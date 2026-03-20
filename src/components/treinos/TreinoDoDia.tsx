@@ -515,13 +515,13 @@ const SerieRow = React.memo(function SerieRow({
       <span className="text-xs text-muted-foreground font-heading w-8">S{serie.numero_serie}</span>
       <input type="number" value={peso} onChange={e => setPeso(e.target.value)}
         onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
-        className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
+        className="w-12 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
         placeholder="kg" />
       <span className="text-muted-foreground text-xs">kg</span>
       <span className="text-muted-foreground text-xs">×</span>
       <input type="number" value={reps} onChange={e => setReps(e.target.value)}
         onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
-        className="w-14 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
+        className="w-11 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
         placeholder="reps" />
       <span className="text-muted-foreground text-xs">reps</span>
       {!serie.salva && <span className="text-[10px] text-yellow-500/60 font-heading">↑ último</span>}
