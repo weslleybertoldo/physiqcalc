@@ -75,6 +75,14 @@ const TreinoDoDia = ({
   const [sortedItems, setSortedItems] = useState<GrupoExercicio[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  // Refs para touch drag
+  const sortedItemsRef = useRef<GrupoExercicio[]>([]);
+  const draggingIdRef = useRef<string | null>(null);
+  const cardRectsRef = useRef<Map<string, DOMRect>>(new Map());
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Sincroniza ref com state (para usar dentro de event listeners)
+  useEffect(() => { sortedItemsRef.current = sortedItems; }, [sortedItems]);
 
   // Carrega ordem personalizada do usuário
   useEffect(() => {
@@ -113,6 +121,67 @@ const TreinoDoDia = ({
     await supabase.from("exercicio_ordem_usuario").upsert(upserts, { onConflict: "user_id,grupo_id,exercicio_id" });
   };
 
+  // Captura os bounding rects de todos os cards antes de iniciar o drag
+  const captureCardRects = () => {
+    if (!listContainerRef.current) return;
+    const cards = listContainerRef.current.querySelectorAll<HTMLElement>("[data-exercicio-id]");
+    cardRectsRef.current = new Map();
+    cards.forEach(card => {
+      const id = card.dataset.exercicioId!;
+      cardRectsRef.current.set(id, card.getBoundingClientRect());
+    });
+  };
+
+  // Encontra qual card está sob o ponto Y atual
+  const findCardAtY = (clientY: number): string | null => {
+    let closest: string | null = null;
+    let closestDist = Infinity;
+    cardRectsRef.current.forEach((rect, id) => {
+      if (id === draggingIdRef.current) return;
+      const centerY = rect.top + rect.height / 2;
+      const dist = Math.abs(clientY - centerY);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = id;
+      }
+    });
+    return closest;
+  };
+
+  const handleTouchDragStart = (exercicioId: string) => {
+    draggingIdRef.current = exercicioId;
+    setDraggingId(exercicioId);
+    captureCardRects();
+    if (navigator.vibrate) navigator.vibrate(30);
+  };
+
+  const handleTouchDragMove = (clientY: number) => {
+    const targetId = findCardAtY(clientY);
+    if (!targetId || targetId === draggingIdRef.current) return;
+
+    setDragOverId(targetId);
+    const items = sortedItemsRef.current;
+    const from = items.findIndex(e => e.exercicio_id === draggingIdRef.current);
+    const to = items.findIndex(e => e.exercicio_id === targetId);
+    if (from === -1 || to === -1) return;
+
+    const novaOrdem = [...items];
+    novaOrdem.splice(from, 1);
+    novaOrdem.splice(to, 0, items[from]);
+    setSortedItems(novaOrdem);
+    // Recaptura rects após reordenar (DOM atualiza no próximo frame)
+    requestAnimationFrame(captureCardRects);
+  };
+
+  const handleTouchDragEnd = async () => {
+    const finalOrder = sortedItemsRef.current;
+    draggingIdRef.current = null;
+    setDraggingId(null);
+    setDragOverId(null);
+    await saveOrder(finalOrder);
+  };
+
+  // Mouse drag handlers (desktop)
   const handleDragOver = (targetId: string) => {
     if (!draggingId || draggingId === targetId) return;
     setDragOverId(targetId);
@@ -268,7 +337,7 @@ const TreinoDoDia = ({
       {sortedItems.length === 0 ? (
         <p className="text-muted-foreground font-body text-sm">Nenhum exercício neste grupo.</p>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-8" ref={listContainerRef}>
           {sortedItems.map(ge => {
             const ex = ge.tb_exercicios;
             const exSeries = getSeriesForExercicio(ex.id);
@@ -283,10 +352,13 @@ const TreinoDoDia = ({
                 tipoCorrida={tipoCorrida}
                 isDragging={draggingId === ex.id}
                 isDragOver={dragOverId === ex.id}
-                onDragStart={() => setDraggingId(ex.id)}
+                onDragStart={() => { setDraggingId(ex.id); captureCardRects(); if (navigator.vibrate) navigator.vibrate(30); }}
                 onDragOver={() => handleDragOver(ex.id)}
                 onDrop={handleDrop}
                 onDragEnd={handleDrop}
+                onTouchDragStart={() => handleTouchDragStart(ex.id)}
+                onTouchDragMove={handleTouchDragMove}
+                onTouchDragEnd={handleTouchDragEnd}
                 onSetInfoExercicio={setInfoExercicio}
                 onSetHistorico={(id, nome) => { setHistoricoId(id); setHistoricoNome(nome); }}
                 onSaveSerie={handleSaveSerie}
@@ -321,6 +393,7 @@ const TreinoDoDia = ({
 const ExercicioCard = ({
   exercicio: ex, series: exSeries, userId, dateKey, tipoCorrida,
   isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
+  onTouchDragStart, onTouchDragMove, onTouchDragEnd,
   onSetInfoExercicio, onSetHistorico,
   onSaveSerie, onRemoveSerie, onConcluirSerie, onDesfazerSerie, onAddSerie,
 }: {
@@ -335,6 +408,9 @@ const ExercicioCard = ({
   onDragOver: () => void;
   onDrop: () => void;
   onDragEnd: () => void;
+  onTouchDragStart: () => void;
+  onTouchDragMove: (clientY: number) => void;
+  onTouchDragEnd: () => void;
   onSetInfoExercicio: (ex: Exercicio) => void;
   onSetHistorico: (id: string, nome: string) => void;
   onSaveSerie: (exId: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => void;
@@ -349,12 +425,18 @@ const ExercicioCard = ({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    onDragStart();
-    if (navigator.vibrate) navigator.vibrate(30);
+    onTouchDragStart();
   };
 
-  const handleTouchEnd = () => {
-    onDrop();
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    onTouchDragMove(touch.clientY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    onTouchDragEnd();
   };
 
   useEffect(() => {
@@ -363,6 +445,7 @@ const ExercicioCard = ({
 
   return (
     <div
+      data-exercicio-id={ex.id}
       className={`result-card border-muted-foreground/30 relative transition-all ${isDragging ? "opacity-40 border-primary scale-95" : ""} ${isDragOver && !isDragging ? "border-primary/60 bg-primary/5" : ""}`}
       draggable
       onDragStart={onDragStart}
@@ -375,6 +458,7 @@ const ExercicioCard = ({
           <div
             className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-primary touch-none"
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
           >
