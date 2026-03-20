@@ -133,10 +133,14 @@ const TimerDescanso = ({
     setEditMinutes(String(duracaoSegundos / 60));
   }, [ativo, serieId, duracaoSegundos, exercicioNome, numeroSerie]);
 
-  const playBeep = useCallback(() => {
+  const playBeep = useCallback(async () => {
     try {
       const ctx = audioRef.current || new AudioContext();
       audioRef.current = ctx;
+      // Resume context if suspended (happens after app goes to background)
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
       const playTone = (freq: number, delay: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
