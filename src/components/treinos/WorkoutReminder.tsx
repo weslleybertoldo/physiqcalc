@@ -1,0 +1,154 @@
+import { useState, useEffect } from "react";
+import { Bell, BellOff, X } from "lucide-react";
+
+interface Props {
+  grupoNome: string | null;
+  dateLabel: string;
+}
+
+const REMINDER_KEY = "physiq_workout_reminder";
+
+function getStoredReminder(): { hour: number; minute: number; enabled: boolean } | null {
+  try {
+    const v = localStorage.getItem(REMINDER_KEY);
+    return v ? JSON.parse(v) : null;
+  } catch {
+    return null;
+  }
+}
+
+const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
+  const [open, setOpen] = useState(false);
+  const stored = getStoredReminder();
+  const [enabled, setEnabled] = useState(stored?.enabled ?? false);
+  const [hour, setHour] = useState(stored?.hour ?? 7);
+  const [minute, setMinute] = useState(stored?.minute ?? 0);
+  const [permission, setPermission] = useState<NotificationPermission>(
+    typeof Notification !== "undefined" ? Notification.permission : "denied"
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const checkReminder = () => {
+      const now = new Date();
+      if (now.getHours() === hour && now.getMinutes() === minute) {
+        if (permission === "granted" && grupoNome) {
+          new Notification("PhysiqCalc — Hora do Treino! 💪", {
+            body: `Treino de hoje: ${grupoNome} (${dateLabel})`,
+            icon: "/icon-192.png",
+            badge: "/icon-192.png",
+          });
+        }
+      }
+    };
+
+    const interval = setInterval(checkReminder, 60000); // check every minute
+    return () => clearInterval(interval);
+  }, [enabled, hour, minute, permission, grupoNome, dateLabel]);
+
+  const requestPermission = async () => {
+    if (typeof Notification === "undefined") return;
+    const result = await Notification.requestPermission();
+    setPermission(result);
+    return result;
+  };
+
+  const toggleReminder = async () => {
+    if (!enabled) {
+      let perm = permission;
+      if (perm !== "granted") {
+        perm = (await requestPermission()) || "denied";
+      }
+      if (perm === "granted") {
+        setEnabled(true);
+        localStorage.setItem(REMINDER_KEY, JSON.stringify({ hour, minute, enabled: true }));
+      }
+    } else {
+      setEnabled(false);
+      localStorage.setItem(REMINDER_KEY, JSON.stringify({ hour, minute, enabled: false }));
+    }
+  };
+
+  const saveTime = (h: number, m: number) => {
+    setHour(h);
+    setMinute(m);
+    localStorage.setItem(REMINDER_KEY, JSON.stringify({ hour: h, minute: m, enabled }));
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={`p-2 rounded-lg transition-colors ${
+          enabled
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+        title="Lembrete de treino"
+      >
+        {enabled ? <Bell size={16} /> : <BellOff size={16} />}
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setOpen(false)}>
+          <div className="bg-card border border-border rounded-xl p-6 w-80 space-y-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading text-sm uppercase tracking-wider text-foreground">
+                🔔 Lembrete de Treino
+              </h3>
+              <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground font-body">
+              Receba uma notificação diária no horário escolhido para lembrar do seu treino.
+            </p>
+
+            {permission === "denied" && (
+              <p className="text-xs text-destructive font-body">
+                ⚠ Notificações bloqueadas no navegador. Habilite nas configurações do seu navegador.
+              </p>
+            )}
+
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-muted-foreground font-heading">Horário:</label>
+              <input
+                type="time"
+                value={`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`}
+                onChange={(e) => {
+                  const [h, m] = e.target.value.split(":").map(Number);
+                  saveTime(h, m);
+                }}
+                className="bg-transparent border border-border rounded px-2 py-1 text-sm text-foreground font-heading outline-none focus:border-primary"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={toggleReminder}
+              disabled={permission === "denied"}
+              className={`w-full py-3 rounded-lg font-heading text-xs uppercase tracking-widest transition-colors ${
+                enabled
+                  ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {enabled ? "Desativar lembrete" : "Ativar lembrete"}
+            </button>
+
+            {enabled && (
+              <p className="text-[10px] text-primary font-body text-center">
+                ✓ Lembrete ativo às {String(hour).padStart(2, "0")}:{String(minute).padStart(2, "0")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default WorkoutReminder;
