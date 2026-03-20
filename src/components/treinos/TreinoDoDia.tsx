@@ -74,6 +74,7 @@ const TreinoDoDia = ({
   const [saving, setSaving] = useState(false);
   const [sortedItems, setSortedItems] = useState<GrupoExercicio[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   // Carrega ordem personalizada do usuário
   useEffect(() => {
@@ -101,16 +102,7 @@ const TreinoDoDia = ({
     loadOrder();
   }, [exercicios, userId, grupoId]);
 
-  const handleDrop = async (targetId: string) => {
-    if (!draggingId || draggingId === targetId) return;
-    const from = sortedItems.findIndex(e => e.exercicio_id === draggingId);
-    const to = sortedItems.findIndex(e => e.exercicio_id === targetId);
-    if (from === -1 || to === -1) return;
-    const novaOrdem = [...sortedItems];
-    novaOrdem.splice(from, 1);
-    novaOrdem.splice(to, 0, sortedItems[from]);
-    setSortedItems(novaOrdem);
-    setDraggingId(null);
+  const saveOrder = async (novaOrdem: GrupoExercicio[]) => {
     const upserts = novaOrdem.map((ex, posicao) => ({
       user_id: userId,
       grupo_id: grupoId,
@@ -119,6 +111,25 @@ const TreinoDoDia = ({
       updated_at: new Date().toISOString(),
     }));
     await supabase.from("exercicio_ordem_usuario").upsert(upserts, { onConflict: "user_id,grupo_id,exercicio_id" });
+  };
+
+  const handleDragOver = (targetId: string) => {
+    if (!draggingId || draggingId === targetId) return;
+    setDragOverId(targetId);
+    const from = sortedItems.findIndex(e => e.exercicio_id === draggingId);
+    const to = sortedItems.findIndex(e => e.exercicio_id === targetId);
+    if (from === -1 || to === -1) return;
+    const novaOrdem = [...sortedItems];
+    novaOrdem.splice(from, 1);
+    novaOrdem.splice(to, 0, sortedItems[from]);
+    setSortedItems(novaOrdem);
+  };
+
+  const handleDrop = async () => {
+    if (!draggingId) return;
+    setDraggingId(null);
+    setDragOverId(null);
+    await saveOrder(sortedItems);
   };
 
   const handleResetOrder = async () => {
@@ -164,33 +175,6 @@ const TreinoDoDia = ({
     tempoSegundos?: number, distanciaKm?: number
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
-
-    // Salva todas as séries não salvas do mesmo exercício antes de concluir
-    // Isso evita que as séries com memória do último treino sumam ao recarregar
-    const seriesNaoSalvas = series.filter(
-      s => s.exercicio_id === exercicioId && !s.salva && s.numero_serie !== numeroSerie
-    );
-    if (seriesNaoSalvas.length > 0) {
-      await supabase.from("tb_treino_series").upsert(
-        seriesNaoSalvas.map(s => ({
-          user_id: userId,
-          exercicio_id: s.exercicio_id,
-          data_treino: dateKey,
-          numero_serie: s.numero_serie,
-          peso: s.peso ?? 0,
-          reps: s.reps ?? 10,
-          concluida: false,
-          updated_at: new Date().toISOString(),
-        })) as any[],
-        { onConflict: "user_id,exercicio_id,data_treino,numero_serie" }
-      );
-      onSeriesUpdate(prev => prev.map(s =>
-        s.exercicio_id === exercicioId && !s.salva && s.numero_serie !== numeroSerie
-          ? { ...s, salva: true }
-          : s
-      ));
-    }
-
     await supabase.from("tb_treino_series").upsert(
       {
         user_id: userId,
@@ -298,9 +282,11 @@ const TreinoDoDia = ({
                 dateKey={dateKey}
                 tipoCorrida={tipoCorrida}
                 isDragging={draggingId === ex.id}
+                isDragOver={dragOverId === ex.id}
                 onDragStart={() => setDraggingId(ex.id)}
-                onDrop={() => handleDrop(ex.id)}
-                onDragEnd={() => setDraggingId(null)}
+                onDragOver={() => handleDragOver(ex.id)}
+                onDrop={handleDrop}
+                onDragEnd={handleDrop}
                 onSetInfoExercicio={setInfoExercicio}
                 onSetHistorico={(id, nome) => { setHistoricoId(id); setHistoricoNome(nome); }}
                 onSaveSerie={handleSaveSerie}
@@ -334,7 +320,7 @@ const TreinoDoDia = ({
 // ── ExercicioCard ─────────────────────────────────────────────────────────────
 const ExercicioCard = ({
   exercicio: ex, series: exSeries, userId, dateKey, tipoCorrida,
-  isDragging, onDragStart, onDrop, onDragEnd,
+  isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
   onSetInfoExercicio, onSetHistorico,
   onSaveSerie, onRemoveSerie, onConcluirSerie, onDesfazerSerie, onAddSerie,
 }: {
@@ -344,7 +330,9 @@ const ExercicioCard = ({
   dateKey: string;
   tipoCorrida: boolean;
   isDragging: boolean;
+  isDragOver: boolean;
   onDragStart: () => void;
+  onDragOver: () => void;
   onDrop: () => void;
   onDragEnd: () => void;
   onSetInfoExercicio: (ex: Exercicio) => void;
@@ -359,16 +347,14 @@ const ExercicioCard = ({
   const [temComentario, setTemComentario] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleTouchStart = () => {
-    longPressTimer.current = setTimeout(() => {
-      onDragStart();
-      if (navigator.vibrate) navigator.vibrate(50);
-    }, 2000);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    onDragStart();
+    if (navigator.vibrate) navigator.vibrate(30);
   };
 
   const handleTouchEnd = () => {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-    onDragEnd();
+    onDrop();
   };
 
   useEffect(() => {
@@ -377,11 +363,11 @@ const ExercicioCard = ({
 
   return (
     <div
-      className={`result-card border-muted-foreground/30 relative transition-opacity ${isDragging ? "opacity-40 border-primary" : ""}`}
+      className={`result-card border-muted-foreground/30 relative transition-all ${isDragging ? "opacity-40 border-primary scale-95" : ""} ${isDragOver && !isDragging ? "border-primary/60 bg-primary/5" : ""}`}
       draggable
       onDragStart={onDragStart}
-      onDragOver={e => e.preventDefault()}
-      onDrop={onDrop}
+      onDragOver={e => { e.preventDefault(); onDragOver(); }}
+      onDrop={e => { e.preventDefault(); onDrop(); }}
       onDragEnd={onDragEnd}
     >
       <div className="flex items-center justify-between mb-4">
@@ -457,7 +443,6 @@ const SerieRow = React.memo(function SerieRow({
   const [reps, setReps] = useState(serie.reps > 0 ? String(serie.reps) : "");
   const [tempo, setTempo] = useState(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
   const [distancia, setDistancia] = useState(serie.distancia_km ? String(serie.distancia_km) : "");
-  const concluindoRef = useRef(false);
   const isConcluida = serie.concluida === true;
 
   useEffect(() => {
@@ -542,20 +527,18 @@ const SerieRow = React.memo(function SerieRow({
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground font-heading w-8">S{serie.numero_serie}</span>
       <input type="number" value={peso} onChange={e => setPeso(e.target.value)}
-        onBlur={() => { if (!concluindoRef.current) onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
+        onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
         className="w-12 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
         placeholder="kg" />
       <span className="text-muted-foreground text-xs">kg</span>
       <span className="text-muted-foreground text-xs">×</span>
       <input type="number" value={reps} onChange={e => setReps(e.target.value)}
-        onBlur={() => { if (!concluindoRef.current) onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
+        onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
         className="w-11 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
         placeholder="reps" />
       <span className="text-muted-foreground text-xs">reps</span>
       {!serie.salva && <span className="text-[10px] text-yellow-500/60 font-heading">↑ último</span>}
-      <button type="button"
-        onMouseDown={() => { concluindoRef.current = true; }}
-        onClick={() => { onConcluir(parseFloat(peso) || 0, parseInt(reps) || 0); concluindoRef.current = false; }}
+      <button type="button" onClick={() => onConcluir(parseFloat(peso) || 0, parseInt(reps) || 0)}
         className="ml-auto px-2 py-1 text-xs font-heading uppercase tracking-wider text-classify-green border border-classify-green/50 bg-classify-green/10 hover:bg-classify-green/20 transition-colors flex items-center gap-1 rounded">
         <Check size={12} /> OK
       </button>
