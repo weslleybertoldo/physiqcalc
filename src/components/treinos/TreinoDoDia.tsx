@@ -164,6 +164,33 @@ const TreinoDoDia = ({
     tempoSegundos?: number, distanciaKm?: number
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
+
+    // Salva todas as séries não salvas do mesmo exercício antes de concluir
+    // Isso evita que as séries com memória do último treino sumam ao recarregar
+    const seriesNaoSalvas = series.filter(
+      s => s.exercicio_id === exercicioId && !s.salva && s.numero_serie !== numeroSerie
+    );
+    if (seriesNaoSalvas.length > 0) {
+      await supabase.from("tb_treino_series").upsert(
+        seriesNaoSalvas.map(s => ({
+          user_id: userId,
+          exercicio_id: s.exercicio_id,
+          data_treino: dateKey,
+          numero_serie: s.numero_serie,
+          peso: s.peso ?? 0,
+          reps: s.reps ?? 10,
+          concluida: false,
+          updated_at: new Date().toISOString(),
+        })) as any[],
+        { onConflict: "user_id,exercicio_id,data_treino,numero_serie" }
+      );
+      onSeriesUpdate(prev => prev.map(s =>
+        s.exercicio_id === exercicioId && !s.salva && s.numero_serie !== numeroSerie
+          ? { ...s, salva: true }
+          : s
+      ));
+    }
+
     await supabase.from("tb_treino_series").upsert(
       {
         user_id: userId,
@@ -430,6 +457,7 @@ const SerieRow = React.memo(function SerieRow({
   const [reps, setReps] = useState(serie.reps > 0 ? String(serie.reps) : "");
   const [tempo, setTempo] = useState(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
   const [distancia, setDistancia] = useState(serie.distancia_km ? String(serie.distancia_km) : "");
+  const concluindoRef = useRef(false);
   const isConcluida = serie.concluida === true;
 
   useEffect(() => {
@@ -514,18 +542,20 @@ const SerieRow = React.memo(function SerieRow({
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground font-heading w-8">S{serie.numero_serie}</span>
       <input type="number" value={peso} onChange={e => setPeso(e.target.value)}
-        onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
+        onBlur={() => { if (!concluindoRef.current) onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
         className="w-12 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
         placeholder="kg" />
       <span className="text-muted-foreground text-xs">kg</span>
       <span className="text-muted-foreground text-xs">×</span>
       <input type="number" value={reps} onChange={e => setReps(e.target.value)}
-        onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
+        onBlur={() => { if (!concluindoRef.current) onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
         className="w-11 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
         placeholder="reps" />
       <span className="text-muted-foreground text-xs">reps</span>
       {!serie.salva && <span className="text-[10px] text-yellow-500/60 font-heading">↑ último</span>}
-      <button type="button" onClick={() => onConcluir(parseFloat(peso) || 0, parseInt(reps) || 0)}
+      <button type="button"
+        onMouseDown={() => { concluindoRef.current = true; }}
+        onClick={() => { onConcluir(parseFloat(peso) || 0, parseInt(reps) || 0); concluindoRef.current = false; }}
         className="ml-auto px-2 py-1 text-xs font-heading uppercase tracking-wider text-classify-green border border-classify-green/50 bg-classify-green/10 hover:bg-classify-green/20 transition-colors flex items-center gap-1 rounded">
         <Check size={12} /> OK
       </button>
