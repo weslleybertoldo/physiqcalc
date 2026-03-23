@@ -3,16 +3,34 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 
 const isNative = Capacitor.isNativePlatform();
 
-// IDs fixos para as notificações do timer
+// IDs
 const TIMER_ONGOING_ID = 1001;
 const TIMER_FINISHED_ID = 1002;
 
-function formatTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+// Referência ao interval do foreground service
+let fgInterval: ReturnType<typeof setInterval> | null = null;
+let fgEndTime = 0;
+let fgExercicioNome = "";
+
+// Lazy import do ForegroundService (só existe no APK)
+async function getForegroundService() {
+  if (!isNative) return null;
+  try {
+    const mod = await import("@capawesome-team/capacitor-android-foreground-service");
+    return mod.ForegroundService;
+  } catch {
+    return null;
+  }
+}
+
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 /**
- * Pede permissão para enviar notificações (necessário no Android 13+)
+ * Pede permissão para notificações
  */
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!isNative) {
@@ -28,9 +46,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 /**
- * Inicia o timer de descanso com notificações nativas:
- * 1. Mostra notificação persistente com horário de término
- * 2. Agenda notificação com som para quando o tempo acabar
+ * Inicia o timer com Foreground Service (contagem regressiva real nas notificações)
  */
 export async function startTimerNotifications(
   exercicioNome: string,
@@ -38,33 +54,65 @@ export async function startTimerNotifications(
 ): Promise<void> {
   if (!isNative) return;
 
-  const endTime = new Date(Date.now() + segundosRestantes * 1000);
-  const endTimeStr = formatTime(endTime);
-  const mins = Math.floor(segundosRestantes / 60);
-  const secs = segundosRestantes % 60;
-  const duracao = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  // Limpa timer anterior
+  await cancelTimerNotification();
+
+  const FgService = await getForegroundService();
+  if (!FgService) return;
+
+  fgEndTime = Date.now() + segundosRestantes * 1000;
+  fgExercicioNome = exercicioNome;
 
   try {
-    // Cancela notificações anteriores
-    await cancelTimerNotification();
-
-    // 1. Notificação persistente mostrando quando termina (não depende de JS em background)
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          id: TIMER_ONGOING_ID,
-          title: `⏱ Descanso — ${duracao}`,
-          body: `${exercicioNome} — Termina às ${endTimeStr}`,
-          ongoing: true,
-          autoCancel: false,
-          smallIcon: "ic_launcher",
-          largeIcon: "ic_launcher",
-          sound: "",
-        },
-      ],
+    // Inicia o Foreground Service com a notificação
+    await FgService.startForegroundService({
+      id: TIMER_ONGOING_ID,
+      title: `⏱ Descanso — ${formatCountdown(segundosRestantes)}`,
+      body: `${exercicioNome}`,
+      smallIcon: "ic_launcher",
     });
 
-    // 2. Agenda notificação de FIM com som (executada pelo Android, não pelo JS)
+    // Atualiza a notificação a cada segundo (roda no Foreground Service, não é suspenso)
+    fgInterval = setInterval(async () => {
+      const remaining = Math.max(0, Math.round((fgEndTime - Date.now()) / 1000));
+
+      if (remaining <= 0) {
+        // Timer acabou!
+        if (fgInterval) clearInterval(fgInterval);
+        fgInterval = null;
+
+        // Para o foreground service
+        try {
+          await FgService.stopForegroundService();
+        } catch {}
+
+        // Mostra notificação de fim com som
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: TIMER_FINISHED_ID,
+              title: "Hora de treinar! 💪",
+              body: `Descanso concluído: ${fgExercicioNome}`,
+              smallIcon: "ic_launcher",
+              sound: "default",
+            },
+          ],
+        });
+        return;
+      }
+
+      // Atualiza contagem regressiva
+      try {
+        await FgService.updateForegroundService({
+          id: TIMER_ONGOING_ID,
+          title: `⏱ Descanso — ${formatCountdown(remaining)}`,
+          body: `${fgExercicioNome}`,
+          smallIcon: "ic_launcher",
+        });
+      } catch {}
+    }, 1000);
+
+    // Também agenda notificação de backup via LocalNotifications (caso o FG service morra)
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -72,28 +120,24 @@ export async function startTimerNotifications(
           title: "Hora de treinar! 💪",
           body: `Descanso concluído: ${exercicioNome}`,
           smallIcon: "ic_launcher",
-          largeIcon: "ic_launcher",
           sound: "default",
           schedule: {
-            at: endTime,
+            at: new Date(fgEndTime),
             allowWhileIdle: true,
           },
         },
       ],
     });
-  } catch {
-    // Silencioso
-  }
+  } catch {}
 }
 
 /**
- * Mostra notificação de timer finalizado (chamada quando o app está em foreground)
+ * Notificação de timer finalizado (quando o app está em foreground)
  */
 export async function showTimerFinishedNotification(
   exercicioNome: string
 ): Promise<void> {
   if (!isNative) {
-    // PWA — usa Notification API do browser
     if ("Notification" in window && Notification.permission === "granted") {
       try {
         new Notification("PhysiqCalc — Hora de treinar! 💪", {
@@ -106,22 +150,32 @@ export async function showTimerFinishedNotification(
     return;
   }
 
-  try {
-    // Remove a notificação ongoing
-    await LocalNotifications.cancel({
-      notifications: [{ id: TIMER_ONGOING_ID }],
-    });
-    // A notificação agendada (TIMER_FINISHED_ID) já deve ter disparado,
-    // mas se o app está em foreground, garantimos que aparece
-  } catch {}
+  // Para o foreground service se ainda estiver rodando
+  const FgService = await getForegroundService();
+  if (FgService) {
+    try { await FgService.stopForegroundService(); } catch {}
+  }
 }
 
 /**
- * Remove todas as notificações do timer
+ * Remove todas as notificações e para o foreground service
  */
 export async function cancelTimerNotification(): Promise<void> {
+  // Limpa o interval
+  if (fgInterval) {
+    clearInterval(fgInterval);
+    fgInterval = null;
+  }
+
   if (!isNative) return;
 
+  // Para o foreground service
+  const FgService = await getForegroundService();
+  if (FgService) {
+    try { await FgService.stopForegroundService(); } catch {}
+  }
+
+  // Cancela notificações locais
   try {
     await LocalNotifications.cancel({
       notifications: [
