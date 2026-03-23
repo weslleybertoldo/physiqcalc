@@ -1,8 +1,11 @@
 import { useState, FormEvent } from "react";
-import { Eye, EyeOff, Settings } from "lucide-react";
+import { Eye, EyeOff, Settings, RefreshCw, Check, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { signInWithGoogle } from "@/lib/capacitorAuth";
 import AdminLoginDialog from "@/components/AdminLoginDialog";
+
+const APP_VERSION = __APP_VERSION__;
+const RELEASES_URL = "https://api.github.com/repos/weslleybertoldo/physiqcalc/releases/latest";
 
 const AuthPage = () => {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -14,12 +17,43 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
 
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateResult, setUpdateResult] = useState<null | { hasUpdate: boolean; url?: string; version?: string }>(null);
+
   const handleGoogleLogin = async () => {
     setError("");
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
+    setLoading(true);
+    const { error } = await signInWithGoogle();
     if (error) setError("Erro ao conectar com Google. Tente novamente.");
+    setLoading(false);
+  };
+
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    setUpdateResult(null);
+    try {
+      const res = await fetch(RELEASES_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error();
+      const release = await res.json();
+      const remoteVersion = (release.tag_name || "").replace(/^v/, "");
+      const remote = remoteVersion.split(".").map(Number);
+      const local = APP_VERSION.split(".").map(Number);
+      const isNewer =
+        remote[0] > local[0] ||
+        (remote[0] === local[0] && remote[1] > local[1]) ||
+        (remote[0] === local[0] && remote[1] === local[1] && remote[2] > local[2]);
+
+      if (isNewer) {
+        const apkAsset = (release.assets || []).find((a: any) => a.name.endsWith(".apk"));
+        setUpdateResult({ hasUpdate: true, url: apkAsset?.browser_download_url || release.html_url, version: remoteVersion });
+      } else {
+        setUpdateResult({ hasUpdate: false });
+      }
+    } catch {
+      setUpdateResult({ hasUpdate: false });
+    } finally {
+      setCheckingUpdate(false);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -162,9 +196,41 @@ const AuthPage = () => {
         </p>
 
         {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground font-body italic">
-          By Weslley Bertoldo
-        </p>
+        <div className="text-center space-y-2">
+          <p className="text-xs text-muted-foreground font-body italic">
+            By Weslley Bertoldo
+          </p>
+          <p className="text-[10px] text-muted-foreground/50 font-body">v{APP_VERSION}</p>
+          <button
+            type="button"
+            onClick={handleCheckUpdate}
+            disabled={checkingUpdate}
+            className="text-[10px] text-muted-foreground/60 hover:text-primary font-body transition-colors flex items-center justify-center gap-1 mx-auto"
+          >
+            <RefreshCw size={10} className={checkingUpdate ? "animate-spin" : ""} />
+            Verificar atualizações
+          </button>
+          {updateResult && (
+            <div className="mt-2">
+              {updateResult.hasUpdate ? (
+                <a
+                  href={updateResult.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-body transition-colors"
+                >
+                  <Download size={12} />
+                  Baixar v{updateResult.version}
+                </a>
+              ) : (
+                <p className="text-[10px] text-classify-green font-body flex items-center justify-center gap-1">
+                  <Check size={10} />
+                  Você está usando a versão mais recente
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Admin gear */}
