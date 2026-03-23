@@ -229,132 +229,142 @@ const TreinosPage = () => {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
+  // Carrega dados do cache offline
+  const loadFromCache = useCallback((cacheKey: string): boolean => {
+    const cached = getCacheData<any>(cacheKey);
+    if (!cached) return false;
+    setProfile(cached.profile);
+    setGrupos(cached.grupos);
+    setGruposPessoais(cached.gruposPessoais);
+    setSemanaConfig(cached.semanaConfig);
+    setGruposExercicios(cached.gruposExercicios);
+    setGruposExerciciosPessoais(cached.gruposExerciciosPessoais);
+    setOverrides(cached.overrides);
+    setConcluidos(cached.concluidos);
+    setTreinosSemana(cached.treinosSemana);
+    setTreinosMes(cached.treinosMes);
+    return true;
+  }, []);
+
   // Load base data (groups, config, overrides, concluidos)
   // refreshOnly=true → atualiza dados em background sem mostrar tela de "Carregando"
   const loadBaseData = useCallback(async (refreshOnly = false) => {
     if (!user) return;
-    // Não recarrega quando o app está em background (bloqueio de tela, minimizado)
     if (refreshOnly && !isVisibleRef.current) return;
     if (!refreshOnly) setLoading(true);
 
     const cacheKey = `baseData_${user.id}`;
 
-    // Se estiver offline, tenta carregar do cache
+    // Se offline, carrega do cache imediatamente
     if (!navigator.onLine) {
-      const cached = getCacheData<any>(cacheKey);
-      if (cached) {
-        setProfile(cached.profile);
-        setGrupos(cached.grupos);
-        setGruposPessoais(cached.gruposPessoais);
-        setSemanaConfig(cached.semanaConfig);
-        setGruposExercicios(cached.gruposExercicios);
-        setGruposExerciciosPessoais(cached.gruposExerciciosPessoais);
-        setOverrides(cached.overrides);
-        setConcluidos(cached.concluidos);
-        setTreinosSemana(cached.treinosSemana);
-        setTreinosMes(cached.treinosMes);
-        if (!refreshOnly) setLoading(false);
-        return;
-      }
-      // Sem cache e sem internet — nada a fazer
+      loadFromCache(cacheKey);
       if (!refreshOnly) setLoading(false);
       return;
     }
 
-    // Compute fresh dates inside the callback to avoid stale closure
-    const freshToday = new Date();
-    const freshWeek = getWeekDates(freshToday);
-    const weekStart = getLocalDateKey(freshWeek[0]);
-    const weekEnd = getLocalDateKey(freshWeek[6]);
-    const monthStart = getMonthStart();
+    // Online: tenta buscar do Supabase
+    try {
+      const freshToday = new Date();
+      const freshWeek = getWeekDates(freshToday);
+      const weekStart = getLocalDateKey(freshWeek[0]);
+      const weekEnd = getLocalDateKey(freshWeek[6]);
+      const monthStart = getMonthStart();
 
-    const [profileRes, gruposRes, gruposPessoaisRes, semanaRes, overridesRes, concluidosSemanaRes, concluidosMesRes] =
-      await Promise.all([
-        supabase.from("physiq_profiles").select("nome, foto_url, user_code").eq("id", user.id).single(),
-        supabase.from("tb_grupos_treino").select("*").order("nome"),
-        supabase.from("tb_grupos_treino_usuario").select("*").eq("user_id", user.id).order("nome"),
-        supabase.from("tb_semana_treinos").select("dia_semana, grupo_id, tb_grupos_treino(id, nome)"),
-        supabase.from("tb_treino_dia_override").select("data_treino, grupo_id, grupo_usuario_id").eq("user_id", user.id).gte("data_treino", weekStart).lte("data_treino", weekEnd),
-        supabase.from("tb_treino_concluido").select("data_treino").eq("user_id", user.id).gte("data_treino", weekStart).lte("data_treino", weekEnd),
-        supabase.from("tb_treino_concluido").select("data_treino").eq("user_id", user.id).gte("data_treino", monthStart),
-      ]);
+      const [profileRes, gruposRes, gruposPessoaisRes, semanaRes, overridesRes, concluidosSemanaRes, concluidosMesRes] =
+        await Promise.all([
+          supabase.from("physiq_profiles").select("nome, foto_url, user_code").eq("id", user.id).single(),
+          supabase.from("tb_grupos_treino").select("*").order("nome"),
+          supabase.from("tb_grupos_treino_usuario").select("*").eq("user_id", user.id).order("nome"),
+          supabase.from("tb_semana_treinos").select("dia_semana, grupo_id, tb_grupos_treino(id, nome)"),
+          supabase.from("tb_treino_dia_override").select("data_treino, grupo_id, grupo_usuario_id").eq("user_id", user.id).gte("data_treino", weekStart).lte("data_treino", weekEnd),
+          supabase.from("tb_treino_concluido").select("data_treino").eq("user_id", user.id).gte("data_treino", weekStart).lte("data_treino", weekEnd),
+          supabase.from("tb_treino_concluido").select("data_treino").eq("user_id", user.id).gte("data_treino", monthStart),
+        ]);
 
-    if (profileRes.data) setProfile(profileRes.data as any);
-    const gruposList = (gruposRes.data as GrupoTreino[]) || [];
-    setGrupos(gruposList);
-    setGruposPessoais((gruposPessoaisRes.data as GrupoTreino[]) || []);
-    setSemanaConfig((semanaRes.data as any[]) || []);
-
-    // Load exercises for global groups
-    const geMap: Record<string, GrupoExercicio[]> = {};
-    if (gruposList.length > 0) {
-      const { data: geData } = await supabase
-        .from("tb_grupos_exercicios")
-        .select("grupo_id, exercicio_id, ordem, tb_exercicios(id, nome, grupo_muscular, emoji, tipo)")
-        .order("ordem");
-      if (geData) {
-        (geData as any[]).forEach((ge) => {
-          if (!geMap[ge.grupo_id]) geMap[ge.grupo_id] = [];
-          geMap[ge.grupo_id].push(ge);
-        });
+      // Se as queries retornaram erro (ex: rede instável), usa cache
+      if (gruposRes.error || semanaRes.error) {
+        loadFromCache(cacheKey);
+        if (!refreshOnly) setLoading(false);
+        return;
       }
-    }
-    setGruposExercicios(geMap);
 
-    // Load exercises for personal groups
-    const gePessoalMap: Record<string, GrupoExercicio[]> = {};
-    const pessoaisList = (gruposPessoaisRes.data as any[]) || [];
-    if (pessoaisList.length > 0) {
-      const { data: geuData } = await supabase
-        .from("tb_grupos_exercicios_usuario")
-        .select("grupo_usuario_id, exercicio_id, exercicio_usuario_id, ordem, tb_exercicios(id, nome, grupo_muscular, emoji, tipo), tb_exercicios_usuario(id, nome, grupo_muscular, emoji, tipo)")
-        .eq("user_id", user.id)
-        .order("ordem");
-      if (geuData) {
-        (geuData as any[]).forEach((ge: any) => {
-          const gid = ge.grupo_usuario_id;
-          if (!gePessoalMap[gid]) gePessoalMap[gid] = [];
-          const exData = ge.tb_exercicios || ge.tb_exercicios_usuario;
-          if (exData) {
-            gePessoalMap[gid].push({
-              exercicio_id: exData.id,
-              ordem: ge.ordem || 0,
-              tb_exercicios: exData,
-            });
-          }
-        });
+      if (profileRes.data) setProfile(profileRes.data as any);
+      const gruposList = (gruposRes.data as GrupoTreino[]) || [];
+      setGrupos(gruposList);
+      setGruposPessoais((gruposPessoaisRes.data as GrupoTreino[]) || []);
+      setSemanaConfig((semanaRes.data as any[]) || []);
+
+      const geMap: Record<string, GrupoExercicio[]> = {};
+      if (gruposList.length > 0) {
+        const { data: geData } = await supabase
+          .from("tb_grupos_exercicios")
+          .select("grupo_id, exercicio_id, ordem, tb_exercicios(id, nome, grupo_muscular, emoji, tipo)")
+          .order("ordem");
+        if (geData) {
+          (geData as any[]).forEach((ge) => {
+            if (!geMap[ge.grupo_id]) geMap[ge.grupo_id] = [];
+            geMap[ge.grupo_id].push(ge);
+          });
+        }
       }
+      setGruposExercicios(geMap);
+
+      const gePessoalMap: Record<string, GrupoExercicio[]> = {};
+      const pessoaisList = (gruposPessoaisRes.data as any[]) || [];
+      if (pessoaisList.length > 0) {
+        const { data: geuData } = await supabase
+          .from("tb_grupos_exercicios_usuario")
+          .select("grupo_usuario_id, exercicio_id, exercicio_usuario_id, ordem, tb_exercicios(id, nome, grupo_muscular, emoji, tipo), tb_exercicios_usuario(id, nome, grupo_muscular, emoji, tipo)")
+          .eq("user_id", user.id)
+          .order("ordem");
+        if (geuData) {
+          (geuData as any[]).forEach((ge: any) => {
+            const gid = ge.grupo_usuario_id;
+            if (!gePessoalMap[gid]) gePessoalMap[gid] = [];
+            const exData = ge.tb_exercicios || ge.tb_exercicios_usuario;
+            if (exData) {
+              gePessoalMap[gid].push({
+                exercicio_id: exData.id,
+                ordem: ge.ordem || 0,
+                tb_exercicios: exData,
+              });
+            }
+          });
+        }
+      }
+      setGruposExerciciosPessoais(gePessoalMap);
+
+      const ovMap: Record<string, OverrideInfo> = {};
+      ((overridesRes.data as any[]) || []).forEach((o) => {
+        ovMap[o.data_treino] = { grupo_id: o.grupo_id, grupo_usuario_id: o.grupo_usuario_id };
+      });
+      setOverrides(ovMap);
+
+      const concluidosDates = ((concluidosSemanaRes.data as any[]) || []).map((c: any) => c.data_treino);
+      setConcluidos(concluidosDates);
+      setTreinosSemana(concluidosDates.length);
+      setTreinosMes(((concluidosMesRes.data as any[]) || []).length);
+
+      // Salva tudo no cache para uso offline
+      setCacheData(cacheKey, {
+        profile: profileRes.data,
+        grupos: gruposList,
+        gruposPessoais: (gruposPessoaisRes.data as GrupoTreino[]) || [],
+        semanaConfig: (semanaRes.data as any[]) || [],
+        gruposExercicios: geMap,
+        gruposExerciciosPessoais: gePessoalMap,
+        overrides: ovMap,
+        concluidos: concluidosDates,
+        treinosSemana: concluidosDates.length,
+        treinosMes: ((concluidosMesRes.data as any[]) || []).length,
+      });
+    } catch {
+      // Falha de rede — carrega do cache
+      loadFromCache(cacheKey);
     }
-    setGruposExerciciosPessoais(gePessoalMap);
-
-    // Overrides
-    const ovMap: Record<string, OverrideInfo> = {};
-    ((overridesRes.data as any[]) || []).forEach((o) => {
-      ovMap[o.data_treino] = { grupo_id: o.grupo_id, grupo_usuario_id: o.grupo_usuario_id };
-    });
-    setOverrides(ovMap);
-
-    const concluidosDates = ((concluidosSemanaRes.data as any[]) || []).map((c: any) => c.data_treino);
-    setConcluidos(concluidosDates);
-    setTreinosSemana(concluidosDates.length);
-    setTreinosMes(((concluidosMesRes.data as any[]) || []).length);
-
-    // Salva tudo no cache para uso offline
-    setCacheData(cacheKey, {
-      profile: profileRes.data,
-      grupos: gruposList,
-      gruposPessoais: (gruposPessoaisRes.data as GrupoTreino[]) || [],
-      semanaConfig: (semanaRes.data as any[]) || [],
-      gruposExercicios: geMap,
-      gruposExerciciosPessoais: gePessoalMap,
-      overrides: ovMap,
-      concluidos: concluidosDates,
-      treinosSemana: concluidosDates.length,
-      treinosMes: ((concluidosMesRes.data as any[]) || []).length,
-    });
 
     if (!refreshOnly) setLoading(false);
-  }, [user]);
+  }, [user, loadFromCache]);
 
   useEffect(() => {
     // Primeira carga: mostra loading — só roda uma vez na vida do componente
@@ -401,14 +411,14 @@ const TreinosPage = () => {
 
     const seriesCacheKey = `series_${user.id}_${dateKey}`;
 
-    // Se offline, usa cache
-    if (!navigator.onLine) {
+    // Função para carregar séries do cache
+    const loadSeriesFromCache = () => {
       const cached = getCacheData<SerieComMemoria[]>(seriesCacheKey);
       if (cached) {
         setSeries(cached);
-        return;
+        return true;
       }
-      // Sem cache — cria séries placeholder para os exercícios
+      // Sem cache — cria séries placeholder
       const placeholders: SerieComMemoria[] = [];
       for (const ge of exerciciosList) {
         for (let i = 1; i <= 3; i++) {
@@ -423,85 +433,89 @@ const TreinosPage = () => {
         }
       }
       setSeries(placeholders);
+      return false;
+    };
+
+    // Se offline, usa cache
+    if (!navigator.onLine) {
+      loadSeriesFromCache();
       return;
     }
 
-    // 1. Load saved series for this exact date
-    const { data: seriesDoDia } = await supabase
-      .from("tb_treino_series")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("data_treino", dateKey)
-      .order("numero_serie");
+    // Online: tenta buscar do Supabase
+    try {
+      const { data: seriesDoDia } = await supabase
+        .from("tb_treino_series")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("data_treino", dateKey)
+        .order("numero_serie");
 
-    const savedSeries = (seriesDoDia as any[]) || [];
+      const savedSeries = (seriesDoDia as any[]) || [];
 
-    // 2. Group saved series by exercise
-    const seriesByExercicio: Record<string, any[]> = {};
-    savedSeries.forEach((s) => {
-      const key = s.exercicio_id;
-      if (!seriesByExercicio[key]) seriesByExercicio[key] = [];
-      seriesByExercicio[key].push(s);
-    });
+      const seriesByExercicio: Record<string, any[]> = {};
+      savedSeries.forEach((s) => {
+        const key = s.exercicio_id;
+        if (!seriesByExercicio[key]) seriesByExercicio[key] = [];
+        seriesByExercicio[key].push(s);
+      });
 
-    // 3. For exercises without saved series, fetch last workout data
-    const allSeries: SerieComMemoria[] = [];
+      const allSeries: SerieComMemoria[] = [];
 
-    for (const ge of exerciciosList) {
-      const exId = ge.exercicio_id;
-      const saved = seriesByExercicio[exId];
+      for (const ge of exerciciosList) {
+        const exId = ge.exercicio_id;
+        const saved = seriesByExercicio[exId];
 
-      if (saved && saved.length > 0) {
-        // Has saved data for this date
-        saved.forEach((s: any) => {
-          allSeries.push({
-            id: s.id,
-            exercicio_id: s.exercicio_id,
-            numero_serie: s.numero_serie,
-            peso: s.peso ?? 0,
-            reps: s.reps ?? 10,
-            concluida: s.concluida ?? false,
-            salva: true,
-            // Campos de corrida
-            tempo_segundos: s.tempo_segundos ?? undefined,
-            distancia_km: s.distancia_km ?? undefined,
-            pace_segundos_km: s.pace_segundos_km ?? undefined,
-          });
-        });
-      } else {
-        // No saved data — try to get from last workout
-        const ultimo = await buscarUltimoTreino(user.id, exId, dateKey);
-
-        if (ultimo && ultimo.length > 0) {
-          ultimo.forEach((s) => {
+        if (saved && saved.length > 0) {
+          saved.forEach((s: any) => {
             allSeries.push({
-              exercicio_id: exId,
+              id: s.id,
+              exercicio_id: s.exercicio_id,
               numero_serie: s.numero_serie,
               peso: s.peso ?? 0,
               reps: s.reps ?? 10,
-              concluida: false,
-              salva: false,
+              concluida: s.concluida ?? false,
+              salva: true,
+              tempo_segundos: s.tempo_segundos ?? undefined,
+              distancia_km: s.distancia_km ?? undefined,
+              pace_segundos_km: s.pace_segundos_km ?? undefined,
             });
           });
         } else {
-          // Never done this exercise — 3 empty placeholder series
-          for (let i = 1; i <= 3; i++) {
-            allSeries.push({
-              exercicio_id: exId,
-              numero_serie: i,
-              peso: 0,
-              reps: 10,
-              concluida: false,
-              salva: false,
+          const ultimo = await buscarUltimoTreino(user.id, exId, dateKey);
+
+          if (ultimo && ultimo.length > 0) {
+            ultimo.forEach((s) => {
+              allSeries.push({
+                exercicio_id: exId,
+                numero_serie: s.numero_serie,
+                peso: s.peso ?? 0,
+                reps: s.reps ?? 10,
+                concluida: false,
+                salva: false,
+              });
             });
+          } else {
+            for (let i = 1; i <= 3; i++) {
+              allSeries.push({
+                exercicio_id: exId,
+                numero_serie: i,
+                peso: 0,
+                reps: 10,
+                concluida: false,
+                salva: false,
+              });
+            }
           }
         }
       }
-    }
 
-    // Salva no cache para uso offline
-    setCacheData(seriesCacheKey, allSeries);
-    setSeries(allSeries);
+      setCacheData(seriesCacheKey, allSeries);
+      setSeries(allSeries);
+    } catch {
+      // Falha de rede — carrega do cache
+      loadSeriesFromCache();
+    }
   }, [user]);
 
   // Reload series when selectedDate changes
