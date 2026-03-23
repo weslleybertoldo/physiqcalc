@@ -76,7 +76,23 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
               resolve({ error: sessionError.message });
             } else {
               // Força buscar user completo (com user_metadata, avatar_url, etc)
-              await supabase.auth.getUser();
+              const { data: { user } } = await supabase.auth.getUser();
+
+              // Salva foto e nome do Google no perfil
+              if (user) {
+                const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+                const fullName = user.user_metadata?.full_name || user.user_metadata?.name;
+                if (avatarUrl) {
+                  await supabase
+                    .from("physiq_profiles")
+                    .update({
+                      foto_url: avatarUrl,
+                      ...(fullName ? { nome: fullName } : {}),
+                    })
+                    .eq("id", user.id);
+                }
+              }
+
               resolve({});
             }
           } else {

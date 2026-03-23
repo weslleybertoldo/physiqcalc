@@ -36,7 +36,11 @@
         <service
             android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
             android:foregroundServiceType="specialUse"
-            android:exported="false" />
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Timer de descanso com contagem regressiva" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"
