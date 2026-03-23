@@ -33,8 +33,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Sessão encontrada — tenta refresh para garantir token válido
           const { data: { session: refreshed } } = await supabase.auth.refreshSession();
           const activeSession = refreshed || existingSession;
+
+          // Busca user completo para garantir que user_metadata está populado
+          const { data: { user: fullUser } } = await supabase.auth.getUser();
+          const userToSet = fullUser || activeSession.user;
+
           setSession(activeSession);
-          setUser(activeSession.user);
+          setUser(userToSet);
         } else {
           setSession(null);
           setUser(null);
@@ -52,23 +57,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initSession();
 
     // 2. Escuta mudanças de auth em tempo real
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      // Após login, sincroniza foto e nome do Google para o perfil
-      if (event === "SIGNED_IN" && session?.user) {
-        const avatarUrl = session.user.user_metadata?.avatar_url;
-        const fullName = session.user.user_metadata?.full_name;
-        if (avatarUrl) {
-          supabase
-            .from("physiq_profiles")
-            .update({ foto_url: avatarUrl, ...(fullName ? { nome: fullName } : {}) })
-            .eq("id", session.user.id)
-            .then(() => {});
-        }
-      }
     });
 
     // 3. Refresca o token quando o app volta ao primeiro plano (APK + PWA)
