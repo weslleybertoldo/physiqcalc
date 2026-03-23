@@ -94,12 +94,13 @@ const TreinoDoDia = ({
       const cacheKey = `ordem_${userId}_${grupoId}`;
 
       try {
-        const { data: ordemUsuario } = await supabase
+        const { data: ordemUsuario, error: ordemError } = await supabase
           .from("exercicio_ordem_usuario")
           .select("exercicio_id, posicao")
           .eq("user_id", userId)
           .eq("grupo_id", grupoId);
 
+        if (ordemError) throw ordemError;
         if (!ordemUsuario || ordemUsuario.length === 0) {
           setSortedItems(defaultSorted);
           return;
