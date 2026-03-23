@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PWAInstallProvider } from "@/hooks/usePWAInstall";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { isAdminAuthenticated } from "@/components/AdminLoginDialog";
+import { setupDeepLinkListener } from "@/lib/capacitorAuth";
 import AuthPage from "./pages/AuthPage";
 import UserDashboard from "./pages/UserDashboard";
 import AdminPanel from "./pages/AdminPanel";
@@ -16,6 +17,9 @@ import TreinosPage from "./pages/TreinosPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Inicializa deep link listener para OAuth no APK
+setupDeepLinkListener();
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
