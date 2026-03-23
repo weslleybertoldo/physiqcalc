@@ -4,6 +4,29 @@ import CountdownNotification from "./countdownNotification";
 
 const isNative = Capacitor.isNativePlatform();
 const TIMER_FINISHED_ID = 1002;
+const ALERT_CHANNEL_ID = "timer-alerts-v1";
+let channelCreated = false;
+
+/**
+ * Cria canal de notificação com som (IMPORTANCE_HIGH)
+ */
+async function ensureAlertChannel() {
+  if (channelCreated || !isNative) return;
+  try {
+    await LocalNotifications.createChannel({
+      id: ALERT_CHANNEL_ID,
+      name: "Alertas de Timer",
+      description: "Notificação com som quando o descanso termina",
+      importance: 5,
+      sound: "default",
+      vibration: true,
+      visibility: 1,
+    });
+    channelCreated = true;
+  } catch (e) {
+    console.warn("[Timer] create channel:", e);
+  }
+}
 
 /**
  * Pede permissão para notificações
@@ -18,6 +41,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
   }
 
   const { display } = await LocalNotifications.requestPermissions();
+  await ensureAlertChannel();
   return display === "granted";
 }
 
@@ -45,7 +69,8 @@ export async function startTimerNotifications(
     console.warn("[Timer] startCountdown:", e);
   }
 
-  // 2. Agenda notificação de FIM com som
+  // 2. Agenda notificação de FIM com som (canal IMPORTANCE_HIGH)
+  await ensureAlertChannel();
   try {
     await LocalNotifications.schedule({
       notifications: [{
@@ -53,6 +78,7 @@ export async function startTimerNotifications(
         title: "Hora de treinar! 💪",
         body: `Descanso concluído: ${exercicioNome}`,
         smallIcon: "ic_launcher",
+        channelId: ALERT_CHANNEL_ID,
         sound: "default",
         schedule: {
           at: new Date(Date.now() + segundosRestantes * 1000),
@@ -67,6 +93,7 @@ export async function startTimerNotifications(
 
 /**
  * Chamada quando o timer termina no foreground
+ * NÃO remove o cronômetro — ele continua contando em negativo
  */
 export async function showTimerFinishedNotification(
   exercicioNome: string
@@ -83,11 +110,7 @@ export async function showTimerFinishedNotification(
     }
     return;
   }
-
-  // Remove o cronômetro
-  try {
-    await CountdownNotification.stopCountdown();
-  } catch {}
+  // Cronômetro continua rodando (mostra tempo negativo = tempo excedido)
 }
 
 /**

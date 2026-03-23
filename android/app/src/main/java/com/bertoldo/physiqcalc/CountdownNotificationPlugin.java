@@ -9,7 +9,6 @@ import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
 
-import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -43,6 +42,7 @@ public class CountdownNotificationPlugin extends Plugin {
             .setSmallIcon(context.getApplicationInfo().icon)
             .setContentTitle(title)
             .setContentText(body)
+            .setSubText("PhysiqCalc")
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
             .setWhen(whenMs)
@@ -50,7 +50,8 @@ public class CountdownNotificationPlugin extends Plugin {
             .setAutoCancel(false)
             .setContentIntent(pendingIntent)
             .setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW);
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_HIGH);
 
         NotificationManager manager = (NotificationManager)
             context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -72,10 +73,12 @@ public class CountdownNotificationPlugin extends Plugin {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 "Timer de Descanso",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             );
             channel.setDescription("Contagem regressiva do timer de descanso");
-            channel.setShowBadge(false);
+            channel.setShowBadge(true);
+            channel.setSound(null, null);
+            channel.enableVibration(false);
             NotificationManager manager = (NotificationManager)
                 context.getSystemService(Context.NOTIFICATION_SERVICE);
             manager.createNotificationChannel(channel);

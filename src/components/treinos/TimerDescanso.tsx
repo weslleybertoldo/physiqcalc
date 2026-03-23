@@ -176,21 +176,20 @@ const TimerDescanso = ({
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [ativo, paused, finished, playBeep, exercicioNome]);
 
-  // BUG 3 FIX: quando app volta ao primeiro plano, recalcula tempo real decorrido
-  // O setInterval para no background — ao voltar, sincroniza com Date.now()
+  // Quando app volta ao primeiro plano, recalcula tempo real decorrido
   useEffect(() => {
     if (!ativo) return;
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
-        // Ao voltar ao app, remove notificação persistente (ongoing)
-        cancelTimerNotification();
-
+        // NÃO cancela a notificação ao voltar — ela continua visível
         const saved = lerEstadoSalvo();
         if (!saved || !saved.ativo) return;
         const restante = calcularRestante(saved);
         if (restante <= 0) {
           setFinished(true);
           setSeconds(0);
+          // Remove notificação do cronômetro (acabou o tempo)
+          cancelTimerNotification();
           if (!notifiedRef.current) {
             notifiedRef.current = true;
             playBeep();
