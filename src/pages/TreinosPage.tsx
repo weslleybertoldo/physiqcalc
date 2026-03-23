@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ClipboardList, LogOut, History } from "lucide-react";
+import { ClipboardList, LogOut, History, WifiOff, Loader2 } from "lucide-react";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
 import WorkoutTimer from "@/components/treinos/WorkoutTimer";
@@ -7,6 +7,8 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { setCacheData, getCacheData } from "@/lib/offlineSync";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
@@ -114,6 +116,7 @@ async function buscarUltimoTreino(
 const TreinosPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { isOnline, pendingCount, syncing } = useOfflineSync();
   const [profile, setProfile] = useState<{ nome: string | null; foto_url: string | null; user_code: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   // Guarda posição do scroll para restaurar após updates silenciosos
@@ -230,6 +233,30 @@ const TreinosPage = () => {
     if (refreshOnly && !isVisibleRef.current) return;
     if (!refreshOnly) setLoading(true);
 
+    const cacheKey = `baseData_${user.id}`;
+
+    // Se estiver offline, tenta carregar do cache
+    if (!navigator.onLine) {
+      const cached = getCacheData<any>(cacheKey);
+      if (cached) {
+        setProfile(cached.profile);
+        setGrupos(cached.grupos);
+        setGruposPessoais(cached.gruposPessoais);
+        setSemanaConfig(cached.semanaConfig);
+        setGruposExercicios(cached.gruposExercicios);
+        setGruposExerciciosPessoais(cached.gruposExerciciosPessoais);
+        setOverrides(cached.overrides);
+        setConcluidos(cached.concluidos);
+        setTreinosSemana(cached.treinosSemana);
+        setTreinosMes(cached.treinosMes);
+        if (!refreshOnly) setLoading(false);
+        return;
+      }
+      // Sem cache e sem internet — nada a fazer
+      if (!refreshOnly) setLoading(false);
+      return;
+    }
+
     // Compute fresh dates inside the callback to avoid stale closure
     const freshToday = new Date();
     const freshWeek = getWeekDates(freshToday);
@@ -308,6 +335,20 @@ const TreinosPage = () => {
     setTreinosSemana(concluidosDates.length);
     setTreinosMes(((concluidosMesRes.data as any[]) || []).length);
 
+    // Salva tudo no cache para uso offline
+    setCacheData(cacheKey, {
+      profile: profileRes.data,
+      grupos: gruposList,
+      gruposPessoais: (gruposPessoaisRes.data as GrupoTreino[]) || [],
+      semanaConfig: (semanaRes.data as any[]) || [],
+      gruposExercicios: geMap,
+      gruposExerciciosPessoais: gePessoalMap,
+      overrides: ovMap,
+      concluidos: concluidosDates,
+      treinosSemana: concluidosDates.length,
+      treinosMes: ((concluidosMesRes.data as any[]) || []).length,
+    });
+
     if (!refreshOnly) setLoading(false);
   }, [user]);
 
@@ -353,6 +394,33 @@ const TreinosPage = () => {
   // Load series for the selected date (with weight memory)
   const loadSeriesForDate = useCallback(async (dateKey: string, exerciciosList: GrupoExercicio[]) => {
     if (!user) return;
+
+    const seriesCacheKey = `series_${user.id}_${dateKey}`;
+
+    // Se offline, usa cache
+    if (!navigator.onLine) {
+      const cached = getCacheData<SerieComMemoria[]>(seriesCacheKey);
+      if (cached) {
+        setSeries(cached);
+        return;
+      }
+      // Sem cache — cria séries placeholder para os exercícios
+      const placeholders: SerieComMemoria[] = [];
+      for (const ge of exerciciosList) {
+        for (let i = 1; i <= 3; i++) {
+          placeholders.push({
+            exercicio_id: ge.exercicio_id,
+            numero_serie: i,
+            peso: 0,
+            reps: 10,
+            concluida: false,
+            salva: false,
+          });
+        }
+      }
+      setSeries(placeholders);
+      return;
+    }
 
     // 1. Load saved series for this exact date
     const { data: seriesDoDia } = await supabase
@@ -427,6 +495,8 @@ const TreinosPage = () => {
       }
     }
 
+    // Salva no cache para uso offline
+    setCacheData(seriesCacheKey, allSeries);
     setSeries(allSeries);
   }, [user]);
 
@@ -480,27 +550,28 @@ const TreinosPage = () => {
   const selectedConcluido = concluidos.includes(selectedDate);
 
   const handleOverride = async (grupoId: string | null, isPessoal: boolean) => {
+    const { offlineUpsert } = await import("@/lib/offlineSync");
     if (grupoId === null) {
-      // "Sem treino": salva override com grupo_id null e grupo_usuario_id null
-      // Usa uma sentinela especial para indicar "dia vazio intencionalmente"
-      await supabase.from("tb_treino_dia_override").upsert(
+      await offlineUpsert(
+        "tb_treino_dia_override",
         {
           user_id: user.id,
           data_treino: selectedDate,
           grupo_id: null,
           grupo_usuario_id: null,
         },
-        { onConflict: "user_id,data_treino" }
+        "user_id,data_treino"
       );
     } else {
-      await supabase.from("tb_treino_dia_override").upsert(
+      await offlineUpsert(
+        "tb_treino_dia_override",
         {
           user_id: user.id,
           data_treino: selectedDate,
           grupo_id: isPessoal ? null : grupoId,
           grupo_usuario_id: isPessoal ? grupoId : null,
         },
-        { onConflict: "user_id,data_treino" }
+        "user_id,data_treino"
       );
     }
     handleRefresh();
@@ -559,6 +630,32 @@ const TreinosPage = () => {
           <HistoricoTreinos userId={user.id} onBack={() => setShowHistorico(false)} />
         ) : (
           <>
+            {/* Indicador offline / sincronização */}
+            {(!isOnline || pendingCount > 0) && (
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 text-xs font-heading ${
+                !isOnline
+                  ? "bg-yellow-500/10 border border-yellow-500/30 text-yellow-500"
+                  : "bg-primary/10 border border-primary/30 text-primary"
+              }`}>
+                {!isOnline ? (
+                  <>
+                    <WifiOff size={14} />
+                    <span>Modo offline — seus dados serão sincronizados quando a internet voltar</span>
+                  </>
+                ) : syncing ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Sincronizando {pendingCount} dado(s)...</span>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 size={14} />
+                    <span>{pendingCount} dado(s) pendente(s) de sincronização</span>
+                  </>
+                )}
+              </div>
+            )}
+
             <h1 className="font-heading text-2xl sm:text-3xl text-foreground tracking-tight mb-6">
               PHYSIQ<span className="text-primary">CALC</span>{" "}
               <span className="text-muted-foreground text-lg">TREINOS</span>
