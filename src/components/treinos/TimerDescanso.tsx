@@ -123,7 +123,7 @@ const TimerDescanso = ({
     setEditMinutes(String(duracaoSegundos / 60));
 
     // Mostra notificação persistente + agenda notificação de fim com som
-    startTimerNotifications(exercicioNome, duracaoSegundos);
+    startTimerNotifications(`${exercicioNome} — Série ${numeroSerie}`, duracaoSegundos);
   }, [ativo, serieId, duracaoSegundos, exercicioNome, numeroSerie]);
 
   const playBeep = useCallback(async () => {
@@ -215,7 +215,7 @@ const TimerDescanso = ({
         cancelTimerNotification();
       } else {
         salvarEstado({ ...saved, isPaused: false, startedAt: Date.now() - ((saved.duracao - seconds) * 1000) });
-        startTimerNotifications(saved.exercicioNome, seconds);
+        startTimerNotifications(`${saved.exercicioNome} — Série ${saved.numeroSerie}`, seconds);
       }
     }
   };
@@ -226,7 +226,7 @@ const TimerDescanso = ({
     const saved = lerEstadoSalvo();
     if (saved) {
       salvarEstado({ ...saved, startedAt: Date.now(), isPaused: false, pausedRemaining: dur, duracao: dur });
-      startTimerNotifications(saved.exercicioNome, dur);
+      startTimerNotifications(`${saved.exercicioNome} — Série ${saved.numeroSerie}`, dur);
     }
   };
 
