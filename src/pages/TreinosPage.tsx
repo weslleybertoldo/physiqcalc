@@ -98,7 +98,7 @@ async function buscarUltimoTreino(
   const cacheKey = `ultimoTreino_${userId}_${exercicioId}`;
 
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("tb_treino_series")
       .select("numero_serie, peso, reps, data_treino")
       .eq("user_id", userId)
@@ -109,6 +109,7 @@ async function buscarUltimoTreino(
       .order("numero_serie", { ascending: true })
       .limit(20);
 
+    if (error) return getCacheData<any[]>(cacheKey);
     if (!data || data.length === 0) return null;
 
     const ultimaData = data[0].data_treino;
@@ -469,12 +470,18 @@ const TreinosPage = () => {
 
     // Online: tenta buscar do Supabase
     try {
-      const { data: seriesDoDia } = await supabase
+      const { data: seriesDoDia, error: seriesError } = await supabase
         .from("tb_treino_series")
         .select("*")
         .eq("user_id", user.id)
         .eq("data_treino", dateKey)
         .order("numero_serie");
+
+      // Se o Supabase retornou erro (sem internet real), usa cache
+      if (seriesError) {
+        loadSeriesFromCache();
+        return;
+      }
 
       const savedSeries = (seriesDoDia as any[]) || [];
 
