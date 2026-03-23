@@ -278,14 +278,42 @@ const TreinoDoDia = ({
   };
 
   const handleDesfazerSerie = async (exercicioId: string, numeroSerie: number) => {
+    // Salva as séries do mesmo exercício que vieram do histórico (salva: false)
+    // para que não desapareçam quando o refazer causar reload
+    const naoSalvas = series
+      .filter(s => s.exercicio_id === exercicioId && !s.salva);
+    for (const s of naoSalvas) {
+      await offlineUpsert(
+        "tb_treino_series",
+        {
+          user_id: userId,
+          exercicio_id: exercicioId,
+          data_treino: dateKey,
+          numero_serie: s.numero_serie,
+          peso: s.peso ?? 0,
+          reps: s.reps ?? 10,
+          concluida: false,
+          updated_at: new Date().toISOString(),
+        },
+        "user_id,exercicio_id,data_treino,numero_serie"
+      );
+    }
+
     await offlineUpdate(
       "tb_treino_series",
       { concluida: false, updated_at: new Date().toISOString() },
       { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie }
     );
-    onSeriesUpdate(prev => prev.map(s =>
-      s.exercicio_id === exercicioId && s.numero_serie === numeroSerie ? { ...s, concluida: false } : s
-    ));
+    onSeriesUpdate(prev => prev.map(s => {
+      if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
+        return { ...s, concluida: false };
+      }
+      // Marca as séries do histórico como salvas (agora existem no banco)
+      if (s.exercicio_id === exercicioId && !s.salva) {
+        return { ...s, salva: true };
+      }
+      return s;
+    }));
   };
 
   const handleAddSerie = async (exercicioId: string) => {
