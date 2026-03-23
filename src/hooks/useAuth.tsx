@@ -24,32 +24,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Tenta recuperar sessão existente primeiro (crucial para APK/Capacitor)
+    // 1. Recupera sessão do localStorage primeiro (funciona offline)
     const initSession = async () => {
       try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        // Sempre começa com a sessão local (funciona sem internet)
+        const { data: { session: localSession } } = await supabase.auth.getSession();
 
-        if (existingSession) {
-          // Sessão encontrada — tenta refresh para garantir token válido
-          const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-          const activeSession = refreshed || existingSession;
+        if (localSession) {
+          // Mostra o usuário imediatamente com dados locais
+          setSession(localSession);
+          setUser(localSession.user);
+          setLoading(false);
 
-          // Busca user completo para garantir que user_metadata está populado
-          const { data: { user: fullUser } } = await supabase.auth.getUser();
-          const userToSet = fullUser || activeSession.user;
-
-          setSession(activeSession);
-          setUser(userToSet);
+          // Se online, tenta refresh e buscar dados completos em background
+          if (navigator.onLine) {
+            try {
+              const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+              if (refreshed) {
+                setSession(refreshed);
+                setUser(refreshed.user);
+              }
+              // Busca user completo (user_metadata com avatar)
+              const { data: { user: fullUser } } = await supabase.auth.getUser();
+              if (fullUser) {
+                setUser(fullUser);
+              }
+            } catch {
+              // Falha no refresh — mantém sessão local, não desloga
+            }
+          }
         } else {
           setSession(null);
           setUser(null);
+          setLoading(false);
         }
       } catch {
-        // Falha no refresh (ex: offline) — mantém sessão do localStorage se existir
-        const { data: { session: fallback } } = await supabase.auth.getSession();
-        setSession(fallback);
-        setUser(fallback?.user ?? null);
-      } finally {
+        // Erro total — tenta sessão local como último recurso
+        try {
+          const { data: { session: fallback } } = await supabase.auth.getSession();
+          setSession(fallback);
+          setUser(fallback?.user ?? null);
+        } catch {
+          setSession(null);
+          setUser(null);
+        }
         setLoading(false);
       }
     };
