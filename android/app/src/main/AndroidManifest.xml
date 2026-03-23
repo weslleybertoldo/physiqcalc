@@ -32,6 +32,12 @@
 
         </activity>
 
+        <!-- Foreground Service para notificações do timer de descanso -->
+        <service
+            android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
