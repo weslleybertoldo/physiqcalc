@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { offlineUpsert, offlineInsert, offlineUpdate, offlineDelete, setCacheData, getCacheData } from "@/lib/offlineSync";
+import { offlineUpsert, offlineInsert, offlineUpdate, offlineDelete, setCacheData, getCacheData, addPendingOperation } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
@@ -79,6 +79,8 @@ const TreinoDoDia = ({
   // Refs para touch drag
   const sortedItemsRef = useRef<GrupoExercicio[]>([]);
   const draggingIdRef = useRef<string | null>(null);
+  const lastSwapIdRef = useRef<string | null>(null);
+  const throttleRef = useRef(false);
   const cardRectsRef = useRef<Map<string, DOMRect>>(new Map());
   const listContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -133,19 +135,27 @@ const TreinoDoDia = ({
   }, [exercicios, userId, grupoId]);
 
   const saveOrder = async (novaOrdem: GrupoExercicio[]) => {
-    for (let posicao = 0; posicao < novaOrdem.length; posicao++) {
-      const ex = novaOrdem[posicao];
-      await offlineUpsert(
-        "exercicio_ordem_usuario",
-        {
-          user_id: userId,
-          grupo_id: grupoId,
-          exercicio_id: ex.exercicio_id,
-          posicao,
-          updated_at: new Date().toISOString(),
-        },
-        "user_id,grupo_id,exercicio_id"
-      );
+    const cacheKey = `ordem_${userId}_${grupoId}`;
+    const upserts = novaOrdem.map((ex, posicao) => ({
+      user_id: userId,
+      grupo_id: grupoId,
+      exercicio_id: ex.exercicio_id,
+      posicao,
+      updated_at: new Date().toISOString(),
+    }));
+
+    // Salva no cache imediatamente
+    setCacheData(cacheKey, upserts.map(u => ({ exercicio_id: u.exercicio_id, posicao: u.posicao })));
+
+    // Salva no Supabase (batch upsert — uma chamada só)
+    try {
+      await (supabase.from as any)("exercicio_ordem_usuario")
+        .upsert(upserts, { onConflict: "user_id,grupo_id,exercicio_id" });
+    } catch {
+      // Offline: enfileira para sincronizar depois
+      for (const u of upserts) {
+        addPendingOperation("exercicio_ordem_usuario", "upsert", u, "user_id,grupo_id,exercicio_id");
+      }
     }
   };
 
@@ -178,16 +188,25 @@ const TreinoDoDia = ({
 
   const handleTouchDragStart = (exercicioId: string) => {
     draggingIdRef.current = exercicioId;
+    lastSwapIdRef.current = null;
+    throttleRef.current = false;
     setDraggingId(exercicioId);
     captureCardRects();
     if (navigator.vibrate) navigator.vibrate(30);
   };
 
   const handleTouchDragMove = (clientY: number) => {
+    // Throttle: ignora eventos por 200ms após cada troca (evita piscar)
+    if (throttleRef.current) return;
+
     const targetId = findCardAtY(clientY);
     if (!targetId || targetId === draggingIdRef.current) return;
+    // Só troca se o alvo mudou (evita trocar repetidamente com o mesmo card)
+    if (targetId === lastSwapIdRef.current) return;
 
+    lastSwapIdRef.current = targetId;
     setDragOverId(targetId);
+
     const items = sortedItemsRef.current;
     const from = items.findIndex(e => e.exercicio_id === draggingIdRef.current);
     const to = items.findIndex(e => e.exercicio_id === targetId);
@@ -197,13 +216,20 @@ const TreinoDoDia = ({
     novaOrdem.splice(from, 1);
     novaOrdem.splice(to, 0, items[from]);
     setSortedItems(novaOrdem);
-    // Recaptura rects após reordenar (DOM atualiza no próximo frame)
-    requestAnimationFrame(captureCardRects);
+    if (navigator.vibrate) navigator.vibrate(15);
+
+    // Throttle de 200ms antes de permitir próxima troca
+    throttleRef.current = true;
+    setTimeout(() => {
+      throttleRef.current = false;
+      requestAnimationFrame(captureCardRects);
+    }, 200);
   };
 
   const handleTouchDragEnd = async () => {
     const finalOrder = sortedItemsRef.current;
     draggingIdRef.current = null;
+    lastSwapIdRef.current = null;
     setDraggingId(null);
     setDragOverId(null);
     await saveOrder(finalOrder);
@@ -483,21 +509,43 @@ const ExercicioCard = ({
   const [comentarioAberto, setComentarioAberto] = useState(false);
   const [temComentario, setTemComentario] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragActiveRef = useRef(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    onTouchDragStart();
+    dragActiveRef.current = false;
+    // Inicia long press: 3 segundos para ativar o drag
+    longPressTimer.current = setTimeout(() => {
+      dragActiveRef.current = true;
+      onTouchDragStart();
+      if (navigator.vibrate) navigator.vibrate(100);
+    }, 3000);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
+    if (!dragActiveRef.current) {
+      // Se moveu antes dos 3s, cancela o long press
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+      return;
+    }
     const touch = e.touches[0];
     onTouchDragMove(touch.clientY);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     e.preventDefault();
-    onTouchDragEnd();
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (dragActiveRef.current) {
+      dragActiveRef.current = false;
+      onTouchDragEnd();
+    }
   };
 
   useEffect(() => {
