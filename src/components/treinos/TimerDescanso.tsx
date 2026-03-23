@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Play, Pause, RotateCcw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import {
+  requestNotificationPermission,
+  showTimerNotification,
+  showTimerFinishedNotification,
+  cancelTimerNotification,
+  scheduleTimerEndNotification,
+} from "@/lib/nativeNotifications";
 
 const LS_REST_KEY = "physiq_rest_timer";
 
@@ -44,23 +51,8 @@ function limparEstado() {
   localStorage.removeItem(LS_REST_KEY);
 }
 
-async function pedirPermissaoNotificacao() {
-  if (!("Notification" in window)) return;
-  if (Notification.permission === "default") {
-    await Notification.requestPermission();
-  }
-}
-
-function enviarNotificacao(exercicioNome: string) {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  try {
-    new Notification("PhysiqCalc — Hora de treinar! 💪", {
-      body: `Descanso concluído: ${exercicioNome}`,
-      icon: "/icons/icon-192x192.png",
-      tag: "descanso-concluido",
-    } as NotificationOptions);
-  } catch {}
-}
+// Contador para atualizar notificação a cada 5 segundos (não a cada 1s para performance)
+let lastNotifUpdate = 0;
 
 const TimerDescanso = ({
   ativo, exercicioNome, numeroSerie, duracaoSegundos, serieId, onFechado, onTempoAlterado,
@@ -91,7 +83,7 @@ const TimerDescanso = ({
   // Guarda o serieId da última série que disparou o timer
   const lastSerieIdRef = useRef<string>("");
 
-  useEffect(() => { pedirPermissaoNotificacao(); }, []);
+  useEffect(() => { requestNotificationPermission(); }, []);
 
   // Ao montar: recuperar estado salvo (preserva timer após reload/troca de aba)
   useEffect(() => {
@@ -130,7 +122,13 @@ const TimerDescanso = ({
     setPaused(false);
     setFinished(false);
     notifiedRef.current = false;
+    lastNotifUpdate = 0;
     setEditMinutes(String(duracaoSegundos / 60));
+
+    // Agenda notificação nativa para quando o timer acabar (funciona em background)
+    scheduleTimerEndNotification(exercicioNome, duracaoSegundos);
+    // Mostra notificação com contagem
+    showTimerNotification(exercicioNome, duracaoSegundos);
   }, [ativo, serieId, duracaoSegundos, exercicioNome, numeroSerie]);
 
   const playBeep = useCallback(async () => {
@@ -170,10 +168,16 @@ const TimerDescanso = ({
           if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
           if (!notifiedRef.current) {
             notifiedRef.current = true;
-            enviarNotificacao(exercicioNome);
+            showTimerFinishedNotification(exercicioNome);
           }
           limparEstado();
           return 0;
+        }
+        // Atualiza notificação a cada 5 segundos
+        const now = Date.now();
+        if (now - lastNotifUpdate > 5000) {
+          lastNotifUpdate = now;
+          showTimerNotification(exercicioNome, next);
         }
         const saved = lerEstadoSalvo();
         if (saved) salvarEstado({ ...saved, startedAt: Date.now() - ((saved.duracao - next) * 1000) });
@@ -189,6 +193,9 @@ const TimerDescanso = ({
     if (!ativo) return;
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
+        // Ao voltar ao app, remove notificação persistente (ongoing)
+        cancelTimerNotification();
+
         const saved = lerEstadoSalvo();
         if (!saved || !saved.ativo) return;
         const restante = calcularRestante(saved);
@@ -199,7 +206,6 @@ const TimerDescanso = ({
             notifiedRef.current = true;
             playBeep();
             if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
-            enviarNotificacao(saved.exercicioNome);
           }
           limparEstado();
         } else {
@@ -218,8 +224,12 @@ const TimerDescanso = ({
     if (saved) {
       if (nowPaused) {
         salvarEstado({ ...saved, isPaused: true, pausedRemaining: seconds });
+        cancelTimerNotification(); // Remove notificações ao pausar
       } else {
         salvarEstado({ ...saved, isPaused: false, startedAt: Date.now() - ((saved.duracao - seconds) * 1000) });
+        // Reagenda notificação de fim e mostra contagem
+        scheduleTimerEndNotification(saved.exercicioNome, seconds);
+        showTimerNotification(saved.exercicioNome, seconds);
       }
     }
   };
@@ -228,7 +238,11 @@ const TimerDescanso = ({
     const dur = duracaoAtualRef.current;
     setSeconds(dur); setPaused(false); setFinished(false); notifiedRef.current = false;
     const saved = lerEstadoSalvo();
-    if (saved) salvarEstado({ ...saved, startedAt: Date.now(), isPaused: false, pausedRemaining: dur, duracao: dur });
+    if (saved) {
+      salvarEstado({ ...saved, startedAt: Date.now(), isPaused: false, pausedRemaining: dur, duracao: dur });
+      scheduleTimerEndNotification(saved.exercicioNome, dur);
+      showTimerNotification(saved.exercicioNome, dur);
+    }
   };
 
   const handleSubtract15 = () => {
@@ -251,7 +265,7 @@ const TimerDescanso = ({
     if (saved) salvarEstado({ ...saved, duracao: newSec, pausedRemaining: newSec, startedAt: Date.now() });
   };
 
-  const handleFechar = () => { limparEstado(); onFechado(); };
+  const handleFechar = () => { limparEstado(); cancelTimerNotification(); onFechado(); };
 
   if (!ativo) return null;
 
