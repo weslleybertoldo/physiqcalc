@@ -12,6 +12,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
+import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
 import { useNavigate } from "react-router-dom";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
@@ -744,7 +745,10 @@ const TreinosPage = () => {
         <footer className="py-12 text-center space-y-4">
           <PWAInstallButton />
           <p className="text-xs text-muted-foreground font-body italic">By Weslley Bertoldo</p>
+          <p className="text-[10px] text-muted-foreground/50 font-body">v{CURRENT_VERSION}</p>
         </footer>
+
+        <UpdateChecker />
       </div>
 
       <TimerDescanso
