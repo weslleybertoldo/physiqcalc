@@ -66,19 +66,18 @@ async function executePendingOp(op: PendingOperation): Promise<boolean> {
 
     switch (op.type) {
       case "upsert":
-        result = await supabase
-          .from(op.table)
-          .upsert(op.data as any, op.onConflict ? { onConflict: op.onConflict } : undefined);
+        result = await (supabase.from as any)(op.table)
+          .upsert(op.data, op.onConflict ? { onConflict: op.onConflict } : undefined);
         break;
 
       case "insert":
-        result = await supabase.from(op.table).insert(op.data as any);
+        result = await (supabase.from as any)(op.table).insert(op.data);
         break;
 
       case "update":
         if (!op.match) return false;
         {
-          let query = supabase.from(op.table).update(op.data as any);
+          let query = (supabase.from as any)(op.table).update(op.data);
           for (const [key, value] of Object.entries(op.match)) {
             query = query.eq(key, value);
           }
@@ -89,7 +88,7 @@ async function executePendingOp(op: PendingOperation): Promise<boolean> {
       case "delete":
         if (!op.match) return false;
         {
-          let query = supabase.from(op.table).delete();
+          let query = (supabase.from as any)(op.table).delete();
           for (const [key, value] of Object.entries(op.match)) {
             query = query.eq(key, value);
           }
@@ -196,9 +195,8 @@ export async function offlineUpsert(
 ): Promise<{ offline: boolean }> {
   if (navigator.onLine) {
     try {
-      const { error } = await supabase
-        .from(table)
-        .upsert(data as any, { onConflict });
+      const { error } = await (supabase.from as any)(table)
+        .upsert(data, { onConflict });
       if (!error) return { offline: false };
     } catch {
       // Falha de rede — enfileira
@@ -215,7 +213,7 @@ export async function offlineInsert(
 ): Promise<{ offline: boolean }> {
   if (navigator.onLine) {
     try {
-      const { error } = await supabase.from(table).insert(data as any);
+      const { error } = await (supabase.from as any)(table).insert(data);
       if (!error) return { offline: false };
     } catch {
       // Falha de rede — enfileira
@@ -233,7 +231,7 @@ export async function offlineUpdate(
 ): Promise<{ offline: boolean }> {
   if (navigator.onLine) {
     try {
-      let query = supabase.from(table).update(data as any);
+      let query = (supabase.from as any)(table).update(data);
       for (const [key, value] of Object.entries(match)) {
         query = query.eq(key, value);
       }
@@ -254,7 +252,7 @@ export async function offlineDelete(
 ): Promise<{ offline: boolean }> {
   if (navigator.onLine) {
     try {
-      let query = supabase.from(table).delete();
+      let query = (supabase.from as any)(table).delete();
       for (const [key, value] of Object.entries(match)) {
         query = query.eq(key, value);
       }
