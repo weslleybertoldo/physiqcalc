@@ -80,8 +80,20 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
 
               // Salva foto e nome do Google no perfil
               if (user) {
-                const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
-                const fullName = user.user_metadata?.full_name || user.user_metadata?.name;
+                // Busca avatar de múltiplas fontes possíveis
+                const googleIdentity = user.identities?.find(
+                  (id: any) => id.provider === "google"
+                );
+                const avatarUrl =
+                  googleIdentity?.identity_data?.picture ||
+                  googleIdentity?.identity_data?.avatar_url ||
+                  user.user_metadata?.avatar_url ||
+                  user.user_metadata?.picture;
+                const fullName =
+                  googleIdentity?.identity_data?.full_name ||
+                  googleIdentity?.identity_data?.name ||
+                  user.user_metadata?.full_name ||
+                  user.user_metadata?.name;
                 if (avatarUrl) {
                   await supabase
                     .from("physiq_profiles")

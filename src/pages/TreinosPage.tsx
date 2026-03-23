@@ -529,8 +529,9 @@ const TreinosPage = () => {
 
   if (!user) return null;
 
-  const displayName = profile?.nome || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
-  const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
+  const googleIdentity = (user as any)?.identities?.find((id: any) => id.provider === "google");
+  const displayName = profile?.nome || googleIdentity?.identity_data?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
+  const avatarUrl = profile?.foto_url || googleIdentity?.identity_data?.picture || googleIdentity?.identity_data?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
   const initial = displayName.charAt(0).toUpperCase();
 
   const diasInfo = weekDates.map((d) => {
