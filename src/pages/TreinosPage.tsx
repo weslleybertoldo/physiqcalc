@@ -429,21 +429,35 @@ const TreinosPage = () => {
         setSeries(cached);
         return true;
       }
-      // Sem cache — cria séries placeholder
-      const placeholders: SerieComMemoria[] = [];
+      // Sem cache da data — tenta montar séries usando o cache do último treino
+      const allSeries: SerieComMemoria[] = [];
       for (const ge of exerciciosList) {
-        for (let i = 1; i <= 3; i++) {
-          placeholders.push({
-            exercicio_id: ge.exercicio_id,
-            numero_serie: i,
-            peso: 0,
-            reps: 10,
-            concluida: false,
-            salva: false,
+        const ultimoCache = getCacheData<any[]>(`ultimoTreino_${user.id}_${ge.exercicio_id}`);
+        if (ultimoCache && ultimoCache.length > 0) {
+          ultimoCache.forEach((s) => {
+            allSeries.push({
+              exercicio_id: ge.exercicio_id,
+              numero_serie: s.numero_serie,
+              peso: s.peso ?? 0,
+              reps: s.reps ?? 10,
+              concluida: false,
+              salva: false,
+            });
           });
+        } else {
+          for (let i = 1; i <= 3; i++) {
+            allSeries.push({
+              exercicio_id: ge.exercicio_id,
+              numero_serie: i,
+              peso: 0,
+              reps: 10,
+              concluida: false,
+              salva: false,
+            });
+          }
         }
       }
-      setSeries(placeholders);
+      setSeries(allSeries);
       return false;
     };
 
