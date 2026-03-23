@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff, X } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 interface Props {
   grupoNome: string | null;
@@ -7,6 +9,8 @@ interface Props {
 }
 
 const REMINDER_KEY = "physiq_workout_reminder";
+const REMINDER_NOTIF_ID = 2001;
+const isNative = Capacitor.isNativePlatform();
 
 function getStoredReminder(): { hour: number; minute: number; enabled: boolean } | null {
   try {
@@ -23,50 +27,107 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
   const [enabled, setEnabled] = useState(stored?.enabled ?? false);
   const [hour, setHour] = useState(stored?.hour ?? 7);
   const [minute, setMinute] = useState(stored?.minute ?? 0);
-  const [permission, setPermission] = useState<NotificationPermission>(
-    typeof Notification !== "undefined" ? Notification.permission : "denied"
-  );
+  const [permGranted, setPermGranted] = useState(true); // assume granted, check on open
 
+  // Verifica permissão ao abrir o modal
   useEffect(() => {
-    if (!enabled) return;
-
-    const checkReminder = () => {
-      const now = new Date();
-      if (now.getHours() === hour && now.getMinutes() === minute) {
-        if (permission === "granted" && grupoNome) {
-          new Notification("PhysiqCalc — Hora do Treino! 💪", {
-            body: `Treino de hoje: ${grupoNome} (${dateLabel})`,
-            icon: "/icon-192.png",
-            badge: "/icon-192.png",
-          });
-        }
+    if (!open) return;
+    const checkPerm = async () => {
+      if (isNative) {
+        const { display } = await LocalNotifications.checkPermissions();
+        setPermGranted(display === "granted");
+      } else if ("Notification" in window) {
+        setPermGranted(Notification.permission === "granted" || Notification.permission === "default");
       }
     };
+    checkPerm();
+  }, [open]);
 
-    const interval = setInterval(checkReminder, 60000); // check every minute
-    return () => clearInterval(interval);
-  }, [enabled, hour, minute, permission, grupoNome, dateLabel]);
+  // Lembrete: no APK usa LocalNotifications agendada, no PWA usa Notification API
+  useEffect(() => {
+    if (!enabled || !grupoNome) return;
 
-  const requestPermission = async () => {
-    if (typeof Notification === "undefined") return;
-    const result = await Notification.requestPermission();
-    setPermission(result);
-    return result;
+    if (isNative) {
+      // Agenda notificação diária via LocalNotifications
+      const scheduleReminder = async () => {
+        try {
+          await LocalNotifications.cancel({ notifications: [{ id: REMINDER_NOTIF_ID }] });
+
+          const now = new Date();
+          const target = new Date();
+          target.setHours(hour, minute, 0, 0);
+          // Se já passou do horário hoje, agenda para amanhã
+          if (target <= now) {
+            target.setDate(target.getDate() + 1);
+          }
+
+          await LocalNotifications.schedule({
+            notifications: [{
+              id: REMINDER_NOTIF_ID,
+              title: "PhysiqCalc — Hora do Treino! 💪",
+              body: `Treino de hoje: ${grupoNome} (${dateLabel})`,
+              smallIcon: "ic_launcher",
+              sound: "default",
+              schedule: {
+                at: target,
+                every: "day",
+                allowWhileIdle: true,
+              },
+            }],
+          });
+        } catch (e) {
+          console.warn("[WorkoutReminder] schedule failed:", e);
+        }
+      };
+      scheduleReminder();
+    } else {
+      // PWA: check every minute
+      const interval = setInterval(() => {
+        const now = new Date();
+        if (now.getHours() === hour && now.getMinutes() === minute) {
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("PhysiqCalc — Hora do Treino! 💪", {
+              body: `Treino de hoje: ${grupoNome} (${dateLabel})`,
+              icon: "/icon-192.png",
+            });
+          }
+        }
+      }, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [enabled, hour, minute, grupoNome, dateLabel]);
+
+  const requestPermission = async (): Promise<boolean> => {
+    if (isNative) {
+      const { display } = await LocalNotifications.requestPermissions();
+      const granted = display === "granted";
+      setPermGranted(granted);
+      return granted;
+    } else if ("Notification" in window) {
+      const result = await Notification.requestPermission();
+      const granted = result === "granted";
+      setPermGranted(granted);
+      return granted;
+    }
+    return false;
   };
 
   const toggleReminder = async () => {
     if (!enabled) {
-      let perm = permission;
-      if (perm !== "granted") {
-        perm = (await requestPermission()) || "denied";
-      }
-      if (perm === "granted") {
+      const granted = await requestPermission();
+      if (granted) {
         setEnabled(true);
         localStorage.setItem(REMINDER_KEY, JSON.stringify({ hour, minute, enabled: true }));
       }
     } else {
       setEnabled(false);
       localStorage.setItem(REMINDER_KEY, JSON.stringify({ hour, minute, enabled: false }));
+      // Cancela notificação agendada
+      if (isNative) {
+        try {
+          await LocalNotifications.cancel({ notifications: [{ id: REMINDER_NOTIF_ID }] });
+        } catch {}
+      }
     }
   };
 
@@ -107,9 +168,9 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
               Receba uma notificação diária no horário escolhido para lembrar do seu treino.
             </p>
 
-            {permission === "denied" && (
+            {!permGranted && (
               <p className="text-xs text-destructive font-body">
-                ⚠ Notificações bloqueadas no navegador. Habilite nas configurações do seu navegador.
+                ⚠ Notificações bloqueadas. Habilite nas configurações do app.
               </p>
             )}
 
@@ -129,12 +190,11 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
             <button
               type="button"
               onClick={toggleReminder}
-              disabled={permission === "denied"}
               className={`w-full py-3 rounded-lg font-heading text-xs uppercase tracking-widest transition-colors ${
                 enabled
                   ? "bg-muted text-muted-foreground hover:bg-muted/80"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              }`}
             >
               {enabled ? "Desativar lembrete" : "Ativar lembrete"}
             </button>
