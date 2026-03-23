@@ -33,32 +33,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Auto-increment version
+      - name: Get current version
         id: version
         run: |
           CURRENT=$(node -p "require('./package.json').version")
-          # Incrementa patch: 1.0.0 -> 1.0.1
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "Versão: $CURRENT -> $NEW_VERSION"
-
-          # Atualiza package.json
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '$NEW_VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-
-          # Atualiza version.json
-          node -e "
-            const fs = require('fs');
-            const v = JSON.parse(fs.readFileSync('public/version.json', 'utf8'));
-            v.version = '$NEW_VERSION';
-            fs.writeFileSync('public/version.json', JSON.stringify(v, null, 2) + '\n');
-          "
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Compilando APK com versão: $CURRENT"
 
       - name: Install dependencies
         run: npm ci
@@ -88,21 +68,35 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: PhysiqCalc v${{ steps.version.outputs.version }}
+          tag_name: v${{ steps.version.outputs.current }}
+          name: PhysiqCalc v${{ steps.version.outputs.current }}
           body: |
-            ## PhysiqCalc v${{ steps.version.outputs.version }}
+            ## PhysiqCalc v${{ steps.version.outputs.current }}
 
             APK gerado automaticamente.
 
             **Download:** Baixe o `PhysiqCalc.apk` abaixo.
           files: android/app/build/outputs/apk/debug/PhysiqCalc.apk
           generate_release_notes: true
+          make_latest: true
 
-      - name: Commit version bump
+      - name: Bump version for next build
         run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_PATCH=$((PATCH + 1))
+          NEXT="$MAJOR.$MINOR.$NEW_PATCH"
+          echo "Preparando próxima versão: $CURRENT -> $NEXT"
+
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$NEXT';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json public/version.json
-          git diff --staged --quiet || git commit -m "chore: bump version to v${{ steps.version.outputs.version }} [skip ci]"
+          git add package.json
+          git diff --staged --quiet || git commit -m "chore: bump version to v$NEXT [skip ci]"
           git push
