@@ -537,6 +537,12 @@ const TreinosPage = () => {
 
       setCacheData(seriesCacheKey, allSeries);
       setSeries(allSeries);
+
+      // Cacheia último treino de TODOS os exercícios em background
+      // (garante que offline terá pesos mesmo para dias futuros)
+      for (const ge of exerciciosList) {
+        buscarUltimoTreino(user.id, ge.exercicio_id, dateKey);
+      }
     } catch {
       // Falha de rede — carrega do cache
       loadSeriesFromCache();

@@ -14,21 +14,30 @@
         android:singleLine="true"
         android:ellipsize="end" />
 
-    <Chronometer
-        android:id="@+id/notification_chronometer"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:textSize="28sp"
-        android:textColor="#F59E0B"
-        android:textStyle="bold" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="2dp">
 
-    <TextView
-        android:id="@+id/notification_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="⏱ Descanso"
-        android:textSize="11sp"
-        android:textColor="#888888" />
+        <TextView
+            android:id="@+id/notification_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⏱ Descanso"
+            android:textSize="16sp"
+            android:textColor="#888888" />
+
+        <Chronometer
+            android:id="@+id/notification_chronometer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="22sp"
+            android:textColor="#F59E0B"
+            android:textStyle="bold" />
+
+    </LinearLayout>
 
 </LinearLayout>
