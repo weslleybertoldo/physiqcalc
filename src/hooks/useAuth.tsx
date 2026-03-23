@@ -58,18 +58,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
 
       // Após login, sincroniza foto e nome do Google para o perfil
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
+      if (event === "SIGNED_IN" && session?.user) {
         const avatarUrl = session.user.user_metadata?.avatar_url;
         const fullName = session.user.user_metadata?.full_name;
-        if (avatarUrl || fullName) {
-          const updates: Record<string, string> = {};
-          if (avatarUrl) updates.foto_url = avatarUrl;
-          if (fullName) updates.nome = fullName;
+        if (avatarUrl) {
           supabase
             .from("physiq_profiles")
-            .update(updates)
+            .update({ foto_url: avatarUrl, ...(fullName ? { nome: fullName } : {}) })
             .eq("id", session.user.id)
-            .is("foto_url", null)
             .then(() => {});
         }
       }

@@ -75,6 +75,8 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
             if (sessionError) {
               resolve({ error: sessionError.message });
             } else {
+              // Força buscar user completo (com user_metadata, avatar_url, etc)
+              await supabase.auth.getUser();
               resolve({});
             }
           } else {
