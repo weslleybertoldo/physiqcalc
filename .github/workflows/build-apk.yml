@@ -40,6 +40,10 @@ jobs:
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
           echo "Compilando APK com versão: $CURRENT"
 
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/physiqcalc-release.keystore
+
       - name: Install dependencies
         run: npm ci
 
@@ -52,17 +56,24 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build APK
-        run: cd android && ./gradlew assembleDebug
+      - name: Build signed APK
+        run: cd android && ./gradlew assembleRelease
+        env:
+          KEYSTORE_FILE: physiqcalc-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Rename APK
-        run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/PhysiqCalc.apk
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          mv "$APK" android/app/build/outputs/apk/release/PhysiqCalc.apk
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: PhysiqCalc
-          path: android/app/build/outputs/apk/debug/PhysiqCalc.apk
+          path: android/app/build/outputs/apk/release/PhysiqCalc.apk
           retention-days: 30
 
       - name: Create GitHub Release
@@ -76,7 +87,7 @@ jobs:
             APK gerado automaticamente.
 
             **Download:** Baixe o `PhysiqCalc.apk` abaixo.
-          files: android/app/build/outputs/apk/debug/PhysiqCalc.apk
+          files: android/app/build/outputs/apk/release/PhysiqCalc.apk
           generate_release_notes: true
           make_latest: true
 
