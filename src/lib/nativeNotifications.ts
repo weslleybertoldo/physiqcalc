@@ -3,22 +3,23 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 
 const isNative = Capacitor.isNativePlatform();
 
-// IDs
 const TIMER_ONGOING_ID = 1001;
 const TIMER_FINISHED_ID = 1002;
 
-// Referência ao interval do foreground service
 let fgInterval: ReturnType<typeof setInterval> | null = null;
 let fgEndTime = 0;
 let fgExercicioNome = "";
+let FgServiceCache: any = null;
 
-// Lazy import do ForegroundService (só existe no APK)
 async function getForegroundService() {
   if (!isNative) return null;
+  if (FgServiceCache) return FgServiceCache;
   try {
     const mod = await import("@capawesome-team/capacitor-android-foreground-service");
-    return mod.ForegroundService;
-  } catch {
+    FgServiceCache = mod.ForegroundService;
+    return FgServiceCache;
+  } catch (e) {
+    console.warn("[Notifications] ForegroundService not available:", e);
     return null;
   }
 }
@@ -30,7 +31,7 @@ function formatCountdown(seconds: number): string {
 }
 
 /**
- * Pede permissão para notificações
+ * Pede todas as permissões necessárias para notificações
  */
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!isNative) {
@@ -41,12 +42,24 @@ export async function requestNotificationPermission(): Promise<boolean> {
     return Notification.permission === "granted";
   }
 
+  // Permissão de notificações locais
   const { display } = await LocalNotifications.requestPermissions();
+
+  // Permissão do Foreground Service (Android 13+ precisa de POST_NOTIFICATIONS)
+  const FgService = await getForegroundService();
+  if (FgService) {
+    try {
+      await FgService.requestPermissions();
+    } catch (e) {
+      console.warn("[Notifications] FG permission request failed:", e);
+    }
+  }
+
   return display === "granted";
 }
 
 /**
- * Inicia o timer com Foreground Service (contagem regressiva real nas notificações)
+ * Inicia o timer com Foreground Service + fallback para LocalNotifications
  */
 export async function startTimerNotifications(
   exercicioNome: string,
@@ -54,85 +67,116 @@ export async function startTimerNotifications(
 ): Promise<void> {
   if (!isNative) return;
 
-  // Limpa timer anterior
   await cancelTimerNotification();
-
-  const FgService = await getForegroundService();
-  if (!FgService) return;
 
   fgEndTime = Date.now() + segundosRestantes * 1000;
   fgExercicioNome = exercicioNome;
 
-  try {
-    // Inicia o Foreground Service com a notificação
-    await FgService.startForegroundService({
-      id: TIMER_ONGOING_ID,
-      title: `⏱ Descanso — ${formatCountdown(segundosRestantes)}`,
-      body: `${exercicioNome}`,
-      smallIcon: "ic_launcher",
-    });
+  const FgService = await getForegroundService();
 
-    // Atualiza a notificação a cada segundo (roda no Foreground Service, não é suspenso)
-    fgInterval = setInterval(async () => {
-      const remaining = Math.max(0, Math.round((fgEndTime - Date.now()) / 1000));
+  // Tenta Foreground Service primeiro
+  if (FgService) {
+    try {
+      await FgService.startForegroundService({
+        id: TIMER_ONGOING_ID,
+        title: `⏱ Descanso — ${formatCountdown(segundosRestantes)}`,
+        body: exercicioNome,
+        smallIcon: "ic_launcher",
+        silent: true,
+      });
 
-      if (remaining <= 0) {
-        // Timer acabou!
-        if (fgInterval) clearInterval(fgInterval);
-        fgInterval = null;
+      // Atualiza a cada segundo
+      fgInterval = setInterval(async () => {
+        const remaining = Math.max(0, Math.round((fgEndTime - Date.now()) / 1000));
 
-        // Para o foreground service
+        if (remaining <= 0) {
+          if (fgInterval) clearInterval(fgInterval);
+          fgInterval = null;
+
+          try { await FgService.stopForegroundService(); } catch (e) {
+            console.warn("[Notifications] stop FG failed:", e);
+          }
+
+          try {
+            await LocalNotifications.schedule({
+              notifications: [{
+                id: TIMER_FINISHED_ID,
+                title: "Hora de treinar! 💪",
+                body: `Descanso concluído: ${fgExercicioNome}`,
+                smallIcon: "ic_launcher",
+                sound: "default",
+              }],
+            });
+          } catch (e) {
+            console.warn("[Notifications] schedule finished failed:", e);
+          }
+          return;
+        }
+
         try {
-          await FgService.stopForegroundService();
-        } catch {}
+          await FgService.updateForegroundService({
+            id: TIMER_ONGOING_ID,
+            title: `⏱ Descanso — ${formatCountdown(remaining)}`,
+            body: fgExercicioNome,
+            smallIcon: "ic_launcher",
+            silent: true,
+          });
+        } catch (e) {
+          console.warn("[Notifications] update FG failed:", e);
+        }
+      }, 1000);
 
-        // Mostra notificação de fim com som
-        await LocalNotifications.schedule({
-          notifications: [
-            {
-              id: TIMER_FINISHED_ID,
-              title: "Hora de treinar! 💪",
-              body: `Descanso concluído: ${fgExercicioNome}`,
-              smallIcon: "ic_launcher",
-              sound: "default",
-            },
-          ],
-        });
-        return;
-      }
+      console.log("[Notifications] ForegroundService started OK");
+    } catch (e) {
+      console.warn("[Notifications] ForegroundService start failed, using fallback:", e);
+      FgServiceCache = null; // Reset cache para tentar novamente depois
+    }
+  }
 
-      // Atualiza contagem regressiva
-      try {
-        await FgService.updateForegroundService({
-          id: TIMER_ONGOING_ID,
-          title: `⏱ Descanso — ${formatCountdown(remaining)}`,
-          body: `${fgExercicioNome}`,
-          smallIcon: "ic_launcher",
-        });
-      } catch {}
-    }, 1000);
-
-    // Também agenda notificação de backup via LocalNotifications (caso o FG service morra)
+  // Sempre agenda notificação de backup para quando acabar o tempo
+  try {
     await LocalNotifications.schedule({
-      notifications: [
-        {
-          id: TIMER_FINISHED_ID,
-          title: "Hora de treinar! 💪",
-          body: `Descanso concluído: ${exercicioNome}`,
-          smallIcon: "ic_launcher",
-          sound: "default",
-          schedule: {
-            at: new Date(fgEndTime),
-            allowWhileIdle: true,
-          },
+      notifications: [{
+        id: TIMER_FINISHED_ID,
+        title: "Hora de treinar! 💪",
+        body: `Descanso concluído: ${exercicioNome}`,
+        smallIcon: "ic_launcher",
+        sound: "default",
+        schedule: {
+          at: new Date(fgEndTime),
+          allowWhileIdle: true,
         },
-      ],
+      }],
     });
-  } catch {}
+  } catch (e) {
+    console.warn("[Notifications] schedule backup failed:", e);
+  }
+
+  // Fallback: se ForegroundService falhou, mostra notificação estática
+  if (!FgService || !fgInterval) {
+    const endTime = new Date(fgEndTime);
+    const endStr = `${String(endTime.getHours()).padStart(2, "0")}:${String(endTime.getMinutes()).padStart(2, "0")}`;
+    try {
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: TIMER_ONGOING_ID,
+          title: `⏱ Descanso — ${formatCountdown(segundosRestantes)}`,
+          body: `${exercicioNome} — Termina às ${endStr}`,
+          smallIcon: "ic_launcher",
+          ongoing: true,
+          autoCancel: false,
+          sound: "",
+        }],
+      });
+      console.log("[Notifications] Fallback static notification shown");
+    } catch (e) {
+      console.warn("[Notifications] fallback notification failed:", e);
+    }
+  }
 }
 
 /**
- * Notificação de timer finalizado (quando o app está em foreground)
+ * Chamada quando o timer termina no foreground
  */
 export async function showTimerFinishedNotification(
   exercicioNome: string
@@ -145,15 +189,18 @@ export async function showTimerFinishedNotification(
           icon: "/icon-192.png",
           tag: "descanso-concluido",
         });
-      } catch {}
+      } catch (e) {
+        console.warn("[Notifications] browser notification failed:", e);
+      }
     }
     return;
   }
 
-  // Para o foreground service se ainda estiver rodando
   const FgService = await getForegroundService();
   if (FgService) {
-    try { await FgService.stopForegroundService(); } catch {}
+    try { await FgService.stopForegroundService(); } catch (e) {
+      console.warn("[Notifications] stop FG on finish failed:", e);
+    }
   }
 }
 
@@ -161,7 +208,6 @@ export async function showTimerFinishedNotification(
  * Remove todas as notificações e para o foreground service
  */
 export async function cancelTimerNotification(): Promise<void> {
-  // Limpa o interval
   if (fgInterval) {
     clearInterval(fgInterval);
     fgInterval = null;
@@ -169,13 +215,13 @@ export async function cancelTimerNotification(): Promise<void> {
 
   if (!isNative) return;
 
-  // Para o foreground service
   const FgService = await getForegroundService();
   if (FgService) {
-    try { await FgService.stopForegroundService(); } catch {}
+    try { await FgService.stopForegroundService(); } catch (e) {
+      console.warn("[Notifications] stop FG on cancel failed:", e);
+    }
   }
 
-  // Cancela notificações locais
   try {
     await LocalNotifications.cancel({
       notifications: [
@@ -183,5 +229,7 @@ export async function cancelTimerNotification(): Promise<void> {
         { id: TIMER_FINISHED_ID },
       ],
     });
-  } catch {}
+  } catch (e) {
+    console.warn("[Notifications] cancel local notifications failed:", e);
+  }
 }
