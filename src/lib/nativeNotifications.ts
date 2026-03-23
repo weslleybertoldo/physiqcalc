@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { ForegroundService } from "@capawesome-team/capacitor-android-foreground-service";
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -9,20 +10,7 @@ const TIMER_FINISHED_ID = 1002;
 let fgInterval: ReturnType<typeof setInterval> | null = null;
 let fgEndTime = 0;
 let fgExercicioNome = "";
-let FgServiceCache: any = null;
-
-async function getForegroundService() {
-  if (!isNative) return null;
-  if (FgServiceCache) return FgServiceCache;
-  try {
-    const mod = await import("@capawesome-team/capacitor-android-foreground-service");
-    FgServiceCache = mod.ForegroundService;
-    return FgServiceCache;
-  } catch (e) {
-    console.warn("[Notifications] ForegroundService not available:", e);
-    return null;
-  }
-}
+let fgAvailable = true;
 
 function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -42,17 +30,13 @@ export async function requestNotificationPermission(): Promise<boolean> {
     return Notification.permission === "granted";
   }
 
-  // Permissão de notificações locais
   const { display } = await LocalNotifications.requestPermissions();
 
-  // Permissão do Foreground Service (Android 13+ precisa de POST_NOTIFICATIONS)
-  const FgService = await getForegroundService();
-  if (FgService) {
-    try {
-      await FgService.requestPermissions();
-    } catch (e) {
-      console.warn("[Notifications] FG permission request failed:", e);
-    }
+  try {
+    await ForegroundService.requestPermissions();
+  } catch (e) {
+    console.warn("[Notifications] FG permission failed:", e);
+    fgAvailable = false;
   }
 
   return display === "granted";
@@ -72,12 +56,10 @@ export async function startTimerNotifications(
   fgEndTime = Date.now() + segundosRestantes * 1000;
   fgExercicioNome = exercicioNome;
 
-  const FgService = await getForegroundService();
-
-  // Tenta Foreground Service primeiro
-  if (FgService) {
+  // Tenta Foreground Service
+  if (fgAvailable) {
     try {
-      await FgService.startForegroundService({
+      await ForegroundService.startForegroundService({
         id: TIMER_ONGOING_ID,
         title: `⏱ Descanso — ${formatCountdown(segundosRestantes)}`,
         body: exercicioNome,
@@ -85,7 +67,6 @@ export async function startTimerNotifications(
         silent: true,
       });
 
-      // Atualiza a cada segundo
       fgInterval = setInterval(async () => {
         const remaining = Math.max(0, Math.round((fgEndTime - Date.now()) / 1000));
 
@@ -93,8 +74,8 @@ export async function startTimerNotifications(
           if (fgInterval) clearInterval(fgInterval);
           fgInterval = null;
 
-          try { await FgService.stopForegroundService(); } catch (e) {
-            console.warn("[Notifications] stop FG failed:", e);
+          try { await ForegroundService.stopForegroundService(); } catch (e) {
+            console.warn("[Timer] stop FG:", e);
           }
 
           try {
@@ -108,13 +89,13 @@ export async function startTimerNotifications(
               }],
             });
           } catch (e) {
-            console.warn("[Notifications] schedule finished failed:", e);
+            console.warn("[Timer] schedule end notif:", e);
           }
           return;
         }
 
         try {
-          await FgService.updateForegroundService({
+          await ForegroundService.updateForegroundService({
             id: TIMER_ONGOING_ID,
             title: `⏱ Descanso — ${formatCountdown(remaining)}`,
             body: fgExercicioNome,
@@ -122,18 +103,18 @@ export async function startTimerNotifications(
             silent: true,
           });
         } catch (e) {
-          console.warn("[Notifications] update FG failed:", e);
+          console.warn("[Timer] update FG:", e);
         }
       }, 1000);
 
-      console.log("[Notifications] ForegroundService started OK");
+      console.log("[Timer] ForegroundService started");
     } catch (e) {
-      console.warn("[Notifications] ForegroundService start failed, using fallback:", e);
-      FgServiceCache = null; // Reset cache para tentar novamente depois
+      console.warn("[Timer] FG start failed:", e);
+      fgAvailable = false;
     }
   }
 
-  // Sempre agenda notificação de backup para quando acabar o tempo
+  // Sempre agenda notificação de fim (backup)
   try {
     await LocalNotifications.schedule({
       notifications: [{
@@ -149,11 +130,11 @@ export async function startTimerNotifications(
       }],
     });
   } catch (e) {
-    console.warn("[Notifications] schedule backup failed:", e);
+    console.warn("[Timer] schedule backup:", e);
   }
 
-  // Fallback: se ForegroundService falhou, mostra notificação estática
-  if (!FgService || !fgInterval) {
+  // Fallback se FG não funcionou: notificação estática
+  if (!fgAvailable || !fgInterval) {
     const endTime = new Date(fgEndTime);
     const endStr = `${String(endTime.getHours()).padStart(2, "0")}:${String(endTime.getMinutes()).padStart(2, "0")}`;
     try {
@@ -165,12 +146,10 @@ export async function startTimerNotifications(
           smallIcon: "ic_launcher",
           ongoing: true,
           autoCancel: false,
-          sound: "",
         }],
       });
-      console.log("[Notifications] Fallback static notification shown");
     } catch (e) {
-      console.warn("[Notifications] fallback notification failed:", e);
+      console.warn("[Timer] fallback notif:", e);
     }
   }
 }
@@ -190,16 +169,15 @@ export async function showTimerFinishedNotification(
           tag: "descanso-concluido",
         });
       } catch (e) {
-        console.warn("[Notifications] browser notification failed:", e);
+        console.warn("[Timer] browser notif:", e);
       }
     }
     return;
   }
 
-  const FgService = await getForegroundService();
-  if (FgService) {
-    try { await FgService.stopForegroundService(); } catch (e) {
-      console.warn("[Notifications] stop FG on finish failed:", e);
+  if (fgAvailable) {
+    try { await ForegroundService.stopForegroundService(); } catch (e) {
+      console.warn("[Timer] stop FG on finish:", e);
     }
   }
 }
@@ -215,10 +193,9 @@ export async function cancelTimerNotification(): Promise<void> {
 
   if (!isNative) return;
 
-  const FgService = await getForegroundService();
-  if (FgService) {
-    try { await FgService.stopForegroundService(); } catch (e) {
-      console.warn("[Notifications] stop FG on cancel failed:", e);
+  if (fgAvailable) {
+    try { await ForegroundService.stopForegroundService(); } catch (e) {
+      console.warn("[Timer] stop FG on cancel:", e);
     }
   }
 
@@ -230,6 +207,6 @@ export async function cancelTimerNotification(): Promise<void> {
       ],
     });
   } catch (e) {
-    console.warn("[Notifications] cancel local notifications failed:", e);
+    console.warn("[Timer] cancel notifs:", e);
   }
 }
