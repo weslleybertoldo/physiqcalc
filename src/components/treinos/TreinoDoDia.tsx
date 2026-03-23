@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { offlineUpsert, offlineInsert, offlineUpdate, offlineDelete } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
@@ -111,14 +112,20 @@ const TreinoDoDia = ({
   }, [exercicios, userId, grupoId]);
 
   const saveOrder = async (novaOrdem: GrupoExercicio[]) => {
-    const upserts = novaOrdem.map((ex, posicao) => ({
-      user_id: userId,
-      grupo_id: grupoId,
-      exercicio_id: ex.exercicio_id,
-      posicao,
-      updated_at: new Date().toISOString(),
-    }));
-    await supabase.from("exercicio_ordem_usuario").upsert(upserts, { onConflict: "user_id,grupo_id,exercicio_id" });
+    for (let posicao = 0; posicao < novaOrdem.length; posicao++) {
+      const ex = novaOrdem[posicao];
+      await offlineUpsert(
+        "exercicio_ordem_usuario",
+        {
+          user_id: userId,
+          grupo_id: grupoId,
+          exercicio_id: ex.exercicio_id,
+          posicao,
+          updated_at: new Date().toISOString(),
+        },
+        "user_id,grupo_id,exercicio_id"
+      );
+    }
   };
 
   // Captura os bounding rects de todos os cards antes de iniciar o drag
@@ -217,7 +224,8 @@ const TreinoDoDia = ({
     tempoSegundos?: number, distanciaKm?: number
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
-    await supabase.from("tb_treino_series").upsert(
+    await offlineUpsert(
+      "tb_treino_series",
       {
         user_id: userId,
         exercicio_id: exercicioId,
@@ -229,8 +237,8 @@ const TreinoDoDia = ({
         distancia_km: distanciaKm ?? null,
         pace_segundos_km: pace ?? null,
         updated_at: new Date().toISOString(),
-      } as any,
-      { onConflict: "user_id,exercicio_id,data_treino,numero_serie" }
+      },
+      "user_id,exercicio_id,data_treino,numero_serie"
     );
     onSeriesUpdate(prev => prev.map(s =>
       s.exercicio_id === exercicioId && s.numero_serie === numeroSerie
@@ -244,7 +252,8 @@ const TreinoDoDia = ({
     tempoSegundos?: number, distanciaKm?: number
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
-    await supabase.from("tb_treino_series").upsert(
+    await offlineUpsert(
+      "tb_treino_series",
       {
         user_id: userId,
         exercicio_id: exercicioId,
@@ -257,8 +266,8 @@ const TreinoDoDia = ({
         pace_segundos_km: pace ?? null,
         concluida: true,
         updated_at: new Date().toISOString(),
-      } as any,
-      { onConflict: "user_id,exercicio_id,data_treino,numero_serie" }
+      },
+      "user_id,exercicio_id,data_treino,numero_serie"
     );
     onSeriesUpdate(prev => prev.map(s =>
       s.exercicio_id === exercicioId && s.numero_serie === numeroSerie
@@ -269,10 +278,11 @@ const TreinoDoDia = ({
   };
 
   const handleDesfazerSerie = async (exercicioId: string, numeroSerie: number) => {
-    await supabase.from("tb_treino_series")
-      .update({ concluida: false, updated_at: new Date().toISOString() })
-      .eq("user_id", userId).eq("exercicio_id", exercicioId)
-      .eq("data_treino", dateKey).eq("numero_serie", numeroSerie);
+    await offlineUpdate(
+      "tb_treino_series",
+      { concluida: false, updated_at: new Date().toISOString() },
+      { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie }
+    );
     onSeriesUpdate(prev => prev.map(s =>
       s.exercicio_id === exercicioId && s.numero_serie === numeroSerie ? { ...s, concluida: false } : s
     ));
@@ -284,7 +294,7 @@ const TreinoDoDia = ({
     const novoNum = existing.length > 0 ? Math.max(...existing.map(s => s.numero_serie)) + 1 : 1;
     const peso = last?.peso ?? 0;
     const reps = last?.reps ?? 10;
-    await supabase.from("tb_treino_series").insert({
+    await offlineInsert("tb_treino_series", {
       user_id: userId, exercicio_id: exercicioId, data_treino: dateKey,
       numero_serie: novoNum, peso, reps,
     });
@@ -293,9 +303,10 @@ const TreinoDoDia = ({
 
   const handleRemoveSerie = async (exercicioId: string, numeroSerie: number, isSalva: boolean) => {
     if (isSalva) {
-      await supabase.from("tb_treino_series").delete()
-        .eq("user_id", userId).eq("exercicio_id", exercicioId)
-        .eq("data_treino", dateKey).eq("numero_serie", numeroSerie);
+      await offlineDelete("tb_treino_series", {
+        user_id: userId, exercicio_id: exercicioId,
+        data_treino: dateKey, numero_serie: numeroSerie,
+      });
     }
     onSeriesUpdate(prev =>
       prev.filter(s => !(s.exercicio_id === exercicioId && s.numero_serie === numeroSerie))
@@ -307,11 +318,12 @@ const TreinoDoDia = ({
   const handleConcluir = async () => {
     setSaving(true);
     if (concluido) {
-      await supabase.from("tb_treino_concluido").delete().eq("user_id", userId).eq("data_treino", dateKey);
+      await offlineDelete("tb_treino_concluido", { user_id: userId, data_treino: dateKey });
     } else {
-      await supabase.from("tb_treino_concluido").upsert(
+      await offlineUpsert(
+        "tb_treino_concluido",
         { user_id: userId, data_treino: dateKey, concluido: true },
-        { onConflict: "user_id,data_treino" }
+        "user_id,data_treino"
       );
       toast.success("Treino concluído! 💪");
     }
