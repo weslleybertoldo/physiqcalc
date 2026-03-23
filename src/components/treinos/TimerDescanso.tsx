@@ -3,10 +3,9 @@ import { X, Play, Pause, RotateCcw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   requestNotificationPermission,
-  showTimerNotification,
+  startTimerNotifications,
   showTimerFinishedNotification,
   cancelTimerNotification,
-  scheduleTimerEndNotification,
 } from "@/lib/nativeNotifications";
 
 const LS_REST_KEY = "physiq_rest_timer";
@@ -51,8 +50,7 @@ function limparEstado() {
   localStorage.removeItem(LS_REST_KEY);
 }
 
-// Contador para atualizar notificação a cada 5 segundos (não a cada 1s para performance)
-let lastNotifUpdate = 0;
+// Notificações nativas são gerenciadas pelo Android (não dependem de JS em background)
 
 const TimerDescanso = ({
   ativo, exercicioNome, numeroSerie, duracaoSegundos, serieId, onFechado, onTempoAlterado,
@@ -122,13 +120,10 @@ const TimerDescanso = ({
     setPaused(false);
     setFinished(false);
     notifiedRef.current = false;
-    lastNotifUpdate = 0;
     setEditMinutes(String(duracaoSegundos / 60));
 
-    // Agenda notificação nativa para quando o timer acabar (funciona em background)
-    scheduleTimerEndNotification(exercicioNome, duracaoSegundos);
-    // Mostra notificação com contagem
-    showTimerNotification(exercicioNome, duracaoSegundos);
+    // Mostra notificação persistente + agenda notificação de fim com som
+    startTimerNotifications(exercicioNome, duracaoSegundos);
   }, [ativo, serieId, duracaoSegundos, exercicioNome, numeroSerie]);
 
   const playBeep = useCallback(async () => {
@@ -172,12 +167,6 @@ const TimerDescanso = ({
           }
           limparEstado();
           return 0;
-        }
-        // Atualiza notificação a cada 5 segundos
-        const now = Date.now();
-        if (now - lastNotifUpdate > 5000) {
-          lastNotifUpdate = now;
-          showTimerNotification(exercicioNome, next);
         }
         const saved = lerEstadoSalvo();
         if (saved) salvarEstado({ ...saved, startedAt: Date.now() - ((saved.duracao - next) * 1000) });
@@ -224,12 +213,10 @@ const TimerDescanso = ({
     if (saved) {
       if (nowPaused) {
         salvarEstado({ ...saved, isPaused: true, pausedRemaining: seconds });
-        cancelTimerNotification(); // Remove notificações ao pausar
+        cancelTimerNotification();
       } else {
         salvarEstado({ ...saved, isPaused: false, startedAt: Date.now() - ((saved.duracao - seconds) * 1000) });
-        // Reagenda notificação de fim e mostra contagem
-        scheduleTimerEndNotification(saved.exercicioNome, seconds);
-        showTimerNotification(saved.exercicioNome, seconds);
+        startTimerNotifications(saved.exercicioNome, seconds);
       }
     }
   };
@@ -240,8 +227,7 @@ const TimerDescanso = ({
     const saved = lerEstadoSalvo();
     if (saved) {
       salvarEstado({ ...saved, startedAt: Date.now(), isPaused: false, pausedRemaining: dur, duracao: dur });
-      scheduleTimerEndNotification(saved.exercicioNome, dur);
-      showTimerNotification(saved.exercicioNome, dur);
+      startTimerNotifications(saved.exercicioNome, dur);
     }
   };
 
