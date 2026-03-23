@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { offlineUpsert, offlineInsert, offlineUpdate, offlineDelete } from "@/lib/offlineSync";
+import { offlineUpsert, offlineInsert, offlineUpdate, offlineDelete, setCacheData, getCacheData } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
@@ -85,28 +85,49 @@ const TreinoDoDia = ({
   // Sincroniza ref com state (para usar dentro de event listeners)
   useEffect(() => { sortedItemsRef.current = sortedItems; }, [sortedItems]);
 
-  // Carrega ordem personalizada do usuário
+  // Carrega ordem personalizada do usuário (com cache offline)
   useEffect(() => {
     const loadOrder = async () => {
       const defaultSorted = [...exercicios].sort((a, b) => a.ordem - b.ordem);
-      const { data: ordemUsuario } = await supabase
-        .from("exercicio_ordem_usuario")
-        .select("exercicio_id, posicao")
-        .eq("user_id", userId)
-        .eq("grupo_id", grupoId);
+      const cacheKey = `ordem_${userId}_${grupoId}`;
 
-      if (!ordemUsuario || ordemUsuario.length === 0) {
-        setSortedItems(defaultSorted);
-        return;
+      try {
+        const { data: ordemUsuario } = await supabase
+          .from("exercicio_ordem_usuario")
+          .select("exercicio_id, posicao")
+          .eq("user_id", userId)
+          .eq("grupo_id", grupoId);
+
+        if (!ordemUsuario || ordemUsuario.length === 0) {
+          setSortedItems(defaultSorted);
+          return;
+        }
+
+        // Salva no cache para uso offline
+        setCacheData(cacheKey, ordemUsuario);
+
+        const mapaOrdem = Object.fromEntries(ordemUsuario.map(o => [o.exercicio_id, o.posicao]));
+        const sorted = [...defaultSorted].sort((a, b) => {
+          const posA = mapaOrdem[a.exercicio_id] ?? 999;
+          const posB = mapaOrdem[b.exercicio_id] ?? 999;
+          return posA - posB;
+        });
+        setSortedItems(sorted);
+      } catch {
+        // Offline: tenta carregar do cache
+        const cached = getCacheData<{ exercicio_id: string; posicao: number }[]>(cacheKey);
+        if (cached && cached.length > 0) {
+          const mapaOrdem = Object.fromEntries(cached.map(o => [o.exercicio_id, o.posicao]));
+          const sorted = [...defaultSorted].sort((a, b) => {
+            const posA = mapaOrdem[a.exercicio_id] ?? 999;
+            const posB = mapaOrdem[b.exercicio_id] ?? 999;
+            return posA - posB;
+          });
+          setSortedItems(sorted);
+        } else {
+          setSortedItems(defaultSorted);
+        }
       }
-
-      const mapaOrdem = Object.fromEntries(ordemUsuario.map(o => [o.exercicio_id, o.posicao]));
-      const sorted = [...defaultSorted].sort((a, b) => {
-        const posA = mapaOrdem[a.exercicio_id] ?? 999;
-        const posB = mapaOrdem[b.exercicio_id] ?? 999;
-        return posA - posB;
-      });
-      setSortedItems(sorted);
     };
     loadOrder();
   }, [exercicios, userId, grupoId]);

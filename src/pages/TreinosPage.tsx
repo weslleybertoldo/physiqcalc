@@ -89,29 +89,40 @@ export interface SerieComMemoria {
   pace_segundos_km?: number;
 }
 
-// Fetch last workout data for a specific exercise
+// Fetch last workout data for a specific exercise (com cache offline)
 async function buscarUltimoTreino(
   userId: string,
   exercicioId: string,
   dataAtual: string
 ) {
-  const { data } = await supabase
-    .from("tb_treino_series")
-    .select("numero_serie, peso, reps, data_treino")
-    .eq("user_id", userId)
-    .eq("exercicio_id", exercicioId)
-    .eq("concluida", true)
-    .lt("data_treino", dataAtual)
-    .order("data_treino", { ascending: false })
-    .order("numero_serie", { ascending: true })
-    .limit(20);
+  const cacheKey = `ultimoTreino_${userId}_${exercicioId}`;
 
-  if (!data || data.length === 0) return null;
+  try {
+    const { data } = await supabase
+      .from("tb_treino_series")
+      .select("numero_serie, peso, reps, data_treino")
+      .eq("user_id", userId)
+      .eq("exercicio_id", exercicioId)
+      .eq("concluida", true)
+      .lt("data_treino", dataAtual)
+      .order("data_treino", { ascending: false })
+      .order("numero_serie", { ascending: true })
+      .limit(20);
 
-  const ultimaData = data[0].data_treino;
-  return data
-    .filter((s) => s.data_treino === ultimaData)
-    .sort((a, b) => a.numero_serie - b.numero_serie);
+    if (!data || data.length === 0) return null;
+
+    const ultimaData = data[0].data_treino;
+    const result = data
+      .filter((s) => s.data_treino === ultimaData)
+      .sort((a, b) => a.numero_serie - b.numero_serie);
+
+    // Salva no cache para uso offline
+    setCacheData(cacheKey, result);
+    return result;
+  } catch {
+    // Offline: tenta cache
+    return getCacheData<any[]>(cacheKey);
+  }
 }
 
 const TreinosPage = () => {
