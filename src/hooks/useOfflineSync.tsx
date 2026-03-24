@@ -15,10 +15,13 @@ export function useOfflineSync() {
     setSyncing(true);
     try {
       const { synced, failed } = await syncPendingOperations();
-      if (synced > 0) {
+      if (synced > 0 && failed === 0) {
         toast.success(`${synced} dado(s) sincronizado(s) com sucesso!`);
+      } else if (synced > 0 && failed > 0) {
+        toast.success(`${synced} sincronizado(s). ${failed} pendente(s).`);
       }
-      if (failed > 0) {
+      // Só mostra erro se NENHUM dado foi sincronizado (evita alarme desnecessário)
+      if (synced === 0 && failed > 0) {
         toast.error(`${failed} dado(s) não puderam ser sincronizados. Tentaremos novamente.`);
       }
     } catch {

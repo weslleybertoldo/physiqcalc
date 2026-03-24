@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { offlineUpsert, offlineInsert, offlineUpdate, offlineDelete, setCacheData, getCacheData, addPendingOperation } from "@/lib/offlineSync";
+import { offlineUpsert, offlineUpdate, offlineDelete, setCacheData, getCacheData, addPendingOperation } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
@@ -272,7 +272,8 @@ const TreinoDoDia = ({
     tempoSegundos?: number, distanciaKm?: number
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
-    await offlineUpsert(
+    // Sem await — não bloqueia a UI enquanto salva
+    offlineUpsert(
       "tb_treino_series",
       {
         user_id: userId,
@@ -300,7 +301,31 @@ const TreinoDoDia = ({
     tempoSegundos?: number, distanciaKm?: number
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
-    await offlineUpsert(
+    const now = new Date().toISOString();
+
+    // Salva TODAS as séries não salvas do mesmo exercício ANTES de concluir
+    // — impede que sumam num reload (só séries salvas sobrevivem ao recarregar do DB)
+    const naoSalvas = series
+      .filter(s => s.exercicio_id === exercicioId && !s.salva && s.numero_serie !== numeroSerie);
+    for (const s of naoSalvas) {
+      offlineUpsert(
+        "tb_treino_series",
+        {
+          user_id: userId,
+          exercicio_id: exercicioId,
+          data_treino: dateKey,
+          numero_serie: s.numero_serie,
+          peso: s.peso ?? 0,
+          reps: s.reps ?? 10,
+          concluida: false,
+          updated_at: now,
+        },
+        "user_id,exercicio_id,data_treino,numero_serie"
+      );
+    }
+
+    // Salva a série concluída (sem await para não bloquear a UI)
+    offlineUpsert(
       "tb_treino_series",
       {
         user_id: userId,
@@ -313,15 +338,20 @@ const TreinoDoDia = ({
         distancia_km: distanciaKm ?? null,
         pace_segundos_km: pace ?? null,
         concluida: true,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       },
       "user_id,exercicio_id,data_treino,numero_serie"
     );
-    onSeriesUpdate(prev => prev.map(s =>
-      s.exercicio_id === exercicioId && s.numero_serie === numeroSerie
-        ? { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, concluida: true, salva: true }
-        : s
-    ));
+    onSeriesUpdate(prev => prev.map(s => {
+      if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
+        return { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, concluida: true, salva: true };
+      }
+      // Marca todas as não-salvas como salvas (agora existem no banco)
+      if (s.exercicio_id === exercicioId && !s.salva) {
+        return { ...s, salva: true };
+      }
+      return s;
+    }));
     onSerieConcluida(exercicioNome, numeroSerie, exercicioId);
   };
 
@@ -370,10 +400,13 @@ const TreinoDoDia = ({
     const novoNum = existing.length > 0 ? Math.max(...existing.map(s => s.numero_serie)) + 1 : 1;
     const peso = last?.peso ?? 0;
     const reps = last?.reps ?? 10;
-    await offlineInsert("tb_treino_series", {
+    // Usa upsert em vez de insert para evitar conflito de chave duplicada
+    // que trava a fila de sincronização
+    offlineUpsert("tb_treino_series", {
       user_id: userId, exercicio_id: exercicioId, data_treino: dateKey,
       numero_serie: novoNum, peso, reps,
-    });
+      updated_at: new Date().toISOString(),
+    }, "user_id,exercicio_id,data_treino,numero_serie");
     onSeriesUpdate(prev => [...prev, { exercicio_id: exercicioId, numero_serie: novoNum, peso, reps, concluida: false, salva: true }]);
   };
 
