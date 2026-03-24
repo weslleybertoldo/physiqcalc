@@ -71,7 +71,10 @@ async function executePendingOp(op: PendingOperation): Promise<boolean> {
         break;
 
       case "insert":
-        result = await (supabase.from as any)(op.table).insert(op.data);
+        // Usa upsert como fallback para evitar conflito de chave duplicada
+        // que travaria a operação na fila permanentemente
+        result = await (supabase.from as any)(op.table)
+          .upsert(op.data, op.onConflict ? { onConflict: op.onConflict } : undefined);
         break;
 
       case "update":
