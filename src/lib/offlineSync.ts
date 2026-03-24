@@ -60,21 +60,32 @@ export function getPendingCount(): number {
 
 // ── Sincronização ────────────────────────────────────────────────────────────
 
+// Mapeia tabelas para suas chaves compostas de conflito
+// — necessário para converter inserts antigos (sem onConflict) em upserts seguros
+const TABLE_CONFLICT_KEYS: Record<string, string> = {
+  tb_treino_series: "user_id,exercicio_id,data_treino,numero_serie",
+  tb_treino_concluido: "user_id,data_treino",
+  tb_treino_dia_override: "user_id,data_treino",
+  exercicio_ordem_usuario: "user_id,grupo_id,exercicio_id",
+};
+
 async function executePendingOp(op: PendingOperation): Promise<boolean> {
   try {
     let result;
+    // Resolve a chave de conflito: usa a do op, ou deduz pela tabela
+    const conflict = op.onConflict || TABLE_CONFLICT_KEYS[op.table];
 
     switch (op.type) {
       case "upsert":
         result = await (supabase.from as any)(op.table)
-          .upsert(op.data, op.onConflict ? { onConflict: op.onConflict } : undefined);
+          .upsert(op.data, conflict ? { onConflict: conflict } : undefined);
         break;
 
       case "insert":
         // Usa upsert como fallback para evitar conflito de chave duplicada
         // que travaria a operação na fila permanentemente
         result = await (supabase.from as any)(op.table)
-          .upsert(op.data, op.onConflict ? { onConflict: op.onConflict } : undefined);
+          .upsert(op.data, conflict ? { onConflict: conflict } : undefined);
         break;
 
       case "update":
