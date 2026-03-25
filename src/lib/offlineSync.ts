@@ -69,16 +69,12 @@ const TABLE_CONFLICT_KEYS: Record<string, string> = {
   exercicio_ordem_usuario: "user_id,grupo_id,exercicio_id",
 };
 
-// Erros permanentes que nunca serão resolvidos com retry
+// Erros realmente irrecuperáveis (dados inválidos, não problema de sessão)
 const PERMANENT_ERRORS = [
-  "violates row-level security",
   "violates foreign key constraint",
   "violates not-null constraint",
   "violates check constraint",
   "column",
-  "permission denied",
-  "JWT expired",
-  "Invalid API key",
 ];
 
 function isPermanentError(message: string): boolean {
@@ -150,15 +146,15 @@ export async function syncPendingOperations(): Promise<{
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      // Tenta refresh
       const { data: { session: refreshed } } = await supabase.auth.refreshSession();
       if (!refreshed) {
-        // Sem sessão válida — não adianta tentar sync
-        return { synced: 0, failed: ops.length };
+        // Sem sessão — guarda operações e tenta na próxima vez (sem alarmar)
+        return { synced: 0, failed: 0 };
       }
     }
   } catch {
-    // Erro ao verificar sessão — tenta sync mesmo assim
+    // Sem conexão pra validar sessão — não arrisca perder dados
+    return { synced: 0, failed: 0 };
   }
 
   const failures: PendingOperation[] = [];
