@@ -7,7 +7,7 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { setCacheData, getCacheData } from "@/lib/offlineSync";
+import { setCacheData, getCacheData, hasPendingData } from "@/lib/offlineSync";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
@@ -572,8 +572,14 @@ const TreinosPage = () => {
     // Series will reload via the selectedDate useEffect
   }, [loadBaseData]);
 
-  // Logout handler
+  // Logout handler — avisa se há dados pendentes
   const handleLogout = async () => {
+    if (hasPendingData()) {
+      const confirmed = window.confirm(
+        "Você tem dados não sincronizados. Sair agora pode causar perda de dados. Deseja continuar?"
+      );
+      if (!confirmed) return;
+    }
     sessionStorage.clear();
     await supabase.auth.signOut();
     navigate("/");

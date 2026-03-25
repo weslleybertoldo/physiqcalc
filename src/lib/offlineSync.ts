@@ -20,18 +20,91 @@ const CACHE_KEY = "physiq_offline_cache";
 
 function getPending(): PendingOperation[] {
   try {
-    return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // Validação: garante que é array e filtra entradas corrompidas
+    if (!Array.isArray(parsed)) {
+      console.warn("[Sync] Fila corrompida (não é array). Resetando.");
+      localStorage.removeItem(PENDING_KEY);
+      return [];
+    }
+    return parsed.filter(
+      (op: any) =>
+        op &&
+        typeof op.table === "string" &&
+        typeof op.type === "string" &&
+        typeof op.createdAt === "number"
+    );
   } catch {
+    console.warn("[Sync] Fila corrompida (JSON inválido). Resetando.");
+    localStorage.removeItem(PENDING_KEY);
     return [];
   }
 }
 
 function savePending(ops: PendingOperation[]) {
-  localStorage.setItem(PENDING_KEY, JSON.stringify(ops));
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(ops));
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "QuotaExceededError") {
+      // Libera espaço: limpa cache de leitura primeiro
+      localStorage.removeItem(CACHE_KEY);
+      try {
+        localStorage.setItem(PENDING_KEY, JSON.stringify(ops));
+        return;
+      } catch {
+        // Último recurso: manter apenas operações das últimas 24h
+        const recent = ops.filter(
+          (op) => Date.now() - op.createdAt < 24 * 60 * 60 * 1000
+        );
+        try {
+          localStorage.setItem(PENDING_KEY, JSON.stringify(recent));
+        } catch {
+          console.error("[Sync] localStorage cheio. Não foi possível salvar fila.");
+        }
+      }
+    }
+  }
 }
 
 function generateId(): string {
   return crypto.randomUUID();
+}
+
+// ── Compactação de fila ─────────────────────────────────────────────────────
+// Remove operações redundantes (ex: 5 upserts na mesma série → mantém só o último)
+
+function compactQueue(ops: PendingOperation[]): PendingOperation[] {
+  const map = new Map<string, PendingOperation>();
+
+  for (const op of ops) {
+    // Chave única: tabela + tipo + identificação dos dados
+    const identity =
+      op.type === "delete" || op.type === "update"
+        ? JSON.stringify(op.match)
+        : op.onConflict
+          ? op.onConflict
+              .split(",")
+              .map((k) => op.data?.[k.trim()])
+              .join("|")
+          : op.data?.id || op.id;
+
+    const key = `${op.table}:${identity}`;
+
+    if (op.type === "delete") {
+      // delete substitui qualquer operação anterior no mesmo registro
+      map.set(key, op);
+    } else {
+      const existing = map.get(key);
+      if (!existing || existing.type !== "delete") {
+        // Mantém a operação mais recente
+        map.set(key, op);
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export function addPendingOperation(
@@ -61,7 +134,6 @@ export function getPendingCount(): number {
 // ── Sincronização ────────────────────────────────────────────────────────────
 
 // Mapeia tabelas para suas chaves compostas de conflito
-// — necessário para converter inserts antigos (sem onConflict) em upserts seguros
 const TABLE_CONFLICT_KEYS: Record<string, string> = {
   tb_treino_series: "user_id,exercicio_id,data_treino,numero_serie",
   tb_treino_concluido: "user_id,data_treino",
@@ -85,13 +157,11 @@ function isPermanentError(message: string): boolean {
 async function executePendingOp(op: PendingOperation): Promise<"ok" | "retry" | "discard"> {
   try {
     let result;
-    // Resolve a chave de conflito: usa a do op, ou deduz pela tabela
     const conflict = op.onConflict || TABLE_CONFLICT_KEYS[op.table];
 
     switch (op.type) {
       case "upsert":
       case "insert":
-        // Sempre usa upsert para evitar conflito de chave duplicada
         result = await (supabase.from as any)(op.table)
           .upsert(op.data, conflict ? { onConflict: conflict } : undefined);
         break;
@@ -121,10 +191,9 @@ async function executePendingOp(op: PendingOperation): Promise<"ok" | "retry" | 
 
     if (!result?.error) return "ok";
 
-    // Erro permanente — descartar para não travar a fila
     console.warn(`[Sync] Erro na op ${op.type} ${op.table}:`, result.error.message);
     if (isPermanentError(result.error.message)) {
-      console.warn(`[Sync] Descartando operação permanentemente falha:`, op);
+      console.warn(`[Sync] Descartando operação irrecuperável:`, op);
       return "discard";
     }
     return "retry";
@@ -132,6 +201,28 @@ async function executePendingOp(op: PendingOperation): Promise<"ok" | "retry" | 
     return "retry";
   }
 }
+
+// ── Exponential backoff ─────────────────────────────────────────────────────
+
+let retryAttempt = 0;
+
+export function getRetryDelay(): number {
+  const baseMs = 2000;
+  const maxMs = 30000;
+  const exponential = baseMs * Math.pow(2, retryAttempt);
+  const jitter = Math.random() * 1000;
+  return Math.min(exponential + jitter, maxMs);
+}
+
+export function resetRetry() {
+  retryAttempt = 0;
+}
+
+export function incrementRetry() {
+  retryAttempt++;
+}
+
+// ── Sync principal ──────────────────────────────────────────────────────────
 
 export async function syncPendingOperations(): Promise<{
   synced: number;
@@ -157,18 +248,16 @@ export async function syncPendingOperations(): Promise<{
     return { synced: 0, failed: 0 };
   }
 
+  // Compacta fila antes de enviar (remove operações redundantes)
+  const compacted = compactQueue(ops);
   const failures: PendingOperation[] = [];
   let synced = 0;
 
-  // Executa em ordem cronológica para manter consistência
-  const sorted = [...ops].sort((a, b) => a.createdAt - b.createdAt);
-
-  for (const op of sorted) {
+  for (const op of compacted) {
     const outcome = await executePendingOp(op);
     if (outcome === "ok") {
       synced++;
     } else if (outcome === "discard") {
-      // Operação com erro permanente — descarta
       synced++; // Conta como resolvida para não alarmar o usuário
     } else {
       // retry — mantém apenas se é recente (< 7 dias)
@@ -181,6 +270,32 @@ export async function syncPendingOperations(): Promise<{
 
   savePending(failures);
   return { synced, failed: failures.length };
+}
+
+// ── Sync ao re-logar ────────────────────────────────────────────────────────
+// Escuta eventos de autenticação para sincronizar automaticamente ao logar
+
+let authSyncRegistered = false;
+
+export function registerAuthSync() {
+  if (authSyncRegistered) return;
+  authSyncRegistered = true;
+
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_IN" && navigator.onLine) {
+      const pending = getPendingCount();
+      if (pending > 0) {
+        // Delay curto para a sessão estabilizar
+        setTimeout(() => syncPendingOperations(), 2000);
+      }
+    }
+  });
+}
+
+// ── Aviso de dados pendentes antes de sair ──────────────────────────────────
+
+export function hasPendingData(): boolean {
+  return getPendingCount() > 0;
 }
 
 // ── Cache de leitura ─────────────────────────────────────────────────────────
@@ -207,7 +322,11 @@ function saveCache(cache: Record<string, CacheEntry>) {
       ([, a], [, b]) => b.timestamp - a.timestamp
     );
     const trimmed = Object.fromEntries(entries.slice(0, Math.floor(entries.length / 2)));
-    localStorage.setItem(CACHE_KEY, JSON.stringify(trimmed));
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(trimmed));
+    } catch {
+      // Sem espaço mesmo — ignora
+    }
   }
 }
 
@@ -234,7 +353,6 @@ export function getCacheData<T = any>(key: string): T | null {
 }
 
 // ── Operações offline-aware ──────────────────────────────────────────────────
-// Wrappers que tentam enviar online e, se falhar, enfileiram
 
 export async function offlineUpsert(
   table: string,
