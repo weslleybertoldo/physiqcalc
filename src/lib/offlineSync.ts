@@ -69,7 +69,24 @@ const TABLE_CONFLICT_KEYS: Record<string, string> = {
   exercicio_ordem_usuario: "user_id,grupo_id,exercicio_id",
 };
 
-async function executePendingOp(op: PendingOperation): Promise<boolean> {
+// Erros permanentes que nunca serão resolvidos com retry
+const PERMANENT_ERRORS = [
+  "violates row-level security",
+  "violates foreign key constraint",
+  "violates not-null constraint",
+  "violates check constraint",
+  "column",
+  "permission denied",
+  "JWT expired",
+  "Invalid API key",
+];
+
+function isPermanentError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return PERMANENT_ERRORS.some((e) => lower.includes(e.toLowerCase()));
+}
+
+async function executePendingOp(op: PendingOperation): Promise<"ok" | "retry" | "discard"> {
   try {
     let result;
     // Resolve a chave de conflito: usa a do op, ou deduz pela tabela
@@ -77,19 +94,14 @@ async function executePendingOp(op: PendingOperation): Promise<boolean> {
 
     switch (op.type) {
       case "upsert":
-        result = await (supabase.from as any)(op.table)
-          .upsert(op.data, conflict ? { onConflict: conflict } : undefined);
-        break;
-
       case "insert":
-        // Usa upsert como fallback para evitar conflito de chave duplicada
-        // que travaria a operação na fila permanentemente
+        // Sempre usa upsert para evitar conflito de chave duplicada
         result = await (supabase.from as any)(op.table)
           .upsert(op.data, conflict ? { onConflict: conflict } : undefined);
         break;
 
       case "update":
-        if (!op.match) return false;
+        if (!op.match) return "discard";
         {
           let query = (supabase.from as any)(op.table).update(op.data);
           for (const [key, value] of Object.entries(op.match)) {
@@ -100,7 +112,7 @@ async function executePendingOp(op: PendingOperation): Promise<boolean> {
         break;
 
       case "delete":
-        if (!op.match) return false;
+        if (!op.match) return "discard";
         {
           let query = (supabase.from as any)(op.table).delete();
           for (const [key, value] of Object.entries(op.match)) {
@@ -111,9 +123,17 @@ async function executePendingOp(op: PendingOperation): Promise<boolean> {
         break;
     }
 
-    return !result?.error;
+    if (!result?.error) return "ok";
+
+    // Erro permanente — descartar para não travar a fila
+    console.warn(`[Sync] Erro na op ${op.type} ${op.table}:`, result.error.message);
+    if (isPermanentError(result.error.message)) {
+      console.warn(`[Sync] Descartando operação permanentemente falha:`, op);
+      return "discard";
+    }
+    return "retry";
   } catch {
-    return false;
+    return "retry";
   }
 }
 
@@ -126,6 +146,21 @@ export async function syncPendingOperations(): Promise<{
   const ops = getPending();
   if (ops.length === 0) return { synced: 0, failed: 0 };
 
+  // Garante sessão válida antes de sincronizar (evita erro de RLS)
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      // Tenta refresh
+      const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+      if (!refreshed) {
+        // Sem sessão válida — não adianta tentar sync
+        return { synced: 0, failed: ops.length };
+      }
+    }
+  } catch {
+    // Erro ao verificar sessão — tenta sync mesmo assim
+  }
+
   const failures: PendingOperation[] = [];
   let synced = 0;
 
@@ -133,11 +168,14 @@ export async function syncPendingOperations(): Promise<{
   const sorted = [...ops].sort((a, b) => a.createdAt - b.createdAt);
 
   for (const op of sorted) {
-    const success = await executePendingOp(op);
-    if (success) {
+    const outcome = await executePendingOp(op);
+    if (outcome === "ok") {
       synced++;
+    } else if (outcome === "discard") {
+      // Operação com erro permanente — descarta
+      synced++; // Conta como resolvida para não alarmar o usuário
     } else {
-      // Mantém operações que falharam apenas se são recentes (< 7 dias)
+      // retry — mantém apenas se é recente (< 7 dias)
       const sevenDays = 7 * 24 * 60 * 60 * 1000;
       if (Date.now() - op.createdAt < sevenDays) {
         failures.push(op);

@@ -829,6 +829,35 @@ const TreinosPage = () => {
           <PWAInstallButton />
           <p className="text-xs text-muted-foreground font-body italic">By Weslley Bertoldo</p>
           <p className="text-[10px] text-muted-foreground/50 font-body">v{CURRENT_VERSION}</p>
+          <button
+            type="button"
+            onClick={handleCheckUpdate}
+            disabled={checkingUpdate}
+            className="flex items-center justify-center gap-1 mx-auto text-[10px] text-muted-foreground/50 hover:text-primary font-body transition-colors"
+          >
+            <RefreshCw size={10} className={checkingUpdate ? "animate-spin" : ""} />
+            Verificar atualizações
+          </button>
+          {updateResult && !showSettings && (
+            <div className="mt-1">
+              {updateResult.hasUpdate ? (
+                <a
+                  href={updateResult.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-[10px] font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors"
+                >
+                  <Download size={10} />
+                  Baixar v{updateResult.version}
+                </a>
+              ) : (
+                <p className="text-[10px] text-classify-green font-body flex items-center justify-center gap-1">
+                  <Check size={10} />
+                  Versão mais recente
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Engrenagem no canto inferior direito */}
           <button
