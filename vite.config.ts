@@ -27,6 +27,41 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         navigateFallbackDenylist: [/^\/~oauth/],
+        runtimeCaching: [
+          {
+            // Supabase REST API — NetworkFirst com fallback ao cache
+            urlPattern: /^https:\/\/uxwpwdbbnlticxgtzcsb\.supabase\.co\/rest\/v1\/.*/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "supabase-api-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24,
+              },
+              networkTimeoutSeconds: 10,
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            // Supabase Auth — nunca cachear
+            urlPattern: /^https:\/\/uxwpwdbbnlticxgtzcsb\.supabase\.co\/auth\/.*/,
+            handler: "NetworkOnly",
+          },
+          {
+            // Imagens externas — CacheFirst
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images-cache",
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
+          },
+        ],
       },
       manifest: {
         name: "PhysiqCalc",
