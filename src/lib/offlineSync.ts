@@ -135,6 +135,8 @@ export function getPendingCount(): number {
 
 // Mapeia tabelas para suas chaves compostas de conflito
 const TABLE_CONFLICT_KEYS: Record<string, string> = {
+  // tb_treino_series tem duas chaves possíveis dependendo do tipo de exercício
+  // a chave correta é passada explicitamente pelo caller
   tb_treino_series: "user_id,exercicio_id,data_treino,numero_serie",
   tb_treino_concluido: "user_id,data_treino",
   tb_treino_dia_override: "user_id,data_treino",

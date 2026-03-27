@@ -267,33 +267,59 @@ const TreinoDoDia = ({
     [series]
   );
 
+  // Atualiza o cache local após salvar (evita que reload traga dados antigos)
+  const updateSeriesCache = useCallback((updatedSeries: SerieComMemoria[]) => {
+    const cacheKey = `series_${userId}_${dateKey}`;
+    setCacheData(cacheKey, updatedSeries);
+  }, [userId, dateKey]);
+
+  // Monta o objeto de série correto: usa exercicio_usuario_id para exercícios pessoais
+  const buildSerieData = (exercicioId: string, base: Record<string, any>) => {
+    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+    const exUsuarioId = serieInfo?.exercicio_usuario_id;
+
+    if (exUsuarioId) {
+      // Exercício pessoal: usa exercicio_usuario_id e deixa exercicio_id null
+      return { ...base, exercicio_id: null, exercicio_usuario_id: exUsuarioId };
+    }
+    // Exercício padrão: usa exercicio_id normalmente
+    return { ...base, exercicio_id: exercicioId };
+  };
+
+  // Chave de conflito correta baseada no tipo de exercício
+  const getConflictKey = (exercicioId: string) => {
+    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+    return serieInfo?.exercicio_usuario_id
+      ? "user_id,exercicio_usuario_id,data_treino,numero_serie"
+      : "user_id,exercicio_id,data_treino,numero_serie";
+  };
+
   const handleSaveSerie = async (
     exercicioId: string, numeroSerie: number, peso: number, reps: number,
     tempoSegundos?: number, distanciaKm?: number
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
-    // Sem await — não bloqueia a UI enquanto salva
-    offlineUpsert(
-      "tb_treino_series",
-      {
-        user_id: userId,
-        exercicio_id: exercicioId,
-        data_treino: dateKey,
-        numero_serie: numeroSerie,
-        peso: tempoSegundos ? null : peso,
-        reps: tempoSegundos ? null : reps,
-        tempo_segundos: tempoSegundos ?? null,
-        distancia_km: distanciaKm ?? null,
-        pace_segundos_km: pace ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      "user_id,exercicio_id,data_treino,numero_serie"
-    );
-    onSeriesUpdate(prev => prev.map(s =>
-      s.exercicio_id === exercicioId && s.numero_serie === numeroSerie
-        ? { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, salva: true }
-        : s
-    ));
+    const data = buildSerieData(exercicioId, {
+      user_id: userId,
+      data_treino: dateKey,
+      numero_serie: numeroSerie,
+      peso: tempoSegundos ? null : peso,
+      reps: tempoSegundos ? null : reps,
+      tempo_segundos: tempoSegundos ?? null,
+      distancia_km: distanciaKm ?? null,
+      pace_segundos_km: pace ?? null,
+      updated_at: new Date().toISOString(),
+    });
+    await offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
+    onSeriesUpdate(prev => {
+      const updated = prev.map(s =>
+        s.exercicio_id === exercicioId && s.numero_serie === numeroSerie
+          ? { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, salva: true }
+          : s
+      );
+      updateSeriesCache(updated);
+      return updated;
+    });
   };
 
   const handleConcluirSerie = async (
@@ -302,85 +328,79 @@ const TreinoDoDia = ({
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
     const now = new Date().toISOString();
+    const conflictKey = getConflictKey(exercicioId);
 
     // Salva TODAS as séries não salvas do mesmo exercício ANTES de concluir
-    // — impede que sumam num reload (só séries salvas sobrevivem ao recarregar do DB)
     const naoSalvas = series
       .filter(s => s.exercicio_id === exercicioId && !s.salva && s.numero_serie !== numeroSerie);
     for (const s of naoSalvas) {
-      offlineUpsert(
-        "tb_treino_series",
-        {
-          user_id: userId,
-          exercicio_id: exercicioId,
-          data_treino: dateKey,
-          numero_serie: s.numero_serie,
-          peso: s.peso ?? 0,
-          reps: s.reps ?? 10,
-          concluida: false,
-          updated_at: now,
-        },
-        "user_id,exercicio_id,data_treino,numero_serie"
-      );
+      const data = buildSerieData(exercicioId, {
+        user_id: userId,
+        data_treino: dateKey,
+        numero_serie: s.numero_serie,
+        peso: s.peso ?? 0,
+        reps: s.reps ?? 10,
+        concluida: false,
+        updated_at: now,
+      });
+      await offlineUpsert("tb_treino_series", data, conflictKey);
     }
 
-    // Salva a série concluída (sem await para não bloquear a UI)
-    offlineUpsert(
-      "tb_treino_series",
-      {
-        user_id: userId,
-        exercicio_id: exercicioId,
-        data_treino: dateKey,
-        numero_serie: numeroSerie,
-        peso: tempoSegundos ? null : peso,
-        reps: tempoSegundos ? null : reps,
-        tempo_segundos: tempoSegundos ?? null,
-        distancia_km: distanciaKm ?? null,
-        pace_segundos_km: pace ?? null,
-        concluida: true,
-        updated_at: now,
-      },
-      "user_id,exercicio_id,data_treino,numero_serie"
-    );
-    onSeriesUpdate(prev => prev.map(s => {
-      if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
-        return { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, concluida: true, salva: true };
-      }
-      // Marca todas as não-salvas como salvas (agora existem no banco)
-      if (s.exercicio_id === exercicioId && !s.salva) {
-        return { ...s, salva: true };
-      }
-      return s;
-    }));
+    // Salva a série concluída
+    const data = buildSerieData(exercicioId, {
+      user_id: userId,
+      data_treino: dateKey,
+      numero_serie: numeroSerie,
+      peso: tempoSegundos ? null : peso,
+      reps: tempoSegundos ? null : reps,
+      tempo_segundos: tempoSegundos ?? null,
+      distancia_km: distanciaKm ?? null,
+      pace_segundos_km: pace ?? null,
+      concluida: true,
+      updated_at: now,
+    });
+    await offlineUpsert("tb_treino_series", data, conflictKey);
+    onSeriesUpdate(prev => {
+      const updated = prev.map(s => {
+        if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
+          return { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, concluida: true, salva: true };
+        }
+        if (s.exercicio_id === exercicioId && !s.salva) {
+          return { ...s, salva: true };
+        }
+        return s;
+      });
+      updateSeriesCache(updated);
+      return updated;
+    });
     onSerieConcluida(exercicioNome, numeroSerie, exercicioId);
   };
 
   const handleDesfazerSerie = async (exercicioId: string, numeroSerie: number) => {
-    // Salva as séries do mesmo exercício que vieram do histórico (salva: false)
-    // para que não desapareçam quando o refazer causar reload
+    const conflictKey = getConflictKey(exercicioId);
     const naoSalvas = series
       .filter(s => s.exercicio_id === exercicioId && !s.salva);
     for (const s of naoSalvas) {
-      await offlineUpsert(
-        "tb_treino_series",
-        {
-          user_id: userId,
-          exercicio_id: exercicioId,
-          data_treino: dateKey,
-          numero_serie: s.numero_serie,
-          peso: s.peso ?? 0,
-          reps: s.reps ?? 10,
-          concluida: false,
-          updated_at: new Date().toISOString(),
-        },
-        "user_id,exercicio_id,data_treino,numero_serie"
-      );
+      const data = buildSerieData(exercicioId, {
+        user_id: userId,
+        data_treino: dateKey,
+        numero_serie: s.numero_serie,
+        peso: s.peso ?? 0,
+        reps: s.reps ?? 10,
+        concluida: false,
+        updated_at: new Date().toISOString(),
+      });
+      await offlineUpsert("tb_treino_series", data, conflictKey);
     }
 
+    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+    const matchKey = serieInfo?.exercicio_usuario_id
+      ? { user_id: userId, exercicio_usuario_id: serieInfo.exercicio_usuario_id, data_treino: dateKey, numero_serie: numeroSerie }
+      : { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie };
     await offlineUpdate(
       "tb_treino_series",
       { concluida: false, updated_at: new Date().toISOString() },
-      { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie }
+      matchKey
     );
     onSeriesUpdate(prev => prev.map(s => {
       if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
@@ -400,22 +420,24 @@ const TreinoDoDia = ({
     const novoNum = existing.length > 0 ? Math.max(...existing.map(s => s.numero_serie)) + 1 : 1;
     const peso = last?.peso ?? 0;
     const reps = last?.reps ?? 10;
-    // Usa upsert em vez de insert para evitar conflito de chave duplicada
-    // que trava a fila de sincronização
-    offlineUpsert("tb_treino_series", {
-      user_id: userId, exercicio_id: exercicioId, data_treino: dateKey,
+    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+    const exUsuarioId = serieInfo?.exercicio_usuario_id;
+    const data = buildSerieData(exercicioId, {
+      user_id: userId, data_treino: dateKey,
       numero_serie: novoNum, peso, reps,
       updated_at: new Date().toISOString(),
-    }, "user_id,exercicio_id,data_treino,numero_serie");
-    onSeriesUpdate(prev => [...prev, { exercicio_id: exercicioId, numero_serie: novoNum, peso, reps, concluida: false, salva: true }]);
+    });
+    offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
+    onSeriesUpdate(prev => [...prev, { exercicio_id: exercicioId, exercicio_usuario_id: exUsuarioId, numero_serie: novoNum, peso, reps, concluida: false, salva: true }]);
   };
 
   const handleRemoveSerie = async (exercicioId: string, numeroSerie: number, isSalva: boolean) => {
     if (isSalva) {
-      await offlineDelete("tb_treino_series", {
-        user_id: userId, exercicio_id: exercicioId,
-        data_treino: dateKey, numero_serie: numeroSerie,
-      });
+      const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+      const matchKey = serieInfo?.exercicio_usuario_id
+        ? { user_id: userId, exercicio_usuario_id: serieInfo.exercicio_usuario_id, data_treino: dateKey, numero_serie: numeroSerie }
+        : { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie };
+      await offlineDelete("tb_treino_series", matchKey);
     }
     onSeriesUpdate(prev =>
       prev.filter(s => !(s.exercicio_id === exercicioId && s.numero_serie === numeroSerie))
