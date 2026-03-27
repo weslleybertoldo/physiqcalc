@@ -55,6 +55,7 @@ interface GrupoTreino {
 
 interface GrupoExercicio {
   exercicio_id: string;
+  exercicio_usuario_id?: string; // preenchido quando é exercício pessoal
   ordem: number;
   tb_exercicios: {
     id: string;
@@ -78,12 +79,12 @@ interface OverrideInfo {
 export interface SerieComMemoria {
   id?: string;
   exercicio_id: string;
+  exercicio_usuario_id?: string; // preenchido quando é exercício pessoal
   numero_serie: number;
   peso: number;
   reps: number;
   concluida?: boolean;
   salva: boolean;
-  // Campos de corrida (opcionais)
   tempo_segundos?: number;
   distancia_km?: number;
   pace_segundos_km?: number;
@@ -93,16 +94,19 @@ export interface SerieComMemoria {
 async function buscarUltimoTreino(
   userId: string,
   exercicioId: string,
-  dataAtual: string
+  dataAtual: string,
+  isExercicioUsuario = false
 ) {
   const cacheKey = `ultimoTreino_${userId}_${exercicioId}`;
 
   try {
+    // Busca pelo campo correto dependendo do tipo de exercício
+    const fieldName = isExercicioUsuario ? "exercicio_usuario_id" : "exercicio_id";
     const { data, error } = await supabase
       .from("tb_treino_series")
       .select("numero_serie, peso, reps, data_treino")
       .eq("user_id", userId)
-      .eq("exercicio_id", exercicioId)
+      .eq(fieldName, exercicioId)
       .eq("concluida", true)
       .lt("data_treino", dataAtual)
       .order("data_treino", { ascending: false })
@@ -334,9 +338,11 @@ const TreinosPage = () => {
             const gid = ge.grupo_usuario_id;
             if (!gePessoalMap[gid]) gePessoalMap[gid] = [];
             const exData = ge.tb_exercicios || ge.tb_exercicios_usuario;
+            const isPessoal = !ge.tb_exercicios && !!ge.tb_exercicios_usuario;
             if (exData) {
               gePessoalMap[gid].push({
                 exercicio_id: exData.id,
+                exercicio_usuario_id: isPessoal ? exData.id : undefined,
                 ordem: ge.ordem || 0,
                 tb_exercicios: exData,
               });
@@ -487,7 +493,9 @@ const TreinosPage = () => {
 
       const seriesByExercicio: Record<string, any[]> = {};
       savedSeries.forEach((s) => {
-        const key = s.exercicio_id;
+        // Exercícios pessoais têm exercicio_id=null e exercicio_usuario_id preenchido
+        const key = s.exercicio_id || s.exercicio_usuario_id;
+        if (!key) return;
         if (!seriesByExercicio[key]) seriesByExercicio[key] = [];
         seriesByExercicio[key].push(s);
       });
@@ -496,6 +504,7 @@ const TreinosPage = () => {
 
       for (const ge of exerciciosList) {
         const exId = ge.exercicio_id;
+        const exUsuarioId = ge.exercicio_usuario_id;
         const saved = seriesByExercicio[exId];
 
         if (saved && saved.length > 0) {
@@ -503,6 +512,7 @@ const TreinosPage = () => {
             allSeries.push({
               id: s.id,
               exercicio_id: s.exercicio_id,
+              exercicio_usuario_id: s.exercicio_usuario_id ?? exUsuarioId,
               numero_serie: s.numero_serie,
               peso: s.peso ?? 0,
               reps: s.reps ?? 10,
@@ -514,12 +524,13 @@ const TreinosPage = () => {
             });
           });
         } else {
-          const ultimo = await buscarUltimoTreino(user.id, exId, dateKey);
+          const ultimo = await buscarUltimoTreino(user.id, exId, dateKey, !!exUsuarioId);
 
           if (ultimo && ultimo.length > 0) {
             ultimo.forEach((s) => {
               allSeries.push({
                 exercicio_id: exId,
+                exercicio_usuario_id: exUsuarioId,
                 numero_serie: s.numero_serie,
                 peso: s.peso ?? 0,
                 reps: s.reps ?? 10,
@@ -531,6 +542,7 @@ const TreinosPage = () => {
             for (let i = 1; i <= 3; i++) {
               allSeries.push({
                 exercicio_id: exId,
+                exercicio_usuario_id: exUsuarioId,
                 numero_serie: i,
                 peso: 0,
                 reps: 10,
@@ -542,16 +554,40 @@ const TreinosPage = () => {
         }
       }
 
+      // Antes de sobrescrever, preserva séries locais não salvas que estão no cache
+      // (evita perder edições do usuário quando o banco não tem os dados)
+      const cached = getCacheData<SerieComMemoria[]>(seriesCacheKey);
+      if (cached) {
+        const localOnlySeries = cached.filter(
+          (c) => !c.salva && !allSeries.some(
+            (s) => s.exercicio_id === c.exercicio_id && s.numero_serie === c.numero_serie && s.salva
+          )
+        );
+        // Mescla: séries do banco têm prioridade, mas mantém edições locais para exercícios sem dados no banco
+        for (const local of localOnlySeries) {
+          const existsInNew = allSeries.some(
+            (s) => s.exercicio_id === local.exercicio_id && s.numero_serie === local.numero_serie
+          );
+          if (existsInNew) {
+            // Substitui a versão do "último treino" pela edição local se não foi salva no banco
+            const idx = allSeries.findIndex(
+              (s) => s.exercicio_id === local.exercicio_id && s.numero_serie === local.numero_serie && !s.salva
+            );
+            if (idx !== -1) {
+              allSeries[idx] = local;
+            }
+          }
+        }
+      }
+
       setCacheData(seriesCacheKey, allSeries);
       setSeries(allSeries);
 
       // Cacheia último treino de TODOS os exercícios em background
-      // (garante que offline terá pesos mesmo para dias futuros)
       for (const ge of exerciciosList) {
-        buscarUltimoTreino(user.id, ge.exercicio_id, dateKey);
+        buscarUltimoTreino(user.id, ge.exercicio_id, dateKey, !!ge.exercicio_usuario_id);
       }
     } catch {
-      // Falha de rede — carrega do cache
       loadSeriesFromCache();
     }
   }, [user]);
