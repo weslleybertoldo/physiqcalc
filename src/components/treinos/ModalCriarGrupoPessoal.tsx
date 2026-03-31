@@ -68,29 +68,53 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
 
   const handleCriarExercicio = async () => {
     if (!novoNome.trim()) return;
-    await supabase.from("tb_exercicios_usuario").insert({
-      user_id: userId, nome: novoNome.trim(), grupo_muscular: novoGrupo, emoji: novoEmoji,
-    });
-    setNovoNome("");
-    setShowNovoEx(false);
-    toast.success("Exercício criado!");
-    loadExercicios();
+    try {
+      const { error } = await supabase.from("tb_exercicios_usuario").insert({
+        user_id: userId, nome: novoNome.trim(), grupo_muscular: novoGrupo, emoji: novoEmoji,
+      });
+      if (error) {
+        toast.error("Erro ao criar exercício. Tente novamente.");
+        return;
+      }
+      setNovoNome("");
+      setShowNovoEx(false);
+      toast.success("Exercício criado!");
+      loadExercicios();
+    } catch {
+      toast.error("Erro ao criar exercício. Tente novamente.");
+    }
   };
 
   const handleEditarExercicio = async (id: string) => {
-    await supabase.from("tb_exercicios_usuario").update({
-      nome: editNome, grupo_muscular: editGrupo, emoji: editEmoji,
-    }).eq("id", id).eq("user_id", userId);
-    setEditingId(null);
-    toast.success("Exercício atualizado!");
-    loadExercicios();
+    try {
+      const { error } = await supabase.from("tb_exercicios_usuario").update({
+        nome: editNome, grupo_muscular: editGrupo, emoji: editEmoji,
+      }).eq("id", id).eq("user_id", userId);
+      if (error) {
+        toast.error("Erro ao atualizar exercício. Tente novamente.");
+        return;
+      }
+      setEditingId(null);
+      toast.success("Exercício atualizado!");
+      loadExercicios();
+    } catch {
+      toast.error("Erro ao atualizar exercício. Tente novamente.");
+    }
   };
 
   const handleDeletarExercicio = async (id: string) => {
-    await supabase.from("tb_exercicios_usuario").delete().eq("id", id).eq("user_id", userId);
-    setSelectedIds((prev) => prev.filter((s) => !(s.id === id && s.isPessoal)));
-    toast.success("Exercício removido");
-    loadExercicios();
+    try {
+      const { error } = await supabase.from("tb_exercicios_usuario").delete().eq("id", id).eq("user_id", userId);
+      if (error) {
+        toast.error("Erro ao remover exercício. Tente novamente.");
+        return;
+      }
+      setSelectedIds((prev) => prev.filter((s) => !(s.id === id && s.isPessoal)));
+      toast.success("Exercício removido");
+      loadExercicios();
+    } catch {
+      toast.error("Erro ao remover exercício. Tente novamente.");
+    }
   };
 
   const handleSalvar = async () => {
@@ -100,12 +124,18 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
     }
     setSaving(true);
 
-    const { data: grupo } = await supabase
-      .from("tb_grupos_treino_usuario")
-      .insert({ user_id: userId, nome: nomeGrupo.trim() })
-      .select().single();
+    try {
+      const { data: grupo, error: grupoError } = await supabase
+        .from("tb_grupos_treino_usuario")
+        .insert({ user_id: userId, nome: nomeGrupo.trim() })
+        .select().single();
 
-    if (grupo) {
+      if (grupoError || !grupo) {
+        toast.error("Erro ao criar grupo. Tente novamente.");
+        setSaving(false);
+        return;
+      }
+
       const inserts = selectedIds.map((s, i) => ({
         user_id: userId,
         grupo_usuario_id: grupo.id,
@@ -113,14 +143,22 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
         exercicio_usuario_id: s.isPessoal ? s.id : null,
         ordem: i,
       }));
-      await supabase.from("tb_grupos_exercicios_usuario").insert(inserts);
-    }
+      const { error: insertError } = await supabase.from("tb_grupos_exercicios_usuario").insert(inserts);
+      if (insertError) {
+        toast.error("Grupo criado, mas erro ao adicionar exercícios.");
+        setSaving(false);
+        return;
+      }
 
-    setSaving(false);
-    setNomeGrupo("");
-    setSelectedIds([]);
-    toast.success("Grupo criado!");
-    onCreated();
+      setSaving(false);
+      setNomeGrupo("");
+      setSelectedIds([]);
+      toast.success("Grupo criado!");
+      onCreated();
+    } catch {
+      toast.error("Erro ao criar grupo. Tente novamente.");
+      setSaving(false);
+    }
   };
 
   const isSelected = (id: string, isPessoal: boolean) =>

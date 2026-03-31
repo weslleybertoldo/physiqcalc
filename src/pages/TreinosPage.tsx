@@ -7,7 +7,7 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { setCacheData, getCacheData, hasPendingData } from "@/lib/offlineSync";
+import { setCacheData, getCacheData, hasPendingData, offlineUpsert } from "@/lib/offlineSync";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
@@ -154,9 +154,21 @@ const TreinosPage = () => {
   const [treinosSemana, setTreinosSemana] = useState(0);
   const [treinosMes, setTreinosMes] = useState(0);
 
-  // Memoized so that re-renders don't create new Date objects and cause downstream recalculations
-  const today = useState(() => new Date())[0];
-  const weekDates = useState(() => getWeekDates(today))[0];
+  const [today, setToday] = useState(() => new Date());
+  const [weekDates, setWeekDates] = useState(() => getWeekDates(new Date()));
+
+  // Verifica a cada 60s se o dia mudou (após meia-noite)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      if (getLocalDateKey(now) !== getLocalDateKey(today)) {
+        setToday(now);
+        setWeekDates(getWeekDates(now));
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [today]);
+
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateKey(today));
   const [showAlterarGrupo, setShowAlterarGrupo] = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
@@ -205,17 +217,24 @@ const TreinosPage = () => {
 
   // Cleanup old series on mount
   useEffect(() => {
-    // Limpa séries com mais de 6 meses — mantém histórico completo dos últimos 6 meses
+    // Limpa séries com mais de 12 meses — mantém histórico completo do último ano
     if (user?.id) {
-      const seisLimite = new Date();
-      seisLimite.setMonth(seisLimite.getMonth() - 6);
-      const dataLimite = seisLimite.toISOString().slice(0, 10);
-      supabase
-        .from("tb_treino_series")
-        .delete()
-        .eq("user_id", user.id)
-        .lt("data_treino", dataLimite)
-        .then(() => {});
+      try {
+        const limite = new Date();
+        limite.setMonth(limite.getMonth() - 12);
+        const dataLimite = limite.toISOString().slice(0, 10);
+        console.log(`[Cleanup] Removendo séries anteriores a ${dataLimite}`);
+        supabase
+          .from("tb_treino_series")
+          .delete()
+          .eq("user_id", user.id)
+          .lt("data_treino", dataLimite)
+          .then(({ error }) => {
+            if (error) console.error("[Cleanup] Erro ao limpar séries antigas:", error.message);
+          });
+      } catch (err) {
+        console.error("[Cleanup] Erro inesperado:", err);
+      }
     }
   }, [user?.id]);
 
@@ -580,8 +599,17 @@ const TreinosPage = () => {
         }
       }
 
-      setCacheData(seriesCacheKey, allSeries);
-      setSeries(allSeries);
+      // Preserva séries não salvas do estado atual que não existem em allSeries
+      setSeries(prev => {
+        const unsavedFromState = prev.filter(
+          (p) => !p.salva && !allSeries.some(
+            (s) => s.exercicio_id === p.exercicio_id && s.numero_serie === p.numero_serie
+          )
+        );
+        const merged = [...allSeries, ...unsavedFromState];
+        setCacheData(seriesCacheKey, merged);
+        return merged;
+      });
 
       // Cacheia último treino de TODOS os exercícios em background
       for (const ge of exerciciosList) {
@@ -649,7 +677,6 @@ const TreinosPage = () => {
   const selectedConcluido = concluidos.includes(selectedDate);
 
   const handleOverride = async (grupoId: string | null, isPessoal: boolean) => {
-    const { offlineUpsert } = await import("@/lib/offlineSync");
     if (grupoId === null) {
       await offlineUpsert(
         "tb_treino_dia_override",

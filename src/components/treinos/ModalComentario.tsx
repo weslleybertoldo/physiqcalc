@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { offlineUpsert, offlineDelete } from "@/lib/offlineSync";
+import { toast } from "sonner";
 import { MessageSquare, Trash2 } from "lucide-react";
 
 interface ModalComentarioProps {
@@ -33,30 +35,34 @@ async function salvarComentario(
 ) {
   const campo = ehPessoal ? "exercicio_usuario_id" : "exercicio_id";
 
-  if (!comentario.trim()) {
-    await supabase
-      .from("tb_exercicio_comentarios")
-      .delete()
-      .eq("user_id", userId)
-      .eq(campo, exercicioId);
-    return;
-  }
+  try {
+    if (!comentario.trim()) {
+      const match: Record<string, string> = { user_id: userId, [campo]: exercicioId };
+      await offlineDelete("tb_exercicio_comentarios", match);
+      return;
+    }
 
-  const row: Record<string, unknown> = {
-    user_id: userId,
-    [campo]: exercicioId,
-    comentario: comentario.trim(),
-    updated_at: new Date().toISOString(),
-  };
-  if (ehPessoal) {
-    row.exercicio_id = null;
-  } else {
-    row.exercicio_usuario_id = null;
-  }
+    const row: Record<string, unknown> = {
+      user_id: userId,
+      [campo]: exercicioId,
+      comentario: comentario.trim(),
+      updated_at: new Date().toISOString(),
+    };
+    if (ehPessoal) {
+      row.exercicio_id = null;
+    } else {
+      row.exercicio_usuario_id = null;
+    }
 
-  await supabase
-    .from("tb_exercicio_comentarios")
-    .upsert(row as any, { onConflict: `user_id,${campo}` });
+    await offlineUpsert(
+      "tb_exercicio_comentarios",
+      row as Record<string, any>,
+      `user_id,${campo}`
+    );
+  } catch (e) {
+    toast.error("Erro ao salvar comentário. Tente novamente.");
+    throw e;
+  }
 }
 
 export { carregarComentario };

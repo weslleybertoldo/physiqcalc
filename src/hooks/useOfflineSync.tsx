@@ -3,6 +3,7 @@ import {
   syncPendingOperations,
   getPendingCount,
   registerAuthSync,
+  unregisterAuthSync,
   getRetryDelay,
   resetRetry,
   incrementRetry,
@@ -13,13 +14,15 @@ export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(getPendingCount);
   const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSync = useCallback(async () => {
-    if (syncing || !navigator.onLine) return;
+    if (syncingRef.current || !navigator.onLine) return;
     const count = getPendingCount();
     if (count === 0) return;
 
+    syncingRef.current = true;
     setSyncing(true);
     try {
       const { synced, failed } = await syncPendingOperations();
@@ -44,10 +47,11 @@ export function useOfflineSync() {
     } catch {
       // Silencioso — tentará novamente na próxima vez
     } finally {
+      syncingRef.current = false;
       setSyncing(false);
       setPendingCount(getPendingCount());
     }
-  }, [syncing]);
+  }, []);
 
   useEffect(() => {
     // Registra sync automático ao re-logar
@@ -81,6 +85,7 @@ export function useOfflineSync() {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      unregisterAuthSync();
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);
       }

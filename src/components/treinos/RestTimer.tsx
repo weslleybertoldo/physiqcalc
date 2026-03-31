@@ -9,6 +9,7 @@ const DEFAULT_SECONDS = 120;
 const RestTimer = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [seconds, setSeconds] = useState(DEFAULT_SECONDS);
+  const [totalSeconds, setTotalSeconds] = useState(DEFAULT_SECONDS);
   const [running, setRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,6 +73,7 @@ const RestTimer = () => {
     setRunning(false);
     setIsFinished(false);
     setSeconds(newSeconds);
+    setTotalSeconds(newSeconds);
   };
 
   const toggle = () => {
@@ -81,7 +83,7 @@ const RestTimer = () => {
 
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  const progress = ((DEFAULT_SECONDS - seconds) / DEFAULT_SECONDS) * 100;
+  const progress = totalSeconds > 0 ? ((totalSeconds - seconds) / totalSeconds) * 100 : 0;
 
   if (!isOpen) {
     return (

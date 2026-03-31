@@ -234,7 +234,15 @@ const TimerDescanso = ({
     setSeconds((s) => {
       const next = Math.max(0, s - 15);
       const saved = lerEstadoSalvo();
-      if (saved) salvarEstado({ ...saved, pausedRemaining: next });
+      if (saved) {
+        if (saved.isPaused) {
+          salvarEstado({ ...saved, pausedRemaining: next });
+        } else {
+          // Recalcula startedAt para refletir os 15s subtraídos
+          const newStartedAt = Date.now() - ((saved.duracao - next) * 1000);
+          salvarEstado({ ...saved, startedAt: newStartedAt, pausedRemaining: next });
+        }
+      }
       return next;
     });
   };
@@ -245,12 +253,27 @@ const TimerDescanso = ({
     const newSec = Math.round(m * 60);
     duracaoAtualRef.current = newSec;
     setSeconds(newSec);
+    setPaused(false);
+    setFinished(false);
+    notifiedRef.current = false;
     onTempoAlterado(newSec);
     const saved = lerEstadoSalvo();
-    if (saved) salvarEstado({ ...saved, duracao: newSec, pausedRemaining: newSec, startedAt: Date.now() });
+    if (saved) {
+      salvarEstado({ ...saved, duracao: newSec, pausedRemaining: newSec, startedAt: Date.now(), isPaused: false });
+      // Reagenda notificação com o novo tempo
+      startTimerNotifications(`${saved.exercicioNome} — Série ${saved.numeroSerie}`, newSec);
+    }
   };
 
-  const handleFechar = () => { limparEstado(); cancelTimerNotification(); onFechado(); };
+  const handleFechar = () => {
+    limparEstado();
+    cancelTimerNotification();
+    if (audioRef.current) {
+      audioRef.current.close().catch(() => {});
+      audioRef.current = null;
+    }
+    onFechado();
+  };
 
   if (!ativo) return null;
 
