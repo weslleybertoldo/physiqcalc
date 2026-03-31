@@ -237,7 +237,7 @@ public class TimerForegroundService extends Service {
         if (isAlarmPlaying) return;
         isAlarmPlaying = true;
 
-        // Vibração
+        // Vibração curta e sutil
         try {
             Vibrator vibrator;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -247,7 +247,7 @@ public class TimerForegroundService extends Service {
                 vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             }
             if (vibrator != null) {
-                long[] pattern = {0, 200, 100, 200, 100, 400, 500, 200, 100, 200, 100, 400};
+                long[] pattern = {0, 150, 100, 150};
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1));
                 } else {
@@ -258,37 +258,27 @@ public class TimerForegroundService extends Service {
             // Ignora se vibração não disponível
         }
 
-        // Som de alarme (USAGE_ALARM = prioridade máxima, toca mesmo em modo silencioso)
+        // Som de notificação sutil (TYPE_NOTIFICATION = som curto do sistema)
         try {
-            Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-            if (alarmSound == null) {
-                alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            if (notifSound == null) {
+                notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
             }
             mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(this, alarmSound);
+            mediaPlayer.setDataSource(this, notifSound);
             mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build());
             mediaPlayer.setLooping(false);
             mediaPlayer.setOnCompletionListener(mp -> {
-                // Libera recursos assim que o som terminar de tocar
                 try { mp.release(); } catch (Exception e) { /* ignora */ }
                 mediaPlayer = null;
             });
             mediaPlayer.prepare();
             mediaPlayer.start();
         } catch (Exception e) {
-            // Fallback: tenta notification sound
-            try {
-                Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                mediaPlayer = new MediaPlayer();
-                mediaPlayer.setDataSource(this, notifSound);
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-            } catch (Exception e2) {
-                // Sem som disponível
-            }
+            // Sem som disponível
         }
 
         // Notificação de alarme visual
@@ -361,13 +351,13 @@ public class TimerForegroundService extends Service {
             channel.setShowBadge(true);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
-            Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-            if (alarmSound != null) {
+            Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            if (notifSound != null) {
                 AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build();
-                channel.setSound(alarmSound, audioAttributes);
+                channel.setSound(notifSound, audioAttributes);
             }
 
             NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
