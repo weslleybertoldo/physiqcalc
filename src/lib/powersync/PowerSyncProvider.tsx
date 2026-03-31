@@ -1,0 +1,59 @@
+import { PowerSyncContext } from "@powersync/react";
+import { WASQLitePowerSyncDatabaseOpenFactory } from "@powersync/web";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { AppSchema } from "./schema";
+import { SupabaseConnector } from "./connector";
+import { useAuth } from "@/hooks/useAuth";
+
+const factory = new WASQLitePowerSyncDatabaseOpenFactory({
+  schema: AppSchema,
+  dbFilename: "physiqcalc.db",
+});
+
+const powerSyncDb = factory.getInstance();
+
+export function PowerSyncProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const [ready, setReady] = useState(false);
+  const connector = useMemo(() => new SupabaseConnector(), []);
+
+  useEffect(() => {
+    if (!user) {
+      // Desconecta quando desloga
+      powerSyncDb.disconnectAndClear().then(() => setReady(false));
+      return;
+    }
+
+    // Conecta quando loga
+    const init = async () => {
+      try {
+        await powerSyncDb.init();
+        await powerSyncDb.connect(connector);
+        setReady(true);
+      } catch (e) {
+        console.warn("[PowerSync] init error:", e);
+        // Mesmo com erro de sync, o banco local funciona
+        setReady(true);
+      }
+    };
+
+    init();
+
+    return () => {
+      powerSyncDb.disconnect();
+    };
+  }, [user, connector]);
+
+  return (
+    <PowerSyncContext.Provider value={powerSyncDb}>
+      {ready || !user ? children : (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <p className="text-muted-foreground text-sm">Sincronizando dados...</p>
+        </div>
+      )}
+    </PowerSyncContext.Provider>
+  );
+}
+
+// Export para uso direto em funções não-React
+export { powerSyncDb };
