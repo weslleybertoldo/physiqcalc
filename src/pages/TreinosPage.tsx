@@ -654,6 +654,15 @@ const TreinosPage = () => {
   const googleIdentity = (user as any)?.identities?.find((id: any) => id.provider === "google");
   const displayName = profile?.nome || googleIdentity?.identity_data?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
   const avatarUrl = profile?.foto_url || googleIdentity?.identity_data?.picture || googleIdentity?.identity_data?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
+
+  // Salva foto do Google no perfil na primeira vez que encontrar (para não depender de identities)
+  useEffect(() => {
+    if (avatarUrl && !profile?.foto_url && user?.id) {
+      supabase.from("physiq_profiles").update({ foto_url: avatarUrl }).eq("id", user.id).then(() => {
+        setProfile(prev => prev ? { ...prev, foto_url: avatarUrl } : prev);
+      });
+    }
+  }, [avatarUrl, profile?.foto_url, user?.id]);
   const initial = displayName.charAt(0).toUpperCase();
 
   const diasInfo = weekDates.map((d) => {
