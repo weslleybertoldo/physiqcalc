@@ -123,15 +123,44 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
       // Envia em batches de 50 para evitar payload muito grande
       for (let i = 0; i < rows.length; i += 50) {
         const batch = rows.slice(i, i + 50);
-        const { error } = await table.upsert(batch);
-        if (error) throw error;
+        const { error } = await table.upsert(batch, { onConflict: 'id' });
+        if (error) {
+          // Conflito 23505: tenta update individual para cada registro
+          if (error.code === '23505') {
+            console.warn(`[PowerSync] Conflito em ${tableName}, fazendo merge individual`);
+            for (const row of batch) {
+              const { id, ...data } = row;
+              const { error: updateErr } = await table.update(data).eq('id', id);
+              if (updateErr) {
+                console.error(`[PowerSync] Erro ao resolver conflito para id=${id}:`, updateErr.message);
+              } else {
+                console.log(`[PowerSync] Conflito resolvido para id=${id} via UPDATE`);
+              }
+            }
+          } else {
+            throw error;
+          }
+        }
       }
     }
 
     // PATCHes são individuais (precisam de WHERE clause)
     for (const op of patches) {
       const { error } = await table.update(op.opData!).eq("id", op.id);
-      if (error) throw error;
+      if (error) {
+        // Conflito: tenta merge com dados existentes via upsert
+        if (error.code === '23505') {
+          console.warn(`[PowerSync] Conflito PATCH em ${tableName} id=${op.id}, fazendo upsert`);
+          const { error: upsertErr } = await table.upsert({ id: op.id, ...op.opData }, { onConflict: 'id' });
+          if (upsertErr) {
+            console.error(`[PowerSync] Erro ao resolver conflito PATCH id=${op.id}:`, upsertErr.message);
+          } else {
+            console.log(`[PowerSync] Conflito PATCH resolvido para id=${op.id}`);
+          }
+        } else {
+          throw error;
+        }
+      }
     }
 
     // DELETEs são individuais
