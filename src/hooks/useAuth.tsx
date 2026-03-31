@@ -75,35 +75,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initSession();
 
     // 2. Escuta mudanças de auth em tempo real
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // IMPORTANTE: ignora SIGNED_OUT se já tem sessão local (previne logout por falha de rede)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'SIGNED_OUT') {
+        // Só desloga se foi um signOut explícito (não por falha de refresh)
+        // Verifica se ainda tem sessão válida no storage
+        supabase.auth.getSession().then(({ data: { session: stored } }) => {
+          if (!stored) {
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+          }
+        });
+        return;
+      }
+      if (newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
+      }
       setLoading(false);
     });
 
     // 3. Refresca o token quando o app volta ao primeiro plano (APK + PWA)
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        supabase.auth.refreshSession().then(({ data: { session: refreshed } }) => {
-          if (refreshed) {
-            setSession(refreshed);
-            setUser(refreshed.user);
+    // Usa getSession primeiro (local), só faz refresh se necessário
+    const onVisibility = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const { data: { session: local } } = await supabase.auth.getSession();
+        if (local) {
+          setSession(local);
+          setUser(local.user);
+          // Tenta refresh em background, sem deslogar se falhar
+          if (navigator.onLine) {
+            const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+            if (refreshed) {
+              setSession(refreshed);
+              setUser(refreshed.user);
+            }
           }
-        }).catch(() => {
-          // Offline — mantém sessão atual sem deslogar
-        });
+        }
+      } catch {
+        // Offline — mantém sessão atual sem deslogar
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
 
     // 4. No Capacitor, o app pode ser "resumed" sem visibilitychange
-    const onResume = () => {
-      supabase.auth.refreshSession().then(({ data: { session: refreshed } }) => {
-        if (refreshed) {
-          setSession(refreshed);
-          setUser(refreshed.user);
+    const onResume = async () => {
+      try {
+        const { data: { session: local } } = await supabase.auth.getSession();
+        if (local) {
+          setSession(local);
+          setUser(local.user);
+          if (navigator.onLine) {
+            const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+            if (refreshed) {
+              setSession(refreshed);
+              setUser(refreshed.user);
+            }
+          }
         }
-      }).catch(() => {});
+      } catch {}
     };
     document.addEventListener('resume', onResume);
 
