@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { usePowerSync } from "@powersync/react";
 import { offlineUpsert, offlineDelete } from "@/lib/offlineSync";
 import { toast } from "sonner";
 import { MessageSquare, Trash2 } from "lucide-react";
@@ -15,16 +15,16 @@ interface ModalComentarioProps {
 async function carregarComentario(
   userId: string,
   exercicioId: string,
-  ehPessoal: boolean
+  ehPessoal: boolean,
+  db?: any
 ): Promise<string> {
+  if (!db) return "";
   const campo = ehPessoal ? "exercicio_usuario_id" : "exercicio_id";
-  const { data } = await supabase
-    .from("tb_exercicio_comentarios")
-    .select("comentario")
-    .eq("user_id", userId)
-    .eq(campo, exercicioId)
-    .single();
-  return data?.comentario ?? "";
+  const rows = await db.getAll(
+    `SELECT comentario FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
+    [userId, exercicioId]
+  );
+  return (rows[0] as any)?.comentario ?? "";
 }
 
 async function salvarComentario(
@@ -74,6 +74,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
   userId,
   onFechar,
 }) => {
+  const db = usePowerSync();
   const [texto, setTexto] = useState("");
   const [textoOriginal, setTextoOriginal] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -81,7 +82,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    carregarComentario(userId, exercicioId, ehPessoal).then((c) => {
+    carregarComentario(userId, exercicioId, ehPessoal, db).then((c) => {
       setTexto(c);
       setTextoOriginal(c);
       setCarregando(false);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Edit2, X, Save, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { usePowerSync } from "@powersync/react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -26,6 +27,7 @@ const GRUPOS_MUSCULARES = [
 ];
 
 const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props) => {
+  const db = usePowerSync();
   const [nomeGrupo, setNomeGrupo] = useState("");
   const [exerciciosGlobais, setExerciciosGlobais] = useState<Exercicio[]>([]);
   const [exerciciosPessoais, setExerciciosPessoais] = useState<Exercicio[]>([]);
@@ -50,12 +52,12 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
   }, [open]);
 
   const loadExercicios = async () => {
-    const [globalRes, pessoalRes] = await Promise.all([
-      supabase.from("tb_exercicios").select("*").order("nome"),
-      supabase.from("tb_exercicios_usuario").select("*").eq("user_id", userId).order("nome"),
+    const [globais, pessoais] = await Promise.all([
+      db.getAll("SELECT * FROM tb_exercicios ORDER BY nome"),
+      db.getAll("SELECT * FROM tb_exercicios_usuario WHERE user_id = ? ORDER BY nome", [userId]),
     ]);
-    setExerciciosGlobais((globalRes.data as Exercicio[]) || []);
-    setExerciciosPessoais(((pessoalRes.data as any[]) || []).map((e) => ({ ...e, isPessoal: true })));
+    setExerciciosGlobais((globais as Exercicio[]) || []);
+    setExerciciosPessoais(((pessoais as any[]) || []).map((e: any) => ({ ...e, isPessoal: true })));
   };
 
   const toggleSelect = (id: string, isPessoal: boolean) => {
