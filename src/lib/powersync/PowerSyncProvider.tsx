@@ -14,26 +14,21 @@ const powerSyncDb = factory.getInstance();
 
 export function PowerSyncProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [ready, setReady] = useState(false);
   const connector = useMemo(() => new SupabaseConnector(), []);
 
   useEffect(() => {
     if (!user) {
-      // Desconecta quando desloga
-      powerSyncDb.disconnectAndClear().then(() => setReady(false));
+      powerSyncDb.disconnectAndClear().catch(() => {});
       return;
     }
 
-    // Conecta quando loga
     const init = async () => {
       try {
         await powerSyncDb.init();
         await powerSyncDb.connect(connector);
-        setReady(true);
       } catch (e) {
         console.warn("[PowerSync] init error:", e);
         // Mesmo com erro de sync, o banco local funciona
-        setReady(true);
       }
     };
 
@@ -44,16 +39,13 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
     };
   }, [user, connector]);
 
+  // NUNCA bloqueia a renderização — mostra o app imediatamente
+  // O PowerSync sincroniza em background
   return (
     <PowerSyncContext.Provider value={powerSyncDb}>
-      {ready || !user ? children : (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <p className="text-muted-foreground text-sm">Sincronizando dados...</p>
-        </div>
-      )}
+      {children}
     </PowerSyncContext.Provider>
   );
 }
 
-// Export para uso direto em funções não-React
 export { powerSyncDb };
