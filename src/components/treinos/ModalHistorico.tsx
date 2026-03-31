@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { usePowerSync } from "@powersync/react";
 import { formatarDataCurta } from "@/utils/formatDate";
 import { toast } from "sonner";
 
@@ -37,6 +37,7 @@ function formatPace(paceSegundos: number): string {
 }
 
 const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange }: Props) => {
+  const db = usePowerSync();
   const [records, setRecords] = useState<SerieRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(false);
@@ -48,21 +49,17 @@ const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange
     // Busca tanto por exercicio_id (global) quanto por exercicio_usuario_id (personalizado)
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from("tb_treino_series")
-          .select("data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km")
-          .eq("user_id", userId)
-          .eq("concluida", true)
-          .or(`exercicio_id.eq.${exercicioId},exercicio_usuario_id.eq.${exercicioId}`)
-          .or("peso.gt.0,tempo_segundos.gt.0")
-          .order("data_treino", { ascending: false })
-          .limit(50);
-        if (error) {
-          setErro(true);
-          toast.error("Erro ao carregar histórico.");
-        } else {
-          setRecords((data as unknown as SerieRecord[]) || []);
-        }
+        const rows = await db.getAll(
+          `SELECT data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km
+           FROM tb_treino_series
+           WHERE user_id = ? AND concluida = 1
+             AND (exercicio_id = ? OR exercicio_usuario_id = ?)
+             AND (peso > 0 OR tempo_segundos > 0)
+           ORDER BY data_treino DESC
+           LIMIT 50`,
+          [userId, exercicioId, exercicioId]
+        );
+        setRecords((rows as unknown as SerieRecord[]) || []);
       } catch {
         setErro(true);
         toast.error("Erro ao carregar histórico.");
@@ -70,7 +67,7 @@ const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange
         setLoading(false);
       }
     })();
-  }, [open, exercicioId, userId]);
+  }, [open, exercicioId, userId, db]);
 
   // Group by date
   const grouped = records.reduce<Record<string, SerieRecord[]>>((acc, r) => {

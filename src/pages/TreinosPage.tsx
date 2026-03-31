@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ClipboardList, LogOut, History, WifiOff, Loader2, Settings, RefreshCw, Check, Download, X } from "lucide-react";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
@@ -7,13 +7,14 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { setCacheData, getCacheData, hasPendingData, offlineUpsert } from "@/lib/offlineSync";
+import { hasPendingData, offlineUpsert } from "@/lib/offlineSync";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
 import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
 import { useNavigate } from "react-router-dom";
+import { usePowerSync, useQuery } from "@powersync/react";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
 
@@ -90,69 +91,17 @@ export interface SerieComMemoria {
   pace_segundos_km?: number;
 }
 
-// Fetch last workout data for a specific exercise (com cache offline)
-async function buscarUltimoTreino(
-  userId: string,
-  exercicioId: string,
-  dataAtual: string,
-  isExercicioUsuario = false
-) {
-  const cacheKey = `ultimoTreino_${userId}_${exercicioId}`;
-
-  try {
-    // Busca pelo campo correto dependendo do tipo de exercício
-    const fieldName = isExercicioUsuario ? "exercicio_usuario_id" : "exercicio_id";
-    const { data, error } = await supabase
-      .from("tb_treino_series")
-      .select("numero_serie, peso, reps, data_treino")
-      .eq("user_id", userId)
-      .eq(fieldName, exercicioId)
-      .eq("concluida", true)
-      .lt("data_treino", dataAtual)
-      .order("data_treino", { ascending: false })
-      .order("numero_serie", { ascending: true })
-      .limit(20);
-
-    if (error) return getCacheData<any[]>(cacheKey);
-    if (!data || data.length === 0) return null;
-
-    const ultimaData = data[0].data_treino;
-    const result = data
-      .filter((s) => s.data_treino === ultimaData)
-      .sort((a, b) => a.numero_serie - b.numero_serie);
-
-    // Salva no cache para uso offline
-    setCacheData(cacheKey, result);
-    return result;
-  } catch {
-    // Offline: tenta cache
-    return getCacheData<any[]>(cacheKey);
-  }
-}
-
 const TreinosPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const db = usePowerSync();
   const { isOnline, pendingCount, syncing } = useOfflineSync();
-  const [profile, setProfile] = useState<{ nome: string | null; foto_url: string | null; user_code: number | null } | null>(null);
-  const [loading, setLoading] = useState(true);
   // Guarda posição do scroll para restaurar após updates silenciosos
   const scrollYRef = useRef(0);
   // Flag para não recarregar quando voltar do bloqueio/minimizar
   const isVisibleRef = useRef(true);
-  // Flag para garantir que a primeira carga (com loading=true) só acontece uma vez
-  const initialLoadDoneRef = useRef(false);
 
-  const [grupos, setGrupos] = useState<GrupoTreino[]>([]);
-  const [gruposPessoais, setGruposPessoais] = useState<GrupoTreino[]>([]);
-  const [semanaConfig, setSemanaConfig] = useState<SemanaConfig[]>([]);
-  const [gruposExercicios, setGruposExercicios] = useState<Record<string, GrupoExercicio[]>>({});
-  const [gruposExerciciosPessoais, setGruposExerciciosPessoais] = useState<Record<string, GrupoExercicio[]>>({});
-  const [overrides, setOverrides] = useState<Record<string, OverrideInfo>>({});
   const [series, setSeries] = useState<SerieComMemoria[]>([]);
-  const [concluidos, setConcluidos] = useState<string[]>([]);
-  const [treinosSemana, setTreinosSemana] = useState(0);
-  const [treinosMes, setTreinosMes] = useState(0);
 
   const [today, setToday] = useState(() => new Date());
   const [weekDates, setWeekDates] = useState(() => getWeekDates(new Date()));
@@ -169,7 +118,7 @@ const TreinosPage = () => {
     return () => clearInterval(interval);
   }, [today]);
 
-  const [selectedDate, setSelectedDate] = useState(() => getLocalDateKey(today));
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateKey(new Date()));
   const [showAlterarGrupo, setShowAlterarGrupo] = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -264,155 +213,172 @@ const TreinosPage = () => {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
-  // Carrega dados do cache offline
-  const loadFromCache = useCallback((cacheKey: string): boolean => {
-    const cached = getCacheData<any>(cacheKey);
-    if (!cached) return false;
-    setProfile(cached.profile);
-    setGrupos(cached.grupos);
-    setGruposPessoais(cached.gruposPessoais);
-    setSemanaConfig(cached.semanaConfig);
-    setGruposExercicios(cached.gruposExercicios);
-    setGruposExerciciosPessoais(cached.gruposExerciciosPessoais);
-    setOverrides(cached.overrides);
-    setConcluidos(cached.concluidos);
-    setTreinosSemana(cached.treinosSemana);
-    setTreinosMes(cached.treinosMes);
-    return true;
-  }, []);
+  // =====================================================
+  // LEITURAS REATIVAS via PowerSync (SQLite local)
+  // =====================================================
+  const userId = user?.id ?? "";
 
-  // Load base data (groups, config, overrides, concluidos)
-  // refreshOnly=true → atualiza dados em background sem mostrar tela de "Carregando"
-  const loadBaseData = useCallback(async (refreshOnly = false) => {
-    if (!user) return;
-    if (refreshOnly && !isVisibleRef.current) return;
-    if (!refreshOnly) setLoading(true);
+  // Perfil do usuário
+  const { data: profileRows } = useQuery(
+    "SELECT nome, foto_url, user_code FROM physiq_profiles WHERE id = ?",
+    [userId]
+  );
+  const profile = useMemo(() => {
+    if (!profileRows || profileRows.length === 0) return null;
+    const row = profileRows[0] as any;
+    return { nome: row.nome, foto_url: row.foto_url, user_code: row.user_code };
+  }, [profileRows]);
 
-    const cacheKey = `baseData_${user.id}`;
+  // Grupos de treino (globais)
+  const { data: gruposRows } = useQuery(
+    "SELECT id, nome FROM tb_grupos_treino ORDER BY nome"
+  );
+  const grupos = useMemo<GrupoTreino[]>(
+    () => (gruposRows as any[]) || [],
+    [gruposRows]
+  );
 
-    // Se offline, carrega do cache imediatamente
-    if (!navigator.onLine) {
-      loadFromCache(cacheKey);
-      if (!refreshOnly) setLoading(false);
-      return;
+  // Grupos de treino do usuário (pessoais)
+  const { data: gruposPessoaisRows } = useQuery(
+    "SELECT id, nome FROM tb_grupos_treino_usuario WHERE user_id = ? ORDER BY nome",
+    [userId]
+  );
+  const gruposPessoais = useMemo<GrupoTreino[]>(
+    () => (gruposPessoaisRows as any[]) || [],
+    [gruposPessoaisRows]
+  );
+
+  // Configuração da semana (com JOIN para pegar nome do grupo)
+  const { data: semanaRows } = useQuery(
+    `SELECT s.dia_semana, s.grupo_id, g.id as grupo_treino_id, g.nome as grupo_treino_nome
+     FROM tb_semana_treinos s
+     LEFT JOIN tb_grupos_treino g ON s.grupo_id = g.id`
+  );
+  const semanaConfig = useMemo<SemanaConfig[]>(() => {
+    if (!semanaRows) return [];
+    return (semanaRows as any[]).map((row) => ({
+      dia_semana: String(row.dia_semana),
+      grupo_id: row.grupo_id,
+      tb_grupos_treino: row.grupo_treino_id
+        ? { id: row.grupo_treino_id, nome: row.grupo_treino_nome }
+        : null,
+    }));
+  }, [semanaRows]);
+
+  // Overrides da semana atual
+  const weekStart = useMemo(() => getLocalDateKey(weekDates[0]), [weekDates]);
+  const weekEnd = useMemo(() => getLocalDateKey(weekDates[6]), [weekDates]);
+
+  const { data: overridesRows } = useQuery(
+    `SELECT data_treino, grupo_id, grupo_usuario_id
+     FROM tb_treino_dia_override
+     WHERE user_id = ? AND data_treino >= ? AND data_treino <= ?`,
+    [userId, weekStart, weekEnd]
+  );
+  const overrides = useMemo<Record<string, OverrideInfo>>(() => {
+    const map: Record<string, OverrideInfo> = {};
+    if (overridesRows) {
+      (overridesRows as any[]).forEach((o) => {
+        map[o.data_treino] = { grupo_id: o.grupo_id, grupo_usuario_id: o.grupo_usuario_id };
+      });
     }
+    return map;
+  }, [overridesRows]);
 
-    // Online: tenta buscar do Supabase
-    try {
-      const freshToday = new Date();
-      const freshWeek = getWeekDates(freshToday);
-      const weekStart = getLocalDateKey(freshWeek[0]);
-      const weekEnd = getLocalDateKey(freshWeek[6]);
-      const monthStart = getMonthStart();
+  // Treinos concluídos da semana
+  const { data: concluidosSemanaRows } = useQuery(
+    `SELECT data_treino FROM tb_treino_concluido
+     WHERE user_id = ? AND data_treino >= ? AND data_treino <= ?`,
+    [userId, weekStart, weekEnd]
+  );
+  const concluidos = useMemo(
+    () => ((concluidosSemanaRows as any[]) || []).map((c: any) => c.data_treino),
+    [concluidosSemanaRows]
+  );
+  const treinosSemana = concluidos.length;
 
-      const [profileRes, gruposRes, gruposPessoaisRes, semanaRes, overridesRes, concluidosSemanaRes, concluidosMesRes] =
-        await Promise.all([
-          supabase.from("physiq_profiles").select("nome, foto_url, user_code").eq("id", user.id).single(),
-          supabase.from("tb_grupos_treino").select("*").order("nome"),
-          supabase.from("tb_grupos_treino_usuario").select("*").eq("user_id", user.id).order("nome"),
-          supabase.from("tb_semana_treinos").select("dia_semana, grupo_id, tb_grupos_treino(id, nome)"),
-          supabase.from("tb_treino_dia_override").select("data_treino, grupo_id, grupo_usuario_id").eq("user_id", user.id).gte("data_treino", weekStart).lte("data_treino", weekEnd),
-          supabase.from("tb_treino_concluido").select("data_treino").eq("user_id", user.id).gte("data_treino", weekStart).lte("data_treino", weekEnd),
-          supabase.from("tb_treino_concluido").select("data_treino").eq("user_id", user.id).gte("data_treino", monthStart),
-        ]);
+  // Treinos concluídos do mês
+  const monthStart = useMemo(() => getMonthStart(), []);
+  const { data: concluidosMesRows } = useQuery(
+    `SELECT data_treino FROM tb_treino_concluido
+     WHERE user_id = ? AND data_treino >= ?`,
+    [userId, monthStart]
+  );
+  const treinosMes = (concluidosMesRows || []).length;
 
-      // Se as queries retornaram erro (ex: rede instável), usa cache
-      if (gruposRes.error || semanaRes.error) {
-        loadFromCache(cacheKey);
-        if (!refreshOnly) setLoading(false);
-        return;
-      }
+  // Exercícios dos grupos globais (com JOIN)
+  const { data: gruposExerciciosRows } = useQuery(
+    `SELECT ge.grupo_id, ge.exercicio_id, ge.ordem,
+            e.id as ex_id, e.nome as ex_nome, e.grupo_muscular as ex_grupo_muscular, e.emoji as ex_emoji, e.tipo as ex_tipo
+     FROM tb_grupos_exercicios ge
+     LEFT JOIN tb_exercicios e ON ge.exercicio_id = e.id
+     ORDER BY ge.ordem`
+  );
+  const gruposExercicios = useMemo<Record<string, GrupoExercicio[]>>(() => {
+    const map: Record<string, GrupoExercicio[]> = {};
+    if (gruposExerciciosRows) {
+      (gruposExerciciosRows as any[]).forEach((ge) => {
+        if (!ge.ex_id) return;
+        if (!map[ge.grupo_id]) map[ge.grupo_id] = [];
+        map[ge.grupo_id].push({
+          exercicio_id: ge.exercicio_id,
+          ordem: ge.ordem || 0,
+          tb_exercicios: {
+            id: ge.ex_id,
+            nome: ge.ex_nome,
+            grupo_muscular: ge.ex_grupo_muscular,
+            emoji: ge.ex_emoji,
+          },
+        });
+      });
+    }
+    return map;
+  }, [gruposExerciciosRows]);
 
-      if (profileRes.data) setProfile(profileRes.data as any);
-      const gruposList = (gruposRes.data as GrupoTreino[]) || [];
-      setGrupos(gruposList);
-      setGruposPessoais((gruposPessoaisRes.data as GrupoTreino[]) || []);
-      setSemanaConfig((semanaRes.data as any[]) || []);
-
-      const geMap: Record<string, GrupoExercicio[]> = {};
-      if (gruposList.length > 0) {
-        const { data: geData } = await supabase
-          .from("tb_grupos_exercicios")
-          .select("grupo_id, exercicio_id, ordem, tb_exercicios(id, nome, grupo_muscular, emoji, tipo)")
-          .order("ordem");
-        if (geData) {
-          (geData as any[]).forEach((ge) => {
-            if (!geMap[ge.grupo_id]) geMap[ge.grupo_id] = [];
-            geMap[ge.grupo_id].push(ge);
+  // Exercícios dos grupos pessoais do usuário (com JOINs)
+  const { data: gruposExerciciosUsuarioRows } = useQuery(
+    `SELECT geu.grupo_usuario_id, geu.exercicio_id, geu.exercicio_usuario_id, geu.ordem,
+            e.id as ex_id, e.nome as ex_nome, e.grupo_muscular as ex_grupo_muscular, e.emoji as ex_emoji, e.tipo as ex_tipo,
+            eu.id as exu_id, eu.nome as exu_nome, eu.grupo_muscular as exu_grupo_muscular, eu.emoji as exu_emoji, eu.tipo as exu_tipo
+     FROM tb_grupos_exercicios_usuario geu
+     LEFT JOIN tb_exercicios e ON geu.exercicio_id = e.id
+     LEFT JOIN tb_exercicios_usuario eu ON geu.exercicio_usuario_id = eu.id
+     WHERE geu.user_id = ?
+     ORDER BY geu.ordem`,
+    [userId]
+  );
+  const gruposExerciciosPessoais = useMemo<Record<string, GrupoExercicio[]>>(() => {
+    const map: Record<string, GrupoExercicio[]> = {};
+    if (gruposExerciciosUsuarioRows) {
+      (gruposExerciciosUsuarioRows as any[]).forEach((ge: any) => {
+        const gid = ge.grupo_usuario_id;
+        if (!map[gid]) map[gid] = [];
+        const exData = ge.ex_id
+          ? { id: ge.ex_id, nome: ge.ex_nome, grupo_muscular: ge.ex_grupo_muscular, emoji: ge.ex_emoji }
+          : ge.exu_id
+            ? { id: ge.exu_id, nome: ge.exu_nome, grupo_muscular: ge.exu_grupo_muscular, emoji: ge.exu_emoji }
+            : null;
+        const isPessoal = !ge.ex_id && !!ge.exu_id;
+        if (exData) {
+          map[gid].push({
+            exercicio_id: exData.id,
+            exercicio_usuario_id: isPessoal ? exData.id : undefined,
+            ordem: ge.ordem || 0,
+            tb_exercicios: exData,
           });
         }
-      }
-      setGruposExercicios(geMap);
-
-      const gePessoalMap: Record<string, GrupoExercicio[]> = {};
-      const pessoaisList = (gruposPessoaisRes.data as any[]) || [];
-      if (pessoaisList.length > 0) {
-        const { data: geuData } = await supabase
-          .from("tb_grupos_exercicios_usuario")
-          .select("grupo_usuario_id, exercicio_id, exercicio_usuario_id, ordem, tb_exercicios(id, nome, grupo_muscular, emoji, tipo), tb_exercicios_usuario(id, nome, grupo_muscular, emoji, tipo)")
-          .eq("user_id", user.id)
-          .order("ordem");
-        if (geuData) {
-          (geuData as any[]).forEach((ge: any) => {
-            const gid = ge.grupo_usuario_id;
-            if (!gePessoalMap[gid]) gePessoalMap[gid] = [];
-            const exData = ge.tb_exercicios || ge.tb_exercicios_usuario;
-            const isPessoal = !ge.tb_exercicios && !!ge.tb_exercicios_usuario;
-            if (exData) {
-              gePessoalMap[gid].push({
-                exercicio_id: exData.id,
-                exercicio_usuario_id: isPessoal ? exData.id : undefined,
-                ordem: ge.ordem || 0,
-                tb_exercicios: exData,
-              });
-            }
-          });
-        }
-      }
-      setGruposExerciciosPessoais(gePessoalMap);
-
-      const ovMap: Record<string, OverrideInfo> = {};
-      ((overridesRes.data as any[]) || []).forEach((o) => {
-        ovMap[o.data_treino] = { grupo_id: o.grupo_id, grupo_usuario_id: o.grupo_usuario_id };
       });
-      setOverrides(ovMap);
-
-      const concluidosDates = ((concluidosSemanaRes.data as any[]) || []).map((c: any) => c.data_treino);
-      setConcluidos(concluidosDates);
-      setTreinosSemana(concluidosDates.length);
-      setTreinosMes(((concluidosMesRes.data as any[]) || []).length);
-
-      // Salva tudo no cache para uso offline
-      setCacheData(cacheKey, {
-        profile: profileRes.data,
-        grupos: gruposList,
-        gruposPessoais: (gruposPessoaisRes.data as GrupoTreino[]) || [],
-        semanaConfig: (semanaRes.data as any[]) || [],
-        gruposExercicios: geMap,
-        gruposExerciciosPessoais: gePessoalMap,
-        overrides: ovMap,
-        concluidos: concluidosDates,
-        treinosSemana: concluidosDates.length,
-        treinosMes: ((concluidosMesRes.data as any[]) || []).length,
-      });
-    } catch {
-      // Falha de rede — carrega do cache
-      loadFromCache(cacheKey);
     }
+    return map;
+  }, [gruposExerciciosUsuarioRows]);
 
-    if (!refreshOnly) setLoading(false);
-  }, [user, loadFromCache]);
-
-  useEffect(() => {
-    // Primeira carga: mostra loading — só roda uma vez na vida do componente
-    if (initialLoadDoneRef.current) {
-      // Recargas subsequentes (ex: mudança de user) — silenciosas, sem loading
-      loadBaseData(true);
-      return;
-    }
-    initialLoadDoneRef.current = true;
-    loadBaseData(false);
-  }, [loadBaseData]);
+  // Séries do dia selecionado (reativo)
+  const { data: seriesDoDiaRows } = useQuery(
+    `SELECT * FROM tb_treino_series
+     WHERE user_id = ? AND data_treino = ?
+     ORDER BY numero_serie`,
+    [userId, selectedDate]
+  );
 
   // Helper to get grupo for a date
   const getGrupoForDate = useCallback((d: Date): { grupo: GrupoTreino | null; exercicios: GrupoExercicio[]; overrideVazio: boolean } => {
@@ -442,77 +408,51 @@ const TreinosPage = () => {
     return { grupo: null, exercicios: [], overrideVazio: false };
   }, [overrides, gruposPessoais, gruposExerciciosPessoais, grupos, gruposExercicios, semanaConfig]);
 
-  // Load series for the selected date (with weight memory)
-  const loadSeriesForDate = useCallback(async (dateKey: string, exerciciosList: GrupoExercicio[]) => {
-    if (!user) return;
-
-    const seriesCacheKey = `series_${user.id}_${dateKey}`;
-
-    // Função para carregar séries do cache
-    const loadSeriesFromCache = () => {
-      const cached = getCacheData<SerieComMemoria[]>(seriesCacheKey);
-      if (cached) {
-        setSeries(cached);
-        return true;
-      }
-      // Sem cache da data — tenta montar séries usando o cache do último treino
-      const allSeries: SerieComMemoria[] = [];
-      for (const ge of exerciciosList) {
-        const ultimoCache = getCacheData<any[]>(`ultimoTreino_${user.id}_${ge.exercicio_id}`);
-        if (ultimoCache && ultimoCache.length > 0) {
-          ultimoCache.forEach((s) => {
-            allSeries.push({
-              exercicio_id: ge.exercicio_id,
-              numero_serie: s.numero_serie,
-              peso: s.peso ?? 0,
-              reps: s.reps ?? 10,
-              concluida: false,
-              salva: false,
-            });
-          });
-        } else {
-          for (let i = 1; i <= 3; i++) {
-            allSeries.push({
-              exercicio_id: ge.exercicio_id,
-              numero_serie: i,
-              peso: 0,
-              reps: 10,
-              concluida: false,
-              salva: false,
-            });
-          }
-        }
-      }
-      setSeries(allSeries);
-      return false;
-    };
-
-    // Se offline, usa cache
-    if (!navigator.onLine) {
-      loadSeriesFromCache();
-      return;
-    }
-
-    // Online: tenta buscar do Supabase
+  // Buscar último treino de um exercício (leitura imperativa do SQLite local)
+  const buscarUltimoTreino = useCallback(async (
+    exId: string,
+    dataAtual: string,
+    isExercicioUsuario = false
+  ) => {
+    if (!userId) return null;
     try {
-      const { data: seriesDoDia, error: seriesError } = await supabase
-        .from("tb_treino_series")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("data_treino", dateKey)
-        .order("numero_serie");
+      const fieldName = isExercicioUsuario ? "exercicio_usuario_id" : "exercicio_id";
+      const rows = await db.getAll(
+        `SELECT numero_serie, peso, reps, data_treino
+         FROM tb_treino_series
+         WHERE user_id = ? AND ${fieldName} = ? AND concluida = 1 AND data_treino < ?
+         ORDER BY data_treino DESC, numero_serie ASC
+         LIMIT 20`,
+        [userId, exId, dataAtual]
+      );
+      if (!rows || rows.length === 0) return null;
+      const ultimaData = (rows[0] as any).data_treino;
+      return rows
+        .filter((s: any) => s.data_treino === ultimaData)
+        .sort((a: any, b: any) => a.numero_serie - b.numero_serie);
+    } catch {
+      return null;
+    }
+  }, [userId, db]);
 
-      // Se o Supabase retornou erro (sem internet real), usa cache
-      if (seriesError) {
-        loadSeriesFromCache();
-        return;
-      }
+  // Montar séries para o dia selecionado a partir dos dados reativos do PowerSync
+  const selectedDateObj = useMemo(
+    () => weekDates.find((d) => getLocalDateKey(d) === selectedDate) || today,
+    [weekDates, selectedDate, today]
+  );
+  const { exercicios: selectedExercicios, grupo: selectedGrupo, overrideVazio } = useMemo(
+    () => getGrupoForDate(selectedDateObj),
+    [getGrupoForDate, selectedDateObj]
+  );
 
-      const savedSeries = (seriesDoDia as any[]) || [];
+  // Atualiza séries quando os dados reativos do PowerSync mudam
+  useEffect(() => {
+    if (!user || !seriesDoDiaRows) return;
 
+    const buildSeries = async () => {
+      const savedSeries = (seriesDoDiaRows as any[]) || [];
       const seriesByExercicio: Record<string, any[]> = {};
       savedSeries.forEach((s) => {
-        // Exercícios pessoais têm exercicio_id=null e exercicio_usuario_id preenchido
         const key = s.exercicio_id || s.exercicio_usuario_id;
         if (!key) return;
         if (!seriesByExercicio[key]) seriesByExercicio[key] = [];
@@ -521,7 +461,7 @@ const TreinosPage = () => {
 
       const allSeries: SerieComMemoria[] = [];
 
-      for (const ge of exerciciosList) {
+      for (const ge of selectedExercicios) {
         const exId = ge.exercicio_id;
         const exUsuarioId = ge.exercicio_usuario_id;
         const saved = seriesByExercicio[exId];
@@ -535,7 +475,7 @@ const TreinosPage = () => {
               numero_serie: s.numero_serie,
               peso: s.peso ?? 0,
               reps: s.reps ?? 10,
-              concluida: s.concluida ?? false,
+              concluida: s.concluida === 1 || s.concluida === true,
               salva: true,
               tempo_segundos: s.tempo_segundos ?? undefined,
               distancia_km: s.distancia_km ?? undefined,
@@ -543,10 +483,10 @@ const TreinosPage = () => {
             });
           });
         } else {
-          const ultimo = await buscarUltimoTreino(user.id, exId, dateKey, !!exUsuarioId);
+          const ultimo = await buscarUltimoTreino(exId, selectedDate, !!exUsuarioId);
 
           if (ultimo && ultimo.length > 0) {
-            ultimo.forEach((s) => {
+            (ultimo as any[]).forEach((s) => {
               allSeries.push({
                 exercicio_id: exId,
                 exercicio_usuario_id: exUsuarioId,
@@ -573,32 +513,6 @@ const TreinosPage = () => {
         }
       }
 
-      // Antes de sobrescrever, preserva séries locais não salvas que estão no cache
-      // (evita perder edições do usuário quando o banco não tem os dados)
-      const cached = getCacheData<SerieComMemoria[]>(seriesCacheKey);
-      if (cached) {
-        const localOnlySeries = cached.filter(
-          (c) => !c.salva && !allSeries.some(
-            (s) => s.exercicio_id === c.exercicio_id && s.numero_serie === c.numero_serie && s.salva
-          )
-        );
-        // Mescla: séries do banco têm prioridade, mas mantém edições locais para exercícios sem dados no banco
-        for (const local of localOnlySeries) {
-          const existsInNew = allSeries.some(
-            (s) => s.exercicio_id === local.exercicio_id && s.numero_serie === local.numero_serie
-          );
-          if (existsInNew) {
-            // Substitui a versão do "último treino" pela edição local se não foi salva no banco
-            const idx = allSeries.findIndex(
-              (s) => s.exercicio_id === local.exercicio_id && s.numero_serie === local.numero_serie && !s.salva
-            );
-            if (idx !== -1) {
-              allSeries[idx] = local;
-            }
-          }
-        }
-      }
-
       // Preserva séries não salvas do estado atual que não existem em allSeries
       setSeries(prev => {
         const unsavedFromState = prev.filter(
@@ -606,35 +520,20 @@ const TreinosPage = () => {
             (s) => s.exercicio_id === p.exercicio_id && s.numero_serie === p.numero_serie
           )
         );
-        const merged = [...allSeries, ...unsavedFromState];
-        setCacheData(seriesCacheKey, merged);
-        return merged;
+        return [...allSeries, ...unsavedFromState];
       });
+    };
 
-      // Cacheia último treino de TODOS os exercícios em background
-      for (const ge of exerciciosList) {
-        buscarUltimoTreino(user.id, ge.exercicio_id, dateKey, !!ge.exercicio_usuario_id);
-      }
-    } catch {
-      loadSeriesFromCache();
-    }
-  }, [user]);
+    buildSeries();
+  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino]);
 
-  // Reload series when selectedDate changes
-  useEffect(() => {
-    if (!user || loading) return;
-    // Não recarrega séries quando app volta do background
-    if (!isVisibleRef.current) return;
-    const selectedDateObj = weekDates.find((d) => getLocalDateKey(d) === selectedDate) || today;
-    const { exercicios } = getGrupoForDate(selectedDateObj);
-    loadSeriesForDate(selectedDate, exercicios);
-  }, [selectedDate, user, loading, getGrupoForDate, loadSeriesForDate]);
+  const selectedConcluido = concluidos.includes(selectedDate);
 
+  // O PowerSync é reativo, então handleRefresh agora é um no-op leve.
+  // Escritas via supabase/offlineUpsert disparam sync que atualiza o SQLite e re-renderiza.
   const handleRefresh = useCallback(async () => {
-    // refreshOnly=true: atualiza dados em background sem mostrar "Carregando"
-    await loadBaseData(true);
-    // Series will reload via the selectedDate useEffect
-  }, [loadBaseData]);
+    // No-op: o PowerSync re-renderiza automaticamente quando dados mudam no SQLite
+  }, []);
 
   // Logout handler — avisa se há dados pendentes
   const handleLogout = async () => {
@@ -659,7 +558,7 @@ const TreinosPage = () => {
   useEffect(() => {
     if (avatarUrl && !profile?.foto_url && user?.id) {
       supabase.from("physiq_profiles").update({ foto_url: avatarUrl }).eq("id", user.id).then(() => {
-        setProfile(prev => prev ? { ...prev, foto_url: avatarUrl } : prev);
+        // PowerSync vai sincronizar e re-renderizar automaticamente
       });
     }
   }, [avatarUrl, profile?.foto_url, user?.id]);
@@ -680,10 +579,6 @@ const TreinosPage = () => {
       isToday: dk === getLocalDateKey(today),
     };
   });
-
-  const selectedDateObj = weekDates.find((d) => getLocalDateKey(d) === selectedDate) || today;
-  const { grupo: selectedGrupo, exercicios: selectedExercicios, overrideVazio } = getGrupoForDate(selectedDateObj);
-  const selectedConcluido = concluidos.includes(selectedDate);
 
   const handleOverride = async (grupoId: string | null, isPessoal: boolean) => {
     if (grupoId === null) {
@@ -738,6 +633,10 @@ const TreinosPage = () => {
       setCheckingUpdate(false);
     }
   };
+
+  // Determina se ainda está carregando dados iniciais
+  // Usa o isLoading implícito: se temos grupos/semana mas nenhum dado de perfil ainda, pode ser que esteja carregando
+  const loading = !profile && userId !== "";
 
   if (loading) {
     return (

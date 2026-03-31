@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
+import { usePowerSync } from "@powersync/react";
 import { supabase } from "@/integrations/supabase/client";
 import { offlineUpsert, offlineUpdate, offlineDelete, setCacheData, getCacheData, addPendingOperation } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
@@ -69,6 +70,7 @@ const TreinoDoDia = ({
   userId, dateKey, dateLabel, grupoNome, grupoId, exercicios,
   series, concluido, onRefresh, onAlterarGrupo, onSerieConcluida, onSeriesUpdate,
 }: Props) => {
+  const db = usePowerSync();
   const [infoExercicio, setInfoExercicio] = useState<Exercicio | null>(null);
   const [historicoId, setHistoricoId] = useState<string | null>(null);
   const [historicoNome, setHistoricoNome] = useState("");
@@ -94,13 +96,11 @@ const TreinoDoDia = ({
       const cacheKey = `ordem_${userId}_${grupoId}`;
 
       try {
-        const { data: ordemUsuario, error: ordemError } = await supabase
-          .from("exercicio_ordem_usuario")
-          .select("exercicio_id, posicao")
-          .eq("user_id", userId)
-          .eq("grupo_id", grupoId);
+        const ordemUsuario = await db.getAll(
+          "SELECT exercicio_id, posicao FROM exercicio_ordem_usuario WHERE user_id = ? AND grupo_id = ?",
+          [userId, grupoId]
+        );
 
-        if (ordemError) throw ordemError;
         if (!ordemUsuario || ordemUsuario.length === 0) {
           setSortedItems(defaultSorted);
           return;
@@ -519,6 +519,7 @@ const TreinoDoDia = ({
                 series={exSeries}
                 userId={userId}
                 dateKey={dateKey}
+                db={db}
                 tipoCorrida={tipoCorrida}
                 isDragging={draggingId === ex.id}
                 isDragOver={dragOverId === ex.id}
@@ -561,7 +562,7 @@ const TreinoDoDia = ({
 
 // ── ExercicioCard ─────────────────────────────────────────────────────────────
 const ExercicioCard = ({
-  exercicio: ex, series: exSeries, userId, dateKey, tipoCorrida,
+  exercicio: ex, series: exSeries, userId, dateKey, db, tipoCorrida,
   isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
   onTouchDragStart, onTouchDragMove, onTouchDragEnd,
   onSetInfoExercicio, onSetHistorico,
@@ -571,6 +572,7 @@ const ExercicioCard = ({
   series: SerieComMemoria[];
   userId: string;
   dateKey: string;
+  db: any;
   tipoCorrida: boolean;
   isDragging: boolean;
   isDragOver: boolean;
@@ -635,8 +637,8 @@ const ExercicioCard = ({
   useEffect(() => {
     if (comentarioCarregadoRef.current) return;
     comentarioCarregadoRef.current = true;
-    carregarComentario(userId, ex.id, false).then(c => setTemComentario(c.trim().length > 0));
-  }, [ex.id, userId]);
+    carregarComentario(userId, ex.id, false, db).then(c => setTemComentario(c.trim().length > 0));
+  }, [ex.id, userId, db]);
 
   return (
     <div
@@ -700,7 +702,7 @@ const ExercicioCard = ({
         <ModalComentario exercicioNome={ex.nome} exercicioId={ex.id} ehPessoal={false} userId={userId}
           onFechar={() => {
             setComentarioAberto(false);
-            carregarComentario(userId, ex.id, false).then(c => setTemComentario(c.trim().length > 0));
+            carregarComentario(userId, ex.id, false, db).then(c => setTemComentario(c.trim().length > 0));
           }} />
       )}
     </div>

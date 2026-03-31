@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Timer, Dumbbell, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { usePowerSync } from "@powersync/react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatarData } from "@/utils/formatDate";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ const DIAS_LABEL: Record<number, string> = {
 };
 
 const HistoricoTreinos = ({ userId, onBack }: Props) => {
+  const db = usePowerSync();
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -49,24 +51,24 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  useEffect(() => { loadHistorico(); }, [userId]);
+  useEffect(() => { loadHistorico(); }, [userId, db]);
 
   const loadHistorico = async () => {
     setLoading(true);
     setErro(false);
     try {
-      const { data, error } = await supabase
-        .from("treino_historico")
-        .select("*")
-        .eq("user_id", userId)
-        .order("concluido_em", { ascending: false })
-        .limit(100);
-      if (error) {
-        setErro(true);
-        toast.error("Erro ao carregar histórico.");
-      } else {
-        setHistorico((data as HistoricoItem[]) || []);
-      }
+      const rows = await db.getAll(
+        "SELECT * FROM treino_historico WHERE user_id = ? ORDER BY concluido_em DESC LIMIT 100",
+        [userId]
+      );
+      // exercicios_concluidos é armazenado como JSON string no SQLite
+      const parsed = (rows as any[]).map((r) => ({
+        ...r,
+        exercicios_concluidos: typeof r.exercicios_concluidos === "string"
+          ? JSON.parse(r.exercicios_concluidos)
+          : r.exercicios_concluidos,
+      }));
+      setHistorico(parsed as HistoricoItem[]);
     } catch {
       setErro(true);
       toast.error("Erro ao carregar histórico.");
