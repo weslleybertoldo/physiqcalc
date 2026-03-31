@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
 import { X, Play, Pause, RotateCcw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -7,6 +8,8 @@ import {
   showTimerFinishedNotification,
   cancelTimerNotification,
 } from "@/lib/nativeNotifications";
+
+const isNative = Capacitor.isNativePlatform();
 
 const LS_REST_KEY = "physiq_rest_timer";
 
@@ -159,8 +162,12 @@ const TimerDescanso = ({
         const next = s - 1;
         if (next <= 0) {
           setFinished(true);
-          playBeep();
-          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+          // No APK, o Foreground Service cuida do som e vibração
+          // No PWA, toca beep via AudioContext + vibração do browser
+          if (!isNative) {
+            playBeep();
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+          }
           if (!notifiedRef.current) {
             notifiedRef.current = true;
             showTimerFinishedNotification(exercicioNome);
