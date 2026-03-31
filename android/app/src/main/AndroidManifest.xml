@@ -32,14 +32,14 @@
 
         </activity>
 
-        <!-- Foreground Service para notificações do timer de descanso -->
+        <!-- Foreground Service do timer de descanso (som em background) -->
         <service
-            android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
+            android:name=".TimerForegroundService"
             android:foregroundServiceType="specialUse"
             android:exported="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Timer de descanso com contagem regressiva" />
+                android:value="Timer de descanso com contagem regressiva e alarme sonoro" />
         </service>
 
         <provider

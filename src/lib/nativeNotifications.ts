@@ -58,7 +58,8 @@ export async function startTimerNotifications(
 
   await cancelTimerNotification();
 
-  // 1. Cronômetro nativo — atualiza sozinho a cada segundo, sem JS
+  // Foreground Service: cronômetro nativo + alarme sonoro em background
+  // O service cuida de tudo: notificação com cronômetro, som e vibração quando acaba
   try {
     await CountdownNotification.startCountdown({
       durationSeconds: segundosRestantes,
@@ -67,27 +68,26 @@ export async function startTimerNotifications(
     });
   } catch (e) {
     console.warn("[Timer] startCountdown:", e);
-  }
-
-  // 2. Agenda notificação de FIM com som (canal IMPORTANCE_HIGH)
-  await ensureAlertChannel();
-  try {
-    await LocalNotifications.schedule({
-      notifications: [{
-        id: TIMER_FINISHED_ID,
-        title: "Hora de treinar! 💪",
-        body: `Descanso concluído: ${exercicioNome}`,
-        smallIcon: "ic_launcher",
-        channelId: ALERT_CHANNEL_ID,
-        sound: "default",
-        schedule: {
-          at: new Date(Date.now() + segundosRestantes * 1000),
-          allowWhileIdle: true,
-        },
-      }],
-    });
-  } catch (e) {
-    console.warn("[Timer] schedule end:", e);
+    // Fallback: agenda notificação com LocalNotifications
+    await ensureAlertChannel();
+    try {
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: TIMER_FINISHED_ID,
+          title: "Hora de treinar! 💪",
+          body: `Descanso concluído: ${exercicioNome}`,
+          smallIcon: "ic_launcher",
+          channelId: ALERT_CHANNEL_ID,
+          sound: "default",
+          schedule: {
+            at: new Date(Date.now() + segundosRestantes * 1000),
+            allowWhileIdle: true,
+          },
+        }],
+      });
+    } catch (e2) {
+      console.warn("[Timer] schedule fallback:", e2);
+    }
   }
 }
 
