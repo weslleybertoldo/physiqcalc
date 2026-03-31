@@ -74,6 +74,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initSession();
 
+    // Segurança: se initSession travar, libera o loading após 5 segundos
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     // 2. Escuta mudanças de auth em tempo real
     // IMPORTANTE: ignora SIGNED_OUT se já tem sessão local (previne logout por falha de rede)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
@@ -140,6 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     document.addEventListener('resume', onResume);
 
     return () => {
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', onVisibility);
       document.removeEventListener('resume', onResume);

@@ -11,6 +11,8 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
+// @powersync/tanstack-react-query instalado — hooks (useQuery, useSuspenseQuery)
+// ficam disponíveis sem provider adicional (v1.x expõe só hooks)
 import { isAdminAuthenticated } from "@/components/AdminLoginDialog";
 import { setupDeepLinkListener } from "@/lib/capacitorAuth";
 import AuthPage from "./pages/AuthPage";

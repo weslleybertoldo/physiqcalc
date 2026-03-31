@@ -15,6 +15,7 @@ import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
 import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
+import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
 
@@ -417,13 +418,17 @@ const TreinosPage = () => {
     if (!userId) return null;
     try {
       const fieldName = isExercicioUsuario ? "exercicio_usuario_id" : "exercicio_id";
+      // Limita busca a 90 dias para reduzir leitura do SQLite
+      const limite90d = new Date();
+      limite90d.setDate(limite90d.getDate() - 90);
+      const dataLimite90 = limite90d.toISOString().slice(0, 10);
       const rows = await db.getAll(
         `SELECT numero_serie, peso, reps, data_treino
          FROM tb_treino_series
-         WHERE user_id = ? AND ${fieldName} = ? AND concluida = 1 AND data_treino < ?
+         WHERE user_id = ? AND ${fieldName} = ? AND concluida = 1 AND data_treino < ? AND data_treino >= ?
          ORDER BY data_treino DESC, numero_serie ASC
          LIMIT 20`,
-        [userId, exId, dataAtual]
+        [userId, exId, dataAtual, dataLimite90]
       );
       if (!rows || rows.length === 0) return null;
       const ultimaData = (rows[0] as any).data_treino;
@@ -634,17 +639,8 @@ const TreinosPage = () => {
     }
   };
 
-  // Determina se ainda está carregando dados iniciais
-  // Usa o isLoading implícito: se temos grupos/semana mas nenhum dado de perfil ainda, pode ser que esteja carregando
-  const loading = !profile && userId !== "";
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground font-body">Carregando...</p>
-      </div>
-    );
-  }
+  // Nunca bloqueia a tela — PowerSync carrega dados em background
+  // O perfil pode ser null no primeiro sync, mas o app funciona sem ele
 
   return (
     <div className="min-h-screen bg-background">
@@ -660,9 +656,12 @@ const TreinosPage = () => {
             )}
             <div>
               <p className="font-heading text-sm text-foreground">{displayName}</p>
-              {profile?.user_code && (
-                <p className="text-[10px] text-muted-foreground font-body">ID: {profile.user_code}</p>
-              )}
+              <div className="flex items-center gap-2">
+                {profile?.user_code && (
+                  <p className="text-[10px] text-muted-foreground font-body">ID: {profile.user_code}</p>
+                )}
+                <SyncStatusIndicator />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
