@@ -694,23 +694,23 @@ const SerieRow = React.memo(function SerieRow({
   const [distancia, setDistancia] = useState(serie.distancia_km ? String(serie.distancia_km) : "");
   const isConcluida = serie.concluida === true;
 
+  const initializedRef = useRef(false);
   useEffect(() => {
     if (!tipoCorrida) {
-      // Sincroniza peso/reps apenas se:
-      // 1. A série ainda não foi concluída (não apaga após OK)
-      // 2. Tem um valor real do histórico (peso > 0)
-      // Isso garante que o último peso fica nos campos até o usuário editar
-      if (!serie.concluida && serie.peso > 0) {
+      // Na primeira renderização, sempre sincroniza com os dados da série
+      // Nas seguintes, só sincroniza se a série foi salva (evita sobrescrever edição do usuário)
+      if (!serie.concluida && serie.peso > 0 && (!initializedRef.current || serie.salva)) {
         setPeso(String(serie.peso));
       }
-      if (!serie.concluida && serie.reps > 0) {
+      if (!serie.concluida && serie.reps > 0 && (!initializedRef.current || serie.salva)) {
         setReps(String(serie.reps));
       }
+      initializedRef.current = true;
     } else {
       setTempo(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
       setDistancia(serie.distancia_km ? String(serie.distancia_km) : "");
     }
-  }, [serie.peso, serie.reps, serie.tempo_segundos, serie.distancia_km, serie.concluida, tipoCorrida]);
+  }, [serie.peso, serie.reps, serie.tempo_segundos, serie.distancia_km, serie.concluida, serie.salva, tipoCorrida]);
 
   const pacePreview = (() => {
     const t = parseTempo(tempo);
