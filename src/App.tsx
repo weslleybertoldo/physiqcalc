@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
 import { isAdminAuthenticated } from "@/components/AdminLoginDialog";
 import { setupDeepLinkListener } from "@/lib/capacitorAuth";
 import AuthPage from "./pages/AuthPage";
@@ -78,6 +79,7 @@ const App = () => {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <PowerSyncProvider>
           <PWAInstallProvider>
             <TooltipProvider>
               <Toaster />
@@ -88,6 +90,7 @@ const App = () => {
               <PWAInstallBanner />
             </TooltipProvider>
           </PWAInstallProvider>
+          </PowerSyncProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
