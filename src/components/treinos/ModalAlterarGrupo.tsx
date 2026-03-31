@@ -24,9 +24,17 @@ const ModalAlterarGrupo = ({ gruposGlobais, gruposPessoais, userId, open, onOpen
   const [showCriar, setShowCriar] = useState(false);
 
   const handleDeleteGrupoPessoal = async (id: string) => {
-    await supabase.from("tb_grupos_treino_usuario").delete().eq("id", id).eq("user_id", userId);
-    toast.success("Grupo removido");
-    onRefresh();
+    try {
+      const { error } = await supabase.from("tb_grupos_treino_usuario").delete().eq("id", id).eq("user_id", userId);
+      if (error) {
+        toast.error("Erro ao remover grupo. Tente novamente.");
+        return;
+      }
+      toast.success("Grupo removido");
+      onRefresh();
+    } catch {
+      toast.error("Erro ao remover grupo. Tente novamente.");
+    }
   };
 
   return (

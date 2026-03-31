@@ -226,64 +226,82 @@ export function incrementRetry() {
 
 // ── Sync principal ──────────────────────────────────────────────────────────
 
+let syncInProgress = false;
+
 export async function syncPendingOperations(): Promise<{
   synced: number;
   failed: number;
 }> {
   if (!navigator.onLine) return { synced: 0, failed: 0 };
+  if (syncInProgress) return { synced: 0, failed: 0 };
 
-  const ops = getPending();
-  if (ops.length === 0) return { synced: 0, failed: 0 };
-
-  // Garante sessão válida antes de sincronizar (evita erro de RLS)
+  syncInProgress = true;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-      if (!refreshed) {
-        // Sem sessão — guarda operações e tenta na próxima vez (sem alarmar)
-        return { synced: 0, failed: 0 };
+    const ops = getPending();
+    if (ops.length === 0) return { synced: 0, failed: 0 };
+
+    // Garante sessão válida antes de sincronizar (evita erro de RLS)
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        if (!refreshed) {
+          // Sem sessão — guarda operações e tenta na próxima vez (sem alarmar)
+          return { synced: 0, failed: 0 };
+        }
+      }
+    } catch {
+      // Sem conexão pra validar sessão — não arrisca perder dados
+      return { synced: 0, failed: 0 };
+    }
+
+    // Compacta fila antes de enviar (remove operações redundantes)
+    const compacted = compactQueue(ops);
+    const successIds = new Set<string>();
+    const failures: PendingOperation[] = [];
+    let synced = 0;
+
+    for (const op of compacted) {
+      const outcome = await executePendingOp(op);
+      if (outcome === "ok") {
+        synced++;
+        successIds.add(op.id);
+      } else if (outcome === "discard") {
+        synced++; // Conta como resolvida para não alarmar o usuário
+        successIds.add(op.id);
+      } else {
+        // retry — mantém apenas se é recente (< 7 dias)
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        if (Date.now() - op.createdAt < sevenDays) {
+          failures.push(op);
+        } else {
+          successIds.add(op.id);
+        }
       }
     }
-  } catch {
-    // Sem conexão pra validar sessão — não arrisca perder dados
-    return { synced: 0, failed: 0 };
+
+    // Relê a fila para preservar operações adicionadas durante a sync
+    const currentOps = getPending();
+    const remaining = currentOps.filter((op) => !successIds.has(op.id));
+    savePending(remaining);
+
+    return { synced, failed: failures.length };
+  } finally {
+    syncInProgress = false;
   }
-
-  // Compacta fila antes de enviar (remove operações redundantes)
-  const compacted = compactQueue(ops);
-  const failures: PendingOperation[] = [];
-  let synced = 0;
-
-  for (const op of compacted) {
-    const outcome = await executePendingOp(op);
-    if (outcome === "ok") {
-      synced++;
-    } else if (outcome === "discard") {
-      synced++; // Conta como resolvida para não alarmar o usuário
-    } else {
-      // retry — mantém apenas se é recente (< 7 dias)
-      const sevenDays = 7 * 24 * 60 * 60 * 1000;
-      if (Date.now() - op.createdAt < sevenDays) {
-        failures.push(op);
-      }
-    }
-  }
-
-  savePending(failures);
-  return { synced, failed: failures.length };
 }
 
 // ── Sync ao re-logar ────────────────────────────────────────────────────────
 // Escuta eventos de autenticação para sincronizar automaticamente ao logar
 
 let authSyncRegistered = false;
+let authSyncSubscription: { unsubscribe: () => void } | null = null;
 
 export function registerAuthSync() {
   if (authSyncRegistered) return;
   authSyncRegistered = true;
 
-  supabase.auth.onAuthStateChange((event) => {
+  const { data } = supabase.auth.onAuthStateChange((event) => {
     if (event === "SIGNED_IN" && navigator.onLine) {
       const pending = getPendingCount();
       if (pending > 0) {
@@ -292,6 +310,15 @@ export function registerAuthSync() {
       }
     }
   });
+  authSyncSubscription = data.subscription;
+}
+
+export function unregisterAuthSync() {
+  if (authSyncSubscription) {
+    authSyncSubscription.unsubscribe();
+    authSyncSubscription = null;
+    authSyncRegistered = false;
+  }
 }
 
 // ── Aviso de dados pendentes antes de sair ──────────────────────────────────
@@ -354,6 +381,20 @@ export function getCacheData<T = any>(key: string): T | null {
   return entry.data as T;
 }
 
+export function invalidateCache(keyPattern: string) {
+  const cache = getCache();
+  let changed = false;
+  for (const key of Object.keys(cache)) {
+    if (key.includes(keyPattern)) {
+      delete cache[key];
+      changed = true;
+    }
+  }
+  if (changed) {
+    saveCache(cache);
+  }
+}
+
 // ── Operações offline-aware ──────────────────────────────────────────────────
 
 export async function offlineUpsert(
@@ -372,6 +413,7 @@ export async function offlineUpsert(
   }
 
   addPendingOperation(table, "upsert", data, onConflict);
+  invalidateCache(table);
   return { offline: true };
 }
 
@@ -389,6 +431,7 @@ export async function offlineInsert(
   }
 
   addPendingOperation(table, "insert", data);
+  invalidateCache(table);
   return { offline: true };
 }
 
@@ -411,6 +454,7 @@ export async function offlineUpdate(
   }
 
   addPendingOperation(table, "update", data, undefined, match);
+  invalidateCache(table);
   return { offline: true };
 }
 
@@ -432,5 +476,6 @@ export async function offlineDelete(
   }
 
   addPendingOperation(table, "delete", undefined, undefined, match);
+  invalidateCache(table);
   return { offline: true };
 }

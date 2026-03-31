@@ -123,11 +123,11 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
       };
 
       // Escuta o deep link
-      App.addListener("appUrlOpen", handleUrl);
+      const listenerHandle = App.addListener("appUrlOpen", handleUrl);
 
-      // Limpa o listener após resolução
+      // Limpa apenas o listener específico após resolução
       sessionPromise.then(() => {
-        App.removeAllListeners();
+        listenerHandle.then((l) => l.remove());
       });
     });
 
@@ -144,8 +144,13 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
 /**
  * Inicializa listener de deep links para o app (deve ser chamado uma vez no boot)
  */
+let deepLinkListenerRegistered = false;
+let lastProcessedToken: string | null = null;
+
 export function setupDeepLinkListener() {
   if (!isNative) return;
+  if (deepLinkListenerRegistered) return;
+  deepLinkListenerRegistered = true;
 
   App.addListener("appUrlOpen", async ({ url }) => {
     // Se receber um deep link com tokens (ex: após OAuth), processa
@@ -157,7 +162,11 @@ export function setupDeepLinkListener() {
       const accessToken = params.get("access_token");
       const refreshToken = params.get("refresh_token");
 
+      // Guard: não processa o mesmo token duas vezes
+      if (accessToken && accessToken === lastProcessedToken) return;
+
       if (accessToken && refreshToken) {
+        lastProcessedToken = accessToken;
         await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,

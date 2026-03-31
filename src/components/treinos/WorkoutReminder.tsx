@@ -47,11 +47,14 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
   useEffect(() => {
     if (!enabled || !grupoNome) return;
 
+    let cancelled = false;
+
     if (isNative) {
       // Agenda notificação diária via LocalNotifications
       const scheduleReminder = async () => {
         try {
           await LocalNotifications.cancel({ notifications: [{ id: REMINDER_NOTIF_ID }] });
+          if (cancelled) return;
 
           const now = new Date();
           const target = new Date();
@@ -80,6 +83,12 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
         }
       };
       scheduleReminder();
+
+      return () => {
+        cancelled = true;
+        // Cancela notificação agendada ao desmontar / mudar dependências
+        LocalNotifications.cancel({ notifications: [{ id: REMINDER_NOTIF_ID }] }).catch(() => {});
+      };
     } else {
       // PWA: check every minute
       const interval = setInterval(() => {

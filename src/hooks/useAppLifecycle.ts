@@ -1,11 +1,30 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { supabase } from "@/integrations/supabase/client";
+import { syncPendingOperations, getPendingCount } from "@/lib/offlineSync";
 
 export function useAppLifecycle(onResume?: () => void) {
+  const onResumeRef = useRef(onResume);
+  onResumeRef.current = onResume;
+
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    // Web: sincroniza ao voltar do background via visibilitychange
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && navigator.onLine) {
+        if (getPendingCount() > 0) {
+          syncPendingOperations();
+        }
+        onResumeRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    if (!Capacitor.isNativePlatform()) {
+      return () => {
+        document.removeEventListener("visibilitychange", handleVisibility);
+      };
+    }
 
     const stateListener = CapApp.addListener("appStateChange", async ({ isActive }) => {
       if (isActive) {
@@ -22,7 +41,12 @@ export function useAppLifecycle(onResume?: () => void) {
           // Offline — não faz nada
         }
 
-        onResume?.();
+        // Sincroniza dados pendentes ao voltar do background
+        if (navigator.onLine && getPendingCount() > 0) {
+          syncPendingOperations();
+        }
+
+        onResumeRef.current?.();
       } else {
         // App foi para background — para auto-refresh para economizar bateria
         supabase.auth.stopAutoRefresh();
@@ -39,8 +63,9 @@ export function useAppLifecycle(onResume?: () => void) {
     });
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
       stateListener.then((l) => l.remove());
       backListener.then((l) => l.remove());
     };
-  }, [onResume]);
+  }, []);
 }

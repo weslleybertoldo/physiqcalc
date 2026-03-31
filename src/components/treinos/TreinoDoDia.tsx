@@ -257,7 +257,11 @@ const TreinoDoDia = ({
   };
 
   const handleResetOrder = async () => {
-    await supabase.from("exercicio_ordem_usuario").delete().eq("user_id", userId).eq("grupo_id", grupoId);
+    const { error } = await supabase.from("exercicio_ordem_usuario").delete().eq("user_id", userId).eq("grupo_id", grupoId);
+    if (error) {
+      toast.error("Erro ao resetar ordem: " + error.message);
+      return;
+    }
     setSortedItems([...exercicios].sort((a, b) => a.ordem - b.ordem));
     toast.success("Ordem resetada para o padrão.");
   };
@@ -381,6 +385,8 @@ const TreinoDoDia = ({
     const naoSalvas = series
       .filter(s => s.exercicio_id === exercicioId && !s.salva);
     for (const s of naoSalvas) {
+      // Pula séries que nunca foram editadas (peso indefinido ou 0 sem reps alterados)
+      if ((s.peso === undefined || s.peso === 0) && (s.reps === undefined || s.reps === 10)) continue;
       const data = buildSerieData(exercicioId, {
         user_id: userId,
         data_treino: dateKey,
@@ -427,7 +433,7 @@ const TreinoDoDia = ({
       numero_serie: novoNum, peso, reps,
       updated_at: new Date().toISOString(),
     });
-    offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
+    await offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
     onSeriesUpdate(prev => [...prev, { exercicio_id: exercicioId, exercicio_usuario_id: exUsuarioId, numero_serie: novoNum, peso, reps, concluida: false, salva: true }]);
   };
 
@@ -439,11 +445,32 @@ const TreinoDoDia = ({
         : { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie };
       await offlineDelete("tb_treino_series", matchKey);
     }
-    onSeriesUpdate(prev =>
-      prev.filter(s => !(s.exercicio_id === exercicioId && s.numero_serie === numeroSerie))
+    // Renumera localmente e atualiza no banco
+    onSeriesUpdate(prev => {
+      const updated = prev
+        .filter(s => !(s.exercicio_id === exercicioId && s.numero_serie === numeroSerie))
         .map(s => s.exercicio_id === exercicioId && s.numero_serie > numeroSerie
-          ? { ...s, numero_serie: s.numero_serie - 1 } : s)
-    );
+          ? { ...s, numero_serie: s.numero_serie - 1 } : s);
+
+      // Atualiza numero_serie no banco para séries renumeradas
+      const renumeradas = updated.filter(
+        s => s.exercicio_id === exercicioId && s.salva && s.numero_serie >= numeroSerie
+      );
+      for (const s of renumeradas) {
+        const data = buildSerieData(exercicioId, {
+          user_id: userId,
+          data_treino: dateKey,
+          numero_serie: s.numero_serie,
+          peso: s.peso ?? 0,
+          reps: s.reps ?? 10,
+          concluida: s.concluida ?? false,
+          updated_at: new Date().toISOString(),
+        });
+        offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
+      }
+
+      return updated;
+    });
   };
 
   const handleConcluir = async () => {
@@ -564,6 +591,7 @@ const ExercicioCard = ({
 }) => {
   const [comentarioAberto, setComentarioAberto] = useState(false);
   const [temComentario, setTemComentario] = useState(false);
+  const comentarioCarregadoRef = useRef(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragActiveRef = useRef(false);
 
@@ -605,6 +633,8 @@ const ExercicioCard = ({
   };
 
   useEffect(() => {
+    if (comentarioCarregadoRef.current) return;
+    comentarioCarregadoRef.current = true;
     carregarComentario(userId, ex.id, false).then(c => setTemComentario(c.trim().length > 0));
   }, [ex.id, userId]);
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { addPendingOperation } from "@/lib/offlineSync";
 import { toast } from "sonner";
 
 // Persistência do timer de treino no localStorage
@@ -131,14 +132,21 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
 
     const exerciciosArray = Object.entries(exConcluidos).map(([id, data]) => ({ exercicio_id: id, ...data }));
 
-    await supabase.from("treino_historico").insert({
+    const historicoData = {
       user_id: userId,
       nome_treino: grupoNome,
       iniciado_em: iniciadoEm.toISOString(),
       concluido_em: agora.toISOString(),
       duracao_segundos: duracao,
       exercicios_concluidos: exerciciosArray,
-    });
+    };
+    try {
+      const { error } = await supabase.from("treino_historico").insert(historicoData);
+      if (error) throw error;
+    } catch {
+      // Offline ou erro: enfileira para sincronizar depois
+      addPendingOperation("treino_historico", "insert", historicoData);
+    }
 
     setDuracaoFinal(duracao);
     setConcluido(true);

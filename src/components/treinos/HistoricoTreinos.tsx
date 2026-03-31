@@ -34,7 +34,7 @@ function formatTimer(s: number): string {
 
 function formatHora(isoString: string): string {
   const d = new Date(isoString);
-  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Maceio" });
+  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 }
 
 const DIAS_LABEL: Record<number, string> = {
@@ -44,6 +44,7 @@ const DIAS_LABEL: Record<number, string> = {
 const HistoricoTreinos = ({ userId, onBack }: Props) => {
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -52,14 +53,26 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
 
   const loadHistorico = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("treino_historico")
-      .select("*")
-      .eq("user_id", userId)
-      .order("concluido_em", { ascending: false })
-      .limit(100);
-    setHistorico((data as HistoricoItem[]) || []);
-    setLoading(false);
+    setErro(false);
+    try {
+      const { data, error } = await supabase
+        .from("treino_historico")
+        .select("*")
+        .eq("user_id", userId)
+        .order("concluido_em", { ascending: false })
+        .limit(100);
+      if (error) {
+        setErro(true);
+        toast.error("Erro ao carregar histórico.");
+      } else {
+        setHistorico((data as HistoricoItem[]) || []);
+      }
+    } catch {
+      setErro(true);
+      toast.error("Erro ao carregar histórico.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -106,6 +119,8 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
 
       {loading ? (
         <p className="text-muted-foreground font-body text-sm">Carregando...</p>
+      ) : erro ? (
+        <p className="text-destructive font-body text-sm text-center py-8">Erro ao carregar histórico. Tente novamente.</p>
       ) : historico.length === 0 ? (
         <p className="text-muted-foreground font-body text-sm text-center py-8">Nenhum treino registrado ainda.</p>
       ) : (
