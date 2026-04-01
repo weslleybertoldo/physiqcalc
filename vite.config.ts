@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import wasm from "vite-plugin-wasm";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
@@ -21,6 +22,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    wasm(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
@@ -89,7 +91,7 @@ export default defineConfig(({ mode }) => ({
     format: "es",
   },
   optimizeDeps: {
-    exclude: ["@powersync/web"],
-    include: ["@powersync/web > event-iterator"],
+    exclude: ["@journeyapps/wa-sqlite", "@powersync/web"],
+    include: [],
   },
 }));

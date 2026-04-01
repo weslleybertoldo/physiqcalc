@@ -8,7 +8,7 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { hasPendingData, offlineDelete, offlineUpsert, offlineUpdate } from "@/lib/offlineSync";
+import { hasPendingData } from "@/lib/offlineSync";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
@@ -583,7 +583,7 @@ const TreinosPage = () => {
   // Salva foto do Google no perfil na primeira vez que encontrar (para não depender de identities)
   useEffect(() => {
     if (avatarUrl && !profile?.foto_url && user?.id) {
-      offlineUpdate("physiq_profiles", { foto_url: avatarUrl }, { id: user.id })
+      db.execute("UPDATE physiq_profiles SET foto_url = ? WHERE id = ?", [avatarUrl, user.id])
         .catch((e: any) => console.warn("[TreinosPage] Erro ao salvar foto:", e));
     }
   }, [avatarUrl, profile?.foto_url, user?.id]);
@@ -611,24 +611,21 @@ const TreinosPage = () => {
       "SELECT id FROM tb_treino_dia_override WHERE user_id = ? AND data_treino = ?",
       [user.id, selectedDate]
     );
-    const id = (existingRows && existingRows.length > 0) ? (existingRows[0] as any).id : crypto.randomUUID();
+    const existingId = (existingRows && existingRows.length > 0) ? (existingRows[0] as any).id : null;
 
-    if (grupoId === null) {
-      await offlineUpsert("tb_treino_dia_override", {
-        id,
-        user_id: user.id,
-        data_treino: selectedDate,
-        grupo_id: null,
-        grupo_usuario_id: null,
-      }, "user_id,data_treino");
+    const grupoIdVal = grupoId === null ? null : (isPessoal ? null : grupoId);
+    const grupoUsuarioIdVal = grupoId === null ? null : (isPessoal ? grupoId : null);
+
+    if (existingId) {
+      await db.execute(
+        "INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id) VALUES (?, ?, ?, ?, ?)",
+        [existingId, user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal]
+      );
     } else {
-      await offlineUpsert("tb_treino_dia_override", {
-        id,
-        user_id: user.id,
-        data_treino: selectedDate,
-        grupo_id: isPessoal ? null : grupoId,
-        grupo_usuario_id: isPessoal ? grupoId : null,
-      }, "user_id,data_treino");
+      await db.execute(
+        "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id) VALUES (uuid(), ?, ?, ?, ?)",
+        [user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal]
+      );
     }
     handleRefresh();
   };

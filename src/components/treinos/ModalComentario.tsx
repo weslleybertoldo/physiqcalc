@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { usePowerSync } from "@powersync/react";
 import { toast } from "sonner";
 import { MessageSquare, Trash2 } from "lucide-react";
-import { offlineUpsert, offlineDelete } from "@/lib/offlineSync";
 
 interface ModalComentarioProps {
   exercicioNome: string;
@@ -38,40 +37,38 @@ async function salvarComentario(
 
   try {
     if (!comentario.trim()) {
-      // Para delete, precisamos buscar o id do comentário existente
-      const existing = await db.getAll(
-        `SELECT id FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
+      // Delete comentário existente
+      await db.execute(
+        `DELETE FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
         [userId, exercicioId]
       );
-      if (existing && existing.length > 0) {
-        await offlineDelete("tb_exercicio_comentarios", {
-          id: (existing[0] as any).id,
-          user_id: userId,
-        });
-      }
       return;
     }
 
-    // Find existing or create new id
+    // Find existing id
     const existing = await db.getAll(
       `SELECT id FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
       [userId, exercicioId]
     );
-    const id = (existing && existing.length > 0) ? (existing[0] as any).id : crypto.randomUUID();
+    const existingId = (existing && existing.length > 0) ? (existing[0] as any).id : null;
 
     const exId = ehPessoal ? null : exercicioId;
     const exUsuarioId = ehPessoal ? exercicioId : null;
     const now = new Date().toISOString();
 
-    await offlineUpsert("tb_exercicio_comentarios", {
-      id,
-      user_id: userId,
-      exercicio_id: exId,
-      exercicio_usuario_id: exUsuarioId,
-      comentario: comentario.trim(),
-      updated_at: now,
-      created_at: now,
-    }, "id");
+    if (existingId) {
+      await db.execute(
+        `INSERT OR REPLACE INTO tb_exercicio_comentarios (id, user_id, exercicio_id, exercicio_usuario_id, comentario, updated_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [existingId, userId, exId, exUsuarioId, comentario.trim(), now, now]
+      );
+    } else {
+      await db.execute(
+        `INSERT INTO tb_exercicio_comentarios (id, user_id, exercicio_id, exercicio_usuario_id, comentario, updated_at, created_at)
+         VALUES (uuid(), ?, ?, ?, ?, ?, ?)`,
+        [userId, exId, exUsuarioId, comentario.trim(), now, now]
+      );
+    }
   } catch (e) {
     toast.error("Erro ao salvar comentário. Tente novamente.");
     throw e;
