@@ -1,34 +1,47 @@
 import { PowerSyncContext } from "@powersync/react";
-import { WASQLitePowerSyncDatabaseOpenFactory } from "@powersync/web";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { PowerSyncDatabase, WASQLiteOpenFactory, WASQLiteVFS } from "@powersync/web";
+import { ReactNode, useEffect, useRef } from "react";
 import { AppSchema } from "./schema";
-import { SupabaseConnector } from "./connector";
+import { connector } from "./connector";
 import { useAuth } from "@/hooks/useAuth";
 
-const factory = new WASQLitePowerSyncDatabaseOpenFactory({
+// Cria o banco SQLite local — singleton, criado uma vez
+// Baseado no projeto de referência oficial: powersync-community/vite-react-ts-powersync-supabase
+const powerSyncDb = new PowerSyncDatabase({
+  database: new WASQLiteOpenFactory({
+    dbFilename: "physiqcalc.db",
+    vfs: WASQLiteVFS.OPFSCoopSyncVFS,
+    flags: {
+      enableMultiTabs: typeof SharedWorker !== "undefined",
+    },
+  }),
   schema: AppSchema,
-  dbFilename: "physiqcalc.db",
 });
-
-const powerSyncDb = factory.getInstance();
 
 export function PowerSyncProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const connector = useMemo(() => new SupabaseConnector(), []);
+  const connectedRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
-      powerSyncDb.disconnect();
+      if (connectedRef.current) {
+        powerSyncDb.disconnect();
+        connectedRef.current = false;
+      }
       return;
     }
 
+    if (connectedRef.current) return; // Já conectado, não reconecta
+
     const init = async () => {
       try {
-        await powerSyncDb.init();
-        await powerSyncDb.connect(connector);
+        await powerSyncDb.connect(connector, {
+          crudUploadThrottleMs: 1000,
+        });
+        connectedRef.current = true;
+        console.log("[PowerSync] Connected");
       } catch (e) {
-        console.warn("[PowerSync] init error:", e);
-        // Mesmo com erro de sync, o banco local funciona
+        console.warn("[PowerSync] Connect error:", e);
       }
     };
 
@@ -36,11 +49,10 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
 
     return () => {
       powerSyncDb.disconnect();
+      connectedRef.current = false;
     };
-  }, [user, connector]);
+  }, [user]);
 
-  // NUNCA bloqueia a renderização — mostra o app imediatamente
-  // O PowerSync sincroniza em background
   return (
     <PowerSyncContext.Provider value={powerSyncDb}>
       {children}
