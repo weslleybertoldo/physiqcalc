@@ -24,6 +24,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^3.10.0",
+    "@journeyapps/wa-sqlite": "^1.5.0",
     "@lovable.dev/cloud-auth-js": "^0.0.3",
     "@powersync/react": "^1.10.0",
     "@powersync/tanstack-react-query": "^0.2.4",
@@ -79,6 +80,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
     "vite-plugin-pwa": "^1.2.0",
+    "vite-plugin-wasm": "^3.6.0",
     "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
