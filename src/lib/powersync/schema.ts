@@ -64,11 +64,11 @@ const tb_treino_dia_override = new Table({
 
 const treino_historico = new Table({
   user_id: column.text,
-  data_treino: column.text,
-  grupo_nome: column.text,
-  inicio: column.text,
-  fim: column.text,
+  nome_treino: column.text,
+  iniciado_em: column.text,
+  concluido_em: column.text,
   duracao_segundos: column.integer,
+  exercicios_concluidos: column.text,
   created_at: column.text,
 });
 
