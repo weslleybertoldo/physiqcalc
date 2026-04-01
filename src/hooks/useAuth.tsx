@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const intentionalLogoutRef = useRef(false);
 
   useEffect(() => {
     // 1. Recupera sessão do localStorage primeiro (funciona offline)
@@ -83,15 +84,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // IMPORTANTE: ignora SIGNED_OUT se já tem sessão local (previne logout por falha de rede)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === 'SIGNED_OUT') {
-        // Só desloga se foi um signOut explícito (não por falha de refresh)
-        // Verifica se ainda tem sessão válida no storage
-        supabase.auth.getSession().then(({ data: { session: stored } }) => {
-          if (!stored) {
-            setSession(null);
-            setUser(null);
-            setLoading(false);
-          }
-        });
+        if (intentionalLogoutRef.current) {
+          intentionalLogoutRef.current = false;
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+        }
+        // Se não foi intencional, ignora (foi falha de refresh)
         return;
       }
       if (newSession) {
@@ -153,6 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    intentionalLogoutRef.current = true;
     await supabase.auth.signOut();
   };
 

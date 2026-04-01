@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+// lastLocalEditRef: protege contra buildSeries sobrescrever estado otimista
 import { ClipboardList, LogOut, History, WifiOff, Loader2, Settings, RefreshCw, Check, Download, X } from "lucide-react";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
@@ -104,6 +105,7 @@ const TreinosPage = () => {
   const isVisibleRef = useRef(true);
 
   const [series, setSeries] = useState<SerieComMemoria[]>([]);
+  const lastLocalEditRef = useRef(0);
 
   const [today, setToday] = useState(() => new Date());
   const [weekDates, setWeekDates] = useState(() => getWeekDates(new Date()));
@@ -478,7 +480,7 @@ const TreinosPage = () => {
           saved.forEach((s: any) => {
             allSeries.push({
               id: s.id,
-              exercicio_id: s.exercicio_id,
+              exercicio_id: s.exercicio_id || s.exercicio_usuario_id,
               exercicio_usuario_id: s.exercicio_usuario_id ?? exUsuarioId,
               numero_serie: s.numero_serie,
               peso: s.peso ?? 0,
@@ -520,6 +522,9 @@ const TreinosPage = () => {
           }
         }
       }
+
+      // Se o usuário editou nos últimos 5s, não sobrescreve o estado otimista
+      if (Date.now() - lastLocalEditRef.current < 5000) return;
 
       // Preserva séries não salvas do estado atual que não existem em allSeries
       setSeries(prev => {
@@ -762,7 +767,10 @@ const TreinosPage = () => {
                   concluido={selectedConcluido}
                   onRefresh={handleRefresh}
                   onAlterarGrupo={() => setShowAlterarGrupo(true)}
-                  onSeriesUpdate={setSeries}
+                  onSeriesUpdate={(action) => {
+                    lastLocalEditRef.current = Date.now();
+                    setSeries(action);
+                  }}
                   onSerieConcluida={(nome, num, exId) => {
                     setTimerExercicio(nome);
                     setTimerSerie(num);
