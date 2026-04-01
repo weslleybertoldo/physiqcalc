@@ -37,8 +37,8 @@ import androidx.core.app.NotificationCompat;
  */
 public class TimerForegroundService extends Service {
 
-    private static final String CHANNEL_TIMER = "timer_foreground_channel";
-    private static final String CHANNEL_ALARM = "timer_alarm_channel";
+    private static final String CHANNEL_TIMER = "timer_foreground_v2";
+    private static final String CHANNEL_ALARM = "timer_alarm_v2";
     private static final int NOTIFICATION_ID = 3001;
     private static final int ALARM_NOTIFICATION_ID = 3002;
 
@@ -258,18 +258,23 @@ public class TimerForegroundService extends Service {
             // Ignora se vibração não disponível
         }
 
-        // Som de notificação sutil (TYPE_NOTIFICATION = som curto do sistema)
+        // Som com USAGE_ALARM (toca mesmo no silencioso/DND)
         try {
-            Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            if (notifSound == null) {
-                notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            // Tenta som de notificação (curto) primeiro, alarme como fallback
+            Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            if (sound == null) {
+                sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            }
+            if (sound == null) {
+                sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
             }
             mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(this, notifSound);
+            mediaPlayer.setDataSource(this, sound);
             mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setUsage(AudioAttributes.USAGE_ALARM)  // ALARM = sempre toca
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build());
+            mediaPlayer.setVolume(1.0f, 1.0f);  // Volume máximo
             mediaPlayer.setLooping(false);
             mediaPlayer.setOnCompletionListener(mp -> {
                 try { mp.release(); } catch (Exception e) { /* ignora */ }
@@ -278,7 +283,14 @@ public class TimerForegroundService extends Service {
             mediaPlayer.prepare();
             mediaPlayer.start();
         } catch (Exception e) {
-            // Sem som disponível
+            // Sem som disponível — tenta Ringtone como último recurso
+            try {
+                android.media.Ringtone ringtone = RingtoneManager.getRingtone(this,
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION));
+                if (ringtone != null) ringtone.play();
+            } catch (Exception e2) {
+                // Realmente sem som
+            }
         }
 
         // Notificação de alarme visual
@@ -351,13 +363,16 @@ public class TimerForegroundService extends Service {
             channel.setShowBadge(true);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
-            Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            if (notifSound != null) {
+            Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            if (alarmSound == null) {
+                alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            }
+            if (alarmSound != null) {
                 AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setUsage(AudioAttributes.USAGE_ALARM)  // ALARM = toca mesmo no silencioso
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build();
-                channel.setSound(notifSound, audioAttributes);
+                channel.setSound(alarmSound, audioAttributes);
             }
 
             NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
