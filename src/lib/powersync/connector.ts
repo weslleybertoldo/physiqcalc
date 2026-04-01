@@ -27,7 +27,7 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
         throw new Error("Não autenticado");
       }
       return {
-        endpoint: "https://69cc4d1df69619e9d4834456.powersync.journeyapps.com",
+        endpoint: "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com",
         token: refreshed.access_token,
         expiresAt: refreshed.expires_at
           ? new Date(refreshed.expires_at * 1000)
@@ -36,7 +36,7 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
     }
 
     return {
-      endpoint: "https://69cc4d1df69619e9d4834456.powersync.journeyapps.com",
+      endpoint: "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com",
       token: session.access_token,
       expiresAt: session.expires_at
         ? new Date(session.expires_at * 1000)
