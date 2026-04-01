@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, CheckCircle2 } from "lucide-react";
-import { usePowerSync } from "@powersync/react";
 import { toast } from "sonner";
+import { offlineUpsert } from "@/lib/offlineSync";
 
 // Persistência do timer de treino no localStorage
 const LS_WORKOUT_KEY = "physiq_workout_timer";
@@ -45,7 +45,6 @@ function formatDuracao(seconds: number): string {
 }
 
 const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTreinoConcluido }: Props) => {
-  const db = usePowerSync();
   // Inicializa segundos a partir do LS se tiver treino em andamento para o mesmo dia
   const [ativo, setAtivo] = useState(() => {
     const saved = lerWorkoutSalvo();
@@ -133,11 +132,16 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
     const exerciciosArray = Object.entries(exConcluidos).map(([id, data]) => ({ exercicio_id: id, ...data }));
 
     const historicoId = crypto.randomUUID();
-    await db.execute(
-      `INSERT INTO treino_historico (id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [historicoId, userId, grupoNome, iniciadoEm.toISOString(), agora.toISOString(), duracao, JSON.stringify(exerciciosArray), agora.toISOString()]
-    );
+    await offlineUpsert("treino_historico", {
+      id: historicoId,
+      user_id: userId,
+      nome_treino: grupoNome,
+      iniciado_em: iniciadoEm.toISOString(),
+      concluido_em: agora.toISOString(),
+      duracao_segundos: duracao,
+      exercicios_concluidos: exerciciosArray,
+      created_at: agora.toISOString(),
+    }, "id");
 
     setDuracaoFinal(duracao);
     setConcluido(true);

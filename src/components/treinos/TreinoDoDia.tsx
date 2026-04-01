@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
 import { usePowerSync } from "@powersync/react";
-import { setCacheData, getCacheData } from "@/lib/offlineSync";
+import { setCacheData, getCacheData, offlineUpsert, offlineDelete, offlineUpdate } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
@@ -147,14 +147,17 @@ const TreinoDoDia = ({
     // Salva no cache imediatamente
     setCacheData(cacheKey, upserts.map(u => ({ exercicio_id: u.exercicio_id, posicao: u.posicao })));
 
-    // Escreve no SQLite local — PowerSync sincroniza com Supabase
+    // Escreve via Supabase (com fallback offline)
     for (const u of upserts) {
       const id = crypto.randomUUID();
-      await db.execute(
-        `INSERT OR REPLACE INTO exercicio_ordem_usuario (id, user_id, grupo_id, exercicio_id, posicao, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, u.user_id, u.grupo_id, u.exercicio_id, u.posicao, u.updated_at]
-      );
+      await offlineUpsert("exercicio_ordem_usuario", {
+        id,
+        user_id: u.user_id,
+        grupo_id: u.grupo_id,
+        exercicio_id: u.exercicio_id,
+        posicao: u.posicao,
+        updated_at: u.updated_at,
+      }, "user_id,grupo_id,exercicio_id");
     }
   };
 
@@ -256,10 +259,7 @@ const TreinoDoDia = ({
 
   const handleResetOrder = async () => {
     try {
-      await db.execute(
-        "DELETE FROM exercicio_ordem_usuario WHERE user_id = ? AND grupo_id = ?",
-        [userId, grupoId]
-      );
+      await offlineDelete("exercicio_ordem_usuario", { user_id: userId, grupo_id: grupoId });
       setSortedItems([...exercicios].sort((a, b) => a.ordem - b.ordem));
       toast.success("Ordem resetada para o padrão.");
     } catch (e: any) {
@@ -303,19 +303,29 @@ const TreinoDoDia = ({
     return crypto.randomUUID();
   };
 
-  // Helper: upsert de série no SQLite local
+  // Helper: upsert de série via Supabase (com fallback offline)
   const upsertSerie = async (exercicioId: string, data: Record<string, any>) => {
     const exUsuarioId = data.exercicio_usuario_id || null;
     const exIdVal = data.exercicio_id || null;
     const id = await findOrCreateSerieId(exercicioId, exUsuarioId, data.numero_serie);
-    await db.execute(
-      `INSERT OR REPLACE INTO tb_treino_series
-       (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.user_id, exIdVal, exUsuarioId, data.data_treino, data.numero_serie,
-       data.peso ?? null, data.reps ?? null, data.tempo_segundos ?? null, data.distancia_km ?? null,
-       data.pace_segundos_km ?? null, data.concluida ?? null, data.updated_at ?? new Date().toISOString()]
-    );
+    const conflictKey = exUsuarioId
+      ? "user_id,exercicio_usuario_id,data_treino,numero_serie"
+      : "user_id,exercicio_id,data_treino,numero_serie";
+    await offlineUpsert("tb_treino_series", {
+      id,
+      user_id: data.user_id,
+      exercicio_id: exIdVal,
+      exercicio_usuario_id: exUsuarioId,
+      data_treino: data.data_treino,
+      numero_serie: data.numero_serie,
+      peso: data.peso ?? null,
+      reps: data.reps ?? null,
+      tempo_segundos: data.tempo_segundos ?? null,
+      distancia_km: data.distancia_km ?? null,
+      pace_segundos_km: data.pace_segundos_km ?? null,
+      concluida: data.concluida ?? null,
+      updated_at: data.updated_at ?? new Date().toISOString(),
+    }, conflictKey);
   };
 
   const handleSaveSerie = async (
@@ -420,11 +430,15 @@ const TreinoDoDia = ({
     const serieInfo = series.find(s => s.exercicio_id === exercicioId);
     const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
     const val = serieInfo?.exercicio_usuario_id || exercicioId;
-    await db.execute(
-      `UPDATE tb_treino_series SET concluida = 0, updated_at = ?
-       WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
-      [new Date().toISOString(), userId, val, dateKey, numeroSerie]
-    );
+    await offlineUpdate("tb_treino_series", {
+      concluida: false,
+      updated_at: new Date().toISOString(),
+    }, {
+      user_id: userId,
+      [field]: val,
+      data_treino: dateKey,
+      numero_serie: numeroSerie,
+    });
     onSeriesUpdate(prev => prev.map(s => {
       if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
         return { ...s, concluida: false };
@@ -459,10 +473,12 @@ const TreinoDoDia = ({
       const serieInfo = series.find(s => s.exercicio_id === exercicioId);
       const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
       const val = serieInfo?.exercicio_usuario_id || exercicioId;
-      await db.execute(
-        `DELETE FROM tb_treino_series WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
-        [userId, val, dateKey, numeroSerie]
-      );
+      await offlineDelete("tb_treino_series", {
+        user_id: userId,
+        [field]: val,
+        data_treino: dateKey,
+        numero_serie: numeroSerie,
+      });
     }
     // Renumera localmente e atualiza no banco
     onSeriesUpdate(prev => {
@@ -495,17 +511,17 @@ const TreinoDoDia = ({
   const handleConcluir = async () => {
     setSaving(true);
     if (concluido) {
-      await db.execute(
-        "DELETE FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ?",
-        [userId, dateKey]
-      );
+      await offlineDelete("tb_treino_concluido", { user_id: userId, data_treino: dateKey });
     } else {
       const id = crypto.randomUUID();
-      await db.execute(
-        `INSERT OR REPLACE INTO tb_treino_concluido (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, userId, dateKey, grupoId, null, new Date().toISOString()]
-      );
+      await offlineUpsert("tb_treino_concluido", {
+        id,
+        user_id: userId,
+        data_treino: dateKey,
+        grupo_id: grupoId,
+        grupo_usuario_id: null,
+        created_at: new Date().toISOString(),
+      }, "user_id,data_treino");
       toast.success("Treino concluído! 💪");
     }
     setSaving(false);

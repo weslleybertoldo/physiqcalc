@@ -3,6 +3,7 @@ import { ArrowLeft, Timer, Dumbbell, ChevronDown, ChevronUp, Trash2 } from "luci
 import { usePowerSync } from "@powersync/react";
 import { formatarData } from "@/utils/formatDate";
 import { toast } from "sonner";
+import { offlineDelete } from "@/lib/offlineSync";
 
 interface HistoricoItem {
   id: string;
@@ -79,10 +80,7 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await db.execute(
-        "DELETE FROM treino_historico WHERE id = ? AND user_id = ?",
-        [id, userId]
-      );
+      await offlineDelete("treino_historico", { id, user_id: userId });
       setHistorico((prev) => prev.filter((h) => h.id !== id));
       toast.success("Treino excluído.");
     } catch {

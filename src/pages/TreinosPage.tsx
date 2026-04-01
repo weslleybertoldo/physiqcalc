@@ -7,7 +7,7 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { hasPendingData } from "@/lib/offlineSync";
+import { hasPendingData, offlineDelete, offlineUpsert, offlineUpdate } from "@/lib/offlineSync";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
@@ -166,26 +166,26 @@ const TreinosPage = () => {
     } catch { return ""; }
   });
 
-  // Cleanup old series on mount
+  // Cleanup old series on mount — via Supabase diretamente
   useEffect(() => {
-    // Limpa séries com mais de 12 meses — mantém histórico completo do último ano
-    if (user?.id) {
+    if (user?.id && navigator.onLine) {
       try {
         const limite = new Date();
         limite.setMonth(limite.getMonth() - 12);
         const dataLimite = limite.toISOString().slice(0, 10);
         console.log(`[Cleanup] Removendo séries anteriores a ${dataLimite}`);
-        db.execute(
-          "DELETE FROM tb_treino_series WHERE user_id = ? AND data_treino < ?",
-          [user.id, dataLimite]
-        ).catch((err: any) => {
-          console.error("[Cleanup] Erro ao limpar séries antigas:", err?.message || err);
-        });
+        (supabase.from as any)("tb_treino_series")
+          .delete()
+          .eq("user_id", user.id)
+          .lt("data_treino", dataLimite)
+          .then(({ error }: any) => {
+            if (error) console.error("[Cleanup] Erro ao limpar séries antigas:", error.message);
+          });
       } catch (err) {
         console.error("[Cleanup] Erro inesperado:", err);
       }
     }
-  }, [user?.id, db]);
+  }, [user?.id]);
 
   // Salva posição do scroll continuamente
   useEffect(() => {
@@ -538,7 +538,7 @@ const TreinosPage = () => {
   const selectedConcluido = concluidos.includes(selectedDate);
 
   // O PowerSync é reativo, então handleRefresh agora é um no-op leve.
-  // Escritas via db.execute() no SQLite local disparam re-renderização via PowerSync.
+  // Escritas vão direto pro Supabase; o PowerSync baixa as mudanças e re-renderiza automaticamente.
   const handleRefresh = useCallback(async () => {
     // No-op: o PowerSync re-renderiza automaticamente quando dados mudam no SQLite
   }, []);
@@ -565,12 +565,10 @@ const TreinosPage = () => {
   // Salva foto do Google no perfil na primeira vez que encontrar (para não depender de identities)
   useEffect(() => {
     if (avatarUrl && !profile?.foto_url && user?.id) {
-      db.execute(
-        "UPDATE physiq_profiles SET foto_url = ? WHERE id = ?",
-        [avatarUrl, user.id]
-      ).catch((e: any) => console.warn("[TreinosPage] Erro ao salvar foto:", e));
+      offlineUpdate("physiq_profiles", { foto_url: avatarUrl }, { id: user.id })
+        .catch((e: any) => console.warn("[TreinosPage] Erro ao salvar foto:", e));
     }
-  }, [avatarUrl, profile?.foto_url, user?.id, db]);
+  }, [avatarUrl, profile?.foto_url, user?.id]);
   const initial = displayName.charAt(0).toUpperCase();
 
   const diasInfo = weekDates.map((d) => {
@@ -598,17 +596,21 @@ const TreinosPage = () => {
     const id = (existingRows && existingRows.length > 0) ? (existingRows[0] as any).id : crypto.randomUUID();
 
     if (grupoId === null) {
-      await db.execute(
-        `INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id)
-         VALUES (?, ?, ?, ?, ?)`,
-        [id, user.id, selectedDate, null, null]
-      );
+      await offlineUpsert("tb_treino_dia_override", {
+        id,
+        user_id: user.id,
+        data_treino: selectedDate,
+        grupo_id: null,
+        grupo_usuario_id: null,
+      }, "user_id,data_treino");
     } else {
-      await db.execute(
-        `INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id)
-         VALUES (?, ?, ?, ?, ?)`,
-        [id, user.id, selectedDate, isPessoal ? null : grupoId, isPessoal ? grupoId : null]
-      );
+      await offlineUpsert("tb_treino_dia_override", {
+        id,
+        user_id: user.id,
+        data_treino: selectedDate,
+        grupo_id: isPessoal ? null : grupoId,
+        grupo_usuario_id: isPessoal ? grupoId : null,
+      }, "user_id,data_treino");
     }
     handleRefresh();
   };
