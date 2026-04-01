@@ -17,31 +17,42 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export class SupabaseConnector implements PowerSyncBackendConnector {
   async fetchCredentials() {
-    // Tenta pegar sessão local primeiro
-    const { data: { session } } = await supabase.auth.getSession();
+    const ENDPOINT = "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com";
 
-    if (!session) {
-      // Tenta refresh se não tem sessão
-      const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-      if (!refreshed) {
-        throw new Error("Não autenticado");
+    try {
+      // Tenta pegar sessão local primeiro
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        return {
+          endpoint: ENDPOINT,
+          token: session.access_token,
+          expiresAt: session.expires_at
+            ? new Date(session.expires_at * 1000)
+            : undefined,
+        };
       }
-      return {
-        endpoint: "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com",
-        token: refreshed.access_token,
-        expiresAt: refreshed.expires_at
-          ? new Date(refreshed.expires_at * 1000)
-          : undefined,
-      };
+
+      // Sessão expirada — tenta refresh silenciosamente
+      if (navigator.onLine) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        if (refreshed?.access_token) {
+          return {
+            endpoint: ENDPOINT,
+            token: refreshed.access_token,
+            expiresAt: refreshed.expires_at
+              ? new Date(refreshed.expires_at * 1000)
+              : undefined,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("[PowerSync] fetchCredentials error:", e);
     }
 
-    return {
-      endpoint: "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com",
-      token: session.access_token,
-      expiresAt: session.expires_at
-        ? new Date(session.expires_at * 1000)
-        : undefined,
-    };
+    // Sem sessão — retorna token vazio (PowerSync vai tentar de novo depois)
+    // NÃO lança erro para não causar logout
+    throw new Error("Aguardando autenticação");
   }
 
   async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
