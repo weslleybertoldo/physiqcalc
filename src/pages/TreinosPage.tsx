@@ -290,26 +290,31 @@ const TreinosPage = () => {
     return map;
   }, [overridesRows]);
 
-  // Treinos concluídos da semana
+  // Treinos concluídos da semana (PowerSync + estado local)
   const { data: concluidosSemanaRows } = useQuery(
     `SELECT data_treino FROM tb_treino_concluido
      WHERE user_id = ? AND data_treino >= ? AND data_treino <= ?`,
     [userId, weekStart, weekEnd]
   );
-  const concluidos = useMemo(
-    () => ((concluidosSemanaRows as any[]) || []).map((c: any) => c.data_treino),
-    [concluidosSemanaRows]
-  );
+  // Estado local para concluídos (atualizado imediatamente, sem esperar PowerSync)
+  const [localConcluidos, setLocalConcluidos] = useState<Set<string>>(new Set());
+  const concluidos = useMemo(() => {
+    const fromDb = ((concluidosSemanaRows as any[]) || []).map((c: any) => c.data_treino);
+    return [...new Set([...fromDb, ...localConcluidos])];
+  }, [concluidosSemanaRows, localConcluidos]);
   const treinosSemana = concluidos.length;
 
-  // Treinos concluídos do mês
+  // Treinos concluídos do mês (PowerSync + estado local)
   const monthStart = useMemo(() => getMonthStart(), [today]);
   const { data: concluidosMesRows } = useQuery(
     `SELECT data_treino FROM tb_treino_concluido
      WHERE user_id = ? AND data_treino >= ?`,
     [userId, monthStart]
   );
-  const treinosMes = (concluidosMesRows || []).length;
+  const treinosMes = useMemo(() => {
+    const fromDb = ((concluidosMesRows as any[]) || []).map((c: any) => c.data_treino);
+    return [...new Set([...fromDb, ...Array.from(localConcluidos).filter(d => d >= monthStart)])].length;
+  }, [concluidosMesRows, localConcluidos, monthStart]);
 
   // Exercícios dos grupos globais (com JOIN)
   const { data: gruposExerciciosRows } = useQuery(
@@ -542,8 +547,16 @@ const TreinosPage = () => {
 
   const selectedConcluido = concluidos.includes(selectedDate);
 
-  // O PowerSync é reativo, então handleRefresh agora é um no-op leve.
-  // Escritas vão direto pro Supabase; o PowerSync baixa as mudanças e re-renderiza automaticamente.
+  // Callback para atualizar estado local quando treino é concluído/desconcluído
+  const handleTreinoConcluido = useCallback((dateKey: string, concluido: boolean) => {
+    setLocalConcluidos(prev => {
+      const next = new Set(prev);
+      if (concluido) next.add(dateKey);
+      else next.delete(dateKey);
+      return next;
+    });
+  }, []);
+
   const handleRefresh = useCallback(async () => {
     // No-op: o PowerSync re-renderiza automaticamente quando dados mudam no SQLite
   }, []);
@@ -766,6 +779,7 @@ const TreinosPage = () => {
                   series={series}
                   concluido={selectedConcluido}
                   onRefresh={handleRefresh}
+                  onTreinoConcluido={handleTreinoConcluido}
                   onAlterarGrupo={() => setShowAlterarGrupo(true)}
                   onSeriesUpdate={(action) => {
                     lastLocalEditRef.current = Date.now();

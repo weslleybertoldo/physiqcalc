@@ -32,6 +32,7 @@ interface Props {
   series: SerieComMemoria[];
   concluido: boolean;
   onRefresh: () => void;
+  onTreinoConcluido?: (dateKey: string, concluido: boolean) => void;
   onAlterarGrupo: () => void;
   onSerieConcluida: (exercicioNome: string, numeroSerie: number, exercicioId: string) => void;
   onSeriesUpdate: React.Dispatch<React.SetStateAction<SerieComMemoria[]>>;
@@ -67,7 +68,7 @@ function calcularPace(tempoSegundos: number, distanciaKm: number): number {
 
 const TreinoDoDia = ({
   userId, dateKey, dateLabel, grupoNome, grupoId, exercicios,
-  series, concluido, onRefresh, onAlterarGrupo, onSerieConcluida, onSeriesUpdate,
+  series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onSerieConcluida, onSeriesUpdate,
 }: Props) => {
   const db = usePowerSync();
   const [infoExercicio, setInfoExercicio] = useState<Exercicio | null>(null);
@@ -512,6 +513,7 @@ const TreinoDoDia = ({
     setSaving(true);
     if (concluido) {
       await offlineDelete("tb_treino_concluido", { user_id: userId, data_treino: dateKey });
+      onTreinoConcluido?.(dateKey, false);
     } else {
       const id = crypto.randomUUID();
       await offlineUpsert("tb_treino_concluido", {
@@ -522,6 +524,7 @@ const TreinoDoDia = ({
         grupo_usuario_id: null,
         created_at: new Date().toISOString(),
       }, "user_id,data_treino");
+      onTreinoConcluido?.(dateKey, true);
       toast.success("Treino concluído! 💪");
     }
     setSaving(false);
@@ -773,7 +776,7 @@ const SerieRow = React.memo(function SerieRow({
   const [reps, setReps] = useState(serie.reps > 0 ? String(serie.reps) : "");
   const [tempo, setTempo] = useState(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
   const [distancia, setDistancia] = useState(serie.distancia_km ? String(serie.distancia_km) : "");
-  const isConcluida = serie.concluida === true;
+  const isConcluida = serie.concluida === true || serie.concluida === 1;
 
   const initializedRef = useRef(false);
   useEffect(() => {
