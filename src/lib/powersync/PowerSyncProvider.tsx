@@ -18,7 +18,9 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) {
-      powerSyncDb.disconnectAndClear().catch(() => {});
+      powerSyncDb.disconnectAndClear().catch((e) => {
+        console.warn("[PowerSync] disconnectAndClear error:", e);
+      });
       return;
     }
 

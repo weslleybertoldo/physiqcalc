@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
 import { usePowerSync } from "@powersync/react";
-import { supabase } from "@/integrations/supabase/client";
-import { offlineUpsert, offlineUpdate, offlineDelete, setCacheData, getCacheData, addPendingOperation } from "@/lib/offlineSync";
+import { setCacheData, getCacheData } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
@@ -148,15 +147,14 @@ const TreinoDoDia = ({
     // Salva no cache imediatamente
     setCacheData(cacheKey, upserts.map(u => ({ exercicio_id: u.exercicio_id, posicao: u.posicao })));
 
-    // Salva no Supabase (batch upsert — uma chamada só)
-    try {
-      await (supabase.from as any)("exercicio_ordem_usuario")
-        .upsert(upserts, { onConflict: "user_id,grupo_id,exercicio_id" });
-    } catch {
-      // Offline: enfileira para sincronizar depois
-      for (const u of upserts) {
-        addPendingOperation("exercicio_ordem_usuario", "upsert", u, "user_id,grupo_id,exercicio_id");
-      }
+    // Escreve no SQLite local — PowerSync sincroniza com Supabase
+    for (const u of upserts) {
+      const id = crypto.randomUUID();
+      await db.execute(
+        `INSERT OR REPLACE INTO exercicio_ordem_usuario (id, user_id, grupo_id, exercicio_id, posicao, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, u.user_id, u.grupo_id, u.exercicio_id, u.posicao, u.updated_at]
+      );
     }
   };
 
@@ -257,13 +255,16 @@ const TreinoDoDia = ({
   };
 
   const handleResetOrder = async () => {
-    const { error } = await supabase.from("exercicio_ordem_usuario").delete().eq("user_id", userId).eq("grupo_id", grupoId);
-    if (error) {
-      toast.error("Erro ao resetar ordem: " + error.message);
-      return;
+    try {
+      await db.execute(
+        "DELETE FROM exercicio_ordem_usuario WHERE user_id = ? AND grupo_id = ?",
+        [userId, grupoId]
+      );
+      setSortedItems([...exercicios].sort((a, b) => a.ordem - b.ordem));
+      toast.success("Ordem resetada para o padrão.");
+    } catch (e: any) {
+      toast.error("Erro ao resetar ordem: " + (e?.message || "erro desconhecido"));
     }
-    setSortedItems([...exercicios].sort((a, b) => a.ordem - b.ordem));
-    toast.success("Ordem resetada para o padrão.");
   };
 
   const getSeriesForExercicio = useCallback(
@@ -290,12 +291,31 @@ const TreinoDoDia = ({
     return { ...base, exercicio_id: exercicioId };
   };
 
-  // Chave de conflito correta baseada no tipo de exercício
-  const getConflictKey = (exercicioId: string) => {
-    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
-    return serieInfo?.exercicio_usuario_id
-      ? "user_id,exercicio_usuario_id,data_treino,numero_serie"
-      : "user_id,exercicio_id,data_treino,numero_serie";
+  // Helper: encontra ou gera id para uma série no SQLite
+  const findOrCreateSerieId = async (exercicioId: string, exUsuarioId: string | undefined, numSerie: number): Promise<string> => {
+    const field = exUsuarioId ? "exercicio_usuario_id" : "exercicio_id";
+    const val = exUsuarioId || exercicioId;
+    const rows = await db.getAll(
+      `SELECT id FROM tb_treino_series WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
+      [userId, val, dateKey, numSerie]
+    );
+    if (rows && rows.length > 0) return (rows[0] as any).id;
+    return crypto.randomUUID();
+  };
+
+  // Helper: upsert de série no SQLite local
+  const upsertSerie = async (exercicioId: string, data: Record<string, any>) => {
+    const exUsuarioId = data.exercicio_usuario_id || null;
+    const exIdVal = data.exercicio_id || null;
+    const id = await findOrCreateSerieId(exercicioId, exUsuarioId, data.numero_serie);
+    await db.execute(
+      `INSERT OR REPLACE INTO tb_treino_series
+       (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.user_id, exIdVal, exUsuarioId, data.data_treino, data.numero_serie,
+       data.peso ?? null, data.reps ?? null, data.tempo_segundos ?? null, data.distancia_km ?? null,
+       data.pace_segundos_km ?? null, data.concluida ?? null, data.updated_at ?? new Date().toISOString()]
+    );
   };
 
   const handleSaveSerie = async (
@@ -314,7 +334,7 @@ const TreinoDoDia = ({
       pace_segundos_km: pace ?? null,
       updated_at: new Date().toISOString(),
     });
-    await offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
+    await upsertSerie(exercicioId, data);
     onSeriesUpdate(prev => {
       const updated = prev.map(s =>
         s.exercicio_id === exercicioId && s.numero_serie === numeroSerie
@@ -332,7 +352,6 @@ const TreinoDoDia = ({
   ) => {
     const pace = tempoSegundos && distanciaKm ? calcularPace(tempoSegundos, distanciaKm) : undefined;
     const now = new Date().toISOString();
-    const conflictKey = getConflictKey(exercicioId);
 
     // Salva TODAS as séries não salvas do mesmo exercício ANTES de concluir
     const naoSalvas = series
@@ -347,7 +366,7 @@ const TreinoDoDia = ({
         concluida: false,
         updated_at: now,
       });
-      await offlineUpsert("tb_treino_series", data, conflictKey);
+      await upsertSerie(exercicioId, data);
     }
 
     // Salva a série concluída
@@ -363,7 +382,7 @@ const TreinoDoDia = ({
       concluida: true,
       updated_at: now,
     });
-    await offlineUpsert("tb_treino_series", data, conflictKey);
+    await upsertSerie(exercicioId, data);
     onSeriesUpdate(prev => {
       const updated = prev.map(s => {
         if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
@@ -381,7 +400,6 @@ const TreinoDoDia = ({
   };
 
   const handleDesfazerSerie = async (exercicioId: string, numeroSerie: number) => {
-    const conflictKey = getConflictKey(exercicioId);
     const naoSalvas = series
       .filter(s => s.exercicio_id === exercicioId && !s.salva);
     for (const s of naoSalvas) {
@@ -396,17 +414,16 @@ const TreinoDoDia = ({
         concluida: false,
         updated_at: new Date().toISOString(),
       });
-      await offlineUpsert("tb_treino_series", data, conflictKey);
+      await upsertSerie(exercicioId, data);
     }
 
     const serieInfo = series.find(s => s.exercicio_id === exercicioId);
-    const matchKey = serieInfo?.exercicio_usuario_id
-      ? { user_id: userId, exercicio_usuario_id: serieInfo.exercicio_usuario_id, data_treino: dateKey, numero_serie: numeroSerie }
-      : { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie };
-    await offlineUpdate(
-      "tb_treino_series",
-      { concluida: false, updated_at: new Date().toISOString() },
-      matchKey
+    const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
+    const val = serieInfo?.exercicio_usuario_id || exercicioId;
+    await db.execute(
+      `UPDATE tb_treino_series SET concluida = 0, updated_at = ?
+       WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
+      [new Date().toISOString(), userId, val, dateKey, numeroSerie]
     );
     onSeriesUpdate(prev => prev.map(s => {
       if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
@@ -433,17 +450,19 @@ const TreinoDoDia = ({
       numero_serie: novoNum, peso, reps,
       updated_at: new Date().toISOString(),
     });
-    await offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
+    await upsertSerie(exercicioId, data);
     onSeriesUpdate(prev => [...prev, { exercicio_id: exercicioId, exercicio_usuario_id: exUsuarioId, numero_serie: novoNum, peso, reps, concluida: false, salva: true }]);
   };
 
   const handleRemoveSerie = async (exercicioId: string, numeroSerie: number, isSalva: boolean) => {
     if (isSalva) {
       const serieInfo = series.find(s => s.exercicio_id === exercicioId);
-      const matchKey = serieInfo?.exercicio_usuario_id
-        ? { user_id: userId, exercicio_usuario_id: serieInfo.exercicio_usuario_id, data_treino: dateKey, numero_serie: numeroSerie }
-        : { user_id: userId, exercicio_id: exercicioId, data_treino: dateKey, numero_serie: numeroSerie };
-      await offlineDelete("tb_treino_series", matchKey);
+      const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
+      const val = serieInfo?.exercicio_usuario_id || exercicioId;
+      await db.execute(
+        `DELETE FROM tb_treino_series WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
+        [userId, val, dateKey, numeroSerie]
+      );
     }
     // Renumera localmente e atualiza no banco
     onSeriesUpdate(prev => {
@@ -466,7 +485,7 @@ const TreinoDoDia = ({
           concluida: s.concluida ?? false,
           updated_at: new Date().toISOString(),
         });
-        offlineUpsert("tb_treino_series", data, getConflictKey(exercicioId));
+        upsertSerie(exercicioId, data);
       }
 
       return updated;
@@ -476,12 +495,16 @@ const TreinoDoDia = ({
   const handleConcluir = async () => {
     setSaving(true);
     if (concluido) {
-      await offlineDelete("tb_treino_concluido", { user_id: userId, data_treino: dateKey });
+      await db.execute(
+        "DELETE FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ?",
+        [userId, dateKey]
+      );
     } else {
-      await offlineUpsert(
-        "tb_treino_concluido",
-        { user_id: userId, data_treino: dateKey, concluido: true },
-        "user_id,data_treino"
+      const id = crypto.randomUUID();
+      await db.execute(
+        `INSERT OR REPLACE INTO tb_treino_concluido (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, userId, dateKey, grupoId, null, new Date().toISOString()]
       );
       toast.success("Treino concluído! 💪");
     }
@@ -633,6 +656,16 @@ const ExercicioCard = ({
       onTouchDragEnd();
     }
   };
+
+  // Cleanup do longPressTimer no unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (comentarioCarregadoRef.current) return;

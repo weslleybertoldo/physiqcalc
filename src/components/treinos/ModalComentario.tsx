@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { usePowerSync } from "@powersync/react";
-import { offlineUpsert, offlineDelete } from "@/lib/offlineSync";
 import { toast } from "sonner";
 import { MessageSquare, Trash2 } from "lucide-react";
 
@@ -31,33 +30,34 @@ async function salvarComentario(
   userId: string,
   exercicioId: string,
   ehPessoal: boolean,
-  comentario: string
+  comentario: string,
+  db: any
 ) {
   const campo = ehPessoal ? "exercicio_usuario_id" : "exercicio_id";
 
   try {
     if (!comentario.trim()) {
-      const match: Record<string, string> = { user_id: userId, [campo]: exercicioId };
-      await offlineDelete("tb_exercicio_comentarios", match);
+      await db.execute(
+        `DELETE FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
+        [userId, exercicioId]
+      );
       return;
     }
 
-    const row: Record<string, unknown> = {
-      user_id: userId,
-      [campo]: exercicioId,
-      comentario: comentario.trim(),
-      updated_at: new Date().toISOString(),
-    };
-    if (ehPessoal) {
-      row.exercicio_id = null;
-    } else {
-      row.exercicio_usuario_id = null;
-    }
+    // Find existing or create new id
+    const existing = await db.getAll(
+      `SELECT id FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
+      [userId, exercicioId]
+    );
+    const id = (existing && existing.length > 0) ? (existing[0] as any).id : crypto.randomUUID();
 
-    await offlineUpsert(
-      "tb_exercicio_comentarios",
-      row as Record<string, any>,
-      `user_id,${campo}`
+    const exId = ehPessoal ? null : exercicioId;
+    const exUsuarioId = ehPessoal ? exercicioId : null;
+
+    await db.execute(
+      `INSERT OR REPLACE INTO tb_exercicio_comentarios (id, user_id, exercicio_id, exercicio_usuario_id, comentario, updated_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, userId, exId, exUsuarioId, comentario.trim(), new Date().toISOString(), new Date().toISOString()]
     );
   } catch (e) {
     toast.error("Erro ao salvar comentário. Tente novamente.");
@@ -95,7 +95,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
       return;
     }
     setSalvando(true);
-    await salvarComentario(userId, exercicioId, ehPessoal, texto);
+    await salvarComentario(userId, exercicioId, ehPessoal, texto, db);
     setTextoOriginal(texto);
     setSalvando(false);
     setSalvo(true);
@@ -162,7 +162,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
               <button
                 onClick={async () => {
                   setTexto("");
-                  await salvarComentario(userId, exercicioId, ehPessoal, "");
+                  await salvarComentario(userId, exercicioId, ehPessoal, "", db);
                   setTextoOriginal("");
                 }}
                 className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg px-3.5 py-2 font-heading font-bold text-xs flex items-center gap-1 hover:bg-destructive/20 transition-colors"

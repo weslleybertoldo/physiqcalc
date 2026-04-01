@@ -7,7 +7,7 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { hasPendingData, offlineUpsert } from "@/lib/offlineSync";
+import { hasPendingData } from "@/lib/offlineSync";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
@@ -64,6 +64,7 @@ interface GrupoExercicio {
     nome: string;
     grupo_muscular: string;
     emoji: string;
+    tipo?: string;
   };
 }
 
@@ -174,19 +175,17 @@ const TreinosPage = () => {
         limite.setMonth(limite.getMonth() - 12);
         const dataLimite = limite.toISOString().slice(0, 10);
         console.log(`[Cleanup] Removendo séries anteriores a ${dataLimite}`);
-        supabase
-          .from("tb_treino_series")
-          .delete()
-          .eq("user_id", user.id)
-          .lt("data_treino", dataLimite)
-          .then(({ error }) => {
-            if (error) console.error("[Cleanup] Erro ao limpar séries antigas:", error.message);
-          });
+        db.execute(
+          "DELETE FROM tb_treino_series WHERE user_id = ? AND data_treino < ?",
+          [user.id, dataLimite]
+        ).catch((err: any) => {
+          console.error("[Cleanup] Erro ao limpar séries antigas:", err?.message || err);
+        });
       } catch (err) {
         console.error("[Cleanup] Erro inesperado:", err);
       }
     }
-  }, [user?.id]);
+  }, [user?.id, db]);
 
   // Salva posição do scroll continuamente
   useEffect(() => {
@@ -220,10 +219,13 @@ const TreinosPage = () => {
   const userId = user?.id ?? "";
 
   // Perfil do usuário
-  const { data: profileRows } = useQuery(
+  const { data: profileRows, error: profileError } = useQuery(
     "SELECT nome, foto_url, user_code FROM physiq_profiles WHERE id = ?",
     [userId]
   );
+  useEffect(() => {
+    if (profileError) console.warn("[TreinosPage] Erro ao buscar perfil:", profileError);
+  }, [profileError]);
   const profile = useMemo(() => {
     if (!profileRows || profileRows.length === 0) return null;
     const row = profileRows[0] as any;
@@ -299,7 +301,7 @@ const TreinosPage = () => {
   const treinosSemana = concluidos.length;
 
   // Treinos concluídos do mês
-  const monthStart = useMemo(() => getMonthStart(), []);
+  const monthStart = useMemo(() => getMonthStart(), [today]);
   const { data: concluidosMesRows } = useQuery(
     `SELECT data_treino FROM tb_treino_concluido
      WHERE user_id = ? AND data_treino >= ?`,
@@ -329,6 +331,7 @@ const TreinosPage = () => {
             nome: ge.ex_nome,
             grupo_muscular: ge.ex_grupo_muscular,
             emoji: ge.ex_emoji,
+            tipo: ge.ex_tipo,
           },
         });
       });
@@ -355,9 +358,9 @@ const TreinosPage = () => {
         const gid = ge.grupo_usuario_id;
         if (!map[gid]) map[gid] = [];
         const exData = ge.ex_id
-          ? { id: ge.ex_id, nome: ge.ex_nome, grupo_muscular: ge.ex_grupo_muscular, emoji: ge.ex_emoji }
+          ? { id: ge.ex_id, nome: ge.ex_nome, grupo_muscular: ge.ex_grupo_muscular, emoji: ge.ex_emoji, tipo: ge.ex_tipo }
           : ge.exu_id
-            ? { id: ge.exu_id, nome: ge.exu_nome, grupo_muscular: ge.exu_grupo_muscular, emoji: ge.exu_emoji }
+            ? { id: ge.exu_id, nome: ge.exu_nome, grupo_muscular: ge.exu_grupo_muscular, emoji: ge.exu_emoji, tipo: ge.exu_tipo }
             : null;
         const isPessoal = !ge.ex_id && !!ge.exu_id;
         if (exData) {
@@ -535,7 +538,7 @@ const TreinosPage = () => {
   const selectedConcluido = concluidos.includes(selectedDate);
 
   // O PowerSync é reativo, então handleRefresh agora é um no-op leve.
-  // Escritas via supabase/offlineUpsert disparam sync que atualiza o SQLite e re-renderiza.
+  // Escritas via db.execute() no SQLite local disparam re-renderização via PowerSync.
   const handleRefresh = useCallback(async () => {
     // No-op: o PowerSync re-renderiza automaticamente quando dados mudam no SQLite
   }, []);
@@ -562,11 +565,12 @@ const TreinosPage = () => {
   // Salva foto do Google no perfil na primeira vez que encontrar (para não depender de identities)
   useEffect(() => {
     if (avatarUrl && !profile?.foto_url && user?.id) {
-      supabase.from("physiq_profiles").update({ foto_url: avatarUrl }).eq("id", user.id).then(() => {
-        // PowerSync vai sincronizar e re-renderizar automaticamente
-      });
+      db.execute(
+        "UPDATE physiq_profiles SET foto_url = ? WHERE id = ?",
+        [avatarUrl, user.id]
+      ).catch((e: any) => console.warn("[TreinosPage] Erro ao salvar foto:", e));
     }
-  }, [avatarUrl, profile?.foto_url, user?.id]);
+  }, [avatarUrl, profile?.foto_url, user?.id, db]);
   const initial = displayName.charAt(0).toUpperCase();
 
   const diasInfo = weekDates.map((d) => {
@@ -586,27 +590,24 @@ const TreinosPage = () => {
   });
 
   const handleOverride = async (grupoId: string | null, isPessoal: boolean) => {
+    // Verifica se já existe um override para este dia
+    const existingRows = await db.getAll(
+      "SELECT id FROM tb_treino_dia_override WHERE user_id = ? AND data_treino = ?",
+      [user.id, selectedDate]
+    );
+    const id = (existingRows && existingRows.length > 0) ? (existingRows[0] as any).id : crypto.randomUUID();
+
     if (grupoId === null) {
-      await offlineUpsert(
-        "tb_treino_dia_override",
-        {
-          user_id: user.id,
-          data_treino: selectedDate,
-          grupo_id: null,
-          grupo_usuario_id: null,
-        },
-        "user_id,data_treino"
+      await db.execute(
+        `INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id)
+         VALUES (?, ?, ?, ?, ?)`,
+        [id, user.id, selectedDate, null, null]
       );
     } else {
-      await offlineUpsert(
-        "tb_treino_dia_override",
-        {
-          user_id: user.id,
-          data_treino: selectedDate,
-          grupo_id: isPessoal ? null : grupoId,
-          grupo_usuario_id: isPessoal ? grupoId : null,
-        },
-        "user_id,data_treino"
+      await db.execute(
+        `INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id)
+         VALUES (?, ?, ?, ?, ?)`,
+        [id, user.id, selectedDate, isPessoal ? null : grupoId, isPessoal ? grupoId : null]
       );
     }
     handleRefresh();
