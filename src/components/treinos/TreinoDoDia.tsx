@@ -268,7 +268,7 @@ const TreinoDoDia = ({
   };
 
   const getSeriesForExercicio = useCallback(
-    (exId: string) => series.filter(s => s.exercicio_id === exId).sort((a, b) => a.numero_serie - b.numero_serie),
+    (exId: string) => series.filter(s => s.exercicio_id === exId || s.exercicio_usuario_id === exId).sort((a, b) => a.numero_serie - b.numero_serie),
     [series]
   );
 
@@ -280,7 +280,7 @@ const TreinoDoDia = ({
 
   // Monta o objeto de série correto: usa exercicio_usuario_id para exercícios pessoais
   const buildSerieData = (exercicioId: string, base: Record<string, any>) => {
-    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+    const serieInfo = series.find(s => s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId);
     const exUsuarioId = serieInfo?.exercicio_usuario_id;
 
     if (exUsuarioId) {
@@ -347,7 +347,7 @@ const TreinoDoDia = ({
     await upsertSerie(exercicioId, data);
     onSeriesUpdate(prev => {
       const updated = prev.map(s =>
-        s.exercicio_id === exercicioId && s.numero_serie === numeroSerie
+        (s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.numero_serie === numeroSerie
           ? { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, salva: true }
           : s
       );
@@ -365,7 +365,7 @@ const TreinoDoDia = ({
 
     // Salva TODAS as séries não salvas do mesmo exercício ANTES de concluir
     const naoSalvas = series
-      .filter(s => s.exercicio_id === exercicioId && !s.salva && s.numero_serie !== numeroSerie);
+      .filter(s => (s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && !s.salva && s.numero_serie !== numeroSerie);
     for (const s of naoSalvas) {
       const data = buildSerieData(exercicioId, {
         user_id: userId,
@@ -395,10 +395,10 @@ const TreinoDoDia = ({
     await upsertSerie(exercicioId, data);
     onSeriesUpdate(prev => {
       const updated = prev.map(s => {
-        if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
+        if ((s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.numero_serie === numeroSerie) {
           return { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, concluida: true, salva: true };
         }
-        if (s.exercicio_id === exercicioId && !s.salva) {
+        if ((s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && !s.salva) {
           return { ...s, salva: true };
         }
         return s;
@@ -411,7 +411,7 @@ const TreinoDoDia = ({
 
   const handleDesfazerSerie = async (exercicioId: string, numeroSerie: number) => {
     const naoSalvas = series
-      .filter(s => s.exercicio_id === exercicioId && !s.salva);
+      .filter(s => (s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && !s.salva);
     for (const s of naoSalvas) {
       // Pula séries que nunca foram editadas (peso indefinido ou 0 sem reps alterados)
       if ((s.peso === undefined || s.peso === 0) && (s.reps === undefined || s.reps === 10)) continue;
@@ -427,7 +427,7 @@ const TreinoDoDia = ({
       await upsertSerie(exercicioId, data);
     }
 
-    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+    const serieInfo = series.find(s => s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId);
     const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
     const val = serieInfo?.exercicio_usuario_id || exercicioId;
     await offlineUpdate("tb_treino_series", {
@@ -440,11 +440,11 @@ const TreinoDoDia = ({
       numero_serie: numeroSerie,
     });
     onSeriesUpdate(prev => prev.map(s => {
-      if (s.exercicio_id === exercicioId && s.numero_serie === numeroSerie) {
+      if ((s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.numero_serie === numeroSerie) {
         return { ...s, concluida: false };
       }
       // Marca as séries do histórico como salvas (agora existem no banco)
-      if (s.exercicio_id === exercicioId && !s.salva) {
+      if ((s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && !s.salva) {
         return { ...s, salva: true };
       }
       return s;
@@ -457,7 +457,7 @@ const TreinoDoDia = ({
     const novoNum = existing.length > 0 ? Math.max(...existing.map(s => s.numero_serie)) + 1 : 1;
     const peso = last?.peso ?? 0;
     const reps = last?.reps ?? 10;
-    const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+    const serieInfo = series.find(s => s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId);
     const exUsuarioId = serieInfo?.exercicio_usuario_id;
     const data = buildSerieData(exercicioId, {
       user_id: userId, data_treino: dateKey,
@@ -470,7 +470,7 @@ const TreinoDoDia = ({
 
   const handleRemoveSerie = async (exercicioId: string, numeroSerie: number, isSalva: boolean) => {
     if (isSalva) {
-      const serieInfo = series.find(s => s.exercicio_id === exercicioId);
+      const serieInfo = series.find(s => s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId);
       const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
       const val = serieInfo?.exercicio_usuario_id || exercicioId;
       await offlineDelete("tb_treino_series", {
@@ -483,13 +483,13 @@ const TreinoDoDia = ({
     // Renumera localmente e atualiza no banco
     onSeriesUpdate(prev => {
       const updated = prev
-        .filter(s => !(s.exercicio_id === exercicioId && s.numero_serie === numeroSerie))
-        .map(s => s.exercicio_id === exercicioId && s.numero_serie > numeroSerie
+        .filter(s => !((s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.numero_serie === numeroSerie))
+        .map(s => (s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.numero_serie > numeroSerie
           ? { ...s, numero_serie: s.numero_serie - 1 } : s);
 
       // Atualiza numero_serie no banco para séries renumeradas
       const renumeradas = updated.filter(
-        s => s.exercicio_id === exercicioId && s.salva && s.numero_serie >= numeroSerie
+        s => (s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.salva && s.numero_serie >= numeroSerie
       );
       for (const s of renumeradas) {
         const data = buildSerieData(exercicioId, {
