@@ -18,16 +18,11 @@ const FATAL_RESPONSE_CODES = [
 
 class SupabaseConnector implements PowerSyncBackendConnector {
   async fetchCredentials() {
-    console.log("[PowerSync] fetchCredentials called");
     const { data: { session }, error } = await supabase.auth.getSession();
 
     if (!session || error) {
-      console.error("[PowerSync] No session:", error?.message);
       throw new Error(`Could not fetch credentials: ${error?.message || "No session"}`);
     }
-
-    console.log("[PowerSync] Got token, endpoint:", POWERSYNC_URL);
-    console.log("[PowerSync] Token sub:", JSON.parse(atob(session.access_token.split('.')[1])).sub);
 
     return {
       endpoint: POWERSYNC_URL,
