@@ -1,21 +1,16 @@
 import { PowerSyncContext } from "@powersync/react";
-import { PowerSyncDatabase, WASQLiteOpenFactory, WASQLiteVFS } from "@powersync/web";
+import { PowerSyncDatabase } from "@powersync/web";
 import { ReactNode, useEffect, useRef } from "react";
 import { AppSchema } from "./schema";
 import { connector } from "./connector";
 import { useAuth } from "@/hooks/useAuth";
 
 // Cria o banco SQLite local — singleton, criado uma vez
-// Baseado no projeto de referência oficial: powersync-community/vite-react-ts-powersync-supabase
+// Usa config padrão (IndexedDB) que funciona em todos os ambientes:
+// PWA, Capacitor Android, iOS
 const powerSyncDb = new PowerSyncDatabase({
-  database: new WASQLiteOpenFactory({
-    dbFilename: "physiqcalc.db",
-    vfs: WASQLiteVFS.OPFSCoopSyncVFS,
-    flags: {
-      enableMultiTabs: typeof SharedWorker !== "undefined",
-    },
-  }),
   schema: AppSchema,
+  database: { dbFilename: "physiqcalc.db" },
 });
 
 export function PowerSyncProvider({ children }: { children: ReactNode }) {
