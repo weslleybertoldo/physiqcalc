@@ -50,8 +50,7 @@ const tb_treino_series = new Table({
 const tb_treino_concluido = new Table({
   user_id: column.text,
   data_treino: column.text,
-  grupo_id: column.text,
-  grupo_usuario_id: column.text,
+  concluido: column.integer,
   created_at: column.text,
 });
 
@@ -60,6 +59,7 @@ const tb_treino_dia_override = new Table({
   data_treino: column.text,
   grupo_id: column.text,
   grupo_usuario_id: column.text,
+  created_at: column.text,
 });
 
 const treino_historico = new Table({

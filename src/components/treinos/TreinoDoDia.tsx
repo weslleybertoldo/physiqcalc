@@ -520,8 +520,7 @@ const TreinoDoDia = ({
         id,
         user_id: userId,
         data_treino: dateKey,
-        grupo_id: grupoId,
-        grupo_usuario_id: null,
+        concluido: true,
         created_at: new Date().toISOString(),
       }, "user_id,data_treino");
       onTreinoConcluido?.(dateKey, true);
