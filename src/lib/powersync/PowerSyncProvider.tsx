@@ -30,13 +30,15 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       try {
+        console.log("[PowerSync] Connecting... user:", user?.id);
+        console.log("[PowerSync] DB status before connect:", powerSyncDb.connected);
         await powerSyncDb.connect(connector, {
           crudUploadThrottleMs: 1000,
         });
         connectedRef.current = true;
-        console.log("[PowerSync] Connected");
+        console.log("[PowerSync] Connected successfully! DB connected:", powerSyncDb.connected);
       } catch (e) {
-        console.warn("[PowerSync] Connect error:", e);
+        console.error("[PowerSync] Connect FAILED:", e);
       }
     };
 
