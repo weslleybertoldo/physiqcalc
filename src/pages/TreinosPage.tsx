@@ -168,6 +168,18 @@ const TreinosPage = () => {
     } catch { return ""; }
   });
 
+  // Limpa fila do offlineSync antigo (PowerSync cuida de tudo agora)
+  useEffect(() => {
+    try {
+      const pending = localStorage.getItem("physiq_offline_pending");
+      if (pending) {
+        console.log("[Migration] Removendo fila offlineSync antiga:", pending.length, "bytes");
+        localStorage.removeItem("physiq_offline_pending");
+      }
+      localStorage.removeItem("physiq_offline_cache");
+    } catch {}
+  }, []);
+
   // Cleanup old series on mount — via Supabase diretamente
   useEffect(() => {
     if (user?.id && navigator.onLine) {
