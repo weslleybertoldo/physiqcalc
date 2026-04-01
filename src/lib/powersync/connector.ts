@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export class SupabaseConnector implements PowerSyncBackendConnector {
   async fetchCredentials() {
-    const ENDPOINT = "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com";
+    const ENDPOINT = "https://69cc4d1df69619e9d4834456.powersync.journeyapps.com";
 
     try {
       // Tenta pegar sessão local primeiro
