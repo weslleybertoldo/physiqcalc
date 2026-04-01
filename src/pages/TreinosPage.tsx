@@ -106,6 +106,7 @@ const TreinosPage = () => {
 
   const [series, setSeries] = useState<SerieComMemoria[]>([]);
   const lastLocalEditRef = useRef(0);
+  const buildSeriesIdRef = useRef(0);
 
   const [today, setToday] = useState(() => new Date());
   const [weekDates, setWeekDates] = useState(() => getWeekDates(new Date()));
@@ -312,7 +313,8 @@ const TreinosPage = () => {
   const [localConcluidos, setLocalConcluidos] = useState<Set<string>>(new Set());
   const concluidos = useMemo(() => {
     const fromDb = ((concluidosSemanaRows as any[]) || []).map((c: any) => c.data_treino);
-    return [...new Set([...fromDb, ...localConcluidos])];
+    const result = [...new Set([...fromDb, ...localConcluidos])];
+    return result;
   }, [concluidosSemanaRows, localConcluidos]);
   const treinosSemana = concluidos.length;
 
@@ -476,7 +478,12 @@ const TreinosPage = () => {
   useEffect(() => {
     if (!user || !seriesDoDiaRows) return;
 
+    const currentBuildId = ++buildSeriesIdRef.current;
+
     const buildSeries = async () => {
+      // Não sobrescreve se os exercícios ainda não carregaram
+      if (selectedExercicios.length === 0) return;
+
       const savedSeries = (seriesDoDiaRows as any[]) || [];
       const seriesByExercicio: Record<string, any[]> = {};
       savedSeries.forEach((s) => {
@@ -491,7 +498,7 @@ const TreinosPage = () => {
       for (const ge of selectedExercicios) {
         const exId = ge.exercicio_id;
         const exUsuarioId = ge.exercicio_usuario_id;
-        const saved = seriesByExercicio[exId];
+        const saved = seriesByExercicio[exId] || (exUsuarioId ? seriesByExercicio[exUsuarioId] : undefined);
 
         if (saved && saved.length > 0) {
           saved.forEach((s: any) => {
@@ -510,7 +517,10 @@ const TreinosPage = () => {
             });
           });
         } else {
+          // Cancela se um buildSeries mais recente já iniciou
+          if (currentBuildId !== buildSeriesIdRef.current) return;
           const ultimo = await buscarUltimoTreino(exId, selectedDate, !!exUsuarioId);
+          if (currentBuildId !== buildSeriesIdRef.current) return;
 
           if (ultimo && ultimo.length > 0) {
             (ultimo as any[]).forEach((s) => {
@@ -539,6 +549,9 @@ const TreinosPage = () => {
           }
         }
       }
+
+      // Cancela se um buildSeries mais recente já iniciou
+      if (currentBuildId !== buildSeriesIdRef.current) return;
 
       // Se o usuário editou nos últimos 5s, não sobrescreve o estado otimista
       if (Date.now() - lastLocalEditRef.current < 5000) return;
