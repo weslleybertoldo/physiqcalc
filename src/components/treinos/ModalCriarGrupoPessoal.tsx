@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Edit2, X, Save, Check } from "lucide-react";
+import { Plus, Trash2, Edit2, X, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePowerSync } from "@powersync/react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Exercicio {
@@ -13,11 +12,17 @@ interface Exercicio {
   isPessoal?: boolean;
 }
 
+export interface GrupoParaEditar {
+  id: string;
+  nome: string;
+}
+
 interface Props {
   userId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
+  editGrupo?: GrupoParaEditar | null;
 }
 
 const EMOJIS = ["🏋️", "💪", "🦵", "🧘", "🔵"];
@@ -26,8 +31,10 @@ const GRUPOS_MUSCULARES = [
   "Quadríceps", "Isquiotibiais", "Panturrilha", "Abdômen", "Glúteo",
 ];
 
-const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props) => {
+const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGrupo }: Props) => {
   const db = usePowerSync();
+  const isEditMode = !!editGrupo;
+
   const [nomeGrupo, setNomeGrupo] = useState("");
   const [exerciciosGlobais, setExerciciosGlobais] = useState<Exercicio[]>([]);
   const [exerciciosPessoais, setExerciciosPessoais] = useState<Exercicio[]>([]);
@@ -43,13 +50,21 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
   // Editar exercício pessoal
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNome, setEditNome] = useState("");
-  const [editGrupo, setEditGrupo] = useState("");
+  const [editGrupoMusc, setEditGrupoMusc] = useState("");
   const [editEmoji, setEditEmoji] = useState("");
 
   useEffect(() => {
     if (!open) return;
     loadExercicios();
-  }, [open]);
+
+    if (editGrupo) {
+      setNomeGrupo(editGrupo.nome);
+      loadExerciciosDoGrupo(editGrupo.id);
+    } else {
+      setNomeGrupo("");
+      setSelectedIds([]);
+    }
+  }, [open, editGrupo?.id]);
 
   const loadExercicios = async () => {
     const [globais, pessoais] = await Promise.all([
@@ -58,6 +73,24 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
     ]);
     setExerciciosGlobais((globais as Exercicio[]) || []);
     setExerciciosPessoais(((pessoais as any[]) || []).map((e: any) => ({ ...e, isPessoal: true })));
+  };
+
+  const loadExerciciosDoGrupo = async (grupoId: string) => {
+    try {
+      const rows = await db.getAll(
+        "SELECT exercicio_id, exercicio_usuario_id FROM tb_grupos_exercicios_usuario WHERE grupo_usuario_id = ? AND user_id = ? ORDER BY ordem",
+        [grupoId, userId]
+      );
+      const selected = ((rows as any[]) || []).map((r: any) => {
+        if (r.exercicio_usuario_id) {
+          return { id: r.exercicio_usuario_id, isPessoal: true };
+        }
+        return { id: r.exercicio_id, isPessoal: false };
+      }).filter((s) => s.id);
+      setSelectedIds(selected);
+    } catch (e) {
+      console.error("[EditGrupo] Erro ao carregar exercícios do grupo:", e);
+    }
   };
 
   const toggleSelect = (id: string, isPessoal: boolean) => {
@@ -71,50 +104,48 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
   const handleCriarExercicio = async () => {
     if (!novoNome.trim()) return;
     try {
-      const { error } = await supabase.from("tb_exercicios_usuario").insert({
-        user_id: userId, nome: novoNome.trim(), grupo_muscular: novoGrupo, emoji: novoEmoji,
-      });
-      if (error) {
-        toast.error("Erro ao criar exercício. Tente novamente.");
-        return;
-      }
+      const now = new Date().toISOString();
+      await db.execute(
+        "INSERT INTO tb_exercicios_usuario (id, user_id, nome, grupo_muscular, emoji, created_at, updated_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
+        [userId, novoNome.trim(), novoGrupo, novoEmoji, now, now]
+      );
       setNovoNome("");
       setShowNovoEx(false);
       toast.success("Exercício criado!");
       loadExercicios();
-    } catch {
+    } catch (e) {
+      console.error("[CriarGrupo] Erro ao criar exercício:", e);
       toast.error("Erro ao criar exercício. Tente novamente.");
     }
   };
 
   const handleEditarExercicio = async (id: string) => {
     try {
-      const { error } = await supabase.from("tb_exercicios_usuario").update({
-        nome: editNome, grupo_muscular: editGrupo, emoji: editEmoji,
-      }).eq("id", id).eq("user_id", userId);
-      if (error) {
-        toast.error("Erro ao atualizar exercício. Tente novamente.");
-        return;
-      }
+      const now = new Date().toISOString();
+      await db.execute(
+        "UPDATE tb_exercicios_usuario SET nome = ?, grupo_muscular = ?, emoji = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+        [editNome, editGrupoMusc, editEmoji, now, id, userId]
+      );
       setEditingId(null);
       toast.success("Exercício atualizado!");
       loadExercicios();
-    } catch {
+    } catch (e) {
+      console.error("[CriarGrupo] Erro ao editar exercício:", e);
       toast.error("Erro ao atualizar exercício. Tente novamente.");
     }
   };
 
   const handleDeletarExercicio = async (id: string) => {
     try {
-      const { error } = await supabase.from("tb_exercicios_usuario").delete().eq("id", id).eq("user_id", userId);
-      if (error) {
-        toast.error("Erro ao remover exercício. Tente novamente.");
-        return;
-      }
+      await db.execute(
+        "DELETE FROM tb_exercicios_usuario WHERE id = ? AND user_id = ?",
+        [id, userId]
+      );
       setSelectedIds((prev) => prev.filter((s) => !(s.id === id && s.isPessoal)));
       toast.success("Exercício removido");
       loadExercicios();
-    } catch {
+    } catch (e) {
+      console.error("[CriarGrupo] Erro ao remover exercício:", e);
       toast.error("Erro ao remover exercício. Tente novamente.");
     }
   };
@@ -127,38 +158,58 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
     setSaving(true);
 
     try {
-      const { data: grupo, error: grupoError } = await supabase
-        .from("tb_grupos_treino_usuario")
-        .insert({ user_id: userId, nome: nomeGrupo.trim() })
-        .select().single();
+      const now = new Date().toISOString();
 
-      if (grupoError || !grupo) {
-        toast.error("Erro ao criar grupo. Tente novamente.");
-        setSaving(false);
-        return;
-      }
+      if (isEditMode && editGrupo) {
+        // === MODO EDIÇÃO ===
+        // 1. Atualiza o nome do grupo
+        await db.execute(
+          "UPDATE tb_grupos_treino_usuario SET nome = ? WHERE id = ? AND user_id = ?",
+          [nomeGrupo.trim(), editGrupo.id, userId]
+        );
 
-      const inserts = selectedIds.map((s, i) => ({
-        user_id: userId,
-        grupo_usuario_id: grupo.id,
-        exercicio_id: s.isPessoal ? null : s.id,
-        exercicio_usuario_id: s.isPessoal ? s.id : null,
-        ordem: i,
-      }));
-      const { error: insertError } = await supabase.from("tb_grupos_exercicios_usuario").insert(inserts);
-      if (insertError) {
-        toast.error("Grupo criado, mas erro ao adicionar exercícios.");
-        setSaving(false);
-        return;
+        // 2. Remove exercícios antigos do grupo
+        await db.execute(
+          "DELETE FROM tb_grupos_exercicios_usuario WHERE grupo_usuario_id = ? AND user_id = ?",
+          [editGrupo.id, userId]
+        );
+
+        // 3. Insere os novos exercícios selecionados
+        for (let i = 0; i < selectedIds.length; i++) {
+          const s = selectedIds[i];
+          await db.execute(
+            "INSERT INTO tb_grupos_exercicios_usuario (id, user_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, ordem) VALUES (uuid(), ?, ?, ?, ?, ?)",
+            [userId, editGrupo.id, s.isPessoal ? null : s.id, s.isPessoal ? s.id : null, i]
+          );
+        }
+
+        toast.success("Grupo atualizado!");
+      } else {
+        // === MODO CRIAÇÃO ===
+        const grupoId = crypto.randomUUID();
+        await db.execute(
+          "INSERT INTO tb_grupos_treino_usuario (id, user_id, nome, created_at) VALUES (?, ?, ?, ?)",
+          [grupoId, userId, nomeGrupo.trim(), now]
+        );
+
+        for (let i = 0; i < selectedIds.length; i++) {
+          const s = selectedIds[i];
+          await db.execute(
+            "INSERT INTO tb_grupos_exercicios_usuario (id, user_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, ordem) VALUES (uuid(), ?, ?, ?, ?, ?)",
+            [userId, grupoId, s.isPessoal ? null : s.id, s.isPessoal ? s.id : null, i]
+          );
+        }
+
+        toast.success("Grupo criado!");
       }
 
       setSaving(false);
       setNomeGrupo("");
       setSelectedIds([]);
-      toast.success("Grupo criado!");
       onCreated();
-    } catch {
-      toast.error("Erro ao criar grupo. Tente novamente.");
+    } catch (e) {
+      console.error("[CriarGrupo] Erro ao salvar grupo:", e);
+      toast.error("Erro ao salvar grupo. Tente novamente.");
       setSaving(false);
     }
   };
@@ -170,7 +221,9 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background border-muted-foreground/30 max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-heading text-foreground">➕ Criar Grupo Pessoal</DialogTitle>
+          <DialogTitle className="font-heading text-foreground">
+            {isEditMode ? "✏️ Editar Grupo Pessoal" : "➕ Criar Grupo Pessoal"}
+          </DialogTitle>
         </DialogHeader>
 
         <input
@@ -214,7 +267,7 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
                   <div className="flex-1 space-y-2">
                     <input type="text" value={editNome} onChange={(e) => setEditNome(e.target.value)} className="input-underline text-sm" />
                     <div className="flex gap-2">
-                      <select value={editGrupo} onChange={(e) => setEditGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none">
+                      <select value={editGrupoMusc} onChange={(e) => setEditGrupoMusc(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none">
                         {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g}>{g}</option>)}
                       </select>
                       <select value={editEmoji} onChange={(e) => setEditEmoji(e.target.value)} className="w-14 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none">
@@ -235,7 +288,7 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
                       className="accent-primary"
                     />
                     <span className="text-sm font-body text-foreground flex-1">{ex.emoji} {ex.nome}</span>
-                    <button type="button" onClick={() => { setEditingId(ex.id); setEditNome(ex.nome); setEditGrupo(ex.grupo_muscular); setEditEmoji(ex.emoji); }} className="p-1 text-muted-foreground hover:text-primary transition-colors">
+                    <button type="button" onClick={() => { setEditingId(ex.id); setEditNome(ex.nome); setEditGrupoMusc(ex.grupo_muscular); setEditEmoji(ex.emoji); }} className="p-1 text-muted-foreground hover:text-primary transition-colors">
                       <Edit2 size={12} />
                     </button>
                     <button type="button" onClick={() => handleDeletarExercicio(ex.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
@@ -277,7 +330,12 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated }: Props
           disabled={saving || !nomeGrupo.trim() || selectedIds.length === 0}
           className="w-full py-3 bg-primary text-primary-foreground font-heading text-xs uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
-          {saving ? "Salvando..." : `Criar grupo (${selectedIds.length} exercícios)`}
+          {saving
+            ? "Salvando..."
+            : isEditMode
+              ? `Salvar grupo (${selectedIds.length} exercícios)`
+              : `Criar grupo (${selectedIds.length} exercícios)`
+          }
         </button>
       </DialogContent>
     </Dialog>
