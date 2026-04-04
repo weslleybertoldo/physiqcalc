@@ -469,7 +469,8 @@ const TreinoDoDia = ({
       const renumeradas = updated.filter(
         s => (s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.salva && s.numero_serie >= numeroSerie
       );
-      for (const s of renumeradas) {
+      // Renumera no banco (fire-and-forget com log de erro)
+      const renumerarPromises = renumeradas.map(s => {
         const data = buildSerieData(exercicioId, {
           user_id: userId,
           data_treino: dateKey,
@@ -479,8 +480,11 @@ const TreinoDoDia = ({
           concluida: s.concluida ?? false,
           updated_at: new Date().toISOString(),
         });
-        upsertSerie(exercicioId, data);
-      }
+        return upsertSerie(exercicioId, data);
+      });
+      Promise.all(renumerarPromises).catch(e =>
+        console.error("[TreinoDoDia] Erro ao renumerar séries:", e)
+      );
 
       return updated;
     });
