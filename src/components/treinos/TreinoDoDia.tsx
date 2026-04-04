@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
 import { usePowerSync } from "@powersync/react";
-import { setCacheData, getCacheData } from "@/lib/offlineSync";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
@@ -89,11 +88,10 @@ const TreinoDoDia = ({
   // Sincroniza ref com state (para usar dentro de event listeners)
   useEffect(() => { sortedItemsRef.current = sortedItems; }, [sortedItems]);
 
-  // Carrega ordem personalizada do usuário (com cache offline)
+  // Carrega ordem personalizada do usuário (PowerSync SQLite local — sempre disponível)
   useEffect(() => {
     const loadOrder = async () => {
       const defaultSorted = [...exercicios].sort((a, b) => a.ordem - b.ordem);
-      const cacheKey = `ordem_${userId}_${grupoId}`;
 
       try {
         const ordemUsuario = await db.getAll(
@@ -106,9 +104,6 @@ const TreinoDoDia = ({
           return;
         }
 
-        // Salva no cache para uso offline
-        setCacheData(cacheKey, ordemUsuario);
-
         const mapaOrdem = Object.fromEntries(ordemUsuario.map(o => [o.exercicio_id, o.posicao]));
         const sorted = [...defaultSorted].sort((a, b) => {
           const posA = mapaOrdem[a.exercicio_id] ?? 999;
@@ -117,26 +112,13 @@ const TreinoDoDia = ({
         });
         setSortedItems(sorted);
       } catch {
-        // Offline: tenta carregar do cache
-        const cached = getCacheData<{ exercicio_id: string; posicao: number }[]>(cacheKey);
-        if (cached && cached.length > 0) {
-          const mapaOrdem = Object.fromEntries(cached.map(o => [o.exercicio_id, o.posicao]));
-          const sorted = [...defaultSorted].sort((a, b) => {
-            const posA = mapaOrdem[a.exercicio_id] ?? 999;
-            const posB = mapaOrdem[b.exercicio_id] ?? 999;
-            return posA - posB;
-          });
-          setSortedItems(sorted);
-        } else {
-          setSortedItems(defaultSorted);
-        }
+        setSortedItems(defaultSorted);
       }
     };
     loadOrder();
   }, [exercicios, userId, grupoId]);
 
   const saveOrder = async (novaOrdem: GrupoExercicio[]) => {
-    const cacheKey = `ordem_${userId}_${grupoId}`;
     const now = new Date().toISOString();
     const upserts = novaOrdem.map((ex, posicao) => ({
       user_id: userId,
@@ -145,9 +127,6 @@ const TreinoDoDia = ({
       posicao,
       updated_at: now,
     }));
-
-    // Salva no cache imediatamente
-    setCacheData(cacheKey, upserts.map(u => ({ exercicio_id: u.exercicio_id, posicao: u.posicao })));
 
     // Escreve via PowerSync (SQLite local)
     for (const u of upserts) {
@@ -284,11 +263,6 @@ const TreinoDoDia = ({
     [series]
   );
 
-  // Atualiza o cache local após salvar (evita que reload traga dados antigos)
-  const updateSeriesCache = useCallback((updatedSeries: SerieComMemoria[]) => {
-    const cacheKey = `series_${userId}_${dateKey}`;
-    setCacheData(cacheKey, updatedSeries);
-  }, [userId, dateKey]);
 
   // Monta o objeto de série correto: usa exercicio_usuario_id para exercícios pessoais
   const buildSerieData = (exercicioId: string, base: Record<string, any>) => {
@@ -364,7 +338,6 @@ const TreinoDoDia = ({
           ? { ...s, peso, reps, tempo_segundos: tempoSegundos, distancia_km: distanciaKm, pace_segundos_km: pace, salva: true }
           : s
       );
-      updateSeriesCache(updated);
       return updated;
     });
   };
@@ -416,7 +389,6 @@ const TreinoDoDia = ({
         }
         return s;
       });
-      updateSeriesCache(updated);
       return updated;
     });
     onSerieConcluida(exercicioNome, numeroSerie, exercicioId);

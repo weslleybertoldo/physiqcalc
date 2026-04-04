@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 // lastLocalEditRef: protege contra buildSeries sobrescrever estado otimista
-import { ClipboardList, LogOut, History, WifiOff, Loader2, Settings, RefreshCw, Check, Download, X } from "lucide-react";
+import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X } from "lucide-react";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
 import WorkoutTimer from "@/components/treinos/WorkoutTimer";
@@ -8,8 +8,6 @@ import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { hasPendingData } from "@/lib/offlineSync";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
@@ -95,10 +93,9 @@ export interface SerieComMemoria {
 }
 
 const TreinosPage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const db = usePowerSync();
-  const { isOnline, pendingCount, syncing } = useOfflineSync();
   // Guarda posição do scroll para restaurar após updates silenciosos
   const scrollYRef = useRef(0);
   // Flag para não recarregar quando voltar do bloqueio/minimizar
@@ -586,16 +583,10 @@ const TreinosPage = () => {
     // No-op: o PowerSync re-renderiza automaticamente quando dados mudam no SQLite
   }, []);
 
-  // Logout handler — avisa se há dados pendentes
+  // Logout handler — usa signOut do contexto (marca intentionalLogoutRef)
   const handleLogout = async () => {
-    if (hasPendingData()) {
-      const confirmed = window.confirm(
-        "Você tem dados não sincronizados. Sair agora pode causar perda de dados. Deseja continuar?"
-      );
-      if (!confirmed) return;
-    }
     sessionStorage.clear();
-    await supabase.auth.signOut();
+    await signOut();
     navigate("/");
   };
 
@@ -640,19 +631,19 @@ const TreinosPage = () => {
 
     const grupoIdVal = grupoId === null ? null : (isPessoal ? null : grupoId);
     const grupoUsuarioIdVal = grupoId === null ? null : (isPessoal ? grupoId : null);
+    const now = new Date().toISOString();
 
     if (existingId) {
       await db.execute(
-        "INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id) VALUES (?, ?, ?, ?, ?)",
-        [existingId, user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal]
+        "INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [existingId, user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal, now]
       );
     } else {
       await db.execute(
-        "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id) VALUES (uuid(), ?, ?, ?, ?)",
-        [user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal]
+        "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?)",
+        [user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal, now]
       );
     }
-    handleRefresh();
   };
 
   const handleCheckUpdate = async () => {
@@ -734,30 +725,6 @@ const TreinosPage = () => {
         ) : (
           <>
             {/* Indicador offline / sincronização */}
-            {(!isOnline || pendingCount > 0) && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 text-xs font-heading ${
-                !isOnline
-                  ? "bg-yellow-500/10 border border-yellow-500/30 text-yellow-500"
-                  : "bg-primary/10 border border-primary/30 text-primary"
-              }`}>
-                {!isOnline ? (
-                  <>
-                    <WifiOff size={14} />
-                    <span>Modo offline — seus dados serão sincronizados quando a internet voltar</span>
-                  </>
-                ) : syncing ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>Sincronizando {pendingCount} dado(s)...</span>
-                  </>
-                ) : (
-                  <>
-                    <Loader2 size={14} />
-                    <span>{pendingCount} dado(s) pendente(s) de sincronização</span>
-                  </>
-                )}
-              </div>
-            )}
 
             <h1 className="font-heading text-2xl sm:text-3xl text-foreground tracking-tight mb-6">
               PHYSIQ<span className="text-primary">CALC</span>{" "}

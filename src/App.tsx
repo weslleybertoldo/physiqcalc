@@ -7,7 +7,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
@@ -46,10 +45,8 @@ setupDeepLinkListener();
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   const [adminMode] = useState(() => isAdminAuthenticated());
-  const { triggerSync } = useOfflineSync();
-
-  // Capacitor: refresh sessão + re-sync ao voltar do background
-  useAppLifecycle(triggerSync);
+  // Capacitor: refresh sessão ao voltar do background
+  useAppLifecycle();
 
   if (loading) {
     return (

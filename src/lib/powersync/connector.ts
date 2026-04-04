@@ -61,13 +61,13 @@ class SupabaseConnector implements PowerSyncBackendConnector {
 
       await transaction.complete();
     } catch (ex: any) {
-      console.debug("[PowerSync] Upload exception:", ex);
+      console.warn("[PowerSync] Upload exception:", ex?.code, ex?.message, "op:", lastOp?.table, lastOp?.op);
       if (
         typeof ex?.code === "string" &&
         FATAL_RESPONSE_CODES.some((regex) => regex.test(ex.code))
       ) {
         // Fatal error — discard transaction to unblock queue
-        console.error("[PowerSync] Fatal error, discarding:", lastOp, ex);
+        console.error(`[PowerSync] FATAL: descartando op ${lastOp?.op} em ${lastOp?.table} (code: ${ex.code})`, lastOp?.opData);
         await transaction.complete();
       } else {
         // Retryable error — PowerSync will retry after delay
