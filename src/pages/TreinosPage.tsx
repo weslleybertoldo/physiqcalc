@@ -7,7 +7,6 @@ import WorkoutTimer from "@/components/treinos/WorkoutTimer";
 import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
@@ -15,6 +14,7 @@ import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
+import { toast } from "sonner";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
 
@@ -178,25 +178,16 @@ const TreinosPage = () => {
     } catch {}
   }, []);
 
-  // Cleanup old series on mount — via Supabase diretamente
+  // Cleanup séries com mais de 12 meses via PowerSync
   useEffect(() => {
-    if (user?.id && navigator.onLine) {
-      try {
-        const limite = new Date();
-        limite.setMonth(limite.getMonth() - 12);
-        const dataLimite = limite.toISOString().slice(0, 10);
-        console.log(`[Cleanup] Removendo séries anteriores a ${dataLimite}`);
-        (supabase.from as any)("tb_treino_series")
-          .delete()
-          .eq("user_id", user.id)
-          .lt("data_treino", dataLimite)
-          .then(({ error }: any) => {
-            if (error) console.error("[Cleanup] Erro ao limpar séries antigas:", error.message);
-          });
-      } catch (err) {
-        console.error("[Cleanup] Erro inesperado:", err);
-      }
-    }
+    if (!user?.id) return;
+    const limite = new Date();
+    limite.setMonth(limite.getMonth() - 12);
+    const dataLimite = limite.toISOString().slice(0, 10);
+    db.execute(
+      "DELETE FROM tb_treino_series WHERE user_id = ? AND data_treino < ?",
+      [user.id, dataLimite]
+    ).catch(err => console.error("[Cleanup] Erro ao limpar séries antigas:", err));
   }, [user?.id]);
 
   // Salva posição do scroll continuamente
@@ -622,27 +613,34 @@ const TreinosPage = () => {
   });
 
   const handleOverride = async (grupoId: string | null, isPessoal: boolean) => {
-    // Verifica se já existe um override para este dia
-    const existingRows = await db.getAll(
-      "SELECT id FROM tb_treino_dia_override WHERE user_id = ? AND data_treino = ?",
-      [user.id, selectedDate]
-    );
-    const existingId = (existingRows && existingRows.length > 0) ? (existingRows[0] as any).id : null;
-
-    const grupoIdVal = grupoId === null ? null : (isPessoal ? null : grupoId);
-    const grupoUsuarioIdVal = grupoId === null ? null : (isPessoal ? grupoId : null);
-    const now = new Date().toISOString();
-
-    if (existingId) {
-      await db.execute(
-        "INSERT OR REPLACE INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        [existingId, user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal, now]
+    try {
+      // Verifica se já existe um override para este dia
+      const existingRows = await db.getAll(
+        "SELECT id FROM tb_treino_dia_override WHERE user_id = ? AND data_treino = ?",
+        [user.id, selectedDate]
       );
-    } else {
-      await db.execute(
-        "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?)",
-        [user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal, now]
-      );
+      const existingId = (existingRows && existingRows.length > 0) ? (existingRows[0] as any).id : null;
+
+      const grupoIdVal = grupoId === null ? null : (isPessoal ? null : grupoId);
+      const grupoUsuarioIdVal = grupoId === null ? null : (isPessoal ? grupoId : null);
+      const now = new Date().toISOString();
+
+      if (existingId) {
+        // UPDATE gera um PATCH no PowerSync — mais seguro que INSERT OR REPLACE
+        await db.execute(
+          "UPDATE tb_treino_dia_override SET grupo_id = ?, grupo_usuario_id = ?, created_at = ? WHERE id = ?",
+          [grupoIdVal, grupoUsuarioIdVal, now, existingId]
+        );
+      } else {
+        await db.execute(
+          "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?)",
+          [user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal, now]
+        );
+      }
+      console.log("[Override] Salvo:", { selectedDate, grupoIdVal, grupoUsuarioIdVal, existingId });
+    } catch (e) {
+      console.error("[Override] Erro ao salvar:", e);
+      toast.error("Erro ao alterar treino. Tente novamente.");
     }
   };
 

@@ -51,6 +51,9 @@ class SupabaseConnector implements PowerSyncBackendConnector {
           case UpdateType.DELETE:
             result = await table.delete().eq("id", op.id);
             break;
+          default:
+            console.warn("[PowerSync] Unknown op type:", op.op);
+            continue;
         }
 
         if (result!.error) {
