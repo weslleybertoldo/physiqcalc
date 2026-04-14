@@ -321,6 +321,12 @@ export function unregisterAuthSync() {
   }
 }
 
+/** Limpa filas offline no logout para evitar leak de dados entre usuários */
+export function clearOfflineData() {
+  localStorage.removeItem(PENDING_KEY);
+  localStorage.removeItem(CACHE_KEY);
+}
+
 // ── Aviso de dados pendentes antes de sair ──────────────────────────────────
 
 export function hasPendingData(): boolean {

@@ -41,6 +41,20 @@ const DIAS_LABEL: Record<number, string> = {
   0: "DOM", 1: "SEG", 2: "TER", 3: "QUA", 4: "QUI", 5: "SEX", 6: "SAB",
 };
 
+/** Parseia exercicios_concluidos que pode estar single ou double-encoded como JSON string */
+function parseExercicios(raw: unknown): any[] {
+  let parsed = raw;
+  // Desfaz até 3 camadas de encoding (string → string → array)
+  for (let i = 0; i < 3 && typeof parsed === "string"; i++) {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(parsed) ? parsed : [];
+}
+
 const HistoricoTreinos = ({ userId, onBack }: Props) => {
   const db = usePowerSync();
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
@@ -60,12 +74,10 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
         "SELECT * FROM treino_historico WHERE user_id = ? ORDER BY concluido_em DESC LIMIT 100",
         [userId]
       );
-      // exercicios_concluidos é armazenado como JSON string no SQLite
+      // exercicios_concluidos pode estar double-encoded (string→string→array) após sync Supabase jsonb
       const parsed = (rows as any[]).map((r) => ({
         ...r,
-        exercicios_concluidos: typeof r.exercicios_concluidos === "string"
-          ? JSON.parse(r.exercicios_concluidos)
-          : r.exercicios_concluidos,
+        exercicios_concluidos: parseExercicios(r.exercicios_concluidos),
       }));
       setHistorico(parsed as HistoricoItem[]);
     } catch {

@@ -583,18 +583,24 @@ const TreinosPage = () => {
 
   if (!user) return null;
 
+  // user.identities pode não existir em getSession() (só vem com getUser())
+  // user_metadata é a fonte confiável pois está no JWT
   const googleIdentity = (user as any)?.identities?.find((id: any) => id.provider === "google");
-  const displayName = profile?.nome || googleIdentity?.identity_data?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
-  const avatarUrl = profile?.foto_url || googleIdentity?.identity_data?.picture || googleIdentity?.identity_data?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
+  const displayName = profile?.nome || user?.user_metadata?.full_name || user?.user_metadata?.name || googleIdentity?.identity_data?.full_name || user?.email || "";
+  const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || googleIdentity?.identity_data?.picture || "";
 
-  // Salva foto do Google no perfil na primeira vez que encontrar (para não depender de identities)
+  // URL fresca do Google (user_metadata está sempre no JWT, identities pode não estar)
+  const freshGoogleUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || googleIdentity?.identity_data?.picture || "";
+
+  // Salva/atualiza foto do Google no perfil (mantém sincronizado se URL mudar)
   useEffect(() => {
-    if (avatarUrl && !profile?.foto_url && user?.id) {
-      db.execute("UPDATE physiq_profiles SET foto_url = ? WHERE id = ?", [avatarUrl, user.id])
+    if (freshGoogleUrl && user?.id && freshGoogleUrl !== profile?.foto_url) {
+      db.execute("UPDATE physiq_profiles SET foto_url = ? WHERE id = ?", [freshGoogleUrl, user.id])
         .catch((e: any) => console.warn("[TreinosPage] Erro ao salvar foto:", e));
     }
-  }, [avatarUrl, profile?.foto_url, user?.id]);
+  }, [freshGoogleUrl, profile?.foto_url, user?.id]);
   const initial = displayName.charAt(0).toUpperCase();
+  const [avatarBroken, setAvatarBroken] = useState(false);
 
   const diasInfo = weekDates.map((d) => {
     const dk = getLocalDateKey(d);
@@ -679,8 +685,8 @@ const TreinosPage = () => {
       <div className="mx-auto max-w-3xl px-4 sm:px-8">
         <header className="pt-6 sm:pt-12 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+            {avatarUrl && !avatarBroken ? (
+              <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" onError={() => setAvatarBroken(true)} referrerPolicy="no-referrer" />
             ) : (
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-heading text-sm">
                 {initial}

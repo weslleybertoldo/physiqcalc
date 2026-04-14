@@ -122,12 +122,14 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
 
     const exConcluidos: Record<string, { nome: string; series_concluidas: number; concluido_em: string }> = {};
     series.filter((s) => s.concluida).forEach((s) => {
-      const ex = exerciciosMap[s.exercicio_id];
-      if (!ex) return;
-      if (!exConcluidos[s.exercicio_id]) {
-        exConcluidos[s.exercicio_id] = { nome: ex.nome, series_concluidas: 0, concluido_em: agora.toISOString() };
+      const exKey = s.exercicio_id;
+      const ex = exerciciosMap[exKey];
+      // Fallback: se exercício não está no map, usa nome genérico em vez de dropar silenciosamente
+      const nome = ex?.nome || `Exercício ${exKey.slice(0, 6)}`;
+      if (!exConcluidos[exKey]) {
+        exConcluidos[exKey] = { nome, series_concluidas: 0, concluido_em: agora.toISOString() };
       }
-      exConcluidos[s.exercicio_id].series_concluidas++;
+      exConcluidos[exKey].series_concluidas++;
     });
 
     const exerciciosArray = Object.entries(exConcluidos).map(([id, data]) => ({ exercicio_id: id, ...data }));

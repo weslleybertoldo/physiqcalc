@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { clearOfflineData } from "@/lib/offlineSync";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -38,13 +39,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Se online, tenta refresh em background (sem deslogar se falhar)
           if (navigator.onLine) {
             try {
-              const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+              const { data: { session: refreshed }, error: refreshError } = await supabase.auth.refreshSession();
               if (refreshed) {
                 setSession(refreshed);
                 setUser(refreshed.user);
+              } else if (refreshError) {
+                console.warn("[Auth] Token refresh falhou:", refreshError.message);
               }
-            } catch {
-              // Falha no refresh — mantém sessão local, não desloga
+            } catch (err) {
+              console.warn("[Auth] Erro inesperado no refresh:", err);
             }
           }
         } else {
@@ -112,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     intentionalLogoutRef.current = true;
+    clearOfflineData();
     await supabase.auth.signOut();
   };
 

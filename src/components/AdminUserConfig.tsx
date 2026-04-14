@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import InputField from "./InputField";
 import GenderToggle from "./GenderToggle";
 import { levels } from "./TdeeTable";
@@ -113,63 +114,76 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
 
   const handleSave = async () => {
     setSaving(true);
-    // Update profile
-    await supabase.functions.invoke("admin-update-user", {
-      body: {
-        userId,
-        data: {
-          nome,
-          sexo,
-          idade: dataNascimento ? calcularIdade(dataNascimento) : (parseInt(idade) || null),
-          data_nascimento: dataNascimento || null,
-          peso: parseFloat(peso) || null,
-          altura: parseFloat(altura) || null,
-          dobra_1: parseFloat(dobra1) || null,
-          dobra_2: parseFloat(dobra2) || null,
-          dobra_3: parseFloat(dobra3) || null,
-          percentual_gordura: computed.bf,
-          massa_gorda: computed.massaGorda,
-          massa_magra: computed.massaMagra,
-          tmb_mifflin: computed.tmbMifflin,
-          tmb_katch: computed.tmbKatch,
-          tmb_metodo: tmbMetodo,
-          nivel_atividade: nivelAtividade,
-          ajuste_calorico: ajusteCalorico,
-          macro_proteina_multiplicador: parseFloat(proteinMult) || 2.2,
-          macro_gordura_percentual: parseFloat(fatPct) || 15,
-          plano_nome: planoNome || null,
-          plano_expiracao: planoExp || null,
-          admin_locked: adminLocked,
-          ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
+    try {
+      // Update profile
+      const { error: profileError } = await supabase.functions.invoke("admin-update-user", {
+        body: {
+          userId,
+          data: {
+            nome,
+            sexo,
+            idade: dataNascimento ? calcularIdade(dataNascimento) : (parseInt(idade) || null),
+            data_nascimento: dataNascimento || null,
+            peso: parseFloat(peso) || null,
+            altura: parseFloat(altura) || null,
+            dobra_1: parseFloat(dobra1) || null,
+            dobra_2: parseFloat(dobra2) || null,
+            dobra_3: parseFloat(dobra3) || null,
+            percentual_gordura: computed.bf,
+            massa_gorda: computed.massaGorda,
+            massa_magra: computed.massaMagra,
+            tmb_mifflin: computed.tmbMifflin,
+            tmb_katch: computed.tmbKatch,
+            tmb_metodo: tmbMetodo,
+            nivel_atividade: nivelAtividade,
+            ajuste_calorico: ajusteCalorico,
+            macro_proteina_multiplicador: parseFloat(proteinMult) || 2.2,
+            macro_gordura_percentual: parseFloat(fatPct) || 15,
+            plano_nome: planoNome || null,
+            plano_expiracao: planoExp || null,
+            admin_locked: adminLocked,
+            ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
+          },
         },
-      },
-    });
+      });
+      if (profileError) {
+        console.error("[AdminUserConfig] Erro ao salvar perfil:", profileError);
+        toast.error("Erro ao salvar perfil.");
+        setSaving(false);
+        return;
+      }
 
-    // Auto-register avaliacao
-    await supabase.functions.invoke("admin-avaliacoes", {
-      body: {
-        action: "create",
-        userId,
-        avaliacao: {
-          data_avaliacao: (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })(),
-          peso: parseFloat(peso) || null,
-          altura: parseFloat(altura) || null,
-          dobra_1: parseFloat(dobra1) || null,
-          dobra_2: parseFloat(dobra2) || null,
-          dobra_3: parseFloat(dobra3) || null,
-          percentual_gordura: computed.bf,
-          massa_gorda: computed.massaGorda,
-          massa_magra: computed.massaMagra,
-          tmb_mifflin: computed.tmbMifflin,
-          tmb_katch: computed.tmbKatch,
-          observacao: observacao || null,
-          ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
+      // Auto-register avaliacao
+      const { error: avalError } = await supabase.functions.invoke("admin-avaliacoes", {
+        body: {
+          action: "create",
+          userId,
+          avaliacao: {
+            data_avaliacao: (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })(),
+            peso: parseFloat(peso) || null,
+            altura: parseFloat(altura) || null,
+            dobra_1: parseFloat(dobra1) || null,
+            dobra_2: parseFloat(dobra2) || null,
+            dobra_3: parseFloat(dobra3) || null,
+            percentual_gordura: computed.bf,
+            massa_gorda: computed.massaGorda,
+            massa_magra: computed.massaMagra,
+            tmb_mifflin: computed.tmbMifflin,
+            tmb_katch: computed.tmbKatch,
+            observacao: observacao || null,
+            ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
+          },
         },
-      },
-    });
+      });
+      if (avalError) console.warn("[AdminUserConfig] Erro ao registrar avaliação:", avalError);
 
-    setSaving(false);
-    onBack();
+      onBack();
+    } catch (err) {
+      console.error("[AdminUserConfig] Erro inesperado:", err);
+      toast.error("Erro ao salvar.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
