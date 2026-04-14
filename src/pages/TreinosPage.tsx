@@ -299,6 +299,7 @@ const TreinosPage = () => {
   );
   // Estado local para concluídos (atualizado imediatamente, sem esperar PowerSync)
   const [localConcluidos, setLocalConcluidos] = useState<Set<string>>(new Set());
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const concluidos = useMemo(() => {
     const fromDb = ((concluidosSemanaRows as any[]) || []).map((c: any) => c.data_treino);
     const result = [...new Set([...fromDb, ...localConcluidos])];
@@ -600,7 +601,6 @@ const TreinosPage = () => {
     }
   }, [freshGoogleUrl, profile?.foto_url, user?.id]);
   const initial = displayName.charAt(0).toUpperCase();
-  const [avatarBroken, setAvatarBroken] = useState(false);
 
   const diasInfo = weekDates.map((d) => {
     const dk = getLocalDateKey(d);
