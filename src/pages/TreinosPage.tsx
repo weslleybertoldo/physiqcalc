@@ -582,25 +582,22 @@ const TreinosPage = () => {
     navigate("/");
   };
 
-  if (!user) return null;
-
-  // user.identities pode não existir em getSession() (só vem com getUser())
-  // user_metadata é a fonte confiável pois está no JWT
+  // Avatar/foto — computado antes do early return pra não violar regras de hooks
   const googleIdentity = (user as any)?.identities?.find((id: any) => id.provider === "google");
   const displayName = profile?.nome || user?.user_metadata?.full_name || user?.user_metadata?.name || googleIdentity?.identity_data?.full_name || user?.email || "";
   const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || googleIdentity?.identity_data?.picture || "";
-
-  // URL fresca do Google (user_metadata está sempre no JWT, identities pode não estar)
   const freshGoogleUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || googleIdentity?.identity_data?.picture || "";
+  const initial = displayName.charAt(0).toUpperCase();
 
-  // Salva/atualiza foto do Google no perfil (mantém sincronizado se URL mudar)
+  // Salva/atualiza foto do Google no perfil
   useEffect(() => {
     if (freshGoogleUrl && user?.id && freshGoogleUrl !== profile?.foto_url) {
       db.execute("UPDATE physiq_profiles SET foto_url = ? WHERE id = ?", [freshGoogleUrl, user.id])
         .catch((e: any) => console.warn("[TreinosPage] Erro ao salvar foto:", e));
     }
   }, [freshGoogleUrl, profile?.foto_url, user?.id]);
-  const initial = displayName.charAt(0).toUpperCase();
+
+  if (!user) return null;
 
   const diasInfo = weekDates.map((d) => {
     const dk = getLocalDateKey(d);
