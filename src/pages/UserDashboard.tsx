@@ -41,6 +41,7 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"comp" | "macros" | "evolucao">("comp");
   const [ajusteLocal, setAjusteLocal] = useState<number>(0);
+  const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -87,7 +88,6 @@ const UserDashboard = () => {
   const displayName = profile?.nome || user?.user_metadata?.full_name || user?.email || "";
   const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
   const initial = displayName.charAt(0).toUpperCase();
-  const [avatarError, setAvatarError] = useState(false);
 
   const hasData = profile?.peso && profile?.idade;
 
