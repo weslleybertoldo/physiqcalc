@@ -70,13 +70,13 @@ jobs:
       - name: Rename APK
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          mv "$APK" android/app/build/outputs/apk/release/PhysiqCalc.apk
+          mv "$APK" "android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}.apk"
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PhysiqCalc
-          path: android/app/build/outputs/apk/release/PhysiqCalc.apk
+          name: PhysiqCalc-v${{ steps.version.outputs.current }}
+          path: android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}.apk
           retention-days: 30
 
       - name: Create GitHub Release
@@ -89,8 +89,8 @@ jobs:
 
             APK gerado automaticamente.
 
-            **Download:** Baixe o `PhysiqCalc.apk` abaixo.
-          files: android/app/build/outputs/apk/release/PhysiqCalc.apk
+            **Download:** Baixe o `PhysiqCalc-v${{ steps.version.outputs.current }}.apk` abaixo.
+          files: android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}.apk
           generate_release_notes: true
           make_latest: true
 
