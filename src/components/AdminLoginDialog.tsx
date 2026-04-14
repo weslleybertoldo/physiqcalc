@@ -11,13 +11,58 @@ interface Props {
 }
 
 const SESSION_KEY = "physiqcalc-admin";
+const TIMESTAMP_KEY = "physiqcalc-admin-ts";
+const SIGNATURE_KEY = "physiqcalc-admin-sig";
+const MAX_SESSION_MS = 24 * 60 * 60 * 1000; // 24h
+
+/** Gera assinatura HMAC-SHA256 do token + timestamp para impedir falsificação via DevTools */
+async function signToken(token: string, timestamp: string): Promise<string> {
+  // Usa o Supabase anon key como segredo (disponível no client, mas impede forjamento trivial)
+  const secret = import.meta.env.VITE_SUPABASE_ANON_KEY || "physiqcalc-admin-secret";
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(`${token}:${timestamp}`));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyToken(token: string, timestamp: string, signature: string): Promise<boolean> {
+  const expected = await signToken(token, timestamp);
+  return expected === signature;
+}
 
 export function isAdminAuthenticated(): boolean {
-  return sessionStorage.getItem(SESSION_KEY) === "true";
+  const token = sessionStorage.getItem(SESSION_KEY);
+  if (!token) return false;
+  const ts = sessionStorage.getItem(TIMESTAMP_KEY) || "0";
+  const sig = sessionStorage.getItem(SIGNATURE_KEY) || "";
+  const tsNum = parseInt(ts, 10);
+  if (isNaN(tsNum) || Date.now() - tsNum > MAX_SESSION_MS) {
+    adminLogout();
+    return false;
+  }
+  // Verificação async da assinatura acontece no useEffect do AdminPanel
+  // Aqui fazemos check síncrono básico (token + timestamp existem)
+  return !!(token && sig);
+}
+
+/** Verificação assíncrona completa — chamar no mount do AdminPanel */
+export async function isAdminAuthenticatedAsync(): Promise<boolean> {
+  const token = sessionStorage.getItem(SESSION_KEY);
+  const ts = sessionStorage.getItem(TIMESTAMP_KEY) || "0";
+  const sig = sessionStorage.getItem(SIGNATURE_KEY) || "";
+  if (!token || !sig) return false;
+  const tsNum = parseInt(ts, 10);
+  if (isNaN(tsNum) || Date.now() - tsNum > MAX_SESSION_MS) {
+    adminLogout();
+    return false;
+  }
+  return verifyToken(token, ts, sig);
 }
 
 export function adminLogout() {
   sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(TIMESTAMP_KEY);
+  sessionStorage.removeItem(SIGNATURE_KEY);
 }
 
 const AdminLoginDialog = ({ open, onOpenChange }: Props) => {
@@ -42,10 +87,14 @@ const AdminLoginDialog = ({ open, onOpenChange }: Props) => {
       }
 
       if (data?.success) {
-        sessionStorage.setItem(SESSION_KEY, "true");
+        const token = crypto.randomUUID();
+        const ts = Date.now().toString();
+        const sig = await signToken(token, ts);
+        sessionStorage.setItem(SESSION_KEY, token);
+        sessionStorage.setItem(TIMESTAMP_KEY, ts);
+        sessionStorage.setItem(SIGNATURE_KEY, sig);
         onOpenChange(false);
         setPassword("");
-        // Navigate to admin panel
         window.location.href = "/admin";
       } else {
         setError("Senha incorreta.");

@@ -49,7 +49,10 @@ const UserDashboard = () => {
       .select("*")
       .eq("id", user.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[UserDashboard] Erro ao carregar perfil:", error);
+        }
         if (data) {
           setProfile(data as unknown as Profile);
           setAjusteLocal(data.ajuste_calorico ?? 0);
@@ -65,7 +68,10 @@ const UserDashboard = () => {
       supabase
         .from("physiq_profiles")
         .update({ ajuste_calorico: ajusteLocal })
-        .eq("id", user.id);
+        .eq("id", user.id)
+        .then(({ error }) => {
+          if (error) console.warn("[UserDashboard] Erro ao salvar ajuste calórico:", error.message);
+        });
     }, 500);
     return () => clearTimeout(timeout);
   }, [ajusteLocal, user, profile]);
@@ -79,8 +85,9 @@ const UserDashboard = () => {
   }
 
   const displayName = profile?.nome || user?.user_metadata?.full_name || user?.email || "";
-  const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || "";
+  const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
   const initial = displayName.charAt(0).toUpperCase();
+  const [avatarError, setAvatarError] = useState(false);
 
   const hasData = profile?.peso && profile?.idade;
 
@@ -122,8 +129,8 @@ const UserDashboard = () => {
         {/* Header */}
         <header className="pt-12 sm:pt-20 pb-4 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+            {avatarUrl && !avatarError ? (
+              <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" onError={() => setAvatarError(true)} referrerPolicy="no-referrer" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-heading text-lg">
                 {initial}

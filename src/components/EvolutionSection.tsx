@@ -104,19 +104,25 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
   });
 
   const loadAvaliacoes = async () => {
-    if (isAdmin) {
-      const { data } = await supabase.functions.invoke("admin-avaliacoes", {
-        body: { action: "list", userId },
-      });
-      if (data?.avaliacoes) setAvaliacoes(data.avaliacoes);
-    } else {
-      const { data } = await supabase
-        .from("physiq_avaliacoes")
-        .select("*")
-        .eq("user_id", userId)
-        .order("data_avaliacao", { ascending: true })
-        .limit(200);
-      if (data) setAvaliacoes(data as unknown as Avaliacao[]);
+    try {
+      if (isAdmin) {
+        const { data, error } = await supabase.functions.invoke("admin-avaliacoes", {
+          body: { action: "list", userId },
+        });
+        if (error) console.error("[EvolutionSection] Erro admin:", error);
+        if (data?.avaliacoes) setAvaliacoes(data.avaliacoes);
+      } else {
+        const { data, error } = await supabase
+          .from("physiq_avaliacoes")
+          .select("*")
+          .eq("user_id", userId)
+          .order("data_avaliacao", { ascending: true })
+          .limit(200);
+        if (error) console.error("[EvolutionSection] Erro:", error);
+        if (data) setAvaliacoes(data as unknown as Avaliacao[]);
+      }
+    } catch (err) {
+      console.error("[EvolutionSection] Erro inesperado:", err);
     }
     setLoading(false);
   };

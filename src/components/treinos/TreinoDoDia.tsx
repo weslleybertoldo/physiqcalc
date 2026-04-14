@@ -353,16 +353,20 @@ const TreinoDoDia = ({
     const naoSalvas = series
       .filter(s => (s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && !s.salva && s.numero_serie !== numeroSerie);
     for (const s of naoSalvas) {
-      const data = buildSerieData(exercicioId, {
-        user_id: userId,
-        data_treino: dateKey,
-        numero_serie: s.numero_serie,
-        peso: s.peso ?? 0,
-        reps: s.reps ?? 10,
-        concluida: false,
-        updated_at: now,
-      });
-      await upsertSerie(exercicioId, data);
+      try {
+        const data = buildSerieData(exercicioId, {
+          user_id: userId,
+          data_treino: dateKey,
+          numero_serie: s.numero_serie,
+          peso: s.peso ?? 0,
+          reps: s.reps ?? 10,
+          concluida: false,
+          updated_at: now,
+        });
+        await upsertSerie(exercicioId, data);
+      } catch (err) {
+        console.warn("[TreinoDoDia] Erro ao salvar série não-salva:", s.numero_serie, err);
+      }
     }
 
     // Salva a série concluída

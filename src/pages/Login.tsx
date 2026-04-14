@@ -3,13 +3,24 @@ import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const SESSION_KEY = "physiqcalc-auth";
+const TIMESTAMP_KEY = "physiqcalc-auth-ts";
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_SESSION_MS = 24 * 60 * 60 * 1000; // 24h
 
 export function isAuthenticated(): boolean {
-  return sessionStorage.getItem(SESSION_KEY) === "true";
+  const token = sessionStorage.getItem(SESSION_KEY);
+  if (!token || !UUID_REGEX.test(token)) return false;
+  const ts = parseInt(sessionStorage.getItem(TIMESTAMP_KEY) || "0", 10);
+  if (isNaN(ts) || Date.now() - ts > MAX_SESSION_MS) {
+    logout();
+    return false;
+  }
+  return true;
 }
 
 export function logout() {
   sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(TIMESTAMP_KEY);
 }
 
 interface Props {
@@ -38,7 +49,8 @@ const Login = ({ onSuccess }: Props) => {
       }
 
       if (data?.success) {
-        sessionStorage.setItem(SESSION_KEY, "true");
+        sessionStorage.setItem(SESSION_KEY, crypto.randomUUID());
+        sessionStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
         onSuccess();
       } else {
         setError("Senha incorreta. Tente novamente.");

@@ -95,13 +95,14 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
                   user.user_metadata?.full_name ||
                   user.user_metadata?.name;
                 if (avatarUrl) {
-                  await supabase
+                  const { error: updateErr } = await supabase
                     .from("physiq_profiles")
                     .update({
                       foto_url: avatarUrl,
                       ...(fullName ? { nome: fullName } : {}),
                     })
                     .eq("id", user.id);
+                  if (updateErr) console.warn("[CapAuth] Erro ao salvar avatar:", updateErr.message);
                 }
               }
 
@@ -125,9 +126,14 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
       // Escuta o deep link
       const listenerHandle = App.addListener("appUrlOpen", handleUrl);
 
-      // Limpa apenas o listener específico após resolução
-      sessionPromise.then(() => {
-        listenerHandle.then((l) => l.remove());
+      // Limpa listener após resolução (awaited para evitar leak)
+      sessionPromise.then(async () => {
+        try {
+          const l = await listenerHandle;
+          await l.remove();
+        } catch {
+          // Listener já removido ou app fechando
+        }
       });
     });
 

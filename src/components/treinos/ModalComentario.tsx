@@ -18,11 +18,15 @@ async function carregarComentario(
   db?: any
 ): Promise<string> {
   if (!db) return "";
-  const campo = ehPessoal ? "exercicio_usuario_id" : "exercicio_id";
-  const rows = await db.getAll(
-    `SELECT comentario FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
-    [userId, exercicioId]
-  );
+  const rows = ehPessoal
+    ? await db.getAll(
+        "SELECT comentario FROM tb_exercicio_comentarios WHERE user_id = ? AND exercicio_usuario_id = ?",
+        [userId, exercicioId]
+      )
+    : await db.getAll(
+        "SELECT comentario FROM tb_exercicio_comentarios WHERE user_id = ? AND exercicio_id = ?",
+        [userId, exercicioId]
+      );
   return (rows[0] as any)?.comentario ?? "";
 }
 
@@ -33,21 +37,21 @@ async function salvarComentario(
   comentario: string,
   db: any
 ) {
-  const campo = ehPessoal ? "exercicio_usuario_id" : "exercicio_id";
-
   try {
+    const whereClause = ehPessoal
+      ? "user_id = ? AND exercicio_usuario_id = ?"
+      : "user_id = ? AND exercicio_id = ?";
+
     if (!comentario.trim()) {
-      // Delete comentário existente
       await db.execute(
-        `DELETE FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
+        `DELETE FROM tb_exercicio_comentarios WHERE ${whereClause}`,
         [userId, exercicioId]
       );
       return;
     }
 
-    // Find existing id
     const existing = await db.getAll(
-      `SELECT id FROM tb_exercicio_comentarios WHERE user_id = ? AND ${campo} = ?`,
+      `SELECT id FROM tb_exercicio_comentarios WHERE ${whereClause}`,
       [userId, exercicioId]
     );
     const existingId = (existing && existing.length > 0) ? (existing[0] as any).id : null;

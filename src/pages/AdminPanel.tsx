@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { LogOut, Search, Eye, Settings, Calculator, FileDown, Ban, Trash2, Tags, Dumbbell } from "lucide-react";
 import { formatarDataCurta } from "@/utils/formatDate";
-import { adminLogout, isAdminAuthenticated } from "@/components/AdminLoginDialog";
+import { adminLogout, isAdminAuthenticated, isAdminAuthenticatedAsync } from "@/components/AdminLoginDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import AdminUserConfig from "@/components/AdminUserConfig";
@@ -38,11 +38,19 @@ const AdminPanel = () => {
   const [userTagsMap, setUserTagsMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
+    // Verificação síncrona rápida + async com HMAC
     if (!isAdminAuthenticated()) {
       navigate("/");
       return;
     }
-    loadUsers();
+    isAdminAuthenticatedAsync().then((valid) => {
+      if (!valid) {
+        adminLogout();
+        navigate("/");
+        return;
+      }
+      loadUsers();
+    });
   }, [navigate]);
 
   const loadUsers = async () => {
@@ -53,8 +61,8 @@ const AdminPanel = () => {
       supabase.functions.invoke("admin-tags", { body: { action: "getAllUserTags" } }),
     ]);
     if (!usersRes.error && usersRes.data?.users) setUsers(usersRes.data.users);
-    if (tagsRes.data?.tags) setAllTags(tagsRes.data.tags);
-    if (userTagsRes.data?.userTags) {
+    if (!tagsRes.error && tagsRes.data?.tags) setAllTags(tagsRes.data.tags);
+    if (!userTagsRes.error && userTagsRes.data?.userTags) {
       const map: Record<string, string[]> = {};
       (userTagsRes.data.userTags as { user_id: string; tag_id: string }[]).forEach((ut) => {
         if (!map[ut.user_id]) map[ut.user_id] = [];
