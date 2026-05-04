@@ -2,6 +2,7 @@ name: Keep Supabase Active
 
 on:
   schedule:
+    # A cada 5 dias as 9h UTC (antes do limite de 7 dias)
     - cron: '0 9 */5 * *'
   workflow_dispatch:
 
@@ -9,13 +10,27 @@ jobs:
   ping-supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Send health ping
+      - name: Ping runtime do projeto (auth/v1/health)
+        # Trafego HTTP no host <ref>.supabase.co — exatamente o tipo de
+        # trafego que uso normal faz. Anon key e publica (vai pro frontend).
         run: |
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
+          set -e
+          RES=$(curl -s -w "\n%{http_code}" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4d3B3ZGJibmx0aWN4Z3R6Y3NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzE3OTcsImV4cCI6MjA4OTU0Nzc5N30.AFEAJgrzbirf_kgkO9Yt7LtVzFqpWkvOjdwxbm8fs2Q" \
+            "https://uxwpwdbbnlticxgtzcsb.supabase.co/auth/v1/health")
+          CODE=$(echo "$RES" | tail -1)
+          echo "PhysiqCalc runtime ping: HTTP $CODE"
+          [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+
+      - name: Executar SQL real no Postgres (camada extra)
+        run: |
+          set -e
+          RES=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_PAT }}" \
-            "https://api.supabase.com/v1/projects/uxwpwdbbnlticxgtzcsb")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          echo "Project status: HTTP $HTTP_CODE"
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "PhysiqCalc is healthy"
-          fi
+            -H "Content-Type: application/json" \
+            -d '{"query":"SELECT 1 as alive, now() as ts"}' \
+            "https://api.supabase.com/v1/projects/uxwpwdbbnlticxgtzcsb/database/query")
+          CODE=$(echo "$RES" | tail -1)
+          BODY=$(echo "$RES" | sed '$d')
+          echo "PhysiqCalc SQL ping: HTTP $CODE | $BODY"
+          [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
