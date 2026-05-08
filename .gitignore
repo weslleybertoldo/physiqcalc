@@ -27,3 +27,4 @@ keystore_base64.txt
 
 # Environment variables
 .env*
+.vercel
