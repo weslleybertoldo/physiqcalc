@@ -15,8 +15,10 @@ const tb_exercicios = new Table({
 });
 
 const tb_semana_treinos = new Table({
+  user_id: column.text,
   dia_semana: column.text,
   grupo_id: column.text,
+  grupo_usuario_id: column.text,
 });
 
 const tb_grupos_exercicios = new Table({

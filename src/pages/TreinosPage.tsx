@@ -74,6 +74,7 @@ interface GrupoExercicio {
 interface SemanaConfig {
   dia_semana: string;
   grupo_id: string | null;
+  grupo_usuario_id: string | null;
   tb_grupos_treino: GrupoTreino | null;
 }
 
@@ -289,17 +290,22 @@ const TreinosPage = () => {
     [gruposPessoaisRows]
   );
 
-  // Configuração da semana (com JOIN para pegar nome do grupo)
+  // Configuração da semana — agora per-user (filtra por user_id) e pode apontar
+  // tanto pra grupo global (grupo_id) quanto pessoal (grupo_usuario_id)
   const { data: semanaRows } = useQuery(
-    `SELECT s.dia_semana, s.grupo_id, g.id as grupo_treino_id, g.nome as grupo_treino_nome
+    `SELECT s.dia_semana, s.grupo_id, s.grupo_usuario_id,
+            g.id as grupo_treino_id, g.nome as grupo_treino_nome
      FROM tb_semana_treinos s
-     LEFT JOIN tb_grupos_treino g ON s.grupo_id = g.id`
+     LEFT JOIN tb_grupos_treino g ON s.grupo_id = g.id
+     WHERE s.user_id = ?`,
+    [userId]
   );
   const semanaConfig = useMemo<SemanaConfig[]>(() => {
     if (!semanaRows) return [];
     return (semanaRows as any[]).map((row) => ({
       dia_semana: String(row.dia_semana),
       grupo_id: row.grupo_id,
+      grupo_usuario_id: row.grupo_usuario_id,
       tb_grupos_treino: row.grupo_treino_id
         ? { id: row.grupo_treino_id, nome: row.grupo_treino_nome }
         : null,
@@ -465,6 +471,12 @@ const TreinosPage = () => {
     }
 
     const config = semanaConfig.find((s) => s.dia_semana === diaSemana);
+    if (config?.grupo_usuario_id) {
+      const grupo = gruposPessoais.find((g) => g.id === config.grupo_usuario_id) || null;
+      if (grupo) {
+        return [{ slot_idx: 0, grupo, exercicios: gruposExerciciosPessoais[config.grupo_usuario_id] || [], overrideVazio: false, source: 'semana' }];
+      }
+    }
     if (config?.grupo_id) {
       const grupo = config.tb_grupos_treino || grupos.find((g) => g.id === config.grupo_id) || null;
       return [{ slot_idx: 0, grupo, exercicios: gruposExercicios[config.grupo_id] || [], overrideVazio: false, source: 'semana' }];
