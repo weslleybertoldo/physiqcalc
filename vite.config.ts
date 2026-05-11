@@ -43,7 +43,8 @@ export default defineConfig(({ mode }) => ({
               },
               networkTimeoutSeconds: 10,
               cacheableResponse: {
-                statuses: [0, 200],
+                // Apenas 200 — status 0 (opaque/CORS-blocked) pode poisonar cache
+                statuses: [200],
               },
             },
           },

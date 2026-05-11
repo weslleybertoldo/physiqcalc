@@ -122,6 +122,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem("physiq_offline_pending");
       localStorage.removeItem("physiq_offline_cache");
     } catch { /* storage indisponivel */ }
+    // Limpa cache do Service Worker pra evitar servir dados do user anterior offline
+    if ("caches" in window) {
+      try {
+        const names = await caches.keys();
+        await Promise.all(
+          names
+            .filter((n) => n.includes("supabase-api-cache"))
+            .map((n) => caches.delete(n))
+        );
+      } catch { /* fora de https/ssr */ }
+    }
     await supabase.auth.signOut();
   };
 
