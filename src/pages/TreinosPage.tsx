@@ -706,31 +706,38 @@ const TreinosPage = () => {
       const mode = target?.mode ?? 'replace';
 
       if (mode === 'add') {
-        // Determina próximo slot_idx
-        const usedSlots = new Set(ovrList.map(o => o.slot_idx));
-        // Se não há overrides ainda mas há treino padrão da semana, o slot 0 está "tomado" implicitamente
-        // → materializa também o slot 0 com o grupo padrão pra coexistir
-        if (ovrList.length === 0) {
-          const baseSlots = getSlotsForDate(selectedDateObj).filter(s => s.grupo);
-          for (const bs of baseSlots) {
-            const baseGrupoId = bs.source === 'override' ? null : (bs.grupo?.id || null);
-            // se vem da semana (não-override), materializa
-            if (bs.source === 'semana' && baseGrupoId) {
-              await db.execute(
-                "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
-                [user.id, selectedDate, 0, baseGrupoId, null, now]
-              );
-              usedSlots.add(0);
+        // Caso 1: ha overrides vazios (dia descanso) — reusar primeiro slot vazio
+        const emptyOverride = ovrList.find(o => !o.grupo_id && !o.grupo_usuario_id);
+        if (emptyOverride) {
+          await db.execute(
+            "UPDATE tb_treino_dia_override SET grupo_id = ?, grupo_usuario_id = ?, created_at = ? WHERE id = ?",
+            [grupoIdVal, grupoUsuarioIdVal, now, emptyOverride.id]
+          );
+          console.log("[Override] Reutilizou slot vazio", emptyOverride.slot_idx);
+        } else {
+          // Caso 2: sem overrides — materializa slot 0 da semana padrao se houver treino padrao
+          const usedSlots = new Set(ovrList.map(o => o.slot_idx));
+          if (ovrList.length === 0) {
+            const baseSlots = getSlotsForDate(selectedDateObj).filter(s => s.grupo);
+            for (const bs of baseSlots) {
+              const baseGrupoId = bs.source === 'override' ? null : (bs.grupo?.id || null);
+              if (bs.source === 'semana' && baseGrupoId) {
+                await db.execute(
+                  "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
+                  [user.id, selectedDate, 0, baseGrupoId, null, now]
+                );
+                usedSlots.add(0);
+              }
             }
           }
+          let nextSlot = 0;
+          while (usedSlots.has(nextSlot)) nextSlot++;
+          await db.execute(
+            "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
+            [user.id, selectedDate, nextSlot, grupoIdVal, grupoUsuarioIdVal, now]
+          );
+          console.log("[Override] Adicionado slot", nextSlot, { grupoIdVal, grupoUsuarioIdVal });
         }
-        let nextSlot = 0;
-        while (usedSlots.has(nextSlot)) nextSlot++;
-        await db.execute(
-          "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
-          [user.id, selectedDate, nextSlot, grupoIdVal, grupoUsuarioIdVal, now]
-        );
-        console.log("[Override] Adicionado slot", nextSlot, { grupoIdVal, grupoUsuarioIdVal });
       } else {
         // mode === 'replace'
         const slot = target?.slot_idx ?? 0;
@@ -758,10 +765,11 @@ const TreinosPage = () => {
 
   const handleRemoverSlot = async (overrideId: string | undefined, slotIdx: number) => {
     try {
-      if (overrideId) {
-        await db.execute("DELETE FROM tb_treino_dia_override WHERE id = ?", [overrideId]);
-      }
-      // Também limpa séries/conclusão daquele slot
+      const ovrList = overrides[selectedDate] || [];
+      const isOnlySlot = ovrList.length <= 1;
+      const now = new Date().toISOString();
+
+      // Limpa series + concluido sempre
       await db.execute(
         "DELETE FROM tb_treino_series WHERE user_id = ? AND data_treino = ? AND slot_idx = ?",
         [user.id, selectedDate, slotIdx]
@@ -775,6 +783,26 @@ const TreinosPage = () => {
         next.delete(`${selectedDate}|${slotIdx}`);
         return next;
       });
+
+      if (isOnlySlot) {
+        // Se for o unico slot do dia, marca dia como descanso (override vazio).
+        // Apenas deletar voltaria pro treino padrao da semana — UX confusa
+        // ("removi mas continua aparecendo").
+        if (overrideId) {
+          await db.execute(
+            "UPDATE tb_treino_dia_override SET grupo_id = NULL, grupo_usuario_id = NULL, created_at = ? WHERE id = ?",
+            [now, overrideId]
+          );
+        } else {
+          await db.execute(
+            "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, NULL, NULL, ?)",
+            [user.id, selectedDate, 0, now]
+          );
+        }
+      } else if (overrideId) {
+        // Mais de um slot — deleta so este override
+        await db.execute("DELETE FROM tb_treino_dia_override WHERE id = ?", [overrideId]);
+      }
     } catch (e) {
       console.error("[Remover slot] Erro:", e);
       toast.error("Erro ao remover treino.");
@@ -1015,7 +1043,7 @@ const TreinosPage = () => {
                               onRefresh={handleRefresh}
                               onTreinoConcluido={handleTreinoConcluido}
                               onAlterarGrupo={() => { setAlterarTarget({ slot_idx: slot.slot_idx, mode: 'replace' }); setShowAlterarGrupo(true); }}
-                              onRemoverTreino={slotsComTreino.length > 1 || slot.source === 'override' ? () => handleRemoverSlot(slot.override_id, slot.slot_idx) : undefined}
+                              onRemoverTreino={() => handleRemoverSlot(slot.override_id, slot.slot_idx)}
                               onSeriesUpdate={(action) => {
                                 const now = Date.now();
                                 setSeries(prev => {
