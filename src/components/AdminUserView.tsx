@@ -80,7 +80,7 @@ const AdminUserView = ({ userId, onBack }: Props) => {
       <div className="mx-auto max-w-3xl px-5 sm:px-8">
         <header className="pt-12 sm:pt-20 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+            <button type="button" onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft size={20} />
             </button>
             <div>
@@ -88,7 +88,7 @@ const AdminUserView = ({ userId, onBack }: Props) => {
               {profile.user_code && <p className="text-xs text-muted-foreground font-body">ID: {profile.user_code}</p>}
             </div>
           </div>
-          <button onClick={() => generateAdminPDF(profile, avaliacoes)} title="Gerar PDF" className="p-2 text-muted-foreground hover:text-primary transition-colors">
+          <button type="button" onClick={() => generateAdminPDF(profile, avaliacoes)} title="Gerar PDF" className="p-2 text-muted-foreground hover:text-primary transition-colors">
             <FileDown size={18} />
           </button>
         </header>

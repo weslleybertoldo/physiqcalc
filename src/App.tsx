@@ -19,6 +19,7 @@ import UserDashboard from "./pages/UserDashboard";
 import AdminPanel from "./pages/AdminPanel";
 import Index from "./pages/Index";
 import TreinosPage from "./pages/TreinosPage";
+import PrivacidadePage from "./pages/PrivacidadePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -67,6 +68,8 @@ const AppRoutes = () => {
           element={user ? <TreinosPage /> : <AuthPage />}
         />
         <Route path="/avaliacao" element={user ? <UserDashboard /> : <AuthPage />} />
+        <Route path="/privacidade" element={<PrivacidadePage />} />
+        <Route path="/termos" element={<PrivacidadePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

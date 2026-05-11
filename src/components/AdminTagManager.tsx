@@ -86,7 +86,7 @@ const AdminTagManager = ({ onBack }: Props) => {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-5 sm:px-8">
         <header className="pt-12 sm:pt-20 pb-4 flex items-center gap-4">
-          <button onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+          <button type="button" onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div>

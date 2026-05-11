@@ -16,6 +16,7 @@ const AuthPage = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [aceiteTermos, setAceiteTermos] = useState(false);
 
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<null | { hasUpdate: boolean; url?: string; version?: string }>(null);
@@ -64,6 +65,11 @@ const AuthPage = () => {
 
     try {
       if (mode === "signup") {
+        if (!aceiteTermos) {
+          setError("Voce precisa aceitar os termos e a politica de privacidade.");
+          setLoading(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -164,12 +170,31 @@ const AuthPage = () => {
             </div>
           </div>
 
+          {mode === "signup" && (
+            <label className="flex items-start gap-2 text-xs text-muted-foreground font-body cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={aceiteTermos}
+                onChange={(e) => setAceiteTermos(e.target.checked)}
+                className="mt-0.5 accent-primary"
+                aria-label="Aceitar termos e politica de privacidade"
+              />
+              <span>
+                Li e aceito a{" "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  Politica de Privacidade
+                </a>{" "}
+                e os termos de uso.
+              </span>
+            </label>
+          )}
+
           {error && <p className="text-sm font-body text-destructive">{error}</p>}
           {message && <p className="text-sm font-body text-primary">{message}</p>}
 
           <button
             type="submit"
-            disabled={loading || !email || !password}
+            disabled={loading || !email || !password || (mode === "signup" && !aceiteTermos)}
             className="w-full h-12 bg-primary text-primary-foreground font-heading text-sm uppercase tracking-widest hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Processando..." : mode === "login" ? "Entrar" : "Criar conta"}

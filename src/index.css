@@ -22,7 +22,8 @@
     --secondary-foreground: 0 0% 91.8%;
 
     --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 40%;
+    /* WCAG AA: 65% sobre bg 5% = ~7:1 (antes 40% = 2.0:1, falhava AA) */
+    --muted-foreground: 0 0% 65%;
 
     --accent: 45 100% 50%;
     --accent-foreground: 0 0% 5.1%;
@@ -70,7 +71,7 @@
 
 @layer components {
   .input-underline {
-    @apply w-full bg-transparent border-0 border-b border-muted-foreground px-0 py-3 text-foreground font-body text-lg outline-none transition-colors duration-200 placeholder:text-muted-foreground;
+    @apply w-full bg-transparent border-0 border-b border-muted-foreground px-0 py-3 text-foreground font-body text-lg outline-none transition-colors duration-200 placeholder:text-muted-foreground focus-visible:border-b-2 focus-visible:border-primary;
   }
   .input-underline:focus {
     @apply border-b-2 border-primary;

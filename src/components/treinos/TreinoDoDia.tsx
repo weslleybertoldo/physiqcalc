@@ -842,14 +842,14 @@ const SerieRow = React.memo(function SerieRow({
           <input type="text" value={tempo} onChange={e => setTempo(e.target.value)}
             onBlur={() => { const t = parseTempo(tempo); const d = parseFloat(distancia); if (t) onSave(0, 0, t, d || undefined); }}
             className="w-20 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
-            placeholder="00:00" />
+            placeholder="00:00" aria-label={`Tempo serie ${serie.numero_serie} (MM:SS)`} />
         </div>
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] text-muted-foreground font-heading">Dist (km)</span>
           <input type="number" value={distancia} onChange={e => setDistancia(e.target.value)}
             onBlur={() => { const t = parseTempo(tempo); const d = parseFloat(distancia); if (t || d) onSave(0, 0, t || undefined, d || undefined); }}
             className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
-            placeholder="0.0" step="0.1" min="0" />
+            placeholder="0.0" step="0.1" min="0" aria-label={`Distancia serie ${serie.numero_serie} (km)`} />
         </div>
         {pacePreview && <span className="text-xs text-primary font-heading">⚡ {pacePreview}</span>}
         <button type="button"
@@ -871,13 +871,13 @@ const SerieRow = React.memo(function SerieRow({
       <input type="number" value={peso} onChange={e => setPeso(e.target.value)}
         onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
         className="w-12 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
-        placeholder="kg" />
+        placeholder="kg" aria-label={`Peso serie ${serie.numero_serie} (kg)`} />
       <span className="text-muted-foreground text-xs">kg</span>
       <span className="text-muted-foreground text-xs">×</span>
       <input type="number" value={reps} onChange={e => setReps(e.target.value)}
         onBlur={e => { e.preventDefault(); onSave(parseFloat(peso) || 0, parseInt(reps) || 0); }}
         className="w-11 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-none focus:border-primary transition-colors"
-        placeholder="reps" />
+        placeholder="reps" aria-label={`Repeticoes serie ${serie.numero_serie}`} />
       <span className="text-muted-foreground text-xs">reps</span>
       {!serie.salva && <span className="text-[10px] text-yellow-500/60 font-heading">↑ último</span>}
       <button type="button" onClick={() => onConcluir(parseFloat(peso) || 0, parseInt(reps) || 0)}

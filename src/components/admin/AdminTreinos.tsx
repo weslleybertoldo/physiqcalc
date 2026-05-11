@@ -282,7 +282,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                   <select
                     value={config?.grupo_id || ""}
                     onChange={(e) => handleSemanaChange(dia, e.target.value || null)}
-                    className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary transition-colors"
+                    className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary transition-colors focus-visible:border-primary focus-visible:border-b-2"
                   >
                     <option value="">— Descanso —</option>
                     {grupos.map((g) => (
@@ -352,7 +352,7 @@ const AdminTreinos = ({ onBack }: Props) => {
               <input type="text" value={novoExNome} onChange={(e) => setNovoExNome(e.target.value)} placeholder="Nome do exercício..." className="input-underline" />
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
-                  <select value={novoExGrupo} onChange={(e) => setNovoExGrupo(e.target.value)} className="w-full bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary">
+                  <select value={novoExGrupo} onChange={(e) => setNovoExGrupo(e.target.value)} className="w-full bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                     <option value="">Selecionar...</option>
                     {gruposMusculares.map((g) => (<option key={g.id} value={g.nome}>{g.nome}</option>))}
                   </select>
@@ -363,13 +363,13 @@ const AdminTreinos = ({ onBack }: Props) => {
                   </button>
                 ) : (
                   <div className="flex gap-2 items-end flex-1">
-                    <input autoFocus value={novoMusculo} onChange={e => setNovoMusculo(e.target.value)} onKeyDown={e => e.key === "Enter" && salvarNovoMusculo()} placeholder="ex: Trapézio Médio" className="flex-1 bg-transparent border-b border-primary py-2 text-foreground text-sm outline-none" />
+                    <input autoFocus value={novoMusculo} onChange={e => setNovoMusculo(e.target.value)} onKeyDown={e => e.key === "Enter" && salvarNovoMusculo()} placeholder="ex: Trapézio Médio" className="flex-1 bg-transparent border-b border-primary py-2 text-foreground text-sm outline-none focus-visible:border-primary focus-visible:border-b-2" />
                     <button type="button" onClick={salvarNovoMusculo} disabled={!novoMusculo.trim()} className="px-3 py-2 bg-primary text-primary-foreground text-[10px] font-bold uppercase rounded disabled:opacity-40">Salvar</button>
                     <button type="button" onClick={() => { setAdicionandoMusculo(false); setNovoMusculo(""); }} className="px-3 py-2 border border-muted-foreground/20 text-muted-foreground text-[10px] font-bold uppercase rounded">✕</button>
                   </div>
                 )}
-                <input type="text" value={novoExEmoji} onChange={(e) => setNovoExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-body text-lg py-1 outline-none focus:border-primary" />
-              <select value={novoExTipo} onChange={(e) => setNovoExTipo(e.target.value as "musculacao" | "corrida")} className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary">
+                <input type="text" value={novoExEmoji} onChange={(e) => setNovoExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-body text-lg py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2" />
+              <select value={novoExTipo} onChange={(e) => setNovoExTipo(e.target.value as "musculacao" | "corrida")} className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                 <option value="musculacao">💪 Musculação</option>
                 <option value="corrida">🏃 Corrida</option>
               </select>
@@ -400,10 +400,10 @@ const AdminTreinos = ({ onBack }: Props) => {
                     <div className="space-y-2">
                       <input type="text" value={editExNome} onChange={(e) => setEditExNome(e.target.value)} className="input-underline text-sm" placeholder="Nome" />
                       <div className="flex gap-2">
-                        <select value={editExGrupo} onChange={(e) => setEditExGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary">
+                        <select value={editExGrupo} onChange={(e) => setEditExGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                           {gruposMusculares.map((g) => <option key={g.id} value={g.nome}>{g.nome}</option>)}
                         </select>
-                        <select value={editExEmoji} onChange={(e) => setEditExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus:border-primary">
+                        <select value={editExEmoji} onChange={(e) => setEditExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                           {["🏋️", "💪", "🦵", "🧘", "🔵"].map((e) => <option key={e} value={e}>{e}</option>)}
                         </select>
                       </div>

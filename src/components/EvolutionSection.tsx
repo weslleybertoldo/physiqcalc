@@ -245,7 +245,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
                       {isAdmin && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <button title="Excluir" className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0">
+                            <button type="button" title="Excluir" className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0">
                               <Trash2 size={14} />
                             </button>
                           </AlertDialogTrigger>
@@ -392,8 +392,8 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
             </div>
           </div>
           <DialogFooter>
-            <button onClick={() => setDialogOpen(false)} className="px-4 py-2 text-sm font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
-            <button onClick={handleCreateManual} className="px-6 py-2 bg-primary text-primary-foreground font-heading text-sm uppercase tracking-wider hover:bg-primary/90 transition-colors">Registrar</button>
+            <button type="button" onClick={() => setDialogOpen(false)} className="px-4 py-2 text-sm font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
+            <button type="button" onClick={handleCreateManual} className="px-6 py-2 bg-primary text-primary-foreground font-heading text-sm uppercase tracking-wider hover:bg-primary/90 transition-colors">Registrar</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

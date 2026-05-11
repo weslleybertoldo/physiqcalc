@@ -14,6 +14,7 @@ import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
@@ -791,6 +792,69 @@ const TreinosPage = () => {
     }
   };
 
+  // ── LGPD: export user data + self-delete ──────────────────────────
+  const handleExportarDados = async () => {
+    if (!user?.id) return;
+    try {
+      toast.info("Coletando seus dados...");
+      const tables = [
+        "physiq_profiles", "physiq_avaliacoes", "tb_treino_series",
+        "tb_treino_concluido", "tb_treino_dia_override", "treino_historico",
+        "exercicio_ordem_usuario", "tb_grupos_treino_usuario",
+        "tb_exercicios_usuario", "tb_grupos_exercicios_usuario",
+        "tb_exercicio_comentarios",
+      ];
+      const dump: Record<string, unknown[]> = {};
+      for (const t of tables) {
+        // physiq_profiles usa coluna `id` em vez de `user_id`
+        const idCol = t === "physiq_profiles" ? "id" : "user_id";
+        const rows = await db.getAll(`SELECT * FROM ${t} WHERE ${idCol} = ?`, [user.id]);
+        dump[t] = rows || [];
+      }
+      const payload = {
+        exportado_em: new Date().toISOString(),
+        user_id: user.id,
+        email: user.email,
+        nome: profile?.nome,
+        tables: dump,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `physiqcalc-export-${(user.email || "user").replace(/[^a-z0-9]/gi, "_")}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Download iniciado.");
+    } catch (e) {
+      console.error("[Export] erro:", e);
+      toast.error("Erro ao exportar dados.");
+    }
+  };
+
+  const handleExcluirConta = async () => {
+    const conf = window.prompt(
+      "Esta acao e IRREVERSIVEL. Apaga seu perfil, treinos, avaliacoes e desativa o login.\n\nDigite DELETAR para confirmar:"
+    );
+    if (conf !== "DELETAR") return;
+    try {
+      toast.info("Excluindo conta...");
+      const { data, error } = await supabase.functions.invoke("delete-my-account", {
+        body: { confirm: "DELETE_MY_ACCOUNT" },
+      });
+      if (error || !data?.ok) {
+        toast.error("Erro ao excluir conta. Tente novamente.");
+        return;
+      }
+      toast.success("Conta excluida.");
+      await signOut();
+      navigate("/");
+    } catch (e) {
+      console.error("[Delete] erro:", e);
+      toast.error("Erro ao excluir conta.");
+    }
+  };
+
   // Nunca bloqueia a tela — PowerSync carrega dados em background
   // O perfil pode ser null no primeiro sync, mas o app funciona sem ele
 
@@ -1052,6 +1116,32 @@ const TreinosPage = () => {
                 >
                   <RefreshCw size={12} className={checkingUpdate ? "animate-spin" : ""} />
                   Verificar atualizações
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportarDados}
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
+                >
+                  <Download size={12} />
+                  Exportar meus dados
+                </button>
+
+                <a
+                  href="/privacidade"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
+                >
+                  Privacidade & Termos
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleExcluirConta}
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-destructive border border-destructive/40 rounded-lg hover:bg-destructive/10 transition-colors"
+                >
+                  Excluir minha conta
                 </button>
 
                 {updateResult && (
