@@ -26,7 +26,26 @@ function jsonErr(msg: string, status: number, origin: string | null) {
   });
 }
 
-async function requireAdmin(req: Request): Promise<{ user: any; error: Response | null }> {
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+async function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): Promise<boolean> {
+  try {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const { data, error } = await admin.rpc("check_rate_limit", {
+      p_user_id: userId,
+      p_endpoint: endpoint,
+      p_max_count: maxCount,
+      p_window_secs: windowSecs,
+    });
+    if (error) return true; // fail-open em erro pra evitar lockout
+    return data === true;
+  } catch {
+    return true;
+  }
+}
+
+async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return { user: null, error: jsonErr("missing_auth", 401, origin) };
@@ -38,37 +57,29 @@ async function requireAdmin(req: Request): Promise<{ user: any; error: Response 
   if (error || !data?.user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
   const role = (data.user.app_metadata as any)?.role;
   if (role !== "admin") return { user: null, error: jsonErr("forbidden", 403, origin) };
+  const allowed = await checkRateLimit(data.user.id, endpoint, maxCount, windowSecs);
+  if (!allowed) return { user: null, error: jsonErr("rate_limited", 429, origin) };
   return { user: data.user, error: null };
 }
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
-  const { user: caller, error: authErr } = await requireAdmin(req);
+  const { user: caller, error: authErr } = await requireAdmin(req, "admin-delete-user", 5, 60);
   if (authErr) return authErr;
   try {
     const body = await req.json();
     const userId = body?.userId;
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
     if (userId === caller.id) return jsonErr("cannot_delete_self", 400, origin);
-
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    // Order matters: auth.users delete cascade limpa physiq_profiles via FK; mas pra ser explícito, deletamos profile primeiro.
-    // Se auth.deleteUser falhar, profile já foi removido; rollback básico tenta restaurar minimamente.
     const { data: profile } = await admin.from("physiq_profiles").select("*").eq("id", userId).maybeSingle();
     const { error: delErr } = await admin.auth.admin.deleteUser(userId);
     if (delErr) {
-      // tenta restaurar profile pelo menos
       if (profile) await admin.from("physiq_profiles").upsert(profile);
       throw delErr;
     }
-    // garante profile removido (FK CASCADE costuma fazer isso)
     await admin.from("physiq_profiles").delete().eq("id", userId);
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
-  } catch (_e) {
-    return jsonErr("internal", 500, origin);
-  }
+  } catch (_e) { return jsonErr("internal", 500, origin); }
 });

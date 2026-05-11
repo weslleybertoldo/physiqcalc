@@ -18,13 +18,15 @@ function corsHeaders(origin: string | null): Record<string, string> {
     "Vary": "Origin",
   };
 }
-
 function jsonErr(msg: string, status: number, origin: string | null) {
   return new Response(JSON.stringify({ error: msg }), {
     status,
     headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
   });
 }
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
@@ -34,30 +36,25 @@ Deno.serve(async (req) => {
   if (!auth?.startsWith("Bearer ")) return jsonErr("missing_auth", 401, origin);
   const token = auth.slice(7);
 
-  const url = Deno.env.get("SUPABASE_URL")!;
   const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const sr = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  // 1. valida JWT do caller
-  const userClient = createClient(url, anon, { global: { headers: { Authorization: auth } } });
+  const userClient = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
   const { data, error } = await userClient.auth.getUser(token);
   if (error || !data?.user) return jsonErr("invalid_token", 401, origin);
   const userId = data.user.id;
 
-  // 2. exige confirmação explícita no body
+  // Rate limit: 3 tentativas por hora por user
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const { data: allowed } = await admin.rpc("check_rate_limit", {
+    p_user_id: userId, p_endpoint: "delete-my-account", p_max_count: 3, p_window_secs: 3600,
+  });
+  if (allowed === false) return jsonErr("rate_limited", 429, origin);
+
   try {
     const body = await req.json();
-    if (body?.confirm !== "DELETE_MY_ACCOUNT") {
-      return jsonErr("confirmation_required", 400, origin);
-    }
-  } catch {
-    return jsonErr("invalid_body", 400, origin);
-  }
+    if (body?.confirm !== "DELETE_MY_ACCOUNT") return jsonErr("confirmation_required", 400, origin);
+  } catch { return jsonErr("invalid_body", 400, origin); }
 
-  // 3. deleta auth.user (cascade pra tabelas FK)
   try {
-    const admin = createClient(url, sr);
-    // Limpa tabelas que nao têm CASCADE FK definida
     await admin.from("tb_treino_series").delete().eq("user_id", userId);
     await admin.from("tb_treino_concluido").delete().eq("user_id", userId);
     await admin.from("tb_treino_dia_override").delete().eq("user_id", userId);
@@ -70,14 +67,10 @@ Deno.serve(async (req) => {
     await admin.from("physiq_avaliacoes").delete().eq("user_id", userId);
     await admin.from("physiq_user_tags").delete().eq("user_id", userId);
     await admin.from("physiq_profiles").delete().eq("id", userId);
-
     const { error: delErr } = await admin.auth.admin.deleteUser(userId);
     if (delErr) throw delErr;
-
     return new Response(JSON.stringify({ ok: true }), {
       headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
     });
-  } catch (_e) {
-    return jsonErr("internal", 500, origin);
-  }
+  } catch (_e) { return jsonErr("internal", 500, origin); }
 });

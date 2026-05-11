@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-// lastLocalEditRef: protege contra buildSeries sobrescrever estado otimista
+// localEditsRef: timestamp por (exercicio|slot|numero_serie) da ultima edicao local.
+// Substitui a janela fixa de 5s anterior — comparacao por chave evita race tanto em
+// sync rapido (nao descarta builds validos) quanto em pausa longa (preserva edits
+// nao sincronizados ate o PowerSync propagar updated_at >= timestamp local).
 import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X } from "lucide-react";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
@@ -115,7 +118,9 @@ const TreinosPage = () => {
   const isVisibleRef = useRef(true);
 
   const [series, setSeries] = useState<SerieComMemoria[]>([]);
-  const lastLocalEditRef = useRef(0);
+  const localEditsRef = useRef<Map<string, number>>(new Map());
+  const editKey = (exId: string, slot: number | undefined, num: number) =>
+    `${exId}|${slot ?? 0}|${num}`;
   const buildSeriesIdRef = useRef(0);
 
   const [today, setToday] = useState(() => new Date());
@@ -589,17 +594,28 @@ const TreinosPage = () => {
       // Cancela se um buildSeries mais recente já iniciou
       if (currentBuildId !== buildSeriesIdRef.current) return;
 
-      // Se o usuário editou nos últimos 5s, não sobrescreve o estado otimista
-      if (Date.now() - lastLocalEditRef.current < 5000) return;
-
-      // Preserva séries não salvas do estado atual que não existem em allSeries
+      // Merge: preserva versao local quando edit local for mais novo que snapshot do banco
       setSeries(prev => {
+        const now = Date.now();
+        const merged = allSeries.map((s) => {
+          const key = editKey(s.exercicio_id, s.slot_idx, s.numero_serie);
+          const editedAt = localEditsRef.current.get(key);
+          if (!editedAt) return s;
+          // Se passou tempo demais (>30s) sem o PowerSync confirmar, descarta o lock
+          if (now - editedAt > 30000) { localEditsRef.current.delete(key); return s; }
+          // Procura versao local atual; se existir e for mais nova, mantem
+          const local = prev.find(
+            (p) => p.exercicio_id === s.exercicio_id && (p.slot_idx ?? 0) === (s.slot_idx ?? 0) && p.numero_serie === s.numero_serie
+          );
+          return local ?? s;
+        });
+        // Preserva séries não salvas do estado atual que não existem em allSeries
         const unsavedFromState = prev.filter(
-          (p) => !p.salva && !allSeries.some(
+          (p) => !p.salva && !merged.some(
             (s) => s.exercicio_id === p.exercicio_id && (s.slot_idx ?? 0) === (p.slot_idx ?? 0) && s.numero_serie === p.numero_serie
           )
         );
-        return [...allSeries, ...unsavedFromState];
+        return [...merged, ...unsavedFromState];
       });
     };
 
@@ -1001,8 +1017,26 @@ const TreinosPage = () => {
                               onAlterarGrupo={() => { setAlterarTarget({ slot_idx: slot.slot_idx, mode: 'replace' }); setShowAlterarGrupo(true); }}
                               onRemoverTreino={slotsComTreino.length > 1 || slot.source === 'override' ? () => handleRemoverSlot(slot.override_id, slot.slot_idx) : undefined}
                               onSeriesUpdate={(action) => {
-                                lastLocalEditRef.current = Date.now();
-                                setSeries(action);
+                                const now = Date.now();
+                                setSeries(prev => {
+                                  const next = typeof action === "function" ? action(prev) : action;
+                                  // marca series que mudaram nesta atualizacao com timestamp local
+                                  for (const s of next) {
+                                    if ((s.slot_idx ?? 0) !== slot.slot_idx) continue;
+                                    const before = prev.find(
+                                      (p) => p.exercicio_id === s.exercicio_id && (p.slot_idx ?? 0) === (s.slot_idx ?? 0) && p.numero_serie === s.numero_serie
+                                    );
+                                    const changed =
+                                      !before ||
+                                      before.peso !== s.peso ||
+                                      before.reps !== s.reps ||
+                                      before.concluida !== s.concluida ||
+                                      before.tempo_segundos !== s.tempo_segundos ||
+                                      before.distancia_km !== s.distancia_km;
+                                    if (changed) localEditsRef.current.set(editKey(s.exercicio_id, s.slot_idx, s.numero_serie), now);
+                                  }
+                                  return next;
+                                });
                               }}
                               onSerieConcluida={(nome, num, exId) => {
                                 setTimerExercicio(nome);
