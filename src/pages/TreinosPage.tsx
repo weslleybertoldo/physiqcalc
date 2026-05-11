@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 // Substitui a janela fixa de 5s anterior — comparacao por chave evita race tanto em
 // sync rapido (nao descarta builds validos) quanto em pausa longa (preserva edits
 // nao sincronizados ate o PowerSync propagar updated_at >= timestamp local).
-import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X } from "lucide-react";
+import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X, ChevronLeft, ChevronRight } from "lucide-react";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
 import WorkoutTimer from "@/components/treinos/WorkoutTimer";
@@ -124,7 +124,24 @@ const TreinosPage = () => {
   const buildSeriesIdRef = useRef(0);
 
   const [today, setToday] = useState(() => new Date());
-  const [weekDates, setWeekDates] = useState(() => getWeekDates(new Date()));
+  // weekOffset: 0 = semana atual, -1 = anterior, +1 = proxima
+  const [weekOffset, setWeekOffset] = useState(0);
+  const weekDates = useMemo(() => {
+    const ref = new Date(today);
+    ref.setDate(ref.getDate() + weekOffset * 7);
+    return getWeekDates(ref);
+  }, [today, weekOffset]);
+
+  // Quando o usuario navega entre semanas, ajusta a data selecionada
+  // pra primeira dentro da semana visivel (hoje na semana atual, segunda em outras).
+  useEffect(() => {
+    if (weekOffset === 0) {
+      setSelectedDate(getLocalDateKey(today));
+    } else {
+      setSelectedDate(getLocalDateKey(weekDates[0]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekOffset]);
 
   // Verifica a cada 60s se o dia mudou (após meia-noite)
   useEffect(() => {
@@ -132,7 +149,6 @@ const TreinosPage = () => {
       const now = new Date();
       if (getLocalDateKey(now) !== getLocalDateKey(today)) {
         setToday(now);
-        setWeekDates(getWeekDates(now));
       }
     }, 60000);
     return () => clearInterval(interval);
@@ -969,6 +985,46 @@ const TreinosPage = () => {
             </div>
 
             <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset(o => o - 1)}
+                  className="p-2 text-muted-foreground hover:text-primary transition-colors"
+                  aria-label="Semana anterior"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-heading uppercase tracking-wider text-muted-foreground">
+                    {weekOffset === 0
+                      ? "Esta semana"
+                      : weekOffset === -1
+                      ? "Semana passada"
+                      : weekOffset === 1
+                      ? "Próxima semana"
+                      : `${weekOffset > 0 ? "+" : ""}${weekOffset} semanas`}
+                    {" · "}
+                    {formatDateLabel(weekDates[0])} – {formatDateLabel(weekDates[6])}
+                  </p>
+                  {weekOffset !== 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setWeekOffset(0); setSelectedDate(getLocalDateKey(today)); }}
+                      className="text-[10px] font-heading uppercase tracking-wider text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Hoje
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset(o => o + 1)}
+                  className="p-2 text-muted-foreground hover:text-primary transition-colors"
+                  aria-label="Próxima semana"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
               <TabelaSemanal dias={diasInfo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
             </div>
 
