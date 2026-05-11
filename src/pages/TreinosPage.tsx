@@ -74,14 +74,26 @@ interface SemanaConfig {
 }
 
 interface OverrideInfo {
+  id: string;
+  slot_idx: number;
   grupo_id: string | null;
   grupo_usuario_id: string | null;
+}
+
+interface DiaSlot {
+  slot_idx: number;
+  override_id?: string;
+  grupo: GrupoTreino | null;
+  exercicios: GrupoExercicio[];
+  overrideVazio: boolean;
+  source: 'override' | 'semana' | 'placeholder';
 }
 
 export interface SerieComMemoria {
   id?: string;
   exercicio_id: string;
   exercicio_usuario_id?: string; // preenchido quando é exercício pessoal
+  slot_idx?: number;
   numero_serie: number;
   peso: number;
   reps: number;
@@ -122,6 +134,7 @@ const TreinosPage = () => {
 
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateKey(new Date()));
   const [showAlterarGrupo, setShowAlterarGrupo] = useState(false);
+  const [expandedSlot, setExpandedSlot] = useState<number | null>(0);
   const [showHistorico, setShowHistorico] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -276,47 +289,61 @@ const TreinosPage = () => {
   const weekEnd = useMemo(() => getLocalDateKey(weekDates[6]), [weekDates]);
 
   const { data: overridesRows } = useQuery(
-    `SELECT data_treino, grupo_id, grupo_usuario_id
+    `SELECT id, data_treino, slot_idx, grupo_id, grupo_usuario_id
      FROM tb_treino_dia_override
-     WHERE user_id = ? AND data_treino >= ? AND data_treino <= ?`,
+     WHERE user_id = ? AND data_treino >= ? AND data_treino <= ?
+     ORDER BY data_treino, slot_idx`,
     [userId, weekStart, weekEnd]
   );
-  const overrides = useMemo<Record<string, OverrideInfo>>(() => {
-    const map: Record<string, OverrideInfo> = {};
+  const overrides = useMemo<Record<string, OverrideInfo[]>>(() => {
+    const map: Record<string, OverrideInfo[]> = {};
     if (overridesRows) {
       (overridesRows as any[]).forEach((o) => {
-        map[o.data_treino] = { grupo_id: o.grupo_id, grupo_usuario_id: o.grupo_usuario_id };
+        const arr = map[o.data_treino] || (map[o.data_treino] = []);
+        arr.push({ id: o.id, slot_idx: o.slot_idx ?? 0, grupo_id: o.grupo_id, grupo_usuario_id: o.grupo_usuario_id });
       });
+      Object.values(map).forEach(arr => arr.sort((a, b) => a.slot_idx - b.slot_idx));
     }
     return map;
   }, [overridesRows]);
 
   // Treinos concluídos da semana (PowerSync + estado local)
   const { data: concluidosSemanaRows } = useQuery(
-    `SELECT data_treino FROM tb_treino_concluido
+    `SELECT data_treino, slot_idx FROM tb_treino_concluido
      WHERE user_id = ? AND data_treino >= ? AND data_treino <= ?`,
     [userId, weekStart, weekEnd]
   );
-  // Estado local para concluídos (atualizado imediatamente, sem esperar PowerSync)
+  // Estado local: chave "date|slot"
   const [localConcluidos, setLocalConcluidos] = useState<Set<string>>(new Set());
   const [avatarBroken, setAvatarBroken] = useState(false);
-  const concluidos = useMemo(() => {
-    const fromDb = ((concluidosSemanaRows as any[]) || []).map((c: any) => c.data_treino);
-    const result = [...new Set([...fromDb, ...localConcluidos])];
-    return result;
+  const concluidosSet = useMemo(() => {
+    const set = new Set<string>();
+    ((concluidosSemanaRows as any[]) || []).forEach((c: any) => set.add(`${c.data_treino}|${c.slot_idx ?? 0}`));
+    localConcluidos.forEach(k => set.add(k));
+    return set;
   }, [concluidosSemanaRows, localConcluidos]);
-  const treinosSemana = concluidos.length;
+  // Conjunto de dateKeys com pelo menos 1 treino concluído (pra contagem semanal)
+  const concluidosDates = useMemo(() => {
+    const set = new Set<string>();
+    concluidosSet.forEach(k => set.add(k.split('|')[0]));
+    return set;
+  }, [concluidosSet]);
+  const treinosSemana = concluidosDates.size;
 
-  // Treinos concluídos do mês (PowerSync + estado local)
+  // Treinos concluídos do mês (PowerSync + estado local) — conta total de slots concluídos
   const monthStart = useMemo(() => getMonthStart(), [today]);
   const { data: concluidosMesRows } = useQuery(
-    `SELECT data_treino FROM tb_treino_concluido
+    `SELECT data_treino, slot_idx FROM tb_treino_concluido
      WHERE user_id = ? AND data_treino >= ?`,
     [userId, monthStart]
   );
   const treinosMes = useMemo(() => {
-    const fromDb = ((concluidosMesRows as any[]) || []).map((c: any) => c.data_treino);
-    return [...new Set([...fromDb, ...Array.from(localConcluidos).filter(d => d >= monthStart)])].length;
+    const set = new Set<string>();
+    ((concluidosMesRows as any[]) || []).forEach((c: any) => set.add(`${c.data_treino}|${c.slot_idx ?? 0}`));
+    localConcluidos.forEach(k => {
+      if (k.split('|')[0] >= monthStart) set.add(k);
+    });
+    return set.size;
   }, [concluidosMesRows, localConcluidos, monthStart]);
 
   // Exercícios dos grupos globais (com JOIN)
@@ -390,37 +417,47 @@ const TreinosPage = () => {
   const { data: seriesDoDiaRows } = useQuery(
     `SELECT * FROM tb_treino_series
      WHERE user_id = ? AND data_treino = ?
-     ORDER BY numero_serie`,
+     ORDER BY slot_idx, numero_serie`,
     [userId, selectedDate]
   );
 
-  // Helper to get grupo for a date
-  const getGrupoForDate = useCallback((d: Date): { grupo: GrupoTreino | null; exercicios: GrupoExercicio[]; overrideVazio: boolean } => {
+  // Helper: retorna a lista de slots de treino do dia
+  const getSlotsForDate = useCallback((d: Date): DiaSlot[] => {
     const dk = getLocalDateKey(d);
     const diaSemana = DIAS_SEMANA[d.getDay()];
+    const ovrList = overrides[dk];
 
-    const override = overrides[dk];
-    // Override existe mas ambos os campos são null → dia intencionalmente sem treino
-    if (override && !override.grupo_id && !override.grupo_usuario_id) {
-      return { grupo: null, exercicios: [], overrideVazio: true };
-    }
-    if (override?.grupo_usuario_id) {
-      const grupo = gruposPessoais.find((g) => g.id === override.grupo_usuario_id) || null;
-      return { grupo, exercicios: gruposExerciciosPessoais[override.grupo_usuario_id] || [], overrideVazio: false };
-    }
-    if (override?.grupo_id) {
-      const grupo = grupos.find((g) => g.id === override.grupo_id) || null;
-      return { grupo, exercicios: gruposExercicios[override.grupo_id] || [], overrideVazio: false };
+    if (ovrList && ovrList.length > 0) {
+      // Quando há overrides, eles substituem o treino padrão do dia
+      return ovrList.map<DiaSlot>((o) => {
+        if (!o.grupo_id && !o.grupo_usuario_id) {
+          return { slot_idx: o.slot_idx, override_id: o.id, grupo: null, exercicios: [], overrideVazio: true, source: 'override' };
+        }
+        if (o.grupo_usuario_id) {
+          const grupo = gruposPessoais.find((g) => g.id === o.grupo_usuario_id) || null;
+          return { slot_idx: o.slot_idx, override_id: o.id, grupo, exercicios: gruposExerciciosPessoais[o.grupo_usuario_id] || [], overrideVazio: false, source: 'override' };
+        }
+        const grupo = grupos.find((g) => g.id === o.grupo_id!) || null;
+        return { slot_idx: o.slot_idx, override_id: o.id, grupo, exercicios: gruposExercicios[o.grupo_id!] || [], overrideVazio: false, source: 'override' };
+      });
     }
 
     const config = semanaConfig.find((s) => s.dia_semana === diaSemana);
     if (config?.grupo_id) {
       const grupo = config.tb_grupos_treino || grupos.find((g) => g.id === config.grupo_id) || null;
-      return { grupo, exercicios: gruposExercicios[config.grupo_id] || [], overrideVazio: false };
+      return [{ slot_idx: 0, grupo, exercicios: gruposExercicios[config.grupo_id] || [], overrideVazio: false, source: 'semana' }];
     }
 
-    return { grupo: null, exercicios: [], overrideVazio: false };
+    return [];
   }, [overrides, gruposPessoais, gruposExerciciosPessoais, grupos, gruposExercicios, semanaConfig]);
+
+  // Compatibilidade: primeiro slot (usado em UI antiga)
+  const getGrupoForDate = useCallback((d: Date) => {
+    const slots = getSlotsForDate(d);
+    if (slots.length === 0) return { grupo: null, exercicios: [] as GrupoExercicio[], overrideVazio: false };
+    const first = slots[0];
+    return { grupo: first.grupo, exercicios: first.exercicios, overrideVazio: first.overrideVazio && slots.length === 1 };
+  }, [getSlotsForDate]);
 
   // Buscar último treino de um exercício (leitura imperativa do SQLite local)
   const buscarUltimoTreino = useCallback(async (
@@ -458,10 +495,13 @@ const TreinosPage = () => {
     () => weekDates.find((d) => getLocalDateKey(d) === selectedDate) || today,
     [weekDates, selectedDate, today]
   );
-  const { exercicios: selectedExercicios, grupo: selectedGrupo, overrideVazio } = useMemo(
-    () => getGrupoForDate(selectedDateObj),
-    [getGrupoForDate, selectedDateObj]
-  );
+  const selectedSlots = useMemo(() => getSlotsForDate(selectedDateObj), [getSlotsForDate, selectedDateObj]);
+  const overrideVazio = selectedSlots.length === 1 && selectedSlots[0].overrideVazio;
+  // Lista plana de todos os exercícios do dia (com slot_idx anexado)
+  const selectedExercicios = useMemo(
+    () => selectedSlots.flatMap((s) => s.exercicios.map((ex) => ({ ...ex, _slot_idx: s.slot_idx }))),
+    [selectedSlots]
+  ) as (GrupoExercicio & { _slot_idx: number })[];
 
   // Atualiza séries quando os dados reativos do PowerSync mudam
   useEffect(() => {
@@ -474,12 +514,14 @@ const TreinosPage = () => {
       if (selectedExercicios.length === 0) return;
 
       const savedSeries = (seriesDoDiaRows as any[]) || [];
-      const seriesByExercicio: Record<string, any[]> = {};
+      // Indexa por "key|slot"
+      const seriesByExSlot: Record<string, any[]> = {};
       savedSeries.forEach((s) => {
         const key = s.exercicio_id || s.exercicio_usuario_id;
         if (!key) return;
-        if (!seriesByExercicio[key]) seriesByExercicio[key] = [];
-        seriesByExercicio[key].push(s);
+        const k = `${key}|${s.slot_idx ?? 0}`;
+        if (!seriesByExSlot[k]) seriesByExSlot[k] = [];
+        seriesByExSlot[k].push(s);
       });
 
       const allSeries: SerieComMemoria[] = [];
@@ -487,7 +529,8 @@ const TreinosPage = () => {
       for (const ge of selectedExercicios) {
         const exId = ge.exercicio_id;
         const exUsuarioId = ge.exercicio_usuario_id;
-        const saved = seriesByExercicio[exId] || (exUsuarioId ? seriesByExercicio[exUsuarioId] : undefined);
+        const slot = ge._slot_idx;
+        const saved = seriesByExSlot[`${exId}|${slot}`] || (exUsuarioId ? seriesByExSlot[`${exUsuarioId}|${slot}`] : undefined);
 
         if (saved && saved.length > 0) {
           saved.forEach((s: any) => {
@@ -495,6 +538,7 @@ const TreinosPage = () => {
               id: s.id,
               exercicio_id: s.exercicio_id || s.exercicio_usuario_id,
               exercicio_usuario_id: s.exercicio_usuario_id ?? exUsuarioId,
+              slot_idx: s.slot_idx ?? 0,
               numero_serie: s.numero_serie,
               peso: s.peso ?? 0,
               reps: s.reps ?? 10,
@@ -516,6 +560,7 @@ const TreinosPage = () => {
               allSeries.push({
                 exercicio_id: exId,
                 exercicio_usuario_id: exUsuarioId,
+                slot_idx: slot,
                 numero_serie: s.numero_serie,
                 peso: s.peso ?? 0,
                 reps: s.reps ?? 10,
@@ -528,6 +573,7 @@ const TreinosPage = () => {
               allSeries.push({
                 exercicio_id: exId,
                 exercicio_usuario_id: exUsuarioId,
+                slot_idx: slot,
                 numero_serie: i,
                 peso: 0,
                 reps: 10,
@@ -549,7 +595,7 @@ const TreinosPage = () => {
       setSeries(prev => {
         const unsavedFromState = prev.filter(
           (p) => !p.salva && !allSeries.some(
-            (s) => s.exercicio_id === p.exercicio_id && s.numero_serie === p.numero_serie
+            (s) => s.exercicio_id === p.exercicio_id && (s.slot_idx ?? 0) === (p.slot_idx ?? 0) && s.numero_serie === p.numero_serie
           )
         );
         return [...allSeries, ...unsavedFromState];
@@ -559,14 +605,18 @@ const TreinosPage = () => {
     buildSeries();
   }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino]);
 
-  const selectedConcluido = concluidos.includes(selectedDate);
+  const isSlotConcluido = useCallback(
+    (dk: string, slot: number) => concluidosSet.has(`${dk}|${slot}`),
+    [concluidosSet]
+  );
 
   // Callback para atualizar estado local quando treino é concluído/desconcluído
-  const handleTreinoConcluido = useCallback((dateKey: string, concluido: boolean) => {
+  const handleTreinoConcluido = useCallback((dateKey: string, slotIdx: number, concluido: boolean) => {
+    const key = `${dateKey}|${slotIdx}`;
     setLocalConcluidos(prev => {
       const next = new Set(prev);
-      if (concluido) next.add(dateKey);
-      else next.delete(dateKey);
+      if (concluido) next.add(key);
+      else next.delete(key);
       return next;
     });
   }, []);
@@ -602,48 +652,115 @@ const TreinosPage = () => {
   const diasInfo = weekDates.map((d) => {
     const dk = getLocalDateKey(d);
     const diaSemana = DIAS_SEMANA[d.getDay()];
-    const { grupo, exercicios } = getGrupoForDate(d);
+    const slots = getSlotsForDate(d);
+    const treinos = slots
+      .filter(s => s.grupo)
+      .map(s => ({
+        slot_idx: s.slot_idx,
+        grupoNome: s.grupo!.nome,
+        concluido: isSlotConcluido(dk, s.slot_idx),
+      }));
 
     return {
       dateKey: dk,
       dateLabel: formatDateLabel(d),
       diaSemana,
-      grupoNome: grupo?.nome || null,
-      exercicios: exercicios.map((e) => ({ nome: e.tb_exercicios.nome, emoji: e.tb_exercicios.emoji })),
-      concluido: concluidos.includes(dk),
+      treinos,
+      concluido: treinos.length > 0 && treinos.every(t => t.concluido),
       isToday: dk === getLocalDateKey(today),
     };
   });
 
+  const [alterarTarget, setAlterarTarget] = useState<{ slot_idx: number; mode: 'replace' | 'add' } | null>(null);
+
   const handleOverride = async (grupoId: string | null, isPessoal: boolean) => {
     try {
-      // Verifica se já existe um override para este dia
-      const existingRows = await db.getAll(
-        "SELECT id FROM tb_treino_dia_override WHERE user_id = ? AND data_treino = ?",
-        [user.id, selectedDate]
-      );
-      const existingId = (existingRows && existingRows.length > 0) ? (existingRows[0] as any).id : null;
+      const target = alterarTarget;
+      const ovrList = overrides[selectedDate] || [];
+
+      // Materializar base: se ainda não há override pro dia mas existe treino padrão da semana,
+      // o usuário só vai conseguir "alterar" se materializarmos o slot 0 com o grupo padrão atual.
+      // Mas como o ModalAlterarGrupo sempre passa o grupoId escolhido, basta usar ele.
 
       const grupoIdVal = grupoId === null ? null : (isPessoal ? null : grupoId);
       const grupoUsuarioIdVal = grupoId === null ? null : (isPessoal ? grupoId : null);
       const now = new Date().toISOString();
 
-      if (existingId) {
-        // UPDATE gera um PATCH no PowerSync — mais seguro que INSERT OR REPLACE
+      const mode = target?.mode ?? 'replace';
+
+      if (mode === 'add') {
+        // Determina próximo slot_idx
+        const usedSlots = new Set(ovrList.map(o => o.slot_idx));
+        // Se não há overrides ainda mas há treino padrão da semana, o slot 0 está "tomado" implicitamente
+        // → materializa também o slot 0 com o grupo padrão pra coexistir
+        if (ovrList.length === 0) {
+          const baseSlots = getSlotsForDate(selectedDateObj).filter(s => s.grupo);
+          for (const bs of baseSlots) {
+            const baseGrupoId = bs.source === 'override' ? null : (bs.grupo?.id || null);
+            // se vem da semana (não-override), materializa
+            if (bs.source === 'semana' && baseGrupoId) {
+              await db.execute(
+                "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
+                [user.id, selectedDate, 0, baseGrupoId, null, now]
+              );
+              usedSlots.add(0);
+            }
+          }
+        }
+        let nextSlot = 0;
+        while (usedSlots.has(nextSlot)) nextSlot++;
         await db.execute(
-          "UPDATE tb_treino_dia_override SET grupo_id = ?, grupo_usuario_id = ?, created_at = ? WHERE id = ?",
-          [grupoIdVal, grupoUsuarioIdVal, now, existingId]
+          "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
+          [user.id, selectedDate, nextSlot, grupoIdVal, grupoUsuarioIdVal, now]
         );
+        console.log("[Override] Adicionado slot", nextSlot, { grupoIdVal, grupoUsuarioIdVal });
       } else {
-        await db.execute(
-          "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?)",
-          [user.id, selectedDate, grupoIdVal, grupoUsuarioIdVal, now]
-        );
+        // mode === 'replace'
+        const slot = target?.slot_idx ?? 0;
+        const existing = ovrList.find(o => o.slot_idx === slot);
+        if (existing) {
+          await db.execute(
+            "UPDATE tb_treino_dia_override SET grupo_id = ?, grupo_usuario_id = ?, created_at = ? WHERE id = ?",
+            [grupoIdVal, grupoUsuarioIdVal, now, existing.id]
+          );
+        } else {
+          await db.execute(
+            "INSERT INTO tb_treino_dia_override (id, user_id, data_treino, slot_idx, grupo_id, grupo_usuario_id, created_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?)",
+            [user.id, selectedDate, slot, grupoIdVal, grupoUsuarioIdVal, now]
+          );
+        }
+        console.log("[Override] Salvo slot", slot, { grupoIdVal, grupoUsuarioIdVal });
       }
-      console.log("[Override] Salvo:", { selectedDate, grupoIdVal, grupoUsuarioIdVal, existingId });
     } catch (e) {
       console.error("[Override] Erro ao salvar:", e);
       toast.error("Erro ao alterar treino. Tente novamente.");
+    } finally {
+      setAlterarTarget(null);
+    }
+  };
+
+  const handleRemoverSlot = async (overrideId: string | undefined, slotIdx: number) => {
+    try {
+      if (overrideId) {
+        await db.execute("DELETE FROM tb_treino_dia_override WHERE id = ?", [overrideId]);
+      }
+      // Também limpa séries/conclusão daquele slot
+      await db.execute(
+        "DELETE FROM tb_treino_series WHERE user_id = ? AND data_treino = ? AND slot_idx = ?",
+        [user.id, selectedDate, slotIdx]
+      );
+      await db.execute(
+        "DELETE FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ? AND slot_idx = ?",
+        [user.id, selectedDate, slotIdx]
+      );
+      setLocalConcluidos(prev => {
+        const next = new Set(prev);
+        next.delete(`${selectedDate}|${slotIdx}`);
+        return next;
+      });
+    } catch (e) {
+      console.error("[Remover slot] Erro:", e);
+      toast.error("Erro ao remover treino.");
     }
   };
 
@@ -704,7 +821,7 @@ const TreinosPage = () => {
               <History size={16} />
             </button>
             <WorkoutReminder
-              grupoNome={selectedGrupo?.nome || null}
+              grupoNome={selectedSlots.filter(s => s.grupo).map(s => s.grupo!.nome).join(' + ') || null}
               dateLabel={`${DIAS_SEMANA[selectedDateObj.getDay()]} ${formatDateLabel(selectedDateObj)}`}
             />
             <button type="button" onClick={() => navigate("/avaliacao")} className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Avaliação">
@@ -747,62 +864,104 @@ const TreinosPage = () => {
               <TabelaSemanal dias={diasInfo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
             </div>
 
-            {selectedGrupo ? (
-              <>
-                <WorkoutTimer
-                  userId={user.id}
-                  grupoNome={selectedGrupo.nome}
-                  dateKey={selectedDate}
-                  series={series}
-                  exerciciosMap={Object.fromEntries(
-                    selectedExercicios.map(e => [e.exercicio_id, { nome: e.tb_exercicios.nome, emoji: e.tb_exercicios.emoji }])
-                  )}
-                  onTreinoConcluido={handleRefresh}
-                />
-                <TreinoDoDia
-                  userId={user.id}
-                  dateKey={selectedDate}
-                  dateLabel={`${DIAS_SEMANA[selectedDateObj.getDay()]} ${formatDateLabel(selectedDateObj)}`}
-                  grupoNome={selectedGrupo.nome}
-                  grupoId={selectedGrupo.id}
-                  exercicios={selectedExercicios}
-                  series={series}
-                  concluido={selectedConcluido}
-                  onRefresh={handleRefresh}
-                  onTreinoConcluido={handleTreinoConcluido}
-                  onAlterarGrupo={() => setShowAlterarGrupo(true)}
-                  onSeriesUpdate={(action) => {
-                    lastLocalEditRef.current = Date.now();
-                    setSeries(action);
-                  }}
-                  onSerieConcluida={(nome, num, exId) => {
-                    setTimerExercicio(nome);
-                    setTimerSerie(num);
-                    // Cria um ID único para a série — só muda quando uma nova série é concluída
-                    setTimerSerieId(`${exId}-${num}-${Date.now()}`);
-                    setTimerAtivo(true);
-                  }}
-                />
-              </>
-            ) : (
-              <div className="result-card border-muted-foreground/20 text-center py-12">
-                <p className="text-muted-foreground font-body text-sm">
-                  {overrideVazio
-                    ? "Dia marcado como descanso. Nenhum treino para este dia."
-                    : "Nenhum treino programado para este dia."}
-                </p>
-                <div className="flex items-center justify-center gap-4 mt-4 flex-wrap">
+            {(() => {
+              const slotsComTreino = selectedSlots.filter(s => s.grupo);
+              const dateLabel = `${DIAS_SEMANA[selectedDateObj.getDay()]} ${formatDateLabel(selectedDateObj)}`;
+
+              if (slotsComTreino.length === 0) {
+                return (
+                  <div className="result-card border-muted-foreground/20 text-center py-12">
+                    <p className="text-muted-foreground font-body text-sm">
+                      {overrideVazio
+                        ? "Dia marcado como descanso. Nenhum treino para este dia."
+                        : "Nenhum treino programado para este dia."}
+                    </p>
+                    <div className="flex items-center justify-center gap-4 mt-4 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => { setAlterarTarget({ slot_idx: 0, mode: 'replace' }); setShowAlterarGrupo(true); }}
+                        className="text-xs text-primary hover:text-primary/80 font-heading uppercase tracking-wider transition-colors"
+                      >
+                        + Adicionar treino
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {slotsComTreino.map((slot) => {
+                    const slotConcluido = isSlotConcluido(selectedDate, slot.slot_idx);
+                    const isOpen = expandedSlot === slot.slot_idx;
+                    const slotSeries = series.filter(s => (s.slot_idx ?? 0) === slot.slot_idx);
+                    return (
+                      <div key={slot.slot_idx} className="border border-muted-foreground/20">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedSlot(isOpen ? null : slot.slot_idx)}
+                          className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors ${
+                            slotConcluido ? 'bg-classify-green/10' : 'hover:bg-muted/30'
+                          }`}
+                        >
+                          <span className="font-heading text-sm text-foreground">
+                            TREINO DO DIA — {dateLabel}: <span className="text-primary">{slot.grupo!.nome}</span>
+                          </span>
+                          {slotConcluido && <Check size={14} className="text-classify-green" />}
+                        </button>
+                        {isOpen && (
+                          <div className="px-4 py-4 border-t border-muted-foreground/20">
+                            <WorkoutTimer
+                              userId={user.id}
+                              grupoNome={slot.grupo!.nome}
+                              dateKey={selectedDate}
+                              series={slotSeries}
+                              exerciciosMap={Object.fromEntries(
+                                slot.exercicios.map(e => [e.exercicio_id, { nome: e.tb_exercicios.nome, emoji: e.tb_exercicios.emoji }])
+                              )}
+                              onTreinoConcluido={handleRefresh}
+                            />
+                            <TreinoDoDia
+                              userId={user.id}
+                              dateKey={selectedDate}
+                              dateLabel={dateLabel}
+                              grupoNome={slot.grupo!.nome}
+                              grupoId={slot.grupo!.id}
+                              slotIdx={slot.slot_idx}
+                              treinoId={slot.override_id}
+                              exercicios={slot.exercicios}
+                              series={slotSeries}
+                              concluido={slotConcluido}
+                              onRefresh={handleRefresh}
+                              onTreinoConcluido={handleTreinoConcluido}
+                              onAlterarGrupo={() => { setAlterarTarget({ slot_idx: slot.slot_idx, mode: 'replace' }); setShowAlterarGrupo(true); }}
+                              onRemoverTreino={slotsComTreino.length > 1 || slot.source === 'override' ? () => handleRemoverSlot(slot.override_id, slot.slot_idx) : undefined}
+                              onSeriesUpdate={(action) => {
+                                lastLocalEditRef.current = Date.now();
+                                setSeries(action);
+                              }}
+                              onSerieConcluida={(nome, num, exId) => {
+                                setTimerExercicio(nome);
+                                setTimerSerie(num);
+                                setTimerSerieId(`${exId}-${num}-${Date.now()}`);
+                                setTimerAtivo(true);
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   <button
                     type="button"
-                    onClick={() => setShowAlterarGrupo(true)}
-                    className="text-xs text-primary hover:text-primary/80 font-heading uppercase tracking-wider transition-colors"
+                    onClick={() => { setAlterarTarget({ slot_idx: -1, mode: 'add' }); setShowAlterarGrupo(true); }}
+                    className="w-full py-3 border border-dashed border-muted-foreground/30 text-xs text-primary hover:bg-primary/5 font-heading uppercase tracking-wider transition-colors"
                   >
-                    + {overrideVazio ? "Adicionar treino" : "Adicionar treino"}
+                    + Adicionar outro treino
                   </button>
-
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </>
         )}
 
@@ -811,7 +970,7 @@ const TreinosPage = () => {
           gruposPessoais={gruposPessoais}
           userId={user.id}
           open={showAlterarGrupo}
-          onOpenChange={setShowAlterarGrupo}
+          onOpenChange={(o) => { setShowAlterarGrupo(o); if (!o) setAlterarTarget(null); }}
           onSelect={handleOverride}
           onRefresh={handleRefresh}
         />

@@ -27,12 +27,15 @@ interface Props {
   dateLabel: string;
   grupoNome: string;
   grupoId: string;
+  slotIdx: number;
+  treinoId?: string;
   exercicios: GrupoExercicio[];
   series: SerieComMemoria[];
   concluido: boolean;
   onRefresh: () => void;
-  onTreinoConcluido?: (dateKey: string, concluido: boolean) => void;
+  onTreinoConcluido?: (dateKey: string, slotIdx: number, concluido: boolean) => void;
   onAlterarGrupo: () => void;
+  onRemoverTreino?: () => void;
   onSerieConcluida: (exercicioNome: string, numeroSerie: number, exercicioId: string) => void;
   onSeriesUpdate: React.Dispatch<React.SetStateAction<SerieComMemoria[]>>;
 }
@@ -66,8 +69,8 @@ function calcularPace(tempoSegundos: number, distanciaKm: number): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TreinoDoDia = ({
-  userId, dateKey, dateLabel, grupoNome, grupoId, exercicios,
-  series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onSerieConcluida, onSeriesUpdate,
+  userId, dateKey, dateLabel, grupoNome, grupoId, slotIdx, treinoId, exercicios,
+  series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onRemoverTreino, onSerieConcluida, onSeriesUpdate,
 }: Props) => {
   const db = usePowerSync();
   const [infoExercicio, setInfoExercicio] = useState<Exercicio | null>(null);
@@ -282,8 +285,8 @@ const TreinoDoDia = ({
     const field = exUsuarioId ? "exercicio_usuario_id" : "exercicio_id";
     const val = exUsuarioId || exercicioId;
     const rows = await db.getAll(
-      `SELECT id FROM tb_treino_series WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
-      [userId, val, dateKey, numSerie]
+      `SELECT id FROM tb_treino_series WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND slot_idx = ? AND numero_serie = ?`,
+      [userId, val, dateKey, slotIdx, numSerie]
     );
     if (rows && rows.length > 0) return (rows[0] as any).id;
     return null;
@@ -298,17 +301,17 @@ const TreinoDoDia = ({
 
     if (existingId) {
       await db.execute(
-        `INSERT OR REPLACE INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [existingId, data.user_id, exIdVal, exUsuarioId, data.data_treino, data.numero_serie,
+        `INSERT OR REPLACE INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [existingId, data.user_id, exIdVal, exUsuarioId, data.data_treino, slotIdx, data.numero_serie,
          data.peso ?? null, data.reps ?? null, data.tempo_segundos ?? null, data.distancia_km ?? null,
          data.pace_segundos_km ?? null, data.concluida ?? null, updatedAt]
       );
     } else {
       await db.execute(
-        `INSERT INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
-         VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.user_id, exIdVal, exUsuarioId, data.data_treino, data.numero_serie,
+        `INSERT INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
+         VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.user_id, exIdVal, exUsuarioId, data.data_treino, slotIdx, data.numero_serie,
          data.peso ?? null, data.reps ?? null, data.tempo_segundos ?? null, data.distancia_km ?? null,
          data.pace_segundos_km ?? null, data.concluida ?? null, updatedAt]
       );
@@ -420,8 +423,8 @@ const TreinoDoDia = ({
     const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
     const val = serieInfo?.exercicio_usuario_id || exercicioId;
     await db.execute(
-      `UPDATE tb_treino_series SET concluida = ?, updated_at = ? WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
-      [false, new Date().toISOString(), userId, val, dateKey, numeroSerie]
+      `UPDATE tb_treino_series SET concluida = ?, updated_at = ? WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND slot_idx = ? AND numero_serie = ?`,
+      [false, new Date().toISOString(), userId, val, dateKey, slotIdx, numeroSerie]
     );
     onSeriesUpdate(prev => prev.map(s => {
       if ((s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.numero_serie === numeroSerie) {
@@ -458,8 +461,8 @@ const TreinoDoDia = ({
       const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
       const val = serieInfo?.exercicio_usuario_id || exercicioId;
       await db.execute(
-        `DELETE FROM tb_treino_series WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND numero_serie = ?`,
-        [userId, val, dateKey, numeroSerie]
+        `DELETE FROM tb_treino_series WHERE user_id = ? AND ${field} = ? AND data_treino = ? AND slot_idx = ? AND numero_serie = ?`,
+        [userId, val, dateKey, slotIdx, numeroSerie]
       );
     }
     // Renumera localmente e atualiza no banco
@@ -498,28 +501,28 @@ const TreinoDoDia = ({
     setSaving(true);
     if (concluido) {
       await db.execute(
-        "DELETE FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ?",
-        [userId, dateKey]
+        "DELETE FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ? AND slot_idx = ?",
+        [userId, dateKey, slotIdx]
       );
-      onTreinoConcluido?.(dateKey, false);
+      onTreinoConcluido?.(dateKey, slotIdx, false);
     } else {
       // Verifica se já existe para fazer INSERT OR REPLACE
       const existing = await db.getAll(
-        "SELECT id FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ?",
-        [userId, dateKey]
+        "SELECT id FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ? AND slot_idx = ?",
+        [userId, dateKey, slotIdx]
       );
       if (existing && existing.length > 0) {
         await db.execute(
-          "INSERT OR REPLACE INTO tb_treino_concluido (id, user_id, data_treino, concluido, created_at) VALUES (?, ?, ?, ?, ?)",
-          [(existing[0] as any).id, userId, dateKey, true, new Date().toISOString()]
+          "INSERT OR REPLACE INTO tb_treino_concluido (id, user_id, data_treino, slot_idx, concluido, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          [(existing[0] as any).id, userId, dateKey, slotIdx, true, new Date().toISOString()]
         );
       } else {
         await db.execute(
-          "INSERT INTO tb_treino_concluido (id, user_id, data_treino, concluido, created_at) VALUES (uuid(), ?, ?, ?, ?)",
-          [userId, dateKey, true, new Date().toISOString()]
+          "INSERT INTO tb_treino_concluido (id, user_id, data_treino, slot_idx, concluido, created_at) VALUES (uuid(), ?, ?, ?, ?, ?)",
+          [userId, dateKey, slotIdx, true, new Date().toISOString()]
         );
       }
-      onTreinoConcluido?.(dateKey, true);
+      onTreinoConcluido?.(dateKey, slotIdx, true);
       toast.success("Treino concluído! 💪");
     }
     setSaving(false);
@@ -530,14 +533,24 @@ const TreinoDoDia = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-heading text-xl text-foreground">TREINO DO DIA — {dateLabel}</h2>
-          <p className="text-sm text-primary font-heading mt-1">{grupoNome}</p>
+          <h2 className="font-heading text-xl text-foreground">
+            TREINO DO DIA — {dateLabel}: <span className="text-primary">{grupoNome}</span>
+          </h2>
+          {treinoId && (
+            <p className="text-[10px] text-muted-foreground/60 font-mono mt-1">ID: {treinoId.slice(0, 8)}</p>
+          )}
         </div>
         <div className="flex items-center gap-3">
-<button type="button" onClick={onAlterarGrupo}
+          <button type="button" onClick={onAlterarGrupo}
             className="text-xs text-muted-foreground hover:text-primary font-heading uppercase tracking-wider transition-colors">
             🔄 Alterar
           </button>
+          {onRemoverTreino && (
+            <button type="button" onClick={onRemoverTreino}
+              className="text-xs text-muted-foreground hover:text-destructive font-heading uppercase tracking-wider transition-colors">
+              ✕ Remover
+            </button>
+          )}
         </div>
       </div>
 
@@ -711,6 +724,7 @@ const ExercicioCard = ({
           <button type="button" onClick={() => onSetInfoExercicio(ex)}
             className="font-heading text-sm text-foreground hover:text-primary transition-colors flex items-center gap-2">
             <span>{ex.emoji}</span> {ex.nome}
+            <span className="text-[9px] text-muted-foreground/50 font-mono">#{ex.id.slice(0, 6)}</span>
           </button>
         </div>
         <div className="flex items-center gap-3">

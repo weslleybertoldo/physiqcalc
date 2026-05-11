@@ -1,11 +1,16 @@
 import { CheckCircle2 } from "lucide-react";
 
+interface TreinoSlot {
+  slot_idx: number;
+  grupoNome: string;
+  concluido: boolean;
+}
+
 interface DiaInfo {
   dateKey: string;
   dateLabel: string;
   diaSemana: string;
-  grupoNome: string | null;
-  exercicios: { nome: string; emoji: string }[];
+  treinos: TreinoSlot[];
   concluido: boolean;
   isToday: boolean;
 }
@@ -22,8 +27,8 @@ const TabelaSemanal = ({ dias, selectedDate, onSelectDate }: Props) => {
       {dias.map((dia) => {
         const isSelected = dia.dateKey === selectedDate;
         const maxVisible = 3;
-        const visible = dia.exercicios.slice(0, maxVisible);
-        const remaining = dia.exercicios.length - maxVisible;
+        const visible = dia.treinos.slice(0, maxVisible);
+        const remaining = dia.treinos.length - maxVisible;
 
         return (
           <button
@@ -46,14 +51,16 @@ const TabelaSemanal = ({ dias, selectedDate, onSelectDate }: Props) => {
             </p>
 
             <div className="flex-1 flex flex-col items-center justify-center gap-0.5 mt-1 w-full">
-              {dia.grupoNome ? (
+              {dia.treinos.length > 0 ? (
                 <>
-                  <p className="text-[8px] sm:text-[10px] text-primary font-heading truncate w-full text-center">
-                    {dia.grupoNome}
-                  </p>
-                  {visible.map((ex, i) => (
-                    <span key={i} className="text-[9px] sm:text-[10px] text-muted-foreground font-body truncate w-full text-center">
-                      {ex.emoji} {ex.nome}
+                  {visible.map((t) => (
+                    <span
+                      key={t.slot_idx}
+                      className={`text-[9px] sm:text-[10px] font-heading truncate w-full text-center ${
+                        t.concluido ? "text-classify-green" : "text-primary"
+                      }`}
+                    >
+                      {t.grupoNome}
                     </span>
                   ))}
                   {remaining > 0 && (

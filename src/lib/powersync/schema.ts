@@ -37,6 +37,7 @@ const tb_treino_series = new Table({
   exercicio_id: column.text,
   exercicio_usuario_id: column.text,
   data_treino: column.text,
+  slot_idx: column.integer,
   numero_serie: column.integer,
   peso: column.real,
   reps: column.integer,
@@ -50,6 +51,7 @@ const tb_treino_series = new Table({
 const tb_treino_concluido = new Table({
   user_id: column.text,
   data_treino: column.text,
+  slot_idx: column.integer,
   concluido: column.integer,
   created_at: column.text,
 });
@@ -57,6 +59,7 @@ const tb_treino_concluido = new Table({
 const tb_treino_dia_override = new Table({
   user_id: column.text,
   data_treino: column.text,
+  slot_idx: column.integer,
   grupo_id: column.text,
   grupo_usuario_id: column.text,
   created_at: column.text,
