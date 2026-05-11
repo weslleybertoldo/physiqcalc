@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { clearOfflineData } from "@/lib/offlineSync";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -63,23 +62,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    initSession();
+    let safetyTimeout: ReturnType<typeof setTimeout> | null = null;
+    initSession().finally(() => {
+      if (safetyTimeout) { clearTimeout(safetyTimeout); safetyTimeout = null; }
+    });
 
     // Segurança: se initSession travar, libera o loading após 5 segundos
-    const safetyTimeout = setTimeout(() => {
+    safetyTimeout = setTimeout(() => {
       setLoading(false);
     }, 5000);
 
     // 2. Escuta mudanças de auth (ÚNICO listener — sem duplicatas)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === 'SIGNED_OUT') {
-        if (intentionalLogoutRef.current) {
+        // Desloga em: (a) logout intencional ou (b) sessão revogada server-side (ban / troca de senha em outro device)
+        // Mantém estado em: refresh-fail offline (newSession null mas user ainda autenticado localmente)
+        if (intentionalLogoutRef.current || navigator.onLine) {
           intentionalLogoutRef.current = false;
           setSession(null);
           setUser(null);
           setLoading(false);
         }
-        // Se não foi intencional, ignora (foi falha de refresh de rede)
         return;
       }
       if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
@@ -115,7 +118,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     intentionalLogoutRef.current = true;
-    clearOfflineData();
+    try {
+      localStorage.removeItem("physiq_offline_pending");
+      localStorage.removeItem("physiq_offline_cache");
+    } catch { /* storage indisponivel */ }
     await supabase.auth.signOut();
   };
 

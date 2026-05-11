@@ -94,4 +94,26 @@ export default defineConfig(({ mode }) => ({
     exclude: ["@journeyapps/wa-sqlite", "@powersync/web"],
     include: [],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "powersync": ["@powersync/web", "@powersync/react", "@journeyapps/wa-sqlite"],
+          "supabase": ["@supabase/supabase-js"],
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+          "charts": ["recharts"],
+          "pdf": ["jspdf", "html2canvas"],
+          "xlsx": ["xlsx"],
+          "radix": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toast",
+          ],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 }));
