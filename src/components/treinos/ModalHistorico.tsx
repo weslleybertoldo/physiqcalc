@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePowerSync } from "@powersync/react";
 import { formatarDataCurta } from "@/utils/formatDate";
+import { formatTempo, formatPace } from "@/lib/corrida";
 import { toast } from "sonner";
 
 interface Props {
@@ -20,20 +21,6 @@ interface SerieRecord {
   tempo_segundos: number | null;
   distancia_km: number | null;
   pace_segundos_km: number | null;
-}
-
-function formatTempo(segundos: number): string {
-  const h = Math.floor(segundos / 3600);
-  const m = Math.floor((segundos % 3600) / 60);
-  const s = segundos % 60;
-  if (h > 0) return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-function formatPace(paceSegundos: number): string {
-  const m = Math.floor(paceSegundos / 60);
-  const s = paceSegundos % 60;
-  return `${m}:${String(s).padStart(2, "0")} /km`;
 }
 
 const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange }: Props) => {
