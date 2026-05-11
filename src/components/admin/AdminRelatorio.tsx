@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import { formatarDataCurta, agoraFormatado } from "@/utils/formatDate";
 import {
   desenharCabecalho, desenharTituloSecao, desenharCard,
@@ -782,7 +781,7 @@ function exportarPDF(
   doc.save(nomeArquivo);
 }
 
-function exportarExcel(
+async function exportarExcel(
   perfil: ProfileData | null,
   avaliacao: any,
   semanas: SemanaAgrupada[],
@@ -791,6 +790,7 @@ function exportarExcel(
   fallbackNome?: string,
   fallbackEmail?: string
 ) {
+  const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
   const nomeAluno = obterNomeAluno(perfil, fallbackNome, fallbackEmail);
   const nomeArquivo = `treinos_${nomeAluno.replace(/\s+/g, "_")}_${MESES[mes - 1]}_${ano}.xlsx`;
