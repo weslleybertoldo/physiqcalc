@@ -1033,6 +1033,17 @@ const TreinosPage = () => {
               <div className="text-center space-y-3">
                 <p className="text-[10px] text-muted-foreground/50 font-body">Versão atual: v{CURRENT_VERSION}</p>
 
+                {((user as any)?.app_metadata?.role === "admin") && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/admin")}
+                    className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-primary border border-primary/40 rounded-lg hover:bg-primary/10 transition-colors"
+                  >
+                    <Settings size={12} />
+                    Painel Admin
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={handleCheckUpdate}
