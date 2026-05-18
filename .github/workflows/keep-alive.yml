@@ -1,4 +1,4 @@
-name: Keep Supabase Active
+name: Keep Supabase + PowerSync Active
 
 on:
   schedule:
@@ -10,6 +10,28 @@ jobs:
   ping-supabase:
     runs-on: ubuntu-latest
     steps:
+      - name: Ping PowerSync Production instance (liveness probe)
+        # Toca touched_at no host <instance>.powersync.journeyapps.com,
+        # previne deprovisionamento por inatividade no Free Plan.
+        run: |
+          set -e
+          RES=$(curl -s -w "\n%{http_code}" \
+            "https://69cc4d1df69619e9d4834456.powersync.journeyapps.com/probes/liveness")
+          CODE=$(echo "$RES" | tail -1)
+          BODY=$(echo "$RES" | sed '$d')
+          echo "PowerSync Production: HTTP $CODE | $BODY"
+          [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+
+      - name: Ping PowerSync Development instance (liveness probe)
+        run: |
+          set -e
+          RES=$(curl -s -w "\n%{http_code}" \
+            "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com/probes/liveness")
+          CODE=$(echo "$RES" | tail -1)
+          BODY=$(echo "$RES" | sed '$d')
+          echo "PowerSync Development: HTTP $CODE | $BODY"
+          [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+
       - name: Ping runtime do projeto (auth/v1/health)
         # Trafego HTTP no host <ref>.supabase.co — exatamente o tipo de
         # trafego que uso normal faz. Anon key e publica (vai pro frontend).
