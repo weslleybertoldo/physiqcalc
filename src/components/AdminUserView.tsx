@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, FileDown } from "lucide-react";
+import { ArrowLeft, FileDown, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateAdminPDF, type AdminProfile } from "@/lib/generateAdminPDF";
+import { generateWorkoutPlanPDF } from "@/lib/generateWorkoutPlanPDF";
 import { levels } from "./TdeeTable";
 import EvolutionSection from "./EvolutionSection";
 import { classificarGordura } from "@/utils/composicaoCorporal";
@@ -22,6 +23,23 @@ const AdminUserView = ({ userId, onBack }: Props) => {
   const [avaliacoes, setAvaliacoes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"dados" | "evolucao">("dados");
+  const [loadingTreino, setLoadingTreino] = useState(false);
+
+  const handleTreinoPDF = async () => {
+    setLoadingTreino(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-get-workout-plan", { body: { userId } });
+      if (error || !data?.profile) {
+        console.error("[AdminUserView] Erro ao gerar PDF de treino:", error);
+        return;
+      }
+      generateWorkoutPlanPDF(data.profile, data.dias ?? []);
+    } catch (e) {
+      console.error("[AdminUserView] Falha no PDF de treino:", e);
+    } finally {
+      setLoadingTreino(false);
+    }
+  };
 
   useEffect(() => {
     supabase.functions.invoke("admin-get-user", { body: { userId } }).then(({ data }) => {
@@ -88,9 +106,6 @@ const AdminUserView = ({ userId, onBack }: Props) => {
               {profile.user_code && <p className="text-xs text-muted-foreground font-body">ID: {profile.user_code}</p>}
             </div>
           </div>
-          <button type="button" onClick={() => generateAdminPDF(profile, avaliacoes)} title="Gerar PDF" className="p-2 text-muted-foreground hover:text-primary transition-colors">
-            <FileDown size={18} />
-          </button>
         </header>
 
         {/* Tabs */}
@@ -212,6 +227,32 @@ const AdminUserView = ({ userId, onBack }: Props) => {
             )}
           </div>
         )}
+
+        {/* Downloads (admin) */}
+        <div className="section-divider pt-8 pb-20">
+          <h2 className="font-heading text-lg text-foreground mb-4">Downloads</h2>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => generateAdminPDF(profile, avaliacoes)}
+              className="w-full flex items-center justify-between result-card hover:border-primary/50 transition-colors py-3 px-4"
+            >
+              <span className="font-body text-sm text-foreground">Dados &amp; Evolução</span>
+              <FileDown size={18} className="text-muted-foreground" />
+            </button>
+            <button
+              type="button"
+              onClick={handleTreinoPDF}
+              disabled={loadingTreino}
+              className="w-full flex items-center justify-between result-card hover:border-primary/50 transition-colors py-3 px-4 disabled:opacity-60"
+            >
+              <span className="font-body text-sm text-foreground">Treino</span>
+              {loadingTreino
+                ? <Loader2 size={18} className="text-muted-foreground animate-spin" />
+                : <FileDown size={18} className="text-muted-foreground" />}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
