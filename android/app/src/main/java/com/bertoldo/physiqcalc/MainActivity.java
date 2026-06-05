@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(CountdownNotificationPlugin.class);
+        registerPlugin(ApkInstallerPlugin.class);
         super.onCreate(savedInstanceState);
 
         WebSettings webSettings = this.bridge.getWebView().getSettings();

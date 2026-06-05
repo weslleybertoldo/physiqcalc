@@ -14,7 +14,7 @@ import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
 import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
-import { openApkDownload } from "@/lib/openDownload";
+import { downloadAndInstall } from "@/lib/apkUpdater";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
@@ -163,6 +163,25 @@ const TreinosPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<null | { hasUpdate: boolean; url?: string; version?: string }>(null);
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+  const [updateNeedsPerm, setUpdateNeedsPerm] = useState(false);
+
+  const handleBaixarUpdate = async () => {
+    if (!updateResult?.url) return;
+    setUpdateNeedsPerm(false);
+    setUpdateProgress(0);
+    try {
+      const res = await downloadAndInstall(updateResult.url, (p) => setUpdateProgress(p));
+      if (res === "permission") {
+        setUpdateNeedsPerm(true);
+        setUpdateProgress(null);
+      } else if (res === "fallback") {
+        setUpdateProgress(null);
+      }
+    } catch {
+      setUpdateProgress(null);
+    }
+  };
 
   // Timer state
   // Inicializa timerAtivo verificando localStorage — persiste após reload
@@ -1278,14 +1297,35 @@ const TreinosPage = () => {
                 {updateResult && (
                   <div className="mt-2">
                     {updateResult.hasUpdate ? (
-                      <button
-                        type="button"
-                        onClick={() => updateResult.url && openApkDownload(updateResult.url)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors"
-                      >
-                        <Download size={12} />
-                        Baixar v{updateResult.version}
-                      </button>
+                      updateProgress !== null ? (
+                        <div>
+                          <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all duration-200"
+                              style={{ width: `${updateProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 text-center font-body">
+                            {updateProgress < 100 ? `Baixando ${updateProgress}%` : "Abrindo instalador..."}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {updateNeedsPerm && (
+                            <p className="text-xs text-muted-foreground font-body mb-2">
+                              Permita "instalar apps desconhecidos" nas configurações que abriram e toque novamente.
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleBaixarUpdate}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors"
+                          >
+                            <Download size={12} />
+                            {updateNeedsPerm ? "Tentar novamente" : `Baixar v${updateResult.version}`}
+                          </button>
+                        </>
+                      )
                     ) : (
                       <p className="text-xs text-classify-green font-body flex items-center justify-center gap-1">
                         <Check size={12} />
