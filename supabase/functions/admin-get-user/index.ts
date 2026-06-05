@@ -73,9 +73,15 @@ Deno.serve(async (req) => {
     const userId = body?.userId;
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data, error } = await admin.from("physiq_profiles").select("*").eq("id", userId).maybeSingle();
+    const { data: profile, error } = await admin.from("physiq_profiles").select("*").eq("id", userId).maybeSingle();
     if (error) throw error;
-    if (!data) return jsonErr("not_found", 404, origin);
-    return new Response(JSON.stringify({ user: data }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+    if (!profile) return jsonErr("not_found", 404, origin);
+    const { data: avaliacoes } = await admin.from("physiq_avaliacoes")
+      .select("*").eq("user_id", userId).order("data_avaliacao", { ascending: true });
+    const lista = avaliacoes ?? [];
+    return new Response(
+      JSON.stringify({ profile, user: profile, avaliacoes: lista, avaliacao: lista[lista.length - 1] ?? null }),
+      { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
+    );
   } catch (_e) { return jsonErr("internal", 500, origin); }
 });
