@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LogOut, Search, Eye, Settings, Calculator, FileDown, Ban, Trash2, Tags, Dumbbell } from "lucide-react";
 import { formatarDataCurta } from "@/utils/formatDate";
 import { adminLogout, isAdminAuthenticated, isAdminAuthenticatedAsync } from "@/components/AdminLoginDialog";
@@ -36,6 +36,30 @@ const AdminPanel = () => {
   const [viewMode, setViewMode] = useState<"list" | "config" | "view" | "calculator" | "tags" | "treinos">("list");
   const [allTags, setAllTags] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const [userTagsMap, setUserTagsMap] = useState<Record<string, string[]>>({});
+
+  // Navegação interna history-aware: cada sub-aba empilha uma entrada no
+  // history, então o "voltar" (botão visual OU back do Android) volta pra lista
+  // do admin em vez de sair direto pro app. Só sai do /admin quando já na lista.
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
+  const goToView = (mode: typeof viewMode, userId?: string) => {
+    if (userId) setSelectedUser(userId);
+    setViewMode(mode);
+    window.history.pushState({ adminView: mode }, "");
+  };
+
+  useEffect(() => {
+    const onPop = () => {
+      if (viewModeRef.current !== "list") {
+        setViewMode("list");
+        loadUsers();
+      }
+      // já na lista: deixa o back natural sair do /admin
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   useEffect(() => {
     // Verificação síncrona rápida + async com HMAC
@@ -142,23 +166,23 @@ const AdminPanel = () => {
   };
 
   if (viewMode === "config" && selectedUser) {
-    return <AdminUserConfig userId={selectedUser} onBack={() => { setViewMode("list"); loadUsers(); }} />;
+    return <AdminUserConfig userId={selectedUser} onBack={() => window.history.back()} />;
   }
 
   if (viewMode === "view" && selectedUser) {
-    return <AdminUserView userId={selectedUser} onBack={() => setViewMode("list")} />;
+    return <AdminUserView userId={selectedUser} onBack={() => window.history.back()} />;
   }
 
   if (viewMode === "calculator") {
-    return <Index onBack={() => setViewMode("list")} />;
+    return <Index onBack={() => window.history.back()} />;
   }
 
   if (viewMode === "tags") {
-    return <AdminTagManager onBack={() => { setViewMode("list"); loadUsers(); }} />;
+    return <AdminTagManager onBack={() => window.history.back()} />;
   }
 
   if (viewMode === "treinos") {
-    return <AdminTreinos onBack={() => setViewMode("list")} />;
+    return <AdminTreinos onBack={() => window.history.back()} />;
   }
 
   return (
@@ -184,7 +208,7 @@ const AdminPanel = () => {
         {/* Manual Calculator */}
         <button
           type="button"
-          onClick={() => setViewMode("calculator")}
+          onClick={() => goToView("calculator")}
           className="w-full mb-8 result-card border-primary/50 flex items-center gap-4 hover:bg-primary/5 transition-colors cursor-pointer"
         >
           <Calculator size={24} className="text-primary shrink-0" />
@@ -197,7 +221,7 @@ const AdminPanel = () => {
         {/* Tag Manager */}
         <button
           type="button"
-          onClick={() => setViewMode("tags")}
+          onClick={() => goToView("tags")}
           className="w-full mb-4 result-card border-muted-foreground/30 flex items-center gap-4 hover:bg-primary/5 transition-colors cursor-pointer"
         >
           <Tags size={24} className="text-primary shrink-0" />
@@ -210,7 +234,7 @@ const AdminPanel = () => {
         {/* Treinos Manager */}
         <button
           type="button"
-          onClick={() => setViewMode("treinos")}
+          onClick={() => goToView("treinos")}
           className="w-full mb-8 result-card border-muted-foreground/30 flex items-center gap-4 hover:bg-primary/5 transition-colors cursor-pointer"
         >
           <Dumbbell size={24} className="text-primary shrink-0" />
@@ -304,7 +328,7 @@ const AdminPanel = () => {
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button
-                      onClick={() => { setSelectedUser(u.id); setViewMode("view"); }}
+                      onClick={() => goToView("view", u.id)}
                       title="Visualizar"
                       className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
@@ -318,7 +342,7 @@ const AdminPanel = () => {
                       <FileDown size={16} />
                     </button>
                     <button
-                      onClick={() => { setSelectedUser(u.id); setViewMode("config"); }}
+                      onClick={() => goToView("config", u.id)}
                       title="Configurar"
                       className="p-2 text-muted-foreground hover:text-primary transition-colors"
                     >
