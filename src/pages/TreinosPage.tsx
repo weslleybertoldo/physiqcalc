@@ -1202,15 +1202,28 @@ const TreinosPage = () => {
           {updateResult && !showSettings && (
             <div className="mt-1">
               {updateResult.hasUpdate ? (
-                <a
-                  href={updateResult.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-[10px] font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors"
-                >
-                  <Download size={10} />
-                  Baixar v{updateResult.version}
-                </a>
+                updateProgress !== null ? (
+                  <div className="max-w-[200px] mx-auto">
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-200"
+                        style={{ width: `${updateProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 text-center font-body">
+                      {updateProgress < 100 ? `Baixando ${updateProgress}%` : "Abrindo instalador..."}
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleBaixarUpdate}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-[10px] font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors"
+                  >
+                    <Download size={10} />
+                    {updateNeedsPerm ? "Tentar novamente" : `Baixar v${updateResult.version}`}
+                  </button>
+                )
               ) : (
                 <p className="text-[10px] text-classify-green font-body flex items-center justify-center gap-1">
                   <Check size={10} />
