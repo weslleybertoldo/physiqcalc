@@ -2,39 +2,45 @@ name: Keep Supabase + PowerSync Active
 
 on:
   schedule:
-    # A cada 5 dias as 9h UTC (antes do limite de 7 dias)
-    - cron: '0 9 */5 * *'
+    # A cada 4 dias as 9h UTC. Margem ampla sob o limite de 7 dias do Free Plan,
+    # absorvendo eventuais atrasos do agendador do GitHub Actions.
+    - cron: '0 9 */4 * *'
   workflow_dispatch:
 
 jobs:
-  ping-supabase:
+  keep-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping PowerSync Production instance (liveness probe)
-        # Toca touched_at no host <instance>.powersync.journeyapps.com,
-        # previne deprovisionamento por inatividade no Free Plan.
-        run: |
-          set -e
-          RES=$(curl -s -w "\n%{http_code}" \
-            "https://69cc4d1df69619e9d4834456.powersync.journeyapps.com/probes/liveness")
-          CODE=$(echo "$RES" | tail -1)
-          BODY=$(echo "$RES" | sed '$d')
-          echo "PowerSync Production: HTTP $CODE | $BODY"
-          [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+      - uses: actions/checkout@v4
 
-      - name: Ping PowerSync Development instance (liveness probe)
-        run: |
-          set -e
-          RES=$(curl -s -w "\n%{http_code}" \
-            "https://69cc4d1d8fa42c16d7f6eb27.powersync.journeyapps.com/probes/liveness")
-          CODE=$(echo "$RES" | tail -1)
-          BODY=$(echo "$RES" | sed '$d')
-          echo "PowerSync Development: HTTP $CODE | $BODY"
-          [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-      - name: Ping runtime do projeto (auth/v1/health)
-        # Trafego HTTP no host <ref>.supabase.co — exatamente o tipo de
-        # trafego que uso normal faz. Anon key e publica (vai pro frontend).
+      # PowerSync Free Plan desprovisiona instancias sem DEPLOYS nem CONEXOES DE
+      # CLIENTE por 7 dias. Pings HTTP no /probes/liveness NAO contam (confirmado
+      # em docs.powersync.com/resources/usage-and-billing). Por isso fazemos um
+      # deploy real das sync rules a cada 4 dias, que conta como atividade e
+      # mantem ambas as instancias provisionadas.
+      - name: Deploy sync-config (Production) — mantem instancia ativa
+        env:
+          PS_ADMIN_TOKEN: ${{ secrets.POWERSYNC_PAT }}
+        run: |
+          npx -y powersync@latest deploy sync-config \
+            --instance-id 69cc4d1df69619e9d4834456 \
+            --project-id 69cc4d1caaa9a30007b4ec2c \
+            --org-id 69cc4bec866ae00007694860 < /dev/null
+
+      - name: Deploy sync-config (Development) — mantem instancia ativa
+        env:
+          PS_ADMIN_TOKEN: ${{ secrets.POWERSYNC_PAT }}
+        run: |
+          npx -y powersync@latest deploy sync-config \
+            --instance-id 69cc4d1d8fa42c16d7f6eb27 \
+            --project-id 69cc4d1caaa9a30007b4ec2c \
+            --org-id 69cc4bec866ae00007694860 < /dev/null
+
+      - name: Ping runtime do Supabase (auth/v1/health) — mantem projeto ativo
         run: |
           set -e
           RES=$(curl -s -w "\n%{http_code}" \
@@ -44,7 +50,7 @@ jobs:
           echo "PhysiqCalc runtime ping: HTTP $CODE"
           [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
 
-      - name: Executar SQL real no Postgres (camada extra)
+      - name: Executar SQL real no Postgres (camada extra Supabase)
         run: |
           set -e
           RES=$(curl -s -w "\n%{http_code}" -X POST \
@@ -53,6 +59,5 @@ jobs:
             -d '{"query":"SELECT 1 as alive, now() as ts"}' \
             "https://api.supabase.com/v1/projects/uxwpwdbbnlticxgtzcsb/database/query")
           CODE=$(echo "$RES" | tail -1)
-          BODY=$(echo "$RES" | sed '$d')
-          echo "PhysiqCalc SQL ping: HTTP $CODE | $BODY"
+          echo "PhysiqCalc SQL ping: HTTP $CODE"
           [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
