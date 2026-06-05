@@ -6,41 +6,48 @@ import { MessageSquare, Trash2 } from "lucide-react";
 interface ModalComentarioProps {
   exercicioNome: string;
   exercicioId: string;
-  ehPessoal: boolean;
   userId: string;
   onFechar: () => void;
+}
+
+// Descobre se o id é de exercício do catálogo (tb_exercicios) ou pessoal
+// (tb_exercicios_usuario). Antes o componente recebia ehPessoal=false fixo, o
+// que gravava exercicio_id inexistente p/ exercícios pessoais → a FK
+// exercicio_id_fkey rejeitava o upload no Supabase e a anotação sumia.
+async function resolverColuna(
+  db: any,
+  exercicioId: string
+): Promise<"exercicio_id" | "exercicio_usuario_id"> {
+  const cat = await db.getAll(
+    "SELECT 1 FROM tb_exercicios WHERE id = ? LIMIT 1",
+    [exercicioId]
+  );
+  return cat.length > 0 ? "exercicio_id" : "exercicio_usuario_id";
 }
 
 async function carregarComentario(
   userId: string,
   exercicioId: string,
-  ehPessoal: boolean,
   db?: any
 ): Promise<string> {
   if (!db) return "";
-  const rows = ehPessoal
-    ? await db.getAll(
-        "SELECT comentario FROM tb_exercicio_comentarios WHERE user_id = ? AND exercicio_usuario_id = ?",
-        [userId, exercicioId]
-      )
-    : await db.getAll(
-        "SELECT comentario FROM tb_exercicio_comentarios WHERE user_id = ? AND exercicio_id = ?",
-        [userId, exercicioId]
-      );
+  const coluna = await resolverColuna(db, exercicioId);
+  const rows = await db.getAll(
+    `SELECT comentario FROM tb_exercicio_comentarios WHERE user_id = ? AND ${coluna} = ?`,
+    [userId, exercicioId]
+  );
   return (rows[0] as any)?.comentario ?? "";
 }
 
 async function salvarComentario(
   userId: string,
   exercicioId: string,
-  ehPessoal: boolean,
   comentario: string,
   db: any
 ) {
   try {
-    const whereClause = ehPessoal
-      ? "user_id = ? AND exercicio_usuario_id = ?"
-      : "user_id = ? AND exercicio_id = ?";
+    const coluna = await resolverColuna(db, exercicioId);
+    const whereClause = `user_id = ? AND ${coluna} = ?`;
 
     if (!comentario.trim()) {
       await db.execute(
@@ -56,8 +63,8 @@ async function salvarComentario(
     );
     const existingId = (existing && existing.length > 0) ? (existing[0] as any).id : null;
 
-    const exId = ehPessoal ? null : exercicioId;
-    const exUsuarioId = ehPessoal ? exercicioId : null;
+    const exId = coluna === "exercicio_id" ? exercicioId : null;
+    const exUsuarioId = coluna === "exercicio_usuario_id" ? exercicioId : null;
     const now = new Date().toISOString();
 
     if (existingId) {
@@ -84,7 +91,6 @@ export { carregarComentario };
 const ModalComentario: React.FC<ModalComentarioProps> = ({
   exercicioNome,
   exercicioId,
-  ehPessoal,
   userId,
   onFechar,
 }) => {
@@ -96,12 +102,12 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    carregarComentario(userId, exercicioId, ehPessoal, db).then((c) => {
+    carregarComentario(userId, exercicioId, db).then((c) => {
       setTexto(c);
       setTextoOriginal(c);
       setCarregando(false);
     });
-  }, [exercicioId, userId, ehPessoal]);
+  }, [exercicioId, userId]);
 
   async function handleSalvar() {
     if (texto === textoOriginal) {
@@ -109,7 +115,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
       return;
     }
     setSalvando(true);
-    await salvarComentario(userId, exercicioId, ehPessoal, texto, db);
+    await salvarComentario(userId, exercicioId, texto, db);
     setTextoOriginal(texto);
     setSalvando(false);
     setSalvo(true);
@@ -176,7 +182,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
               <button
                 onClick={async () => {
                   setTexto("");
-                  await salvarComentario(userId, exercicioId, ehPessoal, "", db);
+                  await salvarComentario(userId, exercicioId, "", db);
                   setTextoOriginal("");
                 }}
                 className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg px-3.5 py-2 font-heading font-bold text-xs flex items-center gap-1 hover:bg-destructive/20 transition-colors"

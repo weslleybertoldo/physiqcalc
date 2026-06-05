@@ -671,7 +671,7 @@ const ExercicioCard = ({
   useEffect(() => {
     if (comentarioCarregadoRef.current) return;
     comentarioCarregadoRef.current = true;
-    carregarComentario(userId, ex.id, false, db).then(c => setTemComentario(c.trim().length > 0));
+    carregarComentario(userId, ex.id, db).then(c => setTemComentario(c.trim().length > 0));
   }, [ex.id, userId, db]);
 
   return (
@@ -734,10 +734,10 @@ const ExercicioCard = ({
       </button>
 
       {comentarioAberto && (
-        <ModalComentario exercicioNome={ex.nome} exercicioId={ex.id} ehPessoal={false} userId={userId}
+        <ModalComentario exercicioNome={ex.nome} exercicioId={ex.id} userId={userId}
           onFechar={() => {
             setComentarioAberto(false);
-            carregarComentario(userId, ex.id, false, db).then(c => setTemComentario(c.trim().length > 0));
+            carregarComentario(userId, ex.id, db).then(c => setTemComentario(c.trim().length > 0));
           }} />
       )}
     </div>
