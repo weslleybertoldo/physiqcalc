@@ -24,14 +24,10 @@ const UpdateChecker = () => {
     setProgress(0);
     try {
       const res = await downloadAndInstall(update.download_url, (p) => setProgress(p));
-      if (res === "permission") {
-        setNeedsPerm(true);
-        setProgress(null);
-      } else if (res === "fallback") {
-        // web/iOS: abriu no navegador, sem barra
-        setProgress(null);
-      }
-      // "installed": instalador do sistema abriu; mantém 100% até o usuário agir
+      if (res === "permission") setNeedsPerm(true);
+      // Reseta a barra: se o usuário cancelar a tela "Instalar?" do sistema,
+      // o botão "Baixar" reaparece pra tentar de novo (não fica travado em 100%).
+      setProgress(null);
     } catch {
       setProgress(null);
     }

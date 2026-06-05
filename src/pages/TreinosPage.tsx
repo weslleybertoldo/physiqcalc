@@ -172,12 +172,9 @@ const TreinosPage = () => {
     setUpdateProgress(0);
     try {
       const res = await downloadAndInstall(updateResult.url, (p) => setUpdateProgress(p));
-      if (res === "permission") {
-        setUpdateNeedsPerm(true);
-        setUpdateProgress(null);
-      } else if (res === "fallback") {
-        setUpdateProgress(null);
-      }
+      if (res === "permission") setUpdateNeedsPerm(true);
+      // reseta a barra pra permitir nova tentativa se cancelar o instalador
+      setUpdateProgress(null);
     } catch {
       setUpdateProgress(null);
     }
