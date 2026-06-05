@@ -46,6 +46,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [grupos, setGrupos] = useState<GrupoTreino[]>([]);
   const [semanaConfig, setSemanaConfig] = useState<SemanaConfig[]>([]);
   const [gruposExercicios, setGruposExercicios] = useState<Record<string, string[]>>({});
+  const [gruposPerfis, setGruposPerfis] = useState<Record<string, string[]>>({});
   const [gruposMusculares, setGruposMusculares] = useState<GrupoMuscular[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,12 +67,13 @@ const AdminTreinos = ({ onBack }: Props) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [exRes, grRes, smRes, geRes, gmRes] = await Promise.all([
+      const [exRes, grRes, smRes, geRes, gmRes, perfRes] = await Promise.all([
         supabase.from("tb_exercicios").select("*").order("nome"),
         supabase.from("tb_grupos_treino").select("*").order("nome"),
         supabase.from("tb_semana_treinos").select("dia_semana, grupo_id"),
         supabase.from("tb_grupos_exercicios").select("grupo_id, exercicio_id, ordem").order("ordem"),
         supabase.from("grupos_musculares").select("*").order("nome"),
+        (supabase.from as any)("tb_grupos_treino_perfis").select("grupo_id, user_id"),
       ]);
 
       if (exRes.error) throw exRes.error;
@@ -92,6 +94,12 @@ const AdminTreinos = ({ onBack }: Props) => {
         map[ge.grupo_id].push(ge.exercicio_id);
       });
       setGruposExercicios(map);
+      const perfMap: Record<string, string[]> = {};
+      ((perfRes.data as any[]) || []).forEach((p) => {
+        if (!perfMap[p.grupo_id]) perfMap[p.grupo_id] = [];
+        perfMap[p.grupo_id].push(p.user_id);
+      });
+      setGruposPerfis(perfMap);
     } catch (err: any) {
       toast.error("Erro ao carregar dados: " + (err?.message || "tente novamente"));
     } finally {
@@ -109,7 +117,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   };
 
   useEffect(() => { loadData(); }, []);
-  useEffect(() => { if (tab === "relatorio") loadUsers(); }, [tab]);
+  useEffect(() => { if (tab === "relatorio" || tab === "grupos") loadUsers(); }, [tab]);
 
   // === Semana ===
   const handleSemanaChange = async (dia: string, grupoId: string | null) => {
@@ -237,6 +245,24 @@ const AdminTreinos = ({ onBack }: Props) => {
     }
   };
 
+  const handleTogglePerfil = async (grupoId: string, userId: string) => {
+    const current = gruposPerfis[grupoId] || [];
+    try {
+      if (current.includes(userId)) {
+        const { error } = await (supabase.from as any)("tb_grupos_treino_perfis")
+          .delete().eq("grupo_id", grupoId).eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase.from as any)("tb_grupos_treino_perfis")
+          .insert({ grupo_id: grupoId, user_id: userId });
+        if (error) throw error;
+      }
+      await loadData();
+    } catch (err: any) {
+      toast.error("Erro ao atualizar perfis: " + (err?.message || "tente novamente"));
+    }
+  };
+
   const tabs = [
     { key: "semana" as const, label: "📅 Semana" },
     { key: "grupos" as const, label: "🗂️ Grupos" },
@@ -341,6 +367,38 @@ const AdminTreinos = ({ onBack }: Props) => {
                       )}
                     </div>
                   )}
+                  <div className="mt-4 pt-3 border-t border-muted-foreground/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">
+                        Quem vê este treino
+                      </p>
+                      {(gruposPerfis[g.id]?.length ?? 0) === 0 && (
+                        <span className="text-[10px] text-destructive font-body">
+                          ⚠️ Sem perfil — invisível p/ todos
+                        </span>
+                      )}
+                    </div>
+                    {users.length === 0 ? (
+                      <p className="text-xs text-muted-foreground font-body">Carregando usuários...</p>
+                    ) : (
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {users.map((u) => (
+                          <label key={u.id} className="flex items-center gap-2 py-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={(gruposPerfis[g.id] || []).includes(u.id)}
+                              onChange={() => handleTogglePerfil(g.id, u.id)}
+                              className="accent-primary"
+                            />
+                            <span className="text-sm font-body text-foreground">{u.nome}</span>
+                            <span className="text-[10px] text-muted-foreground font-body ml-auto truncate max-w-[160px]">
+                              {u.email}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
