@@ -69,6 +69,13 @@ const ALLOWED_FIELDS = new Set([
   "macro_proteina_multiplicador", "macro_gordura_percentual", "ajuste_calorico",
   "tmb_metodo", "plano_nome", "plano_expiracao", "status", "admin_locked",
   "foto_url",
+  // valores computados de composição corporal salvos pelo painel admin
+  "percentual_gordura", "massa_gorda", "massa_magra", "tmb_mifflin", "tmb_katch",
+  // medidas corporais (cm)
+  "medida_pescoco", "medida_ombro", "medida_peitoral", "medida_cintura",
+  "medida_abdomen", "medida_quadril", "medida_braco_d", "medida_braco_e",
+  "medida_antebraco_d", "medida_antebraco_e", "medida_coxa_d", "medida_coxa_e",
+  "medida_panturrilha_d", "medida_panturrilha_e",
 ]);
 
 Deno.serve(async (req) => {
@@ -79,7 +86,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const userId = body?.userId;
-    const profileData = body?.profileData ?? {};
+    const profileData = body?.data ?? body?.profileData ?? {};
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
     if (typeof profileData !== "object" || profileData === null) return jsonErr("invalid_profileData", 400, origin);
     const filtered: Record<string, unknown> = {};

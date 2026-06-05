@@ -84,25 +84,61 @@ Deno.serve(async (req) => {
       if (error) throw error;
       return new Response(JSON.stringify({ userTags: data ?? [] }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
+    // tags de UM usuario como lista de ids (AdminTagSelector)
+    if (action === "getUserTags") {
+      const userId = body?.userId;
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      const { data, error } = await admin.from("physiq_user_tags").select("tag_id").eq("user_id", userId);
+      if (error) throw error;
+      const tagIds = (data ?? []).map((r: { tag_id: string }) => r.tag_id);
+      return new Response(JSON.stringify({ tagIds, userTags: data ?? [] }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+    }
     if (action === "getAllUserTags") {
       const { data, error } = await admin.from("physiq_user_tags").select("user_id, tag_id");
       if (error) throw error;
       return new Response(JSON.stringify({ userTags: data ?? [] }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
-    if (action === "create-tag") {
-      const nome = body?.nome;
-      const cor = body?.cor ?? null;
+    if (action === "create-tag" || action === "create") {
+      const nome = body?.tag?.nome ?? body?.nome;
+      const cor = body?.tag?.cor ?? body?.cor ?? null;
       if (!nome || typeof nome !== "string") return jsonErr("missing_nome", 400, origin);
-      const { data, error } = await admin.from("physiq_tags").insert({ nome, cor }).select().maybeSingle();
+      const { data, error } = await admin.from("physiq_tags").insert({ nome: nome.trim(), cor }).select().maybeSingle();
       if (error) throw error;
       return new Response(JSON.stringify({ tag: data }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
-    if (action === "delete-tag") {
+    if (action === "update-tag" || action === "update") {
+      const tagId = body?.tagId;
+      const nome = body?.tag?.nome ?? body?.nome;
+      const cor = body?.tag?.cor ?? body?.cor ?? null;
+      if (!tagId || typeof tagId !== "string") return jsonErr("missing_tagId", 400, origin);
+      if (!nome || typeof nome !== "string") return jsonErr("missing_nome", 400, origin);
+      const { data, error } = await admin.from("physiq_tags").update({ nome: nome.trim(), cor }).eq("id", tagId).select().maybeSingle();
+      if (error) throw error;
+      return new Response(JSON.stringify({ tag: data }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+    }
+    if (action === "delete-tag" || action === "delete") {
       const tagId = body?.tagId;
       if (!tagId || typeof tagId !== "string") return jsonErr("missing_tagId", 400, origin);
-      const { error } = await admin.from("physiq_tags").delete().eq("id", tagId);
+      const { error } = await admin.from("physiq_user_tags").delete().eq("tag_id", tagId);
       if (error) throw error;
+      const { error: e2 } = await admin.from("physiq_tags").delete().eq("id", tagId);
+      if (e2) throw e2;
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+    }
+    // substitui o conjunto de tags de um usuario (AdminTagSelector)
+    if (action === "setUserTags") {
+      const userId = body?.userId;
+      const tagIds = body?.tagIds;
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      if (!Array.isArray(tagIds)) return jsonErr("missing_tagIds", 400, origin);
+      const { error: delErr } = await admin.from("physiq_user_tags").delete().eq("user_id", userId);
+      if (delErr) throw delErr;
+      if (tagIds.length > 0) {
+        const rows = tagIds.map((t: string) => ({ user_id: userId, tag_id: t }));
+        const { error: insErr } = await admin.from("physiq_user_tags").insert(rows);
+        if (insErr) throw insErr;
+      }
+      return new Response(JSON.stringify({ ok: true, tagIds }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
     if (action === "assign-tag") {
       const userId = body?.userId;
