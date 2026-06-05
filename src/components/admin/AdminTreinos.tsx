@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AdminRelatorio from "./AdminRelatorio";
@@ -47,6 +47,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [semanaConfig, setSemanaConfig] = useState<SemanaConfig[]>([]);
   const [gruposExercicios, setGruposExercicios] = useState<Record<string, string[]>>({});
   const [gruposPerfis, setGruposPerfis] = useState<Record<string, string[]>>({});
+  const [perfilAberto, setPerfilAberto] = useState<string | null>(null);
   const [gruposMusculares, setGruposMusculares] = useState<GrupoMuscular[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -368,35 +369,46 @@ const AdminTreinos = ({ onBack }: Props) => {
                     </div>
                   )}
                   <div className="mt-4 pt-3 border-t border-muted-foreground/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">
+                    <button
+                      type="button"
+                      onClick={() => setPerfilAberto(perfilAberto === g.id ? null : g.id)}
+                      className="w-full flex items-center gap-2"
+                    >
+                      {perfilAberto === g.id ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">
                         Quem vê este treino
-                      </p>
-                      {(gruposPerfis[g.id]?.length ?? 0) === 0 && (
-                        <span className="text-[10px] text-destructive font-body">
+                      </span>
+                      {(gruposPerfis[g.id]?.length ?? 0) === 0 ? (
+                        <span className="text-[10px] text-destructive font-body ml-auto">
                           ⚠️ Sem perfil — invisível p/ todos
                         </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-body ml-auto">
+                          {gruposPerfis[g.id].length} selecionado{gruposPerfis[g.id].length > 1 ? "s" : ""}
+                        </span>
                       )}
-                    </div>
-                    {users.length === 0 ? (
-                      <p className="text-xs text-muted-foreground font-body">Carregando usuários...</p>
-                    ) : (
-                      <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {users.map((u) => (
-                          <label key={u.id} className="flex items-center gap-2 py-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={(gruposPerfis[g.id] || []).includes(u.id)}
-                              onChange={() => handleTogglePerfil(g.id, u.id)}
-                              className="accent-primary"
-                            />
-                            <span className="text-sm font-body text-foreground">{u.nome}</span>
-                            <span className="text-[10px] text-muted-foreground font-body ml-auto truncate max-w-[160px]">
-                              {u.email}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
+                    </button>
+                    {perfilAberto === g.id && (
+                      users.length === 0 ? (
+                        <p className="text-xs text-muted-foreground font-body mt-2">Carregando usuários...</p>
+                      ) : (
+                        <div className="space-y-1 max-h-40 overflow-y-auto mt-2">
+                          {users.map((u) => (
+                            <label key={u.id} className="flex items-center gap-2 py-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={(gruposPerfis[g.id] || []).includes(u.id)}
+                                onChange={() => handleTogglePerfil(g.id, u.id)}
+                                className="accent-primary"
+                              />
+                              <span className="text-sm font-body text-foreground">{u.nome}</span>
+                              <span className="text-[10px] text-muted-foreground font-body ml-auto truncate max-w-[160px]">
+                                {u.email}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )
                     )}
                   </div>
                 </div>
