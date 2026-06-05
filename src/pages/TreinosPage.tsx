@@ -14,6 +14,7 @@ import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
 import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
+import { openApkDownload } from "@/lib/openDownload";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
@@ -1277,15 +1278,14 @@ const TreinosPage = () => {
                 {updateResult && (
                   <div className="mt-2">
                     {updateResult.hasUpdate ? (
-                      <a
-                        href={updateResult.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => updateResult.url && openApkDownload(updateResult.url)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors"
                       >
                         <Download size={12} />
                         Baixar v{updateResult.version}
-                      </a>
+                      </button>
                     ) : (
                       <p className="text-xs text-classify-green font-body flex items-center justify-center gap-1">
                         <Check size={12} />

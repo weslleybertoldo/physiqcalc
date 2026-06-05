@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
+import { openApkDownload } from "@/lib/openDownload";
 
 const CURRENT_VERSION = __APP_VERSION__;
 // Busca a última release via GitHub API (funciona em repos privados e públicos)
@@ -77,15 +78,14 @@ const UpdateChecker = () => {
             <X size={16} />
           </button>
         </div>
-        <a
-          href={update.download_url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
+          onClick={() => openApkDownload(update.download_url)}
           className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-4 bg-primary text-primary-foreground rounded-lg font-heading text-xs uppercase tracking-wider hover:bg-primary/90 transition-colors"
         >
           <Download size={14} />
           Baixar atualização
-        </a>
+        </button>
       </div>
     </div>
   );
