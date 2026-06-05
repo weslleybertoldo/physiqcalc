@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Exercicio {
@@ -5,6 +6,9 @@ interface Exercicio {
   nome: string;
   grupo_muscular: string;
   emoji: string;
+  imagem_url?: string | null;
+  subgrupo?: string | null;
+  dica?: string | null;
 }
 
 interface Props {
@@ -14,6 +18,7 @@ interface Props {
 }
 
 const ModalExercicio = ({ exercicio, open, onOpenChange }: Props) => {
+  const [imgErro, setImgErro] = useState(false);
   if (!exercicio) return null;
 
   return (
@@ -25,9 +30,35 @@ const ModalExercicio = ({ exercicio, open, onOpenChange }: Props) => {
             {exercicio.nome}
           </DialogTitle>
         </DialogHeader>
-        <div className="py-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-1">Grupo muscular</p>
-          <p className="text-foreground font-body">{exercicio.grupo_muscular}</p>
+
+        {exercicio.imagem_url && !imgErro && (
+          <img
+            src={exercicio.imagem_url}
+            alt={exercicio.nome}
+            onError={() => setImgErro(true)}
+            className="w-full rounded-lg border border-muted-foreground/20 object-contain max-h-72 bg-card"
+          />
+        )}
+
+        <div className="space-y-4 pt-2">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-1">Grupo muscular</p>
+            <p className="text-foreground font-body">{exercicio.grupo_muscular}</p>
+          </div>
+
+          {exercicio.subgrupo && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-1">Subgrupo</p>
+              <p className="text-foreground font-body">{exercicio.subgrupo}</p>
+            </div>
+          )}
+
+          {exercicio.dica && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-1">Dica</p>
+              <p className="text-foreground font-body whitespace-pre-line">{exercicio.dica}</p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

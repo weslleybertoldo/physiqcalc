@@ -394,7 +394,8 @@ const TreinosPage = () => {
   // Exercícios dos grupos globais (com JOIN)
   const { data: gruposExerciciosRows } = useQuery(
     `SELECT ge.grupo_id, ge.exercicio_id, ge.ordem,
-            e.id as ex_id, e.nome as ex_nome, e.grupo_muscular as ex_grupo_muscular, e.emoji as ex_emoji, e.tipo as ex_tipo
+            e.id as ex_id, e.nome as ex_nome, e.grupo_muscular as ex_grupo_muscular, e.emoji as ex_emoji, e.tipo as ex_tipo,
+            e.imagem_url as ex_imagem_url, e.subgrupo as ex_subgrupo, e.dica as ex_dica
      FROM tb_grupos_exercicios ge
      LEFT JOIN tb_exercicios e ON ge.exercicio_id = e.id
      ORDER BY ge.ordem`
@@ -414,6 +415,9 @@ const TreinosPage = () => {
             grupo_muscular: ge.ex_grupo_muscular,
             emoji: ge.ex_emoji,
             tipo: ge.ex_tipo,
+            imagem_url: ge.ex_imagem_url,
+            subgrupo: ge.ex_subgrupo,
+            dica: ge.ex_dica,
           },
         });
       });
@@ -425,6 +429,7 @@ const TreinosPage = () => {
   const { data: gruposExerciciosUsuarioRows } = useQuery(
     `SELECT geu.grupo_usuario_id, geu.exercicio_id, geu.exercicio_usuario_id, geu.ordem,
             e.id as ex_id, e.nome as ex_nome, e.grupo_muscular as ex_grupo_muscular, e.emoji as ex_emoji, e.tipo as ex_tipo,
+            e.imagem_url as ex_imagem_url, e.subgrupo as ex_subgrupo, e.dica as ex_dica,
             eu.id as exu_id, eu.nome as exu_nome, eu.grupo_muscular as exu_grupo_muscular, eu.emoji as exu_emoji, eu.tipo as exu_tipo
      FROM tb_grupos_exercicios_usuario geu
      LEFT JOIN tb_exercicios e ON geu.exercicio_id = e.id
@@ -440,9 +445,9 @@ const TreinosPage = () => {
         const gid = ge.grupo_usuario_id;
         if (!map[gid]) map[gid] = [];
         const exData = ge.ex_id
-          ? { id: ge.ex_id, nome: ge.ex_nome, grupo_muscular: ge.ex_grupo_muscular, emoji: ge.ex_emoji, tipo: ge.ex_tipo }
+          ? { id: ge.ex_id, nome: ge.ex_nome, grupo_muscular: ge.ex_grupo_muscular, emoji: ge.ex_emoji, tipo: ge.ex_tipo, imagem_url: ge.ex_imagem_url, subgrupo: ge.ex_subgrupo, dica: ge.ex_dica }
           : ge.exu_id
-            ? { id: ge.exu_id, nome: ge.exu_nome, grupo_muscular: ge.exu_grupo_muscular, emoji: ge.exu_emoji, tipo: ge.exu_tipo }
+            ? { id: ge.exu_id, nome: ge.exu_nome, grupo_muscular: ge.exu_grupo_muscular, emoji: ge.exu_emoji, tipo: ge.exu_tipo, imagem_url: null, subgrupo: null, dica: null }
             : null;
         const isPessoal = !ge.ex_id && !!ge.exu_id;
         if (exData) {

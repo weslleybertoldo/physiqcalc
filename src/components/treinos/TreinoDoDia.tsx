@@ -13,6 +13,9 @@ interface Exercicio {
   grupo_muscular: string;
   emoji: string;
   tipo?: string;
+  imagem_url?: string | null;
+  subgrupo?: string | null;
+  dica?: string | null;
 }
 
 interface GrupoExercicio {

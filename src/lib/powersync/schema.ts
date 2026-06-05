@@ -12,6 +12,9 @@ const tb_exercicios = new Table({
   grupo_muscular: column.text,
   nome: column.text,
   tipo: column.text,
+  imagem_url: column.text,
+  subgrupo: column.text,
+  dica: column.text,
 });
 
 const tb_semana_treinos = new Table({

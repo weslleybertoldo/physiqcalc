@@ -9,6 +9,9 @@ interface Exercicio {
   nome: string;
   grupo_muscular: string;
   emoji: string;
+  imagem_url?: string | null;
+  subgrupo?: string | null;
+  dica?: string | null;
 }
 
 interface GrupoTreino {
@@ -55,6 +58,8 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [novoExGrupo, setNovoExGrupo] = useState("");
   const [novoExEmoji, setNovoExEmoji] = useState("🏋️");
   const [novoExTipo, setNovoExTipo] = useState<"musculacao" | "corrida">("musculacao");
+  const [novoExSubgrupo, setNovoExSubgrupo] = useState("");
+  const [novoExDica, setNovoExDica] = useState("");
   const [novoGrupoNome, setNovoGrupoNome] = useState("");
   const [editingGrupo, setEditingGrupo] = useState<string | null>(null);
   const [adicionandoMusculo, setAdicionandoMusculo] = useState(false);
@@ -63,6 +68,11 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [editExNome, setEditExNome] = useState("");
   const [editExGrupo, setEditExGrupo] = useState("");
   const [editExEmoji, setEditExEmoji] = useState("");
+  const [editExSubgrupo, setEditExSubgrupo] = useState("");
+  const [editExDica, setEditExDica] = useState("");
+  const [editExImagemUrl, setEditExImagemUrl] = useState<string | null>(null);
+  const [editExImagemFile, setEditExImagemFile] = useState<File | null>(null);
+  const [uploadingImg, setUploadingImg] = useState(false);
   const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
 
   const loadData = async () => {
@@ -135,13 +145,29 @@ const AdminTreinos = ({ onBack }: Props) => {
   };
 
   // === Biblioteca ===
+  // Sobe a imagem/gif pro bucket publico 'exercicios' (escrita restrita a admin
+  // pela policy). Cache-bust no fim pra refletir troca de imagem na hora.
+  const uploadImagem = async (file: File, exId: string): Promise<string> => {
+    if (!file.type.startsWith("image/")) throw new Error("Selecione uma imagem ou gif");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Imagem maior que 5MB");
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const path = `${exId}.${ext}`;
+    const { error } = await supabase.storage.from("exercicios").upload(path, file, { upsert: true, contentType: file.type });
+    if (error) throw error;
+    const { data } = supabase.storage.from("exercicios").getPublicUrl(path);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  };
+
   const handleAddExercicio = async () => {
     if (!novoExNome.trim()) return;
     try {
-      const { error } = await supabase.from("tb_exercicios").insert({ nome: novoExNome.trim(), grupo_muscular: novoExGrupo, emoji: novoExEmoji, tipo: novoExTipo } as any);
+      const { error } = await supabase.from("tb_exercicios").insert({
+        nome: novoExNome.trim(), grupo_muscular: novoExGrupo, emoji: novoExEmoji, tipo: novoExTipo,
+        subgrupo: novoExSubgrupo.trim() || null, dica: novoExDica.trim() || null,
+      } as any);
       if (error) throw error;
-      setNovoExNome("");
-      toast.success("Exercício criado!");
+      setNovoExNome(""); setNovoExSubgrupo(""); setNovoExDica("");
+      toast.success("Exercício criado! Edite-o para adicionar a foto/gif.");
       await loadData();
     } catch (err: any) {
       toast.error("Erro ao criar exercício: " + (err?.message || "tente novamente"));
@@ -161,15 +187,23 @@ const AdminTreinos = ({ onBack }: Props) => {
   const handleEditExercicio = async () => {
     if (!editingExId || !editExNome.trim()) return;
     try {
+      setUploadingImg(true);
+      let imagem_url = editExImagemUrl;
+      if (editExImagemFile) imagem_url = await uploadImagem(editExImagemFile, editingExId);
       const { error } = await supabase.from("tb_exercicios").update({
         nome: editExNome.trim(), grupo_muscular: editExGrupo, emoji: editExEmoji,
-      }).eq("id", editingExId);
+        subgrupo: editExSubgrupo.trim() || null, dica: editExDica.trim() || null,
+        imagem_url: imagem_url || null,
+      } as any).eq("id", editingExId);
       if (error) throw error;
       setEditingExId(null);
+      setEditExImagemFile(null);
       toast.success("Exercício atualizado!");
       await loadData();
     } catch (err: any) {
       toast.error("Erro ao atualizar exercício: " + (err?.message || "tente novamente"));
+    } finally {
+      setUploadingImg(false);
     }
   };
 
@@ -444,6 +478,9 @@ const AdminTreinos = ({ onBack }: Props) => {
                 <option value="corrida">🏃 Corrida</option>
               </select>
               </div>
+              <input type="text" value={novoExSubgrupo} onChange={(e) => setNovoExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional, ex: Porção medial)" className="input-underline text-sm" />
+              <textarea value={novoExDica} onChange={(e) => setNovoExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-none focus:border-primary" />
+              <p className="text-[10px] text-muted-foreground font-body">A foto/gif é adicionada na edição do exercício.</p>
               <button type="button" onClick={handleAddExercicio} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase">
                 <Plus size={14} className="inline mr-1" /> Criar Exercício
               </button>
@@ -477,9 +514,30 @@ const AdminTreinos = ({ onBack }: Props) => {
                           {["🏋️", "💪", "🦵", "🧘", "🔵"].map((e) => <option key={e} value={e}>{e}</option>)}
                         </select>
                       </div>
+                      {/* Foto / gif */}
+                      <div className="space-y-2">
+                        {(editExImagemFile || editExImagemUrl) && (
+                          <img
+                            src={editExImagemFile ? URL.createObjectURL(editExImagemFile) : (editExImagemUrl as string)}
+                            alt="preview"
+                            className="w-full max-h-48 object-contain rounded-lg border border-muted-foreground/20 bg-card"
+                          />
+                        )}
+                        <div className="flex items-center gap-2">
+                          <label className="px-3 py-1.5 border border-muted-foreground/20 rounded text-[10px] font-bold uppercase tracking-wider text-primary hover:border-primary transition-colors cursor-pointer">
+                            {editExImagemUrl || editExImagemFile ? "Trocar foto/gif" : "Adicionar foto/gif"}
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditExImagemFile(e.target.files?.[0] || null)} />
+                          </label>
+                          {(editExImagemUrl || editExImagemFile) && (
+                            <button type="button" onClick={() => { setEditExImagemFile(null); setEditExImagemUrl(null); }} className="text-[10px] text-muted-foreground hover:text-destructive uppercase font-bold">Remover</button>
+                          )}
+                        </div>
+                      </div>
+                      <input type="text" value={editExSubgrupo} onChange={(e) => setEditExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional)" className="input-underline text-sm" />
+                      <textarea value={editExDica} onChange={(e) => setEditExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-none focus:border-primary" />
                       <div className="flex gap-2">
-                        <button type="button" onClick={handleEditExercicio} className="px-3 py-1.5 bg-primary text-primary-foreground font-heading text-xs uppercase"><Save size={12} className="inline mr-1" />Salvar</button>
-                        <button type="button" onClick={() => setEditingExId(null)} className="px-3 py-1.5 text-muted-foreground font-heading text-xs uppercase"><X size={12} className="inline mr-1" />Cancelar</button>
+                        <button type="button" onClick={handleEditExercicio} disabled={uploadingImg} className="px-3 py-1.5 bg-primary text-primary-foreground font-heading text-xs uppercase disabled:opacity-50"><Save size={12} className="inline mr-1" />{uploadingImg ? "Salvando..." : "Salvar"}</button>
+                        <button type="button" onClick={() => { setEditingExId(null); setEditExImagemFile(null); }} className="px-3 py-1.5 text-muted-foreground font-heading text-xs uppercase"><X size={12} className="inline mr-1" />Cancelar</button>
                       </div>
                     </div>
                   ) : (
@@ -492,7 +550,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <button type="button" onClick={() => { setEditingExId(ex.id); setEditExNome(ex.nome); setEditExGrupo(ex.grupo_muscular); setEditExEmoji(ex.emoji); }} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
+                        <button type="button" onClick={() => { setEditingExId(ex.id); setEditExNome(ex.nome); setEditExGrupo(ex.grupo_muscular); setEditExEmoji(ex.emoji); setEditExSubgrupo(ex.subgrupo || ""); setEditExDica(ex.dica || ""); setEditExImagemUrl(ex.imagem_url || null); setEditExImagemFile(null); }} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
                           <Edit2 size={14} />
                         </button>
                         <button type="button" onClick={() => handleDeleteExercicio(ex.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
