@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,7 +30,11 @@ interface GrupoMuscular {
 }
 
 const AdminTreinos = ({ onBack }: Props) => {
-  const [tab, setTab] = useState<"grupos" | "biblioteca" | "relatorio">("grupos");
+  // sub-aba derivada da URL (?v=treinos&t=...) pra o reload (F5) manter a aba
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get("t") as "grupos" | "biblioteca" | "relatorio") || "grupos";
+  const setTab = (t: "grupos" | "biblioteca" | "relatorio") =>
+    setSearchParams((prev) => { prev.set("v", "treinos"); prev.set("t", t); return prev; }, { replace: true });
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [grupos, setGrupos] = useState<GrupoTreino[]>([]);
   const [gruposExercicios, setGruposExercicios] = useState<Record<string, string[]>>({});
