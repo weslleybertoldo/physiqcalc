@@ -23,6 +23,7 @@ export default function AdminSemanaUsuario({ userId }: Props) {
   const [marcados, setMarcados] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [savingDia, setSavingDia] = useState<string | null>(null);
+  const [aberto, setAberto] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,27 +75,52 @@ export default function AdminSemanaUsuario({ userId }: Props) {
           Nenhum treino atribuído a este usuário. Atribua grupos em Gerenciar Treinos › Grupos.
         </p>
       ) : (
-        <div className="flex flex-col gap-6">
-          {DIAS.map((d) => (
-            <div key={d.code} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-heading uppercase tracking-wider text-foreground">{d.label}</span>
-                {savingDia === d.code && <span className="text-xs text-muted-foreground">salvando…</span>}
-                {(marcados[d.code]?.size ?? 0) === 0 && <span className="text-xs text-muted-foreground">descanso</span>}
+        <div className="flex flex-col gap-3">
+          {DIAS.map((d) => {
+            const sel = grupos.filter((g) => marcados[d.code]?.has(keyOf(g)));
+            const isOpen = aberto === d.code;
+            return (
+              <div key={d.code} className="border border-border rounded-md p-3">
+                <button
+                  type="button"
+                  onClick={() => setAberto(isOpen ? null : d.code)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-heading uppercase tracking-wider text-foreground">{d.label}</span>
+                  <span className="flex items-center gap-2">
+                    {savingDia === d.code && <span className="text-xs text-muted-foreground">salvando…</span>}
+                    <span className="text-xs text-muted-foreground">{isOpen ? "▲" : "▼"}</span>
+                  </span>
+                </button>
+
+                {sel.length > 0 ? (
+                  <div className="flex flex-col gap-0.5 pl-1 mt-1">
+                    {sel.map((g) => (
+                      <span key={g.id} className="text-sm font-body text-foreground">
+                        {g.nome}{g.tipo === "pessoal" ? " (pessoal)" : ""}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="block text-xs text-muted-foreground font-body pl-1 mt-1">Descanso</span>
+                )}
+
+                {isOpen && (
+                  <div className="flex flex-col gap-1 pl-1 mt-2 border-t border-border pt-2">
+                    {grupos.map((g) => {
+                      const checked = marcados[d.code]?.has(keyOf(g)) ?? false;
+                      return (
+                        <label key={g.id} className="flex items-center gap-2 text-sm font-body cursor-pointer">
+                          <input type="checkbox" checked={checked} onChange={() => toggle(d.code, g)} className="accent-primary" />
+                          <span>{g.nome}{g.tipo === "pessoal" ? " (pessoal)" : ""}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div className="flex flex-col gap-1 pl-1">
-                {grupos.map((g) => {
-                  const checked = marcados[d.code]?.has(keyOf(g)) ?? false;
-                  return (
-                    <label key={g.id} className="flex items-center gap-2 text-sm font-body cursor-pointer">
-                      <input type="checkbox" checked={checked} onChange={() => toggle(d.code, g)} className="accent-primary" />
-                      <span>{g.nome}{g.tipo === "pessoal" ? " (pessoal)" : ""}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
