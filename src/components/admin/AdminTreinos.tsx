@@ -64,8 +64,10 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
 
-  const loadData = async () => {
-    setLoading(true);
+  // silent=true recarrega os dados sem trocar pra "Carregando..." (mantém a lista
+  // montada e o scroll/posição) — usado nas ações pós-edição.
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [exRes, grRes, geRes, gmRes, perfRes] = await Promise.all([
         supabase.from("tb_exercicios").select("*").order("nome"),
@@ -101,7 +103,7 @@ const AdminTreinos = ({ onBack }: Props) => {
     } catch (err: any) {
       toast.error("Erro ao carregar dados: " + (err?.message || "tente novamente"));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -141,7 +143,7 @@ const AdminTreinos = ({ onBack }: Props) => {
       if (error) throw error;
       setNovoExNome(""); setNovoExSubgrupo(""); setNovoExDica("");
       toast.success("Exercício criado! Edite-o para adicionar a foto/gif.");
-      await loadData();
+      await loadData(true);
     } catch (err: any) {
       toast.error("Erro ao criar exercício: " + (err?.message || "tente novamente"));
     }
@@ -151,7 +153,8 @@ const AdminTreinos = ({ onBack }: Props) => {
     try {
       const { error } = await supabase.from("tb_exercicios").delete().eq("id", id);
       if (error) throw error;
-      await loadData();
+      toast.success("Exercício excluído.");
+      await loadData(true);
     } catch (err: any) {
       toast.error("Erro ao excluir exercício: " + (err?.message || "tente novamente"));
     }
@@ -172,7 +175,7 @@ const AdminTreinos = ({ onBack }: Props) => {
       setEditingExId(null);
       setEditExImagemFile(null);
       toast.success("Exercício atualizado!");
-      await loadData();
+      await loadData(true);
     } catch (err: any) {
       toast.error("Erro ao atualizar exercício: " + (err?.message || "tente novamente"));
     } finally {
@@ -221,7 +224,7 @@ const AdminTreinos = ({ onBack }: Props) => {
       if (error) throw error;
       setNovoGrupoNome("");
       toast.success("Grupo criado!");
-      await loadData();
+      await loadData(true);
     } catch (err: any) {
       toast.error("Erro ao criar grupo: " + (err?.message || "tente novamente"));
     }
@@ -231,7 +234,8 @@ const AdminTreinos = ({ onBack }: Props) => {
     try {
       const { error } = await supabase.from("tb_grupos_treino").delete().eq("id", id);
       if (error) throw error;
-      await loadData();
+      toast.success("Grupo excluído.");
+      await loadData(true);
     } catch (err: any) {
       toast.error("Erro ao excluir grupo: " + (err?.message || "tente novamente"));
     }
@@ -247,7 +251,8 @@ const AdminTreinos = ({ onBack }: Props) => {
         const { error } = await supabase.from("tb_grupos_exercicios").insert({ grupo_id: grupoId, exercicio_id: exercicioId, ordem: current.length });
         if (error) throw error;
       }
-      await loadData();
+      toast.success("Atualizado.");
+      await loadData(true);
     } catch (err: any) {
       toast.error("Erro ao atualizar grupo: " + (err?.message || "tente novamente"));
     }
