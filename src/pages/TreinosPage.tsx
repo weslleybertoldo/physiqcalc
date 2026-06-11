@@ -498,7 +498,7 @@ const TreinosPage = () => {
     const configs = selectSemanaConfigsForDia(semanaConfig, diaSemana);
     const slots: DiaSlot[] = [];
     configs.forEach((config, idx) => {
-      const slotIdx = config.slot_idx ?? idx;
+      const slotIdx = config.slot_idx ?? 0;
       if (config.grupo_usuario_id) {
         const grupo = gruposPessoais.find((g) => g.id === config.grupo_usuario_id) || null;
         if (grupo) {

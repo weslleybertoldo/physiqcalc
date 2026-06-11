@@ -25,4 +25,14 @@ describe("selectSemanaConfigsForDia", () => {
     );
     expect(r).toHaveLength(1);
   });
+  it("ordena com slot_idx null antes de número", () => {
+    const r = selectSemanaConfigsForDia(
+      [
+        { dia_semana: "QUI", slot_idx: 1, grupo_id: "b", grupo_usuario_id: null },
+        { dia_semana: "QUI", slot_idx: null, grupo_id: "a", grupo_usuario_id: null },
+      ],
+      "QUI",
+    );
+    expect(r.map((x) => x.grupo_id)).toEqual(["a", "b"]);
+  });
 });
