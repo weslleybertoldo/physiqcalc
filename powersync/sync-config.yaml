@@ -13,11 +13,11 @@ streams:
   grupos_por_perfil:
     auto_subscribe: true
     queries:
-      - SELECT g.* FROM tb_grupos_treino g
-        JOIN tb_grupos_treino_perfis p ON p.grupo_id = g.id
+      - SELECT tb_grupos_treino.* FROM tb_grupos_treino
+        JOIN tb_grupos_treino_perfis p ON p.grupo_id = tb_grupos_treino.id
         WHERE p.user_id = auth.user_id()
-      - SELECT ge.* FROM tb_grupos_exercicios ge
-        JOIN tb_grupos_treino_perfis p ON p.grupo_id = ge.grupo_id
+      - SELECT tb_grupos_exercicios.* FROM tb_grupos_exercicios
+        JOIN tb_grupos_treino_perfis p ON p.grupo_id = tb_grupos_exercicios.grupo_id
         WHERE p.user_id = auth.user_id()
 
   by_user:
