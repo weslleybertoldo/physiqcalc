@@ -18,6 +18,7 @@ import { downloadAndInstall } from "@/lib/apkUpdater";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
+import { selectSemanaConfigsForDia } from "@/lib/semanaSlots";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -74,6 +75,7 @@ interface GrupoExercicio {
 
 interface SemanaConfig {
   dia_semana: string;
+  slot_idx: number | null;
   grupo_id: string | null;
   grupo_usuario_id: string | null;
   tb_grupos_treino: GrupoTreino | null;
@@ -310,7 +312,7 @@ const TreinosPage = () => {
   // Configuração da semana — agora per-user (filtra por user_id) e pode apontar
   // tanto pra grupo global (grupo_id) quanto pessoal (grupo_usuario_id)
   const { data: semanaRows } = useQuery(
-    `SELECT s.dia_semana, s.grupo_id, s.grupo_usuario_id,
+    `SELECT s.dia_semana, s.slot_idx, s.grupo_id, s.grupo_usuario_id,
             g.id as grupo_treino_id, g.nome as grupo_treino_nome
      FROM tb_semana_treinos s
      LEFT JOIN tb_grupos_treino g ON s.grupo_id = g.id
@@ -321,6 +323,7 @@ const TreinosPage = () => {
     if (!semanaRows) return [];
     return (semanaRows as any[]).map((row) => ({
       dia_semana: String(row.dia_semana),
+      slot_idx: row.slot_idx ?? 0,
       grupo_id: row.grupo_id,
       grupo_usuario_id: row.grupo_usuario_id,
       tb_grupos_treino: row.grupo_treino_id
@@ -492,19 +495,21 @@ const TreinosPage = () => {
       });
     }
 
-    const config = semanaConfig.find((s) => s.dia_semana === diaSemana);
-    if (config?.grupo_usuario_id) {
-      const grupo = gruposPessoais.find((g) => g.id === config.grupo_usuario_id) || null;
-      if (grupo) {
-        return [{ slot_idx: 0, grupo, exercicios: gruposExerciciosPessoais[config.grupo_usuario_id] || [], overrideVazio: false, source: 'semana' }];
+    const configs = selectSemanaConfigsForDia(semanaConfig, diaSemana);
+    const slots: DiaSlot[] = [];
+    configs.forEach((config, idx) => {
+      const slotIdx = config.slot_idx ?? 0;
+      if (config.grupo_usuario_id) {
+        const grupo = gruposPessoais.find((g) => g.id === config.grupo_usuario_id) || null;
+        if (grupo) {
+          slots.push({ slot_idx: slotIdx, grupo, exercicios: gruposExerciciosPessoais[config.grupo_usuario_id] || [], overrideVazio: false, source: 'semana' });
+        }
+      } else if (config.grupo_id) {
+        const grupo = config.tb_grupos_treino || grupos.find((g) => g.id === config.grupo_id) || null;
+        slots.push({ slot_idx: slotIdx, grupo, exercicios: gruposExercicios[config.grupo_id] || [], overrideVazio: false, source: 'semana' });
       }
-    }
-    if (config?.grupo_id) {
-      const grupo = config.tb_grupos_treino || grupos.find((g) => g.id === config.grupo_id) || null;
-      return [{ slot_idx: 0, grupo, exercicios: gruposExercicios[config.grupo_id] || [], overrideVazio: false, source: 'semana' }];
-    }
-
-    return [];
+    });
+    return slots;
   }, [overrides, gruposPessoais, gruposExerciciosPessoais, grupos, gruposExercicios, semanaConfig]);
 
   // Compatibilidade: primeiro slot (usado em UI antiga)

@@ -1,0 +1,28 @@
+name: Deploy Edge Function (manual)
+
+# Deploy manual de UMA edge function via Supabase CLI, usando o PAT já existente
+# no secret SUPABASE_PAT (mesma conta dona do projeto PhysiqCalc). Evita depender
+# de credencial local. Dispare por Actions → Run workflow, informando o nome.
+
+on:
+  workflow_dispatch:
+    inputs:
+      function:
+        description: "Nome da edge function (pasta em supabase/functions/)"
+        required: true
+        default: admin-semana-treinos
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PAT }}
+        run: |
+          npx -y supabase@latest functions deploy "${{ inputs.function }}" \
+            --project-ref uxwpwdbbnlticxgtzcsb < /dev/null
