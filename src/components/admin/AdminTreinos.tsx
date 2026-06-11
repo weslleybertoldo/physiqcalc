@@ -254,9 +254,14 @@ const AdminTreinos = ({ onBack }: Props) => {
   };
 
   const handleTogglePerfil = async (grupoId: string, userId: string) => {
-    const current = gruposPerfis[grupoId] || [];
+    const isRemoving = (gruposPerfis[grupoId] || []).includes(userId);
+    // atualização otimista (sem recarregar a página, mantém scroll/posição)
+    setGruposPerfis((prev) => {
+      const arr = prev[grupoId] || [];
+      return { ...prev, [grupoId]: isRemoving ? arr.filter((id) => id !== userId) : [...arr, userId] };
+    });
     try {
-      if (current.includes(userId)) {
+      if (isRemoving) {
         const { error } = await (supabase.from as any)("tb_grupos_treino_perfis")
           .delete().eq("grupo_id", grupoId).eq("user_id", userId);
         if (error) throw error;
@@ -265,9 +270,10 @@ const AdminTreinos = ({ onBack }: Props) => {
           .insert({ grupo_id: grupoId, user_id: userId });
         if (error) throw error;
       }
-      await loadData();
+      toast.success(isRemoving ? "Removido." : "Salvo.");
     } catch (err: any) {
       toast.error("Erro ao atualizar perfis: " + (err?.message || "tente novamente"));
+      await loadData(); // reverte pro estado real do servidor
     }
   };
 
@@ -378,7 +384,10 @@ const AdminTreinos = ({ onBack }: Props) => {
                         <p className="text-xs text-muted-foreground font-body mt-2">Carregando usuários...</p>
                       ) : (
                         <div className="space-y-1 max-h-40 overflow-y-auto mt-2">
-                          {users.map((u) => (
+                          {[...users].sort((a, b) => {
+                            const sel = gruposPerfis[g.id] || [];
+                            return (sel.includes(a.id) ? 0 : 1) - (sel.includes(b.id) ? 0 : 1);
+                          }).map((u) => (
                             <label key={u.id} className="flex items-center gap-2 py-1 cursor-pointer">
                               <input
                                 type="checkbox"
