@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { LogOut, Search, Eye, Settings, Calculator, FileDown, Ban, Trash2, Tags, Dumbbell } from "lucide-react";
 import { formatarDataCurta } from "@/utils/formatDate";
 import { adminLogout, isAdminAuthenticated, isAdminAuthenticatedAsync } from "@/components/AdminLoginDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminUserConfig from "@/components/AdminUserConfig";
 import AdminUserView from "@/components/AdminUserView";
 import AdminTagManager from "@/components/AdminTagManager";
@@ -32,34 +32,21 @@ const AdminPanel = () => {
   const [search, setSearch] = useState("");
   const [tagFiltro, setTagFiltro] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "config" | "view" | "calculator" | "tags" | "treinos">("list");
   const [allTags, setAllTags] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const [userTagsMap, setUserTagsMap] = useState<Record<string, string[]>>({});
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Navegação interna history-aware: cada sub-aba empilha uma entrada no
-  // history, então o "voltar" (botão visual OU back do Android) volta pra lista
-  // do admin em vez de sair direto pro app. Só sai do /admin quando já na lista.
-  const viewModeRef = useRef(viewMode);
-  viewModeRef.current = viewMode;
+  // Navegação via URL (?v=<tela>&u=<userId>): a sub-tela é derivada da URL, então
+  // recarregar a página (F5) mantém a mesma tela e voltar/avançar funcionam nativos.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewMode = (searchParams.get("v") as "list" | "config" | "view" | "calculator" | "tags" | "treinos") || "list";
+  const selectedUser = searchParams.get("u");
 
   const goToView = (mode: typeof viewMode, userId?: string) => {
-    if (userId) setSelectedUser(userId);
-    setViewMode(mode);
-    window.history.pushState({ adminView: mode }, "");
+    const params: Record<string, string> = { v: mode };
+    if (userId) params.u = userId;
+    setSearchParams(params); // push: empilha no history pra o "voltar" funcionar
   };
-
-  useEffect(() => {
-    const onPop = () => {
-      if (viewModeRef.current !== "list") {
-        setViewMode("list");
-        loadUsers();
-      }
-      // já na lista: deixa o back natural sair do /admin
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
 
   useEffect(() => {
     // Verificação síncrona rápida + async com HMAC
@@ -73,9 +60,15 @@ const AdminPanel = () => {
         navigate("/");
         return;
       }
-      loadUsers();
+      setAuthChecked(true);
     });
   }, [navigate]);
+
+  // Carrega a lista quando autenticado e na tela de lista (mount, reload em /admin
+  // e ao voltar de uma sub-tela). Sub-telas (config/view) carregam seus próprios dados.
+  useEffect(() => {
+    if (authChecked && viewMode === "list") loadUsers();
+  }, [authChecked, viewMode]);
 
   const loadUsers = async () => {
     setLoading(true);
