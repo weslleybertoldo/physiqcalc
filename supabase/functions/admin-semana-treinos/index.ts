@@ -101,17 +101,30 @@ Deno.serve(async (req) => {
       const grupos = Array.isArray(body?.grupos) ? body.grupos : [];
       if (!DIAS.has(dia)) return jsonErr("invalid_dia", 400, origin);
       const { catalogo, pessoal } = await gruposDisponiveis(admin, userId);
+      // valida e normaliza: cada item é OU catálogo OU pessoal (nunca ambos)
+      const norm: { grupo_id: string | null; grupo_usuario_id: string | null }[] = [];
       for (const g of grupos) {
-        if (g?.grupo_id && !catalogo.has(g.grupo_id)) return jsonErr("grupo_nao_disponivel", 400, origin);
-        if (g?.grupo_usuario_id && !pessoal.has(g.grupo_usuario_id)) return jsonErr("grupo_nao_disponivel", 400, origin);
-        if (!g?.grupo_id && !g?.grupo_usuario_id) return jsonErr("grupo_invalido", 400, origin);
+        const gid = g?.grupo_id ?? null;
+        const guid = g?.grupo_usuario_id ?? null;
+        if (gid && guid) return jsonErr("grupo_ambiguo", 400, origin);
+        if (gid) {
+          if (!catalogo.has(gid)) return jsonErr("grupo_nao_disponivel", 400, origin);
+          norm.push({ grupo_id: gid, grupo_usuario_id: null });
+        } else if (guid) {
+          if (!pessoal.has(guid)) return jsonErr("grupo_nao_disponivel", 400, origin);
+          norm.push({ grupo_id: null, grupo_usuario_id: guid });
+        } else {
+          return jsonErr("grupo_invalido", 400, origin);
+        }
       }
       const del = await admin.from("tb_semana_treinos").delete().eq("user_id", userId).eq("dia_semana", dia);
       if (del.error) throw del.error;
-      if (grupos.length > 0) {
-        const rows = grupos.map((g: any, i: number) => ({
+      // não-atômico de propósito: se o insert falhar após o delete, o dia fica vazio
+      // (admin re-marca). Aceitável para um painel admin.
+      if (norm.length > 0) {
+        const rows = norm.map((g, i) => ({
           user_id: userId, dia_semana: dia, slot_idx: i,
-          grupo_id: g.grupo_id ?? null, grupo_usuario_id: g.grupo_usuario_id ?? null,
+          grupo_id: g.grupo_id, grupo_usuario_id: g.grupo_usuario_id,
           updated_at: new Date().toISOString(),
         }));
         const ins = await admin.from("tb_semana_treinos").insert(rows);
