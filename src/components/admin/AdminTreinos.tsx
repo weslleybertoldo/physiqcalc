@@ -19,24 +19,9 @@ interface GrupoTreino {
   nome: string;
 }
 
-interface GrupoExercicio {
-  exercicio_id: string;
-  ordem: number;
-}
-
-interface SemanaConfig {
-  dia_semana: string;
-  grupo_id: string | null;
-}
-
 interface Props {
   onBack: () => void;
 }
-
-const DIAS = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
-const DIAS_LABEL: Record<string, string> = {
-  SEG: "Segunda", TER: "Terça", QUA: "Quarta", QUI: "Quinta", SEX: "Sexta", SAB: "Sábado", DOM: "Domingo",
-};
 
 interface GrupoMuscular {
   id: string;
@@ -44,10 +29,9 @@ interface GrupoMuscular {
 }
 
 const AdminTreinos = ({ onBack }: Props) => {
-  const [tab, setTab] = useState<"semana" | "grupos" | "biblioteca" | "relatorio">("semana");
+  const [tab, setTab] = useState<"grupos" | "biblioteca" | "relatorio">("grupos");
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [grupos, setGrupos] = useState<GrupoTreino[]>([]);
-  const [semanaConfig, setSemanaConfig] = useState<SemanaConfig[]>([]);
   const [gruposExercicios, setGruposExercicios] = useState<Record<string, string[]>>({});
   const [gruposPerfis, setGruposPerfis] = useState<Record<string, string[]>>({});
   const [perfilAberto, setPerfilAberto] = useState<string | null>(null);
@@ -78,10 +62,9 @@ const AdminTreinos = ({ onBack }: Props) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [exRes, grRes, smRes, geRes, gmRes, perfRes] = await Promise.all([
+      const [exRes, grRes, geRes, gmRes, perfRes] = await Promise.all([
         supabase.from("tb_exercicios").select("*").order("nome"),
         supabase.from("tb_grupos_treino").select("*").order("nome"),
-        supabase.from("tb_semana_treinos").select("dia_semana, grupo_id"),
         supabase.from("tb_grupos_exercicios").select("grupo_id, exercicio_id, ordem").order("ordem"),
         supabase.from("grupos_musculares").select("*").order("nome"),
         (supabase.from as any)("tb_grupos_treino_perfis").select("grupo_id, user_id"),
@@ -92,7 +75,6 @@ const AdminTreinos = ({ onBack }: Props) => {
 
       setExercicios((exRes.data as Exercicio[]) || []);
       setGrupos((grRes.data as GrupoTreino[]) || []);
-      setSemanaConfig((smRes.data as SemanaConfig[]) || []);
       setGruposMusculares((gmRes.data as GrupoMuscular[]) || []);
 
       if (gmRes.data && gmRes.data.length > 0 && !novoExGrupo) {
@@ -129,20 +111,6 @@ const AdminTreinos = ({ onBack }: Props) => {
 
   useEffect(() => { loadData(); }, []);
   useEffect(() => { if (tab === "relatorio" || tab === "grupos") loadUsers(); }, [tab]);
-
-  // === Semana ===
-  const handleSemanaChange = async (dia: string, grupoId: string | null) => {
-    try {
-      const { error } = await supabase.from("tb_semana_treinos").upsert(
-        { dia_semana: dia, grupo_id: grupoId || null, updated_at: new Date().toISOString() },
-        { onConflict: "dia_semana" }
-      );
-      if (error) throw error;
-      await loadData();
-    } catch (err: any) {
-      toast.error("Erro ao salvar semana: " + (err?.message || "tente novamente"));
-    }
-  };
 
   // === Biblioteca ===
   // Sobe a imagem/gif pro bucket publico 'exercicios' (escrita restrita a admin
@@ -299,7 +267,6 @@ const AdminTreinos = ({ onBack }: Props) => {
   };
 
   const tabs = [
-    { key: "semana" as const, label: "📅 Semana" },
     { key: "grupos" as const, label: "🗂️ Grupos" },
     { key: "biblioteca" as const, label: "📚 Biblioteca" },
     { key: "relatorio" as const, label: "📊 Relatório" },
@@ -314,7 +281,7 @@ const AdminTreinos = ({ onBack }: Props) => {
           </button>
           <div>
             <h1 className="font-heading text-2xl text-foreground">Gerenciar Treinos</h1>
-            <p className="text-xs text-muted-foreground font-body">Configuração de exercícios, grupos e semana</p>
+            <p className="text-xs text-muted-foreground font-body">Configuração de exercícios e grupos</p>
           </div>
         </header>
 
@@ -333,27 +300,6 @@ const AdminTreinos = ({ onBack }: Props) => {
 
         {loading ? (
           <p className="text-muted-foreground font-body">Carregando...</p>
-        ) : tab === "semana" ? (
-          <div className="space-y-3">
-            {DIAS.map((dia) => {
-              const config = semanaConfig.find((s) => s.dia_semana === dia);
-              return (
-                <div key={dia} className="flex items-center gap-4 py-3 border-b border-muted-foreground/20">
-                  <span className="font-heading text-sm text-foreground w-20">{DIAS_LABEL[dia]}</span>
-                  <select
-                    value={config?.grupo_id || ""}
-                    onChange={(e) => handleSemanaChange(dia, e.target.value || null)}
-                    className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary transition-colors focus-visible:border-primary focus-visible:border-b-2"
-                  >
-                    <option value="">— Descanso —</option>
-                    {grupos.map((g) => (
-                      <option key={g.id} value={g.id}>{g.nome}</option>
-                    ))}
-                  </select>
-                </div>
-              );
-            })}
-          </div>
         ) : tab === "grupos" ? (
           <div className="space-y-6">
             <div className="flex gap-2">
