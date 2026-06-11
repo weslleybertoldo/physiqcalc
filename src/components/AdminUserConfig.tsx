@@ -178,7 +178,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
       });
       if (avalError) console.warn("[AdminUserConfig] Erro ao registrar avaliação:", avalError);
 
-      onBack();
+      toast.success("Dados salvos.");
     } catch (err) {
       console.error("[AdminUserConfig] Erro inesperado:", err);
       toast.error("Erro ao salvar.");
