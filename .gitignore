@@ -29,3 +29,6 @@ keystore_base64.txt
 .env*
 !.env.example
 .vercel
+
+supabase/.temp/
+deno.lock
