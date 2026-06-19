@@ -4,6 +4,10 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Schema do ambiente: "public" (prod) ou "staging". Dirige PostgREST, edge functions (x-schema)
+// e as escritas do PowerSync (uploadData usa supabase.from → respeita db.schema).
+export const DB_SCHEMA = (import.meta.env.VITE_DB_SCHEMA as string) || "public";
+
 // Fetch com timeout e retry automático para todas as queries
 function createResilientFetch(retries = 2, timeout = 15000) {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -54,7 +58,9 @@ function createResilientFetch(retries = 2, timeout = 15000) {
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   global: {
     fetch: createResilientFetch(2, 15000),
+    headers: { "x-schema": DB_SCHEMA },
   },
+  db: { schema: DB_SCHEMA as "public" },
   auth: {
     storage: localStorage,
     persistSession: true,

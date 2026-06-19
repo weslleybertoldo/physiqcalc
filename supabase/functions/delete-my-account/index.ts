@@ -1,4 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { AsyncLocalStorage } from "node:async_hooks";
+// Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
+const _ALLOWED_SCHEMAS = ["public", "staging"];
+function resolveSchema(req: Request): string {
+  const h = (req.headers.get("x-schema") || "public").toLowerCase();
+  return _ALLOWED_SCHEMAS.includes(h) ? h : "public";
+}
+const schemaCtx = new AsyncLocalStorage<string>();
+function currentSchema(): "public" { return (schemaCtx.getStore() || "public") as "public"; }
 
 const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.vercel.app",
@@ -14,7 +23,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-schema",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -30,6 +39,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
+  schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
 
@@ -44,7 +54,7 @@ Deno.serve(async (req) => {
   const userId = data.user.id;
 
   // Rate limit: 3 tentativas por hora por user
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
   const { data: allowed } = await admin.rpc("check_rate_limit", {
     p_user_id: userId, p_endpoint: "delete-my-account", p_max_count: 3, p_window_secs: 3600,
   });

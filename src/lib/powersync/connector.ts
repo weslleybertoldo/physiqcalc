@@ -7,7 +7,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 
-const POWERSYNC_URL = "https://69cc4d1df69619e9d4834456.powersync.journeyapps.com";
+// Instância PowerSync por ambiente. Prod (public) = instância default; staging deve apontar
+// para uma instância PowerSync própria (sync rules lendo o schema staging) via VITE_POWERSYNC_URL.
+// Escritas (uploadData) usam supabase.from → já respeitam db.schema (não vazam para prod).
+const POWERSYNC_URL =
+  (import.meta.env.VITE_POWERSYNC_URL as string) ||
+  "https://69cc4d1df69619e9d4834456.powersync.journeyapps.com";
 
 /// Postgres Response codes that we cannot recover from by retrying.
 /// Nota: 23505 (unique violation) é recuperável e NÃO está aqui.

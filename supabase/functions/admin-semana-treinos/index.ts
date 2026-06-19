@@ -1,4 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { AsyncLocalStorage } from "node:async_hooks";
+// Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
+const _ALLOWED_SCHEMAS = ["public", "staging"];
+function resolveSchema(req: Request): string {
+  const h = (req.headers.get("x-schema") || "public").toLowerCase();
+  return _ALLOWED_SCHEMAS.includes(h) ? h : "public";
+}
+const schemaCtx = new AsyncLocalStorage<string>();
+function currentSchema(): "public" { return (schemaCtx.getStore() || "public") as "public"; }
 
 const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.vercel.app",
@@ -14,7 +23,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-schema",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -33,7 +42,7 @@ const DIAS = new Set(["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"]);
 
 async function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): Promise<boolean> {
   try {
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
     const { data, error } = await admin.rpc("check_rate_limit", {
       p_user_id: userId, p_endpoint: endpoint, p_max_count: maxCount, p_window_secs: windowSecs,
     });
@@ -74,6 +83,7 @@ async function gruposDisponiveis(admin: any, userId: string): Promise<{ catalogo
 }
 
 Deno.serve(async (req) => {
+  schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
   const { error: authErr } = await requireAdmin(req, "admin-semana-treinos", 60, 60);
@@ -83,7 +93,7 @@ Deno.serve(async (req) => {
     const action = body?.action;
     const userId = body?.userId;
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
 
     if (action === "get") {
       const [semanaRes, disp] = await Promise.all([
