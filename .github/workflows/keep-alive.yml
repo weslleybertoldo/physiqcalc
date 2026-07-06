@@ -2,13 +2,50 @@ name: Keep Supabase + PowerSync Active
 
 on:
   schedule:
-    # A cada 4 dias as 9h UTC. Margem ampla sob o limite de 7 dias do Free Plan,
-    # absorvendo eventuais atrasos do agendador do GitHub Actions.
+    # Supabase: 4x/dia. Criterio oficial do auto-pause NAO e "qualquer
+    # atividade reseta o contador" — e "sufficient user database activity...
+    # a few user requests to the database EACH DAY over the previous week"
+    # (docs/guides/platform/free-project-pausing). Ping espacado (3-5 dias)
+    # falhou no NutriTrack: runs verdes 28/06 e 01/07 e pausou 04/07/2026.
+    - cron: '0 3,9,15,21 * * *'
+    # PowerSync: deploy real a cada 4 dias (deploy 4x/dia seria excessivo)
     - cron: '0 9 */4 * *'
   workflow_dispatch:
 
 jobs:
-  keep-alive:
+  keep-alive-supabase:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3,9,15,21 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pings REST/PostgREST (atividade que CONTA p/ o auto-pause)
+        run: |
+          set -e
+          ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4d3B3ZGJibmx0aWN4Z3R6Y3NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzE3OTcsImV4cCI6MjA4OTU0Nzc5N30.AFEAJgrzbirf_kgkO9Yt7LtVzFqpWkvOjdwxbm8fs2Q"
+          # 3 queries por run x 4 runs/dia = ~12 queries/dia ("a few each day")
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "apikey: $ANON" \
+              -H "Authorization: Bearer $ANON" \
+              "https://uxwpwdbbnlticxgtzcsb.supabase.co/rest/v1/app_config?select=*&limit=$i")
+            echo "PhysiqCalc REST ping $i/3: HTTP $CODE"
+            [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+            sleep 2
+          done
+
+      - name: Executar SQL real no Postgres (camada extra Supabase)
+        run: |
+          set -e
+          RES=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_PAT }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"SELECT 1 as alive, now() as ts"}' \
+            "https://api.supabase.com/v1/projects/uxwpwdbbnlticxgtzcsb/database/query")
+          CODE=$(echo "$RES" | tail -1)
+          echo "PhysiqCalc SQL ping: HTTP $CODE"
+          [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
+
+  keep-alive-powersync:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 9 */4 * *'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,25 +76,3 @@ jobs:
             --instance-id 69cc4d1d8fa42c16d7f6eb27 \
             --project-id 69cc4d1caaa9a30007b4ec2c \
             --org-id 69cc4bec866ae00007694860 < /dev/null
-
-      - name: Ping runtime do Supabase (auth/v1/health) — mantem projeto ativo
-        run: |
-          set -e
-          RES=$(curl -s -w "\n%{http_code}" \
-            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4d3B3ZGJibmx0aWN4Z3R6Y3NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzE3OTcsImV4cCI6MjA4OTU0Nzc5N30.AFEAJgrzbirf_kgkO9Yt7LtVzFqpWkvOjdwxbm8fs2Q" \
-            "https://uxwpwdbbnlticxgtzcsb.supabase.co/auth/v1/health")
-          CODE=$(echo "$RES" | tail -1)
-          echo "PhysiqCalc runtime ping: HTTP $CODE"
-          [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
-
-      - name: Executar SQL real no Postgres (camada extra Supabase)
-        run: |
-          set -e
-          RES=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_PAT }}" \
-            -H "Content-Type: application/json" \
-            -d '{"query":"SELECT 1 as alive, now() as ts"}' \
-            "https://api.supabase.com/v1/projects/uxwpwdbbnlticxgtzcsb/database/query")
-          CODE=$(echo "$RES" | tail -1)
-          echo "PhysiqCalc SQL ping: HTTP $CODE"
-          [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
