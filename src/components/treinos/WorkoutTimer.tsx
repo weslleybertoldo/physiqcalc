@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { Play, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePowerSync } from "@powersync/react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Persistência do timer de treino no localStorage
 const LS_WORKOUT_KEY = "physiq_workout_timer";
@@ -72,6 +76,16 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
   const [duracaoFinal, setDuracaoFinal] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Todas as séries concluídas com o timer rodando → pergunta se finaliza o treino.
+  // Pergunta 1x por transição (Não = continua contando; refaz/conclui de novo → pergunta de novo).
+  const [confirmFim, setConfirmFim] = useState(false);
+  const todasConcluidasRef = useRef(false);
+  const todasConcluidas = series.length > 0 && series.every((s) => s.concluida);
+  useEffect(() => {
+    if (ativo && todasConcluidas && !todasConcluidasRef.current) setConfirmFim(true);
+    todasConcluidasRef.current = todasConcluidas;
+  }, [ativo, todasConcluidas]);
+
   // Ao mudar de dia, verificar se o treino salvo é para o mesmo dia
   useEffect(() => {
     const saved = lerWorkoutSalvo();
@@ -88,14 +102,22 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
     }
   }, [dateKey]);
 
+  // Tick recalcula pelo timestamp de início (não incrementa +1): em background o
+  // WebView suspende timers JS e ticks se perdem — ao voltar, o valor corrige na hora.
   useEffect(() => {
-    if (ativo) {
-      intervalRef.current = setInterval(() => {
-        setSegundos((s) => s + 1);
-      }, 1000);
+    if (ativo && iniciadoEm) {
+      const tick = () =>
+        setSegundos(Math.max(0, Math.floor((Date.now() - iniciadoEm.getTime()) / 1000)));
+      tick();
+      intervalRef.current = setInterval(tick, 1000);
+      document.addEventListener("visibilitychange", tick);
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        document.removeEventListener("visibilitychange", tick);
+      };
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [ativo]);
+  }, [ativo, iniciadoEm]);
 
   const handleIniciar = () => {
     const agora = Date.now();
@@ -199,6 +221,23 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
       >
         <CheckCircle2 size={14} /> TREINO CONCLUÍDO
       </button>
+
+      <AlertDialog open={confirmFim} onOpenChange={setConfirmFim}>
+        <AlertDialogContent className="bg-background border-muted-foreground/30 max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Treino foi concluído?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as séries de {grupoNome} foram concluídas. Finalizar a contagem em {formatTimer(segundos)}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não, continuar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConfirmFim(false); void handleConcluir(); }}>
+              Sim, finalizar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
