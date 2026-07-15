@@ -68,11 +68,15 @@ jobs:
             --project-id 69cc4d1caaa9a30007b4ec2c \
             --org-id 69cc4bec866ae00007694860 < /dev/null
 
-      - name: Deploy sync-config (Development) — mantem instancia ativa
+      # A instância Development é o PowerSync do STAGING (lê o schema staging) —
+      # deploya o sync-config.staging.yaml, NÃO o de prod.
+      - name: Deploy sync-config (Development/staging) — mantem instancia ativa
         env:
           PS_ADMIN_TOKEN: ${{ secrets.POWERSYNC_PAT }}
         run: |
+          cp powersync/sync-config.staging.yaml powersync/sync-config.yaml
           npx -y powersync@latest deploy sync-config \
             --instance-id 69cc4d1d8fa42c16d7f6eb27 \
             --project-id 69cc4d1caaa9a30007b4ec2c \
             --org-id 69cc4bec866ae00007694860 < /dev/null
+          git checkout -- powersync/sync-config.yaml

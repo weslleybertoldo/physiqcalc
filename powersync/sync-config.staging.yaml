@@ -1,0 +1,40 @@
+# STAGING — igual ao sync-config.yaml mas lendo o schema staging (instância Dev).
+# Gerado a partir do sync-config.yaml; manter os dois em sincronia.
+# Adds YAML Schema support for VSCode users with the YAML extension installed. This enables features like validation and autocompletion based on the provided schema.
+# yaml-language-server: $schema=https://unpkg.com/@powersync/service-sync-rules@latest/schema/sync_rules.json
+config:
+  edition: 3
+
+streams:
+  global:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM staging.tb_exercicios
+      - SELECT * FROM staging.grupos_musculares
+
+  grupos_por_perfil:
+    auto_subscribe: true
+    queries:
+      - SELECT tb_grupos_treino.* FROM staging.tb_grupos_treino
+        JOIN staging.tb_grupos_treino_perfis p ON p.grupo_id = tb_grupos_treino.id
+        WHERE p.user_id = auth.user_id()
+      - SELECT tb_grupos_exercicios.* FROM staging.tb_grupos_exercicios
+        JOIN staging.tb_grupos_treino_perfis p ON p.grupo_id = tb_grupos_exercicios.grupo_id
+        WHERE p.user_id = auth.user_id()
+
+  by_user:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM staging.tb_treino_series WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_treino_concluido WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_treino_dia_override WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.treino_historico WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.physiq_profiles WHERE id = auth.user_id()
+      - SELECT * FROM staging.exercicio_ordem_usuario WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_grupos_treino_usuario WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_exercicios_usuario WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_grupos_exercicios_usuario WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_exercicio_comentarios WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_semana_treinos WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_academias WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_academia_pesos WHERE user_id = auth.user_id()
