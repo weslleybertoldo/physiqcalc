@@ -8,6 +8,7 @@ import GenderToggle from "./GenderToggle";
 import { levels } from "./TdeeTable";
 import AdminTagSelector from "./AdminTagSelector";
 import AdminSemanaUsuario from "./AdminSemanaUsuario";
+import AdminPagamentosStatus from "./AdminPagamentosStatus";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
 
@@ -492,6 +493,9 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
               </div>
             </div>
           </section>
+
+          {/* Pagamentos do aluno: situação, assinatura, histórico/comprovantes, reembolso */}
+          <AdminPagamentosStatus userId={userId} />
           </>)}
 
           {configTab === "dobras" && (<>

@@ -411,8 +411,11 @@ Deno.serve(async (req) => {
     if (action === "receipt") {
       const pagamentoId = body?.pagamentoId;
       if (!pagamentoId || typeof pagamentoId !== "string") return jsonErr("missing_pagamentoId", 400, origin);
-      const { data: row } = await admin.from("physiq_pagamentos").select("*")
-        .eq("id", pagamentoId).eq("user_id", user.id).maybeSingle();
+      // admin pode ver comprovante de qualquer aluno; aluno só o próprio
+      const isAdmin = (user.app_metadata as any)?.role === "admin";
+      let q = admin.from("physiq_pagamentos").select("*").eq("id", pagamentoId);
+      if (!isAdmin) q = q.eq("user_id", user.id);
+      const { data: row } = await q.maybeSingle();
       if (!row) return jsonErr("not_found", 404, origin);
       let mp: any = null;
       if ((row as any).mp_payment_id) {
@@ -474,20 +477,68 @@ Deno.serve(async (req) => {
       await refreshPendentes(userId);
       const [prof, pagRes, assRes, pagoAte] = await Promise.all([
         getMensalidade(userId),
-        admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, created_at")
-          .eq("user_id", userId).order("created_at", { ascending: false }).limit(12),
-        admin.from("physiq_assinaturas").select("id, status, valor, created_at")
+        admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, mp_payment_id, pix_expira_em, created_at, updated_at")
+          .eq("user_id", userId).order("created_at", { ascending: false }).limit(24),
+        admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
           .eq("user_id", userId).order("created_at", { ascending: false }).limit(1),
         getPagoAte(userId),
       ]);
       const pagamentos = (pagRes.data as any[]) || [];
       const assinaturaAdm = ((assRes.data as any[]) || [])[0] || null;
+      if (assinaturaAdm && ["authorized", "pending"].includes(assinaturaAdm.status)) {
+        assinaturaAdm.proxima_cobranca = await proximaCobranca(assinaturaAdm);
+      }
+      if (assinaturaAdm) delete assinaturaAdm.mp_preapproval_id;
       const emDia = (pagoAte !== null && pagoAte > new Date()) || assinaturaAdm?.status === "authorized";
       return jsonOk({
         mensalidade: prof, emDia, mesPago: emDia,
         pagoAte: pagoAte ? pagoAte.toISOString() : null,
         assinatura: assinaturaAdm, pagamentos,
       }, origin);
+    }
+
+    // ---- admin cancela a assinatura de um aluno ----
+    if (action === "admin-cancel-subscription") {
+      const role = (user.app_metadata as any)?.role;
+      if (role !== "admin") return jsonErr("forbidden", 403, origin);
+      const userId = body?.userId;
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      const { data: ativa } = await admin.from("physiq_assinaturas")
+        .select("id, mp_preapproval_id").eq("user_id", userId).in("status", ["authorized", "pending", "paused"])
+        .order("created_at", { ascending: false }).limit(1);
+      const a = ((ativa as any[]) || [])[0];
+      if (!a) return jsonErr("sem_assinatura", 400, origin);
+      const { status } = await mpFetch(`/preapproval/${a.mp_preapproval_id}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (status >= 300) return jsonErr("mp_error", 502, origin);
+      await admin.from("physiq_assinaturas").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", a.id);
+      return jsonOk({ ok: true }, origin);
+    }
+
+    // ---- admin reembolsa um pagamento (total) ----
+    if (action === "admin-refund") {
+      const role = (user.app_metadata as any)?.role;
+      if (role !== "admin") return jsonErr("forbidden", 403, origin);
+      const pagamentoId = body?.pagamentoId;
+      if (!pagamentoId || typeof pagamentoId !== "string") return jsonErr("missing_pagamentoId", 400, origin);
+      const { data: row } = await admin.from("physiq_pagamentos").select("id, mp_payment_id, status, valor")
+        .eq("id", pagamentoId).maybeSingle();
+      if (!row) return jsonErr("not_found", 404, origin);
+      if ((row as any).status !== "approved") return jsonErr("nao_reembolsavel", 400, origin);
+      if (!(row as any).mp_payment_id) return jsonErr("sem_transacao_mp", 400, origin);
+      const { status, body: ref } = await mpFetch(`/v1/payments/${(row as any).mp_payment_id}/refunds`, {
+        method: "POST",
+        headers: { "X-Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({}),
+      });
+      if (status >= 300) {
+        console.error("mp refund fail", status, JSON.stringify(ref).slice(0, 400));
+        return jsonErr("mp_error", 502, origin);
+      }
+      await admin.from("physiq_pagamentos").update({ status: "refunded", updated_at: new Date().toISOString() }).eq("id", (row as any).id);
+      return jsonOk({ ok: true, refund_id: ref?.id || null }, origin);
     }
 
     return jsonErr("unknown_action", 400, origin);
