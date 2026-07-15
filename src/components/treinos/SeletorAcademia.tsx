@@ -80,9 +80,10 @@ const SeletorAcademia = ({ userId, academiaAtual, onTrocar, onSalvar, onCriada, 
           onChange={(e) => handleSelect(e.target.value)}
           className="flex-1 min-w-[140px] bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-none focus:border-primary"
         >
-          <option value="">Selecionar academia...</option>
+          {/* cor explícita: o dropdown nativo não herda o tema e o texto ficava branco no fundo branco */}
+          <option value="" className="bg-background text-foreground">Selecionar academia...</option>
           {(academias || []).map((a) => (
-            <option key={a.id} value={a.id}>{a.nome}</option>
+            <option key={a.id} value={a.id} className="bg-background text-foreground">{a.nome}</option>
           ))}
         </select>
         <button
