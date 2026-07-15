@@ -247,6 +247,47 @@ Deno.serve(async (req) => {
       return jsonOk({ pagamento: inserted }, origin);
     }
 
+    // ---- cartão avulso: paga só o mês atual ----
+    if (action === "create-card-payment") {
+      const cardToken = body?.card_token;
+      if (!cardToken || typeof cardToken !== "string") return jsonErr("missing_card_token", 400, origin);
+      const valor = await getMensalidade(user.id);
+      if (!valor) return jsonErr("sem_mensalidade", 400, origin);
+      const mesRef = mesRefAtual();
+
+      const { data: pagos } = await admin.from("physiq_pagamentos")
+        .select("id").eq("user_id", user.id).eq("mes_ref", mesRef).eq("status", "approved").limit(1);
+      if (((pagos as any[]) || []).length > 0) return jsonErr("mes_ja_pago", 400, origin);
+
+      const payload: Record<string, unknown> = {
+        transaction_amount: valor,
+        token: cardToken,
+        description: `Mensalidade PhysiqCalc — ${mesLabel(mesRef)}`,
+        installments: 1,
+        payer: { email: payerEmail(user.email) },
+        external_reference: `${currentSchema()}:${user.id}:${mesRef}`,
+        notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
+      };
+      if (body?.payment_method_id && typeof body.payment_method_id === "string") payload.payment_method_id = body.payment_method_id;
+      if (body?.issuer_id) payload.issuer_id = body.issuer_id;
+
+      const { status, body: pay } = await mpFetch("/v1/payments", {
+        method: "POST",
+        headers: { "X-Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify(payload),
+      });
+      if (status >= 300 || !pay?.id) {
+        console.error("mp create-card-payment fail", status, JSON.stringify(pay).slice(0, 500));
+        return jsonErr("mp_error", 502, origin);
+      }
+      const { data: inserted, error: insErr } = await admin.from("physiq_pagamentos").insert({
+        user_id: user.id, tipo: "cartao", valor, mes_ref: mesRef,
+        mp_payment_id: String(pay.id), status: pay.status || "pending",
+      }).select().single();
+      if (insErr) throw insErr;
+      return jsonOk({ pagamento: inserted, status_detail: pay.status_detail || null }, origin);
+    }
+
     // ---- assinatura recorrente no cartão ----
     if (action === "create-subscription") {
       const cardToken = body?.card_token;

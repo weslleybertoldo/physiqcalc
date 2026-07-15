@@ -68,7 +68,7 @@ const PagamentosPage = () => {
   const [status, setStatus] = useState<MpStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [showCard, setShowCard] = useState(false);
+  const [cardMode, setCardMode] = useState<"avulso" | "assinatura" | null>(null);
   const [pixData, setPixData] = useState<{ qr: string; qrBase64: string | null; expiraEm: string | null } | null>(null);
   const [comprovante, setComprovante] = useState<MpPagamento | null>(null);
   const [receiptMp, setReceiptMp] = useState<any | null>(null);
@@ -142,13 +142,25 @@ const PagamentosPage = () => {
 
   const handleCardSubmit = async (formData: any) => {
     try {
-      await invokeMp("create-subscription", { card_token: formData?.token });
-      toast.success("Assinatura criada! A cobrança mensal é automática.");
-      setShowCard(false);
+      if (cardMode === "avulso") {
+        const r = await invokeMp<{ pagamento: MpPagamento }>("create-card-payment", {
+          card_token: formData?.token,
+          payment_method_id: formData?.payment_method_id,
+          issuer_id: formData?.issuer_id,
+        });
+        if (r.pagamento?.status === "approved") toast.success("Pagamento aprovado! Mês quitado.");
+        else if (r.pagamento?.status === "rejected") toast.error("Pagamento recusado pelo cartão.");
+        else toast.info("Pagamento em processamento — o status atualiza em instantes.");
+      } else {
+        await invokeMp("create-subscription", { card_token: formData?.token });
+        toast.success("Assinatura criada! A cobrança mensal é automática.");
+      }
+      setCardMode(null);
       await load();
     } catch (e: any) {
       const msg = e?.message === "assinatura_ja_ativa" ? "Você já tem uma assinatura ativa."
-        : "Erro ao criar assinatura. Verifique os dados do cartão.";
+        : e?.message === "mes_ja_pago" ? "O mês atual já está pago."
+        : "Erro no pagamento. Verifique os dados do cartão.";
       toast.error(msg);
       throw e; // Brick mostra estado de erro
     }
@@ -265,7 +277,7 @@ const PagamentosPage = () => {
             <div className="bg-card border border-border rounded-xl p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <CreditCard size={16} className="text-primary" />
-                <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Assinatura no cartão</h2>
+                <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Pagar com cartão</h2>
               </div>
               {assinaturaAtiva ? (
                 <div className="space-y-3">
@@ -277,10 +289,16 @@ const PagamentosPage = () => {
                     Cancelar assinatura
                   </button>
                 </div>
-              ) : showCard ? (
+              ) : cardMode ? (
                 <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-body">
+                    {cardMode === "avulso"
+                      ? `Pagamento único de ${fmtBRL(status.mensalidade)} — só o mês de ${status.mesLabel}.`
+                      : `Assinatura de ${fmtBRL(status.mensalidade)}/mês com cobrança automática. Cancele quando quiser.`}
+                  </p>
                   {MP_PUBLIC_KEY ? (
                     <CardPayment
+                      key={cardMode}
                       initialization={{ amount: status.mensalidade, payer: { email: user?.email || "" } }}
                       customization={{ paymentMethods: { maxInstallments: 1 } }}
                       onSubmit={handleCardSubmit}
@@ -289,7 +307,7 @@ const PagamentosPage = () => {
                   ) : (
                     <p className="text-xs text-destructive font-body">Chave pública do Mercado Pago não configurada.</p>
                   )}
-                  <button type="button" onClick={() => setShowCard(false)}
+                  <button type="button" onClick={() => setCardMode(null)}
                     className="flex items-center gap-1 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
                     <X size={12} /> Fechar
                   </button>
@@ -297,11 +315,17 @@ const PagamentosPage = () => {
               ) : (
                 <>
                   <p className="text-xs text-muted-foreground font-body">
-                    Cobrança automática todo mês, sem precisar lembrar. Cancele quando quiser.
+                    Pague só o mês atual ou assine pra cobrar automático todo mês.
                   </p>
-                  <button type="button" onClick={() => setShowCard(true)}
-                    className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
-                    Assinar com cartão
+                  {!status.mesPago && (
+                    <button type="button" onClick={() => setCardMode("avulso")}
+                      className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
+                      Pagar só este mês
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setCardMode("assinatura")}
+                    className="w-full py-2.5 border border-primary/40 text-primary rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/10 transition-colors">
+                    Assinar (automático todo mês)
                   </button>
                 </>
               )}
