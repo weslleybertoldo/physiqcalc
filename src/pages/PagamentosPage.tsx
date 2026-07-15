@@ -454,6 +454,13 @@ const PagamentosPage = () => {
                   {STATUS_LABEL[comprovante.status] || comprovante.status}
                 </p>
               </div>
+              {receiptLoading ? (
+                <div className="py-8 text-center space-y-2">
+                  <RefreshCw size={18} className="mx-auto animate-spin text-primary" />
+                  <p className="text-xs text-muted-foreground font-body">Carregando dados da transação...</p>
+                </div>
+              ) : (
+              <>
               <div className="space-y-2 text-sm font-body">
                 {[
                   ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
@@ -476,14 +483,13 @@ const PagamentosPage = () => {
                     <span className="text-foreground text-right break-all">{v}</span>
                   </div>
                 ))}
-                {receiptLoading && (
-                  <p className="text-[10px] text-muted-foreground font-body text-center">Buscando dados da transação no Mercado Pago...</p>
-                )}
               </div>
               <button type="button" onClick={handleBaixarComprovante}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
                 <Download size={12} /> Baixar comprovante (PDF)
               </button>
+              </>
+              )}
             </div>
           </div>
         )}
