@@ -446,7 +446,7 @@ const PagamentosPage = () => {
                   ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
                   ["Forma de pagamento", comprovante.tipo === "pix" ? "Pix" : "Cartão de crédito"],
                   ["Criado em", fmtDataHora(comprovante.created_at)],
-                  ...(comprovante.status === "approved" && comprovante.updated_at
+                  ...(comprovante.status === "approved" && comprovante.updated_at && !receiptMp?.date_approved
                     ? [["Confirmado em", fmtDataHora(comprovante.updated_at)]] : []),
                   ...(comprovante.tipo === "pix" && comprovante.pix_expira_em && comprovante.status === "pending"
                     ? [["Vence em", fmtDataHora(comprovante.pix_expira_em)]] : []),
