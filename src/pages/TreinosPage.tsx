@@ -111,6 +111,7 @@ export interface SerieComMemoria {
   tempo_segundos?: number;
   distancia_km?: number;
   pace_segundos_km?: number;
+  academia_nome?: string | null;
 }
 
 const TreinosPage = () => {
@@ -135,9 +136,24 @@ const TreinosPage = () => {
     localStorage.setItem(LS_ACADEMIA_KEY, JSON.stringify(a));
   }, []);
 
+  // Academia do DIA selecionado: se o treino do dia já tem academia carimbada nas
+  // séries, ela prevalece no seletor sobre a última usada (localStorage).
+  const { data: academiasRows } = useQuery<Academia>(
+    "SELECT id, nome FROM tb_academias WHERE user_id = ? ORDER BY nome",
+    [user?.id ?? ""]
+  );
+
+  const academiaDoDia = useMemo(() => {
+    const nome = series.find((s) => s.academia_nome)?.academia_nome;
+    if (!nome) return null;
+    return (academiasRows || []).find((a) => a.nome === nome) ?? null;
+  }, [series, academiasRows]);
+  // Academia "valendo" no dia selecionado: a do treino do dia > última usada
+  const academiaEfetiva = academiaDoDia ?? academiaAtual;
+
   // Refs pra usar academia/salvar-pesos em callbacks declarados antes deles
-  const academiaAtualRef = useRef<Academia | null>(academiaAtual);
-  useEffect(() => { academiaAtualRef.current = academiaAtual; }, [academiaAtual]);
+  const academiaAtualRef = useRef<Academia | null>(academiaEfetiva);
+  useEffect(() => { academiaAtualRef.current = academiaEfetiva; }, [academiaEfetiva]);
   const salvarPesosRef = useRef<((a: Academia, silent?: boolean) => Promise<void>) | null>(null);
   const localEditsRef = useRef<Map<string, number>>(new Map());
   const editKey = (exId: string, slot: number | undefined, num: number) =>
@@ -622,6 +638,7 @@ const TreinosPage = () => {
               reps: s.reps ?? 10,
               concluida: s.concluida === 1 || s.concluida === true,
               salva: true,
+              academia_nome: s.academia_nome ?? null,
               tempo_segundos: s.tempo_segundos ?? undefined,
               distancia_km: s.distancia_km ?? undefined,
               pace_segundos_km: s.pace_segundos_km ?? undefined,
@@ -636,12 +653,12 @@ const TreinosPage = () => {
           // academia (?? 0) — nunca do último treino (que pode ter sido em outra academia).
           // Estrutura (nº de séries e reps) continua vindo do último treino.
           let pesosAcademia: Map<number, number> | null = null;
-          if (academiaAtual) {
+          if (academiaEfetiva) {
             const dbExId = exUsuarioId ? null : exId;
             const refs = await db.getAll<{ numero_serie: number; peso: number }>(
               `SELECT numero_serie, peso FROM tb_academia_pesos
                WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ?`,
-              [user.id, academiaAtual.id, dbExId || "", exUsuarioId || ""]
+              [user.id, academiaEfetiva.id, dbExId || "", exUsuarioId || ""]
             );
             pesosAcademia = new Map(refs.map((r) => [r.numero_serie, r.peso]));
           }
@@ -709,7 +726,7 @@ const TreinosPage = () => {
     };
 
     buildSeries();
-  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino, academiaAtual, db]);
+  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino, academiaEfetiva, db]);
 
   const isSlotConcluido = useCallback(
     (dk: string, slot: number) => concluidosSet.has(`${dk}|${slot}`),
@@ -799,8 +816,8 @@ const TreinosPage = () => {
   // Concluir treino (timer ou botão) grava o "último treino daquela academia"
   const handleTreinoConcluidoComPesos = useCallback((dateKey: string, slotIdx: number, concluido: boolean) => {
     handleTreinoConcluido(dateKey, slotIdx, concluido);
-    if (concluido && academiaAtual) void salvarPesosNaAcademia(academiaAtual, true);
-  }, [handleTreinoConcluido, academiaAtual, salvarPesosNaAcademia]);
+    if (concluido && academiaEfetiva) void salvarPesosNaAcademia(academiaEfetiva, true);
+  }, [handleTreinoConcluido, academiaEfetiva, salvarPesosNaAcademia]);
   useEffect(() => { salvarPesosRef.current = salvarPesosNaAcademia; }, [salvarPesosNaAcademia]);
 
   // Troca de academia confirmada: pesos do dia viram os salvos da nova; sem referência = 0kg
@@ -1226,7 +1243,7 @@ const TreinosPage = () => {
 
             <SeletorAcademia
               userId={user.id}
-              academiaAtual={academiaAtual}
+              academiaAtual={academiaEfetiva}
               onTrocar={trocarAcademia}
               onSalvar={salvarPesosNaAcademia}
               onCriada={selecionarAcademia}
@@ -1301,7 +1318,7 @@ const TreinosPage = () => {
                               exercicios={slot.exercicios}
                               series={slotSeries}
                               concluido={slotConcluido}
-                              academiaAtual={academiaAtual}
+                              academiaAtual={academiaEfetiva}
                               onRefresh={handleRefresh}
                               onTreinoConcluido={handleTreinoConcluidoComPesos}
                               onAlterarGrupo={() => { setAlterarTarget({ slot_idx: slot.slot_idx, mode: 'replace' }); setShowAlterarGrupo(true); }}
