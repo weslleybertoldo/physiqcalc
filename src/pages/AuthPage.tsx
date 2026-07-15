@@ -1,6 +1,6 @@
 import { useState, FormEvent } from "react";
 import { Eye, EyeOff, Settings, RefreshCw, Check, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
 import AdminLoginDialog from "@/components/AdminLoginDialog";
 
@@ -73,7 +73,12 @@ const AuthPage = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: {
+            emailRedirectTo: window.location.origin,
+            // conta criada pelo staging é de TESTE: o trigger cria o perfil só em staging.*
+            // e as functions de exclusão só aceitam apagar contas com esse flag
+            ...(DB_SCHEMA === "staging" ? { data: { ambiente: "staging" } } : {}),
+          },
         });
         if (error) {
           setError(error.message);

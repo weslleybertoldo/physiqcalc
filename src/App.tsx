@@ -20,6 +20,7 @@ import AdminPanel from "./pages/AdminPanel";
 import Index from "./pages/Index";
 import TreinosPage from "./pages/TreinosPage";
 import PagamentosPage from "./pages/PagamentosPage";
+import StagingGate from "@/components/StagingGate";
 import PrivacidadePage from "./pages/PrivacidadePage";
 import NotFound from "./pages/NotFound";
 
@@ -60,6 +61,7 @@ const AppRoutes = () => {
 
   return (
     <BrowserRouter>
+      <StagingGate>
       <Routes>
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/calculator" element={<Index />} />
@@ -74,6 +76,7 @@ const AppRoutes = () => {
         <Route path="/termos" element={<PrivacidadePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </StagingGate>
     </BrowserRouter>
   );
 };

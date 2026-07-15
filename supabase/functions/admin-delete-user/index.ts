@@ -85,6 +85,13 @@ Deno.serve(async (req) => {
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
     if (userId === caller.id) return jsonErr("cannot_delete_self", 400, origin);
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+    // staging só apaga CONTA DE TESTE — auth é global, conta real sumiria da produção
+    if (currentSchema() === "staging") {
+      const { data: alvo } = await admin.auth.admin.getUserById(userId);
+      if ((alvo?.user?.user_metadata as any)?.ambiente !== "staging") {
+        return jsonErr("conta_real_protegida", 403, origin);
+      }
+    }
     const { data: profile } = await admin.from("physiq_profiles").select("*").eq("id", userId).maybeSingle();
     const { error: delErr } = await admin.auth.admin.deleteUser(userId);
     if (delErr) {

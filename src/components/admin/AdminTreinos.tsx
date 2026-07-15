@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
+
+// staging tem bucket próprio de mídias — upload não polui as fotos de produção
+const BUCKET_EXERCICIOS = DB_SCHEMA === "staging" ? "exercicios-staging" : "exercicios";
 import { toast } from "sonner";
 import AdminRelatorio from "./AdminRelatorio";
 
@@ -127,9 +130,9 @@ const AdminTreinos = ({ onBack }: Props) => {
     if (file.size > 5 * 1024 * 1024) throw new Error("Imagem maior que 5MB");
     const ext = (file.name.split(".").pop() || "png").toLowerCase();
     const path = `${exId}.${ext}`;
-    const { error } = await supabase.storage.from("exercicios").upload(path, file, { upsert: true, contentType: file.type });
+    const { error } = await supabase.storage.from(BUCKET_EXERCICIOS).upload(path, file, { upsert: true, contentType: file.type });
     if (error) throw error;
-    const { data } = supabase.storage.from("exercicios").getPublicUrl(path);
+    const { data } = supabase.storage.from(BUCKET_EXERCICIOS).getPublicUrl(path);
     return `${data.publicUrl}?v=${Date.now()}`;
   };
 

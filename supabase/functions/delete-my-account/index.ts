@@ -54,6 +54,12 @@ Deno.serve(async (req) => {
   if (error || !data?.user) return jsonErr("invalid_token", 401, origin);
   const userId = data.user.id;
 
+  // staging só apaga CONTA DE TESTE (user_metadata.ambiente='staging') — auth é global,
+  // apagar uma conta real pelo staging sumiria com ela da produção
+  if (currentSchema() === "staging" && (data.user.user_metadata as any)?.ambiente !== "staging") {
+    return jsonErr("conta_real_protegida", 403, origin);
+  }
+
   // Rate limit: 3 tentativas por hora por user
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
   const { data: allowed } = await admin.rpc("check_rate_limit", {
