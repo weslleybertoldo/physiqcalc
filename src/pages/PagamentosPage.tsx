@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, CreditCard, QrCode, Check, X, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, CreditCard, Download, QrCode, Check, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { invokeMp, MpStatus, MpPagamento } from "@/lib/mpClient";
@@ -71,14 +71,28 @@ const PagamentosPage = () => {
   const [showCard, setShowCard] = useState(false);
   const [pixData, setPixData] = useState<{ qr: string; qrBase64: string | null; expiraEm: string | null } | null>(null);
   const [comprovante, setComprovante] = useState<MpPagamento | null>(null);
+  const [receiptMp, setReceiptMp] = useState<any | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+
+  // dados reais da transação no MP ao abrir o comprovante
+  useEffect(() => {
+    if (!comprovante) { setReceiptMp(null); return; }
+    let cancelled = false;
+    setReceiptLoading(true);
+    invokeMp<{ pagamento: MpPagamento; mp: any }>("receipt", { pagamentoId: comprovante.id })
+      .then((r) => { if (!cancelled) setReceiptMp(r.mp); })
+      .catch(() => { /* comprovante segue com dados locais */ })
+      .finally(() => { if (!cancelled) setReceiptLoading(false); });
+    return () => { cancelled = true; };
+  }, [comprovante]);
   const [agora, setAgora] = useState(() => Date.now());
 
   // contagem regressiva do vencimento do Pix (atualiza a cada 30s)
   useEffect(() => {
-    if (!pixData?.expiraEm) return;
+    if (!pixData) return;
     const t = setInterval(() => setAgora(Date.now()), 30000);
     return () => clearInterval(t);
-  }, [pixData?.expiraEm]);
+  }, [pixData]);
 
   const load = useCallback(async () => {
     try {
@@ -155,6 +169,54 @@ const PagamentosPage = () => {
   };
 
   const assinaturaAtiva = status?.assinatura && ["authorized", "pending"].includes(status.assinatura.status);
+  const pagamentosPagos = (status?.pagamentos || []).filter((p) => p.status === "approved");
+  // vencimento efetivo do QR: da resposta do create ou do pendente do mês no status
+  const pixPendenteMes = (status?.pagamentos || []).find((p) => p.tipo === "pix" && p.status === "pending" && p.mes_ref === status?.mesRef);
+  const pixExpiraEfetivo = pixData?.expiraEm || pixPendenteMes?.pix_expira_em || null;
+
+  const handleBaixarComprovante = async () => {
+    if (!comprovante) return;
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      const W = doc.internal.pageSize.getWidth();
+      let y = 24;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(18);
+      doc.text("PhysiqCalc", W / 2, y, { align: "center" }); y += 8;
+      doc.setFontSize(12); doc.setFont("helvetica", "normal");
+      doc.text("Comprovante de Pagamento", W / 2, y, { align: "center" }); y += 12;
+      doc.setDrawColor(180); doc.line(20, y, W - 20, y); y += 12;
+      doc.setFontSize(22); doc.setFont("helvetica", "bold");
+      doc.text(fmtBRL(Number(comprovante.valor)), W / 2, y, { align: "center" }); y += 8;
+      doc.setFontSize(11); doc.setFont("helvetica", "normal");
+      doc.text(STATUS_LABEL[comprovante.status] || comprovante.status, W / 2, y, { align: "center" }); y += 14;
+      const linhas: [string, string][] = [
+        ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
+        ["Forma de pagamento", comprovante.tipo === "pix" ? "Pix" : "Cartão de crédito"],
+        ["Criado em", fmtDataHora(comprovante.created_at)],
+      ];
+      if (receiptMp?.date_approved) linhas.push(["Pago em", fmtDataHora(receiptMp.date_approved)]);
+      if (receiptMp?.payer_email) linhas.push(["Pagador", receiptMp.payer_email]);
+      if (receiptMp?.card_last4) linhas.push(["Cartão", `final ${receiptMp.card_last4}`]);
+      if (comprovante.mp_payment_id) linhas.push(["ID da transação (Mercado Pago)", String(comprovante.mp_payment_id)]);
+      if (receiptMp?.e2e_id) linhas.push(["E2E ID (Pix)", receiptMp.e2e_id]);
+      if (receiptMp?.bank_transfer_id) linhas.push(["ID transferência bancária", String(receiptMp.bank_transfer_id)]);
+      if (receiptMp?.status_detail) linhas.push(["Detalhe do status", receiptMp.status_detail]);
+      doc.setFontSize(10);
+      for (const [k, v] of linhas) {
+        doc.setFont("helvetica", "bold"); doc.text(`${k}:`, 24, y);
+        doc.setFont("helvetica", "normal"); doc.text(String(v), 90, y, { maxWidth: W - 114 });
+        y += 8;
+      }
+      y += 6; doc.setDrawColor(180); doc.line(20, y, W - 20, y); y += 8;
+      doc.setFontSize(8); doc.setTextColor(120);
+      doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · Pagamento processado pelo Mercado Pago`, W / 2, y, { align: "center" });
+      doc.save(`comprovante-physiqcalc-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
+    } catch (e) {
+      console.error("[Comprovante] PDF", e);
+      toast.error("Erro ao gerar o PDF do comprovante.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -255,7 +317,7 @@ const PagamentosPage = () => {
                 {pixData ? (
                   <div className="space-y-3 text-center">
                     {(() => {
-                      const exp = pixData.expiraEm ? new Date(pixData.expiraEm).getTime() : null;
+                      const exp = pixExpiraEfetivo ? new Date(pixExpiraEfetivo).getTime() : null;
                       const vencido = exp !== null && exp <= agora;
                       if (vencido) {
                         return (
@@ -309,11 +371,11 @@ const PagamentosPage = () => {
             {/* Histórico */}
             <div className="bg-card border border-border rounded-xl p-5 space-y-3">
               <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Histórico</h2>
-              {status.pagamentos.length === 0 ? (
-                <p className="text-xs text-muted-foreground font-body">Nenhum pagamento ainda.</p>
+              {pagamentosPagos.length === 0 ? (
+                <p className="text-xs text-muted-foreground font-body">Nenhum pagamento confirmado ainda.</p>
               ) : (
                 <div className="space-y-2">
-                  {status.pagamentos.map((p) => (
+                  {pagamentosPagos.map((p) => (
                     <button type="button" key={p.id} onClick={() => setComprovante(p)}
                       className="w-full flex items-center justify-between text-sm font-body border-b border-border/50 pb-2 last:border-0 last:pb-0 text-left hover:bg-muted/20 rounded px-1 transition-colors">
                       <div>
@@ -363,15 +425,27 @@ const PagamentosPage = () => {
                     ? [["Confirmado em", fmtDataHora(comprovante.updated_at)]] : []),
                   ...(comprovante.tipo === "pix" && comprovante.pix_expira_em && comprovante.status === "pending"
                     ? [["Vence em", fmtDataHora(comprovante.pix_expira_em)]] : []),
+                  ...(receiptMp?.date_approved ? [["Pago em", fmtDataHora(receiptMp.date_approved)]] : []),
+                  ...(receiptMp?.payer_email ? [["Pagador", receiptMp.payer_email]] : []),
+                  ...(receiptMp?.card_last4 ? [["Cartão", `final ${receiptMp.card_last4}`]] : []),
                   ...(comprovante.mp_payment_id
                     ? [["ID da transação (Mercado Pago)", comprovante.mp_payment_id]] : []),
+                  ...(receiptMp?.e2e_id ? [["E2E ID (Pix)", receiptMp.e2e_id]] : []),
+                  ...(receiptMp?.bank_transfer_id ? [["ID transferência bancária", String(receiptMp.bank_transfer_id)]] : []),
                 ].map(([k, v]) => (
                   <div key={k as string} className="flex items-start justify-between gap-3 border-b border-border/40 pb-2 last:border-0">
                     <span className="text-muted-foreground text-xs uppercase tracking-wider">{k}</span>
                     <span className="text-foreground text-right break-all">{v}</span>
                   </div>
                 ))}
+                {receiptLoading && (
+                  <p className="text-[10px] text-muted-foreground font-body text-center">Buscando dados da transação no Mercado Pago...</p>
+                )}
               </div>
+              <button type="button" onClick={handleBaixarComprovante}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
+                <Download size={12} /> Baixar comprovante (PDF)
+              </button>
             </div>
           </div>
         )}
