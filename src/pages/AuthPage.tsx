@@ -209,7 +209,8 @@ const AuthPage = () => {
           </button>
         </form>
 
-        {/* Toggle mode */}
+        {/* Toggle mode — staging não cria conta pela tela (ambiente de teste enxuto) */}
+        {DB_SCHEMA !== "staging" && (
         <p className="text-center text-sm text-muted-foreground font-body">
           {mode === "login" ? (
             <>
@@ -227,6 +228,7 @@ const AuthPage = () => {
             </>
           )}
         </p>
+        )}
 
         {/* Footer */}
         <div className="text-center space-y-2">
@@ -234,6 +236,7 @@ const AuthPage = () => {
             By Weslley Bertoldo
           </p>
           <p className="text-[10px] text-muted-foreground/50 font-body">v{APP_VERSION}</p>
+          {DB_SCHEMA !== "staging" && (<>
           <button
             type="button"
             onClick={handleCheckUpdate}
@@ -263,6 +266,7 @@ const AuthPage = () => {
               )}
             </div>
           )}
+          </>)}
         </div>
       </div>
 
