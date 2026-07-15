@@ -24,6 +24,7 @@ export interface MpAssinatura {
   status: string;
   valor: number;
   created_at: string;
+  proxima_cobranca?: string | null;
 }
 
 export interface MpStatus {

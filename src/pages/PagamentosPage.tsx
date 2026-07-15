@@ -200,19 +200,21 @@ const PagamentosPage = () => {
       const CINZA: [number, number, number] = [150, 150, 150];
       doc.setFillColor(13, 13, 13); doc.rect(0, 0, W, H, "F");
       doc.setFillColor(255, 191, 0); doc.rect(0, 0, W, 3, "F");
+      // centralização manual (largura medida) — align:center do jsPDF já nos traiu com charSpace
+      const centro = (txt: string, yy: number) => doc.text(txt, (W - doc.getTextWidth(txt)) / 2, yy);
       let y = 24;
       doc.setTextColor(...AMARELO);
       doc.setFont("helvetica", "bold"); doc.setFontSize(20);
-      doc.text("PHYSIQCALC", W / 2, y, { align: "center" }); y += 8;
+      centro("PHYSIQCALC", y); y += 8;
       doc.setTextColor(...CINZA); doc.setFontSize(10); doc.setFont("helvetica", "normal");
-      doc.text("COMPROVANTE DE PAGAMENTO", W / 2, y, { align: "center" }); y += 12;
+      centro("COMPROVANTE DE PAGAMENTO", y); y += 12;
       doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 14;
       doc.setTextColor(...BRANCO); doc.setFontSize(26); doc.setFont("helvetica", "bold");
-      doc.text(fmtBRL(Number(comprovante.valor)), W / 2, y, { align: "center" }); y += 10;
+      centro(fmtBRL(Number(comprovante.valor)), y); y += 10;
       const aprovado = comprovante.status === "approved";
       doc.setFontSize(11);
       doc.setTextColor(...(aprovado ? AMARELO : CINZA));
-      doc.text((STATUS_LABEL[comprovante.status] || comprovante.status).toUpperCase(), W / 2, y, { align: "center" }); y += 14;
+      centro((STATUS_LABEL[comprovante.status] || comprovante.status).toUpperCase(), y); y += 14;
       const linhas: [string, string][] = [
         ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
         ["Forma de pagamento", comprovante.tipo === "pix" ? "Pix" : "Cartão de crédito"],
@@ -298,6 +300,11 @@ const PagamentosPage = () => {
                   <p className="text-sm text-muted-foreground font-body">
                     Assinatura <span className="text-primary">{ASSINATURA_LABEL[status.assinatura!.status] || status.assinatura!.status}</span> — {fmtBRL(status.assinatura!.valor)}/mês cobrados automaticamente.
                   </p>
+                  {status.assinatura!.proxima_cobranca && (
+                    <p className="text-sm font-body text-foreground">
+                      Próxima cobrança: <span className="text-primary font-heading">{new Date(status.assinatura!.proxima_cobranca).toLocaleDateString("pt-BR")}</span>
+                    </p>
+                  )}
                   <button type="button" onClick={handleCancelar} disabled={busy}
                     className="text-xs font-heading uppercase tracking-wider text-destructive border border-destructive/40 rounded-lg px-4 py-2 hover:bg-destructive/10 transition-colors disabled:opacity-50">
                     Cancelar assinatura

@@ -130,6 +130,20 @@ async function getMensalidade(userId: string): Promise<number | null> {
   return typeof v === "number" && v > 0 ? v : null;
 }
 
+// próxima cobrança da assinatura: data real do MP; fallback = mesmo dia da adesão no mês seguinte
+async function proximaCobranca(ass: { mp_preapproval_id?: string | null; created_at: string }): Promise<string | null> {
+  if (ass.mp_preapproval_id) {
+    const { status, body } = await mpFetch(`/preapproval/${ass.mp_preapproval_id}`);
+    const next = body?.next_payment_date || body?.auto_recurring?.next_payment_date || body?.summarized?.next_payment_date;
+    if (status === 200 && next) return next;
+  }
+  const adesao = new Date(ass.created_at);
+  const agora = new Date();
+  const alvo = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), adesao.getUTCDate(), adesao.getUTCHours(), adesao.getUTCMinutes()));
+  if (alvo <= agora) alvo.setUTCMonth(alvo.getUTCMonth() + 1);
+  return alvo.toISOString();
+}
+
 // e-mail do pagador: com credencial de TESTE o MP exige comprador de teste
 function payerEmail(realEmail: string): string {
   if (usingTestToken()) return Deno.env.get("MP_TEST_PAYER_EMAIL") || realEmail;
@@ -187,11 +201,15 @@ Deno.serve(async (req) => {
         getMensalidade(user.id),
         admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, created_at, updated_at")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(12),
-        admin.from("physiq_assinaturas").select("id, status, valor, created_at")
+        admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
       ]);
       const pagamentos = (pagRes.data as any[]) || [];
       const assinatura = ((assRes.data as any[]) || [])[0] || null;
+      if (assinatura && ["authorized", "pending"].includes(assinatura.status)) {
+        assinatura.proxima_cobranca = await proximaCobranca(assinatura);
+      }
+      if (assinatura) delete assinatura.mp_preapproval_id;
       const mesPago = pagamentos.some((p) => p.mes_ref === mesRef && p.status === "approved");
       return jsonOk({ mensalidade: prof, mesRef, mesLabel: mesLabel(mesRef), mesPago, assinatura, pagamentos }, origin);
     }
