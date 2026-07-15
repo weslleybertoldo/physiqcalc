@@ -160,6 +160,7 @@ const PagamentosPage = () => {
     } catch (e: any) {
       const msg = e?.message === "assinatura_ja_ativa" ? "Você já tem uma assinatura ativa."
         : e?.message === "mes_ja_pago" ? "O mês atual já está pago."
+        : e?.message === "assinatura_sem_sandbox" ? "Assinatura não funciona em ambiente de teste — use \"Pagar só este mês\". Em produção funciona normalmente."
         : "Erro no pagamento. Verifique os dados do cartão.";
       toast.error(msg);
       throw e; // Brick mostra estado de erro

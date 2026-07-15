@@ -313,6 +313,8 @@ Deno.serve(async (req) => {
       });
       if (status >= 300 || !pre?.id) {
         console.error("mp create-subscription fail", status, JSON.stringify(pre).slice(0, 500));
+        // /preapproval não tem sandbox: com credencial TEST o MP responde 404 "Card token service not found"
+        if (usingTestToken() && status === 404) return jsonErr("assinatura_sem_sandbox", 400, origin);
         return jsonErr("mp_error", 502, origin);
       }
       const { data: inserted, error: insErr } = await admin.from("physiq_assinaturas").insert({
