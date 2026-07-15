@@ -113,7 +113,9 @@ const AuthPage = () => {
           </p>
         </div>
 
-        {/* Google button */}
+        {/* Google button — oculto no staging (OAuth não marca metadata de ambiente,
+            conta nova criaria perfil na produção) */}
+        {DB_SCHEMA !== "staging" && (<>
         <button
           type="button"
           onClick={handleGoogleLogin}
@@ -134,6 +136,7 @@ const AuthPage = () => {
           <span className="text-xs text-muted-foreground font-body uppercase">ou</span>
           <div className="flex-1 border-t border-muted-foreground/30" />
         </div>
+        </>)}
 
         {/* Email/password form */}
         <form onSubmit={handleSubmit} className="space-y-5">
