@@ -463,15 +463,18 @@ Deno.serve(async (req) => {
         const fim = addMonthClamp(new Date(p.updated_at || p.created_at));
         if (!fimPorUser[p.user_id] || fim > fimPorUser[p.user_id]) fimPorUser[p.user_id] = fim;
       }
-      const badges: Record<string, { s: string; ate: string | null }> = {};
+      // badges = string (compatível com bundles antigos em cache/APK); badgesData = detalhe com data
+      const badges: Record<string, string> = {};
+      const badgesData: Record<string, { s: string; ate: string | null }> = {};
       for (const p of ((profs.data as any[]) || [])) {
         if (Number(p.mensalidade_valor) > 0) {
           const fim = fimPorUser[p.id] || null;
           const coberto = (fim !== null && fim > agora) || assinantesSet.has(p.id);
-          badges[p.id] = { s: coberto ? "pago" : "pendente", ate: fim ? fim.toISOString() : null };
+          badges[p.id] = coberto ? "pago" : "pendente";
+          badgesData[p.id] = { s: badges[p.id], ate: fim ? fim.toISOString() : null };
         }
       }
-      return jsonOk({ badges }, origin);
+      return jsonOk({ badges, badgesData }, origin);
     }
 
     // ---- visão do admin sobre um aluno ----

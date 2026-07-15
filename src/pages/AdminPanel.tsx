@@ -80,8 +80,8 @@ const AdminPanel = () => {
       supabase.functions.invoke("admin-tags", { body: { action: "getAllUserTags" } }),
     ]);
     // badge pago/pendente com data da cobertura (só quem tem mensalidade) — não bloqueia a lista
-    invokeMp<{ badges: Record<string, { s: string; ate: string | null }> }>("admin-badges")
-      .then((r) => setPagamentoBadges(r.badges || {}))
+    invokeMp<{ badgesData: Record<string, { s: string; ate: string | null }> }>("admin-badges")
+      .then((r) => setPagamentoBadges(r.badgesData || {}))
       .catch((e) => console.error("[AdminPanel] admin-badges", e));
     if (!usersRes.error && usersRes.data?.users) setUsers(usersRes.data.users);
     if (!tagsRes.error && tagsRes.data?.tags) setAllTags(tagsRes.data.tags);
