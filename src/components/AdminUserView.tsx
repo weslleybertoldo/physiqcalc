@@ -7,6 +7,7 @@ import { levels } from "./TdeeTable";
 import EvolutionSection from "./EvolutionSection";
 import { classificarGordura } from "@/utils/composicaoCorporal";
 import MedidasCorporaisDisplay from "@/components/MedidasCorporaisDisplay";
+import AdminPagamentosStatus from "@/components/AdminPagamentosStatus";
 
 interface Profile extends AdminProfile {
   plano_nome: string | null;
@@ -188,6 +189,9 @@ const AdminUserView = ({ userId, onBack }: Props) => {
             <section className="section-divider pt-10">
               <MedidasCorporaisDisplay data={profile as any} />
             </section>
+
+            {/* Mensalidade / Pagamentos */}
+            <AdminPagamentosStatus userId={userId} />
 
             {/* Macros */}
             {totalCalories && (
