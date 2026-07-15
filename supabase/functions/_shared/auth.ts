@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 export const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.vercel.app",
+  "https://physiqcalc-staging.vercel.app",
   "https://physiqcalc.lovable.app",
   "capacitor://localhost",
   "https://localhost",
