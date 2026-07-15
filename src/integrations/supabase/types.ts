@@ -83,6 +83,36 @@ export type Database = {
         }
         Relationships: []
       }
+      physiq_assinaturas: {
+        Row: {
+          created_at: string
+          id: string
+          mp_preapproval_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mp_preapproval_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mp_preapproval_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       physiq_avaliacoes: {
         Row: {
           altura: number | null
@@ -190,6 +220,51 @@ export type Database = {
           },
         ]
       }
+      physiq_pagamentos: {
+        Row: {
+          created_at: string
+          id: string
+          mes_ref: string
+          mp_payment_id: string | null
+          pix_expira_em: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mes_ref: string
+          mp_payment_id?: string | null
+          pix_expira_em?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mes_ref?: string
+          mp_payment_id?: string | null
+          pix_expira_em?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       physiq_profiles: {
         Row: {
           admin_locked: boolean | null
@@ -208,6 +283,7 @@ export type Database = {
           macro_proteina_multiplicador: number | null
           massa_gorda: number | null
           massa_magra: number | null
+          mensalidade_valor: number | null
           medida_abdomen: number | null
           medida_antebraco_d: number | null
           medida_antebraco_e: number | null
@@ -253,6 +329,7 @@ export type Database = {
           macro_proteina_multiplicador?: number | null
           massa_gorda?: number | null
           massa_magra?: number | null
+          mensalidade_valor?: number | null
           medida_abdomen?: number | null
           medida_antebraco_d?: number | null
           medida_antebraco_e?: number | null
@@ -298,6 +375,7 @@ export type Database = {
           macro_proteina_multiplicador?: number | null
           massa_gorda?: number | null
           massa_magra?: number | null
+          mensalidade_valor?: number | null
           medida_abdomen?: number | null
           medida_antebraco_d?: number | null
           medida_antebraco_e?: number | null

@@ -45,6 +45,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [fatPct, setFatPct] = useState("15");
   const [planoNome, setPlanoNome] = useState("");
   const [planoExp, setPlanoExp] = useState("");
+  const [mensalidade, setMensalidade] = useState("");
   const [adminLocked, setAdminLocked] = useState(true);
   const [observacao, setObservacao] = useState("");
   const [medidas, setMedidas] = useState<Record<string, string>>({});
@@ -69,6 +70,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
         setFatPct(p.macro_gordura_percentual?.toString() || "15");
         setPlanoNome(p.plano_nome || "");
         setPlanoExp(p.plano_expiracao || "");
+        setMensalidade(p.mensalidade_valor?.toString() || "");
         setAdminLocked(p.admin_locked ?? true);
         // Load medidas
         const m: Record<string, string> = {};
@@ -142,6 +144,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             macro_gordura_percentual: parseFloat(fatPct) || 15,
             plano_nome: planoNome || null,
             plano_expiracao: planoExp || null,
+            mensalidade_valor: parseFloat(mensalidade.replace(",", ".")) || null,
             admin_locked: adminLocked,
             ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
           },
@@ -446,6 +449,11 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
               <div className="flex flex-col gap-1">
                 <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Expiração</label>
                 <input type="date" value={planoExp} onChange={(e) => setPlanoExp(e.target.value)} className="input-underline" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Mensalidade (R$)</label>
+                <input type="text" inputMode="decimal" value={mensalidade} onChange={(e) => setMensalidade(e.target.value)} className="input-underline" placeholder="Ex: 150,00" />
+                <p className="text-xs text-muted-foreground font-body mt-1">Vazio = sem cobrança. Aparece na aba Pagamentos do aluno (Pix e assinatura no cartão)</p>
               </div>
             </div>
           </section>

@@ -1,0 +1,327 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+// Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
+const _ALLOWED_SCHEMAS = ["public", "staging"];
+function resolveSchema(req: Request): string {
+  const h = (req.headers.get("x-schema") || "public").toLowerCase();
+  return _ALLOWED_SCHEMAS.includes(h) ? h : "public";
+}
+const schemaCtx = new AsyncLocalStorage<string>();
+function currentSchema(): "public" { return (schemaCtx.getStore() || "public") as "public"; }
+
+const ALLOWED_ORIGINS = new Set([
+  "https://physiqcalc.vercel.app",
+  "https://physiqcalc-staging.vercel.app",
+  "https://physiqcalc.lovable.app",
+  "capacitor://localhost",
+  "https://localhost",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allow = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://physiqcalc.vercel.app";
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-schema",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+  };
+}
+
+function jsonOk(body: unknown, origin: string | null) {
+  return new Response(JSON.stringify(body), {
+    headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+  });
+}
+
+function jsonErr(msg: string, status: number, origin: string | null) {
+  return new Response(JSON.stringify({ error: msg }), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+  });
+}
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const MP_API = "https://api.mercadopago.com";
+
+// staging sempre usa credencial de TESTE; public usa PROD (fallback TESTE enquanto prod não ativada)
+function mpToken(): string {
+  const test = Deno.env.get("MP_ACCESS_TOKEN_TEST") || "";
+  const prod = Deno.env.get("MP_ACCESS_TOKEN_PROD") || "";
+  if (currentSchema() === "staging") return test;
+  return prod || test;
+}
+function usingTestToken(): boolean {
+  return mpToken().startsWith("TEST-");
+}
+
+function adminClient() {
+  return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+}
+
+async function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): Promise<boolean> {
+  try {
+    const admin = adminClient();
+    const { data, error } = await admin.rpc("check_rate_limit", {
+      p_user_id: userId, p_endpoint: endpoint, p_max_count: maxCount, p_window_secs: windowSecs,
+    });
+    if (error) return true;
+    return data === true;
+  } catch { return true; }
+}
+
+async function requireUser(req: Request): Promise<{ user: any; error: Response | null }> {
+  const origin = req.headers.get("Origin");
+  const auth = req.headers.get("Authorization");
+  if (!auth?.startsWith("Bearer ")) return { user: null, error: jsonErr("missing_auth", 401, origin) };
+  const token = auth.slice(7);
+  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const userClient = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
+  const { data, error } = await userClient.auth.getUser(token);
+  if (error || !data?.user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
+  const allowed = await checkRateLimit(data.user.id, "mp-payments", 30, 60);
+  if (!allowed) return { user: null, error: jsonErr("rate_limited", 429, origin) };
+  return { user: data.user, error: null };
+}
+
+async function mpFetch(path: string, init: RequestInit = {}): Promise<{ status: number; body: any }> {
+  // retry em 5xx (API do MP tem 500 transiente); seguro pois POSTs usam X-Idempotency-Key
+  let status = 0;
+  let body: any = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 800 * attempt));
+    const res = await fetch(`${MP_API}${path}`, {
+      ...init,
+      headers: {
+        "Authorization": `Bearer ${mpToken()}`,
+        "Content-Type": "application/json",
+        ...(init.headers || {}),
+      },
+    });
+    status = res.status;
+    body = null;
+    try { body = await res.json(); } catch { /* corpo vazio */ }
+    if (status < 500) break;
+  }
+  return { status, body };
+}
+
+function mesRefAtual(): string {
+  // primeiro dia do mês corrente em BRT
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function mesLabel(mesRef: string): string {
+  const [y, m] = mesRef.split("-");
+  const nomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  return `${nomes[parseInt(m, 10) - 1]}/${y}`;
+}
+
+async function getMensalidade(userId: string): Promise<number | null> {
+  const admin = adminClient();
+  const { data } = await admin.from("physiq_profiles").select("mensalidade_valor").eq("id", userId).maybeSingle();
+  const v = (data as any)?.mensalidade_valor;
+  return typeof v === "number" && v > 0 ? v : null;
+}
+
+// e-mail do pagador: com credencial de TESTE o MP exige comprador de teste
+function payerEmail(realEmail: string): string {
+  if (usingTestToken()) return Deno.env.get("MP_TEST_PAYER_EMAIL") || realEmail;
+  return realEmail;
+}
+
+// re-consulta pagamentos/assinatura pendentes no MP (funciona mesmo sem webhook configurado)
+async function refreshPendentes(userId: string) {
+  const admin = adminClient();
+  const { data: pend } = await admin.from("physiq_pagamentos")
+    .select("id, mp_payment_id, status")
+    .eq("user_id", userId)
+    .in("status", ["pending", "in_process"])
+    .not("mp_payment_id", "is", null)
+    .limit(6);
+  for (const p of (pend as any[]) || []) {
+    const { status, body } = await mpFetch(`/v1/payments/${p.mp_payment_id}`);
+    if (status === 200 && body?.status && body.status !== p.status) {
+      await admin.from("physiq_pagamentos").update({ status: body.status, updated_at: new Date().toISOString() }).eq("id", p.id);
+    }
+  }
+  const { data: ass } = await admin.from("physiq_assinaturas")
+    .select("id, mp_preapproval_id, status")
+    .eq("user_id", userId)
+    .in("status", ["pending", "authorized", "paused"])
+    .not("mp_preapproval_id", "is", null)
+    .limit(3);
+  for (const a of (ass as any[]) || []) {
+    const { status, body } = await mpFetch(`/preapproval/${a.mp_preapproval_id}`);
+    if (status === 200 && body?.status && body.status !== a.status) {
+      await admin.from("physiq_assinaturas").update({ status: body.status, updated_at: new Date().toISOString() }).eq("id", a.id);
+    }
+  }
+}
+
+Deno.serve(async (req) => {
+  schemaCtx.enterWith(resolveSchema(req));
+  const origin = req.headers.get("Origin");
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
+  if (!mpToken()) return jsonErr("mp_not_configured", 500, origin);
+
+  const { user, error: authErr } = await requireUser(req);
+  if (authErr) return authErr;
+
+  try {
+    const body = await req.json();
+    const action = body?.action;
+    const admin = adminClient();
+
+    // ---- status (aba Pagamentos do aluno) ----
+    if (action === "status") {
+      await refreshPendentes(user.id);
+      const mesRef = mesRefAtual();
+      const [prof, pagRes, assRes] = await Promise.all([
+        getMensalidade(user.id),
+        admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, created_at, updated_at")
+          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(12),
+        admin.from("physiq_assinaturas").select("id, status, valor, created_at")
+          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+      ]);
+      const pagamentos = (pagRes.data as any[]) || [];
+      const assinatura = ((assRes.data as any[]) || [])[0] || null;
+      const mesPago = pagamentos.some((p) => p.mes_ref === mesRef && p.status === "approved");
+      return jsonOk({ mensalidade: prof, mesRef, mesLabel: mesLabel(mesRef), mesPago, assinatura, pagamentos }, origin);
+    }
+
+    // ---- Pix avulso do mês ----
+    if (action === "create-pix") {
+      const valor = await getMensalidade(user.id);
+      if (!valor) return jsonErr("sem_mensalidade", 400, origin);
+      const mesRef = mesRefAtual();
+
+      // reusa pix pendente do mês ainda válido
+      const { data: existing } = await admin.from("physiq_pagamentos")
+        .select("id, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, valor")
+        .eq("user_id", user.id).eq("mes_ref", mesRef).eq("tipo", "pix")
+        .in("status", ["pending", "approved"])
+        .order("created_at", { ascending: false }).limit(1);
+      const ex = ((existing as any[]) || [])[0];
+      if (ex?.status === "approved") return jsonErr("mes_ja_pago", 400, origin);
+      if (ex?.status === "pending" && ex.pix_qr_code && Number(ex.valor) === valor) {
+        const { status, body: pay } = await mpFetch(`/v1/payments/${ex.mp_payment_id}`);
+        if (status === 200 && pay?.status === "pending") {
+          return jsonOk({ pagamento: ex, reused: true }, origin);
+        }
+        await admin.from("physiq_pagamentos").update({ status: (status === 200 && pay?.status) || "cancelled", updated_at: new Date().toISOString() }).eq("id", ex.id);
+      }
+
+      const expiraDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+      const expira = expiraDate.toISOString().replace("Z", "-00:00");
+      const { status, body: pay } = await mpFetch("/v1/payments", {
+        method: "POST",
+        headers: { "X-Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({
+          transaction_amount: valor,
+          description: `Mensalidade PhysiqCalc — ${mesLabel(mesRef)}`,
+          payment_method_id: "pix",
+          payer: { email: payerEmail(user.email) },
+          external_reference: `${currentSchema()}:${user.id}:${mesRef}`,
+          notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
+          date_of_expiration: expira,
+        }),
+      });
+      if (status >= 300 || !pay?.id) {
+        console.error("mp create-pix fail", status, JSON.stringify(pay).slice(0, 500));
+        return jsonErr("mp_error", 502, origin);
+      }
+      const td = pay.point_of_interaction?.transaction_data || {};
+      const { data: inserted, error: insErr } = await admin.from("physiq_pagamentos").insert({
+        user_id: user.id, tipo: "pix", valor, mes_ref: mesRef,
+        mp_payment_id: String(pay.id), status: pay.status || "pending",
+        pix_qr_code: td.qr_code || null, pix_qr_code_base64: td.qr_code_base64 || null,
+        pix_expira_em: pay.date_of_expiration || expiraDate.toISOString(),
+      }).select().single();
+      if (insErr) throw insErr;
+      return jsonOk({ pagamento: inserted }, origin);
+    }
+
+    // ---- assinatura recorrente no cartão ----
+    if (action === "create-subscription") {
+      const cardToken = body?.card_token;
+      if (!cardToken || typeof cardToken !== "string") return jsonErr("missing_card_token", 400, origin);
+      const valor = await getMensalidade(user.id);
+      if (!valor) return jsonErr("sem_mensalidade", 400, origin);
+
+      const { data: ativa } = await admin.from("physiq_assinaturas")
+        .select("id").eq("user_id", user.id).in("status", ["authorized", "pending"]).limit(1);
+      if (((ativa as any[]) || []).length > 0) return jsonErr("assinatura_ja_ativa", 400, origin);
+
+      const { status, body: pre } = await mpFetch("/preapproval", {
+        method: "POST",
+        body: JSON.stringify({
+          reason: "Mensalidade PhysiqCalc",
+          external_reference: `${currentSchema()}:${user.id}`,
+          payer_email: payerEmail(user.email),
+          card_token_id: cardToken,
+          auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: valor, currency_id: "BRL" },
+          back_url: "https://physiqcalc.vercel.app/pagamentos",
+          status: "authorized",
+        }),
+      });
+      if (status >= 300 || !pre?.id) {
+        console.error("mp create-subscription fail", status, JSON.stringify(pre).slice(0, 500));
+        return jsonErr("mp_error", 502, origin);
+      }
+      const { data: inserted, error: insErr } = await admin.from("physiq_assinaturas").insert({
+        user_id: user.id, mp_preapproval_id: String(pre.id), status: pre.status || "pending", valor,
+      }).select().single();
+      if (insErr) throw insErr;
+
+      // 1ª cobrança da assinatura pode levar minutos; o mês fica pago via webhook/refresh
+      return jsonOk({ assinatura: inserted }, origin);
+    }
+
+    // ---- cancelar assinatura ----
+    if (action === "cancel-subscription") {
+      const { data: ativa } = await admin.from("physiq_assinaturas")
+        .select("id, mp_preapproval_id").eq("user_id", user.id).in("status", ["authorized", "pending", "paused"])
+        .order("created_at", { ascending: false }).limit(1);
+      const a = ((ativa as any[]) || [])[0];
+      if (!a) return jsonErr("sem_assinatura", 400, origin);
+      const { status } = await mpFetch(`/preapproval/${a.mp_preapproval_id}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (status >= 300) return jsonErr("mp_error", 502, origin);
+      await admin.from("physiq_assinaturas").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", a.id);
+      return jsonOk({ ok: true }, origin);
+    }
+
+    // ---- visão do admin sobre um aluno ----
+    if (action === "admin-status") {
+      const role = (user.app_metadata as any)?.role;
+      if (role !== "admin") return jsonErr("forbidden", 403, origin);
+      const userId = body?.userId;
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      await refreshPendentes(userId);
+      const mesRef = mesRefAtual();
+      const [prof, pagRes, assRes] = await Promise.all([
+        getMensalidade(userId),
+        admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, created_at")
+          .eq("user_id", userId).order("created_at", { ascending: false }).limit(12),
+        admin.from("physiq_assinaturas").select("id, status, valor, created_at")
+          .eq("user_id", userId).order("created_at", { ascending: false }).limit(1),
+      ]);
+      const pagamentos = (pagRes.data as any[]) || [];
+      const mesPago = pagamentos.some((p) => p.mes_ref === mesRef && p.status === "approved");
+      return jsonOk({ mensalidade: prof, mesRef, mesPago, assinatura: ((assRes.data as any[]) || [])[0] || null, pagamentos }, origin);
+    }
+
+    return jsonErr("unknown_action", 400, origin);
+  } catch (e) {
+    console.error("mp-payments error", e);
+    return jsonErr("internal_error", 500, origin);
+  }
+});

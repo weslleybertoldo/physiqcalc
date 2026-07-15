@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 // Substitui a janela fixa de 5s anterior — comparacao por chave evita race tanto em
 // sync rapido (nao descarta builds validos) quanto em pausa longa (preserva edits
 // nao sincronizados ate o PowerSync propagar updated_at >= timestamp local).
-import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
 import WorkoutTimer from "@/components/treinos/WorkoutTimer";
@@ -1277,6 +1277,15 @@ const TreinosPage = () => {
                     Painel Admin
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/pagamentos")}
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
+                >
+                  <CreditCard size={12} />
+                  Pagamentos
+                </button>
 
                 <button
                   type="button"

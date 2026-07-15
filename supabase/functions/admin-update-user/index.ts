@@ -85,6 +85,8 @@ const ALLOWED_FIELDS = new Set([
   "medida_abdomen", "medida_quadril", "medida_braco_d", "medida_braco_e",
   "medida_antebraco_d", "medida_antebraco_e", "medida_coxa_d", "medida_coxa_e",
   "medida_panturrilha_d", "medida_panturrilha_e",
+  // mensalidade Mercado Pago (R$; null = sem cobrança)
+  "mensalidade_valor",
 ]);
 
 Deno.serve(async (req) => {

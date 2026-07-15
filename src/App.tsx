@@ -19,6 +19,7 @@ import UserDashboard from "./pages/UserDashboard";
 import AdminPanel from "./pages/AdminPanel";
 import Index from "./pages/Index";
 import TreinosPage from "./pages/TreinosPage";
+import PagamentosPage from "./pages/PagamentosPage";
 import PrivacidadePage from "./pages/PrivacidadePage";
 import NotFound from "./pages/NotFound";
 
@@ -68,6 +69,7 @@ const AppRoutes = () => {
           element={user ? <TreinosPage /> : <AuthPage />}
         />
         <Route path="/avaliacao" element={user ? <UserDashboard /> : <AuthPage />} />
+        <Route path="/pagamentos" element={user ? <PagamentosPage /> : <AuthPage />} />
         <Route path="/privacidade" element={<PrivacidadePage />} />
         <Route path="/termos" element={<PrivacidadePage />} />
         <Route path="*" element={<NotFound />} />

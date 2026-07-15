@@ -1,0 +1,55 @@
+import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
+
+// Em dev local as functions rodam fora do Supabase (deno run) — VITE_MP_FUNCTIONS_URL aponta pra elas.
+const FN_BASE =
+  (import.meta.env.VITE_MP_FUNCTIONS_URL as string | undefined) ||
+  `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
+export interface MpPagamento {
+  id: string;
+  tipo: "pix" | "cartao";
+  valor: number;
+  mes_ref: string;
+  status: string;
+  pix_qr_code?: string | null;
+  pix_qr_code_base64?: string | null;
+  pix_expira_em?: string | null;
+  mp_payment_id?: string | null;
+  updated_at?: string;
+  created_at: string;
+}
+
+export interface MpAssinatura {
+  id: string;
+  status: string;
+  valor: number;
+  created_at: string;
+}
+
+export interface MpStatus {
+  mensalidade: number | null;
+  mesRef: string;
+  mesLabel: string;
+  mesPago: boolean;
+  assinatura: MpAssinatura | null;
+  pagamentos: MpPagamento[];
+}
+
+export async function invokeMp<T = any>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const session = data?.session;
+  if (!session) throw new Error("not_authenticated");
+  const res = await fetch(`${FN_BASE}/mp-payments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+      "x-schema": DB_SCHEMA,
+    },
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.error || `http_${res.status}`);
+  return body as T;
+}
