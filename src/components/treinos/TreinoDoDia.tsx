@@ -41,6 +41,9 @@ interface Props {
   onRemoverTreino?: () => void;
   onSerieConcluida: (exercicioNome: string, numeroSerie: number, exercicioId: string) => void;
   onSeriesUpdate: React.Dispatch<React.SetStateAction<SerieComMemoria[]>>;
+  // Academia atual: carimbada nas séries salvas (tag do histórico) e recebe o peso
+  // ao vivo em tb_academia_pesos a cada série salva/concluída.
+  academiaAtual?: { id: string; nome: string } | null;
 }
 
 import { parseTempo, formatTempo, formatPace, calcularPace } from "@/lib/corrida";
@@ -48,6 +51,7 @@ import { parseTempo, formatTempo, formatPace, calcularPace } from "@/lib/corrida
 const TreinoDoDia = ({
   userId, dateKey, dateLabel, grupoNome, grupoId, slotIdx, treinoId, exercicios,
   series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onRemoverTreino, onSerieConcluida, onSeriesUpdate,
+  academiaAtual,
 }: Props) => {
   const db = usePowerSync();
   const [infoExercicio, setInfoExercicio] = useState<Exercicio | null>(null);
@@ -278,20 +282,42 @@ const TreinoDoDia = ({
 
     if (existingId) {
       await db.execute(
-        `INSERT OR REPLACE INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, academia_nome, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [existingId, data.user_id, exIdVal, exUsuarioId, data.data_treino, slotIdx, data.numero_serie,
          data.peso ?? null, data.reps ?? null, data.tempo_segundos ?? null, data.distancia_km ?? null,
-         data.pace_segundos_km ?? null, data.concluida ?? null, updatedAt]
+         data.pace_segundos_km ?? null, data.concluida ?? null, academiaAtual?.nome ?? null, updatedAt]
       );
     } else {
       await db.execute(
-        `INSERT INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, updated_at)
-         VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, academia_nome, updated_at)
+         VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.user_id, exIdVal, exUsuarioId, data.data_treino, slotIdx, data.numero_serie,
          data.peso ?? null, data.reps ?? null, data.tempo_segundos ?? null, data.distancia_km ?? null,
-         data.pace_segundos_km ?? null, data.concluida ?? null, updatedAt]
+         data.pace_segundos_km ?? null, data.concluida ?? null, academiaAtual?.nome ?? null, updatedAt]
       );
+    }
+
+    // Com academia selecionada, o peso da série atualiza AO VIVO em tb_academia_pesos
+    // (corrida fica de fora — não tem peso).
+    if (academiaAtual && data.tempo_segundos == null) {
+      const ref = await db.getAll<{ id: string }>(
+        `SELECT id FROM tb_academia_pesos
+         WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
+        [data.user_id, academiaAtual.id, exIdVal || "", exUsuarioId || "", data.numero_serie]
+      );
+      if (ref.length > 0) {
+        await db.execute(
+          "UPDATE tb_academia_pesos SET peso = ?, updated_at = ? WHERE id = ?",
+          [data.peso ?? 0, updatedAt, ref[0].id]
+        );
+      } else {
+        await db.execute(
+          `INSERT INTO tb_academia_pesos (id, user_id, academia_id, exercicio_id, exercicio_usuario_id, numero_serie, peso, updated_at)
+           VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
+          [data.user_id, academiaAtual.id, exIdVal, exUsuarioId, data.numero_serie, data.peso ?? 0, updatedAt]
+        );
+      }
     }
   };
 
@@ -768,9 +794,11 @@ const SerieRow = React.memo(function SerieRow({
   useEffect(() => {
     if (!tipoCorrida) {
       // Na primeira renderização, sempre sincroniza com os dados da série
-      // Nas seguintes, só sincroniza se a série foi salva (evita sobrescrever edição do usuário)
-      if (!serie.concluida && serie.peso > 0 && (!initializedRef.current || serie.salva)) {
-        setPeso(String(serie.peso));
+      // Nas seguintes, só sincroniza se a série foi salva (evita sobrescrever edição do usuário).
+      // Peso 0 vira campo vazio — precisa sincronizar também (troca de academia zera séries
+      // sem referência; o guard antigo `peso > 0` deixava o valor velho preso no input).
+      if (!serie.concluida && (!initializedRef.current || serie.salva)) {
+        setPeso(serie.peso > 0 ? String(serie.peso) : "");
       }
       if (!serie.concluida && serie.reps > 0 && (!initializedRef.current || serie.salva)) {
         setReps(String(serie.reps));

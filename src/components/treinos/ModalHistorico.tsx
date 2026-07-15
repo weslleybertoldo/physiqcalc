@@ -21,6 +21,7 @@ interface SerieRecord {
   tempo_segundos: number | null;
   distancia_km: number | null;
   pace_segundos_km: number | null;
+  academia_nome: string | null;
 }
 
 const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange }: Props) => {
@@ -37,7 +38,7 @@ const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange
     (async () => {
       try {
         const rows = await db.getAll(
-          `SELECT data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km
+          `SELECT data_treino, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, academia_nome
            FROM tb_treino_series
            WHERE user_id = ? AND concluida = 1
              AND (exercicio_id = ? OR exercicio_usuario_id = ?)
@@ -110,6 +111,9 @@ const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange
                             <span className="text-muted-foreground">×</span>
                             <span>{s.reps} reps</span>
                           </>
+                        )}
+                        {s.academia_nome && (
+                          <span className="text-muted-foreground text-xs">- ({s.academia_nome})</span>
                         )}
                       </div>
                     ))}

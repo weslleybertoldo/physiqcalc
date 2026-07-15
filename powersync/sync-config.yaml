@@ -34,3 +34,5 @@ streams:
       - SELECT * FROM tb_grupos_exercicios_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM tb_exercicio_comentarios WHERE user_id = auth.user_id()
       - SELECT * FROM tb_semana_treinos WHERE user_id = auth.user_id()
+      - SELECT * FROM tb_academias WHERE user_id = auth.user_id()
+      - SELECT * FROM tb_academia_pesos WHERE user_id = auth.user_id()

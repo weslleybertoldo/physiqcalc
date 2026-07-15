@@ -51,6 +51,23 @@ const tb_treino_series = new Table({
   distancia_km: column.real,
   pace_segundos_km: column.real,
   concluida: column.integer, // boolean as 0/1
+  academia_nome: column.text,
+  updated_at: column.text,
+});
+
+const tb_academias = new Table({
+  user_id: column.text,
+  nome: column.text,
+  created_at: column.text,
+});
+
+const tb_academia_pesos = new Table({
+  user_id: column.text,
+  academia_id: column.text,
+  exercicio_id: column.text,
+  exercicio_usuario_id: column.text,
+  numero_serie: column.integer,
+  peso: column.real,
   updated_at: column.text,
 });
 
@@ -169,4 +186,6 @@ export const AppSchema = new Schema({
   tb_exercicios_usuario,
   tb_grupos_exercicios_usuario,
   tb_exercicio_comentarios,
+  tb_academias,
+  tb_academia_pesos,
 });

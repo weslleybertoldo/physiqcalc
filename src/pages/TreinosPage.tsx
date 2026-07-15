@@ -12,6 +12,7 @@ import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
 import TabelaSemanal from "@/components/treinos/TabelaSemanal";
 import TreinoDoDia from "@/components/treinos/TreinoDoDia";
+import SeletorAcademia, { Academia } from "@/components/treinos/SeletorAcademia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
 import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
 import { downloadAndInstall } from "@/lib/apkUpdater";
@@ -122,6 +123,22 @@ const TreinosPage = () => {
   const isVisibleRef = useRef(true);
 
   const [series, setSeries] = useState<SerieComMemoria[]>([]);
+
+  // ── Academias: pesos salvos por academia ────────────────────────────────────
+  const LS_ACADEMIA_KEY = "physiq_academia_atual";
+  const [academiaAtual, setAcademiaAtual] = useState<Academia | null>(() => {
+    try { return JSON.parse(localStorage.getItem(LS_ACADEMIA_KEY) || "null"); } catch { return null; }
+  });
+
+  const selecionarAcademia = useCallback((a: Academia) => {
+    setAcademiaAtual(a);
+    localStorage.setItem(LS_ACADEMIA_KEY, JSON.stringify(a));
+  }, []);
+
+  // Refs pra usar academia/salvar-pesos em callbacks declarados antes deles
+  const academiaAtualRef = useRef<Academia | null>(academiaAtual);
+  useEffect(() => { academiaAtualRef.current = academiaAtual; }, [academiaAtual]);
+  const salvarPesosRef = useRef<((a: Academia, silent?: boolean) => Promise<void>) | null>(null);
   const localEditsRef = useRef<Map<string, number>>(new Map());
   const editKey = (exId: string, slot: number | undefined, num: number) =>
     `${exId}|${slot ?? 0}|${num}`;
@@ -614,7 +631,24 @@ const TreinosPage = () => {
           // Cancela se um buildSeries mais recente já iniciou
           if (currentBuildId !== buildSeriesIdRef.current) return;
           const ultimo = await buscarUltimoTreino(exId, selectedDate, !!exUsuarioId);
+
+          // Com academia selecionada, o peso sugerido vem SÓ dos pesos salvos daquela
+          // academia (?? 0) — nunca do último treino (que pode ter sido em outra academia).
+          // Estrutura (nº de séries e reps) continua vindo do último treino.
+          let pesosAcademia: Map<number, number> | null = null;
+          if (academiaAtual) {
+            const dbExId = exUsuarioId ? null : exId;
+            const refs = await db.getAll<{ numero_serie: number; peso: number }>(
+              `SELECT numero_serie, peso FROM tb_academia_pesos
+               WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ?`,
+              [user.id, academiaAtual.id, dbExId || "", exUsuarioId || ""]
+            );
+            pesosAcademia = new Map(refs.map((r) => [r.numero_serie, r.peso]));
+          }
           if (currentBuildId !== buildSeriesIdRef.current) return;
+
+          const pesoSugerido = (numeroSerie: number, pesoUltimo: number) =>
+            pesosAcademia ? (pesosAcademia.get(numeroSerie) ?? 0) : pesoUltimo;
 
           if (ultimo && ultimo.length > 0) {
             (ultimo as any[]).forEach((s) => {
@@ -623,7 +657,7 @@ const TreinosPage = () => {
                 exercicio_usuario_id: exUsuarioId,
                 slot_idx: slot,
                 numero_serie: s.numero_serie,
-                peso: s.peso ?? 0,
+                peso: pesoSugerido(s.numero_serie, s.peso ?? 0),
                 reps: s.reps ?? 10,
                 concluida: false,
                 salva: false,
@@ -636,7 +670,7 @@ const TreinosPage = () => {
                 exercicio_usuario_id: exUsuarioId,
                 slot_idx: slot,
                 numero_serie: i,
-                peso: 0,
+                peso: pesoSugerido(i, 0),
                 reps: 10,
                 concluida: false,
                 salva: false,
@@ -675,7 +709,7 @@ const TreinosPage = () => {
     };
 
     buildSeries();
-  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino]);
+  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino, academiaAtual, db]);
 
   const isSlotConcluido = useCallback(
     (dk: string, slot: number) => concluidosSet.has(`${dk}|${slot}`),
@@ -696,6 +730,126 @@ const TreinosPage = () => {
   const handleRefresh = useCallback(async () => {
     // No-op: o PowerSync re-renderiza automaticamente quando dados mudam no SQLite
   }, []);
+
+  // "TREINO CONCLUÍDO" do cronômetro também marca o treino do dia como concluído
+  // (mesma escrita do botão "Marcar treino como concluído" do TreinoDoDia).
+  const marcarSlotConcluido = useCallback(async (dateKey: string, slotIdx: number) => {
+    if (!user) return;
+    const existing = await db.getAll(
+      "SELECT id FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ? AND slot_idx = ?",
+      [user.id, dateKey, slotIdx]
+    );
+    if (existing && existing.length > 0) {
+      await db.execute(
+        "INSERT OR REPLACE INTO tb_treino_concluido (id, user_id, data_treino, slot_idx, concluido, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [(existing[0] as any).id, user.id, dateKey, slotIdx, true, new Date().toISOString()]
+      );
+    } else {
+      await db.execute(
+        "INSERT INTO tb_treino_concluido (id, user_id, data_treino, slot_idx, concluido, created_at) VALUES (uuid(), ?, ?, ?, ?, ?)",
+        [user.id, dateKey, slotIdx, true, new Date().toISOString()]
+      );
+    }
+    handleTreinoConcluido(dateKey, slotIdx, true);
+    // Academia selecionada → conclusão grava o treino daquela academia
+    if (academiaAtualRef.current) void salvarPesosRef.current?.(academiaAtualRef.current, true);
+  }, [db, user, handleTreinoConcluido]);
+
+  // Séries de musculação do dia (corrida não tem peso)
+  const seriesComPeso = useCallback(
+    () => series.filter((s) => s.tempo_segundos == null),
+    [series]
+  );
+
+  // "Salvar treino" e conclusão de treino: guarda/substitui o peso de cada série do dia na academia
+  const salvarPesosNaAcademia = useCallback(async (a: Academia, silent = false) => {
+    if (!user) return;
+    const alvo = seriesComPeso();
+    if (alvo.length === 0) { if (!silent) toast.error("Nenhuma série de musculação hoje pra salvar."); return; }
+    const now = new Date().toISOString();
+    for (const s of alvo) {
+      const exId = s.exercicio_usuario_id ? null : s.exercicio_id;
+      const exUsuId = s.exercicio_usuario_id || null;
+      const existing = await db.getAll<{ id: string }>(
+        `SELECT id FROM tb_academia_pesos
+         WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
+        [user.id, a.id, exId || "", exUsuId || "", s.numero_serie]
+      );
+      if (existing.length > 0) {
+        await db.execute(
+          "UPDATE tb_academia_pesos SET peso = ?, updated_at = ? WHERE id = ?",
+          [s.peso ?? 0, now, existing[0].id]
+        );
+      } else {
+        await db.execute(
+          `INSERT INTO tb_academia_pesos (id, user_id, academia_id, exercicio_id, exercicio_usuario_id, numero_serie, peso, updated_at)
+           VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
+          [user.id, a.id, exId, exUsuId, s.numero_serie, s.peso ?? 0, now]
+        );
+      }
+    }
+    // Carimba a academia nas séries do dia já persistidas (tag do histórico)
+    await db.execute(
+      "UPDATE tb_treino_series SET academia_nome = ?, updated_at = ? WHERE user_id = ? AND data_treino = ?",
+      [a.nome, now, user.id, selectedDate]
+    );
+    if (!silent) toast.success(`Pesos salvos na academia ${a.nome}! 💪`);
+  }, [db, user, selectedDate, seriesComPeso]);
+
+  // Concluir treino (timer ou botão) grava o "último treino daquela academia"
+  const handleTreinoConcluidoComPesos = useCallback((dateKey: string, slotIdx: number, concluido: boolean) => {
+    handleTreinoConcluido(dateKey, slotIdx, concluido);
+    if (concluido && academiaAtual) void salvarPesosNaAcademia(academiaAtual, true);
+  }, [handleTreinoConcluido, academiaAtual, salvarPesosNaAcademia]);
+  useEffect(() => { salvarPesosRef.current = salvarPesosNaAcademia; }, [salvarPesosNaAcademia]);
+
+  // Troca de academia confirmada: pesos do dia viram os salvos da nova; sem referência = 0kg
+  const trocarAcademia = useCallback(async (a: Academia) => {
+    if (!user) return;
+    const salvos = await db.getAll<{ exercicio_id: string | null; exercicio_usuario_id: string | null; numero_serie: number; peso: number }>(
+      "SELECT exercicio_id, exercicio_usuario_id, numero_serie, peso FROM tb_academia_pesos WHERE user_id = ? AND academia_id = ?",
+      [user.id, a.id]
+    );
+    const mapa = new Map<string, number>();
+    for (const r of salvos) {
+      mapa.set(`${r.exercicio_id || ""}|${r.exercicio_usuario_id || ""}|${r.numero_serie}`, r.peso);
+    }
+    const now = new Date().toISOString();
+    for (const s of seriesComPeso()) {
+      const exId = s.exercicio_usuario_id ? null : s.exercicio_id;
+      const exUsuId = s.exercicio_usuario_id || null;
+      const novoPeso = mapa.get(`${exId || ""}|${exUsuId || ""}|${s.numero_serie}`) ?? 0;
+      const existing = await db.getAll<{ id: string }>(
+        `SELECT id FROM tb_treino_series
+         WHERE user_id = ? AND data_treino = ? AND ifnull(slot_idx, 0) = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
+        [user.id, selectedDate, s.slot_idx ?? 0, exId || "", exUsuId || "", s.numero_serie]
+      );
+      if (existing.length > 0) {
+        await db.execute(
+          "UPDATE tb_treino_series SET peso = ?, academia_nome = ?, updated_at = ? WHERE id = ?",
+          [novoPeso, a.nome, now, existing[0].id]
+        );
+      } else {
+        await db.execute(
+          `INSERT INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, concluida, academia_nome, updated_at)
+           VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [user.id, exId, exUsuId, selectedDate, s.slot_idx ?? 0, s.numero_serie, novoPeso, s.reps ?? 10, s.concluida ? 1 : 0, a.nome, now]
+        );
+      }
+    }
+    // Troca é autoritativa: derruba as travas de edição local e atualiza o estado
+    // na hora (sem esperar o watch do PowerSync re-emitir).
+    localEditsRef.current.clear();
+    setSeries((prev) => prev.map((s) => {
+      if (s.tempo_segundos != null) return s;
+      const exId = s.exercicio_usuario_id ? null : s.exercicio_id;
+      const exUsuId = s.exercicio_usuario_id || null;
+      const novoPeso = mapa.get(`${exId || ""}|${exUsuId || ""}|${s.numero_serie}`) ?? 0;
+      return { ...s, peso: novoPeso, salva: true };
+    }));
+    selecionarAcademia(a);
+    toast.success(`Academia atual: ${a.nome}`);
+  }, [db, user, selectedDate, seriesComPeso, selecionarAcademia]);
 
   // Logout handler — usa signOut do contexto (marca intentionalLogoutRef)
   const handleLogout = async () => {
@@ -1070,6 +1224,15 @@ const TreinosPage = () => {
               <TabelaSemanal dias={diasInfo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
             </div>
 
+            <SeletorAcademia
+              userId={user.id}
+              academiaAtual={academiaAtual}
+              onTrocar={trocarAcademia}
+              onSalvar={salvarPesosNaAcademia}
+              onCriada={selecionarAcademia}
+              trocaBloqueada={selectedSlots.some((s) => s.grupo && isSlotConcluido(selectedDate, s.slot_idx))}
+            />
+
             {(() => {
               const slotsComTreino = selectedSlots.filter(s => s.grupo);
               const dateLabel = `${DIAS_SEMANA[selectedDateObj.getDay()]} ${formatDateLabel(selectedDateObj)}`;
@@ -1125,7 +1288,7 @@ const TreinosPage = () => {
                               exerciciosMap={Object.fromEntries(
                                 slot.exercicios.map(e => [e.exercicio_id, { nome: e.tb_exercicios.nome, emoji: e.tb_exercicios.emoji }])
                               )}
-                              onTreinoConcluido={handleRefresh}
+                              onTreinoConcluido={() => marcarSlotConcluido(selectedDate, slot.slot_idx)}
                             />
                             <TreinoDoDia
                               userId={user.id}
@@ -1138,8 +1301,9 @@ const TreinosPage = () => {
                               exercicios={slot.exercicios}
                               series={slotSeries}
                               concluido={slotConcluido}
+                              academiaAtual={academiaAtual}
                               onRefresh={handleRefresh}
-                              onTreinoConcluido={handleTreinoConcluido}
+                              onTreinoConcluido={handleTreinoConcluidoComPesos}
                               onAlterarGrupo={() => { setAlterarTarget({ slot_idx: slot.slot_idx, mode: 'replace' }); setShowAlterarGrupo(true); }}
                               onRemoverTreino={() => handleRemoverSlot(slot.override_id, slot.slot_idx)}
                               onSeriesUpdate={(action) => {
