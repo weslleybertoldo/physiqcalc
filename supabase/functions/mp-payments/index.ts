@@ -48,12 +48,13 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MP_API = "https://api.mercadopago.com";
 
-// staging sempre usa credencial de TESTE; public usa PROD (fallback TESTE enquanto prod não ativada)
+// staging sempre usa credencial de TESTE; public exige PROD (fail-secure: sem fallback
+// pra TEST — senão aluno real "pagaria" um Pix de sandbox e o mês constaria pago sem dinheiro)
 function mpToken(): string {
   const test = Deno.env.get("MP_ACCESS_TOKEN_TEST") || "";
   const prod = Deno.env.get("MP_ACCESS_TOKEN_PROD") || "";
   if (currentSchema() === "staging") return test;
-  return prod || test;
+  return prod;
 }
 function usingTestToken(): boolean {
   return mpToken().startsWith("TEST-");
