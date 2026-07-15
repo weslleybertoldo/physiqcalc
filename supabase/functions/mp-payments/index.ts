@@ -327,6 +327,8 @@ Deno.serve(async (req) => {
           card_token_id: cardToken,
           auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: valor, currency_id: "BRL" },
           back_url: "https://physiqcalc.vercel.app/pagamentos",
+          // webhook por assinatura (config global da app só existe via painel; WAF bloqueia a API legada)
+          notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
           status: "authorized",
         }),
       });
