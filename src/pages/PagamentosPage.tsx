@@ -205,14 +205,14 @@ const PagamentosPage = () => {
       doc.setFont("helvetica", "bold"); doc.setFontSize(20);
       doc.text("PHYSIQCALC", W / 2, y, { align: "center" }); y += 8;
       doc.setTextColor(...CINZA); doc.setFontSize(10); doc.setFont("helvetica", "normal");
-      doc.text("COMPROVANTE DE PAGAMENTO", W / 2, y, { align: "center", charSpace: 1 }); y += 12;
+      doc.text("COMPROVANTE DE PAGAMENTO", W / 2, y, { align: "center" }); y += 12;
       doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 14;
       doc.setTextColor(...BRANCO); doc.setFontSize(26); doc.setFont("helvetica", "bold");
       doc.text(fmtBRL(Number(comprovante.valor)), W / 2, y, { align: "center" }); y += 10;
       const aprovado = comprovante.status === "approved";
       doc.setFontSize(11);
       doc.setTextColor(...(aprovado ? AMARELO : CINZA));
-      doc.text((STATUS_LABEL[comprovante.status] || comprovante.status).toUpperCase(), W / 2, y, { align: "center", charSpace: 1 }); y += 14;
+      doc.text((STATUS_LABEL[comprovante.status] || comprovante.status).toUpperCase(), W / 2, y, { align: "center" }); y += 14;
       const linhas: [string, string][] = [
         ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
         ["Forma de pagamento", comprovante.tipo === "pix" ? "Pix" : "Cartão de crédito"],
