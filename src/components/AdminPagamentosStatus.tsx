@@ -4,7 +4,8 @@ import { invokeMp, MpPagamento, MpAssinatura } from "@/lib/mpClient";
 
 interface AdminMpStatus {
   mensalidade: number | null;
-  mesRef: string;
+  emDia: boolean;
+  pagoAte: string | null;
   mesPago: boolean;
   assinatura: MpAssinatura | null;
   pagamentos: MpPagamento[];
@@ -48,13 +49,13 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm text-foreground font-body">Mensalidade {fmtBRL(status.mensalidade)}</p>
-            {status.mesPago ? (
+            {status.emDia ? (
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-heading uppercase tracking-wider bg-primary/15 text-primary">
-                <Check size={12} /> Mês pago
+                <Check size={12} /> Em dia{status.pagoAte ? ` até ${new Date(status.pagoAte).toLocaleDateString("pt-BR")}` : ""}
               </span>
             ) : (
               <span className="px-3 py-1 rounded-full text-xs font-heading uppercase tracking-wider bg-destructive/15 text-destructive">
-                Mês pendente
+                Pendente{status.pagoAte ? ` desde ${new Date(status.pagoAte).toLocaleDateString("pt-BR")}` : ""}
               </span>
             )}
           </div>
