@@ -35,7 +35,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [allTags, setAllTags] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const [userTagsMap, setUserTagsMap] = useState<Record<string, string[]>>({});
-  const [pagamentoBadges, setPagamentoBadges] = useState<Record<string, string>>({});
+  const [pagamentoBadges, setPagamentoBadges] = useState<Record<string, { s: string; ate: string | null }>>({});
   const [authChecked, setAuthChecked] = useState(false);
 
   // Navegação via URL (?v=<tela>&u=<userId>): a sub-tela é derivada da URL, então
@@ -79,8 +79,8 @@ const AdminPanel = () => {
       supabase.functions.invoke("admin-tags", { body: { action: "list" } }),
       supabase.functions.invoke("admin-tags", { body: { action: "getAllUserTags" } }),
     ]);
-    // badge pago/pendente do mês (só quem tem mensalidade) — não bloqueia a lista
-    invokeMp<{ badges: Record<string, string> }>("admin-badges")
+    // badge pago/pendente com data da cobertura (só quem tem mensalidade) — não bloqueia a lista
+    invokeMp<{ badges: Record<string, { s: string; ate: string | null }> }>("admin-badges")
       .then((r) => setPagamentoBadges(r.badges || {}))
       .catch((e) => console.error("[AdminPanel] admin-badges", e));
     if (!usersRes.error && usersRes.data?.users) setUsers(usersRes.data.users);
@@ -302,9 +302,11 @@ const AdminPanel = () => {
                       <span className={`text-xs font-heading uppercase ${statusColor}`}>{statusLabel}</span>
                       {pagamentoBadges[u.id] && (
                         <span className={`text-xs font-heading uppercase px-2 py-0.5 rounded-full ${
-                          pagamentoBadges[u.id] === "pago" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
+                          pagamentoBadges[u.id].s === "pago" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
                         }`}>
-                          {pagamentoBadges[u.id]}
+                          {pagamentoBadges[u.id].s === "pago"
+                            ? `pago${pagamentoBadges[u.id].ate ? ` até ${new Date(pagamentoBadges[u.id].ate!).toLocaleDateString("pt-BR")}` : ""}`
+                            : `pendente${pagamentoBadges[u.id].ate ? ` desde ${new Date(pagamentoBadges[u.id].ate!).toLocaleDateString("pt-BR")}` : ""}`}
                         </span>
                       )}
                     </div>

@@ -456,14 +456,20 @@ Deno.serve(async (req) => {
         admin.from("physiq_assinaturas").select("user_id").eq("status", "authorized"),
       ]);
       const agora = new Date();
-      const cobertos = new Set(((assinantes.data as any[]) || []).map((a) => a.user_id));
+      const assinantesSet = new Set(((assinantes.data as any[]) || []).map((a) => a.user_id));
+      // fim de cobertura por user (maior data de pagamento + 1 mês)
+      const fimPorUser: Record<string, Date> = {};
       for (const p of ((pagos.data as any[]) || [])) {
         const fim = addMonthClamp(new Date(p.updated_at || p.created_at));
-        if (fim > agora) cobertos.add(p.user_id);
+        if (!fimPorUser[p.user_id] || fim > fimPorUser[p.user_id]) fimPorUser[p.user_id] = fim;
       }
-      const badges: Record<string, string> = {};
+      const badges: Record<string, { s: string; ate: string | null }> = {};
       for (const p of ((profs.data as any[]) || [])) {
-        if (Number(p.mensalidade_valor) > 0) badges[p.id] = cobertos.has(p.id) ? "pago" : "pendente";
+        if (Number(p.mensalidade_valor) > 0) {
+          const fim = fimPorUser[p.id] || null;
+          const coberto = (fim !== null && fim > agora) || assinantesSet.has(p.id);
+          badges[p.id] = { s: coberto ? "pago" : "pendente", ate: fim ? fim.toISOString() : null };
+        }
       }
       return jsonOk({ badges }, origin);
     }
