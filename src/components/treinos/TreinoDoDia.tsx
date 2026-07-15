@@ -439,6 +439,16 @@ const TreinoDoDia = ({
       }
       return s;
     }));
+
+    // Refazer uma série de treino já concluído desfaz também o "Treino concluído"
+    if (concluido) {
+      await db.execute(
+        "DELETE FROM tb_treino_concluido WHERE user_id = ? AND data_treino = ? AND slot_idx = ?",
+        [userId, dateKey, slotIdx]
+      );
+      onTreinoConcluido?.(dateKey, slotIdx, false);
+      onRefresh();
+    }
   };
 
   const handleAddSerie = async (exercicioId: string) => {
