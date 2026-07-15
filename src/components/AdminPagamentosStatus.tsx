@@ -6,6 +6,7 @@ import ComprovanteModal from "@/components/ComprovanteModal";
 
 interface AdminMpStatus {
   mensalidade: number | null;
+  pausada?: boolean;
   emDia: boolean;
   pagoAte: string | null;
   assinatura: MpAssinatura | null;
@@ -60,6 +61,23 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
     }
   };
 
+  const handlePausar = async (pausar: boolean) => {
+    const msg = pausar
+      ? "Parar a cobrança deste aluno? Ele deixa de ver pendência e opções de pagamento (a assinatura ativa, se houver, continua — cancele-a também se for o caso)."
+      : "Reativar a cobrança deste aluno?";
+    if (!window.confirm(msg)) return;
+    setBusy(true);
+    try {
+      await invokeMp("admin-pausar-cobranca", { userId, pausar });
+      toast.success(pausar ? "Cobrança parada." : "Cobrança reativada.");
+      load();
+    } catch {
+      toast.error("Erro ao atualizar a cobrança.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleReembolso = async (p: MpPagamento) => {
     if (!window.confirm(`Realmente vai seguir com o reembolso de ${fmtBRL(Number(p.valor))}?`)) return;
     setBusy(true);
@@ -90,7 +108,11 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
           {/* Situação */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-foreground font-body">Mensalidade {fmtBRL(status.mensalidade)}</p>
-            {status.emDia ? (
+            {status.pausada ? (
+              <span className="px-3 py-1 rounded-full text-xs font-heading uppercase tracking-wider bg-muted text-muted-foreground">
+                Cobrança parada
+              </span>
+            ) : status.emDia ? (
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-heading uppercase tracking-wider bg-primary/15 text-primary">
                 <Check size={12} /> Em dia{!assinaturaAtiva && status.pagoAte ? ` até ${new Date(status.pagoAte).toLocaleDateString("pt-BR")}` : ""}
               </span>
@@ -100,6 +122,24 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
               </span>
             )}
           </div>
+
+          {/* Parar/reativar cobrança (por perfil) */}
+          {status.pausada ? (
+            <div className="bg-muted/20 border border-border rounded-lg p-4 space-y-2">
+              <p className="text-xs text-muted-foreground font-body">
+                Cobrança parada: o aluno não vê pendência, aviso nem opções de pagamento — mesmo com valor configurado.
+              </p>
+              <button type="button" onClick={() => handlePausar(false)} disabled={busy}
+                className="text-xs font-heading uppercase tracking-wider text-primary border border-primary/40 rounded-lg px-4 py-2 hover:bg-primary/10 transition-colors disabled:opacity-50">
+                Reativar cobrança
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => handlePausar(true)} disabled={busy}
+              className="text-xs font-heading uppercase tracking-wider text-destructive border border-destructive/40 rounded-lg px-4 py-2 hover:bg-destructive/10 transition-colors disabled:opacity-50">
+              Parar cobrança
+            </button>
+          )}
 
           {/* Assinatura */}
           {assinaturaAtiva ? (

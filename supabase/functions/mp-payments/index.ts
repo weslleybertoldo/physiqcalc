@@ -123,9 +123,11 @@ function mesLabel(mesRef: string): string {
   return `${nomes[parseInt(m, 10) - 1]}/${y}`;
 }
 
+// null = sem cobrança (não configurada OU pausada pelo admin)
 async function getMensalidade(userId: string): Promise<number | null> {
   const admin = adminClient();
-  const { data } = await admin.from("physiq_profiles").select("mensalidade_valor").eq("id", userId).maybeSingle();
+  const { data } = await admin.from("physiq_profiles").select("mensalidade_valor, cobranca_pausada").eq("id", userId).maybeSingle();
+  if ((data as any)?.cobranca_pausada) return null;
   const v = (data as any)?.mensalidade_valor;
   return typeof v === "number" && v > 0 ? v : null;
 }
@@ -451,7 +453,7 @@ Deno.serve(async (req) => {
       // rolling: cobre 1 mês da data do pagamento → busca aprovados dos últimos 45 dias
       const corte = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
       const [profs, pagos, assinantes] = await Promise.all([
-        admin.from("physiq_profiles").select("id, mensalidade_valor").not("mensalidade_valor", "is", null),
+        admin.from("physiq_profiles").select("id, mensalidade_valor, cobranca_pausada").not("mensalidade_valor", "is", null),
         admin.from("physiq_pagamentos").select("user_id, created_at, updated_at").eq("status", "approved").gte("updated_at", corte),
         admin.from("physiq_assinaturas").select("user_id").eq("status", "authorized"),
       ]);
@@ -467,7 +469,7 @@ Deno.serve(async (req) => {
       const badges: Record<string, string> = {};
       const badgesData: Record<string, { s: string; ate: string | null }> = {};
       for (const p of ((profs.data as any[]) || [])) {
-        if (Number(p.mensalidade_valor) > 0) {
+        if (Number(p.mensalidade_valor) > 0 && !p.cobranca_pausada) {
           const fim = fimPorUser[p.id] || null;
           const coberto = (fim !== null && fim > agora) || assinantesSet.has(p.id);
           badges[p.id] = coberto ? "pago" : "pendente";
@@ -484,8 +486,8 @@ Deno.serve(async (req) => {
       const userId = body?.userId;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
       await refreshPendentes(userId);
-      const [prof, pagRes, assRes, pagoAte] = await Promise.all([
-        getMensalidade(userId),
+      const [profRow, pagRes, assRes, pagoAte] = await Promise.all([
+        admin.from("physiq_profiles").select("mensalidade_valor, cobranca_pausada").eq("id", userId).maybeSingle(),
         admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, mp_payment_id, pix_expira_em, created_at, updated_at")
           .eq("user_id", userId).order("created_at", { ascending: false }).limit(24),
         admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
@@ -498,9 +500,12 @@ Deno.serve(async (req) => {
         assinaturaAdm.proxima_cobranca = await proximaCobranca(assinaturaAdm);
       }
       if (assinaturaAdm) delete assinaturaAdm.mp_preapproval_id;
+      const valorProf = (profRow.data as any)?.mensalidade_valor;
+      const mensalidadeAdm = typeof valorProf === "number" && valorProf > 0 ? valorProf : null;
+      const pausada = Boolean((profRow.data as any)?.cobranca_pausada);
       const emDia = (pagoAte !== null && pagoAte > new Date()) || assinaturaAdm?.status === "authorized";
       return jsonOk({
-        mensalidade: prof, emDia, mesPago: emDia,
+        mensalidade: mensalidadeAdm, pausada, emDia, mesPago: emDia,
         pagoAte: pagoAte ? pagoAte.toISOString() : null,
         assinatura: assinaturaAdm, pagamentos,
       }, origin);
@@ -524,6 +529,18 @@ Deno.serve(async (req) => {
       if (status >= 300) return jsonErr("mp_error", 502, origin);
       await admin.from("physiq_assinaturas").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", a.id);
       return jsonOk({ ok: true }, origin);
+    }
+
+    // ---- admin pausa/reativa a cobrança de um aluno ----
+    if (action === "admin-pausar-cobranca") {
+      const role = (user.app_metadata as any)?.role;
+      if (role !== "admin") return jsonErr("forbidden", 403, origin);
+      const userId = body?.userId;
+      const pausar = Boolean(body?.pausar);
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      const { error } = await admin.from("physiq_profiles").update({ cobranca_pausada: pausar }).eq("id", userId);
+      if (error) throw error;
+      return jsonOk({ ok: true, pausada: pausar }, origin);
     }
 
     // ---- admin reembolsa um pagamento (total) ----

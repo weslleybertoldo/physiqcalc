@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 // sync rapido (nao descarta builds validos) quanto em pausa longa (preserva edits
 // nao sincronizados ate o PowerSync propagar updated_at >= timestamp local).
 import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
+import PendenciaAviso from "@/components/PendenciaAviso";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
 import WorkoutTimer from "@/components/treinos/WorkoutTimer";
@@ -1131,6 +1132,7 @@ const TreinosPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 sm:px-8">
+        <PendenciaAviso />
         <header className="pt-6 sm:pt-12 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {avatarUrl && !avatarBroken ? (
