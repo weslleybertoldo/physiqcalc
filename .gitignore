@@ -32,3 +32,4 @@ keystore_base64.txt
 
 supabase/.temp/
 deno.lock
+.env.admin-teste

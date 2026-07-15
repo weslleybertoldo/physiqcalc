@@ -121,7 +121,7 @@ const PagamentosPage = () => {
       }
       await load();
     } catch (e: any) {
-      const msg = e?.message === "mes_ja_pago" ? "O mês atual já está pago."
+      const msg = e?.message === "ainda_coberto" || e?.message === "mes_ja_pago" ? "Sua mensalidade ainda está em dia — pague de novo quando vencer."
         : e?.message === "sem_mensalidade" ? "Nenhuma mensalidade configurada."
         : "Erro ao gerar Pix.";
       toast.error(msg);
@@ -152,15 +152,19 @@ const PagamentosPage = () => {
         else if (r.pagamento?.status === "rejected") toast.error("Pagamento recusado pelo cartão.");
         else toast.info("Pagamento em processamento — o status atualiza em instantes.");
       } else {
-        await invokeMp("create-subscription", { card_token: formData?.token });
-        toast.success("Assinatura criada! A cobrança mensal é automática.");
+        const r = await invokeMp<{ primeira_cobranca?: string | null }>("create-subscription", { card_token: formData?.token });
+        if (r.primeira_cobranca) {
+          toast.success(`Assinatura criada! Como o mês já está pago, a primeira cobrança será em ${new Date(r.primeira_cobranca).toLocaleDateString("pt-BR")}.`);
+        } else {
+          toast.success("Assinatura criada! A cobrança mensal é automática.");
+        }
       }
       setCardMode(null);
       await load();
     } catch (e: any) {
       const msg = e?.message === "assinatura_ja_ativa" ? "Você já tem uma assinatura ativa."
-        : e?.message === "mes_ja_pago" ? "O mês atual já está pago."
-        : e?.message === "assinatura_sem_sandbox" ? "Assinatura não funciona em ambiente de teste — use \"Pagar só este mês\". Em produção funciona normalmente."
+        : e?.message === "ainda_coberto" || e?.message === "mes_ja_pago" ? "Sua mensalidade ainda está em dia — pague de novo quando vencer."
+        : e?.message === "assinatura_sem_sandbox" ? "Assinatura não funciona em ambiente de teste — use \"Pagar 1 mês (avulso)\". Em produção funciona normalmente."
         : "Erro no pagamento. Verifique os dados do cartão.";
       toast.error(msg);
       throw e; // Brick mostra estado de erro
@@ -272,14 +276,14 @@ const PagamentosPage = () => {
           </div>
         ) : (
           <>
-            {/* Status do mês */}
+            {/* Situação da mensalidade */}
             <div className="bg-card border border-border rounded-xl p-5 space-y-1">
-              <p className="text-xs text-muted-foreground font-body uppercase tracking-wider">Mensalidade · {status.mesLabel}</p>
+              <p className="text-xs text-muted-foreground font-body uppercase tracking-wider">Mensalidade</p>
               <div className="flex items-center justify-between">
                 <p className="font-heading text-2xl text-foreground">{fmtBRL(status.mensalidade)}</p>
-                {status.mesPago ? (
+                {status.emDia ? (
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-heading uppercase tracking-wider bg-primary/15 text-primary">
-                    <Check size={12} /> Pago
+                    <Check size={12} /> Em dia
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-heading uppercase tracking-wider bg-destructive/15 text-destructive">
@@ -287,6 +291,14 @@ const PagamentosPage = () => {
                   </span>
                 )}
               </div>
+              {status.pagoAte && !assinaturaAtiva && (
+                <p className="text-xs text-muted-foreground font-body">
+                  {new Date(status.pagoAte) > new Date() ? "Pago até " : "Venceu em "}
+                  <span className={new Date(status.pagoAte) > new Date() ? "text-primary" : "text-destructive"}>
+                    {new Date(status.pagoAte).toLocaleDateString("pt-BR")}
+                  </span>
+                </p>
+              )}
             </div>
 
             {/* Assinatura cartão */}
@@ -314,7 +326,7 @@ const PagamentosPage = () => {
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground font-body">
                     {cardMode === "avulso"
-                      ? `Pagamento único de ${fmtBRL(status.mensalidade)} — só o mês de ${status.mesLabel}.`
+                      ? `Pagamento único de ${fmtBRL(status.mensalidade)} — cobre 1 mês a partir de hoje.`
                       : `Assinatura de ${fmtBRL(status.mensalidade)}/mês com cobrança automática. Cancele quando quiser.`}
                   </p>
                   {MP_PUBLIC_KEY ? (
@@ -338,10 +350,10 @@ const PagamentosPage = () => {
                   <p className="text-xs text-muted-foreground font-body">
                     Pague só o mês atual ou assine pra cobrar automático todo mês.
                   </p>
-                  {!status.mesPago && (
+                  {!status.emDia && (
                     <button type="button" onClick={() => setCardMode("avulso")}
                       className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
-                      Pagar só este mês
+                      Pagar 1 mês (avulso)
                     </button>
                   )}
                   <button type="button" onClick={() => setCardMode("assinatura")}
@@ -353,11 +365,11 @@ const PagamentosPage = () => {
             </div>
 
             {/* Pix do mês */}
-            {!status.mesPago && !assinaturaAtiva && (
+            {!status.emDia && !assinaturaAtiva && (
               <div className="bg-card border border-border rounded-xl p-5 space-y-3">
                 <div className="flex items-center gap-2">
                   <QrCode size={16} className="text-primary" />
-                  <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Pagar o mês via Pix</h2>
+                  <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Pagar via Pix</h2>
                 </div>
                 {pixData ? (
                   <div className="space-y-3 text-center">
@@ -398,7 +410,7 @@ const PagamentosPage = () => {
                           </button>
                           <p className="text-[10px] text-muted-foreground font-body">
                             Após pagar, o status atualiza em instantes (toque em atualizar).
-                            Se o código vencer, é só gerar um novo Pix do mês.
+                            Se o código vencer, é só gerar um novo Pix.
                           </p>
                         </>
                       );
@@ -407,7 +419,7 @@ const PagamentosPage = () => {
                 ) : (
                   <button type="button" onClick={handlePix} disabled={busy}
                     className="w-full py-2.5 border border-primary/40 text-primary rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/10 transition-colors disabled:opacity-50">
-                    {busy ? "Gerando..." : "Gerar Pix do mês"}
+                    {busy ? "Gerando..." : "Gerar Pix (1 mês)"}
                   </button>
                 )}
               </div>

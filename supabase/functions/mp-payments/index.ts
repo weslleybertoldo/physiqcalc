@@ -130,6 +130,34 @@ async function getMensalidade(userId: string): Promise<number | null> {
   return typeof v === "number" && v > 0 ? v : null;
 }
 
+// soma 1 mês com clamp de dia (31/01 → 28/02, não 03/03)
+function addMonthClamp(d: Date): Date {
+  const r = new Date(d);
+  const dia = r.getUTCDate();
+  r.setUTCDate(1);
+  r.setUTCMonth(r.getUTCMonth() + 1);
+  const ultimo = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 0)).getUTCDate();
+  r.setUTCDate(Math.min(dia, ultimo));
+  return r;
+}
+
+// modelo rolling: cada pagamento aprovado cobre 1 mês a partir da data do pagamento.
+// pago_ate = maior cobertura entre os pagamentos aprovados (null = nunca pagou)
+async function getPagoAte(userId: string): Promise<Date | null> {
+  const admin = adminClient();
+  const { data } = await admin.from("physiq_pagamentos")
+    .select("created_at, updated_at, status")
+    .eq("user_id", userId).eq("status", "approved")
+    .order("updated_at", { ascending: false }).limit(12);
+  let max: Date | null = null;
+  for (const p of ((data as any[]) || [])) {
+    const base = new Date(p.updated_at || p.created_at);
+    const fim = addMonthClamp(base);
+    if (!max || fim > max) max = fim;
+  }
+  return max;
+}
+
 // próxima cobrança da assinatura: data real do MP; fallback = mesmo dia da adesão no mês seguinte
 async function proximaCobranca(ass: { mp_preapproval_id?: string | null; created_at: string }): Promise<string | null> {
   if (ass.mp_preapproval_id) {
@@ -196,13 +224,13 @@ Deno.serve(async (req) => {
     // ---- status (aba Pagamentos do aluno) ----
     if (action === "status") {
       await refreshPendentes(user.id);
-      const mesRef = mesRefAtual();
-      const [prof, pagRes, assRes] = await Promise.all([
+      const [prof, pagRes, assRes, pagoAte] = await Promise.all([
         getMensalidade(user.id),
         admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, created_at, updated_at")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(12),
         admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+        getPagoAte(user.id),
       ]);
       const pagamentos = (pagRes.data as any[]) || [];
       const assinatura = ((assRes.data as any[]) || [])[0] || null;
@@ -210,24 +238,33 @@ Deno.serve(async (req) => {
         assinatura.proxima_cobranca = await proximaCobranca(assinatura);
       }
       if (assinatura) delete assinatura.mp_preapproval_id;
-      const mesPago = pagamentos.some((p) => p.mes_ref === mesRef && p.status === "approved");
-      return jsonOk({ mensalidade: prof, mesRef, mesLabel: mesLabel(mesRef), mesPago, assinatura, pagamentos }, origin);
+      // em dia = cobertura rolling vigente (pagamento cobre 1 mês da data do pagamento) OU assinante ativo
+      const emDia = (pagoAte !== null && pagoAte > new Date()) || assinatura?.status === "authorized";
+      return jsonOk({
+        mensalidade: prof, emDia, mesPago: emDia,
+        pagoAte: pagoAte ? pagoAte.toISOString() : null,
+        mesRef: mesRefAtual(), mesLabel: mesLabel(mesRefAtual()),
+        assinatura, pagamentos,
+      }, origin);
     }
 
-    // ---- Pix avulso do mês ----
+    // ---- Pix avulso (cobre 1 mês a partir do pagamento) ----
     if (action === "create-pix") {
       const valor = await getMensalidade(user.id);
       if (!valor) return jsonErr("sem_mensalidade", 400, origin);
       const mesRef = mesRefAtual();
 
-      // reusa pix pendente do mês ainda válido
+      // cobertura rolling vigente? não deixa pagar de novo antes de vencer
+      const pagoAte = await getPagoAte(user.id);
+      if (pagoAte && pagoAte > new Date()) return jsonErr("ainda_coberto", 400, origin);
+
+      // reusa pix pendente ainda válido (independente do mês)
       const { data: existing } = await admin.from("physiq_pagamentos")
         .select("id, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, valor")
-        .eq("user_id", user.id).eq("mes_ref", mesRef).eq("tipo", "pix")
-        .in("status", ["pending", "approved"])
+        .eq("user_id", user.id).eq("tipo", "pix")
+        .eq("status", "pending")
         .order("created_at", { ascending: false }).limit(1);
       const ex = ((existing as any[]) || [])[0];
-      if (ex?.status === "approved") return jsonErr("mes_ja_pago", 400, origin);
       if (ex?.status === "pending" && ex.pix_qr_code && Number(ex.valor) === valor) {
         const { status, body: pay } = await mpFetch(`/v1/payments/${ex.mp_payment_id}`);
         if (status === 200 && pay?.status === "pending") {
@@ -274,9 +311,8 @@ Deno.serve(async (req) => {
       if (!valor) return jsonErr("sem_mensalidade", 400, origin);
       const mesRef = mesRefAtual();
 
-      const { data: pagos } = await admin.from("physiq_pagamentos")
-        .select("id").eq("user_id", user.id).eq("mes_ref", mesRef).eq("status", "approved").limit(1);
-      if (((pagos as any[]) || []).length > 0) return jsonErr("mes_ja_pago", 400, origin);
+      const pagoAteCartao = await getPagoAte(user.id);
+      if (pagoAteCartao && pagoAteCartao > new Date()) return jsonErr("ainda_coberto", 400, origin);
 
       const payload: Record<string, unknown> = {
         transaction_amount: valor,
@@ -318,6 +354,11 @@ Deno.serve(async (req) => {
         .select("id").eq("user_id", user.id).in("status", ["authorized", "pending"]).limit(1);
       if (((ativa as any[]) || []).length > 0) return jsonErr("assinatura_ja_ativa", 400, origin);
 
+      // cobertura rolling vigente? 1ª cobrança quando ela termina (ex.: avulso dia 15 →
+      // assinou até 15 do mês seguinte → cobra dia 15 e recorre nesse dia). Vencido → cobra na hora.
+      const pagoAteSub = await getPagoAte(user.id);
+      const startDate: string | null = pagoAteSub && pagoAteSub > new Date() ? pagoAteSub.toISOString() : null;
+
       const { status, body: pre } = await mpFetch("/preapproval", {
         method: "POST",
         body: JSON.stringify({
@@ -325,7 +366,10 @@ Deno.serve(async (req) => {
           external_reference: `${currentSchema()}:${user.id}`,
           payer_email: payerEmail(user.email),
           card_token_id: cardToken,
-          auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: valor, currency_id: "BRL" },
+          auto_recurring: {
+            frequency: 1, frequency_type: "months", transaction_amount: valor, currency_id: "BRL",
+            ...(startDate ? { start_date: startDate } : {}),
+          },
           back_url: "https://physiqcalc.vercel.app/pagamentos",
           // webhook por assinatura (config global da app só existe via painel; WAF bloqueia a API legada)
           notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
@@ -344,7 +388,7 @@ Deno.serve(async (req) => {
       if (insErr) throw insErr;
 
       // 1ª cobrança da assinatura pode levar minutos; o mês fica pago via webhook/refresh
-      return jsonOk({ assinatura: inserted }, origin);
+      return jsonOk({ assinatura: inserted, primeira_cobranca: startDate }, origin);
     }
 
     // ---- cancelar assinatura ----
@@ -397,6 +441,30 @@ Deno.serve(async (req) => {
       return jsonOk({ pagamento: row, mp }, origin);
     }
 
+    // ---- badges pago/pendente da lista do admin ----
+    if (action === "admin-badges") {
+      const role = (user.app_metadata as any)?.role;
+      if (role !== "admin") return jsonErr("forbidden", 403, origin);
+      // rolling: cobre 1 mês da data do pagamento → busca aprovados dos últimos 45 dias
+      const corte = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+      const [profs, pagos, assinantes] = await Promise.all([
+        admin.from("physiq_profiles").select("id, mensalidade_valor").not("mensalidade_valor", "is", null),
+        admin.from("physiq_pagamentos").select("user_id, created_at, updated_at").eq("status", "approved").gte("updated_at", corte),
+        admin.from("physiq_assinaturas").select("user_id").eq("status", "authorized"),
+      ]);
+      const agora = new Date();
+      const cobertos = new Set(((assinantes.data as any[]) || []).map((a) => a.user_id));
+      for (const p of ((pagos.data as any[]) || [])) {
+        const fim = addMonthClamp(new Date(p.updated_at || p.created_at));
+        if (fim > agora) cobertos.add(p.user_id);
+      }
+      const badges: Record<string, string> = {};
+      for (const p of ((profs.data as any[]) || [])) {
+        if (Number(p.mensalidade_valor) > 0) badges[p.id] = cobertos.has(p.id) ? "pago" : "pendente";
+      }
+      return jsonOk({ badges }, origin);
+    }
+
     // ---- visão do admin sobre um aluno ----
     if (action === "admin-status") {
       const role = (user.app_metadata as any)?.role;
@@ -404,17 +472,22 @@ Deno.serve(async (req) => {
       const userId = body?.userId;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
       await refreshPendentes(userId);
-      const mesRef = mesRefAtual();
-      const [prof, pagRes, assRes] = await Promise.all([
+      const [prof, pagRes, assRes, pagoAte] = await Promise.all([
         getMensalidade(userId),
         admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, created_at")
           .eq("user_id", userId).order("created_at", { ascending: false }).limit(12),
         admin.from("physiq_assinaturas").select("id, status, valor, created_at")
           .eq("user_id", userId).order("created_at", { ascending: false }).limit(1),
+        getPagoAte(userId),
       ]);
       const pagamentos = (pagRes.data as any[]) || [];
-      const mesPago = pagamentos.some((p) => p.mes_ref === mesRef && p.status === "approved");
-      return jsonOk({ mensalidade: prof, mesRef, mesPago, assinatura: ((assRes.data as any[]) || [])[0] || null, pagamentos }, origin);
+      const assinaturaAdm = ((assRes.data as any[]) || [])[0] || null;
+      const emDia = (pagoAte !== null && pagoAte > new Date()) || assinaturaAdm?.status === "authorized";
+      return jsonOk({
+        mensalidade: prof, emDia, mesPago: emDia,
+        pagoAte: pagoAte ? pagoAte.toISOString() : null,
+        assinatura: assinaturaAdm, pagamentos,
+      }, origin);
     }
 
     return jsonErr("unknown_action", 400, origin);

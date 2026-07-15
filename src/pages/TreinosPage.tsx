@@ -987,6 +987,9 @@ const TreinosPage = () => {
               grupoNome={selectedSlots.filter(s => s.grupo).map(s => s.grupo!.nome).join(' + ') || null}
               dateLabel={`${DIAS_SEMANA[selectedDateObj.getDay()]} ${formatDateLabel(selectedDateObj)}`}
             />
+            <button type="button" onClick={() => navigate("/pagamentos")} className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Pagamentos">
+              <CreditCard size={16} />
+            </button>
             <button type="button" onClick={() => navigate("/avaliacao")} className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Avaliação">
               <ClipboardList size={16} />
             </button>

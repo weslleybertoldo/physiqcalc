@@ -31,6 +31,10 @@ export interface MpStatus {
   mensalidade: number | null;
   mesRef: string;
   mesLabel: string;
+  /** cobertura rolling vigente (pagamento cobre 1 mês da data do pagamento) ou assinatura ativa */
+  emDia: boolean;
+  /** fim da cobertura do último pagamento aprovado (null = nunca pagou) */
+  pagoAte: string | null;
   mesPago: boolean;
   assinatura: MpAssinatura | null;
   pagamentos: MpPagamento[];

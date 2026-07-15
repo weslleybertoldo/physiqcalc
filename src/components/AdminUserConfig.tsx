@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,6 +30,23 @@ function calcBodyFat3(gender: "male" | "female", soma: number, age: number) {
 const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // sub-aba na URL (?ct=) — F5 mantém a aba (mesmo padrão do AdminTreinos)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const CONFIG_TABS = [
+    { key: "geral", label: "Dados Gerais" },
+    { key: "dobras", label: "Dobras & Medidas" },
+    { key: "plano", label: "Plano" },
+    { key: "treino", label: "Treino" },
+  ] as const;
+  const rawTab = searchParams.get("ct") || "geral";
+  const configTab = CONFIG_TABS.some((t) => t.key === rawTab) ? rawTab : "geral";
+  const setConfigTab = (t: string) => {
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set("ct", t);
+      return p;
+    }, { replace: true });
+  };
   const [nome, setNome] = useState("");
   const [sexo, setSexo] = useState<"male" | "female">("male");
   const [idade, setIdade] = useState("");
@@ -211,8 +229,23 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
           </div>
         </header>
 
-        <div className="space-y-10 pb-20">
-          {/* Dados pessoais */}
+        <div className="flex flex-wrap gap-1 border-b border-border">
+          {CONFIG_TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setConfigTab(t.key)}
+              className={`px-2.5 sm:px-4 py-2.5 text-xs font-heading uppercase tracking-wider border-b-2 -mb-px whitespace-nowrap transition-colors ${
+                configTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-10 pb-20 pt-8">
+          {configTab === "geral" && (
           <section>
             <h2 className="font-heading text-lg text-foreground mb-6">Dados Pessoais</h2>
             <div className="space-y-6">
@@ -252,9 +285,10 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
               </div>
             </div>
           </section>
+          )}
 
-          {/* Dobras cutâneas */}
-          <section className="section-divider pt-10">
+          {configTab === "dobras" && (<>
+          <section>
             <h2 className="font-heading text-lg text-foreground mb-6">Dobras Cutâneas (3 dobras J&P)</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               <InputField label={foldLabels[0]} unit="mm" value={dobra1} onChange={setDobra1} />
@@ -431,9 +465,10 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
               <InputField label="% Gordura" unit="%" value={fatPct} onChange={setFatPct} placeholder="15" />
             </div>
           </section>
+          </>)}
 
-          {/* Tags */}
-          <section className="section-divider pt-10">
+          {configTab === "plano" && (<>
+          <section>
             <h2 className="font-heading text-lg text-foreground mb-6">Tags</h2>
             <AdminTagSelector userId={userId} />
           </section>
@@ -457,7 +492,9 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
               </div>
             </div>
           </section>
+          </>)}
 
+          {configTab === "dobras" && (<>
           {/* Toggle edição manual */}
           <section className="section-divider pt-10">
             <div className="flex items-center justify-between">
@@ -489,11 +526,13 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
               <p className="text-xs text-muted-foreground font-body mt-1">Será registrada junto com a avaliação ao salvar</p>
             </div>
           </section>
+          </>)}
 
-          {/* Treino Diário */}
-          <AdminSemanaUsuario userId={userId} />
+          {/* Treino Diário (auto-salva) */}
+          {configTab === "treino" && <AdminSemanaUsuario userId={userId} />}
 
           {/* Save button */}
+          {configTab !== "treino" && (
           <button
             onClick={handleSave}
             disabled={saving}
@@ -501,6 +540,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
           >
             {saving ? "Salvando..." : "Salvar"}
           </button>
+          )}
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import AdminTagManager from "@/components/AdminTagManager";
 import AdminTreinos from "@/components/admin/AdminTreinos";
 import Index from "./Index";
 import { generateAdminPDF, type AdminProfile } from "@/lib/generateAdminPDF";
+import { invokeMp } from "@/lib/mpClient";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -34,6 +35,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [allTags, setAllTags] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const [userTagsMap, setUserTagsMap] = useState<Record<string, string[]>>({});
+  const [pagamentoBadges, setPagamentoBadges] = useState<Record<string, string>>({});
   const [authChecked, setAuthChecked] = useState(false);
 
   // Navegação via URL (?v=<tela>&u=<userId>): a sub-tela é derivada da URL, então
@@ -77,6 +79,10 @@ const AdminPanel = () => {
       supabase.functions.invoke("admin-tags", { body: { action: "list" } }),
       supabase.functions.invoke("admin-tags", { body: { action: "getAllUserTags" } }),
     ]);
+    // badge pago/pendente do mês (só quem tem mensalidade) — não bloqueia a lista
+    invokeMp<{ badges: Record<string, string> }>("admin-badges")
+      .then((r) => setPagamentoBadges(r.badges || {}))
+      .catch((e) => console.error("[AdminPanel] admin-badges", e));
     if (!usersRes.error && usersRes.data?.users) setUsers(usersRes.data.users);
     if (!tagsRes.error && tagsRes.data?.tags) setAllTags(tagsRes.data.tags);
     if (!userTagsRes.error && userTagsRes.data?.userTags) {
@@ -294,6 +300,13 @@ const AdminPanel = () => {
                         </span>
                       )}
                       <span className={`text-xs font-heading uppercase ${statusColor}`}>{statusLabel}</span>
+                      {pagamentoBadges[u.id] && (
+                        <span className={`text-xs font-heading uppercase px-2 py-0.5 rounded-full ${
+                          pagamentoBadges[u.id] === "pago" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
+                        }`}>
+                          {pagamentoBadges[u.id]}
+                        </span>
+                      )}
                     </div>
                     {/* Tags */}
                     {(() => {
