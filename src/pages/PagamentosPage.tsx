@@ -193,16 +193,26 @@ const PagamentosPage = () => {
       const { default: jsPDF } = await import("jspdf");
       const doc = new jsPDF();
       const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+      // tema do app: fundo preto (#0D0D0D) + amarelo (#FFBF00)
+      const AMARELO: [number, number, number] = [255, 191, 0];
+      const BRANCO: [number, number, number] = [234, 234, 234];
+      const CINZA: [number, number, number] = [150, 150, 150];
+      doc.setFillColor(13, 13, 13); doc.rect(0, 0, W, H, "F");
+      doc.setFillColor(255, 191, 0); doc.rect(0, 0, W, 3, "F");
       let y = 24;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(18);
-      doc.text("PhysiqCalc", W / 2, y, { align: "center" }); y += 8;
-      doc.setFontSize(12); doc.setFont("helvetica", "normal");
-      doc.text("Comprovante de Pagamento", W / 2, y, { align: "center" }); y += 12;
-      doc.setDrawColor(180); doc.line(20, y, W - 20, y); y += 12;
-      doc.setFontSize(22); doc.setFont("helvetica", "bold");
-      doc.text(fmtBRL(Number(comprovante.valor)), W / 2, y, { align: "center" }); y += 8;
-      doc.setFontSize(11); doc.setFont("helvetica", "normal");
-      doc.text(STATUS_LABEL[comprovante.status] || comprovante.status, W / 2, y, { align: "center" }); y += 14;
+      doc.setTextColor(...AMARELO);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(20);
+      doc.text("PHYSIQCALC", W / 2, y, { align: "center" }); y += 8;
+      doc.setTextColor(...CINZA); doc.setFontSize(10); doc.setFont("helvetica", "normal");
+      doc.text("COMPROVANTE DE PAGAMENTO", W / 2, y, { align: "center", charSpace: 1 }); y += 12;
+      doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 14;
+      doc.setTextColor(...BRANCO); doc.setFontSize(26); doc.setFont("helvetica", "bold");
+      doc.text(fmtBRL(Number(comprovante.valor)), W / 2, y, { align: "center" }); y += 10;
+      const aprovado = comprovante.status === "approved";
+      doc.setFontSize(11);
+      doc.setTextColor(...(aprovado ? AMARELO : CINZA));
+      doc.text((STATUS_LABEL[comprovante.status] || comprovante.status).toUpperCase(), W / 2, y, { align: "center", charSpace: 1 }); y += 14;
       const linhas: [string, string][] = [
         ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
         ["Forma de pagamento", comprovante.tipo === "pix" ? "Pix" : "Cartão de crédito"],
@@ -217,12 +227,15 @@ const PagamentosPage = () => {
       if (receiptMp?.status_detail) linhas.push(["Detalhe do status", receiptMp.status_detail]);
       doc.setFontSize(10);
       for (const [k, v] of linhas) {
-        doc.setFont("helvetica", "bold"); doc.text(`${k}:`, 24, y);
-        doc.setFont("helvetica", "normal"); doc.text(String(v), 90, y, { maxWidth: W - 114 });
-        y += 8;
+        doc.setTextColor(...AMARELO); doc.setFont("helvetica", "bold");
+        doc.text(`${k.toUpperCase()}`, 24, y);
+        doc.setTextColor(...BRANCO); doc.setFont("helvetica", "normal");
+        doc.text(String(v), W - 24, y, { align: "right", maxWidth: W - 118 });
+        y += 6;
+        doc.setDrawColor(40, 40, 40); doc.line(24, y, W - 24, y); y += 7;
       }
-      y += 6; doc.setDrawColor(180); doc.line(20, y, W - 20, y); y += 8;
-      doc.setFontSize(8); doc.setTextColor(120);
+      y += 4; doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 8;
+      doc.setFontSize(8); doc.setTextColor(...CINZA);
       doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · Pagamento processado pelo Mercado Pago`, W / 2, y, { align: "center" });
       doc.save(`comprovante-physiqcalc-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
     } catch (e) {
