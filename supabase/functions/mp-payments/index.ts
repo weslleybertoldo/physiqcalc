@@ -423,6 +423,11 @@ Deno.serve(async (req) => {
       if ((row as any).mp_payment_id) {
         const { status, body: pay } = await mpFetch(`/v1/payments/${(row as any).mp_payment_id}`);
         if (status === 200 && pay) {
+          // e-mail mascarado pelo MP (privacidade do Pix) não serve pra exibir
+          const email = pay.payer?.email || null;
+          const emailVisivel = email && !/x{3,}/i.test(email) ? email : null;
+          const nomeTitular = pay.card?.cardholder?.name || null;
+          const bancoPagador = pay.point_of_interaction?.transaction_data?.bank_info?.payer?.long_name || null;
           mp = {
             status: pay.status || null,
             status_detail: pay.status_detail || null,
@@ -431,7 +436,9 @@ Deno.serve(async (req) => {
             payment_method: pay.payment_method_id || null,
             payment_type: pay.payment_type_id || null,
             installments: pay.installments || null,
-            payer_email: pay.payer?.email || null,
+            payer_email: emailVisivel,
+            payer_nome: nomeTitular,
+            banco_pagador: bancoPagador,
             e2e_id: pay.point_of_interaction?.transaction_data?.e2e_id || null,
             bank_transfer_id: pay.transaction_details?.bank_transfer_id || null,
             transaction_id: pay.transaction_details?.transaction_id || null,

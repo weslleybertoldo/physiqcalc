@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { invokeMp, MpStatus, MpPagamento } from "@/lib/mpClient";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
+import { salvarPdf } from "@/lib/salvarPdf";
 
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY as string | undefined;
 let mpInitialized = false;
@@ -225,7 +226,9 @@ const PagamentosPage = () => {
         ["Criado em", fmtDataHora(comprovante.created_at)],
       ];
       if (receiptMp?.date_approved) linhas.push(["Pago em", fmtDataHora(receiptMp.date_approved)]);
-      if (receiptMp?.payer_email) linhas.push(["Pagador", receiptMp.payer_email]);
+      if (receiptMp?.payer_nome) linhas.push(["Pagador", receiptMp.payer_nome]);
+      else if (receiptMp?.payer_email) linhas.push(["Pagador", receiptMp.payer_email]);
+      if (receiptMp?.banco_pagador) linhas.push(["Banco do pagador", receiptMp.banco_pagador]);
       if (receiptMp?.card_last4) linhas.push(["Cartão", `final ${receiptMp.card_last4}`]);
       if (comprovante.mp_payment_id) linhas.push(["ID da transação (Mercado Pago)", String(comprovante.mp_payment_id)]);
       if (receiptMp?.e2e_id) linhas.push(["E2E ID (Pix)", receiptMp.e2e_id]);
@@ -243,7 +246,7 @@ const PagamentosPage = () => {
       y += 4; doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 8;
       doc.setFontSize(8); doc.setTextColor(...CINZA);
       doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · Pagamento processado pelo Mercado Pago`, W / 2, y, { align: "center" });
-      doc.save(`comprovante-physiqcalc-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
+      await salvarPdf(doc, `comprovante-physiqcalc-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
     } catch (e) {
       console.error("[Comprovante] PDF", e);
       toast.error("Erro ao gerar o PDF do comprovante.");
@@ -490,7 +493,8 @@ const PagamentosPage = () => {
                   ...(comprovante.tipo === "pix" && comprovante.pix_expira_em && comprovante.status === "pending"
                     ? [["Vence em", fmtDataHora(comprovante.pix_expira_em)]] : []),
                   ...(receiptMp?.date_approved ? [["Pago em", fmtDataHora(receiptMp.date_approved)]] : []),
-                  ...(receiptMp?.payer_email ? [["Pagador", receiptMp.payer_email]] : []),
+                  ...(receiptMp?.payer_nome ? [["Pagador", receiptMp.payer_nome]] : receiptMp?.payer_email ? [["Pagador", receiptMp.payer_email]] : []),
+                  ...(receiptMp?.banco_pagador ? [["Banco do pagador", receiptMp.banco_pagador]] : []),
                   ...(receiptMp?.card_last4 ? [["Cartão", `final ${receiptMp.card_last4}`]] : []),
                   ...(comprovante.mp_payment_id
                     ? [["ID da transação (Mercado Pago)", comprovante.mp_payment_id]] : []),
