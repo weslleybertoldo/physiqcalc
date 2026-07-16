@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { calcCobertura } from "./cobertura.ts";
 
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
@@ -132,32 +133,29 @@ async function getMensalidade(userId: string): Promise<number | null> {
   return typeof v === "number" && v > 0 ? v : null;
 }
 
-// soma 1 mês com clamp de dia (31/01 → 28/02, não 03/03)
-function addMonthClamp(d: Date): Date {
-  const r = new Date(d);
-  const dia = r.getUTCDate();
-  r.setUTCDate(1);
-  r.setUTCMonth(r.getUTCMonth() + 1);
-  const ultimo = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 0)).getUTCDate();
-  r.setUTCDate(Math.min(dia, ultimo));
-  return r;
+// dia do ciclo da assinatura ativa (dia da próxima cobrança no MP); null = sem assinatura ativa
+async function getAnchorDay(userId: string): Promise<number | null> {
+  const admin = adminClient();
+  const { data } = await admin.from("physiq_assinaturas")
+    .select("mp_preapproval_id, created_at").eq("user_id", userId)
+    .eq("status", "authorized").order("created_at", { ascending: false }).limit(1);
+  const a = ((data as any[]) || [])[0];
+  if (!a) return null;
+  const next = await proximaCobranca(a);
+  return new Date(next || a.created_at).getUTCDate();
 }
 
-// modelo rolling: cada pagamento aprovado cobre 1 mês a partir da data do pagamento.
-// pago_ate = maior cobertura entre os pagamentos aprovados (null = nunca pagou)
-async function getPagoAte(userId: string): Promise<Date | null> {
+// cobertura sequencial (regras em cobertura.ts): atraso move o vencimento; adiantado preserva
+// o dia; com assinatura ativa o avulso de reposição cobre só até a próxima cobrança do ciclo.
+// pago_ate = null → nunca pagou (ou tudo reembolsado)
+async function getPagoAte(userId: string, anchorDay: number | null = null): Promise<Date | null> {
   const admin = adminClient();
   const { data } = await admin.from("physiq_pagamentos")
-    .select("created_at, updated_at, status")
+    .select("created_at, updated_at")
     .eq("user_id", userId).eq("status", "approved")
-    .order("updated_at", { ascending: false }).limit(12);
-  let max: Date | null = null;
-  for (const p of ((data as any[]) || [])) {
-    const base = new Date(p.updated_at || p.created_at);
-    const fim = addMonthClamp(base);
-    if (!max || fim > max) max = fim;
-  }
-  return max;
+    .order("created_at", { ascending: true }).limit(48);
+  const datas = ((data as any[]) || []).map((p) => new Date(p.updated_at || p.created_at));
+  return calcCobertura(datas, anchorDay);
 }
 
 // próxima cobrança da assinatura: data real do MP; fallback = mesmo dia da adesão no mês seguinte
@@ -226,22 +224,27 @@ Deno.serve(async (req) => {
     // ---- status (aba Pagamentos do aluno) ----
     if (action === "status") {
       await refreshPendentes(user.id);
-      const [prof, pagRes, assRes, pagoAte] = await Promise.all([
+      const { data: assData } = await admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
+        .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1);
+      const assinatura = ((assData as any[]) || [])[0] || null;
+      let anchorDay: number | null = null;
+      if (assinatura && ["authorized", "pending"].includes(assinatura.status)) {
+        assinatura.proxima_cobranca = await proximaCobranca(assinatura);
+        if (assinatura.status === "authorized") {
+          anchorDay = new Date(assinatura.proxima_cobranca || assinatura.created_at).getUTCDate();
+        }
+      }
+      if (assinatura) delete assinatura.mp_preapproval_id;
+      const [prof, pagRes, pagoAte] = await Promise.all([
         getMensalidade(user.id),
         admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, created_at, updated_at")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(12),
-        admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
-          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
-        getPagoAte(user.id),
+        getPagoAte(user.id, anchorDay),
       ]);
       const pagamentos = (pagRes.data as any[]) || [];
-      const assinatura = ((assRes.data as any[]) || [])[0] || null;
-      if (assinatura && ["authorized", "pending"].includes(assinatura.status)) {
-        assinatura.proxima_cobranca = await proximaCobranca(assinatura);
-      }
-      if (assinatura) delete assinatura.mp_preapproval_id;
-      // em dia = cobertura rolling vigente (pagamento cobre 1 mês da data do pagamento) OU assinante ativo
-      const emDia = (pagoAte !== null && pagoAte > new Date()) || assinatura?.status === "authorized";
+      // em dia = SÓ cobertura vigente. Assinatura não é atalho: mês reembolsado fica
+      // pendente mesmo com assinatura ativa (ela cobre só o próximo ciclo).
+      const emDia = pagoAte !== null && pagoAte > new Date();
       return jsonOk({
         mensalidade: prof, emDia, mesPago: emDia,
         pagoAte: pagoAte ? pagoAte.toISOString() : null,
@@ -256,8 +259,9 @@ Deno.serve(async (req) => {
       if (!valor) return jsonErr("sem_mensalidade", 400, origin);
       const mesRef = mesRefAtual();
 
-      // cobertura rolling vigente? não deixa pagar de novo antes de vencer
-      const pagoAte = await getPagoAte(user.id);
+      // cobertura vigente? não deixa pagar de novo antes de vencer (reembolso derruba a
+      // cobertura → reposição liberada na hora, mesmo com assinatura ativa)
+      const pagoAte = await getPagoAte(user.id, await getAnchorDay(user.id));
       if (pagoAte && pagoAte > new Date()) return jsonErr("ainda_coberto", 400, origin);
 
       // reusa pix pendente ainda válido (independente do mês)
@@ -313,7 +317,7 @@ Deno.serve(async (req) => {
       if (!valor) return jsonErr("sem_mensalidade", 400, origin);
       const mesRef = mesRefAtual();
 
-      const pagoAteCartao = await getPagoAte(user.id);
+      const pagoAteCartao = await getPagoAte(user.id, await getAnchorDay(user.id));
       if (pagoAteCartao && pagoAteCartao > new Date()) return jsonErr("ainda_coberto", 400, origin);
 
       const payload: Record<string, unknown> = {
@@ -457,28 +461,26 @@ Deno.serve(async (req) => {
     if (action === "admin-badges") {
       const role = (user.app_metadata as any)?.role;
       if (role !== "admin") return jsonErr("forbidden", 403, origin);
-      // rolling: cobre 1 mês da data do pagamento → busca aprovados dos últimos 45 dias
-      const corte = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
-      const [profs, pagos, assinantes] = await Promise.all([
+      // cobertura sequencial → 90 dias de histórico dão folga pra atraso/adiantamento encadeado.
+      // Sem atalho de assinante: mês reembolsado aparece pendente mesmo com assinatura ativa.
+      // (Aqui não consulta o MP por user — sem âncora; diferença só em janela de reposição, aceitável pro badge.)
+      const corte = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const [profs, pagos] = await Promise.all([
         admin.from("physiq_profiles").select("id, mensalidade_valor, cobranca_pausada").not("mensalidade_valor", "is", null),
         admin.from("physiq_pagamentos").select("user_id, created_at, updated_at").eq("status", "approved").gte("updated_at", corte),
-        admin.from("physiq_assinaturas").select("user_id").eq("status", "authorized"),
       ]);
       const agora = new Date();
-      const assinantesSet = new Set(((assinantes.data as any[]) || []).map((a) => a.user_id));
-      // fim de cobertura por user (maior data de pagamento + 1 mês)
-      const fimPorUser: Record<string, Date> = {};
+      const datasPorUser: Record<string, Date[]> = {};
       for (const p of ((pagos.data as any[]) || [])) {
-        const fim = addMonthClamp(new Date(p.updated_at || p.created_at));
-        if (!fimPorUser[p.user_id] || fim > fimPorUser[p.user_id]) fimPorUser[p.user_id] = fim;
+        (datasPorUser[p.user_id] ||= []).push(new Date(p.updated_at || p.created_at));
       }
       // badges = string (compatível com bundles antigos em cache/APK); badgesData = detalhe com data
       const badges: Record<string, string> = {};
       const badgesData: Record<string, { s: string; ate: string | null }> = {};
       for (const p of ((profs.data as any[]) || [])) {
         if (Number(p.mensalidade_valor) > 0 && !p.cobranca_pausada) {
-          const fim = fimPorUser[p.id] || null;
-          const coberto = (fim !== null && fim > agora) || assinantesSet.has(p.id);
+          const fim = calcCobertura(datasPorUser[p.id] || [], null);
+          const coberto = fim !== null && fim > agora;
           badges[p.id] = coberto ? "pago" : "pendente";
           badgesData[p.id] = { s: badges[p.id], ate: fim ? fim.toISOString() : null };
         }
@@ -493,24 +495,29 @@ Deno.serve(async (req) => {
       const userId = body?.userId;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
       await refreshPendentes(userId);
-      const [profRow, pagRes, assRes, pagoAte] = await Promise.all([
+      const { data: assDataAdm } = await admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
+        .eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
+      const assinaturaAdm = ((assDataAdm as any[]) || [])[0] || null;
+      let anchorDayAdm: number | null = null;
+      if (assinaturaAdm && ["authorized", "pending"].includes(assinaturaAdm.status)) {
+        assinaturaAdm.proxima_cobranca = await proximaCobranca(assinaturaAdm);
+        if (assinaturaAdm.status === "authorized") {
+          anchorDayAdm = new Date(assinaturaAdm.proxima_cobranca || assinaturaAdm.created_at).getUTCDate();
+        }
+      }
+      if (assinaturaAdm) delete assinaturaAdm.mp_preapproval_id;
+      const [profRow, pagRes, pagoAte] = await Promise.all([
         admin.from("physiq_profiles").select("mensalidade_valor, cobranca_pausada").eq("id", userId).maybeSingle(),
         admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, mp_payment_id, pix_expira_em, created_at, updated_at")
           .eq("user_id", userId).order("created_at", { ascending: false }).limit(24),
-        admin.from("physiq_assinaturas").select("id, status, valor, created_at, mp_preapproval_id")
-          .eq("user_id", userId).order("created_at", { ascending: false }).limit(1),
-        getPagoAte(userId),
+        getPagoAte(userId, anchorDayAdm),
       ]);
       const pagamentos = (pagRes.data as any[]) || [];
-      const assinaturaAdm = ((assRes.data as any[]) || [])[0] || null;
-      if (assinaturaAdm && ["authorized", "pending"].includes(assinaturaAdm.status)) {
-        assinaturaAdm.proxima_cobranca = await proximaCobranca(assinaturaAdm);
-      }
-      if (assinaturaAdm) delete assinaturaAdm.mp_preapproval_id;
       const valorProf = (profRow.data as any)?.mensalidade_valor;
       const mensalidadeAdm = typeof valorProf === "number" && valorProf > 0 ? valorProf : null;
       const pausada = Boolean((profRow.data as any)?.cobranca_pausada);
-      const emDia = (pagoAte !== null && pagoAte > new Date()) || assinaturaAdm?.status === "authorized";
+      // em dia = SÓ cobertura vigente (reembolso derruba na hora, assinatura não mascara)
+      const emDia = pagoAte !== null && pagoAte > new Date();
       return jsonOk({
         mensalidade: mensalidadeAdm, pausada, emDia, mesPago: emDia,
         pagoAte: pagoAte ? pagoAte.toISOString() : null,
