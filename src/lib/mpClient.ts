@@ -7,7 +7,9 @@ const FN_BASE =
 
 export interface MpPagamento {
   id: string;
-  tipo: "pix" | "cartao";
+  tipo: "pix" | "cartao" | "manual";
+  /** método do pagamento manual registrado pelo admin (dinheiro, pix por fora, etc.) */
+  metodo?: string | null;
   valor: number;
   mes_ref: string;
   status: string;
@@ -29,6 +31,8 @@ export interface MpAssinatura {
 
 export interface MpStatus {
   mensalidade: number | null;
+  /** nome do plano do aluno (physiq_profiles.plano_nome) */
+  plano?: string | null;
   mesRef: string;
   mesLabel: string;
   /** cobertura rolling vigente (pagamento cobre 1 mês da data do pagamento) ou assinatura ativa */
@@ -38,6 +42,22 @@ export interface MpStatus {
   mesPago: boolean;
   assinatura: MpAssinatura | null;
   pagamentos: MpPagamento[];
+}
+
+// métodos aceitos no registro manual do admin (value gravado em physiq_pagamentos.metodo)
+export const METODOS_MANUAIS: { value: string; label: string }[] = [
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "pix", label: "Pix (por fora)" },
+  { value: "cartao", label: "Cartão (por fora)" },
+  { value: "transferencia", label: "Transferência" },
+  { value: "outro", label: "Outro" },
+];
+
+export function tipoPagamentoLabel(p: Pick<MpPagamento, "tipo" | "metodo">): string {
+  if (p.tipo === "pix") return "Pix";
+  if (p.tipo === "cartao") return "Cartão";
+  const m = p.metodo ? (METODOS_MANUAIS.find((x) => x.value === p.metodo)?.label || p.metodo) : null;
+  return m ? `Manual · ${m}` : "Manual";
 }
 
 export async function invokeMp<T = any>(action: string, payload: Record<string, unknown> = {}): Promise<T> {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Undo2 } from "lucide-react";
+import { Check, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
-import { invokeMp, MpPagamento, MpAssinatura } from "@/lib/mpClient";
+import { invokeMp, MpPagamento, MpAssinatura, METODOS_MANUAIS, tipoPagamentoLabel } from "@/lib/mpClient";
 import ComprovanteModal from "@/components/ComprovanteModal";
 
 interface AdminMpStatus {
@@ -33,6 +33,15 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
   const [erro, setErro] = useState(false);
   const [busy, setBusy] = useState(false);
   const [comprovante, setComprovante] = useState<MpPagamento | null>(null);
+  // form do registro manual (dinheiro vivo etc.)
+  const [registrando, setRegistrando] = useState(false);
+  const hojeISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  const [regData, setRegData] = useState(hojeISO());
+  const [regMetodo, setRegMetodo] = useState("dinheiro");
+  const [regValor, setRegValor] = useState("");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -73,6 +82,44 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
       load();
     } catch {
       toast.error("Erro ao atualizar a cobrança.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRegistrar = async () => {
+    const valor = parseFloat(regValor.replace(",", ".")) || status?.mensalidade || 0;
+    if (!regData) { toast.error("Informe a data do pagamento."); return; }
+    if (!(valor > 0)) { toast.error("Informe o valor do pagamento."); return; }
+    const metodoLabel = METODOS_MANUAIS.find((m) => m.value === regMetodo)?.label || regMetodo;
+    if (!window.confirm(`Registrar pagamento de ${fmtBRL(valor)} em ${new Date(`${regData}T12:00:00`).toLocaleDateString("pt-BR")} (${metodoLabel})?`)) return;
+    setBusy(true);
+    try {
+      await invokeMp("admin-registrar-pagamento", { userId, dataPagamento: regData, metodo: regMetodo, valor });
+      toast.success("Pagamento registrado.");
+      setRegistrando(false);
+      setRegData(hojeISO());
+      setRegValor("");
+      load();
+    } catch (e: any) {
+      const msg = e?.message === "data_futura" ? "A data do pagamento não pode ser no futuro."
+        : e?.message === "sem_valor" ? "Sem valor: defina a mensalidade ou informe o valor."
+        : "Erro ao registrar o pagamento.";
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemoverManual = async (p: MpPagamento) => {
+    if (!window.confirm(`Remover este pagamento manual de ${fmtBRL(Number(p.valor))}? Sem outra cobertura, o aluno volta a ficar pendente (com cobrança).`)) return;
+    setBusy(true);
+    try {
+      await invokeMp("admin-remover-pagamento-manual", { pagamentoId: p.id });
+      toast.success("Pagamento manual removido.");
+      load();
+    } catch {
+      toast.error("Erro ao remover o pagamento manual.");
     } finally {
       setBusy(false);
     }
@@ -141,6 +188,49 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
             </button>
           )}
 
+          {/* Registro manual (ex.: dinheiro vivo) */}
+          {registrando ? (
+            <div className="bg-muted/20 border border-border rounded-lg p-4 space-y-3">
+              <p className="text-sm text-foreground font-body">Registrar pagamento recebido por fora do app</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-muted-foreground font-body uppercase tracking-wider">Data do pagamento</label>
+                  <input type="date" value={regData} max={hojeISO()} onChange={(e) => setRegData(e.target.value)} className="input-underline" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-muted-foreground font-body uppercase tracking-wider">Método</label>
+                  <select value={regMetodo} onChange={(e) => setRegMetodo(e.target.value)}
+                    className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-none focus:border-primary">
+                    {METODOS_MANUAIS.map((m) => (
+                      <option key={m.value} value={m.value} className="bg-background text-foreground">{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-muted-foreground font-body uppercase tracking-wider">Valor (R$)</label>
+                  <input type="text" inputMode="decimal" value={regValor} onChange={(e) => setRegValor(e.target.value)}
+                    placeholder={status.mensalidade ? String(status.mensalidade) : ""} className="input-underline" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground font-body">Cobre 1 mês a partir da data — o aluno fica em dia e some da cobrança.</p>
+              <div className="flex gap-3">
+                <button type="button" onClick={handleRegistrar} disabled={busy}
+                  className="text-xs font-heading uppercase tracking-wider bg-primary text-primary-foreground rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-50">
+                  Confirmar registro
+                </button>
+                <button type="button" onClick={() => setRegistrando(false)} disabled={busy}
+                  className="text-xs font-heading uppercase tracking-wider text-muted-foreground border border-border rounded-lg px-4 py-2 hover:text-foreground transition-colors disabled:opacity-50">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => { setRegValor(status.mensalidade ? String(status.mensalidade) : ""); setRegistrando(true); }} disabled={busy}
+              className="text-xs font-heading uppercase tracking-wider text-primary border border-primary/40 rounded-lg px-4 py-2 hover:bg-primary/10 transition-colors disabled:opacity-50">
+              Registrar pagamento
+            </button>
+          )}
+
           {/* Assinatura */}
           {assinaturaAtiva ? (
             <div className="bg-muted/20 border border-border rounded-lg p-4 space-y-2">
@@ -174,7 +264,7 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
                     <div>
                       <p className="text-sm text-foreground font-body">
                         <span className="font-heading tracking-wider">{mesNome(p.mes_ref)}</span>
-                        <span className="text-muted-foreground"> — {new Date(p.created_at).toLocaleDateString("pt-BR")} · {p.tipo === "pix" ? "Pix" : "Cartão"}</span>
+                        <span className="text-muted-foreground"> — {new Date(p.created_at).toLocaleDateString("pt-BR")} · {tipoPagamentoLabel(p)}</span>
                       </p>
                       <p className="text-[10px] text-muted-foreground font-body">toque pra ver o comprovante</p>
                     </div>
@@ -185,13 +275,19 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
                       </p>
                     </div>
                   </button>
-                  {p.status === "approved" && (
+                  {p.status === "approved" && (p.tipo === "manual" ? (
+                    <button type="button" onClick={() => handleRemoverManual(p)} disabled={busy}
+                      title="Remover pagamento manual (volta a pendente)"
+                      className="p-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50">
+                      <Trash2 size={15} />
+                    </button>
+                  ) : (
                     <button type="button" onClick={() => handleReembolso(p)} disabled={busy}
                       title={`Reembolsar ${fmtBRL(Number(p.valor))}`}
                       className="p-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50">
                       <Undo2 size={15} />
                     </button>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
