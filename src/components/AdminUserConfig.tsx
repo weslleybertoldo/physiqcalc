@@ -63,7 +63,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [proteinMult, setProteinMult] = useState("2.2");
   const [fatPct, setFatPct] = useState("15");
   const [planoNome, setPlanoNome] = useState("");
-  const [planoExp, setPlanoExp] = useState("");
   // catálogo global de planos (physiq_planos) — compartilhado entre todos os alunos
   const [planos, setPlanos] = useState<string[]>([]);
   const [criandoPlano, setCriandoPlano] = useState(false);
@@ -93,7 +92,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
         setProteinMult(p.macro_proteina_multiplicador?.toString() || "2.2");
         setFatPct(p.macro_gordura_percentual?.toString() || "15");
         setPlanoNome(p.plano_nome || "");
-        setPlanoExp(p.plano_expiracao || "");
         setMensalidade(p.mensalidade_valor?.toString() || "");
         setAdminLocked(p.admin_locked ?? true);
         // Load medidas
@@ -196,7 +194,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             macro_proteina_multiplicador: parseFloat(proteinMult) || 2.2,
             macro_gordura_percentual: parseFloat(fatPct) || 15,
             plano_nome: planoNome || null,
-            plano_expiracao: planoExp || null,
             mensalidade_valor: parseFloat(mensalidade.replace(",", ".")) || null,
             admin_locked: adminLocked,
             ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
@@ -554,10 +551,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground font-body mt-1">Planos são globais — o mesmo plano pode ser usado em vários alunos</p>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Expiração</label>
-                <input type="date" value={planoExp} onChange={(e) => setPlanoExp(e.target.value)} className="input-underline" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Mensalidade (R$)</label>

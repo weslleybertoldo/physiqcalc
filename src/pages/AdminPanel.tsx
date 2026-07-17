@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { LogOut, Search, Eye, Settings, Calculator, FileDown, Ban, Trash2, Tags, Dumbbell } from "lucide-react";
-import { formatarDataCurta } from "@/utils/formatDate";
 import { adminLogout, isAdminAuthenticated, isAdminAuthenticatedAsync } from "@/components/AdminLoginDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -23,7 +22,6 @@ interface UserProfile {
   user_code: number | null;
   status: string | null;
   plano_nome: string | null;
-  plano_expiracao: string | null;
   created_at: string | null;
 }
 
@@ -147,22 +145,17 @@ const AdminPanel = () => {
     return matchBusca && matchTag;
   });
 
-  const getStatusColor = (status: string | null, planoExp: string | null) => {
+  // "expirado" por plano_expiracao foi aposentado — vencimento agora é a cobertura de pagamento (badge pago/pendente)
+  const getStatusColor = (status: string | null) => {
     if (status === "bloqueado") return "text-destructive";
-    if (planoExp && new Date(planoExp) < new Date()) return "text-classify-yellow";
     return "text-classify-green";
   };
 
-  const getStatusLabel = (status: string | null, planoExp: string | null) => {
+  const getStatusLabel = (status: string | null) => {
     if (status === "bloqueado") return "bloqueado";
-    if (planoExp && new Date(planoExp) < new Date()) return "expirado";
     return "ativo";
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "";
-    return formatarDataCurta(dateStr, { weekday: false });
-  };
 
   if (viewMode === "config" && selectedUser) {
     return <AdminUserConfig userId={selectedUser} onBack={() => window.history.back()} />;
@@ -283,8 +276,8 @@ const AdminPanel = () => {
         ) : (
           <div className="space-y-0">
             {filteredUsers.map((u) => {
-              const statusLabel = getStatusLabel(u.status, u.plano_expiracao);
-              const statusColor = getStatusColor(u.status, u.plano_expiracao);
+              const statusLabel = getStatusLabel(u.status);
+              const statusColor = getStatusColor(u.status);
 
               return (
                 <div key={u.id} className="flex items-center justify-between py-4 border-b border-muted-foreground/30">
@@ -296,7 +289,6 @@ const AdminPanel = () => {
                       {u.plano_nome && (
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 font-body">
                           {u.plano_nome}
-                          {u.plano_expiracao && ` · até ${formatDate(u.plano_expiracao)}`}
                         </span>
                       )}
                       <span className={`text-xs font-heading uppercase ${statusColor}`}>{statusLabel}</span>

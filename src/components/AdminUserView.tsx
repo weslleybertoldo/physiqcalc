@@ -11,7 +11,6 @@ import AdminPagamentosStatus from "@/components/AdminPagamentosStatus";
 
 interface Profile extends AdminProfile {
   plano_nome: string | null;
-  plano_expiracao: string | null;
 }
 
 interface Props {
