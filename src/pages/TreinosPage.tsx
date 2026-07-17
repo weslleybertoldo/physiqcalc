@@ -22,6 +22,7 @@ import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
 import { selectSemanaConfigsForDia } from "@/lib/semanaSlots";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeMp, MpStatus } from "@/lib/mpClient";
 import { toast } from "sonner";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
@@ -196,6 +197,17 @@ const TreinosPage = () => {
   const [showAlterarGrupo, setShowAlterarGrupo] = useState(false);
   const [expandedSlot, setExpandedSlot] = useState<number | null>(0);
   const [showHistorico, setShowHistorico] = useState(false);
+  // mensalidade pendente → exclamação vermelha no ícone de pagamentos do header
+  const [mensalidadePendente, setMensalidadePendente] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    invokeMp<MpStatus>("status")
+      .then((s) => { if (!cancelled) setMensalidadePendente(Boolean(s.mensalidade) && !s.emDia); })
+      .catch(() => { /* sem rede/erro: não sinaliza */ });
+    return () => { cancelled = true; };
+  }, [user?.id]);
   const [showSettings, setShowSettings] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<null | { hasUpdate: boolean; url?: string; version?: string }>(null);
@@ -1160,8 +1172,13 @@ const TreinosPage = () => {
               grupoNome={selectedSlots.filter(s => s.grupo).map(s => s.grupo!.nome).join(' + ') || null}
               dateLabel={`${DIAS_SEMANA[selectedDateObj.getDay()]} ${formatDateLabel(selectedDateObj)}`}
             />
-            <button type="button" onClick={() => navigate("/pagamentos")} className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Pagamentos">
+            <button type="button" onClick={() => navigate("/pagamentos")} className="relative p-2 text-muted-foreground hover:text-primary transition-colors" title="Pagamentos">
               <CreditCard size={16} />
+              {mensalidadePendente && (
+                <span className="absolute top-0.5 right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-destructive text-[8px] font-bold leading-none text-white" aria-label="Mensalidade pendente">
+                  !
+                </span>
+              )}
             </button>
             <button type="button" onClick={() => navigate("/avaliacao")} className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Avaliação">
               <ClipboardList size={16} />

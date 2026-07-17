@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { invokeMp, MpPagamento } from "@/lib/mpClient";
+import { invokeMp, MpPagamento, tipoPagamentoLabel } from "@/lib/mpClient";
 import { salvarPdf } from "@/lib/salvarPdf";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -25,6 +25,8 @@ const ComprovanteModal = ({ pagamento, onClose }: { pagamento: MpPagamento; onCl
 
   useEffect(() => {
     let cancelled = false;
+    // pagamento manual não tem transação no MP — nada a buscar
+    if (pagamento.tipo === "manual") { setMp(null); setLoading(false); return; }
     setLoading(true);
     invokeMp<{ pagamento: MpPagamento; mp: any }>("receipt", { pagamentoId: pagamento.id })
       .then((r) => { if (!cancelled) setMp(r.mp); })
@@ -58,10 +60,11 @@ const ComprovanteModal = ({ pagamento, onClose }: { pagamento: MpPagamento; onCl
       centro((STATUS_LABEL[pagamento.status] || pagamento.status).toUpperCase(), y); y += 14;
       const linhas: [string, string][] = [
         ["Mês de referência", `${mesNome(pagamento.mes_ref)}/${pagamento.mes_ref.slice(0, 4)}`],
-        ["Forma de pagamento", pagamento.tipo === "pix" ? "Pix" : "Cartão de crédito"],
+        ["Forma de pagamento", pagamento.tipo === "cartao" ? "Cartão de crédito" : tipoPagamentoLabel(pagamento)],
         ["Criado em", fmtDataHora(pagamento.created_at)],
       ];
       if (mp?.date_approved) linhas.push(["Pago em", fmtDataHora(mp.date_approved)]);
+      else if (pagamento.tipo === "manual") linhas.push(["Pago em", new Date(pagamento.created_at).toLocaleDateString("pt-BR")]);
       if (mp?.payer_nome) linhas.push(["Pagador", mp.payer_nome]);
       else if (mp?.payer_email) linhas.push(["Pagador", mp.payer_email]);
       if (mp?.banco_pagador) linhas.push(["Banco do pagador", mp.banco_pagador]);
@@ -81,7 +84,7 @@ const ComprovanteModal = ({ pagamento, onClose }: { pagamento: MpPagamento; onCl
       }
       y += 4; doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 8;
       doc.setFontSize(8); doc.setTextColor(...CINZA);
-      centro(`Emitido em ${fmtDataHora(new Date().toISOString())} · Pagamento processado pelo Mercado Pago`, y);
+      centro(`Emitido em ${fmtDataHora(new Date().toISOString())} · ${pagamento.tipo === "manual" ? "Pagamento registrado manualmente pelo treinador" : "Pagamento processado pelo Mercado Pago"}`, y);
       await salvarPdf(doc, `comprovante-physiqcalc-${mesNome(pagamento.mes_ref).toLowerCase()}-${pagamento.mes_ref.slice(0, 4)}.pdf`);
     } catch (e) {
       console.error("[Comprovante] PDF", e);
@@ -114,9 +117,10 @@ const ComprovanteModal = ({ pagamento, onClose }: { pagamento: MpPagamento; onCl
             <div className="space-y-2 text-sm font-body">
               {[
                 ["Mês de referência", `${mesNome(pagamento.mes_ref)}/${pagamento.mes_ref.slice(0, 4)}`],
-                ["Forma de pagamento", pagamento.tipo === "pix" ? "Pix" : "Cartão de crédito"],
+                ["Forma de pagamento", pagamento.tipo === "cartao" ? "Cartão de crédito" : tipoPagamentoLabel(pagamento)],
                 ["Criado em", fmtDataHora(pagamento.created_at)],
-                ...(mp?.date_approved ? [["Pago em", fmtDataHora(mp.date_approved)]] : []),
+                ...(mp?.date_approved ? [["Pago em", fmtDataHora(mp.date_approved)]]
+                  : pagamento.tipo === "manual" ? [["Pago em", new Date(pagamento.created_at).toLocaleDateString("pt-BR")]] : []),
                 ...(mp?.payer_nome ? [["Pagador", mp.payer_nome]] : mp?.payer_email ? [["Pagador", mp.payer_email]] : []),
                 ...(mp?.banco_pagador ? [["Banco do pagador", mp.banco_pagador]] : []),
                 ...(mp?.card_last4 ? [["Cartão", `final ${mp.card_last4}`]] : []),

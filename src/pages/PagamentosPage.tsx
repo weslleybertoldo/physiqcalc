@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Copy, CreditCard, Download, QrCode, Check, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { invokeMp, MpStatus, MpPagamento } from "@/lib/mpClient";
+import { invokeMp, MpStatus, MpPagamento, tipoPagamentoLabel } from "@/lib/mpClient";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 import { salvarPdf } from "@/lib/salvarPdf";
 
@@ -222,7 +222,7 @@ const PagamentosPage = () => {
       centro((STATUS_LABEL[comprovante.status] || comprovante.status).toUpperCase(), y); y += 14;
       const linhas: [string, string][] = [
         ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
-        ["Forma de pagamento", comprovante.tipo === "pix" ? "Pix" : "Cartão de crédito"],
+        ["Forma de pagamento", comprovante.tipo === "cartao" ? "Cartão de crédito" : tipoPagamentoLabel(comprovante)],
         ["Criado em", fmtDataHora(comprovante.created_at)],
       ];
       if (receiptMp?.date_approved) linhas.push(["Pago em", fmtDataHora(receiptMp.date_approved)]);
@@ -245,7 +245,7 @@ const PagamentosPage = () => {
       }
       y += 4; doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 8;
       doc.setFontSize(8); doc.setTextColor(...CINZA);
-      doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · Pagamento processado pelo Mercado Pago`, W / 2, y, { align: "center" });
+      doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · ${comprovante.tipo === "manual" ? "Pagamento registrado manualmente pelo treinador" : "Pagamento processado pelo Mercado Pago"}`, W / 2, y, { align: "center" });
       await salvarPdf(doc, `comprovante-physiqcalc-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
     } catch (e) {
       console.error("[Comprovante] PDF", e);
@@ -281,6 +281,12 @@ const PagamentosPage = () => {
           <>
             {/* Situação da mensalidade */}
             <div className="bg-card border border-border rounded-xl p-5 space-y-1">
+              {status.plano && (
+                <div className="pb-3 mb-2 border-b border-border/50">
+                  <p className="text-xs text-muted-foreground font-body uppercase tracking-wider">Plano</p>
+                  <p className="font-heading text-lg text-primary">{status.plano}</p>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground font-body uppercase tracking-wider">Mensalidade</p>
               <div className="flex items-center justify-between">
                 <p className="font-heading text-2xl text-foreground">{fmtBRL(status.mensalidade)}</p>
@@ -443,7 +449,7 @@ const PagamentosPage = () => {
                           <span className="font-heading tracking-wider">{mesNome(p.mes_ref)}</span>
                           <span className="text-muted-foreground"> — {new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
                         </p>
-                        <p className="text-[10px] text-muted-foreground">{p.tipo === "pix" ? "Pix" : "Cartão"} · toque pra ver o comprovante</p>
+                        <p className="text-[10px] text-muted-foreground">{tipoPagamentoLabel(p)} · toque pra ver o comprovante</p>
                       </div>
                       <div className="text-right">
                         <p className="text-foreground">{fmtBRL(Number(p.valor))}</p>
@@ -486,7 +492,7 @@ const PagamentosPage = () => {
               <div className="space-y-2 text-sm font-body">
                 {[
                   ["Mês de referência", `${mesNome(comprovante.mes_ref)}/${comprovante.mes_ref.slice(0, 4)}`],
-                  ["Forma de pagamento", comprovante.tipo === "pix" ? "Pix" : "Cartão de crédito"],
+                  ["Forma de pagamento", comprovante.tipo === "cartao" ? "Cartão de crédito" : tipoPagamentoLabel(comprovante)],
                   ["Criado em", fmtDataHora(comprovante.created_at)],
                   ...(comprovante.status === "approved" && comprovante.updated_at && !receiptMp?.date_approved
                     ? [["Confirmado em", fmtDataHora(comprovante.updated_at)]] : []),

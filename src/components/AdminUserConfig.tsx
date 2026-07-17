@@ -64,6 +64,11 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [fatPct, setFatPct] = useState("15");
   const [planoNome, setPlanoNome] = useState("");
   const [planoExp, setPlanoExp] = useState("");
+  // catálogo global de planos (physiq_planos) — compartilhado entre todos os alunos
+  const [planos, setPlanos] = useState<string[]>([]);
+  const [criandoPlano, setCriandoPlano] = useState(false);
+  const [novoPlano, setNovoPlano] = useState("");
+  const [salvandoPlano, setSalvandoPlano] = useState(false);
   const [mensalidade, setMensalidade] = useState("");
   const [adminLocked, setAdminLocked] = useState(true);
   const [observacao, setObservacao] = useState("");
@@ -99,6 +104,35 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
       setLoading(false);
     });
   }, [userId]);
+
+  useEffect(() => {
+    supabase.from("physiq_planos").select("nome").order("nome").then(({ data, error }) => {
+      if (error) { console.error("[AdminUserConfig] planos:", error); return; }
+      setPlanos((data || []).map((p) => p.nome));
+    });
+  }, []);
+
+  const handleCriarPlano = async () => {
+    const nome = novoPlano.trim();
+    if (!nome) { toast.error("Digite o nome do plano."); return; }
+    if (planos.some((p) => p.toLowerCase() === nome.toLowerCase())) {
+      toast.error("Já existe um plano com esse nome.");
+      return;
+    }
+    setSalvandoPlano(true);
+    const { error } = await supabase.from("physiq_planos").insert({ nome });
+    setSalvandoPlano(false);
+    if (error) {
+      console.error("[AdminUserConfig] criar plano:", error);
+      toast.error("Erro ao criar o plano.");
+      return;
+    }
+    setPlanos((prev) => [...prev, nome].sort((a, b) => a.localeCompare(b)));
+    setPlanoNome(nome);
+    setNovoPlano("");
+    setCriandoPlano(false);
+    toast.success(`Plano "${nome}" criado.`);
+  };
 
   const maleLabels = ["Peitoral", "Abdômen", "Coxa"];
   const femaleLabels = ["Tríceps", "Supra-ilíaca", "Coxa"];
@@ -479,8 +513,47 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             <h2 className="font-heading text-lg text-foreground mb-6">Plano</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               <div className="flex flex-col gap-1">
-                <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Nome do Plano</label>
-                <input type="text" value={planoNome} onChange={(e) => setPlanoNome(e.target.value)} className="input-underline" placeholder="Ex: Premium" />
+                <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Plano</label>
+                <select
+                  value={planoNome}
+                  onChange={(e) => {
+                    if (e.target.value === "__novo__") { setCriandoPlano(true); return; }
+                    setPlanoNome(e.target.value);
+                  }}
+                  className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-none focus:border-primary"
+                >
+                  <option value="" className="bg-background text-foreground">Sem plano</option>
+                  {/* plano legado do perfil que ainda não está no catálogo continua selecionável */}
+                  {planoNome && !planos.includes(planoNome) && (
+                    <option value={planoNome} className="bg-background text-foreground">{planoNome}</option>
+                  )}
+                  {planos.map((p) => (
+                    <option key={p} value={p} className="bg-background text-foreground">{p}</option>
+                  ))}
+                  <option value="__novo__" className="bg-background text-primary">+ Criar novo plano...</option>
+                </select>
+                {criandoPlano && (
+                  <div className="flex items-end gap-2 mt-2">
+                    <input
+                      type="text"
+                      value={novoPlano}
+                      onChange={(e) => setNovoPlano(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCriarPlano(); } }}
+                      className="input-underline flex-1"
+                      placeholder="Nome do novo plano"
+                      autoFocus
+                    />
+                    <button type="button" onClick={handleCriarPlano} disabled={salvandoPlano}
+                      className="text-xs font-heading uppercase tracking-wider bg-primary text-primary-foreground rounded-lg px-3 py-2 hover:bg-primary/90 transition-colors disabled:opacity-50 shrink-0">
+                      {salvandoPlano ? "Criando..." : "Criar"}
+                    </button>
+                    <button type="button" onClick={() => { setCriandoPlano(false); setNovoPlano(""); }}
+                      className="text-xs font-heading uppercase tracking-wider text-muted-foreground border border-border rounded-lg px-3 py-2 hover:text-foreground transition-colors shrink-0">
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground font-body mt-1">Planos são globais — o mesmo plano pode ser usado em vários alunos</p>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Expiração</label>

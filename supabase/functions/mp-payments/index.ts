@@ -133,6 +133,14 @@ async function getMensalidade(userId: string): Promise<number | null> {
   return typeof v === "number" && v > 0 ? v : null;
 }
 
+// nome do plano do aluno (catálogo physiq_planos; atribuição em physiq_profiles.plano_nome)
+async function getPlanoNome(userId: string): Promise<string | null> {
+  const admin = adminClient();
+  const { data } = await admin.from("physiq_profiles").select("plano_nome").eq("id", userId).maybeSingle();
+  const p = (data as any)?.plano_nome;
+  return typeof p === "string" && p.trim() ? p.trim() : null;
+}
+
 // dia do ciclo da assinatura ativa (dia da próxima cobrança no MP); null = sem assinatura ativa
 async function getAnchorDay(userId: string): Promise<number | null> {
   const admin = adminClient();
@@ -235,9 +243,10 @@ Deno.serve(async (req) => {
         }
       }
       if (assinatura) delete assinatura.mp_preapproval_id;
-      const [prof, pagRes, pagoAte] = await Promise.all([
+      const [prof, plano, pagRes, pagoAte] = await Promise.all([
         getMensalidade(user.id),
-        admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, created_at, updated_at")
+        getPlanoNome(user.id),
+        admin.from("physiq_pagamentos").select("id, tipo, metodo, valor, mes_ref, status, pix_qr_code, pix_qr_code_base64, pix_expira_em, mp_payment_id, created_at, updated_at")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(12),
         getPagoAte(user.id, anchorDay),
       ]);
@@ -246,7 +255,7 @@ Deno.serve(async (req) => {
       // pendente mesmo com assinatura ativa (ela cobre só o próximo ciclo).
       const emDia = pagoAte !== null && pagoAte > new Date();
       return jsonOk({
-        mensalidade: prof, emDia, mesPago: emDia,
+        mensalidade: prof, plano, emDia, mesPago: emDia,
         pagoAte: pagoAte ? pagoAte.toISOString() : null,
         mesRef: mesRefAtual(), mesLabel: mesLabel(mesRefAtual()),
         assinatura, pagamentos,
@@ -508,7 +517,7 @@ Deno.serve(async (req) => {
       if (assinaturaAdm) delete assinaturaAdm.mp_preapproval_id;
       const [profRow, pagRes, pagoAte] = await Promise.all([
         admin.from("physiq_profiles").select("mensalidade_valor, cobranca_pausada").eq("id", userId).maybeSingle(),
-        admin.from("physiq_pagamentos").select("id, tipo, valor, mes_ref, status, mp_payment_id, pix_expira_em, created_at, updated_at")
+        admin.from("physiq_pagamentos").select("id, tipo, metodo, valor, mes_ref, status, mp_payment_id, pix_expira_em, created_at, updated_at")
           .eq("user_id", userId).order("created_at", { ascending: false }).limit(24),
         getPagoAte(userId, anchorDayAdm),
       ]);
@@ -555,6 +564,48 @@ Deno.serve(async (req) => {
       const { error } = await admin.from("physiq_profiles").update({ cobranca_pausada: pausar }).eq("id", userId);
       if (error) throw error;
       return jsonOk({ ok: true, pausada: pausar }, origin);
+    }
+
+    // ---- admin registra pagamento manual (ex.: dinheiro vivo) ----
+    if (action === "admin-registrar-pagamento") {
+      const role = (user.app_metadata as any)?.role;
+      if (role !== "admin") return jsonErr("forbidden", 403, origin);
+      const userId = body?.userId;
+      const dataPagamento = body?.dataPagamento; // yyyy-mm-dd
+      const metodo = typeof body?.metodo === "string" ? body.metodo.trim().slice(0, 40) : "";
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      if (!metodo) return jsonErr("missing_metodo", 400, origin);
+      if (typeof dataPagamento !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dataPagamento)) return jsonErr("invalid_data", 400, origin);
+      // meio-dia UTC evita pular de dia no fuso BRT; cobre 1 mês a partir daí (mesma régua dos demais)
+      const quando = new Date(`${dataPagamento}T12:00:00Z`);
+      if (isNaN(quando.getTime())) return jsonErr("invalid_data", 400, origin);
+      if (quando.getTime() > Date.now() + 24 * 60 * 60 * 1000) return jsonErr("data_futura", 400, origin);
+      const { data: profRow } = await admin.from("physiq_profiles").select("mensalidade_valor").eq("id", userId).maybeSingle();
+      const valorBody = Number(body?.valor);
+      const valor = valorBody > 0 ? valorBody : Number((profRow as any)?.mensalidade_valor);
+      if (!(valor > 0)) return jsonErr("sem_valor", 400, origin);
+      const iso = quando.toISOString();
+      const { data: inserted, error: insErr } = await admin.from("physiq_pagamentos").insert({
+        user_id: userId, tipo: "manual", metodo, valor,
+        mes_ref: `${dataPagamento.slice(0, 7)}-01`,
+        status: "approved", created_at: iso, updated_at: iso,
+      }).select().single();
+      if (insErr) throw insErr;
+      return jsonOk({ pagamento: inserted }, origin);
+    }
+
+    // ---- admin remove um pagamento manual (cobertura recua → volta a pendente/cobrança) ----
+    if (action === "admin-remover-pagamento-manual") {
+      const role = (user.app_metadata as any)?.role;
+      if (role !== "admin") return jsonErr("forbidden", 403, origin);
+      const pagamentoId = body?.pagamentoId;
+      if (!pagamentoId || typeof pagamentoId !== "string") return jsonErr("missing_pagamentoId", 400, origin);
+      const { data: row } = await admin.from("physiq_pagamentos").select("id, tipo").eq("id", pagamentoId).maybeSingle();
+      if (!row) return jsonErr("not_found", 404, origin);
+      if ((row as any).tipo !== "manual") return jsonErr("nao_manual", 400, origin);
+      const { error: delErr } = await admin.from("physiq_pagamentos").delete().eq("id", pagamentoId);
+      if (delErr) throw delErr;
+      return jsonOk({ ok: true }, origin);
     }
 
     // ---- admin reembolsa um pagamento (total) ----

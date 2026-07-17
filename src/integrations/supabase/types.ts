@@ -225,6 +225,7 @@ export type Database = {
           created_at: string
           id: string
           mes_ref: string
+          metodo: string | null
           mp_payment_id: string | null
           pix_expira_em: string | null
           pix_qr_code: string | null
@@ -239,6 +240,7 @@ export type Database = {
           created_at?: string
           id?: string
           mes_ref: string
+          metodo?: string | null
           mp_payment_id?: string | null
           pix_expira_em?: string | null
           pix_qr_code?: string | null
@@ -253,6 +255,7 @@ export type Database = {
           created_at?: string
           id?: string
           mes_ref?: string
+          metodo?: string | null
           mp_payment_id?: string | null
           pix_expira_em?: string | null
           pix_qr_code?: string | null
@@ -262,6 +265,24 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor?: number
+        }
+        Relationships: []
+      }
+      physiq_planos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
         }
         Relationships: []
       }
