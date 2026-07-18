@@ -210,29 +210,32 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
         return;
       }
 
-      // Auto-register avaliacao
-      const { error: avalError } = await supabase.functions.invoke("admin-avaliacoes", {
-        body: {
-          action: "create",
-          userId,
-          avaliacao: {
-            data_avaliacao: (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })(),
-            peso: parseFloat(peso) || null,
-            altura: parseFloat(altura) || null,
-            dobra_1: parseFloat(dobra1) || null,
-            dobra_2: parseFloat(dobra2) || null,
-            dobra_3: parseFloat(dobra3) || null,
-            percentual_gordura: computed.bf,
-            massa_gorda: computed.massaGorda,
-            massa_magra: computed.massaMagra,
-            tmb_mifflin: computed.tmbMifflin,
-            tmb_katch: computed.tmbKatch,
-            observacao: observacao || null,
-            ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
+      // Registra avaliação (nova evolução) SÓ ao salvar pela aba Dobras & Medidas.
+      // Salvar em Dados Gerais/Plano/Treino atualiza o perfil sem gerar evolução.
+      if (configTab === "dobras") {
+        const { error: avalError } = await supabase.functions.invoke("admin-avaliacoes", {
+          body: {
+            action: "create",
+            userId,
+            avaliacao: {
+              data_avaliacao: (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })(),
+              peso: parseFloat(peso) || null,
+              altura: parseFloat(altura) || null,
+              dobra_1: parseFloat(dobra1) || null,
+              dobra_2: parseFloat(dobra2) || null,
+              dobra_3: parseFloat(dobra3) || null,
+              percentual_gordura: computed.bf,
+              massa_gorda: computed.massaGorda,
+              massa_magra: computed.massaMagra,
+              tmb_mifflin: computed.tmbMifflin,
+              tmb_katch: computed.tmbKatch,
+              observacao: observacao || null,
+              ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
+            },
           },
-        },
-      });
-      if (avalError) console.warn("[AdminUserConfig] Erro ao registrar avaliação:", avalError);
+        });
+        if (avalError) console.warn("[AdminUserConfig] Erro ao registrar avaliação:", avalError);
+      }
 
       toast.success("Dados salvos.");
     } catch (err) {
