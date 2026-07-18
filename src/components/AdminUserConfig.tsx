@@ -9,8 +9,10 @@ import { levels } from "./TdeeTable";
 import AdminTagSelector from "./AdminTagSelector";
 import AdminSemanaUsuario from "./AdminSemanaUsuario";
 import AdminPagamentosStatus from "./AdminPagamentosStatus";
+import EvolutionSection from "./EvolutionSection";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
+import { classificarGordura } from "@/utils/composicaoCorporal";
 
 interface Props {
   userId: string;
@@ -36,6 +38,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
   const CONFIG_TABS = [
     { key: "geral", label: "Dados Gerais" },
     { key: "dobras", label: "Dobras & Medidas" },
+    { key: "evolucao", label: "Evolução" },
     { key: "plano", label: "Plano" },
     { key: "treino", label: "Treino" },
   ] as const;
@@ -352,6 +355,26 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
                 </div>
               </div>
             )}
+
+            {computed.bf !== null && (() => {
+              const cls = classificarGordura(computed.bf, sexo === "male" ? "M" : "F", parseFloat(idade) || 25);
+              return (
+                <div className="result-card mt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: cls.cor }} />
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
+                      Classificação
+                    </span>
+                  </div>
+                  <p className="font-heading text-xl" style={{ color: cls.cor }}>{cls.label}</p>
+                  <p className="text-xs text-muted-foreground font-body mt-1">{cls.descricao}</p>
+                  <p className="text-[8px] text-muted-foreground/60 font-body italic mt-2 leading-relaxed">
+                    📚 Gallagher et al. (2000) Am J Clin Nutr 72:694–701 · ACE · Lohman (1993) · ACSM
+                    {cls.ajuste > 0 && ` · Ajuste etário: +${cls.ajuste}%`}
+                  </p>
+                </div>
+              );
+            })()}
           </section>
 
           {/* Medidas Corporais */}
@@ -597,6 +620,13 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             </div>
           </section>
           </>)}
+
+          {/* Evolução do aluno (mesma visão do app do aluno; excluir reflete pra ele) */}
+          {configTab === "evolucao" && (
+            <section>
+              <EvolutionSection userId={userId} isAdmin />
+            </section>
+          )}
 
           {/* Treino Diário (auto-salva) */}
           {configTab === "treino" && <AdminSemanaUsuario userId={userId} />}

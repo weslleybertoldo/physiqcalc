@@ -190,7 +190,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
   if (loading) return <p className="text-muted-foreground font-body py-8">Carregando evolução...</p>;
 
   return (
-    <div className="space-y-10">
+    <div className="flex flex-col gap-10">
       {isAdmin && (
         <button
           onClick={() => setDialogOpen(true)}
@@ -211,7 +211,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
       ) : (
         <>
           {/* Timeline */}
-          <section>
+          <section className="order-3">
             <h2 className="font-heading text-lg text-foreground mb-6">Linha do Tempo</h2>
             <div className="space-y-0">
               {reversed.map((a, idx) => {
@@ -272,7 +272,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
 
           {/* Charts */}
           {chartData.length >= 2 && (
-            <section>
+            <section className="order-1">
               <h2 className="font-heading text-lg text-foreground mb-4">Gráficos de Evolução</h2>
               <div className="flex flex-wrap gap-2 mb-6">
                 {[...BASE_METRICS, ...CHART_MEDIDA_KEYS].map((key) => (
@@ -321,7 +321,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
 
           {/* Comparison */}
           {comparison && (
-            <section>
+            <section className="order-2">
               <h2 className="font-heading text-lg text-foreground mb-4">Resumo Comparativo</h2>
               <p className="text-xs text-muted-foreground font-body mb-4">
                 {formatDate(avaliacoes[0].data_avaliacao)} → {formatDate(avaliacoes[avaliacoes.length - 1].data_avaliacao)}
