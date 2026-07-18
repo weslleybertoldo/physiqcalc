@@ -65,4 +65,6 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Atualização in-app: instalar o APK baixado dentro do app -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Salvar imagem na galeria só precisa de permissão no Android 9- (API 28-); no 10+ é scoped storage -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 </manifest>

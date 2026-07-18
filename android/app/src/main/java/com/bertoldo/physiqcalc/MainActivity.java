@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(CountdownNotificationPlugin.class);
         registerPlugin(ApkInstallerPlugin.class);
+        registerPlugin(GalleryImagePlugin.class);
         super.onCreate(savedInstanceState);
 
         WebSettings webSettings = this.bridge.getWebView().getSettings();
