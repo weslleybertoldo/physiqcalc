@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, CheckCircle2 } from "lucide-react";
+import { Play, CheckCircle2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePowerSync } from "@powersync/react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import CompartilharTreinoModal from "./CompartilharTreinoModal";
+import { buildTreinoResumo, type TreinoResumo } from "@/lib/treinoResumo";
 
 // Persistência do timer de treino no localStorage
 const LS_WORKOUT_KEY = "physiq_workout_timer";
@@ -29,7 +31,14 @@ interface Props {
   userId: string;
   grupoNome: string;
   dateKey: string;
-  series: { exercicio_id: string; concluida?: boolean }[];
+  series: {
+    exercicio_id: string;
+    concluida?: boolean;
+    numero_serie?: number;
+    peso?: number;
+    reps?: number;
+    academia_nome?: string | null;
+  }[];
   exerciciosMap: Record<string, { nome: string; emoji: string }>;
   onTreinoConcluido?: () => void;
 }
@@ -74,6 +83,8 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
 
   const [concluido, setConcluido] = useState(false);
   const [duracaoFinal, setDuracaoFinal] = useState(0);
+  const [resumoConcluido, setResumoConcluido] = useState<TreinoResumo | null>(null);
+  const [compartilhando, setCompartilhando] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Todas as séries concluídas com o timer rodando → pergunta se finaliza o treino.
@@ -142,16 +153,29 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
     const agora = new Date();
     const duracao = Math.round((agora.getTime() - iniciadoEm.getTime()) / 1000);
 
-    const exConcluidos: Record<string, { nome: string; series_concluidas: number; concluido_em: string }> = {};
+    // Guarda também peso/reps por série e a academia, pro detalhe e imagem do treino.
+    const academiaTreino = series.find((s) => s.academia_nome)?.academia_nome ?? null;
+    const exConcluidos: Record<string, {
+      nome: string;
+      series_concluidas: number;
+      concluido_em: string;
+      academia_nome: string | null;
+      series: { numero_serie: number; peso: number; reps: number }[];
+    }> = {};
     series.filter((s) => s.concluida).forEach((s) => {
       const exKey = s.exercicio_id;
       const ex = exerciciosMap[exKey];
       // Fallback: se exercício não está no map, usa nome genérico em vez de dropar silenciosamente
       const nome = ex?.nome || `Exercício ${exKey.slice(0, 6)}`;
       if (!exConcluidos[exKey]) {
-        exConcluidos[exKey] = { nome, series_concluidas: 0, concluido_em: agora.toISOString() };
+        exConcluidos[exKey] = { nome, series_concluidas: 0, concluido_em: agora.toISOString(), academia_nome: academiaTreino, series: [] };
       }
       exConcluidos[exKey].series_concluidas++;
+      exConcluidos[exKey].series.push({
+        numero_serie: s.numero_serie ?? exConcluidos[exKey].series.length + 1,
+        peso: s.peso ?? 0,
+        reps: s.reps ?? 0,
+      });
     });
 
     const exerciciosArray = Object.entries(exConcluidos).map(([id, data]) => ({ exercicio_id: id, ...data }));
@@ -162,6 +186,13 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
       [userId, grupoNome, iniciadoEm.toISOString(), agora.toISOString(), duracao, JSON.stringify(exerciciosArray), agora.toISOString()]
     );
 
+    setResumoConcluido(buildTreinoResumo({
+      nome_treino: grupoNome,
+      iniciado_em: iniciadoEm.toISOString(),
+      concluido_em: agora.toISOString(),
+      duracao_segundos: duracao,
+      exercicios_concluidos: exerciciosArray,
+    }));
     setDuracaoFinal(duracao);
     setConcluido(true);
     toast.success(`Treino concluído em ${formatDuracao(duracao)}! 💪🔥`);
@@ -176,14 +207,28 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
 
   if (concluido) {
     return (
-      <div className="result-card border-classify-green/50 text-center py-6 mb-6">
-        <p className="text-classify-green font-heading text-lg mb-1">🎉 Parabéns!</p>
-        <p className="text-foreground font-heading text-2xl mb-2">{formatDuracao(duracaoFinal)}</p>
-        <p className="text-muted-foreground font-body text-sm mb-4">Treino de {grupoNome} concluído com sucesso!</p>
-        <button type="button" onClick={handleFecharParabens} className="text-xs text-muted-foreground hover:text-foreground font-heading uppercase tracking-wider transition-colors">
-          Fechar
-        </button>
-      </div>
+      <>
+        <div className="result-card border-classify-green/50 text-center py-6 mb-6">
+          <p className="text-classify-green font-heading text-lg mb-1">🎆 Treino finalizado!</p>
+          <p className="text-foreground font-heading text-2xl mb-2">{formatDuracao(duracaoFinal)}</p>
+          <p className="text-muted-foreground font-body text-sm mb-4">Treino de {grupoNome} concluído com sucesso!</p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setCompartilhando(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase tracking-wider transition-colors hover:bg-primary/90"
+            >
+              <Share2 size={14} /> Compartilhar treino
+            </button>
+            <button type="button" onClick={handleFecharParabens} className="text-xs text-muted-foreground hover:text-foreground font-heading uppercase tracking-wider transition-colors">
+              Fechar
+            </button>
+          </div>
+        </div>
+        {compartilhando && resumoConcluido && (
+          <CompartilharTreinoModal resumo={resumoConcluido} onClose={() => setCompartilhando(false)} />
+        )}
+      </>
     );
   }
 
