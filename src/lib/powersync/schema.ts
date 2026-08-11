@@ -137,6 +137,18 @@ const exercicio_ordem_usuario = new Table({
   updated_at: column.text,
 });
 
+const exercicio_substituicao_usuario = new Table({
+  user_id: column.text,
+  grupo_id: column.text,
+  slot_idx: column.integer,
+  exercicio_origem_id: column.text,
+  exercicio_novo_id: column.text,
+  exercicio_novo_usuario_id: column.text,
+  data_treino: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+});
+
 const tb_grupos_treino_usuario = new Table({
   user_id: column.text,
   nome: column.text,
@@ -182,6 +194,7 @@ export const AppSchema = new Schema({
   treino_historico,
   physiq_profiles,
   exercicio_ordem_usuario,
+  exercicio_substituicao_usuario,
   tb_grupos_treino_usuario,
   tb_exercicios_usuario,
   tb_grupos_exercicios_usuario,

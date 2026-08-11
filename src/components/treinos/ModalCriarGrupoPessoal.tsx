@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Trash2, Edit2, X, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePowerSync } from "@powersync/react";
 import { toast } from "sonner";
+import SeletorExerciciosPorGrupo from "./SeletorExerciciosPorGrupo";
+import { nomeDoBloco, type BlocoMuscular } from "@/lib/gruposMusculares";
 
 interface Exercicio {
   id: string;
@@ -28,7 +30,7 @@ interface Props {
 const EMOJIS = ["🏋️", "💪", "🦵", "🧘", "🔵"];
 const GRUPOS_MUSCULARES = [
   "Peitoral", "Dorsal", "Deltóide", "Bíceps", "Tríceps",
-  "Quadríceps", "Isquiotibiais", "Panturrilha", "Abdômen", "Glúteo",
+  "Quadríceps", "Isquiotibiais", "Panturrilha", "Abdômen", "Glúteo", "Corrida",
 ];
 
 const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGrupo }: Props) => {
@@ -40,6 +42,9 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
   const [exerciciosPessoais, setExerciciosPessoais] = useState<Exercicio[]>([]);
   const [selectedIds, setSelectedIds] = useState<{ id: string; isPessoal: boolean }[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Bloco muscular aberto no seletor (só para rotular o "criar exercício em X")
+  const [blocoAtual, setBlocoAtual] = useState<BlocoMuscular | null>(null);
 
   // Novo exercício pessoal
   const [showNovoEx, setShowNovoEx] = useState(false);
@@ -56,6 +61,9 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
   useEffect(() => {
     if (!open) return;
     loadExercicios();
+    setBlocoAtual(null);
+    setShowNovoEx(false);
+    setEditingId(null);
 
     if (editGrupo) {
       setNomeGrupo(editGrupo.nome);
@@ -72,7 +80,7 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
       db.getAll("SELECT * FROM tb_exercicios_usuario WHERE user_id = ? ORDER BY nome", [userId]),
     ]);
     setExerciciosGlobais((globais as Exercicio[]) || []);
-    setExerciciosPessoais(((pessoais as any[]) || []).map((e: any) => ({ ...e, isPessoal: true })));
+    setExerciciosPessoais(((pessoais as Exercicio[]) || []).map((e) => ({ ...e, isPessoal: true })));
   };
 
   const loadExerciciosDoGrupo = async (grupoId: string) => {
@@ -81,7 +89,8 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
         "SELECT exercicio_id, exercicio_usuario_id FROM tb_grupos_exercicios_usuario WHERE grupo_usuario_id = ? AND user_id = ? ORDER BY ordem",
         [grupoId, userId]
       );
-      const selected = ((rows as any[]) || []).map((r: any) => {
+      type LinkRow = { exercicio_id: string | null; exercicio_usuario_id: string | null };
+      const selected = ((rows as LinkRow[]) || []).map((r) => {
         if (r.exercicio_usuario_id) {
           return { id: r.exercicio_usuario_id, isPessoal: true };
         }
@@ -93,12 +102,46 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
     }
   };
 
+  // Globais + pessoais numa lista só, ordenada por nome (pessoais marcados com badge)
+  const todosExercicios = useMemo(
+    () => [...exerciciosGlobais, ...exerciciosPessoais].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    [exerciciosGlobais, exerciciosPessoais]
+  );
+
+  const isSelected = (id: string, isPessoal: boolean) =>
+    selectedIds.some((s) => s.id === id && s.isPessoal === isPessoal);
+
+  const contarSelecionados = (exs: Exercicio[]) =>
+    exs.filter((ex) => isSelected(ex.id, !!ex.isPessoal)).length;
+
+  const exerciciosSelecionados = useMemo(
+    () =>
+      selectedIds
+        .map((s) => todosExercicios.find((ex) => ex.id === s.id && !!ex.isPessoal === s.isPessoal))
+        .filter((ex): ex is Exercicio => !!ex),
+    [selectedIds, todosExercicios]
+  );
+
   const toggleSelect = (id: string, isPessoal: boolean) => {
     setSelectedIds((prev) => {
       const exists = prev.find((s) => s.id === id && s.isPessoal === isPessoal);
       if (exists) return prev.filter((s) => !(s.id === id && s.isPessoal === isPessoal));
       return [...prev, { id, isPessoal }];
     });
+  };
+
+  /** Remoção pelo chip de "Selecionados" — pede confirmação (clique fácil de errar) */
+  const removerSelecionado = (ex: Exercicio) => {
+    const confirmed = window.confirm(`Realmente deseja remover "${ex.nome}" deste grupo?`);
+    if (!confirmed) return;
+    toggleSelect(ex.id, !!ex.isPessoal);
+  };
+
+  const handleBlocoChange = (bloco: BlocoMuscular | null) => {
+    setBlocoAtual(bloco);
+    setShowNovoEx(false);
+    setEditingId(null);
+    if (bloco) setNovoGrupo(bloco.grupoPadrao);
   };
 
   const handleCriarExercicio = async () => {
@@ -214,8 +257,62 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
     }
   };
 
-  const isSelected = (id: string, isPessoal: boolean) =>
-    selectedIds.some((s) => s.id === id && s.isPessoal === isPessoal);
+  // Linha de exercício (checkbox + nome + grupo/badge + ações se pessoal)
+  const renderExercicio = (ex: Exercicio, { mostrarGrupo }: { mostrarGrupo: boolean }) => {
+    if (ex.isPessoal && editingId === ex.id) {
+      return (
+        <div key={ex.id} className="py-1.5">
+          <div className="space-y-2">
+            <input type="text" value={editNome} onChange={(e) => setEditNome(e.target.value)} className="input-underline text-sm" />
+            <div className="flex gap-2">
+              <select value={editGrupoMusc} onChange={(e) => setEditGrupoMusc(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
+                {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select value={editEmoji} onChange={(e) => setEditEmoji(e.target.value)} className="w-14 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
+                {EMOJIS.map((e) => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => handleEditarExercicio(ex.id)} className="text-xs text-primary font-heading"><Save size={12} className="inline mr-1" />Salvar</button>
+              <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground font-heading"><X size={12} className="inline mr-1" />Cancelar</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div key={`${ex.isPessoal ? "p" : "g"}-${ex.id}`} className="flex items-center gap-2 py-1.5">
+        <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isSelected(ex.id, !!ex.isPessoal)}
+            onChange={() => toggleSelect(ex.id, !!ex.isPessoal)}
+            className="accent-primary shrink-0"
+          />
+          <span className="text-sm font-body text-foreground truncate">{ex.emoji} {ex.nome}</span>
+          {ex.isPessoal && (
+            <span className="text-[9px] uppercase tracking-wider text-primary border border-primary/40 px-1 py-0.5 font-heading shrink-0">meu</span>
+          )}
+          {mostrarGrupo && (
+            <span className="text-[10px] text-muted-foreground font-body ml-auto shrink-0">
+              {nomeDoBloco(ex.grupo_muscular)}
+            </span>
+          )}
+        </label>
+        {ex.isPessoal && (
+          <>
+            <button type="button" onClick={() => { setEditingId(ex.id); setEditNome(ex.nome); setEditGrupoMusc(ex.grupo_muscular); setEditEmoji(ex.emoji); }} className="p-1 text-muted-foreground hover:text-primary transition-colors">
+              <Edit2 size={12} />
+            </button>
+            <button type="button" onClick={() => handleDeletarExercicio(ex.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+              <Trash2 size={12} />
+            </button>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,75 +328,39 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
           value={nomeGrupo}
           onChange={(e) => setNomeGrupo(e.target.value)}
           placeholder="Nome do grupo..."
-          className="input-underline mb-4"
+          className="input-underline mb-3"
         />
 
-        {/* Global exercises */}
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-2">
-          Exercícios Globais (biblioteca)
-        </p>
-        <div className="space-y-1 mb-4 max-h-40 overflow-y-auto">
-          {exerciciosGlobais.map((ex) => (
-            <label key={ex.id} className="flex items-center gap-2 py-1.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isSelected(ex.id, false)}
-                onChange={() => toggleSelect(ex.id, false)}
-                className="accent-primary"
-              />
-              <span className="text-sm font-body text-foreground">{ex.emoji} {ex.nome}</span>
-              <span className="text-[10px] text-muted-foreground font-body ml-auto">{ex.grupo_muscular}</span>
-            </label>
-          ))}
-        </div>
+        {/* Selecionados — visível em qualquer nível */}
+        {exerciciosSelecionados.length > 0 && (
+          <div className="mb-3">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-1.5">
+              Selecionados ({exerciciosSelecionados.length})
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {exerciciosSelecionados.map((ex) => (
+                <button
+                  key={`sel-${ex.isPessoal ? "p" : "g"}-${ex.id}`}
+                  type="button"
+                  onClick={() => removerSelecionado(ex)}
+                  title="Remover do grupo"
+                  className="flex items-center gap-1 border border-primary/40 text-primary px-1.5 py-0.5 text-[11px] font-body hover:bg-primary/10 transition-colors"
+                >
+                  {ex.emoji} {ex.nome}
+                  <X size={10} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Personal exercises */}
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-2">
-          Meus Exercícios
-        </p>
-        <div className="space-y-1 mb-3">
-          {exerciciosPessoais.length === 0 ? (
-            <p className="text-xs text-muted-foreground font-body">Nenhum exercício pessoal criado.</p>
-          ) : (
-            exerciciosPessoais.map((ex) => (
-              <div key={ex.id} className="flex items-center gap-2 py-1.5">
-                {editingId === ex.id ? (
-                  <div className="flex-1 space-y-2">
-                    <input type="text" value={editNome} onChange={(e) => setEditNome(e.target.value)} className="input-underline text-sm" />
-                    <div className="flex gap-2">
-                      <select value={editGrupoMusc} onChange={(e) => setEditGrupoMusc(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
-                        {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                      <select value={editEmoji} onChange={(e) => setEditEmoji(e.target.value)} className="w-14 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
-                        {EMOJIS.map((e) => <option key={e} value={e}>{e}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => handleEditarExercicio(ex.id)} className="text-xs text-primary font-heading"><Save size={12} className="inline mr-1" />Salvar</button>
-                      <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground font-heading"><X size={12} className="inline mr-1" />Cancelar</button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      type="checkbox"
-                      checked={isSelected(ex.id, true)}
-                      onChange={() => toggleSelect(ex.id, true)}
-                      className="accent-primary"
-                    />
-                    <span className="text-sm font-body text-foreground flex-1">{ex.emoji} {ex.nome}</span>
-                    <button type="button" onClick={() => { setEditingId(ex.id); setEditNome(ex.nome); setEditGrupoMusc(ex.grupo_muscular); setEditEmoji(ex.emoji); }} className="p-1 text-muted-foreground hover:text-primary transition-colors">
-                      <Edit2 size={12} />
-                    </button>
-                    <button type="button" onClick={() => handleDeletarExercicio(ex.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
-                      <Trash2 size={12} />
-                    </button>
-                  </>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+        <SeletorExerciciosPorGrupo
+          exercicios={todosExercicios}
+          renderItem={renderExercicio}
+          contarSelecionados={contarSelecionados}
+          onBlocoChange={handleBlocoChange}
+          resetKey={`${open}-${editGrupo?.id ?? "novo"}`}
+        />
 
         {/* Create personal exercise */}
         {showNovoEx ? (
@@ -319,8 +380,15 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setShowNovoEx(true)} className="text-xs text-primary hover:text-primary/80 font-heading uppercase tracking-wider mb-4 flex items-center gap-1">
-            <Plus size={14} /> Criar novo exercício
+          <button
+            type="button"
+            onClick={() => {
+              if (blocoAtual) setNovoGrupo(blocoAtual.grupoPadrao);
+              setShowNovoEx(true);
+            }}
+            className="text-xs text-primary hover:text-primary/80 font-heading uppercase tracking-wider mb-4 flex items-center gap-1"
+          >
+            <Plus size={14} /> {blocoAtual ? `Criar exercício em ${blocoAtual.nome}` : "Criar novo exercício"}
           </button>
         )}
 
