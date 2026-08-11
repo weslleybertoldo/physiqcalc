@@ -20,6 +20,7 @@ import { downloadAndInstall } from "@/lib/apkUpdater";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
+import { aplicarSubstituicoes, type ExercicioAlvo, type Substituicao } from "@/lib/substituicaoExercicio";
 import { selectSemanaConfigsForDia } from "@/lib/semanaSlots";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeMp, MpStatus } from "@/lib/mpClient";
@@ -95,6 +96,8 @@ interface DiaSlot {
   slot_idx: number;
   override_id?: string;
   grupo: GrupoTreino | null;
+  /** Grupo pessoal do usuário (não é do catálogo do treinador) */
+  grupoPessoal?: boolean;
   exercicios: GrupoExercicio[];
   overrideVazio: boolean;
   source: 'override' | 'semana' | 'placeholder';
@@ -512,6 +515,33 @@ const TreinosPage = () => {
     return map;
   }, [gruposExerciciosUsuarioRows]);
 
+  // Catálogo completo de exercícios — resolve o substituto de uma troca
+  const { data: exerciciosCatalogoRows } = useQuery(
+    `SELECT id, nome, grupo_muscular, emoji, tipo, imagem_url, subgrupo, dica FROM tb_exercicios`
+  );
+  const { data: exerciciosPessoaisRows } = useQuery(
+    `SELECT id, nome, grupo_muscular, emoji, tipo FROM tb_exercicios_usuario WHERE user_id = ?`,
+    [userId]
+  );
+  const exerciciosPorId = useMemo(() => {
+    const map = new Map<string, ExercicioAlvo>();
+    ((exerciciosCatalogoRows as ExercicioAlvo[]) || []).forEach((e) => map.set(e.id, e));
+    ((exerciciosPessoaisRows as ExercicioAlvo[]) || []).forEach((e) =>
+      map.set(e.id, { ...e, imagem_url: null, subgrupo: null, dica: null, isPessoal: true })
+    );
+    return map;
+  }, [exerciciosCatalogoRows, exerciciosPessoaisRows]);
+
+  // Trocas de exercício do usuário (data_treino null = definitiva)
+  const { data: substituicoesRows } = useQuery(
+    `SELECT * FROM exercicio_substituicao_usuario WHERE user_id = ?`,
+    [userId]
+  );
+  const substituicoes = useMemo<Substituicao[]>(
+    () => (substituicoesRows as Substituicao[]) || [],
+    [substituicoesRows]
+  );
+
   // Séries do dia selecionado (reativo)
   const { data: seriesDoDiaRows } = useQuery(
     `SELECT * FROM tb_treino_series
@@ -526,6 +556,10 @@ const TreinosPage = () => {
     const diaSemana = DIAS_SEMANA[d.getDay()];
     const ovrList = overrides[dk];
 
+    // Aplica as trocas de exercício do usuário (do dia ganha da definitiva)
+    const comTrocas = (exs: GrupoExercicio[], grupoId: string, slotIdx: number): GrupoExercicio[] =>
+      aplicarSubstituicoes(exs, substituicoes, { grupoId, slotIdx, dateKey: dk }, exerciciosPorId) as GrupoExercicio[];
+
     if (ovrList && ovrList.length > 0) {
       // Quando há overrides, eles substituem o treino padrão do dia
       return ovrList.map<DiaSlot>((o) => {
@@ -534,10 +568,10 @@ const TreinosPage = () => {
         }
         if (o.grupo_usuario_id) {
           const grupo = gruposPessoais.find((g) => g.id === o.grupo_usuario_id) || null;
-          return { slot_idx: o.slot_idx, override_id: o.id, grupo, exercicios: gruposExerciciosPessoais[o.grupo_usuario_id] || [], overrideVazio: false, source: 'override' };
+          return { slot_idx: o.slot_idx, override_id: o.id, grupo, grupoPessoal: true, exercicios: comTrocas(gruposExerciciosPessoais[o.grupo_usuario_id] || [], o.grupo_usuario_id, o.slot_idx), overrideVazio: false, source: 'override' };
         }
         const grupo = grupos.find((g) => g.id === o.grupo_id!) || null;
-        return { slot_idx: o.slot_idx, override_id: o.id, grupo, exercicios: gruposExercicios[o.grupo_id!] || [], overrideVazio: false, source: 'override' };
+        return { slot_idx: o.slot_idx, override_id: o.id, grupo, grupoPessoal: false, exercicios: comTrocas(gruposExercicios[o.grupo_id!] || [], o.grupo_id!, o.slot_idx), overrideVazio: false, source: 'override' };
       });
     }
 
@@ -548,15 +582,15 @@ const TreinosPage = () => {
       if (config.grupo_usuario_id) {
         const grupo = gruposPessoais.find((g) => g.id === config.grupo_usuario_id) || null;
         if (grupo) {
-          slots.push({ slot_idx: slotIdx, grupo, exercicios: gruposExerciciosPessoais[config.grupo_usuario_id] || [], overrideVazio: false, source: 'semana' });
+          slots.push({ slot_idx: slotIdx, grupo, grupoPessoal: true, exercicios: comTrocas(gruposExerciciosPessoais[config.grupo_usuario_id] || [], config.grupo_usuario_id, slotIdx), overrideVazio: false, source: 'semana' });
         }
       } else if (config.grupo_id) {
         const grupo = config.tb_grupos_treino || grupos.find((g) => g.id === config.grupo_id) || null;
-        slots.push({ slot_idx: slotIdx, grupo, exercicios: gruposExercicios[config.grupo_id] || [], overrideVazio: false, source: 'semana' });
+        slots.push({ slot_idx: slotIdx, grupo, grupoPessoal: false, exercicios: comTrocas(gruposExercicios[config.grupo_id] || [], config.grupo_id, slotIdx), overrideVazio: false, source: 'semana' });
       }
     });
     return slots;
-  }, [overrides, gruposPessoais, gruposExerciciosPessoais, grupos, gruposExercicios, semanaConfig]);
+  }, [overrides, gruposPessoais, gruposExerciciosPessoais, grupos, gruposExercicios, semanaConfig, substituicoes, exerciciosPorId]);
 
   // Compatibilidade: primeiro slot (usado em UI antiga)
   const getGrupoForDate = useCallback((d: Date) => {
@@ -1332,6 +1366,7 @@ const TreinosPage = () => {
                               dateLabel={dateLabel}
                               grupoNome={slot.grupo!.nome}
                               grupoId={slot.grupo!.id}
+                              grupoPessoal={!!slot.grupoPessoal}
                               slotIdx={slot.slot_idx}
                               treinoId={slot.override_id}
                               exercicios={slot.exercicios}

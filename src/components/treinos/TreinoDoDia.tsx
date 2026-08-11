@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical } from "lucide-react";
+import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical, Repeat } from "lucide-react";
 import { usePowerSync } from "@powersync/react";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
+import ModalTrocarExercicio from "./ModalTrocarExercicio";
 import { toast } from "sonner";
 import type { SerieComMemoria } from "@/pages/TreinosPage";
 
@@ -22,6 +23,8 @@ interface GrupoExercicio {
   exercicio_id: string;
   ordem: number;
   tb_exercicios: Exercicio;
+  /** Presente quando este item já é uma troca (do dia ou definitiva) */
+  substituindo?: { id: string; nome: string; escopo: "dia" | "definitiva"; trocadoEm?: string | null };
 }
 
 interface Props {
@@ -30,6 +33,8 @@ interface Props {
   dateLabel: string;
   grupoNome: string;
   grupoId: string;
+  /** Grupo pessoal do usuário (não é do treinador) — habilita troca definitiva no grupo */
+  grupoPessoal?: boolean;
   slotIdx: number;
   treinoId?: string;
   exercicios: GrupoExercicio[];
@@ -49,7 +54,7 @@ interface Props {
 import { parseTempo, formatTempo, formatPace, calcularPace } from "@/lib/corrida";
 
 const TreinoDoDia = ({
-  userId, dateKey, dateLabel, grupoNome, grupoId, slotIdx, treinoId, exercicios,
+  userId, dateKey, dateLabel, grupoNome, grupoId, grupoPessoal = false, slotIdx, treinoId, exercicios,
   series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onRemoverTreino, onSerieConcluida, onSeriesUpdate,
   academiaAtual,
 }: Props) => {
@@ -57,6 +62,11 @@ const TreinoDoDia = ({
   const [infoExercicio, setInfoExercicio] = useState<Exercicio | null>(null);
   const [historicoId, setHistoricoId] = useState<string | null>(null);
   const [historicoNome, setHistoricoNome] = useState("");
+  const [trocarExercicio, setTrocarExercicio] = useState<{
+    ex: Exercicio;
+    origemId: string;
+    substituindo?: { id: string; nome: string; escopo: "dia" | "definitiva"; trocadoEm?: string | null };
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [sortedItems, setSortedItems] = useState<GrupoExercicio[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -595,6 +605,8 @@ const TreinoDoDia = ({
                 onTouchDragEnd={handleTouchDragEnd}
                 onSetInfoExercicio={setInfoExercicio}
                 onSetHistorico={(id, nome) => { setHistoricoId(id); setHistoricoNome(nome); }}
+                onTrocarExercicio={() => setTrocarExercicio({ ex, origemId: ge.substituindo?.id ?? ex.id, substituindo: ge.substituindo })}
+                substituindo={ge.substituindo?.trocadoEm === dateKey ? ge.substituindo : undefined}
                 onSaveSerie={handleSaveSerie}
                 onRemoveSerie={handleRemoveSerie}
                 onConcluirSerie={handleConcluirSerie}
@@ -619,6 +631,23 @@ const TreinoDoDia = ({
       <ModalExercicio exercicio={infoExercicio} open={!!infoExercicio} onOpenChange={o => !o && setInfoExercicio(null)} />
       <ModalHistorico exercicioId={historicoId} exercicioNome={historicoNome} userId={userId}
         open={!!historicoId} onOpenChange={o => !o && setHistoricoId(null)} />
+      {trocarExercicio && (
+        <ModalTrocarExercicio
+          userId={userId}
+          exercicioAtual={{ id: trocarExercicio.ex.id, nome: trocarExercicio.ex.nome, emoji: trocarExercicio.ex.emoji }}
+          origemId={trocarExercicio.origemId}
+          idsNoTreino={sortedItems.map((ge) => ge.exercicio_id)}
+          grupoId={grupoId}
+          grupoNome={grupoNome}
+          grupoPessoal={grupoPessoal}
+          slotIdx={slotIdx}
+          dateKey={dateKey}
+          dateLabel={dateLabel}
+          open={!!trocarExercicio}
+          onOpenChange={o => !o && setTrocarExercicio(null)}
+          onTrocado={onRefresh}
+        />
+      )}
     </div>
   );
 };
@@ -628,7 +657,7 @@ const ExercicioCard = ({
   exercicio: ex, series: exSeries, userId, dateKey, db, tipoCorrida,
   isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
   onTouchDragStart, onTouchDragMove, onTouchDragEnd,
-  onSetInfoExercicio, onSetHistorico,
+  onSetInfoExercicio, onSetHistorico, onTrocarExercicio, substituindo,
   onSaveSerie, onRemoveSerie, onConcluirSerie, onDesfazerSerie, onAddSerie,
 }: {
   exercicio: Exercicio;
@@ -648,6 +677,8 @@ const ExercicioCard = ({
   onTouchDragEnd: () => void;
   onSetInfoExercicio: (ex: Exercicio) => void;
   onSetHistorico: (id: string, nome: string) => void;
+  onTrocarExercicio: () => void;
+  substituindo?: { id: string; nome: string; escopo: "dia" | "definitiva"; trocadoEm?: string | null };
   onSaveSerie: (exId: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => void;
   onRemoveSerie: (exId: string, num: number, salva: boolean) => void;
   onConcluirSerie: (exId: string, nome: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => void;
@@ -739,12 +770,21 @@ const ExercicioCard = ({
             <span>{ex.emoji}</span> {ex.nome}
             <span className="text-[9px] text-muted-foreground/50 font-mono">#{ex.id.slice(0, 6)}</span>
           </button>
+          {substituindo && (
+            <span className="text-[9px] font-body text-primary/80 whitespace-nowrap" title={`No lugar de ${substituindo.nome}`}>
+              🔄 trocado
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => setComentarioAberto(true)} title="Anotações"
             className={`text-xs font-body flex items-center gap-1 transition-colors ${temComentario ? "text-primary" : "text-muted-foreground hover:text-primary"}`}>
             <MessageSquare size={12} />
             {temComentario && <span className="text-primary">•</span>}
+          </button>
+          <button type="button" onClick={onTrocarExercicio} title="Trocar exercício"
+            className="text-xs text-muted-foreground hover:text-primary font-body flex items-center gap-1 transition-colors">
+            <Repeat size={12} /> Trocar
           </button>
           <button type="button" onClick={() => onSetHistorico(ex.id, ex.nome)}
             className="text-xs text-muted-foreground hover:text-primary font-body flex items-center gap-1 transition-colors">
