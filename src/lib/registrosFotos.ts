@@ -54,10 +54,26 @@ export async function urlAssinada(path: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
-// Reduz a foto pra no máx 1600px (maior lado) em JPEG — Storage do free tier sob controle
+// Decodifica a imagem; HEIC/HEIF (padrão do iPhone) o browser não abre nativo —
+// converte via heic2any (lazy, só carrega o chunk quando precisa)
+async function decodificarImagem(file: File): Promise<ImageBitmap> {
+  const direto = await createImageBitmap(file).catch(() => null);
+  if (direto) return direto;
+  try {
+    const { default: heic2any } = await import("heic2any");
+    const jpeg = (await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 })) as Blob;
+    const convertido = await createImageBitmap(jpeg).catch(() => null);
+    if (convertido) return convertido;
+  } catch (e) {
+    console.warn("[registros] Conversão HEIC falhou:", e);
+  }
+  throw new Error("Formato de imagem não suportado. Envie JPEG ou PNG.");
+}
+
+// Reduz a foto pra no máx 1600px (maior lado) em JPEG — Storage do free tier sob controle.
+// Nunca sobe o arquivo sem decodificar: bytes que o browser não abre viram imagem quebrada no app.
 export async function comprimirImagem(file: File, maxDim = 1600, quality = 0.85): Promise<Blob> {
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) return file;
+  const bitmap = await decodificarImagem(file);
   const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * scale);
   const h = Math.round(bitmap.height * scale);
@@ -65,9 +81,11 @@ export async function comprimirImagem(file: File, maxDim = 1600, quality = 0.85)
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
+  if (!ctx) throw new Error("Não foi possível processar a imagem neste dispositivo.");
   ctx.drawImage(bitmap, 0, 0, w, h);
-  return await new Promise<Blob>((resolve) => {
-    canvas.toBlob((b) => resolve(b ?? file), "image/jpeg", quality);
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", quality);
   });
+  if (!blob) throw new Error("Não foi possível processar a imagem neste dispositivo.");
+  return blob;
 }
