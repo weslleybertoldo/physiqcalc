@@ -4,7 +4,6 @@ export const MEDIDA_FIELDS = [
   { key: "medida_ombro", label: "Ombro", group: "tronco" },
   { key: "medida_peitoral", label: "Peitoral", group: "tronco" },
   { key: "medida_cintura", label: "Cintura", group: "tronco" },
-  { key: "medida_abdomen", label: "Abdômen", group: "tronco" },
   { key: "medida_quadril", label: "Quadril", group: "tronco" },
   { key: "medida_braco_d", label: "Braço D", group: "bracos" },
   { key: "medida_braco_e", label: "Braço E", group: "bracos" },
@@ -25,4 +24,4 @@ export const MEDIDA_GROUPS = [
 ] as const;
 
 // Metrics where lower values are "better" for evolution tracking
-export const MEDIDA_LOWER_BETTER: MedidaKey[] = ["medida_cintura", "medida_abdomen", "medida_quadril"];
+export const MEDIDA_LOWER_BETTER: MedidaKey[] = ["medida_cintura", "medida_quadril"];

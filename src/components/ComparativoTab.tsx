@@ -91,7 +91,6 @@ const MEDIDAS_CONFIG = [
   { label: 'Ombro', key: 'ombro' as keyof MedidasCorporais, inv: false },
   { label: 'Peitoral', key: 'peitoral' as keyof MedidasCorporais, inv: false },
   { label: 'Cintura', key: 'cintura' as keyof MedidasCorporais, inv: true },
-  { label: 'Abdômen', key: 'abdomen' as keyof MedidasCorporais, inv: true },
   { label: 'Quadril', key: 'quadril' as keyof MedidasCorporais, inv: true },
   { label: 'Braço D', key: 'bracoD' as keyof MedidasCorporais, inv: false },
   { label: 'Braço E', key: 'bracoE' as keyof MedidasCorporais, inv: false },

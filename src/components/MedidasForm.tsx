@@ -16,7 +16,6 @@ const MedidasForm = ({ medidas, onChange, colunas = 3 }: MedidasFormProps) => {
     { label: 'Ombro (cm)', key: 'ombro' as const },
     { label: 'Peitoral (cm)', key: 'peitoral' as const },
     { label: 'Cintura (cm)', key: 'cintura' as const },
-    { label: 'Abdômen (cm)', key: 'abdomen' as const },
     { label: 'Quadril (cm)', key: 'quadril' as const },
   ];
 
