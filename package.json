@@ -1,7 +1,7 @@
 {
   "name": "physiqcalc",
   "private": true,
-  "version": "2.92",
+  "version": "2.93",
   "type": "module",
   "scripts": {
     "dev": "vite",
