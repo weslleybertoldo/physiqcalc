@@ -427,6 +427,36 @@ export type Database = {
         }
         Relationships: []
       }
+      physiq_registros_fotos: {
+        Row: {
+          created_at: string
+          id: string
+          mes_ref: string
+          storage_path: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mes_ref: string
+          storage_path: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mes_ref?: string
+          storage_path?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       physiq_tags: {
         Row: {
           cor: string

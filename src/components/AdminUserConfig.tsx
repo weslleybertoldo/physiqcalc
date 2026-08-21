@@ -8,6 +8,7 @@ import GenderToggle from "./GenderToggle";
 import { levels } from "./TdeeTable";
 import AdminTagSelector from "./AdminTagSelector";
 import AdminSemanaUsuario from "./AdminSemanaUsuario";
+import AdminRegistrosFotos from "./AdminRegistrosFotos";
 import AdminPagamentosStatus from "./AdminPagamentosStatus";
 import EvolutionSection from "./EvolutionSection";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
@@ -39,6 +40,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
     { key: "geral", label: "Dados Gerais" },
     { key: "dobras", label: "Dobras & Medidas" },
     { key: "evolucao", label: "Evolução" },
+    { key: "registros", label: "Registros" },
     { key: "plano", label: "Plano" },
     { key: "treino", label: "Treino" },
   ] as const;
@@ -631,11 +633,14 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             </section>
           )}
 
+          {/* Registros fotográficos mensais (auto-salva; reflete no app do aluno) */}
+          {configTab === "registros" && <AdminRegistrosFotos userId={userId} />}
+
           {/* Treino Diário (auto-salva) */}
           {configTab === "treino" && <AdminSemanaUsuario userId={userId} />}
 
           {/* Save button */}
-          {configTab !== "treino" && (
+          {configTab !== "treino" && configTab !== "registros" && (
           <button
             onClick={handleSave}
             disabled={saving}
