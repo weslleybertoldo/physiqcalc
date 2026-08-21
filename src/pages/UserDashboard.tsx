@@ -8,6 +8,7 @@ import { levels } from "@/components/TdeeTable";
 import EvolutionSection from "@/components/EvolutionSection";
 import { classificarGordura } from "@/utils/composicaoCorporal";
 import MedidasCorporaisDisplay from "@/components/MedidasCorporaisDisplay";
+import RegistrosSection from "@/components/RegistrosSection";
 
 interface Profile {
   nome: string | null;
@@ -39,7 +40,7 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"comp" | "macros" | "evolucao">("comp");
+  const [activeTab, setActiveTab] = useState<"comp" | "macros" | "evolucao" | "registros">("comp");
   const [ajusteLocal, setAjusteLocal] = useState<number>(0);
   const [avatarError, setAvatarError] = useState(false);
 
@@ -168,7 +169,7 @@ const UserDashboard = () => {
         </h1>
 
         {/* Tabs */}
-        <div className="flex border-b border-muted-foreground/30 mb-2">
+        <div className="flex border-b border-muted-foreground/30 mb-2 overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab("comp")}
@@ -190,11 +191,20 @@ const UserDashboard = () => {
           <button
             type="button"
             onClick={() => setActiveTab("evolucao")}
-            className={`py-3 px-1 font-heading text-sm uppercase tracking-widest transition-colors duration-200 border-b-2 ${
+            className={`py-3 px-1 mr-8 font-heading text-sm uppercase tracking-widest transition-colors duration-200 border-b-2 whitespace-nowrap ${
               activeTab === "evolucao" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
             }`}
           >
             Evolução
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("registros")}
+            className={`py-3 px-1 font-heading text-sm uppercase tracking-widest transition-colors duration-200 border-b-2 whitespace-nowrap ${
+              activeTab === "registros" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+            }`}
+          >
+            Registros
           </button>
         </div>
 
@@ -340,9 +350,13 @@ const UserDashboard = () => {
               </div>
             )}
           </section>
-        ) : (
+        ) : activeTab === "evolucao" ? (
           <section className="py-10">
             {user && <EvolutionSection userId={user.id} />}
+          </section>
+        ) : (
+          <section>
+            {user && <RegistrosSection userId={user.id} />}
           </section>
         )}
 

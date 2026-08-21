@@ -3,7 +3,6 @@ export interface MedidasCorporais {
   ombro: number | '';
   peitoral: number | '';
   cintura: number | '';
-  abdomen: number | '';
   quadril: number | '';
   bracoD: number | '';
   bracoE: number | '';
@@ -16,7 +15,7 @@ export interface MedidasCorporais {
 }
 
 export const medidasVazias: MedidasCorporais = {
-  pescoco: '', ombro: '', peitoral: '', cintura: '', abdomen: '', quadril: '',
+  pescoco: '', ombro: '', peitoral: '', cintura: '', quadril: '',
   bracoD: '', bracoE: '', antebracoD: '', antebracoE: '',
   coxaD: '', coxaE: '', panturrilhaD: '', panturrilhaE: '',
 };

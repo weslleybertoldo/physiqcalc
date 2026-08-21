@@ -85,7 +85,7 @@ function VariationBadge({ current, previous, metric }: { current: number | null;
 
 const BASE_METRICS = ["percentual_gordura", "peso", "massa_magra", "massa_gorda", "tmb_mifflin"];
 const CHART_MEDIDA_KEYS = [
-  "medida_cintura", "medida_abdomen", "medida_quadril",
+  "medida_cintura", "medida_quadril",
   "medida_braco_d", "medida_braco_e",
   "medida_coxa_d", "medida_coxa_e",
   "medida_panturrilha_d", "medida_panturrilha_e",

@@ -52,7 +52,6 @@ const MEDIDA_KEY_MAP: Record<string, keyof MedidasCorporais> = {
   medida_ombro: "ombro",
   medida_peitoral: "peitoral",
   medida_cintura: "cintura",
-  medida_abdomen: "abdomen",
   medida_quadril: "quadril",
   medida_braco_d: "bracoD",
   medida_braco_e: "bracoE",
