@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { LogOut, Search, Eye, Settings, Calculator, FileDown, Ban, Trash2, Tags, Dumbbell } from "lucide-react";
+import { LogOut, Search, Eye, Settings, Calculator, FileDown, Ban, Trash2, Dumbbell } from "lucide-react";
 import { adminLogout, isAdminAuthenticated, isAdminAuthenticatedAsync } from "@/components/AdminLoginDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminUserConfig from "@/components/AdminUserConfig";
 import AdminUserView from "@/components/AdminUserView";
-import AdminTagManager from "@/components/AdminTagManager";
 import AdminTreinos from "@/components/admin/AdminTreinos";
 import Index from "./Index";
 import { generateAdminPDF, type AdminProfile } from "@/lib/generateAdminPDF";
@@ -39,7 +38,7 @@ const AdminPanel = () => {
   // Navegação via URL (?v=<tela>&u=<userId>): a sub-tela é derivada da URL, então
   // recarregar a página (F5) mantém a mesma tela e voltar/avançar funcionam nativos.
   const [searchParams, setSearchParams] = useSearchParams();
-  const viewMode = (searchParams.get("v") as "list" | "config" | "view" | "calculator" | "tags" | "treinos") || "list";
+  const viewMode = (searchParams.get("v") as "list" | "config" | "view" | "calculator" | "treinos") || "list";
   const selectedUser = searchParams.get("u");
 
   const goToView = (mode: typeof viewMode, userId?: string) => {
@@ -169,10 +168,6 @@ const AdminPanel = () => {
     return <Index onBack={() => window.history.back()} />;
   }
 
-  if (viewMode === "tags") {
-    return <AdminTagManager onBack={() => window.history.back()} />;
-  }
-
   if (viewMode === "treinos") {
     return <AdminTreinos onBack={() => window.history.back()} />;
   }
@@ -207,19 +202,6 @@ const AdminPanel = () => {
           <div className="text-left">
             <p className="font-heading text-lg text-foreground">Cálculo Manual</p>
             <p className="text-xs text-muted-foreground font-body">Calculadora completa para uso avulso</p>
-          </div>
-        </button>
-
-        {/* Tag Manager */}
-        <button
-          type="button"
-          onClick={() => goToView("tags")}
-          className="w-full mb-4 result-card border-muted-foreground/30 flex items-center gap-4 hover:bg-primary/5 transition-colors cursor-pointer"
-        >
-          <Tags size={24} className="text-primary shrink-0" />
-          <div className="text-left">
-            <p className="font-heading text-lg text-foreground">Gerenciar Tags</p>
-            <p className="text-xs text-muted-foreground font-body">Criar e editar tags personalizadas</p>
           </div>
         </button>
 
