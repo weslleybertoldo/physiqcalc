@@ -50,7 +50,8 @@ const SUB_TABS: { key: string; label: string }[] = [
 
 export default function AdminSemanaUsuario({ userId }: Props) {
   const [grupos, setGrupos] = useState<GrupoDisp[]>([]);
-  const [marcados, setMarcados] = useState<Record<string, Set<string>>>({});
+  // keys dos treinos de cada dia NA ORDEM MARCADA (slot_idx) — define a rotação do alternado
+  const [ordemDia, setOrdemDia] = useState<Record<string, string[]>>({});
   const [diasConfig, setDiasConfig] = useState<Record<string, DiaConfigRow>>({});
   const [extras, setExtras] = useState<Record<string, ExtraInfo[]>>({});
   const [loading, setLoading] = useState(true);
@@ -76,9 +77,12 @@ export default function AdminSemanaUsuario({ userId }: Props) {
       const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { action: "get", userId } });
       if (error) throw error;
       setGrupos((data?.gruposDisponiveis as GrupoDisp[]) || []);
-      const map: Record<string, Set<string>> = {};
+      const map: Record<string, string[]> = {};
       const exMap: Record<string, ExtraInfo[]> = {};
-      ((data?.semana as SemanaRow[]) || []).forEach((r) => {
+      const rows = (((data?.semana as SemanaRow[]) || []) as SemanaRow[])
+        .slice()
+        .sort((a, b) => (a.slot_idx ?? 0) - (b.slot_idx ?? 0));
+      rows.forEach((r) => {
         if (r.extra) {
           const atrelado = r.extra_atrelado_grupo_usuario_id
             ? `pessoal:${r.extra_atrelado_grupo_usuario_id}`
@@ -87,10 +91,10 @@ export default function AdminSemanaUsuario({ userId }: Props) {
               : null;
           (exMap[r.dia_semana] ||= []).push({ key: keyOfRow(r), atrelado });
         } else {
-          (map[r.dia_semana] ||= new Set()).add(keyOfRow(r));
+          (map[r.dia_semana] ||= []).push(keyOfRow(r));
         }
       });
-      setMarcados(map);
+      setOrdemDia(map);
       setExtras(exMap);
       const cfg: Record<string, DiaConfigRow> = {};
       ((data?.diasConfig as DiaConfigRow[]) || []).forEach((c) => { cfg[c.dia_semana] = c; });
@@ -104,13 +108,13 @@ export default function AdminSemanaUsuario({ userId }: Props) {
 
   const toggle = async (dia: string, grupo: GrupoDisp) => {
     const k = keyOf(grupo);
-    const atual = new Set(marcados[dia] || []);
-    if (atual.has(k)) atual.delete(k); else atual.add(k);
-    setMarcados((prev) => ({ ...prev, [dia]: atual }));
+    const atual = (ordemDia[dia] || []).slice();
+    const i = atual.indexOf(k);
+    if (i >= 0) atual.splice(i, 1); else atual.push(k); // novo entra no FIM da rotação
+    setOrdemDia((prev) => ({ ...prev, [dia]: atual }));
     setSavingDia(dia);
     try {
-      const payload = grupos.filter((g) => atual.has(keyOf(g))).map((g) =>
-        g.tipo === "pessoal" ? { grupo_usuario_id: g.id } : { grupo_id: g.id });
+      const payload = atual.map((key) => idsFromKey(key));
       const { error } = await supabase.functions.invoke("admin-semana-treinos", {
         body: { action: "setDia", userId, dia_semana: dia, grupos: payload },
       });
@@ -125,16 +129,18 @@ export default function AdminSemanaUsuario({ userId }: Props) {
     const ativo = !!diasConfig[dia]?.alternado;
     const novo = !ativo;
     const inicio = segundaDaSemana(hojeISO());
+    // otimista (igual ao toggle dos treinos); reverte recarregando se falhar
+    setDiasConfig((prev) => ({ ...prev, [dia]: { dia_semana: dia, alternado: novo, alternado_inicio: novo ? inicio : null } }));
+    if (!novo) setExtras((prev) => ({ ...prev, [dia]: [] }));
     setSavingDia(dia);
     try {
       const { error } = await supabase.functions.invoke("admin-semana-treinos", {
         body: { action: "setDiaConfig", userId, dia_semana: dia, alternado: novo, inicio },
       });
       if (error) throw error;
-      setDiasConfig((prev) => ({ ...prev, [dia]: { dia_semana: dia, alternado: novo, alternado_inicio: novo ? inicio : null } }));
-      if (!novo) setExtras((prev) => ({ ...prev, [dia]: [] }));
     } catch {
-      toast.error("Erro ao salvar o alternado.");
+      toast.error("Erro ao salvar o alternado — recarregando.");
+      await load();
     } finally { setSavingDia(null); }
   };
 
@@ -166,9 +172,11 @@ export default function AdminSemanaUsuario({ userId }: Props) {
     return g ? g.nome : "(treino)";
   };
 
-  /** rotativos do dia na ordem marcada (mesma ordem enviada no setDia) */
+  /** rotativos do dia na ordem marcada (mesma ordem enviada no setDia / slot_idx) */
   const rotativosDoDia = (dia: string): GrupoDisp[] =>
-    grupos.filter((g) => marcados[dia]?.has(keyOf(g)));
+    (ordemDia[dia] || [])
+      .map((k) => grupos.find((g) => keyOf(g) === k))
+      .filter((g): g is GrupoDisp => !!g);
 
   const treinoDaSemanaAtual = (dia: string): GrupoDisp | null => {
     const cfg = diasConfig[dia];
@@ -268,7 +276,7 @@ export default function AdminSemanaUsuario({ userId }: Props) {
                 {isOpen && (
                   <div className="flex flex-col gap-1 pl-1 mt-2 border-t border-border pt-2">
                     {grupos.map((g) => {
-                      const checked = marcados[d.code]?.has(keyOf(g)) ?? false;
+                      const checked = ordemDia[d.code]?.includes(keyOf(g)) ?? false;
                       return (
                         <label key={g.id} className="flex items-center gap-2 text-sm font-body cursor-pointer">
                           <input type="checkbox" checked={checked} onChange={() => toggle(d.code, g)} className="accent-primary" />
