@@ -153,8 +153,10 @@ Deno.serve(async (req) => {
       ]);
       if (semanaRes.error) throw semanaRes.error;
       const semana = (semanaRes.data as any[]) ?? [];
-      const gruposCatalogo = [...new Set(semana.map((r) => r.grupo_id).filter(Boolean))] as string[];
-      const gruposPessoais = [...new Set(semana.map((r) => r.grupo_usuario_id).filter(Boolean))] as string[];
+      // TODOS os grupos disponíveis do usuário (não só os da semana) — o front
+      // decide quais compõem o volume via seletor "Treino selecionado"
+      const gruposCatalogo = [...disp.catalogo];
+      const gruposPessoais = [...disp.pessoal];
 
       const [catRes, pessRes, subsRes] = await Promise.all([
         gruposCatalogo.length
