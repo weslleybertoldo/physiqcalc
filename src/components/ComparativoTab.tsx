@@ -391,8 +391,8 @@ const ComparativoTab = () => {
           <div>
             <label className={labelClass}>Sexo</label>
             <select value={dadosComuns.sexo} onChange={e => setDadosComuns({ ...dadosComuns, sexo: e.target.value as 'M' | 'F' })} className={inputClass}>
-              <option value="M">Masculino</option>
-              <option value="F">Feminino</option>
+              <option value="M" className="bg-background text-foreground">Masculino</option>
+              <option value="F" className="bg-background text-foreground">Feminino</option>
             </select>
           </div>
           <div>

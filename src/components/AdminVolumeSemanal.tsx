@@ -163,7 +163,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
             className="text-xs font-body bg-background text-foreground border border-border rounded px-2 py-1"
           >
             {semanas.map((s) => (
-              <option key={s.inicio} value={s.inicio}>{s.label}</option>
+              <option key={s.inicio} value={s.inicio} className="bg-background text-foreground">{s.label}</option>
             ))}
           </select>
         )}
