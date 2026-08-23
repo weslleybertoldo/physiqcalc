@@ -58,6 +58,9 @@ export default function AdminVolumeSemanal({ userId }: Props) {
 
   const semanas = useMemo(() => ultimasSemanas(8), []);
   const [modo, setModo] = useState<"programado" | "praticado">("programado");
+  // seleção de treinos do Programado — null = default (treinos da semana)
+  const [treinosSel, setTreinosSel] = useState<Set<string> | null>(null);
+  const [seletorAberto, setSeletorAberto] = useState(false);
   // default do praticado = semana anterior
   const [semanaSel, setSemanaSel] = useState<string>(semanas[1]?.inicio ?? semanas[0].inicio);
   const [praticado, setPraticado] = useState<Record<string, ExercicioPraticado[]>>({});
@@ -107,13 +110,32 @@ export default function AdminVolumeSemanal({ userId }: Props) {
     return () => { ativo = false; };
   }, [modo, semanaSel, userId, semanas, praticado]);
 
-  const volumes = useMemo(
-    () =>
-      modo === "programado"
-        ? calcularVolumeSemanal(semana, grupos)
-        : calcularVolumePraticado(praticado[semanaSel] ?? []),
-    [modo, semana, grupos, praticado, semanaSel],
-  );
+  const keyRow = (r: SemanaRowVolume) =>
+    r.grupo_usuario_id ? `pessoal:${r.grupo_usuario_id}` : `catalogo:${r.grupo_id}`;
+  const freqSemana = useMemo(() => {
+    const m = new Map<string, number>();
+    semana.forEach((r) => m.set(keyRow(r), (m.get(keyRow(r)) ?? 0) + 1));
+    return m;
+  }, [semana]);
+  // default do seletor = treinos marcados na semana
+  const selecionados = treinosSel ?? new Set(freqSemana.keys());
+
+  const volumes = useMemo(() => {
+    if (modo === "praticado") return calcularVolumePraticado(praticado[semanaSel] ?? []);
+    // semana filtrada pela seleção + 1 ocorrência sintética pra treino fora da semana
+    const rows = semana.filter((r) => selecionados.has(keyRow(r)));
+    for (const key of selecionados) {
+      if (!freqSemana.has(key) && grupos[key]) {
+        const [tipo, id] = key.split(":");
+        rows.push({
+          dia_semana: "EXTRA",
+          grupo_id: tipo === "catalogo" ? id : null,
+          grupo_usuario_id: tipo === "pessoal" ? id : null,
+        });
+      }
+    }
+    return calcularVolumeSemanal(rows, grupos);
+  }, [modo, semana, grupos, praticado, semanaSel, selecionados, freqSemana]);
   const temPadrao = modo === "programado" && volumes.some((v) => v.detalhes.some((d) => d.seriesEhPadrao));
   const carregando = loading || (modo === "praticado" && loadingPraticado && !praticado[semanaSel]);
 
@@ -147,9 +169,49 @@ export default function AdminVolumeSemanal({ userId }: Props) {
         )}
       </div>
 
+      {modo === "programado" && Object.keys(grupos).length > 0 && (
+        <div className="border border-border rounded-md p-3">
+          <button
+            type="button"
+            onClick={() => setSeletorAberto((v) => !v)}
+            className="flex items-center justify-between w-full text-left"
+          >
+            <span className="text-xs font-heading uppercase tracking-wider text-foreground">
+              Treino selecionado ({selecionados.size}/{Object.keys(grupos).length})
+            </span>
+            <span className="text-xs text-muted-foreground">{seletorAberto ? "▲" : "▼"}</span>
+          </button>
+          {seletorAberto && (
+            <div className="flex flex-col gap-1 pl-1 mt-2 border-t border-border pt-2">
+              {Object.entries(grupos).map(([key, g]) => {
+                const freq = freqSemana.get(key);
+                return (
+                  <label key={key} className="flex items-center gap-2 text-sm font-body cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selecionados.has(key)}
+                      onChange={() => {
+                        const novo = new Set(selecionados);
+                        if (novo.has(key)) novo.delete(key); else novo.add(key);
+                        setTreinosSel(novo);
+                      }}
+                      className="accent-primary"
+                    />
+                    <span>{g.nome}{key.startsWith("pessoal:") ? " (pessoal)" : ""}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {freq ? `${freq}×/sem` : "fora da semana · conta 1×"}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground font-body">
         {modo === "programado"
-          ? "Séries semanais programadas por grupo muscular, com base nos treinos marcados na semana. Séries por exercício = último treino registrado."
+          ? "Séries semanais programadas por grupo muscular, com base nos treinos selecionados. Séries por exercício = último treino registrado."
           : "Séries CONCLUÍDAS no app na semana escolhida, por grupo muscular."}
         {" "}Faixas científicas MEV–MRV (volume landmarks, RP/Israetel); músculo secundário conta meia série.
       </p>
@@ -159,7 +221,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
       ) : volumes.length === 0 ? (
         <p className="text-sm text-muted-foreground font-body">
           {modo === "programado"
-            ? "Nenhum treino marcado na semana deste usuário. Marque os treinos na aba Treino Diário."
+            ? "Nenhum treino selecionado. Marque treinos no seletor acima ou na aba Treino Diário."
             : "Nenhuma série concluída nessa semana."}
         </p>
       ) : (
