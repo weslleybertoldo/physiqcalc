@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import AdminVolumeSemanal from "./AdminVolumeSemanal";
 
 interface Props { userId: string }
 
@@ -18,12 +20,28 @@ const DIAS: { code: string; label: string }[] = [
   { code: "DOM", label: "Domingo" },
 ];
 
+const SUB_TABS: { key: string; label: string }[] = [
+  { key: "semana", label: "Treino Diário" },
+  { key: "volume", label: "Volume Semanal" },
+];
+
 export default function AdminSemanaUsuario({ userId }: Props) {
   const [grupos, setGrupos] = useState<GrupoDisp[]>([]);
   const [marcados, setMarcados] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [savingDia, setSavingDia] = useState<string | null>(null);
   const [aberto, setAberto] = useState<string | null>(null);
+
+  // sub-aba derivada da URL (?wt=) — F5 mantém a aba, padrão do AdminTreinos
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawSub = searchParams.get("wt");
+  const subTab = SUB_TABS.some((t) => t.key === rawSub) ? (rawSub as string) : "semana";
+  const setSubTab = (key: string) =>
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set("wt", key);
+      return p;
+    }, { replace: true });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,7 +82,25 @@ export default function AdminSemanaUsuario({ userId }: Props) {
 
   return (
     <section className="section-divider pt-10">
-      <h2 className="font-heading text-lg text-foreground mb-2">Treino Diário</h2>
+      <div className="flex gap-4 border-b border-border mb-4">
+        {SUB_TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setSubTab(t.key)}
+            className={`pb-2 text-sm font-heading uppercase tracking-wider border-b-2 -mb-px transition-colors ${
+              subTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "volume" ? (
+        <AdminVolumeSemanal userId={userId} />
+      ) : (
+      <>
       <p className="text-xs text-muted-foreground font-body mb-6">
         Marque os treinos que aparecem em cada dia. Repetem toda semana. Salva automaticamente.
       </p>
@@ -122,6 +158,8 @@ export default function AdminSemanaUsuario({ userId }: Props) {
             );
           })}
         </div>
+      )}
+      </>
       )}
     </section>
   );

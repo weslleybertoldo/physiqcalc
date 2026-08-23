@@ -114,6 +114,10 @@ export const musculoPrimario = (grupoMuscular: string): string =>
 export const blocoDoGrupoMuscular = (grupoMuscular: string): string =>
   MAPA_PRIMARIO[normalizar(musculoPrimario(grupoMuscular))] ?? BLOCO_OUTROS;
 
+/** Bloco de UM músculo isolado (sem "/"), ou null se não reconhecido */
+export const blocoDeMusculo = (musculo: string): string | null =>
+  MAPA_PRIMARIO[normalizar(musculo)] ?? null;
+
 export const getBloco = (key: string): BlocoMuscular =>
   BLOCOS_MUSCULARES.find((b) => b.key === key) ??
   BLOCOS_MUSCULARES[BLOCOS_MUSCULARES.length - 1];
