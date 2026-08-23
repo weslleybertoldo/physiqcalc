@@ -117,6 +117,16 @@ describe("calcularVolumeSemanal", () => {
   });
 });
 
+describe("LANDMARKS", () => {
+  it("MEV ≤ MAVmin ≤ MAVmax ≤ MRV em todos os blocos", () => {
+    for (const [key, lm] of Object.entries(LANDMARKS)) {
+      expect(lm.mev, key).toBeLessThanOrEqual(lm.mav[0]);
+      expect(lm.mav[0], key).toBeLessThanOrEqual(lm.mav[1]);
+      expect(lm.mav[1], key).toBeLessThanOrEqual(lm.mrv);
+    }
+  });
+});
+
 describe("calcularVolumePraticado", () => {
   it("agrega séries concluídas por bloco, com secundário 0,5 e sem marcar padrão", () => {
     const res = calcularVolumePraticado([
