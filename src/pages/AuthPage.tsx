@@ -1,8 +1,7 @@
 import { useState, FormEvent } from "react";
-import { Eye, EyeOff, Settings, RefreshCw, Check, Download } from "lucide-react";
+import { Eye, EyeOff, RefreshCw, Check, Download } from "lucide-react";
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
-import AdminLoginDialog from "@/components/AdminLoginDialog";
 
 const APP_VERSION = __APP_VERSION__;
 const RELEASES_URL = "https://api.github.com/repos/weslleybertoldo/physiqcalc/releases/latest";
@@ -15,7 +14,6 @@ const AuthPage = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [adminOpen, setAdminOpen] = useState(false);
   const [aceiteTermos, setAceiteTermos] = useState(false);
 
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -270,17 +268,6 @@ const AuthPage = () => {
         </div>
       </div>
 
-      {/* Admin gear */}
-      <button
-        type="button"
-        onClick={() => setAdminOpen(true)}
-        title="Acesso Admin"
-        className="fixed bottom-4 right-4 p-2 text-muted-foreground/30 hover:text-muted-foreground transition-colors duration-200"
-      >
-        <Settings size={16} />
-      </button>
-
-      <AdminLoginDialog open={adminOpen} onOpenChange={setAdminOpen} />
     </div>
   );
 };
