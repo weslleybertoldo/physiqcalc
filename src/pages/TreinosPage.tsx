@@ -124,6 +124,8 @@ export interface SerieComMemoria {
 
 const TreinosPage = () => {
   const { user, signOut } = useAuth();
+  // engrenagem (configurações/atualizações) só aparece pra admin
+  const isAdmin = ((user?.app_metadata as any)?.role ?? null) === "admin";
   const navigate = useNavigate();
   const db = usePowerSync();
   // Guarda posição do scroll para restaurar após updates silenciosos
@@ -215,6 +217,7 @@ const TreinosPage = () => {
     return () => { cancelled = true; };
   }, [user?.id]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showConfirmSair, setShowConfirmSair] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<null | { hasUpdate: boolean; url?: string; version?: string }>(null);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
@@ -1237,14 +1240,16 @@ const TreinosPage = () => {
             <button type="button" onClick={() => navigate("/avaliacao")} className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Avaliação">
               <ClipboardList size={16} />
             </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Sair"
-              className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <LogOut size={16} />
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => { setShowSettings(true); setUpdateResult(null); }}
+                title="Configurações"
+                className="p-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Settings size={16} />
+              </button>
+            )}
           </div>
         </header>
 
@@ -1501,15 +1506,33 @@ const TreinosPage = () => {
             </div>
           )}
 
-          {/* Engrenagem no canto inferior direito */}
+          {/* Sair no canto inferior direito (onde ficava a engrenagem), com confirmação */}
           <button
             type="button"
-            onClick={() => { setShowSettings(true); setUpdateResult(null); }}
-            className="absolute bottom-0 right-0 p-2 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+            onClick={() => setShowConfirmSair(true)}
+            title="Sair"
+            className="absolute bottom-0 right-0 p-2 text-muted-foreground/30 hover:text-destructive transition-colors"
           >
-            <Settings size={16} />
+            <LogOut size={16} />
           </button>
         </footer>
+
+        {/* Confirmação de saída */}
+        {showConfirmSair && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6" onClick={() => setShowConfirmSair(false)}>
+            <div className="bg-background border border-border rounded-lg w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <p className="font-heading text-sm text-foreground">Realmente deseja sair?</p>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setShowConfirmSair(false)} className="px-4 py-2 text-muted-foreground font-heading text-xs uppercase">
+                  Cancelar
+                </button>
+                <button type="button" onClick={() => { setShowConfirmSair(false); handleLogout(); }} className="px-4 py-2 bg-destructive text-destructive-foreground font-heading text-xs uppercase">
+                  Sair
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de configurações */}
         {showSettings && (
