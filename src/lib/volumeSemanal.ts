@@ -18,22 +18,24 @@ export const SERIES_PADRAO = 3;
 export interface LandmarkVolume {
   /** MEV — mínimo de séries/semana pra crescer */
   mev: number;
+  /** MAV — faixa recomendada [min, max] de séries/semana */
+  mav: [number, number];
   /** MRV — máximo recuperável de séries/semana (o "limite") */
   mrv: number;
 }
 
 /** Landmarks semanais por bloco (RP/Israetel, população treinada média) */
 export const LANDMARKS: Record<string, LandmarkVolume> = {
-  peito: { mev: 10, mrv: 22 },
-  costas: { mev: 10, mrv: 25 },
-  ombro: { mev: 8, mrv: 26 },
-  biceps: { mev: 8, mrv: 26 },
-  triceps: { mev: 6, mrv: 18 },
-  quadriceps: { mev: 8, mrv: 20 },
-  posterior: { mev: 6, mrv: 20 },
-  gluteo: { mev: 4, mrv: 16 },
-  panturrilha: { mev: 8, mrv: 20 },
-  abdomen: { mev: 0, mrv: 25 },
+  peito: { mev: 10, mav: [12, 20], mrv: 22 },
+  costas: { mev: 10, mav: [14, 22], mrv: 25 },
+  ombro: { mev: 8, mav: [16, 22], mrv: 26 },
+  biceps: { mev: 8, mav: [14, 20], mrv: 26 },
+  triceps: { mev: 6, mav: [10, 14], mrv: 18 },
+  quadriceps: { mev: 8, mav: [12, 18], mrv: 20 },
+  posterior: { mev: 6, mav: [10, 16], mrv: 20 },
+  gluteo: { mev: 4, mav: [4, 12], mrv: 16 },
+  panturrilha: { mev: 8, mav: [12, 16], mrv: 20 },
+  abdomen: { mev: 0, mav: [16, 20], mrv: 25 },
 };
 
 export type StatusVolume = "abaixo" | "produtivo" | "perto" | "limite" | "neutro";

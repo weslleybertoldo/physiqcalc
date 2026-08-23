@@ -191,11 +191,22 @@ export default function AdminVolumeSemanal({ userId }: Props) {
 
                 {v.landmark && (
                   <div className="mt-2">
-                    <div className="h-1.5 rounded bg-muted overflow-hidden">
+                    <div className="relative h-1.5 rounded bg-muted">
                       <div className={`h-full rounded ${badge.bar}`} style={{ width: `${pct}%` }} />
+                      {v.landmark.mav.map((m, i) => (
+                        <div
+                          key={i}
+                          className="absolute -top-1 h-3.5 w-[3px] rounded-sm bg-primary"
+                          style={{ left: `calc(${Math.min(m / v.landmark!.mrv, 1) * 100}% - 1px)` }}
+                          title={`MAV ${i === 0 ? "mín" : "máx"}: ${m} séries`}
+                        />
+                      ))}
                     </div>
-                    <span className="block text-[10px] text-muted-foreground font-body mt-0.5">
-                      faixa {v.landmark.mev}–{v.landmark.mrv} séries/semana
+                    <span className="block text-[10px] text-muted-foreground font-body mt-1">
+                      MEV–MRV: {v.landmark.mev}–{v.landmark.mrv} séries/semana (máx. recuperável)
+                    </span>
+                    <span className="block text-[10px] text-muted-foreground font-body">
+                      MAV: {v.landmark.mav[0]}–{v.landmark.mav[1]} séries/semana (recomendado)
                     </span>
                   </div>
                 )}
