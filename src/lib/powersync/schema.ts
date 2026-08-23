@@ -23,6 +23,18 @@ const tb_semana_treinos = new Table({
   grupo_id: column.text,
   grupo_usuario_id: column.text,
   slot_idx: column.integer,
+  extra: column.integer, // boolean as 0/1 — treino extra do alternado
+  extra_atrelado_grupo_id: column.text,
+  extra_atrelado_grupo_usuario_id: column.text,
+});
+
+// Config por (user, dia): toggle "Treino alternado" + âncora da rotação
+const tb_semana_dia_config = new Table({
+  user_id: column.text,
+  dia_semana: column.text,
+  alternado: column.integer, // boolean as 0/1
+  alternado_inicio: column.text,
+  updated_at: column.text,
 });
 
 const tb_grupos_exercicios = new Table({
@@ -187,6 +199,7 @@ export const AppSchema = new Schema({
   tb_exercicios,
   tb_semana_treinos,
   tb_grupos_exercicios,
+  tb_semana_dia_config,
   grupos_musculares,
   tb_treino_series,
   tb_treino_concluido,

@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
 import { aplicarSubstituicoes, type ExercicioAlvo, type Substituicao } from "@/lib/substituicaoExercicio";
-import { selectSemanaConfigsForDia } from "@/lib/semanaSlots";
+import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeMp, MpStatus } from "@/lib/mpClient";
 import { toast } from "sonner";
@@ -82,6 +82,9 @@ interface SemanaConfig {
   slot_idx: number | null;
   grupo_id: string | null;
   grupo_usuario_id: string | null;
+  extra: number | null;
+  extra_atrelado_grupo_id: string | null;
+  extra_atrelado_grupo_usuario_id: string | null;
   tb_grupos_treino: GrupoTreino | null;
 }
 
@@ -362,6 +365,7 @@ const TreinosPage = () => {
   // tanto pra grupo global (grupo_id) quanto pessoal (grupo_usuario_id)
   const { data: semanaRows } = useQuery(
     `SELECT s.dia_semana, s.slot_idx, s.grupo_id, s.grupo_usuario_id,
+            s.extra, s.extra_atrelado_grupo_id, s.extra_atrelado_grupo_usuario_id,
             g.id as grupo_treino_id, g.nome as grupo_treino_nome
      FROM tb_semana_treinos s
      LEFT JOIN tb_grupos_treino g ON s.grupo_id = g.id
@@ -375,11 +379,27 @@ const TreinosPage = () => {
       slot_idx: row.slot_idx ?? 0,
       grupo_id: row.grupo_id,
       grupo_usuario_id: row.grupo_usuario_id,
+      extra: row.extra ?? 0,
+      extra_atrelado_grupo_id: row.extra_atrelado_grupo_id ?? null,
+      extra_atrelado_grupo_usuario_id: row.extra_atrelado_grupo_usuario_id ?? null,
       tb_grupos_treino: row.grupo_treino_id
         ? { id: row.grupo_treino_id, nome: row.grupo_treino_nome }
         : null,
     }));
   }, [semanaRows]);
+
+  // Config do "Treino alternado" por dia da semana
+  const { data: diaConfigRows } = useQuery(
+    `SELECT dia_semana, alternado, alternado_inicio FROM tb_semana_dia_config WHERE user_id = ?`,
+    [userId]
+  );
+  const diasConfig = useMemo<Record<string, DiaAlternadoConfig>>(() => {
+    const map: Record<string, DiaAlternadoConfig> = {};
+    ((diaConfigRows as any[]) || []).forEach((r) => {
+      map[r.dia_semana] = { dia_semana: r.dia_semana, alternado: r.alternado, alternado_inicio: r.alternado_inicio };
+    });
+    return map;
+  }, [diaConfigRows]);
 
   // Overrides da semana atual
   const weekStart = useMemo(() => getLocalDateKey(weekDates[0]), [weekDates]);
@@ -575,7 +595,7 @@ const TreinosPage = () => {
       });
     }
 
-    const configs = selectSemanaConfigsForDia(semanaConfig, diaSemana);
+    const configs = resolverTreinosDoDia(semanaConfig, diaSemana, dk, diasConfig[diaSemana] ?? null);
     const slots: DiaSlot[] = [];
     configs.forEach((config, idx) => {
       const slotIdx = config.slot_idx ?? 0;
@@ -590,7 +610,7 @@ const TreinosPage = () => {
       }
     });
     return slots;
-  }, [overrides, gruposPessoais, gruposExerciciosPessoais, grupos, gruposExercicios, semanaConfig, substituicoes, exerciciosPorId]);
+  }, [overrides, gruposPessoais, gruposExerciciosPessoais, grupos, gruposExercicios, semanaConfig, diasConfig, substituicoes, exerciciosPorId]);
 
   // Compatibilidade: primeiro slot (usado em UI antiga)
   const getGrupoForDate = useCallback((d: Date) => {

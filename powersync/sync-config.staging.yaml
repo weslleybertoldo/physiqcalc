@@ -37,5 +37,6 @@ streams:
       - SELECT * FROM staging.tb_grupos_exercicios_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM staging.tb_exercicio_comentarios WHERE user_id = auth.user_id()
       - SELECT * FROM staging.tb_semana_treinos WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_semana_dia_config WHERE user_id = auth.user_id()
       - SELECT * FROM staging.tb_academias WHERE user_id = auth.user_id()
       - SELECT * FROM staging.tb_academia_pesos WHERE user_id = auth.user_id()
