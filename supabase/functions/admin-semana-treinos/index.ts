@@ -97,12 +97,16 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
 
     if (action === "get") {
-      const [semanaRes, disp] = await Promise.all([
-        admin.from("tb_semana_treinos").select("dia_semana, slot_idx, grupo_id, grupo_usuario_id").eq("user_id", userId),
+      const [semanaRes, disp, cfgRes] = await Promise.all([
+        admin.from("tb_semana_treinos")
+          .select("dia_semana, slot_idx, grupo_id, grupo_usuario_id, extra, extra_atrelado_grupo_id, extra_atrelado_grupo_usuario_id")
+          .eq("user_id", userId),
         gruposDisponiveis(admin, userId),
+        admin.from("tb_semana_dia_config").select("dia_semana, alternado, alternado_inicio").eq("user_id", userId),
       ]);
       if (semanaRes.error) throw semanaRes.error;
-      return new Response(JSON.stringify({ semana: semanaRes.data ?? [], gruposDisponiveis: disp.lista }), {
+      if (cfgRes.error) throw cfgRes.error;
+      return new Response(JSON.stringify({ semana: semanaRes.data ?? [], gruposDisponiveis: disp.lista, diasConfig: cfgRes.data ?? [] }), {
         headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
       });
     }
@@ -128,7 +132,8 @@ Deno.serve(async (req) => {
           return jsonErr("grupo_invalido", 400, origin);
         }
       }
-      const del = await admin.from("tb_semana_treinos").delete().eq("user_id", userId).eq("dia_semana", dia);
+      // preserva as linhas de treino EXTRA do alternado (geridas via setExtras)
+      const del = await admin.from("tb_semana_treinos").delete().eq("user_id", userId).eq("dia_semana", dia).eq("extra", false);
       if (del.error) throw del.error;
       // não-atômico de propósito: se o insert falhar após o delete, o dia fica vazio
       // (admin re-marca). Aceitável para um painel admin.
@@ -147,8 +152,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "volume") {
+      // extras do alternado ficam fora do volume (decisão: aba Volume não muda)
       const [semanaRes, disp] = await Promise.all([
-        admin.from("tb_semana_treinos").select("dia_semana, slot_idx, grupo_id, grupo_usuario_id").eq("user_id", userId),
+        admin.from("tb_semana_treinos").select("dia_semana, slot_idx, grupo_id, grupo_usuario_id").eq("user_id", userId).eq("extra", false),
         gruposDisponiveis(admin, userId),
       ]);
       if (semanaRes.error) throw semanaRes.error;
@@ -246,6 +252,68 @@ Deno.serve(async (req) => {
       });
 
       return new Response(JSON.stringify({ semana, grupos }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+      });
+    }
+
+    if (action === "setDiaConfig") {
+      const dia = body?.dia_semana;
+      const alternado = body?.alternado === true;
+      const inicio = body?.inicio;
+      if (!DIAS.has(dia)) return jsonErr("invalid_dia", 400, origin);
+      if (alternado && !/^\d{4}-\d{2}-\d{2}$/.test(inicio ?? "")) return jsonErr("inicio_invalido", 400, origin);
+      const up = await admin.from("tb_semana_dia_config").upsert(
+        {
+          user_id: userId, dia_semana: dia, alternado,
+          alternado_inicio: alternado ? inicio : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,dia_semana" },
+      );
+      if (up.error) throw up.error;
+      if (!alternado) {
+        // desativar o alternado remove os treinos extras do dia
+        const del = await admin.from("tb_semana_treinos").delete()
+          .eq("user_id", userId).eq("dia_semana", dia).eq("extra", true);
+        if (del.error) throw del.error;
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+      });
+    }
+
+    if (action === "setExtras") {
+      const dia = body?.dia_semana;
+      const extras = Array.isArray(body?.extras) ? body.extras : [];
+      if (!DIAS.has(dia)) return jsonErr("invalid_dia", 400, origin);
+      const { catalogo, pessoal } = await gruposDisponiveis(admin, userId);
+      const valido = (gid: string | null, guid: string | null): boolean =>
+        (!!gid && !guid && catalogo.has(gid)) || (!!guid && !gid && pessoal.has(guid));
+      const rows: any[] = [];
+      for (let i = 0; i < extras.length; i++) {
+        const e = extras[i];
+        const gid = e?.grupo_id ?? null;
+        const guid = e?.grupo_usuario_id ?? null;
+        if (!valido(gid, guid)) return jsonErr("grupo_nao_disponivel", 400, origin);
+        const agid = e?.atrelado_grupo_id ?? null;
+        const aguid = e?.atrelado_grupo_usuario_id ?? null;
+        if (agid && aguid) return jsonErr("atrelamento_ambiguo", 400, origin);
+        if ((agid || aguid) && !valido(agid, aguid)) return jsonErr("atrelamento_invalido", 400, origin);
+        rows.push({
+          user_id: userId, dia_semana: dia, slot_idx: 100 + i, extra: true,
+          grupo_id: gid, grupo_usuario_id: guid,
+          extra_atrelado_grupo_id: agid, extra_atrelado_grupo_usuario_id: aguid,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      const del = await admin.from("tb_semana_treinos").delete()
+        .eq("user_id", userId).eq("dia_semana", dia).eq("extra", true);
+      if (del.error) throw del.error;
+      if (rows.length > 0) {
+        const ins = await admin.from("tb_semana_treinos").insert(rows);
+        if (ins.error) throw ins.error;
+      }
+      return new Response(JSON.stringify({ ok: true }), {
         headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
       });
     }
