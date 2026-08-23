@@ -18,6 +18,9 @@ interface Exercicio {
   dica?: string | null;
 }
 
+/** Emojis oferecidos no seletor de exercício (todos os já usados no catálogo) */
+const EMOJIS_EXERCICIO = ["🏋️", "🏋️‍♂️", "💪", "🦵", "🍑", "🫁", "🔙", "🎯", "🧘", "🏃", "🏃‍♂️", "🔵"];
+
 interface GrupoTreino {
   id: string;
   nome: string;
@@ -425,8 +428,8 @@ const AdminTreinos = ({ onBack }: Props) => {
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
                   <select value={novoExGrupo} onChange={(e) => setNovoExGrupo(e.target.value)} className="w-full bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
-                    <option value="">Selecionar...</option>
-                    {gruposMusculares.map((g) => (<option key={g.id} value={g.nome}>{g.nome}</option>))}
+                    <option value="" className="bg-background text-foreground">Selecionar...</option>
+                    {gruposMusculares.map((g) => (<option key={g.id} value={g.nome} className="bg-background text-foreground">{g.nome}</option>))}
                   </select>
                 </div>
                 {!adicionandoMusculo ? (
@@ -442,8 +445,8 @@ const AdminTreinos = ({ onBack }: Props) => {
                 )}
                 <input type="text" value={novoExEmoji} onChange={(e) => setNovoExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-body text-lg py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2" />
               <select value={novoExTipo} onChange={(e) => setNovoExTipo(e.target.value as "musculacao" | "corrida")} className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
-                <option value="musculacao">💪 Musculação</option>
-                <option value="corrida">🏃 Corrida</option>
+                <option value="musculacao" className="bg-background text-foreground">💪 Musculação</option>
+                <option value="corrida" className="bg-background text-foreground">🏃 Corrida</option>
               </select>
               </div>
               <input type="text" value={novoExSubgrupo} onChange={(e) => setNovoExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional, ex: Porção medial)" className="input-underline text-sm" />
@@ -476,10 +479,10 @@ const AdminTreinos = ({ onBack }: Props) => {
                       <input type="text" value={editExNome} onChange={(e) => setEditExNome(e.target.value)} className="input-underline text-sm" placeholder="Nome" />
                       <div className="flex gap-2">
                         <select value={editExGrupo} onChange={(e) => setEditExGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
-                          {gruposMusculares.map((g) => <option key={g.id} value={g.nome}>{g.nome}</option>)}
+                          {gruposMusculares.map((g) => <option key={g.id} value={g.nome} className="bg-background text-foreground">{g.nome}</option>)}
                         </select>
                         <select value={editExEmoji} onChange={(e) => setEditExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
-                          {["🏋️", "💪", "🦵", "🧘", "🔵"].map((e) => <option key={e} value={e}>{e}</option>)}
+                          {(EMOJIS_EXERCICIO.includes(editExEmoji) ? EMOJIS_EXERCICIO : [editExEmoji, ...EMOJIS_EXERCICIO]).map((e) => <option key={e} value={e} className="bg-background text-foreground">{e}</option>)}
                         </select>
                       </div>
                       {/* Foto / gif */}
