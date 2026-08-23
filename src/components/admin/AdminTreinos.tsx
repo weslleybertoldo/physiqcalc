@@ -72,6 +72,8 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [editingGrupo, setEditingGrupo] = useState<string | null>(null);
   // popups da Biblioteca (criar exercício / grupos musculares / lista de exercícios)
   const [modalBiblioteca, setModalBiblioteca] = useState<null | "novo" | "musculos" | "exercicios">(null);
+  // popup "pedir o nome" ao criar grupo/pasta na aba Grupos
+  const [modalCriar, setModalCriar] = useState<null | "grupo" | "pasta">(null);
   const [pastas, setPastas] = useState<PastaTreino[]>([]);
   // pastas de cada grupo (N:N — um treino pode estar em várias pastas)
   const [pastasDoGrupo, setPastasDoGrupo] = useState<Record<string, string[]>>({});
@@ -159,6 +161,7 @@ const AdminTreinos = ({ onBack }: Props) => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setModalBiblioteca(null);
+        setModalCriar(null);
         setPastaDropdown(null);
       }
     };
@@ -272,6 +275,7 @@ const AdminTreinos = ({ onBack }: Props) => {
       const { error } = await supabase.from("tb_grupos_treino").insert({ nome: novoGrupoNome.trim() });
       if (error) throw error;
       setNovoGrupoNome("");
+      setModalCriar(null);
       toast.success("Grupo criado!");
       await loadData(true);
     } catch (err: any) {
@@ -340,6 +344,7 @@ const AdminTreinos = ({ onBack }: Props) => {
       const { error } = await (supabase.from as any)("tb_pastas_treino").insert({ nome: novaPastaNome.trim() });
       if (error) throw error;
       setNovaPastaNome("");
+      setModalCriar(null);
       toast.success("Pasta criada!");
       await loadData(true);
     } catch (err: any) {
@@ -437,20 +442,36 @@ const AdminTreinos = ({ onBack }: Props) => {
           <div className="space-y-6">
             {!pastaAberta ? (
               <>
-                <div className="flex gap-2">
-                  <input type="text" value={novoGrupoNome} onChange={(e) => setNovoGrupoNome(e.target.value)} placeholder="Nome do novo grupo..." className="input-underline flex-1" />
-                  <button type="button" onClick={handleAddGrupo} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase">
-                    <Plus size={14} className="inline mr-1" /> Criar
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setModalCriar("grupo")} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase">
+                    <Plus size={14} className="inline mr-1" /> Criar grupo
                   </button>
-                </div>
-
-                {/* ——— Pastas de treinos ——— */}
-                <div className="flex gap-2">
-                  <input type="text" value={novaPastaNome} onChange={(e) => setNovaPastaNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddPasta()} placeholder="Nome da nova pasta... (ex: Treino mulher)" className="input-underline flex-1" />
-                  <button type="button" onClick={handleAddPasta} className="px-4 py-2 border border-primary text-primary font-heading text-xs uppercase hover:bg-primary/10 transition-colors">
+                  <button type="button" onClick={() => setModalCriar("pasta")} className="px-4 py-2 border border-primary text-primary font-heading text-xs uppercase hover:bg-primary/10 transition-colors">
                     <Plus size={14} className="inline mr-1" /> Criar pasta
                   </button>
                 </div>
+
+                {modalCriar && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setModalCriar(null)}>
+                <div className="bg-background border border-border rounded-lg w-full max-w-sm p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <p className="font-heading text-sm text-foreground">{modalCriar === "grupo" ? "Novo grupo de treino" : "Nova pasta"}</p>
+                    <button type="button" onClick={() => setModalCriar(null)} className="p-1.5 text-muted-foreground hover:text-foreground"><X size={16} /></button>
+                  </div>
+                  {modalCriar === "grupo" ? (
+                    <input autoFocus type="text" value={novoGrupoNome} onChange={(e) => setNovoGrupoNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddGrupo()} placeholder="Nome do novo grupo..." className="input-underline w-full" />
+                  ) : (
+                    <input autoFocus type="text" value={novaPastaNome} onChange={(e) => setNovaPastaNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddPasta()} placeholder="Nome da nova pasta... (ex: Treino mulher)" className="input-underline w-full" />
+                  )}
+                  <div className="flex gap-2">
+                    <button type="button" onClick={modalCriar === "grupo" ? handleAddGrupo : handleAddPasta} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase">
+                      <Plus size={14} className="inline mr-1" /> Criar
+                    </button>
+                    <button type="button" onClick={() => setModalCriar(null)} className="px-4 py-2 text-muted-foreground font-heading text-xs uppercase">Cancelar</button>
+                  </div>
+                </div>
+                </div>
+                )}
                 {pastas.length > 0 && (
                   <div className="space-y-2">
                     {pastas.map((p) => {
