@@ -253,9 +253,9 @@ const AdminPanel = () => {
             onChange={(e) => setTagFiltro(e.target.value)}
             className="bg-transparent border-b border-muted-foreground text-foreground font-body text-[11px] py-2 outline-none focus:border-primary min-w-[160px]"
           >
-            <option value="">Todas as tags</option>
+            <option value="" className="bg-background text-foreground">Todas as tags</option>
             {todasAsTags.map(tag => (
-              <option key={tag.id} value={tag.id}>{tag.nome}</option>
+              <option key={tag.id} value={tag.id} className="bg-background text-foreground">{tag.nome}</option>
             ))}
           </select>
           {(search || tagFiltro) && (

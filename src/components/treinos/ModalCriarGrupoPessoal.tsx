@@ -266,10 +266,10 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
             <input type="text" value={editNome} onChange={(e) => setEditNome(e.target.value)} className="input-underline text-sm" />
             <div className="flex gap-2">
               <select value={editGrupoMusc} onChange={(e) => setEditGrupoMusc(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
-                {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g}>{g}</option>)}
+                {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g} className="bg-background text-foreground">{g}</option>)}
               </select>
               <select value={editEmoji} onChange={(e) => setEditEmoji(e.target.value)} className="w-14 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
-                {EMOJIS.map((e) => <option key={e} value={e}>{e}</option>)}
+                {EMOJIS.map((e) => <option key={e} value={e} className="bg-background text-foreground">{e}</option>)}
               </select>
             </div>
             <div className="flex gap-2">
@@ -368,10 +368,10 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
             <input type="text" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Nome do exercício..." className="input-underline text-sm" />
             <div className="flex gap-2">
               <select value={novoGrupo} onChange={(e) => setNovoGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
-                {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g}>{g}</option>)}
+                {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g} className="bg-background text-foreground">{g}</option>)}
               </select>
               <select value={novoEmoji} onChange={(e) => setNovoEmoji(e.target.value)} className="w-14 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus-visible:border-primary focus-visible:border-b-2">
-                {EMOJIS.map((e) => <option key={e} value={e}>{e}</option>)}
+                {EMOJIS.map((e) => <option key={e} value={e} className="bg-background text-foreground">{e}</option>)}
               </select>
             </div>
             <div className="flex gap-2">
