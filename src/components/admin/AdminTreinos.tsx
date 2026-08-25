@@ -7,6 +7,7 @@ import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 const BUCKET_EXERCICIOS = DB_SCHEMA === "staging" ? "exercicios-staging" : "exercicios";
 import { toast } from "sonner";
 import AdminRelatorio from "./AdminRelatorio";
+import AdminHistoricoMes from "./AdminHistoricoMes";
 
 interface Exercicio {
   id: string;
@@ -43,8 +44,8 @@ interface GrupoMuscular {
 const AdminTreinos = ({ onBack }: Props) => {
   // sub-aba derivada da URL (?v=treinos&t=...) pra o reload (F5) manter a aba
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = (searchParams.get("t") as "grupos" | "biblioteca" | "relatorio") || "grupos";
-  const setTab = (t: "grupos" | "biblioteca" | "relatorio") =>
+  const tab = (searchParams.get("t") as "grupos" | "biblioteca" | "historico" | "relatorio") || "grupos";
+  const setTab = (t: "grupos" | "biblioteca" | "historico" | "relatorio") =>
     setSearchParams((prev) => { prev.set("v", "treinos"); prev.set("t", t); prev.delete("pasta"); return prev; }, { replace: true });
   // pasta aberta derivada da URL (?pasta=) — push mantém o "voltar" nativo
   const pastaParam = searchParams.get("pasta");
@@ -168,7 +169,7 @@ const AdminTreinos = ({ onBack }: Props) => {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  useEffect(() => { if (tab === "relatorio" || tab === "grupos") loadUsers(); }, [tab]);
+  useEffect(() => { if (tab === "relatorio" || tab === "grupos" || tab === "historico") loadUsers(); }, [tab]);
 
   // === Biblioteca ===
   // Sobe a imagem/gif pro bucket publico 'exercicios' (escrita restrita a admin
@@ -407,6 +408,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const tabs = [
     { key: "grupos" as const, label: "🗂️ Grupos" },
     { key: "biblioteca" as const, label: "📚 Biblioteca" },
+    { key: "historico" as const, label: "🕒 Histórico de Treinos" },
     { key: "relatorio" as const, label: "📊 Relatório" },
   ];
 
@@ -829,6 +831,8 @@ const AdminTreinos = ({ onBack }: Props) => {
             </div>
             )}
           </div>
+        ) : tab === "historico" ? (
+          <AdminHistoricoMes users={users} />
         ) : (
           <AdminRelatorio users={users} />
         )}
