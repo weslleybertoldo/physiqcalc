@@ -118,6 +118,23 @@ com_timer = [h for h in hist_j if not h.get("sem_cronometro")]
 checa("Jaise tem treinos cronometrados no popup", len(com_timer) > 0, f"{len(com_timer)} com cronometro")
 checa("cronometrados tem duracao > 0", all(h["duracao_segundos"] > 0 for h in com_timer))
 
+print("\n== 4b. treino com exercicios_concluidos em STRING ==")
+# 8 linhas em public estao com o JSON duplo-encodado (seeds da conta Admin Teste).
+# buildTreinoResumo so aceita array, entao sem normalizar na edge os exercicios
+# somem sem erro nenhum no popup de um treino.
+ADMIN_TESTE = "e4c5fb14-fe3b-4a51-a49f-ceed61485054"
+TREINO_STRING = "h:f2d054a4-e592-479f-862d-b4880e0743a1"  # Admin Teste, 14/07, Lower A
+st, r = post(edge, {"action": "historicoTreino", "userId": ADMIN_TESTE, "chave": TREINO_STRING}, tk_admin)
+checa("HTTP 200 no treino string", st == 200, f"status={st}")
+t = r.get("treino") or {}
+checa("nome do treino veio", t.get("nome_treino") == "Lower A", str(t.get("nome_treino")))
+checa("exercicios_concluidos virou ARRAY", isinstance(t.get("exercicios_concluidos"), list),
+      type(t.get("exercicios_concluidos")).__name__)
+checa("array nao veio vazio", len(t.get("exercicios_concluidos") or []) > 0,
+      f"{len(t.get('exercicios_concluidos') or [])} exercicios")
+checa("exercicios tem nome e series",
+      all(ex.get("nome") for ex in (t.get("exercicios_concluidos") or [])))
+
 print("\n== 5. NEGATIVOS ==")
 st, r = post(edge, {"action": "relatorio", "userId": JAISE, "ano": 2026, "mes": 8}, tk_aluno)
 checa("aluno comum recebe 403", st == 403, f"status={st} {r.get('error')}")

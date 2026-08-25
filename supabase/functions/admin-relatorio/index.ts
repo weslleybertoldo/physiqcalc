@@ -77,6 +77,25 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
 
 // ── Helpers de data ──
 
+/**
+ * `exercicios_concluidos` pode vir como array OU como string de JSON (registros
+ * antigos gravados duplo-encodados: 8 linhas em public, 4 em staging). Devolve
+ * sempre um array — sem isso os exercícios somem sem erro nenhum.
+ */
+function parseExercicios(bruto: unknown): any[] {
+  let atual: unknown = bruto;
+  for (let i = 0; i < 3 && typeof atual === "string"; i++) {
+    try { atual = JSON.parse(atual); } catch { return []; }
+  }
+  return Array.isArray(atual) ? atual : [];
+}
+
+/** Normaliza uma linha de treino_historico para o formato que o front espera. */
+function normalizarTreino(linha: any): any {
+  if (!linha) return linha;
+  return { ...linha, exercicios_concluidos: parseExercicios(linha.exercicios_concluidos) };
+}
+
 /** Data (YYYY-MM-DD) de um timestamptz no fuso de São Paulo. */
 function dataBRT(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ });
@@ -364,7 +383,7 @@ Deno.serve(async (req) => {
         if (!timerPorUsuarioData.has(h.user_id)) timerPorUsuarioData.set(h.user_id, new Set());
         timerPorUsuarioData.get(h.user_id)!.add(data);
 
-        const exs = Array.isArray(h.exercicios_concluidos) ? h.exercicios_concluidos : [];
+        const exs = parseExercicios(h.exercicios_concluidos);
         const academia = exs.find((e: any) => e?.academia_nome)?.academia_nome ?? null;
         itens.push({
           chave: `h:${h.id}`,
@@ -450,7 +469,7 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .maybeSingle();
         if (error) throw error;
-        return jsonOk({ treino: data ?? null }, origin);
+        return jsonOk({ treino: data ? normalizarTreino(data) : null }, origin);
       }
 
       if (chave.startsWith("c:")) {
@@ -498,7 +517,7 @@ Deno.serve(async (req) => {
 
       const sinteticos = await sintetizarDeSeries(admin, userId, inicio, fim, comTimer, datasConcluidas);
 
-      const historico = [...((timerRows as any[]) || []), ...sinteticos]
+      const historico = [...((timerRows as any[]) || []).map(normalizarTreino), ...sinteticos]
         .sort((a, b) => String(b.iniciado_em).localeCompare(String(a.iniciado_em)));
 
       return jsonOk({ historico }, origin);
