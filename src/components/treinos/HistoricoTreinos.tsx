@@ -4,6 +4,8 @@ import { usePowerSync } from "@powersync/react";
 import { formatarData } from "@/utils/formatDate";
 import { toast } from "sonner";
 import { buildTreinoResumo, formatDuracao, type TreinoResumo } from "@/lib/treinoResumo";
+import { supabase } from "@/integrations/supabase/client";
+import { CaixasResumo, ListaExercicios, formatTimer, formatHora } from "./DetalheTreino";
 import CompartilharTreinoModal from "./CompartilharTreinoModal";
 
 interface HistoricoItem {
@@ -13,26 +15,20 @@ interface HistoricoItem {
   concluido_em: string;
   duracao_segundos: number;
   exercicios_concluidos: any[] | null;
+  /** Registro reconstruido a partir das series (aluno nao usou o cronometro). */
+  sem_cronometro?: boolean;
 }
 
 interface Props {
   userId: string;
-  onBack: () => void;
+  /** Ausente quando embutido num popup, que ja tem o proprio fechar. */
+  onBack?: () => void;
+  /** Modo admin: carrega o historico de OUTRO usuario via edge function com
+   *  service_role (treino_historico tem RLS de dono) e esconde as acoes de edicao. */
+  isAdmin?: boolean;
 }
 
 const PAGE_SIZE = 5;
-
-function formatTimer(s: number): string {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-}
-
-function formatHora(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
-}
 
 const DIAS_LABEL: Record<number, string> = {
   0: "DOM", 1: "SEG", 2: "TER", 3: "QUA", 4: "QUI", 5: "SEX", 6: "SAB",
@@ -58,7 +54,18 @@ function mesLabel(key: string): string {
   return `${MESES[parseInt(m, 10) - 1]}/${y}`;
 }
 
-const HistoricoTreinos = ({ userId, onBack }: Props) => {
+/** Historico de outro usuario: o admin nao passa na RLS de `treino_historico`,
+ *  entao a leitura vai pela edge function (que tambem reconstroi os treinos de
+ *  quem registra series sem usar o cronometro). */
+async function carregarComoAdmin(userId: string): Promise<any[]> {
+  const { data, error } = await supabase.functions.invoke("admin-relatorio", {
+    body: { action: "historicoUsuario", userId },
+  });
+  if (error) throw error;
+  return (data?.historico ?? []) as any[];
+}
+
+const HistoricoTreinos = ({ userId, onBack, isAdmin = false }: Props) => {
   const db = usePowerSync();
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,16 +79,18 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const filtroInicializado = useRef(false);
 
-  useEffect(() => { loadHistorico(); }, [userId, db]);
+  useEffect(() => { loadHistorico(); }, [userId, db, isAdmin]);
 
   const loadHistorico = async () => {
     setLoading(true);
     setErro(false);
     try {
-      const rows = await db.getAll(
-        "SELECT * FROM treino_historico WHERE user_id = ? ORDER BY concluido_em DESC LIMIT 500",
-        [userId]
-      );
+      const rows = isAdmin
+        ? await carregarComoAdmin(userId)
+        : await db.getAll(
+            "SELECT * FROM treino_historico WHERE user_id = ? ORDER BY concluido_em DESC LIMIT 500",
+            [userId]
+          );
       const parsed = (rows as any[]).map((r) => ({
         ...r,
         exercicios_concluidos: parseExercicios(r.exercicios_concluidos),
@@ -148,17 +157,22 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
 
   // Cards de resumo (recalculados pelo filtro de mês)
   const totalTreinos = filtrados.length;
-  const tempoTotal = filtrados.reduce((acc, h) => acc + h.duracao_segundos, 0);
-  const mediaPorTreino = totalTreinos > 0 ? Math.round(tempoTotal / totalTreinos) : 0;
+  // Tempo total e media contam so os treinos cronometrados: os reconstruidos a partir
+  // das series nao tem duracao gravada e puxariam a media para baixo.
+  const cronometrados = filtrados.filter((h) => !h.sem_cronometro);
+  const tempoTotal = cronometrados.reduce((acc, h) => acc + h.duracao_segundos, 0);
+  const mediaPorTreino = cronometrados.length > 0 ? Math.round(tempoTotal / cronometrados.length) : 0;
 
   const toResumo = useCallback((h: HistoricoItem): TreinoResumo => buildTreinoResumo(h), []);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft size={18} />
-        </button>
+        {onBack && (
+          <button type="button" onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft size={18} />
+          </button>
+        )}
         <h2 className="font-heading text-xl text-foreground">HISTÓRICO DE TREINOS</h2>
       </div>
 
@@ -224,13 +238,19 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground font-heading">{dia} · {dataStr}</span>
-                        <span className="text-[10px] text-muted-foreground/60 font-body">{hora} – {horaFim}</span>
+                        {!h.sem_cronometro && (
+                          <span className="text-[10px] text-muted-foreground/60 font-body">{hora} – {horaFim}</span>
+                        )}
                       </div>
                       <p className="font-heading text-sm text-foreground mt-0.5">{h.nome_treino}</p>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
-                        <span className="text-[10px] text-muted-foreground font-body flex items-center gap-1">
-                          <Timer size={10} /> {formatDuracao(h.duracao_segundos)}
-                        </span>
+                        {h.sem_cronometro ? (
+                          <span className="text-[10px] text-muted-foreground/60 font-body italic">sem cronômetro</span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-body flex items-center gap-1">
+                            <Timer size={10} /> {formatDuracao(h.duracao_segundos)}
+                          </span>
+                        )}
                         {resumo.exercicios.length > 0 && (
                           <span className="text-[10px] text-muted-foreground font-body flex items-center gap-1">
                             <Dumbbell size={10} /> {resumo.exercicios.length} exercícios
@@ -245,12 +265,14 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <span className="font-heading text-sm text-foreground tabular-nums">{formatTimer(h.duracao_segundos)}</span>
+                      {!h.sem_cronometro && (
+                        <span className="font-heading text-sm text-foreground tabular-nums">{formatTimer(h.duracao_segundos)}</span>
+                      )}
                       {isExpanded ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
                     </div>
                   </button>
 
-                  {isConfirming ? (
+                  {isAdmin ? null : isConfirming ? (
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
@@ -282,58 +304,12 @@ const HistoricoTreinos = ({ userId, onBack }: Props) => {
 
                 {isExpanded && (
                   <div className="pb-4 pl-1 space-y-4">
-                    {/* Info do treino */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Duração</p>
-                        <p className="text-sm font-heading text-foreground">{formatTimer(h.duracao_segundos)}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Academia</p>
-                        <p className="text-sm font-heading text-foreground">{resumo.academia_nome || "—"}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Volume total</p>
-                        <p className="text-sm font-heading text-primary">{Math.round(resumo.volumeTotal).toLocaleString("pt-BR")} kg</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Média peso/rep</p>
-                        <p className="text-sm font-heading text-primary">{resumo.mediaPesoRep != null ? `${resumo.mediaPesoRep.toFixed(1)} kg` : "—"}</p>
-                      </div>
-                    </div>
-
-                    {resumo.exercicios.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground mb-2">
-                          Exercícios realizados
-                        </p>
-                        <div className="space-y-2">
-                          {resumo.exercicios.map((ex, i) => (
-                            <div key={i} className="py-2 px-3 bg-secondary/30 rounded">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-heading text-foreground">🏆 {ex.nome}</span>
-                                {ex.mediaPesoRep != null && (
-                                  <span className="text-[10px] text-primary font-heading">{ex.mediaPesoRep.toFixed(1)} kg/rep</span>
-                                )}
-                              </div>
-                              {ex.series.length > 0 ? (
-                                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
-                                  {ex.series.map((s) => (
-                                    <span key={s.numero_serie} className="text-[11px] text-muted-foreground font-body tabular-nums">
-                                      {s.numero_serie}ª: <span className="text-foreground">{s.peso}kg × {s.reps}</span>
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-[10px] text-muted-foreground font-body mt-1">
-                                  {ex.series_concluidas} série{ex.series_concluidas !== 1 ? "s" : ""}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <CaixasResumo
+                      resumo={resumo}
+                      duracaoSegundos={h.duracao_segundos}
+                      semCronometro={h.sem_cronometro}
+                    />
+                    <ListaExercicios resumo={resumo} />
 
                     <button
                       type="button"

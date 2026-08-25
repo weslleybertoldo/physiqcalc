@@ -75,75 +75,23 @@ interface SemanaAgrupada {
 // ── Data fetching ──
 
 async function carregarRelatorioCompleto(userId: string, ano: number, mes: number) {
-  const _d1 = new Date(ano, mes - 1, 1); const inicioMes = `${_d1.getFullYear()}-${String(_d1.getMonth()+1).padStart(2,"0")}-01`;
-  const _d2 = new Date(ano, mes, 0); const fimMes = `${_d2.getFullYear()}-${String(_d2.getMonth()+1).padStart(2,"0")}-${String(_d2.getDate()).padStart(2,"0")}`;
-
-  const [concluidosRes, seriesRes, overridesDireto, gruposRes] = await Promise.all([
-    supabase
-      .from("tb_treino_concluido")
-      .select("data_treino")
-      .eq("user_id", userId)
-      .eq("concluido", true)
-      .gte("data_treino", inicioMes)
-      .lte("data_treino", fimMes)
-      .order("data_treino"),
-    supabase
-      .from("tb_treino_series")
-      .select(`
-        data_treino, numero_serie, peso, reps, concluida,
-        exercicio_id, exercicio_usuario_id,
-        tb_exercicios ( nome, grupo_muscular, emoji ),
-        tb_exercicios_usuario ( nome, grupo_muscular, emoji )
-      `)
-      .eq("user_id", userId)
-      .eq("concluida", true)
-      .gte("data_treino", inicioMes)
-      .lte("data_treino", fimMes)
-      .order("data_treino")
-      .order("numero_serie"),
-    // Busca overrides direto — policy SELECT USING(true) permite acesso sem autenticação
-    supabase
-      .from("tb_treino_dia_override")
-      .select("data_treino, grupo_id, grupo_usuario_id")
-      .eq("user_id", userId)
-      .gte("data_treino", inicioMes)
-      .lte("data_treino", fimMes),
-    // Busca todos os grupos globais de uma vez
-    supabase.from("tb_grupos_treino").select("id, nome"),
-  ]);
-
-  const overrides: any[] = (overridesDireto.data ?? []) as any[];
-
-  // Monta mapa de grupos globais por id
-  const grupoNomeById: Record<string, string> = {};
-  ((gruposRes.data ?? []) as any[]).forEach((g: any) => {
-    if (g?.id && g?.nome) grupoNomeById[g.id] = g.nome;
+  // Leitura via edge function (service_role): tb_treino_concluido, tb_treino_series e
+  // tb_treino_dia_override têm RLS de dono (auth.uid() = user_id) e NENHUMA policy de
+  // admin, então consultar direto do navegador devolve lista vazia — sem erro — para
+  // qualquer aluno que não seja o próprio admin logado.
+  const { data, error } = await supabase.functions.invoke("admin-relatorio", {
+    body: { action: "relatorio", userId, ano, mes },
   });
 
-  // Busca grupos pessoais se necessário
-  const grupoIdsUsuario = [...new Set(overrides.map((o: any) => o.grupo_usuario_id).filter(Boolean))];
-  if (grupoIdsUsuario.length > 0) {
-    const { data: gu } = await supabase
-      .from("tb_grupos_treino_usuario")
-      .select("id, nome")
-      .in("id", grupoIdsUsuario);
-    (gu ?? []).forEach((g: any) => { if (g?.id && g?.nome) grupoNomeById[g.id] = g.nome; });
+  if (error) {
+    console.error("[AdminRelatorio] Erro ao carregar relatório:", error);
+    return { concluidos: [], series: [] as SerieRow[], grupoNomePorData: {} };
   }
 
-  // Monta mapa data → nome do grupo de treino
-  const grupoNomePorData: Record<string, string> = {};
-  overrides.forEach((o: any) => {
-    const nome = grupoNomeById[o.grupo_usuario_id] ?? grupoNomeById[o.grupo_id];
-    const dataKey = o.data_treino ? String(o.data_treino).split('T')[0] : null;
-    if (nome && dataKey) grupoNomePorData[dataKey] = nome;
-  });
-
-  const concluidos = (concluidosRes.data ?? []) as { data_treino: string }[];
-
   return {
-    concluidos,
-    series: (seriesRes.data ?? []) as unknown as SerieRow[],
-    grupoNomePorData
+    concluidos: (data?.concluidos ?? []) as { data_treino: string }[],
+    series: (data?.series ?? []) as unknown as SerieRow[],
+    grupoNomePorData: (data?.grupoNomePorData ?? {}) as Record<string, string>,
   };
 }
 
