@@ -77,8 +77,16 @@ if "access_token" not in sessao:
 print("== sessao de admin obtida ==")
 
 with sync_playwright() as pw:
-    nav = pw.chromium.launch()
-    ctx = nav.new_context(viewport={"width": 1280, "height": 1400})
+    # Fingerprint de navegador normal: o Vercel pode estar em Attack Challenge Mode
+    # (polling de deploy dispara), e o headless padrao fica preso no Security Checkpoint.
+    nav = pw.chromium.launch(args=["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"])
+    ctx = nav.new_context(
+        viewport={"width": 1280, "height": 1400},
+        locale="pt-BR",
+        user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"),
+    )
+    ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});")
     ctx.add_init_script(f"""
       try {{
         localStorage.setItem('sb-{REF}-auth-token', JSON.stringify({json.dumps(sessao)}));
