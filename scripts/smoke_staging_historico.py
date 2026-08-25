@@ -126,6 +126,13 @@ with sync_playwright() as pw:
     checa("nome real do treino aparece", tem(corpo, "Upper A") or tem(corpo, "Lower A") or tem(corpo, "TRES"))
     checa("treino sem cronometro reconstruido (16/07)", tem(corpo, "sem cronômetro"))
 
+    print("\n== 4b. filtro por aluno ==")
+    selects = pg.locator("select")
+    checa("existe o 3o filtro (aluno)", selects.count() >= 4, f"{selects.count()} selects")
+    opcoes_aluno = pg.eval_on_selector_all(
+        "select >> nth=3 >> option", "els => els.map(e => e.textContent.trim())")
+    checa("filtro tem 'Todos os alunos'", "Todos os alunos" in opcoes_aluno, " | ".join(opcoes_aluno))
+
     print("\n== 5. popup abre no staging ==")
     pg.locator("button", has_text="Admin Teste").first.click()
     pg.wait_for_selector("div.fixed.inset-0.z-50", timeout=25000)
@@ -133,9 +140,14 @@ with sync_playwright() as pw:
     checa("popup terminou de carregar", espera_carregar(pg, popup))
     txt = popup.inner_text()
     checa("popup abriu", popup.is_visible())
-    checa("popup tem HISTORICO DE TREINOS", tem(txt, "HISTÓRICO DE TREINOS"))
     checa("popup tem o nome da pessoa", tem(txt, "Admin Teste"))
-    checa("popup lista treino com nome real", tem(txt, "Upper A") or tem(txt, "Lower A"))
+    checa("popup mostra o nome do treino", tem(txt, "Upper A") or tem(txt, "Lower A"))
+    # Clique na linha = SO aquele treino (o historico completo e o botao Buscar)
+    checa("NAO e o historico completo", not tem(txt, "Todos os meses") and not tem(txt, "Tempo total"))
+    checa("tem as 4 caixas do treino",
+          tem(txt, "Duração") and tem(txt, "Academia")
+          and tem(txt, "Volume total") and tem(txt, "Média peso/rep"))
+    checa("secao Exercicios realizados", tem(txt, "Exercícios realizados"))
     checa("admin nao ve excluir", popup.locator("button[title='Excluir treino']").count() == 0)
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(800)
@@ -156,6 +168,10 @@ with sync_playwright() as pw:
               t[:110].replace("\n", " "))
         checa("popup da busca lista treino com nome real",
               tem(t, "Upper A") or tem(t, "Lower A") or tem(t, "TRES"))
+        # Aqui SIM e o historico completo
+        checa("Buscar abre historico completo (seletor de mes)", tem(t, "Todos os meses"))
+        checa("historico completo tem Total/Tempo total/Media",
+              tem(t, "Total") and tem(t, "Tempo total") and tem(t, "Média"))
         pg.keyboard.press("Escape")
         pg.wait_for_timeout(600)
 
