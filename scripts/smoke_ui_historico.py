@@ -23,6 +23,21 @@ def tem(texto, alvo):
     return alvo.upper() in texto.upper()
 
 
+def espera_carregar(pg, escopo=None, timeout_ms=60000):
+    """Espera o 'Carregando...' sumir. Afirmar antes disso gera PASS/FALHA falsos."""
+    import time
+    limite = time.time() + timeout_ms / 1000
+    while time.time() < limite:
+        try:
+            texto = (escopo or pg.locator("body")).inner_text()
+        except Exception:
+            texto = "Carregando"
+        if "Carregando" not in texto:
+            return True
+        pg.wait_for_timeout(400)
+    return False
+
+
 with sync_playwright() as pw:
     nav = pw.chromium.launch()
     ctx = nav.new_context(viewport={"width": 1280, "height": 1400})
@@ -62,21 +77,73 @@ with sync_playwright() as pw:
     checa("mes atual pre-selecionado", pg.locator("select").nth(1).input_value() == "8",
           f"mes={pg.locator('select').nth(1).input_value()}")
 
-    print("\n== 4. clique na linha abre o popup ==")
+    print("\n== 3b. filtro por aluno na lista ==")
+    selects = pg.locator("select")
+    checa("existe o 3o filtro (aluno) ao lado de mes/ano", selects.count() >= 4,
+          f"{selects.count()} selects")
+    opcoes_aluno = pg.eval_on_selector_all(
+        "select >> nth=3 >> option", "els => els.map(e => e.textContent.trim())")
+    checa("filtro tem 'Todos os alunos'", "Todos os alunos" in opcoes_aluno)
+    checa("filtro lista so quem treinou no mes",
+          any("Jaise" in o for o in opcoes_aluno) and any("Cavalcante" in o for o in opcoes_aluno),
+          " | ".join(opcoes_aluno))
+    linhas = pg.locator("div.space-y-0 > button")
+    total_geral = linhas.count()
+    checa("lista tem linhas antes de filtrar", total_geral > 0, f"{total_geral} linhas")
+
+    alvo_jaise = next((o for o in opcoes_aluno if "Jaise" in o), None)
+    if alvo_jaise:
+        selects.nth(3).select_option(label=alvo_jaise)
+        pg.wait_for_timeout(1200)
+        linhas = pg.locator("div.space-y-0 > button")
+        nomes_visiveis = [linhas.nth(i).inner_text() for i in range(linhas.count())]
+        checa("filtrando pela Jaise sobra so ela",
+              len(nomes_visiveis) > 0 and all(tem(n, "Jaise") for n in nomes_visiveis),
+              f"{len(nomes_visiveis)} linhas")
+        checa("filtro reduziu a lista", len(nomes_visiveis) < total_geral,
+              f"{len(nomes_visiveis)} de {total_geral}")
+        import re as _re
+        rotulo = pg.locator("text=/treinos? em Agosto/i").first.inner_text()
+        n_rotulo = int(_re.search(r"(\d+)", rotulo).group(1))
+        checa("contagem do rotulo bate com as linhas", n_rotulo == len(nomes_visiveis),
+              f"rotulo diz {n_rotulo}, tem {len(nomes_visiveis)} linhas")
+
+        selects.nth(3).select_option("")
+        pg.wait_for_timeout(1200)
+        checa("voltar para 'Todos os alunos' restaura a lista",
+              pg.locator("div.space-y-0 > button").count() == total_geral,
+              f"voltou com {pg.locator('div.space-y-0 > button').count()} de {total_geral}")
+
+    print("\n== 4. clique na linha abre SO aquele treino ==")
+    # Primeira linha da Jaise = 20/08 (lista ordenada do mais recente pro mais antigo)
     pg.locator("button", has_text="Jaise Soares").first.click()
     pg.wait_for_selector("div.fixed.inset-0.z-50", timeout=20000)
     popup = pg.locator("div.fixed.inset-0.z-50")
-    pg.wait_for_timeout(2500)
+    checa("popup do treino terminou de carregar", espera_carregar(pg, popup))
     txt = popup.inner_text()
     checa("popup abriu", popup.is_visible())
-    checa("popup tem o titulo HISTORICO DE TREINOS", tem(txt, "HISTÓRICO DE TREINOS"))
     checa("popup tem o nome da pessoa", tem(txt, "Jaise Soares"))
-    checa("popup tem cards Total/Tempo total/Media",
-          tem(txt, "Total") and tem(txt, "Tempo total") and tem(txt, "Média"))
-    checa("popup lista treinos da Jaise com nome real", tem(txt, "Treino B") or tem(txt, "Treino A"))
-    checa("popup mostra duracao cronometrada", bool(re.search(r"\d+h\d+m", txt)), "procurando 1h05m etc")
-    checa("admin nao ve botao de excluir no popup",
-          popup.locator("button[title='Excluir treino']").count() == 0)
+    checa("popup e do treino de 20/08", tem(txt, "20/08"))
+    checa("mostra o nome do treino", tem(txt, "Treino B"))
+
+    # É o detalhe de UM treino, nao o historico completo
+    checa("NAO tem seletor de mes do historico", not tem(txt, "Todos os meses"))
+    checa("NAO tem os cards de resumo do mes", not tem(txt, "Tempo total"))
+
+    checa("tem as 4 caixas do treino",
+          tem(txt, "Duração") and tem(txt, "Academia")
+          and tem(txt, "Volume total") and tem(txt, "Média peso/rep"))
+    checa("duracao exata 1:04:46", tem(txt, "1:04:46"))
+    checa("academia BG", tem(txt, "BG"))
+    checa("volume total 2.086 kg", tem(txt, "2.086"))
+    checa("media peso/rep 13.4 kg", tem(txt, "13.4"))
+    checa("secao Exercicios realizados", tem(txt, "Exercícios realizados"))
+    checa("exercicios reais do dia",
+          tem(txt, "Elevação Lateral com Halteres") and tem(txt, "Desenvolvimento na Máquina")
+          and tem(txt, "Crucifixo Invertido"))
+    checa("series com peso e reps", tem(txt, "6kg × 6") and tem(txt, "16kg × 10"))
+    checa("kg/rep por exercicio", tem(txt, "kg/rep"))
+    checa("admin nao ve botao de excluir", popup.locator("button[title='Excluir treino']").count() == 0)
 
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(800)
@@ -91,13 +158,17 @@ with sync_playwright() as pw:
         sel_aluno.select_option(label=alvo)
         pg.locator("button", has_text="Buscar").first.click()
         pg.wait_for_selector("div.fixed.inset-0.z-50", timeout=20000)
-        pg.wait_for_timeout(2500)
         popup = pg.locator("div.fixed.inset-0.z-50")
+        checa("popup da busca terminou de carregar", espera_carregar(pg, popup))
         t = popup.inner_text()
         checa("popup da busca abriu", popup.is_visible())
         checa("popup da busca e da Livia", tem(t, "Cavalcante"))
         checa("Livia tem treinos no popup (era invisivel antes)", not tem(t, "Nenhum treino registrado"))
         checa("treinos da Livia marcados sem cronometro", tem(t, "sem cronômetro"))
+        # Aqui SIM e o historico completo: seletor de mes e cards de resumo
+        checa("Buscar abre o historico completo (tem seletor de mes)", tem(t, "Todos os meses"))
+        checa("historico completo tem Total/Tempo total/Media",
+              tem(t, "Total") and tem(t, "Tempo total") and tem(t, "Média"))
         pg.keyboard.press("Escape")
         pg.wait_for_timeout(600)
 

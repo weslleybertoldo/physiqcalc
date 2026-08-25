@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { X, Timer, Dumbbell, MapPin, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDuracao } from "@/lib/treinoResumo";
+import DetalheTreino, { type TreinoRow } from "@/components/treinos/DetalheTreino";
 import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 
 const MESES = [
@@ -38,17 +39,60 @@ function diaMes(data: string): string {
   return `${d}/${m}`;
 }
 
+/** Casca do popup: fundo, ESC, clique fora e botão de fechar. */
+function Popup({ titulo, onFechar, children }: {
+  titulo: string;
+  onFechar: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onFechar(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onFechar]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 py-8 overflow-y-auto"
+      onClick={onFechar}
+    >
+      <div
+        className="bg-background border border-muted-foreground/30 rounded-lg w-full max-w-2xl p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-heading text-lg text-foreground">{titulo}</h3>
+          <button
+            type="button"
+            onClick={onFechar}
+            className="p-1.5 text-muted-foreground hover:text-foreground"
+            aria-label="Fechar"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 const AdminHistoricoMes = ({ users }: Props) => {
   const hoje = new Date();
   const [mes, setMes] = useState(hoje.getMonth() + 1);
   const [ano, setAno] = useState(hoje.getFullYear());
   const [itens, setItens] = useState<ItemHistorico[]>([]);
+  const [filtroAluno, setFiltroAluno] = useState("");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
 
-  // Popup do histórico completo de uma pessoa
-  const [popup, setPopup] = useState<{ userId: string; nome: string } | null>(null);
-  // Seletor do topo ("buscar histórico completo")
+  // Popup de UM treino (clique na linha da lista)
+  const [treinoAberto, setTreinoAberto] = useState<ItemHistorico | null>(null);
+  const [treino, setTreino] = useState<TreinoRow | null>(null);
+  const [carregandoTreino, setCarregandoTreino] = useState(false);
+
+  // Popup do histórico COMPLETO de um aluno (botão Buscar do topo)
+  const [historicoAberto, setHistoricoAberto] = useState<{ userId: string; nome: string } | null>(null);
   const [buscaUserId, setBuscaUserId] = useState("");
 
   const carregar = useCallback(async () => {
@@ -70,24 +114,37 @@ const AdminHistoricoMes = ({ users }: Props) => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // ESC fecha o popup
-  useEffect(() => {
-    if (!popup) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPopup(null); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [popup]);
-
-  const anos = [hoje.getFullYear(), hoje.getFullYear() - 1, hoje.getFullYear() - 2];
+  const abrirTreino = async (item: ItemHistorico) => {
+    setTreinoAberto(item);
+    setTreino(null);
+    setCarregandoTreino(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-relatorio", {
+        body: { action: "historicoTreino", userId: item.userId, chave: item.chave },
+      });
+      if (error) throw error;
+      setTreino((data?.treino ?? null) as TreinoRow | null);
+    } catch (err) {
+      console.error("[AdminHistoricoMes] Erro ao abrir treino:", err);
+      setTreino(null);
+    }
+    setCarregandoTreino(false);
+  };
 
   const abrirBusca = () => {
     const u = users.find((x) => x.id === buscaUserId);
-    if (u) setPopup({ userId: u.id, nome: u.nome });
+    if (u) setHistoricoAberto({ userId: u.id, nome: u.nome });
   };
+
+  const anos = [hoje.getFullYear(), hoje.getFullYear() - 1, hoje.getFullYear() - 2];
+
+  // Só entram no seletor os alunos que treinaram no mês exibido.
+  const alunosDoMes = users.filter((u) => itens.some((i) => i.userId === u.id));
+  const visiveis = filtroAluno ? itens.filter((i) => i.userId === filtroAluno) : itens;
 
   return (
     <div className="space-y-6">
-      {/* Busca do histórico completo de um aluno */}
+      {/* Histórico completo de um aluno */}
       <div className="border border-muted-foreground/20 rounded-lg p-4 space-y-3">
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">
           Histórico completo de um aluno
@@ -136,6 +193,16 @@ const AdminHistoricoMes = ({ users }: Props) => {
             <option key={a} value={a} className="bg-background text-foreground">{a}</option>
           ))}
         </select>
+        <select
+          value={filtroAluno}
+          onChange={(e) => setFiltroAluno(e.target.value)}
+          className="input-underline text-sm py-1 flex-1 min-w-0"
+        >
+          <option value="" className="bg-background text-foreground">Todos os alunos</option>
+          {alunosDoMes.map((u) => (
+            <option key={u.id} value={u.id} className="bg-background text-foreground">{u.nome}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -144,21 +211,23 @@ const AdminHistoricoMes = ({ users }: Props) => {
         <p className="text-destructive font-body text-sm text-center py-8">
           Erro ao carregar os treinos. Tente novamente.
         </p>
-      ) : itens.length === 0 ? (
+      ) : visiveis.length === 0 ? (
         <p className="text-muted-foreground font-body text-sm text-center py-8">
-          Nenhum treino registrado em {MESES[mes - 1]} de {ano}.
+          {filtroAluno
+            ? `Este aluno não tem treinos em ${MESES[mes - 1]} de ${ano}.`
+            : `Nenhum treino registrado em ${MESES[mes - 1]} de ${ano}.`}
         </p>
       ) : (
         <>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">
-            {itens.length} {itens.length === 1 ? "treino" : "treinos"} em {MESES[mes - 1]}
+            {visiveis.length} {visiveis.length === 1 ? "treino" : "treinos"} em {MESES[mes - 1]}
           </p>
           <div className="space-y-0">
-            {itens.map((it) => (
+            {visiveis.map((it) => (
               <button
                 key={it.chave}
                 type="button"
-                onClick={() => setPopup({ userId: it.userId, nome: it.pessoa })}
+                onClick={() => abrirTreino(it)}
                 className="w-full text-left border-b border-muted-foreground/20 py-3 hover:bg-muted-foreground/5 transition-colors px-1"
               >
                 <div className="flex items-baseline gap-2 flex-wrap">
@@ -194,30 +263,26 @@ const AdminHistoricoMes = ({ users }: Props) => {
         </>
       )}
 
-      {/* Popup com o histórico completo do aluno */}
-      {popup && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 py-8 overflow-y-auto"
-          onClick={() => setPopup(null)}
-        >
-          <div
-            className="bg-background border border-muted-foreground/30 rounded-lg w-full max-w-2xl p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading text-lg text-foreground">{popup.nome}</h3>
-              <button
-                type="button"
-                onClick={() => setPopup(null)}
-                className="p-1.5 text-muted-foreground hover:text-foreground"
-                aria-label="Fechar"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <HistoricoTreinos userId={popup.userId} isAdmin />
-          </div>
-        </div>
+      {/* Popup de UM treino: só o que foi feito naquele dia */}
+      {treinoAberto && (
+        <Popup titulo={treinoAberto.pessoa} onFechar={() => { setTreinoAberto(null); setTreino(null); }}>
+          {carregandoTreino ? (
+            <p className="text-muted-foreground font-body text-sm py-6 text-center">Carregando...</p>
+          ) : treino ? (
+            <DetalheTreino treino={treino} />
+          ) : (
+            <p className="text-destructive font-body text-sm py-6 text-center">
+              Não consegui carregar os detalhes deste treino.
+            </p>
+          )}
+        </Popup>
+      )}
+
+      {/* Popup do histórico completo do aluno */}
+      {historicoAberto && (
+        <Popup titulo={historicoAberto.nome} onFechar={() => setHistoricoAberto(null)}>
+          <HistoricoTreinos userId={historicoAberto.userId} isAdmin />
+        </Popup>
       )}
     </div>
   );

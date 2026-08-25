@@ -434,7 +434,41 @@ Deno.serve(async (req) => {
       return jsonOk({ itens }, origin);
     }
 
-    // ── Histórico completo de um aluno (popup) ──
+    // ── UM treino específico (popup ao clicar na linha da lista) ──
+    // `chave` vem da lista: "h:<id>" para registro do cronômetro,
+    // "c:<userId>:<data>:<slot>" para treino reconstruído das séries.
+    if (action === "historicoTreino") {
+      const userId = body?.userId;
+      const chave = body?.chave;
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      if (!chave || typeof chave !== "string") return jsonErr("missing_chave", 400, origin);
+
+      if (chave.startsWith("h:")) {
+        const { data, error } = await admin.from("treino_historico")
+          .select("id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos")
+          .eq("id", chave.slice(2))
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (error) throw error;
+        return jsonOk({ treino: data ?? null }, origin);
+      }
+
+      if (chave.startsWith("c:")) {
+        const partes = chave.split(":");
+        const dataTreino = partes[2];
+        const slot = partes[3] ?? "0";
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dataTreino ?? "")) return jsonErr("chave_invalida", 400, origin);
+        const sinteticos = await sintetizarDeSeries(
+          admin, userId, dataTreino, dataTreino, new Set<string>(), new Set<string>([dataTreino]),
+        );
+        const alvo = sinteticos.find((s) => s.id === `sintetico:${dataTreino}#${slot}`) ?? sinteticos[0] ?? null;
+        return jsonOk({ treino: alvo }, origin);
+      }
+
+      return jsonErr("chave_invalida", 400, origin);
+    }
+
+    // ── Histórico completo de um aluno (popup do botão Buscar) ──
     if (action === "historicoUsuario") {
       const userId = body?.userId;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);

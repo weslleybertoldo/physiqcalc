@@ -5,6 +5,7 @@ import { formatarData } from "@/utils/formatDate";
 import { toast } from "sonner";
 import { buildTreinoResumo, formatDuracao, type TreinoResumo } from "@/lib/treinoResumo";
 import { supabase } from "@/integrations/supabase/client";
+import { CaixasResumo, ListaExercicios, formatTimer, formatHora } from "./DetalheTreino";
 import CompartilharTreinoModal from "./CompartilharTreinoModal";
 
 interface HistoricoItem {
@@ -28,18 +29,6 @@ interface Props {
 }
 
 const PAGE_SIZE = 5;
-
-function formatTimer(s: number): string {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-}
-
-function formatHora(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
-}
 
 const DIAS_LABEL: Record<number, string> = {
   0: "DOM", 1: "SEG", 2: "TER", 3: "QUA", 4: "QUI", 5: "SEX", 6: "SAB",
@@ -315,58 +304,12 @@ const HistoricoTreinos = ({ userId, onBack, isAdmin = false }: Props) => {
 
                 {isExpanded && (
                   <div className="pb-4 pl-1 space-y-4">
-                    {/* Info do treino */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Duração</p>
-                        <p className="text-sm font-heading text-foreground">{formatTimer(h.duracao_segundos)}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Academia</p>
-                        <p className="text-sm font-heading text-foreground">{resumo.academia_nome || "—"}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Volume total</p>
-                        <p className="text-sm font-heading text-primary">{Math.round(resumo.volumeTotal).toLocaleString("pt-BR")} kg</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading">Média peso/rep</p>
-                        <p className="text-sm font-heading text-primary">{resumo.mediaPesoRep != null ? `${resumo.mediaPesoRep.toFixed(1)} kg` : "—"}</p>
-                      </div>
-                    </div>
-
-                    {resumo.exercicios.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground mb-2">
-                          Exercícios realizados
-                        </p>
-                        <div className="space-y-2">
-                          {resumo.exercicios.map((ex, i) => (
-                            <div key={i} className="py-2 px-3 bg-secondary/30 rounded">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-heading text-foreground">🏆 {ex.nome}</span>
-                                {ex.mediaPesoRep != null && (
-                                  <span className="text-[10px] text-primary font-heading">{ex.mediaPesoRep.toFixed(1)} kg/rep</span>
-                                )}
-                              </div>
-                              {ex.series.length > 0 ? (
-                                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
-                                  {ex.series.map((s) => (
-                                    <span key={s.numero_serie} className="text-[11px] text-muted-foreground font-body tabular-nums">
-                                      {s.numero_serie}ª: <span className="text-foreground">{s.peso}kg × {s.reps}</span>
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-[10px] text-muted-foreground font-body mt-1">
-                                  {ex.series_concluidas} série{ex.series_concluidas !== 1 ? "s" : ""}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <CaixasResumo
+                      resumo={resumo}
+                      duracaoSegundos={h.duracao_segundos}
+                      semCronometro={h.sem_cronometro}
+                    />
+                    <ListaExercicios resumo={resumo} />
 
                     <button
                       type="button"
