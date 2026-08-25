@@ -169,6 +169,11 @@ async function resolverNomesTreino(
  * Monta registros no formato de `treino_historico` a partir das séries concluídas,
  * para treinos que NÃO passaram pelo cronômetro (quem só marca os exercícios).
  * Sem cronômetro não há duração nem horários — só a lista de exercícios e séries.
+ *
+ * `datasConcluidas` (linhas de tb_treino_concluido) delimita o que conta como treino:
+ * é o MESMO universo da lista do mês. Sem esse recorte, um dia com séries soltas que
+ * o aluno nunca concluiu apareceria no popup — carimbado "✓ Concluído" pelo card —
+ * sem aparecer na lista.
  */
 async function sintetizarDeSeries(
   admin: any,
@@ -176,6 +181,7 @@ async function sintetizarDeSeries(
   inicio: string,
   fim: string,
   datasComTimer: Set<string>,
+  datasConcluidas: Set<string>,
 ): Promise<any[]> {
   const { data: series } = await admin.from("tb_treino_series")
     .select("data_treino, slot_idx, numero_serie, peso, reps, exercicio_id, exercicio_usuario_id, academia_nome")
@@ -187,7 +193,10 @@ async function sintetizarDeSeries(
     .order("numero_serie")
     .limit(5000);
 
-  const linhas = ((series as any[]) || []).filter((s) => !datasComTimer.has(String(s.data_treino).split("T")[0]));
+  const linhas = ((series as any[]) || []).filter((s) => {
+    const data = String(s.data_treino).split("T")[0];
+    return !datasComTimer.has(data) && datasConcluidas.has(data);
+  });
   if (linhas.length === 0) return [];
 
   // Nomes dos exercícios
@@ -444,7 +453,16 @@ Deno.serve(async (req) => {
       const fim = hoje.toLocaleDateString("en-CA", { timeZone: TZ });
       const dozeMesesAtras = new Date(hoje.getTime() - 365 * 24 * 3600 * 1000);
       const inicio = dozeMesesAtras.toLocaleDateString("en-CA", { timeZone: TZ });
-      const sinteticos = await sintetizarDeSeries(admin, userId, inicio, fim, comTimer);
+      const { data: conclRows } = await admin.from("tb_treino_concluido")
+        .select("data_treino")
+        .eq("user_id", userId).eq("concluido", true)
+        .gte("data_treino", inicio).lte("data_treino", fim)
+        .limit(2000);
+      const datasConcluidas = new Set<string>(
+        ((conclRows as any[]) || []).map((c) => String(c.data_treino).split("T")[0]),
+      );
+
+      const sinteticos = await sintetizarDeSeries(admin, userId, inicio, fim, comTimer, datasConcluidas);
 
       const historico = [...((timerRows as any[]) || []), ...sinteticos]
         .sort((a, b) => String(b.iniciado_em).localeCompare(String(a.iniciado_em)));
