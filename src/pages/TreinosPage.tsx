@@ -7,7 +7,7 @@ import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X
 import PendenciaAviso from "@/components/PendenciaAviso";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
-import WorkoutTimer from "@/components/treinos/WorkoutTimer";
+import WorkoutTimer, { iniciarTreinoSeParado } from "@/components/treinos/WorkoutTimer";
 import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +20,7 @@ import { downloadAndInstall } from "@/lib/apkUpdater";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
-import { aplicarSubstituicoes, type ExercicioAlvo, type Substituicao } from "@/lib/substituicaoExercicio";
+import { aplicarSubstituicoes, exerciciosRemovidos, type ExercicioAlvo, type ItemRemovido, type Substituicao } from "@/lib/substituicaoExercicio";
 import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeMp, MpStatus } from "@/lib/mpClient";
@@ -102,6 +102,8 @@ interface DiaSlot {
   /** Grupo pessoal do usuário (não é do catálogo do treinador) */
   grupoPessoal?: boolean;
   exercicios: GrupoExercicio[];
+  /** Exercícios do grupo removidos nesta data (pra "restaurar") */
+  removidos?: ItemRemovido[];
   overrideVazio: boolean;
   source: 'override' | 'semana' | 'placeholder';
 }
@@ -582,6 +584,9 @@ const TreinosPage = () => {
     // Aplica as trocas de exercício do usuário (do dia ganha da definitiva)
     const comTrocas = (exs: GrupoExercicio[], grupoId: string, slotIdx: number): GrupoExercicio[] =>
       aplicarSubstituicoes(exs, substituicoes, { grupoId, slotIdx, dateKey: dk }, exerciciosPorId) as GrupoExercicio[];
+    // Exercícios removidos (do dia ou definitivo) — o TreinoDoDia oferece "restaurar"
+    const removidosDe = (exs: GrupoExercicio[], grupoId: string, slotIdx: number): ItemRemovido[] =>
+      exerciciosRemovidos(exs, substituicoes, { grupoId, slotIdx, dateKey: dk });
 
     if (ovrList && ovrList.length > 0) {
       // Quando há overrides, eles substituem o treino padrão do dia
@@ -591,10 +596,10 @@ const TreinosPage = () => {
         }
         if (o.grupo_usuario_id) {
           const grupo = gruposPessoais.find((g) => g.id === o.grupo_usuario_id) || null;
-          return { slot_idx: o.slot_idx, override_id: o.id, grupo, grupoPessoal: true, exercicios: comTrocas(gruposExerciciosPessoais[o.grupo_usuario_id] || [], o.grupo_usuario_id, o.slot_idx), overrideVazio: false, source: 'override' };
+          return { slot_idx: o.slot_idx, override_id: o.id, grupo, grupoPessoal: true, exercicios: comTrocas(gruposExerciciosPessoais[o.grupo_usuario_id] || [], o.grupo_usuario_id, o.slot_idx), removidos: removidosDe(gruposExerciciosPessoais[o.grupo_usuario_id] || [], o.grupo_usuario_id, o.slot_idx), overrideVazio: false, source: 'override' };
         }
         const grupo = grupos.find((g) => g.id === o.grupo_id!) || null;
-        return { slot_idx: o.slot_idx, override_id: o.id, grupo, grupoPessoal: false, exercicios: comTrocas(gruposExercicios[o.grupo_id!] || [], o.grupo_id!, o.slot_idx), overrideVazio: false, source: 'override' };
+        return { slot_idx: o.slot_idx, override_id: o.id, grupo, grupoPessoal: false, exercicios: comTrocas(gruposExercicios[o.grupo_id!] || [], o.grupo_id!, o.slot_idx), removidos: removidosDe(gruposExercicios[o.grupo_id!] || [], o.grupo_id!, o.slot_idx), overrideVazio: false, source: 'override' };
       });
     }
 
@@ -605,11 +610,11 @@ const TreinosPage = () => {
       if (config.grupo_usuario_id) {
         const grupo = gruposPessoais.find((g) => g.id === config.grupo_usuario_id) || null;
         if (grupo) {
-          slots.push({ slot_idx: slotIdx, grupo, grupoPessoal: true, exercicios: comTrocas(gruposExerciciosPessoais[config.grupo_usuario_id] || [], config.grupo_usuario_id, slotIdx), overrideVazio: false, source: 'semana' });
+          slots.push({ slot_idx: slotIdx, grupo, grupoPessoal: true, exercicios: comTrocas(gruposExerciciosPessoais[config.grupo_usuario_id] || [], config.grupo_usuario_id, slotIdx), removidos: removidosDe(gruposExerciciosPessoais[config.grupo_usuario_id] || [], config.grupo_usuario_id, slotIdx), overrideVazio: false, source: 'semana' });
         }
       } else if (config.grupo_id) {
         const grupo = config.tb_grupos_treino || grupos.find((g) => g.id === config.grupo_id) || null;
-        slots.push({ slot_idx: slotIdx, grupo, grupoPessoal: false, exercicios: comTrocas(gruposExercicios[config.grupo_id] || [], config.grupo_id, slotIdx), overrideVazio: false, source: 'semana' });
+        slots.push({ slot_idx: slotIdx, grupo, grupoPessoal: false, exercicios: comTrocas(gruposExercicios[config.grupo_id] || [], config.grupo_id, slotIdx), removidos: removidosDe(gruposExercicios[config.grupo_id] || [], config.grupo_id, slotIdx), overrideVazio: false, source: 'semana' });
       }
     });
     return slots;
@@ -1395,6 +1400,7 @@ const TreinosPage = () => {
                               slotIdx={slot.slot_idx}
                               treinoId={slot.override_id}
                               exercicios={slot.exercicios}
+                              removidos={slot.removidos}
                               series={slotSeries}
                               concluido={slotConcluido}
                               academiaAtual={academiaEfetiva}
@@ -1425,6 +1431,10 @@ const TreinosPage = () => {
                                 });
                               }}
                               onSerieConcluida={(nome, num, exId) => {
+                                // OK em qualquer série inicia o treino; se já há treino em andamento, não faz nada
+                                if (iniciarTreinoSeParado(selectedDate, slot.grupo!.nome)) {
+                                  toast.success("Treino iniciado ⏱️");
+                                }
                                 setTimerExercicio(nome);
                                 setTimerSerie(num);
                                 setTimerSerieId(`${exId}-${num}-${Date.now()}`);

@@ -151,7 +151,7 @@ function desenharDados(ctx: CanvasRenderingContext2D, resumo: TreinoResumo, top:
 
   ctx.textAlign = "right";
   ctx.fillStyle = COR.text;
-  const nomeAcomp = "Bertoldo Performance";
+  const nomeAcomp = "@bertoldoperformance";
   ctx.fillText(nomeAcomp, W - PAD, y + 20);
   const wNome = ctx.measureText(nomeAcomp).width;
   ctx.fillStyle = COR.accent;
@@ -239,32 +239,43 @@ function gerarComFoto(resumo: TreinoResumo, img: HTMLImageElement): string {
   ctx.textAlign = "left";
   ctx.fillStyle = COR.accent;
   ctx.font = "800 40px Arial, sans-serif";
-  ctx.fillText("🔥 TREINO CONCLUÍDO", 72, STORY_H - 240);
+  // "TREINO CONCLUÍDO" um pouco mais alto (respiro sutil acima do nome do treino)
+  ctx.fillText("🔥 TREINO CONCLUÍDO", 72, STORY_H - 252);
   ctx.fillStyle = COR.text;
   ctx.font = "800 84px Arial, sans-serif";
   ctx.fillText(resumo.nome_treino, 72, STORY_H - 160);
+  const yData = STORY_H - 104;
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.font = "400 34px Arial, sans-serif";
-  ctx.fillText(`${fmtData(resumo.iniciado_em)} · ${fmtHora(resumo.iniciado_em)}–${fmtHora(resumo.concluido_em)}`, 72, STORY_H - 104);
+  const textoData = `${fmtData(resumo.iniciado_em)} · ${fmtHora(resumo.iniciado_em)}–${fmtHora(resumo.concluido_em)}`;
+  ctx.fillText(textoData, 72, yData);
+  const fimData = 72 + ctx.measureText(textoData).width;
   if (resumo.academia_nome) {
     ctx.fillStyle = COR.accent;
     ctx.font = "700 34px Arial, sans-serif";
     ctx.fillText(`📍 ${resumo.academia_nome}`, 72, STORY_H - 56);
   }
 
-  // Rodapé direito (acima da data/academia): "Acomp: Bertoldo Performance" + PHYSIQCALC
+  // Rodapé direito: "Acomp: @bertoldoperformance" NA LINHA DA DATA + PHYSIQCALC na linha da academia.
+  // A fonte do Acomp encolhe (28→20px) até caber sem encostar na data (fontes variam por aparelho).
   ctx.textAlign = "right";
-  ctx.font = "700 30px Arial, sans-serif";
-  const nomeAcomp = "Bertoldo Performance";
+  const nomeAcomp = "@bertoldoperformance";
+  const prefixoAcomp = "Acomp: ";
+  let fonteAcomp = 28;
+  ctx.font = `700 ${fonteAcomp}px Arial, sans-serif`;
+  while (fonteAcomp > 20 && STORY_W - 72 - ctx.measureText(prefixoAcomp + nomeAcomp).width < fimData + 28) {
+    fonteAcomp -= 1;
+    ctx.font = `700 ${fonteAcomp}px Arial, sans-serif`;
+  }
   ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.fillText(nomeAcomp, STORY_W - 72, STORY_H - 160);
+  ctx.fillText(nomeAcomp, STORY_W - 72, yData);
   ctx.fillStyle = COR.accent;
-  ctx.fillText("Acomp: ", STORY_W - 72 - ctx.measureText(nomeAcomp).width, STORY_H - 160);
+  ctx.fillText(prefixoAcomp, STORY_W - 72 - ctx.measureText(nomeAcomp).width, yData);
   ctx.font = "800 38px Arial, sans-serif";
   ctx.fillStyle = COR.text;
-  ctx.fillText("PHYSIQ", STORY_W - 72 - ctx.measureText("CALC").width, STORY_H - 112);
+  ctx.fillText("PHYSIQ", STORY_W - 72 - ctx.measureText("CALC").width, STORY_H - 56);
   ctx.fillStyle = COR.accent;
-  ctx.fillText("CALC", STORY_W - 72, STORY_H - 112);
+  ctx.fillText("CALC", STORY_W - 72, STORY_H - 56);
   semSombra();
 
   return canvas.toDataURL("image/png");
