@@ -87,12 +87,12 @@ const ModalRemoverExercicio = ({
           [userId, grupoId, origemId]
         );
       } else if (escopo === "definitiva") {
-        // Grupo do treinador: remoção definitiva SÓ do usuário. Substitui qualquer
-        // troca/remoção anterior desse exercício neste slot (a definitiva passa a valer).
+        // Grupo do treinador: remoção definitiva SÓ do usuário, valendo no grupo inteiro
+        // (qualquer slot). Substitui qualquer troca/remoção anterior desse exercício no grupo.
         await db.execute(
           `DELETE FROM exercicio_substituicao_usuario
-           WHERE user_id = ? AND grupo_id = ? AND slot_idx = ? AND exercicio_origem_id = ?`,
-          [userId, grupoId, slotIdx, origemId]
+           WHERE user_id = ? AND grupo_id = ? AND exercicio_origem_id = ?`,
+          [userId, grupoId, origemId]
         );
         await db.execute(
           `INSERT INTO exercicio_substituicao_usuario

@@ -26,8 +26,31 @@ from playwright.sync_api import sync_playwright
 BASE = os.environ.get("SMOKE_BASE", "http://localhost:8080")
 PAT = os.environ.get("SUPABASE_PAT")
 REF = "uxwpwdbbnlticxgtzcsb"
+SUPA = f"https://{REF}.supabase.co"
+# Schema onde o alvo grava: local aponta pra public; physiqcalc-staging usa staging.
+SCHEMA = os.environ.get("SMOKE_SCHEMA", "public")
+# Build de produção (staging/prod) não tem o auto-login DEV: injeta sessão real no localStorage.
+INJETAR_SESSAO = os.environ.get("SMOKE_INJECT_SESSION") == "1"
+ANON = os.environ.get("SUPABASE_ANON_KEY")
+SENHA = os.environ.get("SMOKE_PASSWORD")
 USER_TESTE = "c62c7533-14ff-4e01-9ffa-06b3cdff1cc5"
+EMAIL_TESTE = "teste@teste.com"
 falhas, passes, erros_console = [], [], []
+
+
+def sessao_via_api():
+    req = urllib.request.Request(
+        f"{SUPA}/auth/v1/token?grant_type=password",
+        method="POST",
+        data=json.dumps({"email": EMAIL_TESTE, "password": SENHA}).encode(),
+        headers={"Content-Type": "application/json", "apikey": ANON},
+    )
+    with urllib.request.urlopen(req, timeout=60) as r:
+        sessao = json.loads(r.read().decode())
+    if "access_token" not in sessao:
+        print(f"ERRO no login: {sessao}")
+        sys.exit(1)
+    return sessao
 
 
 def checa(nome, cond, detalhe=""):
@@ -63,14 +86,22 @@ def espera_carregar(pg, timeout_ms=60000):
     return False
 
 
+GRUPO_ALVO = os.environ.get("SMOKE_GRUPO", "Peito + tríceps")
+
+
 def garantir_expandido(pg):
-    """O slot do treino do dia pode estar recolhido — clica no cabeçalho se não há exercícios."""
-    if pg.locator("[data-remover-exercicio]").count() > 0:
+    """Abre o slot do GRUPO_ALVO (grupo do catálogo). O dia pode ter mais de um treino
+    (ex.: grupo pessoal no slot 0) e só um slot fica expandido por vez — o smoke precisa
+    do grupo do treinador pra provar 'definitivo = vale pros próximos treinos' + restaurar."""
+    aberto = pg.locator(f"h2:has-text('TREINO DO DIA'):has-text('{GRUPO_ALVO}')")
+    if aberto.count() > 0 and pg.locator("[data-remover-exercicio]").count() > 0:
         return
-    cab = pg.locator("button:has-text('TREINO DO DIA')").first
+    cab = pg.locator(f"button:has-text('TREINO DO DIA'):has-text('{GRUPO_ALVO}')").first
     if cab.count():
         cab.click()
-        pg.wait_for_timeout(600)
+        pg.wait_for_timeout(800)
+    else:
+        print(f"  AVISO  slot '{GRUPO_ALVO}' não encontrado neste dia")
 
 
 def ir_para_dia(pg, ddmm):
@@ -112,14 +143,27 @@ def toasts(pg):
 
 
 with sync_playwright() as pw:
-    nav = pw.chromium.launch(args=["--disable-dev-shm-usage"])
-    ctx = nav.new_context(viewport={"width": 1280, "height": 1600}, timezone_id="America/Sao_Paulo", locale="pt-BR")
+    # Fingerprint de navegador normal: Vercel em Attack Challenge Mode prende o headless padrão.
+    nav = pw.chromium.launch(args=["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"])
+    ctx = nav.new_context(
+        viewport={"width": 1280, "height": 1600}, timezone_id="America/Sao_Paulo", locale="pt-BR",
+        user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"),
+    )
+    ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});")
     ctx.add_init_script("""
       try {
         const hoje = new Date().toLocaleDateString('pt-BR');
         localStorage.setItem('physiq_pendencia_avisada_em', hoje);
       } catch (e) {}
     """)
+    if INJETAR_SESSAO:
+        if not (ANON and SENHA):
+            print("defina SUPABASE_ANON_KEY e SMOKE_PASSWORD para injetar a sessão")
+            sys.exit(1)
+        sessao = sessao_via_api()
+        ctx.add_init_script(f"try {{ localStorage.setItem('sb-{REF}-auth-token', JSON.stringify({json.dumps(sessao)})); }} catch (e) {{}}")
+        print(f"== sessão de {EMAIL_TESTE} injetada (schema {SCHEMA}) ==")
     pg = ctx.new_page()
     pg.on("console", lambda m: erros_console.append(m.text) if m.type == "error" else None)
     pg.on("dialog", lambda d: d.accept())
@@ -134,7 +178,7 @@ with sync_playwright() as pw:
     garantir_expandido(pg)
     pg.wait_for_selector("[data-remover-exercicio]", timeout=30000)
 
-    cab = pg.locator("button:has-text('TREINO DO DIA')").first.inner_text()
+    cab = pg.locator(f"button:has-text('TREINO DO DIA'):has-text('{GRUPO_ALVO}')").first.inner_text()
     m = re.search(r"TREINO DO DIA\s*—\s*(\w{3})\s+(\d{2}/\d{2})", cab, re.I)
     dia_semana, ddmm = (m.group(1), m.group(2)) if m else ("", "")
     date_label = f"{dia_semana} {ddmm}"
@@ -151,7 +195,7 @@ with sync_playwright() as pw:
     checa("X fica ao lado do Histórico", card.locator("button:has-text('Histórico')").count() == 1)
 
     # outro dia com treino (pra provar 'só neste dia' vs 'definitivo')
-    outros = [b.inner_text() for b in pg.locator("div.grid-cols-7 button", has_text="Peito").all()]
+    outros = [b.inner_text() for b in pg.locator("div.grid-cols-7 button", has_text=GRUPO_ALVO.split(" ")[0]).all()]
     outros_ddmm = [re.search(r"\d{2}/\d{2}", t).group(0) for t in outros if re.search(r"\d{2}/\d{2}", t)]
     outros_ddmm = [d for d in outros_ddmm if d != ddmm]
     outro = outros_ddmm[0] if outros_ddmm else None
@@ -196,7 +240,7 @@ with sync_playwright() as pw:
     if PAT:
         ok_srv = False
         for _ in range(12):
-            rows = sql(f"select data_treino, exercicio_novo_id, exercicio_novo_usuario_id from public.exercicio_substituicao_usuario where user_id='{USER_TESTE}' and exercicio_origem_id='{ex_id}'")
+            rows = sql(f"select data_treino, exercicio_novo_id, exercicio_novo_usuario_id from {SCHEMA}.exercicio_substituicao_usuario where user_id='{USER_TESTE}' and exercicio_origem_id='{ex_id}'")
             if rows and any(r["exercicio_novo_id"] is None and r["exercicio_novo_usuario_id"] is None and r["data_treino"] for r in rows):
                 ok_srv = True
                 break
@@ -274,9 +318,9 @@ with sync_playwright() as pw:
 print("== limpeza no servidor ==")
 if PAT:
     time.sleep(6)
-    print("  séries apagadas:", sql(f"delete from public.tb_treino_series where user_id='{USER_TESTE}' and data_treino >= '2026-08-25' returning id"))
-    print("  substituições apagadas:", sql(f"delete from public.exercicio_substituicao_usuario where user_id='{USER_TESTE}' returning id"))
-    print("  pesos academia apagados (só desta rodada):", sql(f"delete from public.tb_academia_pesos where user_id='{USER_TESTE}' and updated_at >= now() - interval '2 hours' returning id"))
+    print("  séries apagadas:", sql(f"delete from {SCHEMA}.tb_treino_series where user_id='{USER_TESTE}' and data_treino >= '2026-08-25' returning id"))
+    print("  substituições apagadas:", sql(f"delete from {SCHEMA}.exercicio_substituicao_usuario where user_id='{USER_TESTE}' returning id"))
+    print("  pesos academia apagados (só desta rodada):", sql(f"delete from {SCHEMA}.tb_academia_pesos where user_id='{USER_TESTE}' and updated_at >= now() - interval '2 hours' returning id"))
 else:
     print("  SKIP sem SUPABASE_PAT")
 

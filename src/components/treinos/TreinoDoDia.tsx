@@ -291,11 +291,12 @@ const TreinoDoDia = ({
           [userId, grupoId, slotIdx, r.exercicio_id, dateKey]
         );
       } else {
+        // definitiva vale no grupo inteiro (qualquer slot) → apaga sem filtrar slot
         await db.execute(
           `DELETE FROM exercicio_substituicao_usuario
-           WHERE user_id = ? AND grupo_id = ? AND slot_idx = ? AND exercicio_origem_id = ?
+           WHERE user_id = ? AND grupo_id = ? AND exercicio_origem_id = ?
              AND data_treino IS NULL AND exercicio_novo_id IS NULL AND exercicio_novo_usuario_id IS NULL`,
-          [userId, grupoId, slotIdx, r.exercicio_id]
+          [userId, grupoId, r.exercicio_id]
         );
       }
       toast.success(`Restaurado: ${r.nome}`);

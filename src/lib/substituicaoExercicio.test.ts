@@ -46,10 +46,13 @@ describe("resolverSubstituicao", () => {
   it("ignora substituição de outro dia", () => {
     expect(resolverSubstituicao([sub({ data_treino: "2026-08-12" })], alvo)).toBeNull();
   });
-  it("ignora outro grupo, outro slot ou outro exercício", () => {
+  it("ignora outro grupo ou outro exercício", () => {
     expect(resolverSubstituicao([sub({ grupo_id: "G2" })], alvo)).toBeNull();
-    expect(resolverSubstituicao([sub({ slot_idx: 1 })], alvo)).toBeNull();
     expect(resolverSubstituicao([sub({ exercicio_origem_id: "remada" })], alvo)).toBeNull();
+  });
+  it("definitiva vale em qualquer slot do grupo; a do dia só no slot em que foi feita", () => {
+    expect(resolverSubstituicao([sub({ slot_idx: 1 })], alvo)).not.toBeNull();
+    expect(resolverSubstituicao([sub({ slot_idx: 1, data_treino: "2026-08-11" })], alvo)).toBeNull();
   });
   it("trata slot_idx null como 0", () => {
     expect(resolverSubstituicao([sub({ slot_idx: null })], alvo)).not.toBeNull();
@@ -148,9 +151,10 @@ describe("remoção de exercício (linha sem exercício novo)", () => {
     expect(ids(aplicarSubstituicoes(itens, subs, outroDia, catalogo))).toEqual(["remada"]);
   });
 
-  it("remoção respeita grupo/slot", () => {
+  it("remoção respeita o grupo; definitiva vale em qualquer slot, do dia só no próprio slot", () => {
     expect(ids(aplicarSubstituicoes(itens, [remocao({ grupo_id: "G2" })], ctx, catalogo))).toEqual(["supino", "remada"]);
-    expect(ids(aplicarSubstituicoes(itens, [remocao({ slot_idx: 1 })], ctx, catalogo))).toEqual(["supino", "remada"]);
+    expect(ids(aplicarSubstituicoes(itens, [remocao({ slot_idx: 1 })], ctx, catalogo))).toEqual(["remada"]);
+    expect(ids(aplicarSubstituicoes(itens, [remocao({ slot_idx: 1, data_treino: "2026-08-11" })], ctx, catalogo))).toEqual(["supino", "remada"]);
   });
 
   it("exerciciosRemovidos lista o que saiu, com escopo", () => {

@@ -72,10 +72,15 @@ export function dataDaTroca(sub: Substituicao): string | null {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+/**
+ * Mesmo alvo: grupo + exercício de origem. A troca/remoção DO DIA é do slot em que foi
+ * feita; a DEFINITIVA vale no grupo inteiro ("vale para os próximos treinos"), em
+ * qualquer slot em que o grupo apareça — mesma leitura da edge admin-semana-treinos.
+ */
 const mesmoAlvo = (s: Substituicao, grupoId: string, slotIdx: number, exercicioId: string) =>
   s.grupo_id === grupoId &&
-  (s.slot_idx ?? 0) === slotIdx &&
-  s.exercicio_origem_id === exercicioId;
+  s.exercicio_origem_id === exercicioId &&
+  (!s.data_treino || (s.slot_idx ?? 0) === slotIdx);
 
 /** A substituição que vale para (grupo, slot, exercício, data) — a do dia ganha da definitiva */
 export function resolverSubstituicao(
