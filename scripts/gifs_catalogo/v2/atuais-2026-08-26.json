@@ -1,0 +1,464 @@
+{
+ "Abdominais na Máquina": {
+  "id": "17e52ced-abc2-41a1-8776-c6162309e306",
+  "nome": "Abdominais na Máquina",
+  "grupo_muscular": "Abdômen",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/17e52ced-abc2-41a1-8776-c6162309e306.gif?v=1787716117"
+ },
+ "Abdominal Supra no Solo": {
+  "id": "821c3148-1817-40a2-9598-86388a81f577",
+  "nome": "Abdominal Supra no Solo",
+  "grupo_muscular": "Abdômen",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/821c3148-1817-40a2-9598-86388a81f577.gif?v=1787716117"
+ },
+ "Abdução de Quadril na Polia": {
+  "id": "af3d0704-18ad-4328-9453-bc36d58fee3b",
+  "nome": "Abdução de Quadril na Polia",
+  "grupo_muscular": "Abdutores da Coxa / Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/af3d0704-18ad-4328-9453-bc36d58fee3b.gif?v=1787716117"
+ },
+ "Abdutora": {
+  "id": "6e06bce6-1909-4f5d-902b-ea3c80695aec",
+  "nome": "Abdutora",
+  "grupo_muscular": "Abdutores da Coxa / Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/6e06bce6-1909-4f5d-902b-ea3c80695aec.gif?v=1787716117"
+ },
+ "Adutora": {
+  "id": "a7f62fd1-842d-4ae0-83ee-c62e902efb7b",
+  "nome": "Adutora",
+  "grupo_muscular": "Adutores da Coxa",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/a7f62fd1-842d-4ae0-83ee-c62e902efb7b.gif?v=1787716117"
+ },
+ "Afundo com Halteres": {
+  "id": "58dccb5e-4411-468c-ab53-fdbb1cbf97fa",
+  "nome": "Afundo com Halteres",
+  "grupo_muscular": "Quadríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/58dccb5e-4411-468c-ab53-fdbb1cbf97fa.gif?v=1787716117"
+ },
+ "Agachamento Búlgaro": {
+  "id": "cbf903f0-b43d-4ee7-8be1-f2eee6eb71a2",
+  "nome": "Agachamento Búlgaro",
+  "grupo_muscular": "Quadríceps / Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/cbf903f0-b43d-4ee7-8be1-f2eee6eb71a2.gif?v=1787716117"
+ },
+ "Agachamento Livre": {
+  "id": "f06e45bc-a6c7-4939-92d1-3d6fafa4a534",
+  "nome": "Agachamento Livre",
+  "grupo_muscular": "Quadríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/f06e45bc-a6c7-4939-92d1-3d6fafa4a534.gif?v=1787716117"
+ },
+ "Agachamento na Máquina": {
+  "id": "d06298a4-bcc3-43f3-a681-765b58315ea4",
+  "nome": "Agachamento na Máquina",
+  "grupo_muscular": "Quadríceps / Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/d06298a4-bcc3-43f3-a681-765b58315ea4.gif"
+ },
+ "Agachamento no Hack": {
+  "id": "f7742b0d-2365-40c8-8ae8-b49d375ed6f8",
+  "nome": "Agachamento no Hack",
+  "grupo_muscular": "Quadríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/f7742b0d-2365-40c8-8ae8-b49d375ed6f8.gif?v=1787716117"
+ },
+ "Agachamento Sumô": {
+  "id": "5143c9ed-f192-4a84-a2b0-9ce146ac8d9c",
+  "nome": "Agachamento Sumô",
+  "grupo_muscular": "Quadríceps / Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/5143c9ed-f192-4a84-a2b0-9ce146ac8d9c.gif?v=1787716117"
+ },
+ "Barra Fixa": {
+  "id": "aac834e8-ae82-4d43-a48e-f9e8fbdd1cf2",
+  "nome": "Barra Fixa",
+  "grupo_muscular": "Dorsal / Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/aac834e8-ae82-4d43-a48e-f9e8fbdd1cf2.gif?v=1787716117"
+ },
+ "Coice na Polia Baixa": {
+  "id": "5be8bb3e-992c-47be-adc2-cee8328cb48f",
+  "nome": "Coice na Polia Baixa",
+  "grupo_muscular": "Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/5be8bb3e-992c-47be-adc2-cee8328cb48f.gif?v=1787716117"
+ },
+ "Corrida": {
+  "id": "4a151e92-a1f1-473d-a6df-51235d68d77c",
+  "nome": "Corrida",
+  "grupo_muscular": "Corrida",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/4a151e92-a1f1-473d-a6df-51235d68d77c.gif?v=1787716117"
+ },
+ "Cross-over na Polia": {
+  "id": "049e0404-02e8-4064-9bc4-e2a99a856e7e",
+  "nome": "Cross-over na Polia",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/049e0404-02e8-4064-9bc4-e2a99a856e7e.gif?v=1787716117"
+ },
+ "Crucifixo com Halteres": {
+  "id": "91fb0a6d-dfe2-4edd-bab7-aecf79311927",
+  "nome": "Crucifixo com Halteres",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/91fb0a6d-dfe2-4edd-bab7-aecf79311927.gif?v=1787716117"
+ },
+ "Crucifixo Invertido": {
+  "id": "6f78e74c-c4db-400e-8e26-47d06638a770",
+  "nome": "Crucifixo Invertido",
+  "grupo_muscular": "Deltóide Posterior",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/6f78e74c-c4db-400e-8e26-47d06638a770.gif?v=1787716117"
+ },
+ "Crucifixo Invertido Sentado": {
+  "id": "e9241c10-9aaf-4ea5-badf-2b42ad3e4ffc",
+  "nome": "Crucifixo Invertido Sentado",
+  "grupo_muscular": "Deltóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/e9241c10-9aaf-4ea5-badf-2b42ad3e4ffc.gif?v=1787716117"
+ },
+ "Crucifixo na Máquina": {
+  "id": "aa61d549-d952-4ee9-94ac-2f76ed29b063",
+  "nome": "Crucifixo na Máquina",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/aa61d549-d952-4ee9-94ac-2f76ed29b063.gif?v=1787716117"
+ },
+ "Desenvolvimento Arnold": {
+  "id": "b57159b0-8167-4ddb-9986-2a0857d75ebf",
+  "nome": "Desenvolvimento Arnold",
+  "grupo_muscular": "Ombro",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/b57159b0-8167-4ddb-9986-2a0857d75ebf.gif?v=1787716117"
+ },
+ "Desenvolvimento com Halteres": {
+  "id": "abfb812d-809c-49d5-b6c3-dfe7cd252f09",
+  "nome": "Desenvolvimento com Halteres",
+  "grupo_muscular": "Deltóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/abfb812d-809c-49d5-b6c3-dfe7cd252f09.gif?v=1787716117"
+ },
+ "Desenvolvimento na Máquina": {
+  "id": "a7ff4aaf-94c0-4a15-9e9a-33dd4de78538",
+  "nome": "Desenvolvimento na Máquina",
+  "grupo_muscular": "Deltóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/a7ff4aaf-94c0-4a15-9e9a-33dd4de78538.gif?v=1787716117"
+ },
+ "Elevação de Pernas": {
+  "id": "22a7129c-1967-4369-a32f-01f6f83b1259",
+  "nome": "Elevação de Pernas",
+  "grupo_muscular": "Abdômen",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/22a7129c-1967-4369-a32f-01f6f83b1259.gif?v=1787716117"
+ },
+ "Elevação Frontal com Halteres": {
+  "id": "76a9b295-0c39-4c2e-98d1-4b87f7caa66d",
+  "nome": "Elevação Frontal com Halteres",
+  "grupo_muscular": "Deltóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/76a9b295-0c39-4c2e-98d1-4b87f7caa66d.gif?v=1787716117"
+ },
+ "Elevação Frontal na Polia": {
+  "id": "0cf2c040-e048-40d1-a932-5b78aa1f7a4e",
+  "nome": "Elevação Frontal na Polia",
+  "grupo_muscular": "Deltóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/0cf2c040-e048-40d1-a932-5b78aa1f7a4e.gif?v=1787716117"
+ },
+ "Elevação Lateral com Halteres": {
+  "id": "ee4b34f0-1d15-4282-9b85-ee0dd019a2de",
+  "nome": "Elevação Lateral com Halteres",
+  "grupo_muscular": "Deltóide Lateral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/ee4b34f0-1d15-4282-9b85-ee0dd019a2de.gif?v=1787716117"
+ },
+ "Elevação Lateral na Máquina": {
+  "id": "d825eb63-5885-444e-a0eb-0dbba9bb6c25",
+  "nome": "Elevação Lateral na Máquina",
+  "grupo_muscular": "Deltóide Lateral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/d825eb63-5885-444e-a0eb-0dbba9bb6c25.gif?v=1787716117"
+ },
+ "Elevação Lateral na Polia": {
+  "id": "4270d1f6-1b90-416e-84cb-b058ee869780",
+  "nome": "Elevação Lateral na Polia",
+  "grupo_muscular": "Deltóide Lateral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/4270d1f6-1b90-416e-84cb-b058ee869780.gif?v=1787716117"
+ },
+ "Elevação Pélvica": {
+  "id": "8fa6d8ea-d37a-492a-82fc-30da35333b15",
+  "nome": "Elevação Pélvica",
+  "grupo_muscular": "Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/8fa6d8ea-d37a-492a-82fc-30da35333b15.gif?v=1787716117"
+ },
+ "Encolhimento com Halteres": {
+  "id": "de0144a5-36de-42ae-8541-1bfc27d667d2",
+  "nome": "Encolhimento com Halteres",
+  "grupo_muscular": "Trapézio",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/de0144a5-36de-42ae-8541-1bfc27d667d2.gif?v=1787716117"
+ },
+ "Extensora": {
+  "id": "e55a6426-e367-40e1-a127-3c3dc30090ec",
+  "nome": "Extensora",
+  "grupo_muscular": "Quadríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/e55a6426-e367-40e1-a127-3c3dc30090ec.gif?v=1787716117"
+ },
+ "Face Pull na Polia": {
+  "id": "3bdc8fa0-2546-468b-a70c-81138c884c24",
+  "nome": "Face Pull na Polia",
+  "grupo_muscular": "Deltóide Posterior",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/3bdc8fa0-2546-468b-a70c-81138c884c24.gif?v=1787716117"
+ },
+ "Flexão de Braço": {
+  "id": "0fab29a1-94b3-4763-bece-b00fe613a640",
+  "nome": "Flexão de Braço",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/0fab29a1-94b3-4763-bece-b00fe613a640.gif?v=1787716117"
+ },
+ "Flexão Nórdica": {
+  "id": "19810e64-96fd-4d5e-a76d-3b2e35e6a35d",
+  "nome": "Flexão Nórdica",
+  "grupo_muscular": "Isquiotibiais",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/19810e64-96fd-4d5e-a76d-3b2e35e6a35d.gif?v=1787716117"
+ },
+ "Flexora de Perna Sentado": {
+  "id": "3e848d7d-77d6-47b3-a200-9d49d4e271b0",
+  "nome": "Flexora de Perna Sentado",
+  "grupo_muscular": "Isquiotibiais",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/3e848d7d-77d6-47b3-a200-9d49d4e271b0.gif?v=1787716117"
+ },
+ "Flexora Deitado": {
+  "id": "ebaa51d6-b407-40ad-9909-ee07cfb85448",
+  "nome": "Flexora Deitado",
+  "grupo_muscular": "Isquiotibiais",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/ebaa51d6-b407-40ad-9909-ee07cfb85448.gif?v=1787716117"
+ },
+ "Flexora em Pé": {
+  "id": "578f2cf4-630b-410c-ab50-8cc8975d3248",
+  "nome": "Flexora em Pé",
+  "grupo_muscular": "Posterior de Coxa",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/578f2cf4-630b-410c-ab50-8cc8975d3248.gif?v=1787716117"
+ },
+ "High Row": {
+  "id": "89e42973-497e-4434-b95e-24f5533acf90",
+  "nome": "High Row",
+  "grupo_muscular": "Dorsal / Rombóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/89e42973-497e-4434-b95e-24f5533acf90.gif?v=1787716117"
+ },
+ "Hiperextensão Lombar": {
+  "id": "97550668-6b59-4f4b-a5ac-d56b0452880b",
+  "nome": "Hiperextensão Lombar",
+  "grupo_muscular": "Lombar",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/97550668-6b59-4f4b-a5ac-d56b0452880b.gif?v=1787716117"
+ },
+ "Leg Press": {
+  "id": "3274a384-ff2e-4ebf-8350-aea78367ee71",
+  "nome": "Leg Press",
+  "grupo_muscular": "Quadríceps / Glúteo",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/3274a384-ff2e-4ebf-8350-aea78367ee71.gif?v=1787716117"
+ },
+ "Levantamento Terra": {
+  "id": "d716cf5f-1989-4364-887b-010ceffd4826",
+  "nome": "Levantamento Terra",
+  "grupo_muscular": "Posterior de Coxa",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/d716cf5f-1989-4364-887b-010ceffd4826.gif?v=1787716117"
+ },
+ "Levantamento Terra Romeno (Stiff)": {
+  "id": "79c9f663-691b-4c17-9a75-2e47599167e4",
+  "nome": "Levantamento Terra Romeno (Stiff)",
+  "grupo_muscular": "Posterior de Coxa",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/79c9f663-691b-4c17-9a75-2e47599167e4.gif?v=1787716117"
+ },
+ "Mergulho (Tríceps)": {
+  "id": "4e5b8db8-6778-47a1-a15a-3e94e8a21713",
+  "nome": "Mergulho (Tríceps)",
+  "grupo_muscular": "Tríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/4e5b8db8-6778-47a1-a15a-3e94e8a21713.gif?v=1787716117"
+ },
+ "Panturrilha em Pé na Máquina": {
+  "id": "a3df3ffc-425b-49c5-b99f-f2980cd79e21",
+  "nome": "Panturrilha em Pé na Máquina",
+  "grupo_muscular": "Panturrilha",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/a3df3ffc-425b-49c5-b99f-f2980cd79e21.gif?v=1787716117"
+ },
+ "Panturrilha na Máquina": {
+  "id": "919d1ad4-42d6-4407-89b9-2f7007a3e1ba",
+  "nome": "Panturrilha na Máquina",
+  "grupo_muscular": "Panturrilha",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/919d1ad4-42d6-4407-89b9-2f7007a3e1ba.gif?v=1787716117"
+ },
+ "Panturrilha no Step": {
+  "id": "d7498204-0046-44b1-9f85-caad94cf4334",
+  "nome": "Panturrilha no Step",
+  "grupo_muscular": "Panturrilha",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/d7498204-0046-44b1-9f85-caad94cf4334.gif?v=1787716117"
+ },
+ "Pulldown com Braços Estendidos": {
+  "id": "640a64bd-0491-4501-9e91-f99c725057a0",
+  "nome": "Pulldown com Braços Estendidos",
+  "grupo_muscular": "Dorsal / Rombóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/640a64bd-0491-4501-9e91-f99c725057a0.gif?v=1787716117"
+ },
+ "Puxada Aberta Frontal": {
+  "id": "a4e3d8c8-48be-4446-b9c8-c78ba0a74fa6",
+  "nome": "Puxada Aberta Frontal",
+  "grupo_muscular": "Dorsal / Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/a4e3d8c8-48be-4446-b9c8-c78ba0a74fa6.gif?v=1787716117"
+ },
+ "Puxada Fechada Frontal": {
+  "id": "1ad63bb7-2a99-40a0-a5e4-78b2749d780e",
+  "nome": "Puxada Fechada Frontal",
+  "grupo_muscular": "Dorsal / Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/1ad63bb7-2a99-40a0-a5e4-78b2749d780e.gif?v=1787716117"
+ },
+ "Puxada Fechada Supinada": {
+  "id": "ca81c43e-1360-44a6-a8d4-784ed0dd6fa0",
+  "nome": "Puxada Fechada Supinada",
+  "grupo_muscular": "Dorsal / Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/ca81c43e-1360-44a6-a8d4-784ed0dd6fa0.gif?v=1787716117"
+ },
+ "Remada Aberta na Máquina": {
+  "id": "37da252b-86db-4cf8-ad90-735a0c23c75e",
+  "nome": "Remada Aberta na Máquina",
+  "grupo_muscular": "Dorsal / Rombóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/37da252b-86db-4cf8-ad90-735a0c23c75e.gif?v=1787716117"
+ },
+ "Remada Cavalinho na Máquina": {
+  "id": "3ff85379-f225-4fc0-964e-22a688904490",
+  "nome": "Remada Cavalinho na Máquina",
+  "grupo_muscular": "Dorsal / Trapézio",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/3ff85379-f225-4fc0-964e-22a688904490.gif?v=1787716117"
+ },
+ "Remada Curvada com Barra": {
+  "id": "7fc0ec10-492e-4753-a7de-02a4acbfd57e",
+  "nome": "Remada Curvada com Barra",
+  "grupo_muscular": "Dorsal / Rombóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/7fc0ec10-492e-4753-a7de-02a4acbfd57e.gif?v=1787716117"
+ },
+ "Remada Fechada na Máquina": {
+  "id": "b7a120f0-5efb-474a-bdaf-d13acfaceef8",
+  "nome": "Remada Fechada na Máquina",
+  "grupo_muscular": "Costas",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/b7a120f0-5efb-474a-bdaf-d13acfaceef8.gif?v=1787716117"
+ },
+ "Remada na Polia Sentado": {
+  "id": "59b8f69d-3b31-45e2-ae12-f12369b45dfb",
+  "nome": "Remada na Polia Sentado",
+  "grupo_muscular": "Dorsal / Rombóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/59b8f69d-3b31-45e2-ae12-f12369b45dfb.gif?v=1787716117"
+ },
+ "Remada Unilateral com Halter": {
+  "id": "232c2ac4-7fd8-4145-8dba-76cf121dcb87",
+  "nome": "Remada Unilateral com Halter",
+  "grupo_muscular": "Dorsal / Rombóide",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/232c2ac4-7fd8-4145-8dba-76cf121dcb87.gif?v=1787716117"
+ },
+ "Rosca Alternada na Máquina": {
+  "id": "333ca7e7-cd4d-4a5f-893a-03b6c649f5b8",
+  "nome": "Rosca Alternada na Máquina",
+  "grupo_muscular": "Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/333ca7e7-cd4d-4a5f-893a-03b6c649f5b8.gif?v=1787716117"
+ },
+ "Rosca Alternada no Banco Inclinado": {
+  "id": "0eed6ebd-c8bf-4e47-b1af-d59d52f8eaf9",
+  "nome": "Rosca Alternada no Banco Inclinado",
+  "grupo_muscular": "Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/0eed6ebd-c8bf-4e47-b1af-d59d52f8eaf9.gif?v=1787716117"
+ },
+ "Rosca Concentrada": {
+  "id": "61bcf40c-6a82-423b-99e5-0adc11190b67",
+  "nome": "Rosca Concentrada",
+  "grupo_muscular": "Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/61bcf40c-6a82-423b-99e5-0adc11190b67.gif?v=1787716117"
+ },
+ "Rosca Direta com Barra": {
+  "id": "4f141bfc-a902-406b-bc41-98076648c4ae",
+  "nome": "Rosca Direta com Barra",
+  "grupo_muscular": "Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/4f141bfc-a902-406b-bc41-98076648c4ae.gif?v=1787716117"
+ },
+ "Rosca Martelo com Halteres": {
+  "id": "97bf2aa2-77b4-429e-9c9d-d5e3547b5b14",
+  "nome": "Rosca Martelo com Halteres",
+  "grupo_muscular": "Bíceps / Braquial",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/97bf2aa2-77b4-429e-9c9d-d5e3547b5b14.gif?v=1787716117"
+ },
+ "Rosca Martelo na Polia": {
+  "id": "cc614132-6b3e-4629-9995-e19dd6537ab1",
+  "nome": "Rosca Martelo na Polia",
+  "grupo_muscular": "Bíceps / Braquial",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/cc614132-6b3e-4629-9995-e19dd6537ab1.gif?v=1787716117"
+ },
+ "Rosca Punho com Halter Apoiado": {
+  "id": "c2c93530-bb75-4501-b827-b70e387e8912",
+  "nome": "Rosca Punho com Halter Apoiado",
+  "grupo_muscular": "Bíceps / Braquial",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/c2c93530-bb75-4501-b827-b70e387e8912.gif?v=1787716117"
+ },
+ "Rosca Scott com Halteres": {
+  "id": "bba4b446-ca22-4560-a24b-5fa53b8b310f",
+  "nome": "Rosca Scott com Halteres",
+  "grupo_muscular": "Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/bba4b446-ca22-4560-a24b-5fa53b8b310f.gif?v=1787716117"
+ },
+ "Rosca Scott na máquina": {
+  "id": "9ff64ebf-6c63-4151-a8f7-0b2380a094cf",
+  "nome": "Rosca Scott na máquina",
+  "grupo_muscular": "Bíceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/9ff64ebf-6c63-4151-a8f7-0b2380a094cf.gif?v=1787716117"
+ },
+ "Supino Declinado na Máquina": {
+  "id": "fefee8d3-50d8-4a90-b481-52eceab67dfb",
+  "nome": "Supino Declinado na Máquina",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/fefee8d3-50d8-4a90-b481-52eceab67dfb.gif?v=1787716117"
+ },
+ "Supino Inclinado": {
+  "id": "f09b4daa-fcfd-4baa-9696-0d9571457ee9",
+  "nome": "Supino Inclinado",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/f09b4daa-fcfd-4baa-9696-0d9571457ee9.gif?v=1787716117"
+ },
+ "Supino Reto com Barra": {
+  "id": "23d01e92-0780-4bbf-9451-0c04d63600cf",
+  "nome": "Supino Reto com Barra",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/23d01e92-0780-4bbf-9451-0c04d63600cf.gif?v=1787716117"
+ },
+ "Supino Reto com Halteres": {
+  "id": "bb673b75-dfee-407c-af40-7166908ff2b9",
+  "nome": "Supino Reto com Halteres",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/bb673b75-dfee-407c-af40-7166908ff2b9.gif?v=1787716117"
+ },
+ "Supino Reto na Máquina Deitado": {
+  "id": "1b1a1328-542e-4925-b038-15751ed254f7",
+  "nome": "Supino Reto na Máquina Deitado",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/1b1a1328-542e-4925-b038-15751ed254f7.gif?v=1787716117"
+ },
+ "Supino Reto na Máquina Sentado": {
+  "id": "e6edd5b3-bd3a-48fa-9e4e-a3b387962bc2",
+  "nome": "Supino Reto na Máquina Sentado",
+  "grupo_muscular": "Peitoral",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/e6edd5b3-bd3a-48fa-9e4e-a3b387962bc2.gif?v=1787716117"
+ },
+ "Tríceps Coice com Halter": {
+  "id": "21e1db91-de3b-4f98-bdc2-7eb5e0ee02af",
+  "nome": "Tríceps Coice com Halter",
+  "grupo_muscular": "Tríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/21e1db91-de3b-4f98-bdc2-7eb5e0ee02af.gif?v=1787716117"
+ },
+ "Tríceps Corda na Polia": {
+  "id": "4bc6d7ff-3d35-43a0-ae52-3faf8722ce23",
+  "nome": "Tríceps Corda na Polia",
+  "grupo_muscular": "Tríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/4bc6d7ff-3d35-43a0-ae52-3faf8722ce23.gif?v=1787716117"
+ },
+ "Tríceps Francês com Halter": {
+  "id": "3ee805c7-8279-4dba-9411-02c2bb7cbe22",
+  "nome": "Tríceps Francês com Halter",
+  "grupo_muscular": "Tríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/3ee805c7-8279-4dba-9411-02c2bb7cbe22.gif?v=1787716117"
+ },
+ "Tríceps Francês Unilateral na Polia Baixa": {
+  "id": "45f56d80-a211-4c4d-b46d-52d066e4b5c0",
+  "nome": "Tríceps Francês Unilateral na Polia Baixa",
+  "grupo_muscular": "Tríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/45f56d80-a211-4c4d-b46d-52d066e4b5c0.gif?v=1787716117"
+ },
+ "Tríceps Pulley": {
+  "id": "3f6e172a-9b35-4f8c-ad22-ddd942d7d667",
+  "nome": "Tríceps Pulley",
+  "grupo_muscular": "Tríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/3f6e172a-9b35-4f8c-ad22-ddd942d7d667.gif?v=1787716117"
+ },
+ "Tríceps Testa": {
+  "id": "c7016a9d-1af3-4238-929f-adae75005ce6",
+  "nome": "Tríceps Testa",
+  "grupo_muscular": "Tríceps",
+  "imagem_url": "https://uxwpwdbbnlticxgtzcsb.supabase.co/storage/v1/object/public/exercicios/c7016a9d-1af3-4238-929f-adae75005ce6.gif?v=1787716117"
+ }
+}
