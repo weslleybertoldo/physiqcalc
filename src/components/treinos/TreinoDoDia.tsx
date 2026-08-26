@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical, Repeat } from "lucide-react";
+import { Plus, Minus, Clock, CheckCircle2, Check, Undo2, MessageSquare, GripVertical, Repeat, X } from "lucide-react";
 import { usePowerSync } from "@powersync/react";
 import ModalExercicio from "./ModalExercicio";
 import ModalHistorico from "./ModalHistorico";
 import ModalComentario, { carregarComentario } from "./ModalComentario";
 import ModalTrocarExercicio from "./ModalTrocarExercicio";
+import ModalRemoverExercicio from "./ModalRemoverExercicio";
 import { toast } from "sonner";
 import type { SerieComMemoria } from "@/pages/TreinosPage";
+import type { ItemRemovido } from "@/lib/substituicaoExercicio";
 
 interface Exercicio {
   id: string;
@@ -38,6 +40,8 @@ interface Props {
   slotIdx: number;
   treinoId?: string;
   exercicios: GrupoExercicio[];
+  /** Exercícios do grupo removidos nesta data (do dia ou definitivo) — pra oferecer "restaurar" */
+  removidos?: ItemRemovido[];
   series: SerieComMemoria[];
   concluido: boolean;
   onRefresh: () => void;
@@ -55,7 +59,7 @@ import { parseTempo, formatTempo, formatPace, calcularPace } from "@/lib/corrida
 
 const TreinoDoDia = ({
   userId, dateKey, dateLabel, grupoNome, grupoId, grupoPessoal = false, slotIdx, treinoId, exercicios,
-  series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onRemoverTreino, onSerieConcluida, onSeriesUpdate,
+  removidos = [], series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onRemoverTreino, onSerieConcluida, onSeriesUpdate,
   academiaAtual,
 }: Props) => {
   const db = usePowerSync();
@@ -67,6 +71,7 @@ const TreinoDoDia = ({
     origemId: string;
     substituindo?: { id: string; nome: string; escopo: "dia" | "definitiva"; trocadoEm?: string | null };
   } | null>(null);
+  const [removerExercicio, setRemoverExercicio] = useState<{ ex: Exercicio; origemId: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [sortedItems, setSortedItems] = useState<GrupoExercicio[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -256,6 +261,51 @@ const TreinoDoDia = ({
     (exId: string) => series.filter(s => s.exercicio_id === exId || s.exercicio_usuario_id === exId).sort((a, b) => a.numero_serie - b.numero_serie),
     [series]
   );
+
+  // ✕ do exercício: abre o popup de remoção. Bloqueia quando já há registro do dia
+  // (treino concluído ou série OK) — remover apagaria o contexto do que foi feito.
+  const handleAbrirRemover = (ex: Exercicio, origemId: string) => {
+    if (concluido) {
+      toast.error("Treino já concluído — desmarque antes de remover exercícios.");
+      return;
+    }
+    if (getSeriesForExercicio(ex.id).some(s => s.concluida)) {
+      toast.error("Este exercício já tem série concluída hoje — desfaça as séries antes de remover.");
+      return;
+    }
+    setRemoverExercicio({ ex, origemId });
+  };
+
+  // Desfaz uma remoção (do dia ou definitiva em grupo do treinador)
+  const handleRestaurar = async (r: ItemRemovido) => {
+    const pergunta = r.escopo === "dia"
+      ? `Restaurar "${r.nome}" em ${dateLabel}?`
+      : `Restaurar "${r.nome}" nos próximos treinos de ${grupoNome}?`;
+    if (!window.confirm(pergunta)) return;
+    try {
+      if (r.escopo === "dia") {
+        await db.execute(
+          `DELETE FROM exercicio_substituicao_usuario
+           WHERE user_id = ? AND grupo_id = ? AND slot_idx = ? AND exercicio_origem_id = ?
+             AND data_treino = ? AND exercicio_novo_id IS NULL AND exercicio_novo_usuario_id IS NULL`,
+          [userId, grupoId, slotIdx, r.exercicio_id, dateKey]
+        );
+      } else {
+        // definitiva vale no grupo inteiro (qualquer slot) → apaga sem filtrar slot
+        await db.execute(
+          `DELETE FROM exercicio_substituicao_usuario
+           WHERE user_id = ? AND grupo_id = ? AND exercicio_origem_id = ?
+             AND data_treino IS NULL AND exercicio_novo_id IS NULL AND exercicio_novo_usuario_id IS NULL`,
+          [userId, grupoId, r.exercicio_id]
+        );
+      }
+      toast.success(`Restaurado: ${r.nome}`);
+      onRefresh();
+    } catch (e) {
+      console.error("[TreinoDoDia] Erro ao restaurar exercício:", e);
+      toast.error("Erro ao restaurar o exercício. Tente novamente.");
+    }
+  };
 
 
   // Monta o objeto de série correto: usa exercicio_usuario_id para exercícios pessoais
@@ -606,6 +656,7 @@ const TreinoDoDia = ({
                 onSetInfoExercicio={setInfoExercicio}
                 onSetHistorico={(id, nome) => { setHistoricoId(id); setHistoricoNome(nome); }}
                 onTrocarExercicio={() => setTrocarExercicio({ ex, origemId: ge.substituindo?.id ?? ex.id, substituindo: ge.substituindo })}
+                onRemoverExercicio={() => handleAbrirRemover(ex, ge.substituindo?.id ?? ex.id)}
                 substituindo={ge.substituindo?.trocadoEm === dateKey ? ge.substituindo : undefined}
                 onSaveSerie={handleSaveSerie}
                 onRemoveSerie={handleRemoveSerie}
@@ -615,6 +666,27 @@ const TreinoDoDia = ({
               />
             );
           })}
+        </div>
+      )}
+
+      {removidos.length > 0 && (
+        <div className="text-[11px] font-body text-muted-foreground space-y-1" data-removidos>
+          {removidos.map((r) => (
+            <div key={r.exercicio_id} className="flex items-center gap-2 flex-wrap">
+              <span className="line-through opacity-70">{r.emoji} {r.nome}</span>
+              <span className="text-[9px] uppercase tracking-wider border border-muted-foreground/40 px-1 py-0.5 font-heading">
+                {r.escopo === "dia" ? "removido hoje" : "removido"}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRestaurar(r)}
+                data-restaurar={r.exercicio_id}
+                className="text-primary hover:text-primary/80 font-heading uppercase tracking-wider text-[10px] transition-colors"
+              >
+                Restaurar
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -648,6 +720,22 @@ const TreinoDoDia = ({
           onTrocado={onRefresh}
         />
       )}
+      {removerExercicio && (
+        <ModalRemoverExercicio
+          userId={userId}
+          exercicio={{ id: removerExercicio.ex.id, nome: removerExercicio.ex.nome, emoji: removerExercicio.ex.emoji }}
+          origemId={removerExercicio.origemId}
+          grupoId={grupoId}
+          grupoNome={grupoNome}
+          grupoPessoal={grupoPessoal}
+          slotIdx={slotIdx}
+          dateKey={dateKey}
+          dateLabel={dateLabel}
+          open={!!removerExercicio}
+          onOpenChange={o => !o && setRemoverExercicio(null)}
+          onRemovido={onRefresh}
+        />
+      )}
     </div>
   );
 };
@@ -657,7 +745,7 @@ const ExercicioCard = ({
   exercicio: ex, series: exSeries, userId, dateKey, db, tipoCorrida,
   isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
   onTouchDragStart, onTouchDragMove, onTouchDragEnd,
-  onSetInfoExercicio, onSetHistorico, onTrocarExercicio, substituindo,
+  onSetInfoExercicio, onSetHistorico, onTrocarExercicio, onRemoverExercicio, substituindo,
   onSaveSerie, onRemoveSerie, onConcluirSerie, onDesfazerSerie, onAddSerie,
 }: {
   exercicio: Exercicio;
@@ -678,6 +766,7 @@ const ExercicioCard = ({
   onSetInfoExercicio: (ex: Exercicio) => void;
   onSetHistorico: (id: string, nome: string) => void;
   onTrocarExercicio: () => void;
+  onRemoverExercicio: () => void;
   substituindo?: { id: string; nome: string; escopo: "dia" | "definitiva"; trocadoEm?: string | null };
   onSaveSerie: (exId: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => void;
   onRemoveSerie: (exId: string, num: number, salva: boolean) => void;
@@ -789,6 +878,11 @@ const ExercicioCard = ({
           <button type="button" onClick={() => onSetHistorico(ex.id, ex.nome)}
             className="text-xs text-muted-foreground hover:text-primary font-body flex items-center gap-1 transition-colors">
             <Clock size={12} /> Histórico
+          </button>
+          <button type="button" onClick={onRemoverExercicio} title="Remover exercício" aria-label={`Remover ${ex.nome}`}
+            data-remover-exercicio={ex.id}
+            className="text-xs text-muted-foreground hover:text-destructive font-body flex items-center transition-colors">
+            <X size={14} />
           </button>
         </div>
       </div>

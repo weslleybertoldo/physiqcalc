@@ -8,6 +8,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import CompartilharTreinoModal from "./CompartilharTreinoModal";
 import { buildTreinoResumo, type TreinoResumo } from "@/lib/treinoResumo";
+import {
+  MARCOS_TREINO_LONGO_MIN, formatMarcoTreinoLongo,
+  agendarAvisosTreinoLongo, cancelarAvisosTreinoLongo, avisarTreinoLongoWeb,
+} from "@/lib/nativeNotifications";
 
 // Persistência do timer de treino no localStorage
 const LS_WORKOUT_KEY = "physiq_workout_timer";
@@ -17,6 +21,16 @@ interface WorkoutTimerState {
   startedAt: number; // timestamp ms
   dateKey: string;
   grupoNome: string;
+  /** Marcos (min) de "Ainda está treinando?" já avisados neste treino */
+  avisos?: number[];
+}
+
+/** Registra no localStorage que o marco já foi avisado (sobrevive a reload) */
+function marcarAvisoTreinoLongo(min: number) {
+  const saved = lerWorkoutSalvo();
+  if (!saved) return;
+  const avisos = Array.from(new Set([...(saved.avisos ?? []), min]));
+  localStorage.setItem(LS_WORKOUT_KEY, JSON.stringify({ ...saved, avisos } as WorkoutTimerState));
 }
 
 function lerWorkoutSalvo(): WorkoutTimerState | null {
@@ -25,6 +39,40 @@ function lerWorkoutSalvo(): WorkoutTimerState | null {
     if (!raw) return null;
     return JSON.parse(raw) as WorkoutTimerState;
   } catch { return null; }
+}
+
+// Evento disparado quando o treino é iniciado fora do botão (ex.: OK numa série) —
+// o componente montado sincroniza o estado a partir do localStorage.
+const WORKOUT_EVENT = "physiq:workout-timer";
+
+function gravarInicio(dateKey: string, grupoNome: string) {
+  const startedAt = Date.now();
+  localStorage.setItem(LS_WORKOUT_KEY, JSON.stringify({
+    ativo: true,
+    startedAt,
+    dateKey,
+    grupoNome,
+    avisos: [],
+  } as WorkoutTimerState));
+  // "Ainda está treinando?" em 1h30 / 2h / 3h (Android agenda nativo; web avisa pelo tick)
+  void agendarAvisosTreinoLongo(startedAt, grupoNome);
+  window.dispatchEvent(new Event(WORKOUT_EVENT));
+}
+
+/** Há um treino com o cronômetro rodando (em qualquer dia)? */
+export function treinoEmAndamento(): boolean {
+  const saved = lerWorkoutSalvo();
+  return !!(saved && saved.ativo);
+}
+
+/**
+ * Inicia o cronômetro do treino se NÃO houver nenhum em andamento.
+ * Devolve true se iniciou agora; false se já havia treino rodando (não faz nada).
+ */
+export function iniciarTreinoSeParado(dateKey: string, grupoNome: string): boolean {
+  if (treinoEmAndamento()) return false;
+  gravarInicio(dateKey, grupoNome);
+  return true;
 }
 
 interface Props {
@@ -86,6 +134,9 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
   const [resumoConcluido, setResumoConcluido] = useState<TreinoResumo | null>(null);
   const [compartilhando, setCompartilhando] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Marcos de treino longo (1h30/2h/3h) já avisados neste treino (persistidos no LS)
+  const avisadosRef = useRef<Set<number>>(new Set(lerWorkoutSalvo()?.avisos ?? []));
+  const prevSegRef = useRef<number | null>(null);
 
   // Todas as séries concluídas com o timer rodando → pergunta se finaliza o treino.
   // Pergunta 1x por transição (Não = continua contando; refaz/conclui de novo → pergunta de novo).
@@ -97,28 +148,59 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
     todasConcluidasRef.current = todasConcluidas;
   }, [ativo, todasConcluidas]);
 
-  // Ao mudar de dia, verificar se o treino salvo é para o mesmo dia
+  // Ao mudar de dia (ou quando o treino é iniciado por fora — OK numa série),
+  // sincroniza com o treino salvo no localStorage.
   useEffect(() => {
-    const saved = lerWorkoutSalvo();
-    if (saved && saved.ativo && saved.dateKey === dateKey) {
-      const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
-      setAtivo(true);
-      setSegundos(elapsed);
-      setIniciadoEm(new Date(saved.startedAt));
-    } else if (!saved || saved.dateKey !== dateKey) {
-      // Outro dia selecionado — não mostrar timer ativo
-      setAtivo(false);
-      setSegundos(0);
-      setIniciadoEm(null);
-    }
+    const sincronizar = () => {
+      const saved = lerWorkoutSalvo();
+      if (saved && saved.ativo && saved.dateKey === dateKey) {
+        const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
+        avisadosRef.current = new Set(saved.avisos ?? []);
+        prevSegRef.current = null;
+        setAtivo(true);
+        setSegundos(elapsed);
+        setIniciadoEm(new Date(saved.startedAt));
+        setConcluido(false);
+      } else if (!saved || saved.dateKey !== dateKey) {
+        // Outro dia selecionado — não mostrar timer ativo
+        setAtivo(false);
+        setSegundos(0);
+        setIniciadoEm(null);
+      }
+    };
+    sincronizar();
+    window.addEventListener(WORKOUT_EVENT, sincronizar);
+    return () => window.removeEventListener(WORKOUT_EVENT, sincronizar);
   }, [dateKey]);
 
   // Tick recalcula pelo timestamp de início (não incrementa +1): em background o
   // WebView suspende timers JS e ticks se perdem — ao voltar, o valor corrige na hora.
   useEffect(() => {
     if (ativo && iniciadoEm) {
-      const tick = () =>
-        setSegundos(Math.max(0, Math.floor((Date.now() - iniciadoEm.getTime()) / 1000)));
+      // "Ainda está treinando?": ao CRUZAR 1h30/2h/3h avisa uma vez (toast + notificação web).
+      // Marco já ultrapassado quando o componente monta (reload/voltar do background) só é
+      // registrado, sem avisar de novo — no Android a notificação agendada já cuidou disso.
+      const verificarTreinoLongo = (seg: number) => {
+        for (const min of MARCOS_TREINO_LONGO_MIN) {
+          if (seg < min * 60 || avisadosRef.current.has(min)) continue;
+          avisadosRef.current.add(min);
+          marcarAvisoTreinoLongo(min);
+          const cruzouAgora = prevSegRef.current !== null && prevSegRef.current < min * 60;
+          if (cruzouAgora) {
+            toast(`Ainda está treinando? ⏱️ ${formatMarcoTreinoLongo(min)} de ${grupoNome}`, {
+              description: "Se já terminou, conclua o treino pra parar o cronômetro.",
+              duration: 12000,
+            });
+            avisarTreinoLongoWeb(grupoNome, min);
+          }
+        }
+        prevSegRef.current = seg;
+      };
+      const tick = () => {
+        const seg = Math.max(0, Math.floor((Date.now() - iniciadoEm.getTime()) / 1000));
+        setSegundos(seg);
+        verificarTreinoLongo(seg);
+      };
       tick();
       intervalRef.current = setInterval(tick, 1000);
       document.addEventListener("visibilitychange", tick);
@@ -128,20 +210,11 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
       };
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [ativo, iniciadoEm]);
+  }, [ativo, iniciadoEm, grupoNome]);
 
   const handleIniciar = () => {
-    const agora = Date.now();
-    localStorage.setItem(LS_WORKOUT_KEY, JSON.stringify({
-      ativo: true,
-      startedAt: agora,
-      dateKey,
-      grupoNome,
-    } as WorkoutTimerState));
-    setAtivo(true);
-    setSegundos(0);
-    setIniciadoEm(new Date(agora));
-    setConcluido(false);
+    // grava no localStorage e dispara o evento → o efeito acima sincroniza o estado
+    gravarInicio(dateKey, grupoNome);
   };
 
   const handleConcluir = async () => {
@@ -149,6 +222,7 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
     setAtivo(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
     localStorage.removeItem(LS_WORKOUT_KEY);
+    void cancelarAvisosTreinoLongo();
 
     const agora = new Date();
     const duracao = Math.round((agora.getTime() - iniciadoEm.getTime()) / 1000);

@@ -213,6 +213,8 @@ Deno.serve(async (req) => {
         let ex = r.tb_exercicios;
         let isPessoal = false;
         if (sub) {
+          // linha sem exercício novo = removido definitivamente pelo aluno → fora do volume programado
+          if (!sub.novoId && !sub.novoUsuarioId) return;
           const det = sub.novoUsuarioId ? detNovoPess.get(sub.novoUsuarioId) : detNovoCat.get(sub.novoId);
           if (det) { ex = det; isPessoal = !!sub.novoUsuarioId; }
         }
