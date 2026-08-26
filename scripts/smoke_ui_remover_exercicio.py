@@ -94,14 +94,22 @@ def garantir_expandido(pg):
     (ex.: grupo pessoal no slot 0) e só um slot fica expandido por vez — o smoke precisa
     do grupo do treinador pra provar 'definitivo = vale pros próximos treinos' + restaurar."""
     aberto = pg.locator(f"h2:has-text('TREINO DO DIA'):has-text('{GRUPO_ALVO}')")
-    if aberto.count() > 0 and pg.locator("[data-remover-exercicio]").count() > 0:
-        return
-    cab = pg.locator(f"button:has-text('TREINO DO DIA'):has-text('{GRUPO_ALVO}')").first
-    if cab.count():
-        cab.click()
-        pg.wait_for_timeout(800)
-    else:
-        print(f"  AVISO  slot '{GRUPO_ALVO}' não encontrado neste dia")
+    if aberto.count() == 0:
+        # slot fechado (o h2 só existe com o slot expandido) → clica no cabeçalho.
+        # NÃO clicar quando já está aberto: os exercícios podem só não ter sincronizado ainda
+        # (1º sync do PowerSync em contexto limpo) e o clique fecharia o slot.
+        cab = pg.locator(f"button:has-text('TREINO DO DIA'):has-text('{GRUPO_ALVO}')").first
+        if cab.count():
+            cab.click()
+            pg.wait_for_timeout(800)
+        else:
+            print(f"  AVISO  slot '{GRUPO_ALVO}' não encontrado neste dia")
+            return
+    try:
+        pg.wait_for_selector("[data-remover-exercicio]", timeout=90000)
+    except Exception:
+        pg.screenshot(path="/tmp/smoke-remover-falha.png", full_page=True)
+        print("  AVISO  exercícios não apareceram (screenshot /tmp/smoke-remover-falha.png)")
 
 
 def ir_para_dia(pg, ddmm):
