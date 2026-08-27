@@ -23,6 +23,7 @@ import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
 import { aplicarSubstituicoes, exerciciosRemovidos, type ExercicioAlvo, type ItemRemovido, type Substituicao } from "@/lib/substituicaoExercicio";
 import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots";
 import { chavesExerciciosAtivos, serieDeExercicioAtivo } from "@/lib/seriesAtivas";
+import { chaveParaConcluido, contarDiasTreinados, diasTreinados } from "@/lib/contagemTreinos";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeMp, MpStatus } from "@/lib/mpClient";
 import { toast } from "sonner";
@@ -445,28 +446,26 @@ const TreinosPage = () => {
     localConcluidos.forEach(k => set.add(k));
     return set;
   }, [concluidosSemanaRows, localConcluidos]);
-  // Conjunto de dateKeys com pelo menos 1 treino concluído (pra contagem semanal)
-  const concluidosDates = useMemo(() => {
-    const set = new Set<string>();
-    concluidosSet.forEach(k => set.add(k.split('|')[0]));
-    return set;
-  }, [concluidosSet]);
+  // Conjunto de dateKeys com pelo menos 1 treino concluído (contagem semanal = DIAS treinados)
+  const concluidosDates = useMemo(
+    () => diasTreinados([...concluidosSet].map(chaveParaConcluido)),
+    [concluidosSet]
+  );
   const treinosSemana = concluidosDates.size;
 
-  // Treinos concluídos do mês (PowerSync + estado local) — conta total de slots concluídos
+  // Treinos concluídos do mês (PowerSync + estado local) — mesma regra da semana:
+  // conta DIAS distintos com ≥1 treino concluído (2 treinos no mesmo dia = 1)
   const monthStart = useMemo(() => getMonthStart(), [today]);
   const { data: concluidosMesRows } = useQuery(
-    `SELECT data_treino, slot_idx FROM tb_treino_concluido
+    `SELECT DISTINCT data_treino FROM tb_treino_concluido
      WHERE user_id = ? AND data_treino >= ?`,
     [userId, monthStart]
   );
   const treinosMes = useMemo(() => {
-    const set = new Set<string>();
-    ((concluidosMesRows as any[]) || []).forEach((c: any) => set.add(`${c.data_treino}|${c.slot_idx ?? 0}`));
-    localConcluidos.forEach(k => {
-      if (k.split('|')[0] >= monthStart) set.add(k);
-    });
-    return set.size;
+    const locais = [...localConcluidos]
+      .map(chaveParaConcluido)
+      .filter(c => c.data_treino >= monthStart);
+    return contarDiasTreinados([...(((concluidosMesRows as any[]) || []) as { data_treino: string }[]), ...locais]);
   }, [concluidosMesRows, localConcluidos, monthStart]);
 
   // Exercícios dos grupos globais (com JOIN)
