@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import CompartilharTreinoModal from "./CompartilharTreinoModal";
 import { buildTreinoResumo, type TreinoResumo } from "@/lib/treinoResumo";
+import { seriesDoTreino } from "@/lib/seriesAtivas";
 import {
   MARCOS_TREINO_LONGO_MIN, formatMarcoTreinoLongo,
   agendarAvisosTreinoLongo, cancelarAvisosTreinoLongo, avisarTreinoLongoWeb,
@@ -142,7 +143,10 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
   // Pergunta 1x por transição (Não = continua contando; refaz/conclui de novo → pergunta de novo).
   const [confirmFim, setConfirmFim] = useState(false);
   const todasConcluidasRef = useRef(false);
-  const todasConcluidas = series.length > 0 && series.every((s) => s.concluida);
+  // Só séries de exercícios que ainda estão no treino: série órfã de exercício
+  // trocado/removido no meio do treino não pode travar a pergunta.
+  const doTreino = seriesDoTreino(series, exerciciosMap);
+  const todasConcluidas = doTreino.length > 0 && doTreino.every((s) => s.concluida);
   useEffect(() => {
     if (ativo && todasConcluidas && !todasConcluidasRef.current) setConfirmFim(true);
     todasConcluidasRef.current = todasConcluidas;

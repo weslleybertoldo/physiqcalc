@@ -48,7 +48,8 @@ interface Props {
   onTreinoConcluido?: (dateKey: string, slotIdx: number, concluido: boolean) => void;
   onAlterarGrupo: () => void;
   onRemoverTreino?: () => void;
-  onSerieConcluida: (exercicioNome: string, numeroSerie: number, exercicioId: string) => void;
+  /** `ultimaDoTreino` = com este OK todas as séries do treino ficaram concluídas (não abre descanso) */
+  onSerieConcluida: (exercicioNome: string, numeroSerie: number, exercicioId: string, ultimaDoTreino: boolean) => void;
   onSeriesUpdate: React.Dispatch<React.SetStateAction<SerieComMemoria[]>>;
   // Academia atual: carimbada nas séries salvas (tag do histórico) e recebe o peso
   // ao vivo em tb_academia_pesos a cada série salva/concluída.
@@ -461,7 +462,15 @@ const TreinoDoDia = ({
       });
       return updated;
     });
-    onSerieConcluida(exercicioNome, numeroSerie, exercicioId);
+    // Foi a última série do treino? Só conta exercícios que estão na lista (trocado/removido
+    // fica fora); a série que acabou de ser concluída ainda consta como pendente neste instante.
+    const idsAtivos = new Set(exercicios.map(ge => ge.exercicio_id));
+    const faltaAlguma = series.some(s =>
+      (idsAtivos.has(s.exercicio_id) || (!!s.exercicio_usuario_id && idsAtivos.has(s.exercicio_usuario_id))) &&
+      !s.concluida &&
+      !((s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId) && s.numero_serie === numeroSerie)
+    );
+    onSerieConcluida(exercicioNome, numeroSerie, exercicioId, !faltaAlguma);
   };
 
   const handleDesfazerSerie = async (exercicioId: string, numeroSerie: number) => {

@@ -8,6 +8,7 @@ import {
   showTimerFinishedNotification,
   cancelTimerNotification,
 } from "@/lib/nativeNotifications";
+import { restanteDescanso } from "@/lib/descanso";
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -58,11 +59,7 @@ function limparEstado() {
 const TimerDescanso = ({
   ativo, exercicioNome, numeroSerie, duracaoSegundos, serieId, onFechado, onTempoAlterado,
 }: TimerDescansoProps) => {
-  const calcularRestante = useCallback((state: RestTimerState): number => {
-    if (state.isPaused) return state.pausedRemaining;
-    const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
-    return Math.max(0, state.duracao - elapsed);
-  }, []);
+  const calcularRestante = useCallback((state: RestTimerState): number => restanteDescanso(state), []);
 
   // Inicializa com o estado salvo no localStorage (persiste entre reloads)
   const [seconds, setSeconds] = useState(() => {
@@ -151,37 +148,46 @@ const TimerDescanso = ({
     } catch {}
   }, []);
 
-  // Loop do timer — roda enquanto ativo, não pausado e não finalizado
+  // Loop do timer — roda enquanto ativo, não pausado e não finalizado.
+  // O restante é DERIVADO do startedAt salvo (relógio real), nunca "segundos - 1":
+  // em background o WebView congela/estrangula o setInterval e um contador local
+  // ficava pra trás — o toque nativo tocava na hora certa, mas a tela seguia contando.
+  // (A versão antiga ainda re-ancorava o startedAt a cada tick, cristalizando o atraso.)
   useEffect(() => {
     if (!ativo || paused || finished) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
-    intervalRef.current = setInterval(() => {
-      setSeconds((s) => {
-        const next = s - 1;
-        if (next <= 0) {
-          setFinished(true);
-          // No APK, o Foreground Service cuida do som e vibração
-          // No PWA, toca beep via AudioContext + vibração do browser
-          if (!isNative) {
-            playBeep();
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
-          }
-          if (!notifiedRef.current) {
-            notifiedRef.current = true;
-            showTimerFinishedNotification(exercicioNome);
-          }
-          limparEstado();
-          return 0;
+    const tick = () => {
+      const saved = lerEstadoSalvo();
+      // Sem estado salvo (estado de transição) → contador local como reserva
+      const restante = saved && saved.ativo ? calcularRestante(saved) : null;
+      if (restante === null) {
+        setSeconds((s) => Math.max(0, s - 1));
+        return;
+      }
+      if (restante <= 0) {
+        setSeconds(0);
+        setFinished(true);
+        // No APK, o Foreground Service cuida do som e vibração
+        // No PWA, toca beep via AudioContext + vibração do browser
+        if (!isNative) {
+          playBeep();
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
         }
-        const saved = lerEstadoSalvo();
-        if (saved) salvarEstado({ ...saved, startedAt: Date.now() - ((saved.duracao - next) * 1000) });
-        return next;
-      });
-    }, 1000);
+        if (!notifiedRef.current) {
+          notifiedRef.current = true;
+          showTimerFinishedNotification(exercicioNome);
+        }
+        limparEstado();
+        return;
+      }
+      setSeconds(restante);
+    };
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [ativo, paused, finished, playBeep, exercicioNome]);
+  }, [ativo, paused, finished, playBeep, exercicioNome, calcularRestante]);
 
   // Quando app volta ao primeiro plano, recalcula tempo real decorrido
   useEffect(() => {
