@@ -22,6 +22,7 @@ import { usePowerSync, useQuery } from "@powersync/react";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
 import { aplicarSubstituicoes, exerciciosRemovidos, type ExercicioAlvo, type ItemRemovido, type Substituicao } from "@/lib/substituicaoExercicio";
 import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots";
+import { chavesExerciciosAtivos, serieDeExercicioAtivo } from "@/lib/seriesAtivas";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeMp, MpStatus } from "@/lib/mpClient";
 import { toast } from "sonner";
@@ -790,9 +791,19 @@ const TreinosPage = () => {
           );
           return local ?? s;
         });
-        // Preserva séries não salvas do estado atual que não existem em allSeries
+        // Preserva séries não salvas do estado atual que não existem em allSeries —
+        // SÓ de exercícios que continuam no treino. Exercício trocado/removido no meio
+        // do treino deixava as séries padrão dele órfãs (nunca concluídas): o cronômetro
+        // não perguntava "Treino foi concluído?" e a academia recebia peso 0 dele.
+        const ativos = chavesExerciciosAtivos(
+          selectedExercicios.map((ge) => ({
+            exercicio_id: ge.exercicio_id,
+            exercicio_usuario_id: ge.exercicio_usuario_id,
+            slot_idx: ge._slot_idx,
+          }))
+        );
         const unsavedFromState = prev.filter(
-          (p) => !p.salva && !merged.some(
+          (p) => !p.salva && serieDeExercicioAtivo(p, ativos) && !merged.some(
             (s) => s.exercicio_id === p.exercicio_id && (s.slot_idx ?? 0) === (p.slot_idx ?? 0) && s.numero_serie === p.numero_serie
           )
         );
@@ -1430,11 +1441,14 @@ const TreinosPage = () => {
                                   return next;
                                 });
                               }}
-                              onSerieConcluida={(nome, num, exId) => {
+                              onSerieConcluida={(nome, num, exId, ultimaDoTreino) => {
                                 // OK em qualquer série inicia o treino; se já há treino em andamento, não faz nada
                                 if (iniciarTreinoSeParado(selectedDate, slot.grupo!.nome)) {
                                   toast.success("Treino iniciado ⏱️");
                                 }
+                                // Última série do treino: não há próxima série pra descansar —
+                                // o cronômetro já pergunta "Treino foi concluído?".
+                                if (ultimaDoTreino) return;
                                 setTimerExercicio(nome);
                                 setTimerSerie(num);
                                 setTimerSerieId(`${exId}-${num}-${Date.now()}`);

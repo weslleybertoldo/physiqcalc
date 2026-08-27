@@ -187,12 +187,27 @@ const ModalTrocarExercicio = ({
         // Troca do dia (qualquer grupo) ou definitiva em grupo do treinador:
         // registra a substituição por usuário (o catálogo do treinador não é editável)
         const dataTreino = escopo === "dia" ? dateKey : null;
-        const existentes = await db.getAll(
-          `SELECT id FROM exercicio_substituicao_usuario
-           WHERE user_id = ? AND grupo_id = ? AND slot_idx = ? AND exercicio_origem_id = ?
-             AND ifnull(data_treino, '') = ?`,
-          [userId, grupoId, slotIdx, origemId, dataTreino ?? ""]
-        );
+        if (!dataTreino) {
+          // Definitiva vale no grupo inteiro (qualquer slot) e "para os próximos treinos":
+          // apaga a definitiva anterior E as trocas/remoções DO DIA de hoje em diante desse
+          // exercício — a do dia tem prioridade na leitura e escondia a definitiva recém-feita
+          // (o app seguia mostrando a troca de hoje). Dias passados ficam como foram treinados.
+          // Espelha a remoção definitiva (ModalRemoverExercicio).
+          await db.execute(
+            `DELETE FROM exercicio_substituicao_usuario
+             WHERE user_id = ? AND grupo_id = ? AND exercicio_origem_id = ?
+               AND (data_treino IS NULL OR data_treino >= ?)`,
+            [userId, grupoId, origemId, dateKey]
+          );
+        }
+        const existentes = dataTreino
+          ? await db.getAll(
+              `SELECT id FROM exercicio_substituicao_usuario
+               WHERE user_id = ? AND grupo_id = ? AND slot_idx = ? AND exercicio_origem_id = ?
+                 AND data_treino = ?`,
+              [userId, grupoId, slotIdx, origemId, dataTreino]
+            )
+          : [];
         const existente = ((existentes as { id: string }[]) || [])[0];
         if (existente) {
           await db.execute(
