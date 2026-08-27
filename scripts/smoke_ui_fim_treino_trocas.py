@@ -56,7 +56,7 @@ if not PAT and os.path.exists(os.path.expanduser("~/.pc-pat")):
 
 HOJE = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
 AMANHA = HOJE + timedelta(days=1)
-falhas, passes, erros_console = [], [], []
+falhas, passes, erros_console, avisos_powersync = [], [], [], []
 overrides_semeados = []
 
 
@@ -270,7 +270,9 @@ try:
             ctx.add_init_script(f"try {{ localStorage.setItem('sb-{REF}-auth-token', JSON.stringify({json.dumps(sessao)})); }} catch (e) {{}}")
             print(f"== sessão de {EMAIL_TESTE} injetada (schema {SCHEMA}) ==")
         pg = ctx.new_page()
-        pg.on("console", lambda m: erros_console.append(m.text) if m.type == "error" else None)
+        # warnings do PowerSync também importam: o connector DESCARTA op com unique violation via console.warn
+        pg.on("console", lambda m: erros_console.append(m.text) if m.type == "error" else (
+            avisos_powersync.append(f"{time.strftime('%H:%M:%S')} {m.text[:200]}") if m.type == "warning" and "PowerSync" in m.text else None))
         pg.on("dialog", lambda d: d.accept())
 
         print("== 1. link abre já logado (contexto limpo) ==")
@@ -303,14 +305,15 @@ try:
         checa("Remada Fechada aparece HOJE na hora (a do dia não esconde mais a definitiva)", apareceu and card(pg, EX_DIA).count() == 0)
         checa("selo 'trocado' no card definitivo", apareceu and tem(card(pg, EX_DEF).inner_text(), "trocado"))
         checa("toast 'Trocado definitivamente'", tem(toasts(pg), "Trocado definitivamente"))
-        ok_srv, rows = False, None
-        for _ in range(15):
+        # Upload do PowerSync pode levar >30s no staging (build de produção via Vercel) → poll de 90s
+        ok_srv, rows, t_ini = False, None, time.time()
+        for _ in range(45):
             rows = sql(f"select data_treino, exercicio_novo_id from {SCHEMA}.exercicio_substituicao_usuario where user_id='{USER_TESTE}' and exercicio_origem_id='{EX_ORIGEM}'")
             if rows and len(rows) == 1 and rows[0]["data_treino"] is None and rows[0]["exercicio_novo_id"] == EX_DEF:
                 ok_srv = True
                 break
             time.sleep(2)
-        checa("servidor: 1 linha só (definitiva → Remada Fechada); a do dia foi apagada", ok_srv, json.dumps(rows)[:200])
+        checa("servidor: 1 linha só (definitiva → Remada Fechada); a do dia foi apagada", ok_srv, f"{json.dumps(rows)[:160]} · {int(time.time() - t_ini)}s")
         ir_para_dia(pg, ddmm_amanha)
         checa(f"amanhã ({ddmm_amanha}) também mostra Remada Fechada (definitiva)", card(pg, EX_DEF).count() == 1 and card(pg, EX_ORIGEM).count() == 0)
         ir_para_dia(pg, ddmm_hoje)
@@ -383,7 +386,7 @@ try:
                 checa("slot marcado 'Treino concluído ✓'", tem(corpo, "Treino concluído"))
                 checa("toast 'Treino concluído em'", tem(toasts(pg), "Treino concluído em"))
                 ok_hist, hist = False, None
-                for _ in range(15):
+                for _ in range(45):
                     hist = sql(f"select nome_treino, exercicios_concluidos from {SCHEMA}.treino_historico where user_id='{USER_TESTE}' and created_at >= now() - interval '30 minutes' order by created_at desc limit 1")
                     if hist:
                         break
@@ -405,6 +408,7 @@ try:
         print("== console ==")
         ruido = [e for e in erros_console if "401" not in e and "Failed to load resource" not in e]
         checa("sem erro de console (ignorando 401 pré-existente)", len(ruido) == 0, "; ".join(ruido)[:300])
+        checa("sem op descartada pelo connector do PowerSync (warn)", not any("descartando" in a or "Upload exception" in a for a in avisos_powersync), "; ".join(avisos_powersync)[:400])
 
         nav.close()
 finally:
