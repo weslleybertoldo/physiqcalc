@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatarDataCurta, agoraFormatado } from "@/utils/formatDate";
+import { contarDiasTreinados } from "@/lib/contagemTreinos";
 import {
   desenharCabecalho, desenharTituloSecao, desenharCard,
   desenharRodape, estiloTabela, novaPagina, limparTexto,
@@ -182,7 +183,7 @@ function agruparPorSemana(
     semanas.push({
       numero: num,
       label: `Semana ${num}  (${pad(inicio)}/${pad(mes)} – ${pad(fim)}/${pad(mes)})`,
-      totalTreinos: c.length,
+      totalTreinos: contarDiasTreinados(c), // dias treinados (2 treinos no mesmo dia = 1), igual ao card do aluno
       volumeTotal: volume,
       dias
         });
