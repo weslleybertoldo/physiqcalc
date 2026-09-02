@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ const BUCKET_EXERCICIOS = DB_SCHEMA === "staging" ? "exercicios-staging" : "exer
 import { toast } from "sonner";
 import AdminRelatorio from "./AdminRelatorio";
 import AdminHistoricoMes from "./AdminHistoricoMes";
+import ModalExerciciosGrupoAdmin from "./ModalExerciciosGrupoAdmin";
 
 interface Exercicio {
   id: string;
@@ -94,6 +95,8 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [editExImagemFile, setEditExImagemFile] = useState<File | null>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
+  // pares grupo:exercício com gravação em andamento — 2 cliques no mesmo tick disparam 1 request
+  const toggleEmAndamento = useRef<Set<string>>(new Set());
 
   // silent=true recarrega os dados sem trocar pra "Carregando..." (mantém a lista
   // montada e o scroll/posição) — usado nas ações pós-edição.
@@ -130,7 +133,8 @@ const AdminTreinos = ({ onBack }: Props) => {
       const map: Record<string, string[]> = {};
       ((geRes.data as any[]) || []).forEach((ge) => {
         if (!map[ge.grupo_id]) map[ge.grupo_id] = [];
-        map[ge.grupo_id].push(ge.exercicio_id);
+        // linha duplicada do mesmo par grupo↔exercício aparece 1x (a remoção apaga todas)
+        if (!map[ge.grupo_id].includes(ge.exercicio_id)) map[ge.grupo_id].push(ge.exercicio_id);
       });
       setGruposExercicios(map);
       const perfMap: Record<string, string[]> = {};
@@ -296,19 +300,32 @@ const AdminTreinos = ({ onBack }: Props) => {
   };
 
   const handleToggleExercicioInGrupo = async (grupoId: string, exercicioId: string) => {
+    const chave = `${grupoId}:${exercicioId}`;
+    if (toggleEmAndamento.current.has(chave)) return;
+    toggleEmAndamento.current.add(chave);
     const current = gruposExercicios[grupoId] || [];
+    const removendo = current.includes(exercicioId);
+    // otimista: o checkbox do popup e os chips do card respondem na hora (sem recarregar tudo).
+    // Idempotente: o 2º clique rápido enxerga o estado já atualizado e vira a operação inversa,
+    // em vez de inserir o mesmo exercício 2x (bug do "Crucifixo Invertido" duplicado).
+    setGruposExercicios((prev) => {
+      const arr = (prev[grupoId] || []).filter((id) => id !== exercicioId);
+      return { ...prev, [grupoId]: removendo ? arr : [...arr, exercicioId] };
+    });
     try {
-      if (current.includes(exercicioId)) {
+      if (removendo) {
         const { error } = await supabase.from("tb_grupos_exercicios").delete().eq("grupo_id", grupoId).eq("exercicio_id", exercicioId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("tb_grupos_exercicios").insert({ grupo_id: grupoId, exercicio_id: exercicioId, ordem: current.length });
         if (error) throw error;
       }
-      toast.success("Atualizado.");
-      await loadData(true);
+      toast.success(removendo ? "Removido do treino." : "Adicionado ao treino.");
     } catch (err: any) {
-      toast.error("Erro ao atualizar grupo: " + (err?.message || "tente novamente"));
+      toast.error("Erro ao atualizar treino: " + (err?.message || "tente novamente"));
+      await loadData(true); // reverte pro estado real do servidor
+    } finally {
+      toggleEmAndamento.current.delete(chave);
     }
   };
 
@@ -546,10 +563,9 @@ const AdminTreinos = ({ onBack }: Props) => {
               const membros = pastasDoGrupo[g.id] || [];
               return pastaAberta ? membros.includes(pastaAberta.id) : membros.length === 0;
             }).map((g) => {
-              const isEditing = editingGrupo === g.id;
               const exIds = gruposExercicios[g.id] || [];
               return (
-                <div key={g.id} className="result-card border-muted-foreground/20">
+                <div key={g.id} className="result-card border-muted-foreground/20" data-admin-treino={g.id}>
                   <div className="flex items-center justify-between mb-3 gap-2">
                     <p className="font-heading text-foreground flex-1 min-w-0 truncate">{g.nome}</p>
                     <div className="flex items-center gap-1 shrink-0">
@@ -594,38 +610,26 @@ const AdminTreinos = ({ onBack }: Props) => {
                           </div>
                         );
                       })()}
-                      <button type="button" onClick={() => setEditingGrupo(isEditing ? null : g.id)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
-                        {isEditing ? <X size={14} /> : <Edit2 size={14} />}
+                      <button type="button" onClick={() => setEditingGrupo(g.id)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors" title="Editar exercícios do treino" data-admin-editar-treino={g.id}>
+                        <Edit2 size={14} />
                       </button>
-                      <button type="button" onClick={() => handleDeleteGrupo(g.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
+                      <button type="button" onClick={() => handleDeleteGrupo(g.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Excluir treino" data-admin-excluir-treino={g.id}>
                         <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
-                  {isEditing ? (
-                    <div className="space-y-1 max-h-60 overflow-y-auto">
-                      {exercicios.map((ex) => (
-                        <label key={ex.id} className="flex items-center gap-2 py-1 cursor-pointer">
-                          <input type="checkbox" checked={exIds.includes(ex.id)} onChange={() => handleToggleExercicioInGrupo(g.id, ex.id)} className="accent-primary" />
-                          <span className="text-sm font-body text-foreground">{ex.emoji} {ex.nome}</span>
-                          <span className="text-[10px] text-muted-foreground font-body ml-auto">{ex.grupo_muscular}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {exIds.length === 0 ? (
-                        <span className="text-xs text-muted-foreground font-body">Nenhum exercício</span>
-                      ) : (
-                        exIds.map((eid) => {
-                          const ex = exercicios.find((e) => e.id === eid);
-                          return ex ? (
-                            <span key={eid} className="text-xs bg-secondary text-foreground px-2 py-1 font-body">{ex.emoji} {ex.nome}</span>
-                          ) : null;
-                        })
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-1" data-admin-chips={g.id}>
+                    {exIds.length === 0 ? (
+                      <span className="text-xs text-muted-foreground font-body">Nenhum exercício</span>
+                    ) : (
+                      exIds.map((eid) => {
+                        const ex = exercicios.find((e) => e.id === eid);
+                        return ex ? (
+                          <span key={eid} className="text-xs bg-secondary text-foreground px-2 py-1 font-body">{ex.emoji} {ex.nome}</span>
+                        ) : null;
+                      })
+                    )}
+                  </div>
                   <div className="mt-4 pt-3 border-t border-muted-foreground/10">
                     <button
                       type="button"
@@ -675,6 +679,13 @@ const AdminTreinos = ({ onBack }: Props) => {
                 </div>
               );
             })}
+            <ModalExerciciosGrupoAdmin
+              grupo={grupos.find((g) => g.id === editingGrupo) ?? null}
+              exercicios={exercicios}
+              idsNoTreino={editingGrupo ? gruposExercicios[editingGrupo] || [] : []}
+              onToggle={(exId) => (editingGrupo ? handleToggleExercicioInGrupo(editingGrupo, exId) : undefined)}
+              onOpenChange={(aberto) => { if (!aberto) setEditingGrupo(null); }}
+            />
           </div>
         ) : tab === "biblioteca" ? (
           <div className="space-y-4">
