@@ -194,6 +194,17 @@ const tb_exercicio_comentarios = new Table({
   updated_at: column.text,
 });
 
+// Nº de séries por treino configurado pelo admin (padrão 3 quando não há linha)
+const tb_series_padrao_usuario = new Table({
+  user_id: column.text,
+  grupo_id: column.text,
+  grupo_usuario_id: column.text,
+  exercicio_id: column.text,
+  exercicio_usuario_id: column.text,
+  num_series: column.integer,
+  updated_at: column.text,
+});
+
 export const AppSchema = new Schema({
   tb_grupos_treino,
   tb_exercicios,
@@ -208,6 +219,7 @@ export const AppSchema = new Schema({
   physiq_profiles,
   exercicio_ordem_usuario,
   exercicio_substituicao_usuario,
+  tb_series_padrao_usuario,
   tb_grupos_treino_usuario,
   tb_exercicios_usuario,
   tb_grupos_exercicios_usuario,

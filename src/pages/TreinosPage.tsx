@@ -19,6 +19,7 @@ import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
 import { downloadAndInstall } from "@/lib/apkUpdater";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
+import { chaveTreino, estruturaSeriesPadrao, mapaSeriesPadrao, numSeriesPadrao, numerosParaCompletar, type SeriePadraoRow } from "@/lib/seriesPadrao";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
 import { aplicarSubstituicoes, exerciciosRemovidos, type ExercicioAlvo, type ItemRemovido, type Substituicao } from "@/lib/substituicaoExercicio";
 import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots";
@@ -76,6 +77,9 @@ interface GrupoExercicio {
     grupo_muscular: string;
     emoji: string;
     tipo?: string;
+    imagem_url?: string | null;
+    subgrupo?: string | null;
+    dica?: string | null;
   };
 }
 
@@ -575,6 +579,14 @@ const TreinosPage = () => {
     [userId, selectedDate]
   );
 
+  // Nº de séries por treino configurado pelo admin (sem linha = 3)
+  const { data: seriesPadraoRows } = useQuery<SeriePadraoRow>(
+    `SELECT grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series
+     FROM tb_series_padrao_usuario WHERE user_id = ?`,
+    [userId]
+  );
+  const seriesPadraoMap = useMemo(() => mapaSeriesPadrao(seriesPadraoRows), [seriesPadraoRows]);
+
   // Helper: retorna a lista de slots de treino do dia
   const getSlotsForDate = useCallback((d: Date): DiaSlot[] => {
     const dk = getLocalDateKey(d);
@@ -668,9 +680,13 @@ const TreinosPage = () => {
   const overrideVazio = selectedSlots.length === 1 && selectedSlots[0].overrideVazio;
   // Lista plana de todos os exercícios do dia (com slot_idx anexado)
   const selectedExercicios = useMemo(
-    () => selectedSlots.flatMap((s) => s.exercicios.map((ex) => ({ ...ex, _slot_idx: s.slot_idx }))),
+    () => selectedSlots.flatMap((s) => s.exercicios.map((ex) => ({
+      ...ex,
+      _slot_idx: s.slot_idx,
+      _grupo_key: s.grupo ? chaveTreino(s.grupoPessoal ? null : s.grupo.id, s.grupoPessoal ? s.grupo.id : null) : null,
+    }))),
     [selectedSlots]
-  ) as (GrupoExercicio & { _slot_idx: number })[];
+  ) as (GrupoExercicio & { _slot_idx: number; _grupo_key: string | null })[];
 
   // Atualiza séries quando os dados reativos do PowerSync mudam
   useEffect(() => {
@@ -719,6 +735,21 @@ const TreinosPage = () => {
               pace_segundos_km: s.pace_segundos_km ?? undefined,
             });
           });
+          // O admin (ou o próprio aluno, em outro aparelho) subiu o número hoje: completa com séries
+          // vazias até o alvo, ao vivo. Séries salvas nunca somem por redução do número.
+          const alvoHoje = numSeriesPadrao(seriesPadraoMap, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null);
+          for (const n of numerosParaCompletar(saved.map((s: { numero_serie: number }) => Number(s.numero_serie)), alvoHoje)) {
+            allSeries.push({
+              exercicio_id: exId,
+              exercicio_usuario_id: exUsuarioId,
+              slot_idx: slot,
+              numero_serie: n,
+              peso: 0,
+              reps: 10,
+              concluida: false,
+              salva: false,
+            });
+          }
         } else {
           // Cancela se um buildSeries mais recente já iniciou
           if (currentBuildId !== buildSeriesIdRef.current) return;
@@ -742,32 +773,21 @@ const TreinosPage = () => {
           const pesoSugerido = (numeroSerie: number, pesoUltimo: number) =>
             pesosAcademia ? (pesosAcademia.get(numeroSerie) ?? 0) : pesoUltimo;
 
-          if (ultimo && ultimo.length > 0) {
-            (ultimo as any[]).forEach((s) => {
-              allSeries.push({
-                exercicio_id: exId,
-                exercicio_usuario_id: exUsuarioId,
-                slot_idx: slot,
-                numero_serie: s.numero_serie,
-                peso: pesoSugerido(s.numero_serie, s.peso ?? 0),
-                reps: s.reps ?? 10,
-                concluida: false,
-                salva: false,
-              });
+          // Quantidade = nº configurado pelo admin pro exercício, senão o geral do treino (padrão 3), NÃO a
+          // estrutura do último treino (1 série feita ontem virava 1 série hoje). Peso/reps por
+          // número continuam vindo do último treino quando existir.
+          const alvo = numSeriesPadrao(seriesPadraoMap, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null);
+          for (const s of estruturaSeriesPadrao(alvo, (ultimo as any[]) || [])) {
+            allSeries.push({
+              exercicio_id: exId,
+              exercicio_usuario_id: exUsuarioId,
+              slot_idx: slot,
+              numero_serie: s.numero_serie,
+              peso: pesoSugerido(s.numero_serie, s.pesoUltimo),
+              reps: s.reps,
+              concluida: false,
+              salva: false,
             });
-          } else {
-            for (let i = 1; i <= 3; i++) {
-              allSeries.push({
-                exercicio_id: exId,
-                exercicio_usuario_id: exUsuarioId,
-                slot_idx: slot,
-                numero_serie: i,
-                peso: pesoSugerido(i, 0),
-                reps: 10,
-                concluida: false,
-                salva: false,
-              });
-            }
           }
         }
       }
@@ -811,7 +831,7 @@ const TreinosPage = () => {
     };
 
     buildSeries();
-  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino, academiaEfetiva, db]);
+  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino, academiaEfetiva, db, seriesPadraoMap]);
 
   const isSlotConcluido = useCallback(
     (dk: string, slot: number) => concluidosSet.has(`${dk}|${slot}`),

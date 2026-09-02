@@ -1,9 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AdminVolumeSemanal from "./AdminVolumeSemanal";
 import { indiceRotacao, segundaDaSemana } from "@/lib/semanaSlots";
+import ModalSeriesTreino from "./admin/ModalSeriesTreino";
+import {
+  SERIES_PADRAO_DEFAULT, chaveExercicio, chaveTreino, clampSeries, mapaSeriesPadrao, numSeriesPadrao, temSeriesProprias,
+  type ExercicioTreino, type SeriePadraoRow,
+} from "@/lib/seriesPadrao";
 
 interface Props { userId: string }
 
@@ -59,6 +64,15 @@ export default function AdminSemanaUsuario({ userId }: Props) {
   const [aberto, setAberto] = useState<string | null>(null);
   // fluxo "adicionar treino extra" (por dia aberto)
   const [extraNovo, setExtraNovo] = useState<{ dia: string; key: string; atrelar: "todos" | "um"; atrelado: string } | null>(null);
+  // séries por treino/exercício (linhas da tabela; sem linha = padrão 3) + popup "Séries" do treino aberto
+  const [seriesRows, setSeriesRows] = useState<SeriePadraoRow[]>([]);
+  const [modalSeries, setModalSeries] = useState<GrupoDisp | null>(null);
+  // exercícios de cada treino (vêm no get → popup abre na hora); key do treino → lista
+  const [exerciciosPorTreino, setExerciciosPorTreino] = useState<Record<string, ExercicioTreino[]>>({});
+  const [salvandoSeries, setSalvandoSeries] = useState(false);
+  // gravação em voo + recarga do Realtime adiada (senão o evento da 1ª gravação sobrescreve o valor otimista da 2ª)
+  const salvandoRef = useRef(false);
+  const recargaPendenteRef = useRef(false);
 
   // sub-aba derivada da URL (?wt=) — F5 mantém a aba, padrão do AdminTreinos
   const [searchParams, setSearchParams] = useSearchParams();
@@ -99,12 +113,43 @@ export default function AdminSemanaUsuario({ userId }: Props) {
       const cfg: Record<string, DiaConfigRow> = {};
       ((data?.diasConfig as DiaConfigRow[]) || []).forEach((c) => { cfg[c.dia_semana] = c; });
       setDiasConfig(cfg);
+      setSeriesRows((data?.seriesPadrao as SeriePadraoRow[]) || []);
+      setExerciciosPorTreino((data?.exerciciosPorTreino as Record<string, ExercicioTreino[]>) || {});
     } catch {
       toast.error("Erro ao carregar a semana do usuário.");
     } finally { setLoading(false); }
   }, [userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Tempo real: o aluno adiciona/remove série no app → a linha dele muda → o popup "Séries"
+  // atualiza sem recarregar (Realtime do Supabase, filtrado pelo aluno; RLS admin permite ler).
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const recarregar = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(async () => {
+        if (salvandoRef.current) { recargaPendenteRef.current = true; return; }
+        const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { action: "get", userId } });
+        if (!error && data?.seriesPadrao) setSeriesRows(data.seriesPadrao as SeriePadraoRow[]);
+      }, 250);
+    };
+    const canal = supabase
+      .channel(`series-padrao-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: DB_SCHEMA, table: "tb_series_padrao_usuario", filter: `user_id=eq.${userId}` },
+        recarregar,
+      )
+      .subscribe((status, err) => {
+        // visível no console: SUBSCRIBED = ao vivo; CHANNEL_ERROR/TIMED_OUT = sem tempo real (cai pro reload manual)
+        console.info("[realtime series-padrao]", status, err?.message ?? "");
+      });
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(canal);
+    };
+  }, [userId]);
 
   const toggle = async (dia: string, grupo: GrupoDisp) => {
     const k = keyOf(grupo);
@@ -165,6 +210,105 @@ export default function AdminSemanaUsuario({ userId }: Props) {
       await load();
     } finally { setSavingDia(null); }
   };
+
+  const mapaSeries = useMemo(() => mapaSeriesPadrao(seriesRows), [seriesRows]);
+  const geralDe = (g: GrupoDisp): number => numSeriesPadrao(mapaSeries, keyOf(g));
+  const valorDe = (g: GrupoDisp, ex: ExercicioTreino): number =>
+    numSeriesPadrao(mapaSeries, keyOf(g), ex.exercicio_id, ex.exercicio_usuario_id);
+  const temProprio = (g: GrupoDisp, ex: ExercicioTreino): boolean =>
+    temSeriesProprias(mapaSeries, keyOf(g), ex.exercicio_id, ex.exercicio_usuario_id);
+
+  /** recarrega só as linhas de séries (usado pra reverter quando uma gravação falha) */
+  const recarregarSeries = async () => {
+    const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { action: "get", userId } });
+    if (!error && data?.seriesPadrao) setSeriesRows(data.seriesPadrao as SeriePadraoRow[]);
+  };
+
+  /** abre o popup "Séries" — exercícios já vieram no get; busca só se faltarem (fallback) */
+  const abrirSeries = async (g: GrupoDisp) => {
+    setModalSeries(g);
+    const k = keyOf(g);
+    if (exerciciosPorTreino[k]) return;
+    const { data, error } = await supabase.functions.invoke("admin-semana-treinos", {
+      body: { action: "exerciciosTreino", userId, ...idsFromKey(k) },
+    });
+    if (error || data?.error) {
+      toast.error("Erro ao carregar os exercícios do treino.");
+      setExerciciosPorTreino((prev) => ({ ...prev, [k]: [] }));
+      return;
+    }
+    setExerciciosPorTreino((prev) => ({ ...prev, [k]: (data?.exercicios as ExercicioTreino[]) || [] }));
+  };
+
+  const rowDoTreino = (r: SeriePadraoRow): string | null => chaveTreino(r.grupo_id, r.grupo_usuario_id);
+  const rowDoExercicio = (r: SeriePadraoRow): string | null => chaveExercicio(r.exercicio_id, r.exercicio_usuario_id);
+
+  /** grava na edge com estado otimista; se falhar, avisa e recarrega do servidor */
+  const gravarSeries = async (body: Record<string, unknown>, otimista: (rows: SeriePadraoRow[]) => SeriePadraoRow[], erro: string) => {
+    setSeriesRows(otimista);
+    setSalvandoSeries(true);
+    salvandoRef.current = true;
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { userId, ...body } });
+      if (error || data?.error) throw error || new Error(String(data.error));
+    } catch {
+      toast.error(erro);
+      await recarregarSeries();
+    } finally {
+      salvandoRef.current = false;
+      setSalvandoSeries(false);
+      if (recargaPendenteRef.current) {
+        recargaPendenteRef.current = false;
+        void recarregarSeries();
+      }
+    }
+  };
+
+  /** − / + de um exercício: número próprio dele (1 a 10) */
+  const alterarSeriesExercicio = (g: GrupoDisp, ex: ExercicioTreino, delta: 1 | -1) => {
+    const atual = valorDe(g, ex);
+    const novo = clampSeries(atual + delta);
+    if (novo === atual) return;
+    const k = keyOf(g);
+    const exKey = chaveExercicio(ex.exercicio_id, ex.exercicio_usuario_id);
+    const ids = idsFromKey(k);
+    void gravarSeries(
+      { action: "setSeriesPadrao", ...ids, exercicio_id: ex.exercicio_id, exercicio_usuario_id: ex.exercicio_usuario_id, num_series: novo },
+      (rows) => [
+        ...rows.filter((r) => !(rowDoTreino(r) === k && rowDoExercicio(r) === exKey)),
+        { grupo_id: ids.grupo_id ?? null, grupo_usuario_id: ids.grupo_usuario_id ?? null, exercicio_id: ex.exercicio_id, exercicio_usuario_id: ex.exercicio_usuario_id, num_series: novo },
+      ],
+      "Erro ao salvar o número de séries do exercício.",
+    );
+  };
+
+  /** "Aplicar a todos": vira o geral do treino e apaga os números próprios */
+  const aplicarSeriesTodos = (g: GrupoDisp, n: number) => {
+    const k = keyOf(g);
+    const ids = idsFromKey(k);
+    const valor = clampSeries(n);
+    void gravarSeries(
+      { action: "aplicarSeriesTreino", ...ids, num_series: valor },
+      (rows) => [
+        ...rows.filter((r) => rowDoTreino(r) !== k),
+        { grupo_id: ids.grupo_id ?? null, grupo_usuario_id: ids.grupo_usuario_id ?? null, exercicio_id: null, exercicio_usuario_id: null, num_series: valor },
+      ],
+      "Erro ao aplicar as séries ao treino.",
+    );
+  };
+
+  /** badge "Séries" ao lado do treino — abre o popup com os exercícios dele */
+  const BadgeSeries = ({ g }: { g: GrupoDisp }) => (
+    <button
+      type="button"
+      onClick={() => void abrirSeries(g)}
+      title="Séries de cada exercício deste treino"
+      data-admin-series-treino={keyOf(g)}
+      className="shrink-0 text-[10px] font-body uppercase tracking-wider rounded px-1.5 py-0.5 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+    >
+      Séries
+    </button>
+  );
 
   const nomeDoKey = (k: string | null): string => {
     if (!k) return "";
@@ -263,8 +407,9 @@ export default function AdminSemanaUsuario({ userId }: Props) {
                       </>
                     ) : (
                       sel.map((g) => (
-                        <span key={g.id} className="text-sm font-body text-foreground">
-                          {g.nome}{g.tipo === "pessoal" ? " (pessoal)" : ""}
+                        <span key={g.id} className="flex items-center gap-2 text-sm font-body text-foreground">
+                          <span className="truncate">{g.nome}{g.tipo === "pessoal" ? " (pessoal)" : ""}</span>
+                          <BadgeSeries g={g} />
                         </span>
                       ))
                     )}
@@ -278,10 +423,13 @@ export default function AdminSemanaUsuario({ userId }: Props) {
                     {grupos.map((g) => {
                       const checked = ordemDia[d.code]?.includes(keyOf(g)) ?? false;
                       return (
-                        <label key={g.id} className="flex items-center gap-2 text-sm font-body cursor-pointer">
-                          <input type="checkbox" checked={checked} onChange={() => toggle(d.code, g)} className="accent-primary" />
-                          <span>{g.nome}{g.tipo === "pessoal" ? " (pessoal)" : ""}</span>
-                        </label>
+                        <div key={g.id} className="flex items-center gap-2 text-sm font-body">
+                          <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                            <input type="checkbox" checked={checked} onChange={() => toggle(d.code, g)} className="accent-primary" />
+                            <span className="truncate">{g.nome}{g.tipo === "pessoal" ? " (pessoal)" : ""}</span>
+                          </label>
+                          {checked && <BadgeSeries g={g} />}
+                        </div>
                       );
                     })}
 
@@ -404,6 +552,17 @@ export default function AdminSemanaUsuario({ userId }: Props) {
       )}
       </>
       )}
+      <ModalSeriesTreino
+        treino={modalSeries}
+        exercicios={modalSeries ? exerciciosPorTreino[keyOf(modalSeries)] ?? null : null}
+        geral={modalSeries ? geralDe(modalSeries) : SERIES_PADRAO_DEFAULT}
+        valorDe={(ex) => (modalSeries ? valorDe(modalSeries, ex) : SERIES_PADRAO_DEFAULT)}
+        temProprio={(ex) => (modalSeries ? temProprio(modalSeries, ex) : false)}
+        onAlterarExercicio={(ex, delta) => { if (modalSeries) alterarSeriesExercicio(modalSeries, ex, delta); }}
+        onAplicarTodos={(n) => { if (modalSeries) aplicarSeriesTodos(modalSeries, n); }}
+        salvando={salvandoSeries}
+        onOpenChange={(aberto) => { if (!aberto) setModalSeries(null); }}
+      />
     </section>
   );
 }
