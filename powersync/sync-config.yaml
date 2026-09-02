@@ -30,6 +30,7 @@ streams:
       - SELECT * FROM physiq_profiles WHERE id = auth.user_id()
       - SELECT * FROM exercicio_ordem_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM exercicio_substituicao_usuario WHERE user_id = auth.user_id()
+      - SELECT * FROM tb_series_padrao_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM tb_grupos_treino_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM tb_exercicios_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM tb_grupos_exercicios_usuario WHERE user_id = auth.user_id()
