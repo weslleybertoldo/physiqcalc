@@ -10,6 +10,7 @@ import {
   type SemanaRowVolume,
   type StatusVolume,
 } from "@/lib/volumeSemanal";
+import type { SeriePadraoRow } from "@/lib/seriesPadrao";
 
 interface Props { userId: string }
 
@@ -53,6 +54,8 @@ function ultimasSemanas(n: number): Semana[] {
 export default function AdminVolumeSemanal({ userId }: Props) {
   const [semana, setSemana] = useState<SemanaRowVolume[]>([]);
   const [grupos, setGrupos] = useState<Record<string, GrupoVolume>>({});
+  // nº de séries configurado no Treino Diário (badge "Séries") — mesma fonte do treino do aluno
+  const [seriesPadrao, setSeriesPadrao] = useState<SeriePadraoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [aberto, setAberto] = useState<string | null>(null);
 
@@ -78,6 +81,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
         if (!ativo) return;
         setSemana((data?.semana as SemanaRowVolume[]) || []);
         setGrupos((data?.grupos as Record<string, GrupoVolume>) || {});
+        setSeriesPadrao((data?.seriesPadrao as SeriePadraoRow[]) || []);
       } catch {
         if (ativo) toast.error("Erro ao carregar o volume semanal.");
       } finally {
@@ -118,7 +122,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
     return m;
   }, [semana]);
   // default do seletor = treinos marcados na semana
-  const selecionados = treinosSel ?? new Set(freqSemana.keys());
+  const selecionados = useMemo(() => treinosSel ?? new Set(freqSemana.keys()), [treinosSel, freqSemana]);
 
   const volumes = useMemo(() => {
     if (modo === "praticado") return calcularVolumePraticado(praticado[semanaSel] ?? []);
@@ -134,8 +138,8 @@ export default function AdminVolumeSemanal({ userId }: Props) {
         });
       }
     }
-    return calcularVolumeSemanal(rows, grupos);
-  }, [modo, semana, grupos, praticado, semanaSel, selecionados, freqSemana]);
+    return calcularVolumeSemanal(rows, grupos, seriesPadrao);
+  }, [modo, semana, grupos, seriesPadrao, praticado, semanaSel, selecionados, freqSemana]);
   const temPadrao = modo === "programado" && volumes.some((v) => v.detalhes.some((d) => d.seriesEhPadrao));
   const carregando = loading || (modo === "praticado" && loadingPraticado && !praticado[semanaSel]);
 
@@ -211,7 +215,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
 
       <p className="text-xs text-muted-foreground font-body">
         {modo === "programado"
-          ? "Séries semanais programadas por grupo muscular, com base nos treinos selecionados. Séries por exercício = último treino registrado."
+          ? "Séries semanais programadas por grupo muscular, com base nos treinos selecionados. Séries por exercício = nº configurado no Treino Diário (badge Séries), o mesmo que monta o treino do aluno."
           : "Séries CONCLUÍDAS no app na semana escolhida, por grupo muscular."}
         {" "}Faixas científicas MEV–MRV (volume landmarks, RP/Israetel); músculo secundário conta meia série.
       </p>
@@ -231,7 +235,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
             const isOpen = aberto === v.bloco.key;
             const pct = v.landmark ? Math.min(v.total / v.landmark.mrv, 1) * 100 : 0;
             return (
-              <div key={v.bloco.key} className="border border-border rounded-md p-3">
+              <div key={v.bloco.key} className="border border-border rounded-md p-3" data-admin-volume-bloco={v.bloco.key}>
                 <button
                   type="button"
                   onClick={() => setAberto(isOpen ? null : v.bloco.key)}
@@ -241,7 +245,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
                     {v.bloco.emoji} {v.bloco.nome}
                   </span>
                   <span className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-body text-foreground">
+                    <span className="text-sm font-body text-foreground" data-admin-volume-total={v.total}>
                       {formatarSeries(v.total)} séries
                     </span>
                     <span className={`text-[10px] font-body uppercase tracking-wider rounded px-1.5 py-0.5 ${badge.cls}`}>
@@ -276,7 +280,14 @@ export default function AdminVolumeSemanal({ userId }: Props) {
                 {isOpen && (
                   <div className="flex flex-col gap-1 pl-1 mt-2 border-t border-border pt-2">
                     {v.detalhes.map((d, i) => (
-                      <span key={i} className="text-xs font-body text-foreground">
+                      <span
+                        key={i}
+                        className="text-xs font-body text-foreground"
+                        data-admin-volume-detalhe={d.nome}
+                        data-admin-volume-series={d.series}
+                        data-admin-volume-padrao={d.seriesEhPadrao ? "1" : "0"}
+                        data-admin-volume-subtotal={d.subtotal}
+                      >
                         {d.nome} — {formatarSeries(d.series)} {d.series === 1 ? "série" : "séries"}{d.seriesEhPadrao ? "*" : ""}
                         {modo === "programado" ? ` × ${d.vezes}×/sem` : ""}
                         {d.fator !== 1 ? " (secundário ×0,5)" : ""}
@@ -291,8 +302,8 @@ export default function AdminVolumeSemanal({ userId }: Props) {
           })}
 
           {temPadrao && (
-            <p className="text-[10px] text-muted-foreground font-body">
-              * exercício sem treino registrado — considera as 3 séries padrão.
+            <p className="text-[10px] text-muted-foreground font-body" data-admin-volume-nota-padrao>
+              * sem nº configurado no Treino Diário — considera as 3 séries padrão do app.
             </p>
           )}
         </>

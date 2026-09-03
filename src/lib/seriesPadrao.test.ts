@@ -8,6 +8,7 @@ import {
   numSeriesPadrao,
   numerosParaCompletar,
   temSeriesProprias,
+  temSeriesConfiguradas,
   SERIES_PADRAO_DEFAULT,
 } from "./seriesPadrao";
 
@@ -87,6 +88,17 @@ describe("mapaSeriesPadrao + numSeriesPadrao", () => {
     expect(temSeriesProprias(mapa, "catalogo:g1", "e1", null)).toBe(true);
     expect(temSeriesProprias(mapa, "catalogo:g1", "e2", null)).toBe(false);
     expect(temSeriesProprias(mapa, "catalogo:g1", null, null)).toBe(false);
+  });
+
+  it("temSeriesConfiguradas: linha própria OU geral do treino; sem nada (ou sem treino) = padrão", () => {
+    expect(temSeriesConfiguradas(mapa, "catalogo:g1", "e1", null)).toBe(true); // própria
+    expect(temSeriesConfiguradas(mapa, "catalogo:g1", "e2", null)).toBe(true); // só geral do treino
+    expect(temSeriesConfiguradas(mapa, "catalogo:g1")).toBe(true);
+    expect(temSeriesConfiguradas(mapa, "pessoal:p1", null, "u1")).toBe(true);
+    expect(temSeriesConfiguradas(mapa, "pessoal:p1", "e9", null)).toBe(false); // treino pessoal sem geral
+    expect(temSeriesConfiguradas(mapa, "catalogo:g3")).toBe(false); // linha ignorada (num_series null)
+    expect(temSeriesConfiguradas(mapa, "catalogo:inexistente", "e1", null)).toBe(false);
+    expect(temSeriesConfiguradas(mapa, null, "e1", null)).toBe(false);
   });
 });
 

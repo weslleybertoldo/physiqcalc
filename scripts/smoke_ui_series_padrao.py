@@ -104,8 +104,15 @@ def abrir_popup(pg):
     return dlg
 
 
-def esperar_salvo(pg):
-    pg.wait_for_function("() => !(document.querySelector('[role=dialog]')?.textContent || '').includes('salvando')", timeout=20000)
+def esperar_banco(pg, pred, tentativas=75):
+    """espera o banco (fonte da verdade) refletir o esperado — a gravação enfileirada terminou. Sem depender de UI."""
+    ultimo = None
+    for _ in range(tentativas):
+        ultimo = linhas_banco()
+        if pred(ultimo):
+            return ultimo
+        pg.wait_for_timeout(400)
+    return ultimo
 
 
 def valor_exercicio(dlg, exid):
@@ -120,7 +127,7 @@ def aplicar_todos(pg, dlg, n):
     pg.wait_for_function("v => document.querySelector('[data-admin-series-geral-valor]')?.textContent.trim() === String(v)", arg=n, timeout=10000)
     dlg.locator("button", has_text="Aplicar a todos").click()
     pg.wait_for_timeout(300)
-    esperar_salvo(pg)
+    esperar_banco(pg, lambda b: b.get(None) == n)
 
 
 # estado limpo antes de começar
@@ -169,7 +176,7 @@ with sync_playwright() as pw:
         # --- 3. próprio do Tríceps Testa = 5
         dlg.locator("button[aria-label='Mais uma série em Tríceps Testa']").click()
         pg.wait_for_timeout(300)
-        esperar_salvo(pg)
+        esperar_banco(pg, lambda b: b.get(TESTA_ID) == 5)
         pg.wait_for_function(f"() => document.querySelector(\"[data-admin-series-exercicio='ex:{TESTA_ID}'] [data-admin-series-exercicio-valor]\")?.textContent.trim() === '5'", timeout=15000)
         check(linhas_banco() == {None: 4, TESTA_ID: 5}, f"3. banco: geral 4 + Tríceps Testa 5 (visto: {linhas_banco()})")
         check("PRÓPRIO" in dlg.locator(f"[data-admin-series-exercicio='ex:{TESTA_ID}']").inner_text().upper(), "3. Tríceps Testa marcado como 'próprio'")
@@ -209,7 +216,8 @@ with sync_playwright() as pw:
         for _ in range(2):
             dlg_adm.locator(f"button[aria-label='Mais uma série em Tríceps Testa']").click()
             adm.wait_for_timeout(300)
-            esperar_salvo(adm)
+            alvo_adm = valor_exercicio(dlg_adm, TESTA_ID)  # valor otimista na tela do admin
+            esperar_banco(adm, lambda b, a=alvo_adm: b.get(TESTA_ID) == a)
         check(valor_exercicio(dlg_adm, TESTA_ID) == 8, "4c. admin: Testa = 8")
         esperar_series(pg, {"*": 4, TESTA_ID: 8})
         check(True, "4c. app: Testa mostra S1..S8 ao vivo (dia com séries salvas completou até o alvo)")
@@ -251,7 +259,7 @@ with sync_playwright() as pw:
     finally:
         sql(f"DELETE FROM {SCHEMA}.tb_series_padrao_usuario WHERE user_id='{USER_ID}'")
         # a série adicionada pelo "aluno" em 4b ficou salva em tb_treino_series (hoje) → apaga
-        sql(f"DELETE FROM {SCHEMA}.tb_treino_series WHERE user_id='{USER_ID}' AND data_treino='2026-09-02'")
+        sql(f"DELETE FROM {SCHEMA}.tb_treino_series WHERE user_id='{USER_ID}' AND data_treino=current_date")
         check(linhas_banco() == {}, "7. limpeza: config e séries de hoje do usuário de teste apagadas")
         nav.close()
 

@@ -102,6 +102,15 @@ export const temSeriesProprias = (
   return !!treino && !!ex && mapa.has(chaveSeries(treino, ex));
 };
 
+/** Há nº configurado pro exercício (próprio) OU pro treino (geral)? false = vale o padrão 3 */
+export const temSeriesConfiguradas = (
+  mapa: Map<string, number>,
+  treino: string | null | undefined,
+  exercicioId?: string | null,
+  exercicioUsuarioId?: string | null,
+): boolean =>
+  !!treino && (temSeriesProprias(mapa, treino, exercicioId, exercicioUsuarioId) || mapa.has(treino));
+
 /**
  * Números de série vazias a acrescentar pra um exercício que JÁ tem séries salvas hoje chegar
  * ao alvo (o admin subiu o número): preenche as lacunas a partir do 1 (a salva pode ser só a S6,

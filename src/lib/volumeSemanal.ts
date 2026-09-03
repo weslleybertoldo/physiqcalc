@@ -1,7 +1,10 @@
 /**
  * Volume semanal de treino por bloco muscular.
  *
- * Séries por exercício = último treino registrado (fallback 3, o padrão do app).
+ * PROGRAMADO: séries por exercício = nº configurado pelo admin no Treino Diário (badge "Séries":
+ * linha do EXERCÍCIO > GERAL do treino > padrão 3) — o mesmo alvo que monta o treino do aluno
+ * (`seriesPadrao.ts`), por isso o mesmo exercício pode contar diferente em treinos diferentes.
+ * PRATICADO: séries concluídas de verdade no período.
  * Músculo primário conta 1 série; secundários (após a "/") contam 0,5 cada
  * (volume indireto). Faixas por bloco = volume landmarks MEV/MRV
  * (Renaissance Periodization / Israetel); cardio e "outros" não têm faixa.
@@ -12,8 +15,15 @@ import {
   blocoDoGrupoMuscular,
   blocoDeMusculo,
 } from "./gruposMusculares";
+import {
+  SERIES_PADRAO_DEFAULT,
+  mapaSeriesPadrao,
+  numSeriesPadrao,
+  temSeriesConfiguradas,
+  type SeriePadraoRow,
+} from "./seriesPadrao";
 
-export const SERIES_PADRAO = 3;
+export const SERIES_PADRAO = SERIES_PADRAO_DEFAULT;
 
 export interface LandmarkVolume {
   /** MEV — mínimo de séries/semana pra crescer */
@@ -66,13 +76,13 @@ export function blocosSecundarios(grupoMuscular: string): string[] {
   return out;
 }
 
+/** Exercício de um treino, como a edge `volume` devolve (já com a troca definitiva do aluno aplicada) */
 export interface ExercicioVolume {
   id: string;
   isPessoal: boolean;
   nome: string;
   grupo_muscular: string;
   tipo: string | null;
-  seriesUltimo: number | null;
 }
 
 export interface GrupoVolume {
@@ -88,10 +98,11 @@ export interface SemanaRowVolume {
 
 export interface DetalheExercicio {
   nome: string;
-  /** séries por sessão (último treino ou padrão) */
+  /** séries por sessão (nº configurado no Treino Diário, ou padrão 3) */
   series: number;
+  /** true = sem nº configurado (nem próprio nem geral do treino) → vale o padrão 3 */
   seriesEhPadrao: boolean;
-  /** quantas vezes o exercício aparece na semana */
+  /** quantas vezes o exercício aparece na semana com esse nº de séries */
   vezes: number;
   /** 1 = primário, 0.5 = secundário */
   fator: number;
@@ -106,6 +117,7 @@ export interface VolumeBloco {
   detalhes: DetalheExercicio[];
 }
 
+/** Chave do treino, igual à do admin e à de `seriesPadrao.chaveTreino`: "catalogo:<id>" | "pessoal:<id>" */
 const keyOfRow = (r: SemanaRowVolume) =>
   r.grupo_usuario_id ? `pessoal:${r.grupo_usuario_id}` : `catalogo:${r.grupo_id}`;
 
@@ -118,9 +130,13 @@ interface Ocorrencia {
   seriesEhPadrao: boolean;
 }
 
-/** Agrega ocorrências de exercícios em blocos musculares (primário 1, secundário 0,5) */
+/**
+ * Agrega ocorrências de exercícios em blocos musculares (primário 1, secundário 0,5).
+ * Ocorrências do mesmo exercício com o MESMO nº de séries viram uma linha ("× N×/sem");
+ * com nº diferente (treinos configurados diferente) ficam em linhas separadas, pra soma bater com o que se lê.
+ */
 function agregarOcorrencias(ocorrencias: Ocorrencia[]): VolumeBloco[] {
-  // por bloco -> por exercício (id+fator) -> detalhe acumulado
+  // por bloco -> por exercício (id+fator+séries) -> detalhe acumulado
   const acc = new Map<string, Map<string, DetalheExercicio>>();
 
   for (const ex of ocorrencias) {
@@ -131,11 +147,12 @@ function agregarOcorrencias(ocorrencias: Ocorrencia[]): VolumeBloco[] {
     for (const { blocoKey, fator } of alvos) {
       const porEx = acc.get(blocoKey) ?? new Map<string, DetalheExercicio>();
       acc.set(blocoKey, porEx);
-      const exKey = `${ex.isPessoal ? "p" : "c"}:${ex.id}:${fator}`;
+      const exKey = `${ex.isPessoal ? "p" : "c"}:${ex.id}:${fator}:${ex.series}`;
       const atual = porEx.get(exKey);
       if (atual) {
         atual.vezes += 1;
         atual.subtotal = atual.series * atual.fator * atual.vezes;
+        atual.seriesEhPadrao = atual.seriesEhPadrao && ex.seriesEhPadrao;
       } else {
         porEx.set(exKey, {
           nome: ex.nome,
@@ -163,23 +180,32 @@ function agregarOcorrencias(ocorrencias: Ocorrencia[]): VolumeBloco[] {
   });
 }
 
-/** Soma o volume semanal PROGRAMADO por bloco (semana recorrente + exercícios dos grupos) */
+/**
+ * Soma o volume semanal PROGRAMADO por bloco (semana recorrente + exercícios dos grupos).
+ * `seriesPadrao` = linhas de `tb_series_padrao_usuario` do aluno (as mesmas do badge "Séries" do
+ * Treino Diário); sem linha pro exercício nem geral do treino vale o padrão 3 (marcado `seriesEhPadrao`).
+ */
 export function calcularVolumeSemanal(
   semana: SemanaRowVolume[],
   grupos: Record<string, GrupoVolume>,
+  seriesPadrao?: SeriePadraoRow[] | null,
 ): VolumeBloco[] {
+  const mapa = mapaSeriesPadrao(seriesPadrao);
   const ocorrencias: Ocorrencia[] = [];
   for (const row of semana) {
-    const grupo = grupos[keyOfRow(row)];
+    const treino = keyOfRow(row);
+    const grupo = grupos[treino];
     if (!grupo) continue;
     for (const ex of grupo.exercicios) {
+      const exercicioId = ex.isPessoal ? null : ex.id;
+      const exercicioUsuarioId = ex.isPessoal ? ex.id : null;
       ocorrencias.push({
         id: ex.id,
         isPessoal: ex.isPessoal,
         nome: ex.nome,
         grupo_muscular: ex.grupo_muscular,
-        series: ex.seriesUltimo ?? SERIES_PADRAO,
-        seriesEhPadrao: ex.seriesUltimo == null,
+        series: numSeriesPadrao(mapa, treino, exercicioId, exercicioUsuarioId),
+        seriesEhPadrao: !temSeriesConfiguradas(mapa, treino, exercicioId, exercicioUsuarioId),
       });
     }
   }

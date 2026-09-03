@@ -248,11 +248,14 @@ Deno.serve(async (req) => {
 
     if (action === "volume") {
       // extras do alternado ficam fora do volume (decisão: aba Volume não muda)
-      const [semanaRes, disp] = await Promise.all([
+      const [semanaRes, disp, seriesRes] = await Promise.all([
         admin.from("tb_semana_treinos").select("dia_semana, slot_idx, grupo_id, grupo_usuario_id").eq("user_id", userId).eq("extra", false),
         gruposDisponiveis(admin, userId),
+        // nº de séries configurado no Treino Diário (badge "Séries") — o Programado usa a mesma fonte do treino do aluno
+        admin.from("tb_series_padrao_usuario").select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series").eq("user_id", userId),
       ]);
       if (semanaRes.error) throw semanaRes.error;
+      if (seriesRes.error) throw seriesRes.error;
       const semana = (semanaRes.data as any[]) ?? [];
       // TODOS os grupos disponíveis do usuário (não só os da semana) — o front
       // decide quais compõem o volume via seletor "Treino selecionado"
@@ -322,7 +325,8 @@ Deno.serve(async (req) => {
         if (ex) g.exercicios.push({ id: ex.id, isPessoal: !!r.exercicio_usuario_id, nome: ex.nome, grupo_muscular: ex.grupo_muscular ?? "", tipo: ex.tipo ?? null });
       });
 
-      // séries do último treino registrado de cada exercício (fallback null → front usa 3)
+      // LEGADO: séries do último treino registrado (seriesUltimo). O front atual calcula pelo seriesPadrao;
+      // remover este bloco quando o app em produção não ler mais seriesUltimo.
       const unicos = new Map<string, { id: string; isPessoal: boolean }>();
       Object.values(grupos).forEach((g) => g.exercicios.forEach((e) => unicos.set(`${e.isPessoal ? "p" : "c"}:${e.id}`, e)));
       const contagens = new Map<string, number>();
@@ -348,9 +352,17 @@ Deno.serve(async (req) => {
         });
       });
 
-      return new Response(JSON.stringify({ semana, grupos }), {
+      return new Response(JSON.stringify({ semana, grupos, seriesPadrao: seriesRes.data ?? [] }), {
         headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
       });
+    }
+
+    if (action === "getSeriesPadrao") {
+      // só as linhas de séries (leve) — recarga do popup "Séries" após gravação ou evento Realtime
+      const { data, error } = await admin.from("tb_series_padrao_usuario")
+        .select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series").eq("user_id", userId);
+      if (error) throw error;
+      return okJson({ seriesPadrao: data ?? [] }, origin);
     }
 
     if (action === "exerciciosTreino") {

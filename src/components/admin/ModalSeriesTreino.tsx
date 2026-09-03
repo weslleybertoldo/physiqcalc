@@ -24,7 +24,6 @@ interface ConteudoProps {
   onAlterarExercicio: (ex: ExercicioTreino, delta: 1 | -1) => void;
   /** aplica n a todos os exercícios do treino (vira o geral; apaga os números próprios) */
   onAplicarTodos: (n: number) => void;
-  salvando?: boolean;
 }
 
 const btn =
@@ -32,7 +31,7 @@ const btn =
 
 /** Conteúdo do popup (sem o Dialog) — exportado pra teste unitário */
 export const ConteudoSeriesTreino = ({
-  nomeTreino, exercicios, geral, valorDe, temProprio, onAlterarExercicio, onAplicarTodos, salvando = false,
+  nomeTreino, exercicios, geral, valorDe, temProprio, onAlterarExercicio, onAplicarTodos,
 }: ConteudoProps) => {
   // rascunho do "aplicar a todos" — começa no geral e acompanha quando ele muda
   const [rascunho, setRascunho] = useState(geral);
@@ -51,17 +50,16 @@ export const ConteudoSeriesTreino = ({
           Todos os exercícios
         </p>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => setRascunho((v) => clampSeries(v - 1))} disabled={rascunho <= SERIES_PADRAO_MIN || salvando} aria-label="Menos uma série (todos)" className={btn}>
+          <button type="button" onClick={() => setRascunho((v) => clampSeries(v - 1))} disabled={rascunho <= SERIES_PADRAO_MIN} aria-label="Menos uma série (todos)" className={btn}>
             <Minus size={16} />
           </button>
           <span className="min-w-[2ch] text-center font-heading text-2xl text-primary" data-admin-series-geral-valor>{rascunho}</span>
-          <button type="button" onClick={() => setRascunho((v) => clampSeries(v + 1))} disabled={rascunho >= SERIES_PADRAO_MAX || salvando} aria-label="Mais uma série (todos)" className={btn}>
+          <button type="button" onClick={() => setRascunho((v) => clampSeries(v + 1))} disabled={rascunho >= SERIES_PADRAO_MAX} aria-label="Mais uma série (todos)" className={btn}>
             <Plus size={16} />
           </button>
           <button
             type="button"
             onClick={() => onAplicarTodos(rascunho)}
-            disabled={salvando}
             className="ml-auto px-3 py-2 bg-primary text-primary-foreground font-heading text-[10px] uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             Aplicar a todos
@@ -94,11 +92,11 @@ export const ConteudoSeriesTreino = ({
                     <span className="ml-1.5 text-[9px] uppercase tracking-wider text-primary border border-primary/40 px-1 py-0.5 font-heading">próprio</span>
                   )}
                 </span>
-                <button type="button" onClick={() => onAlterarExercicio(ex, -1)} disabled={n <= SERIES_PADRAO_MIN || salvando} aria-label={`Menos uma série em ${ex.nome}`} className={btn}>
+                <button type="button" onClick={() => onAlterarExercicio(ex, -1)} disabled={n <= SERIES_PADRAO_MIN} aria-label={`Menos uma série em ${ex.nome}`} className={btn}>
                   <Minus size={14} />
                 </button>
                 <span className="min-w-[2ch] text-center font-heading text-lg text-foreground" data-admin-series-exercicio-valor>{n}</span>
-                <button type="button" onClick={() => onAlterarExercicio(ex, 1)} disabled={n >= SERIES_PADRAO_MAX || salvando} aria-label={`Mais uma série em ${ex.nome}`} className={btn}>
+                <button type="button" onClick={() => onAlterarExercicio(ex, 1)} disabled={n >= SERIES_PADRAO_MAX} aria-label={`Mais uma série em ${ex.nome}`} className={btn}>
                   <Plus size={14} />
                 </button>
               </div>
@@ -106,7 +104,6 @@ export const ConteudoSeriesTreino = ({
           })}
         </div>
       )}
-      {salvando && <p className="text-[10px] font-body text-muted-foreground mb-2">salvando…</p>}
     </>
   );
 };
