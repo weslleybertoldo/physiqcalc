@@ -32,6 +32,7 @@ streams:
       - SELECT * FROM staging.physiq_profiles WHERE id = auth.user_id()
       - SELECT * FROM staging.exercicio_ordem_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM staging.exercicio_substituicao_usuario WHERE user_id = auth.user_id()
+      - SELECT * FROM staging.tb_series_padrao_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM staging.tb_grupos_treino_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM staging.tb_exercicios_usuario WHERE user_id = auth.user_id()
       - SELECT * FROM staging.tb_grupos_exercicios_usuario WHERE user_id = auth.user_id()

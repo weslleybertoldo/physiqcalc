@@ -8,6 +8,7 @@ import ModalTrocarExercicio from "./ModalTrocarExercicio";
 import ModalRemoverExercicio from "./ModalRemoverExercicio";
 import { toast } from "sonner";
 import type { SerieComMemoria } from "@/pages/TreinosPage";
+import { clampSeries } from "@/lib/seriesPadrao";
 import type { ItemRemovido } from "@/lib/substituicaoExercicio";
 
 interface Exercicio {
@@ -94,7 +95,7 @@ const TreinoDoDia = ({
       const defaultSorted = [...exercicios].sort((a, b) => a.ordem - b.ordem);
 
       try {
-        const ordemUsuario = await db.getAll(
+        const ordemUsuario = await db.getAll<{ exercicio_id: string; posicao: number }>(
           "SELECT exercicio_id, posicao FROM exercicio_ordem_usuario WHERE user_id = ? AND grupo_id = ?",
           [userId, grupoId]
         );
@@ -520,6 +521,40 @@ const TreinoDoDia = ({
     }
   };
 
+  /**
+   * Espelha o total de séries do exercício no nº configurado (tb_series_padrao_usuario, via PowerSync):
+   * o admin vê ao vivo no popup "Séries" e o exercício passa a abrir com esse número nos próximos dias.
+   */
+  const gravarSeriesPadraoExercicio = async (exercicioId: string, exUsuarioId: string | undefined, total: number) => {
+    try {
+      const n = clampSeries(total);
+      const gCol = grupoPessoal ? "grupo_usuario_id" : "grupo_id";
+      const exCol = exUsuarioId ? "exercicio_usuario_id" : "exercicio_id";
+      const exVal = exUsuarioId || exercicioId;
+      const existentes = await db.getAll<{ id: string; num_series: number }>(
+        `SELECT id, num_series FROM tb_series_padrao_usuario WHERE user_id = ? AND ${gCol} = ? AND ${exCol} = ?`,
+        [userId, grupoId, exVal]
+      );
+      const now = new Date().toISOString();
+      if (existentes.length > 0) {
+        if (Number(existentes[0].num_series) === n) return;
+        await db.execute(
+          `UPDATE tb_series_padrao_usuario SET num_series = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+          [n, now, existentes[0].id, userId]
+        );
+      } else {
+        await db.execute(
+          `INSERT INTO tb_series_padrao_usuario
+             (id, user_id, grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series, updated_at)
+           VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
+          [userId, grupoPessoal ? null : grupoId, grupoPessoal ? grupoId : null, exUsuarioId ? null : exercicioId, exUsuarioId ?? null, n, now]
+        );
+      }
+    } catch (e) {
+      console.error("[TreinoDoDia] Erro ao espelhar o nº de séries do exercício:", e);
+    }
+  };
+
   const handleAddSerie = async (exercicioId: string) => {
     const existing = getSeriesForExercicio(exercicioId);
     const last = existing[existing.length - 1];
@@ -535,9 +570,12 @@ const TreinoDoDia = ({
     });
     await upsertSerie(exercicioId, data);
     onSeriesUpdate(prev => [...prev, { exercicio_id: exercicioId, exercicio_usuario_id: exUsuarioId, numero_serie: novoNum, peso, reps, concluida: false, salva: true }]);
+    void gravarSeriesPadraoExercicio(exercicioId, exUsuarioId, existing.length + 1);
   };
 
   const handleRemoveSerie = async (exercicioId: string, numeroSerie: number, isSalva: boolean) => {
+    const totalAntes = getSeriesForExercicio(exercicioId).length;
+    const exUsuarioIdRemocao = series.find(s => s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId)?.exercicio_usuario_id;
     if (isSalva) {
       const serieInfo = series.find(s => s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId);
       const field = serieInfo?.exercicio_usuario_id ? "exercicio_usuario_id" : "exercicio_id";
@@ -577,6 +615,7 @@ const TreinoDoDia = ({
 
       return updated;
     });
+    void gravarSeriesPadraoExercicio(exercicioId, exUsuarioIdRemocao, totalAntes - 1);
   };
 
   const handleConcluir = async () => {
@@ -941,7 +980,7 @@ const SerieRow = React.memo(function SerieRow({
   const [reps, setReps] = useState(serie.reps > 0 ? String(serie.reps) : "");
   const [tempo, setTempo] = useState(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
   const [distancia, setDistancia] = useState(serie.distancia_km ? String(serie.distancia_km) : "");
-  const isConcluida = serie.concluida === true || serie.concluida === 1;
+  const isConcluida = !!serie.concluida; // SQLite pode devolver 1/0 além de true/false
 
   const initializedRef = useRef(false);
   useEffect(() => {
@@ -1015,7 +1054,7 @@ const SerieRow = React.memo(function SerieRow({
           className="ml-auto px-2 py-1 text-xs font-heading uppercase tracking-wider text-classify-green border border-classify-green/50 bg-classify-green/10 hover:bg-classify-green/20 transition-colors flex items-center gap-1 rounded">
           <Check size={12} /> OK
         </button>
-        <button type="button" onClick={onRemove} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+        <button type="button" onClick={onRemove} aria-label="Remover série" title="Remover série" className="p-1 text-muted-foreground hover:text-destructive transition-colors">
           <Minus size={14} />
         </button>
       </div>
@@ -1042,7 +1081,7 @@ const SerieRow = React.memo(function SerieRow({
         className="ml-auto px-2 py-1 text-xs font-heading uppercase tracking-wider text-classify-green border border-classify-green/50 bg-classify-green/10 hover:bg-classify-green/20 transition-colors flex items-center gap-1 rounded">
         <Check size={12} /> OK
       </button>
-      <button type="button" onClick={onRemove} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+      <button type="button" onClick={onRemove} aria-label="Remover série" title="Remover série" className="p-1 text-muted-foreground hover:text-destructive transition-colors">
         <Minus size={14} />
       </button>
     </div>
