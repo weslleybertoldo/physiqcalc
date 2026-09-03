@@ -58,7 +58,9 @@ jobs:
       # CLIENTE por 7 dias. Pings HTTP no /probes/liveness NAO contam (confirmado
       # em docs.powersync.com/resources/usage-and-billing). Por isso fazemos um
       # deploy real das sync rules a cada 4 dias, que conta como atividade e
-      # mantem ambas as instancias provisionadas.
+      # mantem a instancia Production provisionada.
+      # A instancia Development (PowerSync do staging) foi DESLIGADA em 03/09/2026
+      # para aliviar a VM Nano do Supabase (Disk IO); staging usa a Production.
       - name: Deploy sync-config (Production) — mantem instancia ativa
         env:
           PS_ADMIN_TOKEN: ${{ secrets.POWERSYNC_PAT }}
@@ -67,16 +69,3 @@ jobs:
             --instance-id 69cc4d1df69619e9d4834456 \
             --project-id 69cc4d1caaa9a30007b4ec2c \
             --org-id 69cc4bec866ae00007694860 < /dev/null
-
-      # A instância Development é o PowerSync do STAGING (lê o schema staging) —
-      # deploya o sync-config.staging.yaml, NÃO o de prod.
-      - name: Deploy sync-config (Development/staging) — mantem instancia ativa
-        env:
-          PS_ADMIN_TOKEN: ${{ secrets.POWERSYNC_PAT }}
-        run: |
-          cp powersync/sync-config.staging.yaml powersync/sync-config.yaml
-          npx -y powersync@latest deploy sync-config \
-            --instance-id 69cc4d1d8fa42c16d7f6eb27 \
-            --project-id 69cc4d1caaa9a30007b4ec2c \
-            --org-id 69cc4bec866ae00007694860 < /dev/null
-          git checkout -- powersync/sync-config.yaml
