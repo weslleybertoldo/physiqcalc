@@ -11,6 +11,7 @@ import AdminSemanaUsuario from "./AdminSemanaUsuario";
 import AdminRegistrosFotos from "./AdminRegistrosFotos";
 import AdminPagamentosStatus from "./AdminPagamentosStatus";
 import EvolutionSection from "./EvolutionSection";
+import AdminHistoricoMes from "./admin/AdminHistoricoMes";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
 import { classificarGordura } from "@/utils/composicaoCorporal";
@@ -31,6 +32,9 @@ function calcBodyFat3(gender: "male" | "female", soma: number, age: number) {
   return bf > 0 && bf < 100 ? bf : null;
 }
 
+// Abas que auto-salvam ou só leem: não mostram o botão Salvar (que grava o perfil).
+const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["treino", "registros", "historico"]);
+
 const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,6 +47,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
     { key: "registros", label: "Registros" },
     { key: "plano", label: "Plano" },
     { key: "treino", label: "Treino" },
+    { key: "historico", label: "Histórico" },
   ] as const;
   const rawTab = searchParams.get("ct") || "geral";
   const configTab = CONFIG_TABS.some((t) => t.key === rawTab) ? rawTab : "geral";
@@ -639,8 +644,11 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
           {/* Treino Diário (auto-salva) */}
           {configTab === "treino" && <AdminSemanaUsuario userId={userId} />}
 
+          {/* Histórico de treinos do aluno: mesma lista da aba "Histórico de Treinos" do painel, presa neste aluno (filtro mês/ano) */}
+          {configTab === "historico" && <AdminHistoricoMes userId={userId} />}
+
           {/* Save button */}
-          {configTab !== "treino" && configTab !== "registros" && (
+          {!TABS_SEM_SALVAR.has(configTab) && (
           <button
             onClick={handleSave}
             disabled={saving}
