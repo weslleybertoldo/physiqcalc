@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Exercicio {
@@ -19,6 +19,15 @@ interface Props {
 
 const ModalExercicio = ({ exercicio, open, onOpenChange }: Props) => {
   const [imgErro, setImgErro] = useState(false);
+  const [imgCarregada, setImgCarregada] = useState(false);
+  const imagemUrl = exercicio?.imagem_url ?? null;
+
+  // trocou o exercício → recomeça o estado da imagem (erro de um não esconde a do próximo)
+  useEffect(() => {
+    setImgErro(false);
+    setImgCarregada(false);
+  }, [imagemUrl]);
+
   if (!exercicio) return null;
 
   return (
@@ -31,13 +40,24 @@ const ModalExercicio = ({ exercicio, open, onOpenChange }: Props) => {
           </DialogTitle>
         </DialogHeader>
 
-        {exercicio.imagem_url && !imgErro && (
-          <img
-            src={exercicio.imagem_url}
-            alt={exercicio.nome}
-            onError={() => setImgErro(true)}
-            className="w-full rounded-lg border border-muted-foreground/20 object-contain max-h-72 bg-card"
-          />
+        {imagemUrl && !imgErro && (
+          // Área reservada (GIFs do catálogo são 600×400 = 3:2) → sem salto de layout
+          // enquanto baixa; skeleton pulsando até a imagem chegar.
+          <div
+            className="relative w-full aspect-[3/2] max-h-72 overflow-hidden rounded-lg border border-muted-foreground/20 bg-card"
+            data-testid="exercicio-imagem"
+          >
+            {!imgCarregada && <div className="absolute inset-0 animate-pulse bg-muted/60" aria-hidden="true" />}
+            <img
+              src={imagemUrl}
+              alt={exercicio.nome}
+              decoding="async"
+              crossOrigin="anonymous"
+              onLoad={() => setImgCarregada(true)}
+              onError={() => setImgErro(true)}
+              className={`h-full w-full object-contain transition-opacity duration-200 ${imgCarregada ? "opacity-100" : "opacity-0"}`}
+            />
+          </div>
         )}
 
         <div className="space-y-4 pt-2">

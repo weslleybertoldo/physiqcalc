@@ -8,6 +8,8 @@ import { readFileSync } from "fs";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
+const UM_ANO = 60 * 60 * 24 * 365;
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   define: {
@@ -27,8 +29,12 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // 6 MB: o wasm do SQLite (PowerSync) tem até 2,3 MB
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // Precache = tudo que a abertura precisa, inclusive fontes locais e o wasm do SQLite
+        // que o PowerSync usa de fato (IDBBatchAtomicVFS → wa-sqlite-async; as variantes
+        // sync e `mc-*` cifradas ficam de fora) → 2ª abertura sem rede.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}", "**/wa-sqlite-async-*.wasm"],
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {
@@ -54,8 +60,41 @@ export default defineConfig(({ mode }) => ({
             handler: "NetworkOnly",
           },
           {
-            // Imagens externas — CacheFirst
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+            // GIFs/WebP dos exercícios (Storage público) — CacheFirst longo. A URL muda (?v=)
+            // quando o GIF muda, então cache "pra sempre" é seguro. O <img> pede com
+            // crossorigin=anonymous → resposta CORS (200), sem o padding de resposta opaca.
+            urlPattern: /^https:\/\/uxwpwdbbnlticxgtzcsb\.supabase\.co\/storage\/v1\/object\/public\/exercicios(-staging)?\//,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "exercicios-cache",
+              expiration: {
+                maxEntries: 120,
+                maxAgeSeconds: 60 * 60 * 24 * 180,
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: {
+                statuses: [200],
+              },
+            },
+          },
+          {
+            // wasm com hash no nome (SQLite) que ficou fora do precache — imutável
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.endsWith(".wasm"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "wasm-cache",
+              expiration: {
+                maxEntries: 8,
+                maxAgeSeconds: UM_ANO,
+              },
+              cacheableResponse: {
+                statuses: [200],
+              },
+            },
+          },
+          {
+            // Imagens externas — CacheFirst (aceita query string, ex.: ?v=123)
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)(\?.*)?$/,
             handler: "CacheFirst",
             options: {
               cacheName: "images-cache",

@@ -121,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.removeItem("physiq_offline_pending");
       localStorage.removeItem("physiq_offline_cache");
+      localStorage.removeItem("physiq_mp_status_cache"); // status leve da mensalidade (é por usuário)
     } catch { /* storage indisponivel */ }
     // Limpa cache do Service Worker pra evitar servir dados do user anterior offline
     if ("caches" in window) {

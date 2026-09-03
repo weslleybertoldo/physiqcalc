@@ -9,6 +9,7 @@ import ModalRemoverExercicio from "./ModalRemoverExercicio";
 import { toast } from "sonner";
 import type { SerieComMemoria } from "@/pages/TreinosPage";
 import { clampSeries } from "@/lib/seriesPadrao";
+import { preAquecerImagens } from "@/lib/preAquecerImagens";
 import type { ItemRemovido } from "@/lib/substituicaoExercicio";
 
 interface Exercicio {
@@ -66,6 +67,17 @@ const TreinoDoDia = ({
 }: Props) => {
   const db = usePowerSync();
   const [infoExercicio, setInfoExercicio] = useState<Exercicio | null>(null);
+
+  // Pré-aquece os GIFs dos exercícios deste treino (até 10) 4 s depois de montar, só online:
+  // o modal "info" abre na hora e o Service Worker guarda a imagem pras próximas aberturas.
+  // Chave em string: o array `exercicios` muda de identidade a cada render do pai.
+  const chaveImagens = exercicios.map((ge) => ge.tb_exercicios?.imagem_url || "").join("|");
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    const urls = chaveImagens.split("|");
+    const t = setTimeout(() => preAquecerImagens(urls), 4000);
+    return () => clearTimeout(t);
+  }, [chaveImagens]);
   const [historicoId, setHistoricoId] = useState<string | null>(null);
   const [historicoNome, setHistoricoNome] = useState("");
   const [trocarExercicio, setTrocarExercicio] = useState<{
