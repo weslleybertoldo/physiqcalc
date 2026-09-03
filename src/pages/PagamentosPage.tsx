@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Copy, CreditCard, Download, QrCode, Check, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { invokeMp, MpStatus, MpPagamento, tipoPagamentoLabel } from "@/lib/mpClient";
+import { gravarStatusCache, invalidarStatusCache, invokeMp, MpStatus, MpPagamento, tipoPagamentoLabel } from "@/lib/mpClient";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 import { salvarPdf } from "@/lib/salvarPdf";
 
@@ -99,15 +99,18 @@ const PagamentosPage = () => {
     try {
       const s = await invokeMp<MpStatus>("status");
       setStatus(s);
+      // espelha no cache do status leve → badge "!" e aviso da abertura ficam coerentes com a aba
+      if (user?.id) gravarStatusCache(user.id, s);
     } catch (e) {
       console.error("[Pagamentos] status", e);
       toast.error("Erro ao carregar pagamentos.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
-  useEffect(() => { load(); }, [load]);
+  // entrar na aba = fonte da verdade (status completo, com refresh no MP): descarta o cache leve
+  useEffect(() => { invalidarStatusCache(); load(); }, [load]);
   useEffect(() => { ensureMpInit(); }, []);
 
   const handlePix = async () => {

@@ -177,13 +177,14 @@ const AdminTreinos = ({ onBack }: Props) => {
 
   // === Biblioteca ===
   // Sobe a imagem/gif pro bucket publico 'exercicios' (escrita restrita a admin
-  // pela policy). Cache-bust no fim pra refletir troca de imagem na hora.
+  // pela policy). Cache de 1 ano no CDN (cacheControl) — seguro porque a URL gravada
+  // leva ?v=<timestamp>: trocar a imagem muda a URL e o app busca a nova na hora.
   const uploadImagem = async (file: File, exId: string): Promise<string> => {
     if (!file.type.startsWith("image/")) throw new Error("Selecione uma imagem ou gif");
     if (file.size > 5 * 1024 * 1024) throw new Error("Imagem maior que 5MB");
     const ext = (file.name.split(".").pop() || "png").toLowerCase();
     const path = `${exId}.${ext}`;
-    const { error } = await supabase.storage.from(BUCKET_EXERCICIOS).upload(path, file, { upsert: true, contentType: file.type });
+    const { error } = await supabase.storage.from(BUCKET_EXERCICIOS).upload(path, file, { upsert: true, contentType: file.type, cacheControl: "31536000" });
     if (error) throw error;
     const { data } = supabase.storage.from(BUCKET_EXERCICIOS).getPublicUrl(path);
     return `${data.publicUrl}?v=${Date.now()}`;

@@ -78,3 +78,92 @@ export async function invokeMp<T = any>(action: string, payload: Record<string, 
   if (!res.ok) throw new Error(body?.error || `http_${res.status}`);
   return body as T;
 }
+
+// ───────────────────────────── status leve (abertura do app) ─────────────────────────────
+// A abertura só precisa saber "tem mensalidade e está em dia?" pro badge "!" e pro aviso de
+// pendência. Isso vem do action `status-lite` (só banco, sem Mercado Pago) e fica em cache
+// local por 6 h — a aba Pagamentos continua usando o `status` completo e espelha aqui.
+
+/** Resposta enxuta do `status-lite`. */
+export interface MpStatusLeve {
+  mensalidade: number | null;
+  emDia: boolean;
+  pagoAte: string | null;
+  mesRef: string;
+  mesLabel: string;
+}
+
+export const STATUS_CACHE_KEY = "physiq_mp_status_cache";
+export const STATUS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 h
+
+interface StatusCache {
+  userId: string;
+  em: number;
+  status: MpStatusLeve;
+}
+
+/** Cache válido (mesmo usuário, dentro do TTL) ou null. */
+export function lerStatusCache(userId: string, agora = Date.now()): MpStatusLeve | null {
+  try {
+    const raw = localStorage.getItem(STATUS_CACHE_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw) as Partial<StatusCache>;
+    if (!c || c.userId !== userId || typeof c.em !== "number" || !c.status) return null;
+    if (agora < c.em || agora - c.em > STATUS_CACHE_TTL_MS) return null;
+    return c.status;
+  } catch {
+    return null;
+  }
+}
+
+/** Grava o status (leve ou completo — só os campos leves ficam). */
+export function gravarStatusCache(userId: string, s: MpStatusLeve | MpStatus, agora = Date.now()): void {
+  const status: MpStatusLeve = {
+    mensalidade: s.mensalidade ?? null,
+    emDia: Boolean(s.emDia),
+    pagoAte: s.pagoAte ?? null,
+    mesRef: s.mesRef,
+    mesLabel: s.mesLabel,
+  };
+  try {
+    const c: StatusCache = { userId, em: agora, status };
+    localStorage.setItem(STATUS_CACHE_KEY, JSON.stringify(c));
+  } catch {
+    /* storage cheio/indisponível: segue sem cache */
+  }
+}
+
+export function invalidarStatusCache(): void {
+  try {
+    localStorage.removeItem(STATUS_CACHE_KEY);
+  } catch {
+    /* ignora */
+  }
+}
+
+/** Tem mensalidade configurada e a cobertura não está vigente. */
+export function mensalidadePendente(s: Pick<MpStatusLeve, "mensalidade" | "emDia"> | null | undefined): boolean {
+  return !!s && Boolean(s.mensalidade) && !s.emDia;
+}
+
+// 1 chamada em voo por vez: header e aviso pedem ao mesmo tempo → 1 requisição só
+let statusLeveEmVoo: Promise<MpStatusLeve> | null = null;
+
+/** Status leve com cache (6 h). `forcar` ignora o cache. */
+export async function statusLeve(userId: string, opts: { forcar?: boolean } = {}): Promise<MpStatusLeve> {
+  if (!opts.forcar) {
+    const emCache = lerStatusCache(userId);
+    if (emCache) return emCache;
+  }
+  if (!statusLeveEmVoo) {
+    statusLeveEmVoo = invokeMp<MpStatusLeve>("status-lite")
+      .then((s) => {
+        gravarStatusCache(userId, s);
+        return s;
+      })
+      .finally(() => {
+        statusLeveEmVoo = null;
+      });
+  }
+  return statusLeveEmVoo;
+}

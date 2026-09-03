@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { downloadAndInstall } from "@/lib/apkUpdater";
+
+/** Espera a abertura assentar antes de perguntar ao GitHub se há APK novo. */
+export const ATRASO_CHECK_UPDATE_MS = 5000;
 
 const CURRENT_VERSION = __APP_VERSION__;
 // Busca a última release via GitHub API (funciona em repos privados e públicos)
@@ -34,6 +38,10 @@ const UpdateChecker = () => {
   };
 
   useEffect(() => {
+    // Só no APK — na web não há APK pra instalar (o botão manual "Verificar atualizações"
+    // continua existindo). E só depois da abertura assentar: a chamada ao GitHub saía
+    // junto com o carregamento crítico da tela.
+    if (!Capacitor.isNativePlatform()) return;
     const checkUpdate = async () => {
       try {
         const res = await fetch(RELEASES_URL, { cache: "no-store" });
@@ -54,8 +62,8 @@ const UpdateChecker = () => {
 
         if (isNewer) {
           // Busca o link do APK nos assets da release
-          const apkAsset = (release.assets || []).find(
-            (a: any) => a.name.endsWith(".apk")
+          const apkAsset = ((release.assets || []) as { name: string; browser_download_url: string }[]).find(
+            (a) => a.name.endsWith(".apk")
           );
           setUpdate({
             version: remoteVersion,
@@ -70,7 +78,8 @@ const UpdateChecker = () => {
       }
     };
 
-    checkUpdate();
+    const t = setTimeout(checkUpdate, ATRASO_CHECK_UPDATE_MS);
+    return () => clearTimeout(t);
   }, []);
 
   if (!update || dismissed) return null;

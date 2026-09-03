@@ -1,40 +1,39 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CreditCard } from "lucide-react";
-import { invokeMp, MpStatus } from "@/lib/mpClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useMensalidadeStatus } from "@/hooks/useMensalidadeStatus";
 
 const STORAGE_KEY = "physiq_pendencia_avisada_em";
 const hoje = () => new Date().toLocaleDateString("pt-BR"); // 1x por dia, no fuso do aparelho
 
+function jaAvisadoHoje(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === hoje();
+  } catch {
+    return false;
+  }
+}
+
 // Aviso na abertura do app quando a mensalidade está pendente (1x por dia —
-// "Mais tarde" silencia até o dia seguinte).
+// "Mais tarde" silencia até o dia seguinte). O status vem do cache leve compartilhado
+// com o header (0 chamadas quando o cache vale; 1 chamada `status-lite` fora do caminho crítico).
 const PendenciaAviso = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [aberto, setAberto] = useState(false);
-  const [valor, setValor] = useState<number | null>(null);
+  const { status, pendente } = useMensalidadeStatus(user?.id);
+  const [dispensado, setDispensado] = useState(jaAvisadoHoje);
 
-  useEffect(() => {
-    if (!user || localStorage.getItem(STORAGE_KEY) === hoje()) return;
-    let cancelled = false;
-    invokeMp<MpStatus>("status")
-      .then((s) => {
-        if (cancelled) return;
-        if (s.mensalidade && !s.emDia) {
-          setValor(s.mensalidade);
-          setAberto(true);
-        }
-      })
-      .catch(() => { /* sem rede/erro: não incomoda */ });
-    return () => { cancelled = true; };
-  }, [user?.id]);
-
-  if (!aberto) return null;
+  if (!pendente || dispensado) return null;
+  const valor = status?.mensalidade ?? null;
 
   const fechar = () => {
-    localStorage.setItem(STORAGE_KEY, hoje());
-    setAberto(false);
+    try {
+      localStorage.setItem(STORAGE_KEY, hoje());
+    } catch {
+      /* storage indisponível */
+    }
+    setDispensado(true);
   };
 
   return (

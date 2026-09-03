@@ -26,7 +26,7 @@ import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots
 import { chavesExerciciosAtivos, serieDeExercicioAtivo } from "@/lib/seriesAtivas";
 import { chaveParaConcluido, contarDiasTreinados, diasTreinados } from "@/lib/contagemTreinos";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeMp, MpStatus } from "@/lib/mpClient";
+import { useMensalidadeStatus } from "@/hooks/useMensalidadeStatus";
 import { toast } from "sonner";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
@@ -213,17 +213,9 @@ const TreinosPage = () => {
   const [showAlterarGrupo, setShowAlterarGrupo] = useState(false);
   const [expandedSlot, setExpandedSlot] = useState<number | null>(0);
   const [showHistorico, setShowHistorico] = useState(false);
-  // mensalidade pendente → exclamação vermelha no ícone de pagamentos do header
-  const [mensalidadePendente, setMensalidadePendente] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    invokeMp<MpStatus>("status")
-      .then((s) => { if (!cancelled) setMensalidadePendente(Boolean(s.mensalidade) && !s.emDia); })
-      .catch(() => { /* sem rede/erro: não sinaliza */ });
-    return () => { cancelled = true; };
-  }, [user?.id]);
+  // mensalidade pendente → exclamação vermelha no ícone de pagamentos do header.
+  // Status leve com cache local (6 h), pedido só depois do 1º render — fora do caminho crítico.
+  const { pendente: mensalidadePendente } = useMensalidadeStatus(user?.id);
   const [showSettings, setShowSettings] = useState(false);
   const [showConfirmSair, setShowConfirmSair] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);

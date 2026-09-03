@@ -153,17 +153,30 @@ async function getAnchorDay(userId: string): Promise<number | null> {
   return new Date(next || a.created_at).getUTCDate();
 }
 
-// cobertura sequencial (regras em cobertura.ts): atraso move o vencimento; adiantado preserva
-// o dia; com assinatura ativa o avulso de reposição cobre só até a próxima cobrança do ciclo.
-// pago_ate = null → nunca pagou (ou tudo reembolsado)
-async function getPagoAte(userId: string, anchorDay: number | null = null): Promise<Date | null> {
+// datas dos pagamentos aprovados (base da cobertura), mais antigos primeiro
+async function datasPagamentosAprovados(userId: string): Promise<Date[]> {
   const admin = adminClient();
   const { data } = await admin.from("physiq_pagamentos")
     .select("created_at, updated_at")
     .eq("user_id", userId).eq("status", "approved")
     .order("created_at", { ascending: true }).limit(48);
-  const datas = ((data as any[]) || []).map((p) => new Date(p.updated_at || p.created_at));
-  return calcCobertura(datas, anchorDay);
+  return ((data as any[]) || []).map((p) => new Date(p.updated_at || p.created_at));
+}
+
+// cobertura sequencial (regras em cobertura.ts): atraso move o vencimento; adiantado preserva
+// o dia; com assinatura ativa o avulso de reposição cobre só até a próxima cobrança do ciclo.
+// pago_ate = null → nunca pagou (ou tudo reembolsado)
+async function getPagoAte(userId: string, anchorDay: number | null = null): Promise<Date | null> {
+  return calcCobertura(await datasPagamentosAprovados(userId), anchorDay);
+}
+
+// fallback sem consultar o MP: mesmo dia/hora da adesão no próximo ciclo
+function proximaCobrancaFallback(createdAt: string): string {
+  const adesao = new Date(createdAt);
+  const agora = new Date();
+  const alvo = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), adesao.getUTCDate(), adesao.getUTCHours(), adesao.getUTCMinutes()));
+  if (alvo <= agora) alvo.setUTCMonth(alvo.getUTCMonth() + 1);
+  return alvo.toISOString();
 }
 
 // próxima cobrança da assinatura: data real do MP; fallback = mesmo dia da adesão no mês seguinte
@@ -173,11 +186,7 @@ async function proximaCobranca(ass: { mp_preapproval_id?: string | null; created
     const next = body?.next_payment_date || body?.auto_recurring?.next_payment_date || body?.summarized?.next_payment_date;
     if (status === 200 && next) return next;
   }
-  const adesao = new Date(ass.created_at);
-  const agora = new Date();
-  const alvo = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), adesao.getUTCDate(), adesao.getUTCHours(), adesao.getUTCMinutes()));
-  if (alvo <= agora) alvo.setUTCMonth(alvo.getUTCMonth() + 1);
-  return alvo.toISOString();
+  return proximaCobrancaFallback(ass.created_at);
 }
 
 // e-mail do pagador: com credencial de TESTE o MP exige comprador de teste
@@ -259,6 +268,31 @@ Deno.serve(async (req) => {
         pagoAte: pagoAte ? pagoAte.toISOString() : null,
         mesRef: mesRefAtual(), mesLabel: mesLabel(mesRefAtual()),
         assinatura, pagamentos,
+      }, origin);
+    }
+
+    // ---- status-lite (abertura do app: badge "!" no header + aviso "Parcela pendente") ----
+    // Só banco — sem refreshPendentes nem ida ao Mercado Pago (isso fica pro `status` da aba
+    // Pagamentos, que espelha o resultado no cache do app). Mesma régua de cobertura;
+    // âncora do ciclo = fallback do dia da adesão. Contrato aditivo: `status` continua igual.
+    if (action === "status-lite") {
+      // 3 leituras em paralelo = 1 ida ao banco em vez de 3 (a VM Nano cobra caro por ida)
+      const [assRes, mensalidade, datas] = await Promise.all([
+        admin.from("physiq_assinaturas").select("status, created_at")
+          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+        getMensalidade(user.id),
+        datasPagamentosAprovados(user.id),
+      ]);
+      const ultimaAss = ((assRes.data as any[]) || [])[0] || null;
+      const anchorLite = ultimaAss?.status === "authorized"
+        ? new Date(proximaCobrancaFallback(ultimaAss.created_at)).getUTCDate()
+        : null;
+      const pagoAte = calcCobertura(datas, anchorLite);
+      const emDia = pagoAte !== null && pagoAte > new Date();
+      return jsonOk({
+        mensalidade, emDia, mesPago: emDia,
+        pagoAte: pagoAte ? pagoAte.toISOString() : null,
+        mesRef: mesRefAtual(), mesLabel: mesLabel(mesRefAtual()),
       }, origin);
     }
 
