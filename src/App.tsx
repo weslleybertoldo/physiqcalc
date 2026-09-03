@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PWAInstallProvider } from "@/hooks/usePWAInstall";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
@@ -15,14 +15,25 @@ import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
 import { isAdminAuthenticated } from "@/components/AdminLoginDialog";
 import { setupDeepLinkListener } from "@/lib/capacitorAuth";
 import AuthPage from "./pages/AuthPage";
-import UserDashboard from "./pages/UserDashboard";
-import AdminPanel from "./pages/AdminPanel";
-import Index from "./pages/Index";
 import TreinosPage from "./pages/TreinosPage";
-import PagamentosPage from "./pages/PagamentosPage";
 import StagingGate from "@/components/StagingGate";
-import PrivacidadePage from "./pages/PrivacidadePage";
-import NotFound from "./pages/NotFound";
+
+// Code-splitting por rota: só a abertura (TreinosPage/AuthPage) entra no JS inicial.
+// As demais rotas — e com elas jspdf/autotable (PDF), recharts (gráficos) e o SDK do
+// Mercado Pago — carregam sob demanda na 1ª visita; o Service Worker guarda os chunks
+// pras próximas. Na 1ª entrada aparece o mesmo "Carregando..." da abertura por um instante.
+const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const Index = lazy(() => import("./pages/Index"));
+const PagamentosPage = lazy(() => import("./pages/PagamentosPage"));
+const PrivacidadePage = lazy(() => import("./pages/PrivacidadePage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const Carregando = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <p className="text-muted-foreground font-body">Carregando...</p>
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,16 +63,13 @@ const AppRoutes = () => {
   useAppLifecycle();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground font-body">Carregando...</p>
-      </div>
-    );
+    return <Carregando />;
   }
 
   return (
     <BrowserRouter>
       <StagingGate>
+      <Suspense fallback={<Carregando />}>
       <Routes>
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/calculator" element={<Index />} />
@@ -76,6 +84,7 @@ const AppRoutes = () => {
         <Route path="/termos" element={<PrivacidadePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
       </StagingGate>
     </BrowserRouter>
   );
