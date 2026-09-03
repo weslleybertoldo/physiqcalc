@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { resolverImagem } from "@/lib/imagemExercicio";
 
 interface Exercicio {
   id: string;
@@ -20,7 +21,8 @@ interface Props {
 const ModalExercicio = ({ exercicio, open, onOpenChange }: Props) => {
   const [imgErro, setImgErro] = useState(false);
   const [imgCarregada, setImgCarregada] = useState(false);
-  const imagemUrl = exercicio?.imagem_url ?? null;
+  // local-primeiro: WebP embutido no app quando a versão bate com o manifest; senão a URL do Storage
+  const imagemUrl = resolverImagem(exercicio?.imagem_url);
 
   // trocou o exercício → recomeça o estado da imagem (erro de um não esconde a do próximo)
   useEffect(() => {

@@ -35,8 +35,28 @@ export default defineConfig(({ mode }) => ({
         // que o PowerSync usa de fato (IDBBatchAtomicVFS → wa-sqlite-async; as variantes
         // sync e `mc-*` cifradas ficam de fora) → 2ª abertura sem rede.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}", "**/wa-sqlite-async-*.wasm"],
+        // WebP dos exercícios embutidos (public/exercicios, vários MB) ficam FORA do precache:
+        // a 1ª visita web não pode pesar; entram no cache em runtime conforme o aluno abre
+        // (rota abaixo). No APK são arquivos locais do bundle — nem passam pela rede.
+        globIgnores: ["**/node_modules/**/*", "**/exercicios/**"],
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
+          {
+            // WebP dos exercícios servidos pela própria origem (nome do arquivo leva a versão → imutável)
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/exercicios/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "exercicios-local-cache",
+              expiration: {
+                maxEntries: 120,
+                maxAgeSeconds: 60 * 60 * 24 * 180,
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: {
+                statuses: [200],
+              },
+            },
+          },
           {
             // Supabase REST API — NetworkFirst com fallback ao cache
             urlPattern: /^https:\/\/uxwpwdbbnlticxgtzcsb\.supabase\.co\/rest\/v1\/.*/,

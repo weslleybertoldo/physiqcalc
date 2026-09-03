@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import type { SerieComMemoria } from "@/pages/TreinosPage";
 import { clampSeries } from "@/lib/seriesPadrao";
 import { preAquecerImagens } from "@/lib/preAquecerImagens";
+import { resolverImagem } from "@/lib/imagemExercicio";
 import type { ItemRemovido } from "@/lib/substituicaoExercicio";
 
 interface Exercicio {
@@ -68,10 +69,11 @@ const TreinoDoDia = ({
   const db = usePowerSync();
   const [infoExercicio, setInfoExercicio] = useState<Exercicio | null>(null);
 
-  // Pré-aquece os GIFs dos exercícios deste treino (até 10) 4 s depois de montar, só online:
+  // Pré-aquece as imagens dos exercícios deste treino (até 10) 4 s depois de montar, só online:
   // o modal "info" abre na hora e o Service Worker guarda a imagem pras próximas aberturas.
+  // Resolvidas "local-primeiro" (WebP embutido quando a versão bate; no APK é arquivo local).
   // Chave em string: o array `exercicios` muda de identidade a cada render do pai.
-  const chaveImagens = exercicios.map((ge) => ge.tb_exercicios?.imagem_url || "").join("|");
+  const chaveImagens = exercicios.map((ge) => resolverImagem(ge.tb_exercicios?.imagem_url) || "").join("|");
   useEffect(() => {
     if (typeof navigator !== "undefined" && navigator.onLine === false) return;
     const urls = chaveImagens.split("|");
