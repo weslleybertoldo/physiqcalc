@@ -157,20 +157,27 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          "powersync": ["@powersync/web", "@powersync/react", "@journeyapps/wa-sqlite"],
-          "supabase": ["@supabase/supabase-js"],
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
-          "charts": ["recharts"],
-          "pdf": ["jspdf", "html2canvas"],
-          "xlsx": ["xlsx"],
-          "radix": [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-select",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-toast",
-          ],
+        // Função (não objeto): o objeto puxava dependências COMPARTILHADAS pro chunk manual —
+        // o `clsx` (usado pelo `cn()` do app e pelo recharts) foi parar dentro de `charts`, e a
+        // entrada passou a pré-carregar os 373 KB do recharts só por causa dele. Com a função,
+        // cada chunk nomeado recebe SÓ os arquivos daquela lib; o resto o Rollup agrupa sozinho
+        // por quem usa (o que só a rota lazy usa vai junto com ela).
+        manualChunks(id: string) {
+          if (!id.includes("node_modules/")) return undefined;
+          if (/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler|@remix-run\/router)\//.test(id)) return "react-vendor";
+          // utilitários minúsculos usados pela abertura E por libs pesadas (ex.: clsx = cva + recharts):
+          // soltos, o Rollup os funde no chunk pesado e a entrada passa a pré-carregá-lo inteiro
+          if (/node_modules\/(clsx|class-variance-authority|tailwind-merge|react-is|prop-types|tslib|tiny-invariant)\//.test(id)) return "react-vendor";
+          if (id.includes("node_modules/@supabase/")) return "supabase";
+          if (id.includes("node_modules/@powersync/")) return "powersync";
+          // API do wa-sqlite vai junto; as variantes que carregam o wasm (sync/async/mc-*) ficam
+          // como chunks dinâmicos — só a que o PowerSync usa é baixada
+          if (id.includes("node_modules/@journeyapps/wa-sqlite/") && !/\/dist\/(mc-)?wa-sqlite(-async)?\.mjs/.test(id)) return "powersync";
+          if (id.includes("node_modules/recharts/")) return "charts";
+          if (/node_modules\/(jspdf|jspdf-autotable|html2canvas)\//.test(id)) return "pdf";
+          if (id.includes("node_modules/xlsx/")) return "xlsx";
+          if (/node_modules\/@radix-ui\/react-(dialog|dropdown-menu|select|tabs|toast)\//.test(id)) return "radix";
+          return undefined;
         },
       },
     },

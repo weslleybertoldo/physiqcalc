@@ -1,4 +1,6 @@
-import jsPDF from 'jspdf';
+// só o TIPO: quem instancia o jsPDF é o gerador de cada relatório (rota carregada sob demanda);
+// assim este módulo de helpers não puxa a lib pro JS inicial
+import type { jsPDF } from 'jspdf';
 
 // ── Tema ──────────────────────────────────────────────────────────────────
 export const TEMA = {
