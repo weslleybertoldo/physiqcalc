@@ -325,32 +325,7 @@ Deno.serve(async (req) => {
         if (ex) g.exercicios.push({ id: ex.id, isPessoal: !!r.exercicio_usuario_id, nome: ex.nome, grupo_muscular: ex.grupo_muscular ?? "", tipo: ex.tipo ?? null });
       });
 
-      // LEGADO: séries do último treino registrado (seriesUltimo). O front atual calcula pelo seriesPadrao;
-      // remover este bloco quando o app em produção não ler mais seriesUltimo.
-      const unicos = new Map<string, { id: string; isPessoal: boolean }>();
-      Object.values(grupos).forEach((g) => g.exercicios.forEach((e) => unicos.set(`${e.isPessoal ? "p" : "c"}:${e.id}`, e)));
-      const contagens = new Map<string, number>();
-      await Promise.all([...unicos.entries()].map(async ([k, e]) => {
-        const col = e.isPessoal ? "exercicio_usuario_id" : "exercicio_id";
-        const { data } = await admin.from("tb_treino_series")
-          .select("data_treino, slot_idx, numero_serie")
-          .eq("user_id", userId).eq(col, e.id)
-          .order("data_treino", { ascending: false }).limit(20);
-        const rows = (data as any[]) || [];
-        if (!rows.length) return;
-        const ultima = rows[0].data_treino;
-        const porSlot = new Map<number, number>();
-        rows.filter((r) => r.data_treino === ultima).forEach((r) => {
-          const s = r.slot_idx ?? 0;
-          porSlot.set(s, (porSlot.get(s) ?? 0) + 1);
-        });
-        contagens.set(k, Math.max(...porSlot.values()));
-      }));
-      Object.values(grupos).forEach((g) => {
-        (g.exercicios as any[]).forEach((e) => {
-          e.seriesUltimo = contagens.get(`${e.isPessoal ? "p" : "c"}:${e.id}`) ?? null;
-        });
-      });
+      // seriesUltimo ("último treino registrado") foi aposentado: o Programado usa seriesPadrao (PR #29).
 
       return new Response(JSON.stringify({ semana, grupos, seriesPadrao: seriesRes.data ?? [] }), {
         headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
