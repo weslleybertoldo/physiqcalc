@@ -30,7 +30,13 @@ interface ItemHistorico {
 }
 
 interface Props {
-  users: UserOption[];
+  /** Alunos do painel (seletor de aluno + busca do histórico completo). Dispensável no modo usuário fixo. */
+  users?: UserOption[];
+  /**
+   * Modo "Configurar Usuário › Histórico": a lista fica presa neste aluno — sem seletor
+   * de aluno nem busca do histórico completo; sobram só os filtros de mês e ano.
+   */
+  userId?: string;
 }
 
 /** "2026-08-24" → "24/08" */
@@ -77,7 +83,7 @@ function Popup({ titulo, onFechar, children }: {
   );
 }
 
-const AdminHistoricoMes = ({ users }: Props) => {
+const AdminHistoricoMes = ({ users = [], userId }: Props) => {
   const hoje = new Date();
   const [mes, setMes] = useState(hoje.getMonth() + 1);
   const [ano, setAno] = useState(hoje.getFullYear());
@@ -138,13 +144,17 @@ const AdminHistoricoMes = ({ users }: Props) => {
 
   const anos = [hoje.getFullYear(), hoje.getFullYear() - 1, hoje.getFullYear() - 2];
 
+  // Usuário fixo (Configurar Usuário) manda; senão vale o seletor de aluno do painel.
+  const usuarioFixo = Boolean(userId);
+  const alunoFiltrado = userId ?? filtroAluno;
   // Só entram no seletor os alunos que treinaram no mês exibido.
   const alunosDoMes = users.filter((u) => itens.some((i) => i.userId === u.id));
-  const visiveis = filtroAluno ? itens.filter((i) => i.userId === filtroAluno) : itens;
+  const visiveis = alunoFiltrado ? itens.filter((i) => i.userId === alunoFiltrado) : itens;
 
   return (
     <div className="space-y-6">
-      {/* Histórico completo de um aluno */}
+      {/* Histórico completo de um aluno (só no painel — no usuário fixo não há aluno a escolher) */}
+      {!usuarioFixo && (
       <div className="border border-muted-foreground/20 rounded-lg p-4 space-y-3">
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">
           Histórico completo de um aluno
@@ -172,13 +182,15 @@ const AdminHistoricoMes = ({ users }: Props) => {
           </button>
         </div>
       </div>
+      )}
 
       {/* Filtro do mês da lista */}
-      <div className="flex gap-2">
+      <div className="flex gap-2" data-historico-filtros>
         <select
           value={mes}
           onChange={(e) => setMes(Number(e.target.value))}
           className="input-underline text-sm py-1 flex-1"
+          data-historico-mes
         >
           {MESES.map((m, i) => (
             <option key={m} value={i + 1} className="bg-background text-foreground">{m}</option>
@@ -188,11 +200,13 @@ const AdminHistoricoMes = ({ users }: Props) => {
           value={ano}
           onChange={(e) => setAno(Number(e.target.value))}
           className="input-underline text-sm py-1 w-28"
+          data-historico-ano
         >
           {anos.map((a) => (
             <option key={a} value={a} className="bg-background text-foreground">{a}</option>
           ))}
         </select>
+        {!usuarioFixo && (
         <select
           value={filtroAluno}
           onChange={(e) => setFiltroAluno(e.target.value)}
@@ -203,6 +217,7 @@ const AdminHistoricoMes = ({ users }: Props) => {
             <option key={u.id} value={u.id} className="bg-background text-foreground">{u.nome}</option>
           ))}
         </select>
+        )}
       </div>
 
       {loading ? (
@@ -213,13 +228,13 @@ const AdminHistoricoMes = ({ users }: Props) => {
         </p>
       ) : visiveis.length === 0 ? (
         <p className="text-muted-foreground font-body text-sm text-center py-8">
-          {filtroAluno
+          {alunoFiltrado
             ? `Este aluno não tem treinos em ${MESES[mes - 1]} de ${ano}.`
             : `Nenhum treino registrado em ${MESES[mes - 1]} de ${ano}.`}
         </p>
       ) : (
         <>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading" data-historico-contagem>
             {visiveis.length} {visiveis.length === 1 ? "treino" : "treinos"} em {MESES[mes - 1]}
           </p>
           <div className="space-y-0">
@@ -227,6 +242,7 @@ const AdminHistoricoMes = ({ users }: Props) => {
               <button
                 key={it.chave}
                 type="button"
+                data-historico-linha
                 onClick={() => abrirTreino(it)}
                 className="w-full text-left border-b border-muted-foreground/20 py-3 hover:bg-muted-foreground/5 transition-colors px-1"
               >
