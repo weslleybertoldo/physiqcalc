@@ -14,7 +14,7 @@ on:
 
 jobs:
   keep-alive-supabase:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3,9,15,21 * * *'
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '19 3,9,15,21 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Pings REST/PostgREST (atividade que CONTA p/ o auto-pause)
@@ -45,7 +45,7 @@ jobs:
           [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
 
   keep-alive-powersync:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 9 */4 * *'
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '19 9 */4 * *'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
