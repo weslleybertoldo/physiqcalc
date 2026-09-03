@@ -9,8 +9,12 @@ import {
   SERIES_PADRAO_DEFAULT, chaveExercicio, chaveTreino, clampSeries, mapaSeriesPadrao, numSeriesPadrao, temSeriesProprias,
   type ExercicioTreino, type SeriePadraoRow,
 } from "@/lib/seriesPadrao";
+import { criarFilaCoalescida, type FilaCoalescida } from "@/lib/filaCoalescida";
 
 interface Props { userId: string }
+
+/** gravação de séries enfileirada (body da edge + mensagem de erro) */
+interface GravacaoSeries { body: Record<string, unknown>; erro: string }
 
 interface GrupoDisp { id: string; nome: string; tipo: "catalogo" | "pessoal" }
 interface SemanaRow {
@@ -69,10 +73,33 @@ export default function AdminSemanaUsuario({ userId }: Props) {
   const [modalSeries, setModalSeries] = useState<GrupoDisp | null>(null);
   // exercícios de cada treino (vêm no get → popup abre na hora); key do treino → lista
   const [exerciciosPorTreino, setExerciciosPorTreino] = useState<Record<string, ExercicioTreino[]>>({});
-  const [salvandoSeries, setSalvandoSeries] = useState(false);
-  // gravação em voo + recarga do Realtime adiada (senão o evento da 1ª gravação sobrescreve o valor otimista da 2ª)
-  const salvandoRef = useRef(false);
+  // Gravações em FILA (uma em voo por vez; cliques rápidos no mesmo alvo coalescem no último valor) + VERSÃO do
+  // estado otimista: uma leitura do servidor que saiu ANTES de um clique não pode sobrescrever o valor otimista
+  // quando chega (era o "8 → 7 → 8" do popup). Recarga pedida pelo Realtime fica pendente até a fila esvaziar.
+  const versaoRef = useRef(0);
   const recargaPendenteRef = useRef(false);
+  const userIdRef = useRef(userId);
+  const recarregarRef = useRef<(forcar?: boolean) => Promise<void>>(async () => {});
+  const filaRef = useRef<FilaCoalescida<GravacaoSeries> | null>(null);
+  if (!filaRef.current) {
+    filaRef.current = criarFilaCoalescida<GravacaoSeries>({
+      executar: async (g) => {
+        const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { userId: userIdRef.current, ...g.body } });
+        if (error || data?.error) throw error || new Error(String(data.error));
+      },
+      aoErro: async (g) => {
+        toast.error(g.erro);
+        await recarregarRef.current(true);
+      },
+      aoEsvaziar: () => {
+        if (recargaPendenteRef.current) {
+          recargaPendenteRef.current = false;
+          void recarregarRef.current();
+        }
+      },
+    });
+  }
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
 
   // sub-aba derivada da URL (?wt=) — F5 mantém a aba, padrão do AdminTreinos
   const [searchParams, setSearchParams] = useSearchParams();
@@ -128,11 +155,7 @@ export default function AdminSemanaUsuario({ userId }: Props) {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const recarregar = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(async () => {
-        if (salvandoRef.current) { recargaPendenteRef.current = true; return; }
-        const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { action: "get", userId } });
-        if (!error && data?.seriesPadrao) setSeriesRows(data.seriesPadrao as SeriePadraoRow[]);
-      }, 250);
+      timer = setTimeout(() => { void recarregarRef.current(); }, 250);
     };
     const canal = supabase
       .channel(`series-padrao-${userId}`)
@@ -218,11 +241,24 @@ export default function AdminSemanaUsuario({ userId }: Props) {
   const temProprio = (g: GrupoDisp, ex: ExercicioTreino): boolean =>
     temSeriesProprias(mapaSeries, keyOf(g), ex.exercicio_id, ex.exercicio_usuario_id);
 
-  /** recarrega só as linhas de séries (usado pra reverter quando uma gravação falha) */
-  const recarregarSeries = async () => {
-    const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { action: "get", userId } });
-    if (!error && data?.seriesPadrao) setSeriesRows(data.seriesPadrao as SeriePadraoRow[]);
+  /**
+   * Recarrega só as linhas de séries (action leve getSeriesPadrao). A resposta só é aplicada se nenhum clique
+   * aconteceu depois que a leitura saiu e nada está em voo/na fila — senão fica pendente e roda quando a fila
+   * esvaziar (ou repete na hora, se já esvaziou). `forcar` = voltar pro servidor após erro de gravação.
+   */
+  const recarregarSeries = async (forcar = false) => {
+    const fila = filaRef.current!;
+    if (!forcar && !fila.ociosa()) { recargaPendenteRef.current = true; return; }
+    const versao = versaoRef.current;
+    const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { action: "getSeriesPadrao", userId } });
+    if (error || !data?.seriesPadrao) return;
+    if (!forcar) {
+      if (!fila.ociosa()) { recargaPendenteRef.current = true; return; }
+      if (versao !== versaoRef.current) { void recarregarSeries(); return; }
+    }
+    setSeriesRows(data.seriesPadrao as SeriePadraoRow[]);
   };
+  useEffect(() => { recarregarRef.current = recarregarSeries; });
 
   /** abre o popup "Séries" — exercícios já vieram no get; busca só se faltarem (fallback) */
   const abrirSeries = async (g: GrupoDisp) => {
@@ -243,25 +279,14 @@ export default function AdminSemanaUsuario({ userId }: Props) {
   const rowDoTreino = (r: SeriePadraoRow): string | null => chaveTreino(r.grupo_id, r.grupo_usuario_id);
   const rowDoExercicio = (r: SeriePadraoRow): string | null => chaveExercicio(r.exercicio_id, r.exercicio_usuario_id);
 
-  /** grava na edge com estado otimista; se falhar, avisa e recarrega do servidor */
-  const gravarSeries = async (body: Record<string, unknown>, otimista: (rows: SeriePadraoRow[]) => SeriePadraoRow[], erro: string) => {
+  /**
+   * Estado otimista na hora + gravação enfileirada por alvo: cliques rápidos no mesmo alvo viram UMA gravação
+   * com o último valor; alvos diferentes gravam em ordem, um por vez. Erro → avisa e volta pro servidor.
+   */
+  const gravarSeries = (alvo: string, body: Record<string, unknown>, otimista: (rows: SeriePadraoRow[]) => SeriePadraoRow[], erro: string) => {
+    versaoRef.current += 1;
     setSeriesRows(otimista);
-    setSalvandoSeries(true);
-    salvandoRef.current = true;
-    try {
-      const { data, error } = await supabase.functions.invoke("admin-semana-treinos", { body: { userId, ...body } });
-      if (error || data?.error) throw error || new Error(String(data.error));
-    } catch {
-      toast.error(erro);
-      await recarregarSeries();
-    } finally {
-      salvandoRef.current = false;
-      setSalvandoSeries(false);
-      if (recargaPendenteRef.current) {
-        recargaPendenteRef.current = false;
-        void recarregarSeries();
-      }
-    }
+    filaRef.current!.enfileirar(alvo, { body, erro });
   };
 
   /** − / + de um exercício: número próprio dele (1 a 10) */
@@ -272,7 +297,8 @@ export default function AdminSemanaUsuario({ userId }: Props) {
     const k = keyOf(g);
     const exKey = chaveExercicio(ex.exercicio_id, ex.exercicio_usuario_id);
     const ids = idsFromKey(k);
-    void gravarSeries(
+    gravarSeries(
+      `${k}|${exKey}`,
       { action: "setSeriesPadrao", ...ids, exercicio_id: ex.exercicio_id, exercicio_usuario_id: ex.exercicio_usuario_id, num_series: novo },
       (rows) => [
         ...rows.filter((r) => !(rowDoTreino(r) === k && rowDoExercicio(r) === exKey)),
@@ -287,7 +313,8 @@ export default function AdminSemanaUsuario({ userId }: Props) {
     const k = keyOf(g);
     const ids = idsFromKey(k);
     const valor = clampSeries(n);
-    void gravarSeries(
+    gravarSeries(
+      `${k}|aplicar`,
       { action: "aplicarSeriesTreino", ...ids, num_series: valor },
       (rows) => [
         ...rows.filter((r) => rowDoTreino(r) !== k),
@@ -560,7 +587,6 @@ export default function AdminSemanaUsuario({ userId }: Props) {
         temProprio={(ex) => (modalSeries ? temProprio(modalSeries, ex) : false)}
         onAlterarExercicio={(ex, delta) => { if (modalSeries) alterarSeriesExercicio(modalSeries, ex, delta); }}
         onAplicarTodos={(n) => { if (modalSeries) aplicarSeriesTodos(modalSeries, n); }}
-        salvando={salvandoSeries}
         onOpenChange={(aberto) => { if (!aberto) setModalSeries(null); }}
       />
     </section>

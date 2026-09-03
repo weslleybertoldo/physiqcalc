@@ -66,15 +66,18 @@ describe("ConteudoSeriesTreino (popup Séries do treino)", () => {
     expect(screen.getByLabelText("Menos uma série em Tríceps Testa")).toBeDisabled();
   });
 
-  it("estados: carregando e treino sem exercícios; salvando desabilita os controles", () => {
+  it("estados: carregando e treino sem exercícios; sem indicador 'salvando…' (gravação otimista/enfileirada no pai)", () => {
     montar({ exercicios: null });
     expect(screen.getByText(/Carregando exercícios/)).toBeInTheDocument();
     cleanup();
     montar({ exercicios: [] });
     expect(screen.getByText(/ainda não tem exercícios/)).toBeInTheDocument();
     cleanup();
-    montar({ salvando: true });
-    expect(screen.getByText("Aplicar a todos")).toBeDisabled();
-    expect(screen.getByLabelText("Mais uma série em Supino Reto")).toBeDisabled();
+    const p = montar();
+    // não existe mais a mensagem "salvando…"; a mudança aparece na hora e o pai enfileira/coalesce os cliques
+    expect(screen.queryByText("salvando…")).toBeNull();
+    expect(screen.getByText("Aplicar a todos")).not.toBeDisabled();
+    fireEvent.click(screen.getByLabelText("Mais uma série em Supino Reto"));
+    expect(p.onAlterarExercicio).toHaveBeenCalledWith(EX[0], 1);
   });
 });
