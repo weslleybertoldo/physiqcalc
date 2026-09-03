@@ -11,6 +11,8 @@ interface Props {
   userId: string;
 }
 
+// Catálogo de tags + tags do usuário vêm numa chamada só (`getUserTagsCompleto`) — antes eram
+// 2 invocações à edge, cada uma pagando auth + rate limit na VM Nano.
 const AdminTagSelector = ({ userId }: Props) => {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -18,16 +20,22 @@ const AdminTagSelector = ({ userId }: Props) => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    let cancelado = false;
     const load = async () => {
-      const [tagsRes, userTagsRes] = await Promise.all([
-        supabase.functions.invoke("admin-tags", { body: { action: "list" } }),
-        supabase.functions.invoke("admin-tags", { body: { action: "getUserTags", userId } }),
-      ]);
-      if (tagsRes.data?.tags) setAllTags(tagsRes.data.tags);
-      if (userTagsRes.data?.tagIds) setSelectedIds(userTagsRes.data.tagIds);
+      const { data, error } = await supabase.functions.invoke("admin-tags", {
+        body: { action: "getUserTagsCompleto", userId },
+      });
+      if (cancelado) return;
+      if (!error && data) {
+        if (Array.isArray(data.tags)) setAllTags(data.tags);
+        if (Array.isArray(data.tagIds)) setSelectedIds(data.tagIds);
+      }
       setLoading(false);
     };
     load();
+    return () => {
+      cancelado = true;
+    };
   }, [userId]);
 
   const toggleTag = async (tagId: string) => {
@@ -56,6 +64,7 @@ const AdminTagSelector = ({ userId }: Props) => {
             type="button"
             onClick={() => toggleTag(tag.id)}
             disabled={saving}
+            aria-pressed={isSelected}
             className={`inline-flex items-center px-3 py-1 text-xs font-heading uppercase tracking-wider rounded-full transition-all duration-200 border-2 ${
               isSelected
                 ? "text-white border-transparent"
