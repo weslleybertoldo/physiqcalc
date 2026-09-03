@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
@@ -56,21 +57,37 @@ async function checkRateLimit(userId: string, endpoint: string, maxCount: number
   }
 }
 
+// JWT validado LOCALMENTE (JWKS do GoTrue, cacheado no isolate) — poupa a ida ao /auth/v1/user
+// na VM Nano a cada chamada. Token que o JWKS não reconhece cai no getUser (compatibilidade).
+// Sessão revogada só é percebida quando o token expira (1 h) — por isso as funções destrutivas
+// (delete) continuam com getUser sempre.
+const JWKS = createRemoteJWKSet(new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`));
+async function usuarioDoToken(token: string, auth: string): Promise<any | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWKS, { issuer: `${SUPABASE_URL}/auth/v1`, audience: "authenticated" });
+    if (payload.sub) {
+      const p = payload as Record<string, unknown>;
+      return { id: payload.sub, email: (p.email as string | undefined) ?? null, app_metadata: (p.app_metadata as Record<string, unknown>) ?? {}, user_metadata: (p.user_metadata as Record<string, unknown>) ?? {} };
+    }
+  } catch (_e) { /* assinatura/alg/kid desconhecido → getUser */ }
+  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const userClient = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
+  const { data, error } = await userClient.auth.getUser(token);
+  return error || !data?.user ? null : data.user;
+}
+
 async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return { user: null, error: jsonErr("missing_auth", 401, origin) };
   const token = auth.slice(7);
-  const url = Deno.env.get("SUPABASE_URL")!;
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const userClient = createClient(url, anon, { global: { headers: { Authorization: auth } } });
-  const { data, error } = await userClient.auth.getUser(token);
-  if (error || !data?.user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
-  const role = (data.user.app_metadata as any)?.role;
+  const user = await usuarioDoToken(token, auth);
+  if (!user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
+  const role = (user.app_metadata as any)?.role;
   if (role !== "admin") return { user: null, error: jsonErr("forbidden", 403, origin) };
-  const allowed = await checkRateLimit(data.user.id, endpoint, maxCount, windowSecs);
+  const allowed = await checkRateLimit(user.id, endpoint, maxCount, windowSecs);
   if (!allowed) return { user: null, error: jsonErr("rate_limited", 429, origin) };
-  return { user: data.user, error: null };
+  return { user, error: null };
 }
 
 Deno.serve(async (req) => {
@@ -103,6 +120,19 @@ Deno.serve(async (req) => {
       if (error) throw error;
       const tagIds = (data ?? []).map((r: { tag_id: string }) => r.tag_id);
       return new Response(JSON.stringify({ tagIds, userTags: data ?? [] }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+    }
+    // tudo que o AdminTagSelector precisa numa chamada só (catálogo + ids do usuário)
+    if (action === "getUserTagsCompleto") {
+      const userId = body?.userId;
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      const [tagsRes, userTagsRes] = await Promise.all([
+        admin.from("physiq_tags").select("*").order("nome"),
+        admin.from("physiq_user_tags").select("tag_id").eq("user_id", userId),
+      ]);
+      if (tagsRes.error) throw tagsRes.error;
+      if (userTagsRes.error) throw userTagsRes.error;
+      const tagIds = (userTagsRes.data ?? []).map((r: { tag_id: string }) => r.tag_id);
+      return new Response(JSON.stringify({ tags: tagsRes.data ?? [], tagIds }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
     if (action === "getAllUserTags") {
       const { data, error } = await admin.from("physiq_user_tags").select("user_id, tag_id");

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { calcCobertura } from "./cobertura.ts";
 
@@ -76,18 +77,35 @@ async function checkRateLimit(userId: string, endpoint: string, maxCount: number
   } catch { return true; }
 }
 
+// JWT validado LOCALMENTE (JWKS do GoTrue, cacheado no isolate) — poupa a ida ao /auth/v1/user
+// na VM Nano a cada chamada. Token que o JWKS não reconhece cai no getUser (compatibilidade).
+// Sessão revogada só é percebida quando o token expira (1 h) — por isso as funções destrutivas
+// (delete) continuam com getUser sempre.
+const JWKS = createRemoteJWKSet(new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`));
+async function usuarioDoToken(token: string, auth: string): Promise<any | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWKS, { issuer: `${SUPABASE_URL}/auth/v1`, audience: "authenticated" });
+    if (payload.sub) {
+      const p = payload as Record<string, unknown>;
+      return { id: payload.sub, email: (p.email as string | undefined) ?? null, app_metadata: (p.app_metadata as Record<string, unknown>) ?? {}, user_metadata: (p.user_metadata as Record<string, unknown>) ?? {} };
+    }
+  } catch (_e) { /* assinatura/alg/kid desconhecido → getUser */ }
+  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const userClient = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
+  const { data, error } = await userClient.auth.getUser(token);
+  return error || !data?.user ? null : data.user;
+}
+
 async function requireUser(req: Request): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return { user: null, error: jsonErr("missing_auth", 401, origin) };
   const token = auth.slice(7);
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const userClient = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
-  const { data, error } = await userClient.auth.getUser(token);
-  if (error || !data?.user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
-  const allowed = await checkRateLimit(data.user.id, "mp-payments", 30, 60);
+  const user = await usuarioDoToken(token, auth);
+  if (!user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
+  const allowed = await checkRateLimit(user.id, "mp-payments", 30, 60);
   if (!allowed) return { user: null, error: jsonErr("rate_limited", 429, origin) };
-  return { user: data.user, error: null };
+  return { user, error: null };
 }
 
 async function mpFetch(path: string, init: RequestInit = {}): Promise<{ status: number; body: any }> {
