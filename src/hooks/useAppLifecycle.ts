@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { supabase } from "@/integrations/supabase/client";
+import { fecharDialogAberto } from "@/lib/dialogAberto";
 
 export function useAppLifecycle() {
   useEffect(() => {
@@ -17,8 +18,10 @@ export function useAppLifecycle() {
       }
     });
 
-    // Back button handler (Android) — minimiza em vez de fechar
+    // Back button handler (Android) — modal aberto fecha primeiro; sem modal,
+    // volta na rota; sem histórico, minimiza em vez de fechar
     const backListener = CapApp.addListener("backButton", ({ canGoBack }) => {
+      if (fecharDialogAberto()) return;
       if (!canGoBack) {
         CapApp.minimizeApp();
       } else {
