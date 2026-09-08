@@ -919,7 +919,6 @@ const ExercicioCard = ({
           <button type="button" onClick={() => onSetInfoExercicio(ex)}
             className="font-heading text-sm text-foreground hover:text-primary transition-colors flex items-center gap-2">
             <span>{ex.emoji}</span> {ex.nome}
-            <span className="text-[9px] text-muted-foreground/50 font-mono">#{ex.id.slice(0, 6)}</span>
           </button>
           {substituindo && (
             <span className="text-[9px] font-body text-primary/80 whitespace-nowrap" title={`No lugar de ${substituindo.nome}`}>
