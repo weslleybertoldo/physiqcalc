@@ -146,6 +146,8 @@ export function aplicarSubstituicoes(
  * Exercícios do slot que estão REMOVIDOS na data (pra oferecer "restaurar").
  * Mesma regra de precedência do resolver: se a linha que vale na data é uma
  * remoção, o exercício conta como removido (do dia ou definitivo).
+ * Só entra o que foi removido NESTA data (`dataDaTroca`): a remoção definitiva
+ * feita ontem continua tirando o exercício, mas não oferece mais o "restaurar".
  */
 export function exerciciosRemovidos(
   itens: ItemTreino[],
@@ -162,6 +164,10 @@ export function exerciciosRemovidos(
       dateKey: ctx.dateKey,
     });
     if (!sub || !ehRemocao(sub)) continue;
+    // "Restaurar" só no dia em que a remoção foi feita: do dia = a própria data;
+    // definitiva = data local do created_at/updated_at. Nos treinos seguintes o
+    // exercício removido simplesmente não aparece (nem o aviso, nem o botão).
+    if (dataDaTroca(sub) !== ctx.dateKey) continue;
     out.push({
       exercicio_id: item.exercicio_id,
       nome: item.tb_exercicios.nome,

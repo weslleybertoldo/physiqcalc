@@ -120,6 +120,8 @@ describe("remoção de exercício (linha sem exercício novo)", () => {
   const remocao = (over: Partial<Substituicao> = {}) =>
     sub({ exercicio_novo_id: null, exercicio_novo_usuario_id: null, ...over });
   const ids = (out: ItemTreino[]) => out.map((i) => i.exercicio_id);
+  /** Timestamp de meio-dia LOCAL do dia (independente do fuso do runner) */
+  const feitaEm = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12, 0, 0).toISOString();
 
   it("ehRemocao só quando não há exercício novo", () => {
     expect(ehRemocao(remocao())).toBe(true);
@@ -158,13 +160,31 @@ describe("remoção de exercício (linha sem exercício novo)", () => {
   });
 
   it("exerciciosRemovidos lista o que saiu, com escopo", () => {
-    const subs = [remocao({ data_treino: "2026-08-11" }), remocao({ exercicio_origem_id: "remada" })];
+    const subs = [
+      remocao({ data_treino: "2026-08-11" }),
+      remocao({ exercicio_origem_id: "remada", created_at: feitaEm(2026, 8, 11) }),
+    ];
     expect(exerciciosRemovidos(itens, subs, ctx)).toEqual([
       { exercicio_id: "supino", nome: "Supino Reto", emoji: "🏋️", escopo: "dia" },
       { exercicio_id: "remada", nome: "Remada", emoji: "🏋️", escopo: "definitiva" },
     ]);
-    // em outro dia só a definitiva conta
-    expect(exerciciosRemovidos(itens, subs, outroDia).map((r) => r.exercicio_id)).toEqual(["remada"]);
+    // em outro dia nada é oferecido pra restaurar (a definitiva foi feita em 11/08)
+    expect(exerciciosRemovidos(itens, subs, outroDia)).toEqual([]);
+  });
+
+  it("remoção definitiva só oferece 'restaurar' no dia em que foi feita", () => {
+    const subs = [remocao({ created_at: feitaEm(2026, 8, 11) })];
+    // no dia da remoção: aviso + restaurar
+    expect(exerciciosRemovidos(itens, subs, ctx).map((r) => r.exercicio_id)).toEqual(["supino"]);
+    // no treino seguinte: o exercício continua fora, mas sem aviso/restaurar
+    expect(exerciciosRemovidos(itens, subs, outroDia)).toEqual([]);
+    expect(ids(aplicarSubstituicoes(itens, subs, outroDia, catalogo))).toEqual(["remada"]);
+    // updated_at (última alteração) manda sobre created_at
+    const reaplicada = [remocao({ created_at: feitaEm(2026, 8, 1), updated_at: feitaEm(2026, 8, 12) })];
+    expect(exerciciosRemovidos(itens, reaplicada, ctx)).toEqual([]);
+    expect(exerciciosRemovidos(itens, reaplicada, outroDia).map((r) => r.exercicio_id)).toEqual(["supino"]);
+    // sem timestamp não dá pra saber o dia → não oferece
+    expect(exerciciosRemovidos(itens, [remocao()], ctx)).toEqual([]);
   });
 
   it("exerciciosRemovidos ignora trocas comuns e lista vazia sem substituições", () => {
@@ -173,7 +193,7 @@ describe("remoção de exercício (linha sem exercício novo)", () => {
   });
 
   it("aplicar + removidos são complementares", () => {
-    const subs = [remocao(), sub({ exercicio_origem_id: "remada", exercicio_novo_id: "crucifixo" })];
+    const subs = [remocao({ created_at: feitaEm(2026, 8, 11) }), sub({ exercicio_origem_id: "remada", exercicio_novo_id: "crucifixo" })];
     const vis = ids(aplicarSubstituicoes(itens, subs, ctx, catalogo));
     const rem = exerciciosRemovidos(itens, subs, ctx).map((r) => r.exercicio_id);
     expect(vis).toEqual(["crucifixo"]);
