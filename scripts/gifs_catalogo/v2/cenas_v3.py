@@ -976,3 +976,10 @@ cena("Agachamento no Hack", "lado_frente", ["quadriceps"], hack_pose3((0, 34, 0)
 from catalogo3d import eq_lat_pulldown
 cena("Puxada Alta na Polia", "costas34", ["dorsal", "trapezio_medio", "biceps"],
      SEAT(arm=LR(168, 50, 168, 50)), SEAT(arm=LR(70, 130, 125, 60)), eq_lat_pulldown)
+
+
+# Puxada Alta na Polia: mãos por IK com largura FIXA (barra de comprimento constante); barra desce até o peito alto,
+# visível acima dos ombros por trás (ref. Mundo Boa Forma); cotovelos pra baixo/fora
+def pux_pose(y, z):
+    return SEAT(arm_L=dict(elev=0, az=0, hand=(-28, y, z), bend=(-1, -1, -0.3)), arm_R=dict(elev=0, az=0, hand=(28, y, z), bend=(1, -1, -0.3)))
+cena("Puxada Alta na Polia", "costas34", ["dorsal", "trapezio_medio", "biceps"], pux_pose(106, 4), pux_pose(57, 12), eq_lat_pulldown)
