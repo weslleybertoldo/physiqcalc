@@ -1,0 +1,38 @@
+{
+ "Remada Baixa na Máquina": {
+  "id": "d6796429-e3ab-4644-97a4-4d8c9a59ca11",
+  "nome": "Remada Baixa na Máquina",
+  "grupo_muscular": "Dorsal",
+  "emoji": "🏋️",
+  "tipo": "musculacao",
+  "subgrupo": "Latíssimo do dorso (porção inferior) · romboides · trapézio inferior · bíceps",
+  "dica": "Peito no apoio e pegadas baixas. Puxe em direção ao abdômen levando os cotovelos para trás e junto ao corpo, junte as escápulas no fim e volte devagar até sentir alongar.\nBase: remadas com o tronco apoiado mantêm alta ativação do latíssimo com baixa carga na lombar (Fenwick et al., 2009); cotovelos junto ao corpo favorecem o latíssimo em relação ao trapézio e ao deltoide posterior (Lehman et al., 2004)."
+ },
+ "Abdominal Bicicleta": {
+  "id": "fb7b3cf3-b689-4905-b9bf-c40c016f493d",
+  "nome": "Abdominal Bicicleta",
+  "grupo_muscular": "Abdômen",
+  "emoji": "🧘",
+  "tipo": "musculacao",
+  "subgrupo": "Reto abdominal · oblíquos externo e interno",
+  "dica": "Deitado, mãos atrás da cabeça e pernas elevadas: leve o cotovelo ao joelho oposto enquanto estende a outra perna, alternando com controle e sem puxar o pescoço. Lombar encostada no chão.\nBase: o abdominal bicicleta ficou entre os exercícios com maior ativação de reto abdominal e oblíquos em estudo de EMG do ACE (Francis et al./ACE, 2001)."
+ },
+ "Abdominal Oblíquo com Pé no Banco": {
+  "id": "59c92f5d-312e-422c-b9fb-e6e60ef05997",
+  "nome": "Abdominal Oblíquo com Pé no Banco",
+  "grupo_muscular": "Abdômen",
+  "emoji": "🧘",
+  "tipo": "musculacao",
+  "subgrupo": "Oblíquos externo e interno · reto abdominal",
+  "dica": "Deitado com um pé apoiado no banco e o outro tornozelo cruzado sobre o joelho, gire o tronco levando o ombro em direção ao joelho oposto. Suba curto, segure 1 s e desça controlando. Faça os dois lados.\nBase: a rotação do tronco no abdominal aumenta a ativação dos oblíquos em relação ao abdominal reto tradicional (Escamilla et al., 2006)."
+ },
+ "Puxada Alta na Polia": {
+  "id": "d15af9c4-3439-462f-a95b-4139e6627a82",
+  "nome": "Puxada Alta na Polia",
+  "grupo_muscular": "Costas",
+  "emoji": "🏋️",
+  "tipo": "musculacao",
+  "subgrupo": "Latíssimo do dorso · trapézio inferior · bíceps",
+  "dica": "Sentado com as coxas travadas, pegada pronada um pouco mais aberta que os ombros. Puxe a barra até a parte alta do peito levando os cotovelos para baixo e para trás, peito aberto, e volte controlando até os braços quase estendidos.\\nBase: a puxada na polia alta ativa fortemente o latíssimo do dorso; pegada pronada média gera ativação igual ou maior que a aberta/supinada (Andersen et al., 2014; Lehman et al., 2004)."
+ }
+}
