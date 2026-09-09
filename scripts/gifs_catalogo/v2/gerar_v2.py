@@ -4,10 +4,12 @@
 import os, sys, math, re, unicodedata
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))  # catalogo.py
 import rig3d_lib as R
 from rig3d_lib import Camera, Scene, Body, draw_body, floor_grid, labels, arrow, CAMS, ease, lerp
 from catalogo import E, D
 from catalogo3d import SCENES
+import cenas_v3  # noqa: F401 — refaz cenas em SCENES (08/09/2026)
 
 FRAMES, DUR = 24, 80
 
@@ -17,7 +19,19 @@ def slug(s):
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 
+def _expand(p):
+    """arm/leg genéricos viram arm_L/arm_R/leg_L/leg_R (senão a interpolação A→B ignora o lado que só existe numa pose)."""
+    p = dict(p)
+    for base in ("arm", "leg"):
+        if base in p:
+            for side in ("L", "R"):
+                p.setdefault(f"{base}_{side}", p[base])
+            del p[base]
+    return p
+
+
 def lerp_pose(A, B, k):
+    A, B = _expand(A), _expand(B)
     out = {}
     for key in set(A) | set(B):
         a, b = A.get(key), B.get(key, A.get(key))
@@ -36,22 +50,38 @@ def lerp_pose(A, B, k):
 def frame(nome, meta, sc_def, t):
     k = ease(t)
     pose = lerp_pose(sc_def["A"], sc_def["B"], k)
+    # pé fixo no chão/plataforma: recalcula a perna por IK a cada frame (interpolar ângulos faria o pé afundar/subir)
+    if sc_def.get("leg_ik"):
+        import cenas_v3
+        for side, ank in sc_def["leg_ik"].items():
+            base = sc_def["A"].get("leg_" + side, {})
+            pose["leg_" + side] = cenas_v3.perna_para_pe(pose["P"], ank, -1 if side == "L" else 1, az=base.get("az", 6), foot=base.get("foot"), foot_dir=base.get("foot_dir"))
+    # barra rígida: se a cena define pivôs ("arc"), a mão é reprojetada no arco de raio constante em volta do pivô
+    if sc_def.get("arc"):
+        for side, piv in sc_def["arc"].items():
+            arm = pose.get("arm_" + side)
+            if arm and arm.get("hand") is not None:
+                hA = sc_def["A"]["arm_" + side]["hand"]
+                Rr = math.dist(hA, piv)
+                h = arm["hand"]; d = R.norm(R.sub(h, piv))
+                arm["hand"] = tuple(pp + Rr * dd for pp, dd in zip(piv, d))
     kc = k if sc_def["contract"] == "B" else 1 - k
     eye = CAMS[sc_def["cam"]]
     cam = Camera(eye=eye)
     sc = Scene(cam)
     body = Body(pose)
     # hanging: mãos fixas (barra fixa / mergulho) — alvo = posição da mão na pose A
-    if sc_def["A"].get("arm", {}).get("hand", "x") is None:
+    _armA = sc_def["A"].get("arm") or sc_def["A"].get("arm_R") or {}
+    if _armA.get("hand", "x") is None:
         bodyA = Body(sc_def["A"])
         for s in (-1, 1):
             body.hand[s] = bodyA.hand[s]
-            body.elbow[s] = R.ik(body.sh[s], bodyA.hand[s], R.L["ua"], R.L["fa"], body.Fw if sc_def["A"]["arm"].get("az", 0) < 90 else R.mul(body.Fw, -1))
+            body.elbow[s] = R.ik(body.sh[s], bodyA.hand[s], R.L["ua"], R.L["fa"], body.Fw if _armA.get("az", 0) < 90 else R.mul(body.Fw, -1))
     floor_grid(sc)
     if sc_def["equip"]:
         sc_def["equip"](sc, body, k)
     draw_body(sc, body, kc, muscles=sc_def["musc"], hide=sc_def["hide"])
-    sc.autofit()
+    sc.autofit(top=sc_def.get("fit_top") or 72)
     img = sc.render()
     # seta: trajetória do efetuador entre A e B
     bA, bB = Body(sc_def["A"]), Body(sc_def["B"])

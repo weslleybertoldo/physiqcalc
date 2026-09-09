@@ -173,7 +173,7 @@ D["Flexão Nórdica"] = ("Isquiotibiais (excêntrico) · bíceps femoral",
     "Joelhos apoiados, tornozelos presos, desça o tronco o mais devagar possível mantendo quadril estendido; ajude com as mãos na volta.\nBase: a nórdica é o exercício de maior ativação excêntrica de isquiotibiais e reduz risco de lesão (Bourne et al., 2017).")
 D["Abdutora"] = ("Glúteo médio · glúteo mínimo · tensor da fáscia lata",
     "Sentado com as costas apoiadas, abra as pernas contra os pads até o fim e volte devagar sem bater. Inclinar levemente à frente aumenta o glúteo.\nBase: abdução de quadril ativa glúteo médio/mínimo, estabilizadores importantes da pelve (Reiman et al., 2012).")
-D["Adutora"] = ("Adutores (longo · curto · magno)",
+D["Adutora"] = ("Adutores da coxa (longo, curto e magno) · grácil · pectíneo",
     "Feche as pernas contra os pads de forma controlada e abra devagar até o alongamento confortável, sem forçar.\nBase: exercícios de adução fortalecem os adutores, ligados à prevenção de dor na virilha (Serner et al., 2014).")
 D["Abdução de Quadril na Polia"] = ("Glúteo médio · glúteo mínimo",
     "Tornozeleira no cabo baixo, tronco reto segurando o apoio; leve a perna para o lado sem inclinar e volte devagar.\nBase: abdução em pé com cabo ativa o glúteo médio e o lado oposto como estabilizador (Reiman et al., 2012).")
@@ -398,6 +398,27 @@ ex("Corrida", "Corrida", "🏃‍♂️",
    STAND(torso=82, thigh=-60, shin=-100, foot=10, thigh2=-120, shin2=-150, foot2=-40, ua=-50, fa=30, ua2=-130, fa2=-40),
    STAND(torso=82, thigh=-120, shin=-150, foot=-40, thigh2=-60, shin2=-100, foot2=10, ua=-130, fa=-40, ua2=-50, fa2=30),
    [("treadmill",)], id="4a151e92", tipo="corrida")
+
+# ── NOVOS 08/09/2026 (exercícios pessoais do Weslley promovidos ao catálogo; GIF só no motor v2) ──
+D["Remada Baixa na Máquina"] = ("Latíssimo do dorso (porção inferior) · romboides · trapézio inferior · bíceps",
+    "Peito no apoio e pegadas baixas. Puxe em direção ao abdômen levando os cotovelos para trás e junto ao corpo, junte as escápulas no fim e volte devagar até sentir alongar.\nBase: remadas com o tronco apoiado mantêm alta ativação do latíssimo com baixa carga na lombar (Fenwick et al., 2009); cotovelos junto ao corpo favorecem o latíssimo em relação ao trapézio e ao deltoide posterior (Lehman et al., 2004).")
+D["Abdominal Bicicleta"] = ("Reto abdominal · oblíquos externo e interno",
+    "Deitado, mãos atrás da cabeça e pernas elevadas: leve o cotovelo ao joelho oposto enquanto estende a outra perna, alternando com controle e sem puxar o pescoço. Lombar encostada no chão.\nBase: o abdominal bicicleta ficou entre os exercícios com maior ativação de reto abdominal e oblíquos em estudo de EMG do ACE (Francis et al./ACE, 2001).")
+D["Abdominal Oblíquo com Pé no Banco"] = ("Oblíquos externo e interno · reto abdominal",
+    "Deitado com um pé apoiado no banco e o outro tornozelo cruzado sobre o joelho, gire o tronco levando o ombro em direção ao joelho oposto. Suba curto, segure 1 s e desça controlando. Faça os dois lados.\nBase: a rotação do tronco no abdominal aumenta a ativação dos oblíquos em relação ao abdominal reto tradicional (Escamilla et al., 2006).")
+ex("Remada Baixa na Máquina", "Dorsal", "🏋️", SEATED(ua=-10, fa=-10), SEATED(ua=-150, fa=-10),
+   [("seat", None), ("tower", TOWER_R), ("stack", 515)], id="NOVO-remada-baixa")
+ex("Abdominal Bicicleta", "Abdômen", "🧘",
+   dict(hip=(300, 320), torso=180, neck=180, thigh=40, shin=-95, foot=-5, ua=150, fa=60),
+   dict(hip=(300, 320), torso=160, neck=140, thigh=60, shin=-95, foot=-5, ua=150, fa=60), [("mat",)], id="NOVO-abd-bicicleta")
+ex("Abdominal Oblíquo com Pé no Banco", "Abdômen", "🧘",
+   dict(hip=(300, 320), torso=180, neck=180, thigh=40, shin=-95, foot=-5, ua=150, fa=60),
+   dict(hip=(300, 320), torso=150, neck=130, thigh=40, shin=-95, foot=-5, ua=150, fa=60), [("mat",)], id="NOVO-abd-obliquo")
+
+D["Puxada Alta na Polia"] = ("Latíssimo do dorso · trapézio inferior · bíceps",
+    "Sentado com as coxas travadas, pegada pronada um pouco mais aberta que os ombros. Puxe a barra até a parte alta do peito levando os cotovelos para baixo e para trás, peito aberto, e volte controlando até os braços quase estendidos.\nBase: a puxada na polia alta ativa fortemente o latíssimo do dorso; pegada pronada média gera ativação igual ou maior que a aberta/supinada (Andersen et al., 2014; Lehman et al., 2004).")
+ex("Puxada Alta na Polia", "Costas", "🏋️", SEATED(ua=120, fa=60), SEATED(ua=-150, fa=60),
+   [("seat", None), ("tower", TOWER_R), ("stack", 515)], id="NOVO-puxada-alta")
 
 for e in E:
     e["sub"], e["dica"] = D[e["nome"]]

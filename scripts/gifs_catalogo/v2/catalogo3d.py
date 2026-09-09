@@ -8,8 +8,8 @@ from rig3d_lib import (FLOOR, MACH, MACH_D, MACH_L, MUTED, ACCENT, PAD, PAD_T, B
 
 SCENES = {}
 
-def cena(nome, cam, musc, A, B, equip=None, contract="B", hide=(), arrow="hand_R", fit_extra=None):
-    SCENES[nome] = dict(cam=cam, musc=musc, A=A, B=B, equip=equip, contract=contract, hide=hide, arrow=arrow, fit_extra=fit_extra)
+def cena(nome, cam, musc, A, B, equip=None, contract="B", hide=(), arrow="hand_R", fit_extra=None, fit_top=None, arc=None, **kw):
+    SCENES[nome] = dict(cam=cam, musc=musc, A=A, B=B, equip=equip, contract=contract, hide=hide, arrow=arrow, fit_extra=fit_extra, fit_top=fit_top, arc=arc, **kw)
 
 # ── poses base ────────────────────────────────────────────────────────────────
 def STAND(**o):

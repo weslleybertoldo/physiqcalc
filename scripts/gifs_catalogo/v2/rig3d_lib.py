@@ -77,6 +77,11 @@ CAMS = {
     "alto_frente": (-140, 200, 200),
     "alto_lado": (-230, 190, 60),
     "supino": (-170, 170, 200),
+    "alto_lado_costas": (-230, 190, -60),
+    "supino_pes": (-70, 160, 240),
+    "lado_tf": (-250, 120, -70),     # lateral com leve 3/4 de costas (tríceps francês: pedido dele; puro lado fica palito)   # deitados: visto dos pés, elevado — barra horizontal e braços simétricos
+    "lado_alto": (-250, 150, 30),
+    "frente34_baixo": (-150, 60, 230),
 }
 
 
@@ -122,19 +127,32 @@ class Scene:
             draw.line([self.P(p) for p in pts], fill=fill, width=int(width * S), joint="curve")
         self.add(d, fn, tuple(pts) if fit else ())
     def box(self, x0, x1, y0, y1, z0, z1, fill, top=None, side=None, outline=OUTLINE, fit=True):
-        faces = [
-            ([(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0)], (0,0,-1), fill),
-            ([(x0,y0,z1),(x1,y0,z1),(x1,y1,z1),(x0,y1,z1)], (0,0,1), fill),
-            ([(x0,y1,z0),(x1,y1,z0),(x1,y1,z1),(x0,y1,z1)], (0,1,0), top or fill),
-            ([(x0,y0,z0),(x1,y0,z0),(x1,y0,z1),(x0,y0,z1)], (0,-1,0), MACH_D),
-            ([(x0,y0,z0),(x0,y1,z0),(x0,y1,z1),(x0,y0,z1)], (-1,0,0), side or fill),
-            ([(x1,y0,z0),(x1,y1,z0),(x1,y1,z1),(x1,y0,z1)], (1,0,0), side or fill),
-        ]
-        for pts, n, col in faces:
-            if dot(n, mul(self.cam.f, -1)) > 0:
-                self.polygon(pts, col, outline=outline, depth_bias=-0.01, fit=fit)
-    def obox(self, c, u, v, w, su, sv, sw, fill, top=None, side=None, outline=OUTLINE):
-        """caixa orientada: centro c, eixos u/v/w (unitários), meios-tamanhos su/sv/sw."""
+        c = ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)
+        self.obox(c, (1, 0, 0), (0, 1, 0), (0, 0, 1), abs(x1 - x0) / 2, abs(y1 - y0) / 2, abs(z1 - z0) / 2, fill, top=top, side=side, outline=outline, fit=fit)
+    def obox(self, c, u, v, w, su, sv, sw, fill, top=None, side=None, outline=OUTLINE, fit=True, slice_len=28):
+        """caixa orientada: centro c, eixos u/v/w (unitários), meios-tamanhos su/sv/sw.
+        Caixas longas são FATIADAS ao longo do eixo maior (cada fatia com a própria profundidade → banco/encosto
+        não passam por cima do corpo que está em cima deles); as arestas da caixa inteira são desenhadas por
+        segmento (profundidade local), sem costura visível entre fatias."""
+        axes = [(u, su), (v, sv), (w, sw)]
+        i_long = max(range(3), key=lambda i: axes[i][1])
+        n = max(1, int(math.ceil(2 * axes[i_long][1] / slice_len)))
+        ax, half = axes[i_long]
+        for i in range(n):
+            off = -half + (i + 0.5) * (2 * half / n)
+            cc = addv(c, mul(ax, off))
+            hs = [su, sv, sw]; hs[i_long] = half / n
+            self._obox_faces(cc, u, v, w, hs[0], hs[1], hs[2], fill, top, side, fit)
+        if outline:
+            def corner(a, b, d): return addv(c, mul(u, a*su), mul(v, b*sv), mul(w, d*sw))
+            P = {(a, b, d): corner(a, b, d) for a in (-1, 1) for b in (-1, 1) for d in (-1, 1)}
+            edges = [((-1,-1,-1),(1,-1,-1)),((-1,1,-1),(1,1,-1)),((-1,-1,1),(1,-1,1)),((-1,1,1),(1,1,1)),
+                     ((-1,-1,-1),(-1,1,-1)),((1,-1,-1),(1,1,-1)),((-1,-1,1),(-1,1,1)),((1,-1,1),(1,1,1)),
+                     ((-1,-1,-1),(-1,-1,1)),((1,-1,-1),(1,-1,1)),((-1,1,-1),(-1,1,1)),((1,1,-1),(1,1,1))]
+            for a, b in edges:
+                pa, pb = P[a], P[b]
+                self.line3([pa, pb], outline, 1.6, depth=(self.cam.depth(pa) + self.cam.depth(pb)) / 2 - 0.08, fit=False)
+    def _obox_faces(self, c, u, v, w, su, sv, sw, fill, top, side, fit):
         def corner(a, b, d): return addv(c, mul(u, a*su), mul(v, b*sv), mul(w, d*sw))
         faces = [
             ((-1,-1,-1),(1,-1,-1),(1,1,-1),(-1,1,-1), mul(w,-1), fill),
@@ -146,7 +164,7 @@ class Scene:
         ]
         for a, b, cc, d, n, col in faces:
             if dot(n, mul(self.cam.f, -1)) > 0:
-                self.polygon([corner(*a), corner(*b), corner(*cc), corner(*d)], col, outline=outline, depth_bias=-0.01)
+                self.polygon([corner(*a), corner(*b), corner(*cc), corner(*d)], col, outline=None, depth_bias=-0.01, fit=fit)
     def autofit(self, top=72, bottom=372, left=40, right=560):
         if not self.fit:
             return
@@ -266,13 +284,14 @@ def draw_body(sc, body, k, muscles=(), cam_side=None, arms_front=True, hide=()):
         sc.capsule(hipj, knee, 9, SKIN, shade=SKIN_SH)
         sc.capsule(hipj, addv(hipj, mul(sub(knee, hipj), 0.42)), 9.8, SHORTS, outline=OUTLINE)
         dth = (cam.depth(hipj) + cam.depth(knee)) / 2
-        if "quadriceps" in muscles or ("adutores" in muscles) or ("posterior" in muscles and not front_visible):
+        if any(m in muscles for m in ("quadriceps", "adutores", "posterior", "abdutores")):
             sc.capsule(addv(hipj, mul(sub(knee, hipj), 0.42)), addv(hipj, mul(sub(knee, hipj), 0.97)), 8.0, MUSC + (a,), outline=None, depth=dth - 0.02)
         sc.capsule(knee, ankle, 7, SKIN, shade=SKIN_SH)
         if "panturrilha" in muscles:
             dsh = (cam.depth(knee) + cam.depth(ankle)) / 2
             sc.capsule(addv(knee, mul(sub(ankle, knee), 0.12)), addv(knee, mul(sub(ankle, knee), 0.62)), 6.4, MUSC + (a,), outline=None, depth=dsh - 0.02)
-        sc.capsule(ankle, toe, 5, SHOE)
+        fd_ = norm(sub(toe, ankle))
+        sc.capsule(addv(ankle, mul(fd_, -5)), toe, 5, SHOE)   # calcanhar 5 un. atrás do tornozelo
     # ── pelve (bloco do short) ──
     sc.obox(bp(0, 4, 3), R, U, Fw, 16, 6, 11, SHORTS, top=SHORTS_T, side=SHORTS_S)
     if "gluteo" in muscles:
@@ -346,7 +365,9 @@ def draw_body(sc, body, k, muscles=(), cam_side=None, arms_front=True, hide=()):
             continue
         sh, elbow, hand = body.sh[s], body.elbow[s], body.hand[s]
         d_nat = (cam.depth(sh) + cam.depth(elbow)) / 2
-        d_arm = min(d_nat, D - 0.2) if arms_front else d_nat
+        # à frente do plano do tronco só quando está na faixa de z-fight (braço ao lado do corpo);
+        # claramente atrás (ex. braço de apoio no banco visto de costas) fica atrás de verdade
+        d_arm = (min(d_nat, D - 0.2) if d_nat < D + 6.0 else d_nat) if arms_front else d_nat
         d_fore = (cam.depth(elbow) + cam.depth(hand)) / 2
         sc.capsule(sh, elbow, 6.5, SKIN, shade=SKIN_SH, depth=d_arm)
         if "biceps" in muscles or "triceps" in muscles:
@@ -372,7 +393,9 @@ def floor_grid(sc, x0=-160, x1=200, z0=-140, z1=160, step=40):
     for gz in range(z0, z1 + 1, step):
         sc.line3([(x0, FLOOR, gz), (x1, FLOOR, gz)], (28, 28, 28), 1, depth_bias=80, fit=False)
 
-def tower(sc, k, x=-96, z=44, h=106, stack_z=64, lift=26, cable_to=None, sel_from_top=True):
+def tower(sc, k, x=-96, z=44, h=106, stack_z=None, lift=26, cable_to=None, sel_from_top=True):
+    if stack_z is None:
+        stack_z = z + 20   # pilha logo atrás da coluna (antes ficava fixa em z=64, solta da torre)
     sc.box(x-4, x+4, FLOOR, h, z-4, z+4, MACH, top=MACH_L)
     sc.box(x-10, x+10, h-6, h+2, z-4, z+4, MACH_L)
     sc.box(x-16, x+16, FLOOR, FLOOR+4, stack_z-8, stack_z+8, MACH_D)
@@ -399,8 +422,8 @@ def seat(sc, y=-2, back_angle=None, cz=0):
     sc.box(-17, 17, y-8, y, cz-22, cz+20, BENCH, top=BENCH_T)
     sc.line3([(-17, y, cz-22), (17, y, cz-22)], ACCENT, 2, depth_bias=-0.2)
     if back_angle is not None:
-        ang = math.radians(back_angle)   # 90 = vertical; 110 = reclinado para trás
-        u = (0, math.sin(ang), -math.cos(ang))  # eixo do encosto (para cima, inclinando para -z)
+        ang = math.radians(back_angle)   # 90 = vertical; 110 = reclinado para trás (-z)
+        u = (0, math.sin(ang), math.cos(ang))  # eixo do encosto (para cima; >90 inclina para -z = costas)
         base = (0, y, cz-20)
         c = addv(base, mul(u, 34))
         sc.obox(c, (1, 0, 0), u, norm(cross((1, 0, 0), u)), 16, 34, 3, PAD, top=PAD_T)
@@ -464,6 +487,8 @@ def arrow(img, cam, p_from, p_to, forward=True):
     vx, vy = vx/n, vy/n
     L_ = min(38, n); ax, ay = a[0] + vx*(n-L_)/2, a[1] + vy*(n-L_)/2 - 26
     bx, by = ax + vx*L_, ay + vy*L_
+    if min(ay, by) < 70:   # faixa do título/legenda → seta abaixo do efetuador
+        ax, bx = ax, bx; ay, by = ay + 52 + 26, by + 52 + 26
     d.line([(ax*S, ay*S), (bx*S, by*S)], fill=ACCENT, width=3*S)
     px, py = -vy, vx
     d.polygon([((bx+vx*8)*S, (by+vy*8)*S), ((bx+px*6)*S, (by+py*6)*S), ((bx-px*6)*S, (by-py*6)*S)], fill=ACCENT)
