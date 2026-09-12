@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MpPagamento } from "@/lib/mpClient";
+
+// planoTexto → saasApi → client do Supabase: no CI não existe .env (createClient lança "supabaseUrl is required") → mock
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { auth: { getSession: async () => ({ data: { session: null } }) } },
+  DB_SCHEMA: "public",
+}));
 import type { PlanoStatus } from "@/lib/saasApi";
 import { addDias, ehPixSimulado, faixaAlunos, liberaPagarCicloEm, mensagemErroPlano, pixAberto, podePagarCiclo, situacaoPlano, valorAnualDe, valorMensalDe } from "./planoTexto";
 
