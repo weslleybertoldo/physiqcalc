@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight, Lock } from "lucide-react";
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { listarAlunos } from "@/lib/saasApi";
 
 // staging tem bucket próprio de mídias — upload não polui as fotos de produção
 const BUCKET_EXERCICIOS = DB_SCHEMA === "staging" ? "exercicios-staging" : "exercicios";
@@ -18,19 +20,30 @@ interface Exercicio {
   imagem_url?: string | null;
   subgrupo?: string | null;
   dica?: string | null;
+  /** NULL = catálogo GLOBAL do master; senão o professor dono (SaaS 12/09/2026) */
+  professor_id?: string | null;
 }
 
 /** Emojis oferecidos no seletor de exercício (todos os já usados no catálogo) */
 const EMOJIS_EXERCICIO = ["🏋️", "🏋️‍♂️", "💪", "🦵", "🍑", "🫁", "🔙", "🎯", "🧘", "🏃", "🏃‍♂️", "🔵"];
 
+/** Marca de item do catálogo GLOBAL (do master) — o professor só lê */
+const BadgeGlobal = () => (
+  <span className="inline-flex items-center gap-1 text-[10px] font-heading uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0" title="Catálogo global — só leitura" data-global>
+    <Lock size={10} /> Global
+  </span>
+);
+
 interface GrupoTreino {
   id: string;
   nome: string;
+  professor_id?: string | null;
 }
 
 interface PastaTreino {
   id: string;
   nome: string;
+  professor_id?: string | null;
 }
 
 interface Props {
@@ -40,19 +53,35 @@ interface Props {
 interface GrupoMuscular {
   id: string;
   nome: string;
+  professor_id?: string | null;
 }
 
 const AdminTreinos = ({ onBack }: Props) => {
-  // sub-aba derivada da URL (?v=treinos&t=...) pra o reload (F5) manter a aba
+  // Escopo SaaS (12/09/2026): o professor vê os treinos/exercícios DELE + os GLOBAIS (professor_id null, só leitura);
+  // o master cria global. Linhas de outros professores (que a RLS de leitura deixa passar) ficam fora da tela.
+  const { user, papel } = useAuth();
+  const meuId = user?.id ?? null;
+  const donoInsert = papel === "professor" ? meuId : null; // professor_id gravado ao criar
+  const ehGlobal = (r: { professor_id?: string | null }) => !r.professor_id;
+  const ehMeu = (r: { professor_id?: string | null }) => !!meuId && r.professor_id === meuId;
+  const visivel = (r: { professor_id?: string | null }) => ehGlobal(r) || ehMeu(r);
+  const podeEditar = (r: { professor_id?: string | null }) => (papel === "master" ? visivel(r) : ehMeu(r));
+
+  // sub-aba derivada da URL (/admin/treinos?t=...) pra o reload (F5) manter a aba
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get("t") as "grupos" | "biblioteca" | "historico" | "relatorio") || "grupos";
   const setTab = (t: "grupos" | "biblioteca" | "historico" | "relatorio") =>
-    setSearchParams((prev) => { prev.set("v", "treinos"); prev.set("t", t); prev.delete("pasta"); return prev; }, { replace: true });
+    setSearchParams((prev) => { prev.set("t", t); prev.delete("pasta"); return prev; }, { replace: true });
+  // Biblioteca: "Global 🔒" (catálogo do master) | "Minha" (do professor). Master só tem a Global (editável).
+  const bibScope: "global" | "minha" = papel === "master" ? "global" : searchParams.get("b") === "minha" ? "minha" : "global";
+  const setBibScope = (b: "global" | "minha") =>
+    setSearchParams((prev) => { prev.set("t", "biblioteca"); prev.set("b", b); return prev; }, { replace: true });
+  const podeEditarBib = papel === "master" || bibScope === "minha";
   // pasta aberta derivada da URL (?pasta=) — push mantém o "voltar" nativo
   const pastaParam = searchParams.get("pasta");
   const setPastaAberta = (id: string | null) =>
     setSearchParams((prev) => {
-      prev.set("v", "treinos"); prev.set("t", "grupos");
+      prev.set("t", "grupos");
       if (id) prev.set("pasta", id); else prev.delete("pasta");
       return prev;
     });
@@ -95,6 +124,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [editExImagemFile, setEditExImagemFile] = useState<File | null>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
+  const [usersCarregados, setUsersCarregados] = useState(false);
   // pares grupo:exercício com gravação em andamento — 2 cliques no mesmo tick disparam 1 request
   const toggleEmAndamento = useRef<Set<string>>(new Set());
 
@@ -109,25 +139,30 @@ const AdminTreinos = ({ onBack }: Props) => {
         supabase.from("tb_grupos_exercicios").select("grupo_id, exercicio_id, ordem").order("ordem"),
         supabase.from("grupos_musculares").select("*").order("nome"),
         (supabase.from as any)("tb_grupos_treino_perfis").select("grupo_id, user_id"),
-        (supabase.from as any)("tb_pastas_treino").select("id, nome").order("nome"),
+        (supabase.from as any)("tb_pastas_treino").select("id, nome, professor_id").order("nome"),
         (supabase.from as any)("tb_pastas_treino_grupos").select("pasta_id, grupo_id"),
       ]);
 
       if (exRes.error) throw exRes.error;
       if (grRes.error) throw grRes.error;
 
-      setExercicios((exRes.data as Exercicio[]) || []);
-      setGrupos((grRes.data as GrupoTreino[]) || []);
-      setPastas((paRes.data as PastaTreino[]) || []);
+      // só o que é global ou meu (o master enxerga tudo pela RLS; aqui ele vê o catálogo global dele)
+      setExercicios(((exRes.data as Exercicio[]) || []).filter(visivel));
+      setGrupos(((grRes.data as GrupoTreino[]) || []).filter(visivel));
+      const pastasVis = ((paRes.data as PastaTreino[]) || []).filter(visivel);
+      setPastas(pastasVis);
+      // vínculo treino↔pasta só conta pastas visíveis (treino global numa pasta de OUTRO professor continua "sem pasta" pra mim)
+      const idsPastasVis = new Set(pastasVis.map((p) => p.id));
       const pgMap: Record<string, string[]> = {};
       ((pgRes.data as any[]) || []).forEach((v) => {
-        (pgMap[v.grupo_id] ||= []).push(v.pasta_id);
+        if (idsPastasVis.has(v.pasta_id)) (pgMap[v.grupo_id] ||= []).push(v.pasta_id);
       });
       setPastasDoGrupo(pgMap);
-      setGruposMusculares((gmRes.data as GrupoMuscular[]) || []);
+      const musculos = ((gmRes.data as GrupoMuscular[]) || []).filter(visivel);
+      setGruposMusculares(musculos);
 
-      if (gmRes.data && gmRes.data.length > 0 && !novoExGrupo) {
-        setNovoExGrupo((gmRes.data[0] as GrupoMuscular).nome);
+      if (musculos.length > 0 && !novoExGrupo) {
+        setNovoExGrupo(musculos[0].nome);
       }
 
       const map: Record<string, string[]> = {};
@@ -150,16 +185,20 @@ const AdminTreinos = ({ onBack }: Props) => {
     }
   };
 
+  // alunos do escopo (Quem vê / Histórico / Relatório): o professor já recebe só os dele; no Admin o master vê SÓ os alunos dele
   const loadUsers = async () => {
     try {
-      const { data } = await supabase.functions.invoke("admin-list-users");
-      if (data?.users) setUsers(data.users.map((u: any) => ({ id: u.id, nome: u.nome || u.email, email: u.email })));
+      const { users: lista } = await listarAlunos({ limit: 100, professorId: papel === "master" ? meuId : undefined });
+      setUsers(lista.map((u) => ({ id: u.id, nome: u.nome || u.email || "", email: u.email || "" })));
     } catch {
-      toast.error("Erro ao carregar usuários.");
+      toast.error("Erro ao carregar alunos.");
+    } finally {
+      setUsersCarregados(true);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadData(); }, [meuId]);
 
   // ESC fecha popups (modais da Biblioteca e dropdown de pastas)
   useEffect(() => {
@@ -196,6 +235,7 @@ const AdminTreinos = ({ onBack }: Props) => {
       const { error } = await supabase.from("tb_exercicios").insert({
         nome: novoExNome.trim(), grupo_muscular: novoExGrupo, emoji: novoExEmoji, tipo: novoExTipo,
         subgrupo: novoExSubgrupo.trim() || null, dica: novoExDica.trim() || null,
+        professor_id: donoInsert,
       } as any);
       if (error) throw error;
       setNovoExNome(""); setNovoExSubgrupo(""); setNovoExDica("");
@@ -258,7 +298,7 @@ const AdminTreinos = ({ onBack }: Props) => {
     const nome = novoMusculo.trim();
     if (!nome) return;
     try {
-      const { data, error } = await supabase.from("grupos_musculares").insert({ nome }).select().single();
+      const { data, error } = await (supabase.from as any)("grupos_musculares").insert({ nome, professor_id: donoInsert }).select().single();
       if (error) {
         if (error.code === "23505") toast.error("Esse músculo já existe na lista.");
         else throw error;
@@ -278,7 +318,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const handleAddGrupo = async () => {
     if (!novoGrupoNome.trim()) return;
     try {
-      const { error } = await supabase.from("tb_grupos_treino").insert({ nome: novoGrupoNome.trim() });
+      const { error } = await (supabase.from as any)("tb_grupos_treino").insert({ nome: novoGrupoNome.trim(), professor_id: donoInsert });
       if (error) throw error;
       setNovoGrupoNome("");
       setModalCriar(null);
@@ -356,11 +396,13 @@ const AdminTreinos = ({ onBack }: Props) => {
 
   // === Pastas de treinos ===
   const pastaAberta = pastas.find((p) => p.id === pastaParam) || null;
+  // só nas pastas MINHAS dá pra colocar/tirar treino (as globais do master aparecem só leitura pro professor)
+  const pastasEditaveis = pastas.filter(podeEditar);
 
   const handleAddPasta = async () => {
     if (!novaPastaNome.trim()) return;
     try {
-      const { error } = await (supabase.from as any)("tb_pastas_treino").insert({ nome: novaPastaNome.trim() });
+      const { error } = await (supabase.from as any)("tb_pastas_treino").insert({ nome: novaPastaNome.trim(), professor_id: donoInsert });
       if (error) throw error;
       setNovaPastaNome("");
       setModalCriar(null);
@@ -423,23 +465,28 @@ const AdminTreinos = ({ onBack }: Props) => {
     }
   };
 
+  // Biblioteca no escopo escolhido (Global 🔒 do master | Minha)
+  const exerciciosBib = exercicios.filter((e) => (bibScope === "global" ? ehGlobal(e) : ehMeu(e)));
+  const musculosBib = gruposMusculares.filter((g) => (bibScope === "global" ? ehGlobal(g) : ehMeu(g)));
+
   const tabs = [
-    { key: "grupos" as const, label: "🗂️ Grupos" },
+    { key: "grupos" as const, label: "🗂️ Meus treinos" },
     { key: "biblioteca" as const, label: "📚 Biblioteca" },
     { key: "historico" as const, label: "🕒 Histórico de Treinos" },
     { key: "relatorio" as const, label: "📊 Relatório" },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-4xl px-5 sm:px-8">
-        <header className="pt-12 sm:pt-20 pb-4 flex items-center gap-4">
-          <button type="button" onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+    <div data-pagina-treinos>
+      <div className="mx-auto max-w-4xl">
+        {/* header compacto: a página já fica dentro do layout com sidebar */}
+        <header className="pb-4 flex items-center gap-3">
+          <button type="button" onClick={onBack} title="Voltar pra lista de alunos" className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors" data-btn-voltar>
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="font-heading text-2xl text-foreground">Gerenciar Treinos</h1>
-            <p className="text-xs text-muted-foreground font-body">Configuração de exercícios e grupos</p>
+            <h1 className="font-heading text-xl text-foreground uppercase tracking-wider">Treinos</h1>
+            <p className="text-xs text-muted-foreground font-body">Exercícios, grupos e programação semanal</p>
           </div>
         </header>
 
@@ -503,7 +550,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                           onClick={() => setPastaAberta(p.id)}
                           className="w-full flex items-center justify-between result-card border-muted-foreground/20 hover:border-primary transition-colors text-left"
                         >
-                          <span className="font-heading text-foreground">📁 {p.nome}</span>
+                          <span className="font-heading text-foreground flex items-center gap-2 min-w-0"><span className="truncate">📁 {p.nome}</span>{!podeEditar(p) && <BadgeGlobal />}</span>
                           <span className="flex items-center gap-2 text-xs text-muted-foreground font-body">
                             {qtd} treino{qtd === 1 ? "" : "s"} <ChevronRight size={14} />
                           </span>
@@ -532,16 +579,19 @@ const AdminTreinos = ({ onBack }: Props) => {
                       </>
                     ) : (
                       <>
-                        <p className="font-heading text-foreground flex-1">📁 {pastaAberta.nome}</p>
+                        <p className="font-heading text-foreground flex-1 flex items-center gap-2 min-w-0"><span className="truncate">📁 {pastaAberta.nome}</span>{!podeEditar(pastaAberta) && <BadgeGlobal />}</p>
+                        {podeEditar(pastaAberta) && (<>
                         <button type="button" onClick={() => { setEditandoPasta(true); setEditPastaNome(pastaAberta.nome); }} className="p-1.5 text-muted-foreground hover:text-primary transition-colors" title="Renomear pasta">
                           <Edit2 size={14} />
                         </button>
                         <button type="button" onClick={() => handleDeletePasta(pastaAberta.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Excluir pasta (treinos são preservados)">
                           <Trash2 size={14} />
                         </button>
+                        </>)}
                       </>
                     )}
                   </div>
+                  {podeEditar(pastaAberta) && (
                   <select
                     value=""
                     onChange={(e) => e.target.value && handleTogglePastaGrupo(e.target.value, pastaAberta.id)}
@@ -552,11 +602,12 @@ const AdminTreinos = ({ onBack }: Props) => {
                       const outras = (pastasDoGrupo[g.id] || []).length;
                       return (
                         <option key={g.id} value={g.id} className="bg-background text-foreground">
-                          {g.nome}{outras > 0 ? ` (em ${outras} pasta${outras > 1 ? "s" : ""})` : ""}
+                          {g.nome}{ehGlobal(g) && papel !== "master" ? " 🔒" : ""}{outras > 0 ? ` (em ${outras} pasta${outras > 1 ? "s" : ""})` : ""}
                         </option>
                       );
                     })}
                   </select>
+                  )}
                 </div>
               </>
             )}
@@ -566,11 +617,14 @@ const AdminTreinos = ({ onBack }: Props) => {
             }).map((g) => {
               const exIds = gruposExercicios[g.id] || [];
               return (
-                <div key={g.id} className="result-card border-muted-foreground/20" data-admin-treino={g.id}>
+                <div key={g.id} className={`result-card ${podeEditar(g) ? "border-muted-foreground/20" : "border-muted-foreground/10"}`} data-admin-treino={g.id} data-admin-treino-global={podeEditar(g) ? undefined : "1"}>
                   <div className="flex items-center justify-between mb-3 gap-2">
-                    <p className="font-heading text-foreground flex-1 min-w-0 truncate">{g.nome}</p>
+                    <p className="font-heading text-foreground flex-1 min-w-0 flex items-center gap-2">
+                      <span className="truncate">{g.nome}</span>
+                      {!podeEditar(g) && <BadgeGlobal />}
+                    </p>
                     <div className="flex items-center gap-1 shrink-0">
-                      {pastas.length > 0 && (() => {
+                      {pastasEditaveis.length > 0 && (() => {
                         const membros = pastasDoGrupo[g.id] || [];
                         const label =
                           membros.length === 0
@@ -594,7 +648,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                               <>
                                 <div className="fixed inset-0 z-10" onClick={() => setPastaDropdown(null)} />
                                 <div className="absolute right-0 top-full mt-1 z-20 w-56 bg-background border border-border rounded-md p-2 shadow-lg space-y-1">
-                                  {pastas.map((p) => (
+                                  {pastasEditaveis.map((p) => (
                                     <label key={p.id} className="flex items-center gap-2 py-0.5 text-xs font-body text-foreground cursor-pointer">
                                       <input
                                         type="checkbox"
@@ -611,12 +665,14 @@ const AdminTreinos = ({ onBack }: Props) => {
                           </div>
                         );
                       })()}
+                      {podeEditar(g) && (<>
                       <button type="button" onClick={() => setEditingGrupo(g.id)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors" title="Editar exercícios do treino" data-admin-editar-treino={g.id}>
                         <Edit2 size={14} />
                       </button>
                       <button type="button" onClick={() => handleDeleteGrupo(g.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Excluir treino" data-admin-excluir-treino={g.id}>
                         <Trash2 size={14} />
                       </button>
+                      </>)}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1" data-admin-chips={g.id}>
@@ -643,7 +699,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                       </span>
                       {(gruposPerfis[g.id]?.length ?? 0) === 0 ? (
                         <span className="text-[10px] text-destructive font-body ml-auto">
-                          ⚠️ Sem perfil — invisível p/ todos
+                          ⚠️ {podeEditar(g) ? "Sem perfil — invisível p/ todos" : "Nenhum aluno seu vê este treino"}
                         </span>
                       ) : (
                         <span className="text-[10px] text-muted-foreground font-body ml-auto">
@@ -653,7 +709,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                     </button>
                     {perfilAberto === g.id && (
                       users.length === 0 ? (
-                        <p className="text-xs text-muted-foreground font-body mt-2">Carregando usuários...</p>
+                        <p className="text-xs text-muted-foreground font-body mt-2">{usersCarregados ? "Nenhum aluno na sua lista ainda — convide em Alunos." : "Carregando alunos..."}</p>
                       ) : (
                         <div className="space-y-1 max-h-40 overflow-y-auto mt-2">
                           {[...users].sort((a, b) => {
@@ -690,15 +746,36 @@ const AdminTreinos = ({ onBack }: Props) => {
           </div>
         ) : tab === "biblioteca" ? (
           <div className="space-y-4">
+            {papel !== "master" && (
+              <>
+                <div className="flex gap-0 max-w-xs" data-biblioteca-escopo={bibScope}>
+                  <button type="button" onClick={() => setBibScope("global")} data-btn-escopo="global"
+                    className={`flex-1 py-2 px-3 font-heading text-xs uppercase tracking-widest transition-colors ${bibScope === "global" ? "toggle-active" : "toggle-inactive"}`}>
+                    🔒 Global
+                  </button>
+                  <button type="button" onClick={() => setBibScope("minha")} data-btn-escopo="minha"
+                    className={`flex-1 py-2 px-3 font-heading text-xs uppercase tracking-widest transition-colors ${bibScope === "minha" ? "toggle-active" : "toggle-inactive"}`}>
+                    Minha
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground font-body">
+                  {bibScope === "global"
+                    ? "Catálogo global do PhysiqCalc — só leitura. Você pode usar esses exercícios nos seus treinos; para criar os seus, mude para \"Minha\"."
+                    : "Seus exercícios e grupos musculares — só você vê e edita."}
+                </p>
+              </>
+            )}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setModalBiblioteca("novo")} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase">
+              {podeEditarBib && (
+              <button type="button" onClick={() => setModalBiblioteca("novo")} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase" data-btn-criar-exercicio>
                 <Plus size={14} className="inline mr-1" /> Criar Exercício
               </button>
+              )}
               <button type="button" onClick={() => setModalBiblioteca("musculos")} className="px-4 py-2 border border-muted-foreground/20 rounded font-heading text-xs uppercase text-foreground hover:border-primary transition-colors">
-                💪 Grupos Musculares ({gruposMusculares.length})
+                💪 Grupos Musculares ({musculosBib.length})
               </button>
               <button type="button" onClick={() => setModalBiblioteca("exercicios")} className="px-4 py-2 border border-muted-foreground/20 rounded font-heading text-xs uppercase text-foreground hover:border-primary transition-colors">
-                📚 Exercícios ({exercicios.length})
+                📚 Exercícios ({exerciciosBib.length})
               </button>
             </div>
 
@@ -753,16 +830,21 @@ const AdminTreinos = ({ onBack }: Props) => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setModalBiblioteca(null)}>
             <div className="bg-background border border-border rounded-lg w-full max-w-xl max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-3">
-                <p className="font-heading text-sm text-foreground">Grupos Musculares ({gruposMusculares.length})</p>
+                <p className="font-heading text-sm text-foreground">Grupos Musculares ({musculosBib.length}){papel !== "master" && bibScope === "global" ? " 🔒" : ""}</p>
                 <button type="button" onClick={() => setModalBiblioteca(null)} className="p-1.5 text-muted-foreground hover:text-foreground"><X size={16} /></button>
               </div>
               <div className="space-y-1">
-                {gruposMusculares.map((g) => (
+                {musculosBib.length === 0 && (
+                  <p className="text-xs text-muted-foreground font-body py-2">{bibScope === "minha" ? "Nenhum grupo muscular seu ainda — crie pelo \"+ Músculo\" ao criar um exercício." : "Nenhum grupo muscular no catálogo."}</p>
+                )}
+                {musculosBib.map((g) => (
                   <div key={g.id} className="flex items-center justify-between py-1.5 border-b border-muted-foreground/10 last:border-0">
                     <span className="text-sm font-body text-foreground">{g.nome}</span>
+                    {podeEditar(g) ? (
                     <button type="button" onClick={() => handleExcluirGrupoMuscular(g.id, g.nome)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Excluir grupo muscular">
                       <Trash2 size={13} />
                     </button>
+                    ) : <BadgeGlobal />}
                   </div>
                 ))}
               </div>
@@ -774,11 +856,14 @@ const AdminTreinos = ({ onBack }: Props) => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setModalBiblioteca(null)}>
             <div className="bg-background border border-border rounded-lg w-full max-w-xl max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-2">
-                <p className="font-heading text-sm text-foreground">Exercícios ({exercicios.length})</p>
+                <p className="font-heading text-sm text-foreground">Exercícios ({exerciciosBib.length}){papel !== "master" && bibScope === "global" ? " 🔒" : ""}</p>
                 <button type="button" onClick={() => setModalBiblioteca(null)} className="p-1.5 text-muted-foreground hover:text-foreground"><X size={16} /></button>
               </div>
               <div className="space-y-0">
-              {exercicios.map((ex) => (
+              {exerciciosBib.length === 0 && (
+                <p className="text-xs text-muted-foreground font-body py-3">{bibScope === "minha" ? "Nenhum exercício seu ainda — crie o primeiro." : "Nenhum exercício no catálogo."}</p>
+              )}
+              {exerciciosBib.map((ex) => (
                 <div key={ex.id} className="py-3 border-b border-muted-foreground/20">
                   {editingExId === ex.id ? (
                     <div className="space-y-2">
@@ -827,12 +912,14 @@ const AdminTreinos = ({ onBack }: Props) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        {podeEditar(ex) ? (<>
                         <button type="button" onClick={() => { setEditingExId(ex.id); setEditExNome(ex.nome); setEditExGrupo(ex.grupo_muscular); setEditExEmoji(ex.emoji); setEditExSubgrupo(ex.subgrupo || ""); setEditExDica(ex.dica || ""); setEditExImagemUrl(ex.imagem_url || null); setEditExImagemFile(null); }} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
                           <Edit2 size={14} />
                         </button>
                         <button type="button" onClick={() => handleDeleteExercicio(ex.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
                           <Trash2 size={14} />
                         </button>
+                        </>) : <BadgeGlobal />}
                       </div>
                     </div>
                   )}
@@ -849,9 +936,6 @@ const AdminTreinos = ({ onBack }: Props) => {
           <AdminRelatorio users={users} />
         )}
 
-        <footer className="py-12 text-center">
-          <p className="text-xs text-muted-foreground font-body italic">By Weslley Bertoldo</p>
-        </footer>
       </div>
     </div>
   );

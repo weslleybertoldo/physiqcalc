@@ -1,28 +1,90 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { papelDoUser, vincularProfessor, type Papel } from "@/lib/saasApi";
+import { lerProfPendente, limparProfPendente } from "@/lib/profPendente";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** master (Weslley; claim admin|master) · professor · aluno */
+  papel: Papel;
+  isStaff: boolean;
+  isMaster: boolean;
   signOut: () => Promise<void>;
+  /** força novo JWT (ex.: depois de virar professor) */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  papel: "aluno",
+  isStaff: false,
+  isMaster: false,
   signOut: async () => {},
+  refreshUser: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
+
+// 1 chamada de vínculo por login (ou sempre que houver código pendente); evita bater na edge a cada foco de aba
+const VINCULO_KEY = "physiq_vinculo_checado";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const intentionalLogoutRef = useRef(false);
+  const vinculandoRef = useRef(false);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+      if (refreshed) {
+        setSession(refreshed);
+        setUser(refreshed.user);
+      }
+    } catch (err) {
+      console.warn("[Auth] refreshUser falhou:", err);
+    }
+  }, []);
+
+  // Login só Google: logo após entrar, casa o código do link (?prof=) ou o convite por e-mail.
+  // Idempotente no servidor; aqui só evita repetir sem motivo.
+  const vincularSePendente = useCallback(async (sess: Session) => {
+    if (vinculandoRef.current) return;
+    const codigo = lerProfPendente();
+    let jaChecado = false;
+    try { jaChecado = sessionStorage.getItem(`${VINCULO_KEY}:${sess.user.id}`) === "1"; } catch { /* noop */ }
+    if (!codigo && jaChecado) return;
+    vinculandoRef.current = true;
+    try {
+      const r = await vincularProfessor(codigo);
+      try { sessionStorage.setItem(`${VINCULO_KEY}:${sess.user.id}`, "1"); } catch { /* noop */ }
+      if (r.vinculado) {
+        limparProfPendente();
+        toast.success(r.professor ? `Você entrou na lista de ${r.professor}.` : "Você foi vinculado ao seu professor.");
+      } else if (r.papel === "professor" && r.refresh) {
+        limparProfPendente();
+        await refreshUser();
+        toast.success("Sua conta de professor está pronta.");
+      } else if (r.motivo === "ja_tem_professor" || r.motivo === "ja_professor" || r.motivo === "ja_master" || r.motivo === "proprio_codigo") {
+        limparProfPendente();
+      }
+    } catch (e: any) {
+      const msg = e?.message;
+      if (msg === "codigo_invalido") { limparProfPendente(); toast.error("O link do professor é inválido. Peça um novo link."); }
+      else if (msg === "professor_inativo") { limparProfPendente(); toast.error("Este professor não está mais ativo."); }
+      else if (msg === "limite_plano") { toast.error("Este professor atingiu o limite de alunos do plano dele."); }
+      else console.warn("[Auth] vincular-professor:", msg);
+    } finally {
+      vinculandoRef.current = false;
+    }
+  }, [refreshUser]);
 
   useEffect(() => {
     // 1. Recupera sessão do localStorage primeiro (funciona offline)
@@ -42,6 +104,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               if (refreshed) {
                 setSession(refreshed);
                 setUser(refreshed.user);
+                // código de professor pendente de uma abertura anterior (ex.: link aberto já logado)
+                if (lerProfPendente()) void vincularSePendente(refreshed);
               } else if (refreshError) {
                 console.warn("[Auth] Token refresh falhou:", refreshError.message);
               }
@@ -89,6 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (newSession) {
           setSession(newSession);
           setUser(newSession.user);
+          if (event === 'SIGNED_IN' && navigator.onLine) void vincularSePendente(newSession);
         }
       }
       setLoading(false);
@@ -114,7 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [vincularSePendente]);
 
   const signOut = async () => {
     intentionalLogoutRef.current = true;
@@ -137,8 +202,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  const papel = papelDoUser(user);
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, papel, isStaff: papel !== "aluno", isMaster: papel === "master", signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

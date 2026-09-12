@@ -7,7 +7,8 @@ const FN_BASE =
 
 export interface MpPagamento {
   id: string;
-  tipo: "pix" | "cartao" | "manual";
+  /** pix_manual = Pix na chave do professor com comprovante anexado pelo aluno (SaaS 12/09/2026) */
+  tipo: "pix" | "cartao" | "manual" | "pix_manual";
   /** método do pagamento manual registrado pelo admin (dinheiro, pix por fora, etc.) */
   metodo?: string | null;
   valor: number;
@@ -17,8 +18,22 @@ export interface MpPagamento {
   pix_qr_code_base64?: string | null;
   pix_expira_em?: string | null;
   mp_payment_id?: string | null;
+  /** caminho do comprovante no bucket privado (pix_manual) */
+  comprovante_path?: string | null;
+  recusado_motivo?: string | null;
+  /** cobrança do PROFESSOR: adesao | mensal | anual */
+  tipo_cobranca?: string | null;
   updated_at?: string;
   created_at: string;
+}
+
+/** Dados do professor do aluno na tela Pagamentos (modo pix_manual traz a chave) */
+export interface MpProfessorAluno {
+  id: string;
+  nome: string;
+  pix: { tipo: string | null; chave: string; favorecido: string | null; banco: string | null } | null;
+  alunosBloqueados: boolean;
+  alunosBloqueadosMsg: string | null;
 }
 
 export interface MpAssinatura {
@@ -42,6 +57,12 @@ export interface MpStatus {
   mesPago: boolean;
   assinatura: MpAssinatura | null;
   pagamentos: MpPagamento[];
+  /** como o aluno paga: Mercado Pago (alunos do Weslley), Pix na chave do professor, ou nada configurado */
+  modo?: "mercadopago" | "pix_manual" | "none";
+  professor?: MpProfessorAluno | null;
+  /** pix_manual já avisado e esperando o professor confirmar */
+  aguardandoConfirmacao?: MpPagamento | null;
+  bloqueadoPeloMaster?: boolean;
 }
 
 // métodos aceitos no registro manual do admin (value gravado em physiq_pagamentos.metodo)
@@ -55,6 +76,7 @@ export const METODOS_MANUAIS: { value: string; label: string }[] = [
 
 export function tipoPagamentoLabel(p: Pick<MpPagamento, "tipo" | "metodo">): string {
   if (p.tipo === "pix") return "Pix";
+  if (p.tipo === "pix_manual") return "Pix (chave do professor)";
   if (p.tipo === "cartao") return "Cartão";
   const m = p.metodo ? (METODOS_MANUAIS.find((x) => x.value === p.metodo)?.label || p.metodo) : null;
   return m ? `Manual · ${m}` : "Manual";
@@ -91,6 +113,8 @@ export interface MpStatusLeve {
   pagoAte: string | null;
   mesRef: string;
   mesLabel: string;
+  /** master bloqueou os alunos do professor deste aluno (manual) */
+  bloqueadoPeloMaster?: boolean;
 }
 
 export const STATUS_CACHE_KEY = "physiq_mp_status_cache";
@@ -124,6 +148,8 @@ export function gravarStatusCache(userId: string, s: MpStatusLeve | MpStatus, ag
     pagoAte: s.pagoAte ?? null,
     mesRef: s.mesRef,
     mesLabel: s.mesLabel,
+    // só quando o servidor mandou (bundles/testes antigos não têm o campo)
+    ...(s.bloqueadoPeloMaster !== undefined ? { bloqueadoPeloMaster: Boolean(s.bloqueadoPeloMaster) } : {}),
   };
   try {
     const c: StatusCache = { userId, em: agora, status };

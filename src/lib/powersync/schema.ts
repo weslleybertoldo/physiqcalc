@@ -1,9 +1,11 @@
 import { column, Schema, Table } from "@powersync/web";
 
 // Tabelas globais (sincronizadas para todos os usuários)
+// professor_id (SaaS 12/09/2026): NULL = catálogo global do master; preenchido = criado pelo professor do aluno
 const tb_grupos_treino = new Table({
   created_at: column.text,
   nome: column.text,
+  professor_id: column.text,
 });
 
 const tb_exercicios = new Table({
@@ -15,6 +17,7 @@ const tb_exercicios = new Table({
   imagem_url: column.text,
   subgrupo: column.text,
   dica: column.text,
+  professor_id: column.text,
 });
 
 const tb_semana_treinos = new Table({
@@ -47,6 +50,7 @@ const grupos_musculares = new Table({
   created_at: column.text,
   criado_por: column.text,
   nome: column.text,
+  professor_id: column.text,
 });
 
 // Tabelas do usuário (cada um recebe só os seus)
@@ -132,6 +136,7 @@ const physiq_profiles = new Table({
   peso: column.real,
   plano_expiracao: column.text,
   plano_nome: column.text,
+  professor_id: column.text,
   sexo: column.text,
   status: column.text,
   tempo_descanso_segundos: column.integer,

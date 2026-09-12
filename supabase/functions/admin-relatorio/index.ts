@@ -84,6 +84,22 @@ async function usuarioDoToken(token: string, auth: string): Promise<any | null> 
   return error || !data?.user ? null : data.user;
 }
 
+// ---- SaaS (12/09/2026): papéis master (role admin|master) e professor; escopo por professor_id ----
+type Papel = "master" | "professor";
+function papelDe(role: unknown): Papel | null {
+  if (role === "admin" || role === "master") return "master";
+  if (role === "professor") return "professor";
+  return null;
+}
+// endpoints que o professor TRAVADO (plano vencido) ainda pode usar
+const SEM_ACESSO_OK = new Set<string>(["mp-payments"]);
+// escopo: professor só enxerga aluno com professor_id = ele; master enxerga todos
+async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise<boolean> {
+  if (user?.papel === "master") return true;
+  const { data } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
+  return (data as any)?.professor_id === user?.id;
+}
+
 async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
@@ -92,7 +108,15 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   const user = await usuarioDoToken(token, auth);
   if (!user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
   const role = (user.app_metadata as any)?.role;
-  if (role !== "admin") return { user: null, error: jsonErr("forbidden", 403, origin) };
+  const papel = papelDe(role);
+  if (!papel) return { user: null, error: jsonErr("forbidden", 403, origin) };
+  // professor com plano vencido (fora da tolerância) só acessa o que está em SEM_ACESSO_OK
+  if (papel === "professor" && !SEM_ACESSO_OK.has(endpoint)) {
+    const admin0 = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+    const { data: ok } = await admin0.rpc("physiq_professor_acesso_ok", { pid: user.id });
+    if (ok !== true) return { user: null, error: jsonErr("plano_vencido", 403, origin) };
+  }
+  user.papel = papel;
   const allowed = await checkRateLimit(user.id, endpoint, maxCount, windowSecs);
   if (!allowed) return { user: null, error: jsonErr("rate_limited", 429, origin) };
   return { user, error: null };
@@ -304,13 +328,15 @@ Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
-  const { error: authErr } = await requireAdmin(req, "admin-relatorio", 60, 60);
+  const { user, error: authErr } = await requireAdmin(req, "admin-relatorio", 60, 60);
   if (authErr) return authErr;
 
   try {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+    // ações com userId: professor só enxerga aluno dele
+    if (typeof body?.userId === "string" && !(await alunoDoProfessor(admin, user, body.userId))) return jsonErr("forbidden", 403, origin);
 
     // ── Relatório mensal de um aluno (usado pela aba Relatório e pelos exports) ──
     if (action === "relatorio") {
@@ -377,19 +403,26 @@ Deno.serve(async (req) => {
       const deIso = `${inicio}T00:00:00-03:00`;
       const ateIso = `${fim}T23:59:59-03:00`;
 
-      const [perfisRes, timerRes, concluidosRes] = await Promise.all([
-        admin.from("physiq_profiles").select("id, nome, email, user_code"),
-        admin.from("treino_historico")
-          .select("id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos")
-          .gte("iniciado_em", deIso).lte("iniciado_em", ateIso)
-          .order("iniciado_em", { ascending: false })
-          .limit(1000),
-        admin.from("tb_treino_concluido")
-          .select("user_id, data_treino, slot_idx")
-          .eq("concluido", true)
-          .gte("data_treino", inicio).lte("data_treino", fim)
-          .limit(2000),
-      ]);
+      // escopo: professor vê só os alunos dele (master vê todos)
+      let perfisQ = admin.from("physiq_profiles").select("id, nome, email, user_code");
+      if (user.papel === "professor") perfisQ = perfisQ.eq("professor_id", user.id);
+      const perfisRes = await perfisQ;
+      if (perfisRes.error) throw perfisRes.error;
+      const idsEscopo: string[] | null = user.papel === "professor"
+        ? (((perfisRes.data as any[]) || []).map((p) => p.id).concat(["00000000-0000-0000-0000-000000000000"]))
+        : null;
+      let timerQ = admin.from("treino_historico")
+        .select("id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos")
+        .gte("iniciado_em", deIso).lte("iniciado_em", ateIso)
+        .order("iniciado_em", { ascending: false })
+        .limit(1000);
+      let conclQ = admin.from("tb_treino_concluido")
+        .select("user_id, data_treino, slot_idx")
+        .eq("concluido", true)
+        .gte("data_treino", inicio).lte("data_treino", fim)
+        .limit(2000);
+      if (idsEscopo) { timerQ = timerQ.in("user_id", idsEscopo); conclQ = conclQ.in("user_id", idsEscopo); }
+      const [timerRes, concluidosRes] = await Promise.all([timerQ, conclQ]);
       if (timerRes.error) throw timerRes.error;
       if (concluidosRes.error) throw concluidosRes.error;
 

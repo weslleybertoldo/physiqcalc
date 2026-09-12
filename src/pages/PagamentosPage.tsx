@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, CreditCard, Download, QrCode, Check, X, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, CreditCard, Download, QrCode, Check, X, RefreshCw, Upload, Camera, FileText, Clock, AlertTriangle, ExternalLink, Send, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { gravarStatusCache, invalidarStatusCache, invokeMp, MpStatus, MpPagamento, tipoPagamentoLabel } from "@/lib/mpClient";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 import { salvarPdf } from "@/lib/salvarPdf";
+import { toDataURL as qrToDataURL } from "qrcode";
+import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
+import { comprimirImagem } from "@/lib/registrosFotos";
+import { pixBrCode, rotuloTipoChave } from "@/lib/pixBrCode";
 
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY as string | undefined;
 let mpInitialized = false;
@@ -25,7 +29,14 @@ const STATUS_LABEL: Record<string, string> = {
   expired: "Expirado",
   refunded: "Reembolsado",
   charged_back: "Estornado",
+  aguardando_confirmacao: "Aguardando confirmação",
 };
+
+// pix_manual: o comprovante vai pro bucket privado do ambiente (RLS só deixa gravar em prof/<professor>/<aluno>/)
+const BUCKET_COMPROVANTES = DB_SCHEMA === "staging" ? "comprovantes-staging" : "comprovantes";
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
+const statusCls = (s: string) =>
+  s === "approved" ? "text-primary" : ["pending", "in_process", "aguardando_confirmacao"].includes(s) ? "text-muted-foreground" : "text-destructive";
 
 const ASSINATURA_LABEL: Record<string, string> = {
   pending: "Pendente",
@@ -74,6 +85,16 @@ const PagamentosPage = () => {
   const [comprovante, setComprovante] = useState<MpPagamento | null>(null);
   const [receiptMp, setReceiptMp] = useState<any | null>(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
+  // ── Pix manual (chave do professor + comprovante obrigatório) ──
+  const [qrPixManual, setQrPixManual] = useState<string | null>(null);
+  const [anexo, setAnexo] = useState<{ path: string; preview: string | null; nome: string; ehPdf: boolean } | null>(null);
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  const [trocandoComprovante, setTrocandoComprovante] = useState(false);
+  const [adiantar, setAdiantar] = useState(false);
+  const [anexoAberto, setAnexoAberto] = useState<{ url: string; ehPdf: boolean } | null>(null);
+  const [abrindoAnexo, setAbrindoAnexo] = useState(false);
+  // preview local do anexo: libera a URL quando troca ou sai da tela
+  useEffect(() => () => { if (anexo?.preview) URL.revokeObjectURL(anexo.preview); }, [anexo]);
 
   // dados reais da transação no MP ao abrir o comprovante
   useEffect(() => {
@@ -190,7 +211,121 @@ const PagamentosPage = () => {
   };
 
   const assinaturaAtiva = status?.assinatura && ["authorized", "pending"].includes(status.assinatura.status);
-  const pagamentosPagos = (status?.pagamentos || []).filter((p) => p.status === "approved");
+  // histórico: pagos (qualquer tipo) + todo pix_manual (aguardando confirmação / recusado / pago)
+  const historico = (status?.pagamentos || []).filter((p) => p.status === "approved" || p.tipo === "pix_manual");
+
+  // ── modo de cobrança = integração do professor. Sem o campo (resposta antiga) = Mercado Pago, como sempre.
+  const modo: NonNullable<MpStatus["modo"]> = status?.modo ?? "mercadopago";
+  const modoMp = modo === "mercadopago";
+  const nomeProf = status?.professor?.nome || "seu professor";
+  const profPix = modo === "pix_manual" ? status?.professor?.pix ?? null : null;
+  const aguardando = status?.aguardandoConfirmacao ?? null;
+  const ultimoPixManual = (status?.pagamentos || []).find((p) => p.tipo === "pix_manual") || null;
+  const recusado = !aguardando && ultimoPixManual?.status === "rejected" ? ultimoPixManual : null;
+
+  // BR Code estático com a chave do professor e o valor da mensalidade (gerado aqui, sem MP)
+  const pixManualPayload = useMemo(() => {
+    if (!profPix?.chave || !status?.mensalidade) return null;
+    try {
+      return pixBrCode({ chave: profPix.chave, tipo: profPix.tipo, nome: profPix.favorecido || nomeProf, valor: status.mensalidade });
+    } catch (e) {
+      console.error("[Pagamentos] BR Code", e);
+      return null;
+    }
+  }, [profPix, status?.mensalidade, nomeProf]);
+
+  useEffect(() => {
+    if (!pixManualPayload) { setQrPixManual(null); return; }
+    let cancelled = false;
+    qrToDataURL(pixManualPayload, { margin: 1, width: 240 })
+      .then((url) => { if (!cancelled) setQrPixManual(url); })
+      .catch((e) => { console.error("[Pagamentos] QR", e); if (!cancelled) setQrPixManual(null); });
+    return () => { cancelled = true; };
+  }, [pixManualPayload]);
+
+  const copiarTexto = async (texto: string, ok: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast.success(ok);
+    } catch {
+      toast.error("Não foi possível copiar. Selecione o texto manualmente.");
+    }
+  };
+
+  // imagem → comprimida em JPEG; PDF até 5 MB como está. Sobe pra prof/<professor>/<aluno>/<yyyy-mm>-<ts>.<ext>
+  const handleAnexo = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // deixa escolher o mesmo arquivo de novo
+    if (!file || !status?.professor?.id || !user?.id) return;
+    const ehPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    const ehImagem = file.type.startsWith("image/") || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+    if (!ehPdf && !ehImagem) { toast.error("Envie um print, uma foto ou um PDF do comprovante."); return; }
+    if (ehPdf && file.size > MAX_PDF_BYTES) { toast.error("PDF muito grande — o limite é 5 MB."); return; }
+    setEnviandoAnexo(true);
+    let blob: Blob = file;
+    if (!ehPdf) {
+      try {
+        blob = await comprimirImagem(file);
+      } catch (err) {
+        toast.error((err instanceof Error && err.message) || "Não foi possível processar a imagem.");
+        setEnviandoAnexo(false);
+        return;
+      }
+    }
+    try {
+      const path = `prof/${status.professor.id}/${user.id}/${status.mesRef.slice(0, 7)}-${Date.now()}.${ehPdf ? "pdf" : "jpg"}`;
+      const { error } = await supabase.storage.from(BUCKET_COMPROVANTES).upload(path, blob, {
+        contentType: ehPdf ? "application/pdf" : "image/jpeg", upsert: false,
+      });
+      if (error) throw error;
+      setAnexo({ path, preview: ehPdf ? null : URL.createObjectURL(blob), nome: file.name, ehPdf });
+      toast.success("Comprovante anexado. Agora é só avisar o professor.");
+    } catch (err) {
+      console.error("[Pagamentos] upload comprovante", err);
+      toast.error("Não foi possível enviar o comprovante. Tente de novo.");
+    } finally {
+      setEnviandoAnexo(false);
+    }
+  };
+
+  const handleAvisarProfessor = async () => {
+    if (!anexo || busy || enviandoAnexo) return;
+    setBusy(true);
+    try {
+      const r = await invokeMp<{ pagamento: MpPagamento; atualizado?: boolean }>("pix-manual-avisar", { comprovante_path: anexo.path });
+      toast.success(r.atualizado ? "Comprovante trocado — seu professor vai conferir." : `Aviso enviado! ${nomeProf} vai confirmar o pagamento.`);
+      setAnexo(null);
+      setTrocandoComprovante(false);
+      setAdiantar(false);
+      await load();
+    } catch (e) {
+      const m = e instanceof Error ? e.message : undefined;
+      toast.error(
+        m === "missing_comprovante" ? "Anexe o comprovante antes de avisar."
+          : m === "sem_mensalidade" ? "Nenhuma mensalidade configurada."
+          : m === "sem_professor" ? "Sua conta não está vinculada a um professor."
+          : m === "comprovante_fora_da_pasta" ? "Comprovante inválido — anexe de novo."
+          : m === "bloqueado_pelo_master" ? "Seu acesso está pausado. Fale com seu professor."
+          : "Não foi possível avisar o professor. Tente de novo.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // URL assinada (5 min) do comprovante anexado — imagem inline; PDF abre em nova aba
+  const abrirComprovanteAnexado = async (p: MpPagamento) => {
+    if (abrindoAnexo) return;
+    setAbrindoAnexo(true);
+    try {
+      const { url } = await invokeMp<{ url: string }>("comprovante-url", { pagamentoId: p.id });
+      setAnexoAberto({ url, ehPdf: /\.pdf$/i.test(p.comprovante_path || "") });
+    } catch {
+      toast.error("Não foi possível abrir o comprovante.");
+    } finally {
+      setAbrindoAnexo(false);
+    }
+  };
   // vencimento efetivo do QR: da resposta do create ou do pendente do mês no status
   const pixPendenteMes = (status?.pagamentos || []).find((p) => p.tipo === "pix" && p.status === "pending" && p.mes_ref === status?.mesRef);
   const pixExpiraEfetivo = pixData?.expiraEm || pixPendenteMes?.pix_expira_em || null;
@@ -237,6 +372,7 @@ const PagamentosPage = () => {
       if (receiptMp?.e2e_id) linhas.push(["E2E ID (Pix)", receiptMp.e2e_id]);
       if (receiptMp?.bank_transfer_id) linhas.push(["ID transferência bancária", String(receiptMp.bank_transfer_id)]);
       if (receiptMp?.status_detail) linhas.push(["Detalhe do status", receiptMp.status_detail]);
+      if (comprovante.tipo === "pix_manual" && comprovante.recusado_motivo) linhas.push(["Motivo da recusa", comprovante.recusado_motivo]);
       doc.setFontSize(10);
       for (const [k, v] of linhas) {
         doc.setTextColor(...AMARELO); doc.setFont("helvetica", "bold");
@@ -248,7 +384,10 @@ const PagamentosPage = () => {
       }
       y += 4; doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 8;
       doc.setFontSize(8); doc.setTextColor(...CINZA);
-      doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · ${comprovante.tipo === "manual" ? "Pagamento registrado manualmente pelo treinador" : "Pagamento processado pelo Mercado Pago"}`, W / 2, y, { align: "center" });
+      const origem = comprovante.tipo === "manual" ? "Pagamento registrado manualmente pelo treinador"
+        : comprovante.tipo === "pix_manual" ? "Pix na chave do treinador, confirmado por ele"
+        : "Pagamento processado pelo Mercado Pago";
+      doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · ${origem}`, W / 2, y, { align: "center" });
       await salvarPdf(doc, `comprovante-physiqcalc-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
     } catch (e) {
       console.error("[Comprovante] PDF", e);
@@ -271,6 +410,15 @@ const PagamentosPage = () => {
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
+
+        {!loading && status?.bloqueadoPeloMaster && (
+          <div className="border border-destructive/50 bg-destructive/10 rounded-xl p-3 flex items-start gap-2 text-xs font-body text-foreground" data-bloqueado-master>
+            <AlertTriangle size={14} className="text-destructive shrink-0 mt-0.5" />
+            <span>
+              Seu acesso está pausado pelo administrador{status.professor?.alunosBloqueadosMsg ? `: ${status.professor.alunosBloqueadosMsg}` : ". Fale com seu professor."}
+            </span>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-muted-foreground font-body text-sm">Carregando...</p>
@@ -313,6 +461,9 @@ const PagamentosPage = () => {
               )}
             </div>
 
+            {/* ── Mercado Pago (alunos do master): cartão + Pix do MP, exatamente como sempre ── */}
+            {modoMp && (
+            <>
             {/* Assinatura cartão */}
             <div className="bg-card border border-border rounded-xl p-5 space-y-3">
               <div className="flex items-center gap-2">
@@ -436,15 +587,189 @@ const PagamentosPage = () => {
                 )}
               </div>
             )}
+            </>
+            )}
+
+            {/* ── Pix manual: o aluno paga na chave do professor e anexa o comprovante ── */}
+            {modo === "pix_manual" && (
+              aguardando && !trocandoComprovante ? (
+                <div className="bg-card border border-primary/40 rounded-xl p-5 space-y-3" data-pix-manual-aguardando>
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-primary" />
+                    <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Aguardando confirmação de {nomeProf}</h2>
+                  </div>
+                  <p className="text-sm font-body text-foreground">
+                    <span className="font-heading">{fmtBRL(Number(aguardando.valor))}</span>
+                    <span className="text-muted-foreground"> · avisado em {fmtDataHora(aguardando.created_at)}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Assim que {nomeProf} confirmar, sua mensalidade fica em dia. Mandou o arquivo errado? Troque o comprovante.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => abrirComprovanteAnexado(aguardando)} disabled={abrindoAnexo}
+                      className="inline-flex items-center gap-1 px-4 py-2 border border-primary/40 text-primary rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/10 transition-colors disabled:opacity-50" data-pix-manual-ver-comprovante>
+                      <FileText size={12} /> {abrindoAnexo ? "Abrindo..." : "Ver comprovante"}
+                    </button>
+                    <button type="button" onClick={() => setTrocandoComprovante(true)}
+                      className="px-4 py-2 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors" data-pix-manual-trocar>
+                      Trocar comprovante
+                    </button>
+                  </div>
+                </div>
+              ) : !status.emDia || adiantar || trocandoComprovante || recusado ? (
+                <>
+                  {recusado && (
+                    <div className="border border-destructive/50 bg-destructive/10 rounded-xl p-4 space-y-1" data-pix-manual-recusado>
+                      <p className="text-xs font-heading uppercase tracking-wider text-destructive">Comprovante recusado</p>
+                      <p className="text-sm font-body text-foreground">
+                        {nomeProf} recusou seu último comprovante
+                        {recusado.recusado_motivo ? <>: <span className="text-destructive">“{recusado.recusado_motivo}”</span></> : "."}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-body">Confira o pagamento e envie um novo comprovante abaixo.</p>
+                    </div>
+                  )}
+                  {trocandoComprovante && aguardando && (
+                    <p className="text-xs text-muted-foreground font-body flex flex-wrap items-center gap-2">
+                      Trocando o comprovante do aviso de {fmtDataHora(aguardando.created_at)}.
+                      <button type="button" onClick={() => setTrocandoComprovante(false)} className="text-primary hover:underline" data-pix-manual-cancelar-troca>Cancelar</button>
+                    </p>
+                  )}
+
+                  {/* 1 · Pix pra chave do professor */}
+                  <div className="bg-card border border-border rounded-xl p-5 space-y-3" data-pix-manual-qr>
+                    <div className="flex items-center gap-2">
+                      <QrCode size={16} className="text-primary" />
+                      <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">1 · Pague via Pix para {nomeProf}</h2>
+                    </div>
+                    {profPix ? (
+                      <>
+                        {qrPixManual ? (
+                          <img src={qrPixManual} alt="QR Code Pix" className="mx-auto w-48 h-48 rounded-lg bg-white p-2" />
+                        ) : pixManualPayload ? (
+                          <p className="text-xs text-muted-foreground font-body text-center">Gerando QR code...</p>
+                        ) : null}
+                        <div className="space-y-2 text-sm font-body">
+                          <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-2">
+                            <span className="text-muted-foreground text-xs uppercase tracking-wider">Valor</span>
+                            <span className="text-foreground font-heading">{fmtBRL(status.mensalidade)}</span>
+                          </div>
+                          <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-2">
+                            <span className="text-muted-foreground text-xs uppercase tracking-wider">Favorecido</span>
+                            <span className="text-foreground text-right">{profPix.favorecido || nomeProf}</span>
+                          </div>
+                          {profPix.banco && (
+                            <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-2">
+                              <span className="text-muted-foreground text-xs uppercase tracking-wider">Banco</span>
+                              <span className="text-foreground text-right">{profPix.banco}</span>
+                            </div>
+                          )}
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="text-muted-foreground text-xs uppercase tracking-wider">{rotuloTipoChave(profPix.tipo)}</span>
+                            <span className="text-right break-all inline-flex items-center gap-2">
+                              <span className="text-foreground" data-pix-manual-chave>{profPix.chave}</span>
+                              <button type="button" onClick={() => copiarTexto(profPix.chave, "Chave Pix copiada.")} aria-label="Copiar chave"
+                                className="text-muted-foreground hover:text-primary transition-colors shrink-0" data-pix-manual-copiar-chave>
+                                <Copy size={14} />
+                              </button>
+                            </span>
+                          </div>
+                        </div>
+                        {pixManualPayload && (
+                          <>
+                            <p className="text-[10px] text-muted-foreground font-body break-all bg-muted/40 rounded p-2 max-h-20 overflow-y-auto">{pixManualPayload}</p>
+                            <button type="button" onClick={() => copiarTexto(pixManualPayload, "Código Pix copiado.")}
+                              className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors" data-pix-manual-copiar-codigo>
+                              <Copy size={12} /> Copiar código Pix (copia e cola)
+                            </button>
+                          </>
+                        )}
+                        <p className="text-[10px] text-muted-foreground font-body">
+                          No app do seu banco: Pix → “Pix copia e cola” (ou leia o QR) → confira o valor de {fmtBRL(status.mensalidade)} e o favorecido → pague.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground font-body">A chave Pix de {nomeProf} não está disponível. Fale com ele.</p>
+                    )}
+                  </div>
+
+                  {/* 2 · Comprovante (obrigatório) */}
+                  <div className="bg-card border border-border rounded-xl p-5 space-y-3" data-pix-manual-comprovante>
+                    <div className="flex items-center gap-2">
+                      <Paperclip size={16} className="text-primary" />
+                      <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">2 · Anexe o comprovante</h2>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-body">
+                      Print, foto ou PDF do comprovante (até 5 MB). É obrigatório — é por ele que {nomeProf} confirma o pagamento.
+                    </p>
+                    {anexo && (
+                      <div className="flex items-center gap-3 border border-primary/40 rounded-lg p-3" data-pix-manual-anexo>
+                        {anexo.preview ? (
+                          <img src={anexo.preview} alt="Comprovante" className="w-16 h-16 object-cover rounded bg-black shrink-0" />
+                        ) : (
+                          <FileText size={28} className="text-primary shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-body text-foreground truncate">{anexo.nome}</p>
+                          <p className="text-[10px] text-primary font-body inline-flex items-center gap-1"><Check size={10} /> Anexado</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className={`flex flex-col items-center justify-center gap-1 border border-dashed border-primary/40 rounded-lg p-3 text-center text-xs font-heading uppercase tracking-wider text-primary hover:bg-primary/5 transition-colors cursor-pointer ${enviandoAnexo ? "opacity-50 pointer-events-none" : ""}`}>
+                        <input type="file" accept="image/*,application/pdf" capture="environment" className="hidden" onChange={handleAnexo} disabled={enviandoAnexo} data-pix-manual-input-camera />
+                        <Camera size={16} /> {anexo ? "Nova foto" : "Tirar foto"}
+                      </label>
+                      <label className={`flex flex-col items-center justify-center gap-1 border border-dashed border-primary/40 rounded-lg p-3 text-center text-xs font-heading uppercase tracking-wider text-primary hover:bg-primary/5 transition-colors cursor-pointer ${enviandoAnexo ? "opacity-50 pointer-events-none" : ""}`}>
+                        <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleAnexo} disabled={enviandoAnexo} data-pix-manual-input />
+                        <Upload size={16} /> {anexo ? "Trocar arquivo" : "Print ou PDF"}
+                      </label>
+                    </div>
+                    {enviandoAnexo && (
+                      <p className="text-xs text-muted-foreground font-body inline-flex items-center gap-2">
+                        <RefreshCw size={12} className="animate-spin text-primary" /> Enviando comprovante...
+                      </p>
+                    )}
+                    <button type="button" onClick={handleAvisarProfessor}
+                      disabled={!anexo || enviandoAnexo || busy || !!status.bloqueadoPeloMaster}
+                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" data-pix-manual-avisar>
+                      <Send size={12} /> {busy ? "Enviando..." : "Já paguei — enviar ao professor"}
+                    </button>
+                    {!anexo && !enviandoAnexo && (
+                      <p className="text-[10px] text-muted-foreground font-body text-center">Anexe o comprovante para liberar o botão.</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="bg-card border border-border rounded-xl p-5 space-y-3" data-pix-manual-em-dia>
+                  <p className="text-sm font-body text-foreground">
+                    Sua mensalidade está em dia{status.pagoAte ? <> até <span className="text-primary">{new Date(status.pagoAte).toLocaleDateString("pt-BR")}</span></> : null}.
+                  </p>
+                  <p className="text-xs text-muted-foreground font-body">Quando vencer, a chave Pix de {nomeProf} e o envio do comprovante aparecem aqui.</p>
+                  <button type="button" onClick={() => setAdiantar(true)}
+                    className="px-4 py-2 border border-primary/40 text-primary rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/10 transition-colors" data-pix-manual-adiantar>
+                    Quero adiantar o próximo mês
+                  </button>
+                </div>
+              )
+            )}
+
+            {/* ── Professor sem forma de pagamento configurada ── */}
+            {modo === "none" && (
+              <div className="bg-card border border-border rounded-xl p-5 text-center" data-modo-none>
+                <p className="text-sm text-muted-foreground font-body">
+                  Seu professor ainda não configurou uma forma de pagamento. Fale com ele.
+                </p>
+              </div>
+            )}
 
             {/* Histórico */}
             <div className="bg-card border border-border rounded-xl p-5 space-y-3">
               <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Histórico</h2>
-              {pagamentosPagos.length === 0 ? (
+              {historico.length === 0 ? (
                 <p className="text-xs text-muted-foreground font-body">Nenhum pagamento confirmado ainda.</p>
               ) : (
                 <div className="space-y-2">
-                  {pagamentosPagos.map((p) => (
+                  {historico.map((p) => (
                     <button type="button" key={p.id} onClick={() => setComprovante(p)}
                       className="w-full flex items-center justify-between text-sm font-body border-b border-border/50 pb-2 last:border-0 last:pb-0 text-left hover:bg-muted/20 rounded px-1 transition-colors">
                       <div>
@@ -456,7 +781,7 @@ const PagamentosPage = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-foreground">{fmtBRL(Number(p.valor))}</p>
-                        <p className={`text-[10px] uppercase tracking-wider ${p.status === "approved" ? "text-primary" : p.status === "pending" || p.status === "in_process" ? "text-muted-foreground" : "text-destructive"}`}>
+                        <p className={`text-[10px] uppercase tracking-wider ${statusCls(p.status)}`}>
                           {STATUS_LABEL[p.status] || p.status}
                         </p>
                       </div>
@@ -509,6 +834,8 @@ const PagamentosPage = () => {
                     ? [["ID da transação (Mercado Pago)", comprovante.mp_payment_id]] : []),
                   ...(receiptMp?.e2e_id ? [["E2E ID (Pix)", receiptMp.e2e_id]] : []),
                   ...(receiptMp?.bank_transfer_id ? [["ID transferência bancária", String(receiptMp.bank_transfer_id)]] : []),
+                  ...(comprovante.tipo === "pix_manual" && comprovante.status === "rejected" && comprovante.recusado_motivo
+                    ? [["Motivo da recusa", comprovante.recusado_motivo]] : []),
                 ].map(([k, v]) => (
                   <div key={k as string} className="flex items-start justify-between gap-3 border-b border-border/40 pb-2 last:border-0">
                     <span className="text-muted-foreground text-xs uppercase tracking-wider">{k}</span>
@@ -516,12 +843,43 @@ const PagamentosPage = () => {
                   </div>
                 ))}
               </div>
+              {comprovante.tipo === "pix_manual" && comprovante.comprovante_path && (
+                <button type="button" onClick={() => abrirComprovanteAnexado(comprovante)} disabled={abrindoAnexo}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 border border-primary/40 text-primary rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/10 transition-colors disabled:opacity-50" data-pix-manual-ver-comprovante-modal>
+                  <FileText size={12} /> {abrindoAnexo ? "Abrindo..." : "Ver comprovante anexado"}
+                </button>
+              )}
               <button type="button" onClick={handleBaixarComprovante}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
                 <Download size={12} /> Baixar comprovante (PDF)
               </button>
               </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Comprovante anexado pelo aluno (pix_manual) — URL assinada por 5 min */}
+        {anexoAberto && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4" onClick={() => setAnexoAberto(null)}>
+            <div className="bg-card border border-border rounded-xl p-4 max-w-sm w-full space-y-3" onClick={(e) => e.stopPropagation()} data-pix-manual-anexo-aberto>
+              <div className="flex items-center justify-between">
+                <h3 className="font-heading text-sm text-foreground uppercase tracking-wider">Comprovante anexado</h3>
+                <button type="button" onClick={() => setAnexoAberto(null)} aria-label="Fechar"
+                  className="text-muted-foreground hover:text-foreground transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+              {anexoAberto.ehPdf ? (
+                <p className="text-sm text-muted-foreground font-body text-center py-4">Comprovante em PDF — abra em nova aba para visualizar.</p>
+              ) : (
+                <img src={anexoAberto.url} alt="Comprovante" className="w-full max-h-[60vh] object-contain rounded bg-black" />
+              )}
+              <a href={anexoAberto.url} target="_blank" rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 border border-primary/40 text-primary rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/10 transition-colors">
+                <ExternalLink size={12} /> Abrir em nova aba
+              </a>
+              <p className="text-[10px] text-muted-foreground font-body text-center">Link válido por 5 minutos.</p>
             </div>
           </div>
         )}

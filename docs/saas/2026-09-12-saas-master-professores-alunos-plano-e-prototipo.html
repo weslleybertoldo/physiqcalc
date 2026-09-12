@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhysiqCalc SaaS — Plano e Protótipo v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0d0d;--fg:#eaeaea;--card:#121212;--card2:#181818;--side:#0f0f0f;
+  --muted:#262626;--muted-fg:#a6a6a6;--muted-fg2:#7a7a7a;
+  --primary:#ffbf00;--primary-fg:#0d0d0d;--primary-dim:rgba(255,191,0,.12);
+  --border:rgba(102,102,102,.45);--border-soft:rgba(102,102,102,.25);
+  --destructive:#c62828;--destructive-dim:rgba(198,40,40,.18);
+  --green:#43a047;--green-dim:rgba(67,160,71,.16);--blue:#1e88e5;--blue-dim:rgba(30,136,229,.16);
+  --purple:#8e24aa;--teal:#00897b;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55;padding:0 clamp(16px,4vw,56px) 96px}
+h1,h2,h3,h4,.h{font-family:"Roboto Condensed","Arial Narrow",Impact,sans-serif;font-weight:700;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1.1}
+h1{font-size:clamp(34px,6vw,64px)}
+h2{font-size:clamp(22px,3vw,30px);margin:0 0 6px}
+h3{font-size:18px;margin:0 0 8px}
+h4{font-size:14px;color:var(--muted-fg);letter-spacing:.12em}
+p{margin:0 0 12px}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;background:var(--muted);padding:1px 6px;color:#ffd866}
+small{color:var(--muted-fg)}
+.y{color:var(--primary)}.g{color:#7ed184}.r{color:#ff8a80}.b{color:#82b1ff}
+.wrap{max-width:1180px;margin:0 auto}
+header.hero{padding:64px 0 32px;border-bottom:1px solid var(--border)}
+.hero .kicker{font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.2em;font-size:12px;color:var(--muted-fg);margin-bottom:12px}
+.hero p.lead{font-size:17px;max-width:880px;color:#d0d0d0;margin-top:16px}
+.meta{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:20px;font-size:13px;color:var(--muted-fg)}
+.meta b{color:var(--fg);font-weight:500}
+.pill{display:inline-block;font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:11px;padding:3px 10px;border:1px solid var(--border);vertical-align:middle}
+.pill.y{border-color:var(--primary);color:var(--primary);background:var(--primary-dim)}
+.pill.g{border-color:var(--green);color:#7ed184;background:var(--green-dim)}
+.pill.r{border-color:var(--destructive);color:#ff8a80;background:var(--destructive-dim)}
+.pill.b{border-color:var(--blue);color:#82b1ff;background:var(--blue-dim)}
+nav.toc{position:sticky;top:0;z-index:20;background:rgba(13,13,13,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--border-soft);margin:0 calc(-1 * clamp(16px,4vw,56px));padding:0 clamp(16px,4vw,56px)}
+nav.toc ul{list-style:none;margin:0 auto;padding:0;display:flex;gap:2px;overflow-x:auto;max-width:1180px}
+nav.toc a{display:block;padding:12px 14px;font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--muted-fg);white-space:nowrap;border-bottom:2px solid transparent}
+nav.toc a:hover{color:var(--fg);text-decoration:none;border-color:var(--primary)}
+section{padding:56px 0 8px}
+section+section{border-top:1px solid var(--border-soft)}
+.sub{color:var(--muted-fg);margin-bottom:24px;max-width:880px}
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+.card{background:var(--card);border:1px solid var(--border);padding:20px 22px}
+.card.y{border-color:rgba(255,191,0,.5)}
+.card h3{display:flex;align-items:center;gap:10px}
+.card ul{margin:8px 0 0;padding-left:18px}
+.card li{margin:4px 0}
+.card td,.card li{overflow-wrap:anywhere}
+.card td code,.card li code{white-space:normal;overflow-wrap:anywhere}
+.card .tbl table{table-layout:fixed}
+.card .tbl td:first-child{width:40%}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border-soft);vertical-align:top}
+th{font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--muted-fg);font-weight:700}
+.tbl{overflow-x:auto;border:1px solid var(--border);background:var(--card)}
+td .ok{color:#7ed184}td .no{color:#ff8a80}td .own{color:var(--primary)}
+.center{text-align:center}
+.dec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.dec{border:1px solid var(--border);background:var(--card);padding:14px 16px 14px 54px;position:relative}
+.dec .n{position:absolute;left:16px;top:12px;font-family:"Roboto Condensed",sans-serif;font-size:24px;color:var(--primary)}
+.dec b.t{display:block;font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:13px;margin-bottom:3px}
+.dec .q{font-size:12.5px;color:#d0d0d0}
+.dec .a{font-size:11.5px;color:var(--muted-fg);margin-top:7px;border-top:1px dashed var(--border-soft);padding-top:7px}
+.dec.new{border-color:rgba(255,191,0,.5)}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin:10px 0 20px}
+.lane{border:1px solid var(--border);background:var(--card);padding:16px}
+.lane h4{margin-bottom:10px}
+.steps{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px}
+.steps .s{border:1px solid var(--border);padding:6px 10px;background:var(--card2)}
+.steps .s.y{border-color:rgba(255,191,0,.6);color:var(--primary)}
+.steps .s.g{border-color:rgba(67,160,71,.6);color:#7ed184}
+.steps .s.b{border-color:rgba(30,136,229,.6);color:#82b1ff}
+.steps i{color:var(--muted-fg2);font-style:normal}
+.tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;margin:14px 0 6px;position:relative}
+.tl::before{content:"";position:absolute;left:0;right:0;top:11px;height:2px;background:var(--border)}
+.tl .t{position:relative;padding:30px 12px 0 0;font-size:12px;color:#d0d0d0}
+.tl .t::before{content:"";position:absolute;left:0;top:4px;width:16px;height:16px;border-radius:50%;background:var(--bg);border:2px solid var(--muted-fg)}
+.tl .t.y::before{border-color:var(--primary);background:var(--primary)}
+.tl .t.r::before{border-color:#ff8a80;background:#ff8a80}
+.tl .t.g::before{border-color:#7ed184;background:#7ed184}
+.tl .t b{display:block;font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--fg);margin-bottom:3px}
+.tl .t small{color:var(--muted-fg)}
+.tier{display:grid;grid-template-columns:150px 1fr;gap:18px;padding:18px 0;border-bottom:1px dashed var(--border-soft);align-items:start}
+.tier .who{font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:20px}
+.tier .who small{display:block;font-family:Inter,sans-serif;text-transform:none;letter-spacing:0;font-size:12px;color:var(--muted-fg);margin-top:4px}
+.tier .who.master{color:var(--primary)}.tier .who.prof{color:#82b1ff}.tier .who.aluno{color:#7ed184}
+.tier .what{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--border);padding:5px 10px;font-size:13px;background:var(--card)}
+.chip.y{border-color:rgba(255,191,0,.6);color:var(--primary)}
+.chip.lock{color:var(--muted-fg)}
+.arrow{color:var(--muted-fg2);font-size:12px;padding:6px 0 0 150px;letter-spacing:.1em;text-transform:uppercase;font-family:"Roboto Condensed",sans-serif}
+.gallery{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;margin-top:12px}
+.frame{background:#0a0a0a;border:1px solid rgba(255,255,255,.12);box-shadow:0 30px 60px rgba(0,0,0,.6),0 0 0 1px #000;position:relative;overflow:hidden}
+.phone{width:372px;max-width:100%;padding:14px 0 0}
+.phone .bar{height:22px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:10px;color:var(--muted-fg2);font-family:ui-monospace,monospace}
+.desk{width:100%;max-width:1120px}
+.desk .bar{height:30px;background:#151515;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:6px;padding:0 12px;font-size:11px;color:var(--muted-fg2)}
+.desk .bar i{width:10px;height:10px;border-radius:50%;background:#333;display:inline-block}
+.desk .bar span{margin-left:10px;font-family:ui-monospace,monospace}
+.caption{width:100%;margin-top:10px;font-size:13px;color:var(--muted-fg)}
+.caption b{color:var(--fg);font-weight:500}
+.mockcol{display:flex;flex-direction:column;flex:0 1 372px;max-width:100%}
+.mockcol.wide{flex:1 1 100%}
+.mockcol.mid{flex:1 1 560px}
+.shell{display:grid;grid-template-columns:216px 1fr;min-height:600px;font-size:13px}
+.shell.rail{grid-template-columns:58px 1fr;min-height:560px}
+.side{background:var(--side);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;padding:16px 0 12px}
+.side .logo{font-family:"Roboto Condensed",sans-serif;font-size:20px;text-transform:uppercase;padding:0 18px 6px}
+.side .who{font-size:10px;color:var(--muted-fg);padding:0 18px 14px;border-bottom:1px solid var(--border-soft);margin-bottom:10px;line-height:1.5}
+.side .item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:var(--muted-fg);font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:12px;border-left:3px solid transparent;cursor:pointer;background:none;border-top:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.side .item .ic{width:18px;text-align:center;font-size:14px;font-family:Inter,sans-serif}
+.side .item.active{color:var(--primary);border-left-color:var(--primary);background:var(--primary-dim)}
+.side .item:hover{color:var(--fg)}
+.side .item .cnt{margin-left:auto;font-size:10px;color:var(--muted-fg2);font-family:Inter,sans-serif}
+.side .item .cnt.r{color:#ff8a80}
+.side .sp{flex:1}
+.side .foot{border-top:1px solid var(--border-soft);padding-top:8px;margin-top:8px}
+.side .foot .item{font-size:11px;padding:8px 16px}
+.side .switch-btn{margin:6px 14px 4px;border:1px solid rgba(255,191,0,.6);color:var(--primary);font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:11px;padding:8px 10px;text-align:center;background:var(--primary-dim)}
+.rail .side{padding:10px 0 8px}
+.rail .side .logo{font-size:14px;padding:0 0 10px;text-align:center}
+.rail .side .item{flex-direction:column;gap:3px;padding:9px 0;font-size:8px;letter-spacing:.04em;border-left-width:3px}
+.rail .side .item .ic{font-size:16px}
+.rail .side .foot .item{padding:8px 0;font-size:8px}
+.main{padding:22px 26px 28px;min-width:0}
+.rail .main{padding:14px 14px 20px}
+.panel[hidden]{display:none}
+.app-h1{font-family:"Roboto Condensed",sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:.01em}
+.app-sub{font-size:11px;color:var(--muted-fg);margin-top:2px}
+.app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.ico{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;color:var(--muted-fg);font-size:13px}
+.subtabs{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+.subtabs button{appearance:none;background:var(--card2);border:1px solid var(--border-soft);color:var(--muted-fg);font-size:11px;padding:4px 10px;cursor:pointer;font-family:Inter,sans-serif}
+.subtabs button.active{border-color:var(--primary);color:var(--primary);background:var(--primary-dim)}
+.vtabs{display:grid;grid-template-columns:170px 1fr;gap:18px}
+.vtabs .vlist{border-right:1px solid var(--border-soft);padding-right:10px}
+.vtabs .vlist button{display:block;width:100%;text-align:left;appearance:none;background:none;border:0;border-left:3px solid transparent;color:var(--muted-fg);font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:12px;padding:9px 10px;cursor:pointer}
+.vtabs .vlist button.active{color:var(--primary);border-left-color:var(--primary);background:var(--primary-dim)}
+.vtabs .vlist small{display:block;font-family:Inter,sans-serif;text-transform:none;letter-spacing:0;font-size:10px;color:var(--muted-fg2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:12px;padding:11px 16px;border:1px solid var(--border);color:var(--fg);background:transparent;cursor:default;white-space:nowrap}
+.btn.p{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.btn.w{width:100%}
+.btn.sm{padding:6px 10px;font-size:10px}
+.btn.ghost{border-color:rgba(255,191,0,.5);color:var(--primary)}
+.btn.danger{border-color:rgba(198,40,40,.6);color:#ff8a80}
+.btn.google{background:#fff;color:#111;border-color:#fff;gap:10px}
+.gicon{width:16px;height:16px;border-radius:50%;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0);display:inline-block}
+.input{border:0;border-bottom:1px solid var(--border);padding:8px 0;color:var(--fg);font-size:13px;background:transparent;width:100%}
+.input .ph{color:var(--muted-fg2)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border-soft)}
+.row .nm{font-family:"Roboto Condensed",sans-serif;font-size:14px;text-transform:uppercase;letter-spacing:.02em}
+.row .em{font-size:11px;color:var(--muted-fg)}
+.row .mt{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;align-items:center;font-size:10px;color:var(--muted-fg)}
+.row.hl-r{background:var(--destructive-dim);margin:0 -8px;padding:12px 8px}
+.row.hl-y{background:var(--primary-dim);margin:0 -8px;padding:12px 8px}
+.row.click{cursor:pointer}
+tr.hl-y td{background:var(--primary-dim)}
+.row.click:hover{background:rgba(255,255,255,.03)}
+.more{display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;font-size:11px;color:var(--muted-fg)}
+.badge{font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;font-size:10px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.badge.pago{background:var(--primary-dim);color:var(--primary)}
+.badge.pend{background:var(--destructive-dim);color:#ff8a80}
+.badge.wait{background:var(--blue-dim);color:#82b1ff}
+.badge.tol{background:rgba(255,191,0,.22);color:#ffd866}
+.badge.ativo{color:#7ed184}
+.badge.bloq{color:#ff8a80}
+.badge.conv{background:var(--blue-dim);color:#82b1ff}
+.badge.pause{background:var(--muted);color:var(--muted-fg)}
+.badge.plan{background:var(--primary-dim);color:var(--primary);border-radius:0}
+.badge.mp{background:rgba(0,158,227,.18);color:#6cc8ff;border-radius:0}
+.badge.pix{background:rgba(50,188,173,.18);color:#5fe0cf;border-radius:0}
+.badge.none{background:var(--muted);color:var(--muted-fg);border-radius:0}
+.tag{font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;font-size:9px;letter-spacing:.08em;color:#fff;padding:2px 7px;border-radius:999px}
+.dots{color:var(--muted-fg);font-weight:700;letter-spacing:2px;padding:0 4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.chips span{font-size:11px;border:1px solid var(--border-soft);padding:3px 9px;color:var(--muted-fg);white-space:nowrap}
+.chips span.on{border-color:var(--primary);color:var(--primary);background:var(--primary-dim)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:6px 0 20px}
+.kpi{border:1px solid var(--border);padding:14px 16px;background:var(--card2)}
+.kpi .v{font-family:"Roboto Condensed",sans-serif;font-size:30px;line-height:1;color:var(--fg)}
+.kpi .v.y{color:var(--primary)}.kpi .v.r{color:#ff8a80}.kpi .v.b{color:#82b1ff}
+.kpi .l{font-size:11px;color:var(--muted-fg);margin-top:6px;text-transform:uppercase;letter-spacing:.08em}
+.callout{border:1px solid rgba(255,191,0,.5);background:var(--primary-dim);padding:12px 14px;margin:10px 0 16px;font-size:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.callout.b{border-color:rgba(30,136,229,.5);background:var(--blue-dim)}
+.callout.r{border-color:rgba(198,40,40,.6);background:var(--destructive-dim)}
+.sheet{border:1px solid var(--border);background:var(--card2);padding:14px;margin-top:14px}
+.sheet h5{margin:0 0 10px;font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--muted-fg)}
+.modal{border:1px solid rgba(255,191,0,.5);background:#141414;padding:16px;box-shadow:0 20px 50px rgba(0,0,0,.7);position:relative}
+.modal .x{position:absolute;right:12px;top:10px;color:var(--muted-fg);font-size:14px}
+.modal h5{color:var(--fg);font-size:14px}
+.code{font-family:ui-monospace,monospace;font-size:14px;letter-spacing:.12em;color:var(--primary);border:1px dashed rgba(255,191,0,.6);padding:8px 12px;display:inline-block;overflow-wrap:anywhere}
+.mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0}
+.mini .f{border-bottom:1px solid var(--border);padding:6px 0;font-size:12px;min-width:0;overflow-wrap:anywhere}
+.mini .f small{display:block;font-size:10px;color:var(--muted-fg2);text-transform:uppercase;letter-spacing:.08em}
+.toggle{display:inline-block;width:30px;height:16px;border-radius:999px;background:var(--primary);position:relative;vertical-align:middle;margin-right:6px}
+.toggle::after{content:"";position:absolute;right:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#0d0d0d}
+.qr{width:120px;height:120px;background:repeating-linear-gradient(90deg,#fff 0 8px,transparent 8px 16px),repeating-linear-gradient(0deg,#fff 0 8px,#0d0d0d 8px 16px);border:6px solid #fff;margin:10px auto;position:relative}
+.qr::after{content:"PIX";position:absolute;inset:38px;background:#fff;color:#0d0d0d;font-family:"Roboto Condensed",sans-serif;font-size:12px;display:flex;align-items:center;justify-content:center}
+.receipt{border:1px dashed var(--border);background:#0f0f0f;padding:10px;font-size:11px;color:var(--muted-fg);text-align:center}
+.receipt .doc{width:100%;height:90px;background:linear-gradient(#1e1e1e,#151515);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;color:var(--muted-fg2);font-family:ui-monospace,monospace;margin-bottom:6px}
+.folder{border:1px solid var(--border-soft);padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;background:var(--card2)}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:10px 0}
+.wk div{border:1px solid var(--border-soft);padding:6px 2px;text-align:center;font-size:9px;color:var(--muted-fg);min-height:52px}
+.wk div b{display:block;font-size:10px;color:var(--fg);margin-bottom:3px}
+.wk div.on{border-color:rgba(255,191,0,.6)}
+.foot{font-size:10px;color:var(--muted-fg2);text-align:center;padding-top:16px;font-style:italic}
+.note{font-size:12px;color:var(--muted-fg);border-left:2px solid var(--border);padding-left:10px;margin:14px 0}
+.push{border:1px solid rgba(255,255,255,.15);background:#1c1c1c;border-radius:10px;padding:10px 12px;font-size:11px;display:flex;gap:10px;align-items:flex-start;margin-top:8px}
+.push .ap{width:26px;height:26px;background:var(--primary);color:#0d0d0d;font-family:"Roboto Condensed",sans-serif;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:6px}
+.push b{display:block;font-size:11px}
+.price{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;margin:10px 0}
+.tierbox{border:1px solid var(--border);background:var(--card2);padding:16px;position:relative}
+.tierbox.hi{border-color:var(--primary)}
+.tierbox.cur::before{content:"ATUAL";position:absolute;right:10px;top:10px;font-family:"Roboto Condensed",sans-serif;font-size:10px;letter-spacing:.1em;color:var(--primary)}
+.tierbox.off{opacity:.45}
+.tierbox .nm{font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:13px;color:var(--muted-fg)}
+.tierbox .pr{font-family:"Roboto Condensed",sans-serif;font-size:28px;color:var(--fg);margin:6px 0 2px}
+.tierbox .pr small{font-size:12px;color:var(--muted-fg);font-family:Inter,sans-serif}
+.tierbox .al{font-size:12px;color:var(--primary);margin-bottom:8px}
+.tierbox .an{font-size:11px;color:var(--muted-fg);border-top:1px dashed var(--border-soft);padding-top:6px;margin-top:6px}
+.payopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0}
+.payopt{border:1px solid var(--border);background:var(--card2);padding:12px;font-size:12px}
+.payopt b{display:block;font-family:"Roboto Condensed",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:12px;margin-bottom:4px}
+.payopt.hi{border-color:rgba(255,191,0,.6)}
+.phase{display:grid;grid-template-columns:64px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid var(--border-soft)}
+.phase .n{font-family:"Roboto Condensed",sans-serif;font-size:34px;color:var(--primary);line-height:1}
+.phase h3{margin-bottom:4px}
+.phase .meta2{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.phase ul{margin:6px 0 0;padding-left:18px;color:#d0d0d0}
+.phase li{margin:3px 0}
+.gate{border:1px solid rgba(255,191,0,.5);background:var(--primary-dim);padding:6px 10px;font-size:12px;display:inline-block;margin-top:8px}
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--muted-fg)}
+footer code{white-space:pre-wrap;word-break:break-all}
+@media (max-width:760px){
+  .tier{grid-template-columns:1fr}.arrow{padding-left:0}
+  .phase{grid-template-columns:44px 1fr}.phase .n{font-size:26px}
+  .shell{grid-template-columns:58px 1fr}
+  .shell .side .item{flex-direction:column;gap:3px;padding:9px 0;font-size:8px;letter-spacing:.04em}
+  .shell .side .item .cnt{display:none}
+  .shell .side .logo{font-size:14px;padding:0 0 10px;text-align:center}
+  .shell .side .who,.shell .side .switch-btn{display:none}
+  .main{padding:14px}
+  .vtabs{grid-template-columns:1fr}.vtabs .vlist{border-right:0;display:flex;gap:4px;overflow-x:auto;padding:0 0 8px;border-bottom:1px solid var(--border-soft)}
+  .vtabs .vlist button{white-space:nowrap;border-left:0;border-bottom:2px solid transparent}.vtabs .vlist button.active{border-bottom-color:var(--primary)}
+  .vtabs .vlist small{display:none}
+  .tl::before{display:none}.tl .t{padding-top:0;padding-left:26px;margin-bottom:12px}.tl .t::before{top:2px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Proposta v6 · 12/09/2026 · + aba Planos no Master · aguardando seu OK final</div>
+  <h1>PHYSIQ<span class="y">CALC</span> → SAAS</h1>
+  <p class="lead">Três níveis, <b>Master → Professores → Alunos</b>. Você entra por dois botões: <b>Admin</b> (seus alunos, como hoje) e <b>Master</b> (professores, <b>Financeiro</b>, integrações). <b>Login só com Google</b>: o link do professor vincula o aluno no primeiro acesso. O professor paga <b>adesão de R$ 500</b> ao ativar e depois a mensalidade da faixa no fim de cada ciclo de 30 dias (<b>pós-pago</b>), pelo <b>seu Mercado Pago</b>. Atrasou: 7 dias de aviso, depois o Admin dele trava; os alunos dele continuam treinando até <b>você</b> bloquear. Alunos pagam o professor pelo <b>Pix dele</b> e anexam o <b>comprovante</b>. Listas com 20 itens e "Ver mais". A tela inicial do aluno <b>não muda</b>.</p>
+  <div class="meta">
+    <span><b>Repo</b> ~/projetos/physiqcalc (main <code>a04ea89</code>, v2.117)</span>
+    <span><b>Stack</b> React + Capacitor + Supabase (edge functions) + PowerSync + Mercado Pago</span>
+    <span><b>v4 → v5</b> paginação · código PROF-NOME-SOBRENOME · valor ao lado do plano · Financeiro compacto + popup · sem "Regenerar" · login só Google · comprovante obrigatório · home do aluno intacta</span>
+    <span><b>v5 → v6</b> aba <b>Planos</b> no Master: editar nomes, faixas, valores, adesão, trial e tolerância; reflete na conta dos professores</span>
+    <span class="pill y">Nada foi codado ainda</span>
+  </div>
+</header>
+
+<nav class="toc"><ul>
+  <li><a href="#dec">Decisões</a></li>
+  <li><a href="#hier">Acessos e dinheiro</a></li>
+  <li><a href="#proto">Protótipo</a></li>
+  <li><a href="#planos">Planos e cobrança</a></li>
+  <li><a href="#tec">Técnica</a></li>
+  <li><a href="#plano">Fases</a></li>
+  <li><a href="#aberto">Em aberto</a></li>
+  <li><a href="#risco">Riscos</a></li>
+</ul></nav>
+
+<!-- ===================== DECISÕES ===================== -->
+<section id="dec">
+  <h2>1 · Decisões fechadas (12/09)</h2>
+  <p class="sub">Tudo o que você definiu ao longo do dia. Em amarelo, o que entrou na v5.</p>
+  <div class="dec-grid">
+    <div class="dec"><span class="n">1</span><b class="t">Recebimento dos alunos</b><div class="q">Professor cadastra a <b>chave Pix</b>; aparece por padrão na tela Pagamentos dos alunos dele. <b>Mercado Pago só para os seus alunos.</b> Banco do professor → depois, por professor. Página <b>Integrações</b>.</div></div>
+    <div class="dec"><span class="n">2</span><b class="t">Biblioteca</b><div class="q">Seus exercícios atuais = <b>global</b> (Master). Cada professor cria os seus.</div></div>
+    <div class="dec"><span class="n">3</span><b class="t">Troca de professor</b><div class="q"><b>Só o Master move</b> aluno.</div></div>
+    <div class="dec"><span class="n">4</span><b class="t">Planos</b><div class="q"><b>Start</b> 1–10 R$ 39,90 · <b>Studio</b> 11–30 R$ 79,90 · <b>Pro</b> 31–100 R$ 149,90 · <b>Ilimitado</b> R$ 300,00 · <b>adesão R$ 500,00</b>.</div></div>
+    <div class="dec"><span class="n">5</span><b class="t">Quem vira professor</b><div class="q">Por <b>convite seu</b> ou <b>promovendo um aluno</b>.</div></div>
+    <div class="dec"><span class="n">6</span><b class="t">Link de convite · fila · sidebar</b><div class="q">"Compartilhar link" no Admin. Sem link → <b>fila que o Master define</b>. Navegação <b>lateral</b>, como o MyFinances.</div></div>
+    <div class="dec"><span class="n">7</span><b class="t">Aba Planos no Admin</b><div class="q">Professor vê o plano, muda e <b>paga pelo seu Mercado Pago</b>: recorrente, cartão do mês ou Pix.</div></div>
+    <div class="dec"><span class="n">8</span><b class="t">Aba Financeiro no Master</b><div class="q">Professores como a cobrança dos alunos: plano, vencimento, pagamentos, comprovantes; você libera, suspende, registra, cancela, reembolsa.</div></div>
+    <div class="dec"><span class="n">9</span><b class="t">Trava e alunos</b><div class="q">Sem pagar, o Admin trava. Alunos continuam treinando. <b>"Bloquear alunos"</b> é manual, no Financeiro.</div></div>
+    <div class="dec"><span class="n">10</span><b class="t">Tolerância com aviso</b><div class="q"><b>7 dias</b> após o vencimento, com <b>notificação</b> de que o acesso será bloqueado.</div></div>
+    <div class="dec"><span class="n">11</span><b class="t">Trial e anual</b><div class="q"><b>14 dias grátis no Start</b>, sem adesão. <b>Anual = 10 mensalidades</b> de cada faixa.</div></div>
+    <div class="dec"><span class="n">12</span><b class="t">Pós-pago · adesão separada</b><div class="q">Adesão na ativação; depois <b>usa 30 dias e paga</b>, a cada ciclo.</div></div>
+    <div class="dec new"><span class="n">13</span><b class="t">Login só com Google</b><div class="q">Sem e-mail e senha (nem login, nem cadastro). O link do professor guarda o código, o aluno entra com Google e o app vincula no primeiro acesso.</div><div class="a">O botão Google já existe (<code>signInWithGoogle</code>: PWA por redirect, APK por deep link). Convite por e-mail = a pessoa entra com Google usando aquele e-mail e é vinculada/promovida sozinha.</div></div>
+    <div class="dec new"><span class="n">14</span><b class="t">Comprovante obrigatório</b><div class="q">Ao "Já paguei", o aluno <b>anexa o comprovante</b>. O professor clica, vê o anexo e confirma ou recusa.</div></div>
+    <div class="dec new"><span class="n">15</span><b class="t">Código do professor</b><div class="q">Sempre <b>PROF-NOME-SOBRENOME</b> (ex.: <code>PROF-RAFAEL-LIMA</code>). Homônimo → <code>PROF-RAFAEL-LIMA-RL</code>, depois <code>-RL1</code>, <code>-RL2</code>… <b>Sem "Regenerar".</b></div></div>
+    <div class="dec new"><span class="n">16</span><b class="t">Listas paginadas</b><div class="q">Toda lista mostra <b>20 por vez</b> e um botão <b>"Ver mais"</b> (alunos, professores, financeiro, histórico).</div></div>
+    <div class="dec new"><span class="n">17</span><b class="t">Financeiro compacto + popup</b><div class="q">Linha só com nome, plano · ciclo e badges; botões laterais mantidos. <b>Clicar abre um popup</b> com tudo (forma, próxima cobrança, adesão, histórico, comprovantes).</div></div>
+    <div class="dec new"><span class="n">18</span><b class="t">Valor ao lado do plano</b><div class="q">Nas tabelas: <b>Studio - R$ 79,90</b>, e não só "Studio".</div></div>
+    <div class="dec new"><span class="n">19</span><b class="t">Home do aluno não muda</b><div class="q">A tela inicial de treinos fica <b>exatamente como está</b> (print de 12/09). O nome do professor aparece só na tela Pagamentos.</div></div>
+    <div class="dec new"><span class="n">20</span><b class="t">Aba Planos no Master</b><div class="q">Item próprio na sidebar do Master para <b>editar nome, faixa de alunos, valor mensal e anual</b> de cada plano, mais adesão, trial e tolerância. <b>Reflete na conta dos professores.</b></div><div class="a">Nome muda na hora em todo lugar; valor novo vale a partir do <b>próximo ciclo</b> de cada professor (o ciclo em andamento fecha no valor antigo) e o professor é avisado.</div></div>
+  </div>
+</section>
+
+<!-- ===================== ACESSOS E DINHEIRO ===================== -->
+<section id="hier">
+  <h2>2 · Acessos e fluxo do dinheiro</h2>
+  <p class="sub">Quem gerencia quem, e por onde cada real passa.</p>
+
+  <div class="tier">
+    <div class="who master">Master<small>você · botão <b>Master</b> · <code>role=master</code></small></div>
+    <div class="what">
+      <span class="chip y">Convida / promove / suspende professores</span>
+      <span class="chip y">Move alunos · fila "Sem professor"</span>
+      <span class="chip y"><b>Financeiro</b>: ciclo, vencimento, pagamentos e comprovantes de cada professor · libera acesso · suspende cobrança · registra pagamento · reembolsa · <b>bloqueia/desbloqueia alunos</b> do inadimplente</span>
+      <span class="chip y"><b>Planos</b>: edita nomes, faixas, valores, adesão, trial e tolerância — reflete na conta dos professores</span>
+      <span class="chip y">Integrações por professor · Biblioteca global</span>
+      <span class="chip">Botão <b>Admin</b> = seu painel de professor, como hoje</span>
+    </div>
+  </div>
+  <div class="arrow">↓ gerencia os acessos de</div>
+  <div class="tier">
+    <div class="who prof">Professor<small>N contas · botão <b>Admin</b> · <code>role=professor</code></small></div>
+    <div class="what">
+      <span class="chip">Alunos · Treinos · Cobrança · <b>Planos</b> · Configurações</span>
+      <span class="chip">Compartilha o link <code>?prof=PROF-NOME-SOBRENOME</code> · convida por e-mail</span>
+      <span class="chip">Cadastra a chave Pix · abre o <b>comprovante</b> do aluno e confirma</span>
+      <span class="chip"><b>Paga adesão e mensalidades pós-pagas</b> · muda de plano · anual</span>
+      <span class="chip">Cria treinos, pastas, tags, planos de aluno e exercícios <b>próprios</b></span>
+      <span class="chip lock">🔒 Biblioteca global só leitura · não vê alunos de outros</span>
+      <span class="chip lock">🔒 Limite de alunos = faixa · sem pagar: aviso 7 dias → Admin trava</span>
+    </div>
+  </div>
+  <div class="arrow">↓ gerencia os acessos de</div>
+  <div class="tier" style="border-bottom:0">
+    <div class="who aluno">Aluno<small>sem role · <code>professor_id</code> no perfil · entra com Google</small></div>
+    <div class="what">
+      <span class="chip">Tela inicial <b>igual à de hoje</b> · treina mesmo com o professor travado, até o Master bloquear</span>
+      <span class="chip">Pagamentos mostra o Pix do <b>seu</b> professor · anexa comprovante ao "Já paguei"</span>
+      <span class="chip lock">🔒 Não troca de professor sozinho</span>
+    </div>
+  </div>
+
+  <h3 style="margin-top:28px">Fluxo do dinheiro</h3>
+  <div class="flow">
+    <div class="lane"><h4>Alunos do Weslley</h4><div class="steps"><span class="s g">Aluno</span><i>→</i><span class="s b">Mercado Pago (Pix automático · cartão · assinatura)</span><i>→</i><span class="s y">Sua conta MP</span></div><p style="font-size:12px;color:var(--muted-fg);margin:10px 0 0">Exatamente o fluxo atual.</p></div>
+    <div class="lane"><h4>Alunos de um professor</h4><div class="steps"><span class="s g">Aluno</span><i>→</i><span class="s">Pix direto (chave do professor · QR com o valor)</span><i>→</i><span class="s b">Conta do professor</span></div><p style="font-size:12px;color:var(--muted-fg);margin:10px 0 0">Aluno anexa o comprovante e avisa → professor abre o anexo e confirma. A plataforma não toca nesse dinheiro.</p></div>
+    <div class="lane" style="border-color:rgba(255,191,0,.5)"><h4>Professores → plataforma (pós-pago)</h4><div class="steps"><span class="s b">Professor</span><i>→</i><span class="s">Adesão R$ 500</span><i>→</i><span class="s">usa 30 dias</span><i>→</i><span class="s">mensalidade da faixa</span><i>→</i><span class="s b">Mercado Pago</span><i>→</i><span class="s y">Sua conta MP</span></div><p style="font-size:12px;color:var(--muted-fg);margin:10px 0 0">Webhook marca pago e abre o próximo ciclo. Venceu → 7 dias de aviso → Admin trava.</p></div>
+  </div>
+
+  <h3 style="margin-top:8px">Linha do tempo de um professor</h3>
+  <div class="tl">
+    <div class="t g"><b>Dia −14 · Entra pelo link com Google</b>Trial no Start, grátis, sem adesão.<small> Limite de 10 alunos.</small></div>
+    <div class="t y"><b>Dia 0 · Ativação</b>Paga a <b>adesão R$ 500</b>. Escolhe a faixa. Ciclo 1 começa.</div>
+    <div class="t"><b>Dia 30 · Fim do ciclo 1</b>Paga a <b>1ª mensalidade</b> pelo mês que usou.</div>
+    <div class="t"><b>Dias 30–37 · Tolerância</b>Banner + notificação <i>"seu acesso será bloqueado em X dias"</i>.</div>
+    <div class="t r"><b>Dia 37 · Admin trava</b>Só a aba Planos abre. Alunos seguem treinando.</div>
+    <div class="t r"><b>Quando você decidir</b>Financeiro: <b>Bloquear alunos</b>, liberar acesso ou suspender cobrança.</div>
+  </div>
+
+  <div class="tbl" style="margin-top:24px"><table>
+    <thead><tr><th>Ação</th><th class="center">Master</th><th class="center">Professor</th><th class="center">Aluno</th><th>Onde é garantido</th></tr></thead>
+    <tbody>
+      <tr><td>Entrar no app</td><td class="center"><span class="ok">Google</span></td><td class="center"><span class="ok">Google</span></td><td class="center"><span class="ok">Google</span></td><td><code>signInWithGoogle</code> (já existe); e-mail/senha removidos do <code>AuthPage</code></td></tr>
+      <tr><td>Vincular aluno ao professor</td><td class="center"><span class="ok">move</span></td><td class="center"><span class="own">pelo link / e-mail</span></td><td class="center"><span class="own">1º acesso</span></td><td>edge <code>vincular-professor</code> (só se ainda sem professor)</td></tr>
+      <tr><td>Listar / ver / configurar / bloquear / excluir alunos</td><td class="center"><span class="ok">todos</span></td><td class="center"><span class="own">só os seus</span></td><td class="center"><span class="no">—</span></td><td><code>requireStaff</code> + escopo · listas de 20 em 20</td></tr>
+      <tr><td>Pix dos alunos (chave, ver comprovante, confirmar, recusar)</td><td class="center"><span class="ok">✓</span></td><td class="center"><span class="own">a própria / dos seus</span></td><td class="center"><span class="own">anexa e avisa</span></td><td>bucket privado <code>comprovantes</code> · ações <code>pix-*</code></td></tr>
+      <tr><td>Pagar adesão / mensalidade / anual · mudar de plano</td><td class="center"><span class="ok">vê e registra</span></td><td class="center"><span class="own">o próprio</span></td><td class="center"><span class="no">—</span></td><td><code>mp-payments</code> com <code>contexto = plano_professor</code></td></tr>
+      <tr><td>Liberar · suspender · registrar · reembolsar · <b>bloquear alunos</b></td><td class="center"><span class="ok">✓</span></td><td class="center"><span class="no">—</span></td><td class="center"><span class="no">—</span></td><td><code>master-financeiro</code></td></tr>
+      <tr><td>Treinos, pastas, tags, planos de aluno, exercícios</td><td class="center"><span class="ok">globais + próprios</span></td><td class="center"><span class="own">próprios</span></td><td class="center"><span class="no">—</span></td><td>RLS por <code>professor_id</code></td></tr>
+      <tr><td>Treinar (séries, semana, histórico)</td><td class="center"><span class="ok">✓</span></td><td class="center"><span class="ok">✓</span></td><td class="center"><span class="ok">✓ salvo bloqueio manual</span></td><td>flag <code>alunos_bloqueados_em</code> do professor</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ===================== PROTÓTIPO ===================== -->
+<section id="proto">
+  <h2>3 · Protótipo visual</h2>
+  <p class="sub">Mesma linguagem do app. Sidebar fixa no desktop e trilho de ícones no celular. Itens da sidebar e sub-abas são clicáveis. Nomes e números são <b>exemplo</b>.</p>
+
+  <h3 style="margin-top:12px">3.0 · Entrada: login só com Google · botões Admin e Master</h3>
+  <div class="gallery">
+    <div class="mockcol">
+      <div class="frame phone">
+        <div class="bar"><span>09:37</span><span>▮▮▮ 100%</span></div>
+        <div style="padding:18px 18px 22px;font-size:13px;min-height:520px">
+          <div style="text-align:center;padding:40px 0 22px"><div class="app-h1" style="font-size:34px">PHYSIQ<span class="y">CALC</span></div><div class="app-sub">Entre para treinar</div></div>
+          <div class="callout b" style="margin:0 0 18px"><span>Você chegou pelo link de <b>Rafael Lima</b>. Ao entrar, sua conta fica vinculada a ele.</span></div>
+          <span class="btn google w"><span class="gicon"></span>Entrar com Google</span>
+          <div class="em" style="text-align:center;margin-top:14px;color:var(--muted-fg2)">Sem e-mail e senha. Ao continuar você aceita os <span class="y">termos</span> e a <span class="y">privacidade</span>.</div>
+          <div class="sheet" style="margin-top:34px"><h5>Depois do login (1º acesso)</h5><div class="push"><div class="ap">PC</div><div><b>Vinculado a Rafael Lima</b>Você já aparece na lista dele. Bom treino!</div></div><div class="em" style="margin-top:8px">Sem link nem código → "Aguardando professor" e fila do Master. Quem já tem professor não muda nada.</div></div>
+          <div class="sheet"><h5>Convite por e-mail</h5><div class="em">O professor (ou você, para novos professores) cadastra o e-mail. Quando a pessoa entrar com o Google <b>daquele e-mail</b>, o vínculo (ou a promoção a professor) acontece sozinho.</div></div>
+          <div class="foot">By Weslley Bertoldo</div>
+        </div>
+      </div>
+      <div class="caption"><b>Login.</b> Só o botão Google, que já existe no app. O <code>?prof=</code> do link fica guardado até o login terminar; aí o app chama <code>vincular-professor</code>. Nenhum formulário de cadastro.</div>
+    </div>
+    <div class="mockcol">
+      <div class="frame phone">
+        <div class="bar"><span>09:38</span><span>▮▮▮ 100%</span></div>
+        <div style="padding:18px 18px 22px;font-size:13px;min-height:520px">
+          <div class="app-head"><div><div class="app-h1">Configurações</div><div class="app-sub">Weslley Bertoldo · v2.117</div></div><span class="ico">✕</span></div>
+          <div class="row"><div><div class="nm">Atualizações</div><div class="em">Versão atual v2.117 · verificar</div></div><span class="ico">›</span></div>
+          <div class="row"><div><div class="nm">Descanso padrão</div><div class="em">60 s</div></div><span class="ico">›</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 10px"><span class="btn ghost">⚙ Admin</span><span class="btn p">★ Master</span></div>
+          <div class="em" style="text-align:center">Admin = seus alunos (como hoje) · Master = professores, financeiro, integrações</div>
+          <div class="sheet" style="margin-top:22px"><h5>Conta de um professor</h5><span class="btn ghost w">⚙ Admin</span><div class="em" style="margin-top:8px">Só Admin. Aluno comum não vê nenhum dos dois.</div></div>
+          <div class="sheet"><h5>Tela inicial do aluno</h5><div class="em"><b>Não muda.</b> Cabeçalho com foto, nome, ID e ícones; "PHYSIQCALC TREINOS"; treinos na semana e no mês; a semana; academia; treino do dia — igual ao print de 12/09 (v2.117).</div></div>
+          <div class="foot">By Weslley Bertoldo</div>
+        </div>
+      </div>
+      <div class="caption"><b>Botões.</b> Onde hoje existe "Painel Admin" (engrenagem do TreinosPage), sua conta passa a ter dois botões. A home de treinos do aluno fica intacta.</div>
+    </div>
+  </div>
+
+  <!-- 3.1 MASTER -->
+  <h3 style="margin-top:44px">3.1 · Master <small>· <code>/master</code></small></h3>
+  <div class="gallery">
+    <div class="mockcol wide">
+      <div class="frame desk">
+        <div class="bar"><i></i><i></i><i></i><span>physiqcalc.vercel.app/master/planos</span></div>
+        <div class="shell" data-tabs>
+          <div class="side">
+            <div class="logo">PHYSIQ<span class="y">CALC</span></div>
+            <div class="who">MASTER<br>Weslley Bertoldo</div>
+            <button class="item" data-tab="m-visao"><span class="ic">▦</span>Visão geral</button>
+            <button class="item" data-tab="m-prof"><span class="ic">👤</span>Professores<span class="cnt">7</span></button>
+            <button class="item" data-tab="m-alunos"><span class="ic">👥</span>Alunos<span class="cnt">62</span></button>
+            <button class="item" data-tab="m-fin"><span class="ic">$</span>Financeiro<span class="cnt r">3</span></button>
+            <button class="item active" data-tab="m-planos"><span class="ic">◈</span>Planos</button>
+            <button class="item" data-tab="m-integ"><span class="ic">⇄</span>Integrações</button>
+            <button class="item" data-tab="m-bib"><span class="ic">▤</span>Biblioteca global</button>
+            <button class="item" data-tab="m-cfg"><span class="ic">⚙</span>Configurações</button>
+            <div class="sp"></div>
+            <div class="switch-btn">⚙ Ir para Admin</div>
+            <div class="foot"><button class="item"><span class="ic">⏻</span>Sair</button></div>
+          </div>
+          <div class="main">
+
+            <div class="panel" data-panel="m-visao" hidden>
+              <div class="app-head"><div><div class="app-h1">Visão geral</div><div class="app-sub">Plataforma · atualizado agora</div></div></div>
+              <div class="kpis">
+                <div class="kpi"><div class="v y">6</div><div class="l">Professores ativos</div></div>
+                <div class="kpi"><div class="v">62</div><div class="l">Alunos</div></div>
+                <div class="kpi"><div class="v r">3</div><div class="l">Sem professor</div></div>
+                <div class="kpi"><div class="v" style="color:#ffd866">1</div><div class="l">Em tolerância</div></div>
+                <div class="kpi"><div class="v r">2</div><div class="l">Travados</div></div>
+                <div class="kpi"><div class="v">R$ 649<span style="font-size:14px;color:var(--muted-fg)">/mês</span></div><div class="l">Planos previstos</div></div>
+              </div>
+              <div class="callout" style="border-color:rgba(255,216,102,.6)"><span>⏳ <b>Camila Souza</b> — Studio venceu 10/09, em tolerância até 17/09. Avisada 10/09 e 13/09.</span><span class="btn sm">Ver no Financeiro</span></div>
+              <div class="callout r"><span>⛔ <b>Diego Martins</b> — Pro venceu 02/09, travado desde 09/09. 35 alunos dele seguem treinando.</span><span style="display:flex;gap:6px"><span class="btn sm">Liberar</span><span class="btn sm danger">Bloquear alunos</span></span></div>
+              <div class="callout"><span>⚠️ <b>3 alunos sem professor</b> — entraram com Google sem link.</span><span class="btn sm p">Atribuir</span></div>
+            </div>
+
+            <div class="panel" data-panel="m-prof" hidden>
+              <div class="app-head"><div><div class="app-h1">Professores</div><div class="app-sub">Acessos · 7 contas</div></div><span class="btn p">+ Novo professor</span></div>
+              <div class="chips" style="margin:0 0 8px"><span class="on">Todos</span><span>Ativos</span><span>Trial</span><span>Travados</span><span>Alunos bloqueados</span><span>Suspensos</span></div>
+              <div class="tbl" style="border:0;background:transparent"><table>
+                <thead><tr><th>Professor</th><th>Alunos</th><th>Plano</th><th>Recebimento</th><th>Acesso</th><th>Código</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td><b>Weslley Bertoldo</b><br><small>master</small></td><td>17</td><td>—</td><td><span class="badge mp">Mercado Pago</span></td><td><span class="badge ativo">ativo</span></td><td><code>PROF-WESLLEY-BERTOLDO</code></td><td class="dots">···</td></tr>
+                  <tr><td><b>Rafael Lima</b></td><td>18 / 30</td><td>Studio - R$ 79,90</td><td><span class="badge pix">Pix</span></td><td><span class="badge ativo">ativo</span></td><td><code>PROF-RAFAEL-LIMA</code></td><td class="dots">···</td></tr>
+                  <tr><td><b>Camila Souza</b></td><td>27 / 30</td><td>Studio - R$ 79,90</td><td><span class="badge pix">Pix</span></td><td><span class="badge tol">tolerância até 17/09</span></td><td><code>PROF-CAMILA-SOUZA</code></td><td class="dots">···</td></tr>
+                  <tr><td><b>Diego Martins</b></td><td>35 / 100</td><td>Pro - R$ 149,90</td><td><span class="badge pix">Pix</span></td><td><span class="badge bloq">travado · alunos treinando</span></td><td><code>PROF-DIEGO-MARTINS</code></td><td class="dots">···</td></tr>
+                  <tr><td><b>Paula Reis</b></td><td>9 / 10</td><td>Start - R$ 39,90</td><td><span class="badge none">—</span></td><td><span class="badge bloq">travada · alunos bloqueados 01/09</span></td><td><code>PROF-PAULA-REIS</code></td><td class="dots">···</td></tr>
+                  <tr><td><b>Rafael Lima</b><br><small>homônimo · rafael.l@…</small></td><td>4 / 10</td><td>Start - R$ 39,90</td><td><span class="badge none">sem integração</span></td><td><span class="badge conv">trial até 26/09</span></td><td><code>PROF-RAFAEL-LIMA-RL</code></td><td class="dots">···</td></tr>
+                  <tr><td><b>Marcos Paz</b></td><td>120</td><td>Ilimitado anual - R$ 3.000,00</td><td><span class="badge pix">Pix</span></td><td><span class="badge ativo">ativo</span></td><td><code>PROF-MARCOS-PAZ</code></td><td class="dots">···</td></tr>
+                </tbody>
+              </table></div>
+              <div class="more"><span>Mostrando 7 de 7</span></div>
+              <div class="two" style="margin-top:8px">
+                <div class="sheet" style="margin:0"><h5>Código do professor</h5><div class="em">Gerado uma vez, a partir do nome: <code>PROF-NOME-SOBRENOME</code> (sem acentos). Se já existir: <code>PROF-RAFAEL-LIMA-RL</code>; depois <code>PROF-RAFAEL-LIMA-RL1</code>, <code>-RL2</code>… <b>Não existe "Regenerar"</b>; mudar o nome não muda o código.</div></div>
+                <div class="sheet" style="margin:0"><h5>Menu ··· · + Novo professor</h5><div class="chips" style="margin:0 0 10px"><span>Ver alunos</span><span>Reenviar convite</span><span>Suspender acesso</span><span>Mover alunos para…</span><span style="color:#ff8a80">Remover</span></div><div class="mini"><div class="f"><small>Convidar por e-mail (Google)</small>novo.professor@gmail.com</div><div class="f"><small>ou promover aluno existente</small>buscar aluno… ▾</div><div class="f"><small>Trial</small>14 dias no Start, sem adesão</div></div></div>
+              </div>
+            </div>
+
+            <div class="panel" data-panel="m-alunos" hidden>
+              <div class="app-head"><div><div class="app-h1">Alunos</div><div class="app-sub">62 alunos · todos os professores</div></div></div>
+              <div style="display:flex;gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap"><div class="input" style="max-width:300px"><span class="ph">🔍 Nome, e-mail ou ID…</span></div><div class="chips" style="margin:0"><span class="on">Todos os professores ▾</span><span>Sem professor (3)</span><span>Bloqueados pelo master (9)</span></div></div>
+              <div class="row"><div><div class="nm">Ana Paula</div><div class="em">ana@… · ID 102041</div><div class="mt"><span class="badge bloq">sem professor</span></div></div><div style="display:flex;gap:6px"><span class="btn sm p">Atribuir ▾</span><span class="dots">···</span></div></div>
+              <div class="row"><div><div class="nm">João Pedro</div><div class="em">joao@… · ID 102038</div><div class="mt"><span>Prof. Rafael Lima</span><span class="badge plan">Somente treino</span><span class="badge pago">pago até 05/10</span></div></div><div style="display:flex;gap:6px"><span class="btn sm">Mover ▾</span><span class="dots">···</span></div></div>
+              <div class="row"><div><div class="nm">Renata Dias</div><div class="em">renata@… · ID 102011</div><div class="mt"><span>Prof. Paula Reis</span><span class="badge bloq">bloqueado pelo master (professora inadimplente)</span></div></div><div style="display:flex;gap:6px"><span class="btn sm">Mover ▾</span><span class="dots">···</span></div></div>
+              <div class="row" style="border-bottom:0;opacity:.55"><div><div class="nm">… mais 17 linhas …</div></div></div>
+              <div class="more"><span>Mostrando 20 de 62</span><span class="btn sm ghost">Ver mais (42)</span></div>
+            </div>
+
+            <div class="panel" data-panel="m-fin" hidden>
+              <div class="app-head"><div><div class="app-h1">Financeiro</div><div class="app-sub">Cobrança dos professores · pós-pago · recebido pelo seu Mercado Pago</div></div><span class="btn">Registrar pagamento manual</span></div>
+              <div class="kpis" style="grid-template-columns:repeat(6,1fr)">
+                <div class="kpi"><div class="v y">R$ 1.229</div><div class="l">Recebido em setembro</div></div>
+                <div class="kpi"><div class="v">R$ 649,60</div><div class="l">Previsto / mês</div></div>
+                <div class="kpi"><div class="v b">2</div><div class="l">Vencem em 7 dias</div></div>
+                <div class="kpi"><div class="v" style="color:#ffd866">1</div><div class="l">Em tolerância</div></div>
+                <div class="kpi"><div class="v r">2</div><div class="l">Travados</div></div>
+                <div class="kpi"><div class="v">1</div><div class="l">Cobrança suspensa</div></div>
+              </div>
+              <div class="em" style="margin:-6px 0 10px">Nomes, faixas e valores dos planos são editados na aba <b>Planos</b>.</div>
+              <div class="row click"><div><div class="nm">Rafael Lima</div><div class="em">Studio - R$ 79,90 · ciclo 05/09 → 05/10</div><div class="mt"><span class="badge pago">em dia</span><span class="badge mp">recorrente</span></div></div><div style="display:flex;gap:6px"><span class="btn sm">Registrar pagamento</span><span class="dots">···</span></div></div>
+              <div class="row click hl-y"><div><div class="nm">Camila Souza</div><div class="em">Studio - R$ 79,90 · ciclo 10/08 → 10/09</div><div class="mt"><span class="badge tol">tolerância · 4 dias</span><span class="badge pix">Pix avulso</span></div></div><div style="display:flex;gap:6px"><span class="btn sm">Registrar pagamento</span><span class="btn sm">Reenviar aviso</span><span class="dots">···</span></div></div>
+              <div class="row click hl-r"><div><div class="nm">Diego Martins</div><div class="em">Pro - R$ 149,90 · ciclo 02/08 → 02/09</div><div class="mt"><span class="badge pend">atrasado</span><span class="badge bloq">acesso travado</span></div></div><div style="display:flex;gap:6px"><span class="btn sm p">Liberar acesso</span><span class="btn sm danger">Bloquear alunos (35)</span><span class="dots">···</span></div></div>
+              <div class="row click hl-r"><div><div class="nm">Paula Reis</div><div class="em">Start - R$ 39,90 · ciclo 13/07 → 13/08</div><div class="mt"><span class="badge pend">atrasado</span><span class="badge bloq">acesso travado</span><span class="badge bloq">9 alunos bloqueados</span></div></div><div style="display:flex;gap:6px"><span class="btn sm">Desbloquear alunos</span><span class="dots">···</span></div></div>
+              <div class="row click"><div><div class="nm">Rafael Lima (RL)</div><div class="em">Start - R$ 39,90 · trial até 26/09</div><div class="mt"><span class="badge conv">trial</span></div></div><div style="display:flex;gap:6px"><span class="btn sm">Ativar agora</span><span class="dots">···</span></div></div>
+              <div class="row click"><div><div class="nm">Marcos Paz</div><div class="em">Ilimitado anual - R$ 3.000,00 · coberto até 01/08/2027</div><div class="mt"><span class="badge pago">anual</span><span class="badge pause">cobrança suspensa</span></div></div><div style="display:flex;gap:6px"><span class="btn sm">Retomar cobrança</span><span class="dots">···</span></div></div>
+              <div class="more"><span>Mostrando 6 de 6</span></div>
+              <div class="two" style="margin-top:14px">
+                <div class="modal"><span class="x">✕</span><h5>Rafael Lima · detalhes</h5>
+                  <div class="mini"><div class="f"><small>Plano</small>Studio - R$ 79,90 · 18/30 alunos</div><div class="f"><small>Ciclo atual</small>05/09 → 05/10 · <span class="g">em dia</span></div><div class="f"><small>Forma</small>Assinatura no cartão · final 4421 · cobra em 05/10</div><div class="f"><small>Adesão</small>R$ 500,00 paga em 05/08</div><div class="f"><small>Trial</small>22/07 → 05/08</div><div class="f"><small>Avisos</small>nenhum pendente</div></div>
+                  <h5 style="margin-top:10px;font-size:12px;color:var(--muted-fg)">Histórico</h5>
+                  <div class="row" style="padding:8px 0"><div><div class="nm" style="font-size:12px">Ciclo 05/08 → 05/09</div><div class="em">assinatura · 05/09</div></div><div style="display:flex;gap:6px;align-items:center"><span class="badge pago">R$ 79,90</span><span class="btn sm">Comprovante</span></div></div>
+                  <div class="row" style="padding:8px 0"><div><div class="nm" style="font-size:12px">Adesão</div><div class="em">cartão · 05/08</div></div><div style="display:flex;gap:6px;align-items:center"><span class="badge pago">R$ 500,00</span><span class="btn sm">Comprovante</span></div></div>
+                  <div class="chips" style="margin:10px 0 0"><span>Registrar pagamento</span><span>Liberar acesso até…</span><span>Suspender cobrança</span><span>Mudar plano</span><span>Cancelar assinatura</span><span style="color:#ff8a80">Bloquear alunos</span><span style="color:#ff8a80">Reembolsar</span></div>
+                </div>
+                <div class="sheet" style="margin:0"><h5>Como funciona</h5><div class="em">A lista mostra só <b>nome · plano e valor · ciclo · badges</b>, com os botões laterais de sempre. <b>Clicar na linha abre o popup</b> ao lado, com forma de pagamento, próxima cobrança, adesão, trial, avisos, histórico e comprovantes, mais todas as ações. Também paginado: 20 por vez e "Ver mais".</div></div>
+              </div>
+            </div>
+
+            <div class="panel" data-panel="m-planos">
+              <div class="app-head"><div><div class="app-h1">Planos</div><div class="app-sub">Nomes, faixas e valores · o que você muda aqui vale para todos os professores</div></div><span class="btn p">+ Novo plano</span></div>
+              <div class="tbl" style="border:0;background:transparent"><table>
+                <thead><tr><th>Plano</th><th>Alunos</th><th>Mensal</th><th>Anual (10×)</th><th>Professores</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td><b>Start</b></td><td>1 a 10</td><td>R$ 39,90</td><td>R$ 399,00</td><td>2 · Paula Reis, Rafael Lima (RL)</td><td><span class="badge ativo">ativo · trial 14 dias</span></td><td><span class="btn sm">✎ Editar</span></td></tr>
+                  <tr class="hl-y"><td><b>Studio</b></td><td>11 a 30</td><td>R$ 79,90</td><td>R$ 799,00</td><td>2 · Rafael Lima, Camila Souza</td><td><span class="badge ativo">ativo</span></td><td><span class="btn sm p">✎ Editar</span></td></tr>
+                  <tr><td><b>Pro</b></td><td>31 a 100</td><td>R$ 149,90</td><td>R$ 1.499,00</td><td>1 · Diego Martins</td><td><span class="badge ativo">ativo</span></td><td><span class="btn sm">✎ Editar</span></td></tr>
+                  <tr><td><b>Ilimitado</b></td><td>sem limite</td><td>R$ 300,00</td><td>R$ 3.000,00</td><td>1 · Marcos Paz</td><td><span class="badge ativo">ativo</span></td><td><span class="btn sm">✎ Editar</span></td></tr>
+                </tbody>
+              </table></div>
+              <h4 style="margin:18px 0 6px">Regras gerais</h4>
+              <div class="mini" style="max-width:820px">
+                <div class="f"><small>Adesão (única, na ativação)</small>R$ 500,00 <span class="y">✎</span></div>
+                <div class="f"><small>Trial</small>14 dias · plano Start · sem adesão <span class="y">✎</span></div>
+                <div class="f"><small>Tolerância após o vencimento</small>7 dias · avisos nos dias 0, 3 e 6 <span class="y">✎</span></div>
+                <div class="f"><small>Anual</small>10 × mensal (automático) <span class="y">✎</span></div>
+              </div>
+              <div class="two" style="margin-top:14px">
+                <div class="modal"><span class="x">✕</span><h5>Editar plano · Studio</h5>
+                  <div class="mini"><div class="f"><small>Nome</small>Studio</div><div class="f"><small>Alunos · mínimo</small>11</div><div class="f"><small>Alunos · máximo</small>30</div><div class="f"><small>Mensal</small>R$ 79,90 → <b class="y">R$ 89,90</b></div><div class="f"><small>Anual</small>R$ 899,00 <span class="em">(10 × mensal, automático · <span class="y">editar manualmente</span>)</span></div><div class="f"><small>Status</small><span class="toggle"></span>ativo</div></div>
+                  <div class="callout" style="margin:10px 0 0;display:block"><b>2 professores neste plano:</b> Rafael Lima (ciclo até 05/10) e Camila Souza (ciclo até 10/09).<div class="em" style="margin-top:4px">O nome muda na hora. O novo valor passa a valer no <b>próximo ciclo</b> de cada um: Rafael a partir de 05/10, Camila a partir do ciclo que abrir quando ela pagar. A assinatura no cartão do Rafael é atualizada para R$ 89,90 no Mercado Pago. Os dois recebem aviso no Admin e por e-mail.</div></div>
+                  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="btn sm p">Salvar</span><span class="btn sm">Cancelar</span><span class="btn sm danger">Desativar plano</span></div>
+                </div>
+                <div class="sheet" style="margin:0"><h5>Como reflete na conta dos professores</h5><div class="em">
+                  <b>Nome:</b> muda imediatamente em Admin › Planos, no Financeiro, nas tabelas e nos comprovantes futuros.<br><br>
+                  <b>Valor:</b> o ciclo em andamento fecha no valor antigo; novos ciclos usam o novo. Assinaturas no cartão têm o valor atualizado no Mercado Pago; se o MP recusar a alteração, a assinatura é recriada no fim do ciclo.<br><br>
+                  <b>Faixa (min–máx):</b> quem ficar fora da nova faixa recebe aviso para trocar de plano; ninguém é travado por isso.<br><br>
+                  <b>Desativar:</b> ninguém novo entra; quem já está continua até trocar (aparece como "legado").<br><br>
+                  <b>Adesão, trial e tolerância:</b> valem para ativações e vencimentos a partir da mudança.
+                </div></div>
+              </div>
+              <div class="more"><span>Histórico de alterações: 3 mudanças · última 12/09 (Studio 79,90 → 89,90)</span><span class="btn sm ghost">Ver histórico</span></div>
+            </div>
+
+            <div class="panel" data-panel="m-integ" hidden>
+              <div class="app-head"><div><div class="app-h1">Integrações</div><div class="app-sub">Recebimento dos alunos, por professor</div></div></div>
+              <div class="callout b" style="margin-top:0"><span>A integração é <b>por professor</b>. A sua é o Mercado Pago, para os seus alunos e para os planos dos professores. Quem não tem integração recebe dos alunos pelo <b>Pix manual com comprovante</b>.</span></div>
+              <div class="row"><div><div class="nm">Weslley Bertoldo</div><div class="em">Pix automático · cartão · assinatura · webhook OK</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge mp">Mercado Pago</span><span class="btn sm">Configurar</span></div></div>
+              <div class="row"><div><div class="nm">Rafael Lima</div><div class="em">Chave Pix CPF ***.456.789-** · Rafael L. · Nubank · exibida aos alunos ✓</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge pix">Pix manual</span><span class="btn sm">Ver</span></div></div>
+              <div class="row"><div><div class="nm">Rafael Lima (RL)</div><div class="em r">Sem chave Pix — alunos veem "fale com seu professor"</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge none">Sem integração</span><span class="btn sm">Lembrar</span></div></div>
+              <div class="sheet"><h5>Disponíveis</h5><div class="mini"><div class="f"><small>Pix manual + comprovante</small><span class="g">padrão</span></div><div class="f"><small>Mercado Pago (sua conta)</small><span class="g">ativa</span></div><div class="f"><small>Mercado Pago (conta do professor)</small><span class="b">fase 8a</span></div><div class="f"><small>Outros bancos</small><span class="b">fase 8a</span> · sob demanda</div></div></div>
+            </div>
+
+            <div class="panel" data-panel="m-bib" hidden>
+              <div class="app-head"><div><div class="app-h1">Biblioteca global</div><div class="app-sub">O que você criou até hoje · visível a todos os professores</div></div><span class="btn p">+ Novo exercício</span></div>
+              <div class="subtabs"><button class="active">Exercícios (234)</button><button>Grupos musculares (14)</button><button>Planos de aluno globais (3)</button></div>
+              <div class="row"><div><div class="nm">Supino reto com barra</div><div class="em">Peito · musculação · GIF ✓</div></div><span class="pill">global</span></div>
+              <div class="row"><div><div class="nm">Agachamento livre</div><div class="em">Perna · musculação · GIF ✓</div></div><span class="pill">global</span></div>
+              <div class="more"><span>Mostrando 20 de 234</span><span class="btn sm ghost">Ver mais (214)</span></div>
+              <div class="callout" style="margin-top:14px"><span>Exercícios dos professores ficam nas bibliotecas deles; você pode <b>promover para global</b>.</span><span class="btn sm">Ver dos professores (31)</span></div>
+            </div>
+
+            <div class="panel" data-panel="m-cfg" hidden>
+              <div class="app-head"><div><div class="app-h1">Configurações</div><div class="app-sub">Regras da plataforma</div></div></div>
+              <div class="mini" style="max-width:720px">
+                <div class="f"><small>Login</small>Só Google (e-mail/senha desativados)</div>
+                <div class="f"><small>Entrou sem link/código</small>Fila "Sem professor" · você atribui ▾</div>
+                <div class="f"><small>Planos, adesão, trial e tolerância</small>Editar na aba <b>Planos</b> →</div>
+                <div class="f"><small>Avisos na tolerância</small>Banner no Admin + notificação no app + e-mail ▾</div>
+                <div class="f"><small>Bloqueio dos alunos do inadimplente</small>Manual, pelo Master ▾</div>
+                <div class="f"><small>Comprovante no "Já paguei"</small>Obrigatório</div>
+                <div class="f"><small>Itens por página</small>20 ▾</div>
+                <div class="f"><small>Termos e privacidade</small>Editar → <code>/privacidade</code></div>
+              </div>
+            </div>
+            <div class="foot">By Weslley Bertoldo</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><b>Master.</b> <b>Professores</b> cuida dos acessos (plano com valor e código <code>PROF-NOME-SOBRENOME</code>); <b>Financeiro</b> cuida do dinheiro com linhas compactas, botões laterais e popup de detalhes; <b>Planos</b> é onde você edita nomes, faixas, valores, adesão, trial e tolerância, e a mudança reflete na conta de todos os professores. Tudo paginado de 20 em 20.</div>
+    </div>
+  </div>
+
+  <!-- 3.2 ADMIN -->
+  <h3 style="margin-top:44px">3.2 · Admin <small>· <code>/admin</code> · painel do professor (o seu também)</small></h3>
+  <div class="gallery">
+    <div class="mockcol wide">
+      <div class="frame desk">
+        <div class="bar"><i></i><i></i><i></i><span>physiqcalc.vercel.app/admin/cobranca</span></div>
+        <div class="shell" data-tabs>
+          <div class="side">
+            <div class="logo">PHYSIQ<span class="y">CALC</span></div>
+            <div class="who">ADMIN<br>Rafael Lima · Studio 18/30</div>
+            <button class="item" data-tab="p-alunos"><span class="ic">👥</span>Alunos<span class="cnt">18</span></button>
+            <button class="item" data-tab="p-treinos"><span class="ic">🏋</span>Treinos</button>
+            <button class="item active" data-tab="p-cobranca"><span class="ic">$</span>Cobrança<span class="cnt r">2</span></button>
+            <button class="item" data-tab="p-planos"><span class="ic">◈</span>Planos</button>
+            <button class="item" data-tab="p-cfg"><span class="ic">⚙</span>Configurações</button>
+            <div class="sp"></div>
+            <div class="foot"><button class="item"><span class="ic">🧮</span>Cálculo manual</button><button class="item"><span class="ic">⏻</span>Sair</button></div>
+          </div>
+          <div class="main">
+
+            <div class="panel" data-panel="p-alunos" hidden>
+              <div class="app-head"><div><div class="app-h1">Alunos</div><div class="app-sub">18 de 30 do plano Studio</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btn ghost">🔗 Compartilhar link</span><span class="btn p">+ Convidar aluno</span></div></div>
+              <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div class="input" style="max-width:300px"><span class="ph">🔍 Nome, e-mail ou ID…</span></div><div class="chips" style="margin:0"><span class="on">Todos 18</span><span>Pendentes 2</span><span>Bloqueados 1</span><span>Convites 3</span><span>Tag ▾</span></div></div>
+              <div class="row"><div><div class="nm">João Pedro</div><div class="em">joao@…</div><div class="mt"><span>ID 102038</span><span class="badge plan">Somente treino</span><span class="badge ativo">ativo</span><span class="badge pago">pago até 05/10</span></div></div><span class="dots">···</span></div>
+              <div class="row"><div><div class="nm">Marina Alves</div><div class="em">marina@…</div><div class="mt"><span>ID 102030</span><span class="badge plan">Completo</span><span class="badge ativo">ativo</span><span class="badge wait">comprovante enviado · confirmar</span></div></div><span class="dots">···</span></div>
+              <div class="row"><div><div class="nm">Thiago Nunes</div><div class="em">thiago@…</div><div class="mt"><span>ID 102019</span><span class="badge ativo">ativo</span><span class="badge pago">pago até 28/09</span></div></div><span class="dots">···</span></div>
+              <div class="row" style="opacity:.7"><div><div class="nm">convite · fernanda@gmail.com</div><div class="em">enviado 10/09 · vincula quando ela entrar com esse Google</div></div><span class="btn sm">Reenviar</span></div>
+              <div class="more"><span>Mostrando 18 de 18</span></div>
+              <div class="sheet" style="max-width:520px"><h5>Menu ··· do aluno</h5><div class="chips" style="margin:0"><span>👁 Ver</span><span>⚙ Configurar</span><span>⬇ PDF</span><span>⛔ Bloquear</span><span style="color:#ff8a80">🗑 Excluir</span></div></div>
+            </div>
+
+            <div class="panel" data-panel="p-treinos" hidden>
+              <div class="app-head"><div><div class="app-h1">Treinos</div><div class="app-sub">Meus treinos · biblioteca · relatório · histórico</div></div><span class="btn p">+ Novo treino</span></div>
+              <div class="subtabs"><button class="active">Meus treinos</button><button>Biblioteca</button><button>Relatório</button><button>Histórico</button></div>
+              <div class="two">
+                <div><div class="folder"><span>📁 Hipertrofia <small style="color:var(--muted-fg2)">· 5 treinos</small></span><span>›</span></div><div class="folder"><span>📁 Iniciantes <small style="color:var(--muted-fg2)">· 3 treinos</small></span><span>›</span></div><h4 style="margin:14px 0 6px">Sem pasta</h4><div class="row"><div><div class="nm">Peito + tríceps</div><div class="em">8 exercícios</div></div><div style="display:flex;gap:4px;align-items:center"><span class="btn sm">👥 6 alunos</span><span class="ico">✎</span><span class="ico">🗑</span></div></div></div>
+                <div class="sheet" style="margin:0"><h5>Biblioteca</h5><div class="chips" style="margin:0 0 10px"><span>Global 🔒 234</span><span class="on">Minha 12</span></div><div class="row"><div><div class="nm">Remada cavalinho</div><div class="em">Costas · minha</div></div><span class="ico">✎</span></div><div class="row"><div><div class="nm">Supino reto com barra</div><div class="em">Peito · global</div></div><span class="ico">🔒</span></div></div>
+              </div>
+            </div>
+
+            <div class="panel" data-panel="p-cobranca">
+              <div class="app-head"><div><div class="app-h1">Cobrança</div><div class="app-sub">O que seus alunos pagam a você · Pix ***.456.789-** (Nubank)</div></div><span class="btn">Registrar pagamento manual</span></div>
+              <div class="kpis" style="grid-template-columns:repeat(4,1fr)"><div class="kpi"><div class="v y">14</div><div class="l">Em dia</div></div><div class="kpi"><div class="v b">2</div><div class="l">Comprovantes a confirmar</div></div><div class="kpi"><div class="v r">1</div><div class="l">Pendentes</div></div><div class="kpi"><div class="v">1</div><div class="l">Sem cobrança</div></div></div>
+              <div class="two">
+                <div>
+                  <div class="row click hl-y"><div><div class="nm">Marina Alves</div><div class="em">R$ 120,00 · ref. setembro · avisou hoje 07:52</div><div class="mt"><span class="badge wait">📎 comprovante anexado</span></div></div><span class="btn sm p">Ver comprovante</span></div>
+                  <div class="row click"><div><div class="nm">Pedro Henrique</div><div class="em">R$ 90,00 · ref. setembro · avisou ontem</div><div class="mt"><span class="badge wait">📎 comprovante anexado</span></div></div><span class="btn sm p">Ver comprovante</span></div>
+                  <div class="row"><div><div class="nm">Thiago Nunes</div><div class="em">R$ 120,00 · Pix</div></div><span class="badge pago">pago até 28/09</span></div>
+                  <div class="row"><div><div class="nm">Beatriz Rocha</div><div class="em">R$ 120,00 · Pix</div></div><span class="badge pend">pendente desde 02/09</span></div>
+                  <div class="more"><span>Mostrando 18 de 18</span></div>
+                </div>
+                <div class="modal"><span class="x">✕</span><h5>Comprovante · Marina Alves</h5>
+                  <div class="receipt"><div class="doc">[ comprovante-pix-2026-09-12.jpg ]</div>Nubank · Pix enviado · R$ 120,00 · 12/09 07:50 · para Rafael Lima (CPF ***.456.789-**) · E2E E1234…</div>
+                  <div class="mini" style="margin-top:8px"><div class="f"><small>Valor esperado</small>R$ 120,00 · setembro</div><div class="f"><small>Enviado por</small>Marina Alves · 12/09 07:52</div></div>
+                  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><span class="btn sm p">✓ Confirmar pagamento</span><span class="btn sm danger">Recusar · pedir outro</span><span class="btn sm">Abrir em tela cheia</span></div>
+                  <div class="em" style="margin-top:8px">Confirmar registra "pago até 12/10" e guarda o comprovante no histórico. Recusar devolve a aluna a pendente com aviso.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel" data-panel="p-planos" hidden>
+              <div class="app-head"><div><div class="app-h1">Planos</div><div class="app-sub">Seu plano e seus pagamentos à plataforma · pós-pago</div></div></div>
+              <div class="two">
+                <div class="sheet" style="margin:0;border-color:rgba(255,191,0,.5)"><h5>Plano atual</h5><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap"><div><div class="app-h1" style="color:var(--primary)">Studio</div><div class="em">11 a 30 alunos · você usa 18</div></div><div style="text-align:right"><div class="app-h1" style="font-size:22px">R$ 79,90<span style="font-size:11px;color:var(--muted-fg)">/mês</span></div><span class="badge pago">em dia</span></div></div><div class="mini" style="margin-top:10px"><div class="f"><small>Ciclo atual</small>05/09 → 05/10</div><div class="f"><small>Próximo pagamento</small>05/10 · R$ 79,90</div><div class="f"><small>Forma</small>Assinatura no cartão · final 4421</div><div class="f"><small>Adesão</small>R$ 500,00 paga em 05/08</div></div></div>
+                <div class="sheet" style="margin:0"><h5>Pagar</h5><div class="payopts"><div class="payopt hi"><b>Assinatura</b>R$ 79,90 no cartão no fim de cada ciclo. <span class="g">ativa</span></div><div class="payopt"><b>Cartão · fechar o ciclo</b>Pagamento único.</div><div class="payopt"><b>Pix · fechar o ciclo</b>QR do Mercado Pago.</div><div class="payopt"><b>Anual</b>Studio R$ 799,00 · 12 meses.</div></div></div>
+              </div>
+              <h4 style="margin:18px 0 6px">Mudar de plano</h4>
+              <div class="em" style="margin:0 0 6px">Nomes e valores vêm da aba <b>Planos</b> do Master. Se o master alterar um valor, o novo vale a partir do seu próximo ciclo e você é avisado aqui.</div>
+              <div class="price" style="margin-top:4px">
+                <div class="tierbox off"><div class="nm">Start</div><div class="pr">R$ 39,90<small>/mês</small></div><div class="al">1 a 10 alunos</div><div class="em">Indisponível: 18 alunos</div></div>
+                <div class="tierbox hi cur"><div class="nm">Studio</div><div class="pr">R$ 79,90<small>/mês</small></div><div class="al">11 a 30 alunos</div><div class="an">Anual R$ 799,00</div></div>
+                <div class="tierbox"><div class="nm">Pro</div><div class="pr">R$ 149,90<small>/mês</small></div><div class="al">31 a 100 alunos</div><span class="btn sm ghost" style="margin-top:6px">Upgrade</span></div>
+                <div class="tierbox"><div class="nm">Ilimitado</div><div class="pr">R$ 300,00<small>/mês</small></div><div class="al">sem limite</div><span class="btn sm ghost" style="margin-top:6px">Upgrade</span></div>
+              </div>
+              <h4 style="margin:18px 0 6px">Histórico</h4>
+              <div class="row"><div><div class="nm">Ciclo 05/08 → 05/09</div><div class="em">assinatura · cartão final 4421 · 05/09</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge pago">R$ 79,90</span><span class="btn sm">Comprovante</span></div></div>
+              <div class="row"><div><div class="nm">Adesão</div><div class="em">cartão · 05/08</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge pago">R$ 500,00</span><span class="btn sm">Comprovante</span></div></div>
+              <div class="more"><span>Mostrando 2 de 2</span></div>
+            </div>
+
+            <div class="panel" data-panel="p-cfg" hidden>
+              <div class="app-head"><div><div class="app-h1">Configurações</div><div class="app-sub">Perfil · convite · recebimento</div></div></div>
+              <div class="vtabs" data-tabs>
+                <div class="vlist">
+                  <button data-tab="c-perfil">Perfil<small>nome, foto, e-mail</small></button>
+                  <button class="active" data-tab="c-convite">Convite<small>link e código</small></button>
+                  <button data-tab="c-receb">Recebimento<small>chave Pix</small></button>
+                </div>
+                <div>
+                  <div class="panel" data-panel="c-perfil" hidden><div class="mini"><div class="f"><small>Nome exibido aos alunos</small>Rafael Lima</div><div class="f"><small>E-mail (Google)</small>rafael@gmail.com</div><div class="f"><small>Foto</small>do Google · alterar…</div><div class="f"><small>Descanso padrão dos alunos</small>60 s</div></div><span class="btn p" style="margin-top:8px">Salvar</span></div>
+                  <div class="panel" data-panel="c-convite">
+                    <div class="sheet" style="margin-top:0"><h5>Link de convite</h5><div style="font-family:ui-monospace,monospace;font-size:12px;color:var(--muted-fg);word-break:break-all">physiqcalc.vercel.app/?prof=PROF-RAFAEL-LIMA</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="btn sm p">Copiar link</span><span class="btn sm">Compartilhar (WhatsApp…)</span><span class="btn sm">QR do link</span></div><div class="em" style="margin-top:8px">O aluno abre o link, entra com Google e já cai na sua lista.</div></div>
+                    <div class="sheet"><h5>Seu código</h5><span class="code">PROF-RAFAEL-LIMA</span><div class="em" style="margin-top:8px">Fixo, gerado do seu nome. Serve para quem prefere digitar em vez de usar o link.</div></div>
+                    <div class="sheet"><h5>Convite por e-mail</h5><div class="input" style="max-width:320px">fernanda@gmail.com</div><span class="btn" style="margin-top:10px">Enviar convite</span><div class="em" style="margin-top:8px">Vincula quando ela entrar com o Google desse e-mail.</div></div>
+                  </div>
+                  <div class="panel" data-panel="c-receb" hidden>
+                    <div class="callout b" style="margin-top:0"><span>Sua chave Pix aparece na tela <b>Pagamentos</b> dos seus alunos, com QR já com o valor. O aluno anexa o comprovante e você confirma em <b>Cobrança</b>.</span></div>
+                    <div class="mini"><div class="f"><small>Tipo da chave</small>CPF ▾</div><div class="f"><small>Chave Pix</small>123.456.789-00</div><div class="f"><small>Favorecido (como no banco)</small>Rafael Lima</div><div class="f"><small>Banco</small>Nubank</div></div>
+                    <div style="margin:10px 0 14px;font-size:12px"><span class="toggle"></span>Mostrar Pix na tela dos meus alunos <span class="g">(ligado por padrão)</span> · Comprovante no "Já paguei": <b>obrigatório</b></div>
+                    <span class="btn p">Salvar</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="foot">By Weslley Bertoldo</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><b>Admin.</b> Em <b>Cobrança</b>, quem avisou "já paguei" aparece com "📎 comprovante anexado"; clicar abre o comprovante com Confirmar / Recusar. Em <b>Configurações › Convite</b>, o link e o código <code>PROF-RAFAEL-LIMA</code>, sem "Regenerar". Listas com "Mostrando X de Y" e "Ver mais".</div>
+    </div>
+  </div>
+
+  <!-- 3.3 celular + tolerância/travado + aluno -->
+  <h3 style="margin-top:44px">3.3 · No celular · aviso e trava · pagamento do aluno com comprovante</h3>
+  <div class="gallery">
+    <div class="mockcol">
+      <div class="frame phone">
+        <div class="bar"><span>09:41</span><span>▮▮▮ 100%</span></div>
+        <div class="shell rail" data-tabs>
+          <div class="side">
+            <div class="logo">P<span class="y">C</span></div>
+            <button class="item active" data-tab="r-alunos"><span class="ic">👥</span>Alunos</button>
+            <button class="item" data-tab="r-treinos"><span class="ic">🏋</span>Treinos</button>
+            <button class="item" data-tab="r-cob"><span class="ic">$</span>Cobrança</button>
+            <button class="item" data-tab="r-planos"><span class="ic">◈</span>Planos</button>
+            <button class="item" data-tab="r-cfg"><span class="ic">⚙</span>Config.</button>
+            <div class="sp"></div>
+            <div class="foot"><button class="item"><span class="ic">🧮</span>Cálculo</button><button class="item"><span class="ic">⏻</span>Sair</button></div>
+          </div>
+          <div class="main">
+            <div class="panel" data-panel="r-alunos"><div class="callout" style="margin:0 0 10px;padding:8px 10px;font-size:11px;border-color:rgba(255,216,102,.6)"><span>⏳ Mensalidade de R$ 79,90 venceu 10/09. <b>Pague até 17/09</b> para não perder o acesso.</span><span class="btn sm p">Pagar</span></div><div class="app-h1" style="font-size:20px">Alunos <span style="font-size:12px;color:var(--muted-fg2)">27/30</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0"><span class="btn sm ghost">🔗 Link</span><span class="btn sm p">+ Convidar</span></div><div class="input"><span class="ph">🔍 Buscar…</span></div><div class="row"><div><div class="nm" style="font-size:13px">João Pedro</div><div class="mt"><span class="badge pago">até 05/10</span></div></div><span class="dots">···</span></div><div class="row"><div><div class="nm" style="font-size:13px">Marina Alves</div><div class="mt"><span class="badge wait">📎 confirmar</span></div></div><span class="dots">···</span></div><div class="row" style="opacity:.55;border-bottom:0"><div><div class="nm" style="font-size:12px">… 18 linhas …</div></div></div><div class="more"><span>20 de 27</span><span class="btn sm ghost">Ver mais (7)</span></div></div>
+            <div class="panel" data-panel="r-treinos" hidden><div class="app-h1" style="font-size:20px">Treinos</div><div class="subtabs" style="margin-top:10px"><button class="active">Meus</button><button>Biblioteca</button></div><div class="folder"><span>📁 Hipertrofia</span><span>›</span></div><div class="row"><div><div class="nm" style="font-size:13px">Peito + tríceps</div></div><span class="btn sm">👥 6</span></div></div>
+            <div class="panel" data-panel="r-cob" hidden><div class="app-h1" style="font-size:20px">Cobrança</div><div class="row"><div><div class="nm" style="font-size:13px">Marina Alves</div><div class="em">R$ 120 · 📎 anexado</div></div><span class="btn sm p">Ver</span></div><div class="row"><div><div class="nm" style="font-size:13px">Beatriz Rocha</div><div class="em">R$ 120</div></div><span class="badge pend">pendente</span></div></div>
+            <div class="panel" data-panel="r-planos" hidden><div class="app-h1" style="font-size:20px">Planos</div><div class="sheet" style="margin-top:8px;padding:10px"><div class="app-h1" style="font-size:16px;color:var(--primary)">Studio</div><div class="em">R$ 79,90/mês · 27/30 · ciclo venceu 10/09 · <span class="y">tolerância até 17/09</span></div></div><span class="btn sm p w" style="margin-top:8px">Pagar o ciclo · Pix</span><span class="btn sm w" style="margin-top:6px">Pagar o ciclo · cartão</span><span class="btn sm w" style="margin-top:6px">Assinar · recorrente</span></div>
+            <div class="panel" data-panel="r-cfg" hidden><div class="app-h1" style="font-size:20px">Config.</div><div class="row"><div><div class="nm" style="font-size:13px">Perfil</div></div><span class="ico">›</span></div><div class="row"><div><div class="nm" style="font-size:13px">Convite</div><div class="em">PROF-CAMILA-SOUZA</div></div><span class="ico">›</span></div><div class="row"><div><div class="nm" style="font-size:13px">Recebimento</div><div class="em">Pix ✓</div></div><span class="ico">›</span></div></div>
+            <div class="foot">By Weslley Bertoldo</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><b>Celular · em tolerância.</b> Trilho de 58 px com os 5 itens; banner amarelo em todas as telas do Admin; lista com "Ver mais".</div>
+    </div>
+
+    <div class="mockcol">
+      <div class="frame phone">
+        <div class="bar"><span>09:43</span><span>▮▮▮ 100%</span></div>
+        <div style="padding:18px 18px 22px;font-size:13px;min-height:560px">
+          <div class="app-head"><div><div class="app-h1">Admin travado</div><div class="app-sub">Diego Martins · Pro</div></div><span class="ico">⏻</span></div>
+          <div class="callout r" style="margin:0 0 14px;display:block"><b>Seu ciclo venceu em 02/09.</b><div class="em" style="margin-top:4px">Tolerância de 7 dias encerrada em 09/09. Regularize para voltar a acessar seus alunos, treinos e cobrança.</div></div>
+          <div class="sheet" style="margin-top:0"><div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div class="app-h1" style="font-size:18px;color:var(--primary)">Pro</div><div class="em">ciclo 02/08 → 02/09 · 35 alunos</div></div><div style="text-align:right"><div class="app-h1" style="font-size:20px">R$ 149,90</div><span class="badge pend">atrasado</span></div></div></div>
+          <span class="btn p w" style="margin-top:12px">Pagar o ciclo · Pix</span>
+          <span class="btn w" style="margin-top:8px">Pagar o ciclo · cartão</span>
+          <span class="btn w" style="margin-top:8px">Assinar · recorrente no cartão</span>
+          <div class="sheet"><h5>Avisos recebidos antes (dias 0, 3 e 6)</h5>
+            <div class="push"><div class="ap">PC</div><div><b>PhysiqCalc</b>Sua mensalidade de R$ 149,90 venceu. Pague até 09/09 para não perder o acesso ao Admin.</div></div>
+            <div class="push"><div class="ap">PC</div><div><b>PhysiqCalc · 3 dias</b>Seu acesso ao Admin será bloqueado em 3 dias.</div></div>
+          </div>
+          <div class="sheet"><h5>Enquanto isso</h5><div class="em">✓ Seus 35 alunos continuam treinando.<br>✓ Nada é apagado.<br>✗ Você não vê nem edita alunos até regularizar.<br>⚠️ O master pode bloquear o acesso dos seus alunos.</div></div>
+          <div class="foot">By Weslley Bertoldo</div>
+        </div>
+      </div>
+      <div class="caption"><b>Trava.</b> Venceu + 7 dias → o Admin mostra só esta tela. Pagou ou o master liberou → volta ao normal.</div>
+    </div>
+
+    <div class="mockcol">
+      <div class="frame phone">
+        <div class="bar"><span>09:44</span><span>▮▮▮ 100%</span></div>
+        <div style="padding:18px 18px 22px;font-size:13px;min-height:560px">
+          <div class="app-head"><div><div class="app-h1"><span class="y">←</span> Pagamentos</div><div class="app-sub">Professor: Rafael Lima</div></div></div>
+          <div class="sheet" style="margin-top:0;display:flex;justify-content:space-between;align-items:center"><div><div class="em">Plano</div><div class="app-h1" style="font-size:16px;color:var(--primary)">Completo</div></div><div style="text-align:right"><div class="em">Mensalidade</div><div class="app-h1" style="font-size:22px">R$ 120,00</div></div></div>
+          <div class="callout" style="margin:10px 0"><span><span class="badge pend">pendente desde 02/09</span></span></div>
+          <h4 style="margin:14px 0 4px">1 · Pague via Pix para Rafael Lima</h4>
+          <div class="qr"></div>
+          <div class="mini"><div class="f"><small>Chave Pix (CPF)</small>123.456.789-00</div><div class="f"><small>Favorecido</small>Rafael Lima · Nubank</div></div>
+          <span class="btn w">📋 Copiar código Pix</span>
+          <h4 style="margin:18px 0 4px">2 · Anexe o comprovante</h4>
+          <span class="btn w">📎 Anexar comprovante (foto ou PDF)</span>
+          <div class="receipt" style="margin-top:8px"><div class="doc" style="height:44px">comprovante-pix-2026-09-12.jpg ✓</div></div>
+          <span class="btn p w" style="margin-top:10px">✓ Já paguei — enviar ao professor</span>
+          <div class="em" style="margin-top:8px;text-align:center">Sem comprovante o botão fica desabilitado. Depois: "Aguardando confirmação de Rafael Lima".</div>
+          <h4 style="margin:18px 0 4px">Histórico</h4>
+          <div class="row"><div><div class="nm">Agosto/2026</div><div class="em">Pix · confirmado 04/08 · 📎</div></div><span class="badge pago">pago</span></div>
+          <div class="foot">By Weslley Bertoldo</div>
+        </div>
+      </div>
+      <div class="caption"><b>Aluno de um professor com Pix.</b> Dois passos: pagar e anexar. Para os seus alunos nada muda (Mercado Pago). A home de treinos é a mesma de hoje.</div>
+    </div>
+  </div>
+
+  <!-- 3.4 configurar aluno -->
+  <h3 style="margin-top:44px">3.4 · Configurar aluno <small>· 7 abas → 4 grupos na lateral</small></h3>
+  <div class="gallery">
+    <div class="mockcol mid">
+      <div class="frame desk" style="max-width:760px">
+        <div class="bar"><i></i><i></i><i></i><span>physiqcalc.vercel.app/admin/alunos/102030?ct=plano</span></div>
+        <div class="main" style="min-height:440px;font-size:13px">
+          <div class="app-head"><div><div class="app-h1"><span class="y">←</span> Marina Alves</div><div class="app-sub">ID 102030 · marina@… · <span class="badge plan">Completo</span> · <span class="badge wait">📎 comprovante a confirmar</span></div></div><span class="btn sm">⬇ PDF</span></div>
+          <div class="vtabs" data-tabs>
+            <div class="vlist">
+              <button data-tab="a-perfil">Perfil<small>dados, tags, status</small></button>
+              <button data-tab="a-aval">Avaliação<small>dobras · evolução · registros</small></button>
+              <button data-tab="a-treino">Treino<small>diário · volume · histórico</small></button>
+              <button class="active" data-tab="a-plano">Plano &amp; Cobrança<small>plano · Pix · comprovantes</small></button>
+            </div>
+            <div>
+              <div class="panel" data-panel="a-perfil" hidden><div class="mini"><div class="f"><small>Nome</small>Marina Alves</div><div class="f"><small>E-mail (Google)</small>marina@gmail.com</div><div class="f"><small>Nascimento</small>14/03/1996 · 30 anos</div><div class="f"><small>Sexo</small>Feminino</div><div class="f"><small>Altura</small>1,68 m</div><div class="f"><small>Peso</small>64,2 kg</div><div class="f"><small>Tags</small><span class="tag" style="background:var(--purple)">Emagrecimento</span> +</div><div class="f"><small>Status</small><span class="g">ativo</span> · trava admin ☑</div></div><span class="btn p" style="margin-top:10px">Salvar</span></div>
+              <div class="panel" data-panel="a-aval" hidden><div class="subtabs"><button class="active">Dobras &amp; Medidas</button><button>Evolução</button><button>Registros</button></div><div class="mini"><div class="f"><small>Dobra 1 (mm)</small>18</div><div class="f"><small>Dobra 2 (mm)</small>22</div><div class="f"><small>Dobra 3 (mm)</small>16</div><div class="f"><small>Método TMB</small>Katch-McArdle</div></div><span class="btn p">Salvar avaliação</span></div>
+              <div class="panel" data-panel="a-treino" hidden><div class="subtabs"><button class="active">Treino Diário</button><button>Volume Semanal</button><button>Histórico</button></div><div class="wk"><div class="on"><b>SEG</b>Peito + tríceps</div><div class="on"><b>TER</b>Perna<br><span class="y">alternado</span></div><div><b>QUA</b>—</div><div class="on"><b>QUI</b>Costas + bíceps</div><div class="on"><b>SEX</b>Ombro</div><div class="on"><b>SÁB</b>Corrida</div><div><b>DOM</b>—</div></div><div class="row"><div><div class="nm">Terça · Perna</div><div class="em">☑ Treino alternado · extra: Abdômen · séries de cada exercício ✎</div></div><span class="btn sm">Editar</span></div><div class="note" style="margin:10px 0 0">Tudo que existe hoje continua: treinos por dia (vários por dia), treino alternado com extra, séries por exercício, Volume Semanal e Histórico. Só mudou o lugar: virou um grupo da lateral.</div></div>
+              <div class="panel" data-panel="a-plano"><div class="mini"><div class="f"><small>Plano</small>Completo ▾</div><div class="f"><small>Mensalidade</small>R$ 120,00</div><div class="f"><small>Recebimento</small>Pix do professor</div></div><div class="callout" style="margin:10px 0"><span>📎 Comprovante enviado hoje 07:52 · ref. setembro</span><span style="display:flex;gap:6px"><span class="btn sm p">Ver e confirmar</span><span class="btn sm">Recusar</span></span></div><div class="row"><div><div class="nm">Ago/2026</div><div class="em">Pix · confirmado 04/08 · 📎 comprovante</div></div><span class="badge pago">pago</span></div><div class="row"><div><div class="nm">Jul/2026</div><div class="em">Manual · registrado pelo professor</div></div><span class="badge pago">pago</span></div><div class="more"><span>Mostrando 2 de 2</span></div><span class="btn p" style="margin-top:10px">Salvar</span></div>
+            </div>
+          </div>
+          <div class="foot">By Weslley Bertoldo</div>
+        </div>
+      </div>
+      <div class="caption"><b>Configurar aluno.</b> Nenhum campo some; os 7 componentes atuais mudam de lugar, com os 4 grupos na lateral. Em Plano &amp; Cobrança o comprovante do mês aparece para confirmar.</div>
+    </div>
+    <div class="mockcol">
+      <div class="card" style="height:100%">
+        <h3>Mapa: hoje → proposta</h3>
+        <div class="tbl" style="border:0;background:transparent"><table>
+          <thead><tr><th>Hoje</th><th>Proposta</th></tr></thead>
+          <tbody>
+            <tr><td>Login e cadastro com e-mail/senha + Google</td><td><b>Só Google</b>; vínculo pelo link no 1º acesso</td></tr>
+            <tr><td>Dados Gerais</td><td><b>Perfil</b> (+ tags e status)</td></tr>
+            <tr><td>Dobras &amp; Medidas · Evolução · Registros</td><td><b>Avaliação</b> com 3 sub-abas</td></tr>
+            <tr><td>Treino (Treino Diário · Volume Semanal) · Histórico</td><td><b>Treino</b> com 3 sub-abas: Treino Diário · Volume Semanal · Histórico — tudo que existe hoje</td></tr>
+            <tr><td>Plano</td><td><b>Plano &amp; Cobrança</b> (+ comprovante do Pix)</td></tr>
+            <tr><td>Cards "Cálculo Manual" e "Gerenciar Treinos"</td><td>Rodapé da sidebar · item <b>Treinos</b> com botão 👥</td></tr>
+            <tr><td>Abas horizontais · listas inteiras</td><td>Sidebar (desktop) · trilho (celular) · <b>20 por vez + "Ver mais"</b></td></tr>
+            <tr><td>Não existe</td><td><b>Planos</b> (pós-pago) · <b>Configurações</b> (perfil, convite, Pix)</td></tr>
+            <tr><td>Não existe</td><td>Master: <b>Financeiro</b> (compacto + popup, bloqueio manual), <b>Planos</b> (editar nomes e valores), <b>Integrações</b>, Professores, Biblioteca global</td></tr>
+            <tr><td>Home de treinos do aluno</td><td><b>Inalterada</b></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PLANOS E COBRANÇA ===================== -->
+<section id="planos">
+  <h2>4 · Planos e regras de cobrança dos professores</h2>
+  <p class="sub">Tudo definido por você em 12/09. Anual = 10 mensalidades de cada faixa.</p>
+  <div class="price">
+    <div class="tierbox"><div class="nm">Start</div><div class="pr">R$ 39,90<small>/mês</small></div><div class="al">1 a 10 alunos</div><div class="an">Anual R$ 399,00 · trial 14 dias grátis</div></div>
+    <div class="tierbox"><div class="nm">Studio</div><div class="pr">R$ 79,90<small>/mês</small></div><div class="al">11 a 30 alunos</div><div class="an">Anual R$ 799,00</div></div>
+    <div class="tierbox"><div class="nm">Pro</div><div class="pr">R$ 149,90<small>/mês</small></div><div class="al">31 a 100 alunos</div><div class="an">Anual R$ 1.499,00</div></div>
+    <div class="tierbox"><div class="nm">Ilimitado</div><div class="pr">R$ 300,00<small>/mês</small></div><div class="al">sem limite</div><div class="an">Anual R$ 3.000,00</div></div>
+    <div class="tierbox hi"><div class="nm">Adesão</div><div class="pr">R$ 500,00<small> única</small></div><div class="al">cobrada separada, na ativação</div><div class="an">Depois: usa 30 dias e paga a mensalidade</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>🔁 Pós-pago: como o professor paga</h3>
+      <ul>
+        <li><b>Trial:</b> 14 dias grátis no Start, sem adesão, até 10 alunos.</li>
+        <li><b>Ativação:</b> paga só a <b>adesão R$ 500</b> e escolhe a faixa. O ciclo 1 começa nesse dia.</li>
+        <li><b>Fim de cada ciclo (30 dias):</b> paga a mensalidade pelo mês que usou — assinatura recorrente (cobra sozinha no fim do ciclo), cartão avulso ou Pix.</li>
+        <li><b>Anual:</b> 10 mensalidades adiantadas, cobre 12 meses.</li>
+        <li><b>Mudar de plano:</b> upgrade vale na hora; downgrade só se o nº de alunos couber.</li>
+        <li><b>Comprovantes</b> em PDF, como o aluno tem hoje.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>⛔ Atraso, trava e bloqueio dos alunos</h3>
+      <ul>
+        <li>Ciclo venceu sem pagar → <b>7 dias de tolerância</b> com avisos (banner, notificação, e-mail nos dias 0, 3 e 6) de que o acesso será bloqueado.</li>
+        <li>Dia 7 → <b>Admin trava</b>: só a aba Planos abre. Pagou → destrava na hora.</li>
+        <li><b>Alunos continuam treinando.</b> No Financeiro, <b>"Bloquear alunos"</b> é manual e seu; desbloqueio imediato.</li>
+        <li>Master também: liberar acesso até uma data, suspender/retomar cobrança, registrar pagamento manual, cancelar assinatura, reembolsar, mudar plano, reenviar aviso.</li>
+        <li>Estourou a faixa: link e convites bloqueados com aviso de upgrade.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TÉCNICA ===================== -->
+<section id="tec">
+  <h2>5 · Estrutura técnica</h2>
+  <p class="sub">O que muda em cada camada. Tudo idempotente e aplicado em <code>public</code> e <code>staging</code>. Princípio: <b>reaproveitar o que já existe</b> (Google login, Mercado Pago, webhook, comprovantes, bucket privado de registros, regra de cobertura).</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>🔐 Login só Google e vínculo pelo link</h3>
+      <ul>
+        <li><code>AuthPage</code> perde e-mail/senha (login e cadastro) e fica só com <code>signInWithGoogle</code>, que já trata PWA (redirect) e APK (deep link <code>com.bertoldo.physiqcalc://login-callback</code>).</li>
+        <li><b>Link:</b> <code>/?prof=PROF-RAFAEL-LIMA</code> → o app guarda o código em <code>localStorage</code> (<code>physiq_prof_pendente</code>) e mostra o banner "você chegou pelo link de…". Depois do <code>SIGNED_IN</code>, chama a edge <b><code>vincular-professor</code></b>, que só age se o perfil ainda está sem professor: valida código ativo e faixa, grava <code>professor_id</code>. Idempotente; nunca troca professor existente.</li>
+        <li><b>Convite por e-mail:</b> linha em <code>physiq_convites</code> (e-mail, professor, papel). A mesma edge, no 1º login, casa pelo e-mail do Google: aluno → vincula; professor → <code>role=professor</code> via Auth Admin API + cria <code>physiq_professores</code>. Sem <code>inviteUserByEmail</code>, sem senha.</li>
+        <li>Trigger <code>handle_new_user</code> continua só criando o perfil.</li>
+        <li><b>Staging:</b> OAuth não marca <code>ambiente=staging</code>, então o build de staging mantém o formulário de e-mail/senha <b>só para contas de teste</b> (já é assim hoje); produção fica 100% Google.</li>
+        <li><b>Contas antigas com e-mail/senha:</b> ao entrar com Google usando o <b>mesmo e-mail</b>, o Supabase liga a identidade à conta existente (nada se perde). E-mail diferente → conta nova → você move/trata no Master. Levanto quantas contas usam senha na Fase 1.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🗄️ Banco (1 migration)</h3>
+      <div class="tbl" style="border:0;background:transparent"><table>
+        <tbody>
+          <tr><td><code>physiq_professores</code> <span class="pill b">nova</span></td><td><code>id</code>, <code>nome</code>, <code>email</code>, <code>status</code>, <b><code>codigo_convite</code></b> UNIQUE (gerado por <code>physiq_gerar_codigo_professor(nome)</code>: <code>PROF-NOME-SOBRENOME</code> sem acentos; colisão → <code>-INICIAIS</code>, <code>-INICIAIS1</code>, <code>2</code>…; imutável), Pix (<code>pix_tipo</code>, <code>pix_chave</code>, <code>pix_favorecido</code>, <code>pix_banco</code>, <code>pix_exibir</code>), plano (<code>plano_id</code>, <code>trial_ate</code>, <code>adesao_paga_em</code>, <code>ciclo_inicio</code>, <code>ciclo_vence_em</code>, <code>anual_ate</code>, <code>cobranca_pausada</code>, <code>acesso_liberado_ate</code>, <code>alunos_bloqueados_em</code>, <code>alunos_bloqueados_msg</code>)</td></tr>
+          <tr><td><code>physiq_planos_professor</code> <span class="pill b">nova · editável pelo Master</span></td><td><code>nome</code>, <code>min_alunos</code>, <code>max_alunos</code>, <code>valor_mensal</code>, <code>valor_anual</code> (10× por padrão, editável), <code>ordem</code>, <code>ativo</code>, <code>atualizado_em</code> · seed 4 faixas · <code>physiq_planos_professor_hist</code> guarda cada alteração (quem, quando, de → para) · <code>app_config</code>: adesão 500, tolerância 7, trial 14, itens por página 20 (editáveis na aba Planos)</td></tr>
+          <tr><td>Preço congelado por ciclo</td><td><code>physiq_professores.ciclo_valor</code> é gravado na abertura de cada ciclo; mudança de preço só afeta ciclos novos. Nome do plano é sempre lido da tabela (muda na hora).</td></tr>
+          <tr><td><code>physiq_pagamentos</code> · <code>physiq_assinaturas</code></td><td>+ <code>contexto</code> ('aluno' | 'plano_professor') + <code>plano_id</code> + <code>tipo_cobranca</code> (adesao | mensal | anual) · + tipo <code>pix_manual</code>, status <code>aguardando_confirmacao</code>, <b><code>comprovante_path</code> obrigatório</b> para <code>pix_manual</code>, <code>confirmado_por</code>, <code>recusado_motivo</code></td></tr>
+          <tr><td>Storage <code>comprovantes</code> <span class="pill b">novo bucket privado</span></td><td>caminho <code>prof/&lt;professor_id&gt;/&lt;aluno_id&gt;/&lt;ano-mes&gt;-&lt;ts&gt;.&lt;ext&gt;</code> · aluno grava só na própria pasta; professor/master leem por URL assinada · espelho <code>comprovantes-staging</code>, mesmo padrão do bucket <code>registros</code></td></tr>
+          <tr><td><code>physiq_convites</code> · <code>physiq_integracoes</code> · <code>physiq_avisos_plano</code> <span class="pill b">novas</span></td><td>convites por e-mail (aluno | professor) · integração por professor · log dos avisos (dias 0/3/6)</td></tr>
+          <tr><td><code>physiq_profiles</code> · 6 catálogos</td><td>+ <code>professor_id</code> (NULL = global nos catálogos) + índices</td></tr>
+          <tr><td>Funções SQL</td><td><code>physiq_papel()</code> · <code>physiq_is_master()</code> · <code>physiq_is_staff()</code> · <code>physiq_professor_pode_convidar(pid)</code> · <code>physiq_professor_acesso_ok(pid)</code> · <code>physiq_aluno_bloqueado(uid)</code> · <code>physiq_gerar_codigo_professor(nome)</code></td></tr>
+          <tr><td>Cobertura e cron</td><td>adesão → ciclo de 30 dias; mensal → +1 mês; anual → +12 meses · pg_cron diário <code>physiq_avisos_tolerancia()</code></td></tr>
+          <tr><td>Dados</td><td>Weslley → <code>physiq_professores</code> (<code>PROF-WESLLEY-BERTOLDO</code>) + <code>role=master</code> + integração mercadopago · perfis atuais → <code>professor_id = Weslley</code></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>🛡️ RLS</h3>
+      <ul>
+        <li><b>Master:</b> ALL em tudo.</li>
+        <li><b>Professor:</b> ALL onde <code>professor_id = auth.uid()</code> nos catálogos; SELECT nos globais; UPDATE da própria linha só em perfil/Pix (código, plano, pausas e liberação são do master/edges). <b>Escrita exige <code>acesso_ok()</code></b>.</li>
+        <li><b>Aluno:</b> lê o próprio professor pela view <code>physiq_professor_publico</code>; não altera <code>professor_id</code>; insere <code>pix_manual</code> só com <code>comprovante_path</code> na própria pasta; escrita bloqueada se <code>physiq_aluno_bloqueado()</code>.</li>
+        <li><b>Storage:</b> aluno faz upload só em <code>prof/&lt;seu professor&gt;/&lt;seu id&gt;/</code>; leitura por URL assinada gerada pela edge para o professor dono ou master.</li>
+        <li><b>Pagamentos:</b> cada um lê os próprios; status só via service_role.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>⚡ Edge functions</h3>
+      <ul>
+        <li><b><code>vincular-professor</code></b> <span class="pill b">nova</span>: código do link ou convite por e-mail → vincula/promove no 1º acesso (idempotente).</li>
+        <li><b><code>requireStaff</code></b> nas 12 funções, com escopo e <code>acesso_ok</code>; <b>listas com <code>limit</code>/<code>offset</code> de 20</b> e <code>total</code> na resposta (<code>admin-list-users</code>, <code>master-*</code>, históricos).</li>
+        <li><b><code>mp-payments</code>:</b> contexto plano (ativação, ciclos, anual, assinatura com <code>start_date</code>, <code>mudar-plano</code>) e contexto aluno (<code>modo</code>, <code>bloqueado</code>, <code>pix-manual-avisar</code> exige <code>comprovante_path</code>, <code>comprovante-url</code> assinada, <code>admin-confirmar-pix</code>, <code>admin-recusar-pix</code>). <code>status-lite</code> devolve <code>bloqueado_pelo_master</code>.</li>
+        <li><b><code>mp-webhook</code>:</b> pagamento de plano → atualiza ciclo/anual/adesão e destrava.</li>
+        <li><b><code>master-financeiro</code>:</b> lista compacta paginada · <code>detalhe</code> (popup: forma, próxima cobrança, adesão, trial, avisos, histórico, comprovantes) · registrar · remover-manual · pausar/retomar · liberar-ate · cancelar-assinatura · refund · receipt · reenviar-aviso · bloquear/desbloquear-alunos.</li>
+        <li><b><code>master-planos</code></b> <span class="pill b">nova</span>: list · create · update (nome, faixa, mensal, anual, ativo) · set-regras (adesão, trial, tolerância) · historico. Ao mudar o valor: grava o histórico, notifica os professores do plano e atualiza o <code>transaction_amount</code> das assinaturas no Mercado Pago (<code>PUT /preapproval/{id}</code>); se o MP recusar, marca para recriar a assinatura no fim do ciclo.</li>
+        <li><b>Novas também:</b> <code>master-professores</code> (invite por e-mail, promote, suspend, move, set-plano; código gerado no banco), <code>master-integracoes</code>, <code>professor-convites</code> (link, e-mail, pendentes; <b>sem regenerar</b>).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🔄 PowerSync</h3>
+      <ul>
+        <li>Stream <code>global</code> filtra <code>professor_id IS NULL</code>; nova stream <code>do_meu_professor</code> com JOIN em <code>physiq_profiles</code>.</li>
+        <li><code>schema.ts</code> + <code>professor_id</code>. Bump do app (APK). Dev primeiro, Production fora de horário.</li>
+        <li>Comprovantes e bloqueio não passam pelo PowerSync: upload direto no Storage; <code>status-lite</code> ao abrir o app.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🖥️ Frontend</h3>
+      <div class="tbl" style="border:0;background:transparent"><table>
+        <tbody>
+          <tr><td><code>AuthPage.tsx</code></td><td>só Google; banner do link; guarda <code>?prof=</code>; pós-login chama <code>vincular-professor</code>. E-mail/senha só quando <code>DB_SCHEMA === "staging"</code></td></tr>
+          <tr><td><code>AppSidebar.tsx</code> · <code>AdminLayout.tsx</code> · <code>MasterLayout.tsx</code> <span class="pill b">novos</span></td><td>shadcn Sidebar (padrão do MyFinances) · trilho no celular · banner de tolerância</td></tr>
+          <tr><td><code>ListaPaginada.tsx</code> <span class="pill b">novo</span></td><td>"Mostrando X de Y" + "Ver mais" (20 por vez), usado em todas as listas</td></tr>
+          <tr><td><code>PlanoBloqueado.tsx</code> · <code>AlunoBloqueado.tsx</code> <span class="pill b">novos</span></td><td>trava do professor · aluno bloqueado pelo master</td></tr>
+          <tr><td><code>admin/CobrancaPage.tsx</code> <span class="pill b">novo</span></td><td>fila de comprovantes: abre anexo (URL assinada), Confirmar / Recusar</td></tr>
+          <tr><td><code>admin/PlanosPage.tsx</code> · <code>admin/ConfiguracoesPage.tsx</code> <span class="pill b">novos</span></td><td>plano pós-pago (reusa Brick, Pix QR, <code>ComprovanteModal</code>, PDF) · perfil, convite (sem regenerar), Pix</td></tr>
+          <tr><td><code>master/FinanceiroPage.tsx</code> <span class="pill b">novo</span></td><td>lista compacta + <code>ProfessorFinanceiroModal</code> (popup)</td></tr>
+          <tr><td><code>master/PlanosPage.tsx</code> · <code>PlanoEditModal.tsx</code> <span class="pill b">novos</span></td><td>tabela editável dos planos (nome, faixa, mensal, anual, status, nº de professores), regras gerais (adesão, trial, tolerância), prévia de impacto antes de salvar, histórico de alterações</td></tr>
+          <tr><td><code>master/*</code> <span class="pill b">novos</span></td><td>Visão geral · Professores (plano com valor, código) · Alunos · Integrações · Biblioteca global · Configurações</td></tr>
+          <tr><td><code>PagamentosPage.tsx</code> · <code>lib/pixBrCode.ts</code> <span class="pill b">novo</span></td><td>modo Pix do professor: QR estático, <b>anexar comprovante</b> (câmera/galeria/PDF, reusa o upload de <code>registrosFotos</code>), enviar</td></tr>
+          <tr><td><code>TreinosPage.tsx</code></td><td>só os botões Admin/Master na engrenagem e o gate de aluno bloqueado. <b>Home inalterada.</b></td></tr>
+          <tr><td><code>AdminUserConfig.tsx</code> · <code>AdminTreinos.tsx</code> · <code>useAuth.tsx</code> · <code>App.tsx</code> · <code>schema.ts</code></td><td>4 grupos na lateral · Meus treinos + 👥 · <code>papel</code>/<code>isMaster</code> · rotas · <code>professor_id</code></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>🧪 Testes que provam</h3>
+      <ul>
+        <li>Link <code>?prof=PROF-RAFAEL-LIMA</code> + Google novo → vinculado ao Rafael; Google já com professor → não muda; código inválido/faixa cheia → "Aguardando professor". Convite por e-mail + Google daquele e-mail → vinculado/promovido.</li>
+        <li>Dois "Rafael Lima" → <code>PROF-RAFAEL-LIMA</code> e <code>PROF-RAFAEL-LIMA-RL</code>; terceiro → <code>-RL1</code>. Nenhuma rota de regenerar.</li>
+        <li>"Já paguei" sem anexo → recusado (400); com anexo → linha <code>aguardando_confirmacao</code>; professor abre URL assinada, confirma → pago até; recusa → pendente com motivo. Professor de outro aluno não consegue a URL (403).</li>
+        <li>Listas devolvem 20 + total; "Ver mais" traz os próximos 20; busca filtra no servidor.</li>
+        <li>Professor A × aluno do B → 403. Ativação cobra só adesão e abre 30 dias; dia 30 cobra mensalidade; venceu → avisos 0/3/6 → dia 7 trava; paga → destrava; master bloqueia/desbloqueia alunos.</li>
+        <li>Assinatura de professor em <b>prod com R$ 1</b> (token TEST não aceita <code>/preapproval</code>). Contas atuais seguem entrando; <code>role='admin'</code> abre como master.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FASES ===================== -->
+<section id="plano">
+  <h2>6 · Plano por fases</h2>
+  <p class="sub">Esteira pessoal: local → link para você validar → staging → prod, um PR por fase.</p>
+  <div class="phase"><div class="n">0</div><div><h3>OK desta v5</h3><div class="meta2"><span class="pill">tamanho P</span><span class="pill">sem código</span></div><ul><li>Você confirma a página, o provedor de e-mail dos avisos e a regra do sufixo do código (seção 7).</li></ul><div class="gate">Gate: seu OK</div></div></div>
+  <div class="phase"><div class="n">1</div><div><h3>Banco, papéis, bucket e PowerSync (Dev)</h3><div class="meta2"><span class="pill">tamanho M</span><span class="pill b">migration</span><span class="pill b">sync rules Dev</span></div><ul><li>Migration completa da seção 5 (código do professor, planos, ciclos, tolerância, bloqueio, <code>contexto</code>, comprovante obrigatório, avisos, funções) + bucket <code>comprovantes</code>.</li><li>Sync rules Dev + <code>schema.ts</code>; aluno de teste sincronizando. UI intacta. Levantamento de contas com senha.</li></ul><div class="gate">Gate: staging migrado e app do aluno teste igual ao de antes</div></div></div>
+  <div class="phase"><div class="n">2</div><div><h3>Edge functions: vínculo, escopo, trava, comprovante, paginação</h3><div class="meta2"><span class="pill">tamanho M</span><span class="pill b">12 funções + 5 novas</span></div><ul><li><code>vincular-professor</code>; <code>requireStaff</code> + escopo + <code>acesso_ok</code> + paginação nas 12.</li><li><code>mp-payments</code> com contexto, ativação, ciclos, anual, Pix manual com comprovante e URL assinada; <code>mp-webhook</code>; <code>status-lite</code>.</li><li><code>master-professores</code>, <code>master-financeiro</code> (compacto + detalhe + bloqueio), <code>master-integracoes</code>, <code>professor-convites</code>; pg_cron dos avisos. Script de testes contra staging.</li></ul><div class="gate">Gate: relatório dos testes no staging</div></div></div>
+  <div class="phase"><div class="n">3</div><div><h3>Login Google + sidebar + Admin (professor)</h3><div class="meta2"><span class="pill">tamanho G</span><span class="pill b">UI</span></div><ul><li><code>AuthPage</code> só Google com vínculo pelo link; <code>AppSidebar</code> + <code>AdminLayout</code> + trilho + <code>ListaPaginada</code>.</li><li>Alunos, Treinos, <b>Cobrança com comprovantes</b>, Configurações (convite sem regenerar, Pix); Configurar aluno em 4 grupos.</li></ul><div class="gate">Gate: link local + staging: entrar pelo link com Google de teste e cair na lista do professor certo</div></div></div>
+  <div class="phase"><div class="n">4</div><div><h3>Master + botões Admin/Master</h3><div class="meta2"><span class="pill">tamanho M</span><span class="pill b">UI nova</span></div><ul><li><code>MasterLayout</code>: Visão geral, Professores (plano com valor, código), Alunos paginados + fila, <b>Planos (editar nomes, faixas, valores, adesão, trial, tolerância)</b>, Integrações, Biblioteca global, Configurações. Botões Admin/Master.</li></ul><div class="gate">Gate: você convida um professor de teste por e-mail, ele entra com Google e vira professor; você move um aluno; você renomeia um plano e vê refletir no Admin dele</div></div></div>
+  <div class="phase" style="border-color:rgba(255,191,0,.5)"><div class="n">5</div><div><h3>Planos (Admin) + Financeiro (Master) pelo Mercado Pago</h3><div class="meta2"><span class="pill">tamanho G</span><span class="pill y">seu Mercado Pago</span></div><ul><li><code>admin/PlanosPage</code>: trial → ativação → ciclos pós-pagos → assinatura/cartão/Pix/anual, mudar de plano, histórico; <code>PlanoBloqueado</code>; avisos.</li><li><code>master/FinanceiroPage</code>: lista compacta, popup de detalhes, menu ··· completo, bloquear/desbloquear alunos; <code>AlunoBloqueado</code>.</li><li><b>Mudança de valor na aba Planos refletindo na cobrança:</b> ciclo atual congelado, próximo ciclo no valor novo, assinatura atualizada no Mercado Pago, aviso aos professores.</li><li>Staging com token TEST; assinatura só em prod com R$ 1.</li></ul><div class="gate">Gate: professor de teste ativa, fecha um ciclo por Pix, entra em tolerância, trava e destrava; você bloqueia e desbloqueia os alunos dele; você muda o valor do plano e o próximo ciclo dele sai no valor novo</div></div></div>
+  <div class="phase"><div class="n">6</div><div><h3>Aluno: Pagamentos com comprovante</h3><div class="meta2"><span class="pill">tamanho M</span><span class="pill b">Pagamentos</span></div><ul><li><code>PagamentosPage</code> em modo Pix do professor: QR, anexar comprovante, enviar; modo Mercado Pago inalterado; tela de aluno bloqueado. Home de treinos intocada.</li></ul><div class="gate">Gate: aluno de teste paga, anexa e o professor confirma no staging</div></div></div>
+  <div class="phase"><div class="n">7</div><div><h3>Go-live</h3><div class="meta2"><span class="pill">tamanho P</span><span class="pill y">prod</span></div><ul><li>Migration em <code>public</code>, bucket, sync rules Production (fora de horário), edges, pg_cron, Vercel prod, APK pelo CI. Login só Google em prod.</li><li>Você entra como master, seus alunos intactos, convida o primeiro professor real; assinatura de professor validada com R$ 1.</li></ul><div class="gate">Gate: prova viva em prod (você valida)</div></div></div>
+  <div class="phase"><div class="n">8a</div><div><h3>Integração bancária por professor</h3><div class="meta2"><span class="pill">tamanho G</span><span class="pill b">sob demanda</span></div><ul><li>Mercado Pago do <b>próprio professor</b> via OAuth: Pix automático e cartão para os alunos dele, sem comprovante manual. Outros bancos conforme pedirem.</li></ul><div class="gate">Gate: 1 professor recebendo automático</div></div></div>
+  <div class="phase" style="border:0"><div class="n">8b</div><div><h3>Autocadastro de professor</h3><div class="meta2"><span class="pill">tamanho M</span><span class="pill b">landing</span></div><ul><li>Página pública com os planos; professor entra com Google no trial sem convite; você aprova.</li></ul><div class="gate">Gate: decisão sua se quer abrir a porta</div></div></div>
+</section>
+
+<!-- ===================== EM ABERTO ===================== -->
+<section id="aberto">
+  <h2>7 · O que ainda depende de você</h2>
+  <div class="grid g3">
+    <div class="card y"><h3>📧 E-mail dos avisos</h3><p style="font-size:13px">Banner e notificação no app saem sem nada extra. Para o <b>e-mail</b> dos dias 0, 3 e 6 (e o convite por e-mail) preciso de um provedor: Resend tem plano grátis, ou um SMTP seu. Sem isso, convite por e-mail vira só "cadastrar o e-mail e mandar o link pelo WhatsApp".</p></div>
+    <div class="card y"><h3>🔤 Sufixo do código</h3><p style="font-size:13px">Você escreveu <code>-RL1</code> e depois <code>-RL-2</code>. Normalizei para <code>-RL</code>, <code>-RL1</code>, <code>-RL2</code>… Se preferir <code>-RL-1</code>, <code>-RL-2</code>, é só dizer.</p></div>
+    <div class="card"><h3>👤 Contas antigas com senha</h3><p style="font-size:13px">Quem entrar com o Google do mesmo e-mail continua na mesma conta. Quem usar outro e-mail vira conta nova. Levanto quantas contas usam senha na Fase 1 e te trago a lista antes do go-live.</p></div>
+    <div class="card"><h3>🧾 Texto dos termos</h3><p style="font-size:13px">Pós-pago, adesão, trava, bloqueio manual e comprovante precisam estar nos termos do professor e do aluno. Escrevo um rascunho na Fase 5 para você revisar.</p></div>
+    <div class="card"><h3>7️⃣ Leitura do "7"</h3><p style="font-size:13px">Tratei "7 abre o plano" como detalhar a fase 7; a cobrança dos professores virou a Fase 5 e o resto ficou em 8a/8b. Se quis dizer outra coisa, me diga.</p></div>
+  </div>
+</section>
+
+<!-- ===================== RISCOS ===================== -->
+<section id="risco">
+  <h2>8 · Riscos e cuidados</h2>
+  <div class="grid g3">
+    <div class="card"><h3>🔐 Google-only e contas antigas</h3><p>Aluno com e-mail/senha que entra com outro Google perde o histórico. Mitigação: aviso no app antes do go-live pedindo para usar o mesmo e-mail, lista das contas com senha para você, e "Mover" no Master para casos isolados.</p></div>
+    <div class="card"><h3>📨 E-mail do convite ≠ e-mail do Google</h3><p>Convite por e-mail só vincula se a pessoa entrar com aquele e-mail. Fallback sempre disponível: o link do professor, que funciona com qualquer Google.</p></div>
+    <div class="card"><h3>🧪 Staging sem OAuth</h3><p>O login Google não marca o ambiente de staging; o build de staging mantém e-mail/senha só para contas de teste, como hoje. Produção fica 100% Google.</p></div>
+    <div class="card"><h3>📎 Comprovante falso</h3><p>O comprovante é prova para o professor conferir no extrato dele, não validação automática. A tela mostra valor esperado, favorecido e data para comparar; recusar é um clique.</p></div>
+    <div class="card"><h3>💸 Pós-pago = risco do 1º mês</h3><p>Adesão de R$ 500 paga na frente e trava no dia 37 (com bloqueio dos alunos na sua mão) limitam a perda a um ciclo.</p></div>
+    <div class="card"><h3>💳 Assinatura só testa em prod</h3><p>O <code>/preapproval</code> não aceita token TEST. Pix e cartão avulso testam no staging; assinatura valida em prod com R$ 1.</p></div>
+    <div class="card"><h3>⛔ Bloquear alunos é forte</h3><p>Por isso é manual e só seu; tela do aluno diz "fale com seu professor"; desbloqueio imediato; nada é apagado.</p></div>
+    <div class="card"><h3>🔔 Aviso que ninguém vê</h3><p>Três canais em três dias, com log; o Financeiro mostra "avisada 10/09 e 13/09".</p></div>
+    <div class="card"><h3>🔄 PowerSync · 📱 bundles antigos · 🐢 VM Nano</h3><p>Dev primeiro; <code>role='admin'</code> aceito como master; nenhuma coluna apagada; índices em <code>professor_id</code> e <code>contexto</code>; paginação alivia o banco. Sem upgrade do Supabase.</p></div>
+  </div>
+</section>
+
+<footer>
+  <p><b>Arquivo local</b> (sem Artifact): <code>C:\Users\Usuário\Desktop\PhysiqCalc SaaS\PhysiqCalc - plano e prototipo SaaS master-professores-alunos - 2026-09-12.html</code><br>Cópia no repo (não commitada): <code>~/projetos/physiqcalc/docs/saas/2026-09-12-saas-master-professores-alunos-plano-e-prototipo.html</code></p>
+  <p>Próximo passo: você confirma a v5 (e os pontos da seção 7) → Fase 1 no staging pela esteira pessoal, com link para validar antes de cada promoção.</p>
+</footer>
+
+</div>
+<script>
+document.querySelectorAll('[data-tabs]').forEach(function(box){
+  var own = function(sel){ return Array.prototype.filter.call(box.querySelectorAll(sel), function(el){ return el.closest('[data-tabs]') === box; }); };
+  var btns = own('[data-tab]'), panels = own('[data-panel]');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var key = b.getAttribute('data-tab');
+      btns.forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-tab') === key); });
+      panels.forEach(function(p){ p.hidden = p.getAttribute('data-panel') !== key; });
+    });
+  });
+});
+</script>
+</body>
+</html>
