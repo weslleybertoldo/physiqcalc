@@ -76,6 +76,22 @@ async function usuarioDoToken(token: string, auth: string): Promise<any | null> 
   return error || !data?.user ? null : data.user;
 }
 
+// ---- SaaS (12/09/2026): papéis master (role admin|master) e professor; escopo por professor_id ----
+type Papel = "master" | "professor";
+function papelDe(role: unknown): Papel | null {
+  if (role === "admin" || role === "master") return "master";
+  if (role === "professor") return "professor";
+  return null;
+}
+// endpoints que o professor TRAVADO (plano vencido) ainda pode usar
+const SEM_ACESSO_OK = new Set<string>(["mp-payments"]);
+// escopo: professor só enxerga aluno com professor_id = ele; master enxerga todos
+async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise<boolean> {
+  if (user?.papel === "master") return true;
+  const { data } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
+  return (data as any)?.professor_id === user?.id;
+}
+
 async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
@@ -84,7 +100,15 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   const user = await usuarioDoToken(token, auth);
   if (!user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
   const role = (user.app_metadata as any)?.role;
-  if (role !== "admin") return { user: null, error: jsonErr("forbidden", 403, origin) };
+  const papel = papelDe(role);
+  if (!papel) return { user: null, error: jsonErr("forbidden", 403, origin) };
+  // professor com plano vencido (fora da tolerância) só acessa o que está em SEM_ACESSO_OK
+  if (papel === "professor" && !SEM_ACESSO_OK.has(endpoint)) {
+    const admin0 = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+    const { data: ok } = await admin0.rpc("physiq_professor_acesso_ok", { pid: user.id });
+    if (ok !== true) return { user: null, error: jsonErr("plano_vencido", 403, origin) };
+  }
+  user.papel = papel;
   const allowed = await checkRateLimit(user.id, endpoint, maxCount, windowSecs);
   if (!allowed) return { user: null, error: jsonErr("rate_limited", 429, origin) };
   return { user, error: null };
@@ -94,14 +118,29 @@ Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
-  const { error: authErr } = await requireAdmin(req, "admin-tags", 60, 60);
+  const { user, error: authErr } = await requireAdmin(req, "admin-tags", 60, 60);
   if (authErr) return authErr;
   try {
     const body = await req.json();
     const action = body?.action;
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+    const professor = user.papel === "professor";
+    // ações com userId: professor só mexe em aluno dele
+    if (typeof body?.userId === "string" && !(await alunoDoProfessor(admin, user, body.userId))) return jsonErr("forbidden", 403, origin);
+    // tag existente: professor só edita/apaga as PRÓPRIAS (as globais são do master)
+    const tagMinha = async (tagId: string): Promise<boolean> => {
+      if (!professor) return true;
+      const { data: t } = await admin.from("physiq_tags").select("professor_id").eq("id", tagId).maybeSingle();
+      return (t as any)?.professor_id === user.id;
+    };
+    // catálogo visível: master = tudo; professor = globais (NULL) + as dele
+    const tagsVisiveis = () => {
+      let q = admin.from("physiq_tags").select("*").order("nome");
+      if (professor) q = q.or(`professor_id.is.null,professor_id.eq.${user.id}`);
+      return q;
+    };
     if (action === "list-tags" || action === "list") {
-      const { data, error } = await admin.from("physiq_tags").select("*").order("nome");
+      const { data, error } = await tagsVisiveis();
       if (error) throw error;
       return new Response(JSON.stringify({ tags: data ?? [] }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
@@ -126,7 +165,7 @@ Deno.serve(async (req) => {
       const userId = body?.userId;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
       const [tagsRes, userTagsRes] = await Promise.all([
-        admin.from("physiq_tags").select("*").order("nome"),
+        tagsVisiveis(),
         admin.from("physiq_user_tags").select("tag_id").eq("user_id", userId),
       ]);
       if (tagsRes.error) throw tagsRes.error;
@@ -135,7 +174,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ tags: tagsRes.data ?? [], tagIds }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
     if (action === "getAllUserTags") {
-      const { data, error } = await admin.from("physiq_user_tags").select("user_id, tag_id");
+      let q = admin.from("physiq_user_tags").select("user_id, tag_id");
+      if (professor) {
+        // só alunos do professor (lista vazia → filtro impossível, devolve [])
+        const { data: alunos } = await admin.from("physiq_profiles").select("id").eq("professor_id", user.id);
+        const ids = ((alunos as any[]) || []).map((a) => a.id);
+        q = q.in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return new Response(JSON.stringify({ userTags: data ?? [] }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
@@ -143,7 +189,8 @@ Deno.serve(async (req) => {
       const nome = body?.tag?.nome ?? body?.nome;
       const cor = body?.tag?.cor ?? body?.cor ?? null;
       if (!nome || typeof nome !== "string") return jsonErr("missing_nome", 400, origin);
-      const { data, error } = await admin.from("physiq_tags").insert({ nome: nome.trim(), cor }).select().maybeSingle();
+      // tag do professor leva o dono; do master fica global (NULL)
+      const { data, error } = await admin.from("physiq_tags").insert({ nome: nome.trim(), cor, professor_id: professor ? user.id : null }).select().maybeSingle();
       if (error) throw error;
       return new Response(JSON.stringify({ tag: data }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
@@ -153,6 +200,7 @@ Deno.serve(async (req) => {
       const cor = body?.tag?.cor ?? body?.cor ?? null;
       if (!tagId || typeof tagId !== "string") return jsonErr("missing_tagId", 400, origin);
       if (!nome || typeof nome !== "string") return jsonErr("missing_nome", 400, origin);
+      if (!(await tagMinha(tagId))) return jsonErr("forbidden", 403, origin);
       const { data, error } = await admin.from("physiq_tags").update({ nome: nome.trim(), cor }).eq("id", tagId).select().maybeSingle();
       if (error) throw error;
       return new Response(JSON.stringify({ tag: data }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
@@ -160,6 +208,7 @@ Deno.serve(async (req) => {
     if (action === "delete-tag" || action === "delete") {
       const tagId = body?.tagId;
       if (!tagId || typeof tagId !== "string") return jsonErr("missing_tagId", 400, origin);
+      if (!(await tagMinha(tagId))) return jsonErr("forbidden", 403, origin);
       const { error } = await admin.from("physiq_user_tags").delete().eq("tag_id", tagId);
       if (error) throw error;
       const { error: e2 } = await admin.from("physiq_tags").delete().eq("id", tagId);

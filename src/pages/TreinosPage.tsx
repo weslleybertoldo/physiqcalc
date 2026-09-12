@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 // nao sincronizados ate o PowerSync propagar updated_at >= timestamp local).
 import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
 import PendenciaAviso from "@/components/PendenciaAviso";
+import BloqueioMasterGate from "@/components/BloqueioMasterGate";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
 import WorkoutTimer, { iniciarTreinoSeParado } from "@/components/treinos/WorkoutTimer";
@@ -131,9 +132,9 @@ export interface SerieComMemoria {
 }
 
 const TreinosPage = () => {
-  const { user, signOut } = useAuth();
-  // engrenagem (configurações/atualizações) só aparece pra admin
-  const isAdmin = ((user?.app_metadata as any)?.role ?? null) === "admin";
+  const { user, signOut, papel, isStaff } = useAuth();
+  // engrenagem (configurações/atualizações) só aparece pra staff (professor ou master — SaaS 12/09/2026)
+  const isAdmin = isStaff;
   const navigate = useNavigate();
   const db = usePowerSync();
   // Guarda posição do scroll para restaurar após updates silenciosos
@@ -1229,6 +1230,7 @@ const TreinosPage = () => {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 sm:px-8">
         <PendenciaAviso />
+        <BloqueioMasterGate />
         <header className="pt-6 sm:pt-12 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {avatarUrl && !avatarBroken ? (
@@ -1583,15 +1585,29 @@ const TreinosPage = () => {
               <div className="text-center space-y-3">
                 <p className="text-[10px] text-muted-foreground/50 font-body">Versão atual: v{CURRENT_VERSION}</p>
 
-                {((user as any)?.app_metadata?.role === "admin") && (
-                  <button
-                    type="button"
-                    onClick={() => navigate("/admin")}
-                    className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-primary border border-primary/40 rounded-lg hover:bg-primary/10 transition-colors"
-                  >
-                    <Settings size={12} />
-                    Painel Admin
-                  </button>
+                {/* Staff: Admin (professor — gestão dos alunos, como sempre) e, só pro master, Master (gestão dos professores) */}
+                {isStaff && (
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/admin/alunos")}
+                      data-btn-admin
+                      className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-heading uppercase tracking-wider text-primary border border-primary/40 rounded-lg hover:bg-primary/10 transition-colors"
+                    >
+                      <Settings size={12} />
+                      Admin
+                    </button>
+                    {papel === "master" && (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/master")}
+                        data-btn-master
+                        className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-heading uppercase tracking-wider bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                      >
+                        Master
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 <button

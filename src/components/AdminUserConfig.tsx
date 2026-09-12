@@ -15,6 +15,9 @@ import AdminHistoricoMes from "./admin/AdminHistoricoMes";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
 import { classificarGordura } from "@/utils/composicaoCorporal";
+import { useAuth } from "@/hooks/useAuth";
+import { invokeMp, type MpPagamento } from "@/lib/mpClient";
+import ComprovantePixCard, { type PixPendente } from "@/components/admin/ComprovantePixCard";
 
 interface Props {
   userId: string;
@@ -35,22 +38,26 @@ function calcBodyFat3(gender: "male" | "female", soma: number, age: number) {
 // Abas que auto-salvam ou só leem: não mostram o botão Salvar (que grava o perfil).
 const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["treino", "registros", "historico"]);
 
+// 4 GRUPOS com sub-abas (SaaS 12/09/2026). As chaves antigas do ?ct= continuam válidas — o grupo é derivado
+// da chave — e o conteúdo de cada aba é o mesmo de antes; só a navegação mudou.
+const GRUPOS = [
+  { key: "perfil", label: "Perfil", abas: [{ key: "geral", label: "Dados Gerais" }] },
+  { key: "avaliacao", label: "Avaliação", abas: [{ key: "dobras", label: "Dobras & Medidas" }, { key: "evolucao", label: "Evolução" }, { key: "registros", label: "Registros" }] },
+  { key: "treino", label: "Treino", abas: [{ key: "treino", label: "Treino" }, { key: "historico", label: "Histórico" }] },
+  { key: "plano", label: "Plano & Cobrança", abas: [{ key: "plano", label: "Plano" }] },
+] as const;
+const TODAS_ABAS: ReadonlySet<string> = new Set(GRUPOS.flatMap((g) => g.abas.map((a) => a.key)));
+
 const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // sub-aba na URL (?ct=) — F5 mantém a aba (mesmo padrão do AdminTreinos)
+  const { user, papel } = useAuth();
+  // remonta o bloco de pagamentos depois de confirmar/recusar um comprovante Pix
+  const [pagRefresh, setPagRefresh] = useState(0);
+  // sub-aba na URL (?ct=) — F5 mantém a aba (mesmo padrão do AdminTreinos); "perfil" (link antigo) cai em "geral"
   const [searchParams, setSearchParams] = useSearchParams();
-  const CONFIG_TABS = [
-    { key: "geral", label: "Dados Gerais" },
-    { key: "dobras", label: "Dobras & Medidas" },
-    { key: "evolucao", label: "Evolução" },
-    { key: "registros", label: "Registros" },
-    { key: "plano", label: "Plano" },
-    { key: "treino", label: "Treino" },
-    { key: "historico", label: "Histórico" },
-  ] as const;
   const rawTab = searchParams.get("ct") || "geral";
-  const configTab = CONFIG_TABS.some((t) => t.key === rawTab) ? rawTab : "geral";
+  const configTab = TODAS_ABAS.has(rawTab) ? rawTab : "geral";
   const setConfigTab = (t: string) => {
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
@@ -128,7 +135,8 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
       return;
     }
     setSalvandoPlano(true);
-    const { error } = await supabase.from("physiq_planos").insert({ nome });
+    // professor cria plano PRÓPRIO (professor_id = ele); master cria global (null) — exigido pela RLS do catálogo
+    const { error } = await (supabase.from as any)("physiq_planos").insert({ nome, professor_id: papel === "professor" ? user?.id ?? null : null });
     setSalvandoPlano(false);
     if (error) {
       console.error("[AdminUserConfig] criar plano:", error);
@@ -254,42 +262,67 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground font-body">Carregando...</p>
-      </div>
-    );
+    return <p className="text-muted-foreground font-body">Carregando...</p>;
   }
 
+  const grupoAtual = GRUPOS.find((g) => g.abas.some((a) => a.key === configTab)) ?? GRUPOS[0];
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-3xl px-5 sm:px-8">
-        <header className="pt-12 sm:pt-20 pb-4 flex items-center gap-4">
-          <button type="button" onClick={onBack} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="font-heading text-2xl text-foreground">Configurar Usuário</h1>
-            <p className="text-sm text-muted-foreground font-body">{nome || "Sem nome"}</p>
-          </div>
-        </header>
-
-        <div className="flex flex-wrap gap-1 border-b border-border">
-          {CONFIG_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setConfigTab(t.key)}
-              className={`px-2.5 sm:px-4 py-2.5 text-xs font-heading uppercase tracking-wider border-b-2 -mb-px whitespace-nowrap transition-colors ${
-                configTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+    <div className="mx-auto max-w-5xl" data-config-aluno={userId}>
+      {/* header compacto: a página já fica dentro do layout com sidebar */}
+      <header className="pb-4 flex items-center gap-3">
+        <button type="button" onClick={onBack} title="Voltar pra lista" className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors" data-btn-voltar>
+          <ArrowLeft size={20} />
+        </button>
+        <div className="min-w-0">
+          <h1 className="font-heading text-xl text-foreground uppercase tracking-wider">Configurar aluno</h1>
+          <p className="text-sm text-muted-foreground font-body truncate">{nome || "Sem nome"}</p>
         </div>
+      </header>
 
-        <div className="space-y-10 pb-20 pt-8">
+      <div className="sm:grid sm:grid-cols-[170px_1fr] sm:gap-8">
+        {/* grupos: linha rolável no mobile, coluna lateral no desktop */}
+        <nav className="flex gap-2 overflow-x-auto pb-3 sm:flex-col sm:gap-1 sm:pb-0 sm:border-r sm:border-muted-foreground/20 sm:pr-4" aria-label="Grupos">
+          {GRUPOS.map((g) => {
+            const ativo = g.key === grupoAtual.key;
+            return (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setConfigTab(g.abas[0].key)}
+                data-config-grupo={g.key}
+                data-ativo={ativo || undefined}
+                className={`shrink-0 px-3 py-2 text-left font-heading text-xs uppercase tracking-wider whitespace-nowrap transition-colors rounded-full border sm:rounded-none sm:border-0 sm:border-l-2 sm:w-full ${
+                  ativo ? "border-primary text-primary bg-primary/10" : "border-muted-foreground/30 text-muted-foreground hover:text-foreground sm:border-transparent"
+                }`}
+              >
+                {g.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="min-w-0">
+        {/* sub-abas do grupo como chips (só quando o grupo tem mais de uma) */}
+        {grupoAtual.abas.length > 1 && (
+          <div className="flex flex-wrap gap-2 pt-2 sm:pt-0" data-config-subabas>
+            {grupoAtual.abas.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setConfigTab(t.key)}
+                data-config-aba={t.key}
+                className={`px-3 py-1.5 text-[11px] font-heading uppercase tracking-wider rounded-full border transition-colors ${
+                  configTab === t.key ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-10 pb-10 pt-6">
           {configTab === "geral" && (
           <section>
             <h2 className="font-heading text-lg text-foreground mb-6">Dados Pessoais</h2>
@@ -593,8 +626,10 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             </div>
           </section>
 
-          {/* Pagamentos do aluno: situação, assinatura, histórico/comprovantes, reembolso */}
-          <AdminPagamentosStatus userId={userId} />
+          {/* Pagamentos do aluno: situação, assinatura, histórico/comprovantes, reembolso (key = remonta ao confirmar/recusar Pix) */}
+          <AdminPagamentosStatus key={pagRefresh} userId={userId} />
+          {/* Comprovante Pix manual aguardando sua confirmação (some ao confirmar/recusar) */}
+          <ComprovanteAguardandoAluno userId={userId} versao={pagRefresh} onResolvido={() => setPagRefresh((v) => v + 1)} />
           </>)}
 
           {configTab === "dobras" && (<>
@@ -658,9 +693,35 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
           </button>
           )}
         </div>
+        </div>
       </div>
     </div>
   );
 };
+
+/** Comprovante Pix (pix_manual) do aluno esperando confirmação — lido do `admin-status`; some ao confirmar/recusar. */
+function ComprovanteAguardandoAluno({ userId, versao, onResolvido }: { userId: string; versao: number; onResolvido: () => void }) {
+  const [item, setItem] = useState<PixPendente | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    invokeMp<{ pagamentos?: MpPagamento[] }>("admin-status", { userId })
+      .then((s) => {
+        if (!vivo) return;
+        const p = (s.pagamentos || []).find((x) => x.tipo === "pix_manual" && x.status === "aguardando_confirmacao");
+        setItem(p ? { id: p.id, valor: p.valor, mes_ref: p.mes_ref, comprovante_path: p.comprovante_path, created_at: p.created_at } : null);
+      })
+      .catch((e) => { console.error("[AdminUserConfig] admin-status", e); if (vivo) setItem(null); });
+    return () => { vivo = false; };
+  }, [userId, versao]);
+
+  if (!item) return null;
+  return (
+    <section className="pt-6" data-comprovante-aluno>
+      <h3 className="font-heading text-sm text-foreground uppercase tracking-wider mb-3">Comprovante Pix aguardando sua confirmação</h3>
+      <ComprovantePixCard item={item} onResolvido={onResolvido} />
+    </section>
+  );
+}
 
 export default AdminUserConfig;

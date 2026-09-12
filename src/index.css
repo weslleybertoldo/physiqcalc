@@ -159,3 +159,7 @@
     @apply bg-secondary text-muted-foreground;
   }
 }
+
+/* trilho de navegação mobile (SaaS 12/09/2026): esconde a barra de rolagem horizontal */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

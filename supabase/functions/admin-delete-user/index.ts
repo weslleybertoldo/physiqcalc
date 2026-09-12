@@ -56,6 +56,22 @@ async function checkRateLimit(userId: string, endpoint: string, maxCount: number
   }
 }
 
+// ---- SaaS (12/09/2026): papéis master (role admin|master) e professor; escopo por professor_id ----
+type Papel = "master" | "professor";
+function papelDe(role: unknown): Papel | null {
+  if (role === "admin" || role === "master") return "master";
+  if (role === "professor") return "professor";
+  return null;
+}
+// endpoints que o professor TRAVADO (plano vencido) ainda pode usar
+const SEM_ACESSO_OK = new Set<string>(["mp-payments"]);
+// escopo: professor só enxerga aluno com professor_id = ele; master enxerga todos
+async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise<boolean> {
+  if (user?.papel === "master") return true;
+  const { data } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
+  return (data as any)?.professor_id === user?.id;
+}
+
 async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
@@ -67,7 +83,15 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   const { data, error } = await userClient.auth.getUser(token);
   if (error || !data?.user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
   const role = (data.user.app_metadata as any)?.role;
-  if (role !== "admin") return { user: null, error: jsonErr("forbidden", 403, origin) };
+  const papel = papelDe(role);
+  if (!papel) return { user: null, error: jsonErr("forbidden", 403, origin) };
+  // professor com plano vencido (fora da tolerância) só acessa o que está em SEM_ACESSO_OK
+  if (papel === "professor" && !SEM_ACESSO_OK.has(endpoint)) {
+    const admin0 = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+    const { data: ok } = await admin0.rpc("physiq_professor_acesso_ok", { pid: data.user.id });
+    if (ok !== true) return { user: null, error: jsonErr("plano_vencido", 403, origin) };
+  }
+  (data.user as any).papel = papel;
   const allowed = await checkRateLimit(data.user.id, endpoint, maxCount, windowSecs);
   if (!allowed) return { user: null, error: jsonErr("rate_limited", 429, origin) };
   return { user: data.user, error: null };
@@ -85,8 +109,16 @@ Deno.serve(async (req) => {
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
     if (userId === caller.id) return jsonErr("cannot_delete_self", 400, origin);
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+    if (!(await alunoDoProfessor(admin, caller, userId))) return jsonErr("forbidden", 403, origin);
+    // PROFESSOR não apaga a conta do aluno (a conta é do aluno, não do professor): "excluir" pra ele = desvincular →
+    // o aluno cai na fila "Sem professor" do master. Só o MASTER apaga de verdade (abaixo).
+    if (caller.papel === "professor") {
+      const { error: unlinkErr } = await admin.from("physiq_profiles").update({ professor_id: null }).eq("id", userId).eq("professor_id", caller.id);
+      if (unlinkErr) throw unlinkErr;
+      return new Response(JSON.stringify({ ok: true, desvinculado: true }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+    }
     // staging só apaga CONTA DE TESTE — auth é global, conta real sumiria da produção
-    if (currentSchema() === "staging") {
+    if ((schemaCtx.getStore() || "public") === "staging") {
       const { data: alvo } = await admin.auth.admin.getUserById(userId);
       if ((alvo?.user?.user_metadata as any)?.ambiente !== "staging") {
         return jsonErr("conta_real_protegida", 403, origin);

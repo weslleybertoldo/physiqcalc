@@ -4,11 +4,23 @@ config:
   edition: 3
 
 streams:
+  # Biblioteca GLOBAL do master (professor_id IS NULL) — todo aluno recebe
   global:
     auto_subscribe: true
     queries:
-      - SELECT * FROM tb_exercicios
-      - SELECT * FROM grupos_musculares
+      - SELECT * FROM tb_exercicios WHERE professor_id IS NULL
+      - SELECT * FROM grupos_musculares WHERE professor_id IS NULL
+
+  # Biblioteca do PROFESSOR do aluno (SaaS 12/09/2026): só os exercícios/músculos criados pelo professor dele
+  do_meu_professor:
+    auto_subscribe: true
+    queries:
+      - SELECT tb_exercicios.* FROM tb_exercicios
+        JOIN physiq_profiles p ON p.professor_id = tb_exercicios.professor_id
+        WHERE p.id = auth.user_id()
+      - SELECT grupos_musculares.* FROM grupos_musculares
+        JOIN physiq_profiles p ON p.professor_id = grupos_musculares.professor_id
+        WHERE p.id = auth.user_id()
 
   grupos_por_perfil:
     auto_subscribe: true
