@@ -102,10 +102,11 @@ Deno.serve(async (req) => {
     const action = body?.action;
     const { data: prof } = await admin.from("physiq_professores").select("id, nome, codigo_convite, status").eq("id", user.id).maybeSingle();
     if (!prof) return jsonErr("nao_professor", 404, origin);
-    const appOrigin = origin && ALLOWED_ORIGINS.has(origin) && origin.startsWith("http") ? origin : "https://physiqcalc.vercel.app";
+    // Link público SEMPRE pelo ambiente: o Origin do APK é https://localhost / capacitor://localhost e o do dev é
+    // localhost:8080 — nenhum serve pra um aluno abrir. staging → site de staging; public → site oficial.
+    const base = (schemaCtx.getStore() || "public") === "staging" ? "https://physiqcalc-staging.vercel.app" : "https://physiqcalc.vercel.app";
 
     if (action === "link") {
-      const base = typeof body?.base === "string" && /^https?:\/\//.test(body.base) ? body.base.replace(/\/+$/, "") : appOrigin;
       return jsonOk({ codigo: (prof as any).codigo_convite, url: `${base}/?prof=${encodeURIComponent((prof as any).codigo_convite)}` }, origin);
     }
 

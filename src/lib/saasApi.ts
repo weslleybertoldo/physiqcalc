@@ -196,6 +196,12 @@ export function planoComValor(p: { nome: string; valor_mensal?: number | string;
   return v === undefined || v === null ? p.nome : `${p.nome} - ${fmtBRL(v)}`;
 }
 
+/** Link público de convite do professor — sempre o SITE do ambiente (no APK, window.location.origin é https://localhost). */
+export function linkConviteProfessor(codigo: string): string {
+  const base = DB_SCHEMA === "staging" ? "https://physiqcalc-staging.vercel.app" : "https://physiqcalc.vercel.app";
+  return `${base}/?prof=${encodeURIComponent(codigo)}`;
+}
+
 /** yyyy-mm-dd → dd/mm/aaaa (sem fuso) */
 export function fmtData(d: string | null | undefined): string {
   if (!d) return "—";
