@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Link2 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { fmtBRL, fmtData, fmtDataHora, masterProfessores, planoComValor, type ProfessorRow } from "@/lib/saasApi";
+import { fmtBRL, fmtData, fmtDataHora, linkConviteProfessor, masterProfessores, planoComValor, type ProfessorRow } from "@/lib/saasApi";
 import {
   BTN_MINI_NEUTRO, BTN_MINI_PRIMARIO, Carregando, Dado, ErroCarregar, Etiqueta, INTEGRACAO_LABEL, alunosTexto, copiar, mensagemErro,
 } from "@/components/master/masterUi";
@@ -35,7 +35,7 @@ export default function ProfessorDetalhesSheet({ userId, onClose }: Props) {
 
   useEffect(() => { if (userId) void carregar(userId); }, [userId, carregar]);
 
-  const linkConvite = p ? `${window.location.origin}/?prof=${p.codigo_convite}` : "";
+  const linkConvite = p ? linkConviteProfessor(p.codigo_convite) : "";
   const recriar = !!(p?.integracaoConfig as { recriar_assinatura?: boolean } | undefined)?.recriar_assinatura;
 
   return (
