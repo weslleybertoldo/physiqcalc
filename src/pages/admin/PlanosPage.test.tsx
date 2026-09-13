@@ -44,5 +44,9 @@ describe("Admin › Planos pro master (isento): mesma visão dos professores, se
     expect(document.querySelector("[data-plano-mudar]")).toBeNull();
     expect(screen.queryByText(/ainda não definiu o seu plano/)).toBeNull();
     expect(invokeMock).not.toHaveBeenCalled();
+    // visão de professor: nada de "Master" na tela; a conta isenta aparece com selo neutro
+    expect(screen.queryByText("Master")).toBeNull();
+    expect(screen.queryByText(/Conta master/)).toBeNull();
+    expect(screen.getByText("Sem cobrança")).toBeInTheDocument();
   });
 });
