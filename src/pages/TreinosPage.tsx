@@ -17,6 +17,8 @@ import TreinoDoDia from "@/components/treinos/TreinoDoDia";
 import SeletorAcademia, { Academia } from "@/components/treinos/SeletorAcademia";
 import ModalAlterarGrupo from "@/components/treinos/ModalAlterarGrupo";
 import UpdateChecker, { CURRENT_VERSION } from "@/components/UpdateChecker";
+import InstalarMenu from "@/components/InstalarMenu";
+import { Capacitor } from "@capacitor/core";
 import { downloadAndInstall } from "@/lib/apkUpdater";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
@@ -31,6 +33,8 @@ import { useMensalidadeStatus } from "@/hooks/useMensalidadeStatus";
 import { toast } from "sonner";
 
 const DIAS_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
+// APK (Capacitor) mantém "Verificar atualizações"; no site entra o "Instalar" (App Web / APK Android)
+const EH_APP = Capacitor.isNativePlatform();
 
 function getWeekDates(refDate: Date) {
   const d = new Date(refDate);
@@ -1497,18 +1501,22 @@ const TreinosPage = () => {
         />
 
         <footer className="py-12 text-center space-y-4 relative">
-          <PWAInstallButton />
+          {EH_APP && <PWAInstallButton />}
           <p className="text-xs text-muted-foreground font-body italic">By Weslley Bertoldo</p>
           <p className="text-[10px] text-muted-foreground/50 font-body">v{CURRENT_VERSION}</p>
-          <button
-            type="button"
-            onClick={handleCheckUpdate}
-            disabled={checkingUpdate}
-            className="flex items-center justify-center gap-1 mx-auto text-[10px] text-muted-foreground/50 hover:text-primary font-body transition-colors"
-          >
-            <RefreshCw size={10} className={checkingUpdate ? "animate-spin" : ""} />
-            Verificar atualizações
-          </button>
+          {EH_APP ? (
+            <button
+              type="button"
+              onClick={handleCheckUpdate}
+              disabled={checkingUpdate}
+              className="flex items-center justify-center gap-1 mx-auto text-[10px] text-muted-foreground/50 hover:text-primary font-body transition-colors"
+            >
+              <RefreshCw size={10} className={checkingUpdate ? "animate-spin" : ""} />
+              Verificar atualizações
+            </button>
+          ) : (
+            <InstalarMenu variante="rodape" />
+          )}
           {updateResult && !showSettings && (
             <div className="mt-1">
               {updateResult.hasUpdate ? (
@@ -1619,15 +1627,19 @@ const TreinosPage = () => {
                   Pagamentos
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleCheckUpdate}
-                  disabled={checkingUpdate}
-                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
-                >
-                  <RefreshCw size={12} className={checkingUpdate ? "animate-spin" : ""} />
-                  Verificar atualizações
-                </button>
+                {EH_APP ? (
+                  <button
+                    type="button"
+                    onClick={handleCheckUpdate}
+                    disabled={checkingUpdate}
+                    className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
+                  >
+                    <RefreshCw size={12} className={checkingUpdate ? "animate-spin" : ""} />
+                    Verificar atualizações
+                  </button>
+                ) : (
+                  <InstalarMenu variante="config" />
+                )}
 
                 <button
                   type="button"
