@@ -71,8 +71,8 @@ describe("situacaoPlano (linguagem simples)", () => {
     expect(situacaoPlano(mk({ status: "suspenso" })).badge).toBe("Suspenso");
   });
 
-  it("master isento", () => {
-    expect(situacaoPlano(mk({}, { isento: true })).badge).toBe("Master");
+  it("conta isenta (master) — selo neutro, sem a palavra Master", () => {
+    expect(situacaoPlano(mk({}, { isento: true }))).toMatchObject({ badge: "Sem cobrança", titulo: "Esta conta não tem cobrança de plano." });
   });
 });
 

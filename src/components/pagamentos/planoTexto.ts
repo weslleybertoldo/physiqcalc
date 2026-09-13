@@ -114,7 +114,7 @@ export function situacaoPlano(s: PlanoStatus): SituacaoPlano {
   const valor = valorMensalDe(s);
   const vStr = valor !== null ? ` de ${fmtBRL(valor)}` : "";
 
-  if (s.isento) return { badge: "Master", cls: BADGE_OK, titulo: "Conta master — sem cobrança." };
+  if (s.isento) return { badge: "Sem cobrança", cls: BADGE_OK, titulo: "Esta conta não tem cobrança de plano." }; // conta isenta (master) — sem "Master" no Admin, que é a visão de professor
   if (p.status === "suspenso") {
     return { badge: "Suspenso", cls: BADGE_RUIM, titulo: "Conta suspensa pelo administrador.", detalhe: "Fale com ele para reativar." };
   }

@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Users, Dumbbell, DollarSign, Gem, Settings, Calculator, LogOut, LayoutGrid, UserCog, ArrowLeftRight, Library, Star, Home } from "lucide-react";
+import { Users, Dumbbell, DollarSign, Gem, Settings, Calculator, LogOut, LayoutGrid, UserCog, ArrowLeftRight, Library, Home } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -36,22 +36,17 @@ const btnBase = "font-heading uppercase tracking-wider text-xs rounded-none bord
 export function MobileNavBar({ items, modo }: { items: NavItem[]; modo: "admin" | "master" }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { papel } = useAuth();
   const isActive = (url: string) => (url === "/master" ? location.pathname === "/master" : location.pathname.startsWith(url));
-  const extras: NavItem[] = papel === "master"
-    ? [{ title: modo === "admin" ? "Master" : "Admin", url: modo === "admin" ? "/master" : "/admin/alunos", icon: Star }]
-    : [];
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-muted-foreground/20 bg-background/95 backdrop-blur md:hidden" data-mobile-nav>
       <div className="flex overflow-x-auto no-scrollbar">
-        {[...items, ...extras].map((it) => {
-          const ativo = it.url === "/master" || it.url === "/admin/alunos" ? isActive(it.url) && !extras.includes(it) : isActive(it.url);
-          const ehSwitch = extras.includes(it);
+        {items.map((it) => {
+          const ativo = isActive(it.url);
           return (
-            <button key={`${it.url}-${it.title}`} type="button" onClick={() => navigate(it.url)} title={it.title}
-              data-nav={ehSwitch ? "switch" : it.url}
+            <button key={it.url} type="button" onClick={() => navigate(it.url)} title={it.title}
+              data-nav={it.url}
               className={`flex-1 min-w-[64px] flex flex-col items-center gap-0.5 py-2 text-[9px] font-heading uppercase tracking-wider border-t-2 transition-colors ${
-                ehSwitch ? "border-transparent text-primary" : ativo ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+                ativo ? "border-primary text-primary" : "border-transparent text-muted-foreground"
               }`}>
               <it.icon className="h-4 w-4" />
               <span className="truncate max-w-[60px]">{it.title}</span>
@@ -68,7 +63,7 @@ export function AppSidebar({ items, modo, badges }: { items: NavItem[]; modo: "a
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, papel, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const go = (url: string) => {
     navigate(url);
@@ -87,7 +82,7 @@ export function AppSidebar({ items, modo, badges }: { items: NavItem[]; modo: "a
           </span>
           {!collapsed && (
             <p className="text-[10px] text-muted-foreground font-body mt-1 uppercase tracking-wider truncate" title={nome}>
-              {modo === "master" ? "Master" : papel === "master" ? "Admin · seus alunos" : "Professor"} · {nome}
+              {modo === "master" ? "Master" : "Professor"} · {nome}
             </p>
           )}
         </div>
@@ -119,15 +114,6 @@ export function AppSidebar({ items, modo, badges }: { items: NavItem[]; modo: "a
         </SidebarGroup>
         <div className="p-2 border-t border-muted-foreground/20">
           <SidebarMenu>
-            {papel === "master" && (
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => go(modo === "admin" ? "/master" : "/admin/alunos")} tooltip={modo === "admin" ? "Ir para Master" : "Ir para Admin"}
-                  className={`${btnBase} border-transparent text-primary text-[11px]`} data-nav="switch">
-                  <Star className="h-4 w-4" />
-                  {!collapsed && <span>{modo === "admin" ? "Ir para Master" : "Ir para Admin"}</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
             {modo === "admin" && (
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => go("/admin/calculadora")} tooltip="Cálculo manual" className={`${btnBase} border-transparent text-muted-foreground text-[11px]`}>

@@ -27,7 +27,7 @@ export function PlanoResumoCard({ status }: { status: PlanoStatus }) {
 
       <p className="text-sm font-body text-foreground" data-plano-situacao>{sit.titulo}</p>
       {sit.detalhe && <p className="text-xs font-body text-muted-foreground">{sit.detalhe}</p>}
-      {!plano && (
+      {!plano && !status.isento && (
         <p className="text-xs font-body text-muted-foreground">
           O administrador ainda não definiu o seu plano — fale com ele para liberar os pagamentos.
         </p>

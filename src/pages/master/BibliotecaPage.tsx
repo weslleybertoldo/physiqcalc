@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Edit2, Globe, Image as ImageIcon, Plus, Search, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -213,7 +212,7 @@ const BibliotecaPage = () => {
     <div data-pagina="master-biblioteca">
       <TituloPagina
         titulo="Biblioteca global"
-        sub={<>{totalGlobais} exercício(s) global(is) · {totalProfs} dos professores. Foto/GIF: <Link to="/admin/treinos" className="text-primary hover:underline">Admin › Treinos › Biblioteca</Link>.</>}
+        sub={<>{totalGlobais} exercício(s) global(is) · {totalProfs} dos professores. Foto/GIF: pela Biblioteca do seu painel de professor (Treinos › Biblioteca).</>}
         acao={(
           <button type="button" onClick={() => abrirEditor(null)} className={BTN_PRIMARIO} data-btn-novo-exercicio>
             <Plus size={12} className="inline mr-1 -mt-0.5" />Novo exercício
