@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Crown, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { usePlanoStatus } from "@/layouts/AdminLayout";
 import { invokeMp, type MpPagamento } from "@/lib/mpClient";
-import { planoComValor, type PlanoStatus } from "@/lib/saasApi";
+import type { PlanoStatus } from "@/lib/saasApi";
 import { PlanoResumoCard } from "@/components/pagamentos/PlanoResumoCard";
 import { PlanoAtivarCard } from "@/components/pagamentos/PlanoAtivarCard";
 import { PlanoPagarCard } from "@/components/pagamentos/PlanoPagarCard";
 import { PlanoMudarCard } from "@/components/pagamentos/PlanoMudarCard";
 import { PlanoHistorico } from "@/components/pagamentos/PlanoHistorico";
-import { BTN_LINK, BTN_SECUNDARIO, CARD, TITULO_CARD, codigoErro, faixaAlunos, mensagemErroPlano } from "@/components/pagamentos/planoTexto";
+import { BTN_LINK, BTN_SECUNDARIO, CARD, codigoErro, mensagemErroPlano } from "@/components/pagamentos/planoTexto";
 
-// Aba Planos do PROFESSOR (e do master, que é isento): situação do plano, adesão / ciclo / assinatura /
+// Aba Planos do PROFESSOR — o master (isento) vê a MESMA tela, sem bloco nem atalho de master (pedido 13/09/2026): situação do plano, adesão / ciclo / assinatura /
 // anual, troca de plano e histórico. O status vem do layout (usePlanoStatus); se ainda não chegou,
 // a página busca `plano-status` sozinha. Toda ação → refetch aqui + recarregar() do layout (banner/trava).
 const PlanosPage = () => {
   const ctx = usePlanoStatus();
-  const navigate = useNavigate();
   const [local, setLocal] = useState<PlanoStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -71,36 +69,6 @@ const PlanosPage = () => {
         ) : (
           <p className="text-muted-foreground font-body text-sm">Carregando...</p>
         )
-      ) : status.isento ? (
-        <>
-          <section className={CARD} data-plano-master>
-            <div className="flex items-center gap-2">
-              <Crown size={16} className="text-primary" />
-              <h2 className={TITULO_CARD}>Conta master — sem cobrança</h2>
-            </div>
-            <p className="text-sm text-muted-foreground font-body">
-              Você é o dono da plataforma: não paga adesão nem mensalidade. Os planos abaixo são os que os professores contratam.
-            </p>
-            <button type="button" onClick={() => navigate("/master/planos")} className={BTN_SECUNDARIO} data-plano-gerenciar>
-              Gerenciar planos
-            </button>
-          </section>
-          <section className={CARD} data-plano-lista-master>
-            <h2 className={TITULO_CARD}>Planos disponíveis</h2>
-            {status.planos.length === 0 ? (
-              <p className="text-xs text-muted-foreground font-body">Nenhum plano ativo.</p>
-            ) : (
-              <ul>
-                {status.planos.map((pl) => (
-                  <li key={pl.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-muted-foreground/20 py-2 last:border-0" data-plano-opcao={pl.id}>
-                    <span className="font-heading text-sm text-foreground">{planoComValor(pl)}</span>
-                    <span className="text-xs text-muted-foreground font-body">{faixaAlunos(pl)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
       ) : (
         <>
           <PlanoResumoCard status={status} />
@@ -109,7 +77,7 @@ const PlanosPage = () => {
               ? <PlanoAtivarCard status={status} onAtualizar={atualizar} />
               : <PlanoPagarCard status={status} onAtualizar={atualizar} />
           )}
-          <PlanoMudarCard status={status} onAtualizar={atualizar} />
+          {!status.isento && <PlanoMudarCard status={status} onAtualizar={atualizar} />}
           <PlanoHistorico pagamentos={status.pagamentos as MpPagamento[]} />
           {erro && (
             <p className="text-xs text-destructive font-body">

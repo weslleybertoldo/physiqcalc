@@ -132,13 +132,6 @@ const VisaoGeralPage = () => {
                   <i.icon className="h-3.5 w-3.5" />{i.title}
                 </Link>
               ))}
-              <Link
-                to="/admin/alunos"
-                className="inline-flex items-center gap-2 border border-primary/40 px-3 py-2 text-xs font-heading uppercase tracking-wider text-primary hover:bg-primary/10 transition-colors"
-                data-atalho="/admin/alunos"
-              >
-                Admin · meus alunos
-              </Link>
             </div>
           </Secao>
         </>

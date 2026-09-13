@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, Library, Users } from "lucide-react";
+import { ArrowLeftRight, Library } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DB_SCHEMA } from "@/integrations/supabase/client";
 import { fmtBRL } from "@/lib/saasApi";
@@ -45,9 +45,6 @@ const ConfiguracoesMasterPage = () => {
 
       <Secao titulo="Atalhos">
         <div className="flex flex-wrap gap-2">
-          <Link to="/admin/alunos" className={`${BTN_SECUNDARIO} inline-flex items-center gap-2`} data-atalho="/admin/alunos">
-            <Users size={12} />Admin dos meus alunos
-          </Link>
           <Link to="/master/integracoes" className={`${BTN_SECUNDARIO} inline-flex items-center gap-2`} data-atalho="/master/integracoes">
             <ArrowLeftRight size={12} />Integrações
           </Link>
