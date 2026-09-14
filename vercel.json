@@ -19,6 +19,12 @@
   ],
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "physiqcalc.vercel.app" }],
+      "destination": "https://physiqcalc.com.br/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "physiqcalc.vercel.app" }],
       "destination": "https://physiqcalc.com.br/:path*",
