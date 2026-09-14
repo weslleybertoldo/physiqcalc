@@ -48,4 +48,19 @@ describe("AdminTagSelector", () => {
     render(<AdminTagSelector userId="u2" />);
     await waitFor(() => expect(screen.getAllByText(/Nenhuma tag criada/).length).toBe(2));
   });
+
+  it("readOnly (espelho): mostra só as tags do aluno, sem botão pra alternar", async () => {
+    invokeMock.mockResolvedValueOnce({ data: { tags, tagIds: ["t2"] }, error: null });
+    render(<AdminTagSelector userId="u1" readOnly />);
+    await waitFor(() => expect(screen.getByText("Online")).toBeInTheDocument());
+    expect(screen.queryByText("Iniciante")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("readOnly sem tags no aluno → 'Nenhuma tag.'", async () => {
+    invokeMock.mockResolvedValueOnce({ data: { tags, tagIds: [] }, error: null });
+    render(<AdminTagSelector userId="u1" readOnly />);
+    await waitFor(() => expect(screen.getByText("Nenhuma tag.")).toBeInTheDocument());
+  });
 });

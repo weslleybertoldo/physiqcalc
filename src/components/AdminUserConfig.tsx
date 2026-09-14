@@ -6,18 +6,14 @@ import { toast } from "sonner";
 import InputField from "./InputField";
 import GenderToggle from "./GenderToggle";
 import { levels } from "./TdeeTable";
-import AdminTagSelector from "./AdminTagSelector";
 import AdminSemanaUsuario from "./AdminSemanaUsuario";
 import AdminRegistrosFotos from "./AdminRegistrosFotos";
-import AdminPagamentosStatus from "./AdminPagamentosStatus";
 import EvolutionSection from "./EvolutionSection";
 import AdminHistoricoMes from "./admin/AdminHistoricoMes";
+import PlanoCobrancaAluno from "./admin/PlanoCobrancaAluno";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
 import { classificarGordura } from "@/utils/composicaoCorporal";
-import { useAuth } from "@/hooks/useAuth";
-import { invokeMp, type MpPagamento } from "@/lib/mpClient";
-import ComprovantePixCard, { type PixPendente } from "@/components/admin/ComprovantePixCard";
 
 interface Props {
   userId: string;
@@ -36,7 +32,8 @@ function calcBodyFat3(gender: "male" | "female", soma: number, age: number) {
 }
 
 // Abas que auto-salvam ou só leem: não mostram o botão Salvar (que grava o perfil).
-const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["treino", "registros", "historico"]);
+// "plano" é ESPELHO desde 13/09/2026 — plano/mensalidade se editam no popup "Cobrança" da tela Cobrança.
+const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["treino", "registros", "historico", "plano"]);
 
 // 4 GRUPOS com sub-abas (SaaS 12/09/2026). As chaves antigas do ?ct= continuam válidas — o grupo é derivado
 // da chave — e o conteúdo de cada aba é o mesmo de antes; só a navegação mudou.
@@ -51,9 +48,6 @@ const TODAS_ABAS: ReadonlySet<string> = new Set(GRUPOS.flatMap((g) => g.abas.map
 const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { user, papel } = useAuth();
-  // remonta o bloco de pagamentos depois de confirmar/recusar um comprovante Pix
-  const [pagRefresh, setPagRefresh] = useState(0);
   // sub-aba na URL (?ct=) — F5 mantém a aba (mesmo padrão do AdminTreinos); "perfil" (link antigo) cai em "geral"
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("ct") || "geral";
@@ -79,13 +73,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [ajusteCalorico, setAjusteCalorico] = useState(0);
   const [proteinMult, setProteinMult] = useState("2.2");
   const [fatPct, setFatPct] = useState("15");
-  const [planoNome, setPlanoNome] = useState("");
-  // catálogo global de planos (physiq_planos) — compartilhado entre todos os alunos
-  const [planos, setPlanos] = useState<string[]>([]);
-  const [criandoPlano, setCriandoPlano] = useState(false);
-  const [novoPlano, setNovoPlano] = useState("");
-  const [salvandoPlano, setSalvandoPlano] = useState(false);
-  const [mensalidade, setMensalidade] = useState("");
   const [adminLocked, setAdminLocked] = useState(true);
   const [observacao, setObservacao] = useState("");
   const [medidas, setMedidas] = useState<Record<string, string>>({});
@@ -108,8 +95,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
         setAjusteCalorico(p.ajuste_calorico ?? 0);
         setProteinMult(p.macro_proteina_multiplicador?.toString() || "2.2");
         setFatPct(p.macro_gordura_percentual?.toString() || "15");
-        setPlanoNome(p.plano_nome || "");
-        setMensalidade(p.mensalidade_valor?.toString() || "");
         setAdminLocked(p.admin_locked ?? true);
         // Load medidas
         const m: Record<string, string> = {};
@@ -119,36 +104,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
       setLoading(false);
     });
   }, [userId]);
-
-  useEffect(() => {
-    supabase.from("physiq_planos").select("nome").order("nome").then(({ data, error }) => {
-      if (error) { console.error("[AdminUserConfig] planos:", error); return; }
-      setPlanos((data || []).map((p) => p.nome));
-    });
-  }, []);
-
-  const handleCriarPlano = async () => {
-    const nome = novoPlano.trim();
-    if (!nome) { toast.error("Digite o nome do plano."); return; }
-    if (planos.some((p) => p.toLowerCase() === nome.toLowerCase())) {
-      toast.error("Já existe um plano com esse nome.");
-      return;
-    }
-    setSalvandoPlano(true);
-    // professor cria plano PRÓPRIO (professor_id = ele); master cria global (null) — exigido pela RLS do catálogo
-    const { error } = await (supabase.from as any)("physiq_planos").insert({ nome, professor_id: papel === "professor" ? user?.id ?? null : null });
-    setSalvandoPlano(false);
-    if (error) {
-      console.error("[AdminUserConfig] criar plano:", error);
-      toast.error("Erro ao criar o plano.");
-      return;
-    }
-    setPlanos((prev) => [...prev, nome].sort((a, b) => a.localeCompare(b)));
-    setPlanoNome(nome);
-    setNovoPlano("");
-    setCriandoPlano(false);
-    toast.success(`Plano "${nome}" criado.`);
-  };
 
   const maleLabels = ["Peitoral", "Abdômen", "Coxa"];
   const femaleLabels = ["Tríceps", "Supra-ilíaca", "Coxa"];
@@ -211,8 +166,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             ajuste_calorico: ajusteCalorico,
             macro_proteina_multiplicador: parseFloat(proteinMult) || 2.2,
             macro_gordura_percentual: parseFloat(fatPct) || 15,
-            plano_nome: planoNome || null,
-            mensalidade_valor: parseFloat(mensalidade.replace(",", ".")) || null,
+            // plano_nome / mensalidade_valor: só o popup "Cobrança" grava (13/09/2026)
             admin_locked: adminLocked,
             ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
           },
@@ -565,72 +519,8 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
           </section>
           </>)}
 
-          {configTab === "plano" && (<>
-          <section>
-            <h2 className="font-heading text-lg text-foreground mb-6">Tags</h2>
-            <AdminTagSelector userId={userId} />
-          </section>
-
-          {/* Plano */}
-          <section className="section-divider pt-10">
-            <h2 className="font-heading text-lg text-foreground mb-6">Plano</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Plano</label>
-                <select
-                  value={planoNome}
-                  onChange={(e) => {
-                    if (e.target.value === "__novo__") { setCriandoPlano(true); return; }
-                    setPlanoNome(e.target.value);
-                  }}
-                  className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-none focus:border-primary"
-                >
-                  <option value="" className="bg-background text-foreground">Sem plano</option>
-                  {/* plano legado do perfil que ainda não está no catálogo continua selecionável */}
-                  {planoNome && !planos.includes(planoNome) && (
-                    <option value={planoNome} className="bg-background text-foreground">{planoNome}</option>
-                  )}
-                  {planos.map((p) => (
-                    <option key={p} value={p} className="bg-background text-foreground">{p}</option>
-                  ))}
-                  <option value="__novo__" className="bg-background text-primary">+ Criar novo plano...</option>
-                </select>
-                {criandoPlano && (
-                  <div className="flex items-end gap-2 mt-2">
-                    <input
-                      type="text"
-                      value={novoPlano}
-                      onChange={(e) => setNovoPlano(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCriarPlano(); } }}
-                      className="input-underline flex-1"
-                      placeholder="Nome do novo plano"
-                      autoFocus
-                    />
-                    <button type="button" onClick={handleCriarPlano} disabled={salvandoPlano}
-                      className="text-xs font-heading uppercase tracking-wider bg-primary text-primary-foreground rounded-lg px-3 py-2 hover:bg-primary/90 transition-colors disabled:opacity-50 shrink-0">
-                      {salvandoPlano ? "Criando..." : "Criar"}
-                    </button>
-                    <button type="button" onClick={() => { setCriandoPlano(false); setNovoPlano(""); }}
-                      className="text-xs font-heading uppercase tracking-wider text-muted-foreground border border-border rounded-lg px-3 py-2 hover:text-foreground transition-colors shrink-0">
-                      Cancelar
-                    </button>
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground font-body mt-1">Planos são globais — o mesmo plano pode ser usado em vários alunos</p>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-muted-foreground font-body uppercase tracking-wider">Mensalidade (R$)</label>
-                <input type="text" inputMode="decimal" value={mensalidade} onChange={(e) => setMensalidade(e.target.value)} className="input-underline" placeholder="Ex: 150,00" />
-                <p className="text-xs text-muted-foreground font-body mt-1">Vazio = sem cobrança. Aparece na aba Pagamentos do aluno (Pix e assinatura no cartão)</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Pagamentos do aluno: situação, assinatura, histórico/comprovantes, reembolso (key = remonta ao confirmar/recusar Pix) */}
-          <AdminPagamentosStatus key={pagRefresh} userId={userId} />
-          {/* Comprovante Pix manual aguardando sua confirmação (some ao confirmar/recusar) */}
-          <ComprovanteAguardandoAluno userId={userId} versao={pagRefresh} onResolvido={() => setPagRefresh((v) => v + 1)} />
-          </>)}
+          {/* Plano & Cobrança = ESPELHO só-leitura (edita-se no popup "Cobrança" da tela Cobrança, 13/09/2026) */}
+          {configTab === "plano" && <PlanoCobrancaAluno userId={userId} modo="espelho" />}
 
           {configTab === "dobras" && (<>
           {/* Toggle edição manual */}
@@ -698,30 +588,5 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
     </div>
   );
 };
-
-/** Comprovante Pix (pix_manual) do aluno esperando confirmação — lido do `admin-status`; some ao confirmar/recusar. */
-function ComprovanteAguardandoAluno({ userId, versao, onResolvido }: { userId: string; versao: number; onResolvido: () => void }) {
-  const [item, setItem] = useState<PixPendente | null>(null);
-
-  useEffect(() => {
-    let vivo = true;
-    invokeMp<{ pagamentos?: MpPagamento[] }>("admin-status", { userId })
-      .then((s) => {
-        if (!vivo) return;
-        const p = (s.pagamentos || []).find((x) => x.tipo === "pix_manual" && x.status === "aguardando_confirmacao");
-        setItem(p ? { id: p.id, valor: p.valor, mes_ref: p.mes_ref, comprovante_path: p.comprovante_path, created_at: p.created_at } : null);
-      })
-      .catch((e) => { console.error("[AdminUserConfig] admin-status", e); if (vivo) setItem(null); });
-    return () => { vivo = false; };
-  }, [userId, versao]);
-
-  if (!item) return null;
-  return (
-    <section className="pt-6" data-comprovante-aluno>
-      <h3 className="font-heading text-sm text-foreground uppercase tracking-wider mb-3">Comprovante Pix aguardando sua confirmação</h3>
-      <ComprovantePixCard item={item} onResolvido={onResolvido} />
-    </section>
-  );
-}
 
 export default AdminUserConfig;

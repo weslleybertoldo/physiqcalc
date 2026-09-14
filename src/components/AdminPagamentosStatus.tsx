@@ -25,9 +25,10 @@ function fmtBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-// Painel de pagamentos do aluno no admin (aba Plano + visão do aluno):
-// situação, assinatura (próxima cobrança + cancelar), histórico com comprovante e reembolso
-const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
+// Painel de pagamentos do aluno no admin (popup "Cobrança" + espelho da aba Plano & Cobrança):
+// situação, assinatura (próxima cobrança + cancelar), histórico com comprovante e reembolso.
+// `somenteLeitura` (espelho, 13/09/2026): mostra tudo, mas sem as ações (parar/registrar/cancelar/remover/reembolsar).
+const AdminPagamentosStatus = ({ userId, somenteLeitura = false }: { userId: string; somenteLeitura?: boolean }) => {
   const [status, setStatus] = useState<AdminMpStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -142,14 +143,14 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
   };
 
   return (
-    <section className="section-divider pt-10">
+    <section className="section-divider pt-10" data-pagamentos-status data-somente-leitura={somenteLeitura || undefined}>
       <h2 className="font-heading text-lg text-foreground mb-4">Pagamentos</h2>
       {loading ? (
         <p className="text-xs text-muted-foreground font-body">Carregando...</p>
       ) : erro ? (
         <p className="text-xs text-destructive font-body">Erro ao carregar pagamentos.</p>
       ) : !status?.mensalidade ? (
-        <p className="text-xs text-muted-foreground font-body">Sem mensalidade configurada (defina o valor em Plano → Mensalidade).</p>
+        <p className="text-xs text-muted-foreground font-body">Sem mensalidade configurada{somenteLeitura ? "." : " (defina o valor em Plano → Mensalidade)."}</p>
       ) : (
         <div className="space-y-4">
           {/* Situação */}
@@ -170,8 +171,8 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
             )}
           </div>
 
-          {/* Parar/reativar cobrança (por perfil) */}
-          {status.pausada ? (
+          {/* Parar/reativar cobrança (por perfil) — só no modo de edição */}
+          {!somenteLeitura && (status.pausada ? (
             <div className="bg-muted/20 border border-border rounded-lg p-4 space-y-2">
               <p className="text-xs text-muted-foreground font-body">
                 Cobrança parada: o aluno não vê pendência, aviso nem opções de pagamento — mesmo com valor configurado.
@@ -186,10 +187,10 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
               className="text-xs font-heading uppercase tracking-wider text-destructive border border-destructive/40 rounded-lg px-4 py-2 hover:bg-destructive/10 transition-colors disabled:opacity-50">
               Parar cobrança
             </button>
-          )}
+          ))}
 
-          {/* Registro manual (ex.: dinheiro vivo) */}
-          {registrando ? (
+          {/* Registro manual (ex.: dinheiro vivo) — só no modo de edição */}
+          {!somenteLeitura && (registrando ? (
             <div className="bg-muted/20 border border-border rounded-lg p-4 space-y-3">
               <p className="text-sm text-foreground font-body">Registrar pagamento recebido por fora do app</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -229,7 +230,7 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
               className="text-xs font-heading uppercase tracking-wider text-primary border border-primary/40 rounded-lg px-4 py-2 hover:bg-primary/10 transition-colors disabled:opacity-50">
               Registrar pagamento
             </button>
-          )}
+          ))}
 
           {/* Assinatura */}
           {assinaturaAtiva ? (
@@ -242,10 +243,12 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
                   Próxima cobrança: <span className="text-primary">{new Date(status.assinatura!.proxima_cobranca).toLocaleDateString("pt-BR")}</span>
                 </p>
               )}
-              <button type="button" onClick={handleCancelar} disabled={busy}
-                className="text-xs font-heading uppercase tracking-wider text-destructive border border-destructive/40 rounded-lg px-4 py-2 hover:bg-destructive/10 transition-colors disabled:opacity-50">
-                Cancelar assinatura
-              </button>
+              {!somenteLeitura && (
+                <button type="button" onClick={handleCancelar} disabled={busy}
+                  className="text-xs font-heading uppercase tracking-wider text-destructive border border-destructive/40 rounded-lg px-4 py-2 hover:bg-destructive/10 transition-colors disabled:opacity-50">
+                  Cancelar assinatura
+                </button>
+              )}
             </div>
           ) : (
             <p className="text-xs text-muted-foreground font-body">
@@ -275,7 +278,7 @@ const AdminPagamentosStatus = ({ userId }: { userId: string }) => {
                       </p>
                     </div>
                   </button>
-                  {p.status === "approved" && (p.tipo === "manual" ? (
+                  {!somenteLeitura && p.status === "approved" && (p.tipo === "manual" ? (
                     <button type="button" onClick={() => handleRemoverManual(p)} disabled={busy}
                       title="Remover pagamento manual (volta a pendente)"
                       className="p-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50">

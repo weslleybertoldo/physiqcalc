@@ -9,11 +9,13 @@ interface Tag {
 
 interface Props {
   userId: string;
+  /** Espelho (aba Plano & Cobrança do Configurar aluno): mostra só as tags do aluno, sem alternar. */
+  readOnly?: boolean;
 }
 
 // Catálogo de tags + tags do usuário vêm numa chamada só (`getUserTagsCompleto`) — antes eram
 // 2 invocações à edge, cada uma pagando auth + rate limit na VM Nano.
-const AdminTagSelector = ({ userId }: Props) => {
+const AdminTagSelector = ({ userId, readOnly = false }: Props) => {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,25 @@ const AdminTagSelector = ({ userId }: Props) => {
   };
 
   if (loading) return <p className="text-muted-foreground font-body text-sm">Carregando tags...</p>;
+
+  if (readOnly) {
+    const selecionadas = allTags.filter((t) => selectedIds.includes(t.id));
+    if (selecionadas.length === 0) return <p className="text-muted-foreground font-body text-sm" data-tags-readonly>Nenhuma tag.</p>;
+    return (
+      <div className="flex flex-wrap gap-2" data-tags-readonly>
+        {selecionadas.map((tag) => (
+          <span
+            key={tag.id}
+            className="inline-flex items-center px-3 py-1 text-xs font-heading uppercase tracking-wider rounded-full border-2 text-white"
+            style={{ backgroundColor: tag.cor, borderColor: tag.cor }}
+          >
+            {tag.nome}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
   if (allTags.length === 0) return <p className="text-muted-foreground font-body text-sm">Nenhuma tag criada. Crie tags no gerenciador do painel.</p>;
 
   return (
