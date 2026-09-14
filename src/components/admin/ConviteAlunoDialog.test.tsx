@@ -2,10 +2,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { convitesMock, toastSuccessMock } = vi.hoisted(() => ({ convitesMock: vi.fn(), toastSuccessMock: vi.fn() }));
-vi.mock("@/lib/saasApi", async () => {
-  const real = await vi.importActual<typeof import("@/lib/saasApi")>("@/lib/saasApi");
-  return { ...real, professorConvites: convitesMock };
-});
+// Mock COMPLETO do saasApi (sem importActual): o módulo real importa o client do Supabase,
+// que exige VITE_SUPABASE_URL — e a CI roda os testes sem .env.
+vi.mock("@/lib/saasApi", () => ({
+  professorConvites: convitesMock,
+  fmtDataHora: (s: string) => s,
+}));
 vi.mock("sonner", () => ({ toast: { success: toastSuccessMock, error: vi.fn() } }));
 
 import { ConviteAlunoConteudo } from "./ConviteAlunoDialog";
