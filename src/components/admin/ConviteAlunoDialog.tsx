@@ -6,8 +6,8 @@ import { fmtDataHora, professorConvites } from "@/lib/saasApi";
 
 /**
  * Convidar aluno (SaaS 12/09/2026): link + código fixo do professor, convite por e-mail e
- * lista de convites pendentes (revogar). Não existe e-mail automático — o professor manda o
- * link pelo WhatsApp. Usado como popup na lista de Alunos e embutido em Configurações › Convite.
+ * lista de convites pendentes (revogar). A edge manda o e-mail com o link via Resend quando
+ * RESEND_API_KEY está configurada; sem ela, o professor manda o link pelo WhatsApp. Usado como popup na lista de Alunos e embutido em Configurações › Convite.
  */
 
 export interface ConviteAluno {
@@ -75,7 +75,7 @@ export const ConviteAlunoConteudo = ({ onVinculado, mostrarLink = true }: Conteu
   const [convites, setConvites] = useState<ConviteAluno[]>([]);
   const [email, setEmail] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [resultado, setResultado] = useState<{ tipo: "vinculado" | "ja_era" | "pendente"; email: string } | null>(null);
+  const [resultado, setResultado] = useState<{ tipo: "vinculado" | "ja_era" | "pendente"; email: string; emailEnviado?: boolean } | null>(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -98,7 +98,7 @@ export const ConviteAlunoConteudo = ({ onVinculado, mostrarLink = true }: Conteu
     if (!em) return;
     setEnviando(true);
     try {
-      const r = await professorConvites<{ vinculado: boolean; jaEra?: boolean; jaExistia?: boolean; convite?: ConviteAluno }>("email", { email: em });
+      const r = await professorConvites<{ vinculado: boolean; jaEra?: boolean; jaExistia?: boolean; convite?: ConviteAluno; emailEnviado?: boolean }>("email", { email: em });
       if (r.vinculado) {
         setResultado({ tipo: r.jaEra ? "ja_era" : "vinculado", email: em });
         if (!r.jaEra) {
@@ -106,8 +106,8 @@ export const ConviteAlunoConteudo = ({ onVinculado, mostrarLink = true }: Conteu
           onVinculado?.();
         }
       } else {
-        setResultado({ tipo: "pendente", email: em });
-        toast.success(r.jaExistia ? "Esse convite já estava pendente." : "Convite registrado.");
+        setResultado({ tipo: "pendente", email: em, emailEnviado: !!r.emailEnviado });
+        toast.success(r.jaExistia ? "Esse convite já estava pendente." : r.emailEnviado ? "Convite enviado por e-mail." : "Convite registrado.");
       }
       setEmail("");
       void carregar();
@@ -194,7 +194,7 @@ export const ConviteAlunoConteudo = ({ onVinculado, mostrarLink = true }: Conteu
             {resultado.tipo === "ja_era" && <>👍 <b>{resultado.email}</b> já está na sua lista.</>}
             {resultado.tipo === "pendente" && (
               <div className="space-y-2">
-                <p>⏳ Convite pendente — <b>{resultado.email}</b> ainda não tem conta. Mande o link pelo WhatsApp: ao entrar com Google, entra na sua lista automaticamente.</p>
+                <p>⏳ Convite pendente — <b>{resultado.email}</b> ainda não tem conta. {resultado.emailEnviado ? "Enviamos um e-mail com o link. " : "Mande o link pelo WhatsApp: "}Ao entrar com Google, entra na sua lista automaticamente.</p>
                 {whatsappHref && (
                   <a href={whatsappHref} target="_blank" rel="noreferrer" className={BTN_SEC}>
                     <MessageCircle size={12} /> Mandar o link pelo WhatsApp
@@ -205,7 +205,7 @@ export const ConviteAlunoConteudo = ({ onVinculado, mostrarLink = true }: Conteu
           </div>
         )}
         <p className="text-[11px] text-muted-foreground">
-          Não enviamos e-mail automático: se a pessoa já tem conta e está sem professor, entra na hora; senão fica pendente até entrar com Google.
+          Se a pessoa já tem conta e está sem professor, entra na hora; senão fica pendente até entrar com Google — o link vai por e-mail e você também pode mandar pelo WhatsApp.
         </p>
       </section>
 

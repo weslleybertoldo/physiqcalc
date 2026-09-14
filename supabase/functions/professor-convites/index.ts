@@ -45,6 +45,34 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 function adminClient() { return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } }); }
 
+// E-mail do convite (pedido 13/09/2026) via Resend (conta B Code). Sem RESEND_API_KEY → não manda (comporta como antes).
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "PhysiqCalc <convites@physiqcalc.com.br>";
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
+}
+async function enviarConvitePorEmail(para: string, professor: string, url: string): Promise<boolean> {
+  if (!RESEND_API_KEY) return false;
+  const nome = escapeHtml(professor || "Seu professor");
+  const link = escapeHtml(url);
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111">
+    <h2 style="margin:0 0 12px">Convite pro PhysiqCalc</h2>
+    <p><b>${nome}</b> te convidou pra entrar na lista de alunos dele no PhysiqCalc.</p>
+    <p style="margin:20px 0"><a href="${link}" style="display:inline-block;background:#f5b400;color:#111;text-decoration:none;font-weight:bold;padding:12px 18px;border-radius:8px">Entrar com Google e aceitar</a></p>
+    <p style="font-size:12px;color:#555">Ou copie o link: ${link}</p>
+    <p style="font-size:12px;color:#555">Se você não esperava este convite, ignore este e-mail.</p>
+  </div>`;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: RESEND_FROM, to: [para], subject: `${professor || "Seu professor"} te convidou pro PhysiqCalc`, html }),
+    });
+    if (!res.ok) { console.error("resend", res.status, await res.text()); return false; }
+    return true;
+  } catch (e) { console.error("resend", e); return false; }
+}
+
 const janelasRate = new Map<string, number[]>();
 function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): boolean {
   const agora = Date.now();
@@ -132,7 +160,8 @@ Deno.serve(async (req) => {
       if (existente) return jsonOk({ vinculado: false, convite: existente, jaExistia: true }, origin);
       const { data: conv, error } = await admin.from("physiq_convites").insert({ professor_id: user.id, email, papel: "aluno", criado_por: user.id }).select().single();
       if (error) throw error;
-      return jsonOk({ vinculado: false, convite: conv }, origin);
+      const emailEnviado = await enviarConvitePorEmail(email, (prof as any).nome, `${base}/?prof=${encodeURIComponent((prof as any).codigo_convite)}`);
+      return jsonOk({ vinculado: false, convite: conv, emailEnviado }, origin);
     }
 
     if (action === "list") {
@@ -148,7 +177,10 @@ Deno.serve(async (req) => {
       const { data, error } = await admin.from("physiq_convites").update(patch).eq("id", id).eq("professor_id", user.id).eq("status", "pendente").select().maybeSingle();
       if (error) throw error;
       if (!data) return jsonErr("not_found", 404, origin);
-      return jsonOk({ convite: data }, origin);
+      const emailEnviado = action === "resend"
+        ? await enviarConvitePorEmail((data as any).email, (prof as any).nome, `${base}/?prof=${encodeURIComponent((prof as any).codigo_convite)}`)
+        : false;
+      return jsonOk({ convite: data, emailEnviado }, origin);
     }
 
     return jsonErr("unknown_action", 400, origin);
