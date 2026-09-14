@@ -1,27 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Link2, User, Wallet } from "lucide-react";
+import { Camera, Link2, User, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Switch } from "@/components/ui/switch";
 import { ConviteAlunoConteudo } from "@/components/admin/ConviteAlunoDialog";
+import { uploadFotoProfessor, validarFoto } from "@/lib/fotoProfessor";
+import type { PixTipo } from "@/lib/pixChave";
+import RecebimentosLista from "@/components/admin/RecebimentosLista";
 
 type Secao = "perfil" | "convite" | "recebimento";
-type PixTipo = "cpf" | "cnpj" | "email" | "telefone" | "aleatoria";
 
 const SECOES: { key: Secao; label: string; icon: typeof User }[] = [
   { key: "perfil", label: "Perfil", icon: User },
   { key: "convite", label: "Convite", icon: Link2 },
   { key: "recebimento", label: "Recebimento", icon: Wallet },
-];
-
-const PIX_TIPOS: { value: PixTipo; label: string; placeholder: string }[] = [
-  { value: "cpf", label: "CPF", placeholder: "000.000.000-00" },
-  { value: "cnpj", label: "CNPJ", placeholder: "00.000.000/0000-00" },
-  { value: "email", label: "E-mail", placeholder: "voce@exemplo.com" },
-  { value: "telefone", label: "Telefone", placeholder: "(82) 99999-9999" },
-  { value: "aleatoria", label: "Chave aleatória", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
 ];
 
 /** Linha do professor em physiq_professores (só as colunas que a tela usa; o trigger ignora as outras). */
@@ -39,42 +32,11 @@ interface ProfessorLinha {
   pix_exibir: boolean;
 }
 
-const soDigitos = (v: string) => v.replace(/\D/g, "");
-const telefoneNacional = (dig: string) => (dig.startsWith("55") && dig.length >= 12 ? dig.slice(2) : dig);
-
-/** Mensagem de erro da chave Pix por tipo, ou null quando válida. */
-function validarChavePix(tipo: PixTipo | "", chave: string): string | null {
-  const v = chave.trim();
-  if (!tipo) return "Escolha o tipo da chave.";
-  if (!v) return "Informe a chave Pix.";
-  switch (tipo) {
-    case "cpf": return soDigitos(v).length === 11 ? null : "CPF precisa ter 11 dígitos.";
-    case "cnpj": return soDigitos(v).length === 14 ? null : "CNPJ precisa ter 14 dígitos.";
-    case "email": return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? null : "E-mail inválido.";
-    case "telefone": {
-      const n = telefoneNacional(soDigitos(v));
-      return n.length === 10 || n.length === 11 ? null : "Telefone precisa ter DDD + número (10 ou 11 dígitos).";
-    }
-    case "aleatoria": return v.length >= 32 ? null : "Chave aleatória tem pelo menos 32 caracteres.";
-  }
-  return null;
-}
-
-/** Como a chave é gravada: CPF/CNPJ só dígitos, telefone +55DDDNÚMERO, e-mail minúsculo. */
-function normalizarChavePix(tipo: PixTipo, chave: string): string {
-  const v = chave.trim();
-  if (tipo === "cpf" || tipo === "cnpj") return soDigitos(v);
-  if (tipo === "telefone") return `+55${telefoneNacional(soDigitos(v))}`;
-  if (tipo === "email") return v.toLowerCase();
-  return v;
-}
-
 const BTN_PRI = "inline-flex items-center gap-1.5 bg-primary text-primary-foreground font-heading text-xs uppercase tracking-widest px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-50";
 const BTN_SEC = "inline-flex items-center gap-1.5 border border-primary/40 text-primary font-heading text-xs uppercase tracking-wider px-3 py-1.5 hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50";
 const LABEL = "text-sm text-muted-foreground font-body uppercase tracking-wider";
-const SELECT = "bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary";
 
-// Configurações do PROFESSOR (SaaS 12/09/2026): Perfil · Convite · Recebimento (Pix) — lê/grava a própria linha de physiq_professores.
+// Configurações do PROFESSOR (SaaS 12/09/2026): Perfil · Convite · Recebimento — lê/grava a própria linha de physiq_professores.
 const ConfiguracoesPage = () => {
   const { user, papel } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -90,13 +52,8 @@ const ConfiguracoesPage = () => {
   const [nome, setNome] = useState("");
   const [foto, setFoto] = useState("");
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
-  // Recebimento
-  const [pixTipo, setPixTipo] = useState<PixTipo | "">("");
-  const [pixChave, setPixChave] = useState("");
-  const [pixFavorecido, setPixFavorecido] = useState("");
-  const [pixBanco, setPixBanco] = useState("");
-  const [pixExibir, setPixExibir] = useState(true);
-  const [salvandoPix, setSalvandoPix] = useState(false);
+  const inputFoto = useRef<HTMLInputElement>(null);
+  const [subindoFoto, setSubindoFoto] = useState(false);
 
   const meta = (user?.user_metadata ?? {}) as { avatar_url?: string; picture?: string; full_name?: string; name?: string };
   const fotoGoogle = meta.avatar_url || meta.picture || "";
@@ -116,11 +73,6 @@ const ConfiguracoesPage = () => {
         if (p) {
           setNome(p.nome || "");
           setFoto(p.foto_url || "");
-          setPixTipo(p.pix_tipo || "");
-          setPixChave(p.pix_chave || "");
-          setPixFavorecido(p.pix_favorecido || "");
-          setPixBanco(p.pix_banco || "");
-          setPixExibir(p.pix_exibir ?? true);
         }
         setLoading(false);
       });
@@ -141,31 +93,30 @@ const ConfiguracoesPage = () => {
     toast.success("Perfil salvo.");
   };
 
-  const salvarPix = async () => {
-    if (!user) return;
-    const limpando = !pixTipo && !pixChave.trim();
-    if (!limpando) {
-      const erro = validarChavePix(pixTipo, pixChave);
-      if (erro) { toast.error(erro); return; }
+  /** "Alterar foto": escolhe o arquivo, sobe pro Storage e já grava a URL no perfil (pedido 13/09/2026). */
+  const escolherFoto = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    const erro = validarFoto(file);
+    if (erro) { toast.error(erro); return; }
+    setSubindoFoto(true);
+    try {
+      const url = await uploadFotoProfessor(user.id, file);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- padrão do arquivo (physiq_professores fora dos tipos gerados)
+      const { error } = await (supabase.from as any)("physiq_professores").update({ foto_url: url }).eq("id", user.id);
+      if (error) throw error;
+      setFoto(url);
+      setProf((p) => (p ? { ...p, foto_url: url } : p));
+      toast.success("Foto alterada.");
+    } catch (err) {
+      console.error("[Configuracoes] foto:", err);
+      toast.error("Não foi possível enviar a foto.");
+    } finally {
+      setSubindoFoto(false);
     }
-    const chave = limpando ? null : normalizarChavePix(pixTipo as PixTipo, pixChave);
-    setSalvandoPix(true);
-    const patch = {
-      pix_tipo: limpando ? null : pixTipo,
-      pix_chave: chave,
-      pix_favorecido: pixFavorecido.trim() || null,
-      pix_banco: pixBanco.trim() || null,
-      pix_exibir: pixExibir,
-    };
-    const { error } = await (supabase.from as any)("physiq_professores").update(patch).eq("id", user.id);
-    setSalvandoPix(false);
-    if (error) { console.error("[Configuracoes] pix:", error); toast.error("Erro ao salvar os dados de recebimento."); return; }
-    if (chave) setPixChave(chave);
-    setProf((p) => (p ? { ...p, ...patch } as ProfessorLinha : p));
-    toast.success(limpando ? "Chave Pix removida." : "Dados de recebimento salvos.");
   };
 
-  const tipoSel = PIX_TIPOS.find((t) => t.value === pixTipo);
 
   const AvisoNaoProfessor = () => (
     <div className="result-card border-destructive/40 text-sm font-body text-foreground" data-aviso-nao-professor>
@@ -228,9 +179,12 @@ const ConfiguracoesPage = () => {
                     <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} className="input-underline text-base" placeholder="Como seus alunos te veem" data-perfil-nome />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className={LABEL}>Foto (URL)</label>
-                    <input type="url" value={foto} onChange={(e) => setFoto(e.target.value)} className="input-underline text-sm" placeholder="https://..." data-perfil-foto />
+                    <label className={LABEL}>Foto</label>
+                    <input ref={inputFoto} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={escolherFoto} data-perfil-foto-arquivo />
                     <div className="flex flex-wrap gap-2 mt-1">
+                      <button type="button" onClick={() => inputFoto.current?.click()} disabled={subindoFoto} className={BTN_SEC} data-btn-alterar-foto>
+                        <Camera size={12} className="inline mr-1 -mt-0.5" />{subindoFoto ? "Enviando..." : "Alterar foto"}
+                      </button>
                       {fotoGoogle && foto.trim() !== fotoGoogle && (
                         <button type="button" onClick={() => setFoto(fotoGoogle)} className={BTN_SEC}>Usar a foto do Google</button>
                       )}
@@ -238,6 +192,7 @@ const ConfiguracoesPage = () => {
                         <button type="button" onClick={() => setFoto("")} className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground hover:text-destructive transition-colors px-2">Remover</button>
                       )}
                     </div>
+                    <p className="text-[11px] text-muted-foreground font-body">JPG, PNG ou WebP até 5 MB. “Usar a foto do Google” e “Remover” valem depois de Salvar perfil.</p>
                   </div>
                 </div>
               </div>
@@ -261,65 +216,12 @@ const ConfiguracoesPage = () => {
           ) : (
             <section className="space-y-6" data-secao="recebimento">
               <div>
-                <h2 className="font-heading text-lg text-foreground">Recebimento (Pix)</h2>
+                <h2 className="font-heading text-lg text-foreground">Recebimento</h2>
                 <p className="text-xs text-muted-foreground font-body mt-1">
-                  O aluno vê sua chave na tela Pagamentos, faz o Pix pelo banco dele e anexa o comprovante. Você confere e confirma em Cobrança — aí ele fica em dia.
+                  Como seus alunos pagam. Só um recebimento fica ligado por vez — é ele que aparece na tela Pagamentos do aluno.
                 </p>
-                {papel === "master" && (
-                  <p className="text-xs text-primary font-body mt-2" data-nota-master>
-                    Você é o master: seus alunos pagam pelo Mercado Pago (integração). A chave abaixo só entra em cena se algum aluno seu estiver em modo Pix manual.
-                  </p>
-                )}
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-1">
-                  <label className={LABEL}>Tipo da chave</label>
-                  <select value={pixTipo} onChange={(e) => setPixTipo(e.target.value as PixTipo | "")} className={SELECT} data-pix-tipo>
-                    <option value="" className="bg-background text-foreground">Selecionar...</option>
-                    {PIX_TIPOS.map((t) => (
-                      <option key={t.value} value={t.value} className="bg-background text-foreground">{t.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className={LABEL}>Chave Pix</label>
-                  <input
-                    type={pixTipo === "email" ? "email" : "text"}
-                    inputMode={pixTipo === "cpf" || pixTipo === "cnpj" || pixTipo === "telefone" ? "numeric" : undefined}
-                    value={pixChave}
-                    onChange={(e) => setPixChave(e.target.value)}
-                    placeholder={tipoSel?.placeholder || "Escolha o tipo primeiro"}
-                    className="input-underline text-sm"
-                    data-pix-chave
-                  />
-                  {pixTipo && pixChave.trim() && validarChavePix(pixTipo, pixChave) && (
-                    <p className="text-[11px] text-destructive font-body" data-pix-erro>{validarChavePix(pixTipo, pixChave)}</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className={LABEL}>Favorecido (nome que aparece)</label>
-                  <input type="text" value={pixFavorecido} onChange={(e) => setPixFavorecido(e.target.value)} className="input-underline text-sm" placeholder="Nome completo ou razão social" data-pix-favorecido />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className={LABEL}>Banco</label>
-                  <input type="text" value={pixBanco} onChange={(e) => setPixBanco(e.target.value)} className="input-underline text-sm" placeholder="Ex.: Nubank, Inter, Itaú" data-pix-banco />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 result-card p-4 border-muted-foreground/30">
-                <div>
-                  <p className="text-sm text-foreground font-body">Mostrar minha chave na tela Pagamentos dos alunos</p>
-                  <p className="text-xs text-muted-foreground font-body mt-1">
-                    Desligado, o aluno não vê a chave nem consegue anexar comprovante (útil se você cobra por fora).
-                  </p>
-                </div>
-                <Switch checked={pixExibir} onCheckedChange={setPixExibir} aria-label="Mostrar minha chave na tela Pagamentos dos alunos" data-pix-exibir />
-              </div>
-
-              <button type="button" onClick={salvarPix} disabled={salvandoPix} className={BTN_PRI} data-btn-salvar-pix>
-                {salvandoPix ? "Salvando..." : "Salvar recebimento"}
-              </button>
+              {user && <RecebimentosLista professorId={user.id} ehMaster={papel === "master"} />}
             </section>
           )}
         </div>
