@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ban, Eye, FileDown, MoreVertical, Receipt, Search, Settings, Share2, Trash2, UserPlus } from "lucide-react";
+import { Ban, DollarSign, Eye, FileDown, MoreVertical, Receipt, Search, Settings, Share2, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,7 @@ import { generateAdminPDF, type AdminProfile } from "@/lib/generateAdminPDF";
 import { ListaPaginada, usePaginado } from "@/components/ListaPaginada";
 import ConviteAlunoDialog, { compartilharLink, erroConviteMsg } from "@/components/admin/ConviteAlunoDialog";
 import { BadgePagamento } from "@/components/admin/ComprovantePixCard";
+import CobrancaAlunoDialog from "@/components/admin/CobrancaAlunoDialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -65,6 +66,8 @@ const AlunosPage = () => {
   const [aguardando, setAguardando] = useState<Record<string, string>>({});
   const [conviteAberto, setConviteAberto] = useState(false);
   const [alvoExcluir, setAlvoExcluir] = useState<AlunoRow | null>(null);
+  // popup "Cobrança" do aluno (o mesmo da tela Cobrança; 13/09/2026)
+  const [alunoCobranca, setAlunoCobranca] = useState<AlunoRow | null>(null);
   const [compartilhando, setCompartilhando] = useState(false);
 
   const carregarTags = useCallback(async () => {
@@ -265,6 +268,10 @@ const AlunosPage = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
+                  <button type="button" onClick={() => setAlunoCobranca(u)} title="Cobrança"
+                    className="p-2 text-muted-foreground hover:text-primary transition-colors" data-btn-cobranca={u.id}>
+                    <DollarSign size={16} />
+                  </button>
                   <button type="button" onClick={() => navigate(`/admin/alunos/${u.id}/ver`)} title="Visualizar"
                     className="p-2 text-muted-foreground hover:text-foreground transition-colors" data-btn-ver={u.id}>
                     <Eye size={16} />
@@ -304,6 +311,8 @@ const AlunosPage = () => {
       )}
 
       <ConviteAlunoDialog open={conviteAberto} onOpenChange={setConviteAberto} onVinculado={() => { void recarregar(); carregarBadges(); }} />
+
+      <CobrancaAlunoDialog aluno={alunoCobranca} onFechar={() => setAlunoCobranca(null)} onSalvo={() => { void recarregar(); carregarBadges(); }} />
 
       <AlertDialog open={!!alvoExcluir} onOpenChange={(o) => { if (!o) setAlvoExcluir(null); }}>
         <AlertDialogContent className="bg-background border-muted-foreground/30">

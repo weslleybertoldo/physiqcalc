@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Receipt } from "lucide-react";
+import { ChevronDown, ChevronUp, Receipt } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { fmtBRL, listarAlunos, type AlunoRow } from "@/lib/saasApi";
 import { invokeMp } from "@/lib/mpClient";
 import { ITENS_PAGINA, ListaPaginada } from "@/components/ListaPaginada";
 import ComprovantePixCard, { BadgePagamento, type PixPendente } from "@/components/admin/ComprovantePixCard";
+import CobrancaAlunoDialog from "@/components/admin/CobrancaAlunoDialog";
 
 interface BadgeInfo { s: string; ate: string | null }
 interface BadgesResp { badges?: Record<string, string>; badgesData?: Record<string, BadgeInfo>; aguardando?: Record<string, string> }
 
 /**
- * Todos os alunos do escopo (páginas de 100 = máximo do servidor) filtrados por mensalidade.
- * O `admin-list-users` não filtra por mensalidade, então o filtro é aqui; a paginação de 20 é local.
+ * Todos os alunos do escopo (páginas de 100 = máximo do servidor). O `admin-list-users` não filtra por
+ * mensalidade, então a separação com/sem mensalidade é aqui; a paginação de 20 é local.
  */
-async function carregarAlunosComMensalidade(professorId?: string): Promise<AlunoRow[]> {
+async function carregarTodosAlunos(professorId?: string): Promise<AlunoRow[]> {
   const todos: AlunoRow[] = [];
   let offset = 0;
   for (let i = 0; i < 20; i++) {
@@ -23,15 +23,20 @@ async function carregarAlunosComMensalidade(professorId?: string): Promise<Aluno
     offset += r.users.length;
     if (r.users.length === 0 || offset >= r.total) break;
   }
-  return todos.filter((a) => Number(a.mensalidade_valor) > 0);
+  return todos;
 }
 
+const temMensalidade = (a: AlunoRow) => Number(a.mensalidade_valor) > 0;
+const porNome = (a: AlunoRow, b: AlunoRow) => (a.nome || a.email || "").localeCompare(b.nome || b.email || "");
+
 const BTN_SEC = "inline-flex items-center gap-1.5 border border-primary/40 text-primary font-heading text-xs uppercase tracking-wider px-3 py-1.5 hover:bg-primary/10 rounded-lg transition-colors";
+// cabeçalho recolhível (setinha): "Alunos sem mensalidade" e "Comprovantes aguardando confirmação"
+const BTN_TOGGLE = "inline-flex items-center gap-2 font-heading text-sm uppercase tracking-wider transition-colors text-left";
 
 // Cobrança do PROFESSOR (SaaS 12/09/2026): KPIs do admin-badges, alunos com mensalidade e comprovantes Pix pra conferir.
+// 13/09/2026: o botão "Cobrança" abre um POPUP (plano, mensalidade, tags, pagamentos) — antes era um atalho pro Configurar aluno.
 const CobrancaPage = () => {
   const { user, papel } = useAuth();
-  const navigate = useNavigate();
   // mesmo escopo da lista de Alunos: no Admin o master vê SÓ os alunos dele
   const escopo = papel === "master" ? user?.id ?? undefined : undefined;
 
@@ -41,6 +46,12 @@ const CobrancaPage = () => {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [mostrar, setMostrar] = useState(ITENS_PAGINA);
+  // popup "Cobrança" do aluno
+  const [alunoCobranca, setAlunoCobranca] = useState<AlunoRow | null>(null);
+  // blocos recolhidos (setinha): alunos ainda sem mensalidade (define plano e valor no mesmo popup) e comprovantes Pix
+  const [semAberto, setSemAberto] = useState(false);
+  const [mostrarSem, setMostrarSem] = useState(ITENS_PAGINA);
+  const [comprovantesAberto, setComprovantesAberto] = useState(false);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!silencioso) setLoading(true);
@@ -49,7 +60,7 @@ const CobrancaPage = () => {
       const [b, p, a] = await Promise.all([
         invokeMp<BadgesResp>("admin-badges"),
         invokeMp<{ pendentes: PixPendente[] }>("admin-pix-pendentes"),
-        carregarAlunosComMensalidade(escopo),
+        carregarTodosAlunos(escopo),
       ]);
       setBadges(b);
       setPendentes(p.pendentes || []);
@@ -63,6 +74,9 @@ const CobrancaPage = () => {
   }, [escopo]);
 
   useEffect(() => { void carregar(); }, [carregar]);
+
+  const comMensalidade = useMemo(() => alunos.filter(temMensalidade), [alunos]);
+  const semMensalidade = useMemo(() => alunos.filter((a) => !temMensalidade(a)).sort(porNome), [alunos]);
 
   const badgesData = useMemo(() => badges?.badgesData || {}, [badges]);
   const aguardando = useMemo(() => badges?.aguardando || {}, [badges]);
@@ -79,10 +93,14 @@ const CobrancaPage = () => {
   // comprovante pra conferir primeiro, depois pendentes, em dia e cobrança parada; dentro, por nome
   const ordenados = useMemo(() => {
     const peso = (a: AlunoRow) => aguardando[a.id] ? 0 : badgesData[a.id]?.s === "pendente" ? 1 : badgesData[a.id]?.s === "pago" ? 2 : 3;
-    return [...alunos].sort((a, b) => peso(a) - peso(b) || (a.nome || a.email || "").localeCompare(b.nome || b.email || ""));
-  }, [alunos, badgesData, aguardando]);
+    return [...comMensalidade].sort((a, b) => peso(a) - peso(b) || porNome(a, b));
+  }, [comMensalidade, badgesData, aguardando]);
 
-  const irParaComprovantes = () => document.getElementById("comprovantes")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // KPI e "comprovante para conferir": abre o bloco (se estiver recolhido) e rola até ele
+  const irParaComprovantes = () => {
+    setComprovantesAberto(true);
+    window.setTimeout(() => document.getElementById("comprovantes")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
 
   const KPI = ({ rotulo, valor, cor = "text-foreground", onClick, dataKey }: { rotulo: string; valor: number; cor?: string; onClick?: () => void; dataKey: string }) => (
     <button type="button" onClick={onClick} disabled={!onClick}
@@ -116,8 +134,10 @@ const CobrancaPage = () => {
         {loading ? (
           <p className="text-muted-foreground font-body text-sm">Carregando...</p>
         ) : ordenados.length === 0 ? (
-          <p className="text-muted-foreground font-body text-sm">
-            Nenhum aluno com mensalidade. Defina o valor em Alunos › Configurar › Plano &amp; Cobrança.
+          <p className="text-muted-foreground font-body text-sm" data-cobranca-vazio>
+            {alunos.length === 0
+              ? "Nenhum aluno na sua lista ainda."
+              : "Nenhum aluno com mensalidade. Use o botão Cobrança de um aluno abaixo pra definir o plano e o valor."}
           </p>
         ) : (
           <>
@@ -147,7 +167,7 @@ const CobrancaPage = () => {
                         )}
                       </div>
                     </div>
-                    <button type="button" onClick={() => navigate(`/admin/alunos/${a.id}?ct=plano`)} className={`${BTN_SEC} shrink-0`} data-btn-cobranca={a.id}>
+                    <button type="button" onClick={() => setAlunoCobranca(a)} className={`${BTN_SEC} shrink-0`} data-btn-cobranca={a.id}>
                       Cobrança
                     </button>
                   </div>
@@ -159,33 +179,72 @@ const CobrancaPage = () => {
         )}
       </section>
 
-      {/* Comprovantes Pix aguardando confirmação */}
+      {/* Alunos sem mensalidade: recolhido; o mesmo popup define plano e valor */}
+      {!loading && semMensalidade.length > 0 && (
+        <section className="space-y-2" data-secao-sem-mensalidade>
+          <button type="button" onClick={() => setSemAberto((v) => !v)} aria-expanded={semAberto}
+            className={`${BTN_TOGGLE} text-muted-foreground hover:text-foreground`}
+            data-btn-sem-mensalidade>
+            {semAberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            Alunos sem mensalidade ({semMensalidade.length}) — definir cobrança
+          </button>
+          {semAberto && (
+            <>
+              <div className="space-y-0" data-lista-sem-mensalidade>
+                {semMensalidade.slice(0, mostrarSem).map((a) => (
+                  <div key={a.id} className="flex items-center justify-between gap-3 py-3 border-b border-muted-foreground/30" data-cobranca-aluno-sem={a.id}>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-heading text-sm text-foreground truncate">{a.nome || "Sem nome"}</p>
+                      <p className="text-xs text-muted-foreground font-body truncate">{a.email}</p>
+                      {a.user_code && <span className="text-xs text-muted-foreground font-body">ID: {a.user_code}</span>}
+                    </div>
+                    <button type="button" onClick={() => setAlunoCobranca(a)} className={`${BTN_SEC} shrink-0`} data-btn-cobranca={a.id}>
+                      Cobrança
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <ListaPaginada total={semMensalidade.length} mostrando={mostrarSem} onVerMais={() => setMostrarSem((m) => m + ITENS_PAGINA)} rotulo="alunos" />
+            </>
+          )}
+        </section>
+      )}
+
+      {/* Comprovantes Pix aguardando confirmação — recolhido (setinha), igual ao bloco "sem mensalidade"; pedido 13/09/2026 */}
       <section id="comprovantes" className="space-y-3 scroll-mt-4" data-secao-comprovantes>
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">
-            Comprovantes aguardando confirmação {!loading && `(${pendentes.length})`}
-          </h2>
-        </div>
-        <p className="text-xs text-muted-foreground font-body">
-          O aluno pagou o Pix na sua chave e anexou o comprovante. Confira o valor e o mês antes de confirmar — ao confirmar, ele fica em dia.
-        </p>
-        {loading ? (
-          <p className="text-muted-foreground font-body text-sm">Carregando...</p>
-        ) : pendentes.length === 0 ? (
-          <p className="text-muted-foreground font-body text-sm" data-comprovantes-vazio>Nenhum comprovante aguardando.</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {pendentes.map((p) => (
-              <ComprovantePixCard key={p.id} item={p} onResolvido={() => { void carregar(true); }} />
-            ))}
-          </div>
-        )}
-        {papel === "master" && (
-          <p className="text-[11px] text-muted-foreground font-body">
-            Seus alunos pagam pelo Mercado Pago (integração) — comprovantes Pix só aparecem aqui se algum aluno seu estiver em modo Pix manual.
-          </p>
+        <button type="button" onClick={() => setComprovantesAberto((v) => !v)} aria-expanded={comprovantesAberto}
+          className={`${BTN_TOGGLE} ${pendentes.length > 0 ? "text-primary hover:text-primary/80" : "text-muted-foreground hover:text-foreground"}`}
+          data-btn-comprovantes>
+          {comprovantesAberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          Comprovantes aguardando confirmação {!loading && `(${pendentes.length})`}
+        </button>
+        {comprovantesAberto && (
+          <>
+            <p className="text-xs text-muted-foreground font-body">
+              O aluno pagou o Pix na sua chave e anexou o comprovante. Confira o valor e o mês antes de confirmar — ao confirmar, ele fica em dia.
+            </p>
+            {loading ? (
+              <p className="text-muted-foreground font-body text-sm">Carregando...</p>
+            ) : pendentes.length === 0 ? (
+              <p className="text-muted-foreground font-body text-sm" data-comprovantes-vazio>Nenhum comprovante aguardando.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {pendentes.map((p) => (
+                  <ComprovantePixCard key={p.id} item={p} onResolvido={() => { void carregar(true); }} />
+                ))}
+              </div>
+            )}
+            {papel === "master" && (
+              <p className="text-[11px] text-muted-foreground font-body">
+                Seus alunos pagam pelo Mercado Pago (integração) — comprovantes Pix só aparecem aqui se algum aluno seu estiver em modo Pix manual.
+              </p>
+            )}
+          </>
         )}
       </section>
+
+      {/* popup Cobrança do aluno (plano, mensalidade, tags, pagamentos) — recarrega a tela ao salvar */}
+      <CobrancaAlunoDialog aluno={alunoCobranca} onFechar={() => setAlunoCobranca(null)} onSalvo={() => { void carregar(true); }} />
     </div>
   );
 };
