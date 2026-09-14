@@ -198,7 +198,7 @@ export function planoComValor(p: { nome: string; valor_mensal?: number | string;
 
 /** Link público de convite do professor — sempre o SITE do ambiente (no APK, window.location.origin é https://localhost). */
 export function linkConviteProfessor(codigo: string): string {
-  const base = DB_SCHEMA === "staging" ? "https://physiqcalc-staging.vercel.app" : "https://physiqcalc.vercel.app";
+  const base = DB_SCHEMA === "staging" ? "https://physiqcalc-staging.vercel.app" : "https://physiqcalc.com.br";
   return `${base}/?prof=${encodeURIComponent(codigo)}`;
 }
 

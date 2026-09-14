@@ -17,6 +17,8 @@ function ehStaging(): boolean { return schemaAtual() === "staging"; }
 
 const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.vercel.app",
+  "https://physiqcalc.com.br",
+  "https://www.physiqcalc.com.br",
   "https://physiqcalc-staging.vercel.app",
   "https://physiqcalc.lovable.app",
   "capacitor://localhost",
@@ -590,7 +592,7 @@ Deno.serve(async (req) => {
             frequency: 1, frequency_type: "months", transaction_amount: valor, currency_id: "BRL",
             ...(startDate ? { start_date: startDate } : {}),
           },
-          back_url: "https://physiqcalc.vercel.app/pagamentos",
+          back_url: "https://physiqcalc.com.br/pagamentos",
           // webhook por assinatura (config global da app só existe via painel; WAF bloqueia a API legada)
           notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
           status: "authorized",
@@ -1026,7 +1028,7 @@ Deno.serve(async (req) => {
             external_reference: `${currentSchema()}:${user.id}::plano_professor:mensal`,
             payer_email: payerEmail(user.email), card_token_id: cardToken,
             auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: Number(prof.plano.valor_mensal), currency_id: "BRL", ...(inicio ? { start_date: inicio } : {}) },
-            back_url: "https://physiqcalc.vercel.app/admin/planos",
+            back_url: "https://physiqcalc.com.br/admin/planos",
             notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
             status: "authorized",
           }),

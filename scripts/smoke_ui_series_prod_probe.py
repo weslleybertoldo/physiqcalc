@@ -7,7 +7,7 @@ Roteiro (conta admin.teste, sessão injetada):
      (public.tb_series_padrao_usuario) recebe a linha própria = valor da tela; tela nunca regride; "−" → banco volta
   3. limpeza: apaga as linhas de config do usuário de teste (estado igual ao inicial)
 
-Env: SMOKE_BASE (default https://physiqcalc.vercel.app), SMOKE_SCHEMA (default public), SUPABASE_PAT ou ~/.pc-pat,
+Env: SMOKE_BASE (default https://physiqcalc.com.br), SMOKE_SCHEMA (default public), SUPABASE_PAT ou ~/.pc-pat,
 SMOKE_INJECT_SESSION=1 + SUPABASE_ANON_KEY + SMOKE_PASSWORD.
 """
 import json
@@ -17,7 +17,7 @@ import urllib.request
 
 from playwright.sync_api import sync_playwright
 
-BASE = os.environ.get("SMOKE_BASE", "https://physiqcalc.vercel.app").rstrip("/")
+BASE = os.environ.get("SMOKE_BASE", "https://physiqcalc.com.br").rstrip("/")
 SCHEMA = os.environ.get("SMOKE_SCHEMA", "public")
 SHOTS = os.environ.get("SMOKE_SHOTS", "/tmp")
 INJECT = os.environ.get("SMOKE_INJECT_SESSION") == "1"
