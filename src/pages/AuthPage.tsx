@@ -1,8 +1,9 @@
-import { useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { Eye, EyeOff, RefreshCw, Check, Download, Link2 } from "lucide-react";
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
 import { lerProfPendente } from "@/lib/profPendente";
+import { contaComoTentativa, formatarRestante, gravarRegistro, lerRegistro, registrarErro, restanteBloqueioMs } from "@/lib/rateLimitLogin";
 
 const APP_VERSION = __APP_VERSION__;
 const RELEASES_URL = "https://api.github.com/repos/weslleybertoldo/physiqcalc/releases/latest";
@@ -19,6 +20,17 @@ const AuthPage = () => {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<null | { hasUpdate: boolean; url?: string; version?: string }>(null);
   const profPendente = lerProfPendente();
+
+  // Rate limit do formulário do staging (pedido 13/09/2026): 3 erros → 1 min; 4º → 3 min; depois 5/10/30 min → 1 h.
+  // Por e-mail, no navegador. `agora` avança a cada segundo enquanto há bloqueio: contador na tela e liberação sozinha.
+  const [agora, setAgora] = useState(() => Date.now());
+  const restanteBloqueio = SO_GOOGLE ? 0 : restanteBloqueioMs(lerRegistro(email, agora), agora);
+  const bloqueado = restanteBloqueio > 0;
+  useEffect(() => {
+    if (!bloqueado) return;
+    const timer = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [bloqueado]);
 
   const handleGoogleLogin = async () => {
     setError("");
@@ -59,11 +71,24 @@ const AuthPage = () => {
   // staging: contas de teste entram com e-mail/senha (sem cadastro pela tela)
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (bloqueado) return; // botão travado; Enter no campo também cai aqui e não chama o Auth
     setError("");
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError("Email ou senha incorretos.");
+      if (!error) {
+        gravarRegistro(email, null); // acerto zera os erros do e-mail
+        setAgora(Date.now());
+        return;
+      }
+      if (contaComoTentativa(error)) {
+        const registro = registrarErro(lerRegistro(email), Date.now());
+        gravarRegistro(email, registro);
+        setAgora(Date.now());
+        setError(registro.bloqueadoAte ? "" : "Email ou senha incorretos.");
+      } else {
+        setError(error.status === 429 ? "Muitas tentativas no servidor. Aguarde alguns minutos." : "Erro ao processar. Tente novamente.");
+      }
     } catch {
       setError("Erro ao processar. Tente novamente.");
     } finally {
@@ -141,13 +166,21 @@ const AuthPage = () => {
                 </button>
               </div>
             </div>
-            {error && <p className="text-sm font-body text-destructive">{error}</p>}
+            {bloqueado ? (
+              <p className="text-sm font-body text-destructive" role="alert" data-bloqueio-login>
+                Muitas tentativas. Tente de novo em{" "}
+                <span className="font-heading tracking-wider" data-bloqueio-restante>{formatarRestante(restanteBloqueio)}</span>.
+              </p>
+            ) : (
+              error && <p className="text-sm font-body text-destructive">{error}</p>
+            )}
             <button
               type="submit"
-              disabled={loading || !email || !password}
+              disabled={loading || bloqueado || !email || !password}
               className="w-full h-12 bg-primary text-primary-foreground font-heading text-sm uppercase tracking-widest hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              data-btn-entrar
             >
-              {loading ? "Processando..." : "Entrar"}
+              {loading ? "Processando..." : bloqueado ? "Aguarde" : "Entrar"}
             </button>
           </form>
         )}
