@@ -15,6 +15,8 @@ function currentSchema(): "public" { return (schemaCtx.getStore() || "public") a
 
 const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.vercel.app",
+  "https://physiqcalc.com.br",
+  "https://www.physiqcalc.com.br",
   "https://physiqcalc-staging.vercel.app",
   "https://physiqcalc.lovable.app",
   "capacitor://localhost",
@@ -104,7 +106,7 @@ Deno.serve(async (req) => {
     if (!prof) return jsonErr("nao_professor", 404, origin);
     // Link público SEMPRE pelo ambiente: o Origin do APK é https://localhost / capacitor://localhost e o do dev é
     // localhost:8080 — nenhum serve pra um aluno abrir. staging → site de staging; public → site oficial.
-    const base = (schemaCtx.getStore() || "public") === "staging" ? "https://physiqcalc-staging.vercel.app" : "https://physiqcalc.vercel.app";
+    const base = (schemaCtx.getStore() || "public") === "staging" ? "https://physiqcalc-staging.vercel.app" : "https://physiqcalc.com.br";
 
     if (action === "link") {
       return jsonOk({ codigo: (prof as any).codigo_convite, url: `${base}/?prof=${encodeURIComponent((prof as any).codigo_convite)}` }, origin);

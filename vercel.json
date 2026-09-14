@@ -17,6 +17,14 @@
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "physiqcalc.vercel.app" }],
+      "destination": "https://physiqcalc.com.br/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/((?!assets/|.*\\.(?:js|css|png|jpg|jpeg|svg|ico|webp|webmanifest|json|woff2?|ttf|wasm)|sw\\.js|workbox-.*|registerSW\\.js|manifest\\.json).*)", "destination": "/index.html" }
   ]

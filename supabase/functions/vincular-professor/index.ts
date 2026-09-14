@@ -16,6 +16,8 @@ function currentSchema(): "public" { return (schemaCtx.getStore() || "public") a
 
 const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.vercel.app",
+  "https://physiqcalc.com.br",
+  "https://www.physiqcalc.com.br",
   "https://physiqcalc-staging.vercel.app",
   "https://physiqcalc.lovable.app",
   "capacitor://localhost",

@@ -12,7 +12,7 @@ import sys
 import urllib.request
 from playwright.sync_api import sync_playwright
 
-BASE = "https://physiqcalc.vercel.app"
+BASE = "https://physiqcalc.com.br"
 SUPA = "https://uxwpwdbbnlticxgtzcsb.supabase.co"
 REF = "uxwpwdbbnlticxgtzcsb"
 ADMIN = "admin.teste.claude@physiqcalc.app"
