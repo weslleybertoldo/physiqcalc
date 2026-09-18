@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ban, DollarSign, Eye, FileDown, MoreVertical, Receipt, Search, Settings, Share2, Trash2, UserPlus } from "lucide-react";
+import { Ban, DollarSign, FileDown, MoreVertical, Receipt, Search, Settings, Share2, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -272,10 +272,7 @@ const AlunosPage = () => {
                     className="p-2 text-muted-foreground hover:text-primary transition-colors" data-btn-cobranca={u.id}>
                     <DollarSign size={16} />
                   </button>
-                  <button type="button" onClick={() => navigate(`/admin/alunos/${u.id}/ver`)} title="Visualizar"
-                    className="p-2 text-muted-foreground hover:text-foreground transition-colors" data-btn-ver={u.id}>
-                    <Eye size={16} />
-                  </button>
+                  {/* o botão "olho" (visão de leitura) saiu em 18/09/2026: agora é a aba Dados da engrenagem */}
                   <button type="button" onClick={() => navigate(`/admin/alunos/${u.id}`)} title="Configurar"
                     className="p-2 text-muted-foreground hover:text-primary transition-colors" data-btn-configurar={u.id}>
                     <Settings size={16} />

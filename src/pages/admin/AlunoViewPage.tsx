@@ -1,12 +1,10 @@
-import { Navigate, useNavigate, useParams } from "react-router-dom";
-import AdminUserView from "@/components/AdminUserView";
+import { Navigate, useParams } from "react-router-dom";
 
-// /admin/alunos/:id/ver — visão de leitura do aluno (dados + evolução + PDFs)
+// /admin/alunos/:id/ver — a visão de leitura do aluno virou a aba "Dados" da engrenagem (pedido do Weslley
+// 18/09/2026: "retira [o olho], tudo fica na engrenagem"). Links antigos (magic links, favoritos) continuam valendo.
 const AlunoViewPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  if (!id) return <Navigate to="/admin/alunos" replace />;
-  return <AdminUserView userId={id} onBack={() => navigate("/admin/alunos")} />;
+  return <Navigate to={id ? `/admin/alunos/${id}?ct=dados` : "/admin/alunos"} replace />;
 };
 
 export default AlunoViewPage;
