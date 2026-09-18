@@ -189,6 +189,8 @@ export function calcularVolumeSemanal(
   semana: SemanaRowVolume[],
   grupos: Record<string, GrupoVolume>,
   seriesPadrao?: SeriePadraoRow[] | null,
+  /** padrão do aluno (physiq_profiles.series_padrao_qtd, aba Configuração); sem ele, 3 */
+  padrao: number = SERIES_PADRAO_DEFAULT,
 ): VolumeBloco[] {
   const mapa = mapaSeriesPadrao(seriesPadrao);
   const ocorrencias: Ocorrencia[] = [];
@@ -204,7 +206,7 @@ export function calcularVolumeSemanal(
         isPessoal: ex.isPessoal,
         nome: ex.nome,
         grupo_muscular: ex.grupo_muscular,
-        series: numSeriesPadrao(mapa, treino, exercicioId, exercicioUsuarioId),
+        series: numSeriesPadrao(mapa, treino, exercicioId, exercicioUsuarioId, padrao),
         seriesEhPadrao: !temSeriesConfiguradas(mapa, treino, exercicioId, exercicioUsuarioId),
       });
     }

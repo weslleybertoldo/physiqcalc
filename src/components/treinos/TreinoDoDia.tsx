@@ -40,6 +40,8 @@ interface Props {
   grupoId: string;
   /** Grupo pessoal do usuário (não é do treinador) — habilita troca definitiva no grupo */
   grupoPessoal?: boolean;
+  /** Cadeado do professor (aba Configuração, 18/09/2026): o aluno não adiciona nem remove série */
+  seriesTravadas?: boolean;
   slotIdx: number;
   treinoId?: string;
   exercicios: GrupoExercicio[];
@@ -62,7 +64,7 @@ interface Props {
 import { parseTempo, formatTempo, formatPace, calcularPace } from "@/lib/corrida";
 
 const TreinoDoDia = ({
-  userId, dateKey, dateLabel, grupoNome, grupoId, grupoPessoal = false, slotIdx, treinoId, exercicios,
+  userId, dateKey, dateLabel, grupoNome, grupoId, grupoPessoal = false, seriesTravadas = false, slotIdx, treinoId, exercicios,
   removidos = [], series, concluido, onRefresh, onTreinoConcluido, onAlterarGrupo, onRemoverTreino, onSerieConcluida, onSeriesUpdate,
   academiaAtual,
 }: Props) => {
@@ -570,6 +572,7 @@ const TreinoDoDia = ({
   };
 
   const handleAddSerie = async (exercicioId: string) => {
+    if (seriesTravadas) return; // cadeado do professor
     const existing = getSeriesForExercicio(exercicioId);
     const last = existing[existing.length - 1];
     const novoNum = existing.length > 0 ? Math.max(...existing.map(s => s.numero_serie)) + 1 : 1;
@@ -588,6 +591,7 @@ const TreinoDoDia = ({
   };
 
   const handleRemoveSerie = async (exercicioId: string, numeroSerie: number, isSalva: boolean) => {
+    if (seriesTravadas) return; // cadeado do professor
     const totalAntes = getSeriesForExercicio(exercicioId).length;
     const exUsuarioIdRemocao = series.find(s => s.exercicio_id === exercicioId || s.exercicio_usuario_id === exercicioId)?.exercicio_usuario_id;
     if (isSalva) {
@@ -725,6 +729,7 @@ const TreinoDoDia = ({
                 onConcluirSerie={handleConcluirSerie}
                 onDesfazerSerie={handleDesfazerSerie}
                 onAddSerie={handleAddSerie}
+                podeEditarSeries={!seriesTravadas}
               />
             );
           })}
@@ -808,7 +813,7 @@ const ExercicioCard = ({
   isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
   onTouchDragStart, onTouchDragMove, onTouchDragEnd,
   onSetInfoExercicio, onSetHistorico, onTrocarExercicio, onRemoverExercicio, substituindo,
-  onSaveSerie, onRemoveSerie, onConcluirSerie, onDesfazerSerie, onAddSerie,
+  onSaveSerie, onRemoveSerie, onConcluirSerie, onDesfazerSerie, onAddSerie, podeEditarSeries = true,
 }: {
   exercicio: Exercicio;
   series: SerieComMemoria[];
@@ -835,6 +840,8 @@ const ExercicioCard = ({
   onConcluirSerie: (exId: string, nome: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => void;
   onDesfazerSerie: (exId: string, num: number) => void;
   onAddSerie: (exId: string) => void;
+  /** false = cadeado do professor: sem "Adicionar série" nem "Remover série" */
+  podeEditarSeries?: boolean;
 }) => {
   const [comentarioAberto, setComentarioAberto] = useState(false);
   const [temComentario, setTemComentario] = useState(false);
@@ -955,17 +962,19 @@ const ExercicioCard = ({
             serie={s}
             tipoCorrida={tipoCorrida}
             onSave={(peso, reps, tempo, dist) => onSaveSerie(ex.id, s.numero_serie, peso, reps, tempo, dist)}
-            onRemove={() => onRemoveSerie(ex.id, s.numero_serie, s.salva)}
+            onRemove={podeEditarSeries ? () => onRemoveSerie(ex.id, s.numero_serie, s.salva) : undefined}
             onConcluir={(peso, reps, tempo, dist) => onConcluirSerie(ex.id, ex.nome, s.numero_serie, peso, reps, tempo, dist)}
             onDesfazer={() => onDesfazerSerie(ex.id, s.numero_serie)}
           />
         ))}
       </div>
 
+      {podeEditarSeries && (
       <button type="button" onClick={() => onAddSerie(ex.id)}
         className="mt-3 flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-heading uppercase tracking-wider transition-colors">
         <Plus size={14} /> Adicionar série
       </button>
+      )}
 
       {comentarioAberto && (
         <ModalComentario exercicioNome={ex.nome} exercicioId={ex.id} userId={userId}
@@ -985,7 +994,8 @@ const SerieRow = React.memo(function SerieRow({
   serie: SerieComMemoria;
   tipoCorrida: boolean;
   onSave: (peso: number, reps: number, tempo?: number, dist?: number) => void;
-  onRemove: () => void;
+  /** ausente = cadeado do professor (sem botão de remover) */
+  onRemove?: () => void;
   onConcluir: (peso: number, reps: number, tempo?: number, dist?: number) => void;
   onDesfazer: () => void;
 }) {
@@ -1067,9 +1077,11 @@ const SerieRow = React.memo(function SerieRow({
           className="ml-auto px-2 py-1 text-xs font-heading uppercase tracking-wider text-classify-green border border-classify-green/50 bg-classify-green/10 hover:bg-classify-green/20 transition-colors flex items-center gap-1 rounded">
           <Check size={12} /> OK
         </button>
+        {onRemove && (
         <button type="button" onClick={onRemove} aria-label="Remover série" title="Remover série" className="p-1 text-muted-foreground hover:text-destructive transition-colors">
           <Minus size={14} />
         </button>
+        )}
       </div>
     );
   }
@@ -1094,9 +1106,11 @@ const SerieRow = React.memo(function SerieRow({
         className="ml-auto px-2 py-1 text-xs font-heading uppercase tracking-wider text-classify-green border border-classify-green/50 bg-classify-green/10 hover:bg-classify-green/20 transition-colors flex items-center gap-1 rounded">
         <Check size={12} /> OK
       </button>
+      {onRemove && (
       <button type="button" onClick={onRemove} aria-label="Remover série" title="Remover série" className="p-1 text-muted-foreground hover:text-destructive transition-colors">
         <Minus size={14} />
       </button>
+      )}
     </div>
   );
 });

@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
     if (!(await alunoDoProfessor(admin, user, userId))) return jsonErr("forbidden", 403, origin);
 
     if (action === "get") {
-      const [semanaRes, disp, cfgRes, seriesRes] = await Promise.all([
+      const [semanaRes, disp, cfgRes, seriesRes, perfilRes] = await Promise.all([
         admin.from("tb_semana_treinos")
           .select("dia_semana, slot_idx, grupo_id, grupo_usuario_id, extra, extra_atrelado_grupo_id, extra_atrelado_grupo_usuario_id")
           .eq("user_id", userId),
@@ -238,15 +238,19 @@ Deno.serve(async (req) => {
         admin.from("tb_semana_dia_config").select("dia_semana, alternado, alternado_inicio").eq("user_id", userId),
         // nº de séries por treino (sem linha = padrão 3 no app)
         admin.from("tb_series_padrao_usuario").select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series").eq("user_id", userId),
+        // aba Configuração (18/09/2026): padrão de séries do aluno, modo, cadeado e descanso
+        admin.from("physiq_profiles").select("series_padrao_qtd, series_modo, series_travadas, tempo_descanso_segundos").eq("id", userId).maybeSingle(),
       ]);
       if (semanaRes.error) throw semanaRes.error;
       if (cfgRes.error) throw cfgRes.error;
+      if (perfilRes.error) throw perfilRes.error;
       if (seriesRes.error) throw seriesRes.error;
       // exercícios de cada treino já vão junto: o popup "Séries" abre sem nova chamada
       const exerciciosPorTreinoMap = await exerciciosPorTreino(admin, userId, disp.lista);
       return new Response(JSON.stringify({
         semana: semanaRes.data ?? [], gruposDisponiveis: disp.lista, diasConfig: cfgRes.data ?? [],
         seriesPadrao: seriesRes.data ?? [], exerciciosPorTreino: exerciciosPorTreinoMap,
+        config: perfilRes.data ?? null,
       }), {
         headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
       });
@@ -294,14 +298,16 @@ Deno.serve(async (req) => {
 
     if (action === "volume") {
       // extras do alternado ficam fora do volume (decisão: aba Volume não muda)
-      const [semanaRes, disp, seriesRes] = await Promise.all([
+      const [semanaRes, disp, seriesRes, perfilRes] = await Promise.all([
         admin.from("tb_semana_treinos").select("dia_semana, slot_idx, grupo_id, grupo_usuario_id").eq("user_id", userId).eq("extra", false),
         gruposDisponiveis(admin, userId),
         // nº de séries configurado no Treino Diário (badge "Séries") — o Programado usa a mesma fonte do treino do aluno
         admin.from("tb_series_padrao_usuario").select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series").eq("user_id", userId),
+        admin.from("physiq_profiles").select("series_padrao_qtd").eq("id", userId).maybeSingle(),
       ]);
       if (semanaRes.error) throw semanaRes.error;
       if (seriesRes.error) throw seriesRes.error;
+      if (perfilRes.error) throw perfilRes.error;
       const semana = (semanaRes.data as any[]) ?? [];
       // TODOS os grupos disponíveis do usuário (não só os da semana) — o front
       // decide quais compõem o volume via seletor "Treino selecionado"
@@ -373,7 +379,7 @@ Deno.serve(async (req) => {
 
       // seriesUltimo ("último treino registrado") foi aposentado: o Programado usa seriesPadrao (PR #29).
 
-      return new Response(JSON.stringify({ semana, grupos, seriesPadrao: seriesRes.data ?? [] }), {
+      return new Response(JSON.stringify({ semana, grupos, seriesPadrao: seriesRes.data ?? [], config: perfilRes.data ?? null }), {
         headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
       });
     }
@@ -451,6 +457,15 @@ Deno.serve(async (req) => {
       });
       if (ins.error) throw ins.error;
       return okJson({ ok: true, num_series: n }, origin);
+    }
+
+    if (action === "limparSeriesAluno") {
+      // aba Configuração › Padrão N › "Aplicar a todos": apaga TODAS as linhas de séries do aluno (por exercício e
+      // geral de cada treino) — o nº que passa a valer é physiq_profiles.series_padrao_qtd, gravado antes pelo
+      // admin-update-user. Não-atômico com o update do perfil, de propósito (mesmo padrão do aplicarSeriesTreino).
+      const { data: apagadas, error } = await admin.from("tb_series_padrao_usuario").delete().eq("user_id", userId).select("id");
+      if (error) throw error;
+      return okJson({ ok: true, removidas: (apagadas ?? []).length }, origin);
     }
 
     if (action === "setDiaConfig") {

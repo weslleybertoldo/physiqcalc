@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     // Perfil (cabeçalho do PDF)
     const { data: profile, error: pErr } = await admin
       .from("physiq_profiles")
-      .select("id, nome, user_code, sexo, idade, peso, altura, plano_nome")
+      .select("id, nome, user_code, sexo, idade, peso, altura, plano_nome, series_padrao_qtd")
       .eq("id", userId)
       .maybeSingle();
     if (pErr) throw pErr;
@@ -184,7 +184,9 @@ Deno.serve(async (req) => {
 
     // Nº de séries de cada exercício no PDF = o mesmo que o app do aluno monta (src/lib/seriesPadrao.ts):
     // linha do EXERCÍCIO > linha GERAL do treino > padrão (3). Antes o PDF imprimia "3" fixo (18/09/2026).
-    const SERIES_PADRAO_ALUNO = 3;
+    // padrão do ALUNO (aba Configuração, 18/09/2026): physiq_profiles.series_padrao_qtd; sem ele, 3
+    const qtdPerfil = Number((profile as any).series_padrao_qtd);
+    const SERIES_PADRAO_ALUNO = Number.isInteger(qtdPerfil) && qtdPerfil >= 1 ? Math.min(10, qtdPerfil) : 3;
     const chaveTreino = (gid: string | null, guid: string | null): string | null =>
       guid ? `pessoal:${guid}` : gid ? `catalogo:${gid}` : null;
     const chaveExercicio = (exid: string | null, exuid: string | null): string | null =>

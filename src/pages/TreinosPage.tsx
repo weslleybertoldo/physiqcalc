@@ -22,7 +22,7 @@ import { Capacitor } from "@capacitor/core";
 import { downloadAndInstall } from "@/lib/apkUpdater";
 import { useNavigate } from "react-router-dom";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { chaveTreino, estruturaSeriesPadrao, mapaSeriesPadrao, numSeriesPadrao, numerosParaCompletar, type SeriePadraoRow } from "@/lib/seriesPadrao";
+import { SERIES_PADRAO_DEFAULT, chaveTreino, clampSeries, estruturaSeriesPadrao, mapaSeriesPadrao, numSeriesPadrao, numerosParaCompletar, type SeriePadraoRow } from "@/lib/seriesPadrao";
 import { SyncStatusIndicator } from "@/components/treinos/SyncStatusIndicator";
 import { aplicarSubstituicoes, exerciciosRemovidos, type ExercicioAlvo, type ItemRemovido, type Substituicao } from "@/lib/substituicaoExercicio";
 import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots";
@@ -338,7 +338,7 @@ const TreinosPage = () => {
 
   // Perfil do usuário
   const { data: profileRows, error: profileError } = useQuery(
-    "SELECT nome, foto_url, user_code FROM physiq_profiles WHERE id = ?",
+    "SELECT nome, foto_url, user_code, tempo_descanso_segundos, series_padrao_qtd, series_travadas FROM physiq_profiles WHERE id = ?",
     [userId]
   );
   useEffect(() => {
@@ -347,8 +347,24 @@ const TreinosPage = () => {
   const profile = useMemo(() => {
     if (!profileRows || profileRows.length === 0) return null;
     const row = profileRows[0] as any;
-    return { nome: row.nome, foto_url: row.foto_url, user_code: row.user_code };
+    return {
+      nome: row.nome, foto_url: row.foto_url, user_code: row.user_code,
+      // configuração do professor (aba Configuração, 18/09/2026) — colunas podem vir vazias em perfil antigo
+      tempo_descanso_segundos: row.tempo_descanso_segundos != null ? Number(row.tempo_descanso_segundos) : null,
+      series_padrao_qtd: row.series_padrao_qtd != null ? Number(row.series_padrao_qtd) : null,
+      series_travadas: row.series_travadas === 1 || row.series_travadas === true || row.series_travadas === "true",
+    };
   }, [profileRows]);
+  // Padrão de séries do aluno (professor): vale quando não há linha em tb_series_padrao_usuario (antes 3 fixo)
+  const seriesPadraoAluno = clampSeries(profile?.series_padrao_qtd ?? SERIES_PADRAO_DEFAULT);
+  // Cadeado do professor: o aluno não adiciona nem remove série
+  const seriesTravadas = !!profile?.series_travadas;
+  // Descanso configurado pelo professor vira a duração inicial do cronômetro (antes 120 s fixo).
+  // Só reage quando o valor do perfil muda — o ajuste que o aluno faz no cronômetro na sessão fica.
+  useEffect(() => {
+    const seg = profile?.tempo_descanso_segundos;
+    if (seg && seg > 0) setTempoPadrao(Math.round(seg));
+  }, [profile?.tempo_descanso_segundos]);
 
   // Grupos de treino (globais)
   const { data: gruposRows } = useQuery(
@@ -734,7 +750,7 @@ const TreinosPage = () => {
           });
           // O admin (ou o próprio aluno, em outro aparelho) subiu o número hoje: completa com séries
           // vazias até o alvo, ao vivo. Séries salvas nunca somem por redução do número.
-          const alvoHoje = numSeriesPadrao(seriesPadraoMap, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null);
+          const alvoHoje = numSeriesPadrao(seriesPadraoMap, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null, seriesPadraoAluno);
           for (const n of numerosParaCompletar(saved.map((s: { numero_serie: number }) => Number(s.numero_serie)), alvoHoje)) {
             allSeries.push({
               exercicio_id: exId,
@@ -773,7 +789,7 @@ const TreinosPage = () => {
           // Quantidade = nº configurado pelo admin pro exercício, senão o geral do treino (padrão 3), NÃO a
           // estrutura do último treino (1 série feita ontem virava 1 série hoje). Peso/reps por
           // número continuam vindo do último treino quando existir.
-          const alvo = numSeriesPadrao(seriesPadraoMap, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null);
+          const alvo = numSeriesPadrao(seriesPadraoMap, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null, seriesPadraoAluno);
           for (const s of estruturaSeriesPadrao(alvo, (ultimo as any[]) || [])) {
             allSeries.push({
               exercicio_id: exId,
@@ -828,7 +844,7 @@ const TreinosPage = () => {
     };
 
     buildSeries();
-  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino, academiaEfetiva, db, seriesPadraoMap]);
+  }, [user, seriesDoDiaRows, selectedExercicios, selectedDate, buscarUltimoTreino, academiaEfetiva, db, seriesPadraoMap, seriesPadraoAluno]);
 
   const isSlotConcluido = useCallback(
     (dk: string, slot: number) => concluidosSet.has(`${dk}|${slot}`),
@@ -1425,6 +1441,7 @@ const TreinosPage = () => {
                               grupoNome={slot.grupo!.nome}
                               grupoId={slot.grupo!.id}
                               grupoPessoal={!!slot.grupoPessoal}
+                              seriesTravadas={seriesTravadas}
                               slotIdx={slot.slot_idx}
                               treinoId={slot.override_id}
                               exercicios={slot.exercicios}

@@ -140,6 +140,10 @@ const physiq_profiles = new Table({
   sexo: column.text,
   status: column.text,
   tempo_descanso_segundos: column.integer,
+  // aba Configuração do professor (18/09/2026)
+  series_modo: column.text,
+  series_padrao_qtd: column.integer,
+  series_travadas: column.integer, // boolean 0/1
   tmb_katch: column.real,
   tmb_metodo: column.text,
   tmb_mifflin: column.real,
