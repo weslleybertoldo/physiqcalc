@@ -31,7 +31,11 @@ jobs:
           distribution: temurin
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          # o pacote legado `tools` saiu do repositório do SDK (run 35354769934 morreu em 18/09/2026);
+          # o Gradle baixa platforms/build-tools que faltarem (mesmo fix do WatchMov, 14/09/2026)
+          packages: platform-tools
 
       - name: Get current version
         id: version
