@@ -60,7 +60,9 @@ export function MobileNavBar({ items, modo }: { items: NavItem[]; modo: "admin" 
 
 export function AppSidebar({ items, modo, badges }: { items: NavItem[]; modo: "admin" | "master"; badges?: Record<string, number | string | undefined> }) {
   const { state, isMobile, setOpenMobile } = useSidebar();
-  const collapsed = state === "collapsed";
+  // No celular a sidebar é um drawer (Sheet) e o `state` do provider fica "collapsed" (defaultOpen={!isMobile}):
+  // sem o `!isMobile` o drawer abria só com ícones, sem os nomes (pedido do Weslley 18/09/2026).
+  const collapsed = state === "collapsed" && !isMobile;
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();

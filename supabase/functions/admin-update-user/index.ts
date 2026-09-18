@@ -89,6 +89,7 @@ function papelDe(role: unknown): Papel | null {
 const SEM_ACESSO_OK = new Set<string>(["mp-payments"]);
 // escopo: professor só enxerga aluno com professor_id = ele; master enxerga todos
 async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise<boolean> {
+  if (alunoId && alunoId === user?.id) return true; // o professor abre o PRÓPRIO perfil (aluno de si mesmo, 18/09/2026)
   if (user?.papel === "master") return true;
   const { data } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
   return (data as any)?.professor_id === user?.id;

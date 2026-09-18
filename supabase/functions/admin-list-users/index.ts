@@ -89,6 +89,7 @@ function papelDe(role: unknown): Papel | null {
 const SEM_ACESSO_OK = new Set<string>(["mp-payments"]);
 // escopo: professor só enxerga aluno com professor_id = ele; master enxerga todos
 async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise<boolean> {
+  if (alunoId && alunoId === user?.id) return true; // o professor abre o PRÓPRIO perfil (aluno de si mesmo, 18/09/2026)
   if (user?.papel === "master") return true;
   const { data } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
   return (data as any)?.professor_id === user?.id;
@@ -116,7 +117,8 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   return { user, error: null };
 }
 
-// Lista de alunos com escopo por papel + paginação (SaaS 12/09/2026).
+// Lista de alunos com escopo por papel + paginação (SaaS 12/09/2026). Desde 18/09/2026 a lista do professor
+// (e a do Admin do master) traz também o PRÓPRIO perfil dele.
 // body opcional: { limit (1..100, padrão 20), offset, q (nome/email/user_code), professorId (só master), semProfessor (só master), todos (só master: sem paginar) }
 // Contrato aditivo: `users` continua; `total/limit/offset` são novos. Sem body (bundle antigo) → professor recebe os dele
 // e o master recebe TODOS (como antes), paginados em 100 só se `limit` vier.
@@ -147,7 +149,12 @@ Deno.serve(async (req) => {
       const { data: profs } = await admin.from("physiq_professores").select("id");
       const idsProf = ((profs as any[]) || []).map((p) => p.id);
       if (idsProf.length) q = q.not("id", "in", `(${idsProf.join(",")})`);
-    } else if (professorId) q = q.eq("professor_id", professorId);
+    } else if (professorId) {
+      // O professor enxerga o PRÓPRIO perfil na sua lista de alunos (pedido do Weslley 18/09/2026: "o acesso do
+      // professor sempre manter") — o perfil dele tem professor_id NULL por desenho do SaaS. Só quando lista a si
+      // mesmo (professorId === user.id, uuid vindo do JWT); o master filtrando OUTRO professor não muda.
+      q = professorId === user.id ? q.or(`professor_id.eq.${user.id},id.eq.${user.id}`) : q.eq("professor_id", professorId);
+    }
     if (busca) {
       const seguro = busca.replace(/[%,()]/g, " ");
       const partes = [`nome.ilike.%${seguro}%`, `email.ilike.%${seguro}%`];

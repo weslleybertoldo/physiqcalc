@@ -13,7 +13,7 @@ const AdminRedirect = () => {
     return s ? `?${s}` : "";
   };
   if (v === "config" && u) return <Navigate to={`/admin/alunos/${u}${passa(["ct", "wt"])}`} replace />;
-  if (v === "view" && u) return <Navigate to={`/admin/alunos/${u}/ver`} replace />;
+  if (v === "view" && u) return <Navigate to={`/admin/alunos/${u}?ct=dados`} replace />;
   if (v === "treinos") return <Navigate to={`/admin/treinos${passa(["t", "pasta"])}`} replace />;
   if (v === "calculator") return <Navigate to="/admin/calculadora" replace />;
   return <Navigate to="/admin/alunos" replace />;

@@ -11,6 +11,7 @@ import AdminRegistrosFotos from "./AdminRegistrosFotos";
 import EvolutionSection from "./EvolutionSection";
 import AdminHistoricoMes from "./admin/AdminHistoricoMes";
 import PlanoCobrancaAluno from "./admin/PlanoCobrancaAluno";
+import AlunoDados from "./admin/AlunoDados";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
 import { classificarGordura } from "@/utils/composicaoCorporal";
@@ -33,11 +34,13 @@ function calcBodyFat3(gender: "male" | "female", soma: number, age: number) {
 
 // Abas que auto-salvam ou só leem: não mostram o botão Salvar (que grava o perfil).
 // "plano" é ESPELHO desde 13/09/2026 — plano/mensalidade se editam no popup "Cobrança" da tela Cobrança.
-const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["treino", "registros", "historico", "plano"]);
+// "dados" é a visão de leitura (antigo botão "olho"), dentro da engrenagem desde 18/09/2026.
+const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["dados", "treino", "registros", "historico", "plano"]);
 
-// 4 GRUPOS com sub-abas (SaaS 12/09/2026). As chaves antigas do ?ct= continuam válidas — o grupo é derivado
-// da chave — e o conteúdo de cada aba é o mesmo de antes; só a navegação mudou.
+// 5 GRUPOS com sub-abas (SaaS 12/09/2026; "Dados" entrou em 18/09/2026 no lugar do botão "olho"). As chaves antigas
+// do ?ct= continuam válidas — o grupo é derivado da chave — e o conteúdo de cada aba é o mesmo de antes.
 const GRUPOS = [
+  { key: "dados", label: "Dados", abas: [{ key: "dados", label: "Dados" }] },
   { key: "perfil", label: "Perfil", abas: [{ key: "geral", label: "Dados Gerais" }] },
   { key: "avaliacao", label: "Avaliação", abas: [{ key: "dobras", label: "Dobras & Medidas" }, { key: "evolucao", label: "Evolução" }, { key: "registros", label: "Registros" }] },
   { key: "treino", label: "Treino", abas: [{ key: "treino", label: "Treino" }, { key: "historico", label: "Histórico" }] },
@@ -48,10 +51,11 @@ const TODAS_ABAS: ReadonlySet<string> = new Set(GRUPOS.flatMap((g) => g.abas.map
 const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // sub-aba na URL (?ct=) — F5 mantém a aba (mesmo padrão do AdminTreinos); "perfil" (link antigo) cai em "geral"
+  // sub-aba na URL (?ct=) — F5 mantém a aba (mesmo padrão do AdminTreinos). Sem ?ct= abre em "Dados" (a antiga
+  // tela do olho, 18/09/2026); chave desconhecida ("perfil", link antigo) cai em "geral".
   const [searchParams, setSearchParams] = useSearchParams();
-  const rawTab = searchParams.get("ct") || "geral";
-  const configTab = TODAS_ABAS.has(rawTab) ? rawTab : "geral";
+  const rawTab = searchParams.get("ct");
+  const configTab = rawTab ? (TODAS_ABAS.has(rawTab) ? rawTab : "geral") : "dados";
   const setConfigTab = (t: string) => {
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
@@ -277,6 +281,9 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
         )}
 
         <div className="space-y-10 pb-10 pt-6">
+          {/* Dados = visão de leitura do aluno (era o botão "olho"; dentro da engrenagem desde 18/09/2026) */}
+          {configTab === "dados" && <AlunoDados userId={userId} />}
+
           {configTab === "geral" && (
           <section>
             <h2 className="font-heading text-lg text-foreground mb-6">Dados Pessoais</h2>
