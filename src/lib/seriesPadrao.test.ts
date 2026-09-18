@@ -136,3 +136,26 @@ describe("estruturaSeriesPadrao", () => {
     expect(s[0]).toEqual({ numero_serie: 1, pesoUltimo: 0, reps: 10 });
   });
 });
+
+describe("numSeriesPadrao com padrão do aluno (aba Configuração)", () => {
+  const mapa = mapaSeriesPadrao([
+    { grupo_id: "g1", grupo_usuario_id: null, exercicio_id: "e1", exercicio_usuario_id: null, num_series: 2 },
+    { grupo_id: "g2", grupo_usuario_id: null, exercicio_id: null, exercicio_usuario_id: null, num_series: 5 },
+  ]);
+  it("sem linha configurada vale o padrão do aluno, não o 3 fixo", () => {
+    expect(numSeriesPadrao(mapa, "catalogo:g1", "e9", null, 4)).toBe(4);
+    expect(numSeriesPadrao(mapa, "catalogo:g9", null, null, 4)).toBe(4);
+    expect(numSeriesPadrao(mapa, null, null, null, 4)).toBe(4);
+  });
+  it("linha do exercício e geral do treino continuam ganhando do padrão do aluno", () => {
+    expect(numSeriesPadrao(mapa, "catalogo:g1", "e1", null, 4)).toBe(2);
+    expect(numSeriesPadrao(mapa, "catalogo:g2", "e9", null, 4)).toBe(5);
+  });
+  it("sem o argumento, padrão 3 (compatível com o que existia)", () => {
+    expect(numSeriesPadrao(mapa, "catalogo:g9", null, null)).toBe(SERIES_PADRAO_DEFAULT);
+  });
+  it("padrão fora da faixa é limitado a 1–10", () => {
+    expect(numSeriesPadrao(mapa, "catalogo:g9", null, null, 0)).toBe(1);
+    expect(numSeriesPadrao(mapa, "catalogo:g9", null, null, 99)).toBe(10);
+  });
+});

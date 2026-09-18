@@ -12,6 +12,7 @@ import EvolutionSection from "./EvolutionSection";
 import AdminHistoricoMes from "./admin/AdminHistoricoMes";
 import PlanoCobrancaAluno from "./admin/PlanoCobrancaAluno";
 import AlunoDados from "./admin/AlunoDados";
+import ConfiguracaoAluno from "./admin/ConfiguracaoAluno";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
 import { classificarGordura } from "@/utils/composicaoCorporal";
@@ -35,9 +36,9 @@ function calcBodyFat3(gender: "male" | "female", soma: number, age: number) {
 // Abas que auto-salvam ou só leem: não mostram o botão Salvar (que grava o perfil).
 // "plano" é ESPELHO desde 13/09/2026 — plano/mensalidade se editam no popup "Cobrança" da tela Cobrança.
 // "dados" é a visão de leitura (antigo botão "olho"), dentro da engrenagem desde 18/09/2026.
-const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["dados", "treino", "registros", "historico", "plano"]);
+const TABS_SEM_SALVAR: ReadonlySet<string> = new Set(["dados", "treino", "registros", "historico", "plano", "config"]);
 
-// 5 GRUPOS com sub-abas (SaaS 12/09/2026; "Dados" entrou em 18/09/2026 no lugar do botão "olho"). As chaves antigas
+// 6 GRUPOS com sub-abas (SaaS 12/09/2026; "Dados" entrou em 18/09/2026 no lugar do botão "olho"). As chaves antigas
 // do ?ct= continuam válidas — o grupo é derivado da chave — e o conteúdo de cada aba é o mesmo de antes.
 const GRUPOS = [
   { key: "dados", label: "Dados", abas: [{ key: "dados", label: "Dados" }] },
@@ -45,6 +46,8 @@ const GRUPOS = [
   { key: "avaliacao", label: "Avaliação", abas: [{ key: "dobras", label: "Dobras & Medidas" }, { key: "evolucao", label: "Evolução" }, { key: "registros", label: "Registros" }] },
   { key: "treino", label: "Treino", abas: [{ key: "treino", label: "Treino" }, { key: "historico", label: "Histórico" }] },
   { key: "plano", label: "Plano & Cobrança", abas: [{ key: "plano", label: "Plano" }] },
+  // 18/09/2026: descanso, nº de séries (padrão × personalizada) e cadeado do aluno — cada bloco salva sozinho
+  { key: "config", label: "Configuração", abas: [{ key: "config", label: "Configuração" }] },
 ] as const;
 const TODAS_ABAS: ReadonlySet<string> = new Set(GRUPOS.flatMap((g) => g.abas.map((a) => a.key)));
 
@@ -528,6 +531,9 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
 
           {/* Plano & Cobrança = ESPELHO só-leitura (edita-se no popup "Cobrança" da tela Cobrança, 13/09/2026) */}
           {configTab === "plano" && <PlanoCobrancaAluno userId={userId} modo="espelho" />}
+
+          {/* Configuração do aluno (18/09/2026): descanso, nº de séries e cadeado — "Personalizada" leva pra aba Treino */}
+          {configTab === "config" && <ConfiguracaoAluno userId={userId} onIrParaTreino={() => setConfigTab("treino")} />}
 
           {configTab === "dobras" && (<>
           {/* Toggle edição manual */}

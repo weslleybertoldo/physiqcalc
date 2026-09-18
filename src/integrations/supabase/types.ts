@@ -328,6 +328,9 @@ export type Database = {
           sexo: string | null
           status: string | null
           tempo_descanso_segundos: number | null
+          series_modo: string | null
+          series_padrao_qtd: number | null
+          series_travadas: boolean | null
           tmb_katch: number | null
           tmb_metodo: string | null
           tmb_mifflin: number | null
@@ -374,6 +377,9 @@ export type Database = {
           sexo?: string | null
           status?: string | null
           tempo_descanso_segundos?: number | null
+          series_modo?: string | null
+          series_padrao_qtd?: number | null
+          series_travadas?: boolean | null
           tmb_katch?: number | null
           tmb_metodo?: string | null
           tmb_mifflin?: number | null
@@ -420,6 +426,9 @@ export type Database = {
           sexo?: string | null
           status?: string | null
           tempo_descanso_segundos?: number | null
+          series_modo?: string | null
+          series_padrao_qtd?: number | null
+          series_travadas?: boolean | null
           tmb_katch?: number | null
           tmb_metodo?: string | null
           tmb_mifflin?: number | null

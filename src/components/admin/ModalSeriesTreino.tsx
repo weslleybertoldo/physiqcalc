@@ -16,6 +16,8 @@ interface ConteudoProps {
   exercicios: ExercicioTreino[] | null;
   /** nº geral do treino (vale pra quem não tem número próprio) */
   geral: number;
+  /** padrão do aluno (aba Configuração) quando nada está configurado; sem ele, 3 */
+  padrao?: number;
   /** nº efetivo do exercício (próprio > geral > padrão) */
   valorDe: (ex: ExercicioTreino) => number;
   /** o exercício tem número próprio? */
@@ -31,7 +33,7 @@ const btn =
 
 /** Conteúdo do popup (sem o Dialog) — exportado pra teste unitário */
 export const ConteudoSeriesTreino = ({
-  nomeTreino, exercicios, geral, valorDe, temProprio, onAlterarExercicio, onAplicarTodos,
+  nomeTreino, exercicios, geral, padrao = SERIES_PADRAO_DEFAULT, valorDe, temProprio, onAlterarExercicio, onAplicarTodos,
 }: ConteudoProps) => {
   // rascunho do "aplicar a todos" — começa no geral e acompanha quando ele muda
   const [rascunho, setRascunho] = useState(geral);
@@ -41,7 +43,7 @@ export const ConteudoSeriesTreino = ({
     <>
       <p className="text-xs font-body text-muted-foreground mb-3">
         <span className="text-foreground">{nomeTreino}</span> · quantas séries de cada exercício aparecem no app
-        quando o aluno abre este treino. Padrão {SERIES_PADRAO_DEFAULT}, de {SERIES_PADRAO_MIN} a {SERIES_PADRAO_MAX}.
+        quando o aluno abre este treino. Padrão {padrao}, de {SERIES_PADRAO_MIN} a {SERIES_PADRAO_MAX}.
       </p>
 
       {/* geral */}

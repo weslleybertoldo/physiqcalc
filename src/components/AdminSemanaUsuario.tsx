@@ -70,6 +70,8 @@ export default function AdminSemanaUsuario({ userId }: Props) {
   const [extraNovo, setExtraNovo] = useState<{ dia: string; key: string; atrelar: "todos" | "um"; atrelado: string } | null>(null);
   // séries por treino/exercício (linhas da tabela; sem linha = padrão 3) + popup "Séries" do treino aberto
   const [seriesRows, setSeriesRows] = useState<SeriePadraoRow[]>([]);
+  /** padrão de séries do ALUNO (aba Configuração) — vale quando não há linha configurada */
+  const [seriesPadraoAluno, setSeriesPadraoAluno] = useState<number>(SERIES_PADRAO_DEFAULT);
   const [modalSeries, setModalSeries] = useState<GrupoDisp | null>(null);
   // exercícios de cada treino (vêm no get → popup abre na hora); key do treino → lista
   const [exerciciosPorTreino, setExerciciosPorTreino] = useState<Record<string, ExercicioTreino[]>>({});
@@ -141,6 +143,7 @@ export default function AdminSemanaUsuario({ userId }: Props) {
       ((data?.diasConfig as DiaConfigRow[]) || []).forEach((c) => { cfg[c.dia_semana] = c; });
       setDiasConfig(cfg);
       setSeriesRows((data?.seriesPadrao as SeriePadraoRow[]) || []);
+      setSeriesPadraoAluno(clampSeries(Number(data?.config?.series_padrao_qtd) || SERIES_PADRAO_DEFAULT));
       setExerciciosPorTreino((data?.exerciciosPorTreino as Record<string, ExercicioTreino[]>) || {});
     } catch {
       toast.error("Erro ao carregar a semana do usuário.");
@@ -235,9 +238,9 @@ export default function AdminSemanaUsuario({ userId }: Props) {
   };
 
   const mapaSeries = useMemo(() => mapaSeriesPadrao(seriesRows), [seriesRows]);
-  const geralDe = (g: GrupoDisp): number => numSeriesPadrao(mapaSeries, keyOf(g));
+  const geralDe = (g: GrupoDisp): number => numSeriesPadrao(mapaSeries, keyOf(g), null, null, seriesPadraoAluno);
   const valorDe = (g: GrupoDisp, ex: ExercicioTreino): number =>
-    numSeriesPadrao(mapaSeries, keyOf(g), ex.exercicio_id, ex.exercicio_usuario_id);
+    numSeriesPadrao(mapaSeries, keyOf(g), ex.exercicio_id, ex.exercicio_usuario_id, seriesPadraoAluno);
   const temProprio = (g: GrupoDisp, ex: ExercicioTreino): boolean =>
     temSeriesProprias(mapaSeries, keyOf(g), ex.exercicio_id, ex.exercicio_usuario_id);
 
@@ -582,8 +585,9 @@ export default function AdminSemanaUsuario({ userId }: Props) {
       <ModalSeriesTreino
         treino={modalSeries}
         exercicios={modalSeries ? exerciciosPorTreino[keyOf(modalSeries)] ?? null : null}
-        geral={modalSeries ? geralDe(modalSeries) : SERIES_PADRAO_DEFAULT}
-        valorDe={(ex) => (modalSeries ? valorDe(modalSeries, ex) : SERIES_PADRAO_DEFAULT)}
+        geral={modalSeries ? geralDe(modalSeries) : seriesPadraoAluno}
+        padrao={seriesPadraoAluno}
+        valorDe={(ex) => (modalSeries ? valorDe(modalSeries, ex) : seriesPadraoAluno)}
         temProprio={(ex) => (modalSeries ? temProprio(modalSeries, ex) : false)}
         onAlterarExercicio={(ex, delta) => { if (modalSeries) alterarSeriesExercicio(modalSeries, ex, delta); }}
         onAplicarTodos={(n) => { if (modalSeries) aplicarSeriesTodos(modalSeries, n); }}

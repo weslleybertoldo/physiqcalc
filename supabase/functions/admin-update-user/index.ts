@@ -122,6 +122,8 @@ const ALLOWED_FIELDS = new Set([
   "dobra_1", "dobra_2", "dobra_3", "nivel_atividade", "tempo_descanso_segundos",
   "macro_proteina_multiplicador", "macro_gordura_percentual", "ajuste_calorico",
   "tmb_metodo", "plano_nome", "plano_expiracao", "status", "admin_locked",
+  // aba Configuração (18/09/2026): modo (padrao|personalizada), padrão de séries do aluno e cadeado — CHECKs no banco
+  "series_modo", "series_padrao_qtd", "series_travadas",
   "foto_url",
   // valores computados de composição corporal salvos pelo painel admin
   "percentual_gordura", "massa_gorda", "massa_magra", "tmb_mifflin", "tmb_katch",

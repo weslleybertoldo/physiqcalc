@@ -73,7 +73,8 @@ export function mapaSeriesPadrao(rows: SeriePadraoRow[] | null | undefined): Map
 }
 
 /**
- * Nº de séries de um exercício do treino: configurado pro exercício > geral do treino > padrão.
+ * Nº de séries de um exercício do treino: configurado pro exercício > geral do treino > padrão do ALUNO
+ * (`padrao` = physiq_profiles.series_padrao_qtd, aba Configuração 18/09/2026; sem ele, 3).
  * Sem exercício informado, devolve o geral do treino (ou o padrão).
  */
 export function numSeriesPadrao(
@@ -81,14 +82,16 @@ export function numSeriesPadrao(
   treino: string | null | undefined,
   exercicioId?: string | null,
   exercicioUsuarioId?: string | null,
+  padrao: number = SERIES_PADRAO_DEFAULT,
 ): number {
-  if (!treino) return SERIES_PADRAO_DEFAULT;
+  const base = clampSeries(padrao);
+  if (!treino) return base;
   const ex = chaveExercicio(exercicioId, exercicioUsuarioId);
   if (ex) {
     const proprio = mapa.get(chaveSeries(treino, ex));
     if (proprio) return proprio;
   }
-  return mapa.get(treino) || SERIES_PADRAO_DEFAULT;
+  return mapa.get(treino) || base;
 }
 
 /** O exercício tem número próprio (diferente da regra geral do treino)? */

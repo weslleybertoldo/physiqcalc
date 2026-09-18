@@ -10,7 +10,7 @@ import {
   type SemanaRowVolume,
   type StatusVolume,
 } from "@/lib/volumeSemanal";
-import type { SeriePadraoRow } from "@/lib/seriesPadrao";
+import { SERIES_PADRAO_DEFAULT, clampSeries, type SeriePadraoRow } from "@/lib/seriesPadrao";
 
 interface Props { userId: string }
 
@@ -56,6 +56,8 @@ export default function AdminVolumeSemanal({ userId }: Props) {
   const [grupos, setGrupos] = useState<Record<string, GrupoVolume>>({});
   // nº de séries configurado no Treino Diário (badge "Séries") — mesma fonte do treino do aluno
   const [seriesPadrao, setSeriesPadrao] = useState<SeriePadraoRow[]>([]);
+  /** padrão de séries do ALUNO (aba Configuração) — vale quando não há linha configurada */
+  const [padraoAluno, setPadraoAluno] = useState<number>(SERIES_PADRAO_DEFAULT);
   const [loading, setLoading] = useState(true);
   const [aberto, setAberto] = useState<string | null>(null);
 
@@ -82,6 +84,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
         setSemana((data?.semana as SemanaRowVolume[]) || []);
         setGrupos((data?.grupos as Record<string, GrupoVolume>) || {});
         setSeriesPadrao((data?.seriesPadrao as SeriePadraoRow[]) || []);
+        setPadraoAluno(clampSeries(Number(data?.config?.series_padrao_qtd) || SERIES_PADRAO_DEFAULT));
       } catch {
         if (ativo) toast.error("Erro ao carregar o volume semanal.");
       } finally {
@@ -138,8 +141,8 @@ export default function AdminVolumeSemanal({ userId }: Props) {
         });
       }
     }
-    return calcularVolumeSemanal(rows, grupos, seriesPadrao);
-  }, [modo, semana, grupos, seriesPadrao, praticado, semanaSel, selecionados, freqSemana]);
+    return calcularVolumeSemanal(rows, grupos, seriesPadrao, padraoAluno);
+  }, [modo, semana, grupos, seriesPadrao, padraoAluno, praticado, semanaSel, selecionados, freqSemana]);
   const temPadrao = modo === "programado" && volumes.some((v) => v.detalhes.some((d) => d.seriesEhPadrao));
   const carregando = loading || (modo === "praticado" && loadingPraticado && !praticado[semanaSel]);
 
