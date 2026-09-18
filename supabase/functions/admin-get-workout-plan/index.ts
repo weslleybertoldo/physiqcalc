@@ -166,17 +166,43 @@ Deno.serve(async (req) => {
     const grupoIds = [...new Set(semanaRows.map((r) => r.grupo_id).filter(Boolean))];
     const grupoUsuIds = [...new Set(semanaRows.map((r) => r.grupo_usuario_id).filter(Boolean))];
 
-    // Nomes dos grupos (global + pessoal)
-    const [gGlob, gUsu] = await Promise.all([
+    // Nomes dos grupos (global + pessoal) + nº de séries configurado pro aluno
+    const [gGlob, gUsu, seriesCfg] = await Promise.all([
       grupoIds.length
         ? admin.from("tb_grupos_treino").select("id, nome").in("id", grupoIds)
         : Promise.resolve({ data: [] as any[] }),
       grupoUsuIds.length
         ? admin.from("tb_grupos_treino_usuario").select("id, nome").in("id", grupoUsuIds)
         : Promise.resolve({ data: [] as any[] }),
+      admin.from("tb_series_padrao_usuario")
+        .select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series")
+        .eq("user_id", userId),
     ]);
+    if (seriesCfg.error) throw seriesCfg.error;
     const nomeGrupoGlob = new Map((gGlob.data ?? []).map((g: any) => [g.id, g.nome]));
     const nomeGrupoUsu = new Map((gUsu.data ?? []).map((g: any) => [g.id, g.nome]));
+
+    // Nº de séries de cada exercício no PDF = o mesmo que o app do aluno monta (src/lib/seriesPadrao.ts):
+    // linha do EXERCÍCIO > linha GERAL do treino > padrão (3). Antes o PDF imprimia "3" fixo (18/09/2026).
+    const SERIES_PADRAO_ALUNO = 3;
+    const chaveTreino = (gid: string | null, guid: string | null): string | null =>
+      guid ? `pessoal:${guid}` : gid ? `catalogo:${gid}` : null;
+    const chaveExercicio = (exid: string | null, exuid: string | null): string | null =>
+      exuid ? `exu:${exuid}` : exid ? `ex:${exid}` : null;
+    const clampSeries = (n: number): number => Math.min(10, Math.max(1, Math.round(n)));
+    const mapaSeries = new Map<string, number>();
+    for (const r of (seriesCfg.data ?? []) as any[]) {
+      const treino = chaveTreino(r.grupo_id ?? null, r.grupo_usuario_id ?? null);
+      if (!treino || r.num_series == null || !Number.isFinite(Number(r.num_series))) continue;
+      const ex = chaveExercicio(r.exercicio_id ?? null, r.exercicio_usuario_id ?? null);
+      mapaSeries.set(ex ? `${treino}|${ex}` : treino, clampSeries(Number(r.num_series)));
+    }
+    const numSeriesDe = (treino: string | null, exid: string | null, exuid: string | null): number => {
+      if (!treino) return SERIES_PADRAO_ALUNO;
+      const ex = chaveExercicio(exid, exuid);
+      const proprio = ex ? mapaSeries.get(`${treino}|${ex}`) : undefined;
+      return proprio ?? mapaSeries.get(treino) ?? SERIES_PADRAO_ALUNO;
+    };
 
     // Vínculos exercício↔grupo (global e pessoal)
     const [geGlob, geUsu, ordemUsu] = await Promise.all([
@@ -226,7 +252,10 @@ Deno.serve(async (req) => {
       if (!ex) continue;
       const pos = posUsu.get(`${r.grupo_id}|${r.exercicio_id}`);
       const lista = exsPorGrupoGlob.get(r.grupo_id) ?? [];
-      lista.push({ nome: ex.nome, grupo_muscular: ex.grupo_muscular, ordem: pos ?? r.ordem ?? 0 });
+      lista.push({
+        nome: ex.nome, grupo_muscular: ex.grupo_muscular, ordem: pos ?? r.ordem ?? 0,
+        exercicio_id: r.exercicio_id ?? null, exercicio_usuario_id: null,
+      });
       exsPorGrupoGlob.set(r.grupo_id, lista);
     }
     // Exercícios por grupo pessoal
@@ -235,7 +264,11 @@ Deno.serve(async (req) => {
       const ex = r.exercicio_usuario_id ? exMapUsu.get(r.exercicio_usuario_id) : exMapGlob.get(r.exercicio_id);
       if (!ex) continue;
       const lista = exsPorGrupoUsu.get(r.grupo_usuario_id) ?? [];
-      lista.push({ nome: ex.nome, grupo_muscular: ex.grupo_muscular, ordem: r.ordem ?? 0 });
+      lista.push({
+        nome: ex.nome, grupo_muscular: ex.grupo_muscular, ordem: r.ordem ?? 0,
+        exercicio_id: r.exercicio_usuario_id ? null : (r.exercicio_id ?? null),
+        exercicio_usuario_id: r.exercicio_usuario_id ?? null,
+      });
       exsPorGrupoUsu.set(r.grupo_usuario_id, lista);
     }
 
@@ -250,10 +283,15 @@ Deno.serve(async (req) => {
           ? exsPorGrupoUsu.get(r.grupo_usuario_id)
           : exsPorGrupoGlob.get(r.grupo_id)) ?? [];
         exercicios.sort((a, b) => a.ordem - b.ordem);
+        const treino = chaveTreino(r.grupo_id ?? null, r.grupo_usuario_id ?? null);
         return {
           dia_semana: r.dia_semana,
           grupo_nome: grupoNome,
-          exercicios: exercicios.map((e) => ({ nome: e.nome, grupo_muscular: e.grupo_muscular ?? null })),
+          exercicios: exercicios.map((e) => ({
+            nome: e.nome,
+            grupo_muscular: e.grupo_muscular ?? null,
+            num_series: numSeriesDe(treino, e.exercicio_id, e.exercicio_usuario_id),
+          })),
         };
       })
       .sort((a, b) => ordemDia(a.dia_semana) - ordemDia(b.dia_semana));
