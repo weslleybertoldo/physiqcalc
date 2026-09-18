@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Play, CheckCircle2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePowerSync } from "@powersync/react";
@@ -143,6 +144,22 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
   // Pergunta 1x por transição (Não = continua contando; refaz/conclui de novo → pergunta de novo).
   const [confirmFim, setConfirmFim] = useState(false);
   const todasConcluidasRef = useRef(false);
+
+  // Pílula do tempo (pedido 18/09/2026): com treino em andamento, quando o card
+  // "Treino em andamento" sai da tela ao rolar, uma pílula verde piscando no topo (centro)
+  // mostra o mesmo tempo; volta a rolar e o card reaparece → some. Toque = rola até o card.
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [cardForaDaTela, setCardForaDaTela] = useState(false);
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!ativo || concluido || !el || typeof IntersectionObserver === "undefined") {
+      setCardForaDaTela(false);
+      return;
+    }
+    const io = new IntersectionObserver(([entry]) => setCardForaDaTela(!entry.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ativo, concluido]);
   // Só séries de exercícios que ainda estão no treino: série órfã de exercício
   // trocado/removido no meio do treino não pode travar a pergunta.
   const doTreino = seriesDoTreino(series, exerciciosMap);
@@ -323,7 +340,7 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
   }
 
   return (
-    <div className="result-card border-classify-green/50 mb-6">
+    <div className="result-card border-classify-green/50 mb-6" ref={cardRef} data-workout-card>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="relative flex h-3 w-3">
@@ -361,6 +378,20 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {cardForaDaTela && createPortal(
+        <button
+          type="button"
+          data-pilula-tempo
+          aria-label="Tempo do treino em andamento — toque para voltar ao cronômetro"
+          onClick={() => cardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" })}
+          className="fixed top-[max(0.5rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-classify-green text-background font-heading text-sm tracking-wider tabular-nums px-4 py-1.5 shadow-lg animate-pulse"
+        >
+          <span className="inline-flex h-2 w-2 rounded-full bg-background/80" aria-hidden="true" />
+          {formatTimer(segundos)}
+        </button>,
+        document.body,
+      )}
     </div>
   );
 };
