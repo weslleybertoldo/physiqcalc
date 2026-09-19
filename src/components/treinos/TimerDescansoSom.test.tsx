@@ -10,6 +10,8 @@ vi.mock("@/lib/nativeNotifications", () => ({
 }));
 
 import TimerDescanso from "./TimerDescanso";
+import { startTimerNotifications } from "@/lib/nativeNotifications";
+import { SOM_EVENTO } from "@/lib/somDescanso";
 
 function renderTimer(onAbrirSom?: () => void) {
   return render(
@@ -26,7 +28,10 @@ function renderTimer(onAbrirSom?: () => void) {
   );
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  vi.clearAllMocks();
+});
 
 describe("TimerDescanso — ícone Som do descanso", () => {
   it("mostra o ícone 🔊 na barra e abre o popup ao tocar", () => {
@@ -43,5 +48,32 @@ describe("TimerDescanso — ícone Som do descanso", () => {
     renderTimer(undefined);
     expect(document.querySelector("[data-abrir-som]")).toBeNull();
     expect(document.body.textContent).toContain("Descanso");
+  });
+});
+
+describe("TimerDescanso — troca de som com descanso em andamento", () => {
+  it("re-arma o aviso nativo com o tempo restante quando o som muda", () => {
+    renderTimer();
+    const start = vi.mocked(startTimerNotifications);
+    expect(start).toHaveBeenCalledTimes(1); // série nova → descanso armado
+
+    window.dispatchEvent(new CustomEvent(SOM_EVENTO, { detail: "sino" }));
+
+    expect(start).toHaveBeenCalledTimes(2);
+    const [nome, restante] = start.mock.calls[1];
+    expect(nome).toBe("Agachamento — Série 1");
+    expect(restante).toBeGreaterThan(0);
+    expect(restante).toBeLessThanOrEqual(90);
+  });
+
+  it("sem descanso salvo no aparelho, a troca de som não re-arma nada", () => {
+    renderTimer();
+    const start = vi.mocked(startTimerNotifications);
+    start.mockClear();
+    localStorage.removeItem("physiq_rest_timer");
+
+    window.dispatchEvent(new CustomEvent(SOM_EVENTO, { detail: "alarme" }));
+
+    expect(start).not.toHaveBeenCalled();
   });
 });

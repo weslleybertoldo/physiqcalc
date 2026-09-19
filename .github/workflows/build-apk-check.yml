@@ -1,0 +1,97 @@
+name: Check APK build
+
+# Só manual: `gh workflow run build-apk-check.yml --ref <branch>`.
+# Compila o APK assinado DA BRANCH pra provar que o Java/Gradle compilam e pra testar no aparelho
+# ANTES do merge (mesmos passos do build-apk.yml até o APK). NÃO cria release nem faz bump de versão.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          # igual ao build-apk.yml: o Gradle baixa platforms/build-tools que faltarem
+          packages: platform-tools
+
+      - name: Get current version
+        id: version
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Compilando APK de checagem com versão: $CURRENT"
+
+      - name: Inject version into build.gradle
+        run: |
+          V="${{ steps.version.outputs.current }}"
+          IFS='.' read -r MA MI PA <<< "$V"
+          PA=${PA:-0}
+          CODE=$((MA * 10000 + MI * 100 + PA))
+          sed -i "s/versionCode [0-9]\+/versionCode $CODE/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"$V\"/" android/app/build.gradle
+          echo "versionCode=$CODE versionName=$V"
+          grep -E "versionCode|versionName" android/app/build.gradle
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/physiqcalc-release.keystore
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build web assets
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_MP_PUBLIC_KEY: ${{ secrets.VITE_MP_PUBLIC_KEY }}
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build signed APK
+        run: cd android && ./gradlew assembleRelease
+        env:
+          KEYSTORE_FILE: physiqcalc-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Rename APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          mv "$APK" "android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}-check.apk"
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhysiqCalc-v${{ steps.version.outputs.current }}-check
+          path: android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}-check.apk
+          retention-days: 7

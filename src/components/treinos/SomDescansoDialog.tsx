@@ -98,7 +98,7 @@ const SomDescansoDialog = ({ open, onOpenChange }: Props) => {
         </ul>
 
         <p className="font-body text-[10px] text-muted-foreground/70">
-          No app Android com a tela fechada, o aviso do fim do descanso usa o som padrão do sistema.
+          No app Android o som toca como mídia: com fone conectado, sai só no fone.
         </p>
       </DialogContent>
     </Dialog>

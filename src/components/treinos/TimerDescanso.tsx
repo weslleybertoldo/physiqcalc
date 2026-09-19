@@ -9,7 +9,7 @@ import {
   cancelTimerNotification,
 } from "@/lib/nativeNotifications";
 import { restanteDescanso } from "@/lib/descanso";
-import { VIBRACAO_FIM_DESCANSO, deveVibrar, lerSomDescanso, temSom, tocarSom } from "@/lib/somDescanso";
+import { SOM_EVENTO, VIBRACAO_FIM_DESCANSO, deveVibrar, lerSomDescanso, temSom, tocarSom } from "@/lib/somDescanso";
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -218,6 +218,21 @@ const TimerDescanso = ({
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [ativo, calcularRestante, playBeep, vibrarFim]);
+
+  // Trocou o som (Configurações › Som) com um descanso correndo → re-arma o serviço nativo com o som
+  // novo e o tempo restante (web = no-op: startTimerNotifications sai se !isNative e lê o som na hora)
+  useEffect(() => {
+    if (!ativo || paused || finished) return;
+    const onSomTrocado = () => {
+      const saved = lerEstadoSalvo();
+      if (!saved || !saved.ativo || saved.isPaused) return;
+      const restante = calcularRestante(saved);
+      if (restante <= 0) return;
+      startTimerNotifications(`${saved.exercicioNome} — Série ${saved.numeroSerie}`, restante);
+    };
+    window.addEventListener(SOM_EVENTO, onSomTrocado);
+    return () => window.removeEventListener(SOM_EVENTO, onSomTrocado);
+  }, [ativo, paused, finished, calcularRestante]);
 
   const handleTogglePause = () => {
     const nowPaused = !paused;

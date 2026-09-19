@@ -1,12 +1,14 @@
 // Som do fim do descanso — escolha do aluno no popup Configurações › Som (pedido 18/09/2026).
 // Preferência do APARELHO (localStorage): 1 aparelho = 1 escolha, sem migration nem sync.
-// No APK em segundo plano a notificação nativa continua com o som padrão do canal do Android
-// (não dá pra trocar o som de um canal já criado); a escolha vale com o app aberto (web/APK).
+// Web/PWA: os tons tocam aqui (AudioContext). APK: o serviço nativo (TimerForegroundService) recebe
+// a escolha e gera os MESMOS tons como mídia — com fone conectado, só no fone (pedido dele 18/09/2026).
 
 export type SomDescanso = "bip" | "sino" | "alarme" | "vibrar" | "silencio";
 
 export const SOM_PADRAO: SomDescanso = "bip";
 export const SOM_CHAVE = "physiq_som_descanso";
+/** Disparado no window quando o aluno troca o som (detail = SomDescanso) — o TimerDescanso re-arma o serviço nativo */
+export const SOM_EVENTO = "physiq:som-descanso";
 
 export interface SomOpcao {
   valor: SomDescanso;
@@ -15,7 +17,7 @@ export interface SomOpcao {
 }
 
 export const SOM_OPCOES: SomOpcao[] = [
-  { valor: "bip", nome: "Bip", descricao: "Três toques curtos (o de hoje)" },
+  { valor: "bip", nome: "Bip", descricao: "Três toques curtos" },
   { valor: "sino", nome: "Sino", descricao: "Dois toques longos" },
   { valor: "alarme", nome: "Alarme", descricao: "Cinco toques rápidos" },
   { valor: "vibrar", nome: "Só vibrar", descricao: "Sem som, só vibração" },
@@ -44,6 +46,9 @@ export function gravarSomDescanso(som: SomDescanso): void {
     localStorage.setItem(SOM_CHAVE, som);
   } catch {
     // localStorage indisponível (modo privado) — fica o padrão nesta sessão
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SOM_EVENTO, { detail: som }));
   }
 }
 

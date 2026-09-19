@@ -5,6 +5,8 @@ interface CountdownNotificationPlugin {
     durationSeconds: number;
     title: string;
     body: string;
+    /** Som do fim do descanso escolhido pelo aluno ("bip" | "sino" | "alarme" | "vibrar" | "silencio"); padrão "bip" */
+    som?: string;
   }): Promise<void>;
   stopCountdown(): Promise<void>;
 }

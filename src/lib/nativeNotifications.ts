@@ -1,6 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import CountdownNotification from "./countdownNotification";
+import { lerSomDescanso, temSom } from "./somDescanso";
 
 const isNative = Capacitor.isNativePlatform();
 const TIMER_FINISHED_ID = 1002;
@@ -64,7 +65,8 @@ export async function requestNotificationPermission(): Promise<boolean> {
 /**
  * Inicia o timer de descanso:
  * - Cronômetro nativo do Android (atualiza a cada 1s sem JS)
- * - Notificação agendada para quando o tempo acabar (com som)
+ * - No fim, o serviço nativo toca o som escolhido pelo aluno (Configurações › Som) como mídia,
+ *   vibra ou fica em silêncio — e mostra a notificação "Hora de treinar!"
  */
 export async function startTimerNotifications(
   exercicioNome: string,
@@ -74,13 +76,17 @@ export async function startTimerNotifications(
 
   await cancelTimerNotification();
 
-  // Foreground Service: cronômetro nativo + alarme sonoro em background
-  // O service cuida de tudo: notificação com cronômetro, som e vibração quando acaba
+  // Som escolhido no aparelho — vai pro serviço nativo, que gera os tons (AudioTrack) quando acaba
+  const som = lerSomDescanso();
+
+  // Foreground Service: cronômetro nativo + som/vibração em background
+  // O service cuida de tudo: notificação com cronômetro, som escolhido e vibração quando acaba
   try {
     await CountdownNotification.startCountdown({
       durationSeconds: segundosRestantes,
       title: "⏱ Descanso",
       body: exercicioNome,
+      som,
     });
   } catch (e) {
     console.warn("[Timer] startCountdown:", e);
@@ -94,7 +100,8 @@ export async function startTimerNotifications(
           body: `Descanso concluído: ${exercicioNome}`,
           smallIcon: "ic_launcher",
           channelId: ALERT_CHANNEL_ID,
-          sound: "default",
+          // "Só vibrar"/"Silencioso" → sem som (no Android 8+ o canal ainda manda; limite do fallback)
+          ...(temSom(som) ? { sound: "default" } : {}),
           schedule: {
             at: new Date(Date.now() + segundosRestantes * 1000),
             allowWhileIdle: true,
