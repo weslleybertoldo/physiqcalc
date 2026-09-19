@@ -1,10 +1,17 @@
 name: Check APK build
 
-# Só manual: `gh workflow run build-apk-check.yml --ref <branch>`.
 # Compila o APK assinado DA BRANCH pra provar que o Java/Gradle compilam e pra testar no aparelho
 # ANTES do merge (mesmos passos do build-apk.yml até o APK). NÃO cria release nem faz bump de versão.
+# Roda sozinho no push de qualquer branch (menos main/staging) que mexa no código nativo — o
+# `workflow_dispatch` só funciona depois que o arquivo chegar na main (limite do GitHub).
 on:
   workflow_dispatch:
+  push:
+    branches-ignore: [main, staging]
+    paths:
+      - "android/**"
+      - "capacitor.config.*"
+      - ".github/workflows/build-apk-check.yml"
 
 permissions:
   contents: read
