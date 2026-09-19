@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import wasm from "vite-plugin-wasm";
 import path from "path";
@@ -10,8 +10,29 @@ const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
 const UM_ANO = 60 * 60 * 24 * 365;
 
+// Host direto do projeto Supabase: os GIFs do Storage gravados no banco (`imagem_url`) apontam
+// pra cá mesmo quando o app fala com a API pelo domínio próprio (api.physiqcalc.com.br).
+const SUPABASE_DIRETO = "https://uxwpwdbbnlticxgtzcsb.supabase.co";
+
+const escaparRegex = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * As regras de cache do service worker precisam casar com a MESMA origem que o client usa
+ * (`VITE_SUPABASE_URL`): Supabase direto ou o domínio próprio. Devolve uma RegExp que aceita
+ * qualquer uma das origens conhecidas seguida do caminho pedido.
+ */
+function padraoApi(origens: string[], caminho: string): RegExp {
+  const unicas = Array.from(new Set(origens.map((o) => new URL(o).origin)));
+  return new RegExp("^(?:" + unicas.map(escaparRegex).join("|") + ")" + caminho);
+}
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  // URL da API que o client usa (mesma fonte do `import.meta.env.VITE_SUPABASE_URL`).
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const urlApi = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL || SUPABASE_DIRETO;
+  const origensApi = [urlApi, SUPABASE_DIRETO];
+  return {
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
@@ -59,7 +80,7 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // Supabase REST API — NetworkFirst com fallback ao cache
-            urlPattern: /^https:\/\/uxwpwdbbnlticxgtzcsb\.supabase\.co\/rest\/v1\/.*/,
+            urlPattern: padraoApi(origensApi, "/rest/v1/.*"),
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-api-cache",
@@ -76,14 +97,14 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // Supabase Auth — nunca cachear
-            urlPattern: /^https:\/\/uxwpwdbbnlticxgtzcsb\.supabase\.co\/auth\/.*/,
+            urlPattern: padraoApi(origensApi, "/auth/.*"),
             handler: "NetworkOnly",
           },
           {
             // GIFs/WebP dos exercícios (Storage público) — CacheFirst longo. A URL muda (?v=)
             // quando o GIF muda, então cache "pra sempre" é seguro. O <img> pede com
             // crossorigin=anonymous → resposta CORS (200), sem o padding de resposta opaca.
-            urlPattern: /^https:\/\/uxwpwdbbnlticxgtzcsb\.supabase\.co\/storage\/v1\/object\/public\/exercicios(-staging)?\//,
+            urlPattern: padraoApi(origensApi, "/storage/v1/object/public/exercicios(-staging)?/"),
             handler: "CacheFirst",
             options: {
               cacheName: "exercicios-cache",
@@ -183,4 +204,5 @@ export default defineConfig(({ mode }) => ({
     },
     chunkSizeWarningLimit: 1000,
   },
-}));
+  };
+});
