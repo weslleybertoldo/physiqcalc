@@ -3,12 +3,13 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 // Substitui a janela fixa de 5s anterior — comparacao por chave evita race tanto em
 // sync rapido (nao descarta builds validos) quanto em pausa longa (preserva edits
 // nao sincronizados ate o PowerSync propagar updated_at >= timestamp local).
-import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
+import { ClipboardList, LogOut, History, Settings, RefreshCw, Check, Download, X, ChevronLeft, ChevronRight, CreditCard, Volume2 } from "lucide-react";
 import PendenciaAviso from "@/components/PendenciaAviso";
 import BloqueioMasterGate from "@/components/BloqueioMasterGate";
 import TimerDescanso from "@/components/treinos/TimerDescanso";
 import WorkoutReminder from "@/components/treinos/WorkoutReminder";
 import WorkoutTimer, { iniciarTreinoSeParado } from "@/components/treinos/WorkoutTimer";
+import SomDescansoDialog from "@/components/treinos/SomDescansoDialog";
 import HistoricoTreinos from "@/components/treinos/HistoricoTreinos";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { useAuth } from "@/hooks/useAuth";
@@ -222,6 +223,7 @@ const TreinosPage = () => {
   // Status leve com cache local (6 h), pedido só depois do 1º render — fora do caminho crítico.
   const { pendente: mensalidadePendente } = useMensalidadeStatus(user?.id);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSom, setShowSom] = useState(false); // Configurações › Som (som do fim do descanso)
   const [showConfirmSair, setShowConfirmSair] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<null | { hasUpdate: boolean; url?: string; version?: string }>(null);
@@ -1596,6 +1598,9 @@ const TreinosPage = () => {
           </div>
         )}
 
+        {/* Som do fim do descanso (Configurações › Som) */}
+        <SomDescansoDialog open={showSom} onOpenChange={setShowSom} />
+
         {/* Modal de configurações */}
         {showSettings && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowSettings(false)}>
@@ -1642,6 +1647,16 @@ const TreinosPage = () => {
                 >
                   <CreditCard size={12} />
                   Pagamentos
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setShowSettings(false); setShowSom(true); }}
+                  data-config-som
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-heading uppercase tracking-wider text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
+                >
+                  <Volume2 size={12} />
+                  Som
                 </button>
 
                 {EH_APP ? (
@@ -1733,6 +1748,7 @@ const TreinosPage = () => {
       </div>
 
       <TimerDescanso
+        onAbrirSom={() => setShowSom(true)}
         ativo={timerAtivo}
         exercicioNome={timerExercicio}
         numeroSerie={timerSerie}

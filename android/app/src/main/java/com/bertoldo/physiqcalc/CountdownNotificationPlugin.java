@@ -17,6 +17,8 @@ public class CountdownNotificationPlugin extends Plugin {
         int durationSeconds = call.getInt("durationSeconds", 120);
         String title = call.getString("title", "⏱ Descanso");
         String body = call.getString("body", "");
+        // Som do fim do descanso escolhido pelo aluno (bip | sino | alarme | vibrar | silencio)
+        String som = call.getString("som", TimerForegroundService.SOM_PADRAO);
 
         Context context = getContext();
 
@@ -25,6 +27,7 @@ public class CountdownNotificationPlugin extends Plugin {
         serviceIntent.putExtra(TimerForegroundService.EXTRA_DURATION, durationSeconds);
         serviceIntent.putExtra(TimerForegroundService.EXTRA_TITLE, title);
         serviceIntent.putExtra(TimerForegroundService.EXTRA_BODY, body);
+        serviceIntent.putExtra(TimerForegroundService.EXTRA_SOM, som);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(serviceIntent);

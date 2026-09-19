@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
-import { X, Play, Pause, RotateCcw } from "lucide-react";
+import { X, Play, Pause, RotateCcw, Volume2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   requestNotificationPermission,
@@ -9,6 +9,7 @@ import {
   cancelTimerNotification,
 } from "@/lib/nativeNotifications";
 import { restanteDescanso } from "@/lib/descanso";
+import { SOM_EVENTO, VIBRACAO_FIM_DESCANSO, deveVibrar, lerSomDescanso, temSom, tocarSom } from "@/lib/somDescanso";
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -36,6 +37,8 @@ interface TimerDescansoProps {
   serieId: string;
   onFechado: () => void;
   onTempoAlterado: (segundos: number) => void;
+  /** Abre o popup "Som do descanso" (ícone 🔊 na barra) — o aluno não tem a engrenagem de Configurações */
+  onAbrirSom?: () => void;
 }
 
 function lerEstadoSalvo(): RestTimerState | null {
@@ -57,7 +60,7 @@ function limparEstado() {
 // Notificações nativas são gerenciadas pelo Android (não dependem de JS em background)
 
 const TimerDescanso = ({
-  ativo, exercicioNome, numeroSerie, duracaoSegundos, serieId, onFechado, onTempoAlterado,
+  ativo, exercicioNome, numeroSerie, duracaoSegundos, serieId, onFechado, onTempoAlterado, onAbrirSom,
 }: TimerDescansoProps) => {
   const calcularRestante = useCallback((state: RestTimerState): number => restanteDescanso(state), []);
 
@@ -126,26 +129,24 @@ const TimerDescanso = ({
     startTimerNotifications(`${exercicioNome} — Série ${numeroSerie}`, duracaoSegundos);
   }, [ativo, serieId, duracaoSegundos, exercicioNome, numeroSerie]);
 
+  // Som do fim do descanso = escolha do aluno (Configurações › Som; padrão "Bip" = os 3 toques de sempre)
   const playBeep = useCallback(async () => {
     try {
+      const som = lerSomDescanso();
+      if (!temSom(som)) return; // "Só vibrar" / "Silencioso"
       const ctx = audioRef.current || new AudioContext();
       audioRef.current = ctx;
       // Resume context if suspended (happens after app goes to background)
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
-      const playTone = (freq: number, delay: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.8);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.8);
-      };
-      playTone(880, 0); playTone(880, 0.9); playTone(1100, 1.8);
+      tocarSom(ctx, som);
     } catch {}
+  }, []);
+
+  // Vibração do fim do descanso — só se o som escolhido vibra ("Silencioso" não)
+  const vibrarFim = useCallback(() => {
+    if (deveVibrar(lerSomDescanso()) && navigator.vibrate) navigator.vibrate(VIBRACAO_FIM_DESCANSO);
   }, []);
 
   // Loop do timer — roda enquanto ativo, não pausado e não finalizado.
@@ -173,7 +174,7 @@ const TimerDescanso = ({
         // No PWA, toca beep via AudioContext + vibração do browser
         if (!isNative) {
           playBeep();
-          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+          vibrarFim();
         }
         if (!notifiedRef.current) {
           notifiedRef.current = true;
@@ -187,7 +188,7 @@ const TimerDescanso = ({
     tick();
     intervalRef.current = setInterval(tick, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [ativo, paused, finished, playBeep, exercicioNome, calcularRestante]);
+  }, [ativo, paused, finished, playBeep, vibrarFim, exercicioNome, calcularRestante]);
 
   // Quando app volta ao primeiro plano, recalcula tempo real decorrido
   useEffect(() => {
@@ -206,7 +207,7 @@ const TimerDescanso = ({
           if (!notifiedRef.current) {
             notifiedRef.current = true;
             playBeep();
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+            vibrarFim();
           }
           limparEstado();
         } else {
@@ -216,7 +217,22 @@ const TimerDescanso = ({
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [ativo, calcularRestante, playBeep]);
+  }, [ativo, calcularRestante, playBeep, vibrarFim]);
+
+  // Trocou o som (Configurações › Som) com um descanso correndo → re-arma o serviço nativo com o som
+  // novo e o tempo restante (web = no-op: startTimerNotifications sai se !isNative e lê o som na hora)
+  useEffect(() => {
+    if (!ativo || paused || finished) return;
+    const onSomTrocado = () => {
+      const saved = lerEstadoSalvo();
+      if (!saved || !saved.ativo || saved.isPaused) return;
+      const restante = calcularRestante(saved);
+      if (restante <= 0) return;
+      startTimerNotifications(`${saved.exercicioNome} — Série ${saved.numeroSerie}`, restante);
+    };
+    window.addEventListener(SOM_EVENTO, onSomTrocado);
+    return () => window.removeEventListener(SOM_EVENTO, onSomTrocado);
+  }, [ativo, paused, finished, calcularRestante]);
 
   const handleTogglePause = () => {
     const nowPaused = !paused;
@@ -304,9 +320,23 @@ const TimerDescanso = ({
           <span className="text-xs text-muted-foreground font-body truncate max-w-[180px]">
             {exercicioNome} — Série {numeroSerie}
           </span>
-          <button type="button" onClick={handleFechar} className="text-muted-foreground hover:text-foreground transition-colors">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            {onAbrirSom && (
+              <button
+                type="button"
+                onClick={onAbrirSom}
+                data-abrir-som
+                title="Som do descanso"
+                aria-label="Som do descanso"
+                className="p-1 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Volume2 size={16} />
+              </button>
+            )}
+            <button type="button" onClick={handleFechar} className="text-muted-foreground hover:text-foreground transition-colors">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="text-center">
