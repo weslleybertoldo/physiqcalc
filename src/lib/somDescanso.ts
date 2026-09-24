@@ -91,5 +91,5 @@ export function tocarSom(ctx: AudioContext, som: SomDescanso): void {
   }
 }
 
-/** Padrão de vibração do fim do descanso (o mesmo de sempre). */
-export const VIBRACAO_FIM_DESCANSO = [200, 100, 200, 100, 400];
+/** Padrão de vibração do fim do descanso: 3 vibrações de 3 s com 1 s de pausa (11 s) — o nativo usa o mesmo. */
+export const VIBRACAO_FIM_DESCANSO = [3000, 1000, 3000, 1000, 3000];

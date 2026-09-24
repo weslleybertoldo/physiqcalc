@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  SOM_CHAVE, SOM_OPCOES, SOM_PADRAO, deveVibrar, ehSomDescanso, gravarSomDescanso, lerSomDescanso, nomeDoSom,
-  temSom, tocarSom, tonsDoSom,
+  SOM_CHAVE, SOM_OPCOES, SOM_PADRAO, VIBRACAO_FIM_DESCANSO, deveVibrar, ehSomDescanso, gravarSomDescanso,
+  lerSomDescanso, nomeDoSom, temSom, tocarSom, tonsDoSom,
 } from "./somDescanso";
 
 /** AudioContext falso que registra os osciladores tocados */
@@ -58,6 +58,13 @@ describe("somDescanso — opções e tons", () => {
     expect(temSom("alarme")).toBe(true);
     expect(temSom("vibrar")).toBe(false);
     expect(temSom("silencio")).toBe(false);
+  });
+
+  it("o fim do descanso vibra 3 vezes de 3 s, com 1 s de pausa", () => {
+    const vibracoes = VIBRACAO_FIM_DESCANSO.filter((_, i) => i % 2 === 0);
+    const pausas = VIBRACAO_FIM_DESCANSO.filter((_, i) => i % 2 === 1);
+    expect(vibracoes).toEqual([3000, 3000, 3000]);
+    expect(pausas).toEqual([1000, 1000]);
   });
 });
 

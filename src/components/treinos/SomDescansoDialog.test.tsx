@@ -73,6 +73,16 @@ describe("SomDescansoDialog", () => {
     expect(audio.starts).toBe(5);
   });
 
+  it("no site, Ouvir do Só vibrar vibra pelo navegador (3× de 3 s); Silencioso não vibra", () => {
+    const vibrate = vi.fn(() => true);
+    Object.defineProperty(navigator, "vibrate", { value: vibrate, configurable: true });
+    render(<SomDescansoDialog open onOpenChange={() => {}} />);
+    fireEvent.click(ouvir("vibrar"));
+    expect(vibrate).toHaveBeenCalledWith([3000, 1000, 3000, 1000, 3000]);
+    fireEvent.click(ouvir("silencio"));
+    expect(vibrate).toHaveBeenCalledTimes(1);
+  });
+
   it("fechado não renderiza a lista", () => {
     render(<SomDescansoDialog open={false} onOpenChange={() => {}} />);
     expect(document.querySelectorAll("[data-som-opcao]")).toHaveLength(0);

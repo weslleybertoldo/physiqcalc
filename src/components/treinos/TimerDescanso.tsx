@@ -144,8 +144,10 @@ const TimerDescanso = ({
     } catch {}
   }, []);
 
-  // Vibração do fim do descanso — só se o som escolhido vibra ("Silencioso" não)
+  // Vibração do fim do descanso — só se o som escolhido vibra ("Silencioso" não).
+  // No APK quem vibra é o serviço nativo; ao voltar pro app ele para, e vibrar de novo aqui repetiria os 11 s.
   const vibrarFim = useCallback(() => {
+    if (isNative) return;
     if (deveVibrar(lerSomDescanso()) && navigator.vibrate) navigator.vibrate(VIBRACAO_FIM_DESCANSO);
   }, []);
 
