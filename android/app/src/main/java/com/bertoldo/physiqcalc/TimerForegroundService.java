@@ -17,9 +17,11 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
@@ -41,6 +43,7 @@ import androidx.core.app.NotificationCompat;
  */
 public class TimerForegroundService extends Service {
 
+    private static final String TAG = "TimerForegroundService";
     private static final String CHANNEL_TIMER = "timer_foreground_v2";
     // v3 = canal mudo (o som vem do AudioTrack). O v2 tinha som USAGE_ALARM gravado — canal não muda depois de criado.
     private static final String CHANNEL_ALARM = "timer_alarm_v3";
@@ -283,7 +286,11 @@ public class TimerForegroundService extends Service {
         manager.notify(ALARM_NOTIFICATION_ID, alarmNotif);
     }
 
-    /** Mesmo padrão do web (VIBRACAO_FIM_DESCANSO): 200 · pausa 100 · 200 · pausa 100 · 400 */
+    /**
+     * Mesmo padrão do web (VIBRACAO_FIM_DESCANSO): 200 · pausa 100 · 200 · pausa 100 · 400.
+     * Vibra como ALARME: vibração comum (sem uso) é descartada pelo Android na economia de bateria.
+     * Precisa da permissão VIBRATE no manifesto — sem ela o vibrate() lança SecurityException.
+     */
     private void vibrar() {
         try {
             Vibrator vibrator;
@@ -293,16 +300,25 @@ public class TimerForegroundService extends Service {
             } else {
                 vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             }
-            if (vibrator != null) {
-                long[] pattern = {0, 200, 100, 200, 100, 400};
+            if (vibrator == null || !vibrator.hasVibrator()) return;
+
+            long[] pattern = {0, 200, 100, 200, 100, 400};
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1),
+                    VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM));
+            } else {
+                AudioAttributes alarme = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1));
+                    vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1), alarme);
                 } else {
-                    vibrator.vibrate(pattern, -1);
+                    vibrator.vibrate(pattern, -1, alarme);
                 }
             }
         } catch (Exception e) {
-            // Ignora se vibração não disponível
+            Log.w(TAG, "vibração do fim do descanso falhou", e);
         }
     }
 
