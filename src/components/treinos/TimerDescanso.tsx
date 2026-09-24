@@ -262,20 +262,19 @@ const TimerDescanso = ({
   };
 
   const handleSubtract15 = () => {
-    setSeconds((s) => {
-      const next = Math.max(0, s - 15);
-      const saved = lerEstadoSalvo();
-      if (saved) {
-        if (saved.isPaused) {
-          salvarEstado({ ...saved, pausedRemaining: next });
-        } else {
-          // Recalcula startedAt para refletir os 15s subtraídos
-          const newStartedAt = Date.now() - ((saved.duracao - next) * 1000);
-          salvarEstado({ ...saved, startedAt: newStartedAt, pausedRemaining: next });
-        }
-      }
-      return next;
-    });
+    if (finished) return; // já acabou: nada a adiantar (e o alarme não pode tocar de novo)
+    const next = Math.max(0, seconds - 15);
+    setSeconds(next);
+    const saved = lerEstadoSalvo();
+    if (!saved) return;
+    if (saved.isPaused) {
+      salvarEstado({ ...saved, pausedRemaining: next });
+      return;
+    }
+    // Recalcula startedAt para refletir os 15s subtraídos
+    salvarEstado({ ...saved, startedAt: Date.now() - ((saved.duracao - next) * 1000), pausedRemaining: next });
+    // Re-arma o aviso nativo com o tempo novo — senão o APK toca/vibra no fim ANTIGO, depois da tela zerar
+    startTimerNotifications(`${saved.exercicioNome} — Série ${saved.numeroSerie}`, next);
   };
 
   const handleChangeTime = (val: string) => {
