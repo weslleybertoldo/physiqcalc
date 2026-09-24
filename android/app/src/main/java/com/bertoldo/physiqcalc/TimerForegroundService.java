@@ -17,9 +17,11 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
@@ -41,6 +43,7 @@ import androidx.core.app.NotificationCompat;
  */
 public class TimerForegroundService extends Service {
 
+    private static final String TAG = "TimerForegroundService";
     private static final String CHANNEL_TIMER = "timer_foreground_v2";
     // v3 = canal mudo (o som vem do AudioTrack). O v2 tinha som USAGE_ALARM gravado — canal não muda depois de criado.
     private static final String CHANNEL_ALARM = "timer_alarm_v3";
@@ -50,8 +53,8 @@ public class TimerForegroundService extends Service {
 
     // Segurança: service se encerra sozinho após 15 minutos (mesmo se algo der errado)
     private static final long MAX_SERVICE_LIFETIME_MS = 15 * 60 * 1000L;
-    // Tempo que o alarme toca antes do service se encerrar
-    private static final long ALARM_DURATION_MS = 10_000L;
+    // Tempo que o alarme toca antes do service se encerrar — cobre a vibração de 11 s (o encerramento corta ela)
+    private static final long ALARM_DURATION_MS = 12_000L;
 
     private static final int SAMPLE_RATE = 44100;
 
@@ -255,7 +258,7 @@ public class TimerForegroundService extends Service {
         boolean silencio = "silencio".equals(som);
         double[][] tons = tonsDoSom(som); // vazio pra "vibrar" e "silencio"
 
-        if (!silencio) vibrar();
+        if (!silencio) vibrar(this);
         if (tons.length > 0) tocarTons(tons);
 
         // Notificação "Hora de treinar!" — só visual (canal mudo + setSilent); o som é o AudioTrack acima
@@ -283,26 +286,53 @@ public class TimerForegroundService extends Service {
         manager.notify(ALARM_NOTIFICATION_ID, alarmNotif);
     }
 
-    /** Mesmo padrão do web (VIBRACAO_FIM_DESCANSO): 200 · pausa 100 · 200 · pausa 100 · 400 */
-    private void vibrar() {
+    private static Vibrator vibrador(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            VibratorManager vm = (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            return vm.getDefaultVibrator();
+        }
+        return (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+    }
+
+    /**
+     * Mesmo padrão do web (VIBRACAO_FIM_DESCANSO): 3 vibrações de 3 s com 1 s de pausa (11 s).
+     * Vibra como ALARME: vibração comum (sem uso) é descartada pelo Android na economia de bateria, e a
+     * de toque (navigator.vibrate da WebView) some com a "vibração ao tocar" desligada.
+     * Precisa da permissão VIBRATE no manifesto — sem ela o vibrate() lança SecurityException.
+     * Também é a prévia do "Ouvir" (CountdownNotificationPlugin.vibrar), pra ela sentir igual ao fim.
+     */
+    static void vibrar(Context context) {
         try {
-            Vibrator vibrator;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                VibratorManager vm = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-                vibrator = vm.getDefaultVibrator();
+            Vibrator vibrator = vibrador(context);
+            if (vibrator == null || !vibrator.hasVibrator()) return;
+
+            long[] pattern = {0, 3000, 1000, 3000, 1000, 3000};
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1),
+                    VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM));
             } else {
-                vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-            }
-            if (vibrator != null) {
-                long[] pattern = {0, 200, 100, 200, 100, 400};
+                AudioAttributes alarme = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1));
+                    vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1), alarme);
                 } else {
-                    vibrator.vibrate(pattern, -1);
+                    vibrator.vibrate(pattern, -1, alarme);
                 }
             }
         } catch (Exception e) {
-            // Ignora se vibração não disponível
+            Log.w(TAG, "vibração do fim do descanso falhou", e);
+        }
+    }
+
+    /** Corta a vibração no meio (fechou o descanso, começou outro ou voltou pro app) — ela dura 11 s. */
+    static void pararVibracao(Context context) {
+        try {
+            Vibrator vibrator = vibrador(context);
+            if (vibrator != null) vibrator.cancel();
+        } catch (Exception e) {
+            Log.w(TAG, "parar a vibração falhou", e);
         }
     }
 
@@ -411,6 +441,7 @@ public class TimerForegroundService extends Service {
     private void stopAlarm() {
         isAlarmPlaying = false;
         releaseAudioTrack();
+        pararVibracao(this);
     }
 
     // ── Canais de notificação ──

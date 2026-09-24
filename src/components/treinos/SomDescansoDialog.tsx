@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import CountdownNotification, { isNativeApp } from "@/lib/countdownNotification";
 import {
   SOM_OPCOES, VIBRACAO_FIM_DESCANSO, deveVibrar, gravarSomDescanso, lerSomDescanso, nomeDoSom, temSom, tocarSom,
   type SomDescanso,
@@ -32,8 +33,11 @@ const SomDescansoDialog = ({ open, onOpenChange }: Props) => {
 
   const ouvir = async (som: SomDescanso) => {
     try {
-      if (deveVibrar(som) && typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(VIBRACAO_FIM_DESCANSO);
+      if (deveVibrar(som)) {
+        // No APK vibra pelo nativo, igual ao fim do descanso (uso alarme): o navigator.vibrate da WebView
+        // sai como vibração de toque e o Android ignora com a "vibração ao tocar" desligada
+        if (isNativeApp) CountdownNotification.vibrar().catch(() => {});
+        else if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(VIBRACAO_FIM_DESCANSO);
       }
       if (!temSom(som)) return;
       const ctx = new AudioContext();
