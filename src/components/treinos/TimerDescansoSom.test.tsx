@@ -77,3 +77,35 @@ describe("TimerDescanso — troca de som com descanso em andamento", () => {
     expect(start).not.toHaveBeenCalled();
   });
 });
+
+describe("TimerDescanso — botão -15s", () => {
+  const menos15 = () =>
+    Array.from(document.querySelectorAll("button")).find((b) => b.textContent === "-15s") as HTMLButtonElement;
+
+  it("re-arma o aviso nativo com o tempo novo (senão o APK vibra no fim antigo, depois da tela zerar)", () => {
+    renderTimer();
+    const start = vi.mocked(startTimerNotifications);
+    start.mockClear();
+
+    fireEvent.click(menos15());
+
+    expect(start).toHaveBeenCalledTimes(1);
+    const [nome, restante] = start.mock.calls[0];
+    expect(nome).toBe("Agachamento — Série 1");
+    expect(restante).toBeGreaterThanOrEqual(74);
+    expect(restante).toBeLessThanOrEqual(75);
+  });
+
+  it("com o descanso pausado só guarda o tempo novo, sem armar aviso", () => {
+    renderTimer();
+    const salvo = JSON.parse(localStorage.getItem("physiq_rest_timer") as string);
+    localStorage.setItem("physiq_rest_timer", JSON.stringify({ ...salvo, isPaused: true, pausedRemaining: 90 }));
+    const start = vi.mocked(startTimerNotifications);
+    start.mockClear();
+
+    fireEvent.click(menos15());
+
+    expect(start).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem("physiq_rest_timer") as string).pausedRemaining).toBe(75);
+  });
+});
