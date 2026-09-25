@@ -13,6 +13,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { MEDIDA_FIELDS, MEDIDA_LOWER_BETTER, MEDIDA_GROUPS, type MedidaKey } from "@/lib/medidas";
+import CamposAvaliacao from "@/components/avaliacao/CamposAvaliacao";
+import {
+  calcularComposicao, colunasDoMetodo, dadosBalanca, rotuloMetodo, tmbEscolhida, tmbValida, valoresVazios,
+  type Sexo, type TmbMetodo, type ValoresAvaliacao,
+} from "@/lib/avaliacao";
 
 interface Avaliacao {
   id: string;
@@ -35,23 +40,32 @@ interface Avaliacao {
 interface Props {
   userId: string;
   isAdmin?: boolean;
+  /** Registrar Avaliação (admin) calcula o % de gordura das dobras com o sexo/idade do aluno e usa a TMB preferida */
+  sexo?: Sexo;
+  idade?: number | null;
+  tmbPreferida?: TmbMetodo;
 }
 
-type MetricKey = "percentual_gordura" | "peso" | "massa_magra" | "massa_gorda" | "tmb_mifflin" | MedidaKey;
+type MetricKey = "percentual_gordura" | "peso" | "massa_magra" | "massa_gorda" | "tmb" | MedidaKey;
 
+// "tmb" = a TMB escolhida em cada avaliação (Mifflin, Katch ou balança — 25/09/2026); a balança traz mais 3 métricas
 const BASE_METRIC_LABELS: Record<string, string> = {
   percentual_gordura: "% Gordura",
   peso: "Peso (kg)",
   massa_magra: "M. Magra (kg)",
   massa_gorda: "M. Gorda (kg)",
-  tmb_mifflin: "TMB (kcal)",
+  tmb: "TMB (kcal)",
+  massa_muscular: "M. Muscular (kg)",
+  agua_corporal: "Água (%)",
+  gordura_visceral: "Visceral (nível)",
 };
+const METRICAS_BALANCA = ["massa_muscular", "agua_corporal", "gordura_visceral"];
 
 // Build full labels map including medidas
 const METRIC_LABELS: Record<string, string> = { ...BASE_METRIC_LABELS };
 MEDIDA_FIELDS.forEach(f => { METRIC_LABELS[f.key] = `${f.label} (cm)`; });
 
-const BASE_LOWER_BETTER = ["percentual_gordura", "massa_gorda"];
+const BASE_LOWER_BETTER = ["percentual_gordura", "massa_gorda", "gordura_visceral"];
 const ALL_LOWER_BETTER = [...BASE_LOWER_BETTER, ...MEDIDA_LOWER_BETTER];
 
 // Metrics where increase is good (muscle measurements)
@@ -74,7 +88,8 @@ function VariationBadge({ current, previous, metric }: { current: number | null;
   const Icon = diff > 0 ? TrendingUp : TrendingDown;
   const sign = diff > 0 ? "+" : "";
   const isMedida = metric.startsWith("medida_");
-  const unit = metric === "percentual_gordura" ? "%" : metric === "tmb_mifflin" ? " kcal" : isMedida ? " cm" : " kg";
+  const unit = metric === "percentual_gordura" || metric === "agua_corporal" ? "%"
+    : metric === "tmb" ? " kcal" : metric === "gordura_visceral" ? "" : isMedida ? " cm" : " kg";
 
   return (
     <span className={`flex items-center gap-1 text-xs font-heading ${color}`}>
@@ -83,7 +98,7 @@ function VariationBadge({ current, previous, metric }: { current: number | null;
   );
 }
 
-const BASE_METRICS = ["percentual_gordura", "peso", "massa_magra", "massa_gorda", "tmb_mifflin"];
+const BASE_METRICS = ["percentual_gordura", "peso", "massa_magra", "massa_gorda", "tmb"];
 const CHART_MEDIDA_KEYS = [
   "medida_cintura", "medida_quadril",
   "medida_braco_d", "medida_braco_e",
@@ -91,7 +106,7 @@ const CHART_MEDIDA_KEYS = [
   "medida_panturrilha_d", "medida_panturrilha_e",
 ];
 
-const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
+const EvolutionSection = ({ userId, isAdmin = false, sexo = "male", idade = null, tmbPreferida = "mifflin" }: Props) => {
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<string>("percentual_gordura");
@@ -99,9 +114,10 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
 
   const [formData, setFormData] = useState<Record<string, string>>({
     data_avaliacao: (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })(),
-    peso: "", altura: "", dobra_1: "", dobra_2: "", dobra_3: "", observacao: "",
+    peso: "", altura: "", observacao: "",
     ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, ""])),
   });
+  const [valoresNova, setValoresNova] = useState<ValoresAvaliacao>(() => valoresVazios());
 
   const loadAvaliacoes = async () => {
     try {
@@ -130,13 +146,20 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
   useEffect(() => { loadAvaliacoes(); }, [userId]);
 
   const handleCreateManual = async () => {
+    const peso = parseFloat(formData.peso) || null;
+    const altura = parseFloat(formData.altura) || null;
+    const c = calcularComposicao(valoresNova, { sexo, idade, peso, altura });
     const avaliacao: Record<string, any> = {
       data_avaliacao: formData.data_avaliacao,
-      peso: parseFloat(formData.peso) || null,
-      altura: parseFloat(formData.altura) || null,
-      dobra_1: parseFloat(formData.dobra_1) || null,
-      dobra_2: parseFloat(formData.dobra_2) || null,
-      dobra_3: parseFloat(formData.dobra_3) || null,
+      peso,
+      altura,
+      ...colunasDoMetodo(valoresNova),
+      percentual_gordura: c.bf,
+      massa_gorda: c.massaGorda,
+      massa_magra: c.massaMagra,
+      tmb_mifflin: c.tmbMifflin,
+      tmb_katch: c.tmbKatch,
+      tmb_metodo: tmbValida(tmbPreferida, c),
       observacao: formData.observacao || null,
     };
     MEDIDA_FIELDS.forEach(f => { avaliacao[f.key] = parseFloat(formData[f.key]) || null; });
@@ -147,9 +170,10 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
     setDialogOpen(false);
     setFormData({
       data_avaliacao: (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })(),
-      peso: "", altura: "", dobra_1: "", dobra_2: "", dobra_3: "", observacao: "",
+      peso: "", altura: "", observacao: "",
       ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, ""])),
     });
+    setValoresNova(valoresVazios());
     loadAvaliacoes();
   };
 
@@ -158,18 +182,29 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
     loadAvaliacoes();
   };
 
+  // valor da métrica numa avaliação ("tmb" = a TMB escolhida naquela avaliação)
+  const valorMetrica = (a: Avaliacao, m: string): number | null =>
+    m === "tmb" ? tmbEscolhida(a).valor : a[m] != null ? Number(a[m]) : null;
+
   const chartData = useMemo(() => {
     return avaliacoes.map((a) => ({
       date: formatDate(a.data_avaliacao),
-      value: a[selectedMetric] != null ? Number(a[selectedMetric]) : null,
+      value: valorMetrica(a, selectedMetric),
+      metodo: rotuloMetodo(a.metodo_avaliacao),
     })).filter((d) => d.value !== null);
   }, [avaliacoes, selectedMetric]);
+
+  // métricas da balança só aparecem se alguma avaliação tem o dado
+  const metricasBalanca = useMemo(
+    () => METRICAS_BALANCA.filter((m) => avaliacoes.some((a) => a[m] != null)),
+    [avaliacoes],
+  );
 
   const comparison = useMemo(() => {
     if (avaliacoes.length < 2) return null;
     const first = avaliacoes[0];
     const last = avaliacoes[avaliacoes.length - 1];
-    const metrics = ["peso", "percentual_gordura", "massa_magra", "massa_gorda", ...MEDIDA_FIELDS.map(f => f.key)];
+    const metrics = ["peso", "percentual_gordura", "massa_magra", "massa_gorda", ...METRICAS_BALANCA, ...MEDIDA_FIELDS.map(f => f.key)];
     return metrics.map((m) => ({
       metric: m,
       label: METRIC_LABELS[m] || m,
@@ -221,13 +256,27 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
                   <div key={a.id} className="py-4 border-b border-muted-foreground/30">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="font-heading text-sm text-primary">{formatDate(a.data_avaliacao)}</p>
+                        <p className="font-heading text-sm text-primary">
+                          {formatDate(a.data_avaliacao)}
+                          {/* tipo só quando a avaliação tem composição (registro só com medidas não é "3 dobras") */}
+                          {a.percentual_gordura != null && (
+                            <span className="ml-2 text-xs font-body text-muted-foreground" data-metodo-avaliacao>{rotuloMetodo(a.metodo_avaliacao)}</span>
+                          )}
+                        </p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 mt-2">
                           <TimelineField label="Peso" value={a.peso} unit="kg" prev={prev?.peso} metric="peso" />
                           <TimelineField label="% Gordura" value={a.percentual_gordura} unit="%" prev={prev?.percentual_gordura} metric="percentual_gordura" />
                           <TimelineField label="M. Gorda" value={a.massa_gorda} unit="kg" prev={prev?.massa_gorda} metric="massa_gorda" />
                           <TimelineField label="M. Magra" value={a.massa_magra} unit="kg" prev={prev?.massa_magra} metric="massa_magra" />
                         </div>
+                        {/* Dados da balança (bioimpedância) */}
+                        {dadosBalanca(a).length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 mt-2" data-dados-balanca>
+                            {dadosBalanca(a).map((d) => (
+                              <TimelineField key={d.key} label={d.label} value={a[d.key]} unit={d.key === "massa_muscular" ? "kg" : d.key === "agua_corporal" ? "%" : ""} prev={prev?.[d.key]} metric={d.key} />
+                            ))}
+                          </div>
+                        )}
                         {/* Medidas in timeline */}
                         {activeMedidas.length > 0 && (
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 mt-2">
@@ -275,7 +324,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
             <section className="order-1">
               <h2 className="font-heading text-lg text-foreground mb-4">Gráficos de Evolução</h2>
               <div className="flex flex-wrap gap-2 mb-6">
-                {[...BASE_METRICS, ...CHART_MEDIDA_KEYS].map((key) => (
+                {[...BASE_METRICS, ...metricasBalanca, ...CHART_MEDIDA_KEYS].map((key) => (
                   <button
                     key={key}
                     onClick={() => setSelectedMetric(key)}
@@ -301,6 +350,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
                         border: "1px solid hsl(var(--muted-foreground) / 0.3)",
                         fontSize: 12,
                       }}
+                      formatter={(v: number, nome: string, item: { payload?: { metodo?: string } }) => [Number(v.toFixed(1)), `${nome} · ${item.payload?.metodo ?? ""}`]}
                     />
                     <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--primary))" }} name={METRIC_LABELS[selectedMetric]} />
                     {chartData.length > 0 && (
@@ -368,11 +418,7 @@ const EvolutionSection = ({ userId, isAdmin = false }: Props) => {
               <FormField label="Peso (kg)" field="peso" formData={formData} setFormData={setFormData} />
               <FormField label="Altura (cm)" field="altura" formData={formData} setFormData={setFormData} />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <FormField label="Dobra 1" field="dobra_1" formData={formData} setFormData={setFormData} />
-              <FormField label="Dobra 2" field="dobra_2" formData={formData} setFormData={setFormData} />
-              <FormField label="Dobra 3" field="dobra_3" formData={formData} setFormData={setFormData} />
-            </div>
+            <CamposAvaliacao valores={valoresNova} onChange={setValoresNova} sexo={sexo} compacto />
 
             {/* Medidas */}
             {MEDIDA_GROUPS.map(group => (

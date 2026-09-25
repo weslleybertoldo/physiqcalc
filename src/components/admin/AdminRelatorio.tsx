@@ -4,6 +4,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatarDataCurta, agoraFormatado } from "@/utils/formatDate";
 import { contarDiasTreinados } from "@/lib/contagemTreinos";
+import { rotuloMetodo, tmbEscolhida } from "@/lib/avaliacao";
 import {
   desenharCabecalho, desenharTituloSecao, desenharCard,
   desenharRodape, estiloTabela, novaPagina, limparTexto,
@@ -46,6 +47,15 @@ interface ProfileData {
   massa_magra: number | null;
   tmb_mifflin: number | null;
   tmb_katch: number | null;
+  tmb_balanca?: number | null;
+  tmb_metodo?: string | null;
+  metodo_avaliacao?: string | null;
+}
+
+// TMB escolhida da última avaliação; avaliação sem TMB gravada (antes de 25/09/2026 o registro perdia a TMB) → a do perfil
+function tmbDoAluno(perfil: ProfileData | null, avaliacao: Record<string, unknown> | null | undefined) {
+  const daAvaliacao = avaliacao ? tmbEscolhida(avaliacao) : null;
+  return daAvaliacao?.valor != null ? daAvaliacao : tmbEscolhida((perfil ?? {}) as Record<string, unknown>);
 }
 
 interface ExercicioAgrupado {
@@ -248,8 +258,7 @@ function CardPerfil({ perfil, avaliacao }: { perfil: ProfileData | null; avaliac
   const pGordura = avaliacao?.percentual_gordura ?? perfil.percentual_gordura;
   const mGorda = avaliacao?.massa_gorda ?? perfil.massa_gorda;
   const mMagra = avaliacao?.massa_magra ?? perfil.massa_magra;
-  const tmbMifflin = avaliacao?.tmb_mifflin ?? perfil.tmb_mifflin;
-  const tmbKatch = avaliacao?.tmb_katch ?? perfil.tmb_katch;
+  const tmb = tmbDoAluno(perfil, avaliacao);
 
   return (
     <div className="result-card border-muted-foreground/20 mb-5">
@@ -293,13 +302,10 @@ function CardPerfil({ perfil, avaliacao }: { perfil: ProfileData | null; avaliac
       )}
 
       {/* TMB */}
-      {(tmbMifflin || tmbKatch) && (
+      {tmb.valor !== null && (
         <>
           <Divisor label="Taxa Metabólica Basal" />
-          <div className="grid grid-cols-2 gap-2">
-            <TMBBox label="TMB Mifflin-St Jeor" value={tmbMifflin ? `${Math.round(Number(tmbMifflin))} kcal/dia` : "—"} />
-            <TMBBox label="TMB Katch-McArdle" value={tmbKatch ? `${Math.round(Number(tmbKatch))} kcal/dia` : "—"} />
-          </div>
+          <TMBBox label={`TMB ${tmb.label}`} value={`${Math.round(tmb.valor)} kcal/dia`} />
         </>
       )}
 
@@ -506,7 +512,7 @@ function exportarPDF(
       ["Peso", (avaliacao?.peso ?? perfil?.peso) ? `${avaliacao?.peso ?? perfil?.peso} kg` : "-", "Altura", (avaliacao?.altura ?? perfil?.altura) ? `${avaliacao?.altura ?? perfil?.altura} cm` : "-"],
       ["Idade", perfil?.idade ? `${perfil.idade} anos` : "-", "% Gordura", (avaliacao?.percentual_gordura ?? perfil?.percentual_gordura) ? `${Number(avaliacao?.percentual_gordura ?? perfil?.percentual_gordura).toFixed(1)}%` : "-"],
       ["Massa Gorda", (avaliacao?.massa_gorda ?? perfil?.massa_gorda) ? `${Number(avaliacao?.massa_gorda ?? perfil?.massa_gorda).toFixed(1)} kg` : "-", "Massa Magra", (avaliacao?.massa_magra ?? perfil?.massa_magra) ? `${Number(avaliacao?.massa_magra ?? perfil?.massa_magra).toFixed(1)} kg` : "-"],
-      ["TMB Mifflin", (avaliacao?.tmb_mifflin ?? perfil?.tmb_mifflin) ? `${Number(avaliacao?.tmb_mifflin ?? perfil?.tmb_mifflin).toFixed(1)} kcal/dia` : "-", "TMB Katch", (avaliacao?.tmb_katch ?? perfil?.tmb_katch) ? `${Number(avaliacao?.tmb_katch ?? perfil?.tmb_katch).toFixed(1)} kcal/dia` : "-"],
+      ["TMB", (() => { const t = tmbDoAluno(perfil, avaliacao); return t.valor !== null ? `${Math.round(t.valor)} kcal/dia (${limparTexto(t.label)})` : "-"; })(), "Tipo de avaliacao", limparTexto(rotuloMetodo((avaliacao ?? perfil)?.metodo_avaliacao))],
     ],
     ...estiloTabela(),
     margin: { left: 14, right: 14, top: 15 },
@@ -763,8 +769,8 @@ async function exportarExcel(
     ["% Gordura", (avaliacao?.percentual_gordura ?? perfil?.percentual_gordura) ? `${avaliacao?.percentual_gordura ?? perfil?.percentual_gordura}%` : "-"],
     ["Massa Gorda", (avaliacao?.massa_gorda ?? perfil?.massa_gorda) ? `${avaliacao?.massa_gorda ?? perfil?.massa_gorda} kg` : "-"],
     ["Massa Magra", (avaliacao?.massa_magra ?? perfil?.massa_magra) ? `${avaliacao?.massa_magra ?? perfil?.massa_magra} kg` : "-"],
-    ["TMB Mifflin", (avaliacao?.tmb_mifflin ?? perfil?.tmb_mifflin) ? `${avaliacao?.tmb_mifflin ?? perfil?.tmb_mifflin} kcal/dia` : "-"],
-    ["TMB Katch", (avaliacao?.tmb_katch ?? perfil?.tmb_katch) ? `${avaliacao?.tmb_katch ?? perfil?.tmb_katch} kcal/dia` : "-"],
+    ["Tipo de avaliação", rotuloMetodo((avaliacao ?? perfil)?.metodo_avaliacao)],
+    [`TMB ${tmbDoAluno(perfil, avaliacao).label}`, tmbDoAluno(perfil, avaliacao).valor !== null ? `${Math.round(tmbDoAluno(perfil, avaliacao).valor!)} kcal/dia` : "-"],
     [],
     ["RESUMO DO MES"],
     ["Treinos no mes", totalTreinos],

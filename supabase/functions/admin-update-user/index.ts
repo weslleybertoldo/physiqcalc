@@ -120,6 +120,9 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
 const ALLOWED_FIELDS = new Set([
   "nome", "email", "data_nascimento", "sexo", "altura", "peso", "idade",
   "dobra_1", "dobra_2", "dobra_3", "nivel_atividade", "tempo_descanso_segundos",
+  // avaliação por 3 dobras, 7 dobras ou bioimpedância + TMB da balança (25/09/2026)
+  "metodo_avaliacao", "dobra_4", "dobra_5", "dobra_6", "dobra_7",
+  "massa_muscular", "agua_corporal", "gordura_visceral", "tmb_balanca",
   "macro_proteina_multiplicador", "macro_gordura_percentual", "ajuste_calorico",
   "tmb_metodo", "plano_nome", "plano_expiracao", "status", "admin_locked",
   // aba Configuração (18/09/2026): modo (padrao|personalizada), padrão de séries do aluno e cadeado — CHECKs no banco

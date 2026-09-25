@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import InputField from "./InputField";
 import GenderToggle from "./GenderToggle";
-import { levels } from "./TdeeTable";
+import CamposAvaliacao from "./avaliacao/CamposAvaliacao";
+import SeletorTmb from "./avaliacao/SeletorTmb";
 import AdminSemanaUsuario from "./AdminSemanaUsuario";
 import AdminRegistrosFotos from "./AdminRegistrosFotos";
 import EvolutionSection from "./EvolutionSection";
@@ -16,21 +17,14 @@ import ConfiguracaoAluno from "./admin/ConfiguracaoAluno";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { calcularIdade } from "@/utils/formatDate";
 import { classificarGordura } from "@/utils/composicaoCorporal";
+import {
+  calcularComposicao, colunasDoMetodo, rotuloTmb, tmbMetodoDe, tmbValida, valoresDoRegistro, valoresVazios,
+  type TmbMetodo, type ValoresAvaliacao,
+} from "@/lib/avaliacao";
 
 interface Props {
   userId: string;
   onBack: () => void;
-}
-
-function calcBodyFat3(gender: "male" | "female", soma: number, age: number) {
-  let density: number;
-  if (gender === "male") {
-    density = 1.10938 - 0.0008267 * soma + 0.0000016 * soma * soma - 0.0002574 * age;
-  } else {
-    density = 1.0994921 - 0.0009929 * soma + 0.0000023 * soma * soma - 0.0001392 * age;
-  }
-  const bf = ((4.95 / density) - 4.5) * 100;
-  return bf > 0 && bf < 100 ? bf : null;
 }
 
 // Abas que auto-salvam ou só leem: não mostram o botão Salvar (que grava o perfil).
@@ -72,15 +66,10 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
   const [dataNascimento, setDataNascimento] = useState("");
   const [peso, setPeso] = useState("");
   const [altura, setAltura] = useState("");
-  const [dobra1, setDobra1] = useState("");
-  const [dobra2, setDobra2] = useState("");
-  const [dobra3, setDobra3] = useState("");
-  const [tmbMetodo, setTmbMetodo] = useState("mifflin");
-  const [nivelAtividade, setNivelAtividade] = useState(1.55);
-  const [ajusteCalorico, setAjusteCalorico] = useState(0);
-  const [proteinMult, setProteinMult] = useState("2.2");
-  const [fatPct, setFatPct] = useState("15");
-  const [adminLocked, setAdminLocked] = useState(true);
+  // avaliação: 3 dobras, 7 dobras ou bioimpedância + a TMB escolhida (25/09/2026). Os macros saíram daqui
+  // (nutrição fica no PhysiqNutri); as colunas deles continuam no banco, sem uso.
+  const [valores, setValores] = useState<ValoresAvaliacao>(() => valoresVazios());
+  const [tmbMetodo, setTmbMetodo] = useState<TmbMetodo>("mifflin");
   const [observacao, setObservacao] = useState("");
   const [medidas, setMedidas] = useState<Record<string, string>>({});
 
@@ -94,15 +83,8 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
         setDataNascimento(p.data_nascimento || "");
         setPeso(p.peso?.toString() || "");
         setAltura(p.altura?.toString() || "");
-        setDobra1(p.dobra_1?.toString() || "");
-        setDobra2(p.dobra_2?.toString() || "");
-        setDobra3(p.dobra_3?.toString() || "");
-        setTmbMetodo(p.tmb_metodo || "mifflin");
-        setNivelAtividade(p.nivel_atividade ?? 1.55);
-        setAjusteCalorico(p.ajuste_calorico ?? 0);
-        setProteinMult(p.macro_proteina_multiplicador?.toString() || "2.2");
-        setFatPct(p.macro_gordura_percentual?.toString() || "15");
-        setAdminLocked(p.admin_locked ?? true);
+        setValores(valoresDoRegistro(p));
+        setTmbMetodo(tmbMetodoDe(p.tmb_metodo));
         // Load medidas
         const m: Record<string, string> = {};
         MEDIDA_FIELDS.forEach(f => { m[f.key] = p[f.key]?.toString() || ""; });
@@ -112,39 +94,24 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
     });
   }, [userId]);
 
-  const maleLabels = ["Peitoral", "Abdômen", "Coxa"];
-  const femaleLabels = ["Tríceps", "Supra-ilíaca", "Coxa"];
-  const foldLabels = sexo === "male" ? maleLabels : femaleLabels;
+  const computed = useMemo(
+    () => calcularComposicao(valores, { sexo, idade: parseFloat(idade), peso: parseFloat(peso), altura: parseFloat(altura) }),
+    [valores, idade, peso, altura, sexo],
+  );
+  // o que vale/grava: a escolha só fica se a TMB dela existe (Katch sem % de gordura → Mifflin)
+  const tmbEfetiva = tmbValida(tmbMetodo, computed);
+  const tmbValor = { mifflin: computed.tmbMifflin, katch: computed.tmbKatch, balanca: computed.tmbBalanca }[tmbEfetiva];
 
-  const computed = useMemo(() => {
-    const a = parseFloat(idade), w = parseFloat(peso), h = parseFloat(altura);
-    const d1 = parseFloat(dobra1), d2 = parseFloat(dobra2), d3 = parseFloat(dobra3);
-
-    const tmbMifflin = a && h && w
-      ? (sexo === "male" ? 10 * w + 6.25 * h - 5 * a + 5 : 10 * w + 6.25 * h - 5 * a - 161)
-      : null;
-
-    let bf: number | null = null;
-    let massaGorda: number | null = null;
-    let massaMagra: number | null = null;
-    let tmbKatch: number | null = null;
-
-    if (d1 && d2 && d3 && a && w) {
-      bf = calcBodyFat3(sexo, d1 + d2 + d3, a);
-      if (bf !== null) {
-        massaGorda = w * (bf / 100);
-        massaMagra = w - massaGorda;
-        tmbKatch = 370 + 21.6 * massaMagra;
-      }
-    }
-
-    return { tmbMifflin, bf, massaGorda, massaMagra, tmbKatch };
-  }, [idade, peso, altura, dobra1, dobra2, dobra3, sexo]);
-
-  // Derived calorie calculation
-  const baseTmb = tmbMetodo === "katch" && computed.tmbKatch ? computed.tmbKatch : computed.tmbMifflin;
-  const baseCalories = baseTmb ? Math.round(baseTmb * nivelAtividade) : null;
-  const totalCalories = baseCalories ? baseCalories + ajusteCalorico : null;
+  // avaliação no perfil e no registro de evolução: colunas do tipo escolhido + composição + TMB escolhida
+  const dadosAvaliacao = () => ({
+    ...colunasDoMetodo(valores),
+    percentual_gordura: computed.bf,
+    massa_gorda: computed.massaGorda,
+    massa_magra: computed.massaMagra,
+    tmb_mifflin: computed.tmbMifflin,
+    tmb_katch: computed.tmbKatch,
+    tmb_metodo: tmbEfetiva,
+  });
 
   const handleSave = async () => {
     setSaving(true);
@@ -160,21 +127,8 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             data_nascimento: dataNascimento || null,
             peso: parseFloat(peso) || null,
             altura: parseFloat(altura) || null,
-            dobra_1: parseFloat(dobra1) || null,
-            dobra_2: parseFloat(dobra2) || null,
-            dobra_3: parseFloat(dobra3) || null,
-            percentual_gordura: computed.bf,
-            massa_gorda: computed.massaGorda,
-            massa_magra: computed.massaMagra,
-            tmb_mifflin: computed.tmbMifflin,
-            tmb_katch: computed.tmbKatch,
-            tmb_metodo: tmbMetodo,
-            nivel_atividade: nivelAtividade,
-            ajuste_calorico: ajusteCalorico,
-            macro_proteina_multiplicador: parseFloat(proteinMult) || 2.2,
-            macro_gordura_percentual: parseFloat(fatPct) || 15,
+            ...dadosAvaliacao(),
             // plano_nome / mensalidade_valor: só o popup "Cobrança" grava (13/09/2026)
-            admin_locked: adminLocked,
             ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
           },
         },
@@ -197,14 +151,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
               data_avaliacao: (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })(),
               peso: parseFloat(peso) || null,
               altura: parseFloat(altura) || null,
-              dobra_1: parseFloat(dobra1) || null,
-              dobra_2: parseFloat(dobra2) || null,
-              dobra_3: parseFloat(dobra3) || null,
-              percentual_gordura: computed.bf,
-              massa_gorda: computed.massaGorda,
-              massa_magra: computed.massaMagra,
-              tmb_mifflin: computed.tmbMifflin,
-              tmb_katch: computed.tmbKatch,
+              ...dadosAvaliacao(),
               observacao: observacao || null,
               ...Object.fromEntries(MEDIDA_FIELDS.map(f => [f.key, parseFloat(medidas[f.key]) || null])),
             },
@@ -331,34 +278,30 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
 
           {configTab === "dobras" && (<>
           <section>
-            <h2 className="font-heading text-lg text-foreground mb-6">Dobras Cutâneas (3 dobras J&P)</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              <InputField label={foldLabels[0]} unit="mm" value={dobra1} onChange={setDobra1} />
-              <InputField label={foldLabels[1]} unit="mm" value={dobra2} onChange={setDobra2} />
-              <InputField label={foldLabels[2]} unit="mm" value={dobra3} onChange={setDobra3} />
+            <h2 className="font-heading text-lg text-foreground mb-6">Avaliação Corporal</h2>
+            <CamposAvaliacao valores={valores} onChange={setValores} sexo={sexo} />
+
+            <div className="mt-8">
+              <SeletorTmb valor={tmbMetodo} onChange={setTmbMetodo} composicao={computed} metodo={valores.metodo} />
             </div>
 
             {computed.bf !== null && (
-              <div className="mt-8 grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4" data-resultado-avaliacao>
                 <div className="result-card">
                   <p className="text-xs uppercase text-muted-foreground font-body mb-1">% Gordura</p>
                   <p className="font-heading text-xl text-primary">{computed.bf.toFixed(1)}%</p>
                 </div>
                 <div className="result-card">
                   <p className="text-xs uppercase text-muted-foreground font-body mb-1">M. Gorda</p>
-                  <p className="font-heading text-xl text-foreground">{computed.massaGorda?.toFixed(1)} kg</p>
+                  <p className="font-heading text-xl text-foreground">{computed.massaGorda !== null ? `${computed.massaGorda.toFixed(1)} kg` : "—"}</p>
                 </div>
                 <div className="result-card">
                   <p className="text-xs uppercase text-muted-foreground font-body mb-1">M. Magra</p>
-                  <p className="font-heading text-xl text-foreground">{computed.massaMagra?.toFixed(1)} kg</p>
+                  <p className="font-heading text-xl text-foreground">{computed.massaMagra !== null ? `${computed.massaMagra.toFixed(1)} kg` : "—"}</p>
                 </div>
-                <div className="result-card">
-                  <p className="text-xs uppercase text-muted-foreground font-body mb-1">TMB Mifflin</p>
-                  <p className="font-heading text-xl text-foreground">{computed.tmbMifflin ? Math.round(computed.tmbMifflin) : "—"}</p>
-                </div>
-                <div className="result-card">
-                  <p className="text-xs uppercase text-muted-foreground font-body mb-1">TMB Katch</p>
-                  <p className="font-heading text-xl text-foreground">{computed.tmbKatch ? Math.round(computed.tmbKatch) : "—"}</p>
+                <div className="result-card" data-resultado-tmb={tmbEfetiva}>
+                  <p className="text-xs uppercase text-muted-foreground font-body mb-1">TMB {rotuloTmb(tmbEfetiva)}</p>
+                  <p className="font-heading text-xl text-foreground">{tmbValor !== null ? `${Math.round(tmbValor)} kcal` : "—"}</p>
                 </div>
               </div>
             )}
@@ -405,128 +348,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
             ))}
           </section>
 
-          {/* Macros config */}
-          <section className="section-divider pt-10">
-            <h2 className="font-heading text-lg text-foreground mb-6">Configuração de Macros</h2>
-
-            {/* TMB selector */}
-            <div className="mb-6">
-              <label className="text-sm text-muted-foreground font-body uppercase tracking-wider mb-2 block">TMB Utilizada</label>
-              <div className="flex gap-0">
-                <button
-                  type="button"
-                  onClick={() => setTmbMetodo("mifflin")}
-                  className={`flex-1 py-3 px-4 font-heading text-sm uppercase tracking-widest transition-colors duration-200 ${
-                    tmbMetodo === "mifflin" ? "toggle-active" : "toggle-inactive"
-                  }`}
-                >
-                  Mifflin-St Jeor
-                  {computed.tmbMifflin && <span className="block text-xs font-body normal-case tracking-normal mt-1 opacity-70">{Math.round(computed.tmbMifflin)} kcal</span>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTmbMetodo("katch")}
-                  disabled={!computed.tmbKatch}
-                  className={`flex-1 py-3 px-4 font-heading text-sm uppercase tracking-widest transition-colors duration-200 ${
-                    tmbMetodo === "katch" ? "toggle-active" : "toggle-inactive"
-                  } ${!computed.tmbKatch ? "opacity-40 cursor-not-allowed" : ""}`}
-                >
-                  Katch-McArdle
-                  {computed.tmbKatch ? (
-                    <span className="block text-xs font-body normal-case tracking-normal mt-1 opacity-70">{Math.round(computed.tmbKatch)} kcal</span>
-                  ) : (
-                    <span className="block text-xs font-body normal-case tracking-normal mt-1 opacity-50">Preencha as dobras</span>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Activity level selector */}
-            <div className="mb-6">
-              <label className="text-sm text-muted-foreground font-body uppercase tracking-wider mb-2 block">Nível de Atividade</label>
-              <div className="space-y-0">
-                {levels.map((l) => {
-                  const isSelected = nivelAtividade === l.factor;
-                  return (
-                    <div
-                      key={l.factor}
-                      onClick={() => setNivelAtividade(l.factor)}
-                      className={`flex items-center justify-between py-3 px-2 border-b border-muted-foreground/30 cursor-pointer transition-colors duration-200 hover:bg-muted/20 ${
-                        isSelected ? "bg-primary/10 border-primary/50" : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full shrink-0 transition-colors duration-200 ${
-                          isSelected ? "bg-primary" : "bg-muted-foreground/30"
-                        }`} />
-                        <span className="font-body text-sm text-foreground/80">{l.label}</span>
-                        <span className="text-xs text-muted-foreground">×{l.factor}</span>
-                      </div>
-                      {baseTmb && (
-                        <div className="flex items-baseline gap-2">
-                          <span className={`font-heading text-lg ${isSelected ? "text-primary" : "text-foreground"}`}>
-                            {Math.round(baseTmb * l.factor)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">kcal</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Calorie target with adjustment */}
-            {baseCalories && (
-              <div className="result-card border-primary/50 mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-                  <div className="flex-1">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-body mb-1">Meta calórica</p>
-                    <p className="font-heading text-4xl sm:text-5xl text-primary">
-                      {totalCalories}
-                      <span className="text-lg text-muted-foreground ml-2">kcal/dia</span>
-                    </p>
-                    {ajusteCalorico !== 0 && (
-                      <p className="text-sm text-muted-foreground font-body mt-2">
-                        {baseCalories} <span className="text-muted-foreground/60">(base)</span>
-                        {" "}{ajusteCalorico >= 0 ? "+" : "−"} {Math.abs(ajusteCalorico)} <span className="text-muted-foreground/60">(ajuste)</span>
-                        {" "}= <span className="text-foreground font-heading">{totalCalories}</span> kcal/dia
-                      </p>
-                    )}
-                  </div>
-                  <div className="sm:w-48 shrink-0">
-                    <label className="text-xs uppercase tracking-wider text-muted-foreground font-body mb-2 block">
-                      Ajuste (kcal)
-                    </label>
-                    <div className="flex items-center gap-0">
-                      <button
-                        type="button"
-                        onClick={() => setAjusteCalorico(v => v - 50)}
-                        className="h-10 w-10 flex items-center justify-center bg-secondary text-foreground font-heading text-lg hover:bg-muted transition-colors duration-200 shrink-0"
-                      >−</button>
-                      <input
-                        type="number"
-                        value={ajusteCalorico}
-                        onChange={(e) => setAjusteCalorico(parseInt(e.target.value) || 0)}
-                        className="h-10 w-full bg-transparent border-b border-t border-muted-foreground text-center text-foreground font-heading text-lg outline-none focus:border-primary transition-colors"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setAjusteCalorico(v => v + 50)}
-                        className="h-10 w-10 flex items-center justify-center bg-secondary text-foreground font-heading text-lg hover:bg-muted transition-colors duration-200 shrink-0"
-                      >+</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Protein & fat config */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <InputField label="Multiplicador Proteína" unit="g/kg" value={proteinMult} onChange={setProteinMult} placeholder="2.2" />
-              <InputField label="% Gordura" unit="%" value={fatPct} onChange={setFatPct} placeholder="15" />
-            </div>
-          </section>
           </>)}
 
           {/* Plano & Cobrança = ESPELHO só-leitura (edita-se no popup "Cobrança" da tela Cobrança, 13/09/2026) */}
@@ -536,22 +357,6 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
           {configTab === "config" && <ConfiguracaoAluno userId={userId} onIrParaTreino={() => setConfigTab("treino")} />}
 
           {configTab === "dobras" && (<>
-          {/* Toggle edição manual */}
-          <section className="section-divider pt-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-heading text-lg text-foreground">Permitir edição manual</h2>
-                <p className="text-xs text-muted-foreground font-body mt-1">Liberar ajuste calórico pelo usuário</p>
-              </div>
-              <button
-                onClick={() => setAdminLocked(!adminLocked)}
-                className={`w-12 h-6 rounded-full transition-colors duration-200 ${adminLocked ? "bg-muted" : "bg-primary"}`}
-              >
-                <div className={`w-5 h-5 rounded-full bg-foreground transition-transform duration-200 ${adminLocked ? "translate-x-0.5" : "translate-x-6"}`} />
-              </button>
-            </div>
-          </section>
-
           {/* Observação da avaliação */}
           <section className="section-divider pt-10">
             <h2 className="font-heading text-lg text-foreground mb-6">Observação da Avaliação</h2>
@@ -572,7 +377,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
           {/* Evolução do aluno (mesma visão do app do aluno; excluir reflete pra ele) */}
           {configTab === "evolucao" && (
             <section>
-              <EvolutionSection userId={userId} isAdmin />
+              <EvolutionSection userId={userId} isAdmin sexo={sexo} idade={parseFloat(idade) || null} tmbPreferida={tmbMetodo} />
             </section>
           )}
 

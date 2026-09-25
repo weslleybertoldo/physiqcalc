@@ -3,7 +3,6 @@ import { Trash2, FileDown, LogOut } from "lucide-react";
 import { logout } from "./Login";
 import SectionTMB from "@/components/SectionTMB";
 import SectionBodyFat from "@/components/SectionBodyFat";
-import SectionMacros from "@/components/SectionMacros";
 import MedidasForm from "@/components/MedidasForm";
 import TabelaReferenciaGordura from "@/components/TabelaReferenciaGordura";
 import ComparativoTab from "@/components/ComparativoTab";
@@ -12,7 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { generateReport, type ReportData } from "@/lib/generateReport";
+import { generateReport } from "@/lib/generateReport";
 
 const LS_KEY = "physiqcalc-basic";
 const LS_MEDIDAS_KEY = "physiqcalc-medidas";
@@ -35,7 +34,8 @@ function loadMedidas(): MedidasCorporais {
 
 const Index = ({ onBack }: { onBack?: () => void } = {}) => {
   const saved = loadSaved();
-  const [activeTab, setActiveTab] = useState<"comp" | "comparativo" | "macros">(saved?.activeTab ?? "comp");
+  // aba Macronutrientes saiu em 25/09/2026 (nutrição fica no PhysiqNutri); "macros" salvo no aparelho volta pra "comp"
+  const [activeTab, setActiveTab] = useState<"comp" | "comparativo">(saved?.activeTab === "comparativo" ? "comparativo" : "comp");
   const [name, setName] = useState<string>(saved?.name ?? "");
   const [gender, setGender] = useState<"male" | "female">(saved?.gender ?? "male");
   const [age, setAge] = useState<string>(saved?.age ?? "");
@@ -43,7 +43,6 @@ const Index = ({ onBack }: { onBack?: () => void } = {}) => {
   const [weight, setWeight] = useState<string>(saved?.weight ?? "");
   const [resetKey, setResetKey] = useState(0);
   const [bodyFatResult, setBodyFatResult] = useState<{ bf: number; tmbKatch: number } | null>(null);
-  const [macroData, setMacroData] = useState<ReportData["macros"]>(null);
   const [medidas, setMedidas] = useState<MedidasCorporais>(loadMedidas);
 
   // Persist basic data
@@ -77,7 +76,6 @@ const Index = ({ onBack }: { onBack?: () => void } = {}) => {
     setWeight("");
     setActiveTab("comp");
     setBodyFatResult(null);
-    setMacroData(null);
     setMedidas({ ...medidasVazias });
     setResetKey((k) => k + 1);
   };
@@ -107,7 +105,6 @@ const Index = ({ onBack }: { onBack?: () => void } = {}) => {
       weight: numWeight,
       tmbMifflin: tmb,
       bodyFatResult,
-      macros: macroData,
       medidas,
       dobras,
     });
@@ -116,7 +113,6 @@ const Index = ({ onBack }: { onBack?: () => void } = {}) => {
   const tabs = [
     { key: "comp" as const, label: "Composição Corporal" },
     { key: "comparativo" as const, label: "Comparativo" },
-    { key: "macros" as const, label: "Macronutrientes" },
   ];
 
   return (
@@ -255,16 +251,8 @@ const Index = ({ onBack }: { onBack?: () => void } = {}) => {
 
             <TabelaReferenciaGordura sexoInicial={gender === "male" ? "M" : "F"} />
           </>
-        ) : activeTab === "comparativo" ? (
-          <ComparativoTab />
         ) : (
-          <SectionMacros
-            key={resetKey}
-            tmbMifflin={tmb}
-            tmbKatch={bodyFatResult?.tmbKatch ?? null}
-            weight={numWeight}
-            onDataChange={setMacroData}
-          />
+          <ComparativoTab />
         )}
 
         <footer className="section-divider py-12 text-center">

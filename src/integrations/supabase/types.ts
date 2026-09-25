@@ -115,6 +115,7 @@ export type Database = {
       }
       physiq_avaliacoes: {
         Row: {
+          agua_corporal: number | null
           altura: number | null
           created_at: string | null
           created_by: string | null
@@ -122,9 +123,15 @@ export type Database = {
           dobra_1: number | null
           dobra_2: number | null
           dobra_3: number | null
+          dobra_4: number | null
+          dobra_5: number | null
+          dobra_6: number | null
+          dobra_7: number | null
+          gordura_visceral: number | null
           id: string
           massa_gorda: number | null
           massa_magra: number | null
+          massa_muscular: number | null
           medida_abdomen: number | null
           medida_antebraco_d: number | null
           medida_antebraco_e: number | null
@@ -139,14 +146,18 @@ export type Database = {
           medida_peitoral: number | null
           medida_pescoco: number | null
           medida_quadril: number | null
+          metodo_avaliacao: string | null
           observacao: string | null
           percentual_gordura: number | null
           peso: number | null
+          tmb_balanca: number | null
           tmb_katch: number | null
+          tmb_metodo: string | null
           tmb_mifflin: number | null
           user_id: string
         }
         Insert: {
+          agua_corporal?: number | null
           altura?: number | null
           created_at?: string | null
           created_by?: string | null
@@ -154,9 +165,15 @@ export type Database = {
           dobra_1?: number | null
           dobra_2?: number | null
           dobra_3?: number | null
+          dobra_4?: number | null
+          dobra_5?: number | null
+          dobra_6?: number | null
+          dobra_7?: number | null
+          gordura_visceral?: number | null
           id?: string
           massa_gorda?: number | null
           massa_magra?: number | null
+          massa_muscular?: number | null
           medida_abdomen?: number | null
           medida_antebraco_d?: number | null
           medida_antebraco_e?: number | null
@@ -171,14 +188,18 @@ export type Database = {
           medida_peitoral?: number | null
           medida_pescoco?: number | null
           medida_quadril?: number | null
+          metodo_avaliacao?: string | null
           observacao?: string | null
           percentual_gordura?: number | null
           peso?: number | null
+          tmb_balanca?: number | null
           tmb_katch?: number | null
+          tmb_metodo?: string | null
           tmb_mifflin?: number | null
           user_id: string
         }
         Update: {
+          agua_corporal?: number | null
           altura?: number | null
           created_at?: string | null
           created_by?: string | null
@@ -186,9 +207,15 @@ export type Database = {
           dobra_1?: number | null
           dobra_2?: number | null
           dobra_3?: number | null
+          dobra_4?: number | null
+          dobra_5?: number | null
+          dobra_6?: number | null
+          dobra_7?: number | null
+          gordura_visceral?: number | null
           id?: string
           massa_gorda?: number | null
           massa_magra?: number | null
+          massa_muscular?: number | null
           medida_abdomen?: number | null
           medida_antebraco_d?: number | null
           medida_antebraco_e?: number | null
@@ -203,10 +230,13 @@ export type Database = {
           medida_peitoral?: number | null
           medida_pescoco?: number | null
           medida_quadril?: number | null
+          metodo_avaliacao?: string | null
           observacao?: string | null
           percentual_gordura?: number | null
           peso?: number | null
+          tmb_balanca?: number | null
           tmb_katch?: number | null
+          tmb_metodo?: string | null
           tmb_mifflin?: number | null
           user_id?: string
         }
@@ -289,6 +319,7 @@ export type Database = {
       physiq_profiles: {
         Row: {
           admin_locked: boolean | null
+          agua_corporal: number | null
           ajuste_calorico: number | null
           altura: number | null
           created_at: string | null
@@ -296,14 +327,20 @@ export type Database = {
           dobra_1: number | null
           dobra_2: number | null
           dobra_3: number | null
+          dobra_4: number | null
+          dobra_5: number | null
+          dobra_6: number | null
+          dobra_7: number | null
           email: string | null
           foto_url: string | null
+          gordura_visceral: number | null
           id: string
           idade: number | null
           macro_gordura_percentual: number | null
           macro_proteina_multiplicador: number | null
           massa_gorda: number | null
           massa_magra: number | null
+          massa_muscular: number | null
           mensalidade_valor: number | null
           medida_abdomen: number | null
           medida_antebraco_d: number | null
@@ -319,6 +356,7 @@ export type Database = {
           medida_peitoral: number | null
           medida_pescoco: number | null
           medida_quadril: number | null
+          metodo_avaliacao: string | null
           nivel_atividade: number | null
           nome: string | null
           percentual_gordura: number | null
@@ -331,6 +369,7 @@ export type Database = {
           series_modo: string | null
           series_padrao_qtd: number | null
           series_travadas: boolean | null
+          tmb_balanca: number | null
           tmb_katch: number | null
           tmb_metodo: string | null
           tmb_mifflin: number | null
@@ -338,6 +377,7 @@ export type Database = {
         }
         Insert: {
           admin_locked?: boolean | null
+          agua_corporal?: number | null
           ajuste_calorico?: number | null
           altura?: number | null
           created_at?: string | null
@@ -345,14 +385,20 @@ export type Database = {
           dobra_1?: number | null
           dobra_2?: number | null
           dobra_3?: number | null
+          dobra_4?: number | null
+          dobra_5?: number | null
+          dobra_6?: number | null
+          dobra_7?: number | null
           email?: string | null
           foto_url?: string | null
+          gordura_visceral?: number | null
           id: string
           idade?: number | null
           macro_gordura_percentual?: number | null
           macro_proteina_multiplicador?: number | null
           massa_gorda?: number | null
           massa_magra?: number | null
+          massa_muscular?: number | null
           mensalidade_valor?: number | null
           medida_abdomen?: number | null
           medida_antebraco_d?: number | null
@@ -368,6 +414,7 @@ export type Database = {
           medida_peitoral?: number | null
           medida_pescoco?: number | null
           medida_quadril?: number | null
+          metodo_avaliacao?: string | null
           nivel_atividade?: number | null
           nome?: string | null
           percentual_gordura?: number | null
@@ -380,6 +427,7 @@ export type Database = {
           series_modo?: string | null
           series_padrao_qtd?: number | null
           series_travadas?: boolean | null
+          tmb_balanca?: number | null
           tmb_katch?: number | null
           tmb_metodo?: string | null
           tmb_mifflin?: number | null
@@ -387,6 +435,7 @@ export type Database = {
         }
         Update: {
           admin_locked?: boolean | null
+          agua_corporal?: number | null
           ajuste_calorico?: number | null
           altura?: number | null
           created_at?: string | null
@@ -394,14 +443,20 @@ export type Database = {
           dobra_1?: number | null
           dobra_2?: number | null
           dobra_3?: number | null
+          dobra_4?: number | null
+          dobra_5?: number | null
+          dobra_6?: number | null
+          dobra_7?: number | null
           email?: string | null
           foto_url?: string | null
+          gordura_visceral?: number | null
           id?: string
           idade?: number | null
           macro_gordura_percentual?: number | null
           macro_proteina_multiplicador?: number | null
           massa_gorda?: number | null
           massa_magra?: number | null
+          massa_muscular?: number | null
           mensalidade_valor?: number | null
           medida_abdomen?: number | null
           medida_antebraco_d?: number | null
@@ -417,6 +472,7 @@ export type Database = {
           medida_peitoral?: number | null
           medida_pescoco?: number | null
           medida_quadril?: number | null
+          metodo_avaliacao?: string | null
           nivel_atividade?: number | null
           nome?: string | null
           percentual_gordura?: number | null
@@ -429,6 +485,7 @@ export type Database = {
           series_modo?: string | null
           series_padrao_qtd?: number | null
           series_travadas?: boolean | null
+          tmb_balanca?: number | null
           tmb_katch?: number | null
           tmb_metodo?: string | null
           tmb_mifflin?: number | null

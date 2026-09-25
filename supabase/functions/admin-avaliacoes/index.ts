@@ -127,7 +127,17 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const action = body?.action;
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
-    const ALLOWED = new Set(["data_avaliacao","peso","altura","dobra_1","dobra_2","dobra_3","observacao","percentual_gordura","massa_gorda","massa_magra"]);
+    // 25/09/2026: + tipo de avaliação (7 dobras, balança), as TMBs e a escolhida, e as medidas — TMB e medidas já
+    // eram enviadas pelo painel e ficavam de fora daqui (a avaliação salva perdia os dois)
+    const ALLOWED = new Set([
+      "data_avaliacao", "peso", "altura", "observacao", "percentual_gordura", "massa_gorda", "massa_magra",
+      "metodo_avaliacao", "dobra_1", "dobra_2", "dobra_3", "dobra_4", "dobra_5", "dobra_6", "dobra_7",
+      "massa_muscular", "agua_corporal", "gordura_visceral",
+      "tmb_mifflin", "tmb_katch", "tmb_balanca", "tmb_metodo",
+      "medida_pescoco", "medida_ombro", "medida_peitoral", "medida_cintura", "medida_abdomen", "medida_quadril",
+      "medida_braco_d", "medida_braco_e", "medida_antebraco_d", "medida_antebraco_e", "medida_coxa_d", "medida_coxa_e",
+      "medida_panturrilha_d", "medida_panturrilha_e",
+    ]);
     // avaliação existente → dono → escopo do professor
     const avaliacaoNoEscopo = async (avaliacaoId: string): Promise<boolean> => {
       const { data: av } = await admin.from("physiq_avaliacoes").select("user_id").eq("id", avaliacaoId).maybeSingle();
