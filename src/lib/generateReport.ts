@@ -18,23 +18,6 @@ export interface ReportData {
   weight: number;
   tmbMifflin: number | null;
   bodyFatResult: { bf: number; tmbKatch: number } | null;
-  macros: {
-    totalCalories: number;
-    baseCalories: number;
-    calorieAdjust: number;
-    calorieSource: string;
-    tmbSourceLabel: string;
-    activityLabel: string;
-    proteinG: number;
-    proteinKcal: number;
-    proteinPct: number;
-    fatG: number;
-    fatKcal: number;
-    fatPct: number;
-    carbG: number;
-    carbKcal: number;
-    carbPct: number;
-  } | null;
   medidas?: MedidasCorporais;
   dobras?: { labels: string[]; values: number[] };
 }
@@ -170,30 +153,6 @@ export function generateReport(data: ReportData) {
     y = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // Macronutrientes
-  if (data.macros) {
-    if (y > 220) { y = novaPagina(doc); }
-    y = desenharTituloSecao(doc, 'Macronutrientes', y);
-
-    const adj = data.macros.calorieAdjust;
-    let metaStr: string;
-    if (adj !== 0) {
-      const sign = adj >= 0 ? "+" : "-";
-      metaStr = `${Math.round(data.macros.baseCalories)} (base) ${sign} ${Math.abs(adj)} = ${Math.round(data.macros.totalCalories)} kcal/dia`;
-    } else {
-      metaStr = `${Math.round(data.macros.totalCalories)} kcal/dia`;
-    }
-
-    desenharCard(doc, `Meta calorica - ${limparTexto(data.macros.tmbSourceLabel)} x ${limparTexto(data.macros.activityLabel)}`, metaStr, 14, y, W - 28, 18, TEMA.amarelo);
-    y += 22;
-
-    const mW = (W - 28 - 8) / 3;
-    desenharCard(doc, 'Proteina', `${data.macros.proteinG.toFixed(1)}g (${data.macros.proteinPct.toFixed(1)}%)`, 14, y, mW, 18);
-    desenharCard(doc, 'Gordura', `${data.macros.fatG.toFixed(1)}g (${data.macros.fatPct.toFixed(1)}%)`, 14 + mW + 4, y, mW, 18);
-    desenharCard(doc, 'Carboidrato', `${data.macros.carbG.toFixed(1)}g (${data.macros.carbPct.toFixed(1)}%)`, 14 + mW * 2 + 8, y, mW, 18);
-    y += 22;
-  }
-
   // Tabela de Referência — % Gordura Corporal
   if (y > 200) { y = novaPagina(doc); }
   y = desenharTituloSecao(doc, 'Tabela de Referencia - % Gordura Corporal', y);
@@ -243,7 +202,7 @@ export function generateReport(data: ReportData) {
   desenharRodape(doc, 'Formulas: Mifflin-St Jeor - Jackson & Pollock - Katch-McArdle');
 
   const safeName = data.name.trim()
-    ? `Relatorio de macros do ${data.name.trim().replace(/[^a-zA-Z0-9 ]/g, "")}`
-    : "Relatorio de macros";
+    ? `Relatorio PhysiqCalc do ${data.name.trim().replace(/[^a-zA-Z0-9 ]/g, "")}`
+    : "Relatorio PhysiqCalc";
   doc.save(`${safeName}.pdf`);
 }

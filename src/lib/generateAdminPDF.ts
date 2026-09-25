@@ -8,6 +8,10 @@ import {
 import { classificarGordura } from "@/utils/composicaoCorporal";
 import { agoraFormatado, formatarDataCurta, calcularIdade } from "@/utils/formatDate";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
+import { dadosBalanca, rotuloMetodo, tmbEscolhida } from "@/lib/avaliacao";
+
+// texto do PDF sem emoji e sem acento (mesmo padrão dos títulos: "Composicao Corporal")
+const pdfTexto = (t: string) => limparTexto(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export interface AdminProfile {
   nome: string | null;
@@ -23,10 +27,6 @@ export interface AdminProfile {
   tmb_mifflin: number | null;
   tmb_katch: number | null;
   tmb_metodo: string | null;
-  nivel_atividade: number | null;
-  ajuste_calorico: number | null;
-  macro_proteina_multiplicador: number | null;
-  macro_gordura_percentual: number | null;
   user_code: number | null;
   [key: string]: any;
 }
@@ -43,14 +43,6 @@ export interface Avaliacao {
   tmb_katch: number | null;
   [key: string]: any;
 }
-
-const ACTIVITY_LABELS: Record<number, string> = {
-  1.2: "Sedentario",
-  1.375: "Levemente ativo",
-  1.55: "Moderadamente ativo",
-  1.725: "Muito ativo",
-  1.9: "Atleta / dupla sessao",
-};
 
 export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]) {
   const doc = new jsPDF();
@@ -75,9 +67,9 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
   if (idadeEfetiva) desenharCard(doc, 'Idade', `${idadeEfetiva} anos`, 14 + cW * 2 + 8, y, cW, 18);
   y += 22;
 
-  // Composição Corporal
+  // Composição Corporal (tipo de avaliação no título; na bioimpedância, os dados da balança)
   if (profile.percentual_gordura) {
-    y = desenharTituloSecao(doc, 'Composicao Corporal', y);
+    y = desenharTituloSecao(doc, `Composicao Corporal - ${pdfTexto(rotuloMetodo(profile.metodo_avaliacao))}`, y);
     desenharCard(doc, '% Gordura', `${Number(profile.percentual_gordura).toFixed(1)}%`, 14, y, cW, 18, TEMA.amarelo);
     if (profile.massa_gorda) desenharCard(doc, 'Massa Gorda', `${Number(profile.massa_gorda).toFixed(1)} kg`, 14 + cW + 4, y, cW, 18);
     if (profile.massa_magra) desenharCard(doc, 'Massa Magra', `${Number(profile.massa_magra).toFixed(1)} kg`, 14 + cW * 2 + 8, y, cW, 18, TEMA.verde);
@@ -86,53 +78,22 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
     // Classificação
     const sexo = profile.sexo === "male" ? "M" : "F";
     const cls = classificarGordura(Number(profile.percentual_gordura), sexo as "M" | "F", idadeEfetiva || 25);
+    const balanca = dadosBalanca(profile);
+    if (balanca.length > 0) {
+      balanca.forEach((d, i) => desenharCard(doc, pdfTexto(d.label), pdfTexto(d.valor), 14 + i * (cW + 4), y, cW, 18));
+      y += 22;
+    }
+
     desenharCard(doc, 'Classificacao', limparTexto(cls.label), 14, y, W - 28, 18, cls.cor);
     y += 22;
 
-    // TMB
-    y = desenharTituloSecao(doc, 'Taxa Metabolica Basal', y);
-    const hW = (W - 28 - 4) / 2;
-    if (profile.tmb_mifflin) desenharCard(doc, 'TMB Mifflin-St Jeor', `${Math.round(Number(profile.tmb_mifflin))} kcal/dia`, 14, y, hW, 18);
-    if (profile.tmb_katch) desenharCard(doc, 'TMB Katch-McArdle', `${Math.round(Number(profile.tmb_katch))} kcal/dia`, 14 + hW + 4, y, hW, 18);
-    y += 22;
-  }
-
-  // Macros
-  const baseTmb = profile.tmb_metodo === "katch" && profile.tmb_katch ? profile.tmb_katch : profile.tmb_mifflin;
-  const actFactor = Number(profile.nivel_atividade ?? 1.55);
-  const baseCalories = baseTmb ? Math.round(Number(baseTmb) * actFactor) : null;
-  const ajuste = profile.ajuste_calorico ?? 0;
-  const total = baseCalories ? baseCalories + ajuste : null;
-
-  if (total && profile.peso) {
-    y = desenharTituloSecao(doc, 'Macronutrientes', y);
-
-    const tmbLabel = profile.tmb_metodo === "katch" ? "Katch-McArdle" : "Mifflin-St Jeor";
-    const actLabel = ACTIVITY_LABELS[actFactor] || `x${actFactor}`;
-    let metaStr: string;
-    if (ajuste !== 0) {
-      const sign = ajuste >= 0 ? "+" : "-";
-      metaStr = `${baseCalories} (base) ${sign} ${Math.abs(ajuste)} = ${total} kcal/dia`;
-    } else {
-      metaStr = `${total} kcal/dia`;
+    // TMB: só a que o professor escolheu
+    const tmb = tmbEscolhida(profile);
+    if (tmb.valor !== null) {
+      y = desenharTituloSecao(doc, 'Taxa Metabolica Basal', y);
+      desenharCard(doc, `TMB ${pdfTexto(tmb.label)}`, `${Math.round(tmb.valor)} kcal/dia`, 14, y, W - 28, 18);
+      y += 22;
     }
-
-    desenharCard(doc, `Meta calorica - ${tmbLabel} x ${actLabel}`, metaStr, 14, y, W - 28, 18, TEMA.amarelo);
-    y += 22;
-
-    const pm = Number(profile.macro_proteina_multiplicador ?? 2.2);
-    const fp = Number(profile.macro_gordura_percentual ?? 15);
-    const peso = Number(profile.peso);
-    const protG = pm * peso, protK = protG * 4;
-    const fatK = total * (fp / 100), fatG = fatK / 9;
-    const carbK = total - protK - fatK, carbG = carbK / 4;
-    const totalK = protK + fatK + carbK;
-
-    const mW = (W - 28 - 8) / 3;
-    desenharCard(doc, `Proteina (${(protK / totalK * 100).toFixed(1)}%)`, `${protG.toFixed(1)}g`, 14, y, mW, 18);
-    desenharCard(doc, `Gordura (${(fatK / totalK * 100).toFixed(1)}%)`, `${fatG.toFixed(1)}g`, 14 + mW + 4, y, mW, 18);
-    desenharCard(doc, `Carboidrato (${(carbK / totalK * 100).toFixed(1)}%)`, `${carbG.toFixed(1)}g`, 14 + mW * 2 + 8, y, mW, 18);
-    y += 22;
   }
 
   // Medidas Corporais
@@ -175,12 +136,13 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
 
     autoTable(doc, {
       startY: y,
-      head: [['Data', 'Peso', '% Gordura', 'M. Gorda', 'M. Magra', 'Classificacao']],
+      head: [['Data', 'Tipo', 'Peso', '% Gordura', 'M. Gorda', 'M. Magra', 'Classificacao']],
       body: avaliacoes.map(a => {
         const pct = a.percentual_gordura;
         const cls = pct ? classificarGordura(Number(pct), sexo, idadeEfetiva || 25) : null;
         return [
           formatarDataCurta(a.data_avaliacao || a.created_at?.split('T')[0]),
+          pdfTexto(rotuloMetodo(a.metodo_avaliacao)),
           a.peso ? `${a.peso} kg` : '-',
           pct ? `${Number(pct).toFixed(1)}%` : '-',
           a.massa_gorda ? `${Number(a.massa_gorda).toFixed(1)} kg` : '-',
@@ -191,7 +153,7 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
       ...estiloTabela(),
       margin: { left: 14, right: 14 },
       didParseCell: (data: any) => {
-        if (data.column.index === 5 && data.section === 'body') {
+        if (data.column.index === 6 && data.section === 'body') {
           const av = avaliacoes[data.row.index];
           if (av?.percentual_gordura) {
             const cls = classificarGordura(Number(av.percentual_gordura), sexo, idadeEfetiva || 25);
