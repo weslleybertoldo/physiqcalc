@@ -42,3 +42,12 @@ Numa migração de host, esses três precisam de tratamento à parte.
 
 Voltar `VITE_SUPABASE_URL` pra `https://uxwpwdbbnlticxgtzcsb.supabase.co` (Vercel + secret do
 GitHub) e redeployar/gerar release. O host da Supabase continua válido o tempo todo.
+
+## Banco principal: `api-principal.physiqcalc.com.br` (Physiq W2, 29/09/2026)
+
+O banco principal do Physiq (Supabase `hkxvtsbwctxkrqzkkdoz`, o do PhysiqNutri) segue a mesma receita: Worker
+`physiq-principal-api` (proxy sem cache e sem seguir redirects) no custom domain `api-principal.physiqcalc.com.br`,
+reserva `physiq-principal-api.weslleybertoldo.workers.dev`. O código fica versionado em
+`infra/cloudflare/physiq-principal-api/` (`deploy.sh` publica e liga o domínio). O app usa pelo
+`src/integrations/principal/client.ts` (`VITE_PRINCIPAL_URL`). O callback do Google continua em
+`https://hkxvtsbwctxkrqzkkdoz.supabase.co/auth/v1/callback` e as funções do servidor falam com o host direto.
