@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { ExternalLink, LayoutDashboard, Salad, UserRoundX } from "lucide-react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { ExternalLink, LayoutDashboard, Salad, UserRoundX, Wallet } from "lucide-react";
+import { faixaDoAluno } from "@/financeiro/regras";
+import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
 import { existe } from "@/rotas/registro";
 import { useSessao } from "@/nucleo/sessao";
 import { ehProfissional } from "@/nucleo/situacao";
@@ -13,12 +15,16 @@ import { TelaTrava } from "./pecas/TelaTrava";
  *   · sem conta, sem matrícula e sem convite → Boas-vindas (código do profissional ou "sou profissional");
  *   · matrícula sem nenhum módulo (responsáveis removidos, conta sem o módulo) → "Seu profissional ainda não liberou seu
  *     acesso" (os dados ficam guardados);
- *   · só Nutrição e a aba Dieta nova ainda não chegou (W11) → "use o site do PhysiqNutri por enquanto".
+ *   · só Nutrição e a aba Dieta nova ainda não chegou (W11) → "use o site do PhysiqNutri por enquanto" — menos Perfil ›
+ *     Pagamentos (W6, R16): o paciente do Nutri vê as cobranças e paga pelo app; com cobrança a pagar, a trava mostra "Pagar".
  * Sem a situação (principal fora do ar e nada guardado) não trava: vale o que o Treino sabe.
  */
 export default function GateSemModulo({ children }: { children: ReactNode }) {
   const { situacao } = useSessao();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const soNutri = !!situacao && !situacao.sem_nada && situacao.modulos_aluno.length > 0 && !situacao.modulos_aluno.includes("treino") && !existe("abasApp", "Dieta");
+  const { resumo } = useResumoFinanceiro({ ativo: soNutri, atrasoMs: 300 });
   if (!situacao) return <>{children}</>;
   if (situacao.sem_nada) return <Navigate to="/boas-vindas" replace />;
   const modulos = situacao.modulos_aluno;
@@ -49,7 +55,10 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!modulos.includes("treino") && !existe("abasApp", "Dieta")) {
+  if (soNutri) {
+    if (pathname.startsWith("/perfil/pagamentos")) return <>{children}</>;
+    const f = faixaDoAluno(resumo);
+    const pagar = f?.podePagar ? (f.alvo.tipo === "avulsa" ? `/perfil/pagamentos?pagar=${f.alvo.id}` : "/perfil/pagamentos?pagar=mensalidade") : null;
     return (
       <TelaTrava
         marca="use-o-nutri"
@@ -58,9 +67,27 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
         titulo="Sua dieta continua no PhysiqNutri por enquanto"
         texto="O Physiq está juntando tudo num app só. Enquanto a dieta não chega aqui, use o site do PhysiqNutri — com o mesmo e-mail e senha."
         acoes={
-          <a href={`${SITE_NUTRI}/app/entrar`} target="_blank" rel="noopener noreferrer" className="pq-botao pq-botao-w w-full">
-            <ExternalLink aria-hidden /> Abrir o PhysiqNutri
-          </a>
+          <>
+            {f && pagar && (
+              <>
+                <p className={`rounded-2xl border px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-texto ${f.tom === "r" ? "border-[var(--p-chip-r-borda)] bg-[var(--p-chip-r-fundo)]" : "border-[rgba(245,158,11,.26)] bg-[var(--p-chip-a-fundo)]"}`} data-trava-cobranca>
+                  {f.titulo}
+                  <span className="mt-px block text-[12px] font-medium text-texto-2">{f.subtitulo}</span>
+                </p>
+                <button type="button" className="pq-botao pq-botao-w w-full" onClick={() => navigate(pagar)} data-trava-pagar>
+                  <Wallet aria-hidden /> Pagar
+                </button>
+              </>
+            )}
+            <a href={`${SITE_NUTRI}/app/entrar`} target="_blank" rel="noopener noreferrer" className={`pq-botao ${pagar ? "pq-botao-g" : "pq-botao-w"} w-full`}>
+              <ExternalLink aria-hidden /> Abrir o PhysiqNutri
+            </a>
+            {!pagar && (
+              <button type="button" className="pq-botao pq-botao-g w-full" onClick={() => navigate("/perfil/pagamentos")} data-trava-pagamentos>
+                <Wallet aria-hidden /> Pagamentos
+              </button>
+            )}
+          </>
         }
       />
     );

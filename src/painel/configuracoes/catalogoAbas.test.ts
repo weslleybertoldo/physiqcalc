@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/pages/admin/ConfiguracoesPage", () => ({ default: () => null }));
 vi.mock("@/pages/admin/PlanosPage", () => ({ default: () => null }));
 
 import { ABAS_CONFIG, estadoDaAbaConfig } from "./catalogoAbas";
@@ -10,9 +9,10 @@ describe("abas das Configurações (spec 4.6)", () => {
     expect(ABAS_CONFIG.map((a) => a.rotulo)).toEqual(["Perfil", "Conta", "Equipe", "Plano", "Recebimento", "Convite", "Aplicativo"]);
   });
 
-  it("antes das abas novas: Perfil, Plano, Recebimento e Convite pelas telas antigas", () => {
+  it("sem as abas novas, só o Plano tem tela antiga (a Configurações antiga do Calc saiu na W6)", () => {
     const visiveis = ABAS_CONFIG.filter((a) => estadoDaAbaConfig(a, { ehDono: true }, () => false) !== null).map((a) => a.id);
-    expect(visiveis).toEqual(["perfil", "plano", "recebimento", "convite"]);
+    expect(visiveis).toEqual(["plano"]);
+    expect(ABAS_CONFIG.map((a) => estadoDaAbaConfig(a, { ehDono: true }))).toEqual(["nova", "nova", "nova", "nova", "nova", "nova", "nova"]);
   });
 
   it("Conta, Equipe, Plano e Recebimento só para o dono", () => {

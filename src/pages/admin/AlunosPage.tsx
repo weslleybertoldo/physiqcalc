@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { listarAlunos, professorConvites, type AlunoRow } from "@/lib/saasApi";
-import { invokeMp } from "@/lib/mpClient";
+import { badgesDaConta } from "@/financeiro/api";
+import { useConta } from "@/nucleo/conta";
 import { generateAdminPDF, type AdminProfile } from "@/lib/generateAdminPDF";
 import { ListaPaginada, usePaginado } from "@/components/ListaPaginada";
 import ConviteAlunoDialog, { compartilharLink, erroConviteMsg } from "@/components/admin/ConviteAlunoDialog";
@@ -21,7 +22,6 @@ import {
 
 interface Tag { id: string; nome: string; cor: string }
 interface BadgeInfo { s: string; ate: string | null }
-interface BadgesResp { badges?: Record<string, string>; badgesData?: Record<string, BadgeInfo>; aguardando?: Record<string, string> }
 
 /** Código de erro ({ error }) de uma resposta não-2xx do supabase.functions.invoke. */
 async function codigoErroInvoke(error: unknown): Promise<string | null> {
@@ -85,12 +85,15 @@ const AlunosPage = () => {
     }
   }, []);
 
-  // badge pago/pendente com data da cobertura (só quem tem mensalidade) + comprovantes Pix esperando — não bloqueia a lista
+  // badge pago/pendente com data da cobertura (só quem tem mensalidade) + comprovantes Pix esperando — não bloqueia a lista.
+  // W6: vem do banco principal (a cobrança do aluno da conta ativa), chaveado pelo id do Treino do aluno.
+  const contaId = useConta().conta?.id ?? null;
   const carregarBadges = useCallback(() => {
-    invokeMp<BadgesResp>("admin-badges")
-      .then((r) => { setBadges(r.badgesData || {}); setAguardando(r.aguardando || {}); })
-      .catch((e) => console.error("[AlunosPage] admin-badges", e));
-  }, []);
+    if (!contaId) return;
+    badgesDaConta(contaId)
+      .then((r) => { setBadges(r.badgesData); setAguardando(r.aguardando); })
+      .catch((e) => console.error("[AlunosPage] selos de pagamento", e));
+  }, [contaId]);
 
   useEffect(() => { void carregarTags(); carregarBadges(); }, [carregarTags, carregarBadges]);
 
@@ -247,8 +250,8 @@ const AlunosPage = () => {
                     {aguardando[u.id] && (
                       <button
                         type="button"
-                        onClick={() => navigate("/admin/cobranca")}
-                        title="Ver o comprovante em Cobrança"
+                        onClick={() => navigate(`/painel/alunos/${u.id}/financeiro`)}
+                        title="Ver o comprovante no Financeiro do aluno"
                         className="inline-flex items-center gap-1 text-xs font-heading uppercase px-2 py-0.5 rounded-full border border-primary/50 text-primary hover:bg-primary/10 transition-colors"
                         data-badge-comprovante={u.id}
                       >

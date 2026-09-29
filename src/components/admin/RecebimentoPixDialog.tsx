@@ -1,112 +1,96 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Save } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { principal } from "@/integrations/principal/client";
+import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
+import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
 import { PIX_TIPOS, normalizarChavePix, validarChavePix, type PixTipo } from "@/lib/pixChave";
-import type { Recebimento } from "@/lib/recebimentos";
+import { Botao } from "@/ui/premium/Botao";
+import { PainelDeslizante } from "@/ui/premium/Sheet";
+
+/** Chave Pix de recebimento da conta (recebimento_chaves no banco principal — W6; vinha do physiq_recebimentos do Calc). */
+export interface ChaveRecebimento {
+  id: string;
+  conta_id: string;
+  membro_id: string | null;
+  tipo: PixTipo;
+  chave: string;
+  favorecido: string | null;
+  banco: string | null;
+  ativa: boolean;
+  criado_em: string;
+}
+
+export const COLUNAS_CHAVE = "id, conta_id, membro_id, tipo, chave, favorecido, banco, ativa, criado_em";
 
 interface Props {
   aberto: boolean;
   onFechar: () => void;
-  professorId: string;
-  /** null = novo recebimento; com item = editar a chave existente. */
-  item: Recebimento | null;
-  /** Sem nenhum recebimento ligado, o novo já nasce ligado. */
+  contaId: string;
+  membroId: string | null;
+  /** null = chave nova; com item = editar. */
+  item: ChaveRecebimento | null;
+  /** Sem nenhuma chave ligada, a nova já nasce ligada. */
   ativarAoCriar: boolean;
-  /** Recebe a linha gravada (a lista atualiza sem ir de novo ao banco). */
-  onSalvo: (salva: Recebimento) => void;
+  onSalvo: (salva: ChaveRecebimento) => void;
 }
 
-const LABEL = "text-sm text-muted-foreground font-body uppercase tracking-wider";
-const SELECT = "bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-hidden focus:border-primary";
-const BTN_PRI = "inline-flex w-full items-center justify-center gap-1.5 bg-primary text-primary-foreground font-heading text-xs uppercase tracking-widest px-4 py-3 hover:bg-primary/90 transition-colors disabled:opacity-50";
-
-/** Popup "Adicionar" / "Editar" recebimento Pix (pedido 13/09/2026): tipo, chave, favorecido, banco → linha em physiq_recebimentos. */
-export default function RecebimentoPixDialog({ aberto, onFechar, professorId, item, ativarAoCriar, onSalvo }: Props) {
-  const [pixTipo, setPixTipo] = useState<PixTipo | "">("");
-  const [pixChave, setPixChave] = useState("");
-  const [pixFavorecido, setPixFavorecido] = useState("");
-  const [pixBanco, setPixBanco] = useState("");
+/** Popup "Adicionar" / "Editar" chave Pix (pedido 13/09/2026): tipo, chave, favorecido e banco. */
+export default function RecebimentoPixDialog({ aberto, onFechar, contaId, membroId, item, ativarAoCriar, onSalvo }: Props) {
+  const celular = useIsMobile();
+  const [tipo, setTipo] = useState<PixTipo | "">("");
+  const [chave, setChave] = useState("");
+  const [favorecido, setFavorecido] = useState("");
+  const [banco, setBanco] = useState("");
+  const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     if (!aberto) return;
-    setPixTipo(item?.pix_tipo ?? "");
-    setPixChave(item?.pix_chave ?? "");
-    setPixFavorecido(item?.pix_favorecido ?? "");
-    setPixBanco(item?.pix_banco ?? "");
+    setTipo(item?.tipo ?? "");
+    setChave(item?.chave ?? "");
+    setFavorecido(item?.favorecido ?? "");
+    setBanco(item?.banco ?? "");
+    setErro("");
   }, [aberto, item]);
 
-  const tipoSel = PIX_TIPOS.find((t) => t.value === pixTipo);
-  const erroChave = pixTipo && pixChave.trim() ? validarChavePix(pixTipo, pixChave) : null;
+  const tipoSel = PIX_TIPOS.find((t) => t.value === tipo);
 
-  const salvar = async () => {
-    const erro = validarChavePix(pixTipo, pixChave);
-    if (erro) { toast.error(erro); return; }
-    const dados = {
-      pix_tipo: pixTipo,
-      pix_chave: normalizarChavePix(pixTipo as PixTipo, pixChave),
-      pix_favorecido: pixFavorecido.trim() || null,
-      pix_banco: pixBanco.trim() || null,
-    };
+  const salvar = async (e: FormEvent) => {
+    e.preventDefault();
+    const problema = validarChavePix(tipo, chave);
+    if (problema) return setErro(problema);
+    const dados = { tipo: tipo as PixTipo, chave: normalizarChavePix(tipo as PixTipo, chave), favorecido: favorecido.trim() || null, banco: banco.trim() || null };
     setSalvando(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- physiq_recebimentos fora dos tipos gerados
-    const tabela = (supabase.from as any)("physiq_recebimentos");
     const { data, error } = item
-      ? await tabela.update(dados).eq("id", item.id).select("*").single()
-      : await tabela.insert({ professor_id: professorId, tipo: "pix", ...dados, ativo: ativarAoCriar }).select("*").single();
+      ? await principal.from("recebimento_chaves").update(dados).eq("id", item.id).select(COLUNAS_CHAVE).single()
+      : await principal.from("recebimento_chaves").insert({ conta_id: contaId, membro_id: membroId, ...dados, ativa: ativarAoCriar }).select(COLUNAS_CHAVE).single();
     setSalvando(false);
-    if (error || !data) { console.error("[Recebimentos] salvar:", error); toast.error("Erro ao salvar o recebimento."); return; }
-    toast.success(item ? "Recebimento atualizado." : ativarAoCriar ? "Recebimento salvo e ligado." : "Recebimento salvo.");
-    onSalvo(data as Recebimento);
+    if (error || !data) {
+      console.error("[Recebimento] salvar chave:", error);
+      return setErro("Não deu para salvar a chave agora. Tente de novo.");
+    }
+    toast.success(item ? "Chave atualizada." : ativarAoCriar ? "Chave salva e ligada." : "Chave salva.");
+    onSalvo(data as unknown as ChaveRecebimento);
     onFechar();
   };
 
   return (
-    <Dialog open={aberto} onOpenChange={(o) => { if (!o) onFechar(); }}>
-      <DialogContent className="max-w-md" data-dialog-recebimento>
-        <DialogHeader>
-          <DialogTitle className="font-heading text-sm uppercase tracking-wider">{item ? "Editar recebimento" : "Novo recebimento (Pix)"}</DialogTitle>
-          <DialogDescription className="font-body text-xs">
-            O aluno vê esta chave na tela Pagamentos, faz o Pix pelo banco dele e anexa o comprovante. Você confere e confirma em Cobrança.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid grid-cols-1 gap-5">
-          <div className="flex flex-col gap-1">
-            <label className={LABEL}>Tipo da chave</label>
-            <select value={pixTipo} onChange={(e) => setPixTipo(e.target.value as PixTipo | "")} className={SELECT} data-pix-tipo>
-              <option value="" className="bg-background text-foreground">Selecionar...</option>
-              {PIX_TIPOS.map((t) => (
-                <option key={t.value} value={t.value} className="bg-background text-foreground">{t.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className={LABEL}>Chave Pix</label>
-            <input
-              type={pixTipo === "email" ? "email" : "text"}
-              inputMode={pixTipo === "cpf" || pixTipo === "cnpj" || pixTipo === "telefone" ? "numeric" : undefined}
-              value={pixChave}
-              onChange={(e) => setPixChave(e.target.value)}
-              placeholder={tipoSel?.placeholder || "Escolha o tipo primeiro"}
-              className="input-underline text-sm"
-              data-pix-chave
-            />
-            {erroChave && <p className="text-[11px] text-destructive font-body" data-pix-erro>{erroChave}</p>}
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className={LABEL}>Favorecido (nome que aparece)</label>
-            <input type="text" value={pixFavorecido} onChange={(e) => setPixFavorecido(e.target.value)} className="input-underline text-sm" placeholder="Nome completo ou razão social" data-pix-favorecido />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className={LABEL}>Banco</label>
-            <input type="text" value={pixBanco} onChange={(e) => setPixBanco(e.target.value)} className="input-underline text-sm" placeholder="Ex.: Nubank, Inter, Itaú" data-pix-banco />
-          </div>
-        </div>
-        <button type="button" onClick={salvar} disabled={salvando} className={BTN_PRI} data-btn-salvar-pix>
-          {salvando ? "Salvando..." : "Salvar recebimento"}
-        </button>
-      </DialogContent>
-    </Dialog>
+    <PainelDeslizante aberto={aberto} aoMudar={(a) => !a && onFechar()} lado={celular ? "baixo" : "direita"} titulo={item ? "Editar chave Pix" : "Nova chave Pix"}
+      descricao="O aluno vê esta chave em Perfil › Pagamentos, faz o Pix pelo banco dele e anexa o comprovante. Você confere e confirma.">
+      <form onSubmit={salvar} className="flex flex-col gap-4 pt-2" data-dialog-recebimento>
+        <CampoSelect rotulo="Tipo da chave" value={tipo} onChange={(e) => { setTipo(e.target.value as PixTipo | ""); setErro(""); }} data-pix-tipo>
+          <option value="">Selecionar…</option>
+          {PIX_TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </CampoSelect>
+        <Campo rotulo="Chave Pix" type={tipo === "email" ? "email" : "text"} inputMode={tipo === "cpf" || tipo === "cnpj" || tipo === "telefone" ? "numeric" : undefined}
+          value={chave} onChange={(e) => { setChave(e.target.value); setErro(""); }} placeholder={tipoSel?.placeholder || "Escolha o tipo primeiro"} data-pix-chave />
+        <Campo rotulo="Favorecido (nome que aparece)" value={favorecido} onChange={(e) => setFavorecido(e.target.value)} placeholder="Nome completo ou razão social" data-pix-favorecido />
+        <Campo rotulo="Banco" value={banco} onChange={(e) => setBanco(e.target.value)} placeholder="Ex.: Nubank, Inter, Itaú" data-pix-banco />
+        {erro && <MensagemForm data-pix-erro>{erro}</MensagemForm>}
+        <Botao type="submit" variante="w" icone={Save} disabled={salvando} data-btn-salvar-pix>{salvando ? "Salvando…" : "Salvar a chave"}</Botao>
+      </form>
+    </PainelDeslizante>
   );
 }

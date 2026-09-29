@@ -1,252 +1,196 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Receipt } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { fmtBRL, listarAlunos, type AlunoRow } from "@/lib/saasApi";
-import { invokeMp } from "@/lib/mpClient";
-import { ITENS_PAGINA, ListaPaginada } from "@/components/ListaPaginada";
-import ComprovantePixCard, { BadgePagamento, type PixPendente } from "@/components/admin/ComprovantePixCard";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, ChevronUp, CircleCheck, Clock, Receipt, Users, Wallet } from "lucide-react";
+import { useConta } from "@/nucleo/conta";
+import { badgeDoAluno, buscarResumoDaConta, ErroFinanceiro } from "@/financeiro/api";
+import { mensagemErroFinanceiro, reais } from "@/financeiro/regras";
+import type { AlunoResumo } from "@/financeiro/tipos";
+import ComprovantePixCard, { BadgePagamento } from "@/components/admin/ComprovantePixCard";
 import CobrancaAlunoDialog from "@/components/admin/CobrancaAlunoDialog";
+import { TopoPagina } from "@/ui/casca/topo";
+import { Avatar } from "@/ui/premium/Avatar";
+import { Botao } from "@/ui/premium/Botao";
+import { Cartao, CabecalhoCartao } from "@/ui/premium/Cartao";
+import { Chip } from "@/ui/premium/Chip";
+import { EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
+import { Kpi } from "@/ui/premium/Kpi";
 
-interface BadgeInfo { s: string; ate: string | null }
-interface BadgesResp { badges?: Record<string, string>; badgesData?: Record<string, BadgeInfo>; aguardando?: Record<string, string> }
+const PAGINA = 20;
+const porNome = (a: AlunoResumo, b: AlunoResumo) => (a.nome || a.email || "").localeCompare(b.nome || b.email || "");
+/** Id do aluno nas rotas do painel: o do Treino para o aluno do Calc (lista antiga de alunos), senão o da matrícula. */
+const idDoAluno = (a: Pick<AlunoResumo, "treino_user_id" | "paciente_id">) => a.treino_user_id ?? a.paciente_id;
 
 /**
- * Todos os alunos do escopo (páginas de 100 = máximo do servidor). O `admin-list-users` não filtra por
- * mensalidade, então a separação com/sem mensalidade é aqui; a paginação de 20 é local.
+ * Financeiro do profissional — a tela antiga "Cobrança" do Calc, que responde por /painel/financeiro até a página nova (W19).
+ * W6: lê o banco principal (pagamentos-aluno › prof_resumo da conta ativa): KPIs, alunos com mensalidade (selo pago até /
+ * pendente desde, comprovante para conferir), alunos sem mensalidade e os comprovantes Pix aguardando a confirmação. O botão
+ * "Cobrança" abre o Financeiro do aluno no painel lateral (o mesmo da aba Financeiro do perfil do aluno).
  */
-async function carregarTodosAlunos(professorId?: string): Promise<AlunoRow[]> {
-  const todos: AlunoRow[] = [];
-  let offset = 0;
-  for (let i = 0; i < 20; i++) {
-    const r = await listarAlunos({ limit: 100, offset, professorId });
-    todos.push(...r.users);
-    offset += r.users.length;
-    if (r.users.length === 0 || offset >= r.total) break;
-  }
-  return todos;
-}
-
-const temMensalidade = (a: AlunoRow) => Number(a.mensalidade_valor) > 0;
-const porNome = (a: AlunoRow, b: AlunoRow) => (a.nome || a.email || "").localeCompare(b.nome || b.email || "");
-
-const BTN_SEC = "inline-flex items-center gap-1.5 border border-primary/40 text-primary font-heading text-xs uppercase tracking-wider px-3 py-1.5 hover:bg-primary/10 rounded-lg transition-colors";
-// cabeçalho recolhível (setinha): "Alunos sem mensalidade" e "Comprovantes aguardando confirmação"
-const BTN_TOGGLE = "inline-flex items-center gap-2 font-heading text-sm uppercase tracking-wider transition-colors text-left";
-
-// Cobrança do PROFESSOR (SaaS 12/09/2026): KPIs do admin-badges, alunos com mensalidade e comprovantes Pix pra conferir.
-// 13/09/2026: o botão "Cobrança" abre um POPUP (plano, mensalidade, tags, pagamentos) — antes era um atalho pro Configurar aluno.
 const CobrancaPage = () => {
-  const { user, papel } = useAuth();
-  // mesmo escopo da lista de Alunos: no Admin o master vê SÓ os alunos dele
-  const escopo = papel === "master" ? user?.id ?? undefined : undefined;
-
-  const [badges, setBadges] = useState<BadgesResp | null>(null);
-  const [alunos, setAlunos] = useState<AlunoRow[]>([]);
-  const [pendentes, setPendentes] = useState<PixPendente[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-  const [mostrar, setMostrar] = useState(ITENS_PAGINA);
-  // popup "Cobrança" do aluno
-  const [alunoCobranca, setAlunoCobranca] = useState<AlunoRow | null>(null);
-  // blocos recolhidos (setinha): alunos ainda sem mensalidade (define plano e valor no mesmo popup) e comprovantes Pix
+  const { conta } = useConta();
+  const qc = useQueryClient();
+  const consulta = useQuery({
+    queryKey: ["financeiro-resumo-conta", conta?.id],
+    enabled: !!conta?.id,
+    queryFn: () => buscarResumoDaConta(conta!.id),
+    staleTime: 15_000,
+  });
+  const [mostrar, setMostrar] = useState(PAGINA);
+  const [mostrarSem, setMostrarSem] = useState(PAGINA);
   const [semAberto, setSemAberto] = useState(false);
-  const [mostrarSem, setMostrarSem] = useState(ITENS_PAGINA);
-  const [comprovantesAberto, setComprovantesAberto] = useState(false);
+  const [comprovantesAberto, setComprovantesAberto] = useState(true);
+  const [aluno, setAluno] = useState<AlunoResumo | null>(null);
 
-  const carregar = useCallback(async (silencioso = false) => {
-    if (!silencioso) setLoading(true);
-    setErro(null);
-    try {
-      const [b, p, a] = await Promise.all([
-        invokeMp<BadgesResp>("admin-badges"),
-        invokeMp<{ pendentes: PixPendente[] }>("admin-pix-pendentes"),
-        carregarTodosAlunos(escopo),
-      ]);
-      setBadges(b);
-      setPendentes(p.pendentes || []);
-      setAlunos(a);
-    } catch (e) {
-      const msg = (e as { message?: string } | null)?.message;
-      setErro(msg === "plano_vencido" ? "Seu plano está vencido — regularize em Planos." : "Erro ao carregar a cobrança. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
-  }, [escopo]);
-
-  useEffect(() => { void carregar(); }, [carregar]);
-
-  const comMensalidade = useMemo(() => alunos.filter(temMensalidade), [alunos]);
-  const semMensalidade = useMemo(() => alunos.filter((a) => !temMensalidade(a)).sort(porNome), [alunos]);
-
-  const badgesData = useMemo(() => badges?.badgesData || {}, [badges]);
-  const aguardando = useMemo(() => badges?.aguardando || {}, [badges]);
+  const dados = consulta.data;
+  const alunos = useMemo(() => dados?.alunos ?? [], [dados]);
+  const pendentes = useMemo(() => dados?.pendentes ?? [], [dados]);
+  const comMensalidade = useMemo(() => alunos.filter((a) => Number(a.mensalidade_valor) > 0), [alunos]);
+  const semMensalidade = useMemo(() => alunos.filter((a) => !(Number(a.mensalidade_valor) > 0)).sort(porNome), [alunos]);
+  const selos = useMemo(() => new Map(comMensalidade.map((a) => [a.paciente_id, badgeDoAluno(a)])), [comMensalidade]);
   const kpis = useMemo(() => {
-    const valores = Object.values(badgesData);
+    const lista = [...selos.values()].filter(Boolean);
     return {
-      comMensalidade: valores.length,
-      emDia: valores.filter((b) => b.s === "pago").length,
-      pendentes: valores.filter((b) => b.s === "pendente").length,
-      comprovantes: pendentes.length || Object.keys(aguardando).length,
+      comMensalidade: comMensalidade.length,
+      emDia: lista.filter((b) => b!.s === "pago").length,
+      pendentes: lista.filter((b) => b!.s === "pendente").length,
+      comprovantes: pendentes.length,
     };
-  }, [badgesData, aguardando, pendentes.length]);
-
-  // comprovante pra conferir primeiro, depois pendentes, em dia e cobrança parada; dentro, por nome
+  }, [selos, comMensalidade.length, pendentes.length]);
+  // comprovante para conferir primeiro, depois pendentes, em dia e cobrança parada; dentro, por nome
   const ordenados = useMemo(() => {
-    const peso = (a: AlunoRow) => aguardando[a.id] ? 0 : badgesData[a.id]?.s === "pendente" ? 1 : badgesData[a.id]?.s === "pago" ? 2 : 3;
+    const peso = (a: AlunoResumo) => (a.aguardando ? 0 : selos.get(a.paciente_id)?.s === "pendente" ? 1 : selos.get(a.paciente_id)?.s === "pago" ? 2 : 3);
     return [...comMensalidade].sort((a, b) => peso(a) - peso(b) || porNome(a, b));
-  }, [comMensalidade, badgesData, aguardando]);
+  }, [comMensalidade, selos]);
 
-  // KPI e "comprovante para conferir": abre o bloco (se estiver recolhido) e rola até ele
   const irParaComprovantes = () => {
     setComprovantesAberto(true);
     window.setTimeout(() => document.getElementById("comprovantes")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
+  const recarregar = () => void qc.invalidateQueries({ queryKey: ["financeiro-resumo-conta", conta?.id] });
+  const carregando = consulta.isLoading;
 
-  const KPI = ({ rotulo, valor, cor = "text-foreground", onClick, dataKey }: { rotulo: string; valor: number; cor?: string; onClick?: () => void; dataKey: string }) => (
-    <button type="button" onClick={onClick} disabled={!onClick}
-      className={`result-card p-4 text-left ${onClick ? "hover:border-primary transition-colors cursor-pointer" : "cursor-default"}`}
-      data-kpi={dataKey} data-kpi-valor={valor}>
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-body mb-1">{rotulo}</p>
-      <p className={`font-heading text-2xl ${cor}`}>{loading ? "—" : valor}</p>
-    </button>
-  );
+  if (!conta) {
+    return <div data-pagina-cobranca><EstadoVazio icone={Wallet} titulo="Nenhuma conta ativa" texto="O financeiro aparece aqui quando você faz parte de uma conta de profissional." /></div>;
+  }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8" data-pagina-cobranca>
-      <header>
-        <h1 className="font-heading text-xl text-foreground uppercase tracking-wider">Cobrança</h1>
-        <p className="text-xs text-muted-foreground font-body mt-1">Mensalidades dos seus alunos e comprovantes Pix pra conferir.</p>
-      </header>
+    <div className="flex flex-col gap-4" data-pagina-cobranca>
+      <TopoPagina titulo="Financeiro" subtitulo="Mensalidades dos alunos e comprovantes Pix para conferir" />
 
-      {erro && <p className="text-sm text-destructive font-body">{erro}</p>}
+      {consulta.isError && (
+        <EstadoErro texto={mensagemErroFinanceiro(consulta.error instanceof ErroFinanceiro ? consulta.error.codigo : null, "Não deu para carregar o financeiro. Tente de novo.")}
+          aoTentar={() => void consulta.refetch()} />
+      )}
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI rotulo="Com mensalidade" valor={kpis.comMensalidade} dataKey="com-mensalidade" />
-        <KPI rotulo="Em dia" valor={kpis.emDia} cor="text-primary" dataKey="em-dia" />
-        <KPI rotulo="Pendentes" valor={kpis.pendentes} cor={kpis.pendentes > 0 ? "text-destructive" : "text-foreground"} dataKey="pendentes" />
-        <KPI rotulo="Comprovantes aguardando" valor={kpis.comprovantes} cor={kpis.comprovantes > 0 ? "text-primary" : "text-foreground"} onClick={irParaComprovantes} dataKey="comprovantes" />
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <Kpi icone={Users} titulo="Com mensalidade" tom="violeta" valor={carregando ? "—" : kpis.comMensalidade} className="h-[116px]" />
+        <Kpi icone={CircleCheck} titulo="Em dia" tom="verde" valor={carregando ? "—" : kpis.emDia} className="h-[116px]" />
+        <Kpi icone={Clock} titulo="Pendentes" tom="ambar" valor={carregando ? "—" : kpis.pendentes} className="h-[116px]" />
+        <button type="button" className="text-left" onClick={irParaComprovantes} data-kpi-comprovantes={kpis.comprovantes}>
+          <Kpi icone={Receipt} titulo="Comprovantes aguardando" tom="ciano" valor={carregando ? "—" : kpis.comprovantes} className="h-[116px] transition-colors hover:border-violeta/40" />
+        </button>
       </div>
 
-      {/* Alunos com mensalidade */}
-      <section className="space-y-2">
-        <h2 className="font-heading text-sm text-foreground uppercase tracking-wider">Alunos com mensalidade</h2>
-        {loading ? (
-          <p className="text-muted-foreground font-body text-sm">Carregando...</p>
+      <Cartao className="px-4 pb-2 pt-4" data-secao-com-mensalidade>
+        <CabecalhoCartao titulo="Alunos com mensalidade" extra={<Chip tom="g">{comMensalidade.length}</Chip>} />
+        {carregando ? (
+          <div className="flex flex-col gap-2 pb-2"><Esqueleto className="h-14 w-full rounded-2xl" /><Esqueleto className="h-14 w-full rounded-2xl" /></div>
         ) : ordenados.length === 0 ? (
-          <p className="text-muted-foreground font-body text-sm" data-cobranca-vazio>
-            {alunos.length === 0
-              ? "Nenhum aluno na sua lista ainda."
-              : "Nenhum aluno com mensalidade. Use o botão Cobrança de um aluno abaixo pra definir o plano e o valor."}
+          <p className="pb-3 text-[13px] text-texto-2" data-cobranca-vazio>
+            {alunos.length === 0 ? "Nenhum aluno na sua conta ainda." : "Nenhum aluno com mensalidade. Use o botão Cobrança de um aluno abaixo para definir o plano e o valor."}
           </p>
         ) : (
           <>
-            <div className="space-y-0">
-              {ordenados.slice(0, mostrar).map((a) => {
-                const badge = badgesData[a.id];
-                return (
-                  <div key={a.id} className="flex items-center justify-between gap-3 py-3 border-b border-muted-foreground/30" data-cobranca-aluno={a.id}>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-heading text-sm text-foreground truncate">{a.nome || "Sem nome"}</p>
-                      <p className="text-xs text-muted-foreground font-body truncate">{a.email}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        {a.user_code && <span className="text-xs text-muted-foreground font-body">ID: {a.user_code}</span>}
-                        <span className="text-xs text-foreground font-body">{fmtBRL(a.mensalidade_valor)}/mês</span>
-                        {a.plano_nome && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 font-body">{a.plano_nome}</span>}
-                        {badge ? (
-                          <BadgePagamento badge={badge} />
-                        ) : (
-                          <span className="text-xs font-heading uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground">cobrança parada</span>
-                        )}
-                        {aguardando[a.id] && (
-                          <button type="button" onClick={irParaComprovantes}
-                            className="inline-flex items-center gap-1 text-xs font-heading uppercase px-2 py-0.5 rounded-full border border-primary/50 text-primary hover:bg-primary/10 transition-colors"
-                            data-badge-comprovante={a.id}>
-                            <Receipt size={11} /> comprovante para conferir
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <button type="button" onClick={() => setAlunoCobranca(a)} className={`${BTN_SEC} shrink-0`} data-btn-cobranca={a.id}>
-                      Cobrança
-                    </button>
-                  </div>
-                );
-              })}
+            <div className="divide-y divide-linha-3">
+              {ordenados.slice(0, mostrar).map((a) => (
+                <LinhaAluno key={a.paciente_id} a={a} selo={selos.get(a.paciente_id) ?? null} aoCobranca={() => setAluno(a)} aoComprovante={irParaComprovantes} />
+              ))}
             </div>
-            <ListaPaginada total={ordenados.length} mostrando={mostrar} onVerMais={() => setMostrar((m) => m + ITENS_PAGINA)} rotulo="alunos" />
+            {ordenados.length > mostrar && (
+              <div className="py-2"><Botao tamanho="sm" variante="g" onClick={() => setMostrar((m) => m + PAGINA)}>Ver mais ({ordenados.length - mostrar})</Botao></div>
+            )}
           </>
         )}
-      </section>
+      </Cartao>
 
-      {/* Alunos sem mensalidade: recolhido; o mesmo popup define plano e valor */}
-      {!loading && semMensalidade.length > 0 && (
-        <section className="space-y-2" data-secao-sem-mensalidade>
-          <button type="button" onClick={() => setSemAberto((v) => !v)} aria-expanded={semAberto}
-            className={`${BTN_TOGGLE} text-muted-foreground hover:text-foreground`}
-            data-btn-sem-mensalidade>
-            {semAberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            Alunos sem mensalidade ({semMensalidade.length}) — definir cobrança
+      {!carregando && semMensalidade.length > 0 && (
+        <Cartao className="px-4 py-3" data-secao-sem-mensalidade>
+          <button type="button" onClick={() => setSemAberto((v) => !v)} aria-expanded={semAberto} className="flex w-full items-center gap-2 text-left text-[14px] font-semibold text-texto" data-btn-sem-mensalidade>
+            {semAberto ? <ChevronUp aria-hidden className="h-4 w-4 text-texto-3" /> : <ChevronDown aria-hidden className="h-4 w-4 text-texto-3" />}
+            Alunos sem mensalidade
+            <Chip tom="g" className="ml-auto">{semMensalidade.length}</Chip>
           </button>
           {semAberto && (
-            <>
-              <div className="space-y-0" data-lista-sem-mensalidade>
-                {semMensalidade.slice(0, mostrarSem).map((a) => (
-                  <div key={a.id} className="flex items-center justify-between gap-3 py-3 border-b border-muted-foreground/30" data-cobranca-aluno-sem={a.id}>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-heading text-sm text-foreground truncate">{a.nome || "Sem nome"}</p>
-                      <p className="text-xs text-muted-foreground font-body truncate">{a.email}</p>
-                      {a.user_code && <span className="text-xs text-muted-foreground font-body">ID: {a.user_code}</span>}
-                    </div>
-                    <button type="button" onClick={() => setAlunoCobranca(a)} className={`${BTN_SEC} shrink-0`} data-btn-cobranca={a.id}>
-                      Cobrança
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <ListaPaginada total={semMensalidade.length} mostrando={mostrarSem} onVerMais={() => setMostrarSem((m) => m + ITENS_PAGINA)} rotulo="alunos" />
-            </>
+            <div className="mt-2 divide-y divide-linha-3" data-lista-sem-mensalidade>
+              {semMensalidade.slice(0, mostrarSem).map((a) => (
+                <LinhaAluno key={a.paciente_id} a={a} selo={null} aoCobranca={() => setAluno(a)} aoComprovante={irParaComprovantes} semValor />
+              ))}
+              {semMensalidade.length > mostrarSem && (
+                <div className="py-2"><Botao tamanho="sm" variante="g" onClick={() => setMostrarSem((m) => m + PAGINA)}>Ver mais ({semMensalidade.length - mostrarSem})</Botao></div>
+              )}
+            </div>
           )}
-        </section>
+        </Cartao>
       )}
 
-      {/* Comprovantes Pix aguardando confirmação — recolhido (setinha), igual ao bloco "sem mensalidade"; pedido 13/09/2026 */}
-      <section id="comprovantes" className="space-y-3 scroll-mt-4" data-secao-comprovantes>
-        <button type="button" onClick={() => setComprovantesAberto((v) => !v)} aria-expanded={comprovantesAberto}
-          className={`${BTN_TOGGLE} ${pendentes.length > 0 ? "text-primary hover:text-primary/80" : "text-muted-foreground hover:text-foreground"}`}
-          data-btn-comprovantes>
-          {comprovantesAberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          Comprovantes aguardando confirmação {!loading && `(${pendentes.length})`}
+      <Cartao id="comprovantes" className="scroll-mt-4 px-4 py-3" data-secao-comprovantes>
+        <button type="button" onClick={() => setComprovantesAberto((v) => !v)} aria-expanded={comprovantesAberto} className="flex w-full items-center gap-2 text-left text-[14px] font-semibold text-texto" data-btn-comprovantes>
+          {comprovantesAberto ? <ChevronUp aria-hidden className="h-4 w-4 text-texto-3" /> : <ChevronDown aria-hidden className="h-4 w-4 text-texto-3" />}
+          Comprovantes aguardando confirmação
+          <Chip tom={pendentes.length ? "c" : "g"} className="ml-auto">{carregando ? "…" : pendentes.length}</Chip>
         </button>
         {comprovantesAberto && (
-          <>
-            <p className="text-xs text-muted-foreground font-body">
-              O aluno pagou o Pix na sua chave e anexou o comprovante. Confira o valor e o mês antes de confirmar — ao confirmar, ele fica em dia.
-            </p>
-            {loading ? (
-              <p className="text-muted-foreground font-body text-sm">Carregando...</p>
+          <div className="mt-3 flex flex-col gap-3">
+            <p className="text-[12.5px] text-texto-2">O aluno pagou o Pix na sua chave e anexou o comprovante. Confira o valor e o mês antes de confirmar — ao confirmar, ele fica em dia.</p>
+            {carregando ? (
+              <Esqueleto className="h-[92px] w-full rounded-2xl" />
             ) : pendentes.length === 0 ? (
-              <p className="text-muted-foreground font-body text-sm" data-comprovantes-vazio>Nenhum comprovante aguardando.</p>
+              <p className="text-[13px] text-texto-2" data-comprovantes-vazio>Nenhum comprovante aguardando.</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {pendentes.map((p) => (
-                  <ComprovantePixCard key={p.id} item={p} onResolvido={() => { void carregar(true); }} />
-                ))}
+              <div className="grid gap-3 md:grid-cols-2">
+                {pendentes.map((p) => <ComprovantePixCard key={p.id} item={p} onResolvido={recarregar} />)}
               </div>
             )}
-            {papel === "master" && (
-              <p className="text-[11px] text-muted-foreground font-body">
-                Seus alunos pagam pelo Mercado Pago (integração) — comprovantes Pix só aparecem aqui se algum aluno seu estiver em modo Pix manual.
-              </p>
-            )}
-          </>
+          </div>
         )}
-      </section>
+      </Cartao>
 
-      {/* popup Cobrança do aluno (plano, mensalidade, tags, pagamentos) — recarrega a tela ao salvar */}
-      <CobrancaAlunoDialog aluno={alunoCobranca} onFechar={() => setAlunoCobranca(null)} onSalvo={() => { void carregar(true); }} />
+      <CobrancaAlunoDialog aluno={aluno ? { id: idDoAluno(aluno), nome: aluno.nome, email: aluno.email } : null} onFechar={() => setAluno(null)} onSalvo={recarregar} />
     </div>
   );
 };
+
+function LinhaAluno({ a, selo, aoCobranca, aoComprovante, semValor }: {
+  a: AlunoResumo;
+  selo: { s: string; ate: string | null } | null;
+  aoCobranca: () => void;
+  aoComprovante: () => void;
+  semValor?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-3" data-cobranca-aluno={idDoAluno(a)}>
+      <Avatar nome={a.nome || a.email} tamanho={38} />
+      <div className="min-w-0 flex-1">
+        <Link to={`/painel/alunos/${idDoAluno(a)}/financeiro`} className="block truncate text-[14px] font-semibold text-texto hover:text-violeta-3">{a.nome || "Sem nome"}</Link>
+        <p className="truncate text-[12px] text-texto-3">{a.email}</p>
+        {!semValor && (
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="text-[12px] font-semibold tabular-nums text-texto">{reais(Number(a.mensalidade_valor))}/mês</span>
+            {a.plano && <Chip tom="t" className="h-[22px] text-[10.5px]">{a.plano.toUpperCase()}</Chip>}
+            {selo ? <BadgePagamento badge={selo} /> : <Chip tom="g" className="h-[22px] text-[10.5px]" data-cobranca-parada>COBRANÇA PARADA</Chip>}
+            {a.aguardando && (
+              <button type="button" onClick={aoComprovante} data-badge-comprovante={idDoAluno(a)}>
+                <Chip tom="c" icone={Receipt} className="h-[22px] text-[10.5px]">COMPROVANTE PARA CONFERIR</Chip>
+              </button>
+            )}
+            {a.abertas > 0 && <Chip tom="a" className="h-[22px] text-[10.5px]">{a.abertas} EM ABERTO</Chip>}
+          </div>
+        )}
+      </div>
+      <Botao tamanho="sm" variante="g" onClick={aoCobranca} className="flex-none" data-btn-cobranca={idDoAluno(a)}>Cobrança</Botao>
+    </div>
+  );
+}
 
 export default CobrancaPage;

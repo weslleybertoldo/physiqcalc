@@ -8,11 +8,13 @@ const h = vi.hoisted(() => ({
   auth: { user: null as null | { id: string }, isStaff: false },
   status: null as null | { bloqueadoPeloMaster?: boolean },
   dietaNova: false,
+  resumo: null as null | Array<Record<string, unknown>>,
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
 vi.mock("@/hooks/useMensalidadeStatus", () => ({ useMensalidadeStatus: () => ({ status: h.status, pendente: false }) }));
 vi.mock("@/rotas/registro", () => ({ existe: (g: string, n: string) => g === "abasApp" && n === "Dieta" && h.dietaNova }));
+vi.mock("@/financeiro/useResumoFinanceiro", () => ({ useResumoFinanceiro: () => ({ resumo: h.resumo, carregando: false, erro: false }) }));
 
 import GateBloqueioMaster from "./GateBloqueioMaster";
 import GateSemModulo from "./GateSemModulo";
@@ -36,6 +38,7 @@ beforeEach(() => {
   h.auth = { user: { id: "t1" }, isStaff: false };
   h.status = null;
   h.dietaNova = false;
+  h.resumo = null;
   sair.mockClear();
   tentar.mockClear();
 });
@@ -92,6 +95,25 @@ describe("GateSemModulo", () => {
     h.sessao.situacao = null;
     montar(GateSemModulo);
     expect(screen.getByText("o app")).toBeInTheDocument();
+  });
+  it("W6 (R16): só Nutrição — Perfil › Pagamentos abre; com cobrança a pagar a trava mostra 'Pagar'", () => {
+    h.sessao.situacao = situacao({ matriculas: [matricula({ modulos: ["nutricao"] })], modulos_aluno: ["nutricao"] });
+    const r1 = montar(GateSemModulo, "/perfil/pagamentos");
+    expect(screen.getByText("o app")).toBeInTheDocument();
+    r1.unmount();
+    const r2 = montar(GateSemModulo);
+    expect(screen.queryByText(/^Pagar/)).toBeNull();
+    expect(document.querySelector("[data-trava-pagamentos]")).not.toBeNull();
+    r2.unmount();
+    h.resumo = [{
+      paciente_id: "p-1", conta_id: "c-1", conta_nome: "Nutri", recebimento_modo: "pix_manual", bloquear_inadimplente: true, tem_chave: true,
+      profissional: "Marina Souza", mensalidade_valor: null, plano_nome: null, pausada: false, pago_ate: null, desde: null, aguardando: false,
+      assinatura_ativa: false, abertas: [{ id: "cob-1", descricao: "Consulta", valor: 180, vencimento: "2026-09-01" }], aguardando_avulsas: 0,
+    }];
+    montar(GateSemModulo);
+    expect(document.querySelector("[data-trava-pagar]")).not.toBeNull();
+    expect(document.querySelector("[data-trava-cobranca]")?.textContent).toContain("Consulta venceu em 01/09");
+    expect(document.querySelector("[data-trava-pagamentos]")).toBeNull();
   });
 });
 
