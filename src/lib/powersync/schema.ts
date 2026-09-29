@@ -18,6 +18,10 @@ const tb_exercicios = new Table({
   subgrupo: column.text,
   dica: column.text,
   professor_id: column.text,
+  // equivalência (W2 cria, W9 usa): listas fixas no código (src/treino/equivalencia.ts)
+  padrao_movimento: column.text,
+  equipamento: column.text,
+  variacao: column.text,
 });
 
 const tb_semana_treinos = new Table({
@@ -75,6 +79,7 @@ const tb_academias = new Table({
   user_id: column.text,
   nome: column.text,
   created_at: column.text,
+  equipamentos: column.text, // text[] no Postgres → JSON no SQLite (W2 cria; filtro da troca na W9). Vazio = sem filtro
 });
 
 const tb_academia_pesos = new Table({
@@ -148,6 +153,10 @@ const physiq_profiles = new Table({
   tmb_metodo: column.text,
   tmb_mifflin: column.real,
   user_code: column.integer,
+  // espelho do núcleo (W2): conta do aluno no banco principal + datas da próxima avaliação e troca do treino (NF7)
+  conta_id: column.text,
+  proxima_avaliacao: column.text,
+  proxima_troca_treino: column.text,
 });
 
 const exercicio_ordem_usuario = new Table({
@@ -184,6 +193,9 @@ const tb_exercicios_usuario = new Table({
   tipo: column.text,
   created_at: column.text,
   updated_at: column.text,
+  padrao_movimento: column.text,
+  equipamento: column.text,
+  variacao: column.text,
 });
 
 const tb_grupos_exercicios_usuario = new Table({
@@ -212,6 +224,11 @@ const tb_series_padrao_usuario = new Table({
   exercicio_usuario_id: column.text,
   num_series: column.integer,
   updated_at: column.text,
+  // prescrição opcional (NF1/NF2 — W2 cria, W15 edita, W8 mostra): vazio = como hoje (histórico e descanso do aluno)
+  reps_alvo: column.text, // "10" ou "8-12"
+  descanso_segundos: column.integer,
+  carga_sugerida_kg: column.real,
+  observacao: column.text, // na linha geral do treino (sem exercício)
 });
 
 export const AppSchema = new Schema({
