@@ -1,46 +1,37 @@
-import { ReactNode, useEffect, useState } from "react";
-import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import type { ReactNode } from "react";
+import { FlaskConical, LogOut } from "lucide-react";
+import { DB_SCHEMA } from "@/integrations/supabase/client";
+import { emailDeTeste } from "@/nucleo/contasTeste";
+import { useSessao } from "@/nucleo/sessao";
+import { Cartao } from "@/ui/premium/Cartao";
+import { Marca } from "@/ui/premium/Marca";
 
-// O staging é ambiente de TESTE: só entram contas com perfil em staging.*
-// (migradas pra teste ou criadas pelo próprio staging). Conta real cai nesta tela
-// e não consegue operar nada — garante que o staging nunca mexe com produção.
+/**
+ * O staging é ambiente de TESTE (P26): o Auth dos 2 bancos é compartilhado com a produção, então só entram as contas de
+ * teste (src/nucleo/contasTeste.ts — a mesma regra da troca de token e do pos-login). Conta real cai nesta tela e não
+ * opera nada.
+ */
 const StagingGate = ({ children }: { children: ReactNode }) => {
-  const { user, signOut } = useAuth();
-  const [permitido, setPermitido] = useState<boolean | null>(DB_SCHEMA === "staging" ? null : true);
-
-  useEffect(() => {
-    if (DB_SCHEMA !== "staging" || !user) { setPermitido(true); return; }
-    let cancelled = false;
-    supabase.from("physiq_profiles").select("id").eq("id", user.id).maybeSingle()
-      .then(({ data, error }) => { if (!cancelled) setPermitido(error ? true : !!data); })
-      .then(undefined, () => { if (!cancelled) setPermitido(true); });
-    return () => { cancelled = true; };
-  }, [user?.id]);
-
-  if (DB_SCHEMA !== "staging" || !user || permitido === true) return <>{children}</>;
-
-  if (permitido === null) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground font-body">Carregando...</p>
-      </div>
-    );
-  }
+  const { usuario, sair } = useSessao();
+  if (DB_SCHEMA !== "staging" || !usuario || emailDeTeste(usuario.email)) return <>{children}</>;
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6">
-      <div className="max-w-sm text-center space-y-4">
-        <h1 className="font-heading text-xl text-foreground uppercase tracking-wider">Ambiente de teste</h1>
-        <p className="text-sm text-muted-foreground font-body">
-          Esta conta é de produção e não tem acesso ao ambiente de teste.
-          Use uma conta de teste (crie uma nova por aqui) ou acesse o app oficial.
+    <div data-staging-bloqueado className="relative isolate flex min-h-screen items-center justify-center px-5">
+      <div aria-hidden className="pq-halo-app pointer-events-none fixed inset-0 -z-10" />
+      <Cartao brilho className="flex w-full max-w-sm flex-col items-center gap-4 px-6 py-8 text-center">
+        <Marca tamanho={40} soIcone />
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-linha bg-superficie text-ambar-3">
+          <FlaskConical aria-hidden className="h-5 w-5" strokeWidth={1.8} />
+        </span>
+        <h1 className="font-body text-[18px] font-semibold normal-case tracking-[-0.02em] text-texto">Ambiente de teste</h1>
+        <p className="text-[13.5px] leading-relaxed text-texto-2">
+          Esta conta é de produção e não entra no ambiente de teste. Use uma conta de teste ou abra o app oficial em physiqcalc.com.br.
         </p>
-        <button type="button" onClick={() => signOut()}
-          className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
+        <button type="button" onClick={() => void sair()} className="pq-botao pq-botao-g">
+          <LogOut aria-hidden />
           Sair
         </button>
-      </div>
+      </Cartao>
     </div>
   );
 };

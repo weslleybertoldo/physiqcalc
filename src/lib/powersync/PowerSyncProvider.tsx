@@ -11,16 +11,46 @@ const powerSyncDb = new PowerSyncDatabase({
   database: { dbFilename: "physiqcalc.db" },
 });
 
+// Physiq W3 (login único): a sessão do Treino chega pela troca de token (src/nucleo/trocaToken.ts) e o PowerSync
+// conecta com ela sem mudar o connector. Se a pessoa do aparelho MUDA (outro login no mesmo celular), o SQLite local da
+// anterior é apagado antes de conectar — o treino de uma pessoa nunca aparece para outra. A mesma pessoa (inclusive quem
+// vinha do app antigo com séries na fila sem internet) conecta por cima e a fila sobe normalmente.
+const CHAVE_DONO_LOCAL = "physiq_powersync_usuario";
+
+async function prepararBancoLocal(userId: string): Promise<void> {
+  let anterior: string | null = null;
+  try {
+    anterior = localStorage.getItem(CHAVE_DONO_LOCAL);
+  } catch {
+    /* sem armazenamento */
+  }
+  if (anterior && anterior !== userId) {
+    console.log("[PowerSync] Outra pessoa neste aparelho — limpando o banco local da anterior");
+    try {
+      await powerSyncDb.disconnectAndClear();
+    } catch (e) {
+      console.warn("[PowerSync] disconnectAndClear falhou:", e);
+    }
+  }
+  try {
+    localStorage.setItem(CHAVE_DONO_LOCAL, userId);
+  } catch {
+    /* noop */
+  }
+}
+
 export function PowerSyncProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const connectedRef = useRef(false);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connectWithRetry = useCallback(async () => {
-    if (connectedRef.current || !user) return;
+    if (connectedRef.current || !userId) return;
 
     try {
+      await prepararBancoLocal(userId);
       await powerSyncDb.connect(connector, {
         crudUploadThrottleMs: 1000,
       });
@@ -39,10 +69,10 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
         retryTimerRef.current = setTimeout(connectWithRetry, delay);
       }
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       // Sem usuário — desconecta
       if (connectedRef.current) {
         powerSyncDb.disconnect();
@@ -68,11 +98,11 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
         retryTimerRef.current = null;
       }
     };
-  }, [user, connectWithRetry]);
+  }, [userId, connectWithRetry]);
 
   // Reconecta quando a rede volta (online event)
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const handleOnline = () => {
       if (!connectedRef.current) {
@@ -84,7 +114,7 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
-  }, [user, connectWithRetry]);
+  }, [userId, connectWithRetry]);
 
   return (
     <PowerSyncContext.Provider value={powerSyncDb}>

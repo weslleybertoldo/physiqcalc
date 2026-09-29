@@ -9,6 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => {
   const estado = {
     auth: { user: null as null | { id: string; email: string; user_metadata: Record<string, string> }, loading: false, papel: "aluno", isStaff: false, isMaster: false, signOut: async () => {} },
+    // W3: login único — o login é o do banco principal (useSessao) e a situação vem da minha_situacao()
+    sessao: { usuario: null as null | { id: string; email: string; user_metadata: Record<string, string> }, situacao: null as null | Record<string, unknown> },
   };
   const marcador = (id: string) => ({
     default: (props: { userId?: string }) => <div data-testid={id}>{props.userId ? `${id}:${props.userId}` : id}</div>,
@@ -17,7 +19,30 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.estado.auth }));
+vi.mock("@/nucleo/sessao", () => ({
+  SessaoProvider: ({ children }: { children: unknown }) => children,
+  useSessao: () => ({
+    pronto: true,
+    usuario: h.estado.sessao.usuario,
+    sessao: null,
+    situacao: h.estado.sessao.situacao,
+    carregandoSituacao: false,
+    erroSituacao: false,
+    treino: { estado: "pronto", erro: null },
+    senhaTrocada: false,
+    entrarComGoogle: async () => ({}),
+    entrarComEmail: async () => ({}),
+    sair: async () => {},
+    recarregarSituacao: async () => null,
+    tentarTreinoDeNovo: () => {},
+    vincularCodigo: async () => ({ ok: false }),
+    marcarAvisoMudanca: async () => {},
+  }),
+}));
 vi.mock("@/lib/mpClient", () => ({
+  lerStatusCache: () => null,
+  statusLeve: vi.fn(async () => ({ mensalidade: null, emDia: true, pagoAte: null, mesRef: "2026-09", mesLabel: "setembro" })),
+  mensalidadePendente: () => false,
   invokeMp: vi.fn(async () => ({
     isento: true,
     professor: { id: "p1", nome: "Lucas Ferreira", alunos: 7, status: "ativo" },
@@ -45,7 +70,6 @@ vi.mock("@/integrations/principal/client", () => ({
 vi.mock("@/pages/TreinosPage", () => h.marcador("antiga-treinos"));
 vi.mock("@/pages/UserDashboard", () => h.marcador("antiga-avaliacao"));
 vi.mock("@/pages/PagamentosPage", () => h.marcador("antiga-pagamentos"));
-vi.mock("@/pages/AuthPage", () => h.marcador("antiga-entrada"));
 vi.mock("@/pages/Index", () => h.marcador("antiga-calculadora-publica"));
 vi.mock("@/pages/PrivacidadePage", () => h.marcador("antiga-privacidade"));
 vi.mock("@/pages/admin/AlunosPage", () => h.marcador("antiga-admin-alunos"));
@@ -86,20 +110,37 @@ function abrir(caminho: string) {
 
 const onde = () => screen.getByTestId("onde").textContent;
 
+function conta(nome: string) {
+  return {
+    id: "c-1", nome, origem: "legado_calc", plano: "treino", modulos: ["treino"], faixa: "f10", periodicidade: "mensal",
+    situacao: "isenta", teste_ate: null, vence_em: null, tolerancia_dias: 7, cobranca_legada: true, isenta_motivo: "master",
+    alunos_bloqueados_em: null, alunos_bloqueados_msg: null, dono_id: "u-professor", dono_nome: nome, membro_id: "m-1",
+    papeis: ["dono", "personal"], codigo_convite: "PROF-LUCAS-FERREIRA", profissionais: 1, alunos_ativos: 7, limite_alunos: null,
+  };
+}
+
 function logar(papel: "aluno" | "professor" | "master") {
-  h.estado.auth = {
-    user: { id: `u-${papel}`, email: `${papel}@teste.com`, user_metadata: { full_name: `Pessoa ${papel}` } },
-    loading: false,
-    papel,
-    isStaff: papel !== "aluno",
-    isMaster: papel === "master",
-    signOut: async () => {},
+  const user = { id: `u-${papel}`, email: `${papel}@teste.com`, user_metadata: { full_name: `Pessoa ${papel}` } };
+  h.estado.auth = { user, loading: false, papel, isStaff: papel !== "aluno", isMaster: papel === "master", signOut: async () => {} };
+  h.estado.sessao = {
+    usuario: user,
+    situacao: {
+      versao: 1, user_id: user.id, email: user.email, nome: `Pessoa ${papel}`, foto_url: null, master: papel === "master",
+      papel_legado: null, calc: true, contas: papel === "aluno" ? [] : [conta(papel === "master" ? "Master Teste" : "Lucas Ferreira")],
+      matriculas: papel === "aluno"
+        ? [{ id: "p-1", conta_id: "c-1", conta_nome: "Lucas Ferreira", conta_origem: "legado_calc", ativo: true, origem: "calc", modulos: ["treino"],
+             bloqueada: false, bloqueio_msg: null, bloqueado_por_pagamento: false, conta_alunos_bloqueados_em: null,
+             conta_alunos_bloqueados_msg: null, personal: { id: "u-professor", nome: "Lucas Ferreira" }, nutricionista: null }]
+        : [],
+      modulos_aluno: ["treino"], precisa_treino: true, sem_nada: false, legado_nutri: null, aviso_mudanca: null, gerado_em: "2026-09-29T09:00:00Z",
+    },
   };
 }
 
 beforeEach(() => {
   localStorage.clear();
   h.estado.auth = { user: null, loading: false, papel: "aluno", isStaff: false, isMaster: false, signOut: async () => {} };
+  h.estado.sessao = { usuario: null, situacao: null };
 });
 afterEach(() => {
   document.documentElement.removeAttribute("data-casca");
@@ -139,11 +180,34 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
   });
 });
 
-describe("entrada: sem login cai no Entrar (a tela de hoje até a W3)", () => {
-  it.each([["/"], ["/treino"], ["/login"], ["/entrar"], ["/app/entrar"]])("%s", async (de) => {
+describe("entrada: sem login cai no Entrar (a tela nova da W3, login único)", () => {
+  it.each([["/"], ["/treino"], ["/login"], ["/entrar"]])("%s", async (de) => {
     abrir(de);
-    expect(await screen.findByTestId("antiga-entrada")).toBeInTheDocument();
+    expect(await screen.findByText("Entrar com Google", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(document.querySelector("[data-entrada]")).not.toBeNull();
     expect(onde()).toMatch(/^\/entrar/);
+  });
+
+  it("/entrar/email (e o /app/entrar do Nutri) abre o e-mail e senha; /boas-vindas sem login volta para o Entrar", async () => {
+    const r = abrir("/entrar/email");
+    expect(await screen.findByText("E-mail e senha", {}, { timeout: 4000 })).toBeInTheDocument();
+    r.unmount();
+    const r2 = abrir("/app/entrar");
+    expect(await screen.findByText("E-mail e senha", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(onde()).toBe("/entrar/email");
+    r2.unmount();
+    abrir("/boas-vindas");
+    expect(await screen.findByText("Entrar com Google", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(onde()).toBe("/entrar");
+  });
+
+  it("logado sem conta, sem matrícula e sem convite: Boas-vindas com o código do profissional", async () => {
+    logar("aluno");
+    h.estado.sessao.situacao = { ...h.estado.sessao.situacao!, calc: false, matriculas: [], modulos_aluno: [], precisa_treino: false, sem_nada: true };
+    abrir("/entrar");
+    expect(await screen.findByText("Tenho um código do meu profissional", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(onde()).toBe("/boas-vindas");
+    expect(screen.getByText("EM BREVE")).toBeInTheDocument();
   });
 
   it("logado, /entrar volta para o app", async () => {

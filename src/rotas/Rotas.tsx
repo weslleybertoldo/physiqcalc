@@ -1,7 +1,7 @@
 import { lazy } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import AuthPage from "@/pages/AuthPage";
+import { useSessao } from "@/nucleo/sessao";
+import { destinoDepoisDoLogin } from "@/nucleo/situacao";
 import AppAlunoLayout from "@/app-aluno/AppAlunoLayout";
 import { RotaAba, RotaInicialApp, RotaItemPerfil } from "@/app-aluno/RotasApp";
 import PublicoLayout from "@/publico/PublicoLayout";
@@ -25,25 +25,28 @@ export function RedirecionarAntiga() {
   return destino ? <Navigate to={destino} replace /> : <NaoEncontrada />;
 }
 
-/** Entrada (/entrar, /entrar/email, /boas-vindas): a tela nova da W3 quando existe; senão a AuthPage de hoje. */
+/**
+ * Entrada (/entrar, /entrar/email, /boas-vindas) — W3: login único no banco principal. Deslogado vê a tela de entrada;
+ * logado vai para onde a situação manda (Boas-vindas para quem não tem nada; senão a página que pediu o login ou "/").
+ * As Boas-vindas pedem login.
+ */
 export function RotaEntrada({ nome }: { nome: string }) {
-  const { user, loading } = useAuth();
+  const { pronto, usuario, situacao, erroSituacao } = useSessao();
   const location = useLocation();
-  if (loading) return <CarregandoTela />;
+  if (!pronto) return <CarregandoTela />;
   const Nova = tela("entrada", nome);
-  if (user && nome !== "BoasVindas") {
+  if (usuario && nome !== "BoasVindas") {
+    if (!situacao && !erroSituacao) return <CarregandoTela texto="Entrando" />;
     const de = (location.state as { de?: string } | null)?.de;
-    return <Navigate to={de && de.startsWith("/") && !de.startsWith("/entrar") ? de : "/"} replace />;
+    return <Navigate to={destinoDepoisDoLogin(situacao, de)} replace />;
   }
-  if (Nova) {
-    return (
-      <Carregavel nome={`entrada ${nome}`}>
-        <Nova />
-      </Carregavel>
-    );
-  }
-  if (nome === "BoasVindas") return <Navigate to="/" replace />;
-  return <AuthPage />;
+  if (!usuario && nome === "BoasVindas") return <Navigate to="/entrar" replace />;
+  if (!Nova) return <NaoEncontrada />;
+  return (
+    <Carregavel nome={`entrada ${nome}`}>
+      <Nova />
+    </Carregavel>
+  );
 }
 
 /**

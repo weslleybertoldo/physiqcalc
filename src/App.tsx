@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { useSessao } from "@/nucleo/sessao";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
@@ -21,7 +22,7 @@ import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 // W1 (Physiq): as rotas agora são montadas pelas cascas novas (src/rotas/Rotas.tsx) — app do aluno
 // com 5 abas, site do profissional, master, entrada e páginas públicas — com as telas antigas como
 // fallback (spec 11.1) e os redirecionamentos das rotas antigas dos 2 apps (spec 4.8). Code-splitting:
-// a abertura do app (TreinosPage/AuthPage) segue no JS inicial; painel, master, PDF, gráficos e o SDK
+// a abertura do app (TreinosPage e a entrada) segue no JS inicial; painel, master, PDF, gráficos e o SDK
 // do Mercado Pago carregam sob demanda.
 
 const queryClient = new QueryClient({
@@ -42,14 +43,16 @@ const queryClient = new QueryClient({
   },
 });
 
-// Link do professor (?prof=PROF-NOME-SOBRENOME): guarda ANTES do login com Google;
-// o useAuth vincula no SIGNED_IN (edge vincular-professor).
+// Link do profissional (?prof=PROF-NOME-SOBRENOME): guarda ANTES do login; depois do login a sessão (src/nucleo/sessao.tsx)
+// manda o código para o vincular-aluno do banco principal (W3).
 capturarProfDaUrl();
 // Inicializa deep link listener para OAuth no APK
 setupDeepLinkListener();
 
 const AppRoutes = () => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
+  // W3: o login é o do banco principal — os avisos globais ("o Physiq mudou") valem para quem entrou, com ou sem Treino
+  const { usuario } = useSessao();
   // Capacitor: refresh sessão ao voltar do background
   useAppLifecycle();
 
@@ -64,7 +67,7 @@ const AppRoutes = () => {
           <Rotas />
         </Suspense>
         {/* janelas globais registradas em src/ui/avisos (ex.: "o Physiq mudou", W3) */}
-        {user && <AvisosGlobais />}
+        {usuario && <AvisosGlobais />}
       </StagingGate>
     </BrowserRouter>
   );
