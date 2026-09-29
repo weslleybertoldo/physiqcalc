@@ -109,19 +109,20 @@ def main() -> int:
         p.check(st == 204 or st == 200, f"marcar_aviso_mudanca ({st})")
         sql_principal(f"update {s}.profiles set config = config #- '{{aviso_mudanca_visto,e2e}}' where id = '{sess['user']['id']}'")
 
-    print("== professor do Calc (prof1.teste.claude)")
-    sess = login("prof1.teste.claude@physiqcalc.app", admin["SENHA"])
-    st, pl = funcao("pos-login", sess["access_token"], {}, s)
-    sit = pl.get("situacao") or {}
-    contas = sit.get("contas", [])
-    p.check(st == 200 and any(c["origem"] == "legado_calc" and "personal" in c["papeis"] and c["codigo_convite"] == "PROF-RAFAEL-LIMA" for c in contas),
-            f"conta legado_calc dono+personal com o mesmo código ({[(c['nome'], c['codigo_convite']) for c in contas]})")
-    st, tt = trocar(sess["access_token"], s)
-    p.check(st == 200 and tt.get("papel") == "professor", f"troca → papel professor no Treino ({st}, {tt.get('papel')})")
-    if st == 200:
-        st2, r2, _ = http("POST", f"{API_T}/functions/v1/admin-list-users", {"limit": 20}, {"Authorization": f"Bearer {tt['access_token']}", "apikey": anon(TREINO_REF), "x-schema": s, "Origin": ORIGEM})
-        emails = sorted(u.get("email") or "" for u in (r2 or {}).get("users", []))
-        p.check(st2 == 200 and any("aluno1" in e for e in emails), f"painel antigo: admin-list-users lista os alunos dele ({emails})")
+    if escrever:  # o professor e a paciente de teste existem só no staging
+        print("== professor do Calc (prof1.teste.claude)")
+        sess = login("prof1.teste.claude@physiqcalc.app", admin["SENHA"])
+        st, pl = funcao("pos-login", sess["access_token"], {}, s)
+        sit = pl.get("situacao") or {}
+        contas = sit.get("contas", [])
+        p.check(st == 200 and any(c["origem"] == "legado_calc" and "personal" in c["papeis"] and c["codigo_convite"] == "PROF-RAFAEL-LIMA" for c in contas),
+                f"conta legado_calc dono+personal com o mesmo código ({[(c['nome'], c['codigo_convite']) for c in contas]})")
+        st, tt = trocar(sess["access_token"], s)
+        p.check(st == 200 and tt.get("papel") == "professor", f"troca → papel professor no Treino ({st}, {tt.get('papel')})")
+        if st == 200:
+            st2, r2, _ = http("POST", f"{API_T}/functions/v1/admin-list-users", {"limit": 20}, {"Authorization": f"Bearer {tt['access_token']}", "apikey": anon(TREINO_REF), "x-schema": s, "Origin": ORIGEM})
+            emails = sorted(u.get("email") or "" for u in (r2 or {}).get("users", []))
+            p.check(st2 == 200 and any("aluno1" in e for e in emails), f"painel antigo: admin-list-users lista os alunos dele ({emails})")
 
     print("== master (admin.teste.claude)")
     sess = login("admin.teste.claude@physiqcalc.app", admin["SENHA"])
@@ -144,11 +145,12 @@ def main() -> int:
         if st == 201:
             rest("DELETE", f"alimentos?id=eq.{r[0]['id']}", sess["access_token"], None, s)
 
-    print("== paciente do Nutri")
-    sess = login("paciente.teste.claude@physiqnutri.app", senha("paciente"))
-    st, pl = funcao("pos-login", sess["access_token"], {}, s)
-    sit = pl.get("situacao") or {}
-    p.check(sit.get("modulos_aluno") == ["nutricao"] and sit.get("precisa_treino") is False, f"paciente: só Nutrição, sem Treino ({sit.get('modulos_aluno')})")
+    if escrever:  # o professor e a paciente de teste existem só no staging
+        print("== paciente do Nutri")
+        sess = login("paciente.teste.claude@physiqnutri.app", senha("paciente"))
+        st, pl = funcao("pos-login", sess["access_token"], {}, s)
+        sit = pl.get("situacao") or {}
+        p.check(sit.get("modulos_aluno") == ["nutricao"] and sit.get("precisa_treino") is False, f"paciente: só Nutrição, sem Treino ({sit.get('modulos_aluno')})")
 
     print("== pessoa nova (pessoa.teste.claude) — ninguém vira nutricionista sozinho")
     sess = login("pessoa.teste.claude@physiqnutri.app", senha("pessoa"))
@@ -172,11 +174,13 @@ def main() -> int:
     sess = login("pessoa.teste.claude@physiqnutri.app", senha("pessoa"))
     st, r = funcao("vincular-aluno", sess["access_token"], {"codigo": "PROF-NAO-EXISTE-W3"}, s)
     p.check(st == 404 and r.get("erro") == "codigo_invalido", f"código inválido → 404 codigo_invalido ({st}, {r.get('erro')})")
-    sess_prof = login("prof1.teste.claude@physiqcalc.app", admin["SENHA"])
-    st, r = funcao("vincular-aluno", sess_prof["access_token"], {"codigo": "PROF-RAFAEL-LIMA"}, s)
+    prof_email, prof_codigo, outro_codigo = (("prof1.teste.claude@physiqcalc.app", "PROF-RAFAEL-LIMA", "PROF-RAFAEL-LIMA") if escrever
+                                             else ("admin.teste.claude@physiqcalc.app", "PROF-ADMIN-TESTE", "PROF-ADMIN-TESTE"))
+    sess_prof = login(prof_email, admin["SENHA"])
+    st, r = funcao("vincular-aluno", sess_prof["access_token"], {"codigo": prof_codigo}, s)
     p.check(st == 409 and r.get("erro") == "proprio_codigo", f"o próprio código → proprio_codigo ({st}, {r.get('erro')})")
     sess_al = login("teste@teste.com", aluno["SENHA"])
-    st, r = funcao("vincular-aluno", sess_al["access_token"], {"codigo": "PROF-RAFAEL-LIMA"}, s)
+    st, r = funcao("vincular-aluno", sess_al["access_token"], {"codigo": outro_codigo}, s)
     p.check(st == 409 and r.get("erro") == "outro_profissional", f"aluno ativo em outra conta → outro_profissional (P7) ({st}, {r.get('erro')})")
 
     if escrever:
