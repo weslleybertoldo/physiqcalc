@@ -1,5 +1,4 @@
-import { lazy } from "react";
-import { Link, Navigate, Outlet, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import AdminLayout from "@/layouts/AdminLayout";
 import { tela } from "@/rotas/registro";
@@ -7,14 +6,11 @@ import { Carregavel } from "@/ui/casca/Carregavel";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { ABAS_CONFIG, estadoDaAbaConfig } from "./catalogoAbas";
 
-// Configurações antigas do Calc (seções por `?s=`): fallback de Perfil, Convite e Recebimento
-const ConfiguracoesAntiga = lazy(() => import("@/pages/admin/ConfiguracoesPage"));
-
 /**
  * Configurações do profissional (spec 4.6): Perfil · Conta · Equipe · Plano · Recebimento · Convite ·
  * Aplicativo. A aba nova é `src/painel/configuracoes/<arquivo>.tsx`; enquanto não existe, vale a tela
- * antiga do Calc: a Planos (Plano) e as seções da Configurações antiga (`?s=` perfil, convite,
- * recebimento). Sem nova e sem antiga, a aba some. Conta, Equipe, Plano e Recebimento são do dono.
+ * antiga do Calc (a Planos responde pelo Plano). Sem nova e sem antiga, a aba some. Conta, Equipe, Plano
+ * e Recebimento são do dono. A Configurações antiga (`?s=`) saiu na W6: o link antigo cai na aba nova.
  */
 export default function ConfiguracoesLayout() {
   const dados = useDadosCasca();
@@ -65,10 +61,9 @@ export function PrimeiraAbaConfig() {
   return <Navigate to={primeira ? `/painel/configuracoes/${primeira.id}` : "/painel"} replace />;
 }
 
-/** Uma aba das Configurações: a nova, ou a antiga (Planos / seção da Configurações antiga). */
+/** Uma aba das Configurações: a nova, ou a antiga (Planos). */
 export function AbaConfiguracoes() {
   const { aba = "" } = useParams();
-  const [params] = useSearchParams();
   const dados = useDadosCasca();
   const def = ABAS_CONFIG.find((a) => a.id === aba);
   const estado = def ? estadoDaAbaConfig(def, dados) : null;
@@ -81,29 +76,12 @@ export function AbaConfiguracoes() {
       </Carregavel>
     );
   }
-  if (def.antiga) {
-    const Antiga = def.antiga;
-    return (
-      <AdminLayout>
-        <Carregavel nome={`${def.rotulo} (antiga)`}>
-          <Antiga />
-        </Carregavel>
-      </AdminLayout>
-    );
-  }
-  // a Configurações antiga escolhe a seção pelo ?s= (a navegação dela fica escondida — legado.css)
-  if (params.get("s") !== def.secaoAntiga) {
-    const q = new URLSearchParams(params);
-    q.set("s", def.secaoAntiga!);
-    return <Navigate to={{ search: `?${q.toString()}` }} replace />;
-  }
+  const Antiga = def.antiga!;
   return (
-    <div data-fallback-config>
-      <AdminLayout>
-        <Carregavel nome="Configurações (antiga)">
-          <ConfiguracoesAntiga />
-        </Carregavel>
-      </AdminLayout>
-    </div>
+    <AdminLayout>
+      <Carregavel nome={`${def.rotulo} (antiga)`}>
+        <Antiga />
+      </Carregavel>
+    </AdminLayout>
   );
 }

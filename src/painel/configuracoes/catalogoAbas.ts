@@ -10,20 +10,19 @@ export interface AbaConfig {
   rotulo: string;
   icone: LucideIcon;
   soDono: boolean;
+  /** Tela antiga do Calc que responde pela aba enquanto a nova não existe. */
   antiga?: LazyExoticComponent<ComponentType>;
-  /** Seção da Configurações antiga do Calc (`?s=`) que responde por esta aba. */
-  secaoAntiga?: "perfil" | "convite" | "recebimento";
 }
 
 const PlanosAntiga = lazy(() => import("@/pages/admin/PlanosPage"));
 
 export const ABAS_CONFIG: AbaConfig[] = [
-  { id: "perfil", arquivo: "Perfil", rotulo: "Perfil", icone: User, soDono: false, secaoAntiga: "perfil" },
+  { id: "perfil", arquivo: "Perfil", rotulo: "Perfil", icone: User, soDono: false },
   { id: "conta", arquivo: "Conta", rotulo: "Conta", icone: Building2, soDono: true },
   { id: "equipe", arquivo: "Equipe", rotulo: "Equipe", icone: Users, soDono: true },
   { id: "plano", arquivo: "Plano", rotulo: "Plano", icone: Gem, soDono: true, antiga: PlanosAntiga },
-  { id: "recebimento", arquivo: "Recebimento", rotulo: "Recebimento", icone: Wallet, soDono: true, secaoAntiga: "recebimento" },
-  { id: "convite", arquivo: "Convite", rotulo: "Convite", icone: Link2, soDono: false, secaoAntiga: "convite" },
+  { id: "recebimento", arquivo: "Recebimento", rotulo: "Recebimento", icone: Wallet, soDono: true },
+  { id: "convite", arquivo: "Convite", rotulo: "Convite", icone: Link2, soDono: false },
   { id: "aplicativo", arquivo: "Aplicativo", rotulo: "Aplicativo", icone: Smartphone, soDono: false },
 ];
 
@@ -32,5 +31,5 @@ export type EstadoAbaConfig = "nova" | "antiga" | null;
 export function estadoDaAbaConfig(aba: AbaConfig, dados: Pick<DadosCasca, "ehDono">, temNova: (arquivo: string) => boolean = (a) => existe("abasConfig", a)): EstadoAbaConfig {
   if (aba.soDono && !dados.ehDono) return null;
   if (temNova(aba.arquivo)) return "nova";
-  return aba.antiga || aba.secaoAntiga ? "antiga" : null;
+  return aba.antiga ? "antiga" : null;
 }

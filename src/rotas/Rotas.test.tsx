@@ -77,7 +77,6 @@ vi.mock("@/pages/admin/AlunosPage", () => h.marcador("antiga-admin-alunos"));
 vi.mock("@/pages/admin/TreinosAdminPage", () => h.marcador("antiga-admin-treinos"));
 vi.mock("@/pages/admin/CobrancaPage", () => h.marcador("antiga-admin-cobranca"));
 vi.mock("@/pages/admin/CalculadoraPage", () => h.marcador("antiga-admin-calculadora"));
-vi.mock("@/pages/admin/ConfiguracoesPage", () => h.marcador("antiga-admin-configuracoes"));
 vi.mock("@/pages/admin/PlanosPage", () => h.marcador("antiga-admin-planos"));
 vi.mock("@/components/AdminUserConfig", () => h.marcador("antiga-configurar-aluno"));
 vi.mock("@/pages/master/VisaoGeralPage", () => h.marcador("antiga-master-visao-geral"));
@@ -154,7 +153,6 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
     ["/treino", "/treino", "antiga-treinos"],
     ["/avaliacao", "/evolucao", "antiga-avaliacao"],
     ["/evolucao", "/evolucao", "antiga-avaliacao"],
-    ["/pagamentos", "/perfil/pagamentos", "antiga-pagamentos"],
   ])("%s → %s (%s)", async (de, para, tela) => {
     logar("aluno");
     abrir(de);
@@ -164,6 +162,15 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
     const barra = document.querySelector("[data-tabbar]")!;
     expect(barra).not.toBeNull();
     expect([...barra.querySelectorAll("[data-aba]")].map((a) => a.textContent)).toEqual(["Treino", "Evolução"]);
+  });
+
+  // W6: Perfil › Pagamentos é a tela nova (src/app-aluno/perfil/Pagamentos.tsx) — o /pagamentos e o /app/recibos caem nela
+  it.each([["/pagamentos"], ["/app/recibos"], ["/perfil/pagamentos"]])("%s → /perfil/pagamentos (tela nova da W6)", async (de) => {
+    logar("aluno");
+    abrir(de);
+    await waitFor(() => expect(document.querySelector("[data-pagina-pagamentos]")).not.toBeNull(), { timeout: 4000 });
+    await waitFor(() => expect(onde()).toBe("/perfil/pagamentos"));
+    expect(screen.queryByTestId("antiga-pagamentos")).toBeNull();
   });
 
   it("aba sem tela nem módulo (Dieta, Perfil) volta para a abertura", async () => {
@@ -228,7 +235,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ["/admin/cobranca", "/painel/financeiro", "antiga-admin-cobranca"],
     ["/admin/calculadora", "/painel/calculadora", "antiga-admin-calculadora"],
     ["/admin/planos", "/painel/configuracoes/plano", "antiga-admin-planos"],
-    ["/admin/configuracoes?s=recebimento", "/painel/configuracoes/recebimento?s=recebimento", "antiga-admin-configuracoes"],
     ["/admin?v=calculator", "/painel/calculadora", "antiga-admin-calculadora"],
     ["/admin?v=treinos&t=biblioteca", "/painel/treinos?t=biblioteca", "antiga-admin-treinos"],
   ])("%s → %s", async (de, para, tela) => {
@@ -243,11 +249,13 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ]);
   });
 
-  // W5: Perfil e Convite ganharam as abas novas (src/painel/configuracoes/{Perfil,Convite}.tsx) — o link antigo cai nelas
+  // W5: Perfil e Convite ganharam as abas novas (src/painel/configuracoes/{Perfil,Convite}.tsx) e a W6 o Recebimento — o
+  // link antigo cai nelas (a Configurações antiga do Calc saiu)
   it.each([
     ["/admin/configuracoes", "/painel/configuracoes/perfil", "perfil"],
     ["/admin/configuracoes?s=convite", "/painel/configuracoes/convite?s=convite", "convite"],
-  ])("%s → %s (aba nova da W5)", async (de, para, aba) => {
+    ["/admin/configuracoes?s=recebimento", "/painel/configuracoes/recebimento?s=recebimento", "recebimento"],
+  ])("%s → %s (aba nova)", async (de, para, aba) => {
     logar("professor");
     abrir(de);
     await waitFor(() => expect(document.querySelector(`[data-config-aba='${aba}']`)).not.toBeNull(), { timeout: 4000 });
@@ -263,7 +271,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ["/admin/alunos/u1?ct=config", "/painel/alunos/u1/treino?ct=config", "treino"],
     ["/admin/alunos/u1?ct=dobras", "/painel/alunos/u1/avaliacao?ct=dobras", "avaliacao"],
     ["/admin/alunos/u1?ct=registros", "/painel/alunos/u1/avaliacao?ct=registros", "avaliacao"],
-    ["/admin/alunos/u1?ct=plano", "/painel/alunos/u1/financeiro?ct=plano", "financeiro"],
     ["/admin/alunos/u1?ct=geral", "/painel/alunos/u1?ct=geral", "resumo"],
     ["/admin?v=config&u=u1&ct=evolucao", "/painel/alunos/u1/avaliacao?ct=evolucao", "avaliacao"],
   ])("Configurar aluno %s → %s (aba %s)", async (de, para, aba) => {
@@ -273,6 +280,16 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(onde()).toBe(para));
     expect(document.querySelector(`[data-aba-aluno="${aba}"]`)?.getAttribute("aria-current")).toBe("page");
     expect([...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"))).toEqual(["resumo", "treino", "avaliacao", "financeiro"]);
+  });
+
+  // W6: a aba Financeiro do aluno é a nova (src/painel/aluno/abas/Financeiro.tsx) — o "Plano & Cobrança" antigo não abre mais
+  it("Configurar aluno /admin/alunos/u1?ct=plano → /painel/alunos/u1/financeiro?ct=plano (aba Financeiro nova da W6)", async () => {
+    logar("professor");
+    abrir("/admin/alunos/u1?ct=plano");
+    await waitFor(() => expect(onde()).toBe("/painel/alunos/u1/financeiro?ct=plano"), { timeout: 4000 });
+    await waitFor(() => expect(document.querySelector('[data-aba-aluno="financeiro"]')?.getAttribute("aria-current")).toBe("page"));
+    await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='financeiro']")?.textContent).toContain("Não deu para abrir o financeiro"), { timeout: 4000 });
+    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
   });
 
   it("profissional abre direto no painel; se escolheu o app de aluno, volta para o app", async () => {

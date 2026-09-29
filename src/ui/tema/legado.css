@@ -36,16 +36,3 @@ html[data-casca="aluno"] .fixed.bottom-4:not([role="dialog"], [data-slot], [data
   padding-top: 0;
 }
 
-/* Configurações: a página antiga responde pelas abas Perfil, Convite e Recebimento (`?s=`); o título
-   e a navegação de seções dela somem. Até a W5 (Perfil, Convite) e a W6 (Recebimento). */
-[data-fallback-config] [data-pagina-configuracoes] > header,
-[data-fallback-config] [data-pagina-configuracoes] nav[aria-label="Seções"] {
-  display: none;
-}
-[data-fallback-config] [data-pagina-configuracoes] {
-  max-width: none;
-  margin: 0;
-}
-[data-fallback-config] [data-pagina-configuracoes] > div {
-  display: block;
-}

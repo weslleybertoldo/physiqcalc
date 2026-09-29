@@ -80,7 +80,10 @@ export default function AlunoLayout() {
   );
 }
 
-/** Aba Resumo: os cards registrados (tela 7) ou, antes deles, o "Dados" do Configurar aluno antigo. */
+/**
+ * Aba Resumo: os cards registrados (tela 7) ou, antes deles, o "Dados" do Configurar aluno antigo. Enquanto o card de dados
+ * do aluno (W14) não chega, o "Dados" antigo continua embaixo dos cards que já existem (W6: o Financeiro) — conta com Treino.
+ */
 export function AbaResumo() {
   const { id = "" } = useParams();
   const dados = useDadosCasca();
@@ -91,6 +94,7 @@ export function AbaResumo() {
     if (estadoDaAbaAluno(resumo, modulos) === "antiga") return <FallbackConfigurar alunoId={id} opcoes={resumo.antigas!} />;
     return <EstadoVazio titulo="Resumo do aluno" texto="Os cards do resumo aparecem aqui assim que os dados do aluno estiverem no Physiq." />;
   }
+  const dadosAntigosEmbaixo = !cards.some((c) => c.nome === "CardDadosAluno") && !!resumo.antigas && modulos.includes("treino");
   const cima = cards.filter((c) => ORDEM_RESUMO.indexOf(c.nome as (typeof ORDEM_RESUMO)[number]) > -1 && ORDEM_RESUMO.indexOf(c.nome as (typeof ORDEM_RESUMO)[number]) < 6);
   const baixo = cards.filter((c) => !cima.includes(c));
   const grade = (lista: typeof cards) => (
@@ -108,6 +112,7 @@ export function AbaResumo() {
     <div className="flex flex-col gap-3.5" data-resumo-aluno>
       {cima.length > 0 && grade(cima)}
       {baixo.length > 0 && grade(baixo)}
+      {dadosAntigosEmbaixo && <FallbackConfigurar alunoId={id} opcoes={resumo.antigas!} />}
     </div>
   );
 }

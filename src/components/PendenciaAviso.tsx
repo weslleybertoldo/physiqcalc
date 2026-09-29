@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMensalidadeStatus } from "@/hooks/useMensalidadeStatus";
+import { existe } from "@/rotas/registro";
 
 const STORAGE_KEY = "physiq_pendencia_avisada_em";
 const hoje = () => new Date().toLocaleDateString("pt-BR"); // 1x por dia, no fuso do aparelho
@@ -16,15 +17,19 @@ function jaAvisadoHoje(): boolean {
 }
 
 // Aviso na abertura do app quando a mensalidade está pendente (1x por dia —
-// "Mais tarde" silencia até o dia seguinte). O status vem do cache leve compartilhado
-// com o header (0 chamadas quando o cache vale; 1 chamada `status-lite` fora do caminho crítico).
+// "Mais tarde" silencia até o dia seguinte). O status vem do resumo leve compartilhado
+// com o header (W6: a mensalidade é a do banco principal).
+// A13 (spec 3.3): o popup diário vira a faixa do topo (src/app-aluno/avisos/FaixaMensalidade.tsx, W6) — com ela no
+// app, este aviso não aparece (a regra de avisar é a mesma); fica só para uma tela antiga que ainda o monte sem a faixa.
+const FAIXA_NO_APP = existe("avisosApp", "FaixaMensalidade");
+
 const PendenciaAviso = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { status, pendente } = useMensalidadeStatus(user?.id);
+  const { status, pendente } = useMensalidadeStatus(FAIXA_NO_APP ? null : user?.id);
   const [dispensado, setDispensado] = useState(jaAvisadoHoje);
 
-  if (!pendente || dispensado) return null;
+  if (FAIXA_NO_APP || !pendente || dispensado) return null;
   const valor = status?.mensalidade ?? null;
 
   const fechar = () => {
@@ -52,7 +57,7 @@ const PendenciaAviso = () => {
             className="flex-1 py-2.5 border border-border text-muted-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:text-foreground transition-colors">
             Mais tarde
           </button>
-          <button type="button" onClick={() => { fechar(); navigate("/pagamentos"); }}
+          <button type="button" onClick={() => { fechar(); navigate("/perfil/pagamentos"); }}
             className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-heading uppercase tracking-wider hover:bg-primary/90 transition-colors">
             Regularizar agora
           </button>

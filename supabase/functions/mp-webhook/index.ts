@@ -1,7 +1,14 @@
-// Webhook de notificações do Mercado Pago (verify_jwt = false).
+// Webhook de notificações do Mercado Pago (verify_jwt = false). Publicar SÓ pelo scripts/deploy_function.sh (o workflow
+// deploy-function.yml liga o verify_jwt e o MP passaria a levar 401).
 // Nunca confia no payload: sempre re-busca o recurso na API do MP (fonte da verdade).
 // external_reference: "<schema>:<user_id>[:<mes_ref>[:<contexto>[:<tipo_cobranca>]]]"
 //   contexto = aluno (mensalidade do aluno, padrão) | plano_professor (SaaS 12/09/2026: adesão/mensal/anual do professor)
+// Physiq W6: a cobrança do ALUNO mudou para o banco principal. Os pagamentos e as assinaturas que o Calc criou antes continuam
+// avisando esta URL: aqui eles seguem sendo gravados no Treino (como sempre) e o MESMO aviso é repassado para a
+// mp-webhook-aluno do principal (segredo PRINCIPAL_WEBHOOK_URL), que busca de novo no MP e grava a cobrança lá. Se o repasse
+// falha, a resposta é 500 — o MP manda de novo e nada se perde (as duas pontas são idempotentes). Os do professor
+// (plano_professor) não são repassados (W28). PRINCIPAL_WEBHOOK_SCHEMAS (ex.: "staging" ou "staging,public") liga o repasse
+// por ambiente.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -91,9 +98,12 @@ async function gravarPagamento(admin: any, row: Record<string, unknown>, pay: an
   }
 }
 
-async function handlePayment(paymentId: string) {
+// o que o aviso era: de quem (contexto) e de qual ambiente — decide o repasse ao principal (W6)
+interface Alvo { contexto: string | null; schema: string | null }
+
+async function handlePayment(paymentId: string): Promise<Alvo> {
   const pay = await mpGet(`/v1/payments/${paymentId}`);
-  if (!pay) return;
+  if (!pay) return { contexto: null, schema: null };
   const ref = parseRef(pay.external_reference);
   const tipo = pay.payment_method_id === "pix" ? "pix" : "cartao";
 
@@ -101,15 +111,15 @@ async function handlePayment(paymentId: string) {
   if (ref?.mesRef) {
     const admin = adminFor(ref.schema);
     await gravarPagamento(admin, { user_id: ref.userId, tipo, valor: Number(pay.transaction_amount), mes_ref: ref.mesRef }, pay, ref.contexto, ref.tipoCobranca);
-    return;
+    return { contexto: ref.contexto, schema: ref.schema };
   }
 
   // pagamento gerado por assinatura: acha o dono pela preapproval
   const preapprovalId = pay.metadata?.preapproval_id || pay.point_of_interaction?.transaction_data?.subscription_id || null;
-  await upsertPagamentoAssinatura(preapprovalId, pay, ref);
+  return await upsertPagamentoAssinatura(preapprovalId, pay, ref);
 }
 
-async function upsertPagamentoAssinatura(preapprovalId: string | null, pay: any, ref: Ref | null) {
+async function upsertPagamentoAssinatura(preapprovalId: string | null, pay: any, ref: Ref | null): Promise<Alvo> {
   const schemas = ref ? [ref.schema] : _ALLOWED_SCHEMAS;
   for (const sch of schemas) {
     const admin = adminFor(sch);
@@ -124,43 +134,75 @@ async function upsertPagamentoAssinatura(preapprovalId: string | null, pay: any,
       user_id: userId, tipo: "cartao", valor: Number(pay.transaction_amount),
       mes_ref: mesRefFromDate(pay.date_approved || pay.date_created),
     }, pay, contexto, "mensal");
-    return;
+    return { contexto, schema: sch };
   }
+  return { contexto: ref?.contexto ?? null, schema: ref?.schema ?? null };
 }
 
-async function handlePreapproval(preapprovalId: string) {
+async function handlePreapproval(preapprovalId: string): Promise<Alvo> {
   const pre = await mpGet(`/preapproval/${preapprovalId}`);
-  if (!pre) return;
+  if (!pre) return { contexto: null, schema: null };
   const ref = parseRef(pre.external_reference);
   const schemas = ref ? [ref.schema] : _ALLOWED_SCHEMAS;
   for (const sch of schemas) {
     const admin = adminFor(sch);
-    const { data } = await admin.from("physiq_assinaturas").select("id").eq("mp_preapproval_id", String(pre.id)).maybeSingle();
+    const { data } = await admin.from("physiq_assinaturas").select("id, contexto").eq("mp_preapproval_id", String(pre.id)).maybeSingle();
     if (data) {
-      await admin.from("physiq_assinaturas").update({ status: pre.status, updated_at: new Date().toISOString() }).eq("id", (data as any).id);
-      return;
+      const linha = data as { id: string; contexto: string | null };
+      await admin.from("physiq_assinaturas").update({ status: pre.status, updated_at: new Date().toISOString() }).eq("id", linha.id);
+      return { contexto: linha.contexto || ref?.contexto || "aluno", schema: sch };
     }
     if (ref && sch === ref.schema) {
       await admin.from("physiq_assinaturas").insert({
         user_id: ref.userId, mp_preapproval_id: String(pre.id), contexto: ref.contexto,
         status: pre.status || "pending", valor: Number(pre.auto_recurring?.transaction_amount || 0) || 1,
       });
-      return;
+      return { contexto: ref.contexto, schema: ref.schema };
     }
   }
+  return { contexto: ref?.contexto ?? null, schema: ref?.schema ?? null };
 }
 
-async function handleAuthorizedPayment(authPaymentId: string) {
+async function handleAuthorizedPayment(authPaymentId: string): Promise<Alvo> {
   const ap = await mpGet(`/authorized_payments/${authPaymentId}`);
-  if (!ap) return;
+  if (!ap) return { contexto: null, schema: null };
   const paymentId = ap.payment?.id;
-  if (paymentId) { await handlePayment(String(paymentId)); return; }
+  if (paymentId) return await handlePayment(String(paymentId));
   if (ap.preapproval_id) {
-    await upsertPagamentoAssinatura(String(ap.preapproval_id), {
+    return await upsertPagamentoAssinatura(String(ap.preapproval_id), {
       id: `ap-${ap.id}`, transaction_amount: ap.transaction_amount,
       date_created: ap.date_created, status: ap.status === "processed" ? "approved" : "pending",
     }, null);
   }
+  return { contexto: null, schema: null };
+}
+
+// ---- W6: repasse dos avisos de ALUNO para o banco principal ----
+function repasseLigado(schema: string | null): boolean {
+  if (!Deno.env.get("PRINCIPAL_WEBHOOK_URL")) return false;
+  const ligados = (Deno.env.get("PRINCIPAL_WEBHOOK_SCHEMAS") || "staging,public").split(",").map((x) => x.trim()).filter(Boolean);
+  // sem saber o ambiente (aviso sem referência que o Treino não reconheceu), só repassa com a produção ligada
+  return ligados.includes(schema || "public");
+}
+
+async function repassar(topic: string, id: string, schema: string | null): Promise<boolean> {
+  const base = Deno.env.get("PRINCIPAL_WEBHOOK_URL")!;
+  const url = `${base}${base.includes("?") ? "&" : "?"}origem=treino${schema ? `&schema=${schema}` : ""}`;
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 20000);
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: topic, data: { id } }), signal: ctrl.signal });
+      clearTimeout(t);
+      const txt = await res.text();
+      console.log("mp-webhook repasse", topic, id, schema ?? "?", res.status, txt.slice(0, 200));
+      if (res.ok) return true;
+    } catch (e) {
+      console.error("mp-webhook repasse falhou", topic, id, String((e as { message?: string })?.message || e));
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return false;
 }
 
 Deno.serve(async (req) => {
@@ -173,11 +215,22 @@ Deno.serve(async (req) => {
     const id = body?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "";
     if (!id) return new Response("ok", { status: 200 });
 
-    if (topic === "payment") await handlePayment(String(id));
-    else if (topic === "subscription_preapproval" || topic === "preapproval") await handlePreapproval(String(id));
-    else if (topic === "subscription_authorized_payment") await handleAuthorizedPayment(String(id));
-    // outros tópicos: ignora silenciosamente
+    let alvo: Alvo = { contexto: null, schema: null };
+    try {
+      if (topic === "payment") alvo = await handlePayment(String(id));
+      else if (topic === "subscription_preapproval" || topic === "preapproval") alvo = await handlePreapproval(String(id));
+      else if (topic === "subscription_authorized_payment") alvo = await handleAuthorizedPayment(String(id));
+      else return new Response("ok", { status: 200 }); // outros tópicos: ignora silenciosamente
+    } catch (e) {
+      // o Treino não gravou (o refresh da tela antiga cobria); o principal ainda recebe o aviso abaixo
+      console.error("mp-webhook error", e);
+    }
 
+    // W6: aviso de aluno (ou de dono desconhecido) vai também para o principal; sem sucesso → 500 (o MP manda de novo)
+    if (alvo.contexto !== "plano_professor" && repasseLigado(alvo.schema)) {
+      const ok = await repassar(String(topic), String(id), alvo.schema);
+      if (!ok) return new Response("repasse_falhou", { status: 500 });
+    }
     return new Response("ok", { status: 200 });
   } catch (e) {
     console.error("mp-webhook error", e);

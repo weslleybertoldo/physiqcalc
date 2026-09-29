@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dumbbell, Lock, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { buscarFinanceiroDoAluno } from "@/financeiro/api";
 import { listar } from "@/rotas/registro";
 import { TopoPagina } from "@/ui/casca/topo";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
@@ -21,14 +22,36 @@ interface PerfilTreino {
   created_at: string | null;
   status: string | null;
   plano_nome: string | null;
+  /** De onde vieram os dados: o Banco do Treino (aluno do Calc) ou a matrícula do banco principal (W6). */
+  origem?: "treino" | "principal";
 }
 
-async function buscarPerfil(alunoId: string): Promise<PerfilTreino> {
+async function perfilDoTreino(alunoId: string): Promise<PerfilTreino> {
   const { data, error } = await supabase.functions.invoke("admin-get-user", { body: { userId: alunoId } });
   if (error) throw error;
   const perfil = (data as { profile?: PerfilTreino } | null)?.profile;
   if (!perfil) throw new Error("Aluno não encontrado.");
-  return perfil;
+  return { ...perfil, origem: "treino" };
+}
+
+/**
+ * Os dados do Treino; sem eles (paciente do Nutri, que não tem conta no Treino, ou o Treino fora do ar), os da matrícula no
+ * banco principal — a mesma consulta do Financeiro do aluno (W6), que também acha o aluno pelo id do Treino.
+ */
+async function buscarPerfil(alunoId: string): Promise<PerfilTreino> {
+  try {
+    return await perfilDoTreino(alunoId);
+  } catch (erroTreino) {
+    try {
+      const f = await buscarFinanceiroDoAluno(alunoId);
+      return {
+        nome: f.aluno.nome, email: f.aluno.email, foto_url: f.aluno.foto_url, idade: null, altura: null, created_at: null,
+        status: f.aluno.ativo ? "ativo" : "inativo", plano_nome: f.mensalidade?.plano ?? null, origem: "principal",
+      };
+    } catch {
+      throw erroTreino;
+    }
+  }
 }
 
 /**
@@ -63,9 +86,11 @@ export default function CabecalhoPadrao({ alunoId }: { alunoId: string }) {
                   <h2 className="truncate font-body text-[24px] font-bold normal-case tracking-[-0.03em] text-texto">{nome}</h2>
                   <div className="mb-2.5 mt-1 truncate text-[13px] text-texto-2">{linhaDoAluno(perfil!) || perfil?.email}</div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Chip tom="t" icone={Dumbbell}>
-                      TREINO
-                    </Chip>
+                    {perfil?.origem !== "principal" && (
+                      <Chip tom="t" icone={Dumbbell}>
+                        TREINO
+                      </Chip>
+                    )}
                     {perfil?.status === "bloqueado" && (
                       <Chip tom="r" icone={Lock}>
                         BLOQUEADO

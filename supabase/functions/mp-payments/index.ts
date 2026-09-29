@@ -121,6 +121,13 @@ async function requireUser(req: Request): Promise<{ user: any; error: Response |
   return { user, error: null };
 }
 
+// Physiq W6: ações que eram da cobrança do aluno (agora na pagamentos-aluno do banco principal)
+const ACOES_ALUNO_MIGRADAS = new Set([
+  "status", "create-pix", "create-card-payment", "create-subscription", "cancel-subscription", "pix-manual-avisar", "comprovante-url",
+  "admin-badges", "admin-pix-pendentes", "admin-confirmar-pix", "admin-recusar-pix", "admin-status", "admin-cancel-subscription",
+  "admin-pausar-cobranca", "admin-registrar-pagamento", "admin-remover-pagamento-manual", "admin-refund",
+]);
+
 // ---- SaaS (12/09/2026): papéis e escopo ----
 type Papel = "master" | "professor";
 function papelDe(role: unknown): Papel | null {
@@ -474,6 +481,23 @@ Deno.serve(async (req) => {
     const action = body?.action;
     const admin = adminClient();
     const hoje = hojeISO();
+
+    // ---- Physiq W6: a cobrança do ALUNO foi para o banco principal (função pagamentos-aluno). As ações de aluno e de staff
+    // sobre alunos respondem "migrado" (410); o status-lite segue respondendo só o bloqueio dos alunos pelo master (a trava
+    // do app — GateBloqueioMaster — ainda lê daqui) e diz que não há mensalidade pendente (o app novo lê a do principal).
+    // As ações plano-* (o plano do PROFESSOR) continuam aqui até a W28. ----
+    if (action === "status-lite") {
+      const { data: bloq } = await admin.rpc("physiq_aluno_bloqueado", { uid: user.id });
+      return jsonOk({
+        migrado: true, mensalidade: null, emDia: true, mesPago: true, pagoAte: null,
+        mesRef: mesRefAtual(), mesLabel: mesLabel(mesRefAtual()), bloqueadoPeloMaster: bloq === true,
+      }, origin);
+    }
+    if (ACOES_ALUNO_MIGRADAS.has(action)) return jsonErr("migrado", 410, origin);
+    if (action === "receipt") {
+      const { data: linha } = await admin.from("physiq_pagamentos").select("contexto").eq("id", String(body?.pagamentoId || "")).maybeSingle();
+      if ((linha as { contexto?: string | null } | null)?.contexto === "aluno") return jsonErr("migrado", 410, origin);
+    }
 
     // ---- status (aba Pagamentos do aluno) ----
     if (action === "status") {
