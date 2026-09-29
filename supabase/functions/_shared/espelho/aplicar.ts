@@ -5,11 +5,13 @@
 import type { SupabaseClient, User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import {
   acessoProfessor,
+  deveTirarAcessoDoEspelho,
   escolherMatriculaTreino,
   linhasEspelhoMembros,
   papelTreino,
   sexoTreino,
   statusDoPerfil,
+  type LinhaProfessorCobranca,
   type ResumoNucleo,
 } from "./regras.ts";
 
@@ -17,7 +19,7 @@ export interface ResultadoEspelho {
   papel: string | null;
   papel_mudou: boolean;
   membros: number;
-  professor: "criado" | "atualizado" | null;
+  professor: "criado" | "atualizado" | "sem_acesso" | null;
   aluno: "atualizado" | "sem_matricula_de_treino" | "sem_perfil";
   alunos_ligados: number;
 }
@@ -111,6 +113,17 @@ export async function aplicarResumo(
       const { error: eu } = await db.from("physiq_professores").update(campos).eq("id", treinoId);
       if (eu) throw eu;
       professor = "atualizado";
+    }
+  } else {
+    // W5: não é mais personal numa conta com Treino (removido da equipe, perdeu o papel): o acesso que o espelho deu sai
+    const { data: linha, error: el } = await db.from("physiq_professores")
+      .select("id, plano_id, trial_ate, adesao_paga_em, ciclo_vence_em, anual_ate, cobranca_pausada, acesso_liberado_ate, nucleo_acesso_ate")
+      .eq("id", treinoId).maybeSingle();
+    if (el) throw el;
+    if (deveTirarAcessoDoEspelho(resumo, papelAtual, (linha as LinhaProfessorCobranca | null) ?? null)) {
+      const { error: et } = await db.from("physiq_professores").update({ acesso_liberado_ate: null, nucleo_acesso_ate: null }).eq("id", treinoId);
+      if (et) throw et;
+      professor = "sem_acesso";
     }
   }
 

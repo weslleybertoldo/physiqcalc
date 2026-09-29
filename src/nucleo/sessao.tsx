@@ -29,10 +29,12 @@ import {
 } from "./situacao";
 import {
   aplicarSessaoTreino,
-  esperaDaTentativa,
+  depoisDaFalha,
   esquecerTrocas,
+  limparPausaTroca,
+  pausaDaTroca,
+  pausarTroca,
   pedirTroca,
-  retentavel,
   sessaoTreinoServe,
   type ErroTroca,
 } from "./trocaToken";
@@ -103,7 +105,18 @@ function avisoVistoAqui(uid: string, versao: string): boolean {
     return false;
   }
 }
-const MAX_TENTATIVAS_TROCA = 8;
+
+/**
+ * W5: o link do e-mail do convite de membro da equipe abre com `?convite=` — o pos-login roda de novo mesmo para quem já
+ * estava logado neste aparelho (o aceite do convite é no pos-login, pelo e-mail confirmado — spec 8.1).
+ */
+function veioDoConvite(): boolean {
+  try {
+    return typeof window !== "undefined" && new URLSearchParams(window.location.search).has("convite");
+  } catch {
+    return false;
+  }
+}
 
 /** Sessão guardada pelo supabase-js no aparelho (sem internet o getSession de um token vencido devolve null). */
 function sessaoGuardada(chave: string | undefined): Session | null {
@@ -168,6 +181,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   const uidRef = useRef<string | null>(null);
   uidRef.current = uid;
   const sairRef = useRef<(() => Promise<void>) | null>(null);
+  // W5: abriu pelo link do convite da equipe → o pos-login roda de novo 1 vez (aceita o convite de quem já estava logado)
+  const conviteNaUrl = useRef(veioDoConvite());
 
   // 1. login do principal: lê do aparelho e acompanha as mudanças (Google volta com ?code=, e-mail e senha, sair)
   useEffect(() => {
@@ -227,6 +242,10 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         } catch {
           /* noop */
         }
+        if (conviteNaUrl.current) {
+          conviteNaUrl.current = false;
+          jaFez = false;
+        }
         if (!jaFez) {
           const { data, error } = await principal.functions.invoke("pos-login", { body: {} });
           if (!error && data) {
@@ -269,6 +288,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   }, [uid, versaoSituacao]);
 
   // 3. sessão do Banco do Treino (troca de token)
+  // W5 (correção do painel sem o Treino): só a pessoa ("Tentar de novo", forcar) passa por cima da pausa guardada; sozinho
+  // o app não martela a trocar-token — 429 pausa 15 min e o servidor falhando ganha só 2 tentativas (depoisDaFalha).
   const trocar = useCallback(async (forcar: boolean) => {
     const pid = uidRef.current;
     const sit = situacaoRef.current;
@@ -280,6 +301,13 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         setTreino({ estado: "pronto", erro: null });
         return;
       }
+      const pausa = pausaDaTroca(pid);
+      if (pausa) {
+        setTreino({ estado: "erro", erro: pausa.erro });
+        return;
+      }
+    } else {
+      limparPausaTroca(pid);
     }
     if (!online()) {
       setTreino({ estado: "erro", erro: "rede" });
@@ -299,6 +327,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       if (r.ok) {
         const ok = await aplicarSessaoTreino(pid, r.sessao);
         tentativasTroca.current = 0;
+        if (ok) limparPausaTroca(pid);
         setTreino(ok ? { estado: "pronto", erro: null } : { estado: "erro", erro: "interno" });
         return;
       }
@@ -310,10 +339,12 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         return;
       }
       setTreino({ estado: "erro", erro: falha.erro });
-      if (retentavel(falha.erro) && tentativasTroca.current < MAX_TENTATIVAS_TROCA) {
-        const espera = esperaDaTentativa(tentativasTroca.current++);
+      const passo = depoisDaFalha(falha.erro, tentativasTroca.current);
+      if (passo.pausarPor) pausarTroca(pid, falha.erro, passo.pausarPor);
+      if (passo.tentarEm !== null) {
+        tentativasTroca.current++;
         if (timerTroca.current) clearTimeout(timerTroca.current);
-        timerTroca.current = setTimeout(() => setPedidoTroca((p) => ({ n: p.n + 1, forcar: false })), espera);
+        timerTroca.current = setTimeout(() => setPedidoTroca((p) => ({ n: p.n + 1, forcar: false })), passo.tentarEm);
       }
     } finally {
       trocando.current = false;
@@ -331,12 +362,13 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a troca depende de quem é e se precisa, não do objeto inteiro
   }, [uid, situacao?.precisa_treino, pedidoTroca, trocar]);
 
-  // renovação da sessão do Treino falhou com o principal válido → refaz a troca em silêncio (spec 7.4 passo 5)
+  // renovação da sessão do Treino falhou com o principal válido → refaz a troca em silêncio (spec 7.4 passo 5). Sem forçar:
+  // a sessão que sumiu já não serve, e a pausa guardada (429/servidor falhando) continua valendo — nada de martelar o limite
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((evento) => {
       if (evento !== "SIGNED_OUT" || saindo.current) return;
       if (uidRef.current && situacaoRef.current?.precisa_treino && online()) {
-        setTimeout(() => setPedidoTroca((p) => ({ n: p.n + 1, forcar: true })), 300);
+        setTimeout(() => setPedidoTroca((p) => ({ n: p.n + 1, forcar: false })), 300);
       }
     });
     return () => sub.subscription.unsubscribe();

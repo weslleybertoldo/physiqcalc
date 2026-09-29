@@ -7,6 +7,8 @@ import PlanoBloqueado from "@/components/PlanoBloqueado";
 import { invokeMp } from "@/lib/mpClient";
 import { fmtBRL, fmtData, type PlanoStatus } from "@/lib/saasApi";
 import { gatesPainel } from "@/rotas/registro";
+import { SemConexaoTreino } from "@/ui/casca/SemConexaoTreino";
+import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 
 // Status do plano do professor (isento pro master). Compartilhado com as páginas do Admin via contexto.
 const PlanoCtx = createContext<{ status: PlanoStatus | null; recarregar: () => void }>({ status: null, recarregar: () => {} });
@@ -19,6 +21,10 @@ const TRAVA_NOVA_DE_PLANO = gatesPainel.some((g) => g.nome === "GatePlanoLegado"
  * Fallback das páginas antigas do painel do PROFESSOR (W1): o menu, o topo e a barra do celular agora
  * são da casca nova (src/painel/PainelLayout.tsx); aqui ficou só o que as páginas antigas precisam —
  * o status do plano (usePlanoStatus), a faixa de tolerância e a trava de plano vencido de hoje.
+ *
+ * W5: estas páginas são as ÚNICAS do painel que usam o Banco do Treino. Sem a sessão dele (troca de token esperando,
+ * falhando ou pausada pelo limite), só o conteúdo delas vira "Sem conexão com o Treino" com "Tentar de novo" — o menu, as
+ * Configurações e o que é do banco principal seguem abrindo (antes o painel inteiro travava).
  */
 const AdminLayout = ({ children }: { children?: ReactNode }) => {
   const { user, isStaff } = useAuth();
@@ -33,7 +39,10 @@ const AdminLayout = ({ children }: { children?: ReactNode }) => {
     retry: 1,
   });
 
+  const treino = useTreinoDaPagina();
+
   const conteudo = children ?? <Outlet />;
+  if (treino.tipo !== "ok") return <SemConexaoTreino estado={treino} />;
   if (!user || !isStaff) return <>{conteudo}</>;
 
   const status = plano.data ?? null;

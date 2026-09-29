@@ -3,6 +3,8 @@ import {
   acessoProfessor,
   claimsDoJwt,
   decidirVinculo,
+  deveTirarAcessoDoEspelho,
+  linhaSoDoEspelho,
   ehLoginGoogle,
   ehPersonalComTreino,
   emailConfirmado,
@@ -222,5 +224,34 @@ describe("segredo do espelho em tempo constante", () => {
     expect(segredoConfere("b".repeat(64), s)).toBe(false);
     expect(segredoConfere("", s)).toBe(false);
     expect(segredoConfere("curto", "curto")).toBe(false);
+  });
+});
+
+describe("W5 — personal removido da equipe perde o acesso que o espelho tinha dado no Treino", () => {
+  const linhaEspelho = { plano_id: null, trial_ate: null, adesao_paga_em: null, ciclo_vence_em: null, anual_ate: null, cobranca_pausada: false,
+    acesso_liberado_ate: "2026-10-29", nucleo_acesso_ate: "2026-10-29" };
+  const linhaCalc = { ...linhaEspelho, plano_id: "plano-start", ciclo_vence_em: "2026-10-18", adesao_paga_em: "2026-09-01" };
+  it("linha criada pelo espelho = só acesso (sem plano, teste, adesão, ciclo, anual ou pausa do Calc)", () => {
+    expect(linhaSoDoEspelho(linhaEspelho)).toBe(true);
+    expect(linhaSoDoEspelho(linhaCalc)).toBe(false);
+    expect(linhaSoDoEspelho({ ...linhaEspelho, trial_ate: "2026-10-02" })).toBe(false);
+    expect(linhaSoDoEspelho({ ...linhaEspelho, cobranca_pausada: true })).toBe(false);
+  });
+  it("removido (membro 'removido') ou sem o papel personal: tira o acesso da linha do espelho", () => {
+    const removido = resumo({ membros: [membro({ status: "removido" })] });
+    expect(deveTirarAcessoDoEspelho(removido, "professor", linhaEspelho)).toBe(true);
+    const soNutri = resumo({ membros: [membro({ papeis: ["nutricionista"] })] });
+    expect(deveTirarAcessoDoEspelho(soNutri, "professor", linhaEspelho)).toBe(true);
+    const contaSemTreino = resumo({ membros: [membro({ conta: conta({ modulos: ["nutricao"] }) })] });
+    expect(deveTirarAcessoDoEspelho(contaSemTreino, null, linhaEspelho)).toBe(true);
+  });
+  it("nunca: ainda personal ativo, professor do Calc de verdade, master/admin, sem linha ou já sem acesso", () => {
+    expect(deveTirarAcessoDoEspelho(resumo({ membros: [membro()] }), "professor", linhaEspelho)).toBe(false);
+    const removido = resumo({ membros: [membro({ status: "removido" })] });
+    expect(deveTirarAcessoDoEspelho(removido, "professor", linhaCalc)).toBe(false);
+    expect(deveTirarAcessoDoEspelho({ ...removido, master: true }, "master", linhaEspelho)).toBe(false);
+    expect(deveTirarAcessoDoEspelho(removido, "admin", linhaEspelho)).toBe(false);
+    expect(deveTirarAcessoDoEspelho(removido, "professor", null)).toBe(false);
+    expect(deveTirarAcessoDoEspelho(removido, null, { ...linhaEspelho, acesso_liberado_ate: null, nucleo_acesso_ate: null })).toBe(false);
   });
 });

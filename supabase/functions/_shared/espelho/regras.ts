@@ -227,6 +227,38 @@ export function acessoProfessor(r: ResumoNucleo): AcessoProfessor | null {
   };
 }
 
+/** Colunas de cobrança do Calc numa linha de physiq_professores (o que diz se é um professor do Calc de verdade). */
+export interface LinhaProfessorCobranca {
+  plano_id?: string | null;
+  trial_ate?: string | null;
+  adesao_paga_em?: string | null;
+  ciclo_vence_em?: string | null;
+  anual_ate?: string | null;
+  cobranca_pausada?: boolean | null;
+  acesso_liberado_ate?: string | null;
+  nucleo_acesso_ate?: string | null;
+}
+
+/**
+ * W5: a linha de physiq_professores foi criada pelo espelho para o personal de uma conta NOVA (só acesso: sem plano, teste,
+ * adesão, ciclo, anual ou cobrança pausada do Calc)? A mesma conferência do pos-login (professorDoCalcDeVerdade, W4).
+ */
+export function linhaSoDoEspelho(p: LinhaProfessorCobranca): boolean {
+  return !p.plano_id && !p.trial_ate && !p.adesao_paga_em && !p.ciclo_vence_em && !p.anual_ate && !p.cobranca_pausada;
+}
+
+/**
+ * W5 — personal removido da equipe (ou que perdeu o papel, ou a conta ficou sem o Treino): o acesso que o espelho tinha dado
+ * a ele no Treino sai (acesso_liberado_ate e nucleo_acesso_ate vazios → physiq_professor_acesso_ok = falso → as funções
+ * admin-* e o convite antigo recusam já, mesmo com um token do Treino ainda válido). Nunca mexe em professor do Calc de
+ * verdade (as regras de hoje continuam) nem no master; sem acesso para tirar, nada a fazer.
+ */
+export function deveTirarAcessoDoEspelho(r: ResumoNucleo, papelAtual: string | null | undefined, linha: LinhaProfessorCobranca | null): boolean {
+  if (!linha || r.master || papelAtual === "admin" || papelAtual === "master") return false;
+  if (acessoProfessor(r)) return false;
+  return linhaSoDoEspelho(linha) && Boolean(linha.acesso_liberado_ate || linha.nucleo_acesso_ate);
+}
+
 /** Linhas do physiq_espelho_membros deste usuário (todas as contas em que aparece; ativo só se o membro está ativo). */
 export function linhasEspelhoMembros(r: ResumoNucleo): Array<{ conta_id: string; papeis: Papel[]; ativo: boolean }> {
   const porConta = new Map<string, { conta_id: string; papeis: Papel[]; ativo: boolean }>();
