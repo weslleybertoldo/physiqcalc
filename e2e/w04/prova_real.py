@@ -12,7 +12,9 @@ real) e o ESTORNO depois. Só mexe em conta de TESTE (e-mail *teste*@physiq…);
   estornar  --ambiente public --mp-payment-id <id> [--cancelar-assinatura] [--dry-run]
             estorna o pagamento inteiro no MP (POST /v1/payments/<id>/refunds) e, com --cancelar-assinatura, cancela a
             cobrança automática da conta; depois confere a fatura (o webhook marca 'refunded')
-  limpar    --ambiente public         fecha no MP o Pix/assinatura que ficaram abertos na conta de teste e tira o preço especial
+  limpar    --ambiente public [--manter-preco]   fecha no MP o Pix/assinatura que ficaram abertos na conta de teste e tira o
+            preço especial (com --manter-preco, deixa a conta pronta para a prova)
+  pix       --ambiente public         gera o Pix da prova (QR de verdade no MP de produção) — só para provar; feche com limpar
 
 Credenciais do MP: ~/.physiq-mp-prod (produção) e ~/.physiq-mp-test (staging) — cofre › PhysiqCalc › "Mercado Pago — PhysiqCalc".
 """
@@ -31,7 +33,7 @@ from _comum import PRINCIPAL_REF, PRINCIPAL_URL, anon, http, service, sql_princi
 
 MP = "https://api.mercadopago.com"
 EMAIL = "prova.teste.claude@physiqnutri.app"
-NOME_CONTA = "Prova do cartão (teste)"
+NOME_CONTA = "Prova Cartão Teste"
 
 
 def senha() -> str:
@@ -148,6 +150,18 @@ def checkout(a) -> int:
     return 0 if st == 200 and r.get("init_point") else 1
 
 
+def pix(a) -> int:
+    uid = garantir_usuario()
+    c = conta(a.ambiente, uid)
+    if not c:
+        raise SystemExit("rode preparar antes")
+    st, r = cobranca(a.ambiente, sessao(), "pix_criar", {"conta_id": c["id"], "plano": c["plano"], "faixa": c["faixa"], "meses": 1})
+    f = r.get("fatura") or {}
+    print(st, json.dumps({"ok": r.get("ok"), "erro": r.get("erro"), "valor": f.get("valor"), "mp_payment_id": f.get("mp_payment_id"),
+                          "copia_cola": (f.get("pix_copia_cola") or "")[:40] + "…", "qr": bool(f.get("pix_qr")), "expira": f.get("pix_expira_em")}, ensure_ascii=False))
+    return 0 if st == 200 and f.get("pix_copia_cola") else 1
+
+
 def estornar(a) -> int:
     st, pay = mp(a.ambiente, "GET", f"/v1/payments/{a.mp_payment_id}")
     if st != 200:
@@ -199,25 +213,27 @@ def limpar(a) -> int:
         if not x["mp_preapproval_id"].startswith("sim-"):
             st, r = mp(a.ambiente, "PUT", f"/preapproval/{x['mp_preapproval_id']}", {"status": "cancelled"})
             print(f"assinatura {x['mp_preapproval_id']}: {st} {r.get('status')}")
-    sql_principal(f"update {a.ambiente}.conta_assinaturas set status = 'cancelled' where conta_id = '{c['id']}';"
-                  f"update {a.ambiente}.contas set valor_travado = null where id = '{c['id']}'")
-    print("limpo")
+    sql_principal(f"update {a.ambiente}.conta_assinaturas set status = 'cancelled' where conta_id = '{c['id']}'")
+    if not a.manter_preco:
+        sql_principal(f"update {a.ambiente}.contas set valor_travado = null where id = '{c['id']}'")
+    print("limpo" + (" (preço especial mantido para a prova)" if a.manter_preco else ""))
     return 0
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("acao", choices=["preparar", "conferir", "checkout", "estornar", "limpar"])
+    ap.add_argument("acao", choices=["preparar", "conferir", "checkout", "pix", "estornar", "limpar"])
     ap.add_argument("--ambiente", choices=["public", "staging"], required=True)
     ap.add_argument("--valor", default="1.00")
     ap.add_argument("--mp-payment-id")
     ap.add_argument("--cancelar-assinatura", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--forcar", action="store_true")
+    ap.add_argument("--manter-preco", action="store_true", help="limpar: fecha o que está aberto mas mantém o preço especial da prova")
     a = ap.parse_args()
     if a.acao == "estornar" and not a.mp_payment_id:
         raise SystemExit("--mp-payment-id é obrigatório")
-    return {"preparar": preparar, "conferir": conferir, "checkout": checkout, "estornar": estornar, "limpar": limpar}[a.acao](a)
+    return {"preparar": preparar, "conferir": conferir, "checkout": checkout, "pix": pix, "estornar": estornar, "limpar": limpar}[a.acao](a)
 
 
 if __name__ == "__main__":
