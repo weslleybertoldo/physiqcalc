@@ -54,7 +54,8 @@ jobs:
           V="${{ steps.version.outputs.current }}"
           IFS='.' read -r MA MI PA <<< "$V"
           PA=${PA:-0}
-          CODE=$((MA * 10000 + MI * 100 + PA))
+          # mesma fórmula do build-apk.yml (Physiq 3.0: MAJOR*100000 — o APK de teste instala por cima da 2.136)
+          CODE=$((MA * 100000 + MI * 100 + PA))
           sed -i "s/versionCode [0-9]\+/versionCode $CODE/" android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"$V\"/" android/app/build.gradle
           echo "versionCode=$CODE versionName=$V"
@@ -76,6 +77,9 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_MP_PUBLIC_KEY: ${{ secrets.VITE_MP_PUBLIC_KEY }}
+          # banco principal do Physiq (spec 7.8): entra no APK antes da W3; ninguém lê ainda
+          VITE_PRINCIPAL_URL: ${{ secrets.VITE_PRINCIPAL_URL }}
+          VITE_PRINCIPAL_ANON_KEY: ${{ secrets.VITE_PRINCIPAL_ANON_KEY }}
 
       - name: Sync Capacitor
         run: npx cap sync android
@@ -94,11 +98,11 @@ jobs:
       - name: Rename APK
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          mv "$APK" "android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}-check.apk"
+          mv "$APK" "android/app/build/outputs/apk/release/Physiq-v${{ steps.version.outputs.current }}-check.apk"
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PhysiqCalc-v${{ steps.version.outputs.current }}-check
-          path: android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}-check.apk
+          name: Physiq-v${{ steps.version.outputs.current }}-check
+          path: android/app/build/outputs/apk/release/Physiq-v${{ steps.version.outputs.current }}-check.apk
           retention-days: 7

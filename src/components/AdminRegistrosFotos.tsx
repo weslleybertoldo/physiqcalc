@@ -141,7 +141,7 @@ const AdminRegistrosFotos = ({ userId }: Props) => {
             type="month"
             value={mesInput}
             onChange={(e) => e.target.value && setMesInput(e.target.value)}
-            className="bg-background border border-border text-foreground text-sm font-body px-3 py-2 focus:outline-none focus:border-primary"
+            className="bg-background border border-border text-foreground text-sm font-body px-3 py-2 focus:outline-hidden focus:border-primary"
           />
           {mesesComFoto.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -175,12 +175,12 @@ const AdminRegistrosFotos = ({ userId }: Props) => {
                   url ? (
                     <img src={url} alt={`${t.label} ${mesRef}`} className="w-full object-contain max-h-96" />
                   ) : (
-                    <div className="aspect-[3/4] flex items-center justify-center text-xs text-muted-foreground font-body">
+                    <div className="aspect-3/4 flex items-center justify-center text-xs text-muted-foreground font-body">
                       Carregando...
                     </div>
                   )
                 ) : (
-                  <div className="aspect-[3/4] flex items-center justify-center text-xs text-muted-foreground font-body">
+                  <div className="aspect-3/4 flex items-center justify-center text-xs text-muted-foreground font-body">
                     Sem foto
                   </div>
                 )}
@@ -205,7 +205,7 @@ const AdminRegistrosFotos = ({ userId }: Props) => {
                   )}
                 </div>
                 <input
-                  ref={(el) => (inputRefs.current[t.key] = el)}
+                  ref={(el) => { inputRefs.current[t.key] = el; }}
                   type="file"
                   accept="image/*"
                   className="hidden"

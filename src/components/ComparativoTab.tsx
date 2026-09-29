@@ -311,7 +311,7 @@ const ComparativoTab = () => {
     setRelatorioVisivel(false);
   };
 
-  const inputClass = "w-full bg-transparent border-b border-muted-foreground/20 py-2 text-foreground text-[16px] outline-none focus:border-primary transition-colors";
+  const inputClass = "w-full bg-transparent border-b border-muted-foreground/20 py-2 text-foreground text-[16px] outline-hidden focus:border-primary transition-colors";
   const labelClass = "text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground block mb-1.5";
 
   return (

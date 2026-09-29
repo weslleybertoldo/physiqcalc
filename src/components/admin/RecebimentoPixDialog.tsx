@@ -18,7 +18,7 @@ interface Props {
 }
 
 const LABEL = "text-sm text-muted-foreground font-body uppercase tracking-wider";
-const SELECT = "bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary";
+const SELECT = "bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-hidden focus:border-primary";
 const BTN_PRI = "inline-flex w-full items-center justify-center gap-1.5 bg-primary text-primary-foreground font-heading text-xs uppercase tracking-widest px-4 py-3 hover:bg-primary/90 transition-colors disabled:opacity-50";
 
 /** Popup "Adicionar" / "Editar" recebimento Pix (pedido 13/09/2026): tipo, chave, favorecido, banco → linha em physiq_recebimentos. */

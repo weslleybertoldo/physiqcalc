@@ -167,7 +167,7 @@ const PlanosMasterPage = () => {
                   {h.professor_nome && <span>· prof. <span className="text-foreground">{h.professor_nome}</span></span>}
                   {!h.plano_id && !h.professor_id && <span>· regras</span>}
                 </div>
-                <p className="text-sm text-foreground font-body mt-0.5 break-words">{resumoHistorico(h, nomePlano)}</p>
+                <p className="text-sm text-foreground font-body mt-0.5 wrap-break-word">{resumoHistorico(h, nomePlano)}</p>
               </div>
             ))}
             <ListaPaginada total={hist.total} mostrando={hist.itens.length} carregandoMais={hist.carregandoMais} onVerMais={hist.verMais} rotulo="alterações" />

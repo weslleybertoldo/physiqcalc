@@ -245,7 +245,7 @@ const BibliotecaPage = () => {
                   <span>{ex.grupo_muscular}{ex.subgrupo ? ` · ${ex.subgrupo}` : ""}</span>
                   {ex.imagem_url && <span className="inline-flex items-center gap-0.5" title="Tem foto/GIF"><ImageIcon size={10} />mídia</span>}
                   {dosProfessores && ex.professor_id && (
-                    <Etiqueta tom="info" className="!text-[9px]">{nomesProf.get(ex.professor_id) ?? "professor"}</Etiqueta>
+                    <Etiqueta tom="info" className="text-[9px]!">{nomesProf.get(ex.professor_id) ?? "professor"}</Etiqueta>
                   )}
                 </div>
               </div>

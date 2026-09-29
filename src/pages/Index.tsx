@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { Trash2, FileDown, LogOut } from "lucide-react";
-import { logout } from "./Login";
 import SectionTMB from "@/components/SectionTMB";
 import SectionBodyFat from "@/components/SectionBodyFat";
 import MedidasForm from "@/components/MedidasForm";
@@ -149,7 +148,7 @@ const Index = ({ onBack }: { onBack?: () => void } = {}) => {
             {!onBack && (
               <button
                 type="button"
-                onClick={() => { logout(); window.location.href = "/"; }}
+                onClick={() => { window.location.href = "/"; }}
                 title="Sair"
                 className="p-2 text-muted-foreground hover:text-destructive transition-colors duration-200"
               >

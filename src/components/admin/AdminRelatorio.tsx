@@ -903,7 +903,7 @@ const AdminRelatorio = ({ users }: AdminRelatorioProps) => {
         <select
           value={usuarioSelecionado}
           onChange={(e) => setUsuarioSelecionado(e.target.value)}
-          className="flex-[2] bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2.5 outline-none focus:border-primary transition-colors min-w-[180px]"
+          className="flex-2 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2.5 outline-hidden focus:border-primary transition-colors min-w-[180px]"
         >
           <option value="" className="bg-background text-foreground">Selecionar usuário...</option>
           {users.map((u) => (
@@ -915,7 +915,7 @@ const AdminRelatorio = ({ users }: AdminRelatorioProps) => {
         <select
           value={mesSelecionado}
           onChange={(e) => setMesSelecionado(Number(e.target.value))}
-          className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2.5 outline-none focus:border-primary transition-colors min-w-[100px]"
+          className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2.5 outline-hidden focus:border-primary transition-colors min-w-[100px]"
         >
           {MESES.map((m, i) => (
             <option key={i + 1} value={i + 1} className="bg-background text-foreground">
@@ -926,7 +926,7 @@ const AdminRelatorio = ({ users }: AdminRelatorioProps) => {
         <select
           value={anoSelecionado}
           onChange={(e) => setAnoSelecionado(Number(e.target.value))}
-          className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2.5 outline-none focus:border-primary transition-colors min-w-[70px]"
+          className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2.5 outline-hidden focus:border-primary transition-colors min-w-[70px]"
         >
           {[2025, 2026, 2027].map((a) => (
             <option key={a} value={a} className="bg-background text-foreground">

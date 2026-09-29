@@ -113,7 +113,7 @@ export default function RecebimentosLista({ professorId, ehMaster }: Props) {
               {r.tipo === "mercadopago" ? <CreditCard size={14} className="text-primary shrink-0" /> : <QrCode size={14} className="text-primary shrink-0" />}
               <span className="truncate">{tituloRecebimento(r)}</span>
             </p>
-            <p className="text-xs text-muted-foreground font-body mt-1 break-words">{detalheRecebimento(r)}</p>
+            <p className="text-xs text-muted-foreground font-body mt-1 wrap-break-word">{detalheRecebimento(r)}</p>
             <p className={`text-xs font-body mt-1 ${r.ativo ? "text-primary" : "text-muted-foreground"}`} data-recebimento-estado>{descricaoSwitch(r)}</p>
             {r.tipo === "pix" && (
               <div className="flex flex-wrap gap-2 mt-2">

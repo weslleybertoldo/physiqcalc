@@ -137,7 +137,7 @@ const AlunosMasterPage = () => {
       ) : (
         <div data-lista-alunos>
           <div className="flex items-center gap-2 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground font-body">
-            <Checkbox checked={todosMarcados} onCheckedChange={toggleTodos} className={`${CHECK_CLS} !mt-0`} aria-label="Selecionar todos visíveis" data-check-todos />
+            <Checkbox checked={todosMarcados} onCheckedChange={toggleTodos} className={`${CHECK_CLS} mt-0!`} aria-label="Selecionar todos visíveis" data-check-todos />
             <span>Selecionar visíveis ({selecionaveis.length})</span>
           </div>
           {lista.itens.map((a) => {
@@ -159,11 +159,11 @@ const AlunosMasterPage = () => {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs font-body">
                     {a.user_code && <span className="text-muted-foreground">ID {a.user_code}</span>}
                     {ehProf ? (
-                      <Etiqueta tom="info" className="!text-[10px]">Professor (conta própria)</Etiqueta>
+                      <Etiqueta tom="info" className="text-[10px]!">Professor (conta própria)</Etiqueta>
                     ) : a.professor_id ? (
                       <span className="text-muted-foreground">Prof.: <span className="text-foreground">{prof?.nome ?? "…"}</span></span>
                     ) : (
-                      <Etiqueta tom="aviso" className="!text-[10px]" data-sem-professor>— sem professor —</Etiqueta>
+                      <Etiqueta tom="aviso" className="text-[10px]!" data-sem-professor>— sem professor —</Etiqueta>
                     )}
                     <span className={`font-heading uppercase ${a.status === "bloqueado" ? "text-destructive" : "text-classify-green"}`}>
                       {a.status === "bloqueado" ? "bloqueado" : "ativo"}

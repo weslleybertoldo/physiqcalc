@@ -46,7 +46,7 @@ const ModalExercicio = ({ exercicio, open, onOpenChange }: Props) => {
           // Área reservada (GIFs do catálogo são 600×400 = 3:2) → sem salto de layout
           // enquanto baixa; skeleton pulsando até a imagem chegar.
           <div
-            className="relative w-full aspect-[3/2] max-h-72 overflow-hidden rounded-lg border border-muted-foreground/20 bg-card"
+            className="relative w-full aspect-3/2 max-h-72 overflow-hidden rounded-lg border border-muted-foreground/20 bg-card"
             data-testid="exercicio-imagem"
           >
             {!imgCarregada && <div className="absolute inset-0 animate-pulse bg-muted/60" aria-hidden="true" />}

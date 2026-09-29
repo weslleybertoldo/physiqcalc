@@ -230,7 +230,7 @@ export default function ProfessorFinanceiroModal({ userId, onClose, onChanged }:
           onEscapeKeyDown={(e) => { if (comprovante) { e.preventDefault(); setComprovante(null); } }}
         >
           <DialogHeader className="text-left">
-            <DialogTitle className="font-heading text-foreground uppercase tracking-wider text-base break-words">{p?.nome ?? "Professor"}</DialogTitle>
+            <DialogTitle className="font-heading text-foreground uppercase tracking-wider text-base wrap-break-word">{p?.nome ?? "Professor"}</DialogTitle>
             <DialogDescription className="font-body text-xs break-all">
               {p ? <>{p.email ?? "—"} · <span className="font-heading tracking-wider">{p.codigo}</span></> : loading ? "Carregando..." : ""}
             </DialogDescription>
@@ -427,7 +427,7 @@ export default function ProfessorFinanceiroModal({ userId, onClose, onChanged }:
                         <p className="text-[11px] text-muted-foreground font-body">
                           {fmtDataHora(a.enviado_em)} · {a.canal}{a.canal !== "manual" && a.canal !== "reajuste" ? ` · dia ${a.dia}` : ""} · ciclo {fmtData(a.ciclo_vence_em)}
                         </p>
-                        {a.mensagem && <p className="text-xs text-foreground font-body break-words">{a.mensagem}</p>}
+                        {a.mensagem && <p className="text-xs text-foreground font-body wrap-break-word">{a.mensagem}</p>}
                       </div>
                     ))}
                   </div>
@@ -444,7 +444,7 @@ export default function ProfessorFinanceiroModal({ userId, onClose, onChanged }:
                     {det.historico.map((h) => (
                       <div key={h.id} className="border-b border-border/40 py-1.5 last:border-0" data-historico-linha={h.id}>
                         <p className="text-[11px] text-muted-foreground font-body">{fmtDataHora(h.alterado_em)}{h.alterado_por === p.id ? " · pelo professor" : ""}</p>
-                        <p className="text-xs text-foreground font-body break-words">{resumoHistorico(h, nomePlano)}</p>
+                        <p className="text-xs text-foreground font-body wrap-break-word">{resumoHistorico(h, nomePlano)}</p>
                       </div>
                     ))}
                   </div>

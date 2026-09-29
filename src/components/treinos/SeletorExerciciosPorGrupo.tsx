@@ -92,7 +92,7 @@ const SeletorExerciciosPorGrupo = <T extends ExercicioSelecionavel>({
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder={blocoAtual ? `Buscar em ${blocoAtual.nome}...` : "Buscar exercício..."}
-          className="flex-1 bg-transparent text-foreground font-body text-sm py-1.5 outline-none placeholder:text-muted-foreground"
+          className="flex-1 bg-transparent text-foreground font-body text-sm py-1.5 outline-hidden placeholder:text-muted-foreground"
         />
         {buscando && (
           <button type="button" onClick={() => setBusca("")} className="p-1 text-muted-foreground hover:text-foreground transition-colors">

@@ -21,7 +21,7 @@ export const BTN_MINI_PERIGO = `${BTN_MINI} border-destructive/40 text-destructi
 export const BTN_MINI_NEUTRO = `${BTN_MINI} border-border text-muted-foreground hover:text-foreground`;
 
 export const INPUT = "input-underline text-sm py-2";
-export const TEXTAREA = "w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-none focus:border-primary";
+export const TEXTAREA = "w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-hidden focus:border-primary";
 export const SELECT_TRIGGER = "h-9 text-sm bg-transparent border-muted-foreground/40 font-body text-foreground";
 export const SELECT_CONTENT = "bg-background border-muted-foreground/30 text-foreground font-body";
 export const DIALOG_CONTENT = "bg-background border-muted-foreground/30";
@@ -297,7 +297,7 @@ export function Dado({ k, v, destaque }: { k: string; v: ReactNode; destaque?: b
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border/40 py-1.5 last:border-0 text-sm font-body">
       <span className="text-muted-foreground text-[10px] uppercase tracking-wider pt-0.5 shrink-0">{k}</span>
-      <span className={`text-right break-words min-w-0 ${destaque ? "text-primary" : "text-foreground"}`}>{v ?? "—"}</span>
+      <span className={`text-right wrap-break-word min-w-0 ${destaque ? "text-primary" : "text-foreground"}`}>{v ?? "—"}</span>
     </div>
   );
 }

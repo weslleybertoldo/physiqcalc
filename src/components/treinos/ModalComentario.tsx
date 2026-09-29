@@ -129,7 +129,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center p-4"
+      className="fixed inset-0 z-200 flex items-end justify-center p-4"
       style={{ background: "rgba(0,0,0,.75)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleSalvar();
@@ -166,7 +166,7 @@ const ModalComentario: React.FC<ModalComentarioProps> = ({
             placeholder="Ex: Manter cotovelos fechados, aumentar peso na próxima semana, sentiu dor no ombro..."
             autoFocus
             rows={5}
-            className="w-full bg-card border border-border rounded-[10px] px-3.5 py-3 text-foreground font-body text-sm leading-relaxed resize-y outline-none focus:border-primary transition-colors"
+            className="w-full bg-card border border-border rounded-[10px] px-3.5 py-3 text-foreground font-body text-sm leading-relaxed resize-y outline-hidden focus:border-primary transition-colors"
           />
         )}
 

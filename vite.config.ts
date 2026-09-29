@@ -1,8 +1,8 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import tailwindcss from "@tailwindcss/vite";
 import wasm from "vite-plugin-wasm";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import { readFileSync } from "fs";
 
@@ -45,8 +45,9 @@ export default defineConfig(({ mode }) => {
   },
   plugins: [
     react(),
+    // Tailwind 4: a configuração mora no CSS (`@theme` em src/index.css), sem tailwind.config/postcss
+    tailwindcss(),
     wasm(),
-    mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
@@ -148,13 +149,13 @@ export default defineConfig(({ mode }) => {
         ],
       },
       manifest: {
-        name: "PhysiqCalc",
-        short_name: "PhysiqCalc",
-        description: "Calculadora de composição corporal para atletas",
+        name: "Physiq",
+        short_name: "Physiq",
+        description: "App focado em saúde e performance",
         start_url: "/",
         display: "standalone",
-        background_color: "#0a0a0a",
-        theme_color: "#f59e0b",
+        background_color: "#09090B",
+        theme_color: "#09090B",
         orientation: "portrait",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

@@ -861,7 +861,7 @@ const PagamentosPage = () => {
 
         {/* Comprovante anexado pelo aluno (pix_manual) — URL assinada por 5 min */}
         {anexoAberto && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4" onClick={() => setAnexoAberto(null)}>
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 px-4" onClick={() => setAnexoAberto(null)}>
             <div className="bg-card border border-border rounded-xl p-4 max-w-sm w-full space-y-3" onClick={(e) => e.stopPropagation()} data-pix-manual-anexo-aberto>
               <div className="flex items-center justify-between">
                 <h3 className="font-heading text-sm text-foreground uppercase tracking-wider">Comprovante anexado</h3>

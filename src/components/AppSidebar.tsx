@@ -38,7 +38,7 @@ export function MobileNavBar({ items, modo }: { items: NavItem[]; modo: "admin" 
   const navigate = useNavigate();
   const isActive = (url: string) => (url === "/master" ? location.pathname === "/master" : location.pathname.startsWith(url));
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-muted-foreground/20 bg-background/95 backdrop-blur md:hidden" data-mobile-nav>
+    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-muted-foreground/20 bg-background/95 backdrop-blur-sm md:hidden" data-mobile-nav>
       <div className="flex overflow-x-auto no-scrollbar">
         {items.map((it) => {
           const ativo = isActive(it.url);

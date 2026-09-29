@@ -505,7 +505,7 @@ export default function AdminSemanaUsuario({ userId }: Props) {
                               <select
                                 value={extraNovo.key}
                                 onChange={(e) => setExtraNovo({ ...extraNovo, key: e.target.value })}
-                                className="bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none focus:border-primary"
+                                className="bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-hidden focus:border-primary"
                               >
                                 <option value="" className="bg-background text-foreground">Escolher o treino extra...</option>
                                 {grupos.map((g) => (
@@ -531,7 +531,7 @@ export default function AdminSemanaUsuario({ userId }: Props) {
                                 <select
                                   value={extraNovo.atrelado}
                                   onChange={(e) => setExtraNovo({ ...extraNovo, atrelado: e.target.value })}
-                                  className="bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-none focus:border-primary"
+                                  className="bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-hidden focus:border-primary"
                                 >
                                   <option value="" className="bg-background text-foreground">Escolher o treino...</option>
                                   {sel.map((g) => (
