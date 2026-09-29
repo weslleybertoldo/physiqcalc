@@ -350,8 +350,9 @@ def caso_master(nav, a) -> None:
     p.check(c.esperar(lambda: c.tem("[data-menu-lateral]"), 120), "master: painel abre")
     c.fechar_aviso()
     c.pg.goto(a.base + "/master", wait_until="domcontentloaded")
-    p.check(c.esperar(lambda: '[data-casca="master"]' and c.tem('[data-casca="master"] [data-menu-lateral]'), 90), "master: /master abre (papel admin do Treino mantido)")
-    c.pg.wait_for_timeout(2500)
+    p.check(c.esperar(lambda: c.tem('[data-casca="master"] [data-menu-lateral]'), 90), "master: /master abre (papel admin do Treino mantido)")
+    p.check(c.esperar(lambda: "PROFESSORES ATIVOS" in c.texto().upper(), 90), "master: a visão geral carrega os números (funções master do Treino com a sessão da troca)")
+    c.pg.wait_for_timeout(1200)
     c.print("master")
     c.fim()
 
