@@ -16,10 +16,11 @@ describe("schema do banco principal", () => {
 });
 
 describe("cliente do principal", () => {
-  it("importa sem quebrar mesmo sem as variáveis (nos testes elas não existem)", () => {
+  it("importa sem quebrar, com ou sem as variáveis (no CI o npm test roda sem elas; no local o .env.local pode ter)", () => {
     expect(principal).toBeTruthy();
     expect(typeof principal.from).toBe("function");
-    expect(principalConfigurado).toBe(false);
+    const env = import.meta.env as Record<string, string | undefined>;
+    expect(principalConfigurado).toBe(Boolean(env.VITE_PRINCIPAL_URL?.trim() && env.VITE_PRINCIPAL_ANON_KEY?.trim()));
   });
   it("guarda a sessão numa chave própria, diferente da do Treino (sb-<host>-auth-token)", () => {
     expect(PRINCIPAL_STORAGE_KEY).toBe("physiq-principal-auth");
