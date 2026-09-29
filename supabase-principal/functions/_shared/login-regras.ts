@@ -145,6 +145,16 @@ export function contaLegadoCalc(p: ProfessorCalc, hoje: string): ContaLegadoCalc
   return { ...base, situacao: limite >= hoje ? "ativa" : "vencida", vence_em: maior.data, tolerancia_dias: tolerancia };
 }
 
+/**
+ * W4: o professor do Treino é um professor do CALC de verdade (e não a linha que o espelho criou para o personal de uma conta
+ * NOVA do Physiq)? O espelho só grava acesso (acesso_liberado_ate/nucleo_acesso_ate) — sem plano, teste, adesão, ciclo, anual
+ * ou cobrança pausada. Sem esta conferência, quem saiu de uma conta nova (removido da equipe, conta apagada) ganharia no
+ * próximo login uma conta 'legado_calc' pela ponte do pos-login.
+ */
+export function professorDoCalcDeVerdade(p: ProfessorCalc): boolean {
+  return p.master || !!(p.plano_nome || p.trial_ate || p.adesao_paga_em || p.ciclo_vence_em || p.anual_ate || p.cobranca_pausada);
+}
+
 export function somarDiasIso(data: string, dias: number): string {
   const d = new Date(`${data.slice(0, 10)}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + dias);

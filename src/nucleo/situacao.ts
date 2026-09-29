@@ -34,6 +34,10 @@ export interface ContaSituacao {
   profissionais: number;
   alunos_ativos: number;
   limite_alunos: number | null;
+  /** W4: a cobrança automática no cartão (card do plano "Renova em … · cartão"; recorrente não recebe a faixa de aviso). */
+  assinatura?: { status: string; proximo_vencimento: string | null; valor: number | string | null } | null;
+  /** W4: o valor mensal de hoje da conta (tabela de preços ou o valor travado). */
+  valor_mensal?: number | string | null;
 }
 
 export interface PessoaRef {

@@ -13,6 +13,7 @@ import { invokeMp } from "@/lib/mpClient";
 import type { PlanoStatus } from "@/lib/saasApi";
 import { planoDoStatusLegado, type ContaCasca, type DadosCasca, type PlanoCasca } from "@/ui/casca/dadosCasca";
 import { useConta } from "./conta";
+import { planoCartaoContaNova } from "./cobranca/cartao";
 import { planoCartaoConta, planoCartaoNutri } from "./planoLegado";
 import { useSessao } from "./sessao";
 import { regraDoPlano, type ContaSituacao } from "./situacao";
@@ -62,6 +63,8 @@ export function useDadosCasca(): DadosCasca {
   if (conta.conta) {
     if (regra === "calc") plano = planoCalc.data ? planoDoStatusLegado(planoCalc.data) : planoCartaoConta(conta.conta, ehMaster);
     else if (regra === "nutri") plano = planoCartaoNutri(situacao?.legado_nutri);
+    // W4: conta nova com a situação, o teste e o vencimento reais (e "Renova em … · cartão" com a cobrança automática)
+    else if (regra === "nova") plano = planoCartaoContaNova(conta.conta);
     else plano = planoCartaoConta(conta.conta, ehMaster);
   } else if (semSituacao && planoCalc.data) {
     plano = planoDoStatusLegado(planoCalc.data);

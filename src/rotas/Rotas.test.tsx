@@ -207,7 +207,9 @@ describe("entrada: sem login cai no Entrar (a tela nova da W3, login único)", (
     abrir("/entrar");
     expect(await screen.findByText("Tenho um código do meu profissional", {}, { timeout: 4000 })).toBeInTheDocument();
     expect(onde()).toBe("/boas-vindas");
-    expect(screen.getByText("EM BREVE")).toBeInTheDocument();
+    // W4: o "Sou profissional" abriu (antes: "EM BREVE")
+    expect(await screen.findByText("14 DIAS GRÁTIS")).toBeInTheDocument();
+    expect(screen.queryByText("EM BREVE")).toBeNull();
   });
 
   it("logado, /entrar volta para o app", async () => {
