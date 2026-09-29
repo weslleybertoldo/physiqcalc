@@ -15,8 +15,9 @@ import { TelaTrava } from "./pecas/TelaTrava";
  *   · sem conta, sem matrícula e sem convite → Boas-vindas (código do profissional ou "sou profissional");
  *   · matrícula sem nenhum módulo (responsáveis removidos, conta sem o módulo) → "Seu profissional ainda não liberou seu
  *     acesso" (os dados ficam guardados);
- *   · só Nutrição e a aba Dieta nova ainda não chegou (W11) → "use o site do PhysiqNutri por enquanto" — menos Perfil ›
- *     Pagamentos (W6, R16): o paciente do Nutri vê as cobranças e paga pelo app; com cobrança a pagar, a trava mostra "Pagar".
+ *   · só Nutrição e a aba Dieta nova ainda não chegou (W11) → "use o site do PhysiqNutri por enquanto" — menos o Perfil
+ *     (W7: Agenda, Pagamentos — W6, R16 —, Conta, Aparência, Exportar e Excluir); com cobrança a pagar, a trava mostra "Pagar".
+ * W7: o aluno sem módulo também abre o Perfil (Sair, Exportar, Excluir e o "Tenho um código do meu profissional").
  * Sem a situação (principal fora do ar e nada guardado) não trava: vale o que o Treino sabe.
  */
 export default function GateSemModulo({ children }: { children: ReactNode }) {
@@ -30,7 +31,10 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
   const modulos = situacao.modulos_aluno;
   const profissional = ehProfissional(situacao);
 
+  const noPerfil = pathname === "/perfil" || pathname.startsWith("/perfil/");
+
   if (modulos.length === 0) {
+    if (!profissional && noPerfil) return <>{children}</>;
     return profissional ? (
       <TelaTrava
         marca="sem-modulo-profissional"
@@ -56,7 +60,7 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
   }
 
   if (soNutri) {
-    if (pathname.startsWith("/perfil/pagamentos")) return <>{children}</>;
+    if (noPerfil) return <>{children}</>;
     const f = faixaDoAluno(resumo);
     const pagar = f?.podePagar ? (f.alvo.tipo === "avulsa" ? `/perfil/pagamentos?pagar=${f.alvo.id}` : "/perfil/pagamentos?pagar=mensalidade") : null;
     return (

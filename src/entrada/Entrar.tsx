@@ -89,7 +89,7 @@ export default function Entrar() {
           style={{ background: "linear-gradient(90deg, var(--p-chip-t-fundo), transparent)" }}>
           <Link2 aria-hidden className="mt-0.5 h-[18px] w-[18px] flex-none text-violeta-3" strokeWidth={1.9} />
           <span className="text-texto">
-            Você chegou pelo link de um profissional (<b className="font-semibold text-violeta-3">{codigo}</b>). Ao entrar, sua conta fica ligada a ele.
+            Você chegou pelo link de um profissional (<b className="font-semibold text-violeta-3">{codigo}</b>). Ao entrar, você confirma se quer ficar na lista dele.
           </span>
         </div>
       )}

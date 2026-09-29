@@ -5,19 +5,18 @@
  *   2. a situação fica guardada no aparelho (abre sem internet — 7.5);
  *   3. quem precisa do Banco do Treino (aluno com Treino, personal, dono de conta com Treino, master, quem veio do Calc)
  *      recebe a sessão dele pela troca de token; a sessão guardada do Treino é reaproveitada enquanto for desta pessoa;
- *   4. o código do profissional pendente (?prof=) vai para o `vincular-aluno`.
+ *   4. o código do profissional pendente (?prof=) vai para o `vincular-aluno` — desde a W7 só depois do popup "confirmar o
+ *      profissional" (src/ui/avisos/AvisoVinculoPendente.tsx).
  * Sair = sair dos 2 bancos + limpar os caches (como o signOut de hoje). As telas antigas seguem lendo `useAuth()` (o
  * usuário do Treino vindo da troca); as novas usam `useSessao()` e `useConta()`.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { toast } from "sonner";
 import { principal, PRINCIPAL_STORAGE_KEY } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
-import { lerProfPendente, limparProfPendente } from "@/lib/profPendente";
+import { limparProfPendente } from "@/lib/profPendente";
 import {
-  MENSAGEM_VINCULO,
   erroDoVinculo,
   guardarSituacao,
   lerSituacaoGuardada,
@@ -175,7 +174,6 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   const tentativasTroca = useRef(0);
   const timerTroca = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trocando = useRef(false);
-  const vinculando = useRef(false);
   const situacaoRef = useRef<Situacao | null>(null);
   situacaoRef.current = situacao;
   const uidRef = useRef<string | null>(null);
@@ -405,25 +403,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     return { ok: true, jaEra: d.ja_era === true, profissional: (d.profissional as string) ?? null, conta: (d.conta_nome as string) ?? null };
   }, []);
 
-  useEffect(() => {
-    const codigo = lerProfPendente();
-    if (!uid || !situacao || !codigo || vinculando.current || !online()) return;
-    vinculando.current = true;
-    void vincularCodigo(codigo)
-      .then((r) => {
-        if (r.ok) {
-          toast.success(r.profissional ? `Você entrou na lista de ${r.profissional}.` : "Você foi ligado ao seu profissional.");
-        } else if (r.erro && ["codigo_invalido", "profissional_inativo", "proprio_codigo", "outro_profissional"].includes(r.erro)) {
-          limparProfPendente();
-          if (r.erro !== "proprio_codigo") toast.error(MENSAGEM_VINCULO[r.erro]);
-        } else if (r.erro === "limite_plano") {
-          toast.error(MENSAGEM_VINCULO.limite_plano);
-        }
-      })
-      .finally(() => {
-        vinculando.current = false;
-      });
-  }, [uid, situacao, vincularCodigo]);
+  // W7 (pedido dele, 29/09): o código pendente do link (?prof=) NÃO vincula mais sozinho — o popup "confirmar o profissional"
+  // (src/ui/avisos/AvisoVinculoPendente.tsx) mostra o nome, a foto e o tipo dele e só vincula no Confirmar
 
   // 5. entrar e sair
   const entrarComGoogle = useCallback(async () => {

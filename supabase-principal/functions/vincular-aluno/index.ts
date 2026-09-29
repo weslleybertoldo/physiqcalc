@@ -8,6 +8,10 @@
 //   servidor → x-espelho-segredo · x-schema · corpo { principal_user_id, codigo }  (o vincular-professor do Treino repassa
 //              os vínculos feitos pelo APK antigo)
 // 200 → { ok: true, paciente_id, ja_era, conta_id, conta_nome, profissional, modulos }
+// W7 — prévia (pedido dele, 29/09): app + corpo { codigo, previa: true } → NÃO vincula; devolve o que o popup "confirmar o
+//   profissional" mostra: { ok, erro?, ja_era, conta_nome, modulos, profissional: { nome, foto_url, tipo_perfil, papeis } }
+//   (a MESMA regra do vínculo, desfeita no banco — previa_vinculo_por_codigo). Código inexistente → 404 codigo_invalido.
+//   Limite próprio (30/h por pessoa) contra tentativa em massa de códigos; nada de e-mail, telefone ou ids.
 // 4xx → { ok: false, erro: codigo_invalido | profissional_inativo | proprio_codigo | outro_profissional | limite_plano | ... }
 // verify_jwt = false (o modo servidor não tem JWT; o app é validado aqui no GET /auth/v1/user). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions vincular-aluno false
@@ -57,7 +61,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
-  let corpo: { codigo?: unknown; principal_user_id?: unknown } = {};
+  let corpo: { codigo?: unknown; principal_user_id?: unknown; previa?: unknown } = {};
   try { corpo = await req.json(); } catch { corpo = {}; }
   const codigo = typeof corpo.codigo === "string" ? corpo.codigo.trim().toUpperCase().slice(0, 60) : "";
   if (!codigo) return json({ ok: false, erro: "codigo_invalido" }, 400, origin);
@@ -79,6 +83,23 @@ Deno.serve(async (req) => {
     if (schema === "staging" && !emailDeTeste(data.user.email)) return json({ ok: false, erro: "conta_real_no_staging" }, 403, origin);
     userId = data.user.id;
   }
+  // W7: a prévia do popup (só no modo app; o servidor não pede prévia) — não vincula nada
+  if (corpo.previa === true && !segredo) {
+    if (!permitido(`previa:${schema}:${userId}`, 30)) return json({ ok: false, erro: "rate_limited" }, 429, origin);
+    try {
+      const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
+      const { data, error } = await db.rpc("previa_vinculo_por_codigo", { p_user: userId, p_codigo: codigo });
+      if (error) throw error;
+      const r = (data ?? {}) as Record<string, unknown>;
+      if (!r.profissional) return json({ ok: false, erro: String(r.erro || "codigo_invalido") }, 404, origin);
+      return json({ ok: r.ok === true, erro: r.erro ?? null, ja_era: r.ja_era === true, conta_nome: r.conta_nome ?? null,
+        modulos: Array.isArray(r.modulos) ? r.modulos : [], profissional: r.profissional, previa: true }, 200, origin);
+    } catch (e) {
+      console.error("vincular-aluno (previa)", String((e as { message?: string })?.message || e));
+      return json({ ok: false, erro: "erro_interno" }, 500, origin);
+    }
+  }
+
   if (!permitido(`${schema}:${userId}`)) return json({ ok: false, erro: "rate_limited" }, 429, origin);
 
   try {

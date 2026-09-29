@@ -158,10 +158,10 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
     abrir(de);
     expect(await screen.findByTestId(tela)).toBeInTheDocument();
     await waitFor(() => expect(onde()).toBe(para));
-    // a barra de abas da tela 1, com as abas que já têm tela (Treino e Evolução até a W7/W11/W12)
+    // a barra de abas da tela 1, com as abas que já têm tela (Treino, Evolução e — desde a W7 — Perfil; Início e Dieta nas W12/W11)
     const barra = document.querySelector("[data-tabbar]")!;
     expect(barra).not.toBeNull();
-    expect([...barra.querySelectorAll("[data-aba]")].map((a) => a.textContent)).toEqual(["Treino", "Evolução"]);
+    expect([...barra.querySelectorAll("[data-aba]")].map((a) => a.textContent)).toEqual(["Treino", "Evolução", "Perfil"]);
   });
 
   // W6: Perfil › Pagamentos é a tela nova (src/app-aluno/perfil/Pagamentos.tsx) — o /pagamentos e o /app/recibos caem nela
