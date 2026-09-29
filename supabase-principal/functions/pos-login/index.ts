@@ -24,6 +24,7 @@ import {
   emailDeTeste,
   hojeSaoPaulo,
   origemPermitida,
+  professorDoCalcDeVerdade,
   senhaAleatoria,
   somarDiasIso,
   temIdentidade,
@@ -140,7 +141,8 @@ Deno.serve(async (req) => {
           .eq("user_id", user.id).eq("status", "ativo");
         const jaPersonal = ((membros ?? []) as Array<{ papeis: string[]; contas: { plano: string } | null }>)
           .some((m) => m.papeis.includes("personal") && ["treino", "treino_nutricao"].includes(m.contas?.plano ?? ""));
-        if (lt.professor && !jaPersonal) {
+        // W4: a linha de professor que o espelho criou para o personal de uma conta NOVA não é um professor do Calc
+        if (lt.professor && !jaPersonal && professorDoCalcDeVerdade(lt.professor)) {
           const c = contaLegadoCalc(lt.professor, hojeSaoPaulo());
           const { data, error } = await db.rpc("registrar_profissional_treino", {
             p_user: user.id, p_nome: lt.professor.nome || nome, p_codigo: lt.professor.codigo_convite, p_origem: "legado_calc",

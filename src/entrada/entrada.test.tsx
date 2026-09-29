@@ -5,21 +5,26 @@ import { chaveRegistro } from "@/lib/rateLimitLogin";
 
 const h = vi.hoisted(() => {
   (globalThis as unknown as { __APP_VERSION__: string }).__APP_VERSION__ = "3.2";
-  return { entrarComEmail: vi.fn(), entrarComGoogle: vi.fn(), vincularCodigo: vi.fn(), situacao: null as unknown, pendente: null as string | null };
+  return {
+    entrarComEmail: vi.fn(), entrarComGoogle: vi.fn(), vincularCodigo: vi.fn(), situacao: null as unknown, pendente: null as string | null,
+    rpc: vi.fn(), recarregar: vi.fn(async () => null),
+  };
 });
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase: {} }));
 vi.mock("@/lib/profPendente", () => ({ lerProfPendente: () => h.pendente, limparProfPendente: () => {} }));
 vi.mock("@/nucleo/sessao", () => ({
   useSessao: () => ({
     entrarComEmail: h.entrarComEmail, entrarComGoogle: h.entrarComGoogle, vincularCodigo: h.vincularCodigo, situacao: h.situacao,
-    usuario: { id: "u1", email: "rafa@gmail.com" }, sair: async () => {},
+    usuario: { id: "u1", email: "rafa@gmail.com" }, sair: async () => {}, recarregarSituacao: h.recarregar,
   }),
 }));
+vi.mock("@/integrations/principal/client", () => ({ principal: { rpc: h.rpc } }));
 
 import Entrar from "./Entrar";
 import EntrarEmail from "./EntrarEmail";
 import BoasVindas from "./BoasVindas";
 import TenhoCodigo from "./onboarding/TenhoCodigo";
+import CriarConta from "./onboarding/CriarConta";
 import { textoErroEntrar } from "./pecas/textos";
 
 const EMAIL = "conta@teste.com";
@@ -48,10 +53,12 @@ beforeEach(() => {
   h.vincularCodigo.mockReset();
   h.situacao = null;
   h.pendente = null;
+  h.rpc.mockReset();
+  h.recarregar.mockClear();
 });
 
 describe("Entrar (tela 1)", () => {
-  it("Google e e-mail e senha; o link do profissional aparece; 'Sou profissional' avisa que abre em breve", async () => {
+  it("Google e e-mail e senha; o link do profissional aparece; 'Sou profissional' explica o cadastro com 14 dias (W4)", async () => {
     h.pendente = "PROF-LUCAS-FERREIRA";
     h.entrarComGoogle.mockResolvedValue({});
     abrir(<Entrar />);
@@ -60,7 +67,8 @@ describe("Entrar (tela 1)", () => {
     await waitFor(() => expect(h.entrarComGoogle).toHaveBeenCalledTimes(1));
     expect(screen.getByRole("link", { name: /Entrar com e-mail e senha/ })).toHaveAttribute("href", "/entrar/email");
     fireEvent.click(screen.getByRole("button", { name: /Sou profissional/ }));
-    expect(screen.getByText(/O cadastro de profissional abre em breve/)).toBeInTheDocument();
+    expect(screen.getByText(/a conta nasce com 14 dias grátis/)).toBeInTheDocument();
+    expect(screen.queryByText(/abre em breve/)).toBeNull();
   });
   it("erro do Google vira mensagem", async () => {
     h.entrarComGoogle.mockResolvedValue({ erro: "x" });
@@ -115,12 +123,14 @@ describe("Entrar com e-mail e senha — o limitador de tentativas de hoje", () =
 });
 
 describe("Boas-vindas e 'Tenho um código'", () => {
-  it("opção do código + 'Sou profissional' em breve (a W4 traz o cadastro)", async () => {
+  it("opção do código + 'Sou profissional' com 14 dias grátis (W4 — o cadastro abriu)", async () => {
     h.situacao = { sem_nada: true, nome: "Rafael Moura" };
     abrir(<BoasVindas />);
     expect(screen.getByText("Rafael")).toBeInTheDocument();
     expect(await screen.findByText("Tenho um código do meu profissional")).toBeInTheDocument();
-    expect(screen.getByText("EM BREVE")).toBeInTheDocument();
+    expect(await screen.findByText("14 DIAS GRÁTIS")).toBeInTheDocument();
+    expect(screen.getByText("Sou profissional")).toBeInTheDocument();
+    expect(screen.queryByText("EM BREVE")).toBeNull();
   });
   it("código preenchido pelo link; erro do vínculo vira a frase da spec", async () => {
     h.pendente = "PROF-X";
@@ -137,5 +147,38 @@ describe("Boas-vindas e 'Tenho um código'", () => {
     fireEvent.change(screen.getByPlaceholderText("PROF-NOME-SOBRENOME"), { target: { value: "prof-lucas" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar na lista" }));
     expect(await screen.findByText(/Você entrou na lista de Lucas Ferreira/)).toBeInTheDocument();
+  });
+});
+
+describe("Boas-vindas › 'Sou profissional' (W4)", () => {
+  const preencherConta = () => {
+    fireEvent.click(screen.getByRole("button", { name: "Criar minha conta" }));
+    expect(screen.getByDisplayValue("Rafael Moura")).toBeInTheDocument(); // começa com o nome da pessoa
+    fireEvent.change(screen.getByPlaceholderText("Ex.: Consultoria Ferreira"), { target: { value: "Consultoria Moura" } });
+  };
+  it("cria a conta com o tipo de perfil e o registro → teste de 14 dias e o painel", async () => {
+    h.situacao = { sem_nada: true, nome: "Rafael Moura" };
+    h.rpc.mockResolvedValue({ data: { ok: true, conta_id: "c9", teste_ate: "2026-10-13" }, error: null });
+    abrir(<CriarConta />);
+    preencherConta();
+    fireEvent.click(screen.getByRole("radio", { name: /Personal trainer/ }));
+    fireEvent.change(screen.getByPlaceholderText("CREF 000000-G/UF"), { target: { value: "CREF 012345-G/PE" } });
+    fireEvent.click(screen.getByRole("button", { name: /Criar conta com 14 dias grátis/ }));
+    expect(await screen.findByText(/Sua conta está no teste até 13\/10/)).toBeInTheDocument();
+    expect(h.rpc).toHaveBeenCalledWith("criar_minha_conta", { p_nome: "Consultoria Moura", p_tipo: "personal", p_registro: "CREF 012345-G/PE" });
+    expect(h.recarregar).toHaveBeenCalled();
+  });
+  it("sem o tipo de perfil não envia; recusa do servidor vira a frase", async () => {
+    h.situacao = { sem_nada: true, nome: "Rafael Moura" };
+    abrir(<CriarConta />);
+    preencherConta();
+    fireEvent.click(screen.getByRole("button", { name: /Criar conta com 14 dias grátis/ }));
+    expect(await screen.findByText("Escolha como você atende.")).toBeInTheDocument();
+    expect(h.rpc).not.toHaveBeenCalled();
+    h.rpc.mockResolvedValue({ data: { ok: false, erro: "ja_tem_conta" }, error: null });
+    fireEvent.click(screen.getByRole("radio", { name: /Nutricionista/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Criar conta com 14 dias grátis/ }));
+    expect(await screen.findByText(/Você já faz parte de uma conta de profissional/)).toBeInTheDocument();
+    expect(h.rpc).toHaveBeenCalledWith("criar_minha_conta", { p_nome: "Consultoria Moura", p_tipo: "nutricionista", p_registro: null });
   });
 });

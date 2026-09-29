@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   contaLegadoCalc,
+  professorDoCalcDeVerdade,
   deveTrocarSenha,
   ehLoginGoogle,
   emailDeTeste,
@@ -98,5 +99,19 @@ describe("CORS das funções do login", () => {
     for (const o of ["https://evil.com", "http://localhost:3000", "https://physiqcalc.com.br.evil.com", null]) {
       expect(origemPermitida(o)).toBe(false);
     }
+  });
+});
+
+describe("W4 — a ponte do pos-login só vale para professor do Calc de verdade", () => {
+  const base = { codigo_convite: "PROF-X", nome: "X", status: "ativo", plano_nome: null, trial_ate: null, adesao_paga_em: null, ciclo_vence_em: null,
+    anual_ate: null, cobranca_pausada: false, acesso_liberado_ate: null, master: false };
+  it("a linha que o espelho criou (só acesso) não vira conta legado_calc; a do Calc (plano, teste, adesão, anual) vira", () => {
+    expect(professorDoCalcDeVerdade({ ...base, acesso_liberado_ate: "2026-10-13" })).toBe(false);
+    expect(professorDoCalcDeVerdade({ ...base, plano_nome: "Start" })).toBe(true);
+    expect(professorDoCalcDeVerdade({ ...base, trial_ate: "2026-10-01" })).toBe(true);
+    expect(professorDoCalcDeVerdade({ ...base, adesao_paga_em: "2026-09-01", ciclo_vence_em: "2026-10-01" })).toBe(true);
+    expect(professorDoCalcDeVerdade({ ...base, anual_ate: "2027-01-01" })).toBe(true);
+    expect(professorDoCalcDeVerdade({ ...base, cobranca_pausada: true })).toBe(true);
+    expect(professorDoCalcDeVerdade({ ...base, master: true })).toBe(true);
   });
 });

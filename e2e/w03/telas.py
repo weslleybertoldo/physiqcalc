@@ -8,7 +8,7 @@ Casos (positivos e negativos):
                 redirect_uri = callback do principal, state.referrer = <origem>/entrar) e o fluxo do APK (deep link)
   aluno         aluno do Calc entra por e-mail e senha → aviso "o Physiq mudou" → Treino com as séries antigas
                 (+ --escrever: série marcada SEM internet e sincronizada depois, conferida no banco e apagada)
-  pessoa        pessoa nova → Boas-vindas ("Tenho um código" + "Sou profissional" em breve); código inválido recusado
+  pessoa        pessoa nova → Boas-vindas ("Tenho um código" + "Sou profissional", aberto na W4); código inválido recusado
   professor     professor do Calc → painel com a casca da tela 6 e os alunos dele (página antiga dentro)
   master        master de teste → painel + Master
   nutri         nutricionista do Nutri → painel de nutrição com "use o site do PhysiqNutri por enquanto"
@@ -150,7 +150,8 @@ def caso_entrar(nav, a) -> None:
     c.pg.wait_for_timeout(800)
     c.print("entrar")
     c.pg.locator("[data-sou-profissional]").click()
-    p.check(c.esperar(lambda: "abre em breve" in c.texto(), 5), "'Sou profissional' avisa que o cadastro abre em breve (W4)")
+    # W4: o cadastro de profissional abriu (antes: "abre em breve")
+    p.check(c.esperar(lambda: "14 dias grátis" in c.texto(), 5), "'Sou profissional' explica o cadastro com 14 dias grátis (W4)")
     c.pg.goto(a.base + "/entrar/email", wait_until="domcontentloaded")
     p.check(c.esperar(lambda: c.tem("[data-form-email]"), 30), "Entrar com e-mail e senha abre")
     c.pg.wait_for_timeout(500)
@@ -312,7 +313,7 @@ def caso_pessoa(nav, a) -> None:
     c.preparar()
     c.entrar_pela_tela("pessoa")
     p.check(c.esperar(lambda: "/boas-vindas" in c.caminho() and c.tem("[data-onboarding='TenhoCodigo']"), 120), f"pessoa nova → Boas-vindas ({c.caminho()})")
-    p.check(c.tem("[data-onboarding='CriarConta-em-breve']"), "'Sou profissional' em breve (W4)")
+    p.check(c.tem("[data-onboarding='CriarConta']"), "'Sou profissional' (W4: o cadastro abriu)")
     c.pg.wait_for_timeout(800)
     c.print("boas_vindas")
     c.pg.get_by_placeholder("PROF-NOME-SOBRENOME").fill("PROF-NAO-EXISTE-W3")
