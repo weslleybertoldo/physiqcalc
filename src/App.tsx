@@ -13,7 +13,7 @@ import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
 // @powersync/tanstack-react-query instalado — hooks (useQuery, useSuspenseQuery)
 // ficam disponíveis sem provider adicional (v1.x expõe só hooks)
 import { setupDeepLinkListener } from "@/lib/capacitorAuth";
-import { capturarProfDaUrl } from "@/lib/profPendente";
+import { capturarProfDaUrl, capturarProfDoDeepLink } from "@/lib/profPendente";
 import StagingGate from "@/components/StagingGate";
 import { Rotas } from "@/rotas/Rotas";
 import { AvisosGlobais } from "@/ui/casca/AvisosGlobais";
@@ -43,9 +43,11 @@ const queryClient = new QueryClient({
   },
 });
 
-// Link do profissional (?prof=PROF-NOME-SOBRENOME): guarda ANTES do login; depois do login a sessão (src/nucleo/sessao.tsx)
-// manda o código para o vincular-aluno do banco principal (W3).
+// Link do profissional (?prof=PROF-NOME-SOBRENOME): guarda ANTES do login; depois do login o popup "confirmar o profissional"
+// (W7 — src/ui/avisos/AvisoVinculoPendente.tsx) mostra quem é e só então manda o código para o vincular-aluno. No APK, o link
+// com.bertoldo.physiqcalc://…?prof= faz o mesmo.
 capturarProfDaUrl();
+capturarProfDoDeepLink();
 // Inicializa deep link listener para OAuth no APK
 setupDeepLinkListener();
 

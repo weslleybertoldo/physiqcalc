@@ -1,0 +1,43 @@
+// Physiq W7 — conversa servidor → servidor com o Banco do Treino para "Exportar meus dados" e "Excluir minha conta".
+// Chama a delete-my-account de lá em modo servidor (x-espelho-segredo, o segredo da W2). A delete-my-account tem verify_jwt =
+// true: vai o anon do Treino (TREINO_ANON_KEY, público — é o do APK) no Authorization só para passar pela borda do Supabase;
+// quem autoriza é o segredo. O id do aluno no Treino sai do vínculo physiq_identidades lá — daqui vai só o id do JWT.
+import { lerRespostaTreino, type PassoTreino } from "./conta-aluno-regras.ts";
+
+const TREINO_URL = (Deno.env.get("TREINO_URL") || "").replace(/\/+$/, "");
+const TREINO_ANON_KEY = Deno.env.get("TREINO_ANON_KEY") || "";
+const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+
+export interface RespostaTreino {
+  passo: PassoTreino;
+  status: number;
+  corpo: Record<string, unknown>;
+}
+
+export function treinoConfigurado(): boolean {
+  return Boolean(TREINO_URL && TREINO_ANON_KEY && ESPELHO_SEGREDO.length >= 32);
+}
+
+export async function chamarTreino(schema: string, acao: "exportar" | "conferir" | "excluir", principalUserId: string): Promise<RespostaTreino> {
+  if (!treinoConfigurado()) return { passo: "indisponivel", status: 0, corpo: { erro: "sem_configuracao" } };
+  try {
+    const r = await fetch(`${TREINO_URL}/functions/v1/delete-my-account`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${TREINO_ANON_KEY}`,
+        apikey: TREINO_ANON_KEY,
+        "x-espelho-segredo": ESPELHO_SEGREDO,
+        "x-schema": schema,
+      },
+      body: JSON.stringify({ modo: "servidor", acao, principal_user_id: principalUserId }),
+    });
+    const corpo = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+    const passo = lerRespostaTreino(r.status, corpo);
+    if (passo === "indisponivel") console.error("treino-servidor:", acao, r.status, JSON.stringify(corpo).slice(0, 300));
+    return { passo, status: r.status, corpo };
+  } catch (e) {
+    console.error("treino-servidor:", acao, String(e));
+    return { passo: "indisponivel", status: 0, corpo: { erro: "rede" } };
+  }
+}

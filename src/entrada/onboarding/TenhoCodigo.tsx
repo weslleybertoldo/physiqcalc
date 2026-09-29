@@ -1,37 +1,31 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, KeyRound } from "lucide-react";
-import { lerProfPendente } from "@/lib/profPendente";
-import { useSessao } from "@/nucleo/sessao";
-import { MENSAGEM_VINCULO } from "@/nucleo/situacao";
+import { lerProfPendente, limparProfPendente } from "@/lib/profPendente";
+import { MENSAGEM_VINCULO, normalizarCodigo } from "@/nucleo/situacao";
 import { Cartao } from "@/ui/premium/Cartao";
+import { ConfirmarVinculo } from "@/ui/vinculo/ConfirmarVinculo";
 import { Campo, MensagemForm } from "../pecas/Campo";
 
 /**
  * Boas-vindas › "Tenho um código do meu profissional" (W3, spec 4.2): o código PROF-NOME-SOBRENOME (o link ?prof= já
  * preenche) leva à conta certa — a matrícula nasce na conta do profissional pelo `vincular-aluno` e o treino dele chega
- * pela troca de token.
+ * pela troca de token. W7 (pedido dele, 29/09): antes de vincular, o popup mostra o nome, a foto e o tipo do profissional
+ * (Confirmar / Cancelar).
  */
 export default function TenhoCodigo() {
-  const { vincularCodigo } = useSessao();
   const navigate = useNavigate();
   const [codigo, setCodigo] = useState(() => lerProfPendente() ?? "");
   const [erro, setErro] = useState("");
-  const [enviando, setEnviando] = useState(false);
+  const [conferindo, setConferindo] = useState<string | null>(null);
   const [pronto, setPronto] = useState<string | null>(null);
 
-  const enviar = async (e: FormEvent) => {
+  const enviar = (e: FormEvent) => {
     e.preventDefault();
     setErro("");
-    setEnviando(true);
-    const r = await vincularCodigo(codigo);
-    setEnviando(false);
-    if (!r.ok) {
-      setErro(MENSAGEM_VINCULO[r.erro ?? "erro_interno"]);
-      return;
-    }
-    setPronto(r.profissional ?? "seu profissional");
-    setTimeout(() => navigate("/", { replace: true }), 1400);
+    const c = normalizarCodigo(codigo);
+    if (!c) return setErro(MENSAGEM_VINCULO.codigo_invalido);
+    setConferindo(c);
   };
 
   return (
@@ -54,14 +48,27 @@ export default function TenhoCodigo() {
         </MensagemForm>
       ) : (
         <form onSubmit={enviar} className="flex flex-col gap-3" data-form-codigo>
-          <Campo rotulo="Código" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} placeholder="PROF-NOME-SOBRENOME"
+          <Campo rotulo="Código" value={codigo} onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErro(""); }} placeholder="PROF-NOME-SOBRENOME"
             autoCapitalize="characters" autoComplete="off" spellCheck={false} required />
           {erro && <MensagemForm data-vinculo-erro>{erro}</MensagemForm>}
-          <button type="submit" disabled={enviando || !codigo.trim()} className="pq-botao pq-botao-w h-12 w-full rounded-2xl">
-            {enviando ? "Conferindo…" : "Entrar na lista"}
+          <button type="submit" disabled={!codigo.trim()} className="pq-botao pq-botao-w h-12 w-full rounded-2xl">
+            Entrar na lista
           </button>
         </form>
       )}
+      <ConfirmarVinculo
+        codigo={conferindo}
+        aberto={conferindo !== null}
+        aoFechar={(fim, r) => {
+          setConferindo(null);
+          if (fim === "vinculou") {
+            setPronto(r?.profissional ?? "seu profissional");
+            setTimeout(() => navigate("/", { replace: true }), 1400);
+          } else {
+            limparProfPendente();
+          }
+        }}
+      />
     </Cartao>
   );
 }

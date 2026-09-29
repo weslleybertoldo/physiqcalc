@@ -7,7 +7,7 @@ const h = vi.hoisted(() => {
   (globalThis as unknown as { __APP_VERSION__: string }).__APP_VERSION__ = "3.2";
   return {
     entrarComEmail: vi.fn(), entrarComGoogle: vi.fn(), vincularCodigo: vi.fn(), situacao: null as unknown, pendente: null as string | null,
-    rpc: vi.fn(), recarregar: vi.fn(async () => null),
+    rpc: vi.fn(), recarregar: vi.fn(async () => null), previa: vi.fn(),
   };
 });
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase: {} }));
@@ -19,6 +19,8 @@ vi.mock("@/nucleo/sessao", () => ({
   }),
 }));
 vi.mock("@/integrations/principal/client", () => ({ principal: { rpc: h.rpc } }));
+// W7: a prévia do código (nome, foto e tipo do profissional) antes do vínculo
+vi.mock("@/nucleo/vinculo", async (orig) => ({ ...(await orig<typeof import("@/nucleo/vinculo")>()), previaDoCodigo: (c: string) => h.previa(c) }));
 
 import Entrar from "./Entrar";
 import EntrarEmail from "./EntrarEmail";
@@ -51,6 +53,7 @@ beforeEach(() => {
   h.entrarComEmail.mockReset();
   h.entrarComGoogle.mockReset();
   h.vincularCodigo.mockReset();
+  h.previa.mockReset();
   h.situacao = null;
   h.pendente = null;
   h.rpc.mockReset();
@@ -132,21 +135,41 @@ describe("Boas-vindas e 'Tenho um código'", () => {
     expect(screen.getByText("Sou profissional")).toBeInTheDocument();
     expect(screen.queryByText("EM BREVE")).toBeNull();
   });
-  it("código preenchido pelo link; erro do vínculo vira a frase da spec", async () => {
+  const LUCAS = { nome: "Lucas Ferreira", foto_url: null, tipo_perfil: "personal", papeis: ["personal"] };
+  it("código preenchido pelo link; a prévia recusa (P7) com a frase da spec e nada é vinculado", async () => {
     h.pendente = "PROF-X";
-    h.vincularCodigo.mockResolvedValue({ ok: false, erro: "outro_profissional" });
+    h.previa.mockResolvedValue({ ok: false, erro: "outro_profissional", jaEra: false, contaNome: "Consultoria", modulos: ["treino"], profissional: LUCAS });
     abrir(<TenhoCodigo />);
     expect(screen.getByDisplayValue("PROF-X")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Entrar na lista" }));
     expect(await screen.findByText("Este aluno já está com outro profissional.")).toBeInTheDocument();
-    expect(h.vincularCodigo).toHaveBeenCalledWith("PROF-X");
+    expect(screen.getByText("Lucas Ferreira")).toBeInTheDocument();
+    expect(h.previa).toHaveBeenCalledWith("PROF-X");
+    expect(h.vincularCodigo).not.toHaveBeenCalled();
   });
-  it("vínculo feito mostra a confirmação", async () => {
+  it("W7: o popup mostra nome e tipo do profissional; Cancelar não vincula; Confirmar vincula e mostra a confirmação", async () => {
+    h.previa.mockResolvedValue({ ok: true, erro: null, jaEra: false, contaNome: "Consultoria Ferreira", modulos: ["treino"], profissional: LUCAS });
     h.vincularCodigo.mockResolvedValue({ ok: true, profissional: "Lucas Ferreira" });
     abrir(<TenhoCodigo />);
     fireEvent.change(screen.getByPlaceholderText("PROF-NOME-SOBRENOME"), { target: { value: "prof-lucas" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar na lista" }));
+    expect(await screen.findByText("PERSONAL TRAINER (ED. FÍSICA)")).toBeInTheDocument();
+    expect(screen.getByText("Lucas Ferreira")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByText("PERSONAL TRAINER (ED. FÍSICA)")).toBeNull());
+    expect(h.vincularCodigo).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Entrar na lista" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(h.vincularCodigo).toHaveBeenCalledWith("PROF-LUCAS"));
     expect(await screen.findByText(/Você entrou na lista de Lucas Ferreira/)).toBeInTheDocument();
+  });
+  it("W7: código que não existe → erro claro no popup, sem vínculo", async () => {
+    h.previa.mockResolvedValue({ ok: false, erro: "codigo_invalido", jaEra: false, contaNome: null, modulos: [], profissional: null });
+    abrir(<TenhoCodigo />);
+    fireEvent.change(screen.getByPlaceholderText("PROF-NOME-SOBRENOME"), { target: { value: "prof-nada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar na lista" }));
+    expect(await screen.findByText("Não achamos esse código. Confira com o seu profissional.")).toBeInTheDocument();
+    expect(h.vincularCodigo).not.toHaveBeenCalled();
   });
 });
 
