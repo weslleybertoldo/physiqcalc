@@ -65,6 +65,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 // banco principal (W2): sem sessão nele antes da W3 — o sino fica vazio e nada vai à rede
 vi.mock("@/integrations/principal/client", () => ({
   principalConfigurado: true,
+  PRINCIPAL_SCHEMA: "staging",
   principal: { auth: { getSession: async () => ({ data: { session: null } }) }, from: vi.fn() },
 }));
 vi.mock("@/pages/TreinosPage", () => h.marcador("antiga-treinos"));
@@ -227,8 +228,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ["/admin/cobranca", "/painel/financeiro", "antiga-admin-cobranca"],
     ["/admin/calculadora", "/painel/calculadora", "antiga-admin-calculadora"],
     ["/admin/planos", "/painel/configuracoes/plano", "antiga-admin-planos"],
-    ["/admin/configuracoes", "/painel/configuracoes/perfil?s=perfil", "antiga-admin-configuracoes"],
-    ["/admin/configuracoes?s=convite", "/painel/configuracoes/convite?s=convite", "antiga-admin-configuracoes"],
     ["/admin/configuracoes?s=recebimento", "/painel/configuracoes/recebimento?s=recebimento", "antiga-admin-configuracoes"],
     ["/admin?v=calculator", "/painel/calculadora", "antiga-admin-calculadora"],
     ["/admin?v=treinos&t=biblioteca", "/painel/treinos?t=biblioteca", "antiga-admin-treinos"],
@@ -242,6 +241,18 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     expect([...menu.querySelectorAll("[data-nav]")].map((a) => a.textContent?.replace(/\d+$/, ""))).toEqual([
       "Alunos", "Treinos", "Financeiro", "Configurações", "Calculadora",
     ]);
+  });
+
+  // W5: Perfil e Convite ganharam as abas novas (src/painel/configuracoes/{Perfil,Convite}.tsx) — o link antigo cai nelas
+  it.each([
+    ["/admin/configuracoes", "/painel/configuracoes/perfil", "perfil"],
+    ["/admin/configuracoes?s=convite", "/painel/configuracoes/convite?s=convite", "convite"],
+  ])("%s → %s (aba nova da W5)", async (de, para, aba) => {
+    logar("professor");
+    abrir(de);
+    await waitFor(() => expect(document.querySelector(`[data-config-aba='${aba}']`)).not.toBeNull(), { timeout: 4000 });
+    await waitFor(() => expect(onde()).toBe(para));
+    expect(screen.queryByTestId("antiga-admin-configuracoes")).toBeNull();
   });
 
   it.each([

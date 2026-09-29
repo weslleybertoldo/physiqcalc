@@ -63,13 +63,13 @@ describe("useDadosCasca (dados reais da W3)", () => {
     h.auth = { ...h.auth, isStaff: true, isMaster: true };
     expect(dados().current.ehMaster).toBe(true);
   });
-  it("carregando enquanto a situação e a troca de token não chegaram (sem sessão do Treino)", () => {
+  it("carregando só enquanto a situação não chegou; a troca de token NÃO segura a casca (W5: o painel não trava sem o Treino)", () => {
     h.sessao = { ...h.sessao, situacao: null, carregandoSituacao: true };
     expect(dados().current.carregando).toBe(true);
     h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true, modulos_aluno: ["treino"] }), carregandoSituacao: false, treino: { estado: "trocando", erro: null } };
     h.auth = { ...h.auth, user: null };
-    expect(dados().current.carregando).toBe(true);
-    h.sessao = { ...h.sessao, treino: { estado: "erro", erro: "rede" } };
+    expect(dados().current.carregando).toBe(false);
+    h.sessao = { ...h.sessao, treino: { estado: "erro", erro: "limite" } };
     expect(dados().current.carregando).toBe(false);
   });
   it("principal fora do ar e nada guardado: vale o Treino (spec 9)", () => {

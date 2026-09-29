@@ -51,12 +51,12 @@ export function useDadosCasca(): DadosCasca {
   const ehProfissional = conta.ehProfissional || auth.isStaff;
   const modulosAluno = situacao ? situacao.modulos_aluno : auth.user ? (["treino"] as const).slice() : [];
 
-  const precisaTreino = situacao?.precisa_treino ?? false;
-  const esperandoTreino = precisaTreino && !auth.user && (sessao.treino.estado === "aguardando" || sessao.treino.estado === "trocando");
+  // W5 (correção do painel sem o Treino): a casca NÃO espera a troca de token — com a situação do principal ela já abre
+  // (menu, card da conta, card do plano, Configurações). Quem precisa do Treino espera no próprio lugar: as páginas antigas
+  // do painel (AdminLayout → "Sem conexão com o Treino") e as abas do app que usam o Treino (GateSessaoTreino do app).
   const carregando =
     !sessao.pronto ||
     (Boolean(usuarioP) && semSituacao && (sessao.carregandoSituacao || (!sessao.erroSituacao && !auth.user))) ||
-    esperandoTreino ||
     (Boolean(usuarioP) && auth.loading);
 
   let plano: PlanoCasca | null = null;

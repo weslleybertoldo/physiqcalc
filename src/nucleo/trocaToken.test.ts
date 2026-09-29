@@ -5,13 +5,20 @@ vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabas
 
 import {
   aplicarSessaoTreino,
+  depoisDaFalha,
   erroDaResposta,
   esperaDaTentativa,
   esquecerTrocas,
   lembrarTreinoDe,
+  limparPausaTroca,
+  PAUSA_LIMITE_MS,
+  PAUSA_SERVIDOR_MS,
+  pausaDaTroca,
+  pausarTroca,
   pedirTroca,
   retentavel,
   sessaoTreinoServe,
+  tentativasAutomaticas,
   treinoDe,
 } from "./trocaToken";
 
@@ -85,5 +92,41 @@ describe("de quem é a sessão do Treino do aparelho", () => {
     h.setSession.mockResolvedValue({ data: { session: null }, error: { message: "x" } });
     expect(await aplicarSessaoTreino("p8", { access_token: "a", refresh_token: "r", treino_user_id: "t", papel: null })).toBe(false);
     expect(treinoDe("p8")).toBeNull();
+  });
+});
+
+describe("W5 — sem loop de tentativas que piore o limite de 20/h da trocar-token", () => {
+  it("tentativas sozinhas: rede segue a espera crescente; servidor só 2; limite, conflito e o resto nenhuma", () => {
+    expect(tentativasAutomaticas("rede")).toBe(8);
+    expect(tentativasAutomaticas("indisponivel")).toBe(2);
+    expect(tentativasAutomaticas("interno")).toBe(2);
+    for (const e of ["limite", "conflito", "staging", "email", "invalido"] as const) expect(tentativasAutomaticas(e)).toBe(0);
+  });
+  it("depois da falha: 429 pausa 15 min sem tentar; servidor tenta 2x e pausa 5 min; rede tenta e para sem pausar", () => {
+    expect(depoisDaFalha("limite", 0)).toEqual({ tentarEm: null, pausarPor: PAUSA_LIMITE_MS });
+    expect(depoisDaFalha("indisponivel", 0)).toEqual({ tentarEm: 2_000, pausarPor: null });
+    expect(depoisDaFalha("interno", 1)).toEqual({ tentarEm: 4_000, pausarPor: null });
+    expect(depoisDaFalha("interno", 2)).toEqual({ tentarEm: null, pausarPor: PAUSA_SERVIDOR_MS });
+    expect(depoisDaFalha("rede", 3)).toEqual({ tentarEm: 16_000, pausarPor: null });
+    expect(depoisDaFalha("rede", 8)).toEqual({ tentarEm: null, pausarPor: null });
+    expect(depoisDaFalha("conflito", 0)).toEqual({ tentarEm: null, pausarPor: null });
+  });
+  it("a pausa fica guardada no aparelho (vale entre aberturas), por pessoa, e vence sozinha", () => {
+    const agora = 1_000_000;
+    pausarTroca("u1", "limite", PAUSA_LIMITE_MS, agora);
+    expect(pausaDaTroca("u1", agora + 60_000)).toEqual({ ate: agora + PAUSA_LIMITE_MS, erro: "limite" });
+    expect(pausaDaTroca("u2", agora)).toBeNull();
+    expect(pausaDaTroca("u1", agora + PAUSA_LIMITE_MS + 1)).toBeNull();
+    expect(localStorage.getItem("physiq_troca_pausa:u1")).toBeNull(); // vencida sai do aparelho
+    pausarTroca("u1", "interno", PAUSA_SERVIDOR_MS, agora);
+    limparPausaTroca("u1");
+    expect(pausaDaTroca("u1", agora)).toBeNull();
+  });
+  it("sair (esquecerTrocas) apaga as pausas junto com os vínculos", () => {
+    pausarTroca("u1", "limite", PAUSA_LIMITE_MS);
+    lembrarTreinoDe("u1", "t1");
+    esquecerTrocas();
+    expect(pausaDaTroca("u1")).toBeNull();
+    expect(treinoDe("u1")).toBeNull();
   });
 });

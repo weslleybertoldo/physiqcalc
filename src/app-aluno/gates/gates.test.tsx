@@ -111,6 +111,24 @@ describe("GateSessaoTreino", () => {
     expect(screen.getByText("Sua conta precisa de uma conferência")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Tentar de novo/ })).toBeNull();
   });
+  it("W5: a troca ainda não chegou → 'Abrindo seu treino' só nas abas do Treino (a casca não espera mais)", () => {
+    h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true, modulos_aluno: ["treino"] }), treino: { estado: "trocando", erro: null } };
+    h.auth.user = null;
+    const r = montar(GateSessaoTreino, "/treino");
+    expect(screen.getByText(/Abrindo seu treino/)).toBeInTheDocument();
+    expect(screen.queryByText("o app")).toBeNull();
+    r.unmount();
+    montar(GateSessaoTreino, "/perfil/pagamentos");
+    expect(screen.getByText("o app")).toBeInTheDocument();
+  });
+  it("W5: limite de tentativas → 'Muitas tentativas' e o 'Tentar de novo' é da pessoa", () => {
+    h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true, modulos_aluno: ["treino"] }), treino: { estado: "erro", erro: "limite" } };
+    h.auth.user = null;
+    montar(GateSessaoTreino, "/evolucao");
+    expect(screen.getByText(/Muitas tentativas/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Tentar de novo/ }));
+    expect(tentar).toHaveBeenCalledTimes(1);
+  });
   it("fora das abas do Treino (Perfil, Dieta) não trava; com sessão do Treino também não", () => {
     h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true }), treino: { estado: "erro", erro: "rede" } };
     h.auth.user = null;
