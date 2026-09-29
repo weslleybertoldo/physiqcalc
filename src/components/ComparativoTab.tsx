@@ -191,7 +191,7 @@ function RelatorioComparativo({ refD, novo, dados }: { refD: RefData; novo: Novo
     <div className="result-card mt-6">
       <div className="flex justify-between items-start mb-5 pb-4 border-b border-muted-foreground/20">
         <div>
-          <p className="text-xs font-bold tracking-[0.14em] uppercase text-primary font-heading">📄 Relatório Comparativo</p>
+          <p className="text-xs font-bold tracking-[0.14em] uppercase text-primary font-heading">Relatório Comparativo</p>
           <p className="text-[9px] text-muted-foreground font-body mt-1">
             {refD.nome || 'Sem nome'} · {sexo === 'M' ? 'Masculino' : 'Feminino'}, {idadeN} anos
             {refD.data && ` · Ref: ${refD.data}`}
@@ -274,7 +274,7 @@ function RelatorioComparativo({ refD, novo, dados }: { refD: RefData; novo: Novo
       </table>
 
       <p className="mt-4 text-[8px] text-muted-foreground/50 font-body italic leading-relaxed">
-        * Cálculo baseado nos dados inseridos manualmente. Não vinculado a nenhuma conta do PhysiqCalc.<br/>
+        * Cálculo baseado nos dados inseridos manualmente. Não vinculado a nenhuma conta do Physiq.<br/>
         * Classificação: Gallagher et al. (2000) Am J Clin Nutr 72:694–701 | ACE | Lohman TG (1993) | ACSM<br/>
         * Variação das medidas: ▲ aumento · ▼ redução · verde = melhora esperada · vermelho = piora esperada
       </p>
@@ -324,7 +324,7 @@ const ComparativoTab = () => {
           onClick={handleLimpar}
           className="px-3 py-1.5 border border-muted-foreground/20 rounded text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-primary transition-colors"
         >
-          🗑 Limpar dados
+          Limpar dados
         </button>
       </div>
 
@@ -336,7 +336,7 @@ const ComparativoTab = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div className="result-card">
           <p className="text-xs font-bold tracking-[0.14em] uppercase text-muted-foreground mb-4 font-heading">
-            📌 Dados Anteriores (referência)
+            Dados Anteriores (referência)
           </p>
           <div className="mb-4">
             <label className={labelClass}>Nome</label>
@@ -362,7 +362,7 @@ const ComparativoTab = () => {
 
         <div className="result-card">
           <p className="text-xs font-bold tracking-[0.14em] uppercase text-primary mb-4 font-heading">
-            📅 Dados Atuais (novos)
+            Dados Atuais (novos)
           </p>
           <div className="mb-4">
             <label className={labelClass}>Data (opcional)</label>
@@ -410,7 +410,7 @@ const ComparativoTab = () => {
         onClick={() => setRelatorioVisivel(true)}
         className="w-full mt-5 py-3 bg-primary text-primary-foreground font-bold text-[12px] uppercase tracking-wider rounded transition-all hover:bg-primary/90"
       >
-        📄 Gerar Relatório Comparativo
+        Gerar Relatório Comparativo
       </button>
 
       {relatorioVisivel && (

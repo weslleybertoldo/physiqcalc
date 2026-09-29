@@ -348,7 +348,7 @@ const PagamentosPage = () => {
       let y = 24;
       doc.setTextColor(...AMARELO);
       doc.setFont("helvetica", "bold"); doc.setFontSize(20);
-      centro("PHYSIQCALC", y); y += 8;
+      centro("PHYSIQ", y); y += 8;
       doc.setTextColor(...CINZA); doc.setFontSize(10); doc.setFont("helvetica", "normal");
       centro("COMPROVANTE DE PAGAMENTO", y); y += 12;
       doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 14;
@@ -388,7 +388,7 @@ const PagamentosPage = () => {
         : comprovante.tipo === "pix_manual" ? "Pix na chave do treinador, confirmado por ele"
         : "Pagamento processado pelo Mercado Pago";
       doc.text(`Emitido em ${fmtDataHora(new Date().toISOString())} · ${origem}`, W / 2, y, { align: "center" });
-      await salvarPdf(doc, `comprovante-physiqcalc-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
+      await salvarPdf(doc, `comprovante-physiq-${mesNome(comprovante.mes_ref).toLowerCase()}-${comprovante.mes_ref.slice(0, 4)}.pdf`);
     } catch (e) {
       console.error("[Comprovante] PDF", e);
       toast.error("Erro ao gerar o PDF do comprovante.");

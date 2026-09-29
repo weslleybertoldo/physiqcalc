@@ -238,7 +238,6 @@ const BibliotecaPage = () => {
         <div data-lista-exercicios>
           {visiveis.slice(0, mostrando).map((ex) => (
             <div key={ex.id} className={`${LINHA} flex items-center gap-2 ${busyId === ex.id ? "opacity-60" : ""}`} data-exercicio-linha={ex.id}>
-              <span className="text-lg shrink-0 w-7 text-center">{ex.emoji || "🏋️"}</span>
               <div className="flex-1 min-w-0">
                 <p className="font-heading text-sm text-foreground truncate">{ex.nome}</p>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground font-body">
@@ -322,15 +321,6 @@ const BibliotecaPage = () => {
               {fGrupo === OUTRO_GRUPO && (
                 <input type="text" value={fGrupoOutro} onChange={(e) => setFGrupoOutro(e.target.value)} placeholder='Ex.: "Dorsal / Rombóide"' className={INPUT} data-input-ex-grupo-outro />
               )}
-            </Campo>
-            <Campo rotulo="Emoji">
-              <div className="flex flex-wrap gap-1">
-                {EMOJIS.map((em) => (
-                  <button key={em} type="button" onClick={() => setFEmoji(em)} className={`w-9 h-9 text-lg rounded border transition-colors ${fEmoji === em ? "border-primary bg-primary/15" : "border-muted-foreground/30 hover:border-muted-foreground"}`} aria-pressed={fEmoji === em}>
-                    {em}
-                  </button>
-                ))}
-              </div>
             </Campo>
             <Campo rotulo="Subgrupo (opcional)">
               <input type="text" value={fSub} onChange={(e) => setFSub(e.target.value)} className={INPUT} placeholder="Ex.: Porção superior" data-input-ex-subgrupo />

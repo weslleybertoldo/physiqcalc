@@ -145,11 +145,11 @@ const ModalRemoverExercicio = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background border-muted-foreground/30 max-w-sm" data-modal-remover-exercicio>
         <DialogHeader>
-          <DialogTitle className="font-heading text-foreground">✕ Remover exercício</DialogTitle>
+          <DialogTitle className="font-heading text-foreground">Remover exercício</DialogTitle>
         </DialogHeader>
 
         <p className="text-xs font-body text-muted-foreground mb-3">
-          <span className="text-foreground">{exercicio.emoji} {exercicio.nome}</span>
+          <span className="text-foreground">{exercicio.nome}</span>
           <span className="text-muted-foreground/70"> · {grupoNome}</span>
         </p>
 

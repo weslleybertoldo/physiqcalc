@@ -86,7 +86,7 @@ const ModalTrocarExercicio = ({
           className="accent-primary shrink-0"
         />
         <span className={`text-sm font-body truncate ${jaNoTreino ? "text-muted-foreground" : "text-foreground"}`}>
-          {ex.emoji} {ex.nome}
+          {ex.nome}
         </span>
         {ex.isPessoal && (
           <span className="text-[9px] uppercase tracking-wider text-primary border border-primary/40 px-1 py-0.5 font-heading shrink-0">meu</span>
@@ -245,12 +245,12 @@ const ModalTrocarExercicio = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background border-muted-foreground/30 max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-heading text-foreground">🔄 Trocar exercício</DialogTitle>
+          <DialogTitle className="font-heading text-foreground">Trocar exercício</DialogTitle>
         </DialogHeader>
 
         <p className="text-xs font-body text-muted-foreground mb-3">
-          Sai <span className="text-foreground">{exercicioAtual.emoji} {exercicioAtual.nome}</span>
-          {novo && <> · entra <span className="text-primary">{novo.emoji} {novo.nome}</span></>}
+          Sai <span className="text-foreground">{exercicioAtual.nome}</span>
+          {novo && <> · entra <span className="text-primary">{novo.nome}</span></>}
         </p>
 
 

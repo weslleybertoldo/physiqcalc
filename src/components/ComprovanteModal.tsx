@@ -49,7 +49,7 @@ const ComprovanteModal = ({ pagamento, onClose }: { pagamento: MpPagamento; onCl
       const centro = (txt: string, yy: number) => doc.text(txt, (W - doc.getTextWidth(txt)) / 2, yy);
       let y = 24;
       doc.setTextColor(...AMARELO); doc.setFont("helvetica", "bold"); doc.setFontSize(20);
-      centro("PHYSIQCALC", y); y += 8;
+      centro("PHYSIQ", y); y += 8;
       doc.setTextColor(...CINZA); doc.setFontSize(10); doc.setFont("helvetica", "normal");
       centro("COMPROVANTE DE PAGAMENTO", y); y += 12;
       doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 14;
@@ -85,7 +85,7 @@ const ComprovanteModal = ({ pagamento, onClose }: { pagamento: MpPagamento; onCl
       y += 4; doc.setDrawColor(60, 60, 60); doc.line(20, y, W - 20, y); y += 8;
       doc.setFontSize(8); doc.setTextColor(...CINZA);
       centro(`Emitido em ${fmtDataHora(new Date().toISOString())} · ${pagamento.tipo === "manual" ? "Pagamento registrado manualmente pelo treinador" : "Pagamento processado pelo Mercado Pago"}`, y);
-      await salvarPdf(doc, `comprovante-physiqcalc-${mesNome(pagamento.mes_ref).toLowerCase()}-${pagamento.mes_ref.slice(0, 4)}.pdf`);
+      await salvarPdf(doc, `comprovante-physiq-${mesNome(pagamento.mes_ref).toLowerCase()}-${pagamento.mes_ref.slice(0, 4)}.pdf`);
     } catch (e) {
       console.error("[Comprovante] PDF", e);
       toast.error("Erro ao gerar o PDF do comprovante.");

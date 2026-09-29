@@ -16,7 +16,7 @@ const PrivacidadePage = () => {
 
         <section className="space-y-2 text-sm font-body text-foreground/90 leading-relaxed">
           <h2 className="font-heading text-base text-primary uppercase tracking-wider mt-6">Quem somos</h2>
-          <p>O PhysiqCalc é um aplicativo pessoal de cálculo de composição corporal e registro de treinos, operado por Weslley Bertoldo (Maceió-AL, Brasil). Contato: contato@seazone.com.br.</p>
+          <p>O Physiq é um aplicativo pessoal de cálculo de composição corporal e registro de treinos, operado por Weslley Bertoldo (Maceió-AL, Brasil). Contato: contato@seazone.com.br.</p>
         </section>
 
         <section className="space-y-2 text-sm font-body text-foreground/90 leading-relaxed">
@@ -56,7 +56,7 @@ const PrivacidadePage = () => {
 
         <section className="space-y-2 text-sm font-body text-foreground/90 leading-relaxed">
           <h2 className="font-heading text-base text-primary uppercase tracking-wider mt-6">Termos de uso</h2>
-          <p>O PhysiqCalc é fornecido "como está", sem garantia médica. Os cálculos são estimativas baseadas em fórmulas reconhecidas (Mifflin-St Jeor, Katch-McArdle, Jackson-Pollock) e <strong>não substituem avaliação profissional</strong>. Consulte nutricionista e médico antes de iniciar dieta/treino.</p>
+          <p>O Physiq é fornecido "como está", sem garantia médica. Os cálculos são estimativas baseadas em fórmulas reconhecidas (Mifflin-St Jeor, Katch-McArdle, Jackson-Pollock) e <strong>não substituem avaliação profissional</strong>. Consulte nutricionista e médico antes de iniciar dieta/treino.</p>
         </section>
       </div>
     </div>

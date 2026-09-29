@@ -208,7 +208,7 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
           marcarAvisoTreinoLongo(min);
           const cruzouAgora = prevSegRef.current !== null && prevSegRef.current < min * 60;
           if (cruzouAgora) {
-            toast(`Ainda está treinando? ⏱️ ${formatMarcoTreinoLongo(min)} de ${grupoNome}`, {
+            toast(`Ainda está treinando? ${formatMarcoTreinoLongo(min)} de ${grupoNome}`, {
               description: "Se já terminou, conclua o treino pra parar o cronômetro.",
               duration: 12000,
             });
@@ -290,7 +290,7 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
     }));
     setDuracaoFinal(duracao);
     setConcluido(true);
-    toast.success(`Treino concluído em ${formatDuracao(duracao)}! 💪🔥`);
+    toast.success(`Treino concluído em ${formatDuracao(duracao)}!`);
     onTreinoConcluido?.();
   };
 
@@ -304,7 +304,7 @@ const WorkoutTimer = ({ userId, grupoNome, dateKey, series, exerciciosMap, onTre
     return (
       <>
         <div className="result-card border-classify-green/50 text-center py-6 mb-6">
-          <p className="text-classify-green font-heading text-lg mb-1">🎆 Treino finalizado!</p>
+          <p className="text-classify-green font-heading text-lg mb-1">Treino finalizado!</p>
           <p className="text-foreground font-heading text-2xl mb-2">{formatDuracao(duracaoFinal)}</p>
           <p className="text-muted-foreground font-body text-sm mb-4">Treino de {grupoNome} concluído com sucesso!</p>
           <div className="flex items-center justify-center gap-3">

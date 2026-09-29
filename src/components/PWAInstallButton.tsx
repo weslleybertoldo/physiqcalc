@@ -20,7 +20,7 @@ const PWAInstallButton = () => {
         className="flex items-center gap-3 py-3 px-2 w-full text-left text-sm text-foreground font-body hover:bg-secondary transition-colors"
       >
         <Download size={18} className="text-primary shrink-0" />
-        <span>📲 Instalar PhysiqCalc</span>
+        <span>Instalar Physiq</span>
       </button>
     );
   }
@@ -32,7 +32,7 @@ const PWAInstallButton = () => {
     <div className="py-3 px-2">
       <div className="flex items-center gap-3 text-sm text-foreground font-body mb-2">
         <Smartphone size={18} className="text-primary shrink-0" />
-        <span>📲 Instalar PhysiqCalc</span>
+        <span>Instalar Physiq</span>
       </div>
       <p className="text-xs text-muted-foreground font-body ml-8">
         {isIOS

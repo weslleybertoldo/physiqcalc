@@ -27,7 +27,6 @@ interface Props {
   editGrupo?: GrupoParaEditar | null;
 }
 
-const EMOJIS = ["🏋️", "💪", "🦵", "🧘", "🔵"];
 const GRUPOS_MUSCULARES = [
   "Peitoral", "Dorsal", "Deltóide", "Bíceps", "Tríceps",
   "Quadríceps", "Isquiotibiais", "Panturrilha", "Abdômen", "Glúteo", "Corrida",
@@ -50,7 +49,8 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
   const [showNovoEx, setShowNovoEx] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [novoGrupo, setNovoGrupo] = useState(GRUPOS_MUSCULARES[0]);
-  const [novoEmoji, setNovoEmoji] = useState("🏋️");
+  // emoji padrão da coluna (o seletor saiu da tela: sem emoji na interface — W1)
+  const [novoEmoji] = useState("🏋️");
 
   // Editar exercício pessoal
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -268,9 +268,6 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
               <select value={editGrupoMusc} onChange={(e) => setEditGrupoMusc(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-hidden focus-visible:border-primary focus-visible:border-b-2">
                 {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g} className="bg-background text-foreground">{g}</option>)}
               </select>
-              <select value={editEmoji} onChange={(e) => setEditEmoji(e.target.value)} className="w-14 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-hidden focus-visible:border-primary focus-visible:border-b-2">
-                {EMOJIS.map((e) => <option key={e} value={e} className="bg-background text-foreground">{e}</option>)}
-              </select>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => handleEditarExercicio(ex.id)} className="text-xs text-primary font-heading"><Save size={12} className="inline mr-1" />Salvar</button>
@@ -290,7 +287,7 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
             onChange={() => toggleSelect(ex.id, !!ex.isPessoal)}
             className="accent-primary shrink-0"
           />
-          <span className="text-sm font-body text-foreground truncate">{ex.emoji} {ex.nome}</span>
+          <span className="text-sm font-body text-foreground truncate">{ex.nome}</span>
           {ex.isPessoal && (
             <span className="text-[9px] uppercase tracking-wider text-primary border border-primary/40 px-1 py-0.5 font-heading shrink-0">meu</span>
           )}
@@ -319,7 +316,7 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
       <DialogContent className="bg-background border-muted-foreground/30 max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-foreground">
-            {isEditMode ? "✏️ Editar Grupo Pessoal" : "➕ Criar Grupo Pessoal"}
+            {isEditMode ? "Editar Grupo Pessoal" : "Criar Grupo Pessoal"}
           </DialogTitle>
         </DialogHeader>
 
@@ -346,7 +343,7 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
                   title="Remover do grupo"
                   className="flex items-center gap-1 border border-primary/40 text-primary px-1.5 py-0.5 text-[11px] font-body hover:bg-primary/10 transition-colors"
                 >
-                  {ex.emoji} {ex.nome}
+                  {ex.nome}
                   <X size={10} />
                 </button>
               ))}
@@ -369,9 +366,6 @@ const ModalCriarGrupoPessoal = ({ userId, open, onOpenChange, onCreated, editGru
             <div className="flex gap-2">
               <select value={novoGrupo} onChange={(e) => setNovoGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-xs py-1 outline-hidden focus-visible:border-primary focus-visible:border-b-2">
                 {GRUPOS_MUSCULARES.map((g) => <option key={g} value={g} className="bg-background text-foreground">{g}</option>)}
-              </select>
-              <select value={novoEmoji} onChange={(e) => setNovoEmoji(e.target.value)} className="w-14 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-hidden focus-visible:border-primary focus-visible:border-b-2">
-                {EMOJIS.map((e) => <option key={e} value={e} className="bg-background text-foreground">{e}</option>)}
               </select>
             </div>
             <div className="flex gap-2">

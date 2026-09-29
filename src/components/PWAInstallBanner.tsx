@@ -11,7 +11,7 @@ const PWAInstallBanner = () => {
       <div className="flex items-center gap-3 min-w-0">
         <Download size={18} className="text-primary shrink-0" />
         <p className="text-sm text-foreground font-body truncate">
-          Instale o PhysiqCalc na sua tela inicial!
+          Instale o Physiq na sua tela inicial!
         </p>
       </div>
       <div className="flex items-center gap-2 shrink-0">

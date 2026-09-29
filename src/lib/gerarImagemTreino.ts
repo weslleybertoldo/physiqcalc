@@ -71,7 +71,7 @@ function desenharDados(ctx: CanvasRenderingContext2D, resumo: TreinoResumo, top:
 
   ctx.fillStyle = COR.accent;
   ctx.font = "800 34px Arial, sans-serif";
-  ctx.fillText("🔥 TREINO CONCLUÍDO", PAD, y);
+  ctx.fillText("TREINO CONCLUÍDO", PAD, y);
   y += 66;
 
   ctx.fillStyle = COR.text;
@@ -140,14 +140,11 @@ function desenharDados(ctx: CanvasRenderingContext2D, resumo: TreinoResumo, top:
   });
 
   y += 10;
-  // Rodapé: PHYSIQCALC (esquerda) + "Acomp: Bertoldo Performance" (direita, Acomp em amarelo)
+  // Rodapé: PHYSIQ (esquerda) + "Acomp: Bertoldo Performance" (direita, Acomp em amarelo)
   ctx.textAlign = "left";
   ctx.font = "700 26px Arial, sans-serif";
   ctx.fillStyle = COR.text;
   ctx.fillText("PHYSIQ", PAD, y + 20);
-  const wPhysiq = ctx.measureText("PHYSIQ").width;
-  ctx.fillStyle = COR.accent;
-  ctx.fillText("CALC", PAD + wPhysiq, y + 20);
 
   ctx.textAlign = "right";
   ctx.fillStyle = COR.text;
@@ -240,7 +237,7 @@ function gerarComFoto(resumo: TreinoResumo, img: HTMLImageElement): string {
   ctx.fillStyle = COR.accent;
   ctx.font = "800 40px Arial, sans-serif";
   // "TREINO CONCLUÍDO" um pouco mais alto (respiro sutil acima do nome do treino)
-  ctx.fillText("🔥 TREINO CONCLUÍDO", 72, STORY_H - 252);
+  ctx.fillText("TREINO CONCLUÍDO", 72, STORY_H - 252);
   ctx.fillStyle = COR.text;
   ctx.font = "800 84px Arial, sans-serif";
   ctx.fillText(resumo.nome_treino, 72, STORY_H - 160);
@@ -253,10 +250,10 @@ function gerarComFoto(resumo: TreinoResumo, img: HTMLImageElement): string {
   if (resumo.academia_nome) {
     ctx.fillStyle = COR.accent;
     ctx.font = "700 34px Arial, sans-serif";
-    ctx.fillText(`📍 ${resumo.academia_nome}`, 72, STORY_H - 56);
+    ctx.fillText(resumo.academia_nome, 72, STORY_H - 56);
   }
 
-  // Rodapé direito: "Acomp: @bertoldoperformance" NA LINHA DA DATA + PHYSIQCALC na linha da academia.
+  // Rodapé direito: "Acomp: @bertoldoperformance" NA LINHA DA DATA + PHYSIQ na linha da academia.
   // A fonte do Acomp encolhe (28→20px) até caber sem encostar na data (fontes variam por aparelho).
   ctx.textAlign = "right";
   const nomeAcomp = "@bertoldoperformance";
@@ -273,9 +270,7 @@ function gerarComFoto(resumo: TreinoResumo, img: HTMLImageElement): string {
   ctx.fillText(prefixoAcomp, STORY_W - 72 - ctx.measureText(nomeAcomp).width, yData);
   ctx.font = "800 38px Arial, sans-serif";
   ctx.fillStyle = COR.text;
-  ctx.fillText("PHYSIQ", STORY_W - 72 - ctx.measureText("CALC").width, STORY_H - 56);
-  ctx.fillStyle = COR.accent;
-  ctx.fillText("CALC", STORY_W - 72, STORY_H - 56);
+  ctx.fillText("PHYSIQ", STORY_W - 72, STORY_H - 56);
   semSombra();
 
   return canvas.toDataURL("image/png");

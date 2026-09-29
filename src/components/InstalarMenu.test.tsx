@@ -44,7 +44,7 @@ describe("InstalarMenu (site)", () => {
     const aw = within(dlg).getByRole("button", { name: /app web/i });
     const apk = within(dlg).getByRole("button", { name: /apk android/i });
     expect(aw.compareDocumentPosition(apk) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(dlg).getByText("Instalar o PhysiqCalc")).toBeInTheDocument();
+    expect(within(dlg).getByText("Instalar o Physiq")).toBeInTheDocument();
   });
 
   it("App Web com prompt nativo instala direto e fecha o popup", async () => {

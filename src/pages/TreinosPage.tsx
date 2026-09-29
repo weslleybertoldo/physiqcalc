@@ -930,7 +930,7 @@ const TreinosPage = () => {
       "UPDATE tb_treino_series SET academia_nome = ?, updated_at = ? WHERE user_id = ? AND data_treino = ?",
       [a.nome, now, user.id, selectedDate]
     );
-    if (!silent) toast.success(`Pesos salvos na academia ${a.nome}! 💪`);
+    if (!silent) toast.success(`Pesos salvos na academia ${a.nome}!`);
   }, [db, user, selectedDate, seriesComPeso]);
 
   // Concluir treino (timer ou botão) grava o "último treino daquela academia"
@@ -1212,7 +1212,7 @@ const TreinosPage = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `physiqcalc-export-${(user.email || "user").replace(/[^a-z0-9]/gi, "_")}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `physiq-export-${(user.email || "user").replace(/[^a-z0-9]/gi, "_")}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Download iniciado.");
@@ -1311,7 +1311,7 @@ const TreinosPage = () => {
             {/* Indicador offline / sincronização */}
 
             <h1 className="font-heading text-2xl sm:text-3xl text-foreground tracking-tight mb-6">
-              PHYSIQ<span className="text-primary">CALC</span>{" "}
+              PHYSIQ{" "}
               <span className="text-muted-foreground text-lg">TREINOS</span>
             </h1>
 
@@ -1480,7 +1480,7 @@ const TreinosPage = () => {
                               onSerieConcluida={(nome, num, exId, ultimaDoTreino) => {
                                 // OK em qualquer série inicia o treino; se já há treino em andamento, não faz nada
                                 if (iniciarTreinoSeParado(selectedDate, slot.grupo!.nome)) {
-                                  toast.success("Treino iniciado ⏱️");
+                                  toast.success("Treino iniciado");
                                 }
                                 // Última série do treino: não há próxima série pra descansar —
                                 // o cronômetro já pergunta "Treino foi concluído?".

@@ -73,7 +73,7 @@ const TabelaReferenciaGordura = ({ sexoInicial = "M" }: TabelaReferenciaGorduraP
       </table>
 
       <p className="text-[8px] text-muted-foreground/60 font-body italic mt-3 leading-relaxed">
-        📚 Gallagher et al. (2000) · ACE · Lohman (1993) · ACSM — Valores base para adultos 20-39 anos. 
+        Gallagher et al. (2000) · ACE · Lohman (1993) · ACSM — Valores base para adultos 20-39 anos. 
         Acima de 40 anos: +2%. Acima de 60 anos: +4%.
       </p>
     </div>

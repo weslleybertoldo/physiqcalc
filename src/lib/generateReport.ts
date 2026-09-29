@@ -202,7 +202,7 @@ export function generateReport(data: ReportData) {
   desenharRodape(doc, 'Formulas: Mifflin-St Jeor - Jackson & Pollock - Katch-McArdle');
 
   const safeName = data.name.trim()
-    ? `Relatorio PhysiqCalc do ${data.name.trim().replace(/[^a-zA-Z0-9 ]/g, "")}`
-    : "Relatorio PhysiqCalc";
+    ? `Relatorio Physiq do ${data.name.trim().replace(/[^a-zA-Z0-9 ]/g, "")}`
+    : "Relatorio Physiq";
   doc.save(`${safeName}.pdf`);
 }

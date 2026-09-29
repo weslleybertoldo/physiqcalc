@@ -350,7 +350,7 @@ function CardDia({ dia }: { dia: DiaAgrupado }) {
         <div className="font-heading text-sm text-foreground capitalize">{dataFmt}</div>
         <div className="flex gap-2.5 items-center">
           {dia.concluido && (
-            <span className="text-[10px] text-classify-green font-heading">✅ CONCLUÍDO</span>
+            <span className="text-[10px] text-classify-green font-heading">CONCLUÍDO</span>
           )}
           <span className="text-[10px] text-muted-foreground font-body">
             Vol: {dia.volumeTotal.toLocaleString("pt-BR")} kg·rep
@@ -363,7 +363,7 @@ function CardDia({ dia }: { dia: DiaAgrupado }) {
       ) : dia.exercicios.map((ex) => (
         <div key={ex.id} className="mb-2.5 pl-2.5 border-l-2 border-muted-foreground/20">
           <div className="text-sm font-heading text-foreground mb-1">
-            {ex.emoji} {ex.nome}
+            {ex.nome}
             <span className="ml-2 text-[10px] text-primary font-body">{ex.grupo}</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -730,7 +730,7 @@ function exportarPDF(
   const totalPaginas = doc.getNumberOfPages();
   for (let i = 1; i <= totalPaginas; i++) {
     doc.setPage(i);
-    desenharRodape(doc, `PhysiqCalc - Pagina ${i} de ${totalPaginas}`);
+    desenharRodape(doc, `Physiq - Pagina ${i} de ${totalPaginas}`);
   }
 
   doc.save(nomeArquivo);
@@ -755,7 +755,7 @@ async function exportarExcel(
 
   // Sheet 1: Summary
   const resumo = [
-    ["PHYSIQCALC — RELATORIO DE TREINOS"],
+    ["PHYSIQ — RELATORIO DE TREINOS"],
     [`${MESES[mes - 1]} / ${ano}`],
     [`Gerado em: ${agoraFormatado({ incluirHora: false })}`],
     [],
@@ -954,7 +954,7 @@ const AdminRelatorio = ({ users }: AdminRelatorioProps) => {
                 }}
                 className="flex items-center gap-2 bg-destructive/10 border border-destructive text-destructive rounded-lg px-4 py-2.5 font-heading font-bold text-sm hover:bg-destructive hover:text-destructive-foreground transition-all"
               >
-                📄 Exportar PDF
+                Exportar PDF
               </button>
               <button
                 onClick={() => {
@@ -963,7 +963,7 @@ const AdminRelatorio = ({ users }: AdminRelatorioProps) => {
                 }}
                 className="flex items-center gap-2 bg-classify-green/10 border border-classify-green text-classify-green rounded-lg px-4 py-2.5 font-heading font-bold text-sm hover:bg-classify-green hover:text-background transition-all"
               >
-                📊 Exportar Excel
+                Exportar Excel
               </button>
             </div>
           )}

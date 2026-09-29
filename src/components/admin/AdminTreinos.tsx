@@ -25,7 +25,6 @@ interface Exercicio {
 }
 
 /** Emojis oferecidos no seletor de exercício (todos os já usados no catálogo) */
-const EMOJIS_EXERCICIO = ["🏋️", "🏋️‍♂️", "💪", "🦵", "🍑", "🫁", "🔙", "🎯", "🧘", "🏃", "🏃‍♂️", "🔵"];
 
 /** Marca de item do catálogo GLOBAL (do master) — o professor só lê */
 const BadgeGlobal = () => (
@@ -72,7 +71,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const tab = (searchParams.get("t") as "grupos" | "biblioteca" | "historico" | "relatorio") || "grupos";
   const setTab = (t: "grupos" | "biblioteca" | "historico" | "relatorio") =>
     setSearchParams((prev) => { prev.set("t", t); prev.delete("pasta"); return prev; }, { replace: true });
-  // Biblioteca: "Global 🔒" (catálogo do master) | "Minha" (do professor). Master só tem a Global (editável).
+  // Biblioteca: "Global" (catálogo do master) | "Minha" (do professor). Master só tem a Global (editável).
   const bibScope: "global" | "minha" = papel === "master" ? "global" : searchParams.get("b") === "minha" ? "minha" : "global";
   const setBibScope = (b: "global" | "minha") =>
     setSearchParams((prev) => { prev.set("t", "biblioteca"); prev.set("b", b); return prev; }, { replace: true });
@@ -95,7 +94,8 @@ const AdminTreinos = ({ onBack }: Props) => {
 
   const [novoExNome, setNovoExNome] = useState("");
   const [novoExGrupo, setNovoExGrupo] = useState("");
-  const [novoExEmoji, setNovoExEmoji] = useState("🏋️");
+  // emoji padrão da coluna (o seletor saiu da tela: sem emoji na interface — W1)
+  const [novoExEmoji] = useState("🏋️");
   const [novoExTipo, setNovoExTipo] = useState<"musculacao" | "corrida">("musculacao");
   const [novoExSubgrupo, setNovoExSubgrupo] = useState("");
   const [novoExDica, setNovoExDica] = useState("");
@@ -465,15 +465,15 @@ const AdminTreinos = ({ onBack }: Props) => {
     }
   };
 
-  // Biblioteca no escopo escolhido (Global 🔒 do master | Minha)
+  // Biblioteca no escopo escolhido (Global do master | Minha)
   const exerciciosBib = exercicios.filter((e) => (bibScope === "global" ? ehGlobal(e) : ehMeu(e)));
   const musculosBib = gruposMusculares.filter((g) => (bibScope === "global" ? ehGlobal(g) : ehMeu(g)));
 
   const tabs = [
-    { key: "grupos" as const, label: "🗂️ Meus treinos" },
-    { key: "biblioteca" as const, label: "📚 Biblioteca" },
-    { key: "historico" as const, label: "🕒 Histórico de Treinos" },
-    { key: "relatorio" as const, label: "📊 Relatório" },
+    { key: "grupos" as const, label: "Meus treinos" },
+    { key: "biblioteca" as const, label: "Biblioteca" },
+    { key: "historico" as const, label: "Histórico de Treinos" },
+    { key: "relatorio" as const, label: "Relatório" },
   ];
 
   return (
@@ -550,7 +550,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                           onClick={() => setPastaAberta(p.id)}
                           className="w-full flex items-center justify-between result-card border-muted-foreground/20 hover:border-primary transition-colors text-left"
                         >
-                          <span className="font-heading text-foreground flex items-center gap-2 min-w-0"><span className="truncate">📁 {p.nome}</span>{!podeEditar(p) && <BadgeGlobal />}</span>
+                          <span className="font-heading text-foreground flex items-center gap-2 min-w-0"><span className="truncate">{p.nome}</span>{!podeEditar(p) && <BadgeGlobal />}</span>
                           <span className="flex items-center gap-2 text-xs text-muted-foreground font-body">
                             {qtd} treino{qtd === 1 ? "" : "s"} <ChevronRight size={14} />
                           </span>
@@ -579,7 +579,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                       </>
                     ) : (
                       <>
-                        <p className="font-heading text-foreground flex-1 flex items-center gap-2 min-w-0"><span className="truncate">📁 {pastaAberta.nome}</span>{!podeEditar(pastaAberta) && <BadgeGlobal />}</p>
+                        <p className="font-heading text-foreground flex-1 flex items-center gap-2 min-w-0"><span className="truncate">{pastaAberta.nome}</span>{!podeEditar(pastaAberta) && <BadgeGlobal />}</p>
                         {podeEditar(pastaAberta) && (<>
                         <button type="button" onClick={() => { setEditandoPasta(true); setEditPastaNome(pastaAberta.nome); }} className="p-1.5 text-muted-foreground hover:text-primary transition-colors" title="Renomear pasta">
                           <Edit2 size={14} />
@@ -602,7 +602,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                       const outras = (pastasDoGrupo[g.id] || []).length;
                       return (
                         <option key={g.id} value={g.id} className="bg-background text-foreground">
-                          {g.nome}{ehGlobal(g) && papel !== "master" ? " 🔒" : ""}{outras > 0 ? ` (em ${outras} pasta${outras > 1 ? "s" : ""})` : ""}
+                          {g.nome}{ehGlobal(g) && papel !== "master" ? " (global)" : ""}{outras > 0 ? ` (em ${outras} pasta${outras > 1 ? "s" : ""})` : ""}
                         </option>
                       );
                     })}
@@ -641,7 +641,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                               className="max-w-[150px] flex items-center gap-1 border-b border-muted-foreground text-muted-foreground font-body text-xs py-1 hover:text-foreground transition-colors"
                               title="Pastas deste treino (pode estar em várias)"
                             >
-                              <span className="truncate">📁 {label}</span>
+                              <span className="truncate">{label}</span>
                               <ChevronDown size={12} className="shrink-0" />
                             </button>
                             {abertoDp && (
@@ -656,7 +656,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                                         onChange={() => { handleTogglePastaGrupo(g.id, p.id); setPastaDropdown(null); }}
                                         className="accent-primary"
                                       />
-                                      <span className="truncate">📁 {p.nome}</span>
+                                      <span className="truncate">{p.nome}</span>
                                     </label>
                                   ))}
                                 </div>
@@ -682,7 +682,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                       exIds.map((eid) => {
                         const ex = exercicios.find((e) => e.id === eid);
                         return ex ? (
-                          <span key={eid} className="text-xs bg-secondary text-foreground px-2 py-1 font-body">{ex.emoji} {ex.nome}</span>
+                          <span key={eid} className="text-xs bg-secondary text-foreground px-2 py-1 font-body">{ex.nome}</span>
                         ) : null;
                       })
                     )}
@@ -699,7 +699,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                       </span>
                       {(gruposPerfis[g.id]?.length ?? 0) === 0 ? (
                         <span className="text-[10px] text-destructive font-body ml-auto">
-                          ⚠️ {podeEditar(g) ? "Sem perfil — invisível p/ todos" : "Nenhum aluno seu vê este treino"}
+                          {podeEditar(g) ? "Sem perfil — invisível p/ todos" : "Nenhum aluno seu vê este treino"}
                         </span>
                       ) : (
                         <span className="text-[10px] text-muted-foreground font-body ml-auto">
@@ -751,7 +751,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                 <div className="flex gap-0 max-w-xs" data-biblioteca-escopo={bibScope}>
                   <button type="button" onClick={() => setBibScope("global")} data-btn-escopo="global"
                     className={`flex-1 py-2 px-3 font-heading text-xs uppercase tracking-widest transition-colors ${bibScope === "global" ? "toggle-active" : "toggle-inactive"}`}>
-                    🔒 Global
+                    Global
                   </button>
                   <button type="button" onClick={() => setBibScope("minha")} data-btn-escopo="minha"
                     className={`flex-1 py-2 px-3 font-heading text-xs uppercase tracking-widest transition-colors ${bibScope === "minha" ? "toggle-active" : "toggle-inactive"}`}>
@@ -760,7 +760,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                 </div>
                 <p className="text-[11px] text-muted-foreground font-body">
                   {bibScope === "global"
-                    ? "Catálogo global do PhysiqCalc — só leitura. Você pode usar esses exercícios nos seus treinos; para criar os seus, mude para \"Minha\"."
+                    ? "Catálogo global do Physiq — só leitura. Você pode usar esses exercícios nos seus treinos; para criar os seus, mude para \"Minha\"."
                     : "Seus exercícios e grupos musculares — só você vê e edita."}
                 </p>
               </>
@@ -772,10 +772,10 @@ const AdminTreinos = ({ onBack }: Props) => {
               </button>
               )}
               <button type="button" onClick={() => setModalBiblioteca("musculos")} className="px-4 py-2 border border-muted-foreground/20 rounded font-heading text-xs uppercase text-foreground hover:border-primary transition-colors">
-                💪 Grupos Musculares ({musculosBib.length})
+                Grupos Musculares ({musculosBib.length})
               </button>
               <button type="button" onClick={() => setModalBiblioteca("exercicios")} className="px-4 py-2 border border-muted-foreground/20 rounded font-heading text-xs uppercase text-foreground hover:border-primary transition-colors">
-                📚 Exercícios ({exerciciosBib.length})
+                Exercícios ({exerciciosBib.length})
               </button>
             </div>
 
@@ -805,10 +805,9 @@ const AdminTreinos = ({ onBack }: Props) => {
                     <button type="button" onClick={() => { setAdicionandoMusculo(false); setNovoMusculo(""); }} className="px-3 py-2 border border-muted-foreground/20 text-muted-foreground text-[10px] font-bold uppercase rounded">✕</button>
                   </div>
                 )}
-                <input type="text" value={novoExEmoji} onChange={(e) => setNovoExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-body text-lg py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2" />
               <select value={novoExTipo} onChange={(e) => setNovoExTipo(e.target.value as "musculacao" | "corrida")} className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
-                <option value="musculacao" className="bg-background text-foreground">💪 Musculação</option>
-                <option value="corrida" className="bg-background text-foreground">🏃 Corrida</option>
+                <option value="musculacao" className="bg-background text-foreground">Musculação</option>
+                <option value="corrida" className="bg-background text-foreground">Corrida</option>
               </select>
               </div>
               <input type="text" value={novoExSubgrupo} onChange={(e) => setNovoExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional, ex: Porção medial)" className="input-underline text-sm" />
@@ -830,7 +829,7 @@ const AdminTreinos = ({ onBack }: Props) => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setModalBiblioteca(null)}>
             <div className="bg-background border border-border rounded-lg w-full max-w-xl max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-3">
-                <p className="font-heading text-sm text-foreground">Grupos Musculares ({musculosBib.length}){papel !== "master" && bibScope === "global" ? " 🔒" : ""}</p>
+                <p className="font-heading text-sm text-foreground">Grupos Musculares ({musculosBib.length}){papel !== "master" && bibScope === "global" ? " · só leitura" : ""}</p>
                 <button type="button" onClick={() => setModalBiblioteca(null)} className="p-1.5 text-muted-foreground hover:text-foreground"><X size={16} /></button>
               </div>
               <div className="space-y-1">
@@ -856,7 +855,7 @@ const AdminTreinos = ({ onBack }: Props) => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setModalBiblioteca(null)}>
             <div className="bg-background border border-border rounded-lg w-full max-w-xl max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-2">
-                <p className="font-heading text-sm text-foreground">Exercícios ({exerciciosBib.length}){papel !== "master" && bibScope === "global" ? " 🔒" : ""}</p>
+                <p className="font-heading text-sm text-foreground">Exercícios ({exerciciosBib.length}){papel !== "master" && bibScope === "global" ? " · só leitura" : ""}</p>
                 <button type="button" onClick={() => setModalBiblioteca(null)} className="p-1.5 text-muted-foreground hover:text-foreground"><X size={16} /></button>
               </div>
               <div className="space-y-0">
@@ -871,9 +870,6 @@ const AdminTreinos = ({ onBack }: Props) => {
                       <div className="flex gap-2">
                         <select value={editExGrupo} onChange={(e) => setEditExGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                           {gruposMusculares.map((g) => <option key={g.id} value={g.nome} className="bg-background text-foreground">{g.nome}</option>)}
-                        </select>
-                        <select value={editExEmoji} onChange={(e) => setEditExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
-                          {(EMOJIS_EXERCICIO.includes(editExEmoji) ? EMOJIS_EXERCICIO : [editExEmoji, ...EMOJIS_EXERCICIO]).map((e) => <option key={e} value={e} className="bg-background text-foreground">{e}</option>)}
                         </select>
                       </div>
                       {/* Foto / gif */}
@@ -905,7 +901,6 @@ const AdminTreinos = ({ onBack }: Props) => {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-lg">{ex.emoji}</span>
                         <div className="min-w-0">
                           <p className="font-heading text-sm text-foreground truncate">{ex.nome}</p>
                           <p className="text-[10px] text-muted-foreground font-body">{ex.grupo_muscular}</p>

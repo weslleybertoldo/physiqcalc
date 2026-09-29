@@ -69,7 +69,7 @@ const ModalAlterarGrupo = ({ gruposGlobais, gruposPessoais, userId, open, onOpen
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="bg-background border-muted-foreground/30 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-heading text-foreground">🔄 Alterar Grupo</DialogTitle>
+            <DialogTitle className="font-heading text-foreground">Alterar Grupo</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground font-body mb-4">
             Válido somente para este dia — não altera a programação padrão.

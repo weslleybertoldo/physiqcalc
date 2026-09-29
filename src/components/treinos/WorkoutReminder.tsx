@@ -67,7 +67,7 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
           await LocalNotifications.schedule({
             notifications: [{
               id: REMINDER_NOTIF_ID,
-              title: "PhysiqCalc — Hora do Treino! 💪",
+              title: "Physiq — Hora do treino!",
               body: `Treino de hoje: ${grupoNome} (${dateLabel})`,
               smallIcon: "ic_launcher",
               sound: "default",
@@ -95,7 +95,7 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
         const now = new Date();
         if (now.getHours() === hour && now.getMinutes() === minute) {
           if ("Notification" in window && Notification.permission === "granted") {
-            new Notification("PhysiqCalc — Hora do Treino! 💪", {
+            new Notification("Physiq — Hora do treino!", {
               body: `Treino de hoje: ${grupoNome} (${dateLabel})`,
               icon: "/icon-192.png",
             });
@@ -166,7 +166,7 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
           <div className="bg-card border border-border rounded-xl p-6 w-80 space-y-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-heading text-sm uppercase tracking-wider text-foreground">
-                🔔 Lembrete de Treino
+                Lembrete de Treino
               </h3>
               <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X size={16} />
@@ -179,7 +179,7 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
 
             {!permGranted && (
               <p className="text-xs text-destructive font-body">
-                ⚠ Notificações bloqueadas. Habilite nas configurações do app.
+                Notificações bloqueadas. Habilite nas configurações do app.
               </p>
             )}
 

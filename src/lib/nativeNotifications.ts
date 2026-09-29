@@ -20,7 +20,7 @@ export function formatMarcoTreinoLongo(min: number): string {
 }
 
 const textoAvisoTreinoLongo = (grupoNome: string, min: number) => ({
-  title: "Ainda está treinando? ⏱️",
+  title: "Ainda está treinando?",
   body: `${grupoNome} · ${formatMarcoTreinoLongo(min)} em andamento. Se já terminou, conclua o treino.`,
 });
 
@@ -84,7 +84,7 @@ export async function startTimerNotifications(
   try {
     await CountdownNotification.startCountdown({
       durationSeconds: segundosRestantes,
-      title: "⏱ Descanso",
+      title: "Descanso",
       body: exercicioNome,
       som,
     });
@@ -96,7 +96,7 @@ export async function startTimerNotifications(
       await LocalNotifications.schedule({
         notifications: [{
           id: TIMER_FINISHED_ID,
-          title: "Hora de treinar! 💪",
+          title: "Hora de treinar!",
           body: `Descanso concluído: ${exercicioNome}`,
           smallIcon: "ic_launcher",
           channelId: ALERT_CHANNEL_ID,
@@ -124,7 +124,7 @@ export async function showTimerFinishedNotification(
   if (!isNative) {
     if ("Notification" in window && Notification.permission === "granted") {
       try {
-        new Notification("PhysiqCalc — Hora de treinar! 💪", {
+        new Notification("Physiq — Hora de treinar!", {
           body: `Descanso concluído: ${exercicioNome}`,
           icon: "/icon-192.png",
           tag: "descanso-concluido",
@@ -198,7 +198,7 @@ export function avisarTreinoLongoWeb(grupoNome: string, min: number): void {
   if ("Notification" in window && Notification.permission === "granted") {
     try {
       const { title, body } = textoAvisoTreinoLongo(grupoNome, min);
-      new Notification(`PhysiqCalc — ${title}`, { body, icon: "/icon-192.png", tag: `treino-longo-${min}` });
+      new Notification(`Physiq — ${title}`, { body, icon: "/icon-192.png", tag: `treino-longo-${min}` });
     } catch {}
   }
 }

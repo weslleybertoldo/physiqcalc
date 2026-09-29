@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Physiq (W1): fundo da janela de abertura (Android 11 e antes; no 12+ vale a SplashScreen do sistema,
+     com o mesmo fundo e a mesma marca — values/styles.xml). Fundo da tela do app + marca no centro. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_fundo" />
+    <item
+        android:width="288dp"
+        android:height="288dp"
+        android:drawable="@drawable/splash_icone"
+        android:gravity="center" />
+</layer-list>

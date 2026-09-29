@@ -130,7 +130,7 @@ const Index = ({ onBack }: { onBack?: () => void } = {}) => {
               </button>
             )}
             <h1 className="font-heading text-3xl sm:text-4xl text-foreground tracking-tight">
-              PHYSIQ<span className="text-primary">CALC</span>
+              PHYSIQ
             </h1>
             <p className="text-sm text-muted-foreground font-body mt-2">
               Calculadora de composição corporal para atletas.

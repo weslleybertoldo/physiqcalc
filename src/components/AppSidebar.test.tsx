@@ -70,7 +70,7 @@ describe("sidebar do celular mostra os nomes (pedido 18/09/2026)", () => {
     for (const it of ADMIN_ITEMS) expect(rotulos).toContain(it.title);
     expect(rotulos).toContain("Sair");
     expect(drawer.textContent).toMatch(/Professor · Weslley/);
-    expect(drawer.textContent).toMatch(/PHYSIQCALC/);
+    expect(drawer.textContent).toMatch(/PHYSIQ/);
     celular = false;
   });
 

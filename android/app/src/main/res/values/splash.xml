@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- fundo da tela de abertura = fundo da tela do app (#09090B, tokens do visual premium) -->
+    <color name="splash_fundo">#09090B</color>
+</resources>

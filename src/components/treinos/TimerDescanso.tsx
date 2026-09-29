@@ -37,7 +37,7 @@ interface TimerDescansoProps {
   serieId: string;
   onFechado: () => void;
   onTempoAlterado: (segundos: number) => void;
-  /** Abre o popup "Som do descanso" (ícone 🔊 na barra) — o aluno não tem a engrenagem de Configurações */
+  /** Abre o popup "Som do descanso" (ícone de som na barra) — o aluno não tem a engrenagem de Configurações */
   onAbrirSom?: () => void;
 }
 
@@ -317,7 +317,7 @@ const TimerDescanso = ({
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-2xl px-4 py-4 safe-area-bottom">
       <div className="max-w-3xl mx-auto space-y-3">
         <div className="flex items-center justify-between">
-          <span className="font-heading text-xs uppercase tracking-wider text-muted-foreground">⏱ Descanso</span>
+          <span className="font-heading text-xs uppercase tracking-wider text-muted-foreground">Descanso</span>
           <span className="text-xs text-muted-foreground font-body truncate max-w-[180px]">
             {exercicioNome} — Série {numeroSerie}
           </span>
@@ -344,7 +344,7 @@ const TimerDescanso = ({
           <p className={`font-heading text-5xl tabular-nums ${timerColor} ${finished || (seconds <= 30 && seconds > 0) ? "animate-pulse" : ""}`}>
             {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
           </p>
-          {finished && <p className="text-sm text-primary font-heading mt-1 uppercase tracking-wider">Hora de treinar! 💪</p>}
+          {finished && <p className="text-sm text-primary font-heading mt-1 uppercase tracking-wider">Hora de treinar!</p>}
         </div>
 
         <Progress value={progress} className={`h-2 ${progressColor}`} />

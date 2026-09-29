@@ -119,7 +119,7 @@ const SeletorExerciciosPorGrupo = <T extends ExercicioSelecionavel>({
             <ChevronLeft size={14} /> Grupos musculares
           </button>
           <p className="text-sm font-heading text-foreground mb-2">
-            {blocoAtual.emoji} {blocoAtual.nome}
+            {blocoAtual.nome}
             {contarSelecionados && (
               <span className="text-[10px] text-muted-foreground font-body ml-2">
                 {labelContagem(contarSelecionados(exerciciosDoBloco), exerciciosDoBloco.length)}
@@ -151,7 +151,6 @@ const SeletorExerciciosPorGrupo = <T extends ExercicioSelecionavel>({
                     sel > 0 ? "border-primary/60 bg-primary/5" : "border-muted-foreground/30 hover:border-primary/60"
                   }`}
                 >
-                  <span className="text-lg shrink-0">{bloco.emoji}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-heading text-foreground truncate">{bloco.nome}</span>
                     <span className="block text-[10px] font-body text-muted-foreground">

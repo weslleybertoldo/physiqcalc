@@ -8,6 +8,9 @@
     <meta name="description" content="app focado em saúde e performance">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#09090B">
+    <!-- Tema antes do 1º quadro (P21: escuro padrão; claro só para quem escolheu em Aparência — src/ui/tema/useTema.ts) -->
+    <script>try{var t=localStorage.getItem("physiq_tema")==="claro"?"claro":"escuro";document.documentElement.setAttribute("data-tema",t);if(t==="claro")document.querySelector('meta[name="theme-color"]').setAttribute("content","#FAFAFA")}catch(e){}</script>
+    <style>html{background:#09090B}html[data-tema="claro"]{background:#FAFAFA}</style>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

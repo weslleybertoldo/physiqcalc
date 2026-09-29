@@ -18,7 +18,7 @@ export interface ConviteAluno {
   aceito_em: string | null;
 }
 
-export const TEXTO_CONVITE = "Entre na minha lista de alunos no PhysiqCalc pelo link:";
+export const TEXTO_CONVITE = "Entre na minha lista de alunos no Physiq pelo link:";
 
 const MSG_ERRO_CONVITE: Record<string, string> = {
   email_invalido: "E-mail inválido.",
@@ -48,7 +48,7 @@ export async function copiarTexto(texto: string, aviso = "Copiado!") {
 export async function compartilharLink(url: string, texto = TEXTO_CONVITE) {
   if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
     try {
-      await navigator.share({ title: "PhysiqCalc", text: texto, url });
+      await navigator.share({ title: "Physiq", text: texto, url });
       return;
     } catch (e) {
       if ((e as { name?: string } | null)?.name === "AbortError") return; // usuário fechou o painel
@@ -190,11 +190,11 @@ export const ConviteAlunoConteudo = ({ onVinculado, mostrarLink = true }: Conteu
             className={`border rounded-lg p-3 text-xs ${resultado.tipo === "pendente" ? "border-muted-foreground/30 bg-muted/20 text-foreground" : "border-primary/40 bg-primary/10 text-foreground"}`}
             data-convite-resultado={resultado.tipo}
           >
-            {resultado.tipo === "vinculado" && <>✅ <b>{resultado.email}</b> já tinha conta e entrou na sua lista.</>}
-            {resultado.tipo === "ja_era" && <>👍 <b>{resultado.email}</b> já está na sua lista.</>}
+            {resultado.tipo === "vinculado" && <><b>{resultado.email}</b> já tinha conta e entrou na sua lista.</>}
+            {resultado.tipo === "ja_era" && <><b>{resultado.email}</b> já está na sua lista.</>}
             {resultado.tipo === "pendente" && (
               <div className="space-y-2">
-                <p>⏳ Convite pendente — <b>{resultado.email}</b> ainda não tem conta. {resultado.emailEnviado ? "Enviamos um e-mail com o link. " : "Mande o link pelo WhatsApp: "}Ao entrar com Google, entra na sua lista automaticamente.</p>
+                <p>Convite pendente — <b>{resultado.email}</b> ainda não tem conta. {resultado.emailEnviado ? "Enviamos um e-mail com o link. " : "Mande o link pelo WhatsApp: "}Ao entrar com Google, entra na sua lista automaticamente.</p>
                 {whatsappHref && (
                   <a href={whatsappHref} target="_blank" rel="noreferrer" className={BTN_SEC}>
                     <MessageCircle size={12} /> Mandar o link pelo WhatsApp

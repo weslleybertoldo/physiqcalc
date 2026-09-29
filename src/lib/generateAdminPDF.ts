@@ -169,5 +169,5 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
   desenharRodape(doc, 'Formulas: Mifflin-St Jeor - Jackson & Pollock - Katch-McArdle');
 
   const safeName = (profile.nome?.trim() || "Usuario").replace(/[^a-zA-Z0-9 ]/g, "");
-  doc.save(`PhysiqCalc-${safeName}-${profile.user_code || ""}.pdf`);
+  doc.save(`Physiq-${safeName}-${profile.user_code || ""}.pdf`);
 }
