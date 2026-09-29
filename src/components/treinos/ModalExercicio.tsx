@@ -37,7 +37,6 @@ const ModalExercicio = ({ exercicio, open, onOpenChange }: Props) => {
       <DialogContent className="bg-background border-muted-foreground/30 max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-heading text-foreground text-xl flex items-center gap-2">
-            <span className="text-3xl">{exercicio.emoji}</span>
             {exercicio.nome}
           </DialogTitle>
         </DialogHeader>

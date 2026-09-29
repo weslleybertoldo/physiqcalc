@@ -114,7 +114,7 @@ const UserDashboard = () => {
         </header>
 
         <h1 className="font-heading text-3xl sm:text-4xl text-foreground tracking-tight mb-2">
-          PHYSIQ<span className="text-primary">CALC</span>
+          PHYSIQ
         </h1>
 
         {/* Tabs — mr-6/tracking-wider (eram mr-8/widest): a Geist é mais larga que a Roboto Condensed e "Registros" saía cortado em 390px */}

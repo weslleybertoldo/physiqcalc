@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Physiq (W1): marca da tela de abertura — quadrado violeta → verde com o traço de atividade (igual ao
+     ícone do app), centrado no quadro de 288 dp do ícone da SplashScreen do Android 12+ (a parte visível
+     é um círculo de 192 dp). O mesmo desenho vai no fundo da janela de abertura (drawable/splash.xml). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+    <path android:pathData="M117,76 L171,76 A41,41 0 0 1 212,117 L212,171 A41,41 0 0 1 171,212 L117,212 A41,41 0 0 1 76,171 L76,117 A41,41 0 0 1 117,76 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="76"
+                android:startY="76"
+                android:endX="212"
+                android:endY="212">
+                <item android:offset="0" android:color="#FF8B5CF6" />
+                <item android:offset="1" android:color="#FF10B981" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group
+        android:translateX="104.5"
+        android:translateY="104.5"
+        android:scaleX="3.2917"
+        android:scaleY="3.2917">
+        <path
+            android:pathData="M22,12h-2.48a2,2 0,0 0,-1.93 1.46l-2.35,8.36a0.25,0.25 0,0 1,-0.48 0L9.24,2.18a0.25,0.25 0,0 0,-0.48 0l-2.35,8.36A2,2 0,0 1,4.49 12H2"
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="2.3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

@@ -80,7 +80,7 @@ export function AppSidebar({ items, modo, badges }: { items: NavItem[]; modo: "a
       <SidebarContent className="flex flex-col h-full bg-sidebar">
         <div className="p-4">
           <span className="font-heading text-lg text-foreground tracking-tight">
-            {collapsed ? <>P<span className="text-primary">C</span></> : <>PHYSIQ<span className="text-primary">CALC</span></>}
+            {collapsed ? "P" : "PHYSIQ"}
           </span>
           {!collapsed && (
             <p className="text-[10px] text-muted-foreground font-body mt-1 uppercase tracking-wider truncate" title={nome}>

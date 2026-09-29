@@ -245,7 +245,7 @@ export default function AdminVolumeSemanal({ userId }: Props) {
                   className="flex items-center justify-between w-full text-left gap-2"
                 >
                   <span className="text-sm font-heading uppercase tracking-wider text-foreground">
-                    {v.bloco.emoji} {v.bloco.nome}
+                    {v.bloco.nome}
                   </span>
                   <span className="flex items-center gap-2 shrink-0">
                     <span className="text-sm font-body text-foreground" data-admin-volume-total={v.total}>

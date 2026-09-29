@@ -319,7 +319,7 @@ const AdminUserConfig = ({ userId, onBack }: Props) => {
                   <p className="font-heading text-xl" style={{ color: cls.cor }}>{cls.label}</p>
                   <p className="text-xs text-muted-foreground font-body mt-1">{cls.descricao}</p>
                   <p className="text-[8px] text-muted-foreground/60 font-body italic mt-2 leading-relaxed">
-                    📚 Gallagher et al. (2000) Am J Clin Nutr 72:694–701 · ACE · Lohman (1993) · ACSM
+                    Gallagher et al. (2000) Am J Clin Nutr 72:694–701 · ACE · Lohman (1993) · ACSM
                     {cls.ajuste > 0 && ` · Ajuste etário: +${cls.ajuste}%`}
                   </p>
                 </div>

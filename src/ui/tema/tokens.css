@@ -1,0 +1,449 @@
+/* Physiq — tokens do visual premium (W1). Porte do `premium.css` que gerou as 8 telas aprovadas
+   (29/09/2026): mesmas cores, cartão com gradiente e raio de 22 px, borda de luz violeta → verde,
+   chips t/n/a/g/c/r, botões w/g/v, vidro da barra de abas.
+
+   Tema ESCURO é o padrão (P21). O CLARO é derivado dos mesmos tokens e só vale para quem escolher em
+   Aparência (a tela é da W5/W7; o interruptor é `useTema()` em src/ui/tema/useTema.ts), com
+   `data-tema="claro"` no <html>. No claro, os tokens do shadcn também mudam, para as telas antigas que
+   ainda rodam dentro das cascas novas acompanharem.
+
+   Uso: classes do Tailwind com as cores abaixo (`bg-tela`, `text-texto-2`, `border-linha`,
+   `text-violeta-3`…) e as utilidades `pq-*` (cartão, brilho, chip, botão, vidro…), montadas pelos
+   componentes de src/ui/premium. */
+
+:root {
+  color-scheme: dark;
+
+  --p-fundo: #050506; /* bg */
+  --p-tela: #09090b; /* scr */
+  --p-texto: #fafafa; /* txt */
+  --p-forte: #e4e4e7; /* texto forte secundário (nomes em listas) */
+  --p-suave: #d4d4d8; /* metadados em destaque */
+  --p-texto-2: #a1a1aa; /* mut */
+  --p-texto-3: #71717a; /* dim */
+  --p-texto-4: #52525b; /* faint */
+
+  --p-linha: rgba(255, 255, 255, 0.075);
+  --p-linha-2: rgba(255, 255, 255, 0.12);
+  --p-linha-3: rgba(255, 255, 255, 0.06); /* divisória entre linhas de lista */
+  --p-superficie: rgba(255, 255, 255, 0.05); /* botão de ícone, busca */
+  --p-superficie-2: rgba(255, 255, 255, 0.08); /* item ativo do menu, trilho de barra */
+  --p-superficie-3: rgba(255, 255, 255, 0.035); /* KPI do cabeçalho */
+
+  --p-cartao: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
+  --p-cartao-sombra: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 40px -18px rgba(0, 0, 0, 0.8);
+  --p-brilho-fundo: linear-gradient(180deg, rgba(24, 24, 30, 0.96), rgba(14, 14, 18, 0.96));
+  --p-brilho-borda: linear-gradient(
+    135deg,
+    rgba(167, 139, 250, 0.75),
+    rgba(255, 255, 255, 0.06) 35%,
+    rgba(255, 255, 255, 0.04) 65%,
+    rgba(52, 211, 153, 0.55)
+  );
+  --p-vidro: rgba(22, 22, 27, 0.78);
+  --p-vidro-sombra: 0 20px 40px -12px rgba(0, 0, 0, 0.9);
+  --p-menu-lateral: rgba(255, 255, 255, 0.015);
+  --p-halo-1: rgba(139, 92, 246, 0.2);
+  --p-halo-2: rgba(16, 185, 129, 0.1);
+  --p-halo-web-1: rgba(139, 92, 246, 0.16);
+  --p-halo-web-2: rgba(16, 185, 129, 0.08);
+
+  --p-violeta: #8b5cf6;
+  --p-violeta-2: #a78bfa;
+  --p-violeta-3: #c4b5fd;
+  --p-violeta-4: #7c3aed;
+  --p-indigo: #6366f1;
+  --p-verde: #10b981;
+  --p-verde-2: #34d399;
+  --p-verde-3: #6ee7b7;
+  --p-lima: #a3e635;
+  --p-ciano: #22d3ee;
+  --p-ciano-3: #67e8f9;
+  --p-ambar: #f59e0b;
+  --p-ambar-2: #fbbf24;
+  --p-ambar-3: #fcd34d;
+  --p-rosa: #f43f5e;
+  --p-rosa-3: #fda4af;
+
+  /* chips (.chip.t/.n/.a/.g/.c/.r) */
+  --p-chip-t-fundo: rgba(139, 92, 246, 0.14);
+  --p-chip-t-texto: #c4b5fd;
+  --p-chip-t-borda: rgba(139, 92, 246, 0.28);
+  --p-chip-n-fundo: rgba(16, 185, 129, 0.12);
+  --p-chip-n-texto: #6ee7b7;
+  --p-chip-n-borda: rgba(16, 185, 129, 0.28);
+  --p-chip-a-fundo: rgba(245, 158, 11, 0.12);
+  --p-chip-a-texto: #fcd34d;
+  --p-chip-a-borda: rgba(245, 158, 11, 0.28);
+  --p-chip-g-fundo: rgba(255, 255, 255, 0.06);
+  --p-chip-g-texto: #d4d4d8;
+  --p-chip-g-borda: rgba(255, 255, 255, 0.12);
+  --p-chip-c-fundo: rgba(34, 211, 238, 0.1);
+  --p-chip-c-texto: #67e8f9;
+  --p-chip-c-borda: rgba(34, 211, 238, 0.25);
+  --p-chip-r-fundo: rgba(244, 63, 94, 0.12);
+  --p-chip-r-texto: #fda4af;
+  --p-chip-r-borda: rgba(244, 63, 94, 0.3);
+
+  /* botões (.btn.w/.g/.v) */
+  --p-botao-w-fundo: #fafafa;
+  --p-botao-w-texto: #09090b;
+  --p-botao-w-sombra: 0 10px 30px -10px rgba(255, 255, 255, 0.45);
+  --p-botao-v-fundo: linear-gradient(180deg, #8b5cf6, #6d28d9);
+  --p-botao-v-sombra: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 12px 30px -10px rgba(139, 92, 246, 0.75);
+  --p-ponto-borda: #0f0f12; /* anel do ponto vermelho do sino */
+}
+
+/* Tema CLARO: mesmos papéis, valores para fundo branco. */
+:root[data-tema="claro"] {
+  color-scheme: light;
+
+  --p-fundo: #f4f4f5;
+  --p-tela: #fafafa;
+  --p-texto: #09090b;
+  --p-forte: #27272a;
+  --p-suave: #3f3f46;
+  --p-texto-2: #52525b;
+  --p-texto-3: #71717a;
+  --p-texto-4: #a1a1aa;
+
+  --p-linha: rgba(9, 9, 11, 0.08);
+  --p-linha-2: rgba(9, 9, 11, 0.13);
+  --p-linha-3: rgba(9, 9, 11, 0.07);
+  --p-superficie: rgba(9, 9, 11, 0.04);
+  --p-superficie-2: rgba(9, 9, 11, 0.07);
+  --p-superficie-3: rgba(9, 9, 11, 0.03);
+
+  --p-cartao: linear-gradient(180deg, #ffffff, #fcfcfd);
+  --p-cartao-sombra: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 32px -18px rgba(24, 24, 27, 0.28);
+  --p-brilho-fundo: linear-gradient(180deg, #ffffff, #fafafb);
+  --p-brilho-borda: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.6),
+    rgba(9, 9, 11, 0.07) 35%,
+    rgba(9, 9, 11, 0.05) 65%,
+    rgba(16, 185, 129, 0.5)
+  );
+  --p-vidro: rgba(255, 255, 255, 0.84);
+  --p-vidro-sombra: 0 18px 36px -16px rgba(24, 24, 27, 0.35);
+  --p-menu-lateral: rgba(255, 255, 255, 0.6);
+  --p-halo-1: rgba(139, 92, 246, 0.1);
+  --p-halo-2: rgba(16, 185, 129, 0.06);
+  --p-halo-web-1: rgba(139, 92, 246, 0.08);
+  --p-halo-web-2: rgba(16, 185, 129, 0.05);
+
+  --p-violeta: #8b5cf6;
+  --p-violeta-2: #7c3aed;
+  --p-violeta-3: #6d28d9;
+  --p-violeta-4: #6d28d9;
+  --p-indigo: #4f46e5;
+  --p-verde: #059669;
+  --p-verde-2: #059669;
+  --p-verde-3: #047857;
+  --p-lima: #65a30d;
+  --p-ciano: #0891b2;
+  --p-ciano-3: #0e7490;
+  --p-ambar: #d97706;
+  --p-ambar-2: #d97706;
+  --p-ambar-3: #b45309;
+  --p-rosa: #e11d48;
+  --p-rosa-3: #be123c;
+
+  --p-chip-t-fundo: rgba(139, 92, 246, 0.1);
+  --p-chip-t-texto: #6d28d9;
+  --p-chip-t-borda: rgba(139, 92, 246, 0.3);
+  --p-chip-n-fundo: rgba(16, 185, 129, 0.1);
+  --p-chip-n-texto: #047857;
+  --p-chip-n-borda: rgba(16, 185, 129, 0.32);
+  --p-chip-a-fundo: rgba(245, 158, 11, 0.12);
+  --p-chip-a-texto: #b45309;
+  --p-chip-a-borda: rgba(245, 158, 11, 0.38);
+  --p-chip-g-fundo: rgba(9, 9, 11, 0.04);
+  --p-chip-g-texto: #3f3f46;
+  --p-chip-g-borda: rgba(9, 9, 11, 0.12);
+  --p-chip-c-fundo: rgba(34, 211, 238, 0.12);
+  --p-chip-c-texto: #0e7490;
+  --p-chip-c-borda: rgba(8, 145, 178, 0.3);
+  --p-chip-r-fundo: rgba(244, 63, 94, 0.1);
+  --p-chip-r-texto: #be123c;
+  --p-chip-r-borda: rgba(244, 63, 94, 0.3);
+
+  --p-botao-w-fundo: #09090b;
+  --p-botao-w-texto: #fafafa;
+  --p-botao-w-sombra: 0 10px 26px -12px rgba(9, 9, 11, 0.55);
+  --p-botao-v-sombra: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 12px 26px -12px rgba(139, 92, 246, 0.6);
+  --p-ponto-borda: #ffffff;
+
+  /* shadcn/ui: as telas antigas (fallback) acompanham o tema claro */
+  --background: oklch(0.985 0 0); /* #FAFAFA */
+  --foreground: oklch(0.141 0.004 285.8); /* #09090B */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.141 0.004 285.8);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.141 0.004 285.8);
+  --primary: oklch(0.606 0.219 292.7); /* #8B5CF6 */
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.4); /* #F4F4F5 */
+  --secondary-foreground: oklch(0.21 0.006 285.9);
+  --muted: oklch(0.967 0.001 286.4);
+  --muted-foreground: oklch(0.442 0.017 285.8); /* #52525B */
+  --accent: oklch(0.606 0.219 292.7);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.586 0.222 17.6); /* #E11D48 */
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.141 0.004 285.8 / 13%);
+  --input: oklch(0.141 0.004 285.8 / 13%);
+  --ring: oklch(0.606 0.219 292.7);
+  --sidebar: oklch(0.967 0.001 286.4);
+  --sidebar-foreground: oklch(0.141 0.004 285.8);
+  --sidebar-accent: oklch(0.92 0.004 286.3);
+  --sidebar-accent-foreground: oklch(0.141 0.004 285.8);
+  --sidebar-border: oklch(0.141 0.004 285.8 / 13%);
+}
+
+@theme inline {
+  --color-fundo: var(--p-fundo);
+  --color-tela: var(--p-tela);
+  --color-texto: var(--p-texto);
+  --color-forte: var(--p-forte);
+  --color-suave: var(--p-suave);
+  --color-texto-2: var(--p-texto-2);
+  --color-texto-3: var(--p-texto-3);
+  --color-texto-4: var(--p-texto-4);
+  --color-linha: var(--p-linha);
+  --color-linha-2: var(--p-linha-2);
+  --color-linha-3: var(--p-linha-3);
+  --color-superficie: var(--p-superficie);
+  --color-superficie-2: var(--p-superficie-2);
+  --color-superficie-3: var(--p-superficie-3);
+  --color-violeta: var(--p-violeta);
+  --color-violeta-2: var(--p-violeta-2);
+  --color-violeta-3: var(--p-violeta-3);
+  --color-violeta-4: var(--p-violeta-4);
+  --color-indigo: var(--p-indigo);
+  --color-verde: var(--p-verde);
+  --color-verde-2: var(--p-verde-2);
+  --color-verde-3: var(--p-verde-3);
+  --color-lima: var(--p-lima);
+  --color-ciano: var(--p-ciano);
+  --color-ciano-3: var(--p-ciano-3);
+  --color-ambar: var(--p-ambar);
+  --color-ambar-2: var(--p-ambar-2);
+  --color-ambar-3: var(--p-ambar-3);
+  --color-rosa: var(--p-rosa);
+  --color-rosa-3: var(--p-rosa-3);
+
+  --radius-cartao: 22px;
+  --radius-botao: 14px;
+  --radius-pilula: 999px;
+}
+
+/* ───────────────────────── utilidades (porte das classes do premium.css) ───────────────────────── */
+
+/* .card — cartão com gradiente, linha fina e sombra */
+@utility pq-cartao {
+  position: relative;
+  background: var(--p-cartao);
+  border: 1px solid var(--p-linha);
+  border-radius: 22px;
+  box-shadow: var(--p-cartao-sombra);
+}
+
+/* .shine — borda de luz violeta → verde (estilo Magic UI), sem animação */
+@utility pq-brilho {
+  border: 1px solid transparent;
+  background:
+    var(--p-brilho-fundo) padding-box,
+    var(--p-brilho-borda) border-box;
+}
+
+/* vidro da barra de abas e dos painéis flutuantes */
+@utility pq-vidro {
+  background: var(--p-vidro);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+  border: 1px solid var(--p-linha-2);
+  box-shadow: var(--p-vidro-sombra);
+}
+
+/* fundo da tela do app (.phone::before) e do site (.app::before) — vai numa camada fixa atrás da casca */
+@utility pq-halo-app {
+  background:
+    radial-gradient(90% 40% at 15% 0%, var(--p-halo-1), transparent 60%),
+    radial-gradient(70% 30% at 100% 100%, var(--p-halo-2), transparent 60%),
+    var(--p-tela);
+}
+@utility pq-halo-web {
+  background:
+    radial-gradient(40% 30% at 30% 0%, var(--p-halo-web-1), transparent 70%),
+    radial-gradient(35% 30% at 100% 100%, var(--p-halo-web-2), transparent 70%),
+    var(--p-tela);
+}
+
+/* .eyebrow — rótulo pequeno em caixa alta */
+@utility pq-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-texto-3);
+  font-weight: 600;
+}
+
+/* .chip */
+@utility pq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  & svg {
+    width: 13px;
+    height: 13px;
+    stroke-width: 2.2;
+    flex: none;
+  }
+}
+@utility pq-chip-t {
+  background: var(--p-chip-t-fundo);
+  color: var(--p-chip-t-texto);
+  border-color: var(--p-chip-t-borda);
+}
+@utility pq-chip-n {
+  background: var(--p-chip-n-fundo);
+  color: var(--p-chip-n-texto);
+  border-color: var(--p-chip-n-borda);
+}
+@utility pq-chip-a {
+  background: var(--p-chip-a-fundo);
+  color: var(--p-chip-a-texto);
+  border-color: var(--p-chip-a-borda);
+}
+@utility pq-chip-g {
+  background: var(--p-chip-g-fundo);
+  color: var(--p-chip-g-texto);
+  border-color: var(--p-chip-g-borda);
+}
+@utility pq-chip-c {
+  background: var(--p-chip-c-fundo);
+  color: var(--p-chip-c-texto);
+  border-color: var(--p-chip-c-borda);
+}
+@utility pq-chip-r {
+  background: var(--p-chip-r-fundo);
+  color: var(--p-chip-r-texto);
+  border-color: var(--p-chip-r-borda);
+}
+
+/* .btn */
+@utility pq-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 14.5px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition:
+    filter 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.1s ease;
+  & svg {
+    width: 17px;
+    height: 17px;
+    stroke-width: 2.2;
+    flex: none;
+  }
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+@utility pq-botao-sm {
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 11px;
+  font-size: 13px;
+}
+@utility pq-botao-w {
+  background: var(--p-botao-w-fundo);
+  color: var(--p-botao-w-texto);
+  box-shadow: var(--p-botao-w-sombra);
+  &:hover:not(:disabled) {
+    filter: brightness(0.94);
+  }
+}
+@utility pq-botao-g {
+  background: var(--p-superficie);
+  border-color: var(--p-linha-2);
+  color: var(--p-texto);
+  &:hover:not(:disabled) {
+    background: var(--p-superficie-2);
+  }
+}
+@utility pq-botao-v {
+  background: var(--p-botao-v-fundo);
+  color: #fff;
+  box-shadow: var(--p-botao-v-sombra);
+  &:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+}
+
+/* .ibtn — botão só de ícone */
+@utility pq-ibtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: var(--p-superficie);
+  border: 1px solid var(--p-linha);
+  position: relative;
+  color: var(--p-forte);
+  transition: background-color 0.15s ease;
+  &:hover:not(:disabled) {
+    background: var(--p-superficie-2);
+  }
+  & svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.75;
+  }
+}
+
+/* .av — foto redonda com aro */
+@utility pq-avatar {
+  border-radius: 999px;
+  object-fit: cover;
+  flex: none;
+  border: 1.5px solid var(--p-linha-2);
+}
+
+/* ícones no traço das telas (svg.i: 1.75) */
+@utility pq-icone {
+  stroke-width: 1.75;
+  flex: none;
+}
+
+/* rolagem sem barra (listas horizontais de chips/abas) */
+@utility pq-sem-barra {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

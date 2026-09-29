@@ -137,7 +137,7 @@ describe("montarWorkoutPlanPDF", () => {
 
 describe("nomeArquivoTreino", () => {
   it("remove acentos/símbolos e junta o ID", () => {
-    expect(nomeArquivoTreino(perfil)).toBe("PhysiqCalc-Treino-Lvia Cavalcante-72026.pdf");
-    expect(nomeArquivoTreino({ ...perfil, nome: null, user_code: null })).toBe("PhysiqCalc-Treino-Aluno-.pdf");
+    expect(nomeArquivoTreino(perfil)).toBe("Physiq-Treino-Lvia Cavalcante-72026.pdf");
+    expect(nomeArquivoTreino({ ...perfil, nome: null, user_code: null })).toBe("Physiq-Treino-Aluno-.pdf");
   });
 });

@@ -120,7 +120,7 @@ const UpdateChecker = () => {
           <>
             {needsPerm && (
               <p className="mt-2 text-xs text-muted-foreground font-body">
-                Permita "instalar apps desconhecidos" para o PhysiqCalc nas
+                Permita "instalar apps desconhecidos" para o Physiq nas
                 configurações que abriram, depois toque em baixar novamente.
               </p>
             )}

@@ -56,11 +56,11 @@ export function desenharCabecalho(doc: jsPDF, titulo: string, subtitulo?: string
   setFill(doc, TEMA.amarelo);
   doc.rect(0, 0, W, 14, 'F');
 
-  // PHYSIQCALC
+  // PHYSIQ
   setTextColor(doc, TEMA.fundo);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('PHYSIQCALC', 14, 9.5);
+  doc.text('PHYSIQ', 14, 9.5);
 
   // Título à direita
   doc.setFontSize(8);
@@ -156,7 +156,7 @@ export function desenharRodape(doc: jsPDF, textoEsquerda: string) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6);
   doc.text(textoEsquerda, 14, H - 7);
-  doc.text('PhysiqCalc - Bertoldo Performance', W - 14, H - 7, { align: 'right' });
+  doc.text('Physiq - Bertoldo Performance', W - 14, H - 7, { align: 'right' });
 }
 
 // ── Nova página com fundo ────────────────────────────────────────────────

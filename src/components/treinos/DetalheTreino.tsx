@@ -74,7 +74,7 @@ export function ListaExercicios({ resumo }: { resumo: TreinoResumo }) {
         {resumo.exercicios.map((ex, i) => (
           <div key={i} className="py-2 px-3 bg-secondary/30 rounded">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-heading text-foreground">🏆 {ex.nome}</span>
+              <span className="text-xs font-heading text-foreground">{ex.nome}</span>
               {ex.mediaPesoRep != null && (
                 <span className="text-[10px] text-primary font-heading">{ex.mediaPesoRep.toFixed(1)} kg/rep</span>
               )}

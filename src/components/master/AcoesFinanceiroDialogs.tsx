@@ -121,7 +121,7 @@ export function BloquearAlunosDialog({ alvo, onClose, onFeito }: Props) {
           </DialogDescription>
         </DialogHeader>
         <Campo rotulo="Mensagem pros alunos (opcional)" dica="Até 300 caracteres. Sem mensagem, vai o texto padrão.">
-          <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3} maxLength={300} className={TEXTAREA} placeholder="Ex.: Seu professor está com pendência no PhysiqCalc. Fale com ele." data-input-msg />
+          <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3} maxLength={300} className={TEXTAREA} placeholder="Ex.: Seu professor está com pendência no Physiq. Fale com ele." data-input-msg />
         </Campo>
         <Rodape onClose={onClose} onOk={() => void bloquear()} busy={busy} rotulo="Bloquear alunos" perigo />
       </DialogContent>

@@ -280,7 +280,7 @@ const TreinoDoDia = ({
     [series]
   );
 
-  // ✕ do exercício: abre o popup de remoção. Bloqueia quando já há registro do dia
+  // X do exercício: abre o popup de remoção. Bloqueia quando já há registro do dia
   // (treino concluído ou série OK) — remover apagaria o contexto do que foi feito.
   const handleAbrirRemover = (ex: Exercicio, origemId: string) => {
     if (concluido) {
@@ -662,7 +662,7 @@ const TreinoDoDia = ({
         );
       }
       onTreinoConcluido?.(dateKey, slotIdx, true);
-      toast.success("Treino concluído! 💪");
+      toast.success("Treino concluído!");
     }
     setSaving(false);
     onRefresh();
@@ -682,7 +682,7 @@ const TreinoDoDia = ({
         <div className="flex items-center gap-3">
           <button type="button" onClick={onAlterarGrupo}
             className="text-xs text-muted-foreground hover:text-primary font-heading uppercase tracking-wider transition-colors">
-            🔄 Alterar
+            Alterar
           </button>
           {onRemoverTreino && (
             <button type="button" onClick={onRemoverTreino}
@@ -740,7 +740,7 @@ const TreinoDoDia = ({
         <div className="text-[11px] font-body text-muted-foreground space-y-1" data-removidos>
           {removidos.map((r) => (
             <div key={r.exercicio_id} className="flex items-center gap-2 flex-wrap">
-              <span className="line-through opacity-70">{r.emoji} {r.nome}</span>
+              <span className="line-through opacity-70">{r.nome}</span>
               <span className="text-[9px] uppercase tracking-wider border border-muted-foreground/40 px-1 py-0.5 font-heading">
                 {r.escopo === "dia" ? "removido hoje" : "removido"}
               </span>
@@ -925,11 +925,11 @@ const ExercicioCard = ({
           </div>
           <button type="button" onClick={() => onSetInfoExercicio(ex)}
             className="font-heading text-sm text-foreground hover:text-primary transition-colors flex items-center gap-2">
-            <span>{ex.emoji}</span> {ex.nome}
+            {ex.nome}
           </button>
           {substituindo && (
             <span className="text-[9px] font-body text-primary/80 whitespace-nowrap" title={`No lugar de ${substituindo.nome}`}>
-              🔄 trocado
+              trocado
             </span>
           )}
         </div>
@@ -1035,11 +1035,11 @@ const SerieRow = React.memo(function SerieRow({
   if (isConcluida) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded bg-classify-green/10 border border-classify-green/20">
-        <span className="text-xs text-classify-green font-heading w-8">✅ S{serie.numero_serie}</span>
+        <span className="text-xs text-classify-green font-heading w-8 inline-flex items-center gap-0.5"><Check size={11} strokeWidth={3} aria-hidden />S{serie.numero_serie}</span>
         {tipoCorrida && serie.tempo_segundos ? (
           <span className="text-sm text-foreground/70 font-heading">
             {formatTempo(serie.tempo_segundos)} · {serie.distancia_km}km
-            {serie.pace_segundos_km ? <span className="text-xs text-primary ml-2">⚡ {formatPace(serie.pace_segundos_km)}</span> : null}
+            {serie.pace_segundos_km ? <span className="text-xs text-primary ml-2">pace {formatPace(serie.pace_segundos_km)}</span> : null}
           </span>
         ) : (
           <span className="text-sm text-foreground/70 font-heading">{serie.peso} kg × {serie.reps} reps</span>
@@ -1071,7 +1071,7 @@ const SerieRow = React.memo(function SerieRow({
             className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-1 outline-hidden focus:border-primary transition-colors"
             placeholder="0.0" step="0.1" min="0" aria-label={`Distancia serie ${serie.numero_serie} (km)`} />
         </div>
-        {pacePreview && <span className="text-xs text-primary font-heading">⚡ {pacePreview}</span>}
+        {pacePreview && <span className="text-xs text-primary font-heading">pace {pacePreview}</span>}
         <button type="button"
           onClick={() => { const t = parseTempo(tempo); const d = parseFloat(distancia); onConcluir(0, 0, t || undefined, d || undefined); }}
           className="ml-auto px-2 py-1 text-xs font-heading uppercase tracking-wider text-classify-green border border-classify-green/50 bg-classify-green/10 hover:bg-classify-green/20 transition-colors flex items-center gap-1 rounded">

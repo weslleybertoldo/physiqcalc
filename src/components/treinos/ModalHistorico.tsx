@@ -73,7 +73,7 @@ const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange
       <DialogContent className="bg-background border-muted-foreground/30 max-w-sm max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-foreground">
-            🕐 Histórico — {exercicioNome}
+            Histórico — {exercicioNome}
           </DialogTitle>
         </DialogHeader>
         {loading ? (
@@ -102,7 +102,7 @@ const ModalHistorico = ({ exercicioId, exercicioNome, userId, open, onOpenChange
                               <span className="text-muted-foreground">· {s.distancia_km}km</span>
                             )}
                             {s.pace_segundos_km && (
-                              <span className="text-primary text-xs">⚡ {formatPace(s.pace_segundos_km)}</span>
+                              <span className="text-primary text-xs">pace {formatPace(s.pace_segundos_km)}</span>
                             )}
                           </>
                         ) : (

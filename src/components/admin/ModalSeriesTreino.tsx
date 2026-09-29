@@ -89,7 +89,7 @@ export const ConteudoSeriesTreino = ({
             return (
               <div key={chave} className="flex items-center gap-2 py-1" data-admin-series-exercicio={chave}>
                 <span className="text-sm font-body text-foreground truncate flex-1 min-w-0">
-                  {ex.emoji} {ex.nome}
+                  {ex.nome}
                   {proprio && (
                     <span className="ml-1.5 text-[9px] uppercase tracking-wider text-primary border border-primary/40 px-1 py-0.5 font-heading">próprio</span>
                   )}
@@ -121,7 +121,7 @@ const ModalSeriesTreino = ({ treino, onOpenChange, ...rest }: Props) => (
   <Dialog open={!!treino} onOpenChange={onOpenChange}>
     <DialogContent className="bg-background border-muted-foreground/30 max-w-md max-h-[85vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-heading text-foreground">🔢 Séries do treino</DialogTitle>
+        <DialogTitle className="font-heading text-foreground">Séries do treino</DialogTitle>
       </DialogHeader>
       {treino && (
         <>

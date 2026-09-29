@@ -1,0 +1,126 @@
+{
+  "sobre": "Fotos de banco grátis embutidas no Physiq (spec 4.9 e P29): fundos do card do treino por grupo muscular e fotos padrão das refeições por tipo. Licença Unsplash: uso livre, inclusive comercial, sem atribuição obrigatória — os créditos ficam aqui mesmo assim.",
+  "gerado_por": "W1 (sistema visual premium e cascas), 29/09/2026",
+  "fotos": {
+    "treino/geral.webp": {
+      "id": "9dzWZQWZMdE",
+      "autor": "Anastase Maragos",
+      "perfil": "https://unsplash.com/@visualsbyroyalz",
+      "link": "https://unsplash.com/photos/shirtless-man-lifting-barbell-in-gym-9dzWZQWZMdE",
+      "descricao": "shirtless man lifting barbell in gym",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/peito.webp": {
+      "id": "kWmtX_NY5zM",
+      "autor": "Michael DeMoya",
+      "perfil": "https://unsplash.com/@demoya",
+      "link": "https://unsplash.com/photos/a-person-lifting-weights-kWmtX_NY5zM",
+      "descricao": "a person lifting weights",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/costas.webp": {
+      "id": "-jdfUP2N7Os",
+      "autor": "Richard R",
+      "perfil": "https://unsplash.com/@sepro",
+      "link": "https://unsplash.com/photos/a-man-with-a-barbell-in-a-gym--jdfUP2N7Os",
+      "descricao": "a man with a barbell in a gym",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/ombros.webp": {
+      "id": "u6wDM6tRhBs",
+      "autor": "Gyan Shahane",
+      "perfil": "https://unsplash.com/@gyanoba",
+      "link": "https://unsplash.com/photos/man-in-black-and-yellow-adidas-jersey-shirt-and-black-pants-sitting-on-black-exercise-bench-u6wDM6tRhBs",
+      "descricao": "man in black and yellow adidas jersey shirt and black pants sitting on black exercise bench",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/bracos.webp": {
+      "id": "ptafowF0Y-c",
+      "autor": "Ramy Mamdouh",
+      "perfil": "https://unsplash.com/@romba100",
+      "link": "https://unsplash.com/photos/man-lifting-dumbbell-in-a-stadium-setting-with-stadium-lights-ptafowF0Y-c",
+      "descricao": "Man lifting dumbbell in a stadium setting with stadium lights",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/pernas.webp": {
+      "id": "IYLLF511aOY",
+      "autor": "Land O'Lakes, Inc.",
+      "perfil": "https://unsplash.com/@landolakesinc",
+      "link": "https://unsplash.com/photos/woman-lifting-weights-in-a-gym-IYLLF511aOY",
+      "descricao": "Woman lifting weights in a gym",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/gluteos.webp": {
+      "id": "0tQLfwcr5-M",
+      "autor": "Ambitious Studio* | Rick Barrett",
+      "perfil": "https://unsplash.com/@weareambitious",
+      "link": "https://unsplash.com/photos/a-woman-with-tattoos-holding-a-kettle-in-a-gym-0tQLfwcr5-M",
+      "descricao": "a woman with tattoos holding a kettle in a gym",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/abdomen.webp": {
+      "id": "uQ9CSV9eJYw",
+      "autor": "Alora Griffiths",
+      "perfil": "https://unsplash.com/@aloragriffiths",
+      "link": "https://unsplash.com/photos/man-holding-black-dumbbell-uQ9CSV9eJYw",
+      "descricao": "man holding black dumbbell",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "treino/cardio.webp": {
+      "id": "RpHGFHwyFFk",
+      "autor": "Gold's Gym Nepal",
+      "perfil": "https://unsplash.com/@goldsgymnepal",
+      "link": "https://unsplash.com/photos/a-silhouette-of-a-person-on-a-treadmill-RpHGFHwyFFk",
+      "descricao": "A silhouette of a person on a treadmill",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "refeicoes/cafe-da-manha.webp": {
+      "id": "8oNpesw9idE",
+      "autor": "personalgraphic.com",
+      "perfil": "https://unsplash.com/@personal_graphic",
+      "link": "https://unsplash.com/photos/a-fried-egg-on-a-white-plate-8oNpesw9idE",
+      "descricao": "a fried egg on a white plate",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "refeicoes/lanche.webp": {
+      "id": "u256GzFi7Gw",
+      "autor": "Corleto Peanut butter",
+      "perfil": "https://unsplash.com/@corleto",
+      "link": "https://unsplash.com/photos/peanut-butter-with-black-spoon-u256GzFi7Gw",
+      "descricao": "peanut butter with black spoon",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "refeicoes/fruta.webp": {
+      "id": "8TthxGcqWWE",
+      "autor": "Ray Shrewsberry",
+      "perfil": "https://unsplash.com/@ray12119",
+      "link": "https://unsplash.com/photos/a-red-apple-sitting-on-top-of-a-wooden-table-8TthxGcqWWE",
+      "descricao": "a red apple sitting on top of a wooden table",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "refeicoes/almoco.webp": {
+      "id": "YWQ6bySSTsc",
+      "autor": "Andrew Relf",
+      "perfil": "https://unsplash.com/@andrew_relf",
+      "link": "https://unsplash.com/photos/a-plate-of-food-YWQ6bySSTsc",
+      "descricao": "a plate of food",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "refeicoes/jantar.webp": {
+      "id": "5lFfglgMaao",
+      "autor": "Narek Petrosyan",
+      "perfil": "https://unsplash.com/@np1991",
+      "link": "https://unsplash.com/photos/a-plate-of-food-5lFfglgMaao",
+      "descricao": "a plate of food",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    },
+    "refeicoes/ceia.webp": {
+      "id": "p-QPZfuBrbQ",
+      "autor": "mk. s",
+      "perfil": "https://unsplash.com/@mk__s",
+      "link": "https://unsplash.com/photos/a-bowl-filled-with-fruit-and-nuts-on-top-of-a-table-p-QPZfuBrbQ",
+      "descricao": "a bowl filled with fruit and nuts on top of a table",
+      "licenca": "Unsplash License (https://unsplash.com/license)"
+    }
+  }
+}

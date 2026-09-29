@@ -79,7 +79,7 @@ export const ConteudoExerciciosGrupo = ({ grupo, exercicios, idsNoTreino, onTogg
           className="accent-primary shrink-0"
         />
         <span className="text-sm font-body text-foreground truncate">
-          {ex.emoji} {ex.nome}
+          {ex.nome}
         </span>
         {mostrarGrupo && (
           <span className="text-[10px] text-muted-foreground font-body ml-auto shrink-0">
@@ -117,7 +117,7 @@ export const ConteudoExerciciosGrupo = ({ grupo, exercicios, idsNoTreino, onTogg
                 title="Remover do treino"
                 className="flex items-center gap-1 border border-primary/40 text-primary px-1.5 py-0.5 text-[11px] font-body hover:bg-primary/10 transition-colors disabled:opacity-50"
               >
-                {ex.emoji} {ex.nome}
+                {ex.nome}
                 <X size={10} />
               </button>
             ))}
@@ -148,7 +148,7 @@ const ModalExerciciosGrupoAdmin = ({ grupo, onOpenChange, ...rest }: Props) => (
   <Dialog open={!!grupo} onOpenChange={onOpenChange}>
     <DialogContent className="bg-background border-muted-foreground/30 max-w-md max-h-[85vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-heading text-foreground">✏️ Exercícios do treino</DialogTitle>
+        <DialogTitle className="font-heading text-foreground">Exercícios do treino</DialogTitle>
       </DialogHeader>
 
       {grupo && (

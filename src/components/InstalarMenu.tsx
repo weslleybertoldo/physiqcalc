@@ -38,7 +38,7 @@ const InstalarMenu = ({ variante = "rodape" }: Props) => {
       baixarNoNavegador(RELEASES_PAGE);
       return;
     }
-    toast.success(`Baixando PhysiqCalc v${rel.version} (APK)…`);
+    toast.success(`Baixando Physiq v${rel.version} (APK)…`);
     baixarNoNavegador(rel.url);
   };
 
@@ -58,7 +58,7 @@ const InstalarMenu = ({ variante = "rodape" }: Props) => {
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="w-[calc(100%-4rem)] max-w-68 rounded-xl p-4 gap-3" data-instalar-dialog>
           <DialogHeader className="space-y-0.5">
-            <DialogTitle className="font-heading text-xs uppercase tracking-wider text-center">Instalar o PhysiqCalc</DialogTitle>
+            <DialogTitle className="font-heading text-xs uppercase tracking-wider text-center">Instalar o Physiq</DialogTitle>
             <DialogDescription className="font-body text-[11px] text-center">Escolha como quer instalar</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

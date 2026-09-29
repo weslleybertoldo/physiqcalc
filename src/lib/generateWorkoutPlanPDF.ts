@@ -180,7 +180,7 @@ export function montarWorkoutPlanPDF(profile: WorkoutProfile, dias: WorkoutDia[]
 export function nomeArquivoTreino(profile: WorkoutProfile): string {
   const nome = profile.nome?.trim() || "Aluno";
   const safeName = nome.replace(/[^a-zA-Z0-9 ]/g, "");
-  return `PhysiqCalc-Treino-${safeName}-${profile.user_code || ""}.pdf`;
+  return `Physiq-Treino-${safeName}-${profile.user_code || ""}.pdf`;
 }
 
 export function generateWorkoutPlanPDF(profile: WorkoutProfile, dias: WorkoutDia[]) {

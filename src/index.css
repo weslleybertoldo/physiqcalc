@@ -7,6 +7,10 @@
 /* Só src/ gera classes (como o `content` do tailwind.config antigo): docs/, scripts/ e supabase/ ficam fora */
 @import "tailwindcss" source("../src");
 @import "tw-animate-css";
+/* Visual premium (W1): tokens escuro/claro das telas aprovadas + utilidades pq-* (src/ui/tema/tokens.css) */
+@import "./ui/tema/tokens.css";
+/* Convivência das telas antigas com as cascas (fallback da spec 11.1; sai na W28) */
+@import "./ui/tema/legado.css";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -16,7 +16,12 @@
     </style>
 
 
+    <!-- Abertura (W1): fundo da tela do app com a marca Physiq no centro. Android 12+ usa a SplashScreen do
+         sistema (fundo + ícone abaixo); antes do 12, o fundo da janela (drawable/splash.xml) com o mesmo desenho. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_fundo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icone</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
