@@ -243,6 +243,17 @@ def caso_aluno(nav, a) -> None:
     n_series = sql_treino(f"select count(*)::int as n from public.tb_treino_series where user_id = '{uid_t}'")[0]["n"]
     n_local = c.pg.evaluate("""async () => { try { const db = window.__physiqPowerSync || null; return db ? (await db.getAll('select count(*) as n from tb_treino_series'))[0].n : -1 } catch { return -1 } }""")
     p.check(n_series > 0, f"o aluno tem séries antigas no Banco do Treino ({n_series}); no aparelho (SQLite): {n_local if n_local >= 0 else 'n/d'}")
+    # as séries antigas na tela: o histórico de treinos (vem do PowerSync, do usuário antigo do Calc)
+    c.pg.locator("button[title='Histórico de Treinos']").first.click()
+    p.check(c.esperar(lambda: "HISTÓRICO DE TREINOS" in c.texto().upper(), 30), "histórico de treinos abre")
+    total = c.pg.evaluate("""() => { const el = [...document.querySelectorAll('p')].find(p => /^total$/i.test(p.textContent.trim()));
+        return el ? Number(el.nextElementSibling?.textContent?.trim() || 0) : -1 }""")
+    p.check(c.esperar(lambda: c.pg.evaluate("""() => { const el = [...document.querySelectorAll('p')].find(p => /^total$/i.test(p.textContent.trim()));
+        return el ? Number(el.nextElementSibling?.textContent?.trim() || 0) : 0 }""") > 0, 30), f"o histórico mostra os treinos antigos do Calc (total > 0; {total})")
+    c.pg.wait_for_timeout(1200)
+    c.print("app_historico_antigo")
+    c.pg.go_back() if False else c.pg.goto(c.base + "/treino", wait_until="domcontentloaded")
+    c.esperar(lambda: status_sync(c) == "SINCRONIZADO", 90)
     if a.escrever:
         offline_serie(c, a.schema, uid_t)
     c.fim()
