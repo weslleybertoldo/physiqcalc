@@ -97,17 +97,17 @@ const IntegracoesPage = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="font-heading text-sm text-foreground truncate">{i.nome}</p>
-                    {i.ehMaster && <Etiqueta tom="ok" className="!text-[10px]">Master</Etiqueta>}
-                    {i.status === "suspenso" && <Etiqueta tom="ruim" className="!text-[10px]">Suspenso</Etiqueta>}
+                    {i.ehMaster && <Etiqueta tom="ok" className="text-[10px]!">Master</Etiqueta>}
+                    {i.status === "suspenso" && <Etiqueta tom="ruim" className="text-[10px]!">Suspenso</Etiqueta>}
                   </div>
                   <p className="text-xs text-muted-foreground font-body truncate">{i.email || "—"}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
                     {i.temPix ? (
-                      <Etiqueta tom="ok" className="!text-[10px]" data-pix="ok">Pix cadastrado · {i.pixExibir === false ? "oculto do aluno" : "exibido ao aluno"}</Etiqueta>
+                      <Etiqueta tom="ok" className="text-[10px]!" data-pix="ok">Pix cadastrado · {i.pixExibir === false ? "oculto do aluno" : "exibido ao aluno"}</Etiqueta>
                     ) : (
-                      <Etiqueta tom={i.tipo === "pix_manual" ? "aviso" : "neutro"} className="!text-[10px]" data-pix="sem">Sem chave Pix{i.tipo === "pix_manual" ? " — alunos não conseguem pagar" : ""}</Etiqueta>
+                      <Etiqueta tom={i.tipo === "pix_manual" ? "aviso" : "neutro"} className="text-[10px]!" data-pix="sem">Sem chave Pix{i.tipo === "pix_manual" ? " — alunos não conseguem pagar" : ""}</Etiqueta>
                     )}
-                    {recriar && <Etiqueta tom="aviso" className="!text-[10px]">assinatura MP precisa ser recriada</Etiqueta>}
+                    {recriar && <Etiqueta tom="aviso" className="text-[10px]!">assinatura MP precisa ser recriada</Etiqueta>}
                     {i.atualizadoEm && <span className="text-[10px] text-muted-foreground font-body">atualizado {fmtDataHora(i.atualizadoEm)}</span>}
                   </div>
                 </div>

@@ -201,7 +201,7 @@ const AdminPagamentosStatus = ({ userId, somenteLeitura = false }: { userId: str
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-muted-foreground font-body uppercase tracking-wider">Método</label>
                   <select value={regMetodo} onChange={(e) => setRegMetodo(e.target.value)}
-                    className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-none focus:border-primary">
+                    className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-hidden focus:border-primary">
                     {METODOS_MANUAIS.map((m) => (
                       <option key={m.value} value={m.value} className="bg-background text-foreground">{m.label}</option>
                     ))}

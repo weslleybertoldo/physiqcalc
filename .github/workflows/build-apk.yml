@@ -49,9 +49,11 @@ jobs:
           V="${{ steps.version.outputs.current }}"
           IFS='.' read -r MA MI PA <<< "$V"
           PA=${PA:-0}
-          # versionCode = inteiro crescente (MAJOR*10000 + MINOR*100 + PATCH).
+          # versionCode = inteiro crescente (MAJOR*100000 + MINOR*100 + PATCH).
           # Sem isso o APK sai sempre com versionCode 1 e o Android recusa o update.
-          CODE=$((MA * 10000 + MI * 100 + PA))
+          # Physiq 3.0 (W0): era MAJOR*10000 — 3.0 daria 30000, MENOR que os 33600 da 2.136, e o
+          # Android recusaria a atualização. Com *100000: 3.0 = 300000 (e 3.1, 3.2… seguem subindo).
+          CODE=$((MA * 100000 + MI * 100 + PA))
           sed -i "s/versionCode [0-9]\+/versionCode $CODE/" android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"$V\"/" android/app/build.gradle
           echo "versionCode=$CODE versionName=$V"
@@ -73,6 +75,9 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_MP_PUBLIC_KEY: ${{ secrets.VITE_MP_PUBLIC_KEY }}
+          # banco principal do Physiq (spec 7.8): entra no APK antes da W3; ninguém lê ainda
+          VITE_PRINCIPAL_URL: ${{ secrets.VITE_PRINCIPAL_URL }}
+          VITE_PRINCIPAL_ANON_KEY: ${{ secrets.VITE_PRINCIPAL_ANON_KEY }}
 
       - name: Sync Capacitor
         run: npx cap sync android
@@ -91,27 +96,27 @@ jobs:
       - name: Rename APK
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          mv "$APK" "android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}.apk"
+          mv "$APK" "android/app/build/outputs/apk/release/Physiq-v${{ steps.version.outputs.current }}.apk"
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PhysiqCalc-v${{ steps.version.outputs.current }}
-          path: android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}.apk
+          name: Physiq-v${{ steps.version.outputs.current }}
+          path: android/app/build/outputs/apk/release/Physiq-v${{ steps.version.outputs.current }}.apk
           retention-days: 30
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.current }}
-          name: PhysiqCalc v${{ steps.version.outputs.current }}
+          name: Physiq v${{ steps.version.outputs.current }}
           body: |
-            ## PhysiqCalc v${{ steps.version.outputs.current }}
+            ## Physiq v${{ steps.version.outputs.current }}
 
             APK gerado automaticamente.
 
-            **Download:** Baixe o `PhysiqCalc-v${{ steps.version.outputs.current }}.apk` abaixo.
-          files: android/app/build/outputs/apk/release/PhysiqCalc-v${{ steps.version.outputs.current }}.apk
+            **Download:** Baixe o `Physiq-v${{ steps.version.outputs.current }}.apk` abaixo.
+          files: android/app/build/outputs/apk/release/Physiq-v${{ steps.version.outputs.current }}.apk
           generate_release_notes: true
           make_latest: true
 

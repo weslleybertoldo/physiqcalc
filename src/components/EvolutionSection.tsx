@@ -341,25 +341,25 @@ const EvolutionSection = ({ userId, isAdmin = false, sexo = "male", idade = null
               <div className="result-card" style={{ height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground) / 0.15)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} domain={["auto", "auto"]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, var(--muted-foreground) 15%, transparent)" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
+                    <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} domain={["auto", "auto"]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--muted-foreground) / 0.3)",
+                        backgroundColor: "var(--background)",
+                        border: "1px solid color-mix(in oklab, var(--muted-foreground) 30%, transparent)",
                         fontSize: 12,
                       }}
                       formatter={(v: number, nome: string, item: { payload?: { metodo?: string } }) => [Number(v.toFixed(1)), `${nome} · ${item.payload?.metodo ?? ""}`]}
                     />
-                    <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--primary))" }} name={METRIC_LABELS[selectedMetric]} />
+                    <Line type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2} dot={{ r: 4, fill: "var(--primary)" }} name={METRIC_LABELS[selectedMetric]} />
                     {chartData.length > 0 && (
                       <ReferenceDot
                         x={chartData[chartData.length - 1].date}
                         y={chartData[chartData.length - 1].value!}
                         r={7}
-                        fill="hsl(var(--primary))"
-                        stroke="hsl(var(--background))"
+                        fill="var(--primary)"
+                        stroke="var(--background)"
                         strokeWidth={2}
                       />
                     )}

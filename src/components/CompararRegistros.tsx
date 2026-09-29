@@ -60,7 +60,7 @@ const CompararRegistros = ({ registros }: Props) => {
   if (registros.length === 0) return null;
 
   const selectClass =
-    "bg-background border border-border text-foreground text-sm font-body px-3 py-2 rounded-none focus:outline-none focus:border-primary";
+    "bg-background border border-border text-foreground text-sm font-body px-3 py-2 rounded-none focus:outline-hidden focus:border-primary";
 
   return (
     <section>
@@ -109,7 +109,7 @@ const CompararRegistros = ({ registros }: Props) => {
               {item.url ? (
                 <img src={item.url} alt={`${tipo} ${item.mes}`} className="w-full object-contain max-h-[70vh]" />
               ) : (
-                <div className="aspect-[3/4] flex items-center justify-center text-xs text-muted-foreground font-body">
+                <div className="aspect-3/4 flex items-center justify-center text-xs text-muted-foreground font-body">
                   Sem foto neste mês
                 </div>
               )}

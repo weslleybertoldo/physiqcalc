@@ -42,7 +42,7 @@ export default function ProfessorDetalhesSheet({ userId, onClose }: Props) {
     <Sheet open={!!userId} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" className="bg-background border-muted-foreground/30 w-full sm:max-w-md overflow-y-auto" data-sheet-professor={userId ?? undefined}>
         <SheetHeader className="text-left">
-          <SheetTitle className="font-heading text-foreground uppercase tracking-wider text-base break-words">{p?.nome ?? "Professor"}</SheetTitle>
+          <SheetTitle className="font-heading text-foreground uppercase tracking-wider text-base wrap-break-word">{p?.nome ?? "Professor"}</SheetTitle>
           <SheetDescription className="font-body text-xs break-all">{p?.email ?? (loading ? "Carregando..." : "")}</SheetDescription>
         </SheetHeader>
 

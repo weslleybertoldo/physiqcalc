@@ -11,7 +11,7 @@ export type ModoPlanoCobranca = "editar" | "espelho";
 export interface PlanoCobrancaInicial { plano_nome?: string | null; mensalidade_valor?: number | string | null }
 interface Props { userId: string; modo: ModoPlanoCobranca; onSalvo?: () => void; inicial?: PlanoCobrancaInicial }
 
-const CAMPO = "bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-none focus:border-primary disabled:opacity-70";
+const CAMPO = "bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-hidden focus:border-primary disabled:opacity-70";
 
 /**
  * Plano, mensalidade, tags e pagamentos de UM aluno (pedido 13/09/2026).

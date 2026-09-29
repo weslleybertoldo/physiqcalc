@@ -595,7 +595,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                   <select
                     value=""
                     onChange={(e) => e.target.value && handleTogglePastaGrupo(e.target.value, pastaAberta.id)}
-                    className="w-full bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary"
+                    className="w-full bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-hidden focus:border-primary"
                   >
                     <option value="" className="bg-background text-foreground">+ Adicionar treino a esta pasta...</option>
                     {grupos.filter((g) => !(pastasDoGrupo[g.id] || []).includes(pastaAberta.id)).map((g) => {
@@ -789,7 +789,7 @@ const AdminTreinos = ({ onBack }: Props) => {
               <input type="text" value={novoExNome} onChange={(e) => setNovoExNome(e.target.value)} placeholder="Nome do exercício..." className="input-underline" />
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
-                  <select value={novoExGrupo} onChange={(e) => setNovoExGrupo(e.target.value)} className="w-full bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
+                  <select value={novoExGrupo} onChange={(e) => setNovoExGrupo(e.target.value)} className="w-full bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-2 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                     <option value="" className="bg-background text-foreground">Selecionar...</option>
                     {gruposMusculares.map((g) => (<option key={g.id} value={g.nome} className="bg-background text-foreground">{g.nome}</option>))}
                   </select>
@@ -800,19 +800,19 @@ const AdminTreinos = ({ onBack }: Props) => {
                   </button>
                 ) : (
                   <div className="flex gap-2 items-end flex-1">
-                    <input autoFocus value={novoMusculo} onChange={e => setNovoMusculo(e.target.value)} onKeyDown={e => e.key === "Enter" && salvarNovoMusculo()} placeholder="ex: Trapézio Médio" className="flex-1 bg-transparent border-b border-primary py-2 text-foreground text-sm outline-none focus-visible:border-primary focus-visible:border-b-2" />
+                    <input autoFocus value={novoMusculo} onChange={e => setNovoMusculo(e.target.value)} onKeyDown={e => e.key === "Enter" && salvarNovoMusculo()} placeholder="ex: Trapézio Médio" className="flex-1 bg-transparent border-b border-primary py-2 text-foreground text-sm outline-hidden focus-visible:border-primary focus-visible:border-b-2" />
                     <button type="button" onClick={salvarNovoMusculo} disabled={!novoMusculo.trim()} className="px-3 py-2 bg-primary text-primary-foreground text-[10px] font-bold uppercase rounded disabled:opacity-40">Salvar</button>
                     <button type="button" onClick={() => { setAdicionandoMusculo(false); setNovoMusculo(""); }} className="px-3 py-2 border border-muted-foreground/20 text-muted-foreground text-[10px] font-bold uppercase rounded">✕</button>
                   </div>
                 )}
-                <input type="text" value={novoExEmoji} onChange={(e) => setNovoExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-body text-lg py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2" />
-              <select value={novoExTipo} onChange={(e) => setNovoExTipo(e.target.value as "musculacao" | "corrida")} className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
+                <input type="text" value={novoExEmoji} onChange={(e) => setNovoExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-foreground font-body text-lg py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2" />
+              <select value={novoExTipo} onChange={(e) => setNovoExTipo(e.target.value as "musculacao" | "corrida")} className="bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                 <option value="musculacao" className="bg-background text-foreground">💪 Musculação</option>
                 <option value="corrida" className="bg-background text-foreground">🏃 Corrida</option>
               </select>
               </div>
               <input type="text" value={novoExSubgrupo} onChange={(e) => setNovoExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional, ex: Porção medial)" className="input-underline text-sm" />
-              <textarea value={novoExDica} onChange={(e) => setNovoExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-none focus:border-primary" />
+              <textarea value={novoExDica} onChange={(e) => setNovoExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-hidden focus:border-primary" />
               <p className="text-[10px] text-muted-foreground font-body">A foto/gif é adicionada na edição do exercício.</p>
               <div className="flex gap-2">
                 <button type="button" onClick={handleAddExercicio} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase">
@@ -869,10 +869,10 @@ const AdminTreinos = ({ onBack }: Props) => {
                     <div className="space-y-2">
                       <input type="text" value={editExNome} onChange={(e) => setEditExNome(e.target.value)} className="input-underline text-sm" placeholder="Nome" />
                       <div className="flex gap-2">
-                        <select value={editExGrupo} onChange={(e) => setEditExGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
+                        <select value={editExGrupo} onChange={(e) => setEditExGrupo(e.target.value)} className="flex-1 bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                           {gruposMusculares.map((g) => <option key={g.id} value={g.nome} className="bg-background text-foreground">{g.nome}</option>)}
                         </select>
-                        <select value={editExEmoji} onChange={(e) => setEditExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-none focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
+                        <select value={editExEmoji} onChange={(e) => setEditExEmoji(e.target.value)} className="w-16 bg-transparent border-b border-muted-foreground text-center text-lg py-1 outline-hidden focus:border-primary focus-visible:border-primary focus-visible:border-b-2">
                           {(EMOJIS_EXERCICIO.includes(editExEmoji) ? EMOJIS_EXERCICIO : [editExEmoji, ...EMOJIS_EXERCICIO]).map((e) => <option key={e} value={e} className="bg-background text-foreground">{e}</option>)}
                         </select>
                       </div>
@@ -896,7 +896,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                         </div>
                       </div>
                       <input type="text" value={editExSubgrupo} onChange={(e) => setEditExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional)" className="input-underline text-sm" />
-                      <textarea value={editExDica} onChange={(e) => setEditExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-none focus:border-primary" />
+                      <textarea value={editExDica} onChange={(e) => setEditExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-hidden focus:border-primary" />
                       <div className="flex gap-2">
                         <button type="button" onClick={handleEditExercicio} disabled={uploadingImg} className="px-3 py-1.5 bg-primary text-primary-foreground font-heading text-xs uppercase disabled:opacity-50"><Save size={12} className="inline mr-1" />{uploadingImg ? "Salvando..." : "Salvar"}</button>
                         <button type="button" onClick={() => { setEditingExId(null); setEditExImagemFile(null); }} className="px-3 py-1.5 text-muted-foreground font-heading text-xs uppercase"><X size={12} className="inline mr-1" />Cancelar</button>

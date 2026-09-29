@@ -192,7 +192,7 @@ const WorkoutReminder = ({ grupoNome, dateLabel }: Props) => {
                   const [h, m] = e.target.value.split(":").map(Number);
                   saveTime(h, m);
                 }}
-                className="bg-transparent border border-border rounded px-2 py-1 text-sm text-foreground font-heading outline-none focus:border-primary"
+                className="bg-transparent border border-border rounded px-2 py-1 text-sm text-foreground font-heading outline-hidden focus:border-primary"
               />
             </div>
 

@@ -1,165 +1,258 @@
-/* Fontes locais (public/fonts, woff2 latin + latin-ext baixadas do Google Fonts em 03/09/2026).
+/* Physiq — base visual (W0): Tailwind 4 com a configuração no CSS (`@theme`), shadcn/ui novo e os
+   tokens de cor das telas aprovadas (premium.css) em OKLCH. Tema escuro é o padrão (P21).
+
+   Fonte local (public/fonts, Geist variável 100–900, OFL — licença em public/fonts/Geist-OFL.txt).
    Sem @import externo: a abertura não depende de fonts.googleapis/gstatic e o APK tem a fonte
    certa offline. unicode-range = o browser só baixa o subset que a tela usa. */
+/* Só src/ gera classes (como o `content` do tailwind.config antigo): docs/, scripts/ e supabase/ ficam fora */
+@import "tailwindcss" source("../src");
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
 @font-face {
-  font-family: 'Inter';
+  font-family: "Geist";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/inter-400-latin-ext.woff2') format('woff2');
+  src: url("/fonts/geist-latin-ext-wght.woff2") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: "Geist";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/inter-400-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/inter-500-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/inter-500-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/inter-600-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/inter-600-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Roboto Condensed';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/roboto-condensed-700-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Roboto Condensed';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/roboto-condensed-700-latin.woff2') format('woff2');
+  src: url("/fonts/geist-latin-wght.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tokens (valores das telas aprovadas; hex de origem no comentário). Os nomes são os do shadcn/ui,
+   pra que os componentes de src/components/ui e as telas atuais sigam iguais — só a cor muda. */
+:root {
+  --radius: 0px;
 
-@layer base {
-  :root {
-    --background: 0 0% 5.1%;
-    --foreground: 0 0% 91.8%;
+  --background: oklch(0.141 0.004 285.8); /* #09090B tela */
+  --foreground: oklch(0.985 0 0); /* #FAFAFA texto */
 
-    --card: 0 0% 5.1%;
-    --card-foreground: 0 0% 91.8%;
+  --card: oklch(0.183 0.004 286); /* #121214 cartão sobre a tela */
+  --card-foreground: oklch(0.985 0 0);
 
-    --popover: 0 0% 5.1%;
-    --popover-foreground: 0 0% 91.8%;
+  --popover: oklch(0.202 0.01 285.5); /* #16161B */
+  --popover-foreground: oklch(0.985 0 0);
 
-    --primary: 45 100% 50%;
-    --primary-foreground: 0 0% 5.1%;
+  --primary: oklch(0.606 0.219 292.7); /* #8B5CF6 violeta (Treino) */
+  --primary-foreground: oklch(0.985 0 0);
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 91.8%;
+  --secondary: oklch(0.21 0.006 285.9); /* #18181B */
+  --secondary-foreground: oklch(0.985 0 0);
 
-    --muted: 0 0% 15%;
-    /* WCAG AA: 65% sobre bg 5% = ~7:1 (antes 40% = 2.0:1, falhava AA) */
-    --muted-foreground: 0 0% 65%;
+  --muted: oklch(0.274 0.005 286); /* #27272A */
+  --muted-foreground: oklch(0.712 0.013 286.1); /* #A1A1AA secundário */
 
-    --accent: 45 100% 50%;
-    --accent-foreground: 0 0% 5.1%;
+  --accent: oklch(0.606 0.219 292.7); /* #8B5CF6 */
+  --accent-foreground: oklch(0.985 0 0);
 
-    --destructive: 0 72% 39.2%;
-    --destructive-foreground: 0 0% 91.8%;
+  --destructive: oklch(0.645 0.215 16.4); /* #F43F5E rosa (erro) */
+  --destructive-foreground: oklch(0.985 0 0);
 
-    --border: 0 0% 40%;
-    --input: 0 0% 40%;
-    --ring: 45 100% 50%;
+  --border: oklch(1 0 0 / 12%); /* rgba(255,255,255,.12) linha */
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.606 0.219 292.7);
 
-    --radius: 0px;
+  /* Cores da classificação (composição corporal) — mesmas cores de antes, só em OKLCH */
+  --gold: oklch(0.767 0.145 85.3);
+  --green: oklch(0.52 0.136 143.7);
+  --blue: oklch(0.477 0.142 254.5);
+  --yellow: oklch(0.855 0.165 88.3);
+  --red: oklch(0.542 0.196 26.8);
 
-    /* Classification colors */
-    --gold: 43 72% 52%;
-    --green: 122 47% 33%;
-    --blue: 211 80% 37%;
-    --yellow: 45 97% 58%;
-    --red: 0 67% 47%;
+  /* Gráficos (componente chart do shadcn): violeta, verde, ciano, âmbar, rosa */
+  --chart-1: oklch(0.606 0.219 292.7);
+  --chart-2: oklch(0.696 0.149 162.5);
+  --chart-3: oklch(0.797 0.134 211.5);
+  --chart-4: oklch(0.769 0.165 70.1);
+  --chart-5: oklch(0.645 0.215 16.4);
 
-    --sidebar-background: 0 0% 5.1%;
-    --sidebar-foreground: 0 0% 91.8%;
-    --sidebar-primary: 45 100% 50%;
-    --sidebar-primary-foreground: 0 0% 5.1%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 91.8%;
-    --sidebar-border: 0 0% 40%;
-    --sidebar-ring: 45 100% 50%;
+  --sidebar: oklch(0.156 0.006 285.6); /* #0C0C0F */
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.606 0.219 292.7);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.21 0.006 285.9);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.606 0.219 292.7);
+}
+
+@theme inline {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  /* A fonte de título antiga (Roboto Condensed) só tinha o peso 700 carregado: todo `font-heading`
+     saía em negrito, com ou sem `font-bold`. A Geist é variável (100–900), então o negrito vem daqui
+     — e o `font-body` zera, pra texto comum dentro de um título não herdar o 700. */
+  --font-heading: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-heading--font-variation-settings: "wght" 700;
+  --font-body: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-body--font-variation-settings: normal;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-classify-gold: var(--gold);
+  --color-classify-green: var(--green);
+  --color-classify-blue: var(--blue);
+  --color-classify-yellow: var(--yellow);
+  --color-classify-red: var(--red);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Mesma escala de raio de antes (tailwind.config: lg/md/sm a partir de --radius = 0) */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-slide-left: slide-left 250ms cubic-bezier(0.6, 0, 0.4, 1);
+  --animate-slide-right-in: slide-right-in 250ms cubic-bezier(0.6, 0, 0.4, 1);
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-slide-up: slide-up 300ms ease-out;
+
+  @keyframes slide-left {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+  }
+  @keyframes slide-right-in {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
   }
 
   body {
     @apply bg-background text-foreground font-body antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-heading font-bold uppercase tracking-tight;
+  }
+
+  /* Compatibilidade com o Tailwind 3 (as telas ficam iguais): botão com mãozinha e placeholder cinza */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: oklch(0.714 0.019 261.3); /* #9CA3AF, o gray-400 que o Tailwind 3 usava */
   }
 }
 
-@layer components {
-  .input-underline {
-    @apply w-full bg-transparent border-0 border-b border-muted-foreground px-0 py-3 text-foreground font-body text-lg outline-none transition-colors duration-200 placeholder:text-muted-foreground focus-visible:border-b-2 focus-visible:border-primary;
-  }
-  .input-underline:focus {
+@utility input-underline {
+  @apply w-full bg-transparent border-0 border-b border-muted-foreground px-0 py-3 text-foreground font-body text-lg outline-hidden transition-colors duration-200 placeholder:text-muted-foreground focus-visible:border-b-2 focus-visible:border-primary;
+  &:focus {
     @apply border-b-2 border-primary;
   }
+}
 
-  .section-divider {
-    @apply border-t border-muted-foreground;
-  }
+@utility section-divider {
+  @apply border-t border-muted-foreground;
+}
 
-  .result-card {
-    @apply border border-muted-foreground p-6;
-  }
+@utility result-card {
+  @apply border border-muted-foreground p-6;
+}
 
-  .toggle-active {
-    @apply bg-primary text-primary-foreground;
-  }
+@utility toggle-active {
+  @apply bg-primary text-primary-foreground;
+}
 
-  .toggle-inactive {
-    @apply bg-secondary text-muted-foreground;
-  }
+@utility toggle-inactive {
+  @apply bg-secondary text-muted-foreground;
 }
 
 /* trilho de navegação mobile (SaaS 12/09/2026): esconde a barra de rolagem horizontal */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

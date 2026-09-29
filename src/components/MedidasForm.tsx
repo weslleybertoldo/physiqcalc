@@ -52,7 +52,7 @@ const MedidasForm = ({ medidas, onChange, colunas = 3 }: MedidasFormProps) => {
               placeholder="0"
               value={medidas[key]}
               onChange={e => handleChange(key, e.target.value)}
-              className="w-full bg-transparent border-b border-muted-foreground/20 py-2 text-foreground text-[16px] outline-none focus:border-primary transition-colors"
+              className="w-full bg-transparent border-b border-muted-foreground/20 py-2 text-foreground text-[16px] outline-hidden focus:border-primary transition-colors"
             />
           </div>
         ))}

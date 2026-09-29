@@ -98,12 +98,12 @@ const RegistrosSection = ({ userId }: Props) => {
                     url ? (
                       <img src={url} alt={`${t.label} ${mesAberto}`} className="w-full object-contain max-h-[70vh]" />
                     ) : (
-                      <div className="aspect-[3/4] flex items-center justify-center text-xs text-muted-foreground font-body">
+                      <div className="aspect-3/4 flex items-center justify-center text-xs text-muted-foreground font-body">
                         Carregando...
                       </div>
                     )
                   ) : (
-                    <div className="aspect-[3/4] flex items-center justify-center text-xs text-muted-foreground font-body">
+                    <div className="aspect-3/4 flex items-center justify-center text-xs text-muted-foreground font-body">
                       Sem foto
                     </div>
                   )}

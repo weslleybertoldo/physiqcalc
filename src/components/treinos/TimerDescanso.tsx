@@ -368,7 +368,7 @@ const TimerDescanso = ({
             <input
               type="number" value={editMinutes}
               onChange={(e) => handleChangeTime(e.target.value)}
-              className="w-12 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-0.5 outline-none focus:border-primary"
+              className="w-12 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading text-sm py-0.5 outline-hidden focus:border-primary"
               step="0.5" min="0.5" max="10"
             />
             <span className="text-[10px] text-muted-foreground font-heading">min</span>

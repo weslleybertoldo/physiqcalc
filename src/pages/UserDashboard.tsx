@@ -117,12 +117,12 @@ const UserDashboard = () => {
           PHYSIQ<span className="text-primary">CALC</span>
         </h1>
 
-        {/* Tabs */}
+        {/* Tabs — mr-6/tracking-wider (eram mr-8/widest): a Geist é mais larga que a Roboto Condensed e "Registros" saía cortado em 390px */}
         <div className="flex border-b border-muted-foreground/30 mb-2 overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab("comp")}
-            className={`py-3 px-1 mr-8 font-heading text-sm uppercase tracking-widest transition-colors duration-200 border-b-2 ${
+            className={`py-3 px-1 mr-6 font-heading text-sm uppercase tracking-wider transition-colors duration-200 border-b-2 ${
               activeTab === "comp" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
             }`}
           >
@@ -131,7 +131,7 @@ const UserDashboard = () => {
           <button
             type="button"
             onClick={() => setActiveTab("evolucao")}
-            className={`py-3 px-1 mr-8 font-heading text-sm uppercase tracking-widest transition-colors duration-200 border-b-2 whitespace-nowrap ${
+            className={`py-3 px-1 mr-6 font-heading text-sm uppercase tracking-wider transition-colors duration-200 border-b-2 whitespace-nowrap ${
               activeTab === "evolucao" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
             }`}
           >
@@ -140,7 +140,7 @@ const UserDashboard = () => {
           <button
             type="button"
             onClick={() => setActiveTab("registros")}
-            className={`py-3 px-1 font-heading text-sm uppercase tracking-widest transition-colors duration-200 border-b-2 whitespace-nowrap ${
+            className={`py-3 px-1 font-heading text-sm uppercase tracking-wider transition-colors duration-200 border-b-2 whitespace-nowrap ${
               activeTab === "registros" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
             }`}
           >

@@ -78,7 +78,7 @@ const SeletorAcademia = ({ userId, academiaAtual, onTrocar, onSalvar, onCriada, 
         <select
           value={academiaAtual?.id || ""}
           onChange={(e) => handleSelect(e.target.value)}
-          className="flex-1 min-w-[140px] bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-none focus:border-primary"
+          className="flex-1 min-w-[140px] bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-hidden focus:border-primary"
         >
           {/* cor explícita: o dropdown nativo não herda o tema e o texto ficava branco no fundo branco */}
           <option value="" className="bg-background text-foreground">Selecionar academia...</option>
@@ -128,7 +128,7 @@ const SeletorAcademia = ({ userId, academiaAtual, onTrocar, onSalvar, onCriada, 
             onChange={(e) => setNovoNome(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && criarAcademia()}
             placeholder="ex: Smartfit"
-            className="flex-1 bg-transparent border-b border-primary py-1.5 text-foreground text-sm outline-none"
+            className="flex-1 bg-transparent border-b border-primary py-1.5 text-foreground text-sm outline-hidden"
           />
           <button
             type="button"

@@ -9,7 +9,7 @@ const BloqueioMasterGate = () => {
   const { status } = useMensalidadeStatus(user?.id);
   if (isStaff || !status?.bloqueadoPeloMaster) return null;
   return (
-    <div className="fixed inset-0 z-[60] bg-background">
+    <div className="fixed inset-0 z-60 bg-background">
       <AlunoBloqueado />
     </div>
   );

@@ -132,9 +132,9 @@ const FinanceiroPage = () => {
                   </div>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] font-body text-muted-foreground">
                     <span>{cicloTexto(l)}</span>
-                    <Etiqueta cls={sit.cls} className="!text-[10px]">{sit.label}</Etiqueta>
-                    {l.recorrente && <Etiqueta tom="info" className="!text-[10px]">recorrente</Etiqueta>}
-                    {l.alunosBloqueadosEm && <Etiqueta tom="ruim" className="!text-[10px]">alunos bloqueados</Etiqueta>}
+                    <Etiqueta cls={sit.cls} className="text-[10px]!">{sit.label}</Etiqueta>
+                    {l.recorrente && <Etiqueta tom="info" className="text-[10px]!">recorrente</Etiqueta>}
+                    {l.alunosBloqueadosEm && <Etiqueta tom="ruim" className="text-[10px]!">alunos bloqueados</Etiqueta>}
                     {l.diasAtraso !== null && l.diasAtraso > 0 && (l.situacao === "travado" || l.situacao === "em_tolerancia") && (
                       <span className="text-destructive">{l.diasAtraso} d de atraso</span>
                     )}

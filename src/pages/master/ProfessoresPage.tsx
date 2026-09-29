@@ -118,13 +118,13 @@ const ProfessoresPage = () => {
                   <button type="button" onClick={() => setDetalheId(p.id)} className="font-heading text-sm text-foreground truncate max-w-full text-left hover:text-primary transition-colors" data-btn-detalhes>
                     {p.nome}
                   </button>
-                  {p.ehMaster && <Etiqueta tom="ok" className="!text-[10px]">Master</Etiqueta>}
+                  {p.ehMaster && <Etiqueta tom="ok" className="text-[10px]!">Master</Etiqueta>}
                   {p.status === "suspenso" ? (
-                    <Etiqueta tom="ruim" className="!text-[10px]">Suspenso</Etiqueta>
+                    <Etiqueta tom="ruim" className="text-[10px]!">Suspenso</Etiqueta>
                   ) : p.acessoOk ? (
-                    <Etiqueta tom="ok" className="!text-[10px]">Acesso ok</Etiqueta>
+                    <Etiqueta tom="ok" className="text-[10px]!">Acesso ok</Etiqueta>
                   ) : (
-                    <Etiqueta tom="ruim" className="!text-[10px]">Travado</Etiqueta>
+                    <Etiqueta tom="ruim" className="text-[10px]!">Travado</Etiqueta>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground font-body truncate">{p.email || "—"}</p>

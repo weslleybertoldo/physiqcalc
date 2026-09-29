@@ -111,7 +111,7 @@ const VisaoGeralPage = () => {
                         <span>venceu {fmtDiaMes(l.cicloVenceEm)}</span>
                         {l.diasAtraso !== null && l.diasAtraso > 0 && <span className="text-destructive">{l.diasAtraso} d de atraso</span>}
                         <span>{l.alunos} aluno(s)</span>
-                        <Etiqueta cls={situacaoInfo(l.situacao).cls} className="!text-[10px]">{situacaoInfo(l.situacao).label}</Etiqueta>
+                        <Etiqueta cls={situacaoInfo(l.situacao).cls} className="text-[10px]!">{situacaoInfo(l.situacao).label}</Etiqueta>
                       </div>
                     </div>
                   </Link>

@@ -199,7 +199,7 @@ export default function ConfiguracaoAluno({ userId, onIrParaTreino }: Props) {
               onBlur={() => setDescansoTexto(String(descanso))}
               aria-label="Tempo de descanso em segundos"
               data-config-descanso-input
-              className="h-9 w-20 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading outline-none focus:border-primary transition-colors"
+              className="h-9 w-20 bg-transparent border-b border-muted-foreground text-center text-foreground font-heading outline-hidden focus:border-primary transition-colors"
             />
             <span className="text-xs text-muted-foreground font-body">s</span>
           </div>

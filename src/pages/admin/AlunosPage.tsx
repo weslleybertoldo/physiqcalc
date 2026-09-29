@@ -187,7 +187,7 @@ const AlunosPage = () => {
           <select
             value={tagFiltro}
             onChange={(e) => setTagFiltro(e.target.value)}
-            className="bg-transparent border-b border-muted-foreground text-foreground font-body text-[11px] py-2 outline-none focus:border-primary min-w-[160px]"
+            className="bg-transparent border-b border-muted-foreground text-foreground font-body text-[11px] py-2 outline-hidden focus:border-primary min-w-[160px]"
             data-filtro-tag
           >
             <option value="" className="bg-background text-foreground">Todas as tags</option>
