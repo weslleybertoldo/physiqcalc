@@ -96,11 +96,34 @@ function papelDe(role: unknown): Papel | null {
 // endpoints que o professor TRAVADO (plano vencido) ainda pode usar
 const SEM_ACESSO_OK = new Set<string>(["mp-payments"]);
 // escopo: professor só enxerga aluno com professor_id = ele; master enxerga todos
+// Physiq W3: a regra mora no banco (pode_ver_aluno_treino): master, o professor responsável ou o DONO da conta do aluno
+// (espelho do núcleo — o dono vê todos os alunos da conta; o personal, só os dele)
 async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise<boolean> {
   if (alunoId && alunoId === user?.id) return true; // o professor abre o PRÓPRIO perfil (aluno de si mesmo, 18/09/2026)
   if (user?.papel === "master") return true;
-  const { data } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
-  return (data as any)?.professor_id === user?.id;
+  if (!alunoId || !user?.id) return false;
+  const { data, error } = await admin.rpc("pode_ver_aluno_treino_por", { p_aluno: alunoId, p_usuario: user.id });
+  if (error) {
+    // schema ainda sem a função da W3 (a migração entra 1 schema de cada vez): vale a regra de antes
+    console.error("pode_ver_aluno_treino_por", error.message);
+    const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
+    return (perfil as { professor_id?: string } | null)?.professor_id === user.id;
+  }
+  return data === true;
+}
+
+// Physiq W3: contas em que o usuário é DONO no espelho (a lista soma os alunos delas — spec 8.2, P1)
+const _UUID_W3 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type _ClienteRpcW3 = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }> };
+async function contasOndeSouDono(admin: _ClienteRpcW3, userId: string): Promise<string[]> {
+  const { data, error } = await admin.rpc("contas_onde_sou_dono_treino", { p_usuario: userId });
+  if (error) {
+    console.error("contas_onde_sou_dono_treino", error.message);
+    return [];
+  }
+  return ((data as unknown[]) || [])
+    .map((x) => (typeof x === "string" ? x : (x as { contas_onde_sou_dono_treino?: unknown } | null)?.contas_onde_sou_dono_treino))
+    .filter((x): x is string => typeof x === "string" && _UUID_W3.test(x));
 }
 
 async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {
@@ -408,7 +431,12 @@ Deno.serve(async (req) => {
 
       // escopo: professor vê só os alunos dele (master vê todos)
       let perfisQ = admin.from("physiq_profiles").select("id, nome, email, user_code");
-      if (user.papel === "professor") perfisQ = perfisQ.eq("professor_id", user.id);
+      if (user.papel === "professor") {
+        const contas = await contasOndeSouDono(admin, user.id);
+        perfisQ = contas.length
+          ? perfisQ.or(`professor_id.eq.${user.id},conta_id.in.(${contas.join(",")})`)
+          : perfisQ.eq("professor_id", user.id);
+      }
       const perfisRes = await perfisQ;
       if (perfisRes.error) throw perfisRes.error;
       const idsEscopo: string[] | null = user.papel === "professor"

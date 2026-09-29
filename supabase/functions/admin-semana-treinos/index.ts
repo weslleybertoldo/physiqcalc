@@ -84,11 +84,20 @@ function papelDe(role: unknown): Papel | null {
 // endpoints que o professor TRAVADO (plano vencido) ainda pode usar
 const SEM_ACESSO_OK = new Set<string>(["mp-payments"]);
 // escopo: professor só enxerga aluno com professor_id = ele; master enxerga todos
+// Physiq W3: a regra mora no banco (pode_ver_aluno_treino): master, o professor responsável ou o DONO da conta do aluno
+// (espelho do núcleo — o dono vê todos os alunos da conta; o personal, só os dele)
 async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise<boolean> {
   if (alunoId && alunoId === user?.id) return true; // o professor abre o PRÓPRIO perfil (aluno de si mesmo, 18/09/2026)
   if (user?.papel === "master") return true;
-  const { data } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
-  return (data as any)?.professor_id === user?.id;
+  if (!alunoId || !user?.id) return false;
+  const { data, error } = await admin.rpc("pode_ver_aluno_treino_por", { p_aluno: alunoId, p_usuario: user.id });
+  if (error) {
+    // schema ainda sem a função da W3 (a migração entra 1 schema de cada vez): vale a regra de antes
+    console.error("pode_ver_aluno_treino_por", error.message);
+    const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
+    return (perfil as { professor_id?: string } | null)?.professor_id === user.id;
+  }
+  return data === true;
 }
 
 async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {

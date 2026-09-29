@@ -1,5 +1,7 @@
-// Código do professor vindo do link de convite (?prof=PROF-NOME-SOBRENOME).
-// Fica no localStorage até o login com Google terminar; o useAuth chama vincular-professor no SIGNED_IN.
+// Código do profissional vindo do link de convite (?prof=PROF-NOME-SOBRENOME).
+// Fica no localStorage até o login terminar. Physiq W3: o código vai para o `vincular-aluno` do banco principal (a
+// matrícula nasce na conta do profissional — src/nucleo/sessao.tsx); a tela "Tenho um código" das Boas-vindas também
+// lê daqui para já vir preenchida.
 const KEY = "physiq_prof_pendente";
 
 export function capturarProfDaUrl(): string | null {

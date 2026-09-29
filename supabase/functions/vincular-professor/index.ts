@@ -2,6 +2,17 @@
 // body: { codigo?: string }  (código PROF-NOME-SOBRENOME capturado da URL ?prof=)
 // Idempotente. Ordem: 1) convite de PROFESSOR pendente pro e-mail → promove; 2) já tem professor → nada;
 // 3) convite de ALUNO por e-mail → vincula; 4) código do link → vincula; 5) nada → fila "Sem professor".
+//
+// Physiq W3 (login único no banco principal) — esta função REPASSA para o principal:
+//   · modo app (JWT do Treino): só os APKs antigos (≤ 3.1) ainda chamam. Faz o de sempre e, quando liga um aluno pelo
+//     código e a pessoa já tem login no Physiq (physiq_identidades), repassa o vínculo ao principal (vincular-aluno, modo
+//     servidor) — a matrícula nasce lá e o espelho mantém o professor aqui;
+//   · modo servidor (x-espelho-segredo, chamado pelo pos-login do principal): devolve o que o Calc sabe da pessoa e o
+//     principal ainda não — professor do Calc, convite de professor do master pendente (consumido aqui, com o código novo)
+//     e aluno de um professor do Calc. O app novo (3.2+) não chama mais esta função: o código vai para o vincular-aluno.
+// verify_jwt = false desde a W3 (o modo servidor não tem JWT; o modo app valida o token aqui). PUBLICAR SÓ ASSIM:
+//   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions vincular-professor false   (FORCAR_VERIFY_JWT=1 na 1ª vez)
+// Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -44,8 +55,102 @@ function jsonErr(msg: string, status: number, origin: string | null) {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
+const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 function adminClient() { return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } }); }
 function authAdmin() { return createClient(SUPABASE_URL, SERVICE_ROLE); }
+
+// ---- Physiq W3: repasse para o banco principal ----
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function segredoConfere(recebido: string | null | undefined, esperado: string | null | undefined): boolean {
+  const a = recebido || "";
+  const b = esperado || "";
+  if (b.length < 32 || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// o aluno ligado pelo APK antigo ganha a matrícula no principal (se já tem login lá); falha aqui não desfaz o vínculo
+type ClienteW3 = ReturnType<typeof adminClient>;
+async function repassarAoPrincipal(admin: ClienteW3, treinoUserId: string, codigo: string): Promise<string> {
+  if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return "sem_configuracao";
+  const { data: v } = await admin.from("physiq_identidades").select("principal_user_id").eq("treino_user_id", treinoUserId).maybeSingle();
+  const principalId = (v as { principal_user_id?: string } | null)?.principal_user_id;
+  if (!principalId) return "sem_login_no_physiq";
+  try {
+    const r = await fetch(`${PRINCIPAL_URL}/functions/v1/vincular-aluno`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
+      body: JSON.stringify({ principal_user_id: principalId, codigo }),
+    });
+    const corpo = (await r.json().catch(() => ({}))) as { ok?: boolean; erro?: string };
+    return corpo.ok ? "repassado" : `recusado:${corpo.erro ?? r.status}`;
+  } catch (e) {
+    console.error("vincular-professor: repasse", String(e));
+    return "principal_indisponivel";
+  }
+}
+
+interface LinhaProfessorW3 {
+  codigo_convite: string | null; nome: string | null; status: string | null; trial_ate: string | null; adesao_paga_em: string | null;
+  ciclo_vence_em: string | null; anual_ate: string | null; cobranca_pausada: boolean | null; acesso_liberado_ate: string | null;
+  physiq_planos_professor: { nome: string | null } | null;
+}
+
+// modo servidor: o que o Calc sabe desta pessoa (o pos-login do principal cria a conta/matrícula que faltar)
+async function legadoDaPessoa(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const admin = adminClient();
+  const principalId = typeof body.principal_user_id === "string" && UUID.test(body.principal_user_id) ? body.principal_user_id : null;
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const nome = typeof body.nome === "string" ? body.nome.trim().slice(0, 120) : "";
+  let treinoUserId: string | null = null;
+  if (principalId) {
+    const { data: v } = await admin.from("physiq_identidades").select("treino_user_id").eq("principal_user_id", principalId).maybeSingle();
+    treinoUserId = (v as { treino_user_id?: string } | null)?.treino_user_id ?? null;
+  }
+  // sem vínculo: só procura pelo e-mail quando o login do principal foi Google (a mesma regra da trocar-token)
+  if (!treinoUserId && body.google === true && email) {
+    const { data: achado } = await admin.rpc("physiq_auth_user_id_por_email", { p_email: email });
+    treinoUserId = (achado as string | null) ?? null;
+  }
+  const saida: Record<string, unknown> = { treino_user_id: treinoUserId, professor: null, convite_professor: null, aluno: null };
+  if (treinoUserId) {
+    const { data: prof } = await admin.from("physiq_professores")
+      .select("codigo_convite, nome, status, trial_ate, adesao_paga_em, ciclo_vence_em, anual_ate, cobranca_pausada, acesso_liberado_ate, physiq_planos_professor(nome)")
+      .eq("id", treinoUserId).maybeSingle();
+    const p = prof as LinhaProfessorW3 | null;
+    if (p) {
+      const { data: u } = await authAdmin().auth.admin.getUserById(treinoUserId);
+      const role = (u?.user?.app_metadata as { role?: string } | undefined)?.role;
+      saida.professor = {
+        codigo_convite: p.codigo_convite, nome: p.nome, status: p.status, plano_nome: p.physiq_planos_professor?.nome ?? null,
+        trial_ate: p.trial_ate, adesao_paga_em: p.adesao_paga_em, ciclo_vence_em: p.ciclo_vence_em, anual_ate: p.anual_ate,
+        cobranca_pausada: p.cobranca_pausada, acesso_liberado_ate: p.acesso_liberado_ate, master: role === "admin" || role === "master",
+      };
+    } else {
+      const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", treinoUserId).maybeSingle();
+      const profId = (perfil as { professor_id?: string | null } | null)?.professor_id;
+      if (profId) {
+        const { data: p2 } = await admin.from("physiq_professores").select("codigo_convite").eq("id", profId).maybeSingle();
+        saida.aluno = { professor_codigo: (p2 as { codigo_convite?: string | null } | null)?.codigo_convite ?? null };
+      }
+    }
+  }
+  // convite de professor do master pendente pra este e-mail (ainda sem linha de professor): consome e gera o código
+  if (!saida.professor && email) {
+    const { data: conv } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").ilike("email", email).maybeSingle();
+    const conviteId = (conv as { id?: string } | null)?.id;
+    if (conviteId) {
+      const { data: cod, error: eg } = await admin.rpc("physiq_gerar_codigo_professor", { p_nome: nome || email.split("@")[0] });
+      if (eg) throw eg;
+      const { data: marcado } = await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() })
+        .eq("id", conviteId).eq("status", "pendente").select("id").maybeSingle();
+      if (marcado) saida.convite_professor = { codigo: cod as string, nome: nome || null };
+    }
+  }
+  return saida;
+}
 
 const janelasRate = new Map<string, number[]>();
 function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): boolean {
@@ -120,6 +225,19 @@ Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
+  // Physiq W3: modo servidor (pos-login do banco principal), autenticado pelo segredo do espelho
+  const segredo = req.headers.get("x-espelho-segredo");
+  if (segredo) {
+    if (!segredoConfere(segredo, ESPELHO_SEGREDO)) return jsonErr("segredo_invalido", 401, origin);
+    try {
+      const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+      if (body.modo !== "servidor") return jsonErr("modo_invalido", 400, origin);
+      return jsonOk(await legadoDaPessoa(body), origin);
+    } catch (e) {
+      console.error("vincular-professor (servidor)", e);
+      return jsonErr("internal", 500, origin);
+    }
+  }
   const { user, error: authErr } = await requireUser(req);
   if (authErr) return authErr;
   try {
@@ -170,8 +288,11 @@ Deno.serve(async (req) => {
     const { error } = await admin.from("physiq_profiles").update({ professor_id: professorId }).eq("id", user.id).is("professor_id", null);
     if (error) throw error;
     if (conviteId) await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() }).eq("id", conviteId);
-    const { data: nomeProf } = await admin.from("physiq_professores").select("nome").eq("id", professorId).maybeSingle();
-    return jsonOk({ papel: "aluno", vinculado: true, professor: (nomeProf as any)?.nome ?? null }, origin);
+    const { data: nomeProf } = await admin.from("physiq_professores").select("nome, codigo_convite").eq("id", professorId).maybeSingle();
+    // Physiq W3: a matrícula nasce no principal quando a pessoa já tem login lá
+    const prof = nomeProf as { nome?: string | null; codigo_convite?: string | null } | null;
+    const repasse = prof?.codigo_convite ? await repassarAoPrincipal(admin, user.id, prof.codigo_convite) : "sem_codigo";
+    return jsonOk({ papel: "aluno", vinculado: true, professor: prof?.nome ?? null, principal: repasse }, origin);
   } catch (e) {
     console.error("vincular-professor", e);
     return jsonErr("internal", 500, origin);
