@@ -4,7 +4,7 @@ import { useSessao } from "@/nucleo/sessao";
 import { matriculaDoApp } from "@/nucleo/situacao";
 import { CLASSE_PAGINA_APP, TituloApp } from "@/app-aluno/perfil/pecas/TopoItem";
 import { contagemAvaliacoes } from "@/evolucao/formato";
-import { hojeSP, kpisDaSerie, noPeriodo, periodoInicial, pontosDe, serieVazia, temDados, ultimaAvaliacao } from "@/evolucao/serie";
+import { avaliacoesDaTabela, hojeSP, kpisDaSerie, periodoInicial, serieVazia, temDados, ultimaAvaliacao, variacaoDaMetrica } from "@/evolucao/serie";
 import type { Avaliacao, Periodo } from "@/evolucao/tipos";
 import { CardsMetricas } from "@/evolucao/ui/CardsMetricas";
 import { CartaoFotos } from "@/evolucao/ui/CartaoFotos";
@@ -104,8 +104,9 @@ export default function Evolucao() {
 
   const dados = useMemo(() => {
     if (!serie) return null;
-    const avsPeriodo = noPeriodo(serie.avaliacoes, periodo, hoje);
-    const pesos = noPeriodo(pontosDe(serie.avaliacoes, "peso"), periodo, hoje);
+    // o N do botão = as linhas que a tabela abre (a mesma função); o gráfico = a mesma conta dos cards
+    const avsPeriodo = avaliacoesDaTabela(serie, periodo, hoje, "periodo");
+    const pesos = variacaoDaMetrica(serie.avaliacoes, "peso", periodo, hoje).pontos;
     const comDados = serie.avaliacoes.filter(temDados);
     return {
       vazia: serieVazia(serie),
@@ -189,7 +190,7 @@ export default function Evolucao() {
             aoMudar={(v) => setFolha(v ? "tabela" : null)}
             serie={serie}
             hoje={hoje}
-            periodoInicial={dados && dados.nPeriodo === 0 ? "tudo" : periodo}
+            periodo={periodo}
             aoVer={(av) => setVer(av)}
           />
           <SheetComparar aberto={folha === "comparar"} aoMudar={(v) => setFolha(v ? "comparar" : null)} sessoes={serie.sessoes} />

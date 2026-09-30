@@ -3,6 +3,7 @@ import { dataCurta, mesAno, num, rotuloAutor, rotuloSessao, variacaoAbs, variaca
 import {
   avaliacaoDoPrincipal,
   avaliacaoDoTreino,
+  avaliacoesDaTabela,
   classificacaoDe,
   comparacaoInicial,
   eixoDeMeses,
@@ -12,8 +13,10 @@ import {
   linhasDaTabela,
   medidasPorGrupo,
   metricaDoMusculo,
+  modoInicialDaTabela,
   montarSerie,
   noPeriodo,
+  periodoDaTabela,
   periodoInicial,
   pontosDe,
   posicoesComFotos,
@@ -24,6 +27,7 @@ import {
   somarMeses,
   tomDaVariacao,
   ultimaAvaliacao,
+  variacaoDaMetrica,
 } from "./serie";
 import type { AntropometriaPrincipal, Autor, FotoPrincipal, LinhaFotoTreino, LinhaTreino } from "./tipos";
 
@@ -253,11 +257,46 @@ describe("série única dos 2 bancos", () => {
     expect(linhas[0].celulas.peso?.delta).toBeCloseTo(-0.7, 5); // 84,9 (nutri, 26/08) → 84,2
     expect(linhas[0].celulas.peso?.tom).toBe("bom");
     expect(linhas[4].celulas.peso?.delta).toBeNull();
-    const resumo = resumoDoPeriodo(s.avaliacoes, s.objetivo);
+    const resumo = resumoDoPeriodo(s.avaliacoes, "tudo", HOJE, s.objetivo);
     const rPeso = resumo.find((r) => r.metrica === "peso")!;
     expect([rPeso.primeira, rPeso.ultima]).toEqual([90.3, 84.2]);
     expect(rPeso.delta).toBeCloseTo(-6.1, 5);
     expect(resumo.some((r) => r.metrica === "medida_cintura")).toBe(true);
+  });
+
+  it("hotfix W10: a tabela abre com as do PERÍODO (o N do botão) e o resumo usa a MESMA conta dos cards; 'todas' = o histórico", () => {
+    // 6M (desde 30/03): 28/05 (nutri), 14/06, 26/08 (nutri), 22/09 — o 14/03 fica de fora
+    expect(modoInicialDaTabela(s, "6m", HOJE)).toBe("periodo");
+    const doPeriodo = avaliacoesDaTabela(s, "6m", HOJE, "periodo");
+    expect(doPeriodo.map((a) => a.data)).toEqual(["2026-05-28", "2026-06-14", "2026-08-26", "2026-09-22"]);
+    expect(doPeriodo).toHaveLength(noPeriodo(s.avaliacoes, "6m", HOJE).length); // o N do botão da tela
+    const todas = avaliacoesDaTabela(s, "6m", HOJE, "todas");
+    expect(todas).toHaveLength(5);
+    expect(periodoDaTabela("6m", "todas")).toBe("tudo");
+    for (const [periodo, modo] of [["6m", "periodo"], ["1a", "periodo"], ["3m", "periodo"], ["6m", "todas"]] as const) {
+      const efetivo = periodoDaTabela(periodo, modo);
+      const [peso, gordura] = kpisDaSerie(s, efetivo, HOJE);
+      const resumo = resumoDoPeriodo(s.avaliacoes, efetivo, HOJE, s.objetivo);
+      expect(resumo.find((r) => r.metrica === "peso")?.delta).toBe(peso.variacao);
+      expect(resumo.find((r) => r.metrica === "gordura")?.delta).toBe(gordura.variacao);
+      expect(resumo.find((r) => r.metrica === "peso")?.delta).toBe(variacaoDaMetrica(s.avaliacoes, "peso", efetivo, HOJE).delta);
+    }
+    // 6M: 88,4 (28/05) → 84,2 = −4,2 no card E no resumo; todas: 90,3 → 84,2 = −6,1
+    const r6 = resumoDoPeriodo(s.avaliacoes, "6m", HOJE, s.objetivo).find((r) => r.metrica === "peso")!;
+    expect([r6.primeira, r6.ultima]).toEqual([88.4, 84.2]);
+    expect(r6.delta).toBeCloseTo(-4.2, 5);
+    const rTodas = resumoDoPeriodo(s.avaliacoes, "tudo", HOJE, s.objetivo).find((r) => r.metrica === "peso")!;
+    expect(rTodas.delta).toBeCloseTo(-6.1, 5);
+    // o resumo do período só lista as métricas que o período tem
+    expect(resumoDoPeriodo(s.avaliacoes, "3m", HOJE, s.objetivo).every((r) => r.primeira !== null)).toBe(true);
+  });
+
+  it("hotfix W10: período sem nenhuma avaliação abre direto em 'todas'", () => {
+    const antiga = montarSerie({ treino: { perfil: null, fotos: [], avaliacoes: [linhaTreino({ data_avaliacao: "2025-11-10", peso: 80 }), linhaTreino({ data_avaliacao: "2025-12-10", peso: 79 })] }, principal: null, personal: null });
+    expect(avaliacoesDaTabela(antiga, "6m", HOJE, "periodo")).toHaveLength(0);
+    expect(modoInicialDaTabela(antiga, "6m", HOJE)).toBe("todas");
+    expect(avaliacoesDaTabela(antiga, "6m", HOJE, modoInicialDaTabela(antiga, "6m", HOJE))).toHaveLength(2);
+    expect(modoInicialDaTabela(antiga, "1a", HOJE)).toBe("periodo");
   });
 
   it("fotos: por data e origem (a mais recente primeiro); Lado = direito, senão o esquerdo; Comparar começa em penúltima × última", () => {
