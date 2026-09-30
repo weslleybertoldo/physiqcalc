@@ -70,7 +70,8 @@ vi.mock("@/integrations/principal/client", () => ({
 }));
 // W8: a aba Treino é a nova (src/app-aluno/abas/Treino.tsx, pelo registro) — a TreinosPage saiu
 vi.mock("@/app-aluno/abas/Treino", () => h.marcador("aba-treino"));
-vi.mock("@/pages/UserDashboard", () => h.marcador("antiga-avaliacao"));
+// W10: a aba Evolução é a nova (src/app-aluno/abas/Evolucao.tsx, pelo registro) — o UserDashboard saiu
+vi.mock("@/app-aluno/abas/Evolucao", () => h.marcador("aba-evolucao"));
 vi.mock("@/pages/PagamentosPage", () => h.marcador("antiga-pagamentos"));
 vi.mock("@/pages/Index", () => h.marcador("antiga-calculadora-publica"));
 vi.mock("@/pages/PrivacidadePage", () => h.marcador("antiga-privacidade"));
@@ -152,8 +153,8 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
     ["/", "/treino", "aba-treino"],
     ["/treinos", "/treino", "aba-treino"],
     ["/treino", "/treino", "aba-treino"],
-    ["/avaliacao", "/evolucao", "antiga-avaliacao"],
-    ["/evolucao", "/evolucao", "antiga-avaliacao"],
+    ["/avaliacao", "/evolucao", "aba-evolucao"],
+    ["/evolucao", "/evolucao", "aba-evolucao"],
   ])("%s → %s (%s)", async (de, para, tela) => {
     logar("aluno");
     abrir(de);

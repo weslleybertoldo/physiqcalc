@@ -1,4 +1,4 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from "react";
+import type { ComponentType, LazyExoticComponent } from "react";
 import { ChartLine, Dumbbell, House, Salad, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { existe } from "@/rotas/registro";
@@ -6,8 +6,8 @@ import type { Modulo } from "@/ui/casca/dadosCasca";
 
 /**
  * As 5 abas do app do aluno (spec 4.3, tela 1). A aba nova é `src/app-aluno/abas/<arquivo>.tsx`
- * (registro por convenção); enquanto ela não existe, vale a tela antiga (`antiga`): Evolução → UserDashboard
- * (spec 11.1, regra 3; o Treino antigo saiu na W8). Sem nova e sem antiga, a aba some.
+ * (registro por convenção); enquanto ela não existe, vale a tela antiga (`antiga`, spec 11.1, regra 3) — o Treino antigo
+ * saiu na W8 e o UserDashboard (Evolução) na W10. Sem nova e sem antiga, a aba some.
  * Aba sem o módulo do aluno também some (só Treino → sem Dieta; só Nutrição → sem Treino).
  */
 export interface AbaApp {
@@ -25,7 +25,8 @@ export const ABAS_APP: AbaApp[] = [
   // W8: a aba nova (src/app-aluno/abas/Treino.tsx) substituiu a TreinosPage — o service worker guarda o chunk dela (sem internet)
   { id: "treino", arquivo: "Treino", rotulo: "Treino", icone: Dumbbell, rota: "/treino", modulo: "treino" },
   { id: "dieta", arquivo: "Dieta", rotulo: "Dieta", icone: Salad, rota: "/dieta", modulo: "nutricao" },
-  { id: "evolucao", arquivo: "Evolucao", rotulo: "Evolução", icone: ChartLine, rota: "/evolucao", modulo: "ambos", antiga: lazy(() => import("@/pages/UserDashboard")) },
+  // W10: a aba nova (src/app-aluno/abas/Evolucao.tsx) substituiu o UserDashboard (Composição, Evolução e Registros)
+  { id: "evolucao", arquivo: "Evolucao", rotulo: "Evolução", icone: ChartLine, rota: "/evolucao", modulo: "ambos" },
   { id: "perfil", arquivo: "Perfil", rotulo: "Perfil", icone: User, rota: "/perfil", modulo: "ambos" },
 ];
 
