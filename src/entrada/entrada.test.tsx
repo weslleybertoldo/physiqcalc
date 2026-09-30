@@ -9,6 +9,8 @@ const h = vi.hoisted(() => {
   return {
     entrarComEmail: vi.fn(), entrarComGoogle: vi.fn(), vincularCodigo: vi.fn(), situacao: null as unknown, pendente: null as string | null,
     rpc: vi.fn(), recarregar: vi.fn(async () => null), previa: vi.fn(),
+    // W8b: o captcha invisível (Turnstile) da tela de e-mail e senha
+    token: vi.fn(async () => "token-captcha"), usado: vi.fn(),
   };
 });
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase: {} }));
@@ -20,6 +22,7 @@ vi.mock("@/nucleo/sessao", () => ({
   }),
 }));
 vi.mock("@/integrations/principal/client", () => ({ principal: { rpc: h.rpc } }));
+vi.mock("@/nucleo/captcha", () => ({ useCaptcha: () => ({ refCaixa: { current: null }, estado: "pronto", obterToken: h.token, usado: h.usado }) }));
 // W7: a prévia do código (nome, foto e tipo do profissional) antes do vínculo
 vi.mock("@/nucleo/vinculo", async (orig) => ({ ...(await orig<typeof import("@/nucleo/vinculo")>()), previaDoCodigo: (c: string) => h.previa(c) }));
 
@@ -28,7 +31,7 @@ import EntrarEmail from "./EntrarEmail";
 import BoasVindas from "./BoasVindas";
 import TenhoCodigo from "./onboarding/TenhoCodigo";
 import CriarConta from "./onboarding/CriarConta";
-import { textoErroEntrar } from "./pecas/textos";
+import { textoErroEntrar, textoErroServidor } from "./pecas/textos";
 
 const EMAIL = "conta@teste.com";
 const ERRO_CREDENCIAL = { erro: { status: 400, code: "invalid_credentials", message: "Invalid login credentials" } };
@@ -84,47 +87,92 @@ describe("Entrar (tela 1)", () => {
   });
 });
 
-describe("Entrar com e-mail e senha — o limitador de tentativas de hoje", () => {
-  it("3 erros seguidos bloqueiam 1 min: contador, botão travado e a 4ª nem chama o Auth", async () => {
-    h.entrarComEmail.mockResolvedValue(ERRO_CREDENCIAL);
+describe("Entrar com e-mail e senha — o limite de tentativas mora no servidor (W8b)", () => {
+  const agoraIso = () => new Date().toISOString();
+  const emMs = (ms: number) => new Date(Date.now() + ms).toISOString();
+
+  it("manda e-mail, senha e o token do captcha; senha errada sem bloqueio mostra o erro e não guarda nada", async () => {
+    h.entrarComEmail.mockResolvedValue({ erro: { status: 0, code: "senha_errada", bloqueado_ate: null, bloqueado_de_vez: false, agora: agoraIso() } });
     abrir(<EntrarEmail />);
     preencher();
-    await tentar(2);
+    await tentar(1);
+    expect(h.entrarComEmail).toHaveBeenCalledWith(EMAIL, "senha-errada", "token-captcha");
+    expect(h.usado).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.getByText("E-mail ou senha incorretos.")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    expect(registro()).toBeNull();
+  });
+  it("o servidor bloqueou (4ª errada → 1 min): contador, botão travado com a MESMA senha e o aparelho não chama de novo", async () => {
+    h.entrarComEmail.mockResolvedValue({ erro: { status: 0, code: "senha_errada", bloqueado_ate: emMs(60_000), bloqueado_de_vez: false, agora: agoraIso() } });
+    abrir(<EntrarEmail />);
+    preencher();
+    await tentar(1);
     await waitFor(() => expect(screen.getByText(/Muitas tentativas/)).toBeInTheDocument());
-    expect(h.entrarComEmail).toHaveBeenCalledTimes(3);
-    expect(screen.getByText(/Muitas tentativas/).textContent).toMatch(/(1:00|0:5\d)/);
+    expect(screen.getByText(/Muitas tentativas/).textContent).toMatch(/Tente de novo em (1:00|0:5\d)/);
     const botao = screen.getByRole("button", { name: "Aguarde" });
     expect(botao).toBeDisabled();
     fireEvent.submit(botao.closest("form") as HTMLFormElement);
     await act(async () => {
       await new Promise((r) => setTimeout(r, 30));
     });
-    expect(h.entrarComEmail).toHaveBeenCalledTimes(3);
-    expect(registro()).toMatchObject({ erros: 3 });
+    expect(h.entrarComEmail).toHaveBeenCalledTimes(1);
+    expect(registro()).toMatchObject({ deVez: false, motivo: "conta" });
+    // uma senha NOVA (a que o profissional criou) pode tentar: quem decide é o servidor
+    fireEvent.change(screen.getByPlaceholderText("Sua senha"), { target: { value: "senha-nova-8" } });
+    expect(screen.getByRole("button", { name: "Entrar" })).not.toBeDisabled();
   });
-  it("senha certa apaga o registro de erros", async () => {
-    localStorage.setItem(chaveRegistro(EMAIL), JSON.stringify({ erros: 2, bloqueadoAte: null, ultimoErro: Date.now() }));
+  it("bloqueio de vez: a frase dele, o botão do Google (que destrava) e nada de contador", async () => {
+    h.entrarComEmail.mockResolvedValue({ erro: { status: 0, code: "bloqueado_de_vez", bloqueado_ate: null, bloqueado_de_vez: true, agora: agoraIso() } });
+    h.entrarComGoogle.mockResolvedValue({});
+    abrir(<EntrarEmail />);
+    preencher("senha-certa");
+    await tentar(1);
+    expect(await screen.findByText(/Conta bloqueada por tentativas\. Peça uma senha nova ao seu profissional ou entre com o Google/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Conta bloqueada" })).toBeDisabled();
+    expect(registro()).toMatchObject({ deVez: true });
+    fireEvent.click(screen.getByRole("button", { name: /Entrar com Google/ }));
+    await waitFor(() => expect(h.entrarComGoogle).toHaveBeenCalledTimes(1));
+  });
+  it("muitas tentativas da mesma rede: contador próprio", async () => {
+    h.entrarComEmail.mockResolvedValue({ erro: { status: 0, code: "muitas_tentativas_rede", bloqueado_ate: emMs(15 * 60_000), agora: agoraIso() } });
+    abrir(<EntrarEmail />);
+    preencher();
+    await tentar(1);
+    expect(await screen.findByText(/Muitas tentativas desta rede/)).toBeInTheDocument();
+  });
+  it("entrou: apaga o aviso guardado do e-mail", async () => {
+    localStorage.setItem(chaveRegistro(EMAIL), JSON.stringify({ bloqueadoAte: null, deVez: true, motivo: "conta", em: Date.now() }));
     h.entrarComEmail.mockResolvedValue({});
     abrir(<EntrarEmail />);
     preencher("senha-certa");
     await tentar(1);
     await waitFor(() => expect(registro()).toBeNull());
   });
-  it("erro de rede não conta como tentativa", async () => {
-    h.entrarComEmail.mockResolvedValue({ erro: { status: 0, message: "fetch failed" } });
-    abrir(<EntrarEmail />);
-    preencher();
-    await tentar(1);
-    await waitFor(() => expect(screen.getByText("Não foi possível entrar. Tente de novo.")).toBeInTheDocument());
-    expect(registro()).toBeNull();
+  it("sem internet, captcha recusado e servidor fora: a frase certa e nada guardado", async () => {
+    for (const [code, frase] of [
+      ["rede", "Não foi possível entrar. Confira a internet e tente de novo."],
+      ["captcha_invalido", "Não conseguimos confirmar que é você. Tente de novo."],
+      ["indisponivel", "Não foi possível entrar agora. Tente de novo em instantes."],
+      ["acesso_desativado", "Este acesso está desativado. Fale com o seu profissional."],
+    ] as const) {
+      h.entrarComEmail.mockReset();
+      h.entrarComEmail.mockResolvedValue({ erro: { status: 0, code } });
+      const r = abrir(<EntrarEmail />);
+      preencher();
+      await tentar(1);
+      await waitFor(() => expect(screen.getByText(frase)).toBeInTheDocument());
+      expect(registro()).toBeNull();
+      r.unmount();
+    }
   });
-  it("frases do Auth", () => {
+  it("frases do Auth e do servidor", () => {
     expect(textoErroEntrar({ status: 429 })).toMatch(/Muitas tentativas/);
     expect(textoErroEntrar({ code: "user_banned" })).toMatch(/desativado/);
     expect(textoErroEntrar({ code: "invalid_credentials" })).toBe("E-mail ou senha incorretos.");
     expect(textoErroEntrar(null)).toBe("");
+    expect(textoErroServidor("senha_errada")).toBe("E-mail ou senha incorretos.");
+    expect(textoErroServidor("bloqueado_de_vez")).toMatch(/Peça uma senha nova ao seu profissional ou entre com o Google/);
+    expect(textoErroServidor("em_andamento")).toMatch(/Aguarde/);
+    expect(textoErroServidor("qualquer")).toMatch(/Tente de novo em instantes/);
   });
 });
 

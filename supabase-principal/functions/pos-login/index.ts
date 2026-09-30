@@ -9,10 +9,12 @@
 // W7b: quem é aluno do app (sem profissional — a "conta do app") e entrou na lista de um profissional por convite ou pela
 //   ponte do Calc tem a matrícula do app encerrada no banco; aqui a assinatura do app no Mercado Pago é cancelada. A ponte do
 //   Calc não conta a matrícula do app (o aluno do professor do Calc vai para a conta do professor, como antes).
+// W8b: entrar com o Google destrava a conta bloqueada por tentativas de senha (login_destravar — a escada da entrar-senha); a
+//   troca da P25 também tira a marca de senha provisória.
 // Nada disso manda e-mail, WhatsApp ou aviso a ninguém.
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: {}.
-// 200 → { ok, senha_trocada, convites: {aceitos, recusados}, legado: {...}, situacao }
+// 200 → { ok, senha_trocada, destravou?, convites: {aceitos, recusados}, legado: {...}, situacao }
 // Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging · 429 rate_limited · 500
 // verify_jwt = false (validado aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pos-login false
@@ -120,13 +122,22 @@ Deno.serve(async (req) => {
       const { data: temSenha, error: ets } = await dbPublic.rpc("physiq_tem_senha", { p_user: user.id });
       if (ets) console.error("pos-login: physiq_tem_senha", ets.message);
       if (deveTrocarSenha({ loginGoogle, temIdentidadeEmail: true, temSenha: temSenha === true, jaTrocou: false })) {
+        // W8b: a senha que o profissional criou (provisória) também deixa de valer — some a marca de "crie a sua senha"
         const { error } = await authAdmin.auth.admin.updateUserById(user.id, {
           password: senhaAleatoria(),
-          app_metadata: { ...app, senha_trocada_google_em: new Date().toISOString() },
+          app_metadata: { ...app, senha_trocada_google_em: new Date().toISOString(), senha_provisoria: false },
         });
         if (error) console.error("pos-login: P25", error.message);
         else saida.senha_trocada = true;
       }
+    }
+
+    // W8b: entrar com o Google destrava a conta bloqueada por tentativas de senha (o caminho de quem tem Gmail — depois troca ou
+    // cria a senha no Perfil › Conta). Só o Google: um login por senha feito direto no Auth não destrava o bloqueio "de vez".
+    if (loginGoogle) {
+      const { data: destravou, error: ed } = await db.rpc("login_destravar", { p_email: email });
+      if (ed) console.error("pos-login: destravar", ed.message);
+      saida.destravou = destravou === true;
     }
 
     // 2. convites pendentes do e-mail confirmado

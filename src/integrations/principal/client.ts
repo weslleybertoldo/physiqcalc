@@ -34,6 +34,8 @@ const URL_PRINCIPAL = String(ENV.VITE_PRINCIPAL_URL ?? "").trim();
 const ANON_PRINCIPAL = String(ENV.VITE_PRINCIPAL_ANON_KEY ?? "").trim();
 
 export const PRINCIPAL_URL = URL_PRINCIPAL;
+/** Chave pública (anon) do principal — a função entrar-senha (W8b) é chamada com fetch próprio, sem a sessão. */
+export const PRINCIPAL_ANON = ANON_PRINCIPAL;
 export const PRINCIPAL_SCHEMA: SchemaPrincipal = resolverSchemaPrincipal(ENV);
 /** false = build sem as variáveis do principal (a tela deve mostrar "Parte do app está fora do ar", nunca quebrar). */
 export const principalConfigurado = Boolean(URL_PRINCIPAL && ANON_PRINCIPAL);
