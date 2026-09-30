@@ -99,9 +99,11 @@ def main() -> int:
             c.pg.locator("[data-inicio-busca]").click()
             p.check(c.esperar(lambda: c.tem("[data-paleta-busca]"), 20), "3. a busca abre")
             c.pg.locator("[data-paleta-busca] input").fill("supino")
-            achou = c.esperar(lambda: c.pg.locator("[cmdk-item]").count() > 0 or c.tem("[data-busca-vazia]"), 20)
+            # os exercícios dele (o "Peito + tríceps" do profissional tem supinos): espera a consulta do aparelho responder
+            achou = c.esperar(lambda: c.pg.locator("[cmdk-item]").count() > 0, 15)
             itens = c.pg.locator("[cmdk-item]").evaluate_all("els => els.map(e => e.textContent)")
-            p.check(achou, f"3. 'supino' na busca: {itens[:4] or 'nada no plano dele'}")
+            p.check(achou, f"3. 'supino' na busca acha os exercícios dos treinos dele: {itens[:4]}")
+            p.check(not c.tem("[data-busca-vazia]"), "3. sem o 'Nada com …' enquanto há resultado")
             B.foto(c, "inicio_busca")
             c.pg.keyboard.press("Escape")
             c.pg.wait_for_timeout(500)

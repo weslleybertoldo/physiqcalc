@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@powersync/react";
 import { Dumbbell, Salad } from "lucide-react";
@@ -28,10 +28,24 @@ const SQL_EXERCICIOS = `
     LEFT JOIN tb_exercicios_usuario eu ON eu.id = geu.exercicio_usuario_id
    WHERE geu.user_id = ?`;
 
-function FonteExercicios({ userId, termo, aoEscolher }: { userId: string; termo: string; aoEscolher: (e: ExercicioDaBusca) => void }) {
-  const { data } = useQuery<LinhaExercicioBusca>(SQL_EXERCICIOS, [userId]);
+/**
+ * A consulta começa quando a busca ABRE (não na 2ª letra): no celular o SQLite leva uns instantes e, até lá, a paleta diria
+ * "Nada com …" antes de mostrar os exercícios. Enquanto ela não responde, a busca diz "Buscando…" (`aoBuscando`).
+ */
+function FonteExercicios({ userId, termo, curto, aoBuscando, aoEscolher }: {
+  userId: string;
+  termo: string;
+  curto: boolean;
+  aoBuscando: (v: boolean) => void;
+  aoEscolher: (e: ExercicioDaBusca) => void;
+}) {
+  const { data, isLoading } = useQuery<LinhaExercicioBusca>(SQL_EXERCICIOS, [userId]);
+  useEffect(() => {
+    aoBuscando(isLoading);
+    return () => aoBuscando(false);
+  }, [isLoading, aoBuscando]);
   const todos = useMemo(() => exerciciosDaBusca(data ?? []), [data]);
-  const lista = useMemo(() => todos.filter((e) => combina(termo, [e.nome, e.grupo_muscular, ...e.treinos])), [todos, termo]);
+  const lista = useMemo(() => (curto ? [] : todos.filter((e) => combina(termo, [e.nome, e.grupo_muscular, ...e.treinos]))), [todos, termo, curto]);
   if (lista.length === 0) return null;
   return (
     <GrupoBusca titulo="Exercícios do seu treino">
@@ -43,10 +57,10 @@ function FonteExercicios({ userId, termo, aoEscolher }: { userId: string; termo:
   );
 }
 
-function FonteAlimentos({ termo, aoEscolher }: { termo: string; aoEscolher: (destino: string) => void }) {
+function FonteAlimentos({ termo, curto, aoEscolher }: { termo: string; curto: boolean; aoEscolher: (destino: string) => void }) {
   const d = useDieta();
   const todos = useMemo(() => alimentosDaBusca(planoAtivo(d.dados?.planos ?? []), d.hoje), [d.dados, d.hoje]);
-  const lista = useMemo(() => todos.filter((a) => combina(termo, [a.nome, ...a.refeicoes.map((r) => r.nome)])), [todos, termo]);
+  const lista = useMemo(() => (curto ? [] : todos.filter((a) => combina(termo, [a.nome, ...a.refeicoes.map((r) => r.nome)]))), [todos, termo, curto]);
   if (lista.length === 0) return null;
   return (
     <GrupoBusca titulo="Alimentos da sua dieta">
@@ -68,6 +82,7 @@ export function BuscaApp({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v: bo
   const { user } = useAuth();
   const [termo, setTermo] = useState("");
   const [ficha, setFicha] = useState<Exercicio | null>(null);
+  const [buscando, setBuscando] = useState(false);
   const curto = termo.trim().length < MINIMO_BUSCA;
   const fechar = () => {
     aoMudar(false);
@@ -86,24 +101,29 @@ export function BuscaApp({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v: bo
         vazio={
           curto ? (
             <span data-busca-dica>{tem.treino && tem.comNutricionista ? "Digite o nome de um exercício do seu treino ou de um alimento da sua dieta." : tem.treino ? "Digite o nome de um exercício do seu treino." : "Digite o nome de um alimento da sua dieta."}</span>
+          ) : buscando ? (
+            <span data-busca-buscando>Buscando no seu plano…</span>
           ) : (
             <span data-busca-vazia>Nada com “{termo.trim()}” no seu plano.</span>
           )
         }
       >
-        {!curto && tem.treino && user && (
+        {tem.treino && user && (
           <FonteExercicios
             userId={user.id}
             termo={termo}
+            curto={curto}
+            aoBuscando={setBuscando}
             aoEscolher={(e) => {
               fechar();
               setFicha({ id: e.id, nome: e.nome, grupo_muscular: e.grupo_muscular, emoji: e.emoji, tipo: e.tipo, imagem_url: e.imagem_url, subgrupo: e.subgrupo, dica: e.dica });
             }}
           />
         )}
-        {!curto && tem.comNutricionista && (
+        {tem.comNutricionista && (
           <FonteAlimentos
             termo={termo}
+            curto={curto}
             aoEscolher={(destino) => {
               fechar();
               navigate(destino);
