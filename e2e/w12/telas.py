@@ -401,8 +401,15 @@ def caso_busca(nav, base: str, prefixo: str) -> None:
         p.check(c.esperar(lambda: c.tem("[data-paleta-busca]"), 20), "[busca] a busca abriu")
         p.check(c.tem("[data-busca-dica]"), "[busca] a dica antes de digitar")
         campo = c.pg.locator("[data-paleta-busca] input")
-        # "peito": os exercícios do treino "Peito e Tríceps" e o alimento "Frango, peito…" do plano
+        # "peito": os exercícios do treino "Peito e Tríceps" e o alimento "Frango, peito…" do plano — sem piscar "Nada com …" antes
+        vistos: list[str] = []
         campo.fill("peito")
+        for _ in range(15):
+            vistos.append("nada" if c.tem("[data-busca-vazia]") else "itens" if c.pg.locator("[cmdk-item]").count() else "outro")
+            if vistos[-1] == "itens":
+                break
+            c.pg.wait_for_timeout(60)
+        p.check("nada" not in vistos, f"[busca] logo depois de digitar, sem 'Nada com …' antes dos resultados ({vistos})")
         c.esperar(lambda: c.pg.locator("[cmdk-item]").count() > 0, 20)
         c.pg.wait_for_timeout(600)
         grupos = c.pg.locator("[cmdk-group-heading]").evaluate_all("els => els.map(e => e.textContent)")

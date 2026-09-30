@@ -34,6 +34,7 @@ const h = vi.hoisted(() => {
     chave,
     sql: {} as Record<string, unknown[]>,
     hasSynced: true,
+    buscaCarregando: false,
     modulos: ["treino", "nutricao"] as string[],
     situacao: null as null | Record<string, unknown>,
     treino: { estado: "pronto", erro: null } as { estado: string; erro: string | null },
@@ -55,6 +56,7 @@ vi.mock("@powersync/react", () => ({
   usePowerSync: () => h.db,
   useQuery: (sql: string) => {
     const k = h.chave(sql);
+    if (k === "busca" && h.buscaCarregando) return { data: undefined, isLoading: true, isFetching: true, error: undefined };
     if (!h.cache.has(k)) h.cache.set(k, h.sql[k] ?? []);
     return { data: h.cache.get(k), isLoading: false, isFetching: false, error: undefined };
   },
@@ -190,6 +192,7 @@ beforeEach(() => {
   h.agenda = [{ id: "ag1", paciente_id: "m1", titulo: "Retorno", inicio: "2026-10-02T13:00:00Z", fim: "2026-10-02T14:00:00Z", dia_inteiro: false, status: "confirmado",
     modulo: "nutricao", profissional: "Camila Rocha", papel: "nutricionista" }];
   h.marcarMeta.mockClear();
+  h.buscaCarregando = false;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   Element.prototype.scrollIntoView = vi.fn();
   treinoDoDiego();
@@ -338,6 +341,16 @@ describe("aba Início (W12 — tela 1)", () => {
     expect(screen.getByRole("button", { name: "Trocar o treino de hoje" })).toBeInTheDocument();
     // Seg (com treino, feito) e Ter (feito, sem treino marcado agora): 2 de 2 — a mesma conta dos "· 2 feitos" da aba Treino
     expect(card("data-treino-semana")?.getAttribute("data-treino-semana")).toBe("2/2");
+  });
+
+  it("busca: enquanto o SQLite do aparelho não responde, 'Buscando…' (nunca 'Nada com …' antes da hora)", async () => {
+    h.buscaCarregando = true;
+    abrir();
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    const campo = await screen.findByPlaceholderText("Buscar exercício ou alimento");
+    fireEvent.change(campo, { target: { value: "triceps" } });
+    expect(await screen.findByText("Buscando no seu plano…")).toBeInTheDocument();
+    expect(screen.queryByText(/Nada com/)).toBeNull();
   });
 
   it("busca: acha o exercício do treino e o alimento do plano (sem acento)", async () => {
