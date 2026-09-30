@@ -215,9 +215,8 @@ def caso_ip() -> None:
     conta = conta_escada()
     email, senha = B.CONTAS[conta]
     B.zerar(email)
-    sal = Path.home().joinpath(".physiq-login-ip-sal").read_text().strip()
     ip = meu_ip()
-    h = hashlib.sha256(f"physiq-login:{sal}:{ip}".encode()).hexdigest()
+    h = B.hash_do_meu_ip()
     B.zerar_ips()
     st, r = B.entrar_senha(email, senha, "real", origem())
     linha = B.q(f"select tentativas from {B.schema()}.login_tentativas_ip where ip_hash = '{h}'")

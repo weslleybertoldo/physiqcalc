@@ -15,6 +15,7 @@ Casos (na ordem):
   celular      o card no painel em 390 px
   negativo     outra profissional abre o Rafael: o card não oferece criar senha
 Uso: python3 e2e/w08b/telas.py --base http://localhost:8080 --prefixo local [--casos a,b]
+     produção (só a escada, com a descartável): --base https://physiqcalc.com.br --prefixo prod --schema public --casos espera
 """
 from __future__ import annotations
 
@@ -73,7 +74,7 @@ def texto_msg(c: B.Caso) -> str:
 
 
 def caso_espera(nav, a) -> None:
-    email, senha = B.CONTAS["w8b-bloqueio"]
+    email, senha = B.CONTAS["w8b-bloqueio" if S() == "staging" else "w8b-prod-bloqueio"]
     B.zerar(email)
     B.zerar_ips()
     c = caso_novo(nav, a, "espera", desktop=False)
