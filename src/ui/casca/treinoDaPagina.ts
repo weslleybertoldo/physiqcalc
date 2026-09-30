@@ -48,4 +48,6 @@ export const MENSAGEM_TREINO_PAINEL: Record<ErroTroca, string> = {
   staging: MENSAGEM_TROCA.staging,
   email: MENSAGEM_TROCA.email,
   invalido: MENSAGEM_TROCA.invalido,
+  // W13: só acontece com quem é só aluno (profissional nunca é barrado) — fica aqui para o mapa ser completo
+  bloqueado: MENSAGEM_TROCA.bloqueado,
 };

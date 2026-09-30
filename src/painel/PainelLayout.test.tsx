@@ -37,7 +37,7 @@ vi.mock("@/rotas/registro", async () => {
     Componente: lazy(async () => ({ default: (p: { alunoId?: string }) => <div data-testid={`${grupo}-${nome}`}>{`${grupo}:${nome}${p.alunoId ? `:${p.alunoId}` : ""}`}</div> })),
   });
   const registro: Record<string, Record<string, ReturnType<typeof item>>> = {
-    paginasPainel: { Dashboard: item("paginas", "Dashboard"), Dietas: item("paginas", "Dietas"), Mensagens: item("paginas", "Mensagens") },
+    paginasPainel: { Dashboard: item("paginas", "Dashboard"), Alunos: item("paginas", "Alunos"), Dietas: item("paginas", "Dietas"), Mensagens: item("paginas", "Mensagens") },
     abasAluno: { Treino: item("abasAluno", "Treino") },
     resumoAluno: { CardTreino: item("resumo", "CardTreino"), CardDieta: item("resumo", "CardDieta") },
     kpisAluno: { KpiPeso: item("kpis", "KpiPeso") },
@@ -86,7 +86,7 @@ describe("site do profissional: páginas e peças registradas entram sozinhas", 
     expect(screen.getByTestId("faixa-plano")).toBeInTheDocument();
     const menu = document.querySelector("[data-menu-lateral]")!;
     const itens = [...menu.querySelectorAll("[data-nav]")].map((a) => a.getAttribute("data-nav"));
-    // Dashboard e Dietas (novas), Mensagens (nova), + as antigas (Alunos, Treinos, Financeiro, Configurações, Calculadora)
+    // Dashboard, Alunos (W13), Dietas e Mensagens (novas), + as antigas (Alunos, Treinos, Financeiro, Configurações, Calculadora)
     expect(itens).toEqual(["/painel", "/painel/alunos", "/painel/treinos", "/painel/dietas", "/painel/mensagens", "/painel/financeiro", "/painel/configuracoes", "/painel/calculadora"]);
     expect(menu.querySelector('[data-nav="/painel/alunos"] [data-contador]')?.textContent).toBe("132");
     const msg = menu.querySelector('[data-nav="/painel/mensagens"] [data-contador]')!;

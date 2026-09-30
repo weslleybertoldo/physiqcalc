@@ -1,6 +1,14 @@
 // professor-convites (SaaS 12/09/2026) — STAFF (professor ou master): link/código de convite e convites por e-mail dos ALUNOS.
 // actions: link | email | list | revoke | resend
 // Professor com plano vencido (fora da tolerância) NÃO convida (403 plano_vencido).
+//
+// Physiq W13 — os convites de ALUNO passaram para o banco principal (a lista nova do painel e o aceite no 1º login com aquele
+// e-mail, C7). Esta função fica no ar para o APK antigo (≤ 3.15, a lista antiga do Calc) e REPASSA email/list/revoke/resend para a
+// função alunos do principal (modo servidor, ESPELHO_SEGREDO) — com o LIMITE DA FAIXA da conta (C96, spec 6.4), o P7 e o e-mail
+// pelo Resend saindo de lá. O "link" continua daqui (o código do professor é o mesmo nos 2 bancos).
+// verify_jwt = true (chamada com o token do Treino do professor). Publicar:
+//   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions professor-convites true
+// Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2), RESEND_* (não usados desde a W13).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -43,34 +51,46 @@ function jsonErr(msg: string, status: number, origin: string | null) {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
+const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 function adminClient() { return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } }); }
 
-// E-mail do convite (pedido 13/09/2026) via Resend (conta B Code). Sem RESEND_API_KEY → não manda (comporta como antes).
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "PhysiqCalc <convites@physiqcalc.com.br>";
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
+// ---- Physiq W13: repasse dos convites de aluno para o banco principal (função alunos, modo servidor) ----
+/** Erro do principal → o vocabulário que o APK antigo conhece (ConviteAlunoDialog). */
+function erroParaApkAntigo(erro: unknown): string {
+  switch (String(erro ?? "")) {
+    case "email_invalido": return "email_invalido";
+    case "limite_plano": return "limite_plano";
+    case "outro_profissional": return "aluno_de_outro_professor";
+    case "conta_travada": return "plano_vencido";
+    case "nao_professor": return "nao_professor";
+    case "muitos_convites": return "rate_limited";
+    case "convite_inexistente":
+    case "convite_nao_pendente": return "not_found";
+    case "ja_e_aluno": return "ja_e_aluno";
+    case "conta_real_no_staging": return "conta_real_no_staging";
+    default: return "internal";
+  }
 }
-async function enviarConvitePorEmail(para: string, professor: string, url: string): Promise<boolean> {
-  if (!RESEND_API_KEY) return false;
-  const nome = escapeHtml(professor || "Seu professor");
-  const link = escapeHtml(url);
-  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111">
-    <h2 style="margin:0 0 12px">Convite pro PhysiqCalc</h2>
-    <p><b>${nome}</b> te convidou pra entrar na lista de alunos dele no PhysiqCalc.</p>
-    <p style="margin:20px 0"><a href="${link}" style="display:inline-block;background:#f5b400;color:#111;text-decoration:none;font-weight:bold;padding:12px 18px;border-radius:8px">Entrar com Google e aceitar</a></p>
-    <p style="font-size:12px;color:#555">Ou copie o link: ${link}</p>
-    <p style="font-size:12px;color:#555">Se você não esperava este convite, ignore este e-mail.</p>
-  </div>`;
+function statusParaApkAntigo(status: unknown): "pendente" | "aceito" | "revogado" {
+  return status === "aceito" ? "aceito" : status === "pendente" ? "pendente" : "revogado";
+}
+async function repassarAoPrincipal(treinoUserId: string, corpo: Record<string, unknown>): Promise<{ status: number; corpo: Record<string, unknown> }> {
+  if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return { status: 500, corpo: { ok: false, erro: "sem_configuracao" } };
+  const { data: v } = await adminClient().from("physiq_identidades").select("principal_user_id").eq("treino_user_id", treinoUserId).maybeSingle();
+  const principalId = (v as { principal_user_id?: string } | null)?.principal_user_id;
+  if (!principalId) return { status: 404, corpo: { ok: false, erro: "nao_professor" } };
   try {
-    const res = await fetch("https://api.resend.com/emails", {
+    const r = await fetch(`${PRINCIPAL_URL}/functions/v1/alunos`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: RESEND_FROM, to: [para], subject: `${professor || "Seu professor"} te convidou pro PhysiqCalc`, html }),
+      headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
+      body: JSON.stringify({ acao: "repasse", principal_user_id: principalId, ...corpo }),
     });
-    if (!res.ok) { console.error("resend", res.status, await res.text()); return false; }
-    return true;
-  } catch (e) { console.error("resend", e); return false; }
+    return { status: r.status, corpo: (await r.json().catch(() => ({}))) as Record<string, unknown> };
+  } catch (e) {
+    console.error("professor-convites: repasse", String(e));
+    return { status: 502, corpo: { ok: false, erro: "principal_indisponivel" } };
+  }
 }
 
 const janelasRate = new Map<string, number[]>();
@@ -140,47 +160,30 @@ Deno.serve(async (req) => {
       return jsonOk({ codigo: (prof as any).codigo_convite, url: `${base}/?prof=${encodeURIComponent((prof as any).codigo_convite)}` }, origin);
     }
 
-    // convite por e-mail: se a pessoa já tem conta neste ambiente e está sem professor, vincula na hora
+    // W13: convite por e-mail → banco principal (o convite fica pendente até a pessoa entrar com aquele e-mail; limite da faixa)
     if (action === "email") {
       const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return jsonErr("email_invalido", 400, origin);
-      const { data: pode } = await admin.rpc("physiq_professor_pode_convidar", { pid: user.id });
-      if (pode !== true) return jsonErr("limite_plano", 409, origin);
-      const { data: perfil } = await admin.from("physiq_profiles").select("id, professor_id").ilike("email", email).limit(1).maybeSingle();
-      if (perfil) {
-        if ((perfil as any).professor_id === user.id) return jsonOk({ vinculado: true, jaEra: true }, origin);
-        if ((perfil as any).professor_id) return jsonErr("aluno_de_outro_professor", 409, origin);
-        const { data: ehProf } = await admin.from("physiq_professores").select("id").eq("id", (perfil as any).id).maybeSingle();
-        if (ehProf) return jsonErr("email_de_professor", 409, origin);
-        const { error } = await admin.from("physiq_profiles").update({ professor_id: user.id }).eq("id", (perfil as any).id).is("professor_id", null);
-        if (error) throw error;
-        return jsonOk({ vinculado: true }, origin);
-      }
-      const { data: existente } = await admin.from("physiq_convites").select("id").eq("professor_id", user.id).eq("papel", "aluno").eq("status", "pendente").ilike("email", email).maybeSingle();
-      if (existente) return jsonOk({ vinculado: false, convite: existente, jaExistia: true }, origin);
-      const { data: conv, error } = await admin.from("physiq_convites").insert({ professor_id: user.id, email, papel: "aluno", criado_por: user.id }).select().single();
-      if (error) throw error;
-      const emailEnviado = await enviarConvitePorEmail(email, (prof as any).nome, `${base}/?prof=${encodeURIComponent((prof as any).codigo_convite)}`);
-      return jsonOk({ vinculado: false, convite: conv, emailEnviado }, origin);
+      const r = await repassarAoPrincipal(user.id, { repasse: "convidar", email });
+      if (r.corpo.ok !== true) return jsonErr(erroParaApkAntigo(r.corpo.erro), r.status >= 400 ? r.status : 400, origin);
+      const convite = { id: r.corpo.convite_id, email: r.corpo.email, status: "pendente", enviado_em: new Date().toISOString(), aceito_em: null };
+      return jsonOk({ vinculado: false, convite, jaExistia: r.corpo.reenvio === true, emailEnviado: r.corpo.email_enviado === true }, origin);
     }
 
     if (action === "list") {
-      const { data, error } = await admin.from("physiq_convites").select("id, email, status, enviado_em, aceito_em").eq("professor_id", user.id).eq("papel", "aluno").order("status").order("enviado_em", { ascending: false }).limit(200);
-      if (error) throw error;
-      return jsonOk({ convites: data ?? [] }, origin);
+      const r = await repassarAoPrincipal(user.id, { repasse: "convites" });
+      if (r.corpo.ok !== true) return jsonErr(erroParaApkAntigo(r.corpo.erro), r.status >= 400 ? r.status : 400, origin);
+      const lista = Array.isArray(r.corpo.convites) ? (r.corpo.convites as Array<Record<string, unknown>>) : [];
+      return jsonOk({ convites: lista.map((c) => ({ id: c.id, email: c.email, status: statusParaApkAntigo(c.status), enviado_em: c.enviado_em, aceito_em: c.aceito_em ?? null })) }, origin);
     }
 
     if (action === "revoke" || action === "resend") {
       const id = body?.id;
       if (!id || typeof id !== "string") return jsonErr("missing_id", 400, origin);
-      const patch = action === "revoke" ? { status: "revogado" } : { enviado_em: new Date().toISOString() };
-      const { data, error } = await admin.from("physiq_convites").update(patch).eq("id", id).eq("professor_id", user.id).eq("status", "pendente").select().maybeSingle();
-      if (error) throw error;
-      if (!data) return jsonErr("not_found", 404, origin);
-      const emailEnviado = action === "resend"
-        ? await enviarConvitePorEmail((data as any).email, (prof as any).nome, `${base}/?prof=${encodeURIComponent((prof as any).codigo_convite)}`)
-        : false;
-      return jsonOk({ convite: data, emailEnviado }, origin);
+      const r = await repassarAoPrincipal(user.id, { repasse: action === "revoke" ? "cancelar" : "reenviar", convite_id: id });
+      if (r.corpo.ok !== true) return jsonErr(erroParaApkAntigo(r.corpo.erro), r.status >= 400 ? r.status : 400, origin);
+      const convite = { id, email: r.corpo.email ?? null, status: action === "revoke" ? "revogado" : "pendente", enviado_em: new Date().toISOString(), aceito_em: null };
+      return jsonOk({ convite, emailEnviado: r.corpo.email_enviado === true }, origin);
     }
 
     return jsonErr("unknown_action", 400, origin);

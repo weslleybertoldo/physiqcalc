@@ -14,8 +14,8 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
     expect(MENU_PAINEL.filter((i) => i.grupo === "ferramentas").map((i) => i.rotulo)).toEqual(["Modelos", "Impressos", "Calculadora", "Lixeira"]);
   });
 
-  it("antes das páginas novas (W1), professor do Calc vê as antigas: Alunos, Treinos, Financeiro, Configurações e Calculadora", () => {
-    expect(visiveis(["treino"], semNovas)).toEqual(["Alunos", "Treinos", "Financeiro", "Configurações", "Calculadora"]);
+  it("sem página nova, professor do Calc vê as antigas que ainda existem: Treinos, Financeiro, Configurações e Calculadora (Alunos saiu na W13)", () => {
+    expect(visiveis(["treino"], semNovas)).toEqual(["Treinos", "Financeiro", "Configurações", "Calculadora"]);
   });
 
   it("módulos: Treinos só com Treino; Dietas e Impressos só com Nutrição (4.4)", () => {
@@ -26,10 +26,18 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
   });
 
   it("só Nutrição e sem página nova: a antiga vira o aviso do site do Nutri", () => {
+    const treinos = MENU_PAINEL.find((i) => i.id === "financeiro")!;
+    expect(estadoDoItem(treinos, ["treino"], semNovas)).toBe("antiga");
+    expect(estadoDoItem(treinos, ["nutricao"], semNovas)).toBe("nutri");
+    expect(estadoDoItem(treinos, ["nutricao"], comNovas)).toBe("nova");
+  });
+
+  it("W13: Alunos não tem mais a página antiga — é a nova (src/painel/paginas/Alunos.tsx) para os 2 módulos", () => {
     const alunos = MENU_PAINEL.find((i) => i.id === "alunos")!;
-    expect(estadoDoItem(alunos, ["treino"], semNovas)).toBe("antiga");
-    expect(estadoDoItem(alunos, ["nutricao"], semNovas)).toBe("nutri");
-    expect(estadoDoItem(alunos, ["nutricao"], comNovas)).toBe("nova");
+    expect(alunos.antiga).toBeUndefined();
+    expect(estadoDoItem(alunos, ["treino"])).toBe("nova");
+    expect(estadoDoItem(alunos, ["nutricao"])).toBe("nova");
+    expect(estadoDoItem(alunos, ["treino"], semNovas)).toBeNull();
   });
 
   it("item ativo pela rota (Dashboard só na raiz)", () => {

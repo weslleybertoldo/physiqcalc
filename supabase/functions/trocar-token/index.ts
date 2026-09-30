@@ -3,7 +3,8 @@
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: {} (vazio).
 // 200 → { access_token, refresh_token, expires_in, expires_at, token_type, treino_user_id, papel, vinculo, espelho }
-// Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging · 409 conta_em_conflito ·
+// Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging | aluno_bloqueado (W13) ·
+//        409 conta_em_conflito ·
 //        429 rate_limited · 502 principal_indisponivel | espelho_indisponivel · 500 erro_interno
 //
 // Regras de segurança (spec 7.4, risco 1): o token é validado no próprio principal (GET /auth/v1/user: assinatura e
@@ -18,6 +19,7 @@
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { aplicarResumo, type ResultadoEspelho } from "../_shared/espelho/aplicar.ts";
 import {
+  alunoBloqueadoSemStaff,
   claimsDoJwt,
   decidirVinculo,
   ehLoginGoogle,
@@ -221,6 +223,10 @@ Deno.serve(async (req) => {
     if (!resumo) return erro("espelho_indisponivel", 502, origin);
     const espelho: ResultadoEspelho = await aplicarResumo(db, authAdmin, treinoUser, resumo);
     await db.from("physiq_identidades").update({ visto_em: new Date().toISOString() }).eq("principal_user_id", principal.id);
+
+    // W13 (F5): aluno bloqueado pelo profissional em todas as matrículas — e que não é profissional nem master (P7) — não ganha
+    // sessão do Treino (o APK ≤ 3.15 não tem a trava; o app novo mostra "Acesso pausado pelo seu profissional")
+    if (alunoBloqueadoSemStaff(resumo, espelho.papel)) return erro("aluno_bloqueado", 403, origin);
 
     // 6. sessão do Treino (o app grava com setSession; o PowerSync conecta com ela)
     const sessao = await emitirSessao(treinoUser.email);
