@@ -105,8 +105,14 @@ def versao(esperada: str | None) -> None:
     tem_w14 = "Cabecalho-" in corpo and "LinkAntigo-" in corpo
     p.check(tem_w14, f"[site] o bundle de produção tem os chunks da W14 ({js[:1]})")
     if esperada:
-        achou = re.findall(r'"(3\.\d+)"', corpo)
-        p.check(esperada in achou, f"[site] versão {esperada} no bundle ({sorted(set(achou))[:6]})")
+        # a versão aparece nas telas que a mostram (Aplicativo, aviso de atualização, Entrar, Perfil) — chunks sob demanda
+        achou: set[str] = set()
+        for chunk in sorted(set(re.findall(r"(?:Aplicativo|AvisoAtualizacao|Entrar|Perfil)-[A-Za-z0-9_-]+\.js", corpo))):
+            txt = urllib.request.urlopen(urllib.request.Request(f"{BASE}/assets/{chunk}", headers={"User-Agent": "physiq-e2e-w14"}), timeout=60).read().decode()
+            achou |= set(re.findall(r'"(3\.\d+)"', txt))
+        maior, menor = esperada.split(".")
+        seguinte = f"{maior}.{int(menor) + 1}"
+        p.check(esperada in achou and seguinte not in achou, f"[site] versão {esperada} nas telas e nenhuma {seguinte} ({sorted(achou)})")
 
 
 def main() -> int:
