@@ -284,10 +284,22 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
   });
 
+  // W15: os grupos Treino e Configuração do Configurar aluno antigo viraram a aba Treino NOVA (src/painel/aluno/abas/Treino.tsx) —
+  // o link antigo cai nela (o Configurar antigo não abre mais ali)
   it.each([
-    ["/admin/alunos/u1?ct=treino&wt=volume", "/painel/alunos/u1/treino?ct=treino&wt=volume", "treino"],
-    ["/admin/alunos/u1?ct=historico", "/painel/alunos/u1/treino?ct=historico", "treino"],
-    ["/admin/alunos/u1?ct=config", "/painel/alunos/u1/treino?ct=config", "treino"],
+    ["/admin/alunos/u1?ct=treino&wt=volume", "/painel/alunos/u1/treino?ct=treino&wt=volume"],
+    ["/admin/alunos/u1?ct=historico", "/painel/alunos/u1/treino?ct=historico"],
+    ["/admin/alunos/u1?ct=config", "/painel/alunos/u1/treino?ct=config"],
+  ])("Configurar aluno %s → %s (aba Treino nova, W15)", async (de, para) => {
+    logar("professor");
+    abrir(de);
+    await waitFor(() => expect(onde()).toBe(para), { timeout: 4000 });
+    await waitFor(() => expect(document.querySelector('[data-aba-aluno="treino"]')?.getAttribute("aria-current")).toBe("page"));
+    await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='treino']")).not.toBeNull(), { timeout: 4000 });
+    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
+  });
+
+  it.each([
     ["/admin/alunos/u1?ct=dobras", "/painel/alunos/u1/avaliacao?ct=dobras", "avaliacao"],
     ["/admin/alunos/u1?ct=registros", "/painel/alunos/u1/avaliacao?ct=registros", "avaliacao"],
     ["/admin?v=config&u=u1&ct=evolucao", "/painel/alunos/u1/avaliacao?ct=evolucao", "avaliacao"],
@@ -306,9 +318,10 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     abrir("/admin/alunos/u1?ct=plano");
     await waitFor(() => expect(onde()).toBe("/painel/alunos/u1/financeiro?ct=plano"), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector('[data-aba-aluno="financeiro"]')?.getAttribute("aria-current")).toBe("page"));
-    await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='financeiro']")?.textContent).toContain("Não deu para abrir o financeiro"), { timeout: 4000 });
+    // W15: 8 s (a suíte inteira sem .env — o CI — deixa este caso perto dos 4 s; sozinho passa em ~2 s)
+    await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='financeiro']")?.textContent).toContain("Não deu para abrir o financeiro"), { timeout: 8000 });
     expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
-  });
+  }, 15_000);
 
   it("profissional abre direto no painel; se escolheu o app de aluno, volta para o app", async () => {
     logar("professor");

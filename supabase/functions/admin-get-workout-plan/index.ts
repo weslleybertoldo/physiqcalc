@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- função Deno: as respostas do supabase-js (service_role, sem os tipos gerados) são `any` desde sempre neste arquivo */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -113,7 +114,14 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   if (!user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
   const role = (user.app_metadata as any)?.role;
   const papel = papelDe(role);
-  if (!papel) return { user: null, error: jsonErr("forbidden", 403, origin) };
+  if (!papel) {
+    // Physiq W15: esta função só LÊ — quem não tem papel no Treino (o dono da conta que não é personal, spec 4.1) passa
+    // como leitor; o alunoDoProfessor (pode_ver_aluno_treino_por) decide se ele vê aquele aluno
+    user.papel = "leitor";
+    const permitido = await checkRateLimit(user.id, endpoint, maxCount, windowSecs);
+    if (!permitido) return { user: null, error: jsonErr("rate_limited", 429, origin) };
+    return { user, error: null };
+  }
   // professor com plano vencido (fora da tolerância) só acessa o que está em SEM_ACESSO_OK
   if (papel === "professor" && !SEM_ACESSO_OK.has(endpoint)) {
     const admin0 = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
@@ -158,7 +166,7 @@ Deno.serve(async (req) => {
     // Perfil (cabeçalho do PDF)
     const { data: profile, error: pErr } = await admin
       .from("physiq_profiles")
-      .select("id, nome, user_code, sexo, idade, peso, altura, plano_nome, series_padrao_qtd")
+      .select("id, nome, user_code, sexo, idade, peso, altura, plano_nome, series_padrao_qtd, tempo_descanso_segundos, proxima_troca_treino")
       .eq("id", userId)
       .maybeSingle();
     if (pErr) throw pErr;
@@ -184,7 +192,7 @@ Deno.serve(async (req) => {
         ? admin.from("tb_grupos_treino_usuario").select("id, nome").in("id", grupoUsuIds)
         : Promise.resolve({ data: [] as any[] }),
       admin.from("tb_series_padrao_usuario")
-        .select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series")
+        .select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg, observacao")
         .eq("user_id", userId),
     ]);
     if (seriesCfg.error) throw seriesCfg.error;
@@ -208,6 +216,31 @@ Deno.serve(async (req) => {
       const ex = chaveExercicio(r.exercicio_id ?? null, r.exercicio_usuario_id ?? null);
       mapaSeries.set(ex ? `${treino}|${ex}` : treino, clampSeries(Number(r.num_series)));
     }
+    // W15 — prescrição opcional (NF1: repetições, descanso, carga; linha do exercício > linha geral do treino) e a observação
+    // do treino (NF2, linha geral). Campos novos na resposta: o APK antigo ignora.
+    const prescricao = new Map<string, { reps: string | null; descanso: number | null; carga: number | null; obs: string | null }>();
+    const numOuNulo = (v: unknown): number | null => {
+      const n = Number(v);
+      return v === null || v === undefined || v === "" || !Number.isFinite(n) || n <= 0 ? null : n;
+    };
+    for (const r of (seriesCfg.data ?? []) as any[]) {
+      const treino = chaveTreino(r.grupo_id ?? null, r.grupo_usuario_id ?? null);
+      if (!treino) continue;
+      const ex = chaveExercicio(r.exercicio_id ?? null, r.exercicio_usuario_id ?? null);
+      const reps = typeof r.reps_alvo === "string" && r.reps_alvo.trim() ? r.reps_alvo.trim() : null;
+      const obs = typeof r.observacao === "string" && r.observacao.trim() ? r.observacao.trim() : null;
+      prescricao.set(ex ? `${treino}|${ex}` : treino, { reps, descanso: numOuNulo(r.descanso_segundos), carga: numOuNulo(r.carga_sugerida_kg), obs });
+    }
+    const prescricaoDe = (treino: string | null, exid: string | null, exuid: string | null) => {
+      const geral = treino ? prescricao.get(treino) : undefined;
+      const ex = chaveExercicio(exid, exuid);
+      const propria = treino && ex ? prescricao.get(`${treino}|${ex}`) : undefined;
+      return {
+        reps_alvo: propria?.reps ?? geral?.reps ?? null,
+        descanso_segundos: propria?.descanso ?? geral?.descanso ?? null,
+        carga_sugerida_kg: propria?.carga ?? geral?.carga ?? null,
+      };
+    };
     const numSeriesDe = (treino: string | null, exid: string | null, exuid: string | null): number => {
       if (!treino) return SERIES_PADRAO_ALUNO;
       const ex = chaveExercicio(exid, exuid);
@@ -247,7 +280,7 @@ Deno.serve(async (req) => {
     const exUsuIds = [...new Set((geUsu.data ?? []).map((r: any) => r.exercicio_usuario_id).filter(Boolean))];
     const [exGlob, exUsu] = await Promise.all([
       exGlobIds.length
-        ? admin.from("tb_exercicios").select("id, nome, grupo_muscular").in("id", exGlobIds)
+        ? admin.from("tb_exercicios").select("id, nome, grupo_muscular, subgrupo").in("id", exGlobIds)
         : Promise.resolve({ data: [] as any[] }),
       exUsuIds.length
         ? admin.from("tb_exercicios_usuario").select("id, nome, grupo_muscular").in("id", exUsuIds)
@@ -264,7 +297,7 @@ Deno.serve(async (req) => {
       const pos = posUsu.get(`${r.grupo_id}|${r.exercicio_id}`);
       const lista = exsPorGrupoGlob.get(r.grupo_id) ?? [];
       lista.push({
-        nome: ex.nome, grupo_muscular: ex.grupo_muscular, ordem: pos ?? r.ordem ?? 0,
+        nome: ex.nome, grupo_muscular: ex.grupo_muscular, subgrupo: ex.subgrupo ?? null, ordem: pos ?? r.ordem ?? 0,
         exercicio_id: r.exercicio_id ?? null, exercicio_usuario_id: null,
       });
       exsPorGrupoGlob.set(r.grupo_id, lista);
@@ -276,7 +309,7 @@ Deno.serve(async (req) => {
       if (!ex) continue;
       const lista = exsPorGrupoUsu.get(r.grupo_usuario_id) ?? [];
       lista.push({
-        nome: ex.nome, grupo_muscular: ex.grupo_muscular, ordem: r.ordem ?? 0,
+        nome: ex.nome, grupo_muscular: ex.grupo_muscular, subgrupo: ex.subgrupo ?? null, ordem: r.ordem ?? 0,
         exercicio_id: r.exercicio_usuario_id ? null : (r.exercicio_id ?? null),
         exercicio_usuario_id: r.exercicio_usuario_id ?? null,
       });
@@ -298,10 +331,15 @@ Deno.serve(async (req) => {
         return {
           dia_semana: r.dia_semana,
           grupo_nome: grupoNome,
+          grupo_id: r.grupo_id ?? null,
+          grupo_usuario_id: r.grupo_usuario_id ?? null,
+          observacao: treino ? prescricao.get(treino)?.obs ?? null : null,
           exercicios: exercicios.map((e) => ({
             nome: e.nome,
             grupo_muscular: e.grupo_muscular ?? null,
+            subgrupo: e.subgrupo ?? null,
             num_series: numSeriesDe(treino, e.exercicio_id, e.exercicio_usuario_id),
+            ...prescricaoDe(treino, e.exercicio_id, e.exercicio_usuario_id),
           })),
         };
       })

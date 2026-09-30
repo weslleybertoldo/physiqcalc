@@ -14,6 +14,10 @@ export interface WorkoutProfile {
   peso: number | null;
   altura: number | null;
   plano_nome: string | null;
+  /** W15: o descanso padrão do aluno (vale nos exercícios sem descanso próprio) */
+  tempo_descanso_segundos?: number | null;
+  /** W15 — NF7: data da troca do treino (novo ciclo), yyyy-mm-dd */
+  proxima_troca_treino?: string | null;
 }
 
 export interface WorkoutExercicio {
@@ -21,12 +25,18 @@ export interface WorkoutExercicio {
   grupo_muscular: string | null;
   /** nº de séries configurado pro aluno (edge `admin-get-workout-plan`); ausente = padrão */
   num_series?: number | null;
+  /** W15 — NF1 (prescrição opcional do profissional): repetições-alvo ("10" ou "8-12"), descanso (s) e carga sugerida (kg) */
+  reps_alvo?: string | null;
+  descanso_segundos?: number | null;
+  carga_sugerida_kg?: number | null;
 }
 
 export interface WorkoutDia {
   dia_semana: string;
   grupo_nome: string;
   exercicios: WorkoutExercicio[];
+  /** W15 — NF2: observação do treino para o aluno */
+  observacao?: string | null;
 }
 
 /** Sem prescrição de repetições no schema → faixa genérica de hipertrofia (decisão de 05/06/2026). */
@@ -39,10 +49,47 @@ const SERIES_MAX = 10;
  * Coluna "Séries": "N × 8-12" com o N configurado pro aluno (exercício > treino > padrão, resolvido na edge).
  * Até 18/09/2026 saía "3" fixo pra todo mundo — a Lívia tinha ABS com 1 série e o PDF mostrava 3.
  */
-export function textoSeries(numSeries: number | null | undefined): string {
+export function textoSeries(numSeries: number | null | undefined, repsAlvo?: string | null): string {
   const n = Number(numSeries);
   const v = Number.isFinite(n) && n >= 1 ? Math.min(SERIES_MAX, Math.round(n)) : SERIES_PADRAO;
-  return `${v} × ${REPS_PADRAO}`;
+  // W15: com as repetições prescritas pelo profissional (NF1), elas; sem, a faixa genérica de sempre
+  const reps = typeof repsAlvo === "string" && repsAlvo.trim() ? repsAlvo.trim() : REPS_PADRAO;
+  return `${v} × ${reps}`;
+}
+
+/** "60 s" · "90 s" · "2 min" · "2 min 30 s" (o mesmo texto do app do aluno). */
+export function textoDescansoPdf(segundos: number | null | undefined): string {
+  const s = Math.round(Number(segundos));
+  if (!Number.isFinite(s) || s <= 0) return "—";
+  if (s < 120) return `${s} s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return r ? `${m} min ${r} s` : `${m} min`;
+}
+
+/** "60 kg" · "22,5 kg" · "—" */
+export function textoCargaPdf(kg: number | null | undefined): string {
+  const n = Number(kg);
+  if (kg === null || kg === undefined || !Number.isFinite(n) || n <= 0) return "—";
+  return `${String(Math.round(n * 100) / 100).replace(".", ",")} kg`;
+}
+
+/** W15: algum exercício tem descanso ou carga prescritos? Então o PDF ganha as colunas Descanso e Carga. */
+export function temPrescricaoCompleta(dias: WorkoutDia[]): boolean {
+  return dias.some((d) => d.exercicios.some((e) => (e.descanso_segundos ?? 0) > 0 || (e.carga_sugerida_kg ?? 0) > 0));
+}
+
+/** Linhas com a prescrição completa: [exercício, grupo, séries × reps, descanso (o do exercício ou o padrão), carga]. */
+export function linhasTabelaDiaCompleta(dia: WorkoutDia, descansoPadrao: number | null | undefined): string[][] {
+  return dia.exercicios.length
+    ? dia.exercicios.map((e) => [
+        limparTexto(e.nome),
+        e.grupo_muscular ? limparTexto(e.grupo_muscular) : "—",
+        textoSeries(e.num_series, e.reps_alvo),
+        textoDescansoPdf(e.descanso_segundos ?? descansoPadrao),
+        textoCargaPdf(e.carga_sugerida_kg),
+      ])
+    : [["Sem exercícios cadastrados", "—", "—", "—", "—"]];
 }
 
 /** Linhas da tabela de um dia: [exercício, grupo muscular, séries]. */
@@ -51,7 +98,7 @@ export function linhasTabelaDia(dia: WorkoutDia): string[][] {
     ? dia.exercicios.map((e) => [
         limparTexto(e.nome),
         e.grupo_muscular ? limparTexto(e.grupo_muscular) : "—",
-        textoSeries(e.num_series),
+        textoSeries(e.num_series, e.reps_alvo),
       ])
     : [["Sem exercícios cadastrados", "—", "—"]];
 }
@@ -99,6 +146,8 @@ function diaLabel(d: string): string {
 }
 
 export const RODAPE_TREINO = `Repetições ${REPS_PADRAO} (hipertrofia) · nº de séries conforme configurado no app`;
+/** W15: rodapé quando o profissional prescreveu (NF1). */
+export const RODAPE_TREINO_PRESCRITO = `Séries, repetições, descanso e carga prescritos pelo profissional · sem repetições prescritas: ${REPS_PADRAO}`;
 
 /** o jspdf-autotable pendura `lastAutoTable` no documento (posição final da última tabela) */
 type DocComTabela = jsPDF & { lastAutoTable?: { finalY: number } };
@@ -148,30 +197,49 @@ export function montarWorkoutPlanPDF(profile: WorkoutProfile, dias: WorkoutDia[]
     doc.text("Nenhum treino configurado para este aluno.", 14, y + 2);
   }
 
+  // W15: com descanso ou carga prescritos (NF1), a tabela ganha as colunas Descanso e Carga
+  const completa = temPrescricaoCompleta(dias);
+  const temReps = dias.some((d) => d.exercicios.some((e) => typeof e.reps_alvo === "string" && e.reps_alvo.trim()));
+  if (profile.proxima_troca_treino && /^\d{4}-\d{2}-\d{2}$/.test(profile.proxima_troca_treino)) {
+    const [a, m, d] = profile.proxima_troca_treino.split("-");
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...hexToRgb(TEMA.cinzaMedio));
+    doc.text(`Troca do treino (novo ciclo): ${d}/${m}/${a}`, 14, y);
+    y += 7;
+  }
   for (const dia of dias) {
-    const body = linhasTabelaDia(dia);
-    if (precisaNovaPagina(y, body.length, H)) y = abrirPagina();
+    const body = completa ? linhasTabelaDiaCompleta(dia, profile.tempo_descanso_segundos) : linhasTabelaDia(dia);
+    const obs = typeof dia.observacao === "string" && dia.observacao.trim() ? limparTexto(dia.observacao.trim()) : null;
+    if (precisaNovaPagina(y, body.length + (obs ? 1 : 0), H)) y = abrirPagina();
     y = desenharTituloSecao(doc, `${diaLabel(dia.dia_semana)} · ${limparTexto(dia.grupo_nome)}`, y);
     autoTable(doc, {
       startY: y,
-      head: [["Exercício", "Grupo muscular", "Séries"]],
+      head: [completa ? ["Exercício", "Grupo muscular", "Séries", "Descanso", "Carga"] : ["Exercício", "Grupo muscular", "Séries"]],
       body,
       ...estiloTabela(),
       margin: { left: 14, right: 14, bottom: MARGEM_INFERIOR },
-      columnStyles: {
-        1: { cellWidth: 42 },
-        2: { halign: "right", cellWidth: 26 },
-      },
+      columnStyles: completa
+        ? { 1: { cellWidth: 36 }, 2: { halign: "right", cellWidth: 22 }, 3: { halign: "right", cellWidth: 20 }, 4: { halign: "right", cellWidth: 20 } }
+        : { 1: { cellWidth: 42 }, 2: { halign: "right", cellWidth: 26 } },
       willDrawPage: pintarSeNova,
     });
     y = ((doc as DocComTabela).lastAutoTable?.finalY ?? y) + 8;
+    if (obs) {
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(...hexToRgb(TEMA.cinzaMedio));
+      const linhasObs = doc.splitTextToSize(`Observação: ${obs}`, W - 28) as string[];
+      doc.text(linhasObs, 14, y - 3);
+      y += linhasObs.length * 4 + 3;
+    }
   }
 
   // Rodapé em TODAS as páginas (antes só a última tinha)
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
-    desenharRodape(doc, RODAPE_TREINO);
+    desenharRodape(doc, completa || temReps ? RODAPE_TREINO_PRESCRITO : RODAPE_TREINO);
   }
   doc.setPage(total);
   return doc;

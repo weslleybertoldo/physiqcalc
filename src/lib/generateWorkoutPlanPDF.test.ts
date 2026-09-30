@@ -3,6 +3,10 @@ import type { jsPDF } from "jspdf";
 import {
   alturaEstimadaDia,
   linhasTabelaDia,
+  linhasTabelaDiaCompleta,
+  temPrescricaoCompleta,
+  textoCargaPdf,
+  textoDescansoPdf,
   montarWorkoutPlanPDF,
   nomeArquivoTreino,
   precisaNovaPagina,
@@ -139,5 +143,47 @@ describe("nomeArquivoTreino", () => {
   it("remove acentos/símbolos e junta o ID", () => {
     expect(nomeArquivoTreino(perfil)).toBe("Physiq-Treino-Lvia Cavalcante-72026.pdf");
     expect(nomeArquivoTreino({ ...perfil, nome: null, user_code: null })).toBe("Physiq-Treino-Aluno-.pdf");
+  });
+});
+
+describe("W15 — a prescrição do profissional no PDF do treino (NF1/NF2/NF7)", () => {
+  const prescrito: WorkoutDia = {
+    dia_semana: "SEG",
+    grupo_nome: "Peito e tríceps",
+    observacao: "Desça a barra em 3 segundos no supino.",
+    exercicios: [
+      { nome: "Supino Reto com Barra", grupo_muscular: "Peitoral", num_series: 4, reps_alvo: "10", descanso_segundos: 60, carga_sugerida_kg: 60 },
+      { nome: "Supino Inclinado", grupo_muscular: "Peitoral", num_series: 3, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null },
+    ],
+  };
+  it("séries × repetições prescritas; sem repetições, a faixa de sempre", () => {
+    expect(textoSeries(4, "10")).toBe("4 × 10");
+    expect(textoSeries(3, "8-12")).toBe("3 × 8-12");
+    expect(textoSeries(3, "  ")).toBe("3 × 8-12");
+  });
+  it("descanso e carga em texto (o mesmo do app)", () => {
+    expect(textoDescansoPdf(60)).toBe("60 s");
+    expect(textoDescansoPdf(150)).toBe("2 min 30 s");
+    expect(textoDescansoPdf(null)).toBe("—");
+    expect(textoCargaPdf(22.5)).toBe("22,5 kg");
+    expect(textoCargaPdf(0)).toBe("—");
+  });
+  it("com descanso ou carga prescritos, a tabela ganha as colunas (o descanso padrão do aluno onde não tem o do exercício)", () => {
+    expect(temPrescricaoCompleta([prescrito])).toBe(true);
+    expect(temPrescricaoCompleta([dia("SEG", "ABS", 2, 1)])).toBe(false);
+    expect(linhasTabelaDiaCompleta(prescrito, 90)).toEqual([
+      ["Supino Reto com Barra", "Peitoral", "4 × 10", "60 s", "60 kg"],
+      ["Supino Inclinado", "Peitoral", "3 × 8-12", "90 s", "—"],
+    ]);
+  });
+  it("o documento imprime a prescrição, a observação e a troca do treino", () => {
+    const doc = montarWorkoutPlanPDF({ ...perfil, tempo_descanso_segundos: 90, proxima_troca_treino: "2026-10-19" }, [prescrito]);
+    const ops = opsPagina(doc, 1);
+    expect(ops).toContain("4 × 10");
+    expect(ops).toContain("60 kg");
+    expect(ops).toContain("90 s");
+    expect(ops).toContain("Desça a barra em 3 segundos");
+    expect(ops).toContain("19/10/2026");
+    expect(ops).toContain("prescritos pelo profissional");
   });
 });
