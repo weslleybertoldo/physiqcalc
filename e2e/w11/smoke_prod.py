@@ -123,7 +123,7 @@ def caso_tela(nav, base: str, prefixo: str) -> None:
         p.check(T.txt(c, "[data-plano-autor]").startswith("Plano de Nutri Teste Claude"), f"[prod] autor ({T.txt(c, '[data-plano-autor]')})")
         p.check(T.estado_ref(c, ids["Café da manhã"]) == "agora", "[prod] 'Feito' na próxima refeição (café)")
         abas = c.pg.evaluate("() => [...document.querySelectorAll('[data-tabbar] [data-aba]')].map(e => e.getAttribute('data-aba'))")
-        p.check(abas == ["dieta", "evolucao", "perfil"], f"[prod] só Nutrição: Dieta · Evolução · Perfil ({abas})")
+        p.check(abas == ["inicio", "dieta", "evolucao", "perfil"], f"[prod] só Nutrição: Início · Dieta · Evolução · Perfil ({abas})")  # W12: o Início
         p.check("continua no PhysiqNutri" not in c.texto(), "[prod] sem a trava da W3")
         T.foto(c, "dieta")
         c.pg.locator(f'[data-refeicao="{ids["Almoço"]}"] [data-refeicao-abrir]').click()

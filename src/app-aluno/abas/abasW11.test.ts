@@ -8,13 +8,13 @@ import { destinoDaRotaAntiga } from "@/rotas/redirecionamentos";
 const raiz = resolve(__dirname, "../../..");
 
 describe("W11 — a aba Dieta nova entra pelo registro (tela 3)", () => {
-  it("src/app-aluno/abas/Dieta.tsx está registrada; só Nutrição entra no app com Dieta · Evolução · Perfil (abre na Dieta)", () => {
+  it("src/app-aluno/abas/Dieta.tsx está registrada; só Nutrição entra no app com Início · Dieta · Evolução · Perfil (W12: abre no Início)", () => {
     expect(existe("abasApp", "Dieta")).toBe(true);
-    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Dieta", "Evolução", "Perfil"]);
-    expect(abaDeAbertura(["nutricao"])?.id).toBe("dieta");
-    expect(abasVisiveis(["treino", "nutricao"]).map((a) => a.rotulo)).toEqual(["Treino", "Dieta", "Evolução", "Perfil"]);
-    expect(abaDeAbertura(["treino", "nutricao"])?.id).toBe("treino"); // o Início (W12) ainda não existe
-    expect(abasVisiveis(["treino"]).map((a) => a.rotulo)).toEqual(["Treino", "Evolução", "Perfil"]);
+    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Início", "Dieta", "Evolução", "Perfil"]);
+    expect(abaDeAbertura(["nutricao"])?.id).toBe("inicio");
+    expect(abasVisiveis(["treino", "nutricao"]).map((a) => a.rotulo)).toEqual(["Início", "Treino", "Dieta", "Evolução", "Perfil"]);
+    expect(abaDeAbertura(["treino", "nutricao"])?.id).toBe("inicio");
+    expect(abasVisiveis(["treino"]).map((a) => a.rotulo)).toEqual(["Início", "Treino", "Evolução", "Perfil"]);
   });
 
   it("a faixa 'Sua dieta continua no PhysiqNutri' saiu (a Dieta chegou); o Perfil › Alimentação ficou como atalho", () => {

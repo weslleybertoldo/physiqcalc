@@ -5,11 +5,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { Share2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePowerSync } from "@powersync/react";
-import { blocoDoGrupoMuscular } from "@/lib/gruposMusculares";
 import { chaveTreino } from "@/lib/seriesPadrao";
 import { Botao } from "@/ui/premium/Botao";
-import { fotoDoTreino } from "@/ui/premium/fotos";
 import { carregarAnotacao } from "../anotacoes";
+import { fotoDoSlot } from "../foto";
 import { cargaDaLinha, formatarCarga, linhaDoExercicio, observacaoDoTreino, prescricaoDoExercicio, type Prescricao, type PrescricaoTreino } from "../prescricao";
 import { proximaSerie } from "../proxima";
 import { restaurarExercicio } from "../remocao";
@@ -24,17 +23,6 @@ import { SheetHistoricoExercicio } from "./SheetHistoricoExercicio";
 import { SheetOpcoesTreino } from "./SheetOpcoesTreino";
 import { SheetRemoverExercicio } from "./SheetRemoverExercicio";
 import { TrocarExercicio } from "./TrocarExercicio";
-
-/** Bloco muscular que mais aparece no treino → foto de fundo (P29). */
-function fotoDoSlot(slot: DiaSlot): string {
-  const conta = new Map<string, number>();
-  for (const e of slot.exercicios) {
-    const b = blocoDoGrupoMuscular(e.tb_exercicios.grupo_muscular || "");
-    conta.set(b, (conta.get(b) ?? 0) + 1);
-  }
-  const principal = [...conta.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-  return fotoDoTreino(principal && principal !== "outros" ? principal : slot.grupo?.nome);
-}
 
 export interface PropsSlot {
   userId: string;

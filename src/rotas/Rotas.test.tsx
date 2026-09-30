@@ -72,6 +72,8 @@ vi.mock("@/integrations/principal/client", () => ({
 vi.mock("@/app-aluno/abas/Treino", () => h.marcador("aba-treino"));
 // W10: a aba Evolução é a nova (src/app-aluno/abas/Evolucao.tsx, pelo registro) — o UserDashboard saiu
 vi.mock("@/app-aluno/abas/Evolucao", () => h.marcador("aba-evolucao"));
+// W12: o Início (src/app-aluno/abas/Inicio.tsx) é a tela de abertura do app
+vi.mock("@/app-aluno/abas/Inicio", () => h.marcador("aba-inicio"));
 vi.mock("@/pages/PagamentosPage", () => h.marcador("antiga-pagamentos"));
 vi.mock("@/pages/Index", () => h.marcador("antiga-calculadora-publica"));
 vi.mock("@/pages/PrivacidadePage", () => h.marcador("antiga-privacidade"));
@@ -150,7 +152,7 @@ afterEach(() => {
 
 describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
   it.each([
-    ["/", "/treino", "aba-treino"],
+    ["/", "/", "aba-inicio"],
     ["/treinos", "/treino", "aba-treino"],
     ["/treino", "/treino", "aba-treino"],
     ["/avaliacao", "/evolucao", "aba-evolucao"],
@@ -160,10 +162,10 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
     abrir(de);
     expect(await screen.findByTestId(tela)).toBeInTheDocument();
     await waitFor(() => expect(onde()).toBe(para));
-    // a barra de abas da tela 1, com as abas que já têm tela (Treino, Evolução e — desde a W7 — Perfil; Início e Dieta nas W12/W11)
+    // a barra de abas da tela 1 do aluno só do Treino (W12: Início · Treino · Evolução · Perfil; a Dieta é do módulo Nutrição)
     const barra = document.querySelector("[data-tabbar]")!;
     expect(barra).not.toBeNull();
-    expect([...barra.querySelectorAll("[data-aba]")].map((a) => a.textContent)).toEqual(["Treino", "Evolução", "Perfil"]);
+    expect([...barra.querySelectorAll("[data-aba]")].map((a) => a.textContent)).toEqual(["Início", "Treino", "Evolução", "Perfil"]);
   });
 
   // W6: Perfil › Pagamentos é a tela nova (src/app-aluno/perfil/Pagamentos.tsx) — o /pagamentos e o /app/recibos caem nela
@@ -175,18 +177,18 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
     expect(screen.queryByTestId("antiga-pagamentos")).toBeNull();
   });
 
-  it("aba sem tela nem módulo (Dieta, Perfil) volta para a abertura", async () => {
+  it("aba sem o módulo do aluno (Dieta para o aluno só do Treino) volta para a abertura (o Início, W12)", async () => {
     logar("aluno");
     abrir("/dieta");
-    expect(await screen.findByTestId("aba-treino")).toBeInTheDocument();
-    await waitFor(() => expect(onde()).toBe("/treino"));
+    expect(await screen.findByTestId("aba-inicio")).toBeInTheDocument();
+    await waitFor(() => expect(onde()).toBe("/"));
   });
 
   it("aluno não entra no painel nem no master", async () => {
     logar("aluno");
     abrir("/painel/alunos");
-    expect(await screen.findByTestId("aba-treino", {}, { timeout: 4000 })).toBeInTheDocument();
-    expect(onde()).toBe("/treino");
+    expect(await screen.findByTestId("aba-inicio", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(onde()).toBe("/");
   });
 });
 
@@ -222,10 +224,11 @@ describe("entrada: sem login cai no Entrar (a tela nova da W3, login único)", (
     expect(screen.queryByText("EM BREVE")).toBeNull();
   });
 
-  it("logado, /entrar volta para o app", async () => {
+  it("logado, /entrar volta para o app (o Início, W12)", async () => {
     logar("aluno");
     abrir("/entrar");
-    expect(await screen.findByTestId("aba-treino")).toBeInTheDocument();
+    expect(await screen.findByTestId("aba-inicio")).toBeInTheDocument();
+    expect(onde()).toBe("/");
   });
 });
 
@@ -302,7 +305,7 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     r.unmount();
     localStorage.setItem("physiq_area", "aluno");
     abrir("/");
-    expect(await screen.findByTestId("aba-treino")).toBeInTheDocument();
+    expect(await screen.findByTestId("aba-inicio")).toBeInTheDocument();
   });
 
   it("card da conta, card do plano e menu do usuário na casca", async () => {

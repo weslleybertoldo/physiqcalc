@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { gatesApp, listar } from "@/rotas/registro";
+import { cn } from "@/lib/utils";
 import { lembrarArea, ultimaArea } from "@/ui/casca/area";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { Carregavel } from "@/ui/casca/Carregavel";
@@ -13,13 +14,34 @@ import { abaDaRota, abaDeAbertura, abasVisiveis } from "./catalogoAbas";
 /** Faixas do topo da aba de abertura, na ordem da spec (a da mensalidade primeiro). */
 const ORDEM_AVISOS = ["FaixaMensalidade"];
 
+/**
+ * As faixas do topo (src/app-aluno/avisos/<Aviso>.tsx — a da mensalidade, W6/C85). A casca é a dona delas: o Início (W12) as
+ * põe logo abaixo da saudação, como na tela 1; sem o Início, a casca as mostra no alto da aba de abertura. Faixa que não tem o
+ * que mostrar não deixa espaço (a caixa vazia some — era o espaço a mais no topo da W11).
+ */
+export function AvisosDoTopo({ className }: { className?: string }) {
+  const avisos = listar("avisosApp", ORDEM_AVISOS);
+  if (avisos.length === 0) return null;
+  return (
+    <div data-avisos-topo className={cn("flex flex-col gap-3 empty:hidden", className)}>
+      {avisos.map(({ nome, Componente }) => (
+        <LimiteDeErro key={nome} silencioso nome={`aviso ${nome}`}>
+          <Carregavel esqueleto={null}>
+            <Componente />
+          </Carregavel>
+        </LimiteDeErro>
+      ))}
+    </div>
+  );
+}
+
 /** Espaço que a barra de abas ocupa embaixo (as telas antigas com `fixed bottom-*` sobem esse tanto). */
 const RESERVA = "calc(66px + 26px + 12px + env(safe-area-inset-bottom, 0px))";
 
 /**
- * Casca do app do aluno (tela 1): fundo com o halo violeta/verde, faixas do topo na aba de abertura,
- * travas registradas e a barra de abas flutuante embaixo (Início · Treino · Dieta · Evolução · Perfil;
- * as que ainda não têm tela — nova ou antiga — ou não são do módulo do aluno ficam de fora).
+ * Casca do app do aluno (tela 1): fundo com o halo violeta/verde, faixas do topo na aba de abertura (desde a W12 o Início,
+ * que as mostra abaixo da saudação), travas registradas e a barra de abas flutuante embaixo (Início · Treino · Dieta ·
+ * Evolução · Perfil; as que ainda não têm tela — nova ou antiga — ou não são do módulo do aluno ficam de fora).
  */
 export default function AppAlunoLayout() {
   const dados = useDadosCasca();
@@ -51,23 +73,14 @@ export default function AppAlunoLayout() {
   if (!dados.usuario) return <Navigate to="/entrar" replace state={{ de: location.pathname + location.search }} />;
   if (vaiProPainel) return <Navigate to="/painel" replace />;
 
-  const avisos = naAbertura ? listar("avisosApp", ORDEM_AVISOS) : [];
+  // o Início (W12) põe as faixas abaixo da saudação (tela 1); as outras abas de abertura, no alto
+  const avisosNoAlto = naAbertura && abertura?.id !== "inicio";
 
   return (
     <div data-casca-app className="relative isolate min-h-screen text-texto">
       <div aria-hidden className="pq-halo-app pointer-events-none fixed inset-0 -z-10" />
       <ComGates gates={gatesApp}>
-        {avisos.length > 0 && (
-          <div data-avisos-topo className="mx-auto flex max-w-3xl flex-col gap-3 px-4 pt-[max(14px,env(safe-area-inset-top,0px))] sm:px-8">
-            {avisos.map(({ nome, Componente }) => (
-              <LimiteDeErro key={nome} silencioso nome={`aviso ${nome}`}>
-                <Carregavel esqueleto={null}>
-                  <Componente />
-                </Carregavel>
-              </LimiteDeErro>
-            ))}
-          </div>
-        )}
+        {avisosNoAlto && <AvisosDoTopo className="mx-auto max-w-3xl px-4 pt-[max(14px,env(safe-area-inset-top,0px))] sm:px-8" />}
         <div
           data-aba-conteudo={abaAtual ?? ""}
           className={mostrarBarra ? "pb-[var(--reserva-abas)]" : undefined}

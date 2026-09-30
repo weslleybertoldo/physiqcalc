@@ -120,9 +120,20 @@ describe("GateSessaoTreino", () => {
   it("conflito de conta → conferência do master, sem 'tentar de novo'", () => {
     h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true }), treino: { estado: "erro", erro: "conflito" } };
     h.auth.user = null;
-    montar(GateSessaoTreino, "/");
+    montar(GateSessaoTreino, "/treino");
     expect(screen.getByText("Sua conta precisa de uma conferência")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Tentar de novo/ })).toBeNull();
+  });
+  it("W12: o Início (\"/\") não espera a troca nem fecha com o erro — o card do treino cuida disso no próprio lugar", () => {
+    h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true, modulos_aluno: ["treino", "nutricao"] }), treino: { estado: "trocando", erro: null } };
+    h.auth.user = null;
+    const r = montar(GateSessaoTreino, "/");
+    expect(screen.getByText("o app")).toBeInTheDocument();
+    r.unmount();
+    h.sessao = { ...h.sessao, treino: { estado: "erro", erro: "rede" } };
+    montar(GateSessaoTreino, "/");
+    expect(screen.getByText("o app")).toBeInTheDocument();
+    expect(screen.queryByText("Não foi possível abrir seu treino")).toBeNull();
   });
   it("W5: a troca ainda não chegou → 'Abrindo seu treino' só nas abas do Treino (a casca não espera mais)", () => {
     h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true, modulos_aluno: ["treino"] }), treino: { estado: "trocando", erro: null } };

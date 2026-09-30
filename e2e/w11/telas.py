@@ -355,7 +355,7 @@ def caso_so_nutricao(nav, base: str, prefixo: str) -> None:
         ok = c.esperar(lambda: c.caminho().startswith("/dieta") and c.tem('[data-aba-dieta="sem-plano"]'), 60)
         p.check(ok, f"[so_nutricao] a aluna só de Nutrição entra no app e abre na Dieta ({c.caminho()})")
         abas = c.pg.evaluate("() => [...document.querySelectorAll('[data-tabbar] [data-aba]')].map(e => e.getAttribute('data-aba'))")
-        p.check(abas == ["dieta", "evolucao", "perfil"], f"[so_nutricao] as 3 abas: Dieta · Evolução · Perfil ({abas})")
+        p.check(abas == ["inicio", "dieta", "evolucao", "perfil"], f"[so_nutricao] as 4 abas: Início · Dieta · Evolução · Perfil ({abas})")  # W12: o Início
         p.check(not c.tem('[data-trava-app="use-o-nutri"]') and "continua no PhysiqNutri" not in c.texto(), "[so_nutricao] sem a trava da W3")
         p.check("Nenhum plano alimentar ainda" in c.texto() and c.tem("[data-abrir-diario]") and c.tem("[data-abrir-metas]"),
                 "[so_nutricao] sem plano: o vazio, com diário e metas")

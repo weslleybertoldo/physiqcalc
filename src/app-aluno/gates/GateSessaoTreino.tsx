@@ -7,9 +7,12 @@ import { MENSAGEM_TROCA, retentavel } from "@/nucleo/trocaToken";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { TelaTrava } from "./pecas/TelaTrava";
 
-/** Abas que dependem do Banco do Treino (as telas de hoje): a de abertura "/", Treino e Evolução. */
+/**
+ * Abas que dependem do Banco do Treino: Treino e Evolução. O Início (W12, em "/") NÃO espera a troca: o card do treino mostra a
+ * espera ou o erro no próprio lugar e os cards da dieta, da consulta e do peso seguem (spec 9: "Dieta e Perfil seguem").
+ */
 function precisaDoTreinoAqui(pathname: string): boolean {
-  return pathname === "/" || pathname.startsWith("/treino") || pathname.startsWith("/evolucao");
+  return pathname.startsWith("/treino") || pathname.startsWith("/evolucao");
 }
 
 /**

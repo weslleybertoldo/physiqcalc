@@ -7,11 +7,11 @@ import { existe } from "@/rotas/registro";
 const raiz = resolve(__dirname, "../../..");
 
 describe("W8 — a aba Treino nova entra pelo registro no lugar da TreinosPage", () => {
-  it("src/app-aluno/abas/Treino.tsx está registrada e é a abertura de quem tem Treino (antes do Início)", () => {
+  it("src/app-aluno/abas/Treino.tsx está registrada (desde a W12 o app abre no Início; o Treino é a 2ª aba)", () => {
     expect(existe("abasApp", "Treino")).toBe(true);
-    expect(abasVisiveis(["treino"]).map((a) => a.rotulo)).toEqual(["Treino", "Evolução", "Perfil"]);
-    expect(abaDeAbertura(["treino"])?.id).toBe("treino");
-    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Dieta", "Evolução", "Perfil"]); // W11
+    expect(abasVisiveis(["treino"]).map((a) => a.rotulo)).toEqual(["Início", "Treino", "Evolução", "Perfil"]);
+    expect(abaDeAbertura(["treino"])?.id).toBe("inicio");
+    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Início", "Dieta", "Evolução", "Perfil"]); // W11
   });
 
   it("o aviso de atualização do APK virou janela global da casca (morava na TreinosPage)", () => {
