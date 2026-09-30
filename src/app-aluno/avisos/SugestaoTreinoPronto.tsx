@@ -47,7 +47,7 @@ export default function SugestaoTreinoPronto() {
       <ListChecks aria-hidden className="h-5 w-5 flex-none text-violeta-3" strokeWidth={1.75} />
       <div className="min-w-0 flex-1 text-[13px] font-semibold text-texto">
         <div className="truncate">Escolha um treino pronto</div>
-        <div className="mt-px truncate text-[12px] font-medium text-texto-2">Pelo seu objetivo, ou monte o seu em "Alterar grupo"</div>
+        <div className="mt-px truncate text-[12px] font-medium text-texto-2">Pelo seu objetivo, ou monte o seu na aba Treino</div>
       </div>
       <button type="button" onClick={() => navigate("/perfil/treinos-prontos")} className="pq-botao pq-botao-g pq-botao-sm flex-none" data-sugestao-ver>Ver</button>
       <button type="button" onClick={fechar} aria-label="Fechar" className="flex h-8 w-8 flex-none items-center justify-center rounded-xl text-texto-3 hover:text-texto" data-sugestao-fechar>

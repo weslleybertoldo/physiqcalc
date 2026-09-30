@@ -133,7 +133,7 @@ export default function TreinosProntos() {
           }>
           <p className="text-[13.5px] leading-relaxed text-texto" data-confirmar-texto>
             A sua semana de treinos ({confirmar?.dias} {confirmar?.dias === 1 ? "dia" : "dias"}) vai ser trocada por esta. Os treinos que você montou
-            continuam salvos e dá para usar qualquer um no dia, em "Alterar grupo".
+            continuam salvos e dá para usar qualquer um no dia, em "Trocar o treino do dia".
           </p>
         </PainelDeslizante>
       </div>

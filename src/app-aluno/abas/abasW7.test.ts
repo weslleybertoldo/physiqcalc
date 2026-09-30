@@ -1,6 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/pages/TreinosPage", () => ({ default: () => null }));
+import { describe, expect, it } from "vitest";
 
 import { abasVisiveis } from "@/app-aluno/catalogoAbas";
 import { existe } from "@/rotas/registro";
