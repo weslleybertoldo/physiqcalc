@@ -7,7 +7,7 @@ números (15/07) e o perfil sem dados — o que a tela antiga mostrava ("Seus da
 tempo com 15/07). Casos:
   so_calc  a aba nova abre já logada, o estado vazio certo e a avaliação de 15/07 na tabela; NÚMERO A NÚMERO contra a foto da
            tela antiga de produção (antes_prod.json, tirada antes do merge)
-  rotas    /avaliacao → /evolucao com a aba nova
+  rotas    /avaliacao → /evolucao com a aba nova (a mesma conta de teste — a w10-aluno só existe no staging)
 Prints prod_* (390 × 844 × 3,4) em ~/projetos/physiqcalc-scratch/prints/w10/.
 Uso: python3 e2e/w10/smoke_prod.py [--base https://physiqcalc.com.br]
 """
@@ -47,6 +47,8 @@ def main() -> int:
     a = ap.parse_args()
     B.ESTADO["schema"] = "public"
     T.ESTADO["antes"] = "prod"
+    T.ESTADO["conta_rotas"] = B.ALUNO_CALC
+    T.ESTADO["marca_rotas"] = "vazia"
     if not B.saude_treino():
         print("Banco do Treino fora do normal — parando sem testar.")
         return 2

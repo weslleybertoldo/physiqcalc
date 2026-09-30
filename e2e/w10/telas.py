@@ -335,10 +335,12 @@ def caso_sem_internet(nav, base: str, prefixo: str) -> None:
 
 @caso
 def caso_rotas(nav, base: str, prefixo: str) -> None:
-    c = B.abrir(nav, base, prefixo, "rotas", "w10-aluno", rota="/avaliacao")
+    # produção: a conta de teste do Calc (a w10-aluno só tem matrícula no staging) — lá ela abre no estado vazio
+    conta, marca = ESTADO.get("conta_rotas", "w10-aluno"), ESTADO.get("marca_rotas", "dados")
+    c = B.abrir(nav, base, prefixo, "rotas", conta, rota="/avaliacao")
     try:
         p.check(c.esperar(lambda: c.caminho() == "/evolucao", 20), f"/avaliacao → /evolucao ({c.caminho()})")
-        p.check(esperar_dados(c), "com a aba nova (não a tela antiga)")
+        p.check(esperar_dados(c, marca), f"com a aba nova (não a tela antiga) — {marca}")
         p.check("PHYSIQ" not in c.pg.inner_text("h1") and "Composição Corporal" not in c.texto(), "o UserDashboard saiu")
     finally:
         c.fim()
