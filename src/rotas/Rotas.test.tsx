@@ -269,15 +269,27 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     expect(screen.queryByTestId("antiga-admin-configuracoes")).toBeNull();
   });
 
+  // W14: o grupo Dados/Perfil do Configurar aluno antigo virou os cards do Resumo (dados, acesso, ajustes, link, resumo privado,
+  // fluxo de consulta) — o link antigo cai no Resumo NOVO (o Configurar antigo não abre mais ali)
   it.each([
-    ["/admin/alunos/u1", "/painel/alunos/u1?ct=dados", "resumo"],
-    ["/admin/alunos/u1/ver", "/painel/alunos/u1?ct=dados", "resumo"],
+    ["/admin/alunos/u1", "/painel/alunos/u1"],
+    ["/admin/alunos/u1/ver", "/painel/alunos/u1?ct=dados"],
+    ["/admin/alunos/u1?ct=geral", "/painel/alunos/u1?ct=geral"],
+  ])("Configurar aluno %s → %s (Resumo novo, W14)", async (de, para) => {
+    logar("professor");
+    abrir(de);
+    await waitFor(() => expect(onde()).toBe(para), { timeout: 4000 });
+    await waitFor(() => expect(document.querySelector("[data-resumo-aluno]")).not.toBeNull(), { timeout: 4000 });
+    expect(document.querySelector('[data-aba-aluno="resumo"]')?.getAttribute("aria-current")).toBe("page");
+    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
+  });
+
+  it.each([
     ["/admin/alunos/u1?ct=treino&wt=volume", "/painel/alunos/u1/treino?ct=treino&wt=volume", "treino"],
     ["/admin/alunos/u1?ct=historico", "/painel/alunos/u1/treino?ct=historico", "treino"],
     ["/admin/alunos/u1?ct=config", "/painel/alunos/u1/treino?ct=config", "treino"],
     ["/admin/alunos/u1?ct=dobras", "/painel/alunos/u1/avaliacao?ct=dobras", "avaliacao"],
     ["/admin/alunos/u1?ct=registros", "/painel/alunos/u1/avaliacao?ct=registros", "avaliacao"],
-    ["/admin/alunos/u1?ct=geral", "/painel/alunos/u1?ct=geral", "resumo"],
     ["/admin?v=config&u=u1&ct=evolucao", "/painel/alunos/u1/avaliacao?ct=evolucao", "avaliacao"],
   ])("Configurar aluno %s → %s (aba %s)", async (de, para, aba) => {
     logar("professor");

@@ -116,9 +116,14 @@ export const validarArquivoDiario = (f: ArquivoInfo): string | null =>
   validarEnvio({ refeicao: "outro", arquivo: f, comentario: "", dataHoraIso: new Date().toISOString() });
 
 /** Erros da função/Storage (código na mensagem) → texto pro aluno. */
+/** Spec 9: o aluno com o diário desligado pelo profissional. */
+export const TEXTO_DIARIO_DESLIGADO = "O envio de fotos está desligado pelo seu profissional.";
+
 export function textoErroRpc(e: unknown): string {
   const m = (e instanceof Error ? e.message : typeof e === "string" ? e : "").toLowerCase();
   if (m.includes("codigo_invalido")) return "O envio de fotos não está liberado agora. Fale com a sua nutricionista.";
+  // W14 (R12, spec 9): o profissional desligou o diário (ou o storage recusou a foto por isso)
+  if (m.includes("diario_desligado") || m.includes("link_desligado")) return TEXTO_DIARIO_DESLIGADO;
   if (m.includes("muitos_envios")) return "Muitos envios em pouco tempo — tente de novo em alguns minutos.";
   if (m.includes("arquivo_nao_encontrado") || m.includes("path_invalido") || m.includes("arquivo_invalido")) return "A foto não subiu. Tente de novo.";
   if (m.includes("data_invalida")) return "A data e hora não podem estar no futuro.";

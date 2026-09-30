@@ -7,7 +7,7 @@ import { matriculaDoApp, temAlimentacaoDoApp } from "@/nucleo/situacao";
 import { CLASSE_PAGINA_APP, TituloApp } from "@/app-aluno/perfil/pecas/TopoItem";
 import { planoAtivo, planoVariaPorDia, proximaPendente, refeicoesDoDia, resumoDoDia, rotuloDoDia } from "@/nutricao/app/dia";
 import { diaMesCurto, fmtHorario, fmtKcal, formatarDataPlano, resumoDaRefeicao, totaisDosItens } from "@/nutricao/app/dietaUtil";
-import { registroDaRefeicao, tipoDaRefeicaoDoPlano, type Refeicao } from "@/nutricao/app/diarioUtil";
+import { registroDaRefeicao, TEXTO_DIARIO_DESLIGADO, tipoDaRefeicaoDoPlano, type Refeicao } from "@/nutricao/app/diarioUtil";
 import { textoErroMeta } from "@/nutricao/app/metasUtil";
 import { refeicaoMarcavel, textoErroMarcar } from "@/nutricao/app/refeicaoConcluidaUtil";
 import type { RefeicaoDoPlano } from "@/nutricao/app/tipos";
@@ -123,6 +123,8 @@ function DietaDaNutricionista() {
   const matricula = matriculas.find((m) => m.id === plano?.paciente_id) ?? matriculas[0] ?? null;
   const nutricionista = matricula?.nutricionista.nome ?? null;
   const aluno = matricula?.nome || "Aluno";
+  // W14 (R12): o profissional pode desligar o diário do aluno — a foto some daqui e o servidor também recusa
+  const diarioLigado = matricula?.diario_alimentar !== false;
   const diario = dados?.diario ?? [];
   const varia = planoVariaPorDia(plano);
   const desligado = !online;
@@ -270,13 +272,19 @@ function DietaDaNutricionista() {
           </>
         )}
         <div className="mt-3 flex gap-2.5">
-          <Botao variante="w" icone={Camera} className="flex-1" onClick={() => { setRefeicaoDoDiario(null); abrir("diario"); }} data-abrir-diario>
+          <Botao variante="w" icone={Camera} className="flex-1" onClick={() => { setRefeicaoDoDiario(null); abrir("diario"); }} disabled={!diarioLigado}
+            title={diarioLigado ? undefined : TEXTO_DIARIO_DESLIGADO} data-abrir-diario data-diario-ligado={diarioLigado ? "1" : "0"}>
             Foto pro diário
           </Botao>
           <Botao variante="g" icone={Target} className="flex-1" onClick={() => abrir("metas")} data-abrir-metas>
             Metas
           </Botao>
         </div>
+        {!diarioLigado && (
+          <p className="mt-2 text-center text-[12px] text-texto-3" data-diario-desligado>
+            {TEXTO_DIARIO_DESLIGADO}
+          </p>
+        )}
       </>
     );
   }
@@ -307,7 +315,7 @@ function DietaDaNutricionista() {
             desligado={desligado}
             aoMarcar={(c) => refeicaoAberta && void marcar(refeicaoAberta.id, c)}
             aoFoto={
-              refeicaoAberta && ehHoje && matricula
+              refeicaoAberta && ehHoje && matricula && diarioLigado
                 ? () => {
                     setRefeicaoDoDiario(tipoDaRefeicaoDoPlano(refeicaoAberta.nome, refeicaoAberta.horario));
                     abrir("diario", {}, true);
@@ -357,7 +365,7 @@ function DietaDaNutricionista() {
             nutricionista={nutricionista}
           />
           <SheetDiario
-            aberto={folha === "diario"}
+            aberto={folha === "diario" && diarioLigado}
             aoMudar={mudarFolha("diario")}
             matricula={matricula}
             registros={diario}

@@ -133,7 +133,7 @@ function montarGates(mapa: Record<string, unknown>): { nome: string; Gate: Gate 
       .map(([caminho, mod]) => ({ nome: nomeDoArquivo(caminho), Gate: (mod as { default?: Gate }).default }))
       .filter((g): g is { nome: string; Gate: Gate } => Boolean(g.Gate) && !g.nome.startsWith("_") && !/\.(test|spec)$/.test(g.nome)),
     // ordem: bloqueios de acesso primeiro, depois cobrança e faixas
-    ["GateBloqueioMaster", "GateBloqueioAluno", "GateSemModulo", "GatePlanoLegado", "GatePlano", "GatePagamentoPendente", "FaixaAvisoPlano"],
+    ["GateBloqueioMaster", "GateBloqueioAluno", "GateAcessoApp", "GateSemModulo", "GatePlanoLegado", "GatePlano", "GatePagamentoPendente", "FaixaAvisoPlano"],
   );
 }
 
