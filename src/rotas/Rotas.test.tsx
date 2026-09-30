@@ -68,7 +68,8 @@ vi.mock("@/integrations/principal/client", () => ({
   PRINCIPAL_SCHEMA: "staging",
   principal: { auth: { getSession: async () => ({ data: { session: null } }) }, from: vi.fn() },
 }));
-vi.mock("@/pages/TreinosPage", () => h.marcador("antiga-treinos"));
+// W8: a aba Treino é a nova (src/app-aluno/abas/Treino.tsx, pelo registro) — a TreinosPage saiu
+vi.mock("@/app-aluno/abas/Treino", () => h.marcador("aba-treino"));
 vi.mock("@/pages/UserDashboard", () => h.marcador("antiga-avaliacao"));
 vi.mock("@/pages/PagamentosPage", () => h.marcador("antiga-pagamentos"));
 vi.mock("@/pages/Index", () => h.marcador("antiga-calculadora-publica"));
@@ -148,9 +149,9 @@ afterEach(() => {
 
 describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
   it.each([
-    ["/", "/treino", "antiga-treinos"],
-    ["/treinos", "/treino", "antiga-treinos"],
-    ["/treino", "/treino", "antiga-treinos"],
+    ["/", "/treino", "aba-treino"],
+    ["/treinos", "/treino", "aba-treino"],
+    ["/treino", "/treino", "aba-treino"],
     ["/avaliacao", "/evolucao", "antiga-avaliacao"],
     ["/evolucao", "/evolucao", "antiga-avaliacao"],
   ])("%s → %s (%s)", async (de, para, tela) => {
@@ -176,14 +177,14 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
   it("aba sem tela nem módulo (Dieta, Perfil) volta para a abertura", async () => {
     logar("aluno");
     abrir("/dieta");
-    expect(await screen.findByTestId("antiga-treinos")).toBeInTheDocument();
+    expect(await screen.findByTestId("aba-treino")).toBeInTheDocument();
     await waitFor(() => expect(onde()).toBe("/treino"));
   });
 
   it("aluno não entra no painel nem no master", async () => {
     logar("aluno");
     abrir("/painel/alunos");
-    expect(await screen.findByTestId("antiga-treinos", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByTestId("aba-treino", {}, { timeout: 4000 })).toBeInTheDocument();
     expect(onde()).toBe("/treino");
   });
 });
@@ -223,7 +224,7 @@ describe("entrada: sem login cai no Entrar (a tela nova da W3, login único)", (
   it("logado, /entrar volta para o app", async () => {
     logar("aluno");
     abrir("/entrar");
-    expect(await screen.findByTestId("antiga-treinos")).toBeInTheDocument();
+    expect(await screen.findByTestId("aba-treino")).toBeInTheDocument();
   });
 });
 
@@ -300,7 +301,7 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     r.unmount();
     localStorage.setItem("physiq_area", "aluno");
     abrir("/");
-    expect(await screen.findByTestId("antiga-treinos")).toBeInTheDocument();
+    expect(await screen.findByTestId("aba-treino")).toBeInTheDocument();
   });
 
   it("card da conta, card do plano e menu do usuário na casca", async () => {

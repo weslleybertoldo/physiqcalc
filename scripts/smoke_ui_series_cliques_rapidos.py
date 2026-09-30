@@ -10,21 +10,30 @@ Roteiro:
   4. "+" (→6) e logo "Aplicar a todos" 4 sem esperar → banco = só geral 4 (próprio apagado); tela do Testa = 4
   5. limpeza
 
-Env: SMOKE_BASE (default http://localhost:5173), SMOKE_SCHEMA (default staging), SUPABASE_PAT ou ~/.pc-pat,
-SMOKE_INJECT_SESSION=1 + SUPABASE_ANON_KEY + SMOKE_PASSWORD (build sem auto-login, ex. staging Vercel).
+W8: o login é o de hoje (W3 — sessão do banco principal injetada + troca de token pelo próprio app; ver e2e/w08/_base.py);
+a tela do profissional é a antiga, dentro do painel novo (a /admin?v=config… redireciona). Só o STAGING é gravado.
+
+Uso: SMOKE_BASE=http://localhost:5173 python3 scripts/smoke_ui_series_cliques_rapidos.py   (SMOKE_SCHEMA=staging)
 """
 import json
+import importlib.util
 import os
 import sys
 import time
 import urllib.request
+from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+
+sys.dont_write_bytecode = True
+_ESPEC = importlib.util.spec_from_file_location("_base_w08", Path(__file__).resolve().parent.parent / "e2e" / "w08" / "_base.py")
+B8 = importlib.util.module_from_spec(_ESPEC)
+sys.modules["_base_w08"] = B8
+_ESPEC.loader.exec_module(B8)  # type: ignore[union-attr]
 
 BASE = os.environ.get("SMOKE_BASE", "http://localhost:5173").rstrip("/")
 SCHEMA = os.environ.get("SMOKE_SCHEMA", "staging")
 SHOTS = os.environ.get("SMOKE_SHOTS", "/tmp")
-INJECT = os.environ.get("SMOKE_INJECT_SESSION") == "1"
 REF = "uxwpwdbbnlticxgtzcsb"
 SUPABASE_URL = f"https://{REF}.supabase.co"
 USER_ID = "e4c5fb14-fe3b-4a51-a49f-ceed61485054"  # admin.teste.claude
@@ -34,6 +43,7 @@ TESTA = "Tríceps Testa"
 KEY = f"catalogo:{GRUPO_ID}"
 SEL_VALOR = f"[data-admin-series-exercicio='ex:{TESTA_ID}'] [data-admin-series-exercicio-valor]"
 PAT = os.environ.get("SUPABASE_PAT") or open(os.path.expanduser("~/.pc-pat")).read().strip()
+assert SCHEMA == "staging", "este smoke grava: só no staging"
 
 ok = 0
 fail = 0
@@ -61,14 +71,6 @@ def sql(query):
 def linhas_banco():
     rows = sql(f"SELECT exercicio_id, num_series FROM {SCHEMA}.tb_series_padrao_usuario WHERE user_id='{USER_ID}' AND grupo_id='{GRUPO_ID}'")
     return {r["exercicio_id"]: r["num_series"] for r in rows}
-
-
-def sessao_admin():
-    anon = os.environ["SUPABASE_ANON_KEY"]
-    body = json.dumps({"email": "admin.teste.claude@physiqcalc.app", "password": os.environ["SMOKE_PASSWORD"]}).encode()
-    req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/token?grant_type=password", data=body,
-                                 headers={"apikey": anon, "Content-Type": "application/json"})
-    return json.loads(urllib.request.urlopen(req, timeout=30).read().decode())
 
 
 def abrir_admin(pg):
@@ -127,13 +129,16 @@ def monotonico(vals, crescente=True):
 # estado limpo antes de começar
 sql(f"DELETE FROM {SCHEMA}.tb_series_padrao_usuario WHERE user_id='{USER_ID}'")
 
+B8.ESTADO["schema"] = SCHEMA
+if not B8.saude_treino():
+    print("Banco do Treino fora do normal — parando sem testar.")
+    sys.exit(2)
+
 with sync_playwright() as pw:
-    nav = pw.chromium.launch(args=["--disable-dev-shm-usage"])
-    ctx = nav.new_context(viewport={"width": 430, "height": 900}, locale="pt-BR", timezone_id="America/Sao_Paulo")
-    ctx.add_init_script("try { localStorage.setItem('physiq_pendencia_avisada_em', new Date().toLocaleDateString('pt-BR')); } catch (e) {}")
-    pg = ctx.new_page()
-    erros = []
-    pg.on("pageerror", lambda e: erros.append(str(e)))
+    nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+    c = B8.abrir_painel(nav, BASE, os.environ.get("SMOKE_PREFIXO", "local"), "series_cliques", "/painel")
+    ctx, pg = c.ctx, c.pg
+    erros = c.erros
     gravacoes = []  # requisições de gravação (setSeriesPadrao / aplicarSeriesTreino)
 
     def on_request(req):
@@ -143,11 +148,6 @@ with sync_playwright() as pw:
                 gravacoes.append(corpo)
 
     pg.on("request", on_request)
-
-    if INJECT:
-        sess = sessao_admin()
-        pg.goto(BASE + "/", wait_until="domcontentloaded")
-        pg.evaluate("([k, v]) => localStorage.setItem(k, v)", [f"sb-{REF}-auth-token", json.dumps(sess)])
 
     try:
         # --- 1. popup

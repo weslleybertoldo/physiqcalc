@@ -1,30 +1,42 @@
 #!/usr/bin/env python3
-"""Smoke E2E — nº de séries por treino/exercício (admin configura → app mostra).
+"""Smoke E2E — nº de séries por treino/exercício: o profissional configura (popup "Séries") e o app do aluno (aba Treino nova,
+W8) monta as séries com esse número.
 
-Conta: admin.teste.claude (admin + aluno com "Peito + tríceps" hoje via override em STAGING).
-Roteiro:
-  1. admin › usuário › Treino › Treino Diário: badge "Séries" ao lado do treino abre o popup com os exercícios
-  2. "Aplicar a todos" 4 → banco: 1 linha geral = 4, nenhuma por exercício; popup mostra 4 em todos
-  3. "+" no Tríceps Testa → 5 (linha própria); marca "próprio"
-  4. app /treinos: Tríceps Testa abre com S1..S5, os demais com S1..S4 (sync PowerSync)
-  5. "Aplicar a todos" 3 → apaga o próprio; app volta a S1..S3 em todos
-  6. limites: geral desce até 1 → "−" desabilitado
-  7. limpeza: apaga as linhas de tb_series_padrao_usuario do usuário de teste
+Parte 1 — profissional (admin.teste.claude, tela antiga "Configurar aluno › Treino Diário" dentro do painel novo; STAGING):
+  1. badge "Séries" ao lado do treino abre o popup com os exercícios (tudo em 3 sem configuração)
+  2. "Aplicar a todos" 4 → banco: 1 linha geral = 4
+  3. "+" no Tríceps Testa → 5 (linha própria, selo "próprio")
+  5. "Aplicar a todos" 3 → apaga o próprio · 6. geral desce até 1 → "−" desabilitado (rascunho não grava)
+Parte 2 — app do aluno (teste@teste.com), a MESMA regra do nº configurado (linha do exercício > geral > padrão 3):
+  4. sem internet, "Adicionar série" no Tríceps Testa → S1..S4 hoje; no dia seguinte, com o mesmo treino, o Testa abre com 4
+     e os outros com 3 (o app espelhou o total no nº configurado — o que o profissional vê)
+  4b. a internet volta → staging.tb_series_padrao_usuario do aluno com Testa = 4 (o espelho subiu pelo PowerSync)
+Adaptação da W8: P20 — o PowerSync do local/staging lê o public e o que o profissional grava no staging não chega ao app; e o
+Realtime do Banco do Treino está suspenso desde 03/09 (os passos "ao vivo" de antes — popup do profissional mudando sozinho —
+não têm como rodar). A regra do app é a mesma e está coberta no Vitest (src/app-aluno/abas/Treino.test.tsx, nº por exercício).
 
-Env: SMOKE_BASE (default http://localhost:5173), SMOKE_SCHEMA (default staging), SUPABASE_PAT ou ~/.pc-pat,
-SMOKE_INJECT_SESSION=1 + SUPABASE_ANON_KEY + SMOKE_PASSWORD (build sem auto-login).
+Uso: SMOKE_BASE=http://localhost:5173 python3 scripts/smoke_ui_series_padrao.py   (SMOKE_SCHEMA=staging)
 """
+import datetime as dt
+import importlib.util
 import json
 import os
 import sys
+import time
 import urllib.request
+from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+
+sys.dont_write_bytecode = True
+_ESPEC = importlib.util.spec_from_file_location("_base_w08", Path(__file__).resolve().parent.parent / "e2e" / "w08" / "_base.py")
+B8 = importlib.util.module_from_spec(_ESPEC)
+sys.modules["_base_w08"] = B8
+_ESPEC.loader.exec_module(B8)  # type: ignore[union-attr]
 
 BASE = os.environ.get("SMOKE_BASE", "http://localhost:5173").rstrip("/")
 SCHEMA = os.environ.get("SMOKE_SCHEMA", "staging")
 SHOTS = os.environ.get("SMOKE_SHOTS", "/tmp")
-INJECT = os.environ.get("SMOKE_INJECT_SESSION") == "1"
 REF = "uxwpwdbbnlticxgtzcsb"
 SUPABASE_URL = f"https://{REF}.supabase.co"
 USER_ID = "e4c5fb14-fe3b-4a51-a49f-ceed61485054"  # admin.teste.claude
@@ -32,6 +44,7 @@ GRUPO_ID = "1427b068-58ab-417c-a13f-65e3489b76f2"  # Peito + tríceps
 TESTA_ID = "c7016a9d-1af3-4238-929f-adae75005ce6"  # Tríceps Testa
 KEY = f"catalogo:{GRUPO_ID}"
 PAT = os.environ.get("SUPABASE_PAT") or open(os.path.expanduser("~/.pc-pat")).read().strip()
+assert SCHEMA == "staging", "este smoke grava: só no staging"
 
 ok = 0
 fail = 0
@@ -60,14 +73,6 @@ def linhas_banco():
     """{exercicio_id|None: num_series} do treino de teste"""
     rows = sql(f"SELECT exercicio_id, num_series FROM {SCHEMA}.tb_series_padrao_usuario WHERE user_id='{USER_ID}' AND grupo_id='{GRUPO_ID}'")
     return {r["exercicio_id"]: r["num_series"] for r in rows}
-
-
-def sessao_admin():
-    anon = os.environ["SUPABASE_ANON_KEY"]
-    body = json.dumps({"email": "admin.teste.claude@physiqcalc.app", "password": os.environ["SMOKE_PASSWORD"]}).encode()
-    req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/token?grant_type=password", data=body,
-                                 headers={"apikey": anon, "Content-Type": "application/json"})
-    return json.loads(urllib.request.urlopen(req, timeout=30).read().decode())
 
 
 def series_por_card(pg):
@@ -130,22 +135,57 @@ def aplicar_todos(pg, dlg, n):
     esperar_banco(pg, lambda b: b.get(None) == n)
 
 
+def parte_app(nav) -> None:
+    """Parte 2 — a aba Treino nova (aluno teste@teste.com, sem internet depois do 1º sync)."""
+    B8.ESTADO["schema"] = SCHEMA
+    desde = B8.agora_iso()
+    hoje, amanha = B8.hoje(), B8.hoje() + dt.timedelta(days=1)
+    c = B8.abrir_treino(nav, BASE, os.environ.get("SMOKE_PREFIXO", "local"), "series_padrao_app")
+    try:
+        B8.sem_internet(c)
+        B8.ir_para_dia(c, amanha)
+        B8.escolher_treino_do_dia(c)
+        B8.ir_para_dia(c, hoje)
+        B8.escolher_treino_do_dia(c)
+        B8.abrir_exercicio(c, TESTA_ID)
+        n0 = B8.linha(c, TESTA_ID).locator("[data-serie]").count()
+        check(n0 == 3, f"4. app: Tríceps Testa abre com 3 séries (padrão, sem configuração) — viu {n0}")
+        B8.linha(c, TESTA_ID).locator("[data-adicionar-serie]").click()
+        c.pg.wait_for_timeout(700)
+        check(B8.linha(c, TESTA_ID).locator("[data-serie]").count() == 4, "4. app: 'Adicionar série' → S1..S4 hoje")
+        B8.ir_para_dia(c, amanha)
+        c.esperar(lambda: B8.linha(c, TESTA_ID).count() == 1, 10)
+        B8.abrir_exercicio(c, TESTA_ID)
+        n_testa = B8.linha(c, TESTA_ID).locator("[data-serie]").count()
+        outro = next(e for e in B8.exercicios(c) if e != TESTA_ID)
+        B8.abrir_exercicio(c, outro)
+        n_outro = B8.linha(c, outro).locator("[data-serie]").count()
+        check(n_testa == 4 and n_outro == 3, f"4. amanhã o Testa abre com 4 (o nº espelhado) e os outros com 3 (Testa {n_testa} · outro {n_outro})")
+        c.print("series_padrao_app")
+        B8.sem_internet(c, False)
+        check(B8.esperar_fila_vazia(c, 120), "4b. a internet voltou e a fila do PowerSync esvaziou")
+        ok_ = B8.esperar_staging(lambda: len(B8.sql_treino(
+            f"select 1 from staging.tb_series_padrao_usuario where user_id='{B8.USER_TESTE}' and grupo_id='{GRUPO_ID}' and exercicio_id='{TESTA_ID}' and num_series = 4 and updated_at >= '{desde}'")) == 1, 60)
+        check(ok_, "4b. staging: Tríceps Testa = 4 no nº configurado do aluno (o que o profissional vê no popup)")
+    finally:
+        c.fim()
+        time.sleep(2)
+        B8.limpar_staging(desde, "séries padrão (app)")
+
+
 # estado limpo antes de começar
 sql(f"DELETE FROM {SCHEMA}.tb_series_padrao_usuario WHERE user_id='{USER_ID}'")
 
-with sync_playwright() as pw:
-    nav = pw.chromium.launch(args=["--disable-dev-shm-usage"])
-    ctx = nav.new_context(viewport={"width": 430, "height": 900}, locale="pt-BR", timezone_id="America/Sao_Paulo")
-    # o usuário de teste tem mensalidade pendente no staging → o aviso (overlay) já foi "visto hoje"
-    ctx.add_init_script("try { localStorage.setItem('physiq_pendencia_avisada_em', new Date().toLocaleDateString('pt-BR')); } catch (e) {}")
-    pg = ctx.new_page()
-    erros = []
-    pg.on("pageerror", lambda e: erros.append(str(e)))
+B8.ESTADO["schema"] = SCHEMA
+if not B8.saude_treino():
+    print("Banco do Treino fora do normal — parando sem testar.")
+    sys.exit(2)
 
-    if INJECT:
-        sess = sessao_admin()
-        pg.goto(BASE + "/", wait_until="domcontentloaded")
-        pg.evaluate("([k, v]) => localStorage.setItem(k, v)", [f"sb-{REF}-auth-token", json.dumps(sess)])
+with sync_playwright() as pw:
+    nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+    c = B8.abrir_painel(nav, BASE, os.environ.get("SMOKE_PREFIXO", "local"), "series_padrao", "/painel")
+    ctx, pg = c.ctx, c.pg
+    erros = c.erros
 
     try:
         # --- 1. badge "Séries" + popup lista os exercícios
@@ -182,58 +222,12 @@ with sync_playwright() as pw:
         check("PRÓPRIO" in dlg.locator(f"[data-admin-series-exercicio='ex:{TESTA_ID}']").inner_text().upper(), "3. Tríceps Testa marcado como 'próprio'")
         pg.screenshot(path=f"{SHOTS}/smoke-series-3-proprio.png")
         dlg.locator("button", has_text="Concluir").click()
-
-        # --- 4. app: Testa S1..S5, demais S1..S4
-        pg.goto(f"{BASE}/treinos", wait_until="domcontentloaded")
-        pg.wait_for_selector("div[data-exercicio-id]", timeout=120000)
-        esperar_series(pg, {"*": 4, TESTA_ID: 5})
-        cards = series_por_card(pg)
-        check(cards.get(TESTA_ID) == ["S1", "S2", "S3", "S4", "S5"], f"4. app: Tríceps Testa com S1..S5 (visto: {cards.get(TESTA_ID)})")
-        outros = {k: v for k, v in cards.items() if k != TESTA_ID}
-        check(len(outros) >= 4 and all(v == ["S1", "S2", "S3", "S4"] for v in outros.values()), f"4. app: os outros {len(outros)} exercícios com S1..S4")
-        pg.screenshot(path=f"{SHOTS}/smoke-series-4-app.png")
-
-        # --- 4b. ESPELHO aluno → admin, ao vivo: admin fica com o popup aberto em outra aba; o aluno
-        #         clica "Adicionar série" no Tríceps Testa → S6 no app → banco Testa = 6 → popup do admin
-        #         mostra 6 sem recarregar (Realtime)
-        adm = ctx.new_page()
-        abrir_admin(adm)
-        dlg_adm = abrir_popup(adm)
-        check(valor_exercicio(dlg_adm, TESTA_ID) == 5, "4b. admin (aba 2) vê Testa = 5 antes do aluno mexer")
-        pg.bring_to_front()
-        card = pg.locator(f"div[data-exercicio-id='{TESTA_ID}']")
-        card.locator("button", has_text="Adicionar série").click()
-        esperar_series(pg, {"*": 4, TESTA_ID: 6})
-        check(True, "4b. app: Tríceps Testa ganhou S6 ao adicionar")
-        adm.wait_for_function(
-            f"() => document.querySelector(\"[data-admin-series-exercicio='ex:{TESTA_ID}'] [data-admin-series-exercicio-valor]\")?.textContent.trim() === '6'",
-            timeout=20000)
-        check(True, "4b. admin: popup atualizou pra 6 AO VIVO (sem recarregar)")
-        check(linhas_banco().get(TESTA_ID) == 6, f"4b. banco: Testa = 6 gravado pelo aluno (visto: {linhas_banco()})")
-
-        # --- 4c. ESPELHO admin → aluno, ao vivo, num dia COM série salva: admin sobe Testa pra 8 →
-        #         app (ainda aberto) mostra S7 e S8 vazias sem recarregar; a S6 salva continua
-        for _ in range(2):
-            dlg_adm.locator(f"button[aria-label='Mais uma série em Tríceps Testa']").click()
-            adm.wait_for_timeout(300)
-            alvo_adm = valor_exercicio(dlg_adm, TESTA_ID)  # valor otimista na tela do admin
-            esperar_banco(adm, lambda b, a=alvo_adm: b.get(TESTA_ID) == a)
-        check(valor_exercicio(dlg_adm, TESTA_ID) == 8, "4c. admin: Testa = 8")
-        esperar_series(pg, {"*": 4, TESTA_ID: 8})
-        check(True, "4c. app: Testa mostra S1..S8 ao vivo (dia com séries salvas completou até o alvo)")
-        # aluno remove a S8 (vazia) → total 7 → admin vê 7
-        card.locator("button[aria-label='Remover série']").last.click()
-        adm.wait_for_function(
-            f"() => document.querySelector(\"[data-admin-series-exercicio='ex:{TESTA_ID}'] [data-admin-series-exercicio-valor]\")?.textContent.trim() === '7'",
-            timeout=20000)
-        check(linhas_banco().get(TESTA_ID) == 7, "4c. aluno removeu 1 → admin vê 7 ao vivo e banco = 7")
-        dlg_adm.locator("button", has_text="Concluir").click()
-        adm.close()
+        pg.wait_for_timeout(500)
 
         # --- 5. aplicar a todos = 3 → apaga o próprio
         abrir_admin(pg)
         dlg = abrir_popup(pg)
-        check(valor_exercicio(dlg, TESTA_ID) == 7, "5. popup reabre com Testa = 7 (persistido)")
+        check(valor_exercicio(dlg, TESTA_ID) == 5, "5. popup reabre com Testa = 5 (persistido)")
         aplicar_todos(pg, dlg, 3)
         pg.wait_for_function(f"() => document.querySelector(\"[data-admin-series-exercicio='ex:{TESTA_ID}'] [data-admin-series-exercicio-valor]\")?.textContent.trim() === '3'", timeout=15000)
         check(linhas_banco() == {None: 3}, f"5. banco: aplicar zerou o próprio, geral = 3 (visto: {linhas_banco()})")
@@ -246,22 +240,17 @@ with sync_playwright() as pw:
         check(linhas_banco() == {None: 3}, "6. rascunho do geral não grava sozinho")
         dlg.locator("button", has_text="Concluir").click()
 
-        # o aluno SALVOU só a S6 no Testa (4b; a S8 removida em 4c era vazia) → "aplicar 3" corta as vazias até 3,
-        # mas a S6 salva NÃO some: Testa = S1, S2 (vazias) + S6 (salva); os demais voltam a S1..S3
-        pg.goto(f"{BASE}/treinos", wait_until="domcontentloaded")
-        pg.wait_for_selector("div[data-exercicio-id]", timeout=120000)
-        esperar_series(pg, {"*": 3})
-        cards = series_por_card(pg)
-        check(all(v == ["S1", "S2", "S3"] for k, v in cards.items() if k != TESTA_ID), "5. app voltou a S1..S3 nos exercícios sem série salva")
-        check(len(cards.get(TESTA_ID, [])) == 3 and "S6" in cards.get(TESTA_ID, []),
-              f"5. Testa com 3 séries e a S6 SALVA preservada (redução do admin não apaga série salva) (visto: {cards.get(TESTA_ID)})")
         check(not erros, f"sem erro de página ({len(erros)})")
     finally:
         sql(f"DELETE FROM {SCHEMA}.tb_series_padrao_usuario WHERE user_id='{USER_ID}'")
-        # a série adicionada pelo "aluno" em 4b ficou salva em tb_treino_series (hoje) → apaga
-        sql(f"DELETE FROM {SCHEMA}.tb_treino_series WHERE user_id='{USER_ID}' AND data_treino=current_date")
-        check(linhas_banco() == {}, "7. limpeza: config e séries de hoje do usuário de teste apagadas")
-        nav.close()
+        check(linhas_banco() == {}, "7. limpeza: config do profissional de teste apagada")
+        ctx.close()
+    parte_app(nav)
+    nav.close()
 
-print(f"\n{ok}/{ok + fail} PASS")
+# as checagens da base da W8 (entrar, sem erro de página) também contam
+extras = [t for ok_, t in B8.p.itens if not ok_]
+fail += len(extras)
+ok += sum(1 for ok_, _ in B8.p.itens if ok_)
+print(f"\n{ok}/{ok + fail} PASS" + (f" — FALHAS da base: {extras}" if extras else ""))
 sys.exit(0 if fail == 0 else 1)

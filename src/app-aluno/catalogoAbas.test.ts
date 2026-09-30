@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-// a tela antiga do Treino é pesada (PowerSync, PDFs): aqui só importa que ela é o fallback
-vi.mock("@/pages/TreinosPage", () => ({ default: () => null }));
-
 import { ABAS_APP, abaDaRota, abaDeAbertura, abasVisiveis, estadoDaAba } from "./catalogoAbas";
 
 const nenhumaNova = () => false;
@@ -14,9 +11,15 @@ describe("abas do app do aluno (spec 4.3 e 11.1)", () => {
     expect(ABAS_APP.map((a) => a.rota)).toEqual(["/", "/treino", "/dieta", "/evolucao", "/perfil"]);
   });
 
-  it("antes das telas novas: só as que têm tela antiga (Treino e Evolução)", () => {
-    expect(abasVisiveis(["treino"], nenhumaNova).map((a) => a.id)).toEqual(["treino", "evolucao"]);
-    expect(abaDeAbertura(["treino"], nenhumaNova)?.id).toBe("treino");
+  it("sem telas novas: só a que ainda tem tela antiga (Evolução — o Treino antigo saiu na W8)", () => {
+    expect(abasVisiveis(["treino"], nenhumaNova).map((a) => a.id)).toEqual(["evolucao"]);
+    expect(abaDeAbertura(["treino"], nenhumaNova)?.id).toBe("evolucao");
+  });
+
+  it("W8: com a aba Treino nova, ela é a abertura do aluno do Calc (antes do Início)", () => {
+    const soTreino = (arquivo: string) => arquivo === "Treino";
+    expect(abasVisiveis(["treino"], soTreino).map((a) => a.id)).toEqual(["treino", "evolucao"]);
+    expect(abaDeAbertura(["treino"], soTreino)?.id).toBe("treino");
   });
 
   it("com todas as telas novas: só Treino → sem Dieta; só Nutrição → sem Treino", () => {
@@ -28,8 +31,11 @@ describe("abas do app do aluno (spec 4.3 e 11.1)", () => {
 
   it("aba nova vence a antiga; sem o módulo, some mesmo com tela", () => {
     const treino = ABAS_APP.find((a) => a.id === "treino")!;
-    expect(estadoDaAba(treino, ["treino"], nenhumaNova)).toBe("antiga");
+    // o Treino não tem mais tela antiga (W8): sem a nova, some
+    expect(estadoDaAba(treino, ["treino"], nenhumaNova)).toBeNull();
     expect(estadoDaAba(treino, ["treino"], todasNovas)).toBe("nova");
+    const evolucao = ABAS_APP.find((a) => a.id === "evolucao")!;
+    expect(estadoDaAba(evolucao, ["treino"], nenhumaNova)).toBe("antiga");
     expect(estadoDaAba(treino, ["nutricao"], todasNovas)).toBeNull();
   });
 

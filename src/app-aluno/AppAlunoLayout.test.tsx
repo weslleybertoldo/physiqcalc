@@ -11,12 +11,12 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@/ui/casca/dadosCasca", () => ({ useDadosCasca: () => h.dados }));
-vi.mock("@/pages/TreinosPage", () => ({ default: () => <div>tela do treino</div> }));
 vi.mock("@/rotas/registro", async () => {
   const { lazy } = await import("react");
   const FaixaMensalidade = lazy(async () => ({ default: () => <div data-testid="faixa">Sua mensalidade vence em 3 dias</div> }));
   return {
-    existe: () => false,
+    // W8: a aba Treino nova existe (a TreinosPage saiu); as outras ainda não
+    existe: (grupo: string, nome: string) => grupo === "abasApp" && nome === "Treino",
     tela: () => null,
     listar: (grupo: string) => (grupo === "avisosApp" ? [{ nome: "FaixaMensalidade", caminho: "x", carregar: async () => ({ default: () => null }), Componente: FaixaMensalidade }] : []),
     gatesApp: [

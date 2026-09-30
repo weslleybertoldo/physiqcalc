@@ -8,10 +8,14 @@ dados fixos (escolhe um aluno/mês com treinos, ou testa o estado vazio se não 
 Local (dev server com auto-login DEV): contexto LIMPO — prova que o link do gate abre já logado.
 Staging/prod (build de produção): SMOKE_INJECT_SESSION=1 injeta a sessão real no localStorage.
 
-Env: SMOKE_BASE (default http://localhost:5173) · SMOKE_SCHEMA (public|staging, default public)
-     · SMOKE_PASSWORD (obrigatória) · SUPABASE_ANON_KEY (senão lê do .env)
-     · SMOKE_USER_ID (opcional: força o aluno) · SMOKE_PNG (screenshot final)
+W8: o login é o de hoje (W3 — sessão do banco principal injetada + troca de token pelo próprio app; ver e2e/w08/_base.py) e o
+oráculo usa a sessão do Treino da mesma troca de token; a tela é a antiga ("Configurar aluno › Histórico") dentro do perfil do
+aluno do painel novo (/admin?v=config… redireciona para /painel/alunos/:id/treino?ct=historico). Só leitura.
+
+Env: SMOKE_BASE (default http://localhost:5173) · SMOKE_SCHEMA (default staging) · SMOKE_USER_ID (opcional: força o aluno)
+     · SMOKE_PNG (screenshot final)
 """
+import importlib.util
 import json
 import os
 import re
@@ -19,11 +23,18 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
+
 from playwright.sync_api import sync_playwright
 
+sys.dont_write_bytecode = True
+_ESPEC = importlib.util.spec_from_file_location("_base_w08", Path(__file__).resolve().parent.parent / "e2e" / "w08" / "_base.py")
+B8 = importlib.util.module_from_spec(_ESPEC)
+sys.modules["_base_w08"] = B8
+_ESPEC.loader.exec_module(B8)  # type: ignore[union-attr]
+
 BASE = os.environ.get("SMOKE_BASE", "http://localhost:5173").rstrip("/")
-SCHEMA = os.environ.get("SMOKE_SCHEMA", "public")
-INJETAR = os.environ.get("SMOKE_INJECT_SESSION") == "1"
+SCHEMA = os.environ.get("SMOKE_SCHEMA", "staging")
 PNG = os.environ.get("SMOKE_PNG", "/tmp/pc_smoke_historico_usuario.png")
 SUPA = "https://uxwpwdbbnlticxgtzcsb.supabase.co"
 REF = "uxwpwdbbnlticxgtzcsb"
@@ -31,15 +42,8 @@ ADMIN = "admin.teste.claude@physiqcalc.app"
 MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
 
-SENHA = os.environ.get("SMOKE_PASSWORD")
-if not SENHA:
-    print("defina SMOKE_PASSWORD com a senha da conta de teste admin")
-    sys.exit(1)
-ANON = os.environ.get("SUPABASE_ANON_KEY")
-if not ANON:
-    import pathlib
-    env = (pathlib.Path(__file__).resolve().parent.parent / ".env").read_text(encoding="utf-8")
-    ANON = re.search(r"VITE_SUPABASE_ANON_KEY=(\S+)", env).group(1)
+B8.ESTADO["schema"] = SCHEMA
+ANON = B8.B5.anon(REF)
 
 falhas, passes, erros_console = [], [], []
 
@@ -80,25 +84,26 @@ def format_duracao(s):
 def post_json(url, body, headers):
     req = urllib.request.Request(url, method="POST", data=json.dumps(body).encode())
     req.add_header("Content-Type", "application/json")
+    req.add_header("User-Agent", "physiq-unificado/1.0 (smoke)")  # a Cloudflare do api. recusa o urllib sem User-Agent (1010)
     for k, v in headers.items():
         req.add_header(k, v)
     with urllib.request.urlopen(req, timeout=90) as r:
         return json.loads(r.read().decode())
 
 
-# 1) sessão real do admin de teste
-sessao = post_json(f"{SUPA}/auth/v1/token?grant_type=password",
-                   {"email": ADMIN, "password": SENHA}, {"apikey": ANON})
-if "access_token" not in sessao:
-    print(f"ERRO no login: {sessao}")
+# 1) sessão do Treino do profissional de teste (a mesma troca de token do app)
+_st, sessao = B8.B5.trocar_token("master")
+if _st != 200 or "access_token" not in sessao:
+    print(f"ERRO na troca de token: {_st} {sessao}")
     sys.exit(1)
 JWT = sessao["access_token"]
-print(f"== sessão de admin obtida (schema {SCHEMA}) ==")
+sessao["user"] = {"id": sessao.get("treino_user_id")}
+print(f"== sessão do Treino do profissional de teste (schema {SCHEMA}) ==")
 
 
 def edge(body):
-    return post_json(f"{SUPA}/functions/v1/admin-relatorio", body,
-                     {"apikey": ANON, "Authorization": f"Bearer {JWT}", "x-schema": SCHEMA})
+    return post_json(f"https://api.physiqcalc.com.br/functions/v1/admin-relatorio", body,
+                     {"apikey": ANON, "Authorization": f"Bearer {JWT}", "x-schema": SCHEMA, "Origin": "http://localhost:5173"})
 
 
 def meses_para_tras(n):
@@ -155,36 +160,27 @@ for ano, mes in meses_para_tras(24):
         break
 
 with sync_playwright() as pw:
-    nav = pw.chromium.launch(args=["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"])
-    ctx = nav.new_context(
-        viewport={"width": 1280, "height": 1400}, locale="pt-BR", timezone_id="America/Sao_Paulo",
-        user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"),
-    )
-    ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});")
-    # popup "Parcela pendente" (overlay z-50) intercepta cliques — suprime como os outros smokes
-    ctx.add_init_script("try { localStorage.setItem('physiq_pendencia_avisada_em', new Date().toLocaleDateString('pt-BR')); } catch (e) {}")
-    if INJETAR:
-        ctx.add_init_script(f"try {{ localStorage.setItem('sb-{REF}-auth-token', JSON.stringify({json.dumps(sessao)})); }} catch (e) {{}}")
-    pg = ctx.new_page()
+    nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+    caso = B8.abrir_painel(nav, BASE, os.environ.get("SMOKE_PREFIXO", "local"), "historico_usuario", "/painel")
+    ctx, pg = caso.ctx, caso.pg
     pg.on("console", lambda m: erros_console.append(m.text) if m.type == "error" else None)
 
     url = f"{BASE}/admin?v=config&u={user_id}&ct=historico"
-    print(f"\n== 1. {url} abre já logado em Configurar Usuário ==")
+    print(f"\n== 1. {url} abre já logado no perfil do aluno › Treino › Histórico ==")
     pg.goto(url, wait_until="domcontentloaded")
-    pg.wait_for_selector("text=Configurar Usuário", timeout=120000)
+    pg.wait_for_selector("[data-historico-filtros]", timeout=120000)
     corpo = pg.inner_text("body")
     checa("não caiu na tela de login", not tem(corpo, "Entrar com") and not tem(corpo, "Esqueci minha senha"))
-    checa("Configurar Usuário carregou", tem(corpo, "Configurar Usuário"))
+    checa("o perfil do aluno abriu na aba Treino › Histórico", "/painel/alunos/" in pg.url and "ct=historico" in pg.url, pg.url)
     if pessoa != "(sem treinos)":
         checa("cabeçalho mostra o nome do aluno", tem(corpo, pessoa), pessoa)
 
     print("\n== 2. aba Histórico ao lado de Treino, já ativa pela URL ==")
-    abas = pg.eval_on_selector_all("div.flex.flex-wrap.gap-1 > button", "els => els.map(e => e.textContent.trim())")
+    abas = pg.eval_on_selector_all("div.flex.flex-wrap.gap-2.pt-2 > button", "els => els.map(e => e.textContent.trim())")
     checa("aba 'Histórico' existe", "Histórico" in abas, " | ".join(abas))
     checa("vem logo depois de 'Treino'",
           "Treino" in abas and "Histórico" in abas and abas.index("Histórico") == abas.index("Treino") + 1)
-    aba = pg.get_by_role("button", name="Histórico", exact=True)
+    aba = pg.locator("div.flex.flex-wrap.gap-2.pt-2 > button", has_text="Histórico").first
     checa("aba Histórico está ativa (?ct=historico)", "border-primary" in (aba.get_attribute("class") or ""))
     checa("sem botão Salvar nesta aba", pg.get_by_role("button", name="Salvar", exact=True).count() == 0)
 
@@ -264,8 +260,8 @@ with sync_playwright() as pw:
 
     print("\n== 7. F5 mantém a aba Histórico ==")
     pg.reload(wait_until="domcontentloaded")
-    pg.wait_for_selector("text=Configurar Usuário", timeout=120000)
-    aba = pg.get_by_role("button", name="Histórico", exact=True)
+    pg.wait_for_selector("[data-historico-filtros]", timeout=120000)
+    aba = pg.locator("div.flex.flex-wrap.gap-2.pt-2 > button", has_text="Histórico").first
     checa("URL segue com ct=historico", "ct=historico" in pg.url)
     checa("aba Histórico continua ativa", "border-primary" in (aba.get_attribute("class") or ""))
     checa("filtros da aba renderizados", pg.locator("[data-historico-filtros]").count() == 1)
@@ -274,16 +270,18 @@ with sync_playwright() as pw:
     espera_carregar(pg)
     pg.screenshot(path=PNG, full_page=True)
 
-    print("\n== 8. regressão: aba do painel (Gerenciar Treinos › Histórico de Treinos) segue com aluno ==")
+    print("\n== 8. regressão: painel › Treinos › Histórico de Treinos segue com o filtro de aluno ==")
     pg.goto(f"{BASE}/admin?v=treinos&t=historico", wait_until="domcontentloaded")
-    pg.wait_for_selector("text=Gerenciar Treinos", timeout=120000)
+    pg.wait_for_selector("text=Histórico completo de um aluno", timeout=120000)
     checa("painel carregou a lista", espera_carregar(pg))
     checa("bloco 'Histórico completo de um aluno' presente", tem(pg.inner_text("body"), "Histórico completo de um aluno"))
     checa("filtro 'Todos os alunos' presente", pg.locator("option", has_text="Todos os alunos").count() == 1)
     checa("4 selects no painel (busca, mês, ano, aluno)", pg.locator("select").count() == 4, f"{pg.locator('select').count()}")
 
     print("\n== 9. console ==")
-    reais = [e for e in erros_console if "favicon" not in e.lower() and "manifest" not in e.lower()]
+    # o Realtime do Banco do Treino está suspenso desde 03/09 (403 no websocket) — não é desta tela
+    reais = [e for e in erros_console if "favicon" not in e.lower() and "manifest" not in e.lower() and "realtime" not in e.lower()
+             and "Failed to load resource" not in e]
     checa("sem erros de console", len(reais) == 0, " | ".join(reais[:3]) if reais else "limpo")
 
     ctx.close()
