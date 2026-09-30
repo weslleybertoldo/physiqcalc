@@ -7,6 +7,7 @@ import { hojeSP, kpisDaSerie, periodoInicial, variacaoDaMetrica } from "@/evoluc
 import { SetaVariacao } from "@/evolucao/ui/CardsMetricas";
 import { COR_DO_TOM } from "@/evolucao/ui/tons";
 import { useEvolucaoDoAluno } from "@/evolucao/useEvolucaoDoAluno";
+import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 import { Area } from "@/ui/premium/Area";
 import { Esqueleto } from "@/ui/premium/Estados";
 import { textoDoPeriodo } from "./pecas/regras";
@@ -22,8 +23,25 @@ const CLASSE = "pq-cartao flex w-full min-h-[84px] items-center gap-3 px-3.5 py-
  */
 export default function CardPeso() {
   const tem = useOQueOAlunoTem();
+  const treino = useTreinoDaPagina();
   if (tem.semProfissional) return null;
+  // quem tem Treino: a série só é montada depois da sessão do Banco do Treino (a troca de token), como na aba Evolução (que a trava
+  // da sessão segura) — senão o card mostraria por uns segundos só as avaliações da nutricionista e depois mudaria de número
+  if (tem.treino && treino.tipo === "carregando") return <EsqueletoPeso />;
   return <Peso />;
+}
+
+function EsqueletoPeso() {
+  return (
+    <div className={CLASSE} data-card-peso="carregando" role="status" aria-busy="true" aria-label="Carregando o seu peso">
+      <div className="flex flex-1 flex-col gap-2">
+        <Esqueleto className="h-3 w-1/4" />
+        <Esqueleto className="h-5 w-2/5" />
+        <Esqueleto className="h-3 w-1/2" />
+      </div>
+      <Esqueleto className="h-[60px] w-[150px] flex-none" />
+    </div>
+  );
 }
 
 function Peso() {
@@ -40,18 +58,7 @@ function Peso() {
     return { periodo, kpi, pontos };
   }, [ev.serie, hoje]);
 
-  if (ev.fase === "carregando") {
-    return (
-      <div className={CLASSE} data-card-peso="carregando" role="status" aria-busy="true" aria-label="Carregando o seu peso">
-        <div className="flex flex-1 flex-col gap-2">
-          <Esqueleto className="h-3 w-1/4" />
-          <Esqueleto className="h-5 w-2/5" />
-          <Esqueleto className="h-3 w-1/2" />
-        </div>
-        <Esqueleto className="h-[60px] w-[150px] flex-none" />
-      </div>
-    );
-  }
+  if (ev.fase === "carregando") return <EsqueletoPeso />;
 
   if (ev.fase === "sem-conexao" || ev.fase === "erro" || !dados) {
     const semRede = ev.fase === "sem-conexao";

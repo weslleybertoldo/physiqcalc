@@ -310,6 +310,9 @@ describe("aba Início (W12 — tela 1)", () => {
     abrir();
     await waitFor(() => expect(card('data-card-treino-hoje="carregando"')).not.toBeNull(), { timeout: 4000 });
     await waitFor(() => expect(card("data-dieta-hoje-kcal")).not.toBeNull());
+    // o peso soma os 2 bancos: espera a sessão do Treino (senão mostraria só o lado da nutricionista e depois mudaria)
+    expect(card('data-card-peso="carregando"')).not.toBeNull();
+    expect(card('data-card-peso="dados"')).toBeNull();
   });
 
   it("sem internet: o treino abre (SQLite do aparelho); a dieta sem nada guardado mostra 'Sem conexão'", async () => {
