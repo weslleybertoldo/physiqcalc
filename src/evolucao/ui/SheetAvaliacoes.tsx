@@ -1,80 +1,86 @@
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
-import { Segmentado } from "@/ui/premium/Segmentado";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { Tabela, TabelaCabeca, TabelaCelula, TabelaCorpo, TabelaLinha, TabelaTitulo } from "@/ui/premium/Tabela";
 import { autorCurto, contagemAvaliacoes, dataTabela, num, variacaoComSinal } from "../formato";
 import {
+  avaliacoesDaTabela,
   infoMetrica,
   janelaDoGrafico,
   linhasDaTabela,
   metricaDoMusculo,
   metricasComDados,
-  noPeriodo,
-  pontosDe,
+  modoInicialDaTabela,
+  periodoDaTabela,
   resumoDoPeriodo,
+  rotuloDoPeriodo,
   tipoCurto,
+  variacaoDaMetrica,
   type Metrica,
+  type ModoTabela,
 } from "../serie";
 import type { Avaliacao, Periodo, Serie } from "../tipos";
 import { SetaVariacao } from "./CardsMetricas";
-import { COR_DO_TOM } from "./tons";
 import { GraficoLinha } from "./GraficoLinha";
+import { COR_DO_TOM } from "./tons";
 
-const PERIODOS: { valor: Periodo; rotulo: string }[] = [
-  { valor: "3m", rotulo: "3M" },
-  { valor: "6m", rotulo: "6M" },
-  { valor: "1a", rotulo: "1A" },
-  { valor: "tudo", rotulo: "Tudo" },
-];
+/** "nos últimos 6 meses" → "Nos últimos 6 meses". */
+function maiuscula(t: string): string {
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
 
 /**
- * "N avaliações" (tela 4 → C25): a tabela com as variações (cada avaliação, a mais recente primeiro, com o que mudou desde a
- * anterior), o gráfico de qualquer métrica (a "Gráficos de evolução" da tela antiga) e o resumo do período (a 1ª e a última).
- * Toque numa linha abre a composição daquela avaliação.
+ * "N avaliações" (tela 4 → C25): abre com as avaliações do PERÍODO escolhido na tela (o mesmo N do botão), cada uma com a
+ * variação desde a anterior, o gráfico de qualquer métrica e o resumo do período — com a MESMA conta dos cards (em 6M, o Peso
+ * do resumo é o do card). No fim da lista, "Ver todas (N)" mostra o histórico inteiro (a tabela completa da tela antiga) e o
+ * resumo passa a "Desde a 1ª avaliação". Período sem nenhuma avaliação abre direto em todas. Tocar numa linha abre a composição.
  */
 export function SheetAvaliacoes({
   aberto,
   aoMudar,
   serie,
   hoje,
-  periodoInicial,
+  periodo,
   aoVer,
 }: {
   aberto: boolean;
   aoMudar: (v: boolean) => void;
   serie: Serie;
   hoje: string;
-  periodoInicial: Periodo;
+  /** o período escolhido na tela (3M · 6M · 1A) */
+  periodo: Exclude<Periodo, "tudo">;
   aoVer: (av: Avaliacao) => void;
 }) {
-  const [periodo, setPeriodo] = useState<Periodo>(periodoInicial);
+  const [modo, setModo] = useState<ModoTabela>(() => modoInicialDaTabela(serie, periodo, hoje));
   const [metrica, setMetrica] = useState<Metrica>("peso");
   useEffect(() => {
-    if (aberto) setPeriodo(periodoInicial);
-  }, [aberto, periodoInicial]);
+    if (aberto) setModo(modoInicialDaTabela(serie, periodo, hoje));
+  }, [aberto, serie, periodo, hoje]);
 
-  const avs = useMemo(() => noPeriodo(serie.avaliacoes, periodo, hoje), [serie.avaliacoes, periodo, hoje]);
+  const efetivo = periodoDaTabela(periodo, modo);
+  const avs = useMemo(() => avaliacoesDaTabela(serie, periodo, hoje, modo), [serie, periodo, hoje, modo]);
+  const nPeriodo = useMemo(() => avaliacoesDaTabela(serie, periodo, hoje, "periodo").length, [serie, periodo, hoje]);
+  const nTodas = serie.avaliacoes.length;
   const metricas = useMemo(() => metricasComDados(avs), [avs]);
   const atual = metricas.includes(metrica) ? metrica : metricas[0] ?? "peso";
-  const pontos = useMemo(() => pontosDe(avs, atual), [avs, atual]);
+  const pontos = useMemo(() => variacaoDaMetrica(serie.avaliacoes, atual, efetivo, hoje).pontos, [serie.avaliacoes, atual, efetivo, hoje]);
   const colunas = useMemo<Metrica[]>(() => ["peso", "gordura", metricaDoMusculo(serie)], [serie]);
   const linhas = useMemo(() => linhasDaTabela(avs, colunas, serie.objetivo), [avs, colunas, serie.objetivo]);
-  const resumo = useMemo(() => resumoDoPeriodo(avs, serie.objetivo), [avs, serie.objetivo]);
+  const resumo = useMemo(() => resumoDoPeriodo(serie.avaliacoes, efetivo, hoje, serie.objetivo), [serie.avaliacoes, efetivo, hoje, serie.objetivo]);
   const info = infoMetrica(atual);
+  const quando = modo === "todas" ? "Desde a 1ª avaliação" : maiuscula(rotuloDoPeriodo(periodo));
 
   return (
     <PainelDeslizante
       aberto={aberto}
       aoMudar={aoMudar}
       titulo={contagemAvaliacoes(avs.length)}
-      descricao="Cada avaliação com a variação desde a anterior. Toque numa linha para ver a composição."
+      descricao={`${quando}, cada uma com a variação desde a anterior. Toque numa linha para ver a composição.`}
       className="max-h-[92vh]"
     >
-      <div className="flex flex-col gap-3.5 pb-2" data-sheet-avaliacoes={periodo}>
-        <Segmentado<Periodo> opcoes={PERIODOS} valor={periodo} aoMudar={setPeriodo} className="self-start" />
-
+      <div className="flex flex-col gap-3.5 pb-2" data-sheet-avaliacoes={modo} data-sheet-periodo={efetivo}>
         {metricas.length > 0 && (
           <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-0.5" data-metricas-grafico>
             {metricas.map((m) => (
@@ -104,20 +110,20 @@ export function SheetAvaliacoes({
             </div>
             {pontos.length >= 2 ? (
               <div className="mt-2">
-                <GraficoLinha pontos={pontos} janela={janelaDoGrafico(pontos, periodo, hoje)} altura={120} rotulo={`${info.rotulo} no período`} />
+                <GraficoLinha pontos={pontos} janela={janelaDoGrafico(pontos, efetivo, hoje)} altura={120} rotulo={`${info.rotulo} — ${quando.toLowerCase()}`} />
               </div>
             ) : (
-              <p className="mt-2 pb-1 text-[12.5px] text-texto-2">Com 2 avaliações com {info.rotulo.toLowerCase()} no período, o gráfico aparece aqui.</p>
+              <p className="mt-2 pb-1 text-[12.5px] text-texto-2">Com 2 avaliações com {info.rotulo.toLowerCase()}, o gráfico aparece aqui.</p>
             )}
           </Cartao>
         )}
 
         {linhas.length === 0 ? (
           <p className="text-[13px] text-texto-2" data-tabela-vazia>
-            Nenhuma avaliação neste período.
+            Nenhuma avaliação ainda.
           </p>
         ) : (
-          <Tabela data-tabela-avaliacoes>
+          <Tabela data-tabela-avaliacoes={avs.length}>
             <TabelaCabeca>
               <tr>
                 <TabelaTitulo className="pl-0">Data</TabelaTitulo>
@@ -161,9 +167,22 @@ export function SheetAvaliacoes({
           </Tabela>
         )}
 
+        {modo === "periodo" && nTodas > avs.length && (
+          <Botao variante="g" tamanho="sm" className="self-center" onClick={() => setModo("todas")} data-tabela-ver-todas={nTodas}>
+            Ver todas ({nTodas})
+          </Botao>
+        )}
+        {modo === "todas" && nPeriodo > 0 && nPeriodo < nTodas && (
+          <Botao variante="g" tamanho="sm" className="self-center" onClick={() => setModo("periodo")} data-tabela-ver-periodo={nPeriodo}>
+            Só {rotuloDoPeriodo(periodo).replace(/^nos /, "os ").replace(/^no /, "o ")} ({nPeriodo})
+          </Botao>
+        )}
+
         {resumo.length > 0 && avs.length >= 2 && (
-          <section data-resumo-periodo>
-            <h3 className="pq-eyebrow mb-2">Resumo do período</h3>
+          <section data-resumo-periodo={modo}>
+            <h3 className="pq-eyebrow mb-2" data-resumo-titulo>
+              {modo === "todas" ? "Desde a 1ª avaliação" : "Resumo do período"}
+            </h3>
             <div className="flex flex-col divide-y divide-linha-3 rounded-2xl border border-linha bg-superficie-3 px-3.5">
               {resumo.map((r) => (
                 <div key={r.metrica} className="flex items-center gap-2 py-2.5 text-[12.5px]" data-resumo={r.metrica}>
@@ -172,7 +191,9 @@ export function SheetAvaliacoes({
                   <span aria-hidden className="text-texto-4">→</span>
                   <b className="w-[52px] text-right font-semibold tabular-nums text-texto">{num(r.ultima, r.casas)}</b>
                   <span className={cn("flex w-[62px] items-center justify-end gap-0.5 font-semibold tabular-nums", COR_DO_TOM[r.tom])}>
-                    {r.delta === null ? "—" : (
+                    {r.delta === null ? (
+                      "—"
+                    ) : (
                       <>
                         <SetaVariacao delta={r.delta} className="h-3 w-3" />
                         {variacaoComSinal(r.delta, r.casas)}

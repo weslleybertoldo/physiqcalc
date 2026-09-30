@@ -163,11 +163,24 @@ describe("aba Evolução (W10 — tela 4)", () => {
     fireEvent.click(document.querySelector("[data-evolucao-contagem]")!);
     const painel = await screen.findByRole("dialog");
     const linhas = painel.querySelectorAll("[data-linha-avaliacao]");
+    // o mesmo N do botão (4 no 6M): o 14/03 fica fora dos 6 meses
+    expect(document.querySelector("[data-evolucao-contagem]")!.textContent).toBe("4 avaliações");
+    expect(painel.textContent).toContain("4 avaliações");
     expect([...linhas].map((l) => l.getAttribute("data-linha-origem"))).toEqual(["treino", "principal", "treino", "treino"]);
     expect(linhas[1].querySelector("[data-linha-autor]")!.textContent).toBe("Pollock 3 · Camila");
     expect(linhas[0].querySelector('[data-celula="peso"]')!.textContent).toContain("−0,7"); // 84,9 (nutri) → 84,2
-    expect(within(painel as HTMLElement).getByText("Resumo do período")).toBeInTheDocument();
-    fireEvent.click(linhas[1]);
+    // o resumo do período = o card Peso do período (89,1 → 84,2 = −4,9)
+    expect(painel.querySelector("[data-resumo-titulo]")!.textContent).toBe("Resumo do período");
+    expect(painel.querySelector('[data-resumo="peso"]')!.textContent).toContain("−4,9");
+    expect(document.querySelector('[data-kpi-evolucao="peso"]')!.textContent).toContain("4,9 kg");
+    // "Ver todas (5)": o histórico inteiro e o resumo "Desde a 1ª avaliação" (90,3 → 84,2 = −6,1)
+    fireEvent.click(painel.querySelector("[data-tabela-ver-todas]")!);
+    expect(painel.querySelectorAll("[data-linha-avaliacao]")).toHaveLength(5);
+    expect(painel.querySelector("[data-resumo-titulo]")!.textContent).toBe("Desde a 1ª avaliação");
+    expect(painel.querySelector('[data-resumo="peso"]')!.textContent).toContain("−6,1");
+    fireEvent.click(painel.querySelector("[data-tabela-ver-periodo]")!);
+    expect(painel.querySelectorAll("[data-linha-avaliacao]")).toHaveLength(4);
+    fireEvent.click(painel.querySelectorAll("[data-linha-avaliacao]")[1]);
     await waitFor(() => expect(document.querySelector('[data-composicao="principal:n1"]')).not.toBeNull());
     const comp = document.querySelector('[data-composicao="principal:n1"]')!.textContent ?? "";
     expect(comp).toContain("Jackson & Pollock — 3 dobras");
@@ -251,5 +264,19 @@ describe("aba Evolução (W10 — tela 4)", () => {
     const painel = await screen.findByRole("dialog");
     expect(painel.querySelectorAll("[data-linha-avaliacao]")).toHaveLength(1);
     expect(painel.textContent).toContain("15/07/26");
+  });
+
+  it("período sem nenhuma avaliação: '0 no período' abre a tabela direto em todas", async () => {
+    h.treino = { perfil: null, fotos: [], avaliacoes: [av("2025-10-10", 88, 20), av("2025-11-10", 87, 19)] };
+    h.principal = { objetivo: null, antropometrias: [], fotos: [] };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-evolucao-contagem]")).not.toBeNull());
+    fireEvent.click(screen.getByRole("radio", { name: "3M" }));
+    expect(document.querySelector("[data-evolucao-contagem]")!.textContent).toBe("2 no total");
+    fireEvent.click(document.querySelector("[data-evolucao-contagem]")!);
+    const painel = await screen.findByRole("dialog");
+    expect(painel.querySelector("[data-sheet-avaliacoes]")!.getAttribute("data-sheet-avaliacoes")).toBe("todas");
+    expect(painel.querySelectorAll("[data-linha-avaliacao]")).toHaveLength(2);
+    expect(painel.querySelector("[data-tabela-ver-periodo]")).toBeNull();
   });
 });

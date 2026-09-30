@@ -567,6 +567,28 @@ export function variacaoNoPeriodo(pontos: PontoSerie[]): number | null {
   return pontos[pontos.length - 1].valor - pontos[0].valor;
 }
 
+export interface VariacaoMetrica {
+  /** os valores da métrica dentro do período, em ordem de data */
+  pontos: PontoSerie[];
+  primeira: number | null;
+  ultima: number | null;
+  delta: number | null;
+}
+
+/**
+ * A variação de uma métrica no período: o 1º e o último valor DENTRO dele e a diferença. É a MESMA conta dos cards do topo,
+ * do resumo da tabela e do gráfico ("Tudo" = desde a 1ª avaliação) — nenhum lugar da tela faz outra.
+ */
+export function variacaoDaMetrica(avs: Avaliacao[], m: Metrica, periodo: Periodo, hoje: string): VariacaoMetrica {
+  const pontos = noPeriodo(pontosDe(avs, m), periodo, hoje);
+  return {
+    pontos,
+    primeira: pontos[0]?.valor ?? null,
+    ultima: pontos[pontos.length - 1]?.valor ?? null,
+    delta: variacaoNoPeriodo(pontos),
+  };
+}
+
 export interface Kpi {
   metrica: Metrica;
   titulo: string;
@@ -593,7 +615,7 @@ function kpi(s: Serie, m: Metrica, titulo: string, periodo: Periodo, hoje: strin
   const info = infoMetrica(m);
   const todos = pontosDe(s.avaliacoes, m);
   const valor = todos.length ? todos[todos.length - 1].valor : s.composicaoAtual ? valorDe(s.composicaoAtual, m) : null;
-  const variacao = variacaoNoPeriodo(noPeriodo(todos, periodo, hoje));
+  const variacao = variacaoDaMetrica(s.avaliacoes, m, periodo, hoje).delta;
   return { metrica: m, titulo, valor, unidade: info.unidade, variacao, unidadeVariacao: info.unidadeVariacao, tom: tomDaVariacao(m, variacao, s.objetivo), casas: info.casas };
 }
 
@@ -705,16 +727,33 @@ export interface LinhaResumo {
   tom: Tom;
 }
 
-/** "Resumo do período" (o "Resumo Comparativo" da tela antiga): a 1ª e a última de cada métrica e a variação. */
-export function resumoDoPeriodo(avs: Avaliacao[], objetivo?: string | null): LinhaResumo[] {
-  return metricasComDados(avs).map((m) => {
+/**
+ * "Resumo do período" (o "Resumo Comparativo" da tela antiga): a 1ª e a última de cada métrica no período e a variação —
+ * pela `variacaoDaMetrica`, a mesma dos cards (em 6M, o Peso do resumo é o Peso do card). "Tudo" = desde a 1ª avaliação.
+ */
+export function resumoDoPeriodo(avs: Avaliacao[], periodo: Periodo, hoje: string, objetivo?: string | null): LinhaResumo[] {
+  return metricasComDados(noPeriodo(avs, periodo, hoje)).map((m) => {
     const info = infoMetrica(m);
-    const pts = pontosDe(avs, m);
-    const primeira = pts[0]?.valor ?? null;
-    const ultima = pts[pts.length - 1]?.valor ?? null;
-    const delta = variacaoNoPeriodo(pts);
+    const { primeira, ultima, delta } = variacaoDaMetrica(avs, m, periodo, hoje);
     return { metrica: m, rotulo: info.rotulo, unidade: info.unidade, casas: info.casas, primeira, ultima, delta, tom: tomDaVariacao(m, delta, objetivo) };
   });
+}
+
+/** A tabela "N avaliações" mostra as do PERÍODO escolhido na tela (o mesmo N do botão) ou, pelo "Ver todas", o histórico inteiro. */
+export type ModoTabela = "periodo" | "todas";
+
+/** O período de verdade de cada modo: o da tela ou "tudo" (desde a 1ª avaliação). */
+export function periodoDaTabela(periodo: Periodo, modo: ModoTabela): Periodo {
+  return modo === "todas" ? "tudo" : periodo;
+}
+
+export function avaliacoesDaTabela(s: Serie, periodo: Periodo, hoje: string, modo: ModoTabela): Avaliacao[] {
+  return noPeriodo(s.avaliacoes, periodoDaTabela(periodo, modo), hoje);
+}
+
+/** Abre no período da tela; período sem nenhuma avaliação abre direto em "todas" (nada fica escondido). */
+export function modoInicialDaTabela(s: Serie, periodo: Periodo, hoje: string): ModoTabela {
+  return noPeriodo(s.avaliacoes, periodo, hoje).length > 0 ? "periodo" : "todas";
 }
 
 // ───────────────────────── composição (o "Ver") ─────────────────────────

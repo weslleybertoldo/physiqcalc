@@ -7,7 +7,8 @@ A aba lê o Banco do Treino pelo REST no schema do build (local e staging = `sta
 Casos (na ordem):
   dois_bancos  w10-aluno: cards Peso/Gordura/M. magra com a variação do 6M, gráfico "De 89,1 kg pra 84,2 kg", "7 avaliações",
                a última ("Avaliação por 7 dobras · 22/09 · Lucas Ferreira, seu personal") → Ver (composição completa),
-               a tabela (as 2 origens juntas, em ordem, com o autor; "Tudo" = 8), o Ver de uma antropometria da nutri,
+               a tabela do período (7, o mesmo N do botão; resumo = a conta dos cards: −4,9) e "Ver todas" (8; "Desde a 1ª
+               avaliação": −6,1), as 2 origens juntas, em ordem, com o autor; o Ver de uma antropometria da nutri,
                filtro 1A/3M, fotos com cadeado (tocar abre e fecha; a imagem carrega), Comparar (nutri 26/08 × personal set/26)
   so_calc      teste@teste.com: tudo o que o UserDashboard mostrava, NÚMERO A NÚMERO (antes_<prefixo>.json, tirado da tela antiga
                antes do deploy): a composição (perfil), cada avaliação da linha do tempo, as variações e o resumo
@@ -106,21 +107,43 @@ def caso_dois_bancos(nav, base: str, prefixo: str) -> None:
         c.print("evolucao_ver_2")
         fechar_painel(c)
 
-        # "N avaliações" — a tabela
+        # "N avaliações" — a tabela abre com as do PERÍODO (o mesmo N do botão) e o resumo com a conta dos cards
+        card_peso = txt(c, '[data-kpi-evolucao="peso"]')
         c.pg.locator("[data-evolucao-contagem]").click()
         c.esperar(lambda: c.tem("[data-tabela-avaliacoes]"), 10)
+        n6 = c.pg.locator("[data-linha-avaliacao]").count()
+        p.check(n6 == 7 and "7 avaliações" in painel(c) and c.pg.locator('[data-sheet-avaliacoes="periodo"]').count() == 1,
+                f"6M: a tabela abre com as 7 do período — o mesmo N do botão ({n6})")
         origens = c.pg.locator("[data-linha-avaliacao]").evaluate_all("ls => ls.map(l => l.getAttribute('data-linha-origem'))")
         p.check(origens == ["treino", "principal", "treino", "treino", "principal", "treino", "treino"], f"tabela 6M: as 2 origens em ordem de data ({origens})")
+        p.check("14/03/26" not in txt(c, "[data-tabela-avaliacoes]"), "6M: o 14/03 (fora dos 6 meses) não entra")
         autores = c.pg.locator("[data-linha-autor]").all_inner_texts()
         p.check(autores[1] == "Pollock 3 · Camila" and autores[0] == "7 dobras · Lucas", f"com o autor de cada uma ({autores[:2]})")
         cel = c.pg.locator('[data-linha-avaliacao] [data-celula="peso"]').first.inner_text()
         p.check("84,2" in cel and "−0,7" in cel, f"variação desde a anterior (a da nutri, 84,9 → 84,2): {cel!r}")
-        p.check(c.tem("[data-resumo-periodo]"), "resumo do período (a 1ª e a última)")
+        r_peso = txt(c, '[data-resumo="peso"]')
+        p.check(txt(c, "[data-resumo-titulo]").lower() == "resumo do período" and "89,1" in r_peso and "84,2" in r_peso and "−4,9" in r_peso,
+                f"resumo do período: Peso 89,1 → 84,2 −4,9 ({r_peso!r})")
+        p.check("4,9 kg" in card_peso, f"= o card Peso do mesmo período (↘ 4,9 kg) ({card_peso!r})")
         c.print("evolucao_tabela")
-        c.pg.get_by_role("radio", name="Tudo").click()
+        c.pg.locator("[data-tabela-ver-todas]").evaluate("b => b.scrollIntoView({ block: 'center' })")
+        c.pg.wait_for_timeout(600)
+        p.check(txt(c, "[data-tabela-ver-todas]") == "Ver todas (8)", f"no fim da lista: {txt(c, '[data-tabela-ver-todas]')!r}")
+        c.print("evolucao_tabela_periodo")
+        # "Ver todas (8)": o histórico inteiro (C25) e o resumo "Desde a 1ª avaliação"
+        c.pg.locator("[data-tabela-ver-todas]").click()
         c.pg.wait_for_timeout(700)
         n = c.pg.locator("[data-linha-avaliacao]").count()
-        p.check(n == 8 and "8 avaliações" in painel(c), f"Tudo: as 8 (6 do personal + 2 da nutricionista) ({n})")
+        p.check(n == 8 and "8 avaliações" in painel(c), f"Ver todas: as 8 (6 do personal + 2 da nutricionista) ({n})")
+        r_todas = txt(c, '[data-resumo="peso"]')
+        p.check(txt(c, "[data-resumo-titulo]").lower() == "desde a 1ª avaliação" and "90,3" in r_todas and "−6,1" in r_todas,
+                f"'Desde a 1ª avaliação': Peso 90,3 → 84,2 −6,1 ({r_todas!r})")
+        p.check(txt(c, "[data-tabela-ver-periodo]") == "Só os últimos 6 meses (7)", f"e a volta pro período: {txt(c, '[data-tabela-ver-periodo]')!r}")
+        # a última linha (14/03, a que só entra em "todas"), o botão de volta e o resumo "Desde a 1ª avaliação"
+        c.pg.locator('[data-linha-avaliacao]').last.evaluate("l => l.scrollIntoView({ block: 'start' })")
+        c.pg.wait_for_timeout(600)
+        p.check("14/03/26" in txt(c, "[data-tabela-avaliacoes]"), "Ver todas: o 14/03 entra")
+        c.print("evolucao_tabela_todas")
         c.pg.locator('[data-metrica="gordura"]').click()
         c.pg.wait_for_timeout(500)
         p.check(c.pg.locator('[data-grafico-metrica="gordura"] [data-grafico-pontos]').count() == 1, "gráfico de outra métrica (% de gordura) no painel")
@@ -223,8 +246,8 @@ def caso_so_calc(nav, base: str, prefixo: str) -> None:
         abrir_tabela = "[data-evolucao-contagem]" if c.tem("[data-evolucao-contagem]") else "[data-evolucao-ver-registros]"
         c.pg.locator(abrir_tabela).click()
         c.esperar(lambda: c.tem("[data-linha-avaliacao]") or c.tem("[data-tabela-vazia]"), 10)
-        if c.pg.get_by_role("radio", name="Tudo").count():
-            c.pg.get_by_role("radio", name="Tudo").click()
+        if c.tem("[data-tabela-ver-todas]"):
+            c.pg.locator("[data-tabela-ver-todas]").click()
             c.pg.wait_for_timeout(600)
         textos.append(painel(c))
         c.print("evolucao_calc_tabela")
