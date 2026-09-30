@@ -11,7 +11,7 @@ describe("W8 — a aba Treino nova entra pelo registro no lugar da TreinosPage",
     expect(existe("abasApp", "Treino")).toBe(true);
     expect(abasVisiveis(["treino"]).map((a) => a.rotulo)).toEqual(["Treino", "Evolução", "Perfil"]);
     expect(abaDeAbertura(["treino"])?.id).toBe("treino");
-    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Evolução", "Perfil"]);
+    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Dieta", "Evolução", "Perfil"]); // W11
   });
 
   it("o aviso de atualização do APK virou janela global da casca (morava na TreinosPage)", () => {

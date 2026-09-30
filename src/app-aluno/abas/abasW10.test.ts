@@ -8,11 +8,12 @@ import { destinoDaRotaAntiga } from "@/rotas/redirecionamentos";
 const raiz = resolve(__dirname, "../../..");
 
 describe("W10 — a aba Evolução nova entra pelo registro no lugar do UserDashboard", () => {
-  it("src/app-aluno/abas/Evolucao.tsx está registrada; as abas do aluno seguem (Treino abre; só Nutrição abre na Evolução)", () => {
+  it("src/app-aluno/abas/Evolucao.tsx está registrada; as abas do aluno seguem (Treino abre; só Nutrição abre na Dieta — W11)", () => {
     expect(existe("abasApp", "Evolucao")).toBe(true);
     expect(abasVisiveis(["treino"]).map((a) => a.rotulo)).toEqual(["Treino", "Evolução", "Perfil"]);
     expect(abaDeAbertura(["treino"])?.id).toBe("treino");
-    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Evolução", "Perfil"]);
+    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Dieta", "Evolução", "Perfil"]);
+    expect(abaDeAbertura(["nutricao"])?.id).toBe("dieta");
   });
 
   it("C14: o antigo /avaliacao (ícone Avaliação do topo) cai na aba Evolução", () => {
