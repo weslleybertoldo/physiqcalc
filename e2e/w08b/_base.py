@@ -103,9 +103,18 @@ def zerar(email: str) -> None:
     q(f"delete from {schema()}.login_bloqueios where email = lower('{email}')")
 
 
+def hash_do_meu_ip() -> str:
+    """O hash que a função grava para o IP DESTE aparelho (mesmo sal e formato de _shared/entrar-senha-regras.ts)."""
+    with urllib.request.urlopen("https://api.ipify.org", timeout=20) as r:
+        ip = r.read().decode().strip().lower()
+    sal = Path.home().joinpath(".physiq-login-ip-sal").read_text().strip()
+    return hashlib.sha256(f"physiq-login:{sal}:{ip}".encode()).hexdigest()
+
+
 def zerar_ips() -> None:
-    """As tentativas desta máquina (o limite por IP) — os testes fazem muitas de propósito."""
-    q(f"delete from {schema()}.login_tentativas_ip")
+    """As tentativas DESTA máquina (o limite por IP) — os testes fazem muitas de propósito. Só a linha deste IP: em produção a
+    tabela tem as tentativas de gente de verdade."""
+    q(f"delete from {schema()}.login_tentativas_ip where ip_hash = '{hash_do_meu_ip()}'")
 
 
 def meta(email: str) -> dict:
