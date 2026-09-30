@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { Plus, Save, MapPin, Pencil } from "lucide-react";
+import { Check, MapPin, Pencil, Plus, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { EQUIPAMENTOS, gravarEquipamentos, lerEquipamentos } from "@/treino/equivalencia";
+import { Botao } from "@/ui/premium/Botao";
 
 export interface Academia {
   id: string;
@@ -25,10 +28,15 @@ interface Props {
   trocaBloqueada?: boolean;
 }
 
+/**
+ * Academia do treino (C17/C73 — cargas por academia) + os EQUIPAMENTOS dela (W9 — NF11): marcar o que a academia tem faz a
+ * troca de exercício mostrar primeiro os equivalentes possíveis ali (o resto vai para o fim, apagado). Opcional: nada marcado =
+ * sem filtro. Grava em `tb_academias.equipamentos` (text[] no Postgres; JSON no SQLite do PowerSync) — funciona sem internet.
+ */
 const SeletorAcademia = ({ userId, academiaAtual, onTrocar, onSalvar, onCriada, trocaBloqueada }: Props) => {
   const db = usePowerSync();
-  const { data: academias } = useQuery<Academia>(
-    "SELECT id, nome FROM tb_academias WHERE user_id = ? ORDER BY nome",
+  const { data: academias } = useQuery<Academia & { equipamentos: string | null }>(
+    "SELECT id, nome, equipamentos FROM tb_academias WHERE user_id = ? ORDER BY nome",
     [userId]
   );
 
@@ -38,6 +46,29 @@ const SeletorAcademia = ({ userId, academiaAtual, onTrocar, onSalvar, onCriada, 
   const [confirmTrocar, setConfirmTrocar] = useState<Academia | null>(null);
   const [confirmSalvar, setConfirmSalvar] = useState(false);
   const [salvando, setSalvando] = useState(false);
+
+  // equipamentos da academia atual: espelho local (toques seguidos não se perdem enquanto o SQLite responde)
+  const doBanco = useMemo(
+    () => lerEquipamentos((academias || []).find((a) => a.id === academiaAtual?.id)?.equipamentos),
+    [academias, academiaAtual?.id]
+  );
+  const [marcados, setMarcados] = useState<string[]>(doBanco);
+  const assinatura = doBanco.join(",");
+  useEffect(() => {
+    setMarcados(assinatura ? assinatura.split(",") : []);
+  }, [academiaAtual?.id, assinatura]);
+
+  const gravarMarcados = async (prox: string[]) => {
+    if (!academiaAtual) return;
+    setMarcados(prox);
+    try {
+      await db.execute("UPDATE tb_academias SET equipamentos = ? WHERE id = ? AND user_id = ?", [gravarEquipamentos(prox), academiaAtual.id, userId]);
+    } catch (e) {
+      console.error("[Treino] equipamentos da academia:", e);
+      toast.error("Não deu para salvar os equipamentos. Tente de novo.");
+    }
+  };
+  const alternar = (chave: string) => void gravarMarcados(marcados.includes(chave) ? marcados.filter((c) => c !== chave) : [...marcados, chave]);
 
   const criarAcademia = async () => {
     const nome = novoNome.trim();
@@ -72,81 +103,117 @@ const SeletorAcademia = ({ userId, academiaAtual, onTrocar, onSalvar, onCriada, 
   };
 
   return (
-    <div className="result-card border-muted-foreground/20 mb-6">
-      <div className="flex items-center gap-2 flex-wrap">
-        <MapPin size={14} className="text-primary shrink-0" />
-        <select
-          value={academiaAtual?.id || ""}
-          onChange={(e) => handleSelect(e.target.value)}
-          className="flex-1 min-w-[140px] bg-transparent border-b border-muted-foreground text-foreground font-body text-sm py-1.5 outline-hidden focus:border-primary"
-        >
-          {/* cor explícita: o dropdown nativo não herda o tema e o texto ficava branco no fundo branco */}
-          <option value="" className="bg-background text-foreground">Selecionar academia...</option>
-          {(academias || []).map((a) => (
-            <option key={a.id} value={a.id} className="bg-background text-foreground">{a.nome}</option>
-          ))}
-        </select>
+    <div className="flex flex-col gap-4" data-seletor-academia>
+      <div className="flex items-center gap-2">
+        <span className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[14px] border border-linha-2 bg-superficie px-3 focus-within:border-violeta/60">
+          <MapPin aria-hidden className="h-4 w-4 flex-none text-violeta-3" />
+          <select
+            value={academiaAtual?.id || ""}
+            onChange={(e) => handleSelect(e.target.value)}
+            aria-label="Academia"
+            data-academia-select
+            className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-texto outline-none"
+          >
+            {/* cor explícita: o dropdown nativo não herda o tema e o texto ficava branco no fundo branco */}
+            <option value="" className="bg-tela text-texto">Selecionar academia...</option>
+            {(academias || []).map((a) => (
+              <option key={a.id} value={a.id} className="bg-tela text-texto">{a.nome}</option>
+            ))}
+          </select>
+        </span>
         <button
           type="button"
           onClick={() => { setMenuAberto((v) => !v); setAdicionando(false); }}
-          className={`p-1.5 transition-colors ${menuAberto ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+          className={cn("pq-ibtn", menuAberto && "border-violeta/50 text-violeta-3")}
+          aria-label="Opções da academia"
           title="Opções da academia"
+          data-academia-opcoes
         >
-          <Pencil size={14} />
+          <Pencil aria-hidden />
         </button>
       </div>
 
-      {menuAberto && (
-        <div className="flex items-center gap-2 flex-wrap mt-3">
-          {!adicionando && (
-            <button
-              type="button"
-              onClick={() => setAdicionando(true)}
-              className="px-3 py-1.5 border border-muted-foreground/20 rounded text-[10px] font-bold uppercase tracking-wider text-primary hover:border-primary transition-colors whitespace-nowrap"
-            >
-              <Plus size={11} className="inline mr-1" />Adicionar academia
-            </button>
-          )}
-          <button
-            type="button"
+      {menuAberto && !adicionando && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Botao variante="g" tamanho="sm" icone={Plus} onClick={() => setAdicionando(true)} data-academia-adicionar>Adicionar academia</Botao>
+          <Botao
+            variante="w"
+            tamanho="sm"
+            icone={Save}
             onClick={() => {
               if (!academiaAtual) { toast.error("Selecione uma academia primeiro."); return; }
               setConfirmSalvar(true);
             }}
-            className="px-3 py-1.5 bg-primary text-primary-foreground rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+            data-academia-salvar-treino
           >
-            <Save size={11} className="inline mr-1" />Salvar treino
-          </button>
+            Salvar treino
+          </Botao>
         </div>
       )}
 
       {adicionando && (
-        <div className="flex gap-2 items-end mt-3">
+        <div className="flex items-center gap-2">
           <input
             autoFocus
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && criarAcademia()}
             placeholder="ex: Smartfit"
-            className="flex-1 bg-transparent border-b border-primary py-1.5 text-foreground text-sm outline-hidden"
+            aria-label="Nome da academia nova"
+            data-academia-nome
+            className="h-10 min-w-0 flex-1 rounded-xl border border-linha-2 bg-superficie px-3 text-[14px] text-texto outline-none placeholder:text-texto-4 focus:border-violeta/60"
           />
-          <button
-            type="button"
-            onClick={criarAcademia}
-            disabled={!novoNome.trim()}
-            className="px-3 py-1.5 bg-primary text-primary-foreground text-[10px] font-bold uppercase rounded disabled:opacity-40"
-          >
-            Criar
-          </button>
-          <button
-            type="button"
-            onClick={() => { setAdicionando(false); setNovoNome(""); }}
-            className="px-3 py-1.5 border border-muted-foreground/20 text-muted-foreground text-[10px] font-bold uppercase rounded"
-          >
-            ✕
+          <Botao variante="w" tamanho="sm" onClick={() => void criarAcademia()} disabled={!novoNome.trim()} data-academia-criar>Criar</Botao>
+          <button type="button" onClick={() => { setAdicionando(false); setNovoNome(""); }} className="pq-ibtn" aria-label="Cancelar">
+            <X aria-hidden />
           </button>
         </div>
       )}
+
+      <div className="flex flex-col gap-2.5" data-equipamentos-academia={academiaAtual ? academiaAtual.id : "sem-academia"}>
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="pq-eyebrow">Equipamentos da academia</span>
+          {academiaAtual && marcados.length > 0 && (
+            <button type="button" onClick={() => void gravarMarcados([])} className="text-[12px] font-semibold text-texto-3 hover:text-texto" data-equipamentos-limpar>
+              Limpar
+            </button>
+          )}
+        </div>
+        {academiaAtual ? (
+          <>
+            <p className="text-[12.5px] leading-snug text-texto-2">
+              Marque o que a {academiaAtual.nome} tem: ao trocar um exercício, os equivalentes que dá para fazer nela aparecem primeiro. Sem marcar nada, a troca mostra tudo.
+            </p>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Equipamentos da ${academiaAtual.nome}`}>
+              {EQUIPAMENTOS.map((e) => {
+                const ativo = marcados.includes(e.chave);
+                return (
+                  <button
+                    key={e.chave}
+                    type="button"
+                    aria-pressed={ativo}
+                    onClick={() => alternar(e.chave)}
+                    data-equipamento={e.chave}
+                    data-equipamento-marcado={ativo ? "1" : "0"}
+                    className={cn(
+                      "flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-semibold transition-colors",
+                      ativo ? "border-violeta/60 bg-violeta/15 text-violeta-3" : "border-linha-2 bg-superficie text-texto-2 hover:text-texto"
+                    )}
+                  >
+                    {ativo && <Check aria-hidden className="h-3.5 w-3.5" strokeWidth={2.6} />}
+                    {e.rotulo}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11.5px] text-texto-3" data-equipamentos-resumo>
+              {marcados.length === 0 ? "Nenhum marcado · a troca mostra tudo" : `${marcados.length} de ${EQUIPAMENTOS.length} marcados`}
+            </p>
+          </>
+        ) : (
+          <p className="text-[12.5px] leading-snug text-texto-3">Escolha ou crie a academia para marcar os equipamentos dela.</p>
+        )}
+      </div>
 
       {/* Confirmação de troca de academia */}
       <AlertDialog open={!!confirmTrocar} onOpenChange={(o) => !o && setConfirmTrocar(null)}>

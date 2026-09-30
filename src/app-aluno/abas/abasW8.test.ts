@@ -35,11 +35,11 @@ describe("W8 — a aba Treino nova entra pelo registro no lugar da TreinosPage",
       "src/components/treinos/ModalExercicio.tsx",
       "src/components/treinos/ModalHistorico.tsx",
       "src/components/treinos/ModalRemoverExercicio.tsx",
+      "src/components/treinos/ModalTrocarExercicio.tsx", // W9: virou src/treino/ui/TrocarExercicio.tsx (equivalentes primeiro)
     ]) expect(existsSync(resolve(raiz, saiu)), saiu).toBe(false);
     for (const ficou of [
-      "src/components/treinos/ModalTrocarExercicio.tsx", // W9
-      "src/components/treinos/SeletorAcademia.tsx", // W9
-      "src/components/treinos/SeletorExerciciosPorGrupo.tsx", // W9 (troca) e o painel (grupos)
+      "src/components/treinos/SeletorAcademia.tsx", // W9: + equipamentos da academia (NF11)
+      "src/components/treinos/SeletorExerciciosPorGrupo.tsx", // o painel (grupos do profissional)
       "src/components/treinos/HistoricoTreinos.tsx", // painel: histórico do aluno
       "src/components/treinos/DetalheTreino.tsx", // painel: histórico do mês
       "src/components/treinos/CompartilharTreinoModal.tsx", // painel: histórico do aluno

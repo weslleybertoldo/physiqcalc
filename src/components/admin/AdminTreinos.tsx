@@ -4,6 +4,10 @@ import { ArrowLeft, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight, Loc
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { listarAlunos } from "@/lib/saasApi";
+import {
+  CAMPOS_EQUIVALENCIA_VAZIOS, camposDoExercicio, camposParaGravar, rotuloEquipamento, rotuloPadrao, type CamposEquivalencia,
+} from "@/treino/equivalencia";
+import { FormExercicioBiblioteca } from "@/treino/ui/FormExercicioBiblioteca";
 
 // staging tem bucket próprio de mídias — upload não polui as fotos de produção
 const BUCKET_EXERCICIOS = DB_SCHEMA === "staging" ? "exercicios-staging" : "exercicios";
@@ -22,6 +26,10 @@ interface Exercicio {
   dica?: string | null;
   /** NULL = catálogo GLOBAL do master; senão o professor dono (SaaS 12/09/2026) */
   professor_id?: string | null;
+  /** equivalência (W9): a troca por equivalente do app do aluno usa movimento + equipamento */
+  padrao_movimento?: string | null;
+  equipamento?: string | null;
+  variacao?: string | null;
 }
 
 /** Emojis oferecidos no seletor de exercício (todos os já usados no catálogo) */
@@ -99,6 +107,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [novoExTipo, setNovoExTipo] = useState<"musculacao" | "corrida">("musculacao");
   const [novoExSubgrupo, setNovoExSubgrupo] = useState("");
   const [novoExDica, setNovoExDica] = useState("");
+  const [novoExEquiv, setNovoExEquiv] = useState<CamposEquivalencia>(CAMPOS_EQUIVALENCIA_VAZIOS);
   const [novoGrupoNome, setNovoGrupoNome] = useState("");
   const [editingGrupo, setEditingGrupo] = useState<string | null>(null);
   // popups da Biblioteca (criar exercício / grupos musculares / lista de exercícios)
@@ -120,6 +129,7 @@ const AdminTreinos = ({ onBack }: Props) => {
   const [editExEmoji, setEditExEmoji] = useState("");
   const [editExSubgrupo, setEditExSubgrupo] = useState("");
   const [editExDica, setEditExDica] = useState("");
+  const [editExEquiv, setEditExEquiv] = useState<CamposEquivalencia>(CAMPOS_EQUIVALENCIA_VAZIOS);
   const [editExImagemUrl, setEditExImagemUrl] = useState<string | null>(null);
   const [editExImagemFile, setEditExImagemFile] = useState<File | null>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
@@ -235,10 +245,11 @@ const AdminTreinos = ({ onBack }: Props) => {
       const { error } = await supabase.from("tb_exercicios").insert({
         nome: novoExNome.trim(), grupo_muscular: novoExGrupo, emoji: novoExEmoji, tipo: novoExTipo,
         subgrupo: novoExSubgrupo.trim() || null, dica: novoExDica.trim() || null,
+        ...camposParaGravar(novoExEquiv),
         professor_id: donoInsert,
       } as any);
       if (error) throw error;
-      setNovoExNome(""); setNovoExSubgrupo(""); setNovoExDica("");
+      setNovoExNome(""); setNovoExSubgrupo(""); setNovoExDica(""); setNovoExEquiv(CAMPOS_EQUIVALENCIA_VAZIOS);
       setModalBiblioteca(null);
       toast.success("Exercício criado! Edite-o para adicionar a foto/gif.");
       await loadData(true);
@@ -267,6 +278,7 @@ const AdminTreinos = ({ onBack }: Props) => {
       const { error } = await supabase.from("tb_exercicios").update({
         nome: editExNome.trim(), grupo_muscular: editExGrupo, emoji: editExEmoji,
         subgrupo: editExSubgrupo.trim() || null, dica: editExDica.trim() || null,
+        ...camposParaGravar(editExEquiv),
         imagem_url: imagem_url || null,
       } as any).eq("id", editingExId);
       if (error) throw error;
@@ -812,6 +824,7 @@ const AdminTreinos = ({ onBack }: Props) => {
               </div>
               <input type="text" value={novoExSubgrupo} onChange={(e) => setNovoExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional, ex: Porção medial)" className="input-underline text-sm" />
               <textarea value={novoExDica} onChange={(e) => setNovoExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-hidden focus:border-primary" />
+              <FormExercicioBiblioteca valor={novoExEquiv} aoMudar={setNovoExEquiv} grupoMuscular={novoExGrupo} />
               <p className="text-[10px] text-muted-foreground font-body">A foto/gif é adicionada na edição do exercício.</p>
               <div className="flex gap-2">
                 <button type="button" onClick={handleAddExercicio} className="px-4 py-2 bg-primary text-primary-foreground font-heading text-xs uppercase">
@@ -893,6 +906,7 @@ const AdminTreinos = ({ onBack }: Props) => {
                       </div>
                       <input type="text" value={editExSubgrupo} onChange={(e) => setEditExSubgrupo(e.target.value)} placeholder="Subgrupo (opcional)" className="input-underline text-sm" />
                       <textarea value={editExDica} onChange={(e) => setEditExDica(e.target.value)} placeholder="Dica de execução (opcional)" rows={2} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm resize-y outline-hidden focus:border-primary" />
+                      <FormExercicioBiblioteca valor={editExEquiv} aoMudar={setEditExEquiv} grupoMuscular={editExGrupo} />
                       <div className="flex gap-2">
                         <button type="button" onClick={handleEditExercicio} disabled={uploadingImg} className="px-3 py-1.5 bg-primary text-primary-foreground font-heading text-xs uppercase disabled:opacity-50"><Save size={12} className="inline mr-1" />{uploadingImg ? "Salvando..." : "Salvar"}</button>
                         <button type="button" onClick={() => { setEditingExId(null); setEditExImagemFile(null); }} className="px-3 py-1.5 text-muted-foreground font-heading text-xs uppercase"><X size={12} className="inline mr-1" />Cancelar</button>
@@ -903,12 +917,14 @@ const AdminTreinos = ({ onBack }: Props) => {
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <div className="min-w-0">
                           <p className="font-heading text-sm text-foreground truncate">{ex.nome}</p>
-                          <p className="text-[10px] text-muted-foreground font-body">{ex.grupo_muscular}</p>
+                          <p className="text-[10px] text-muted-foreground font-body" data-exercicio-classificacao={ex.padrao_movimento && ex.equipamento ? "1" : "0"}>
+                            {[ex.grupo_muscular, rotuloPadrao(ex.padrao_movimento), rotuloEquipamento(ex.equipamento)].filter(Boolean).join(" · ")}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {podeEditar(ex) ? (<>
-                        <button type="button" onClick={() => { setEditingExId(ex.id); setEditExNome(ex.nome); setEditExGrupo(ex.grupo_muscular); setEditExEmoji(ex.emoji); setEditExSubgrupo(ex.subgrupo || ""); setEditExDica(ex.dica || ""); setEditExImagemUrl(ex.imagem_url || null); setEditExImagemFile(null); }} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
+                        <button type="button" onClick={() => { setEditingExId(ex.id); setEditExNome(ex.nome); setEditExGrupo(ex.grupo_muscular); setEditExEmoji(ex.emoji); setEditExSubgrupo(ex.subgrupo || ""); setEditExDica(ex.dica || ""); setEditExEquiv(camposDoExercicio(ex)); setEditExImagemUrl(ex.imagem_url || null); setEditExImagemFile(null); }} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
                           <Edit2 size={14} />
                         </button>
                         <button type="button" onClick={() => handleDeleteExercicio(ex.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
