@@ -6,6 +6,7 @@ import { principal } from "@/integrations/principal/client";
 import type { Json } from "@/integrations/principal/types";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { useSessao } from "@/nucleo/sessao";
+import { salvarMinhaSenha } from "@/nucleo/senha";
 import { enviarFotoPerfil, validarFoto } from "@/painel/configuracoes/perfil/foto";
 import { comFoto, formasDeEntrar, validarNovaSenha } from "@/painel/configuracoes/perfil/regras";
 import { Avatar } from "@/ui/premium/Avatar";
@@ -175,15 +176,15 @@ function Acesso() {
     setSalvando(true);
     setErro("");
     try {
-      const { error } = await principal.auth.updateUser({ password: senha });
-      if (error) throw error;
+      // W8b: grava e tira a marca de senha provisória (a que o profissional criou)
+      const r = await salvarMinhaSenha(senha);
+      if (!r.ok) return setErro((r as { erro: string }).erro);
       setSenha("");
       setConfirmacao("");
       toast.success(temSenha ? "Senha trocada." : "Senha criada. Agora você também entra com e-mail e senha.");
       setTemSenha(true);
-    } catch (err) {
-      const msg = String((err as { message?: string })?.message ?? "");
-      setErro(/same|different|igual/i.test(msg) ? "A nova senha precisa ser diferente da atual." : "Não foi possível salvar a senha agora. Tente de novo.");
+    } catch {
+      setErro("Não foi possível salvar a senha agora. Tente de novo.");
     } finally {
       setSalvando(false);
     }

@@ -1,37 +1,49 @@
-// Rate limit do login por e-mail/senha — SÓ o formulário do STAGING usa (pedido do Weslley, 13/09/2026):
-// 3 erros seguidos → bloqueia 1 min; 4º erro → 3 min; depois 5 → 10 → 30 min → 1 h (teto).
-// Contado POR E-MAIL e guardado no navegador (localStorage). Acerto zera; registro sem uso expira em 24 h.
+// Limite de tentativas do login por e-mail e senha — desde a W8b (30/09/2026) quem CONTA é o SERVIDOR (função entrar-senha do
+// banco principal, por conta e por IP; regra dele: 4 senhas erradas → 1 min; cada erro depois sobe 5 → 15 → 30 → 60 min; o
+// seguinte bloqueia de vez). O aparelho só SEGUE o que o servidor respondeu — guarda o fim do bloqueio que veio na resposta
+// (acertado pelo relógio do servidor) para mostrar o tempo que falta e não mandar a mesma senha de novo antes da hora. Não conta
+// nada sozinho (sem contar duas vezes). Por e-mail, no localStorage; registro sem uso expira em 24 h (o de vez fica até entrar).
 
-/** Minutos de bloqueio a partir do 3º erro (índice 0 = 3º erro). O último valor é o teto. */
-export const ESCADA_MINUTOS = [1, 3, 5, 10, 30, 60];
-export const ERROS_ATE_BLOQUEAR = 3;
 export const VALIDADE_REGISTRO_MS = 24 * 60 * 60 * 1000;
-const PREFIXO_CHAVE = "physiq_login_erros:";
+const PREFIXO_CHAVE = "physiq_login_bloqueio:";
+
+export type MotivoBloqueio = "conta" | "rede";
 
 export interface RegistroLogin {
-  /** erros seguidos (sem acerto no meio) */
-  erros: number;
-  /** epoch ms até quando o e-mail fica bloqueado; null = sem bloqueio */
+  /** epoch ms (relógio DESTE aparelho) até quando o servidor disse que está bloqueado; null = sem espera */
   bloqueadoAte: number | null;
-  /** epoch ms do último erro (usado pra expirar o registro) */
-  ultimoErro: number;
+  /** o servidor bloqueou a conta de vez (só senha nova do profissional ou o Google destravam) */
+  deVez: boolean;
+  /** conta (a escada) ou a rede (muitas tentativas do mesmo IP) */
+  motivo: MotivoBloqueio;
+  /** quando a resposta chegou (epoch ms) — expira o registro */
+  em: number;
 }
 
-/** Duração do bloqueio (ms) depois de `erros` erros seguidos; 0 = ainda não bloqueia. */
-export function duracaoBloqueioMs(erros: number): number {
-  if (erros < ERROS_ATE_BLOQUEAR) return 0;
-  const idx = Math.min(erros - ERROS_ATE_BLOQUEAR, ESCADA_MINUTOS.length - 1);
-  return ESCADA_MINUTOS[idx] * 60_000;
+export interface RespostaBloqueio {
+  erro: string;
+  bloqueado_ate?: string | null;
+  bloqueado_de_vez?: boolean;
+  agora?: string | null;
 }
 
-/** Registro novo depois de mais um erro. */
-export function registrarErro(anterior: RegistroLogin | null, agora = Date.now()): RegistroLogin {
-  const erros = (anterior?.erros ?? 0) + 1;
-  const duracao = duracaoBloqueioMs(erros);
-  return { erros, bloqueadoAte: duracao ? agora + duracao : null, ultimoErro: agora };
+/**
+ * Resposta do servidor → registro do aparelho (null = nada a guardar). O fim do bloqueio vem no relógio do servidor: o aparelho
+ * soma a diferença ao próprio relógio (aparelho com a hora errada não encurta nem estica a espera).
+ */
+export function registroDaResposta(r: RespostaBloqueio, agoraLocal = Date.now()): RegistroLogin | null {
+  const deVez = r.bloqueado_de_vez === true || r.erro === "bloqueado_de_vez";
+  const motivo: MotivoBloqueio = r.erro === "muitas_tentativas_rede" ? "rede" : "conta";
+  if (deVez) return { bloqueadoAte: null, deVez: true, motivo: "conta", em: agoraLocal };
+  const fim = r.bloqueado_ate ? Date.parse(r.bloqueado_ate) : NaN;
+  if (!Number.isFinite(fim)) return null;
+  const agoraServidor = r.agora ? Date.parse(r.agora) : NaN;
+  const restante = Number.isFinite(agoraServidor) ? fim - agoraServidor : fim - agoraLocal;
+  if (restante <= 0) return null;
+  return { bloqueadoAte: agoraLocal + restante, deVez: false, motivo, em: agoraLocal };
 }
 
-/** Quanto falta de bloqueio (ms); 0 = livre. */
+/** Quanto falta de bloqueio (ms); 0 = livre (o de vez não tem tempo: use `deVez`). */
 export function restanteBloqueioMs(registro: RegistroLogin | null, agora = Date.now()): number {
   if (!registro?.bloqueadoAte) return 0;
   return Math.max(0, registro.bloqueadoAte - agora);
@@ -45,36 +57,34 @@ export function formatarRestante(ms: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-/** Erro do Supabase Auth que conta como tentativa errada (credencial inválida). Rede/5xx/429 não contam. */
-export function contaComoTentativa(erro: { status?: number; code?: string } | null | undefined): boolean {
-  if (!erro) return false;
-  return erro.code === "invalid_credentials" || erro.status === 400;
-}
-
 export function chaveRegistro(email: string): string {
   return PREFIXO_CHAVE + email.trim().toLowerCase();
 }
 
-/** Lê o registro do e-mail (null se não há, está inválido ou expirou). Não grava nada. */
+/** Lê o registro do e-mail (null se não há, está inválido, expirou ou a espera acabou). Não grava nada. */
 export function lerRegistro(email: string, agora = Date.now()): RegistroLogin | null {
+  if (!email.trim()) return null;
   try {
     const bruto = localStorage.getItem(chaveRegistro(email));
     if (!bruto) return null;
     const reg = JSON.parse(bruto) as Partial<RegistroLogin>;
-    if (typeof reg.erros !== "number" || typeof reg.ultimoErro !== "number") return null;
-    if (agora - reg.ultimoErro > VALIDADE_REGISTRO_MS) return null;
-    return { erros: reg.erros, bloqueadoAte: typeof reg.bloqueadoAte === "number" ? reg.bloqueadoAte : null, ultimoErro: reg.ultimoErro };
+    if (typeof reg.em !== "number") return null;
+    const deVez = reg.deVez === true;
+    if (!deVez && agora - reg.em > VALIDADE_REGISTRO_MS) return null;
+    const bloqueadoAte = typeof reg.bloqueadoAte === "number" ? reg.bloqueadoAte : null;
+    if (!deVez && (!bloqueadoAte || bloqueadoAte <= agora)) return null;
+    return { bloqueadoAte, deVez, motivo: reg.motivo === "rede" ? "rede" : "conta", em: reg.em };
   } catch {
     return null;
   }
 }
 
-/** Grava (ou apaga, com null) o registro do e-mail. Sem localStorage → segue sem bloqueio. */
+/** Grava (ou apaga, com null) o registro do e-mail. Sem localStorage → segue sem o aviso guardado (o servidor continua valendo). */
 export function gravarRegistro(email: string, registro: RegistroLogin | null): void {
   try {
     if (registro) localStorage.setItem(chaveRegistro(email), JSON.stringify(registro));
     else localStorage.removeItem(chaveRegistro(email));
   } catch {
-    /* navegador sem storage: não bloqueia */
+    /* navegador sem storage */
   }
 }

@@ -12,11 +12,20 @@ NOME="physiq-principal-api"
 HOST="api-principal.physiqcalc.com.br"
 API="https://api.cloudflare.com/client/v4/accounts/$CONTA/workers"
 
-echo "→ script"
+echo "→ script (mantém os secrets do Worker — PROXY_SEGREDO, W8b)"
 curl -sS -X PUT "$API/scripts/$NOME" -H "Authorization: Bearer $TOKEN" \
-  -F 'metadata={"main_module":"worker.js","compatibility_date":"2026-09-01","compatibility_flags":["nodejs_compat"]};type=application/json' \
+  -F 'metadata={"main_module":"worker.js","compatibility_date":"2026-09-01","compatibility_flags":["nodejs_compat"],"keep_bindings":["secret_text"]};type=application/json' \
   -F "worker.js=@worker.js;type=application/javascript+module" \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print("  success:", d["success"], d.get("errors"))'
+
+# W8b: o segredo que prova às funções do principal que o x-physiq-ip veio deste Worker (o mesmo do secret PROXY_SEGREDO das
+# funções). Fica em ~/.physiq-proxy-segredo (600) e no cofre (PhysiqCalc › "Physiq — segredo do proxy api-principal (W8b)").
+if [ -f "$HOME/.physiq-proxy-segredo" ]; then
+  echo "→ secret PROXY_SEGREDO"
+  python3 -c 'import json,sys; print(json.dumps({"name":"PROXY_SEGREDO","text":open(sys.argv[1]).read().strip(),"type":"secret_text"}))' "$HOME/.physiq-proxy-segredo" \
+    | curl -sS -X PUT "$API/scripts/$NOME/secrets" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary @- \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print("  success:", d["success"], d.get("errors"))'
+fi
 
 echo "→ endereço reserva *.workers.dev"
 curl -sS -X POST "$API/scripts/$NOME/subdomain" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \

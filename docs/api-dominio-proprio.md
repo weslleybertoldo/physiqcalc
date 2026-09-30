@@ -51,3 +51,13 @@ reserva `physiq-principal-api.weslleybertoldo.workers.dev`. O código fica versi
 `infra/cloudflare/physiq-principal-api/` (`deploy.sh` publica e liga o domínio). O app usa pelo
 `src/integrations/principal/client.ts` (`VITE_PRINCIPAL_URL`). O callback do Google continua em
 `https://hkxvtsbwctxkrqzkkdoz.supabase.co/auth/v1/callback` e as funções do servidor falam com o host direto.
+
+### IP de quem chama nas funções do principal (W8b, 30/09/2026)
+
+Quando um Worker repassa o pedido, a Cloudflare troca o `cf-connecting-ip` pelo IP do Worker (`2a06:98c0:3600::103`) — as
+funções veriam todo mundo como um IP só. Nas chamadas `/functions/v1/…` o Worker `physiq-principal-api` manda o IP de verdade
+em `x-physiq-ip` junto com o segredo do proxy em `x-physiq-proxy` (secret `PROXY_SEGREDO` do Worker = o mesmo secret das funções
+do principal; cofre › PhysiqCalc › "Physiq — segredo do proxy api-principal (W8b)"). A função só acredita no `x-physiq-ip` com
+o segredo certo; o que o aparelho mandar nesses 2 cabeçalhos é descartado pelo Worker. Direto no `supabase.co` vale o
+`cf-connecting-ip` (a Cloudflare recusa esse cabeçalho vindo do cliente). Quem usa: `entrar-senha` (limite de tentativas por IP).
+O `deploy.sh` publica o código mantendo os secrets (`keep_bindings`) e grava o `PROXY_SEGREDO` de `~/.physiq-proxy-segredo`.

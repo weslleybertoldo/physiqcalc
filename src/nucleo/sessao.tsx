@@ -15,6 +15,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { principal, PRINCIPAL_STORAGE_KEY } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
+import { entrarComSenhaNoServidor } from "./entrarSenha";
 import { limparProfPendente } from "@/lib/profPendente";
 import {
   erroDoVinculo,
@@ -42,8 +43,13 @@ export type EstadoTreino = "desnecessario" | "aguardando" | "trocando" | "pronto
 
 export interface ErroEntrada {
   status?: number;
+  /** W8b: o código da função entrar-senha (senha_errada, bloqueado, bloqueado_de_vez, captcha_invalido…) */
   code?: string;
   message?: string;
+  /** W8b: fim do bloqueio (relógio do servidor), bloqueio de vez e a hora do servidor na resposta */
+  bloqueado_ate?: string | null;
+  bloqueado_de_vez?: boolean;
+  agora?: string | null;
 }
 
 export interface SessaoValor {
@@ -59,7 +65,8 @@ export interface SessaoValor {
   /** P25: a senha antiga foi trocada nesta entrada com o Google */
   senhaTrocada: boolean;
   entrarComGoogle: () => Promise<{ erro?: string }>;
-  entrarComEmail: (email: string, senha: string) => Promise<{ erro?: ErroEntrada }>;
+  /** W8b: pelo servidor (entrar-senha: captcha + limite de tentativas); `captcha` = token do Turnstile da tela */
+  entrarComEmail: (email: string, senha: string, captcha?: string) => Promise<{ erro?: ErroEntrada }>;
   sair: () => Promise<void>;
   recarregarSituacao: () => Promise<Situacao | null>;
   tentarTreinoDeNovo: () => void;
@@ -412,10 +419,17 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     return error ? { erro: error } : {};
   }, []);
 
-  const entrarComEmail = useCallback(async (email: string, senha: string) => {
-    const { error } = await principal.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: senha });
-    if (!error) return {};
-    return { erro: { status: error.status, code: (error as { code?: string }).code, message: error.message } };
+  // W8b: o e-mail e senha passa pela função entrar-senha (o limite de tentativas mora no servidor); a sessão que ela devolve é a
+  // do próprio Auth — gravada aqui como se o login tivesse sido feito direto (dispara o SIGNED_IN, a pos-login e a troca)
+  const entrarComEmail = useCallback(async (email: string, senha: string, captcha = "") => {
+    const r = await entrarComSenhaNoServidor({ email, senha, captcha });
+    if (!r.ok) {
+      const f = r as Extract<typeof r, { ok: false }>;
+      return { erro: { status: 0, code: f.erro, bloqueado_ate: f.bloqueado_ate ?? null, bloqueado_de_vez: f.bloqueado_de_vez === true, agora: f.agora ?? null } };
+    }
+    const { error } = await principal.auth.setSession({ access_token: r.sessao.access_token, refresh_token: r.sessao.refresh_token });
+    if (error) return { erro: { status: error.status, code: "sessao", message: error.message } };
+    return {};
   }, []);
 
   const sair = useCallback(async () => {
