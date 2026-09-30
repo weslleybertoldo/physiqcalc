@@ -10,7 +10,7 @@
 import type { Session } from "@supabase/supabase-js";
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 
-export type ErroTroca = "rede" | "invalido" | "conflito" | "limite" | "staging" | "email" | "indisponivel" | "interno";
+export type ErroTroca = "rede" | "invalido" | "conflito" | "limite" | "staging" | "email" | "indisponivel" | "interno" | "bloqueado";
 
 export interface SessaoTreino {
   access_token: string;
@@ -34,13 +34,15 @@ export const MENSAGEM_TROCA: Record<ErroTroca, string> = {
   staging: "Este é o ambiente de teste: só contas de teste entram.",
   email: "Confirme o seu e-mail para entrar.",
   invalido: "Sua sessão terminou. Entre de novo.",
+  // W13 (F5): o profissional bloqueou o acesso (a trava GateBloqueioAluno mostra a tela; aqui é só o texto do treino)
+  bloqueado: "Acesso pausado pelo seu profissional.",
 };
 
 /** Status HTTP + código da função → erro da troca. */
 export function erroDaResposta(status: number, codigo?: string | null): ErroTroca {
   if (status === 0) return "rede";
   if (status === 401) return "invalido";
-  if (status === 403) return codigo === "conta_real_no_staging" ? "staging" : "email";
+  if (status === 403) return codigo === "conta_real_no_staging" ? "staging" : codigo === "aluno_bloqueado" ? "bloqueado" : "email";
   if (status === 409) return "conflito";
   if (status === 429) return "limite";
   if (status === 502 || status === 503 || status === 504) return "indisponivel";

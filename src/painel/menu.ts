@@ -41,14 +41,13 @@ export interface ItemMenuPainel {
   contadorTom?: "neutro" | "destaque";
 }
 
-const AlunosPage = lazy(() => import("@/pages/admin/AlunosPage"));
 const TreinosAdminPage = lazy(() => import("@/pages/admin/TreinosAdminPage"));
 const CobrancaPage = lazy(() => import("@/pages/admin/CobrancaPage"));
 const CalculadoraPage = lazy(() => import("@/pages/admin/CalculadoraPage"));
 
 export const MENU_PAINEL: ItemMenuPainel[] = [
   { id: "dashboard", arquivo: "Dashboard", rotulo: "Dashboard", icone: LayoutDashboard, rota: "/painel", modulo: "ambos", grupo: "principal", noCelular: true },
-  { id: "alunos", arquivo: "Alunos", rotulo: "Alunos", icone: Users, rota: "/painel/alunos", modulo: "ambos", grupo: "principal", antiga: AlunosPage, noCelular: true },
+  { id: "alunos", arquivo: "Alunos", rotulo: "Alunos", icone: Users, rota: "/painel/alunos", modulo: "ambos", grupo: "principal", noCelular: true },
   { id: "treinos", arquivo: "Treinos", rotulo: "Treinos", icone: Dumbbell, rota: "/painel/treinos", modulo: "treino", grupo: "principal", antiga: TreinosAdminPage, noCelular: true },
   { id: "dietas", arquivo: "Dietas", rotulo: "Dietas", icone: Salad, rota: "/painel/dietas", modulo: "nutricao", grupo: "principal", noCelular: true },
   { id: "pre-consulta", arquivo: "PreConsulta", rotulo: "Pré-consulta", icone: ClipboardList, rota: "/painel/pre-consulta", modulo: "ambos", grupo: "principal" },

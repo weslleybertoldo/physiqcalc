@@ -77,7 +77,8 @@ vi.mock("@/app-aluno/abas/Inicio", () => h.marcador("aba-inicio"));
 vi.mock("@/pages/PagamentosPage", () => h.marcador("antiga-pagamentos"));
 vi.mock("@/pages/Index", () => h.marcador("antiga-calculadora-publica"));
 vi.mock("@/pages/PrivacidadePage", () => h.marcador("antiga-privacidade"));
-vi.mock("@/pages/admin/AlunosPage", () => h.marcador("antiga-admin-alunos"));
+// W13: a página Alunos é a nova (src/painel/paginas/Alunos.tsx, pelo registro) — a AlunosPage do Calc saiu
+vi.mock("@/painel/paginas/Alunos", () => h.marcador("pagina-alunos"));
 vi.mock("@/pages/admin/TreinosAdminPage", () => h.marcador("antiga-admin-treinos"));
 vi.mock("@/pages/admin/CobrancaPage", () => h.marcador("antiga-admin-cobranca"));
 vi.mock("@/pages/admin/CalculadoraPage", () => h.marcador("antiga-admin-calculadora"));
@@ -234,8 +235,8 @@ describe("entrada: sem login cai no Entrar (a tela nova da W3, login único)", (
 
 describe("site do profissional: rotas antigas do Calc abrem a mesma função na casca nova", () => {
   it.each([
-    ["/admin", "/painel/alunos", "antiga-admin-alunos"],
-    ["/admin/alunos", "/painel/alunos", "antiga-admin-alunos"],
+    ["/admin", "/painel/alunos", "pagina-alunos"],
+    ["/admin/alunos", "/painel/alunos", "pagina-alunos"],
     ["/admin/treinos", "/painel/treinos", "antiga-admin-treinos"],
     ["/admin/cobranca", "/painel/financeiro", "antiga-admin-cobranca"],
     ["/admin/calculadora", "/painel/calculadora", "antiga-admin-calculadora"],
@@ -300,7 +301,7 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
   it("profissional abre direto no painel; se escolheu o app de aluno, volta para o app", async () => {
     logar("professor");
     const r = abrir("/");
-    expect(await screen.findByTestId("antiga-admin-alunos", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByTestId("pagina-alunos", {}, { timeout: 4000 })).toBeInTheDocument();
     expect(onde()).toBe("/painel/alunos");
     r.unmount();
     localStorage.setItem("physiq_area", "aluno");
@@ -311,7 +312,7 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
   it("card da conta, card do plano e menu do usuário na casca", async () => {
     logar("professor");
     abrir("/painel/alunos");
-    await screen.findByTestId("antiga-admin-alunos", {}, { timeout: 4000 });
+    await screen.findByTestId("pagina-alunos", {}, { timeout: 4000 });
     await waitFor(() => expect(document.querySelector("[data-card-plano]")).not.toBeNull());
     expect(document.querySelector("[data-card-conta]")?.textContent).toContain("Lucas Ferreira");
     expect(document.querySelector("[data-card-plano]")?.textContent).toContain("TREINO");
@@ -341,7 +342,7 @@ describe("master: páginas antigas na casca nova", () => {
   it("professor não entra no master", async () => {
     logar("professor");
     abrir("/master/contas");
-    expect(await screen.findByTestId("antiga-admin-alunos", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByTestId("pagina-alunos", {}, { timeout: 4000 })).toBeInTheDocument();
     expect(onde()).toBe("/painel/alunos");
   });
 });

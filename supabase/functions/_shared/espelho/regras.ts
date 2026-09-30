@@ -166,6 +166,18 @@ export function statusDoPerfil(m: MatriculaResumo, atual: string | null | undefi
   return atual ?? null;
 }
 
+/**
+ * W13 (F5) — aluno bloqueado pelo profissional em TODAS as matrículas vivas (ativas, fora da lixeira) e que NÃO é profissional:
+ * sem papel no Treino, não é master e não é membro ativo de nenhuma conta (P7: quem também é profissional nunca é barrado).
+ * A trocar-token recusa a sessão do Treino (o APK ≤ 3.15 não tem a trava nova) e o espelho encerra as sessões que ele tinha.
+ */
+export function alunoBloqueadoSemStaff(r: ResumoNucleo, papel: string | null | undefined): boolean {
+  if (r.master || papel) return false;
+  if ((r.membros || []).some((m) => m.status === "ativo")) return false;
+  const vivas = (r.matriculas || []).filter((m) => !m.excluida && m.ativo);
+  return vivas.length > 0 && vivas.every((m) => m.bloqueada);
+}
+
 /** genero do principal (masculino/feminino/outro) → sexo do Calc (male/female); outro/vazio = não mexe. */
 export function sexoTreino(genero: string | null | undefined): "male" | "female" | null {
   if (genero === "masculino") return "male";

@@ -5,6 +5,7 @@
 import type { SupabaseClient, User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import {
   acessoProfessor,
+  alunoBloqueadoSemStaff,
   deveTirarAcessoDoEspelho,
   escolherMatriculaTreino,
   linhasEspelhoMembros,
@@ -22,6 +23,8 @@ export interface ResultadoEspelho {
   professor: "criado" | "atualizado" | "sem_acesso" | null;
   aluno: "atualizado" | "sem_matricula_de_treino" | "sem_perfil";
   alunos_ligados: number;
+  /** W13: sessões do Treino encerradas agora (o aluno acabou de ser bloqueado pelo profissional) */
+  sessoes_encerradas?: number;
 }
 
 /** principal_user_id → treino_user_id, pelo vínculo (physiq_identidades) do schema. */
@@ -129,6 +132,7 @@ export async function aplicarResumo(
 
   // 4. aluno: a matrícula com Treino manda em professor_id, conta_id, status e no cadastro
   let aluno: ResultadoEspelho["aluno"] = "sem_matricula_de_treino";
+  let sessoesEncerradas = 0;
   const mat = escolherMatriculaTreino(resumo.matriculas);
   if (mat) {
     const { data: perfil, error: ep } = await db.from("physiq_profiles").select("id, status, professor_id, conta_id").eq("id", treinoId).maybeSingle();
@@ -151,6 +155,14 @@ export async function aplicarResumo(
       const { error: eu } = await db.from("physiq_profiles").update(campos).eq("id", treinoId);
       if (eu) throw eu;
       aluno = "atualizado";
+      // W13 (F5): acabou de ser bloqueado e é só aluno → as sessões do Treino dele caem (o APK ≤ 3.15 não tem a trava nova; o
+      // app novo já fechou pela trava). Falha aqui não desfaz o espelho: a trocar-token recusa a próxima sessão do mesmo jeito.
+      const antes = (perfil as { status: string | null }).status;
+      if (campos.status === "bloqueado" && antes !== "bloqueado" && alunoBloqueadoSemStaff(resumo, papelNovo)) {
+        const { data: n, error: es } = await db.rpc("physiq_encerrar_sessoes_treino", { p_user: treinoId });
+        if (es) console.error("espelho: encerrar sessões do aluno bloqueado", treinoId, es.message);
+        else sessoesEncerradas = Number(n) || 0;
+      }
     }
   }
 
@@ -171,5 +183,5 @@ export async function aplicarResumo(
     }
   }
 
-  return { papel: papelNovo, papel_mudou: papelMudou, membros: linhas.length, professor, aluno, alunos_ligados: ligados };
+  return { papel: papelNovo, papel_mudou: papelMudou, membros: linhas.length, professor, aluno, alunos_ligados: ligados, sessoes_encerradas: sessoesEncerradas };
 }
