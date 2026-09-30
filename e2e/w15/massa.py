@@ -7,10 +7,11 @@
                descanso padrão 60 s, séries travadas, os treinos concluídos de seg e ter desta semana (+ hoje com --hoje) e
                séries feitas no mês (histórico, volume praticado e relatório). A prescrição (séries × reps · descanso · carga)
                e a observação NÃO entram aqui: o E2E digita no editor.
-  --zerar      volta a massa ao começo (apaga a prescrição, as cópias "personalizadas" e o que o E2E acrescentou)
+  --prescricao depois de montar, grava a prescrição e a observação da tela 8 no treino A (o que o E2E digitaria) — a massa
+               que a W16 ("Editar treino e dieta") usa nos prints
   --limpar     apaga tudo o que a W15 criou no staging (treinos, semana, séries, concluídos) e devolve a config do Rafael
 
-Uso: python3 e2e/w15/massa.py [--zerar | --limpar] [--hoje]
+Uso: python3 e2e/w15/massa.py [--prescricao | --limpar] [--hoje]
 """
 from __future__ import annotations
 
@@ -129,6 +130,18 @@ def montar(hoje_feito: bool) -> None:
     print("massa W15 no staging:", {k: estado[k] for k in ("A", "B", "C")}, "· feitos:", estado["feitos"])
 
 
+def prescrever() -> None:
+    """A prescrição da tela 8 no treino A do Rafael (séries × reps · descanso · carga) e a observação — direto no banco do staging."""
+    estado = B.ler_json(ARQ)
+    rafael, a = estado["rafael"], estado["A"]
+    for nome, series, reps, desc, kg in B.TREINO_A:
+        ex(f"""insert into {S}.tb_series_padrao_usuario (user_id, grupo_id, exercicio_id, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg)
+               values ('{rafael}', '{a}', '{B.exercicio_id(nome)}', {series}, '{reps}', {desc}, {kg})""")
+    ex(f"""insert into {S}.tb_series_padrao_usuario (user_id, grupo_id, num_series, observacao)
+           values ('{rafael}', '{a}', 3, $o${B.OBSERVACAO}$o$)""")
+    print("prescrição da tela 8 gravada no treino A do Rafael (staging)")
+
+
 def limpar() -> None:
     estado = B.ler_json(ARQ)
     if not estado:
@@ -159,7 +172,7 @@ def limpar() -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--zerar", action="store_true")
+    ap.add_argument("--prescricao", action="store_true")
     ap.add_argument("--limpar", action="store_true")
     ap.add_argument("--hoje", action="store_true")
     a = ap.parse_args()
@@ -169,6 +182,8 @@ def main() -> int:
         limpar()
     else:
         montar(a.hoje)
+        if a.prescricao:
+            prescrever()
     return 0
 
 
