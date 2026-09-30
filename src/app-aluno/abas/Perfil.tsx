@@ -17,6 +17,7 @@ import { SheetExportar } from "@/app-aluno/perfil/pecas/SheetExportar";
 import { SheetLembrete } from "@/app-aluno/perfil/pecas/SheetLembrete";
 import { SheetSom } from "@/app-aluno/perfil/pecas/SheetSom";
 import { CLASSE_PAGINA_APP, TituloApp } from "@/app-aluno/perfil/pecas/TopoItem";
+import { GrupoDoApp } from "@/app-aluno/sozinho/pecas/GrupoDoApp";
 import { BotaoIcone } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
@@ -91,8 +92,11 @@ export default function Perfil() {
             aoVincular={() => {
               void qc.invalidateQueries({ queryKey: ["perfil-aluno", uid] });
               void qc.invalidateQueries({ queryKey: ["agenda-aluno", uid] });
+              void qc.invalidateQueries({ queryKey: ["plano-app"] });
             }}
           />
+          {/* W7b: aluno sem profissional — Meu plano, Treinos prontos e (Treino + Alimentação) os pratos prontos */}
+          <GrupoDoApp />
           <GrupoLista>
             <ItemLista icone={CalendarDays} rotulo="Agenda" para="/perfil/agenda"
               valor={<span data-perfil-agenda-valor>{agenda.isLoading ? "…" : proxima ? diaCurto(proxima.inicio) : "Nenhuma"}</span>} />

@@ -13,6 +13,9 @@
 //   aluno_mp_assinar  { paciente_id, card_token }            cobrança automática mensal no cartão
 //   aluno_mp_cancelar { paciente_id }                        cancela a própria assinatura
 //   aluno_mp_conferir { cobranca_id }                        a tela confere o Pix do MP a cada 5 s e no "Já paguei"
+//   aluno_app_plano   { paciente_id, plano }                 W7b — aluno sem profissional troca o plano do app (Treino ·
+//                                                            Treino + Alimentação): vale a partir do próximo pagamento e a
+//                                                            cobrança automática no cartão passa para o valor novo
 //   detalhe_mp        { cobranca_id }                        dados reais da transação no MP (comprovante em PDF) — aluno ou profissional
 //   simular_aprovacao { cobranca_id }                        SÓ STAGING (o Pix do sandbox não se paga)
 //  PROFISSIONAL (dono da conta, responsável pelo aluno ou master — quem vê o quê: spec 4.1 e P6):
@@ -65,18 +68,23 @@ import {
   aplicarPagamentoMp,
   avisar,
   carregarMatricula,
+  ehDoApp,
   espelhoAssinaturaAluno,
   linkDoAlunoNoPainel,
   recebedor,
   type Cobranca,
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
+import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SCHEMAS: Schema[] = ["public", "staging"];
 const SITE: Record<Schema, string> = { public: "https://physiqcalc.com.br", staging: "https://physiqcalc-staging.vercel.app" };
 const PIX_HORAS = 72;
+// W7b: dentro da janela do aviso (7 dias antes do fim da cobertura — o teste grátis do app inclusive) dá para pagar adiantado
+// pelo Mercado Pago; a cobertura nova começa no fim da atual (a régua do Calc)
+const JANELA_ADIANTAR_MS = 7 * 86_400_000;
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -339,7 +347,9 @@ Deno.serve(async (req) => {
   const mensalidadeVista = (m: Matricula) =>
     m.mensalidade_valor
       ? { valor: Number(m.mensalidade_valor), plano_id: m.plano_aluno_id, plano: m.plano?.nome ?? null, pausada: m.cobranca_pausada,
-          pago_ate: m.mensalidade_pago_ate, desde: m.mensalidade_desde, coberta: coberto(m.mensalidade_pago_ate) }
+          pago_ate: m.mensalidade_pago_ate, desde: m.mensalidade_desde, coberta: coberto(m.mensalidade_pago_ate),
+          // W7b: aluno sem profissional — o teste grátis do app e o código do plano (Treino · Treino + Alimentação)
+          teste_ate: ehDoApp(m) ? m.app_teste_ate ?? null : null, plano_codigo: ehDoApp(m) ? m.plano?.codigo ?? null : null }
       : null;
 
   const assinaturaVista = (a: Awaited<ReturnType<typeof assinaturaDe>>) =>
@@ -360,7 +370,11 @@ Deno.serve(async (req) => {
     }
     if (!m.mensalidade_valor || !(Number(m.mensalidade_valor) > 0)) falhar("sem_mensalidade");
     if (m.cobranca_pausada) falhar("cobranca_pausada");
-    if (!permitirAdiantar && coberto(m.mensalidade_pago_ate)) falhar("ainda_coberto");
+    const dentroDaJanela = !!m.mensalidade_pago_ate && new Date(m.mensalidade_pago_ate).getTime() - Date.now() <= JANELA_ADIANTAR_MS;
+    // W7b: nos dias grátis do app (a cobertura é só o teste) dá para pagar/assinar em qualquer dia do teste
+    const soOTesteDoApp = ehDoApp(m) && !!m.app_teste_ate && !!m.mensalidade_pago_ate
+      && new Date(m.mensalidade_pago_ate).getTime() <= new Date(m.app_teste_ate).getTime() + 60_000;
+    if (!permitirAdiantar && coberto(m.mensalidade_pago_ate) && !dentroDaJanela && !soOTesteDoApp) falhar("ainda_coberto");
     const venc = vencimentoAPagar({ pago_ate: m.mensalidade_pago_ate, desde: m.mensalidade_desde }, hoje);
     return { avulsa: null as Cobranca | null, valor: Number(m.mensalidade_valor), vencimento: venc, mesRef: mesRefDe(venc) };
   };
@@ -404,6 +418,12 @@ Deno.serve(async (req) => {
   try {
     // ════════════════════════════ ALUNO ════════════════════════════
     if (acao === "aluno_status") {
+      // W7b (rede de segurança): saiu do app para um profissional e a assinatura do app ainda está viva → cancela no MP
+      try {
+        await cancelarAssinaturasDoAppEncerrado(db, credencial, user.id, "vinculou_profissional");
+      } catch (e) {
+        console.error("pagamentos-aluno: assinatura do app encerrado", String((e as { message?: string })?.message || e));
+      }
       const { data: mats, error } = await db.from("pacientes").select("id").eq("user_id", user.id).is("deleted_at", null)
         .eq("ativo", true).order("created_at");
       if (error) throw error;
@@ -425,7 +445,7 @@ Deno.serve(async (req) => {
         matriculas.push({
           paciente_id: atual.id, nome: atual.nome,
           conta: { id: atual.conta_id, nome: atual.conta?.nome ?? null, modo, bloquear: atual.conta?.bloquear_app_inadimplente ?? false,
-                   profissional: await nomeDe(dono) },
+                   profissional: ehDoApp(atual) ? "Physiq" : await nomeDe(dono), app: ehDoApp(atual) },
           chave: chave ? { tipo: chave.tipo, chave: chave.chave, favorecido: chave.favorecido, banco: chave.banco } : null,
           mensalidade: mensalidadeVista(atual),
           assinatura: assinaturaVista(assinatura),
@@ -662,6 +682,38 @@ Deno.serve(async (req) => {
         await db.from("aluno_assinaturas").update({ status: "cancelled" }).eq("id", a!.id);
       }
       return json({ ok: true }, 200, origin);
+    }
+
+    if (acao === "aluno_app_plano") {
+      const m = await minhaMatricula(body.paciente_id);
+      if (!ehDoApp(m)) falhar("nao_e_do_app");
+      const plano = String(body.plano || "");
+      if (!/^app_[a-z_]{1,40}$/.test(plano)) falhar("plano_invalido");
+      const { data: r0, error: et } = await db.rpc("app_trocar_plano", { p_paciente: m.id, p_plano: plano, p_por: user.id });
+      if (et) throw et;
+      const r = (r0 ?? {}) as { ok?: boolean; erro?: string; mudou?: boolean; valor?: number; nome?: string; plano?: string };
+      if (!r.ok) falhar(r.erro || "plano_invalido");
+      // a cobrança automática no cartão passa para o valor novo (como o "Trocar de plano" das contas — spec 6.2)
+      let assinatura: string | null = null;
+      if (r.mudou) {
+        const a = await assinaturaDe(m.id);
+        if (a?.mp_preapproval_id && a.status === "authorized" && !simulado(a.mp_preapproval_id) && a.payload?.simulada !== true) {
+          const { status: st, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {
+            method: "PUT", body: JSON.stringify({ auto_recurring: { transaction_amount: Number(r.valor), currency_id: "BRL" } }),
+          });
+          if (st >= 300 || !pre?.id) {
+            console.error("pagamentos-aluno: valor da assinatura do app", st, JSON.stringify(pre).slice(0, 300));
+            assinatura = "falhou";
+          } else {
+            await db.from("aluno_assinaturas").update({ ...espelhoAssinaturaAluno(pre, { ...(a.payload ?? {}), valor_trocado_em: new Date().toISOString() }), valor: Number(r.valor) }).eq("id", a.id);
+            assinatura = "atualizada";
+          }
+        } else if (a && ["authorized", "pending"].includes(a.status)) {
+          await db.from("aluno_assinaturas").update({ valor: Number(r.valor) }).eq("id", a.id);
+          assinatura = "atualizada";
+        }
+      }
+      return json({ ok: true, mudou: r.mudou === true, plano: r.plano, nome: r.nome ?? null, valor: Number(r.valor), assinatura }, 200, origin);
     }
 
     if (acao === "aluno_mp_conferir") {

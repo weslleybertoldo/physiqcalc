@@ -151,9 +151,9 @@ export function chipDePagamentos(lista: ResumoMatricula[] | null | undefined, ag
     }
   }
   if (avulsa && avulsa.dias < 0) return { texto: "Cobrança vencida", tom: "r" };
-  const ordem: Record<string, number> = { vencida: 0, pendente: 1, vence_em_breve: 2, aguardando: 3, em_dia: 4, pausada: 5, sem: 6 };
+  const ordem: Record<string, number> = { vencida: 0, pendente: 1, vence_em_breve: 2, teste: 2, aguardando: 3, em_dia: 4, pausada: 5, sem: 6 };
   const estados = lista
-    .map((r) => estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando }, agora))
+    .map((r) => estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando, teste_ate: r.teste_ate }, agora))
     .sort((a, b) => (ordem[a.situacao] ?? 9) - (ordem[b.situacao] ?? 9) || (a.dias ?? 0) - (b.dias ?? 0));
   const e = estados[0];
   if (avulsa && avulsa.dias <= 7 && (!e || ordem[e.situacao] >= ordem.vence_em_breve)) {

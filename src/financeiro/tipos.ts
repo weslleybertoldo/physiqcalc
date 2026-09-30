@@ -46,6 +46,9 @@ export interface MensalidadeVista {
   pago_ate: string | null;
   desde: string | null;
   coberta: boolean;
+  /** W7b — aluno sem profissional (conta do app): fim do teste grátis e o código do plano (app_treino · app_treino_alimentacao) */
+  teste_ate?: string | null;
+  plano_codigo?: string | null;
 }
 
 export interface AssinaturaVista {
@@ -80,7 +83,7 @@ export interface ReciboVista {
 export interface MatriculaPagamentos {
   paciente_id: string;
   nome: string;
-  conta: { id: string | null; nome: string | null; modo: ModoRecebimento; bloquear: boolean; profissional: string | null };
+  conta: { id: string | null; nome: string | null; modo: ModoRecebimento; bloquear: boolean; profissional: string | null; app?: boolean };
   chave: ChavePix | null;
   mensalidade: MensalidadeVista | null;
   assinatura: AssinaturaVista | null;
@@ -170,4 +173,8 @@ export interface ResumoMatricula {
   assinatura_ativa: boolean;
   abertas: Array<{ id: string; descricao: string; valor: number | string; vencimento: string }>;
   aguardando_avulsas: number;
+  /** W7b — matrícula da conta do app (aluno sem profissional): o teste grátis e o plano */
+  app?: boolean;
+  teste_ate?: string | null;
+  plano_codigo?: string | null;
 }

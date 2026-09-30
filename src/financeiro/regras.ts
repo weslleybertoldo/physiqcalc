@@ -77,7 +77,8 @@ export function lerValor(texto: string | number | null | undefined): number | nu
 
 // ───────────────────────── mensalidade (a régua do Calc) ─────────────────────────
 
-export type SituacaoMensalidade = "sem" | "pausada" | "aguardando" | "em_dia" | "vence_em_breve" | "vencida" | "pendente";
+/** "teste" (W7b) = a cobertura é só o teste grátis do app do aluno sem profissional (nada pago cobre depois dele). */
+export type SituacaoMensalidade = "sem" | "pausada" | "aguardando" | "em_dia" | "vence_em_breve" | "vencida" | "pendente" | "teste";
 
 export interface EstadoMensalidade {
   situacao: SituacaoMensalidade;
@@ -95,9 +96,19 @@ export interface DadosMensalidade {
   pago_ate: string | null;
   desde: string | null;
   aguardando?: boolean;
+  /** W7b — fim do teste grátis do app (aluno sem profissional); a cobertura do banco já o inclui */
+  teste_ate?: string | null;
 }
 
 export const JANELA_AVISO_DIAS = 7;
+
+/** A cobertura de agora é só o teste grátis do app (pago_ate não passa do fim do teste — 1 min de folga)? */
+export function soOTeste(m: Pick<DadosMensalidade, "pago_ate" | "teste_ate">): boolean {
+  if (!m.teste_ate || !m.pago_ate) return false;
+  const fim = new Date(m.teste_ate).getTime();
+  const cob = new Date(m.pago_ate).getTime();
+  return Number.isFinite(fim) && Number.isFinite(cob) && cob <= fim + 60_000;
+}
 
 export function estadoDaMensalidade(m: DadosMensalidade | null | undefined, agora: Date = new Date()): EstadoMensalidade {
   const valor = m && Number(m.valor) > 0 ? Number(m.valor) : null;
@@ -108,6 +119,7 @@ export function estadoDaMensalidade(m: DadosMensalidade | null | undefined, agor
   const dias = vence ? diasEntre(hoje, vence) : null;
   if (m.pausada) return { situacao: "pausada", vence, dias, valor, coberta };
   if (m.aguardando) return { situacao: "aguardando", vence, dias, valor, coberta };
+  if (coberta && soOTeste(m)) return { situacao: "teste", vence, dias, valor, coberta };
   if (coberta) return { situacao: dias !== null && dias <= JANELA_AVISO_DIAS ? "vence_em_breve" : "em_dia", vence, dias, valor, coberta };
   if (!m.pago_ate && m.desde && dias !== null && dias >= 0) return { situacao: "vence_em_breve", vence, dias, valor, coberta };
   if (vence) return { situacao: "vencida", vence, dias, valor, coberta };
@@ -127,6 +139,7 @@ export function textoDoVencimento(e: EstadoMensalidade): string {
   if (e.situacao === "vencida") return `venceu em ${dataBR(e.vence)}`;
   if (e.dias === null) return "";
   if (e.situacao === "aguardando") return "aguardando a confirmação";
+  if (e.situacao === "teste") return e.dias <= 0 ? "grátis até hoje" : e.dias === 1 ? "grátis até amanhã" : `grátis até ${dataBR(e.vence)}`;
   if (e.dias <= 0) return "vence hoje";
   if (e.dias === 1) return "vence amanhã";
   if (e.dias <= JANELA_AVISO_DIAS) return `vence em ${e.dias} dias`;
@@ -146,6 +159,8 @@ export function chipDaMensalidade(e: EstadoMensalidade): { texto: string; tom: T
       return { texto: "Aguardando confirmação", tom: "c" };
     case "em_dia":
       return { texto: `Em dia até ${dataBR(e.vence)}`, tom: "n" };
+    case "teste":
+      return { texto: `Grátis até ${dataBR(e.vence)}`, tom: "n" };
     case "vence_em_breve": {
       const t = textoDoVencimento(e);
       return { texto: t.charAt(0).toUpperCase() + t.slice(1), tom: "a" };
@@ -167,7 +182,7 @@ export function avulsaVencida(c: { vencimento: string }, hoje: string): boolean 
 export function inadimplente(r: ResumoMatricula, agora: Date = new Date()): boolean {
   const hoje = hojeSP(agora);
   if ((r.abertas ?? []).some((c) => avulsaVencida(c, hoje))) return true;
-  const e = estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando }, agora);
+  const e = estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando, teste_ate: r.teste_ate }, agora);
   return mensalidadePendente(e);
 }
 
@@ -190,7 +205,10 @@ export function formasDePagar(modo: ModoRecebimento, temChave: boolean): string 
 // ───────────────────────── faixa do topo (Início / aba de abertura — tela 1; A13) ─────────────────────────
 
 export interface Faixa {
-  tom: "a" | "r";
+  /** a = vence em breve · r = vencida · t = teste grátis do app (W7b) */
+  tom: "a" | "r" | "t";
+  /** texto do botão ("Pagar" por padrão; "Assinar" no teste grátis) */
+  acao?: string;
   titulo: string;
   subtitulo: string;
   podePagar: boolean;
@@ -208,8 +226,20 @@ export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora:
   for (const r of lista ?? []) {
     const pagar = podePagarPeloApp(r.recebimento_modo, r.tem_chave);
     const formas = r.profissional && !pagar ? `combine com ${r.profissional.split(" ")[0]}` : formasDePagar(r.recebimento_modo, r.tem_chave);
-    const e = estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando }, agora);
-    if (e.situacao === "vence_em_breve" || e.situacao === "vencida" || e.situacao === "pendente") {
+    const e = estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando, teste_ate: r.teste_ate }, agora);
+    if (e.situacao === "teste") {
+      // W7b: aluno sem profissional nos dias grátis — "Seus dias grátis vão até 06/10 · Depois, R$ 29,90/mês · Pix ou cartão · Assinar"
+      candidatas.push({
+        tom: "t",
+        titulo: e.dias !== null && e.dias <= 0 ? "Seu teste grátis termina hoje" : e.dias === 1 ? "Seu teste grátis termina amanhã" : `Seus dias grátis vão até ${dataBR(e.vence)}`,
+        subtitulo: `Depois, ${reais(e.valor)}/mês · ${formas}`,
+        podePagar: pagar,
+        acao: "Assinar",
+        alvo: { tipo: "mensalidade" },
+        pacienteId: r.paciente_id,
+        ordem: e.dias ?? 0,
+      });
+    } else if (e.situacao === "vence_em_breve" || e.situacao === "vencida" || e.situacao === "pendente") {
       candidatas.push({
         tom: e.situacao === "vence_em_breve" ? "a" : "r",
         titulo: `Sua mensalidade ${textoDoVencimento(e)}`,
@@ -389,6 +419,7 @@ export const MENSAGEM_ERRO_FINANCEIRO: Record<string, string> = {
   sem_assinatura: "Não há cobrança automática ativa.",
   rate_limited: "Muitas tentativas. Tente em alguns minutos.",
   conta_real_no_staging: "Este é o ambiente de teste: só contas de teste entram.",
+  nao_e_do_app: "Esta mensalidade não é do plano do app.",
 };
 
 export function mensagemErroFinanceiro(codigo: string | null | undefined, padrao = "Não deu certo agora. Tente de novo."): string {

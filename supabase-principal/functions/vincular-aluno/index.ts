@@ -13,12 +13,20 @@
 //   (a MESMA regra do vínculo, desfeita no banco — previa_vinculo_por_codigo). Código inexistente → 404 codigo_invalido.
 //   Limite próprio (30/h por pessoa) contra tentativa em massa de códigos; nada de e-mail, telefone ou ids.
 // 4xx → { ok: false, erro: codigo_invalido | profissional_inativo | proprio_codigo | outro_profissional | limite_plano | ... }
+// W7b (aluno sem profissional — a "conta do app"): quem é aluno do app PODE entrar na lista de um profissional (P7 não conta a
+//   conta do app); o banco encerra a matrícula do app e aqui a assinatura do app no Mercado Pago é cancelada (sem reembolso
+//   automático do mês pago). A prévia devolve `app: { valor, plano, assinatura_ativa }` para o popup avisar que a mensalidade do
+//   app para. Modo servidor novo — `{ acao: "desvincular", principal_user_id, profissional_principal_id }`: o painel antigo do
+//   Calc (admin-delete-user do Treino) tirou o aluno da lista → a matrícula dele fica inativa e o gatilho do banco o leva para o
+//   app com 7 dias grátis (desvincular_do_profissional).
 // verify_jwt = false (o modo servidor não tem JWT; o app é validado aqui no GET /auth/v1/user). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions vincular-aluno false
-// Segredos: ESPELHO_SEGREDO (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
+// Segredos: ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (cancelar a assinatura do app) (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
 // pelo espelho) — e a fila espelho_pendencias leva a mudança para quem já tem vínculo.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { emailConfirmado, emailDeTeste, origemPermitida, segredoConfere } from "../_shared/login-regras.ts";
+import { credencialDoSchema, type Schema } from "../_shared/cobranca-mp.ts";
+import { appDaPessoa, cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -61,9 +69,26 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
-  let corpo: { codigo?: unknown; principal_user_id?: unknown; previa?: unknown } = {};
+  let corpo: { codigo?: unknown; principal_user_id?: unknown; previa?: unknown; acao?: unknown; profissional_principal_id?: unknown } = {};
   try { corpo = await req.json(); } catch { corpo = {}; }
   const codigo = typeof corpo.codigo === "string" ? corpo.codigo.trim().toUpperCase().slice(0, 60) : "";
+
+  // W7b — modo servidor: o profissional tirou o aluno da lista no painel antigo (admin-delete-user do Treino)
+  if (corpo.acao === "desvincular") {
+    if (!segredoConfere(req.headers.get("x-espelho-segredo"), ESPELHO_SEGREDO)) return json({ ok: false, erro: "segredo_invalido" }, 401, origin);
+    const aluno = typeof corpo.principal_user_id === "string" ? corpo.principal_user_id : "";
+    const prof = typeof corpo.profissional_principal_id === "string" ? corpo.profissional_principal_id : "";
+    if (!UUID.test(aluno) || !UUID.test(prof)) return json({ ok: false, erro: "parametros_invalidos" }, 400, origin);
+    try {
+      const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
+      const { data, error } = await db.rpc("desvincular_do_profissional", { p_aluno: aluno, p_profissional: prof });
+      if (error) throw error;
+      return json(data ?? { ok: true }, 200, origin);
+    } catch (e) {
+      console.error("vincular-aluno (desvincular)", String((e as { message?: string })?.message || e));
+      return json({ ok: false, erro: "erro_interno" }, 500, origin);
+    }
+  }
   if (!codigo) return json({ ok: false, erro: "codigo_invalido" }, 400, origin);
 
   const authAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
@@ -92,8 +117,11 @@ Deno.serve(async (req) => {
       if (error) throw error;
       const r = (data ?? {}) as Record<string, unknown>;
       if (!r.profissional) return json({ ok: false, erro: String(r.erro || "codigo_invalido") }, 404, origin);
+      // W7b: é aluno do app? o popup avisa que a mensalidade do app para (e a cobrança automática, se tiver, é cancelada)
+      const app = r.ok === true && r.ja_era !== true ? await appDaPessoa(db, userId) : null;
       return json({ ok: r.ok === true, erro: r.erro ?? null, ja_era: r.ja_era === true, conta_nome: r.conta_nome ?? null,
-        modulos: Array.isArray(r.modulos) ? r.modulos : [], profissional: r.profissional, previa: true }, 200, origin);
+        modulos: Array.isArray(r.modulos) ? r.modulos : [], profissional: r.profissional, previa: true,
+        app: app ? { valor: app.valor, plano: app.plano, assinatura_ativa: app.assinatura_ativa } : null }, 200, origin);
     } catch (e) {
       console.error("vincular-aluno (previa)", String((e as { message?: string })?.message || e));
       return json({ ok: false, erro: "erro_interno" }, 500, origin);
@@ -111,7 +139,15 @@ Deno.serve(async (req) => {
       const erro = String(r.erro || "erro_interno");
       return json({ ok: false, erro, limite: r.limite ?? null }, STATUS_DO_ERRO[erro] ?? 400, origin);
     }
-    return json(r, 200, origin);
+    // W7b: saiu do app (a matrícula do app encerrou) → a assinatura do app no Mercado Pago é cancelada (não trava o vínculo)
+    let assinaturaApp = { canceladas: 0, falhas: 0 };
+    try {
+      assinaturaApp = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), userId, "vinculou_profissional");
+    } catch (e) {
+      console.error("vincular-aluno: cancelar assinatura do app", String((e as { message?: string })?.message || e));
+      assinaturaApp = { canceladas: 0, falhas: 1 };
+    }
+    return json({ ...r, assinatura_app: assinaturaApp }, 200, origin);
   } catch (e) {
     console.error("vincular-aluno", String((e as { message?: string })?.message || e));
     return json({ ok: false, erro: "erro_interno" }, 500, origin);

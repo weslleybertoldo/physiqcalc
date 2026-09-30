@@ -12,7 +12,7 @@ Idempotente: cada linha copiada guarda o id de origem (treino_pagamento_id, trei
 treino_plano_id); a 2ª rodada não cria nada e não reescreve o que o profissional já mudou no principal (a matrícula leva a
 marca financeiro_migrado_em; a conta, o evento w06_recebimento).
 No staging só entram contas de TESTE (P26). Pagamento de aluno SEM professor (ex.: o próprio master pagando como aluno) não
-tem conta para onde ir: fica só no Treino e aparece no relatório à parte.
+tem conta de professor: a W7b o leva para a conta do app (scripts/virada/05_alunos_do_app.py, que confere esses à parte).
 
 Conferência (sempre ao fim, ou só ela com --conferir): por professor, número de pagamentos, soma em R$ e número de
 comprovantes no Treino = no principal; arquivos por pasta de professor; sai com erro (exit 1) se algo não bater.
@@ -444,7 +444,9 @@ def conferir(s: str) -> dict:
             divergencias.append(f"cobrança com origem {c['tid']} que não existe no Treino")
             continue
         prof = (perfis.get(g["user_id"]) or {}).get("professor_id")
-        d = depois[prof or "?"]
+        if not prof:
+            continue  # sem professor: foi para a conta do app (script 05, W7b) — conferido lá
+        d = depois[prof]
         d["pagamentos"] += 1
         d["soma"] += Decimal(c["valor"])
         d["comprovantes"] += 1 if c["comprovante_path"] else 0
@@ -474,7 +476,7 @@ def imprimir_conferencia(c: dict) -> None:
         a, d = x["antes"], x["depois"]
         print(f"  {'ok   ' if x['ok'] else 'FALHA'} {x['nome'] or x['professor']}: {a['pagamentos']}→{d['pagamentos']} · R$ {a['soma']}→R$ {d['soma']} · {a['comprovantes']}→{d['comprovantes']}")
     sp = c["sem_professor"]
-    print(f"  (fora, sem professor — ficam só no Treino: {sp['pagamentos']} pagamentos · R$ {sp['soma']} · {sp['comprovantes']} comprovantes)")
+    print(f"  (sem professor — vão para a conta do app pelo script 05 da W7b: {sp['pagamentos']} pagamentos · R$ {sp['soma']} · {sp['comprovantes']} comprovantes)")
     print(f"  arquivos: {c['arquivos']['treino']} no Treino, faltando no principal: {len(c['arquivos']['faltando_no_principal'])}")
     for dv in c["divergencias"]:
         print(f"  FALHA {dv}")

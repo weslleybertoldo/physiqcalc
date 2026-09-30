@@ -69,7 +69,7 @@ const VisaoGeralPage = () => {
               <KpiCard rotulo="Professores ativos" valor={dados.profAtivos} to="/master/professores?status=ativo" tom="ok" data-kpi="prof-ativos" />
               <KpiCard rotulo="Professores suspensos" valor={dados.profSuspensos} to="/master/professores?status=suspenso" tom={dados.profSuspensos > 0 ? "ruim" : "neutro"} data-kpi="prof-suspensos" />
               <KpiCard rotulo="Alunos (total)" valor={dados.alunos} to="/master/alunos" data-kpi="alunos" />
-              <KpiCard rotulo="Alunos sem professor" valor={dados.semProfessor} to="/master/alunos?semProfessor=1" tom={dados.semProfessor > 0 ? "aviso" : "neutro"} data-kpi="alunos-sem-professor" />
+              <KpiCard rotulo="Alunos do app (sem professor)" valor={dados.semProfessor} to="/master/alunos?semProfessor=1" tom={dados.semProfessor > 0 ? "aviso" : "neutro"} data-kpi="alunos-sem-professor" />
             </div>
           </Secao>
 

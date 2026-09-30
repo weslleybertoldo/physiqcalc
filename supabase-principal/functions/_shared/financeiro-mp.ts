@@ -69,17 +69,38 @@ export interface Matricula {
   mensalidade_desde: string | null;
   mensalidade_pago_ate: string | null;
   deleted_at: string | null;
+  /** W7b — aluno sem profissional (conta do app): o teste grátis e o objetivo */
+  app_teste_de?: string | null;
+  app_teste_ate?: string | null;
+  objetivo_app?: string | null;
   conta: { id: string; nome: string; dono_id: string | null; recebimento_modo: string; bloquear_app_inadimplente: boolean; origem: string } | null;
-  plano: { id: string; nome: string } | null;
+  plano: { id: string; nome: string; codigo?: string | null } | null;
 }
 
 export const COLUNAS_MATRICULA =
   "id, conta_id, user_id, treino_user_id, nome, email, cpf, foto_url, ativo, tags, personal_id, nutricionista_id, plano_aluno_id, " +
+  "mensalidade_valor, cobranca_pausada, mensalidade_desde, mensalidade_pago_ate, deleted_at, app_teste_de, app_teste_ate, objetivo_app, " +
+  "conta:contas(id, nome, dono_id, recebimento_modo, bloquear_app_inadimplente, origem), plano:planos_aluno(id, nome, codigo)";
+
+/** As colunas de antes da W7b — o schema que ainda não recebeu a migração (as funções valem para os 2 schemas ao mesmo tempo). */
+const COLUNAS_MATRICULA_W6 =
+  "id, conta_id, user_id, treino_user_id, nome, email, cpf, foto_url, ativo, tags, personal_id, nutricionista_id, plano_aluno_id, " +
   "mensalidade_valor, cobranca_pausada, mensalidade_desde, mensalidade_pago_ate, deleted_at, " +
   "conta:contas(id, nome, dono_id, recebimento_modo, bloquear_app_inadimplente, origem), plano:planos_aluno(id, nome)";
 
+/** A matrícula é da conta do app (aluno sem profissional — W7b)? */
+export function ehDoApp(m: Pick<Matricula, "conta"> | null | undefined): boolean {
+  return m?.conta?.origem === "app";
+}
+
 export async function carregarMatricula(db: SupabaseClient, id: string): Promise<Matricula | null> {
   const { data, error } = await db.from("pacientes").select(COLUNAS_MATRICULA).eq("id", id).maybeSingle();
+  if (error && /column|coluna|does not exist|42703|PGRST20/i.test(`${error.code ?? ""} ${error.message ?? ""}`)) {
+    // schema ainda sem a migração da W7b: as colunas de antes (a função é publicada uma vez para public e staging)
+    const r = await db.from("pacientes").select(COLUNAS_MATRICULA_W6).eq("id", id).maybeSingle();
+    if (r.error) throw r.error;
+    return (r.data as unknown as Matricula | null) ?? null;
+  }
   if (error) throw error;
   return (data as unknown as Matricula | null) ?? null;
 }

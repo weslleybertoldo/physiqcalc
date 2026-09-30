@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { CircleAlert, RefreshCw, UserRoundCheck } from "lucide-react";
+import { CircleAlert, RefreshCw, UserRoundCheck, Wallet } from "lucide-react";
+import { reais } from "@/financeiro/regras";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSessao } from "@/nucleo/sessao";
 import { MENSAGEM_VINCULO, type ErroVinculo, type ResultadoVinculo } from "@/nucleo/situacao";
@@ -129,11 +130,22 @@ export function ConfirmarVinculo({
               </div>
             )}
             {podeConfirmar ? (
-              <p className="text-[13.5px] leading-relaxed text-texto" data-vinculo-o-que>
-                {previa?.jaEra
-                  ? `Você já está na lista de ${primeiro}. Confirmar só atualiza o vínculo.`
-                  : `Você vai entrar na lista de ${primeiro} e receber ${oQueGanha(previa?.modulos ?? [])} pelo Physiq. Confirma?`}
-              </p>
+              <>
+                <p className="text-[13.5px] leading-relaxed text-texto" data-vinculo-o-que>
+                  {previa?.jaEra
+                    ? `Você já está na lista de ${primeiro}. Confirmar só atualiza o vínculo.`
+                    : `Você vai entrar na lista de ${primeiro} e receber ${oQueGanha(previa?.modulos ?? [])} pelo Physiq. Confirma?`}
+                </p>
+                {previa?.app && (
+                  <p className="flex items-start gap-2 rounded-2xl border border-linha bg-superficie px-3.5 py-3 text-[12.5px] leading-relaxed text-texto-2" data-vinculo-app>
+                    <Wallet aria-hidden className="mt-0.5 h-4 w-4 flex-none text-violeta-3" />
+                    <span>
+                      A mensalidade do app{previa.app.valor ? ` (${reais(previa.app.valor)}/mês)` : ""} para aqui
+                      {previa.app.assinatura_ativa ? " e a cobrança automática no cartão é cancelada" : ""}. Daqui em diante, você paga como combinar com {primeiro}.
+                    </span>
+                  </p>
+                )}
+              </>
             ) : falha ? (
               <p className="flex items-start gap-2 text-[13.5px] leading-relaxed text-texto" role="alert" data-vinculo-erro={falha}>
                 <CircleAlert aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />

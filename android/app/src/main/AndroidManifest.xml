@@ -32,6 +32,18 @@
                 <data android:scheme="com.bertoldo.physiqcalc" />
             </intent-filter>
 
+            <!-- Physiq W7b: Android App Links — o link https do profissional (https://physiqcalc.com.br/?prof=…) abre o APK
+                 (verificado pelo public/.well-known/assetlinks.json do site, com o SHA-256 do certificado que assina o APK).
+                 Só a raiz do site: as outras páginas continuam no navegador. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="physiqcalc.com.br" />
+                <data android:path="/" />
+            </intent-filter>
+
         </activity>
 
         <!-- Foreground Service do timer de descanso (som em background) -->

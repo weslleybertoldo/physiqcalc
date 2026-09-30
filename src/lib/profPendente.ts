@@ -5,6 +5,8 @@
 // W7 (pedido dele, 29/09): com o código guardado, o popup "confirmar o profissional" (src/ui/avisos/AvisoVinculoPendente.tsx)
 // abre assim que a pessoa está logada — Cancelar descarta o código. O ?prof= sai da barra de endereço depois de guardado (um
 // recarregar não traz de volta o que foi cancelado) e o APK aceita o link com.bertoldo.physiqcalc://…?prof=… (deep link).
+// W7b: com o Android App Links (intent-filter autoVerify + public/.well-known/assetlinks.json), o link https do profissional
+// (https://physiqcalc.com.br/?prof=…) também abre o APK e chega aqui pelo appUrlOpen.
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 
@@ -12,6 +14,8 @@ const KEY = "physiq_prof_pendente";
 /** O mesmo nome do src/nucleo/vinculo.ts (aqui sem importar o núcleo: este arquivo roda antes de tudo, no App.tsx). */
 const EVENTO = "physiq:prof-pendente";
 const ESQUEMA_APK = "com.bertoldo.physiqcalc";
+/** Domínios do link https que o APK abre (App Links verificados — só o site de produção). */
+const HOSTS_APP_LINK = ["physiqcalc.com.br", "www.physiqcalc.com.br"];
 
 function guardar(bruto: string | null | undefined): string | null {
   const c = (bruto ?? "").trim();
@@ -40,10 +44,24 @@ export function capturarProfDaUrl(): string | null {
   return null;
 }
 
-/** "com.bertoldo.physiqcalc://vincular?prof=PROF-X" → "PROF-X" (null se o link não é de código de profissional). */
+/**
+ * "com.bertoldo.physiqcalc://vincular?prof=PROF-X" ou "https://physiqcalc.com.br/?prof=PROF-X" (App Link) → "PROF-X"
+ * (null se o link não é de código de profissional).
+ */
 export function codigoDoDeepLink(url: string | null | undefined): string | null {
-  if (!url || !url.startsWith(`${ESQUEMA_APK}:`)) return null;
-  const q = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
+  if (!url) return null;
+  let q = "";
+  if (url.startsWith(`${ESQUEMA_APK}:`)) {
+    q = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
+  } else {
+    try {
+      const u = new URL(url);
+      if (u.protocol !== "https:" || !HOSTS_APP_LINK.includes(u.hostname.toLowerCase())) return null;
+      q = u.search.replace(/^\?/, "");
+    } catch {
+      return null;
+    }
+  }
   const c = new URLSearchParams(q).get("prof");
   return c && c.trim() ? c.trim().toUpperCase().slice(0, 60) : null;
 }

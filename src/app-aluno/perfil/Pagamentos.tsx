@@ -66,7 +66,7 @@ export default function Pagamentos() {
         break;
       }
       const e = m.mensalidade ? estadoDaMensalidade({ ...m.mensalidade, valor: m.mensalidade.valor }) : null;
-      if (pedido === "mensalidade" && e && ["vencida", "pendente", "vence_em_breve"].includes(e.situacao)
+      if (pedido === "mensalidade" && e && ["vencida", "pendente", "vence_em_breve", "teste"].includes(e.situacao)
         && !m.cobrancas.some((x) => x.tipo === "mensalidade" && x.status === "aguardando_confirmacao" && x.forma === "pix_manual")) {
         setPagar({ m, alvo: { tipo: "mensalidade" } });
         break;
@@ -255,14 +255,20 @@ function SecaoMatricula({
 }
 
 function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: MatriculaPagamentos; aguardando: boolean; pagarNoApp: boolean; aoPagar: (a: AlvoPagamento) => void }) {
+  const navigate = useNavigate();
   const ms = m.mensalidade!;
-  const e = estadoDaMensalidade({ valor: ms.valor, pausada: ms.pausada, pago_ate: ms.pago_ate, desde: ms.desde, aguardando });
+  const e = estadoDaMensalidade({ valor: ms.valor, pausada: ms.pausada, pago_ate: ms.pago_ate, desde: ms.desde, aguardando, teste_ate: ms.teste_ate ?? null });
   const chip = chipDaMensalidade(e);
-  const precisaPagar = e.situacao === "vencida" || e.situacao === "pendente" || e.situacao === "vence_em_breve";
+  // W7b: nos dias grátis do plano do app dá para assinar/pagar já (o mês pago começa quando o teste acaba)
+  const precisaPagar = e.situacao === "vencida" || e.situacao === "pendente" || e.situacao === "vence_em_breve" || e.situacao === "teste";
   const automatica = m.assinatura?.status === "authorized";
+  const doApp = !!m.conta.app;
+  const formas = pagarNoApp ? formasDePagar(m.conta.modo, !!m.chave) : `combine com ${m.conta.profissional ?? "seu profissional"}`;
   const linha = e.situacao === "pausada"
-    ? "Seu profissional parou a cobrança pelo app."
-    : `${e.coberta ? `Pago até ${dataBR(e.vence)}` : textoDoVencimento(e).replace(/^./, (x) => x.toUpperCase())} · ${pagarNoApp ? formasDePagar(m.conta.modo, !!m.chave) : `combine com ${m.conta.profissional ?? "seu profissional"}`}`;
+    ? doApp ? "Sem cobrança." : "Seu profissional parou a cobrança pelo app."
+    : e.situacao === "teste"
+      ? `Grátis até ${dataBR(e.vence)} · depois ${reais(ms.valor)}/mês · ${formas}`
+      : `${e.coberta ? `Pago até ${dataBR(e.vence)}` : textoDoVencimento(e).replace(/^./, (x) => x.toUpperCase())} · ${formas}`;
   return (
     <Cartao brilho className="flex flex-col gap-3 px-4 py-4" data-mensalidade-aluno={e.situacao}>
       {/* o chip vai para a linha de baixo quando não cabe ao lado do valor ("Aguardando confirmação") */}
@@ -271,7 +277,7 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
           <Wallet aria-hidden className="h-5 w-5" strokeWidth={1.8} />
         </span>
         <div className="min-w-[150px] flex-1">
-          <div className="truncate text-[12px] font-medium text-texto-2">Mensalidade{ms.plano ? ` · ${ms.plano}` : ""}</div>
+          <div className="truncate text-[12px] font-medium text-texto-2">{doApp ? "Plano do app" : "Mensalidade"}{ms.plano ? ` · ${ms.plano}` : ""}</div>
           <b className="block whitespace-nowrap text-[24px] font-bold tabular-nums tracking-[-0.03em] text-texto">{reais(ms.valor)}<span className="ml-1 text-[13px] font-medium text-texto-2">/mês</span></b>
         </div>
         <Chip tom={chip.tom} className="ml-auto flex-none" data-chip-mensalidade>{chip.texto}</Chip>
@@ -280,12 +286,19 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
       {e.situacao !== "pausada" && pagarNoApp && !automatica && (
         <div className="flex flex-wrap gap-2">
           {precisaPagar && !aguardando && (
-            <Botao variante="w" icone={QrCode} onClick={() => aoPagar({ tipo: "mensalidade" })} data-pagar-mensalidade>Pagar {reais(ms.valor)}</Botao>
+            <Botao variante="w" icone={QrCode} onClick={() => aoPagar({ tipo: "mensalidade" })} data-pagar-mensalidade>
+              {e.situacao === "teste" ? `Assinar · ${reais(ms.valor)}/mês` : `Pagar ${reais(ms.valor)}`}
+            </Botao>
           )}
           {!precisaPagar && !aguardando && m.conta.modo === "pix_manual" && (
             <Botao variante="g" onClick={() => aoPagar({ tipo: "mensalidade", adiantar: true })} data-adiantar-mensalidade>Adiantar o próximo mês</Botao>
           )}
         </div>
+      )}
+      {doApp && e.situacao !== "pausada" && (
+        <button type="button" onClick={() => navigate("/perfil/meu-plano")} className="self-start text-[12.5px] font-semibold text-violeta-3" data-trocar-plano-app>
+          Trocar de plano ou de objetivo
+        </button>
       )}
     </Cartao>
   );

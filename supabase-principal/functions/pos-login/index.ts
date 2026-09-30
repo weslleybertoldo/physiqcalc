@@ -6,6 +6,9 @@
 //      pessoa é professor do Calc sem conta aqui, tem convite de professor do master pendente ou é aluno de um professor do
 //      Calc sem matrícula aqui — e cria a conta/matrícula (o master continua convidando pelo painel antigo até a W27);
 //   4. devolve a minha_situacao() já atualizada.
+// W7b: quem é aluno do app (sem profissional — a "conta do app") e entrou na lista de um profissional por convite ou pela
+//   ponte do Calc tem a matrícula do app encerrada no banco; aqui a assinatura do app no Mercado Pago é cancelada. A ponte do
+//   Calc não conta a matrícula do app (o aluno do professor do Calc vai para a conta do professor, como antes).
 // Nada disso manda e-mail, WhatsApp ou aviso a ninguém.
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: {}.
@@ -13,7 +16,7 @@
 // Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging · 429 rate_limited · 500
 // verify_jwt = false (validado aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pos-login false
-// Segredos: TREINO_URL, ESPELHO_SEGREDO (+ os automáticos).
+// Segredos: TREINO_URL, ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (W7b) (+ os automáticos).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import {
   claimsDoJwt,
@@ -30,6 +33,8 @@ import {
   temIdentidade,
   type ProfessorCalc,
 } from "../_shared/login-regras.ts";
+import { credencialDoSchema, type Schema } from "../_shared/cobranca-mp.ts";
+import { cancelarAssinaturasDoAppEncerrado, contaDoApp } from "../_shared/app-sem-profissional.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -163,7 +168,11 @@ Deno.serve(async (req) => {
           legado.conta_nova = data;
         }
         if (lt.aluno?.professor_codigo) {
-          const { data: mats } = await db.from("pacientes").select("id").eq("user_id", user.id).is("deleted_at", null).limit(1);
+          // W7b: a matrícula da conta do app (aluno sem profissional) não conta — o aluno do professor do Calc vai para a conta dele
+          const app = await contaDoApp(db);
+          let consulta = db.from("pacientes").select("id").eq("user_id", user.id).is("deleted_at", null);
+          if (app) consulta = consulta.or(`conta_id.is.null,conta_id.neq.${app}`);
+          const { data: mats } = await consulta.limit(1);
           if (!(mats ?? []).length) {
             const { data: membro } = await db.from("conta_membros").select("conta_id, user_id")
               .ilike("codigo_convite", lt.aluno.professor_codigo).eq("status", "ativo").not("user_id", "is", null).limit(1).maybeSingle();
@@ -185,6 +194,13 @@ Deno.serve(async (req) => {
       legado.erro = "ponte_indisponivel";
     }
     saida.legado = legado;
+
+    // W7b: saiu do app (convite ou ponte do Calc encerraram a matrícula do app) → cancela a assinatura do app no Mercado Pago
+    try {
+      saida.assinatura_app = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), user.id, "vinculou_profissional");
+    } catch (e) {
+      console.error("pos-login: cancelar assinatura do app", String((e as { message?: string })?.message || e));
+    }
 
     // 4. situação atualizada (com o token da pessoa: a função lê auth.uid())
     const comoPessoa = createClient(SUPABASE_URL, ANON, {

@@ -22,8 +22,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 import _base as B  # noqa: E402
 
 p = B.p
-S = "staging"
-B.ESTADO["schema"] = S
 
 TABS_P = ["pacientes", "profiles", "diario_alimentar", "refeicoes_concluidas", "metas_concluidas", "mensagens_whatsapp", "avisos",
           "agendamentos", "cobrancas", "antropometrias", "planos_alimentares", "refeicoes", "metas", "recibos", "registros_prontuario"]
@@ -60,21 +58,21 @@ def foto(conta: str, rotulo: str) -> dict:
     for t in TABS_P:
         col = COL_P.get(t)
         if t in ("refeicoes",):
-            cond = f"plano_id in (select id from {S}.planos_alimentares where paciente_id in ({lista}))"
+            cond = f"plano_id in (select id from {B.schema()}.planos_alimentares where paciente_id in ({lista}))"
         elif t == "pacientes":
             cond = f"id in ({lista})"
         elif col:
             cond = f"{col} = '{u}'" if u else "false"
         else:
             cond = f"paciente_id in ({lista})"
-        sel_p.append(f"select '{t}' tabela, (select count(*) from {S}.{t}) total, (select count(*) from {S}.{t} where {cond}) da_conta")
+        sel_p.append(f"select '{t}' tabela, (select count(*) from {B.schema()}.{t}) total, (select count(*) from {B.schema()}.{t} where {cond}) da_conta")
     principal = {r["tabela"]: {"total": r["total"], "da_conta": r["da_conta"]} for r in B.sql_principal(" union all ".join(sel_p))}
     treino = {}
     if tid:
         sel_t = []
         for t in TABS_T:
             col = COL_T.get(t, "user_id")
-            sel_t.append(f"select '{t}' tabela, (select count(*) from {S}.{t}) total, (select count(*) from {S}.{t} where {col} = '{tid}') da_conta")
+            sel_t.append(f"select '{t}' tabela, (select count(*) from {B.schema()}.{t}) total, (select count(*) from {B.schema()}.{t} where {col} = '{tid}') da_conta")
         treino = {r["tabela"]: {"total": r["total"], "da_conta": r["da_conta"]} for r in B.sql_treino(" union all ".join(sel_t))}
     login_p = B.sql_principal(f"select count(*)::int n from auth.users where id = '{u}'")[0]["n"] if u else 0
     login_t = B.sql_treino(f"select id::text, email, deleted_at, (select count(*) from auth.identities i where i.user_id = u.id) as identidades from auth.users u where id = '{tid}'") if tid else []
@@ -105,7 +103,7 @@ def caso_api() -> None:
         p.check(st in (401, 403, 404) or (isinstance(r, dict) and r.get("code") == "42501"), f"rpc {fn} como aluno → recusado ({st} {str(r)[:90]})")
 
     print("\n== prévia do código (popup) — não vincula nada")
-    antes = B.sql_principal(f"select count(*)::int n from {S}.pacientes where user_id = '{B.uid('excluir2')}'")[0]["n"]
+    antes = B.sql_principal(f"select count(*)::int n from {B.schema()}.pacientes where user_id = '{B.uid('excluir2')}'")[0]["n"]
     st, r = B.funcao(B.token("excluir2"), "vincular-aluno", {"codigo": "prof-lucas-ferreira", "previa": True})
     prof = (r or {}).get("profissional") or {}
     p.check(st == 200 and r.get("ok") is True and prof.get("nome") == "Lucas Ferreira" and prof.get("tipo_perfil") == "personal" and prof.get("foto_url"),
@@ -116,7 +114,7 @@ def caso_api() -> None:
     p.check(st == 404 and (r or {}).get("erro") == "codigo_invalido", f"prévia com código errado → 404 codigo_invalido ({st} {r})")
     st, r = B.funcao(B.token("w7-aluno"), "vincular-aluno", {"codigo": "PROF-CAMILA-ROCHA-W7", "previa": True})
     p.check(st == 200 and r.get("ok") is True and r.get("ja_era") is True, f"prévia de quem já é aluno dela → 'já está na lista' ({st} {str(r)[:140]})")
-    depois = B.sql_principal(f"select count(*)::int n from {S}.pacientes where user_id = '{B.uid('excluir2')}'")[0]["n"]
+    depois = B.sql_principal(f"select count(*)::int n from {B.schema()}.pacientes where user_id = '{B.uid('excluir2')}'")[0]["n"]
     p.check(antes == depois == 0, f"a prévia não vinculou ninguém (matrículas {antes} → {depois})")
 
     print("\n== Exportar meus dados (excluir1: os 2 bancos)")
@@ -154,7 +152,7 @@ def caso_api() -> None:
     st, r = f_excluir("excluir1", {})
     p.check(st == 400 and r.get("erro") == "confirmacao_invalida", f"sem confirmação → 400 ({st} {r})")
     st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/functions/v1/excluir-minha-conta", {"confirmacao": "EXCLUIR"},
-                      {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {B.anon(B.PRINCIPAL_REF)}", "x-schema": S})
+                      {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {B.anon(B.PRINCIPAL_REF)}", "x-schema": B.schema()})
     p.check(st == 401, f"sem login (só o anon) → 401 ({st} {r})")
     for staff in ("w7-personal", "w7-nutri"):
         st, r = f_excluir(staff, {"simular": True})
@@ -215,15 +213,16 @@ def conferir(conta: str) -> None:
             p.check(b["total"] == a["total"] and b["da_conta"] == a["da_conta"], f"treino.{t}: fica com o profissional ({a['da_conta']} da conta)")
     if antes["matriculas"]:
         lista = ",".join(f"'{x}'" for x in antes["matriculas"])
-        m = B.sql_principal(f"select id::text, user_id::text, ativo, config ->> 'conta_excluida_em' as excluida from {S}.pacientes where id in ({lista})")
+        m = B.sql_principal(f"select id::text, user_id::text, ativo, config ->> 'conta_excluida_em' as excluida from {B.schema()}.pacientes where id in ({lista})")
         p.check(all(x["user_id"] is None and x["ativo"] is False and x["excluida"] for x in m), f"matrícula desligada do login e desativada ({m})")
         arq = B.sql_principal(f"select count(*)::int n from storage.objects where bucket_id = 'diario' and name like '{antes['matriculas'][0]}/%'")[0]["n"]
         p.check(arq == 0, f"fotos do diário apagadas do Storage ({arq})")
     if antes["principal_user_id"]:
-        fp = B.sql_principal(f"select count(*)::int n from storage.objects where bucket_id = 'fotos-perfil-staging' and name like '{antes['principal_user_id']}/%'")[0]["n"]
+        bucket = "fotos-perfil-staging" if B.schema() == "staging" else "fotos-perfil"
+        fp = B.sql_principal(f"select count(*)::int n from storage.objects where bucket_id = '{bucket}' and name like '{antes['principal_user_id']}/%'")[0]["n"]
         p.check(fp == 0, f"foto do Perfil apagada do Storage ({fp})")
     if antes.get("treino_user_id"):
-        pr = B.sql_treino(f"select status, foto_url, professor_id::text from {S}.physiq_profiles where id = '{antes['treino_user_id']}'")
+        pr = B.sql_treino(f"select status, foto_url, professor_id::text from {B.schema()}.physiq_profiles where id = '{antes['treino_user_id']}'")
         p.check(bool(pr) and pr[0]["status"] == "excluido" and pr[0]["foto_url"] is None, f"Treino: o cadastro fica com o profissional, marcado 'excluido' ({pr})")
 
 
@@ -238,6 +237,7 @@ def excluir(conta: str) -> None:
 
 
 def main() -> int:
+    B.ESTADO["schema"] = "staging"  # os testes desta W rodam no staging (o smoke de produção importa as funções com "public")
     if len(sys.argv) < 2:
         print(__doc__)
         return 2

@@ -7,7 +7,8 @@
 import type { Modulo } from "@/ui/casca/dadosCasca";
 
 export type Papel = "dono" | "personal" | "nutricionista";
-export type OrigemConta = "nova" | "legado_calc" | "legado_nutri";
+/** "app" (W7b) = a conta do app: os alunos sem profissional pagam a mensalidade do app ao Physiq. */
+export type OrigemConta = "nova" | "legado_calc" | "legado_nutri" | "app";
 export type SituacaoConta = "teste" | "ativa" | "vencida" | "isenta" | "suspensa" | "cancelada";
 
 export interface ContaSituacao {
@@ -60,6 +61,11 @@ export interface MatriculaSituacao {
   conta_alunos_bloqueados_msg: string | null;
   personal: PessoaRef | null;
   nutricionista: PessoaRef | null;
+  /** W7b — matrícula da conta do app (aluno sem profissional): o plano (app_treino · app_treino_alimentacao), o objetivo e o teste */
+  app?: boolean;
+  app_plano?: string | null;
+  objetivo_app?: string | null;
+  teste_ate?: string | null;
 }
 
 export interface LegadoNutri {
@@ -95,6 +101,8 @@ export interface Situacao {
   sem_nada: boolean;
   legado_nutri: LegadoNutri | null;
   aviso_mudanca: AvisoMudancaSituacao | null;
+  /** W7b — id da conta do app (a dos alunos sem profissional) */
+  conta_app?: string | null;
   gerado_em: string;
 }
 
@@ -164,8 +172,22 @@ export function normalizarSituacao(bruto: unknown): Situacao | null {
     sem_nada: b.sem_nada === true,
     legado_nutri: (b.legado_nutri as LegadoNutri) ?? null,
     aviso_mudanca: (b.aviso_mudanca as AvisoMudancaSituacao) ?? null,
+    conta_app: (b.conta_app as string) ?? null,
     gerado_em: String(b.gerado_em ?? new Date().toISOString()),
   };
+}
+
+/**
+ * W7b — a matrícula ATIVA do aluno sem profissional (conta do app), se ele está no app agora (quem tem profissional não tem).
+ * O aluno do app paga a mensalidade do app ao Physiq e usa os treinos prontos (e os pratos prontos no Treino + Alimentação).
+ */
+export function matriculaDoApp(s: Situacao | null | undefined): MatriculaSituacao | null {
+  return s?.matriculas.find((m) => m.app === true && m.ativo) ?? null;
+}
+
+/** O aluno do app tem a Alimentação (plano Treino + Alimentação)? */
+export function temAlimentacaoDoApp(m: MatriculaSituacao | null | undefined): boolean {
+  return !!m && m.modulos.includes("nutricao");
 }
 
 /** Pode abrir o painel: master ou membro ativo de alguma conta. */

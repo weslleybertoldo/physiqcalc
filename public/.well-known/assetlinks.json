@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bertoldo.physiqcalc",
+      "sha256_cert_fingerprints": ["CF:F7:EC:90:E7:3F:CC:AF:1E:64:00:CE:23:F2:1F:2C:96:D0:3C:F7:10:38:86:04:01:5A:85:B5:89:38:9F:6C"]
+    }
+  }
+]

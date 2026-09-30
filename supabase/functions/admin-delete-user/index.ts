@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { AsyncLocalStorage } from "node:async_hooks";
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
@@ -41,6 +41,34 @@ function jsonErr(msg: string, status: number, origin: string | null) {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// Physiq W7b: o banco principal fica sabendo quando o professor tira o aluno da lista (a matrícula de lá fica inativa e o aluno
+// vira aluno do app com 7 dias grátis — vincular-aluno em modo servidor, acao "desvincular"). Segredos PRINCIPAL_URL e
+// ESPELHO_SEGREDO (W2). Falhar aqui não desfaz o desvínculo no Treino (a W13 troca esta tela).
+const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
+const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+
+async function avisarPrincipalDoDesvinculo(admin: SupabaseClient, alunoTreino: string, profTreino: string): Promise<string> {
+  if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return "principal_nao_configurado";
+  try {
+    const { data, error } = await admin.from("physiq_identidades").select("principal_user_id, treino_user_id")
+      .in("treino_user_id", [alunoTreino, profTreino]);
+    if (error) return "sem_identidades";
+    const mapa = new Map(((data ?? []) as Array<{ principal_user_id: string; treino_user_id: string }>).map((r) => [r.treino_user_id, r.principal_user_id]));
+    const aluno = mapa.get(alunoTreino);
+    const prof = mapa.get(profTreino);
+    if (!aluno || !prof) return "sem_vinculo";
+    const r = await fetch(`${PRINCIPAL_URL}/functions/v1/vincular-aluno`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
+      body: JSON.stringify({ acao: "desvincular", principal_user_id: aluno, profissional_principal_id: prof }),
+    });
+    if (r.status !== 200) console.error("admin-delete-user: principal respondeu", r.status, (await r.text()).slice(0, 200));
+    return r.status === 200 ? "ok" : `http_${r.status}`;
+  } catch (e) {
+    console.error("admin-delete-user: principal", String((e as Error)?.message || e));
+    return "erro";
+  }
+}
 
 async function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): Promise<boolean> {
   try {
@@ -127,7 +155,8 @@ Deno.serve(async (req) => {
     if (caller.papel === "professor") {
       const { error: unlinkErr } = await admin.from("physiq_profiles").update({ professor_id: null }).eq("id", userId).eq("professor_id", caller.id);
       if (unlinkErr) throw unlinkErr;
-      return new Response(JSON.stringify({ ok: true, desvinculado: true }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+      const principal = await avisarPrincipalDoDesvinculo(admin, userId, caller.id);
+      return new Response(JSON.stringify({ ok: true, desvinculado: true, principal }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
     // staging só apaga CONTA DE TESTE — auth é global, conta real sumiria da produção
     if ((schemaCtx.getStore() || "public") === "staging") {

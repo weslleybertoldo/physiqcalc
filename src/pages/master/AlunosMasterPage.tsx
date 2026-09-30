@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ListaPaginada, usePaginado } from "@/components/ListaPaginada";
 import { listarAlunos, masterProfessores, type AlunoRow, type ProfessorRow } from "@/lib/saasApi";
 import MoverAlunosDialog from "@/components/master/MoverAlunosDialog";
+import { buscarAlunosDoApp, type AlunoDoAppMaster } from "@/app-aluno/sozinho/api";
+import { situacaoDoPlano } from "@/app-aluno/sozinho/regras";
 import {
   BTN_MINI_NEUTRO, BTN_MINI_PRIMARIO, Carregando, Chip, ErroCarregar, Etiqueta, INPUT, LINHA, SELECT_CONTENT, SELECT_TRIGGER,
   TituloPagina, Vazio, alunosTexto, mensagemErro, useDebounce,
@@ -16,6 +18,9 @@ const CHECK_CLS = "mt-1 border-muted-foreground/60 data-[state=checked]:bg-prima
 
 // Alunos (master): TODOS os alunos, filtro Todos · Sem professor · por professor (?professorId= / ?semProfessor=1),
 // seleção múltipla e "Mover" (só o master move — decisão do Weslley).
+// Physiq W7b (C8): "Sem professor" virou "Alunos do app" — quem treina sem profissional paga a mensalidade do app (Treino ou
+// Treino + Alimentação); cada linha mostra o plano e a situação (grátis até, em dia, vencido) do banco principal. A tela nova
+// do master, com editar os treinos e pratos prontos, é da W27.
 const AlunosMasterPage = () => {
   const navigate = useNavigate();
   const [sp, setSp] = useSearchParams();
@@ -40,6 +45,14 @@ const AlunosMasterPage = () => {
       ...(semProfessor ? { semProfessor: true } : professorId ? { professorId } : {}),
     }).then((r) => ({ itens: r.users, total: r.total })), [qDeb, professorId, semProfessor]);
   const lista = usePaginado<AlunoRow>(fetchPage, [qDeb, professorId, semProfessor]);
+
+  // W7b: os alunos do app (banco principal), pelo e-mail — a lista daqui é a do Banco do Treino
+  const [doApp, setDoApp] = useState<Map<string, AlunoDoAppMaster>>(new Map());
+  useEffect(() => {
+    buscarAlunosDoApp()
+      .then((l) => setDoApp(new Map(l.filter((a) => a.email).map((a) => [String(a.email).toLowerCase(), a]))))
+      .catch(() => setDoApp(new Map()));
+  }, []);
 
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [mover, setMover] = useState<AlunoRow[] | null>(null);
@@ -79,7 +92,7 @@ const AlunosMasterPage = () => {
         sub={lista.loading ? "Carregando..." : (
           <>
             {lista.total} aluno(s)
-            {semProfessor ? " sem professor" : professorFiltrado ? <> de <span className="text-primary">{professorFiltrado.nome}</span> ({alunosTexto(professorFiltrado.alunos, professorFiltrado.plano?.max_alunos)})</> : " no total"}
+            {semProfessor ? " do app (sem professor)" : professorFiltrado ? <> de <span className="text-primary">{professorFiltrado.nome}</span> ({alunosTexto(professorFiltrado.alunos, professorFiltrado.plano?.max_alunos)})</> : " no total"}
             {" · só o master move alunos"}
           </>
         )}
@@ -99,7 +112,7 @@ const AlunosMasterPage = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Chip ativo={!semProfessor && !professorId} onClick={() => setFiltro("todos")} data-filtro="todos">Todos</Chip>
-          <Chip ativo={semProfessor} onClick={() => setFiltro("sem")} data-filtro="sem-professor">Sem professor</Chip>
+          <Chip ativo={semProfessor} onClick={() => setFiltro("sem")} data-filtro="sem-professor">Alunos do app</Chip>
           <Select value={professorId} onValueChange={(v) => setFiltro(v === "__todos__" ? "todos" : { professorId: v })}>
             <SelectTrigger className={`${SELECT_TRIGGER} w-auto min-w-[180px] max-w-full h-8 rounded-full text-[11px] ${professorId ? "border-primary text-primary" : ""}`} data-select-professor>
               <SelectValue placeholder="Por professor…" />
@@ -133,7 +146,7 @@ const AlunosMasterPage = () => {
 
       {lista.erro && <ErroCarregar texto={mensagemErro(lista.erro)} onRetry={() => void lista.recarregar()} />}
       {lista.loading ? <Carregando /> : lista.itens.length === 0 ? (
-        <Vazio texto={semProfessor ? "Nenhum aluno na fila 'Sem professor'." : qDeb ? "Nenhum aluno encontrado." : "Nenhum aluno."} />
+        <Vazio texto={semProfessor ? "Nenhum aluno do app (sem professor)." : qDeb ? "Nenhum aluno encontrado." : "Nenhum aluno."} />
       ) : (
         <div data-lista-alunos>
           <div className="flex items-center gap-2 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground font-body">
@@ -162,6 +175,8 @@ const AlunosMasterPage = () => {
                       <Etiqueta tom="info" className="text-[10px]!">Professor (conta própria)</Etiqueta>
                     ) : a.professor_id ? (
                       <span className="text-muted-foreground">Prof.: <span className="text-foreground">{prof?.nome ?? "…"}</span></span>
+                    ) : doApp.get(String(a.email ?? "").toLowerCase()) ? (
+                      <EtiquetaDoApp aluno={doApp.get(String(a.email ?? "").toLowerCase())!} />
                     ) : (
                       <Etiqueta tom="aviso" className="text-[10px]!" data-sem-professor>— sem professor —</Etiqueta>
                     )}
@@ -192,5 +207,19 @@ const AlunosMasterPage = () => {
     </div>
   );
 };
+
+/** W7b: "Aluno do app · Treino · Grátis até 06/10" (a situação do plano do app). */
+function EtiquetaDoApp({ aluno }: { aluno: AlunoDoAppMaster }) {
+  const s = situacaoDoPlano({
+    paciente_id: aluno.paciente_id, ativo: aluno.ativo, plano: aluno.plano, plano_nome: aluno.plano_nome, valor: aluno.valor, modulos: [],
+    objetivo: null, teste_de: null, teste_ate: aluno.teste_ate, pago_ate: aluno.pago_ate, pausada: aluno.pausada, encerrada_em: aluno.encerrada_em,
+    encerrada_motivo: aluno.encerrada_motivo, aguardando: false, assinatura: null,
+  });
+  return (
+    <Etiqueta tom={s?.tom === "r" ? "ruim" : "info"} className="text-[10px]!" data-aluno-do-app={aluno.plano ?? ""}>
+      Aluno do app · {aluno.plano_nome ?? "Treino"}{s ? ` · ${s.texto}` : ""}
+    </Etiqueta>
+  );
+}
 
 export default AlunosMasterPage;

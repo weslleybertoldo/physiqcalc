@@ -35,11 +35,15 @@ describe("W7 — link do profissional (?prof=) no site e no APK", () => {
     expect(window.location.hash).toBe("#topo");
     expect(capturarProfDaUrl()).toBeNull();
   });
-  it("APK: só o esquema do app com ?prof= vale (a volta do login não)", () => {
+  it("APK: o esquema do app e o App Link https do site com ?prof= valem (a volta do login não)", () => {
     expect(codigoDoDeepLink("com.bertoldo.physiqcalc://vincular?prof=prof-lucas")).toBe("PROF-LUCAS");
     expect(codigoDoDeepLink("com.bertoldo.physiqcalc://?prof=PROF-X#y")).toBe("PROF-X");
     expect(codigoDoDeepLink("com.bertoldo.physiqcalc://login-callback?code=abc")).toBeNull();
-    expect(codigoDoDeepLink("https://physiqcalc.com.br/?prof=PROF-X")).toBeNull();
+    expect(codigoDoDeepLink("https://physiqcalc.com.br/?prof=PROF-X")).toBe("PROF-X");
+    expect(codigoDoDeepLink("https://www.physiqcalc.com.br/?prof=prof-y&x=1")).toBe("PROF-Y");
+    expect(codigoDoDeepLink("https://physiqcalc.com.br/entrar")).toBeNull();
+    expect(codigoDoDeepLink("https://outro-site.com/?prof=PROF-X")).toBeNull();
+    expect(codigoDoDeepLink("http://physiqcalc.com.br/?prof=PROF-X")).toBeNull();
     expect(codigoDoDeepLink(null)).toBeNull();
   });
 });

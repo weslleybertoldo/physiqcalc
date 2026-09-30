@@ -5,7 +5,7 @@
 export type Modulo = "treino" | "nutricao";
 export type Papel = "dono" | "personal" | "nutricionista";
 export type Situacao = "teste" | "ativa" | "vencida" | "isenta" | "suspensa" | "cancelada";
-export type Origem = "nova" | "legado_calc" | "legado_nutri";
+export type Origem = "nova" | "legado_calc" | "legado_nutri" | "app";
 
 export interface LinhaConta {
   id: string;

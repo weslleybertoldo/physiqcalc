@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { chaveRegistro } from "@/lib/rateLimitLogin";
@@ -31,7 +32,9 @@ import { textoErroEntrar } from "./pecas/textos";
 
 const EMAIL = "conta@teste.com";
 const ERRO_CREDENCIAL = { erro: { status: 400, code: "invalid_credentials", message: "Invalid login credentials" } };
-const abrir = (el: React.ReactNode) => render(<MemoryRouter>{el}</MemoryRouter>);
+// W7b: a opção "Treinar sem profissional" das Boas-vindas lê os planos do app (react-query)
+const abrir = (el: React.ReactNode) =>
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>);
 
 function preencher(senha = "senha-errada") {
   fireEvent.change(screen.getByPlaceholderText("voce@email.com"), { target: { value: EMAIL } });

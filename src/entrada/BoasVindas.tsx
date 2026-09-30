@@ -9,8 +9,11 @@ import { Esqueleto } from "@/ui/premium/Estados";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { MolduraEntrada, TituloEntrada } from "./pecas/Moldura";
 
-/** Ordem das opções (spec 4.2): primeiro o código do profissional, depois "Sou profissional" (W4). */
-const ORDEM = ["TenhoCodigo", "CriarConta"];
+/**
+ * Ordem das opções (spec 4.2): primeiro o código do profissional, depois "Treinar sem profissional" (W7b — a regra dele: o
+ * aluno pode treinar sozinho, pagando a mensalidade do app) e por fim "Sou profissional" (W4).
+ */
+const ORDEM = ["TenhoCodigo", "TreinarSemProfissional", "CriarConta"];
 
 /** Enquanto a W4 não traz o "Sou profissional", o cartão avisa que o cadastro abre em breve. */
 function SouProfissionalEmBreve() {
@@ -34,7 +37,8 @@ function SouProfissionalEmBreve() {
 
 /**
  * Boas-vindas (W3, spec 4.2): quem entrou sem convite, sem conta e sem matrícula escolhe "Tenho um código do meu
- * profissional" ou "Sou profissional". Quem não escolhe fica "sem conta" (o master vê no painel master).
+ * profissional", "Treinar sem profissional" (W7b) ou "Sou profissional". Quem não escolhe fica "sem conta" (o master vê no
+ * painel master).
  */
 export default function BoasVindas() {
   const { situacao, usuario, sair } = useSessao();
@@ -68,7 +72,7 @@ export default function BoasVindas() {
         </Link>
       ) : (
         <p className="px-1 text-center text-[12.5px] leading-relaxed text-texto-3">
-          Ainda sem o código? Pode sair e voltar depois — a sua conta fica guardada.
+          Sem código? Treine sozinho com os dias grátis ou saia e volte depois — a sua conta fica guardada.
         </p>
       )}
     </MolduraEntrada>
