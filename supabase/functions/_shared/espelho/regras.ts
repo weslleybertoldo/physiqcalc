@@ -10,7 +10,7 @@ export type PapelTreino = "admin" | "master" | "professor" | null;
 export interface ContaResumo {
   id: string;
   nome: string;
-  origem: "nova" | "legado_calc" | "legado_nutri";
+  origem: "nova" | "legado_calc" | "legado_nutri" | "app";
   modulos: Modulo[];
   situacao: "teste" | "ativa" | "vencida" | "isenta" | "suspensa" | "cancelada";
   cobranca_legada: boolean;

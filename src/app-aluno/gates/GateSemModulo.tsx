@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ExternalLink, LayoutDashboard, Salad, UserRoundX, Wallet } from "lucide-react";
+import { Dumbbell, ExternalLink, LayoutDashboard, Salad, UserRoundX, Wallet } from "lucide-react";
 import { faixaDoAluno } from "@/financeiro/regras";
 import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
 import { existe } from "@/rotas/registro";
@@ -18,6 +18,7 @@ import { TelaTrava } from "./pecas/TelaTrava";
  *   · só Nutrição e a aba Dieta nova ainda não chegou (W11) → "use o site do PhysiqNutri por enquanto" — menos o Perfil
  *     (W7: Agenda, Pagamentos — W6, R16 —, Conta, Aparência, Exportar e Excluir); com cobrança a pagar, a trava mostra "Pagar".
  * W7: o aluno sem módulo também abre o Perfil (Sair, Exportar, Excluir e o "Tenho um código do meu profissional").
+ * W7b: e pode treinar sozinho (Boas-vindas › "Treinar sem profissional", com os dias grátis do plano do app).
  * Sem a situação (principal fora do ar e nada guardado) não trava: vale o que o Treino sabe.
  */
 export default function GateSemModulo({ children }: { children: ReactNode }) {
@@ -55,6 +56,11 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
         tom="var(--p-ambar-3)"
         titulo="Seu profissional ainda não liberou seu acesso"
         texto="Assim que ele liberar o treino ou a dieta, tudo aparece aqui. O que você já tinha continua guardado."
+        acoes={
+          <button type="button" className="pq-botao pq-botao-g w-full" onClick={() => navigate("/boas-vindas")} data-trava-treinar-sozinho>
+            <Dumbbell aria-hidden /> Treinar sem profissional
+          </button>
+        }
       />
     );
   }

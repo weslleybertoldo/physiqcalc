@@ -1,0 +1,295 @@
+{
+  "versao": 1,
+  "atualizado_em": "2026-09-29",
+  "sobre": "Pratos prontos do aluno sem profissional no plano Treino + Alimentação (Physiq W7b, 1ª versão — revisão do Weslley em produção). 8 por objetivo (2 por refeição: café da manhã, almoço, lanche e jantar). Cada item é um alimento da tabela TACO do banco principal (código taco:N em alimentos) com a quantidade em gramas e a medida caseira; kcal e macros são calculados pelo banco na hora (pratos_prontos_do_app). Foto: a padrão do tipo de refeição (P29, public/fotos/refeicoes — créditos em docs/creditos-fotos.json). Carga: python3 scripts/conteudo/carregar_pratos_prontos.py --schema staging|public [--dry-run].",
+  "pratos": [
+    {
+      "codigo": "emagrecer-cafe-ovos-pao-mamao", "nome": "Ovos cozidos, pão integral e mamão", "refeicao": "cafe_da_manha", "objetivos": ["emagrecer"], "ordem": 1,
+      "descricao": "Proteína logo cedo para segurar a fome até o almoço.",
+      "modo_preparo": "Cozinhe os ovos por 10 minutos. Sirva com a fatia de pão integral e o mamão picado.",
+      "itens": [
+        { "taco": "taco:488", "nome": "Ovo cozido", "gramas": 100, "medida": "2 unidades" },
+        { "taco": "taco:52", "nome": "Pão integral", "gramas": 25, "medida": "1 fatia" },
+        { "taco": "taco:226", "nome": "Mamão papaia", "gramas": 150, "medida": "1 fatia média" }
+      ]
+    },
+    {
+      "codigo": "emagrecer-cafe-iogurte-aveia-morango", "nome": "Iogurte com aveia e morango", "refeicao": "cafe_da_manha", "objetivos": ["emagrecer"], "ordem": 2,
+      "descricao": "Leve, com fibra da aveia e da linhaça.",
+      "modo_preparo": "Misture a aveia e a linhaça no iogurte e cubra com os morangos picados.",
+      "itens": [
+        { "taco": "taco:449", "nome": "Iogurte natural desnatado", "gramas": 170, "medida": "1 pote" },
+        { "taco": "taco:7", "nome": "Aveia em flocos", "gramas": 30, "medida": "3 colheres de sopa" },
+        { "taco": "taco:239", "nome": "Morango", "gramas": 100, "medida": "8 unidades" },
+        { "taco": "taco:594", "nome": "Linhaça", "gramas": 5, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "emagrecer-almoco-frango-arroz-integral", "nome": "Frango grelhado, arroz integral, feijão e salada", "refeicao": "almoco", "objetivos": ["emagrecer"], "ordem": 1,
+      "descricao": "O prato feito brasileiro, com porção controlada e metade do prato de salada.",
+      "modo_preparo": "Grelhe o filé temperado com sal, alho e limão. Sirva com o arroz, o feijão e a salada temperada com o azeite.",
+      "itens": [
+        { "taco": "taco:410", "nome": "Peito de frango grelhado", "gramas": 120, "medida": "1 filé médio" },
+        { "taco": "taco:1", "nome": "Arroz integral cozido", "gramas": 80, "medida": "4 colheres de sopa" },
+        { "taco": "taco:561", "nome": "Feijão carioca cozido", "gramas": 80, "medida": "1 concha pequena" },
+        { "taco": "taco:78", "nome": "Alface", "gramas": 30, "medida": "1 prato de sobremesa" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 60, "medida": "4 rodelas" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 5, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "emagrecer-almoco-peixe-batata-doce", "nome": "Peixe assado com batata-doce e legumes", "refeicao": "almoco", "objetivos": ["emagrecer"], "ordem": 2,
+      "descricao": "Peixe magro, carboidrato de digestão lenta e muito legume.",
+      "modo_preparo": "Asse a posta de merluza com limão e ervas por 20 minutos. Cozinhe a batata-doce, o brócolis e a cenoura no vapor e regue com o azeite.",
+      "itens": [
+        { "taco": "taco:301", "nome": "Merluza assada", "gramas": 150, "medida": "1 posta" },
+        { "taco": "taco:88", "nome": "Batata-doce cozida", "gramas": 120, "medida": "1 unidade pequena" },
+        { "taco": "taco:100", "nome": "Brócolis cozido", "gramas": 80, "medida": "1 xícara" },
+        { "taco": "taco:109", "nome": "Cenoura cozida", "gramas": 50, "medida": "½ xícara" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 5, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "emagrecer-lanche-maca-iogurte-castanha", "nome": "Maçã, iogurte e castanha-do-pará", "refeicao": "lanche", "objetivos": ["emagrecer"], "ordem": 1,
+      "descricao": "Fruta, proteína e uma gordura boa para não chegar com fome no jantar.",
+      "modo_preparo": "Coma a maçã com o iogurte e as 2 castanhas.",
+      "itens": [
+        { "taco": "taco:222", "nome": "Maçã", "gramas": 130, "medida": "1 unidade" },
+        { "taco": "taco:449", "nome": "Iogurte natural desnatado", "gramas": 100, "medida": "½ pote" },
+        { "taco": "taco:589", "nome": "Castanha-do-pará", "gramas": 8, "medida": "2 unidades" }
+      ]
+    },
+    {
+      "codigo": "emagrecer-lanche-pao-ricota-tomate", "nome": "Pão integral com ricota e tomate", "refeicao": "lanche", "objetivos": ["emagrecer"], "ordem": 2,
+      "descricao": "Sanduíche leve, com queijo magro.",
+      "modo_preparo": "Espalhe a ricota nas fatias de pão, tempere com orégano e cubra com o tomate.",
+      "itens": [
+        { "taco": "taco:52", "nome": "Pão integral", "gramas": 50, "medida": "2 fatias" },
+        { "taco": "taco:469", "nome": "Ricota", "gramas": 40, "medida": "2 colheres de sopa" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 40, "medida": "3 rodelas" }
+      ]
+    },
+    {
+      "codigo": "emagrecer-jantar-omelete-espinafre", "nome": "Omelete de espinafre com batata-doce e salada", "refeicao": "jantar", "objetivos": ["emagrecer"], "ordem": 1,
+      "descricao": "Jantar rápido, com proteína e verdura.",
+      "modo_preparo": "Bata os ovos com o espinafre, a cebola e o tomate picados e faça a omelete na frigideira com o azeite. Sirva com a batata-doce e a salada.",
+      "itens": [
+        { "taco": "taco:489", "nome": "Ovo", "gramas": 100, "medida": "2 unidades" },
+        { "taco": "taco:119", "nome": "Espinafre", "gramas": 30, "medida": "1 xícara" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 50, "medida": "½ unidade" },
+        { "taco": "taco:107", "nome": "Cebola", "gramas": 20, "medida": "2 colheres de sopa picada" },
+        { "taco": "taco:88", "nome": "Batata-doce cozida", "gramas": 100, "medida": "1 unidade pequena" },
+        { "taco": "taco:78", "nome": "Alface", "gramas": 40, "medida": "1 prato de sobremesa" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 5, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "emagrecer-jantar-patinho-abobora", "nome": "Patinho grelhado com abóbora e salada", "refeicao": "jantar", "objetivos": ["emagrecer"], "ordem": 2,
+      "descricao": "Carne magra com legumes, pouco carboidrato à noite.",
+      "modo_preparo": "Grelhe o bife de patinho. Cozinhe a abóbora e a abobrinha e sirva com a rúcula temperada com o azeite.",
+      "itens": [
+        { "taco": "taco:377", "nome": "Patinho grelhado", "gramas": 100, "medida": "1 bife médio" },
+        { "taco": "taco:64", "nome": "Abóbora cabotiá cozida", "gramas": 150, "medida": "1 xícara" },
+        { "taco": "taco:70", "nome": "Abobrinha cozida", "gramas": 80, "medida": "½ xícara" },
+        { "taco": "taco:152", "nome": "Rúcula", "gramas": 30, "medida": "1 prato de sobremesa" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 5, "medida": "1 colher de chá" }
+      ]
+    },
+
+    {
+      "codigo": "manter-cafe-tapioca-ovo-queijo", "nome": "Tapioca com ovo e queijo minas", "refeicao": "cafe_da_manha", "objetivos": ["manter"], "ordem": 1,
+      "descricao": "Clássico do café, com proteína e uma fruta.",
+      "modo_preparo": "Espalhe a goma na frigideira quente até firmar. Recheie com o ovo cozido amassado e o queijo e dobre. Sirva com o mamão.",
+      "itens": [
+        { "taco": "taco:124", "nome": "Goma de tapioca", "gramas": 40, "medida": "3 colheres de sopa" },
+        { "taco": "taco:488", "nome": "Ovo cozido", "gramas": 50, "medida": "1 unidade" },
+        { "taco": "taco:461", "nome": "Queijo minas frescal", "gramas": 30, "medida": "1 fatia" },
+        { "taco": "taco:226", "nome": "Mamão papaia", "gramas": 150, "medida": "1 fatia média" }
+      ]
+    },
+    {
+      "codigo": "manter-cafe-pao-frances-ovos-banana", "nome": "Pão francês com ovos e banana", "refeicao": "cafe_da_manha", "objetivos": ["manter"], "ordem": 2,
+      "descricao": "O pão com ovo de todo dia, com fruta.",
+      "modo_preparo": "Cozinhe os ovos e sirva com o pão francês e a banana.",
+      "itens": [
+        { "taco": "taco:53", "nome": "Pão francês", "gramas": 50, "medida": "1 unidade" },
+        { "taco": "taco:488", "nome": "Ovo cozido", "gramas": 100, "medida": "2 unidades" },
+        { "taco": "taco:182", "nome": "Banana prata", "gramas": 80, "medida": "1 unidade" }
+      ]
+    },
+    {
+      "codigo": "manter-almoco-frango-arroz-feijao", "nome": "Frango grelhado com arroz, feijão e legumes", "refeicao": "almoco", "objetivos": ["manter"], "ordem": 1,
+      "descricao": "Prato completo e equilibrado.",
+      "modo_preparo": "Grelhe o frango. Sirva com o arroz, o feijão e os legumes cozidos regados com o azeite.",
+      "itens": [
+        { "taco": "taco:410", "nome": "Peito de frango grelhado", "gramas": 130, "medida": "1 filé grande" },
+        { "taco": "taco:3", "nome": "Arroz branco cozido", "gramas": 120, "medida": "6 colheres de sopa" },
+        { "taco": "taco:561", "nome": "Feijão carioca cozido", "gramas": 100, "medida": "1 concha" },
+        { "taco": "taco:109", "nome": "Cenoura cozida", "gramas": 50, "medida": "½ xícara" },
+        { "taco": "taco:100", "nome": "Brócolis cozido", "gramas": 60, "medida": "¾ xícara" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 8, "medida": "2 colheres de chá" }
+      ]
+    },
+    {
+      "codigo": "manter-almoco-carne-moida-mandioca", "nome": "Carne moída com mandioca, feijão preto e salada", "refeicao": "almoco", "objetivos": ["manter"], "ordem": 2,
+      "descricao": "Comida de casa, com a mandioca no lugar do arroz.",
+      "modo_preparo": "Refogue a carne moída com cebola e alho. Sirva com a mandioca cozida, o feijão preto e a salada de alface e tomate com o azeite.",
+      "itens": [
+        { "taco": "taco:326", "nome": "Carne moída (acém) refogada", "gramas": 100, "medida": "4 colheres de sopa" },
+        { "taco": "taco:129", "nome": "Mandioca cozida", "gramas": 150, "medida": "2 pedaços médios" },
+        { "taco": "taco:567", "nome": "Feijão preto cozido", "gramas": 80, "medida": "1 concha pequena" },
+        { "taco": "taco:78", "nome": "Alface", "gramas": 40, "medida": "1 prato de sobremesa" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 60, "medida": "4 rodelas" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 5, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "manter-lanche-iogurte-banana-aveia", "nome": "Iogurte com banana, aveia e mel", "refeicao": "lanche", "objetivos": ["manter"], "ordem": 1,
+      "descricao": "Lanche doce na medida, bom antes do treino.",
+      "modo_preparo": "Corte a banana no iogurte, junte a aveia e finalize com o mel.",
+      "itens": [
+        { "taco": "taco:448", "nome": "Iogurte natural", "gramas": 170, "medida": "1 pote" },
+        { "taco": "taco:182", "nome": "Banana prata", "gramas": 80, "medida": "1 unidade" },
+        { "taco": "taco:7", "nome": "Aveia em flocos", "gramas": 20, "medida": "2 colheres de sopa" },
+        { "taco": "taco:507", "nome": "Mel", "gramas": 10, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "manter-lanche-sanduiche-peru-queijo", "nome": "Sanduíche de peito de peru e queijo", "refeicao": "lanche", "objetivos": ["manter"], "ordem": 2,
+      "descricao": "Prático para levar.",
+      "modo_preparo": "Monte o sanduíche com o pão integral, o peito de peru, o queijo, o tomate e a alface.",
+      "itens": [
+        { "taco": "taco:52", "nome": "Pão integral", "gramas": 50, "medida": "2 fatias" },
+        { "taco": "taco:425", "nome": "Peito de peru", "gramas": 40, "medida": "3 fatias" },
+        { "taco": "taco:461", "nome": "Queijo minas frescal", "gramas": 20, "medida": "1 fatia fina" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 30, "medida": "2 rodelas" },
+        { "taco": "taco:78", "nome": "Alface", "gramas": 10, "medida": "2 folhas" }
+      ]
+    },
+    {
+      "codigo": "manter-jantar-salmao-arroz-integral", "nome": "Salmão grelhado com arroz integral e legumes", "refeicao": "jantar", "objetivos": ["manter"], "ordem": 1,
+      "descricao": "Peixe com gordura boa (ômega 3) e legumes.",
+      "modo_preparo": "Grelhe o salmão com sal e limão. Sirva com o arroz integral e a abobrinha e a cenoura cozidas.",
+      "itens": [
+        { "taco": "taco:317", "nome": "Salmão grelhado", "gramas": 120, "medida": "1 posta" },
+        { "taco": "taco:1", "nome": "Arroz integral cozido", "gramas": 100, "medida": "5 colheres de sopa" },
+        { "taco": "taco:70", "nome": "Abobrinha cozida", "gramas": 80, "medida": "½ xícara" },
+        { "taco": "taco:109", "nome": "Cenoura cozida", "gramas": 50, "medida": "½ xícara" }
+      ]
+    },
+    {
+      "codigo": "manter-jantar-lombo-batata", "nome": "Lombo assado com batata, feijão e salada", "refeicao": "jantar", "objetivos": ["manter"], "ordem": 2,
+      "descricao": "Carne suína magra com acompanhamentos simples.",
+      "modo_preparo": "Asse o lombo temperado. Sirva com a batata cozida, o feijão e a salada de rúcula e tomate com o azeite.",
+      "itens": [
+        { "taco": "taco:432", "nome": "Lombo suíno assado", "gramas": 110, "medida": "2 fatias médias" },
+        { "taco": "taco:91", "nome": "Batata inglesa cozida", "gramas": 150, "medida": "1 unidade média" },
+        { "taco": "taco:561", "nome": "Feijão carioca cozido", "gramas": 80, "medida": "1 concha pequena" },
+        { "taco": "taco:152", "nome": "Rúcula", "gramas": 30, "medida": "1 prato de sobremesa" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 50, "medida": "4 rodelas" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 5, "medida": "1 colher de chá" }
+      ]
+    },
+
+    {
+      "codigo": "massa-cafe-ovos-pao-aveia-banana", "nome": "Ovos, pão integral e aveia com banana", "refeicao": "cafe_da_manha", "objetivos": ["ganhar_massa"], "ordem": 1,
+      "descricao": "Café reforçado para ganhar massa: proteína e carboidrato.",
+      "modo_preparo": "Cozinhe os ovos. Sirva com o pão integral e a banana amassada com a aveia.",
+      "itens": [
+        { "taco": "taco:488", "nome": "Ovo cozido", "gramas": 150, "medida": "3 unidades" },
+        { "taco": "taco:52", "nome": "Pão integral", "gramas": 50, "medida": "2 fatias" },
+        { "taco": "taco:7", "nome": "Aveia em flocos", "gramas": 40, "medida": "4 colheres de sopa" },
+        { "taco": "taco:182", "nome": "Banana prata", "gramas": 100, "medida": "1 unidade grande" }
+      ]
+    },
+    {
+      "codigo": "massa-cafe-cuscuz-ovos-queijo", "nome": "Cuscuz com ovos, queijo e banana", "refeicao": "cafe_da_manha", "objetivos": ["ganhar_massa"], "ordem": 2,
+      "descricao": "Cuscuz nordestino com proteína de sobra.",
+      "modo_preparo": "Hidrate o flocão com água e sal e cozinhe no vapor. Sirva com os ovos mexidos, o queijo e a banana com o mel.",
+      "itens": [
+        { "taco": "taco:533", "nome": "Cuscuz de milho cozido", "gramas": 150, "medida": "1 prato raso" },
+        { "taco": "taco:488", "nome": "Ovo", "gramas": 100, "medida": "2 unidades" },
+        { "taco": "taco:461", "nome": "Queijo minas frescal", "gramas": 40, "medida": "1 fatia grossa" },
+        { "taco": "taco:182", "nome": "Banana prata", "gramas": 100, "medida": "1 unidade grande" },
+        { "taco": "taco:507", "nome": "Mel", "gramas": 10, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "massa-almoco-frango-arroz-batata-doce", "nome": "Frango com arroz, feijão, batata-doce e salada", "refeicao": "almoco", "objetivos": ["ganhar_massa"], "ordem": 1,
+      "descricao": "Prato grande, com proteína e carboidrato para o treino render.",
+      "modo_preparo": "Grelhe o frango. Sirva com o arroz, o feijão, a batata-doce cozida e a salada com o azeite.",
+      "itens": [
+        { "taco": "taco:410", "nome": "Peito de frango grelhado", "gramas": 180, "medida": "1 filé grande e meio" },
+        { "taco": "taco:3", "nome": "Arroz branco cozido", "gramas": 150, "medida": "8 colheres de sopa" },
+        { "taco": "taco:561", "nome": "Feijão carioca cozido", "gramas": 120, "medida": "1 concha cheia" },
+        { "taco": "taco:88", "nome": "Batata-doce cozida", "gramas": 100, "medida": "1 unidade pequena" },
+        { "taco": "taco:78", "nome": "Alface", "gramas": 30, "medida": "1 prato de sobremesa" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 50, "medida": "4 rodelas" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 10, "medida": "1 colher de sopa" }
+      ]
+    },
+    {
+      "codigo": "massa-almoco-patinho-arroz-feijao-preto", "nome": "Patinho com arroz, feijão preto e legumes", "refeicao": "almoco", "objetivos": ["ganhar_massa"], "ordem": 2,
+      "descricao": "Carne vermelha magra com porção generosa de arroz e feijão.",
+      "modo_preparo": "Grelhe os bifes de patinho. Sirva com o arroz, o feijão preto e o brócolis e a cenoura cozidos com o azeite.",
+      "itens": [
+        { "taco": "taco:377", "nome": "Patinho grelhado", "gramas": 150, "medida": "1 bife grande" },
+        { "taco": "taco:3", "nome": "Arroz branco cozido", "gramas": 150, "medida": "8 colheres de sopa" },
+        { "taco": "taco:567", "nome": "Feijão preto cozido", "gramas": 120, "medida": "1 concha cheia" },
+        { "taco": "taco:100", "nome": "Brócolis cozido", "gramas": 80, "medida": "1 xícara" },
+        { "taco": "taco:109", "nome": "Cenoura cozida", "gramas": 60, "medida": "½ xícara" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 8, "medida": "2 colheres de chá" }
+      ]
+    },
+    {
+      "codigo": "massa-lanche-iogurte-aveia-amendoim", "nome": "Iogurte com aveia, banana e amendoim", "refeicao": "lanche", "objetivos": ["ganhar_massa"], "ordem": 1,
+      "descricao": "Lanche calórico e com proteína, bom depois do treino.",
+      "modo_preparo": "Misture a aveia, a banana picada e o amendoim no iogurte e finalize com o mel.",
+      "itens": [
+        { "taco": "taco:448", "nome": "Iogurte natural", "gramas": 200, "medida": "1 pote grande" },
+        { "taco": "taco:7", "nome": "Aveia em flocos", "gramas": 40, "medida": "4 colheres de sopa" },
+        { "taco": "taco:182", "nome": "Banana prata", "gramas": 100, "medida": "1 unidade grande" },
+        { "taco": "taco:557", "nome": "Amendoim", "gramas": 20, "medida": "1 colher de sopa" },
+        { "taco": "taco:507", "nome": "Mel", "gramas": 10, "medida": "1 colher de chá" }
+      ]
+    },
+    {
+      "codigo": "massa-lanche-sanduiche-atum-maca", "nome": "Sanduíche de atum e maçã", "refeicao": "lanche", "objetivos": ["ganhar_massa"], "ordem": 2,
+      "descricao": "Proteína prática em lata, com pão e fruta.",
+      "modo_preparo": "Escorra o atum e misture com a ricota. Monte o sanduíche com o tomate e a alface. Coma a maçã junto.",
+      "itens": [
+        { "taco": "taco:52", "nome": "Pão integral", "gramas": 75, "medida": "3 fatias" },
+        { "taco": "taco:277", "nome": "Atum em conserva", "gramas": 80, "medida": "½ lata" },
+        { "taco": "taco:469", "nome": "Ricota", "gramas": 30, "medida": "1 colher de sopa cheia" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 40, "medida": "3 rodelas" },
+        { "taco": "taco:78", "nome": "Alface", "gramas": 10, "medida": "2 folhas" },
+        { "taco": "taco:222", "nome": "Maçã", "gramas": 130, "medida": "1 unidade" }
+      ]
+    },
+    {
+      "codigo": "massa-jantar-maminha-mandioca", "nome": "Maminha com mandioca, feijão e salada", "refeicao": "jantar", "objetivos": ["ganhar_massa"], "ordem": 1,
+      "descricao": "Jantar forte, com carne e bastante carboidrato.",
+      "modo_preparo": "Grelhe a maminha em fatias. Sirva com a mandioca cozida, o feijão e a salada de alface e tomate com o azeite.",
+      "itens": [
+        { "taco": "taco:368", "nome": "Maminha grelhada", "gramas": 150, "medida": "3 fatias médias" },
+        { "taco": "taco:129", "nome": "Mandioca cozida", "gramas": 200, "medida": "3 pedaços médios" },
+        { "taco": "taco:561", "nome": "Feijão carioca cozido", "gramas": 100, "medida": "1 concha" },
+        { "taco": "taco:78", "nome": "Alface", "gramas": 30, "medida": "1 prato de sobremesa" },
+        { "taco": "taco:157", "nome": "Tomate", "gramas": 50, "medida": "4 rodelas" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 8, "medida": "2 colheres de chá" }
+      ]
+    },
+    {
+      "codigo": "massa-jantar-frango-lentilha", "nome": "Frango com arroz integral, lentilha e abobrinha", "refeicao": "jantar", "objetivos": ["ganhar_massa"], "ordem": 2,
+      "descricao": "Lentilha no lugar do feijão: mais proteína e fibra.",
+      "modo_preparo": "Grelhe o frango. Cozinhe a lentilha com louro. Sirva com o arroz integral e a abobrinha refogada no azeite.",
+      "itens": [
+        { "taco": "taco:410", "nome": "Peito de frango grelhado", "gramas": 150, "medida": "1 filé grande" },
+        { "taco": "taco:1", "nome": "Arroz integral cozido", "gramas": 150, "medida": "8 colheres de sopa" },
+        { "taco": "taco:577", "nome": "Lentilha cozida", "gramas": 100, "medida": "1 concha" },
+        { "taco": "taco:70", "nome": "Abobrinha", "gramas": 80, "medida": "½ xícara" },
+        { "taco": "taco:260", "nome": "Azeite de oliva", "gramas": 8, "medida": "2 colheres de chá" }
+      ]
+    }
+  ]
+}

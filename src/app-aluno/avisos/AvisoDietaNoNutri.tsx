@@ -12,6 +12,9 @@ export default function AvisoDietaNoNutri() {
   const { situacao } = useSessao();
   const mods = situacao?.modulos_aluno ?? [];
   if (!mods.includes("nutricao") || !mods.includes("treino") || existe("abasApp", "Dieta")) return null;
+  // W7b: a Nutrição do aluno sem profissional (Treino + Alimentação) são os pratos prontos do app, não uma dieta do Nutri
+  const dietaDeNutri = (situacao?.matriculas ?? []).some((m) => m.modulos.includes("nutricao") && !m.app);
+  if (!dietaDeNutri) return null;
   return (
     <div data-aviso-dieta-nutri className="flex items-center gap-3 rounded-[18px] border border-verde/30 px-3.5 py-3 text-[13px]"
       style={{ background: "linear-gradient(90deg, var(--p-chip-n-fundo), transparent)" }}>

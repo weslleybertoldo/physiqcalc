@@ -1,0 +1,478 @@
+{
+  "versao": 1,
+  "atualizado_em": "2026-09-29",
+  "sobre": "Treinos prontos do aluno sem profissional (Physiq W7b, 1ª versão — revisão do Weslley em produção). 3 objetivos × 3 níveis, só com os 81 exercícios da biblioteca (nome exato de tb_exercicios). reps é texto (\"12\", \"8-12\", \"20 min\"); descanso em segundos. Carga: python3 scripts/conteudo/carregar_treinos_prontos.py --schema staging|public [--dry-run]. Mudar aqui e rodar a carga de novo: o que o aluno já escolheu é cópia dele e não muda.",
+  "treinos": [
+    {
+      "codigo": "emagrecer-iniciante",
+      "nome": "Primeiros passos para emagrecer",
+      "objetivo": "emagrecer",
+      "nivel": "iniciante",
+      "dias_por_semana": 3,
+      "divisao": "A · B · C",
+      "descricao": "Corpo todo em 3 dias, com máquinas e pausas curtas para gastar mais. Termina com 20 minutos de corrida leve.",
+      "ordem": 1,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Corpo todo", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Leg Press", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Supino Reto na Máquina Sentado", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Abdominal Supra no Solo", "series": 3, "reps": "15", "descanso": 30 },
+            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Corpo todo", "dias": ["QUA"],
+          "exercicios": [
+            { "exercicio": "Agachamento na Máquina", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Remada Baixa na Máquina", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Desenvolvimento na Máquina", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Elevação de Pernas", "series": 3, "reps": "12", "descanso": 30 },
+            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Corpo todo", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Afundo com Halteres", "series": 3, "reps": "12", "descanso": 45, "observacao": "Cada perna." },
+            { "exercicio": "Crucifixo na Máquina", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Puxada Fechada Frontal", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Elevação Pélvica", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Abdominal Bicicleta", "series": 3, "reps": "20", "descanso": 30 },
+            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "emagrecer-intermediario",
+      "nome": "Definição em 4 dias",
+      "objetivo": "emagrecer",
+      "nivel": "intermediario",
+      "dias_por_semana": 4,
+      "divisao": "Superiores · Inferiores",
+      "descricao": "Superiores e inferiores duas vezes na semana, pausas de 45 a 60 segundos e corrida no fim para acelerar a queima.",
+      "ordem": 2,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Superiores", "dias": ["SEG", "QUI"],
+          "exercicios": [
+            { "exercicio": "Supino Reto com Halteres", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Desenvolvimento com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Elevação Lateral na Polia", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Tríceps Corda na Polia", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Rosca Direta com Barra", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Inferiores e abdômen", "dias": ["TER", "SEX"],
+          "exercicios": [
+            { "exercicio": "Agachamento Livre", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Leg Press", "series": 3, "reps": "15", "descanso": 60 },
+            { "exercicio": "Flexora de Perna Sentado", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "15", "descanso": 45 },
+            { "exercicio": "Abdominal Oblíquo com Pé no Banco", "series": 3, "reps": "15", "descanso": 30, "observacao": "Cada lado." },
+            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo moderado." }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "emagrecer-avancado",
+      "nome": "Queima total em 5 dias",
+      "objetivo": "emagrecer",
+      "nivel": "avancado",
+      "dias_por_semana": 5,
+      "divisao": "A · B · C · D · E",
+      "descricao": "Um grupo por dia, volume alto e pausas curtas, com corrida em quase todos os dias. Para quem já treina há mais de um ano.",
+      "ordem": 3,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Peito e tríceps", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Supino Reto com Barra", "series": 4, "reps": "10-12", "descanso": 60 },
+            { "exercicio": "Supino Inclinado", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Cross-over na Polia", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Mergulho (Tríceps)", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Tríceps Pulley", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Costas e bíceps", "dias": ["TER"],
+          "exercicios": [
+            { "exercicio": "Barra Fixa", "series": 4, "reps": "8-10", "descanso": 60 },
+            { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Remada na Polia Sentado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Pulldown com Braços Estendidos", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Rosca Martelo com Halteres", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Pernas", "dias": ["QUA"],
+          "exercicios": [
+            { "exercicio": "Agachamento Livre", "series": 4, "reps": "12", "descanso": 75 },
+            { "exercicio": "Leg Press", "series": 4, "reps": "15", "descanso": 60 },
+            { "exercicio": "Agachamento Búlgaro", "series": 3, "reps": "10", "descanso": 60, "observacao": "Cada perna." },
+            { "exercicio": "Extensora", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "15", "descanso": 45 }
+          ]
+        },
+        {
+          "letra": "D", "nome": "Treino D · Ombros e abdômen", "dias": ["QUI"],
+          "exercicios": [
+            { "exercicio": "Desenvolvimento com Halteres", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 4, "reps": "15", "descanso": 45 },
+            { "exercicio": "Face Pull na Polia", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Encolhimento com Halteres", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Elevação de Pernas", "series": 3, "reps": "15", "descanso": 30 },
+            { "exercicio": "Abdominais na Máquina", "series": 3, "reps": "15", "descanso": 30 },
+            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo moderado." }
+          ]
+        },
+        {
+          "letra": "E", "nome": "Treino E · Glúteos e posterior", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 4, "reps": "12", "descanso": 75 },
+            { "exercicio": "Elevação Pélvica", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Flexora Deitado", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Abdutora", "series": 3, "reps": "20", "descanso": 45 },
+            { "exercicio": "Coice na Polia Baixa", "series": 3, "reps": "15", "descanso": 45, "observacao": "Cada perna." },
+            { "exercicio": "Corrida", "series": 1, "reps": "25 min", "descanso": null, "observacao": "Ritmo moderado." }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "manter-iniciante",
+      "nome": "Corpo todo em 3 dias",
+      "objetivo": "manter",
+      "nivel": "iniciante",
+      "dias_por_semana": 3,
+      "divisao": "A · B · C",
+      "descricao": "O básico bem feito: corpo todo em 3 dias, com máquinas e halteres, para manter a forma e ganhar condicionamento.",
+      "ordem": 4,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Corpo todo", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Agachamento na Máquina", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Supino Reto na Máquina Sentado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Desenvolvimento na Máquina", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Abdominal Supra no Solo", "series": 3, "reps": "15", "descanso": 45 }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Corpo todo", "dias": ["QUA"],
+          "exercicios": [
+            { "exercicio": "Leg Press", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Remada Baixa na Máquina", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Crucifixo na Máquina", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Elevação de Pernas", "series": 3, "reps": "12", "descanso": 45 }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Corpo todo", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Afundo com Halteres", "series": 3, "reps": "10", "descanso": 60, "observacao": "Cada perna." },
+            { "exercicio": "Supino Reto com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Remada Unilateral com Halter", "series": 3, "reps": "12", "descanso": 60, "observacao": "Cada braço." },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Hiperextensão Lombar", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo leve." }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "manter-intermediario",
+      "nome": "Equilíbrio em 4 dias",
+      "objetivo": "manter",
+      "nivel": "intermediario",
+      "dias_por_semana": 4,
+      "divisao": "A · B · C · D",
+      "descricao": "Empurrar, pernas, puxar e posterior em 4 dias, com 10 a 12 repetições para manter a massa e a força.",
+      "ordem": 5,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Peito, ombros e tríceps", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Supino Reto com Halteres", "series": 4, "reps": "10", "descanso": 75 },
+            { "exercicio": "Supino Inclinado", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Desenvolvimento com Halteres", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Tríceps Corda na Polia", "series": 3, "reps": "12", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Pernas e abdômen", "dias": ["TER"],
+          "exercicios": [
+            { "exercicio": "Agachamento Livre", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Leg Press", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Panturrilha na Máquina", "series": 4, "reps": "12", "descanso": 45 },
+            { "exercicio": "Abdominal Bicicleta", "series": 3, "reps": "20", "descanso": 30 }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Costas e bíceps", "dias": ["QUI"],
+          "exercicios": [
+            { "exercicio": "Puxada Aberta Frontal", "series": 4, "reps": "10", "descanso": 75 },
+            { "exercicio": "Remada Curvada com Barra", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Remada na Polia Sentado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Face Pull na Polia", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Rosca Direta com Barra", "series": 3, "reps": "10", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "D", "nome": "Treino D · Posterior, glúteos e abdômen", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Elevação Pélvica", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Flexora de Perna Sentado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Agachamento Sumô", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Elevação de Pernas", "series": 3, "reps": "12", "descanso": 45 }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "manter-avancado",
+      "nome": "Forma completa em 5 dias",
+      "objetivo": "manter",
+      "nivel": "avancado",
+      "dias_por_semana": 5,
+      "divisao": "A · B · C · D · E",
+      "descricao": "Um grupo por dia, 8 a 12 repetições e descanso de 60 a 120 segundos. Para quem já treina firme e quer manter o físico.",
+      "ordem": 6,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Peito", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Supino Reto com Barra", "series": 4, "reps": "8", "descanso": 90 },
+            { "exercicio": "Supino Inclinado", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Crucifixo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Cross-over na Polia", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Flexão de Braço", "series": 3, "reps": "12-15", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Costas", "dias": ["TER"],
+          "exercicios": [
+            { "exercicio": "Barra Fixa", "series": 4, "reps": "8", "descanso": 90 },
+            { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "8", "descanso": 90 },
+            { "exercicio": "Remada Cavalinho na Máquina", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Puxada Fechada Supinada", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Hiperextensão Lombar", "series": 3, "reps": "12", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Pernas", "dias": ["QUA"],
+          "exercicios": [
+            { "exercicio": "Agachamento Livre", "series": 4, "reps": "8", "descanso": 120 },
+            { "exercicio": "Agachamento no Hack", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Leg Press", "series": 3, "reps": "12", "descanso": 90 },
+            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "12", "descanso": 45 }
+          ]
+        },
+        {
+          "letra": "D", "nome": "Treino D · Ombros e trapézio", "dias": ["QUI"],
+          "exercicios": [
+            { "exercicio": "Desenvolvimento Arnold", "series": 4, "reps": "10", "descanso": 75 },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Crucifixo Invertido", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Elevação Frontal com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Encolhimento com Halteres", "series": 3, "reps": "12", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "E", "nome": "Treino E · Braços e abdômen", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Rosca Direta com Barra", "series": 4, "reps": "10", "descanso": 60 },
+            { "exercicio": "Tríceps Testa", "series": 4, "reps": "10", "descanso": 60 },
+            { "exercicio": "Rosca Martelo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Tríceps Francês com Halter", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Rosca Concentrada", "series": 3, "reps": "12", "descanso": 45, "observacao": "Cada braço." },
+            { "exercicio": "Abdominais na Máquina", "series": 3, "reps": "15", "descanso": 45 }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "ganhar-massa-iniciante",
+      "nome": "Base de força em 3 dias",
+      "objetivo": "ganhar_massa",
+      "nivel": "iniciante",
+      "dias_por_semana": 3,
+      "divisao": "A · B · C",
+      "descricao": "Corpo todo em 3 dias com os exercícios básicos, 10 repetições e descanso maior para aprender a técnica e subir a carga.",
+      "ordem": 7,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Corpo todo", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Leg Press", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Supino Reto na Máquina Sentado", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Desenvolvimento na Máquina", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Rosca Scott na máquina", "series": 3, "reps": "12", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Corpo todo", "dias": ["QUA"],
+          "exercicios": [
+            { "exercicio": "Agachamento na Máquina", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Remada Baixa na Máquina", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Supino Inclinado", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Tríceps Pulley", "series": 3, "reps": "12", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Corpo todo", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Agachamento Livre", "series": 3, "reps": "10", "descanso": 90, "observacao": "Comece leve e capriche na técnica." },
+            { "exercicio": "Supino Reto com Halteres", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Remada Fechada na Máquina", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Panturrilha na Máquina", "series": 3, "reps": "15", "descanso": 45 }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "ganhar-massa-intermediario",
+      "nome": "Hipertrofia em 4 dias",
+      "objetivo": "ganhar_massa",
+      "nivel": "intermediario",
+      "dias_por_semana": 4,
+      "divisao": "Superiores · Inferiores (força e volume)",
+      "descricao": "Superiores e inferiores com um dia de força (6 a 8 repetições) e um dia de volume (10 a 12). Suba a carga toda semana.",
+      "ordem": 8,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Superiores (força)", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Supino Reto com Barra", "series": 4, "reps": "6-8", "descanso": 120 },
+            { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "6-8", "descanso": 120 },
+            { "exercicio": "Desenvolvimento com Halteres", "series": 3, "reps": "8-10", "descanso": 90 },
+            { "exercicio": "Puxada Fechada Frontal", "series": 3, "reps": "8-10", "descanso": 90 },
+            { "exercicio": "Rosca Direta com Barra", "series": 3, "reps": "10", "descanso": 60 },
+            { "exercicio": "Tríceps Testa", "series": 3, "reps": "10", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Inferiores (força)", "dias": ["TER"],
+          "exercicios": [
+            { "exercicio": "Agachamento Livre", "series": 4, "reps": "6-8", "descanso": 150 },
+            { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 3, "reps": "8", "descanso": 120 },
+            { "exercicio": "Leg Press", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Flexora Deitado", "series": 3, "reps": "10", "descanso": 60 },
+            { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "10", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Superiores (volume)", "dias": ["QUI"],
+          "exercicios": [
+            { "exercicio": "Supino Inclinado", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Remada na Polia Sentado", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Crucifixo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Rosca Martelo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Tríceps Corda na Polia", "series": 3, "reps": "12", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "D", "nome": "Treino D · Inferiores (volume)", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Agachamento no Hack", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Agachamento Búlgaro", "series": 3, "reps": "10", "descanso": 90, "observacao": "Cada perna." },
+            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Flexora de Perna Sentado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Elevação Pélvica", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Panturrilha na Máquina", "series": 4, "reps": "15", "descanso": 45 }
+          ]
+        }
+      ]
+    },
+    {
+      "codigo": "ganhar-massa-avancado",
+      "nome": "Hipertrofia avançada em 5 dias",
+      "objetivo": "ganhar_massa",
+      "nivel": "avancado",
+      "dias_por_semana": 5,
+      "divisao": "A · B · C · D · E",
+      "descricao": "Um grupo por dia com os básicos pesados primeiro (5 a 8 repetições) e depois o volume. Para quem já treina há anos.",
+      "ordem": 9,
+      "grupos": [
+        {
+          "letra": "A", "nome": "Treino A · Peito e tríceps", "dias": ["SEG"],
+          "exercicios": [
+            { "exercicio": "Supino Reto com Barra", "series": 5, "reps": "5-8", "descanso": 150 },
+            { "exercicio": "Supino Inclinado", "series": 4, "reps": "8", "descanso": 120 },
+            { "exercicio": "Crucifixo na Máquina", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Mergulho (Tríceps)", "series": 3, "reps": "8-10", "descanso": 90 },
+            { "exercicio": "Tríceps Testa", "series": 3, "reps": "10", "descanso": 75 }
+          ]
+        },
+        {
+          "letra": "B", "nome": "Treino B · Costas e bíceps", "dias": ["TER"],
+          "exercicios": [
+            { "exercicio": "Levantamento Terra", "series": 4, "reps": "5", "descanso": 180 },
+            { "exercicio": "Barra Fixa", "series": 4, "reps": "6-8", "descanso": 120 },
+            { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "8", "descanso": 120 },
+            { "exercicio": "Remada Unilateral com Halter", "series": 3, "reps": "10", "descanso": 90, "observacao": "Cada braço." },
+            { "exercicio": "Rosca Direta com Barra", "series": 4, "reps": "8", "descanso": 75 },
+            { "exercicio": "Rosca Alternada no Banco Inclinado", "series": 3, "reps": "10", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "C", "nome": "Treino C · Pernas", "dias": ["QUA"],
+          "exercicios": [
+            { "exercicio": "Agachamento Livre", "series": 5, "reps": "5-8", "descanso": 180 },
+            { "exercicio": "Leg Press", "series": 4, "reps": "10", "descanso": 120 },
+            { "exercicio": "Agachamento Búlgaro", "series": 3, "reps": "8", "descanso": 90, "observacao": "Cada perna." },
+            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Flexora Deitado", "series": 4, "reps": "10", "descanso": 75 },
+            { "exercicio": "Panturrilha em Pé na Máquina", "series": 5, "reps": "10", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "D", "nome": "Treino D · Ombros", "dias": ["QUI"],
+          "exercicios": [
+            { "exercicio": "Desenvolvimento com Halteres", "series": 4, "reps": "8", "descanso": 120 },
+            { "exercicio": "Desenvolvimento Arnold", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Elevação Lateral com Halteres", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Face Pull na Polia", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Encolhimento com Halteres", "series": 4, "reps": "10", "descanso": 60 }
+          ]
+        },
+        {
+          "letra": "E", "nome": "Treino E · Braços e abdômen", "dias": ["SEX"],
+          "exercicios": [
+            { "exercicio": "Rosca Scott com Halteres", "series": 4, "reps": "10", "descanso": 60 },
+            { "exercicio": "Tríceps Francês com Halter", "series": 4, "reps": "10", "descanso": 60 },
+            { "exercicio": "Rosca Martelo na Polia", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Tríceps Pulley", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Rosca Punho com Halter Apoiado", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Abdominais na Máquina", "series": 4, "reps": "12", "descanso": 45 }
+          ]
+        }
+      ]
+    }
+  ]
+}

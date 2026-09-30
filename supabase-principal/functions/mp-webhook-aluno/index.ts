@@ -10,11 +10,14 @@
 // Idempotente: mp_payment_id único + a cobrança vira "paga" uma vez só (a cobertura da mensalidade é refeita pelo gatilho).
 // Tópicos: payment · subscription_preapproval (preapproval) · subscription_authorized_payment. Responde 200 no que tratou ou
 // ignorou; erro de banco/rede → 500 (o MP — ou o repasse do Treino — manda de novo; o tratamento é idempotente).
+// W7b (aluno sem profissional): cobrança recorrente que chega para uma matrícula da conta do app JÁ ENCERRADA (o aluno entrou na
+// lista de um profissional e o cancelamento no MP falhou na hora) → grava o pagamento (é dele) e cancela a assinatura do app.
 // Publicar SÓ ASSIM: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-webhook-aluno false
 // Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { preapprovalDoPagamento, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
-import { mpFetch, tokenMp, type Credencial } from "../_shared/cobranca-mp.ts";
+import { credencialDoSchema, mpFetch, tokenMp, type Credencial } from "../_shared/cobranca-mp.ts";
+import { cancelarAssinaturasDasMatriculas } from "../_shared/app-sem-profissional.ts";
 import { lerReferenciaAluno, lerReferenciaCalc, type Schema } from "../_shared/financeiro-regras.ts";
 import {
   COLUNAS_COBRANCA,
@@ -62,6 +65,17 @@ async function assinaturaPorPreapproval(db: SupabaseClient, preId: string) {
   return (data as { id: string; paciente_id: string; conta_id: string | null; mp_preapproval_id: string; status: string; payload: Record<string, unknown> | null } | null) ?? null;
 }
 
+/** W7b: a assinatura é de uma matrícula do app que já encerrou (o aluno foi para um profissional) → cancela no MP. */
+async function cancelarSeSaiuDoApp(db: SupabaseClient, schema: Schema, m: Matricula, preId: string | null): Promise<void> {
+  if (!preId || m.conta?.origem !== "app" || m.ativo) return;
+  try {
+    const r = await cancelarAssinaturasDasMatriculas(db, credencialDoSchema(schema), [m.id], "cobranca_depois_de_sair_do_app");
+    console.log("mp-webhook-aluno: assinatura do app encerrado", m.id, JSON.stringify(r));
+  } catch (e) {
+    console.error("mp-webhook-aluno: cancelar assinatura do app", String((e as { message?: string })?.message || e));
+  }
+}
+
 async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise<string> {
   const achado = await buscar<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schemaPedido);
   if (!achado?.recurso?.id) return "pagamento_nao_encontrado";
@@ -89,6 +103,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
     const m = await carregarMatricula(db, ref.pacienteId);
     if (!m) return "matricula_inexistente";
     const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preapprovalDoPagamento(pay), origem: "assinatura" });
+    await cancelarSeSaiuDoApp(db, schema, m, preapprovalDoPagamento(pay));
     return r ? `recorrente_${r.status}` : "recorrente_sem_valor";
   }
 
@@ -102,6 +117,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
     const m = a ? await carregarMatricula(db, a.paciente_id) : calc ? await matriculaDoTreino(db, calc.treinoUserId) : null;
     if (!m) return a ? "matricula_inexistente" : "assinatura_inexistente";
     const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preId, origem: calc ? "assinatura_calc" : "assinatura" });
+    await cancelarSeSaiuDoApp(db, schema, m, preId);
     return r ? `assinatura_${r.status}` : "assinatura_sem_valor";
   }
   if (calc) {

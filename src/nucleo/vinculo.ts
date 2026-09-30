@@ -17,6 +17,8 @@ export interface PreviaVinculo {
   contaNome: string | null;
   modulos: Array<"treino" | "nutricao">;
   profissional: { nome: string; foto_url: string | null; tipo_perfil: TipoProfissional | null; papeis: Array<"personal" | "nutricionista"> } | null;
+  /** W7b — a pessoa é aluna do app (treina sem profissional): a mensalidade do app para quando ela confirmar */
+  app?: { valor: number | null; plano: string | null; assinatura_ativa: boolean } | null;
 }
 
 /** O tipo de perfil da W4/W5 (sem ele — professor antigo do Calc —, pelo papel na conta). */
@@ -79,6 +81,13 @@ export async function previaDoCodigo(texto: string): Promise<PreviaVinculo> {
     contaNome: (d.conta_nome as string) ?? null,
     modulos: (Array.isArray(d.modulos) ? d.modulos : []).filter((m): m is "treino" | "nutricao" => m === "treino" || m === "nutricao"),
     profissional: prof && typeof prof.nome === "string" ? prof : null,
+    app: d.app && typeof d.app === "object"
+      ? {
+          valor: Number.isFinite(Number((d.app as Record<string, unknown>).valor)) ? Number((d.app as Record<string, unknown>).valor) : null,
+          plano: ((d.app as Record<string, unknown>).plano as string) ?? null,
+          assinatura_ativa: (d.app as Record<string, unknown>).assinatura_ativa === true,
+        }
+      : null,
   };
 }
 
