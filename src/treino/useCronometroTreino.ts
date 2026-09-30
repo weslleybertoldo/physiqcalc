@@ -6,7 +6,6 @@ import { seriesDoTreino } from "@/lib/seriesAtivas";
 import { buildTreinoResumo, type TreinoResumo } from "@/lib/treinoResumo";
 import {
   EVENTO_CRONOMETRO,
-  formatarDuracao,
   iniciarCronometro,
   lerCronometro,
   marcarAvisoTreinoLongo,
@@ -163,8 +162,8 @@ export function useCronometroTreino(alvo: AlvoCronometro | null, aoConcluir?: ()
       exercicios_concluidos: exercicios,
     });
     setConcluido({ resumo, duracao });
-    // no topo: embaixo ele cobriria os botões da folha "Treino finalizado!" (Fechar / Compartilhar)
-    toast.success(`Treino concluído em ${formatarDuracao(duracao)}!`, { position: "top-center" });
+    // sem aviso (toast) aqui: a folha "Treino finalizado!" já diz a duração, e o aviso cobria os botões dela (embaixo)
+    // ou o calendário do topo
     await aoConcluir?.();
     return resumo;
   }, [alvo, db, aoConcluir]);
