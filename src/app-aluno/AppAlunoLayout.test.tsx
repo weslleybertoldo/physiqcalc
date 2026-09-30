@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // src/app-aluno/avisos. O registro é trocado por um falso — nenhum arquivo de mentira vai para o src.
 const h = vi.hoisted(() => ({
   bloquear: false,
+  comInicio: false,
   dados: { carregando: false, usuario: { id: "u1", nome: "Rafa", email: null, fotoUrl: null }, ehProfissional: false, ehMaster: false, ehDono: false, papelRotulo: "Aluno", modulosAluno: ["treino"], conta: null, contas: [], plano: null, contadores: {} },
 }));
 
@@ -16,7 +17,7 @@ vi.mock("@/rotas/registro", async () => {
   const FaixaMensalidade = lazy(async () => ({ default: () => <div data-testid="faixa">Sua mensalidade vence em 3 dias</div> }));
   return {
     // W8/W10: as abas Treino e Evolução novas existem (a TreinosPage e o UserDashboard saíram); as outras ainda não
-    existe: (grupo: string, nome: string) => grupo === "abasApp" && (nome === "Treino" || nome === "Evolucao"),
+    existe: (grupo: string, nome: string) => grupo === "abasApp" && (nome === "Treino" || nome === "Evolucao" || (h.comInicio && nome === "Inicio")),
     tela: () => null,
     listar: (grupo: string) => (grupo === "avisosApp" ? [{ nome: "FaixaMensalidade", caminho: "x", carregar: async () => ({ default: () => null }), Componente: FaixaMensalidade }] : []),
     gatesApp: [
@@ -36,6 +37,7 @@ function abrir(caminho: string) {
     <MemoryRouter initialEntries={[caminho]}>
       <Routes>
         <Route element={<AppAlunoLayout />}>
+          <Route path="/" element={<div>conteúdo início</div>} />
           <Route path="/treino" element={<div>conteúdo treino</div>} />
           <Route path="/evolucao" element={<div>conteúdo evolução</div>} />
         </Route>
@@ -46,6 +48,7 @@ function abrir(caminho: string) {
 
 beforeEach(() => {
   h.bloquear = false;
+  h.comInicio = false;
 });
 
 describe("casca do app: travas e faixas registradas", () => {
@@ -53,6 +56,14 @@ describe("casca do app: travas e faixas registradas", () => {
     abrir("/treino");
     expect(await screen.findByTestId("faixa")).toBeInTheDocument();
     expect(screen.getByText("conteúdo treino")).toBeInTheDocument();
+  });
+
+  it("W12: com o Início, a casca não põe a faixa no alto — o Início a mostra abaixo da saudação (tela 1)", async () => {
+    h.comInicio = true;
+    abrir("/");
+    expect(await screen.findByText("conteúdo início")).toBeInTheDocument();
+    expect(screen.queryByTestId("faixa")).toBeNull();
+    expect(document.querySelector("[data-avisos-topo]")).toBeNull();
   });
 
   it("em outra aba, sem a faixa do topo", async () => {
