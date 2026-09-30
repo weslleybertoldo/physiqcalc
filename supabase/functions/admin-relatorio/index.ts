@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- função Deno: as respostas do supabase-js (service_role, sem os tipos gerados) são `any` desde sempre neste arquivo */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -126,7 +127,7 @@ async function contasOndeSouDono(admin: _ClienteRpcW3, userId: string): Promise<
     .filter((x): x is string => typeof x === "string" && _UUID_W3.test(x));
 }
 
-async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60): Promise<{ user: any; error: Response | null }> {
+async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windowSecs = 60, leitura = false): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return { user: null, error: jsonErr("missing_auth", 401, origin) };
@@ -135,7 +136,15 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   if (!user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
   const role = (user.app_metadata as any)?.role;
   const papel = papelDe(role);
-  if (!papel) return { user: null, error: jsonErr("forbidden", 403, origin) };
+  if (!papel) {
+    // Physiq W15: quem não tem papel no Treino (o dono da conta que não é personal — spec 4.1) só LÊ o relatório de UM
+    // aluno (as ações com userId, conferido depois pelo alunoDoProfessor); a lista de todos os alunos fica fechada
+    if (!leitura) return { user: null, error: jsonErr("forbidden", 403, origin) };
+    user.papel = "leitor";
+    const permitido = await checkRateLimit(user.id, endpoint, maxCount, windowSecs);
+    if (!permitido) return { user: null, error: jsonErr("rate_limited", 429, origin) };
+    return { user, error: null };
+  }
   // professor com plano vencido (fora da tolerância) só acessa o que está em SEM_ACESSO_OK
   if (papel === "professor" && !SEM_ACESSO_OK.has(endpoint)) {
     const admin0 = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
@@ -354,15 +363,18 @@ Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
-  const { user, error: authErr } = await requireAdmin(req, "admin-relatorio", 60, 60);
+  const body = await req.json().catch(() => ({}));
+  // W15: o leitor (dono sem papel de personal) só entra nas ações de UM aluno (com userId)
+  const soDeUmAluno = typeof body?.userId === "string" && ["relatorio", "historicoMes", "historicoTreino", "historicoUsuario"].includes(body?.action);
+  const { user, error: authErr } = await requireAdmin(req, "admin-relatorio", 60, 60, soDeUmAluno);
   if (authErr) return authErr;
 
   try {
-    const body = await req.json().catch(() => ({}));
     const action = body?.action;
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
     // ações com userId: professor só enxerga aluno dele
     if (typeof body?.userId === "string" && !(await alunoDoProfessor(admin, user, body.userId))) return jsonErr("forbidden", 403, origin);
+    if (user.papel === "leitor" && !soDeUmAluno) return jsonErr("forbidden", 403, origin);
 
     // ── Relatório mensal de um aluno (usado pela aba Relatório e pelos exports) ──
     if (action === "relatorio") {
@@ -413,7 +425,17 @@ Deno.serve(async (req) => {
         if (nome) grupoNomePorData[d] = nome;
       });
 
-      return jsonOk({ concluidos, series, grupoNomePorData }, origin);
+      // W15: a prescrição do profissional (séries, repetições, descanso, carga — NF1 — e a observação do treino — NF2) e o
+      // descanso padrão / troca do treino (NF7) do aluno, para o relatório mostrar o prescrito ao lado do feito
+      const [prescRes, cfgRes] = await Promise.all([
+        admin.from("tb_series_padrao_usuario")
+          .select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg, observacao")
+          .eq("user_id", userId),
+        admin.from("physiq_profiles").select("series_padrao_qtd, tempo_descanso_segundos, proxima_troca_treino").eq("id", userId).maybeSingle(),
+      ]);
+      if (prescRes.error) throw prescRes.error;
+      if (cfgRes.error) throw cfgRes.error;
+      return jsonOk({ concluidos, series, grupoNomePorData, prescricao: prescRes.data ?? [], config: cfgRes.data ?? null }, origin);
     }
 
     // ── Lista do mês com os treinos de TODOS os alunos ──
@@ -429,9 +451,12 @@ Deno.serve(async (req) => {
       const deIso = `${inicio}T00:00:00-03:00`;
       const ateIso = `${fim}T23:59:59-03:00`;
 
-      // escopo: professor vê só os alunos dele (master vê todos)
+      // escopo: professor vê só os alunos dele (master vê todos); W15: com userId (aba Treino do perfil do aluno), só ele —
+      // o alunoDoProfessor lá em cima já conferiu que quem chama vê esse aluno
       let perfisQ = admin.from("physiq_profiles").select("id, nome, email, user_code");
-      if (user.papel === "professor") {
+      if (typeof body?.userId === "string") {
+        perfisQ = perfisQ.eq("id", body.userId);
+      } else if (user.papel === "professor") {
         const contas = await contasOndeSouDono(admin, user.id);
         perfisQ = contas.length
           ? perfisQ.or(`professor_id.eq.${user.id},conta_id.in.(${contas.join(",")})`)
@@ -439,7 +464,7 @@ Deno.serve(async (req) => {
       }
       const perfisRes = await perfisQ;
       if (perfisRes.error) throw perfisRes.error;
-      const idsEscopo: string[] | null = user.papel === "professor"
+      const idsEscopo: string[] | null = user.papel !== "master" || typeof body?.userId === "string"
         ? (((perfisRes.data as any[]) || []).map((p) => p.id).concat(["00000000-0000-0000-0000-000000000000"]))
         : null;
       let timerQ = admin.from("treino_historico")
