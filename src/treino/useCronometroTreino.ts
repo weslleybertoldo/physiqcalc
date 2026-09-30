@@ -163,7 +163,8 @@ export function useCronometroTreino(alvo: AlvoCronometro | null, aoConcluir?: ()
       exercicios_concluidos: exercicios,
     });
     setConcluido({ resumo, duracao });
-    toast.success(`Treino concluído em ${formatarDuracao(duracao)}!`);
+    // no topo: embaixo ele cobriria os botões da folha "Treino finalizado!" (Fechar / Compartilhar)
+    toast.success(`Treino concluído em ${formatarDuracao(duracao)}!`, { position: "top-center" });
     await aoConcluir?.();
     return resumo;
   }, [alvo, db, aoConcluir]);
