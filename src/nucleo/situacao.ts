@@ -56,6 +56,8 @@ export interface MatriculaSituacao {
   modulos: Modulo[];
   bloqueada: boolean;
   bloqueio_msg: string | null;
+  /** W14 (R12, P15) — o ajuste "acesso ao app" desta matrícula (false = o profissional desligou; ausente = servidor antigo, vale ligado) */
+  acesso_app?: boolean;
   bloqueado_por_pagamento: boolean;
   conta_alunos_bloqueados_em: string | null;
   conta_alunos_bloqueados_msg: string | null;

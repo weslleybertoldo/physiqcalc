@@ -84,6 +84,8 @@ export type MatriculaNutricao = {
   ativo: boolean;
   /** código do diário (/d/<código>) — o envio da foto usa o mesmo caminho do link público (W30 do Nutri) */
   link_codigo: string;
+  /** W14 (R12): o ajuste "diário alimentar" desta matrícula (false = o profissional desligou; ausente = servidor antigo, ligado) */
+  diario_alimentar?: boolean;
   nutricionista: NutricionistaDaMatricula;
 };
 

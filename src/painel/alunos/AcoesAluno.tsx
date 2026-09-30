@@ -13,7 +13,8 @@ import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { acaoNoAluno, ErroAlunos, type AcaoAluno } from "./api";
 import { acoesDoAluno, mensagemErroAlunos, rotaDoAluno, type AlunoLinha, type ListaAlunos } from "./regras";
 
-type Confirmar = "bloquear" | "desativar" | "remover";
+/** As ações que pedem confirmação (a W14 reaproveita no cabeçalho e no card "Acesso do aluno" do perfil). */
+export type Confirmar = "bloquear" | "desativar" | "remover";
 
 function ItemMenu({ icone: Icone, rotulo, aoEscolher, perigo, marca }: { icone: LucideIcon; rotulo: string; aoEscolher: () => void; perigo?: boolean; marca: string }) {
   return (
@@ -113,7 +114,7 @@ function explicacao(acao: Confirmar, a: AlunoLinha, eu: ListaAlunos["eu"]): stri
     : "A matrícula sai da lista e fica guardada na Lixeira. A conta e o treino do aluno continuam dele — ele pode voltar pelo seu link.";
 }
 
-function ConfirmarAcao({ aluno, eu, acao, aoFechar, aoFeito }: { aluno: AlunoLinha; eu: ListaAlunos["eu"]; acao: Confirmar | null; aoFechar: () => void; aoFeito: () => void }) {
+export function ConfirmarAcao({ aluno, eu, acao, aoFechar, aoFeito }: { aluno: AlunoLinha; eu: ListaAlunos["eu"]; acao: Confirmar | null; aoFechar: () => void; aoFeito: () => void }) {
   const celular = useIsMobile();
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
