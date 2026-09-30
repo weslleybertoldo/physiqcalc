@@ -237,12 +237,14 @@ def caso_so_calc(nav, base: str, prefixo: str) -> None:
         fechar_painel(c)
         novo = "\n".join(textos)
 
+        # o texto antigo vem repetido (a seção de fora + as de dentro): a 1ª "LINHA DO TEMPO", até o gráfico ou o resumo
+        linha_tempo = evol_antiga.split("LINHA DO TEMPO")[1] if "LINHA DO TEMPO" in evol_antiga else ""
+        linha_tempo = linha_tempo.split("GRÁFICOS DE EVOLUÇÃO")[0].split("RESUMO COMPARATIVO")[0]
         # datas da linha do tempo antiga (dd/mm/aaaa) → na tabela nova (dd/mm/aa), com as repetições
-        datas_antigas = re.findall(r"(\d{2})/(\d{2})/\d{2}(\d{2})", evol_antiga.split("GRÁFICOS DE EVOLUÇÃO")[0])
+        datas_antigas = re.findall(r"(\d{2})/(\d{2})/\d{2}(\d{2})", linha_tempo)
         datas_novas = re.findall(r"(\d{2})/(\d{2})/(\d{2})\b", textos[-1 - len(ids)] if ids else novo)
         p.check(sorted(datas_antigas) == sorted(datas_novas), f"as mesmas avaliações da linha do tempo antiga ({len(datas_antigas)} × {len(datas_novas)})")
         # números: a composição antiga + a linha do tempo antiga (sem o eixo do gráfico e sem as datas) + o resumo comparativo
-        linha_tempo = evol_antiga.split("GRÁFICOS DE EVOLUÇÃO")[0]
         # o texto antigo vem repetido (a seção de fora + as de dentro): o resumo vai até a próxima "LINHA DO TEMPO"
         resumo = evol_antiga.split("RESUMO COMPARATIVO")[1].split("LINHA DO TEMPO")[0] if "RESUMO COMPARATIVO" in evol_antiga else ""
         resumo = re.sub(r"\d{2}/\d{2}/\d{4}", " ", resumo)
