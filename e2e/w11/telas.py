@@ -278,6 +278,9 @@ def caso_sem_internet(nav, base: str, prefixo: str) -> None:
         c.pg.route("**/rpc/minha_dieta", lambda r: r.abort("internetdisconnected"))
         c.entrar("w10-aluno", "/dieta", zerar=True)
         c.fechar_avisos()
+        # o arquivo da aba tem que estar no aparelho antes de cair a rede (no APK ele vem no pacote; no site, o service worker
+        # guarda — aqui o service worker está desligado de propósito)
+        c.esperar(lambda: c.tem("[data-aba-dieta]"), 60)
         c.ctx.set_offline(True)
         ok = c.esperar(lambda: c.tem('[data-aba-dieta="sem-internet"]'), 60)
         p.check(ok and "A dieta aparece quando a internet voltar." in c.texto(), "[sem_internet] 'A dieta aparece quando a internet voltar.'")
