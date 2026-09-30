@@ -128,7 +128,7 @@ export default function MeuPlano() {
 
           <GrupoLista>
             <ItemLista icone={ListChecks} rotulo="Treinos prontos" para="/perfil/treinos-prontos" />
-            {temAlimentacao && <ItemLista icone={Salad} rotulo="Alimentação" para="/perfil/alimentacao" />}
+            {temAlimentacao && <ItemLista icone={Salad} rotulo="Alimentação" para="/dieta" />}
             <ItemLista icone={Receipt} rotulo="Pagamentos" para="/perfil/pagamentos" />
           </GrupoLista>
           <p className="px-1 text-[11.5px] leading-relaxed text-texto-3">

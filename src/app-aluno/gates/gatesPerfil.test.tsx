@@ -11,7 +11,6 @@ const h = vi.hoisted(() => ({
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
 vi.mock("@/hooks/useMensalidadeStatus", () => ({ useMensalidadeStatus: () => ({ status: null, pendente: false }) }));
-vi.mock("@/rotas/registro", () => ({ existe: () => false }));
 vi.mock("@/financeiro/useResumoFinanceiro", () => ({ useResumoFinanceiro: () => ({ resumo: h.resumo, carregando: false, erro: false }) }));
 
 import GateBloqueioMaster from "./GateBloqueioMaster";
@@ -67,15 +66,13 @@ describe("W7 — aluno bloqueado pelo master: o Perfil segue com Sair, Exportar 
 });
 
 describe("W7 — só Nutrição e aluno sem módulo abrem o Perfil", () => {
-  it("só Nutrição (antes da aba Dieta nova): /perfil, /perfil/agenda e /perfil/conta abrem; o resto segue no aviso do Nutri", () => {
+  it("só Nutrição (W11, com a aba Dieta nova): o Perfil e os itens abrem, e as abas também (a trava da W3 saiu)", () => {
     h.sessao.situacao = situacao({ matriculas: [matricula({ modulos: ["nutricao"] })], modulos_aluno: ["nutricao"] });
-    for (const rota of ["/perfil", "/perfil/agenda", "/perfil/conta", "/perfil/pagamentos"]) {
+    for (const rota of ["/perfil", "/perfil/agenda", "/perfil/conta", "/perfil/pagamentos", "/dieta", "/evolucao"]) {
       const r = montar(GateSemModulo, rota);
       expect(screen.getByText("o app")).toBeInTheDocument();
       r.unmount();
     }
-    montar(GateSemModulo, "/evolucao");
-    expect(screen.getByText("Sua dieta continua no PhysiqNutri por enquanto")).toBeInTheDocument();
   });
   it("aluno sem módulo: o Perfil abre (Exportar, Excluir, o código do profissional); as abas não", () => {
     h.sessao.situacao = situacao({ matriculas: [matricula({ modulos: [] })], modulos_aluno: [] });

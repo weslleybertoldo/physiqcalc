@@ -7,13 +7,11 @@ const h = vi.hoisted(() => ({
   sessao: {} as Record<string, unknown>,
   auth: { user: null as null | { id: string }, isStaff: false },
   status: null as null | { bloqueadoPeloMaster?: boolean },
-  dietaNova: false,
   resumo: null as null | Array<Record<string, unknown>>,
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
 vi.mock("@/hooks/useMensalidadeStatus", () => ({ useMensalidadeStatus: () => ({ status: h.status, pendente: false }) }));
-vi.mock("@/rotas/registro", () => ({ existe: (g: string, n: string) => g === "abasApp" && n === "Dieta" && h.dietaNova }));
 vi.mock("@/financeiro/useResumoFinanceiro", () => ({ useResumoFinanceiro: () => ({ resumo: h.resumo, carregando: false, erro: false }) }));
 
 import GateBloqueioMaster from "./GateBloqueioMaster";
@@ -37,7 +35,6 @@ beforeEach(() => {
   h.sessao = { situacao: situacao({ modulos_aluno: ["treino"], matriculas: [matricula()] }), treino: { estado: "pronto", erro: null }, sair, tentarTreinoDeNovo: tentar };
   h.auth = { user: { id: "t1" }, isStaff: false };
   h.status = null;
-  h.dietaNova = false;
   h.resumo = null;
   sair.mockClear();
   tentar.mockClear();
@@ -81,39 +78,33 @@ describe("GateSemModulo", () => {
     montar(GateSemModulo);
     expect(screen.getByText("Você ainda não é aluno no Physiq")).toBeInTheDocument();
   });
-  it("só Nutrição antes da aba Dieta nova → 'use o site do PhysiqNutri'; com a aba nova, passa", () => {
+  it("W11: só Nutrição entra no app — a trava 'use o site do PhysiqNutri' da W3 saiu com a aba Dieta nova", () => {
     h.sessao.situacao = situacao({ matriculas: [matricula({ modulos: ["nutricao"] })], modulos_aluno: ["nutricao"] });
-    const r = montar(GateSemModulo);
-    expect(screen.getByText("Sua dieta continua no PhysiqNutri por enquanto")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Abrir o PhysiqNutri/ })).toHaveAttribute("href", "https://nutri.physiqcalc.com.br/app/entrar");
-    r.unmount();
-    h.dietaNova = true;
-    montar(GateSemModulo);
-    expect(screen.getByText("o app")).toBeInTheDocument();
+    for (const rota of ["/", "/dieta", "/evolucao", "/perfil"]) {
+      const r = montar(GateSemModulo, rota);
+      expect(screen.getByText("o app")).toBeInTheDocument();
+      expect(screen.queryByText(/continua no PhysiqNutri/)).toBeNull();
+      r.unmount();
+    }
   });
   it("sem situação (principal fora do ar) não trava", () => {
     h.sessao.situacao = null;
     montar(GateSemModulo);
     expect(screen.getByText("o app")).toBeInTheDocument();
   });
-  it("W6 (R16): só Nutrição — Perfil › Pagamentos abre; com cobrança a pagar a trava mostra 'Pagar'", () => {
+  it("W11 (R16): só Nutrição com cobrança a pagar — esta trava não fecha o app (a cobrança fica com a trava de pagamento e a faixa)", () => {
     h.sessao.situacao = situacao({ matriculas: [matricula({ modulos: ["nutricao"] })], modulos_aluno: ["nutricao"] });
-    const r1 = montar(GateSemModulo, "/perfil/pagamentos");
-    expect(screen.getByText("o app")).toBeInTheDocument();
-    r1.unmount();
-    const r2 = montar(GateSemModulo);
-    expect(screen.queryByText(/^Pagar/)).toBeNull();
-    expect(document.querySelector("[data-trava-pagamentos]")).not.toBeNull();
-    r2.unmount();
     h.resumo = [{
       paciente_id: "p-1", conta_id: "c-1", conta_nome: "Nutri", recebimento_modo: "pix_manual", bloquear_inadimplente: true, tem_chave: true,
       profissional: "Marina Souza", mensalidade_valor: null, plano_nome: null, pausada: false, pago_ate: null, desde: null, aguardando: false,
       assinatura_ativa: false, abertas: [{ id: "cob-1", descricao: "Consulta", valor: 180, vencimento: "2026-09-01" }], aguardando_avulsas: 0,
     }];
-    montar(GateSemModulo);
-    expect(document.querySelector("[data-trava-pagar]")).not.toBeNull();
-    expect(document.querySelector("[data-trava-cobranca]")?.textContent).toContain("Consulta venceu em 01/09");
-    expect(document.querySelector("[data-trava-pagamentos]")).toBeNull();
+    const r1 = montar(GateSemModulo, "/perfil/pagamentos");
+    expect(screen.getByText("o app")).toBeInTheDocument();
+    r1.unmount();
+    montar(GateSemModulo, "/dieta");
+    expect(screen.getByText("o app")).toBeInTheDocument();
+    expect(document.querySelector("[data-trava-pagar]")).toBeNull();
   });
 });
 

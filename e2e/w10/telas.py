@@ -299,15 +299,16 @@ def caso_vazia(nav, base: str, prefixo: str) -> None:
 
 @caso
 def caso_so_nutri(nav, base: str, prefixo: str) -> None:
-    """Aluna só de Nutrição: até a aba Dieta (W11) a trava da W3 ("sua dieta continua no PhysiqNutri") segue valendo em todo o
-    app menos o Perfil — a Evolução dela aparece junto com a Dieta. Aqui: a trava continua e nada do Diego vaza."""
-    c = B.abrir(nav, base, prefixo, "so_nutri", "w10-paciente", esperar=None)
+    """Aluna só de Nutrição: desde a W11 (a aba Dieta nova) ela entra no app — Dieta · Evolução · Perfil, sem a trava da W3 — e a
+    Evolução dela mostra a antropometria da nutricionista (a série do principal). Nada do Diego vaza."""
+    c = B.abrir(nav, base, prefixo, "so_nutri", "w10-paciente", esperar="[data-aba-evolucao]")
     try:
-        ok = c.esperar(lambda: c.tem('[data-trava-app="use-o-nutri"]') or "Sua dieta continua no PhysiqNutri" in c.texto(), 60)
-        p.check(ok, "só Nutrição: a trava 'Sua dieta continua no PhysiqNutri por enquanto' (regra da W3 até a W11)")
-        p.check(c.tem('[data-tabbar] [data-aba="evolucao"]') and c.tem('[data-tabbar] [data-aba="perfil"]'), "barra com Evolução e Perfil")
+        p.check(not c.tem('[data-trava-app="use-o-nutri"]') and "Sua dieta continua no PhysiqNutri" not in c.texto(), "só Nutrição: sem a trava da W3 (W11)")
+        p.check(c.esperar(lambda: c.tem('[data-aba-evolucao="dados"]'), 60), "só Nutrição: a Evolução dela aparece (a antropometria da nutricionista)")
+        p.check(all(c.tem(f'[data-tabbar] [data-aba="{a}"]') for a in ("dieta", "evolucao", "perfil")) and not c.tem('[data-tabbar] [data-aba="treino"]'),
+                "barra com Dieta, Evolução e Perfil (sem Treino)")
         p.check("Diego" not in c.texto() and "84,2" not in c.texto(), "nada de outro aluno")
-        c.print("evolucao_nutri_trava")
+        c.print("evolucao_so_nutri")
     finally:
         c.fim()
 

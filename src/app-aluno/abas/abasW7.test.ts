@@ -8,9 +8,9 @@ describe("W7 — a aba Perfil entra na barra pelo registro (src/app-aluno/abas/P
     expect(existe("abasApp", "Perfil")).toBe(true);
     for (const item of ["Agenda", "Conta", "Aparencia", "Pagamentos"]) expect(existe("perfilApp", item)).toBe(true);
   });
-  it("só Treino → Treino · Evolução · Perfil; só Nutrição → Evolução · Perfil (Início e Dieta ainda não existem)", () => {
+  it("só Treino → Treino · Evolução · Perfil; só Nutrição → Dieta · Evolução · Perfil (W11; o Início ainda não existe)", () => {
     expect(abasVisiveis(["treino"]).map((a) => a.rotulo)).toEqual(["Treino", "Evolução", "Perfil"]);
-    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Evolução", "Perfil"]);
-    expect(abasVisiveis(["treino", "nutricao"]).map((a) => a.rotulo)).toEqual(["Treino", "Evolução", "Perfil"]);
+    expect(abasVisiveis(["nutricao"]).map((a) => a.rotulo)).toEqual(["Dieta", "Evolução", "Perfil"]);
+    expect(abasVisiveis(["treino", "nutricao"]).map((a) => a.rotulo)).toEqual(["Treino", "Dieta", "Evolução", "Perfil"]);
   });
 });
