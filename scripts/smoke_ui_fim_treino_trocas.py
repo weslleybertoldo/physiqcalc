@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Smoke de UI (regressão) — aba Treino nova (W8, tela 2): fim de treino depois de trocar/remover exercícios + troca definitiva.
+(W9: o "Trocar" virou o TrocarExercicio — Equivalentes, Mesmo músculo e Todos; o roteiro troca pela aba Todos com a busca.)
 
 Bugs cobertos (26/08/2026), agora na tela nova:
   1. Trocar/remover exercício NO MEIO do treino deixava séries padrão órfãs → o cronômetro nunca perguntava "Treino foi
@@ -48,17 +49,18 @@ EX_CRUCIFIXO = "aa61d549-d952-4ee9-94ac-2f76ed29b063"  # removida só hoje
 
 
 def trocar(c, ex_na_tela: str, escopo: str, busca: str, novo_id: str) -> None:
+    """O "Trocar" da W9 (TrocarExercicio): aba Todos → busca → escolhe → só hoje / de vez → confirma."""
     B.abrir_exercicio(c, ex_na_tela)
     B.linha(c, ex_na_tela).locator('[data-acao-exercicio="trocar"]').click()
-    dlg = c.pg.locator("[role='dialog']:has-text('Trocar exercício')")
-    dlg.wait_for(timeout=10000)
-    dlg.locator("button:has-text('Só neste dia')" if escopo == "dia" else "button:has-text('Definitiva')").click()
-    dlg.locator("input[type='text']").first.fill(busca)
-    opcao = dlg.locator(f"label[data-trocar-opcao='{novo_id}']")
+    c.pg.locator("[data-trocar-exercicio]").wait_for(timeout=10000)
+    c.pg.locator('[data-trocar-aba="todos"]').click()
+    c.pg.locator("[data-trocar-busca]").fill(busca)
+    opcao = c.pg.locator(f"[data-trocar-exercicio] [data-trocar-opcao='{novo_id}']")
     opcao.wait_for(timeout=10000)
-    opcao.locator("input").click()
-    dlg.locator("button:has-text('Salvar troca por')").click()
-    c.pg.wait_for_selector("[role='dialog']:has-text('Trocar exercício')", state="detached", timeout=10000)
+    opcao.click()
+    c.pg.locator(f'[data-trocar-escopo="{"dia" if escopo == "dia" else "definitiva"}"]').click()
+    c.pg.locator("[data-trocar-confirmar]").click()
+    c.pg.wait_for_selector("[data-trocar-exercicio]", state="detached", timeout=10000)
     c.pg.wait_for_timeout(500)
 
 

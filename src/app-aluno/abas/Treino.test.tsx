@@ -64,7 +64,7 @@ vi.mock("@/lib/nativeNotifications", () => ({
   showTimerFinishedNotification: vi.fn(async () => {}),
   cancelTimerNotification: vi.fn(async () => {}),
 }));
-vi.mock("@/components/treinos/ModalTrocarExercicio", () => ({ default: () => <div data-testid="modal-trocar">trocar</div> }));
+vi.mock("@/treino/ui/TrocarExercicio", () => ({ TrocarExercicio: ({ alvo }: { alvo: unknown }) => (alvo ? <div data-testid="modal-trocar">trocar</div> : null) }));
 vi.mock("@/components/treinos/SeletorAcademia", () => ({ default: () => <div>seletor</div> }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }) }));
 

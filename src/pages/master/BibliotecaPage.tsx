@@ -8,6 +8,10 @@ import { ITENS_PAGINA, ListaPaginada } from "@/components/ListaPaginada";
 import { supabase } from "@/integrations/supabase/client";
 import { masterProfessores, type ProfessorRow } from "@/lib/saasApi";
 import {
+  CAMPOS_EQUIVALENCIA_VAZIOS, camposDoExercicio, camposParaGravar, rotuloEquipamento, rotuloPadrao, type CamposEquivalencia,
+} from "@/treino/equivalencia";
+import { FormExercicioBiblioteca } from "@/treino/ui/FormExercicioBiblioteca";
+import {
   BTN_MINI_PRIMARIO, BTN_NEUTRO, BTN_PRIMARIO, Campo, Carregando, DIALOG_CONTENT, ErroCarregar, Etiqueta, INPUT, LINHA, SELECT_CONTENT,
   SELECT_TRIGGER, Secao, TEXTAREA, TituloPagina, Vazio, mensagemErro, useConfirmacao, useDebounce,
 } from "@/components/master/masterUi";
@@ -15,6 +19,8 @@ import {
 interface Exercicio {
   id: string; nome: string; grupo_muscular: string; emoji: string | null; subgrupo: string | null; dica: string | null;
   professor_id: string | null; imagem_url?: string | null; tipo?: string | null;
+  // equivalência (W9): movimento e equipamento das listas fixas (src/treino/equivalencia.ts) + variação livre
+  padrao_movimento?: string | null; equipamento?: string | null; variacao?: string | null;
 }
 interface GrupoMuscular { id: string; nome: string; professor_id: string | null }
 
@@ -53,7 +59,7 @@ const BibliotecaPage = () => {
     setErro(null);
     try {
       const [ex, gm] = await Promise.all([
-        tabela("tb_exercicios").select("id, nome, grupo_muscular, emoji, subgrupo, dica, professor_id, imagem_url, tipo").order("nome"),
+        tabela("tb_exercicios").select("id, nome, grupo_muscular, emoji, subgrupo, dica, professor_id, imagem_url, tipo, padrao_movimento, equipamento, variacao").order("nome"),
         tabela("grupos_musculares").select("id, nome, professor_id").order("nome"),
       ]);
       if (ex.error) throw ex.error;
@@ -78,10 +84,12 @@ const BibliotecaPage = () => {
   const gruposGlobais = useMemo(() => grupos.filter((g) => g.professor_id === null), [grupos]);
   const visiveis = useMemo(() => exercicios
     .filter((e) => (dosProfessores ? e.professor_id !== null : e.professor_id === null))
-    .filter((e) => !qDeb || e.nome.toLowerCase().includes(qDeb) || (e.grupo_muscular || "").toLowerCase().includes(qDeb) || (e.subgrupo || "").toLowerCase().includes(qDeb)),
+    .filter((e) => !qDeb || [e.nome, e.grupo_muscular, e.subgrupo, rotuloPadrao(e.padrao_movimento), rotuloEquipamento(e.equipamento), e.variacao]
+      .some((t) => (t || "").toLowerCase().includes(qDeb))),
   [exercicios, dosProfessores, qDeb]);
   const totalGlobais = useMemo(() => exercicios.filter((e) => e.professor_id === null).length, [exercicios]);
   const totalProfs = exercicios.length - totalGlobais;
+  const semClassificacao = useMemo(() => exercicios.filter((e) => e.professor_id === null && (!e.padrao_movimento || !e.equipamento)).length, [exercicios]);
 
   // ── editor (novo / editar) ──
   const [editor, setEditor] = useState<{ ex: Exercicio | null } | null>(null);
@@ -91,6 +99,7 @@ const BibliotecaPage = () => {
   const [fEmoji, setFEmoji] = useState(EMOJIS[0]);
   const [fSub, setFSub] = useState("");
   const [fDica, setFDica] = useState("");
+  const [fEquiv, setFEquiv] = useState<CamposEquivalencia>(CAMPOS_EQUIVALENCIA_VAZIOS);
   const [salvando, setSalvando] = useState(false);
   const opcoesGrupo = useMemo(() => {
     const set = new Set(gruposGlobais.map((g) => g.nome));
@@ -105,6 +114,7 @@ const BibliotecaPage = () => {
     setFEmoji(ex?.emoji || EMOJIS[0]);
     setFSub(ex?.subgrupo ?? "");
     setFDica(ex?.dica ?? "");
+    setFEquiv(camposDoExercicio(ex));
     setEditor({ ex });
   };
   const salvar = async () => {
@@ -113,7 +123,7 @@ const BibliotecaPage = () => {
     if (!grupo) { toast.error("Informe o grupo muscular."); return; }
     setSalvando(true);
     try {
-      const campos = { nome: fNome.trim(), grupo_muscular: grupo, emoji: fEmoji, subgrupo: fSub.trim() || null, dica: fDica.trim() || null };
+      const campos = { nome: fNome.trim(), grupo_muscular: grupo, emoji: fEmoji, subgrupo: fSub.trim() || null, dica: fDica.trim() || null, ...camposParaGravar(fEquiv) };
       if (editor?.ex) {
         const { error } = await tabela("tb_exercicios").update(campos).eq("id", editor.ex.id);
         if (error) throw error;
@@ -212,7 +222,7 @@ const BibliotecaPage = () => {
     <div data-pagina="master-biblioteca">
       <TituloPagina
         titulo="Biblioteca global"
-        sub={<>{totalGlobais} exercício(s) global(is) · {totalProfs} dos professores. Foto/GIF: pela Biblioteca do seu painel de professor (Treinos › Biblioteca).</>}
+        sub={<>{totalGlobais} exercício(s) global(is) · {totalProfs} dos professores{semClassificacao > 0 ? ` · ${semClassificacao} global(is) sem movimento/equipamento` : " · todos os globais com movimento e equipamento"}. Foto/GIF: pela Biblioteca do seu painel de professor (Treinos › Biblioteca).</>}
         acao={(
           <button type="button" onClick={() => abrirEditor(null)} className={BTN_PRIMARIO} data-btn-novo-exercicio>
             <Plus size={12} className="inline mr-1 -mt-0.5" />Novo exercício
@@ -243,6 +253,14 @@ const BibliotecaPage = () => {
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground font-body">
                   <span>{ex.grupo_muscular}{ex.subgrupo ? ` · ${ex.subgrupo}` : ""}</span>
                   {ex.imagem_url && <span className="inline-flex items-center gap-0.5" title="Tem foto/GIF"><ImageIcon size={10} />mídia</span>}
+                  {ex.padrao_movimento || ex.equipamento ? (
+                    <span className="inline-flex items-center gap-1" data-exercicio-equivalencia>
+                      {ex.padrao_movimento && <Etiqueta tom="info" className="text-[9px]!">{rotuloPadrao(ex.padrao_movimento) ?? ex.padrao_movimento}</Etiqueta>}
+                      {ex.equipamento && <Etiqueta className="text-[9px]!">{rotuloEquipamento(ex.equipamento) ?? ex.equipamento}</Etiqueta>}
+                    </span>
+                  ) : (
+                    <Etiqueta tom="aviso" className="text-[9px]!" data-exercicio-sem-equivalencia>sem movimento/equipamento</Etiqueta>
+                  )}
                   {dosProfessores && ex.professor_id && (
                     <Etiqueta tom="info" className="text-[9px]!">{nomesProf.get(ex.professor_id) ?? "professor"}</Etiqueta>
                   )}
@@ -299,7 +317,7 @@ const BibliotecaPage = () => {
       </Secao>
 
       <Dialog open={!!editor} onOpenChange={(o) => { if (!o) setEditor(null); }}>
-        <DialogContent className={`${DIALOG_CONTENT} max-w-md`} data-dialog-exercicio={editor?.ex?.id ?? "novo"}>
+        <DialogContent className={`${DIALOG_CONTENT} max-w-xl max-h-[90vh] overflow-y-auto`} data-dialog-exercicio={editor?.ex?.id ?? "novo"}>
           <DialogHeader className="text-left">
             <DialogTitle className="font-heading text-foreground uppercase tracking-wider text-base">{editor?.ex ? "Editar exercício" : "Novo exercício global"}</DialogTitle>
             <DialogDescription className="font-body text-xs">
@@ -328,6 +346,7 @@ const BibliotecaPage = () => {
             <Campo rotulo="Dica de execução (opcional)">
               <textarea value={fDica} onChange={(e) => setFDica(e.target.value)} rows={2} className={TEXTAREA} data-input-ex-dica />
             </Campo>
+            <FormExercicioBiblioteca valor={fEquiv} aoMudar={setFEquiv} grupoMuscular={fGrupo === OUTRO_GRUPO ? fGrupoOutro : fGrupo} />
             <div className="flex flex-wrap gap-2 justify-end">
               <button type="button" onClick={() => setEditor(null)} className={BTN_NEUTRO}>Cancelar</button>
               <button type="button" onClick={() => void salvar()} disabled={salvando} className={BTN_PRIMARIO} data-btn-salvar-exercicio>

@@ -5,7 +5,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { Share2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePowerSync } from "@powersync/react";
-import ModalTrocarExercicio from "@/components/treinos/ModalTrocarExercicio";
 import { blocoDoGrupoMuscular } from "@/lib/gruposMusculares";
 import { chaveTreino } from "@/lib/seriesPadrao";
 import { Botao } from "@/ui/premium/Botao";
@@ -14,7 +13,7 @@ import { carregarAnotacao } from "../anotacoes";
 import { cargaDaLinha, formatarCarga, linhaDoExercicio, observacaoDoTreino, prescricaoDoExercicio, type Prescricao, type PrescricaoTreino } from "../prescricao";
 import { proximaSerie } from "../proxima";
 import { restaurarExercicio } from "../remocao";
-import type { Academia, DiaSlot, Exercicio, GrupoExercicio, ItemRemovidoDia, SerieComMemoria } from "../tipos";
+import type { Academia, DiaSlot, Exercicio, GrupoExercicio, InfoSubstituicao, ItemRemovidoDia, SerieComMemoria } from "../tipos";
 import { useAcoesSeries, useOrdemExercicios } from "../useAcoesSeries";
 import { CartaoTreino } from "./CartaoTreino";
 import { AlcaArrastar, LinhaExercicio, type EstadoLinha } from "./LinhaExercicio";
@@ -24,6 +23,7 @@ import { SheetFicha } from "./SheetFicha";
 import { SheetHistoricoExercicio } from "./SheetHistoricoExercicio";
 import { SheetOpcoesTreino } from "./SheetOpcoesTreino";
 import { SheetRemoverExercicio } from "./SheetRemoverExercicio";
+import { TrocarExercicio } from "./TrocarExercicio";
 
 /** Bloco muscular que mais aparece no treino → foto de fundo (P29). */
 function fotoDoSlot(slot: DiaSlot): string {
@@ -75,7 +75,7 @@ export function TreinoDoSlot(p: PropsSlot) {
   const [historico, setHistorico] = useState<{ id: string; nome: string } | null>(null);
   const [anotacoes, setAnotacoes] = useState<{ id: string; nome: string } | null>(null);
   const [comAnotacao, setComAnotacao] = useState<Set<string>>(new Set());
-  const [trocar, setTrocar] = useState<{ ex: Exercicio; origemId: string } | null>(null);
+  const [trocar, setTrocar] = useState<{ ex: Exercicio; origemId: string; pessoal: boolean; substituindo: InfoSubstituicao | null } | null>(null);
   const [remover, setRemover] = useState<{ ex: Exercicio; origemId: string } | null>(null);
 
   const seriesDe = (exId: string) => p.series.filter((s) => s.exercicio_id === exId || s.exercicio_usuario_id === exId).sort((a, b) => a.numero_serie - b.numero_serie);
@@ -199,7 +199,7 @@ export function TreinoDoSlot(p: PropsSlot) {
         aoFicha={() => setFicha(ex)}
         aoHistorico={() => setHistorico({ id: ex.id, nome: ex.nome })}
         aoAnotacoes={() => setAnotacoes({ id: ex.id, nome: ex.nome })}
-        aoTrocar={() => setTrocar({ ex, origemId: ge.substituindo?.id ?? ex.id })}
+        aoTrocar={() => setTrocar({ ex, origemId: ge.substituindo?.id ?? ex.id, pessoal: !!ge.exercicio_usuario_id, substituindo: ge.substituindo ?? null })}
         aoRemover={() => abrirRemover(ge)}
         alca={alca}
       >
@@ -323,23 +323,28 @@ export function TreinoDoSlot(p: PropsSlot) {
           grupoPessoal: !!slot.grupoPessoal, slotIdx: slot.slot_idx, dateKey: p.dateKey, dateLabel: p.dateLabel } : null}
         aoFechar={() => setRemover(null)}
       />
-      {trocar && (
-        <ModalTrocarExercicio
-          userId={userId}
-          exercicioAtual={{ id: trocar.ex.id, nome: trocar.ex.nome, emoji: trocar.ex.emoji }}
-          origemId={trocar.origemId}
-          idsNoTreino={itens.map((g) => g.exercicio_id)}
-          grupoId={grupo.id}
-          grupoNome={grupo.nome}
-          grupoPessoal={!!slot.grupoPessoal}
-          slotIdx={slot.slot_idx}
-          dateKey={p.dateKey}
-          dateLabel={p.dateLabel}
-          open={!!trocar}
-          onOpenChange={(o) => !o && setTrocar(null)}
-          onTrocado={() => undefined}
-        />
-      )}
+      <TrocarExercicio
+        alvo={trocar ? {
+          userId,
+          exercicio: trocar.ex,
+          pessoal: trocar.pessoal,
+          origemId: trocar.origemId,
+          substituindo: trocar.substituindo,
+          idsNoTreino: itens.map((g) => g.exercicio_id),
+          grupoId: grupo.id,
+          grupoNome: grupo.nome,
+          grupoPessoal: !!slot.grupoPessoal,
+          slotIdx: slot.slot_idx,
+          dateKey: p.dateKey,
+          dateLabel: p.dateLabel,
+          academia: p.academia,
+        } : null}
+        aoFechar={() => setTrocar(null)}
+        aoEquipamentos={() => {
+          setTrocar(null);
+          p.aoAcademia();
+        }}
+      />
     </div>
   );
 }
