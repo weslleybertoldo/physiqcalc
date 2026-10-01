@@ -14,8 +14,8 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
     expect(MENU_PAINEL.filter((i) => i.grupo === "ferramentas").map((i) => i.rotulo)).toEqual(["Modelos", "Impressos", "Calculadora", "Lixeira"]);
   });
 
-  it("sem página nova, professor do Calc vê as antigas que ainda existem: Treinos, Configurações e Calculadora (Alunos saiu na W13, Financeiro na W19)", () => {
-    expect(visiveis(["treino"], semNovas)).toEqual(["Treinos", "Configurações", "Calculadora"]);
+  it("sem página nova, professor do Calc vê as antigas que ainda existem: Configurações e Calculadora (Alunos saiu na W13, Financeiro na W19, Treinos na W23)", () => {
+    expect(visiveis(["treino"], semNovas)).toEqual(["Configurações", "Calculadora"]);
   });
 
   it("módulos: Treinos só com Treino; Dietas e Impressos só com Nutrição (4.4)", () => {
@@ -38,6 +38,14 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
     expect(estadoDoItem(financeiro, ["treino"])).toBe("nova");
     expect(estadoDoItem(financeiro, ["nutricao"])).toBe("nova");
     expect(estadoDoItem(financeiro, ["treino"], semNovas)).toBeNull();
+  });
+
+  it("W23: Treinos não tem mais a página antiga (a TreinosAdminPage/AdminTreinos do Calc saiu) — é a nova (src/painel/paginas/Treinos.tsx), só com Treino", () => {
+    const treinos = MENU_PAINEL.find((i) => i.id === "treinos")!;
+    expect(treinos.antiga).toBeUndefined();
+    expect(estadoDoItem(treinos, ["treino"])).toBe("nova");
+    expect(estadoDoItem(treinos, ["nutricao"])).toBeNull();
+    expect(estadoDoItem(treinos, ["treino"], semNovas)).toBeNull();
   });
 
   it("W13: Alunos não tem mais a página antiga — é a nova (src/painel/paginas/Alunos.tsx) para os 2 módulos", () => {

@@ -41,13 +41,13 @@ export interface ItemMenuPainel {
   contadorTom?: "neutro" | "destaque";
 }
 
-const TreinosAdminPage = lazy(() => import("@/pages/admin/TreinosAdminPage"));
 const CalculadoraPage = lazy(() => import("@/pages/admin/CalculadoraPage"));
 
 export const MENU_PAINEL: ItemMenuPainel[] = [
   { id: "dashboard", arquivo: "Dashboard", rotulo: "Dashboard", icone: LayoutDashboard, rota: "/painel", modulo: "ambos", grupo: "principal", noCelular: true },
   { id: "alunos", arquivo: "Alunos", rotulo: "Alunos", icone: Users, rota: "/painel/alunos", modulo: "ambos", grupo: "principal", noCelular: true },
-  { id: "treinos", arquivo: "Treinos", rotulo: "Treinos", icone: Dumbbell, rota: "/painel/treinos", modulo: "treino", grupo: "principal", antiga: TreinosAdminPage, noCelular: true },
+  // W23: Treinos é a página nova (src/painel/paginas/Treinos.tsx) — a TreinosAdminPage/AdminTreinos do Calc saiu
+  { id: "treinos", arquivo: "Treinos", rotulo: "Treinos", icone: Dumbbell, rota: "/painel/treinos", modulo: "treino", grupo: "principal", noCelular: true },
   { id: "dietas", arquivo: "Dietas", rotulo: "Dietas", icone: Salad, rota: "/painel/dietas", modulo: "nutricao", grupo: "principal", noCelular: true },
   { id: "pre-consulta", arquivo: "PreConsulta", rotulo: "Pré-consulta", icone: ClipboardList, rota: "/painel/pre-consulta", modulo: "ambos", grupo: "principal" },
   { id: "agenda", arquivo: "Agenda", rotulo: "Agenda", icone: CalendarDays, rota: "/painel/agenda", modulo: "ambos", grupo: "principal", noCelular: true },

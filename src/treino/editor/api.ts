@@ -19,7 +19,8 @@ export class ErroTreinoPainel extends Error {
 
 const online = () => (typeof navigator === "undefined" ? true : navigator.onLine !== false);
 
-async function invocar<T>(funcao: string, corpo: Record<string, unknown>): Promise<T> {
+/** Chama uma função do Banco do Treino com a sessão do Treino de quem está no painel (a W23 reaproveita para as ações dos modelos). */
+export async function invocar<T>(funcao: string, corpo: Record<string, unknown>): Promise<T> {
   if (!online()) throw new ErroTreinoPainel("sem_internet");
   const { data, error } = await supabase.functions.invoke(funcao, { body: corpo });
   if (error) {
