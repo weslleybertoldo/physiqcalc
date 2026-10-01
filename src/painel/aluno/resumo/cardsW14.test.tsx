@@ -126,10 +126,13 @@ describe("W14 — cards do Resumo", () => {
     fireEvent.click(screen.getByRole("button", { name: /Salvar/ }));
     await waitFor(() => expect(h.dados).toHaveBeenCalledWith("p1", { resumo: "Lesão no joelho" }));
   });
-  it("Fluxo de consulta: os 7 atalhos (site antigo enquanto as abas novas não existem); some sem Nutrição", async () => {
+  it("Fluxo de consulta: os 7 atalhos (a aba nova quando existe — W18: consulta e anamnese no Prontuário); some sem Nutrição", async () => {
     const r = montar(<CardFluxoConsulta alunoId="p1" />);
     await waitFor(() => expect(document.querySelectorAll("[data-atalho]").length).toBe(7));
-    expect(document.querySelector('[data-atalho="consulta"]')?.getAttribute("href")).toMatch(/\/pacientes\/p1\/consultas$/);
+    expect(document.querySelector('[data-atalho="consulta"]')?.getAttribute("href")).toBe("/painel/alunos/p1/prontuario?nova=consulta");
+    expect(document.querySelector('[data-atalho="anamnese"]')?.getAttribute("href")).toBe("/painel/alunos/p1/prontuario?nova=anamnese");
+    // "Agendar" segue no site antigo até a W20
+    expect(document.querySelector('[data-atalho="agendar"]')?.getAttribute("href")).toMatch(/\/agenda\?paciente=p1$/);
     r.unmount();
     h.perfil.mockResolvedValue(perfil({ conta_modulos: ["treino"], modulos: ["treino"] }));
     montar(<CardFluxoConsulta alunoId="p1" />);
