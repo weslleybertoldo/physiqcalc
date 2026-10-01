@@ -251,6 +251,10 @@ def caso_atalhos(nav) -> None:
     ok = c.esperar(lambda: c.tem('[data-modal-anamnese="nova"]'), 45)
     p.check(ok and c.caminho().endswith("/prontuario?secao=anamnese"), f"[atalhos] a anamnese abre com o formulário ({c.caminho()})")
     c.pg.keyboard.press("Escape")
+    # link antigo do Nutri /pacientes/:id/<seção> → a aba Prontuário na seção (tabela "Seção do prontuário → aba", spec 5.2)
+    c.ir(f"/pacientes/{m()['paciente']}/exames")
+    ok = c.esperar(lambda: c.tem("[data-secao-exames]") and c.caminho().endswith("/prontuario?secao=exames"), 45)
+    p.check(ok, f"[atalhos] /pacientes/:id/exames do site antigo abre Prontuário › Exames ({c.caminho()})")
     c.fim()
 
 
