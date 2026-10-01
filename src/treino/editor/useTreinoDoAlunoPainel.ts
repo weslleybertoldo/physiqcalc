@@ -23,7 +23,9 @@ export type EstadoTreinoDoAluno =
   | { tipo: "sem-modulo" }
   | { tipo: "sem-acesso" }
   | { tipo: "sem-login"; temLogin: boolean }
-  | { tipo: "ok"; treinoUserId: string; somenteLeitura: boolean; perfil: PerfilAluno };
+  | { tipo: "ok"; treinoUserId: string; somenteLeitura: boolean; perfil: PerfilAluno }
+  /** W16: quem vê o aluno mas não tem papel no Treino (a nutricionista) lê pelo principal (função treino-leitura), sem sessão do Treino */
+  | { tipo: "leitura"; alunoId: string; perfil: PerfilAluno };
 
 /**
  * O aluno do perfil no Banco do Treino (o que o editor da W15, o card Treino do Resumo e a página "Editar treino e dieta" da
@@ -38,6 +40,7 @@ export function useTreinoDoAlunoPainel(alunoId: string): EstadoTreinoDoAluno {
   if (perfil.isLoading) return { tipo: "carregando" };
   if (perfil.error || !p) return { tipo: "erro", erro: perfil.error, tentar: () => void perfil.refetch() };
   if (!temTreino) return { tipo: "sem-modulo" };
+  if (sessao.tipo === "sem-papel") return { tipo: "leitura", alunoId, perfil: p };
   if (sessao.tipo !== "ok") return { tipo: "sem-sessao", estado: sessao };
   if (aluno.isLoading) return { tipo: "carregando" };
   if (aluno.error) {

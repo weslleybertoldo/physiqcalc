@@ -4,7 +4,7 @@
  * usuário do Treino de uma matrícula nova). Tudo online: o painel não tem PowerSync.
  */
 import { principal } from "@/integrations/principal/client";
-import { supabase } from "@/integrations/supabase/client";
+import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { calcularVolumeSemanal, type GrupoVolume, type SemanaRowVolume } from "@/lib/volumeSemanal";
 import type { SeriePadraoRow } from "@/lib/seriesPadrao";
@@ -212,3 +212,53 @@ export interface TreinoDoHistorico {
 
 export const carregarTreinoDoHistorico = (userId: string, chave: string) =>
   invocar<{ treino: TreinoDoHistorico | null }>("admin-relatorio", { action: "historicoTreino", userId, chave }).then((r) => r.treino);
+
+// ───────────────────────── W16: só leitura, para quem não tem sessão do Treino (a nutricionista — spec 4.1) ─────────────────────────
+
+const URL_LEITURA = `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1/treino-leitura`;
+
+/**
+ * A função treino-leitura do Banco do Treino (W16): recebe o token do BANCO PRINCIPAL, pergunta lá se quem chama vê o aluno (a
+ * regra do perfil do aluno) e devolve o treino só para ler. A nutricionista nunca ganha sessão nem escrita no Treino.
+ */
+async function lerPeloPrincipal<T>(acao: "get" | "semanaAtual" | "volume", alunoIdDaRota: string, extra: Record<string, unknown> = {}): Promise<T> {
+  if (!online()) throw new ErroTreinoPainel("sem_internet");
+  const { data } = await principal.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new ErroTreinoPainel("invalid_token", 401);
+  let r: Response;
+  try {
+    r = await fetch(URL_LEITURA, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "x-schema": DB_SCHEMA },
+      body: JSON.stringify({ action: acao, aluno: alunoIdDaRota, ...extra }),
+    });
+  } catch {
+    throw new ErroTreinoPainel("sem_internet");
+  }
+  const corpo = (await r.json().catch(() => null)) as (T & { error?: string }) | null;
+  if (r.status !== 200 || !corpo) throw new ErroTreinoPainel(String(corpo?.error ?? "erro_interno"), r.status);
+  return corpo as T;
+}
+
+export async function carregarEditorLeitura(alunoIdDaRota: string): Promise<DadosEditor> {
+  const r = await lerPeloPrincipal<Partial<DadosEditor>>("get", alunoIdDaRota);
+  return {
+    semana: r.semana ?? [],
+    gruposDisponiveis: r.gruposDisponiveis ?? [],
+    diasConfig: r.diasConfig ?? [],
+    seriesPadrao: r.seriesPadrao ?? [],
+    exerciciosPorTreino: r.exerciciosPorTreino ?? {},
+    config: r.config ?? null,
+    podeEditar: false,
+    professorDoAluno: r.professorDoAluno ?? null,
+  };
+}
+
+export const carregarSemanaAtualLeitura = (alunoIdDaRota: string, inicio: string, fim: string) => lerPeloPrincipal<SemanaAtual>("semanaAtual", alunoIdDaRota, { inicio, fim });
+
+export async function carregarVolumeLeitura(alunoIdDaRota: string): Promise<VolumeBloco[]> {
+  const r = await lerPeloPrincipal<DadosVolume>("volume", alunoIdDaRota);
+  const padrao = Number(r.config?.series_padrao_qtd);
+  return calcularVolumeSemanal(r.semana ?? [], r.grupos ?? {}, r.seriesPadrao ?? [], Number.isFinite(padrao) && padrao >= 1 ? padrao : undefined);
+}
