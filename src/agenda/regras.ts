@@ -153,7 +153,8 @@ export function janelaDoReagendamento(janela: Janela, mesRef: string, hoje: stri
 
 // ───────────────────────── pacote de consultas ─────────────────────────
 
-export type EstadoMesPacote = "feita" | "faltou" | "desistiu" | "sem_consulta" | "agendada" | "livre";
+/** desmarcada = o PROFISSIONAL desmarcou e o mês acabou sem consulta: não conta, o crédito continua (W20c, decisão dele 01/10). */
+export type EstadoMesPacote = "feita" | "faltou" | "desistiu" | "sem_consulta" | "desmarcada" | "agendada" | "livre";
 
 export interface MesPacote {
   mes: string;
@@ -171,6 +172,8 @@ export interface PacoteSituacao {
   usados: number;
   restam: number;
   livres: number;
+  /** meses desmarcados pelo profissional (não contam; o pacote anda 1 mês para cada um) */
+  devolvidos?: number;
   meses: MesPacote[];
 }
 
@@ -179,6 +182,7 @@ export const ROTULO_MES_PACOTE: Record<EstadoMesPacote, string> = {
   faltou: "faltou",
   desistiu: "desistiu",
   sem_consulta: "sem consulta",
+  desmarcada: "profissional desmarcou · não conta",
   agendada: "agendada",
   livre: "livre",
 };

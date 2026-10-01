@@ -3,6 +3,7 @@ import {
   REGRAS_PADRAO, consultasPorSemana, confirmacaoDe, gerarICS, iniciosDoDia, janelaDoReagendamento, mensagemDesistir, mensagemReagendar,
   nomeArquivoICS, normalizarRegras, numerosDaAgenda, periodoDoPacote, resumoDasRegras, rotuloSemana, somarMeses, textoDias, textoHojePorTipo,
   textoPacote, textoSlotsPorDia, textoTrava, tipoPadrao, travasDoDia, ultimoDiaDoMes, type ContextoConsulta, type PacoteSituacao,
+  ROTULO_MES_PACOTE, mesUsado,
 } from "./regras";
 
 const pacote = (restam: number, total = 6, meses: PacoteSituacao["meses"] = [{ mes: "2026-10-01", estado: "agendada" }]) => ({ restam, total, meses });
@@ -123,6 +124,20 @@ describe("pacote", () => {
     expect(textoPacote({ restam: 5, total: 6 })).toBe("Restam 5 de 6 consultas");
     expect(textoPacote({ restam: 0, total: 6 })).toBe("Nenhuma consulta restante de 6");
     expect(periodoDoPacote({ mes_inicio: "2026-10-01", mes_fim: "2027-03-01" })).toBe("out/2026 a mar/2027 · 1 por mês");
+  });
+});
+
+describe("pacote — desmarcada pelo profissional não conta (W20c, decisão dele 01/10)", () => {
+  it("o mês desmarcado pelo profissional não é usado; falta, desistência e mês sem consulta continuam usados", () => {
+    expect(mesUsado("desmarcada")).toBe(false);
+    expect(mesUsado("faltou")).toBe(true);
+    expect(mesUsado("desistiu")).toBe(true);
+    expect(mesUsado("sem_consulta")).toBe(true);
+    expect(ROTULO_MES_PACOTE.desmarcada).toBe("profissional desmarcou · não conta");
+  });
+  it("o crédito continua: 6 de 6 com 1 mês desmarcado = ainda 6, e o período anda 1 mês", () => {
+    expect(textoPacote({ restam: 6, total: 6 })).toBe("Restam 6 de 6 consultas");
+    expect(periodoDoPacote({ mes_inicio: "2026-10-01", mes_fim: "2027-04-01" })).toBe("out/2026 a abr/2027 · 1 por mês");
   });
 });
 

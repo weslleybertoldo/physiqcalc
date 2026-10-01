@@ -9,6 +9,7 @@ import { ROTA_AGENDA, consultasParaAvisar, gravarAvisadas, idDaNotificacao, lerA
 import { minhaAgenda } from "@/app-aluno/perfil/pecas/api";
 import { inicioDaAgenda } from "@/app-aluno/perfil/pecas/regras";
 import { useSessao } from "@/nucleo/sessao";
+import { pushAtivoNoAparelho } from "@/push/regras";
 
 const nativo = () => Capacitor.isNativePlatform();
 const CANAL = "consultas-v1";
@@ -17,6 +18,8 @@ let canalCriado = false;
 async function notificarNoAparelho(id: number, titulo: string, corpo: string): Promise<boolean> {
   try {
     if (nativo()) {
+      // W20c: com o push ligado neste aparelho a notificação já chegou pelo FCM — aqui fica só o aviso na tela
+      if (pushAtivoNoAparelho()) return false;
       let { display } = await LocalNotifications.checkPermissions();
       if (display === "prompt" || display === "prompt-with-rationale") display = (await LocalNotifications.requestPermissions()).display;
       if (display !== "granted") return false;

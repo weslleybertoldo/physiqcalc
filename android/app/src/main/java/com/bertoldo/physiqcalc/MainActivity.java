@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CountdownNotificationPlugin.class);
         registerPlugin(ApkInstallerPlugin.class);
         registerPlugin(GalleryImagePlugin.class);
+        registerPlugin(PushFirebasePlugin.class);
         super.onCreate(savedInstanceState);
 
         WebSettings webSettings = this.bridge.getWebView().getSettings();
