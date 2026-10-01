@@ -299,18 +299,21 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
   });
 
+  // W17: o grupo Avaliação do Configurar aluno antigo (Dobras & Medidas, Evolução, Registros) virou a aba Avaliação NOVA
+  // (src/painel/aluno/abas/Avaliacao.tsx) — o link antigo cai nela (o Configurar antigo não abre mais ali)
   it.each([
     ["/admin/alunos/u1?ct=dobras", "/painel/alunos/u1/avaliacao?ct=dobras", "avaliacao"],
     ["/admin/alunos/u1?ct=registros", "/painel/alunos/u1/avaliacao?ct=registros", "avaliacao"],
     ["/admin?v=config&u=u1&ct=evolucao", "/painel/alunos/u1/avaliacao?ct=evolucao", "avaliacao"],
-  ])("Configurar aluno %s → %s (aba %s)", async (de, para, aba) => {
+  ])("Configurar aluno %s → %s (aba %s nova, W17)", async (de, para, aba) => {
     logar("professor");
     abrir(de);
-    expect(await screen.findByTestId("antiga-configurar-aluno", {}, { timeout: 4000 })).toHaveTextContent("u1");
-    await waitFor(() => expect(onde()).toBe(para));
-    expect(document.querySelector(`[data-aba-aluno="${aba}"]`)?.getAttribute("aria-current")).toBe("page");
+    await waitFor(() => expect(onde()).toBe(para), { timeout: 4000 });
+    await waitFor(() => expect(document.querySelector(`[data-aba-aluno="${aba}"]`)?.getAttribute("aria-current")).toBe("page"), { timeout: 4000 });
+    await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='avaliacao']")).not.toBeNull(), { timeout: 4000 });
+    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
     expect([...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"))).toEqual(["resumo", "treino", "avaliacao", "financeiro"]);
-  });
+  }, 15_000);
 
   // W6: a aba Financeiro do aluno é a nova (src/painel/aluno/abas/Financeiro.tsx) — o "Plano & Cobrança" antigo não abre mais
   it("Configurar aluno /admin/alunos/u1?ct=plano → /painel/alunos/u1/financeiro?ct=plano (aba Financeiro nova da W6)", async () => {

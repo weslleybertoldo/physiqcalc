@@ -55,7 +55,7 @@ function Coluna({
  * frente com frente), com as fotos do personal e as da nutricionista juntas na lista de datas. Começa com a penúltima × a
  * última. As fotos seguem com o cadeado (tocar mostra).
  */
-export function SheetComparar({ aberto, aoMudar, sessoes }: { aberto: boolean; aoMudar: (v: boolean) => void; sessoes: SessaoFotos[] }) {
+export function SheetComparar({ aberto, aoMudar, sessoes, lado = "baixo" }: { aberto: boolean; aoMudar: (v: boolean) => void; sessoes: SessaoFotos[]; lado?: "baixo" | "direita" }) {
   const posicoes = useMemo(() => posicoesComFotos(sessoes), [sessoes]);
   const [posicao, setPosicao] = useState<Posicao>(posicoes[0] ?? "frente");
   const pos = posicoes.includes(posicao) ? posicao : posicoes[0] ?? "frente";
@@ -66,7 +66,8 @@ export function SheetComparar({ aberto, aoMudar, sessoes }: { aberto: boolean; a
   }, [sessoes, pos, aberto]);
 
   return (
-    <PainelDeslizante aberto={aberto} aoMudar={aoMudar} titulo="Comparar fotos" descricao="A mesma posição em 2 datas, lado a lado." className="max-h-[92vh]">
+    <PainelDeslizante lado={lado} aberto={aberto} aoMudar={aoMudar} titulo="Comparar fotos" descricao="A mesma posição em 2 datas, lado a lado."
+      className={lado === "direita" ? "sm:w-[min(560px,94vw)]" : "max-h-[92vh]"}>
       <div className="flex flex-col gap-3.5 pb-2" data-sheet-comparar={pos}>
         {posicoes.length > 1 && (
           <Segmentado<Posicao> opcoes={posicoes.map((p) => ({ valor: p, rotulo: ROTULO_POSICAO[p] }))} valor={pos} aoMudar={setPosicao} rotulo="Posição" className="self-start" />

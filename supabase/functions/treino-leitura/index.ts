@@ -4,8 +4,11 @@
 // BANCO PRINCIPAL dizer que quem chama vê aquele aluno.
 //
 // POST, headers: Authorization: Bearer <access_token do PRINCIPAL> · x-schema: public|staging.
-// Corpo: { action: "get" | "semanaAtual" | "volume", aluno: <id da rota: matrícula ou id do Treino>, inicio?, fim? }
+// Corpo: { action: "get" | "semanaAtual" | "volume" | "avaliacoes", aluno: <id da rota: matrícula ou id do Treino>, inicio?, fim? }
 // 200 → o mesmo formato das ações de leitura da admin-semana-treinos (get com podeEditar=false)
+//   W17 "avaliacoes": { perfil (a composição atual + próxima avaliação), avaliacoes (physiq_avaliacoes), fotos (as mensais, com a
+//   URL assinada de 1 h do bucket privado) } — o Perfil do aluno › Avaliação de TODO profissional que vê o aluno (o painel soma
+//   às antropometrias do principal: a mesma série da aba Evolução do aluno, W10)
 // Erros: 401 missing_auth | invalid_token · 403 sem_acesso · 404 sem_treino (o aluno ainda não entrou no app) ·
 //        400 acao_invalida | aluno_invalido | periodo_invalido · 429 rate_limited · 502 principal_indisponivel · 500 erro_interno
 //
@@ -27,7 +30,7 @@ const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
 const PRINCIPAL_ANON_KEY = Deno.env.get("PRINCIPAL_ANON_KEY") || "";
 
 const SCHEMAS = ["public", "staging"];
-const ACOES = new Set(["get", "semanaAtual", "volume"]);
+const ACOES = new Set(["get", "semanaAtual", "volume", "avaliacoes"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.com.br",
@@ -276,6 +279,41 @@ async function lerVolume(admin: any, userId: string) {
   return { semana: semanaRes.data ?? [], grupos, seriesPadrao: seriesRes.data ?? [], config: perfilRes.data ?? null };
 }
 
+// ───────────────────────── W17: a avaliação física do aluno (só leitura) ─────────────────────────
+
+/** As colunas do perfil que a Avaliação mostra (a composição atual que o personal gravou) + as datas do NF7. */
+const COLUNAS_PERFIL_AVALIACAO = [
+  "id", "sexo", "idade", "data_nascimento", "peso", "altura", "metodo_avaliacao", "percentual_gordura", "massa_gorda", "massa_magra",
+  "massa_muscular", "agua_corporal", "gordura_visceral", "tmb_mifflin", "tmb_katch", "tmb_balanca", "tmb_metodo",
+  "dobra_1", "dobra_2", "dobra_3", "dobra_4", "dobra_5", "dobra_6", "dobra_7",
+  "medida_pescoco", "medida_ombro", "medida_peitoral", "medida_cintura", "medida_abdomen", "medida_quadril",
+  "medida_braco_d", "medida_braco_e", "medida_antebraco_d", "medida_antebraco_e", "medida_coxa_d", "medida_coxa_e",
+  "medida_panturrilha_d", "medida_panturrilha_e", "proxima_avaliacao", "proxima_troca_treino",
+].join(", ");
+
+async function lerAvaliacoes(admin: any, userId: string, schema: string) {
+  const [perfilRes, avRes, fotosRes] = await Promise.all([
+    admin.from("physiq_profiles").select(COLUNAS_PERFIL_AVALIACAO).eq("id", userId).maybeSingle(),
+    admin.from("physiq_avaliacoes").select("*").eq("user_id", userId).order("data_avaliacao", { ascending: true }).limit(200),
+    admin.from("physiq_registros_fotos").select("id, mes_ref, tipo, storage_path, created_at").eq("user_id", userId).order("mes_ref", { ascending: false }).limit(200),
+  ]);
+  for (const r of [perfilRes, avRes, fotosRes]) if (r.error) throw r.error;
+  const fotos = ((fotosRes.data as any[]) || []);
+  const urls: Record<string, string> = {};
+  if (fotos.length) {
+    // o bucket privado do schema (o staging tem o espelho dele, como o app: src/lib/registrosFotos.ts)
+    const bucket = schema === "staging" ? "registros-staging" : "registros";
+    const { data: ass, error: ea } = await admin.storage.from(bucket).createSignedUrls(fotos.map((f) => f.storage_path), 3600);
+    if (ea) console.warn("treino-leitura avaliacoes: assinar fotos", ea.message);
+    for (const a of (ass as any[]) || []) if (a?.path && a?.signedUrl && !a?.error) urls[a.path] = a.signedUrl;
+  }
+  return {
+    perfil: perfilRes.data ?? null,
+    avaliacoes: avRes.data ?? [],
+    fotos: fotos.map((f) => ({ ...f, url: urls[f.storage_path] ?? null })),
+  };
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
@@ -340,6 +378,7 @@ Deno.serve(async (req) => {
     // 4. só leitura
     if (action === "get") return json({ ...(await lerGet(admin, treinoUserId)), treino_user_id: treinoUserId }, 200, origin);
     if (action === "semanaAtual") return json(await lerSemanaAtual(admin, treinoUserId, inicio, fim), 200, origin);
+    if (action === "avaliacoes") return json({ ...(await lerAvaliacoes(admin, treinoUserId, schema)), treino_user_id: treinoUserId }, 200, origin);
     return json(await lerVolume(admin, treinoUserId), 200, origin);
   } catch (e) {
     console.error("treino-leitura", action, String((e as { message?: string })?.message || e).slice(0, 300));
