@@ -21,6 +21,7 @@ import sys
 import time
 from pathlib import Path
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).parent))
 import _base as B  # noqa: E402
 
@@ -44,17 +45,30 @@ def main() -> int:
     ap.add_argument("--base", required=True, help="o Physiq")
     ap.add_argument("--schema", required=True, choices=["public", "staging"])
     ap.add_argument("--prefixo", required=True)
+    ap.add_argument("--descartavel", action="store_true", help="usa um paciente DESCARTÁVEL de teste mesmo que a nutri já tenha um (o caminho de produção)")
     a = ap.parse_args()
     S = a.schema
     B.ESTADO["schema"] = S
     antigo, physiq = a.url.rstrip("/"), a.base.rstrip("/")
     B.saude_ok("nutri antigo W21")
     leg = B.conta_nutri_legado()
+    antes = B.sql_principal(f"select (select count(*) from {S}.formularios_preconsulta)::int f, (select count(*) from {S}.respostas_preconsulta)::int r, "
+                            f"(select count(*) from {S}.pacientes)::int pac")[0]
     pac = B.sql_principal(f"""select id::text, nome from {S}.pacientes where conta_id = {q(leg)} and deleted_at is null and email like '%teste.claude@%'
                                order by created_at limit 1""")
+    descartavel = None
+    if a.descartavel:
+        pac = []
+    if not pac:
+        # produção: a nutri de teste não tem paciente — um DESCARTÁVEL de teste (e-mail único, sem telefone = nenhum WhatsApp), apagado no fim
+        st, r = B.rest("nutri-legado", "POST", "pacientes", "", {"nome": f"{B.MARCA} Paciente {B.carimbo()}", "nutricionista_id": B.uid("nutri-legado"),
+                                                                "email": f"w21.prod.{B.carimbo()}.teste.claude@physiqnutri.app"})
+        p.check(st == 201, f"paciente DESCARTÁVEL de teste criado pela nutri ({S}) → {st}")
+        if st == 201:
+            descartavel = r[0]["id"]  # type: ignore[index]
+            pac = [{"id": descartavel, "nome": r[0]["nome"]}]  # type: ignore[index]
     p.check(bool(pac), f"o paciente de TESTE da nutri do legado existe ({S})")
     pac = pac[0] if pac else None
-    antes = B.sql_principal(f"select (select count(*) from {S}.formularios_preconsulta)::int f, (select count(*) from {S}.respostas_preconsulta)::int r")[0]
     nutri = B.uid("nutri-legado")
     slug = "".join(secrets.choice("abcdefghijkmnpqrstuvwxyz23456789") for _ in range(8))
     titulo = f"{B.MARCA} Antigo lado a lado {B.carimbo()}"
@@ -142,7 +156,10 @@ def main() -> int:
         if f_id:
             B.sql_principal(f"delete from {S}.respostas_preconsulta where formulario_id = {q(f_id)}")
             B.sql_principal(f"delete from {S}.formularios_preconsulta where id = {q(f_id)}")
-    depois = B.sql_principal(f"select (select count(*) from {S}.formularios_preconsulta)::int f, (select count(*) from {S}.respostas_preconsulta)::int r")[0]
+        if descartavel:
+            B.sql_principal(f"delete from {S}.pacientes where id = {q(descartavel)}")
+    depois = B.sql_principal(f"select (select count(*) from {S}.formularios_preconsulta)::int f, (select count(*) from {S}.respostas_preconsulta)::int r, "
+                             f"(select count(*) from {S}.pacientes)::int pac")[0]
     p.check(antes == depois, f"limpeza: contagens iguais antes/depois ({antes} × {depois})")
     p.check(not erros, f"sem erro de página ({erros[:3]})")
     return p.fim()
