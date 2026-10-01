@@ -1,9 +1,12 @@
-// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/alimentosUtil.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/alimentosUtil.ts) para o banco principal; W24 — trazida a regra da
+// porção da H1 (PhysiqNutri 294887a, PR #66: o "Editar/Novo alimento" trabalha na porção e grava o equivalente em 100 g).
+// Só os imports mudaram; o resto é o do site antigo (uma cópia só: o editor da W16 e o Painel › Dietas usam esta).
 import { arred, fmtNum, numero } from "@/nutricao/editor/lib/antropometriaUtil";
 
 // Regras puras da tela Meus alimentos (W8): normalização da busca (mesma regra da coluna `busca` do banco), macros
 // por porção/medida caseira (regra de 3 a partir dos 100 g), kcal estimada pelos fatores de Atwater (4/4/9) × a
-// informada, leitura do jsonb `nutrientes`, medidas caseiras do formulário e a conversão formulário ⇄ registro.
+// informada, leitura do jsonb `nutrientes`, medidas caseiras do formulário e a conversão formulário ⇄ registro
+// (H1: o formulário trabalha NA PORÇÃO de referência e o banco guarda sempre por 100 g — ver "Porção de referência").
 // Nada de rede aqui; testado no vitest.
 
 export { arred, fmtNum, numero };
@@ -118,6 +121,79 @@ export function divergenciaKcal(informada: number | null, estimada: number | nul
 }
 /** Acima disso a prévia avisa que a kcal informada destoa dos macros. */
 export const DIVERGENCIA_ALERTA_PCT = 15;
+
+// ---- Porção de referência (H1, pedido do Weslley 30/09/2026) ----
+// "Quando colocar o valor de referência, quando salvar o 100g precisa ser equivalente ao que foi adicionado": com a porção
+// de referência preenchida (≠ 100 g), os campos do formulário são os valores do RÓTULO para N g; ao salvar, o banco recebe
+// SEMPRE o equivalente em 100 g (× 100 / N em todos os nutrientes — o que é % não escala); ao editar, o gravado volta pra
+// porção (÷). Sem porção (ou 100 g) = por 100 g, como antes. Exemplo: leite em pó, 127 kcal em 26 g → 488,46 kcal/100 g.
+// Salvar sem mexer não muda o gravado (sem deriva de arredondamento: ver `campoPara100g`). A W24 do Physiq porta igual.
+
+export const PORCAO_PADRAO_G = 100;
+export const PORCAO_MAX_G = 100000;
+/** Casas gravadas: macros (colunas numeric(9,2)) e "demais nutrientes" (jsonb). */
+export const CASAS_MACRO = 2;
+export const CASAS_NUTRIENTE = 3;
+/** Teto (exclusivo) de cada valor por 100 g — o mesmo do formulário; vale pro digitado e pro convertido. */
+export const LIMITE_MACRO: Record<MacroChave, number> = {
+  energia_kcal: 100000,
+  proteina_g: 1000,
+  carboidrato_g: 1000,
+  lipidio_g: 1000,
+  fibra_g: 1000,
+  sodio_mg: 1000000,
+};
+export const LIMITE_NUTRIENTE = 1000000;
+
+/** Porção de referência válida (aceita vírgula; 2 casas, como a coluna `porcao_g`): > 0 e < 100000 g. Vazia/inválida → null. */
+export function porcaoValida(v: string | number | null | undefined): number | null {
+  const n = numero(v);
+  if (n === null) return null;
+  const r = arred(n, 2);
+  return r > 0 && r < PORCAO_MAX_G ? r : null;
+}
+/** Base (g) dos valores do formulário: a porção de referência válida; sem porção → 100 g. */
+export const baseDosValores = (porcao: string | number | null | undefined): number => porcaoValida(porcao) ?? PORCAO_PADRAO_G;
+/** O formulário está na porção (base diferente de 100 g)? */
+export const valoresNaPorcao = (porcao: string | number | null | undefined): boolean => baseDosValores(porcao) !== PORCAO_PADRAO_G;
+
+const valido = (v: number | null | undefined, base: number): v is number =>
+  v !== null && v !== undefined && Number.isFinite(v) && v >= 0 && Number.isFinite(base) && base > 0;
+
+/** Valor do rótulo para `porcao` g → por 100 g (× 100 / porção). Sem valor, negativo ou porção inválida → null. */
+export function porcaoPara100g(valor: number | null | undefined, porcao: number, casas = CASAS_MACRO): number | null {
+  if (!valido(valor, porcao)) return null;
+  return arred(porcao === PORCAO_PADRAO_G ? valor : (valor * PORCAO_PADRAO_G) / porcao, casas);
+}
+/** Valor por 100 g → na porção de `porcao` g (× porção / 100) — o que o formulário mostra ao editar. */
+export function cemGramasParaPorcao(por100: number | null | undefined, porcao: number, casas = CASAS_MACRO): number | null {
+  if (!valido(por100, porcao)) return null;
+  return arred(porcao === PORCAO_PADRAO_G ? por100 : (por100 * porcao) / PORCAO_PADRAO_G, casas);
+}
+/** O que é % (umidade) é concentração: não muda com a porção. */
+export const escalaComPorcao = (d: { unidade: string }): boolean => d.unidade !== "%";
+
+/**
+ * Um campo do formulário (texto na base `base` g) → valor por 100 g pra gravar.
+ * Com o valor GRAVADO: se o texto é o que a tela mostra pra ele nessa base (`cemGramasParaPorcao`), devolve o gravado
+ * exatamente — salvar sem mexer não muda nada (a ida e volta por 2 casas não deriva). Mudou o texto ou a porção → converte.
+ */
+export function campoPara100g(
+  texto: string | null | undefined,
+  base: number,
+  gravado?: number | string | null,
+  casas = CASAS_MACRO,
+  escala = true,
+): number | null {
+  const n = numero(texto);
+  if (n === null || n < 0) return null;
+  const g = gravado === undefined || gravado === null ? null : numero(gravado);
+  if (g !== null && g >= 0) {
+    const mostrado = escala ? cemGramasParaPorcao(g, base, casas) : arred(g, casas);
+    if (mostrado !== null && arred(n, casas) === mostrado) return g;
+  }
+  return escala ? porcaoPara100g(n, base, casas) : arred(n, casas);
+}
 
 // ---- Nutrientes (jsonb `nutrientes`, além dos macros em coluna) ----
 export type NutrienteDef = { chave: string; rotulo: string; unidade: string };
@@ -279,61 +355,102 @@ const valorOuNull = (s: string | null | undefined): number | null => {
   return n === null || n < 0 ? null : arred(n, 2);
 };
 
-export function formParaRegistro(f: FormAlimento): RegistroAlimento {
-  const porcao = numero(f.porcao_g);
+/**
+ * Formulário → registro do banco. Os valores do formulário estão na BASE da porção de referência (N g; sem porção = 100 g)
+ * e saem SEMPRE por 100 g (× 100 / N; o que é % não escala). Na edição, passe o registro `gravado`: o campo que a pessoa
+ * não mexeu volta exatamente como estava (ver `campoPara100g`).
+ */
+export function formParaRegistro(f: FormAlimento, gravado?: RegistroLido | null): RegistroAlimento {
+  const porcao = porcaoValida(f.porcao_g);
+  const base = porcao ?? PORCAO_PADRAO_G;
+  const macro = (chave: MacroChave): number | null => campoPara100g(f[chave], base, gravado ? gravado[chave] : null, CASAS_MACRO);
   return {
     nome: (f.nome ?? "").trim().replace(/\s+/g, " ").slice(0, NOME_MAX),
     grupo: (f.grupo ?? "").trim().replace(/\s+/g, " ").slice(0, GRUPO_MAX) || null,
-    porcao_g: porcao !== null && porcao > 0 && porcao < 100000 ? arred(porcao, 2) : 100,
-    energia_kcal: valorOuNull(f.energia_kcal),
-    proteina_g: valorOuNull(f.proteina_g),
-    carboidrato_g: valorOuNull(f.carboidrato_g),
-    lipidio_g: valorOuNull(f.lipidio_g),
-    fibra_g: valorOuNull(f.fibra_g),
-    sodio_mg: valorOuNull(f.sodio_mg),
+    porcao_g: porcao ?? PORCAO_PADRAO_G,
+    energia_kcal: macro("energia_kcal"),
+    proteina_g: macro("proteina_g"),
+    carboidrato_g: macro("carboidrato_g"),
+    lipidio_g: macro("lipidio_g"),
+    fibra_g: macro("fibra_g"),
+    sodio_mg: macro("sodio_mg"),
     marca: limparMarca(f.marca),
-    nutrientes: nutrientesDoForm(f.nutrientes),
+    nutrientes: nutrientesDoForm(f.nutrientes, base, gravado ? lerNutrientes(gravado.nutrientes) : null),
   };
 }
-/** Campos "Demais nutrientes" do formulário → jsonb: só chaves da tabela com valor válido (≥ 0), 3 casas; vazio/inválido fica de fora. */
-export function nutrientesDoForm(n: Record<string, string> | null | undefined): Record<string, number> {
+/**
+ * Campos "Demais nutrientes" do formulário (na base de `base` g) → jsonb por 100 g: só chaves da tabela com valor válido (≥ 0),
+ * 3 casas; vazio/inválido fica de fora; % não escala. `gravados` = o jsonb da edição (o que não mudou volta igual).
+ */
+export function nutrientesDoForm(
+  n: Record<string, string> | null | undefined,
+  base: number = PORCAO_PADRAO_G,
+  gravados?: Record<string, number> | null,
+): Record<string, number> {
   const saida: Record<string, number> = {};
   if (!n) return saida;
   for (const d of NUTRIENTES) {
-    const v = numero(n[d.chave]);
-    if (v !== null && v >= 0 && v < 1000000) saida[d.chave] = arred(v, 3);
+    const v = campoPara100g(n[d.chave], base, gravados?.[d.chave], CASAS_NUTRIENTE, escalaComPorcao(d));
+    if (v !== null && v < LIMITE_NUTRIENTE) saida[d.chave] = v;
   }
   return saida;
 }
-/** jsonb gravado → campos do formulário (texto com vírgula), só as chaves da tabela. */
-export function nutrientesParaForm(v: unknown): Record<string, string> {
+/** jsonb gravado (por 100 g) → campos do formulário na base de `base` g (texto com vírgula), só as chaves da tabela. */
+export function nutrientesParaForm(v: unknown, base: number = PORCAO_PADRAO_G): Record<string, string> {
   const lidos = lerNutrientes(v);
   const saida: Record<string, string> = {};
   for (const d of NUTRIENTES) {
-    if (lidos[d.chave] !== undefined) saida[d.chave] = textoNumero(lidos[d.chave]);
+    if (lidos[d.chave] === undefined) continue;
+    saida[d.chave] = textoNumero(escalaComPorcao(d) ? cemGramasParaPorcao(lidos[d.chave], base, CASAS_NUTRIENTE) : lidos[d.chave]);
   }
   return saida;
 }
 /** Quantos "demais nutrientes" válidos o formulário tem (contagem no botão). */
 export const totalNutrientesPreenchidos = (n: Record<string, string> | null | undefined): number => Object.keys(nutrientesDoForm(n)).length;
 
+/** Registro do banco (por 100 g) → formulário NA PORÇÃO de referência gravada (÷); porção de 100 g = os mesmos valores. */
 export function registroParaForm(a: RegistroLido & { medidas_caseiras?: { descricao: string; gramas: number; ordem: number }[] | null }): FormAlimento {
+  const base = baseDosValores(a.porcao_g);
+  const macro = (chave: MacroChave): string => textoNumero(cemGramasParaPorcao(numero(a[chave]), base, CASAS_MACRO));
   return {
     nome: a.nome,
     marca: a.marca ?? "",
     grupo: a.grupo ?? "",
     porcao_g: textoNumero(a.porcao_g) || "100",
-    energia_kcal: textoNumero(a.energia_kcal),
-    proteina_g: textoNumero(a.proteina_g),
-    carboidrato_g: textoNumero(a.carboidrato_g),
-    lipidio_g: textoNumero(a.lipidio_g),
-    fibra_g: textoNumero(a.fibra_g),
-    sodio_mg: textoNumero(a.sodio_mg),
-    nutrientes: nutrientesParaForm(a.nutrientes),
+    energia_kcal: macro("energia_kcal"),
+    proteina_g: macro("proteina_g"),
+    carboidrato_g: macro("carboidrato_g"),
+    lipidio_g: macro("lipidio_g"),
+    fibra_g: macro("fibra_g"),
+    sodio_mg: macro("sodio_mg"),
+    nutrientes: nutrientesParaForm(a.nutrientes, base),
     medidas: ordenarMedidas(a.medidas_caseiras ?? []).map((m) => ({ descricao: m.descricao, gramas: textoNumero(m.gramas) })),
   };
 }
-/** Macros do formulário enquanto digita (prévia). */
+/**
+ * Valores do formulário que passam do teto quando convertidos pra 100 g (porção muito pequena pro valor digitado):
+ * caminho do campo → valor por 100 g que daria. Sem porção (base 100) o teto do próprio campo já basta.
+ */
+export function excessosNaConversao(f: Pick<FormAlimento, "porcao_g" | MacroChave | "nutrientes">): { caminho: string; por100: number }[] {
+  const base = baseDosValores(f.porcao_g);
+  if (base === PORCAO_PADRAO_G) return [];
+  const saida: { caminho: string; por100: number }[] = [];
+  for (const chave of MACRO_CHAVES) {
+    const n = numero(f[chave]);
+    if (n === null || n < 0 || n >= LIMITE_MACRO[chave]) continue;
+    const c = porcaoPara100g(n, base, CASAS_MACRO);
+    if (c !== null && c >= LIMITE_MACRO[chave]) saida.push({ caminho: chave, por100: c });
+  }
+  for (const d of NUTRIENTES) {
+    if (!escalaComPorcao(d)) continue;
+    const n = numero(f.nutrientes?.[d.chave]);
+    if (n === null || n < 0 || n >= LIMITE_NUTRIENTE) continue;
+    const c = porcaoPara100g(n, base, CASAS_NUTRIENTE);
+    if (c !== null && c >= LIMITE_NUTRIENTE) saida.push({ caminho: `nutrientes.${d.chave}`, por100: c });
+  }
+  return saida;
+}
+/** Macros do formulário enquanto digita (prévia) — na base do formulário (a porção de referência, ou 100 g). */
 export const macrosDoForm = (f: FormAlimento): Macros => ({
   energia_kcal: valorOuNull(f.energia_kcal),
   proteina_g: valorOuNull(f.proteina_g),
