@@ -9,8 +9,8 @@ interface CountdownNotificationPlugin {
     som?: string;
   }): Promise<void>;
   stopCountdown(): Promise<void>;
-  /** Vibra igual ao fim do descanso (uso alarme) — a prévia do "Ouvir" no APK */
-  vibrar(): Promise<void>;
+  /** Vibra igual ao fim do descanso (uso alarme), no ritmo do som dado — a prévia do "Ouvir" no APK */
+  vibrar(options?: { som?: string }): Promise<void>;
 }
 
 const CountdownNotification = registerPlugin<CountdownNotificationPlugin>(

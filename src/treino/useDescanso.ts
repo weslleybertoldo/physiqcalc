@@ -7,7 +7,7 @@ import {
   showTimerFinishedNotification,
   startTimerNotifications,
 } from "@/lib/nativeNotifications";
-import { SOM_EVENTO, VIBRACAO_FIM_DESCANSO, deveVibrar, lerSomDescanso, temSom, tocarSom } from "@/lib/somDescanso";
+import { SOM_EVENTO, deveVibrar, lerSomDescanso, temSom, tocarSom, vibrarNoNavegador } from "@/lib/somDescanso";
 
 /** lido na hora (e não no carregamento do módulo): o teste troca a plataforma */
 const nativo = () => Capacitor.isNativePlatform();
@@ -155,10 +155,12 @@ export function useDescanso(o: OpcoesDescanso) {
     }
   }, []);
 
-  // no APK quem vibra é o serviço nativo; ao voltar pro app ele para — vibrar aqui de novo repetiria os 11 s
+  // no APK quem vibra é o serviço nativo; ao voltar pro app ele para — vibrar aqui de novo repetiria a vibração.
+  // No site, vibra no ritmo do som escolhido (junto com cada toque; "Só vibrar" = 5 vibrações, uma por segundo).
   const vibrarFim = useCallback(() => {
     if (nativo()) return;
-    if (deveVibrar(lerSomDescanso()) && typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(VIBRACAO_FIM_DESCANSO);
+    const som = lerSomDescanso();
+    if (deveVibrar(som)) vibrarNoNavegador(som);
   }, []);
 
   // contagem
