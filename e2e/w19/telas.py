@@ -337,9 +337,19 @@ def caso_recibos(nav) -> None:
 
 @caso
 def caso_categorias(nav) -> None:
-    c = abrir(nav, "categorias", "w13-dono", "/painel/financeiro?aba=categorias")
+    c = B.B5.Caso(nav, ESTADO["base"], ESTADO["prefixo"], "categorias", desktop=True)
+    c.entrar("w13-dono", "/painel/financeiro?aba=categorias")
+    # do 1º quadro até a lista chegar: o "Nenhuma categoria ainda" não pode piscar (a lista só não chegou ainda)
+    viu_vazio = viu_esqueleto = False
+    t0 = time.time()
+    while time.time() - t0 < 60 and c.pg.locator("[data-categoria]").count() < 6:
+        viu_vazio = viu_vazio or c.tem("[data-categorias-vazio]")
+        viu_esqueleto = viu_esqueleto or c.tem("[data-carregando-categorias]")
+        c.pg.wait_for_timeout(50)
+    c.fechar_avisos()
     ok = esperar_aba(c, "categorias") and c.esperar(lambda: c.pg.locator("[data-categoria]").count() >= 6, 60)
     p.check(ok, "[categorias] as categorias do profissional")
+    p.check(not viu_vazio, f"[categorias] enquanto a lista carrega, nada de 'Nenhuma categoria ainda' (esqueleto visto: {viu_esqueleto})")
     c.pg.fill("[data-campo-nova-categoria]", "consulta")
     c.pg.locator("[data-btn-add-categoria]").click()
     p.check(c.esperar(lambda: c.tem("[data-erro-categoria]"), 10) and "Já existe" in c.pg.inner_text("[data-erro-categoria]"),

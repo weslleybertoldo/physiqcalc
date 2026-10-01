@@ -97,7 +97,8 @@ export default function Financeiro() {
         {aba === "lancamentos" && <Lancamentos f={f} params={sp} setParams={setSp} aoNova={() => setNova(true)} />}
         {aba === "recibos" && <Recibos f={f} />}
         {aba === "categorias" && (
-          <AbaCategorias uid={f.uid} contaId={f.contaId || null} categorias={f.categorias.data ?? []} onMudou={() => void f.recarregar("categorias")} />
+          <AbaCategorias uid={f.uid} contaId={f.contaId || null} categorias={f.categorias.data ?? []} carregando={f.categoriasCarregando} erro={f.categoriasErro}
+            onMudou={() => void f.recarregar("categorias")} />
         )}
       </div>
 
@@ -105,7 +106,7 @@ export default function Financeiro() {
         alunos={f.alunos.data ?? []} onGerenciarCategorias={() => setCategoriasAberto(true)}
         onSalvo={() => { void f.recarregar("transacoes"); void qc.invalidateQueries({ queryKey: ["financeiro-lancamentos"] }); }} />
       <CategoriasDialog open={categoriasAberto} onOpenChange={setCategoriasAberto} uid={f.uid} contaId={f.contaId || null} categorias={f.categorias.data ?? []}
-        onMudou={() => void f.recarregar("categorias")} />
+        carregando={f.categoriasCarregando} erro={f.categoriasErro} onMudou={() => void f.recarregar("categorias")} />
     </div>
   );
 }

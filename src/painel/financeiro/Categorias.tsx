@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { BTN_PERIGO, BTN_PRI, BTN_SEC, DESCRICAO_JANELA, INPUT, JANELA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
+import { Esqueleto } from "@/ui/premium/Estados";
 import { criarCategoria, excluirCategoria, renomearCategoria, type CategoriaFinanceira } from "./dados";
 import { CATEGORIA_NOME_MAX, validarNomeCategoria } from "./financeiroUtil";
 
@@ -27,12 +28,18 @@ interface Props {
   uid: string;
   contaId: string | null;
   categorias: CategoriaFinanceira[];
+  /** a lista ainda não chegou — esqueleto no lugar do "Nenhuma categoria ainda" (que não é verdade enquanto carrega) */
+  carregando?: boolean;
+  /** a lista não veio — avisa em vez de dizer que não há categorias */
+  erro?: boolean;
   /** algo mudou (criou/renomeou/excluiu) — quem chama recarrega */
   onMudou: () => void;
 }
 
 /** O corpo: a lista + nova categoria (sem a moldura — a aba põe o cartão, a janela põe o diálogo). */
-export function GerenciarCategorias({ uid, contaId, categorias, onMudou, aberto = true }: Props & { aberto?: boolean }) {
+export function GerenciarCategorias({ uid, contaId, categorias, carregando = false, erro: erroLista = false, onMudou, aberto = true }: Props & { aberto?: boolean }) {
+  // sem a lista, o "nome repetido" não tem com o que comparar: criar só depois que ela chega
+  const semLista = carregando || erroLista;
   const [nova, setNova] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [editando, setEditando] = useState<{ id: string; nome: string } | null>(null);
@@ -93,7 +100,17 @@ export function GerenciarCategorias({ uid, contaId, categorias, onMudou, aberto 
 
   return (
     <div className="space-y-4" data-gerenciar-categorias>
-      {categorias.length === 0 ? (
+      {carregando ? (
+        <div role="status" aria-busy="true" aria-label="Carregando as categorias" className="flex flex-col gap-2" data-carregando-categorias>
+          <Esqueleto className="h-11 w-full rounded-2xl" />
+          <Esqueleto className="h-11 w-full rounded-2xl" />
+          <Esqueleto className="h-11 w-full rounded-2xl" />
+        </div>
+      ) : erroLista ? (
+        <p role="alert" className="font-body text-[13px] text-rosa-3" data-categorias-erro>
+          Não deu para carregar as categorias. Confira a internet e abra de novo.
+        </p>
+      ) : categorias.length === 0 ? (
         <p className="font-body text-[13px] text-texto-3" data-categorias-vazio>Nenhuma categoria ainda — crie a primeira abaixo.</p>
       ) : (
         <ul className="divide-y divide-linha-3" data-lista-categorias data-categorias-total={categorias.length}>
@@ -134,7 +151,7 @@ export function GerenciarCategorias({ uid, contaId, categorias, onMudou, aberto 
           <span className={ROTULO}>Nova categoria</span>
           <input className={INPUT} value={nova} onChange={(e) => setNova(e.target.value)} placeholder="ex.: Cursos" maxLength={CATEGORIA_NOME_MAX} data-campo-nova-categoria />
         </label>
-        <button type="submit" className={cn(BTN_PRI, "h-10")} disabled={ocupado || !nova.trim()} data-btn-add-categoria>
+        <button type="submit" className={cn(BTN_PRI, "h-10")} disabled={ocupado || semLista || !nova.trim()} data-btn-add-categoria>
           <Plus size={13} aria-hidden="true" /> Adicionar
         </button>
       </form>
@@ -165,7 +182,7 @@ export function GerenciarCategorias({ uid, contaId, categorias, onMudou, aberto 
 export default function AbaCategorias(props: Props) {
   return (
     <Cartao className="px-[18px] pb-3 pt-4" data-aba-financeiro-conteudo="categorias">
-      <CabecalhoCartao titulo="Categorias" extra={<Chip tom="g">{props.categorias.length}</Chip>} />
+      <CabecalhoCartao titulo="Categorias" extra={<Chip tom="g">{props.carregando || props.erro ? "…" : props.categorias.length}</Chip>} />
       <p className="mb-3 font-body text-[12.5px] text-texto-2">
         Organize as movimentações do jeito que fizer sentido para você. As categorias são suas; excluir uma não mexe nas movimentações antigas.
       </p>
