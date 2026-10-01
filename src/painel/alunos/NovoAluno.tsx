@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, ClipboardList, Copy, Dumbbell, Mail, MessageCircle, RotateCw, Salad, Send, Share2, TriangleAlert, UserPlus, X } from "lucide-react";
@@ -13,6 +13,8 @@ import { CampoSelect, OpcoesPilula, type OpcaoPilula } from "@/painel/configurac
 import { linkWhatsApp, textoDoLink, TEXTO_CONVITE_ALUNO } from "@/painel/configuracoes/equipe/regras";
 import { useMeuLink } from "./meuLink";
 import { mensagemLimite } from "@/nucleo/cobranca/regras";
+import { camposDoErro, DICA_REPETIDO, MENSAGEM_REPETIDO, precisaConferir } from "@/nucleo/dadoRepetido";
+import { conferirDadoLivre } from "@/nucleo/dadoLivre";
 import {
   cancelarConviteAluno,
   convidarAluno,
@@ -169,14 +171,26 @@ function Cadastrar({ lista, aoMudou, aoFechar }: { lista: ListaAlunos; aoMudou: 
   const [personal, setPersonal] = useState(() => responsavelPadrao(lista, "personal"));
   const [nutri, setNutri] = useState(() => responsavelPadrao(lista, "nutricionista"));
   const [erro, setErro] = useState("");
+  // W16b: e-mail de outro aluno (em qualquer conta) → mensagem vermelha embaixo do campo
+  const [emailRepetido, setEmailRepetido] = useState(false);
+  const emailAtual = useRef("");
   const [indo, setIndo] = useState(false);
   const [feito, setFeito] = useState<{ nome: string; rota: string } | null>(null);
   const opcoes = useMemo(() => opcoesModulos(lista), [lista]);
+
+  const conferirEmail = async () => {
+    const valor = email;
+    if (!precisaConferir("email", valor)) return;
+    const r = await conferirDadoLivre({ email: valor });
+    // a resposta só vale se o e-mail ainda é o mesmo (a pessoa pode ter continuado digitando)
+    if (r && emailAtual.current === valor) setEmailRepetido(!r.email_livre);
+  };
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (nome.trim().length < 2) return setErro(mensagemErroAlunos("nome_invalido"));
     if (!modulos.length && !lista.eu.dono) return setErro(mensagemErroAlunos("sem_modulo"));
+    if (emailRepetido) return;
     setIndo(true);
     setErro("");
     try {
@@ -189,7 +203,10 @@ function Cadastrar({ lista, aoMudou, aoFechar }: { lista: ListaAlunos; aoMudou: 
       toast.success(`${nome.trim()} entrou na lista.`);
       aoMudou();
     } catch (err) {
-      setErro(mensagemErroAlunos(err instanceof ErroAlunos ? err.codigo : null, err instanceof ErroAlunos ? err.extra : {}));
+      const codigo = err instanceof ErroAlunos ? err.codigo : null;
+      const extra = err instanceof ErroAlunos ? err.extra : {};
+      if (camposDoErro(codigo, extra).includes("email")) setEmailRepetido(true);
+      else setErro(mensagemErroAlunos(codigo, extra));
     } finally {
       setIndo(false);
     }
@@ -204,7 +221,7 @@ function Cadastrar({ lista, aoMudou, aoFechar }: { lista: ListaAlunos; aoMudou: 
         </div>
         <div className="flex flex-wrap gap-2">
           <Botao variante="w" onClick={() => { aoFechar(); navigate(feito.rota); }} data-novo-abrir>Abrir o aluno</Botao>
-          <Botao icone={UserPlus} onClick={() => { setFeito(null); setNome(""); setEmail(""); setTelefone(""); }} data-novo-outro>Cadastrar outro</Botao>
+          <Botao icone={UserPlus} onClick={() => { setFeito(null); setNome(""); setEmail(""); emailAtual.current = ""; setTelefone(""); setEmailRepetido(false); }} data-novo-outro>Cadastrar outro</Botao>
         </div>
       </div>
     );
@@ -212,7 +229,9 @@ function Cadastrar({ lista, aoMudou, aoFechar }: { lista: ListaAlunos; aoMudou: 
   return (
     <form onSubmit={(e) => void enviar(e)} className="flex flex-col gap-3.5" data-form-cadastrar>
       <Campo rotulo="Nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome e sobrenome" autoComplete="off" data-novo-nome />
-      <Campo rotulo="E-mail (opcional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@do.aluno" autoComplete="off" data-novo-email />
+      <Campo rotulo="E-mail (opcional)" type="email" value={email} onChange={(e) => { setEmail(e.target.value); emailAtual.current = e.target.value; setEmailRepetido(false); }}
+        onBlur={() => void conferirEmail()} placeholder="email@do.aluno" autoComplete="off" data-novo-email
+        erro={emailRepetido ? <>{MENSAGEM_REPETIDO.email} {DICA_REPETIDO}</> : undefined} />
       <Campo rotulo="Telefone (opcional)" inputMode="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(82) 99999-0000" autoComplete="off" data-novo-telefone />
       {opcoes.length > 0 && (
         <OpcoesPilula<ModuloAluno> rotulo="O que você vai acompanhar" nome="modulos-novo" varias colunas={1} opcoes={opcoes} valores={modulos} aoMudar={setModulos} />

@@ -9,6 +9,7 @@ import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { EstadoCarregando, EstadoVazio } from "@/ui/premium/Estados";
+import { MENSAGEM_CADASTRO_EXISTE } from "@/nucleo/dadoRepetido";
 
 interface InfoLink {
   ok: boolean;
@@ -68,6 +69,8 @@ export default function Cadastro() {
   const [genero, setGenero] = useState("");
   const [obs, setObs] = useState("");
   const [erro, setErro] = useState("");
+  // W16b: o e-mail já é de um aluno (em qualquer conta) → mensagem vermelha embaixo do campo (sem dizer de quem)
+  const [emailExiste, setEmailExiste] = useState(false);
   const [indo, setIndo] = useState(false);
   const [feito, setFeito] = useState(false);
 
@@ -87,7 +90,9 @@ export default function Cadastro() {
       setFeito(true);
     } catch (err) {
       captcha.usado();
-      setErro(MENSAGEM[(err as Error).message] ?? "Não deu certo agora. Tente de novo.");
+      const codigo = (err as Error).message;
+      if (codigo === "cadastro_email_existe") setEmailExiste(true);
+      else setErro(MENSAGEM[codigo] ?? "Não deu certo agora. Tente de novo.");
     } finally {
       setIndo(false);
     }
@@ -137,7 +142,8 @@ export default function Cadastro() {
             <p className="text-[13px] text-texto-2">Preencha os seus dados. O cadastro fica pendente até o profissional aprovar.</p>
           </div>
           <Campo rotulo="Nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome e sobrenome" autoComplete="name" data-cad-nome />
-          <Campo rotulo="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" autoComplete="email" data-cad-email />
+          <Campo rotulo="E-mail" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailExiste(false); }} placeholder="seu@email.com"
+            autoComplete="email" data-cad-email erro={emailExiste ? MENSAGEM_CADASTRO_EXISTE : undefined} />
           <Campo rotulo="Telefone" inputMode="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(82) 99999-0000" autoComplete="tel" data-cad-telefone />
           <div className="grid grid-cols-2 gap-3">
             <Campo rotulo="Nascimento" type="date" value={nascimento} onChange={(e) => setNascimento(e.target.value)} data-cad-nascimento />

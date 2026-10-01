@@ -4,6 +4,7 @@
  */
 import { rotuloObjetivo } from "@/app-aluno/sozinho/regras";
 import { formatarTelefone, type AlunoLinha } from "@/painel/alunos/regras";
+import { MENSAGEM_REPETIDO } from "@/nucleo/dadoRepetido";
 import type { AjustesAluno, ChaveAjuste, FormDadosAluno, Genero, PerfilAluno, PerfilTreinoAluno } from "./tipos";
 
 export { formatarTelefone };
@@ -236,6 +237,9 @@ export function mensagemErroPerfil(codigo: string | null | undefined): string {
   if (c.includes("cpf_invalido")) return "Confira o CPF.";
   if (c.includes("telefone_invalido")) return "O telefone precisa ter DDD e 8 ou 9 números.";
   if (c.includes("email_invalido")) return "Confira o e-mail.";
+  // W16b: e-mail/CPF de outro aluno (o formulário mostra embaixo do campo; esta é a frase de reserva)
+  if (c.includes("email_repetido")) return MENSAGEM_REPETIDO.email;
+  if (c.includes("cpf_repetido")) return MENSAGEM_REPETIDO.cpf;
   if (c.includes("sem_acesso")) return "Só o dono da conta ou o profissional responsável pode mudar isso.";
   if (c.includes("aluno_inexistente")) return "Aluno não encontrado.";
   if (c.includes("sem_login")) return "Sua sessão terminou. Entre de novo.";

@@ -3,6 +3,7 @@
  * no Vitest (regras.test.ts). A lista vem da alunos_da_conta() do banco principal (P1: dono vê todos, membro só os seus).
  */
 import { mensagemLimite } from "@/nucleo/cobranca/regras";
+import { MENSAGEM_REPETIDO } from "@/nucleo/dadoRepetido";
 import type { TomChip } from "@/ui/premium/Chip";
 
 export type SituacaoFiltro = "ativos" | "bloqueados" | "desativados" | "excluidas" | "todos";
@@ -239,6 +240,9 @@ export function mensagemErroAlunos(codigo: string | null | undefined, extra: Rec
     case "outro_profissional": return "Este aluno já está com outro profissional.";
     case "ja_e_aluno": return "Este e-mail já é de um aluno ativo da conta.";
     case "ja_cadastrado": return "Já existe um aluno com este e-mail na conta.";
+    // W16b: e-mail/CPF de outro aluno, em qualquer conta (o formulário mostra embaixo do campo; aqui é a frase das outras telas)
+    case "email_repetido": case "paciente_email_repetido": return MENSAGEM_REPETIDO.email;
+    case "cpf_repetido": case "paciente_cpf_repetido": return MENSAGEM_REPETIDO.cpf;
     case "conta_travada": return "O plano da conta está vencido. Regularize em Configurações › Plano para cadastrar e convidar alunos.";
     case "conta_real_no_staging": return "Este é o ambiente de teste: só e-mails de teste.";
     case "email_invalido": return "Confira o e-mail.";
