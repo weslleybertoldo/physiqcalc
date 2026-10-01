@@ -8,8 +8,11 @@ import {
   adicionarExercicio,
   aplicarPadraoATodos,
   carregarEditor,
+  carregarEditorLeitura,
   carregarSemanaAtual,
+  carregarSemanaAtualLeitura,
   carregarVolume,
+  carregarVolumeLeitura,
   novoTreino,
   ordenarExercicios,
   removerExercicio,
@@ -71,12 +74,12 @@ export function useAlunoNoTreino(alunoIdDaRota: string, treinoUserId: string | n
   });
 }
 
-/** Tudo o que o editor mostra (ação `get`) + os treinos montados. */
-export function useDadosEditor(treinoUserId: string | null) {
+/** Tudo o que o editor mostra (ação `get`) + os treinos montados. `leituraAluno` (W16): só ler pelo principal (a nutricionista). */
+export function useDadosEditor(treinoUserId: string | null, leituraAluno?: string | null) {
   const q = useQuery({
-    queryKey: chaveEditor(treinoUserId),
-    queryFn: () => carregarEditor(treinoUserId!),
-    enabled: !!treinoUserId,
+    queryKey: leituraAluno ? (["treino-editor-leitura", leituraAluno] as const) : chaveEditor(treinoUserId),
+    queryFn: () => (leituraAluno ? carregarEditorLeitura(leituraAluno) : carregarEditor(treinoUserId!)),
+    enabled: !!leituraAluno || !!treinoUserId,
     staleTime: 30_000,
     retry: (n, e) => !(e instanceof ErroTreinoPainel && ["forbidden", "invalid_token"].includes(e.codigo)) && n < 1,
     networkMode: "online",
@@ -86,14 +89,14 @@ export function useDadosEditor(treinoUserId: string | null) {
 }
 
 /** A semana de hoje (Seg–Dom): trocas do dia e treinos feitos — o "N de M na semana". */
-export function useSemanaAtual(treinoUserId: string | null, hoje: Date = new Date()) {
+export function useSemanaAtual(treinoUserId: string | null, hoje: Date = new Date(), leituraAluno?: string | null) {
   const dias = datasDaSemana(hoje);
   const inicio = chaveData(dias[0]);
   const fim = chaveData(dias[6]);
   return useQuery({
-    queryKey: ["treino-semana-atual", treinoUserId, inicio],
-    queryFn: () => carregarSemanaAtual(treinoUserId!, inicio, fim),
-    enabled: !!treinoUserId,
+    queryKey: ["treino-semana-atual", leituraAluno ? `leitura:${leituraAluno}` : treinoUserId, inicio],
+    queryFn: () => (leituraAluno ? carregarSemanaAtualLeitura(leituraAluno, inicio, fim) : carregarSemanaAtual(treinoUserId!, inicio, fim)),
+    enabled: !!leituraAluno || !!treinoUserId,
     staleTime: 60_000,
     retry: 1,
     networkMode: "online",
@@ -101,11 +104,11 @@ export function useSemanaAtual(treinoUserId: string | null, hoje: Date = new Dat
 }
 
 /** Séries por semana por bloco muscular (o Volume Semanal — programado). */
-export function useVolumeDoAluno(treinoUserId: string | null) {
+export function useVolumeDoAluno(treinoUserId: string | null, leituraAluno?: string | null) {
   return useQuery({
-    queryKey: ["treino-volume", treinoUserId],
-    queryFn: () => carregarVolume(treinoUserId!),
-    enabled: !!treinoUserId,
+    queryKey: ["treino-volume", leituraAluno ? `leitura:${leituraAluno}` : treinoUserId],
+    queryFn: () => (leituraAluno ? carregarVolumeLeitura(leituraAluno) : carregarVolume(treinoUserId!)),
+    enabled: !!leituraAluno || !!treinoUserId,
     staleTime: 60_000,
     retry: 1,
     networkMode: "online",

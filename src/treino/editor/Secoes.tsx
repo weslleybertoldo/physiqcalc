@@ -139,14 +139,16 @@ export function SeriesETroca({ treinoUserId, somenteLeitura }: { treinoUserId: s
 // ───────────────────────── volume semanal ─────────────────────────
 
 /** Séries por semana por grupo (C38): o programado (a semana do aluno) e o feito nesta semana (séries concluídas no app). */
-export function VolumeDoAluno({ treinoUserId }: { treinoUserId: string }) {
-  const volume = useVolumeDoAluno(treinoUserId);
+export function VolumeDoAluno({ treinoUserId, leituraAluno }: { treinoUserId: string; leituraAluno?: string | null }) {
+  // W16: quem só lê pelo principal (a nutricionista) vê o programado; o feito na semana é das funções do Treino
+  const volume = useVolumeDoAluno(leituraAluno ? null : treinoUserId, leituraAluno);
   const dias = datasDaSemana(new Date());
   const inicio = chaveData(dias[0]);
   const fim = chaveData(dias[6]);
   const praticado = useQuery({
     queryKey: ["treino-volume-praticado", treinoUserId, inicio],
     queryFn: () => carregarVolumePraticado(treinoUserId, inicio, fim),
+    enabled: !leituraAluno,
     staleTime: 60_000,
   });
   const grupos = useMemo(() => volumePorGrupo(volume.data ?? []), [volume.data]);
@@ -154,7 +156,9 @@ export function VolumeDoAluno({ treinoUserId }: { treinoUserId: string }) {
   return (
     <Cartao className="px-[18px] py-4" data-volume-aluno>
       <CabecalhoCartao titulo="Volume semanal" extra={<Chip tom="g">SÉRIES POR GRUPO</Chip>} />
-      <p className="-mt-1 mb-3 text-[12px] text-texto-3">Programado na semana do aluno (secundários contam meia série) e o feito nesta semana no app.</p>
+      <p className="-mt-1 mb-3 text-[12px] text-texto-3">
+        {leituraAluno ? "Programado na semana do aluno (secundários contam meia série)." : "Programado na semana do aluno (secundários contam meia série) e o feito nesta semana no app."}
+      </p>
       {volume.isLoading ? (
         <Esqueleto className="h-[150px] w-full" />
       ) : volume.error ? (
@@ -162,7 +166,7 @@ export function VolumeDoAluno({ treinoUserId }: { treinoUserId: string }) {
       ) : grupos.length === 0 ? (
         <p className="text-[12.5px] text-texto-3" data-volume-vazio>Monte a semana do aluno para ver o volume.</p>
       ) : (
-        <BarrasVolume grupos={grupos} maximo={grupos.length} feitos={feitos} />
+        <BarrasVolume grupos={grupos} maximo={grupos.length} feitos={leituraAluno ? undefined : feitos} />
       )}
     </Cartao>
   );

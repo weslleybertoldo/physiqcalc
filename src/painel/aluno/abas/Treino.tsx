@@ -43,6 +43,23 @@ export default function Treino({ alunoId }: { alunoId: string }) {
     );
   }
 
+  if (est.tipo === "leitura") {
+    // W16: a nutricionista vê o treino só para ler (spec 4.1), pelo principal — sem sessão nem escrita no Treino
+    const { perfil: pf } = est;
+    return (
+      <div className="flex flex-col gap-3.5" data-aba-treino-aluno="leitura" data-somente-leitura>
+        <div className="flex items-center gap-2.5 rounded-2xl border border-linha bg-superficie px-3.5 py-2.5 text-[13px] text-texto-2" data-treino-so-ver>
+          <Eye aria-hidden className="h-4 w-4 flex-none text-violeta-3" />
+          Você vê o treino de {pf.nome.split(" ")[0]}; quem muda é {pf.personal?.nome ? `o personal responsável (${pf.personal.nome})` : "o personal responsável"}.
+        </div>
+        <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <EditorTreino treinoUserId="" leituraAluno={est.alunoId} somenteLeitura nomeAluno={pf.nome} />
+          <VolumeDoAluno treinoUserId="" leituraAluno={est.alunoId} />
+        </div>
+      </div>
+    );
+  }
+
   const { treinoUserId, somenteLeitura, perfil } = est;
   const irParaSemana = () => document.getElementById("semana-do-aluno")?.scrollIntoView({ behavior: "smooth", block: "start" });
   return (

@@ -11,7 +11,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { FolhaBiblioteca, FolhaDescanso, FolhaEditarExercicio, FolhaModelos } from "./folhas";
 import { LinhaExercicioEditor } from "./LinhaExercicioEditor";
-import { descansoDoAluno, temAlternado } from "./regras";
+import { descansoDoAluno, temAlternado, textoDescansoCampo } from "./regras";
 import { mensagemDoErro, useAcoesEditor, useDadosEditor, type AcoesEditor } from "./useEditorTreino";
 import type { ExercicioEditor, TreinoEditor } from "./tipos";
 
@@ -26,6 +26,8 @@ export interface EditorTreinoProps {
   onMudou?: () => void;
   /** "Treino alternado" leva até a semana do aluno (a aba Treino rola até ela) */
   aoAbrirSemana?: () => void;
+  /** W16: o aluno da rota, para quem só LÊ pelo principal (a nutricionista, sem sessão do Treino — função treino-leitura) */
+  leituraAluno?: string | null;
   className?: string;
 }
 
@@ -69,12 +71,12 @@ function AbaTreino({ t, ativa, aoAbrir }: { t: TreinoEditor; ativa: boolean; aoA
  * observação para o aluno; descanso padrão e treino alternado. Grava no Banco do Treino a cada mudança (o aluno vê pelo
  * PowerSync). A W16 monta a página "Editar treino e dieta" com este mesmo componente.
  */
-export function EditorTreino({ treinoUserId, somenteLeitura = false, nomeAluno, onMudou, aoAbrirSemana, className }: EditorTreinoProps) {
-  const dados = useDadosEditor(treinoUserId);
-  const acoes = useAcoesEditor(treinoUserId, onMudou);
+export function EditorTreino({ treinoUserId, somenteLeitura = false, nomeAluno, onMudou, aoAbrirSemana, leituraAluno, className }: EditorTreinoProps) {
+  const dados = useDadosEditor(leituraAluno ? null : treinoUserId, leituraAluno);
+  const acoes = useAcoesEditor(leituraAluno ? null : treinoUserId, onMudou);
   const [aberta, setAberta] = useState<string | null>(null);
   const treinos = dados.treinos;
-  const ler = somenteLeitura || dados.data?.podeEditar === false;
+  const ler = somenteLeitura || !!leituraAluno || dados.data?.podeEditar === false;
 
   // aba aberta: a escolhida (pelo nome — a chave muda quando o treino vira cópia só do aluno), senão a 1ª
   const nomeAberto = useRef<string | null>(null);
@@ -329,7 +331,7 @@ function CorpoEditor({
               data-chip-descanso={descansoPadrao}
             >
               <Timer aria-hidden />
-              DESCANSO PADRÃO {(formatarDescanso(descansoPadrao) ?? "").toUpperCase()}
+              DESCANSO PADRÃO {textoDescansoCampo(descansoPadrao).toUpperCase()}
             </button>
             <button type="button" onClick={aoAbrirSemana} className={cn("pq-chip pq-chip-g", aoAbrirSemana && "cursor-pointer hover:text-texto")} data-chip-alternado={alternado ? "sim" : "nao"}>
               <Repeat aria-hidden />

@@ -21,10 +21,12 @@ function Moldura({ alunoId, extra, children }: { alunoId: string; extra?: React.
   );
 }
 
-function Conteudo({ alunoId, treinoUserId }: { alunoId: string; treinoUserId: string }) {
-  const dados = useDadosEditor(treinoUserId);
-  const semana = useSemanaAtual(treinoUserId);
-  const volume = useVolumeDoAluno(treinoUserId);
+function Conteudo({ alunoId, treinoUserId, leitura }: { alunoId: string; treinoUserId: string | null; leitura?: boolean }) {
+  // W16: a nutricionista (sem sessão do Treino) lê pelo principal — o aluno da rota vai no lugar do id do Treino
+  const leituraAluno = leitura ? alunoId : null;
+  const dados = useDadosEditor(treinoUserId, leituraAluno);
+  const semana = useSemanaAtual(treinoUserId, undefined, leituraAluno);
+  const volume = useVolumeDoAluno(treinoUserId, leituraAluno);
   const resumo = useMemo(() => (dados.data ? resumoSemanaDoAluno(dados.data, semana.data) : null), [dados.data, semana.data]);
   const grupos = useMemo(() => volumePorGrupo(volume.data ?? []), [volume.data]);
   const comLetra = dados.treinos.filter((t) => t.letra);
@@ -72,6 +74,7 @@ export default function CardTreino({ alunoId }: { alunoId: string }) {
   const est = useTreinoDoAlunoPainel(alunoId);
   if (est.tipo === "sem-modulo" || est.tipo === "sem-acesso") return null;
   if (est.tipo === "ok") return <Conteudo alunoId={alunoId} treinoUserId={est.treinoUserId} />;
+  if (est.tipo === "leitura") return <Conteudo alunoId={alunoId} treinoUserId={null} leitura />;
   return (
     <Moldura alunoId={alunoId}>
       {est.tipo === "carregando" ? (
