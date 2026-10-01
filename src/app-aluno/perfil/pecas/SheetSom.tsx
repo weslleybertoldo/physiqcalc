@@ -3,24 +3,27 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CountdownNotification, { isNativeApp } from "@/lib/countdownNotification";
 import {
-  SOM_OPCOES, VIBRACAO_FIM_DESCANSO, deveVibrar, gravarSomDescanso, nomeDoSom, temSom, tocarSom, type SomDescanso,
+  SOM_OPCOES, deveVibrar, gravarSomDescanso, nomeDoSom, temSom, tocarSom, vibrarNoNavegador, type SomDescanso,
 } from "@/lib/somDescanso";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 
-/** Prévia do som (a mesma do popup antigo Configurações › Som: no APK a vibração vai pelo nativo, uso alarme). */
+/**
+ * Prévia do som igual ao fim do descanso: os toques e a vibração juntos, no ritmo do som (no APK a vibração vai pelo
+ * nativo, uso alarme, com o padrão do som escolhido). Primeiro o som entra na fila do áudio, depois a vibração — saem juntos.
+ */
 async function ouvir(som: SomDescanso): Promise<void> {
   try {
-    if (deveVibrar(som)) {
-      if (isNativeApp) CountdownNotification.vibrar().catch(() => {});
-      else if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(VIBRACAO_FIM_DESCANSO);
+    if (temSom(som)) {
+      const ctx = new AudioContext();
+      if (ctx.state === "suspended") await ctx.resume();
+      tocarSom(ctx, som);
     }
-    if (!temSom(som)) return;
-    const ctx = new AudioContext();
-    if (ctx.state === "suspended") await ctx.resume();
-    tocarSom(ctx, som);
   } catch {
     /* sem áudio neste aparelho/navegador */
   }
+  if (!deveVibrar(som)) return;
+  if (isNativeApp) CountdownNotification.vibrar({ som }).catch(() => {});
+  else vibrarNoNavegador(som);
 }
 
 /**

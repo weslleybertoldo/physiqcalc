@@ -36,6 +36,8 @@ import androidx.core.app.NotificationCompat;
  *   "bip" / "sino" / "alarme" são gerados aqui (AudioTrack, seno PCM, MESMA tabela de tons do web —
  *   src/lib/somDescanso.ts tonsDoSom) e tocam como MÍDIA (USAGE_MEDIA): com fone conectado saem só
  *   no fone; sem fone, no alto-falante; no volume de mídia. "vibrar" só vibra; "silencio" nada.
+ * - Vibração no RITMO do som (pedido 30/09/2026): vibra junto com cada toque (a 1ª metade dele); "vibrar" = 5 vibrações
+ *   curtas, uma por segundo — padraoVibracao, os MESMOS números de src/lib/somDescanso.ts (padraoVibracao).
  *   (Antes: MediaPlayer + USAGE_ALARM = toque do sistema no alto-falante E no fone, volume máximo.)
  * - Notificação "Hora de treinar!" é só visual (canal timer_alarm_v3 sem som nem vibração)
  * - Auto-encerra em no máximo MAX_SERVICE_LIFETIME_MS (segurança contra leak)
@@ -53,7 +55,8 @@ public class TimerForegroundService extends Service {
 
     // Segurança: service se encerra sozinho após 15 minutos (mesmo se algo der errado)
     private static final long MAX_SERVICE_LIFETIME_MS = 15 * 60 * 1000L;
-    // Tempo que o alarme toca antes do service se encerrar — cobre a vibração de 11 s (o encerramento corta ela)
+    // Tempo que o alarme fica antes do service se encerrar (e a notificação "Hora de treinar!" sumir) — cobre com folga o
+    // som e a vibração mais longos (sino 3,4 s; "vibrar" 4,5 s); o encerramento corta o que sobrar
     private static final long ALARM_DURATION_MS = 12_000L;
 
     private static final int SAMPLE_RATE = 44100;
@@ -258,8 +261,9 @@ public class TimerForegroundService extends Service {
         boolean silencio = "silencio".equals(som);
         double[][] tons = tonsDoSom(som); // vazio pra "vibrar" e "silencio"
 
-        if (!silencio) vibrar(this);
+        // som e vibração saem juntos: cada vibração começa com um toque (padraoVibracao segue a tabela de tons)
         if (tons.length > 0) tocarTons(tons);
+        if (!silencio) vibrar(this, som);
 
         // Notificação "Hora de treinar!" — só visual (canal mudo + setSilent); o som é o AudioTrack acima
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -295,18 +299,35 @@ public class TimerForegroundService extends Service {
     }
 
     /**
-     * Mesmo padrão do web (VIBRACAO_FIM_DESCANSO): 3 vibrações de 3 s com 1 s de pausa (11 s).
-     * Vibra como ALARME: vibração comum (sem uso) é descartada pelo Android na economia de bateria, e a
-     * de toque (navigator.vibrate da WebView) some com a "vibração ao tocar" desligada.
+     * Padrão de vibração do fim do descanso no formato do Android ({espera, vibra, pausa, vibra, …} em ms), no ritmo do som:
+     * cada vibração começa junto com um toque da tabela de tonsDoSom e dura a 1ª metade dele; "vibrar" = 5 vibrações
+     * curtas, uma por segundo (500 ms vibrando, 500 ms parado); "silencio" = nada.
+     * Os MESMOS números de src/lib/somDescanso.ts (padraoVibracaoAndroid) — o teste src/lib/vibracaoNativa.test.ts lê
+     * este arquivo e confere; mudou lá, muda aqui.
+     */
+    static long[] padraoVibracao(String som) {
+        if ("silencio".equals(som)) return new long[0];
+        if ("bip".equals(som)) return new long[]{0, 400, 500, 400, 500, 400};
+        if ("sino".equals(som)) return new long[]{0, 800, 1000, 800};
+        if ("alarme".equals(som)) return new long[]{0, 125, 225, 125, 225, 125, 225, 125, 225, 125};
+        if ("vibrar".equals(som)) return new long[]{0, 500, 500, 500, 500, 500, 500, 500, 500, 500};
+        // valor desconhecido: melhor vibrar do que deixar o fim do descanso passar em branco
+        return padraoVibracao("vibrar");
+    }
+
+    /**
+     * Vibra no ritmo do som escolhido (padraoVibracao). Vibra como ALARME: vibração comum (sem uso) é descartada pelo
+     * Android na economia de bateria, e a de toque (navigator.vibrate da WebView) some com a "vibração ao tocar" desligada.
      * Precisa da permissão VIBRATE no manifesto — sem ela o vibrate() lança SecurityException.
      * Também é a prévia do "Ouvir" (CountdownNotificationPlugin.vibrar), pra ela sentir igual ao fim.
      */
-    static void vibrar(Context context) {
+    static void vibrar(Context context, String som) {
         try {
+            long[] pattern = padraoVibracao(som);
+            if (pattern.length < 2) return;
             Vibrator vibrator = vibrador(context);
             if (vibrator == null || !vibrator.hasVibrator()) return;
 
-            long[] pattern = {0, 3000, 1000, 3000, 1000, 3000};
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1),
                     VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM));
@@ -326,7 +347,7 @@ public class TimerForegroundService extends Service {
         }
     }
 
-    /** Corta a vibração no meio (fechou o descanso, começou outro ou voltou pro app) — ela dura 11 s. */
+    /** Corta a vibração no meio (fechou o descanso, começou outro ou voltou pro app) — ela dura até 4,5 s. */
     static void pararVibracao(Context context) {
         try {
             Vibrator vibrator = vibrador(context);

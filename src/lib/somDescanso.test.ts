@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  SOM_CHAVE, SOM_OPCOES, SOM_PADRAO, VIBRACAO_FIM_DESCANSO, deveVibrar, ehSomDescanso, gravarSomDescanso,
-  lerSomDescanso, nomeDoSom, temSom, tocarSom, tonsDoSom,
+  FRACAO_VIBRANDO, SOM_CHAVE, SOM_OPCOES, SOM_PADRAO, deveVibrar, ehSomDescanso, gravarSomDescanso, lerSomDescanso,
+  nomeDoSom, padraoVibracao, padraoVibracaoAndroid, ritmoDoSom, temSom, tocarSom, tonsDoSom, vibrarNoNavegador, type SomDescanso,
 } from "./somDescanso";
 
 /** AudioContext falso que registra os osciladores tocados */
@@ -60,11 +60,69 @@ describe("somDescanso — opções e tons", () => {
     expect(temSom("silencio")).toBe(false);
   });
 
-  it("o fim do descanso vibra 3 vezes de 3 s, com 1 s de pausa", () => {
-    const vibracoes = VIBRACAO_FIM_DESCANSO.filter((_, i) => i % 2 === 0);
-    const pausas = VIBRACAO_FIM_DESCANSO.filter((_, i) => i % 2 === 1);
-    expect(vibracoes).toEqual([3000, 3000, 3000]);
-    expect(pausas).toEqual([1000, 1000]);
+});
+
+/** Início (ms) de cada vibração de um padrão [vibra, pausa, vibra, …]. */
+function iniciosDasVibracoes(padrao: number[]): number[] {
+  const inicios: number[] = [];
+  let t = 0;
+  padrao.forEach((ms, i) => {
+    if (i % 2 === 0) inicios.push(t);
+    t += ms;
+  });
+  return inicios;
+}
+
+describe("somDescanso — vibração no ritmo do som (pedido dele 30/09/2026)", () => {
+  it('"Só vibrar" = 5 vibrações curtas, uma por segundo (meio segundo vibrando)', () => {
+    const p = padraoVibracao("vibrar");
+    expect(p).toEqual([500, 500, 500, 500, 500, 500, 500, 500, 500]);
+    expect(p.filter((_, i) => i % 2 === 0)).toHaveLength(5);
+    expect(iniciosDasVibracoes(p)).toEqual([0, 1000, 2000, 3000, 4000]);
+    // acaba em 4,5 s (antes: 11 s)
+    expect(p.reduce((a, b) => a + b, 0)).toBe(4500);
+  });
+
+  it("com som, cada vibração começa junto com um toque e dura a 1ª metade dele", () => {
+    for (const som of ["bip", "sino", "alarme"] as const) {
+      const tons = tonsDoSom(som);
+      const p = padraoVibracao(som);
+      // uma vibração por toque
+      expect(p.filter((_, i) => i % 2 === 0)).toHaveLength(tons.length);
+      // começa no toque
+      expect(iniciosDasVibracoes(p)).toEqual(tons.map((t) => Math.round(t[1] * 1000)));
+      // dura a metade do toque
+      expect(p.filter((_, i) => i % 2 === 0)).toEqual(tons.map((t) => Math.round(t[2] * FRACAO_VIBRANDO * 1000)));
+      // nunca passa do fim do som
+      const fimSom = Math.max(...tons.map((t) => (t[1] + t[2]) * 1000));
+      expect(p.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(fimSom);
+      // toda pausa existe (vibrações separadas, como os toques)
+      expect(p.filter((_, i) => i % 2 === 1).every((x) => x > 0)).toBe(true);
+    }
+    expect(padraoVibracao("bip")).toEqual([400, 500, 400, 500, 400]);
+    expect(padraoVibracao("sino")).toEqual([800, 1000, 800]);
+    expect(padraoVibracao("alarme")).toEqual([125, 225, 125, 225, 125, 225, 125, 225, 125]);
+  });
+
+  it("Silencioso não vibra; o formato do Android leva o 0 inicial", () => {
+    expect(padraoVibracao("silencio")).toEqual([]);
+    expect(padraoVibracaoAndroid("silencio")).toEqual([]);
+    expect(padraoVibracaoAndroid("bip")).toEqual([0, 400, 500, 400, 500, 400]);
+    expect(ritmoDoSom("silencio")).toEqual([]);
+    expect(ritmoDoSom("vibrar")).toHaveLength(5);
+  });
+
+  it("vibrarNoNavegador manda o padrão do som pro navigator.vibrate (e nada no Silencioso)", () => {
+    const chamadas: unknown[] = [];
+    const original = Object.getOwnPropertyDescriptor(navigator, "vibrate");
+    Object.defineProperty(navigator, "vibrate", { value: (p: unknown) => { chamadas.push(p); return true; }, configurable: true });
+    try {
+      for (const som of ["vibrar", "bip", "silencio"] as SomDescanso[]) vibrarNoNavegador(som);
+      expect(chamadas).toEqual([padraoVibracao("vibrar"), padraoVibracao("bip")]);
+    } finally {
+      if (original) Object.defineProperty(navigator, "vibrate", original);
+      else delete (navigator as unknown as Record<string, unknown>).vibrate;
+    }
   });
 });
 

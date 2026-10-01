@@ -39,13 +39,14 @@ public class CountdownNotificationPlugin extends Plugin {
     }
 
     /**
-     * Prévia do "Ouvir" (popup Som): a MESMA vibração do fim do descanso, com uso de alarme.
-     * O navigator.vibrate da WebView sai como vibração de TOQUE, e o Android ignora quando a
+     * Prévia do "Ouvir" (popup Som): a MESMA vibração do fim do descanso, no ritmo do som escolhido ("som"), com uso de
+     * alarme. O navigator.vibrate da WebView sai como vibração de TOQUE, e o Android ignora quando a
      * "vibração ao tocar" do aparelho está desligada.
      */
     @PluginMethod()
     public void vibrar(PluginCall call) {
-        TimerForegroundService.vibrar(getContext());
+        String som = call.getString("som", "vibrar");
+        TimerForegroundService.vibrar(getContext(), som);
         call.resolve();
     }
 

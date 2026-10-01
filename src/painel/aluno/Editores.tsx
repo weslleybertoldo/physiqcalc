@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Apple, Bookmark, Dumbbell, Eye, FileText, KeyRound, Plus, Send, UserRoundX, Users } from "lucide-react";
+import { Apple, Bookmark, Dumbbell, Eye, FileText, KeyRound, MessageCircle, Plus, Send, UserRoundX, Users } from "lucide-react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { principal } from "@/integrations/principal/client";
+import { PRINCIPAL_SCHEMA } from "@/integrations/principal/client";
 import { planoAtivo } from "@/nutricao/app/dia";
 import type { PlanoAlimentar } from "@/nutricao/app/tipos";
 import { listarCalculos } from "@/nutricao/editor/lib/calculosEnergeticos";
@@ -23,17 +23,10 @@ import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { acessoDaDieta } from "@/nutricao/editor/lib/acesso";
 import { gerarPdfTreino } from "./dados/pdf";
 import { usePerfilAluno } from "./dados/usePerfilAluno";
+import { enviarAoAluno } from "./envio/api";
+import { SEM_TELEFONE, atalhoWhatsApp, mensagemWhatsApp, textoDoResultado, type ModuloEnvio } from "./envio/regras";
 
-type ModuloAviso = "treino" | "dieta";
-
-/** "Salvar e enviar ao aluno": o aviso "plano atualizado" no sino do aluno (NF9) — nenhuma mensagem de WhatsApp ou e-mail. */
-async function avisarAluno(pacienteId: string, modulos: ModuloAviso[]): Promise<{ avisado: boolean; semLogin: boolean; repetido: boolean }> {
-  const { data, error } = await principal.rpc("aluno_avisar_plano" as never, { p_aluno: pacienteId, p_modulos: modulos } as never);
-  if (error) throw new Error(error.message || "erro_interno");
-  const r = (data ?? {}) as { ok?: boolean; erro?: string; avisado?: boolean; sem_login?: boolean; repetido?: boolean };
-  if (r.ok === false) throw new Error(r.erro ?? "erro_interno");
-  return { avisado: !!r.avisado, semLogin: !!r.sem_login, repetido: !!r.repetido };
-}
+type ModuloAviso = ModuloEnvio;
 
 const TEXTO_ERRO_AVISO: Record<string, string> = {
   sem_acesso: "Você não pode avisar este aluno.",
@@ -77,7 +70,8 @@ function LadoTreino({ alunoId, aoMudar }: { alunoId: string; aoMudar: () => void
  * "Editar treino e dieta" (W16 — tela 8 inteira, spec 4.5, rota /painel/alunos/:id/editar): o editor do treino da W15 à esquerda e
  * o do plano alimentar à direita, cada um conforme o papel (spec 4.1: a nutricionista vê o treino e o personal vê o plano, só para
  * ler). "Gerar PDF" baixa o do treino e/ou o do plano. Tudo grava na hora (o aluno vê como hoje nos 2 apps); "Salvar e enviar ao
- * aluno" cria o aviso "plano atualizado" no sino dele (NF9) — não manda WhatsApp nem e-mail.
+ * aluno" cria o aviso "plano atualizado" no sino dele (NF9) e manda o e-mail (W17: função aluno-enviar, sem repetir em 10 min);
+ * "Enviar pelo WhatsApp" abre o WhatsApp de quem salvou já na conversa com o aluno e a mensagem pronta (sem telefone, desligado).
  */
 export default function Editores({ alunoId }: { alunoId: string }) {
   const perfilQ = usePerfilAluno(alunoId);
@@ -133,11 +127,11 @@ export default function Editores({ alunoId }: { alunoId: string }) {
     setEnviando(true);
     try {
       await new Promise((r) => setTimeout(r, 450));
-      const r = await avisarAluno(p.paciente_id, modulosQueMudo);
+      const r = await enviarAoAluno(p.paciente_id, modulosQueMudo);
       mudou.current.clear();
-      if (r.semLogin) toast.success("Salvo. O aluno ainda não tem acesso ao app: ele vê assim que entrar.");
-      else if (r.repetido) toast.success("Salvo. O aluno já tinha o aviso no app.");
-      else toast.success("Salvo e enviado: o aluno vê no app, com o aviso no sino.");
+      const t = textoDoResultado(r);
+      if (t.tipo === "aviso") toast.warning(t.texto);
+      else toast.success(t.texto);
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
       toast.error(TEXTO_ERRO_AVISO[m] ?? "Não deu para avisar o aluno agora. O que você mudou já está salvo.");
@@ -146,8 +140,11 @@ export default function Editores({ alunoId }: { alunoId: string }) {
     }
   };
 
+  const zap = p && modulosQueMudo.length > 0 ? atalhoWhatsApp(p.telefone, mensagemWhatsApp(p.nome, modulosQueMudo, PRINCIPAL_SCHEMA)) : null;
+  const semTelefone = !!p && modulosQueMudo.length > 0 && !zap;
+
   const acoes = p ? (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Botao variante="g" icone={FileText} data-editores-pdf>Gerar PDF</Botao>
@@ -170,6 +167,16 @@ export default function Editores({ alunoId }: { alunoId: string }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {modulosQueMudo.length > 0 &&
+        (zap ? (
+          <a href={zap} target="_blank" rel="noreferrer" className="pq-botao pq-botao-g" data-editores-whatsapp={zap}>
+            <MessageCircle aria-hidden /> Enviar pelo WhatsApp
+          </a>
+        ) : (
+          <button type="button" className="pq-botao pq-botao-g" disabled title={SEM_TELEFONE} aria-describedby="editores-whatsapp-motivo" data-editores-whatsapp="">
+            <MessageCircle aria-hidden /> Enviar pelo WhatsApp
+          </button>
+        ))}
       {modulosQueMudo.length > 0 && (
         <Botao variante="w" icone={Send} disabled={enviando} onClick={() => void enviar()} data-editores-enviar>
           {enviando ? "Enviando…" : "Salvar e enviar ao aluno"}
@@ -182,7 +189,16 @@ export default function Editores({ alunoId }: { alunoId: string }) {
     <div className="flex flex-col gap-3.5" data-editores={alunoId}>
       {/* a trilha no topo da casca (a busca e o sino de lá ocupam o resto da linha); "Gerar PDF" e "Salvar e enviar ao aluno" logo abaixo */}
       <TopoPagina trilha={[{ rotulo: "Alunos", para: "/painel/alunos", icone: Users }, { rotulo: nome, para: base }, { rotulo: "Editar treino e dieta" }]} />
-      {acoes && <div className="-mt-1 flex justify-end" data-editores-acoes>{acoes}</div>}
+      {acoes && (
+        <div className="-mt-1 flex flex-col items-end gap-1" data-editores-acoes>
+          {acoes}
+          {semTelefone && (
+            <p id="editores-whatsapp-motivo" className="text-[12px] text-texto-3" data-editores-whatsapp-motivo>
+              {SEM_TELEFONE}: cadastre o número em Dados do aluno para enviar pelo WhatsApp.
+            </p>
+          )}
+        </div>
+      )}
       {perfilQ.isLoading ? (
         <Esqueleto className="h-[520px] w-full rounded-[22px]" />
       ) : perfilQ.error || !p ? (
