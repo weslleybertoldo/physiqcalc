@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
 import { useSessao } from "@/nucleo/sessao";
-import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import ComprovantePixCard from "@/components/admin/ComprovantePixCard";
 import { Botao } from "@/ui/premium/Botao";
@@ -15,12 +14,15 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { ErroFinanceiro } from "../api";
 import { criarLancamento, garantirCategorias, listarLancamentosDoAluno, rotuloMetodoLancamento, totais, valorComSinal, type Lancamento } from "../lancamentos";
-import { baixarReciboPdf } from "../pdf";
-import { emitirRecibo, excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, garantirModelosRecibo, listarRecibosDoAluno, podeEmitirRecibo, ultimoNumeroRecibo } from "../recibos";
+import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, listarRecibosDoAluno, podeEmitirRecibo } from "../recibos";
+import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
+import { pdfDoRecibo } from "@/painel/financeiro/pdfRecibo";
+import ReciboDialog from "@/painel/financeiro/ReciboDialog";
+import { useFinanceiroConta } from "@/painel/financeiro/useFinanceiro";
 import { chipDaMensalidade, dataBR, estadoDaMensalidade, lerValor, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
 import { ComprovanteVisor } from "./ComprovanteVisor";
-import { DialogoLancamento, DialogoModelos, DialogoNovaCobranca, DialogoRecibo, DialogoRegistrar } from "./Dialogos";
+import { DialogoLancamento, DialogoNovaCobranca, DialogoRegistrar } from "./Dialogos";
 import { LinhaCobranca } from "./LinhaCobranca";
 import { TagsDoAluno } from "./TagsDoAluno";
 import { useFinanceiroDoAluno } from "./useFinanceiroDoAluno";
@@ -257,43 +259,27 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
   aoFecharReciboAvulso: () => void;
   aoAbrirReciboAvulso: () => void;
 }) {
-  const { usuario, situacao } = useSessao();
-  const { user } = useAuth();
+  const { usuario } = useSessao();
   const uid = usuario?.id ?? "";
+  // W19: o recibo, os modelos ★ e o PDF são os do Painel › Financeiro (o do Nutri: emitir e baixar o PDF, marca Physiq)
+  const fin = useFinanceiroConta({ alunos: false, categorias: false });
   const qc = useQueryClient();
   const pid = d.aluno.paciente_id;
   const lanc = useQuery({ queryKey: ["financeiro-lancamentos", pid], queryFn: () => listarLancamentosDoAluno(pid), enabled: !!uid });
   const recibos = useQuery({ queryKey: ["financeiro-recibos", pid], queryFn: () => listarRecibosDoAluno(pid), enabled: !!uid });
-  const modelos = useQuery({ queryKey: ["financeiro-modelos-recibo", uid], queryFn: () => garantirModelosRecibo(uid), enabled: !!uid });
   const categorias = useQuery({ queryKey: ["financeiro-categorias", uid], queryFn: () => garantirCategorias(uid), enabled: !!uid });
-  const ultimo = useQuery({ queryKey: ["financeiro-ultimo-recibo", uid], queryFn: () => ultimoNumeroRecibo(uid), enabled: !!uid });
   const [novoLanc, setNovoLanc] = useState(false);
   const [reciboDe, setReciboDe] = useState<Lancamento | null>(null);
   const [modelosAberto, setModelosAberto] = useState(false);
   const lista = useMemo(() => lanc.data ?? [], [lanc.data]);
   const t = totais(lista);
-  const nomeProf = situacao?.nome ?? user?.email ?? null;
   const recarregar = async () => {
     await Promise.all(["financeiro-lancamentos", "financeiro-recibos"].map((k) => qc.invalidateQueries({ queryKey: [k, pid] })));
-    await qc.invalidateQueries({ queryKey: ["financeiro-ultimo-recibo", uid] });
+    await fin.recarregar("recibos");
   };
-  const emitir = async (x: { modelo: import("../recibos").ModeloRecibo | null; descricao: string; valor: number; data: string }, transacaoId: string | null) => {
+  const pdf = async (r: { numero: number; valor: number | string; data: string; descricao: string; texto: string; nutricionista_id: string }) => {
     try {
-      const r = await emitirRecibo({
-        uid, contaId: d.aluno.conta_id, pacienteId: pid, transacaoId, modelo: x.modelo, descricao: x.descricao, valor: x.valor, data: x.data,
-        dadosTags: { nomePaciente: d.aluno.nome, cpf: d.aluno.cpf, nomeProfissional: nomeProf }, numeroPrevisto: (ultimo.data ?? 0) + 1,
-      });
-      toast.success(`Recibo nº ${formatarNumeroRecibo(r.numero)} emitido.`);
-      await recarregar();
-      return true;
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não deu para emitir o recibo.");
-      return false;
-    }
-  };
-  const pdf = async (r: { numero: number; valor: number | string; data: string; descricao: string; texto: string }) => {
-    try {
-      await baixarReciboPdf({ numero: r.numero, valor: Number(r.valor), data: r.data, descricao: r.descricao, texto: r.texto, aluno: d.aluno.nome, profissional: nomeProf, emitidoEm: new Date() });
+      await pdfDoRecibo(fin, { ...r, valor: Number(r.valor) }, d.aluno.nome);
     } catch {
       toast.error("Não deu para gerar o PDF agora.");
     }
@@ -358,12 +344,13 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
             return false;
           }
         }} />
-      <DialogoRecibo aberto={reciboAvulso || !!reciboDe} aoFechar={() => { setReciboDe(null); aoFecharReciboAvulso(); }} modelos={modelos.data ?? []}
-        origem={reciboDe ? { descricao: reciboDe.descricao, valor: Number(reciboDe.valor), data: reciboDe.data } : null} proximoNumero={(ultimo.data ?? 0) + 1}
-        dadosTags={{ nomePaciente: d.aluno.nome, cpf: d.aluno.cpf, nomeProfissional: nomeProf }}
-        aoEmitir={(x) => emitir(x, reciboDe?.id ?? null)} aoGerenciarModelos={() => setModelosAberto(true)} />
-      <DialogoModelos aberto={modelosAberto} aoFechar={() => setModelosAberto(false)} uid={uid} modelos={modelos.data ?? []}
-        aoMudou={() => void qc.invalidateQueries({ queryKey: ["financeiro-modelos-recibo", uid] })} />
+      <ReciboDialog open={reciboAvulso || !!reciboDe} onOpenChange={(a) => { if (!a) { setReciboDe(null); aoFecharReciboAvulso(); } }}
+        aluno={{ id: pid, nome: d.aluno.nome, apelido: null, cpf: d.aluno.cpf }}
+        transacao={reciboDe ? { id: reciboDe.id, tipo: reciboDe.tipo, descricao: reciboDe.descricao, valor: Number(reciboDe.valor), data: reciboDe.data } : null}
+        modelos={fin.modelos.data ?? []} proximoNumero={(fin.ultimo.data ?? 0) + 1} nomeProfissional={fin.nomeProfissional} padrao={fin.padrao} uid={uid}
+        contaId={d.aluno.conta_id} onSalvo={() => void recarregar()} onGerenciarModelos={() => setModelosAberto(true)} />
+      <ModelosReciboDialog open={modelosAberto} onOpenChange={setModelosAberto} uid={uid} contaId={d.aluno.conta_id} modelos={fin.modelos.data ?? []}
+        nomeProfissional={fin.nomeProfissional} onMudou={() => fin.recarregar("modelos")} />
     </>
   );
 }

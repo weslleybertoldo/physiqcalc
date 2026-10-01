@@ -80,7 +80,8 @@ vi.mock("@/pages/PrivacidadePage", () => h.marcador("antiga-privacidade"));
 // W13: a página Alunos é a nova (src/painel/paginas/Alunos.tsx, pelo registro) — a AlunosPage do Calc saiu
 vi.mock("@/painel/paginas/Alunos", () => h.marcador("pagina-alunos"));
 vi.mock("@/pages/admin/TreinosAdminPage", () => h.marcador("antiga-admin-treinos"));
-vi.mock("@/pages/admin/CobrancaPage", () => h.marcador("antiga-admin-cobranca"));
+// W19: a página Financeiro é a nova (src/painel/paginas/Financeiro.tsx, pelo registro) — a CobrancaPage do Calc saiu
+vi.mock("@/painel/paginas/Financeiro", () => h.marcador("pagina-financeiro"));
 vi.mock("@/pages/admin/CalculadoraPage", () => h.marcador("antiga-admin-calculadora"));
 vi.mock("@/pages/admin/PlanosPage", () => h.marcador("antiga-admin-planos"));
 vi.mock("@/components/AdminUserConfig", () => h.marcador("antiga-configurar-aluno"));
@@ -238,7 +239,7 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ["/admin", "/painel/alunos", "pagina-alunos"],
     ["/admin/alunos", "/painel/alunos", "pagina-alunos"],
     ["/admin/treinos", "/painel/treinos", "antiga-admin-treinos"],
-    ["/admin/cobranca", "/painel/financeiro", "antiga-admin-cobranca"],
+    ["/admin/cobranca", "/painel/financeiro", "pagina-financeiro"],
     ["/admin/calculadora", "/painel/calculadora", "antiga-admin-calculadora"],
     ["/admin/planos", "/painel/configuracoes/plano", "antiga-admin-planos"],
     ["/admin?v=calculator", "/painel/calculadora", "antiga-admin-calculadora"],

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Check, Plus, ReceiptText, Save, Star, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Check, Plus, Save, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
@@ -8,15 +7,6 @@ import { cn } from "@/lib/utils";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { METODOS_LANCAMENTO, type Categoria, type MetodoLancamento, type TipoLancamento } from "../lancamentos";
-import {
-  TAGS,
-  aplicarTags,
-  excluirModeloRecibo,
-  formatarNumeroRecibo,
-  salvarModeloRecibo,
-  validarModelo,
-  type ModeloRecibo,
-} from "../recibos";
 import { hojeSP, lerValor, reais, ROTULO_METODO } from "../regras";
 import type { CobrancaVista } from "../tipos";
 
@@ -226,143 +216,3 @@ export function DialogoLancamento({
     </Painel>
   );
 }
-
-/** Emitir recibo (de um lançamento ou avulso): modelo com tags, prévia com o próximo número, PDF depois. */
-export function DialogoRecibo({
-  aberto,
-  aoFechar,
-  modelos,
-  origem,
-  proximoNumero,
-  dadosTags,
-  aoEmitir,
-  aoGerenciarModelos,
-}: {
-  aberto: boolean;
-  aoFechar: () => void;
-  modelos: ModeloRecibo[];
-  origem: { descricao: string; valor: number; data: string } | null;
-  proximoNumero: number;
-  dadosTags: { nomePaciente: string; cpf: string | null; nomeProfissional: string | null };
-  aoEmitir: (d: { modelo: ModeloRecibo | null; descricao: string; valor: number; data: string }) => Promise<boolean>;
-  aoGerenciarModelos: () => void;
-}) {
-  const [modeloId, setModeloId] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [data, setData] = useState(hojeSP());
-  const [erro, setErro] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  useEffect(() => {
-    if (!aberto) return;
-    setModeloId(modelos[0]?.id ?? "");
-    setDescricao(origem?.descricao ?? "Atendimento");
-    setValor(origem ? String(origem.valor).replace(".", ",") : "");
-    setData(origem?.data ?? hojeSP());
-    setErro("");
-  }, [aberto, origem, modelos]);
-  const modelo = modelos.find((m) => m.id === modeloId) ?? null;
-  const v = lerValor(valor);
-  const previa = useMemo(() => (modelo ? aplicarTags(modelo.conteudo, { ...dadosTags, valor: v ?? 0, data, numero: proximoNumero }) : ""), [modelo, dadosTags, v, data, proximoNumero]);
-  const enviar = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!v) return setErro("Informe o valor.");
-    setSalvando(true);
-    const ok = await aoEmitir({ modelo, descricao: descricao.trim() || "Atendimento", valor: v, data });
-    setSalvando(false);
-    if (ok) aoFechar();
-  };
-  return (
-    <Painel aberto={aberto} aoFechar={aoFechar} titulo={`Emitir recibo nº ${formatarNumeroRecibo(proximoNumero)}`} descricao={origem ? "A partir do lançamento." : "Recibo avulso."}>
-      <form onSubmit={enviar} className="flex flex-col gap-4 pt-2" data-form-recibo>
-        <div className="flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <CampoSelect rotulo="Modelo" value={modeloId} onChange={(e) => setModeloId(e.target.value)} data-recibo-modelo>
-              {modelos.map((m) => <option key={m.id} value={m.id}>{m.favorito ? "★ " : ""}{m.titulo}</option>)}
-            </CampoSelect>
-          </div>
-          <Botao variante="g" onClick={aoGerenciarModelos} data-recibo-modelos>Modelos</Botao>
-        </div>
-        <Campo rotulo="Referente a" maxLength={160} value={descricao} onChange={(e) => setDescricao(e.target.value)} data-recibo-descricao />
-        <div className="grid grid-cols-2 gap-3">
-          <Campo rotulo="Valor (R$)" inputMode="decimal" value={valor} onChange={(e) => { setValor(e.target.value); setErro(""); }} data-recibo-valor />
-          <Campo rotulo="Data" type="date" value={data} onChange={(e) => setData(e.target.value)} data-recibo-data />
-        </div>
-        <div>
-          <div className="mb-1.5 text-[12.5px] font-semibold text-texto-2">Prévia</div>
-          <p className="max-h-[220px] overflow-y-auto whitespace-pre-wrap rounded-2xl border border-linha bg-superficie px-3.5 py-3 text-[12.5px] leading-relaxed text-texto" data-recibo-previa>{previa}</p>
-        </div>
-        {erro && <MensagemForm>{erro}</MensagemForm>}
-        <Botao type="submit" variante="w" icone={ReceiptText} disabled={salvando} data-recibo-emitir>{salvando ? "Emitindo…" : "Emitir recibo"}</Botao>
-      </form>
-    </Painel>
-  );
-}
-
-/** Modelos de recibo do profissional (com as tags do Nutri; ★ = favorito, abre primeiro). */
-export function DialogoModelos({ aberto, aoFechar, uid, modelos, aoMudou }: { aberto: boolean; aoFechar: () => void; uid: string; modelos: ModeloRecibo[]; aoMudou: () => void }) {
-  const [editando, setEditando] = useState<{ id?: string; titulo: string; conteudo: string; favorito: boolean } | null>(null);
-  const [erro, setErro] = useState("");
-  const salvar = async () => {
-    if (!editando) return;
-    const problema = validarModelo(editando.titulo, editando.conteudo);
-    if (problema) return setErro(problema);
-    try {
-      await salvarModeloRecibo(uid, editando);
-      toast.success("Modelo salvo.");
-      setEditando(null);
-      aoMudou();
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não deu para salvar.");
-    }
-  };
-  const excluir = async (id: string) => {
-    if (!window.confirm("Mandar este modelo para a lixeira? Os recibos já emitidos não mudam.")) return;
-    try {
-      await excluirModeloRecibo(id);
-      aoMudou();
-    } catch {
-      toast.error("Não deu para excluir.");
-    }
-  };
-  return (
-    <Painel aberto={aberto} aoFechar={() => { setEditando(null); aoFechar(); }} titulo="Modelos de recibo" descricao="As tags viram os dados do aluno e do recibo na hora de emitir.">
-      {editando ? (
-        <div className="flex flex-col gap-3 pt-2" data-form-modelo>
-          <Campo rotulo="Título" value={editando.titulo} onChange={(e) => setEditando({ ...editando, titulo: e.target.value })} />
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[12.5px] font-semibold text-texto-2">Texto</span>
-            <textarea value={editando.conteudo} onChange={(e) => setEditando({ ...editando, conteudo: e.target.value })} rows={9}
-              className="w-full rounded-[14px] border border-linha-2 bg-superficie px-3.5 py-3 text-[13px] leading-relaxed text-texto outline-none focus:border-violeta/60" />
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {TAGS.map((t) => (
-              <button key={t.tag} type="button" className="pq-chip pq-chip-g h-7 cursor-pointer px-2.5 text-[11px]" title={t.exemplo}
-                onClick={() => setEditando({ ...editando, conteudo: `${editando.conteudo}${editando.conteudo.endsWith(" ") || !editando.conteudo ? "" : " "}${t.tag}` })}>
-                {t.rotulo}
-              </button>
-            ))}
-          </div>
-          <CaixaMarcar marcado={editando.favorito} aoMudar={(f) => setEditando({ ...editando, favorito: f })}>Favorito (abre primeiro)</CaixaMarcar>
-          {erro && <MensagemForm>{erro}</MensagemForm>}
-          <div className="flex gap-2">
-            <Botao variante="w" icone={Save} onClick={() => void salvar()}>Salvar modelo</Botao>
-            <Botao onClick={() => setEditando(null)}>Cancelar</Botao>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2 pt-2" data-lista-modelos>
-          {modelos.map((m) => (
-            <div key={m.id} className="flex items-center gap-2 rounded-2xl border border-linha bg-superficie px-3 py-2.5">
-              {m.favorito && <Star aria-hidden className="h-4 w-4 flex-none text-ambar-3" />}
-              <button type="button" className="min-w-0 flex-1 truncate text-left text-[13.5px] font-semibold text-texto" onClick={() => setEditando({ id: m.id, titulo: m.titulo, conteudo: m.conteudo, favorito: m.favorito })}>{m.titulo}</button>
-              <button type="button" aria-label="Excluir o modelo" className="text-texto-3 hover:text-rosa-3" onClick={() => void excluir(m.id)}><Trash2 aria-hidden className="h-4 w-4" /></button>
-            </div>
-          ))}
-          <Botao variante="w" icone={Plus} onClick={() => setEditando({ titulo: "", conteudo: modelos[0]?.conteudo ?? "", favorito: false })}>Novo modelo</Botao>
-        </div>
-      )}
-    </Painel>
-  );
-}
-

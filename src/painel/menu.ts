@@ -42,7 +42,6 @@ export interface ItemMenuPainel {
 }
 
 const TreinosAdminPage = lazy(() => import("@/pages/admin/TreinosAdminPage"));
-const CobrancaPage = lazy(() => import("@/pages/admin/CobrancaPage"));
 const CalculadoraPage = lazy(() => import("@/pages/admin/CalculadoraPage"));
 
 export const MENU_PAINEL: ItemMenuPainel[] = [
@@ -53,7 +52,7 @@ export const MENU_PAINEL: ItemMenuPainel[] = [
   { id: "pre-consulta", arquivo: "PreConsulta", rotulo: "Pré-consulta", icone: ClipboardList, rota: "/painel/pre-consulta", modulo: "ambos", grupo: "principal" },
   { id: "agenda", arquivo: "Agenda", rotulo: "Agenda", icone: CalendarDays, rota: "/painel/agenda", modulo: "ambos", grupo: "principal", noCelular: true },
   { id: "mensagens", arquivo: "Mensagens", rotulo: "Mensagens", icone: MessageCircle, rota: "/painel/mensagens", modulo: "ambos", grupo: "principal", contadorTom: "destaque" },
-  { id: "financeiro", arquivo: "Financeiro", rotulo: "Financeiro", icone: Wallet, rota: "/painel/financeiro", modulo: "ambos", grupo: "principal", antiga: CobrancaPage, noCelular: true },
+  { id: "financeiro", arquivo: "Financeiro", rotulo: "Financeiro", icone: Wallet, rota: "/painel/financeiro", modulo: "ambos", grupo: "principal", noCelular: true },
   { id: "configuracoes", arquivo: null, rotulo: "Configurações", icone: Settings, rota: "/painel/configuracoes", modulo: "ambos", grupo: "principal" },
   { id: "modelos", arquivo: "Modelos", rotulo: "Modelos", icone: Bookmark, rota: "/painel/modelos", modulo: "ambos", grupo: "ferramentas" },
   { id: "impressos", arquivo: "Impressos", rotulo: "Impressos", icone: Printer, rota: "/painel/impressos", modulo: "nutricao", grupo: "ferramentas" },

@@ -2,15 +2,15 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { FinanceiroDoAluno } from "@/financeiro/ui/FinanceiroDoAluno";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 
-interface AlunoMin { id: string; nome: string | null; email: string | null; plano_nome?: string | null; mensalidade_valor?: number | string | null }
+interface AlunoMin { id: string; nome: string | null; email: string | null }
 interface Props { aluno: AlunoMin | null; onFechar: () => void; onSalvo?: () => void }
 
 /**
- * Popup "Cobrança" de um aluno (pedido 13/09/2026) nas listas antigas do Calc (Alunos e Financeiro): W6 — é o Financeiro do
- * aluno no banco principal (plano e valor, Pix, pagamento por fora, pausar, cobranças, lançamentos e recibos), o mesmo da aba
- * Financeiro do perfil. `aluno.id` = id do Treino (lista de alunos do Calc) ou o da matrícula. Ao fechar, a lista recarrega.
+ * Painel lateral "Cobrança" de um aluno na aba Mensalidades (W19 — veio do popup "Cobrança" das listas antigas do Calc, pedido de
+ * 13/09/2026): é o Financeiro do aluno (W6) — plano e valor, Pix, pagamento por fora, pausar, cobranças, lançamentos e recibos.
+ * `aluno.id` = id do Treino (aluno do Calc) ou o da matrícula. Ao fechar, a lista recarrega.
  */
-export default function CobrancaAlunoDialog({ aluno, onFechar, onSalvo }: Props) {
+export default function PainelCobranca({ aluno, onFechar, onSalvo }: Props) {
   const celular = useIsMobile();
   const fechar = () => {
     onSalvo?.();
