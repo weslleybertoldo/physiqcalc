@@ -5,11 +5,11 @@
 // no Pagamentos) e pela mp-webhook-aluno (cobrança recorrente que chegou para uma matrícula do app já encerrada).
 // Regras puras (sem Deno e sem rede) em _shared/app-sem-profissional-regras.ts — testadas no Vitest (src/app-aluno/sozinho/regras.test.ts).
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { assinaturaSoNoBanco } from "./app-sem-profissional-regras.ts";
+import { assinaturaSoNoBanco, encerradaPeloVinculo } from "./app-sem-profissional-regras.ts";
 import type { AssinaturaMp } from "./cobranca-regras.ts";
 import { mpFetch, type Credencial } from "./cobranca-mp.ts";
 
-export { assinaturaSoNoBanco, assinaturaViva } from "./app-sem-profissional-regras.ts";
+export { assinaturaSoNoBanco, assinaturaViva, encerradaPeloVinculo } from "./app-sem-profissional-regras.ts";
 
 /** A conta do app deste schema (uma só — índice único contas_app_unica). */
 export async function contaDoApp(db: SupabaseClient): Promise<string | null> {
@@ -50,8 +50,10 @@ interface LinhaAssinatura {
 }
 
 /**
- * Cancela no Mercado Pago as assinaturas ainda vivas das matrículas do app JÁ ENCERRADAS da pessoa (entrou na lista de um
- * profissional). Idempotente: cancelada não volta; falha no MP fica registrada no log e é tentada de novo no próximo
+ * Cancela no Mercado Pago as assinaturas ainda vivas das matrículas do app JÁ ENCERRADAS PELO VÍNCULO da pessoa (entrou na
+ * lista de um profissional — `app_encerrada_em` preenchido). A matrícula do app desativada à mão (sem o marcador) NÃO entra:
+ * desativar não é ir para um profissional (W19 — o "Desativar" do site antigo cancelaria a assinatura de quem continua no
+ * app). Idempotente: cancelada não volta; falha no MP fica registrada no log e é tentada de novo no próximo
  * Pagamentos/login/aviso do MP. Sem reembolso automático do mês já pago (decisão da W7b — o Weslley revisa).
  */
 export async function cancelarAssinaturasDoAppEncerrado(
@@ -62,10 +64,18 @@ export async function cancelarAssinaturasDoAppEncerrado(
 ): Promise<{ canceladas: number; falhas: number }> {
   const app = await contaDoApp(db);
   if (!app) return { canceladas: 0, falhas: 0 };
-  const { data: mats } = await db.from("pacientes").select("id").eq("user_id", userId).eq("conta_id", app).eq("ativo", false).is("deleted_at", null);
-  const ids = ((mats ?? []) as Array<{ id: string }>).map((m) => m.id);
+  const { data: mats } = await db.from("pacientes").select("id, ativo, app_encerrada_em").eq("user_id", userId).eq("conta_id", app)
+    .eq("ativo", false).not("app_encerrada_em", "is", null).is("deleted_at", null);
+  const ids = ((mats ?? []) as Array<{ id: string; ativo: boolean | null; app_encerrada_em: string | null }>)
+    .filter(encerradaPeloVinculo).map((m) => m.id);
   if (!ids.length) return { canceladas: 0, falhas: 0 };
   return await cancelarAssinaturasDasMatriculas(db, credencial, ids, motivo);
+}
+
+/** A matrícula (do app) foi encerrada pelo vínculo? Lê o marcador no banco (o webhook só cancela nesse caso — W19). */
+export async function matriculaEncerradaPeloVinculo(db: SupabaseClient, pacienteId: string): Promise<boolean> {
+  const { data } = await db.from("pacientes").select("ativo, app_encerrada_em").eq("id", pacienteId).maybeSingle();
+  return !!data && encerradaPeloVinculo(data as { ativo: boolean | null; app_encerrada_em: string | null });
 }
 
 /** Cancela as assinaturas vivas destas matrículas (no MP e no banco). */

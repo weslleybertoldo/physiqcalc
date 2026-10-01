@@ -10,3 +10,13 @@ export function assinaturaSoNoBanco(a: { mp_preapproval_id: string | null; paylo
 export function assinaturaViva(status: string | null | undefined): boolean {
   return status === "authorized" || status === "pending" || status === "paused";
 }
+
+/**
+ * W19 — matrícula do app ENCERRADA PELO VÍNCULO com um profissional (P7): o `matricular_na_conta` (W7b) e o script 06 (W16b)
+ * gravam `app_encerrada_em` (+ motivo `vinculou_profissional`) quando encerram a do app. A desativada à mão (o "Desativar" do
+ * site antigo ou do painel) fica inativa SEM o marcador e não conta: a assinatura dela não é cancelada por ninguém além do
+ * próprio aluno ou de quem cuida da cobrança.
+ */
+export function encerradaPeloVinculo(m: { ativo: boolean | null; app_encerrada_em: string | null }): boolean {
+  return m.ativo === false && typeof m.app_encerrada_em === "string" && m.app_encerrada_em.length > 0;
+}

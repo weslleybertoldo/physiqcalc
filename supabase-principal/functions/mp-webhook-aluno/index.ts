@@ -17,7 +17,7 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { preapprovalDoPagamento, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
 import { credencialDoSchema, mpFetch, tokenMp, type Credencial } from "../_shared/cobranca-mp.ts";
-import { cancelarAssinaturasDasMatriculas } from "../_shared/app-sem-profissional.ts";
+import { cancelarAssinaturasDasMatriculas, matriculaEncerradaPeloVinculo } from "../_shared/app-sem-profissional.ts";
 import { lerReferenciaAluno, lerReferenciaCalc, type Schema } from "../_shared/financeiro-regras.ts";
 import {
   COLUNAS_COBRANCA,
@@ -65,10 +65,17 @@ async function assinaturaPorPreapproval(db: SupabaseClient, preId: string) {
   return (data as { id: string; paciente_id: string; conta_id: string | null; mp_preapproval_id: string; status: string; payload: Record<string, unknown> | null } | null) ?? null;
 }
 
-/** W7b: a assinatura é de uma matrícula do app que já encerrou (o aluno foi para um profissional) → cancela no MP. */
+/**
+ * W7b: a assinatura é de uma matrícula do app que já encerrou (o aluno foi para um profissional) → cancela no MP.
+ * W19: só a encerrada PELO VÍNCULO (app_encerrada_em); a desativada à mão segue com a assinatura.
+ */
 async function cancelarSeSaiuDoApp(db: SupabaseClient, schema: Schema, m: Matricula, preId: string | null): Promise<void> {
   if (!preId || m.conta?.origem !== "app" || m.ativo) return;
   try {
+    if (!(await matriculaEncerradaPeloVinculo(db, m.id))) {
+      console.log("mp-webhook-aluno: matrícula do app inativa sem o vínculo (desativada à mão) — assinatura mantida", m.id);
+      return;
+    }
     const r = await cancelarAssinaturasDasMatriculas(db, credencialDoSchema(schema), [m.id], "cobranca_depois_de_sair_do_app");
     console.log("mp-webhook-aluno: assinatura do app encerrado", m.id, JSON.stringify(r));
   } catch (e) {
