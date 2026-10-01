@@ -184,6 +184,19 @@ Deno.serve(async (req) => {
       if (error) throw error;
       return new Response(JSON.stringify({ avaliacao: data }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
+    // W17 (NF7): a data da próxima avaliação do aluno (physiq_profiles.proxima_avaliacao) — "" ou null apaga
+    if (action === "proxima") {
+      const userId = body?.userId;
+      const data = body?.data;
+      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+      const valida = data === null || data === "" || (typeof data === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data) && !Number.isNaN(Date.parse(`${data}T12:00:00Z`)));
+      if (!valida) return jsonErr("data_invalida", 400, origin);
+      if (!(await alunoDoProfessor(admin, user, userId))) return jsonErr("forbidden", 403, origin);
+      const { data: perfil, error } = await admin.from("physiq_profiles").update({ proxima_avaliacao: data || null }).eq("id", userId).select("proxima_avaliacao").maybeSingle();
+      if (error) throw error;
+      if (!perfil) return jsonErr("aluno_inexistente", 404, origin);
+      return new Response(JSON.stringify({ ok: true, proxima_avaliacao: (perfil as { proxima_avaliacao?: string | null }).proxima_avaliacao ?? null }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+    }
     if (action === "delete") {
       const avaliacaoId = body?.avaliacaoId;
       if (!avaliacaoId || typeof avaliacaoId !== "string") return jsonErr("missing_avaliacaoId", 400, origin);

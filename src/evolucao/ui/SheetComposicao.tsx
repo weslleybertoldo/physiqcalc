@@ -130,10 +130,11 @@ export function Composicao({ av }: { av: Avaliacao }) {
   );
 }
 
-/** O "Ver" da avaliação (tela 4): a composição completa num painel de baixo. */
-export function SheetComposicao({ av, aoFechar }: { av: Avaliacao | null; aoFechar: () => void }) {
+/** O "Ver" da avaliação (tela 4): a composição completa num painel de baixo (no painel do profissional, W17, pela direita). */
+export function SheetComposicao({ av, aoFechar, lado = "baixo" }: { av: Avaliacao | null; aoFechar: () => void; lado?: "baixo" | "direita" }) {
   return (
     <PainelDeslizante
+      lado={lado}
       aberto={!!av}
       aoMudar={(v) => !v && aoFechar()}
       titulo="Composição corporal"

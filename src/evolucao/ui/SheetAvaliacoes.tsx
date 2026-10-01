@@ -44,6 +44,7 @@ export function SheetAvaliacoes({
   hoje,
   periodo,
   aoVer,
+  lado = "baixo",
 }: {
   aberto: boolean;
   aoMudar: (v: boolean) => void;
@@ -52,6 +53,8 @@ export function SheetAvaliacoes({
   /** o período escolhido na tela (3M · 6M · 1A) */
   periodo: Exclude<Periodo, "tudo">;
   aoVer: (av: Avaliacao) => void;
+  /** W17: o painel do profissional abre pela direita (o app, de baixo) */
+  lado?: "baixo" | "direita";
 }) {
   const [modo, setModo] = useState<ModoTabela>(() => modoInicialDaTabela(serie, periodo, hoje));
   const [metrica, setMetrica] = useState<Metrica>("peso");
@@ -74,11 +77,12 @@ export function SheetAvaliacoes({
 
   return (
     <PainelDeslizante
+      lado={lado}
       aberto={aberto}
       aoMudar={aoMudar}
       titulo={contagemAvaliacoes(avs.length)}
       descricao={`${quando}, cada uma com a variação desde a anterior. Toque numa linha para ver a composição.`}
-      className="max-h-[92vh]"
+      className={lado === "direita" ? "sm:w-[min(560px,94vw)]" : "max-h-[92vh]"}
     >
       <div className="flex flex-col gap-3.5 pb-2" data-sheet-avaliacoes={modo} data-sheet-periodo={efetivo}>
         {metricas.length > 0 && (

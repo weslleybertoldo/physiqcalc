@@ -27,6 +27,7 @@ http, service, anon, rpc, uid, sessao, token = B16.http, B16.service, B16.anon, 
 PRINCIPAL_REF, PRINCIPAL_URL, API_P, API_T, TREINO_REF = B16.PRINCIPAL_REF, B16.PRINCIPAL_URL, B16.API_P, B16.API_T, B16.TREINO_REF
 conta_de, NOME_CONTA, conta_w13, rafael = B16.conta_de, B16.NOME_CONTA, B16.conta_w13, B16.rafael
 saude_ok, esperar, treino_id = B16.saude_ok, B16.esperar, B16.treino_id
+token_treino, funcao_treino = B16.token_treino, B16.funcao_treino
 json_arquivo, ler_json = B16.json_arquivo, B16.ler_json
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "w17"
 for _b in (B16, B15, B14, B13, B5, B13.B12, B13.B12.B11, B13.B12.B10, B13.B12.B8, B13.B12.B7):
@@ -37,3 +38,12 @@ EMAIL_ENVIO = "w17.envio.teste.claude@physiqnutri.app"
 NOME_ENVIO = "Aluno Envio W17"
 TELEFONE_ENVIO = "00900001701"  # número de mentira (nenhum WhatsApp de verdade)
 CONTAS["w17-envio"] = (EMAIL_ENVIO, B5.senha_de("w17-envio"))
+
+# item 3 (Avaliação): a massa da W10 — "Diego Almeida" (w10-aluno) na "Consultoria Ferreira W7": w7-personal = dono + personal
+# (Lucas Ferreira), w7-nutri = nutricionista (Camila Rocha); 6 avaliações do Treino + 2 antropometrias + fotos das 2 origens
+for _k, _e in (("w7-personal", "w7.personal.teste.claude@physiqnutri.app"), ("w7-nutri", "w7.nutri.teste.claude@physiqnutri.app"),
+               ("w10-aluno", "w10.aluno.teste.claude@physiqnutri.app"), ("w10-paciente", "w10.paciente.teste.claude@physiqnutri.app")):
+    CONTAS.setdefault(_k, (_e, B5.senha_de(_k)))
+DIEGO = "2102f4e1-1950-44d9-be55-94bb9cd6fee3"
+PAULA = "bc3ce350-f197-4e2f-9690-5c2648b1ba42"
+CONTA_W7 = "46a4f549-8daf-4d56-a49c-7b059ceab471"
