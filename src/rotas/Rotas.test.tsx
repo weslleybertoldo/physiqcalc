@@ -251,8 +251,9 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(onde()).toBe(para));
     const menu = document.querySelector("[data-menu-lateral]")!;
     expect(menu).not.toBeNull();
+    // W21: a Pré-consulta (src/painel/paginas/PreConsulta.tsx) vale para os 2 módulos — o professor do Calc ganha o item (R7)
     expect([...menu.querySelectorAll("[data-nav]")].map((a) => a.textContent?.replace(/\d+$/, ""))).toEqual([
-      "Alunos", "Treinos", "Agenda", "Financeiro", "Configurações", "Calculadora",
+      "Alunos", "Treinos", "Pré-consulta", "Agenda", "Financeiro", "Configurações", "Calculadora",
     ]);
   });
 
