@@ -2,11 +2,15 @@ import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode }
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Campo de formulário do visual premium (tela 8: rótulo pequeno, caixa de vidro, raio 14). */
-export const Campo = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { rotulo: string; dica?: ReactNode }>(
-  function Campo({ rotulo, dica, className, type, id, ...props }, ref) {
+/**
+ * Campo de formulário do visual premium (tela 8: rótulo pequeno, caixa de vidro, raio 14). `erro` (W16b) = mensagem vermelha logo
+ * embaixo do campo (borda rosa + aria-invalid), no lugar da dica.
+ */
+export const Campo = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { rotulo: string; dica?: ReactNode; erro?: ReactNode }>(
+  function Campo({ rotulo, dica, erro, className, type, id, ...props }, ref) {
     const idGerado = useId();
     const idCampo = id ?? idGerado;
+    const idErro = `${idCampo}-erro`;
     const [ver, setVer] = useState(false);
     const senha = type === "password";
     return (
@@ -17,9 +21,12 @@ export const Campo = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
             ref={ref}
             id={idCampo}
             type={senha && ver ? "text" : type}
+            aria-invalid={erro ? true : undefined}
+            aria-describedby={erro ? idErro : undefined}
             className={cn(
               "h-12 w-full rounded-[14px] border border-linha-2 bg-superficie px-4 text-[15px] text-texto outline-none transition-colors",
               "placeholder:text-texto-4 focus:border-violeta/60 focus:bg-superficie-2 disabled:opacity-60",
+              erro && "border-rosa focus:border-rosa",
               senha && "pr-12",
               className,
             )}
@@ -36,7 +43,13 @@ export const Campo = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
             </button>
           )}
         </span>
-        {dica && <span className="text-[12px] text-texto-3">{dica}</span>}
+        {erro ? (
+          <span id={idErro} role="alert" className="text-[12.5px] font-medium leading-snug text-rosa-3" data-erro-campo>
+            {erro}
+          </span>
+        ) : (
+          dica && <span className="text-[12px] text-texto-3">{dica}</span>
+        )}
       </label>
     );
   },

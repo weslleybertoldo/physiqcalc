@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AjustesAluno, ChaveAjuste, MensagensDesligadas, PerfilAluno, PerfilTreinoAluno } from "./tipos";
 
 export class ErroPerfil extends Error {
-  constructor(public codigo: string) {
+  constructor(public codigo: string, public extra: Record<string, unknown> = {}) {
     super(codigo);
   }
 }
@@ -21,7 +21,7 @@ async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {
   if (error) throw new ErroPerfil(error.message || "erro_interno");
   const r = data as unknown;
   if (r && typeof r === "object" && !Array.isArray(r) && (r as { ok?: unknown }).ok === false) {
-    throw new ErroPerfil(String((r as { erro?: unknown }).erro ?? "erro_interno"));
+    throw new ErroPerfil(String((r as { erro?: unknown }).erro ?? "erro_interno"), r as Record<string, unknown>);
   }
   return r as T;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -6,6 +6,8 @@ import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { Botao } from "@/ui/premium/Botao";
 import { Segmentado } from "@/ui/premium/Segmentado";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { camposDoErro, DICA_REPETIDO, MENSAGEM_REPETIDO, precisaConferir, type CampoRepetido } from "@/nucleo/dadoRepetido";
+import { conferirDadoLivre } from "@/nucleo/dadoLivre";
 import { ErroPerfil, salvarDadosAluno, salvarNoTreino } from "./api";
 import { cadastroParaTreino, formDoPerfil, formatarCPF, formatarTelefone, GENEROS, hojeSP, mensagemErroPerfil, mudancas, validarForm } from "./regras";
 import type { FormDadosAluno, Genero, PerfilAluno, PerfilTreinoAluno } from "./tipos";
@@ -31,20 +33,44 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
   const inicial = useMemo(() => formDoPerfil(perfil, comTreino ? treino : null), [perfil, treino, comTreino]);
   const [f, setF] = useState<FormDadosAluno>(inicial);
   const [erro, setErro] = useState("");
+  // W16b: e-mail/CPF de outro aluno (em qualquer conta) → mensagem vermelha embaixo do campo
+  const [repetidos, setRepetidos] = useState<CampoRepetido[]>([]);
+  const atual = useRef(inicial);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     if (aberto) {
       setF(inicial);
+      atual.current = inicial;
       setErro("");
+      setRepetidos([]);
     }
   }, [aberto, inicial]);
 
-  const muda = <K extends keyof FormDadosAluno>(k: K, v: FormDadosAluno[K]) => setF((x) => ({ ...x, [k]: v }));
+  const muda = <K extends keyof FormDadosAluno>(k: K, v: FormDadosAluno[K]) => {
+    setF((x) => {
+      const novo = { ...x, [k]: v };
+      atual.current = novo;
+      return novo;
+    });
+    if (k === "email" || k === "cpf") setRepetidos((r) => r.filter((c) => c !== k));
+  };
+
+  const conferir = async (campo: CampoRepetido) => {
+    const valor = f[campo];
+    if (!precisaConferir(campo, valor, inicial[campo])) return;
+    const r = await conferirDadoLivre({ [campo]: valor, pacienteId: perfil.paciente_id });
+    // só vale se o campo ainda tem o mesmo valor (a pessoa pode ter continuado digitando)
+    if (!r || atual.current[campo] !== valor) return;
+    const livre = campo === "email" ? r.email_livre : r.cpf_livre;
+    setRepetidos((x) => (livre ? x.filter((c) => c !== campo) : x.includes(campo) ? x : [...x, campo]));
+  };
+  const erroDo = (campo: CampoRepetido) => (repetidos.includes(campo) ? <>{MENSAGEM_REPETIDO[campo]} {DICA_REPETIDO}</> : undefined);
 
   const salvar = async () => {
     const msg = validarForm(f);
     if (msg) return setErro(msg);
+    if (repetidos.length) return;
     const { principal: p, treino: t } = mudancas(f, inicial);
     const cadastroMudou = ["nome", "genero", "nascimento"].some((k) => k in p);
     if (!Object.keys(p).length && !Object.keys(t).length) {
@@ -67,7 +93,10 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
       toast.success("Dados salvos.");
       aoFechar();
     } catch (e) {
-      setErro(mensagemErroPerfil(e instanceof ErroPerfil ? e.codigo : e instanceof Error ? e.message : ""));
+      const codigo = e instanceof ErroPerfil ? e.codigo : e instanceof Error ? e.message : "";
+      const campos = camposDoErro(codigo, e instanceof ErroPerfil ? e.extra : {});
+      if (campos.length) setRepetidos(campos);
+      else setErro(mensagemErroPerfil(codigo));
     } finally {
       setSalvando(false);
     }
@@ -92,7 +121,8 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
         <Campo rotulo="Apelido (opcional)" value={f.apelido} onChange={(e) => muda("apelido", e.target.value)} maxLength={40} autoComplete="off" data-editar-apelido />
         <div className="grid grid-cols-2 gap-3">
           <Campo rotulo="Nascimento" type="date" value={f.nascimento} max={hojeSP()} onChange={(e) => muda("nascimento", e.target.value)} data-editar-nascimento />
-          <Campo rotulo="CPF (opcional)" inputMode="numeric" value={f.cpf} onChange={(e) => muda("cpf", formatarCPF(e.target.value))} placeholder="000.000.000-00" data-editar-cpf />
+          <Campo rotulo="CPF (opcional)" inputMode="numeric" value={f.cpf} onChange={(e) => muda("cpf", formatarCPF(e.target.value))} onBlur={() => void conferir("cpf")}
+            placeholder="000.000.000-00" data-editar-cpf erro={erroDo("cpf")} />
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-[12.5px] font-semibold text-texto-2">Sexo</span>
@@ -100,7 +130,8 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Campo rotulo="Telefone (WhatsApp)" inputMode="tel" value={f.telefone} onChange={(e) => muda("telefone", formatarTelefone(e.target.value))} placeholder="(00) 00000-0000" data-editar-telefone />
-          <Campo rotulo="E-mail" type="email" value={f.email} onChange={(e) => muda("email", e.target.value)} autoComplete="off" data-editar-email />
+          <Campo rotulo="E-mail" type="email" value={f.email} onChange={(e) => muda("email", e.target.value)} onBlur={() => void conferir("email")}
+            autoComplete="off" data-editar-email erro={erroDo("email")} />
         </div>
         <Campo rotulo="Objetivo" value={f.objetivo} onChange={(e) => muda("objetivo", e.target.value)} maxLength={60} placeholder="Ex.: definição, hipertrofia, emagrecer" data-editar-objetivo />
         {comTreino ? (
