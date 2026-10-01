@@ -23,6 +23,11 @@ const PEDIDO_VALIDO_MIN = 5;
 
 // Physiq W2 (spec 7.2): o site e o app do Physiq também chamam (as origens do Nutri continuam)
 const ORIGEM_PHYSIQ = /^(https:\/\/(www\.)?physiqcalc\.com\.br|https:\/\/physiqcalc-staging\.vercel\.app|https:\/\/localhost|capacitor:\/\/localhost)$/;
+// Physiq W22: o teste diz o nome do app de onde veio o pedido (o personal nunca usou o PhysiqNutri); o site antigo continua igual
+function marcaDaOrigem(origin: string | null): string {
+  if (origin && (ORIGEM_PHYSIQ.test(origin) || /^http:\/\/(127\.0\.0\.1|localhost):(5173|8080)$/.test(origin))) return "Physiq";
+  return "PhysiqNutri";
+}
 function origemPermitida(origin: string | null): boolean {
   if (!origin) return false;
   if (/^https:\/\/(nutri\.physiqcalc\.com\.br|physiqnutri(-[a-z0-9-]+)?\.vercel\.app)$/.test(origin)) return true;
@@ -137,7 +142,7 @@ Deno.serve(async (req) => {
     const nome = typeof p.nome === "string" && p.nome.trim() ? p.nome.trim().split(/\s+/)[0] : "tudo certo";
     const { data: msg, error: em } = await admin.from("mensagens_whatsapp").insert({
       nutricionista_id: user.id, tipo: "teste", destino_e164: destino,
-      texto: `Oi, ${nome}! Esta é a mensagem de teste do PhysiqNutri. Seu WhatsApp está conectado. ✅`,
+      texto: `Oi, ${nome}! Esta é a mensagem de teste do ${marcaDaOrigem(origin)}. Seu WhatsApp está conectado. ✅`,
     }).select("*").single();
     if (em) throw em;
     return json({ mensagem: msg, repetida: false }, 200, origin);
