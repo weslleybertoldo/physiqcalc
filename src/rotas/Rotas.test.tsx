@@ -252,7 +252,7 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     const menu = document.querySelector("[data-menu-lateral]")!;
     expect(menu).not.toBeNull();
     expect([...menu.querySelectorAll("[data-nav]")].map((a) => a.textContent?.replace(/\d+$/, ""))).toEqual([
-      "Alunos", "Treinos", "Financeiro", "Configurações", "Calculadora",
+      "Alunos", "Treinos", "Agenda", "Financeiro", "Configurações", "Calculadora",
     ]);
   });
 

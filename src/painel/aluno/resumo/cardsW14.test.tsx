@@ -131,8 +131,8 @@ describe("W14 — cards do Resumo", () => {
     await waitFor(() => expect(document.querySelectorAll("[data-atalho]").length).toBe(7));
     expect(document.querySelector('[data-atalho="consulta"]')?.getAttribute("href")).toBe("/painel/alunos/p1/prontuario?nova=consulta");
     expect(document.querySelector('[data-atalho="anamnese"]')?.getAttribute("href")).toBe("/painel/alunos/p1/prontuario?nova=anamnese");
-    // "Agendar" segue no site antigo até a W20
-    expect(document.querySelector('[data-atalho="agendar"]')?.getAttribute("href")).toMatch(/\/agenda\?paciente=p1$/);
+    // W20: "Agendar" abre a Agenda nova já com o aluno (era o site antigo até a W20)
+    expect(document.querySelector('[data-atalho="agendar"]')?.getAttribute("href")).toBe("/painel/agenda?aluno=p1&novo=1");
     r.unmount();
     h.perfil.mockResolvedValue(perfil({ conta_modulos: ["treino"], modulos: ["treino"] }));
     montar(<CardFluxoConsulta alunoId="p1" />);
