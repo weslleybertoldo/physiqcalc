@@ -51,6 +51,10 @@ export function useFinanceiroConta(opcoes: { alunos?: boolean; categorias?: bool
   const modelos = useQuery({ queryKey: CHAVES.modelos(uid), queryFn: () => garantirModelosRecibo(uid, contaId || null, padrao.conteudoModelo), enabled: pronto, staleTime: 60_000 });
   const ultimo = useQuery({ queryKey: CHAVES.ultimo(uid), queryFn: () => ultimoNumeroRecibo(uid), enabled: pronto });
 
+  // a lista de categorias ainda não chegou (ou não veio): as telas mostram o esqueleto/o aviso, nunca "nenhuma categoria"
+  const categoriasCarregando = !categorias.data && !categorias.isError;
+  const categoriasErro = !categorias.data && categorias.isError;
+
   const nomeProfissional = nome.data ?? situacao?.nome ?? null;
   const pessoas = useMemo(() => {
     const mapa = new Map<string, Pessoa>();
@@ -82,7 +86,7 @@ export function useFinanceiroConta(opcoes: { alunos?: boolean; categorias?: bool
 
   return {
     conta, contaId, uid, dono: ehDono, papeis, padrao, pronto, nomeProfissional, pessoas, assinaturaDe, recarregar,
-    categorias, alunos, modelos, ultimo, equipe,
+    categorias, categoriasCarregando, categoriasErro, alunos, modelos, ultimo, equipe,
   };
 }
 

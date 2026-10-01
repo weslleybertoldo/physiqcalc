@@ -356,7 +356,7 @@ export default function Lancamentos({ f, params, setParams, aoNova }: {
       <MovimentacaoDialog open={modal.aberto} onOpenChange={(aberto) => setModal((m) => ({ ...m, aberto }))} transacao={modal.transacao} uid={f.uid} contaId={f.contaId}
         categorias={f.categorias.data ?? []} alunos={f.alunos.data ?? []} onSalvo={aplicar} onGerenciarCategorias={() => setCategoriasAberto(true)} />
       <CategoriasDialog open={categoriasAberto} onOpenChange={setCategoriasAberto} uid={f.uid} contaId={f.contaId || null} categorias={f.categorias.data ?? []}
-        onMudou={() => void f.recarregar("categorias")} />
+        carregando={f.categoriasCarregando} erro={f.categoriasErro} onMudou={() => void f.recarregar("categorias")} />
       <ReciboDialog open={!!reciboDe} onOpenChange={(a) => { if (!a) setReciboDe(null); }} aluno={reciboDe ? alunoDo(reciboDe) : null}
         transacao={reciboDe ? { id: reciboDe.id, tipo: reciboDe.tipo, descricao: reciboDe.descricao, valor: Number(reciboDe.valor), data: reciboDe.data } : null}
         modelos={f.modelos.data ?? []} proximoNumero={(f.ultimo.data ?? 0) + 1} nomeProfissional={f.nomeProfissional} padrao={f.padrao} uid={f.uid}

@@ -21,6 +21,7 @@ vi.mock("@/financeiro/api", async (original) => ({
 }));
 
 import { hojeSP } from "@/financeiro/regras";
+import AbaCategorias from "./Categorias";
 import { abaDaUrl } from "./financeiroUtil";
 import Lancamentos from "./Lancamentos";
 import Resumo from "./Resumo";
@@ -131,5 +132,32 @@ describe("W19 — a aba pela URL", () => {
     expect(abaDaUrl(new URLSearchParams("de=2026-09-01&ate=2026-09-30"))).toBe("lancamentos");
     expect(abaDaUrl(new URLSearchParams("tipo=saida"))).toBe("lancamentos");
     expect(abaDaUrl(new URLSearchParams())).toBe("resumo");
+  });
+});
+
+describe("W19 — Categorias: enquanto a lista não chega, nada de \"Nenhuma categoria ainda\"", () => {
+  const base = { uid: "u-camila", contaId: "c1", onMudou: () => {} };
+
+  it("carregando: esqueleto, contagem '…' e o Adicionar travado (sem a lista não dá para recusar nome repetido)", () => {
+    montar(<AbaCategorias {...base} categorias={[]} carregando />);
+    expect(document.querySelector("[data-carregando-categorias]")).not.toBeNull();
+    expect(document.querySelector("[data-categorias-vazio]")).toBeNull();
+    expect(screen.getByText("…")).toBeTruthy();
+    expect((document.querySelector("[data-btn-add-categoria]") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("erro: avisa que não carregou (não diz que não há categorias)", () => {
+    montar(<AbaCategorias {...base} categorias={[]} erro />);
+    expect(document.querySelector("[data-categorias-erro]")).not.toBeNull();
+    expect(document.querySelector("[data-categorias-vazio]")).toBeNull();
+  });
+
+  it("carregou: vazia mostra o convite; com categorias, a lista e a contagem", () => {
+    const { unmount } = montar(<AbaCategorias {...base} categorias={[]} />);
+    expect(document.querySelector("[data-categorias-vazio]")).not.toBeNull();
+    unmount();
+    montar(<AbaCategorias {...base} categorias={[{ id: "cat1", nome: "Consulta", nutricionista_id: "u-camila" }]} />);
+    expect(document.querySelector("[data-lista-categorias]")?.getAttribute("data-categorias-total")).toBe("1");
+    expect(document.querySelector("[data-carregando-categorias]")).toBeNull();
   });
 });
