@@ -282,7 +282,8 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(document.querySelector("[data-resumo-aluno]")).not.toBeNull(), { timeout: 4000 });
     expect(document.querySelector('[data-aba-aluno="resumo"]')?.getAttribute("aria-current")).toBe("page");
     expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
-  });
+    // W18: o Resumo carrega mais um card (Prontuário) — sem .env (como o CI do APK) a 1ª carga passa dos 5 s padrão
+  }, 15_000);
 
   // W15: os grupos Treino e Configuração do Configurar aluno antigo viraram a aba Treino NOVA (src/painel/aluno/abas/Treino.tsx) —
   // o link antigo cai nela (o Configurar antigo não abre mais ali)
@@ -312,7 +313,8 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(document.querySelector(`[data-aba-aluno="${aba}"]`)?.getAttribute("aria-current")).toBe("page"), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='avaliacao']")).not.toBeNull(), { timeout: 4000 });
     expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
-    expect([...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"))).toEqual(["resumo", "treino", "avaliacao", "financeiro"]);
+    // W18: o Prontuário (as anotações da equipe) vale também na conta só de Treino — o personal lê e escreve as "Equipe"
+    expect([...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"))).toEqual(["resumo", "treino", "avaliacao", "prontuario", "financeiro"]);
   }, 15_000);
 
   // W6: a aba Financeiro do aluno é a nova (src/painel/aluno/abas/Financeiro.tsx) — o "Plano & Cobrança" antigo não abre mais
