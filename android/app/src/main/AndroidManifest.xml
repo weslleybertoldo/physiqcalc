@@ -34,7 +34,12 @@
 
             <!-- Physiq W7b: Android App Links — o link https do profissional (https://physiqcalc.com.br/?prof=…) abre o APK
                  (verificado pelo public/.well-known/assetlinks.json do site, com o SHA-256 do certificado que assina o APK).
-                 Só a raiz do site: as outras páginas continuam no navegador. -->
+                 Physiq H2: também as páginas do APP DO ALUNO (o botão dos e-mails — "Ver minha agenda" = /perfil/agenda, o
+                 "Salvar e enviar" = /, /treino, /dieta — e as rotas antigas do Calc que levam a elas: /treinos, /avaliacao,
+                 /pagamentos); o app abre NA tela do link (src/lib/linksDoApp.ts — a lista de lá é esta, conferida no teste).
+                 Ficam no navegador: o painel e o master (o profissional), a entrada/convite (/entrar) e as páginas públicas
+                 (/f/, /d/, /c/, /p/, /calculator, /privacidade, /termos). Só physiqcalc.com.br: o www redireciona (308) e não
+                 tem o assetlinks — no Android 11 ou anterior um host que não se verifica derruba a verificação de todos. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -42,6 +47,12 @@
                 <data android:scheme="https" />
                 <data android:host="physiqcalc.com.br" />
                 <data android:path="/" />
+                <data android:pathPrefix="/treino" />
+                <data android:pathPrefix="/dieta" />
+                <data android:pathPrefix="/evolucao" />
+                <data android:pathPrefix="/perfil" />
+                <data android:pathPrefix="/avaliacao" />
+                <data android:pathPrefix="/pagamentos" />
             </intent-filter>
 
         </activity>

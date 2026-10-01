@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSessao } from "@/nucleo/sessao";
 import { destinoDepoisDoLogin } from "@/nucleo/situacao";
+import { destinoDaEntrada } from "@/lib/linksDoApp";
 import AppAlunoLayout from "@/app-aluno/AppAlunoLayout";
 import { RotaAba, RotaInicialApp, RotaItemPerfil } from "@/app-aluno/RotasApp";
 import PublicoLayout from "@/publico/PublicoLayout";
@@ -28,7 +29,8 @@ export function RedirecionarAntiga() {
 /**
  * Entrada (/entrar, /entrar/email, /boas-vindas) — W3: login único no banco principal. Deslogado vê a tela de entrada;
  * logado vai para onde a situação manda (Boas-vindas para quem não tem nada; senão a página que pediu o login ou "/").
- * As Boas-vindas pedem login.
+ * As Boas-vindas pedem login. H2: sem a página que pediu o login (o "Entrar com e-mail e senha" e a volta do Google a perdem),
+ * vale o destino do link do e-mail/aviso guardado no APK ou no navegador (src/lib/linksDoApp.ts).
  */
 export function RotaEntrada({ nome }: { nome: string }) {
   const { pronto, usuario, situacao, erroSituacao } = useSessao();
@@ -37,7 +39,7 @@ export function RotaEntrada({ nome }: { nome: string }) {
   const Nova = tela("entrada", nome);
   if (usuario && nome !== "BoasVindas") {
     if (!situacao && !erroSituacao) return <CarregandoTela texto="Entrando" />;
-    const de = (location.state as { de?: string } | null)?.de;
+    const de = destinoDaEntrada((location.state as { de?: string } | null)?.de);
     return <Navigate to={destinoDepoisDoLogin(situacao, de)} replace />;
   }
   if (!usuario && nome === "BoasVindas") return <Navigate to="/entrar" replace />;

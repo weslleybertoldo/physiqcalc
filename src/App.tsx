@@ -14,10 +14,13 @@ import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
 // ficam disponíveis sem provider adicional (v1.x expõe só hooks)
 import { setupDeepLinkListener } from "@/lib/capacitorAuth";
 import { capturarProfDaUrl, capturarProfDoDeepLink } from "@/lib/profPendente";
+import { capturarDestinoDaUrl, capturarLinkDoApp } from "@/lib/linksDoApp";
 import StagingGate from "@/components/StagingGate";
 import { Rotas } from "@/rotas/Rotas";
+import { AbrirLinkDoApp } from "@/ui/casca/AbrirLinkDoApp";
 import { AvisosGlobais } from "@/ui/casca/AvisosGlobais";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
+import { FaixaAbrirNoApp } from "@/ui/casca/FaixaAbrirNoApp";
 
 // W1 (Physiq): as rotas agora são montadas pelas cascas novas (src/rotas/Rotas.tsx) — app do aluno
 // com 5 abas, site do profissional, master, entrada e páginas públicas — com as telas antigas como
@@ -50,6 +53,10 @@ capturarProfDaUrl();
 capturarProfDoDeepLink();
 // Inicializa deep link listener para OAuth no APK
 setupDeepLinkListener();
+// H2: o link do site das páginas do aluno (e-mail, aviso, link colado) — no APK abre o app NA tela do link (App Links; frio ou
+// já aberto); no site, quem está sem login entra e volta para a página do link (src/lib/linksDoApp.ts)
+capturarLinkDoApp();
+capturarDestinoDaUrl();
 
 const AppRoutes = () => {
   const { loading } = useAuth();
@@ -65,11 +72,15 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <StagingGate>
+        {/* H2: no navegador do Android, "Abrir no app Physiq" no alto das páginas do aluno (e da entrada, se veio de um link delas) */}
+        <FaixaAbrirNoApp />
         <Suspense fallback={<CarregandoTela />}>
           <Rotas />
         </Suspense>
         {/* janelas globais registradas em src/ui/avisos (ex.: "o Physiq mudou", W3) */}
         {usuario && <AvisosGlobais />}
+        {/* H2: no APK, o link do site que abriu o app leva à tela dele */}
+        <AbrirLinkDoApp />
       </StagingGate>
     </BrowserRouter>
   );
