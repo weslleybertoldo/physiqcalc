@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  assuntoDoEnvio, caminhoDoEnvio, criarFreio, destinoDoEnvio, htmlDoEnvio, linkDoEnvio, modulosDoEnvio, oQueMudou, statusDoErroEnvio,
-  textoDoEnvio,
+  assuntoDoEnvio, caminhoDoEnvio, criarFreio, destinoDoEnvio, htmlDoEnvio, linkDoEnvio, modeloDoEnvio, modulosDoEnvio, oQueMudou,
+  statusDoErroEnvio, textoDoEnvio,
 } from "../../../../supabase-principal/functions/_shared/enviar-aluno-regras";
+import { IMAGENS_EMAIL } from "../../../../supabase-principal/functions/_shared/email-modelo";
+
+/** Os textos e links dos botões do HTML (o primário e os secundários). */
+const botoes = (html: string) => [...html.matchAll(/<a href="([^"]*)" style="display:block;[^"]*">([^<]*)<\/a>/g)].map((m) => `${m[2]} → ${m[1]}`);
 
 describe("função aluno-enviar (W17) — regras do e-mail ao aluno", () => {
   it("STAGING manda SEMPRE para a caixa de teste do Resend, mesmo com e-mail real no cadastro", () => {
@@ -33,6 +37,44 @@ describe("função aluno-enviar (W17) — regras do e-mail ao aluno", () => {
     expect(html).not.toContain("<b>Lima</b>");
     expect(textoDoEnvio(d)).toContain("Camila & Cia atualizou seu plano alimentar no Physiq");
     expect(textoDoEnvio(d)).toContain("https://physiqcalc.com.br/dieta");
+  });
+
+  it("molde C (H3): treino e dieta = os 2 ícones, as 2 linhas + Por e os botões Abrir o Physiq / Ver meu treino / Ver minha dieta", () => {
+    const d = { email: "a@b.com", aluno: "Rafael Moura", quem: "Lucas Ferreira", modulos: ["treino", "dieta"] as const, link: "https://physiqcalc.com.br/" };
+    const m = modeloDoEnvio(d);
+    expect(m.rotulo).toBe("Plano atualizado");
+    expect(m.destaques).toEqual([{ visual: { tipo: "icones", icones: ["halterGrande", "saladaVerdeGrande"] }, olho: "O que mudou", titulo: "Treino e dieta", sub: "atualizados por Lucas Ferreira" }]);
+    expect(m.linhas.map((l) => [l.icone ?? l.iniciais, l.rotulo, l.valor])).toEqual([
+      ["halter", "Treino", "Atualizado · aba Treino do app"], ["saladaVerde", "Plano alimentar", "Atualizado · aba Dieta do app"], ["LF", "Por", "Lucas Ferreira"],
+    ]);
+    expect(m.preheader).toBe("Lucas Ferreira atualizou seu treino e seu plano alimentar no Physiq. Abra o app para ver o que mudou.");
+    const html = htmlDoEnvio(d);
+    expect(botoes(html)).toEqual([
+      "Abrir o Physiq → https://physiqcalc.com.br/", "Ver meu treino → https://physiqcalc.com.br/treino", "Ver minha dieta → https://physiqcalc.com.br/dieta",
+    ]);
+    expect(html).toContain("Olá, Rafael! <strong");
+    expect(html).toContain(">Lucas Ferreira</strong> atualizou seu treino e seu plano alimentar no Physiq. Abra o app para ver o que mudou.");
+    expect(html).toContain("Os botões abrem o app. Se não abrir, use o link:");
+    expect(html).toContain(">physiqcalc.com.br</a></p>");
+    expect(html).toContain("Você recebeu este e-mail porque é aluno de Lucas Ferreira no Physiq.");
+    expect(html).toContain(`${IMAGENS_EMAIL}/halter-violeta-26.png`);
+    expect(html).not.toMatch(/<svg/i);
+  });
+
+  it("molde C (H3): um módulo só = 1 ícone, 1 linha e só o botão dele; staging aponta o site do staging", () => {
+    const treino = { email: "a@b.com", aluno: "", quem: "Bruno Lima", modulos: ["treino"] as const, link: "https://physiqcalc-staging.vercel.app/treino" };
+    const m = modeloDoEnvio(treino);
+    expect(m.destaques![0]).toMatchObject({ visual: { tipo: "icones", icones: ["halterGrande"] }, titulo: "Treino", sub: "atualizado por Bruno Lima" });
+    expect(m.linhas.map((l) => l.rotulo)).toEqual(["Treino", "Por"]);
+    const html = htmlDoEnvio(treino);
+    expect(botoes(html)).toEqual(["Ver meu treino → https://physiqcalc-staging.vercel.app/treino"]);
+    expect(html).toContain("O botão abre o app. Se não abrir, use o link:");
+    expect(html).toContain(">physiqcalc-staging.vercel.app/treino</a>");
+    expect(html).toContain("Olá! <strong"); // sem o nome do aluno
+    const dieta = modeloDoEnvio({ ...treino, modulos: ["dieta"], link: "https://physiqcalc.com.br/dieta" });
+    expect(dieta.destaques![0]).toMatchObject({ visual: { icones: ["saladaVerdeGrande"] }, titulo: "Plano alimentar" });
+    expect(dieta.linhas.map((l) => l.rotulo)).toEqual(["Plano alimentar", "Por"]);
+    expect(dieta.secundarios).toEqual([]);
   });
 
   it("link do botão = site do ambiente + só as abas do aviso", () => {

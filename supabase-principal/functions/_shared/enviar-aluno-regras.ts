@@ -1,6 +1,10 @@
 // Physiq W17 — regras PURAS do e-mail do "Salvar e enviar ao aluno" (tela 8). Sem Deno e sem rede: usadas pela função
 // aluno-enviar e testadas no Vitest (src/painel/aluno/envio/enviarServidor.test.ts).
-import { CAIXA_DE_TESTE_RESEND, destinoDoEmail, escaparHtml, siteDoConvite, type Schema } from "./convites-regras.ts";
+// H3 (01/10): o e-mail no molde C (email-modelo.ts) — destaque com os ícones do que mudou (halter = treino, salada = dieta),
+// linhas Treino/Plano alimentar/Por e os botões "Abrir o Physiq" + "Ver meu treino"/"Ver minha dieta" (um módulo só: 1 ícone,
+// 1 linha e só o botão dele).
+import { CAIXA_DE_TESTE_RESEND, destinoDoEmail, siteDoConvite, type Schema } from "./convites-regras.ts";
+import { iniciaisDe, montarEmail, textoDaReserva, type BotaoEmail, type EmailModelo, type IconeEmail, type LinhaEmail } from "./email-modelo.ts";
 
 export type ModuloEnvio = "treino" | "dieta";
 
@@ -75,20 +79,57 @@ function rotuloDoBotao(modulos: readonly ModuloEnvio[]): string {
   return t ? "Ver meu treino" : "Ver minha dieta";
 }
 
-/** E-mail (HTML simples, claro, sem imagem nem emoji — o mesmo jeito do convite). */
+function origemDe(link: string): string {
+  try {
+    return new URL(link).origin;
+  } catch {
+    return "https://physiqcalc.com.br";
+  }
+}
+
+/** O e-mail do plano atualizado no molde C (o que o htmlDoEnvio monta; separado para o teste olhar as peças). */
+export function modeloDoEnvio(d: DadosEmailEnvio): EmailModelo {
+  const nome = primeiroNomeDe(d.aluno);
+  const quem = d.quem.trim() || "Seu profissional";
+  const t = d.modulos.includes("treino");
+  const n = d.modulos.includes("dieta");
+  const ambos = t && n;
+  const site = origemDe(d.link);
+  const icones: IconeEmail[] = [];
+  if (t) icones.push("halterGrande");
+  if (n || !t) icones.push("saladaVerdeGrande");
+  const linhas: LinhaEmail[] = [];
+  if (t) linhas.push({ icone: "halter", rotulo: "Treino", valor: "Atualizado · aba Treino do app" });
+  if (n || !t) linhas.push({ icone: "saladaVerde", rotulo: "Plano alimentar", valor: "Atualizado · aba Dieta do app" });
+  linhas.push({ iniciais: iniciaisDe(quem), rotulo: "Por", valor: quem });
+  const primario: BotaoEmail = { texto: rotuloDoBotao(d.modulos), href: d.link };
+  const secundarios: BotaoEmail[] = ambos
+    ? [{ texto: "Ver meu treino", href: `${site}/treino` }, { texto: "Ver minha dieta", href: `${site}/dieta` }]
+    : [];
+  const oque = oQueMudou(d.modulos);
+  return {
+    titulo: "Plano atualizado",
+    preheader: `${quem} atualizou ${oque} no Physiq. Abra o app para ver o que mudou.`,
+    rotulo: "Plano atualizado",
+    destaques: [{
+      visual: { tipo: "icones", icones },
+      olho: "O que mudou",
+      titulo: ambos ? "Treino e dieta" : t ? "Treino" : "Plano alimentar",
+      sub: `${ambos ? "atualizados" : "atualizado"} por ${quem}`,
+    }],
+    saudacao: [nome ? `Olá, ${nome}! ` : "Olá! ", { forte: quem }, ` atualizou ${oque} no Physiq. Abra o app para ver o que mudou.`],
+    linhas,
+    primario,
+    secundarios,
+    reserva: { texto: textoDaReserva(1 + secundarios.length, "o app"), href: d.link },
+    rodape: `Você recebeu este e-mail porque é aluno de ${quem} no Physiq.`,
+    site,
+  };
+}
+
+/** E-mail no molde C (email-modelo.ts): tabelas + CSS inline, ícones em PNG, sem SVG nem JS. */
 export function htmlDoEnvio(d: DadosEmailEnvio): string {
-  const nome = escaparHtml(primeiroNomeDe(d.aluno));
-  const quem = escaparHtml(d.quem.trim() || "Seu profissional");
-  const oque = escaparHtml(oQueMudou(d.modulos));
-  const link = escaparHtml(d.link);
-  const botao = escaparHtml(rotuloDoBotao(d.modulos));
-  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#111;line-height:1.5">
-  <h2 style="margin:0 0 12px;font-size:20px">${escaparHtml(assuntoDoEnvio({ ...d, paraTeste: null }))}</h2>
-  <p>${nome ? `Olá, ${nome}! ` : ""}<b>${quem}</b> atualizou ${oque} no Physiq. Abra o app para ver o que mudou.</p>
-  <p style="margin:22px 0"><a href="${link}" style="display:inline-block;background:#6d28d9;color:#fff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:10px">${botao}</a></p>
-  <p style="font-size:12px;color:#555">Ou copie o link: ${link}</p>
-  <p style="font-size:12px;color:#555">Você recebeu este e-mail porque é aluno de ${quem} no Physiq.</p>
-</div>`;
+  return montarEmail(modeloDoEnvio(d));
 }
 
 /** Texto puro (clientes de e-mail sem HTML). */

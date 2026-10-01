@@ -7,6 +7,8 @@ import {
   erroParaApkAntigo,
   htmlConviteAluno,
   linkConviteAluno,
+  modeloConviteAluno,
+  oQueVaiAcompanhar,
   rotuloDosModulos,
   statusDoErro,
   statusParaApkAntigo,
@@ -50,6 +52,36 @@ describe("W13 — e-mail do convite de aluno (Resend, C7/C87)", () => {
     expect(rotuloDosModulos(["treino", "nutricao"])).toBe("o seu treino e a sua alimentação");
     expect(rotuloDosModulos(["nutricao"])).toBe("a sua alimentação");
     expect(textoConviteAluno(d)).toContain("https://physiqcalc.com.br/entrar?convite=1");
+  });
+  it("molde C (H3): a inicial de quem convidou, Convidou você · nome · conta, as linhas e o botão Entrar e aceitar", () => {
+    const c = { email: "rafael.moura@exemplo.com", modulos: ["treino", "nutricao"], conta: "Consultoria Ferreira", quem: "Lucas Ferreira", responsavel: null, link: linkConviteAluno("public") };
+    const m = modeloConviteAluno(c);
+    expect(m.rotulo).toBe("Convite");
+    expect(m.destaques).toEqual([{ visual: { tipo: "pessoa", iniciais: "LF" }, olho: "Convidou você", titulo: "Lucas Ferreira", sub: "Consultoria Ferreira" }]);
+    expect(m.linhas.map((l) => [l.icone ?? l.iniciais, l.rotulo, l.valor])).toEqual([
+      ["lista", "Você vai acompanhar", "Treino e alimentação"],
+      ["email", "Entre com este e-mail", "rafael.moura@exemplo.com"],
+      ["escudo", "Como aceitar", "Pelo botão Entrar com Google"],
+    ]);
+    expect(m.preheader).toBe("Lucas Ferreira (Consultoria Ferreira) convidou você para acompanhar o seu treino e a sua alimentação pelo Physiq.");
+    const html = htmlConviteAluno(c);
+    expect(html).toContain("Olá! <strong");
+    expect(html).toContain(">Lucas Ferreira</strong> (Consultoria Ferreira) convidou você para acompanhar o seu treino e a sua alimentação pelo Physiq.");
+    expect(html).toContain(">Entrar e aceitar</a>");
+    expect(html).toContain("O botão abre o Physiq. Se não abrir, use o link:");
+    expect(html).toContain("Se você não esperava este convite, ignore este e-mail.");
+    // outra pessoa acompanha: a linha "Quem vai acompanhar você" (com as iniciais dela); o mesmo nome não repete
+    const outro = modeloConviteAluno({ ...c, modulos: ["nutricao"], responsavel: "Camila Rocha" });
+    expect(outro.linhas.map((l) => l.rotulo)).toEqual(["Você vai acompanhar", "Quem vai acompanhar você", "Entre com este e-mail", "Como aceitar"]);
+    expect(outro.linhas[1]).toMatchObject({ iniciais: "CR", valor: "Camila Rocha" });
+    expect(modeloConviteAluno({ ...c, responsavel: "Lucas Ferreira" }).linhas).toHaveLength(3);
+    // conta vazia: sem "()" na frase e sem a linha de baixo do destaque
+    const semConta = modeloConviteAluno({ ...c, conta: " " });
+    expect(semConta.destaques![0].sub).toBeNull();
+    expect(htmlConviteAluno({ ...c, conta: "" })).not.toContain("()");
+    expect(textoConviteAluno({ ...c, conta: "" })).not.toContain("()");
+    expect(oQueVaiAcompanhar(["treino"])).toBe("Treino");
+    expect(oQueVaiAcompanhar(["nutricao"])).toBe("Alimentação");
   });
 });
 

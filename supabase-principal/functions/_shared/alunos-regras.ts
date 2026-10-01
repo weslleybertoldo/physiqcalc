@@ -1,6 +1,9 @@
 // Physiq W13 — regras PURAS da função alunos (banco principal): ações aceitas, status HTTP de cada erro do banco e o e-mail do
 // convite de aluno (Resend). Sem Deno e sem rede: usadas pela função e testadas no Vitest (src/painel/alunos/alunosServidor.test.ts).
-import { escaparHtml, siteDoConvite, type Schema } from "./convites-regras.ts";
+// H3 (01/10): o e-mail do convite no molde C (email-modelo.ts) — a inicial de quem convidou, "Convidou você · <nome> · <conta>",
+// linhas Você vai acompanhar/(Quem vai acompanhar você)/Entre com este e-mail/Como aceitar e o botão "Entrar e aceitar".
+import { siteDoConvite, type Schema } from "./convites-regras.ts";
+import { iniciaisDe, montarEmail, textoDaReserva, type EmailModelo, type LinhaEmail } from "./email-modelo.ts";
 
 /** Ações do painel (com o login do profissional). As leituras (lista, convites, pendentes) são RPC direto da tela. */
 export const ACOES_APP = [
@@ -73,28 +76,56 @@ export function assuntoConviteAluno(d: DadosEmailAluno): string {
   return d.paraTeste ? `[teste → ${d.paraTeste}] ${base}` : base;
 }
 
-/** E-mail do convite de aluno (HTML simples, sem imagem nem emoji — o mesmo padrão do convite de equipe da W5). */
+/** "Treino e alimentação" · "Alimentação" · "Treino" (a linha "Você vai acompanhar"). */
+export function oQueVaiAcompanhar(modulos: readonly string[]): string {
+  const t = modulos.includes("treino");
+  const n = modulos.includes("nutricao");
+  if (t && n) return "Treino e alimentação";
+  return n ? "Alimentação" : "Treino";
+}
+
+function origemDe(link: string): string {
+  try {
+    return new URL(link).origin;
+  } catch {
+    return "https://physiqcalc.com.br";
+  }
+}
+
+/** O convite de aluno no molde C (o que o htmlConviteAluno monta; separado para o teste olhar as peças). */
+export function modeloConviteAluno(d: DadosEmailAluno): EmailModelo {
+  const quem = d.quem.trim() || "Seu profissional";
+  const conta = d.conta.trim();
+  const oque = rotuloDosModulos(d.modulos);
+  const resp = (d.responsavel ?? "").trim();
+  const linhas: LinhaEmail[] = [{ icone: "lista", rotulo: "Você vai acompanhar", valor: oQueVaiAcompanhar(d.modulos) }];
+  if (resp && resp !== quem) linhas.push({ iniciais: iniciaisDe(resp), rotulo: "Quem vai acompanhar você", valor: resp });
+  linhas.push(
+    { icone: "email", rotulo: "Entre com este e-mail", valor: d.email, href: `mailto:${d.email}` },
+    { icone: "escudo", rotulo: "Como aceitar", valor: "Pelo botão Entrar com Google", nota: "O convite é aceito sozinho na entrada." },
+  );
+  return {
+    titulo: "Convite para o Physiq",
+    preheader: `${quem}${conta ? ` (${conta})` : ""} convidou você para acompanhar ${oque} pelo Physiq.`,
+    rotulo: "Convite",
+    destaques: [{ visual: { tipo: "pessoa", iniciais: iniciaisDe(quem) }, olho: "Convidou você", titulo: quem, sub: conta || null }],
+    saudacao: ["Olá! ", { forte: quem }, `${conta ? ` (${conta})` : ""} convidou você para acompanhar ${oque} pelo Physiq.`],
+    linhas,
+    primario: { texto: "Entrar e aceitar", href: d.link },
+    reserva: { texto: textoDaReserva(1, "o Physiq"), href: d.link },
+    rodape: "Se você não esperava este convite, ignore este e-mail.",
+    site: origemDe(d.link),
+  };
+}
+
+/** E-mail do convite de aluno no molde C (email-modelo.ts): tabelas + CSS inline, ícones em PNG, sem SVG nem JS. */
 export function htmlConviteAluno(d: DadosEmailAluno): string {
-  const quem = escaparHtml(d.quem || "Seu profissional");
-  const conta = escaparHtml(d.conta);
-  const oque = escaparHtml(rotuloDosModulos(d.modulos));
-  const email = escaparHtml(d.email);
-  const link = escaparHtml(d.link);
-  const resp = d.responsavel && d.responsavel !== d.quem ? `<p>Quem vai acompanhar você: <b>${escaparHtml(d.responsavel)}</b>.</p>` : "";
-  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#111;line-height:1.5">
-  <h2 style="margin:0 0 12px;font-size:20px">Convite para o Physiq</h2>
-  <p><b>${quem}</b> (${conta}) convidou você para acompanhar ${oque} pelo Physiq.</p>
-  ${resp}
-  <p>Para aceitar, entre no Physiq com este e-mail (<b>${email}</b>) — pelo botão <b>Entrar com Google</b>. O convite é aceito sozinho na entrada.</p>
-  <p style="margin:22px 0"><a href="${link}" style="display:inline-block;background:#6d28d9;color:#fff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:10px">Entrar e aceitar</a></p>
-  <p style="font-size:12px;color:#555">Ou copie o link: ${link}</p>
-  <p style="font-size:12px;color:#555">Se você não esperava este convite, ignore este e-mail.</p>
-</div>`;
+  return montarEmail(modeloConviteAluno(d));
 }
 
 export function textoConviteAluno(d: DadosEmailAluno): string {
   return [
-    `${d.quem || "Seu profissional"} (${d.conta}) convidou você para acompanhar ${rotuloDosModulos(d.modulos)} pelo Physiq.`,
+    `${d.quem || "Seu profissional"}${d.conta.trim() ? ` (${d.conta.trim()})` : ""} convidou você para acompanhar ${rotuloDosModulos(d.modulos)} pelo Physiq.`,
     `Para aceitar, entre no Physiq com este e-mail (${d.email}) pelo botão Entrar com Google: ${d.link}`,
     "Se você não esperava este convite, ignore este e-mail.",
   ].join("\n\n");

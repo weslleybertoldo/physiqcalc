@@ -1,7 +1,7 @@
 // Physiq W5 — convites (banco principal): convite de MEMBRO da equipe por e-mail (spec §4.6 Equipe e §8.1 convites). A
 // regra mora no banco (convidar_membro / cancelar_convite_membro, pelo auth.uid() de quem chama — só o dono, papéis que o
 // plano permite, conta nova sem o painel travado, no staging só conta de teste); aqui só sai o e-mail pelo Resend, com o
-// REMETENTE DE HOJE (o dos convites do PhysiqCalc: RESEND_FROM, domínio physiqcalc.com.br verificado na conta B Code).
+// remetente dos convites (RESEND_FROM = "Physiq <convites@physiqcalc.com.br>" desde a H3; domínio verificado na conta B Code).
 // O aceite é no 1º login da pessoa com aquele e-mail (pos-login → aceitar_convites_do_email).
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo:
@@ -28,7 +28,7 @@ import {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "PhysiqCalc <convites@physiqcalc.com.br>";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Physiq <convites@physiqcalc.com.br>";
 const SITE_URL = Deno.env.get("SITE_URL") ?? "https://physiqcalc.com.br";
 const SCHEMAS: Schema[] = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

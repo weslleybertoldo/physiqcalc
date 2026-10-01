@@ -3,6 +3,10 @@
 // auth.uid() de quem chama — só o dono da agenda, o dono da conta ou o master; reserva as consultas novas do aluno com este
 // profissional e nunca manda 2 e-mails da agenda ao mesmo aluno em 10 minutos); aqui só sai o e-mail pelo Resend, com o MESMO
 // remetente dos convites (RESEND_FROM). Se o Resend falha, a reserva é desfeita.
+// H3 (01/10): o e-mail no molde C. Depois da reserva a função lê (service_role, só leitura) o status, os reagendamentos e o mês
+// de cada consulta reservada e as regras do profissional (agenda_regras_de): "Confirmar presença" só para consulta que ainda
+// espera o aluno e "Reagendar" só quando a regra deixa (a mesma conta do app). Se essa leitura falhar, o e-mail sai sem o
+// "Reagendar" (nunca promete o que a regra pode não deixar).
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { agendamento: <id> }
 // 200 → { ok, email: { enviado, motivo?, teste, id?, erro?, consultas? } } · 4xx → { ok: false, erro }
@@ -17,19 +21,22 @@ import type { Schema } from "../_shared/convites-regras.ts";
 import { criarFreio } from "../_shared/enviar-aluno-regras.ts";
 import {
   assuntoDaAgenda,
+  consultasComDetalhes,
   consultasDoEmail,
   destinoDoEmailAgenda,
   htmlDaAgenda,
   linkDaAgenda,
+  regrasDoReagendamento,
   statusDoErroAgenda,
   textoDaAgenda,
+  type RegrasDoReagendamento,
 } from "../_shared/agenda-regras.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "PhysiqCalc <convites@physiqcalc.com.br>";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Physiq <convites@physiqcalc.com.br>";
 const SITE_URL = Deno.env.get("SITE_URL") ?? "https://physiqcalc.com.br";
 const SCHEMAS: Schema[] = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -65,6 +72,28 @@ async function enviarEmail(para: string, assunto: string, html: string, texto: s
   } catch (e) {
     console.error("agenda-avisar: resend", String(e));
     return { id: null, erro: "resend_rede" };
+  }
+}
+
+type Cliente = ReturnType<typeof createClient>;
+
+/** Status, reagendamentos e mês das consultas reservadas + as regras do profissional (só leitura; erro → sem "Reagendar"). */
+async function detalhesDaReserva(db: Cliente, ids: string[]): Promise<{ detalhes: unknown[]; regras: RegrasDoReagendamento | null }> {
+  if (!ids.length) return { detalhes: [], regras: null };
+  try {
+    const { data, error } = await db.from("agendamentos").select("id, status, reagendamentos, mes_referencia, nutricionista_id").in("id", ids);
+    if (error || !Array.isArray(data) || !data.length) {
+      if (error) console.error("agenda-avisar: detalhes", error.message);
+      return { detalhes: [], regras: null };
+    }
+    const prof = (data[0] as { nutricionista_id?: string | null }).nutricionista_id;
+    if (!prof) return { detalhes: data, regras: null };
+    const { data: regras, error: er } = await db.rpc("agenda_regras_de", { p_prof: prof });
+    if (er) console.error("agenda-avisar: regras", er.message);
+    return { detalhes: data, regras: er ? null : regrasDoReagendamento(regras) };
+  } catch (e) {
+    console.error("agenda-avisar: detalhes", String(e));
+    return { detalhes: [], regras: null };
   }
 }
 
@@ -112,8 +141,10 @@ Deno.serve(async (req) => {
     }
 
     const email = String(r.para ?? "");
-    const consultas = consultasDoEmail(r.consultas);
     const ids = (Array.isArray(r.consultas) ? r.consultas : []).map((c) => String((c as { id?: unknown })?.id ?? "")).filter((id) => UUID.test(id));
+    const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema }, auth: { persistSession: false } });
+    const { detalhes, regras } = await detalhesDaReserva(db, ids);
+    const consultas = consultasComDetalhes(consultasDoEmail(r.consultas), detalhes);
     const destino = destinoDoEmailAgenda(schema, email);
     const dados = {
       email,
@@ -122,11 +153,11 @@ Deno.serve(async (req) => {
       consultas,
       link: linkDaAgenda(schema, SITE_URL),
       paraTeste: destino.teste ? email : null,
+      regras,
     };
     const envio = await enviarEmail(destino.para, assuntoDaAgenda(dados), htmlDaAgenda(dados), textoDaAgenda(dados));
     if (envio.erro !== null && ids.length) {
       // o e-mail não saiu: desfaz a reserva (a próxima consulta marcada tenta de novo, sem esperar os 10 minutos)
-      const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema }, auth: { persistSession: false } });
       const { error: ef } = await db.rpc("agenda_reserva_email_falhou", { p_ids: ids });
       if (ef) console.error("agenda-avisar: desfazer reserva", ef.message);
     }
