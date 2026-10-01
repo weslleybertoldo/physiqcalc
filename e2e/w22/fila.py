@@ -241,6 +241,9 @@ def main() -> int:
     antes = B.sql_principal(f"select (select count(*) from {S}.mensagens_whatsapp)::int fila, (select count(*) from {S}.pacientes)::int pac, "
                             f"(select count(*) from {S}.whatsapp_instancias)::int inst, (select count(*) from {S}.agendamentos)::int ag, "
                             f"(select md5(coalesce(config::text, '')) from {S}.profiles where id = {q(x)}) cfg")[0]
+    # o que JÁ está gravado (a massa das telas, por exemplo) entra nas contas do histórico
+    base_x = B.sql_principal(f"select count(*)::int n from {S}.mensagens_whatsapp where nutricionista_id = {q(x)}")[0]["n"]
+    base_bruno = sorted(r["tipo"] for r in B.sql_principal(f"select tipo from {S}.mensagens_whatsapp where nutricionista_id = {q(B.uid('w13-personal2'))}")) if w13 else []
     nulo = "00000000-0000-0000-0000-000000000000"
     sql = (BLOCO.replace("__S__", S).replace("__X__", x).replace("__CONTA__", conta)
            .replace("'__LUCAS__'", q(B.uid("w13-dono")) if w13 else "null").replace("'__BRUNO__'", q(B.uid("w13-personal2")) if w13 else "null")
@@ -278,7 +281,8 @@ def main() -> int:
     p.check(r["resumo_falhas"] == 2 and r["fila_falhas"] == 2, f"número do menu = filtro Com falha: {r['resumo_falhas']} = {r['fila_falhas']} (as 2 que sobraram)")
     p.check(r["limpar"].get("ok") is True and r["resumo_falhas_depois_limpar"] == 0 and r["fila_falhas_depois_limpar"] == 0,
             f"Limpar falhas zera o número e o filtro ({r['resumo_falhas_depois_limpar']}, {r['fila_falhas_depois_limpar']}); o histórico continua")
-    p.check(r["fila_todas"] == ra.get("pendentes", 0) + 3, f"o histórico (todas) lista a fila dele: {r['fila_todas']} = {ra.get('pendentes')} na fila + 3 falhas")
+    p.check(r["fila_todas"] == min(100, base_x + ra.get("pendentes", 0) + 3),
+            f"o histórico (todas) lista a fila dele: {r['fila_todas']} = {base_x} já gravadas + {ra.get('pendentes')} na fila + 3 falhas")
     fp = r["fila_pagina"]
     p.check(fp["p1"] == 3 and fp["mais"] is True and fp["p2"] == 3 and not fp.get("repetidas"),
             f"página por (data, id) sem pular nem repetir linhas gravadas no mesmo instante: {fp}")
@@ -299,7 +303,8 @@ def main() -> int:
         p.check(r["dono_grava_na_fila"] is False, "o dono NÃO grava mais na fila de um membro (a política ALL da W2 virou SELECT)")
         p.check(r.get("camila_conta") == 0 and r.get("camila_rest") == 0, f"a nutri (membro) não vê a fila do Bruno ({r.get('camila_conta')}, {r.get('camila_rest')})")
         p.check(r["bruno_conta_vira_meus"] == "meus", "membro pedindo a fila da conta recebe só a dele")
-        p.check(r["bruno_meus"] == (["aniversario"] if r["aniv_hoje"] else None), f"a fila do Bruno: {r['bruno_meus']}")
+        esperado_b = sorted(base_bruno + (["aniversario"] if r["aniv_hoje"] else []))
+        p.check(sorted(r["bruno_meus"] or []) == esperado_b, f"a fila do Bruno: {r['bruno_meus']} = {base_bruno} já gravadas + o aniversário")
     depois = B.sql_principal(f"select (select count(*) from {S}.mensagens_whatsapp)::int fila, (select count(*) from {S}.pacientes)::int pac, "
                              f"(select count(*) from {S}.whatsapp_instancias)::int inst, (select count(*) from {S}.agendamentos)::int ag, "
                              f"(select md5(coalesce(config::text, '')) from {S}.profiles where id = {q(x)}) cfg")[0]
