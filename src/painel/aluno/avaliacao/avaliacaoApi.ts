@@ -10,8 +10,9 @@
  *   · o aviso "avaliação nova" no sino do aluno (NF9) → aluno_avisar_avaliacao.
  */
 import { principal } from "@/integrations/principal/client";
-import { supabase } from "@/integrations/supabase/client";
+import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 import { BUCKET_REGISTROS, comprimirImagem, type TipoFoto } from "@/lib/registrosFotos";
+import { carregarTreinoDoPainel } from "./fontes";
 
 export class ErroAvaliacao extends Error {
   constructor(public codigo: string) {
@@ -21,25 +22,38 @@ export class ErroAvaliacao extends Error {
 
 const online = () => (typeof navigator === "undefined" ? true : navigator.onLine !== false);
 
+const URL_ADMIN_AVALIACOES = `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1/admin-avaliacoes`;
+const ANON_TREINO = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? "");
+
+/**
+ * A função admin-avaliacoes numa tentativa SÓ, com espera longa (45 s). O cliente do Treino repete sozinho o pedido que passa de
+ * 15 s (VM Nano lenta): para gravar, isso duplicaria a avaliação (o 1º pedido grava, a resposta não chega, o 2º grava de novo) e o
+ * "excluir" voltaria "forbidden" (a linha já tinha saído). Aqui não há repetição automática.
+ */
 async function adminAvaliacoes<T>(corpo: Record<string, unknown>): Promise<T> {
   if (!online()) throw new ErroAvaliacao("sem_internet");
-  const { data, error } = await supabase.functions.invoke("admin-avaliacoes", { body: corpo });
-  if (error) {
-    const ctx = (error as { context?: Response }).context;
-    let codigo = "erro_interno";
-    if (ctx && typeof ctx.json === "function") {
-      try {
-        const j = await ctx.clone().json();
-        codigo = String(j?.error ?? codigo);
-      } catch {
-        /* sem corpo */
-      }
-    }
-    throw new ErroAvaliacao(codigo);
+  const { data: sess } = await supabase.auth.getSession();
+  const token = sess.session?.access_token;
+  if (!token) throw new ErroAvaliacao("invalid_token");
+  const controle = new AbortController();
+  const relogio = setTimeout(() => controle.abort(), 45_000);
+  let r: Response;
+  try {
+    r = await fetch(URL_ADMIN_AVALIACOES, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: ANON_TREINO, "x-schema": DB_SCHEMA },
+      body: JSON.stringify(corpo),
+      signal: controle.signal,
+    });
+  } catch {
+    throw new ErroAvaliacao(online() ? "erro_interno" : "sem_internet");
+  } finally {
+    clearTimeout(relogio);
   }
-  const d = data as { error?: string } | null;
-  if (d && typeof d.error === "string") throw new ErroAvaliacao(d.error);
-  return data as T;
+  const d = (await r.json().catch(() => null)) as (T & { error?: string }) | null;
+  if (!r.ok || !d) throw new ErroAvaliacao(String(d?.error ?? (r.status === 401 ? "invalid_token" : "erro_interno")));
+  if (typeof d.error === "string") throw new ErroAvaliacao(d.error);
+  return d as T;
 }
 
 export interface NovaAvaliacaoFisica {
@@ -72,8 +86,19 @@ export async function registrarAvaliacaoFisica(treinoUserId: string, nova: NovaA
  * Exclui a avaliação física; sendo a mais recente, a composição atual do perfil volta à da anterior (`restaurar`, de
  * composicaoDepoisDeExcluir — o Calc antigo deixava o perfil com os números da excluída).
  */
-export async function excluirAvaliacaoFisica(avaliacaoId: string, restaurar?: { treinoUserId: string; colunas: Record<string, unknown> } | null): Promise<void> {
-  await adminAvaliacoes({ action: "delete", avaliacaoId });
+export async function excluirAvaliacaoFisica(
+  avaliacaoId: string,
+  restaurar?: { treinoUserId: string; colunas: Record<string, unknown> } | null,
+  alunoIdDaRota?: string,
+): Promise<void> {
+  try {
+    await adminAvaliacoes({ action: "delete", avaliacaoId });
+  } catch (e) {
+    // "forbidden" de uma linha que já não existe = um pedido anterior (rede lenta) já excluiu: confere e segue
+    const jaSaiu = e instanceof ErroAvaliacao && e.codigo === "forbidden" && !!alunoIdDaRota
+      && !((await carregarTreinoDoPainel(alunoIdDaRota).catch(() => null))?.parte.avaliacoes ?? [{ id: avaliacaoId }]).some((l) => String(l.id) === avaliacaoId);
+    if (!jaSaiu) throw e;
+  }
   if (restaurar) {
     const { error } = await supabase.functions.invoke("admin-update-user", { body: { userId: restaurar.treinoUserId, data: restaurar.colunas } });
     if (error) console.warn("[avaliacao] a composição atual do perfil não voltou à da avaliação anterior:", error.message);

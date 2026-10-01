@@ -20,7 +20,9 @@ import { autorNoPainel, composicaoDepoisDeExcluir, numerosDoHistorico, podeExclu
  * aluno), "PDF" o da antropometria (o do Nutri) e "Excluir" sai do histórico do aluno (o personal exclui a física, a nutri a
  * antropometria — a antropometria vai para a Lixeira, como no site antigo).
  */
-export function HistoricoAvaliacoes({ avaliacoes, perm, nomeAluno, linhasTreino, treinoUserId, aoVer, aoPdf, aoEditar, aoExcluiu }: {
+export function HistoricoAvaliacoes({ alunoId, avaliacoes, perm, nomeAluno, linhasTreino, treinoUserId, aoVer, aoPdf, aoEditar, aoExcluiu }: {
+  /** o id da rota do aluno (confere no Treino se a avaliação já saiu) */
+  alunoId: string;
   avaliacoes: Avaliacao[];
   perm: PermissoesAvaliacao;
   nomeAluno: string;
@@ -45,7 +47,7 @@ export function HistoricoAvaliacoes({ avaliacoes, perm, nomeAluno, linhasTreino,
     try {
       if (av.origem === "treino") {
         const colunas = treinoUserId ? composicaoDepoisDeExcluir(av.idOriginal, linhasTreino) : null;
-        await excluirAvaliacaoFisica(av.idOriginal, colunas && treinoUserId ? { treinoUserId, colunas } : null);
+        await excluirAvaliacaoFisica(av.idOriginal, colunas && treinoUserId ? { treinoUserId, colunas } : null, alunoId);
       } else await excluirAntropometria(av.idOriginal);
       toast.success(av.origem === "treino" ? "Avaliação física excluída." : "Antropometria excluída (vai para a Lixeira).");
       setParaExcluir(null);

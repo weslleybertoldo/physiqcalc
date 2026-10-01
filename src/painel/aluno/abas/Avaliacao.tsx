@@ -263,6 +263,7 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
 
       {!dados.vazia && (
         <HistoricoAvaliacoes
+          alunoId={alunoId}
           avaliacoes={serie.avaliacoes}
           perm={perm}
           nomeAluno={p.nome}
