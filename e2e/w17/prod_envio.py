@@ -162,7 +162,7 @@ def prova(manter: bool) -> None:
             p.check(len(av) == 1 and av[0]["email_em"], f"P6 no banco: 1 aviso com o e-mail marcado ({av})")
             c.pg.mouse.move(5, 5)
             c.print("salvar_enviar")
-            c.pg.evaluate("document.querySelectorAll('[data-sonner-toast]').forEach(t => t.remove())")
+            c.esperar(lambda: c.pg.locator("[data-sonner-toast]").count() == 0, 12)  # nunca remover o nó do React à mão
             c.pg.locator("[data-editores-enviar]").click()
             t = toast(c, "já tinha o aviso")
             p.check("e o e-mail (menos de 10 minutos)" in t, f"P7 2º clique não repete o sino nem o e-mail ({t})")
