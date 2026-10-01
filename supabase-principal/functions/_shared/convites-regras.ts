@@ -1,5 +1,10 @@
 // Physiq W5 — regras PURAS do convite de membro da equipe (e-mail pelo Resend). Sem Deno e sem rede: usadas pela função
 // convites e testadas no Vitest (src/painel/configuracoes/equipe/convitesServidor.test.ts).
+// H3 (01/10): o e-mail no molde C (email-modelo.ts) — selo com as iniciais da conta, "Equipe · <conta> · como <papel>",
+// linhas Convidado por/Seu papel/Entre com este e-mail/Como aceitar e o botão "Entrar e aceitar".
+import { escaparHtml, iniciaisDe, montarEmail, textoDaReserva, type EmailModelo } from "./email-modelo.ts";
+
+export { escaparHtml };
 
 export type Papel = "dono" | "personal" | "nutricionista";
 export type Schema = "public" | "staging";
@@ -43,10 +48,6 @@ export function rotuloDosPapeis(papeis: readonly string[]): string {
   return nomes.length ? nomes.join(" e ") : "profissional";
 }
 
-export function escaparHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
-}
-
 export interface DadosEmailConvite {
   email: string;
   papeis: readonly string[];
@@ -62,21 +63,48 @@ export function assuntoDoConvite(d: DadosEmailConvite): string {
   return d.paraTeste ? `[teste → ${d.paraTeste}] ${base}` : base;
 }
 
-/** E-mail do convite (HTML simples, claro, sem imagem nem emoji — lê bem em qualquer cliente de e-mail). */
+/** "Personal trainer" · "Nutricionista" · "Personal trainer e nutricionista" (a linha "Seu papel"). */
+function papelComMaiuscula(papeis: readonly string[]): string {
+  const r = rotuloDosPapeis(papeis);
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
+
+function origemDe(link: string): string {
+  try {
+    return new URL(link).origin;
+  } catch {
+    return "https://physiqcalc.com.br";
+  }
+}
+
+/** O convite da equipe no molde C (o que o htmlDoConvite monta; separado para o teste olhar as peças). */
+export function modeloDoConvite(d: DadosEmailConvite): EmailModelo {
+  const quem = d.quem.trim() || "Um profissional";
+  const conta = d.conta.trim() || "Physiq";
+  const papeis = rotuloDosPapeis(d.papeis);
+  const soNutri = d.papeis.includes("nutricionista") && !d.papeis.includes("personal");
+  return {
+    titulo: "Convite para a equipe no Physiq",
+    preheader: `${quem} convidou você para a equipe ${conta} no Physiq, como ${papeis}.`,
+    rotulo: "Convite de equipe",
+    destaques: [{ visual: { tipo: "equipe", iniciais: iniciaisDe(conta) }, olho: "Equipe", titulo: conta, sub: `como ${papeis}` }],
+    saudacao: ["Olá! ", { forte: quem }, " convidou você para a equipe ", { forte: conta }, " no Physiq, como ", { forte: papeis }, "."],
+    linhas: [
+      { iniciais: iniciaisDe(quem), rotulo: "Convidado por", valor: quem },
+      { icone: soNutri ? "estetoscopio" : "halter", rotulo: "Seu papel", valor: papelComMaiuscula(d.papeis) },
+      { icone: "email", rotulo: "Entre com este e-mail", valor: d.email, href: `mailto:${d.email}` },
+      { icone: "escudo", rotulo: "Como aceitar", valor: "Pelo botão Entrar com Google", nota: "O convite é aceito sozinho na entrada." },
+    ],
+    primario: { texto: "Entrar e aceitar", href: d.link },
+    reserva: { texto: textoDaReserva(1, "o Physiq"), href: d.link },
+    rodape: "Se você não esperava este convite, ignore este e-mail.",
+    site: origemDe(d.link),
+  };
+}
+
+/** E-mail do convite no molde C (email-modelo.ts): tabelas + CSS inline, ícones em PNG, sem SVG nem JS. */
 export function htmlDoConvite(d: DadosEmailConvite): string {
-  const quem = escaparHtml(d.quem || "Um profissional");
-  const conta = escaparHtml(d.conta);
-  const papeis = escaparHtml(rotuloDosPapeis(d.papeis));
-  const email = escaparHtml(d.email);
-  const link = escaparHtml(d.link);
-  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#111;line-height:1.5">
-  <h2 style="margin:0 0 12px;font-size:20px">Convite para a equipe no Physiq</h2>
-  <p><b>${quem}</b> convidou você para a equipe <b>${conta}</b> no Physiq, como <b>${papeis}</b>.</p>
-  <p>Para aceitar, entre no Physiq com este e-mail (<b>${email}</b>) — pelo botão <b>Entrar com Google</b>. O convite é aceito sozinho na entrada.</p>
-  <p style="margin:22px 0"><a href="${link}" style="display:inline-block;background:#6d28d9;color:#fff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:10px">Entrar e aceitar</a></p>
-  <p style="font-size:12px;color:#555">Ou copie o link: ${link}</p>
-  <p style="font-size:12px;color:#555">Se você não esperava este convite, ignore este e-mail.</p>
-</div>`;
+  return montarEmail(modeloDoConvite(d));
 }
 
 /** Texto puro (clientes de e-mail sem HTML). */

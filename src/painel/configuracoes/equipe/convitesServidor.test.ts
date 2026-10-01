@@ -7,6 +7,7 @@ import {
   escaparHtml,
   htmlDoConvite,
   linkDoConvite,
+  modeloDoConvite,
   rotuloDosPapeis,
   siteDoConvite,
   textoDoConvite,
@@ -30,10 +31,34 @@ describe("função convites (W5) — regras do e-mail do convite de membro", () 
     expect(assuntoDoConvite({ ...d, paraTeste: "x.teste.claude@physiqnutri.app" })).toMatch(/^\[teste → x\.teste\.claude@physiqnutri\.app\]/);
     const html = htmlDoConvite(d);
     expect(html).toContain("Consultoria &lt;Ferreira&gt;");
-    expect(html).toContain("<b>nutricionista</b>");
+    expect(html).toContain('<strong style="font-weight:600;color:#18181B">nutricionista</strong>');
     expect(html).toContain('href="https://physiqcalc.com.br/entrar?convite=1"');
     expect(textoDoConvite(d)).toContain("Entrar com Google");
     expect(rotuloDosPapeis(["personal", "nutricionista"])).toBe("personal trainer e nutricionista");
     expect(escaparHtml(`"a"&'b'`)).toBe("&quot;a&quot;&amp;&#39;b&#39;");
+  });
+  it("molde C (H3): selo com as iniciais da conta, Equipe · conta · como papel, as 4 linhas e o botão Entrar e aceitar", () => {
+    const d = { email: "camila.rocha@exemplo.com", papeis: ["nutricionista"], conta: "Consultoria Ferreira", quem: "Lucas Ferreira", link: "https://physiqcalc.com.br/entrar?convite=1" };
+    const m = modeloDoConvite(d);
+    expect(m.rotulo).toBe("Convite de equipe");
+    expect(m.destaques).toEqual([{ visual: { tipo: "equipe", iniciais: "CF" }, olho: "Equipe", titulo: "Consultoria Ferreira", sub: "como nutricionista" }]);
+    expect(m.linhas.map((l) => [l.icone ?? l.iniciais, l.rotulo, l.valor])).toEqual([
+      ["LF", "Convidado por", "Lucas Ferreira"],
+      ["estetoscopio", "Seu papel", "Nutricionista"],
+      ["email", "Entre com este e-mail", "camila.rocha@exemplo.com"],
+      ["escudo", "Como aceitar", "Pelo botão Entrar com Google"],
+    ]);
+    expect(m.linhas[2].href).toBe("mailto:camila.rocha@exemplo.com");
+    expect(m.linhas[3].nota).toBe("O convite é aceito sozinho na entrada.");
+    expect(m.preheader).toBe("Lucas Ferreira convidou você para a equipe Consultoria Ferreira no Physiq, como nutricionista.");
+    expect(m.reserva.texto).toBe("O botão abre o Physiq. Se não abrir, use o link:");
+    expect(m.rodape).toBe("Se você não esperava este convite, ignore este e-mail.");
+    expect(m.secundarios ?? []).toEqual([]);
+    expect(modeloDoConvite({ ...d, papeis: ["personal"] }).linhas[1]).toMatchObject({ icone: "halter", valor: "Personal trainer" });
+    expect(modeloDoConvite({ ...d, papeis: ["personal", "nutricionista"] }).linhas[1]).toMatchObject({ icone: "halter", valor: "Personal trainer e nutricionista" });
+    const html = htmlDoConvite(d);
+    expect(html).toContain(">Entrar e aceitar</a>");
+    expect(html).toContain(">physiqcalc.com.br/entrar?convite=1</a>");
+    expect(html).not.toMatch(/<svg/i);
   });
 });
