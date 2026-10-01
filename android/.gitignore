@@ -61,8 +61,9 @@ captures/
 .externalNativeBuild
 .cxx/
 
-# Google Services (e.g. APIs or Firebase)
-# google-services.json
+# Google Services (e.g. APIs or Firebase) — Physiq W20c: o google-services.json do push vem do segredo GOOGLE_SERVICES_JSON
+# no CI (build-apk.yml / build-apk-check.yml) e NUNCA entra no git
+google-services.json
 
 # Freeline
 freeline.py

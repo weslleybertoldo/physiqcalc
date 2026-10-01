@@ -65,6 +65,19 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/physiqcalc-release.keystore
 
+      - name: Firebase do push (google-services.json)
+        # Physiq W20c: o arquivo vem do segredo GOOGLE_SERVICES_JSON e NUNCA entra no git; o android/app/build.gradle só aplica
+        # o plugin do Google quando ele existe. Sem o segredo o APK sai sem push (o app segue com sino, e-mail e notificação local).
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::GOOGLE_SERVICES_JSON vazio: APK sem push (FCM)"
+            exit 0
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          node -e "const j=require('./android/app/google-services.json'); const ok=(j.client||[]).some((c)=>c&&c.client_info&&c.client_info.android_client_info&&c.client_info.android_client_info.package_name==='com.bertoldo.physiqcalc'); if(!ok){console.error('google-services.json sem o app com.bertoldo.physiqcalc');process.exit(1)} console.log('google-services.json escrito: projeto Firebase '+j.project_info.project_id)"
+
       - name: Install dependencies
         run: npm ci
 
@@ -94,6 +107,20 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Conferir o Firebase no APK
+        # Physiq W20c: com o google-services.json, o Gradle tem que ter gerado o google_app_id (o push só liga com ele)
+        run: |
+          if [ ! -f android/app/google-services.json ]; then
+            echo "APK sem Firebase (sem o segredo GOOGLE_SERVICES_JSON): o push fica desligado"
+            exit 0
+          fi
+          f=$(grep -rl 'google_app_id' android/app/build/generated --include=values.xml | head -1)
+          if [ -z "$f" ]; then
+            echo "::error::google-services NÃO foi aplicado (sem google_app_id nos recursos gerados)"
+            exit 1
+          fi
+          echo "Firebase no APK: plugin google-services aplicado (google_app_id em $f)"
 
       - name: Rename APK
         run: |

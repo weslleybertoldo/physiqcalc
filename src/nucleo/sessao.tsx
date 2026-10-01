@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
 import { entrarComSenhaNoServidor } from "./entrarSenha";
 import { limparProfPendente } from "@/lib/profPendente";
+import { esquecerAparelhoPush } from "@/push/aparelho";
 import {
   erroDoVinculo,
   guardarSituacao,
@@ -457,6 +458,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         /* fora de https */
       }
     }
+    // W20c: este aparelho deixa de receber o push desta pessoa (antes do signOut — a função do banco precisa do login)
+    await esquecerAparelhoPush().catch(() => undefined);
     const r1 = await principal.auth.signOut().catch((e) => ({ error: e }));
     const r2 = await supabase.auth.signOut().catch((e) => ({ error: e }));
     // sem internet o supabase-js não apaga a sessão guardada: apaga aqui (sair vale nos 2 bancos)

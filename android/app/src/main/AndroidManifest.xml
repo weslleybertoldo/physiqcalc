@@ -56,6 +56,15 @@
                 android:value="Timer de descanso com contagem regressiva e alarme sonoro" />
         </service>
 
+        <!-- Physiq W20c: push (FCM). Com o app fechado quem mostra a notificação é o Android, com este ícone (o traço de atividade
+             da marca, branco) e no canal "avisos" (o app cria o canal "Avisos", importância alta, ao registrar o aparelho). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_physiq" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="avisos" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
