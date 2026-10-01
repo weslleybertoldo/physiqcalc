@@ -53,7 +53,7 @@ const CAPACITOR = readFileSync(resolve(RAIZ, "capacitor.config.ts"), "utf8");
 
 /** O intent-filter das App Links do site (o que tem o host do site). */
 function filtroDoSite(): string {
-  const filtros = MANIFESTO.match(/<intent-filter[\s\S]*?<\/intent-filter>/g) ?? [];
+  const filtros: string[] = MANIFESTO.match(/<intent-filter[\s\S]*?<\/intent-filter>/g) ?? [];
   const doSite = filtros.filter((f) => f.includes('android:host="physiqcalc.com.br"'));
   expect(doSite).toHaveLength(1);
   return doSite[0];
