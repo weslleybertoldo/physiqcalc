@@ -61,8 +61,8 @@ def toast(c, trecho: str, timeout: float = 45) -> str:
 
 
 def fechar_toasts(c) -> None:
-    c.pg.wait_for_timeout(300)
-    c.pg.evaluate("document.querySelectorAll('[data-sonner-toast]').forEach(t => t.remove())")
+    # nunca remover o nó à mão (o React do Toaster perde o lugar — NotFoundError): espera os avisos saírem sozinhos
+    c.esperar(lambda: c.pg.locator("[data-sonner-toast]").count() == 0, 12)
 
 
 def caso_positivo(nav, m: dict) -> None:
