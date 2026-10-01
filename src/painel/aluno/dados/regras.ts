@@ -371,9 +371,12 @@ export function linhaDoPerfil(p: PerfilAluno): AlunoLinha {
 
 // ───────────────────────── aviso único da P15 ─────────────────────────
 
-/** "1 paciente está com as mensagens…" / "3 pacientes estão com as mensagens…" (o número = a lista do "Ver quais"). */
+/**
+ * "1 aluno está com as mensagens…" / "3 alunos estão com as mensagens…" (o número = a lista do "Ver quais"). W23: a lista é dos
+ * alunos de quem a pessoa é a nutricionista OU o personal — "alunos", o nome do Physiq para os 2 módulos.
+ */
 export function textoMensagensDesligadas(n: number): string {
   return n === 1
-    ? "1 paciente está com as mensagens automáticas do WhatsApp desligadas."
-    : `${n} pacientes estão com as mensagens automáticas do WhatsApp desligadas.`;
+    ? "1 aluno está com as mensagens automáticas do WhatsApp desligadas."
+    : `${n} alunos estão com as mensagens automáticas do WhatsApp desligadas.`;
 }

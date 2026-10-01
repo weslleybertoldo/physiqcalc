@@ -14,9 +14,11 @@ const CHAVE = ["mensagens-desligadas"] as const;
 
 /**
  * Aviso ÚNICO da migração P15 (W14 — R12): o WhatsApp automático agora só vai para quem tem o ajuste "Mensagens automáticas"
- * LIGADO (antes ia para todo paciente com telefone). Para o profissional que já tem o WhatsApp no Physiq e tem pacientes com
+ * LIGADO (antes ia para todo paciente com telefone). Para o profissional que já tem o WhatsApp no Physiq e tem alunos com
  * telefone e o ajuste desligado: "Ver quais" (a lista = o número) e "Ligar para todos" (liga exatamente os da lista). Fechar ou
  * ligar guarda no perfil dele (profiles.config.aviso_mensagens_w14) — não volta, em nenhum aparelho.
+ * W23: vale também para o PERSONAL — a lista são os alunos de quem a pessoa é a nutricionista OU o personal (os alunos do personal
+ * nascem com as mensagens desligadas; o padrão não muda). A regra mora no banco (mensagens_desligadas / mensagens_ligar_para_todos).
  */
 export default function FaixaMensagensDesligadas({ children }: { children: ReactNode }) {
   const { conta } = useConta();
@@ -31,7 +33,7 @@ export default function FaixaMensagensDesligadas({ children }: { children: React
   const pronto = (ligados?: number) => {
     qc.setQueryData(CHAVE, { ...d, mostrar: false, visto: { em: new Date().toISOString() } });
     void qc.invalidateQueries({ queryKey: ["aluno-perfil"] });
-    if (ligados !== undefined) toast.success(ligados === 1 ? "Mensagens ligadas para 1 paciente." : `Mensagens ligadas para ${ligados} pacientes.`);
+    if (ligados !== undefined) toast.success(ligados === 1 ? "Mensagens ligadas para 1 aluno." : `Mensagens ligadas para ${ligados} alunos.`);
   };
   const ligar = async () => {
     setIndo(true);

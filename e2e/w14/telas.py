@@ -290,8 +290,8 @@ def aviso(nav, base, pref):
     c = caso(nav, base, pref, "aviso", "w13-nutri", "/painel/alunos", esperar="[data-faixa-mensagens]")
     try:
         n = attr(c, "[data-faixa-mensagens]", "data-faixa-mensagens")
-        p.check(n == "3" and "3 pacientes estão com as mensagens automáticas do WhatsApp desligadas" in texto(c, "[data-faixa-mensagens]"),
-                f"[aviso] faixa \"3 pacientes estão com as mensagens … desligadas\" ({n})")
+        p.check(n == "3" and "3 alunos estão com as mensagens automáticas do WhatsApp desligadas" in texto(c, "[data-faixa-mensagens]"),
+                f"[aviso] faixa \"3 alunos estão com as mensagens … desligadas\" ({n})")
         foto(c, "aviso_mensagens")
         c.pg.click("[data-faixa-mensagens-ver]")
         ok = c.esperar(lambda: c.tem("[data-mensagens-lista]"), 10)

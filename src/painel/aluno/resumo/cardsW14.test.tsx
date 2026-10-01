@@ -150,7 +150,7 @@ describe("W14 (P15) — aviso único das mensagens desligadas", () => {
     h.mensagens.mockResolvedValue({ mostrar: true, whatsapp: true, visto: null, total: 2, alunos: lista });
     h.ligar.mockResolvedValue(2);
     montar(<FaixaMensagensDesligadas><div>a página</div></FaixaMensagensDesligadas>);
-    expect(await screen.findByText(/2 pacientes estão com as mensagens automáticas do WhatsApp desligadas/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 alunos estão com as mensagens automáticas do WhatsApp desligadas/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Ver quais/ }));
     expect(await screen.findByText("Marina Alves")).toBeInTheDocument();
     expect(document.querySelectorAll("[data-mensagens-aluno]").length).toBe(2);

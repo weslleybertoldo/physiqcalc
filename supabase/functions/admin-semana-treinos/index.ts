@@ -334,6 +334,80 @@ async function exercicioVisivelAoAluno(admin: any, exid: string, prof: string | 
   return dono === null || (prof !== null && dono === prof);
 }
 
+// ───────────────────────── W23 — Painel › Treinos (modelos) ─────────────────────────
+
+const temPrescricaoDoModelo = (l: any): boolean =>
+  l?.num_series != null || (l?.reps_alvo != null && String(l.reps_alvo).trim() !== "") || l?.descanso_segundos != null || l?.carga_sugerida_kg != null;
+
+/**
+ * W23 — a prescrição do MODELO (tb_grupos_exercicios: séries, repetições, descanso e carga, do Painel › Treinos) vai para a
+ * prescrição DO ALUNO (tb_series_padrao_usuario, a que o app lê), só onde o aluno ainda não tem nada: o exercício sem linha do
+ * aluno ganha a linha com o que o modelo tem (as séries do modelo ou, sem elas, o padrão do aluno); a linha que já existe ganha
+ * só os campos vazios (as séries dela ficam). Nunca sobrescreve o que foi ajustado no perfil do aluno. Devolve quantos
+ * exercícios mudaram. Schema sem as colunas da W23 (migração ainda não aplicada) = nada a copiar.
+ */
+async function aplicarPrescricaoDoModelo(admin: any, aluno: string, gid: string): Promise<number> {
+  const modelo = await admin.from("tb_grupos_exercicios")
+    .select("exercicio_id, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg").eq("grupo_id", gid);
+  if (modelo.error) {
+    if (/column|coluna/i.test(String(modelo.error.message ?? ""))) return 0;
+    throw modelo.error;
+  }
+  const comPrescricao = ((modelo.data as any[]) || []).filter((l) => l.exercicio_id && temPrescricaoDoModelo(l));
+  if (!comPrescricao.length) return 0;
+  const [doAluno, perfil] = await Promise.all([
+    admin.from("tb_series_padrao_usuario").select("id, exercicio_id, reps_alvo, descanso_segundos, carga_sugerida_kg")
+      .eq("user_id", aluno).eq("grupo_id", gid).not("exercicio_id", "is", null),
+    admin.from("physiq_profiles").select("series_padrao_qtd").eq("id", aluno).maybeSingle(),
+  ]);
+  if (doAluno.error) throw doAluno.error;
+  if (perfil.error) throw perfil.error;
+  const qtd = Number((perfil.data as any)?.series_padrao_qtd);
+  const padrao = Number.isInteger(qtd) && qtd >= 1 ? Math.min(10, qtd) : 3;
+  const porExercicio = new Map(((doAluno.data as any[]) || []).map((l) => [l.exercicio_id as string, l]));
+  const agora = new Date().toISOString();
+  const novas: any[] = [];
+  let mudou = 0;
+  for (const l of comPrescricao) {
+    const reps = l.reps_alvo != null && String(l.reps_alvo).trim() !== "" ? String(l.reps_alvo) : null;
+    const atual = porExercicio.get(l.exercicio_id);
+    if (!atual) {
+      novas.push({
+        user_id: aluno, grupo_id: gid, exercicio_id: l.exercicio_id, num_series: l.num_series ?? padrao,
+        reps_alvo: reps, descanso_segundos: l.descanso_segundos ?? null, carga_sugerida_kg: l.carga_sugerida_kg ?? null, updated_at: agora,
+      });
+      continue;
+    }
+    const vazio = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+    const patch: Record<string, unknown> = {};
+    if (vazio(atual.reps_alvo) && reps) patch.reps_alvo = reps;
+    if (vazio(atual.descanso_segundos) && l.descanso_segundos != null) patch.descanso_segundos = l.descanso_segundos;
+    if (vazio(atual.carga_sugerida_kg) && l.carga_sugerida_kg != null) patch.carga_sugerida_kg = l.carga_sugerida_kg;
+    if (!Object.keys(patch).length) continue;
+    const up = await admin.from("tb_series_padrao_usuario").update({ ...patch, updated_at: agora }).eq("id", atual.id);
+    if (up.error) throw up.error;
+    mudou++;
+  }
+  if (novas.length) {
+    const ins = await admin.from("tb_series_padrao_usuario").insert(novas);
+    if (ins.error) throw ins.error;
+    mudou += novas.length;
+  }
+  return mudou;
+}
+
+// as contas em que quem chama é DONO no espelho (a mesma regra da lista de alunos — admin-list-users)
+async function contasOndeSouDono(admin: any, userId: string): Promise<string[]> {
+  const { data, error } = await admin.rpc("contas_onde_sou_dono_treino", { p_usuario: userId });
+  if (error) {
+    console.error("contas_onde_sou_dono_treino", error.message);
+    return [];
+  }
+  return ((data as unknown[]) || [])
+    .map((x) => (typeof x === "string" ? x : (x as { contas_onde_sou_dono_treino?: unknown } | null)?.contas_onde_sou_dono_treino))
+    .filter((x): x is string => typeof x === "string" && UUID_RE.test(x));
+}
+
 /** treino alvo do body: grupo_id XOR grupo_usuario_id (null = inválido) */
 function alvoTreino(body: any): { gid: string | null; guid: string | null } | null {
   const gid = body?.grupo_id ?? null;
@@ -346,7 +420,7 @@ const okJson = (payload: unknown, origin: string | null) =>
   new Response(JSON.stringify(payload), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
 
 // Physiq W15: ações que só leem (o dono da conta sem papel de personal também usa — requireAdmin com leitura)
-const ACOES_LEITURA = new Set(["get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno"]);
+const ACOES_LEITURA = new Set(["get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno", "quemRecebe"]);
 
 Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
@@ -372,6 +446,26 @@ Deno.serve(async (req) => {
       if (!tid) return okJson({ treino_user_id: null }, origin);
       if (!(await alunoDoProfessor(adminR, user, tid))) return jsonErr("forbidden", 403, origin);
       return okJson({ treino_user_id: tid }, origin);
+    }
+    if (action === "quemRecebe") {
+      // W23 (Painel › Treinos › "Quem recebe"): quais dos alunos de quem chama recebem cada modelo. Os alunos são os da lista de
+      // alunos dele (admin-list-users: os que têm ele de professor, ele mesmo e os das contas de que é dono — o master, os dele)
+      // — a RLS de tb_grupos_treino_perfis só deixa ler os que têm ele de professor, e o dono precisa ver os da conta toda
+      const grupos = Array.isArray(body?.grupos) ? [...new Set((body.grupos as unknown[]).filter(ehUuid))].slice(0, 500) : [];
+      if (!grupos.length) return okJson({ perfis: [] }, origin);
+      const adminQ = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+      const contas = await contasOndeSouDono(adminQ, user.id);
+      const extra = contas.length ? `,conta_id.in.(${contas.join(",")})` : "";
+      const { data: alunos, error: ea } = await adminQ.from("physiq_profiles").select("id").or(`professor_id.eq.${user.id},id.eq.${user.id}${extra}`).limit(2000);
+      if (ea) throw ea;
+      const ids = ((alunos as any[]) || []).map((a) => a.id as string);
+      const perfis: { grupo_id: string; user_id: string }[] = [];
+      for (let i = 0; i < ids.length; i += 150) {
+        const { data, error } = await adminQ.from("tb_grupos_treino_perfis").select("grupo_id, user_id").in("grupo_id", grupos).in("user_id", ids.slice(i, i + 150));
+        if (error) throw error;
+        perfis.push(...((data as any[]) || []));
+      }
+      return okJson({ perfis }, origin);
     }
     const userId = body?.userId;
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
@@ -982,11 +1076,24 @@ Deno.serve(async (req) => {
       if (dono !== null && dono !== user.id && user.papel !== "master") return jsonErr("grupo_nao_disponivel", 400, origin);
       const ja = await admin.from("tb_grupos_treino_perfis").select("id").eq("grupo_id", gid).eq("user_id", userId).maybeSingle();
       if (ja.error) throw ja.error;
+      let prescricaoDoModelo = 0;
       if (!ja.data) {
         const ins = await admin.from("tb_grupos_treino_perfis").insert({ grupo_id: gid, user_id: userId });
         if (ins.error) throw ins.error;
+        // W23: quem passa a receber o modelo leva a prescrição dele (séries, repetições, descanso, carga) onde não tem nada seu
+        prescricaoDoModelo = await aplicarPrescricaoDoModelo(admin, userId, gid);
       }
-      return okJson({ ok: true, grupo_id: gid }, origin);
+      return okJson({ ok: true, grupo_id: gid, prescricao_do_modelo: prescricaoDoModelo }, origin);
+    }
+
+    if (action === "aplicarModelo") {
+      // W23 (Painel › Treinos › "Aplicar a quem recebe"): a prescrição do modelo neste aluno, que já recebe o modelo — só o vazio
+      const gid = body?.grupo_id;
+      if (!ehUuid(gid)) return jsonErr("grupo_invalido", 400, origin);
+      const { catalogo } = await gruposDisponiveis(admin, userId);
+      if (!catalogo.has(gid)) return jsonErr("grupo_nao_disponivel", 400, origin);
+      const n = await aplicarPrescricaoDoModelo(admin, userId, gid);
+      return okJson({ ok: true, grupo_id: gid, preenchidos: n }, origin);
     }
 
     if (action === "tirarTreino") {
