@@ -193,7 +193,9 @@ def caso_dono(nav):
     p.check(ok and badge == "2" and "nao_reagidas=1" in c.caminho() and "dias=7" in c.caminho(), f"[dono] o item abre o Diário com 'Só não reagidas (2)' ({badge}, {c.caminho()})")
     # os recibos do mês = os da aba Recibos com a data neste mês
     c.ir("/painel/financeiro?aba=recibos")
-    ok = c.esperar(lambda: c.tem("[data-cartao-recibos-conta]") and c.tem("[data-recibos-total]"), 30)
+    # a lista carregada: as linhas [data-recibo] = o número do cabeçalho (antes disso o cartão mostra o esqueleto)
+    ok = c.esperar(lambda: c.tem("[data-lista-recibos-conta] [data-recibo]")
+                   and c.pg.locator("[data-lista-recibos-conta] [data-recibo]").count() == int(c.pg.locator("[data-recibos-total]").first.get_attribute("data-recibos-total") or -1), 45)
     datas = re.findall(r"\b(\d{2})/(\d{2})/(\d{4})\b", c.pg.locator("[data-cartao-recibos-conta]").inner_text()) if ok else []
     hoje = dt.datetime.now()
     no_mes = sum(1 for d_, m_, a_ in datas if int(m_) == hoje.month and int(a_) == hoje.year)
