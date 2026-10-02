@@ -75,8 +75,11 @@ def main() -> None:
     p.check(st == 401, f"[prod] sem token: recusado ({st})")
     st, r5, _ = B.resumo_treino(B.anon(B.TREINO_REF), conta_dono, origem=BASE)
     p.check(st == 401, f"[prod] anon: recusado ({st} {r5})")
+    # a admin.teste.claude é MASTER de teste no Treino (role admin): o master vê qualquer conta (a regra do master) — a recusa da
+    # conta alheia para quem não é master é provada no staging (e2e/w25/api.py: o Lucas numa conta que não é a dele → 403)
     st, r6, _ = B.resumo_treino(tok, conta_nutri, origem=BASE)
-    p.check(st == 403, f"[prod] conta alheia: recusado ({st} {r6})")
+    p.check(st == 200 and (r6 or {}).get("todos") is True and (r6 or {}).get("alunos") == [],
+            f"[prod master de teste] outra conta: o master vê (todos), e a conta só de Nutrição não tem aluno no Treino ({st} {str(r6)[:90]})")
     time.sleep(3)
 
     # ───────── telas (só leitura) ─────────
@@ -85,6 +88,9 @@ def main() -> None:
         try:
             B.saude_ok("produção: Dashboard do dono")
             c = T.abrir(nav, "prod-dono", DONO)
+            # o aluno da conta de teste "Admin Teste" é uma pessoa de verdade (login gmail): nenhum print com o nome dele — os nomes e
+            # as fotos ficam borrados no print e o diagnóstico de falha não tira foto
+            c.diagnostico = lambda: None  # type: ignore[method-assign]
             try:
                 T.fechar_faixa(c)
                 if T.esperar_dashboard(c, "prod dono", "ok"):
@@ -94,9 +100,14 @@ def main() -> None:
                     itens = T.itens_atencao(c)
                     print("   números:", n, "· atenção:", itens, flush=True)
                     p.check(not any(t == "dieta" for t, _ in itens), "[prod dono] nenhum item de dieta (conta sem Nutrição)")
-                    c.pg.evaluate("window.scrollTo(0, 0)")
-                    c.print("tela6_dashboard_treino")
-                    c.pg.screenshot(path=str(B.PRINTS / "prod_tela6_dashboard_treino_inteira.png"), full_page=True)
+                    c.pg.evaluate("""() => { const s = document.createElement('style'); s.textContent =
+                      '[data-atencao-item] b, [data-atencao-item] img, [data-atencao-item] [data-avatar-iniciais], [data-agenda-hoje-evento] b,' +
+                      '[data-agenda-hoje-evento] img, [data-agenda-hoje-evento] [data-avatar-iniciais], [data-atividade-item] b, [data-diario-foto]' +
+                      '{ filter: blur(8px) !important; }'; document.head.appendChild(s); window.scrollTo(0, 0); }""")
+                    c.print("tela6_dashboard_treino_nomes_borrados")
+                    c.pg.screenshot(path=str(B.PRINTS / "prod_tela6_dashboard_treino_nomes_borrados_inteira.png"), full_page=True)
+                    c.ir("/painel")  # volta sem o borrão para conferir as telas de origem (sem print)
+                    T.esperar_dashboard(c, "prod dono (volta)", "ok")
                     T.conferir_origens(c, "prod dono", n, itens)
             finally:
                 c.fim()
