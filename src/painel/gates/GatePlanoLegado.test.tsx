@@ -38,21 +38,21 @@ beforeEach(() => {
 
 describe("GatePlanoLegado — Calc pelo plano-status de hoje", () => {
   it("fora da tolerância: 'Acesso suspenso' (só a aba Plano abre)", async () => {
-    h.conta = conta({ origem: "legado_calc", situacao: "vencida" });
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: true, situacao: "vencida" });
     h.status = statusCalc({ travado: true, diasAtraso: 10 });
     montar();
     expect(await screen.findByText("Acesso suspenso")).toBeInTheDocument();
     expect(screen.getByText("Seus alunos continuam treinando normalmente.")).toBeInTheDocument();
   });
   it("na tolerância: faixa 'Pague até' e a página continua", async () => {
-    h.conta = conta({ origem: "legado_calc", situacao: "ativa" });
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: true, situacao: "ativa" });
     h.status = statusCalc({ diasAtraso: 4 });
     montar();
     expect(await screen.findByText(/Pague até/)).toBeInTheDocument();
     expect(screen.getByText("página do painel")).toBeInTheDocument();
   });
   it("travado mas na aba Plano: abre para pagar", async () => {
-    h.conta = conta({ origem: "legado_calc", situacao: "vencida" });
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: true, situacao: "vencida" });
     h.status = statusCalc({ travado: true });
     montar("/painel/configuracoes/plano");
     expect(await screen.findByText("página do painel")).toBeInTheDocument();
@@ -61,14 +61,14 @@ describe("GatePlanoLegado — Calc pelo plano-status de hoje", () => {
 
 describe("GatePlanoLegado — Nutri pela regra do assinaturaUtil", () => {
   it("teste vencido sem pagamento: 'Assinatura pendente' com o caminho para pagar no PhysiqNutri", () => {
-    h.conta = conta({ origem: "legado_nutri", plano: "nutricao", modulos: ["nutricao"], situacao: "vencida" });
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: true, plano: "nutricao", modulos: ["nutricao"], situacao: "vencida" });
     h.situacao = situacao({ contas: [h.conta as never], legado_nutri: { role: "nutricionista", teste_ate: "2026-09-01T00:00:00Z", pago_ate: null, isento_assinatura: false, assinatura: null } });
     montar();
     expect(screen.getByText("Assinatura pendente")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Pagar no PhysiqNutri/ })).toHaveAttribute("href", "https://nutri.physiqcalc.com.br/configuracoes");
   });
   it("em teste ou isenta passa", () => {
-    h.conta = conta({ origem: "legado_nutri", plano: "nutricao", modulos: ["nutricao"], situacao: "teste" });
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: true, plano: "nutricao", modulos: ["nutricao"], situacao: "teste" });
     h.situacao = situacao({ legado_nutri: { role: "nutricionista", teste_ate: "2099-01-01T00:00:00Z", pago_ate: null, isento_assinatura: false, assinatura: null } });
     montar();
     expect(screen.getByText("página do painel")).toBeInTheDocument();
@@ -77,5 +77,23 @@ describe("GatePlanoLegado — Nutri pela regra do assinaturaUtil", () => {
     h.conta = conta({ origem: "nova", situacao: "vencida" });
     montar();
     expect(screen.getByText("página do painel")).toBeInTheDocument();
+  });
+});
+
+describe("GatePlanoLegado — W28: legada com cobranca_legada = false é do núcleo (GatePlano)", () => {
+  it("Calc e Nutri depois da virada: passa, sem o plano-status do Calc e sem a trava do site antigo", async () => {
+    const { invokeMp } = await import("@/lib/mpClient");
+    vi.mocked(invokeMp).mockClear();
+    h.status = statusCalc({ travado: true, diasAtraso: 10 });
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, situacao: "vencida" });
+    const r = montar();
+    expect(screen.getByText("página do painel")).toBeInTheDocument();
+    expect(invokeMp).not.toHaveBeenCalled();
+    r.unmount();
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: false, regras_legadas: true, plano: "nutricao", modulos: ["nutricao"], situacao: "vencida" });
+    h.situacao = situacao({ contas: [h.conta as never], legado_nutri: { role: "nutricionista", teste_ate: "2026-09-01T00:00:00Z", pago_ate: null, isento_assinatura: false, assinatura: null } });
+    montar();
+    expect(screen.getByText("página do painel")).toBeInTheDocument();
+    expect(screen.queryByText("Assinatura pendente")).toBeNull();
   });
 });

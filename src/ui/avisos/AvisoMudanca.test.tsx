@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CHAVE_VEIO_DO_NUTRI, fecharBoasVindasNutri } from "@/lib/origemNutri";
 import { situacao } from "@/test/fixturesNucleo";
 
 const h = vi.hoisted(() => ({ situacao: null as unknown, marcar: vi.fn(async () => {}) }));
@@ -11,7 +12,10 @@ const aviso = (o: Record<string, unknown> = {}) => ({
   publico: "calc", ativo: true, titulo: "O PhysiqCalc agora é o Physiq", texto: "Seu treino continua aqui.", versao: "1", visto: false, ...o,
 });
 
-beforeEach(() => h.marcar.mockClear());
+beforeEach(() => {
+  h.marcar.mockClear();
+  sessionStorage.clear();
+});
 
 describe("aviso 'o Physiq mudou' (NF14)", () => {
   it("aparece uma vez para quem veio do Calc e grava o visto", () => {
@@ -23,10 +27,21 @@ describe("aviso 'o Physiq mudou' (NF14)", () => {
     expect(h.marcar).toHaveBeenCalledWith("1");
     expect(screen.queryByText("O PhysiqCalc agora é o Physiq")).toBeNull();
   });
-  it("texto de quem veio do Nutri", () => {
+  it("texto de quem veio do Nutri (W28: depois da virada, tudo no Physiq)", () => {
     h.situacao = situacao({ aviso_mudanca: aviso({ publico: "nutri", titulo: "O PhysiqNutri agora faz parte do Physiq" }) as never });
     render(<AvisoMudanca />);
-    expect(screen.getByText(/A dieta e o consultório continuam no site do PhysiqNutri/)).toBeInTheDocument();
+    expect(screen.getByText("Tudo agora fica no Physiq: o consultório, os pacientes, a agenda e as dietas.")).toBeInTheDocument();
+    expect(screen.getByText("Entre com o mesmo e-mail e a mesma senha de sempre (ou o Google).")).toBeInTheDocument();
+    expect(screen.getByText("O app do paciente agora é o app Physiq.")).toBeInTheDocument();
+    expect(screen.queryByText(/site do PhysiqNutri/)).toBeNull();
+  });
+  it("W28: espera a tela 'O PhysiqNutri agora é o Physiq' fechar (uma folha de cada vez)", () => {
+    sessionStorage.setItem(CHAVE_VEIO_DO_NUTRI, JSON.stringify({ caminho: "/dashboard", em: 1 }));
+    h.situacao = situacao({ aviso_mudanca: aviso({ publico: "nutri", titulo: "O PhysiqNutri agora faz parte do Physiq" }) as never });
+    render(<AvisoMudanca />);
+    expect(screen.queryByText("O PhysiqNutri agora faz parte do Physiq")).toBeNull();
+    act(() => fecharBoasVindasNutri());
+    expect(screen.getByText("O PhysiqNutri agora faz parte do Physiq")).toBeInTheDocument();
   });
   it("desligado, já visto ou sem aviso: nada", () => {
     for (const a of [aviso({ ativo: false }), aviso({ visto: true }), null]) {

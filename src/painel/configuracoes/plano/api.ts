@@ -51,6 +51,13 @@ export interface ContaCobranca {
   regra_pix: string;
   isenta_motivo: string | null;
   efetiva: SituacaoConta;
+  /** W28: a conta legada cobrada aqui (cobranca_legada = false) */
+  cobranca_legada?: boolean;
+  /**
+   * W28: o preço (valor_travado) e as regras de hoje valem até trocar de plano — os `precos` já vêm com o valor travado só no
+   * plano/faixa atual (os outros = a tabela) e trocar tira a conta do legado. Pode não vir (servidor antigo).
+   */
+  regras_legadas?: boolean;
 }
 
 export interface StatusCobranca {

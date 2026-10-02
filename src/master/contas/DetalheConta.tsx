@@ -110,6 +110,8 @@ export function DetalheConta({ contaId, aoFechar, aoMudou }: { contaId: string |
               <ChipsModulos modulos={c.modulos} />
               <ChipOrigem origem={c.origem} />
               {c.cobranca_legada && <ChipLegada />}
+              {/* W28: a legada no núcleo com o preço e as regras de hoje (até trocar de plano) */}
+              {!c.cobranca_legada && c.regras_legadas && <Chip tom="g" data-chip-regras-legadas>Preço e regras de hoje</Chip>}
               {c.alunos_bloqueados_em && <Chip tom="r" icone={Lock}>Alunos bloqueados</Chip>}
             </div>
 
@@ -211,7 +213,8 @@ export function DetalheConta({ contaId, aoFechar, aoMudou }: { contaId: string |
       </div>
       <AcaoContaDialog conta={c ?? null} acao={acao} aoFechar={() => setAcao(null)}
         aoFeito={() => { const fechou = acao === "excluir"; setAcao(null); recarregar(); if (fechou) aoFechar(); }} />
-      {c?.origem === "legado_calc" && <CobrancaLegadaCalc aberta={legada} aoMudar={setLegada} conta={c} />}
+      {/* o Financeiro antigo do Calc só enquanto a cobrança da conta é a antiga (W28: depois da virada, a do núcleo) */}
+      {c?.cobranca_legada && c.origem === "legado_calc" && <CobrancaLegadaCalc aberta={legada} aoMudar={setLegada} conta={c} />}
       <ConfirmarPerigo aberto={Boolean(paraMaster)} aoMudar={(a) => !a && setParaMaster(null)} titulo="Tornar master?" rotulo="Tornar master" ocupado={ocupado}
         texto={`${paraMaster?.nome ?? paraMaster?.email ?? ""} passa a ver e mudar TODAS as contas e alunos, nos 2 bancos. Tirar o master depois é à mão.`}
         aoConfirmar={() => void promover()} data-confirmar-tornar-master />

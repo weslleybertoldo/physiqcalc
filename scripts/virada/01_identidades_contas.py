@@ -46,6 +46,11 @@ def somar_dias(data: str, dias: int) -> str:
     return (dt.date.fromisoformat(data[:10]) + dt.timedelta(days=dias)).isoformat()
 
 
+def so_do_espelho(p: dict) -> bool:
+    """Linha de physiq_professores sem nada da cobrança do Calc (criada pelo espelho — linhaSoDoEspelho da W5)."""
+    return not any(p.get(k) for k in ("plano_nome", "trial_ate", "adesao_paga_em", "ciclo_vence_em", "anual_ate", "cobranca_pausada"))
+
+
 def conta_legado_calc(p: dict, master: bool, hoje: str) -> dict:
     """Espelho de contaLegadoCalc() (supabase-principal/functions/_shared/login-regras.ts) — o teste confere que batem."""
     faixa = FAIXA.get((p.get("plano_nome") or "").strip().lower(), "livre" if master else "f10")
@@ -80,7 +85,7 @@ def conta_legado_calc(p: dict, master: bool, hoje: str) -> dict:
 def ler(schema: str, so_testes: bool) -> dict:
     s = schema
     usuarios = sql_treino(f"""
-      select u.id::text as id, lower(u.email) as email, u.raw_app_meta_data->>'role' as role,
+      select u.id::text as id, lower(u.email) as email, u.raw_app_meta_data->>'role' as role, u.created_at::text as criado,
              coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name') as nome_meta,
              coalesce(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture') as foto
         from auth.users u
@@ -105,7 +110,7 @@ def ler(schema: str, so_testes: bool) -> dict:
         tags.setdefault(t["user_id"], []).append(t["nome"])
     identidades = sql_treino(f"select principal_user_id::text as principal_user_id, treino_user_id::text as treino_user_id, lower(email) as email, origem from {s}.physiq_identidades")
     principal = sql_principal("""
-      select u.id::text as id, lower(u.email) as email, coalesce(u.raw_app_meta_data, '{}'::jsonb) as app,
+      select u.id::text as id, lower(u.email) as email, coalesce(u.raw_app_meta_data, '{}'::jsonb) as app, u.created_at::text as criado,
              (u.encrypted_password is not null and u.encrypted_password <> '') as tem_senha,
              exists (select 1 from auth.identities i where i.user_id = u.id and i.provider = 'google') as tem_google
         from auth.users u where u.email is not null""")
@@ -120,6 +125,12 @@ def ler(schema: str, so_testes: bool) -> dict:
             "principal": principal, "perfis_p": perfis_p, "pacientes": pacientes, "contas": contas, "membros": membros}
 
 
+def ja_era_do_calc(u: dict, p: dict) -> bool:
+    """W28: o usuário do Treino já existia ANTES do login no principal (é do PhysiqCalc antigo). Quem nasceu no Physiq (a troca
+    de token criou o usuário do Treino depois) não ganha a marca calc — senão veria o aviso "o Physiq mudou" de quem veio do Calc."""
+    return not u.get("criado") or not p.get("criado") or str(u["criado"]) < str(p["criado"])
+
+
 def planejar(d: dict, schema: str, so_testes: bool) -> dict:
     hoje = hoje_sp()
     p_por_email = {u["email"]: u for u in d["principal"]}
@@ -130,7 +141,7 @@ def planejar(d: dict, schema: str, so_testes: bool) -> dict:
     perfil_por_id = {p["id"]: p for p in d["perfis"]}
     plano = {"schema": schema, "hoje": hoje, "usuarios_criar": [], "usuarios_marcar_calc": [], "identidades_criar": [],
              "identidades_existentes": 0, "conflitos": [], "profissionais": [], "matriculas": [], "sem_conta": [],
-             "nutris": [], "p7_alunos_em_2_contas": [], "p8_profissionais_nos_2_apps": []}
+             "nutris": [], "p7_alunos_em_2_contas": [], "p8_profissionais_nos_2_apps": [], "so_do_espelho": [], "alunos_de_conta_nova": 0}
 
     # 1-2. usuários do principal e vínculos
     for u in d["usuarios"]:
@@ -141,7 +152,7 @@ def planejar(d: dict, schema: str, so_testes: bool) -> dict:
             if p and existente["principal_user_id"] != p["id"]:
                 plano["conflitos"].append({"tipo": "vinculo_divergente", "email": u["email"], "treino_user_id": u["id"],
                                            "principal_vinculado": existente["principal_user_id"], "principal_do_email": p["id"]})
-            if p and not (p["app"] or {}).get("calc"):
+            if p and not (p["app"] or {}).get("calc") and ja_era_do_calc(u, p):
                 plano["usuarios_marcar_calc"].append({"principal_user_id": p["id"], "email": u["email"]})
             continue
         if not p:
@@ -160,7 +171,7 @@ def planejar(d: dict, schema: str, so_testes: bool) -> dict:
                                        "resolve": "a pessoa entra 1 vez com o Google (a troca liga pelo e-mail verificado) ou o master decide"})
             continue
         plano["identidades_criar"].append({"email": u["email"], "treino_user_id": u["id"], "principal_user_id": p["id"]})
-        if not (p["app"] or {}).get("calc"):
+        if not (p["app"] or {}).get("calc") and ja_era_do_calc(u, p):
             plano["usuarios_marcar_calc"].append({"principal_user_id": p["id"], "email": u["email"]})
 
     conflito_ids = {c["treino_user_id"] for c in plano["conflitos"] if c["tipo"] != "vinculo_divergente"}
@@ -171,12 +182,22 @@ def planejar(d: dict, schema: str, so_testes: bool) -> dict:
             continue
         u = usuario_por_id.get(pr["id"], {})
         master = u.get("role") in ("admin", "master")
+        # W28: a linha que o ESPELHO criou para o personal de uma conta nova (sem plano, teste, adesão, ciclo, anual ou pausa do
+        # Calc) não é professor do Calc — a mesma conferência do pos-login (professorDoCalcDeVerdade). Sem isto, quem saiu de uma
+        # equipe ganhava uma conta legado_calc na 2ª rodada.
+        if not master and so_do_espelho(pr):
+            plano["so_do_espelho"].append({"treino_user_id": pr["id"], "email": pr["email"] or u.get("email")})
+            continue
         plano["profissionais"].append({"treino_user_id": pr["id"], "email": pr["email"] or u.get("email"), "nome": pr["nome"],
                                        "codigo": pr["codigo_convite"], "master": master, **conta_legado_calc(pr, master, hoje)})
 
     # 4. alunos com professor → matrícula na conta do professor; sem professor → "sem conta"
+    so_espelho = {x["treino_user_id"] for x in plano["so_do_espelho"]}
     for pf in d["perfis"]:
         if pf["id"] in prof_ids or pf["id"] in conflito_ids:
+            continue
+        if pf["professor_id"] in so_espelho:
+            plano["alunos_de_conta_nova"] += 1  # o aluno do personal de uma conta nova: a matrícula é do núcleo (espelho)
             continue
         if not pf["professor_id"]:
             plano["sem_conta"].append({"treino_user_id": pf["id"], "email": pf["email"] or usuario_por_id.get(pf["id"], {}).get("email")})
@@ -284,6 +305,10 @@ def executar(plano: dict, d: dict, schema: str) -> dict:
             feito["matriculas"]["recusadas"].append({"email": m["email"], "motivo": r.get("erro")})
             continue
         feito["matriculas"]["existentes" if r.get("ja_era") else "criadas"] += 1
+        if r.get("ja_era"):
+            # W28 (2ª rodada): a matrícula que já existe NÃO é completada de novo com o cadastro do Calc — o profissional pode ter
+            # mudado nome, tags ou bloqueio no Physiq depois da W3 (só a matrícula nova recebe o cadastro do Calc)
+            continue
         sql_principal(f"""update {s}.pacientes set
               treino_user_id = coalesce(treino_user_id, {lit(m['treino_user_id'])}::uuid),
               nome = case when coalesce(btrim(nome), '') in ('', 'Aluno') and {lit(m['nome'])} is not null then {lit(m['nome'])} else nome end,
@@ -323,6 +348,8 @@ def main() -> int:
         "sem_conta": len(plano["sem_conta"]), "contas_legado_nutri": len(plano["nutris"]),
         "conflitos": len(plano["conflitos"]), "p7_alunos_em_2_contas": len(plano["p7_alunos_em_2_contas"]),
         "p8_profissionais_nos_2_apps": len(plano["p8_profissionais_nos_2_apps"]),
+        "professores_so_do_espelho": len(plano["so_do_espelho"]),
+        "alunos_de_conta_nova": plano["alunos_de_conta_nova"],
     }
     saida = {"resumo": resumo, "plano": plano}
     if not a.dry_run:

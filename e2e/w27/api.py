@@ -226,10 +226,13 @@ def main() -> int:
     p.check(st == 400 and r.get("erro") == "sem_assinatura", f"[cancelar] sem assinatura: recusa sem mexer no Mercado Pago ({r.get('erro')})")
 
     # ── legado: ações de cobrança recusadas ("Cobrança legada até a virada") ──
-    leg = sqlp(f"select id::text from {S}.contas where origem = 'legado_calc' limit 1")
+    # W28: só a conta que AINDA está na cobrança antiga (cobranca_legada = true) recusa; depois do 03 ela é do núcleo
+    leg = sqlp(f"select id::text from {S}.contas where origem = 'legado_calc' and cobranca_legada limit 1")
     if leg:
         st, r = acao(leg[0]["id"], "isentar", {"motivo": "teste"})
         p.check(st == 400 and r.get("erro") == "cobranca_legada", f"[legado] isentar conta legado Calc recusado: cobrança legada ({r.get('erro')})")
+    else:
+        p.check(True, "[legado] nenhuma conta legado Calc na cobrança antiga (depois da virada) — o master age como nas contas novas")
 
     # ── visão geral, contas, financeiro, integrações (leitura) ──
     st, vg = fn("master-contas", {"acao": "visao_geral"})

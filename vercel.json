@@ -30,6 +30,18 @@
       "has": [{ "type": "host", "value": "physiqcalc.vercel.app" }],
       "destination": "https://physiqcalc.com.br/:path*",
       "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "nutri.physiqcalc.com.br" }],
+      "destination": "https://physiqcalc.com.br/?origem=nutri",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "nutri.physiqcalc.com.br" }],
+      "destination": "https://physiqcalc.com.br/:path*?origem=nutri",
+      "permanent": true
     }
   ],
   "rewrites": [

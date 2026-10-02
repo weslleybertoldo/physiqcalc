@@ -28,7 +28,8 @@ function Trava({ titulo, texto, nota, acao }: { titulo: string; texto: ReactNode
 }
 
 /**
- * Travas de plano LEGADAS do painel (W3, spec 11.3; substitui a faixa e a trava do AdminLayout antigo), pela conta ativa:
+ * Travas de plano LEGADAS do painel (W3, spec 11.3; substitui a faixa e a trava do AdminLayout antigo), pela conta ativa — só
+ * enquanto a cobrança dela é a antiga (cobranca_legada; W28: depois do script da virada a legada é do núcleo — GatePlano):
  *   · 'legado_calc' → o plano-status do Calc de hoje: faixa "pague até" nos 7 dias de tolerância e trava depois (só a
  *     aba Plano abre); os alunos continuam treinando;
  *   · 'legado_nutri' → a regra do assinaturaUtil.ts do Nutri: "Assinatura pendente" com o caminho para pagar no site do

@@ -16,13 +16,16 @@ export function TelaPlanoVencido({ conta, motivo, fim, dono }: { conta: ContaSit
   const navigate = useNavigate();
   const suspensa = motivo !== "vencida";
   const valor = valorMensalDaConta(conta);
+  // `fim` = o dia em que o plano venceu (sem a tolerância — GatePlano)
   const venceu = fim ? dataBR(fim, false) : null;
+  // W28 (legado Calc no núcleo): o painel travou porque os dias de tolerância depois do vencimento acabaram
+  const tolerancia = !suspensa && !!conta.vence_em && fim === conta.vence_em.slice(0, 10) ? Math.max(0, Number(conta.tolerancia_dias) || 0) : 0;
   const titulo = suspensa ? (motivo === "cancelada" ? "Conta cancelada" : "Conta suspensa") : venceu ? `Seu plano venceu em ${venceu}` : "Seu plano venceu";
   const texto = suspensa
     ? "O painel desta conta está pausado. Fale com o suporte do Physiq para voltar a usar."
-    : dono
+    : `${tolerancia > 0 ? `Os ${tolerancia} dias de tolerância depois do vencimento acabaram. ` : ""}${dono
       ? "Pague para voltar ao painel na hora — por Pix, cartão ou cobrança automática. Nada foi apagado."
-      : `O painel volta assim que ${conta.dono_nome || "o dono da conta"} pagar o plano. Nada foi apagado.`;
+      : `O painel volta assim que ${conta.dono_nome || "o dono da conta"} pagar o plano. Nada foi apagado.`}`;
   return (
     <div className="flex min-h-[62vh] items-center justify-center py-8" data-plano-vencido={motivo}>
       <Cartao brilho className="flex w-full max-w-[640px] flex-col gap-5 p-6 sm:p-7">

@@ -6,9 +6,11 @@
 // Physiq W6: a cobrança do ALUNO mudou para o banco principal. Os pagamentos e as assinaturas que o Calc criou antes continuam
 // avisando esta URL: aqui eles seguem sendo gravados no Treino (como sempre) e o MESMO aviso é repassado para a
 // mp-webhook-aluno do principal (segredo PRINCIPAL_WEBHOOK_URL), que busca de novo no MP e grava a cobrança lá. Se o repasse
-// falha, a resposta é 500 — o MP manda de novo e nada se perde (as duas pontas são idempotentes). Os do professor
-// (plano_professor) não são repassados (W28). PRINCIPAL_WEBHOOK_SCHEMAS (ex.: "staging" ou "staging,public") liga o repasse
-// por ambiente.
+// falha, a resposta é 500 — o MP manda de novo e nada se perde (as duas pontas são idempotentes). PRINCIPAL_WEBHOOK_SCHEMAS
+// (ex.: "staging" ou "staging,public") liga o repasse por ambiente.
+// Physiq W28 (virada): os do PROFESSOR (plano_professor) também são repassados — para a mp-webhook-conta do principal
+// (segredo PRINCIPAL_WEBHOOK_CONTA_URL), que aplica na conta legada_calc do professor SÓ depois que ela passou para o núcleo
+// (cobranca_legada = false); antes disso ela ignora e vale o que este webhook grava aqui (as colunas antigas continuam).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -178,6 +180,11 @@ async function handleAuthorizedPayment(authPaymentId: string): Promise<Alvo> {
 }
 
 // ---- W6: repasse dos avisos de ALUNO para o banco principal ----
+// W28: repasse dos avisos de PROFESSOR para a cobrança das contas (mp-webhook-conta do principal)
+function repasseContaLigado(): boolean {
+  return !!Deno.env.get("PRINCIPAL_WEBHOOK_CONTA_URL");
+}
+
 function repasseLigado(schema: string | null): boolean {
   if (!Deno.env.get("PRINCIPAL_WEBHOOK_URL")) return false;
   const ligados = (Deno.env.get("PRINCIPAL_WEBHOOK_SCHEMAS") || "staging,public").split(",").map((x) => x.trim()).filter(Boolean);
@@ -185,8 +192,8 @@ function repasseLigado(schema: string | null): boolean {
   return ligados.includes(schema || "public");
 }
 
-async function repassar(topic: string, id: string, schema: string | null): Promise<boolean> {
-  const base = Deno.env.get("PRINCIPAL_WEBHOOK_URL")!;
+async function repassar(topic: string, id: string, schema: string | null, destino = "PRINCIPAL_WEBHOOK_URL"): Promise<boolean> {
+  const base = Deno.env.get(destino)!;
   const url = `${base}${base.includes("?") ? "&" : "?"}origem=treino${schema ? `&schema=${schema}` : ""}`;
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     try {
@@ -229,6 +236,11 @@ Deno.serve(async (req) => {
     // W6: aviso de aluno (ou de dono desconhecido) vai também para o principal; sem sucesso → 500 (o MP manda de novo)
     if (alvo.contexto !== "plano_professor" && repasseLigado(alvo.schema)) {
       const ok = await repassar(String(topic), String(id), alvo.schema);
+      if (!ok) return new Response("repasse_falhou", { status: 500 });
+    }
+    // W28: aviso de professor vai para a cobrança das contas (o principal só aplica se a conta já está no núcleo)
+    if (alvo.contexto === "plano_professor" && alvo.schema && repasseContaLigado()) {
+      const ok = await repassar(String(topic), String(id), alvo.schema, "PRINCIPAL_WEBHOOK_CONTA_URL");
       if (!ok) return new Response("repasse_falhou", { status: 500 });
     }
     return new Response("ok", { status: 200 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { acoesDaConta, chaveMascarada, dataCurta, faixaCabe, linhaAlunos, linhaVencimento, moeda, somarDias, textoErro } from "./regras";
-import type { ContaLinha } from "./tipos";
+import { acoesDaConta, chaveMascarada, dataCurta, faixaCabe, linhaAlunos, linhaVencimento, moeda, receitaDoMes, somarDias, textoErro } from "./regras";
+import type { ContaLinha, VisaoGeral } from "./tipos";
 
 function conta(c: Partial<ContaLinha> = {}): ContaLinha {
   return {
@@ -30,6 +30,10 @@ describe("painel master — o que cada conta deixa fazer (W27)", () => {
     expect(acoesDaConta(conta({ origem: "legado_calc", cobranca_legada: true }))).toEqual(["mover_alunos"]);
     expect(acoesDaConta(conta({ origem: "legado_nutri", cobranca_legada: true, alunos_total: 0 }))).toEqual(["mover_alunos"]);
   });
+  it("W28: legado já cobrado pelo núcleo (cobranca_legada = false) tem as ações de uma conta nova", () => {
+    const a = acoesDaConta(conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, tolerancia_dias: 7, valor_travado: 39.9 }));
+    expect(a).toEqual(expect.arrayContaining(["plano", "vencimento", "liberar", "registrar_pagamento", "suspender", "mover_alunos"]));
+  });
   it("conta do app: nada (gerida em App do aluno)", () => {
     expect(acoesDaConta(conta({ origem: "app", eh_app: true }))).toEqual([]);
   });
@@ -44,6 +48,11 @@ describe("painel master — textos", () => {
     expect(linhaVencimento(conta({ situacao_efetiva: "suspensa" }))).toBe("Suspensa pelo master");
     expect(linhaVencimento(conta({ origem: "legado_nutri", cobranca_legada: true, situacao_efetiva: "teste", legado_nutri: { teste_ate: null, pago_ate: "2026-10-20", isento: false } })))
       .toBe("Pago até 20/10/2026");
+  });
+  it("W28: legado Nutri no núcleo (cobranca_legada = false) mostra as datas do núcleo, não as do site antigo", () => {
+    const nutri = { origem: "legado_nutri" as const, cobranca_legada: false, regras_legadas: true, legado_nutri: { teste_ate: null, pago_ate: "2026-10-20", isento: true } };
+    expect(linhaVencimento(conta({ ...nutri, situacao_efetiva: "ativa", vence_em: "2026-11-02" }))).toBe("Vence em 02/11/2026");
+    expect(linhaVencimento(conta({ ...nutri, situacao_efetiva: "vencida", vence_em: "2026-09-30" }))).toBe("Venceu em 30/09/2026");
   });
   it("alunos, faixa que cabe, dinheiro, datas e chave mascarada", () => {
     expect(linhaAlunos(conta())).toBe("3 de 10");
@@ -62,5 +71,24 @@ describe("painel master — textos", () => {
     expect(textoErro("so_master")).toBe("Só o master pode fazer isto.");
     expect(textoErro("cobranca_legada")).toContain("Cobrança legada até a virada");
     expect(textoErro("xyz")).toBe("Não deu certo agora. Tente de novo.");
+  });
+});
+
+describe("painel master — Receita do mês (W28: o mês contra o MESMO período do mês anterior)", () => {
+  const receita = (o: Partial<VisaoGeral["receita"]> = {}): VisaoGeral["receita"] => ({ mes: 120, mes_anterior: 860, app_mes: 0, ...o });
+  it("com os recebimentos por dia: 1º a 2 de outubro contra 1º a 2 de setembro (não o setembro inteiro)", () => {
+    const r = receitaDoMes(receita({ recebimentos: [
+      { dia: "2026-09-01", valor: 60, origem: "conta" }, { dia: "2026-09-02", valor: 40, origem: "conta" }, { dia: "2026-09-20", valor: 760, origem: "conta" },
+      { dia: "2026-10-01", valor: 80, origem: "conta" }, { dia: "2026-10-02", valor: "40", origem: "conta" },
+    ] }), "2026-10-02");
+    expect(r).toEqual({ valor: 120, variacao: 20, rotulo: "1–2 set", rotuloLongo: "1º a 2 de setembro" });
+  });
+  it("nada no mesmo período do mês anterior: sem variação (a tela diz 'nada em …')", () => {
+    expect(receitaDoMes(receita({ recebimentos: [{ dia: "2026-10-01", valor: 59.9, origem: "conta" }] }), "2026-10-01"))
+      .toEqual({ valor: 59.9, variacao: null, rotulo: "1º set", rotuloLongo: "1º de setembro" });
+  });
+  it("servidor antigo (sem recebimentos): o mês contra o mês anterior inteiro, como antes", () => {
+    expect(receitaDoMes(receita(), "2026-10-02")).toEqual({ valor: 120, variacao: -86, rotulo: null, rotuloLongo: null });
+    expect(receitaDoMes(receita({ mes_anterior: 0 }), "2026-10-02").variacao).toBeNull();
   });
 });

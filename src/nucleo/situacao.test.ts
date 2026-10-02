@@ -64,13 +64,19 @@ describe("papéis e conta ativa (spec 4.1, NF13)", () => {
     expect(rotuloDoPapel(situacao(), conta({ papeis: ["dono"] }))).toBe("Dono da conta");
     expect(rotuloDoPapel(situacao(), null)).toBe("Aluno");
   });
-  it("regra da trava de plano pela origem da conta (legados até a W28)", () => {
-    expect(regraDoPlano(conta({ origem: "legado_calc", situacao: "ativa" }), situacao())).toBe("calc");
-    expect(regraDoPlano(conta({ origem: "legado_nutri", situacao: "vencida" }), situacao())).toBe("nutri");
+  it("regra da trava de plano: legada com a cobrança antiga (cobranca_legada) continua nas telas antigas", () => {
+    expect(regraDoPlano(conta({ origem: "legado_calc", cobranca_legada: true, situacao: "ativa" }), situacao())).toBe("calc");
+    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: true, situacao: "vencida" }), situacao())).toBe("nutri");
     expect(regraDoPlano(conta({ origem: "nova" }), situacao())).toBe("nova");
     expect(regraDoPlano(conta({ situacao: "isenta" }), situacao())).toBe("isenta");
-    expect(regraDoPlano(conta({ origem: "legado_calc" }), situacao({ master: true }))).toBe("isenta");
+    expect(regraDoPlano(conta({ origem: "legado_calc", cobranca_legada: true }), situacao({ master: true }))).toBe("isenta");
+    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: true, situacao: "isenta" }), situacao())).toBe("isenta");
     expect(regraDoPlano(null, situacao())).toBe("isenta");
+  });
+  it("W28: legada com cobranca_legada = false (depois do script da virada) vai para o núcleo", () => {
+    expect(regraDoPlano(conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, tolerancia_dias: 7 }), situacao())).toBe("nova");
+    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: false, regras_legadas: true, situacao: "vencida" }), situacao())).toBe("nova");
+    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: false, situacao: "isenta" }), situacao())).toBe("isenta");
   });
 });
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,15 +48,15 @@ beforeEach(() => {
   h.recarregar.mockClear();
 });
 
-describe("Configurações › Plano — legados e isenta (P9)", () => {
-  it("legado Calc: a tela Planos de hoje dentro da casca", async () => {
-    h.conta = conta({ origem: "legado_calc", plano: "treino", modulos: ["treino"], situacao: "ativa" });
+describe("Configurações › Plano — legados com a cobrança antiga e isenta (P9)", () => {
+  it("legado Calc com cobranca_legada: a tela Planos de hoje dentro da casca", async () => {
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: true, plano: "treino", modulos: ["treino"], situacao: "ativa" });
     montar();
     expect(await screen.findByText("tela Planos do Calc")).toBeInTheDocument();
     expect(h.buscar).not.toHaveBeenCalled();
   });
-  it("legado Nutri: o aviso com o link para a Assinatura do site do PhysiqNutri", () => {
-    h.conta = conta({ origem: "legado_nutri", plano: "nutricao", modulos: ["nutricao"], situacao: "teste" });
+  it("legado Nutri com cobranca_legada: o aviso com o link para a Assinatura do site do PhysiqNutri", () => {
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: true, plano: "nutricao", modulos: ["nutricao"], situacao: "teste" });
     h.situacao = situacao({ legado_nutri: { role: "nutricionista", teste_ate: "2026-10-05T12:00:00Z", pago_ate: null, isento_assinatura: false, assinatura: null } });
     montar();
     expect(screen.getByRole("link", { name: /Abrir a Assinatura no PhysiqNutri/ })).toHaveAttribute("href", "https://nutri.physiqcalc.com.br/configuracoes");
@@ -68,6 +68,93 @@ describe("Configurações › Plano — legados e isenta (P9)", () => {
     montar();
     expect(screen.getByText("Conta master")).toBeInTheDocument();
     expect(screen.getByText("SEM COBRANÇA")).toBeInTheDocument();
+  });
+});
+
+// W28: legado Calc no núcleo — Só Treino 11–30 com o preço de hoje (R$ 29,90 travado; a tabela é R$ 79,90) e 7 dias de tolerância.
+// O servidor manda o travado só no plano/faixa atual (os outros = a tabela).
+const precosLegado = PRECOS_PADRAO.map((p) => (p.plano === "treino" && p.faixa === "f30" ? { ...p, valor_mensal: 29.9, valor_anual: 299 } : p));
+const contaLegado = { origem: "legado_calc", plano: "treino", faixa: "f30", situacao: "ativa", teste_ate: null, vence_em: "2026-10-20",
+  tolerancia_dias: 7, valor_travado: 29.9, regra_pix: "mes", cobranca_legada: false, regras_legadas: true, efetiva: "ativa" };
+
+describe("Configurações › Plano — W28: legada com cobranca_legada = false vai para o núcleo", () => {
+  it("legado Calc: o plano do núcleo com 'Preço de hoje mantido' e a tolerância de 7 dias", async () => {
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, plano: "treino", modulos: ["treino"], faixa: "f30",
+      situacao: "ativa", teste_ate: null, vence_em: "2026-10-20", tolerancia_dias: 7 });
+    h.buscar.mockResolvedValue(status({ precos: precosLegado, valor_mensal: 29.9, valor_anual: 299, limite_alunos: 30 }, contaLegado));
+    montar();
+    expect(await screen.findByText("Seu plano")).toBeInTheDocument();
+    expect(screen.queryByText("tela Planos do Calc")).toBeNull();
+    expect(h.buscar).toHaveBeenCalledWith("c1");
+    expect(document.querySelector("[data-preco-de-hoje]")?.textContent).toMatch(/^Preço de hoje mantido: R\$\s?29,90\/mês$/);
+    expect(screen.getByText("Tolerância de 7 dias depois do vencimento")).toBeInTheDocument();
+    expect(screen.getByText("preço de hoje")).toBeInTheDocument();
+    // os preços vêm do servidor: o travado no plano/faixa atual e a tabela nos outros (o travado não vale para tudo)
+    expect(within(screen.getByRole("radio", { name: /11–30 alunos/ })).getByText(/R\$\s?29,90/)).toBeInTheDocument();
+    expect(within(screen.getByRole("radio", { name: /31–100 alunos/ })).getByText(/R\$\s?149,90/)).toBeInTheDocument();
+    expect(within(screen.getByRole("radio", { name: /Treino \+ Nutrição/ })).getByText(/R\$\s?119,90/)).toBeInTheDocument();
+  });
+  it("legado Nutri: o plano do núcleo (sem a tela do site antigo); sem tolerância, sem a linha dela", async () => {
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: false, regras_legadas: true, plano: "nutricao", modulos: ["nutricao"], situacao: "ativa",
+      teste_ate: null, vence_em: "2026-10-20" });
+    h.buscar.mockResolvedValue(status({ valor_mensal: 80, limite_alunos: null }, { origem: "legado_nutri", plano: "nutricao", situacao: "ativa", teste_ate: null,
+      vence_em: "2026-10-20", valor_travado: 80, regra_pix: "30dias", cobranca_legada: false, regras_legadas: true, efetiva: "ativa" }));
+    montar();
+    expect(await screen.findByText("Seu plano")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Abrir a Assinatura no PhysiqNutri/ })).toBeNull();
+    expect(document.querySelector("[data-preco-de-hoje]")?.textContent).toMatch(/R\$\s?80,00\/mês$/);
+    expect(document.querySelector("[data-tolerancia-de-hoje]")).toBeNull();
+    expect(screen.getByText("sem limite")).toBeInTheDocument();
+  });
+  it("legado Nutri isento no núcleo: sem cobrança", () => {
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: false, plano: "nutricao", modulos: ["nutricao"], situacao: "isenta", isenta_motivo: "parceria" });
+    montar();
+    expect(screen.getByText("Conta isenta")).toBeInTheDocument();
+    expect(h.buscar).not.toHaveBeenCalled();
+  });
+  it("Mudar plano com o preço de hoje pede confirmação: o preço e as regras de hoje deixam de valer", async () => {
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, plano: "treino", modulos: ["treino"], faixa: "f30",
+      situacao: "ativa", teste_ate: null, vence_em: "2026-10-20", tolerancia_dias: 7 });
+    h.buscar.mockResolvedValue(status({ precos: precosLegado, valor_mensal: 29.9, valor_anual: 299 }, contaLegado));
+    h.acao.mockResolvedValue({ ...status({}, { situacao: "ativa", efetiva: "ativa", plano: "treino_nutricao", faixa: "f30" }), assinatura_atualizada: null });
+    montar();
+    fireEvent.click(await screen.findByRole("radio", { name: /Treino \+ Nutrição/ }));
+    expect(document.querySelector("[data-aviso-sai-do-legado]")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Mudar para este plano/ }));
+    const dialogo = await screen.findByRole("alertdialog");
+    expect(dialogo).toHaveTextContent(/Ao trocar de plano, o preço de hoje \(R\$\s?29,90\/mês\) e as regras de hoje deixam de valer: passam a ser os da tabela nova \(R\$\s?119,90\/mês, a partir do próximo pagamento\)\./);
+    expect(h.acao).not.toHaveBeenCalled();
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Trocar de plano" }));
+    await waitFor(() => expect(h.acao).toHaveBeenCalledWith("mudar_plano", { conta_id: "c1", plano: "treino_nutricao", faixa: "f30" }));
+  });
+  it("vencida com o preço de hoje: outro plano na hora de pagar confirma antes do Pix; o mesmo plano, não", async () => {
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, plano: "treino", modulos: ["treino"], faixa: "f30",
+      situacao: "vencida", teste_ate: null, vence_em: "2026-09-10", tolerancia_dias: 7 });
+    h.buscar.mockResolvedValue(status({ precos: precosLegado, valor_mensal: 29.9, valor_anual: 299 },
+      { ...contaLegado, situacao: "vencida", vence_em: "2026-09-10", efetiva: "vencida" }));
+    h.acao.mockResolvedValue({ fatura: { id: "f1", conta_id: "c1", valor: 29.9, status: "pending", forma: "pix", pix_qr: null,
+      pix_copia_cola: "00020126PIX", pix_expira_em: "2026-10-02T12:00:00Z", pago_em: null, tipo: "pix_avulso", criado_em: "2026-09-29T12:00:00Z" } });
+    montar();
+    // "venceu em" é o vencimento (10/09), não o fim dos 7 dias de tolerância (17/09)
+    expect(await screen.findByText(/Vencida em 10\/09\/2026/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /31–100 alunos/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Pagar com Pix/ }));
+    const dialogo = await screen.findByRole("alertdialog");
+    expect(dialogo).toHaveTextContent(/\(R\$\s?149,90\/mês, já neste pagamento\)/);
+    expect(h.acao).not.toHaveBeenCalled();
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    fireEvent.click(screen.getByRole("radio", { name: /11–30 alunos/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Pagar com Pix/ }));
+    await waitFor(() => expect(h.acao).toHaveBeenCalledWith("pix_criar", { conta_id: "c1", plano: "treino", faixa: "f30", meses: 1 }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+  it("nos dias de tolerância a situação diz até quando pagar", async () => {
+    h.conta = conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, plano: "treino", modulos: ["treino"], faixa: "f30",
+      situacao: "ativa", teste_ate: null, vence_em: "2026-09-25", tolerancia_dias: 7 });
+    h.buscar.mockResolvedValue(status({ precos: precosLegado, valor_mensal: 29.9 }, { ...contaLegado, vence_em: "2026-09-25" }));
+    montar();
+    expect(await screen.findByText("Venceu em 25/09/2026 · pague até 02/10/2026 para não perder o acesso")).toBeInTheDocument();
   });
 });
 

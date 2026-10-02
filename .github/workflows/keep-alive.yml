@@ -11,10 +11,16 @@ on:
     # PowerSync: deploy real a cada 4 dias (deploy 4x/dia seria excessivo)
     - cron: '19 9 */4 * *'
   workflow_dispatch:
+    inputs:
+      so:
+        description: "Qual job rodar à mão (W28: 'principal' prova o ping do banco principal sem o deploy do PowerSync)"
+        type: choice
+        default: todos
+        options: [todos, supabase, principal, powersync]
 
 jobs:
   keep-alive-supabase:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '19 3,9,15,21 * * *'
+    if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","supabase"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '19 3,9,15,21 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Pings REST/PostgREST (atividade que CONTA p/ o auto-pause)
@@ -44,8 +50,45 @@ jobs:
           echo "PhysiqCalc SQL ping: HTTP $CODE"
           [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
 
+  # Physiq W28 (virada): o BANCO PRINCIPAL (hkxvtsbwctxkrqzkkdoz, o Supabase do antigo PhysiqNutri) — o ping vinha do
+  # keep-supabase-active.yml do repositório physiqnutri, que para quando ele é arquivado. Mesmo horário e mesma régua do de cima
+  # (leituras REST de verdade + SQL pela Management API). Segredos: PRINCIPAL_SUPABASE_PUBLISHABLE_KEY (chave pública) e SUPABASE_PAT.
+  keep-alive-principal:
+    if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","principal"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '19 3,9,15,21 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pings REST/PostgREST do principal (atividade que CONTA p/ o auto-pause)
+        env:
+          CHAVE: ${{ secrets.PRINCIPAL_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -e
+          [ -n "$CHAVE" ] || (echo "ERRO: segredo PRINCIPAL_SUPABASE_PUBLISHABLE_KEY vazio" && exit 1)
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "apikey: $CHAVE" "https://hkxvtsbwctxkrqzkkdoz.supabase.co/auth/v1/health")
+          echo "Principal auth health: HTTP $CODE"
+          [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "apikey: $CHAVE" \
+              "https://hkxvtsbwctxkrqzkkdoz.supabase.co/rest/v1/alimentos?select=id&limit=$i")
+            echo "Principal REST ping $i/3: HTTP $CODE"
+            [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
+            sleep 2
+          done
+
+      - name: Executar SQL real no Postgres do principal (camada extra Supabase)
+        run: |
+          set -e
+          RES=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_PAT }}" \
+            -H "Content-Type: application/json" -H "User-Agent: physiqcalc-keepalive" \
+            -d '{"query":"SELECT 1 as alive, now() as ts"}' \
+            "https://api.supabase.com/v1/projects/hkxvtsbwctxkrqzkkdoz/database/query")
+          CODE=$(echo "$RES" | tail -1)
+          echo "Principal SQL ping: HTTP $CODE"
+          [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
+
   keep-alive-powersync:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '19 9 */4 * *'
+    if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","powersync"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '19 9 */4 * *'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

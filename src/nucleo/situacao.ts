@@ -39,6 +39,13 @@ export interface ContaSituacao {
   assinatura?: { status: string; proximo_vencimento: string | null; valor: number | string | null } | null;
   /** W4: o valor mensal de hoje da conta (tabela de preços ou o valor travado). */
   valor_mensal?: number | string | null;
+  /**
+   * W28: a conta legada já cobrada pelo núcleo (cobranca_legada = false) segue o preço e as regras de hoje (tolerância de 7 dias
+   * no Calc; Pix de 30 dias e sem limite de alunos no Nutri) até trocar de plano. Pode não vir (servidor antigo).
+   */
+  regras_legadas?: boolean;
+  /** W28: o preço travado (o de hoje do legado ou o especial do master). Pode não vir (servidor antigo). */
+  valor_travado?: number | string | null;
 }
 
 export interface PessoaRef {
@@ -244,13 +251,18 @@ export function bloqueioDoMaster(
   return { bloqueado: false, mensagem: null };
 }
 
-/** Situação da conta para as travas legadas (a regra de cada app de hoje até a W28). */
+/** Situação da conta para as travas de plano: as telas antigas de cada app (só enquanto a cobrança é a antiga) ou o núcleo. */
 export type RegraPlano = "calc" | "nutri" | "nova" | "isenta";
 
+/**
+ * W28 (virada): quem decide é SÓ o `cobranca_legada` — true = as telas e travas antigas do Calc/Nutri (como até a W27); false =
+ * o motor do núcleo (o mesmo das contas novas), inclusive na conta legada depois do 03_cobranca_legada.py. A origem só diz QUAL
+ * tela antiga abre. Funciona antes e depois do script: enquanto ele não roda, as legadas seguem com cobranca_legada = true.
+ */
 export function regraDoPlano(conta: ContaSituacao | null, s: Situacao | null | undefined): RegraPlano {
   if (!conta || s?.master || conta.situacao === "isenta") return "isenta";
-  if (conta.origem === "legado_calc") return "calc";
-  if (conta.origem === "legado_nutri") return "nutri";
+  if (conta.cobranca_legada && conta.origem === "legado_calc") return "calc";
+  if (conta.cobranca_legada && conta.origem === "legado_nutri") return "nutri";
   return "nova";
 }
 

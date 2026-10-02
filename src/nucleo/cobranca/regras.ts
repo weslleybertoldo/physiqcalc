@@ -7,6 +7,8 @@
  *   · Pix/cartão à vista: +1 mês a partir do maior entre o vencimento, o fim do teste e hoje (ninguém perde dia); anual =
  *     10 mensalidades por 12 meses; legado Nutri: +30 dias (P27);
  *   · faixa de aviso nos dias −7, −2, −1 e 0 (recorrente não avisa) com o X guardando aviso-plano:<conta>:<vence>:<marco>;
+ *     W28 (legado Calc no núcleo, tolerância de 7 dias): os marcos contam do vencimento e, nos dias de tolerância, a faixa
+ *     "pague até" (marco "tolerancia", o X volta no dia seguinte);
  *   · faixa de alunos: "Seu plano permite N alunos ativos. Mude de faixa em Configurações › Plano."
  * Datas em "AAAA-MM-DD" no relógio de São Paulo (sem `Date` na conta de dias, para não trocar de dia com o fuso).
  */
@@ -184,6 +186,25 @@ export function fimDoAcesso(c: DatasConta): string | null {
   return maior(pago, c.teste_ate);
 }
 
+/**
+ * W28: o dia em que o plano VENCE, sem a tolerância (o pago — vence_em — ou o fim do teste). Nas contas novas (tolerância 0) é o
+ * mesmo dia do fimDoAcesso; no legado Calc (7 dias) o painel só trava depois de vence_em + 7, mas "venceu em" é o vence_em.
+ */
+export function vencimentoDoPlano(c: DatasConta): string | null {
+  if (c.situacao === "isenta") return null;
+  return maior(c.vence_em, c.teste_ate);
+}
+
+/** W28: nos dias de tolerância (legado Calc): o plano venceu (vence_em antes de hoje), mas o painel abre até vence_em + tolerância. */
+export function emTolerancia(c: DatasConta, hoje: string): boolean {
+  const tolerancia = Math.max(0, c.tolerancia_dias ?? 0);
+  if (tolerancia === 0 || !c.vence_em) return false;
+  if (c.situacao === "isenta" || c.situacao === "suspensa" || c.situacao === "cancelada") return false;
+  if (c.teste_ate && c.teste_ate.slice(0, 10) >= hoje) return false; // ainda no teste: não venceu
+  const vence = c.vence_em.slice(0, 10);
+  return vence < hoje && hoje <= somarDias(vence, tolerancia);
+}
+
 /** O que o pagamento aprovado faz (aplicar_pagamento_conta): +N meses a partir do maior entre vencimento, fim do teste e hoje. */
 export function vencimentoDepoisDoPagamento(c: DatasConta, meses: Meses, hoje: string): { base: string; vence: string } {
   const base = maior(c.vence_em, c.teste_ate, hoje) as string;
@@ -213,10 +234,13 @@ export function travaDoPainel(c: DatasConta, hoje: string, master = false): { tr
   return { travado: false, motivo: null, desde: null };
 }
 
-export type Marco = 7 | 2 | 1 | 0;
+/** Os marcos de antes do vencimento: −7 (de 7 a 3 dias), −2, −1 e 0. */
+export type MarcoDias = 7 | 2 | 1 | 0;
+/** W28: + "tolerancia" — os dias depois do vencimento em que o legado Calc ainda abre o painel ("pague até"). */
+export type Marco = MarcoDias | "tolerancia";
 
 /** Qual aviso vale com N dias para o vencimento: 7 (de 7 a 3 dias), 2, 1 e 0 (no dia). */
-export function marcoDoAviso(dias: number): Marco | null {
+export function marcoDoAviso(dias: number): MarcoDias | null {
   if (dias < 0) return null;
   if (dias === 0) return 0;
   if (dias === 1) return 1;
@@ -227,39 +251,81 @@ export function marcoDoAviso(dias: number): Marco | null {
 
 export interface Aviso {
   marco: Marco;
+  /** dias até `vence` (na tolerância: até o último dia para pagar, `ate`) */
   dias: number;
+  /** o vencimento (no teste, o fim do teste); na tolerância, o vencimento que já passou */
   vence: string;
   teste: boolean;
+  /** W28, só com tolerância: o último dia com acesso (vence_em + tolerância) — o "pague até" */
+  ate?: string;
 }
 
-/** Faixa de aviso do topo do painel (Pix/cartão à vista e teste; quem tem cartão recorrente não recebe). */
+/**
+ * Faixa de aviso do topo do painel (Pix/cartão à vista e teste; quem tem cartão recorrente não recebe). W28: com tolerância
+ * (legado Calc), os marcos −7/−2/−1/0 contam do vencimento (o dia 0 é o vence_em, não o fim da tolerância) e, depois dele, nos
+ * dias de tolerância, vale o marco "tolerancia" ("pague até"). Sem tolerância (contas novas), exatamente como na W4.
+ */
 export function avisoDoPlano(c: DatasConta, hoje: string, recorrente: boolean): Aviso | null {
   if (recorrente) return null;
   const s = situacaoEfetiva(c, hoje);
   if (s !== "ativa" && s !== "teste") return null;
   const fim = fimDoAcesso(c);
   if (!fim) return null;
-  const dias = diasEntre(hoje, fim);
+  const comTolerancia = Math.max(0, c.tolerancia_dias ?? 0) > 0;
+  if (comTolerancia && emTolerancia(c, hoje)) {
+    return { marco: "tolerancia", dias: diasEntre(hoje, fim), vence: (c.vence_em as string).slice(0, 10), teste: false, ate: fim };
+  }
+  const vence = comTolerancia ? vencimentoDoPlano(c) ?? fim : fim;
+  const dias = diasEntre(hoje, vence);
   const marco = marcoDoAviso(dias);
-  return marco === null ? null : { marco, dias, vence: fim, teste: s === "teste" };
+  if (marco === null) return null;
+  const aviso: Aviso = { marco, dias, vence, teste: s === "teste" };
+  if (fim > vence) aviso.ate = fim;
+  return aviso;
 }
 
-/** Chave do X da faixa: fechar esconde só aquele marco daquele vencimento (spec 6.2). */
-export function chaveDoAviso(contaId: string, vence: string, marco: Marco): string {
-  return `aviso-plano:${contaId}:${vence}:${marco}`;
+/**
+ * Chave do X da faixa: fechar esconde só aquele marco daquele vencimento (spec 6.2). W28: a da tolerância leva também o dia de
+ * hoje — fechada, a faixa volta no dia seguinte (até pagar ou o painel travar).
+ */
+export function chaveDoAviso(contaId: string, vence: string, marco: Marco, hoje: string = hojeSP()): string {
+  return marco === "tolerancia" ? `aviso-plano:${contaId}:${vence}:tolerancia:${hoje}` : `aviso-plano:${contaId}:${vence}:${marco}`;
 }
 
 export function textoDoAviso(a: Aviso, valor?: number | null): string {
   const quando = dataBR(a.vence);
+  if (a.marco === "tolerancia") {
+    const ate = dataBR(a.ate ?? a.vence);
+    return valor
+      ? `Mensalidade de ${reais(valor)} venceu em ${quando}. Pague até ${ate} para não perder o acesso.`
+      : `Sua mensalidade venceu em ${quando}. Pague até ${ate} para não perder o acesso.`;
+  }
   if (a.teste) {
     if (a.dias <= 0) return "Seu teste grátis termina hoje. Escolha um plano para não ficar sem acesso ao painel.";
     if (a.dias === 1) return `Seu teste grátis termina amanhã (${quando}). Escolha um plano para continuar.`;
     return `Seu teste grátis termina em ${a.dias} dias (${quando}).`;
   }
   const v = valor ? ` de ${reais(valor)}` : "";
-  if (a.dias <= 0) return `Seu plano${v} vence hoje. Pague para não ficar sem acesso ao painel amanhã.`;
+  if (a.dias <= 0) {
+    // com tolerância o painel não trava amanhã: o dia de pagar é o fim da tolerância
+    return a.ate && a.ate > a.vence
+      ? `Seu plano${v} vence hoje. Pague até ${dataBR(a.ate)} para não perder o acesso.`
+      : `Seu plano${v} vence hoje. Pague para não ficar sem acesso ao painel amanhã.`;
+  }
   if (a.dias === 1) return `Seu plano${v} vence amanhã (${quando}).`;
   return `Seu plano${v} vence em ${a.dias} dias (${quando}).`;
+}
+
+/**
+ * W28 — o aviso antes de trocar de plano numa conta com o preço e as regras de hoje (regras_legadas): trocar tira a conta do
+ * legado de vez (o servidor passa o preço e as regras para os da tabela). `quando` = "mudar" (Mudar plano: o preço novo vale no
+ * próximo pagamento) ou "pagar" (no teste ou vencida, outro plano escolhido na hora de pagar: já vale neste pagamento).
+ */
+export function textoSaiDoLegado(precoDeHoje: number | null | undefined, precoNovo: number | null | undefined, quando: "mudar" | "pagar" = "mudar"): string {
+  const hoje = precoDeHoje ? ` (${reais(precoDeHoje)}/mês)` : "";
+  const quandoVale = quando === "pagar" ? "já neste pagamento" : "a partir do próximo pagamento";
+  const novo = precoNovo ? `${reais(precoNovo)}/mês, ${quandoVale}` : quandoVale;
+  return `Ao trocar de plano, o preço de hoje${hoje} e as regras de hoje deixam de valer: passam a ser os da tabela nova (${novo}).`;
 }
 
 // ───────────────────────── faixa de alunos (6.4) ─────────────────────────
@@ -275,14 +341,21 @@ export function contarAlunosAtivos(ms: MatriculaContagem[]): number {
   return ms.filter((m) => m.ativo && !m.deleted_at && !m.acesso_bloqueado_em).length;
 }
 
-/** Limite da conta: legado Nutri sem limite; teste = teste_max_alunos; senão a faixa (legado Calc: a faixa do plano dele). */
+/**
+ * Limite da conta (o mesmo conta_limite_alunos do SQL da W28): enquanto a conta segue a cobrança antiga ou o preço e as regras de
+ * hoje (regras_legadas), o legado Nutri não tem limite e o legado Calc tem o da faixa dele (inclusive no teste); depois de trocar de
+ * plano, a regra das contas novas — teste = teste_max_alunos, senão a faixa. Sem as 2 marcas (quem chama como antes da W28), a conta
+ * legada vale como legada.
+ */
 export function limiteDaConta(
-  c: { origem: string; situacao: SituacaoConta; plano: PlanoConta; faixa: Faixa },
+  c: { origem: string; situacao: SituacaoConta; plano: PlanoConta; faixa: Faixa; cobranca_legada?: boolean; regras_legadas?: boolean },
   tabela: LinhaPreco[] = PRECOS_PADRAO,
   testeMax = TESTE_MAX_ALUNOS,
 ): number | null {
-  if (c.origem === "legado_nutri") return null;
-  if (c.situacao === "teste") return testeMax;
+  const semMarcas = c.cobranca_legada === undefined && c.regras_legadas === undefined;
+  const regrasDeHoje = semMarcas || !!c.cobranca_legada || !!c.regras_legadas;
+  if (c.origem === "legado_nutri" && regrasDeHoje) return null;
+  if (c.situacao === "teste" && !(c.origem === "legado_calc" && regrasDeHoje)) return testeMax;
   return maxAlunosDaFaixa(tabela, c.plano, c.faixa);
 }
 

@@ -1,7 +1,9 @@
-// Physiq W4 — cobranca-conta (banco principal): a cobrança da CONTA NOVA do profissional (spec §6.2, §6.5 e §6.6). Junta o
+// Physiq W4 — cobranca-conta (banco principal): a cobrança da CONTA do profissional (spec §6.2, §6.5 e §6.6). Junta o
 // mp-assinar do Nutri e as ações plano-* do mp-payments do Calc, no Mercado Pago da conta do Weslley (o mesmo dos 2 apps).
-// Só o DONO da conta usa; contas legadas (legado_calc / legado_nutri) continuam pelas telas de hoje até a W28 (P9) e são
-// recusadas aqui; conta isenta não paga.
+// Só o DONO da conta usa; conta isenta não paga. W28 (virada): as contas legadas (legado_calc / legado_nutri) passam a pagar
+// aqui depois do 03_cobranca_legada.py (cobranca_legada = false), com o preço e as regras de hoje (regras_legadas — 6.3/P9):
+// o valor travado vale só no plano/faixa atual; outro plano/faixa = preço da tabela, e trocar tira a conta do legado (o
+// gatilho contas_sai_do_legado faz no banco). Enquanto cobranca_legada = true a conta segue recusada (telas antigas).
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, conta_id?, ... }
 //   status               conta, preços, alunos, faturas, assinatura e Pix aberto (confere no MP o que ainda pode mudar)
@@ -107,9 +109,10 @@ interface Conta {
   valor_travado: number | null;
   regra_pix: string;
   cobranca_legada: boolean;
+  regras_legadas: boolean;
   isenta_motivo: string | null;
 }
-const COLUNAS_CONTA = "id, nome, dono_id, origem, plano, faixa, periodicidade, situacao, teste_ate, vence_em, tolerancia_dias, valor_travado, regra_pix, cobranca_legada, isenta_motivo";
+const COLUNAS_CONTA = "id, nome, dono_id, origem, plano, faixa, periodicidade, situacao, teste_ate, vence_em, tolerancia_dias, valor_travado, regra_pix, cobranca_legada, regras_legadas, isenta_motivo";
 
 interface Preco {
   plano: PlanoConta;
@@ -128,8 +131,10 @@ function voltaDoCheckout(origin: string | null, schema: Schema): string {
 
 function precoDe(conta: Conta, precos: Preco[], plano: string, faixa: string, meses: number): number | null {
   const linha = precos.find((p) => p.plano === plano && p.faixa === faixa) ?? null;
+  // W28: na conta com o preço de hoje (regras_legadas) o valor travado vale só para o plano/faixa dela — outro = a tabela
+  const travadoVale = conta.valor_travado !== null && (!conta.regras_legadas || (plano === conta.plano && faixa === conta.faixa));
   return precoDoPlano({
-    valorTravado: conta.valor_travado === null ? null : Number(conta.valor_travado),
+    valorTravado: travadoVale ? Number(conta.valor_travado) : null,
     tabela: linha ? { valor_mensal: Number(linha.valor_mensal), valor_anual: linha.valor_anual === null ? null : Number(linha.valor_anual) } : null,
     meses,
   });
@@ -178,8 +183,9 @@ Deno.serve(async (req) => {
     // ---- a conta: a pedida (se a pessoa é dona) ou a conta nova de que ela é dona ----
     let contaId = ehUuid(body.conta_id) ? String(body.conta_id) : null;
     if (!contaId) {
-      const { data } = await db.from("conta_membros").select("conta_id, contas!inner(origem, criado_em)")
-        .eq("user_id", user.id).eq("status", "ativo").contains("papeis", ["dono"]).eq("contas.origem", "nova").limit(1);
+      const { data } = await db.from("conta_membros").select("conta_id, contas!inner(origem, cobranca_legada, criado_em)")
+        .eq("user_id", user.id).eq("status", "ativo").contains("papeis", ["dono"]).eq("contas.cobranca_legada", false)
+        .neq("contas.origem", "app").limit(1);
       contaId = ((data ?? []) as Array<{ conta_id: string }>)[0]?.conta_id ?? null;
     }
     if (!contaId) return erro("sem_conta", 404, origin);
@@ -190,7 +196,8 @@ Deno.serve(async (req) => {
     if (ec) throw ec;
     if (!contaRow) return erro("sem_conta", 404, origin);
     const conta = contaRow as Conta;
-    if (conta.origem !== "nova" || conta.cobranca_legada) return erro("conta_legada", 400, origin, { origem: conta.origem });
+    if (conta.cobranca_legada) return erro("conta_legada", 400, origin, { origem: conta.origem });
+    if (conta.origem === "app") return erro("isenta", 400, origin);
 
     const [{ data: precosRows }, { data: ativos }, { data: limite }] = await Promise.all([
       db.from("plano_precos").select("plano, faixa, min_alunos, max_alunos, valor_mensal, valor_anual, ordem").eq("ativo", true).order("ordem"),

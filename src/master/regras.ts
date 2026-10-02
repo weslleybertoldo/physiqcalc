@@ -2,8 +2,9 @@
  * Painel master (W27) — regras PURAS das telas: rótulos, tons dos chips, o que cada conta deixa fazer (legado = "Cobrança legada
  * até a virada"), datas e dinheiro, e o texto de cada erro das funções. Testadas no Vitest (src/master/regras.test.ts).
  */
+import { comparacaoDoMes, variacao } from "@/painel/financeiro/resumo";
 import type { TomChip } from "@/ui/premium/Chip";
-import type { ContaLinha, Faixa, ModuloConta, Origem, PlanoConta, Situacao } from "./tipos";
+import type { ContaLinha, Faixa, ModuloConta, Origem, PlanoConta, Situacao, VisaoGeral } from "./tipos";
 
 export const ROTULO_PLANO: Record<PlanoConta, string> = { treino: "Só Treino", nutricao: "Só Nutrição", treino_nutricao: "Treino + Nutrição" };
 export const ROTULO_FAIXA: Record<Faixa, string> = { f10: "1–10 alunos", f30: "11–30 alunos", f100: "31–100 alunos", livre: "Sem limite" };
@@ -48,11 +49,14 @@ export function somarDias(iso: string, dias: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** "Vence em 12/11/2026", "Teste até …", "Isenta · motivo", "Venceu em …" — a linha do vencimento de uma conta. */
+/**
+ * "Vence em 12/11/2026", "Teste até …", "Isenta · motivo", "Venceu em …" — a linha do vencimento de uma conta. As datas do site
+ * antigo do Nutri só valem enquanto a cobrança da conta é a antiga (cobranca_legada); depois da virada (W28), as do núcleo.
+ */
 export function linhaVencimento(c: Pick<ContaLinha, "situacao_efetiva" | "vence_em" | "teste_ate" | "isenta_motivo" | "cobranca_legada" | "origem" | "legado_nutri">): string {
   if (c.situacao_efetiva === "isenta") return c.isenta_motivo ? `Isenta · ${c.isenta_motivo}` : "Isenta";
   if (c.situacao_efetiva === "suspensa") return "Suspensa pelo master";
-  if (c.origem === "legado_nutri" && c.legado_nutri) {
+  if (c.cobranca_legada && c.origem === "legado_nutri" && c.legado_nutri) {
     if (c.legado_nutri.isento) return "Isenta (site antigo)";
     if (c.legado_nutri.pago_ate) return `Pago até ${dataCurta(c.legado_nutri.pago_ate)}`;
     if (c.legado_nutri.teste_ate) return `Teste até ${dataCurta(c.legado_nutri.teste_ate)}`;
@@ -60,6 +64,30 @@ export function linhaVencimento(c: Pick<ContaLinha, "situacao_efetiva" | "vence_
   if (c.situacao_efetiva === "teste") return `Teste até ${dataCurta(c.teste_ate)}`;
   if (c.situacao_efetiva === "vencida") return c.vence_em ? `Venceu em ${dataCurta(c.vence_em)}` : `Teste acabou em ${dataCurta(c.teste_ate)}`;
   return c.vence_em ? `Vence em ${dataCurta(c.vence_em)}` : "—";
+}
+
+export interface ReceitaDoMes {
+  valor: number;
+  variacao: number | null;
+  /** "1–2 set" (o período do mês anterior) — null no servidor antigo (comparação com o mês anterior inteiro) */
+  rotulo: string | null;
+  /** "1º a 2 de setembro" (a dica do cartão) */
+  rotuloLongo: string | null;
+}
+
+/**
+ * KPI "Receita do mês" da Visão geral (W28 — o "−86 % sobre o mês anterior" do dia 2): com os recebimentos por dia, a regra ÚNICA
+ * do painel (comparacaoDoMes — de 1º até hoje contra de 1º até o mesmo dia do mês anterior); sem eles (servidor antigo), o mês
+ * contra o mês anterior inteiro, como antes.
+ */
+export function receitaDoMes(r: VisaoGeral["receita"], hoje: string): ReceitaDoMes {
+  if (Array.isArray(r.recebimentos)) {
+    const recs = r.recebimentos.map((x) => ({ dia: String(x.dia ?? "").slice(0, 10), valor: Number.isFinite(Number(x.valor)) ? Number(x.valor) : 0 }));
+    const c = comparacaoDoMes(recs, hoje);
+    return { valor: c.atual, variacao: c.variacao, rotulo: c.rotulo, rotuloLongo: c.rotuloLongo };
+  }
+  const mes = Number(r.mes) || 0;
+  return { valor: mes, variacao: variacao(mes, Number(r.mes_anterior) || 0), rotulo: null, rotuloLongo: null };
 }
 
 /** "8 de 10" / "8 · sem limite" */
