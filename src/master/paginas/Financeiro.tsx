@@ -11,9 +11,9 @@ import { Tabela, TabelaCabeca, TabelaCelula, TabelaCorpo, TabelaLinha, TabelaTit
 import { ErroMaster, financeiro } from "../api";
 import { DetalheConta } from "../contas/DetalheConta";
 import { ChipSituacao, Filtros } from "../pecas/ui";
-import { LEGADA, ROTULO_PLANO, dataCurta, linhaVencimento, moeda, textoErro } from "../regras";
+import { ROTULO_PLANO, dataCurta, linhaVencimento, moeda, textoErro } from "../regras";
 
-type Filtro = "todas" | "vencidas" | "tolerancia" | "teste" | "isentas" | "em_dia" | "legadas";
+type Filtro = "todas" | "vencidas" | "tolerancia" | "teste" | "isentas" | "em_dia";
 
 const STATUS_FATURA: Record<string, { rotulo: string; tom: "n" | "a" | "r" | "g" }> = {
   approved: { rotulo: "Paga", tom: "n" }, pending: { rotulo: "Aberta", tom: "a" }, in_process: { rotulo: "Em análise", tom: "a" },
@@ -23,8 +23,9 @@ const STATUS_FATURA: Record<string, { rotulo: string; tom: "n" | "a" | "r" | "g"
 
 /**
  * Painel master › Financeiro (C58, N-74/R18): as faturas e a situação de cobrança de cada conta, com os filtros do Calc (vencidas, na
- * tolerância, em teste, isentas, em dia) + as legadas. A linha abre a conta: registrar pagamento feito por fora, ajustar o vencimento,
- * mudar plano, liberar, isentar com motivo ("Pausar cobrança" virou isenção), reenviar aviso, bloquear os alunos, cancelar a assinatura.
+ * tolerância, em teste, isentas, em dia). W28: o filtro "Legadas" saiu (as legadas são cobradas pelo núcleo). A linha abre a conta:
+ * registrar pagamento feito por fora, ajustar o vencimento, mudar plano, liberar, isentar com motivo ("Pausar cobrança" virou
+ * isenção), reenviar aviso, bloquear os alunos, cancelar a assinatura.
  */
 export default function Financeiro() {
   const [sp, setSp] = useSearchParams();
@@ -46,7 +47,7 @@ export default function Financeiro() {
         <Kpi icone={Wallet} titulo="Recebido no mês" valor={moeda(r.recebido_mes ?? 0)} tom="verde" detalhe="faturas pagas das contas" />
         <Kpi icone={CircleDollarSign} titulo="Em aberto" valor={moeda(r.em_aberto ?? 0)} tom="ambar" detalhe="Pix e cartão esperando" />
         <Kpi icone={AlertTriangle} titulo="Vencidas" valor={r.vencidas ?? "…"} tom="violeta" detalhe="painel travado no dia seguinte" />
-        <Kpi icone={FlaskConical} titulo="Em teste" valor={r.teste ?? "…"} tom="ciano" detalhe={`${r.isentas ?? 0} isenta(s) · ${r.legadas ?? 0} legada(s)`} />
+        <Kpi icone={FlaskConical} titulo="Em teste" valor={r.teste ?? "…"} tom="ciano" detalhe={`${r.isentas ?? 0} isenta(s)`} />
       </div>
       <Filtros rotulo="Situação de cobrança" valor={filtro} aoMudar={(v) => mudar("filtro", v === "todas" ? null : v)} opcoes={[
         { valor: "todas", rotulo: "Todas", numero: r.todas },
@@ -55,7 +56,6 @@ export default function Financeiro() {
         { valor: "teste", rotulo: "Em teste", numero: r.teste },
         { valor: "isentas", rotulo: "Isentas", numero: r.isentas },
         { valor: "em_dia", rotulo: "Em dia", numero: r.em_dia },
-        { valor: "legadas", rotulo: "Legadas", numero: r.legadas },
       ]} />
 
       <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
@@ -83,11 +83,10 @@ export default function Financeiro() {
                           <TabelaCelula>
                             <span className="flex flex-col items-start gap-1">
                               <ChipSituacao conta={c} />
-                              {c.cobranca_legada && <span className="max-w-[150px] text-[11px] font-semibold leading-tight text-ambar-3" data-legada-linha>{LEGADA}</span>}
                             </span>
                           </TabelaCelula>
                           <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>
-                          <TabelaCelula className="whitespace-nowrap text-right font-semibold">{c.cobranca_legada && c.origem === "legado_calc" ? "No Calc" : c.situacao_efetiva === "isenta" ? "—" : moeda(c.valor_mensal)}</TabelaCelula>
+                          <TabelaCelula className="whitespace-nowrap text-right font-semibold">{c.situacao_efetiva === "isenta" ? "—" : moeda(c.valor_mensal)}</TabelaCelula>
                         </TabelaLinha>
                       ))}
                     </TabelaCorpo>

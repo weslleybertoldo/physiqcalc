@@ -3,9 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Teste de rotas da W1: toda rota antiga do Calc abre a MESMA função dentro da casca nova, as rotas
-// novas mostram a tela antiga enquanto a nova não existe (spec 11.1) e os redirecionamentos da 4.8
-// valem. As telas antigas viram marcadores (o que importa aqui é QUAL tela abre e em QUAL casca).
+// Teste de rotas da W1: toda rota antiga do Calc abre a MESMA função dentro da casca nova e os redirecionamentos da 4.8
+// valem. As telas viram marcadores (o que importa aqui é QUAL tela abre e em QUAL casca). W28: as telas antigas que ainda
+// respondiam por alguma rota (Planos do Calc, Configurar aluno, Pagamentos) saíram — só a Biblioteca global do master ficou.
 const h = vi.hoisted(() => {
   const estado = {
     auth: { user: null as null | { id: string; email: string; user_metadata: Record<string, string> }, loading: false, papel: "aluno", isStaff: false, isMaster: false, signOut: async () => {} },
@@ -39,21 +39,6 @@ vi.mock("@/nucleo/sessao", () => ({
     marcarAvisoMudanca: async () => {},
   }),
 }));
-vi.mock("@/lib/mpClient", () => ({
-  lerStatusCache: () => null,
-  statusLeve: vi.fn(async () => ({ mensalidade: null, emDia: true, pagoAte: null, mesRef: "2026-09", mesLabel: "setembro" })),
-  mensalidadePendente: () => false,
-  invokeMp: vi.fn(async () => ({
-    isento: true,
-    professor: { id: "p1", nome: "Lucas Ferreira", alunos: 7, status: "ativo" },
-    plano: null,
-    planos: [],
-    travado: false,
-    diasAtraso: null,
-    hoje: "2026-09-29",
-    avisos: [],
-  })),
-}));
 vi.mock("@/integrations/supabase/client", () => ({
   DB_SCHEMA: "staging",
   supabase: {
@@ -74,7 +59,6 @@ vi.mock("@/app-aluno/abas/Treino", () => h.marcador("aba-treino"));
 vi.mock("@/app-aluno/abas/Evolucao", () => h.marcador("aba-evolucao"));
 // W12: o Início (src/app-aluno/abas/Inicio.tsx) é a tela de abertura do app
 vi.mock("@/app-aluno/abas/Inicio", () => h.marcador("aba-inicio"));
-vi.mock("@/pages/PagamentosPage", () => h.marcador("antiga-pagamentos"));
 // W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx) — as antigas saíram
 vi.mock("@/publico/Calculadora", () => h.marcador("publica-calculadora"));
 vi.mock("@/publico/Privacidade", () => h.marcador("publica-privacidade"));
@@ -91,8 +75,6 @@ vi.mock("@/painel/paginas/Calculadora", () => h.marcador("pagina-calculadora"));
 vi.mock("@/painel/paginas/Modelos", () => h.marcador("pagina-modelos"));
 vi.mock("@/painel/paginas/Lixeira", () => h.marcador("pagina-lixeira"));
 vi.mock("@/painel/paginas/Impressos", () => h.marcador("pagina-impressos"));
-vi.mock("@/pages/admin/PlanosPage", () => h.marcador("antiga-admin-planos"));
-vi.mock("@/components/AdminUserConfig", () => h.marcador("antiga-configurar-aluno"));
 // W27: as páginas do master são as novas (src/master/paginas/*.tsx, pelo registro) — as antigas do Calc saíram, menos a Biblioteca
 vi.mock("@/master/paginas/VisaoGeral", () => h.marcador("master-visao-geral"));
 vi.mock("@/master/paginas/Contas", () => h.marcador("master-contas"));
@@ -103,7 +85,6 @@ vi.mock("@/master/paginas/Integracoes", () => h.marcador("master-integracoes"));
 vi.mock("@/master/paginas/AppAluno", () => h.marcador("master-app-aluno"));
 vi.mock("@/master/paginas/Configuracoes", () => h.marcador("master-configuracoes"));
 vi.mock("@/pages/master/BibliotecaPage", () => h.marcador("antiga-master-biblioteca"));
-vi.mock("@/components/PlanoBloqueado", () => h.marcador("plano-bloqueado"));
 
 import { Rotas } from "./Rotas";
 
@@ -129,7 +110,7 @@ const onde = () => screen.getByTestId("onde").textContent;
 function conta(nome: string) {
   return {
     id: "c-1", nome, origem: "legado_calc", plano: "treino", modulos: ["treino"], faixa: "f10", periodicidade: "mensal",
-    situacao: "isenta", teste_ate: null, vence_em: null, tolerancia_dias: 7, cobranca_legada: true, isenta_motivo: "master",
+    situacao: "isenta", teste_ate: null, vence_em: null, tolerancia_dias: 7, cobranca_legada: false, isenta_motivo: "master",
     alunos_bloqueados_em: null, alunos_bloqueados_msg: null, dono_id: "u-professor", dono_nome: nome, membro_id: "m-1",
     papeis: ["dono", "personal"], codigo_convite: "PROF-LUCAS-FERREIRA", profissionais: 1, alunos_ativos: 7, limite_alunos: null,
   };
@@ -186,7 +167,6 @@ describe("app do aluno: telas antigas dentro da casca de 5 abas", () => {
     abrir(de);
     await waitFor(() => expect(document.querySelector("[data-pagina-pagamentos]")).not.toBeNull(), { timeout: 4000 });
     await waitFor(() => expect(onde()).toBe("/perfil/pagamentos"));
-    expect(screen.queryByTestId("antiga-pagamentos")).toBeNull();
   });
 
   it("aba sem o módulo do aluno (Dieta para o aluno só do Treino) volta para a abertura (o Início, W12)", async () => {
@@ -252,7 +232,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ["/admin/treinos", "/painel/treinos", "pagina-treinos"],
     ["/admin/cobranca", "/painel/financeiro", "pagina-financeiro"],
     ["/admin/calculadora", "/painel/calculadora", "pagina-calculadora"],
-    ["/admin/planos", "/painel/configuracoes/plano", "antiga-admin-planos"],
     ["/admin?v=calculator", "/painel/calculadora", "pagina-calculadora"],
     ["/admin?v=treinos&t=biblioteca", "/painel/treinos?t=biblioteca", "pagina-treinos"],
   ])("%s → %s", async (de, para, tela) => {
@@ -271,6 +250,14 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ]);
   });
 
+  // W28: a Planos do Calc saiu — o /admin/planos cai na aba Plano nova (a conta do professor de teste é isenta)
+  it("/admin/planos → /painel/configuracoes/plano (aba Plano nova)", async () => {
+    logar("professor");
+    abrir("/admin/planos");
+    await waitFor(() => expect(document.querySelector("[data-plano-isento]")).not.toBeNull(), { timeout: 4000 });
+    await waitFor(() => expect(onde()).toBe("/painel/configuracoes/plano"));
+  });
+
   // W5: Perfil e Convite ganharam as abas novas (src/painel/configuracoes/{Perfil,Convite}.tsx) e a W6 o Recebimento — o
   // link antigo cai nelas (a Configurações antiga do Calc saiu)
   it.each([
@@ -282,7 +269,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     abrir(de);
     await waitFor(() => expect(document.querySelector(`[data-config-aba='${aba}']`)).not.toBeNull(), { timeout: 4000 });
     await waitFor(() => expect(onde()).toBe(para));
-    expect(screen.queryByTestId("antiga-admin-configuracoes")).toBeNull();
   });
 
   // W14: o grupo Dados/Perfil do Configurar aluno antigo virou os cards do Resumo (dados, acesso, ajustes, link, resumo privado,
@@ -297,7 +283,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(onde()).toBe(para), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector("[data-resumo-aluno]")).not.toBeNull(), { timeout: 4000 });
     expect(document.querySelector('[data-aba-aluno="resumo"]')?.getAttribute("aria-current")).toBe("page");
-    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
     // W18: o Resumo carrega mais um card (Prontuário) — sem .env (como o CI do APK) a 1ª carga passa dos 5 s padrão
   }, 15_000);
 
@@ -313,7 +298,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(onde()).toBe(para), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector('[data-aba-aluno="treino"]')?.getAttribute("aria-current")).toBe("page"));
     await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='treino']")).not.toBeNull(), { timeout: 4000 });
-    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
   });
 
   // W17: o grupo Avaliação do Configurar aluno antigo (Dobras & Medidas, Evolução, Registros) virou a aba Avaliação NOVA
@@ -328,7 +312,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(onde()).toBe(para), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector(`[data-aba-aluno="${aba}"]`)?.getAttribute("aria-current")).toBe("page"), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='avaliacao']")).not.toBeNull(), { timeout: 4000 });
-    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
     // W18: o Prontuário (as anotações da equipe) vale também na conta só de Treino — o personal lê e escreve as "Equipe"
     expect([...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"))).toEqual(["resumo", "treino", "avaliacao", "prontuario", "financeiro"]);
   }, 15_000);
@@ -341,7 +324,6 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(document.querySelector('[data-aba-aluno="financeiro"]')?.getAttribute("aria-current")).toBe("page"));
     // W15: 8 s (a suíte inteira sem .env — o CI — deixa este caso perto dos 4 s; sozinho passa em ~2 s)
     await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='financeiro']")?.textContent).toContain("Não deu para abrir o financeiro"), { timeout: 8000 });
-    expect(screen.queryByTestId("antiga-configurar-aluno")).toBeNull();
   }, 15_000);
 
   it("profissional abre direto no painel; se escolheu o app de aluno, volta para o app", async () => {

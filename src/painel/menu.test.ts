@@ -28,7 +28,6 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
   it("W26: as 4 Ferramentas não têm mais página antiga (a CalculadoraPage do Calc saiu) — são as novas; Impressos só com Nutrição", () => {
     for (const id of ["modelos", "impressos", "calculadora", "lixeira"]) {
       const item = MENU_PAINEL.find((i) => i.id === id)!;
-      expect(item.antiga, id).toBeUndefined();
       expect(estadoDoItem(item, ["treino", "nutricao"]), id).toBe("nova");
       expect(estadoDoItem(item, ["treino", "nutricao"], semNovas), id).toBeNull();
     }
@@ -40,7 +39,6 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
 
   it("W19: Financeiro não tem mais a página antiga (a Cobrança do Calc saiu) — é a nova (src/painel/paginas/Financeiro.tsx) para os 2 módulos", () => {
     const financeiro = MENU_PAINEL.find((i) => i.id === "financeiro")!;
-    expect(financeiro.antiga).toBeUndefined();
     expect(estadoDoItem(financeiro, ["treino"])).toBe("nova");
     expect(estadoDoItem(financeiro, ["nutricao"])).toBe("nova");
     expect(estadoDoItem(financeiro, ["treino"], semNovas)).toBeNull();
@@ -48,7 +46,6 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
 
   it("W23: Treinos não tem mais a página antiga (a TreinosAdminPage/AdminTreinos do Calc saiu) — é a nova (src/painel/paginas/Treinos.tsx), só com Treino", () => {
     const treinos = MENU_PAINEL.find((i) => i.id === "treinos")!;
-    expect(treinos.antiga).toBeUndefined();
     expect(estadoDoItem(treinos, ["treino"])).toBe("nova");
     expect(estadoDoItem(treinos, ["nutricao"])).toBeNull();
     expect(estadoDoItem(treinos, ["treino"], semNovas)).toBeNull();
@@ -56,7 +53,6 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
 
   it("W13: Alunos não tem mais a página antiga — é a nova (src/painel/paginas/Alunos.tsx) para os 2 módulos", () => {
     const alunos = MENU_PAINEL.find((i) => i.id === "alunos")!;
-    expect(alunos.antiga).toBeUndefined();
     expect(estadoDoItem(alunos, ["treino"])).toBe("nova");
     expect(estadoDoItem(alunos, ["nutricao"])).toBe("nova");
     expect(estadoDoItem(alunos, ["treino"], semNovas)).toBeNull();

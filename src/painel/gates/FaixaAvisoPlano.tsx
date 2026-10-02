@@ -18,7 +18,7 @@ function jaFechou(chave: string): boolean {
  * −7, −2, −1 e 0 do vencimento; o X guarda `aviso-plano:<conta>:<vence_em>:<marco>` no aparelho e a faixa volta no próximo marco.
  * W28 (legado Calc no núcleo): nos dias de tolerância, "Mensalidade de R$ X venceu em DD/MM. Pague até DD/MM para não perder o
  * acesso." (urgente; o X vale só no dia). Quem tem a cobrança automática no cartão não recebe aviso (Nativo OS W30a). Master, conta
- * com a cobrança antiga (cobranca_legada — a GatePlanoLegado avisa) e conta do app, não.
+ * que ainda estivesse com a cobrança antiga (cobranca_legada — nenhuma depois da virada) e conta do app, não.
  */
 export default function FaixaAvisoPlano({ children }: { children: ReactNode }) {
   const { conta, ehDono, ehMaster } = useConta();

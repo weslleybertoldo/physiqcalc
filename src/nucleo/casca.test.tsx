@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { conta, matricula, situacao } from "@/test/fixturesNucleo";
@@ -10,7 +10,6 @@ const h = vi.hoisted(() => ({
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
-vi.mock("@/lib/mpClient", () => ({ invokeMp: vi.fn(async () => null) }));
 
 import { useDadosCasca } from "./casca";
 import { escolherContaAtiva } from "./conta";
@@ -32,7 +31,7 @@ beforeEach(() => {
 describe("useDadosCasca (dados reais da W3)", () => {
   it("dono com 2 contas: card da conta, troca de conta, papel e contador de alunos", () => {
     const a = conta({ id: "a", nome: "Consultoria Ferreira", profissionais: 2, alunos_ativos: 132 });
-    const b = conta({ id: "b", nome: "Clínica Nutri", plano: "nutricao", modulos: ["nutricao"], papeis: ["dono", "nutricionista"], origem: "legado_nutri", cobranca_legada: true });
+    const b = conta({ id: "b", nome: "Clínica Nutri", plano: "nutricao", modulos: ["nutricao"], papeis: ["dono", "nutricionista"], origem: "legado_nutri" });
     h.sessao.situacao = situacao({ nome: "Lucas Ferreira", contas: [a, b], modulos_aluno: ["treino"] });
     let r = dados();
     expect(r.current.ehProfissional).toBe(true);
@@ -46,11 +45,9 @@ describe("useDadosCasca (dados reais da W3)", () => {
     r = dados();
     expect(r.current.conta?.id).toBe("b");
     expect(r.current.papelRotulo).toBe("Nutricionista");
-    expect(r.current.plano?.nome).toBe("Plano PhysiqNutri");
+    expect(r.current.plano?.nome).toBe("Plano Nutrição");
   });
-  it("W28: legada com cobranca_legada = false ganha o card do núcleo (sem o plano-status do Calc)", async () => {
-    const { invokeMp } = await import("@/lib/mpClient");
-    vi.mocked(invokeMp).mockClear();
+  it("W28: a legada (cobranca_legada = false) tem o card do núcleo", () => {
     h.auth = { ...h.auth, isStaff: true };
     const nutri = conta({ id: "n", plano: "nutricao", modulos: ["nutricao"], origem: "legado_nutri", cobranca_legada: false, regras_legadas: true,
       situacao: "ativa", teste_ate: null, vence_em: "2099-12-31" });
@@ -60,15 +57,18 @@ describe("useDadosCasca (dados reais da W3)", () => {
       situacao: "ativa", teste_ate: null, vence_em: "2099-12-31", tolerancia_dias: 7 });
     h.sessao.situacao = situacao({ contas: [calc] });
     expect(dados().current.plano).toMatchObject({ nome: "Plano Treino", linha: "Vence em 31/12 · Pix" });
-    expect(invokeMp).not.toHaveBeenCalled();
   });
-  it("legado Calc com a cobrança antiga: o card vem do plano-status do Calc (como até a W27)", async () => {
-    const { invokeMp } = await import("@/lib/mpClient");
-    vi.mocked(invokeMp).mockClear();
+  it("W28: conta que ainda estivesse com a cobrança antiga (cobranca_legada) também tem o card do núcleo (o plano-status do Calc saiu)", () => {
     h.auth = { ...h.auth, isStaff: true };
-    h.sessao.situacao = situacao({ contas: [conta({ origem: "legado_calc", cobranca_legada: true, plano: "treino", modulos: ["treino"], situacao: "ativa" })] });
-    dados();
-    await waitFor(() => expect(invokeMp).toHaveBeenCalledWith("plano-status"));
+    h.sessao.situacao = situacao({ contas: [conta({ origem: "legado_calc", cobranca_legada: true, plano: "treino", modulos: ["treino"], situacao: "ativa",
+      teste_ate: null, vence_em: "2099-12-31", tolerancia_dias: 7 })] });
+    expect(dados().current.plano).toMatchObject({ nome: "Plano Treino", linha: "Vence em 31/12 · Pix" });
+  });
+  it("isenta e master: 'Sem cobrança' / 'Conta master'", () => {
+    h.sessao.situacao = situacao({ contas: [conta({ situacao: "isenta", isenta_motivo: "parceria" })] });
+    expect(dados().current.plano).toMatchObject({ nome: "Plano Treino + Nutrição", linha: "Sem cobrança", tom: "ok" });
+    h.sessao.situacao = situacao({ master: true, contas: [conta({ situacao: "isenta", isenta_motivo: "master" })] });
+    expect(dados().current.plano).toMatchObject({ nome: "Conta master", linha: "Sem cobrança" });
   });
   it("aluno: módulos das matrículas decidem as abas; não é profissional", () => {
     h.sessao.situacao = situacao({ matriculas: [matricula()], modulos_aluno: ["treino"] });

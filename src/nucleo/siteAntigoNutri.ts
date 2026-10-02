@@ -2,11 +2,11 @@ import { PRINCIPAL_SCHEMA, type SchemaPrincipal } from "@/integrations/principal
 import { existe } from "@/rotas/registro";
 
 /**
- * O site antigo do PhysiqNutri (até a W28) e o link do diário do aluno (R13 — falha F1), definidos NUM LUGAR SÓ:
- *   · até a W24 o /d/<código> que funcionava era o do site antigo; com a página pública do Physiq (W24: src/publico/Diario.tsx) o
- *     link e o redirecionamento do /p/ antigo passam a apontar para ela sozinhos (registro por convenção); o site antigo continua
- *     aceitando os mesmos códigos até a W28;
- *   · staging aponta para o staging do site antigo (mesmo schema do banco principal).
+ * O link do diário do aluno (R13 — falha F1), definido NUM LUGAR SÓ:
+ *   · até a W24 o /d/<código> que funcionava era o do site antigo do PhysiqNutri; com a página pública do Physiq (W24:
+ *     src/publico/Diario.tsx) o link e o redirecionamento do /p/ antigo apontam para ela sozinhos (registro por convenção);
+ *   · W28: o site antigo redireciona para o Physiq — os atalhos para as seções dele (secaoNoSiteAntigo) saíram; o endereço dele
+ *     fica só como a volta do link do diário se a página pública sair (staging aponta para o staging dele).
  */
 export const SITE_ANTIGO_NUTRI: Record<SchemaPrincipal, string> = {
   public: "https://nutri.physiqcalc.com.br",
@@ -57,9 +57,4 @@ export function enderecoDoDiario(codigo: string, opcoes: OpcoesDiario = {}): str
     return `${origem}/d/${c}`;
   }
   return `${siteAntigoNutri(opcoes.schema)}/d/${c}`;
-}
-
-/** Uma seção do aluno no site antigo (/pacientes/<id>/<seção>) — atalhos do "Fluxo de consulta" enquanto a aba nova não chega. */
-export function secaoNoSiteAntigo(pacienteId: string, secao: string, schema?: SchemaPrincipal): string {
-  return `${siteAntigoNutri(schema)}/pacientes/${encodeURIComponent(pacienteId)}/${secao}`;
 }

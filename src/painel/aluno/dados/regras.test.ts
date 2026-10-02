@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  AJUSTES, ajustesVisiveis, alturaEmMetros, ATALHOS_FLUXO, cadastroParaTreino, corpoDoAluno, destinoDoAtalho, formDoPerfil, idadeDe,
-  linhaDoCabecalho, linhaDoPerfil, linkLigado, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, textoDoLink, validarCPF,
+  AJUSTES, ajustesVisiveis, alturaEmMetros, ATALHOS_FLUXO, cadastroParaTreino, corpoDoAluno, formDoPerfil, idadeDe,
+  linhaDoCabecalho, linhaDoPerfil, linkLigado, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, rotaDoAtalho, textoDoLink, validarCPF,
   validarForm, whatsappDoAluno,
 } from "./regras";
 import { perfil } from "@/test/fixturesPerfilAluno";
@@ -98,15 +98,12 @@ describe("W14 (F2, R12) — os 4 ajustes", () => {
 });
 
 describe("W14 — Fluxo de consulta (os 7 atalhos do Nutri)", () => {
-  it("sem as abas novas, cada atalho abre a seção do aluno no site antigo; com elas, a aba do Physiq", () => {
+  it("cada atalho abre a aba do Physiq (ou a Agenda) com o formulário — o site antigo saiu na W28", () => {
     expect(ATALHOS_FLUXO.map((a) => a.chave)).toEqual(["consulta", "agendar", "anamnese", "antropometria", "planejamento", "orientacao", "manipulados"]);
-    const nada = () => false;
-    const site = "https://nutri.physiqcalc.com.br";
-    expect(destinoDoAtalho(ATALHOS_FLUXO[0], "/painel/alunos/t1", "p1", nada, nada, site)).toEqual({ rota: null, externo: `${site}/pacientes/p1/consultas` });
-    expect(destinoDoAtalho(ATALHOS_FLUXO[1], "/painel/alunos/t1", "p1", nada, nada, site)).toEqual({ rota: null, externo: `${site}/agenda?paciente=p1` });
-    const tudo = () => true;
-    expect(destinoDoAtalho(ATALHOS_FLUXO[3], "/painel/alunos/t1", "p1", tudo, tudo, site)).toEqual({ rota: "/painel/alunos/t1/avaliacao?nova=antropometria", externo: null });
-    expect(destinoDoAtalho(ATALHOS_FLUXO[1], "/painel/alunos/t1", "p1", tudo, tudo, site).rota).toBe("/painel/agenda?aluno=p1&novo=1");
+    expect(rotaDoAtalho(ATALHOS_FLUXO[0], "/painel/alunos/t1", "p1")).toBe("/painel/alunos/t1/prontuario?nova=consulta");
+    expect(rotaDoAtalho(ATALHOS_FLUXO[1], "/painel/alunos/t1", "p1")).toBe("/painel/agenda?aluno=p1&novo=1");
+    expect(rotaDoAtalho(ATALHOS_FLUXO[3], "/painel/alunos/t1", "p1")).toBe("/painel/alunos/t1/avaliacao?nova=antropometria");
+    expect(rotaDoAtalho(ATALHOS_FLUXO[6], "/painel/alunos/t1", "p1")).toBe("/painel/alunos/t1/dieta?novo=manipulado");
   });
 });
 

@@ -25,6 +25,7 @@ from _comum import (  # noqa: E402,F401
     TREINO_URL,
     Placar,
     anon,
+    cab_login,
     espelho_segredo,
     exec_treino,
     http,
@@ -115,7 +116,8 @@ def sessao(conta: str) -> dict:
     email, s = CONTAS[conta]
     st, sess = 0, None
     for tentativa in range(4):  # a rede até o Supabase às vezes devolve 522 (Cloudflare) — tenta de novo
-        st, sess, _ = http("POST", f"{API_P}/auth/v1/token?grant_type=password", {"email": email, "password": s}, {"apikey": anon(PRINCIPAL_REF)})
+        # W28: captcha global do Auth ligado → o login de teste vai como servidor (cab_login do _comum)
+        st, sess, _ = http("POST", f"{API_P}/auth/v1/token?grant_type=password", {"email": email, "password": s}, cab_login(API_P, anon(PRINCIPAL_REF)))
         if st == 200:
             break
         time.sleep(4 * (tentativa + 1))

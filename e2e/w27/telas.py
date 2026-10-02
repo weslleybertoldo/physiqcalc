@@ -159,7 +159,8 @@ def caso_financeiro(nav):
     c = abrir(nav, "financeiro", "w27-master", "/master/financeiro")
     p.check(pagina(c, "financeiro") and c.esperar(lambda: c.tem("[data-tabela-financeiro-master]") and c.tem("[data-cartao-faturas-master]"), 45),
             "[financeiro] contas com a situação de cobrança + faturas recentes")
-    p.check(c.tem('[data-filtro="tolerancia"]') and c.tem('[data-filtro="isentas"]') and c.tem('[data-filtro="legadas"]'), "[financeiro] filtros do Calc + legadas")
+    # W28: o filtro "Legadas" saiu com a virada (nenhuma conta segue na cobrança antiga)
+    p.check(c.tem('[data-filtro="tolerancia"]') and c.tem('[data-filtro="isentas"]') and not c.tem('[data-filtro="legadas"]'), "[financeiro] filtros do Calc (sem o de legadas)")
     sem_carregando(c)
     c.print("tela6_master_financeiro")
     c.fim()

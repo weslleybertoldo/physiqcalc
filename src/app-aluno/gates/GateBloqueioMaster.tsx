@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Ban, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useMensalidadeStatus } from "@/hooks/useMensalidadeStatus";
 import { useSessao } from "@/nucleo/sessao";
 import { bloqueioDoMaster, ehProfissional } from "@/nucleo/situacao";
 import { PerfilReduzido } from "./pecas/PerfilReduzido";
@@ -13,18 +12,17 @@ const TEXTO_PADRAO = "O acesso dos alunos do seu profissional está pausado no m
 
 /**
  * Trava do app: o master bloqueou os alunos da conta (C101, spec 9 — "Acesso pausado" com a mensagem do master). Vale o
- * bloqueio do núcleo (contas.alunos_bloqueados_em) e o do painel master antigo, que fica no Treino (status-lite do
- * Calc). Profissional nunca é travado aqui. Substitui a BloqueioMasterGate da TreinosPage (que sai na W8).
- * W7 (spec 9): com o app fechado, o Perfil segue abrindo, reduzido a Sair, Exportar e Excluir.
+ * bloqueio do núcleo (contas.alunos_bloqueados_em — a minha_situacao() manda em conta_alunos_bloqueados_em; o espelho grava o
+ * mesmo no Treino). W28: o status-lite do Calc antigo saiu. Profissional nunca é travado aqui. Substitui a BloqueioMasterGate
+ * da TreinosPage (que sai na W8). W7 (spec 9): com o app fechado, o Perfil segue abrindo, reduzido a Sair, Exportar e Excluir.
  */
 export default function GateBloqueioMaster({ children }: { children: ReactNode }) {
   const { situacao } = useSessao();
-  const { user, isStaff } = useAuth();
+  const { isStaff } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const profissional = isStaff || ehProfissional(situacao);
-  const { status } = useMensalidadeStatus(profissional ? null : user?.id);
-  const b = bloqueioDoMaster(situacao, status ? { bloqueadoPeloMaster: status.bloqueadoPeloMaster } : null);
+  const b = bloqueioDoMaster(situacao);
   if (profissional || !b.bloqueado) return <>{children}</>;
   const texto = b.mensagem || TEXTO_PADRAO;
   if (pathname === ROTA_PERFIL_REDUZIDO) {

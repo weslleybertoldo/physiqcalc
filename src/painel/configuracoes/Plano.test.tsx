@@ -15,12 +15,11 @@ const h = vi.hoisted(() => ({
 }));
 vi.mock("@/nucleo/conta", () => ({ useConta: () => ({ conta: h.conta, ehMaster: h.master, ehDono: true }) }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ situacao: h.situacao, recarregarSituacao: h.recarregar, usuario: { id: "u1", email: "dono@teste.com" } }) }));
-vi.mock("@/layouts/AdminLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <div data-admin-layout>{children}</div> }));
-vi.mock("@/pages/admin/PlanosPage", () => ({ default: () => <div>tela Planos do Calc</div> }));
 vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: () => <div data-brick-falso>brick</div>, initMercadoPago: () => {} }));
 vi.mock("./plano/api", async (original) => ({ ...(await original<typeof import("./plano/api")>()), buscarStatusCobranca: h.buscar, acaoCobranca: h.acao }));
 
 import Plano from "./Plano";
+import { ErroCobranca } from "./plano/api";
 
 function montar() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,19 +47,15 @@ beforeEach(() => {
   h.recarregar.mockClear();
 });
 
-describe("Configurações › Plano — legados com a cobrança antiga e isenta (P9)", () => {
-  it("legado Calc com cobranca_legada: a tela Planos de hoje dentro da casca", async () => {
+describe("Configurações › Plano — isenta e a cobrança antiga (W28: as telas antigas saíram)", () => {
+  it("conta que ainda estivesse com a cobrança antiga (cobranca_legada): o plano do núcleo, com o erro 'conta_legada' do servidor", async () => {
     h.conta = conta({ origem: "legado_calc", cobranca_legada: true, plano: "treino", modulos: ["treino"], situacao: "ativa" });
+    h.buscar.mockRejectedValue(new ErroCobranca("conta_legada"));
     montar();
-    expect(await screen.findByText("tela Planos do Calc")).toBeInTheDocument();
-    expect(h.buscar).not.toHaveBeenCalled();
-  });
-  it("legado Nutri com cobranca_legada: o aviso com o link para a Assinatura do site do PhysiqNutri", () => {
-    h.conta = conta({ origem: "legado_nutri", cobranca_legada: true, plano: "nutricao", modulos: ["nutricao"], situacao: "teste" });
-    h.situacao = situacao({ legado_nutri: { role: "nutricionista", teste_ate: "2026-10-05T12:00:00Z", pago_ate: null, isento_assinatura: false, assinatura: null } });
-    montar();
-    expect(screen.getByRole("link", { name: /Abrir a Assinatura no PhysiqNutri/ })).toHaveAttribute("href", "https://nutri.physiqcalc.com.br/configuracoes");
-    expect(h.buscar).not.toHaveBeenCalled();
+    expect(await screen.findByText("Não deu para carregar o plano", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByText("A cobrança desta conta ainda não passou para o Physiq. Fale com o suporte.")).toBeInTheDocument();
+    expect(h.buscar).toHaveBeenCalledWith("c1");
+    expect(screen.queryByRole("link", { name: /PhysiqNutri/ })).toBeNull();
   });
   it("conta isenta do master: sem cobrança", () => {
     h.master = true;
@@ -84,7 +79,6 @@ describe("Configurações › Plano — W28: legada com cobranca_legada = false 
     h.buscar.mockResolvedValue(status({ precos: precosLegado, valor_mensal: 29.9, valor_anual: 299, limite_alunos: 30 }, contaLegado));
     montar();
     expect(await screen.findByText("Seu plano")).toBeInTheDocument();
-    expect(screen.queryByText("tela Planos do Calc")).toBeNull();
     expect(h.buscar).toHaveBeenCalledWith("c1");
     expect(document.querySelector("[data-preco-de-hoje]")?.textContent).toMatch(/^Preço de hoje mantido: R\$\s?29,90\/mês$/);
     expect(screen.getByText("Tolerância de 7 dias depois do vencimento")).toBeInTheDocument();

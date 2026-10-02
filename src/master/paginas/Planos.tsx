@@ -17,7 +17,7 @@ const numero = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
 /**
  * Painel master › Planos (C59, R2, spec 6.1): a tabela de preços por módulo × faixa (anual = 10 mensalidades), os dias e o limite do
  * teste, os dias grátis do app (aluno sem profissional) e o histórico de mudanças. A adesão não existe mais (R2); a tolerância é só do
- * legado Calc (7 dias, só leitura, até a virada).
+ * legado Calc (7 dias, só leitura, até a conta trocar de plano).
  */
 export default function Planos() {
   const q = useQuery({ queryKey: ["master", "planos"], queryFn: planos, staleTime: 15_000 });

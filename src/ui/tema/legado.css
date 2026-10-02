@@ -1,38 +1,13 @@
-/* Physiq W1 — convivência das telas ANTIGAS do Calc com as cascas novas (fallback da spec 11.1).
-   Tudo aqui é temporário: cada regra cai quando a tela nova da worktree citada entra, e o arquivo sai
-   na W28 junto com o legado. Nenhuma tela antiga foi editada para isso. */
+/* Physiq W1 — convivência das peças com `fixed bottom-*` com as cascas novas (fallback da spec 11.1).
+   W28: as regras das telas antigas do Calc (o fundo `min-h-screen bg-background` dentro do app e o "Configurar aluno" antigo
+   no perfil do aluno) saíram com o legado. Fica só a de baixo, que ainda vale para peças vivas: o aviso de atualização do APK
+   (src/components/UpdateChecker.tsx) e a faixa "instalar" do PWA (src/components/PWAInstallBanner.tsx). */
 
-/* App do aluno: o que é `fixed bottom-*` nas telas antigas (card do descanso, "instalar", aviso de
-   versão) sobe acima da barra de abas flutuante. Janelas (role=dialog) e gavetas do shadcn/premium
-   ficam como estão — elas cobrem a barra. Até a W8 (aba Treino nova). */
+/* App do aluno: o que é `fixed bottom-*` (aviso de versão, "instalar") sobe acima da barra de abas flutuante. Janelas
+   (role=dialog) e gavetas do shadcn/premium ficam como estão — elas cobrem a barra. */
 html[data-casca="aluno"] .fixed.bottom-0:not([role="dialog"], [data-slot], [data-painel], [data-tabbar]) {
   bottom: var(--casca-reserva-baixo, 0px);
 }
 html[data-casca="aluno"] .fixed.bottom-4:not([role="dialog"], [data-slot], [data-painel], [data-tabbar]) {
   bottom: calc(var(--casca-reserva-baixo, 0px) + 1rem);
 }
-
-/* App do aluno: as telas antigas pintam o fundo inteiro (`min-h-screen bg-background`); dentro da casca
-   o fundo fica transparente para aparecer o halo violeta/verde da tela 1. Até W8/W10/W6. */
-[data-casca-app] .min-h-screen.bg-background {
-  background: transparent;
-}
-
-/* Perfil do aluno no painel: o "Configurar aluno" antigo abre no grupo da aba; o cabeçalho, os grupos
-   e as sub-abas dele somem (quem navega são as 6 abas novas e as sub-abas da casca). Até W14–W17. */
-[data-fallback-aluno] [data-config-aluno] > header,
-[data-fallback-aluno] [data-config-aluno] nav[aria-label="Grupos"],
-[data-fallback-aluno] [data-config-aluno] [data-config-subabas] {
-  display: none;
-}
-[data-fallback-aluno] [data-config-aluno] {
-  max-width: none;
-  margin: 0;
-}
-[data-fallback-aluno] [data-config-aluno] > div {
-  display: block;
-}
-[data-fallback-aluno] [data-config-aluno] .pt-6 {
-  padding-top: 0;
-}
-

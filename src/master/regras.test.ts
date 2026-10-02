@@ -26,10 +26,6 @@ describe("painel master — o que cada conta deixa fazer (W27)", () => {
     expect(a).not.toContain("isentar");
     expect(a).not.toContain("suspender");
   });
-  it("legado (Calc ou Nutri): só mover alunos — a cobrança segue pelas telas antigas até a virada", () => {
-    expect(acoesDaConta(conta({ origem: "legado_calc", cobranca_legada: true }))).toEqual(["mover_alunos"]);
-    expect(acoesDaConta(conta({ origem: "legado_nutri", cobranca_legada: true, alunos_total: 0 }))).toEqual(["mover_alunos"]);
-  });
   it("W28: legado já cobrado pelo núcleo (cobranca_legada = false) tem as ações de uma conta nova", () => {
     const a = acoesDaConta(conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, tolerancia_dias: 7, valor_travado: 39.9 }));
     expect(a).toEqual(expect.arrayContaining(["plano", "vencimento", "liberar", "registrar_pagamento", "suspender", "mover_alunos"]));
@@ -46,8 +42,6 @@ describe("painel master — textos", () => {
     expect(linhaVencimento(conta({ situacao_efetiva: "vencida", vence_em: "2026-09-30" }))).toBe("Venceu em 30/09/2026");
     expect(linhaVencimento(conta({ situacao_efetiva: "isenta", isenta_motivo: "Conta do master" }))).toBe("Isenta · Conta do master");
     expect(linhaVencimento(conta({ situacao_efetiva: "suspensa" }))).toBe("Suspensa pelo master");
-    expect(linhaVencimento(conta({ origem: "legado_nutri", cobranca_legada: true, situacao_efetiva: "teste", legado_nutri: { teste_ate: null, pago_ate: "2026-10-20", isento: false } })))
-      .toBe("Pago até 20/10/2026");
   });
   it("W28: legado Nutri no núcleo (cobranca_legada = false) mostra as datas do núcleo, não as do site antigo", () => {
     const nutri = { origem: "legado_nutri" as const, cobranca_legada: false, regras_legadas: true, legado_nutri: { teste_ate: null, pago_ate: "2026-10-20", isento: true } };
@@ -69,7 +63,7 @@ describe("painel master — textos", () => {
   });
   it("erros das funções viram frase (desconhecido = genérico)", () => {
     expect(textoErro("so_master")).toBe("Só o master pode fazer isto.");
-    expect(textoErro("cobranca_legada")).toContain("Cobrança legada até a virada");
+    expect(textoErro("cobranca_legada")).toContain("ainda é a antiga");
     expect(textoErro("xyz")).toBe("Não deu certo agora. Tente de novo.");
   });
 });

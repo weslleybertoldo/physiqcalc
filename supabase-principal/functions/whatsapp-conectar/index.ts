@@ -17,7 +17,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SCHEMAS = ["public", "staging"];
-const SITE: Record<string, string> = { public: "https://nutri.physiqcalc.com.br", staging: "https://physiqnutri-staging.vercel.app" };
+// W28: o endereço padrão (CORS sem origem conhecida) passa a ser o do Physiq
+const SITE: Record<string, string> = { public: "https://physiqcalc.com.br", staging: "https://physiqcalc-staging.vercel.app" };
 // o agente republica o QR a cada ~20 s; passou disso sem ping, a tela mostra "celular fora do ar"
 const PEDIDO_VALIDO_MIN = 5;
 
@@ -28,11 +29,12 @@ function marcaDaOrigem(origin: string | null): string {
   if (origin && (ORIGEM_PHYSIQ.test(origin) || /^http:\/\/(127\.0\.0\.1|localhost):(5173|8080)$/.test(origin))) return "Physiq";
   return "PhysiqNutri";
 }
+// Physiq W28 (virada): o site antigo do Nutri redireciona para o Physiq — as origens dele saem do CORS (spec 7.2); no local, as
+// portas do Physiq (5173/8080), como a origemPermitida das outras funções (_shared/login-regras.ts)
 function origemPermitida(origin: string | null): boolean {
   if (!origin) return false;
-  if (/^https:\/\/(nutri\.physiqcalc\.com\.br|physiqnutri(-[a-z0-9-]+)?\.vercel\.app)$/.test(origin)) return true;
   if (ORIGEM_PHYSIQ.test(origin)) return true;
-  return /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin);
+  return /^http:\/\/localhost:(5173|8080)$/.test(origin);
 }
 function cors(origin: string | null): Record<string, string> {
   return {

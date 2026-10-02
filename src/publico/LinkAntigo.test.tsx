@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { diarioNoPhysiq, enderecoDoDiario, normalizarCodigoDiario, origemDoDiario, secaoNoSiteAntigo, siteAntigoNutri } from "@/nucleo/siteAntigoNutri";
+import { diarioNoPhysiq, enderecoDoDiario, normalizarCodigoDiario, origemDoDiario, siteAntigoNutri } from "@/nucleo/siteAntigoNutri";
 import { existe, rotasDaPaginaPublica } from "@/rotas/registro";
 
 import LinkAntigo from "./LinkAntigo";
@@ -13,7 +13,6 @@ describe("W14 (F1, R13) — o link do diário num lugar só", () => {
     expect(enderecoDoDiario(" ABC234xyz9 ", { schema: "public", temPagina: () => false })).toBe("https://nutri.physiqcalc.com.br/d/abc234xyz9");
     expect(enderecoDoDiario("abc", { schema: "staging", temPagina: () => false })).toBe("https://physiqnutri-staging.vercel.app/d/abc");
     expect(normalizarCodigoDiario("a/b?c=1")).toBe("abc1");
-    expect(secaoNoSiteAntigo("p1", "consultas", "public")).toBe("https://nutri.physiqcalc.com.br/pacientes/p1/consultas");
   });
   it("W24: a página /d/:codigo do Physiq existe (src/publico/Diario.tsx) — o link passa para ela SOZINHO (registro por convenção)", () => {
     expect(rotasDaPaginaPublica("LinkAntigo")).toEqual(["/p/:codigo"]);

@@ -494,9 +494,14 @@ Deno.serve(async (req) => {
       }, origin);
     }
     if (ACOES_ALUNO_MIGRADAS.has(action)) return jsonErr("migrado", 410, origin);
+    // Physiq W28 (virada): o plano do PROFESSOR passou para o banco principal (Configurações › Plano → cobranca-conta). As ações
+    // plano-* e o comprovante de pagamento de plano respondem "migrado" (410). O mp-webhook deste banco segue no ar e repassa os
+    // avisos das cobranças antigas para a mp-webhook-conta do principal.
+    if (typeof action === "string" && action.startsWith("plano-")) return jsonErr("migrado", 410, origin);
     if (action === "receipt") {
       const { data: linha } = await admin.from("physiq_pagamentos").select("contexto").eq("id", String(body?.pagamentoId || "")).maybeSingle();
-      if ((linha as { contexto?: string | null } | null)?.contexto === "aluno") return jsonErr("migrado", 410, origin);
+      const ctx = (linha as { contexto?: string | null } | null)?.contexto;
+      if (ctx === "aluno" || ctx === "plano_professor") return jsonErr("migrado", 410, origin);
     }
 
     // ---- status (aba Pagamentos do aluno) ----

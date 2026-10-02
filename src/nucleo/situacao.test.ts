@@ -10,7 +10,6 @@ import {
   limparSituacoes,
   normalizarCodigo,
   normalizarSituacao,
-  regraDoPlano,
   rotuloDoPapel,
 } from "./situacao";
 import { conta, matricula, situacao } from "@/test/fixturesNucleo";
@@ -64,20 +63,6 @@ describe("papéis e conta ativa (spec 4.1, NF13)", () => {
     expect(rotuloDoPapel(situacao(), conta({ papeis: ["dono"] }))).toBe("Dono da conta");
     expect(rotuloDoPapel(situacao(), null)).toBe("Aluno");
   });
-  it("regra da trava de plano: legada com a cobrança antiga (cobranca_legada) continua nas telas antigas", () => {
-    expect(regraDoPlano(conta({ origem: "legado_calc", cobranca_legada: true, situacao: "ativa" }), situacao())).toBe("calc");
-    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: true, situacao: "vencida" }), situacao())).toBe("nutri");
-    expect(regraDoPlano(conta({ origem: "nova" }), situacao())).toBe("nova");
-    expect(regraDoPlano(conta({ situacao: "isenta" }), situacao())).toBe("isenta");
-    expect(regraDoPlano(conta({ origem: "legado_calc", cobranca_legada: true }), situacao({ master: true }))).toBe("isenta");
-    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: true, situacao: "isenta" }), situacao())).toBe("isenta");
-    expect(regraDoPlano(null, situacao())).toBe("isenta");
-  });
-  it("W28: legada com cobranca_legada = false (depois do script da virada) vai para o núcleo", () => {
-    expect(regraDoPlano(conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, tolerancia_dias: 7 }), situacao())).toBe("nova");
-    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: false, regras_legadas: true, situacao: "vencida" }), situacao())).toBe("nova");
-    expect(regraDoPlano(conta({ origem: "legado_nutri", cobranca_legada: false, situacao: "isenta" }), situacao())).toBe("isenta");
-  });
 });
 
 describe("destino depois do login (spec 4.2)", () => {
@@ -95,13 +80,9 @@ describe("bloqueio dos alunos pelo master (C101)", () => {
     const s = situacao({ matriculas: [matricula({ conta_alunos_bloqueados_em: "2026-09-28T10:00:00Z", conta_alunos_bloqueados_msg: "Fale com o Lucas" })] });
     expect(bloqueioDoMaster(s)).toEqual({ bloqueado: true, mensagem: "Fale com o Lucas" });
   });
-  it("bloqueio do painel master antigo (Treino) também fecha o app do aluno do Calc", () => {
-    expect(bloqueioDoMaster(situacao({ matriculas: [matricula()] }), { bloqueadoPeloMaster: true }).bloqueado).toBe(true);
-    expect(bloqueioDoMaster(situacao({ calc: true }), { bloqueadoPeloMaster: true }).bloqueado).toBe(true);
-  });
-  it("aluno em 2 contas (P7): a matrícula só de Nutrição livre mantém o app aberto", () => {
-    const s = situacao({ matriculas: [matricula(), matricula({ id: "p2", conta_id: "c2", modulos: ["nutricao"] })] });
-    expect(bloqueioDoMaster(s, { bloqueadoPeloMaster: true }).bloqueado).toBe(false);
+  it("aluno em 2 contas (P7): a matrícula livre (só de Nutrição) mantém o app aberto", () => {
+    const s = situacao({ matriculas: [matricula({ conta_alunos_bloqueados_em: "2026-09-28T10:00:00Z" }), matricula({ id: "p2", conta_id: "c2", modulos: ["nutricao"] })] });
+    expect(bloqueioDoMaster(s).bloqueado).toBe(false);
   });
   it("profissional nunca é travado; sem bloqueio passa", () => {
     expect(bloqueioDoMaster(situacao({ contas: [conta()], matriculas: [matricula({ conta_alunos_bloqueados_em: "x" })] })).bloqueado).toBe(false);

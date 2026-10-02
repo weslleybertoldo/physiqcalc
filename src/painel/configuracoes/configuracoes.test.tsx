@@ -150,14 +150,6 @@ describe("Configurações › Equipe (dono)", () => {
     fireEvent.click(document.querySelector("[data-form-papeis='m2'] [data-opcao='personal']")!);
     expect(await screen.findByText(/Os 3 alunos de treino dele ficam sem responsável/)).toBeInTheDocument();
   });
-
-  it("conta legada: a lista aparece com o aviso e ninguém é convidado nem removido (até a W28)", async () => {
-    h.equipe = equipe({ bloqueio: "conta_legada", convites: [] });
-    montar(<Equipe />);
-    expect(await screen.findByText(/A equipe chega às contas vindas do PhysiqCalc/)).toBeInTheDocument();
-    expect(screen.queryByText("Convidar")).toBeNull();
-    expect(document.querySelector("[data-membro-remover='m2']")).toBeNull();
-  });
 });
 
 describe("Configurações › Convite (cada membro)", () => {

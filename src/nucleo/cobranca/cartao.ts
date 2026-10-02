@@ -1,8 +1,8 @@
 /**
  * Card do plano no pé do menu (tela 6: chips dos módulos, "Plano Treino + Nutrição", "Renova em 12/08 · cartão") das contas que o
- * NÚCLEO cobra (W4) — situação, teste e vencimento reais da conta. W28: inclui as legadas com cobranca_legada = false (no legado
- * Calc, "Vence em" é o vencimento e, nos dias de tolerância, "Venceu em … · pague até …"); as legadas com a cobrança antiga
- * continuam na regra de hoje (P9, src/nucleo/planoLegado.ts). Regra pura, testada em regras.test.ts.
+ * NÚCLEO cobra (W4) — situação, teste e vencimento reais da conta. W28: inclui as legadas (cobranca_legada = false; no legado
+ * Calc, "Vence em" é o vencimento e, nos dias de tolerância, "Venceu em … · pague até …"). A conta isenta e a do master usam o
+ * planoCartaoConta. Regras puras, testadas em regras.test.ts.
  */
 import type { PlanoCasca } from "@/ui/casca/dadosCasca";
 import type { ContaSituacao } from "../situacao";
@@ -65,5 +65,34 @@ export function planoCartaoContaNova(c: ContaSituacao, hoje: string = hojeSP()):
       const venceu = vencimentoDoPlano(datas) ?? fim;
       return { ...base, linha: venceu ? `Venceu em ${dataBR(venceu)}` : "Plano vencido", tom: "erro" };
     }
+  }
+}
+
+function dataCurta(d: string | null | undefined): string {
+  if (!d) return "";
+  const x = new Date(d.length === 10 ? `${d}T12:00:00` : d);
+  if (Number.isNaN(x.getTime())) return "";
+  return x.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
+}
+
+/**
+ * Card do plano da conta isenta e do master (W3): "Sem cobrança" / "Conta master"; para o master numa conta que paga, a linha da
+ * situação da conta (teste, vencimento) sem as regras do núcleo.
+ */
+export function planoCartaoConta(c: ContaSituacao, master = false): PlanoCasca {
+  const base = { nome: master && c.situacao === "isenta" ? "Conta master" : NOME_PLANO_CARTAO[c.plano] ?? "Plano", modulos: c.modulos };
+  switch (c.situacao) {
+    case "isenta":
+      return { ...base, linha: "Sem cobrança", tom: "ok" };
+    case "teste":
+      return { ...base, linha: c.teste_ate ? `Teste até ${dataCurta(c.teste_ate)}` : "Em teste", tom: "neutro" };
+    case "ativa":
+      return { ...base, linha: c.vence_em ? `Vence em ${dataCurta(c.vence_em)}` : "Conta ativa", tom: "ok" };
+    case "vencida":
+      return { ...base, linha: c.vence_em ? `Venceu em ${dataCurta(c.vence_em)}` : "Plano vencido", tom: "erro" };
+    case "suspensa":
+      return { ...base, linha: "Conta suspensa", tom: "erro" };
+    default:
+      return { ...base, linha: "Conta cancelada", tom: "erro" };
   }
 }

@@ -3,22 +3,17 @@
  * usar `useDadosCasca()` daqui no lugar do padrão — card da conta (e a troca de conta), card do plano, contador de
  * alunos, menu do usuário, módulos do aluno (abas do app).
  *
- * Fonte: o login do banco principal e a `minha_situacao()` (src/nucleo/sessao.tsx). O Banco do Treino entra em 2 pontos:
- * o papel espelhado no JWT do Treino (o master e o professor de hoje continuam vendo o painel e o master mesmo se o
- * principal estiver fora do ar) e o `plano-status` do Calc, que é a regra de cobrança das contas 'legado_calc' enquanto a
- * cobrança delas é a antiga (cobranca_legada). W28: a legada com cobranca_legada = false ganha o card do núcleo
- * (planoCartaoContaNova) — quem decide é o regraDoPlano, que só olha o cobranca_legada.
+ * Fonte: o login do banco principal e a `minha_situacao()` (src/nucleo/sessao.tsx). O Banco do Treino entra só com o papel
+ * espelhado no JWT do Treino (o master e o professor de hoje continuam vendo o painel e o master mesmo se o principal estiver
+ * fora do ar). O card do plano é o do núcleo para toda conta que paga (a nova e, desde a virada — W28 —, a legada); a isenta e
+ * a do master mostram "Sem cobrança" / "Conta master".
  */
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { invokeMp } from "@/lib/mpClient";
-import type { PlanoStatus } from "@/lib/saasApi";
-import { planoDoStatusLegado, type ContaCasca, type DadosCasca, type PlanoCasca } from "@/ui/casca/dadosCasca";
+import type { ContaCasca, DadosCasca, PlanoCasca } from "@/ui/casca/dadosCasca";
 import { useConta } from "./conta";
-import { planoCartaoContaNova } from "./cobranca/cartao";
-import { planoCartaoConta, planoCartaoNutri } from "./planoLegado";
+import { planoCartaoConta, planoCartaoContaNova } from "./cobranca/cartao";
 import { useSessao } from "./sessao";
-import { regraDoPlano, type ContaSituacao } from "./situacao";
+import type { ContaSituacao } from "./situacao";
 
 type Metadados = { full_name?: string; name?: string; avatar_url?: string; picture?: string };
 
@@ -29,18 +24,8 @@ function paraCasca(c: ContaSituacao): ContaCasca {
 export function useDadosCasca(): DadosCasca {
   const sessao = useSessao();
   const conta = useConta();
-  const auth = useAuth(); // Banco do Treino (sessão vinda da troca): papel espelhado e plano-status do Calc
+  const auth = useAuth(); // Banco do Treino (sessão vinda da troca): o papel espelhado
   const situacao = sessao.situacao;
-  const regra = regraDoPlano(conta.conta, situacao);
-
-  const planoCalc = useQuery({
-    // mesma chave do AdminLayout antigo: um pedido só para o card do plano e para a trava das telas antigas
-    queryKey: ["plano-status", auth.user?.id],
-    queryFn: () => invokeMp<PlanoStatus>("plano-status"),
-    enabled: Boolean(auth.user) && auth.isStaff && (regra === "calc" || (!situacao && auth.isStaff)),
-    staleTime: 60_000,
-    retry: 1,
-  });
 
   const usuarioP = sessao.usuario;
   const meta = (usuarioP?.user_metadata ?? {}) as Metadados;
@@ -54,8 +39,8 @@ export function useDadosCasca(): DadosCasca {
   const modulosAluno = situacao ? situacao.modulos_aluno : auth.user ? (["treino"] as const).slice() : [];
 
   // W5 (correção do painel sem o Treino): a casca NÃO espera a troca de token — com a situação do principal ela já abre
-  // (menu, card da conta, card do plano, Configurações). Quem precisa do Treino espera no próprio lugar: as páginas antigas
-  // do painel (AdminLayout → "Sem conexão com o Treino") e as abas do app que usam o Treino (GateSessaoTreino do app).
+  // (menu, card da conta, card do plano, Configurações). Quem precisa do Treino espera no próprio lugar: a Biblioteca do master
+  // ("Sem conexão com o Treino") e as abas do app que usam o Treino (GateSessaoTreino do app).
   const carregando =
     !sessao.pronto ||
     (Boolean(usuarioP) && semSituacao && (sessao.carregandoSituacao || (!sessao.erroSituacao && !auth.user))) ||
@@ -63,20 +48,13 @@ export function useDadosCasca(): DadosCasca {
 
   let plano: PlanoCasca | null = null;
   if (conta.conta) {
-    // as telas antigas só com a cobrança antiga (cobranca_legada); a legada no núcleo cai no card das contas novas
-    if (regra === "calc") plano = planoCalc.data ? planoDoStatusLegado(planoCalc.data) : planoCartaoConta(conta.conta, ehMaster);
-    else if (regra === "nutri") plano = planoCartaoNutri(situacao?.legado_nutri);
     // W4: conta do núcleo com a situação, o teste e o vencimento reais (e "Renova em … · cartão" com a cobrança automática)
-    else if (regra === "nova") plano = planoCartaoContaNova(conta.conta);
-    else plano = planoCartaoConta(conta.conta, ehMaster);
-  } else if (semSituacao && planoCalc.data) {
-    plano = planoDoStatusLegado(planoCalc.data);
+    plano = situacao?.master || conta.conta.situacao === "isenta" ? planoCartaoConta(conta.conta, ehMaster) : planoCartaoContaNova(conta.conta);
   }
 
   const contaCasca = conta.conta ? paraCasca(conta.conta) : null;
   const contadores: Partial<Record<string, number>> = {};
   if (conta.conta) contadores.Alunos = conta.conta.alunos_ativos;
-  else if (planoCalc.data?.professor) contadores.Alunos = planoCalc.data.professor.alunos;
 
   return {
     carregando,

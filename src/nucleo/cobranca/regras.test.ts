@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ContaSituacao } from "../situacao";
-import { planoCartaoContaNova } from "./cartao";
+import { planoCartaoConta, planoCartaoContaNova } from "./cartao";
 import {
   PRECOS_PADRAO,
   avaliarMudanca,
@@ -250,5 +250,11 @@ describe("card do plano no menu (tela 6) — conta nova", () => {
     expect(planoCartaoContaNova(calc(), "2026-10-01")).toMatchObject({ linha: "Vence hoje · Pix" });
     expect(planoCartaoContaNova(calc(), "2026-10-04")).toMatchObject({ linha: "Venceu em 01/10 · pague até 08/10", tom: "erro" });
     expect(planoCartaoContaNova(calc(), "2026-10-09")).toMatchObject({ linha: "Venceu em 01/10", tom: "erro" });
+  });
+  it("conta isenta e a do master (planoCartaoConta — veio do planoLegado.ts, que saiu na W28)", () => {
+    expect(planoCartaoConta(conta({ situacao: "teste", teste_ate: "2026-10-13" }))).toMatchObject({ nome: "Plano Treino + Nutrição", linha: "Teste até 13/10" });
+    expect(planoCartaoConta(conta({ situacao: "vencida", vence_em: "2026-09-20" }))).toMatchObject({ linha: "Venceu em 20/09", tom: "erro" });
+    expect(planoCartaoConta(conta({ situacao: "isenta", plano: "treino", modulos: ["treino"] }), true)).toMatchObject({ nome: "Conta master", linha: "Sem cobrança" });
+    expect(planoCartaoConta(conta({ situacao: "isenta", plano: "treino", modulos: ["treino"] }))).toMatchObject({ nome: "Plano Treino", linha: "Sem cobrança", tom: "ok" });
   });
 });

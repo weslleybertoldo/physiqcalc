@@ -9,26 +9,19 @@ describe("abas do perfil do aluno (spec 4.5, tela 7)", () => {
     expect(ABAS_ALUNO.map((a) => a.rotulo)).toEqual(["Resumo", "Treino", "Dieta", "Avaliação", "Prontuário", "Financeiro"]);
   });
 
-  it("antes das abas novas: Resumo, Treino, Avaliação e Financeiro pelo Configurar aluno antigo", () => {
-    const visiveis = ABAS_ALUNO.filter((a) => estadoDaAbaAluno(a, ["treino"], semNovas, () => false) !== null).map((a) => a.id);
-    expect(visiveis).toEqual(["resumo", "treino", "avaliacao", "financeiro"]);
+  it("sem as abas registradas, só o Resumo (da casca) — o Configurar aluno antigo (fallback) saiu na W28", () => {
+    const visiveis = ABAS_ALUNO.filter((a) => estadoDaAbaAluno(a, ["treino"], semNovas) !== null).map((a) => a.id);
+    expect(visiveis).toEqual(["resumo"]);
+    expect(ABAS_ALUNO.map((a) => estadoDaAbaAluno(a, ["treino", "nutricao"]))).toEqual(["nova", "nova", "nova", "nova", "nova", "nova"]);
   });
 
-  it("grupos antigos → aba (tabela do fim da 5.2)", () => {
-    const cts = (id: string) => ABAS_ALUNO.find((a) => a.id === id)?.antigas?.map((s) => s.ct);
-    expect(cts("resumo")).toEqual(["dados", "geral"]);
-    expect(cts("treino")).toEqual(["treino", "historico", "config"]);
-    expect(cts("avaliacao")).toEqual(["dobras", "evolucao", "registros"]);
-    expect(cts("financeiro")).toEqual(["plano"]);
-  });
-
-  it("aba nova vence; Treino some sem o módulo; Resumo com cards é da casca", () => {
+  it("aba registrada aparece; Treino some sem o módulo; o Resumo é sempre da casca", () => {
     const treino = ABAS_ALUNO.find((a) => a.id === "treino")!;
     const resumo = ABAS_ALUNO[0];
     expect(estadoDaAbaAluno(treino, ["treino"], comNovas)).toBe("nova");
     expect(estadoDaAbaAluno(treino, ["nutricao"], comNovas)).toBeNull();
-    expect(estadoDaAbaAluno(resumo, ["treino"], semNovas, () => true)).toBe("nova");
-    expect(estadoDaAbaAluno(resumo, ["nutricao"], semNovas, () => false)).toBe("nova");
+    expect(estadoDaAbaAluno(resumo, ["treino"], semNovas)).toBe("nova");
+    expect(estadoDaAbaAluno(resumo, ["nutricao"], semNovas)).toBe("nova");
   });
 
   it("aba atual pela rota", () => {

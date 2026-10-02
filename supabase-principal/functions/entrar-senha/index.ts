@@ -36,7 +36,6 @@ import {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET") || "";
 const LOGIN_IP_SAL = Deno.env.get("LOGIN_IP_SAL") || SERVICE_ROLE.slice(-24);
 const PROXY_SEGREDO = Deno.env.get("PROXY_SEGREDO") || "";
@@ -148,9 +147,12 @@ Deno.serve(async (req) => {
     try {
       const controle = new AbortController();
       const timer = setTimeout(() => controle.abort(), 12_000);
+      // W28: a senha é conferida no GoTrue COMO SERVIDOR (service_role) — com o captcha global do Auth ligado (o site antigo do
+      // Nutri entrava direto no /auth/v1/token), a chamada de servidor não precisa do captcha do GoTrue: o Turnstile já foi
+      // conferido aqui em cima, com token de uso único. O GoTrue confere a senha do mesmo jeito.
       const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: `Bearer ${ANON}` },
+        headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` },
         body: JSON.stringify({ email, password: senha }),
         signal: controle.signal,
       }).finally(() => clearTimeout(timer));

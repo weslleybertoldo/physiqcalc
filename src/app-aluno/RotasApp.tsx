@@ -1,4 +1,3 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { registro, slug, tela } from "@/rotas/registro";
 import { Carregavel } from "@/ui/casca/Carregavel";
@@ -6,7 +5,7 @@ import { NaoEncontrada } from "@/ui/casca/NaoEncontrada";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { ABAS_APP, abaDeAbertura, estadoDaAba, type AbaApp } from "./catalogoAbas";
 
-/** Uma aba do app: a nova quando existe; senão a antiga; sem nenhuma (ou sem o módulo), a de abertura. */
+/** Uma aba do app: a registrada; sem ela (ou sem o módulo), a de abertura. */
 export function RotaAba({ id }: { id: AbaApp["id"] }) {
   const { modulosAluno } = useDadosCasca();
   const aba = ABAS_APP.find((a) => a.id === id)!;
@@ -16,14 +15,6 @@ export function RotaAba({ id }: { id: AbaApp["id"] }) {
     return (
       <Carregavel nome={`aba ${aba.arquivo}`}>
         <Nova />
-      </Carregavel>
-    );
-  }
-  if (estado === "antiga" && aba.antiga) {
-    const Antiga = aba.antiga;
-    return (
-      <Carregavel nome={`${aba.rotulo} (antiga)`}>
-        <Antiga />
       </Carregavel>
     );
   }
@@ -41,12 +32,7 @@ export function RotaInicialApp() {
   return <Navigate to={abertura.rota} replace />;
 }
 
-/** Telas antigas que respondem por itens do Perfil enquanto a nova não chega (sob demanda: o SDK do Mercado Pago pesa). */
-const PERFIL_ANTIGO: Record<string, LazyExoticComponent<ComponentType>> = {
-  pagamentos: lazy(() => import("@/pages/PagamentosPage")),
-};
-
-/** /perfil/<item>: a tela nova de src/app-aluno/perfil/<Item>.tsx; senão a antiga (Pagamentos); senão o app. */
+/** /perfil/<item>: a tela de src/app-aluno/perfil/<Item>.tsx; senão o app. W28: o fallback antigo (a PagamentosPage) saiu. */
 export function RotaItemPerfil() {
   const { item = "" } = useParams();
   const registrado = Object.values(registro.perfilApp).find((r) => slug(r.nome) === item);
@@ -55,14 +41,6 @@ export function RotaItemPerfil() {
     return (
       <Carregavel nome={`perfil ${registrado.nome}`}>
         <Nova />
-      </Carregavel>
-    );
-  }
-  const Antiga = PERFIL_ANTIGO[item];
-  if (Antiga) {
-    return (
-      <Carregavel nome={`perfil ${item} (antiga)`}>
-        <Antiga />
       </Carregavel>
     );
   }

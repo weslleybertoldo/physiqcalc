@@ -112,7 +112,7 @@ export function HistoricoAvaliacoes({ alunoId, avaliacoes, perm, nomeAluno, linh
           <p className="text-[13px] leading-relaxed text-texto-2">
             {paraExcluir?.origem === "treino"
               ? "Ela sai do histórico e da Evolução do aluno (no app também). Se for a mais recente, a composição atual volta à da anterior."
-              : "Ela sai do histórico e da Evolução do aluno e vai para a Lixeira (dá para restaurar no site do PhysiqNutri)."}
+              : "Ela sai do histórico e da Evolução do aluno e vai para a Lixeira (dá para restaurar em Ferramentas › Lixeira por 30 dias)."}
           </p>
           <div className="flex justify-end gap-2">
             <button type="button" className={BTN_SEC} onClick={() => setParaExcluir(null)} disabled={excluindo}>Cancelar</button>

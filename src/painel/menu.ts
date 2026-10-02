@@ -1,4 +1,3 @@
-import type { ComponentType, LazyExoticComponent } from "react";
 import {
   Bookmark,
   Calculator,
@@ -19,10 +18,9 @@ import { existe } from "@/rotas/registro";
 import type { Modulo } from "@/ui/casca/dadosCasca";
 
 /**
- * Menu do site do profissional (spec 4.4 e tela 6). A página nova de cada item é o arquivo
- * `src/painel/paginas/<arquivo>.tsx` (registro por convenção); enquanto ela não existe, vale a página
- * antiga do Calc (`antiga`) para quem tem Treino, ou o aviso "Use o site do PhysiqNutri por enquanto"
- * para quem só tem Nutrição. Item sem página nova e sem antiga fica escondido (spec 11.1, regra 3).
+ * Menu do site do profissional (spec 4.4 e tela 6). A página de cada item é o arquivo `src/painel/paginas/<arquivo>.tsx`
+ * (registro por convenção); item sem a página fica escondido (spec 11.1, regra 3). W28: o fallback das páginas antigas do Calc
+ * (`antiga`) e o aviso "Use o site do PhysiqNutri" saíram com o legado — todas as páginas do menu são as novas.
  */
 export type ModuloItem = Modulo | "ambos";
 
@@ -35,7 +33,6 @@ export interface ItemMenuPainel {
   rota: string;
   modulo: ModuloItem;
   grupo: "principal" | "ferramentas";
-  antiga?: LazyExoticComponent<ComponentType>;
   /** Candidato à barra de baixo do celular (as 4 primeiras disponíveis). */
   noCelular?: boolean;
   contadorTom?: "neutro" | "destaque";
@@ -59,15 +56,13 @@ export const MENU_PAINEL: ItemMenuPainel[] = [
   { id: "lixeira", arquivo: "Lixeira", rotulo: "Lixeira", icone: Trash2, rota: "/painel/lixeira", modulo: "ambos", grupo: "ferramentas" },
 ];
 
-/** nova = página nova registrada · antiga = página do Calc · nutri = aviso do site do Nutri · null = escondido */
-export type EstadoItem = "nova" | "antiga" | "nutri" | null;
+/** nova = página registrada (ou montada pela casca, como Configurações) · null = escondido */
+export type EstadoItem = "nova" | null;
 
 export function estadoDoItem(item: ItemMenuPainel, modulosConta: readonly Modulo[], temPaginaNova: (arquivo: string) => boolean = (a) => existe("paginasPainel", a)): EstadoItem {
   if (item.modulo !== "ambos" && !modulosConta.includes(item.modulo)) return null;
   if (item.arquivo === null) return "nova";
-  if (temPaginaNova(item.arquivo)) return "nova";
-  if (item.antiga) return modulosConta.includes("treino") ? "antiga" : "nutri";
-  return null;
+  return temPaginaNova(item.arquivo) ? "nova" : null;
 }
 
 export function itemAtivo(item: ItemMenuPainel, pathname: string): boolean {

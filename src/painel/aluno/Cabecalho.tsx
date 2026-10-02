@@ -10,7 +10,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { acaoNoAluno, ErroAlunos } from "@/painel/alunos/api";
 import { ConfirmarAcao, type Confirmar } from "@/painel/alunos/AcoesAluno";
 import { acoesDoAluno, mensagemErroAlunos } from "@/painel/alunos/regras";
-import { secaoNoSiteAntigo } from "@/nucleo/siteAntigoNutri";
 import { existe, listar } from "@/rotas/registro";
 import { TopoPagina } from "@/ui/casca/topo";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
@@ -42,12 +41,9 @@ function ItemMenu({ icone: Icone, rotulo, aoEscolher, perigo, marca, desligado }
   );
 }
 
-/** Para onde vai o "Nova avaliação": a aba nova (W17 lê ?nova=1), o formulário antigo do Calc ou a antropometria do site antigo. */
-function destinoNovaAvaliacao(p: PerfilAluno, base: string): { rota?: string; externo?: string } | null {
-  if (existe("abasAluno", "Avaliacao")) return { rota: `${base}/avaliacao?nova=1` };
-  if (p.treino_user_id && p.conta_modulos.includes("treino")) return { rota: `${base}/avaliacao?ct=dobras` };
-  if (p.modulos.includes("nutricao")) return { externo: secaoNoSiteAntigo(p.paciente_id, "antropometria") };
-  return null;
+/** Para onde vai o "Nova avaliação": a aba Avaliação (W17 lê ?nova=1). W28: o formulário antigo do Calc e o site antigo do Nutri saíram. */
+function destinoNovaAvaliacao(base: string): string | null {
+  return existe("abasAluno", "Avaliacao") ? `${base}/avaliacao?nova=1` : null;
 }
 
 function AcoesDoCabecalho({ perfil, alunoId, aoEditar }: { perfil: PerfilAluno; alunoId: string; aoEditar: () => void }) {
@@ -60,7 +56,7 @@ function AcoesDoCabecalho({ perfil, alunoId, aoEditar }: { perfil: PerfilAluno; 
   const [gerando, setGerando] = useState<"dados" | "treino" | null>(null);
   const base = `/painel/alunos/${encodeURIComponent(alunoId)}`;
   const zap = whatsappDoAluno(perfil.telefone);
-  const nova = destinoNovaAvaliacao(perfil, base);
+  const nova = destinoNovaAvaliacao(base);
   const linha = linhaDoPerfil(perfil);
   const pode = acoesDoAluno(linha, perfil.eu);
   const pdfTreino = !!perfil.treino_user_id && perfil.modulos.includes("treino") && treinoPronto;
@@ -114,17 +110,10 @@ function AcoesDoCabecalho({ perfil, alunoId, aoEditar }: { perfil: PerfilAluno; 
   );
 
   const novaAvaliacao = nova ? (
-    nova.rota ? (
-      <button type="button" onClick={() => navigate(nova.rota!)} className={celular ? "pq-ibtn" : "pq-botao pq-botao-w"} aria-label="Nova avaliação"
-        data-acao-nova-avaliacao={nova.rota}>
-        <ClipboardCheck aria-hidden /> {!celular && "Nova avaliação"}
-      </button>
-    ) : (
-      <a href={nova.externo} target="_blank" rel="noreferrer" className={celular ? "pq-ibtn" : "pq-botao pq-botao-w"} aria-label="Nova avaliação"
-        data-acao-nova-avaliacao={nova.externo}>
-        <ClipboardCheck aria-hidden /> {!celular && "Nova avaliação"}
-      </a>
-    )
+    <button type="button" onClick={() => navigate(nova)} className={celular ? "pq-ibtn" : "pq-botao pq-botao-w"} aria-label="Nova avaliação"
+      data-acao-nova-avaliacao={nova}>
+      <ClipboardCheck aria-hidden /> {!celular && "Nova avaliação"}
+    </button>
   ) : null;
 
   return (

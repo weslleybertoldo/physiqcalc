@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeftRight, BellRing, CalendarClock, CalendarPlus, CreditCard, ExternalLink, Gem, HandCoins, Lock, LockOpen, PauseCircle, PlayCircle,
+  ArrowLeftRight, BellRing, CalendarClock, CalendarPlus, CreditCard, Gem, HandCoins, Lock, LockOpen, PauseCircle, PlayCircle,
   ShieldCheck, ShieldOff, Trash2, Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -14,14 +14,13 @@ import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro } from "@/ui/premium/Estados";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { detalheConta, ErroMaster, tornarMaster } from "../api";
-import { ChipLegada, ChipOrigem, ChipSituacao, ChipsModulos, Info } from "../pecas/ui";
+import { ChipOrigem, ChipSituacao, ChipsModulos, Info } from "../pecas/ui";
 import {
-  LEGADA, MASTER_NUTRI_ANTIGO, ROTULO_FAIXA, ROTULO_PLANO, ROTULO_RECEBIMENTO, acoesDaConta, dataCurta, dataHora, linhaAlunos, linhaVencimento, moeda,
-  textoErro, type AcaoMaster,
+  ROTULO_FAIXA, ROTULO_PLANO, ROTULO_RECEBIMENTO, acoesDaConta, dataCurta, dataHora, linhaAlunos, linhaVencimento, moeda, textoErro,
+  type AcaoMaster,
 } from "../regras";
 import type { ContaLinha, EventoConta, Membro } from "../tipos";
 import { AcaoContaDialog } from "./AcaoContaDialog";
-import { CobrancaLegadaCalc } from "./CobrancaLegadaCalc";
 
 const BOTOES: Partial<Record<AcaoMaster, { rotulo: string; icone: LucideIcon; perigo?: boolean }>> = {
   plano: { rotulo: "Mudar plano", icone: Gem },
@@ -69,7 +68,6 @@ export function DetalheConta({ contaId, aoFechar, aoMudou }: { contaId: string |
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [acao, setAcao] = useState<AcaoMaster | null>(null);
-  const [legada, setLegada] = useState(false);
   const [paraMaster, setParaMaster] = useState<Membro | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const q = useQuery({ queryKey: ["master-conta", contaId], queryFn: () => detalheConta(contaId!), enabled: Boolean(contaId), staleTime: 10_000 });
@@ -109,31 +107,15 @@ export function DetalheConta({ contaId, aoFechar, aoMudou }: { contaId: string |
               <ChipSituacao conta={c} />
               <ChipsModulos modulos={c.modulos} />
               <ChipOrigem origem={c.origem} />
-              {c.cobranca_legada && <ChipLegada />}
               {/* W28: a legada no núcleo com o preço e as regras de hoje (até trocar de plano) */}
-              {!c.cobranca_legada && c.regras_legadas && <Chip tom="g" data-chip-regras-legadas>Preço e regras de hoje</Chip>}
+              {c.regras_legadas && <Chip tom="g" data-chip-regras-legadas>Preço e regras de hoje</Chip>}
               {c.alunos_bloqueados_em && <Chip tom="r" icone={Lock}>Alunos bloqueados</Chip>}
             </div>
-
-            {c.cobranca_legada && (
-              <div className="rounded-2xl border border-ambar/30 px-3.5 py-3 text-[13px] text-texto-2" style={{ background: "linear-gradient(90deg,var(--p-chip-a-fundo),transparent)" }}
-                data-aviso-legada={c.origem}>
-                <b className="text-texto">{LEGADA}.</b>{" "}
-                {c.origem === "legado_calc"
-                  ? "O ciclo, o plano e a tolerância de 7 dias desta conta continuam no Financeiro antigo do PhysiqCalc (Banco do Treino) até a virada."
-                  : "A assinatura desta conta continua no site antigo do PhysiqNutri até a virada."}
-                <div className="mt-2">
-                  {c.origem === "legado_calc"
-                    ? <Botao tamanho="sm" icone={ExternalLink} onClick={() => setLegada(true)} data-abrir-legada-calc>Abrir no Financeiro antigo</Botao>
-                    : <a href={MASTER_NUTRI_ANTIGO} target="_blank" rel="noreferrer" className="pq-botao pq-botao-g pq-botao-sm" data-abrir-legada-nutri><ExternalLink aria-hidden />Abrir no site antigo</a>}
-                </div>
-              </div>
-            )}
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" data-detalhe-info>
               <Info rotulo="Plano">{ROTULO_PLANO[c.plano]}</Info>
               <Info rotulo="Faixa">{ROTULO_FAIXA[c.faixa]}</Info>
-              <Info rotulo="Valor mensal">{c.cobranca_legada && c.origem === "legado_calc" ? "No Calc" : moeda(c.valor_mensal)}</Info>
+              <Info rotulo="Valor mensal">{moeda(c.valor_mensal)}</Info>
               <Info rotulo="Vencimento" data-detalhe-vencimento>{linhaVencimento(c)}</Info>
               <Info rotulo="Alunos ativos">{linhaAlunos(c)}</Info>
               <Info rotulo="Recebe dos alunos">{ROTULO_RECEBIMENTO[c.recebimento_modo] ?? c.recebimento_modo}</Info>
@@ -213,8 +195,6 @@ export function DetalheConta({ contaId, aoFechar, aoMudou }: { contaId: string |
       </div>
       <AcaoContaDialog conta={c ?? null} acao={acao} aoFechar={() => setAcao(null)}
         aoFeito={() => { const fechou = acao === "excluir"; setAcao(null); recarregar(); if (fechou) aoFechar(); }} />
-      {/* o Financeiro antigo do Calc só enquanto a cobrança da conta é a antiga (W28: depois da virada, a do núcleo) */}
-      {c?.cobranca_legada && c.origem === "legado_calc" && <CobrancaLegadaCalc aberta={legada} aoMudar={setLegada} conta={c} />}
       <ConfirmarPerigo aberto={Boolean(paraMaster)} aoMudar={(a) => !a && setParaMaster(null)} titulo="Tornar master?" rotulo="Tornar master" ocupado={ocupado}
         texto={`${paraMaster?.nome ?? paraMaster?.email ?? ""} passa a ver e mudar TODAS as contas e alunos, nos 2 bancos. Tirar o master depois é à mão.`}
         aoConfirmar={() => void promover()} data-confirmar-tornar-master />

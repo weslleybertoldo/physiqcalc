@@ -6,12 +6,10 @@ import { conta, matricula, situacao } from "@/test/fixturesNucleo";
 const h = vi.hoisted(() => ({
   sessao: {} as Record<string, unknown>,
   auth: { user: null as null | { id: string }, isStaff: false },
-  status: null as null | { bloqueadoPeloMaster?: boolean },
   resumo: null as null | Array<Record<string, unknown>>,
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
-vi.mock("@/hooks/useMensalidadeStatus", () => ({ useMensalidadeStatus: () => ({ status: h.status, pendente: false }) }));
 vi.mock("@/financeiro/useResumoFinanceiro", () => ({ useResumoFinanceiro: () => ({ resumo: h.resumo, carregando: false, erro: false }) }));
 
 import GateBloqueioMaster from "./GateBloqueioMaster";
@@ -34,7 +32,6 @@ function montar(Gate: React.ComponentType<{ children: React.ReactNode }>, caminh
 beforeEach(() => {
   h.sessao = { situacao: situacao({ modulos_aluno: ["treino"], matriculas: [matricula()] }), treino: { estado: "pronto", erro: null }, sair, tentarTreinoDeNovo: tentar };
   h.auth = { user: { id: "t1" }, isStaff: false };
-  h.status = null;
   h.resumo = null;
   sair.mockClear();
   tentar.mockClear();
@@ -49,13 +46,11 @@ describe("GateBloqueioMaster", () => {
     fireEvent.click(screen.getByRole("button", { name: /Sair/ }));
     expect(sair).toHaveBeenCalled();
   });
-  it("bloqueio do painel master antigo (status-lite do Treino) também trava", () => {
-    h.status = { bloqueadoPeloMaster: true };
-    montar(GateBloqueioMaster);
-    expect(screen.getByText("Acesso pausado")).toBeInTheDocument();
-  });
-  it("profissional e aluno livre passam", () => {
-    h.status = { bloqueadoPeloMaster: true };
+  it("profissional e aluno livre passam (W28: só o bloqueio do núcleo vale — o status-lite do Treino saiu)", () => {
+    const r = montar(GateBloqueioMaster);
+    expect(screen.getByText("o app")).toBeInTheDocument();
+    r.unmount();
+    h.sessao.situacao = situacao({ modulos_aluno: ["treino"], matriculas: [matricula({ conta_alunos_bloqueados_em: "2026-09-28" })] });
     h.auth.isStaff = true;
     montar(GateBloqueioMaster);
     expect(screen.getByText("o app")).toBeInTheDocument();

@@ -27,16 +27,18 @@ const VALOR_MENSAL = 80;
 const DIAS_PIX = 30;
 const PIX_EXPIRA_H = 72;
 const SCHEMAS = ["public", "staging"];
-const SITE: Record<string, string> = { public: "https://nutri.physiqcalc.com.br", staging: "https://physiqnutri-staging.vercel.app" };
+// W28: o endereço padrão (CORS sem origem conhecida e a volta do checkout) passa a ser o do Physiq
+const SITE: Record<string, string> = { public: "https://physiqcalc.com.br", staging: "https://physiqcalc-staging.vercel.app" };
 const STATUS = ["pending", "authorized", "paused", "cancelled"];
 
 // Physiq W2 (spec 7.2): o site e o app do Physiq também chamam (as origens do Nutri continuam)
 const ORIGEM_PHYSIQ = /^(https:\/\/(www\.)?physiqcalc\.com\.br|https:\/\/physiqcalc-staging\.vercel\.app|https:\/\/localhost|capacitor:\/\/localhost)$/;
+// Physiq W28 (virada): o site antigo do Nutri redireciona para o Physiq — as origens dele saem do CORS (spec 7.2); no local, as
+// portas do Physiq (5173/8080), como a origemPermitida das outras funções (_shared/login-regras.ts)
 function origemPermitida(origin: string | null): boolean {
   if (!origin) return false;
-  if (/^https:\/\/(nutri\.physiqcalc\.com\.br|physiqnutri(-[a-z0-9-]+)?\.vercel\.app)$/.test(origin)) return true;
   if (ORIGEM_PHYSIQ.test(origin)) return true;
-  return /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin);
+  return /^http:\/\/localhost:(5173|8080)$/.test(origin);
 }
 // Physiq W2: endereço de volta do checkout escolhido pela origem da chamada — Nutri = como antes (/configuracoes);
 // Physiq = a tela de plano dele (site público de quem chamou; do app, o site do ambiente)
