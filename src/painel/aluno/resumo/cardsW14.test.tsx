@@ -127,6 +127,8 @@ describe("W14 — cards do Resumo", () => {
     await waitFor(() => expect(h.dados).toHaveBeenCalledWith("p1", { resumo: "Lesão no joelho" }));
   });
   it("Fluxo de consulta: os 7 atalhos (a aba nova quando existe — W18: consulta e anamnese no Prontuário); some sem Nutrição", async () => {
+    // H5: o card é de quem é nutri (a regra clínica da W18)
+    h.perfil.mockResolvedValue(perfil({ eu: { id: "u1", dono: true, personal: true, nutricionista: true, master: false } }));
     const r = montar(<CardFluxoConsulta alunoId="p1" />);
     await waitFor(() => expect(document.querySelectorAll("[data-atalho]").length).toBe(7));
     expect(document.querySelector('[data-atalho="consulta"]')?.getAttribute("href")).toBe("/painel/alunos/p1/prontuario?nova=consulta");
@@ -134,10 +136,32 @@ describe("W14 — cards do Resumo", () => {
     // W20: "Agendar" abre a Agenda nova já com o aluno (era o site antigo até a W20)
     expect(document.querySelector('[data-atalho="agendar"]')?.getAttribute("href")).toBe("/painel/agenda?aluno=p1&novo=1");
     r.unmount();
-    h.perfil.mockResolvedValue(perfil({ conta_modulos: ["treino"], modulos: ["treino"] }));
+    h.perfil.mockResolvedValue(perfil({ conta_modulos: ["treino"], modulos: ["treino"], eu: { id: "u1", dono: true, personal: true, nutricionista: true, master: false } }));
     montar(<CardFluxoConsulta alunoId="p1" />);
     await waitFor(() => expect(h.perfil).toHaveBeenCalled());
     await waitFor(() => expect(document.querySelector("[data-card-fluxo-consulta]")).toBeNull());
+  });
+  it("H5 (achado 4 do FIM-1b): o Fluxo de consulta é só de quem é nutri — o personal e o dono sem papel de nutri não veem", async () => {
+    // o personal responsável (sem papel de nutri)
+    h.perfil.mockResolvedValue(perfil({ eu: { id: "u2", dono: false, personal: true, nutricionista: false, master: false } }));
+    const r1 = montar(<CardFluxoConsulta alunoId="p1" />);
+    await waitFor(() => expect(h.perfil).toHaveBeenCalled());
+    await waitFor(() => expect(document.querySelector("[data-card-fluxo-consulta]")).toBeNull());
+    r1.unmount();
+    // o dono + personal sem papel de nutri (o fixture padrão)
+    h.perfil.mockResolvedValue(perfil());
+    const r2 = montar(<CardFluxoConsulta alunoId="p1" />);
+    await waitFor(() => expect(h.perfil).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(document.querySelector("[data-card-fluxo-consulta]")).toBeNull());
+    r2.unmount();
+    // a nutricionista da conta (não precisa ser a responsável: ela lê o clínico) e o master veem
+    h.perfil.mockResolvedValue(perfil({ eu: { id: "u3", dono: false, personal: false, nutricionista: true, master: false } }));
+    const r3 = montar(<CardFluxoConsulta alunoId="p1" />);
+    await waitFor(() => expect(document.querySelectorAll("[data-atalho]").length).toBe(7));
+    r3.unmount();
+    h.perfil.mockResolvedValue(perfil({ eu: { id: "u4", dono: false, personal: false, nutricionista: false, master: true } }));
+    montar(<CardFluxoConsulta alunoId="p1" />);
+    await waitFor(() => expect(document.querySelectorAll("[data-atalho]").length).toBe(7));
   });
 });
 

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CalendarPlus, ClipboardList, FilePlus2, FlaskConical, NotebookPen, Ruler, Stethoscope } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { acessoDoProntuario } from "@/nutricao/prontuario/lib/acesso";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { ATALHOS_FLUXO, rotaDoAtalho } from "../dados/regras";
@@ -20,11 +21,14 @@ const ICONE: Record<string, LucideIcon> = {
  * Card "Fluxo de consulta" do Resumo (W14 — N-27): os 7 atalhos do "Perfil do paciente" do Nutri (registrar consulta, agendar,
  * anamnese, antropometria, planejamento, orientação, manipulados). Cada um abre a aba/página do Physiq (W16–W20) com o parâmetro
  * que abre o formulário. W28: o fallback da seção do aluno no site antigo do Nutri saiu. Só com Nutrição.
+ * H5 (achado 4 do FIM-1b): só para quem é NUTRI — a regra clínica da W18 (nutricionista da conta que vê o aluno, o master ou a nutri
+ * dona do paciente sem conta); o personal e o dono sem papel de nutri não veem (os atalhos são da consulta, da anamnese, do plano…).
  */
 export default function CardFluxoConsulta({ alunoId }: { alunoId: string }) {
   const q = usePerfilAluno(alunoId);
   const p = q.data;
   if (!p || !p.conta_modulos.includes("nutricao") || !p.modulos.includes("nutricao")) return null;
+  if (!acessoDoProntuario(p).clinico) return null;
   const rotaAluno = `/painel/alunos/${encodeURIComponent(alunoId)}`;
 
   return (

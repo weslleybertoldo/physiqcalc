@@ -12,6 +12,7 @@
   fotos       N-34 + achado 9: a Camila vê a foto grande (anterior/próxima), baixa e edita a observação; o gráfico da Avaliação com a
               linha do % de gordura; (negativo) o Lucas vê e baixa, mas não edita a foto da nutrição;
   prontuario  item 10: a 2ª nutri da conta (só leitura no clínico) VÊ e BAIXA o anexo; enviar/excluir travados;
+  fluxo       item 11: o "Fluxo de consulta" do Resumo só para quem é nutri (a Camila vê; o Lucas, dono + personal, não);
   textos      item 13: "aluno" no lugar de "paciente" (Orientações vazia, Consultas).
 
 Uso: python3 e2e/h5/telas.py --base http://localhost:8080 --prefixo local [--casos ...]
@@ -483,6 +484,30 @@ def caso_prontuario(nav) -> None:
         p.check(not q(f"select 1 from {S}.pacientes where nome = 'Aluno Leitura H5'") and
                 q(f"select status from {S}.conta_membros where conta_id = '{conta}' and user_id = '{n2}'")[0]["status"] == "removido",
                 "[prontuário] limpo: o aluno temporário saiu e a 2ª nutri voltou a 'removida'")
+
+
+# ───────────────────────── Fluxo de consulta só pra nutri (item 11) ─────────────────────────
+
+@caso
+def caso_fluxo(nav) -> None:
+    raf = rafael()
+    c = painel(nav, "fluxo_nutri", "w13-nutri", f"/painel/alunos/{raf['id']}")
+    try:
+        ok = c.esperar(lambda: c.pg.locator("[data-card-fluxo-consulta] [data-atalho]").count() == 7, 60)
+        p.check(ok, "[fluxo] a nutri (Camila) vê o 'Fluxo de consulta' com os 7 atalhos")
+        if ok:
+            c.pg.locator("[data-card-fluxo-consulta]").scroll_into_view_if_needed()
+        c.print("resumo_fluxo_nutri")
+    finally:
+        c.fim()
+    c = painel(nav, "fluxo_personal", "w13-dono", f"/painel/alunos/{raf['id']}")
+    try:
+        ok = c.esperar(lambda: c.pg.locator("[data-resumo-aluno] [data-card-dieta], [data-resumo-aluno] [data-card]").count() > 0 or c.tem("[data-resumo-aluno]"), 60)
+        c.pg.wait_for_timeout(2500)
+        p.check(ok and not c.tem("[data-card-fluxo-consulta]"), "[fluxo] (negativo) o Lucas (dono + personal, sem papel de nutri) não vê o 'Fluxo de consulta'")
+        c.print("resumo_fluxo_personal")
+    finally:
+        c.fim()
 
 
 # ───────────────────────── textos (item 13) ─────────────────────────
