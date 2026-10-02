@@ -103,7 +103,7 @@ export default function Contas() {
                             {c.cobranca_legada && <span className="max-w-[150px] text-[11px] font-semibold leading-tight text-ambar-3" data-legada-linha>{LEGADA}</span>}
                           </span>
                         </TabelaCelula>
-                        <TabelaCelula className="text-[12.5px] text-texto-2">{linhaVencimento(c)}</TabelaCelula>
+                        <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>
                         <TabelaCelula className="whitespace-nowrap text-[12.5px]">{linhaAlunos(c)}</TabelaCelula>
                         <TabelaCelula><ChipOrigem origem={c.origem} /></TabelaCelula>
                       </TabelaLinha>

@@ -119,15 +119,13 @@ export default function VisaoGeral() {
         <div className="grid gap-3.5">
           <Cartao className="px-[18px] pb-4 pt-4" data-cartao-situacoes>
             <CabecalhoCartao titulo="Contas por situação" acao={<Link to="/master/contas" className="text-[12.5px] font-semibold text-violeta-3">Ver contas</Link>} />
-            <div className="grid grid-cols-5 gap-2">
+            <div className="flex flex-col divide-y divide-linha-3" data-lista-situacoes>
               {situacoes.map((s) => (
                 <button key={s.rotulo} type="button" onClick={() => navigate(`/master/contas?situacao=${s.filtro}`)} data-situacao-contas={s.filtro}
-                  className="flex min-w-0 flex-col items-start gap-1 overflow-hidden rounded-2xl border border-linha bg-superficie-3 px-2.5 py-2.5 text-left transition-colors hover:border-linha-2">
-                  <b className="text-[22px] font-bold tabular-nums tracking-[-0.03em] text-texto">{s.n}</b>
-                  <span className="flex w-full min-w-0 items-center gap-1.5 text-[11px] font-medium text-texto-2">
-                    <i aria-hidden className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: COR_TOM[s.tom] }} />
-                    <span className="truncate">{s.rotulo}</span>
-                  </span>
+                  className="flex items-center gap-2.5 py-2 text-left text-[13px] text-texto-2 transition-colors hover:text-texto">
+                  <i aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: COR_TOM[s.tom] }} />
+                  <span className="min-w-0 flex-1 truncate">{s.rotulo}</span>
+                  <b className="text-[15px] font-bold tabular-nums text-texto">{s.n}</b>
                 </button>
               ))}
             </div>
