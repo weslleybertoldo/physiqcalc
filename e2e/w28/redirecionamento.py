@@ -9,7 +9,10 @@ nutri.physiqcalc.com.br passar para o projeto physiqcalc da Vercel (vercel.json:
   3. o # da recuperação de senha sobrevive ao 308 (o navegador mantém o fragmento);
   4. link de e-mail antigo com redirect_to no nutri. (gerado pela API admin para uma conta de TESTE — nenhum e-mail sai) ainda
      abre: o Auth aceita o redirect_to e o 308 leva ao Physiq com o token no #.
-Códigos públicos FICTÍCIOS (teste-w28): nada de dado de cliente. Uso: python3 e2e/w28/redirecionamento.py [--prints]
+Códigos públicos FICTÍCIOS (teste-w28): nada de dado de cliente. A raiz deslogada vai para /entrar (rota do app) e o cliente
+PKCE não lê token do # — por isso o passo 3 confere a URL que CHEGA ao Physiq (framenavigated), não a final.
+Uso: python3 e2e/w28/massa.py (cria a conta de teste do passo 4) && python3 e2e/w28/redirecionamento.py [--prints];
+no fim, python3 e2e/w28/massa.py --limpar.
 """
 from __future__ import annotations
 
@@ -84,13 +87,22 @@ def caso_navegador(prints: bool) -> None:
             finally:
                 ctx.close()
 
-        print("\n== 3. o # da recuperação de senha sobrevive ao 308")
-        ctx = nav.new_context(viewport={"width": 390, "height": 844}, service_workers="block")
-        pg = ctx.new_page()
-        pg.goto(f"{NUTRI}/#access_token=w28teste&refresh_token=x&type=recovery", wait_until="domcontentloaded", timeout=60000)
-        pg.wait_for_timeout(1500)
-        p.check(pg.url.startswith(PHYSIQ) and "#access_token=w28teste" in pg.url, f"{NUTRI}/#access_token=… → {pg.url[:90]}")
-        ctx.close()
+        print("\n== 3. o # da recuperação de senha sobrevive ao 308 (o navegador mantém o fragmento)")
+        for caminho in ("/", "/d/teste-w28"):
+            ctx = nav.new_context(viewport={"width": 390, "height": 844}, service_workers="block")
+            pg = ctx.new_page()
+            vistas: list[str] = []
+            pg.on("framenavigated", lambda f: vistas.append(f.url) if f == pg.main_frame else None)
+            pg.goto(f"{NUTRI}{caminho}#access_token=w28teste&refresh_token=x&type=recovery", wait_until="domcontentloaded", timeout=60000)
+            pg.wait_for_timeout(1500)
+            chegou = next((u for u in vistas if u.startswith(PHYSIQ)), "")
+            p.check("#access_token=w28teste" in chegou, f"{caminho} → o Physiq recebe a URL com o # ({chegou[:80]})")
+            if caminho != "/":
+                p.check("#access_token=w28teste" in pg.url, f"{caminho}: a página pública fica com o # ({pg.url[:70]})")
+            else:
+                # deslogado, o Physiq manda "/" para "/entrar" (rota própria do app) e o cliente PKCE não usa token no # (de propósito)
+                print(f"   (raiz: o app leva quem está deslogado para {pg.url.split('#')[0][len(PHYSIQ):] or '/'}; o login segue pela tela de entrar)")
+            ctx.close()
 
         print("\n== 4. link de e-mail antigo (redirect_to no nutri.) ainda abre")
         sk = service(PRINCIPAL_REF)
@@ -101,9 +113,12 @@ def caso_navegador(prints: bool) -> None:
         if link:
             ctx = nav.new_context(viewport={"width": 390, "height": 844}, service_workers="block")
             pg = ctx.new_page()
+            vistas2: list[str] = []
+            pg.on("framenavigated", lambda f: vistas2.append(f.url) if f == pg.main_frame else None)
             pg.goto(link, wait_until="domcontentloaded", timeout=60000)
             pg.wait_for_timeout(2500)
-            p.check(pg.url.startswith(PHYSIQ) and "access_token=" in pg.url, f"abre no Physiq com o token no # ({pg.url[:60]}…)")
+            chegou = next((u for u in vistas2 if u.startswith(PHYSIQ)), "")
+            p.check(bool(chegou) and "access_token=" in chegou, f"o Auth aceita o redirect_to do nutri. e o 308 leva ao Physiq com o token no # ({chegou[:50]}…)")
             try:
                 pg.wait_for_selector("[data-boas-vindas-nutri]", timeout=20000)
                 p.check(True, "com 'O PhysiqNutri agora é o Physiq' (entrar com o mesmo e-mail e senha)")
