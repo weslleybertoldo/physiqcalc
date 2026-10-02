@@ -196,7 +196,7 @@ export default function AvaliacaoIntegrada() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-avaliacoes-vazio>
             <FolderOpen className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhuma avaliação</p>
-            <p className="text-xs text-texto-2 font-body">Crie agora a primeira avaliação para seu paciente.</p>
+            <p className="text-xs text-texto-2 font-body">Crie agora a primeira avaliação para o seu aluno.</p>
             <button type="button" onClick={() => setModal({ aberto: true, avaliacao: null })} className={BTN_SEC} data-btn-primeira-avaliacao>
               Nova avaliação
             </button>
@@ -302,7 +302,7 @@ function ItemAvaliacao({ a, aberta, ocupado, onVer, onEditar, onRegerar, onPdf, 
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <button type="button" onClick={onVer} className={BTN_MINI} data-btn-ver-avaliacao>
+          <button type="button" onClick={onVer} className={BTN_MINI} data-leitura data-btn-ver-avaliacao>
             {aberta ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberta ? "Ocultar" : "Ver"}
           </button>
           <button type="button" onClick={onEditar} className={BTN_MINI} data-btn-editar-avaliacao>
@@ -311,7 +311,7 @@ function ItemAvaliacao({ a, aberta, ocupado, onVer, onEditar, onRegerar, onPdf, 
           <button type="button" onClick={onRegerar} className={BTN_MINI} disabled={ocupado} title="Refazer a síntese com as fontes de agora (o parecer fica)" data-btn-regerar-avaliacao>
             <RefreshCw size={12} aria-hidden="true" /> Regerar síntese
           </button>
-          <button type="button" onClick={onPdf} className={BTN_MINI} data-btn-pdf-avaliacao>
+          <button type="button" onClick={onPdf} className={BTN_MINI} data-leitura data-btn-pdf-avaliacao>
             <FileDown size={12} aria-hidden="true" /> PDF
           </button>
           <button type="button" onClick={onExcluir} className={BTN_MINI_PERIGO} disabled={ocupado} data-btn-excluir-avaliacao>

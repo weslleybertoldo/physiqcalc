@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  REGRAS_PADRAO, consultasPorSemana, confirmacaoDe, gerarICS, iniciosDoDia, janelaDoReagendamento, mensagemDesistir, mensagemReagendar,
+  REGRAS_PADRAO, consultasPorSemana, confirmacaoDe, gerarICS, iniciosDoDia, intervaloDoMes, janelaDoReagendamento, janelaPorMes, mensagemDesistir,
+  mensagemReagendar, mesPorExtenso, navegacaoDoMes,
   nomeArquivoICS, normalizarRegras, numerosDaAgenda, periodoDoPacote, resumoDasRegras, rotuloSemana, somarMeses, textoDias, textoHojePorTipo,
   textoPacote, textoSlotsPorDia, textoTrava, tipoPadrao, travasDoDia, ultimoDiaDoMes, type ContextoConsulta, type PacoteSituacao,
   ROTULO_MES_PACOTE, mesUsado,
@@ -61,8 +62,10 @@ describe("janela do reagendamento (as 3 opções do pedido)", () => {
     expect(janelaDoReagendamento("mes_seguinte", "2026-10-01", "2026-10-30")).toEqual({ de: "2026-10-30", ate: "2026-11-30" });
     expect(janelaDoReagendamento("mes_seguinte", "2026-12-01", "2026-12-02")).toEqual({ de: "2026-12-02", ate: "2027-01-31" });
   });
-  it("sem trava: qualquer mês (até 6 meses à frente)", () => {
-    expect(janelaDoReagendamento("livre", "2026-10-01", "2026-10-07")).toEqual({ de: "2026-10-07", ate: "2027-04-05" });
+  it("sem trava: qualquer mês, sem fim (H5 — N-11, regra dele de 01/10; antes parava em 180 dias)", () => {
+    expect(janelaDoReagendamento("livre", "2026-10-01", "2026-10-07")).toEqual({ de: "2026-10-07", ate: null });
+    // a consulta de um mês passado: a janela começa hoje e continua sem fim
+    expect(janelaDoReagendamento("livre", "2026-08-01", "2026-10-07")).toEqual({ de: "2026-10-07", ate: null });
   });
   it("datas", () => {
     expect(somarMeses("2026-12-01", 1)).toBe("2027-01-01");
@@ -193,5 +196,32 @@ describe(".ics (N-66)", () => {
     expect(ics).toContain("STATUS:CANCELLED");
     expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
     expect(nomeArquivoICS(new Date("2026-10-01T12:00:00Z"))).toBe("agenda-physiq-2026-10-01.ics");
+  });
+});
+
+describe("H5 — a janela mês a mês (sem trava = qualquer mês; pacote de vários meses)", () => {
+  it("só pagina quando a janela não cabe num pedido (62 dias) ou não tem fim", () => {
+    expect(janelaPorMes({ de: "2026-10-07", ate: null })).toBe(true);
+    expect(janelaPorMes({ de: "2026-10-07", ate: "2026-10-31" })).toBe(false);
+    expect(janelaPorMes({ de: "2026-10-02", ate: "2026-11-30" })).toBe(false); // mês seguinte: 59 dias, uma lista só (como hoje)
+    expect(janelaPorMes({ de: "2026-10-01", ate: "2026-12-02" })).toBe(false); // 62 dias: ainda cabe
+    expect(janelaPorMes({ de: "2026-10-01", ate: "2026-12-03" })).toBe(true); // pacote de 3 meses
+    expect(janelaPorMes(null)).toBe(false);
+  });
+  it("o mês pedido é cortado pela janela (nunca antes do início nem depois do fim)", () => {
+    expect(intervaloDoMes("2026-10-01", { de: "2026-10-07", ate: null })).toEqual({ de: "2026-10-07", ate: "2026-10-31" });
+    expect(intervaloDoMes("2027-02-01", { de: "2026-10-07", ate: null })).toEqual({ de: "2027-02-01", ate: "2027-02-28" });
+    expect(intervaloDoMes("2026-12-01", { de: "2026-10-01", ate: "2026-12-15" })).toEqual({ de: "2026-12-01", ate: "2026-12-15" });
+  });
+  it("as setas: volta até o mês do início; sem fim, sempre há o próximo (anos à frente também)", () => {
+    const livre = { de: "2026-10-07", ate: null };
+    expect(navegacaoDoMes("2026-10-01", livre)).toEqual({ anterior: null, proximo: "2026-11-01" });
+    expect(navegacaoDoMes("2026-11-01", livre)).toEqual({ anterior: "2026-10-01", proximo: "2026-12-01" });
+    expect(navegacaoDoMes("2029-12-01", livre)).toEqual({ anterior: "2029-11-01", proximo: "2030-01-01" });
+    expect(navegacaoDoMes("2026-12-01", { de: "2026-10-01", ate: "2026-12-31" })).toEqual({ anterior: "2026-11-01", proximo: null });
+  });
+  it("o nome do mês", () => {
+    expect(mesPorExtenso("2026-10-01")).toBe("outubro de 2026");
+    expect(mesPorExtenso("2027-03-15")).toBe("março de 2027");
   });
 });

@@ -39,7 +39,7 @@ export const IMPRESSOS: Impresso[] = [
   {
     id: "ficha-antropometrica",
     titulo: "Ficha de avaliação antropométrica",
-    descricao: "Peso, altura, IMC, circunferências e dobras cutâneas em 3 colunas de data pra acompanhar a evolução do paciente.",
+    descricao: "Peso, altura, IMC, circunferências e dobras cutâneas em 3 colunas de data pra acompanhar a evolução do aluno.",
     categoria: "avaliacao",
     paginas: 1,
   },

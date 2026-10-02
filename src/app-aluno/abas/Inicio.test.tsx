@@ -365,3 +365,31 @@ describe("aba Início (W12 — tela 1)", () => {
     await waitFor(() => expect(screen.getByTestId("rota").textContent).toBe("/dieta?ver=refeicao&r=r2"));
   });
 });
+
+describe("H5 — N-48: o atalho do diário no Início (pendência da W12)", () => {
+  it("com nutricionista e o diário ligado: 'Foto pro diário' abre a folha do diário da aba Dieta; tocar no card abre a Dieta", async () => {
+    abrir();
+    const atalho = await screen.findByRole("button", { name: "Foto pro diário" });
+    expect(card('data-card-dieta-hoje="plano"')).not.toBeNull();
+    fireEvent.click(atalho);
+    await waitFor(() => expect(screen.getByTestId("rota").textContent).toBe("/dieta?ver=diario"));
+  });
+  it("o card continua abrindo a aba Dieta (a camada do card)", async () => {
+    abrir();
+    await screen.findByRole("button", { name: "Foto pro diário" });
+    fireEvent.click(screen.getByRole("button", { name: "Abrir a dieta" }));
+    await waitFor(() => expect(screen.getByTestId("rota").textContent).toBe("/dieta"));
+  });
+  it("diário desligado pelo profissional (R12): sem o atalho", async () => {
+    dieta({ ...DADOS_DIETA, matriculas: [{ ...DADOS_DIETA.matriculas[0], diario_alimentar: false }] });
+    abrir();
+    await waitFor(() => expect(card("data-dieta-hoje-kcal")).not.toBeNull());
+    expect(screen.queryByRole("button", { name: "Foto pro diário" })).toBeNull();
+  });
+  it("sem nutricionista (pratos prontos do app): sem o atalho", async () => {
+    dieta({ ...DADOS_DIETA, matriculas: [] });
+    abrir();
+    await waitFor(() => expect(card("data-card-dieta-hoje")).not.toBeNull());
+    expect(screen.queryByRole("button", { name: "Foto pro diário" })).toBeNull();
+  });
+});

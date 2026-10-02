@@ -187,10 +187,10 @@ export default function Questionarios() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => alternarDetalhe(a.id)} className={BTN_MINI} aria-expanded={aberto} data-btn-ver-aplicacao>
+                      <button type="button" onClick={() => alternarDetalhe(a.id)} className={BTN_MINI} aria-expanded={aberto} data-leitura data-btn-ver-aplicacao>
                         {aberto ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberto ? "Fechar" : "Ver"}
                       </button>
-                      <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-btn-pdf-aplicacao>
+                      <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-aplicacao>
                         <FileDown size={12} aria-hidden="true" /> PDF
                       </button>
                       <button type="button" onClick={() => setModalAplicacao({ aberto: true, aplicacao: a })} className={BTN_MINI} data-btn-editar-aplicacao>

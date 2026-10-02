@@ -341,10 +341,10 @@ export default function FarmacoNutrientes() {
                         <p className="text-xs text-texto-2 font-body" data-analise-resumo>{textoAnalise(a)}</p>
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <button type="button" onClick={() => setModalAnalise({ aberto: true, modo: "ver", analise: a })} className={BTN_MINI} data-btn-ver-analise>
+                        <button type="button" onClick={() => setModalAnalise({ aberto: true, modo: "ver", analise: a })} className={BTN_MINI} data-leitura data-btn-ver-analise>
                           <Eye size={12} aria-hidden="true" /> Ver
                         </button>
-                        <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-btn-pdf-analise>
+                        <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-analise>
                           <FileDown size={12} aria-hidden="true" /> PDF
                         </button>
                         <button type="button" onClick={() => setModalAnalise({ aberto: true, modo: "editar", analise: a })} className={BTN_MINI} data-btn-editar-analise>

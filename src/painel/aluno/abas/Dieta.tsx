@@ -17,6 +17,7 @@ import Suplementos from "@/nutricao/editor/secoes/Suplementos";
 import { ConcluidasDoPeriodo } from "@/nutricao/editor/ui/ConcluidasDoPeriodo";
 import { PacienteProvider } from "@/nutricao/editor/ui/contexto";
 import { cn } from "@/lib/utils";
+import { SomenteLeitura } from "@/nutricao/editor/ui/SomenteLeitura";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 
 function Secao({ secao }: { secao: SecaoDieta }) {
@@ -121,9 +122,9 @@ export default function Dieta({ alunoId }: { alunoId: string }) {
             {acesso === "so-plano" && <AdesaoDoPlano pacienteId={perfil.paciente_id} />}
           </>
         ) : acesso === "ver" ? (
-          <fieldset disabled className="min-w-0" data-dieta-leitura>
+          <SomenteLeitura data-dieta-leitura>
             <Secao secao={secao} />
-          </fieldset>
+          </SomenteLeitura>
         ) : (
           <Secao secao={secao} />
         )}

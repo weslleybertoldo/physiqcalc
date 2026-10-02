@@ -1,8 +1,7 @@
 // Physiq W20 — as folhas da Perfil › Agenda: Reagendar (a mensagem clara no topo, montada pelas regras — pedido dele — e então
 // o dia e 1 horário), Desistir (o aviso do que ele perde e a confirmação) e Marcar a consulta do pacote (1 slot).
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CalendarCheck, CalendarX2, Info, Repeat } from "lucide-react";
+import { CalendarCheck, CalendarX2, ChevronLeft, ChevronRight, Info, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { diaSP, hojeSP, mensagemDesistir, mensagemReagendar, mesDe, periodoDoPacote, quandoConsulta, textoPacote, type PacoteSituacao, type RegrasAgenda } from "@/agenda/regras";
 import { MensagemForm } from "@/entrada/pecas/Campo";
@@ -13,6 +12,7 @@ import {
   type ProfissionalDaAgenda,
 } from "./api";
 import { EscolherHorario } from "./EscolherHorario";
+import { useHorariosPorMes, type HorariosDaFolha } from "./horariosPorMes";
 
 export interface ContextoDaConsulta {
   regras: RegrasAgenda;
@@ -31,6 +31,36 @@ function Aviso({ tom, titulo, texto, marca }: { tom: "ambar" | "rosa" | "violeta
         {titulo && <b className={`block text-[13px] font-semibold ${cor[2]}`}>{titulo}</b>}
         <p className="text-[13px] leading-relaxed text-texto">{texto}</p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A lista de horários da folha. Janela que não cabe num pedido (H5: "sem trava" = qualquer mês; pacote de vários meses): ‹ mês ›
+ * em cima e os horários daquele mês; mudar de mês limpa o horário escolhido.
+ */
+function HorariosDaJanela({ h, valor, aoEscolher }: { h: HorariosDaFolha; valor: string | null; aoEscolher: (inicio: string | null) => void }) {
+  const m = h.mes;
+  if (!m) return <EscolherHorario horarios={h.horarios} carregando={h.carregando} erro={h.erro} valor={valor} aoEscolher={aoEscolher} />;
+  const ir = (mes: string | null) => {
+    if (!mes) return;
+    aoEscolher(null);
+    m.ir(mes);
+  };
+  const seta = "flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-linha-2 bg-[rgba(255,255,255,.04)] text-texto transition-colors disabled:opacity-30";
+  return (
+    <div className="flex flex-col gap-3" data-horarios-por-mes={m.mes}>
+      <div className="flex items-center gap-2" data-navegar-mes>
+        <button type="button" className={seta} onClick={() => ir(m.anterior)} disabled={!m.anterior} aria-label="Mês anterior" data-mes-anterior>
+          <ChevronLeft aria-hidden className="h-4 w-4" />
+        </button>
+        <b className="min-w-0 flex-1 text-center text-[14px] font-semibold text-texto" data-mes-rotulo>{m.rotulo.charAt(0).toUpperCase() + m.rotulo.slice(1)}</b>
+        <button type="button" className={seta} onClick={() => ir(m.proximo)} disabled={!m.proximo} aria-label="Próximo mês" data-mes-proximo>
+          <ChevronRight aria-hidden className="h-4 w-4" />
+        </button>
+      </div>
+      <EscolherHorario horarios={h.horarios} carregando={h.carregando} erro={h.erro} valor={valor} aoEscolher={aoEscolher}
+        textoVazio={`Nenhum horário livre em ${m.rotulo.split(" de ")[0]}.${m.proximo ? " Veja o próximo mês." : ""}`} />
     </div>
   );
 }
@@ -56,13 +86,8 @@ export function SheetReagendar({ consulta, contexto, aberto, aoMudar, aoFeito }:
   const msg = consulta && contexto
     ? mensagemReagendar({ regras: contexto.regras, reagendamentos: consulta.reagendamentos ?? 0, mesRef: mesDaConsulta(consulta), hoje: hojeSP(), inicio: consulta.inicio, profissional: contexto.profissional, pacote: contexto.pacote })
     : null;
-  const q = useQuery({
-    queryKey: ["agenda-aluno-horarios", "reagendar", consulta?.id ?? ""],
-    queryFn: () => horariosParaReagendar(consulta!.id),
-    enabled: aberto && !!consulta && !!msg?.pode,
-    staleTime: 10_000,
-    retry: 1,
-  });
+  const h = useHorariosPorMes(["agenda-aluno-horarios", "reagendar", consulta?.id ?? ""], (de, ate) => horariosParaReagendar(consulta!.id, de, ate),
+    aberto && !!consulta && !!msg?.pode);
 
   const reagendar = async () => {
     if (!consulta || !escolhido) return;
@@ -75,7 +100,7 @@ export function SheetReagendar({ consulta, contexto, aberto, aoMudar, aoFeito }:
       aoMudar(false);
     } catch (e) {
       setErro(mensagemErroAgenda(e));
-      void q.refetch();
+      h.recarregar();
     } finally {
       setEnviando(false);
     }
@@ -89,7 +114,7 @@ export function SheetReagendar({ consulta, contexto, aberto, aoMudar, aoFeito }:
           <p className="text-[12.5px] text-texto-2">Está marcada para <b className="text-texto">{quandoConsulta(consulta.inicio)}</b>.</p>
           {msg.pode && (
             <>
-              <EscolherHorario horarios={q.data?.horarios ?? []} carregando={q.isLoading} erro={q.isError ? mensagemErroAgenda(q.error) : null} valor={escolhido} aoEscolher={setEscolhido} />
+              <HorariosDaJanela h={h} valor={escolhido} aoEscolher={setEscolhido} />
               {erro && <MensagemForm data-reagendar-erro>{erro}</MensagemForm>}
               <Botao variante="w" icone={Repeat} disabled={!escolhido || enviando} onClick={() => void reagendar()} data-reagendar-confirmar>
                 {enviando ? "Reagendando…" : escolhido ? `Reagendar para ${quandoConsulta(escolhido)}` : "Escolha o novo horário"}
@@ -168,13 +193,8 @@ export function SheetMarcar({ prof, aberto, aoMudar, aoFeito }: {
       setErro("");
     }
   }, [aberto, prof?.profissional_id]);
-  const q = useQuery({
-    queryKey: ["agenda-aluno-horarios", "marcar", prof?.profissional_id ?? ""],
-    queryFn: () => horariosParaMarcar(prof!.profissional_id),
-    enabled: aberto && !!prof,
-    staleTime: 10_000,
-    retry: 1,
-  });
+  const h = useHorariosPorMes(["agenda-aluno-horarios", "marcar", prof?.profissional_id ?? ""], (de, ate) => horariosParaMarcar(prof!.profissional_id, de, ate),
+    aberto && !!prof);
 
   const marcar = async () => {
     if (!prof || !escolhido) return;
@@ -187,7 +207,7 @@ export function SheetMarcar({ prof, aberto, aoMudar, aoFeito }: {
       aoMudar(false);
     } catch (e) {
       setErro(mensagemErroAgenda(e));
-      void q.refetch();
+      h.recarregar();
     } finally {
       setEnviando(false);
     }
@@ -200,7 +220,7 @@ export function SheetMarcar({ prof, aberto, aoMudar, aoFeito }: {
         <div className="flex flex-col gap-4 pt-1" data-sheet-marcar={prof.profissional_id}>
           <Aviso tom="violeta" marca="mensagem-marcar"
             texto={`${p ? `${textoPacote(p)} com ${prof.profissional ?? "o seu profissional"} (${periodoDoPacote(p)}). ` : ""}Escolha 1 horário: a consulta do mês fica marcada e ${prof.profissional ?? "o profissional"} é avisado.`} />
-          <EscolherHorario horarios={q.data?.horarios ?? []} carregando={q.isLoading} erro={q.isError ? mensagemErroAgenda(q.error) : null} valor={escolhido} aoEscolher={setEscolhido} />
+          <HorariosDaJanela h={h} valor={escolhido} aoEscolher={setEscolhido} />
           {erro && <MensagemForm data-marcar-erro>{erro}</MensagemForm>}
           <Botao variante="w" icone={CalendarCheck} disabled={!escolhido || enviando} onClick={() => void marcar()} data-marcar-confirmar>
             {enviando ? "Marcando…" : escolhido ? `Marcar ${quandoConsulta(escolhido)}` : "Escolha o horário"}

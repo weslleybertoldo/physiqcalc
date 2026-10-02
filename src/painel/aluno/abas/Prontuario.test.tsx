@@ -117,7 +117,8 @@ describe("W18 — aba Prontuário por papel (spec 4.1)", () => {
     h.perfil.mockResolvedValue(perfil({ eu: eu({ id: "u1", personal: true, nutricionista: true }) }));
     montar(<Prontuario alunoId="p1" />, "/painel/alunos/p1/prontuario?secao=exames");
     expect(await screen.findByText(/quem muda é a nutricionista responsável \(Camila Rocha\)/)).toBeInTheDocument();
-    expect(document.querySelector("fieldset[disabled][data-prontuario-leitura]")).not.toBeNull();
+    // H5: o modo só leitura não desliga mais o que é de LER (PDF, Ver, Baixar) — só o que grava
+    expect(document.querySelector("[data-somente-leitura][data-prontuario-leitura]")).not.toBeNull();
   });
 });
 

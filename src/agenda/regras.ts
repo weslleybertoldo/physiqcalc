@@ -143,13 +143,61 @@ export function somarDias(dia: string, n: number): string {
   return x.toISOString().slice(0, 10);
 }
 
-/** A janela do reagendamento (a mesma do banco, w20_janela): nunca antes de hoje nem do mês da consulta, exceto "sem trava". */
-export function janelaDoReagendamento(janela: Janela, mesRef: string, hoje: string): { de: string; ate: string } {
+/** O prazo em que o aluno escolhe a data: `ate` null = sem fim ("Sem trava", H5 — qualquer mês). */
+export interface JanelaDatas {
+  de: string;
+  ate: string | null;
+}
+
+/**
+ * A janela do reagendamento (a mesma do banco, w20_janela): nunca antes de hoje nem do mês da consulta, exceto "sem trava".
+ * H5 (N-11, regra dele de 01/10: "sem trava o usuário poderá marcar em qualquer mês"): "sem trava" não tem mais fim (era hoje + 180).
+ */
+export function janelaDoReagendamento(janela: Janela, mesRef: string, hoje: string): JanelaDatas {
   const mes = mesDe(mesRef);
-  if (janela === "livre") return { de: hoje, ate: somarDias(hoje, 180) };
+  if (janela === "livre") return { de: hoje, ate: null };
   const de = hoje > mes ? hoje : mes;
   return { de, ate: janela === "mes_seguinte" ? ultimoDiaDoMes(somarMeses(mes, 1)) : ultimoDiaDoMes(mes) };
 }
+
+/** Quantos dias o banco devolve por pedido (aluno_agenda_horarios: de + 62 — o motor de slots trabalha em até 63 dias). */
+export const DIAS_POR_PEDIDO = 62;
+
+function diasEntre(de: string, ate: string): number {
+  const [a1, m1, d1] = de.split("-").map(Number);
+  const [a2, m2, d2] = ate.split("-").map(Number);
+  return Math.round((Date.UTC(a2, m2 - 1, d2) - Date.UTC(a1, m1 - 1, d1)) / 86_400_000);
+}
+
+/**
+ * O app mostra a janela MÊS A MÊS quando ela não cabe num pedido só: "sem trava" (sem fim) ou um pacote de vários meses. As
+ * janelas "só no mês" e "até o fim do mês seguinte" cabem inteiras e continuam numa lista só.
+ */
+export function janelaPorMes(j: JanelaDatas | null | undefined): boolean {
+  if (!j?.de) return false;
+  return j.ate === null || diasEntre(j.de, j.ate) > DIAS_POR_PEDIDO;
+}
+
+/** Os dias que o app pede para um mês ("2026-11-01"): o mês inteiro, cortado pela janela. */
+export function intervaloDoMes(mes: string, j: JanelaDatas): { de: string; ate: string } {
+  const ini = mesDe(mes);
+  const fim = ultimoDiaDoMes(ini);
+  return { de: j.de > ini ? j.de : ini, ate: j.ate !== null && j.ate < fim ? j.ate : fim };
+}
+
+/** As setas ‹ › do mês: até o mês da janela de um lado e, sem fim, para sempre do outro. */
+export function navegacaoDoMes(mes: string, j: JanelaDatas): { anterior: string | null; proximo: string | null } {
+  const atual = mesDe(mes);
+  const primeiro = mesDe(j.de);
+  const ultimo = j.ate === null ? null : mesDe(j.ate);
+  return {
+    anterior: atual > primeiro ? somarMeses(atual, -1) : null,
+    proximo: ultimo === null || atual < ultimo ? somarMeses(atual, 1) : null,
+  };
+}
+
+/** "outubro de 2026" */
+export const mesPorExtenso = (mes: string): string => `${nomeDoMes(mesDe(mes))} de ${mes.slice(0, 4)}`;
 
 // ───────────────────────── pacote de consultas ─────────────────────────
 
@@ -248,17 +296,17 @@ export function mensagemReagendar(c: ContextoConsulta): MensagemAluno {
     const ja = regras.reagendamentos_max === 1 ? "o seu reagendamento" : `os ${regras.reagendamentos_max} reagendamentos`;
     return { pode: false, titulo: "Você já reagendou esta consulta", texto: `Você já usou ${ja} desta consulta. Para mudar a data de novo, fale com ${quem}.` };
   }
-  if (jan.ate < jan.de) {
+  if (jan.ate !== null && jan.ate < jan.de) {
     return { pode: false, titulo: "O prazo para reagendar acabou", texto: `A consulta de ${nome} só pode ser reagendada dentro de ${nome}, e o mês já acabou. Fale com ${quem}.` };
   }
   const ultima = resta === 1;
   let onde: string;
   let perde: string;
   if (regras.janela_reagendamento === "mes") {
-    onde = `neste mês (até ${diaMes(jan.ate)})`;
+    onde = `neste mês (até ${diaMes(jan.ate ?? jan.de)})`;
     perde = `você não terá outra consulta em ${nome}`;
   } else if (regras.janela_reagendamento === "mes_seguinte") {
-    onde = `para uma data até ${diaMes(jan.ate)} (${nome} ou o mês seguinte)`;
+    onde = `para uma data até ${diaMes(jan.ate ?? jan.de)} (${nome} ou o mês seguinte)`;
     perde = `você perde a consulta de ${nome}`;
   } else {
     onde = "para qualquer data";

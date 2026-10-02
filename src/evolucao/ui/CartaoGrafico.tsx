@@ -4,6 +4,22 @@ import { infoMetrica, janelaDoGrafico, rotuloDoPeriodo, type Metrica, type Ponto
 import type { Periodo } from "../tipos";
 import { GraficoLinha } from "./GraficoLinha";
 
+/** A legenda das 2 linhas: a métrica principal (linha cheia) e a 2ª (tracejada), com o de → para de cada uma no período. */
+function LegendaDuasLinhas({ pontos, metrica, segunda }: { pontos: PontoSerie[]; metrica: Metrica; segunda: { pontos: PontoSerie[]; metrica: Metrica; cor: string } }) {
+  const a = infoMetrica(metrica);
+  const b = infoMetrica(segunda.metrica);
+  const deAte = (ps: PontoSerie[], casas: number, un: string) =>
+    ps.length >= 2 ? `${num(ps[0].valor, casas)} → ${num(ps[ps.length - 1].valor, casas)} ${un}` : ps.length === 1 ? `${num(ps[0].valor, casas)} ${un}` : "sem dados no período";
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-texto-2" data-grafico-legenda>
+      <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-[3px] w-4 rounded-full" style={{ background: "var(--p-violeta-2)" }} />{a.rotulo} · {deAte(pontos, a.casas, a.unidade)}</span>
+      <span className="inline-flex items-center gap-1.5" data-grafico-legenda-segunda={segunda.pontos.length}>
+        <i aria-hidden className="h-0 w-4 border-t-2 border-dashed" style={{ borderColor: segunda.cor }} />{b.rotulo} · {deAte(segunda.pontos, b.casas, b.unidade)}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Card do gráfico da tela 4 (borda de luz): "Peso nos últimos 6 meses", "De 90,3 kg pra 84,2 kg", o chip "N avaliações"
  * (abre a tabela) e o balão com o ponto atual. Com menos de 2 valores no período, o card explica em vez do gráfico.
@@ -16,6 +32,7 @@ export function CartaoGrafico({
   contagem,
   aoAbrirTabela,
   textoSemPontos = "As avaliações do período aparecem aqui.",
+  segunda,
 }: {
   pontos: PontoSerie[];
   metrica?: Metrica;
@@ -26,6 +43,11 @@ export function CartaoGrafico({
   aoAbrirTabela?: () => void;
   /** texto quando o período não tem nenhum valor (ex.: "Escolha 1A para ver as anteriores.") */
   textoSemPontos?: string;
+  /**
+   * H5 (painel › Avaliação, achado 9 do FIM-1b): a 2ª métrica no mesmo gráfico (o % de gordura, como no Nutri), com a legenda
+   * embaixo. O app (tela 4) não passa: o gráfico dele fica igual.
+   */
+  segunda?: { pontos: PontoSerie[]; metrica: Metrica; cor: string };
 }) {
   const info = infoMetrica(metrica);
   const primeiro = pontos[0];
@@ -64,8 +86,10 @@ export function CartaoGrafico({
             <span className="block text-[10px] font-medium opacity-70">{dataCurta(ultimo.data)}</span>
           </div>
           <div className="mt-3.5">
-            <GraficoLinha pontos={pontos} janela={janelaDoGrafico(pontos, periodo, hoje)} rotulo={`${info.rotulo} ${rotuloDoPeriodo(periodo)}`} />
+            <GraficoLinha pontos={pontos} janela={janelaDoGrafico(pontos, periodo, hoje)} rotulo={`${info.rotulo} ${rotuloDoPeriodo(periodo)}`}
+              linha2={segunda && segunda.pontos.length >= 2 ? { pontos: segunda.pontos, cor: segunda.cor } : undefined} />
           </div>
+          {segunda && <LegendaDuasLinhas pontos={pontos} metrica={metrica} segunda={segunda} />}
         </>
       ) : (
         <p className="mt-3 pb-1.5 text-[12.5px] leading-relaxed text-texto-2" data-grafico-sem-pontos>

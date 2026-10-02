@@ -78,7 +78,7 @@ export default function ProdutoDialog({ open, onOpenChange, nutricionistaId, pro
           <DialogDescription className="font-body text-texto-2 text-xs">
             {editar
               ? "Muda só o catálogo: as indicações já feitas mantêm nome, marca e apresentação de quando foram indicadas."
-              : "Entra no seu catálogo ('Meus produtos') pra indicar a qualquer paciente."}
+              : "Entra no seu catálogo ('Meus produtos') pra indicar a qualquer aluno."}
           </DialogDescription>
         </DialogHeader>
 

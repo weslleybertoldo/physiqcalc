@@ -16,6 +16,7 @@ import Gestacional from "@/nutricao/prontuario/secoes/Gestacional";
 import Questionarios from "@/nutricao/prontuario/secoes/Questionarios";
 import { ProntuarioProvider } from "@/nutricao/prontuario/ui/contexto";
 import { chavePerfilAluno, usePerfilAluno } from "@/painel/aluno/dados/usePerfilAluno";
+import { SomenteLeitura } from "@/nutricao/editor/ui/SomenteLeitura";
 import { EstadoCarregando, EstadoErro } from "@/ui/premium/Estados";
 
 function SecaoClinica({ secao }: { secao: SecaoProntuario }) {
@@ -125,9 +126,9 @@ export default function Prontuario({ alunoId }: { alunoId: string }) {
         ) : acesso.editarClinico ? (
           <SecaoClinica secao={secao} />
         ) : (
-          <fieldset disabled className="min-w-0" data-prontuario-leitura>
+          <SomenteLeitura data-prontuario-leitura>
             <SecaoClinica secao={secao} />
-          </fieldset>
+          </SomenteLeitura>
         )}
       </div>
     </ProntuarioProvider>

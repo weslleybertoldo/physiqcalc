@@ -30,8 +30,8 @@ export const DIAS_MAX = 365;
 
 // ---- Tags ----
 export const TAGS_DOCUMENTO: Tag[] = [
-  { tag: "*|NOME_PACIENTE|*", rotulo: "Nome do paciente", exemplo: "Maria da Silva" },
-  { tag: "*|CPF_PACIENTE|*", rotulo: "CPF do paciente", exemplo: "123.456.789-09" },
+  { tag: "*|NOME_PACIENTE|*", rotulo: "Nome do aluno", exemplo: "Maria da Silva" },
+  { tag: "*|CPF_PACIENTE|*", rotulo: "CPF do aluno", exemplo: "123.456.789-09" },
   { tag: "*|DATA_HOJE|*", rotulo: "Data", exemplo: "19/09/2026" },
   { tag: "*|NOME_NUTRICIONISTA|*", rotulo: "Nome da nutricionista", exemplo: "Ana Nutri" },
   { tag: "*|CARIMBO|*", rotulo: "Carimbo", exemplo: CARIMBO_PLACEHOLDER },

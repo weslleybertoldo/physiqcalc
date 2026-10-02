@@ -161,11 +161,11 @@ export default function Acompanhamento() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-[10px] uppercase tracking-wider text-texto-2 font-body space-y-1">
             <span>De</span>
-            <input type="date" className={`${INPUT} min-w-[9.5rem]`} value={mostrado.de} max={hoje} onChange={(e) => aplicarIntervalo(e.target.value, mostrado.ate)} data-intervalo-de />
+            <input type="date" className={`${INPUT} min-w-[9.5rem]`} value={mostrado.de} max={hoje} onChange={(e) => aplicarIntervalo(e.target.value, mostrado.ate)} data-leitura data-intervalo-de />
           </label>
           <label className="text-[10px] uppercase tracking-wider text-texto-2 font-body space-y-1">
             <span>Até</span>
-            <input type="date" className={`${INPUT} min-w-[9.5rem]`} value={mostrado.ate} max={hoje} onChange={(e) => aplicarIntervalo(mostrado.de, e.target.value)} data-intervalo-ate />
+            <input type="date" className={`${INPUT} min-w-[9.5rem]`} value={mostrado.ate} max={hoje} onChange={(e) => aplicarIntervalo(mostrado.de, e.target.value)} data-leitura data-intervalo-ate />
           </label>
           <div className="inline-flex rounded-xl border border-linha bg-superficie p-[3px]" role="group" aria-label="Intervalo rápido">
             {PRESETS_INTERVALO.map((n) => (
@@ -175,7 +175,7 @@ export default function Acompanhamento() {
                 aria-pressed={preset === n}
                 onClick={() => aplicarPreset(n)}
                 className={`${BTN_PRESET} ${preset === n ? BTN_PRESET_ON : BTN_PRESET_OFF}`}
-                data-btn-preset={n}
+                data-leitura data-btn-preset={n}
               >
                 {n} dias
               </button>
@@ -294,7 +294,7 @@ export default function Acompanhamento() {
             </h2>
             <label className="text-[10px] uppercase tracking-wider text-texto-2 font-body flex items-center gap-2">
               <span>Últimos</span>
-              <select className={`${SELECT} w-auto min-w-[4.5rem]`} value={filtroPeso} onChange={(e) => setFiltroPeso(Number(e.target.value))} data-filtro-peso>
+              <select className={`${SELECT} w-auto min-w-[4.5rem]`} value={filtroPeso} onChange={(e) => setFiltroPeso(Number(e.target.value))} data-leitura data-filtro-peso>
                 {PRESETS_PESO.map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
@@ -370,7 +370,7 @@ export default function Acompanhamento() {
         {!carregando && noPeriodo.length === 0 && (
           <div className={`${VAZIO} space-y-1`} data-registros-vazio>
             <p className="text-sm text-texto">Nenhum dia registrado neste intervalo</p>
-            <p>Registre água, sintomas e observações de cada dia pra acompanhar o paciente entre as consultas.</p>
+            <p>Registre água, sintomas e observações de cada dia pra acompanhar o aluno entre as consultas.</p>
           </div>
         )}
         {noPeriodo.length > 0 && (

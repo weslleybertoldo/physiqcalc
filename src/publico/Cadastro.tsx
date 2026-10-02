@@ -9,7 +9,10 @@ import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { EstadoCarregando, EstadoVazio } from "@/ui/premium/Estados";
-import { MENSAGEM_CADASTRO_EXISTE } from "@/nucleo/dadoRepetido";
+import {
+  APELIDO_MAX, EMAIL_MAX, FORM_VAZIO, MENSAGEM, MENSAGEM_EXISTE, NOME_MAX, OBSERVACOES_MAX, camposRepetidos, dadosDoCadastro, formatarCPF, problemaDoCadastro,
+  type CampoUnico, type FormCadastro,
+} from "./cadastro/regras";
 
 interface InfoLink {
   ok: boolean;
@@ -19,19 +22,22 @@ interface InfoLink {
   erro?: string;
 }
 
-const MENSAGEM: Record<string, string> = {
-  nome_invalido: "Escreva o seu nome.",
-  contato_obrigatorio: "Deixe um e-mail ou um telefone para o profissional falar com você.",
-  email_invalido: "Confira o e-mail.",
-  telefone_invalido: "O telefone precisa ter DDD e 8 ou 9 números.",
-  nascimento_invalido: "Confira a data de nascimento.",
-  genero_invalido: "Escolha uma opção de gênero.",
-  cadastro_repetido: "Você já mandou um cadastro para este profissional. Espere a aprovação.",
-  muitos_cadastros: "Muitos cadastros agora. Tente de novo em alguns minutos.",
-  captcha_invalido: "Não deu para confirmar que é você. Tente de novo.",
-  link_nao_encontrado: "Este link de cadastro não vale mais. Peça outro ao seu profissional.",
-  conta_real_no_staging: "Este é o ambiente de teste: só e-mails de teste.",
-};
+/** O que acontece depois do envio, pelo contato que a pessoa deixou (só o nome é obrigatório). */
+function textoDepois(f: FormCadastro): string {
+  const email = !!f.email.trim();
+  const tel = !!f.telefone.trim();
+  if (email && tel) return "Depois é só entrar no Physiq com o seu e-mail — ou esperar o contato pelo telefone que você deixou.";
+  if (email) return "Depois é só entrar no Physiq com o seu e-mail.";
+  if (tel) return "Depois é só esperar o contato pelo telefone que você deixou.";
+  return "Depois é só esperar o contato do profissional.";
+}
+
+/** O erro da função alunos: o código e, na trava de e-mail/CPF (W16b + H5), os campos repetidos. */
+class ErroCadastro extends Error {
+  constructor(public codigo: string, public campos?: unknown) {
+    super(codigo);
+  }
+}
 
 async function chamar<T>(corpo: Record<string, unknown>): Promise<T> {
   const { data, error } = await principal.functions.invoke("alunos", { body: corpo });
@@ -43,15 +49,16 @@ async function chamar<T>(corpo: Record<string, unknown>): Promise<T> {
     } catch {
       c = null;
     }
-    throw new Error(String(c?.erro ?? "erro_interno"));
+    throw new ErroCadastro(String(c?.erro ?? "erro_interno"), c?.campos);
   }
   return data as T;
 }
 
 /**
- * /c/:codigo (N-57, spec 4.8): o auto-cadastro pelo link do profissional. A pessoa preenche nome e contato; o cadastro fica
- * PENDENTE em Alunos › Pendentes até o profissional aprovar (dentro do limite do plano). Sem login; o captcha invisível
- * (Turnstile, o mesmo da W8b) é conferido no servidor.
+ * /c/:codigo (N-57, spec 4.8): o auto-cadastro pelo link do profissional. O cadastro fica PENDENTE em Alunos › Pendentes até o
+ * profissional aprovar (dentro do limite do plano). Sem login; o captcha invisível (Turnstile, o mesmo da W8b) é conferido no
+ * servidor. H5 (DN-6): os campos do Nutri voltaram (apelido e CPF); só o nome é obrigatório, como lá; e-mail ou CPF que já é de um
+ * aluno → a frase vermelha embaixo do campo (a trava de e-mail e CPF únicos da W16b, que agora vale também para o CPF daqui).
  */
 export default function Cadastro() {
   const { codigo = "" } = useParams();
@@ -62,41 +69,42 @@ export default function Cadastro() {
     staleTime: Infinity,
   });
   const captcha = useCaptcha("cadastro");
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [nascimento, setNascimento] = useState("");
-  const [genero, setGenero] = useState("");
-  const [obs, setObs] = useState("");
+  const [f, setF] = useState<FormCadastro>(FORM_VAZIO);
   const [erro, setErro] = useState("");
-  // W16b: o e-mail já é de um aluno (em qualquer conta) → mensagem vermelha embaixo do campo (sem dizer de quem)
-  const [emailExiste, setEmailExiste] = useState(false);
+  // W16b + H5: o e-mail ou o CPF já é de um aluno (em qualquer conta) → mensagem vermelha embaixo do campo (sem dizer de quem)
+  const [repetidos, setRepetidos] = useState<CampoUnico[]>([]);
   const [indo, setIndo] = useState(false);
   const [feito, setFeito] = useState(false);
+  const muda = <K extends keyof FormCadastro>(k: K, v: FormCadastro[K]) => {
+    setF((x) => ({ ...x, [k]: v }));
+    if (erro) setErro("");
+    // mexeu no campo que a trava recusou → o aviso some até o próximo envio
+    if (k === "email" || k === "cpf") setRepetidos((r) => r.filter((c) => c !== k));
+  };
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
-    if (nome.trim().length < 2) return setErro(MENSAGEM.nome_invalido);
-    if (!email.trim() && !telefone.trim()) return setErro(MENSAGEM.contato_obrigatorio);
+    const problema = problemaDoCadastro(f);
+    if (problema) return setErro(MENSAGEM[problema] ?? "Confira os dados.");
     setIndo(true);
     setErro("");
+    setRepetidos([]);
     try {
       const token = await captcha.obterToken();
-      await chamar({
-        acao: "cadastro_enviar", codigo, captcha: token,
-        dados: { nome: nome.trim(), email: email.trim(), telefone: telefone.trim(), nascimento, genero, observacoes: obs.trim() },
-      });
+      await chamar({ acao: "cadastro_enviar", codigo, captcha: token, dados: dadosDoCadastro(f) });
       captcha.usado();
       setFeito(true);
     } catch (err) {
       captcha.usado();
-      const codigo = (err as Error).message;
-      if (codigo === "cadastro_email_existe") setEmailExiste(true);
-      else setErro(MENSAGEM[codigo] ?? "Não deu certo agora. Tente de novo.");
+      const cod = err instanceof ErroCadastro ? err.codigo : "erro_interno";
+      const campos = camposRepetidos(cod, err instanceof ErroCadastro ? err.campos : undefined);
+      if (campos.length) setRepetidos(campos);
+      else setErro(MENSAGEM[cod] ?? "Não deu certo agora. Tente de novo.");
     } finally {
       setIndo(false);
     }
   };
+  const erroDo = (c: CampoUnico) => (repetidos.includes(c) ? MENSAGEM_EXISTE[c] : undefined);
 
   const casca = (conteudo: React.ReactNode) => (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-8 sm:py-12" data-pagina-cadastro={codigo}>
@@ -119,8 +127,7 @@ export default function Cadastro() {
         </span>
         <h1 className="font-body text-[19px] font-semibold normal-case tracking-[-0.02em] text-texto">Cadastro enviado</h1>
         <p className="text-[13.5px] leading-relaxed text-texto-2">
-          {d.profissional} vai conferir os seus dados e aprovar. Depois é só entrar no Physiq com o seu e-mail — ou esperar o contato
-          {telefone.trim() ? " pelo telefone que você deixou" : ""}.
+          {d.profissional} vai conferir os seus dados e aprovar. {textoDepois(f)}
         </p>
       </Cartao>,
     );
@@ -139,17 +146,22 @@ export default function Cadastro() {
         <form onSubmit={(e) => void enviar(e)} className="flex flex-col gap-3.5" data-form-cadastro-publico>
           <div className="flex items-center gap-2">
             <ClipboardList aria-hidden className="h-4 w-4 text-texto-3" />
-            <p className="text-[13px] text-texto-2">Preencha os seus dados. O cadastro fica pendente até o profissional aprovar.</p>
+            <p className="text-[13px] text-texto-2" data-cad-so-nome>Preencha os seus dados — só o nome é obrigatório. O cadastro fica pendente até o profissional aprovar.</p>
           </div>
-          <Campo rotulo="Nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome e sobrenome" autoComplete="name" data-cad-nome />
-          <Campo rotulo="E-mail" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailExiste(false); }} placeholder="seu@email.com"
-            autoComplete="email" data-cad-email erro={emailExiste ? MENSAGEM_CADASTRO_EXISTE : undefined} />
-          <Campo rotulo="Telefone" inputMode="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(82) 99999-0000" autoComplete="tel" data-cad-telefone />
+          <Campo rotulo="Nome" value={f.nome} maxLength={NOME_MAX} onChange={(e) => muda("nome", e.target.value)} placeholder="Nome e sobrenome" autoComplete="name" data-cad-nome />
+          <Campo rotulo="Como prefere ser chamado(a)" value={f.apelido} maxLength={APELIDO_MAX} onChange={(e) => muda("apelido", e.target.value)} autoComplete="nickname" data-cad-apelido />
+          <Campo rotulo="E-mail" type="email" value={f.email} maxLength={EMAIL_MAX} onChange={(e) => muda("email", e.target.value)} placeholder="seu@email.com"
+            autoComplete="email" data-cad-email erro={erroDo("email")} />
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            <Campo rotulo="Telefone" inputMode="tel" value={f.telefone} onChange={(e) => muda("telefone", e.target.value)} placeholder="(82) 99999-0000" autoComplete="tel" data-cad-telefone />
+            <Campo rotulo="CPF" inputMode="numeric" value={f.cpf} onChange={(e) => muda("cpf", formatarCPF(e.target.value))} placeholder="000.000.000-00" autoComplete="off"
+              data-cad-cpf erro={erroDo("cpf")} />
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <Campo rotulo="Nascimento" type="date" value={nascimento} onChange={(e) => setNascimento(e.target.value)} data-cad-nascimento />
+            <Campo rotulo="Nascimento" type="date" value={f.nascimento} onChange={(e) => muda("nascimento", e.target.value)} data-cad-nascimento />
             <label className="flex flex-col gap-1.5">
               <span className="text-[12.5px] font-semibold text-texto-2">Gênero</span>
-              <select value={genero} onChange={(e) => setGenero(e.target.value)} data-cad-genero
+              <select value={f.genero} onChange={(e) => muda("genero", e.target.value)} data-cad-genero
                 className="h-12 w-full rounded-[14px] border border-linha-2 bg-superficie px-3.5 text-[15px] text-texto outline-none focus:border-violeta/60 [&>option]:bg-tela [&>option]:text-texto">
                 <option value="">Não informar</option>
                 <option value="feminino">Feminino</option>
@@ -160,7 +172,7 @@ export default function Cadastro() {
           </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-[12.5px] font-semibold text-texto-2">Algo que o profissional precisa saber (opcional)</span>
-            <textarea value={obs} maxLength={2000} onChange={(e) => setObs(e.target.value)} placeholder="Objetivo, lesões, horários…" data-cad-obs
+            <textarea value={f.observacoes} maxLength={OBSERVACOES_MAX} onChange={(e) => muda("observacoes", e.target.value)} placeholder="Objetivo, lesões, horários…" data-cad-obs
               className="min-h-[88px] w-full rounded-[14px] border border-linha-2 bg-superficie px-4 py-3 text-[14px] text-texto outline-none placeholder:text-texto-4 focus:border-violeta/60" />
           </label>
           {/* captcha invisível (Turnstile): a caixinha só aparece se o Cloudflare pedir a confirmação */}

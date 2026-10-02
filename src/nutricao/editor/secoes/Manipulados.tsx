@@ -13,7 +13,7 @@ import ModelosFormulaDialog from "@/nutricao/editor/ui/ModelosFormulaDialog";
 import { useAuth } from "@/nutricao/editor/ui/contexto";
 import type { DadosProfissionais } from "@/nutricao/editor/lib/profissional";
 import {
-  dadosProfissionais, duplicarFormula, excluirFormula, garantirModelosFormula, listarFormulasDoPaciente, nomeDaNutricionista, salvarComoModelo, type Formula,
+  dadosProfissionais, duplicarFormula, excluirFormula, garantirModelosFormula, listarModelosFormula, listarFormulasDoPaciente, nomeDaNutricionista, salvarComoModelo, type Formula,
 } from "@/nutricao/editor/lib/manipulados";
 import { baixarPDFFormula, baixarPDFFormulas } from "@/nutricao/editor/lib/manipuladosPdf";
 import { contarAtivos, inserirFormula, lerAtivos, ordenarFormulas, textoAtivo, textoContagemAtivos, textoContagemFormulas, textoPrescritaEm } from "@/nutricao/editor/lib/manipuladosUtil";
@@ -43,7 +43,8 @@ export default function Manipulados() {
 
   const chave = useMemo(() => ["formulas-paciente", p.id], [p.id]);
   const formulasQ = useQuery({ queryKey: chave, queryFn: () => listarFormulasDoPaciente(p.id) });
-  const modelosQ = useQuery({ queryKey: ["modelos-formula", uid], queryFn: () => garantirModelosFormula(uid!), enabled: !!uid });
+  // H5 (item 10): quem só lê não cria os modelos padrão (gravar é da nutri — RLS da W3)
+  const modelosQ = useQuery({ queryKey: ["modelos-formula", uid, podeEditar], queryFn: () => (podeEditar ? garantirModelosFormula(uid!) : listarModelosFormula()), enabled: !!uid });
 
   const formulas = useMemo(() => ordenarFormulas(formulasQ.data ?? []), [formulasQ.data]);
   const modelos = useMemo(() => modelosQ.data ?? [], [modelosQ.data]);
@@ -156,7 +157,7 @@ export default function Manipulados() {
             <button type="button" onClick={() => setModelosAberto(true)} className={BTN_SEC} disabled={carregando} data-btn-modelos-formula>
               <Star className="h-3.5 w-3.5" aria-hidden="true" /> Modelos
             </button>
-            <button type="button" onClick={pdfGlobal} className={BTN_SEC} disabled={carregando || formulas.length === 0} title={formulas.length === 0 ? "Nenhuma fórmula pra imprimir" : "PDF com todas as fórmulas, uma por página"} data-btn-pdf-global>
+            <button type="button" onClick={pdfGlobal} className={BTN_SEC} disabled={carregando || formulas.length === 0} title={formulas.length === 0 ? "Nenhuma fórmula pra imprimir" : "PDF com todas as fórmulas, uma por página"} data-leitura data-btn-pdf-global>
               <FileDown className="h-3.5 w-3.5" aria-hidden="true" /> PDF global
             </button>
             <button type="button" onClick={() => setModal({ aberto: true, formula: null })} className={BTN_PRI} disabled={carregando} data-btn-nova-formula>
@@ -192,10 +193,10 @@ export default function Manipulados() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => alternarDetalhe(f.id)} className={BTN_MINI} aria-expanded={aberta} data-btn-ver-formula>
+                      <button type="button" onClick={() => alternarDetalhe(f.id)} className={BTN_MINI} aria-expanded={aberta} data-leitura data-btn-ver-formula>
                         {aberta ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberta ? "Fechar" : "Ver"}
                       </button>
-                      <button type="button" onClick={() => pdfUma(f)} className={BTN_MINI} data-btn-pdf-formula>
+                      <button type="button" onClick={() => pdfUma(f)} className={BTN_MINI} data-leitura data-btn-pdf-formula>
                         <FileDown size={12} aria-hidden="true" /> PDF
                       </button>
                       <button type="button" onClick={() => void duplicar(f)} className={BTN_MINI} data-btn-duplicar-formula>

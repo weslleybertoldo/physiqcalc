@@ -99,6 +99,8 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
       vazia: serieVazia(serie),
       kpis: kpisDaSerie(serie, periodo, hoje),
       pesos: variacaoDaMetrica(serie.avaliacoes, "peso", periodo, hoje).pontos,
+      // H5 (achado 9 do FIM-1b): a linha do % de gordura no gráfico (a antropometria do Nutri mostrava as 2)
+      gorduras: variacaoDaMetrica(serie.avaliacoes, "gordura", periodo, hoje).pontos,
       nPeriodo: avsPeriodo.length,
       nTotal: serie.avaliacoes.length,
       temAvaliacoes: serie.avaliacoes.some(temDados),
@@ -244,6 +246,7 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
             {dados.temAvaliacoes && (
               <CartaoGrafico
                 pontos={dados.pesos}
+                segunda={dados.gorduras.length ? { pontos: dados.gorduras, metrica: "gordura", cor: "#F59E0B" } : undefined}
                 periodo={periodo}
                 hoje={hoje}
                 contagem={dados.nPeriodo > 0 ? { texto: contagemAvaliacoes(dados.nPeriodo), n: dados.nPeriodo } : { texto: `${dados.nTotal} no total`, n: 0 }}
@@ -284,7 +287,8 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
       <SheetComparar aberto={folha === "comparar"} aoMudar={(v) => setFolha(v ? "comparar" : null)} sessoes={serie.sessoes} lado={celular ? "baixo" : "direita"} />
       <SheetComposicao av={ver} aoFechar={() => setVer(null)} lado={celular ? "baixo" : "direita"} />
       <SheetFotos aberto={folha === "fotos"} aoMudar={(v) => setFolha(v ? "fotos" : null)} sessoes={serie.sessoes} perm={perm}
-        treinoUserId={perm.fisica ? treinoUserId : null} pacienteId={p.paciente_id} aoMudou={() => void ev.recarregar()} />
+        treinoUserId={perm.fisica ? treinoUserId : null} pacienteId={p.paciente_id} aoMudou={() => void ev.recarregar()}
+        fotosPrincipal={ev.dados?.principal?.fotos ?? []} nomeAluno={p.nome} />
 
       {perm.fisica && treinoUserId && (
         <DialogAvaliacaoFisica

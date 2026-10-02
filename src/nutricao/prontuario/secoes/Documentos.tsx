@@ -192,7 +192,7 @@ export default function Documentos() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-documentos-vazio>
             <FileText className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhum documento emitido</p>
-            <p className="text-xs text-texto-2 font-body">Atestados, receituários e declarações saem prontos com o nome e o CPF do paciente — e o PDF baixa na hora.</p>
+            <p className="text-xs text-texto-2 font-body">Atestados, receituários e declarações saem prontos com o nome e o CPF do aluno — e o PDF baixa na hora.</p>
           </div>
         )}
 
@@ -224,10 +224,10 @@ export default function Documentos() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => pdf(d)} className={BTN_MINI_PRI} data-btn-pdf-documento>
+                      <button type="button" onClick={() => pdf(d)} className={BTN_MINI_PRI} data-leitura data-btn-pdf-documento>
                         <FileDown size={12} aria-hidden="true" /> PDF
                       </button>
-                      <button type="button" onClick={() => alternar(d.id)} className={BTN_MINI} data-btn-ver-documento>
+                      <button type="button" onClick={() => alternar(d.id)} className={BTN_MINI} data-leitura data-btn-ver-documento>
                         {aberto ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberto ? "Ocultar" : "Ver"}
                       </button>
                       <button type="button" onClick={() => abrirEdicao(d)} className={BTN_MINI} data-btn-editar-documento>

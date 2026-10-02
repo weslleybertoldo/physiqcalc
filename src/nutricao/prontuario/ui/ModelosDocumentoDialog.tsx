@@ -180,7 +180,7 @@ export default function ModelosDocumentoDialog({ open, onOpenChange, modelos, no
           </DialogTitle>
           <DialogDescription className="font-body text-xs">
             {form
-              ? "Escreva o texto e clique nas tags pra inseri-las onde estiver o cursor — na emissão elas viram o nome, o CPF e a data do paciente."
+              ? "Escreva o texto e clique nas tags pra inseri-las onde estiver o cursor — na emissão elas viram o nome, o CPF e a data do aluno."
               : "Os modelos são seus, separados por tipo: escolha um ao emitir o documento. A estrela marca os favoritos (aparecem primeiro). O documento já emitido não muda quando o modelo muda."}
           </DialogDescription>
         </DialogHeader>

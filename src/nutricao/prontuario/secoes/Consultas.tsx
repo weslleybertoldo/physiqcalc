@@ -102,7 +102,7 @@ export default function Consultas() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-consultas-vazio>
             <Stethoscope className="mx-auto h-6 w-6 text-texto-3" />
             <p className="text-sm text-texto font-body">Nenhuma consulta registrada</p>
-            <p className="text-xs text-texto-2 font-body">Cada atendimento registrado aqui fica no histórico do paciente, com data, hora e observação.</p>
+            <p className="text-xs text-texto-2 font-body">Cada atendimento registrado aqui fica no histórico do aluno, com data, hora e observação.</p>
             <button type="button" onClick={abrirNova} className={BTN_SEC} data-btn-registrar-primeira>
               Registrar a primeira consulta
             </button>
@@ -137,7 +137,7 @@ export default function Consultas() {
                         disabled={!temObs}
                         className={BTN_MINI}
                         title={temObs ? undefined : "Esta consulta não tem observação"}
-                        data-btn-observacao
+                        data-leitura data-btn-observacao
                         data-tem-observacao={temObs ? "1" : "0"}
                       >
                         {aberta ? <ChevronUp size={12} /> : <ChevronDown size={12} />}

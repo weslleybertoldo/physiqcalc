@@ -170,7 +170,7 @@ export default function Gestacional() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-gestacional-vazio>
             <Baby className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhum acompanhamento</p>
-            <p className="text-xs text-texto-2 font-body">Sua paciente está grávida? Inicie um acompanhamento de ganho de peso.</p>
+            <p className="text-xs text-texto-2 font-body">Sua aluna está grávida? Inicie um acompanhamento de ganho de peso.</p>
             <button type="button" onClick={() => setModalGestacao({ aberto: true, gestacao: null })} className={BTN_PRI} disabled={!uid} data-btn-iniciar-gestacao>
               <Plus size={12} aria-hidden="true" /> Iniciar acompanhamento gestacional
             </button>
@@ -192,7 +192,7 @@ export default function Gestacional() {
                 <button type="button" onClick={() => setModalGestacao({ aberto: true, gestacao: ativa })} className={BTN_MINI} disabled={ocupado} data-btn-editar-gestacao>
                   <Pencil size={12} aria-hidden="true" /> Editar dados
                 </button>
-                <button type="button" onClick={pdf} className={BTN_MINI} data-btn-pdf-gestacional>
+                <button type="button" onClick={pdf} className={BTN_MINI} data-leitura data-btn-pdf-gestacional>
                   <FileDown size={12} aria-hidden="true" /> PDF
                 </button>
                 <button type="button" onClick={() => setParaEncerrar(true)} className={BTN_MINI_PERIGO} disabled={ocupado} data-btn-encerrar-gestacao>
