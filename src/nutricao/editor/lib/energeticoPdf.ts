@@ -1,4 +1,4 @@
-// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/energeticoPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/energeticoPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo. W26: marca PHYSIQ no cabeçalho (N-60, como a W18/W19/W24).
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { rotuloSexo } from "@/nutricao/editor/lib/antropometriaUtil";
@@ -111,7 +111,7 @@ export function montarPDFEnergetico(d: DadosPDFEnergetico): jsPDF {
   };
 
   fonte(9, "bold", [120, 120, 120]);
-  doc.text("PHYSIQNUTRI · CÁLCULO ENERGÉTICO", MARGEM, y);
+  doc.text("PHYSIQ · CÁLCULO ENERGÉTICO", MARGEM, y);
   y += 7;
   paragrafo("Cálculo energético", 16, "bold");
   y += 1;

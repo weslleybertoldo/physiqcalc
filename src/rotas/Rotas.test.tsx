@@ -75,8 +75,9 @@ vi.mock("@/app-aluno/abas/Evolucao", () => h.marcador("aba-evolucao"));
 // W12: o Início (src/app-aluno/abas/Inicio.tsx) é a tela de abertura do app
 vi.mock("@/app-aluno/abas/Inicio", () => h.marcador("aba-inicio"));
 vi.mock("@/pages/PagamentosPage", () => h.marcador("antiga-pagamentos"));
-vi.mock("@/pages/Index", () => h.marcador("antiga-calculadora-publica"));
-vi.mock("@/pages/PrivacidadePage", () => h.marcador("antiga-privacidade"));
+// W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx) — as antigas saíram
+vi.mock("@/publico/Calculadora", () => h.marcador("publica-calculadora"));
+vi.mock("@/publico/Privacidade", () => h.marcador("publica-privacidade"));
 // W13: a página Alunos é a nova (src/painel/paginas/Alunos.tsx, pelo registro) — a AlunosPage do Calc saiu
 vi.mock("@/painel/paginas/Alunos", () => h.marcador("pagina-alunos"));
 // W23: a página Treinos é a nova (src/painel/paginas/Treinos.tsx, pelo registro) — a TreinosAdminPage do Calc saiu
@@ -85,7 +86,11 @@ vi.mock("@/painel/paginas/Treinos", () => h.marcador("pagina-treinos"));
 vi.mock("@/painel/paginas/Financeiro", () => h.marcador("pagina-financeiro"));
 // W25: o /painel é o Dashboard novo (src/painel/paginas/Dashboard.tsx, pelo registro) — antes ele caía em Alunos
 vi.mock("@/painel/paginas/Dashboard", () => h.marcador("pagina-dashboard"));
-vi.mock("@/pages/admin/CalculadoraPage", () => h.marcador("antiga-admin-calculadora"));
+// W26: as Ferramentas são as páginas novas (src/painel/paginas/{Modelos,Calculadora,Lixeira,Impressos}.tsx) — a CalculadoraPage saiu
+vi.mock("@/painel/paginas/Calculadora", () => h.marcador("pagina-calculadora"));
+vi.mock("@/painel/paginas/Modelos", () => h.marcador("pagina-modelos"));
+vi.mock("@/painel/paginas/Lixeira", () => h.marcador("pagina-lixeira"));
+vi.mock("@/painel/paginas/Impressos", () => h.marcador("pagina-impressos"));
 vi.mock("@/pages/admin/PlanosPage", () => h.marcador("antiga-admin-planos"));
 vi.mock("@/components/AdminUserConfig", () => h.marcador("antiga-configurar-aluno"));
 vi.mock("@/pages/master/VisaoGeralPage", () => h.marcador("antiga-master-visao-geral"));
@@ -244,9 +249,9 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     ["/admin/alunos", "/painel/alunos", "pagina-alunos"],
     ["/admin/treinos", "/painel/treinos", "pagina-treinos"],
     ["/admin/cobranca", "/painel/financeiro", "pagina-financeiro"],
-    ["/admin/calculadora", "/painel/calculadora", "antiga-admin-calculadora"],
+    ["/admin/calculadora", "/painel/calculadora", "pagina-calculadora"],
     ["/admin/planos", "/painel/configuracoes/plano", "antiga-admin-planos"],
-    ["/admin?v=calculator", "/painel/calculadora", "antiga-admin-calculadora"],
+    ["/admin?v=calculator", "/painel/calculadora", "pagina-calculadora"],
     ["/admin?v=treinos&t=biblioteca", "/painel/treinos?t=biblioteca", "pagina-treinos"],
   ])("%s → %s", async (de, para, tela) => {
     logar("professor");
@@ -258,8 +263,9 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     // W21: a Pré-consulta (src/painel/paginas/PreConsulta.tsx) vale para os 2 módulos — o professor do Calc ganha o item (R7)
     // W22: e as Mensagens (src/painel/paginas/Mensagens.tsx — o WhatsApp do Nutri, R7)
     // W25: o Dashboard aparece no menu (a página nova existe)
+    // W26: as Ferramentas Modelos, Calculadora e Lixeira (Impressos só com Nutrição — a conta do professor é só de Treino)
     expect([...menu.querySelectorAll("[data-nav]")].map((a) => a.textContent?.replace(/\d+$/, ""))).toEqual([
-      "Dashboard", "Alunos", "Treinos", "Pré-consulta", "Agenda", "Mensagens", "Financeiro", "Configurações", "Calculadora",
+      "Dashboard", "Alunos", "Treinos", "Pré-consulta", "Agenda", "Mensagens", "Financeiro", "Configurações", "Modelos", "Calculadora", "Lixeira",
     ]);
   });
 
@@ -388,9 +394,9 @@ describe("master: páginas antigas na casca nova", () => {
 
 describe("páginas públicas (sem login)", () => {
   it.each([
-    ["/calculator", "antiga-calculadora-publica"],
-    ["/privacidade", "antiga-privacidade"],
-    ["/termos", "antiga-privacidade"],
+    ["/calculator", "publica-calculadora"],
+    ["/privacidade", "publica-privacidade"],
+    ["/termos", "publica-privacidade"],
   ])("%s", async (de, tela) => {
     abrir(de);
     expect(await screen.findByTestId(tela)).toBeInTheDocument();

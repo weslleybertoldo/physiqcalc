@@ -1,11 +1,11 @@
-// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/suplementosPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/suplementosPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo. W26: marca PHYSIQ no cabeçalho (N-60, como a W18/W19/W24).
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import type { DadosProfissionais } from "@/nutricao/editor/lib/profissional";
 import { textoNascimento } from "@/nutricao/editor/lib/prontuarioUtil";
 import { fmtData, nomeArquivoPDFSuplementos, rotuloCategoria, textoPosologia, type IndicacaoBase } from "@/nutricao/editor/lib/suplementosUtil";
 
-// PDF da suplementação (jspdf, A4; modelo da W25): cabeçalho PHYSIQNUTRI · SUPLEMENTAÇÃO com paciente (+ nascimento),
+// PDF da suplementação (jspdf, A4; modelo da W25): cabeçalho PHYSIQ · SUPLEMENTAÇÃO com paciente (+ nascimento),
 // nutricionista (+ CRN) e "emitido em · N produtos"; lista NUMERADA só das indicações ATIVAS, na ordem da tela: 'N. Produto' em
 // negrito + 'marca · apresentação · categoria' + 'Dose · horário · duração · desde dd/MM/yyyy' + observação em itálico; rodapé com
 // página. Fonte padrão (Helvetica, Latin-1).
@@ -79,7 +79,7 @@ export function montarPDFSuplementos(d: DadosPDFSuplementos): jsPDF {
 
   // ---- Cabeçalho ----
   fonte(9, "bold", [120, 120, 120]);
-  doc.text("PHYSIQNUTRI · SUPLEMENTAÇÃO", MARGEM, y);
+  doc.text("PHYSIQ · SUPLEMENTAÇÃO", MARGEM, y);
   y += 7;
   paragrafo("Suplementação e produtos", 16, "bold");
   y += 1;

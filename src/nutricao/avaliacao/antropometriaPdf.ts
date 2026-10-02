@@ -1,4 +1,4 @@
-// Physiq W17 — porta do PhysiqNutri (main ca9f66f, src/lib/antropometriaPdf.ts). Só os imports mudaram; o resto é o do site antigo.
+// Physiq W17 — porta do PhysiqNutri (main ca9f66f, src/lib/antropometriaPdf.ts). Só os imports mudaram; o resto é o do site antigo. W26: marca PHYSIQ no cabeçalho (N-60, como a W18/W19/W24).
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import {
@@ -82,7 +82,7 @@ export function montarPDFAntropometria(d: DadosPDFAntropometria): jsPDF {
   };
 
   fonte(9, "bold", [120, 120, 120]);
-  doc.text("PHYSIQNUTRI · ANTROPOMETRIA", MARGEM, y);
+  doc.text("PHYSIQ · ANTROPOMETRIA", MARGEM, y);
   y += 7;
   paragrafo("Avaliação antropométrica", 16, "bold");
   y += 1;
