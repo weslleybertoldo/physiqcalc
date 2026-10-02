@@ -16,6 +16,7 @@ import {
   somarDias,
   somarMeses,
   variacao,
+  comparacaoDoMes,
   type CobrancaDoResumo,
   type TransacaoDoResumo,
 } from "./resumo";
@@ -113,10 +114,12 @@ describe("os 4 cartões da tela 6", () => {
   const lista = aReceber(cobs, alunos, HOJE, AGORA);
   const k = kpis(recs, lista, HOJE);
 
-  it("recebido do mês (lançamentos + Pix confirmado) e a variação sobre o mês passado", () => {
+  it("recebido do mês (lançamentos + Pix confirmado) e a variação sobre o MESMO período do mês passado (W25: 1º–16/06, não junho inteiro)", () => {
     expect(k.recebidoMes).toBe(749);
-    expect(k.recebidoMesAnterior).toBe(400);
-    expect(k.variacaoMes).toBe(87);
+    // 1º–16/06: só o lançamento de 15/06 (o de 20/06 é depois do dia 16)
+    expect(k.recebidoMesAnterior).toBe(300);
+    expect(k.variacaoMes).toBe(150);
+    expect(k.comparacao).toMatchObject({ de: "2026-06-01", ate: "2026-06-16", rotulo: "1–16 jun", rotuloLongo: "1º a 16 de junho" });
   });
   it("previsto até o fim do mês = recebido + o que vence até o fim do mês (a de agosto fica de fora)", () => {
     expect(k.aReceberMes).toBe(399);
@@ -204,5 +207,31 @@ describe("Entradas do mês por categoria", () => {
       HOJE,
     );
     expect(b).toEqual([{ nome: "Consulta", valor: 300 }, { nome: "Mensalidades e cobranças", valor: 249 }, { nome: "Sem categoria", valor: 90 }]);
+  });
+});
+
+describe("comparação do mês: o MESMO período do mês anterior (W25 — herdado da W19)", () => {
+  const recs = (l: [string, number][]) => l.map(([dia, valor]) => ({ dia, valor, origem: "lancamento" as const }));
+  it("no dia 1º compara 1º contra 1º (não o mês parcial contra o mês cheio)", () => {
+    const c = comparacaoDoMes(recs([["2026-09-01", 100], ["2026-09-15", 900], ["2026-09-30", 500], ["2026-10-01", 130]]), "2026-10-01");
+    expect(c).toMatchObject({ atual: 130, anterior: 100, variacao: 30, de: "2026-09-01", ate: "2026-09-01", rotulo: "1º set", rotuloLongo: "1º de setembro" });
+  });
+  it("sem nada no mesmo período do mês anterior não há variação (nada para comparar)", () => {
+    const c = comparacaoDoMes(recs([["2026-09-02", 900], ["2026-10-01", 130]]), "2026-10-01");
+    expect(c.anterior).toBe(0);
+    expect(c.variacao).toBeNull();
+  });
+  it("dia 31 num mês de 31 contra um mês de 30: o mês anterior inteiro", () => {
+    const c = comparacaoDoMes(recs([["2026-09-30", 200], ["2026-10-31", 300], ["2026-10-02", 100]]), "2026-10-31");
+    expect(c).toMatchObject({ atual: 400, anterior: 200, variacao: 100, de: "2026-09-01", ate: "2026-09-30", rotulo: "1–30 set" });
+  });
+  it("março contra fevereiro: até o dia 28 (ou 29 no bissexto)", () => {
+    expect(comparacaoDoMes([], "2026-03-30")).toMatchObject({ de: "2026-02-01", ate: "2026-02-28", rotulo: "1–28 fev" });
+    expect(comparacaoDoMes([], "2028-03-30")).toMatchObject({ de: "2028-02-01", ate: "2028-02-29", rotulo: "1–29 fev" });
+    expect(comparacaoDoMes([], "2026-03-15")).toMatchObject({ de: "2026-02-01", ate: "2026-02-15" });
+  });
+  it("janeiro compara com dezembro do ano anterior; o que entra depois de hoje no mês não entra na conta", () => {
+    const c = comparacaoDoMes(recs([["2025-12-10", 50], ["2025-12-20", 70], ["2026-01-05", 80], ["2026-01-25", 999]]), "2026-01-10");
+    expect(c).toMatchObject({ atual: 80, anterior: 50, variacao: 60, de: "2025-12-01", ate: "2025-12-10", rotulo: "1–10 dez" });
   });
 });

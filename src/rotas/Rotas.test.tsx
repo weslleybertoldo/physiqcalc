@@ -83,6 +83,8 @@ vi.mock("@/painel/paginas/Alunos", () => h.marcador("pagina-alunos"));
 vi.mock("@/painel/paginas/Treinos", () => h.marcador("pagina-treinos"));
 // W19: a página Financeiro é a nova (src/painel/paginas/Financeiro.tsx, pelo registro) — a CobrancaPage do Calc saiu
 vi.mock("@/painel/paginas/Financeiro", () => h.marcador("pagina-financeiro"));
+// W25: o /painel é o Dashboard novo (src/painel/paginas/Dashboard.tsx, pelo registro) — antes ele caía em Alunos
+vi.mock("@/painel/paginas/Dashboard", () => h.marcador("pagina-dashboard"));
 vi.mock("@/pages/admin/CalculadoraPage", () => h.marcador("antiga-admin-calculadora"));
 vi.mock("@/pages/admin/PlanosPage", () => h.marcador("antiga-admin-planos"));
 vi.mock("@/components/AdminUserConfig", () => h.marcador("antiga-configurar-aluno"));
@@ -237,7 +239,8 @@ describe("entrada: sem login cai no Entrar (a tela nova da W3, login único)", (
 
 describe("site do profissional: rotas antigas do Calc abrem a mesma função na casca nova", () => {
   it.each([
-    ["/admin", "/painel/alunos", "pagina-alunos"],
+    // W25: o /admin do Calc é o /painel (spec 4.8), que agora é o Dashboard
+    ["/admin", "/painel", "pagina-dashboard"],
     ["/admin/alunos", "/painel/alunos", "pagina-alunos"],
     ["/admin/treinos", "/painel/treinos", "pagina-treinos"],
     ["/admin/cobranca", "/painel/financeiro", "pagina-financeiro"],
@@ -254,8 +257,9 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     expect(menu).not.toBeNull();
     // W21: a Pré-consulta (src/painel/paginas/PreConsulta.tsx) vale para os 2 módulos — o professor do Calc ganha o item (R7)
     // W22: e as Mensagens (src/painel/paginas/Mensagens.tsx — o WhatsApp do Nutri, R7)
+    // W25: o Dashboard aparece no menu (a página nova existe)
     expect([...menu.querySelectorAll("[data-nav]")].map((a) => a.textContent?.replace(/\d+$/, ""))).toEqual([
-      "Alunos", "Treinos", "Pré-consulta", "Agenda", "Mensagens", "Financeiro", "Configurações", "Calculadora",
+      "Dashboard", "Alunos", "Treinos", "Pré-consulta", "Agenda", "Mensagens", "Financeiro", "Configurações", "Calculadora",
     ]);
   });
 
@@ -335,8 +339,9 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
   it("profissional abre direto no painel; se escolheu o app de aluno, volta para o app", async () => {
     logar("professor");
     const r = abrir("/");
-    expect(await screen.findByTestId("pagina-alunos", {}, { timeout: 4000 })).toBeInTheDocument();
-    expect(onde()).toBe("/painel/alunos");
+    // W25: o painel abre no Dashboard
+    expect(await screen.findByTestId("pagina-dashboard", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(onde()).toBe("/painel");
     r.unmount();
     localStorage.setItem("physiq_area", "aluno");
     abrir("/");
@@ -376,8 +381,8 @@ describe("master: páginas antigas na casca nova", () => {
   it("professor não entra no master", async () => {
     logar("professor");
     abrir("/master/contas");
-    expect(await screen.findByTestId("pagina-alunos", {}, { timeout: 4000 })).toBeInTheDocument();
-    expect(onde()).toBe("/painel/alunos");
+    expect(await screen.findByTestId("pagina-dashboard", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(onde()).toBe("/painel");
   });
 });
 

@@ -260,12 +260,20 @@ export function idsDaChave(chave: string): { grupo_id?: string; grupo_usuario_id
  * dia vêm da troca do dia (quando existe) ou da semana com o alternado; N = dias com treino feito, M = dias com treino.
  */
 export function resumoSemanaDoAluno(d: DadosEditor, atual: SemanaAtual | null | undefined, hoje: Date = new Date()): { feitos: number; total: number } {
+  return resumoDaSemana(diasTreinoDoAluno(d, atual, datasDaSemana(hoje)));
+}
+
+/**
+ * Os dias (as datas dadas) com os treinos de cada um e se foram feitos — a base do "N de M na semana" acima. W25: o Dashboard usa a
+ * MESMA conta nos últimos 7 dias (a adesão do NF6), com os dados que a função painel-resumo-treino devolve.
+ */
+export function diasTreinoDoAluno(d: Pick<DadosEditor, "semana" | "gruposDisponiveis" | "diasConfig">, atual: SemanaAtual | null | undefined, datas: Date[]) {
   const existe = new Set(d.gruposDisponiveis.map((g) => chaveDoGrupo(g)));
   const configs: Record<string, ConfigDia> = {};
   d.diasConfig.forEach((c) => (configs[c.dia_semana] = c));
   const concluidos = new Set((atual?.concluidos ?? []).map((c) => `${c.data_treino}|${c.slot_idx ?? 0}`));
   const diasFeitos = new Set((atual?.concluidos ?? []).map((c) => c.data_treino));
-  const dias = datasDaSemana(hoje).map((data) => {
+  return datas.map((data) => {
     const dk = chaveData(data);
     const diaSemana = DIAS_SEMANA[data.getDay()];
     const trocas = (atual?.overrides ?? []).filter((o) => o.data_treino === dk);
@@ -278,7 +286,6 @@ export function resumoSemanaDoAluno(d: DadosEditor, atual: SemanaAtual | null | 
     const treinos = slots.filter((s) => s.chave && existe.has(s.chave)).map((s) => ({ concluido: concluidos.has(`${dk}|${s.slot}`) }));
     return { treinos, feito: treinos.length > 0 && treinos.every((t) => t.concluido), algumFeito: diasFeitos.has(dk) };
   });
-  return resumoDaSemana(dias);
 }
 
 // ───────────────────────── volume por grupo (card do Resumo e aba) ─────────────────────────

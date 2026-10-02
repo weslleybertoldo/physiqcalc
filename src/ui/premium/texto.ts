@@ -1,6 +1,9 @@
-/** Iniciais do nome (até 2 letras) para quando não há foto. */
+/**
+ * Iniciais do nome (até 2 letras) para quando não há foto. Só LETRAS (W25): "Conta Teste W24 (prova)" vira "CP", não "C(" —
+ * parênteses, números e símbolos não viram inicial; palavra sem nenhuma letra é ignorada.
+ */
 export function iniciais(nome: string | null | undefined): string {
-  const partes = (nome ?? "").trim().split(/\s+/).filter(Boolean);
+  const partes = (nome ?? "").trim().split(/\s+/).map((p) => p.replace(/[^\p{L}]/gu, "")).filter(Boolean);
   if (partes.length === 0) return "?";
   const primeira = partes[0][0] ?? "";
   const ultima = partes.length > 1 ? partes[partes.length - 1][0] ?? "" : "";

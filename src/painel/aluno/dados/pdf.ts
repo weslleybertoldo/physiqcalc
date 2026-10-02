@@ -15,6 +15,14 @@ type LinhaPdf = Record<string, unknown> & { data_avaliacao: string; created_at: 
 
 const METODO_CALC: Record<string, string> = { dobras_3: "dobras_3", dobras_7: "dobras_7", bioimpedancia: "bioimpedancia", pollock3: "dobras_3", pollock7: "dobras_7" };
 
+/**
+ * O protocolo da antropometria no PDF (W25 — herdado da W18): o MESMO "tipo de avaliação" que a Evolução mostra (src/evolucao/serie.ts,
+ * PROTOCOLOS: "Faulkner — 4 dobras", "Guedes — 3 dobras", "Jackson & Pollock — 3 dobras"…; sem protocolo, "Só medidas" ou "Peso e
+ * altura") — antes o Faulkner e o Guedes (e as só de medidas) saíam como "3 dobras", o padrão do método do Calc. O travessão vira hífen
+ * (a fonte do PDF).
+ */
+export const protocoloNoPdf = (a: Pick<AvaliacaoSerie, "tipo">): string => (a.tipo || "").replace(/\s*[—–]\s*/g, " - ").trim();
+
 /** Uma antropometria do Nutri (já no formato da Evolução, W10) no formato das avaliações do Calc que o PDF antigo lê. */
 export function linhaDaAntropometria(a: AvaliacaoSerie): LinhaPdf {
   return {
@@ -28,6 +36,7 @@ export function linhaDaAntropometria(a: AvaliacaoSerie): LinhaPdf {
     tmb_mifflin: null,
     tmb_katch: null,
     metodo_avaliacao: METODO_CALC[a.metodo] ?? null,
+    rotulo_metodo: protocoloNoPdf(a) || null,
     ...a.medidas,
   };
 }
@@ -80,6 +89,7 @@ export async function gerarPdfDadosEvolucao(perfil: PerfilAluno, comTreino: bool
     tmb_metodo: null,
     user_code: null,
     metodo_avaliacao: ultima ? (METODO_CALC[ultima.metodo] ?? null) : null,
+    rotulo_metodo: ultima ? protocoloNoPdf(ultima) || null : null,
     ...(ultima?.medidas ?? {}),
   };
   generateAdminPDF(perfilPdf as never, doNutri as never);
