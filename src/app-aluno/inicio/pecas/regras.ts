@@ -9,7 +9,7 @@ import { fracao, planoAtivo, refeicoesDoDia, resumoDoDia, type ResumoDoDia } fro
 import { metasDoDia } from "@/nutricao/app/metasUtil";
 import type { DadosDieta, Meta, PlanoAlimentar, RefeicaoDoPlano } from "@/nutricao/app/tipos";
 import type { Periodo } from "@/evolucao/tipos";
-import type { AgendamentoAluno } from "@/app-aluno/perfil/pecas/regras";
+import { areaDaConsulta, type AgendamentoAluno } from "@/app-aluno/perfil/pecas/regras";
 
 /** O que a foto da consulta precisa de "Meus profissionais" (meu_perfil_aluno — W7). */
 export interface ProfissionalDoAlunoMinimo {
@@ -119,9 +119,13 @@ export function metasDeHoje(metas: readonly Meta[], marcadas: readonly string[],
 
 // ───────────────────────── próxima consulta ─────────────────────────
 
-/** Chip "Em 2 dias": verde para a nutricionista, violeta para o personal (as cores dos módulos, spec 4.9), ciano sem papel. */
-export function tomDaConsulta(papel: AgendamentoAluno["papel"]): "n" | "t" | "c" {
-  return papel === "nutricionista" ? "n" : papel === "personal" ? "t" : "c";
+/**
+ * Chip "Em 2 dias": a cor da ÁREA da consulta (H1 — verde nutrição, violeta treino: as cores dos módulos, spec 4.9; ciano geral). O
+ * papel só decide quando a consulta não traz a área (antes ele vencia: o personal que também é a nutri pintava de violeta a nutrição).
+ */
+export function tomDaConsulta(a: Pick<AgendamentoAluno, "modulo" | "papel">): "n" | "t" | "c" {
+  const area = areaDaConsulta(a);
+  return area === "nutricao" ? "n" : area === "treino" ? "t" : "c";
 }
 
 /** A foto do profissional da consulta: o de "Meus profissionais" com o mesmo papel (e o mesmo nome, se houver mais de um). */

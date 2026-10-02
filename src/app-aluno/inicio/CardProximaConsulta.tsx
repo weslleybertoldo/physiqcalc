@@ -78,7 +78,7 @@ export default function CardProximaConsulta() {
           {[papel, quandoAgendamento(proxima)].filter(Boolean).join(" · ")}
         </span>
       </span>
-      <Chip tom={tomDaConsulta(proxima.papel)} className="flex-none" data-consulta-em>{emQuantosDias(proxima.inicio)}</Chip>
+      <Chip tom={tomDaConsulta(proxima)} className="flex-none" data-consulta-em>{emQuantosDias(proxima.inicio)}</Chip>
     </button>
   );
 }

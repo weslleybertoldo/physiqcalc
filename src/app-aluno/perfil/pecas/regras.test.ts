@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ResumoMatricula } from "@/financeiro/tipos";
 import {
-  agendamentosAnteriores, chipDePagamentos, diaCurto, emQuantosDias, lerHora, linhaDoAluno, linkWhatsapp, mesAno, proximosAgendamentos,
+  agendamentosAnteriores, areaDaConsulta, chipDePagamentos, diaCurto, emQuantosDias, lerHora, linhaDoAluno, linkWhatsapp, mesAno, proximosAgendamentos,
   quandoAgendamento, rotuloStatus, valorDoLembrete,
 } from "./regras";
 
@@ -45,6 +45,19 @@ describe("agenda do aluno (N-53, a regra do Nutri)", () => {
   });
   it("anteriores: passaram ou foram desmarcadas, da mais recente para a mais antiga", () => {
     expect(agendamentosAnteriores(lista, AGORA).map((a) => a.id)).toEqual(["c", "b"]);
+  });
+  it("H1: a ÁREA da consulta vence o papel (o ícone: treino → halter, nutrição → prato, geral → calendário)", () => {
+    // quem tem o MESMO profissional como personal e nutri: a consulta de nutrição é de nutrição (antes o papel "personal" vencia)
+    expect(areaDaConsulta({ modulo: "nutricao", papel: "personal" })).toBe("nutricao");
+    expect(areaDaConsulta({ modulo: "treino", papel: "nutricionista" })).toBe("treino");
+    expect(areaDaConsulta({ modulo: "geral", papel: "personal" })).toBe("geral");
+    expect(areaDaConsulta({ modulo: "geral", papel: "nutricionista" })).toBe("geral");
+    // o papel só decide quando a consulta não traz a área
+    expect(areaDaConsulta({ modulo: null, papel: "personal" })).toBe("treino");
+    expect(areaDaConsulta({ papel: "nutricionista" })).toBe("nutricao");
+    expect(areaDaConsulta({ modulo: "outra", papel: "personal" })).toBe("treino");
+    expect(areaDaConsulta({ modulo: null, papel: null })).toBe("geral");
+    expect(areaDaConsulta({})).toBe("geral");
   });
   it("status na voz do aluno, com quem confirmou/desmarcou", () => {
     expect(rotuloStatus("paciente_confirmou")).toBe("Você confirmou");

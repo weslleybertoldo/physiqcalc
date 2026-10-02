@@ -3,6 +3,7 @@
 //   Alunos      alunos_da_conta no filtro "Ativos" (o número do menu e da página) + alunos_novos_por_mes (o card da página Alunos);
 //   Financeiro  as 3 leituras do Resumo (lançamentos desde 1º/jan do ano passado, cobranças e o prof_resumo da W6) e as regras dele;
 //   Agenda      os agendamentos da conta (o recorte da Agenda) e os alunos dela; os calendários escondidos na Agenda ficam fora aqui também;
+//               H1: + as tags dos profissionais dessas consultas (só ler; a pílula da TAG na "Agenda de hoje", como na página Agenda);
 //   Diário      useDiarioDaConta(conta, você, 1) da W24 (só para a nutricionista da conta — a regra clínica); H4: + a de 7 dias (a MESMA
 //               do número da aba Diário e do "Só não reagidas" no período padrão) para as fotos aguardando reação;
 //   Recibos     H4: a lista de Financeiro › Recibos (a mesma chave CHAVES.recibos) para o "Recibos no mês";
@@ -19,7 +20,7 @@ import { numerosDaAgenda } from "@/agenda/regras";
 import { listarAlunos } from "@/painel/alunos/api";
 import { useNovosPorMes } from "@/painel/alunos/novosPorMes";
 import { FILTROS_PADRAO } from "@/painel/alunos/regras";
-import { listarAgendamentos, listarAlunosDaAgenda } from "@/painel/agenda/dados";
+import { listarAgendamentos, listarAlunosDaAgenda, listarTags } from "@/painel/agenda/dados";
 import { CHAVES_AGENDA } from "@/painel/agenda/useAgenda";
 import { paraEvento, type EventoPainel } from "@/painel/agenda/visao";
 import { useDiarioDaConta } from "@/painel/dietas/useDiario";
@@ -33,7 +34,7 @@ import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 import { buscarResumoPrincipal, buscarResumoTreino, listarRespostasRecentes } from "./dados";
 import {
   adesaoMedia, atencaoDoFinanceiro, atividadeRecente, avaliacoesVencidas, cadastrosPendentes, consultasDeHoje, fotosSemReacao, itensAniversario, juntarAlunos,
-  juntarAtencao, preConsultasNovas, recibosDoMes, semMarcarDieta, semTreinar, ultimosDiasAte,
+  juntarAtencao, preConsultasNovas, profissionaisDasConsultas, recibosDoMes, semMarcarDieta, semTreinar, ultimosDiasAte,
 } from "./regras";
 
 export const CHAVES_DASHBOARD = {
@@ -115,6 +116,14 @@ export function useDashboard() {
     enabled: pronto, staleTime: 15_000,
   });
   const alunosAgendaQ = useQuery({ queryKey: CHAVES_AGENDA.alunos(uid, contaId), queryFn: () => listarAlunosDaAgenda(contaId || null, uid), enabled: pronto, staleTime: 60_000 });
+  // H1: a pílula da TAG na "Agenda de hoje" — só LER as tags dos profissionais dessas consultas, sempre por profissional_id (o master
+  // lê todas pela RLS); sem criar as base (o Dashboard não grava): a consulta sem a tag carregada mostra a base da área
+  const profsAgenda = useMemo(() => profissionaisDasConsultas(agendaQ.data ?? []), [agendaQ.data]);
+  const tagsAgendaQ = useQuery({
+    queryKey: CHAVES_AGENDA.tagsLeitura(profsAgenda.join(",")),
+    queryFn: () => listarTags(profsAgenda),
+    enabled: pronto && profsAgenda.length > 0, staleTime: 60_000, retry: 1,
+  });
 
   // ── Diário de hoje (W24) e Pré-consulta (o contador do menu) ──
   const diario = useDiarioDaConta(contaId, uid, 1, pronto && temNutricao && souNutri);
@@ -149,9 +158,12 @@ export function useDashboard() {
     if (!agendaQ.data) return null;
     const ocultos = calendariosOcultos();
     const mapa = new Map((alunosAgendaQ.data ?? []).map((a) => [a.id, a]));
-    const eventos = agendaQ.data.filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, new Map(), mapa));
+    const tags = new Map((tagsAgendaQ.data ?? []).map((t) => [t.id, t]));
+    const eventos = agendaQ.data.filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, new Map(), mapa, tags));
     return { n: numerosDaAgenda(eventos.map(paraResumoAgenda), hoje), deHoje: consultasDeHoje(eventos, hoje) };
-  }, [agendaQ.data, alunosAgendaQ.data, hoje]);
+  }, [agendaQ.data, alunosAgendaQ.data, tagsAgendaQ.data, hoje]);
+  // a lista do dia espera as tags na 1ª carga (sem piscar "Geral" → "Reunião"); se elas falharem, vale a base da área
+  const tagsCarregando = tagsAgendaQ.isLoading;
 
   const atencao = useMemo(() => {
     const fin = financeiro ? atencaoDoFinanceiro(financeiro.atencao, alunos) : [];
@@ -182,7 +194,7 @@ export function useDashboard() {
 
   return {
     conta, contaId, uid, pronto, hoje, modulos, temTreino, temNutricao, souNutri, sessaoTreino,
-    alunosQ, novosQ, principalQ, treinoQ, treinoLigado, transQ, cobsQ, resumoFinQ, agendaQ, diario, novasQ, respostasQ,
+    alunosQ, novosQ, principalQ, treinoQ, treinoLigado, transQ, cobsQ, resumoFinQ, agendaQ, tagsAgendaQ, tagsCarregando, diario, novasQ, respostasQ,
     alunos, adesao, financeiro, agenda, atencao, atividade, diario7, fotosAguardando, recibosQ, recibosMes,
   };
 }

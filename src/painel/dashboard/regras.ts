@@ -12,6 +12,7 @@
 //     Alunos), respostas novas da pré-consulta (o número do menu) e os aniversariantes da semana (a regra do Dashboard do Nutri);
 //     H4: + as fotos do diário aguardando reação (o "Só não reagidas" de Dietas › Diário nos 7 dias — só para quem vê o diário);
 //   · H4: Recibos no mês = os recibos de Financeiro › Recibos (a mesma consulta) com a data no mês de hoje (o KPI do Nutri).
+//   · H1: a "Agenda de hoje" mostra a pílula da TAG da consulta (a da página Agenda), lendo só as tags dos profissionais dela.
 import { primeiroNome, resumoDaSemana } from "@/app-aluno/inicio/pecas/regras";
 import { cancelado, diaSP, somarDias } from "@/agenda/regras";
 import { planoAtivo } from "@/nutricao/app/dia";
@@ -583,4 +584,12 @@ export function consultasDeHoje<T extends { inicio: Date; diaInteiro: boolean; s
   return eventos
     .filter((e) => !e.diaInteiro && !cancelado(e.status) && diaSP(e.inicio) === hoje)
     .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
+}
+
+/**
+ * H1: os profissionais das consultas (sem repetir, em ordem) — as tags que a "Agenda de hoje" lê são SÓ as deles (filtro por
+ * profissional_id: o master lê todas as tags pela RLS e o dono vê as consultas da equipe).
+ */
+export function profissionaisDasConsultas(consultas: readonly { nutricionista_id?: string | null }[]): string[] {
+  return [...new Set(consultas.map((c) => c.nutricionista_id ?? "").filter(Boolean))].sort();
 }

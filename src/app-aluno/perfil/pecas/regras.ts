@@ -68,6 +68,18 @@ export interface AgendamentoAluno {
   papel?: PapelProfissional | null;
 }
 
+export type AreaDaConsulta = "treino" | "nutricao" | "geral";
+
+/**
+ * A ÁREA da consulta (H1): o `modulo` dela manda (treino · nutrição · geral — a área da tag que o profissional escolheu); o papel de
+ * quem marcou só decide quando a consulta não traz a área (o personal → treino; a nutricionista → nutrição; sem papel → geral).
+ * Antes o papel "personal" vencia: quem tem o MESMO profissional como personal e nutri via o halter na consulta de nutrição.
+ */
+export function areaDaConsulta(a: Pick<AgendamentoAluno, "modulo" | "papel">): AreaDaConsulta {
+  if (a.modulo === "treino" || a.modulo === "nutricao" || a.modulo === "geral") return a.modulo;
+  return a.papel === "personal" ? "treino" : a.papel === "nutricionista" ? "nutricao" : "geral";
+}
+
 export const ehCancelado = (status: string): boolean => status === "desmarcado" || status === "paciente_desmarcou";
 
 /** As próximas N (ainda não terminaram e não foram desmarcadas), da mais perto para a mais longe (a regra do Nutri). */

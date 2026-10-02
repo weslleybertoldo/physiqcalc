@@ -16,7 +16,7 @@ const h = vi.hoisted(() => ({
   conta: { id: "c1", nome: "Consultoria Ferreira", papeis: ["dono", "personal", "nutricionista"], modulos: ["treino", "nutricao"] } as { id: string; nome: string; papeis: string[]; modulos: string[] },
   treino: "ok" as string,
   principal: vi.fn(), treinoResumo: vi.fn(), respostas: vi.fn(), alunos: vi.fn(), novos: vi.fn(), rpc: vi.fn(), trans: vi.fn(), cobs: vi.fn(), resumoFin: vi.fn(),
-  agenda: vi.fn(), alunosAgenda: vi.fn(), diario: vi.fn(), urls: vi.fn(), novas: vi.fn(),
+  agenda: vi.fn(), alunosAgenda: vi.fn(), tags: vi.fn(), diario: vi.fn(), urls: vi.fn(), novas: vi.fn(),
 }));
 vi.mock("@/nucleo/conta", () => ({ useConta: () => ({ conta: h.conta, ehMaster: false, ehDono: h.conta.papeis.includes("dono") }) }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-lucas", email: "lucas@x.com", user_metadata: {} }, situacao: { nome: "Lucas Ferreira" } }) }));
@@ -35,7 +35,9 @@ vi.mock("@/painel/dashboard/dados", async (orig) => ({
 vi.mock("@/painel/alunos/api", async (orig) => ({ ...(await orig<typeof import("@/painel/alunos/api")>()), listarAlunos: h.alunos }));
 vi.mock("@/painel/financeiro/dados", async (orig) => ({ ...(await orig<typeof import("@/painel/financeiro/dados")>()), listarTransacoes: h.trans, listarCobrancasDoResumo: h.cobs }));
 vi.mock("@/financeiro/api", async (orig) => ({ ...(await orig<typeof import("@/financeiro/api")>()), buscarResumoDaConta: h.resumoFin }));
-vi.mock("@/painel/agenda/dados", async (orig) => ({ ...(await orig<typeof import("@/painel/agenda/dados")>()), listarAgendamentos: h.agenda, listarAlunosDaAgenda: h.alunosAgenda }));
+vi.mock("@/painel/agenda/dados", async (orig) => ({
+  ...(await orig<typeof import("@/painel/agenda/dados")>()), listarAgendamentos: h.agenda, listarAlunosDaAgenda: h.alunosAgenda, listarTags: h.tags,
+}));
 vi.mock("@/painel/dietas/diario", async (orig) => ({ ...(await orig<typeof import("@/painel/dietas/diario")>()), listarDiarioDaConta: h.diario, urlsAssinadas: h.urls }));
 vi.mock("@/painel/preconsulta/novas", async (orig) => ({ ...(await orig<typeof import("@/painel/preconsulta/novas")>()), contarRespostasNovas: h.novas }));
 
@@ -72,7 +74,7 @@ const TREINO = {
   recordes: [{ user_id: "t-carlos", exercicio: "Supino", exercicio_id: "e1", exercicio_usuario_id: null, data_treino: DEZ_DIAS, peso: 70, anterior: 65, quando: new Date(Date.now() - 25 * 60_000).toISOString() }],
 };
 const AGENDA = [
-  { id: "ag1", nutricionista_id: "u-lucas", calendario_id: "cal", paciente_id: "m-rafael", titulo: "Avaliação física", inicio: hojeAs(7), fim: hojeAs(8), dia_inteiro: false, status: "confirmado", confirmacao: "confirmado", modulo: "treino" },
+  { id: "ag1", nutricionista_id: "u-lucas", calendario_id: "cal", paciente_id: "m-rafael", titulo: "Avaliação física", inicio: hojeAs(7), fim: hojeAs(8), dia_inteiro: false, status: "confirmado", confirmacao: "confirmado", modulo: "treino", tag_id: "tg-aval" },
   { id: "ag2", nutricionista_id: "u-lucas", calendario_id: "cal", paciente_id: "m-beatriz", titulo: "Retorno", inicio: hojeAs(9), fim: hojeAs(10), dia_inteiro: false, status: "agendado", confirmacao: "a_confirmar", modulo: "nutricao" },
   { id: "ag3", nutricionista_id: "u-lucas", calendario_id: "cal", paciente_id: "m-carlos", titulo: "Cancelada", inicio: hojeAs(11), fim: hojeAs(12), dia_inteiro: false, status: "desmarcado", confirmacao: "desmarcado", modulo: "treino" },
 ];
@@ -106,6 +108,8 @@ beforeEach(() => {
   });
   h.agenda.mockReset().mockResolvedValue(AGENDA);
   h.alunosAgenda.mockReset().mockResolvedValue([{ id: "m-rafael", nome: "Rafael Moura", apelido: null, foto_url: null }, { id: "m-beatriz", nome: "Beatriz Lima", apelido: null, foto_url: null }]);
+  // H1: as tags do profissional das consultas (a "Avaliação" é dele; a consulta da Beatriz não tem tag carregada → a base da área)
+  h.tags.mockReset().mockResolvedValue([{ id: "tg-aval", profissional_id: "u-lucas", nome: "Avaliação", cor: "#fb923c", area: "treino", base: false, ordem: 4 }]);
   h.diario.mockReset().mockResolvedValue([
     { id: "d1", paciente_id: "m-beatriz", refeicao: "almoco", data_hora: new Date(Date.now() - 3 * 3600_000).toISOString(), path: "n/p/1.jpg", reacao_nutri: "otimo", comentario: "", comentario_nutri: "", reagido_em: null,
       paciente: { id: "m-beatriz", nome: "Beatriz Lima", apelido: null, link_codigo: "abc", foto_url: null, conta_id: "c1", nutricionista_id: "u-lucas" } },
@@ -135,6 +139,14 @@ describe("W25 — Painel › Dashboard (tela 6)", () => {
     montar();
     await waitFor(() => expect(document.querySelectorAll("[data-agenda-hoje-evento]")).toHaveLength(2));
     expect(screen.getByText("Rafael Moura", { selector: "[data-agenda-hoje-evento] b" })).toBeInTheDocument();
+    // H1: a pílula da TAG (a "Avaliação" dele, na cor dela; sem tag, a base da área) — não mais o chip TREINO/NUTRI
+    const pilula = (id: string) => document.querySelector(`[data-agenda-hoje-evento="${id}"] [data-tag-pilula]`);
+    expect(pilula("ag1")?.getAttribute("data-tag-nome")).toBe("Avaliação");
+    expect((pilula("ag1") as HTMLElement | null)?.style.background).toContain("251, 146, 60");
+    expect(pilula("ag2")?.getAttribute("data-tag-nome")).toBe("Nutrição");
+    expect(document.querySelector("[data-cartao-agenda-hoje-dashboard] [data-chip]")).toBeNull();
+    // só as tags dos profissionais das consultas (o master lê todas pela RLS) e sem gravar nada
+    expect(h.tags).toHaveBeenCalledWith(["u-lucas"]);
     await waitFor(() => expect(document.querySelector('[data-atencao-item="pix"]')).not.toBeNull());
     await waitFor(() => expect(document.querySelector('[data-atencao-item="treino"]')).not.toBeNull());
     const tipos = () => [...document.querySelectorAll("[data-atencao-item]")].map((e) => e.getAttribute("data-atencao-item"));
@@ -148,6 +160,14 @@ describe("W25 — Painel › Dashboard (tela 6)", () => {
     expect(document.querySelector('[data-atencao-item="dieta"]')?.textContent).toContain("Sem marcar a dieta há 10 dias");
     expect(valor('[data-atencao-item="cadastro"]', "data-atencao-link")).toBe("/painel/alunos?pendentes=1");
     expect(valor('[data-atencao-item="preconsulta"]', "data-atencao-link")).toBe("/painel/pre-consulta?aba=respostas");
+  });
+
+  it("H1: as tags não carregaram → a 'Agenda de hoje' aparece assim mesmo, com a base da área de cada consulta", async () => {
+    h.tags.mockRejectedValue(new Error("rede"));
+    montar();
+    await waitFor(() => expect(document.querySelectorAll("[data-agenda-hoje-evento]")).toHaveLength(2), { timeout: 5000 });
+    const nomes = [...document.querySelectorAll("[data-agenda-hoje-evento] [data-tag-pilula]")].map((e) => e.getAttribute("data-tag-nome"));
+    expect(nomes).toEqual(["Treino", "Nutrição"]);
   });
 
   it("diário de hoje (a nutricionista da conta) com a reação e a atividade recente com as 5 fontes", async () => {

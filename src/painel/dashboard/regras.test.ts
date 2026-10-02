@@ -26,6 +26,7 @@ import {
   juntarAlunos,
   juntarAtencao,
   preConsultasNovas,
+  profissionaisDasConsultas,
   recordes,
   semMarcarDieta,
   semTreinar,
@@ -290,6 +291,11 @@ describe("Agenda de hoje = o número do 'Consultas hoje' da Agenda", () => {
     expect(lista.map((e) => e.id)).toEqual(["a", "b", "f", "w"]);
     const n = numerosDaAgenda(evs.map((e) => ({ id: e.id, inicio: e.inicio.toISOString(), fim: e.fim.toISOString(), status: e.status, modulo: e.modulo, dia_inteiro: e.diaInteiro })), HOJE, new Date("2026-10-01T15:00:00Z"));
     expect(n.hoje).toBe(lista.length);
+  });
+  it("H1: as tags lidas são só as dos profissionais das consultas (sem repetir, em ordem; o master lê todas pela RLS)", () => {
+    expect(profissionaisDasConsultas([{ nutricionista_id: "u2" }, { nutricionista_id: "u1" }, { nutricionista_id: "u2" }, { nutricionista_id: null }, {}]))
+      .toEqual(["u1", "u2"]);
+    expect(profissionaisDasConsultas([])).toEqual([]);
   });
 });
 
