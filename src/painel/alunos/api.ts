@@ -58,6 +58,16 @@ export async function listarAlunos(contaId: string, filtros: FiltrosAlunos, offs
   return lista;
 }
 
+/** H4 (N-66): uma página da exportação — a mesma lista e os mesmos filtros, com as colunas do CSV (apelido, CPF, nascimento, gênero). */
+export async function paginaDaExportacao(contaId: string, filtros: FiltrosAlunos, offset: number, limite: number): Promise<ListaAlunos> {
+  const r = await rpc("alunos_da_conta", {
+    p_conta: contaId, p_filtros: { ...filtrosParaServidor(filtros), exportar: "true" }, p_offset: offset, p_limite: limite,
+  });
+  const lista = normalizarLista(r);
+  if (!lista) throw new ErroAlunos("erro_interno");
+  return lista;
+}
+
 export interface ConviteAluno {
   id: string;
   email: string;

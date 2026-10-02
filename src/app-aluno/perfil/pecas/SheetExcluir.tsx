@@ -4,6 +4,7 @@ import { LayoutDashboard, TriangleAlert, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { useSessao } from "@/nucleo/sessao";
+import { CONTATO_SUPORTE, linkDoSuporte } from "@/nucleo/suporte";
 import { lembrarArea } from "@/ui/casca/area";
 import { Botao } from "@/ui/premium/Botao";
 import { Esqueleto } from "@/ui/premium/Estados";
@@ -106,7 +107,10 @@ export function SheetExcluir({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v
           <div className="flex flex-col gap-3" data-excluir-recusa={recusa.codigo}>
             <p className="flex items-start gap-2 text-[13.5px] leading-relaxed text-texto">
               <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />
-              <span>{recusa.texto}{recusa.codigo === "profissional" && " A sua conta sustenta os seus alunos e a sua equipe: para excluí-la, fale com o suporte pelo painel."}</span>
+              <span>{recusa.texto}{recusa.codigo === "profissional" && (
+                <> A sua conta sustenta os seus alunos e a sua equipe: para excluí-la, fale com o suporte do Physiq em{" "}
+                  <a href={linkDoSuporte("Excluir minha conta")} className="font-semibold text-violeta-3 underline-offset-2 hover:underline" data-excluir-suporte={CONTATO_SUPORTE}>{CONTATO_SUPORTE}</a>.</>
+              )}</span>
             </p>
             {recusa.codigo === "profissional" && (
               <Botao icone={LayoutDashboard} onClick={() => { lembrarArea("painel"); aoMudar(false); navigate("/painel"); }} data-excluir-painel>

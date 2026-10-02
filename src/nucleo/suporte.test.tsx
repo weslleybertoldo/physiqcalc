@@ -1,0 +1,47 @@
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+
+const h = vi.hoisted(() => ({ erro: "profissional" }));
+vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ sair: async () => {} }) }));
+vi.mock("@/app-aluno/perfil/pecas/api", async (orig) => {
+  const real = await orig<typeof import("@/app-aluno/perfil/pecas/api")>();
+  return {
+    ...real,
+    conferirExclusao: async () => {
+      throw new real.ErroPerfil(h.erro);
+    },
+    excluirMinhaConta: async () => ({ ok: true }),
+  };
+});
+
+import { SheetExcluir } from "@/app-aluno/perfil/pecas/SheetExcluir";
+import Privacidade from "@/publico/Privacidade";
+import { CONTATO_SUPORTE, linkDoSuporte } from "./suporte";
+
+// H4 (achado da revisão do Calc): o contato do suporte mora num lugar só — a página de privacidade e as telas que mandam "falar
+// com o suporte" leem a MESMA constante — o contato que o Weslley escolheu em 02/10 (mudou de novo? 1 linha).
+describe("H4 — o contato do suporte (constante única)", () => {
+  it("o contato que o Weslley escolheu (02/10) e o link abre o e-mail com o assunto", () => {
+    expect(CONTATO_SUPORTE).toBe("bertoldo.code@gmail.com");
+    expect(linkDoSuporte("Excluir minha conta")).toBe("mailto:bertoldo.code@gmail.com?subject=Excluir%20minha%20conta");
+  });
+  it("a página de privacidade mostra o contato da constante", () => {
+    render(<MemoryRouter initialEntries={["/privacidade"]}><Privacidade /></MemoryRouter>);
+    expect(screen.getByText(new RegExp(`Contato: ${CONTATO_SUPORTE.replace(/[.]/g, "\\.")}\\.`))).toBeInTheDocument();
+  });
+  it("profissional que tenta excluir a própria conta: continua NÃO excluindo, e a tela mostra o contato de verdade (não mais \"pelo painel\")", async () => {
+    h.erro = "profissional";
+    render(<MemoryRouter><SheetExcluir aberto aoMudar={() => {}} /></MemoryRouter>);
+    const link = await screen.findByRole("link", { name: CONTATO_SUPORTE });
+    expect(link.getAttribute("href")).toBe(linkDoSuporte("Excluir minha conta"));
+    expect(screen.queryByText(/pelo painel/)).toBeNull();
+    expect(screen.queryByLabelText(/Para confirmar, digite/)).toBeNull();
+  });
+  it("outra recusa (cobrança automática ligada) não mostra o suporte", async () => {
+    h.erro = "assinatura_ativa";
+    render(<MemoryRouter><SheetExcluir aberto aoMudar={() => {}} /></MemoryRouter>);
+    expect(await screen.findByRole("button", { name: /Abrir Pagamentos/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: CONTATO_SUPORTE })).toBeNull();
+  });
+});

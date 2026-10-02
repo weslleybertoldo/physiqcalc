@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { UserPlus, Users } from "lucide-react";
 import { saudacao, primeiroNome } from "@/app-aluno/inicio/pecas/regras";
 import { useSessao } from "@/nucleo/sessao";
-import { AgendaHoje, Atencao, AtividadeRecente, DiarioHoje, KpiAdesao, KpiAlunos, KpiConsultas, KpiReceita } from "@/painel/dashboard/Blocos";
+import { AgendaHoje, Atencao, AtividadeRecente, DiarioHoje, KpiAdesao, KpiAlunos, KpiConsultas, KpiReceita, RecibosDoMes } from "@/painel/dashboard/Blocos";
 import { dataPorExtenso } from "@/painel/dashboard/regras";
 import { useDashboard } from "@/painel/dashboard/useDashboard";
 import { useMiniaturas } from "@/painel/dietas/useDiario";
@@ -56,7 +56,8 @@ export default function Dashboard() {
   const comDiario = d.temNutricao && d.souNutri;
   const k = d.financeiro?.k ?? null;
   const carregandoAlunos = d.alunosQ.isLoading || d.novosQ.isLoading;
-  const carregandoAtencao = d.principalQ.isLoading || d.transQ.isLoading || d.cobsQ.isLoading || (d.treinoLigado && d.treinoQ.isLoading);
+  const carregandoAtencao = d.principalQ.isLoading || d.transQ.isLoading || d.cobsQ.isLoading || (d.treinoLigado && d.treinoQ.isLoading)
+    || (comDiario && d.diario7.q.isLoading);
   const treinoFalhou = d.temTreino && (d.treinoQ.isError || d.sessaoTreino.tipo === "erro");
   const aviso = treinoFalhou ? (
     <p className="mt-2 border-t border-linha-3 pt-2 text-[11.5px] leading-snug text-texto-3" data-aviso-treino>
@@ -67,7 +68,7 @@ export default function Dashboard() {
   const partes = ["nenhum Pix aguardando", "nada vencido"];
   if (d.temTreino) partes.push("ninguém sem treinar há 7 dias");
   partes.push("nenhuma avaliação vencida");
-  if (comDiario) partes.push("ninguém sem marcar a dieta há 3 dias");
+  if (comDiario) partes.push("ninguém sem marcar a dieta há 3 dias", "nenhuma foto do diário sem reação");
   partes.push("sem cadastro pendente nem pré-consulta nova");
   const vazioAtencao = `Tudo em dia: ${partes.join(", ")}.`;
 
@@ -85,7 +86,8 @@ export default function Dashboard() {
 
       <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {d.financeiro ? (
-          <GraficoReceita recs={d.financeiro.recs} hoje={d.hoje} recebidoMes={d.financeiro.k.recebidoMes} previstoMes={d.financeiro.k.previstoMes} />
+          <GraficoReceita recs={d.financeiro.recs} hoje={d.hoje} recebidoMes={d.financeiro.k.recebidoMes} previstoMes={d.financeiro.k.previstoMes}
+            extra={<RecibosDoMes n={d.recibosMes} hoje={d.hoje} carregando={d.recibosQ.isLoading} erro={d.recibosQ.isError} />} />
         ) : d.transQ.isError || d.cobsQ.isError ? (
           <EstadoErro titulo="Não deu para carregar a receita" aoTentar={() => { void d.transQ.refetch(); void d.cobsQ.refetch(); }} />
         ) : (

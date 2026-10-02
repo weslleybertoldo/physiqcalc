@@ -11,7 +11,7 @@ import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { TEXTO_CONVITE_ALUNO } from "@/painel/configuracoes/equipe/regras";
-import { atribuirAlunos, ErroAlunos, listarAlunos } from "@/painel/alunos/api";
+import { atribuirAlunos, ErroAlunos, listarAlunos, paginaDaExportacao } from "@/painel/alunos/api";
 import { LinhaAluno } from "@/painel/alunos/Linha";
 import { NovoAluno } from "@/painel/alunos/NovoAluno";
 import { useMeuLink } from "@/painel/alunos/meuLink";
@@ -19,17 +19,26 @@ import { NovosPorMes } from "@/painel/alunos/NovosPorMes";
 import { Pendentes } from "@/painel/alunos/Pendentes";
 import {
   FILTROS_PADRAO,
+  GENEROS,
+  ORDENS,
+  PERIODOS_FILTRO,
   SITUACOES,
   TAMANHO_PAGINA,
+  comPeriodo,
+  exportarTodos,
   filtrosAtivos,
   limiteAtingido,
   mensagemErroAlunos,
   montarCSV,
   nomeDoCSV,
+  textoExportacao,
   textoVagas,
   type FiltrosAlunos,
+  type GeneroFiltro,
   type ListaAlunos,
   type ModuloAluno,
+  type OrdemAlunos,
+  type PeriodoFiltro,
   type SituacaoFiltro,
 } from "@/painel/alunos/regras";
 
@@ -44,6 +53,36 @@ function Filtro({ rotulo, children, largo, ...props }: SelectHTMLAttributes<HTML
         {children}
       </select>
     </label>
+  );
+}
+
+const DATA = "h-10 rounded-xl border border-linha-2 bg-superficie px-2.5 text-[13px] text-texto outline-none focus:border-violeta/60";
+
+/** H4 (N-10): o período de cadastro ou de modificação (os do Nutri) + as 2 datas quando é "Personalizar data". */
+function FiltroPeriodo({ campo, rotulo, filtros, aoMudar }: {
+  campo: "cadastro" | "modificacao";
+  rotulo: string;
+  filtros: FiltrosAlunos;
+  aoMudar: (f: FiltrosAlunos) => void;
+}) {
+  const de = campo === "cadastro" ? filtros.cadastroDe : filtros.modificacaoDe;
+  const ate = campo === "cadastro" ? filtros.cadastroAte : filtros.modificacaoAte;
+  return (
+    <div className="flex flex-wrap items-end gap-2" data-filtro-periodo={campo}>
+      <Filtro largo rotulo={rotulo} value={filtros[campo]} onChange={(e) => aoMudar(comPeriodo(filtros, campo, e.target.value as PeriodoFiltro))}
+        data-filtro-periodo-valor={campo}>
+        {PERIODOS_FILTRO.map((x) => <option key={x.valor} value={x.valor}>{x.rotulo}</option>)}
+      </Filtro>
+      {filtros[campo] === "custom" && (
+        <span className="flex items-center gap-1.5">
+          <input type="date" aria-label={`${rotulo}: de`} value={de} max={ate || undefined} className={DATA}
+            onChange={(e) => aoMudar({ ...filtros, [`${campo}De`]: e.target.value })} data-filtro-de={campo} />
+          <span className="text-[11.5px] text-texto-3">até</span>
+          <input type="date" aria-label={`${rotulo}: até`} value={ate} min={de || undefined} className={DATA}
+            onChange={(e) => aoMudar({ ...filtros, [`${campo}Ate`]: e.target.value })} data-filtro-ate={campo} />
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -123,17 +162,20 @@ export default function Alunos() {
     void qc.invalidateQueries({ queryKey: ["alunos-contador"] });
   };
 
+  // N-66: TODOS os alunos do filtro (páginas de 500 em sequência), com as colunas do Nutri; se algum ficar de fora, a tela avisa
   const exportar = async () => {
-    if (!conta?.id) return;
+    const contaId = conta?.id;
+    if (!contaId) return;
     setExportando(true);
     try {
-      const todos = await listarAlunos(conta.id, filtros, 0, 500);
-      if (!todos.itens.length) {
+      const e = await exportarTodos((offset, limite) => paginaDaExportacao(contaId, filtros, offset, limite));
+      if (!e.itens.length) {
         toast.info("Nenhum aluno para exportar com esses filtros.");
         return;
       }
-      baixar(nomeDoCSV(), montarCSV(todos.itens));
-      toast.success(`${todos.itens.length} ${todos.itens.length === 1 ? "aluno exportado" : "alunos exportados"}.`);
+      baixar(nomeDoCSV(), montarCSV(e.itens));
+      if (e.completo) toast.success(textoExportacao(e));
+      else toast.warning(textoExportacao(e), { duration: 12_000 });
     } catch (e) {
       toast.error(mensagemErroAlunos(e instanceof ErroAlunos ? e.codigo : null));
     } finally {
@@ -273,8 +315,18 @@ export default function Alunos() {
               <option value="comprovante">Comprovante para conferir</option>
             </Filtro>
           )}
+          {/* H4 (N-10): os filtros do Nutri — gênero, cadastro e modificação — e a ordem da lista */}
+          <Filtro rotulo="Gênero" value={filtros.genero} onChange={(e) => setFiltros((f) => ({ ...f, genero: e.target.value as GeneroFiltro }))} data-filtro-genero>
+            <option value="">Todos</option>
+            {GENEROS.map((g) => <option key={g.valor} value={g.valor}>{g.rotulo}</option>)}
+          </Filtro>
+          <FiltroPeriodo campo="cadastro" rotulo="Cadastro" filtros={filtros} aoMudar={setFiltros} />
+          <FiltroPeriodo campo="modificacao" rotulo="Modificação" filtros={filtros} aoMudar={setFiltros} />
+          <Filtro largo rotulo="Ordenar por" value={filtros.ordem} onChange={(e) => setFiltros((f) => ({ ...f, ordem: e.target.value as OrdemAlunos }))} data-filtro-ordem>
+            {ORDENS.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
+          </Filtro>
           {/* a situação tem os próprios chips: "Limpar" só aparece com busca ou seletor ligado */}
-          {filtrosAtivos({ ...filtros, situacao: "ativos" }) && (
+          {(filtrosAtivos({ ...filtros, situacao: "ativos" }) || filtros.ordem !== FILTROS_PADRAO.ordem) && (
             <Botao tamanho="sm" icone={X} onClick={() => { setBusca(""); setFiltros(FILTROS_PADRAO); }} data-limpar-filtros>Limpar</Botao>
           )}
         </div>

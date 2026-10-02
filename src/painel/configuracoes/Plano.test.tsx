@@ -21,6 +21,9 @@ vi.mock("./plano/api", async (original) => ({ ...(await original<typeof import("
 import Plano from "./Plano";
 import { ErroCobranca } from "./plano/api";
 
+// H4: a validade do Pix dos mocks era uma data fixa (02/10/2026 12:00Z) e o teste do Pix passou a falhar depois dela: 2 h a partir de agora
+const PIX_VALE_ATE = new Date(Date.now() + 2 * 3_600_000).toISOString();
+
 function montar() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -127,7 +130,7 @@ describe("Configurações › Plano — W28: legada com cobranca_legada = false 
     h.buscar.mockResolvedValue(status({ precos: precosLegado, valor_mensal: 29.9, valor_anual: 299 },
       { ...contaLegado, situacao: "vencida", vence_em: "2026-09-10", efetiva: "vencida" }));
     h.acao.mockResolvedValue({ fatura: { id: "f1", conta_id: "c1", valor: 29.9, status: "pending", forma: "pix", pix_qr: null,
-      pix_copia_cola: "00020126PIX", pix_expira_em: "2026-10-02T12:00:00Z", pago_em: null, tipo: "pix_avulso", criado_em: "2026-09-29T12:00:00Z" } });
+      pix_copia_cola: "00020126PIX", pix_expira_em: PIX_VALE_ATE, pago_em: null, tipo: "pix_avulso", criado_em: "2026-09-29T12:00:00Z" } });
     montar();
     // "venceu em" é o vencimento (10/09), não o fim dos 7 dias de tolerância (17/09)
     expect(await screen.findByText(/Vencida em 10\/09\/2026/)).toBeInTheDocument();
@@ -157,7 +160,7 @@ describe("Configurações › Plano — conta nova (6.5)", () => {
     h.conta = conta();
     h.buscar.mockResolvedValue(status());
     h.acao.mockResolvedValue({ fatura: { id: "f1", conta_id: "c1", valor: 79.9, status: "pending", forma: "pix", pix_qr: null,
-      pix_copia_cola: "00020126PIX", pix_expira_em: "2026-10-02T12:00:00Z", pago_em: null, tipo: "pix_avulso", criado_em: "2026-09-29T12:00:00Z" } });
+      pix_copia_cola: "00020126PIX", pix_expira_em: PIX_VALE_ATE, pago_em: null, tipo: "pix_avulso", criado_em: "2026-09-29T12:00:00Z" } });
     montar();
     expect(await screen.findByText("Escolha o plano")).toBeInTheDocument();
     expect(screen.getByText(/Teste grátis até 13\/10\/2026/)).toBeInTheDocument();

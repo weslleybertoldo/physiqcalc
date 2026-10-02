@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  AREA_OUTRA_MAX,
+  areaOutraParaGravar,
   comFoto,
   dadosParaGravar,
   formDoPerfil,
@@ -14,7 +16,7 @@ import {
   type FormPerfil,
 } from "./regras";
 
-const base: FormPerfil = { nome: "Lucas Ferreira", tipo: "personal", registro: "CREF 012345-G/PE", whatsapp: "(81) 99999-8888", endereco: "Rua A, 10", cidade: "Recife", uf: "PE" };
+const base: FormPerfil = { nome: "Lucas Ferreira", tipo: "personal", areaOutra: "", registro: "CREF 012345-G/PE", whatsapp: "(81) 99999-8888", endereco: "Rua A, 10", cidade: "Recife", uf: "PE" };
 
 describe("Perfil do profissional (W5) — o mesmo jsonb do PhysiqNutri", () => {
   it("WhatsApp: máscara ao digitar e E.164 para gravar (e o formatado que os PDFs do Nutri leem)", () => {
@@ -65,5 +67,22 @@ describe("Perfil do profissional (W5) — o mesmo jsonb do PhysiqNutri", () => {
   it("como a pessoa entra (identidades do login)", () => {
     expect(formasDeEntrar({ identities: [{ provider: "google" }] })).toEqual({ google: true, senha: false });
     expect(formasDeEntrar({ identities: [], app_metadata: { providers: ["email"] } })).toEqual({ google: false, senha: true });
+  });
+});
+
+describe("H4 (N-23) — \"Sua área\" do tipo \"Outra área\" (profiles.area_outra, como no Nutri)", () => {
+  it("o formulário lê a área; grava só com Outra área e com texto (senão null)", () => {
+    expect(formDoPerfil({ nome: "A", tipo_perfil: "outra_area", area_outra: " Educação física " }).areaOutra).toBe("Educação física");
+    expect(formDoPerfil({ nome: "A", tipo_perfil: "personal", area_outra: null }).areaOutra).toBe("");
+    expect(areaOutraParaGravar({ tipo: "outra_area", areaOutra: "  Medicina " })).toBe("Medicina");
+    expect(areaOutraParaGravar({ tipo: "outra_area", areaOutra: "   " })).toBeNull();
+    expect(areaOutraParaGravar({ tipo: "personal", areaOutra: "Medicina" })).toBeNull();
+  });
+  it("até 60 caracteres (o limite do banco)", () => {
+    expect(AREA_OUTRA_MAX).toBe(60);
+    expect(validarPerfil({ ...base, tipo: "outra_area", areaOutra: "x".repeat(60) })).toBeNull();
+    expect(validarPerfil({ ...base, tipo: "outra_area", areaOutra: "x".repeat(61) })).toMatch(/área pode ter até 60/);
+    // a área de outro tipo não é validada (não é gravada)
+    expect(validarPerfil({ ...base, tipo: "personal", areaOutra: "x".repeat(61) })).toBeNull();
   });
 });

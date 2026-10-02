@@ -10,7 +10,14 @@ export async function salvarPdf(doc: jsPDF, filename: string): Promise<void> {
     doc.save(filename);
     return;
   }
-  const base64 = doc.output("datauristring").split(",")[1];
+  await compartilharBase64(filename, doc.output("datauristring").split(",")[1]);
+}
+
+/**
+ * H4: o mesmo caminho para um arquivo já em base64 (ex.: o Excel do relatório do mês — XLSX.write com type "base64"). No site quem
+ * baixa é o chamador (XLSX.writeFile); aqui é só o nativo.
+ */
+export async function compartilharBase64(filename: string, base64: string): Promise<void> {
   const { uri } = await Filesystem.writeFile({
     path: filename,
     data: base64,

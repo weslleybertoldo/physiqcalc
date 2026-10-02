@@ -9,6 +9,7 @@ import { classificarGordura } from "@/utils/composicaoCorporal";
 import { agoraFormatado } from "@/utils/formatDate";
 import { MedidasCorporais } from "@/types/medidas";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
+import { salvarPdf } from "@/lib/salvarPdf";
 
 export interface ReportData {
   name: string;
@@ -204,5 +205,6 @@ export function generateReport(data: ReportData) {
   const safeName = data.name.trim()
     ? `Relatorio Physiq do ${data.name.trim().replace(/[^a-zA-Z0-9 ]/g, "")}`
     : "Relatorio Physiq";
-  doc.save(`${safeName}.pdf`);
+  // H4: no APK o download do navegador não baixa — o salvarPdf abre a folha de compartilhar (no site, o mesmo doc.save)
+  return salvarPdf(doc, `${safeName}.pdf`);
 }

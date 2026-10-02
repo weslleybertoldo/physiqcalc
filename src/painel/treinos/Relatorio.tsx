@@ -116,7 +116,7 @@ export function Relatorio({ q }: { q: QuemMexe }) {
     setGerando(tipo);
     try {
       const r = await import("@/treino/editor/relatorio");
-      if (tipo === "pdf") r.exportarPDF(dados.data.perfil, dados.data.avaliacao, dados.data.semanas, m.mes, m.ano, nome || undefined, email || undefined);
+      if (tipo === "pdf") await r.exportarPDF(dados.data.perfil, dados.data.avaliacao, dados.data.semanas, m.mes, m.ano, nome || undefined, email || undefined);
       else await r.exportarExcel(dados.data.perfil, dados.data.avaliacao, dados.data.semanas, m.mes, m.ano, nome || undefined, email || undefined);
       toast.success(tipo === "pdf" ? "Relatório em PDF baixado." : "Relatório em Excel baixado.");
     } catch (e) {

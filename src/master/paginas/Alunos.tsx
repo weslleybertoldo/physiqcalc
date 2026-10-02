@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ArrowLeftRight, KeyRound, Lock, LockOpen, Users } from "lucide-react";
+import { ArrowLeftRight, ExternalLink, KeyRound, Lock, LockOpen, Users } from "lucide-react";
 import { toast } from "sonner";
 import { SheetSenhaAluno } from "@/painel/aluno/resumo/acesso/SheetSenhaAluno";
 import { cn } from "@/lib/utils";
@@ -25,8 +25,11 @@ const POR_PAGINA = 50;
  * Painel master › Alunos (C57, C8, P7): todos os alunos de todas as contas, filtro por conta, "do app" (sem profissional), "sem conta"
  * (login sem matrícula), os casos legados em 2 contas (P7) e mover vários de uma vez. Por aluno: bloquear/desbloquear (a regra da W13,
  * nos 2 bancos) e criar a senha nova (a do card "Acesso do aluno" — W8b: senha provisória + "Crie a sua senha" no 1º login).
+ * H4 (C57/N-5): "Abrir" leva ao perfil do aluno no painel (/painel/alunos/<matrícula>), também de outra conta — o banco deixa o
+ * master (pode_mexer_no_acesso), como o "Configurar (Admin)" do Calc e o Consultório do Nutri.
  */
 export default function Alunos() {
+  const navigate = useNavigate();
   const [sp, setSp] = useSearchParams();
   const modo = (sp.get("modo") as Modo) || "ativos";
   const conta = sp.get("conta") || "";
@@ -177,7 +180,9 @@ export default function Alunos() {
                           </span>
                         </TabelaCelula>
                         <TabelaCelula className="text-right">
-                          <span className="inline-flex gap-1.5">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Botao tamanho="sm" icone={ExternalLink} onClick={() => navigate(`/painel/alunos/${encodeURIComponent(a.paciente_id)}`)}
+                              title={`Abrir o perfil de ${a.nome ?? "o aluno"}`} data-abrir-aluno={a.nome ?? ""}>Abrir</Botao>
                             {a.tem_login && <BotaoIcone icone={KeyRound} rotulo={`Senha nova para ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => setSenha(a)} data-senha-nova={a.nome ?? ""} />}
                             {a.conta && !a.conta.eh_app && a.ativo && (a.bloqueado
                               ? <BotaoIcone icone={LockOpen} rotulo={`Desbloquear ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => void bloquear(a, false)} data-desbloquear-aluno={a.nome ?? ""} />

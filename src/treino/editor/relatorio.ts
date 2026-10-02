@@ -8,7 +8,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- porte fiel do relatório antigo (dados das funções sem tipo) */
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
+import { compartilharBase64, salvarPdf } from "@/lib/salvarPdf";
 import { formatarDataCurta, agoraFormatado } from "@/utils/formatDate";
 import { contarDiasTreinados } from "@/lib/contagemTreinos";
 import { rotuloMetodo, tmbEscolhida } from "@/lib/avaliacao";
@@ -510,7 +512,8 @@ export function exportarPDF(
     desenharRodape(doc, `Physiq - Pagina ${i} de ${totalPaginas}`);
   }
 
-  doc.save(nomeArquivo);
+  // H4: no APK o download do navegador não baixa — o salvarPdf abre a folha de compartilhar (no site, o mesmo doc.save)
+  return salvarPdf(doc, nomeArquivo);
 }
 
 export async function exportarExcel(
@@ -629,5 +632,7 @@ export async function exportarExcel(
   wsEvolucao["!cols"] = [{ wch: 36 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 16 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, wsEvolucao, "Evolucao por Exercicio");
 
-  XLSX.writeFile(wb, nomeArquivo);
+  // H4: no APK o XLSX.writeFile (download do navegador) não baixa — vai pelo mesmo caminho do salvarPdf
+  if (Capacitor.isNativePlatform()) await compartilharBase64(nomeArquivo, XLSX.write(wb, { bookType: "xlsx", type: "base64" }) as string);
+  else XLSX.writeFile(wb, nomeArquivo);
 }
