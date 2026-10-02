@@ -144,8 +144,7 @@ export default function Alunos() {
                     <tr>
                       <TabelaTitulo className="w-8"><input type="checkbox" aria-label="Marcar todos" checked={todosMarcados} onChange={() => setSelecao(todosMarcados ? new Set() : new Set(idsVisiveis))} data-marcar-todos /></TabelaTitulo>
                       <TabelaTitulo>Aluno</TabelaTitulo>
-                      <TabelaTitulo>Conta</TabelaTitulo>
-                      <TabelaTitulo>Módulos</TabelaTitulo>
+                      <TabelaTitulo>Conta e módulos</TabelaTitulo>
                       <TabelaTitulo>Responsáveis</TabelaTitulo>
                       <TabelaTitulo>Situação</TabelaTitulo>
                       <TabelaTitulo className="text-right">Ações</TabelaTitulo>
@@ -156,17 +155,17 @@ export default function Alunos() {
                       <TabelaLinha key={a.paciente_id} data-linha-aluno={a.nome ?? ""}>
                         <TabelaCelula><input type="checkbox" aria-label={`Marcar ${a.nome}`} checked={selecao.has(a.paciente_id)} onChange={() => alternar(a.paciente_id)} data-marcar-aluno={a.nome ?? ""} /></TabelaCelula>
                         <TabelaCelula>
-                          <span className="flex min-w-[190px] max-w-[270px] items-center gap-2.5"><Avatar nome={a.nome} tamanho={30} />
+                          <span className="flex min-w-[180px] max-w-[250px] items-center gap-2.5"><Avatar nome={a.nome} tamanho={30} />
                             <span className="min-w-0"><b className="block truncate text-[13.5px]">{a.nome}</b><span className="block truncate text-[12px] text-texto-3">{a.email ?? "sem e-mail"}{a.tem_login ? "" : " · sem login"}</span></span>
                           </span>
                         </TabelaCelula>
                         <TabelaCelula className="text-texto-2">
-                          {a.conta ? <span className="block max-w-[170px] truncate">{a.conta.nome}</span> : "—"}
-                          {a.app && <span className="block text-[11.5px] text-texto-3">{a.app.plano ?? "App"}{a.app.pago_ate ? ` · pago até ${dataCurta(a.app.pago_ate)}` : a.app.teste_ate ? ` · teste até ${dataCurta(a.app.teste_ate)}` : ""}</span>}
+                          {a.conta ? <span className="block max-w-[190px] truncate">{a.conta.nome}</span> : "—"}
+                          {a.app ? <span className="block max-w-[190px] truncate text-[11.5px] text-texto-3">{a.app.plano ?? "App"}{a.app.pago_ate ? ` · pago até ${dataCurta(a.app.pago_ate)}` : a.app.teste_ate ? ` · teste até ${dataCurta(a.app.teste_ate)}` : ""}</span>
+                            : a.modulos.length ? <span className="mt-1 block"><ChipsModulos modulos={a.modulos} /></span> : null}
                         </TabelaCelula>
-                        <TabelaCelula>{a.modulos.length ? <ChipsModulos modulos={a.modulos} /> : <span className="text-texto-3">—</span>}</TabelaCelula>
                         <TabelaCelula className="text-[12.5px] text-texto-2">
-                          <span className="block max-w-[170px] truncate" title={[a.personal?.nome && `Personal: ${a.personal.nome}`, a.nutricionista?.nome && `Nutri: ${a.nutricionista.nome}`].filter(Boolean).join(" · ")}>
+                          <span className="block max-w-[160px] truncate" title={[a.personal?.nome && `Personal: ${a.personal.nome}`, a.nutricionista?.nome && `Nutri: ${a.nutricionista.nome}`].filter(Boolean).join(" · ")}>
                             {[a.personal?.nome && `Personal: ${a.personal.nome}`, a.nutricionista?.nome && `Nutri: ${a.nutricionista.nome}`].filter(Boolean).join(" · ") || "Sem responsável"}
                           </span>
                         </TabelaCelula>
