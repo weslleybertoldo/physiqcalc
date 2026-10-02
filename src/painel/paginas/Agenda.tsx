@@ -5,17 +5,24 @@ import { addDays, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { salvarArquivoTexto } from "@/app-aluno/perfil/pecas/salvarArquivo";
-import { gerarICS, nomeArquivoICS, numerosDaAgenda, hojeSP } from "@/agenda/regras";
+import { destinoAoExcluir, gerarICS, mensagemErroTag, nomeArquivoICS, numerosDaAgenda, hojeSP, tagsDe, type TagAgenda } from "@/agenda/regras";
+import { BTN_PERIGO, BTN_SEC, DESCRICAO_JANELA, JANELA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import AgendamentoDialog, { type FormAgendamento } from "@/painel/agenda/AgendamentoDialog";
 import CalendarioDialog from "@/painel/agenda/CalendarioDialog";
 import {
-  buscarAluno, excluirAgendamento, excluirBloqueio, excluirTrava, listarAgendamentos, type Agendamento, type AlunoAgenda, type Bloqueio, type Calendario,
+  buscarAluno, excluirAgendamento, excluirBloqueio, excluirTag, excluirTrava, listarAgendamentos, type Agendamento, type AlunoAgenda, type Bloqueio,
+  type Calendario,
 } from "@/painel/agenda/dados";
 import PainelAgenda from "@/painel/agenda/PainelAgenda";
 import RegrasDialog from "@/painel/agenda/RegrasDialog";
 import ResumoAgenda from "@/painel/agenda/ResumoAgenda";
+import TagDialog from "@/painel/agenda/TagDialog";
 import TravaDialog from "@/painel/agenda/TravaDialog";
 import { CHAVES_AGENDA, useContextoAgenda, useDadosAgenda } from "@/painel/agenda/useAgenda";
 import {
@@ -50,6 +57,8 @@ type DialogAg = { aberto: boolean; agendamento: Agendamento | null; inicial?: Pa
  * (o personal ganha agenda). No topo, o padrão da tela 6: Consultas hoje, a semana, "a confirmar", "Consultas por semana" (N-9) e
  * a "Agenda de hoje". Estado na URL (?visao=&data=); ?aluno=<id>&novo=1 (atalho "Agendar" do Resumo) e ?paciente=<id> (links do
  * site antigo) abrem o novo agendamento já com o aluno.
+ * W2 (02/10): o tipo virou TAG do profissional (bloco "Tags" na lateral, a pílula na consulta, a tag padrão do calendário; excluir
+ * leva as consultas para a base da mesma área) e quem é personal E nutri nasce com os calendários "Treino" e "Nutrição".
  */
 export default function Agenda() {
   const ctx = useContextoAgenda();
@@ -86,6 +95,11 @@ export default function Agenda() {
   const [travaAberta, setTravaAberta] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [alunoExtra, setAlunoExtra] = useState<AlunoAgenda | null>(null);
+  const [dialogTag, setDialogTag] = useState<{ aberto: boolean; tag: TagAgenda | null }>({ aberto: false, tag: null });
+  const [tagExcluir, setTagExcluir] = useState<TagAgenda | null>(null);
+  const [excluindoTag, setExcluindoTag] = useState(false);
+  const minhasTags = useMemo(() => tagsDe(d.tags, ctx.uid), [d.tags, ctx.uid]);
+  const destinoExcluir = tagExcluir ? destinoAoExcluir(tagExcluir, d.tags) : null;
 
   const alunos = useMemo(() => (alunoExtra && !d.alunos.some((a) => a.id === alunoExtra.id) ? [alunoExtra, ...d.alunos] : d.alunos), [d.alunos, alunoExtra]);
   const minhasTravas = useMemo(() => d.travas.filter((t) => t.profissional_id === ctx.uid), [d.travas, ctx.uid]);
@@ -155,14 +169,28 @@ export default function Agenda() {
       toast.error(e instanceof Error ? e.message : "Não foi possível liberar");
     }
   };
+  const confirmarExcluirTag = async () => {
+    if (!tagExcluir) return;
+    setExcluindoTag(true);
+    try {
+      await excluirTag(tagExcluir.id);
+      toast.success(`Tag "${tagExcluir.nome}" excluída${destinoExcluir ? `: as consultas dela agora são "${destinoExcluir.nome}"` : ""}`);
+      setTagExcluir(null);
+      invalidar();
+    } catch (e) {
+      toast.error(mensagemErroTag(e instanceof Error ? e.message : null));
+    } finally {
+      setExcluindoTag(false);
+    }
+  };
   const exportar = async () => {
     setExportando(true);
     try {
       const agora = new Date();
       const lista = await listarAgendamentos(addDays(agora, -30), addDays(agora, 365), ctx.uid, ctx.contaId || null);
       const cores = new Map(d.calendarios.map((c) => [c.id, c.cor]));
-      const evs = lista.filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, cores, d.mapaAlunos))
-        .map((e) => ({ id: e.id, titulo: e.titulo, inicio: e.inicio, fim: e.fim, diaInteiro: e.diaInteiro, status: e.status, observacao: e.observacao, modulo: e.modulo, aluno: e.aluno }));
+      const evs = lista.filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, cores, d.mapaAlunos, d.mapaTags))
+        .map((e) => ({ id: e.id, titulo: e.titulo, inicio: e.inicio, fim: e.fim, diaInteiro: e.diaInteiro, status: e.status, observacao: e.observacao, modulo: e.modulo, aluno: e.aluno, tag: e.tag.nome }));
       const r = await salvarArquivoTexto(nomeArquivoICS(), gerarICS(evs), "text/calendar");
       toast.success(`${evs.length} agendamento(s) ${r === "baixado" ? "exportado(s)" : "prontos para salvar"}`);
     } catch (e) {
@@ -226,6 +254,8 @@ export default function Agenda() {
 
         <aside className={cn("w-full shrink-0 xl:w-[290px]")} data-aside-agenda>
           <PainelAgenda uid={ctx.uid} calendarios={d.calendarios} ocultos={ocultos} nomes={nomes} regras={d.regras} regrasCarregando={d.regrasCarregando} travas={d.travas} bloqueios={d.bloqueiosFuturos}
+            tags={d.tags} tagsCarregando={d.tagsQ.isLoading || d.calendariosQ.isLoading} onNovaTag={() => setDialogTag({ aberto: true, tag: null })}
+            onEditarTag={(t) => setDialogTag({ aberto: true, tag: t })} onExcluirTag={(t) => setTagExcluir(t)}
             exportando={exportando} onAlternar={alternarCalendario}
             onNovoCalendario={() => setDialogCal({ aberto: true, calendario: null })} onEditarCalendario={(c) => setDialogCal({ aberto: true, calendario: c })}
             onEditarRegras={() => !d.regrasCarregando && setRegrasAberto(true)} onTravar={() => setTravaAberta(true)} onLiberarTrava={(t) => void liberarTrava(t.id)}
@@ -235,10 +265,31 @@ export default function Agenda() {
 
       <AgendamentoDialog open={dialogAg.aberto} onOpenChange={(aberto) => setDialogAg((x) => ({ ...x, aberto }))} agendamento={dialogAg.agendamento}
         inicial={dialogAg.inicial} calendarios={d.calendarios} alunos={alunos} eventos={[...d.eventos, ...d.eventosEstat.filter((e) => !d.eventos.some((x) => x.id === e.id))]}
-        bloqueios={d.bloqueios} travas={d.travas} regras={d.regras} ctx={ctx} onSalvo={invalidar} onExcluir={excluir} />
+        bloqueios={d.bloqueios} travas={d.travas} regras={d.regras} ctx={ctx} tags={d.tags} onTagCriada={() => void qc.invalidateQueries({ queryKey: ["agenda-painel", "tags"] })}
+        onSalvo={invalidar} onExcluir={excluir} />
       <CalendarioDialog open={dialogCal.aberto} onOpenChange={(aberto) => setDialogCal((x) => ({ ...x, aberto }))} calendario={dialogCal.calendario}
         outros={d.calendarios.filter((c) => c.nutricionista_id === ctx.uid && c.id !== dialogCal.calendario?.id)} uid={ctx.uid} contaId={ctx.contaId || null}
-        regras={d.regras} onSalvo={invalidar} />
+        regras={d.regras} tags={d.tags} onSalvo={invalidar} />
+      <TagDialog open={dialogTag.aberto} onOpenChange={(aberto) => setDialogTag((x) => ({ ...x, aberto }))} tag={dialogTag.tag} uid={ctx.uid} tags={minhasTags}
+        onSalvo={invalidar} />
+      <AlertDialog open={!!tagExcluir} onOpenChange={(aberto) => { if (!aberto) setTagExcluir(null); }}>
+        <AlertDialogContent className={JANELA} data-modal-excluir-tag={tagExcluir?.id}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className={TITULO_JANELA}>Excluir a tag "{tagExcluir?.nome}"?</AlertDialogTitle>
+            <AlertDialogDescription className={DESCRICAO_JANELA} data-destino-excluir-tag={destinoExcluir?.nome ?? ""}>
+              {destinoExcluir
+                ? `As consultas com esta tag (e os calendários que a usam como padrão) passam para a tag "${destinoExcluir.nome}", da mesma área. Nenhuma consulta sai da agenda.`
+                : "As consultas com esta tag passam para a tag pronta da mesma área. Nenhuma consulta sai da agenda."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className={BTN_SEC}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className={BTN_PERIGO} onClick={(e) => { e.preventDefault(); void confirmarExcluirTag(); }} disabled={excluindoTag} data-btn-confirmar-excluir-tag>
+              {excluindoTag ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <RegrasDialog open={regrasAberto} onOpenChange={setRegrasAberto} uid={ctx.uid} regras={d.regras} nome={ctx.pessoas.get(ctx.uid)?.nome ?? null}
         onSalvo={(r) => { qc.setQueryData(CHAVES_AGENDA.regras(ctx.uid), r); invalidar(); }} />
       <TravaDialog open={travaAberta} onOpenChange={setTravaAberta} calendarios={d.calendarios} uid={ctx.uid} contaId={ctx.contaId || null} regras={d.regras}

@@ -71,7 +71,7 @@ export default function VisaoMes({ ancora, eventos, bloqueios, regras, hoje = ne
               </div>
               <ul className="mt-1 space-y-0.5">
                 {visiveis.map((ev) => (
-                  <li key={ev.id}><ChipEvento ev={ev} onAbrir={onAbrir} compacto /></li>
+                  <li key={ev.id}><ChipEvento ev={ev} onAbrir={onAbrir} compacto inicialDaTag /></li>
                 ))}
                 {extra > 0 && <li className="px-1 text-[10px] text-texto-3" data-mais={extra}>+{extra} mais</li>}
               </ul>

@@ -9,8 +9,8 @@ import {
   nomeDoDiaLongo, posicaoNoDia, sobrepoe, tituloPeriodo, type Visao,
 } from "@/nutricao/editor/lib/agendaUtil";
 import {
-  confirmacaoDe, minutosDe, statusDe, tipoDe, travasDoDia, type ConfirmacaoAgenda, type RegrasAgenda, type StatusAgenda, type TipoAgendamento,
-  type TravaRecorrente,
+  confirmacaoDe, minutosDe, statusDe, tagDaConsulta, tipoDe, travasDoDia, type ConfirmacaoAgenda, type RegrasAgenda, type StatusAgenda,
+  type TagAgenda, type TipoAgendamento, type TravaRecorrente,
 } from "@/agenda/regras";
 import type { Agendamento, AlunoAgenda, Bloqueio, Calendario } from "./dados";
 
@@ -34,7 +34,10 @@ export interface EventoPainel {
   aluno: string | null;
   foto: string | null;
   observacao: string | null;
+  /** a área (o modulo) — a da tag */
   modulo: TipoAgendamento;
+  /** W2: a tag da consulta (a dela; sem ela carregada, a base da área: "Treino" · "Nutrição" · "Geral") */
+  tag: { id: string | null; nome: string; cor: string };
   reagendamentos: number;
   origem: string;
   /** cor do calendário */
@@ -50,8 +53,9 @@ export interface BloqueioPainel {
   profissionalId: string;
 }
 
-export function paraEvento(a: Agendamento, cores: Map<string, string>, alunos: Map<string, AlunoAgenda>): EventoPainel {
+export function paraEvento(a: Agendamento, cores: Map<string, string>, alunos: Map<string, AlunoAgenda>, tags?: ReadonlyMap<string, TagAgenda>): EventoPainel {
   const status = statusDe(a.status);
+  const tag = tagDaConsulta(a.tag_id, a.modulo, tags);
   const aluno = a.paciente_id ? alunos.get(a.paciente_id) ?? null : null;
   const conf = a.confirmacao === "a_confirmar" || a.confirmacao === "confirmado" || a.confirmacao === "desmarcado" ? a.confirmacao : confirmacaoDe(status);
   return {
@@ -69,6 +73,7 @@ export function paraEvento(a: Agendamento, cores: Map<string, string>, alunos: M
     foto: aluno?.foto_url ?? null,
     observacao: a.observacao,
     modulo: tipoDe(a.modulo),
+    tag: { id: tag.id, nome: tag.nome, cor: tag.cor },
     reagendamentos: a.reagendamentos ?? 0,
     origem: a.origem ?? "profissional",
     cor: cores.get(a.calendario_id) ?? CORES_CALENDARIO[0],

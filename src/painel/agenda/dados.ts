@@ -2,8 +2,13 @@
 // conta: o dono vê a agenda da equipe; cada profissional, a dele — as políticas de hoje: dono do registro, dono da conta, master).
 // Exclusão de calendário e de agendamento continua SOFT (deleted_at → Lixeira); bloqueio e trava são apagados de verdade.
 // Slots, janela e pacote são do banco (agenda_horarios, aluno_compromissos, aluno_definir_pacote — migração da W20).
+// W2: as TAGS da agenda (agenda_tags, por profissional; o banco cria as 3 base e mantém modulo = área da tag) e a tag padrão do
+// calendário; quem entra sem calendário sendo personal E nutri nasce com 2 ("Treino" e "Nutrição").
 import { principal } from "@/integrations/principal/client";
-import { normalizarRegras, type RegrasAgenda, type TravaRecorrente } from "@/agenda/regras";
+import {
+  baseDaArea, calendariosIniciais, normalizarRegras, normalizarTag, temAsBases, type AreaTag, type RegrasAgenda, type TagAgenda,
+  type TravaRecorrente,
+} from "@/agenda/regras";
 import type { PacoteSituacao } from "@/agenda/regras";
 
 export interface Calendario {
@@ -16,6 +21,8 @@ export interface Calendario {
   faixa_fim: string;
   slot_minutos: number | null;
   conta_id: string | null;
+  /** W2: a tag sugerida no novo agendamento deste calendário (null = pelo papel, como antes) */
+  tag_padrao_id: string | null;
   created_at: string;
   deleted_at: string | null;
 }
@@ -32,7 +39,10 @@ export interface Agendamento {
   status: string;
   confirmacao: string;
   observacao: string | null;
+  /** a ÁREA (treino · nutricao · geral) — W2: a área da tag; tudo que lia o tipo continua lendo aqui */
   modulo: string;
+  /** W2: a tag da consulta (agenda_tags do profissional dela) */
+  tag_id: string | null;
   conta_id: string | null;
   reagendamentos: number;
   mes_referencia: string | null;
@@ -88,12 +98,21 @@ export async function listarCalendarios(uid: string, contaId: string | null): Pr
   return (data ?? []) as unknown as Calendario[];
 }
 
-/** Lista os calendários; sem nenhum SEU, cria o "Calendário principal" (1º acesso à agenda, como no site antigo). */
-export async function garantirCalendarios(uid: string, contaId: string | null, cor: string): Promise<Calendario[]> {
+/**
+ * Lista os calendários; sem nenhum SEU (1º acesso à agenda, ou excluiu o último — D2), cria os iniciais: personal E nutri na conta
+ * ativa → "Treino" (padrão) e "Nutrição", cada um com a tag padrão da área; senão o "Calendário principal" com a tag padrão da área
+ * do papel (como hoje). Sem as tags (o banco não respondeu), os calendários nascem sem tag padrão — a tag vem pelo papel.
+ */
+export async function garantirCalendarios(uid: string, contaId: string | null, papeis: readonly string[], modulos: readonly string[] | null): Promise<Calendario[]> {
   const lista = await listarCalendarios(uid, contaId);
   if (lista.some((c) => c.nutricionista_id === uid)) return lista;
-  const novo = await criarCalendario(uid, contaId, { nome: NOME_CALENDARIO_PADRAO, cor, padrao: true });
-  return [...lista, novo];
+  const minhas = await garantirMinhasTags(uid).catch(() => [] as TagAgenda[]);
+  const novos: Calendario[] = [];
+  for (const c of calendariosIniciais(papeis, modulos)) {
+    const tag = c.area ? baseDaArea(minhas, uid, c.area) : null;
+    novos.push(await criarCalendario(uid, contaId, { nome: c.nome, cor: c.cor, padrao: c.padrao, tag_padrao_id: tag?.id ?? null }));
+  }
+  return [...lista, ...novos];
 }
 
 export async function criarCalendario(dono: string, contaId: string | null, dados: Partial<Calendario>): Promise<Calendario> {
@@ -118,6 +137,69 @@ export async function excluirCalendario(id: string): Promise<void> {
   falhou(cal.error);
 }
 
+// ───────────────────────── tags (W2) ─────────────────────────
+/** As tags vivas DESTES profissionais (o meu + os donos dos calendários que eu vejo). Sempre por profissional_id: o master lê
+ * todas pela RLS. */
+export async function listarTags(profissionais: readonly string[]): Promise<TagAgenda[]> {
+  const ids = [...new Set(profissionais.filter(Boolean))];
+  if (!ids.length) return [];
+  const { data, error } = await principal.from("agenda_tags" as never).select("*").in("profissional_id", ids).is("deleted_at", null)
+    .order("ordem", { ascending: true }).order("created_at", { ascending: true });
+  falhou(error);
+  return ((data ?? []) as unknown[]).map(normalizarTag).filter((t): t is TagAgenda => !!t);
+}
+
+/** As 3 base de quem chama (o banco cria as que faltam) + as tags vivas dele. */
+export async function garantirTags(): Promise<TagAgenda[]> {
+  const { data, error } = await principal.rpc("agenda_garantir_tags" as never);
+  falhou(error);
+  const r = (data ?? {}) as { ok?: boolean; erro?: string; tags?: unknown[] };
+  if (r.ok === false) throw new Error(r.erro ?? "erro_interno");
+  return (r.tags ?? []).map(normalizarTag).filter((t): t is TagAgenda => !!t);
+}
+
+/** As minhas tags; faltando alguma base, pede ao banco (1ª vez na agenda) — só aí escreve. */
+export async function garantirMinhasTags(uid: string): Promise<TagAgenda[]> {
+  const minhas = await listarTags([uid]);
+  if (temAsBases(minhas, uid)) return minhas;
+  return garantirTags();
+}
+
+/**
+ * As tags que a agenda usa: as minhas (com as 3 base garantidas) + as dos donos dos calendários da equipe (só leitura). Se o banco
+ * não deixar criar as base agora, segue com o que leu (a consulta sem tag carregada mostra a área).
+ */
+export async function carregarTagsDaAgenda(uid: string, donos: readonly string[]): Promise<TagAgenda[]> {
+  const ids = [...new Set([uid, ...donos].filter(Boolean))];
+  const lidas = await listarTags(ids);
+  if (!uid || temAsBases(lidas, uid)) return lidas;
+  const minhas = await garantirTags().catch(() => null);
+  if (!minhas) return lidas;
+  return [...lidas.filter((t) => t.profissional_id !== uid), ...minhas];
+}
+
+export async function criarTag(dados: { profissional_id: string; nome: string; cor: string; area: AreaTag }): Promise<TagAgenda> {
+  const { data, error } = await principal.from("agenda_tags" as never).insert({ ...dados, base: false } as never).select("*").single();
+  falhou(error);
+  const t = normalizarTag(data);
+  if (!t) throw new Error("erro_interno");
+  return t;
+}
+
+export async function atualizarTag(id: string, patch: Partial<Pick<TagAgenda, "nome" | "cor" | "area">>): Promise<TagAgenda> {
+  const { data, error } = await principal.from("agenda_tags" as never).update(patch as never).eq("id", id).select("*").single();
+  falhou(error);
+  const t = normalizarTag(data);
+  if (!t) throw new Error("erro_interno");
+  return t;
+}
+
+/** Soft delete: o banco leva as consultas e os calendários dela para a base da mesma área (na mesma transação). */
+export async function excluirTag(id: string): Promise<void> {
+  const { error } = await principal.from("agenda_tags" as never).update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
+  falhou(error);
+}
+
 // ───────────────────────── agendamentos ─────────────────────────
 /** Os que tocam [inicio, fim). */
 export async function listarAgendamentos(inicio: Date, fim: Date, uid: string, contaId: string | null): Promise<Agendamento[]> {
@@ -128,7 +210,7 @@ export async function listarAgendamentos(inicio: Date, fim: Date, uid: string, c
 }
 
 export type NovoAgendamento = Pick<Agendamento, "nutricionista_id" | "calendario_id" | "paciente_id" | "titulo" | "inicio" | "fim" | "dia_inteiro"
-  | "status" | "confirmacao" | "observacao" | "modulo" | "conta_id">;
+  | "status" | "confirmacao" | "observacao" | "modulo" | "conta_id"> & { tag_id?: string | null };
 
 export async function criarAgendamento(dados: NovoAgendamento): Promise<Agendamento> {
   const { data, error } = await principal.from("agendamentos").insert(dados as never).select("*").single();

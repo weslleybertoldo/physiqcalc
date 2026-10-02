@@ -1,16 +1,20 @@
 // Physiq W20 — painel lateral da agenda (porta do PainelAgenda do PhysiqNutri: "Meus calendários", "Configurações", "Legendas") no
 // visual premium + o pedido dele: "Horários e regras" (slot, atendimento, reagendamento, desistência) e "Travas" (recorrentes e
 // avulsas, com Liberar). O dono vê também os calendários da equipe.
+// W2: o bloco "Tags" (as SUAS: cor, nome e área; Nova; editar; excluir — as 3 prontas não saem) — serve de legenda; o dono vê as da
+// equipe só para ler. Sempre filtrado por profissional_id (o master lê as de todos pela RLS).
 import type { ReactNode } from "react";
 import { format } from "date-fns";
-import { CalendarOff, Download, Lock, Pencil, Plus, Settings2, Trash2, Unlock } from "lucide-react";
+import { CalendarOff, Download, Lock, Pencil, Plus, Settings2, Tag, Trash2, Unlock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  CONFIRMACAO_ORDEM, ESTILO_CONFIRMACAO, ESTILO_STATUS, JANELAS, STATUS_ORDEM, resumoDasRegras, textoTrava, type RegrasAgenda, type TravaRecorrente,
+  CONFIRMACAO_ORDEM, ESTILO_CONFIRMACAO, ESTILO_STATUS, JANELAS, STATUS_ORDEM, resumoDasRegras, rotuloArea, tagsDe, textoTrava, type RegrasAgenda,
+  type TagAgenda, type TravaRecorrente,
 } from "@/agenda/regras";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Esqueleto } from "@/ui/premium/Estados";
 import type { Bloqueio, Calendario } from "./dados";
+import PilulaTag from "./PilulaTag";
 import { hhmm } from "./visao";
 
 interface Props {
@@ -18,6 +22,12 @@ interface Props {
   calendarios: Calendario[];
   ocultos: Set<string>;
   nomes: Map<string, string>;
+  /** W2: as tags que a agenda leu (minhas + as dos donos dos calendários da equipe) */
+  tags: TagAgenda[];
+  tagsCarregando: boolean;
+  onNovaTag: () => void;
+  onEditarTag: (t: TagAgenda) => void;
+  onExcluirTag: (t: TagAgenda) => void;
   regras: RegrasAgenda;
   regrasCarregando: boolean;
   travas: TravaRecorrente[];
@@ -79,10 +89,36 @@ function LinhaCalendario({ c, visivel, dono, onAlternar, onEditar }: { c: Calend
   );
 }
 
+function LinhaTag({ t, onEditar, onExcluir }: { t: TagAgenda; onEditar: () => void; onExcluir?: () => void }) {
+  return (
+    <li className="flex items-center gap-2" data-tag-item={t.id} data-tag-base={t.base ? "1" : undefined} data-tag-area={t.area}>
+      <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: t.cor, boxShadow: `0 0 8px ${t.cor}66` }} aria-hidden="true" />
+      <span className="min-w-0 flex-1">
+        <b className="block truncate text-[13px] font-semibold text-texto" data-tag-item-nome>{t.nome}</b>
+        <span className="block truncate text-[11px] text-texto-3">{rotuloArea(t.area)}{t.base ? " · pronta" : ""}</span>
+      </span>
+      <button type="button" onClick={onEditar} className="rounded-lg p-1 text-texto-3 transition-colors hover:text-texto" aria-label={`Editar a tag ${t.nome}`} data-btn-editar-tag={t.id}>
+        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+      {onExcluir ? (
+        <button type="button" onClick={onExcluir} className="rounded-lg p-1 text-texto-3 transition-colors hover:text-rosa-3" aria-label={`Excluir a tag ${t.nome}`} data-btn-excluir-tag={t.id}>
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      ) : (
+        <span className="w-[22px]" title="As tags prontas não podem ser excluídas" aria-hidden="true" />
+      )}
+    </li>
+  );
+}
+
 export default function PainelAgenda(p: Props) {
   const meus = p.calendarios.filter((c) => c.nutricionista_id === p.uid);
   const equipe = p.calendarios.filter((c) => c.nutricionista_id !== p.uid);
   const janela = JANELAS.find((j) => j.valor === p.regras.janela_reagendamento)?.rotulo ?? "";
+  const minhasTags = tagsDe(p.tags, p.uid);
+  // o dono: as tags de cada membro da equipe com calendário aqui (só leitura)
+  const donosEquipe = [...new Set(equipe.map((c) => c.nutricionista_id))];
+  const tagsEquipe = donosEquipe.map((id) => ({ id, nome: p.nomes.get(id) ?? "Equipe", tags: tagsDe(p.tags, id) })).filter((x) => x.tags.length > 0);
   return (
     <div className="flex flex-col gap-3" data-painel-agenda>
       <Bloco titulo="Meus calendários" marca="calendarios"
@@ -101,6 +137,34 @@ export default function PainelAgenda(p: Props) {
               ))}
             </ul>
           </>
+        )}
+      </Bloco>
+
+      <Bloco titulo="Tags" marca="tags"
+        acao={<button type="button" onClick={p.onNovaTag} disabled={p.tagsCarregando} className={LINK} data-btn-nova-tag><Plus className="h-3.5 w-3.5" aria-hidden="true" /> Nova</button>}>
+        {p.tagsCarregando && minhasTags.length === 0 ? (
+          <div className="space-y-2" data-tags-carregando><Esqueleto className="h-3.5 w-4/5" /><Esqueleto className="h-3.5 w-3/5" /><Esqueleto className="h-3.5 w-2/3" /></div>
+        ) : minhasTags.length === 0 ? (
+          <p className="flex items-center gap-1.5 text-[12px] text-texto-3" data-tags-vazio><Tag className="h-3.5 w-3.5" aria-hidden="true" /> As tags (Treino, Nutrição e Geral) aparecem aqui.</p>
+        ) : (
+          <ul className="space-y-2" data-tags-minhas>
+            {minhasTags.map((t) => (
+              <LinhaTag key={t.id} t={t} onEditar={() => p.onEditarTag(t)} onExcluir={t.base ? undefined : () => p.onExcluirTag(t)} />
+            ))}
+          </ul>
+        )}
+        {tagsEquipe.length > 0 && (
+          <div className="space-y-2 pt-1" data-tags-equipe>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-texto-4">Equipe</p>
+            {tagsEquipe.map((m) => (
+              <div key={m.id} className="space-y-1" data-tags-membro={m.id}>
+                <span className="block truncate text-[11.5px] text-texto-3">{m.nome}</span>
+                <div className="flex flex-wrap gap-1">
+                  {m.tags.map((t) => <PilulaTag key={t.id} tag={t} tamanho="chip" className="h-[20px] text-[10px]" />)}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </Bloco>
 

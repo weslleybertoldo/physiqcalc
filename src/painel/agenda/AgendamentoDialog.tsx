@@ -3,6 +3,9 @@
 // banco calcula (livre · ocupado · travado · bloqueado) e o tipo nasce pelo papel de quem agenda (NF12). Conflito, bloqueio, trava e
 // "fora do atendimento" só AVISAM (o profissional pode encaixar); o aluno não marca nesses. Ao salvar uma consulta futura de um
 // aluno com login, o banco avisa no sino e (com "Avisar o aluno") sai o e-mail.
+// W2: o "Tipo" virou "Tag" — os chips são as tags do DONO do calendário (+ "Nova tag", só nos seus); vem marcada a tag padrão do
+// calendário, senão a base da área que o tipo de antes escolhia (papel, aluno, módulo da conta). A área da tag é o modulo gravado.
+// Sem as tags carregadas, volta o Tipo de antes (o banco põe a base da área).
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -17,14 +20,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { BTN_PERIGO, BTN_PRI, BTN_SEC, Campo, DESCRICAO_JANELA, INPUT, JANELA, SELECT, TEXTAREA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import {
-  ESTILO_STATUS, STATUS_ORDEM, SUGESTOES_TITULO, TIPOS, confirmacaoDe, duracaoTexto, ehStatus, quandoConsulta, statusDe, tipoDe, tipoPadrao,
-  tituloPadrao, type RegrasAgenda, type StatusAgenda, type TipoAgendamento, type TravaRecorrente,
+  ESTILO_STATUS, STATUS_ORDEM, SUGESTOES_TITULO, TIPOS, baseDaArea, confirmacaoDe, duracaoTexto, ehStatus, estiloDaTag, quandoConsulta, statusDe,
+  tagPadraoDoCalendario, tagsDe, tipoDe, tipoPadrao, tituloPadrao, type RegrasAgenda, type StatusAgenda, type TagAgenda, type TipoAgendamento,
+  type TravaRecorrente,
 } from "@/agenda/regras";
 import { Avatar } from "@/ui/premium/Avatar";
 import {
   atualizarAgendamento, avisarPorEmail, criarAgendamento, horariosDoDia, type Agendamento, type AlunoAgenda, type Calendario, type NovoAgendamento,
   type SlotDoDia,
 } from "./dados";
+import TagDialog from "./TagDialog";
 import type { ContextoAgenda } from "./useAgenda";
 import {
   bloqueiosEmConflito, chaveDia, combinarDataHora, conflitos, dataValida, faixaHora, foraDoAtendimento, formatarHora, horaValida, travasEmConflito,
@@ -40,7 +45,10 @@ export interface FormAgendamento {
   /** minutos (N slots) */
   duracao: number;
   diaInteiro: boolean;
+  /** a área (= a da tag escolhida) */
   modulo: TipoAgendamento;
+  /** W2: a tag (do dono do calendário) */
+  tagId: string | null;
   status: StatusAgenda;
   observacao: string;
   avisar: boolean;
@@ -58,6 +66,10 @@ interface Props {
   travas: TravaRecorrente[];
   regras: RegrasAgenda;
   ctx: ContextoAgenda;
+  /** W2: as tags que a agenda leu (as minhas + as dos donos dos calendários) */
+  tags: TagAgenda[];
+  /** uma tag nova nasceu aqui dentro ("Nova tag") */
+  onTagCriada?: (t: TagAgenda) => void;
   onSalvo: (a: Agendamento, modo: "criado" | "editado") => void;
   onExcluir?: (a: Agendamento) => Promise<void> | void;
 }
@@ -73,7 +85,7 @@ function duracaoRotulo(min: number, slot: number): string {
   return d;
 }
 
-export default function AgendamentoDialog({ open, onOpenChange, agendamento, inicial, calendarios, alunos, eventos, bloqueios, travas, regras, ctx, onSalvo, onExcluir }: Props) {
+export default function AgendamentoDialog({ open, onOpenChange, agendamento, inicial, calendarios, alunos, eventos, bloqueios, travas, regras, ctx, tags, onTagCriada, onSalvo, onExcluir }: Props) {
   const editando = !!agendamento;
   const [f, setF] = useState<FormAgendamento | null>(null);
   const [tipoMexido, setTipoMexido] = useState(false);
@@ -83,17 +95,38 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
   const [erros, setErros] = useState<Record<string, string>>({});
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
+  const [novaTagAberta, setNovaTagAberta] = useState(false);
+  // as tags criadas aqui dentro entram na hora (antes de a lista da agenda recarregar)
+  const [criadas, setCriadas] = useState<TagAgenda[]>([]);
+  const todasTags = useMemo(() => [...tags, ...criadas.filter((c) => !tags.some((t) => t.id === c.id))], [tags, criadas]);
 
   const calPadrao = useMemo(() => calendarios.find((c) => c.nutricionista_id === ctx.uid && c.padrao) ?? calendarios.find((c) => c.nutricionista_id === ctx.uid) ?? calendarios[0], [calendarios, ctx.uid]);
+
+  /** A área que o tipo de antes escolhia (papel do dono do calendário, relação com o aluno, módulo da conta). */
+  const areaPeloPapel = (c: Calendario | null | undefined, a: AlunoAgenda | null): TipoAgendamento => {
+    const dono = c?.nutricionista_id ?? ctx.uid;
+    return tipoPadrao(ctx.pessoas.get(dono)?.papeis ?? ctx.papeis, dono, a, ctx.modulos);
+  };
+  /** A tag sugerida: a padrão do calendário, senão a base da área do papel. */
+  const tagSugerida = (c: Calendario | null | undefined, a: AlunoAgenda | null): { tagId: string | null; modulo: TipoAgendamento } => {
+    const area = areaPeloPapel(c, a);
+    const t = tagPadraoDoCalendario(c ?? null, todasTags, area);
+    return { tagId: t?.id ?? null, modulo: t?.area ?? area };
+  };
 
   useEffect(() => {
     if (!open) return;
     setErros({});
     setConfirmarExclusao(false);
     setBuscaAberta(false);
+    setCriadas([]);
+    setNovaTagAberta(false);
     if (agendamento) {
       const ini = new Date(agendamento.inicio);
       const fim = new Date(agendamento.fim);
+      const modulo = tipoDe(agendamento.modulo);
+      const doDono = tagsDe(tags, agendamento.nutricionista_id);
+      const tagId = doDono.find((t) => t.id === agendamento.tag_id)?.id ?? baseDaArea(tags, agendamento.nutricionista_id, modulo)?.id ?? null;
       setTipoMexido(true);
       setTituloMexido(true);
       setF({
@@ -104,7 +137,8 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
         hora: formatarHora(ini),
         duracao: agendamento.dia_inteiro ? 60 : Math.max(Math.round((fim.getTime() - ini.getTime()) / 60000), 5),
         diaInteiro: agendamento.dia_inteiro,
-        modulo: tipoDe(agendamento.modulo),
+        modulo,
+        tagId,
         status: statusDe(agendamento.status),
         observacao: agendamento.observacao ?? "",
         avisar: false,
@@ -114,9 +148,8 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
     const cal = calendarios.find((c) => c.id === inicial?.calendarioId) ?? calPadrao;
     const slot = cal?.slot_minutos ?? regras.slot_minutos;
     const aluno = alunos.find((a) => a.id === inicial?.pacienteId) ?? null;
-    const dono = cal?.nutricionista_id ?? ctx.uid;
-    const papeisDono = ctx.pessoas.get(dono)?.papeis ?? ctx.papeis;
-    const tipo = tipoPadrao(papeisDono, dono, aluno, ctx.modulos);
+    const sug = tagSugerida(cal, aluno);
+    const tipo = sug.modulo;
     setTipoMexido(false);
     setTituloMexido(false);
     setF({
@@ -128,11 +161,28 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
       duracao: inicial?.duracao ?? slot,
       diaInteiro: false,
       modulo: tipo,
+      tagId: sug.tagId,
       status: "agendado",
       observacao: "",
       avisar: true,
     });
   }, [open, agendamento]); // eslint-disable-line react-hooks/exhaustive-deps -- reabrir zera o formulário; o resto vem com ele aberto
+
+  // as tags chegaram com o diálogo já aberto: marca a tag (a da consulta ao editar; a sugerida no novo, se ninguém mexeu)
+  useEffect(() => {
+    if (!open || !f || f.tagId) return;
+    const c = calendarios.find((x) => x.id === f.calendarioId);
+    if (!c || !tagsDe(todasTags, c.nutricionista_id).length) return;
+    if (agendamento) {
+      const t = tagsDe(todasTags, agendamento.nutricionista_id).find((x) => x.id === agendamento.tag_id)
+        ?? baseDaArea(todasTags, c.nutricionista_id, f.modulo);
+      if (t) setF((x) => (x && !x.tagId ? { ...x, tagId: t.id, modulo: t.area } : x));
+      return;
+    }
+    if (tipoMexido) return;
+    const sug = tagSugerida(c, alunos.find((a) => a.id === f.pacienteId) ?? null);
+    if (sug.tagId) setF((x) => (x && !x.tagId ? { ...x, tagId: sug.tagId, modulo: sug.modulo, titulo: tituloMexido ? x.titulo : tituloPadrao(sug.modulo) } : x));
+  }, [open, todasTags, f?.calendarioId, f?.tagId]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando as tags chegam ou o calendário muda
 
   const cal = calendarios.find((c) => c.id === f?.calendarioId) ?? null;
   const donoCal = cal?.nutricionista_id ?? ctx.uid;
@@ -149,12 +199,24 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
 
   const set = <K extends keyof FormAgendamento>(k: K, v: FormAgendamento[K]) => setF((x) => (x ? { ...x, [k]: v } : x));
 
+  // as tags do DONO do calendário escolhido (o dono vendo a equipe agenda com as tags do membro)
+  const tagsDoDono = useMemo(() => tagsDe(todasTags, donoCal), [todasTags, donoCal]);
+  const meuCalendario = donoCal === ctx.uid;
+
   const recalcularTipo = (pacienteId: string | null, calendarioId: string) => {
-    if (tipoMexido || !f) return;
+    if (!f) return;
     const c = calendarios.find((x) => x.id === calendarioId);
     const dono = c?.nutricionista_id ?? ctx.uid;
-    const novo = tipoPadrao(ctx.pessoas.get(dono)?.papeis ?? ctx.papeis, dono, alunos.find((a) => a.id === pacienteId) ?? null, ctx.modulos);
-    setF((x) => (x ? { ...x, modulo: novo, titulo: tituloMexido ? x.titulo : tituloPadrao(novo) } : x));
+    // a tag escolhida à mão continua — a não ser que o calendário novo seja de outro profissional (a tag dele não vale lá)
+    const tagAindaVale = !!f.tagId && tagsDe(todasTags, dono).some((t) => t.id === f.tagId);
+    if (tipoMexido && (tagAindaVale || !f.tagId)) return;
+    const sug = tagSugerida(c, alunos.find((a) => a.id === pacienteId) ?? null);
+    setF((x) => (x ? { ...x, modulo: sug.modulo, tagId: sug.tagId, titulo: tituloMexido ? x.titulo : tituloPadrao(sug.modulo) } : x));
+  };
+
+  const escolherTag = (t: TagAgenda) => {
+    setTipoMexido(true);
+    setF((x) => (x ? { ...x, tagId: t.id, modulo: t.area, titulo: tituloMexido ? x.titulo : tituloPadrao(t.area) } : x));
   };
 
   const escolherAluno = (a: AlunoAgenda | null) => {
@@ -212,6 +274,8 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
         confirmacao: confirmacaoDe(f.status),
         observacao: f.observacao.trim() || null,
         modulo: f.modulo,
+        // só uma tag do dono do calendário (sem ela, o banco põe a base da área)
+        tag_id: f.tagId && tagsDe(todasTags, cal.nutricionista_id).some((t) => t.id === f.tagId) ? f.tagId : null,
         conta_id: ctx.contaId || cal.conta_id || null,
       };
       let salvo: Agendamento;
@@ -220,6 +284,8 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
         const patch: Partial<NovoAgendamento> = { ...registro };
         if (cal.nutricionista_id === agendamento.nutricionista_id) delete patch.nutricionista_id;
         if (agendamento.conta_id) delete patch.conta_id;
+        // sem saber a tag (as tags não carregaram), não mexe na que a consulta tem (o banco acerta se a área mudou)
+        if (!patch.tag_id) delete patch.tag_id;
         salvo = await atualizarAgendamento(agendamento.id, patch);
         toast.success("Agendamento atualizado");
       } else {
@@ -283,7 +349,7 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[3fr_2fr]">
+          <div className={cn("grid grid-cols-1 gap-3", tagsDoDono.length > 0 ? "" : "sm:grid-cols-[3fr_2fr]")}>
             <Campo rotulo="Aluno">
               <Popover open={buscaAberta} onOpenChange={setBuscaAberta}>
                 <PopoverTrigger asChild>
@@ -316,24 +382,52 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
                 </PopoverContent>
               </Popover>
             </Campo>
-            <Campo rotulo="Tipo">
-              <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Tipo do agendamento" data-campo-tipo={f.modulo}>
-                {TIPOS.map((t) => (
-                  <button key={t.valor} type="button" role="radio" aria-checked={f.modulo === t.valor}
-                    onClick={() => {
-                      setTipoMexido(true);
-                      setF((x) => (x ? { ...x, modulo: t.valor, titulo: tituloMexido ? x.titulo : tituloPadrao(t.valor) } : x));
-                    }}
-                    className={cn("h-10 rounded-xl border text-[12.5px] font-semibold transition-colors",
-                      f.modulo === t.valor
-                        ? t.valor === "treino" ? "border-violeta-2/60 bg-[rgba(139,92,246,.16)] text-violeta-3" : t.valor === "nutricao" ? "border-verde/50 bg-[rgba(16,185,129,.12)] text-verde-3" : "border-linha-2 bg-superficie-2 text-texto"
-                        : "border-linha-2 bg-[rgba(255,255,255,.03)] text-texto-3 hover:text-texto")}
-                    data-tipo-btn={t.valor}>
-                    {t.rotulo}
-                  </button>
-                ))}
-              </div>
-            </Campo>
+            {tagsDoDono.length > 0 ? (
+              <Campo rotulo="Tag">
+                <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tag do agendamento" data-campo-tag={f.tagId ?? ""} data-campo-tipo={f.modulo}>
+                  {tagsDoDono.map((t) => {
+                    const sel = f.tagId === t.id;
+                    const est = estiloDaTag(t.cor);
+                    return (
+                      <button key={t.id} type="button" role="radio" aria-checked={sel} onClick={() => escolherTag(t)}
+                        className={cn("inline-flex h-8 max-w-full items-center gap-1.5 truncate rounded-full border px-2.5 text-[12px] font-semibold transition-colors",
+                          sel ? "" : "border-linha-2 bg-[rgba(255,255,255,.03)] text-texto-3 hover:text-texto")}
+                        style={sel ? { background: est.background, borderColor: est.borderColor, color: est.color } : undefined}
+                        title={t.nome} data-tag-btn={t.id} data-tag-btn-nome={t.nome} data-tag-btn-area={t.area}>
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: t.cor }} aria-hidden="true" />
+                        <span className="truncate">{t.nome}</span>
+                      </button>
+                    );
+                  })}
+                  {meuCalendario && (
+                    <button type="button" onClick={() => setNovaTagAberta(true)}
+                      className="inline-flex h-8 items-center gap-1 rounded-full border border-dashed border-linha-2 px-2.5 text-[12px] font-semibold text-texto-3 transition-colors hover:text-texto"
+                      data-btn-nova-tag-agendamento>
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Nova tag
+                    </button>
+                  )}
+                </div>
+              </Campo>
+            ) : (
+              <Campo rotulo="Tipo">
+                <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Tipo do agendamento" data-campo-tipo={f.modulo}>
+                  {TIPOS.map((t) => (
+                    <button key={t.valor} type="button" role="radio" aria-checked={f.modulo === t.valor}
+                      onClick={() => {
+                        setTipoMexido(true);
+                        setF((x) => (x ? { ...x, modulo: t.valor, tagId: null, titulo: tituloMexido ? x.titulo : tituloPadrao(t.valor) } : x));
+                      }}
+                      className={cn("h-10 rounded-xl border text-[12.5px] font-semibold transition-colors",
+                        f.modulo === t.valor
+                          ? t.valor === "treino" ? "border-violeta-2/60 bg-[rgba(139,92,246,.16)] text-violeta-3" : t.valor === "nutricao" ? "border-verde/50 bg-[rgba(16,185,129,.12)] text-verde-3" : "border-linha-2 bg-superficie-2 text-texto"
+                          : "border-linha-2 bg-[rgba(255,255,255,.03)] text-texto-3 hover:text-texto")}
+                      data-tipo-btn={t.valor}>
+                      {t.rotulo}
+                    </button>
+                  ))}
+                </div>
+              </Campo>
+            )}
           </div>
 
           <Campo rotulo="Título *" erro={erros.titulo}>
@@ -481,6 +575,13 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
             </div>
           </div>
         </div>
+
+        <TagDialog open={novaTagAberta} onOpenChange={setNovaTagAberta} uid={ctx.uid} tags={tagsDe(todasTags, ctx.uid)} areaInicial={f.modulo}
+          onSalvo={(t) => {
+            setCriadas((x) => [...x.filter((y) => y.id !== t.id), t]);
+            escolherTag(t);
+            onTagCriada?.(t);
+          }} />
 
         <AlertDialog open={confirmarExclusao} onOpenChange={setConfirmarExclusao}>
           <AlertDialogContent className={JANELA}>

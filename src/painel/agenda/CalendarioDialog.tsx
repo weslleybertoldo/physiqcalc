@@ -1,6 +1,7 @@
 // Physiq W20 — novo/editar calendário (porta do CalendarioDialog do PhysiqNutri no visual premium): nome, cor, faixa de horário da
 // visão semana, "padrão" (sugerido no novo agendamento) e — pedido dele — a DURAÇÃO DO SLOT desta agenda ("por padrão e por agenda":
-// vazio = a duração padrão das regras da agenda).
+// vazio = a duração padrão das regras da agenda). W2: a TAG PADRÃO (a que vem marcada no novo agendamento deste calendário; vazio =
+// pelo papel, como antes).
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Check, Trash2 } from "lucide-react";
@@ -11,7 +12,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { BTN_PERIGO, BTN_PRI, BTN_SEC, Campo, DESCRICAO_JANELA, INPUT, JANELA, SELECT, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
-import { DURACOES_SLOT, textoSlotsPorDia, type RegrasAgenda } from "@/agenda/regras";
+import { DURACOES_SLOT, rotuloArea, tagsDe, textoSlotsPorDia, type RegrasAgenda, type TagAgenda } from "@/agenda/regras";
 import { atualizarCalendario, criarCalendario, excluirCalendario, type Calendario } from "./dados";
 import { CORES_CALENDARIO, hhmm, horaValida, minutosDoDia } from "./visao";
 
@@ -24,6 +25,8 @@ interface Props {
   uid: string;
   contaId: string | null;
   regras: RegrasAgenda;
+  /** W2: as tags que a agenda leu (o campo mostra só as SUAS) */
+  tags: TagAgenda[];
   onSalvo: () => void;
 }
 
@@ -34,11 +37,13 @@ interface Form {
   faixa_fim: string;
   padrao: boolean;
   slot: string; // "" = padrão da agenda
+  tag: string; // "" = sem tag padrão (pelo papel)
 }
 
-export default function CalendarioDialog({ open, onOpenChange, calendario, outros, uid, contaId, regras, onSalvo }: Props) {
+export default function CalendarioDialog({ open, onOpenChange, calendario, outros, uid, contaId, regras, tags, onSalvo }: Props) {
   const editando = !!calendario;
-  const [f, setF] = useState<Form>({ nome: "", cor: CORES_CALENDARIO[1], faixa_inicio: "07:00", faixa_fim: "20:00", padrao: false, slot: "" });
+  const [f, setF] = useState<Form>({ nome: "", cor: CORES_CALENDARIO[1], faixa_inicio: "07:00", faixa_fim: "20:00", padrao: false, slot: "", tag: "" });
+  const minhasTags = tagsDe(tags, calendario?.nutricionista_id ?? uid);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
@@ -49,8 +54,8 @@ export default function CalendarioDialog({ open, onOpenChange, calendario, outro
     setConfirmar(false);
     setErros({});
     setF(calendario
-      ? { nome: calendario.nome, cor: calendario.cor, faixa_inicio: hhmm(calendario.faixa_inicio), faixa_fim: hhmm(calendario.faixa_fim), padrao: calendario.padrao, slot: calendario.slot_minutos ? String(calendario.slot_minutos) : "" }
-      : { nome: "", cor: CORES_CALENDARIO[(outros.length + 1) % CORES_CALENDARIO.length], faixa_inicio: "07:00", faixa_fim: "20:00", padrao: outros.length === 0, slot: "" });
+      ? { nome: calendario.nome, cor: calendario.cor, faixa_inicio: hhmm(calendario.faixa_inicio), faixa_fim: hhmm(calendario.faixa_fim), padrao: calendario.padrao, slot: calendario.slot_minutos ? String(calendario.slot_minutos) : "", tag: calendario.tag_padrao_id ?? "" }
+      : { nome: "", cor: CORES_CALENDARIO[(outros.length + 1) % CORES_CALENDARIO.length], faixa_inicio: "07:00", faixa_fim: "20:00", padrao: outros.length === 0, slot: "", tag: "" });
   }, [open, calendario, outros.length]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
@@ -66,7 +71,10 @@ export default function CalendarioDialog({ open, onOpenChange, calendario, outro
     if (Object.keys(e).length) return;
     setSalvando(true);
     try {
-      const dados = { nome: f.nome.trim(), cor: f.cor, faixa_inicio: f.faixa_inicio, faixa_fim: f.faixa_fim, padrao: f.padrao, slot_minutos: f.slot ? Number(f.slot) : null };
+      const tagValida = minhasTags.some((t) => t.id === f.tag);
+      const dados = { nome: f.nome.trim(), cor: f.cor, faixa_inicio: f.faixa_inicio, faixa_fim: f.faixa_fim, padrao: f.padrao, slot_minutos: f.slot ? Number(f.slot) : null,
+        // só manda a tag padrão quando a lista das tags chegou (sem ela, não apaga a que o calendário tinha)
+        ...(minhasTags.length ? { tag_padrao_id: tagValida ? f.tag : null } : {}) };
       if (calendario) await atualizarCalendario(calendario.id, dados);
       else await criarCalendario(uid, contaId, dados);
       if (f.padrao) await Promise.all(outros.filter((c) => c.padrao).map((c) => atualizarCalendario(c.id, { padrao: false })));
@@ -103,7 +111,7 @@ export default function CalendarioDialog({ open, onOpenChange, calendario, outro
       <DialogContent className={cn(JANELA, "sm:max-w-md")} data-modal-calendario={editando ? "editar" : "novo"}>
         <DialogHeader>
           <DialogTitle className={TITULO_JANELA}>{editando ? "Editar calendário" : "Novo calendário"}</DialogTitle>
-          <DialogDescription className={DESCRICAO_JANELA}>Nome, cor, a faixa da visão semana e a duração do slot desta agenda.</DialogDescription>
+          <DialogDescription className={DESCRICAO_JANELA}>Nome, cor, a tag padrão, a faixa da visão semana e a duração do slot desta agenda.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4" data-form-calendario>
           <Campo rotulo="Nome *" erro={erros.nome}>
@@ -119,6 +127,13 @@ export default function CalendarioDialog({ open, onOpenChange, calendario, outro
                 </button>
               ))}
             </div>
+          </Campo>
+          <Campo rotulo="Tag padrão" dica="A tag que já vem marcada quando você agenda neste calendário (dá para trocar na hora).">
+            <select className={SELECT} value={minhasTags.some((t) => t.id === f.tag) ? f.tag : ""} onChange={(e) => set("tag", e.target.value)}
+              disabled={!minhasTags.length} data-campo-tag-padrao>
+              <option value="">Nenhuma (pelo seu papel e pelo aluno)</option>
+              {minhasTags.map((t) => <option key={t.id} value={t.id}>{t.base ? t.nome : `${t.nome} · ${rotuloArea(t.area)}`}</option>)}
+            </select>
           </Campo>
           <Campo rotulo="Duração do slot desta agenda" dica={`${textoSlotsPorDia(regras, slotEfetivo)} no horário de atendimento (${regras.atende_inicio}–${regras.atende_fim}).`}>
             <select className={SELECT} value={f.slot} onChange={(e) => set("slot", e.target.value)} data-campo-slot-calendario>

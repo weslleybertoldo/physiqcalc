@@ -1,18 +1,20 @@
 // Physiq W20 — o que a página Agenda divide: a conta ativa e quem é você nela (o dono vê a agenda da equipe), os calendários (o 1º
 // acesso cria o "Calendário principal"), as consultas do período da visão e das últimas 8 semanas (os números do topo), bloqueios,
 // travas, as suas regras (e as da equipe, para o dono) e os alunos dos seletores.
+// W2: as TAGS — as minhas (com as 3 base garantidas) + as dos donos dos calendários que eu vejo (a equipe, só leitura), sempre
+// filtradas por profissional_id; personal E nutri sem calendário nasce com "Treino" e "Nutrição".
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, startOfDay } from "date-fns";
 import { useConta } from "@/nucleo/conta";
 import { useSessao } from "@/nucleo/sessao";
 import { buscarEquipe } from "@/painel/configuracoes/equipe/api";
-import { REGRAS_PADRAO, inicioDaSemana, hojeSP, somarDias, type RegrasAgenda } from "@/agenda/regras";
+import { REGRAS_PADRAO, inicioDaSemana, hojeSP, somarDias, type RegrasAgenda, type TagAgenda } from "@/agenda/regras";
 import {
-  garantirCalendarios, lerRegras, listarAgendamentos, listarAlunosDaAgenda, listarBloqueios, listarBloqueiosFuturos, listarTravas,
-  type AlunoAgenda, type Calendario,
+  carregarTagsDaAgenda, garantirCalendarios, lerRegras, listarAgendamentos, listarAlunosDaAgenda, listarBloqueios, listarBloqueiosFuturos,
+  listarTravas, type AlunoAgenda, type Calendario,
 } from "./dados";
-import { CORES_CALENDARIO, intervaloVisao, paraBloqueio, paraEvento, type EventoPainel, type Visao } from "./visao";
+import { intervaloVisao, paraBloqueio, paraEvento, type EventoPainel, type Visao } from "./visao";
 
 export const CHAVES_AGENDA = {
   tudo: ["agenda-painel"] as const,
@@ -24,6 +26,8 @@ export const CHAVES_AGENDA = {
   travas: (uid: string, conta: string) => ["agenda-painel", "travas", uid, conta] as const,
   regras: (prof: string) => ["agenda-painel", "regras", prof] as const,
   alunos: (uid: string, conta: string) => ["agenda-painel", "alunos", uid, conta] as const,
+  /** W2: as tags do painel (as minhas + as dos donos dos calendários que eu vejo) */
+  tags: (uid: string, donos: string) => ["agenda-painel", "tags", uid, donos] as const,
   equipe: (conta: string) => ["agenda-painel", "equipe", conta] as const,
   /** o card "Próximos compromissos" do Resumo do aluno */
   compromissos: (aluno: string) => ["agenda-compromissos", aluno] as const,
@@ -56,7 +60,7 @@ export type ContextoAgenda = ReturnType<typeof useContextoAgenda>;
 
 export function useDadosAgenda(ctx: ContextoAgenda, visao: Visao, ancora: Date, ocultos: Set<string>) {
   const qc = useQueryClient();
-  const { uid, contaId, pronto } = ctx;
+  const { uid, contaId, pronto, papeis, modulos } = ctx;
   const { inicio, fim } = useMemo(() => intervaloVisao(ancora, visao), [ancora, visao]);
   const de = inicio.toISOString();
   const ate = fim.toISOString();
@@ -66,8 +70,16 @@ export function useDadosAgenda(ctx: ContextoAgenda, visao: Visao, ancora: Date, 
 
   const calendarios = useQuery({
     queryKey: CHAVES_AGENDA.calendarios(uid, contaId),
-    queryFn: () => garantirCalendarios(uid, contaId || null, CORES_CALENDARIO[1]),
+    queryFn: () => garantirCalendarios(uid, contaId || null, papeis, modulos),
     enabled: pronto,
+    staleTime: 60_000,
+  });
+  // os donos dos calendários que eu vejo (eu + a equipe, para o dono): as tags de cada um
+  const donos = useMemo(() => [...new Set([uid, ...(calendarios.data ?? []).map((c) => c.nutricionista_id)])].filter(Boolean).sort(), [uid, calendarios.data]);
+  const tags = useQuery({
+    queryKey: CHAVES_AGENDA.tags(uid, donos.join(",")),
+    queryFn: () => carregarTagsDaAgenda(uid, donos),
+    enabled: pronto && !!calendarios.data,
     staleTime: 60_000,
   });
   const agendamentos = useQuery({
@@ -91,14 +103,16 @@ export function useDadosAgenda(ctx: ContextoAgenda, visao: Visao, ancora: Date, 
   const lista = useMemo(() => calendarios.data ?? [], [calendarios.data]);
   const cores = useMemo(() => new Map(lista.map((c) => [c.id, c.cor])), [lista]);
   const mapaAlunos = useMemo(() => new Map((alunos.data ?? []).map((a) => [a.id, a])), [alunos.data]);
+  const listaTags = useMemo<TagAgenda[]>(() => tags.data ?? [], [tags.data]);
+  const mapaTags = useMemo(() => new Map(listaTags.map((t) => [t.id, t])), [listaTags]);
   const visiveis = useMemo(() => lista.filter((c) => !ocultos.has(c.id)), [lista, ocultos]);
   const eventos = useMemo<EventoPainel[]>(
-    () => (agendamentos.data ?? []).filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, cores, mapaAlunos)),
-    [agendamentos.data, ocultos, cores, mapaAlunos],
+    () => (agendamentos.data ?? []).filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, cores, mapaAlunos, mapaTags)),
+    [agendamentos.data, ocultos, cores, mapaAlunos, mapaTags],
   );
   const eventosEstat = useMemo<EventoPainel[]>(
-    () => (estatisticas.data ?? []).filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, cores, mapaAlunos)),
-    [estatisticas.data, ocultos, cores, mapaAlunos],
+    () => (estatisticas.data ?? []).filter((a) => !ocultos.has(a.calendario_id)).map((a) => paraEvento(a, cores, mapaAlunos, mapaTags)),
+    [estatisticas.data, ocultos, cores, mapaAlunos, mapaTags],
   );
   const listaBloqueios = useMemo(
     () => (bloqueios.data ?? []).map(paraBloqueio).filter((b) => b.calendarioId === null || !ocultos.has(b.calendarioId)),
@@ -126,6 +140,10 @@ export function useDadosAgenda(ctx: ContextoAgenda, visao: Visao, ancora: Date, 
     regrasCarregando: !regras.data && !regras.isError,
     alunos: alunos.data ?? [],
     mapaAlunos,
+    /** W2: as tags que a agenda vê (filtre por profissional_id antes de listar) */
+    tags: listaTags,
+    mapaTags,
+    tagsQ: tags,
     recarregar,
     erro: calendarios.error ?? agendamentos.error ?? bloqueios.error ?? null,
     carregando: calendarios.isLoading || (agendamentos.isLoading && !agendamentos.data),
