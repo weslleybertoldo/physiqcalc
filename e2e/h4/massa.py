@@ -191,7 +191,14 @@ def limpar() -> None:
         q(f"delete from {S}.categorias_financeiras where nutricionista_id in ({us})")
         q(f"delete from {S}.notificacoes where user_id in ({us})") if q(f"select 1 from information_schema.tables where table_schema = '{S}' and table_name = 'notificacoes'") else None
         sp = B.service(B.PRINCIPAL_REF)
+        B.saude_ok("a limpeza no Treino")
         for u in ids:
+            # o Banco do Treino: a troca de token criou o vínculo e o login de lá (como a limpeza da W27)
+            for s_ in ("public", "staging"):
+                for x in B.sql_treino(f"select treino_user_id::text as t from {s_}.physiq_identidades where principal_user_id = '{u}'"):
+                    B.B5.exec_treino(f"delete from {s_}.physiq_identidades where principal_user_id = '{u}'")
+                    st_t, _ = B.B27.admin_auth(B.B5.TREINO_REF, "DELETE", f"users/{x['t']}")
+                    print("login do Treino apagado:", x["t"], st_t)
             for s_ in ("public", "staging"):
                 q(f"delete from {s_}.conta_membros where user_id = '{u}'")
             st, r, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/auth/v1/admin/users/{u}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
