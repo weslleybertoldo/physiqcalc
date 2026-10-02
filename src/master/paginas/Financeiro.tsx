@@ -86,7 +86,7 @@ export default function Financeiro() {
                               {c.cobranca_legada && <span className="max-w-[150px] text-[11px] font-semibold leading-tight text-ambar-3" data-legada-linha>{LEGADA}</span>}
                             </span>
                           </TabelaCelula>
-                          <TabelaCelula className="text-[12.5px] text-texto-2">{linhaVencimento(c)}</TabelaCelula>
+                          <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>
                           <TabelaCelula className="whitespace-nowrap text-right font-semibold">{c.cobranca_legada && c.origem === "legado_calc" ? "No Calc" : c.situacao_efetiva === "isenta" ? "—" : moeda(c.valor_mensal)}</TabelaCelula>
                         </TabelaLinha>
                       ))}
