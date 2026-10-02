@@ -14,8 +14,8 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
     expect(MENU_PAINEL.filter((i) => i.grupo === "ferramentas").map((i) => i.rotulo)).toEqual(["Modelos", "Impressos", "Calculadora", "Lixeira"]);
   });
 
-  it("sem página nova, professor do Calc vê as antigas que ainda existem: Configurações e Calculadora (Alunos saiu na W13, Financeiro na W19, Treinos na W23)", () => {
-    expect(visiveis(["treino"], semNovas)).toEqual(["Configurações", "Calculadora"]);
+  it("sem página nova, professor do Calc só vê Configurações (Alunos saiu na W13, Financeiro na W19, Treinos na W23, Calculadora na W26)", () => {
+    expect(visiveis(["treino"], semNovas)).toEqual(["Configurações"]);
   });
 
   it("módulos: Treinos só com Treino; Dietas e Impressos só com Nutrição (4.4)", () => {
@@ -25,11 +25,17 @@ describe("menu do site do profissional (spec 4.4, tela 6)", () => {
     expect(visiveis(["treino", "nutricao"], comNovas)).toHaveLength(MENU_PAINEL.length);
   });
 
-  it("só Nutrição e sem página nova: a antiga vira o aviso do site do Nutri", () => {
-    const calculadora = MENU_PAINEL.find((i) => i.id === "calculadora")!;
-    expect(estadoDoItem(calculadora, ["treino"], semNovas)).toBe("antiga");
-    expect(estadoDoItem(calculadora, ["nutricao"], semNovas)).toBe("nutri");
-    expect(estadoDoItem(calculadora, ["nutricao"], comNovas)).toBe("nova");
+  it("W26: as 4 Ferramentas não têm mais página antiga (a CalculadoraPage do Calc saiu) — são as novas; Impressos só com Nutrição", () => {
+    for (const id of ["modelos", "impressos", "calculadora", "lixeira"]) {
+      const item = MENU_PAINEL.find((i) => i.id === id)!;
+      expect(item.antiga, id).toBeUndefined();
+      expect(estadoDoItem(item, ["treino", "nutricao"]), id).toBe("nova");
+      expect(estadoDoItem(item, ["treino", "nutricao"], semNovas), id).toBeNull();
+    }
+    const impressos = MENU_PAINEL.find((i) => i.id === "impressos")!;
+    expect(estadoDoItem(impressos, ["treino"])).toBeNull();
+    expect(estadoDoItem(MENU_PAINEL.find((i) => i.id === "calculadora")!, ["treino"])).toBe("nova");
+    expect(estadoDoItem(MENU_PAINEL.find((i) => i.id === "lixeira")!, ["nutricao"])).toBe("nova");
   });
 
   it("W19: Financeiro não tem mais a página antiga (a Cobrança do Calc saiu) — é a nova (src/painel/paginas/Financeiro.tsx) para os 2 módulos", () => {

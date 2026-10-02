@@ -1,11 +1,11 @@
-// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/manipuladosPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/manipuladosPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo. W26: marca PHYSIQ no cabeçalho (N-60, como a W18/W19/W24).
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { format } from "date-fns";
 import type { DadosProfissionais } from "@/nutricao/editor/lib/profissional";
 import { formatarDataFormula, lerAtivos, nomeArquivoPDFFormula, nomeArquivoPDFFormulas, textoContagemAtivos, textoDose } from "@/nutricao/editor/lib/manipuladosUtil";
 
-// PDF da prescrição de manipulado (jspdf + jspdf-autotable, A4): cabeçalho PHYSIQNUTRI · PRESCRIÇÃO DE MANIPULADO, título da
+// PDF da prescrição de manipulado (jspdf + jspdf-autotable, A4): cabeçalho PHYSIQ · PRESCRIÇÃO DE MANIPULADO, título da
 // fórmula, paciente + data da prescrição (+ CRN/telefone/endereço da nutricionista quando existirem — W15), tabela Ativo · Dose
 // (uma linha por ativo), Posologia, Quantidade, Observações, assinatura com o nome (+ CRN) e rodapé com páginas. O "PDF global"
 // desenha TODAS as fórmulas vivas do paciente, uma por página, com o mesmo cabeçalho. Carregado em chunk separado (`pdf-*.js`).
@@ -79,7 +79,7 @@ export function desenharFormula(doc: jsPDF, d: DadosPDFFormula, rotulo = "PRESCR
 
   // ---- Cabeçalho ----
   fonte(doc, 9, "bold", [120, 120, 120]);
-  doc.text(`PHYSIQNUTRI · ${rotulo}`, MARGEM, y);
+  doc.text(`PHYSIQ · ${rotulo}`, MARGEM, y);
   fonte(doc, 9, "normal", [120, 120, 120]);
   doc.text(`Emitido em ${format(d.emitidoEm, "dd/MM/yyyy HH:mm")}`, DIREITA, y, { align: "right" });
   y += 11;
@@ -169,7 +169,7 @@ export function montarPDFFormulas(d: DadosPDFFormulas): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   if (!d.formulas.length) {
     fonte(doc, 9, "bold", [120, 120, 120]);
-    doc.text("PHYSIQNUTRI · PRESCRIÇÕES DE MANIPULADOS", MARGEM, MARGEM);
+    doc.text("PHYSIQ · PRESCRIÇÕES DE MANIPULADOS", MARGEM, MARGEM);
     fonte(doc, 11, "italic", [140, 140, 140]);
     doc.text("Nenhuma fórmula prescrita.", MARGEM, MARGEM + 12);
   }

@@ -1,4 +1,4 @@
-// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/orientacaoPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/orientacaoPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo. W26: marca PHYSIQ no cabeçalho (N-60, como a W18/W19/W24).
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { blocosDoMarkdown, nomeArquivoPDF, textoSemMarcas, trechosInline, type Bloco } from "@/nutricao/editor/lib/orientacoesUtil";
@@ -104,7 +104,7 @@ export function montarPDFOrientacao(d: DadosPDFOrientacao): jsPDF {
 
   // ---- Cabeçalho ----
   fonte(9, "bold", [120, 120, 120]);
-  doc.text("PHYSIQNUTRI · ORIENTAÇÕES NUTRICIONAIS", MARGEM, y);
+  doc.text("PHYSIQ · ORIENTAÇÕES NUTRICIONAIS", MARGEM, y);
   y += 7;
   paragrafo(d.titulo, 16, "bold");
   y += 1;

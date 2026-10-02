@@ -9,15 +9,13 @@ import PublicoLayout from "@/publico/PublicoLayout";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { Carregavel } from "@/ui/casca/Carregavel";
 import { NaoEncontrada } from "@/ui/casca/NaoEncontrada";
-import { existe, registro, rotasDaEntrada, rotasDaPaginaPublica, tela } from "./registro";
+import { registro, rotasDaEntrada, rotasDaPaginaPublica, tela } from "./registro";
 import { ROTAS_ANTIGAS, destinoDaRotaAntiga } from "./redirecionamentos";
 
 // Painel e master carregam sob demanda (o aluno não baixa nada deles); a abertura do app fica no JS inicial
 const RotasPainel = lazy(() => import("@/painel/RotasPainel"));
 const RotasMaster = lazy(() => import("@/master/RotasMaster"));
-// Páginas públicas antigas (fallback até a W26)
-const CalculadoraPublicaAntiga = lazy(() => import("@/pages/Index"));
-const PrivacidadeAntiga = lazy(() => import("@/pages/PrivacidadePage"));
+// W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx, pelo registro) — as antigas saíram
 
 /** Rota antiga dos 2 apps → rota nova (spec 4.8), levando a query e o #. */
 export function RedirecionarAntiga() {
@@ -102,15 +100,6 @@ export function Rotas() {
               }
             />
           )),
-        )}
-        {!existe("publico", "Calculadora") && (
-          <Route path="/calculator" element={<Carregavel nome="calculadora (antiga)"><CalculadoraPublicaAntiga /></Carregavel>} />
-        )}
-        {!existe("publico", "Privacidade") && (
-          <>
-            <Route path="/privacidade" element={<Carregavel nome="privacidade (antiga)"><PrivacidadeAntiga /></Carregavel>} />
-            <Route path="/termos" element={<Carregavel nome="termos (antiga)"><PrivacidadeAntiga /></Carregavel>} />
-          </>
         )}
         <Route path="*" element={<NaoEncontrada />} />
       </Route>

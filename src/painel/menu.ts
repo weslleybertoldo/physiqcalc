@@ -1,4 +1,4 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from "react";
+import type { ComponentType, LazyExoticComponent } from "react";
 import {
   Bookmark,
   Calculator,
@@ -41,8 +41,6 @@ export interface ItemMenuPainel {
   contadorTom?: "neutro" | "destaque";
 }
 
-const CalculadoraPage = lazy(() => import("@/pages/admin/CalculadoraPage"));
-
 export const MENU_PAINEL: ItemMenuPainel[] = [
   { id: "dashboard", arquivo: "Dashboard", rotulo: "Dashboard", icone: LayoutDashboard, rota: "/painel", modulo: "ambos", grupo: "principal", noCelular: true },
   { id: "alunos", arquivo: "Alunos", rotulo: "Alunos", icone: Users, rota: "/painel/alunos", modulo: "ambos", grupo: "principal", noCelular: true },
@@ -56,7 +54,8 @@ export const MENU_PAINEL: ItemMenuPainel[] = [
   { id: "configuracoes", arquivo: null, rotulo: "Configurações", icone: Settings, rota: "/painel/configuracoes", modulo: "ambos", grupo: "principal" },
   { id: "modelos", arquivo: "Modelos", rotulo: "Modelos", icone: Bookmark, rota: "/painel/modelos", modulo: "ambos", grupo: "ferramentas" },
   { id: "impressos", arquivo: "Impressos", rotulo: "Impressos", icone: Printer, rota: "/painel/impressos", modulo: "nutricao", grupo: "ferramentas" },
-  { id: "calculadora", arquivo: "Calculadora", rotulo: "Calculadora", icone: Calculator, rota: "/painel/calculadora", modulo: "ambos", grupo: "ferramentas", antiga: CalculadoraPage },
+  // W26: as 4 Ferramentas são páginas novas (src/painel/paginas/{Modelos,Impressos,Calculadora,Lixeira}.tsx) — a CalculadoraPage do Calc saiu
+  { id: "calculadora", arquivo: "Calculadora", rotulo: "Calculadora", icone: Calculator, rota: "/painel/calculadora", modulo: "ambos", grupo: "ferramentas" },
   { id: "lixeira", arquivo: "Lixeira", rotulo: "Lixeira", icone: Trash2, rota: "/painel/lixeira", modulo: "ambos", grupo: "ferramentas" },
 ];
 

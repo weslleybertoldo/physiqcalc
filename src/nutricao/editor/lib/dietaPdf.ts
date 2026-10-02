@@ -1,4 +1,4 @@
-// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/dietaPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/dietaPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo. W26: marca PHYSIQ no cabeçalho (N-60, como a W18/W19/W24).
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { fmtQtd } from "@/nutricao/editor/lib/alimentosUtil";
@@ -111,7 +111,7 @@ export function montarPDFDieta(d: DadosPDFDieta): jsPDF {
 
   // ---- Cabeçalho ----
   fonte(9, "bold", [120, 120, 120]);
-  doc.text("PHYSIQNUTRI · PLANO ALIMENTAR", MARGEM, y);
+  doc.text("PHYSIQ · PLANO ALIMENTAR", MARGEM, y);
   y += 7;
   paragrafo(d.titulo, 16, "bold");
   y += 1;

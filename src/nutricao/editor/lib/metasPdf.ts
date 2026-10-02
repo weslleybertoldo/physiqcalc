@@ -1,10 +1,10 @@
-// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/metasPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+// Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/metasPdf.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo. W26: marca PHYSIQ no cabeçalho (N-60, como a W18/W19/W24).
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { format } from "date-fns";
 import { DIAS_SEMANA, nomeArquivoPDFMetas, normalizarDias, textoDias } from "@/nutricao/editor/lib/metasUtil";
 
-// PDF da prescrição de metas (jspdf + jspdf-autotable, A4): cabeçalho PHYSIQNUTRI · PRESCRIÇÃO DE METAS, paciente + data,
+// PDF da prescrição de metas (jspdf + jspdf-autotable, A4): cabeçalho PHYSIQ · PRESCRIÇÃO DE METAS, paciente + data,
 // tabela com as metas ATIVAS — colunas Meta · Como · Seg Ter Qua Qui Sex Sáb Dom (bolinha cheia no dia em que a meta vale,
 // desenhada com `circle` no `didDrawCell`: as fontes padrão do jspdf são Latin-1 e não têm o caractere de bolinha) —,
 // resumo em texto ("Caminhar 30 minutos: Seg, Qua e Sex"), assinatura com o nome da nutricionista e rodapé com páginas.
@@ -63,7 +63,7 @@ export function montarPDFMetas(d: DadosPDFMetas): jsPDF {
 
   // ---- Cabeçalho ----
   fonte(9, "bold", [120, 120, 120]);
-  doc.text("PHYSIQNUTRI · PRESCRIÇÃO DE METAS", MARGEM, y);
+  doc.text("PHYSIQ · PRESCRIÇÃO DE METAS", MARGEM, y);
   fonte(9, "normal", [120, 120, 120]);
   doc.text(`Emitido em ${format(d.emitidoEm, "dd/MM/yyyy HH:mm")}`, DIREITA, y, { align: "right" });
   y += 11;

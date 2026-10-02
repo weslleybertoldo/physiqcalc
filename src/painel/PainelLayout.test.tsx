@@ -37,7 +37,9 @@ vi.mock("@/rotas/registro", async () => {
     Componente: lazy(async () => ({ default: (p: { alunoId?: string }) => <div data-testid={`${grupo}-${nome}`}>{`${grupo}:${nome}${p.alunoId ? `:${p.alunoId}` : ""}`}</div> })),
   });
   const registro: Record<string, Record<string, ReturnType<typeof item>>> = {
-    paginasPainel: { Dashboard: item("paginas", "Dashboard"), Alunos: item("paginas", "Alunos"), Treinos: item("paginas", "Treinos"), Dietas: item("paginas", "Dietas"), Mensagens: item("paginas", "Mensagens"), Financeiro: item("paginas", "Financeiro") },
+    paginasPainel: { Dashboard: item("paginas", "Dashboard"), Alunos: item("paginas", "Alunos"), Treinos: item("paginas", "Treinos"), Dietas: item("paginas", "Dietas"), Mensagens: item("paginas", "Mensagens"), Financeiro: item("paginas", "Financeiro"),
+      // W26: as 4 Ferramentas são páginas novas
+      Modelos: item("paginas", "Modelos"), Impressos: item("paginas", "Impressos"), Calculadora: item("paginas", "Calculadora"), Lixeira: item("paginas", "Lixeira") },
     abasAluno: { Treino: item("abasAluno", "Treino") },
     resumoAluno: { CardTreino: item("resumo", "CardTreino"), CardDieta: item("resumo", "CardDieta") },
     kpisAluno: { KpiPeso: item("kpis", "KpiPeso") },
@@ -86,8 +88,9 @@ describe("site do profissional: páginas e peças registradas entram sozinhas", 
     expect(screen.getByTestId("faixa-plano")).toBeInTheDocument();
     const menu = document.querySelector("[data-menu-lateral]")!;
     const itens = [...menu.querySelectorAll("[data-nav]")].map((a) => a.getAttribute("data-nav"));
-    // Dashboard, Alunos (W13), Treinos (W23), Dietas, Mensagens e Financeiro (W19) (novas), + Configurações e a Calculadora antiga
-    expect(itens).toEqual(["/painel", "/painel/alunos", "/painel/treinos", "/painel/dietas", "/painel/mensagens", "/painel/financeiro", "/painel/configuracoes", "/painel/calculadora"]);
+    // Dashboard, Alunos (W13), Treinos (W23), Dietas, Mensagens e Financeiro (W19) (novas), Configurações e as 4 Ferramentas (W26)
+    expect(itens).toEqual(["/painel", "/painel/alunos", "/painel/treinos", "/painel/dietas", "/painel/mensagens", "/painel/financeiro", "/painel/configuracoes",
+      "/painel/modelos", "/painel/impressos", "/painel/calculadora", "/painel/lixeira"]);
     expect(menu.querySelector('[data-nav="/painel/alunos"] [data-contador]')?.textContent).toBe("132");
     const msg = menu.querySelector('[data-nav="/painel/mensagens"] [data-contador]')!;
     expect(msg.textContent).toBe("3");
