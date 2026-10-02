@@ -7,7 +7,7 @@
  *   aluno_agenda_confirmar/desistir/reagendar/marcar
  */
 import { principal } from "@/integrations/principal/client";
-import { normalizarRegras, type PacoteSituacao, type RegrasAgenda } from "@/agenda/regras";
+import { normalizarRegras, type JanelaDatas, type PacoteSituacao, type RegrasAgenda } from "@/agenda/regras";
 import type { AgendamentoAluno, PapelProfissional } from "../pecas/regras";
 
 export interface ConsultaAluno extends AgendamentoAluno {
@@ -34,7 +34,8 @@ export interface HorarioLivre {
 }
 
 export interface HorariosDoAluno {
-  janela: { de: string; ate: string } | null;
+  /** o prazo da escolha; `ate` null = sem fim ("Sem trava" — H5) */
+  janela: JanelaDatas | null;
   horarios: HorarioLivre[];
 }
 
@@ -76,8 +77,9 @@ export async function minhasRegrasAgenda(): Promise<ProfissionalDaAgenda[]> {
 }
 
 function horarios(d: unknown): HorariosDoAluno {
-  const r = (d ?? {}) as { janela?: { de: string; ate: string }; horarios?: HorarioLivre[] };
-  return { janela: r.janela ?? null, horarios: Array.isArray(r.horarios) ? r.horarios : [] };
+  const r = (d ?? {}) as { janela?: { de?: string | null; ate?: string | null }; horarios?: HorarioLivre[] };
+  const janela = r.janela?.de ? { de: String(r.janela.de).slice(0, 10), ate: r.janela.ate ? String(r.janela.ate).slice(0, 10) : null } : null;
+  return { janela, horarios: Array.isArray(r.horarios) ? r.horarios : [] };
 }
 
 export const horariosParaReagendar = async (agendamento: string, de?: string, ate?: string): Promise<HorariosDoAluno> =>

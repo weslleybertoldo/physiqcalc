@@ -242,13 +242,13 @@ export default function CalculoEnergetico() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => alternar(c.id)} className={BTN_MINI} data-btn-ver-calculo>
+                      <button type="button" onClick={() => alternar(c.id)} className={BTN_MINI} data-leitura data-btn-ver-calculo>
                         {aberto ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {aberto ? "Ocultar" : "Ver"}
                       </button>
                       <button type="button" onClick={() => abrirEdicao(c)} className={BTN_MINI} data-btn-editar-calculo>
                         <Pencil size={12} /> Editar
                       </button>
-                      <button type="button" onClick={() => pdf(c)} className={BTN_MINI} data-btn-pdf-calculo>
+                      <button type="button" onClick={() => pdf(c)} className={BTN_MINI} data-leitura data-btn-pdf-calculo>
                         <FileDown size={12} /> PDF
                       </button>
                       <button type="button" onClick={() => setParaExcluir(c)} className={BTN_MINI_PERIGO} data-btn-excluir-calculo>

@@ -182,10 +182,10 @@ export default function Exames() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => alternarDetalhe(ped.id)} className={BTN_MINI} aria-expanded={aberto} data-btn-ver-pedido>
+                      <button type="button" onClick={() => alternarDetalhe(ped.id)} className={BTN_MINI} aria-expanded={aberto} data-leitura data-btn-ver-pedido>
                         {aberto ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberto ? "Fechar" : "Ver"}
                       </button>
-                      <button type="button" onClick={() => pdfPedido(ped)} className={BTN_MINI} data-btn-pdf-pedido>
+                      <button type="button" onClick={() => pdfPedido(ped)} className={BTN_MINI} data-leitura data-btn-pdf-pedido>
                         <FileDown size={12} aria-hidden="true" /> PDF
                       </button>
                       <button type="button" onClick={() => setModalPedido({ aberto: true, pedido: ped })} className={BTN_MINI} data-btn-editar-pedido>

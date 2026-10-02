@@ -18,7 +18,7 @@ export type RegistroGestacional = Database["public"]["Tables"]["registros_gestac
 const T_GESTACOES = "gestacoes";
 const T_REGISTROS = "registros_gestacionais";
 
-export const MSG_GESTACAO_ATIVA = "Já existe um acompanhamento ativo pra esta paciente";
+export const MSG_GESTACAO_ATIVA = "Já existe um acompanhamento ativo pra esta aluna";
 
 const falhou = (error: { message: string } | null): void => {
   if (error) throw new Error(error.message);

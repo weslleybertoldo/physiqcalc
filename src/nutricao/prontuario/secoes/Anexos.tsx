@@ -220,7 +220,7 @@ export default function Anexos() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-anexos-vazio>
             <FileText className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhum arquivo anexado</p>
-            <p className="text-xs text-texto-2 font-body">Exames, fotos e documentos do paciente ficam guardados aqui, só pra você.</p>
+            <p className="text-xs text-texto-2 font-body">Exames, fotos e documentos do aluno ficam guardados aqui, só pra você.</p>
           </div>
         )}
 
@@ -246,11 +246,11 @@ export default function Anexos() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <button type="button" onClick={() => void baixar(a)} className={BTN_MINI_PRI} disabled={baixando === a.id} data-btn-baixar-anexo>
+                    <button type="button" onClick={() => void baixar(a)} className={BTN_MINI_PRI} disabled={baixando === a.id} data-leitura data-btn-baixar-anexo>
                       <Download size={12} aria-hidden="true" /> {baixando === a.id ? "Gerando..." : "Baixar"}
                     </button>
                     {podeVisualizar(a.mime) && (
-                      <button type="button" onClick={() => setVisualizar(a)} className={BTN_MINI} data-btn-ver-anexo>
+                      <button type="button" onClick={() => setVisualizar(a)} className={BTN_MINI} data-leitura data-btn-ver-anexo>
                         <Eye size={12} aria-hidden="true" /> Ver
                       </button>
                     )}

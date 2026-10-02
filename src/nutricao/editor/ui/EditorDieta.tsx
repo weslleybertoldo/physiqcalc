@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { chavePlano, usePlano } from "@/nutricao/editor/lib/consultas";
-import { ArrowLeftRight, ChefHat, ChevronDown, ChevronUp, Copy, FileDown, MoreVertical, Pencil, Plus, Repeat, Star, Trash2, Utensils } from "lucide-react";
+import { ArrowDown, ArrowLeftRight, ArrowUp, ChefHat, ChevronDown, ChevronUp, Copy, FileDown, MoreVertical, Pencil, Plus, Repeat, Star, Trash2, Utensils } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -16,13 +16,17 @@ import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import type { Alimento } from "@/nutricao/editor/lib/alimentos";
 import { fmtQtd } from "@/nutricao/editor/lib/alimentosUtil";
 import {
-  descricaoQuantidade, fmtHorario, fmtKcal, lerSubstitutos, macrosDoItem, ordenarItens, ordenarRefeicoes, textoItens, totaisDoPlano, totaisDosItens,
+  ROTULO_SITUACAO, compararComAlvo, descricaoQuantidade, fmtDiferenca, fmtHorario, fmtKcal, fmtNum, lerSubstitutos, macrosDoItem, ordenarItens, ordenarRefeicoes,
+  percentuaisMacros, situacaoAlvo, textoItens, textoRefeicoes, totaisDoPlano, totaisDosItens, type SituacaoAlvo,
 } from "@/nutricao/editor/lib/dietaUtil";
 import {
-  copiarParaSemanaToda, duplicarPlano, excluirItem, excluirPlano, excluirRefeicao, favoritarPlano, type Item, type Plano, type PlanoRow, type Refeicao,
-  type RefeicaoRow,
+  copiarParaSemanaToda, duplicarPlano, excluirItem, excluirPlano, excluirRefeicao, favoritarPlano, salvarOrdemRefeicoes, type Item, type Plano, type PlanoRow,
+  type Refeicao, type RefeicaoRow,
 } from "@/nutricao/editor/lib/planos";
-import { DIAS_SEMANA, copiarDiaParaSemana, diaDeHoje, diasDaRefeicaoNova, refeicoesDoDiaDaSemana, textoDiasRefeicao, variaPorDia } from "@/nutricao/editor/lib/semanaPlano";
+import {
+  DIAS_SEMANA, copiarDiaParaSemana, diaDeHoje, diasDaRefeicaoNova, moverRefeicaoNoDia, refeicoesDoDiaDaSemana, textoDiasRefeicao, variaPorDia,
+} from "@/nutricao/editor/lib/semanaPlano";
+import { Chip } from "@/ui/premium/Chip";
 import BuscaAlimento from "./BuscaAlimento";
 import ItemDialog from "./ItemDialog";
 import PlanoDialog from "./PlanoDialog";
@@ -31,11 +35,17 @@ import RefeicaoDialog from "./RefeicaoDialog";
 import SubstitutosDialog from "./SubstitutosDialog";
 import { BTN_PERIGO, BTN_SEC, DESCRICAO_JANELA, JANELA, TITULO_JANELA } from "./estilos";
 
+/** As colunas da tabela da refeição (tela 8); sem mouse (celular), a última cresce pra lixeira caber à vista ao lado das trocas. */
+const GRADE_ITENS = "grid-cols-[minmax(0,1fr)_58px_42px_46px_58px] [@media(hover:none)]:grid-cols-[minmax(0,1fr)_54px_38px_42px_74px]";
+
 /** As cores da barra da tela 8 (proteína ciano, carboidrato verde, gordura âmbar, fibras violeta). */
 const COR = { p: "#22D3EE", c: "#10B981", g: "#F59E0B", f: "#8B5CF6" } as const;
 
 /** A barra de macros e fibras (NF5): cada pedaço do tamanho das kcal dele (P e C × 4, G × 9, fibras × 2). */
-export function BarraMacros({ proteina, carboidrato, gordura, fibras }: { proteina: number; carboidrato: number; gordura: number; fibras: number }) {
+export function BarraMacros({ proteina, carboidrato, gordura, fibras, comPercentual = false }: { proteina: number; carboidrato: number; gordura: number; fibras: number; comPercentual?: boolean }) {
+  // H5 (achado 8 do FIM-1b): o % das kcal de cada macro, como o editor do Nutri mostrava ao lado das gramas
+  const pct = comPercentual ? percentuaisMacros({ proteina_g: proteina, carboidrato_g: carboidrato, lipidio_g: gordura }) : null;
+  const pctDe: Record<string, number | null> = { p: pct?.proteina ?? null, c: pct?.carboidrato ?? null, g: pct?.lipidio ?? null, f: null };
   const partes = [
     { k: "p", rotulo: "Proteína", g: proteina, kcal: proteina * 4 },
     { k: "c", rotulo: "Carboidrato", g: carboidrato, kcal: carboidrato * 4 },
@@ -56,6 +66,7 @@ export function BarraMacros({ proteina, carboidrato, gordura, fibras }: { protei
           <span key={x.k} className="inline-flex items-center gap-[5px] whitespace-nowrap" data-macro={x.k} data-macro-g={Math.round(x.g)}>
             <i aria-hidden className="h-[7px] w-[7px] rounded-full" style={{ background: COR[x.k] }} />
             {x.rotulo} <b className="font-semibold text-texto">{fmtQtd(Math.round(x.g))} g</b>
+            {pctDe[x.k] !== null && <span className="text-texto-3 tabular-nums" data-macro-pct={pctDe[x.k]}>· {fmtNum(pctDe[x.k] ?? 0, 0)} %</span>}
           </span>
         ))}
       </div>
@@ -81,6 +92,38 @@ function AbaDia({ rotulo, nome, ativa, aoAbrir, marcado }: { rotulo: string; nom
       {rotulo}
       {marcado && !ativa && <i aria-hidden className="absolute right-1 top-1 h-1 w-1 rounded-full bg-verde" />}
     </button>
+  );
+}
+
+const COR_SITUACAO: Record<SituacaoAlvo, string> = { sem_alvo: "var(--p-texto-3)", no_alvo: "#10B981", abaixo: "#F59E0B", acima: "#F43F5E" };
+
+/**
+ * H5 (achado 8 do FIM-1b): os totais que o editor do Nutri mostrava e a tela 8 não — as kcal do dia × a meta do plano (barra, %, a
+ * diferença e abaixo/dentro/acima, com a tolerância de 5 % do Nutri), o sódio e quantos alimentos e refeições. O PDF já tinha tudo.
+ */
+function TotaisDoDia({ kcal, alvo, sodio, alimentos, refeicoes }: { kcal: number; alvo: number | null | undefined; sodio: number; alimentos: number; refeicoes: number }) {
+  const comp = compararComAlvo(kcal, alvo);
+  const situacao = situacaoAlvo(comp);
+  return (
+    <div className="mt-3 flex flex-col gap-2" data-dieta-totais data-situacao-alvo={situacao} data-total-sodio={Math.round(sodio)} data-total-itens={alimentos} data-total-refeicoes={refeicoes}>
+      {comp && (
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1" data-dieta-meta-kcal={Math.round(comp.pct)} data-dieta-diferenca={Math.round(comp.diferenca)}>
+          <span className="h-[5px] min-w-[120px] flex-1 overflow-hidden rounded-full bg-superficie-2" role="progressbar" aria-label="Kcal do dia em relação à meta"
+            aria-valuenow={Math.round(comp.pct)} aria-valuemin={0} aria-valuemax={100}>
+            <span className="block h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, comp.pct))}%`, background: COR_SITUACAO[situacao] }} />
+          </span>
+          <span className="text-[11.5px] tabular-nums text-texto-2">
+            {fmtNum(comp.pct, 0)} % da meta · {fmtDiferenca(comp.diferenca)} kcal ·{" "}
+            <b className="font-semibold" style={{ color: COR_SITUACAO[situacao] }} data-dieta-situacao>{ROTULO_SITUACAO[situacao]}</b>
+          </span>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        <Chip tom="g" data-total-sodio-chip>SÓDIO {fmtQtd(Math.round(sodio))} MG</Chip>
+        <Chip tom="g">{textoItens(alimentos).toUpperCase()}</Chip>
+        <Chip tom="g">{textoRefeicoes(refeicoes).toUpperCase()}</Chip>
+      </div>
+    </div>
   );
 }
 
@@ -119,6 +162,7 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
   const [modalReceita, setModalReceita] = useState<Refeicao | null>(null);
   const [confirmar, setConfirmar] = useState<null | { tipo: "refeicao"; refeicao: Refeicao } | { tipo: "item"; refeicaoId: string; item: Item } | { tipo: "semana" } | { tipo: "plano" }>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [salvandoOrdem, setSalvandoOrdem] = useState(false);
 
   const refeicoes = useMemo(() => (plano ? ordenarRefeicoes(plano.refeicoes) : []), [plano]);
   const doDia = useMemo(() => refeicoesDoDiaDaSemana(refeicoes, dia), [refeicoes, dia]);
@@ -145,6 +189,25 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
   const onItensDeReceita = (refeicaoId: string, novos: Item[]) => trocarRefeicao(refeicaoId, (r) => ({ ...r, itens: ordenarItens([...r.itens, ...novos]) }));
   const onSubstitutosSalvos = (item: Item) => trocarRefeicao(item.refeicao_id, (r) => ({ ...r, itens: r.itens.map((i) => (i.id === item.id ? item : i)) }));
   const onPlanoEditado = (row: PlanoRow) => trocar((p) => ({ ...p, ...row }));
+
+  /** H5 (N-61): Subir/Descer refeição — troca com a vizinha do dia aberto; grava só as ordens que mudaram; se o banco recusar, volta. */
+  const mover = async (id: string, direcao: -1 | 1) => {
+    if (!plano) return;
+    const ordens = moverRefeicaoNoDia(refeicoes, dia, id, direcao);
+    if (!ordens || !ordens.length) return;
+    const anterior = plano;
+    const nova = new Map(ordens.map((o) => [o.id, o.ordem]));
+    trocar((p) => ({ ...p, refeicoes: p.refeicoes.map((r) => (nova.has(r.id) ? { ...r, ordem: nova.get(r.id)! } : r)) }));
+    setSalvandoOrdem(true);
+    try {
+      await salvarOrdemRefeicoes(ordens);
+    } catch (e) {
+      qc.setQueryData<Plano | null>(chavePlano(planoId), anterior);
+      toast.error(e instanceof Error ? e.message : "Não foi possível mudar a ordem");
+    } finally {
+      setSalvandoOrdem(false);
+    }
+  };
 
   const rodar = async (fn: () => Promise<void>, ok: string, erro: string) => {
     setOcupado(true);
@@ -306,22 +369,23 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <BarraMacros proteina={totais.proteina_g} carboidrato={totais.carboidrato_g} gordura={totais.lipidio_g} fibras={totais.fibra_g} />
+      <BarraMacros proteina={totais.proteina_g} carboidrato={totais.carboidrato_g} gordura={totais.lipidio_g} fibras={totais.fibra_g} comPercentual />
+      <TotaisDoDia kcal={totais.energia_kcal} alvo={plano.kcal_alvo} sodio={totais.sodio_mg} alimentos={totais.itens} refeicoes={doDia.length} />
 
       {/* refeições do dia */}
-      <div className="mt-3" data-dieta-refeicoes={doDia.length}>
+      <div className="mt-3" data-dieta-refeicoes={doDia.length} data-salvando-ordem={salvandoOrdem ? "1" : "0"}>
         {doDia.length === 0 && (
           <p className="border-t border-[rgba(255,255,255,.06)] py-5 text-[13px] text-texto-3" data-dieta-sem-refeicao>
             Nenhuma refeição em {nomeDia.toLowerCase()}.
           </p>
         )}
-        {doDia.map((r) => {
+        {doDia.map((r, pos) => {
           const itens = ordenarItens(r.itens);
           const t = totaisDosItens(itens);
           const aberto = aberta === r.id;
           const horario = fmtHorario(r.horario);
           return (
-            <div key={r.id} className="border-t border-[rgba(255,255,255,.06)]" data-refeicao={r.id} data-refeicao-nome={r.nome} data-refeicao-kcal={Math.round(t.energia_kcal)} data-refeicao-itens={itens.length} data-aberta={aberto || undefined}>
+            <div key={r.id} className="border-t border-[rgba(255,255,255,.06)]" data-refeicao={r.id} data-refeicao-nome={r.nome} data-refeicao-kcal={Math.round(t.energia_kcal)} data-refeicao-itens={itens.length} data-refeicao-posicao={pos} data-aberta={aberto || undefined}>
               <div className="flex items-center gap-3 py-2.5">
                 <button type="button" onClick={() => setAberta(aberto ? null : r.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-expanded={aberto} data-refeicao-abrir>
                   <img src={fotoDaRefeicao(r.nome, r.horario)} alt="" className="h-[46px] w-[46px] flex-none rounded-[13px] object-cover" loading="lazy" />
@@ -340,7 +404,7 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
 
               {aberto && (
                 <div className="mb-3 rounded-[16px] border border-linha bg-[rgba(255,255,255,.02)] px-3.5 pb-3 pt-2.5" data-refeicao-tabela>
-                  <div className="grid grid-cols-[minmax(0,1fr)_58px_42px_46px_58px] items-center gap-2 border-b border-[rgba(255,255,255,.06)] pb-2 text-[10.5px] font-semibold tracking-[0.06em] text-texto-3">
+                  <div className={cn("grid items-center gap-2 border-b border-[rgba(255,255,255,.06)] pb-2 text-[10.5px] font-semibold tracking-[0.06em] text-texto-3", GRADE_ITENS)}>
                     <span>ALIMENTO</span>
                     <span>QTDE.</span>
                     <span className="text-right">KCAL</span>
@@ -352,7 +416,7 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
                     const m = macrosDoItem(i);
                     const subs = lerSubstitutos(i.substitutos);
                     return (
-                      <div key={i.id} className="group grid grid-cols-[minmax(0,1fr)_58px_42px_46px_58px] items-center gap-2 border-b border-[rgba(255,255,255,.05)] py-2 last:border-b-0" data-item={i.id} data-item-nome={i.alimento?.nome ?? ""} data-item-kcal={Math.round(m.energia_kcal ?? 0)} data-item-substitutos={subs.length}>
+                      <div key={i.id} className={cn("group grid items-center gap-2 border-b border-[rgba(255,255,255,.05)] py-2 last:border-b-0", GRADE_ITENS)} data-item={i.id} data-item-nome={i.alimento?.nome ?? ""} data-item-kcal={Math.round(m.energia_kcal ?? 0)} data-item-substitutos={subs.length}>
                         <span className="flex min-w-0 items-center gap-1.5">
                           <button
                             type="button"
@@ -381,7 +445,9 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
                             <ArrowLeftRight aria-hidden className="h-3 w-3" /> {subs.length}
                           </button>
                           {!somenteLeitura && (
-                            <button type="button" aria-label={`Remover ${i.alimento?.nome ?? "alimento"}`} onClick={() => setConfirmar({ tipo: "item", refeicaoId: r.id, item: i })} className="rounded p-0.5 text-texto-4 opacity-0 transition-opacity hover:text-rosa-3 focus:opacity-100 group-hover:opacity-100" data-item-remover>
+                            <button type="button" aria-label={`Remover ${i.alimento?.nome ?? "alimento"}`} title="Remover o alimento" onClick={() => setConfirmar({ tipo: "item", refeicaoId: r.id, item: i })}
+                              className="-mr-1 inline-flex h-7 w-7 flex-none items-center justify-center rounded-[8px] text-texto-3 transition-opacity hover:text-rosa-3 focus-visible:opacity-100 [@media(hover:hover)]:text-texto-4 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                              data-item-remover>
                               <Trash2 aria-hidden className="h-3.5 w-3.5" />
                             </button>
                           )}
@@ -404,6 +470,14 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
                         </button>
                         <button type="button" className="inline-flex items-center gap-1.5 hover:text-texto" onClick={() => setModalRefeicao({ aberto: true, refeicao: r })} title="Nome, horário, dias da semana e observação" data-refeicao-editar>
                           <Pencil aria-hidden className="h-3.5 w-3.5" /> Refeição e dias
+                        </button>
+                        <button type="button" className="inline-flex items-center gap-1.5 hover:text-texto disabled:opacity-35" onClick={() => void mover(r.id, -1)}
+                          disabled={pos === 0 || salvandoOrdem} title="Subir a refeição (antes da anterior)" data-refeicao-subir>
+                          <ArrowUp aria-hidden className="h-3.5 w-3.5" /> Subir
+                        </button>
+                        <button type="button" className="inline-flex items-center gap-1.5 hover:text-texto disabled:opacity-35" onClick={() => void mover(r.id, 1)}
+                          disabled={pos === doDia.length - 1 || salvandoOrdem} title="Descer a refeição (depois da próxima)" data-refeicao-descer>
+                          <ArrowDown aria-hidden className="h-3.5 w-3.5" /> Descer
                         </button>
                         <button type="button" aria-label={`Remover a refeição ${r.nome}`} title="Remover a refeição" onClick={() => setConfirmar({ tipo: "refeicao", refeicao: r })} className="ml-auto inline-flex items-center gap-1.5 hover:text-rosa-3" data-refeicao-remover>
                           <Trash2 aria-hidden className="h-3.5 w-3.5" /> Remover refeição

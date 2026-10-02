@@ -47,11 +47,12 @@ export default function Orientacoes() {
 
   const carregarModelos = useCallback(async () => {
     try {
-      setModelos(user ? await garantirModelos(user.id) : await listarModelos());
+      // H5 (item 10): quem só lê não cria os modelos padrão (gravar é da nutri — RLS da W3)
+      setModelos(user && podeEditar ? await garantirModelos(user.id) : await listarModelos());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível carregar os modelos");
     }
-  }, [user]);
+  }, [user, podeEditar]);
 
   useEffect(() => {
     void carregar();
@@ -140,7 +141,7 @@ export default function Orientacoes() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-orientacoes-vazio>
             <ScrollText className="mx-auto h-6 w-6 text-texto-3" />
             <p className="text-sm text-texto font-body">Nenhuma orientação</p>
-            <p className="text-xs text-texto-2 font-body">Escreva agora a primeira orientação do paciente — use um modelo ou comece em branco.</p>
+            <p className="text-xs text-texto-2 font-body">Escreva agora a primeira orientação do aluno — use um modelo ou comece em branco.</p>
             <button type="button" onClick={abrirNova} className={BTN_SEC} data-btn-primeira-orientacao>
               Nova orientação
             </button>
@@ -167,13 +168,13 @@ export default function Orientacoes() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => alternar(o.id)} className={BTN_MINI} data-btn-ver-orientacao>
+                      <button type="button" onClick={() => alternar(o.id)} className={BTN_MINI} data-leitura data-btn-ver-orientacao>
                         {aberta ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {aberta ? "Ocultar" : "Ver"}
                       </button>
                       <button type="button" onClick={() => abrirEdicao(o)} className={BTN_MINI} data-btn-editar-orientacao>
                         <Pencil size={12} /> Editar
                       </button>
-                      <button type="button" onClick={() => pdf(o)} className={BTN_MINI} data-btn-pdf-orientacao>
+                      <button type="button" onClick={() => pdf(o)} className={BTN_MINI} data-leitura data-btn-pdf-orientacao>
                         <FileDown size={12} /> PDF
                       </button>
                       <button type="button" onClick={() => setParaExcluir(o)} className={BTN_MINI_PERIGO} data-btn-excluir-orientacao>

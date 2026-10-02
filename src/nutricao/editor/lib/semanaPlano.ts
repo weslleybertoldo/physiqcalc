@@ -58,3 +58,26 @@ export function copiarDiaParaSemana(lista: { id: string; dias_semana?: unknown }
 
 /** Os dias de uma refeição nova criada com uma aba de dia aberta: sem variação no plano, todos; com variação, só aquele dia. */
 export const diasDaRefeicaoNova = (lista: { dias_semana?: unknown }[], diaAberto: number): number[] => (variaPorDia(lista) ? [diaAberto] : []);
+
+/**
+ * H5 (N-61) — "Subir/Descer refeição" do Nutri, no dia aberto: a refeição troca de lugar com a vizinha DAQUELE dia (no plano que muda
+ * por dia, as refeições de outros dias ficam onde estão) e a ordem do plano inteiro é renumerada 0..n-1 na ordem que a tela mostra
+ * (ordens repetidas do site antigo se resolvem aqui). Devolve só as que mudaram de número (o que salvarOrdemRefeicoes grava); null
+ * quando não dá para mover (1ª subindo, última descendo).
+ */
+export function moverRefeicaoNoDia<T extends { id: string; ordem: number; dias_semana?: unknown }>(
+  todasOrdenadas: T[],
+  dia: number,
+  id: string,
+  direcao: -1 | 1,
+): { id: string; ordem: number }[] | null {
+  const doDia = todasOrdenadas.filter((r) => valeNoDiaDaSemana(r, dia));
+  const i = doDia.findIndex((r) => r.id === id);
+  const vizinha = i < 0 ? undefined : doDia[i + direcao];
+  if (!vizinha) return null;
+  const lista = todasOrdenadas.filter((r) => r.id !== id);
+  const alvo = todasOrdenadas[todasOrdenadas.findIndex((r) => r.id === id)];
+  const j = lista.findIndex((r) => r.id === vizinha.id);
+  lista.splice(direcao === -1 ? j : j + 1, 0, alvo);
+  return lista.map((r, k) => ({ id: r.id, ordem: k })).filter((x) => todasOrdenadas.find((r) => r.id === x.id)?.ordem !== x.ordem);
+}

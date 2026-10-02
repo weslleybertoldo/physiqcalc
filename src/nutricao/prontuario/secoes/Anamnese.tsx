@@ -141,7 +141,7 @@ export default function Anamnese() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-anamneses-vazio>
             <NotebookPen className="mx-auto h-6 w-6 text-texto-3" />
             <p className="text-sm text-texto font-body">Nenhuma anamnese</p>
-            <p className="text-xs text-texto-2 font-body">Crie agora a primeira anamnese do paciente — escolha um modelo de perguntas ou comece em branco.</p>
+            <p className="text-xs text-texto-2 font-body">Crie agora a primeira anamnese do aluno — escolha um modelo de perguntas ou comece em branco.</p>
             <button type="button" onClick={abrirNova} className={BTN_SEC} data-btn-primeira-anamnese>
               Nova anamnese
             </button>
@@ -168,13 +168,13 @@ export default function Anamnese() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => alternar(a.id)} className={BTN_MINI} data-btn-ver-anamnese>
+                      <button type="button" onClick={() => alternar(a.id)} className={BTN_MINI} data-leitura data-btn-ver-anamnese>
                         {aberta ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {aberta ? "Ocultar" : "Ver"}
                       </button>
                       <button type="button" onClick={() => abrirEdicao(a)} className={BTN_MINI} data-btn-editar-anamnese>
                         <Pencil size={12} /> Editar
                       </button>
-                      <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-btn-pdf-anamnese>
+                      <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-anamnese>
                         <FileDown size={12} /> PDF
                       </button>
                       <button type="button" onClick={() => setParaExcluir(a)} className={BTN_MINI_PERIGO} data-btn-excluir-anamnese>

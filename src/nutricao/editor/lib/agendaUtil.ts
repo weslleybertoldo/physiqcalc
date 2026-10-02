@@ -21,9 +21,9 @@ export const STATUS_AGENDAMENTO = {
   agendado: { rotulo: "Agendado", fundo: "bg-sky-500/25 text-sky-100", ponto: "bg-sky-400" },
   encaixe: { rotulo: "Encaixe", fundo: "bg-violet-500/25 text-violet-100", ponto: "bg-violet-400" },
   confirmado: { rotulo: "Confirmado por você", fundo: "bg-emerald-500/25 text-emerald-100", ponto: "bg-emerald-400" },
-  paciente_confirmou: { rotulo: "Paciente confirmou", fundo: "bg-teal-500/25 text-teal-100", ponto: "bg-teal-400" },
+  paciente_confirmou: { rotulo: "Aluno confirmou", fundo: "bg-teal-500/25 text-teal-100", ponto: "bg-teal-400" },
   desmarcado: { rotulo: "Desmarcado por você", fundo: "bg-rose-500/25 text-rose-100 line-through", ponto: "bg-rose-400" },
-  paciente_desmarcou: { rotulo: "Paciente desmarcou", fundo: "bg-orange-500/25 text-orange-100 line-through", ponto: "bg-orange-400" },
+  paciente_desmarcou: { rotulo: "Aluno desistiu", fundo: "bg-orange-500/25 text-orange-100 line-through", ponto: "bg-orange-400" },
   nao_compareceu: { rotulo: "Não compareceu", fundo: "bg-zinc-500/30 text-zinc-200", ponto: "bg-zinc-400" },
 } as const;
 export type StatusAgendamento = keyof typeof STATUS_AGENDAMENTO;

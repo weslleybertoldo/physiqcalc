@@ -168,7 +168,7 @@ export default function Suplementos() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-suplementos-vazio>
             <Pill className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhum produto indicado</p>
-            <p className="text-xs text-texto-2 font-body">Monte uma lista de produtos para complementar a dieta do seu paciente.</p>
+            <p className="text-xs text-texto-2 font-body">Monte uma lista de produtos para complementar a dieta do seu aluno.</p>
             <div className="flex flex-wrap justify-center gap-2 pt-1">
               <button type="button" onClick={abrirNova} className={BTN_PRI} disabled={!uid} data-btn-criar-lista>
                 <Plus size={12} aria-hidden="true" /> Criar lista de produtos
@@ -197,7 +197,7 @@ export default function Suplementos() {
               <button type="button" onClick={() => setCatalogoAberto(true)} className={BTN_MINI} data-btn-meus-produtos>
                 <Package size={12} aria-hidden="true" /> Meus produtos
               </button>
-              <button type="button" onClick={pdf} className={BTN_MINI} disabled={!ativas.length} data-btn-pdf-suplementos>
+              <button type="button" onClick={pdf} className={BTN_MINI} disabled={!ativas.length} data-leitura data-btn-pdf-suplementos>
                 <FileDown size={12} aria-hidden="true" /> PDF
               </button>
             </div>
@@ -231,7 +231,7 @@ export default function Suplementos() {
                 onClick={() => setMostrarEncerradas((v) => !v)}
                 aria-expanded={mostrarEncerradas}
                 className="text-xs text-texto-2 font-semibold uppercase tracking-wider inline-flex items-center gap-1 hover:text-texto"
-                data-btn-toggle-encerradas
+                data-leitura data-btn-toggle-encerradas
               >
                 {mostrarEncerradas ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {textoEncerradas(encerradas.length)}
               </button>

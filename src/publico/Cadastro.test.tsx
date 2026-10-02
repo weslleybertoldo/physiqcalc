@@ -44,17 +44,84 @@ describe("W13 — /c/:codigo (N-57): auto-cadastro que fica pendente", () => {
     expect((envio[1] as { body: Record<string, unknown> }).body).toMatchObject({ codigo: "PROF-LUCAS-FERREIRA", captcha: "tok-1", dados: { nome: "Ana Lima", email: "ana@x.com" } });
   });
 
-  it("sem contato não envia; link inválido mostra o aviso", async () => {
-    h.invoke.mockResolvedValue({ data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null });
+  it("só o nome é obrigatório (como no Nutri): envia sem contato; link inválido mostra o aviso", async () => {
+    h.invoke.mockImplementation(async (_fn: string, { body }: { body: Record<string, unknown> }) =>
+      body.acao === "cadastro_info"
+        ? { data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null }
+        : { data: { ok: true, id: "cp2" }, error: null });
     const r = montar();
     await screen.findByText("Lucas Ferreira");
+    expect(screen.getByText(/só o nome é obrigatório/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
+    expect(await screen.findByText("Escreva o seu nome.")).toBeInTheDocument();
+    expect(h.invoke).toHaveBeenCalledTimes(1);
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana Lima" } });
     fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
-    expect(await screen.findByText(/Deixe um e-mail ou um telefone/)).toBeInTheDocument();
-    expect(h.invoke).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Cadastro enviado")).toBeInTheDocument();
+    expect(screen.getByText(/esperar o contato do profissional/)).toBeInTheDocument();
     r.unmount();
     h.invoke.mockResolvedValue({ data: { ok: false, erro: "link_nao_encontrado" }, error: null });
     montar("NAO-EXISTE");
     await waitFor(() => expect(screen.getByText("Link de cadastro não encontrado")).toBeInTheDocument());
+  });
+});
+
+describe("H5 — /c/ com CPF e apelido (N-57 / DN-6) e a trava de e-mail/CPF", () => {
+  const erroDoBanco = (corpo: Record<string, unknown>) => ({
+    data: null,
+    error: { context: new Response(JSON.stringify(corpo), { status: 409, headers: { "Content-Type": "application/json" } }) },
+  });
+
+  it("manda o apelido e o CPF (só os dígitos, com a máscara na tela)", async () => {
+    h.invoke.mockImplementation(async (_fn: string, { body }: { body: Record<string, unknown> }) =>
+      body.acao === "cadastro_info" ? { data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null } : { data: { ok: true, id: "cp3" }, error: null });
+    montar();
+    await screen.findByText("Lucas Ferreira");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana Lima" } });
+    fireEvent.change(screen.getByLabelText("Como prefere ser chamado(a)"), { target: { value: "Aninha" } });
+    fireEvent.change(screen.getByLabelText("CPF"), { target: { value: "52998224725" } });
+    expect((screen.getByLabelText("CPF") as HTMLInputElement).value).toBe("529.982.247-25");
+    fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
+    expect(await screen.findByText("Cadastro enviado")).toBeInTheDocument();
+    const envio = h.invoke.mock.calls.find((c) => (c[1] as { body: { acao: string } }).body.acao === "cadastro_enviar")!;
+    expect((envio[1] as { body: { dados: Record<string, unknown> } }).body.dados).toMatchObject({ nome: "Ana Lima", apelido: "Aninha", cpf: "52998224725" });
+  });
+
+  it("CPF com dígito errado não envia", async () => {
+    h.invoke.mockResolvedValue({ data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null });
+    montar();
+    await screen.findByText("Lucas Ferreira");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana Lima" } });
+    fireEvent.change(screen.getByLabelText("CPF"), { target: { value: "52998224726" } });
+    fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
+    expect(await screen.findByText("Confira o CPF.")).toBeInTheDocument();
+    expect(h.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("CPF de um aluno que já existe: a frase vermelha embaixo do CPF; e-mail e CPF: embaixo dos 2", async () => {
+    let resposta: Record<string, unknown> = { ok: false, erro: "cadastro_cpf_existe", campos: ["cpf"] };
+    h.invoke.mockImplementation(async (_fn: string, { body }: { body: Record<string, unknown> }) =>
+      body.acao === "cadastro_info" ? { data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null } : erroDoBanco(resposta));
+    montar();
+    await screen.findByText("Lucas Ferreira");
+    // o aviso fica dentro do <label> (Campo): o campo pelo seletor
+    const cpf = () => document.querySelector<HTMLInputElement>("[data-cad-cpf]")!;
+    const email = () => document.querySelector<HTMLInputElement>("[data-cad-email]")!;
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana Lima" } });
+    fireEvent.change(cpf(), { target: { value: "52998224725" } });
+    fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
+    expect(await screen.findByText("Já existe cadastro com este CPF.")).toBeInTheDocument();
+    expect(cpf()).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("Já existe cadastro com este e-mail.")).not.toBeInTheDocument();
+    // mexer no CPF tira o aviso
+    fireEvent.change(cpf(), { target: { value: "529.982.247-2" } });
+    expect(screen.queryByText("Já existe cadastro com este CPF.")).not.toBeInTheDocument();
+    resposta = { ok: false, erro: "cadastro_email_existe", campos: ["cpf", "email"] };
+    fireEvent.change(cpf(), { target: { value: "52998224725" } });
+    fireEvent.change(email(), { target: { value: "ana@x.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
+    expect(await screen.findByText("Já existe cadastro com este e-mail.")).toBeInTheDocument();
+    expect(screen.getByText("Já existe cadastro com este CPF.")).toBeInTheDocument();
+    expect(screen.queryByText("Cadastro enviado")).not.toBeInTheDocument();
   });
 });

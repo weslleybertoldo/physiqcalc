@@ -208,7 +208,7 @@ export default function CalculoDialog({ open, onOpenChange, paciente, ultimaAntr
           </div>
 
           <fieldset className="space-y-2" data-dados-paciente>
-            <legend className={LEGENDA}>Dados do paciente</legend>
+            <legend className={LEGENDA}>Dados do aluno</legend>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               <Campo rotulo="Peso (kg)" erro={errors.peso?.message} dica={req.peso && dados.peso === null ? "a fórmula precisa do peso" : undefined}>
                 <input inputMode="decimal" placeholder="ex.: 72,5" className={INPUT} {...register("peso")} data-campo-peso-calculo />

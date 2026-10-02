@@ -14,12 +14,14 @@ function rotuloDia(dia: string): { semana: string; numero: string; mes: string }
   return { semana: DIAS_CURTOS[d.getUTCDay()], numero: dia.slice(8, 10), mes: MESES_CURTOS[Number(dia.slice(5, 7)) - 1] };
 }
 
-export function EscolherHorario({ horarios, carregando, erro, valor, aoEscolher }: {
+export function EscolherHorario({ horarios, carregando, erro, valor, aoEscolher, textoVazio }: {
   horarios: HorarioLivre[];
   carregando: boolean;
   erro: string | null;
   valor: string | null;
   aoEscolher: (inicio: string | null) => void;
+  /** o texto sem horário livre (H5: no mês a mês, "Nenhum horário livre em novembro. Veja o próximo mês.") */
+  textoVazio?: string;
 }) {
   const porDia = useMemo(() => {
     const m = new Map<string, HorarioLivre[]>();
@@ -45,7 +47,7 @@ export function EscolherHorario({ horarios, carregando, erro, valor, aoEscolher 
   }
   if (erro) return <p className="text-[12.5px] text-rosa-3" data-horarios-erro>{erro}</p>;
   if (!porDia.length) {
-    return <p className="rounded-2xl border border-dashed border-linha-2 p-4 text-center text-[12.5px] text-texto-3" data-sem-horarios>Nenhum horário livre no prazo. Fale com o seu profissional.</p>;
+    return <p className="rounded-2xl border border-dashed border-linha-2 p-4 text-center text-[12.5px] text-texto-3" data-sem-horarios>{textoVazio ?? "Nenhum horário livre no prazo. Fale com o seu profissional."}</p>;
   }
   const doDia = porDia.find(([d]) => d === dia)?.[1] ?? [];
   return (

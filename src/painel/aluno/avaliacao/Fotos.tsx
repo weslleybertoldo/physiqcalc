@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Camera, ImagePlus, Trash2, Upload } from "lucide-react";
+import { Camera, Eye, ImagePlus, PenLine, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TIPOS_FOTO, type TipoFoto } from "@/lib/registrosFotos";
@@ -8,7 +8,7 @@ import { ORDEM_POSICOES, SLOTS, fotoDoSlot } from "@/evolucao/serie";
 import type { Foto, Posicao, SessaoFotos } from "@/evolucao/tipos";
 import { FotoProgresso } from "@/evolucao/ui/FotoProgresso";
 import FotoDialog from "@/nutricao/avaliacao/FotoDialog";
-import { excluirFoto } from "@/nutricao/avaliacao/evolucao";
+import { excluirFoto, type FotoEvolucao } from "@/nutricao/avaliacao/evolucao";
 import { useAuth } from "@/nutricao/editor/ui/contexto";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
@@ -17,6 +17,7 @@ import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { excluirFotoMensal, subirFotoMensal } from "./avaliacaoApi";
 import { mensagemDoErro } from "./mensagens";
 import { autorNoPainel, type PermissoesAvaliacao } from "./regras";
+import { VisualizarFoto } from "./VisualizarFoto";
 
 const POSICAO_DO_TIPO: Record<TipoFoto, Posicao> = { frente: "frente", costas: "costas", lateral_direita: "lado_d", lateral_esquerda: "lado_e" };
 const mesDe = (iso: string) => iso.slice(0, 7);
@@ -80,22 +81,44 @@ export function CartaoFotosPainel({ sessoes, total, perm, aoComparar, aoGerencia
   );
 }
 
-function FotoComAcao({ f, podeExcluir, ocupado, aoExcluir }: { f: Foto; podeExcluir: boolean; ocupado: boolean; aoExcluir: (f: Foto) => void }) {
+const MINI = "inline-flex items-center justify-center gap-1 text-[11.5px] font-semibold disabled:opacity-50";
+
+/** Uma foto da lista: Ver (grande, anterior/próxima, Baixar — H5, N-34), Editar (as da nutrição: posição, data e observação) e Excluir. */
+function FotoComAcao({ f, podeExcluir, podeEditar, ocupado, aoVer, aoEditar, aoExcluir }: {
+  f: Foto;
+  podeExcluir: boolean;
+  podeEditar: boolean;
+  ocupado: boolean;
+  aoVer: (f: Foto) => void;
+  aoEditar: (f: Foto) => void;
+  aoExcluir: (f: Foto) => void;
+}) {
   return (
     <div className="flex flex-col gap-1.5" data-foto-item={f.id}>
       <FotoProgresso url={f.url} rotulo={ROTULO_POSICAO[f.posicao]} altura={120} />
-      {podeExcluir && (
-        <button type="button" disabled={ocupado} onClick={() => aoExcluir(f)}
-          className="inline-flex items-center justify-center gap-1 text-[11.5px] font-semibold text-rosa-3 disabled:opacity-50" data-foto-excluir={f.id}>
-          <Trash2 aria-hidden className="h-3.5 w-3.5" /> Excluir
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+        <button type="button" onClick={() => aoVer(f)} disabled={!f.url} className={`${MINI} text-texto-2 hover:text-texto`} data-leitura data-foto-ver={f.id}>
+          <Eye aria-hidden className="h-3.5 w-3.5" /> Ver
         </button>
-      )}
+        {podeEditar && (
+          <button type="button" disabled={ocupado} onClick={() => aoEditar(f)} className={`${MINI} text-texto-2 hover:text-texto`} data-foto-editar={f.id}>
+            <PenLine aria-hidden className="h-3.5 w-3.5" /> Editar
+          </button>
+        )}
+        {podeExcluir && (
+          <button type="button" disabled={ocupado} onClick={() => aoExcluir(f)} className={`${MINI} text-rosa-3`} data-foto-excluir={f.id}>
+            <Trash2 aria-hidden className="h-3.5 w-3.5" /> Excluir
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
+const idDaLinha = (f: Pick<Foto, "id">): string => f.id.replace(/^(treino|principal):/, "");
+
 /** "Fotos" (subir e excluir) — painel da direita no computador, de baixo no celular. */
-export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacienteId, aoMudou }: {
+export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacienteId, aoMudou, fotosPrincipal = [], nomeAluno = "" }: {
   aberto: boolean;
   aoMudar: (v: boolean) => void;
   sessoes: SessaoFotos[];
@@ -104,12 +127,32 @@ export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacie
   treinoUserId: string | null;
   pacienteId: string | null;
   aoMudou: () => void;
+  /** as linhas das fotos de evolução do principal (aluno_evolucao): a observação e o que o Editar precisa (H5) */
+  fotosPrincipal?: { id: string; posicao: string; data: string; observacao?: string | null; path?: string }[];
+  /** o nome do aluno no arquivo do Baixar */
+  nomeAluno?: string;
 }) {
   const celular = useIsMobile();
   const { user } = useAuth();
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [novaNutri, setNovaNutri] = useState(false);
+  // H5 (N-34): ver grande (com anterior/próxima da mesma data) e editar a foto da nutrição
+  const [ver, setVer] = useState<Foto | null>(null);
+  const [editar, setEditar] = useState<FotoEvolucao | null>(null);
+  const linhaPrincipal = (f: Foto) => (f.origem === "principal" ? fotosPrincipal.find((x) => x.id === idDaLinha(f)) ?? null : null);
+  const irmasDe = (f: Foto | null): Foto[] => {
+    if (!f) return [];
+    const s = sessoes.find((x) => Object.values(x.fotos).some((y) => y?.id === f.id));
+    return s ? ORDEM_POSICOES.map((pos) => s.fotos[pos]).filter((x): x is Foto => !!x) : [f];
+  };
+  const abrirEdicao = (f: Foto) => {
+    const l = linhaPrincipal(f);
+    if (!l) return;
+    setVer(null);
+    // o formulário do Nutri lê posição, data e observação; grava pelo id (a imagem não muda)
+    setEditar({ ...l, observacao: l.observacao ?? null } as unknown as FotoEvolucao);
+  };
   const entrada = useRef<Partial<Record<TipoFoto, HTMLInputElement | null>>>({});
   const doMes = useMemo(() => sessoes.find((s) => s.origem === "treino" && mesDe(s.data) === mes) ?? null, [sessoes, mes]);
   const podeMensal = perm.fisica && !!treinoUserId;
@@ -133,7 +176,7 @@ export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacie
     if (!window.confirm(`Excluir a foto "${ROTULO_POSICAO[f.posicao]}" de ${f.data.split("-").reverse().join("/")}?`)) return;
     setOcupado(f.id);
     try {
-      const id = f.id.replace(/^(treino|principal):/, "");
+      const id = idDaLinha(f);
       if (f.origem === "treino") await excluirFotoMensal({ id, caminho: f.caminho });
       else await excluirFoto({ id, path: f.caminho });
       toast.success("Foto excluída.");
@@ -186,6 +229,7 @@ export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacie
             sessoes.map((s) => {
               const fotos = ORDEM_POSICOES.map((pos) => s.fotos[pos]).filter((x): x is Foto => !!x);
               const podeExcluir = s.origem === "treino" ? perm.fisica : perm.antropometria;
+              const podeEditar = s.origem === "principal" && perm.antropometria;
               return (
                 <section key={s.chave} className="flex flex-col gap-2" data-fotos-sessao={s.chave}>
                   <div className="flex items-center gap-2">
@@ -193,7 +237,10 @@ export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacie
                     <span className="text-[12.5px] text-texto-2">{rotuloSessao(s)} · {autorNoPainel(s.autor)}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                    {fotos.map((f) => <FotoComAcao key={f.id} f={f} podeExcluir={podeExcluir} ocupado={!!ocupado} aoExcluir={(x) => void excluir(x)} />)}
+                    {fotos.map((f) => (
+                      <FotoComAcao key={f.id} f={f} podeExcluir={podeExcluir} podeEditar={podeEditar && !!linhaPrincipal(f)} ocupado={!!ocupado} aoVer={setVer}
+                        aoEditar={abrirEdicao} aoExcluir={(x) => void excluir(x)} />
+                    ))}
                   </div>
                 </section>
               );
@@ -204,6 +251,13 @@ export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacie
       {podeNutri && (
         <FotoDialog open={novaNutri} onOpenChange={setNovaNutri} nutricionistaId={user!.id} pacienteId={pacienteId!} foto={null} inicial={null}
           onSalva={() => aoMudou()} />
+      )}
+      <VisualizarFoto foto={ver} irmas={irmasDe(ver)} observacao={ver ? linhaPrincipal(ver)?.observacao ?? null : null} nomeAluno={nomeAluno}
+        podeEditar={!!ver && ver.origem === "principal" && perm.antropometria && !!linhaPrincipal(ver)} aoTrocar={setVer} aoFechar={() => setVer(null)}
+        aoEditar={abrirEdicao} />
+      {perm.antropometria && pacienteId && user && (
+        <FotoDialog open={!!editar} onOpenChange={(v) => !v && setEditar(null)} nutricionistaId={user.id} pacienteId={pacienteId} foto={editar} inicial={null}
+          onSalva={() => { setEditar(null); aoMudou(); }} />
       )}
     </>
   );

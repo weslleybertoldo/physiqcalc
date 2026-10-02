@@ -1,7 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Metas.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, FileDown, Pause, PenLine, Play, Plus, Star, Target, Trash2 } from "lucide-react";
+import { Check, CircleDashed, Eye, EyeOff, FileDown, Minus, Pause, PenLine, Play, Plus, Star, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -11,12 +11,17 @@ import { BTN_PERIGO, BTN_PRI, BTN_SEC } from "@/nutricao/editor/ui/estilos";
 import MetaDialog from "@/nutricao/editor/ui/MetaDialog";
 import ModelosMetaDialog from "@/nutricao/editor/ui/ModelosMetaDialog";
 import { useAuth } from "@/nutricao/editor/ui/contexto";
-import { alternarAtiva, excluirMeta, garantirModelosMeta, listarMetasDoPaciente, nomeDaNutricionista, type Meta } from "@/nutricao/editor/lib/metas";
+import { alternarAtiva, excluirMeta, garantirModelosMeta, listarMetasDoPaciente, listarModelosMeta, nomeDaNutricionista, type Meta } from "@/nutricao/editor/lib/metas";
 import { baixarPDFMetas } from "@/nutricao/editor/lib/metasPdf";
 import {
   DIAS_SEMANA, contarAtivas, diasParaAttr, filtrarMetas, inserirMeta, normalizarDias, ordenarMetas, textoContagemMetas, textoDias, textoInicio, textoPausadas,
 } from "@/nutricao/editor/lib/metasUtil";
 import { usePaciente } from "@/nutricao/editor/ui/contexto";
+import { ultimosDias } from "@/nutricao/editor/lib/adesao";
+import { diasDaMeta, resumoDaMeta, useMetasConcluidas } from "@/nutricao/editor/lib/metasConcluidas";
+import { diaDaSemana } from "@/nutricao/app/metasUtil";
+import { hojeSP, rotuloDoDia } from "@/nutricao/app/dia";
+import { cn } from "@/lib/utils";
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PRI = "inline-flex items-center gap-1 border border-verde/50 text-verde-3 font-semibold text-[10px] uppercase tracking-wider px-2.5 py-1 hover:bg-[rgba(16,185,129,.08)] transition-colors disabled:opacity-40";
@@ -31,8 +36,47 @@ const BOLINHA_OFF = `${BOLINHA} border-linha text-texto-4`;
 // Seção "Prescrição de metas" do paciente (referência: metas com os dias da semana Seg–Dom). Cabeçalho "N metas · X ativas",
 // botões "Nova meta" / "Modelos" / "PDF das metas" (só com meta ativa) e o filtro "Mostrar pausadas"; lista "título · como ·
 // 7 bolinhas Seg…Dom" com Pausar/Retomar (otimista), Editar e Excluir (soft). A meta guarda a própria cópia do modelo.
+/** Os ✓ do aluno nos últimos 7 dias (H5 — N-40): ✓ marcada · ○ valia e não marcou · – a meta não vale no dia. */
+function MarcadasPeloAluno({ meta, dias, hoje, concluidas, erro }: {
+  meta: Meta;
+  dias: string[];
+  hoje: string;
+  concluidas: { meta_id: string; data: string }[] | null;
+  erro: boolean;
+}) {
+  if (erro) return <p className="ml-6 text-[11.5px] text-rosa-3 font-body" data-meta-marcadas-erro>Não deu para ler os ✓ do aluno agora.</p>;
+  if (!concluidas) return <p className="ml-6 text-[11.5px] text-texto-3 font-body" data-meta-marcadas-carregando>Lendo os ✓ do aluno…</p>;
+  const lista = diasDaMeta(meta, concluidas, dias);
+  const r = resumoDaMeta(lista);
+  return (
+    <div className="ml-6 flex flex-wrap items-center gap-1.5" data-meta-marcadas={r.feitas} data-meta-devidas={r.devidas}>
+      <span className="mr-1 text-[10.5px] font-semibold uppercase tracking-wider text-texto-3 font-body">✓ do aluno · 7 dias · {r.texto}</span>
+      {lista.map((d) => {
+        const curto = DIAS_SEMANA.find((x) => x.n === diaDaSemana(d.dia))?.curto ?? "";
+        const estado = d.feita ? "marcada pelo aluno" : d.vale ? "não marcada" : "a meta não vale neste dia";
+        return (
+          <span
+            key={d.dia}
+            className={cn(
+              "inline-flex h-[24px] items-center gap-1 rounded-[8px] border px-1.5 text-[11px] font-semibold font-body",
+              d.feita ? "border-verde/40 bg-[rgba(16,185,129,.1)] text-verde-3" : d.vale ? "border-linha bg-[rgba(255,255,255,.03)] text-texto-3" : "border-transparent text-texto-4",
+            )}
+            title={`${rotuloDoDia(d.dia, hoje)}: ${estado}`}
+            data-meta-dia={d.dia}
+            data-feita={d.feita ? "1" : "0"}
+            data-vale={d.vale ? "1" : "0"}
+          >
+            {d.feita ? <Check aria-hidden className="h-3 w-3" /> : d.vale ? <CircleDashed aria-hidden className="h-3 w-3" /> : <Minus aria-hidden className="h-3 w-3" />}
+            {d.dia === hoje ? "Hoje" : curto}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Metas() {
-  const { paciente: p, recarregar } = usePaciente();
+  const { paciente: p, recarregar, podeEditar } = usePaciente();
   const { user } = useAuth();
   const uid = user?.id;
   const qc = useQueryClient();
@@ -45,9 +89,14 @@ export default function Metas() {
 
   const chave = useMemo(() => ["metas-paciente", p.id], [p.id]);
   const metasQ = useQuery({ queryKey: chave, queryFn: () => listarMetasDoPaciente(p.id) });
-  const modelosQ = useQuery({ queryKey: ["modelos-meta", uid], queryFn: () => garantirModelosMeta(uid!), enabled: !!uid });
+  // H5 (item 10): quem só lê (o dono sem papel de nutri) não cria os modelos padrão — só lê os que existem (gravar é da nutri: RLS da W3)
+  const modelosQ = useQuery({ queryKey: ["modelos-meta", uid, podeEditar], queryFn: () => (podeEditar ? garantirModelosMeta(uid!) : listarModelosMeta()), enabled: !!uid });
 
   const metas = useMemo(() => ordenarMetas(metasQ.data ?? []), [metasQ.data]);
+  // H5 (N-40): os ✓ que o aluno marcou no app (metas_concluidas) nos últimos 7 dias — a nutri vê em cada meta
+  const dias7 = useMemo(() => ultimosDias(7), []);
+  const concluidasQ = useMetasConcluidas(p.id, dias7[0], dias7[dias7.length - 1]);
+  const hoje = hojeSP();
   const modelos = useMemo(() => modelosQ.data ?? [], [modelosQ.data]);
   const ativas = useMemo(() => contarAtivas(metas), [metas]);
   const pausadas = metas.length - ativas;
@@ -138,7 +187,7 @@ export default function Metas() {
             <button type="button" onClick={() => setModelosAberto(true)} className={BTN_SEC} disabled={carregando} data-btn-modelos-meta>
               <Star className="h-3.5 w-3.5" aria-hidden="true" /> Modelos
             </button>
-            <button type="button" onClick={pdf} className={BTN_SEC} disabled={carregando || ativas === 0} title={ativas === 0 ? "Nenhuma meta ativa pra imprimir" : "PDF com as metas ativas"} data-btn-pdf-metas>
+            <button type="button" onClick={pdf} className={BTN_SEC} disabled={carregando || ativas === 0} title={ativas === 0 ? "Nenhuma meta ativa pra imprimir" : "PDF com as metas ativas"} data-leitura data-btn-pdf-metas>
               <FileDown className="h-3.5 w-3.5" aria-hidden="true" /> PDF das metas
             </button>
             <button type="button" onClick={() => setModal({ aberto: true, meta: null })} className={BTN_PRI} disabled={carregando} data-btn-nova-meta>
@@ -154,7 +203,7 @@ export default function Metas() {
               onClick={() => setMostrarInativas((v) => !v)}
               className={mostrarInativas ? CHIP_ATIVO : CHIP_INATIVO}
               aria-pressed={mostrarInativas}
-              data-toggle-inativas
+              data-leitura data-toggle-inativas
               data-pausadas={pausadas}
             >
               {mostrarInativas ? <EyeOff size={12} aria-hidden="true" /> : <Eye size={12} aria-hidden="true" />} Mostrar pausadas
@@ -167,7 +216,7 @@ export default function Metas() {
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-metas-vazio>
             <Target className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhuma meta prescrita</p>
-            <p className="text-xs text-texto-2 font-body">Metas simples e com dias marcados (beber água, caminhar, dormir bem) ajudam o paciente a manter a rotina entre as consultas.</p>
+            <p className="text-xs text-texto-2 font-body">Metas simples e com dias marcados (beber água, caminhar, dormir bem) ajudam o aluno a manter a rotina entre as consultas.</p>
           </div>
         )}
 
@@ -228,6 +277,7 @@ export default function Metas() {
                       );
                     })}
                   </div>
+                  <MarcadasPeloAluno meta={m} dias={dias7} hoje={hoje} concluidas={concluidasQ.data ?? null} erro={!!concluidasQ.error} />
                 </li>
               );
             })}

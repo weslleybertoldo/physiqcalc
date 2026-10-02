@@ -121,7 +121,7 @@ export default function AplicacaoDialog({ open, onOpenChange, pacienteId, questi
           <DialogDescription className="font-body text-xs">
             {edicao
               ? "Ajuste as respostas, a data ou a observação. As perguntas são as que valiam na data da aplicação; a pontuação e a faixa são recalculadas."
-              : "Escolha o questionário e responda com o paciente. A pontuação e a faixa aparecem ao vivo; o resultado fica guardado com a cópia das perguntas."}
+              : "Escolha o questionário e responda com o aluno. A pontuação e a faixa aparecem ao vivo; o resultado fica guardado com a cópia das perguntas."}
           </DialogDescription>
         </DialogHeader>
 
