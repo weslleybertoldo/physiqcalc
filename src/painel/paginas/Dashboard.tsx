@@ -93,7 +93,9 @@ export default function Dashboard() {
         ) : (
           <Cartao className="h-[380px] p-5" data-receita-carregando><Esqueleto className="h-full w-full" /></Cartao>
         )}
-        <AgendaHoje eventos={d.agenda?.deHoje ?? null} carregando={d.agendaQ.isLoading} erro={d.agendaQ.isError} aoTentar={() => void d.agendaQ.refetch()} hoje={d.hoje} />
+        {/* H1: a lista espera as tags na 1ª carga (a pílula da TAG de cada consulta; sem elas, a base da área) */}
+        <AgendaHoje eventos={d.tagsCarregando ? null : d.agenda?.deHoje ?? null} carregando={d.agendaQ.isLoading || d.tagsCarregando} erro={d.agendaQ.isError}
+          aoTentar={() => void d.agendaQ.refetch()} hoje={d.hoje} />
       </div>
 
       <div className={`grid gap-3.5 ${comDiario ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>

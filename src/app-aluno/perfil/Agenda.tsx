@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarCheck, CalendarDays, CalendarPlus, Check, Dumbbell, Package, RefreshCw, Repeat, Salad, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSessao } from "@/nucleo/sessao";
@@ -13,7 +14,8 @@ import { GrupoLista } from "@/ui/premium/Lista";
 import { useOnline } from "@/ui/premium/useOnline";
 import { minhaAgenda } from "./pecas/api";
 import {
-  agendamentosAnteriores, ehCancelado, emQuantosDias, inicioDaAgenda, proximosAgendamentos, quandoAgendamento, rotuloStatus, ROTULO_PAPEL,
+  agendamentosAnteriores, areaDaConsulta, ehCancelado, emQuantosDias, inicioDaAgenda, proximosAgendamentos, quandoAgendamento, rotuloStatus, ROTULO_PAPEL,
+  type AreaDaConsulta,
 } from "./pecas/regras";
 import { CLASSE_PAGINA_APP, TopoItem } from "./pecas/TopoItem";
 import { confirmarConsulta, mensagemErroAgenda, minhasRegrasAgenda, type ConsultaAluno, type ProfissionalDaAgenda } from "./agenda/api";
@@ -27,7 +29,8 @@ function corDoStatus(status: string): string {
   return "text-texto-2";
 }
 
-const iconeDa = (a: ConsultaAluno) => (a.modulo === "treino" || a.papel === "personal" ? Dumbbell : a.modulo === "nutricao" || a.papel === "nutricionista" ? Salad : CalendarDays);
+/** O ícone pela ÁREA da consulta (H1: treino → halter, nutrição → prato, geral → calendário; o papel só sem a área). */
+const ICONE_DA_AREA: Record<AreaDaConsulta, LucideIcon> = { treino: Dumbbell, nutricao: Salad, geral: CalendarDays };
 const MINI = "inline-flex h-8 items-center gap-1 rounded-[10px] border px-2 text-[11.5px] font-semibold transition-colors disabled:opacity-50";
 
 function Acoes({ a, ctx, aoConfirmar, aoReagendar, aoDesistir, confirmando }: {
@@ -62,12 +65,13 @@ function Acoes({ a, ctx, aoConfirmar, aoReagendar, aoDesistir, confirmando }: {
 
 function Linha({ a, acoes }: { a: ConsultaAluno; acoes?: ReactNode }) {
   const cancelado = ehCancelado(a.status);
-  const Icone = iconeDa(a);
+  const area = areaDaConsulta(a);
+  const Icone = ICONE_DA_AREA[area];
   const quem = a.profissional ? `${a.profissional}${a.papel ? ` · ${ROTULO_PAPEL[a.papel]}` : ""}` : null;
   const espera = aguardandoAluno(a.status) && new Date(a.inicio).getTime() > Date.now();
   return (
-    <li className="flex items-start gap-3 py-2.5" data-agendamento={a.id} data-agendamento-status={a.status}>
-      <span className="mt-0.5 flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[10px] bg-superficie text-suave">
+    <li className="flex items-start gap-3 py-2.5" data-agendamento={a.id} data-agendamento-status={a.status} data-agendamento-area={area}>
+      <span className="mt-0.5 flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[10px] bg-superficie text-suave" data-icone-area={area}>
         <Icone aria-hidden className="h-4 w-4" strokeWidth={1.75} />
       </span>
       <div className="min-w-0 flex-1">

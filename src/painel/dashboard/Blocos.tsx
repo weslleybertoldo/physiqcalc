@@ -5,8 +5,9 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import { Activity, CalendarCheck, Camera, ClipboardList, Dumbbell, ReceiptText, RefreshCw, Trophy, UserPlus, Users, Wallet } from "lucide-react";
-import { infoTipo, textoHojePorTipo, type NumerosAgenda } from "@/agenda/regras";
+import { textoHojePorTipo, type NumerosAgenda } from "@/agenda/regras";
 import { rotuloReacao, tomReacao } from "@/nutricao/app/diarioUtil";
+import PilulaTag from "@/painel/agenda/PilulaTag";
 import { formatarHora, nomeDoEvento, type EventoPainel } from "@/painel/agenda/visao";
 import { primeiroNomeAluno } from "@/painel/dietas/diarioPainel";
 import type { RegistroDiarioNutri } from "@/painel/dietas/diario";
@@ -151,16 +152,17 @@ export function AgendaHoje({ eventos, carregando, erro, aoTentar, hoje }: {
         <div className="divide-y divide-linha-3">
           {lista.slice(0, 5).map((ev) => {
             const { nome, sub } = nomeDoEvento(ev);
-            const tipo = infoTipo(ev.modulo);
+            // H1: a pílula da TAG da consulta na cor dela (a mesma da página Agenda, W2); sem a tag carregada, a base da área
             return (
-              <Link key={ev.id} to={linkDia} className="flex min-h-[50px] items-center gap-[11px] py-1" data-agenda-hoje-evento={ev.id}>
+              <Link key={ev.id} to={linkDia} className="flex min-h-[50px] items-center gap-[11px] py-1" data-agenda-hoje-evento={ev.id}
+                data-agenda-hoje-tag={ev.tag.id ?? ""} data-agenda-hoje-area={ev.modulo}>
                 <b className="w-[44px] flex-none text-[12.5px] font-semibold tabular-nums text-texto-2">{formatarHora(ev.inicio)}</b>
                 <Avatar src={ev.foto} nome={nome} tamanho={32} />
                 <span className="min-w-0 flex-1">
                   <b className="block truncate text-[13.5px] font-semibold text-texto">{nome}</b>
-                  <span className="block truncate text-[12px] text-texto-3">{sub ?? tipo.rotulo}</span>
+                  <span className="block truncate text-[12px] text-texto-3">{sub ?? ev.tag.nome}</span>
                 </span>
-                <Chip tom={tipo.tom} className="h-[22px] flex-none text-[10.5px]">{tipo.chip}</Chip>
+                <PilulaTag tag={ev.tag} tamanho="chip" className="h-[22px] max-w-[120px] flex-none text-[10.5px]" />
               </Link>
             );
           })}

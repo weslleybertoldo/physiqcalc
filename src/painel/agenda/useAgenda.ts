@@ -28,6 +28,8 @@ export const CHAVES_AGENDA = {
   alunos: (uid: string, conta: string) => ["agenda-painel", "alunos", uid, conta] as const,
   /** W2: as tags do painel (as minhas + as dos donos dos calendários que eu vejo) */
   tags: (uid: string, donos: string) => ["agenda-painel", "tags", uid, donos] as const,
+  /** H1: só LER as tags destes profissionais (o Dashboard, sem criar as base); no prefixo da Agenda: mexer numa tag lá invalida aqui */
+  tagsLeitura: (profissionais: string) => ["agenda-painel", "tags-leitura", profissionais] as const,
   equipe: (conta: string) => ["agenda-painel", "equipe", conta] as const,
   /** o card "Próximos compromissos" do Resumo do aluno */
   compromissos: (aluno: string) => ["agenda-compromissos", aluno] as const,

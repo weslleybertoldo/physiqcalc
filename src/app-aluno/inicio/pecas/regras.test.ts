@@ -135,10 +135,15 @@ describe("Início — metas de hoje (NF4)", () => {
 });
 
 describe("Início — próxima consulta e peso", () => {
-  it("cor do chip pelo papel (verde nutrição, violeta treino)", () => {
-    expect(tomDaConsulta("nutricionista")).toBe("n");
-    expect(tomDaConsulta("personal")).toBe("t");
-    expect(tomDaConsulta(null)).toBe("c");
+  it("cor do chip pela ÁREA da consulta (H1: verde nutrição, violeta treino, ciano geral); o papel só sem a área", () => {
+    // o MESMO profissional personal e nutri: a consulta de nutrição é verde (antes o papel "personal" a pintava de violeta)
+    expect(tomDaConsulta({ modulo: "nutricao", papel: "personal" })).toBe("n");
+    expect(tomDaConsulta({ modulo: "treino", papel: "nutricionista" })).toBe("t");
+    expect(tomDaConsulta({ modulo: "geral", papel: "personal" })).toBe("c");
+    // sem a área: o papel decide (como antes)
+    expect(tomDaConsulta({ modulo: null, papel: "nutricionista" })).toBe("n");
+    expect(tomDaConsulta({ papel: "personal" })).toBe("t");
+    expect(tomDaConsulta({ modulo: undefined, papel: null })).toBe("c");
   });
   it("a foto do profissional da consulta vem de 'Meus profissionais' (mesmo papel e nome)", () => {
     const profs = [
