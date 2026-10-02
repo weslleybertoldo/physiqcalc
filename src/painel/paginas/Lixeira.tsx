@@ -57,7 +57,8 @@ export default function Lixeira() {
   });
   const dados = consulta.data;
   const itens = useMemo(() => dados?.itens ?? [], [dados]);
-  const abas = useMemo(() => abasDaPessoa(!!dados?.veClinico), [dados?.veClinico]);
+  // as abas clínicas: só a nutricionista da conta (W18) — e só numa conta com Nutrição (sem o módulo, abas e itens somem — spec 9)
+  const abas = useMemo(() => abasDaPessoa(!!dados?.veClinico && !!dados?.temNutricao), [dados?.veClinico, dados?.temNutricao]);
   const contagem = useMemo(() => contarPorTipo(itens), [itens]);
   const aba = abaInicial(abas, contagem, sp.get("tipo"));
   const visiveis = useMemo(() => filtrarItens(itens, aba, busca), [itens, aba, busca]);

@@ -110,6 +110,13 @@ describe("Ferramentas › Lixeira (N-21)", () => {
     expect(screen.getByText(/só aparecem para a nutricionista da conta/)).toBeInTheDocument();
   });
 
+  it("conta sem Nutrição (o master numa conta só de Treino): sem as abas clínicas", async () => {
+    h.lixeira.mockResolvedValue({ veClinico: true, temNutricao: false, itens: [itensLixeira[0]] });
+    abrir(<Lixeira />, "/painel/lixeira");
+    expect(await screen.findByText("Joana Prado")).toBeInTheDocument();
+    expect([...document.querySelectorAll("[data-aba-lixeira-botao]")].map((b) => b.getAttribute("data-aba-lixeira-botao"))).toEqual(["resposta", "paciente"]);
+  });
+
   it("sem conta ativa: estado vazio, sem consultar", () => {
     h.conta = null;
     abrir(<Lixeira />);
