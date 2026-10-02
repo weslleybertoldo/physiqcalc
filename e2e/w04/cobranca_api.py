@@ -179,7 +179,14 @@ def main() -> int:
     kv = dict(l.strip().split("=", 1) for l in Path.home().joinpath(".physiqcalc-teste-admin").read_text().splitlines() if "=" in l)
     tok_prof1 = sessao("prof1.teste.claude@physiqcalc.app", kv["SENHA"])
     st, r = cobranca(tok_prof1, "status")
-    p.check(st in (400, 404) and r.get("erro") in ("conta_legada", "sem_conta"), f"legado Calc recusado na cobrança nova ({st} {r.get('erro')})")
+    # W28: depois da virada (03_cobranca_legada.py) a conta legada passa a pagar por aqui, com o preço e as regras de hoje
+    legada = sql_principal(f"""select c.cobranca_legada from {SCHEMA}.contas c join auth.users u on u.id = c.dono_id
+        where lower(u.email) = 'prof1.teste.claude@physiqcalc.app' and c.origem = 'legado_calc' limit 1""")
+    if legada and legada[0]["cobranca_legada"] is False:
+        conta_r = r.get("conta") or {}
+        p.check(st == 200 and conta_r.get("origem") == "legado_calc", f"legado Calc já no núcleo: a cobrança nova atende ({st} {conta_r.get('origem')})")
+    else:
+        p.check(st in (400, 404) and r.get("erro") in ("conta_legada", "sem_conta"), f"legado Calc recusado na cobrança nova ({st} {r.get('erro')})")
 
     # 4. status
     st, s = cobranca(tok, "status", {"conta_id": c["id"]})
