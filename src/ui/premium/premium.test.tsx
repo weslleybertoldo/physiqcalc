@@ -27,6 +27,16 @@ describe("componentes premium", () => {
     expect(iniciais("Ana Paula de Souza")).toBe("AS");
   });
 
+  it("iniciais só com letras (W25: o avatar 'C(' da conta com parênteses)", () => {
+    expect(iniciais("Conta Teste W24 (prova)")).toBe("CP");
+    expect(iniciais("Consultoria (Ferreira)")).toBe("CF");
+    expect(iniciais("(prova)")).toBe("P");
+    expect(iniciais("Studio 360")).toBe("S");
+    expect(iniciais("Érica Ávila")).toBe("ÉÁ");
+    expect(iniciais("123 (45)")).toBe("?");
+    expect(iniciais("Ana-Maria Souza")).toBe("AS");
+  });
+
   it("tempo desde o aviso", () => {
     const agora = new Date("2026-09-29T12:00:00Z").getTime();
     expect(tempoDesde("2026-09-29T11:59:30Z", agora)).toBe("agora");

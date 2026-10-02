@@ -13,6 +13,13 @@ import { dadosBalanca, rotuloMetodo, tmbEscolhida } from "@/lib/avaliacao";
 // texto do PDF sem emoji e sem acento (mesmo padrão dos títulos: "Composicao Corporal")
 const pdfTexto = (t: string) => limparTexto(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+/**
+ * O tipo da avaliação no PDF: o protocolo que veio pronto (W25 — as antropometrias do Nutri trazem o da Evolução: "Faulkner - 4
+ * dobras", "Guedes - 3 dobras", "Jackson & Pollock - 3 dobras"…) ou, nas avaliações do Calc, o método (3 dobras, 7 dobras, bioimpedância).
+ */
+export const tipoNoPdf = (r: Record<string, unknown>): string =>
+  pdfTexto(typeof r.rotulo_metodo === "string" && r.rotulo_metodo.trim() ? r.rotulo_metodo : rotuloMetodo(r.metodo_avaliacao));
+
 export interface AdminProfile {
   nome: string | null;
   email: string | null;
@@ -69,7 +76,7 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
 
   // Composição Corporal (tipo de avaliação no título; na bioimpedância, os dados da balança)
   if (profile.percentual_gordura) {
-    y = desenharTituloSecao(doc, `Composicao Corporal - ${pdfTexto(rotuloMetodo(profile.metodo_avaliacao))}`, y);
+    y = desenharTituloSecao(doc, `Composicao Corporal - ${tipoNoPdf(profile)}`, y);
     desenharCard(doc, '% Gordura', `${Number(profile.percentual_gordura).toFixed(1)}%`, 14, y, cW, 18, TEMA.amarelo);
     if (profile.massa_gorda) desenharCard(doc, 'Massa Gorda', `${Number(profile.massa_gorda).toFixed(1)} kg`, 14 + cW + 4, y, cW, 18);
     if (profile.massa_magra) desenharCard(doc, 'Massa Magra', `${Number(profile.massa_magra).toFixed(1)} kg`, 14 + cW * 2 + 8, y, cW, 18, TEMA.verde);
@@ -142,7 +149,7 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
         const cls = pct ? classificarGordura(Number(pct), sexo, idadeEfetiva || 25) : null;
         return [
           formatarDataCurta(a.data_avaliacao || a.created_at?.split('T')[0]),
-          pdfTexto(rotuloMetodo(a.metodo_avaliacao)),
+          tipoNoPdf(a),
           a.peso ? `${a.peso} kg` : '-',
           pct ? `${Number(pct).toFixed(1)}%` : '-',
           a.massa_gorda ? `${Number(a.massa_gorda).toFixed(1)} kg` : '-',

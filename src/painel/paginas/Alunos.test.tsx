@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AlunoLinha, ListaAlunos } from "@/painel/alunos/regras";
 
-const h = vi.hoisted(() => ({ listar: vi.fn() }));
+const h = vi.hoisted(() => ({ listar: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/nucleo/conta", () => ({
   useConta: () => ({ conta: { id: "c1", nome: "Consultoria Ferreira", codigo_convite: "PROF-LUCAS-FERREIRA", papeis: ["dono", "personal"] } }),
 }));
@@ -16,7 +16,7 @@ vi.mock("@/ui/casca/topo", () => ({
 }));
 vi.mock("@/painel/alunos/api", async (orig) => ({ ...(await orig<typeof import("@/painel/alunos/api")>()), listarAlunos: h.listar }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { functions: { invoke: vi.fn() } } }));
-vi.mock("@/integrations/principal/client", () => ({ PRINCIPAL_SCHEMA: "staging", principal: { rpc: vi.fn(), functions: { invoke: vi.fn() } } }));
+vi.mock("@/integrations/principal/client", () => ({ PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, functions: { invoke: vi.fn() } } }));
 
 import Alunos from "./Alunos";
 
@@ -51,8 +51,13 @@ function montar() {
   );
 }
 
+const NOVOS = { ok: true, mes_atual: "2026-10", meses: [
+  { mes: "2026-05", novos: 0 }, { mes: "2026-06", novos: 2 }, { mes: "2026-07", novos: 1 }, { mes: "2026-08", novos: 0 }, { mes: "2026-09", novos: 4 }, { mes: "2026-10", novos: 3 },
+] };
+
 beforeEach(() => {
   h.listar.mockReset();
+  h.rpc.mockReset().mockImplementation(async (nome: string) => (nome === "alunos_novos_por_mes" ? { data: NOVOS, error: null } : { data: null, error: null }));
 });
 
 describe("W13 — Painel › Alunos (telas 6/7)", () => {
@@ -93,5 +98,25 @@ describe("W13 — Painel › Alunos (telas 6/7)", () => {
     h.listar.mockResolvedValue(lista({ total: 0, itens: [], contagens: { ativos: 0, bloqueados: 0, desativados: 0, excluidas: 0, todos: 0 } }));
     montar();
     expect(await screen.findByText("Nenhum aluno ainda")).toBeInTheDocument();
+  });
+
+  it("W25 (N-9) — card 'Novos alunos por mês': 6 barras, o mês atual em destaque e o número de este mês (o do Dashboard)", async () => {
+    h.listar.mockResolvedValue(lista());
+    montar();
+    await screen.findByText("Rafael Moura");
+    await waitFor(() => expect(document.querySelector("[data-cartao-novos-por-mes]")?.getAttribute("data-novos-mes")).toBe("3"));
+    expect(screen.getByText("Novos alunos por mês")).toBeInTheDocument();
+    expect(document.querySelectorAll("[data-novos-barra]")).toHaveLength(6);
+    expect(document.querySelector('[data-novos-barra="2026-09"]')?.getAttribute("data-novos")).toBe("4");
+    expect(document.querySelector("[data-novos-este-mes]")?.textContent).toBe("3");
+    expect(h.rpc).toHaveBeenCalledWith("alunos_novos_por_mes", { p_conta: "c1", p_meses: 6 });
+  });
+
+  it("W25 — sem aluno novo nos 6 meses, o card mostra o texto (sem gráfico em branco)", async () => {
+    h.rpc.mockImplementation(async () => ({ data: { ok: true, mes_atual: "2026-10", meses: NOVOS.meses.map((m) => ({ ...m, novos: 0 })) }, error: null }));
+    h.listar.mockResolvedValue(lista());
+    montar();
+    expect(await screen.findByText(/Nenhum aluno novo nos últimos 6 meses/)).toBeInTheDocument();
+    expect(document.querySelector("[data-grafico-novos]")).toBeNull();
   });
 });

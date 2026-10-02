@@ -68,6 +68,19 @@ export default function ResumoAgenda({ eventos, carregando, aoAbrir, aoVerHoje }
                 <span className="flex items-center gap-1.5"><i aria-hidden className="h-2.5 w-2.5 rounded-[3px] bg-verde-2" />Confirmadas</span>
               </span>
             } />
+          {/* W25 (herdado da W20): sem nenhuma consulta nas 8 semanas, o gráfico vira o estado vazio com texto (não um quadro em branco) */}
+          {semanas.every((s) => s.agendadas === 0) ? (
+            <div className="mt-2 flex h-[236px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-linha-2 px-6 text-center"
+              data-consultas-semana-vazio>
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-linha bg-superficie text-texto-2">
+                <CalendarDays aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+              </span>
+              <b className="text-[14px] font-semibold text-texto">Nenhuma consulta nas últimas 8 semanas</b>
+              <p className="max-w-sm text-[12.5px] leading-relaxed text-texto-3">
+                Quando você marcar consultas, as barras de agendadas e confirmadas de cada semana aparecem aqui. Clique num horário da semana para marcar.
+              </p>
+            </div>
+          ) : (
           <div className="mt-2 flex h-[236px] items-end gap-3 border-b border-linha-3 pb-1" data-grafico-semanas>
             {semanas.map((s, i) => {
               const atual = i === semanas.length - 1;
@@ -84,6 +97,7 @@ export default function ResumoAgenda({ eventos, carregando, aoAbrir, aoVerHoje }
               );
             })}
           </div>
+          )}
           <div className="mt-2 flex gap-3">
             {semanas.map((s, i) => (
               <span key={s.chave} className={cn("min-w-0 flex-1 truncate text-center text-[11px] tabular-nums", i === semanas.length - 1 ? "font-semibold text-texto-2" : "text-texto-4")}>{s.rotulo}</span>

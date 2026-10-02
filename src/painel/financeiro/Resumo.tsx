@@ -15,7 +15,7 @@ import { listarCobrancasDoResumo, listarTransacoes } from "./dados";
 import { fmtBRL, fmtValorComSinal, formatarData, rotuloMetodo } from "./financeiroUtil";
 import GraficoReceita from "./GraficoReceita";
 import {
-  aReceber, cobrancasDoMes, entradasPorCategoria, kpis, nomeDoMesLongo, precisamDeAtencao, recebimentos, somarMeses, type BarraCategoria, type ItemAtencao,
+  aReceber, cobrancasDoMes, entradasPorCategoria, kpis, nomeDoMesLongo, precisamDeAtencao, recebimentos, type BarraCategoria, type ItemAtencao,
 } from "./resumo";
 import { CHAVES, useResumoDaConta, type FinanceiroConta } from "./useFinanceiro";
 
@@ -57,7 +57,6 @@ export default function Resumo({ f, irPara }: { f: FinanceiroConta; irPara: (aba
   }
   const { k } = calc;
   const mes = nomeDoMesLongo(hoje);
-  const mesAnterior = nomeDoMesLongo(somarMeses(hoje, -1));
   const v = k.variacaoMes;
   const recentes = [...(trans.data ?? [])].slice(0, 6);
 
@@ -65,9 +64,12 @@ export default function Resumo({ f, irPara }: { f: FinanceiroConta; irPara: (aba
     <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="resumo" data-recebido-mes={k.recebidoMes.toFixed(2)} data-previsto-mes={k.previstoMes.toFixed(2)}
       data-em-aberto={k.emAberto.valor.toFixed(2)} data-vencido={k.vencido.valor.toFixed(2)}>
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" data-kpis-financeiro>
+        {/* W25 (herdado da W19): a variação compara com o MESMO período do mês anterior (comparacaoDoMes — a mesma regra do Dashboard) */}
         <Kpi icone={Wallet} titulo={`Recebido em ${mes}`} tom="verde" valor={curto(k.recebidoMes)} serie={k.series.recebido6m}
-          detalhe={v === null ? <span>{k.recebidoMesAnterior > 0 ? `${curto(k.recebidoMesAnterior)} em ${mesAnterior}` : `nada em ${mesAnterior}`}</span> : (
-            <><b className={v >= 0 ? "font-semibold text-verde-2" : "font-semibold text-rosa-3"}>{v >= 0 ? "+" : ""}{v}%</b> sobre {mesAnterior}</>
+          detalhe={v === null ? <span title={`De 1º até hoje, comparado com ${k.comparacao.rotuloLongo}`} data-comparacao-mes={k.comparacao.rotulo}>nada em {k.comparacao.rotulo}</span> : (
+            <span title={`De 1º até hoje, comparado com ${k.comparacao.rotuloLongo}`} data-comparacao-mes={k.comparacao.rotulo}>
+              <b className={v >= 0 ? "font-semibold text-verde-2" : "font-semibold text-rosa-3"}>{v >= 0 ? "+" : ""}{v}%</b> sobre {k.comparacao.rotulo}
+            </span>
           )} />
         <Kpi icone={TrendingUp} titulo="Previsto até o fim do mês" tom="violeta" valor={curto(k.previstoMes)} serie={k.series.previstoMes}
           detalhe={<span>{curto(k.aReceberMes)} a receber</span>} />

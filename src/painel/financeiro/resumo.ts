@@ -93,6 +93,48 @@ export function variacao(atual: number, anterior: number): number | null {
   return Math.round(((atual - anterior) / anterior) * 100);
 }
 
+// ───────────────────────── o mês contra o MESMO período do mês anterior (W25 — herdado da W19) ─────────────────────────
+
+const MESES_ABREV = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+export interface ComparacaoMes {
+  /** recebido de 1º até hoje */
+  atual: number;
+  /** recebido de 1º até o mesmo dia do mês anterior (o último dia dele, se ele for mais curto) */
+  anterior: number;
+  variacao: number | null;
+  /** o período anterior (AAAA-MM-DD) */
+  de: string;
+  ate: string;
+  /** "1–16 jun" · "1º set" (o detalhe do cartão) */
+  rotulo: string;
+  /** "1º a 16 de junho" (a dica do cartão) */
+  rotuloLongo: string;
+}
+
+/**
+ * Regra ÚNICA da comparação do mês (o KPI "Receita do mês" do Dashboard e o "Recebido em <mês>" do Resumo do Financeiro): o que
+ * entrou de 1º até hoje contra o que entrou de 1º até o MESMO dia do mês anterior — no dia 1º, 1º contra 1º (não mais o mês parcial
+ * contra o mês cheio, que dava "−87 % sobre setembro" no dia 1º); dia 31 contra um mês de 30 = o mês anterior inteiro; em março,
+ * fevereiro vai até o dia 28 (ou 29).
+ */
+export function comparacaoDoMes(recs: Recebimento[], hoje: string): ComparacaoMes {
+  const mes = inicioDoMes(hoje);
+  const de = somarMeses(mes, -1);
+  const diaHoje = Number(hoje.slice(8, 10));
+  const ultimo = Number(fimDoMes(de).slice(8, 10));
+  const diaAte = Math.min(diaHoje, ultimo);
+  const ate = `${de.slice(0, 8)}${pad(diaAte)}`;
+  const atual = somaEntre(recs, mes, hoje);
+  const anterior = somaEntre(recs, de, ate);
+  const m = Number(de.slice(5, 7)) - 1;
+  return {
+    atual, anterior, variacao: variacao(atual, anterior), de, ate,
+    rotulo: diaAte === 1 ? `1º ${MESES_ABREV[m]}` : `1–${diaAte} ${MESES_ABREV[m]}`,
+    rotuloLongo: diaAte === 1 ? `1º de ${MESES_LONGOS[m]}` : `1º a ${diaAte} de ${MESES_LONGOS[m]}`,
+  };
+}
+
 // ───────────────────────── o que falta receber (cobranças abertas + mensalidades pela régua da W6) ─────────────────────────
 
 export type SituacaoAReceber = "aberta" | "aguardando" | "vencida";
@@ -147,8 +189,10 @@ export interface KpisFinanceiro {
   /** AAAA-MM-01 do mês de hoje */
   mes: string;
   recebidoMes: number;
+  /** o recebido no MESMO período do mês anterior (comparacaoDoMes) */
   recebidoMesAnterior: number;
   variacaoMes: number | null;
+  comparacao: ComparacaoMes;
   /** cobranças e mensalidades que vencem de hoje até o fim do mês + as que aguardam a confirmação */
   aReceberMes: number;
   previstoMes: number;
@@ -160,9 +204,8 @@ export interface KpisFinanceiro {
 export function kpis(recs: Recebimento[], lista: AReceber[], hoje: string): KpisFinanceiro {
   const mes = inicioDoMes(hoje);
   const fim = fimDoMes(hoje);
-  const ant = somarMeses(mes, -1);
   const recebidoMes = somaEntre(recs, mes, fim);
-  const recebidoMesAnterior = somaEntre(recs, ant, fimDoMes(ant));
+  const comparacao = comparacaoDoMes(recs, hoje);
   const noPrazo = lista.filter((x) => x.situacao !== "vencida");
   const doMes = noPrazo.filter((x) => x.situacao === "aguardando" || x.vence <= fim);
   const vencidas = lista.filter((x) => x.situacao === "vencida");
@@ -186,7 +229,7 @@ export function kpis(recs: Recebimento[], lista: AReceber[], hoje: string): Kpis
   }
   const vencido6m = meses6.map((m) => somar(vencidas.filter((x) => chaveMes(x.vence) === m)));
   return {
-    hoje, mes, recebidoMes, recebidoMesAnterior, variacaoMes: variacao(recebidoMes, recebidoMesAnterior), aReceberMes,
+    hoje, mes, recebidoMes, recebidoMesAnterior: comparacao.anterior, variacaoMes: comparacao.variacao, comparacao, aReceberMes,
     previstoMes: arred2(recebidoMes + aReceberMes),
     emAberto: { qtd: noPrazo.length, valor: somar(noPrazo), aguardando: noPrazo.filter((x) => x.situacao === "aguardando").length },
     vencido: { qtd: vencidas.length, valor: somar(vencidas) },

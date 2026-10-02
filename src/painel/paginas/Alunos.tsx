@@ -15,6 +15,7 @@ import { atribuirAlunos, ErroAlunos, listarAlunos } from "@/painel/alunos/api";
 import { LinhaAluno } from "@/painel/alunos/Linha";
 import { NovoAluno } from "@/painel/alunos/NovoAluno";
 import { useMeuLink } from "@/painel/alunos/meuLink";
+import { NovosPorMes } from "@/painel/alunos/NovosPorMes";
 import { Pendentes } from "@/painel/alunos/Pendentes";
 import {
   FILTROS_PADRAO,
@@ -196,6 +197,8 @@ export default function Alunos() {
     <div data-pagina-alunos data-total-alunos={lista.total} data-situacao={filtros.situacao} className="flex flex-col gap-3.5">
       {topo}
       <Avisos lista={lista} aoVerBloqueados={() => setFiltros((f) => ({ ...f, situacao: "bloqueados" }))} aoPlano={() => navigate("/painel/configuracoes/plano")} />
+      {/* W25 (N-9): "Novos alunos por mês" — o "+N este mês" do Dashboard é a barra do mês atual daqui */}
+      <NovosPorMes contaId={lista.conta.id} dono={lista.eu.dono} />
       <Cartao className="p-4" data-filtros-alunos>
         <div className="flex flex-wrap items-center gap-2.5">
           <label className="relative flex min-w-[220px] flex-1 items-center">
