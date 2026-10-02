@@ -13,6 +13,7 @@ import {
   type Nivel, type RegistroAplicacao,
 } from "@/nutricao/prontuario/lib/questionariosUtil";
 import { EMAIL_MAX, NOME_MAX, TELEFONE_MAX } from "./preconsultaUtil";
+import { iniciais } from "@/ui/premium/texto";
 
 export type OrigemResposta = "anamnese" | "questionario" | "personalizado";
 export type TipoImportacao = "anamnese" | "questionario";
@@ -306,6 +307,5 @@ export function aplicacaoDaResposta(r: RespostaBase): RegistroAplicacao {
   };
 }
 
-/** Iniciais de quem respondeu (avatar da linha). */
-export const iniciaisDe = (nome: string): string =>
-  linha1(nome).split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
+/** Iniciais de quem respondeu (avatar da linha) — W27: a MESMA função do Avatar (W25: só letras; "Ana (mãe)" → "AM", nunca "A("). */
+export const iniciaisDe = (nome: string): string => iniciais(linha1(nome));

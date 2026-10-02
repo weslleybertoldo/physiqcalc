@@ -93,14 +93,16 @@ vi.mock("@/painel/paginas/Lixeira", () => h.marcador("pagina-lixeira"));
 vi.mock("@/painel/paginas/Impressos", () => h.marcador("pagina-impressos"));
 vi.mock("@/pages/admin/PlanosPage", () => h.marcador("antiga-admin-planos"));
 vi.mock("@/components/AdminUserConfig", () => h.marcador("antiga-configurar-aluno"));
-vi.mock("@/pages/master/VisaoGeralPage", () => h.marcador("antiga-master-visao-geral"));
-vi.mock("@/pages/master/ProfessoresPage", () => h.marcador("antiga-master-professores"));
-vi.mock("@/pages/master/AlunosMasterPage", () => h.marcador("antiga-master-alunos"));
-vi.mock("@/pages/master/FinanceiroPage", () => h.marcador("antiga-master-financeiro"));
-vi.mock("@/pages/master/PlanosMasterPage", () => h.marcador("antiga-master-planos"));
-vi.mock("@/pages/master/IntegracoesPage", () => h.marcador("antiga-master-integracoes"));
+// W27: as páginas do master são as novas (src/master/paginas/*.tsx, pelo registro) — as antigas do Calc saíram, menos a Biblioteca
+vi.mock("@/master/paginas/VisaoGeral", () => h.marcador("master-visao-geral"));
+vi.mock("@/master/paginas/Contas", () => h.marcador("master-contas"));
+vi.mock("@/master/paginas/Alunos", () => h.marcador("master-alunos"));
+vi.mock("@/master/paginas/Financeiro", () => h.marcador("master-financeiro"));
+vi.mock("@/master/paginas/Planos", () => h.marcador("master-planos"));
+vi.mock("@/master/paginas/Integracoes", () => h.marcador("master-integracoes"));
+vi.mock("@/master/paginas/AppAluno", () => h.marcador("master-app-aluno"));
+vi.mock("@/master/paginas/Configuracoes", () => h.marcador("master-configuracoes"));
 vi.mock("@/pages/master/BibliotecaPage", () => h.marcador("antiga-master-biblioteca"));
-vi.mock("@/pages/master/ConfiguracoesMasterPage", () => h.marcador("antiga-master-configuracoes"));
 vi.mock("@/components/PlanoBloqueado", () => h.marcador("plano-bloqueado"));
 
 import { Rotas } from "./Rotas";
@@ -365,17 +367,18 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
   });
 });
 
-describe("master: páginas antigas na casca nova", () => {
+describe("master: páginas novas na casca (W27) e a Biblioteca antiga", () => {
   it.each([
-    ["/master", "/master", "antiga-master-visao-geral"],
-    ["/master/professores", "/master/contas", "antiga-master-professores"],
-    ["/master/professores?status=ativo", "/master/contas?status=ativo", "antiga-master-professores"],
-    ["/master/alunos", "/master/alunos", "antiga-master-alunos"],
-    ["/master/financeiro", "/master/financeiro", "antiga-master-financeiro"],
-    ["/master/planos", "/master/planos", "antiga-master-planos"],
-    ["/master/integracoes", "/master/integracoes", "antiga-master-integracoes"],
+    ["/master", "/master", "master-visao-geral"],
+    ["/master/professores", "/master/contas", "master-contas"],
+    ["/master/professores?status=ativo", "/master/contas?status=ativo", "master-contas"],
+    ["/master/alunos", "/master/alunos", "master-alunos"],
+    ["/master/financeiro", "/master/financeiro", "master-financeiro"],
+    ["/master/planos", "/master/planos", "master-planos"],
+    ["/master/integracoes", "/master/integracoes", "master-integracoes"],
+    ["/master/app-do-aluno", "/master/app-do-aluno", "master-app-aluno"],
     ["/master/biblioteca", "/master/biblioteca", "antiga-master-biblioteca"],
-    ["/master/configuracoes", "/master/configuracoes", "antiga-master-configuracoes"],
+    ["/master/configuracoes", "/master/configuracoes", "master-configuracoes"],
   ])("%s → %s", async (de, para, tela) => {
     logar("master");
     abrir(de);

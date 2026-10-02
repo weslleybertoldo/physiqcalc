@@ -8,6 +8,7 @@ import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Esqueleto, EstadoVazio } from "@/ui/premium/Estados";
 import { modulosDaConta } from "../menu";
+import { ModuloForaDoPlano } from "@/ui/casca/ModuloForaDoPlano";
 import { ABAS_ALUNO, ORDEM_RESUMO, abaAtualDaRota, estadoDaAbaAluno } from "./catalogoAbas";
 import CabecalhoPadrao from "./CabecalhoPadrao";
 import { AlunoCtx } from "./contexto";
@@ -133,6 +134,10 @@ export function AbaDoAluno() {
     );
   }
   if (def && estado === "antiga" && def.antigas) return <FallbackConfigurar alunoId={id} opcoes={def.antigas} />;
+  // W27 (herdado da W26, spec §9): aba de um módulo que a conta não tem no plano
+  if (def && def.modulo !== "ambos" && !modulos.includes(def.modulo)) {
+    return <ModuloForaDoPlano modulo={def.modulo} ehDono={dados.ehDono} voltarPara={`/painel/alunos/${encodeURIComponent(id)}`} />;
+  }
   return <Navigate to={`/painel/alunos/${encodeURIComponent(id)}`} replace />;
 }
 

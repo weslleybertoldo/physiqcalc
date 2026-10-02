@@ -8,8 +8,10 @@ import { Carregavel } from "@/ui/casca/Carregavel";
 import { CascaWeb, type AcaoUsuario, type ItemNav } from "@/ui/casca/CascaWeb";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { NaoEncontrada } from "@/ui/casca/NaoEncontrada";
+import { SemConexaoTreino } from "@/ui/casca/SemConexaoTreino";
+import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 import MasterLayoutAntigo from "@/layouts/MasterLayout";
-import { MENU_MASTER, itemMasterAtivo } from "./menu";
+import { MENU_MASTER, itemMasterAtivo, type ItemMenuMaster } from "./menu";
 
 function CardMaster() {
   return (
@@ -73,7 +75,25 @@ export default function MasterLayout() {
   );
 }
 
-/** Página do master: a nova (src/master/paginas/<arquivo>.tsx) quando existe; senão a antiga do Calc. */
+/**
+ * Página antiga do Calc que ficou (a Biblioteca global, W9/W23): ela lê o Banco do Treino. W27 (herdado da W16b): abrir o /master
+ * direto (link, F5) antes da troca de token caía no /painel — a guarda antiga via "sem usuário do Treino" e redirecionava. Agora a
+ * página espera a sessão do Treino no próprio lugar (carregando / erro com "Tentar de novo"), como as páginas antigas do painel (W5).
+ */
+function PaginaAntigaMaster({ item }: { item: ItemMenuMaster }) {
+  const treino = useTreinoDaPagina();
+  if (treino.tipo !== "ok") return <SemConexaoTreino estado={treino} />;
+  const Antiga = item.antiga!;
+  return (
+    <MasterLayoutAntigo>
+      <Carregavel nome={`${item.rotulo} (antiga)`}>
+        <Antiga />
+      </Carregavel>
+    </MasterLayoutAntigo>
+  );
+}
+
+/** Página do master: a nova (src/master/paginas/<arquivo>.tsx) quando existe; senão a antiga do Calc (só a Biblioteca, desde a W27). */
 export function PaginaMaster({ id }: { id: string }) {
   const item = MENU_MASTER.find((i) => i.id === id);
   if (!item) return <NaoEncontrada voltarPara="/master" rotuloVoltar="Voltar ao master" />;
@@ -85,12 +105,6 @@ export function PaginaMaster({ id }: { id: string }) {
       </Carregavel>
     );
   }
-  const Antiga = item.antiga;
-  return (
-    <MasterLayoutAntigo>
-      <Carregavel nome={`${item.rotulo} (antiga)`}>
-        <Antiga />
-      </Carregavel>
-    </MasterLayoutAntigo>
-  );
+  if (!item.antiga) return <NaoEncontrada voltarPara="/master" rotuloVoltar="Voltar ao master" />;
+  return <PaginaAntigaMaster item={item} />;
 }
