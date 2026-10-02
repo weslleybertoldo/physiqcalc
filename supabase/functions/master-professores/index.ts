@@ -151,6 +151,10 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
     const hoje = hojeISO();
+    // Physiq W28 (virada): professores, convites, planos e integrações passaram para o banco principal (Painel master › Contas e
+    // Integrações: master-contas do principal). Só a lista fica (a Biblioteca global mostra o nome do dono de cada exercício);
+    // o resto responde "migrado" (410).
+    if (action !== "list") return jsonErr("migrado", 410, origin);
 
     if (action === "list") {
       const limit = Math.min(Math.max(Number(body?.limit) || 20, 1), 100);

@@ -1,7 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/pages/admin/PlanosPage", () => ({ default: () => null }));
-
+import { describe, expect, it } from "vitest";
 import { ABAS_CONFIG, estadoDaAbaConfig } from "./catalogoAbas";
 
 describe("abas das Configurações (spec 4.6)", () => {
@@ -9,9 +6,9 @@ describe("abas das Configurações (spec 4.6)", () => {
     expect(ABAS_CONFIG.map((a) => a.rotulo)).toEqual(["Perfil", "Conta", "Equipe", "Plano", "Recebimento", "Convite", "Aplicativo"]);
   });
 
-  it("sem as abas novas, só o Plano tem tela antiga (a Configurações antiga do Calc saiu na W6)", () => {
+  it("sem as abas registradas, nenhuma aparece (a Configurações antiga do Calc saiu na W6 e a Planos, o fallback do Plano, na W28)", () => {
     const visiveis = ABAS_CONFIG.filter((a) => estadoDaAbaConfig(a, { ehDono: true }, () => false) !== null).map((a) => a.id);
-    expect(visiveis).toEqual(["plano"]);
+    expect(visiveis).toEqual([]);
     expect(ABAS_CONFIG.map((a) => estadoDaAbaConfig(a, { ehDono: true }))).toEqual(["nova", "nova", "nova", "nova", "nova", "nova", "nova"]);
   });
 

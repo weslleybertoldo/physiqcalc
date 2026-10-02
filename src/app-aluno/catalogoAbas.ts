@@ -1,13 +1,11 @@
-import type { ComponentType, LazyExoticComponent } from "react";
 import { ChartLine, Dumbbell, House, Salad, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { existe } from "@/rotas/registro";
 import type { Modulo } from "@/ui/casca/dadosCasca";
 
 /**
- * As 5 abas do app do aluno (spec 4.3, tela 1). A aba nova é `src/app-aluno/abas/<arquivo>.tsx`
- * (registro por convenção); enquanto ela não existe, vale a tela antiga (`antiga`, spec 11.1, regra 3) — o Treino antigo
- * saiu na W8 e o UserDashboard (Evolução) na W10. Sem nova e sem antiga, a aba some.
+ * As 5 abas do app do aluno (spec 4.3, tela 1). A aba é `src/app-aluno/abas/<arquivo>.tsx` (registro por convenção); sem ela, a
+ * aba some — o Treino antigo saiu na W8, o UserDashboard (Evolução) na W10 e o fallback das telas antigas (`antiga`) na W28.
  * Aba sem o módulo do aluno também some (só Treino → sem Dieta; só Nutrição → sem Treino).
  */
 export interface AbaApp {
@@ -17,7 +15,6 @@ export interface AbaApp {
   icone: LucideIcon;
   rota: string;
   modulo: Modulo | "ambos";
-  antiga?: ComponentType | LazyExoticComponent<ComponentType>;
 }
 
 export const ABAS_APP: AbaApp[] = [
@@ -30,12 +27,11 @@ export const ABAS_APP: AbaApp[] = [
   { id: "perfil", arquivo: "Perfil", rotulo: "Perfil", icone: User, rota: "/perfil", modulo: "ambos" },
 ];
 
-export type EstadoAba = "nova" | "antiga" | null;
+export type EstadoAba = "nova" | null;
 
 export function estadoDaAba(aba: AbaApp, modulos: readonly Modulo[], temNova: (arquivo: string) => boolean = (a) => existe("abasApp", a)): EstadoAba {
   if (aba.modulo !== "ambos" && !modulos.includes(aba.modulo)) return null;
-  if (temNova(aba.arquivo)) return "nova";
-  return aba.antiga ? "antiga" : null;
+  return temNova(aba.arquivo) ? "nova" : null;
 }
 
 export function abasVisiveis(modulos: readonly Modulo[], temNova?: (arquivo: string) => boolean): AbaApp[] {

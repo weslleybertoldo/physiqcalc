@@ -16,7 +16,7 @@ import type { AvisoMudanca } from "../tipos";
 type Publico = "calc" | "nutri";
 const PUBLICOS: Array<{ id: Publico; rotulo: string; dica: string }> = [
   { id: "calc", rotulo: "Quem veio do PhysiqCalc", dica: "Aparece 1 vez para cada pessoa, no 1º acesso depois da mudança." },
-  { id: "nutri", rotulo: "Quem veio do PhysiqNutri", dica: "Fica desligado até a virada (W28): as nutris e os pacientes ainda usam o site antigo." },
+  { id: "nutri", rotulo: "Quem veio do PhysiqNutri", dica: "Aparece 1 vez para cada pessoa, no 1º acesso depois da mudança (o site antigo agora abre o Physiq)." },
 ];
 
 /**
@@ -64,8 +64,8 @@ export default function Configuracoes() {
     ["Pix e cartão à vista", "+1 mês a partir do maior entre o vencimento e hoje (código Pix vale 72 h)"],
     ["Anual", "10 mensalidades por 12 meses"],
     ["Preço de entrada", `Só Treino ou Só Nutrição ${moeda(preco("treino", "f10")?.valor_mensal)} · Treino + Nutrição ${moeda(preco("treino_nutricao", "f10")?.valor_mensal)} (1–10 alunos)`],
-    ["Legado PhysiqCalc", `Preço e regras de hoje até trocar de plano · tolerância de ${d.tolerancia_legado_calc} dias · cobrança no Calc até a virada`],
-    ["Legado PhysiqNutri", "Preço de hoje (R$ 80) · Pix de +30 dias · assinatura no site antigo até a virada"],
+    ["Legado PhysiqCalc", `Preço de hoje e ${d.tolerancia_legado_calc} dias de tolerância até trocar de plano`],
+    ["Legado PhysiqNutri", "Preço de hoje (R$ 80) e Pix de +30 dias até trocar de plano"],
     ["Aluno sem profissional", `${d.config.aluno_do_app?.teste_dias ?? 7} dias grátis · Treino R$ 29,90 · Treino + Alimentação R$ 49,90 · sem pagar o app fecha`],
     ["Entrar com senha", `${limite.erros_ate_bloquear ?? 4} erros → espera de ${(limite.escada_min ?? [1, 5, 15, 30, 60]).join(", ")} min → bloqueia de vez · captcha ${limite.captcha === false ? "desligado" : "ligado"}`],
     ["Adesão", "Não existe mais (para ninguém)"],

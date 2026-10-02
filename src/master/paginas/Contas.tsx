@@ -13,7 +13,7 @@ import { DetalheConta } from "../contas/DetalheConta";
 import { NovaContaDialog } from "../contas/NovaContaDialog";
 import { cn } from "@/lib/utils";
 import { CampoBusca, ChipOrigem, ChipSituacao, ChipsModulos, Filtros, SELECT } from "../pecas/ui";
-import { LEGADA, ROTULO_FAIXA, ROTULO_ORIGEM, linhaAlunos, linhaVencimento, textoErro } from "../regras";
+import { ROTULO_FAIXA, ROTULO_ORIGEM, linhaAlunos, linhaVencimento, textoErro } from "../regras";
 
 type Filtro = "todas" | "ativas" | "vencida" | "teste" | "isenta" | "suspensas";
 
@@ -100,7 +100,6 @@ export default function Contas() {
                         <TabelaCelula>
                           <span className="flex flex-col items-start gap-1">
                             <ChipSituacao conta={c} />
-                            {c.cobranca_legada && <span className="max-w-[150px] text-[11px] font-semibold leading-tight text-ambar-3" data-legada-linha>{LEGADA}</span>}
                           </span>
                         </TabelaCelula>
                         <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>

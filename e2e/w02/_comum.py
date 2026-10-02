@@ -100,8 +100,18 @@ def senha(nome: str) -> str:
     return Path.home().joinpath(f".physiq-teste-{nome}").read_text(encoding="utf-8").strip()
 
 
+def cab_login(url: str, anon_key: str) -> dict:
+    """W28: com o captcha global do Auth do principal ligado, o login de TESTE por REST vai como servidor (service_role, que o
+    GoTrue não submete ao captcha — o mesmo que a função entrar-senha faz depois de conferir o Turnstile). O Treino não tem
+    captcha: segue com a chave anon."""
+    if PRINCIPAL_REF in url or "api-principal." in url:
+        sk = service(PRINCIPAL_REF)
+        return {"apikey": sk, "Authorization": f"Bearer {sk}"}
+    return {"apikey": anon_key}
+
+
 def login_senha(url: str, anon_key: str, email: str, senha_: str) -> dict:
-    st, s, _ = http("POST", f"{url}/auth/v1/token?grant_type=password", {"email": email, "password": senha_}, {"apikey": anon_key})
+    st, s, _ = http("POST", f"{url}/auth/v1/token?grant_type=password", {"email": email, "password": senha_}, cab_login(url, anon_key))
     if st != 200:
         raise RuntimeError(f"login {email} em {url}: HTTP {st} {s}")
     return s

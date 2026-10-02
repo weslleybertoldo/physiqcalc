@@ -1,5 +1,6 @@
 // Physiq W27 — as peças do visual antigo que a Biblioteca global (a única página antiga do master que ficou) usa; vieram de
-// src/components/master/masterUi.tsx, que saiu com as outras páginas antigas do master.
+// src/components/master/masterUi.tsx, que saiu com as outras páginas antigas do master. W28: os rótulos, os textos e o hook da
+// cobrança antiga do Calc (planos, ciclo e situação do professor — master-planos/master-financeiro do Treino) saíram com o legado.
 import { useCallback, useEffect, useState, type HTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -7,7 +8,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { fmtBRL, masterPlanos, SITUACAO_LABEL, type PlanoProfessor } from "@/lib/saasApi";
 
 // Peças compartilhadas da área MASTER (SaaS 12/09/2026). Só estilo/utilidades — nada de regra de negócio.
 
@@ -30,50 +30,10 @@ export const DIALOG_CONTENT = "bg-background border-muted-foreground/30";
 export const MENU_CONTENT = "bg-background border-muted-foreground/30 font-body text-sm";
 export const LINHA = "py-3 border-b border-muted-foreground/30 last:border-0";
 
-// ─────────────────────────── rótulos ───────────────────────────
-export const INTEGRACAO_LABEL: Record<string, string> = { mercadopago: "Mercado Pago", pix_manual: "Pix manual", none: "Sem integração" };
-export const TIPO_COBRANCA_LABEL: Record<string, string> = { adesao: "Adesão", mensal: "Mensal", anual: "Anual" };
-export const PAGAMENTO_STATUS_LABEL: Record<string, string> = {
-  pending: "Pendente", in_process: "Em análise", approved: "Pago", rejected: "Recusado",
-  cancelled: "Cancelado", expired: "Expirado", refunded: "Reembolsado", charged_back: "Estornado",
-};
-export const ASSINATURA_STATUS_LABEL: Record<string, string> = {
-  authorized: "Ativa", pending: "Pendente", paused: "Pausada", cancelled: "Cancelada",
-};
-export const REGRA_LABEL: Record<string, string> = {
-  adesao_professor: "Adesão", tolerancia_dias: "Tolerância (dias)", trial_dias: "Teste grátis (dias)", itens_pagina: "Itens por página",
-};
-
-/** "3/10" ou "3/∞" */
-export function alunosTexto(n: number, max: number | null | undefined): string {
-  return `${n}/${max === null || max === undefined ? "∞" : max}`;
-}
-/** yyyy-mm-dd → dd/mm (linhas compactas) */
-export function fmtDiaMes(d: string | null | undefined): string {
-  if (!d) return "—";
-  return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
-}
-/** rótulo/cor da situação com fallback (se a edge devolver uma situação nova, não quebra a tela) */
-export function situacaoInfo(s: string): { label: string; cls: string } {
-  return (SITUACAO_LABEL as Record<string, { label: string; cls: string }>)[s] ?? { label: s || "—", cls: "bg-muted text-muted-foreground" };
-}
-/** texto compacto do ciclo pra linha do Financeiro ("ciclo 12/08 → 12/09", "anual até 01/03"...) */
-export function cicloTexto(l: { situacao: string; cicloInicio: string | null; cicloVenceEm: string | null; anualAte: string | null; trialAte: string | null; acessoLiberadoAte: string | null }): string {
-  if (l.situacao === "anual" && l.anualAte) return `anual até ${fmtDiaMes(l.anualAte)}`;
-  if (l.situacao === "trial" && l.trialAte) return `teste até ${fmtDiaMes(l.trialAte)}`;
-  if (l.situacao === "liberado" && l.acessoLiberadoAte) return `liberado até ${fmtDiaMes(l.acessoLiberadoAte)}`;
-  if (l.cicloInicio || l.cicloVenceEm) return `ciclo ${fmtDiaMes(l.cicloInicio)} → ${fmtDiaMes(l.cicloVenceEm)}`;
-  if (l.situacao === "sem_adesao") return "sem adesão";
-  return "sem ciclo";
-}
+// ─────────────────────────── utilidades ───────────────────────────
 export function nomeDoUser(user: { user_metadata?: Record<string, unknown>; email?: string | null } | null | undefined): string {
   const m = (user?.user_metadata ?? {}) as { full_name?: string; name?: string };
   return m.full_name || m.name || user?.email || "";
-}
-export function numOuNull(v: unknown): number | null {
-  if (v === null || v === undefined || v === "") return null;
-  const n = typeof v === "string" ? Number(v.replace(",", ".")) : Number(v);
-  return Number.isFinite(n) ? n : null;
 }
 
 // ─────────────────────────── datas ───────────────────────────
@@ -156,29 +116,6 @@ export function useDebounce<T>(value: T, ms = 300): T {
   return v;
 }
 
-export interface RegrasGerais { adesao_professor: number; tolerancia_dias: number; trial_dias: number; itens_pagina: number }
-export interface PlanosLista { planos: PlanoProfessor[]; regras: RegrasGerais }
-
-/** `masterPlanos("list")` (planos + regras gerais). `ativo=false` adia o carregamento. */
-export function usePlanosMaster(ativo = true) {
-  const [dados, setDados] = useState<PlanosLista | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const recarregar = useCallback(async () => {
-    setLoading(true);
-    setErro(null);
-    try {
-      setDados(await masterPlanos<PlanosLista>("list"));
-    } catch (e) {
-      setErro(mensagemErro(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => { if (ativo) void recarregar(); }, [ativo, recarregar]);
-  return { planos: dados?.planos ?? [], regras: dados?.regras ?? null, loading, erro, recarregar };
-}
-
 interface ConfirmOpts { titulo: string; descricao?: ReactNode; confirmar?: string; perigo?: boolean }
 /** `const { confirmar, dialogo } = useConfirmacao(); if (!(await confirmar({...}))) return;` — renderize `{dialogo}` na página. */
 export function useConfirmacao() {
@@ -220,7 +157,7 @@ const TOM_CLS: Record<Tom, string> = {
   aviso: "bg-classify-yellow/20 text-classify-yellow",
   info: "bg-primary/10 text-primary",
 };
-/** Badge do app. `cls` substitui o tom (ex.: `SITUACAO_LABEL[s].cls`). */
+/** Badge do app. `cls` substitui o tom (classes próprias). */
 export function Etiqueta({ tom = "neutro", cls, className = "", children, ...rest }: { tom?: Tom; cls?: string; className?: string; children: ReactNode } & Omit<HTMLAttributes<HTMLSpanElement>, "children">) {
   return (
     <span className={`text-xs font-heading uppercase px-2 py-0.5 rounded-full whitespace-nowrap leading-tight ${cls ?? TOM_CLS[tom]} ${className}`} {...rest}>
@@ -316,41 +253,3 @@ export const ErroCarregar = ({ texto, onRetry }: { texto?: string | null; onRetr
     {onRetry && <button type="button" onClick={onRetry} className={BTN_MINI_NEUTRO}>Tentar de novo</button>}
   </div>
 );
-
-// ─────────────────────────── histórico de planos (resumo antes → depois) ───────────────────────────
-type Reg = Record<string, unknown>;
-const reg = (v: unknown): Reg | null => (v && typeof v === "object" ? (v as Reg) : null);
-const txt = (v: unknown, vazio = "—"): string => (v === null || v === undefined ? vazio : String(v));
-const brl = (v: unknown): string => fmtBRL(v as number | string | null | undefined);
-
-/** Formata uma linha de `physiq_planos_professor_hist` (planos, regras e troca de plano do professor). */
-export function resumoHistorico(h: { antes: unknown; depois: unknown }, nomePlano: (id: string | null | undefined) => string): string {
-  const a = reg(h.antes);
-  const d = reg(h.depois);
-  const regras = d ? reg(d.regras) : null;
-  if (regras) {
-    return "Regras gerais: " + Object.entries(regras)
-      .map(([k, v]) => `${REGRA_LABEL[k] ?? k} = ${k === "adesao_professor" ? fmtBRL(Number(v)) : String(v)}`).join(" · ");
-  }
-  // troca de plano de um professor (set-plano do master / plano-mudar do professor): { plano_id, plano?, por? }
-  if (d && "plano_id" in d && !("nome" in d)) {
-    const de = typeof a?.plano === "string" ? a.plano : nomePlano(a?.plano_id as string | null | undefined);
-    const para = typeof d.plano === "string" ? d.plano : nomePlano(d.plano_id as string | null | undefined);
-    return `Plano do professor: ${de} → ${para}${d.por === "master" ? " (pelo master)" : ""}`;
-  }
-  if (!a && d?.nome) return `Plano criado: ${txt(d.nome)} · ${brl(d.valor_mensal)}/mês`;
-  if (a && d) {
-    const partes: string[] = [];
-    if (a.nome !== d.nome) partes.push(`nome: ${txt(a.nome)} → ${txt(d.nome)}`);
-    if (numOuNull(a.valor_mensal) !== numOuNull(d.valor_mensal)) partes.push(`mensal: ${brl(a.valor_mensal)} → ${brl(d.valor_mensal)}`);
-    if (numOuNull(a.valor_anual) !== numOuNull(d.valor_anual)) {
-      partes.push(`anual: ${a.valor_anual == null ? "10× auto" : brl(a.valor_anual)} → ${d.valor_anual == null ? "10× auto" : brl(d.valor_anual)}`);
-    }
-    if ((a.max_alunos ?? null) !== (d.max_alunos ?? null)) partes.push(`máx. alunos: ${txt(a.max_alunos, "∞")} → ${txt(d.max_alunos, "∞")}`);
-    if ((a.min_alunos ?? null) !== (d.min_alunos ?? null)) partes.push(`mín. alunos: ${txt(a.min_alunos)} → ${txt(d.min_alunos)}`);
-    if (a.ativo !== d.ativo) partes.push(d.ativo ? "reativado" : "desativado");
-    if ((a.ordem ?? null) !== (d.ordem ?? null)) partes.push(`ordem: ${txt(a.ordem)} → ${txt(d.ordem)}`);
-    return partes.length ? partes.join(" · ") : "Sem mudança relevante";
-  }
-  return "—";
-}

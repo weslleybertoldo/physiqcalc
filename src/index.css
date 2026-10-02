@@ -9,7 +9,7 @@
 @import "tw-animate-css";
 /* Visual premium (W1): tokens escuro/claro das telas aprovadas + utilidades pq-* (src/ui/tema/tokens.css) */
 @import "./ui/tema/tokens.css";
-/* Convivência das telas antigas com as cascas (fallback da spec 11.1; sai na W28) */
+/* Peças `fixed bottom-*` acima da barra de abas do app (W1; W28: as regras das telas antigas saíram) */
 @import "./ui/tema/legado.css";
 
 @custom-variant dark (&:is(.dark *));

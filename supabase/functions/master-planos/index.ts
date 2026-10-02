@@ -116,6 +116,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
   const { user, error: authErr } = await requireMaster(req, "master-planos");
   if (authErr) return authErr;
+  // Physiq W28 (virada): a tabela de preços passou para o banco principal (Painel master › Planos: master-planos do principal). Toda ação responde "migrado" (410) — o painel master do Physiq não chama mais esta função.
+  if (user) return jsonErr("migrado", 410, origin);
   try {
     const admin = adminClient();
     const body = await req.json().catch(() => ({}));

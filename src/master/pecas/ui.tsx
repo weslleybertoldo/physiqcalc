@@ -8,7 +8,7 @@ import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Chip } from "@/ui/premium/Chip";
-import { LEGADA, ROTULO_MODULO, ROTULO_ORIGEM, ROTULO_SITUACAO, TOM_MODULO, TOM_SITUACAO } from "../regras";
+import { ROTULO_MODULO, ROTULO_ORIGEM, ROTULO_SITUACAO, TOM_MODULO, TOM_SITUACAO } from "../regras";
 import type { ContaLinha } from "../tipos";
 
 export const INPUT =
@@ -93,7 +93,7 @@ export function Filtros<T extends string>({ opcoes, valor, aoMudar, rotulo }: {
   );
 }
 
-export function ChipSituacao({ conta }: { conta: Pick<ContaLinha, "situacao_efetiva" | "cobranca_legada"> }) {
+export function ChipSituacao({ conta }: { conta: Pick<ContaLinha, "situacao_efetiva"> }) {
   return <Chip tom={TOM_SITUACAO[conta.situacao_efetiva] ?? "g"} data-chip-situacao={conta.situacao_efetiva}>{ROTULO_SITUACAO[conta.situacao_efetiva] ?? conta.situacao_efetiva}</Chip>;
 }
 
@@ -107,10 +107,6 @@ export function ChipsModulos({ modulos }: { modulos: ContaLinha["modulos"] }) {
 
 export function ChipOrigem({ origem }: { origem: ContaLinha["origem"] }) {
   return <Chip tom={origem === "nova" ? "c" : origem === "app" ? "t" : "g"} data-chip-origem={origem}>{ROTULO_ORIGEM[origem]}</Chip>;
-}
-
-export function ChipLegada() {
-  return <Chip tom="a" data-chip-legada>{LEGADA}</Chip>;
 }
 
 /** Janela dos formulários do master (Dialog no visual premium). */

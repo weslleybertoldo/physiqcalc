@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { ABAS_APP, abaDaRota, abaDeAbertura, abasVisiveis, estadoDaAba } from "./catalogoAbas";
 
@@ -14,7 +14,6 @@ describe("abas do app do aluno (spec 4.3 e 11.1)", () => {
   it("sem telas novas: nenhuma aba (o Treino antigo saiu na W8 e o UserDashboard na W10 — não há mais tela antiga)", () => {
     expect(abasVisiveis(["treino"], nenhumaNova)).toEqual([]);
     expect(abaDeAbertura(["treino"], nenhumaNova)).toBeNull();
-    expect(ABAS_APP.some((a) => a.antiga)).toBe(false);
   });
 
   it("W8/W10: com as abas Treino e Evolução novas, o Treino é a abertura do aluno do Calc (antes do Início)", () => {

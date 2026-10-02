@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Copy, ExternalLink, ImageUp, MessageCircle, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { diarioNoPhysiq, enderecoDoDiario } from "@/nucleo/siteAntigoNutri";
+import { enderecoDoDiario } from "@/nucleo/siteAntigoNutri";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
@@ -17,9 +17,9 @@ import { chavePerfilAluno, usePerfilAluno } from "../dados/usePerfilAluno";
 /**
  * Card "Link do diário" do Resumo (W14 — falha F1 / R13): o link do aluno agora é o do DIÁRIO (/d/<código>) — o "Link do
  * paciente" antigo mostrava /p/<código>, que dava 404 (o /p/ antigo passa a abrir o diário, src/publico/LinkAntigo.tsx).
- * Enquanto a página nova do diário não existe no Physiq (W24), o link é o do site antigo do Nutri, que funciona hoje
- * (src/nucleo/siteAntigoNutri.ts — um lugar só). Copiar, abrir, mandar no WhatsApp e gerar um link novo (o anterior para).
- * Só para aluno com Nutrição (o diário é da nutricionista).
+ * Desde a W24 o /d/ é a página pública do Physiq (src/nucleo/siteAntigoNutri.ts — um lugar só); W28: o aviso "abre no site do
+ * PhysiqNutri" saiu. Copiar, abrir, mandar no WhatsApp e gerar um link novo (o anterior para). Só para aluno com Nutrição (o
+ * diário é da nutricionista).
  */
 export default function CardLinkDiario({ alunoId }: { alunoId: string }) {
   const q = usePerfilAluno(alunoId);
@@ -84,7 +84,6 @@ export default function CardLinkDiario({ alunoId }: { alunoId: string }) {
           <TriangleAlert aria-hidden className="mt-0.5 h-3.5 w-3.5 flex-none" /> {estado.motivo} Quem abrir o link não consegue mandar fotos.
         </p>
       )}
-      {!diarioNoPhysiq() && <p className="mt-2 text-[11px] text-texto-4" data-link-site-antigo>O diário abre no site do PhysiqNutri até a página nova entrar.</p>}
       <div className="mt-auto flex flex-wrap gap-x-4 gap-y-2 pt-3">
         <button type="button" onClick={() => void copiar()} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-violeta-3" data-link-copiar>
           <Copy aria-hidden className="h-3.5 w-3.5" /> Copiar

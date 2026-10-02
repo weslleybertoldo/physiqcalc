@@ -6,7 +6,8 @@
 import type { Papel } from "@/nucleo/situacao";
 
 export type PapelModulo = "personal" | "nutricionista";
-export type BloqueioEquipe = "conta_legada" | "conta_travada" | "conta_inexistente" | null;
+/** W28: o "conta_legada" (equipe só nas contas novas até a virada) saiu — as legadas convidam igual à conta nova. */
+export type BloqueioEquipe = "conta_travada" | "conta_inexistente" | null;
 
 export interface MembroEquipe {
   id: string;
@@ -55,7 +56,7 @@ export function normalizarEquipe(bruto: unknown): Equipe | null {
   const c = b.conta as Record<string, unknown>;
   const membros = (Array.isArray(b.membros) ? b.membros : []) as Record<string, unknown>[];
   const convites = (Array.isArray(b.convites) ? b.convites : []) as Record<string, unknown>[];
-  const bloqueio = ["conta_legada", "conta_travada", "conta_inexistente"].includes(String(b.bloqueio)) ? (b.bloqueio as BloqueioEquipe) : null;
+  const bloqueio = ["conta_travada", "conta_inexistente"].includes(String(b.bloqueio)) ? (b.bloqueio as BloqueioEquipe) : null;
   return {
     conta: {
       id: String(c.id ?? ""), nome: String(c.nome ?? ""), origem: String(c.origem ?? ""), plano: String(c.plano ?? ""),
@@ -135,7 +136,7 @@ export function textoAlunosAfetados(m: Pick<MembroEquipe, "alunos_treino" | "alu
 
 /** O que o dono pode fazer com cada linha da equipe. */
 export function acoesDoMembro(m: MembroEquipe, equipe: Pick<Equipe, "bloqueio">): { papeis: boolean; remover: boolean } {
-  if (equipe.bloqueio === "conta_legada" || equipe.bloqueio === "conta_inexistente" || m.status !== "ativo") return { papeis: false, remover: false };
+  if (equipe.bloqueio === "conta_inexistente" || m.status !== "ativo") return { papeis: false, remover: false };
   return { papeis: equipe.bloqueio === null, remover: !m.dono };
 }
 
@@ -144,7 +145,7 @@ export const MENSAGEM_EQUIPE: Record<string, string> = {
   sem_login: "Sua sessão terminou. Entre de novo.",
   so_dono: "Só o dono da conta mexe na equipe.",
   conta_inexistente: "Não achamos esta conta.",
-  conta_legada: "A equipe chega às contas vindas do PhysiqCalc e do PhysiqNutri na mudança final do Physiq. Até lá, a conta segue só com você.",
+  conta_legada: "A cobrança desta conta ainda não passou para o Physiq: a equipe abre depois disso. Fale com o suporte.",
   conta_travada: "O plano está vencido: regularize em Configurações › Plano para mexer na equipe.",
   email_invalido: "E-mail inválido.",
   papeis_invalidos: "Escolha pelo menos um papel: personal trainer ou nutricionista.",

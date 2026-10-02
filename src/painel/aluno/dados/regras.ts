@@ -302,40 +302,28 @@ export interface AtalhoFluxo {
   rotulo: string;
   /** aba do perfil do aluno (Physiq) e o parâmetro que ela lê para abrir o formulário novo */
   aba: "prontuario" | "avaliacao" | "dieta" | null;
-  arquivoAba: "Prontuario" | "Avaliacao" | "Dieta" | null;
   parametro: string;
   /** a página do painel (Agenda) */
   pagina?: "Agenda";
-  /** a seção do site antigo (enquanto a aba nova não existe) */
-  secaoAntiga: string;
 }
 
 export const ATALHOS_FLUXO: AtalhoFluxo[] = [
-  { chave: "consulta", rotulo: "Registrar consulta", aba: "prontuario", arquivoAba: "Prontuario", parametro: "nova=consulta", secaoAntiga: "consultas" },
-  { chave: "agendar", rotulo: "Agendar", aba: null, arquivoAba: null, parametro: "novo=1", pagina: "Agenda", secaoAntiga: "agenda" },
-  { chave: "anamnese", rotulo: "Anamnese", aba: "prontuario", arquivoAba: "Prontuario", parametro: "nova=anamnese", secaoAntiga: "anamnese" },
-  { chave: "antropometria", rotulo: "Antropometria", aba: "avaliacao", arquivoAba: "Avaliacao", parametro: "nova=antropometria", secaoAntiga: "antropometria" },
-  { chave: "planejamento", rotulo: "Planejamento", aba: "dieta", arquivoAba: "Dieta", parametro: "novo=plano", secaoAntiga: "planejamento" },
-  { chave: "orientacao", rotulo: "Orientação", aba: "dieta", arquivoAba: "Dieta", parametro: "nova=orientacao", secaoAntiga: "orientacoes" },
-  { chave: "manipulados", rotulo: "Manipulados", aba: "dieta", arquivoAba: "Dieta", parametro: "novo=manipulado", secaoAntiga: "manipulados" },
+  { chave: "consulta", rotulo: "Registrar consulta", aba: "prontuario", parametro: "nova=consulta" },
+  { chave: "agendar", rotulo: "Agendar", aba: null, parametro: "novo=1", pagina: "Agenda" },
+  { chave: "anamnese", rotulo: "Anamnese", aba: "prontuario", parametro: "nova=anamnese" },
+  { chave: "antropometria", rotulo: "Antropometria", aba: "avaliacao", parametro: "nova=antropometria" },
+  { chave: "planejamento", rotulo: "Planejamento", aba: "dieta", parametro: "novo=plano" },
+  { chave: "orientacao", rotulo: "Orientação", aba: "dieta", parametro: "nova=orientacao" },
+  { chave: "manipulados", rotulo: "Manipulados", aba: "dieta", parametro: "novo=manipulado" },
 ];
 
-export interface DestinoAtalho {
-  /** rota interna do Physiq (a aba nova ou a página nova) */
-  rota: string | null;
-  /** o site antigo do Nutri (abre em outra aba) */
-  externo: string | null;
-}
-
-/** Para onde o atalho leva: a aba/página nova do Physiq quando existe; senão, a seção do aluno no site antigo do Nutri. */
-export function destinoDoAtalho(a: AtalhoFluxo, rotaAluno: string, pacienteId: string, existeAba: (arquivo: string) => boolean,
-  existePagina: (nome: string) => boolean, siteAntigo: string): DestinoAtalho {
-  if (a.pagina) {
-    if (existePagina(a.pagina)) return { rota: `/painel/agenda?aluno=${encodeURIComponent(pacienteId)}&${a.parametro}`, externo: null };
-    return { rota: null, externo: `${siteAntigo}/agenda?paciente=${encodeURIComponent(pacienteId)}` };
-  }
-  if (a.aba && a.arquivoAba && existeAba(a.arquivoAba)) return { rota: `${rotaAluno}/${a.aba}?${a.parametro}`, externo: null };
-  return { rota: null, externo: `${siteAntigo}/pacientes/${encodeURIComponent(pacienteId)}/${a.secaoAntiga}` };
+/**
+ * Para onde o atalho leva: a aba do perfil do aluno (ou a Agenda) com o parâmetro que abre o formulário novo. W28: o fallback da
+ * seção do aluno no site antigo do Nutri saiu (todas as abas e a Agenda existem no Physiq; o site antigo redireciona para cá).
+ */
+export function rotaDoAtalho(a: AtalhoFluxo, rotaAluno: string, pacienteId: string): string {
+  if (a.pagina) return `/painel/agenda?aluno=${encodeURIComponent(pacienteId)}&${a.parametro}`;
+  return `${rotaAluno}/${a.aba}?${a.parametro}`;
 }
 
 // ───────────────────────── ações da W13 (Bloquear, Desativar, Remover) no perfil ─────────────────────────

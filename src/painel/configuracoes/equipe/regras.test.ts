@@ -54,10 +54,10 @@ describe("Equipe (W5) — regras da tela", () => {
     expect(textoAlunosAfetados({ alunos_treino: 1, alunos_nutricao: 0 })).toBe("O aluno de treino dele fica sem responsável até você escolher outro.");
     expect(textoAlunosAfetados({ alunos_treino: 0, alunos_nutricao: 0 })).toBeNull();
   });
-  it("ações por linha: dono não é removido; conta legada e convite não mexem; conta travada só remove", () => {
+  it("ações por linha: dono não é removido; conta inexistente e convite não mexem; conta travada só remove", () => {
     expect(acoesDoMembro(membro({ dono: true }), { bloqueio: null })).toEqual({ papeis: true, remover: false });
     expect(acoesDoMembro(membro(), { bloqueio: null })).toEqual({ papeis: true, remover: true });
-    expect(acoesDoMembro(membro(), { bloqueio: "conta_legada" })).toEqual({ papeis: false, remover: false });
+    expect(acoesDoMembro(membro(), { bloqueio: "conta_inexistente" })).toEqual({ papeis: false, remover: false });
     expect(acoesDoMembro(membro(), { bloqueio: "conta_travada" })).toEqual({ papeis: false, remover: true });
   });
   it("papéis em texto (lista da equipe)", () => {

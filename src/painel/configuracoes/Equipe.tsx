@@ -32,7 +32,7 @@ function Faixa({ tom, icone: Icone, children, marca }: { tom: "a" | "g"; icone: 
  * Configurações › Equipe (W5, spec 4.1 e 4.6 — só o dono): os profissionais da conta (nome, papéis, situação, quantos alunos
  * atende), convidar por e-mail com os papéis que o plano permite, mudar papéis, remover (os alunos dele ficam "sem
  * responsável" ou vão para outro membro) e os convites pendentes (reenviar/cancelar). Lista no padrão da tela 7.
- * Até a W28 a equipe é das contas novas; as legadas veem a lista com o dono e o aviso.
+ * W28: as contas legadas convidam igual à conta nova (o aviso "a equipe chega na mudança final" saiu).
  */
 export default function Equipe() {
   const { conta } = useConta();
@@ -103,9 +103,6 @@ export default function Equipe() {
           ) : undefined
         }
       />
-      {equipe.bloqueio === "conta_legada" && (
-        <Faixa tom="g" icone={Lock} marca="legada">{mensagemErroEquipe("conta_legada")}</Faixa>
-      )}
       {equipe.bloqueio === "conta_travada" && (
         <Faixa tom="a" icone={Lock} marca="travada">{mensagemErroEquipe("conta_travada")}</Faixa>
       )}
@@ -131,7 +128,7 @@ export default function Equipe() {
         )}
       </SecaoForm>
 
-      {(equipe.bloqueio !== "conta_legada" || equipe.convites.length > 0) && <SecaoForm titulo="Convites pendentes" marca="equipe-convites" extra={equipe.convites.length ? <Chip tom="a">{equipe.convites.length}</Chip> : undefined}
+      <SecaoForm titulo="Convites pendentes" marca="equipe-convites" extra={equipe.convites.length ? <Chip tom="a">{equipe.convites.length}</Chip> : undefined}
         descricao={equipe.convites.length ? undefined : "Nenhum convite esperando resposta."}>
         {equipe.convites.length > 0 && (
           <div data-lista-convites>
@@ -140,7 +137,7 @@ export default function Equipe() {
             ))}
           </div>
         )}
-      </SecaoForm>}
+      </SecaoForm>
 
       <DialogoConvidar aberto={convidar} aoMudar={setConvidar} equipe={equipe} aoConvidar={() => void atualizar()} />
       <DialogoPapeis

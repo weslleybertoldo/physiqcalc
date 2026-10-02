@@ -1,6 +1,5 @@
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import AdminLayout from "@/layouts/AdminLayout";
 import { tela } from "@/rotas/registro";
 import { Carregavel } from "@/ui/casca/Carregavel";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
@@ -8,9 +7,9 @@ import { ABAS_CONFIG, estadoDaAbaConfig } from "./catalogoAbas";
 
 /**
  * Configurações do profissional (spec 4.6): Perfil · Conta · Equipe · Plano · Recebimento · Convite ·
- * Aplicativo. A aba nova é `src/painel/configuracoes/<arquivo>.tsx`; enquanto não existe, vale a tela
- * antiga do Calc (a Planos responde pelo Plano). Sem nova e sem antiga, a aba some. Conta, Equipe, Plano
- * e Recebimento são do dono. A Configurações antiga (`?s=`) saiu na W6: o link antigo cai na aba nova.
+ * Aplicativo. A aba é `src/painel/configuracoes/<arquivo>.tsx`; sem ela, a aba some. Conta, Equipe, Plano
+ * e Recebimento são do dono. A Configurações antiga (`?s=`) saiu na W6: o link antigo cai na aba nova; a
+ * Planos do Calc (o fallback do Plano) saiu na W28.
  */
 export default function ConfiguracoesLayout() {
   const dados = useDadosCasca();
@@ -61,27 +60,16 @@ export function PrimeiraAbaConfig() {
   return <Navigate to={primeira ? `/painel/configuracoes/${primeira.id}` : "/painel"} replace />;
 }
 
-/** Uma aba das Configurações: a nova, ou a antiga (Planos). */
+/** Uma aba das Configurações (a registrada); sem ela, a primeira disponível. */
 export function AbaConfiguracoes() {
   const { aba = "" } = useParams();
   const dados = useDadosCasca();
   const def = ABAS_CONFIG.find((a) => a.id === aba);
-  const estado = def ? estadoDaAbaConfig(def, dados) : null;
-  if (!def || estado === null) return <PrimeiraAbaConfig />;
-  if (estado === "nova") {
-    const Nova = tela("abasConfig", def.arquivo)!;
-    return (
-      <Carregavel nome={`configurações ${def.arquivo}`}>
-        <Nova />
-      </Carregavel>
-    );
-  }
-  const Antiga = def.antiga!;
+  const Nova = def && estadoDaAbaConfig(def, dados) === "nova" ? tela("abasConfig", def.arquivo) : null;
+  if (!def || !Nova) return <PrimeiraAbaConfig />;
   return (
-    <AdminLayout>
-      <Carregavel nome={`${def.rotulo} (antiga)`}>
-        <Antiga />
-      </Carregavel>
-    </AdminLayout>
+    <Carregavel nome={`configurações ${def.arquivo}`}>
+      <Nova />
+    </Carregavel>
   );
 }

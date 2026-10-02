@@ -395,7 +395,7 @@ export function avaliarMudanca(
 export const MENSAGEM_ERRO_COBRANCA: Record<string, string> = {
   sem_conta: "Não achamos a sua conta. Recarregue a página.",
   so_o_dono: "Só o dono da conta cuida do plano.",
-  conta_legada: "O plano desta conta continua na tela de hoje até a mudança completa.",
+  conta_legada: "A cobrança desta conta ainda não passou para o Physiq. Fale com o suporte.",
   isenta: "Sua conta está isenta: não precisa pagar.",
   conta_suspensa: "Conta suspensa. Fale com o suporte.",
   use_mudar_plano: "Para trocar de plano, use \"Mudar plano\" antes de pagar.",

@@ -77,6 +77,7 @@ export interface MatriculaSituacao {
   teste_ate?: string | null;
 }
 
+/** A assinatura do site antigo do Nutri. W28: o servidor ainda manda; o app não usa mais (a cobrança do Nutri legado é a do núcleo). */
 export interface LegadoNutri {
   role: string | null;
   teste_ate: string | null;
@@ -231,39 +232,17 @@ export function destinoDepoisDoLogin(s: Situacao | null | undefined, de?: string
 
 /**
  * Bloqueio dos alunos pelo master (C101, spec 9: "Acesso pausado" com a mensagem do master). Vale quando TODAS as
- * matrículas ativas estão em conta bloqueada (no caso comum, a única); o Calc antigo avisa pelo status-lite do Treino.
+ * matrículas ativas estão em conta bloqueada (no caso comum, a única). W28: só o do núcleo (contas.alunos_bloqueados_em, que o
+ * espelho grava também no Treino) — o status-lite do Calc antigo saiu.
  */
-export function bloqueioDoMaster(
-  s: Situacao | null | undefined,
-  treino?: { bloqueadoPeloMaster?: boolean; mensagem?: string | null } | null,
-): { bloqueado: boolean; mensagem: string | null } {
+export function bloqueioDoMaster(s: Situacao | null | undefined): { bloqueado: boolean; mensagem: string | null } {
   if (!s || ehProfissional(s)) return { bloqueado: false, mensagem: null };
   const ativas = s.matriculas.filter((m) => m.ativo);
   const bloqueadas = ativas.filter((m) => !!m.conta_alunos_bloqueados_em);
   if (ativas.length > 0 && bloqueadas.length === ativas.length) {
     return { bloqueado: true, mensagem: bloqueadas.find((m) => m.conta_alunos_bloqueados_msg)?.conta_alunos_bloqueados_msg ?? null };
   }
-  // bloqueio feito pelo painel master antigo (fica no Treino, no professor do aluno): fecha o app a não ser que o aluno tenha
-  // uma matrícula só de Nutrição que não está bloqueada
-  if (treino?.bloqueadoPeloMaster && ativas.every((m) => m.modulos.includes("treino") || !!m.conta_alunos_bloqueados_em)) {
-    return { bloqueado: true, mensagem: treino.mensagem ?? null };
-  }
   return { bloqueado: false, mensagem: null };
-}
-
-/** Situação da conta para as travas de plano: as telas antigas de cada app (só enquanto a cobrança é a antiga) ou o núcleo. */
-export type RegraPlano = "calc" | "nutri" | "nova" | "isenta";
-
-/**
- * W28 (virada): quem decide é SÓ o `cobranca_legada` — true = as telas e travas antigas do Calc/Nutri (como até a W27); false =
- * o motor do núcleo (o mesmo das contas novas), inclusive na conta legada depois do 03_cobranca_legada.py. A origem só diz QUAL
- * tela antiga abre. Funciona antes e depois do script: enquanto ele não roda, as legadas seguem com cobranca_legada = true.
- */
-export function regraDoPlano(conta: ContaSituacao | null, s: Situacao | null | undefined): RegraPlano {
-  if (!conta || s?.master || conta.situacao === "isenta") return "isenta";
-  if (conta.cobranca_legada && conta.origem === "legado_calc") return "calc";
-  if (conta.cobranca_legada && conta.origem === "legado_nutri") return "nutri";
-  return "nova";
 }
 
 // ───────────────────────── código do profissional (vincular-aluno) ─────────────────────────

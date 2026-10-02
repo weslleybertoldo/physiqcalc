@@ -20,13 +20,16 @@ describe("W10 — a aba Evolução nova entra pelo registro no lugar do UserDash
     expect(destinoDaRotaAntiga("/avaliacao", "")).toBe("/evolucao");
   });
 
-  it("o legado do app do aluno saiu; o que o painel ainda usa ficou (até a W17)", () => {
-    for (const saiu of ["src/pages/UserDashboard.tsx", "src/components/RegistrosSection.tsx"]) expect(existsSync(resolve(raiz, saiu)), saiu).toBe(false);
+  it("o legado do app do aluno saiu; o que o painel antigo usava saiu na W28 (o Configurar aluno)", () => {
+    for (const saiu of [
+      "src/pages/UserDashboard.tsx",
+      "src/components/RegistrosSection.tsx",
+      "src/components/EvolutionSection.tsx", // W28: era do Configurar aluno › Avaliação › Evolução
+      "src/components/CompararRegistros.tsx", // W28: era dos Registros do Configurar aluno
+      "src/components/MedidasCorporaisDisplay.tsx", // W28: era dos dados do Configurar aluno
+    ]) expect(existsSync(resolve(raiz, saiu)), saiu).toBe(false);
     for (const ficou of [
-      "src/components/EvolutionSection.tsx", // painel: Configurar aluno › Avaliação › Evolução (W17)
-      "src/components/CompararRegistros.tsx", // painel: Registros do aluno (W17)
-      "src/components/MedidasCorporaisDisplay.tsx", // painel: dados do aluno (W14)
-      "src/lib/registrosFotos.ts",
+      "src/lib/registrosFotos.ts", // as fotos da Evolução (app e painel)
     ]) expect(existsSync(resolve(raiz, ficou)), ficou).toBe(true);
   });
 

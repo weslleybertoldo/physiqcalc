@@ -1,6 +1,7 @@
 /**
- * Painel master (W27) — regras PURAS das telas: rótulos, tons dos chips, o que cada conta deixa fazer (legado = "Cobrança legada
- * até a virada"), datas e dinheiro, e o texto de cada erro das funções. Testadas no Vitest (src/master/regras.test.ts).
+ * Painel master (W27) — regras PURAS das telas: rótulos, tons dos chips, o que cada conta deixa fazer, datas e dinheiro, e o texto
+ * de cada erro das funções. Testadas no Vitest (src/master/regras.test.ts). W28: a "Cobrança legada até a virada" saiu — as
+ * contas legadas são cobradas pelo núcleo (cobranca_legada = false), com o preço e as regras de hoje até trocar de plano.
  */
 import { comparacaoDoMes, variacao } from "@/painel/financeiro/resumo";
 import type { TomChip } from "@/ui/premium/Chip";
@@ -18,10 +19,6 @@ export const TOM_MODULO: Record<ModuloConta, TomChip> = { treino: "t", nutricao:
 export const ROTULO_RECEBIMENTO: Record<string, string> = { pix_manual: "Pix manual", nenhum: "Não cobra pelo app", mercadopago: "Mercado Pago" };
 export const PLANOS: PlanoConta[] = ["treino", "nutricao", "treino_nutricao"];
 export const FAIXAS: Faixa[] = ["f10", "f30", "f100", "livre"];
-export const LEGADA = "Cobrança legada até a virada";
-
-/** Link do master do site antigo do Nutri (continua funcionando até a W28 — as contas legado Nutri pagam por lá). */
-export const MASTER_NUTRI_ANTIGO = "https://nutri.physiqcalc.com.br/master/profissionais";
 
 export function dataCurta(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -50,17 +47,12 @@ export function somarDias(iso: string, dias: number): string {
 }
 
 /**
- * "Vence em 12/11/2026", "Teste até …", "Isenta · motivo", "Venceu em …" — a linha do vencimento de uma conta. As datas do site
- * antigo do Nutri só valem enquanto a cobrança da conta é a antiga (cobranca_legada); depois da virada (W28), as do núcleo.
+ * "Vence em 12/11/2026", "Teste até …", "Isenta · motivo", "Venceu em …" — a linha do vencimento de uma conta, pelas datas do
+ * núcleo (W28: também nas legadas; as datas do site antigo do Nutri não valem mais).
  */
-export function linhaVencimento(c: Pick<ContaLinha, "situacao_efetiva" | "vence_em" | "teste_ate" | "isenta_motivo" | "cobranca_legada" | "origem" | "legado_nutri">): string {
+export function linhaVencimento(c: Pick<ContaLinha, "situacao_efetiva" | "vence_em" | "teste_ate" | "isenta_motivo">): string {
   if (c.situacao_efetiva === "isenta") return c.isenta_motivo ? `Isenta · ${c.isenta_motivo}` : "Isenta";
   if (c.situacao_efetiva === "suspensa") return "Suspensa pelo master";
-  if (c.cobranca_legada && c.origem === "legado_nutri" && c.legado_nutri) {
-    if (c.legado_nutri.isento) return "Isenta (site antigo)";
-    if (c.legado_nutri.pago_ate) return `Pago até ${dataCurta(c.legado_nutri.pago_ate)}`;
-    if (c.legado_nutri.teste_ate) return `Teste até ${dataCurta(c.legado_nutri.teste_ate)}`;
-  }
   if (c.situacao_efetiva === "teste") return `Teste até ${dataCurta(c.teste_ate)}`;
   if (c.situacao_efetiva === "vencida") return c.vence_em ? `Venceu em ${dataCurta(c.vence_em)}` : `Teste acabou em ${dataCurta(c.teste_ate)}`;
   return c.vence_em ? `Vence em ${dataCurta(c.vence_em)}` : "—";
@@ -100,13 +92,12 @@ export type AcaoMaster =
   | "registrar_pagamento" | "reenviar_aviso" | "cancelar_assinatura" | "mover_alunos" | "excluir";
 
 /**
- * O que o master pode fazer na conta (a mesma regra do banco — master_conta_acao): conta do app só aparece; legado (Calc/Nutri) =
- * cobrança e acesso pelas regras e telas de hoje até a virada; excluir só sem alunos.
+ * O que o master pode fazer na conta (a mesma regra do banco — master_conta_acao): conta do app só aparece; as demais (a nova e,
+ * desde a virada — W28 —, a legada) têm as ações de cobrança e acesso; excluir só sem alunos.
  */
 export function acoesDaConta(c: ContaLinha): AcaoMaster[] {
   if (c.eh_app) return [];
   const mover: AcaoMaster[] = ["mover_alunos"];
-  if (c.cobranca_legada) return mover;
   const a: AcaoMaster[] = ["plano", "vencimento", "liberar", "registrar_pagamento"];
   a.push(c.situacao === "isenta" || c.isenta_motivo ? "tirar_isencao" : "isentar");
   a.push(c.situacao === "suspensa" ? "reativar" : "suspender");
@@ -138,7 +129,7 @@ const ERROS: Record<string, string> = {
   sem_internet: "Sem internet. Tente quando a conexão voltar.",
   conta_inexistente: "Esta conta não existe mais.",
   conta_do_app: "A conta do app do aluno não muda por aqui.",
-  cobranca_legada: `${LEGADA}: a cobrança desta conta segue pelas telas antigas.`,
+  cobranca_legada: "A cobrança desta conta ainda é a antiga: passe a conta para o núcleo (a virada) antes de mexer nela por aqui.",
   plano_invalido: "Escolha um plano e uma faixa válidos.",
   alunos_acima_do_limite: "A conta tem mais alunos ativos do que essa faixa permite.",
   data_invalida: "Escolha uma data válida.",

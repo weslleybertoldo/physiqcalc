@@ -28,7 +28,8 @@ import { lazy, type ComponentType, type LazyExoticComponent, type ReactNode } fr
  *   src/painel/busca/<Fonte>.tsx            `export default function Fonte({ termo, fechar })` — grupos da busca Ctrl K (use GrupoBusca/ItemBusca)
  *   src/painel/aluno/Cabecalho.tsx          substitui o cabeçalho padrão do perfil do aluno (recebe { alunoId })
  *   src/painel/aluno/Editores.tsx           página "Editar treino e dieta" (/painel/alunos/:id/editar)
- *   src/nucleo/casca.ts                     `export function useDadosCasca(): DadosCasca` — dados da conta/sessão (W3)
+ *   src/nucleo/casca.ts                     `export function useDadosCasca(): DadosCasca` — dados da conta/sessão (W3; desde a
+ *                                           W28 o src/ui/casca/dadosCasca.ts reexporta direto — o padrão da W1 saiu)
  *
  * Contratos: telas, abas, cards, KPIs e avisos exportam `default` um componente. Travas (gates)
  * exportam `default function Gate({ children })` e devolvem `children` (libera), outra coisa (trava)
@@ -133,7 +134,7 @@ function montarGates(mapa: Record<string, unknown>): { nome: string; Gate: Gate 
       .map(([caminho, mod]) => ({ nome: nomeDoArquivo(caminho), Gate: (mod as { default?: Gate }).default }))
       .filter((g): g is { nome: string; Gate: Gate } => Boolean(g.Gate) && !g.nome.startsWith("_") && !/\.(test|spec)$/.test(g.nome)),
     // ordem: bloqueios de acesso primeiro, depois cobrança e faixas
-    ["GateBloqueioMaster", "GateBloqueioAluno", "GateAcessoApp", "GateSemModulo", "GatePlanoLegado", "GatePlano", "GatePagamentoPendente", "FaixaAvisoPlano"],
+    ["GateBloqueioMaster", "GateBloqueioAluno", "GateAcessoApp", "GateSemModulo", "GatePlano", "GatePagamentoPendente", "FaixaAvisoPlano"],
   );
 }
 

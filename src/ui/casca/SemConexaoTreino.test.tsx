@@ -1,38 +1,33 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { situacao } from "@/test/fixturesNucleo";
 
 const h = vi.hoisted(() => ({
   sessao: {} as Record<string, unknown>,
-  auth: { user: null as null | { id: string }, isStaff: false },
+  auth: { user: null as null | { id: string }, loading: false, isStaff: false, isMaster: false },
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
-vi.mock("@/lib/mpClient", () => ({ invokeMp: vi.fn(async () => null) }));
+// a Biblioteca global (a página antiga do master que ficou, W27) — a que ainda espera a sessão do Treino
+vi.mock("@/pages/master/BibliotecaPage", () => ({ default: () => <div>página antiga do Treino</div> }));
 
-import AdminLayout from "@/layouts/AdminLayout";
+import { PaginaMaster } from "@/master/MasterLayout";
 import { treinoDaPagina } from "./treinoDaPagina";
 
 const tentar = vi.fn();
 
-function montarAdmin() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function montarBiblioteca() {
   return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/painel/alunos"]}>
-        <AdminLayout>
-          <div>página antiga do Treino</div>
-        </AdminLayout>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={["/master/biblioteca"]}>
+      <PaginaMaster id="biblioteca" />
+    </MemoryRouter>,
   );
 }
 
 beforeEach(() => {
   tentar.mockClear();
-  h.auth = { user: null, isStaff: false };
+  h.auth = { user: null, loading: false, isStaff: false, isMaster: false };
   h.sessao = { situacao: situacao({ precisa_treino: true, contas: [] }), treino: { estado: "erro", erro: "limite" }, tentarTreinoDeNovo: tentar };
 });
 
@@ -50,9 +45,9 @@ describe("treinoDaPagina (W5 — só as páginas do Treino esperam a troca)", ()
   });
 });
 
-describe("AdminLayout sem o Treino", () => {
+describe("Biblioteca global (a página do master que usa o Treino) sem o Treino — W28: o AdminLayout antigo saiu", () => {
   it("troca em 429: a página antiga dá lugar a 'Sem conexão com o Treino' com 'Tentar de novo' (1 toque = 1 troca)", () => {
-    montarAdmin();
+    montarBiblioteca();
     expect(screen.getByText("Sem conexão com o Treino")).toBeInTheDocument();
     expect(screen.getByText(/Muitas tentativas/)).toBeInTheDocument();
     expect(screen.queryByText("página antiga do Treino")).toBeNull();
@@ -61,24 +56,24 @@ describe("AdminLayout sem o Treino", () => {
   });
   it("conflito de conta: conferência do suporte, sem 'Tentar de novo'", () => {
     h.sessao = { ...h.sessao, treino: { estado: "erro", erro: "conflito" } };
-    montarAdmin();
+    montarBiblioteca();
     expect(screen.getByText("Sua conta precisa de uma conferência")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Tentar de novo/ })).toBeNull();
   });
   it("troca a caminho: esqueleto no lugar da página (nada de tela inteira)", () => {
     h.sessao = { ...h.sessao, treino: { estado: "trocando", erro: null } };
-    const { container } = montarAdmin();
+    const { container } = montarBiblioteca();
     expect(container.querySelector("[data-sem-treino='carregando']")).not.toBeNull();
     expect(container.querySelector("[data-carregando-tela]")).toBeNull();
   });
-  it("nutricionista numa conta com Treino (não usa o Treino): 'Esta página é do módulo Treino'", () => {
+  it("quem não usa o Treino: 'Esta página é do módulo Treino'", () => {
     h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: false }), treino: { estado: "desnecessario", erro: null } };
-    montarAdmin();
+    montarBiblioteca();
     expect(screen.getByText("Esta página é do módulo Treino")).toBeInTheDocument();
   });
-  it("com a sessão do Treino: a página antiga abre como sempre", () => {
-    h.auth = { user: { id: "t1" }, isStaff: true };
-    montarAdmin();
-    expect(screen.getByText("página antiga do Treino")).toBeInTheDocument();
+  it("com a sessão do Treino: a página antiga abre como sempre", async () => {
+    h.auth = { user: { id: "t1" }, loading: false, isStaff: true, isMaster: true };
+    montarBiblioteca();
+    expect(await screen.findByText("página antiga do Treino")).toBeInTheDocument();
   });
 });

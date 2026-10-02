@@ -25,7 +25,6 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@/ui/casca/dadosCasca", () => ({ useDadosCasca: () => h.dados }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: null, isStaff: true, signOut: async () => {} }) }));
-vi.mock("@/lib/mpClient", () => ({ invokeMp: vi.fn(async () => null) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { functions: { invoke: vi.fn(async () => ({ data: { profile: { nome: "Rafael Moura" } }, error: null })) } } }));
 vi.mock("@/integrations/principal/client", () => ({ principalConfigurado: false, principal: {} }));
 vi.mock("@/rotas/registro", async () => {
@@ -107,18 +106,18 @@ describe("site do profissional: páginas e peças registradas entram sozinhas", 
     expect(document.querySelector("[data-paleta-busca]")?.textContent).toContain("Dietas");
   });
 
-  it("perfil do aluno: Resumo com os cards, KPI no cabeçalho e a aba Treino nova", async () => {
+  it("perfil do aluno: Resumo com os cards, KPI no cabeçalho e a aba Treino registrada (W28: sem o Configurar aluno antigo nas outras)", async () => {
     abrir("/painel/alunos/u1");
     expect(await screen.findByTestId("resumo-CardTreino")).toHaveTextContent("u1");
     expect(screen.getByTestId("resumo-CardDieta")).toBeInTheDocument();
     expect(await screen.findByTestId("kpis-KpiPeso")).toBeInTheDocument();
     const abas = [...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"));
-    expect(abas).toEqual(["resumo", "treino", "avaliacao", "financeiro"]);
+    expect(abas).toEqual(["resumo", "treino"]);
     fireEvent.click(document.querySelector('[data-aba-aluno="treino"]')!);
     expect(await screen.findByTestId("abasAluno-Treino")).toHaveTextContent("abasAluno:Treino:u1");
   });
 
-  it("Configurações: a aba nova vence a antiga", async () => {
+  it("Configurações: abre na aba registrada", async () => {
     abrir("/painel/configuracoes");
     expect(await screen.findByTestId("config-Perfil")).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[data-aba-config="perfil"]')?.getAttribute("aria-current")).toBe("page"));
