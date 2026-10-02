@@ -8,6 +8,7 @@ import {
 import { classificarGordura } from "@/utils/composicaoCorporal";
 import { agoraFormatado, formatarDataCurta, calcularIdade } from "@/utils/formatDate";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
+import { salvarPdf } from "@/lib/salvarPdf";
 import { dadosBalanca, rotuloMetodo, tmbEscolhida } from "@/lib/avaliacao";
 
 // texto do PDF sem emoji e sem acento (mesmo padrão dos títulos: "Composicao Corporal")
@@ -176,5 +177,6 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
   desenharRodape(doc, 'Formulas: Mifflin-St Jeor - Jackson & Pollock - Katch-McArdle');
 
   const safeName = (profile.nome?.trim() || "Usuario").replace(/[^a-zA-Z0-9 ]/g, "");
-  doc.save(`Physiq-${safeName}-${profile.user_code || ""}.pdf`);
+  // H4: no APK o download do navegador não baixa — o salvarPdf abre a folha de compartilhar (no site, o mesmo doc.save)
+  return salvarPdf(doc, `Physiq-${safeName}-${profile.user_code || ""}.pdf`);
 }

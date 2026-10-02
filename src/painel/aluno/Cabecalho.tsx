@@ -7,6 +7,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useFinanceiroDoAluno } from "@/financeiro/ui/useFinanceiroDoAluno";
 import { acaoNoAluno, ErroAlunos } from "@/painel/alunos/api";
 import { ConfirmarAcao, type Confirmar } from "@/painel/alunos/AcoesAluno";
 import { acoesDoAluno, mensagemErroAlunos } from "@/painel/alunos/regras";
@@ -20,7 +21,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { ORDEM_KPIS } from "./catalogoAbas";
 import { gerarPdfDadosEvolucao, gerarPdfTreino } from "./dados/pdf";
-import { linhaDoCabecalho, linhaDoPerfil, mensagemErroPerfil, primeiroNome, whatsappDoAluno } from "./dados/regras";
+import { bloqueadoPorPagamento, linhaDoCabecalho, linhaDoPerfil, mensagemErroPerfil, primeiroNome, whatsappDoAluno } from "./dados/regras";
 import { SheetEditarDados } from "./dados/SheetEditarDados";
 import type { PerfilAluno } from "./dados/tipos";
 import { useAtualizarAluno, usePerfilAluno, useTreinoDoAluno, useTreinoPronto } from "./dados/usePerfilAluno";
@@ -175,6 +176,9 @@ export default function Cabecalho({ alunoId }: { alunoId: string }) {
   const treinoQ = useTreinoDoAluno(p);
   const treino = treinoQ.data?.profile ?? null;
   const kpis = listar("kpisAluno", ORDEM_KPIS);
+  // N-64: o app deste aluno está fechado pela mensalidade? (a MESMA consulta do número "Mensalidade" — só quem vê a mensalidade)
+  const fin = useFinanceiroDoAluno(alunoId, !!p);
+  const travadoPorPagamento = !!p && !p.conta_excluida && bloqueadoPorPagamento(fin.data, p.ativo);
   const [editar, setEditar] = useState(false);
   const nome = p?.nome || "Aluno";
   const linha = p ? linhaDoCabecalho(p, treino) : "";
@@ -214,6 +218,11 @@ export default function Cabecalho({ alunoId }: { alunoId: string }) {
                       </Chip>
                     )}
                     {p.bloqueado && p.ativo && <Chip tom="r" icone={Lock} data-chip-situacao="bloqueado">BLOQUEADO</Chip>}
+                    {travadoPorPagamento && (
+                      <span title="O app do aluno está fechado: a mensalidade venceu e a conta bloqueia o app de quem não pagou (Configurações › Recebimento)">
+                        <Chip tom="r" icone={Lock} data-chip-situacao="bloqueado-pagamento">BLOQUEADO (PAGAMENTO)</Chip>
+                      </span>
+                    )}
                     {!p.ativo && <Chip tom="g" data-chip-situacao={p.conta_excluida ? "excluida" : "desativado"}>{p.conta_excluida ? "CONTA EXCLUÍDA" : "DESATIVADO"}</Chip>}
                   </div>
                 </>

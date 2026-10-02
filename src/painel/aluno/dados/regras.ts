@@ -3,9 +3,11 @@
  * ajustes (R12) com os textos novos (F1: "envio de fotos pelo link"), o link do diário e os 7 atalhos do "Fluxo de consulta".
  */
 import { rotuloObjetivo } from "@/app-aluno/sozinho/regras";
+import { travaDoInadimplente } from "@/financeiro/regras";
+import type { FinanceiroProfissional, ResumoMatricula } from "@/financeiro/tipos";
 import { formatarTelefone, type AlunoLinha } from "@/painel/alunos/regras";
 import { MENSAGEM_REPETIDO } from "@/nucleo/dadoRepetido";
-import type { AjustesAluno, ChaveAjuste, FormDadosAluno, Genero, PerfilAluno, PerfilTreinoAluno } from "./tipos";
+import type { AjustesAluno, ChaveAjuste, FormDadosAluno, Genero, ModuloAluno, PerfilAluno, PerfilTreinoAluno } from "./tipos";
 
 export { formatarTelefone };
 
@@ -367,4 +369,95 @@ export function textoMensagensDesligadas(n: number): string {
   return n === 1
     ? "1 aluno está com as mensagens automáticas do WhatsApp desligadas."
     : `${n} alunos estão com as mensagens automáticas do WhatsApp desligadas.`;
+}
+
+// ───────────────────────── H4 (ajustes da revisão final) ─────────────────────────
+
+/**
+ * C57/N-5: as abas do perfil seguem os módulos da conta ATIVA (o menu do painel); o master que abre aluno de OUTRA conta (ou sem
+ * conta ativa) vê as abas pela conta do aluno — o banco já deixa o master ler (pode_mexer_no_acesso). Sem conta conhecida, a regra
+ * de sempre: os módulos da conta ativa (ou só Treino, o padrão do menu).
+ */
+export function modulosDoPerfil(
+  ativa: { id: string; modulos: readonly ModuloAluno[] } | null | undefined,
+  perfil: Pick<PerfilAluno, "conta_id" | "conta_modulos"> | null | undefined,
+  master: boolean,
+): ModuloAluno[] {
+  if (master && perfil?.conta_id && perfil.conta_id !== ativa?.id && perfil.conta_modulos?.length) return [...perfil.conta_modulos];
+  return ativa?.modulos?.length ? [...ativa.modulos] : ["treino"];
+}
+
+/**
+ * N-27: o atalho "Ver diário" (o "Ver diário do paciente" do Nutri) só para quem abre o Diário da conta e enxerga as fotos deste
+ * aluno nele — a regra clínica da W18/W24: nutricionista da conta ATIVA com o módulo Nutrição (ou o master), o aluno da MESMA conta
+ * e com Nutrição. O Diário lista a conta ativa: o de outra conta abriria vazio.
+ */
+export function podeVerDiarioDoAluno(
+  ativa: { id: string; papeis?: readonly string[]; modulos?: readonly string[] } | null | undefined,
+  perfil: Pick<PerfilAluno, "conta_id" | "modulos">,
+  master: boolean,
+): boolean {
+  if (!ativa || !perfil.conta_id || perfil.conta_id !== ativa.id || !(perfil.modulos ?? []).includes("nutricao")) return false;
+  return master || ((ativa.papeis ?? []).includes("nutricionista") && (ativa.modulos ?? []).includes("nutricao"));
+}
+
+/** Dietas › Diário só deste aluno (a página aceita ?aluno=<matrícula> — W24), no período padrão de 7 dias. */
+export function rotaDoDiarioDoAluno(pacienteId: string): string {
+  return `/painel/dietas?aba=diario&aluno=${encodeURIComponent(pacienteId)}`;
+}
+
+/**
+ * N-64: o resumo que a trava do app lê (financeiro_do_aluno — a regra R15/P13, travaDoInadimplente), montado do Financeiro do aluno
+ * que o painel já carrega (prof_aluno). null = quem olha não enxerga a mensalidade (P6: só o dono e o master) — sem ela o selo
+ * mentiria, então não aparece.
+ */
+export function resumoDaTrava(d: FinanceiroProfissional): ResumoMatricula | null {
+  if (!d.permissoes.mensalidade) return null;
+  const m = d.mensalidade;
+  return {
+    paciente_id: d.aluno.paciente_id,
+    conta_id: d.aluno.conta_id,
+    conta_nome: d.aluno.conta_nome,
+    recebimento_modo: d.conta.modo,
+    bloquear_inadimplente: d.conta.bloquear,
+    tem_chave: !!d.conta.chave,
+    profissional: null,
+    mensalidade_valor: m?.valor ?? null,
+    plano_nome: m?.plano ?? null,
+    pausada: !!m?.pausada,
+    pago_ate: m?.pago_ate ?? null,
+    desde: m?.desde ?? null,
+    aguardando: d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao"),
+    assinatura_ativa: d.assinatura?.status === "authorized",
+    abertas: d.cobrancas.filter((c) => c.status === "aberta").map((c) => ({ id: c.id, descricao: c.descricao, valor: c.valor, vencimento: c.vencimento })),
+    aguardando_avulsas: d.cobrancas.filter((c) => c.tipo === "avulsa" && c.status === "aguardando_confirmacao").length,
+    app: d.conta.origem === "app",
+    teste_ate: m?.teste_ate ?? null,
+  };
+}
+
+/** N-64: o selo "BLOQUEADO (pagamento)" — o app deste aluno está fechado pela mensalidade (a trava da conta, sem mudar a regra). */
+export function bloqueadoPorPagamento(d: FinanceiroProfissional | null | undefined, ativo: boolean, agora: Date = new Date()): boolean {
+  if (!d || !ativo) return false;
+  const r = resumoDaTrava(d);
+  return !!r && travaDoInadimplente(r, agora);
+}
+
+/** N-45: o Financeiro do aluno mostra os 12 lançamentos mais recentes; "Ver todos" abre a lista inteira (até os 500 que a consulta traz). */
+export const LANCAMENTOS_VISIVEIS = 12;
+export const LANCAMENTOS_MAX = 500;
+
+/**
+ * N-45: "Editar, estornar ou excluir" (o "Abrir no Financeiro" do Nutri): Painel › Financeiro › Lançamentos com a busca pelo nome do
+ * aluno e o período do 1º lançamento dele até hoje (sem o período, a tela abre nos últimos 30 dias).
+ */
+export function rotaDosLancamentosDoAluno(nome: string, datas: readonly string[], hoje: string): string {
+  const validas = datas.map((d) => (d || "").slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  const q = new URLSearchParams({ aba: "lancamentos" });
+  if (nome.trim()) q.set("q", nome.trim());
+  if (validas.length) {
+    q.set("de", validas[0] < hoje ? validas[0] : hoje);
+    q.set("ate", validas[validas.length - 1] > hoje ? validas[validas.length - 1] : hoje);
+  }
+  return `/painel/financeiro?${q.toString()}`;
 }

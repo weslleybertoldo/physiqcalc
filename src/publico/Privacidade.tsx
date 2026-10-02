@@ -1,10 +1,11 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, Database, FileCheck2, Lock, Scale, ShieldCheck, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import { CONTATO_SUPORTE } from "@/nucleo/suporte";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 
-const ATUALIZADA_EM = "1º de outubro de 2026";
+const ATUALIZADA_EM = "2 de outubro de 2026";
 
 function Secao({ id, icone: Icone, titulo, children }: { id: string; icone: LucideIcon; titulo: string; children: ReactNode }) {
   return (
@@ -50,7 +51,7 @@ export default function Privacidade() {
         <Secao id="quem-somos" icone={UserRound} titulo="Quem somos">
           <p>
             O Physiq é um aplicativo de treino e alimentação: o aluno acompanha o treino, a dieta e a evolução, e o profissional (personal trainer e
-            nutricionista) prescreve e acompanha pelo site. É operado por Weslley Bertoldo (Maceió-AL, Brasil). Contato: contato@seazone.com.br.
+            nutricionista) prescreve e acompanha pelo site. É operado por Weslley Bertoldo (Maceió-AL, Brasil). Contato: {CONTATO_SUPORTE}.
           </p>
         </Secao>
 

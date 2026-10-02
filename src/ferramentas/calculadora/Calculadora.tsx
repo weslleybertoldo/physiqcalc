@@ -180,7 +180,7 @@ export function CalculadoraFerramenta({ cabecalho }: { cabecalho?: (acoes: React
   const gerarPdfComposicao = async () => {
     try {
       const { generateReport } = await import("@/lib/generateReport");
-      generateReport({
+      await generateReport({
         name: nome,
         gender: sexo,
         age: nIdade,
@@ -199,7 +199,7 @@ export function CalculadoraFerramenta({ cabecalho }: { cabecalho?: (acoes: React
   const gerarPdfComparativo = async () => {
     try {
       const { baixarPdfComparativo } = await import("./pdfComparativo");
-      const arquivo = baixarPdfComparativo(refD, novo, comuns);
+      const arquivo = await baixarPdfComparativo(refD, novo, comuns);
       toast.success("PDF gerado", { description: arquivo });
     } catch (e) {
       toast.error("Não foi possível gerar o PDF", { description: e instanceof Error ? e.message : "erro inesperado" });

@@ -3,7 +3,9 @@
 //   Alunos      alunos_da_conta no filtro "Ativos" (o número do menu e da página) + alunos_novos_por_mes (o card da página Alunos);
 //   Financeiro  as 3 leituras do Resumo (lançamentos desde 1º/jan do ano passado, cobranças e o prof_resumo da W6) e as regras dele;
 //   Agenda      os agendamentos da conta (o recorte da Agenda) e os alunos dela; os calendários escondidos na Agenda ficam fora aqui também;
-//   Diário      useDiarioDaConta(conta, você, 1) da W24 (só para a nutricionista da conta — a regra clínica);
+//   Diário      useDiarioDaConta(conta, você, 1) da W24 (só para a nutricionista da conta — a regra clínica); H4: + a de 7 dias (a MESMA
+//               do número da aba Diário e do "Só não reagidas" no período padrão) para as fotos aguardando reação;
+//   Recibos     H4: a lista de Financeiro › Recibos (a mesma chave CHAVES.recibos) para o "Recibos no mês";
 //   Pré-consulta o contador do menu (respostas novas);
 //   e as 2 leituras novas: painel_resumo (principal) e painel-resumo-treino (Treino, com a sessão do Treino).
 // Nada aqui grava: o Dashboard só lê (nem cria o calendário padrão, nem as categorias padrão do Financeiro).
@@ -22,15 +24,16 @@ import { CHAVES_AGENDA } from "@/painel/agenda/useAgenda";
 import { paraEvento, type EventoPainel } from "@/painel/agenda/visao";
 import { useDiarioDaConta } from "@/painel/dietas/useDiario";
 import { podeEscreverNutricao } from "@/painel/dietas/contexto";
-import { listarCobrancasDoResumo, listarTransacoes } from "@/painel/financeiro/dados";
+import { contarNaoReagidas } from "@/painel/dietas/diarioPainel";
+import { listarCobrancasDoResumo, listarRecibos, listarTransacoes } from "@/painel/financeiro/dados";
 import { aReceber, kpis, precisamDeAtencao, recebimentos } from "@/painel/financeiro/resumo";
 import { CHAVES, useResumoDaConta } from "@/painel/financeiro/useFinanceiro";
 import { CHAVES_PRECONSULTA, contarRespostasNovas } from "@/painel/preconsulta/novas";
 import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 import { buscarResumoPrincipal, buscarResumoTreino, listarRespostasRecentes } from "./dados";
 import {
-  adesaoMedia, atencaoDoFinanceiro, atividadeRecente, avaliacoesVencidas, cadastrosPendentes, consultasDeHoje, itensAniversario, juntarAlunos, juntarAtencao,
-  preConsultasNovas, semMarcarDieta, semTreinar, ultimosDiasAte,
+  adesaoMedia, atencaoDoFinanceiro, atividadeRecente, avaliacoesVencidas, cadastrosPendentes, consultasDeHoje, fotosSemReacao, itensAniversario, juntarAlunos,
+  juntarAtencao, preConsultasNovas, recibosDoMes, semMarcarDieta, semTreinar, ultimosDiasAte,
 } from "./regras";
 
 export const CHAVES_DASHBOARD = {
@@ -99,6 +102,9 @@ export function useDashboard() {
   const transQ = useQuery({ queryKey: CHAVES.resumoTransacoes(contaId), queryFn: () => listarTransacoes(contaId, uid, desdeFin, hoje), enabled: pronto, staleTime: 15_000 });
   const cobsQ = useQuery({ queryKey: CHAVES.cobrancas(contaId), queryFn: () => listarCobrancasDoResumo(contaId, uid, desdeFin), enabled: pronto, staleTime: 15_000 });
   const resumoFinQ = useResumoDaConta({ contaId, pronto });
+  // H4: "Recibos no mês" — a lista da aba Recibos (o dono vê os da conta; o membro, os dele — a regra do banco)
+  const recibosQ = useQuery({ queryKey: CHAVES.recibos(contaId), queryFn: () => listarRecibos(contaId, uid), enabled: pronto, staleTime: 15_000 });
+  const recibosMes = recibosQ.data ? recibosDoMes(recibosQ.data, hoje) : null;
 
   // ── Agenda: os últimos 14 dias até hoje (o mini gráfico e o "hoje") ──
   const deAgenda = useMemo(() => startOfDay(addDays(new Date(`${hoje}T12:00:00`), -13)), [hoje]);
@@ -112,6 +118,9 @@ export function useDashboard() {
 
   // ── Diário de hoje (W24) e Pré-consulta (o contador do menu) ──
   const diario = useDiarioDaConta(contaId, uid, 1, pronto && temNutricao && souNutri);
+  // H4: as fotos sem reação dos últimos 7 dias (a mesma consulta e o mesmo número da aba Diário)
+  const diario7 = useDiarioDaConta(contaId, uid, 7, pronto && temNutricao && souNutri);
+  const fotosAguardando = temNutricao && souNutri ? contarNaoReagidas(diario7.registros) : 0;
   const novasQ = useQuery({
     queryKey: CHAVES_PRECONSULTA.novas(contaId, uid),
     queryFn: () => contarRespostasNovas(contaId, uid),
@@ -152,11 +161,12 @@ export function useDashboard() {
       // a data marcada mora no Treino: sem o resumo dele (a nutricionista), só os alunos só de Nutrição
       avaliacoesVencidas(alunos, hoje, Boolean(treinoQ.data)),
       semMarcarDieta(alunos, hoje),
+      fotosSemReacao(fotosAguardando),
       cadastrosPendentes(alunosQ.data?.pendentes ?? 0),
       preConsultasNovas(novasQ.data ?? 0),
       itensAniversario(alunos, hoje),
     );
-  }, [financeiro, alunos, hoje, alunosQ.data, novasQ.data, treinoQ.data]);
+  }, [financeiro, alunos, hoje, alunosQ.data, novasQ.data, treinoQ.data, fotosAguardando]);
 
   const atividade = useMemo(
     () => atividadeRecente({
@@ -173,7 +183,7 @@ export function useDashboard() {
   return {
     conta, contaId, uid, pronto, hoje, modulos, temTreino, temNutricao, souNutri, sessaoTreino,
     alunosQ, novosQ, principalQ, treinoQ, treinoLigado, transQ, cobsQ, resumoFinQ, agendaQ, diario, novasQ, respostasQ,
-    alunos, adesao, financeiro, agenda, atencao, atividade,
+    alunos, adesao, financeiro, agenda, atencao, atividade, diario7, fotosAguardando, recibosQ, recibosMes,
   };
 }
 

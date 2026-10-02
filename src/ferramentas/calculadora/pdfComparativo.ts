@@ -6,6 +6,7 @@ import {
 } from "@/utils/gerarRelatorio";
 import { calcularTMBKatch, calcularTMBMifflin, classificarGordura } from "@/utils/composicaoCorporal";
 import { agoraFormatado } from "@/utils/formatDate";
+import { salvarPdf } from "@/lib/salvarPdf";
 import { MEDIDAS_CONFIG, type DadosComuns, type NovoData, type RefData } from "./comparativo";
 
 /** Monta o PDF (sem baixar) — o teste confere o texto; a tela chama `baixarPdfComparativo`. */
@@ -93,9 +94,9 @@ export function montarPdfComparativo(refD: RefData, novo: NovoData, dados: Dados
   return { doc, nomeArquivo: `Comparativo ${safeName}.pdf` };
 }
 
-/** Gera e baixa (o mesmo nome de arquivo de hoje: "Comparativo <nome>.pdf"). */
-export function baixarPdfComparativo(refD: RefData, novo: NovoData, dados: DadosComuns): string {
+/** Gera e baixa (o mesmo nome de arquivo de hoje: "Comparativo <nome>.pdf"); no APK, pela folha de compartilhar (H4 — salvarPdf). */
+export async function baixarPdfComparativo(refD: RefData, novo: NovoData, dados: DadosComuns): Promise<string> {
   const { doc, nomeArquivo } = montarPdfComparativo(refD, novo, dados);
-  doc.save(nomeArquivo);
+  await salvarPdf(doc, nomeArquivo);
   return nomeArquivo;
 }

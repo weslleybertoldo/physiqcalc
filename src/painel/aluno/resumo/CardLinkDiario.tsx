@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, ExternalLink, ImageUp, MessageCircle, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { Camera, Copy, ExternalLink, ImageUp, MessageCircle, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useConta } from "@/nucleo/conta";
 import { enderecoDoDiario } from "@/nucleo/siteAntigoNutri";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
@@ -10,7 +12,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto } from "@/ui/premium/Estados";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { ErroPerfil, gerarNovoLink } from "../dados/api";
-import { linkLigado, mensagemErroPerfil, temNutricao, textoDoLink, whatsappDoAluno } from "../dados/regras";
+import { linkLigado, mensagemErroPerfil, podeVerDiarioDoAluno, rotaDoDiarioDoAluno, temNutricao, textoDoLink, whatsappDoAluno } from "../dados/regras";
 import type { PerfilAluno } from "../dados/tipos";
 import { chavePerfilAluno, usePerfilAluno } from "../dados/usePerfilAluno";
 
@@ -19,10 +21,12 @@ import { chavePerfilAluno, usePerfilAluno } from "../dados/usePerfilAluno";
  * paciente" antigo mostrava /p/<código>, que dava 404 (o /p/ antigo passa a abrir o diário, src/publico/LinkAntigo.tsx).
  * Desde a W24 o /d/ é a página pública do Physiq (src/nucleo/siteAntigoNutri.ts — um lugar só); W28: o aviso "abre no site do
  * PhysiqNutri" saiu. Copiar, abrir, mandar no WhatsApp e gerar um link novo (o anterior para). Só para aluno com Nutrição (o
- * diário é da nutricionista).
+ * diário é da nutricionista). H4 (N-27): o atalho "Ver diário" (o "Ver diário do paciente" do Nutri) abre Dietas › Diário só deste
+ * aluno — para quem vê o Diário (a nutricionista da conta, ou o master) e com o aluno da conta aberta.
  */
 export default function CardLinkDiario({ alunoId }: { alunoId: string }) {
   const q = usePerfilAluno(alunoId);
+  const { conta, ehMaster } = useConta();
   const qc = useQueryClient();
   const celular = useIsMobile();
   const p = q.data;
@@ -41,6 +45,7 @@ export default function CardLinkDiario({ alunoId }: { alunoId: string }) {
 
   const link = enderecoDoDiario(p.link_codigo);
   const estado = linkLigado(p.ajustes);
+  const verDiario = podeVerDiarioDoAluno(conta, p, ehMaster);
   const zap = whatsappDoAluno(p.telefone);
 
   const copiar = async () => {
@@ -85,6 +90,11 @@ export default function CardLinkDiario({ alunoId }: { alunoId: string }) {
         </p>
       )}
       <div className="mt-auto flex flex-wrap gap-x-4 gap-y-2 pt-3">
+        {verDiario && (
+          <Link to={rotaDoDiarioDoAluno(p.paciente_id)} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-verde-3 hover:text-verde-2" data-ver-diario-aluno>
+            <Camera aria-hidden className="h-3.5 w-3.5" /> Ver diário
+          </Link>
+        )}
         <button type="button" onClick={() => void copiar()} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-violeta-3" data-link-copiar>
           <Copy aria-hidden className="h-3.5 w-3.5" /> Copiar
         </button>

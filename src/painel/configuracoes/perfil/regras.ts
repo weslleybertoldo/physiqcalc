@@ -23,10 +23,14 @@ export const REGISTRO_MAX = 30;
 export const ENDERECO_MAX = 160;
 export const CIDADE_MAX = 80;
 export const SENHA_MIN = 8;
+/** H4 (N-23): o texto livre "Sua área" do tipo "Outra área" (profiles.area_outra — o banco aceita até 60, como no Nutri). */
+export const AREA_OUTRA_MAX = 60;
 
 export interface FormPerfil {
   nome: string;
   tipo: TipoPerfil | "";
+  /** só vale com o tipo "Outra área" (ex.: educação física, medicina, enfermagem) */
+  areaOutra: string;
   registro: string;
   whatsapp: string;
   endereco: string;
@@ -85,7 +89,10 @@ export function rotuloRegistro(tipo: TipoPerfil | ""): string {
 }
 
 /** O formulário a partir do perfil (sem nome no perfil, o do cadastro — nunca o e-mail). */
-export function formDoPerfil(p: { nome?: string | null; tipo_perfil?: string | null; dados_profissionais?: unknown } | null, nomeCadastro = ""): FormPerfil {
+export function formDoPerfil(
+  p: { nome?: string | null; tipo_perfil?: string | null; area_outra?: string | null; dados_profissionais?: unknown } | null,
+  nomeCadastro = "",
+): FormPerfil {
   const o = objeto(p?.dados_profissionais);
   const tipo = TIPOS_PERFIL.some((t) => t.id === p?.tipo_perfil) ? (p!.tipo_perfil as TipoPerfil) : "";
   const e164 = RE_E164.test(texto(o, "whatsapp_e164")) ? texto(o, "whatsapp_e164") : paraE164(texto(o, "telefone")) ?? "";
@@ -94,6 +101,7 @@ export function formDoPerfil(p: { nome?: string | null; tipo_perfil?: string | n
   return {
     nome: (p?.nome ?? "").trim() || nomeCadastro,
     tipo,
+    areaOutra: (p?.area_outra ?? "").trim(),
     registro,
     whatsapp: e164 ? mascararTelefoneBR(e164.startsWith("+55") ? e164.slice(3) : e164) : "",
     endereco: texto(o, "endereco"),
@@ -107,6 +115,7 @@ export function validarPerfil(f: FormPerfil): string | null {
   const nome = f.nome.trim();
   if (nome.length < 2) return "Informe seu nome (pelo menos 2 letras).";
   if (nome.length > NOME_MAX) return `O nome pode ter até ${NOME_MAX} caracteres.`;
+  if (f.tipo === "outra_area" && (f.areaOutra ?? "").trim().length > AREA_OUTRA_MAX) return `A área pode ter até ${AREA_OUTRA_MAX} caracteres.`;
   if (f.registro.trim().length > REGISTRO_MAX) return `O registro pode ter até ${REGISTRO_MAX} caracteres.`;
   if (f.whatsapp.trim() && !paraE164(f.whatsapp)) return "WhatsApp inválido: informe DDD e número, ex. (11) 99999-8888.";
   if (f.endereco.trim().length > ENDERECO_MAX) return `O endereço pode ter até ${ENDERECO_MAX} caracteres.`;
@@ -135,6 +144,12 @@ export function dadosParaGravar(f: FormPerfil, anterior: unknown): Record<string
   if (f.tipo === "personal") saida.cref = registro;
   else if (f.tipo === "nutricionista" || f.tipo === "academico") saida.crn = registro;
   return saida;
+}
+
+/** O que vai em profiles.area_outra: só com "Outra área" e com texto (senão null — a regra do Nutri, areaOutraParaGravar). */
+export function areaOutraParaGravar(f: Pick<FormPerfil, "tipo" | "areaOutra">): string | null {
+  const a = (f.areaOutra ?? "").trim();
+  return f.tipo === "outra_area" && a ? a.slice(0, AREA_OUTRA_MAX) : null;
 }
 
 /** A foto do Perfil (a que o profissional enviou) — sem ela vale a do Google. */

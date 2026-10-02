@@ -9,7 +9,9 @@
 //     refeições marcadas ÷ marcáveis (adesaoDoPeriodo, a do card Dieta do Resumo do aluno), nos últimos 7 dias;
 //   · Precisam de atenção (P28): Pix aguardando e cobrança vencida (os do Resumo do Financeiro), 7 dias sem treinar, avaliação vencida
 //     pela data marcada (sem data, 60 dias da última), 3 dias sem marcar a dieta, cadastros pendentes do link /c/ (o "Pendentes" de
-//     Alunos), respostas novas da pré-consulta (o número do menu) e os aniversariantes da semana (a regra do Dashboard do Nutri).
+//     Alunos), respostas novas da pré-consulta (o número do menu) e os aniversariantes da semana (a regra do Dashboard do Nutri);
+//     H4: + as fotos do diário aguardando reação (o "Só não reagidas" de Dietas › Diário nos 7 dias — só para quem vê o diário);
+//   · H4: Recibos no mês = os recibos de Financeiro › Recibos (a mesma consulta) com a data no mês de hoje (o KPI do Nutri).
 import { primeiroNome, resumoDaSemana } from "@/app-aluno/inicio/pecas/regras";
 import { cancelado, diaSP, somarDias } from "@/agenda/regras";
 import { planoAtivo } from "@/nutricao/app/dia";
@@ -276,7 +278,7 @@ export const LIMIAR_SEM_TREINAR = 7;
 export const LIMIAR_SEM_DIETA = 3;
 export const LIMIAR_AVALIACAO_SEM_DATA = 60;
 
-export type TipoAtencao = "pix" | "cobranca" | "treino" | "avaliacao" | "dieta" | "cadastro" | "preconsulta" | "aniversario";
+export type TipoAtencao = "pix" | "cobranca" | "treino" | "avaliacao" | "dieta" | "diario" | "cadastro" | "preconsulta" | "aniversario";
 
 export interface ItemAtencao {
   chave: string;
@@ -292,7 +294,7 @@ export interface ItemAtencao {
   ordem: string;
 }
 
-const ORDEM_TIPO: Record<TipoAtencao, number> = { pix: 0, cobranca: 1, treino: 2, avaliacao: 3, dieta: 4, cadastro: 5, preconsulta: 6, aniversario: 7 };
+const ORDEM_TIPO: Record<TipoAtencao, number> = { pix: 0, cobranca: 1, treino: 2, avaliacao: 3, dieta: 4, diario: 5, cadastro: 6, preconsulta: 7, aniversario: 8 };
 const ordem = (tipo: TipoAtencao, gravidade: number, nome: string) => `${ORDEM_TIPO[tipo]}:${String(99999 - Math.min(99999, Math.max(0, gravidade))).padStart(5, "0")}:${nome.toLowerCase()}`;
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
@@ -382,6 +384,27 @@ export function semMarcarDieta(alunos: readonly AlunoDash[], hoje: string): Item
     });
   }
   return saida;
+}
+
+/** Dietas › Diário com o período padrão (7 dias) e "Só não reagidas" ligado: a tela que mostra o mesmo número. */
+export const LINK_FOTOS_SEM_REACAO = "/painel/dietas?aba=diario&dias=7&nao_reagidas=1";
+
+/**
+ * H4 (o Nutri mostrava em "Precisam de atenção"): as fotos do diário sem a reação da nutricionista nos últimos 7 dias — o MESMO
+ * número do "Só não reagidas (N)" de Dietas › Diário (e do número da aba Diário), da mesma consulta. 1 item com o número.
+ */
+export function fotosSemReacao(n: number): ItemAtencao[] {
+  if (!(n > 0)) return [];
+  return [{
+    chave: "diario", tipo: "diario", nome: plural(n, "foto do diário", "fotos do diário"), foto: null, chip: "DIÁRIO", tom: "n",
+    texto: "Aguardando a sua reação (últimos 7 dias)", link: LINK_FOTOS_SEM_REACAO, ordem: ordem("diario", n, ""),
+  }];
+}
+
+/** H4: "Recibos no mês" (o KPI do Nutri) — os recibos com a data no mês de hoje, da lista de Financeiro › Recibos. */
+export function recibosDoMes(recibos: readonly { data: string }[], hoje: string): number {
+  const mes = hoje.slice(0, 7);
+  return recibos.filter((r) => (r.data ?? "").slice(0, 7) === mes).length;
 }
 
 /** O "Pendentes" da página Alunos (auto-cadastros pelo link /c/): 1 item com o número. */

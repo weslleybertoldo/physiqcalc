@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  CABECALHO_CSV,
   FILTROS_PADRAO,
+  MAX_EXPORTACAO,
   acoesDoAluno,
   chipsDosModulos,
+  comPeriodo,
+  dataHoraCSV,
+  exportarTodos,
   filtrosAtivos,
   filtrosParaServidor,
+  formatarCPF,
+  intervaloPeriodo,
   limiteAtingido,
   linhaFina,
   mensagemErroAlunos,
@@ -12,6 +19,7 @@ import {
   normalizarLista,
   rotaDoAluno,
   selosDoAluno,
+  textoExportacao,
   textoVagas,
   type AlunoLinha,
 } from "./regras";
@@ -101,15 +109,130 @@ describe("W13 — filtros e leitura da resposta", () => {
   });
 });
 
-describe("W13 — exportar CSV (N-66)", () => {
-  it("BOM, separador ; e o que a lista mostra", () => {
-    const csv = montarCSV([aluno({ tags: ["VIP", "Manhã"], pagamento: { s: "pago", ate: "2026-10-19T12:00:00Z" } }), aluno({ nome: "Ana; Souza", ativo: false })]);
-    expect(csv.startsWith("﻿Nome;E-mail;Telefone;Módulos;Personal;Nutricionista;Tags;Situação;Pagamento;Cadastro\r\n")).toBe(true);
-    expect(csv).toContain("Rafael Moura;rafael@x.com;(82) 99999-0000;Treino + Nutrição;Lucas Ferreira;Camila Rocha;VIP, Manhã;Ativo;Pago até 19/10;10/03/2026");
-    expect(csv).toContain('"Ana; Souza"');
+describe("W13/H4 — exportar CSV (N-66)", () => {
+  it("BOM, separador ; e o que a lista mostra + as colunas do CSV do Nutri (Apelido, CPF, Nascimento, Gênero, Modificado em)", () => {
+    const csv = montarCSV([
+      aluno({ tags: ["VIP", "Manhã"], pagamento: { s: "pago", ate: "2026-10-19T12:00:00Z" }, apelido: "Rafa", cpf: "52998224725", nascimento: "1998-03-10", genero: "masculino" }),
+      aluno({ nome: "Ana; Souza", ativo: false }),
+    ]);
+    expect(csv.startsWith("﻿Nome;Apelido;CPF;E-mail;Telefone;Nascimento;Gênero;Módulos;Personal;Nutricionista;Tags;Situação;Pagamento;Cadastro;Modificado em\r\n")).toBe(true);
+    expect(CABECALHO_CSV).toHaveLength(15);
+    expect(csv).toContain("Rafael Moura;Rafa;529.982.247-25;rafael@x.com;(82) 99999-0000;10/03/1998;Masculino;Treino + Nutrição;Lucas Ferreira;Camila Rocha;VIP, Manhã;Ativo;Pago até 19/10;10/03/2026;01/09/2026 - 09:00:00");
+    // sem os campos (lista antiga, APK velho): as colunas novas saem vazias, o resto igual
+    expect(csv).toContain('"Ana; Souza";;;rafael@x.com;');
     expect(csv).toContain(";Desativado;");
+  });
+  it("CPF com máscara (11 dígitos) e a data e hora da modificação no horário de São Paulo", () => {
+    expect(formatarCPF("52998224725")).toBe("529.982.247-25");
+    expect(formatarCPF("529.982.247-25")).toBe("529.982.247-25");
+    expect(formatarCPF("123")).toBe("123");
+    expect(formatarCPF(null)).toBe("");
+    expect(dataHoraCSV("2026-10-02T02:30:05Z")).toBe("01/10/2026 - 23:30:05");
+    expect(dataHoraCSV(null)).toBe("");
   });
   it("célula que começa com fórmula vira texto (sem injeção no Excel)", () => {
     expect(montarCSV([aluno({ nome: "=HYPERLINK(1)" })])).toContain("'=HYPERLINK(1)");
+  });
+});
+
+describe("H4 — filtros do Nutri na lista (N-10): gênero, cadastro, modificação e a ordem", () => {
+  const agora = new Date("2026-10-02T15:00:00Z");
+  it("o padrão segue só com a situação (o número do menu não muda) e a ordem alfabética não vai para o servidor", () => {
+    expect(filtrosParaServidor(FILTROS_PADRAO, agora)).toEqual({ situacao: "ativos" });
+    expect(FILTROS_PADRAO.ordem).toBe("nome");
+  });
+  it("gênero e ordem vão como a alunos_da_conta entende", () => {
+    expect(filtrosParaServidor({ ...FILTROS_PADRAO, genero: "feminino", ordem: "modificados" }, agora))
+      .toEqual({ situacao: "ativos", genero: "feminino", ordem: "modificados" });
+    expect(filtrosParaServidor({ ...FILTROS_PADRAO, ordem: "recentes" }, agora)).toEqual({ situacao: "ativos", ordem: "recentes" });
+  });
+  it("período relativo (1/2/3 meses atrás) = desde aquele instante até agora; personalizado = os dias inteiros escolhidos", () => {
+    expect(intervaloPeriodo("todo", "", "", agora)).toEqual({});
+    expect(intervaloPeriodo("1m", "", "", agora)).toEqual({ de: "2026-09-02T15:00:00.000Z" });
+    expect(intervaloPeriodo("3m", "", "", agora)).toEqual({ de: "2026-07-02T15:00:00.000Z" });
+    const c = intervaloPeriodo("custom", "2026-09-01", "2026-09-30", agora);
+    expect(new Date(c.de!).getDate()).toBe(1);
+    expect(new Date(c.de!).getHours()).toBe(0);
+    expect(new Date(c.ate!).getDate()).toBe(30);
+    expect(new Date(c.ate!).getHours()).toBe(23);
+    // data faltando ou inválida: aquele lado fica sem limite
+    expect(intervaloPeriodo("custom", "2026-09-01", "", agora)).toEqual({ de: c.de });
+    expect(intervaloPeriodo("custom", "2026-02-31", "xx", agora)).toEqual({});
+  });
+  it("cadastro vira cadastro_de/_ate e modificação vira modificado_de/_ate", () => {
+    const r = filtrosParaServidor({ ...FILTROS_PADRAO, cadastro: "2m", modificacao: "custom", modificacaoDe: "2026-09-10", modificacaoAte: "2026-09-12" }, agora);
+    expect(r.cadastro_de).toBe("2026-08-02T15:00:00.000Z");
+    expect(r.cadastro_ate).toBeUndefined();
+    expect(new Date(r.modificado_de).getDate()).toBe(10);
+    expect(new Date(r.modificado_ate).getDate()).toBe(12);
+  });
+  it("os filtros novos ligam o 'Limpar'; a ordem sozinha não é filtro", () => {
+    expect(filtrosAtivos({ ...FILTROS_PADRAO, genero: "outro" })).toBe(true);
+    expect(filtrosAtivos({ ...FILTROS_PADRAO, cadastro: "1m" })).toBe(true);
+    expect(filtrosAtivos({ ...FILTROS_PADRAO, modificacao: "custom" })).toBe(true);
+    expect(filtrosAtivos({ ...FILTROS_PADRAO, ordem: "recentes" })).toBe(false);
+  });
+  it("trocar o período limpa as datas personalizadas; 'Personalizar data' mantém", () => {
+    const f = { ...FILTROS_PADRAO, cadastro: "custom" as const, cadastroDe: "2026-09-01", cadastroAte: "2026-09-30" };
+    expect(comPeriodo(f, "cadastro", "1m")).toMatchObject({ cadastro: "1m", cadastroDe: "", cadastroAte: "" });
+    expect(comPeriodo(f, "cadastro", "custom")).toMatchObject({ cadastro: "custom", cadastroDe: "2026-09-01", cadastroAte: "2026-09-30" });
+    expect(comPeriodo(f, "modificacao", "2m")).toMatchObject({ modificacao: "2m", cadastroDe: "2026-09-01" });
+  });
+});
+
+describe("H4 — exportar TODOS os alunos (N-66: sem o corte calado em 500)", () => {
+  const fila = (n: number) => Array.from({ length: n }, (_, i) => aluno({ id: `p${i}`, nome: `Aluno ${String(i).padStart(4, "0")}` }));
+  function servidor(todos: AlunoLinha[]) {
+    const pedidos: Array<[number, number]> = [];
+    const buscar = async (offset: number, limite: number) => {
+      pedidos.push([offset, limite]);
+      return { itens: todos.slice(offset, offset + Math.min(limite, 500)), total: todos.length };
+    };
+    return { pedidos, buscar };
+  }
+  it("1.203 alunos: pede 3 páginas (0, 500, 1000) e junta todos, na ordem", async () => {
+    const todos = fila(1203);
+    const s = servidor(todos);
+    const e = await exportarTodos(s.buscar);
+    expect(s.pedidos).toEqual([[0, 500], [500, 500], [1000, 500]]);
+    expect(e.itens).toHaveLength(1203);
+    expect(e.itens[0].id).toBe("p0");
+    expect(e.itens[1202].id).toBe("p1202");
+    expect(e).toMatchObject({ total: 1203, completo: true });
+    expect(textoExportacao(e)).toBe("1203 alunos exportados.");
+  });
+  it("até 500: 1 página só; exatamente 500: para no total (não pede página vazia)", async () => {
+    const s1 = servidor(fila(37));
+    expect((await exportarTodos(s1.buscar)).itens).toHaveLength(37);
+    expect(s1.pedidos).toHaveLength(1);
+    const s2 = servidor(fila(500));
+    expect((await exportarTodos(s2.buscar)).itens).toHaveLength(500);
+    expect(s2.pedidos).toHaveLength(1);
+    const s3 = servidor(fila(501));
+    expect((await exportarTodos(s3.buscar)).itens).toHaveLength(501);
+    expect(s3.pedidos).toEqual([[0, 500], [500, 500]]);
+  });
+  it("a lista muda no meio (alguém entrou): ninguém sai repetido", async () => {
+    const todos = fila(600);
+    let chamada = 0;
+    const e = await exportarTodos(async (offset, limite) => {
+      chamada += 1;
+      // na 2ª página, um aluno novo empurra a lista: o último da 1ª volta no começo da 2ª
+      const lista = chamada === 1 ? todos : [aluno({ id: "novo", nome: "Aaa Novo" }), ...todos];
+      return { itens: lista.slice(offset, offset + limite), total: lista.length };
+    });
+    const ids = e.itens.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+  it("passou do limite de segurança: exporta o que deu e AVISA quantos ficaram de fora", async () => {
+    const s = servidor(fila(1300));
+    const e = await exportarTodos(s.buscar, 500, 1000);
+    expect(e).toMatchObject({ total: 1300, completo: false });
+    expect(e.itens).toHaveLength(1000);
+    expect(textoExportacao(e)).toMatch(/^1000 alunos exportados de 1300: o arquivo parou no limite/);
+    expect(MAX_EXPORTACAO).toBeGreaterThanOrEqual(5000); // o Nutri ia até 5.000
+  });
+  it("1 aluno: texto no singular", async () => {
+    expect(textoExportacao({ itens: fila(1), total: 1, completo: true })).toBe("1 aluno exportado.");
   });
 });

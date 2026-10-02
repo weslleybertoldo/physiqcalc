@@ -113,6 +113,20 @@ export function KpiAdesao({ m, carregando }: { m: AdesaoMedia; carregando: boole
   );
 }
 
+/**
+ * H4: "Recibos no mês" (o KPI do Nutri) — ao lado do "Recebido" e do "Previsto" do cartão Receita; abre Financeiro › Recibos (a lista
+ * de onde o número sai: os recibos com a data neste mês).
+ */
+export function RecibosDoMes({ n, hoje, carregando, erro }: { n: number | null; hoje: string; carregando: boolean; erro: boolean }) {
+  return (
+    <Link to="/painel/financeiro?aba=recibos" className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-violeta/60" title="Os recibos emitidos neste mês (Financeiro › Recibos)"
+      data-recibos-mes={n ?? ""}>
+      <div className="flex items-center gap-1.5 text-[12.5px] text-texto-2"><ReceiptText aria-hidden className="h-3.5 w-3.5" />Recibos em {nomeDoMesLongo(hoje)}</div>
+      <b className="text-[26px] font-bold tabular-nums tracking-[-0.03em] text-texto-2">{carregando && n === null ? "…" : erro && n === null ? "—" : n ?? "—"}</b>
+    </Link>
+  );
+}
+
 // ───────────────────────── Agenda de hoje ─────────────────────────
 
 export function AgendaHoje({ eventos, carregando, erro, aoTentar, hoje }: {
@@ -163,7 +177,7 @@ export function AgendaHoje({ eventos, carregando, erro, aoTentar, hoje }: {
 
 /** A tela 6 mostra 4; o resto abre no "Ver todas". */
 const VISIVEIS_ATENCAO = 4;
-const ICONE_ATENCAO: Partial<Record<ItemAtencao["tipo"], LucideIcon>> = { cadastro: UserPlus, preconsulta: ClipboardList };
+const ICONE_ATENCAO: Partial<Record<ItemAtencao["tipo"], LucideIcon>> = { cadastro: UserPlus, preconsulta: ClipboardList, diario: Camera };
 
 export function Atencao({ itens, carregando, avisos, vazio }: { itens: ItemAtencao[]; carregando: boolean; avisos?: ReactNode; vazio: string }) {
   const [todos, setTodos] = useState(false);

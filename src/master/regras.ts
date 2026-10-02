@@ -39,6 +39,28 @@ export function moeda(v: number | string | null | undefined): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/**
+ * H4 (N-22): "Último acesso" de cada profissional, como no "Profissionais" do Nutri (masterUtil.textoUltimoAcesso): hoje · ontem ·
+ * há N dias · há N meses · há N anos · nunca acessou. Os dias contam pelo calendário de São Paulo.
+ */
+export function textoUltimoAcesso(iso: string | null | undefined, agora: Date = new Date()): string {
+  if (!iso) return "nunca acessou";
+  const quando = new Date(iso);
+  if (Number.isNaN(quando.getTime())) return "nunca acessou";
+  const dia = (d: Date) => d.toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+  const ms = Date.parse(`${dia(agora)}T12:00:00Z`) - Date.parse(`${dia(quando)}T12:00:00Z`);
+  const d = Math.round(ms / 86_400_000);
+  if (d <= 0) return "hoje";
+  if (d === 1) return "ontem";
+  if (d < 30) return `há ${d} dias`;
+  if (d < 365) {
+    const m = Math.floor(d / 30);
+    return `há ${m} ${m === 1 ? "mês" : "meses"}`;
+  }
+  const a = Math.floor(d / 365);
+  return `há ${a} ${a === 1 ? "ano" : "anos"}`;
+}
+
 /** AAAA-MM-DD + n dias (calendário, sem fuso). */
 export function somarDias(iso: string, dias: number): string {
   const d = new Date(`${iso.slice(0, 10)}T12:00:00Z`);

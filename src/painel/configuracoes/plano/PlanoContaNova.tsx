@@ -4,6 +4,7 @@ import { AlertTriangle, BadgeCheck, CalendarClock, CreditCard, Dumbbell, FlaskCo
 import { toast } from "sonner";
 import { ConfirmarPerigo } from "@/ferramentas/Confirmar";
 import { useSessao } from "@/nucleo/sessao";
+import { CONTATO_SUPORTE, linkDoSuporte } from "@/nucleo/suporte";
 import {
   NOME_FAIXA,
   NOME_PLANO,
@@ -333,7 +334,10 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
             <Cartao className="flex items-start gap-3 p-5" data-plano-sem-pagar>
               {efetiva === "isenta" ? <ShieldCheck aria-hidden className="mt-0.5 h-5 w-5 text-verde-2" /> : <AlertTriangle aria-hidden className="mt-0.5 h-5 w-5 text-rosa-3" />}
               <div className="text-[13.5px] leading-relaxed text-texto-2">
-                {efetiva === "isenta" ? "Sua conta está isenta: não há nada para pagar." : "Conta suspensa. Fale com o suporte para voltar a usar o painel."}
+                {efetiva === "isenta" ? "Sua conta está isenta: não há nada para pagar." : (
+                  <>Conta suspensa. Fale com o suporte para voltar a usar o painel:{" "}
+                    <a href={linkDoSuporte(`Conta suspensa · ${c.nome}`)} className="font-semibold text-violeta-3 underline-offset-2 hover:underline" data-plano-suporte={CONTATO_SUPORTE}>{CONTATO_SUPORTE}</a>.</>
+                )}
               </div>
             </Cartao>
           )}

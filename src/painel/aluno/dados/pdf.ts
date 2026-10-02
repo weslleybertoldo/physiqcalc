@@ -68,7 +68,7 @@ export async function gerarPdfDadosEvolucao(perfil: PerfilAluno, comTreino: bool
     const d = data as { profile?: Record<string, unknown>; avaliacoes?: LinhaPdf[] } | null;
     if (!error && d?.profile) {
       const todas = [...(d.avaliacoes ?? []), ...doNutri].sort((a, b) => String(a.data_avaliacao).localeCompare(String(b.data_avaliacao)));
-      generateAdminPDF(d.profile as never, todas as never);
+      await generateAdminPDF(d.profile as never, todas as never);
       return;
     }
   }
@@ -92,7 +92,7 @@ export async function gerarPdfDadosEvolucao(perfil: PerfilAluno, comTreino: bool
     rotulo_metodo: ultima ? protocoloNoPdf(ultima) || null : null,
     ...(ultima?.medidas ?? {}),
   };
-  generateAdminPDF(perfilPdf as never, doNutri as never);
+  await generateAdminPDF(perfilPdf as never, doNutri as never);
 }
 
 /** "Treino" (C32): o PDF do treino de hoje do Calc — só para quem tem treino e com a sessão do Banco do Treino. */
@@ -103,5 +103,5 @@ export async function gerarPdfTreino(treinoUserId: string): Promise<void> {
   ]);
   const d = r.data as { profile?: unknown; dias?: unknown[] } | null;
   if (r.error || !d?.profile) throw r.error ?? new Error("sem_treino");
-  generateWorkoutPlanPDF(d.profile as never, (d.dias ?? []) as never);
+  await generateWorkoutPlanPDF(d.profile as never, (d.dias ?? []) as never);
 }

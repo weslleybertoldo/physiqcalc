@@ -277,7 +277,7 @@ export function RelatorioDoAluno({ treinoUserId, nomeAluno }: { treinoUserId: st
       const r = await import("./relatorio");
       const [rel, dados] = await Promise.all([r.carregarRelatorioCompleto(treinoUserId, m.ano, m.mes), r.carregarDadosUsuario(treinoUserId)]);
       const semanas = r.agruparPorSemana(rel.concluidos, rel.series, m.ano, m.mes, rel.grupoNomePorData);
-      if (tipo === "pdf") r.exportarPDF(dados.perfil, dados.avaliacao, semanas, m.mes, m.ano, nomeAluno ?? undefined);
+      if (tipo === "pdf") await r.exportarPDF(dados.perfil, dados.avaliacao, semanas, m.mes, m.ano, nomeAluno ?? undefined);
       else await r.exportarExcel(dados.perfil, dados.avaliacao, semanas, m.mes, m.ano, nomeAluno ?? undefined);
       toast.success(tipo === "pdf" ? "Relatório em PDF baixado." : "Relatório em Excel baixado.");
     } catch (e) {
@@ -290,7 +290,7 @@ export function RelatorioDoAluno({ treinoUserId, nomeAluno }: { treinoUserId: st
     setGerando("treino");
     try {
       const [{ generateWorkoutPlanPDF }, d] = await Promise.all([import("@/lib/generateWorkoutPlanPDF"), carregarPlanoParaPdf(treinoUserId)]);
-      generateWorkoutPlanPDF(d.profile as never, (d.dias ?? []) as never);
+      await generateWorkoutPlanPDF(d.profile as never, (d.dias ?? []) as never);
       toast.success("PDF do treino baixado.");
     } catch (e) {
       toast.error(mensagemDoErro(e));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acoesDaConta, chaveMascarada, dataCurta, faixaCabe, linhaAlunos, linhaVencimento, moeda, receitaDoMes, somarDias, textoErro } from "./regras";
+import { acoesDaConta, chaveMascarada, dataCurta, faixaCabe, linhaAlunos, linhaVencimento, moeda, receitaDoMes, somarDias, textoErro, textoUltimoAcesso } from "./regras";
 import type { ContaLinha, VisaoGeral } from "./tipos";
 
 function conta(c: Partial<ContaLinha> = {}): ContaLinha {
@@ -84,5 +84,20 @@ describe("painel master — Receita do mês (W28: o mês contra o MESMO período
   it("servidor antigo (sem recebimentos): o mês contra o mês anterior inteiro, como antes", () => {
     expect(receitaDoMes(receita(), "2026-10-02")).toEqual({ valor: 120, variacao: -86, rotulo: null, rotuloLongo: null });
     expect(receitaDoMes(receita({ mes_anterior: 0 }), "2026-10-02").variacao).toBeNull();
+  });
+});
+
+describe("H4 (N-22) — último acesso de cada profissional (o texto do \"Profissionais\" do Nutri)", () => {
+  const agora = new Date("2026-10-02T15:00:00Z"); // 12:00 em São Paulo
+  it("hoje, ontem, há N dias / meses / anos e nunca acessou", () => {
+    expect(textoUltimoAcesso("2026-10-02T03:30:00Z", agora)).toBe("hoje"); // 00:30 de hoje em SP
+    expect(textoUltimoAcesso("2026-10-02T02:30:00Z", agora)).toBe("ontem"); // 23:30 de ontem em SP
+    expect(textoUltimoAcesso("2026-09-25T12:00:00Z", agora)).toBe("há 7 dias");
+    expect(textoUltimoAcesso("2026-08-20T12:00:00Z", agora)).toBe("há 1 mês");
+    expect(textoUltimoAcesso("2026-04-20T12:00:00Z", agora)).toBe("há 5 meses");
+    expect(textoUltimoAcesso("2025-09-01T12:00:00Z", agora)).toBe("há 1 ano");
+    expect(textoUltimoAcesso("2023-09-01T12:00:00Z", agora)).toBe("há 3 anos");
+    expect(textoUltimoAcesso(null, agora)).toBe("nunca acessou");
+    expect(textoUltimoAcesso("lixo", agora)).toBe("nunca acessou");
   });
 });

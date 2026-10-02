@@ -19,8 +19,10 @@ import { useTema, type Tema } from "@/ui/tema/useTema";
 import { CampoSelect, LinhaInfo, OpcoesPilula, SecaoForm, type OpcaoPilula } from "./pecas/Form";
 import { enviarFotoPerfil, validarFoto } from "./perfil/foto";
 import {
+  AREA_OUTRA_MAX,
   TIPOS_PERFIL,
   UFS,
+  areaOutraParaGravar,
   comFoto,
   dadosParaGravar,
   formDoPerfil,
@@ -39,13 +41,14 @@ interface LinhaPerfil {
   nome: string | null;
   email: string | null;
   tipo_perfil: string | null;
+  area_outra: string | null;
   dados_profissionais: unknown;
 }
 
 const ICONE_TIPO: Record<TipoPerfil, typeof Dumbbell> = { personal: Dumbbell, nutricionista: Salad, academico: GraduationCap, outra_area: Sparkles };
 
 async function buscarPerfil(uid: string): Promise<LinhaPerfil | null> {
-  const { data, error } = await principal.from("profiles").select("nome, email, tipo_perfil, dados_profissionais").eq("id", uid).maybeSingle();
+  const { data, error } = await principal.from("profiles").select("nome, email, tipo_perfil, area_outra, dados_profissionais").eq("id", uid).maybeSingle();
   if (error) throw error;
   return (data as LinhaPerfil | null) ?? null;
 }
@@ -116,7 +119,7 @@ export default function Perfil() {
       const nome = form.nome.trim();
       const { error } = await principal
         .from("profiles")
-        .update({ nome, tipo_perfil: form.tipo || null, dados_profissionais: dadosParaGravar(form, atual?.dados_profissionais) as Json })
+        .update({ nome, tipo_perfil: form.tipo || null, area_outra: areaOutraParaGravar(form), dados_profissionais: dadosParaGravar(form, atual?.dados_profissionais) as Json })
         .eq("id", uid);
       if (error) throw error;
       if (usuarioTreino && isStaff) await espelharNoTreino(usuarioTreino.id, { nome });
@@ -199,6 +202,11 @@ export default function Perfil() {
             </div>
             <Campo rotulo="Nome" value={form.nome} onChange={(e) => mudar({ nome: e.target.value })} placeholder="Como os seus alunos te veem" maxLength={80} data-perfil-nome />
             <OpcoesPilula nome="tipo-perfil" rotulo="Tipo de perfil" opcoes={opcoesTipo} valores={form.tipo ? [form.tipo] : []} aoMudar={(v) => mudar({ tipo: v[0] ?? "" })} />
+            {/* H4 (N-23): o "Sua área" do tipo "Outra área", como no Nutri */}
+            {form.tipo === "outra_area" && (
+              <Campo rotulo="Sua área (opcional)" value={form.areaOutra} onChange={(e) => mudar({ areaOutra: e.target.value })}
+                placeholder="Ex.: educação física, medicina, enfermagem" maxLength={AREA_OUTRA_MAX} data-perfil-area-outra />
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo rotulo={`${rotuloRegistro(form.tipo)} (opcional)`} value={form.registro} onChange={(e) => mudar({ registro: e.target.value })}
                 placeholder={form.tipo === "personal" ? "CREF 000000-G/UF" : form.tipo === "outra_area" ? "Número do conselho" : "CRN 0000/UF"} maxLength={30} data-perfil-registro />

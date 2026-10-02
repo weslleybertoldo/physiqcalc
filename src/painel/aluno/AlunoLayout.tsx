@@ -7,11 +7,22 @@ import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Esqueleto, EstadoVazio } from "@/ui/premium/Estados";
-import { modulosDaConta } from "../menu";
 import { ModuloForaDoPlano } from "@/ui/casca/ModuloForaDoPlano";
 import { ABAS_ALUNO, ORDEM_RESUMO, abaAtualDaRota, estadoDaAbaAluno } from "./catalogoAbas";
 import CabecalhoPadrao from "./CabecalhoPadrao";
 import { AlunoCtx } from "./contexto";
+import { modulosDoPerfil } from "./dados/regras";
+import { usePerfilAluno } from "./dados/usePerfilAluno";
+
+/**
+ * Os módulos das abas: os da conta ativa — ou, para o master que abriu um aluno de OUTRA conta (H4, C57/N-5), os da conta do aluno
+ * (o perfil vem da mesma consulta do cabeçalho, em cache).
+ */
+function useModulosDasAbas(alunoId: string) {
+  const dados = useDadosCasca();
+  const perfil = usePerfilAluno(alunoId).data;
+  return { dados, modulos: modulosDoPerfil(dados.conta, perfil, dados.ehMaster) };
+}
 
 const COR_PONTO = { treino: "var(--p-violeta)", nutricao: "var(--p-verde)" } as const;
 
@@ -22,8 +33,7 @@ const COR_PONTO = { treino: "var(--p-violeta)", nutricao: "var(--p-verde)" } as 
 export default function AlunoLayout() {
   const { id = "" } = useParams();
   const location = useLocation();
-  const dados = useDadosCasca();
-  const modulos = modulosDaConta(dados.conta?.modulos);
+  const { modulos } = useModulosDasAbas(id);
   const Cabecalho = tela("cabecalhoAluno", "Cabecalho");
   const abaAtual = abaAtualDaRota(location.pathname, id);
   const abas = ABAS_ALUNO.filter((a) => estadoDaAbaAluno(a, modulos) !== null);
@@ -111,8 +121,7 @@ export function AbaResumo() {
 /** Demais abas: a de src/painel/aluno/abas/<arquivo>.tsx; sem ela, volta ao Resumo. */
 export function AbaDoAluno() {
   const { id = "", aba = "" } = useParams();
-  const dados = useDadosCasca();
-  const modulos = modulosDaConta(dados.conta?.modulos);
+  const { dados, modulos } = useModulosDasAbas(id);
   const def = ABAS_ALUNO.find((a) => a.rota === aba && a.id !== "resumo");
   const estado = def ? estadoDaAbaAluno(def, modulos) : null;
   if (def && estado === "nova" && def.arquivo) {

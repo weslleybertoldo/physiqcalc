@@ -9,6 +9,11 @@ import type { TomChip } from "@/ui/premium/Chip";
 export type SituacaoFiltro = "ativos" | "bloqueados" | "desativados" | "excluidas" | "todos";
 export type ModuloAluno = "treino" | "nutricao";
 export type PagamentoFiltro = "" | "pago" | "pendente" | "comprovante";
+/** H4 (N-10): os filtros que o Nutri tinha — gênero e os períodos de cadastro e de modificação — e a ordem da lista. */
+export type GeneroFiltro = "" | "masculino" | "feminino" | "outro";
+export type PeriodoFiltro = "todo" | "1m" | "2m" | "3m" | "custom";
+/** Os nomes que a alunos_da_conta entende (W13): nome (A–Z) · recentes (cadastro) · modificados (modificação). */
+export type OrdemAlunos = "nome" | "recentes" | "modificados";
 
 export interface FiltrosAlunos {
   q: string;
@@ -18,10 +23,74 @@ export interface FiltrosAlunos {
   responsavel: string;
   tag: string;
   pagamento: PagamentoFiltro;
+  genero: GeneroFiltro;
+  cadastro: PeriodoFiltro;
+  /** yyyy-mm-dd (só em "custom") */
+  cadastroDe: string;
+  cadastroAte: string;
+  modificacao: PeriodoFiltro;
+  modificacaoDe: string;
+  modificacaoAte: string;
+  ordem: OrdemAlunos;
 }
 
-/** Filtro padrão = o conjunto que o número do menu conta (ativos, sem bloqueio — o que ocupa vaga do plano). */
-export const FILTROS_PADRAO: FiltrosAlunos = { q: "", situacao: "ativos", modulo: "", responsavel: "", tag: "", pagamento: "" };
+/** Filtro padrão = o conjunto que o número do menu conta (ativos, sem bloqueio — o que ocupa vaga do plano), em ordem alfabética. */
+export const FILTROS_PADRAO: FiltrosAlunos = {
+  q: "", situacao: "ativos", modulo: "", responsavel: "", tag: "", pagamento: "",
+  genero: "", cadastro: "todo", cadastroDe: "", cadastroAte: "", modificacao: "todo", modificacaoDe: "", modificacaoAte: "", ordem: "nome",
+};
+
+export const GENEROS: { valor: Exclude<GeneroFiltro, "">; rotulo: string }[] = [
+  { valor: "masculino", rotulo: "Masculino" },
+  { valor: "feminino", rotulo: "Feminino" },
+  { valor: "outro", rotulo: "Outro" },
+];
+export const rotuloGenero = (g: string | null | undefined): string => GENEROS.find((x) => x.valor === g)?.rotulo ?? "";
+
+/** Os mesmos do Nutri ("Todo período · 1 mês atrás · 2 meses atrás · 3 meses atrás · Personalizar data"). */
+export const PERIODOS_FILTRO: { valor: PeriodoFiltro; rotulo: string }[] = [
+  { valor: "todo", rotulo: "Todo período" },
+  { valor: "1m", rotulo: "1 mês atrás" },
+  { valor: "2m", rotulo: "2 meses atrás" },
+  { valor: "3m", rotulo: "3 meses atrás" },
+  { valor: "custom", rotulo: "Personalizar data" },
+];
+
+export const ORDENS: { valor: OrdemAlunos; rotulo: string }[] = [
+  { valor: "nome", rotulo: "Ordem alfabética" },
+  { valor: "recentes", rotulo: "Data de cadastro" },
+  { valor: "modificados", rotulo: "Data de modificação" },
+];
+
+const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Meia-noite (ou o fim do dia) LOCAL de uma data yyyy-mm-dd, em ISO; data inválida → null. */
+function instanteDoDia(dia: string, fimDoDia: boolean): string | null {
+  if (!DATA_RE.test(dia)) return null;
+  const [a, m, d] = dia.split("-").map(Number);
+  const t = fimDoDia ? new Date(a, m - 1, d, 23, 59, 59, 999) : new Date(a, m - 1, d, 0, 0, 0, 0);
+  return Number.isNaN(t.getTime()) || t.getDate() !== d ? null : t.toISOString();
+}
+
+/**
+ * O intervalo de um período (a regra do Nutri, intervaloPeriodo): "1m" = de 1 mês atrás até agora; "custom" = os dias inteiros
+ * escolhidos (de 00:00 a 23:59:59 no fuso do aparelho); "todo" = sem limite.
+ */
+export function intervaloPeriodo(p: PeriodoFiltro, de: string, ate: string, agora: Date = new Date()): { de?: string; ate?: string } {
+  if (p === "todo") return {};
+  if (p === "custom") {
+    const r: { de?: string; ate?: string } = {};
+    const i = de ? instanteDoDia(de, false) : null;
+    const f = ate ? instanteDoDia(ate, true) : null;
+    if (i) r.de = i;
+    if (f) r.ate = f;
+    return r;
+  }
+  const meses = p === "1m" ? 1 : p === "2m" ? 2 : 3;
+  const d = new Date(agora.getTime());
+  d.setMonth(d.getMonth() - meses);
+  return { de: d.toISOString() };
+}
 
 export const TAMANHO_PAGINA = 20;
 
@@ -33,19 +102,35 @@ export const SITUACOES: { valor: SituacaoFiltro; rotulo: string }[] = [
   { valor: "todos", rotulo: "Todos" },
 ];
 
+/** Algum filtro além do padrão (a ordem não é filtro: não liga o "Limpar" nem o "Nenhum aluno com esses filtros"). */
 export function filtrosAtivos(f: FiltrosAlunos): boolean {
-  return !!f.q.trim() || f.situacao !== "ativos" || !!f.modulo || !!f.responsavel || !!f.tag || !!f.pagamento;
+  return !!f.q.trim() || f.situacao !== "ativos" || !!f.modulo || !!f.responsavel || !!f.tag || !!f.pagamento
+    || !!f.genero || (f.cadastro ?? "todo") !== "todo" || (f.modificacao ?? "todo") !== "todo";
 }
 
-/** O corpo que a alunos_da_conta() lê (só o que está preenchido). */
-export function filtrosParaServidor(f: FiltrosAlunos): Record<string, string> {
+/** O corpo que a alunos_da_conta() lê (só o que está preenchido; os períodos já viram instantes ISO). */
+export function filtrosParaServidor(f: FiltrosAlunos, agora: Date = new Date()): Record<string, string> {
   const r: Record<string, string> = { situacao: f.situacao };
   if (f.q.trim()) r.q = f.q.trim();
   if (f.modulo) r.modulo = f.modulo;
   if (f.responsavel) r.responsavel = f.responsavel;
   if (f.tag) r.tag = f.tag;
   if (f.pagamento) r.pagamento = f.pagamento;
+  if (f.genero) r.genero = f.genero;
+  const cad = intervaloPeriodo(f.cadastro ?? "todo", f.cadastroDe ?? "", f.cadastroAte ?? "", agora);
+  if (cad.de) r.cadastro_de = cad.de;
+  if (cad.ate) r.cadastro_ate = cad.ate;
+  const mod = intervaloPeriodo(f.modificacao ?? "todo", f.modificacaoDe ?? "", f.modificacaoAte ?? "", agora);
+  if (mod.de) r.modificado_de = mod.de;
+  if (mod.ate) r.modificado_ate = mod.ate;
+  if (f.ordem && f.ordem !== "nome") r.ordem = f.ordem;
   return r;
+}
+
+/** Trocar o período limpa as datas personalizadas (como no Nutri); "custom" mantém as que já estavam. */
+export function comPeriodo(f: FiltrosAlunos, campo: "cadastro" | "modificacao", valor: PeriodoFiltro): FiltrosAlunos {
+  if (valor === "custom") return { ...f, [campo]: valor };
+  return { ...f, [campo]: valor, [`${campo}De`]: "", [`${campo}Ate`]: "" };
 }
 
 export interface PessoaResumo {
@@ -78,6 +163,12 @@ export interface AlunoLinha {
   pagamento: { s: "pago" | "pendente"; ate: string | null } | null;
   comprovante: boolean;
   sou_eu: boolean;
+  /** H4 (N-66): só na exportação (alunos_da_conta com exportar = true) */
+  apelido?: string | null;
+  cpf?: string | null;
+  /** yyyy-mm-dd */
+  nascimento?: string | null;
+  genero?: string | null;
 }
 
 export interface Responsavel {
@@ -282,13 +373,47 @@ function situacaoTexto(a: AlunoLinha): string {
   return "Ativo";
 }
 
-/** CSV (separador ";" e BOM, abre certo no Excel em português) com o que a lista mostra. */
+/** 000.000.000-00 (o CPF guardado só com os dígitos); outro tamanho sai como veio. */
+export function formatarCPF(v: string | null | undefined): string {
+  const d = (v || "").replace(/\D/g, "");
+  if (d.length !== 11) return (v || "").trim();
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
+/** "1990-05-04" → "04/05/1990" (a data guardada, sem fuso). */
+function dataCurtaISO(v: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
+/** "Modificado em" como no Nutri: dd/mm/aaaa - hh:mm:ss (no horário de São Paulo). */
+export function dataHoraCSV(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const dia = d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const hora = d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  return `${dia} - ${hora}`;
+}
+
+export const CABECALHO_CSV = [
+  "Nome", "Apelido", "CPF", "E-mail", "Telefone", "Nascimento", "Gênero", "Módulos", "Personal", "Nutricionista", "Tags", "Situação", "Pagamento",
+  "Cadastro", "Modificado em",
+] as const;
+
+/**
+ * CSV (separador ";" e BOM, abre certo no Excel em português) com o que a lista mostra + as colunas do CSV do Nutri (N-66: Apelido,
+ * CPF, Nascimento, Gênero e "Modificado em").
+ */
 export function montarCSV(itens: AlunoLinha[]): string {
-  const cab = ["Nome", "E-mail", "Telefone", "Módulos", "Personal", "Nutricionista", "Tags", "Situação", "Pagamento", "Cadastro"];
   const linhas = itens.map((a) => [
     a.nome,
+    a.apelido ?? "",
+    formatarCPF(a.cpf),
     a.email ?? "",
     formatarTelefone(a.telefone),
+    dataCurtaISO(a.nascimento),
+    rotuloGenero(a.genero),
     a.modulos.map((m) => (m === "treino" ? "Treino" : "Nutrição")).join(" + "),
     a.personal?.nome ?? "",
     a.nutricionista?.nome ?? "",
@@ -296,8 +421,53 @@ export function montarCSV(itens: AlunoLinha[]): string {
     situacaoTexto(a),
     a.pagamento ? (a.pagamento.s === "pago" ? `Pago até ${ddmm(a.pagamento.ate)}` : "Pendente") : "",
     a.criado_em ? new Date(a.criado_em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
+    dataHoraCSV(a.atualizado_em),
   ].map(celula).join(";"));
-  return "﻿" + [cab.join(";"), ...linhas].join("\r\n") + "\r\n";
+  return "﻿" + [CABECALHO_CSV.join(";"), ...linhas].join("\r\n") + "\r\n";
+}
+
+// ───────────────────────── exportar TODOS (N-66: sem o corte calado em 500) ─────────────────────────
+
+/** O servidor devolve no máximo 500 por chamada: a exportação pede as páginas em sequência. */
+export const PAGINA_EXPORTACAO = 500;
+/** Trava de segurança (40 páginas): passando disso, a tela AVISA quantos ficaram de fora — nunca corta calada. */
+export const MAX_EXPORTACAO = 20_000;
+
+export interface Exportacao {
+  itens: AlunoLinha[];
+  /** o total do filtro (o "N alunos" da lista) */
+  total: number;
+  /** todos os do filtro vieram */
+  completo: boolean;
+}
+
+/** Junta as páginas (offset 0, 500, 1000…) até o total do filtro; para no máximo, numa página vazia ou curta. */
+export async function exportarTodos(
+  buscar: (offset: number, limite: number) => Promise<{ itens: AlunoLinha[]; total: number }>,
+  pagina = PAGINA_EXPORTACAO,
+  maximo = MAX_EXPORTACAO,
+): Promise<Exportacao> {
+  const itens: AlunoLinha[] = [];
+  const vistos = new Set<string>();
+  let total = 0;
+  for (let offset = 0; offset < maximo; offset += pagina) {
+    const r = await buscar(offset, Math.min(pagina, maximo - offset));
+    total = Math.max(total, r.total);
+    for (const a of r.itens) {
+      if (vistos.has(a.id)) continue; // a lista mudou entre 2 páginas: não repete ninguém
+      vistos.add(a.id);
+      itens.push(a);
+    }
+    if (r.itens.length < Math.min(pagina, maximo - offset) || itens.length >= total) break;
+  }
+  return { itens, total, completo: itens.length >= total };
+}
+
+/** O aviso depois de exportar: quantos saíram e, se faltou alguém, quantos. */
+export function textoExportacao(e: Exportacao): string {
+  const n = e.itens.length;
+  const base = `${n} ${n === 1 ? "aluno exportado" : "alunos exportados"}`;
+  return e.completo ? `${base}.` : `${base} de ${e.total}: o arquivo parou no limite de ${MAX_EXPORTACAO.toLocaleString("pt-BR")}. Use os filtros para exportar o resto.`;
 }
 
 export function nomeDoCSV(agora = new Date()): string {

@@ -15,11 +15,12 @@ import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { ErroFinanceiro } from "../api";
 import { criarLancamento, garantirCategorias, listarLancamentosDoAluno, rotuloMetodoLancamento, totais, valorComSinal, type Lancamento } from "../lancamentos";
 import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, listarRecibosDoAluno, podeEmitirRecibo } from "../recibos";
+import { LANCAMENTOS_MAX, LANCAMENTOS_VISIVEIS, rotaDosLancamentosDoAluno } from "@/painel/aluno/dados/regras";
 import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
 import { pdfDoRecibo } from "@/painel/financeiro/pdfRecibo";
 import ReciboDialog from "@/painel/financeiro/ReciboDialog";
 import { useFinanceiroConta } from "@/painel/financeiro/useFinanceiro";
-import { chipDaMensalidade, dataBR, estadoDaMensalidade, lerValor, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
+import { chipDaMensalidade, dataBR, estadoDaMensalidade, hojeSP, lerValor, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
 import { ComprovanteVisor } from "./ComprovanteVisor";
 import { DialogoLancamento, DialogoNovaCobranca, DialogoRegistrar } from "./Dialogos";
@@ -271,7 +272,10 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
   const [novoLanc, setNovoLanc] = useState(false);
   const [reciboDe, setReciboDe] = useState<Lancamento | null>(null);
   const [modelosAberto, setModelosAberto] = useState(false);
+  // N-45: os 12 mais recentes; "Ver todos" mostra a lista inteira (a consulta traz até 500)
+  const [todos, setTodos] = useState(false);
   const lista = useMemo(() => lanc.data ?? [], [lanc.data]);
+  const visiveis = todos ? lista : lista.slice(0, LANCAMENTOS_VISIVEIS);
   const t = totais(lista);
   const recarregar = async () => {
     await Promise.all(["financeiro-lancamentos", "financeiro-recibos"].map((k) => qc.invalidateQueries({ queryKey: [k, pid] })));
@@ -294,7 +298,7 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
         </div>
         {lanc.isLoading ? <Esqueleto className="h-24 w-full" /> : lista.length === 0 ? (
           <p className="py-2 text-[12.5px] text-texto-3">Nenhum lançamento. Confirmar um Pix ou registrar um pagamento pode lançar a entrada aqui.</p>
-        ) : lista.slice(0, 12).map((l) => (
+        ) : visiveis.map((l) => (
           <div key={l.id} className="flex min-h-[46px] items-center gap-2.5 border-t border-linha-3 py-1.5 first:border-t-0" data-lancamento={l.id}>
             {l.tipo === "saida" ? <ArrowDownCircle aria-hidden className="h-4 w-4 flex-none text-rosa-3" /> : <ArrowUpCircle aria-hidden className="h-4 w-4 flex-none text-verde-2" />}
             <span className="min-w-0 flex-1">
@@ -307,6 +311,21 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
             )}
           </div>
         ))}
+        {lista.length > 0 && (
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-linha-3 pt-2.5 text-[12.5px]" data-lancamentos-rodape={lista.length}>
+            {lista.length > LANCAMENTOS_VISIVEIS ? (
+              <button type="button" onClick={() => setTodos((x) => !x)} className="font-semibold text-violeta-3" data-lancamentos-ver-todos={todos ? "aberto" : "fechado"}>
+                {todos ? `Mostrar só os ${LANCAMENTOS_VISIVEIS} mais recentes` : `Ver todos (${lista.length}${lista.length >= LANCAMENTOS_MAX ? "+" : ""})`}
+              </button>
+            ) : (
+              <span className="text-texto-3">{lista.length === 1 ? "1 lançamento" : `${lista.length} lançamentos`}</span>
+            )}
+            <Link to={rotaDosLancamentosDoAluno(d.aluno.nome, lista.map((l) => l.data), hojeSP())} className="font-semibold text-texto-2 hover:text-texto"
+              title="Painel › Financeiro › Lançamentos, só deste aluno" data-lancamentos-no-financeiro>
+              Editar, estornar ou excluir no Financeiro
+            </Link>
+          </div>
+        )}
       </Cartao>
       <Cartao className="flex flex-col p-5" data-cartao-recibos>
         <CabecalhoCartao titulo="Recibos" extra={<Chip tom="g">{recibos.data?.length ?? 0}</Chip>} acao={

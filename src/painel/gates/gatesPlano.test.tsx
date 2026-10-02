@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { conta } from "@/test/fixturesNucleo";
+import { CONTATO_SUPORTE } from "@/nucleo/suporte";
 
 const h = vi.hoisted(() => ({ conta: null as unknown, ehDono: true, ehMaster: false }));
 vi.mock("@/nucleo/conta", () => ({ useConta: () => ({ conta: h.conta, ehDono: h.ehDono, ehMaster: h.ehMaster }) }));
@@ -49,12 +50,29 @@ describe("GatePlano — conta nova: trava no dia seguinte ao vencimento (6.2)", 
     expect(screen.getByText("Fale com Lucas Ferreira.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Pagar agora/ })).toBeNull();
   });
-  it("suspensa: 'Fale com o suporte', sem Pagar", () => {
+  it("suspensa: 'Fale com o suporte', sem Pagar — H4: com o contato de verdade (a constante única do suporte)", () => {
     h.conta = conta({ situacao: "suspensa", vence_em: "2027-01-01" });
     montar(<GatePlano>{pagina}</GatePlano>);
     expect(screen.getByText("Conta suspensa")).toBeInTheDocument();
-    expect(screen.getByText("Fale com o suporte do Physiq.")).toBeInTheDocument();
+    expect(screen.getByText(/Fale com o suporte do Physiq:/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: CONTATO_SUPORTE });
+    expect(link.getAttribute("href")).toMatch(new RegExp(`^mailto:${CONTATO_SUPORTE.replace(/[.]/g, "\\.")}\\?subject=`));
     expect(screen.queryByRole("button", { name: /Pagar agora/ })).toBeNull();
+  });
+  it("H4 (N-22): membro (não dono) de conta suspensa também vê a tela da suspensão no lugar do painel, com o contato", () => {
+    h.ehDono = false;
+    h.conta = conta({ situacao: "suspensa", vence_em: "2027-01-01", papeis: ["personal"], dono_nome: "Lucas Ferreira" });
+    montar(<GatePlano>{pagina}</GatePlano>, "/painel/alunos");
+    expect(screen.queryByText("página do painel")).toBeNull();
+    expect(screen.getByText("Conta suspensa")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: CONTATO_SUPORTE })).toBeInTheDocument();
+    // a suspensão não é "Fale com o dono" (o dono também não resolve): é o suporte
+    expect(screen.queryByText("Fale com Lucas Ferreira.")).toBeNull();
+  });
+  it("H4: plano vencido NÃO mostra o contato do suporte (quem resolve é o dono, pagando)", () => {
+    h.conta = conta({ situacao: "ativa", teste_ate: null, vence_em: "2026-09-20" });
+    montar(<GatePlano>{pagina}</GatePlano>);
+    expect(screen.queryByRole("link", { name: CONTATO_SUPORTE })).toBeNull();
   });
   it("legado com a cobrança antiga (cobranca_legada), isenta, em dia, conta do app e o master: não trava", () => {
     for (const c of [

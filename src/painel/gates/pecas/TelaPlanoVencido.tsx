@@ -3,6 +3,7 @@ import { CalendarX2, Dumbbell, Lock, MessageCircle, Salad, ShieldAlert, Smartpho
 import type { ContaSituacao } from "@/nucleo/situacao";
 import { NOME_FAIXA, NOME_PLANO_CARTAO, dataBR, ehFaixa, ehPlano, reais, type MotivoTrava } from "@/nucleo/cobranca/regras";
 import { valorMensalDaConta } from "@/nucleo/cobranca/cartao";
+import { CONTATO_SUPORTE, linkDoSuporte } from "@/nucleo/suporte";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { KpiCompacto } from "@/ui/premium/Kpi";
@@ -70,8 +71,11 @@ export function TelaPlanoVencido({ conta, motivo, fim, dono }: { conta: ContaSit
             </span>
           )}
           {suspensa && (
-            <span className="flex items-center gap-2 text-[13px] font-medium text-texto" data-plano-suspenso-suporte>
-              <MessageCircle aria-hidden className="h-4 w-4 text-violeta-3" /> Fale com o suporte do Physiq.
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-texto" data-plano-suspenso-suporte={CONTATO_SUPORTE}>
+              <MessageCircle aria-hidden className="h-4 w-4 text-violeta-3" /> Fale com o suporte do Physiq:
+              <a href={linkDoSuporte(`${motivo === "cancelada" ? "Conta cancelada" : "Conta suspensa"} · ${conta.nome}`)} className="font-semibold text-violeta-3 underline-offset-2 hover:underline">
+                {CONTATO_SUPORTE}
+              </a>
             </span>
           )}
         </div>

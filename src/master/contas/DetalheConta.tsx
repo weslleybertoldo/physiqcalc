@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeftRight, BellRing, CalendarClock, CalendarPlus, CreditCard, Gem, HandCoins, Lock, LockOpen, PauseCircle, PlayCircle,
+  ArrowLeftRight, BellRing, CalendarClock, CalendarPlus, Clock, Copy, CreditCard, Gem, HandCoins, Lock, LockOpen, PauseCircle, PlayCircle,
   ShieldCheck, ShieldOff, Trash2, Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -17,7 +17,7 @@ import { detalheConta, ErroMaster, tornarMaster } from "../api";
 import { ChipOrigem, ChipSituacao, ChipsModulos, Info } from "../pecas/ui";
 import {
   ROTULO_FAIXA, ROTULO_PLANO, ROTULO_RECEBIMENTO, acoesDaConta, dataCurta, dataHora, linhaAlunos, linhaVencimento, moeda, textoErro,
-  type AcaoMaster,
+  textoUltimoAcesso, type AcaoMaster,
 } from "../regras";
 import type { ContaLinha, EventoConta, Membro } from "../tipos";
 import { AcaoContaDialog } from "./AcaoContaDialog";
@@ -40,6 +40,25 @@ const BOTOES: Partial<Record<AcaoMaster, { rotulo: string; icone: LucideIcon; pe
 };
 
 const PAPEL: Record<string, string> = { dono: "Dono", personal: "Personal", nutricionista: "Nutricionista" };
+
+/** C56: o código PROF-… do profissional (o do link ?prof= e do "Tenho um código"), com copiar — como o "Copiar código" do Calc. */
+function CodigoDoMembro({ codigo }: { codigo: string }) {
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(codigo);
+      toast.success(`Código ${codigo} copiado.`);
+    } catch {
+      toast.error("Não deu para copiar. Selecione o código e copie.");
+    }
+  };
+  return (
+    <button type="button" onClick={() => void copiar()} title="Copiar o código de convite" aria-label={`Copiar o código ${codigo}`}
+      className="inline-flex max-w-full items-center gap-1 rounded-lg border border-linha bg-superficie px-1.5 py-0.5 font-mono text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto"
+      data-copiar-codigo={codigo}>
+      <Copy aria-hidden className="h-3 w-3 flex-none" /> <span className="truncate">{codigo}</span>
+    </button>
+  );
+}
 
 function resumoEvento(e: EventoConta): string {
   const d = (e.depois ?? {}) as Record<string, unknown>;
@@ -152,6 +171,17 @@ export function DetalheConta({ contaId, aoFechar, aoMudou }: { contaId: string |
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13.5px] font-semibold text-texto">{m.nome ?? m.email}{m.master && <span className="ml-1.5 text-[11px] font-bold text-violeta-3">MASTER</span>}</div>
                       <div className="truncate text-[12px] text-texto-3">{m.email} · {m.papeis.map((p) => PAPEL[p] ?? p).join(" + ")} · {m.status === "convidado" ? "convite pendente" : `${m.alunos} aluno(s)`}</div>
+                      {/* H4: o código PROF-… com copiar (C56) e o último acesso de cada profissional (N-22) */}
+                      {(m.codigo_convite || m.user_id) && (
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] text-texto-3">
+                          {m.codigo_convite && <CodigoDoMembro codigo={m.codigo_convite} />}
+                          {m.user_id && (
+                            <span className="inline-flex items-center gap-1" title={m.ultimo_acesso ? dataHora(m.ultimo_acesso) : undefined} data-ultimo-acesso={textoUltimoAcesso(m.ultimo_acesso)}>
+                              <Clock aria-hidden className="h-3 w-3" /> Último acesso: {textoUltimoAcesso(m.ultimo_acesso)}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {m.user_id && !m.master && m.status === "ativo" && (
                       <Botao tamanho="sm" onClick={() => setParaMaster(m)} data-tornar-master={m.email ?? ""}>Tornar master</Botao>

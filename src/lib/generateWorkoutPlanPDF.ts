@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { salvarPdf } from "@/lib/salvarPdf";
 import {
   desenharCabecalho, desenharTituloSecao, desenharCard,
   desenharRodape, novaPagina, pintarFundo, estiloTabela, hexToRgb,
@@ -251,7 +252,8 @@ export function nomeArquivoTreino(profile: WorkoutProfile): string {
   return `Physiq-Treino-${safeName}-${profile.user_code || ""}.pdf`;
 }
 
-export function generateWorkoutPlanPDF(profile: WorkoutProfile, dias: WorkoutDia[]) {
+export function generateWorkoutPlanPDF(profile: WorkoutProfile, dias: WorkoutDia[]): Promise<void> {
   const doc = montarWorkoutPlanPDF(profile, dias);
-  doc.save(nomeArquivoTreino(profile));
+  // H4: no APK o download do navegador não baixa — o salvarPdf abre a folha de compartilhar (no site, o mesmo doc.save)
+  return salvarPdf(doc, nomeArquivoTreino(profile));
 }
