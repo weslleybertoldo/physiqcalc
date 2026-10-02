@@ -48,7 +48,8 @@ export function confirmacaoDoStatus(s: StatusAgendamento): Confirmacao {
 export const statusCancelado = (s: StatusAgendamento): boolean => s === "desmarcado" || s === "paciente_desmarcou";
 
 export const DURACOES = [15, 30, 45, 60, 90, 120] as const;
-export const CORES_CALENDARIO = ["#38bdf8", "#a78bfa", "#34d399", "#fbbf24", "#f472b6", "#fb923c", "#f87171", "#22d3ee"] as const;
+// W2 (tags da agenda): + o cinza da tag "Geral" no fim (as posições de antes não mudam: o 1º calendário segue nascendo na 2ª cor)
+export const CORES_CALENDARIO = ["#38bdf8", "#a78bfa", "#34d399", "#fbbf24", "#f472b6", "#fb923c", "#f87171", "#22d3ee", "#94a3b8"] as const;
 export const FAIXA_PADRAO = { inicio: "07:00", fim: "20:00" };
 export const HORA_PADRAO_NOVO = "09:00";
 

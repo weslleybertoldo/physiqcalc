@@ -1,13 +1,15 @@
 // Physiq W20 — visão LISTA (porta da VisaoLista do PhysiqNutri): as consultas do mês por dia (só os dias com consulta), no padrão
-// da "Agenda de hoje" da tela 6 (hora, foto, aluno, título, chip TREINO/NUTRI) + o status. Vazio = estado vazio com a ação.
+// da "Agenda de hoje" da tela 6 (hora, foto, aluno, título, a TAG — W2: o chip TREINO/NUTRI virou a pílula da tag na cor dela) + o
+// status. Vazio = estado vazio com a ação.
 import { addDays, eachDayOfInterval, isSameDay } from "date-fns";
 import { CalendarPlus, CalendarX2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ESTILO_CONFIRMACAO, ESTILO_STATUS, infoTipo } from "@/agenda/regras";
+import { ESTILO_CONFIRMACAO, ESTILO_STATUS } from "@/agenda/regras";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoVazio } from "@/ui/premium/Estados";
+import PilulaTag from "./PilulaTag";
 import { agruparPorDia, chaveDia, faixaHora, intervaloVisao, nomeDoDiaLongo, nomeDoEvento, type EventoPainel } from "./visao";
 
 interface Props {
@@ -47,12 +49,11 @@ export default function VisaoLista({ ancora, eventos, hoje = new Date(), onAbrir
               {evs.map((ev) => {
                 const st = ESTILO_STATUS[ev.status];
                 const { nome, sub } = nomeDoEvento(ev);
-                const tipo = infoTipo(ev.modulo);
                 return (
                   <li key={ev.id}>
                     <button type="button" onClick={() => onAbrir(ev)}
                       className={cn("grid w-full grid-cols-[96px_40px_minmax(0,1fr)_auto] items-center gap-3 border-l-[3px] py-2.5 pl-2.5 text-left transition-colors hover:bg-[rgba(255,255,255,.025)]", ESTILO_CONFIRMACAO[ev.confirmacao].borda)}
-                      data-evento={ev.id} data-status={ev.status}>
+                      data-evento={ev.id} data-status={ev.status} data-tag-evento={ev.tag?.id ?? ""}>
                       <span className="text-[13px] font-semibold tabular-nums text-texto">{faixaHora(ev)}</span>
                       <Avatar src={ev.foto} nome={nome} tamanho={36} />
                       <span className="min-w-0">
@@ -65,7 +66,7 @@ export default function VisaoLista({ ancora, eventos, hoje = new Date(), onAbrir
                         <span className={cn("hidden items-center gap-1.5 rounded-full px-2 py-1 text-[10.5px] font-semibold sm:inline-flex", st.fundo, st.texto.replace("line-through", ""))} data-status-rotulo>
                           <span className={cn("h-1.5 w-1.5 rounded-full", st.ponto)} aria-hidden="true" /> {st.rotulo}
                         </span>
-                        {ev.modulo !== "geral" && <Chip tom={tipo.tom} className="h-[22px] text-[10.5px]">{tipo.chip}</Chip>}
+                        {ev.tag && <PilulaTag tag={ev.tag} tamanho="chip" className="max-w-[140px]" />}
                       </span>
                     </button>
                   </li>

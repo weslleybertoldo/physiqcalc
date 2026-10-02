@@ -1,10 +1,11 @@
 // Physiq W20 — o topo do Painel › Agenda no padrão da tela 6: os 4 números (Consultas hoje "3 de treino · 4 de nutrição", Esta
 // semana, A confirmar, Confirmação), "Consultas por semana" (N-9 do Dashboard do Nutri: agendadas × confirmadas, 8 semanas) e a
-// "Agenda de hoje" (hora, foto, aluno, título, tag TREINO/NUTRI).
+// "Agenda de hoje" (hora, foto, aluno, título e — W2 — a TAG da consulta na cor dela; os números seguem pela área/modulo).
 import { useMemo } from "react";
 import { CalendarCheck, CalendarClock, CalendarDays, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ESTILO_STATUS, aguardandoAluno, consultasPorSemana, hojeSP, infoTipo, numerosDaAgenda, textoHojePorTipo } from "@/agenda/regras";
+import PilulaTag from "./PilulaTag";
 import { Avatar } from "@/ui/premium/Avatar";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
@@ -123,12 +124,13 @@ export default function ResumoAgenda({ eventos, carregando, aoAbrir, aoVerHoje }
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-[14px] font-semibold tracking-[-0.01em] text-texto">{nome}</b>
                       <span className="block truncate text-[12px] text-texto-3">
-                        {sub ?? tipo.rotulo}
+                        {sub ?? ev.tag?.nome ?? tipo.rotulo}
                         {espera && <span className="text-ambar-3"> · a confirmar</span>}
                         {ev.status === "paciente_confirmou" && <span className="text-verde-3"> · {ESTILO_STATUS.paciente_confirmou.rotulo.toLowerCase()}</span>}
                       </span>
                     </span>
-                    {ev.modulo !== "geral" ? <Chip tom={tipo.tom} className="h-[24px] flex-none text-[11px]">{tipo.chip}</Chip> : <Chip tom="g" className="h-[24px] flex-none text-[11px]">GERAL</Chip>}
+                    {ev.tag ? <PilulaTag tag={ev.tag} tamanho="chip" className="h-[24px] max-w-[120px] flex-none text-[11px]" />
+                      : <Chip tom={ev.modulo === "geral" ? "g" : tipo.tom} className="h-[24px] flex-none text-[11px]">{ev.modulo === "geral" ? "GERAL" : tipo.chip}</Chip>}
                   </button>
                 );
               })}

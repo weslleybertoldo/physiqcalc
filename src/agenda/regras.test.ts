@@ -5,6 +5,8 @@ import {
   nomeArquivoICS, normalizarRegras, numerosDaAgenda, periodoDoPacote, resumoDasRegras, rotuloSemana, somarMeses, textoDias, textoHojePorTipo,
   textoPacote, textoSlotsPorDia, textoTrava, tipoPadrao, travasDoDia, ultimoDiaDoMes, type ContextoConsulta, type PacoteSituacao,
   ROTULO_MES_PACOTE, mesUsado,
+  TAG_BASE, baseDaArea, calendariosIniciais, destinoAoExcluir, estiloDaTag, inicialDaTag, mensagemErroTag, normalizarNomeTag, normalizarTag,
+  tagDaConsulta, tagPadraoDoCalendario, tagsDe, temAsBases, validarTag, type TagAgenda,
 } from "./regras";
 
 const pacote = (restam: number, total = 6, meses: PacoteSituacao["meses"] = [{ mes: "2026-10-01", estado: "agendada" }]) => ({ restam, total, meses });
@@ -223,5 +225,116 @@ describe("H5 — a janela mês a mês (sem trava = qualquer mês; pacote de vár
   it("o nome do mês", () => {
     expect(mesPorExtenso("2026-10-01")).toBe("outubro de 2026");
     expect(mesPorExtenso("2027-03-15")).toBe("março de 2027");
+  });
+});
+
+// ───────────────────────── W2 — tags da agenda ─────────────────────────
+describe("tags da agenda (W2 — o Tipo vira tag do profissional)", () => {
+  const tg = (extra: Partial<TagAgenda>): TagAgenda => ({ id: "x", profissional_id: "eu", nome: "X", cor: "#94a3b8", area: "geral", base: false, ordem: 9, ...extra });
+  const minhas: TagAgenda[] = [
+    tg({ id: "bt", nome: "Treino", cor: "#a78bfa", area: "treino", base: true, ordem: 1 }),
+    tg({ id: "bn", nome: "Nutrição", cor: "#34d399", area: "nutricao", base: true, ordem: 2 }),
+    tg({ id: "bg", nome: "Geral", cor: "#94a3b8", area: "geral", base: true, ordem: 3 }),
+    tg({ id: "re", nome: "Reunião", cor: "#f472b6", area: "geral", ordem: 4 }),
+    tg({ id: "ac", nome: "Acompanhamento", cor: "#38bdf8", area: "nutricao", ordem: 5 }),
+    tg({ id: "velha", nome: "Antiga", area: "treino", ordem: 6, deleted_at: "2026-10-01T00:00:00Z" }),
+  ];
+  const daCamila: TagAgenda[] = [
+    tg({ id: "cn", profissional_id: "camila", nome: "Nutrição", cor: "#34d399", area: "nutricao", base: true, ordem: 2 }),
+    tg({ id: "cg", profissional_id: "camila", nome: "Geral", area: "geral", base: true, ordem: 3 }),
+    tg({ id: "ct", profissional_id: "camila", nome: "Treino", cor: "#a78bfa", area: "treino", base: true, ordem: 1 }),
+  ];
+  const todas = [...daCamila, ...minhas];
+
+  it("as 3 base têm as cores do chip de antes (Treino violeta, Nutrição verde) e o Geral no cinza da paleta", () => {
+    expect(TAG_BASE).toEqual({ treino: { nome: "Treino", cor: "#a78bfa" }, nutricao: { nome: "Nutrição", cor: "#34d399" }, geral: { nome: "Geral", cor: "#94a3b8" } });
+  });
+
+  it("toda lista filtra por profissional (o master lê as de todos): vivas, na ordem, as base primeiro", () => {
+    expect(tagsDe(todas, "eu").map((t) => t.id)).toEqual(["bt", "bn", "bg", "re", "ac"]);
+    expect(tagsDe(todas, "camila").map((t) => t.id)).toEqual(["ct", "cn", "cg"]);
+    expect(tagsDe(todas, null)).toEqual([]);
+    expect(baseDaArea(todas, "camila", "nutricao")?.id).toBe("cn");
+    expect(temAsBases(todas, "eu")).toBe(true);
+    expect(temAsBases(minhas.filter((t) => t.id !== "bg"), "eu")).toBe(false);
+  });
+
+  it("tag padrão do novo agendamento: a do calendário (viva e do dono dele); sem ela, a base da área que o papel escolhe", () => {
+    expect(tagPadraoDoCalendario({ nutricionista_id: "eu", tag_padrao_id: "ac" }, todas, "treino")?.id).toBe("ac");
+    expect(tagPadraoDoCalendario({ nutricionista_id: "eu", tag_padrao_id: null }, todas, "treino")?.id).toBe("bt");
+    expect(tagPadraoDoCalendario({ nutricionista_id: "eu", tag_padrao_id: "velha" }, todas, "nutricao")?.id).toBe("bn");
+    // calendário da Camila (o dono vendo a equipe): só as tags DELA — a minha "Reunião" não vale lá
+    expect(tagPadraoDoCalendario({ nutricionista_id: "camila", tag_padrao_id: "re" }, todas, "nutricao")?.id).toBe("cn");
+    expect(tagPadraoDoCalendario(null, todas, "geral")).toBeNull();
+  });
+
+  it("a área da tag é o modulo: o tipo de antes (papel) só decide quando o calendário não tem tag padrão", () => {
+    const area = tipoPadrao(["personal"], "eu", null, ["treino", "nutricao"]);
+    expect(area).toBe("treino");
+    expect(tagPadraoDoCalendario({ nutricionista_id: "eu" }, todas, area)?.area).toBe("treino");
+    expect(tagPadraoDoCalendario({ nutricionista_id: "eu", tag_padrao_id: "re" }, todas, area)?.area).toBe("geral");
+  });
+
+  it("excluir: as consultas vão para a base da MESMA área; a base não sai", () => {
+    expect(destinoAoExcluir(minhas[3], todas)?.id).toBe("bg"); // Reunião (geral) → Geral
+    expect(destinoAoExcluir(minhas[4], todas)?.id).toBe("bn"); // Acompanhamento (nutrição) → Nutrição
+    expect(destinoAoExcluir(minhas[0], todas)).toBeNull();
+  });
+
+  it("validar: nome 1–40, sem repetir entre as vivas (sem diferenciar maiúscula), cor da paleta", () => {
+    expect(validarTag({ nome: "  ", cor: "#f472b6" }, minhas)).toEqual({ nome: "Dê um nome à tag" });
+    expect(validarTag({ nome: "x".repeat(41), cor: "#f472b6" }, minhas).nome).toMatch(/40/);
+    expect(validarTag({ nome: "reunião", cor: "#f472b6" }, minhas).nome).toBe("Você já tem uma tag com esse nome");
+    expect(validarTag({ nome: "TREINO", cor: "#f472b6" }, minhas).nome).toBe("Você já tem uma tag com esse nome");
+    expect(validarTag({ nome: "Reunião", cor: "#f472b6" }, minhas, "re")).toEqual({});
+    expect(validarTag({ nome: "Antiga", cor: "#f472b6" }, minhas)).toEqual({}); // a excluída liberou o nome
+    expect(validarTag({ nome: "Nova", cor: "azul" }, minhas)).toEqual({ cor: "Escolha uma cor" });
+    expect(normalizarNomeTag("  Reunião   de  equipe ")).toBe("Reunião de equipe");
+  });
+
+  it("a inicial (visão mês) e a pílula na cor da tag", () => {
+    expect(inicialDaTag("reunião")).toBe("R");
+    expect(inicialDaTag("  ácido")).toBe("Á");
+    expect(estiloDaTag("#f472b6")).toEqual({ background: "rgba(244, 114, 182, .2)", borderColor: "rgba(244, 114, 182, .45)", color: "color-mix(in srgb, #f472b6 62%, var(--p-texto))" });
+    expect(estiloDaTag("azul").background).toBe("rgba(148, 163, 184, .2)");
+  });
+
+  it("a tag que a consulta mostra: a dela; sem ela no mapa, a base da área do modulo", () => {
+    const mapa = new Map(todas.map((t) => [t.id, t]));
+    expect(tagDaConsulta("re", "geral", mapa)).toEqual({ id: "re", nome: "Reunião", cor: "#f472b6", area: "geral" });
+    expect(tagDaConsulta("sumiu", "nutricao", mapa)).toEqual({ id: null, nome: "Nutrição", cor: "#34d399", area: "nutricao" });
+    expect(tagDaConsulta(null, "x", null)).toMatchObject({ id: null, area: "nutricao" });
+  });
+
+  it("calendários iniciais: personal E nutri → Treino (padrão) e Nutrição; só personal → 1 com Treino; só nutri → 1 com Nutrição", () => {
+    expect(calendariosIniciais(["dono", "personal", "nutricionista"], ["treino", "nutricao"])).toEqual([
+      { nome: "Treino", cor: "#a78bfa", padrao: true, area: "treino" },
+      { nome: "Nutrição", cor: "#34d399", padrao: false, area: "nutricao" },
+    ]);
+    expect(calendariosIniciais(["dono", "personal"], ["treino"])).toEqual([{ nome: "Calendário principal", cor: "#a78bfa", padrao: true, area: "treino" }]);
+    expect(calendariosIniciais(["nutricionista"], ["treino", "nutricao"])).toEqual([{ nome: "Calendário principal", cor: "#a78bfa", padrao: true, area: "nutricao" }]);
+    // só dono numa conta com os 2 módulos: sem tag padrão (a tag vem pelo papel em cada consulta, como hoje)
+    expect(calendariosIniciais(["dono"], ["treino", "nutricao"])[0]).toMatchObject({ nome: "Calendário principal", area: null });
+    expect(calendariosIniciais(["dono"], ["nutricao"])[0].area).toBe("nutricao");
+  });
+
+  it("o que vem do banco vira tag (com os padrões) e os erros do banco viram frase", () => {
+    expect(normalizarTag({ id: "a", profissional_id: "p", nome: "Reunião", cor: "#F472B6", area: "geral", base: false, ordem: "4" }))
+      .toMatchObject({ id: "a", cor: "#f472b6", area: "geral", ordem: 4, base: false });
+    expect(normalizarTag({ id: "a", profissional_id: "p", area: "nutricao", cor: "x" })).toMatchObject({ nome: "Nutrição", cor: "#34d399", area: "nutricao" });
+    expect(normalizarTag({ nome: "sem id" })).toBeNull();
+    expect(mensagemErroTag('duplicate key value violates unique constraint "agenda_tags_nome_uq"')).toBe("Você já tem uma tag com esse nome");
+    expect(mensagemErroTag("tag_base_nao_exclui")).toMatch(/não podem ser excluídas/);
+    expect(mensagemErroTag("tag_base_area_fixa")).toBe("A área das tags prontas não muda");
+    expect(mensagemErroTag('new row violates row-level security policy for table "agenda_tags"')).toMatch(/outro profissional/);
+  });
+
+  it("o .ics do profissional leva a tag em CATEGORIES (a área continua na descrição)", () => {
+    const ics = gerarICS([{ id: "a1", titulo: "Retorno", inicio: new Date("2026-10-15T17:00:00Z"), fim: new Date("2026-10-15T18:00:00Z"), diaInteiro: false,
+      status: "confirmado", modulo: "nutricao", aluno: "Marina Alves", tag: "Acompanhamento, mensal" }], new Date("2026-10-01T12:00:00Z"));
+    expect(ics).toContain("CATEGORIES:Acompanhamento\\, mensal\r\n");
+    expect(ics).toContain("DESCRIPTION:Nutrição — Confirmado por você\r\n");
+    const sem = gerarICS([{ id: "a2", titulo: "X", inicio: new Date("2026-10-15T17:00:00Z"), fim: new Date("2026-10-15T18:00:00Z"), diaInteiro: false, status: "agendado" }]);
+    expect(sem).not.toContain("CATEGORIES");
   });
 });

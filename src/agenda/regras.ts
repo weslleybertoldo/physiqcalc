@@ -399,6 +399,190 @@ export const SUGESTOES_TITULO: Record<TipoAgendamento, string[]> = {
   geral: ["Primeira consulta", "Retorno", "Consulta"],
 };
 
+// ───────────────────────── tags da agenda (W2 — o "Tipo" vira TAG do profissional) ─────────────────────────
+// Decisão dele (02/10, D3): Treino, Nutrição e Geral prontas + as dele, com nome, cor e área; o modulo da consulta continua e é a
+// área da tag (o banco garante: agenda_tags + gatilho). D4: o aluno NÃO vê a tag. Cada profissional tem as suas: toda lista de tags
+// na tela filtra por profissional_id (o master lê TODAS pela RLS).
+
+/** A área de uma tag = o modulo da consulta (treino · nutrição · geral). */
+export type AreaTag = TipoAgendamento;
+
+export interface TagAgenda {
+  id: string;
+  profissional_id: string;
+  nome: string;
+  /** "#rrggbb" (a paleta dos calendários) */
+  cor: string;
+  area: AreaTag;
+  /** as 3 prontas: renomeiam e mudam a cor; não saem nem mudam de área */
+  base: boolean;
+  ordem: number;
+  created_at?: string;
+  deleted_at?: string | null;
+}
+
+/** As 3 base (as cores de hoje do chip T/N; Geral no cinza da paleta) — as mesmas do banco (agenda_garantir_bases). */
+export const TAG_BASE: Record<AreaTag, { nome: string; cor: string }> = {
+  treino: { nome: "Treino", cor: "#a78bfa" },
+  nutricao: { nome: "Nutrição", cor: "#34d399" },
+  geral: { nome: "Geral", cor: "#94a3b8" },
+};
+
+export const AREAS_TAG: { valor: AreaTag; rotulo: string }[] = [
+  { valor: "treino", rotulo: "Treino" },
+  { valor: "nutricao", rotulo: "Nutrição" },
+  { valor: "geral", rotulo: "Geral" },
+];
+export const rotuloArea = (a: unknown): string => AREAS_TAG.find((x) => x.valor === a)?.rotulo ?? "Geral";
+export const NOME_TAG_MAX = 40;
+
+/** "  Reunião   de  equipe " → "Reunião de equipe" (a mesma limpeza do banco). */
+export const normalizarNomeTag = (nome: string): string => nome.trim().replace(/\s+/g, " ");
+
+const corValida = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+
+/** O que veio do banco (agenda_tags / agenda_garantir_tags) → tag com os padrões no que faltar; null se não serve. */
+export function normalizarTag(v: unknown): TagAgenda | null {
+  const r = (v ?? {}) as Record<string, unknown>;
+  if (typeof r.id !== "string" || typeof r.profissional_id !== "string") return null;
+  const area = tipoDe(r.area === "geral" || r.area === "treino" || r.area === "nutricao" ? r.area : "geral");
+  return {
+    id: r.id,
+    profissional_id: r.profissional_id,
+    nome: typeof r.nome === "string" && r.nome.trim() ? r.nome : TAG_BASE[area].nome,
+    cor: corValida(r.cor) ? r.cor.toLowerCase() : TAG_BASE[area].cor,
+    area,
+    base: r.base === true,
+    ordem: Number.isFinite(Number(r.ordem)) ? Number(r.ordem) : 0,
+    created_at: typeof r.created_at === "string" ? r.created_at : undefined,
+    deleted_at: (r.deleted_at as string | null | undefined) ?? null,
+  };
+}
+
+const ordemTag = (a: TagAgenda, b: TagAgenda): number => a.ordem - b.ordem || (a.created_at ?? "").localeCompare(b.created_at ?? "") || a.nome.localeCompare(b.nome);
+
+/** As tags VIVAS de UM profissional, na ordem (as base primeiro). Nunca "tudo que a RLS deixa": o master lê as de todos. */
+export function tagsDe(tags: readonly TagAgenda[], profissionalId: string | null | undefined): TagAgenda[] {
+  if (!profissionalId) return [];
+  return tags.filter((t) => t.profissional_id === profissionalId && !t.deleted_at).sort(ordemTag);
+}
+
+/** A base de uma área do profissional (Treino · Nutrição · Geral). */
+export function baseDaArea(tags: readonly TagAgenda[], profissionalId: string | null | undefined, area: AreaTag): TagAgenda | null {
+  return tagsDe(tags, profissionalId).find((t) => t.base && t.area === area) ?? null;
+}
+
+/** As 3 base do profissional já existem? (senão o painel pede ao banco: agenda_garantir_tags) */
+export const temAsBases = (tags: readonly TagAgenda[], profissionalId: string): boolean =>
+  AREAS_TAG.every((a) => !!baseDaArea(tags, profissionalId, a.valor));
+
+/**
+ * A tag que vem marcada no novo agendamento (spec §5): a tag padrão do calendário (viva e do DONO dele); sem ela, a base da área que
+ * o tipoPadrao de hoje escolhe (papel de quem agenda, relação com o aluno, módulo da conta).
+ */
+export function tagPadraoDoCalendario(
+  calendario: { nutricionista_id: string; tag_padrao_id?: string | null } | null | undefined,
+  tags: readonly TagAgenda[],
+  areaPeloPapel: AreaTag,
+): TagAgenda | null {
+  if (!calendario) return null;
+  const doDono = tagsDe(tags, calendario.nutricionista_id);
+  return doDono.find((t) => t.id === calendario.tag_padrao_id) ?? doDono.find((t) => t.base && t.area === areaPeloPapel) ?? null;
+}
+
+/** Para onde vão as consultas de uma tag excluída: a base da MESMA área do mesmo profissional (o banco faz igual). */
+export function destinoAoExcluir(tag: TagAgenda, tags: readonly TagAgenda[]): TagAgenda | null {
+  if (tag.base) return null;
+  return baseDaArea(tags, tag.profissional_id, tag.area);
+}
+
+/** A inicial da tag (visão mês): "Reunião" → "R" · "  nutrição" → "N". */
+export function inicialDaTag(nome: string): string {
+  const primeira = Array.from(normalizarNomeTag(nome))[0] ?? "";
+  return primeira.toLocaleUpperCase("pt-BR");
+}
+
+export interface ErrosTag {
+  nome?: string;
+  cor?: string;
+}
+
+/** Nome 1–40, sem repetir entre as vivas DO MESMO profissional (sem diferenciar maiúscula); cor #rrggbb. */
+export function validarTag(
+  f: { nome: string; cor: string },
+  tagsDoProfissional: readonly TagAgenda[],
+  idAtual?: string | null,
+): ErrosTag {
+  const e: ErrosTag = {};
+  const nome = normalizarNomeTag(f.nome);
+  if (!nome) e.nome = "Dê um nome à tag";
+  else if (nome.length > NOME_TAG_MAX) e.nome = `No máximo ${NOME_TAG_MAX} caracteres`;
+  else if (tagsDoProfissional.some((t) => !t.deleted_at && t.id !== idAtual && t.nome.toLocaleLowerCase("pt-BR") === nome.toLocaleLowerCase("pt-BR"))) {
+    e.nome = "Você já tem uma tag com esse nome";
+  }
+  if (!corValida(f.cor)) e.cor = "Escolha uma cor";
+  return e;
+}
+
+/** O erro do banco ao salvar/excluir uma tag → a frase da tela. */
+export function mensagemErroTag(msg: string | null | undefined): string {
+  const m = msg ?? "";
+  if (/agenda_tags_nome_uq|duplicate key/i.test(m)) return "Você já tem uma tag com esse nome";
+  if (/tag_base_nao_exclui/.test(m)) return "As tags prontas (Treino, Nutrição e Geral) não podem ser excluídas";
+  if (/tag_base_area_fixa|tag_base_fixa/.test(m)) return "A área das tags prontas não muda";
+  if (/agenda_tags_nome/.test(m)) return `O nome precisa ter de 1 a ${NOME_TAG_MAX} caracteres`;
+  if (/row-level security|42501/i.test(m)) return "Você não pode mudar as tags de outro profissional";
+  return m || "Não foi possível salvar a tag";
+}
+
+/** A tag que a consulta mostra: a dela (do mapa); sem ela (não carregou, ou de quem a RLS não deixa ler), a base da área do modulo. */
+export function tagDaConsulta(
+  tagId: string | null | undefined,
+  modulo: unknown,
+  tags: ReadonlyMap<string, TagAgenda> | null | undefined,
+): { id: string | null; nome: string; cor: string; area: AreaTag } {
+  const t = tagId ? tags?.get(tagId) : undefined;
+  if (t) return { id: t.id, nome: t.nome, cor: t.cor, area: t.area };
+  const area = tipoDe(modulo);
+  return { id: null, nome: TAG_BASE[area].nome, cor: TAG_BASE[area].cor, area };
+}
+
+export interface CalendarioInicial {
+  nome: string;
+  cor: string;
+  padrao: boolean;
+  /** a área da tag padrão (null = sem tag padrão: a tag vem pelo papel em cada consulta, como hoje) */
+  area: AreaTag | null;
+}
+
+/** Hoje o 1º calendário nasce violeta (a cor 2 da paleta). */
+export const COR_CALENDARIO_PRINCIPAL = "#a78bfa";
+
+/**
+ * Os calendários de quem entra na agenda SEM nenhum (spec §5): personal E nutri na conta ativa → "Treino" (violeta, tag padrão
+ * Treino, padrão) e "Nutrição" (verde, tag padrão Nutrição); senão 1 "Calendário principal" com a tag padrão da área do papel
+ * (como hoje; quem não tem papel de área fica sem tag padrão). D2: excluir o último continua recriando por aqui.
+ */
+export function calendariosIniciais(papeis: readonly string[], modulosConta?: readonly string[] | null): CalendarioInicial[] {
+  const personal = papeis.includes("personal");
+  const nutri = papeis.includes("nutricionista");
+  if (personal && nutri) {
+    return [
+      { nome: "Treino", cor: TAG_BASE.treino.cor, padrao: true, area: "treino" },
+      { nome: "Nutrição", cor: TAG_BASE.nutricao.cor, padrao: false, area: "nutricao" },
+    ];
+  }
+  const area = tipoPadrao(papeis, null, null, modulosConta);
+  return [{ nome: "Calendário principal", cor: COR_CALENDARIO_PRINCIPAL, padrao: true, area: area === "geral" ? null : area }];
+}
+
+/** A pílula da tag na cor dela (fundo e borda translúcidos; o texto puxa para a cor do tema — legível no escuro e no claro). */
+export function estiloDaTag(cor: string): { background: string; borderColor: string; color: string } {
+  const c = corValida(cor) ? cor : TAG_BASE.geral.cor;
+  const rgb = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)).join(", ");
+  return { background: `rgba(${rgb}, .2)`, borderColor: `rgba(${rgb}, .45)`, color: `color-mix(in srgb, ${c} 62%, var(--p-texto))` };
+}
+
 // ───────────────────────── os 7 status + confirmação no visual premium ─────────────────────────
 
 export type StatusAgenda = "agendado" | "encaixe" | "confirmado" | "paciente_confirmou" | "desmarcado" | "paciente_desmarcou" | "nao_compareceu";
@@ -576,6 +760,8 @@ export interface EventoICS {
   observacao?: string | null;
   modulo?: string | null;
   aluno?: string | null;
+  /** W2: o nome da tag (CATEGORIES do evento) */
+  tag?: string | null;
 }
 
 const escaparICS = (s: string): string => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
@@ -584,7 +770,8 @@ const dataICS = (d: Date): string => `${d.getFullYear()}${String(d.getMonth() + 
 
 /**
  * O .ics da agenda (N-66). O UID continua `<id>@physiqnutri` (o mesmo do site antigo, que usa as MESMAS consultas): quem já
- * importou o arquivo de lá e importa este no Google Agenda atualiza o evento em vez de duplicar.
+ * importou o arquivo de lá e importa este no Google Agenda atualiza o evento em vez de duplicar. W2: a tag da consulta vai em
+ * CATEGORIES (o .ics é do PROFISSIONAL — o aluno não exporta a agenda e não vê a tag).
  */
 export function gerarICS(eventos: readonly EventoICS[], agora = new Date()): string {
   const linhas = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Physiq//Agenda//PT", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Physiq"];
@@ -596,6 +783,7 @@ export function gerarICS(eventos: readonly EventoICS[], agora = new Date()): str
     linhas.push(`SUMMARY:${escaparICS(titulo)}`);
     const descricao = [e.modulo ? infoTipo(e.modulo).rotulo : "", ESTILO_STATUS[e.status].rotulo, e.observacao ?? ""].filter(Boolean).join(" — ");
     if (descricao) linhas.push(`DESCRIPTION:${escaparICS(descricao)}`);
+    if (e.tag?.trim()) linhas.push(`CATEGORIES:${escaparICS(e.tag.trim())}`);
     linhas.push(`STATUS:${cancelado(e.status) ? "CANCELLED" : confirmacaoDe(e.status) === "confirmado" ? "CONFIRMED" : "TENTATIVE"}`, "END:VEVENT");
   }
   linhas.push("END:VCALENDAR");

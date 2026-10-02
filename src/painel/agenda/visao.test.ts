@@ -7,7 +7,7 @@ import {
 
 const linha = (extra: Partial<Agendamento> = {}): Agendamento => ({
   id: "a1", nutricionista_id: "lucas", calendario_id: "c1", paciente_id: "p1", titulo: "Avaliação física", inicio: "2026-10-15T12:00:00Z",
-  fim: "2026-10-15T13:00:00Z", dia_inteiro: false, status: "agendado", confirmacao: "a_confirmar", observacao: null, modulo: "treino", conta_id: "k",
+  fim: "2026-10-15T13:00:00Z", dia_inteiro: false, status: "agendado", confirmacao: "a_confirmar", observacao: null, modulo: "treino", tag_id: null, conta_id: "k",
   reagendamentos: 0, mes_referencia: "2026-10-01", origem: "profissional", aluno_respondeu_em: null, aviso_email_em: null, created_at: "", updated_at: "",
   deleted_at: null, ...extra,
 });
@@ -59,5 +59,14 @@ describe("Painel › Agenda (W20) — o evento e as contas das visões", () => {
     const dia = [ev({ id: "x", inicio: "2026-10-15T15:00:00Z", fim: "2026-10-15T16:00:00Z" }), ev({ id: "y", dia_inteiro: true, inicio: "2026-10-15T03:00:00Z", fim: "2026-10-16T03:00:00Z" })];
     expect(eventosDoDia(dia, new Date(2026, 9, 15)).map((e) => e.id)).toEqual(["y", "x"]);
     expect(faixaHora({ inicio: new Date(2026, 9, 15, 9, 0), fim: new Date(2026, 9, 15, 10, 30), diaInteiro: false })).toBe("09:00 – 10:30");
+  });
+
+  it("W2: o evento leva a tag dele (nome e cor); sem ela no mapa (não carregou ou é de quem a RLS não deixa ler), a base da área", () => {
+    const tags = new Map([["tg1", { id: "tg1", profissional_id: "lucas", nome: "Reunião", cor: "#f472b6", area: "geral" as const, base: false, ordem: 4 }]]);
+    const comTag = paraEvento(linha({ tag_id: "tg1", modulo: "geral" }), new Map(), new Map(), tags);
+    expect(comTag.tag).toEqual({ id: "tg1", nome: "Reunião", cor: "#f472b6" });
+    expect(comTag.modulo).toBe("geral");
+    expect(ev({ tag_id: "nao-carregou", modulo: "nutricao" }).tag).toEqual({ id: null, nome: "Nutrição", cor: "#34d399" });
+    expect(ev({ modulo: "treino" }).tag).toEqual({ id: null, nome: "Treino", cor: "#a78bfa" });
   });
 });
