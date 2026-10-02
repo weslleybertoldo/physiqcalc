@@ -85,7 +85,10 @@ export function recebimentos(trans: TransacaoDoResumo[], cobs: CobrancaDoResumo[
   return saida;
 }
 
-export const somaEntre = (recs: Recebimento[], de: string, ate: string): number => arred2(recs.filter((r) => entre(r.dia, de, ate)).reduce((s, r) => s + r.valor, 0));
+/** O que entra numa soma por dia (os recebimentos do Financeiro e, W28, os pagamentos das contas da Visão geral do master). */
+export type ValorDoDia = Pick<Recebimento, "dia" | "valor">;
+
+export const somaEntre = (recs: readonly ValorDoDia[], de: string, ate: string): number => arred2(recs.filter((r) => entre(r.dia, de, ate)).reduce((s, r) => s + r.valor, 0));
 
 /** Variação percentual (null sem base: o período anterior não teve nada). */
 export function variacao(atual: number, anterior: number): number | null {
@@ -116,9 +119,9 @@ export interface ComparacaoMes {
  * Regra ÚNICA da comparação do mês (o KPI "Receita do mês" do Dashboard e o "Recebido em <mês>" do Resumo do Financeiro): o que
  * entrou de 1º até hoje contra o que entrou de 1º até o MESMO dia do mês anterior — no dia 1º, 1º contra 1º (não mais o mês parcial
  * contra o mês cheio, que dava "−87 % sobre setembro" no dia 1º); dia 31 contra um mês de 30 = o mês anterior inteiro; em março,
- * fevereiro vai até o dia 28 (ou 29).
+ * fevereiro vai até o dia 28 (ou 29). W28: também o KPI "Receita do mês" da Visão geral do master (receitaDoMes, src/master/regras.ts).
  */
-export function comparacaoDoMes(recs: Recebimento[], hoje: string): ComparacaoMes {
+export function comparacaoDoMes(recs: readonly ValorDoDia[], hoje: string): ComparacaoMes {
   const mes = inicioDoMes(hoje);
   const de = somarMeses(mes, -1);
   const diaHoje = Number(hoje.slice(8, 10));

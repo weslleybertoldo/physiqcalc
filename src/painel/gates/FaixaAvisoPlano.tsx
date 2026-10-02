@@ -14,19 +14,22 @@ function jaFechou(chave: string): boolean {
 }
 
 /**
- * Faixa de aviso do plano no topo do painel (W4, spec 6.2): contas novas que pagam por Pix/cartão à vista (e o fim do
- * teste) nos dias −7, −2, −1 e 0 do vencimento; o X guarda `aviso-plano:<conta>:<vence_em>:<marco>` no aparelho e a faixa
- * volta no próximo marco. Quem tem a cobrança automática no cartão não recebe aviso (Nativo OS W30a). Master e legados, não.
+ * Faixa de aviso do plano no topo do painel (W4, spec 6.2): contas que pagam por Pix/cartão à vista (e o fim do teste) nos dias
+ * −7, −2, −1 e 0 do vencimento; o X guarda `aviso-plano:<conta>:<vence_em>:<marco>` no aparelho e a faixa volta no próximo marco.
+ * W28 (legado Calc no núcleo): nos dias de tolerância, "Mensalidade de R$ X venceu em DD/MM. Pague até DD/MM para não perder o
+ * acesso." (urgente; o X vale só no dia). Quem tem a cobrança automática no cartão não recebe aviso (Nativo OS W30a). Master, conta
+ * com a cobrança antiga (cobranca_legada — a GatePlanoLegado avisa) e conta do app, não.
  */
 export default function FaixaAvisoPlano({ children }: { children: ReactNode }) {
   const { conta, ehDono, ehMaster } = useConta();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [fechadas, setFechadas] = useState<string[]>([]);
-  if (!conta || ehMaster || conta.origem !== "nova" || conta.cobranca_legada) return <>{children}</>;
-  const aviso = avisoDoPlano(conta, hojeSP(), recorrenteAtiva(conta));
+  if (!conta || ehMaster || conta.cobranca_legada || conta.origem === "app") return <>{children}</>;
+  const hoje = hojeSP();
+  const aviso = avisoDoPlano(conta, hoje, recorrenteAtiva(conta));
   if (!aviso) return <>{children}</>;
-  const chave = chaveDoAviso(conta.id, aviso.vence, aviso.marco);
+  const chave = chaveDoAviso(conta.id, aviso.vence, aviso.marco, hoje);
   if (fechadas.includes(chave) || jaFechou(chave)) return <>{children}</>;
   const fechar = () => {
     try {
@@ -36,7 +39,7 @@ export default function FaixaAvisoPlano({ children }: { children: ReactNode }) {
     }
     setFechadas((f) => [...f, chave]);
   };
-  const urgente = aviso.dias <= 1;
+  const urgente = aviso.marco === "tolerancia" || aviso.dias <= 1;
   const naAbaPlano = pathname.startsWith("/painel/configuracoes/plano");
   return (
     <>

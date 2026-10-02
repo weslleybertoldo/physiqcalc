@@ -22,6 +22,11 @@ export interface ContaLinha {
   valor_mensal: number | null;
   regra_pix: string;
   cobranca_legada: boolean;
+  /**
+   * W28: a conta legada segue o preço (valor_travado) e as regras de hoje até trocar de plano — a ação "Plano" avisa que ela sai do
+   * legado (o servidor tira o preço travado). Pode não vir (servidor antigo).
+   */
+  regras_legadas?: boolean;
   isenta_motivo: string | null;
   recebimento_modo: "pix_manual" | "nenhum" | "mercadopago";
   bloquear_app_inadimplente: boolean;
@@ -93,7 +98,17 @@ export interface VisaoGeral {
   contas: { total: number; teste: number; ativas: number; vencidas: number; isentas: number; suspensas: number; novas: number; legado_calc: number; legado_nutri: number };
   profissionais: number;
   alunos: { ativos: number; app: number; bloqueados: number; em_2_contas: number };
-  receita: { mes: number; mes_anterior: number; app_mes: number };
+  receita: {
+    mes: number;
+    /** o mês anterior INTEIRO (fica para os APKs antigos) */
+    mes_anterior: number;
+    app_mes: number;
+    /**
+     * W28: o que as contas pagaram por dia (faturas aprovadas) do 1º do mês anterior até hoje — a tela compara o mês com o MESMO
+     * período do mês anterior (comparacaoDoMes). Pode não vir (servidor antigo).
+     */
+    recebimentos?: Array<{ dia: string; valor: number | string; origem: "conta" }>;
+  };
   atencao: {
     vencidas: ContaLinha[];
     teste_acabando: ContaLinha[];

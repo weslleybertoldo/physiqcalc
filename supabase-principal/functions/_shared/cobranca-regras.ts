@@ -73,6 +73,43 @@ export function lerReferencia(ref: string | null | undefined): Referencia | null
   return { schema, contaId, tipo, faturaId: faturaId ?? null };
 }
 
+/**
+ * W28 — referências das cobranças que os APPS ANTIGOS criaram (as assinaturas e os pagamentos de antes da virada continuam
+ * avisando; o repasse traz para cá):
+ *   Calc (professor): "<schema>:<user_id do Treino>:<mes_ref>:plano_professor[:adesao|mensal|anual]"
+ *   Nutri (assinatura): "physiqnutri:<schema>:<user_id>"   ·   Nutri (Pix de 30 dias): "physiqnutri-pix:<schema>:<user_id>"
+ * Aluno do Calc ("…:aluno") não é daqui (vai para a mp-webhook-aluno).
+ */
+export interface ReferenciaLegada {
+  app: "calc" | "nutri";
+  schema: "public" | "staging";
+  userId: string;
+  tipo: "adesao" | "mensal" | "anual" | "recorrente" | "pix";
+}
+
+export function lerReferenciaLegada(ref: string | null | undefined): ReferenciaLegada | null {
+  const partes = String(ref ?? "").split(":");
+  if ((partes[0] === "physiqnutri" || partes[0] === "physiqnutri-pix") && partes.length === 3) {
+    const [prefixo, schema, uid] = partes;
+    if ((schema !== "public" && schema !== "staging") || !ehUuid(uid)) return null;
+    return { app: "nutri", schema, userId: uid, tipo: prefixo === "physiqnutri-pix" ? "pix" : "recorrente" };
+  }
+  if (partes.length >= 4 && (partes[0] === "public" || partes[0] === "staging") && ehUuid(partes[1]) && partes[3] === "plano_professor") {
+    const t = partes[4] || "mensal";
+    const tipo = t === "adesao" || t === "anual" ? t : "mensal";
+    return { app: "calc", schema: partes[0], userId: partes[1], tipo };
+  }
+  return null;
+}
+
+/** A fatura que um pagamento antigo vira no núcleo: anual = 12 meses; o resto (adesão do Calc, mensal, Pix de 30 dias) = 1. */
+export function faturaDaReferenciaLegada(r: ReferenciaLegada): { tipo: "mensal" | "anual" | "pix_avulso" | "recorrente"; meses: number } {
+  if (r.tipo === "anual") return { tipo: "anual", meses: 12 };
+  if (r.tipo === "pix") return { tipo: "pix_avulso", meses: 1 };
+  if (r.tipo === "recorrente") return { tipo: "recorrente", meses: 1 };
+  return { tipo: "mensal", meses: 1 };
+}
+
 // ───────────────────────── Mercado Pago → fatura ─────────────────────────
 
 export interface PagamentoMp {

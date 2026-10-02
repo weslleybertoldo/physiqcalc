@@ -5,7 +5,9 @@
  *
  * Fonte: o login do banco principal e a `minha_situacao()` (src/nucleo/sessao.tsx). O Banco do Treino entra em 2 pontos:
  * o papel espelhado no JWT do Treino (o master e o professor de hoje continuam vendo o painel e o master mesmo se o
- * principal estiver fora do ar) e o `plano-status` do Calc, que é a regra de cobrança das contas 'legado_calc' até a W28.
+ * principal estiver fora do ar) e o `plano-status` do Calc, que é a regra de cobrança das contas 'legado_calc' enquanto a
+ * cobrança delas é a antiga (cobranca_legada). W28: a legada com cobranca_legada = false ganha o card do núcleo
+ * (planoCartaoContaNova) — quem decide é o regraDoPlano, que só olha o cobranca_legada.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,9 +63,10 @@ export function useDadosCasca(): DadosCasca {
 
   let plano: PlanoCasca | null = null;
   if (conta.conta) {
+    // as telas antigas só com a cobrança antiga (cobranca_legada); a legada no núcleo cai no card das contas novas
     if (regra === "calc") plano = planoCalc.data ? planoDoStatusLegado(planoCalc.data) : planoCartaoConta(conta.conta, ehMaster);
     else if (regra === "nutri") plano = planoCartaoNutri(situacao?.legado_nutri);
-    // W4: conta nova com a situação, o teste e o vencimento reais (e "Renova em … · cartão" com a cobrança automática)
+    // W4: conta do núcleo com a situação, o teste e o vencimento reais (e "Renova em … · cartão" com a cobrança automática)
     else if (regra === "nova") plano = planoCartaoContaNova(conta.conta);
     else plano = planoCartaoConta(conta.conta, ehMaster);
   } else if (semSituacao && planoCalc.data) {

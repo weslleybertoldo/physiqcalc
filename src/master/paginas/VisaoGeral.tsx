@@ -12,7 +12,7 @@ import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { Kpi } from "@/ui/premium/Kpi";
 import { ErroMaster, visaoGeral } from "../api";
 import { NovaContaDialog } from "../contas/NovaContaDialog";
-import { dataCurta, moeda, textoErro } from "../regras";
+import { dataCurta, moeda, receitaDoMes, textoErro } from "../regras";
 import type { ContaLinha, VisaoGeral as Dados } from "../tipos";
 
 function dataPorExtenso(iso: string): string {
@@ -52,7 +52,9 @@ export default function VisaoGeral() {
   const q = useQuery({ queryKey: ["master", "visao-geral"], queryFn: visaoGeral, staleTime: 30_000 });
   const d = q.data;
   const atencao = d ? itensDeAtencao(d) : [];
-  const variacao = d && d.receita.mes_anterior > 0 ? Math.round(((d.receita.mes - d.receita.mes_anterior) / d.receita.mes_anterior) * 100) : null;
+  // W28: o mês contra o MESMO período do mês anterior (a regra única do painel); servidor antigo, o mês anterior inteiro
+  const receita = d ? receitaDoMes(d.receita, d.hoje) : null;
+  const variacao = receita?.variacao ?? null;
   const origens = d ? [
     { rotulo: "Contas novas", n: d.contas.novas, cor: "var(--p-ciano)" },
     { rotulo: "Legado PhysiqCalc", n: d.contas.legado_calc, cor: "var(--p-violeta-2)" },
@@ -83,8 +85,14 @@ export default function VisaoGeral() {
             <Kpi icone={Building2} titulo="Contas" valor={d.contas.total} tom="violeta" detalhe={<span data-kpi-contas><b className="text-verde-2">{d.contas.teste}</b> em teste · {d.contas.vencidas} vencidas</span>} />
             <Kpi icone={UserRound} titulo="Profissionais" valor={d.profissionais} tom="ciano" detalhe={`${d.contas.isentas} conta(s) isenta(s)`} />
             <Kpi icone={Users} titulo="Alunos ativos" valor={d.alunos.ativos} tom="verde" detalhe={<span>+{d.alunos.app} no app sem profissional</span>} />
-            <Kpi icone={Wallet} titulo="Receita do mês" valor={moeda(d.receita.mes)} tom="ambar"
-              detalhe={<span data-kpi-receita>{variacao === null ? "planos das contas" : <><b className={variacao >= 0 ? "text-verde-2" : "text-rosa-3"}>{variacao >= 0 ? "+" : ""}{variacao}%</b> sobre o mês anterior</>}</span>} />
+            <Kpi icone={Wallet} titulo="Receita do mês" valor={moeda(receita?.valor ?? d.receita.mes)} tom="ambar"
+              detalhe={receita?.rotulo ? (
+                <span data-kpi-receita data-comparacao-mes={receita.rotulo} title={`De 1º até hoje, comparado com ${receita.rotuloLongo} (o mesmo período do mês anterior)`}>
+                  {variacao === null ? <>nada em {receita.rotulo}</> : <><b className={variacao >= 0 ? "text-verde-2" : "text-rosa-3"}>{variacao >= 0 ? "+" : ""}{variacao}%</b> sobre {receita.rotulo}</>}
+                </span>
+              ) : (
+                <span data-kpi-receita>{variacao === null ? "planos das contas" : <><b className={variacao >= 0 ? "text-verde-2" : "text-rosa-3"}>{variacao >= 0 ? "+" : ""}{variacao}%</b> sobre o mês anterior</>}</span>
+              )} />
           </>
         ) : [0, 1, 2, 3].map((i) => <Cartao key={i} className="h-[132px] p-4"><Esqueleto className="h-full w-full" /></Cartao>)}
       </div>

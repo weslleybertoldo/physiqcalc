@@ -1,8 +1,8 @@
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** "G" do Google (marca exigida pelo guia do botão de login; não é ilustração). */
-function LogoGoogle() {
+/** "G" do Google (marca exigida pelo guia do botão de login; não é ilustração). W28: também no "Entrar com o Google" da tela do Nutri. */
+export function LogoGoogle() {
   return (
     <svg aria-hidden width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
       <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4" />

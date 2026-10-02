@@ -1,3 +1,4 @@
+import { matchRoutes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ABA_DA_SECAO_NUTRI, ABA_DO_CT, ROTAS_ANTIGAS, destinoDaRotaAntiga, montarUrl } from "./redirecionamentos";
 
@@ -126,5 +127,108 @@ describe("links antigos continuam valendo (query e #)", () => {
   it("montarUrl: a query do destino vence e # sem conteúdo some", () => {
     expect(montarUrl("/a?x=2", "?x=1&y=3", "#")).toBe("/a?x=2&y=3");
     expect(montarUrl("/a", "", "")).toBe("/a");
+  });
+});
+
+// ───────────────────────── W28: o site antigo do Nutri inteiro (nutri.physiqcalc.com.br responde 308 para cá) ─────────────────────────
+
+describe("W28 — sub-rotas do site antigo do Nutri (o consultório registrava `${url}/*`)", () => {
+  it.each([
+    ["/dashboard/qualquer", "/painel"],
+    ["/pacientes/p1/anamnese/123", "/painel/alunos/p1/prontuario?secao=anamnese"],
+    ["/pacientes/p1/planejamento/novo/2", "/painel/alunos/p1/dieta?secao=planejamento"],
+    ["/pacientes/p1/perfil/editar", "/painel/alunos/p1"],
+    ["/agenda/semana", "/painel/agenda"],
+    ["/pre-consulta/novo", "/painel/pre-consulta"],
+    ["/respostas-pre-consulta/r9?id=7", "/painel/pre-consulta?id=7&aba=respostas"],
+    ["/whatsapp/conversa/1", "/painel/mensagens"],
+    ["/favoritos/x", "/painel/modelos"],
+    ["/alimentos/novo", "/painel/dietas?aba=alimentos"],
+    ["/receitas/r1", "/painel/dietas?aba=receitas"],
+    ["/diario/hoje", "/painel/dietas?aba=diario"],
+    ["/financeiro/recibos", "/painel/financeiro"],
+    ["/impressos/modelo/3", "/painel/impressos"],
+    ["/lixeira/pacientes", "/painel/lixeira"],
+    ["/master/profissionais/u1", "/master/contas"],
+    ["/app/perfil", "/"],
+    ["/app/qualquer/coisa?x=1", "/?x=1"],
+    ["/configuracoes/assinatura", "/painel/configuracoes"],
+  ])("%s → %s", (antiga, nova) => {
+    expect(ir(antiga)).toBe(nova);
+  });
+  it("as rotas do Physiq com o mesmo começo continuam do Physiq (não são rota antiga)", () => {
+    expect(destinoDaRotaAntiga("/master/contas")).toBeNull();
+    expect(destinoDaRotaAntiga("/master")).toBeNull();
+    expect(destinoDaRotaAntiga("/painel/agenda/x")).toBeNull();
+    expect(destinoDaRotaAntiga("/application")).toBeNull();
+    expect(destinoDaRotaAntiga("/agendamentos")).toBeNull();
+  });
+});
+
+describe("W28 — Configurações do site antigo do Nutri (?aba=)", () => {
+  it.each([
+    ["/configuracoes?aba=assinatura", "/painel/configuracoes/plano"],
+    ["/configuracoes?assinatura=ok", "/painel/configuracoes/plano?assinatura=ok"],
+    ["/configuracoes?assinatura=ok&preapproval_id=2c93808", "/painel/configuracoes/plano?assinatura=ok&preapproval_id=2c93808"],
+    ["/configuracoes?aba=assinatura&assinatura=ok&preapproval_id=2c93808", "/painel/configuracoes/plano?assinatura=ok&preapproval_id=2c93808"],
+    ["/configuracoes?aba=recebimento", "/painel/configuracoes/recebimento"],
+    ["/configuracoes?aba=meus-dados", "/painel/configuracoes/perfil"],
+    ["/configuracoes?aba=meus-dados#topo", "/painel/configuracoes/perfil#topo"],
+    ["/configuracoes", "/painel/configuracoes"],
+  ])("%s → %s", (antiga, nova) => {
+    expect(ir(antiga)).toBe(nova);
+  });
+});
+
+// As rotas que o roteador monta no topo (src/rotas/Rotas.tsx) e as telas do Physiq (o painel de src/painel/menu.ts + RotasPainel.tsx,
+// o master de src/master/menu.ts e as públicas de ROTAS_PUBLICAS em src/rotas/registro.ts) — se o roteador mudar, mude aqui.
+const PUBLICAS = ["/f/:slug", "/d/:codigo", "/c/:codigo", "/p/:codigo", "/calculator", "/privacidade", "/termos"];
+const TOPO = ["/", "/treino", "/dieta", "/evolucao", "/perfil", "/perfil/:item", "/entrar", "/entrar/email", "/boas-vindas", "/painel/*", "/master/*", ...PUBLICAS];
+const TELAS_DO_PHYSIQ = [
+  "/", "/treino", "/dieta", "/evolucao", "/perfil", "/perfil/:item", "/entrar", "/entrar/email", "/boas-vindas",
+  "/painel", "/painel/alunos", "/painel/alunos/:id", "/painel/alunos/:id/:aba", "/painel/treinos", "/painel/dietas", "/painel/pre-consulta",
+  "/painel/agenda", "/painel/mensagens", "/painel/financeiro", "/painel/configuracoes", "/painel/configuracoes/:aba", "/painel/modelos",
+  "/painel/impressos", "/painel/calculadora", "/painel/lixeira",
+  "/master", "/master/contas", "/master/alunos", "/master/financeiro", "/master/planos", "/master/integracoes", "/master/app-do-aluno",
+  "/master/biblioteca", "/master/configuracoes",
+  ...PUBLICAS,
+];
+const rotaDoTopo = (caminho: string) => matchRoutes([...TOPO, ...ROTAS_ANTIGAS, "*"].map((path) => ({ path })), caminho)?.[0]?.route.path ?? "*";
+const telaDoPhysiq = (caminho: string) => matchRoutes(TELAS_DO_PHYSIQ.map((path) => ({ path })), caminho)?.[0]?.route.path ?? null;
+
+/** As rotas do site antigo do Nutri (o App.tsx dele), com exemplos de sub-rota e de ?aba=. */
+const SITE_ANTIGO_NUTRI = [
+  "/", "/entrar/nutricionista", "/login", "/f/abc", "/d/abc123", "/c/abc", "/p/abc123",
+  "/app/entrar", "/app", "/app/plano", "/app/orientacoes", "/app/metas", "/app/diario", "/app/agenda", "/app/recibos",
+  "/dashboard", "/pacientes", "/pacientes/p1", ...Object.keys(ABA_DA_SECAO_NUTRI).map((secao) => `/pacientes/p1/${secao}`),
+  "/agenda", "/pre-consulta", "/respostas-pre-consulta", "/whatsapp", "/favoritos", "/alimentos", "/receitas", "/diario", "/financeiro",
+  "/impressos", "/lixeira", "/master/profissionais", "/configuracoes",
+  "/configuracoes?aba=assinatura", "/configuracoes?aba=recebimento", "/configuracoes?aba=meus-dados", "/configuracoes?assinatura=ok&preapproval_id=2c9",
+  // sub-rotas
+  "/dashboard/x", "/pacientes/p1/anamnese/1", "/agenda/x", "/pre-consulta/x", "/respostas-pre-consulta/x", "/whatsapp/x", "/favoritos/x",
+  "/alimentos/x", "/receitas/x", "/diario/x", "/financeiro/x", "/impressos/x", "/lixeira/x", "/master/profissionais/x", "/app/x/y",
+  "/configuracoes/x",
+];
+
+describe("W28 — TODA rota do site antigo do Nutri cai numa tela do Physiq (nenhuma em 'Página não encontrada')", () => {
+  it.each(SITE_ANTIGO_NUTRI)("%s", (url) => {
+    const u = new URL(url, "https://physiqcalc.com.br");
+    const topo = rotaDoTopo(u.pathname);
+    expect(topo, `${url} cairia no 404`).not.toBe("*");
+    if (ROTAS_ANTIGAS.includes(topo)) {
+      const destino = destinoDaRotaAntiga(u.pathname, u.search, u.hash);
+      expect(destino, `${url} sem destino`).not.toBeNull();
+      expect(telaDoPhysiq(new URL(destino as string, "https://physiqcalc.com.br").pathname), `${url} → ${destino}`).not.toBeNull();
+    } else {
+      // o mesmo caminho já é uma tela do Physiq (o "/", as páginas públicas)
+      expect(telaDoPhysiq(u.pathname), url).not.toBeNull();
+    }
+  });
+  it("o roteador prefere a rota antiga mais específica (/master/profissionais/* vence o /master/* do master novo)", () => {
+    expect(rotaDoTopo("/master/profissionais/u1")).toBe("/master/profissionais/*");
+    expect(rotaDoTopo("/master/contas")).toBe("/master/*");
+    expect(rotaDoTopo("/app/plano")).toBe("/app/plano");
+    expect(rotaDoTopo("/app/x")).toBe("/app/*");
+    expect(rotaDoTopo("/pacientes/p1/anamnese")).toBe("/pacientes/:id/:secao");
   });
 });

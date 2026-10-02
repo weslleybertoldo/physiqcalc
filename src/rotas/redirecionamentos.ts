@@ -50,6 +50,29 @@ export const ABA_DA_SECAO_NUTRI: Record<string, AbaAluno> = {
 /** Seção das Configurações antigas do Calc (`?s=`) → aba nova de Configurações. */
 const ABA_CONFIG_DO_S: Record<string, string> = { perfil: "perfil", convite: "convite", recebimento: "recebimento" };
 
+/** W28: aba das Configurações do site antigo do Nutri (`/configuracoes?aba=`) → aba nova de Configurações. */
+export const ABA_CONFIG_DA_ABA_NUTRI: Record<string, string> = { assinatura: "plano", recebimento: "recebimento", "meus-dados": "perfil" };
+
+/**
+ * W28: rotas do site antigo do Nutri que tinham sub-rotas (o consultório registrava `${url}/*`): `/agenda/qualquer` cai no mesmo
+ * destino de `/agenda`. As Configurações (`/configuracoes/*`) e o paciente (`/pacientes/:id/:secao/*`) têm regra própria abaixo.
+ */
+export const ROTAS_NUTRI_COM_SUBROTAS: readonly string[] = [
+  "/dashboard",
+  "/agenda",
+  "/pre-consulta",
+  "/respostas-pre-consulta",
+  "/whatsapp",
+  "/favoritos",
+  "/alimentos",
+  "/receitas",
+  "/diario",
+  "/financeiro",
+  "/impressos",
+  "/lixeira",
+  "/master/profissionais",
+];
+
 /** Rotas antigas que o roteador registra (cada uma cai em `destinoDaRotaAntiga`). */
 export const ROTAS_ANTIGAS: readonly string[] = [
   // PhysiqCalc
@@ -94,6 +117,12 @@ export const ROTAS_ANTIGAS: readonly string[] = [
   "/app/recibos",
   "/app/entrar",
   "/entrar/nutricionista",
+  // W28 — sub-rotas do site antigo do Nutri (depois do 308 de nutri.physiqcalc.com.br, nada cai em "Página não encontrada"). O
+  // roteador prefere a rota mais específica: /master/profissionais/* vence o /master/* do master novo e /app/plano vence /app/*.
+  ...ROTAS_NUTRI_COM_SUBROTAS.map((r) => `${r}/*`),
+  "/pacientes/:id/:secao/*",
+  "/configuracoes/*",
+  "/app/*",
 ];
 
 /** Troca direta caminho → caminho (com parâmetros extras opcionais). */
@@ -199,8 +228,15 @@ export function destinoDaRotaAntiga(pathname: string, search = "", hash = ""): s
     return montarUrl(aba ? `/painel/configuracoes/${aba}` : "/painel/configuracoes", search, hash);
   }
 
-  // /pacientes/:id/<seção> (Nutri) — a seção vira a aba; `secao` fica na query para a aba abrir a parte certa
-  m = caminho.match(/^\/pacientes\/([^/]+)(?:\/([^/]+))?$/);
+  // W28: /configuracoes[/…]?aba=assinatura (e a volta do Mercado Pago ?assinatura=ok[&preapproval_id=…]) → a aba nova; o `aba` sai
+  // da query (o resto e o # vão junto); sem aba conhecida, /painel/configuracoes (que abre a 1ª aba)
+  if (caminho === "/configuracoes" || caminho.startsWith("/configuracoes/")) {
+    const aba = ABA_CONFIG_DA_ABA_NUTRI[params.get("aba") ?? ""] ?? (params.has("assinatura") ? "plano" : undefined);
+    return aba ? montarUrl(`/painel/configuracoes/${aba}`, search, hash, ["aba"]) : montarUrl("/painel/configuracoes", search, hash);
+  }
+
+  // /pacientes/:id/<seção>[/<resto>] (Nutri) — a seção vira a aba; `secao` fica na query para a aba abrir a parte certa
+  m = caminho.match(/^\/pacientes\/([^/]+)(?:\/([^/]+)(?:\/.*)?)?$/);
   if (m) {
     const id = decodeURIComponent(m[1]);
     const secao = m[2] ? decodeURIComponent(m[2]) : "";
@@ -211,5 +247,11 @@ export function destinoDaRotaAntiga(pathname: string, search = "", hash = ""): s
 
   const direta = DIRETAS[caminho];
   if (direta) return montarUrl(direta, search, hash);
+
+  // W28: sub-rota do site antigo do Nutri → o destino da rota-mãe (/agenda/x → /painel/agenda)
+  const mae = ROTAS_NUTRI_COM_SUBROTAS.find((r) => caminho.startsWith(`${r}/`));
+  if (mae) return montarUrl(DIRETAS[mae], search, hash);
+  // W28: /app/<qualquer outra> (as telas antigas do paciente do Nutri) → o Início
+  if (caminho.startsWith("/app/")) return montarUrl("/", search, hash);
   return null;
 }

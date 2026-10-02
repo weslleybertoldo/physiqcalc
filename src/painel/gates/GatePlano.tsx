@@ -1,21 +1,23 @@
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useConta } from "@/nucleo/conta";
-import { fimDoAcesso, hojeSP, travaDoPainel } from "@/nucleo/cobranca/regras";
+import { hojeSP, travaDoPainel, vencimentoDoPlano } from "@/nucleo/cobranca/regras";
 import { TelaPlanoVencido } from "./pecas/TelaPlanoVencido";
 
 /**
- * Trava de plano das CONTAS NOVAS (W4, spec 6.2 e 9): a partir do dia seguinte ao vencimento (tolerância 0) — ou ao fim do
- * teste — o painel dá lugar à tela de plano vencido; só Configurações › Plano abre, e só para o dono (os outros membros veem
- * "Fale com <dono>"). Conta suspensa/cancelada pelo master: "Fale com o suporte", sem Pagar. Os alunos seguem no app.
- * Contas legadas ficam com a GatePlanoLegado (regras de hoje até a W28); o master nunca fica travado.
+ * Trava de plano das contas que o NÚCLEO cobra (W4, spec 6.2 e 9): a partir do dia seguinte ao vencimento (+ a tolerância: 0 nas
+ * contas novas, 7 no legado Calc) — ou ao fim do teste — o painel dá lugar à tela de plano vencido; só Configurações › Plano abre,
+ * e só para o dono (os outros membros veem "Fale com <dono>"). Conta suspensa/cancelada pelo master: "Fale com o suporte", sem
+ * Pagar. Os alunos seguem no app. W28: pula só a conta com a cobrança antiga (cobranca_legada — fica com a GatePlanoLegado) e a
+ * conta do app; a legada com cobranca_legada = false trava aqui. O master nunca fica travado.
  */
 export default function GatePlano({ children }: { children: ReactNode }) {
   const { conta, ehDono, ehMaster } = useConta();
   const { pathname } = useLocation();
-  if (!conta || ehMaster || conta.origem !== "nova" || conta.cobranca_legada) return <>{children}</>;
+  if (!conta || ehMaster || conta.cobranca_legada || conta.origem === "app") return <>{children}</>;
   const t = travaDoPainel(conta, hojeSP());
   if (!t.travado || !t.motivo) return <>{children}</>;
   if (ehDono && pathname.startsWith("/painel/configuracoes/plano")) return <>{children}</>;
-  return <TelaPlanoVencido conta={conta} motivo={t.motivo} fim={fimDoAcesso(conta)} dono={ehDono} />;
+  // "venceu em": o vencimento sem a tolerância (nas contas novas, o mesmo último dia com acesso)
+  return <TelaPlanoVencido conta={conta} motivo={t.motivo} fim={vencimentoDoPlano(conta)} dono={ehDono} />;
 }

@@ -19,6 +19,7 @@ import StagingGate from "@/components/StagingGate";
 import { Rotas } from "@/rotas/Rotas";
 import { AbrirLinkDoApp } from "@/ui/casca/AbrirLinkDoApp";
 import { AvisosGlobais } from "@/ui/casca/AvisosGlobais";
+import { BoasVindasNutri } from "@/ui/casca/BoasVindasNutri";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { FaixaAbrirNoApp } from "@/ui/casca/FaixaAbrirNoApp";
 
@@ -74,6 +75,8 @@ const AppRoutes = () => {
       <StagingGate>
         {/* H2: no navegador do Android, "Abrir no app Physiq" no alto das páginas do aluno (e da entrada, se veio de um link delas) */}
         <FaixaAbrirNoApp />
+        {/* W28: quem chegou do site antigo do Nutri (logado ou não) — "O PhysiqNutri agora é o Physiq" por cima */}
+        <BoasVindasNutri />
         <Suspense fallback={<CarregandoTela />}>
           <Rotas />
         </Suspense>

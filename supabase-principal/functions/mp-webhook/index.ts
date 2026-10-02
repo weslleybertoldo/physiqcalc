@@ -8,6 +8,10 @@
 // re-busca o pagamento e, aprovado pela 1ª vez, grava pago_em / cobre_ate em pagamentos_assinatura e soma 30 dias em
 // profiles.pago_ate (mesma regra da action pix_status da mp-assinar; só quem troca pending→approved soma).
 // Responde 200 sempre (sem tempestade de retries do MP); o app também sincroniza ao abrir Configurações / voltar do checkout.
+// Physiq W28 (virada): continua gravando o de sempre (assinaturas / pagamentos_assinatura / profiles.pago_ate) e REPASSA o
+// mesmo aviso para a mp-webhook-conta (?schema=<schema da referência>&origem=nutri), que aplica na conta legado_nutri da
+// nutri SÓ depois que ela passou para o núcleo (cobranca_legada = false). Repasse que falha → 500 (o MP manda de novo; as 2
+// pontas são idempotentes).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -57,11 +61,12 @@ function espelho(pre: any) {
   };
 }
 
-async function sincronizarPreapproval(id: string): Promise<string> {
+async function sincronizarPreapproval(id: string, ctx: { schema: string | null } = { schema: null }): Promise<string> {
   const pre = await mpGet(`/preapproval/${id}`);
   if (!pre?.id) return "mp_nao_achou";
   const ref = parseRef(pre.external_reference);
   if (!ref) return "nao_e_do_physiqnutri";
+  ctx.schema = ref.schema;
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: ref.schema as "public" } });
   const { data: linha } = await admin.from("assinaturas").select("id, mp_preapproval_id").eq("nutricionista_id", ref.uid).maybeSingle();
   if (!linha) {
@@ -136,6 +141,26 @@ async function aplicarPagamentoPix(pay: any): Promise<string> {
   return error ? `erro_update:${error.code}` : `pix_${esp.status}`;
 }
 
+// ---- W28: repasse para a mp-webhook-conta (mesmo projeto) ----
+async function repassarParaConta(topic: string, id: string, schema: string): Promise<boolean> {
+  const url = `${SUPABASE_URL}/functions/v1/mp-webhook-conta?schema=${schema}&origem=nutri`;
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 20000);
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: topic, data: { id } }), signal: ctrl.signal });
+      clearTimeout(t);
+      const txt = await res.text();
+      console.log("mp-webhook repasse conta", topic, id, schema, res.status, txt.slice(0, 200));
+      if (res.ok) return true;
+    } catch (e) {
+      console.error("mp-webhook repasse conta falhou", topic, id, String((e as { message?: string })?.message || e));
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("ok", { status: 200 });
   try {
@@ -145,23 +170,31 @@ Deno.serve(async (req) => {
     const topic = String(body?.type || body?.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
     const id = String(body?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     let resultado = "ignorado";
+    const ctx: { schema: string | null } = { schema: null };
     if (id) {
       if (topic === "subscription_preapproval" || topic === "preapproval") {
-        resultado = await sincronizarPreapproval(id);
+        resultado = await sincronizarPreapproval(id, ctx);
       } else if (topic === "subscription_authorized_payment") {
         const ap = await mpGet(`/authorized_payments/${id}`);
-        resultado = ap?.preapproval_id ? await sincronizarPreapproval(String(ap.preapproval_id)) : "sem_preapproval";
+        resultado = ap?.preapproval_id ? await sincronizarPreapproval(String(ap.preapproval_id), ctx) : "sem_preapproval";
       } else if (topic === "payment") {
         const pay = await mpGet(`/v1/payments/${id}`);
-        if (parseRefPix(pay?.external_reference)) {
+        const pix = parseRefPix(pay?.external_reference);
+        if (pix) {
+          ctx.schema = pix.schema;
           resultado = await aplicarPagamentoPix(pay); // W50: PIX avulso da assinatura
         } else {
           const preId = pay?.metadata?.preapproval_id || pay?.point_of_interaction?.transaction_data?.subscription_id || null;
-          resultado = preId ? await sincronizarPreapproval(String(preId)) : "sem_preapproval";
+          resultado = preId ? await sincronizarPreapproval(String(preId), ctx) : "sem_preapproval";
         }
       }
     }
     console.log("mp-webhook", topic, id, resultado);
+    // W28: o mesmo aviso vai para a cobrança das contas (só o que é do PhysiqNutri: a referência deu o schema)
+    if (id && ctx.schema && SCHEMAS.includes(ctx.schema)) {
+      const repasse = await repassarParaConta(topic, id, ctx.schema);
+      if (!repasse) return new Response(JSON.stringify({ ok: false, resultado, repasse: "falhou" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
     return new Response(JSON.stringify({ ok: true, resultado }), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e) {
     console.error("mp-webhook erro", e);

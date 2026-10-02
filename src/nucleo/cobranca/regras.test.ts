@@ -7,6 +7,7 @@ import {
   avisoDoPlano,
   chaveDoAviso,
   contarAlunosAtivos,
+  emTolerancia,
   faixaMinimaPara,
   fimDoAcesso,
   limiteDaConta,
@@ -19,8 +20,10 @@ import {
   situacaoEfetiva,
   somarMeses,
   textoDoAviso,
+  textoSaiDoLegado,
   travaDoPainel,
   vencimentoDepoisDoPagamento,
+  vencimentoDoPlano,
   type DatasConta,
 } from "./regras";
 
@@ -125,6 +128,62 @@ describe("faixa de aviso −7/−2/−1/0 (6.2 — spec 10.1)", () => {
   });
 });
 
+describe("W28 — legado Calc no núcleo: 7 dias de tolerância depois do vencimento", () => {
+  // vence 13/10; o painel abre até 20/10 (inclusive) e trava em 21/10
+  const calc = (o: Partial<DatasConta> = {}) => nova({ vence_em: "2026-10-13", tolerancia_dias: 7, ...o });
+  it("vencimento sem a tolerância × último dia com acesso; nas contas novas os 2 são o mesmo dia", () => {
+    expect(vencimentoDoPlano(calc())).toBe("2026-10-13");
+    expect(fimDoAcesso(calc())).toBe("2026-10-20");
+    expect(vencimentoDoPlano(nova())).toBe(fimDoAcesso(nova()));
+    expect(vencimentoDoPlano(nova({ situacao: "teste", teste_ate: "2026-10-13", vence_em: null }))).toBe("2026-10-13");
+    expect(vencimentoDoPlano(nova({ situacao: "isenta" }))).toBeNull();
+  });
+  it("em tolerância: depois do vencimento até vence + 7 (não no teste, nem isenta/suspensa)", () => {
+    expect([calc(), calc(), calc(), calc()].map((c, i) => emTolerancia(c, ["2026-10-13", "2026-10-14", "2026-10-20", "2026-10-21"][i])))
+      .toEqual([false, true, true, false]);
+    expect(emTolerancia(nova({ vence_em: "2026-10-13" }), "2026-10-14")).toBe(false);
+    expect(emTolerancia(calc({ situacao: "suspensa" }), "2026-10-15")).toBe(false);
+    expect(emTolerancia(calc({ teste_ate: "2026-10-16" }), "2026-10-15")).toBe(false);
+  });
+  it("antes do vencimento os marcos −7/−2/−1/0 contam do vence_em (o dia 0 é o vencimento)", () => {
+    expect(avisoDoPlano(calc(), "2026-10-06", false)).toMatchObject({ marco: 7, dias: 7, vence: "2026-10-13", ate: "2026-10-20" });
+    expect(avisoDoPlano(calc(), "2026-10-11", false)).toMatchObject({ marco: 2, vence: "2026-10-13" });
+    expect(avisoDoPlano(calc(), "2026-10-12", false)).toMatchObject({ marco: 1, vence: "2026-10-13" });
+    expect(avisoDoPlano(calc(), "2026-10-13", false)).toMatchObject({ marco: 0, dias: 0, vence: "2026-10-13" });
+    expect(avisoDoPlano(calc(), "2026-10-05", false)).toBeNull();
+  });
+  it("nos dias de tolerância: a faixa 'pague até' (urgente); depois dela o painel trava e a faixa some", () => {
+    const a = avisoDoPlano(calc(), "2026-10-15", false)!;
+    expect(a).toEqual({ marco: "tolerancia", dias: 5, vence: "2026-10-13", teste: false, ate: "2026-10-20" });
+    expect(textoDoAviso(a, 39.9)).toMatch(/^Mensalidade de R\$\s?39,90 venceu em 13\/10\. Pague até 20\/10 para não perder o acesso\.$/);
+    expect(textoDoAviso(a)).toBe("Sua mensalidade venceu em 13/10. Pague até 20/10 para não perder o acesso.");
+    expect(avisoDoPlano(calc(), "2026-10-20", false)).toMatchObject({ marco: "tolerancia", dias: 0 });
+    expect(avisoDoPlano(calc(), "2026-10-21", false)).toBeNull();
+    expect(travaDoPainel(calc(), "2026-10-21")).toEqual({ travado: true, motivo: "vencida", desde: "2026-10-21" });
+    expect(avisoDoPlano(calc(), "2026-10-15", true)).toBeNull(); // cobrança automática não avisa
+  });
+  it("o X da tolerância vale só no dia (a chave leva o dia de hoje); os outros marcos, como antes", () => {
+    expect(chaveDoAviso("c1", "2026-10-13", "tolerancia", "2026-10-15")).toBe("aviso-plano:c1:2026-10-13:tolerancia:2026-10-15");
+    expect(chaveDoAviso("c1", "2026-10-13", "tolerancia", "2026-10-16")).not.toBe(chaveDoAviso("c1", "2026-10-13", "tolerancia", "2026-10-15"));
+    expect(chaveDoAviso("c1", "2026-10-13", 2, "2026-10-11")).toBe("aviso-plano:c1:2026-10-13:2");
+  });
+  it("no dia do vencimento, com tolerância, o texto manda pagar até o fim dela (o painel não trava amanhã)", () => {
+    expect(textoDoAviso(avisoDoPlano(calc(), "2026-10-13", false)!)).toBe("Seu plano vence hoje. Pague até 20/10 para não perder o acesso.");
+  });
+  it("conta nova (tolerância 0) segue igual: o aviso não ganha o 'ate'", () => {
+    expect(avisoDoPlano(nova({ vence_em: HOJE }), HOJE, false)).toEqual({ marco: 0, dias: 0, vence: HOJE, teste: false });
+  });
+});
+
+describe("W28 — trocar de plano tira a conta do preço e das regras de hoje", () => {
+  it("o aviso antes de trocar (Mudar plano × outro plano escolhido na hora de pagar)", () => {
+    expect(textoSaiDoLegado(39.9, 59.9)).toMatch(
+      /^Ao trocar de plano, o preço de hoje \(R\$\s?39,90\/mês\) e as regras de hoje deixam de valer: passam a ser os da tabela nova \(R\$\s?59,90\/mês, a partir do próximo pagamento\)\.$/);
+    expect(textoSaiDoLegado(80, 39.9, "pagar")).toMatch(/\(R\$\s?39,90\/mês, já neste pagamento\)\.$/);
+    expect(textoSaiDoLegado(null, null)).toBe("Ao trocar de plano, o preço de hoje e as regras de hoje deixam de valer: passam a ser os da tabela nova (a partir do próximo pagamento).");
+  });
+});
+
 describe("faixa e limite de alunos (6.4 — spec 10.1)", () => {
   it("conta só o aluno ativo: bloqueado e desativado liberam a vaga", () => {
     expect(contarAlunosAtivos([
@@ -138,6 +197,15 @@ describe("faixa e limite de alunos (6.4 — spec 10.1)", () => {
     expect(limiteDaConta({ origem: "legado_nutri", situacao: "ativa", plano: "nutricao", faixa: "livre" })).toBeNull();
     expect(limiteDaConta({ origem: "legado_calc", situacao: "ativa", plano: "treino", faixa: "f100" })).toBe(100);
     expect([podeAdicionarAluno(9, 10), podeAdicionarAluno(10, 10), podeAdicionarAluno(500, null)]).toEqual([true, false, true]);
+  });
+  it("W28: com o preço e as regras de hoje o legado segue com o limite de hoje; trocar de plano = a regra das contas novas", () => {
+    const nutri = { origem: "legado_nutri", situacao: "ativa" as const, plano: "nutricao" as const, faixa: "f10" as const };
+    expect(limiteDaConta({ ...nutri, cobranca_legada: false, regras_legadas: true })).toBeNull();
+    expect(limiteDaConta({ ...nutri, cobranca_legada: true, regras_legadas: false })).toBeNull();
+    expect(limiteDaConta({ ...nutri, cobranca_legada: false, regras_legadas: false })).toBe(10);
+    const calcTeste = { origem: "legado_calc", situacao: "teste" as const, plano: "treino" as const, faixa: "f30" as const };
+    expect(limiteDaConta({ ...calcTeste, cobranca_legada: false, regras_legadas: true })).toBe(30);
+    expect(limiteDaConta({ ...calcTeste, cobranca_legada: false, regras_legadas: false })).toBe(10);
   });
   it("mensagem do limite (dono × outro membro)", () => {
     expect(mensagemLimite(10, true)).toBe("Seu plano permite 10 alunos ativos. Mude de faixa em Configurações › Plano.");
@@ -175,5 +243,12 @@ describe("card do plano no menu (tela 6) — conta nova", () => {
     expect(planoCartaoContaNova(conta({ vence_em: "2026-09-20" }), HOJE)).toMatchObject({ linha: "Venceu em 20/09", tom: "erro" });
     expect(planoCartaoContaNova(conta({ situacao: "suspensa" }), HOJE)).toMatchObject({ linha: "Conta suspensa", tom: "erro" });
     expect(planoCartaoContaNova(conta({ situacao: "isenta", plano: "treino", modulos: ["treino"] }), HOJE)).toMatchObject({ nome: "Plano Treino", linha: "Sem cobrança" });
+  });
+  it("W28 — legado Calc no núcleo (tolerância de 7 dias): vence no vence_em, 'pague até' na tolerância e 'Venceu em' sem os 7 dias", () => {
+    const calc = (o: Partial<ContaSituacao> = {}) => conta({ origem: "legado_calc", plano: "treino", modulos: ["treino"], vence_em: "2026-10-01", tolerancia_dias: 7, regras_legadas: true, ...o });
+    expect(planoCartaoContaNova(calc(), HOJE)).toMatchObject({ linha: "Vence em 01/10 · Pix", tom: "aviso" });
+    expect(planoCartaoContaNova(calc(), "2026-10-01")).toMatchObject({ linha: "Vence hoje · Pix" });
+    expect(planoCartaoContaNova(calc(), "2026-10-04")).toMatchObject({ linha: "Venceu em 01/10 · pague até 08/10", tom: "erro" });
+    expect(planoCartaoContaNova(calc(), "2026-10-09")).toMatchObject({ linha: "Venceu em 01/10", tom: "erro" });
   });
 });

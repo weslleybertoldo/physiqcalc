@@ -1,11 +1,12 @@
 /**
- * Card do plano no pé do menu (tela 6: chips dos módulos, "Plano Treino + Nutrição", "Renova em 12/08 · cartão") para as
- * CONTAS NOVAS (W4) — situação, teste e vencimento reais da conta. As legadas continuam na regra de hoje (P9,
- * src/nucleo/planoLegado.ts). Regra pura, testada em regras.test.ts.
+ * Card do plano no pé do menu (tela 6: chips dos módulos, "Plano Treino + Nutrição", "Renova em 12/08 · cartão") das contas que o
+ * NÚCLEO cobra (W4) — situação, teste e vencimento reais da conta. W28: inclui as legadas com cobranca_legada = false (no legado
+ * Calc, "Vence em" é o vencimento e, nos dias de tolerância, "Venceu em … · pague até …"); as legadas com a cobrança antiga
+ * continuam na regra de hoje (P9, src/nucleo/planoLegado.ts). Regra pura, testada em regras.test.ts.
  */
 import type { PlanoCasca } from "@/ui/casca/dadosCasca";
 import type { ContaSituacao } from "../situacao";
-import { NOME_PLANO_CARTAO, dataBR, diasEntre, ehPlano, fimDoAcesso, hojeSP, situacaoEfetiva } from "./regras";
+import { NOME_PLANO_CARTAO, dataBR, diasEntre, ehPlano, emTolerancia, fimDoAcesso, hojeSP, situacaoEfetiva, vencimentoDoPlano } from "./regras";
 
 /** A assinatura no cartão que a minha_situacao() manda por conta (W4). */
 export function assinaturaDaConta(c: Pick<ContaSituacao, "assinatura">): { status: string; proximo_vencimento: string | null; valor: number | null } | null {
@@ -52,11 +53,17 @@ export function planoCartaoContaNova(c: ContaSituacao, hoje: string = hojeSP()):
         const quando = c.vence_em ?? assinatura?.proximo_vencimento?.slice(0, 10) ?? null;
         return { ...base, linha: `Renova em ${dataBR(quando)} · cartão`, tom: "ok" };
       }
-      // o último dia com acesso (o mesmo da faixa de aviso e do "Acesso até" do Plano)
-      const dias = fim ? diasEntre(hoje, fim) : 99;
-      return { ...base, linha: dias === 0 ? "Vence hoje · Pix" : `Vence em ${dataBR(fim ?? c.vence_em)} · Pix`, tom: dias <= 7 ? "aviso" : "ok" };
+      // W28 (legado Calc): nos dias de tolerância o plano já venceu — o painel ainda abre até o "pague até"
+      if (emTolerancia(datas, hoje)) return { ...base, linha: `Venceu em ${dataBR(c.vence_em)} · pague até ${dataBR(fim)}`, tom: "erro" };
+      // o vencimento (o mesmo da faixa de aviso): sem tolerância é o último dia com acesso; com ela, o vence_em
+      const vence = vencimentoDoPlano(datas) ?? fim;
+      const dias = vence ? diasEntre(hoje, vence) : 99;
+      return { ...base, linha: dias === 0 ? "Vence hoje · Pix" : `Vence em ${dataBR(vence ?? c.vence_em)} · Pix`, tom: dias <= 7 ? "aviso" : "ok" };
     }
-    default:
-      return { ...base, linha: fim ? `Venceu em ${dataBR(fim)}` : "Plano vencido", tom: "erro" };
+    default: {
+      // "Venceu em" é o vencimento (no legado Calc, antes dos 7 dias de tolerância)
+      const venceu = vencimentoDoPlano(datas) ?? fim;
+      return { ...base, linha: venceu ? `Venceu em ${dataBR(venceu)}` : "Plano vencido", tom: "erro" };
+    }
   }
 }

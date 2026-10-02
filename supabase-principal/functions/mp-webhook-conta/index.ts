@@ -7,10 +7,22 @@
 // Idempotente: mp_payment_id único + aplicar_pagamento_conta uma vez só por fatura (spec 6.6, Nativo OS W30).
 // Tópicos: payment · subscription_preapproval (preapproval) · subscription_authorized_payment. Responde 200 sempre (o MP
 // repete em erro; a conferência da tela cobre o que falhar).
+// W28 (virada): recebe também o REPASSE dos webhooks antigos — o mp-webhook do Banco do Treino (cobranças de professor do
+// Calc, ?origem=treino) e o mp-webhook do Nutri (assinaturas e Pix das nutris, ?origem=nutri). Referências antigas
+// (lerReferenciaLegada) caem na conta legada do dono, SÓ se ela já está no núcleo (cobranca_legada = false); antes disso o app
+// antigo é quem aplica e aqui nada muda. Mesma idempotência (mp_payment_id único; aplicar uma vez por fatura).
 // Publicar SÓ ASSIM: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-webhook-conta false
 // Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { lerReferencia, preapprovalDoPagamento, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
+import {
+  faturaDaReferenciaLegada,
+  lerReferencia,
+  lerReferenciaLegada,
+  preapprovalDoPagamento,
+  type AssinaturaMp,
+  type PagamentoMp,
+  type ReferenciaLegada,
+} from "../_shared/cobranca-regras.ts";
 import {
   COLUNAS_ASSINATURA,
   COLUNAS_FATURA,
@@ -44,12 +56,54 @@ async function valorMensal(db: SupabaseClient, a: AssinaturaConta): Promise<numb
   return v === null || v === undefined ? a.valor : Number(v);
 }
 
+interface ContaLegada { id: string; plano: string; faixa: string; cobranca_legada: boolean }
+
+/** W28: a conta legada do dono de uma referência antiga (Calc: pelo usuário do Treino; Nutri: pelo dono). */
+async function contaDaReferenciaLegada(db: SupabaseClient, r: ReferenciaLegada): Promise<ContaLegada | null> {
+  if (r.app === "nutri") {
+    const { data } = await db.from("contas").select("id, plano, faixa, cobranca_legada").eq("dono_id", r.userId)
+      .eq("origem", "legado_nutri").order("criado_em").limit(1);
+    return ((data ?? []) as ContaLegada[])[0] ?? null;
+  }
+  const { data } = await db.from("conta_membros").select("conta_id, contas!inner(id, plano, faixa, cobranca_legada, origem)")
+    .eq("treino_user_id", r.userId).contains("papeis", ["dono"]).eq("contas.origem", "legado_calc").limit(1);
+  const linha = ((data ?? []) as Array<{ contas: ContaLegada | null }>)[0];
+  return linha?.contas ?? null;
+}
+
+/** W28: pagamento avulso que um app antigo criou (Pix/cartão do professor do Calc; Pix de 30 dias da nutri). */
+async function tratarPagamentoLegado(db: SupabaseClient, r: ReferenciaLegada, pay: PagamentoMp): Promise<string> {
+  const conta = await contaDaReferenciaLegada(db, r);
+  if (!conta) return `legado_${r.app}_sem_conta`;
+  if (conta.cobranca_legada) return `legado_${r.app}_cobranca_antiga`;
+  const mpId = String(pay.id);
+  let { data } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle();
+  if (!data) {
+    const f = faturaDaReferenciaLegada(r);
+    const { error } = await db.from("conta_faturas").insert({
+      conta_id: conta.id, tipo: f.tipo, valor: Math.max(0, Number(pay.transaction_amount) || 0), status: "pending",
+      forma: pay.payment_method_id === "pix" ? "pix" : "cartao", mp_payment_id: mpId, plano: conta.plano, faixa: conta.faixa,
+      meses: f.meses, descricao: r.app === "calc" ? "Pagamento do PhysiqCalc antigo — aplicado no Physiq" : "Pix do PhysiqNutri antigo — aplicado no Physiq",
+      origem: `legado_${r.app}`, pix_expira_em: pay.date_of_expiration ?? null,
+    });
+    if (error && !String(error.message || "").includes("duplicate")) throw error;
+    data = (await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle()).data;
+  }
+  const fatura = data as Fatura | null;
+  if (!fatura) return `legado_${r.app}_sem_fatura`;
+  if (fatura.conta_id !== conta.id) return "fatura_de_outra_conta";
+  const res = await aplicarStatus(db, fatura, pay);
+  return `legado_${r.app}_${res.status}${res.aplicou ? "_aplicada" : ""}`;
+}
+
 async function tratarPagamento(schema: Schema, id: string): Promise<string> {
   const credencial = credencialDoSchema(schema);
   const { status, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(id)}`);
   if (status !== 200 || !pay?.id) return `pagamento_nao_encontrado_${status}`;
   const ref = lerReferencia(pay.external_reference);
   if (ref && ref.schema !== schema) return "outro_ambiente";
+  const legada = ref ? null : lerReferenciaLegada(pay.external_reference);
+  if (legada && legada.schema !== schema) return "outro_ambiente";
   const db = dbDe(schema);
 
   // cobrança avulsa (Pix ou cartão à vista): a referência traz a fatura
@@ -77,7 +131,13 @@ async function tratarPagamento(schema: Schema, id: string): Promise<string> {
     const { data } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("conta_id", ref.contaId).maybeSingle();
     assinatura = (data as AssinaturaConta | null) ?? null;
   }
-  if (!assinatura) return ref ? "assinatura_inexistente" : "nao_e_do_physiq";
+  // W28: pagamento avulso de um app antigo (sem assinatura migrada por trás)
+  if (!assinatura && legada && legada.tipo !== "recorrente") return await tratarPagamentoLegado(db, legada, pay);
+  if (!assinatura) return ref ? "assinatura_inexistente" : legada ? `legado_${legada.app}_assinatura_inexistente` : "nao_e_do_physiq";
+  if (legada) {
+    const { data: c } = await db.from("contas").select("cobranca_legada").eq("id", assinatura.conta_id).maybeSingle();
+    if ((c as { cobranca_legada?: boolean } | null)?.cobranca_legada) return `legado_${legada.app}_cobranca_antiga`;
+  }
   const r = await registrarCobrancaRecorrente(db, assinatura, pay, await valorMensal(db, assinatura));
   return r ? `recorrente_${r.status}${r.aplicou ? "_aplicada" : ""}` : "recorrente_sem_id";
 }
@@ -88,9 +148,23 @@ async function tratarAssinatura(schema: Schema, id: string): Promise<string> {
   if (status !== 200 || !pre?.id) return `assinatura_nao_encontrada_${status}`;
   const ref = lerReferencia(pre.external_reference);
   if (ref && ref.schema !== schema) return "outro_ambiente";
+  const legada = ref ? null : lerReferenciaLegada(pre.external_reference);
+  if (legada && legada.schema !== schema) return "outro_ambiente";
   const db = dbDe(schema);
   const { data } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("mp_preapproval_id", String(pre.id)).maybeSingle();
   const a = data as AssinaturaConta | null;
+  if (!a && legada) {
+    // W28: assinatura de um app antigo que a virada não trouxe (criada lá depois do 03): liga à conta legada já no núcleo
+    const conta = await contaDaReferenciaLegada(db, legada);
+    if (!conta) return `legado_${legada.app}_sem_conta`;
+    if (conta.cobranca_legada) return `legado_${legada.app}_cobranca_antiga`;
+    const { data: atual } = await db.from("conta_assinaturas").select("id, mp_preapproval_id, status").eq("conta_id", conta.id).maybeSingle();
+    const linhaAtual = atual as { id: string; mp_preapproval_id: string | null; status: string } | null;
+    if (linhaAtual?.mp_preapproval_id && linhaAtual.mp_preapproval_id !== String(pre.id) && linhaAtual.status !== "cancelled") return "assinatura_antiga";
+    await db.from("conta_assinaturas").upsert({ conta_id: conta.id, plano: conta.plano, faixa: conta.faixa,
+      ...espelhoAssinatura(pre, { origem: `legado_${legada.app}` }) }, { onConflict: "conta_id" });
+    return `legado_${legada.app}_assinatura_${pre.status}`;
+  }
   if (a) {
     if (a.payload?.simulada === true) return "assinatura_simulada";
     await db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(a.payload ?? {}) })).eq("id", a.id);

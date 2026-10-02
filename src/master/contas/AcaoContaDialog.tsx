@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { textoSaiDoLegado } from "@/nucleo/cobranca/regras";
 import { Botao } from "@/ui/premium/Botao";
-import { acaoConta, cancelarAssinatura, ErroMaster, reenviarAviso, registrarPagamento } from "../api";
+import { acaoConta, cancelarAssinatura, ErroMaster, planos, reenviarAviso, registrarPagamento } from "../api";
 import { Campo, INPUT, Janela, SELECT, TEXTAREA } from "../pecas/ui";
 import { FAIXAS, PLANOS, ROTULO_FAIXA, ROTULO_PLANO, dataCurta, faixaCabe, moeda, somarDias, textoErro, type AcaoMaster } from "../regras";
 import type { ContaLinha, Faixa, PlanoConta } from "../tipos";
@@ -56,6 +58,9 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+  // W28: a conta com o preço e as regras de hoje sai do legado ao trocar de plano — o aviso mostra o preço da tabela nova
+  const saiDoLegado = acao === "plano" && Boolean(conta?.regras_legadas);
+  const tabela = useQuery({ queryKey: ["master", "planos"], queryFn: planos, enabled: saiDoLegado, staleTime: 15_000 });
 
   useEffect(() => {
     if (!conta || !acao) return;
@@ -72,6 +77,8 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
 
   if (!conta || !acao) return null;
   const cabe = faixaCabe(faixa, conta.alunos_ativos);
+  const outroPlano = plano !== conta.plano || faixa !== conta.faixa;
+  const precoTabela = outroPlano ? tabela.data?.precos.find((p) => p.plano === plano && p.faixa === faixa)?.valor_mensal ?? null : null;
 
   async function confirmar() {
     if (!conta || !acao) return;
@@ -132,6 +139,13 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
       <p className="rounded-2xl border border-linha bg-superficie-3 px-3.5 py-2.5 text-[13px] text-texto-2" data-acao-conta>
         <b className="text-texto">{conta.nome}</b> · {ROTULO_PLANO[conta.plano]} · {ROTULO_FAIXA[conta.faixa]} · {conta.alunos_ativos} aluno(s) ativo(s)
       </p>
+      {saiDoLegado && (
+        <p className="rounded-2xl border border-ambar/30 px-3.5 py-3 text-[13px] leading-relaxed text-texto-2" style={{ background: "linear-gradient(90deg,var(--p-chip-a-fundo),transparent)" }}
+          data-aviso-sai-do-legado>
+          <b className="text-texto">Esta conta tem o preço e as regras de hoje.</b>{" "}
+          {textoSaiDoLegado(conta.valor_travado ?? conta.valor_mensal, precoTabela, "mudar")}
+        </p>
+      )}
       {acao === "plano" && (
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo rotulo="Plano">

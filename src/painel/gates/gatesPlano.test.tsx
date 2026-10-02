@@ -56,12 +56,13 @@ describe("GatePlano — conta nova: trava no dia seguinte ao vencimento (6.2)", 
     expect(screen.getByText("Fale com o suporte do Physiq.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Pagar agora/ })).toBeNull();
   });
-  it("legado, isenta, em dia e o master: não trava", () => {
+  it("legado com a cobrança antiga (cobranca_legada), isenta, em dia, conta do app e o master: não trava", () => {
     for (const c of [
-      conta({ origem: "legado_calc", situacao: "vencida", vence_em: "2026-01-01" }),
-      conta({ origem: "legado_nutri", situacao: "vencida", vence_em: "2026-01-01" }),
+      conta({ origem: "legado_calc", cobranca_legada: true, situacao: "vencida", vence_em: "2026-01-01" }),
+      conta({ origem: "legado_nutri", cobranca_legada: true, situacao: "vencida", vence_em: "2026-01-01" }),
       conta({ situacao: "isenta", vence_em: "2020-01-01" }),
       conta({ situacao: "ativa", vence_em: "2026-10-30" }),
+      conta({ origem: "app", situacao: "vencida", vence_em: "2026-01-01" }),
     ]) {
       h.conta = c;
       const r = montar(<GatePlano>{pagina}</GatePlano>);
@@ -72,6 +73,30 @@ describe("GatePlano — conta nova: trava no dia seguinte ao vencimento (6.2)", 
     h.conta = conta({ situacao: "vencida", vence_em: "2026-01-01" });
     montar(<GatePlano>{pagina}</GatePlano>);
     expect(screen.getByText("página do painel")).toBeInTheDocument();
+  });
+});
+
+describe("GatePlano — W28: legada com cobranca_legada = false trava pelo núcleo", () => {
+  it("legado Nutri vencido trava como a conta nova", () => {
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: false, regras_legadas: true, plano: "nutricao", modulos: ["nutricao"],
+      situacao: "ativa", teste_ate: null, vence_em: "2026-09-20" });
+    montar(<GatePlano>{pagina}</GatePlano>);
+    expect(screen.queryByText("página do painel")).toBeNull();
+    expect(screen.getByText("Seu plano venceu em 20/09/2026")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pagar agora/ })).toBeInTheDocument();
+  });
+  it("legado Calc: abre nos 7 dias de tolerância; depois trava com 'venceu em' = o vencimento (sem os 7 dias)", () => {
+    const calc = (vence: string) => conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, plano: "treino", modulos: ["treino"],
+      situacao: "ativa", teste_ate: null, vence_em: vence, tolerancia_dias: 7 });
+    h.conta = calc("2026-09-22"); // último dia com acesso = 29/09 (hoje)
+    const r = montar(<GatePlano>{pagina}</GatePlano>);
+    expect(screen.getByText("página do painel")).toBeInTheDocument();
+    r.unmount();
+    h.conta = calc("2026-09-21"); // acabou em 28/09
+    montar(<GatePlano>{pagina}</GatePlano>);
+    expect(screen.queryByText("página do painel")).toBeNull();
+    expect(screen.getByText("Seu plano venceu em 21/09/2026")).toBeInTheDocument();
+    expect(screen.getByText(/Os 7 dias de tolerância depois do vencimento acabaram/)).toBeInTheDocument();
   });
 });
 
@@ -103,11 +128,11 @@ describe("FaixaAvisoPlano — −7, −2, −1 e 0 (6.2)", () => {
     expect(screen.getByText(/Fale com Lucas/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Escolher plano" })).toBeNull();
   });
-  it("cartão recorrente, vencimento longe, legado e master: sem faixa", () => {
+  it("cartão recorrente, vencimento longe, legado com a cobrança antiga e master: sem faixa", () => {
     for (const c of [
       conta({ situacao: "ativa", teste_ate: null, vence_em: "2026-10-02", assinatura: { status: "authorized", proximo_vencimento: null, valor: 59.9 } }),
       conta({ situacao: "ativa", teste_ate: null, vence_em: "2026-10-20" }),
-      conta({ origem: "legado_calc", situacao: "ativa", vence_em: "2026-10-01" }),
+      conta({ origem: "legado_calc", cobranca_legada: true, situacao: "ativa", vence_em: "2026-10-01" }),
     ]) {
       h.conta = c;
       const r = montar(<FaixaAvisoPlano>{pagina}</FaixaAvisoPlano>);
@@ -118,5 +143,43 @@ describe("FaixaAvisoPlano — −7, −2, −1 e 0 (6.2)", () => {
     h.conta = conta({ situacao: "ativa", teste_ate: null, vence_em: "2026-10-01" });
     montar(<FaixaAvisoPlano>{pagina}</FaixaAvisoPlano>);
     expect(document.querySelector("[data-faixa-aviso-plano]")).toBeNull();
+  });
+});
+
+describe("FaixaAvisoPlano — W28: legado no núcleo (cobranca_legada = false)", () => {
+  const calc = (o: Record<string, unknown> = {}) => conta({ origem: "legado_calc", cobranca_legada: false, regras_legadas: true, plano: "treino",
+    modulos: ["treino"], situacao: "ativa", teste_ate: null, tolerancia_dias: 7, valor_mensal: 39.9, ...o });
+  it("tolerância: 'pague até' urgente com Pagar; o X vale só hoje (a chave leva o dia)", () => {
+    h.conta = calc({ vence_em: "2026-09-25" }); // venceu 25/09; o painel abre até 02/10
+    const r = montar(<FaixaAvisoPlano>{pagina}</FaixaAvisoPlano>);
+    expect(screen.getByText(/^Mensalidade de R\$\s?39,90 venceu em 25\/09\. Pague até 02\/10 para não perder o acesso\.$/)).toBeInTheDocument();
+    expect(document.querySelector("[data-faixa-aviso-plano]")?.getAttribute("data-faixa-aviso-plano")).toBe("tolerancia");
+    expect(document.querySelector("[data-faixa-aviso-plano]")?.className).toContain("border-rosa/35");
+    expect(screen.getByRole("button", { name: "Pagar" })).toBeInTheDocument();
+    expect(screen.getByText("página do painel")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fechar o aviso" }));
+    expect(localStorage.getItem("aviso-plano:c1:2026-09-25:tolerancia:2026-09-29")).toBe("1");
+    r.unmount();
+    vi.setSystemTime(new Date("2026-09-30T15:00:00Z")); // no dia seguinte volta
+    montar(<FaixaAvisoPlano>{pagina}</FaixaAvisoPlano>);
+    expect(screen.getByText(/Pague até 02\/10/)).toBeInTheDocument();
+  });
+  it("tolerância para outro membro: 'Fale com <dono>' sem o Pagar", () => {
+    h.ehDono = false;
+    h.conta = calc({ vence_em: "2026-09-25", papeis: ["personal"], dono_nome: "Lucas Ferreira" });
+    montar(<FaixaAvisoPlano>{pagina}</FaixaAvisoPlano>);
+    expect(screen.getByText(/Pague até 02\/10 para não perder o acesso\. Fale com Lucas Ferreira\./)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pagar" })).toBeNull();
+  });
+  it("antes do vencimento os marcos contam do vence_em (−2 = 2 dias antes do vencimento, não do fim da tolerância)", () => {
+    h.conta = calc({ vence_em: "2026-10-01" });
+    montar(<FaixaAvisoPlano>{pagina}</FaixaAvisoPlano>);
+    expect(screen.getByText(/Seu plano de R\$\s?39,90 vence em 2 dias \(01\/10\)/)).toBeInTheDocument();
+  });
+  it("legado Nutri no núcleo (sem tolerância): os mesmos marcos da conta nova", () => {
+    h.conta = conta({ origem: "legado_nutri", cobranca_legada: false, regras_legadas: true, plano: "nutricao", modulos: ["nutricao"],
+      situacao: "ativa", teste_ate: null, vence_em: "2026-09-30", tolerancia_dias: 0, valor_mensal: 80 });
+    montar(<FaixaAvisoPlano>{pagina}</FaixaAvisoPlano>);
+    expect(screen.getByText(/Seu plano de R\$\s?80,00 vence amanhã \(30\/09\)/)).toBeInTheDocument();
   });
 });

@@ -282,6 +282,21 @@ export function linhasEspelhoMembros(r: ResumoNucleo): Array<{ conta_id: string;
   return [...porConta.values()];
 }
 
+/** W28 — o dia de hoje em São Paulo (o mesmo do `cobranca_hoje()` do banco principal). */
+export function hojeEmSaoPaulo(agora: Date = new Date()): string {
+  return agora.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+/**
+ * W28 — a regra da `physiq_professor_acesso_ok` do Banco do Treino (supabase/migrations/20261002040100_w28_acesso.sql): status
+ * 'ativo' e o acesso espelhado do núcleo (`nucleo_acesso_ate`, já com a tolerância do legado Calc) até hoje em SÃO PAULO,
+ * inclusive. Assim o Treino trava no MESMO instante que o painel (meia-noite de São Paulo do dia seguinte), e não mais às 21:00
+ * do último dia (o `current_date` em UTC da regra antiga).
+ */
+export function acessoProfessorOk(p: { status?: string | null; nucleo_acesso_ate?: string | null }, agora: Date = new Date()): boolean {
+  return p.status === "ativo" && !!p.nucleo_acesso_ate && p.nucleo_acesso_ate.slice(0, 10) >= hojeEmSaoPaulo(agora);
+}
+
 /** Data de "sem limite" usada pelo espelho (conta isenta). */
 export const ACESSO_SEM_LIMITE = DATA_MAXIMA;
 

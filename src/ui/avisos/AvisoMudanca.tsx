@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Dumbbell, History, LogIn, Salad, Smartphone, UserRound } from "lucide-react";
+import { History, LogIn, Smartphone, Stethoscope, UserRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSessao } from "@/nucleo/sessao";
+import { useVeioDoNutri } from "@/ui/casca/veioDoNutri";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { Marca } from "@/ui/premium/Marca";
 
@@ -13,23 +14,27 @@ const PONTOS: Record<"calc" | "nutri", Array<{ icone: LucideIcon; texto: string 
     { icone: History, texto: "Seus treinos, séries e avaliações continuam aqui, com todo o histórico." },
     { icone: Smartphone, texto: "O app agora se chama Physiq e ganha, aos poucos, a dieta e o resto." },
   ],
+  // W28 (depois da virada — o aviso do público nutri liga no fim dela): tudo no Physiq
   nutri: [
-    { icone: UserRound, texto: "Sua conta é a mesma: o mesmo e-mail e a mesma senha (ou o Google)." },
-    { icone: Salad, texto: "A dieta e o consultório continuam no site do PhysiqNutri por enquanto." },
-    { icone: Dumbbell, texto: "Treino e dieta passam a ficar juntos no mesmo app." },
+    { icone: Stethoscope, texto: "Tudo agora fica no Physiq: o consultório, os pacientes, a agenda e as dietas." },
+    { icone: UserRound, texto: "Entre com o mesmo e-mail e a mesma senha de sempre (ou o Google)." },
+    { icone: Smartphone, texto: "O app do paciente agora é o app Physiq." },
   ],
 };
 
 /**
  * Aviso "o Physiq mudou" (NF14, spec 4.2): uma vez por pessoa, com o texto de quem veio do Calc ou do Nutri; liga e
- * desliga em app_config (o painel master ganha a tela na W27). A casca monta sozinha (src/ui/avisos).
+ * desliga em app_config (o painel master ganha a tela na W27). A casca monta sozinha (src/ui/avisos). W28: enquanto a tela
+ * "O PhysiqNutri agora é o Physiq" (quem chegou pelo site antigo — src/ui/casca/BoasVindasNutri.tsx) está aberta, espera:
+ * as 2 folhas não abrem uma em cima da outra.
  */
 export default function AvisoMudanca() {
   const { situacao, marcarAvisoMudanca } = useSessao();
   const celular = useIsMobile();
+  const veioDoNutri = useVeioDoNutri();
   const [fechado, setFechado] = useState(false);
   const aviso = situacao?.aviso_mudanca;
-  if (!aviso || !aviso.ativo || aviso.visto || fechado || !aviso.titulo) return null;
+  if (!aviso || !aviso.ativo || aviso.visto || fechado || !aviso.titulo || veioDoNutri) return null;
   const pontos = PONTOS[aviso.publico] ?? PONTOS.calc;
   const fechar = () => {
     setFechado(true);

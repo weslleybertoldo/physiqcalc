@@ -151,6 +151,19 @@ export async function registrarCobrancaRecorrente(
   if (pay?.id === undefined || pay?.id === null) return null;
   const mpId = String(pay.id);
   let { data: linha } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle();
+  // W28: assinatura que veio de um app antigo na virada — a cobrança de ANTES da virada já valia lá (o vencimento migrado já a
+  // conta): entra só como histórico ('migrado', paga), sem somar mais 1 mês (nada de cobrança dobrada no acesso)
+  if (!linha && cobrancaAntesDaVirada(a, pay)) {
+    const st = statusDaFatura(pay);
+    const { error } = await db.from("conta_faturas").insert({
+      conta_id: a.conta_id, tipo: "migrado", valor: Number(pay.transaction_amount) > 0 ? Number(pay.transaction_amount) : Number(a.valor ?? valorPadrao ?? 0),
+      status: st, forma: "cartao", mp_payment_id: mpId, mp_preapproval_id: a.mp_preapproval_id, plano: a.plano, faixa: a.faixa, meses: 1,
+      pago_em: st === "approved" ? (pay.date_approved ?? pay.date_created ?? new Date().toISOString()) : null,
+      descricao: "Cobrança do cartão de antes da virada (já valia no app antigo)", origem: "virada_w28",
+    });
+    if (error && !String(error.message || "").includes("duplicate")) throw error;
+    return { status: st, aplicou: false };
+  }
   if (!linha) {
     const valor = Number(pay.transaction_amount) > 0 ? Number(pay.transaction_amount) : Number(a.valor ?? valorPadrao ?? 0);
     const { data: nova, error } = await db.from("conta_faturas").insert({
@@ -167,6 +180,13 @@ export async function registrarCobrancaRecorrente(
     await db.from("conta_assinaturas").update({ ultimo_pagamento_em: pay.date_approved ?? new Date().toISOString() }).eq("id", a.id);
   }
   return r;
+}
+
+/** W28: a cobrança é de uma assinatura migrada na virada e foi aprovada (ou criada) ANTES da migração? */
+export function cobrancaAntesDaVirada(a: Pick<AssinaturaConta, "payload">, pay: Pick<PagamentoMp, "date_approved" | "date_created">): boolean {
+  const migradaEm = typeof a.payload?.migrada_em === "string" ? Date.parse(a.payload.migrada_em as string) : NaN;
+  const quando = Date.parse(String(pay.date_approved ?? pay.date_created ?? ""));
+  return Number.isFinite(migradaEm) && Number.isFinite(quando) && quando < migradaEm;
 }
 
 /** O que vai pra conta_assinaturas a partir da assinatura do MP (fonte da verdade). */

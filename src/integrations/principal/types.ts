@@ -1244,6 +1244,7 @@ export type Database = {
           plano: string
           recebimento_modo: string
           regra_pix: string
+          regras_legadas: boolean
           situacao: string
           teste_ate: string | null
           tolerancia_dias: number
@@ -1267,6 +1268,7 @@ export type Database = {
           plano?: string
           recebimento_modo?: string
           regra_pix?: string
+          regras_legadas?: boolean
           situacao?: string
           teste_ate?: string | null
           tolerancia_dias?: number
@@ -1290,6 +1292,7 @@ export type Database = {
           plano?: string
           recebimento_modo?: string
           regra_pix?: string
+          regras_legadas?: boolean
           situacao?: string
           teste_ate?: string | null
           tolerancia_dias?: number
