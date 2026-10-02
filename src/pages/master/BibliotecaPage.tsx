@@ -14,7 +14,7 @@ import { FormExercicioBiblioteca } from "@/treino/ui/FormExercicioBiblioteca";
 import {
   BTN_MINI_PRIMARIO, BTN_NEUTRO, BTN_PRIMARIO, Campo, Carregando, DIALOG_CONTENT, ErroCarregar, Etiqueta, INPUT, LINHA, SELECT_CONTENT,
   SELECT_TRIGGER, Secao, TEXTAREA, TituloPagina, Vazio, mensagemErro, useConfirmacao, useDebounce,
-} from "@/components/master/masterUi";
+} from "./bibliotecaUi";
 
 interface Exercicio {
   id: string; nome: string; grupo_muscular: string; emoji: string | null; subgrupo: string | null; dica: string | null;

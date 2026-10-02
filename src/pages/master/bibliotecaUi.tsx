@@ -1,3 +1,5 @@
+// Physiq W27 — as peças do visual antigo que a Biblioteca global (a única página antiga do master que ficou) usa; vieram de
+// src/components/master/masterUi.tsx, que saiu com as outras páginas antigas do master.
 import { useCallback, useEffect, useState, type HTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";

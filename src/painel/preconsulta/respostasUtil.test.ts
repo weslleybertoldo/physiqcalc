@@ -236,7 +236,10 @@ describe("W21 — quem importa e os números", () => {
     const agora = new Date(2026, 9, 15, 12);
     const dias = (n: number) => new Date(agora.getTime() - n * 86400000).toISOString();
     expect(respostasPorSemana([{ respondido_em: dias(1) }, { respondido_em: dias(2) }, { respondido_em: dias(8) }, { respondido_em: dias(60) }], agora)).toEqual([0, 0, 0, 0, 0, 0, 1, 2]);
-    expect(iniciaisDe("  ana  maria silva ")).toBe("AM");
+    // W27: a mesma função de iniciais do Avatar (W25) — primeira e última palavra, só letras
+    expect(iniciaisDe("  ana  maria silva ")).toBe("AS");
+    expect(iniciaisDe("Conta Teste (prova)")).toBe("CP");
+    expect(iniciaisDe("(Ana) 2026")).toBe("A");
     expect(iniciaisDe("")).toBe("?");
   });
 });

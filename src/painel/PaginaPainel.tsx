@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { AvisoUseNutri } from "@/ui/casca/AvisoUseNutri";
 import { Carregavel } from "@/ui/casca/Carregavel";
+import { ModuloForaDoPlano } from "@/ui/casca/ModuloForaDoPlano";
 import { NaoEncontrada } from "@/ui/casca/NaoEncontrada";
 import { tela } from "@/rotas/registro";
 import AdminLayout from "@/layouts/AdminLayout";
@@ -16,7 +17,10 @@ export function PaginaPainel({ id }: { id: string }) {
   const dados = useDadosCasca();
   const item = itemPorId(id);
   if (!item) return <NaoEncontrada voltarPara="/painel" rotuloVoltar="Voltar ao painel" />;
-  const estado = estadoDoItem(item, modulosDaConta(dados.conta?.modulos));
+  const modulos = modulosDaConta(dados.conta?.modulos);
+  const estado = estadoDoItem(item, modulos);
+  // W27 (herdado da W26, spec §9): a página é de um módulo que a conta não tem no plano
+  if (estado === null && item.modulo !== "ambos" && !modulos.includes(item.modulo)) return <ModuloForaDoPlano modulo={item.modulo} ehDono={dados.ehDono} />;
   if (estado === "nova" && item.arquivo) {
     const Nova = tela("paginasPainel", item.arquivo);
     if (Nova) {

@@ -1,7 +1,8 @@
 import type { ReactNode, SelectHTMLAttributes } from "react";
 import { Search } from "lucide-react";
+import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { Botao } from "@/ui/premium/Botao";
@@ -74,9 +75,11 @@ export function ConfirmarExclusao({
           <AlertDialogTitle className="font-body text-[17px] font-semibold normal-case tracking-[-0.02em] text-texto">{titulo}</AlertDialogTitle>
           <AlertDialogDescription className="font-body text-[13px] leading-relaxed text-texto-2">{texto}</AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="pq-botao pq-botao-g pq-botao-sm">Cancelar</AlertDialogCancel>
-          <AlertDialogAction
+        <AlertDialogFooter className="gap-2">
+          {/* W27 (herdado da W26): os botões do premium direto nos primitivos do Radix — o AlertDialogAction/Cancel do shadcn põe o
+              violeta do botão padrão por cima (o mesmo conserto da Lixeira, src/ferramentas/Confirmar.tsx) */}
+          <AlertDialogPrimitive.Cancel className="pq-botao pq-botao-g pq-botao-sm" data-confirmar-cancelar>Cancelar</AlertDialogPrimitive.Cancel>
+          <AlertDialogPrimitive.Action
             className="pq-botao pq-botao-g pq-botao-sm !border-[rgba(244,63,94,.35)] !text-rosa-3 hover:!bg-[rgba(244,63,94,.08)]"
             onClick={(e) => {
               e.preventDefault();
@@ -86,7 +89,7 @@ export function ConfirmarExclusao({
             data-confirmar-excluir
           >
             {ocupado ? "Excluindo…" : rotulo}
-          </AlertDialogAction>
+          </AlertDialogPrimitive.Action>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
