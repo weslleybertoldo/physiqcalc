@@ -39,13 +39,13 @@ saude_ok, esperar, treino_id = B14.saude_ok, B14.esperar, B14.treino_id
 # os 5 exercícios do treino A da tela 8 (a prescrição que o E2E digita no editor) — nomes da biblioteca global (81 com GIF)
 TREINO_A = [
     ("Supino Reto com Barra", 4, "10", 60, 60),
-    ("Supino Inclinado", 4, "10", 60, 24),
+    ("Supino Inclinado com Barra", 4, "10", 60, 24),
     ("Crucifixo com Halteres", 3, "12", 45, 14),
     ("Tríceps Francês com Halter", 3, "12", 45, 18),
     ("Tríceps Pulley", 4, "12", 60, 25),
 ]
-TREINO_B = ["Puxada Aberta Frontal", "Remada Curvada com Barra", "Remada Unilateral com Halter", "Rosca Direta com Barra"]
-TREINO_C = ["Agachamento Livre", "Leg Press", "Levantamento Terra Romeno (Stiff)", "Elevação Pélvica"]
+TREINO_B = ["Puxada Frontal Aberta", "Remada Curvada com Barra", "Remada Unilateral com Halter (Serrote)", "Rosca Direta com Barra"]
+TREINO_C = ["Agachamento Livre com Barra", "Leg Press 45°", "Levantamento Terra Romeno (Stiff)", "Elevação Pélvica com Barra"]
 OBSERVACAO = "Desça a barra em 3 segundos no supino. Se passar de 12 repetições no tríceps, suba 2 kg na próxima série."
 
 

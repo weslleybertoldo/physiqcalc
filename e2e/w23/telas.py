@@ -140,9 +140,9 @@ def caso_meus_treinos(nav, base: str, prefixo: str, m: dict) -> None:
         # ── a prescrição do modelo no B (digitada) ──
         p.check(abrir_aba_modelo(c, B.TREINO_B), "M8 aba B abre")
         for campo, valor in (("series", "4"), ("reps", "10"), ("descanso", "90"), ("carga", "40")):
-            digitar(c, "Puxada Aberta Frontal", campo, valor)
+            digitar(c, "Puxada Frontal Aberta", campo, valor)
         ok = B.esperar(lambda: (lambda x: x and (x["num_series"], x["reps_alvo"], x["descanso_segundos"], x["carga"]) == (4, "10", 90, 40.0))(
-            next((r for r in B.linhas_modelo(Bg) if r["nome"] == "Puxada Aberta Frontal"), None)), 30, 2)
+            next((r for r in B.linhas_modelo(Bg) if r["nome"] == "Puxada Frontal Aberta"), None)), 30, 2)
         p.check(bool(ok), "M9 o modelo B grava 4 × 10 · 90 s · 40 kg na Puxada (colunas do modelo, schema staging)")
         digitar(c, "Remada Curvada com Barra", "reps", "abc")
         c.pg.wait_for_timeout(800)
@@ -161,11 +161,11 @@ def caso_meus_treinos(nav, base: str, prefixo: str, m: dict) -> None:
         c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 20, 40)
         c.pg.locator("[data-biblioteca-busca]").fill("extensora")
         c.pg.wait_for_timeout(600)
-        c.pg.locator('[data-biblioteca-item="Extensora"]').first.click()
-        ok = B.esperar(lambda: "Extensora" in [r["nome"] for r in B.linhas_modelo(C)], 30, 2)
-        p.check(bool(ok) and c.esperar(lambda: linha(c, "Extensora").count() > 0, 20), "M14 biblioteca › Extensora entrou no C (tela e banco)")
-        linha(c, "Extensora").locator("[data-exercicio-remover]").click()
-        ok = B.esperar(lambda: "Extensora" not in [r["nome"] for r in B.linhas_modelo(C)], 30, 2)
+        c.pg.locator('[data-biblioteca-item="Cadeira Extensora"]').first.click()
+        ok = B.esperar(lambda: "Cadeira Extensora" in [r["nome"] for r in B.linhas_modelo(C)], 30, 2)
+        p.check(bool(ok) and c.esperar(lambda: linha(c, "Cadeira Extensora").count() > 0, 20), "M14 biblioteca › Extensora entrou no C (tela e banco)")
+        linha(c, "Cadeira Extensora").locator("[data-exercicio-remover]").click()
+        ok = B.esperar(lambda: "Cadeira Extensora" not in [r["nome"] for r in B.linhas_modelo(C)], 30, 2)
         p.check(bool(ok), "M15 tirar do treino: a Extensora saiu do C")
     finally:
         c.fim()
@@ -184,7 +184,7 @@ def caso_quem_recebe(nav, base: str, prefixo: str, m: dict) -> None:
         p.check(ra.get_attribute("data-recebe") == "0" and not B.recebe(Bg, rafael), "Q2 o Rafael não recebe o B (tela = banco)")
         ra.click()
         ok = B.esperar(lambda: B.recebe(Bg, rafael), 40, 2)
-        pr = B.prescricao_aluno(rafael, Bg).get("Puxada Aberta Frontal") or {}
+        pr = B.prescricao_aluno(rafael, Bg).get("Puxada Frontal Aberta") or {}
         p.check(bool(ok) and (pr.get("num_series"), pr.get("reps_alvo"), pr.get("descanso_segundos"), pr.get("carga")) == (4, "10", 90, 40.0),
                 f"Q3 marcar dá o B ao Rafael (função) e ele leva a prescrição do modelo (4 × 10 · 90 s · 40 kg) → {pr}")
         c.esperar(lambda: c.pg.locator(f'[data-quem-recebe-aluno="{rafael}"]').get_attribute("data-recebe") == "1", 20)

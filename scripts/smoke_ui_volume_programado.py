@@ -39,7 +39,7 @@ SUPABASE_URL = f"https://{REF}.supabase.co"
 USER_ID = "e4c5fb14-fe3b-4a51-a49f-ceed61485054"  # admin.teste.claude
 GRUPO_ID = "1427b068-58ab-417c-a13f-65e3489b76f2"  # Peito + tríceps (catálogo)
 TESTA_ID = "c7016a9d-1af3-4238-929f-adae75005ce6"  # Tríceps Testa
-TESTA = "Tríceps Testa"
+TESTA = "Tríceps Testa com Barra"
 PULLEY = "Tríceps Pulley"  # está no Peito + tríceps E no Upper Teste (pessoal)
 KEY = f"catalogo:{GRUPO_ID}"
 URL_VOLUME = f"{BASE}/admin?v=config&u={USER_ID}&ct=treino&wt=volume"

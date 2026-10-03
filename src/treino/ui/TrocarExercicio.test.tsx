@@ -132,11 +132,11 @@ describe("Trocar exercício (tela 2 · W9)", () => {
     expect(deitado.textContent).toContain("NO TREINO");
     unmount();
 
-    const r2 = render(<TrocarExercicio alvo={alvoDe("Supino Inclinado")} aoFechar={vi.fn()} />);
+    const r2 = render(<TrocarExercicio alvo={alvoDe("Supino Inclinado com Barra")} aoFechar={vi.fn()} />);
     await waitFor(() => expect(document.querySelector("[data-trocar-exercicio]")?.getAttribute("data-trocar-aba-atual")).toBe("mesmo"));
     r2.unmount();
 
-    render(<TrocarExercicio alvo={alvoDe("Adutora")} aoFechar={vi.fn()} />);
+    render(<TrocarExercicio alvo={alvoDe("Cadeira Adutora")} aoFechar={vi.fn()} />);
     await waitFor(() => expect(document.querySelector("[data-trocar-exercicio]")?.getAttribute("data-trocar-aba-atual")).toBe("todos"));
     fireEvent.change(document.querySelector("[data-trocar-busca]")!, { target: { value: "martelo" } });
     expect(opcoes()).toEqual(["Rosca Martelo com Halteres", "Rosca Martelo na Polia"]);
@@ -146,11 +146,11 @@ describe("Trocar exercício (tela 2 · W9)", () => {
 
   it("Equivalentes vazio mostra o aviso; exercício próprio do aluno aparece em Mesmo músculo e em Todos", async () => {
     h.proprios = [{ id: "meu1", nome: "Flexão com pausa", grupo_muscular: "Peitoral", tipo: null, padrao_movimento: null, equipamento: null, variacao: null }];
-    render(<TrocarExercicio alvo={alvoDe("Supino Inclinado")} aoFechar={vi.fn()} />);
+    render(<TrocarExercicio alvo={alvoDe("Supino Inclinado com Barra")} aoFechar={vi.fn()} />);
     await waitFor(() => expect(opcoes().length).toBeGreaterThan(0));
     expect(opcoes()).toContain("Flexão com pausa");
     fireEvent.click(document.querySelector('[data-trocar-aba="equivalentes"]')!);
-    expect(screen.getByText("Ainda não há equivalente cadastrado para Supino Inclinado.")).toBeInTheDocument();
+    expect(screen.getByText("Ainda não há equivalente cadastrado para Supino Inclinado com Barra.")).toBeInTheDocument();
     fireEvent.click(document.querySelector('[data-trocar-aba="todos"]')!);
     fireEvent.click(document.querySelector('[data-trocar-bloco="peito"]')!);
     expect(opcoes()).toContain("Flexão com pausa");

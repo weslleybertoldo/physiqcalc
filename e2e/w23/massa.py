@@ -26,10 +26,10 @@ B.ESTADO["schema"] = S
 ARQ = B.SCRATCH / "massa_staging.json"
 # treinos feitos em setembro (os de 28 e 29/09 são da massa da W15): dia → os exercícios do treino daquele dia na semana do Rafael
 DIAS_FEITOS = ["2026-09-01", "2026-09-03", "2026-09-08", "2026-09-10", "2026-09-15", "2026-09-17", "2026-09-22", "2026-09-24"]
-EX_POR_DIA = {0: ["Supino Reto com Barra", "Supino Inclinado", "Crucifixo com Halteres"],  # seg: A da W15 (Peito e tríceps)
-              1: ["Puxada Aberta Frontal", "Remada Curvada com Barra", "Rosca Direta com Barra"],  # ter: B (Costas)
-              2: ["Agachamento Livre", "Leg Press", "Elevação Pélvica"],  # qua: C (Pernas)
-              3: ["Supino Reto com Barra", "Supino Inclinado", "Tríceps Pulley"]}  # qui: A
+EX_POR_DIA = {0: ["Supino Reto com Barra", "Supino Inclinado com Barra", "Crucifixo com Halteres"],  # seg: A da W15 (Peito e tríceps)
+              1: ["Puxada Frontal Aberta", "Remada Curvada com Barra", "Rosca Direta com Barra"],  # ter: B (Costas)
+              2: ["Agachamento Livre com Barra", "Leg Press 45°", "Elevação Pélvica com Barra"],  # qua: C (Pernas)
+              3: ["Supino Reto com Barra", "Supino Inclinado com Barra", "Tríceps Pulley"]}  # qui: A
 
 
 def ex(sql: str) -> None:

@@ -109,7 +109,7 @@ describe("a regra da troca (os 81 de verdade, classificados no CSV)", () => {
   });
 
   it("grupo muscular = o bloco do app ('Costas' × 'Dorsal / Bíceps'): puxada ≈ barra fixa", () => {
-    expect(ehEquivalente(ex("Puxada Alta na Polia"), ex("Barra Fixa"))).toBe(true);
+    expect(ehEquivalente(ex("Puxada Frontal"), ex("Barra Fixa"))).toBe(true);
     const g = montarGruposTroca(ex("Barra Fixa"), CATALOGO);
     expect(g.equivalentes.every((o) => o.exercicio.padrao_movimento === "puxada_vertical")).toBe(true);
     expect(nomes(g.mesmoMusculo)).toContain("Remada Curvada com Barra");
@@ -120,15 +120,15 @@ describe("a regra da troca (os 81 de verdade, classificados no CSV)", () => {
   it("mesmo músculo: mesmo grupo e subgrupo, outro movimento; quem sai e os equivalentes não entram", () => {
     const g = montarGruposTroca(ex("Supino Reto com Barra"), CATALOGO);
     const mm = nomes(g.mesmoMusculo);
-    expect(mm).toEqual(expect.arrayContaining(["Crucifixo com Halteres", "Cross-over na Polia", "Supino Inclinado", "Supino Declinado na Máquina"]));
+    expect(mm).toEqual(expect.arrayContaining(["Crucifixo com Halteres", "Cross-over na Polia", "Supino Inclinado com Barra", "Supino Declinado na Máquina"]));
     expect(mm).not.toContain("Supino Reto com Barra");
     for (const n of nomes(g.equivalentes)) expect(mm).not.toContain(n);
     expect(mm.some((n) => n.startsWith("Tríceps"))).toBe(false);
-    expect(ehMesmoMusculo(ex("Agachamento Sumô"), ex("Afundo com Halteres"))).toBe(true);
+    expect(ehMesmoMusculo(ex("Agachamento Sumô com Halteres"), ex("Afundo com Halteres"))).toBe(true);
   });
 
   it("todos = a lista inteira (os 81), em ordem alfabética", () => {
-    const g = montarGruposTroca(ex("Leg Press"), CATALOGO);
+    const g = montarGruposTroca(ex("Leg Press 45°"), CATALOGO);
     expect(g.todos).toHaveLength(81);
     expect(g.todos[0].nome.localeCompare(g.todos[1].nome, "pt-BR")).toBeLessThan(0);
   });

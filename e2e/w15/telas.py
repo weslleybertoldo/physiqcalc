@@ -193,17 +193,17 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
 
         # ── treino compartilhado (B): mudar a lista vira CÓPIA só do Rafael ──
         abrir_aba(c, "B · Costas")
-        p.check(c.esperar(lambda: c.tem('[data-exercicio-nome="Puxada Aberta Frontal"]'), 20), "aba B abre com a Puxada")
+        p.check(c.esperar(lambda: c.tem('[data-exercicio-nome="Puxada Frontal Aberta"]'), 20), "aba B abre com a Puxada")
         p.check(c.tem("[data-treino-compartilhado]"), "B avisa que é compartilhado")
         c.pg.locator("[data-treino-adicionar]").click()
         c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 20, 30)
         c.pg.locator("[data-biblioteca-busca]").fill("crucifixo invertido")
         c.pg.wait_for_timeout(400)
-        c.pg.locator('[data-biblioteca-item="Crucifixo Invertido"]').first.click()
+        c.pg.locator('[data-biblioteca-item="Crucifixo Invertido com Halteres"]').first.click()
         ok = B.esperar(lambda: Bg not in grupos_do(rafael), 30, 1.5)
         p.check(bool(ok) and Bg in grupos_do(m["lucas"]), "B virou cópia só do Rafael (o Lucas segue com o original)")
-        p.check("Crucifixo Invertido" not in ordem(Bg), "o B original não mudou")
-        p.check(c.esperar(lambda: c.tem('[data-exercicio-nome="Crucifixo Invertido"]') and c.tem('[data-treino-rotulo="B · Costas"]'), 30),
+        p.check("Crucifixo Invertido com Halteres" not in ordem(Bg), "o B original não mudou")
+        p.check(c.esperar(lambda: c.tem('[data-exercicio-nome="Crucifixo Invertido com Halteres"]') and c.tem('[data-treino-rotulo="B · Costas"]'), 30),
                 "a aba segue 'B · Costas', agora com o exercício novo")
         abrir_aba(c, "A · Peito e tríceps")
 
