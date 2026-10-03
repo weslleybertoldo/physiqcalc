@@ -51,7 +51,7 @@ export const CATALOGO_81: (ExercicioEquivalencia & { imagem_url: string | null; 
     equipamento: r.equipamento,
     variacao: r.variacao || null,
     imagem_url: null,
-    tipo: r.nome === "Corrida" ? "corrida" : "musculacao",
+    tipo: r.padrao_movimento === "cardio" ? "corrida" : "musculacao",
   };
 });
 

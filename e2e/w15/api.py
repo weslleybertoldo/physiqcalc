@@ -45,7 +45,7 @@ def main() -> int:
     m = B.ler_json(B.SCRATCH / "massa_staging.json")
     assert m, "rode antes: python3 e2e/w15/massa.py"
     rafael, lucas, A, Bg, C = m["rafael"], m["lucas"], m["A"], m["B"], m["C"]
-    sup, inc = B.exercicio_id("Supino Reto com Barra"), B.exercicio_id("Supino Inclinado")
+    sup, inc = B.exercicio_id("Supino Reto com Barra"), B.exercicio_id("Supino Inclinado com Barra")
 
     # ── get: campos novos + os antigos (APK ≤ 3.17) ──
     st, r = chamar("w13-dono", "get", rafael)
@@ -86,7 +86,7 @@ def main() -> int:
         corpo = {"grupo_id": A, "exercicio_id": sup, "num_series": 4, "reps_alvo": "10", "descanso_segundos": 60, "carga_sugerida_kg": 60, campo: valor}
         st, r = chamar("w13-dono", "setPrescricao", rafael, **corpo)
         p.check(st == 400 and r.get("error") == erro, f"recusa {campo}={valor!r} ({st} {r.get('error')})")
-    st, r = chamar("w13-dono", "setPrescricao", rafael, grupo_id=A, exercicio_id=B.exercicio_id("Leg Press"), num_series=3)
+    st, r = chamar("w13-dono", "setPrescricao", rafael, grupo_id=A, exercicio_id=B.exercicio_id("Leg Press 45°"), num_series=3)
     p.check(st == 400 and r.get("error") == "exercicio_fora_do_treino", "recusa exercício que não está no treino")
 
     # ── observação (NF2) na linha geral ──
@@ -135,7 +135,7 @@ def main() -> int:
     # ── a lista do treino compartilhado (B): vira CÓPIA só do Rafael ──
     antes_b = [x["exercicio_id"] for x in B.sql_treino(f"select exercicio_id::text from {S}.tb_grupos_exercicios where grupo_id = '{Bg}' order by ordem")]
     chamar("w13-dono", "setPrescricao", rafael, grupo_id=Bg, exercicio_id=antes_b[0], num_series=4, reps_alvo="12", descanso_segundos=90, carga_sugerida_kg=50)
-    face = B.exercicio_id("Crucifixo Invertido")
+    face = B.exercicio_id("Crucifixo Invertido com Halteres")
     st, r = chamar("w13-dono", "adicionarExercicio", rafael, grupo_id=Bg, exercicio_id=face)
     novo = r.get("grupo_id")
     p.check(st == 200 and r.get("personalizado") is True and novo and novo != Bg, f"adicionar no B compartilhado: cópia só do Rafael ({st} {r})")

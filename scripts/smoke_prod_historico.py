@@ -130,7 +130,7 @@ with sync_playwright() as pw:
     checa("volume total 2.086 kg", tem(txt, "2.086"))
     checa("media 13.4 kg/rep", tem(txt, "13.4"))
     checa("exercicios reais",
-          tem(txt, "Elevação Lateral com Halteres") and tem(txt, "Crucifixo Invertido"))
+          tem(txt, "Elevação Lateral com Halteres") and tem(txt, "Crucifixo Invertido com Halteres"))
     checa("series com carga", tem(txt, "6kg × 6"))
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(800)

@@ -43,17 +43,17 @@ TREINOS = {
     "w10-aluno": {
         "nome": "Diego Almeida",
         "treinos": {
-            "A": ("Peito e Tríceps", ["Supino Reto com Barra", "Supino Inclinado", "Crucifixo com Halteres", "Tríceps Pulley", "Tríceps Francês com Halter"]),
-            "B": ("Costas e Bíceps", ["Puxada Aberta Frontal", "Remada Curvada com Barra", "Remada Baixa na Máquina", "Rosca Direta com Barra", "Rosca Martelo com Halteres"]),
-            "C": ("Pernas", ["Agachamento Livre", "Leg Press", "Extensora", "Flexora Deitado", "Panturrilha em Pé na Máquina"]),
+            "A": ("Peito e Tríceps", ["Supino Reto com Barra", "Supino Inclinado com Barra", "Crucifixo com Halteres", "Tríceps Pulley", "Tríceps Francês com Halter"]),
+            "B": ("Costas e Bíceps", ["Puxada Frontal Aberta", "Remada Curvada com Barra", "Remada Baixa na Máquina", "Rosca Direta com Barra", "Rosca Martelo com Halteres"]),
+            "C": ("Pernas", ["Agachamento Livre com Barra", "Leg Press 45°", "Cadeira Extensora", "Mesa Flexora", "Panturrilha em Pé na Máquina"]),
         },
         "semana": {"SEG": "A", "TER": "B", "QUA": "A", "QUI": "B", "SEX": "C"},
     },
     "w7-treino": {
         "nome": "Bruno Treino",
         "treinos": {
-            "A": ("Pernas", ["Agachamento Livre", "Leg Press", "Extensora", "Flexora Deitado", "Panturrilha em Pé na Máquina"]),
-            "B": ("Costas e Bíceps", ["Puxada Aberta Frontal", "Remada Curvada com Barra", "Remada Baixa na Máquina", "Rosca Direta com Barra", "Rosca Martelo com Halteres"]),
+            "A": ("Pernas", ["Agachamento Livre com Barra", "Leg Press 45°", "Cadeira Extensora", "Mesa Flexora", "Panturrilha em Pé na Máquina"]),
+            "B": ("Costas e Bíceps", ["Puxada Frontal Aberta", "Remada Curvada com Barra", "Remada Baixa na Máquina", "Rosca Direta com Barra", "Rosca Martelo com Halteres"]),
         },
         "semana": {"SEG": "A", "QUA": "B", "SEX": "A"},
     },

@@ -39,7 +39,7 @@ SUPABASE_URL = f"https://{REF}.supabase.co"
 USER_ID = "e4c5fb14-fe3b-4a51-a49f-ceed61485054"  # admin.teste.claude
 GRUPO_ID = "1427b068-58ab-417c-a13f-65e3489b76f2"  # Peito + tríceps
 TESTA_ID = "c7016a9d-1af3-4238-929f-adae75005ce6"  # Tríceps Testa
-TESTA = "Tríceps Testa"
+TESTA = "Tríceps Testa com Barra"
 KEY = f"catalogo:{GRUPO_ID}"
 SEL_VALOR = f"[data-admin-series-exercicio='ex:{TESTA_ID}'] [data-admin-series-exercicio-valor]"
 PAT = os.environ.get("SUPABASE_PAT") or open(os.path.expanduser("~/.pc-pat")).read().strip()

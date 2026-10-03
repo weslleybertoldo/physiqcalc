@@ -72,13 +72,13 @@ TREINO_B = "B · Costas e bíceps W23"
 TREINO_C = "C · Pernas W23"
 EXS_A = [
     ("Supino Reto com Barra", 4, "10", 60, 60),
-    ("Supino Inclinado", 4, "10", 60, 24),
+    ("Supino Inclinado com Barra", 4, "10", 60, 24),
     ("Crucifixo com Halteres", 3, "12", 45, 14),
     ("Tríceps Francês com Halter", 3, "12", 45, 18),
     ("Tríceps Pulley", 4, "12", 60, 25),
 ]
-EXS_B = ["Puxada Aberta Frontal", "Remada Curvada com Barra", "Rosca Martelo com Halteres", "Rosca Direta com Barra"]
-EXS_C = ["Agachamento Livre", "Leg Press", "Levantamento Terra Romeno (Stiff)", "Elevação Pélvica"]
+EXS_B = ["Puxada Frontal Aberta", "Remada Curvada com Barra", "Rosca Martelo com Halteres", "Rosca Direta com Barra"]
+EXS_C = ["Agachamento Livre com Barra", "Leg Press 45°", "Levantamento Terra Romeno (Stiff)", "Elevação Pélvica com Barra"]
 # o exercício PRÓPRIO novo (Biblioteca › Minha): mesmo movimento e músculo da Rosca Martelo com Halteres, outro equipamento
 PROPRIO = "Rosca Martelo com Kettlebell W23"
 

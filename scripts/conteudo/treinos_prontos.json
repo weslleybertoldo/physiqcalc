@@ -16,23 +16,23 @@
         {
           "letra": "A", "nome": "Treino A · Corpo todo", "dias": ["SEG"],
           "exercicios": [
-            { "exercicio": "Leg Press", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Leg Press 45°", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Supino Reto na Máquina Sentado", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Puxada Frontal Aberta", "series": 3, "reps": "12", "descanso": 45 },
             { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Abdominal Supra no Solo", "series": 3, "reps": "15", "descanso": 30 },
-            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
+            { "exercicio": "Abdominal Supra", "series": 3, "reps": "15", "descanso": 30 },
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
           ]
         },
         {
           "letra": "B", "nome": "Treino B · Corpo todo", "dias": ["QUA"],
           "exercicios": [
-            { "exercicio": "Agachamento na Máquina", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Agachamento no Smith", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Remada Baixa na Máquina", "series": 3, "reps": "12", "descanso": 45 },
             { "exercicio": "Desenvolvimento na Máquina", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Mesa Flexora", "series": 3, "reps": "12", "descanso": 45 },
             { "exercicio": "Elevação de Pernas", "series": 3, "reps": "12", "descanso": 30 },
-            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
           ]
         },
         {
@@ -40,10 +40,10 @@
           "exercicios": [
             { "exercicio": "Afundo com Halteres", "series": 3, "reps": "12", "descanso": 45, "observacao": "Cada perna." },
             { "exercicio": "Crucifixo na Máquina", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Puxada Fechada Frontal", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Elevação Pélvica", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Puxada Frontal Fechada", "series": 3, "reps": "12", "descanso": 45 },
+            { "exercicio": "Elevação Pélvica com Barra", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Abdominal Bicicleta", "series": 3, "reps": "20", "descanso": 30 },
-            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo leve: dá para conversar." }
           ]
         }
       ]
@@ -64,23 +64,23 @@
             { "exercicio": "Supino Reto com Halteres", "series": 4, "reps": "12", "descanso": 60 },
             { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "12", "descanso": 60 },
             { "exercicio": "Desenvolvimento com Halteres", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Puxada Frontal Aberta", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Elevação Lateral na Polia", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Tríceps Corda na Polia", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Rosca Direta com Barra", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
           ]
         },
         {
           "letra": "B", "nome": "Treino B · Inferiores e abdômen", "dias": ["TER", "SEX"],
           "exercicios": [
-            { "exercicio": "Agachamento Livre", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Agachamento Livre com Barra", "series": 4, "reps": "12", "descanso": 60 },
             { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 4, "reps": "12", "descanso": 60 },
-            { "exercicio": "Leg Press", "series": 3, "reps": "15", "descanso": 60 },
-            { "exercicio": "Flexora de Perna Sentado", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Leg Press 45°", "series": 3, "reps": "15", "descanso": 60 },
+            { "exercicio": "Cadeira Flexora", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "15", "descanso": 45 },
-            { "exercicio": "Abdominal Oblíquo com Pé no Banco", "series": 3, "reps": "15", "descanso": 30, "observacao": "Cada lado." },
-            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo moderado." }
+            { "exercicio": "Abdominal Oblíquo com Pés no Banco", "series": 3, "reps": "15", "descanso": 30, "observacao": "Cada lado." },
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo moderado." }
           ]
         }
       ]
@@ -99,11 +99,11 @@
           "letra": "A", "nome": "Treino A · Peito e tríceps", "dias": ["SEG"],
           "exercicios": [
             { "exercicio": "Supino Reto com Barra", "series": 4, "reps": "10-12", "descanso": 60 },
-            { "exercicio": "Supino Inclinado", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Supino Inclinado com Barra", "series": 4, "reps": "12", "descanso": 60 },
             { "exercicio": "Cross-over na Polia", "series": 3, "reps": "15", "descanso": 45 },
-            { "exercicio": "Mergulho (Tríceps)", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Mergulho nas Paralelas", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Tríceps Pulley", "series": 3, "reps": "15", "descanso": 45 },
-            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
           ]
         },
         {
@@ -111,19 +111,19 @@
           "exercicios": [
             { "exercicio": "Barra Fixa", "series": 4, "reps": "8-10", "descanso": 60 },
             { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "12", "descanso": 60 },
-            { "exercicio": "Remada na Polia Sentado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Remada Baixa na Polia", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Pulldown com Braços Estendidos", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Rosca Martelo com Halteres", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo moderado." }
           ]
         },
         {
           "letra": "C", "nome": "Treino C · Pernas", "dias": ["QUA"],
           "exercicios": [
-            { "exercicio": "Agachamento Livre", "series": 4, "reps": "12", "descanso": 75 },
-            { "exercicio": "Leg Press", "series": 4, "reps": "15", "descanso": 60 },
-            { "exercicio": "Agachamento Búlgaro", "series": 3, "reps": "10", "descanso": 60, "observacao": "Cada perna." },
-            { "exercicio": "Extensora", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Agachamento Livre com Barra", "series": 4, "reps": "12", "descanso": 75 },
+            { "exercicio": "Leg Press 45°", "series": 4, "reps": "15", "descanso": 60 },
+            { "exercicio": "Agachamento Búlgaro com Halteres", "series": 3, "reps": "10", "descanso": 60, "observacao": "Cada perna." },
+            { "exercicio": "Cadeira Extensora", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "15", "descanso": 45 }
           ]
         },
@@ -135,19 +135,19 @@
             { "exercicio": "Face Pull na Polia", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Encolhimento com Halteres", "series": 3, "reps": "15", "descanso": 45 },
             { "exercicio": "Elevação de Pernas", "series": 3, "reps": "15", "descanso": 30 },
-            { "exercicio": "Abdominais na Máquina", "series": 3, "reps": "15", "descanso": 30 },
-            { "exercicio": "Corrida", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo moderado." }
+            { "exercicio": "Abdominal na Máquina", "series": 3, "reps": "15", "descanso": 30 },
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "20 min", "descanso": null, "observacao": "Ritmo moderado." }
           ]
         },
         {
           "letra": "E", "nome": "Treino E · Glúteos e posterior", "dias": ["SEX"],
           "exercicios": [
             { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 4, "reps": "12", "descanso": 75 },
-            { "exercicio": "Elevação Pélvica", "series": 4, "reps": "12", "descanso": 60 },
-            { "exercicio": "Flexora Deitado", "series": 3, "reps": "15", "descanso": 45 },
-            { "exercicio": "Abdutora", "series": 3, "reps": "20", "descanso": 45 },
-            { "exercicio": "Coice na Polia Baixa", "series": 3, "reps": "15", "descanso": 45, "observacao": "Cada perna." },
-            { "exercicio": "Corrida", "series": 1, "reps": "25 min", "descanso": null, "observacao": "Ritmo moderado." }
+            { "exercicio": "Elevação Pélvica com Barra", "series": 4, "reps": "12", "descanso": 60 },
+            { "exercicio": "Mesa Flexora", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Cadeira Abdutora", "series": 3, "reps": "20", "descanso": 45 },
+            { "exercicio": "Coice de Glúteo na Polia", "series": 3, "reps": "15", "descanso": 45, "observacao": "Cada perna." },
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "25 min", "descanso": null, "observacao": "Ritmo moderado." }
           ]
         }
       ]
@@ -165,20 +165,20 @@
         {
           "letra": "A", "nome": "Treino A · Corpo todo", "dias": ["SEG"],
           "exercicios": [
-            { "exercicio": "Agachamento na Máquina", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Agachamento no Smith", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Supino Reto na Máquina Sentado", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Puxada Frontal Aberta", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Desenvolvimento na Máquina", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Abdominal Supra no Solo", "series": 3, "reps": "15", "descanso": 45 }
+            { "exercicio": "Abdominal Supra", "series": 3, "reps": "15", "descanso": 45 }
           ]
         },
         {
           "letra": "B", "nome": "Treino B · Corpo todo", "dias": ["QUA"],
           "exercicios": [
-            { "exercicio": "Leg Press", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Leg Press 45°", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Remada Baixa na Máquina", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Crucifixo na Máquina", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Mesa Flexora", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Elevação de Pernas", "series": 3, "reps": "12", "descanso": 45 }
           ]
         },
@@ -187,10 +187,10 @@
           "exercicios": [
             { "exercicio": "Afundo com Halteres", "series": 3, "reps": "10", "descanso": 60, "observacao": "Cada perna." },
             { "exercicio": "Supino Reto com Halteres", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Remada Unilateral com Halter", "series": 3, "reps": "12", "descanso": 60, "observacao": "Cada braço." },
+            { "exercicio": "Remada Unilateral com Halter (Serrote)", "series": 3, "reps": "12", "descanso": 60, "observacao": "Cada braço." },
             { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Hiperextensão Lombar", "series": 3, "reps": "12", "descanso": 45 },
-            { "exercicio": "Corrida", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo leve." }
+            { "exercicio": "Corrida na Esteira", "series": 1, "reps": "15 min", "descanso": null, "observacao": "Ritmo leve." }
           ]
         }
       ]
@@ -209,7 +209,7 @@
           "letra": "A", "nome": "Treino A · Peito, ombros e tríceps", "dias": ["SEG"],
           "exercicios": [
             { "exercicio": "Supino Reto com Halteres", "series": 4, "reps": "10", "descanso": 75 },
-            { "exercicio": "Supino Inclinado", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Supino Inclinado com Barra", "series": 3, "reps": "10", "descanso": 75 },
             { "exercicio": "Desenvolvimento com Halteres", "series": 3, "reps": "10", "descanso": 75 },
             { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Tríceps Corda na Polia", "series": 3, "reps": "12", "descanso": 60 }
@@ -218,19 +218,19 @@
         {
           "letra": "B", "nome": "Treino B · Pernas e abdômen", "dias": ["TER"],
           "exercicios": [
-            { "exercicio": "Agachamento Livre", "series": 4, "reps": "10", "descanso": 90 },
-            { "exercicio": "Leg Press", "series": 3, "reps": "12", "descanso": 75 },
-            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Panturrilha na Máquina", "series": 4, "reps": "12", "descanso": 45 },
+            { "exercicio": "Agachamento Livre com Barra", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Leg Press 45°", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Cadeira Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Panturrilha Sentado na Máquina", "series": 4, "reps": "12", "descanso": 45 },
             { "exercicio": "Abdominal Bicicleta", "series": 3, "reps": "20", "descanso": 30 }
           ]
         },
         {
           "letra": "C", "nome": "Treino C · Costas e bíceps", "dias": ["QUI"],
           "exercicios": [
-            { "exercicio": "Puxada Aberta Frontal", "series": 4, "reps": "10", "descanso": 75 },
+            { "exercicio": "Puxada Frontal Aberta", "series": 4, "reps": "10", "descanso": 75 },
             { "exercicio": "Remada Curvada com Barra", "series": 3, "reps": "10", "descanso": 75 },
-            { "exercicio": "Remada na Polia Sentado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Remada Baixa na Polia", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Face Pull na Polia", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Rosca Direta com Barra", "series": 3, "reps": "10", "descanso": 60 }
           ]
@@ -239,9 +239,9 @@
           "letra": "D", "nome": "Treino D · Posterior, glúteos e abdômen", "dias": ["SEX"],
           "exercicios": [
             { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 4, "reps": "10", "descanso": 90 },
-            { "exercicio": "Elevação Pélvica", "series": 3, "reps": "12", "descanso": 75 },
-            { "exercicio": "Flexora de Perna Sentado", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Agachamento Sumô", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Elevação Pélvica com Barra", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Cadeira Flexora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Agachamento Sumô com Halteres", "series": 3, "reps": "12", "descanso": 75 },
             { "exercicio": "Elevação de Pernas", "series": 3, "reps": "12", "descanso": 45 }
           ]
         }
@@ -261,7 +261,7 @@
           "letra": "A", "nome": "Treino A · Peito", "dias": ["SEG"],
           "exercicios": [
             { "exercicio": "Supino Reto com Barra", "series": 4, "reps": "8", "descanso": 90 },
-            { "exercicio": "Supino Inclinado", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Supino Inclinado com Barra", "series": 4, "reps": "10", "descanso": 90 },
             { "exercicio": "Crucifixo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Cross-over na Polia", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Flexão de Braço", "series": 3, "reps": "12-15", "descanso": 60 }
@@ -273,18 +273,18 @@
             { "exercicio": "Barra Fixa", "series": 4, "reps": "8", "descanso": 90 },
             { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "8", "descanso": 90 },
             { "exercicio": "Remada Cavalinho na Máquina", "series": 3, "reps": "10", "descanso": 75 },
-            { "exercicio": "Puxada Fechada Supinada", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Puxada Frontal Supinada", "series": 3, "reps": "10", "descanso": 75 },
             { "exercicio": "Hiperextensão Lombar", "series": 3, "reps": "12", "descanso": 60 }
           ]
         },
         {
           "letra": "C", "nome": "Treino C · Pernas", "dias": ["QUA"],
           "exercicios": [
-            { "exercicio": "Agachamento Livre", "series": 4, "reps": "8", "descanso": 120 },
+            { "exercicio": "Agachamento Livre com Barra", "series": 4, "reps": "8", "descanso": 120 },
             { "exercicio": "Agachamento no Hack", "series": 3, "reps": "10", "descanso": 90 },
-            { "exercicio": "Leg Press", "series": 3, "reps": "12", "descanso": 90 },
-            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Leg Press 45°", "series": 3, "reps": "12", "descanso": 90 },
+            { "exercicio": "Cadeira Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Mesa Flexora", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "12", "descanso": 45 }
           ]
         },
@@ -293,7 +293,7 @@
           "exercicios": [
             { "exercicio": "Desenvolvimento Arnold", "series": 4, "reps": "10", "descanso": 75 },
             { "exercicio": "Elevação Lateral com Halteres", "series": 4, "reps": "12", "descanso": 60 },
-            { "exercicio": "Crucifixo Invertido", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Crucifixo Invertido com Halteres", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Elevação Frontal com Halteres", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Encolhimento com Halteres", "series": 3, "reps": "12", "descanso": 60 }
           ]
@@ -302,11 +302,11 @@
           "letra": "E", "nome": "Treino E · Braços e abdômen", "dias": ["SEX"],
           "exercicios": [
             { "exercicio": "Rosca Direta com Barra", "series": 4, "reps": "10", "descanso": 60 },
-            { "exercicio": "Tríceps Testa", "series": 4, "reps": "10", "descanso": 60 },
+            { "exercicio": "Tríceps Testa com Barra", "series": 4, "reps": "10", "descanso": 60 },
             { "exercicio": "Rosca Martelo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Tríceps Francês com Halter", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Rosca Concentrada", "series": 3, "reps": "12", "descanso": 45, "observacao": "Cada braço." },
-            { "exercicio": "Abdominais na Máquina", "series": 3, "reps": "15", "descanso": 45 }
+            { "exercicio": "Rosca Concentrada com Halter", "series": 3, "reps": "12", "descanso": 45, "observacao": "Cada braço." },
+            { "exercicio": "Abdominal na Máquina", "series": 3, "reps": "15", "descanso": 45 }
           ]
         }
       ]
@@ -324,31 +324,31 @@
         {
           "letra": "A", "nome": "Treino A · Corpo todo", "dias": ["SEG"],
           "exercicios": [
-            { "exercicio": "Leg Press", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Leg Press 45°", "series": 3, "reps": "10", "descanso": 90 },
             { "exercicio": "Supino Reto na Máquina Sentado", "series": 3, "reps": "10", "descanso": 90 },
-            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Puxada Frontal Aberta", "series": 3, "reps": "10", "descanso": 90 },
             { "exercicio": "Desenvolvimento na Máquina", "series": 3, "reps": "10", "descanso": 75 },
-            { "exercicio": "Rosca Scott na máquina", "series": 3, "reps": "12", "descanso": 60 }
+            { "exercicio": "Rosca Scott na Máquina", "series": 3, "reps": "12", "descanso": 60 }
           ]
         },
         {
           "letra": "B", "nome": "Treino B · Corpo todo", "dias": ["QUA"],
           "exercicios": [
-            { "exercicio": "Agachamento na Máquina", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Agachamento no Smith", "series": 3, "reps": "10", "descanso": 90 },
             { "exercicio": "Remada Baixa na Máquina", "series": 3, "reps": "10", "descanso": 90 },
-            { "exercicio": "Supino Inclinado", "series": 3, "reps": "10", "descanso": 90 },
-            { "exercicio": "Flexora Deitado", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Supino Inclinado com Barra", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Mesa Flexora", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Tríceps Pulley", "series": 3, "reps": "12", "descanso": 60 }
           ]
         },
         {
           "letra": "C", "nome": "Treino C · Corpo todo", "dias": ["SEX"],
           "exercicios": [
-            { "exercicio": "Agachamento Livre", "series": 3, "reps": "10", "descanso": 90, "observacao": "Comece leve e capriche na técnica." },
+            { "exercicio": "Agachamento Livre com Barra", "series": 3, "reps": "10", "descanso": 90, "observacao": "Comece leve e capriche na técnica." },
             { "exercicio": "Supino Reto com Halteres", "series": 3, "reps": "10", "descanso": 90 },
             { "exercicio": "Remada Fechada na Máquina", "series": 3, "reps": "10", "descanso": 90 },
             { "exercicio": "Elevação Lateral com Halteres", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Panturrilha na Máquina", "series": 3, "reps": "15", "descanso": 45 }
+            { "exercicio": "Panturrilha Sentado na Máquina", "series": 3, "reps": "15", "descanso": 45 }
           ]
         }
       ]
@@ -369,28 +369,28 @@
             { "exercicio": "Supino Reto com Barra", "series": 4, "reps": "6-8", "descanso": 120 },
             { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "6-8", "descanso": 120 },
             { "exercicio": "Desenvolvimento com Halteres", "series": 3, "reps": "8-10", "descanso": 90 },
-            { "exercicio": "Puxada Fechada Frontal", "series": 3, "reps": "8-10", "descanso": 90 },
+            { "exercicio": "Puxada Frontal Fechada", "series": 3, "reps": "8-10", "descanso": 90 },
             { "exercicio": "Rosca Direta com Barra", "series": 3, "reps": "10", "descanso": 60 },
-            { "exercicio": "Tríceps Testa", "series": 3, "reps": "10", "descanso": 60 }
+            { "exercicio": "Tríceps Testa com Barra", "series": 3, "reps": "10", "descanso": 60 }
           ]
         },
         {
           "letra": "B", "nome": "Treino B · Inferiores (força)", "dias": ["TER"],
           "exercicios": [
-            { "exercicio": "Agachamento Livre", "series": 4, "reps": "6-8", "descanso": 150 },
+            { "exercicio": "Agachamento Livre com Barra", "series": 4, "reps": "6-8", "descanso": 150 },
             { "exercicio": "Levantamento Terra Romeno (Stiff)", "series": 3, "reps": "8", "descanso": 120 },
-            { "exercicio": "Leg Press", "series": 3, "reps": "10", "descanso": 90 },
-            { "exercicio": "Flexora Deitado", "series": 3, "reps": "10", "descanso": 60 },
+            { "exercicio": "Leg Press 45°", "series": 3, "reps": "10", "descanso": 90 },
+            { "exercicio": "Mesa Flexora", "series": 3, "reps": "10", "descanso": 60 },
             { "exercicio": "Panturrilha em Pé na Máquina", "series": 4, "reps": "10", "descanso": 60 }
           ]
         },
         {
           "letra": "C", "nome": "Treino C · Superiores (volume)", "dias": ["QUI"],
           "exercicios": [
-            { "exercicio": "Supino Inclinado", "series": 4, "reps": "10", "descanso": 90 },
-            { "exercicio": "Remada na Polia Sentado", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Supino Inclinado com Barra", "series": 4, "reps": "10", "descanso": 90 },
+            { "exercicio": "Remada Baixa na Polia", "series": 4, "reps": "10", "descanso": 90 },
             { "exercicio": "Crucifixo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Puxada Aberta Frontal", "series": 3, "reps": "12", "descanso": 75 },
+            { "exercicio": "Puxada Frontal Aberta", "series": 3, "reps": "12", "descanso": 75 },
             { "exercicio": "Elevação Lateral com Halteres", "series": 4, "reps": "12", "descanso": 60 },
             { "exercicio": "Rosca Martelo com Halteres", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Tríceps Corda na Polia", "series": 3, "reps": "12", "descanso": 60 }
@@ -400,11 +400,11 @@
           "letra": "D", "nome": "Treino D · Inferiores (volume)", "dias": ["SEX"],
           "exercicios": [
             { "exercicio": "Agachamento no Hack", "series": 4, "reps": "10", "descanso": 90 },
-            { "exercicio": "Agachamento Búlgaro", "series": 3, "reps": "10", "descanso": 90, "observacao": "Cada perna." },
-            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Flexora de Perna Sentado", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Elevação Pélvica", "series": 3, "reps": "10", "descanso": 75 },
-            { "exercicio": "Panturrilha na Máquina", "series": 4, "reps": "15", "descanso": 45 }
+            { "exercicio": "Agachamento Búlgaro com Halteres", "series": 3, "reps": "10", "descanso": 90, "observacao": "Cada perna." },
+            { "exercicio": "Cadeira Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Cadeira Flexora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Elevação Pélvica com Barra", "series": 3, "reps": "10", "descanso": 75 },
+            { "exercicio": "Panturrilha Sentado na Máquina", "series": 4, "reps": "15", "descanso": 45 }
           ]
         }
       ]
@@ -423,10 +423,10 @@
           "letra": "A", "nome": "Treino A · Peito e tríceps", "dias": ["SEG"],
           "exercicios": [
             { "exercicio": "Supino Reto com Barra", "series": 5, "reps": "5-8", "descanso": 150 },
-            { "exercicio": "Supino Inclinado", "series": 4, "reps": "8", "descanso": 120 },
+            { "exercicio": "Supino Inclinado com Barra", "series": 4, "reps": "8", "descanso": 120 },
             { "exercicio": "Crucifixo na Máquina", "series": 3, "reps": "10", "descanso": 75 },
-            { "exercicio": "Mergulho (Tríceps)", "series": 3, "reps": "8-10", "descanso": 90 },
-            { "exercicio": "Tríceps Testa", "series": 3, "reps": "10", "descanso": 75 }
+            { "exercicio": "Mergulho nas Paralelas", "series": 3, "reps": "8-10", "descanso": 90 },
+            { "exercicio": "Tríceps Testa com Barra", "series": 3, "reps": "10", "descanso": 75 }
           ]
         },
         {
@@ -435,19 +435,19 @@
             { "exercicio": "Levantamento Terra", "series": 4, "reps": "5", "descanso": 180 },
             { "exercicio": "Barra Fixa", "series": 4, "reps": "6-8", "descanso": 120 },
             { "exercicio": "Remada Curvada com Barra", "series": 4, "reps": "8", "descanso": 120 },
-            { "exercicio": "Remada Unilateral com Halter", "series": 3, "reps": "10", "descanso": 90, "observacao": "Cada braço." },
+            { "exercicio": "Remada Unilateral com Halter (Serrote)", "series": 3, "reps": "10", "descanso": 90, "observacao": "Cada braço." },
             { "exercicio": "Rosca Direta com Barra", "series": 4, "reps": "8", "descanso": 75 },
-            { "exercicio": "Rosca Alternada no Banco Inclinado", "series": 3, "reps": "10", "descanso": 60 }
+            { "exercicio": "Rosca Alternada Inclinada com Halteres", "series": 3, "reps": "10", "descanso": 60 }
           ]
         },
         {
           "letra": "C", "nome": "Treino C · Pernas", "dias": ["QUA"],
           "exercicios": [
-            { "exercicio": "Agachamento Livre", "series": 5, "reps": "5-8", "descanso": 180 },
-            { "exercicio": "Leg Press", "series": 4, "reps": "10", "descanso": 120 },
-            { "exercicio": "Agachamento Búlgaro", "series": 3, "reps": "8", "descanso": 90, "observacao": "Cada perna." },
-            { "exercicio": "Extensora", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Flexora Deitado", "series": 4, "reps": "10", "descanso": 75 },
+            { "exercicio": "Agachamento Livre com Barra", "series": 5, "reps": "5-8", "descanso": 180 },
+            { "exercicio": "Leg Press 45°", "series": 4, "reps": "10", "descanso": 120 },
+            { "exercicio": "Agachamento Búlgaro com Halteres", "series": 3, "reps": "8", "descanso": 90, "observacao": "Cada perna." },
+            { "exercicio": "Cadeira Extensora", "series": 3, "reps": "12", "descanso": 60 },
+            { "exercicio": "Mesa Flexora", "series": 4, "reps": "10", "descanso": 75 },
             { "exercicio": "Panturrilha em Pé na Máquina", "series": 5, "reps": "10", "descanso": 60 }
           ]
         },
@@ -468,8 +468,8 @@
             { "exercicio": "Tríceps Francês com Halter", "series": 4, "reps": "10", "descanso": 60 },
             { "exercicio": "Rosca Martelo na Polia", "series": 3, "reps": "12", "descanso": 60 },
             { "exercicio": "Tríceps Pulley", "series": 3, "reps": "12", "descanso": 60 },
-            { "exercicio": "Rosca Punho com Halter Apoiado", "series": 3, "reps": "15", "descanso": 45 },
-            { "exercicio": "Abdominais na Máquina", "series": 4, "reps": "12", "descanso": 45 }
+            { "exercicio": "Rosca Punho com Halter", "series": 3, "reps": "15", "descanso": 45 },
+            { "exercicio": "Abdominal na Máquina", "series": 4, "reps": "12", "descanso": 45 }
           ]
         }
       ]
