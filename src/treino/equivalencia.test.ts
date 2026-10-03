@@ -10,6 +10,7 @@ import {
   ehEquivalente,
   ehMesmoMusculo,
   gravarEquipamentos,
+  grupoDe,
   lerEquipamentos,
   montarGruposTroca,
   musculosDoSubgrupo,
@@ -194,5 +195,85 @@ describe("a classificação dos 81 (docs/exercicios-equivalencia.csv) e a migra�
     expect(usados.size).toBe(65);
     const classificados = new Set(CATALOGO.map((e) => e.nome));
     expect([...usados].filter((n) => !classificados.has(n))).toEqual([]);
+  });
+});
+
+describe("os 61 exercícios novos sem GIF (scripts/conteudo/novos_61.json) na troca", () => {
+  type Novo = ExercicioEquivalencia & { tipo: string };
+  const novos = JSON.parse(readFileSync(resolve(raiz, "scripts/conteudo/novos_61.json"), "utf8")) as Novo[];
+  const migracao = readFileSync(resolve(raiz, "supabase/migrations/20261004000000_exercicios_novos_61.sql"), "utf8");
+  /** O catálogo global depois da carga: os 81 + os 61 (como o app lê do SQLite). */
+  const CATALOGO_142: ExercicioEquivalencia[] = [...CATALOGO, ...novos];
+  const de142 = (nome: string) => {
+    const e = CATALOGO_142.find((x) => x.nome === nome);
+    if (!e) throw new Error(`não achei ${nome}`);
+    return e;
+  };
+  const sqlTexto = (v: string | null | undefined) => (v ? `'${v.replace(/'/g, "''")}'` : "null");
+
+  it("61 novos, ids e nomes que não repetem os 81; movimento e equipamento das listas fixas", () => {
+    const equipamentos = new Set<string>(EQUIPAMENTOS.map((e) => e.chave));
+    expect(novos).toHaveLength(61);
+    expect(new Set(CATALOGO_142.map((e) => e.id)).size).toBe(142);
+    expect(new Set(CATALOGO_142.map((e) => e.nome.toLowerCase())).size).toBe(142);
+    for (const e of novos) {
+      expect(PADROES.some((p) => p.chave === e.padrao_movimento), `${e.nome}: ${e.padrao_movimento}`).toBe(true);
+      expect(equipamentos.has(e.equipamento!), `${e.nome}: ${e.equipamento}`).toBe(true);
+      expect(e.tipo, e.nome).toBe(e.padrao_movimento === "cardio" ? "corrida" : "musculacao");
+    }
+  });
+
+  it("cada novo aparece no grupo do app do seu movimento e tem o músculo principal no subgrupo", () => {
+    for (const e of novos) {
+      const bloco = PADROES.find((p) => p.chave === e.padrao_movimento)!.bloco;
+      expect(grupoDe(e), `${e.nome}: ${e.grupo_muscular}`).toBe(bloco);
+      expect(musculosDoSubgrupo(e.subgrupo).length, `${e.nome}: ${e.subgrupo}`).toBeGreaterThan(0);
+    }
+    expect(grupoDe(de142("Adução de Quadril na Polia"))).toBe(grupoDe(de142("Cadeira Adutora")));
+    expect(grupoDe(de142("Escalador"))).toBe("abdomen");
+  });
+
+  it("supino inclinado com barra: os novos com halteres e no Smith entram nos equivalentes", () => {
+    const g = montarGruposTroca(de142("Supino Inclinado com Barra"), CATALOGO_142);
+    expect(nomes(g.equivalentes)).toEqual(expect.arrayContaining(["Supino Inclinado com Halteres", "Supino Inclinado no Smith"]));
+    expect(nomes(g.mesmoMusculo)).toEqual(expect.arrayContaining(["Crucifixo Inclinado com Halteres", "Cross-over na Polia Baixa"]));
+    expect(g.todos).toHaveLength(142);
+  });
+
+  it("leg press: agachamentos novos nos equivalentes; afundo e subida no banco em mesmo músculo", () => {
+    const g = montarGruposTroca(de142("Leg Press 45°"), CATALOGO_142);
+    expect(nomes(g.equivalentes)).toEqual(
+      expect.arrayContaining(["Agachamento Frontal com Barra", "Agachamento Goblet com Kettlebell", "Agachamento Sumô com Barra"]),
+    );
+    expect(nomes(g.mesmoMusculo)).toEqual(expect.arrayContaining(["Afundo com Barra", "Subida no Banco com Halteres"]));
+  });
+
+  it("corrida na esteira: os 5 aparelhos de cardio novos são os equivalentes", () => {
+    const g = montarGruposTroca(de142("Corrida na Esteira"), CATALOGO_142);
+    expect(nomes(g.equivalentes)).toEqual(["Bicicleta Ergométrica", "Caminhada na Esteira", "Elíptico", "Remo Ergômetro", "Simulador de Escada"]);
+  });
+
+  it("um novo como quem sai: prancha sugere prancha lateral e escalador", () => {
+    expect(nomes(montarGruposTroca(de142("Prancha"), CATALOGO_142).equivalentes)).toEqual(["Escalador", "Prancha Lateral"]);
+  });
+
+  it("o subgrupo separa: encolhimento com barra não é 'mesmo músculo' da puxada (nem o contrário)", () => {
+    const puxada = montarGruposTroca(de142("Puxada Frontal"), CATALOGO_142);
+    expect(nomes(puxada.mesmoMusculo)).toContain("Remada Curvada com Halteres");
+    expect(nomes(puxada.mesmoMusculo)).not.toContain("Encolhimento com Barra");
+    const encolhimento = montarGruposTroca(de142("Encolhimento com Barra"), CATALOGO_142);
+    expect(nomes(encolhimento.equivalentes)).toEqual(["Encolhimento com Halteres"]);
+    expect(nomes(encolhimento.mesmoMusculo)).not.toContain("Puxada Frontal");
+  });
+
+  it("a migração é a do JSON (mesmos valores), só insere globais sem GIF e não entra de novo", () => {
+    for (const e of novos) {
+      const tupla = `(${[e.id, e.nome, e.grupo_muscular, e.subgrupo, e.tipo, e.padrao_movimento, e.equipamento, e.variacao].map(sqlTexto).join(", ")})`;
+      expect(migracao, e.nome).toContain(tupla);
+    }
+    expect(migracao).toContain("INSERT INTO %1$I.tb_exercicios (id, nome, grupo_muscular, subgrupo, tipo, padrao_movimento, equipamento, variacao)");
+    expect(migracao).toContain("WHERE e.id = v.id::uuid OR (e.professor_id IS NULL AND lower(e.nome) = lower(v.nome))");
+    expect(migracao).toContain("ARRAY['public','staging']");
+    expect(migracao).not.toMatch(/\b(UPDATE|DELETE|TRUNCATE)\b/i); // só INSERT, e a lista de colunas acima não tem imagem_url nem professor_id
   });
 });

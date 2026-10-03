@@ -4,6 +4,7 @@
  * `padrao_movimento` e `equipamento` (colunas de `tb_exercicios` e `tb_exercicios_usuario`) usam SÓ as listas fixas daqui;
  * `variacao` é texto livre (ex. "pegada aberta", "sentado"). A classificação dos 81 exercícios globais está em
  * `docs/exercicios-equivalencia.csv` (carga: `supabase/migrations/*_w09_classificacao_81.sql`).
+ * Os 61 globais novos (sem GIF, 03/10/2026) vêm classificados em `scripts/conteudo/novos_61.json` (carga: `*_exercicios_novos_61.sql`).
  *
  * A regra (tudo no aparelho, sem internet — o catálogo vem do SQLite do PowerSync):
  *  - **Equivalentes** = mesmo movimento (`padrao_movimento`) e mesmo grupo muscular, outro exercício. Primeiro os de OUTRO
