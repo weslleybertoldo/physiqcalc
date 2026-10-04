@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { Dumbbell } from "lucide-react";
+import { entrada3d } from "@/lib/exercicios3d";
 import { resolverImagem } from "@/lib/imagemExercicio";
 import { nomeDoBloco } from "@/lib/gruposMusculares";
 import { Chip } from "@/ui/premium/Chip";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import type { Exercicio } from "../tipos";
+import { Visualizador3D } from "./Visualizador3D";
 
-/** Ficha do exercício com o GIF (C69): o NOSSO GIF animado (local primeiro), grupo muscular, subgrupo e a dica. */
+/** Ficha do exercício: o boneco 3D quando o exercício tem 3D; senão o NOSSO GIF animado (C69, local primeiro). Embaixo,
+ * grupo muscular, subgrupo e a dica. */
 export function SheetFicha({ exercicio, aoFechar }: { exercicio: Exercicio | null; aoFechar: () => void }) {
+  const tresD = entrada3d(exercicio?.id);
   const src = resolverImagem(exercicio?.imagem_url);
   const [erro, setErro] = useState(false);
   const [carregou, setCarregou] = useState(false);
@@ -20,7 +24,9 @@ export function SheetFicha({ exercicio, aoFechar }: { exercicio: Exercicio | nul
     <PainelDeslizante aberto={!!exercicio} aoMudar={(v) => !v && aoFechar()} titulo={exercicio?.nome ?? "Exercício"}>
       {exercicio && (
         <div className="flex flex-col gap-4 pt-1" data-ficha-exercicio={exercicio.id}>
-          {src && !erro ? (
+          {tresD ? (
+            <Visualizador3D entrada={tresD} nome={exercicio.nome} />
+          ) : src && !erro ? (
             <div className="relative aspect-[3/2] w-full overflow-hidden rounded-2xl border border-linha bg-[#0f0f12]" data-ficha-gif>
               {!carregou && <div aria-hidden className="absolute inset-0 animate-pulse bg-superficie-2" />}
               <img src={src} alt={exercicio.nome} decoding="async" crossOrigin="anonymous" onLoad={() => setCarregou(true)} onError={() => setErro(true)}
