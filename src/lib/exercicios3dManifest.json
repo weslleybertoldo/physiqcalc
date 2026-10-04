@@ -5,6 +5,29 @@
   "mapa": "/exercicios3d/musculos-1791091845.png"
  },
  "exercicios": {
+  "4f141bfc-a902-406b-bc41-98076648c4ae": {
+   "v": "1791114958",
+   "movimento": "/exercicios3d/4f141bfc-a902-406b-bc41-98076648c4ae-1791114958.glb",
+   "foto": "/exercicios3d/4f141bfc-a902-406b-bc41-98076648c4ae-1791114958.webp",
+   "bytes": 67858,
+   "alvos": [
+    4
+   ],
+   "auxiliares": [
+    3
+   ],
+   "camera": {
+    "az": 34,
+    "el": 8,
+    "dist": 4.4,
+    "alvo": [
+     0,
+     0,
+     0.95
+    ]
+   },
+   "ida_s": 1.5
+  },
   "f06e45bc-a6c7-4939-92d1-3d6fafa4a534": {
    "v": "1791096475",
    "movimento": "/exercicios3d/f06e45bc-a6c7-4939-92d1-3d6fafa4a534-1791096475.glb",

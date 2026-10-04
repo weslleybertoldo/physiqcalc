@@ -439,8 +439,9 @@ def ossos_no_mundo(rig):
 
 
 def saltos(antes, agora):
-    pior = max(np.linalg.norm(agora[n] - antes[n]) for n in agora) * 1000
-    return pior, (["salto de %.0f mm entre quadros" % pior] if pior > SALTO_MM else [])
+    osso = max(agora, key=lambda n: np.linalg.norm(agora[n] - antes[n]))
+    pior = np.linalg.norm(agora[osso] - antes[osso]) * 1000
+    return pior, (["salto de %.0f mm entre quadros (%s)" % (pior, osso.replace(P, ""))] if pior > SALTO_MM else [])
 
 
 def completa(bon, cena, checagens, t, rotulo, estado):

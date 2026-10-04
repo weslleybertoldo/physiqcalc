@@ -1,0 +1,36 @@
+{
+  "uuid": "4f141bfc-a902-406b-bc41-98076648c4ae",
+  "nome": "Rosca Direta com Barra",
+  "cena": "rosca_direta_com_barra",
+  "grupo": "Bíceps",
+  "subgrupo": "Bíceps braquial (cabeças curta e longa)",
+  "padrao_movimento": "rosca",
+  "equipamento": "barra",
+  "variacao": "pegada supinada",
+  "alvos": ["biceps"],
+  "auxiliares": ["antebraco"],
+  "camera": {"az": 34, "el": 8, "dist": 4.4, "alvo": [0, 0, 0.95]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, segurando a barra com as palmas para cima (pegada supinada) na largura dos ombros e os braços quase estendidos à frente das coxas, dobra os cotovelos levando a barra até perto dos ombros, com os cotovelos junto ao tronco e o tronco parado; desce estendendo os cotovelos até os braços ficarem quase estendidos.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética aberta",
+    "articulacoes": "cotovelo (flexão na subida, extensão na descida); ombro quase parado (leve flexão)",
+    "agonistas": "bíceps braquial (cabeças curta e longa) e braquial na flexão do cotovelo",
+    "sinergistas": "braquiorradial e flexores do antebraço",
+    "estabilizadores": "deltoide anterior, trapézio, eretores da espinha e abdominais (tronco sem balanço)",
+    "fases": "subida concêntrica, descida excêntrica"
+  },
+  "referencias": [
+    "Marcolin G, Panizzolo FA, Petrone N, Moro T, Grigoletto D, Piccolo D, Paoli A. Differences in electromyographic activity of biceps brachii and brachioradialis while performing three variants of curl. PeerJ. 2018;6:e5165.",
+    "Biceps brachii and brachioradialis excitation in biceps curl exercise: different handgrips, different synergy. Sports (Basel). 2023;11(3):64."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [],
+    "angulos": [
+      {"nome": "cotovelo quase estendido embaixo", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 25]},
+      {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [115, 145]},
+      {"nome": "tronco parado (sem balanço)", "medida": "tronco", "t": 1.0, "graus": [0, 10]}
+    ]
+  }
+}
