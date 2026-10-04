@@ -1,0 +1,38 @@
+{
+  "uuid": "7fc0ec10-492e-4753-a7de-02a4acbfd57e",
+  "nome": "Remada Curvada com Barra",
+  "cena": "remada_curvada_com_barra",
+  "grupo": "Dorsal / Rombóide",
+  "subgrupo": "Latíssimo · trapézio · romboides · eretores (estabilização)",
+  "padrao_movimento": "remada",
+  "equipamento": "barra",
+  "variacao": "tronco inclinado",
+  "alvos": ["dorsal", "trapezio"],
+  "auxiliares": ["costas", "deltoide", "biceps", "lombar", "antebraco"],
+  "camera": {"az": 60, "el": 10, "dist": 4.4, "alvo": [0, 0, 0.8]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os joelhos levemente dobrados e o tronco inclinado à frente (cerca de 45°) com a coluna neutra, segura a barra com as palmas viradas para o corpo (pegada pronada), um pouco mais aberta que os ombros, com os braços estendidos embaixo dos ombros; puxa a barra até perto do abdômen levando os cotovelos para trás e aproximando as escápulas, com o tronco parado; desce estendendo os cotovelos até os braços ficarem estendidos.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética aberta",
+    "articulacoes": "ombro (extensão na subida, flexão na descida), cotovelo (flexão na subida, extensão na descida) e escápulas (retração na subida, protração na descida); quadril e joelhos parados",
+    "agonistas": "latíssimo do dorso, trapézio médio e romboides",
+    "sinergistas": "redondo maior, deltoide posterior, bíceps braquial, braquial e braquiorradial",
+    "estabilizadores": "eretores da espinha, glúteo máximo e isquiotibiais (tronco inclinado parado) e abdominais",
+    "fases": "subida concêntrica, descida excêntrica"
+  },
+  "referencias": [
+    "Fenwick CM, Brown SH, McGill SM. Comparison of different rowing exercises: trunk muscle activation and lumbar spine motion, load, and stiffness. J Strength Cond Res. 2009;23(2):350-358.",
+    "Lehman GJ, Buchan DD, Lundy A, Myers N, Nalborczyk A. Variations in muscle activation levels during traditional latissimus dorsi weight training exercises: an experimental study. Dyn Med. 2004;3:4."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [],
+    "angulos": [
+      {"nome": "tronco inclinado à frente embaixo", "medida": "tronco", "t": 0.0, "graus": [35, 55]},
+      {"nome": "tronco parado em cima", "medida": "tronco", "t": 1.0, "graus": [35, 55]},
+      {"nome": "joelhos levemente dobrados", "medida": "flexao", "junta": "Leg", "t": 0.0, "graus": [8, 35]},
+      {"nome": "cotovelo quase estendido embaixo", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 25]},
+      {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [70, 125]}
+    ]
+  }
+}
