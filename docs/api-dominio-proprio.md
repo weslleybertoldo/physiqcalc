@@ -30,6 +30,17 @@ app (web/APK) ──HTTPS──▶ api.physiqcalc.com.br (Cloudflare Worker `phy
   de exercícios são geradas a partir de `VITE_SUPABASE_URL` (`padraoApi`), aceitando também o
   host direto da Supabase — os GIFs gravados no banco (`imagem_url`) continuam apontando pra lá.
 
+### Troca da anon legada pela publishable (troca da chave vazada, 04/10/2026)
+
+O código do Worker `physiqcalc-api` agora fica no repo, em `infra/cloudflare/physiqcalc-api/` (`proxy.js` = a lógica,
+`worker.js` = a entrada, `proxy.test.mjs` = teste com `node --test`, `deploy.sh` = publica; `deploy.sh <outro-nome>` sobe um
+ensaio só no `*.workers.dev`). O APK instalado não atualiza sozinho e leva a anon **legada** (JWT) do Treino; as chaves legadas
+vão ser desligadas. Quando o `apikey` (cabeçalho ou `?apikey=`) ou o `Authorization: Bearer` é **exatamente** a anon legada
+(conferida pelo SHA-256 — a chave não fica no código), o Worker põe no lugar a **publishable** do Treino (secret
+`TREINO_PUBLISHABLE` do Worker, gravado pelo `deploy.sh` a partir de `~/.physiq-treino-publishable`). Qualquer outra chave
+passa sem mexer — a service_role vazada nunca vira chave de servidor. Sem o secret, o Worker volta a ser só o proxy.
+Voltar: cada publicação é uma versão na Cloudflare (`POST …/workers/scripts/physiqcalc-api/deployments` com a anterior a 100%).
+
 ## O que NÃO passa pelo proxy
 
 - `imagem_url` dos exercícios no banco (URLs públicas do Storage, host `supabase.co`).
