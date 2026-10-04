@@ -1,0 +1,57 @@
+{
+  "uuid": "58dccb5e-4411-468c-ab53-fdbb1cbf97fa",
+  "nome": "Afundo com Halteres",
+  "cena": "afundo_com_halteres",
+  "grupo": "Quadríceps",
+  "subgrupo": "Quadríceps · glúteo máximo · adutores",
+  "padrao_movimento": "afundo",
+  "equipamento": "halteres",
+  "variacao": "estacionário (pés parados)",
+  "alvos": ["quadriceps", "gluteo"],
+  "auxiliares": ["adutores", "posterior", "panturrilha", "lombar"],
+  "camera": {"az": 62, "el": 8, "dist": 4.4, "alvo": [0, 0.04, 0.8]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com um halter em cada mão ao lado do corpo (braços estendidos, palmas viradas para o corpo), uma perna bem à frente e a outra atrás, com os pés na largura do quadril e o pé de trás apoiado na ponta (calcanhar levantado); desce dobrando os dois joelhos, com o tronco ereto e o quadril descendo em linha reta, até a coxa da frente ficar paralela ao chão e o joelho de trás quase encostar no chão, com o joelho da frente em cima do tornozelo, na direção do pé, e o calcanhar da frente no chão; sobe empurrando com a perna da frente até voltar à posição inicial, sem tirar os pés do lugar. Depois troca de perna.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética fechada, unilateral (base dividida: uma perna à frente e outra atrás)",
+    "articulacoes": "perna da frente: quadril (flexão na descida, extensão na subida), joelho (flexão/extensão) e tornozelo (leve dorsiflexão); perna de trás: joelho (flexão/extensão), quadril perto da posição neutra e tornozelo com o pé na ponta (dedos dobrados no chão)",
+    "agonistas": "quadríceps (vasto lateral, vasto medial, vasto intermédio e reto femoral) na extensão do joelho; glúteo máximo na extensão do quadril da perna da frente",
+    "sinergistas": "adutor magno e sóleo",
+    "estabilizadores": "isquiotibiais e gastrocnêmio (estabilizadores dinâmicos do joelho), glúteo médio e glúteo mínimo (pelve nivelada) e eretores da espinha (tronco ereto)",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Split Squat (Weight Exercises › Quadriceps). https://exrx.net/WeightExercises/Quadriceps/DBSplitSquat (lido na cópia do Internet Archive): \"Stand with dumbbells grasped to sides. Position feet far apart; one foot forward and other foot behind.\" \"Squat down by flexing knee and hip of front leg. Allow heel of rear foot to rise up while knee of rear leg bends slightly until it almost makes contact with floor.\" \"Knees should point same direction as feet throughout movement. Heel of rear foot can be kept elevated off floor throughout movement as shown. Keep torso upright during squat\"; músculos: alvo quadríceps; sinergistas glúteo máximo, adutor magno e sóleo; estabilizadores dinâmicos isquiotibiais e gastrocnêmio; estabilizadores eretores da espinha, glúteo médio e glúteo mínimo.",
+    "Boyd J, Milton K. The undervalued lunge. NSCA Personal Training Quarterly. 2017;4(4):44-47. https://dxpprod.nsca.com/contentassets/24dd7222ed1b4caeb8a0a46b81bd11f3/ptq-4.4.9-the-undervalued-lunge.pdf",
+    "Song Q, Ma M, Liu H, Wei X, Chen X. Effects of step lengths on biomechanical characteristics of lower extremity during split squat movement. Front Bioeng Biotechnol. 2023;11:1277493. doi:10.3389/fbioe.2023.1277493",
+    "American Council on Exercise (ACE) — Exercise Library, Forward Lunge. https://www.acefitness.org/resources/everyone/exercise-library/94/forward-lunge/ e https://www.acefitness.org/resources/everyone/exercise-library/8/forward-lunge/ (com barra)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "pe_na_ponta": ["D"],
+    "pe_na_ponta_fonte": "Pé de trás (direito) apoiado na ponta de propósito: os dedos ficam no chão (planta 0 ± 5 mm) e o calcanhar fica levantado; o que não pode escorregar é a base dos dedos. NSCA PTQ 4.4 (\"The back heel should be off the ground\"; \"Before movement begins, the back heel should be lifted\"); ExRx — Dumbbell Split Squat (\"Allow heel of rear foot to rise up\"; \"Heel of rear foot can be kept elevated off floor throughout movement\")",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base do afundo: um pé bem à frente do outro de propósito, então as regras padrão de base paralela (pes_largura no chão inteiro e pes_alinhados até 40 mm) não servem. As outras (pontas dos pés, os dois pés virados igual, joelho na direção do pé e coluna neutra) estão abaixo com a fonte do afundo, junto com a passada e a largura de lado a lado.",
+    "zonas": [],
+    "angulos": [
+      {"nome": "coxa da frente paralela ao chão embaixo", "medida": "inclinacao", "segmento": ["UpLeg", "Leg"], "lado": "E", "t": 1.0, "graus": [-5, 8], "fonte": "Song et al. 2023 (\"lowering the body until the front thigh was parallel to the floor\"); ACE — Forward Lunge (\"until your front thigh becomes parallel with the floor\")"},
+      {"nome": "joelho da frente a ~90° embaixo", "medida": "flexao", "junta": "Leg", "lado": "E", "t": 1.0, "graus": [85, 110], "fonte": "NSCA PTQ 4.4 (\"lower the hips until both knees are bent at about a 90-degree angle\"); Song et al. 2023 (pico de flexão do joelho da frente de 95° a 104° nos 4 passos)"},
+      {"nome": "canela da frente quase vertical: joelho em cima do tornozelo, sem passar da ponta do pé", "medida": "inclinacao", "segmento": ["Leg", "Foot"], "lado": "E", "t": 1.0, "graus": [78, 90], "fonte": "NSCA PTQ 4.4 (\"Make sure the front knee is directly above the ankle and not over the toe\"); ACE — Forward Lunge (\"your tibia (shinbone) is in a slight forward lean\"); Song et al. 2023 (dorsiflexão do tornozelo da frente de 3° a 8° com passo de 70–100% da perna)"},
+      {"nome": "joelho da frente quase estendido em cima", "medida": "flexao", "junta": "Leg", "lado": "E", "t": 0.0, "graus": [0, 20], "fonte": "ExRx — Dumbbell Split Squat (\"Return to original standing position by extending hip and knee of forward leg\")"},
+      {"nome": "joelho de trás a ~90° embaixo", "medida": "flexao", "junta": "Leg", "lado": "D", "t": 1.0, "graus": [80, 115], "fonte": "NSCA PTQ 4.4 (\"until both knees are bent at about a 90-degree angle\"); ExRx — Dumbbell Split Squat (o joelho de trás dobra até quase encostar no chão)"},
+      {"nome": "coxa de trás quase vertical embaixo (joelho embaixo do quadril)", "medida": "inclinacao", "segmento": ["UpLeg", "Leg"], "lado": "D", "t": 1.0, "graus": [72, 90], "fonte": "NSCA PTQ 4.4 (\"the hips should move down and up in a straight line\", com os dois joelhos a ~90° e a coxa da frente paralela)"},
+      {"nome": "joelho de trás quase encostando no chão embaixo, sem bater", "medida": "joelho_altura", "lado": "D", "t": 1.0, "mm": [60, 110], "fonte": "ExRx — Dumbbell Split Squat (\"until it almost makes contact with floor\"); ACE — Forward Lunge, com barra (\"Lower the left knee almost to the floor without touching the ground\"). Centro do joelho a 60–110 mm do chão = pele do joelho de ~3 a ~8 cm do chão (no boneco a pele mais baixa fica ~31 mm abaixo do centro; o info da cena mede a pele em todo quadro)"},
+      {"nome": "calcanhar de trás levantado (pé de trás na ponta)", "medida": "inclinacao", "segmento": ["Foot", "ToeBase"], "lado": "D", "t": "todos", "graus": [40, 90], "fonte": "NSCA PTQ 4.4 (\"The back heel should be off the ground\"); ExRx — Dumbbell Split Squat (\"Heel of rear foot can be kept elevated off floor throughout movement\"). Pé chapado = 16°"},
+      {"nome": "tronco ereto", "medida": "tronco", "t": "todos", "graus": [0, 10], "fonte": "ExRx — Dumbbell Split Squat (\"Keep torso upright during squat\"); NSCA PTQ 4.4 (\"The torso should be straight\"; erro \"Forward Torso Lean\"); Song et al. 2023 (\"maintain an erect torso during the entire split squat\")"},
+      {"nome": "coluna neutra", "medida": "coluna", "t": "todos", "graus": [0, 15], "fonte": "NSCA PTQ 4.4 (\"keeping the torso straight and abdominals tight\")"},
+      {"nome": "joelhos na direção dos pés (sem entrar nem abrir)", "medida": "joelho_valgo", "t": "todos", "mm": [-20, 40], "fonte": "ExRx — Dumbbell Split Squat (\"Knees should point same direction as feet throughout movement\"); NSCA PTQ 4.4 (\"the toes and knees (of the same leg) should point in the same direction\"; erro \"Knee Caves Inward\")"},
+      {"nome": "joelho em cima do pé, de lado a lado (sem cair pra dentro nem abrir)", "medida": "joelho_fora_do_pe", "t": "todos", "mm": [-25, 30], "fonte": "ExRx — Dumbbell Split Squat (\"Knees should point same direction as feet throughout movement\"); NSCA PTQ 4.4 (\"Even a slight turn of the lead foot or lead knee inward during a forward lunge can increase the torque stress of the knee joint\"; \"the toes and knees (of the same leg) should point in the same direction\")"},
+      {"nome": "pontas dos pés pra frente (os dois)", "medida": "ponta_dedos", "t": "todos", "graus": [-5, 10], "fonte": "NSCA PTQ 4.4 (\"The toes and knees of both legs should be pointing forward\"; erro \"External Rotation of the Back Foot/Knee\": \"Make sure the back foot and knee are pointed straight forward\"). Medido pelos dedos (deitados no chão): com o calcanhar de trás levantado o ponta_pe padrão (tornozelo → base dos dedos visto de cima) perde o sentido"},
+      {"nome": "passada longa: um pé bem à frente do outro", "medida": "pes_alinhados", "t": "todos", "mm": [700, 1000], "fonte": "NSCA PTQ 4.4 (\"the distance between the front foot and back foot should be a length that is greater than a walking stride\"); Song et al. 2023 (\"The optimal step length ... is equal to the length of the individual lower extremity\": ~0,86 m no boneco)"},
+      {"nome": "pés na largura do quadril (de lado a lado)", "medida": "pes_base_lateral", "t": "todos", "faixa": [0.9, 1.6], "fonte": "NSCA PTQ 4.4 (\"The feet should be about hip-width apart\"); ACE — Forward Lunge, com barra (\"Place both feet so that they are about hip-width apart\")"},
+      {"nome": "cotovelos estendidos", "medida": "flexao", "junta": "ForeArm", "t": "todos", "graus": [0, 20], "fonte": "ExRx — Dumbbell Split Squat (\"Stand with dumbbells grasped to sides\"); NSCA PTQ 4.4, tabela 3 (\"Holding weight with straight arms ... to the sides of the body\")"},
+      {"nome": "braços pendurados ao lado do corpo", "medida": "braco_elevacao", "t": "todos", "graus": [0, 15], "fonte": "ExRx — Dumbbell Split Squat (\"dumbbells grasped to sides\")"},
+      {"nome": "halteres ao lado do corpo, por fora das coxas", "medida": "pegada_largura", "t": "todos", "faixa": [1.2, 1.8], "fonte": "ExRx — Dumbbell Split Squat (\"dumbbells grasped to sides\"); NSCA PTQ 4.4, figura 8 (\"Lunge with weight at sides\")"}
+    ]
+  }
+}
