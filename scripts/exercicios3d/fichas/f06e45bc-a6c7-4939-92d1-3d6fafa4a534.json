@@ -1,0 +1,39 @@
+{
+  "uuid": "f06e45bc-a6c7-4939-92d1-3d6fafa4a534",
+  "nome": "Agachamento Livre com Barra",
+  "cena": "agachamento_livre_com_barra",
+  "grupo": "Quadríceps",
+  "subgrupo": "Quadríceps · glúteo máximo · adutores · eretores",
+  "padrao_movimento": "agachamento",
+  "equipamento": "barra",
+  "variacao": "barra nas costas",
+  "alvos": ["quadriceps", "gluteo"],
+  "auxiliares": ["adutores", "posterior", "lombar"],
+  "camera": {"az": 54, "el": 8, "dist": 4.4},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com a barra apoiada no trapézio e as mãos fechadas na barra, desce dobrando quadril e joelhos ao mesmo tempo até a coxa ficar paralela ao chão, tronco inclinado à frente, coluna neutra, joelhos na direção dos pés e calcanhares no chão; sobe estendendo quadril e joelhos até ficar em pé.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética fechada",
+    "articulacoes": "quadril (flexão na descida, extensão na subida), joelho (flexão/extensão), tornozelo (dorsiflexão/flexão plantar)",
+    "agonistas": "quadríceps (vasto lateral, vasto medial, vasto intermédio, reto femoral) na extensão do joelho; glúteo máximo na extensão do quadril",
+    "sinergistas": "adutor magno e isquiotibiais (extensão do quadril), sóleo",
+    "estabilizadores": "eretores da espinha (coluna neutra) e abdominais",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "Schoenfeld BJ. Squatting kinematics and kinetics and their application to exercise performance. J Strength Cond Res. 2010;24(12):3497-3506.",
+    "Escamilla RF. Knee biomechanics of the dynamic squat exercise. Med Sci Sports Exerc. 2001;33(1):127-141."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "barra apoiada nas costas", "equipamento": "barra", "partes": ["Spine2", "Neck", "LeftShoulder", "RightShoulder"], "mm": [-4, 5]}
+    ],
+    "angulos": [
+      {"nome": "coxa paralela ao chão embaixo", "medida": "inclinacao", "segmento": ["UpLeg", "Leg"], "t": 1.0, "graus": [-5, 8]},
+      {"nome": "joelho estendido em pé", "medida": "flexao", "junta": "Leg", "t": 0.0, "graus": [0, 12]},
+      {"nome": "tronco inclinado à frente embaixo", "medida": "tronco", "t": 1.0, "graus": [25, 50]},
+      {"nome": "joelho na direção do pé (sem valgo)", "medida": "joelho_fora_do_pe", "t": 1.0, "mm": [-15, 120]}
+    ]
+  }
+}
