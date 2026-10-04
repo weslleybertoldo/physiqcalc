@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Lock, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { entrada3d } from "@/lib/exercicios3d";
 import { resolverImagem } from "@/lib/imagemExercicio";
 import { cn } from "@/lib/utils";
 import { CAMPOS_EQUIVALENCIA_VAZIOS, camposDoExercicio, camposParaGravar, rotuloEquipamento, rotuloPadrao, type CamposEquivalencia } from "@/treino/equivalencia";
 import { FormExercicioBiblioteca } from "@/treino/ui/FormExercicioBiblioteca";
+import { Visualizador3D } from "@/treino/ui/Visualizador3D";
 import { Botao } from "@/ui/premium/Botao";
 import { Chip } from "@/ui/premium/Chip";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
@@ -71,6 +73,7 @@ export function FolhaExercicio({
     if (grupo && !nomes.includes(grupo)) nomes.push(grupo);
     return [...new Set(nomes)].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [musculos, extras, grupo]);
+  const tresD = entrada3d(exercicio?.id); // exercício com 3D: o boneco no lugar da prévia (mesmo visualizador do aluno)
   const previa = useMemo(() => (arquivo ? URL.createObjectURL(arquivo) : resolverImagem(imagem)), [arquivo, imagem]);
   useEffect(() => () => {
     if (arquivo && previa) URL.revokeObjectURL(previa);
@@ -135,11 +138,14 @@ export function FolhaExercicio({
         )
       }>
       <div className="flex flex-col gap-3.5" data-folha-exercicio={exercicio?.id ?? "novo"} data-somente-leitura={somenteLeitura || undefined}>
+        {tresD && <Visualizador3D entrada={tresD} nome={exercicio?.nome ?? "Exercício"} />}
         {/* GIF / imagem */}
         <div className="flex items-start gap-3">
-          <div className="flex h-[120px] w-[150px] flex-none items-center justify-center overflow-hidden rounded-2xl border border-linha bg-superficie" data-exercicio-previa={previa ? "1" : "0"}>
-            {previa ? <img src={previa} alt={nome || "Exercício"} className="h-full w-full object-cover" /> : <ImagePlus aria-hidden className="h-6 w-6 text-texto-3" strokeWidth={1.5} />}
-          </div>
+          {!tresD && (
+            <div className="flex h-[120px] w-[150px] flex-none items-center justify-center overflow-hidden rounded-2xl border border-linha bg-superficie" data-exercicio-previa={previa ? "1" : "0"}>
+              {previa ? <img src={previa} alt={nome || "Exercício"} className="h-full w-full object-cover" /> : <ImagePlus aria-hidden className="h-6 w-6 text-texto-3" strokeWidth={1.5} />}
+            </div>
+          )}
           <div className="flex min-w-0 flex-col gap-2 pt-1">
             {somenteLeitura ? (
               <>
