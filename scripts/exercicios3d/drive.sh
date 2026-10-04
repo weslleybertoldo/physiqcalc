@@ -2,14 +2,15 @@
 # Guarda UM exercício pronto no Drive da bertoldo.code, pronto pra virar vídeo depois (pedido do Weslley 04/10/2026:
 # "salvar todos os movimentos/exercícios no drive … para futuramente usarmos pra fazer os vídeos" — packs de vídeo
 # à venda): a cena .blend com o movimento e as texturas embutidas, o GLB do app, a ficha e a foto.
-#   ./drive.sh <uuid>          (remoto do rclone "gdrive:" = bertoldo.code; pasta "Physiq - Exercícios 3D")
+#   ./drive.sh <uuid>    (remoto do rclone DRIVE_REMOTO, padrão "gdrive-backup:" = bertoldo.code com escopo drive.file;
+#                         o "gdrive:" do PC é só leitura; pasta "Physiq - Exercícios 3D")
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 UUID="${1:?uuid}"
 FICHA="$AQUI/fichas/$UUID.json"
 NOME="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["nome"])' "$FICHA")"
 CENA="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["cena"])' "$FICHA")"
-RAIZ="gdrive:Physiq - Exercícios 3D"
+RAIZ="${DRIVE_REMOTO:-gdrive-backup:}Physiq - Exercícios 3D"
 DEST="$RAIZ/exercicios/$NOME"
 GLB="$(ls -1 "$AQUI/../../public/exercicios3d/$UUID"-*.glb | tail -1)"
 FOTO="${GLB%.glb}.webp"
@@ -28,9 +29,9 @@ Cada pasta em "exercicios/" tem:
 - <uuid>-<versão>.webp: a foto parada do app.
 Gerado pela fábrica do repo physiqcalc (scripts/exercicios3d).
 TXT
-rclone copyto "$LEIA" "$RAIZ/LEIA-ME.txt" 2>/dev/null
-rclone copyto "$AQUI/build/exercicios/$CENA.blend" "$DEST/$CENA.blend" 2>/dev/null
-rclone copyto "$GLB" "$DEST/$(basename "$GLB")" 2>/dev/null
-rclone copyto "$FOTO" "$DEST/$(basename "$FOTO")" 2>/dev/null
-rclone copyto "$FICHA" "$DEST/ficha.json" 2>/dev/null
-rclone ls "$DEST" 2>/dev/null
+rclone copyto "$LEIA" "$RAIZ/LEIA-ME.txt" 2>&1 | grep -v NOTICE || true
+rclone copyto "$AQUI/build/exercicios/$CENA.blend" "$DEST/$CENA.blend" 2>&1 | grep -v NOTICE || true
+rclone copyto "$GLB" "$DEST/$(basename "$GLB")" 2>&1 | grep -v NOTICE || true
+rclone copyto "$FOTO" "$DEST/$(basename "$FOTO")" 2>&1 | grep -v NOTICE || true
+rclone copyto "$FICHA" "$DEST/ficha.json" 2>&1 | grep -v NOTICE || true
+rclone ls "$DEST" 2>&1 | grep -v NOTICE
