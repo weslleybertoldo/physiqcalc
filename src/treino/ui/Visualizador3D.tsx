@@ -69,7 +69,9 @@ export function Visualizador3D({ entrada, nome }: { entrada: Entrada3D; nome: st
   };
   const pronto = estado === "pronto";
   const botao =
-    "flex h-9 items-center justify-center gap-1.5 rounded-xl border border-linha bg-superficie px-3 text-[12.5px] font-medium text-texto disabled:opacity-40";
+    "flex h-9 items-center justify-center rounded-xl border border-linha bg-superficie text-[12.5px] font-medium text-texto disabled:opacity-40";
+  const comTexto = `${botao} px-2.5`;
+  const soIcone = `${botao} w-9`;
 
   return (
     <div
@@ -96,24 +98,29 @@ export function Visualizador3D({ entrada, nome }: { entrada: Entrada3D; nome: st
           </p>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-1.5" data-controles-3d>
-        <button type="button" className={botao} onClick={alternarTocar} disabled={!pronto}>
-          {tocando ? <Pause aria-hidden className="h-4 w-4" /> : <Play aria-hidden className="h-4 w-4" />}
-          {tocando ? "Pausar" : "Tocar"}
-        </button>
-        {VISTAS.map((v) => (
-          <button key={v.nome} type="button" className={botao} onClick={() => motorRef.current?.vista(v.az)} disabled={!pronto}>
-            {v.nome}
+      {/* uma fileira só até em celular de 360 px: tocar + vistas à esquerda, tela cheia + fundo à direita */}
+      <div className="flex flex-wrap items-center justify-between gap-1" data-controles-3d>
+        <div className="flex items-center gap-1">
+          <button type="button" className={soIcone} onClick={alternarTocar} disabled={!pronto}
+            aria-label={tocando ? "Pausar" : "Tocar"} title={tocando ? "Pausar" : "Tocar"}>
+            {tocando ? <Pause aria-hidden className="h-4 w-4" /> : <Play aria-hidden className="h-4 w-4" />}
           </button>
-        ))}
-        <button type="button" className={botao} onClick={() => setCheia(!cheia)} disabled={!pronto}
-          aria-label={cheia ? "Sair da tela cheia" : "Tela cheia"}>
-          {cheia ? <Minimize2 aria-hidden className="h-4 w-4" /> : <Maximize2 aria-hidden className="h-4 w-4" />}
-        </button>
-        <button type="button" className={botao} onClick={trocarFundo} disabled={!pronto}
-          aria-label={fundo === "escuro" ? "Fundo claro" : "Fundo escuro"}>
-          {fundo === "escuro" ? <Sun aria-hidden className="h-4 w-4" /> : <Moon aria-hidden className="h-4 w-4" />}
-        </button>
+          {VISTAS.map((v) => (
+            <button key={v.nome} type="button" className={comTexto} onClick={() => motorRef.current?.vista(v.az)} disabled={!pronto}>
+              {v.nome}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <button type="button" className={soIcone} onClick={() => setCheia(!cheia)} disabled={!pronto}
+            aria-label={cheia ? "Sair da tela cheia" : "Tela cheia"}>
+            {cheia ? <Minimize2 aria-hidden className="h-4 w-4" /> : <Maximize2 aria-hidden className="h-4 w-4" />}
+          </button>
+          <button type="button" className={soIcone} onClick={trocarFundo} disabled={!pronto}
+            aria-label={fundo === "escuro" ? "Fundo claro" : "Fundo escuro"}>
+            {fundo === "escuro" ? <Sun aria-hidden className="h-4 w-4" /> : <Moon aria-hidden className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
       <div className="flex items-center gap-4 text-[12px] text-texto-2">
         <span className="flex items-center gap-1.5">
