@@ -1,0 +1,43 @@
+{
+  "uuid": "79c9f663-691b-4c17-9a75-2e47599167e4",
+  "nome": "Levantamento Terra Romeno (Stiff)",
+  "cena": "levantamento_terra_romeno_stiff",
+  "grupo": "Posterior de Coxa",
+  "subgrupo": "Isquiotibiais (porção proximal) · glúteo máximo · eretores",
+  "padrao_movimento": "terra_stiff",
+  "equipamento": "barra",
+  "variacao": "romeno (stiff)",
+  "alvos": ["posterior", "gluteo"],
+  "auxiliares": ["lombar", "dorsal", "trapezio", "antebraco"],
+  "camera": {"az": 70, "el": 8, "dist": 4.4, "alvo": [0, 0, 0.8]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés na largura dos ombros e os joelhos levemente dobrados, segura a barra com as palmas viradas para o corpo (pegada pronada) na largura dos ombros, com os braços estendidos e a barra na frente das coxas; leva o quadril para trás inclinando o tronco à frente com a coluna neutra, e a barra desce rente às pernas até logo abaixo dos joelhos; volta estendendo o quadril até ficar em pé, com os joelhos no mesmo ângulo o tempo todo.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética fechada",
+    "articulacoes": "quadril (flexão na descida, extensão na subida); joelhos levemente dobrados e quase parados; coluna neutra (isometria)",
+    "agonistas": "isquiotibiais (bíceps femoral, semitendíneo e semimembranáceo) e glúteo máximo na extensão do quadril",
+    "sinergistas": "adutor magno",
+    "estabilizadores": "eretores da espinha, latíssimo do dorso (barra rente às pernas), trapézio, flexores do antebraço (pegada) e abdominais",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "McAllister MJ, Hammond KG, Schilling BK, Ferreria LC, Reed JP, Weiss LW. Muscle activation during various hamstring exercises. J Strength Cond Res. 2014;28(6):1573-1580.",
+    "Martín-Fuentes I, Oliva-Lozano JM, Muyor JM. Electromyographic activity in deadlift exercise and its variants. A systematic review. PLoS One. 2020;15(2):e0229507."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "barra rente às pernas", "equipamento": "barra", "partes": ["LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg"], "mm": [3, 40], "fonte": "University of Sussex Sport — Romanian Deadlifts (barbell) (\"keeping it close to your legs\")"}
+    ],
+    "angulos": [
+      {"nome": "tronco em pé no começo", "medida": "tronco", "t": 0.0, "graus": [0, 12]},
+      {"nome": "tronco inclinado embaixo", "medida": "tronco", "t": 1.0, "graus": [55, 85]},
+      {"nome": "joelhos levemente dobrados em pé", "medida": "flexao", "junta": "Leg", "t": 0.0, "graus": [3, 25]},
+      {"nome": "joelhos levemente dobrados embaixo", "medida": "flexao", "junta": "Leg", "t": 1.0, "graus": [8, 35]},
+      {"nome": "cotovelos estendidos embaixo", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [0, 25]},
+      {"nome": "pés entre a largura do quadril e a dos ombros", "medida": "pes_largura", "t": "todos", "faixa": [1.0, 2.1], "fonte": "University of Sussex Sport — Romanian Deadlifts (barbell) (\"feet shoulder width apart\"); The Gym Group — Romanian Deadlift"},
+      {"nome": "pegada na largura dos ombros, mãos por fora das coxas", "medida": "pegada_largura", "t": "todos", "faixa": [1.0, 1.5], "fonte": "The Gym Group — Romanian Deadlift (\"gripping the barbell on either side of your body\")"},
+      {"nome": "braços pendurados perto do corpo", "medida": "cotovelo_tronco", "t": "todos", "graus": [-5, 25], "fonte": "University of Sussex Sport — Romanian Deadlifts (barbell) (\"keeping it close to your legs\")"}
+    ]
+  }
+}

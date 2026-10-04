@@ -1,0 +1,160 @@
+{
+ "uuid": "abfb812d-809c-49d5-b6c3-dfe7cd252f09",
+ "nome": "Desenvolvimento com Halteres",
+ "cena": "desenvolvimento_com_halteres",
+ "grupo": "Deltóide",
+ "subgrupo": "Deltoide anterior e lateral · tríceps · trapézio",
+ "padrao_movimento": "desenvolvimento",
+ "equipamento": "halteres",
+ "variacao": "sentado",
+ "alvos": [
+  "deltoide"
+ ],
+ "auxiliares": [
+  "triceps",
+  "trapezio"
+ ],
+ "camera": {
+  "az": 32,
+  "el": 8,
+  "dist": 4.4,
+  "alvo": [
+   0,
+   0.05,
+   0.92
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado no banco com o encosto quase em pé, com o glúteo no assento, as costas e a cabeça no encosto e os pés chapados no chão, segura um halter em cada mão com as palmas viradas para a frente (pegada pronada) e os punhos retos, com os halteres ao lado da cabeça, na altura das orelhas, os cotovelos embaixo dos punhos e os braços um pouco à frente do corpo (plano da escápula); empurra os halteres para cima até estender os cotovelos acima da cabeça, sem arquear a lombar e sem um halter encostar no outro; desce devagar de volta até a altura das orelhas.",
+ "cinesiologia": {
+  "plano": "escapular, entre o frontal e o sagital (elevação do braço 30° à frente do lado), cadeia cinética aberta",
+  "articulacoes": "ombro (abdução e flexão no plano da escápula na subida, adução e extensão na descida), cotovelo (extensão na subida, flexão na descida) e escápula (rotação para cima na subida)",
+  "agonistas": "deltoide anterior",
+  "sinergistas": "deltoide lateral, supraespinal, tríceps braquial, peitoral maior (porção clavicular), trapézio médio e inferior e serrátil anterior",
+  "estabilizadores": "trapézio superior e levantador da escápula; bíceps braquial como estabilizador dinâmico",
+  "fases": "subida concêntrica, descida excêntrica"
+ },
+ "referencias": [
+  "ExRx.net — Dumbbell Shoulder Press. https://exrx.net/WeightExercises/DeltoidAnterior/DBShoulderPress",
+  "American Council on Exercise — Seated Overhead Press. https://www.acefitness.org/resources/everyone/exercise-library/45/seated-overhead-press/",
+  "Durall CJ, Manske RC, Davies GJ. Avoiding Shoulder Injury from Resistance Training. Strength Cond J. 2001;23(5):10-18.",
+  "Paoli A, Marcolin G, Petrone N. Influence of different ranges of motion on selective recruitment of shoulder muscles in the sitting military press: an electromyographic study. J Strength Cond Res. 2010;24(6):1578-1583."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "costas apoiadas no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Overhead Press (\"sit with your back against a back rest so that your head, shoulders and butt make contact with the bench\")"
+   },
+   {
+    "nome": "glúteo e coxas apoiados no assento",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Overhead Press (idem)"
+   },
+   {
+    "nome": "cabeça apoiada no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Overhead Press (idem)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo embaixo do punho embaixo",
+    "medida": "antebraco_vertical",
+    "t": 0.0,
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Dumbbell Shoulder Press (\"Position dumbbells to each side of shoulders with elbows below wrists\")"
+   },
+   {
+    "nome": "antebraço em pé o movimento todo",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx — Dumbbell Shoulder Press (idem)"
+   },
+   {
+    "nome": "cotovelo dobrado embaixo, halteres na altura dos ombros e orelhas",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     95,
+     130
+    ],
+    "fonte": "ACE — Seated Overhead Press (\"lift the dumbbells to your shoulder level\")"
+   },
+   {
+    "nome": "braço no plano da escápula embaixo",
+    "medida": "braco_plano",
+    "t": 0.0,
+    "graus": [
+     15,
+     45
+    ],
+    "fonte": "Durall 2001 (\"scapular plane (30º anterior to the frontal plane)\"); ACE (\"keep your elbows pointed in front of you\")"
+   },
+   {
+    "nome": "braços estendidos acima da cabeça em cima",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx — Dumbbell Shoulder Press (\"until arms are extended overhead\"); ACE (\"until your elbows are fully extended\")"
+   },
+   {
+    "nome": "braços acima da cabeça em cima",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     150,
+     180
+    ],
+    "fonte": "ExRx — Dumbbell Shoulder Press (idem)"
+   },
+   {
+    "nome": "halteres acima dos ombros em cima, sem encostar um no outro",
+    "medida": "pegada_largura",
+    "t": 1.0,
+    "faixa": [
+     0.9,
+     1.6
+    ]
+   }
+  ]
+ }
+}

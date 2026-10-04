@@ -30,7 +30,10 @@
     "angulos": [
       {"nome": "cotovelo quase estendido embaixo", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 25]},
       {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [115, 145]},
-      {"nome": "tronco parado (sem balanço)", "medida": "tronco", "t": 1.0, "graus": [0, 10]}
+      {"nome": "tronco parado (sem balanço)", "medida": "tronco", "t": 1.0, "graus": [0, 10]},
+      {"nome": "cotovelo junto ao tronco", "medida": "cotovelo_tronco", "t": "todos", "graus": [-5, 20], "fonte": "ACE Fitness — Exercise Library, Bicep Curl (\"keeping them next to the middle of the body\")"},
+      {"nome": "cotovelo não vai pra frente", "medida": "braco_frente", "t": "todos", "graus": [-10, 25], "fonte": "ACE Fitness — Exercise Library, Bicep Curl (\"keep chest still, using just the arms for the movement\")"},
+      {"nome": "pegada na largura dos ombros", "medida": "pegada_largura", "t": "todos", "faixa": [1.0, 1.5], "fonte": "ACE Fitness — Exercise Library, Bicep Curl (\"wrists, elbows, and shoulders are in a straight line about shoulder-width apart\")"}
     ]
   }
 }

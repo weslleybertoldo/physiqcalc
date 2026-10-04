@@ -234,8 +234,10 @@ def resumo(resultados):
 
 
 # ── checagem completa (spec do visualizador 3D, seção 4): pés, juntas, corpo × corpo, zonas de apoio, equipamento
-# rígido, ângulos-chave da ficha e saltos entre quadros. Tudo em mm/graus, todo quadro.
+# rígido, ângulos-chave da ficha, técnica (cotovelo × tronco, pés, pegada — tecnica3d.py) e saltos entre quadros.
+# Tudo em mm/graus, todo quadro.
 import limites
+import tecnica3d as tc
 
 PE_CHAO_MM = 5.0        # planta do pé no chão: 0 ± 5 mm
 ESCORREGA_MM = 5.0      # tornozelo parado entre quadros (pé apoiado)
@@ -356,12 +358,43 @@ def posicoes_das_juntas(rig):
         _JUNTA_POS[n] = tuple(_cab(rig, n))
 
 
-def zonas(co, tri, nomes, dono, equipamentos, zonas_ficha):
-    """Zona de apoio da ficha (barra nas costas, quadril no banco…): o equipamento TEM que encostar ali."""
+def _zona_no_apoio(V, raizes, nome):
+    """Distância (m) da pele da zona até o apoio (banco: caixas fechadas e convexas), − = pele dentro dele.
+    Medido dos vértices da pele até o apoio: do apoio até a pele dava profundidade falsa na borda da zona (a pele
+    da zona é um pedaço aberto e, perto da borda, a normal do triângulo mais perto aponta de lado — glúteo
+    "−29,5 mm" com o glúteo só encostando, supino, 04/10/2026)."""
+    perto = 1e9
+    for raiz in raizes:
+        if raiz.name != nome:
+            continue
+        for ob in _malhas(raiz):
+            eco, etri = _avaliar_simples(ob)
+            lo, hi = eco.min(axis=0) - 0.05, eco.max(axis=0) + 0.05
+            perto_v = V[((V >= lo) & (V <= hi)).all(axis=1)]
+            if not len(perto_v):
+                continue
+            bvh = _bvh(eco, etri)
+            for p in perto_v:
+                v = Vector(p)
+                loc, nor, idx, dist = bvh.find_nearest(v)
+                if loc is not None:
+                    perto = min(perto, -dist if (v - loc).dot(nor) < 0 else dist)
+    return perto
+
+
+def zonas(co, tri, nomes, dono, equipamentos, zonas_ficha, apoios=()):
+    """Zona de apoio da ficha (barra nas costas, quadril no banco…): o equipamento TEM que encostar ali.
+    apoios: nomes dos equipamentos que são apoio do corpo (banco) — medidos da pele até eles (_zona_no_apoio)."""
     falhas, medidas = [], {}
     for z in zonas_ficha:
         ossos = set(z["partes"])
         m = np.array([n in ossos for n in nomes] + [False])[dono]
+        if z["equipamento"] in apoios:
+            mm = _zona_no_apoio(co[m], equipamentos, z["equipamento"]) * 1000
+            medidas[z["nome"]] = mm
+            if not z["mm"][0] <= mm <= z["mm"][1]:
+                falhas.append("%s: %.1f mm (esperado %g a %g)" % (z["nome"], mm, z["mm"][0], z["mm"][1]))
+            continue
         tz = tri[m[tri].all(axis=1)]
         bvh_z = _bvh(co, tz)
         perto = 1e9
@@ -383,19 +416,43 @@ def zonas(co, tri, nomes, dono, equipamentos, zonas_ficha):
     return medidas, falhas
 
 
+def corpo_no_apoio(co, nomes, dono, apoios, limite_mm):
+    """Quanto o corpo afunda no banco (mm, o vértice mais fundo): o banco é convexo, então "do lado de dentro da
+    face mais perto" = dentro dele. Encostar é o certo; afundar mais que o estofado cede é o erro."""
+    pior, onde = 0.0, ""
+    for raiz in apoios:
+        for ob in _malhas(raiz):
+            eco, etri = _avaliar_simples(ob)
+            lo, hi = eco.min(axis=0) - 0.01, eco.max(axis=0) + 0.01
+            perto = np.where(((co >= lo) & (co <= hi)).all(axis=1))[0]
+            if not len(perto):
+                continue
+            bvh = _bvh(eco, etri)
+            for i in perto:
+                v = Vector(co[i])
+                loc, nor, idx, dist = bvh.find_nearest(v)
+                if loc is not None and (v - loc).dot(nor) < 0 and dist * 1000 > pior:
+                    pior, onde = dist * 1000, "%s × %s" % (ob.name, _parte(nomes, dono, i))
+    falhas = ["corpo afundado no apoio (%s, %.1f mm)" % (onde, pior)] if pior > limite_mm else []
+    return (pior, onde), falhas
+
+
 def pontos_do_equipamento(equipamentos):
-    return {o.name: np.array(o.matrix_world.to_translation()) for raiz in equipamentos for o in [raiz] + list(raiz.children_recursive)}
+    """Posição de cada peça, separada por equipamento (os 2 halteres andam cada um pro seu lado)."""
+    return {raiz.name: {o.name: np.array(o.matrix_world.to_translation()) for o in [raiz] + list(raiz.children_recursive)}
+            for raiz in equipamentos}
 
 
 def rigidez(pontos, ref):
-    """Distância entre as peças do equipamento igual à do 1º quadro (nada estica nem solta)."""
-    nomes = sorted(ref)
+    """Distância entre as peças de cada equipamento igual à do 1º quadro (nada estica nem solta)."""
     pior = 0.0
-    for i, a in enumerate(nomes):
-        for b in nomes[i + 1:]:
-            d0 = np.linalg.norm(ref[a] - ref[b])
-            d = np.linalg.norm(pontos[a] - pontos[b])
-            pior = max(pior, abs(d - d0) * 1000)
+    for eq, ref_eq in ref.items():
+        nomes = sorted(ref_eq)
+        for i, a in enumerate(nomes):
+            for b in nomes[i + 1:]:
+                d0 = np.linalg.norm(ref_eq[a] - ref_eq[b])
+                d = np.linalg.norm(pontos[eq][a] - pontos[eq][b])
+                pior = max(pior, abs(d - d0) * 1000)
     return pior, (["equipamento deformou (%.1f mm)" % pior] if pior > RIGIDEZ_MM else [])
 
 
@@ -416,21 +473,25 @@ def angulo_chave(rig, regra):
         return [med[junta + "E"], med[junta + "D"]]
     if m == "tronco":                          # tronco × vertical
         return [_ang(c("Neck") - c("Hips"), (0, 0, 1))]
-    if m == "joelho_fora_do_pe":               # joelho pra fora da linha dos dedos (− = joelho pra dentro, valgo)
-        return [s * (c(L + "Leg")[0] - c(L + "ToeBase")[0]) * 1000 for L, s in (("Left", 1), ("Right", -1))]
+    if m in tc.MEDIDAS:                        # técnica: cotovelo × tronco, pés, pegada, coluna (tecnica3d.py)
+        return tc.MEDIDAS[m](posicoes(rig))
     raise ValueError("medida desconhecida na ficha: %s" % m)
 
 
+def posicoes(rig):
+    return {n: _cab(rig, n) for n in tc.JUNTAS}
+
+
 def angulos_chave(rig, regras, t):
+    """Regras da ficha + regras padrão que valem neste quadro (t: número, [t0, t1] ou "todos")."""
     falhas, medidas = [], {}
     for r in regras:
-        if abs(r["t"] - t) > 1e-6:
+        if not tc.vale_no_quadro(r["t"], t):
             continue
         vals = angulo_chave(rig, r)
-        lo, hi = r.get("graus") or r.get("mm")
-        medidas[r["nome"]] = vals
-        if any(not lo <= v <= hi for v in vals):
-            falhas.append("%s: %s (esperado %g a %g)" % (r["nome"], "/".join("%.0f" % v for v in vals), lo, hi))
+        medidas[r["nome"]] = tc.valores(r["medida"], vals)
+        if tc.fora_da_faixa(r, vals):
+            falhas.append("%s: %s (esperado %g a %g)" % (r["nome"], medidas[r["nome"]], *tc.faixa(r)))
     return medidas, falhas
 
 
@@ -454,11 +515,16 @@ def completa(bon, cena, checagens, t, rotulo, estado):
     for nome, (med, f) in (("juntas", juntas(rig)),
                            ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True))),
                            ("corpo", corpo_x_corpo(co, tri, nomes, dono)),
-                           ("zonas", zonas(co, tri, nomes, dono, cena.equipamentos, checagens.get("zonas", []))),
-                           ("angulos", angulos_chave(rig, checagens.get("angulos", []), t))):
+                           ("zonas", zonas(co, tri, nomes, dono, cena.equipamentos + cena.apoios,
+                                           checagens.get("zonas", []), apoios=[a.name for a in cena.apoios])),
+                           ("angulos", angulos_chave(rig, checagens.get("angulos", []) + tc.regras_padrao(checagens),
+                                                     t))):
         itens[nome] = med
         r["falhas"] += f
-    pts = pontos_do_equipamento(cena.equipamentos)
+    itens["tecnica"] = tc.medir(posicoes(rig))
+    itens["apoio"], f = corpo_no_apoio(co, nomes, dono, cena.apoios, cena.afunda_apoio_mm)
+    r["falhas"] += f
+    pts = pontos_do_equipamento(cena.equipamentos + cena.apoios)
     estado.setdefault("ref_eq", pts)
     itens["rigidez"], f = rigidez(pts, estado["ref_eq"])
     r["falhas"] += f
@@ -475,11 +541,13 @@ def completa(bon, cena, checagens, t, rotulo, estado):
     estado["ossos"] = ossos
     estado["tornozelos"] = {k: ossos[P + k] for k in ("LeftFoot", "RightFoot")}
     r["itens"] = itens
-    print("COMPLETA %s | juntas %s | pés %s | corpo×corpo %s | zonas %s | ângulos %s | rigidez %.1f mm | %s" % (
-        rotulo, " ".join("%s %.0f" % (k, v) for k, v in itens["juntas"].items()),
-        " ".join("%s %+.0f/%+.0f" % (k, *v) for k, v in itens["pes"].items()),
-        " ".join("%s %.1f" % (k, v) for k, v in itens["corpo"].items()),
-        " ".join("%s %.1f" % (k, v) for k, v in itens["zonas"].items()),
-        " ".join("%s %s" % (k, "/".join("%.0f" % x for x in v)) for k, v in itens["angulos"].items()) or "-",
-        itens["rigidez"], "OK" if not r["falhas"] else "FALHA: " + "; ".join(r["falhas"])), flush=True)
+    print("COMPLETA %s | juntas %s | pés %s | corpo×corpo %s | zonas %s | ângulos %s | técnica %s | apoio %.1f mm"
+          " | rigidez %.1f mm | %s" % (
+              rotulo, " ".join("%s %.0f" % (k, v) for k, v in itens["juntas"].items()),
+              " ".join("%s %+.0f/%+.0f" % (k, *v) for k, v in itens["pes"].items()),
+              " ".join("%s %.1f" % (k, v) for k, v in itens["corpo"].items()),
+              " ".join("%s %.1f" % (k, v) for k, v in itens["zonas"].items()),
+              " ".join("%s %s" % kv for kv in itens["angulos"].items()) or "-",
+              tc.texto(itens["tecnica"]), itens["apoio"][0], itens["rigidez"],
+              "OK" if not r["falhas"] else "FALHA: " + "; ".join(r["falhas"])), flush=True)
     return r

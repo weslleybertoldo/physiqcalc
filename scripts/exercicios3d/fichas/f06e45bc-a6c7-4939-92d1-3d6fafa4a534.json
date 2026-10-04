@@ -33,7 +33,9 @@
       {"nome": "coxa paralela ao chão embaixo", "medida": "inclinacao", "segmento": ["UpLeg", "Leg"], "t": 1.0, "graus": [-5, 8]},
       {"nome": "joelho estendido em pé", "medida": "flexao", "junta": "Leg", "t": 0.0, "graus": [0, 12]},
       {"nome": "tronco inclinado à frente embaixo", "medida": "tronco", "t": 1.0, "graus": [25, 50]},
-      {"nome": "joelho na direção do pé (sem valgo)", "medida": "joelho_fora_do_pe", "t": 1.0, "mm": [-15, 120]}
+      {"nome": "joelho na direção do pé (sem valgo)", "medida": "joelho_fora_do_pe", "t": 1.0, "mm": [-15, 120]},
+      {"nome": "pés na largura dos ombros", "medida": "pes_largura", "t": "todos", "faixa": [1.4, 2.6], "fonte": "Schoenfeld BJ, J Strength Cond Res 2010;24(12):3497-3506 (largura da base no agachamento)"},
+      {"nome": "mãos por fora dos ombros na barra", "medida": "pegada_largura", "t": "todos", "faixa": [1.5, 2.6], "fonte": "barra apoiada no trapézio com as mãos fechadas por fora dos ombros (movimento da ficha)"}
     ]
   }
 }

@@ -1,0 +1,122 @@
+{
+ "uuid": "22a7129c-1967-4369-a32f-01f6f83b1259",
+ "nome": "Elevação de Pernas",
+ "cena": "elevacao_de_pernas",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · flexores do quadril (iliopsoas, reto femoral)",
+ "padrao_movimento": "abdominal_infra",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "quadriceps",
+  "tensor",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 78,
+  "el": 12,
+  "dist": 4.2,
+  "alvo": [
+   0,
+   -0.15,
+   0.32
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Deitado de costas no colchonete, com a cabeça e a lombar apoiadas, os braços ao lado do tronco e as palmas viradas para baixo, mantém as pernas estendidas, um pouco afastadas, logo acima do chão; sobe as pernas estendidas, dobrando só o quadril, até ficarem na vertical, sem tirar a lombar do chão; desce devagar até as pernas ficarem de novo logo acima do chão.",
+ "cinesiologia": {
+  "plano": "sagital (flexão do quadril), cadeia cinética aberta",
+  "articulacoes": "quadril (flexão na subida, extensão na descida); joelhos estendidos e coluna lombar parada no chão",
+  "agonistas": "iliopsoas e reto femoral (flexores do quadril)",
+  "sinergistas": "tensor da fáscia lata, sartório e pectíneo",
+  "estabilizadores": "reto abdominal e oblíquos: seguram a pelve e a lombar no chão contra a tração dos flexores do quadril — trabalham o abdômen inteiro, sem separar uma \"porção inferior\"",
+  "fases": "subida concêntrica, descida excêntrica"
+ },
+ "referencias": [
+  "ExRx.net — Lying Straight Leg Raise. https://exrx.net/WeightExercises/HipFlexors/BWStraightLegRaise",
+  "Workman JC, Docherty D, Parfrey KC, Behm DG. Influence of pelvis position on the activation of abdominal and hip flexor muscles. J Strength Cond Res. 2008;22(5):1563-1569.",
+  "Kim K, Lee T. Comparison of muscular activities in the abdomen and lower limbs while performing sit-up and leg-raise. J Phys Ther Sci. 2016;28(2):491-494.",
+  "Andersson EA, Nilsson J, Ma Z, Thorstensson A. Abdominal and hip flexor muscle activation during various training exercises. Eur J Appl Physiol Occup Physiol. 1997;75(2):115-123.",
+  "Lehman GJ, McGill SM. Quantification of the differences in electromyographic activity magnitude between the upper and lower portions of the rectus abdominis muscle during selected trunk exercises. Phys Ther. 2001;81(5):1096-1101."
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "zonas": [
+   {
+    "nome": "lombar e costas apoiadas no chão",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Workman 2008 (lombar no chão, pelve sem inclinar pra frente: mais abdômen)"
+   },
+   {
+    "nome": "cabeça apoiada",
+    "equipamento": "colchonete",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ]
+   },
+   {
+    "nome": "mãos ao lado do tronco, no chão",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftHand",
+     "RightHand"
+    ],
+    "mm": [
+     -20,
+     8
+    ],
+    "fonte": "Kim 2016 (mãos ao lado do tronco)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelhos estendidos o movimento todo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Lying Straight Leg Raise (\"Keeping your knees straight, raise your legs by flexing your hips\")"
+   },
+   {
+    "nome": "pernas logo acima do chão embaixo",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ]
+   },
+   {
+    "nome": "pernas na vertical em cima",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 1.0,
+    "graus": [
+     80,
+     95
+    ],
+    "fonte": "ExRx — Lying Straight Leg Raise (idem); com o joelho estendido, a parte de trás da coxa limita a flexão do quadril perto da vertical"
+   }
+  ]
+ }
+}
