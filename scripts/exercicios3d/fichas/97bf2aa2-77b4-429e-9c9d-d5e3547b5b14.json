@@ -1,0 +1,39 @@
+{
+  "uuid": "97bf2aa2-77b4-429e-9c9d-d5e3547b5b14",
+  "nome": "Rosca Martelo com Halteres",
+  "cena": "rosca_martelo_com_halteres",
+  "grupo": "Bíceps / Braquial",
+  "subgrupo": "Braquial · braquiorradial · bíceps",
+  "padrao_movimento": "rosca_martelo",
+  "equipamento": "halteres",
+  "variacao": "pegada neutra",
+  "alvos": ["biceps", "antebraco"],
+  "auxiliares": [],
+  "camera": {"az": 34, "el": 8, "dist": 4.4, "alvo": [0, 0, 0.95]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com um halter em cada mão ao lado do corpo e as palmas viradas uma para a outra (pegada neutra, polegar para cima), dobra os cotovelos levando os halteres até perto dos ombros, com os cotovelos junto ao tronco e a pegada neutra o tempo todo; desce estendendo os cotovelos até os braços ficarem quase estendidos.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética aberta",
+    "articulacoes": "cotovelo (flexão na subida, extensão na descida) com o antebraço em posição neutra; ombro quase parado",
+    "agonistas": "braquial e braquiorradial na flexão do cotovelo com o antebraço neutro",
+    "sinergistas": "bíceps braquial",
+    "estabilizadores": "deltoide anterior, trapézio, flexores do punho e abdominais (tronco sem balanço)",
+    "fases": "subida concêntrica, descida excêntrica"
+  },
+  "referencias": [
+    "Marcolin G, Panizzolo FA, Petrone N, Moro T, Grigoletto D, Piccolo D, Paoli A. Differences in electromyographic activity of biceps brachii and brachioradialis while performing three variants of curl. PeerJ. 2018;6:e5165.",
+    "Biceps brachii and brachioradialis excitation in biceps curl exercise: different handgrips, different synergy. Sports (Basel). 2023;11(3):64."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [],
+    "angulos": [
+      {"nome": "cotovelo quase estendido embaixo", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 25]},
+      {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [105, 145]},
+      {"nome": "tronco parado (sem balanço)", "medida": "tronco", "t": 1.0, "graus": [0, 10]},
+      {"nome": "cotovelo junto ao tronco", "medida": "cotovelo_tronco", "t": "todos", "graus": [-5, 20], "fonte": "ACE Fitness — Exercise Library, Bicep Curl (\"keeping them next to the middle of the body\")"},
+      {"nome": "cotovelo não vai pra frente", "medida": "braco_frente", "t": "todos", "graus": [-10, 25], "fonte": "ACE Fitness — Exercise Library, Bicep Curl (\"keep chest still, using just the arms for the movement\")"},
+      {"nome": "halteres ao lado do corpo, por fora das coxas", "medida": "pegada_largura", "t": "todos", "faixa": [1.0, 1.8], "fonte": "ACE Fitness — Exercise Library, Bicep Curl (cotovelos ao lado do corpo); halter por fora da coxa"}
+    ]
+  }
+}
