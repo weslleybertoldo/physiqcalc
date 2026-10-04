@@ -23,15 +23,18 @@ jobs:
     if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","supabase"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '19 3,9,15,21 * * *'
     runs-on: ubuntu-latest
     steps:
+      # Troca da chave vazada (04/10/2026): a anon legada que ficava escrita aqui foi desligada → a publishable do Treino
+      # vem do segredo TREINO_SUPABASE_PUBLISHABLE_KEY (chave pública, igual à do principal logo abaixo).
       - name: Pings REST/PostgREST (atividade que CONTA p/ o auto-pause)
+        env:
+          CHAVE: ${{ secrets.TREINO_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -e
-          ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4d3B3ZGJibmx0aWN4Z3R6Y3NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzE3OTcsImV4cCI6MjA4OTU0Nzc5N30.AFEAJgrzbirf_kgkO9Yt7LtVzFqpWkvOjdwxbm8fs2Q"
+          [ -n "$CHAVE" ] || (echo "ERRO: segredo TREINO_SUPABASE_PUBLISHABLE_KEY vazio" && exit 1)
           # 3 queries por run x 4 runs/dia = ~12 queries/dia ("a few each day")
           for i in 1 2 3; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "apikey: $ANON" \
-              -H "Authorization: Bearer $ANON" \
+              -H "apikey: $CHAVE" \
               "https://uxwpwdbbnlticxgtzcsb.supabase.co/rest/v1/app_config?select=*&limit=$i")
             echo "PhysiqCalc REST ping $i/3: HTTP $CODE"
             [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)

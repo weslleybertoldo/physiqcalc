@@ -55,17 +55,22 @@ def http(metodo: str, url: str, corpo=None, cab: dict | None = None, timeout: in
 
 @lru_cache(maxsize=None)
 def chaves(ref: str) -> dict:
+    """As legadas pelo nome ("anon", "service_role") e as novas como "<tipo>:<nome>" ("publishable:default", "secret:…")."""
     st, lista, _ = http("GET", f"https://api.supabase.com/v1/projects/{ref}/api-keys?reveal=true", cab={"Authorization": f"Bearer {pat()}"})
     assert st == 200, (st, lista)
-    return {k["name"]: k["api_key"] for k in lista}
+    return {(k["name"] if k.get("type") in (None, "legacy") else f'{k["type"]}:{k["name"]}'): k["api_key"] for k in lista}
 
 
+# Troca da chave vazada (04/10/2026): as chaves LEGADAS do Treino foram desligadas → no Treino vão as novas (a publishable no
+# lugar da anon; a secret servidor_2026_10 no lugar da service_role). O principal segue com as dele.
 def anon(ref: str) -> str:
-    return chaves(ref)["anon"]
+    c = chaves(ref)
+    return c.get("publishable:default") or c["anon"] if ref == TREINO_REF else c["anon"]
 
 
 def service(ref: str) -> str:
-    return chaves(ref)["service_role"]
+    c = chaves(ref)
+    return c.get("secret:servidor_2026_10") or c.get("secret:default") or c["service_role"] if ref == TREINO_REF else c["service_role"]
 
 
 def sql_mgmt(ref: str, query: str) -> list:
