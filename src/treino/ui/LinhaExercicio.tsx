@@ -73,7 +73,7 @@ export function LinhaExercicio({
     >
       <div className="flex items-center gap-3 py-2 pl-2 pr-3">
         <button type="button" onClick={aoFicha} aria-label={`Ver ${nome} (GIF e dicas)`} data-exercicio-ficha className="flex-none rounded-[14px]">
-          <MiniaturaGif url={imagemUrl} nome={nome} />
+          <MiniaturaGif url={imagemUrl} exercicioId={exercicioId} nome={nome} />
         </button>
         <button type="button" onClick={aoAbrir} aria-expanded={aberto} data-exercicio-abrir className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <span className="min-w-0 flex-1">

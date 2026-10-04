@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Dumbbell, Play } from "lucide-react";
-import { resolverImagem } from "@/lib/imagemExercicio";
+import { fotoDoExercicio } from "@/lib/exercicios3d";
 import { cn } from "@/lib/utils";
 
 /**
  * Miniatura do NOSSO GIF (tela 2): o 1º quadro parado (desenhado num canvas — 8 GIFs animando juntos pesam no celular) com o
- * botão de play; tocar abre a ficha com o GIF animado. Sem imagem, o ícone (nada de emoji — decisão 7).
+ * botão de play; tocar abre a ficha com o GIF animado. Exercício com 3D mostra a foto parada do boneco (`exercicioId`). Sem
+ * imagem, o ícone (nada de emoji — decisão 7).
  */
-export function MiniaturaGif({ url, nome, className, semPlay }: { url: string | null | undefined; nome: string; className?: string; semPlay?: boolean }) {
-  const src = resolverImagem(url);
+export function MiniaturaGif({ url, exercicioId, nome, className, semPlay }: {
+  url: string | null | undefined;
+  exercicioId?: string | null;
+  nome: string;
+  className?: string;
+  semPlay?: boolean;
+}) {
+  const src = fotoDoExercicio(exercicioId, url);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [estado, setEstado] = useState<"carregando" | "quadro" | "imagem" | "sem">(src ? "carregando" : "sem");
 

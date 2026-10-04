@@ -148,7 +148,7 @@ export function Biblioteca({
               return (
                 <li key={e.id} className="flex items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-[9px]" data-exercicio-biblioteca={e.id} data-exercicio-biblioteca-nome={e.nome}>
                   <button type="button" onClick={() => setAberto({ ex: e, ler: !editavel })} className="flex min-w-0 flex-1 items-center gap-3 text-left" data-exercicio-abrir>
-                    <MiniaturaGif url={e.imagem_url} nome={e.nome} className="h-[42px] w-[46px] rounded-[11px]" />
+                    <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} className="h-[42px] w-[46px] rounded-[11px]" />
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-[13.5px] font-semibold text-texto" title={e.nome}>{e.nome}</b>
                       <span className="mt-0.5 block truncate text-[11.5px] text-texto-3" data-exercicio-classificacao={classificado(e) ? "1" : "0"}>{linhaDaBiblioteca(e)}</span>
