@@ -5,7 +5,7 @@
 # quando relatorios/<cena>.json traz os pontos). Conferir TODOS os prints antes de mandar.
 import io, json, os, re, sys
 from PIL import Image
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as Demorou, sync_playwright
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 PUB = os.path.join(AQUI, "..", "..", "public", "exercicios3d")
@@ -56,7 +56,14 @@ with sync_playwright() as pw:
                               timeout=120000)
         if pag.evaluate("document.body.dataset['3d']") == "erro":
             raise SystemExit("FOTO: o visualizador deu erro em %s: %s" % (nome, pag.inner_text("#erro")))
-        png = pag.locator("canvas").screenshot(timeout=180000)   # CPU dividida com os exports: o SwiftShader demora
+        for tentativa in range(3):             # CPU dividida com os exports: o SwiftShader atrasa o quadro e o print
+            try:                               # estoura esperando o canvas ficar "estável" (04/10/2026, 2 vezes)
+                png = pag.locator("canvas").screenshot(timeout=180000)
+                break
+            except Demorou:
+                if tentativa == 2:
+                    raise
+                print("PRINT %s demorou, tentando de novo" % nome, flush=True)
         if nome == "foto":
             img = Image.open(io.BytesIO(png)).convert("RGB").resize((600, 400), Image.LANCZOS)
             destino = os.path.join(PUB, "%s-%s.webp" % (UUID, v))
