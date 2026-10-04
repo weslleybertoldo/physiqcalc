@@ -1,0 +1,21 @@
+{
+ "abdomen": 1,
+ "adutores": 2,
+ "antebraco": 3,
+ "biceps": 4,
+ "costas": 5,
+ "deltoide": 6,
+ "dorsal": 7,
+ "gluteo": 8,
+ "lombar": 9,
+ "obliquos": 10,
+ "panturrilha": 11,
+ "peitoral": 12,
+ "pescoco": 13,
+ "posterior": 14,
+ "quadriceps": 15,
+ "tensor": 16,
+ "tibial": 17,
+ "trapezio": 18,
+ "triceps": 19
+}

@@ -350,9 +350,38 @@ def gerar_alvo(alvos):
     return caminho
 
 
+def gerar_ids(v):
+    """Mapa dos músculos pro app (public/exercicios3d/musculos-<v>.png): R = id do músculo (0 = pele), G = fibra.
+    Os ids ficam em musculos_ids.json (versionado) e nunca mudam: grupo novo ganha o próximo número."""
+    import json
+    caminho_ids = os.path.join(config.AQUI, "musculos_ids.json")
+    ids = json.load(open(caminho_ids)) if os.path.exists(caminho_ids) else {}
+    nomes = open(os.path.join(TEX, "anat_grupos.txt")).read().split("\n")   # índice k-1 do anat_grupo.npy
+    for g in nomes:
+        if g not in ids:
+            ids[g] = max(ids.values(), default=0) + 1
+    if max(ids.values()) > 255:
+        raise SystemExit("IDS: mais de 255 músculos não cabem no canal R")
+    tabela = np.zeros(len(nomes) + 1, np.uint8)
+    for k, g in enumerate(nomes):
+        tabela[k + 1] = ids[g]
+    r = tabela[np.load(os.path.join(TEX, "anat_grupo.npy")).astype(np.int32)]
+    fibra = np.asarray(Image.open(os.path.join(TEX, "anat_linhas.png")).convert("RGB"))[..., 2]
+    os.makedirs(config.SAIDA, exist_ok=True)
+    saida = os.path.join(config.SAIDA, "musculos-%s.png" % v)
+    Image.fromarray(np.stack([r, fibra, np.zeros_like(r)], -1), "RGB").save(saida, optimize=True)
+    with open(caminho_ids, "w") as fh:
+        json.dump(ids, fh, ensure_ascii=False, indent=1)
+        fh.write("\n")
+    print("IDS", saida, "%d músculos" % len(ids), "%d KB" % (os.path.getsize(saida) // 1024))
+    return saida
+
+
 if __name__ == "__main__":
     modo = sys.argv[1] if len(sys.argv) > 1 else "base"
     if modo == "base":
         gerar_base(int(sys.argv[2]) if len(sys.argv) > 2 else 2048)
+    elif modo == "ids":
+        gerar_ids(sys.argv[2])
     else:
         gerar_alvo(sys.argv[2].split(",") if len(sys.argv) > 2 else [])
