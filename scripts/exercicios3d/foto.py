@@ -56,7 +56,7 @@ with sync_playwright() as pw:
                               timeout=120000)
         if pag.evaluate("document.body.dataset['3d']") == "erro":
             raise SystemExit("FOTO: o visualizador deu erro em %s: %s" % (nome, pag.inner_text("#erro")))
-        png = pag.locator("canvas").screenshot()
+        png = pag.locator("canvas").screenshot(timeout=180000)   # CPU dividida com os exports: o SwiftShader demora
         if nome == "foto":
             img = Image.open(io.BytesIO(png)).convert("RGB").resize((600, 400), Image.LANCZOS)
             destino = os.path.join(PUB, "%s-%s.webp" % (UUID, v))

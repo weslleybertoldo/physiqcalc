@@ -32,7 +32,7 @@ def arvore(raiz):
     return [raiz] + list(raiz.children_recursive)
 
 
-objs_eq = [o for raiz in c.equipamentos for o in arvore(raiz)]
+objs_eq = [o for raiz in c.equipamentos + c.apoios for o in arvore(raiz)]   # o banco vai junto (parado)
 
 # ── 1) checagem + captura da pose de cada quadro ───────────────────────────────────────────────────────
 resultados, quadros, estado = [], [], {}
@@ -70,8 +70,11 @@ with open(os.path.join(config.RELATORIOS, ficha["cena"] + ".txt"), "w") as fh:
             " ".join("%s %.1f" % kv for kv in it["corpo"].items())))
         fh.write("    zonas (mm): %s | ângulos-chave: %s | rigidez %.1f mm | salto %.0f mm\n" % (
             " ".join("%s %.1f" % kv for kv in it["zonas"].items()) or "-",
-            " ".join("%s %s" % (k, "/".join("%.0f" % x for x in v)) for k, v in it["angulos"].items()) or "-",
+            " | ".join("%s %s" % kv for kv in it["angulos"].items()) or "-",
             it["rigidez"], it.get("salto", 0)))
+        fh.write("    técnica (graus, mm, ×): %s\n" % ck.tc.texto(it["tecnica"]))
+        if c.apoios:
+            fh.write("    corpo no apoio: afunda %.1f mm (%s)\n" % it["apoio"])
         fh.write("    %s\n" % ("OK" if not r["falhas"] else "FALHA: " + "; ".join(r["falhas"])))
 if not ok:
     sys.stdout.flush()

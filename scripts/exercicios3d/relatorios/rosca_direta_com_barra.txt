@@ -2,125 +2,150 @@ Rosca Direta com Barra (4f141bfc-a902-406b-bc41-98076648c4ae) — checagem compl
 k00 t=0.000 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E -120° D 119° | cotovelo fora do alvo E 0.1 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 12° quadrilE 7° ombroE 11° punhoE 8° joelhoD 7° cotoveloD 12° quadrilD 6° ombroD 11° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: cotovelo quase estendido embaixo 12/12 | rigidez 0.0 mm | salto 0 mm
+    zonas (mm): - | ângulos-chave: cotovelo quase estendido embaixo 12/12 | cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 9/9 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 0 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 9/9 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k01 t=0.004 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E 1° D -1° | cotovelo fora do alvo E 0.1 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 13° quadrilE 7° ombroE 11° punhoE 8° joelhoD 7° cotoveloD 13° quadrilD 6° ombroD 11° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 4 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 9/9 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 4 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 9/9 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k02 t=0.017 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E 3° D -3° | cotovelo fora do alvo E 0.1 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 14° quadrilE 7° ombroE 11° punhoE 8° joelhoD 7° cotoveloD 14° quadrilD 6° ombroD 11° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 11 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 9/9 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 11 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 9/9 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k03 t=0.038 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E 4° D -4° | cotovelo fora do alvo E 0.2 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 17° quadrilE 7° ombroE 12° punhoE 8° joelhoD 7° cotoveloD 17° quadrilD 6° ombroD 11° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 19 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 9/9 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 19 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 9/9 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k04 t=0.067 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E 3° D -3° | cotovelo fora do alvo E 0.2 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 20° quadrilE 7° ombroE 12° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 6° ombroD 11° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 26 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 9/9 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 26 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 9/9 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k05 t=0.103 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E 3° D -3° | cotovelo fora do alvo E 0.2 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 24° quadrilE 7° ombroE 12° punhoE 8° joelhoD 7° cotoveloD 24° quadrilD 6° ombroD 12° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 32 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 10/10 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 32 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 10/10 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k06 t=0.146 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E 2° D -2° | cotovelo fora do alvo E 0.3 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 29° quadrilE 7° ombroE 12° punhoE 8° joelhoD 7° cotoveloD 29° quadrilD 6° ombroD 12° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 38 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 10/10 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 38 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 10/10 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k07 t=0.196 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E 2° D -2° | cotovelo fora do alvo E 0.4 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 35° quadrilE 7° ombroE 12° punhoE 8° joelhoD 7° cotoveloD 35° quadrilD 6° ombroD 12° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 43 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 10/10 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 43 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 10/10 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k08 t=0.250 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E 1° D -1° | cotovelo fora do alvo E 0.4 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 42° quadrilE 7° ombroE 13° punhoE 8° joelhoD 7° cotoveloD 42° quadrilD 6° ombroD 12° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 48 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 11/11 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 48 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 11/11 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k09 t=0.309 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E 1° D -1° | cotovelo fora do alvo E 0.5 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 49° quadrilE 7° ombroE 13° punhoE 8° joelhoD 7° cotoveloD 49° quadrilD 6° ombroD 13° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 51 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 11/11 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 51 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 11/11 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k10 t=0.371 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E 1° D -1° | cotovelo fora do alvo E 0.6 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 57° quadrilE 7° ombroE 14° punhoE 8° joelhoD 7° cotoveloD 57° quadrilD 6° ombroD 13° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 54 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 12/12 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 54 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 12/12 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k11 t=0.435 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E 0° D -0° | cotovelo fora do alvo E 0.7 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 65° quadrilE 7° ombroE 14° punhoE 8° joelhoD 7° cotoveloD 65° quadrilD 6° ombroD 14° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 56 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 12/12 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 56 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 12/12 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k12 t=0.500 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E 0° D -0° | cotovelo fora do alvo E 0.8 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 73° quadrilE 7° ombroE 14° punhoE 8° joelhoD 7° cotoveloD 73° quadrilD 6° ombroD 14° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 56 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 12/12 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 56 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 12/12 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k13 t=0.565 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E 0° D -0° | cotovelo fora do alvo E 0.9 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 80° quadrilE 7° ombroE 15° punhoE 8° joelhoD 7° cotoveloD 80° quadrilD 6° ombroD 14° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 56 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 13/13 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 56 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 13/13 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k14 t=0.629 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 1.0 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 88° quadrilE 7° ombroE 15° punhoE 8° joelhoD 7° cotoveloD 88° quadrilD 6° ombroD 15° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 55 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 13/13 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 55 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 13/13 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k15 t=0.691 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 1.2 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 96° quadrilE 7° ombroE 16° punhoE 8° joelhoD 7° cotoveloD 96° quadrilD 6° ombroD 15° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 53 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 14/14 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 53 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 14/14 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k16 t=0.750 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 1.3 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 103° quadrilE 7° ombroE 16° punhoE 8° joelhoD 7° cotoveloD 103° quadrilD 6° ombroD 16° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 50 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 14/14 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 50 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 14/14 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k17 t=0.804 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 1.5 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 110° quadrilE 7° ombroE 16° punhoE 8° joelhoD 7° cotoveloD 110° quadrilD 6° ombroD 16° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 46 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 15/15 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 46 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 15/15 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k18 t=0.854 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 1.7 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 116° quadrilE 7° ombroE 17° punhoE 8° joelhoD 7° cotoveloD 116° quadrilD 6° ombroD 16° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 41 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 15/15 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 41 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 15/15 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k19 t=0.897 | L encosto -4.2 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E -1° D 1° | cotovelo fora do alvo E 1.9 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 121° quadrilE 7° ombroE 17° punhoE 8° joelhoD 7° cotoveloD 121° quadrilD 6° ombroD 16° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 36 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 15/15 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 36 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 15/15 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k20 t=0.933 | L encosto -5.0 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E -1° D 1° | cotovelo fora do alvo E 2.1 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 125° quadrilE 7° ombroE 17° punhoE 8° joelhoD 7° cotoveloD 125° quadrilD 6° ombroD 17° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 30 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 15/15 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 30 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 15/15 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k21 t=0.962 | L encosto -5.0 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.2 mm (barra_eixo × RightForeArm) | supinação E -1° D 0° | cotovelo fora do alvo E 2.3 D 0.0 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 129° quadrilE 7° ombroE 17° punhoE 8° joelhoD 7° cotoveloD 129° quadrilD 6° ombroD 17° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 24 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 7/7 | cotovelo não vai pra frente 16/16 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 24 mm
+    técnica (graus, mm, ×): cotovelo_tronco 7/7 braco_frente 16/16 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k22 t=0.983 | L encosto -5.0 mm envolve 355° | R encosto -2.1 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 2.5 D 0.1 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 131° quadrilE 7° ombroE 17° punhoE 8° joelhoD 7° cotoveloD 131° quadrilD 6° ombroD 17° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 18 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 8/7 | cotovelo não vai pra frente 16/16 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 18 mm
+    técnica (graus, mm, ×): cotovelo_tronco 8/7 braco_frente 16/16 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k23 t=0.996 | L encosto -5.0 mm envolve 355° | R encosto -2.0 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 2.7 D 0.1 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 133° quadrilE 7° ombroE 17° punhoE 8° joelhoD 7° cotoveloD 133° quadrilD 6° ombroD 17° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: - | rigidez 0.0 mm | salto 11 mm
+    zonas (mm): - | ângulos-chave: cotovelo junto ao tronco 8/7 | cotovelo não vai pra frente 16/16 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 11 mm
+    técnica (graus, mm, ×): cotovelo_tronco 8/7 braco_frente 16/16 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
 k24 t=1.000 | L encosto -5.0 mm envolve 355° | R encosto -2.0 mm envolve 346° | peso×corpo folga 56.3 mm (barra_eixo × RightForeArm) | supinação E -0° D 0° | cotovelo fora do alvo E 2.8 D 0.1 mm
     juntas: pescoco 12° joelhoE 7° cotoveloE 133° quadrilE 7° ombroE 18° punhoE 8° joelhoD 7° cotoveloD 133° quadrilD 6° ombroD 17° punhoD 9°
     pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
-    zonas (mm): - | ângulos-chave: cotovelo dobrado em cima 133/133 tronco parado (sem balanço) 0 | rigidez 0.0 mm | salto 4 mm
+    zonas (mm): - | ângulos-chave: cotovelo dobrado em cima 133/133 | tronco parado (sem balanço) 0 | cotovelo junto ao tronco 8/7 | cotovelo não vai pra frente 16/16 | pegada na largura dos ombros 1.22 | pés nem colados nem abertos demais (padrão) 1.84 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) -11/-11 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 4 mm
+    técnica (graus, mm, ×): cotovelo_tronco 8/7 braco_frente 16/16 pegada_largura 1.22 pes_largura 1.84 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
     OK
