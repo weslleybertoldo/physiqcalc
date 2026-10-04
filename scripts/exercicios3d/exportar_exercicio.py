@@ -16,11 +16,13 @@ import checagem3d as ck
 args = sys.argv[sys.argv.index("--") + 1:]
 UUID = args[0]
 SO_CHECAR = len(args) > 1 and args[1] == "checar"
-NQ = int(args[2]) if len(args) > 2 else 24        # 25 quadros de ida (o app faz a volta); menos só pra testar
 FPS = 16                                       # 25 quadros = 1,5 s descendo
 T0 = time.time()
 
 ficha = json.load(open(os.path.join(AQUI, "fichas", UUID + ".json")))
+# quadros de ida (o app faz a volta): ida_s da ficha × FPS — 1,5 s = 24 (25 quadros); um movimento longo e rápido
+# (pernas estendidas subindo 80°) pede mais tempo pra nenhum osso passar de SALTO_MM por quadro; menos só pra testar
+NQ = int(args[2]) if len(args) > 2 else round(ficha.get("ida_s", 1.5) * FPS)
 bon = personagem.criar(ficha["alvos"], ficha["auxiliares"])
 cena = bpy.context.scene
 rig = bon.rig

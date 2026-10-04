@@ -1,0 +1,232 @@
+Elevação de Pernas (22a7129c-1967-4369-a32f-01f6f83b1259) — checagem completa em 33 quadros: OK
+k00 t=0.000 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 13° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 13° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +183.6/+184.0 D +183.6/+184.0 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | pernas logo acima do chão embaixo 13/13 | rigidez 0.0 mm | salto 0 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -7/-7 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k01 t=0.002 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 14° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 13° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +186.6/+187.6 D +186.6/+187.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 3 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -7/-7 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k02 t=0.010 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 14° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 14° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +195.5/+196.3 D +195.5/+196.3 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 9 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -8/-8 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k03 t=0.022 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 15° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 15° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +210.1/+210.8 D +210.1/+210.8 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 15 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -9/-9 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k04 t=0.038 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 16° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 16° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +230.4/+231.2 D +230.4/+231.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 21 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -11/-11 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k05 t=0.059 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 18° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 18° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +255.8/+270.3 D +255.8/+270.3 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 27 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -16/-16 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k06 t=0.084 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 20° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 20° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +286.2/+332.5 D +286.2/+322.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 32 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -32/-32 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k07 t=0.113 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 22° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 22° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +320.6/+384.8 D +320.6/+384.8 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 37 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -124/-124 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k08 t=0.146 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 25° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 25° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +358.9/+439.2 D +358.9/+439.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 42 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -163/-163 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k09 t=0.183 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 28° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 28° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +400.6/+487.7 D +400.6/+484.9 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 46 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -171/-171 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k10 t=0.222 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 31° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 31° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +444.9/+528.9 D +444.9/+526.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 50 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -174/-174 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k11 t=0.264 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 34° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 34° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +491.0/+573.9 D +491.0/+573.9 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 54 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -175/-175 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k12 t=0.309 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 38° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 38° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +538.2/+630.1 D +538.2/+623.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 56 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -176/-176 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k13 t=0.355 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 41° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 41° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +585.5/+722.4 D +585.5/+722.4 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 59 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -177/-177 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k14 t=0.402 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 45° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 45° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +632.2/+777.3 D +632.2/+777.3 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 61 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -177/-177 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k15 t=0.451 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 49° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 49° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +677.4/+821.8 D +677.4/+821.8 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 62 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -178/-178 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k16 t=0.500 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 53° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 53° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +720.3/+862.0 D +720.3/+862.0 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 62 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -178/-178 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k17 t=0.549 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 57° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 57° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +760.3/+894.2 D +760.3/+894.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 62 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -178/-178 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k18 t=0.598 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 61° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 61° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +796.9/+925.2 D +796.9/+925.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 62 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -178/-178 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k19 t=0.645 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 64° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 64° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +829.7/+947.9 D +829.7/+947.9 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 61 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -178/-178 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k20 t=0.691 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 68° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 68° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +858.5/+970.1 D +858.5/+970.1 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 59 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k21 t=0.736 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 72° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 72° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +883.1/+984.4 D +883.1/+984.4 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 56 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k22 t=0.778 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 75° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 75° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +903.7/+994.7 D +903.7/+994.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 54 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k23 t=0.817 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 78° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 78° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +920.5/+1004.1 D +920.5/+1004.1 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 50 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k24 t=0.854 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 81° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 81° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +933.8/+1007.8 D +933.8/+1007.8 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 46 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k25 t=0.887 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 84° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 84° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +944.0/+1009.1 D +944.0/+1009.1 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 42 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k26 t=0.916 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 86° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 86° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +951.1/+1008.7 D +951.1/+1008.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 37 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k27 t=0.941 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 88° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 88° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +952.7/+1007.8 D +952.4/+1007.8 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 32 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k28 t=0.962 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 90° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 90° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +953.1/+1006.5 D +952.8/+1006.5 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 27 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k29 t=0.978 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 91° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 91° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +952.9/+1004.2 D +952.5/+1004.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 21 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k30 t=0.990 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 92° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 92° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +952.4/+1002.2 D +952.0/+1002.2 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 15 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k31 t=0.998 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 92° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 92° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +952.0/+1000.9 D +951.6/+1000.9 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | rigidez 0.0 mm | salto 9 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
+k32 t=1.000 |  | peso×corpo folga 1000000000000.0 mm () | 
+    juntas: pescoco 6° joelhoE 7° cotoveloE 20° quadrilE 93° ombroE 19° punhoE 8° joelhoD 7° cotoveloD 20° quadrilD 93° ombroD 23° punhoD 9°
+    pés (planta/calcanhar mm): E +951.9/+1000.4 D +951.5/+1000.4 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): lombar e costas apoiadas no chão -1.2 cabeça apoiada -3.9 mãos ao lado do tronco, no chão -0.3 | ângulos-chave: joelhos estendidos o movimento todo 7/7 | pernas na vertical em cima 93/93 | rigidez 0.0 mm | salto 3 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/11 braco_frente -1/-20 braco_elevacao 19/23 braco_plano -3/-62 braco_abertura 19/11 antebraco_vertical 70/89 pegada_largura 1.75 pes_largura 1.84 ponta_pe -179/-179 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo -11/-11 joelho_fora_do_pe -53/-53 coluna 1
+    corpo no apoio: afunda 6.0 mm (colchonete × RightForeArm)
+    OK
