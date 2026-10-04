@@ -1,0 +1,176 @@
+Supino Reto com Halteres (bb673b75-dfee-407c-af40-7166908ff2b9) — checagem completa em 25 quadros: OK
+k00 t=0.000 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 10° quadrilE 13° ombroE 84° punhoE 14° joelhoD 88° cotoveloD 10° quadrilD 13° ombroD 84° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.3 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: braços estendidos em cima, sem travar 10/10 | halteres em cima dos ombros em cima 84/84 | antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 0 mm
+    técnica (graus, mm, ×): cotovelo_tronco 8/8 braco_frente 84/84 braco_elevacao 84/84 braco_plano 82/82 braco_abertura 55/54 antebraco_vertical 0/0 pegada_largura 1.11 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.3 mm (banco_estofado × Spine2)
+    OK
+k01 t=0.004 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 11° quadrilE 13° ombroE 84° punhoE 14° joelhoD 88° cotoveloD 11° quadrilD 13° ombroD 84° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.3 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 2 mm
+    técnica (graus, mm, ×): cotovelo_tronco 9/9 braco_frente 84/84 braco_elevacao 84/84 braco_plano 81/81 braco_abertura 55/54 antebraco_vertical 0/0 pegada_largura 1.12 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.3 mm (banco_estofado × Spine2)
+    OK
+k02 t=0.017 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 12° quadrilE 13° ombroE 83° punhoE 14° joelhoD 88° cotoveloD 12° quadrilD 13° ombroD 83° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.5 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 7 mm
+    técnica (graus, mm, ×): cotovelo_tronco 10/10 braco_frente 83/83 braco_elevacao 83/83 braco_plano 80/80 braco_abertura 55/54 antebraco_vertical 0/0 pegada_largura 1.15 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.5 mm (banco_estofado × Spine2)
+    OK
+k03 t=0.038 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 15° quadrilE 13° ombroE 82° punhoE 14° joelhoD 88° cotoveloD 15° quadrilD 13° ombroD 81° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.7 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 12 mm
+    técnica (graus, mm, ×): cotovelo_tronco 12/12 braco_frente 81/81 braco_elevacao 82/81 braco_plano 78/78 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.19 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.7 mm (banco_estofado × Spine2)
+    OK
+k04 t=0.067 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 18° quadrilE 13° ombroE 80° punhoE 14° joelhoD 88° cotoveloD 18° quadrilD 13° ombroD 79° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -7.0 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 16 mm
+    técnica (graus, mm, ×): cotovelo_tronco 15/15 braco_frente 79/79 braco_elevacao 80/79 braco_plano 75/75 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.26 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 7.0 mm (banco_estofado × Spine2)
+    OK
+k05 t=0.103 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 23° quadrilE 13° ombroE 77° punhoE 14° joelhoD 88° cotoveloD 23° quadrilD 13° ombroD 77° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -7.3 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 20 mm
+    técnica (graus, mm, ×): cotovelo_tronco 19/19 braco_frente 76/76 braco_elevacao 77/77 braco_plano 71/71 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.33 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 7.3 mm (banco_estofado × Spine2)
+    OK
+k06 t=0.146 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 28° quadrilE 13° ombroE 74° punhoE 14° joelhoD 88° cotoveloD 28° quadrilD 13° ombroD 74° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -7.7 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 24 mm
+    técnica (graus, mm, ×): cotovelo_tronco 23/23 braco_frente 73/73 braco_elevacao 74/74 braco_plano 66/66 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.42 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 7.7 mm (banco_estofado × Spine2)
+    OK
+k07 t=0.196 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 35° quadrilE 13° ombroE 71° punhoE 14° joelhoD 88° cotoveloD 35° quadrilD 13° ombroD 71° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -8.0 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 27 mm
+    técnica (graus, mm, ×): cotovelo_tronco 28/28 braco_frente 68/68 braco_elevacao 71/71 braco_plano 60/61 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.52 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 8.0 mm (banco_estofado × Spine2)
+    OK
+k08 t=0.250 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 41° quadrilE 13° ombroE 68° punhoE 14° joelhoD 88° cotoveloD 41° quadrilD 13° ombroD 67° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -8.3 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 30 mm
+    técnica (graus, mm, ×): cotovelo_tronco 33/33 braco_frente 63/63 braco_elevacao 68/67 braco_plano 54/54 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.62 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 8.3 mm (banco_estofado × Spine2)
+    OK
+k09 t=0.309 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 49° quadrilE 13° ombroE 65° punhoE 14° joelhoD 88° cotoveloD 49° quadrilD 13° ombroD 64° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -8.5 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 33 mm
+    técnica (graus, mm, ×): cotovelo_tronco 38/38 braco_frente 57/56 braco_elevacao 65/64 braco_plano 47/47 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.71 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 8.5 mm (banco_estofado × Spine2)
+    OK
+k10 t=0.371 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 57° quadrilE 13° ombroE 62° punhoE 14° joelhoD 88° cotoveloD 57° quadrilD 13° ombroD 61° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -8.6 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 35 mm
+    técnica (graus, mm, ×): cotovelo_tronco 43/43 braco_frente 49/49 braco_elevacao 62/61 braco_plano 39/39 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.80 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 8.6 mm (banco_estofado × Spine2)
+    OK
+k11 t=0.435 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 65° quadrilE 13° ombroE 59° punhoE 14° joelhoD 88° cotoveloD 65° quadrilD 13° ombroD 59° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -8.6 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 36 mm
+    técnica (graus, mm, ×): cotovelo_tronco 48/48 braco_frente 40/39 braco_elevacao 59/59 braco_plano 30/30 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.87 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 8.6 mm (banco_estofado × Spine2)
+    OK
+k12 t=0.500 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 73° quadrilE 13° ombroE 57° punhoE 14° joelhoD 88° cotoveloD 73° quadrilD 13° ombroD 56° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -8.4 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 36 mm
+    técnica (graus, mm, ×): cotovelo_tronco 52/51 braco_frente 28/28 braco_elevacao 57/56 braco_plano 20/21 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.92 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 8.4 mm (banco_estofado × Spine2)
+    OK
+k13 t=0.565 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 81° quadrilE 13° ombroE 56° punhoE 14° joelhoD 88° cotoveloD 81° quadrilD 13° ombroD 55° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -8.1 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 36 mm
+    técnica (graus, mm, ×): cotovelo_tronco 54/54 braco_frente 15/15 braco_elevacao 56/55 braco_plano 11/11 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.95 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 8.1 mm (banco_estofado × Spine2)
+    OK
+k14 t=0.629 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 89° quadrilE 13° ombroE 55° punhoE 14° joelhoD 88° cotoveloD 89° quadrilD 13° ombroD 55° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -7.7 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 36 mm
+    técnica (graus, mm, ×): cotovelo_tronco 55/55 braco_frente 1/1 braco_elevacao 55/55 braco_plano 1/1 braco_abertura 55/55 antebraco_vertical 0/0 pegada_largura 1.97 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 7.7 mm (banco_estofado × Spine2)
+    OK
+k15 t=0.691 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 97° quadrilE 13° ombroE 56° punhoE 14° joelhoD 88° cotoveloD 97° quadrilD 13° ombroD 55° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -7.3 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 35 mm
+    técnica (graus, mm, ×): cotovelo_tronco 55/54 braco_frente -12/-12 braco_elevacao 56/55 braco_plano -9/-9 braco_abertura 56/55 antebraco_vertical 0/0 pegada_largura 1.96 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 7.3 mm (banco_estofado × Spine2)
+    OK
+k16 t=0.750 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 104° quadrilE 13° ombroE 57° punhoE 14° joelhoD 88° cotoveloD 104° quadrilD 13° ombroD 56° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.8 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 33 mm
+    técnica (graus, mm, ×): cotovelo_tronco 53/52 braco_frente -25/-24 braco_elevacao 57/56 braco_plano -17/-18 braco_abertura 56/55 antebraco_vertical 0/0 pegada_largura 1.93 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.8 mm (banco_estofado × Spine2)
+    OK
+k17 t=0.804 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 111° quadrilE 13° ombroE 58° punhoE 14° joelhoD 88° cotoveloD 111° quadrilD 13° ombroD 58° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.5 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 30 mm
+    técnica (graus, mm, ×): cotovelo_tronco 50/50 braco_frente -35/-34 braco_elevacao 58/58 braco_plano -25/-26 braco_abertura 56/55 antebraco_vertical 0/0 pegada_largura 1.89 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.5 mm (banco_estofado × Spine2)
+    OK
+k18 t=0.854 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 117° quadrilE 13° ombroE 60° punhoE 14° joelhoD 88° cotoveloD 117° quadrilD 13° ombroD 59° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.4 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 27 mm
+    técnica (graus, mm, ×): cotovelo_tronco 47/46 braco_frente -43/-42 braco_elevacao 60/59 braco_plano -32/-33 braco_abertura 56/55 antebraco_vertical 0/0 pegada_largura 1.85 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.4 mm (banco_estofado × Spine2)
+    OK
+k19 t=0.897 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 123° quadrilE 13° ombroE 62° punhoE 14° joelhoD 88° cotoveloD 123° quadrilD 13° ombroD 61° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.4 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 0/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 24 mm
+    técnica (graus, mm, ×): cotovelo_tronco 44/43 braco_frente -49/-48 braco_elevacao 62/61 braco_plano -38/-38 braco_abertura 56/55 antebraco_vertical 0/0 pegada_largura 1.80 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.4 mm (banco_estofado × Spine2)
+    OK
+k20 t=0.933 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 127° quadrilE 13° ombroE 64° punhoE 14° joelhoD 88° cotoveloD 127° quadrilD 13° ombroD 63° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.3 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 1/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 20 mm
+    técnica (graus, mm, ×): cotovelo_tronco 41/40 braco_frente -54/-53 braco_elevacao 64/63 braco_plano -43/-43 braco_abertura 56/55 antebraco_vertical 1/0 pegada_largura 1.75 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.3 mm (banco_estofado × Spine2)
+    OK
+k21 t=0.962 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 131° quadrilE 13° ombroE 65° punhoE 14° joelhoD 88° cotoveloD 131° quadrilD 13° ombroD 64° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.3 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 1/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 16 mm
+    técnica (graus, mm, ×): cotovelo_tronco 39/38 braco_frente -57/-57 braco_elevacao 65/64 braco_plano -47/-47 braco_abertura 56/55 antebraco_vertical 1/0 pegada_largura 1.71 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.3 mm (banco_estofado × Spine2)
+    OK
+k22 t=0.983 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 14° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 134° quadrilE 13° ombroE 66° punhoE 14° joelhoD 88° cotoveloD 134° quadrilD 13° ombroD 65° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.2 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 1/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 12 mm
+    técnica (graus, mm, ×): cotovelo_tronco 37/36 braco_frente -60/-59 braco_elevacao 66/65 braco_plano -49/-50 braco_abertura 56/55 antebraco_vertical 1/0 pegada_largura 1.68 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.2 mm (banco_estofado × Spine2)
+    OK
+k23 t=0.996 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 15° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 135° quadrilE 13° ombroE 67° punhoE 15° joelhoD 88° cotoveloD 135° quadrilD 13° ombroD 66° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.2 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: antebraço quase em pé o movimento todo 1/0 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 7 mm
+    técnica (graus, mm, ×): cotovelo_tronco 36/35 braco_frente -61/-60 braco_elevacao 67/66 braco_plano -51/-51 braco_abertura 56/55 antebraco_vertical 1/0 pegada_largura 1.66 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.2 mm (banco_estofado × Spine2)
+    OK
+k24 t=1.000 | L encosto -1.3 mm envolve 355° | R encosto -2.2 mm envolve 356° | peso×corpo folga 17.8 mm (halter_Left_anilha+1 × LeftForeArm) | punho dobrado E 15° D 14° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 88° cotoveloE 136° quadrilE 13° ombroE 67° punhoE 15° joelhoD 88° cotoveloD 136° quadrilD 13° ombroD 66° punhoD 14°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): costas apoiadas no banco -6.2 glúteo apoiado no banco -2.0 cabeça apoiada no banco -5.0 | ângulos-chave: cotovelo a 45–70° do tronco embaixo 56/55 | antebraço na vertical embaixo 1/0 | antebraço quase em pé o movimento todo 1/0 | cotovelo bem dobrado embaixo 136/136 | halteres ao lado do peito embaixo, mais abertos que os ombros 1.65 | pés nem colados nem abertos demais (padrão) 2.36 | ponta do pé pra frente ou um pouco pra fora (padrão) -1/-1 | os dois pés virados igual (padrão) 0 | um pé não fica à frente do outro (padrão) 0 | joelho na direção do pé (sem valgo) (padrão) 22/22 | coluna neutra (padrão) 1 | rigidez 0.0 mm | salto 2 mm
+    técnica (graus, mm, ×): cotovelo_tronco 35/35 braco_frente -62/-61 braco_elevacao 67/66 braco_plano -51/-52 braco_abertura 56/55 antebraco_vertical 1/0 pegada_largura 1.65 pes_largura 2.36 ponta_pe -1/-1 ponta_pe_diferenca 0 pes_alinhados 0 joelho_valgo 22/22 joelho_fora_do_pe -49/-49 coluna 1
+    corpo no apoio: afunda 6.2 mm (banco_estofado × Spine2)
+    OK

@@ -1,0 +1,47 @@
+{
+  "uuid": "bb673b75-dfee-407c-af40-7166908ff2b9",
+  "nome": "Supino Reto com Halteres",
+  "cena": "supino_reto_com_halteres",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral maior (porção esternal) · tríceps · deltoide anterior",
+  "padrao_movimento": "supino_reto",
+  "equipamento": "halteres",
+  "variacao": "banco reto",
+  "alvos": ["peitoral"],
+  "auxiliares": ["deltoide", "triceps"],
+  "camera": {"az": 62, "el": 16, "dist": 3.6, "alvo": [0, 0.2, 0.62]},
+  "ida_s": 1.5,
+  "movimento": "Deitado de costas no banco reto, com a cabeça, as costas e o glúteo apoiados e os pés chapados no chão, segura um halter em cada mão com as palmas viradas para os pés, com os braços estendidos e os halteres em cima dos ombros, sem encostar um no outro; desce os halteres até ficarem ao lado do peito, perto das axilas e na altura dos mamilos, com os antebraços na vertical e os cotovelos a cerca de 45–70° do tronco; empurra de volta até estender os cotovelos, sem travar.",
+  "cinesiologia": {
+    "plano": "transverso (adução horizontal do ombro), cadeia cinética aberta",
+    "articulacoes": "ombro (adução horizontal e flexão na subida, abdução horizontal e extensão na descida) e cotovelo (extensão na subida, flexão na descida); escápulas retraídas e paradas no banco",
+    "agonistas": "peitoral maior (porção esternal)",
+    "sinergistas": "peitoral maior (porção clavicular), deltoide anterior, tríceps braquial, peitoral menor e serrátil anterior",
+    "estabilizadores": "bíceps braquial — com halteres ele trabalha mais e o tríceps um pouco menos que na barra; peitoral e deltoide anterior trabalham igual (Saeterbakken 2011)",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "Graham JF. Exercise Technique: Dumbbell Bench Press. Strength Cond J. 2000;22(4):71-72.",
+    "ExRx.net — Dumbbell Bench Press. https://exrx.net/WeightExercises/PectoralSternal/DBBenchPress",
+    "ExRx.net — Bench Press Analyses. https://exrx.net/Kinesiology/BenchPress",
+    "Saeterbakken AH, van den Tillaar R, Fimland MS. A comparison of muscle activity and 1-RM strength of three chest-press exercises with different stability requirements. J Sports Sci. 2011;29(5):533-538.",
+    "Gillett MA. Kinesiology Corner: The Bench Press. Natl Strength Coaches Assoc J. 1981;3(1):52-53."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no banco", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3], "fonte": "Graham 2000 (\"feet flat on the floor and your head, shoulders, and buttocks evenly and firmly on the bench\")"},
+      {"nome": "glúteo apoiado no banco", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3], "fonte": "Graham 2000 (idem)"},
+      {"nome": "cabeça apoiada no banco", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3], "fonte": "Graham 2000 (idem)"}
+    ],
+    "angulos": [
+      {"nome": "braços estendidos em cima, sem travar", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 20], "fonte": "Graham 2000 (\"until the elbows are fully extended but not locked\")"},
+      {"nome": "halteres em cima dos ombros em cima", "medida": "braco_elevacao", "t": 0.0, "graus": [80, 100], "fonte": "ExRx — Dumbbell Bench Press (\"traveling inward over each shoulder at top\")"},
+      {"nome": "cotovelo a 45–70° do tronco embaixo", "medida": "braco_abertura", "t": 1.0, "graus": [45, 70], "fonte": "ExRx — Bench Press Analyses (\"a 45º to 70º angle between the shoulder and torso\"), a mesma faixa do supino com barra"},
+      {"nome": "antebraço na vertical embaixo", "medida": "antebraco_vertical", "t": 1.0, "graus": [0, 15], "fonte": "Graham 2000 (\"the forearms almost perpendicular to the floor\")"},
+      {"nome": "antebraço quase em pé o movimento todo", "medida": "antebraco_vertical", "t": "todos", "graus": [0, 15], "fonte": "Graham 2000 (idem)"},
+      {"nome": "cotovelo bem dobrado embaixo", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [105, 140], "fonte": "Gillett 1981 (\"from complete extension to about 120° of flexion\")"},
+      {"nome": "halteres ao lado do peito embaixo, mais abertos que os ombros", "medida": "pegada_largura", "t": 1.0, "faixa": [1.5, 2.0], "fonte": "Graham 2000 (\"the lateral aspect of the chest near the armpit, even with the nipple level\")"}
+    ]
+  }
+}
