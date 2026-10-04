@@ -1,0 +1,38 @@
+{
+  "uuid": "ee4b34f0-1d15-4282-9b85-ee0dd019a2de",
+  "nome": "Elevação Lateral com Halteres",
+  "cena": "elevacao_lateral_com_halteres",
+  "grupo": "Deltóide Lateral",
+  "subgrupo": "Deltoide lateral (médio)",
+  "padrao_movimento": "elevacao_lateral",
+  "equipamento": "halteres",
+  "variacao": "em pé",
+  "alvos": ["deltoide"],
+  "auxiliares": ["trapezio"],
+  "camera": {"az": 15, "el": 8, "dist": 4.4, "alvo": [0, 0, 1.1]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés na largura dos ombros, o tronco parado e um halter em cada mão ao lado do corpo, com as palmas viradas para o corpo e os cotovelos levemente dobrados; levanta os braços para os lados, um pouco à frente do corpo, até ficarem na altura dos ombros, com as palmas viradas para baixo, sem girar os braços e sem as mãos passarem dos cotovelos; desce devagar até os halteres voltarem ao lado do corpo.",
+  "cinesiologia": {
+    "plano": "plano da escápula (entre o frontal e o sagital), cadeia cinética aberta",
+    "articulacoes": "ombro (abdução no plano da escápula na subida, adução na descida) e escápula (rotação para cima); cotovelo parado levemente dobrado",
+    "agonistas": "deltoide médio (lateral) e supraespinal",
+    "sinergistas": "deltoide anterior, trapézio superior e serrátil anterior (rotação da escápula para cima)",
+    "estabilizadores": "manguito rotador, trapézio médio e inferior, eretores da espinha e abdominais (tronco parado)",
+    "fases": "subida concêntrica, descida excêntrica"
+  },
+  "referencias": [
+    "Coratella G, Tornatore G, Longo S, Esposito F, Cè E. An Electromyographic Analysis of Lateral Raise Variations and Frontal Raise in Competitive Bodybuilders. Int J Environ Res Public Health. 2020;17(17):6015."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [],
+    "angulos": [
+      {"nome": "halteres ao lado do corpo embaixo", "medida": "braco_elevacao", "t": 0.0, "graus": [5, 25]},
+      {"nome": "braço na altura do ombro em cima", "medida": "braco_elevacao", "t": 1.0, "graus": [80, 95], "fonte": "Coratella et al. 2020, Int J Environ Res Public Health 17(17):6015 (\"abduct laterally the humerus up to 90°\")"},
+      {"nome": "braço não passa da altura do ombro", "medida": "braco_elevacao", "t": "todos", "graus": [0, 95]},
+      {"nome": "sobe pelo lado, um pouco à frente (plano da escápula)", "medida": "braco_plano", "t": [0.5, 1.0], "graus": [5, 40]},
+      {"nome": "cotovelo levemente dobrado e parado", "medida": "flexao", "junta": "ForeArm", "t": "todos", "graus": [3, 30], "fonte": "Coratella et al. 2020, Int J Environ Res Public Health 17(17):6015 (\"the elbow was almost fully extended, and the wrist in line with the forearm\")"},
+      {"nome": "tronco parado", "medida": "tronco", "t": "todos", "graus": [0, 10]}
+    ]
+  }
+}
