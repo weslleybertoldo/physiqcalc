@@ -250,11 +250,14 @@ REGIOES = {             # partes do corpo pelo osso dono do vértice
     "pernaE": ("LeftLeg",), "pernaD": ("RightLeg",),
 }
 # (parte A, parte B, junta perto da qual o contato é o vinco normal, raio do vinco em m). Medido no agachamento
-# (04/10/2026) e conferido no close: a dobra da axila (braço × dorsal) vai até ~16 cm do ombro e a do cotovelo
-# dobrado a 120° até ~8 cm — pele encostando no vinco, sem atravessar. Fora desses raios vale o limite de 2 mm.
+# (04/10/2026) e conferido no close: a dobra da axila (braço × dorsal) vai até ~16 cm do ombro. Cotovelo dobrado
+# a ~120°: os eixos do braço e do antebraço ficam ~1 × d separados a d cm da junta e os dois raios (braço musculoso)
+# somam ~10 cm, então a pele de um encosta na do outro perto da junta — é o vinco, não atravessa. Medido no
+# agachamento (cotovelo 122°): 11 mm de sobreposição a 10 cm da junta, 4 mm a 12 cm, zero depois.
+# Fora desses raios vale o limite de 2 mm.
 PARES = (
     ("bracoE", "tronco", "LeftArm", 0.18), ("bracoD", "tronco", "RightArm", 0.18),
-    ("antebracoE", "bracoE", "LeftForeArm", 0.10), ("antebracoD", "bracoD", "RightForeArm", 0.10),
+    ("antebracoE", "bracoE", "LeftForeArm", 0.13), ("antebracoD", "bracoD", "RightForeArm", 0.13),
     ("coxaE", "coxaD", None, 0), ("pernaE", "pernaD", None, 0),
 )
 

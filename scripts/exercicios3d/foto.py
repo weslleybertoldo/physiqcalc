@@ -51,7 +51,7 @@ with sync_playwright() as pw:
     pag.on("pageerror", lambda e: erros.append(str(e)))
     for nome, p in pedidos.items():
         q = "&".join("%s=%s" % (k, val) for k, val in p.items())
-        pag.goto(URL + "&" + q)
+        pag.goto(URL + "&" + q, wait_until="domcontentloaded", timeout=180000)
         pag.wait_for_function("document.body.dataset['3d'] === 'pronto' || document.body.dataset['3d'] === 'erro'",
                               timeout=120000)
         if pag.evaluate("document.body.dataset['3d']") == "erro":

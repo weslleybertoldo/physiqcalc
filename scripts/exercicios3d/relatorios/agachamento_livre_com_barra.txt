@@ -1,0 +1,126 @@
+Agachamento Livre com Barra (f06e45bc-a6c7-4939-92d1-3d6fafa4a534) — checagem completa em 25 quadros: OK
+k00 t=0.000 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 12° joelhoE 7° cotoveloE 121° quadrilE 8° ombroE 38° punhoE 52° joelhoD 7° cotoveloD 122° quadrilD 8° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: joelho estendido em pé 7/7 | rigidez 0.0 mm | salto 0 mm
+    OK
+k01 t=0.004 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 11° joelhoE 11° cotoveloE 121° quadrilE 10° ombroE 38° punhoE 52° joelhoD 11° cotoveloD 122° quadrilD 9° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 11 mm
+    OK
+k02 t=0.017 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 11° joelhoE 17° cotoveloE 121° quadrilE 13° ombroE 38° punhoE 52° joelhoD 17° cotoveloD 122° quadrilD 13° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 22 mm
+    OK
+k03 t=0.038 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 10° joelhoE 24° cotoveloE 121° quadrilE 17° ombroE 38° punhoE 52° joelhoD 24° cotoveloD 122° quadrilD 17° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 23 mm
+    OK
+k04 t=0.067 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 10° joelhoE 31° cotoveloE 121° quadrilE 22° ombroE 38° punhoE 52° joelhoD 31° cotoveloD 122° quadrilD 22° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 23 mm
+    OK
+k05 t=0.103 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 9° joelhoE 38° cotoveloE 121° quadrilE 27° ombroE 38° punhoE 52° joelhoD 38° cotoveloD 122° quadrilD 27° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 21 mm
+    OK
+k06 t=0.146 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 7° joelhoE 44° cotoveloE 121° quadrilE 33° ombroE 38° punhoE 52° joelhoD 44° cotoveloD 122° quadrilD 33° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 22 mm
+    OK
+k07 t=0.196 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 6° joelhoE 51° cotoveloE 121° quadrilE 40° ombroE 38° punhoE 52° joelhoD 51° cotoveloD 122° quadrilD 39° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 25 mm
+    OK
+k08 t=0.250 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 58° cotoveloE 121° quadrilE 46° ombroE 38° punhoE 52° joelhoD 58° cotoveloD 122° quadrilD 46° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 29 mm
+    OK
+k09 t=0.309 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 3° joelhoE 64° cotoveloE 121° quadrilE 53° ombroE 38° punhoE 52° joelhoD 64° cotoveloD 122° quadrilD 53° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 32 mm
+    OK
+k10 t=0.371 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 3° joelhoE 70° cotoveloE 121° quadrilE 59° ombroE 38° punhoE 52° joelhoD 70° cotoveloD 122° quadrilD 59° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 34 mm
+    OK
+k11 t=0.435 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 3° joelhoE 75° cotoveloE 121° quadrilE 66° ombroE 38° punhoE 52° joelhoD 75° cotoveloD 122° quadrilD 66° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 37 mm
+    OK
+k12 t=0.500 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 5° joelhoE 81° cotoveloE 121° quadrilE 73° ombroE 38° punhoE 52° joelhoD 81° cotoveloD 122° quadrilD 73° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 38 mm
+    OK
+k13 t=0.565 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 6° joelhoE 85° cotoveloE 121° quadrilE 80° ombroE 38° punhoE 52° joelhoD 85° cotoveloD 122° quadrilD 80° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 39 mm
+    OK
+k14 t=0.629 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 8° joelhoE 90° cotoveloE 121° quadrilE 87° ombroE 38° punhoE 52° joelhoD 90° cotoveloD 122° quadrilD 87° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 39 mm
+    OK
+k15 t=0.691 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 10° joelhoE 94° cotoveloE 121° quadrilE 93° ombroE 38° punhoE 52° joelhoD 94° cotoveloD 122° quadrilD 93° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 39 mm
+    OK
+k16 t=0.750 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 12° joelhoE 97° cotoveloE 121° quadrilE 99° ombroE 38° punhoE 52° joelhoD 97° cotoveloD 122° quadrilD 99° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 37 mm
+    OK
+k17 t=0.804 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 13° joelhoE 100° cotoveloE 121° quadrilE 105° ombroE 38° punhoE 52° joelhoD 100° cotoveloD 122° quadrilD 105° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 35 mm
+    OK
+k18 t=0.854 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 15° joelhoE 103° cotoveloE 121° quadrilE 110° ombroE 38° punhoE 52° joelhoD 103° cotoveloD 122° quadrilD 110° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 32 mm
+    OK
+k19 t=0.897 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 16° joelhoE 105° cotoveloE 121° quadrilE 115° ombroE 38° punhoE 52° joelhoD 105° cotoveloD 122° quadrilD 115° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.7/+0.7 D +0.7/+0.7 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 29 mm
+    OK
+k20 t=0.933 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 17° joelhoE 107° cotoveloE 121° quadrilE 119° ombroE 38° punhoE 52° joelhoD 107° cotoveloD 122° quadrilD 119° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 24 mm
+    OK
+k21 t=0.962 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 18° joelhoE 108° cotoveloE 121° quadrilE 122° ombroE 38° punhoE 52° joelhoD 108° cotoveloD 122° quadrilD 122° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 20 mm
+    OK
+k22 t=0.983 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 18° joelhoE 109° cotoveloE 121° quadrilE 124° ombroE 38° punhoE 52° joelhoD 109° cotoveloD 122° quadrilD 124° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 14 mm
+    OK
+k23 t=0.996 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 19° joelhoE 110° cotoveloE 121° quadrilE 125° ombroE 38° punhoE 52° joelhoD 110° cotoveloD 122° quadrilD 125° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: - | rigidez 0.0 mm | salto 9 mm
+    OK
+k24 t=1.000 | L encosto -3.9 mm envolve 353° | R encosto -4.5 mm envolve 355° | peso×corpo folga 2.9 mm (barra_eixo × Spine2) | punho dobrado E 52° D 52° | vão da mão E 0.0 D 0.0 mm
+    juntas: pescoco 19° joelhoE 110° cotoveloE 121° quadrilE 126° ombroE 38° punhoE 52° joelhoD 110° cotoveloD 122° quadrilD 126° ombroD 38° punhoD 52°
+    pés (planta/calcanhar mm): E +0.6/+0.6 D +0.6/+0.6 | corpo×corpo (mm): bracoE×tronco 0.0 bracoD×tronco 0.0 antebracoE×bracoE 0.0 antebracoD×bracoD 0.0 coxaE×coxaD 0.0 pernaE×pernaD 0.0
+    zonas (mm): barra apoiada nas costas 2.9 | ângulos-chave: coxa paralela ao chão embaixo 4/4 tronco inclinado à frente embaixo 40 joelho na direção do pé (sem valgo) -14/-14 | rigidez 0.0 mm | salto 3 mm
+    OK

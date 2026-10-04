@@ -1,0 +1,30 @@
+{
+ "boneco": {
+  "v": "1791091845",
+  "glb": "/exercicios3d/boneco-1791091845.glb",
+  "mapa": "/exercicios3d/musculos-1791091845.png"
+ },
+ "exercicios": {
+  "f06e45bc-a6c7-4939-92d1-3d6fafa4a534": {
+   "v": "1791096475",
+   "movimento": "/exercicios3d/f06e45bc-a6c7-4939-92d1-3d6fafa4a534-1791096475.glb",
+   "foto": "/exercicios3d/f06e45bc-a6c7-4939-92d1-3d6fafa4a534-1791096475.webp",
+   "bytes": 68892,
+   "alvos": [
+    15,
+    8
+   ],
+   "auxiliares": [
+    2,
+    14,
+    9
+   ],
+   "camera": {
+    "az": 54,
+    "el": 8,
+    "dist": 4.4
+   },
+   "ida_s": 1.5
+  }
+ }
+}
