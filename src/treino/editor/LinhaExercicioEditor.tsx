@@ -137,7 +137,7 @@ export function LinhaExercicioEditor({
       <span className="flex w-3.5 flex-none justify-center text-[#52525B]">
         {!somenteLeitura && !listaFixa ? alca : <GripVertical aria-hidden className="h-4 w-4 opacity-30" />}
       </span>
-      <MiniaturaGif url={ex.imagem_url} nome={ex.nome} className="h-[42px] w-[46px] rounded-[11px]" />
+      <MiniaturaGif url={ex.imagem_url} exercicioId={ex.exercicio_id} nome={ex.nome} className="h-[42px] w-[46px] rounded-[11px]" />
       <div className="min-w-0 flex-1">
         <b className="block truncate text-[13.5px] font-semibold text-texto" title={ex.nome}>{ex.nome}</b>
         <span className="mt-0.5 block truncate text-[11.5px] text-texto-3" title={ex.subtitulo}>{ex.subtitulo}</span>

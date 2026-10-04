@@ -5,7 +5,7 @@ import { usePowerSync } from "@powersync/react";
 import { CalendarDays, CheckCircle2, Dumbbell, ListChecks, Sparkles, Target } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { resolverImagem } from "@/lib/imagemExercicio";
+import { fotoDoExercicio } from "@/lib/exercicios3d";
 import { useSessao } from "@/nucleo/sessao";
 import { matriculaDoApp } from "@/nucleo/situacao";
 import { aplicarTreinoPronto, semanaDoAluno, treinoEscolhido } from "@/app-aluno/sozinho/aplicarTreino";
@@ -234,7 +234,7 @@ function DetalheTreino({ t }: { t: TreinoPronto }) {
             <Chip tom="g">{diasDoGrupo(g.dias).toUpperCase()}</Chip>
           </div>
           {g.exercicios.map((e) => {
-            const img = resolverImagem(e.exercicio?.imagem_url ?? null);
+            const img = fotoDoExercicio(e.exercicio_id, e.exercicio?.imagem_url ?? null);
             return (
               <Cartao key={`${g.letra}-${e.ordem}`} className="flex items-center gap-3 px-3 py-2.5" data-exercicio-pronto={e.exercicio?.nome ?? e.exercicio_id}>
                 <span className="flex h-[54px] w-[54px] flex-none items-center justify-center overflow-hidden rounded-[14px] border border-linha bg-superficie">

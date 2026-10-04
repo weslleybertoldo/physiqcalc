@@ -205,7 +205,7 @@ export function TrocarExercicio({
           (semNaAcademia || bloqueado) && !marcado && "opacity-50",
         )}
       >
-        <MiniaturaGif url={e.imagem_url} nome={e.nome} semPlay className="h-11 w-12 rounded-[12px]" />
+        <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} semPlay className="h-11 w-12 rounded-[12px]" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13.5px] font-semibold text-texto" data-trocar-nome>{e.nome}</span>
           <span className="block truncate text-[11.5px] text-texto-3">{sub}</span>

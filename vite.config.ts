@@ -60,9 +60,20 @@ export default defineConfig(({ mode }) => {
         // WebP dos exercícios embutidos (public/exercicios, vários MB) ficam FORA do precache:
         // a 1ª visita web não pode pesar; entram no cache em runtime conforme o aluno abre
         // (rota abaixo). No APK são arquivos locais do bundle — nem passam pela rede.
-        globIgnores: ["**/node_modules/**/*", "**/exercicios/**"],
+        // O 3D dos exercícios (public/exercicios3d: boneco ~2,5 MB + movimentos + transcoder) segue a mesma regra.
+        globIgnores: ["**/node_modules/**/*", "**/exercicios/**", "**/exercicios3d/**"],
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
+          {
+            // 3D dos exercícios (boneco, movimentos, fotos; nome com a versão → imutável) — o transcoder também
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/exercicios3d/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "exercicios3d-local-cache",
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
           {
             // WebP dos exercícios servidos pela própria origem (nome do arquivo leva a versão → imutável)
             urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/exercicios/"),

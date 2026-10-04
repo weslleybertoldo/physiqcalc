@@ -183,7 +183,7 @@ export function SheetMeuTreino({
       <div key={`${e.isPessoal ? "p" : "g"}-${e.id}`} className="flex items-center gap-2" data-opcao-exercicio={e.id} data-opcao-escolhida={sel ? "1" : "0"}>
         <button type="button" onClick={() => alternar(e)} aria-pressed={sel}
           className={cn("flex min-h-[52px] min-w-0 flex-1 items-center gap-3 rounded-2xl border px-2 py-1.5 text-left transition-colors", sel ? "border-violeta/55 bg-violeta/10" : "border-linha bg-superficie hover:border-linha-2")}>
-          <MiniaturaGif url={e.imagem_url} nome={e.nome} semPlay className="h-10 w-11 rounded-[11px]" />
+          <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} semPlay className="h-10 w-11 rounded-[11px]" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13.5px] font-semibold text-texto">{e.nome}</span>
             <span className="block truncate text-[11.5px] text-texto-3">{e.isPessoal ? "Meu exercício" : mostrarGrupo ? nomeDoBloco(e.grupo_muscular) : e.grupo_muscular}</span>

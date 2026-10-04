@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bancada 3D</title>
+<style>
+  html, body { margin: 0; background: #0f0f12; }
+  canvas { display: block; width: var(--w, 600px); height: var(--h, 400px); touch-action: none; }
+  body.cheia canvas { width: 100vw; height: 100vh; }
+  #erro { color: #f88; font: 14px sans-serif; position: fixed; top: 8px; left: 8px; }
+</style>
+</head>
+<body>
+<canvas></canvas>
+<div id="erro"></div>
+<script type="module" src="./bancada.ts"></script>
+</body>
+</html>

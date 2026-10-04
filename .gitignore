@@ -33,3 +33,9 @@ keystore_base64.txt
 supabase/.temp/
 deno.lock
 .env.admin-teste
+
+# fábrica dos exercícios 3D (gerados localmente)
+scripts/exercicios3d/tex/
+scripts/exercicios3d/.venv/
+scripts/exercicios3d/build/
+scripts/exercicios3d/**/__pycache__/

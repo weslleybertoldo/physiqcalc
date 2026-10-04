@@ -127,7 +127,7 @@ export function FolhaBiblioteca({
                     className="flex w-full items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-2 text-left disabled:opacity-60"
                     data-biblioteca-item={e.nome}
                   >
-                    <MiniaturaGif url={e.imagem_url} nome={e.nome} className="h-11 w-[50px] rounded-xl" semPlay />
+                    <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} className="h-11 w-[50px] rounded-xl" semPlay />
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-[13.5px] font-semibold text-texto">{e.nome}</b>
                       <span className="block truncate text-[11.5px] text-texto-3">{subtituloDoExercicio(e)}</span>
@@ -366,7 +366,7 @@ export function FolhaEditarExercicio({
     >
       <div className="flex flex-col gap-4" data-folha-editar={ex.chave}>
         <div className="flex items-center gap-3">
-          <MiniaturaGif url={ex.imagem_url} nome={ex.nome} className="h-[84px] w-[96px] rounded-2xl" semPlay />
+          <MiniaturaGif url={ex.imagem_url} exercicioId={ex.exercicio_id} nome={ex.nome} className="h-[84px] w-[96px] rounded-2xl" semPlay />
           <div className="min-w-0 text-[12.5px] leading-relaxed text-texto-2">
             O aluno vê:
             <b className="mt-0.5 block text-[15px] font-semibold text-texto" data-editar-previa>{previa ?? "—"}</b>
