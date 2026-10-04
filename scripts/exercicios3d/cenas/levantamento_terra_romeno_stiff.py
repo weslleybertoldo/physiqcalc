@@ -2,6 +2,7 @@
 # t = 0 em pé, barra na frente das coxas · t = 1 tronco inclinado, barra logo abaixo dos joelhos.
 # Joelhos levemente dobrados, coluna neutra, quadril vai pra trás e a barra desce rente às pernas.
 import math
+import numpy as np
 from mathutils import Vector, Matrix
 import poses3d as p3
 import equip3d as e3
@@ -16,7 +17,7 @@ INCLINA = (0, 70)                # tronco à frente, graus da vertical: em pé �
 RECUA = (0.0, 0.22)              # quadril pra trás (m)
 JOELHO = (15, 20)                # flexão dos joelhos (graus): em pé → embaixo; o quadril desce o que precisar
 FOLGA_PERNA = 0.012              # pele da perna → barra (m): rente, sem encostar
-RAIO_COXA, RAIO_CANELA = 0.118, 0.05   # do eixo do osso até a pele da frente (medido na checagem: coxa ~11 cm)
+PERNAS = ("LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg")
 PALMA_Q = Vector((0, 1, 0))      # pegada pronada: palma virada pro corpo
 DEDOS_Q = Vector((0, 0, -1))
 
@@ -40,13 +41,12 @@ def montar(bon):
     tornoz = p3.ponta(rig, "LeftLeg")
 
     def frente_da_perna(z):
-        """y da pele da frente da perna esquerda na altura z (coxa ou canela)."""
-        q, j, t_ = p3.cabeca(rig, "LeftUpLeg"), p3.cabeca(rig, "LeftLeg"), p3.cabeca(rig, "LeftFoot")
-        for a, b, r in ((q, j, RAIO_COXA), (j, t_, RAIO_CANELA)):
-            if min(a.z, b.z) <= z <= max(a.z, b.z):
-                f = (z - a.z) / (b.z - a.z)
-                return a.y + (b.y - a.y) * f - r
-        return t_.y - RAIO_CANELA
+        """y da pele da frente das pernas na altura z, medido na malha posada (com um raio fixo pra coxa e outro
+        pra canela a barra passava a 4–6 cm dos joelhos no meio da descida — a checagem "rente às pernas" pegou)."""
+        co, _, (nomes, dono) = ck._avaliar(bon.corpo, 1)
+        P = co[np.array([n in PERNAS for n in nomes] + [False])[dono]]
+        faixa = np.abs(P[:, 2] - z) < 0.015
+        return float(P[faixa, 1].min()) if faixa.any() else float(P[:, 1].min())
 
     def pose(t):
         """t=0 em pé, t=1 tronco inclinado (barra abaixo dos joelhos)."""
@@ -80,7 +80,9 @@ def montar(bon):
         p3.atualizar()
         for lado, s in (("Left", 1), ("Right", -1)):
             g = centro + Vector((s * GRIP_X, 0, 0))
-            maos.segurar(lado, g, DEDOS_Q, PALMA_Q, polo=S[lado] + Vector((s * 0.25, 0.5, 0.2)), alinhar=0.5)
+            # vão da mão 2 mm atrás do eixo: a palma afundava 4–5 mm na barra (a checagem pegou 5,1 mm num quadro)
+            maos.segurar(lado, g - PALMA_Q * 0.002, DEDOS_Q, PALMA_Q, polo=S[lado] + Vector((s * 0.25, 0.5, 0.2)),
+                         alinhar=0.5)
         for lado in ("Left", "Right"):               # dedos e polegar fecham até a pele encostar na barra
             antes = pose.dedos.get(lado, {}).get("Thumb") if t > 0 else None
             pose.dedos[lado] = pg.fechar_em_volta(bon, lado, centro, Vector((1, 0, 0)), RAIO_BARRA,
