@@ -358,12 +358,43 @@ def posicoes_das_juntas(rig):
         _JUNTA_POS[n] = tuple(_cab(rig, n))
 
 
-def zonas(co, tri, nomes, dono, equipamentos, zonas_ficha):
-    """Zona de apoio da ficha (barra nas costas, quadril no banco…): o equipamento TEM que encostar ali."""
+def _zona_no_apoio(V, raizes, nome):
+    """Distância (m) da pele da zona até o apoio (banco: caixas fechadas e convexas), − = pele dentro dele.
+    Medido dos vértices da pele até o apoio: do apoio até a pele dava profundidade falsa na borda da zona (a pele
+    da zona é um pedaço aberto e, perto da borda, a normal do triângulo mais perto aponta de lado — glúteo
+    "−29,5 mm" com o glúteo só encostando, supino, 04/10/2026)."""
+    perto = 1e9
+    for raiz in raizes:
+        if raiz.name != nome:
+            continue
+        for ob in _malhas(raiz):
+            eco, etri = _avaliar_simples(ob)
+            lo, hi = eco.min(axis=0) - 0.05, eco.max(axis=0) + 0.05
+            perto_v = V[((V >= lo) & (V <= hi)).all(axis=1)]
+            if not len(perto_v):
+                continue
+            bvh = _bvh(eco, etri)
+            for p in perto_v:
+                v = Vector(p)
+                loc, nor, idx, dist = bvh.find_nearest(v)
+                if loc is not None:
+                    perto = min(perto, -dist if (v - loc).dot(nor) < 0 else dist)
+    return perto
+
+
+def zonas(co, tri, nomes, dono, equipamentos, zonas_ficha, apoios=()):
+    """Zona de apoio da ficha (barra nas costas, quadril no banco…): o equipamento TEM que encostar ali.
+    apoios: nomes dos equipamentos que são apoio do corpo (banco) — medidos da pele até eles (_zona_no_apoio)."""
     falhas, medidas = [], {}
     for z in zonas_ficha:
         ossos = set(z["partes"])
         m = np.array([n in ossos for n in nomes] + [False])[dono]
+        if z["equipamento"] in apoios:
+            mm = _zona_no_apoio(co[m], equipamentos, z["equipamento"]) * 1000
+            medidas[z["nome"]] = mm
+            if not z["mm"][0] <= mm <= z["mm"][1]:
+                falhas.append("%s: %.1f mm (esperado %g a %g)" % (z["nome"], mm, z["mm"][0], z["mm"][1]))
+            continue
         tz = tri[m[tri].all(axis=1)]
         bvh_z = _bvh(co, tz)
         perto = 1e9
@@ -485,7 +516,7 @@ def completa(bon, cena, checagens, t, rotulo, estado):
                            ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True))),
                            ("corpo", corpo_x_corpo(co, tri, nomes, dono)),
                            ("zonas", zonas(co, tri, nomes, dono, cena.equipamentos + cena.apoios,
-                                           checagens.get("zonas", []))),
+                                           checagens.get("zonas", []), apoios=[a.name for a in cena.apoios])),
                            ("angulos", angulos_chave(rig, checagens.get("angulos", []) + tc.regras_padrao(checagens),
                                                      t))):
         itens[nome] = med

@@ -1,0 +1,48 @@
+{
+  "uuid": "23d01e92-0780-4bbf-9451-0c04d63600cf",
+  "nome": "Supino Reto com Barra",
+  "cena": "supino_reto_com_barra",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral maior (porção esternal) · tríceps · deltoide anterior",
+  "padrao_movimento": "supino_reto",
+  "equipamento": "barra",
+  "variacao": "banco reto",
+  "alvos": ["peitoral"],
+  "auxiliares": ["deltoide", "triceps"],
+  "camera": {"az": 62, "el": 16, "dist": 3.6, "alvo": [0, 0.2, 0.62]},
+  "ida_s": 1.5,
+  "movimento": "Deitado de costas no banco reto, com a cabeça, as costas e o glúteo apoiados e os pés chapados no chão, segura a barra com as palmas viradas para os pés (pegada pronada), cerca de 1,5 vez a largura dos ombros, com os braços estendidos e a barra em cima dos ombros; desce a barra até encostar de leve no peito, na linha dos mamilos, com os cotovelos a cerca de 45–70° do tronco e os antebraços na vertical; empurra a barra de volta até estender os cotovelos, sem travar.",
+  "cinesiologia": {
+    "plano": "transverso (adução horizontal do ombro), cadeia cinética aberta",
+    "articulacoes": "ombro (adução horizontal e flexão na subida, abdução horizontal e extensão na descida) e cotovelo (extensão na subida, flexão na descida); escápulas retraídas e paradas no banco",
+    "agonistas": "peitoral maior (porção esternal)",
+    "sinergistas": "peitoral maior (porção clavicular), deltoide anterior, tríceps braquial e coracobraquial",
+    "estabilizadores": "bíceps braquial (cabeça curta)",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "ExRx.net — Barbell Bench Press. https://exrx.net/WeightExercises/PectoralSternal/BBBenchPress",
+    "ExRx.net — Bench Press Analyses. https://exrx.net/Kinesiology/BenchPress",
+    "Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM. Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise. Int J Environ Res Public Health. 2020;17(19):7339.",
+    "Green CM, Comfort P. The affect of grip width on bench press performance and risk of injury. Strength Cond J. 2007;29(5):10-14.",
+    "Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. Int J Environ Res Public Health. 2021;18(12):6444.",
+    "Gillett MA. Kinesiology Corner: The Bench Press. Natl Strength Coaches Assoc J. 1981;3(1):52-53."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no banco", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3], "fonte": "Saeterbakken 2021 (\"The head, shoulders, and buttocks had to be in contact with the bench during the entire lift\")"},
+      {"nome": "glúteo apoiado no banco", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3], "fonte": "Saeterbakken 2021 (idem)"},
+      {"nome": "cabeça apoiada no banco", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3], "fonte": "Saeterbakken 2021 (idem)"}
+    ],
+    "angulos": [
+      {"nome": "braços estendidos em cima, sem travar", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 20], "fonte": "Rodríguez-Ridao 2020 (\"until the elbows were extended (avoiding elbow hyperextension)\")"},
+      {"nome": "barra em cima dos ombros em cima", "medida": "braco_elevacao", "t": 0.0, "graus": [80, 100], "fonte": "ExRx — Bench Press Analyses (\"balanced directly over shoulder joint\")"},
+      {"nome": "cotovelo a 45–70° do tronco embaixo", "medida": "braco_abertura", "t": 1.0, "graus": [45, 70], "fonte": "ExRx — Bench Press Analyses (\"a 45º to 70º angle between the shoulder and torso\")"},
+      {"nome": "antebraço na vertical embaixo", "medida": "antebraco_vertical", "t": 1.0, "graus": [0, 15], "fonte": "ExRx — Bench Press Analyses (\"with the forearms vertical at the lowest bench press position\", citando Rippetoe)"},
+      {"nome": "antebraço quase em pé o movimento todo", "medida": "antebraco_vertical", "t": "todos", "graus": [0, 25], "fonte": "ExRx — Bench Press Analyses (idem); folga no meio da descida, onde a pegada fixa não deixa o antebraço ficar exatamente em pé"},
+      {"nome": "cotovelo bem dobrado embaixo", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [105, 140], "fonte": "Gillett 1981 (\"from complete extension to about 120° of flexion\"); no boneco a barra encosta no peito com o antebraço na vertical em ~135°"},
+      {"nome": "pegada ~1,5× a largura dos ombros", "medida": "pegada_largura", "t": "todos", "faixa": [1.5, 2.0], "fonte": "ExRx — Bench Press Analyses (\"a standard bench press grip of 1.5 to 1.7 times the biacromial width\"); Rodríguez-Ridao 2020 (150% da biacromial). A medida daqui divide pela distância entre as articulações dos ombros, menor que a biacromial (de acrômio a acrômio): por isso a faixa fica acima de 1,5–1,7"}
+    ]
+  }
+}

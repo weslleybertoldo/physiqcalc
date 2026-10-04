@@ -86,3 +86,45 @@ def halter(nome="halter", pegada=0.13, raio=0.016, raio_anilha=0.07, larg_anilha
         _cilindro(nome + "_anilha%+d" % s, raio_anilha, larg_anilha, (x, 0, 0), rot, mat_borracha(), vertices=40,
                   pai=raiz)
     return raiz
+
+
+def banco(nome="banco", y0=-0.34, y1=0.86, topo=0.44, largura=0.30, espessura=0.06):
+    """Banco reto ao longo do Y (de y0 a y1, cabeça pra +Y), estofado com o topo em `topo` m e estrutura embaixo:
+    viga central, 2 colunas e 2 pés no chão (supinos, elevação pélvica — lotes de 04/10/2026)."""
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    meio, compr = (y0 + y1) / 2, y1 - y0
+    caixa(nome + "_estofado", (0, meio, topo - espessura / 2), (largura, compr, espessura), mat_estofado(),
+          pai=raiz, chanfro=0.015)
+    base = topo - espessura                                   # embaixo do estofado
+    caixa(nome + "_viga", (0, meio, base - 0.025), (0.08, compr - 0.16, 0.05), mat_estrutura(), pai=raiz)
+    for y in (y0 + 0.10, y1 - 0.10):
+        caixa(nome + "_coluna", (0, y, (base - 0.05) / 2 + 0.02), (0.06, 0.06, base - 0.09), mat_estrutura(),
+              pai=raiz)
+        caixa(nome + "_pe", (0, y, 0.02), (largura + 0.10, 0.07, 0.04), mat_estrutura(), pai=raiz)
+    return raiz
+
+
+def banco_inclinado(nome="banco", angulo=30, assento=0.44, junta_y=0.0, encosto=0.95, largura=0.28, espessura=0.06):
+    """Banco inclinado (supino inclinado, 04/10/2026): assento reto com o topo em `assento` m, à frente (−Y) da junta,
+    e encosto subindo pra +Y a `angulo` graus da horizontal a partir da junta (topo do estofado passa pela junta)."""
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    a = math.radians(angulo)
+    u = Vector((0, math.cos(a), math.sin(a)))                 # ao longo do encosto, pra cima
+    n = Vector((0, -math.sin(a), math.cos(a)))                # normal do encosto (pro lado do corpo)
+    junta = Vector((0, junta_y, assento))
+    caixa(nome + "_assento", (0, junta_y - 0.17, assento - espessura / 2), (largura + 0.02, 0.34, espessura),
+          mat_estofado(), pai=raiz, chanfro=0.015)
+    caixa(nome + "_encosto", junta + u * (encosto / 2) - n * (espessura / 2), (largura, encosto, espessura),
+          mat_estofado(), rot=(a, 0, 0), pai=raiz, chanfro=0.015)
+    meio_enc = junta + u * (encosto * 0.55) - n * espessura   # embaixo do meio do encosto
+    caixa(nome + "_coluna_encosto", (0, meio_enc.y, (meio_enc.z + 0.04) / 2), (0.06, 0.06, meio_enc.z - 0.04),
+          mat_estrutura(), pai=raiz)
+    caixa(nome + "_coluna_assento", (0, junta_y - 0.17, (assento - espessura + 0.04) / 2),
+          (0.06, 0.06, assento - espessura - 0.04), mat_estrutura(), pai=raiz)
+    y0, y1 = junta_y - 0.30, meio_enc.y + 0.10
+    caixa(nome + "_base", (0, (y0 + y1) / 2, 0.03), (0.08, y1 - y0, 0.04), mat_estrutura(), pai=raiz)
+    for y in (y0 + 0.035, y1 - 0.035):
+        caixa(nome + "_pe", (0, y, 0.02), (largura + 0.12, 0.07, 0.04), mat_estrutura(), pai=raiz)
+    return raiz
