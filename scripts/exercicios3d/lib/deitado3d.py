@@ -159,6 +159,15 @@ def polo_cotovelo_faixa(rig, ombro, punho, braco, antebraco, s, faixa, peso=3.0)
     e2 = u.cross(e1)
     if e2.dot(fora) < 0:
         e2.negate()
+    # perto do topo (cotovelo pouco dobrado) vale o ponto mais baixo: a faixa puxando o cotovelo ali deitava o
+    # antebraço 31° no inclinado; ela pesa inteira só embaixo (cotovelo dobrado 140°). Rampa suave de 65° a 140°,
+    # medida no inclinado com 25 quadros (04/10/2026): de 50° a 90° o cotovelo saltava 108 mm entre 2 quadros;
+    # de 40° a 130° o antebraço deitava 26° em t=0,25 (regra ≤ 25); de 30° a 130°, 30° e salto de 113 mm;
+    # de 65° a 140° o pior quadro fica em 23° e o maior salto em 55 mm (limite 80)
+    dobra = 180 - math.degrees(math.acos(max(-1.0, min(1.0, (braco ** 2 + antebraco ** 2 - d.length ** 2)
+                                                         / (2 * braco * antebraco)))))
+    x = max(0.0, min(1.0, (dobra - 65) / 75))
+    peso *= x * x * (3 - 2 * x)
     melhor = None
     for graus in range(-120, 121):
         f = math.radians(graus)

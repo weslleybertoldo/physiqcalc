@@ -1,0 +1,46 @@
+{
+  "uuid": "f09b4daa-fcfd-4baa-9696-0d9571457ee9",
+  "nome": "Supino Inclinado com Barra",
+  "cena": "supino_inclinado_com_barra",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral maior (porção clavicular) · deltoide anterior · tríceps",
+  "padrao_movimento": "supino_inclinado",
+  "equipamento": "barra",
+  "variacao": "banco inclinado",
+  "alvos": ["peitoral"],
+  "auxiliares": ["deltoide", "triceps"],
+  "camera": {"az": 70, "el": 12, "dist": 3.6, "alvo": [0, 0.1, 0.8]},
+  "ida_s": 1.5,
+  "movimento": "Sentado no banco inclinado a 30°, com o glúteo no assento, as costas e a cabeça no encosto e os pés chapados no chão, segura a barra com as palmas viradas para os pés (pegada pronada), cerca de 1,5 vez a largura dos ombros, com os braços estendidos e a barra em cima dos ombros; desce a barra até encostar de leve na parte de cima do peito, com os cotovelos a cerca de 45–70° do tronco e os antebraços na vertical; empurra a barra de volta até estender os cotovelos, sem travar.",
+  "cinesiologia": {
+    "plano": "oblíquo, entre o transverso e o sagital (flexão com adução horizontal do ombro), cadeia cinética aberta",
+    "articulacoes": "ombro (flexão e adução horizontal na subida, extensão e abdução horizontal na descida) e cotovelo (extensão na subida, flexão na descida); escápulas retraídas e paradas no encosto",
+    "agonistas": "peitoral maior (porção clavicular)",
+    "sinergistas": "peitoral maior (porção esternal), deltoide anterior, tríceps braquial e coracobraquial",
+    "estabilizadores": "bíceps braquial (cabeça curta)",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM. Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise. Int J Environ Res Public Health. 2020;17(19):7339.",
+    "Lauver JD, Cayot TE, Scheuermann BW. Influence of bench angle on upper extremity muscular activation during bench press exercise. Eur J Sport Sci. 2016;16(3):309-316.",
+    "Trebs AA, Brandenburg JP, Pitney WA. An electromyography analysis of 3 muscles surrounding the shoulder joint during the performance of a chest press exercise at several angles. J Strength Cond Res. 2010;24(7):1925-1930.",
+    "ExRx.net — Barbell Incline Bench Press. https://exrx.net/WeightExercises/PectoralClavicular/BBInclineBenchPress",
+    "ExRx.net — Bench Press Analyses. https://exrx.net/Kinesiology/BenchPress"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no encosto", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3]},
+      {"nome": "glúteo apoiado no assento", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3]},
+      {"nome": "cabeça apoiada no encosto", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3]}
+    ],
+    "angulos": [
+      {"nome": "braços estendidos em cima, sem travar", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 20], "fonte": "Rodríguez-Ridao 2020 (\"until the elbows were extended (avoiding elbow hyperextension)\")"},
+      {"nome": "barra na vertical dos ombros em cima", "medida": "braco_elevacao", "t": 0.0, "graus": [108, 132], "fonte": "ExRx — Bench Press Analyses (\"balanced directly over shoulder joint\"); com o tronco a 30° o braço na vertical fica a ~120° do tronco"},
+      {"nome": "cotovelo a 45–70° do tronco embaixo", "medida": "braco_abertura", "t": 1.0, "graus": [45, 70], "fonte": "ExRx — Bench Press Analyses (\"a 45º to 70º angle between the shoulder and torso\")"},
+      {"nome": "antebraço quase na vertical embaixo", "medida": "antebraco_vertical", "t": 1.0, "graus": [0, 18], "fonte": "ExRx — Bench Press Analyses (\"with the forearms vertical at the lowest bench press position\"); NSCA (Graham 2000: \"almost perpendicular to the floor\"). No inclinado a 30° o braço curto do boneco (0,254 m) não deixa menos de ~15–16° com o cotovelo a 45°+ e a barra no peito de cima (medido 04/10/2026)"},
+      {"nome": "antebraço quase em pé o movimento todo", "medida": "antebraco_vertical", "t": "todos", "graus": [0, 25], "fonte": "ExRx — Bench Press Analyses (idem)"},
+      {"nome": "pegada ~1,5× a largura dos ombros", "medida": "pegada_largura", "t": "todos", "faixa": [1.5, 2.0], "fonte": "Rodríguez-Ridao 2020 (150% da biacromial, em todas as inclinações); a medida daqui divide pela distância entre as articulações dos ombros, menor que a biacromial"}
+    ]
+  }
+}
