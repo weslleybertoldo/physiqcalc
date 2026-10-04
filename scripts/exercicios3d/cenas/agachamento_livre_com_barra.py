@@ -110,7 +110,7 @@ def montar(bon):
         p3.girar_osso(rig, "Hips", p3.rot_x(inclina), mover=Vector((0, recua, desce)))
         R = p3.rot_x(inclina)
         pesc = p3.cabeca(rig, "Neck")
-        centro = pesc + R @ Vector((0, 0.075, -0.035))
+        centro = pesc + R @ Vector((0, 0.075, -0.039))   # apoiada no trapézio (zona da ficha: 0–5 mm)
         barra.location = centro
         barra.rotation_mode = "XYZ"
         barra.rotation_euler = R.to_euler()

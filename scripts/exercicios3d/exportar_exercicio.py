@@ -2,7 +2,7 @@
 # (falhou = para, sem exportar), assa a pose de cada quadro em keyframes e grava em build/exercicios/:
 #   <uuid>-raw.glb  — só o esqueleto animado + o equipamento (o corpo vem do boneco único);
 #   <cena>.blend    — cena completa pronta pra render de vídeo (texturas embutidas), a cópia que vai pro Drive.
-#   $BLENDER -b -P exportar_exercicio.py -- <uuid> [checar]      (checar = só a checagem, sem gravar nada)
+#   $BLENDER -b -P exportar_exercicio.py -- <uuid> [checar [quadros]]   (checar = só a checagem, sem gravar o GLB)
 import bpy, importlib, json, os, sys, time
 from mathutils import Matrix
 AQUI = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +16,7 @@ import checagem3d as ck
 args = sys.argv[sys.argv.index("--") + 1:]
 UUID = args[0]
 SO_CHECAR = len(args) > 1 and args[1] == "checar"
-NQ = 24                                        # 25 quadros de ida (o app faz a volta)
+NQ = int(args[2]) if len(args) > 2 else 24        # 25 quadros de ida (o app faz a volta); menos só pra testar
 FPS = 16                                       # 25 quadros = 1,5 s descendo
 T0 = time.time()
 
@@ -35,26 +35,44 @@ def arvore(raiz):
 objs_eq = [o for raiz in c.equipamentos for o in arvore(raiz)]
 
 # ── 1) checagem + captura da pose de cada quadro ───────────────────────────────────────────────────────
-resultados, quadros = [], []
+resultados, quadros, estado = [], [], {}
+pontos = {"mao_esq": {}, "mao_dir": {}, "pe_esq": {}, "pe_dir": {}}   # alvos dos closes (foto.py)
 for k in range(NQ + 1):
     t = p3.suave(k / NQ)
     c.pose(t)
     p3.atualizar()
-    r = ck.quadro(bon, equipamentos=c.equipamentos, pegadas=c.pegadas, rotulo="k%02d t=%.3f" % (k, t),
-                  apoio_mm=c.apoio_mm)
+    r = ck.completa(bon, c, ficha.get("checagens", {}), t, "k%02d t=%.3f" % (k, t), estado)
     r["info"] = c.info()
     resultados.append(r)
+    if k in (0, NQ // 2, NQ):
+        chave = "%g" % round(t, 2)
+        for nome, osso in (("mao_esq", "LeftHandMiddle1"), ("mao_dir", "RightHandMiddle1")):
+            pontos[nome][chave] = list(p3.cabeca(rig, osso))
+        for nome, L in (("pe_esq", "Left"), ("pe_dir", "Right")):
+            meio = (p3.cabeca(rig, L + "Foot") + p3.cabeca(rig, L + "ToeBase")) / 2
+            pontos[nome][chave] = [meio.x, meio.y, 0.05]
     locais = {pb.name: rig.convert_space(pose_bone=pb, matrix=pb.matrix, from_space="POSE", to_space="LOCAL").copy()
               for pb in rig.pose.bones}
     quadros.append((locais, {o.name: o.matrix_world.copy() for o in objs_eq}))
 ok = ck.resumo(resultados)
 os.makedirs(config.RELATORIOS, exist_ok=True)
+with open(os.path.join(config.RELATORIOS, ficha["cena"] + ".json"), "w") as fh:
+    json.dump({k: {t_: [round(x, 4) for x in p] for t_, p in v.items()} for k, v in pontos.items()}, fh, indent=1)
 with open(os.path.join(config.RELATORIOS, ficha["cena"] + ".txt"), "w") as fh:
-    fh.write("%s (%s) — checagem em %d quadros: %s\n" % (ficha["nome"], UUID, len(resultados), "OK" if ok else "FALHOU"))
+    fh.write("%s (%s) — checagem completa em %d quadros: %s\n" % (ficha["nome"], UUID, len(resultados), "OK" if ok else "FALHOU"))
     for r in resultados:
         peg = " | ".join("%s encosto %+.1f mm envolve %.0f°" % (l[0], g["encosto"], g["envolve"]) for l, g in r["pegadas"].items())
-        fh.write("%s | %s | peso×corpo folga %.1f mm (%s) | %s | %s\n" % (
-            r["rotulo"], peg, r["folga"], r["onde"], r["info"], "OK" if not r["falhas"] else "FALHA: " + "; ".join(r["falhas"])))
+        it = r["itens"]
+        fh.write("%s | %s | peso×corpo folga %.1f mm (%s) | %s\n" % (r["rotulo"], peg, r["folga"], r["onde"], r["info"]))
+        fh.write("    juntas: %s\n" % " ".join("%s %.0f°" % kv for kv in it["juntas"].items()))
+        fh.write("    pés (planta/calcanhar mm): %s | corpo×corpo (mm): %s\n" % (
+            " ".join("%s %+.1f/%+.1f" % (k, *v) for k, v in it["pes"].items()),
+            " ".join("%s %.1f" % kv for kv in it["corpo"].items())))
+        fh.write("    zonas (mm): %s | ângulos-chave: %s | rigidez %.1f mm | salto %.0f mm\n" % (
+            " ".join("%s %.1f" % kv for kv in it["zonas"].items()) or "-",
+            " ".join("%s %s" % (k, "/".join("%.0f" % x for x in v)) for k, v in it["angulos"].items()) or "-",
+            it["rigidez"], it.get("salto", 0)))
+        fh.write("    %s\n" % ("OK" if not r["falhas"] else "FALHA: " + "; ".join(r["falhas"])))
 if not ok:
     sys.stdout.flush()
     os._exit(1)
