@@ -32,7 +32,12 @@
       {"nome": "tronco parado em cima", "medida": "tronco", "t": 1.0, "graus": [35, 55]},
       {"nome": "joelhos levemente dobrados", "medida": "flexao", "junta": "Leg", "t": 0.0, "graus": [8, 35]},
       {"nome": "cotovelo quase estendido embaixo", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 25]},
-      {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [70, 125]}
+      {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [70, 125]},
+      {"nome": "cotovelo perto do corpo (não abre pro lado)", "medida": "cotovelo_tronco", "t": "todos", "graus": [-5, 45], "fonte": "Weslley, 04/10/2026 (cotovelo perto do corpo); University of Sussex Sport — Bent Over Barbell Row (\"look out for: elbows coming out to the side\")"},
+      {"nome": "cotovelo pra trás junto do tronco no fim", "medida": "cotovelo_tronco", "t": 1.0, "graus": [10, 45], "fonte": "Weslley, 04/10/2026; University of Sussex Sport — Bent Over Barbell Row (\"look out for: elbows coming out to the side\")"},
+      {"nome": "cotovelo passa da linha do tronco no fim", "medida": "braco_frente", "t": 1.0, "graus": [-70, -25], "fonte": "University of Sussex Sport — Bent Over Barbell Row (\"row the barbell up to the bottom of the chest\")"},
+      {"nome": "pegada um pouco mais aberta que os ombros", "medida": "pegada_largura", "t": "todos", "faixa": [1.0, 1.6], "fonte": "Sweat — Bent Over Barbell Row (\"hands slightly wider than shoulder-width\")"},
+      {"nome": "pés entre a largura do quadril e a dos ombros", "medida": "pes_largura", "t": "todos", "faixa": [1.0, 2.1], "fonte": "Sweat — Bent Over Barbell Row (\"feet shoulder-width apart\")"}
     ]
   }
 }

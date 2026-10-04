@@ -10,7 +10,9 @@ from maos3d import Maos
 from cena import Cena
 
 RAIO_BARRA = 0.0145
-GRIP_X = 0.26                    # meia pegada pronada (um pouco mais aberta que os ombros)
+GRIP_X = 0.24                    # meia pegada pronada (largura dos ombros)
+POLO_FORA = 0.06                 # cotovelos pra trás perto do corpo (~30–45°), não abertos pro lado: pedido dele
+                                 # 04/10/2026 ("os cotovelos abrem no final… ou deveria estar próximo do corpo?")
 INCLINA = 45                     # tronco à frente, graus da vertical
 RECUA, DESCE = 0.15, -0.07       # quadril pra trás e pra baixo (joelhos levemente dobrados)
 BARRIGA = 0.15                   # do osso Spine até o eixo da barra em t = 1 (pele + raio + folga ~3 cm)
@@ -47,7 +49,7 @@ def montar(bon):
         tronco()
         S = {l: p3.cabeca(rig, l + "Arm") for l in ("Left", "Right")}
         meio = (S["Left"] + S["Right"]) / 2
-        c0 = Vector((0, meio.y, meio.z - alcance * 0.96))
+        c0 = Vector((0, meio.y, meio.z - alcance * 0.98))   # braços quase estendidos (cotovelo ≤ 25°)
         c1 = p3.cabeca(rig, "Spine") + R @ Vector((0, -BARRIGA, 0.03))
         c1.x = 0
         centro = c0.lerp(c1, t)
@@ -57,7 +59,7 @@ def montar(bon):
         p3.atualizar()
         for lado, s in (("Left", 1), ("Right", -1)):
             g = centro + Vector((s * GRIP_X, 0, 0))
-            maos.segurar(lado, g, DEDOS_Q, PALMA_Q, polo=S[lado] + Vector((s * 0.30, 0.45, 0.55)), alinhar=0.5)
+            maos.segurar(lado, g, DEDOS_Q, PALMA_Q, polo=S[lado] + Vector((s * POLO_FORA, 0.45, 0.55)), alinhar=0.5)
         for lado in ("Left", "Right"):               # dedos e polegar fecham até a pele encostar na barra
             antes = pose.dedos.get(lado, {}).get("Thumb") if t > 0 else None
             pose.dedos[lado] = pg.fechar_em_volta(bon, lado, centro, Vector((1, 0, 0)), RAIO_BARRA,
