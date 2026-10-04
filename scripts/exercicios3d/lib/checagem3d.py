@@ -468,7 +468,8 @@ def angulo_chave(rig, regra):
             vals.append(math.degrees(math.atan2(-d[2], math.hypot(d[0], d[1]))))
         return vals
     if m == "flexao":
-        junta = {"Leg": "joelho", "ForeArm": "cotovelo", "UpLeg": "quadril"}[regra["junta"]]
+        junta = {"Leg": "joelho", "ForeArm": "cotovelo", "UpLeg": "quadril",
+                 "Hand": "punho"}[regra["junta"]]      # punho: mão × antebraço (crucifixo, lote 2)
         med = medir_juntas(rig)
         return [med[junta + "E"], med[junta + "D"]]
     if m == "tronco":                          # tronco × vertical
