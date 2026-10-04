@@ -147,6 +147,20 @@ def test_pegada_pela_largura_dos_ombros():
     assert tc.pegada_largura(j)[0] == pytest.approx(0.50 / 0.36)
 
 
+def test_ombro_so_sobe_no_encolhimento_e_rolar_e_pego():
+    """Encolhimento (lote 2): subir os ombros não mexe no ombro_frente; levar os ombros 3 cm pra frente (rolar) mexe,
+    com o boneco em pé ou inclinado."""
+    j = em_pe()
+    assert tc.ombro_frente(j) == pytest.approx([0, 0], abs=1e-6)
+    encolhido = dict(j, LeftArm=j["LeftArm"] + np.array([0, 0, 0.06]), RightArm=j["RightArm"] + np.array([0, 0, 0.06]))
+    assert tc.ombro_frente(encolhido) == pytest.approx([0, 0], abs=1e-6)
+    rolando = dict(j, LeftArm=j["LeftArm"] + np.array([0, -0.03, 0]), RightArm=j["RightArm"] + np.array([0, -0.03, 0]))
+    assert tc.ombro_frente(rolando) == pytest.approx([30, 30], abs=1e-6)
+    inclinado = girar(rolando, 30, (1, 0, 0), (0, 0, 1.0))
+    assert tc.ombro_frente(inclinado) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.valores("ombro_frente", [30.4, -2.0]) == "30/-2"
+
+
 def test_joelho_entrando_e_valgo_negativo():
     j = em_pe()
     j["LeftLeg"] = np.array([0.05, -0.05, 0.5])
@@ -200,3 +214,59 @@ def test_fora_da_faixa_le_graus_mm_ou_faixa():
     assert not tc.fora_da_faixa({"mm": [-25, 150]}, [0, 10])
     assert tc.fora_da_faixa({"faixa": [0.8, 2.6]}, [0.5])
     assert tc.valores("pes_largura", [1.234]) == "1.23" and tc.valores("ponta_pe", [12.4, 8.6]) == "12/9"
+
+
+def afundo(j, passo=0.40):
+    """Base do afundo (lote 2): pé esquerdo `passo` m à frente (−Y) e o direito `passo` m atrás, mesma largura."""
+    j = dict(j)
+    for L, dy in (("Left", -passo), ("Right", passo)):
+        for o in ("Foot", "ToeBase"):
+            j[L + o] = j[L + o] + np.array([0, dy, 0])
+    return j
+
+
+def test_base_lateral_do_afundo_nao_conta_a_passada():
+    """pes_base_lateral só olha de lado a lado da pelve: um pé à frente do outro não muda o número (o pes_largura
+    muda, porque mede no chão inteiro); vale com o boneco virado."""
+    j = em_pe()
+    assert tc.pes_base_lateral(j)[0] == pytest.approx(0.20 / 0.18)
+    a = afundo(j)
+    assert tc.pes_base_lateral(a)[0] == pytest.approx(0.20 / 0.18)
+    assert tc.pes_largura(a)[0] > 4                                     # 0,82 m no chão ÷ 0,18 m
+    assert tc.pes_base_lateral(girar(a, 35, (0, 0, 1)))[0] == pytest.approx(0.20 / 0.18)
+    assert tc.valores("pes_base_lateral", [1.111]) == "1.11"
+
+
+def test_altura_do_joelho_acima_do_chao():
+    j = em_pe()
+    assert tc.joelho_altura(j) == pytest.approx([500, 500])
+    j["RightLeg"] = np.array([-0.10, 0.0, 0.08])                       # joelho de trás quase no chão
+    assert tc.joelho_altura(j) == pytest.approx([500, 80])
+    assert tc.valores("joelho_altura", [80.4, 500]) == "80/500"
+
+
+def test_regra_de_um_lado_so():
+    """"lado": "E"/"D" fica só com o valor daquele membro (perna da frente × de trás no afundo); sem "lado" ou numa
+    medida de valor único (tronco), nada muda."""
+    assert tc.do_lado({"graus": [80, 110]}, [95, 30]) == [95, 30]
+    assert tc.do_lado({"lado": "E"}, [95, 30]) == [95]
+    assert tc.do_lado({"lado": "D"}, [95, 30]) == [30]
+    assert tc.do_lado({"lado": "D"}, [7]) == [7]
+    assert not tc.fora_da_faixa({"graus": [80, 110], "lado": "E"}, tc.do_lado({"lado": "E"}, [95, 30]))
+    with pytest.raises(ValueError):
+        tc.do_lado({"lado": "Left"}, [95, 30])
+
+
+def test_ponta_dos_dedos_vale_com_o_calcanhar_levantado():
+    """Pé de trás do afundo: com o pé quase em pé (tornozelo bem em cima da base dos dedos) o ponta_pe vira ruído,
+    mas os dedos continuam deitados no chão apontando pra frente e o ponta_dedos mede 0; dedos virados pra fora 20°
+    dão +20 (e o pé esquerdo, que não mexeu, segue 0)."""
+    j = em_pe()
+    for L, s in (("Left", 1), ("Right", -1)):
+        j[L + "ToeBase_ponta"] = j[L + "ToeBase"] + np.array([0, -0.05, -0.01])
+    assert tc.ponta_dedos(j) == pytest.approx([0, 0], abs=1e-6)
+    j["RightFoot"] = j["RightToeBase"] + np.array([0.003, 0.001, 0.15])      # pé de trás em pé
+    assert abs(tc.ponta_pe(j)[1]) > 45                                         # ruído
+    assert tc.ponta_dedos(j) == pytest.approx([0, 0], abs=1e-6)
+    j["RightToeBase_ponta"] = girar({"t": j["RightToeBase_ponta"]}, -20, (0, 0, 1), j["RightToeBase"])["t"]
+    assert tc.ponta_dedos(j) == pytest.approx([0, 20], abs=1e-6)

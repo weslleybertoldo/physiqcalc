@@ -299,8 +299,10 @@ def juntas(rig):
     return medidas, falhas
 
 
-def pes(co, nomes, dono, no_chao=True, chao_z=0.0):
-    """Planta (vértice mais baixo do pé) e calcanhar (vértice mais baixo da metade de trás) no chão, em mm."""
+def pes(co, nomes, dono, no_chao=True, chao_z=0.0, na_ponta=()):
+    """Planta (vértice mais baixo do pé) e calcanhar (vértice mais baixo da metade de trás) no chão, em mm.
+    na_ponta: lados ("E"/"D") apoiados na ponta do pé de propósito (pé de trás do afundo, checagens.pe_na_ponta):
+    a planta continua no chão e o calcanhar pode subir."""
     falhas, medidas = [], {}
     for lado, L in (("E", "Left"), ("D", "Right")):
         eh = np.array([n in (L + "Foot", L + "ToeBase") for n in nomes] + [False])[dono]
@@ -313,7 +315,7 @@ def pes(co, nomes, dono, no_chao=True, chao_z=0.0):
         medidas[lado] = (planta, calc)
         if no_chao and abs(planta) > PE_CHAO_MM:
             falhas.append("pé %s fora do chão (%+.1f mm)" % (lado, planta))
-        if no_chao and calc > PE_CHAO_MM:
+        if no_chao and calc > PE_CHAO_MM and lado not in na_ponta:
             falhas.append("calcanhar %s subiu (%+.1f mm)" % (lado, calc))
     return medidas, falhas
 
@@ -480,7 +482,10 @@ def angulo_chave(rig, regra):
 
 
 def posicoes(rig):
-    return {n: _cab(rig, n) for n in tc.JUNTAS}
+    j = {n: _cab(rig, n) for n in tc.JUNTAS}
+    for n in tc.PONTAS:                        # ponta do osso (dedos: base → ponta) pro ponta_dedos (afundo, lote 2)
+        j[n + "_ponta"] = np.array(rig.matrix_world @ rig.pose.bones[P + n].tail)
+    return j
 
 
 def angulos_chave(rig, regras, t):
@@ -489,7 +494,7 @@ def angulos_chave(rig, regras, t):
     for r in regras:
         if not tc.vale_no_quadro(r["t"], t):
             continue
-        vals = angulo_chave(rig, r)
+        vals = tc.do_lado(r, angulo_chave(rig, r))      # "lado": "E"/"D" = regra de um membro só (afundo)
         medidas[r["nome"]] = tc.valores(r["medida"], vals)
         if tc.fora_da_faixa(r, vals):
             falhas.append("%s: %s (esperado %g a %g)" % (r["nome"], medidas[r["nome"]], *tc.faixa(r)))
@@ -506,15 +511,24 @@ def saltos(antes, agora):
     return pior, (["salto de %.0f mm entre quadros (%s)" % (pior, osso.replace(P, ""))] if pior > SALTO_MM else [])
 
 
+def _apoio_dos_pes(na_ponta=()):
+    """Osso de cada pé que não pode escorregar no chão: o tornozelo (Foot); no pé apoiado na ponta (na_ponta, ex. o
+    de trás do afundo) é a base dos dedos (ToeBase) — o pé gira em volta dela e o tornozelo anda junto."""
+    return {k: (k.replace("Foot", "ToeBase") if lado in na_ponta else k)
+            for k, lado in (("LeftFoot", "E"), ("RightFoot", "D"))}
+
+
 def completa(bon, cena, checagens, t, rotulo, estado):
     """Todos os itens num quadro (a pose já aplicada). estado: dict guardado entre quadros (anterior, referência)."""
     r = quadro(bon, equipamentos=cena.equipamentos, pegadas=cena.pegadas, rotulo=rotulo, apoio_mm=cena.apoio_mm)
     rig = bon.rig
     co, tri, (nomes, dono) = _avaliar(bon.corpo, 1)
     posicoes_das_juntas(rig)
+    na_ponta = tuple(checagens.get("pe_na_ponta", ()))   # pé de trás do afundo: calcanhar levantado de propósito
+    apoio_pe = _apoio_dos_pes(na_ponta)
     itens = {}
     for nome, (med, f) in (("juntas", juntas(rig)),
-                           ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True))),
+                           ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True), na_ponta=na_ponta)),
                            ("corpo", corpo_x_corpo(co, tri, nomes, dono)),
                            ("zonas", zonas(co, tri, nomes, dono, cena.equipamentos + cena.apoios,
                                            checagens.get("zonas", []), apoios=[a.name for a in cena.apoios])),
@@ -533,14 +547,14 @@ def completa(bon, cena, checagens, t, rotulo, estado):
     if "ossos" in estado:
         itens["salto"], f = saltos(estado["ossos"], ossos)
         r["falhas"] += f
-        tz = {k: ossos[P + k] for k in ("LeftFoot", "RightFoot")}
+        tz = {k: ossos[P + apoio_pe[k]] for k in ("LeftFoot", "RightFoot")}
         if checagens.get("pes_no_chao", True):
             for k, p in tz.items():
                 d = np.linalg.norm((p - estado["tornozelos"][k])[:2]) * 1000
                 if d > ESCORREGA_MM:
                     r["falhas"].append("pé %s escorregou %.1f mm" % (k, d))
     estado["ossos"] = ossos
-    estado["tornozelos"] = {k: ossos[P + k] for k in ("LeftFoot", "RightFoot")}
+    estado["tornozelos"] = {k: ossos[P + apoio_pe[k]] for k in ("LeftFoot", "RightFoot")}
     r["itens"] = itens
     print("COMPLETA %s | juntas %s | pés %s | corpo×corpo %s | zonas %s | ângulos %s | técnica %s | apoio %.1f mm"
           " | rigidez %.1f mm | %s" % (

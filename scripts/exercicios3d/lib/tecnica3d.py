@@ -105,6 +105,14 @@ def antebraco_vertical(j):
     return out
 
 
+def ombro_frente(j):
+    """Articulação do ombro (cabeça do úmero) à frente (+) ou atrás (−) da base do pescoço, no eixo frente do tronco,
+    mm [E, D]: protração (+) / retração (−) da escápula. Subir e descer o ombro não mexe nela — no encolhimento ela
+    fica parada (o ombro só sobe e desce, sem rolar pra frente nem pra trás; lote 2, 04/10/2026)."""
+    _, _, frente = eixos_tronco(j)
+    return [float((j[L + "Arm"] - j["Neck"]) @ frente) * 1000 for L, _ in LADOS]
+
+
 def pes_largura(j):
     """Distância entre os tornozelos (no chão) ÷ distância entre as articulações do quadril: ~1 = pés na largura do
     quadril, ~2 = na largura dos ombros, < 0,7 = pés colados ou cruzando."""
@@ -127,6 +135,21 @@ def ponta_pe_diferenca(j):
     """Um pé mais virado que o outro, graus (valor absoluto)."""
     e, d = ponta_pe(j)
     return [abs(e - d)]
+
+
+PONTAS = ("LeftToeBase", "RightToeBase")     # ossos que também entram pela PONTA (chave "<osso>_ponta")
+
+
+def ponta_dedos(j):
+    """Dedos (base dos dedos → ponta dos dedos, deitados no chão) virados pra fora (+) ou pra dentro (−) da frente da
+    pelve, graus [E, D]. É a direção do pé que vale também com o calcanhar levantado (pé de trás do afundo, lote 2):
+    com o pé quase em pé, o tornozelo → base dos dedos visto de cima fica curtinho e o ponta_pe perde o sentido."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, s in LADOS:
+        p = _chao(j[L + "ToeBase_ponta"] - j[L + "ToeBase"])
+        out.append(math.degrees(math.atan2(p @ (s * lado), p @ frente)))
+    return out
 
 
 def pes_alinhados(j):
@@ -167,16 +190,32 @@ def coluna(j):
     return [_ang(j["Spine1"] - j["Hips"], j["Neck"] - j["Spine1"])]
 
 
+def pes_base_lateral(j):
+    """Distância entre os tornozelos SÓ de lado a lado da pelve (sem contar um pé à frente do outro) ÷ distância
+    entre as articulações do quadril: ~1 = cada pé embaixo do seu quadril. É a "largura do quadril" da base do
+    afundo (lote 2, 04/10/2026), em que o pes_largura (distância no chão inteiro) também conta a passada."""
+    lado, _ = eixos_pelve(j)
+    return [abs(float((j["LeftFoot"] - j["RightFoot"]) @ lado))
+            / max(float(np.linalg.norm(j["LeftUpLeg"] - j["RightUpLeg"])), 1e-9)]
+
+
+def joelho_altura(j):
+    """Altura do centro do joelho acima do chão (z = 0), mm [E, D]: no afundo o joelho de trás desce até quase
+    encostar no chão (lote 2). A pele da frente do joelho fica uns 5 cm à frente do centro da junta."""
+    return [float(j[L + "Leg"][2]) * 1000 for L, _ in LADOS]
+
+
 MEDIDAS = {
     "cotovelo_tronco": cotovelo_tronco, "braco_frente": braco_frente, "braco_elevacao": braco_elevacao,
     "braco_plano": braco_plano, "braco_abertura": braco_abertura, "antebraco_vertical": antebraco_vertical,
-    "pegada_largura": pegada_largura,
+    "pegada_largura": pegada_largura, "ombro_frente": ombro_frente,
     "pes_largura": pes_largura, "ponta_pe": ponta_pe, "ponta_pe_diferenca": ponta_pe_diferenca,
     "pes_alinhados": pes_alinhados, "joelho_valgo": joelho_valgo, "joelho_fora_do_pe": joelho_fora_do_pe,
     "coluna": coluna,
+    "pes_base_lateral": pes_base_lateral, "joelho_altura": joelho_altura, "ponta_dedos": ponta_dedos,
 }
 UNIDADE = {"pes_alinhados": "mm", "joelho_valgo": "mm", "joelho_fora_do_pe": "mm", "pes_largura": "×",
-           "pegada_largura": "×"}
+           "pegada_largura": "×", "ombro_frente": "mm", "pes_base_lateral": "×", "joelho_altura": "mm"}
 
 
 def medir(j):
@@ -233,3 +272,14 @@ def faixa(regra):
 def fora_da_faixa(regra, vals):
     lo, hi = faixa(regra)
     return any(not lo <= v <= hi for v in vals)
+
+
+def do_lado(regra, vals):
+    """Regra de UM membro só: regra["lado"] = "E" (esquerdo) ou "D" (direito) fica só com o valor daquele lado; sem
+    "lado" vale pros dois, como sempre. No afundo a perna da frente e a de trás têm ângulos diferentes (lote 2)."""
+    lado = regra.get("lado")
+    if lado is None or len(vals) != 2:
+        return vals
+    if lado not in ("E", "D"):
+        raise ValueError("lado da regra %r: use \"E\" ou \"D\"" % lado)
+    return [vals[0 if lado == "E" else 1]]
