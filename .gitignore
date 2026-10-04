@@ -39,3 +39,4 @@ scripts/exercicios3d/tex/
 scripts/exercicios3d/.venv/
 scripts/exercicios3d/build/
 scripts/exercicios3d/**/__pycache__/
+scripts/exercicios3d/relatorios/*/
