@@ -18,6 +18,7 @@ ANGULOS_REF = {"Index": (56, 84, 43), "Middle": (65, 83, 53), "Ring": (62, 87, 4
 _SINAL = {}          # (lado, dedo) → sentido que fecha o dedo em volta do eixo dos nós
 POLEGAR_U = 0.015    # onde a ponta do polegar cai, ao longo da barra a partir do meio da mão (sobre indicador/médio)
 POLEGAR_FOLGA = 0.002  # distância mínima entre polegar e dedos (encostar pode, entrar não)
+POLEGAR_PASSO = 0.002  # continuidade: cada 5° longe da solução do quadro anterior pesa como 2 mm na nota
 
 
 def _base(rig, lado):
@@ -120,10 +121,12 @@ def _cadeia_pts(pts, cab, ponta, ossos, eixos, angs):
 
 
 def fechar_em_volta(bon, lado, centro, eixo, raio, polegar=(40, 45, 60),
-                    aperto=APERTO, base_livre=0.022):
+                    aperto=APERTO, base_livre=0.022, polegar_antes=None):
     """Com a mão de referência já posta (mao_de_referencia) e a barra no lugar (ponto_na_mao): cada dedo
     fecha ou abre inteiro (as 3 juntas na mesma proporção) até a pele encostar na barra; o polegar procura
-    apoio na barra ou nos dedos sem entrar em nenhum dos dois."""
+    apoio na barra ou nos dedos sem entrar em nenhum dos dois. polegar_antes = o angs["Thumb"] do quadro
+    anterior: o polegar prefere ficar perto dele (sem isso, a melhor solução de um quadro pode cair do outro
+    lado da faixa e a ponta do polegar salta ~10 cm entre 2 quadros — rosca, 04/10/2026)."""
     from mathutils.kdtree import KDTree
     rig = bon.rig
     c, u = np.array(centro), np.array(Vector(eixo).normalized())
@@ -207,6 +210,9 @@ def fechar_em_volta(bon, lado, centro, eixo, raio, polegar=(40, 45, 60),
                 if bate(P):
                     continue
                 nota = float(np.linalg.norm(pp[ossos[2]].mean(axis=0) - alvo_pol))
+                if isinstance(polegar_antes, tuple):
+                    a0, b0, l0 = polegar_antes[:3]
+                    nota += POLEGAR_PASSO * ((abs(abd - a0) + abs(bb - b0)) / 5 + abs(lam - l0) / 0.1)
                 if melhor is None or nota < melhor[0]:
                     melhor = (nota, abd, bb, lam)
     if melhor is None:
