@@ -22,7 +22,7 @@ from gerar_todos import slug  # noqa: E402
 PAT = os.environ["SUPABASE_PAT"]  # PAT da conta pessoal (nunca no repo)
 REF = "uxwpwdbbnlticxgtzcsb"
 SUPA = f"https://{REF}.supabase.co"
-SR = os.environ["SUPABASE_SERVICE_ROLE"]  # service_role do projeto (nunca no repo)
+SR = os.environ["SUPABASE_SERVICE_ROLE"]  # a sb_secret servidor_2026_10 do Treino (cofre; a service_role legada foi desligada em 04/10/2026)
 OUT = sys.argv[1] if len(sys.argv) > 1 else "/tmp/gif_supino/out"
 DRY = "--dry" in sys.argv
 BUCKETS = {"public": "exercicios", "staging": "exercicios-staging"}

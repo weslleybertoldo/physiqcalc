@@ -8,7 +8,7 @@ Ilustrações vetoriais animadas (Pillow, 600×400, 24 frames × 80 ms ≈ 1,9 s
 - `publicar.py OUT [--dry]` — sobe os GIFs nos buckets `exercicios`/`exercicios-staging` (`<id>.gif`) e faz UPDATE/INSERT em `public`/`staging.tb_exercicios`.
 - `v2/` — motor 3D (v2) + comparativo; ver `v2/README.md`.
 
-Env obrigatórias para publicar: `SUPABASE_PAT` (Management API) e `SUPABASE_SERVICE_ROLE` (Storage). Nunca commitar chaves.
+Env obrigatórias para publicar: `SUPABASE_PAT` (Management API) e `SUPABASE_SERVICE_ROLE` (Storage: a secret do servidor do Treino — cofre › PhysiqCalc › "Physiq Treino — sb_secret servidor_2026_10"; a service_role legada foi desligada em 04/10/2026). Nunca commitar chaves.
 
 Publicado em 26/08/2026: 77 exercícios (48 existentes + 29 novos) com GIF, subgrupo e dica em public e staging.
 

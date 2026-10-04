@@ -2,7 +2,8 @@
 """Publica SÓ os exercícios marcados como "novo" em escolhas.json:
 upload v2out/<slug>.gif → buckets exercicios (public) e exercicios-staging como <uuid>.gif (upsert)
 e UPDATE imagem_url (com ?v=<ts>) em public e staging. Os "atual" não são tocados.
-  SUPABASE_PAT=... SUPABASE_SERVICE_ROLE=... python3 publicar_escolhidos.py v2out [--dry]"""
+  SUPABASE_PAT=... SUPABASE_SERVICE_ROLE=... python3 publicar_escolhidos.py v2out [--dry]
+SUPABASE_SERVICE_ROLE = a sb_secret servidor_2026_10 do Treino (cofre; a service_role legada foi desligada em 04/10/2026)."""
 import json, os, sys, time, urllib.request, re, unicodedata
 
 PAT = os.environ["SUPABASE_PAT"]; SR = os.environ["SUPABASE_SERVICE_ROLE"]

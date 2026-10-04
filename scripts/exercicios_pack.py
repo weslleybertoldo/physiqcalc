@@ -74,7 +74,9 @@ def service_role():
     if sr:
         return sr
     keys = mgmt("/api-keys?reveal=true")
-    return next(k["api_key"] for k in keys if k.get("name") == "service_role")
+    # as legadas do Treino foram desligadas na troca da chave vazada (04/10/2026): vai a secret do servidor
+    por_nome = {(k.get("type"), k.get("name")): k["api_key"] for k in keys if k.get("api_key")}
+    return por_nome.get(("secret", "servidor_2026_10")) or por_nome[("secret", "default")]
 
 
 def baixar(url):
