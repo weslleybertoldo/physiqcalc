@@ -1,0 +1,66 @@
+{
+  "uuid": "232c2ac4-7fd8-4145-8dba-76cf121dcb87",
+  "nome": "Remada Unilateral com Halter (Serrote)",
+  "cena": "remada_unilateral_com_halter_serrote",
+  "grupo": "Dorsal / Rombóide",
+  "subgrupo": "Latíssimo · trapézio médio · romboides · redondo maior",
+  "padrao_movimento": "remada",
+  "equipamento": "halteres",
+  "variacao": "unilateral, joelho e mão apoiados no banco reto",
+  "alvos": ["dorsal", "trapezio"],
+  "auxiliares": ["costas", "deltoide", "biceps", "antebraco", "triceps"],
+  "camera": {"az": 300, "el": 18, "dist": 3.4, "alvo": [0.03, -0.18, 0.6]},
+  "ida_s": 1.5,
+  "movimento": "Com o halter na mão direita, apoia o joelho e a mão esquerdos num banco reto — o joelho embaixo do quadril, com a canela deitada no banco, e a mão espalmada embaixo do ombro, um pouco à frente, com o cotovelo solto — e deixa a perna direita quase estendida, com o pé chapado no chão um pouco atrás e para o lado; o tronco fica quase paralelo ao chão, com as costas retas e a cabeça alinhada com a coluna. Com o braço direito estendido para o chão e a palma virada para o banco (pegada neutra), puxa o halter levando o cotovelo para cima e para trás, junto do tronco, até o braço passar um pouco da horizontal, aproximando a escápula da coluna e sem girar o tronco; desce estendendo o cotovelo até o braço ficar estendido e o ombro descer um pouco em direção ao chão. Depois troca de lado.",
+  "cinesiologia": {
+    "plano": "sagital (extensão do ombro), cadeia cinética aberta, unilateral, com o tronco apoiado no banco (três apoios: joelho e mão no banco, pé no chão)",
+    "articulacoes": "lado que rema: ombro (extensão na subida, flexão na descida), cotovelo (flexão na subida, extensão na descida) e escápula (retração na subida, protração na descida); tronco, quadril, pernas e o braço de apoio parados",
+    "agonistas": "latíssimo do dorso, trapézio médio e inferior e romboides (ExRx: alvo \"Back, General\")",
+    "sinergistas": "redondo maior, deltoide posterior, infraespinhal, redondo menor, braquial, braquiorradial e peitoral maior (porção esternal)",
+    "estabilizadores": "bíceps braquial e cabeça longa do tríceps (estabilizadores dinâmicos do braço que rema), tríceps do braço de apoio e abdominais (tronco firme e sem girar)",
+    "fases": "subida concêntrica, descida excêntrica"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Bent-over Row (Weight Exercises › Back, General). https://exrx.net/WeightExercises/BackGeneral/DBBentOverRow (lido na cópia do Internet Archive): \"Kneel over side of bench by placing knee and hand of supporting arm on bench. Position foot of opposite leg slightly back to side. Grasp dumbbell from floor.\" \"Pull dumbbell to up to side until it makes contact with ribs or until upper arm is just beyond horizontal. Return until arm is extended and shoulder is stretched downward. Repeat and continue with opposite arm.\" \"Allow scapula to articulate but do not rotate torso in effort to throw weight up. Torso should be close to horizontal. Positioning supporting knee and/or arm slightly forward or back will allow for proper levelling of torso.\" Músculos: alvo Back, General; sinergistas trapézio médio, trapézio inferior, romboides, latíssimo do dorso, redondo maior, deltoide posterior, infraespinhal, redondo menor, braquial, braquiorradial e peitoral maior (esternal); estabilizadores dinâmicos bíceps braquial e cabeça longa do tríceps; estabilizador tríceps (braço de apoio).",
+    "American Council on Exercise (ACE) — Exercise Library, Single-arm Row. https://www.acefitness.org/exercise-library-details/3/126/ : \"bend over to place your left knee and left hand on a bench to support your body weight. Your hand should be placed directly under your shoulder and your knees should be positioned directly under your hips.\" \"Your back should be flat and head aligned with your spine.\" \"pull the dumbbell upwards, bending your elbow and pulling your upper arm backwards. Keep your arm close to the side of your body\"; \"Avoid rotating your body or changing the position of your spine throughout the lift.\" Também: \"Gently contract your abdominal / core muscles (\"bracing\") to stiffen your torso and stabilize your spine\" e \"Extend your right arm (holding the dumbbell) towards the floor without allowing your torso to rotate or shoulder to move towards the floor\" (a ACE mantém a escápula parada; o ExRx deixa ela se mexer).",
+    "Linkul R. Resistance training progressions for the older adult — pulls and rows. NSCA Personal Training Quarterly. 2022;9(4):14-20. https://www.nsca.com/contentassets/1cf6f81b246549cfa07473dbd8516ff1/ptq-9.4.3-resistance-training-progressions-for-the-older-adult-pulls-and-rows.pdf (remada \"gorilla/gardeners\", em que um braço empurra o apoio enquanto o outro rema: \"protect their floor/bracing arm with a slight muscular bend\"; \"pull their elbow as high as possible and keep the elbow close to the ribs as they row. The core should be tight with no thoracic rotation\").",
+    "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry (valores de referência da AAOS: extensão do punho 0–70°), a mesma referência do limites.py."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "pe_fora_do_chao": ["E"],
+    "pe_fora_do_chao_fonte": "Pé esquerdo fora do chão de propósito: o joelho e a canela esquerdos ficam em cima do banco e o pé pendurado pra fora dele, atrás (ExRx — Dumbbell Bent-over Row: \"placing knee and hand of supporting arm on bench\"; ACE — Single-arm Row: \"place your left knee and left hand on a bench\"). O pé direito segue com a regra do chão (planta e calcanhar no chão) e os dois tornozelos não podem andar entre os quadros.",
+    "limites_juntas": {"punhoE": [0, 70]},
+    "limites_juntas_fonte": "Punho da mão de apoio (esquerda), espalmada no banco e sem segurar peso: vale a extensão normal do punho da AAOS, 0–70° (Norkin & White, a mesma referência do limites.py). O teto de 55° do limites.py é pra mão segurando peso sem dobrar o punho; com a palma no banco e o antebraço quase em pé o punho fica estendido — a mão vai um pouco à frente do ombro (ExRx: \"Positioning supporting knee and/or arm slightly forward or back will allow for proper levelling of torso\") e o cotovelo fica levemente dobrado, o que deixa a extensão dentro dos 70°.",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base de três apoios: o pé esquerdo fica em cima do banco, atrás, então as regras padrão de base com os dois pés no chão (largura e alinhamento dos pés, os dois pés virados igual) não servem. As que valem estão abaixo, só pro pé direito, junto com a coluna neutra.",
+    "zonas": [
+      {"nome": "joelho e canela esquerdos apoiados no banco", "equipamento": "banco", "partes": ["LeftLeg"], "mm": [-20, 3], "fonte": "ACE — Single-arm Row (\"place your left knee and left hand on a bench to support your body weight\"); ExRx — Dumbbell Bent-over Row (\"placing knee and hand of supporting arm on bench\")"},
+      {"nome": "mão esquerda espalmada no banco", "equipamento": "banco", "partes": ["LeftHand"], "mm": [-12, 3], "fonte": "ACE — Single-arm Row (idem); ExRx — Dumbbell Bent-over Row (idem)"},
+      {"nome": "dedos da mão de apoio deitados no banco", "equipamento": "banco", "partes": ["LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "mm": [-12, 3]}
+    ],
+    "angulos": [
+      {"nome": "tronco quase paralelo ao chão", "medida": "tronco", "t": "todos", "graus": [75, 95], "fonte": "ExRx — Dumbbell Bent-over Row (\"Torso should be close to horizontal\")"},
+      {"nome": "costas retas (coluna neutra)", "medida": "coluna", "t": "todos", "graus": [0, 15], "fonte": "ACE — Single-arm Row (\"Your back should be flat\"; \"Avoid rotating your body or changing the position of your spine throughout the lift\")"},
+      {"nome": "tronco sem girar (ombros nivelados)", "medida": "ombros_nivel", "t": "todos", "graus": [-5, 5], "fonte": "ExRx — Dumbbell Bent-over Row (\"do not rotate torso in effort to throw weight up\"); ACE — Single-arm Row (\"Avoid rotating your body\"); NSCA PTQ 9.4 (\"no thoracic rotation\")"},
+      {"nome": "pelve nivelada", "medida": "pelve_nivel", "t": "todos", "graus": [-5, 5], "fonte": "ExRx — Dumbbell Bent-over Row (\"do not rotate torso\"); ACE — Single-arm Row (\"Avoid rotating your body\")"},
+      {"nome": "coxa de apoio na vertical (joelho embaixo do quadril)", "medida": "inclinacao", "segmento": ["UpLeg", "Leg"], "lado": "E", "t": "todos", "graus": [80, 90], "fonte": "ACE — Single-arm Row (\"your knees should be positioned directly under your hips\")"},
+      {"nome": "joelho de apoio dobrado com a canela deitada no banco", "medida": "flexao", "junta": "Leg", "lado": "E", "t": "todos", "graus": [75, 100]},
+      {"nome": "braço de apoio quase vertical: mão embaixo do ombro, um pouco à frente", "medida": "inclinacao", "segmento": ["Arm", "Hand"], "lado": "E", "t": "todos", "graus": [65, 90], "fonte": "ACE — Single-arm Row (\"Your hand should be placed directly under your shoulder\"); ExRx — Dumbbell Bent-over Row (\"Positioning supporting knee and/or arm slightly forward or back will allow for proper levelling of torso\")"},
+      {"nome": "cotovelo de apoio solto, levemente dobrado", "medida": "flexao", "junta": "ForeArm", "lado": "E", "t": "todos", "graus": [5, 25], "fonte": "NSCA PTQ 9.4 (\"protect their floor/bracing arm with a slight muscular bend\")"},
+      {"nome": "perna direita quase estendida (joelho solto)", "medida": "flexao", "junta": "Leg", "lado": "D", "t": "todos", "graus": [5, 30]},
+      {"nome": "ponta do pé direito pra frente ou um pouco pra fora", "medida": "ponta_pe", "lado": "D", "t": "todos", "graus": [-5, 30], "fonte": "faixa padrão da fábrica (Escamilla 2001; Schoenfeld 2010)"},
+      {"nome": "joelho direito na direção do pé", "medida": "joelho_valgo", "lado": "D", "t": "todos", "mm": [-20, 100], "fonte": "faixa padrão da fábrica (Escamilla 2001; Schoenfeld 2010)"},
+      {"nome": "braço estendido pro chão embaixo", "medida": "flexao", "junta": "ForeArm", "lado": "D", "t": 0.0, "graus": [0, 15], "fonte": "ExRx — Dumbbell Bent-over Row (\"Return until arm is extended\"); ACE — Single-arm Row (\"Extend your right arm (holding the dumbbell) towards the floor\")"},
+      {"nome": "braço pendurado na vertical embaixo", "medida": "inclinacao", "segmento": ["Arm", "ForeArm"], "lado": "D", "t": 0.0, "graus": [80, 90], "fonte": "ACE — Single-arm Row (\"Extend your right arm (holding the dumbbell) towards the floor\")"},
+      {"nome": "ombro solto pro chão embaixo (escápula em protração)", "medida": "escapula_frente", "lado": "D", "t": 0.0, "mm": [10, 40], "fonte": "ExRx — Dumbbell Bent-over Row (\"Return until arm is extended and shoulder is stretched downward\"; \"Allow scapula to articulate\"). A ACE prefere a escápula parada e retraída o movimento todo (\"without allowing your torso to rotate or shoulder to move towards the floor\"); aqui vale o ExRx, com o ombro descendo pouco (~1,5 cm)"},
+      {"nome": "escápula retraída em cima", "medida": "escapula_frente", "lado": "D", "t": 1.0, "mm": [-35, 0], "fonte": "ExRx — Dumbbell Bent-over Row (\"Allow scapula to articulate\"); ACE — Single-arm Row (\"Depress and retract your scapulae (pull your shoulders down and back)\")"},
+      {"nome": "escápula do braço de apoio parada", "medida": "escapula_frente", "lado": "E", "t": "todos", "mm": [-5, 15]},
+      {"nome": "braço um pouco acima da horizontal em cima", "medida": "inclinacao", "segmento": ["Arm", "ForeArm"], "lado": "D", "t": 1.0, "graus": [-35, -3], "fonte": "ExRx — Dumbbell Bent-over Row (\"Pull dumbbell to up to side ... until upper arm is just beyond horizontal\")"},
+      {"nome": "cotovelo passa da linha do tronco em cima", "medida": "braco_frente", "lado": "D", "t": 1.0, "graus": [-45, -10], "fonte": "ExRx — Dumbbell Bent-over Row (idem); ACE — Single-arm Row (\"pulling your upper arm backwards\")"},
+      {"nome": "cotovelo junto do tronco (não abre pro lado)", "medida": "cotovelo_tronco", "lado": "D", "t": "todos", "graus": [-5, 25], "fonte": "ACE — Single-arm Row (\"Keep your arm close to the side of your body\"); NSCA PTQ 9.4 (\"keep the elbow close to the ribs as they row\")"},
+      {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "lado": "D", "t": 1.0, "graus": [90, 125]},
+      {"nome": "antebraço quase vertical (o halter pendurado sobe e desce reto)", "medida": "antebraco_vertical", "lado": "D", "t": "todos", "graus": [0, 15]}
+    ]
+  }
+}
