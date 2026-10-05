@@ -197,3 +197,84 @@ def paralelas(nome="paralelas", largura=0.50, altura=1.10, comprimento=1.40, rai
             caixa(nome + "_sapata%+d%s" % (s, "ft"[k]), (x, y, 0.006), (0.12, 0.12, 0.012), mat_estrutura(), pai=raiz,
                   chanfro=0.003)
     return raiz, barras
+
+
+def banco_hiperextensao(nome="banco_hiper", origem=(0, 0, 1.0), angulo=45, estofado=(-0.44, -0.14, 0.12, 0.075, 0.40),
+                        rolos=(-0.80, -0.09, 0.05, 0.14, 0.12), plataforma=(-0.93, -0.07, 0.25, 0.015, 0.46),
+                        viga=0.27, frente=-0.30, tubo=0.06):
+    """Banco de hiperextensão a 45° (Hiperextensão Lombar, lote 3, 05/10/2026), o modelo de academia em que o corpo fica
+    inclinado `angulo` graus do chão (Technogym "Pure Strength 45 Degree Hyperextension Bench" PG05, o banco do estudo de
+    Andersen et al., J Sports Sci Med 2021; Body-Solid GHYP345, "exact 45° angle"): 2 estofados das coxas lado a lado, 2
+    rolos acolchoados que prendem a parte de trás dos tornozelos, plataforma dos pés (2 chapas, uma de cada lado da haste
+    dos rolos) e a estrutura em tubo quadrado (viga inclinada embaixo dos estofados, coluna da frente, pé de trás, base no
+    chão, travessa dos estofados e haste dos rolos, que sobe entre os pés).
+    Medidas no referencial do corpo, em m: `origem` = um ponto da linha do corpo (a articulação do quadril), s = ao longo
+    do corpo pra cabeça (sobe `angulo` graus pra −Y), d = pra frente do corpo (o lado do peito: desce pra −Y), x = de lado.
+      estofado = (s_baixo, s_cima, d_topo, espessura, largura): topo dos estofados no plano d = d_topo (onde a pele das
+                 coxas encosta), de s_baixo até a borda de cima s_cima;
+      rolos = (s, d_eixo, raio, comprimento, x): eixo dos 2 rolos (ao longo de X) em (s, d_eixo), centrados em ±x;
+      plataforma = (s_topo, d0, d1, espessura, largura): topo das chapas no plano s = s_topo (onde a sola encosta), de d0
+                   a d1;
+      viga = d do eixo da viga; frente = s onde a coluna da frente encontra a viga.
+    Devolve 4 raízes, cada uma um equipamento da cena: "estofado", "rolos" e "plataforma" são APOIO do corpo (encostar é o
+    certo) e a "estrutura" não pode encostar nele. Tubos compridos em anéis (_em_aneis): a checagem fica rápida."""
+    th = math.radians(90 - angulo)                            # inclinação do corpo a partir da vertical
+    u = Vector((0, -math.sin(th), math.cos(th)))              # ao longo do corpo, pra cabeça
+    d = Vector((0, -math.cos(th), -math.sin(th)))             # pra frente do corpo (pro chão, na frente)
+    O = Vector(origem)
+    rot_u = (math.pi / 2 + th, 0, 0)                          # caixa com o Y local ao longo de u e o Z local em d
+    rot_s = (th, 0, 0)                                        # caixa com o Z local ao longo de u (Y local em −d)
+
+    def P(s, dd, x=0.0):
+        return O + u * s + d * dd + Vector((x, 0, 0))
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    est, rol, pla, estr = (raiz_nova(n) for n in ("estofado", "rolos", "plataforma", "estrutura"))
+    # estofados das coxas: 2 almofadas lado a lado (uma embaixo de cada coxa), vão de 4 cm no meio
+    s0, s1, d_topo, esp, larg = estofado
+    meia = (larg - 0.04) / 2
+    for k in (-1, 1):
+        caixa(nome + "_estofado%+d" % k, P((s0 + s1) / 2, d_topo + esp / 2, k * (0.02 + meia / 2)), (meia, s1 - s0, esp),
+              mat_estofado(), rot=rot_u, pai=est, chanfro=0.018)
+    # rolos dos tornozelos (espuma) num eixo de aço que passa pela haste do meio
+    s_r, d_r, raio, compr, x_r = rolos
+    for k in (-1, 1):
+        _cilindro(nome + "_rolo%+d" % k, raio, compr, P(s_r, d_r, k * x_r), (0, math.radians(90), 0), mat_estofado(),
+                  vertices=32, pai=rol)
+    # plataforma dos pés: 2 chapas, uma de cada lado da haste dos rolos
+    s_p, d0, d1, esp_p, larg_p = plataforma
+    meia_p = (larg_p - tubo - 0.02) / 2
+    for k in (-1, 1):
+        caixa(nome + "_chapa%+d" % k, P(s_p - esp_p / 2, (d0 + d1) / 2, k * (tubo / 2 + 0.01 + meia_p / 2)),
+              (meia_p, d1 - d0, esp_p), mat_aco(), rot=rot_s, pai=pla, chanfro=0.003)
+    # estrutura: viga inclinada embaixo dos estofados, da plataforma até perto da borda de cima
+    s_baixo, s_alto = s_p - 0.07, s1 - 0.05
+    _em_aneis(caixa(nome + "_viga", P((s_baixo + s_alto) / 2, viga), (tubo, s_alto - s_baixo, tubo * 4 / 3), mat_estrutura(),
+                    rot=rot_u, pai=estr, chanfro=0.006))
+    # travessa embaixo dos estofados + poste até a viga
+    d_trav = d_topo + esp + 0.025
+    _em_aneis(caixa(nome + "_travessa", P((s0 + s1) / 2, d_trav), (larg - 0.06, 0.05, 0.05), mat_estrutura(), rot=rot_u,
+                    pai=estr, chanfro=0.005))
+    caixa(nome + "_poste_estofado", P((s0 + s1) / 2, (d_trav + viga) / 2), (0.05, 0.05, viga - d_trav), mat_estrutura(),
+          rot=rot_u, pai=estr, chanfro=0.005)
+    # haste dos rolos: sai da viga e sobe entre os pés até o eixo dos rolos; eixo de aço de um rolo ao outro
+    _em_aneis(caixa(nome + "_haste_rolos", P(s_r, (viga + d_r) / 2), (0.05, 0.05, viga - d_r + 0.03), mat_estrutura(),
+                    rot=rot_u, pai=estr, chanfro=0.005))
+    _em_aneis(_cilindro(nome + "_eixo_rolos", 0.012, 2 * x_r + compr - 0.02, P(s_r, d_r), (0, math.radians(90), 0), mat_aco(),
+                        pai=estr))
+    # coluna da frente (vertical, do chão até a viga) e pé de trás (da ponta de baixo da viga ao chão), base no chão
+    topo_f, ponta = P(frente, viga), P(s_baixo + 0.04, viga)
+    _em_aneis(caixa(nome + "_coluna", (0, topo_f.y, (topo_f.z + 0.04) / 2), (tubo, tubo, topo_f.z - 0.04), mat_estrutura(),
+                    pai=estr, chanfro=0.006))
+    caixa(nome + "_pe_tras", (0, ponta.y, (ponta.z + 0.04) / 2), (tubo, tubo, max(ponta.z - 0.04, 0.02)), mat_estrutura(),
+          pai=estr, chanfro=0.006)
+    y0, y1 = topo_f.y - 0.06, ponta.y + 0.06
+    _em_aneis(caixa(nome + "_base", (0, (y0 + y1) / 2, 0.025), (tubo, y1 - y0, 0.05), mat_estrutura(), pai=estr,
+                    chanfro=0.005))
+    for y in (topo_f.y, ponta.y):
+        _em_aneis(caixa(nome + "_pe", (0, y, 0.02), (0.56, 0.07, 0.04), mat_estrutura(), pai=estr, chanfro=0.005))
+    return {"estofado": est, "rolos": rol, "plataforma": pla, "estrutura": estr}

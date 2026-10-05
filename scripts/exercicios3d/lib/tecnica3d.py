@@ -350,3 +350,57 @@ def cotovelos_largura(j):
 
 MEDIDAS.update({"cotovelos_largura": cotovelos_largura})
 UNIDADE.update({"cotovelos_largura": "×"})
+
+
+# ── desenvolvimento Arnold (lote 3, 05/10/2026): a palma começa virada pro corpo (pegada supinada, como no topo da
+# rosca — ExRx Dumbbell Arnold Press: "palms facing body") e termina virada pra frente em cima, girando pelo meio
+# (palmas uma pra outra), nunca pra fora. A palma sai do punho (cabeça de Hand) e da base do indicador e do mínimo
+# (cabeça de HandIndex1 e HandPinky1), igual ao pegada3d._base que a cena usa pra virar a mão.
+JUNTAS = JUNTAS + ("LeftHandIndex1", "RightHandIndex1", "LeftHandPinky1", "RightHandPinky1")
+
+
+def _palma(j, L):
+    """Normal da palma da mão `L` (pra fora da mão pelo lado da palma), no mundo."""
+    s = 1.0 if L == "Left" else -1.0
+    m = j[L + "Hand"]
+    return _u(-s * np.cross(j[L + "HandIndex1"] - m, j[L + "HandPinky1"] - m))
+
+
+def palma_frente(j):
+    """Palma × frente do tronco, graus [E, D]: 0 = palma virada pra frente (pegada pronada em cima do desenvolvimento),
+    90 = palma de lado (neutra, ou virada pra cima/baixo), 180 = palma virada pro corpo (supinada: topo da rosca e
+    começo do desenvolvimento Arnold)."""
+    _, _, frente = eixos_tronco(j)
+    return [_ang(_palma(j, L), frente) for L, _ in LADOS]
+
+
+def palma_dentro(j):
+    """Palma virada pro meio do corpo (+) ou pra fora (−), graus [E, D]: asin(palma · direção pro meio), no referencial
+    do tronco — 0 = palma pra frente, pra trás, pra cima ou pra baixo; +90 = palmas uma pra outra (pegada neutra);
+    −90 = palma virada pra fora. No Arnold a palma passa pelo + (meio) entre o corpo e a frente."""
+    _, lado, _ = eixos_tronco(j)
+    return [math.degrees(math.asin(max(-1.0, min(1.0, float(_palma(j, L) @ (-s * lado)))))) for L, s in LADOS]
+
+
+MEDIDAS.update({"palma_frente": palma_frente, "palma_dentro": palma_dentro})
+
+
+# ── hiperextensão lombar (lote 3, 05/10/2026): o tronco desce dobrando no quadril até ficar perpendicular às pernas e
+# sobe até ficar alinhado com elas, sem passar da linha (Schoenfeld, Kolber, Contreras e Hanney, Strength Cond J 2017:
+# evitar a hiperextensão da coluna no fim da subida). O "quadril" do checagem3d.medir_juntas não tem sinal: o tronco 10°
+# atrás da linha das pernas dá o mesmo número que 10° à frente.
+def quadril_sinal(j):
+    """Flexão do quadril COM SINAL, graus [E, D]: coxa (quadril → joelho) × prolongamento do tronco pra baixo (pescoço →
+    quadril), no plano sagital do tronco: 0 = coxa alinhada com o tronco (corpo reto), + = coxa à frente da linha do
+    tronco (flexão: tronco dobrado pra frente, pra coxa; 90 = tronco perpendicular à coxa), − = coxa atrás da linha do
+    tronco (o tronco passou da linha das pernas pra trás). No referencial do tronco: vale em pé, curvado ou inclinado."""
+    cima, lado, frente = eixos_tronco(j)
+    out = []
+    for L, _ in LADOS:
+        c = j[L + "Leg"] - j[L + "UpLeg"]
+        c = c - lado * (c @ lado)
+        out.append(math.degrees(math.atan2(c @ frente, c @ -cima)))
+    return out
+
+
+MEDIDAS.update({"quadril_sinal": quadril_sinal})
