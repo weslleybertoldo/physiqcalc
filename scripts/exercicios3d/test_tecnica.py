@@ -270,3 +270,53 @@ def test_ponta_dos_dedos_vale_com_o_calcanhar_levantado():
     assert tc.ponta_dedos(j) == pytest.approx([0, 0], abs=1e-6)
     j["RightToeBase_ponta"] = girar({"t": j["RightToeBase_ponta"]}, -20, (0, 0, 1), j["RightToeBase"])["t"]
     assert tc.ponta_dedos(j) == pytest.approx([0, 20], abs=1e-6)
+
+
+def com_claviculas(j):
+    """em_pe() com a base das clavículas (cabeça dos ossos Shoulder): presa no tórax, perto do pescoço."""
+    j = dict(j)
+    j["LeftShoulder"], j["RightShoulder"] = np.array([0.06, 0, 1.44]), np.array([-0.06, 0, 1.44])
+    return j
+
+
+def test_escapula_de_um_lado_so_na_remada_unilateral():
+    """Remada unilateral (lote 2): só o ombro direito vai 3 cm pra frente (protração). O ombro_frente (eixo pela
+    linha dos ombros) divide o movimento entre os dois lados; o escapula_frente (eixo pela base das clavículas, presa
+    no tórax) mostra só o direito — em pé ou com o tronco curvado quase na horizontal."""
+    j = com_claviculas(em_pe())
+    assert tc.escapula_frente(j) == pytest.approx([0, 0], abs=1e-6)
+    j["RightArm"] = j["RightArm"] + np.array([0, -0.03, 0])
+    assert tc.escapula_frente(j) == pytest.approx([0, 30], abs=1e-6)
+    e, d = tc.ombro_frente(j)
+    assert abs(e) > 5 and d < 25                                         # a outra medida espalha pros dois lados
+    curvado = girar(j, 84, (1, 0, 0), (0, 0, 0.95))
+    assert tc.escapula_frente(curvado) == pytest.approx([0, 30], abs=1e-6)
+    assert tc.valores("escapula_frente", [30.4, -2.0]) == "30/-2"
+
+
+def test_tronco_girando_em_volta_do_proprio_eixo_e_pelve_nivelada():
+    """Tronco curvado quase na horizontal: ombros nivelados = 0; girar o tronco 15° em volta do próprio eixo pra
+    subir o lado direito dá +15. Subir a escápula não muda nada (o eixo é a base das clavículas)."""
+    j = com_claviculas(em_pe())
+    assert tc.ombros_nivel(j) == pytest.approx([0], abs=1e-6)
+    assert tc.pelve_nivel(j) == pytest.approx([0], abs=1e-6)
+    curvado = girar(j, 84, (1, 0, 0), (0, 0, 0.95))
+    assert tc.ombros_nivel(curvado) == pytest.approx([0], abs=1e-6)
+    eixo = curvado["Neck"] - curvado["Hips"]
+    girado = girar(curvado, -15, eixo, curvado["Hips"])                 # lado direito (−X) sobe
+    # tronco 6° acima da horizontal: o eixo de lado a lado sobe asin(sen 15° · sen 84°) ≈ 14,9° em relação ao chão
+    esperado = math.degrees(math.asin(math.sin(math.radians(15)) * math.sin(math.radians(84))))
+    assert tc.ombros_nivel(girado) == pytest.approx([esperado], abs=1e-6)
+    encolhido = dict(curvado, RightArm=curvado["RightArm"] + np.array([0, 0, 0.03]))
+    assert tc.ombros_nivel(encolhido) == pytest.approx([0], abs=1e-6)
+    torto = dict(j, RightUpLeg=j["RightUpLeg"] + np.array([0, 0, 0.02]))
+    assert tc.pelve_nivel(torto)[0] == pytest.approx(math.degrees(math.atan2(0.02, 0.18)), abs=1e-6)
+
+
+def test_medidas_novas_entram_no_medir():
+    j = com_claviculas(em_pe())
+    for L in ("Left", "Right"):
+        j[L + "ToeBase_ponta"] = j[L + "ToeBase"] + np.array([0, -0.05, -0.01])
+    m = tc.medir(j)
+    assert {"escapula_frente", "ombros_nivel", "pelve_nivel"} <= set(m)
+    assert {"LeftShoulder", "RightShoulder"} <= set(tc.JUNTAS)

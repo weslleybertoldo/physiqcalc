@@ -217,6 +217,46 @@ MEDIDAS = {
 UNIDADE = {"pes_alinhados": "mm", "joelho_valgo": "mm", "joelho_fora_do_pe": "mm", "pes_largura": "×",
            "pegada_largura": "×", "ombro_frente": "mm", "pes_base_lateral": "×", "joelho_altura": "mm"}
 
+# ── remada unilateral (lote 2, 04/10/2026): escápula de UM lado e tronco sem girar. O ombro_frente usa a linha dos
+# ombros como eixo de lado a lado, e ela gira junto quando só um ombro vai pra frente (os dois lados mexem igual,
+# metade cada); aqui o eixo vem da base das clavículas (cabeça dos ossos Shoulder), presa no tórax.
+JUNTAS = JUNTAS + ("LeftShoulder", "RightShoulder")
+
+
+def eixos_torax(j):
+    """Referencial do tórax: cima (quadril → pescoço), lado (base da clavícula esquerda → direita, ⟂ cima) e frente.
+    A base da clavícula é presa no tórax: subir, levar pra frente ou pra trás a escápula não mexe nesses eixos."""
+    cima = _u(j["Neck"] - j["Hips"])
+    lado = j["RightShoulder"] - j["LeftShoulder"]
+    lado = _u(lado - cima * (lado @ cima))
+    return cima, lado, np.cross(cima, lado)
+
+
+def escapula_frente(j):
+    """Ombro (cabeça do úmero) à frente (+, protração) ou atrás (−, retração) da base do pescoço, no eixo frente do
+    TÓRAX, mm [E, D]: como o ombro_frente, mas um ombro mexendo sozinho não muda o número do outro (remada
+    unilateral: a escápula que rema desce pro chão embaixo e volta pra trás em cima; a do apoio fica parada)."""
+    _, _, frente = eixos_torax(j)
+    return [float((j[L + "Arm"] - j["Neck"]) @ frente) * 1000 for L, _ in LADOS]
+
+
+def ombros_nivel(j):
+    """Eixo de lado a lado do tórax (base das clavículas, ⟂ ao tronco) × o chão, graus: 0 = nivelado, + = lado
+    direito mais alto. Com o tronco curvado perto da horizontal é o giro do tronco em volta do próprio eixo (o "do not
+    rotate torso" da remada unilateral); em pé é a inclinação do tórax pro lado."""
+    _, lado, _ = eixos_torax(j)
+    return [math.degrees(math.asin(max(-1.0, min(1.0, float(lado[2])))))]
+
+
+def pelve_nivel(j):
+    """Linha das articulações do quadril × o chão, graus: 0 = pelve nivelada, + = lado direito mais alto."""
+    d = j["RightUpLeg"] - j["LeftUpLeg"]
+    return [math.degrees(math.atan2(d[2], math.hypot(d[0], d[1])))]
+
+
+MEDIDAS.update({"escapula_frente": escapula_frente, "ombros_nivel": ombros_nivel, "pelve_nivel": pelve_nivel})
+UNIDADE.update({"escapula_frente": "mm"})
+
 
 def medir(j):
     """Todas as medidas de técnica do quadro (o relatório mostra todas, com ou sem regra na ficha)."""

@@ -289,20 +289,26 @@ def medir_juntas(rig):
     return out
 
 
-def juntas(rig):
+def juntas(rig, limites_ficha=None):
+    """Cada junta dentro da amplitude normal (limites.py). limites_ficha (checagens.limites_juntas da ficha, com a
+    fonte lá): {"punhoE": [lo, hi]} troca a faixa de UMA junta de um lado só — ex. a mão de apoio espalmada no banco
+    da remada unilateral (lote 2), que não segura peso: o teto de 55° do punho é pra mão segurando peso."""
     falhas = []
     medidas = medir_juntas(rig)
+    troca = limites_ficha or {}
     for nome, v in medidas.items():
-        lo, hi = limites.JUNTAS[nome.rstrip("ED") if nome != "pescoco" else nome]
+        lo, hi = troca.get(nome) or limites.JUNTAS[nome.rstrip("ED") if nome != "pescoco" else nome]
         if not lo - 0.5 <= v <= hi + 0.5:
             falhas.append("%s %.0f° fora de %d–%d°" % (nome, v, lo, hi))
     return medidas, falhas
 
 
-def pes(co, nomes, dono, no_chao=True, chao_z=0.0, na_ponta=()):
+def pes(co, nomes, dono, no_chao=True, chao_z=0.0, na_ponta=(), fora=()):
     """Planta (vértice mais baixo do pé) e calcanhar (vértice mais baixo da metade de trás) no chão, em mm.
     na_ponta: lados ("E"/"D") apoiados na ponta do pé de propósito (pé de trás do afundo, checagens.pe_na_ponta):
-    a planta continua no chão e o calcanhar pode subir."""
+    a planta continua no chão e o calcanhar pode subir.
+    fora: lados fora do chão de propósito (joelho e canela em cima do banco na remada unilateral, lote 2 —
+    checagens.pe_fora_do_chao): continuam medidos, sem a regra do chão; o outro pé segue chapado."""
     falhas, medidas = [], {}
     for lado, L in (("E", "Left"), ("D", "Right")):
         eh = np.array([n in (L + "Foot", L + "ToeBase") for n in nomes] + [False])[dono]
@@ -313,6 +319,8 @@ def pes(co, nomes, dono, no_chao=True, chao_z=0.0, na_ponta=()):
         tras = P_[P_[:, 1] > np.median(P_[:, 1])]                  # metade de trás (o boneco olha pra -Y)
         calc = (tras[:, 2].min() - chao_z) * 1000
         medidas[lado] = (planta, calc)
+        if lado in fora:
+            continue
         if no_chao and abs(planta) > PE_CHAO_MM:
             falhas.append("pé %s fora do chão (%+.1f mm)" % (lado, planta))
         if no_chao and calc > PE_CHAO_MM and lado not in na_ponta:
@@ -384,11 +392,15 @@ def _zona_no_apoio(V, raizes, nome):
     return perto
 
 
-def zonas(co, tri, nomes, dono, equipamentos, zonas_ficha, apoios=()):
+def zonas(co, tri, nomes, dono, equipamentos, zonas_ficha, apoios=(), t=None):
     """Zona de apoio da ficha (barra nas costas, quadril no banco…): o equipamento TEM que encostar ali.
-    apoios: nomes dos equipamentos que são apoio do corpo (banco) — medidos da pele até eles (_zona_no_apoio)."""
+    apoios: nomes dos equipamentos que são apoio do corpo (banco) — medidos da pele até eles (_zona_no_apoio).
+    t: quadro atual — a zona com "t" (número, [t0, t1] ou "todos", como nos ângulos) só vale nesses quadros; sem "t"
+    vale em todos, como sempre (tríceps testa, lote 2: a barra fica a poucos cm da testa SÓ embaixo)."""
     falhas, medidas = [], {}
     for z in zonas_ficha:
+        if t is not None and not tc.vale_no_quadro(z.get("t", "todos"), t):
+            continue
         ossos = set(z["partes"])
         m = np.array([n in ossos for n in nomes] + [False])[dono]
         if z["equipamento"] in apoios:
@@ -525,13 +537,15 @@ def completa(bon, cena, checagens, t, rotulo, estado):
     co, tri, (nomes, dono) = _avaliar(bon.corpo, 1)
     posicoes_das_juntas(rig)
     na_ponta = tuple(checagens.get("pe_na_ponta", ()))   # pé de trás do afundo: calcanhar levantado de propósito
+    fora = tuple(checagens.get("pe_fora_do_chao", ()))   # pé em cima do banco (remada unilateral): sem regra do chão
     apoio_pe = _apoio_dos_pes(na_ponta)
     itens = {}
-    for nome, (med, f) in (("juntas", juntas(rig)),
-                           ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True), na_ponta=na_ponta)),
+    for nome, (med, f) in (("juntas", juntas(rig, checagens.get("limites_juntas"))),
+                           ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True), na_ponta=na_ponta,
+                                       fora=fora)),
                            ("corpo", corpo_x_corpo(co, tri, nomes, dono)),
                            ("zonas", zonas(co, tri, nomes, dono, cena.equipamentos + cena.apoios,
-                                           checagens.get("zonas", []), apoios=[a.name for a in cena.apoios])),
+                                           checagens.get("zonas", []), apoios=[a.name for a in cena.apoios], t=t)),
                            ("angulos", angulos_chave(rig, checagens.get("angulos", []) + tc.regras_padrao(checagens),
                                                      t))):
         itens[nome] = med
