@@ -120,10 +120,12 @@ def mexe(mats, tol=1e-5):
     return any(max(abs(a - b) for a, b in zip(p, plano[0])) > tol for p in plano[1:])
 
 
-# só vai pro arquivo o que muda (osso que só gira não leva posição; peça presa ao pai não leva nada; escala nunca)
+# só vai pro arquivo o que muda (osso que só gira não leva posição; peça presa ao pai não leva nada; escala nunca, fora
+# a peça marcada com a propriedade "anima_escala" — o cabo da polia, que estica e encolhe: equip3d.polia, lote 3)
 move_osso = {pb.name: mexe([Matrix.Translation(q[0][pb.name].to_translation()) for q in quadros])
              for pb in rig.pose.bones}
 eq_anima = [o for o in objs_eq if mexe([basis_eq(o, q[1]) for q in quadros])]
+eq_escala = [o for o in eq_anima if o.get("anima_escala")]
 for f, (locais, mundos) in enumerate(quadros):
     for pb in rig.pose.bones:
         pb.matrix_basis = locais[pb.name]
@@ -137,8 +139,11 @@ for f, (locais, mundos) in enumerate(quadros):
         if o in eq_anima:
             o.keyframe_insert("location", frame=f)
             o.keyframe_insert("rotation_quaternion", frame=f)
-print("ANIMAÇÃO: %d ossos, %d com posição, equipamento animado: %s" % (
-    len(move_osso), sum(move_osso.values()), [o.name for o in eq_anima]), flush=True)
+        if o in eq_escala:
+            o.keyframe_insert("scale", frame=f)
+print("ANIMAÇÃO: %d ossos, %d com posição, equipamento animado: %s%s" % (
+    len(move_osso), sum(move_osso.values()), [o.name for o in eq_anima],
+    " | com escala: %s" % [o.name for o in eq_escala] if eq_escala else ""), flush=True)
 cena.frame_start, cena.frame_end = 0, NQ
 cena.render.fps = FPS
 cena.frame_set(0)

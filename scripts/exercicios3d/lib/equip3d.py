@@ -281,3 +281,174 @@ def banco_hiperextensao(nome="banco_hiper", origem=(0, 0, 1.0), angulo=45, estof
     for y in (topo_f.y, ponta.y):
         _em_aneis(caixa(nome + "_pe", (0, y, 0.02), (0.56, 0.07, 0.04), mat_estrutura(), pai=estr, chanfro=0.005))
     return {"estofado": est, "rolos": rol, "plataforma": pla, "estrutura": estr}
+
+
+# ── POLIA: estação de cabo (Tríceps Testa na Polia, lote 3, 05/10/2026) ───────────────────────────────────────────────────
+# Coluna única com a caixa da pilha de pesos (a pilha fica parada: o app não mostra a carga), um trilho na frente dela e
+# um carrinho no trilho com a roldana na altura pedida (baixa ~0,1–0,4 m; alta ~2,0–2,2 m). O cabo desce pelo trilho
+# (pedaço parado), dá a volta por baixo da roldana e sai em linha reta até o engate do acessório — esse pedaço é UM
+# objeto, raiz própria "<nome>_cabo", com a origem no eixo da roldana, que GIRA e ESTICA (escala no Z local) a cada
+# quadro; ele leva a marca "anima_escala", que o exportar_exercicio.py usa pra gravar a escala SÓ nele.
+# Uso numa cena (acessório: barra_polia hoje; corda, puxador e barra W entram como funções novas do mesmo jeito — origem
+# no eixo da pegada, engate no +Y local a `engate` m dela):
+#   pol = e3.polia("polia", y=1.42, altura=0.25)            # roldana baixa, de frente pra −Y
+#   barra = e3.barra_polia("barra_polia")
+#   no pose(t): u = pol.direcao(c)                            # c = eixo da pegada no quadro; o gancho gira livre e se
+#               e3.por_acessorio(barra, c, eixo, u)           # alinha com o cabo
+#               pol.ligar(c + u * e3.ENGATE_BARRA_POLIA)     # cabo da saída da roldana até o engate
+#   Cena(pose, [barra] + pol.raizes, ...)
+# Medidas (escolha da fábrica, de estação comum): cabo passando a 45 mm do eixo da roldana (roldana de ~10,5 cm), cabo de
+# aço de 6 mm, coluna de 2,15 m. Peças compridas em anéis (_em_aneis): a checagem fica rápida.
+ENGATE_BARRA_POLIA = 0.13          # do eixo da barra até onde o cabo começa (dentro da bola de borracha do cabo)
+CARENAGEM = (0.10, 0.105, 0.115, 1)
+
+
+def mat_carenagem():
+    return b3.material_liso("Carenagem", CARENAGEM, rug=0.5, metal=0.3)
+
+
+class Polia:
+    """Estação de cabo pronta na cena (polia()). raizes = [torre (parada), cabo (gira e estica)]: as duas entram em
+    Cena.equipamentos junto com o acessório. O cabo desce pelo lado da torre e dá a volta por baixo da roldana."""
+
+    def __init__(self, torre, cabo, centro, raio, frente):
+        self.torre, self.cabo = torre, cabo
+        self.raizes = [torre, cabo]
+        self.centro = Vector(centro)          # eixo da roldana (mundo)
+        self.raio = raio                      # eixo da roldana → eixo do cabo no canal
+        self.frente = Vector(frente)
+        self.saida = None                     # onde o cabo deixa a roldana no último ligar()
+        self.comprimento = 0.0                # comprimento do cabo reto no último ligar() (m)
+
+    def tangente(self, p):
+        """Saída do cabo (ponto da roldana onde ele fica tangente), direção do cabo (da saída pra p) e a normal
+        (eixo da roldana → saída), no plano vertical que passa pelo eixo da roldana e por p."""
+        cima = Vector((0.0, 0.0, 1.0))
+        v = Vector(p) - self.centro
+        f = Vector((v.x, v.y, 0.0))
+        f = f.normalized() if f.length > 1e-6 else self.frente.copy()
+        vf, vc = v.dot(f), v.dot(cima)
+        dist = math.hypot(vf, vc)
+        if dist <= self.raio * 1.01:
+            raise ValueError("polia: ponto %s dentro da roldana" % (tuple(p),))
+        a = math.atan2(vc, vf) + math.asin(self.raio / dist)
+        d = f * math.cos(a) + cima * math.sin(a)
+        n = f * math.sin(a) - cima * math.cos(a)
+        return self.centro + n * self.raio, d, n
+
+    def direcao(self, p):
+        """Direção (mundo, unitária) de p pra saída da roldana: por onde passa o cabo que chega em p. O gancho do
+        acessório gira livre em volta da pegada e se alinha com ela (o eixo da pegada fica na linha do cabo)."""
+        return -self.tangente(p)[1]
+
+    def ligar(self, engate):
+        """Cabo reto da saída da roldana até `engate` (mundo): gira e estica o objeto do cabo. Chamar a cada quadro,
+        depois de pôr o acessório. Devolve o comprimento do cabo reto (m)."""
+        T, d, n = self.tangente(engate)
+        L = (Vector(engate) - T).length
+        R = Matrix((n.cross(d), n, d)).transposed()          # colunas: X = eixo da roldana, Y = pra saída, Z = cabo
+        self.cabo.matrix_world = Matrix.Translation(self.centro) @ R.to_4x4() @ Matrix.Diagonal((1.0, 1.0, L, 1.0))
+        self.saida, self.comprimento = T, L
+        return L
+
+
+def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.045, raio_cabo=0.003, alto=2.15):
+    """Estação de cabo de coluna única (ver o bloco acima): roldana com o eixo em (x, y, altura), virada pra `frente`
+    (horizontal; padrão −Y), o cabo passando a `raio` m do eixo dela; trilho, carrinho, caixa da pilha de pesos e base
+    ficam atrás da roldana. Devolve um Polia (raizes, direcao(), ligar())."""
+    f = Vector(frente)
+    f = Vector((f.x, f.y, 0.0)).normalized()
+    cima = Vector((0.0, 0.0, 1.0))
+    s = cima.cross(f)                                         # de lado (o eixo da roldana)
+    giro = math.atan2(f.x, -f.y)                              # caixa com X local = s, Y local = −f
+    O = Vector((x, y, 0.0))
+
+    def P(df, ds, z):
+        return O + f * df + s * ds + cima * z
+
+    def bloco(nome_, df, ds, z, tam, mat, chanfro=0.006, aneis=False):
+        o = caixa(nome + nome_, P(df, ds, z), tam, mat, rot=(0, 0, giro), pai=torre, chanfro=chanfro)
+        return _em_aneis(o) if aneis else o
+
+    def cilindro_lado(nome_, raio_, compr, df, ds, z, mat):
+        return _cilindro(nome + nome_, raio_, compr, P(df, ds, z), (0, math.radians(90), giro), mat, pai=torre)
+
+    torre = bpy.data.objects.new(nome + "_torre", None)
+    bpy.context.scene.collection.objects.link(torre)
+    trilho = -0.10                                            # eixo do trilho (atrás da roldana)
+    bloco("_base", -0.22, 0, 0.0125, (0.56, 0.68, 0.025), mat_estrutura(), chanfro=0.004, aneis=True)
+    bloco("_pilha", -0.34, 0, 0.9625, (0.44, 0.36, 1.875), mat_carenagem(), chanfro=0.012)
+    bloco("_trilho", trilho, 0, (0.025 + alto) / 2, (0.05, 0.05, alto - 0.025), mat_estrutura(), aneis=True)
+    for k, z in enumerate((0.10, alto - 0.20)):
+        bloco("_suporte%d" % k, -0.1425, 0, z, (0.04, 0.035, 0.05), mat_estrutura(), chanfro=0.003)
+    bloco("_viga", -0.31, 0, alto - 0.03, (0.08, 0.42, 0.06), mat_estrutura(), aneis=True)
+    bloco("_roldana_alta", -0.06, 0, alto - 0.11, (0.06, 0.10, 0.10), mat_estrutura(), chanfro=0.004)
+    # carrinho no trilho: luva, pino de regulagem, garfo e roldana (flanges + miolo + eixo)
+    bloco("_carrinho", trilho, 0, altura, (0.085, 0.085, 0.16), mat_estrutura(), chanfro=0.005)
+    cilindro_lado("_pino", 0.007, 0.035, trilho, 0.0425 + 0.0175, altura, mat_aco())
+    cilindro_lado("_pino_bola", 0.012, 0.016, trilho, 0.0425 + 0.035 + 0.008, altura, mat_borracha())
+    for k in (-1, 1):
+        bloco("_garfo%+d" % k, -0.015, k * 0.017, altura, (0.004, 0.09, 0.11), mat_estrutura(), chanfro=0.0015)
+        cilindro_lado("_flange%+d" % k, raio + 0.007, 0.004, 0, k * 0.0095, altura, mat_aco())
+    cilindro_lado("_miolo", raio - 0.0025, 0.015, 0, 0, altura, mat_aco())
+    cilindro_lado("_eixo", 0.007, 0.042, 0, 0, altura, mat_aco())
+    # cabo parado: sobe da roldana pelo lado da torre até a roldana de cima (dentro da caixinha no alto do trilho)
+    _em_aneis(tubo(nome + "_cabo_trilho", P(-raio, 0, altura), P(-raio, 0, alto - 0.16), raio_cabo, mat_aco(), pai=torre,
+                   vertices=12))
+    # cabo que mexe: cilindro de 1 m no Z local, a `raio` do eixo no Y local (a origem fica no eixo da roldana)
+    bpy.ops.mesh.primitive_cylinder_add(radius=raio_cabo, depth=1.0, location=(0, raio, 0.5), vertices=12)
+    cabo = bpy.context.active_object
+    cabo.name = nome + "_cabo"
+    bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
+    bpy.ops.object.shade_smooth()
+    cabo.data.materials.append(mat_aco())
+    _em_aneis(cabo)
+    cabo["anima_escala"] = True                               # exportar_exercicio.py: grava a escala só deste objeto
+    pol = Polia(torre, cabo, P(0, 0, altura), raio, f)
+    pol.ligar(P(0.6, 0, altura + 0.3))                        # pose de repouso (a cena põe o certo a cada quadro)
+    return pol
+
+
+def barra_polia(nome="barra_polia", comprimento=0.508, raio=0.01524, engate=ENGATE_BARRA_POLIA):
+    """Barra reta curta de polia com o engate no meio (lote 3, 05/10/2026): 20" (0,508 m) com pegada de borracha de 1,2"
+    (30,5 mm) — Synergee Straight Bar Cable Attachment: lengths "20"", Rubber Grip Diameters "1.2"", "a 360-degree
+    swivel", "a universal attachment point that will fit on most cable machine carabiner clips". Eixo da barra no X local
+    e o engate no +Y local (luva giratória no meio → orelha → mosquetão → ponteira e bola de borracha do cabo), com o cabo
+    começando a `engate` m do eixo. Devolve a raiz (vazio no eixo, no meio): use por_acessorio() pra pôr no quadro."""
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    rot = (0, math.radians(90), 0)
+    meio = comprimento / 2
+    _em_aneis(_cilindro(nome + "_nucleo", 0.0125, comprimento, (0, 0, 0), rot, mat_aco(), pai=raiz))
+    for s in (-1, 1):
+        _cilindro(nome + "_pegada%+d" % s, raio, meio - 0.064, (s * (0.045 + (meio - 0.064) / 2), 0, 0), rot,
+                  mat_borracha(), pai=raiz)
+        _cilindro(nome + "_ponta%+d" % s, raio + 0.0012, 0.018, (s * (meio - 0.009), 0, 0), rot, mat_aco(), pai=raiz)
+    _cilindro(nome + "_luva", 0.020, 0.07, (0, 0, 0), rot, mat_aco(), pai=raiz)
+    caixa(nome + "_orelha", (0, 0.034, 0), (0.008, 0.032, 0.022), mat_aco(), pai=raiz, chanfro=0.003)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.0035, major_segments=24, minor_segments=8,
+                                     location=(0, 0.072, 0))
+    mosq = bpy.context.active_object
+    mosq.name = nome + "_mosquetao"
+    mosq.scale = (1.0, 1.6, 1.0)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.ops.object.shade_smooth()
+    mosq.data.materials.append(mat_aco())
+    mosq.parent = raiz
+    _cilindro(nome + "_ponteira", 0.0045, 0.03, (0, 0.11, 0), (math.radians(-90), 0, 0), mat_aco(), vertices=16, pai=raiz)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.012, segments=16, ring_count=8, location=(0, engate + 0.007, 0))
+    bola = bpy.context.active_object
+    bola.name = nome + "_bola"
+    bpy.ops.object.shade_smooth()
+    bola.data.materials.append(mat_borracha())
+    bola.parent = raiz
+    return raiz
+
+
+def por_acessorio(raiz, centro, eixo, para_cabo):
+    """Põe o acessório da polia no quadro: origem em `centro` (eixo da pegada), X local ao longo de `eixo` e o engate (+Y
+    local) virado pra `para_cabo` (polia.direcao(centro)); o gancho gira livre em volta da pegada, como o de verdade."""
+    x = Vector(eixo).normalized()
+    y = Vector(para_cabo) - x * Vector(para_cabo).dot(x)
+    y.normalize()
+    raiz.matrix_world = Matrix.Translation(Vector(centro)) @ Matrix((x, y, x.cross(y))).transposed().to_4x4()
