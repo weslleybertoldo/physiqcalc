@@ -336,3 +336,17 @@ def do_lado(regra, vals):
     if lado not in ("E", "D"):
         raise ValueError("lado da regra %r: use \"E\" ou \"D\"" % lado)
     return [vals[0 if lado == "E" else 1]]
+
+
+# ── abdominal bicicleta (lote 2, 05/10/2026): mãos atrás da cabeça com os cotovelos abertos pro lado (Livestrong,
+# reproduzido pelo ACE: "hands behind your head (elbows out wide)"). O braco_abertura é medido no referencial quadril →
+# pescoço, que muda quando o tronco enrola e gira; a distância entre os cotovelos não depende disso.
+def cotovelos_largura(j):
+    """Distância entre os cotovelos (cabeça do antebraço) ÷ distância entre os ombros (cabeça do úmero): ~1 = cotovelos
+    na largura dos ombros (braços pendurados ou fechados pra frente), ~1,7 = abertos pro lado com as mãos na cabeça."""
+    return [float(np.linalg.norm(j["LeftForeArm"] - j["RightForeArm"])
+                  / max(np.linalg.norm(j["LeftArm"] - j["RightArm"]), 1e-9))]
+
+
+MEDIDAS.update({"cotovelos_largura": cotovelos_largura})
+UNIDADE.update({"cotovelos_largura": "×"})

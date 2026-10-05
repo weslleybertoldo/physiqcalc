@@ -336,3 +336,20 @@ def test_tornozelo_canela_x_pe_no_pe_de_tras_do_bulgaro():
     assert tc.tornozelo(girar(j, 70, (1, 0, 0), (0, 0, 0.9)))[1] == pytest.approx(chapado - 30, abs=1e-6)
     assert "tornozelo" in tc.medir(dict(com_claviculas(j), **{L + "ToeBase_ponta": j[L + "ToeBase"]
                                                               for L in ("Left", "Right")}))
+
+
+def test_cotovelos_largura_abertos_fechados_e_deitado():
+    """Abdominal bicicleta (lote 2): cotovelos abertos pro lado (mãos atrás da cabeça) × fechados pra frente; o número
+    não muda com o boneco deitado e girado (o braco_abertura muda, porque o eixo quadril → pescoço enrola e gira)."""
+    j = em_pe()
+    assert tc.cotovelos_largura(j) == pytest.approx([1.0], abs=1e-6)          # pendurados: largura dos ombros
+    abertos = braco(braco(j, "Left", (1, 0, 0.6)), "Right", (-1, 0, 0.6))
+    larg = (0.36 + 2 * 0.30 / math.hypot(1, 0.6)) / 0.36
+    assert tc.cotovelos_largura(abertos) == pytest.approx([larg], abs=1e-6)
+    fechados = braco(braco(j, "Left", (0, -1, 0.6)), "Right", (0, -1, 0.6))
+    assert tc.cotovelos_largura(fechados) == pytest.approx([1.0], abs=1e-6)
+    deitado = girar(girar(abertos, -90, (1, 0, 0), (0, 0, 0.95)), 30, (0, 1, 0))
+    assert tc.cotovelos_largura(deitado) == pytest.approx([larg], abs=1e-6)
+    m = tc.medir(dict(com_claviculas(abertos), **{L + "ToeBase_ponta": abertos[L + "ToeBase"] for L in ("Left", "Right")}))
+    assert m["cotovelos_largura"] == pytest.approx([larg], abs=1e-6)
+    assert tc.valores("cotovelos_largura", [1.734]) == "1.73"
