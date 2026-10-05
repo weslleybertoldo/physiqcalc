@@ -39,9 +39,16 @@ if "dist" in cam:                                # a mesma câmera que o app abr
 if "alvo" in cam:
     pedidos["foto"]["alvo"] = "%.3f,%.3f,%.3f" % tuple(cam["alvo"])
 SO_FOTO = "--so-foto" in sys.argv                # refaz só a foto parada (sem os prints de checagem)
+# exercício alto (barra fixa, lote 2, 05/10/2026): a ficha pode dar "camera_vistas" {dist, alvo} pras vistas de checagem
+# — com o alvo padrão do motor (0,8 m) a barra e a cabeça em cima ficavam fora do quadro. Sem isso, nada muda.
+vistas = ficha.get("camera_vistas", {})
 for t in (() if SO_FOTO else (0, 0.5, 1)):
     for nome, az, el in (("frente", 0, 7), ("lado", 90, 7), ("costas", 180, 7), ("cima", cam["az"], 55)):
-        pedidos["%s_%03d" % (nome, int(t * 100))] = dict(t=t, az=az, el=el, fundo="claro", w=600, h=600)
+        p = pedidos["%s_%03d" % (nome, int(t * 100))] = dict(t=t, az=az, el=el, fundo="claro", w=600, h=600)
+        if "dist" in vistas:
+            p["dist"] = vistas["dist"]
+        if "alvo" in vistas:
+            p["alvo"] = "%.3f,%.3f,%.3f" % tuple(vistas["alvo"])
 pontos = os.path.join(AQUI, "relatorios", ficha["cena"] + ".json")
 if os.path.exists(pontos) and not SO_FOTO:                       # closes: alvo da câmera no ponto (coordenadas do Blender)
     for nome, quadros in json.load(open(pontos)).items():

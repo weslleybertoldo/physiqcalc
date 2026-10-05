@@ -232,3 +232,30 @@ def fechar_em_volta(bon, lado, centro, eixo, raio, polegar=(40, 45, 60),
             p3.girar_osso(rig, o, p3.rot_eixo(lam * polegar[k] * sg, ex))
     angs["Thumb"] = (abd, int(bb), round(float(lam), 2), round(nota * 1000, 1))
     return angs
+
+
+# ── mão de referência de outra grossura de barra (paralelas de 38 mm, lote 2, 05/10/2026): com a mão de 29 mm a barra
+# de 38 mm não cabia no vão (ponto_na_mao sem solução). A mão de outro diâmetro sai da MESMA fonte do ANGULOS_REF,
+# interpolada entre os 2 cilindros medidos — Shimawaki S, Murai T, Nakabayashi M, Sugimoto H. Applied Bionics and
+# Biomechanics 2019:2839648, tabela 2 ("Mean flexion angle of each joint from the index to the little finger when
+# cylinders of the different diameters were gripped"): (DIP, PIP, MP) em graus com o cilindro de 10 mm e com o de 60 mm.
+# Com 29 mm a interpolação dá exatamente o ANGULOS_REF acima (conferido no Blender).
+SHIMAWAKI_2019 = {"Index": ((48.2, 105.5, 65.6), (35.2, 48.0, 39.7)), "Middle": ((64.8, 104.8, 75.9), (34.5, 48.1, 46.3)),
+                  "Ring": ((57.2, 110.5, 76.6), (27.1, 48.7, 38.7)), "Pinky": ((65.8, 93.0, 64.1), (30.0, 32.8, 35.2))}
+
+
+def angulos_do_cilindro(diametro_mm):
+    """Flexão (MP, PIP, DIP) de cada dedo segurando um cilindro de `diametro_mm` (10 a 60 mm), interpolada em linha
+    reta entre os 2 cilindros de Shimawaki 2019 — a mesma conta que deu o ANGULOS_REF de 29 mm."""
+    f = (diametro_mm - 10.0) / 50.0
+    return {d: tuple(int(round(a[2 - i] + f * (b[2 - i] - a[2 - i]))) for i in range(3))
+            for d, (a, b) in SHIMAWAKI_2019.items()}
+
+
+def usar_cilindro(diametro_mm):
+    """A mão de referência (mao_de_referencia, ponto_na_mao, fechar_em_volta e o maos3d.Maos) passa a ser a de um
+    cilindro de `diametro_mm` em vez de 29 mm. Vale pro processo todo — cada exportação roda num Blender só dela —:
+    chamar no começo do montar() da cena, antes de criar o maos3d.Maos. Sem chamar, nada muda (29 mm)."""
+    global ANGULOS_REF
+    ANGULOS_REF = angulos_do_cilindro(diametro_mm)
+    return ANGULOS_REF

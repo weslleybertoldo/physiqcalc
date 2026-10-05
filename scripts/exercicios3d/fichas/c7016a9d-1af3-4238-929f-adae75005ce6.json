@@ -1,0 +1,47 @@
+{
+  "uuid": "c7016a9d-1af3-4238-929f-adae75005ce6",
+  "nome": "Tríceps Testa com Barra",
+  "cena": "triceps_testa_com_barra",
+  "grupo": "Tríceps",
+  "subgrupo": "Tríceps braquial (cabeças longa, lateral e medial)",
+  "padrao_movimento": "triceps_frances",
+  "equipamento": "barra",
+  "variacao": "banco reto",
+  "alvos": ["triceps"],
+  "auxiliares": [],
+  "camera": {"az": 48, "el": 22, "dist": 3.8, "alvo": [0, 0.25, 0.72]},
+  "ida_s": 1.5,
+  "movimento": "Deitado de costas no banco reto, com a cabeça, as costas e o glúteo apoiados e os pés chapados no chão, segura a barra com as palmas viradas para os pés (pegada pronada fechada, com o polegar em volta da barra), mãos mais ou menos na largura dos ombros, e estica os braços na vertical, com a barra em cima dos ombros; com os braços parados na vertical, os cotovelos apontando para o teto e na largura dos ombros (sem abrir) e os punhos retos, dobra só os cotovelos e desce a barra devagar até ela ficar logo acima da testa, sem encostar na cabeça; estica os cotovelos de volta até os braços ficarem estendidos.",
+  "cinesiologia": {
+    "plano": "sagital (flexão e extensão do cotovelo), cadeia cinética aberta",
+    "articulacoes": "cotovelo (flexão na descida, extensão na subida); ombro parado, com o braço na vertical (cerca de 90° de flexão); punho reto e firme; cabeça, costas e glúteo apoiados no banco e os dois pés no chão",
+    "agonistas": "tríceps braquial (cabeças longa, lateral e medial) (ExRx); no estudo patrocinado pelo ACE a cabeça longa trabalhou mais que a lateral neste exercício (70 × 55, em % da flexão de braço com as mãos em triângulo; Boehler 2011)",
+    "sinergistas": "nenhum (ExRx)",
+    "estabilizadores": "deltoide anterior e posterior, peitoral maior (porções clavicular e esternal), latíssimo do dorso, redondo maior e coracobraquial seguram o braço parado na vertical; os flexores do punho seguram a barra (ExRx)",
+    "fases": "descida excêntrica (dobra os cotovelos inspirando), subida concêntrica (estica os cotovelos soltando o ar) (ACE)"
+  },
+  "referencias": [
+    "American Council on Exercise (ACE) — Lying Barbell Triceps Extensions. https://www.acefitness.org/resources/everyone/exercise-library/36/lying-barbell-triceps-extensions/",
+    "Achievable — CSCS Textbook (preparatório da certificação CSCS da NSCA), cap. 15.6 \"Exercise list part 5\": Lying triceps extension; e cap. 15.1 \"Fundamentals of exercise technique\": five-point body contact position. https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-5",
+    "ExRx.net — Barbell Lying Triceps Extension. https://exrx.net/WeightExercises/Triceps/BBLyingTriExt (lido na cópia do Internet Archive de 02/02/2026)",
+    "Boehler B, Porcari JP, Kline D, Hendrix CR, Foster C, Anders M. ACE-sponsored Research: Best Triceps Exercises. ACE Certified News, agosto de 2011. https://www.acefitness.org/certifiednewsarticle/1562/ace-sponsored-research-best-triceps-exercises/"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no banco", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3], "fonte": "Achievable/CSCS (five-point body contact position: \"Shoulders/upper back on the bench\"); ACE (\"lie supine (on your back) on a flat bench\")"},
+      {"nome": "glúteo apoiado no banco", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3], "fonte": "Achievable/CSCS (idem: \"Buttocks on the bench or seat\")"},
+      {"nome": "cabeça apoiada no banco", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3], "fonte": "Achievable/CSCS (idem: \"Head on the bench or pad\")"},
+      {"nome": "a barra nunca encosta na cabeça", "equipamento": "barra", "partes": ["Head", "Neck"], "mm": [25, 5000], "fonte": "Weslley (a barra nunca encosta nem entra na cabeça); Achievable/CSCS (\"Lower the bar until it almost touches the head or face\"). Medido da PELE: o cabelo fica ~14 mm acima dela na linha da testa, então 25 mm da pele deixa ~1 cm de folga até o cabelo"},
+      {"nome": "embaixo a barra fica logo acima da testa, sem encostar", "equipamento": "barra", "partes": ["Head"], "t": 1.0, "mm": [30, 60], "fonte": "ACE (\"Lower the bar until it sits just above your forehead or until you notice the upper arms begin to drift backwards\"); Achievable/CSCS (\"Lower the bar until it almost touches the head or face\"). A cena para a barra a 30 mm do cabelo (~44 mm da pele)"}
+    ],
+    "angulos": [
+      {"nome": "braços estendidos em cima", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 15], "fonte": "ACE (\"fully extending your elbows until the barbell is positioned directly above your face\"); Achievable/CSCS (\"Position the bar over the chest with the elbows fully extended and the arms parallel\")"},
+      {"nome": "braço parado na vertical o movimento todo (o tronco está deitado: 90° do tronco = vertical)", "medida": "braco_frente", "t": "todos", "graus": [84, 96], "fonte": "ACE (\"Your upper arms should remain vertical to the floor as the elbows bend\"; \"Attempt to keep your upper arms vertical to the floor throughout the exercise\"); Achievable/CSCS (\"Keeping the upper arms stationary\"; \"keep the upper arms perpendicular to the floor\"). A folga de ±6° é da cena"},
+      {"nome": "cotovelos sem abrir pro lado (braços paralelos)", "medida": "cotovelo_tronco", "t": "todos", "graus": [-6, 6], "fonte": "Achievable/CSCS (\"Point the elbows toward the knees (not out to the sides)\"; \"Keep the upper arms parallel to each other\"); ACE (\"keep your elbows shoulder-width apart\")"},
+      {"nome": "pegada fechada, na largura dos ombros ou um pouco menos", "medida": "pegada_largura", "t": "todos", "faixa": [0.75, 1.05], "fonte": "Achievable/CSCS (\"a closed, pronated grip about 12 inches (30 cm) wide\" = 0,75 da distância entre as articulações dos ombros do boneco, 40 cm); ACE (\"keep your elbows shoulder-width apart\"); ExRx (\"narrow overhand grip\")"},
+      {"nome": "punho reto (neutro)", "medida": "flexao", "junta": "Hand", "t": "todos", "graus": [0, 15], "fonte": "ACE (\"Maintain a neutral wrist position (no flexion or extension at the wrist)\"); Achievable/CSCS (\"Keep the wrists stiff\"). Os ~5–7° medidos são desvio de lado, pra linha dos nós dos dedos ficar na barra, sem dobrar pra frente nem pra trás"},
+      {"nome": "cotovelo bem dobrado embaixo (barra logo acima da testa)", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [105, 125], "fonte": "ACE (\"Lower the bar until it sits just above your forehead\"); Achievable/CSCS (\"Lower the bar until it almost touches the head or face\"). No boneco, com o braço na vertical, a barra chega a 30 mm do cabelo com o cotovelo a ~113°"}
+    ]
+  }
+}

@@ -105,6 +105,14 @@ def antebraco_vertical(j):
     return out
 
 
+def ombro_frente(j):
+    """Articulação do ombro (cabeça do úmero) à frente (+) ou atrás (−) da base do pescoço, no eixo frente do tronco,
+    mm [E, D]: protração (+) / retração (−) da escápula. Subir e descer o ombro não mexe nela — no encolhimento ela
+    fica parada (o ombro só sobe e desce, sem rolar pra frente nem pra trás; lote 2, 04/10/2026)."""
+    _, _, frente = eixos_tronco(j)
+    return [float((j[L + "Arm"] - j["Neck"]) @ frente) * 1000 for L, _ in LADOS]
+
+
 def pes_largura(j):
     """Distância entre os tornozelos (no chão) ÷ distância entre as articulações do quadril: ~1 = pés na largura do
     quadril, ~2 = na largura dos ombros, < 0,7 = pés colados ou cruzando."""
@@ -127,6 +135,21 @@ def ponta_pe_diferenca(j):
     """Um pé mais virado que o outro, graus (valor absoluto)."""
     e, d = ponta_pe(j)
     return [abs(e - d)]
+
+
+PONTAS = ("LeftToeBase", "RightToeBase")     # ossos que também entram pela PONTA (chave "<osso>_ponta")
+
+
+def ponta_dedos(j):
+    """Dedos (base dos dedos → ponta dos dedos, deitados no chão) virados pra fora (+) ou pra dentro (−) da frente da
+    pelve, graus [E, D]. É a direção do pé que vale também com o calcanhar levantado (pé de trás do afundo, lote 2):
+    com o pé quase em pé, o tornozelo → base dos dedos visto de cima fica curtinho e o ponta_pe perde o sentido."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, s in LADOS:
+        p = _chao(j[L + "ToeBase_ponta"] - j[L + "ToeBase"])
+        out.append(math.degrees(math.atan2(p @ (s * lado), p @ frente)))
+    return out
 
 
 def pes_alinhados(j):
@@ -167,16 +190,85 @@ def coluna(j):
     return [_ang(j["Spine1"] - j["Hips"], j["Neck"] - j["Spine1"])]
 
 
+def pes_base_lateral(j):
+    """Distância entre os tornozelos SÓ de lado a lado da pelve (sem contar um pé à frente do outro) ÷ distância
+    entre as articulações do quadril: ~1 = cada pé embaixo do seu quadril. É a "largura do quadril" da base do
+    afundo (lote 2, 04/10/2026), em que o pes_largura (distância no chão inteiro) também conta a passada."""
+    lado, _ = eixos_pelve(j)
+    return [abs(float((j["LeftFoot"] - j["RightFoot"]) @ lado))
+            / max(float(np.linalg.norm(j["LeftUpLeg"] - j["RightUpLeg"])), 1e-9)]
+
+
+def joelho_altura(j):
+    """Altura do centro do joelho acima do chão (z = 0), mm [E, D]: no afundo o joelho de trás desce até quase
+    encostar no chão (lote 2). A pele da frente do joelho fica uns 5 cm à frente do centro da junta."""
+    return [float(j[L + "Leg"][2]) * 1000 for L, _ in LADOS]
+
+
 MEDIDAS = {
     "cotovelo_tronco": cotovelo_tronco, "braco_frente": braco_frente, "braco_elevacao": braco_elevacao,
     "braco_plano": braco_plano, "braco_abertura": braco_abertura, "antebraco_vertical": antebraco_vertical,
-    "pegada_largura": pegada_largura,
+    "pegada_largura": pegada_largura, "ombro_frente": ombro_frente,
     "pes_largura": pes_largura, "ponta_pe": ponta_pe, "ponta_pe_diferenca": ponta_pe_diferenca,
     "pes_alinhados": pes_alinhados, "joelho_valgo": joelho_valgo, "joelho_fora_do_pe": joelho_fora_do_pe,
     "coluna": coluna,
+    "pes_base_lateral": pes_base_lateral, "joelho_altura": joelho_altura, "ponta_dedos": ponta_dedos,
 }
 UNIDADE = {"pes_alinhados": "mm", "joelho_valgo": "mm", "joelho_fora_do_pe": "mm", "pes_largura": "×",
-           "pegada_largura": "×"}
+           "pegada_largura": "×", "ombro_frente": "mm", "pes_base_lateral": "×", "joelho_altura": "mm"}
+
+# ── remada unilateral (lote 2, 04/10/2026): escápula de UM lado e tronco sem girar. O ombro_frente usa a linha dos
+# ombros como eixo de lado a lado, e ela gira junto quando só um ombro vai pra frente (os dois lados mexem igual,
+# metade cada); aqui o eixo vem da base das clavículas (cabeça dos ossos Shoulder), presa no tórax.
+JUNTAS = JUNTAS + ("LeftShoulder", "RightShoulder")
+
+
+def eixos_torax(j):
+    """Referencial do tórax: cima (quadril → pescoço), lado (base da clavícula esquerda → direita, ⟂ cima) e frente.
+    A base da clavícula é presa no tórax: subir, levar pra frente ou pra trás a escápula não mexe nesses eixos."""
+    cima = _u(j["Neck"] - j["Hips"])
+    lado = j["RightShoulder"] - j["LeftShoulder"]
+    lado = _u(lado - cima * (lado @ cima))
+    return cima, lado, np.cross(cima, lado)
+
+
+def escapula_frente(j):
+    """Ombro (cabeça do úmero) à frente (+, protração) ou atrás (−, retração) da base do pescoço, no eixo frente do
+    TÓRAX, mm [E, D]: como o ombro_frente, mas um ombro mexendo sozinho não muda o número do outro (remada
+    unilateral: a escápula que rema desce pro chão embaixo e volta pra trás em cima; a do apoio fica parada)."""
+    _, _, frente = eixos_torax(j)
+    return [float((j[L + "Arm"] - j["Neck"]) @ frente) * 1000 for L, _ in LADOS]
+
+
+def ombros_nivel(j):
+    """Eixo de lado a lado do tórax (base das clavículas, ⟂ ao tronco) × o chão, graus: 0 = nivelado, + = lado
+    direito mais alto. Com o tronco curvado perto da horizontal é o giro do tronco em volta do próprio eixo (o "do not
+    rotate torso" da remada unilateral); em pé é a inclinação do tórax pro lado."""
+    _, lado, _ = eixos_torax(j)
+    return [math.degrees(math.asin(max(-1.0, min(1.0, float(lado[2])))))]
+
+
+def pelve_nivel(j):
+    """Linha das articulações do quadril × o chão, graus: 0 = pelve nivelada, + = lado direito mais alto."""
+    d = j["RightUpLeg"] - j["LeftUpLeg"]
+    return [math.degrees(math.atan2(d[2], math.hypot(d[0], d[1])))]
+
+
+MEDIDAS.update({"escapula_frente": escapula_frente, "ombros_nivel": ombros_nivel, "pelve_nivel": pelve_nivel})
+UNIDADE.update({"escapula_frente": "mm"})
+
+
+# ── agachamento búlgaro (lote 2, 04/10/2026): o pé de trás fica com o peito do pé em cima do banco, em flexão
+# plantar — o tornozelo não pode passar da amplitude normal (Alazzawi S et al., World J Orthop 2017;8(1):21-29,
+# tabela 5: flexão plantar 0–50°, dorsiflexão 0–20°). O limites.py não tem o tornozelo.
+def tornozelo(j):
+    """Ângulo canela × pé (joelho → tornozelo × tornozelo → base dos dedos), graus [E, D]. O boneco em pé com o pé
+    chapado mede ~76°; flexão plantar (ponta do pé descendo) diminui o número e dorsiflexão (joelho indo à frente do
+    pé) aumenta: flexão plantar de 0 a 50° = ~76° a ~26° no boneco."""
+    return [_ang(j[L + "Foot"] - j[L + "Leg"], j[L + "ToeBase"] - j[L + "Foot"]) for L, _ in LADOS]
+
+
+MEDIDAS.update({"tornozelo": tornozelo})
 
 
 def medir(j):
@@ -233,3 +325,28 @@ def faixa(regra):
 def fora_da_faixa(regra, vals):
     lo, hi = faixa(regra)
     return any(not lo <= v <= hi for v in vals)
+
+
+def do_lado(regra, vals):
+    """Regra de UM membro só: regra["lado"] = "E" (esquerdo) ou "D" (direito) fica só com o valor daquele lado; sem
+    "lado" vale pros dois, como sempre. No afundo a perna da frente e a de trás têm ângulos diferentes (lote 2)."""
+    lado = regra.get("lado")
+    if lado is None or len(vals) != 2:
+        return vals
+    if lado not in ("E", "D"):
+        raise ValueError("lado da regra %r: use \"E\" ou \"D\"" % lado)
+    return [vals[0 if lado == "E" else 1]]
+
+
+# ── abdominal bicicleta (lote 2, 05/10/2026): mãos atrás da cabeça com os cotovelos abertos pro lado (Livestrong,
+# reproduzido pelo ACE: "hands behind your head (elbows out wide)"). O braco_abertura é medido no referencial quadril →
+# pescoço, que muda quando o tronco enrola e gira; a distância entre os cotovelos não depende disso.
+def cotovelos_largura(j):
+    """Distância entre os cotovelos (cabeça do antebraço) ÷ distância entre os ombros (cabeça do úmero): ~1 = cotovelos
+    na largura dos ombros (braços pendurados ou fechados pra frente), ~1,7 = abertos pro lado com as mãos na cabeça."""
+    return [float(np.linalg.norm(j["LeftForeArm"] - j["RightForeArm"])
+                  / max(np.linalg.norm(j["LeftArm"] - j["RightArm"]), 1e-9))]
+
+
+MEDIDAS.update({"cotovelos_largura": cotovelos_largura})
+UNIDADE.update({"cotovelos_largura": "×"})

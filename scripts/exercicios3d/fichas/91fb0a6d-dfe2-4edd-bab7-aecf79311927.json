@@ -1,0 +1,48 @@
+{
+  "uuid": "91fb0a6d-dfe2-4edd-bab7-aecf79311927",
+  "nome": "Crucifixo com Halteres",
+  "cena": "crucifixo_com_halteres",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral maior (porção esternal) · deltoide anterior · bíceps (cabeça curta)",
+  "padrao_movimento": "crucifixo",
+  "equipamento": "halteres",
+  "variacao": "banco reto",
+  "alvos": ["peitoral"],
+  "auxiliares": ["deltoide", "biceps"],
+  "camera": {"az": 45, "el": 22, "dist": 4.0, "alvo": [0, 0.1, 0.62]},
+  "ida_s": 1.5,
+  "movimento": "Deitado de costas no banco reto, com a cabeça, as costas e o glúteo apoiados e os pés chapados no chão, segura um halter em cada mão com as palmas viradas uma para a outra e os halteres paralelos entre si, com os braços quase estendidos e os halteres em cima do peito, quase encostando um no outro; com os cotovelos levemente dobrados e parados e os punhos retos, desce os halteres para os lados num arco largo, com os cotovelos apontando para o chão, até os halteres ficarem na altura do peito; sobe pelo mesmo arco, como num abraço, até os halteres quase se encostarem de novo, sem mudar o ângulo dos cotovelos.",
+  "cinesiologia": {
+    "plano": "transverso (adução horizontal do ombro na subida, abdução horizontal na descida), cadeia cinética aberta",
+    "articulacoes": "ombro (adução horizontal na subida, abdução horizontal na descida); cotovelo parado, levemente dobrado (20–30°); punho neutro; escápulas retraídas e paradas no banco",
+    "agonistas": "peitoral maior (porção esternal)",
+    "sinergistas": "peitoral maior (porção clavicular), deltoide anterior, bíceps braquial (cabeça curta) e coracobraquial (ExRx); peitoral maior e deltoide anterior com ativação parecida com a dos supinos com 3 repetições (Welsch 2005) e menor que no supino com barra em séries de 6RM (Solstad 2020)",
+    "estabilizadores": "bíceps braquial, braquial e tríceps braquial seguram o cotovelo no mesmo ângulo e os flexores do punho seguram o halter (ExRx); o bíceps trabalha 57–86 % mais que no supino com barra, provavelmente mais pra segurar o ângulo do cotovelo que pra fazer força (Solstad 2020)",
+    "fases": "descida excêntrica (abre os braços, inspirando), subida concêntrica (fecha os braços, soltando o ar)"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Fly. https://exrx.net/WeightExercises/PectoralSternal/DBFly (lido na cópia do Internet Archive de 04/09/2026)",
+    "American Council on Exercise (ACE) — Lying Chest Fly. https://www.acefitness.org/resources/everyone/exercise-library/21/lying-chest-fly/",
+    "Solstad TEJ, Andersen V, Shaw M, Hoel EM, Vonheim A, Saeterbakken AH. A Comparison of Muscle Activation between Barbell Bench Press and Dumbbell Flyes in Resistance-Trained Males. J Sports Sci Med. 2020;19(4):645-651.",
+    "Welsch EA, Bird M, Mayhew JL. Electromyographic activity of the pectoralis major and anterior deltoid muscles during three upper-body lifts. J Strength Cond Res. 2005;19(2):449-452."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no banco", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3], "fonte": "ACE — Lying Chest Fly (\"Your head, shoulders, butt and feet should make contact with the bench and floor/riser throughout the exercise\")"},
+      {"nome": "glúteo apoiado no banco", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3], "fonte": "ACE (idem); Solstad 2020 (\"the head, shoulder, and hips were supported by a bench\")"},
+      {"nome": "cabeça apoiada no banco", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3], "fonte": "ACE (idem)"}
+    ],
+    "angulos": [
+      {"nome": "braços quase estendidos em cima, halteres em cima do peito", "medida": "braco_plano", "t": 0.0, "graus": [75, 95], "fonte": "ExRx — Dumbbell Fly (\"Support dumbbells above chest with arms fixed in slightly bent position\")"},
+      {"nome": "halteres quase juntos em cima", "medida": "pegada_largura", "t": 0.0, "faixa": [0.3, 0.8], "fonte": "ExRx — Dumbbell Fly (\"Bring dumbbells together in wide hugging motion until dumbbells are nearly together\"); a cena deixa 4 cm entre as anilhas, sem encostar"},
+      {"nome": "embaixo os halteres na altura do peito: braço na linha do tronco, sem descer além", "medida": "braco_plano", "t": 1.0, "graus": [-15, 5], "fonte": "ACE — Lying Chest Fly (\"until they lie level with your shoulders or chest\"); Solstad 2020 (o elástico entre os halteres \"had to touch the chest\"). Com o cotovelo a 25° e o eixo do halter na altura da pele mais alta do peito, o braço fica 5° abaixo da linha dos ombros"},
+      {"nome": "o braço anda no plano dos ombros (adução horizontal)", "medida": "braco_elevacao", "t": "todos", "graus": [80, 100], "fonte": "Solstad 2020 (\"horizontal shoulder flexion position with extended elbows\")"},
+      {"nome": "cotovelo levemente dobrado embaixo (150–160° por dentro)", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [20, 30], "fonte": "Solstad 2020 (\"In the DF, the elbow angle (150-160º) in the lowest position and was standardized using a protractor\")"},
+      {"nome": "cotovelo parado o movimento todo", "medida": "flexao", "junta": "ForeArm", "t": "todos", "graus": [20, 30], "fonte": "ExRx — Dumbbell Fly (\"Keep elbows at fixed angle, only slightly bent\"); Solstad 2020 (\"The angle of the elbow joint was kept close to constant throughout the execution of the DF\")"},
+      {"nome": "cotovelo apontando pro chão embaixo (a mão fica acima do cotovelo)", "medida": "inclinacao", "segmento": ["ForeArm", "Hand"], "t": 1.0, "graus": [-35, -10], "fonte": "ExRx — Dumbbell Fly (\"Keep shoulders internally rotated so elbows point downward at bottom position and outward at top position\")"},
+      {"nome": "punho reto (neutro)", "medida": "flexao", "junta": "Hand", "t": "todos", "graus": [0, 15], "fonte": "ACE — Lying Chest Fly (\"maintaining a neutral wrist position (avoid flexion/extension at the wrist joint)\")"},
+      {"nome": "joelhos a ~90° com os pés no chão", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [75, 105], "fonte": "Solstad 2020 (\"the head, shoulder, and hips were supported by a bench with ~90º knee flexion\")"}
+    ]
+  }
+}

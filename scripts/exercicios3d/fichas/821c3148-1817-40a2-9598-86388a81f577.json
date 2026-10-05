@@ -1,0 +1,74 @@
+{
+ "uuid": "821c3148-1817-40a2-9598-86388a81f577",
+ "nome": "Abdominal Supra",
+ "cena": "abdominal_supra",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · oblíquos",
+ "padrao_movimento": "abdominal_supra",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado no chão, mãos atrás da cabeça",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "obliquos"
+ ],
+ "camera": {
+  "az": 70,
+  "el": 14,
+  "dist": 3.4,
+  "alvo": [
+   0,
+   0.02,
+   0.22
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado de costas no colchonete, com os joelhos dobrados e os pés chapados no colchonete, na largura do quadril, coloca as mãos atrás da cabeça — a cabeça apoiada nas palmas e os dedos juntos encostando de leve atrás dela, sem entrelaçar — com os cotovelos abertos para os lados e puxados para trás; soltando o ar, contrai o abdômen e enrola a parte de cima do tronco em direção às coxas, aproximando as costelas da pelve, até as escápulas saírem do chão (tronco a uns 30° do chão), com a cabeça acompanhando a coluna e o queixo só um pouco para dentro, sem encostar no peito e sem puxar a cabeça com as mãos; os pés, o cóccix e a lombar ficam no colchonete; desce devagar, desenrolando a coluna, até as costas e a cabeça voltarem a apoiar.",
+ "cinesiologia": {
+  "plano": "sagital (flexão do tronco), com a pelve e as pernas paradas no chão",
+  "articulacoes": "coluna torácica e lombar alta (flexão na subida, extensão na descida), com leve retroversão da pelve que encosta a lombar no chão; pescoço alinhado com a coluna, com leve flexão em cima; quadril e joelhos parados (pés chapados); ombros e cotovelos parados (mãos atrás da cabeça, cotovelos abertos)",
+  "agonistas": "reto abdominal (ExRx: alvo)",
+  "sinergistas": "oblíquos externo e interno (ExRx: sinergistas; Moura 2011: o crunch \"envolve toda a musculatura abdominal (reto abdominal, oblíquo externo e obliquo interno)\")",
+  "estabilizadores": "nenhum significativo (ExRx). Os flexores do quadril trabalham pouco: o reto femoral teve atividade significativamente menor no crunch do que no ABslide e na FitBall (Hildenbrand 2004: \"Both the Ab Roller and trunk-curl exercise involve significantly less activity of the RF\"), e subir rápido puxando com eles inclina a pelve pra frente e força a lombar (ACE)",
+  "fases": "subida concêntrica (soltando o ar), descida excêntrica e controlada (puxando o ar) (ACE)"
+ },
+ "referencias": [
+  "American Council on Exercise (ACE) — Crunch. https://www.acefitness.org/resources/everyone/exercise-library/52/crunch/",
+  "ExRx.net — Crunch. https://exrx.net/WeightExercises/RectusAbdominis/BWCrunch (lido na cópia do Internet Archive de 04/02/2026)",
+  "Hildenbrand K, Noble L. Abdominal muscle activity while performing trunk-flexion exercises using the Ab Roller, ABslide, FitBall, and conventionally performed trunk curls. J Athl Train. 2004;39(1):37-43. https://pmc.ncbi.nlm.nih.gov/articles/PMC385260/",
+  "Moura ML, Tessutti LS, Moraes AC. Análise do exercício abdominal \"crunch\" realizado com cargas máximas e submáximas: respostas eletromiográficas da musculatura abdominal. Motricidade. 2011;7(1):85-93. https://www.redalyc.org/articulo.oa?id=273019759009"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "chao_mm": 12,
+  "chao_mm_motivo": "os pés ficam chapados em cima do colchonete de 12 mm (ACE: \"Lie in a supine (on your back) position on a mat with your knees bent, feet flat\"; \"Your feet, tailbone and lower back should remain in contact with the mat at all times\"), então a planta é medida no topo dele",
+  "tecnica_padrao": {
+   "coluna": [0, 60]
+  },
+  "tecnica_padrao_motivo": "a coluna dobra de propósito: o exercício É a flexão do tronco (ACE: \"slowly curling your torso towards your thighs\"; ExRx: \"Flex waist to raise upper torso from mat\"); a coluna reta embaixo e a curva em cima estão nos ângulos da ficha",
+  "zonas": [
+   {"nome": "sacro e glúteo apoiados no colchonete", "equipamento": "colchonete", "partes": ["Hips"], "mm": [-20, 3], "fonte": "ACE (\"Your feet, tailbone and lower back should remain in contact with the mat at all times\")"},
+   {"nome": "costas apoiadas embaixo", "equipamento": "colchonete", "partes": ["Spine1", "Spine2"], "t": 0.0, "mm": [-20, 3], "fonte": "ACE (\"Lie in a supine (on your back) position on a mat\")"},
+   {"nome": "lombar encostada no colchonete em cima (retroversão da pelve)", "equipamento": "colchonete", "partes": ["Spine"], "t": [0.8, 1.0], "mm": [-20, 3], "fonte": "ACE (\"Your feet, tailbone and lower back should remain in contact with the mat\"; \"The movement should focus on pulling your rib cage towards your pelvis\"); ExRx (\"Keep low back on mat\"). Embaixo, relaxado, o boneco tem a curva natural da lombar (~1,3 cm de vão no meio); a pelve vira pra trás (retroversão) enquanto o tronco sobe e a lombar encosta"},
+   {"nome": "escápulas fora do chão em cima", "equipamento": "colchonete", "partes": ["Spine2"], "t": 1.0, "mm": [10, 500], "fonte": "Hildenbrand 2004 (\"Subjects elevated the trunk by lifting the head and shoulders such that the scapulae were lifted above the ground\"); ACE (\"Continue curling up until your upper back is lifted off the mat\")"},
+   {"nome": "dorso das mãos no colchonete embaixo (a cabeça apoiada nelas)", "equipamento": "colchonete", "partes": ["LeftHand", "RightHand", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "t": 0.0, "mm": [-20, 3], "fonte": "ACE (\"Place your hands behind your head\"; foto do começo: a cabeça apoiada nas mãos)"},
+   {"nome": "cotovelos puxados pra trás, no colchonete embaixo", "equipamento": "colchonete", "partes": ["LeftArm", "LeftForeArm", "RightArm", "RightForeArm"], "t": 0.0, "mm": [-20, 3], "fonte": "ACE (\"pulling your elbows back without arching your low back. This elbow position should be maintained throughout the exercise\")"}
+  ],
+  "contatos": [
+   {"nome": "mão esquerda atrás da cabeça, encostando (no cabelo) sem entrar", "partes": ["LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "com": ["Head", "Neck"], "cabelo": true, "mm": [-2, 3], "fonte": "ACE (\"Place your hands behind your head\"); ExRx (\"Place hands behind neck or head\"); Weslley (dedos encostando de leve, sem puxar). Medido até a superfície de fora da cabeça (o cabelo): − = a mão afundou no cabelo; a pele fica uns 6 mm embaixo dele"},
+   {"nome": "mão direita atrás da cabeça, encostando (no cabelo) sem entrar", "partes": ["RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Head", "Neck"], "cabelo": true, "mm": [-2, 3], "fonte": "idem"},
+   {"nome": "braços e antebraços sem entrar na cabeça", "partes": ["LeftArm", "LeftForeArm", "RightArm", "RightForeArm"], "com": ["Head", "Neck"], "mm": [-2, 2000]},
+   {"nome": "antebraços e mãos sem entrar no tronco (trapézio, costas, peito)", "partes": ["LeftForeArm", "RightForeArm", "LeftHand", "RightHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3"], "com": ["Spine", "Spine1", "Spine2"], "mm": [-2, 2000]}
+  ],
+  "angulos": [
+   {"nome": "joelhos dobrados, pés chapados", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [85, 115], "fonte": "Hildenbrand 2004 (\"feet were placed flat on the ground with the knees flexed to 90°\"); Moura 2011 (\"decúbito dorsal com joelhos fletidos a 90°\"); ACE (\"heels 12 - 18\\\" from your tailbone\": 30–46 cm pedem ~105–125° neste boneco). A cena usa ~100°, entre os dois: o calcanhar fica a ~48 cm da pelve apoiada no colchonete"},
+   {"nome": "deitado embaixo (tronco no chão)", "medida": "tronco", "t": 0.0, "graus": [86, 94]},
+   {"nome": "tronco a ~30° do chão em cima", "medida": "tronco", "t": 1.0, "graus": [55, 65], "fonte": "Moura 2011 (\"flexão controlada do tronco até aproximadamente 30°\"); medido da pelve à base do pescoço: 90° − 30° = 60° da vertical"},
+   {"nome": "coluna reta embaixo", "medida": "coluna", "t": 0.0, "graus": [0, 10]},
+   {"nome": "coluna enrolada em cima (flexão do tronco, lombar no chão)", "medida": "coluna", "t": 1.0, "graus": [40, 60], "fonte": "ACE (\"curling your torso towards your thighs\"; \"lower back should remain in contact with the mat\"): com a lombar no chão, os ~30° do tronco saem da curva da coluna torácica"},
+   {"nome": "cotovelos abertos pros lados (não fecham na frente do rosto)", "medida": "cotovelo_tronco", "t": "todos", "graus": [45, 75], "fonte": "ACE (\"pulling your elbows back... This elbow position should be maintained throughout the exercise\")"},
+   {"nome": "cotovelos no plano do tronco, puxados pra trás", "medida": "braco_plano", "t": "todos", "graus": [-30, 20], "fonte": "ACE (idem). O eixo do tronco da medida vai da pelve ao pescoço: em cima, com a coluna enrolada, o braço parece ~20° mais à frente sem sair do lugar no tórax"}
+  ]
+ }
+}

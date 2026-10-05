@@ -1,0 +1,368 @@
+{
+ "uuid": "aac834e8-ae82-4d43-a48e-f9e8fbdd1cf2",
+ "nome": "Barra Fixa",
+ "cena": "barra_fixa",
+ "grupo": "Dorsal / Bíceps",
+ "subgrupo": "Latíssimo do dorso · bíceps · trapézio inferior",
+ "padrao_movimento": "puxada_vertical",
+ "equipamento": "peso_corporal",
+ "variacao": "pegada pronada",
+ "alvos": [
+  "dorsal"
+ ],
+ "auxiliares": [
+  "biceps",
+  "costas",
+  "trapezio",
+  "antebraco"
+ ],
+ "camera": {
+  "az": 145,
+  "el": 10,
+  "dist": 5.8,
+  "alvo": [
+   0,
+   0.05,
+   1.25
+  ]
+ },
+ "camera_vistas": {
+  "dist": 5.0,
+  "alvo": [
+   0,
+   0.05,
+   1.3
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Pendurado na barra fixa com as mãos um pouco mais abertas que os ombros e as palmas viradas para a frente (pegada pronada), braços estendidos acima da cabeça, corpo reto, pernas estendidas e soltas, sem cruzar os tornozelos, e os pés fora do chão; primeiro desce as escápulas e leva elas um pouco para trás, tirando os ombros de perto das orelhas, e então puxa o corpo para cima dobrando os cotovelos, que descem pelo lado do tronco, até o queixo passar da barra, com o peito chegando perto dela; o rosto passa logo atrás da barra, com o tronco inclinando um pouco para trás e as pernas indo um pouco à frente, sem balançar nem dar impulso com as pernas; desce devagar até estender de novo os braços e os ombros.",
+ "cinesiologia": {
+  "plano": "frontal (adução do ombro com a pegada pronada aberta) e sagital (flexão do cotovelo); cadeia cinética fechada — as mãos ficam paradas na barra e quem sobe é o corpo",
+  "articulacoes": "ombro (adução e um pouco de extensão na subida, abdução na descida), cotovelo (flexão na subida, extensão na descida) e cintura escapular (descida e retração das escápulas no começo e na subida; elevação na volta até o pendurado); tronco, quadril e joelhos quase parados (corpo reto, pernas estendidas)",
+  "agonistas": "latíssimo do dorso (alvo do ExRx; 117–130% da contração isométrica máxima na barra fixa, Youdas 2010)",
+  "sinergistas": "braquial, braquiorradial e bíceps braquial (flexão do cotovelo), redondo maior, deltoide posterior, infraespinal, redondo menor e coracobraquial, romboides, levantador da escápula, trapézio inferior e médio e peitoral menor (ExRx); o trapézio inferior trabalha mais na barra pronada que na supinada (Youdas 2010) e o trapézio médio mais na pronada que na neutra (Dickie 2017)",
+  "estabilizadores": "cabeça longa do tríceps (estabilizador dinâmico, ExRx); eretores da espinha e oblíquo externo seguram o corpo reto (39–41% e 31–35% da contração máxima, Youdas 2010); os flexores do antebraço seguram a barra",
+  "fases": "subida concêntrica: começa pelas escápulas (trapézio inferior e peitoral maior chegam ao pico primeiro) e termina com bíceps e latíssimo (Youdas 2010); descida excêntrica controlada até estender os cotovelos e os ombros (ExRx, NFPT)"
+ },
+ "referencias": [
+  "ExRx.net — Pull-up. https://exrx.net/WeightExercises/LatissimusDorsi/BWPullup (lido na cópia do Internet Archive de 18/09/2026): \"Step up and grasp bar with overhand wide grip.\"; \"Pull body up until chin is above bar. Lower body until arms and shoulders are fully extended.\"; \"Range of motion will be compromised if grip is too wide.\"",
+  "American Council on Exercise (ACE) — Crockford J. 4 Moves to Help You Master the Pull-up (28/07/2015). https://www.acefitness.org/resources/pros/expert-articles/5565/4-moves-to-help-you-master-the-pull-up/",
+  "National Federation of Professional Trainers (NFPT) — Rogers M. How To Do Pull Ups: A Basic Demo for the Most Fundamental Bodyweight Strength (11/08/2025). https://nfpt.com/how-to-do-pull-ups/",
+  "Snarr RL, Hallmark AV, Casey JC, Esco MR. Electromyographical Comparison of a Traditional, Suspension Device, and Towel Pull-Up. J Hum Kinet. 2017;58:5-13. doi:10.1515/hukin-2017-0068 (PMC5548150)",
+  "Youdas JW, Amundson CL, Cicero KS, Hahn JJ, Harezlak DT, Hollman JH. Surface electromyographic activation patterns and elbow joint motion during a pull-up, chin-up, or perfect-pullup rotational exercise. J Strength Cond Res. 2010;24(12):3404-3414 (resumo)",
+  "Dickie JA, Faulkner JA, Barnes MJ, Lark SD. Electromyographic analysis of muscle activation during pull-up variations. J Electromyogr Kinesiol. 2017;32:30-36 (resumo)",
+  "Prinold JA, Bull AM. Scapula kinematics of pull-up techniques: Avoiding impingement risk with training changes. J Sci Med Sport. 2016;19(8):629-635. doi:10.1016/j.jsams.2015.08.002 (PMC4916995; texto e figura 1)",
+  "Urbanczyk CA, Prinold JAI, Reilly P, Bull AMJ. Avoiding high-risk rotator cuff loading: Muscle force during three pull-up techniques. Scand J Med Sci Sports. 2020;30(11):2205-2214 (resumo)",
+  "TITAN Fitness — TITAN Series 1.25\" Single Pull-Up Bar (especificação: \"Overall Diameter 1.25-in.\"). https://titan.fitness/products/titan-series-1-25-in-single-pull-up-bar",
+  "Duarte M. Body segment parameters (BMClab, UFABC) — tabela de Dempster adaptada por Winter (2009): massa e centro de cada segmento, usada pro centro de massa ficar embaixo da barra. https://github.com/BMClab/BMC/blob/master/notebooks/BodySegmentParameters.ipynb"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "zonas": [
+   {
+    "nome": "a barra nunca encosta na cabeça nem no pescoço (o rosto passa logo atrás dela)",
+    "equipamento": "barra_fixa",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "Weslley (peso e equipamento nunca entram no corpo); NFPT (\"Your chest should nearly touch the bar and your chin is over the bar\"): passa perto, sem encostar"
+   },
+   {
+    "nome": "em cima o peito e o pescoço ficam perto da barra, sem encostar",
+    "equipamento": "barra_fixa",
+    "partes": [
+     "Neck",
+     "Spine2"
+    ],
+    "t": 1.0,
+    "mm": [
+     5,
+     70
+    ],
+    "fonte": "NFPT (\"Your chest should nearly touch the bar and your chin is over the bar\")"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "em cima o queixo passa da barra (a pele mais baixa da cabeça acima do topo da barra)",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "barra_fixa_barra",
+    "t": 1.0,
+    "mm": [
+     0,
+     60
+    ],
+    "fonte": "ExRx — Pull-up (\"Pull body up until chin is above bar\"); NFPT (\"your chin is over the bar\"); Snarr 2017 (\"Once the bottom of the subjects' chin reached the level of the bar\")"
+   },
+   {
+    "nome": "pés fora do chão o movimento todo",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     30,
+     3000
+    ],
+    "fonte": "NFPT (\"keep your legs straight so long as your feet don't touch the floor\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "braço e mão esquerdos não entram na cabeça (braço acima da cabeça embaixo)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "braço e mão direitos não entram na cabeça (braço acima da cabeça embaixo)",
+    "partes": [
+     "RightArm",
+     "RightForeArm",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "corpo pendurado reto embaixo",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "NFPT (\"Keep your body straight without arching or swinging\"); Prinold 2016, figura 1d (no começo o corpo pende embaixo da barra)"
+   },
+   {
+    "nome": "tronco no máximo um pouco inclinado pra trás na subida (o rosto passa atrás da barra sem balançar)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "NFPT (\"Keep your body straight without arching or swinging\"); Prinold 2016, figura 1d (no topo, com o queixo acima da barra, o tronco do participante fica inclinado pra trás). Pendurado parado, o centro de massa fica embaixo da barra (Dempster/Winter): é isso que inclina o tronco"
+   },
+   {
+    "nome": "braços estendidos embaixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx (\"Lower body until arms and shoulders are fully extended\"); NFPT (\"Keep your arms straight as you hang from the bar\"; \"Fully extend your elbows in the extended position\")"
+   },
+   {
+    "nome": "braços acima da cabeça embaixo",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     150,
+     180
+    ],
+    "fonte": "ExRx (\"Lower body until arms and shoulders are fully extended\")"
+   },
+   {
+    "nome": "ombros subidos no pendurado (escápula elevada)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": 0.0,
+    "graus": [
+     -10,
+     14
+    ],
+    "fonte": "ExRx (\"Lower body until arms and shoulders are fully extended\"); ACE (antes de puxar, as escápulas ainda estão em cima: \"before beginning the pull-up motion, maintain straight arms and pull the shoulder blades down the back\")"
+   },
+   {
+    "nome": "escápulas descidas na subida (ombros longe das orelhas)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": [
+     0.35,
+     1.0
+    ],
+    "graus": [
+     22,
+     42
+    ],
+    "fonte": "ACE (\"pull the shoulder blades down the back and together... Maintain this position of the shoulder blades as you engage the back and arms to pull yourself upward\"); NFPT (\"Start by depressing the scapulae first and keep the shoulders down\"; \"Do not elevate your shoulders while pulling up\")"
+   },
+   {
+    "nome": "escápulas pra trás em cima",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -45,
+     -10
+    ],
+    "fonte": "ACE (\"pull the shoulder blades down the back and together\"); Prinold 2016 (\"More ScT retraction towards the top of the front pull-up\")"
+   },
+   {
+    "nome": "cotovelos bem dobrados em cima (queixo acima da barra)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     120,
+     145
+    ],
+    "fonte": "ExRx (\"Pull body up until chin is above bar\"): com o queixo acima da barra e as mãos na barra, o punho fica na altura do ombro e o cotovelo quase todo dobrado"
+   },
+   {
+    "nome": "em cima o braço desce pelo lado do tronco (adução do ombro)",
+    "medida": "braco_abertura",
+    "t": 1.0,
+    "graus": [
+     10,
+     45
+    ],
+    "fonte": "Snarr 2017 (\"pulled their body up to the bar by adducting at the shoulder joint and flexing at the elbows\")"
+   },
+   {
+    "nome": "o braço sobe e desce perto do plano do corpo (pegada pronada)",
+    "medida": "braco_plano",
+    "t": [
+     0.25,
+     0.85
+    ],
+    "graus": [
+     -10,
+     45
+    ],
+    "fonte": "Prinold 2016 (\"the humerus plane is more coronal during front pull-ups\")"
+   },
+   {
+    "nome": "em cima os cotovelos ficam do lado do tronco ou um pouco atrás",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -30,
+     10
+    ]
+   },
+   {
+    "nome": "pegada um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.4,
+     1.85
+    ],
+    "fonte": "Snarr 2017 (\"hands in a pronated position at a distance of 1.5 times their bi-acromial width\"); ExRx (\"overhand wide grip\"; \"Range of motion will be compromised if grip is too wide\")"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ]
+   },
+   {
+    "nome": "pernas estendidas",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NFPT (\"keep your legs straight so long as your feet don't touch the floor\")"
+   },
+   {
+    "nome": "quadril quase reto (corpo sem dobrar)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "NFPT (\"Keep your body straight without arching or swinging\")"
+   },
+   {
+    "nome": "pernas paralelas, sem cruzar os tornozelos",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     2.2
+    ],
+    "fonte": "NFPT (\"Don't cross ankles during a pull-up\")"
+   }
+  ]
+ }
+}

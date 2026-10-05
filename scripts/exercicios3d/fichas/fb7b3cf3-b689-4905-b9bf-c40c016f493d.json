@@ -1,0 +1,419 @@
+{
+ "uuid": "fb7b3cf3-b689-4905-b9bf-c40c016f493d",
+ "nome": "Abdominal Bicicleta",
+ "cena": "abdominal_bicicleta",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · oblíquos (rotação do tronco) · flexores do quadril (iliopsoas, reto femoral)",
+ "padrao_movimento": "abdominal_rotacao",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado no chão, mãos atrás da cabeça, pernas no ar pedalando",
+ "alvos": [
+  "abdomen",
+  "obliquos"
+ ],
+ "auxiliares": [
+  "quadriceps"
+ ],
+ "camera": {
+  "az": 30,
+  "el": 30,
+  "dist": 3.0,
+  "alvo": [
+   0,
+   -0.1,
+   0.22
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado de costas no colchonete, com as mãos atrás da cabeça (dedos soltos, sem entrelaçar e sem puxar o pescoço), os cotovelos abertos pro lado, a lombar encostada no chão e as escápulas fora dele; as duas pernas ficam no ar. Traz o joelho esquerdo em direção ao peito, dobrando bem o joelho, enquanto estica a perna direita pra frente sem encostar no chão, e ao mesmo tempo enrola e gira o tronco levando o cotovelo direito em direção ao joelho esquerdo; depois troca de lado como numa pedalada lenta: o joelho direito vem, a perna esquerda estica e o cotovelo esquerdo vai em direção ao joelho direito. O giro vem do tronco (a pelve fica parada no chão) e a cabeça acompanha a coluna.",
+ "cinesiologia": {
+  "plano": "transverso (rotação do tronco) e sagital (flexão do tronco e das pernas), cadeia cinética aberta",
+  "articulacoes": "coluna torácica (flexão e rotação do tronco) com a lombar e a pelve paradas no chão; quadril e joelho alternando: a perna que vem dobra o quadril e o joelho, a que vai estende",
+  "agonistas": "reto do abdome (flexão do tronco) e oblíquos (rotação): girando pra esquerda (cotovelo direito → joelho esquerdo) trabalham o oblíquo externo direito e o oblíquo interno esquerdo, e o contrário pro outro lado",
+  "sinergistas": "flexores do quadril — iliopsoas e reto femoral — puxando o joelho pro peito; quadríceps esticando o joelho da perna que vai",
+  "estabilizadores": "abdômen firme (\"brace\") segurando a lombar no chão e a pelve parada; flexores do quadril da perna esticada seguram ela no ar",
+  "fases": "cada pedalada é concêntrica (o tronco enrola e gira pro lado do joelho que vem) e a volta é a outra pedalada; devagar e controlado, sem embalo"
+ },
+ "referencias": [
+  "ACE — Supine Bicycle Crunches (Exercise Library). https://www.acefitness.org/resources/everyone/exercise-library/241/supine-bicycle-crunches/",
+  "ACE (14/05/2001) — American Council on Exercise (ACE)-sponsored Study Reveals Best and Worst Abdominal Exercises (Peter Francis, San Diego State University; EMG em 30 pessoas): bicycle maneuver em 1º pro reto do abdome e 2º pros oblíquos entre 13 exercícios. https://www.acefitness.org/about-ace/press-room/press-releases/246/american-council-on-exercise-ace-sponsored-study-reveals-best-and-worst-abdominal-exercises/",
+  "Stenger E, Porcari JP, Camic C, Kovacs A, Foster C. Abs! Exclusive ACE-sponsored Research. ACE ProSource, abril/2014 (reto femoral com ativação bem maior no bicycle crunch que no abdominal tradicional). https://acefitness.org/certifiednews/images/article/pdfs/ACE%20AbsStudy.pdf",
+  "Youdas JW, Guck BR, Hebrink RC, Rugotzke JD, Madson TJ, Hollman JH. An electromyographic analysis of the Ab-Slide exercise, abdominal crunch, supine double leg thrust, and side bridge in healthy young adults: implications for rehabilitation professionals. J Strength Cond Res. 2008;22(6):1939-1946.",
+  "Konrad P, Schmitz K, Denner A. Neuromuscular evaluation of trunk-training exercises. J Athl Train. 2001;36(2):109-118.",
+  "Grundy K. How to Do a Bicycle Crunch for a Strong, Stable Core. Livestrong, 27/03/2023 (reproduzido pelo ACE em \"ACE in the News\"). https://acefitness.org/about-ace/press-room/in-the-news/8311/how-to-do-a-bicycle-crunch-for-a-strong-stable-core-livestrong",
+  "Ichikawa K, Otsuka T, Abduh HAM, Kuruma H. Assessing validity of thoracic spine rotation range of motion measurement methods: comparison of magnetic resonance imaging and clinical measurements. J Phys Ther Sci. 2024;36(3):95. doi:10.1589/jpts.36.95"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "zonas": [
+   {
+    "nome": "sacro e lombar no colchonete (pelve em retroversão)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips",
+     "Spine"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"keep your low back pressed into the floor / mat\"; \"This movement will press your low back into the floor / mat\")"
+   },
+   {
+    "nome": "escápulas fora do chão no meio da pedalada",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "t": 0.5,
+    "mm": [
+     10,
+     500
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Contract your abdominals to flex (curl) your trunk, lifting your left shoulder blade off the floor\"); Youdas 2008 (\"curl the trunk until the inferior angles of the scapulae were lifted off the mat\")"
+   },
+   {
+    "nome": "costas altas fora do colchonete o movimento todo (tronco enrolado)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "mm": [
+     3,
+     500
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (o tronco fica enrolado: \"flex (curl) your trunk, lifting your left shoulder blade off the floor\"); na ponta de cada pedalada o ombro de baixo chega perto do colchonete sem encostar"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mão esquerda atrás da cabeça, encostando de leve (no cabelo) sem entrar",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Do not pull forward on your head during the trunk curl. Support your head in your hands\")"
+   },
+   {
+    "nome": "mão direita atrás da cabeça, encostando de leve (no cabelo) sem entrar",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Do not pull forward on your head during the trunk curl. Support your head in your hands\")"
+   },
+   {
+    "nome": "mãos soltas atrás da cabeça, uma sem entrar na outra",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     0.5,
+     100
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica); dedos soltos, sem entrelaçar: só se aproximam atrás da cabeça"
+   },
+   {
+    "nome": "cotovelo direito vai em direção ao joelho esquerdo sem bater nele",
+    "partes": [
+     "RightArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg"
+    ],
+    "mm": [
+     20,
+     3000
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Continue moving until your elbow touches or comes close to touching the opposite knee\"); com os cotovelos abertos ele chega perto (~10 cm de pele a pele na ponta) sem bater"
+   },
+   {
+    "nome": "cotovelo esquerdo vai em direção ao joelho direito sem bater nele",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm"
+    ],
+    "com": [
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     20,
+     3000
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Continue moving until your elbow touches or comes close to touching the opposite knee\"); com os cotovelos abertos ele chega perto (~10 cm de pele a pele na ponta) sem bater"
+   },
+   {
+    "nome": "antebraço e braço esquerdo sem entrar na cabeça",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     0,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "antebraço e braço direito sem entrar na cabeça",
+    "partes": [
+     "RightArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     0,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "perna direita esticada no ar no começo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "D",
+    "t": 0.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Extend (straightening) your left leg outward while keeping it elevated off the floor\")"
+   },
+   {
+    "nome": "perna esquerda esticada no ar no fim",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": 1.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (idem)"
+   },
+   {
+    "nome": "joelho esquerdo dobrado vindo pro peito no começo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": 0.0,
+    "graus": [
+     100,
+     135
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Drive your right knee towards your chest in a straight line and allow the knee to bend to a deeper angle\")"
+   },
+   {
+    "nome": "joelho direito dobrado vindo pro peito no fim",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "D",
+    "t": 1.0,
+    "graus": [
+     100,
+     135
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (idem)"
+   },
+   {
+    "nome": "joelho esquerdo vindo pro peito no começo: coxa × tronco bem fechado",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "lado": "E",
+    "t": 0.0,
+    "graus": [
+     110,
+     130
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (idem; começo com as coxas na vertical: \"until your thighs align vertically to the floor (90-degree angle at the hips)\")"
+   },
+   {
+    "nome": "joelho direito vindo pro peito no fim: coxa × tronco bem fechado",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "lado": "D",
+    "t": 1.0,
+    "graus": [
+     110,
+     130
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (idem)"
+   },
+   {
+    "nome": "tronco girado pra esquerda no começo: ombro direito mais alto (cotovelo direito → joelho esquerdo)",
+    "medida": "ombros_nivel",
+    "t": 0.0,
+    "graus": [
+     22,
+     42
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"rotating your trunk slowly to drive your left elbow towards your right knee\"); Konrad 2001 (\"Cross Curl-Up... the contralateral elbow is moved to the opposite knee\"); o teto vem de Ichikawa 2024 (rotação da coluna torácica pra um lado: 29,9 ± 6,6° na ressonância, 35,4 ± 7,8° no teste com a lombar travada)"
+   },
+   {
+    "nome": "tronco girado pra direita no fim: ombro esquerdo mais alto (cotovelo esquerdo → joelho direito)",
+    "medida": "ombros_nivel",
+    "t": 1.0,
+    "graus": [
+     -42,
+     -22
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (idem); o teto vem de Ichikawa 2024 (rotação da coluna torácica pra um lado: 29,9 ± 6,6° na ressonância, 35,4 ± 7,8° no teste com a lombar travada)"
+   },
+   {
+    "nome": "ombros nivelados no meio da pedalada",
+    "medida": "ombros_nivel",
+    "t": 0.5,
+    "graus": [
+     -6,
+     6
+    ],
+    "fonte": "meio da pedalada: o tronco passa de um lado pro outro (a ida e a volta são simétricas)"
+   },
+   {
+    "nome": "a pelve não gira: o giro vem do tronco",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -4,
+     4
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"The rotation should come from your trunk and not your hips\")"
+   },
+   {
+    "nome": "pernas indo e voltando em linha reta (sem cruzar nem abrir)",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.4,
+     2.2
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"While your legs drive forward and backwards in a straight line, your trunk will flex (curl) and rotate\")"
+   },
+   {
+    "nome": "cotovelos abertos pro lado (mãos atrás da cabeça, sem fechar os cotovelos pra frente)",
+    "medida": "cotovelos_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     2.2
+    ],
+    "fonte": "Livestrong (reproduzido pelo ACE, 2023): \"lie on your back with your hands behind your head (elbows out wide)\""
+   },
+   {
+    "nome": "perna direita esticada bem acima do chão no começo",
+    "medida": "joelho_altura",
+    "lado": "D",
+    "t": 0.0,
+    "mm": [
+     250,
+     700
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"Extend (straightening) your left leg outward while keeping it elevated off the floor\")"
+   },
+   {
+    "nome": "perna esquerda esticada bem acima do chão no fim",
+    "medida": "joelho_altura",
+    "lado": "E",
+    "t": 1.0,
+    "mm": [
+     250,
+     700
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (idem)"
+   }
+  ]
+ }
+}

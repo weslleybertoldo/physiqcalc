@@ -1,0 +1,45 @@
+{
+  "uuid": "de0144a5-36de-42ae-8541-1bfc27d667d2",
+  "nome": "Encolhimento com Halteres",
+  "cena": "encolhimento_com_halteres",
+  "grupo": "Trapézio",
+  "subgrupo": "Trapézio superior · elevador da escápula",
+  "padrao_movimento": "encolhimento",
+  "equipamento": "halteres",
+  "variacao": "em pé",
+  "alvos": ["trapezio"],
+  "auxiliares": [],
+  "camera": {"az": 146, "el": 10, "dist": 4.3, "alvo": [0, 0, 0.95]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés paralelos e afastados na largura dos ombros, o tronco ereto e um halter em cada mão ao lado das coxas, com as palmas viradas para o corpo (pegada neutra) e os cotovelos estendidos; sobe os ombros reto em direção às orelhas, o mais alto que conseguir, sem dobrar os cotovelos e sem girar (rolar) os ombros para a frente ou para trás; desce devagar até os ombros voltarem embaixo.",
+  "cinesiologia": {
+    "plano": "frontal (elevação e depressão da escápula), cadeia cinética aberta",
+    "articulacoes": "cintura escapular: elevação da escápula e da clavícula (articulação esternoclavicular) na subida, depressão na descida; ombro, cotovelo e punho parados",
+    "agonistas": "trapézio superior",
+    "sinergistas": "levantador da escápula e trapézio médio",
+    "estabilizadores": "eretores da espinha (tronco ereto)",
+    "fases": "subida concêntrica, descida excêntrica"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Shrug (Weight Exercises › Trapezius, Upper): \"Stand holding dumbbells to sides. Elevate shoulders as high as possible. Lower and repeat.\"; músculos: alvo trapézio superior, sinergistas trapézio médio e levantador da escápula, estabilizador eretores da espinha.",
+    "ExRx.net — Kinesiology › Exercise Errors, Shoulder Shrugs (shoulder rolls): \"It's only necessary to raise and lower the shoulders during shrugs.\"",
+    "American Council on Exercise (ACE) — Exercise Library, Standing Shrug (dumbbells).",
+    "Peeters I, Braeckevelt T, Palmans T, Van Tongel A, De Wilde L. Kinematic analysis of scapulothoracic movements in the shoulder girdle: a whole cadaver study. JSES Int. 2022;7(1):147-152.",
+    "Ekstrom RA, Donatelli RA, Soderberg GL. Surface electromyographic analysis of exercises for the trapezius and serratus anterior muscles. J Orthop Sports Phys Ther. 2003;33(5):247-258.",
+    "Pizzari T, Wickham J, Balster S, Ganderton C, Watson L. Modifying a shrug exercise can facilitate the upward rotator muscles of the scapula. Clin Biomech (Bristol). 2014;29(2):201-205."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [],
+    "angulos": [
+      {"nome": "ombros relaxados embaixo (linha do ombro caída)", "medida": "inclinacao", "segmento": ["Shoulder", "Arm"], "t": 0.0, "graus": [20, 32]},
+      {"nome": "ombros encolhidos em cima: linha do ombro na horizontal", "medida": "inclinacao", "segmento": ["Shoulder", "Arm"], "t": 1.0, "graus": [-4, 7], "fonte": "ExRx — Dumbbell Shrug (\"Elevate shoulders as high as possible\"; \"raising shoulders until slope of shoulders becomes horizontal may be considered adequate\"); Peeters et al. 2022, JSES Int 7(1):147-152 (\"Shrug caused a large clavicular elevation of 25° (SD 5°)\")"},
+      {"nome": "cotovelos estendidos e parados", "medida": "flexao", "junta": "ForeArm", "t": "todos", "graus": [0, 12], "fonte": "ACE — Standing Shrug (\"with your elbows fully extended\"; \"avoiding any shoulder rotation or elbow flexion (bending)\")"},
+      {"nome": "braços pendurados ao lado do corpo", "medida": "braco_elevacao", "t": "todos", "graus": [0, 15], "fonte": "Pizzari et al. 2014, Clin Biomech 29(2):201-205 (\"the standard shrug exercise at 0° of shoulder abduction\")"},
+      {"nome": "o ombro só sobe e desce, sem rolar pra frente nem pra trás", "medida": "ombro_frente", "t": "todos", "mm": [-6, 18], "fonte": "ExRx — Exercise Errors, Shoulder Shrugs (\"Rolling (horizontal movement) is nonsensical\"; \"It's only necessary to raise and lower the shoulders during shrugs\"); ACE — Standing Shrug (\"avoiding any shoulder rotation\")"},
+      {"nome": "braço não vai pra frente nem pra trás", "medida": "braco_frente", "t": "todos", "graus": [-5, 10]},
+      {"nome": "halteres ao lado das coxas", "medida": "pegada_largura", "t": "todos", "faixa": [1.2, 1.7], "fonte": "ACE — Standing Shrug (\"Position the dumbbells alongside your thighs\")"},
+      {"nome": "tronco ereto e parado", "medida": "tronco", "t": "todos", "graus": [0, 5], "fonte": "ACE — Standing Shrug (\"Maintain an erect torso\")"}
+    ]
+  }
+}
