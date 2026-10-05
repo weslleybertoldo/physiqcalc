@@ -404,3 +404,19 @@ def quadril_sinal(j):
 
 
 MEDIDAS.update({"quadril_sinal": quadril_sinal})
+
+
+# ── abdominais refeitos (lote 3, 05/10/2026): no supra e no bicicleta só a parte de cima das costas enrola, até as
+# escápulas saírem do chão, e a lombar fica no colchonete (ACE Crunch: "Continue curling up until your upper back is
+# lifted off the mat"; ExRx, do ACSM: "elevation of the trunk to 30° is the important criteria"). O "tronco" do
+# checagem3d (quadril → pescoço × vertical) não pegava o tronco subindo demais: com a lombar parada no chão ele mede
+# só metade do que o tórax sobe — no supra do lote 2 marcava 30° do chão com o tórax a 50°.
+def torax_chao(j):
+    """Tórax (cabeça do Spine1 → base do pescoço: da transição toracolombar, ~T11–T12 no boneco, até ~C7) × o chão,
+    graus: 0 = deitado de costas com as costas no chão, + = a parte de cima subindo (90 = em pé). É quanto as costas
+    saem do colchonete nos abdominais, com a lombar parada no chão."""
+    d = j["Neck"] - j["Spine1"]
+    return [math.degrees(math.atan2(float(d[2]), math.hypot(float(d[0]), float(d[1]))))]
+
+
+MEDIDAS.update({"torax_chao": torax_chao})

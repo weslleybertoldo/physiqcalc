@@ -24,10 +24,10 @@
   ]
  },
  "ida_s": 1.5,
- "movimento": "Deitado de costas no colchonete, com os joelhos dobrados e os pés chapados no colchonete, na largura do quadril, coloca as mãos atrás da cabeça — a cabeça apoiada nas palmas e os dedos juntos encostando de leve atrás dela, sem entrelaçar — com os cotovelos abertos para os lados e puxados para trás; soltando o ar, contrai o abdômen e enrola a parte de cima do tronco em direção às coxas, aproximando as costelas da pelve, até as escápulas saírem do chão (tronco a uns 30° do chão), com a cabeça acompanhando a coluna e o queixo só um pouco para dentro, sem encostar no peito e sem puxar a cabeça com as mãos; os pés, o cóccix e a lombar ficam no colchonete; desce devagar, desenrolando a coluna, até as costas e a cabeça voltarem a apoiar.",
+ "movimento": "Deitado de costas no colchonete, com os joelhos dobrados e os pés chapados no colchonete, na largura do quadril, coloca as mãos atrás da cabeça — a cabeça apoiada nas palmas e os dedos juntos encostando de leve atrás dela, sem entrelaçar — com os cotovelos abertos para os lados e puxados para trás; soltando o ar, contrai o abdômen e enrola só a parte de cima das costas em direção às coxas, aproximando as costelas da pelve, até as escápulas saírem do chão — a parte de cima das costas fica a uns 30° do chão, sem levantar o tronco inteiro —, com a cabeça acompanhando a coluna e o queixo só um pouco para dentro, sem encostar no peito e sem puxar a cabeça com as mãos; os pés, o cóccix e a lombar ficam no colchonete; desce devagar, desenrolando a coluna, até as costas e a cabeça voltarem a apoiar.",
  "cinesiologia": {
   "plano": "sagital (flexão do tronco), com a pelve e as pernas paradas no chão",
-  "articulacoes": "coluna torácica e lombar alta (flexão na subida, extensão na descida), com leve retroversão da pelve que encosta a lombar no chão; pescoço alinhado com a coluna, com leve flexão em cima; quadril e joelhos parados (pés chapados); ombros e cotovelos parados (mãos atrás da cabeça, cotovelos abertos)",
+  "articulacoes": "coluna torácica (flexão na subida, extensão na descida: só a parte de cima das costas sai do chão, até as escápulas), com leve retroversão da pelve que encosta a lombar no chão; pescoço alinhado com a coluna, com leve flexão em cima; quadril e joelhos parados (pés chapados); ombros e cotovelos parados (mãos atrás da cabeça, cotovelos abertos)",
   "agonistas": "reto abdominal (ExRx: alvo)",
   "sinergistas": "oblíquos externo e interno (ExRx: sinergistas; Moura 2011: o crunch \"envolve toda a musculatura abdominal (reto abdominal, oblíquo externo e obliquo interno)\")",
   "estabilizadores": "nenhum significativo (ExRx). Os flexores do quadril trabalham pouco: o reto femoral teve atividade significativamente menor no crunch do que no ABslide e na FitBall (Hildenbrand 2004: \"Both the Ab Roller and trunk-curl exercise involve significantly less activity of the RF\"), e subir rápido puxando com eles inclina a pelve pra frente e força a lombar (ACE)",
@@ -37,16 +37,17 @@
   "American Council on Exercise (ACE) — Crunch. https://www.acefitness.org/resources/everyone/exercise-library/52/crunch/",
   "ExRx.net — Crunch. https://exrx.net/WeightExercises/RectusAbdominis/BWCrunch (lido na cópia do Internet Archive de 04/02/2026)",
   "Hildenbrand K, Noble L. Abdominal muscle activity while performing trunk-flexion exercises using the Ab Roller, ABslide, FitBall, and conventionally performed trunk curls. J Athl Train. 2004;39(1):37-43. https://pmc.ncbi.nlm.nih.gov/articles/PMC385260/",
-  "Moura ML, Tessutti LS, Moraes AC. Análise do exercício abdominal \"crunch\" realizado com cargas máximas e submáximas: respostas eletromiográficas da musculatura abdominal. Motricidade. 2011;7(1):85-93. https://www.redalyc.org/articulo.oa?id=273019759009"
+  "Moura ML, Tessutti LS, Moraes AC. Análise do exercício abdominal \"crunch\" realizado com cargas máximas e submáximas: respostas eletromiográficas da musculatura abdominal. Motricidade. 2011;7(1):85-93. https://www.redalyc.org/articulo.oa?id=273019759009",
+  "ExRx.net — Curl-up / Half Sit-up Test Protocols (ACSM Curl-up, de American College of Sports Medicine. ACSM's Guidelines for Exercise Testing and Prescription, 6ª ed., 2000, p. 84-85; YMCA Half Sit-up, de YMCA of the USA. YMCA Fitness Testing and Assessment Manual, 4ª ed., 2000). https://exrx.net/Testing/CurlUpTests (lido na cópia do Internet Archive, 05/10/2026)"
  ],
  "checagens": {
   "pes_no_chao": true,
   "chao_mm": 12,
   "chao_mm_motivo": "os pés ficam chapados em cima do colchonete de 12 mm (ACE: \"Lie in a supine (on your back) position on a mat with your knees bent, feet flat\"; \"Your feet, tailbone and lower back should remain in contact with the mat at all times\"), então a planta é medida no topo dele",
   "tecnica_padrao": {
-   "coluna": [0, 60]
+   "coluna": [0, 40]
   },
-  "tecnica_padrao_motivo": "a coluna dobra de propósito: o exercício É a flexão do tronco (ACE: \"slowly curling your torso towards your thighs\"; ExRx: \"Flex waist to raise upper torso from mat\"); a coluna reta embaixo e a curva em cima estão nos ângulos da ficha",
+  "tecnica_padrao_motivo": "a coluna dobra de propósito: o exercício É a flexão do tronco (ACE: \"slowly curling your torso towards your thighs\"; ExRx: \"Flex waist to raise upper torso from mat\"), mas só até as escápulas saírem do chão — ~30° de flexão (YMCA, citado pelo ExRx: \"ensures 30 degree spinal flexion\"); a coluna reta embaixo e a curva em cima estão nos ângulos da ficha. Lote 2: [0, 60], que deixava passar o tronco subindo demais",
   "zonas": [
    {"nome": "sacro e glúteo apoiados no colchonete", "equipamento": "colchonete", "partes": ["Hips"], "mm": [-20, 3], "fonte": "ACE (\"Your feet, tailbone and lower back should remain in contact with the mat at all times\")"},
    {"nome": "costas apoiadas embaixo", "equipamento": "colchonete", "partes": ["Spine1", "Spine2"], "t": 0.0, "mm": [-20, 3], "fonte": "ACE (\"Lie in a supine (on your back) position on a mat\")"},
@@ -61,12 +62,16 @@
    {"nome": "braços e antebraços sem entrar na cabeça", "partes": ["LeftArm", "LeftForeArm", "RightArm", "RightForeArm"], "com": ["Head", "Neck"], "mm": [-2, 2000]},
    {"nome": "antebraços e mãos sem entrar no tronco (trapézio, costas, peito)", "partes": ["LeftForeArm", "RightForeArm", "LeftHand", "RightHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3"], "com": ["Spine", "Spine1", "Spine2"], "mm": [-2, 2000]}
   ],
+  "alturas": [
+   {"nome": "costas e glúteo sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)", "partes": ["Hips", "Spine", "Spine1", "Spine2"], "acima_de": "chao", "mm": [3, 2000], "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado). O corpo_no_apoio do checagem3d não vê a pele que passa do fundo de um colchonete fino (por baixo dele ela conta como fora da caixa): no bicicleta do lote 2 a lombar do lado de baixo do giro ia 14 mm abaixo do topo — 2 mm dentro do chão — e passou"}
+  ],
   "angulos": [
    {"nome": "joelhos dobrados, pés chapados", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [85, 115], "fonte": "Hildenbrand 2004 (\"feet were placed flat on the ground with the knees flexed to 90°\"); Moura 2011 (\"decúbito dorsal com joelhos fletidos a 90°\"); ACE (\"heels 12 - 18\\\" from your tailbone\": 30–46 cm pedem ~105–125° neste boneco). A cena usa ~100°, entre os dois: o calcanhar fica a ~48 cm da pelve apoiada no colchonete"},
    {"nome": "deitado embaixo (tronco no chão)", "medida": "tronco", "t": 0.0, "graus": [86, 94]},
-   {"nome": "tronco a ~30° do chão em cima", "medida": "tronco", "t": 1.0, "graus": [55, 65], "fonte": "Moura 2011 (\"flexão controlada do tronco até aproximadamente 30°\"); medido da pelve à base do pescoço: 90° − 30° = 60° da vertical"},
+   {"nome": "tórax no chão embaixo", "medida": "torax_chao", "t": 0.0, "graus": [-5, 5]},
+   {"nome": "só a parte de cima das costas sobe: tórax a ~30° do chão em cima", "medida": "torax_chao", "t": 1.0, "graus": [25, 35], "fonte": "ExRx, citando o ACSM (curl-up: \"the subject slowly lifts the shoulder blades off the mat by flexing spine\"; \"Since elevation of the truck [tronco] to 30° is the important criteria\") e o YMCA (\"ensures 30 degree spinal flexion\"); Moura 2011 (\"flexão controlada do tronco até aproximadamente 30°\"); Weslley (05/10/2026, olhando no app: o tronco subia demais). Com a lombar e o cóccix no chão (ACE), o que sobe é o tórax: medido da transição toracolombar (~T11–T12) à base do pescoço. O lote 2 media da pelve ao pescoço (60° da vertical = 30° do chão) e deixava o tórax a 50° do chão"},
    {"nome": "coluna reta embaixo", "medida": "coluna", "t": 0.0, "graus": [0, 10]},
-   {"nome": "coluna enrolada em cima (flexão do tronco, lombar no chão)", "medida": "coluna", "t": 1.0, "graus": [40, 60], "fonte": "ACE (\"curling your torso towards your thighs\"; \"lower back should remain in contact with the mat\"): com a lombar no chão, os ~30° do tronco saem da curva da coluna torácica"},
+   {"nome": "coluna enrolada em cima (flexão do tronco, lombar no chão)", "medida": "coluna", "t": 1.0, "graus": [25, 40], "fonte": "YMCA, citado pelo ExRx (\"3.5\\\" (9 cm) apart (ensures 30 degree spinal flexion)\"); ACE (\"curling your torso towards your thighs\"; \"lower back should remain in contact with the mat\"). A medida (lombar × torácica) soma os ~30° do tórax e os ~4° que a lombar inclina com a retroversão da pelve"},
    {"nome": "cotovelos abertos pros lados (não fecham na frente do rosto)", "medida": "cotovelo_tronco", "t": "todos", "graus": [45, 75], "fonte": "ACE (\"pulling your elbows back... This elbow position should be maintained throughout the exercise\")"},
    {"nome": "cotovelos no plano do tronco, puxados pra trás", "medida": "braco_plano", "t": "todos", "graus": [-30, 20], "fonte": "ACE (idem). O eixo do tronco da medida vai da pelve ao pescoço: em cima, com a coluna enrolada, o braço parece ~20° mais à frente sem sair do lugar no tórax"}
   ]

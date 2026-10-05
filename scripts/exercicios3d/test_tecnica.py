@@ -418,3 +418,21 @@ def test_quadril_sinal_flexao_positiva_e_passar_da_linha_negativa():
     inclinado = girar(tronco(30), 45, (1, 0, 0), (0, 0, 0.1))
     assert tc.quadril_sinal(inclinado) == pytest.approx([base + 30] * 2, abs=1e-6)
     assert "quadril_sinal" in tc.MEDIDAS
+
+
+def test_torax_chao_deitado_enrolando_so_a_parte_de_cima():
+    """Abdominais refeitos (lote 3): deitado de costas o tórax fica no chão (0°); enrolar só a parte de cima 30° em
+    volta da transição toracolombar (Spine1), com a lombar parada, dá 30 — e o "tronco" do checagem3d (quadril →
+    pescoço) marca só ~18° do chão, por isso não pegava o tronco subindo demais. Virar o boneco em volta da vertical
+    não muda nada; em pé = 90."""
+    j = em_pe()
+    assert tc.torax_chao(j) == pytest.approx([90], abs=1e-6)
+    deitado = girar(j, -90, (1, 0, 0))                                   # de costas, cabeça pra +Y, rosto pra cima
+    assert tc.torax_chao(deitado) == pytest.approx([0], abs=1e-6)
+    enrolado = dict(deitado, Neck=girar({"n": deitado["Neck"]}, 30, (1, 0, 0), deitado["Spine1"])["n"])
+    assert tc.torax_chao(enrolado) == pytest.approx([30], abs=1e-6)
+    d = enrolado["Neck"] - enrolado["Hips"]
+    assert math.degrees(math.atan2(d[2], math.hypot(d[0], d[1]))) == pytest.approx(18.06, abs=0.01)
+    assert tc.torax_chao(girar(enrolado, 40, (0, 0, 1))) == pytest.approx([30], abs=1e-6)
+    assert tc.medir(dict(com_claviculas(enrolado), **{L + "ToeBase_ponta": enrolado[L + "ToeBase"]
+                                                     for L in ("Left", "Right")}))["torax_chao"] == pytest.approx([30])

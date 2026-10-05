@@ -25,10 +25,10 @@
   ]
  },
  "ida_s": 1.5,
- "movimento": "Deitado de costas no colchonete, com as mãos atrás da cabeça (dedos soltos, sem entrelaçar e sem puxar o pescoço), os cotovelos abertos pro lado, a lombar encostada no chão e as escápulas fora dele; as duas pernas ficam no ar. Traz o joelho esquerdo em direção ao peito, dobrando bem o joelho, enquanto estica a perna direita pra frente sem encostar no chão, e ao mesmo tempo enrola e gira o tronco levando o cotovelo direito em direção ao joelho esquerdo; depois troca de lado como numa pedalada lenta: o joelho direito vem, a perna esquerda estica e o cotovelo esquerdo vai em direção ao joelho direito. O giro vem do tronco (a pelve fica parada no chão) e a cabeça acompanha a coluna.",
+ "movimento": "Deitado de costas no colchonete, com as mãos atrás da cabeça (dedos soltos, sem entrelaçar e sem puxar o pescoço), os cotovelos abertos pro lado, a lombar encostada no chão e só as escápulas fora dele (a parte de cima das costas a uns 30° do chão, sem levantar o tronco inteiro); as duas pernas ficam no ar. Traz o joelho esquerdo em direção ao peito, dobrando bem o joelho, enquanto estica a perna direita pra frente sem encostar no chão, e ao mesmo tempo gira o tronco levando o cotovelo direito em direção ao joelho esquerdo — o ombro direito sobe e a escápula esquerda fica rente ao chão; depois troca de lado como numa pedalada lenta: o joelho direito vem, a perna esquerda estica e o cotovelo esquerdo vai em direção ao joelho direito. O giro vem da parte de cima do tronco (a pelve e a lombar ficam paradas no chão) e a cabeça acompanha a coluna.",
  "cinesiologia": {
   "plano": "transverso (rotação do tronco) e sagital (flexão do tronco e das pernas), cadeia cinética aberta",
-  "articulacoes": "coluna torácica (flexão e rotação do tronco) com a lombar e a pelve paradas no chão; quadril e joelho alternando: a perna que vem dobra o quadril e o joelho, a que vai estende",
+  "articulacoes": "coluna torácica (flexão até as escápulas saírem do chão e rotação, mais na parte de cima) com a lombar e a pelve paradas no chão; quadril e joelho alternando: a perna que vem dobra o quadril e o joelho, a que vai estende",
   "agonistas": "reto do abdome (flexão do tronco) e oblíquos (rotação): girando pra esquerda (cotovelo direito → joelho esquerdo) trabalham o oblíquo externo direito e o oblíquo interno esquerdo, e o contrário pro outro lado",
   "sinergistas": "flexores do quadril — iliopsoas e reto femoral — puxando o joelho pro peito; quadríceps esticando o joelho da perna que vai",
   "estabilizadores": "abdômen firme (\"brace\") segurando a lombar no chão e a pelve parada; flexores do quadril da perna esticada seguram ela no ar",
@@ -41,7 +41,9 @@
   "Youdas JW, Guck BR, Hebrink RC, Rugotzke JD, Madson TJ, Hollman JH. An electromyographic analysis of the Ab-Slide exercise, abdominal crunch, supine double leg thrust, and side bridge in healthy young adults: implications for rehabilitation professionals. J Strength Cond Res. 2008;22(6):1939-1946.",
   "Konrad P, Schmitz K, Denner A. Neuromuscular evaluation of trunk-training exercises. J Athl Train. 2001;36(2):109-118.",
   "Grundy K. How to Do a Bicycle Crunch for a Strong, Stable Core. Livestrong, 27/03/2023 (reproduzido pelo ACE em \"ACE in the News\"). https://acefitness.org/about-ace/press-room/in-the-news/8311/how-to-do-a-bicycle-crunch-for-a-strong-stable-core-livestrong",
-  "Ichikawa K, Otsuka T, Abduh HAM, Kuruma H. Assessing validity of thoracic spine rotation range of motion measurement methods: comparison of magnetic resonance imaging and clinical measurements. J Phys Ther Sci. 2024;36(3):95. doi:10.1589/jpts.36.95"
+  "Ichikawa K, Otsuka T, Abduh HAM, Kuruma H. Assessing validity of thoracic spine rotation range of motion measurement methods: comparison of magnetic resonance imaging and clinical measurements. J Phys Ther Sci. 2024;36(3):95. doi:10.1589/jpts.36.95",
+  "ExRx.net — Curl-up / Half Sit-up Test Protocols (ACSM Curl-up, de American College of Sports Medicine. ACSM's Guidelines for Exercise Testing and Prescription, 6ª ed., 2000, p. 84-85). https://exrx.net/Testing/CurlUpTests (lido na cópia do Internet Archive, 05/10/2026)",
+  "Wilke HJ, Herkommer A, Werner K, Liebsch C. In vitro analysis of the segmental flexibility of the thoracic spine. PLoS One. 2017;12(5):e0177823. https://pmc.ncbi.nlm.nih.gov/articles/PMC5433776/"
  ],
  "checagens": {
   "pes_no_chao": false,
@@ -206,7 +208,7 @@
      20,
      3000
     ],
-    "fonte": "ACE — Supine Bicycle Crunches (\"Continue moving until your elbow touches or comes close to touching the opposite knee\"); com os cotovelos abertos ele chega perto (~10 cm de pele a pele na ponta) sem bater"
+    "fonte": "ACE — Supine Bicycle Crunches (\"Continue moving until your elbow touches or comes close to touching the opposite knee\"); com os cotovelos abertos e só as escápulas fora do chão ele aponta pro joelho e fica a ~19 cm dele de pele a pele na ponta, sem bater (no lote 2, com o tronco alto, ~9 cm)"
    },
    {
     "nome": "cotovelo esquerdo vai em direção ao joelho direito sem bater nele",
@@ -222,7 +224,7 @@
      20,
      3000
     ],
-    "fonte": "ACE — Supine Bicycle Crunches (\"Continue moving until your elbow touches or comes close to touching the opposite knee\"); com os cotovelos abertos ele chega perto (~10 cm de pele a pele na ponta) sem bater"
+    "fonte": "ACE — Supine Bicycle Crunches (\"Continue moving until your elbow touches or comes close to touching the opposite knee\"); com os cotovelos abertos e só as escápulas fora do chão ele aponta pro joelho e fica a ~19 cm dele de pele a pele na ponta, sem bater (no lote 2, com o tronco alto, ~9 cm)"
    },
    {
     "nome": "antebraço e braço esquerdo sem entrar na cabeça",
@@ -257,6 +259,38 @@
      3000
     ],
     "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "costas e glúteo sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado). O corpo_no_apoio do checagem3d não vê a pele que passa do fundo de um colchonete fino (por baixo dele ela conta como fora da caixa): no lote 2 a lombar do lado de baixo do giro ia 14 mm abaixo do topo do colchonete — 2 mm dentro do chão — e passou"
+   },
+   {
+    "nome": "braços acima do chão (os cotovelos abertos ficam fora do colchonete)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     0,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão): com o tórax mais baixo, o cotovelo do lado de baixo do giro desce junto"
    }
   ],
   "angulos": [
@@ -413,6 +447,26 @@
      700
     ],
     "fonte": "ACE — Supine Bicycle Crunches (idem)"
+   },
+   {
+    "nome": "só as escápulas fora do chão no meio da pedalada: tórax a ~30° do chão",
+    "medida": "torax_chao",
+    "t": 0.5,
+    "graus": [
+     25,
+     35
+    ],
+    "fonte": "Weslley (05/10/2026, olhando no app: \"Na bicicleta só as escápulas saem do chão também\"); ACE — Supine Bicycle Crunches (\"flex (curl) your trunk, lifting your left shoulder blade off the floor\"); ExRx, citando o ACSM (curl-up: \"lifts the shoulder blades off the mat by flexing spine\"; \"elevation of the truck [tronco] to 30° is the important criteria\"). Medido da transição toracolombar (~T11–T12) à base do pescoço; o lote 2 subia o tórax a 49° no meio"
+   },
+   {
+    "nome": "tronco sem subir demais o movimento todo (nas pontas o giro sobe o ombro de cima e a escápula de baixo fica rente ao chão)",
+    "medida": "torax_chao",
+    "t": "todos",
+    "graus": [
+     25,
+     45
+    ],
+    "fonte": "ACE — Supine Bicycle Crunches (\"lifting your left shoulder blade off the floor and rotating your trunk slowly to drive your left elbow towards your right knee\": sobe a escápula do lado do cotovelo que vai ao joelho); Weslley (idem). Nas pontas o tórax sobe ~8° além do meio, o mínimo pra escápula de baixo não entrar no chão com o giro; o lote 2 ia a 55°"
    }
   ]
  }
