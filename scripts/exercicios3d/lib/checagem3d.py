@@ -572,6 +572,31 @@ def contatos(bon, co, tri, nomes, dono, regras, t=None):
     return medidas, falhas
 
 
+# ── altura de uma parte do corpo acima de uma peça ou do chão (barra fixa, lote 2, 05/10/2026): o queixo passa da
+# barra em cima e os pés ficam fora do chão o movimento todo. Regra da ficha (checagens.alturas): {"nome", "partes":
+# [ossos], "acima_de": nome da malha do equipamento (ex. "barra_fixa_barra") ou "chao", "mm": [lo, hi], "t": número,
+# [t0, t1] ou "todos" (sem "t" = todos)}. A medida é a pele mais baixa das partes menos o ponto mais alto da malha (ou
+# o chão, z = 0), em mm: + = a pele toda acima dela. Os ossos de "partes" são os donos dos vértices, como nas zonas.
+# Sem "alturas" na ficha nada muda.
+def alturas(co, nomes, dono, equipamentos, regras, t=None):
+    falhas, medidas = [], {}
+    for regra in regras:
+        if t is not None and not tc.vale_no_quadro(regra.get("t", "todos"), t):
+            continue
+        m = np.array([n in set(regra["partes"]) for n in nomes] + [False])[dono]
+        base = 0.0
+        if regra["acima_de"] != "chao":
+            objs = [o for raiz in equipamentos for o in _malhas(raiz) if o.name == regra["acima_de"]]
+            if not objs:
+                raise ValueError("alturas: malha %r não está no equipamento da cena" % regra["acima_de"])
+            base = max(float(_avaliar_simples(o)[0][:, 2].max()) for o in objs)
+        mm = (float(co[m][:, 2].min()) - base) * 1000
+        medidas[regra["nome"]] = mm
+        if not regra["mm"][0] <= mm <= regra["mm"][1]:
+            falhas.append("%s: %.1f mm (esperado %g a %g)" % (regra["nome"], mm, regra["mm"][0], regra["mm"][1]))
+    return medidas, falhas
+
+
 def completa(bon, cena, checagens, t, rotulo, estado):
     """Todos os itens num quadro (a pose já aplicada). estado: dict guardado entre quadros (anterior, referência)."""
     r = quadro(bon, equipamentos=cena.equipamentos, pegadas=cena.pegadas, rotulo=rotulo, apoio_mm=cena.apoio_mm)
@@ -594,6 +619,10 @@ def completa(bon, cena, checagens, t, rotulo, estado):
         r["falhas"] += f
     if checagens.get("contatos"):                          # corpo encostando no próprio corpo (sai junto das zonas)
         med, f = contatos(bon, co, tri, nomes, dono, checagens["contatos"], t=t)
+        itens["zonas"].update(med)
+        r["falhas"] += f
+    if checagens.get("alturas"):                           # queixo × barra, pés × chão (sai junto das zonas)
+        med, f = alturas(co, nomes, dono, cena.equipamentos, checagens["alturas"], t=t)
         itens["zonas"].update(med)
         r["falhas"] += f
     itens["tecnica"] = tc.medir(posicoes(rig))
