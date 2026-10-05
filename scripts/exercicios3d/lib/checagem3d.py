@@ -530,6 +530,48 @@ def _apoio_dos_pes(na_ponta=()):
             for k, lado in (("LeftFoot", "E"), ("RightFoot", "D"))}
 
 
+# ── corpo encostando no próprio corpo (abdominal supra, lote 2, 05/10/2026): as mãos atrás da cabeça encostam na
+# cabeça — no cabelo — sem entrar nela. Regra da ficha (checagens.contatos): {"nome", "partes": [ossos],
+# "com": [ossos], "cabelo": true, "mm": [lo, hi], "t": número, [t0, t1] ou "todos" (sem "t" = todos)}. A medida é a
+# menor distância com sinal da pele das partes até a superfície de fora do "com" (− = entrou): a pele dele ou, com
+# "cabelo", o cabelo por cima dela — um dedo 0,6 mm afundado no cabelo dá −0,6; encostado na pele embaixo de 7 mm de
+# cabelo dá −7. Os ossos de "partes" e "com" são os donos dos vértices, como nas zonas. Sem "contatos" na ficha nada
+# muda (chao_mm: altura do chão dos pés, em mm, pro pé chapado no colchonete — padrão 0, o chão de verdade).
+def contatos(bon, co, tri, nomes, dono, regras, t=None):
+    falhas, medidas = [], {}
+    bvh_cabelo = None
+    for regra in regras:
+        if t is not None and not tc.vale_no_quadro(regra.get("t", "todos"), t):
+            continue
+        a = np.array([n in set(regra["partes"]) for n in nomes] + [False])[dono]
+        b = np.array([n in set(regra["com"]) for n in nomes] + [False])[dono]
+        bvh = _bvh(co, tri[b[tri].all(axis=1)])
+        cabelo = None
+        if regra.get("cabelo") and getattr(bon, "cabelo", None) is not None:
+            if bvh_cabelo is None:
+                bvh_cabelo = _bvh(*_avaliar_simples(bon.cabelo))
+            cabelo = bvh_cabelo
+        menor = 1e9
+        for p in co[a]:
+            v = Vector(p)
+            loc, nor, idx, dist = bvh.find_nearest(v)
+            if loc is None:
+                continue
+            d = -dist if (dist < 0.03 and (v - loc).dot(nor) < 0) else dist
+            if cabelo is not None:
+                lc, nc, ic, dc = cabelo.find_nearest(v)
+                if lc is not None and dc < 0.03 and d < 0.025 and (v - lc).dot(nc) < 0:
+                    d = -dc                         # embaixo da superfície do cabelo (afundou nele ou chegou na pele)
+                elif lc is not None and d >= 0:
+                    d = min(d, dc)                  # fora: o que estiver mais perto, cabelo ou pele sem cabelo
+            menor = min(menor, d)
+        mm = menor * 1000
+        medidas[regra["nome"]] = mm
+        if not regra["mm"][0] <= mm <= regra["mm"][1]:
+            falhas.append("%s: %.1f mm (esperado %g a %g)" % (regra["nome"], mm, regra["mm"][0], regra["mm"][1]))
+    return medidas, falhas
+
+
 def completa(bon, cena, checagens, t, rotulo, estado):
     """Todos os itens num quadro (a pose já aplicada). estado: dict guardado entre quadros (anterior, referência)."""
     r = quadro(bon, equipamentos=cena.equipamentos, pegadas=cena.pegadas, rotulo=rotulo, apoio_mm=cena.apoio_mm)
@@ -542,13 +584,17 @@ def completa(bon, cena, checagens, t, rotulo, estado):
     itens = {}
     for nome, (med, f) in (("juntas", juntas(rig, checagens.get("limites_juntas"))),
                            ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True), na_ponta=na_ponta,
-                                       fora=fora)),
+                                       fora=fora, chao_z=checagens.get("chao_mm", 0.0) / 1000)),
                            ("corpo", corpo_x_corpo(co, tri, nomes, dono)),
                            ("zonas", zonas(co, tri, nomes, dono, cena.equipamentos + cena.apoios,
                                            checagens.get("zonas", []), apoios=[a.name for a in cena.apoios], t=t)),
                            ("angulos", angulos_chave(rig, checagens.get("angulos", []) + tc.regras_padrao(checagens),
                                                      t))):
         itens[nome] = med
+        r["falhas"] += f
+    if checagens.get("contatos"):                          # corpo encostando no próprio corpo (sai junto das zonas)
+        med, f = contatos(bon, co, tri, nomes, dono, checagens["contatos"], t=t)
+        itens["zonas"].update(med)
         r["falhas"] += f
     itens["tecnica"] = tc.medir(posicoes(rig))
     itens["apoio"], f = corpo_no_apoio(co, nomes, dono, cena.apoios, cena.afunda_apoio_mm)
