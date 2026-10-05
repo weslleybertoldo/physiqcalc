@@ -201,7 +201,7 @@ def paralelas(nome="paralelas", largura=0.50, altura=1.10, comprimento=1.40, rai
 
 def banco_hiperextensao(nome="banco_hiper", origem=(0, 0, 1.0), angulo=45, estofado=(-0.44, -0.14, 0.12, 0.075, 0.40),
                         rolos=(-0.80, -0.09, 0.05, 0.14, 0.12), plataforma=(-0.93, -0.07, 0.25, 0.015, 0.46),
-                        viga=0.27, frente=-0.30, tubo=0.06):
+                        viga=0.27, frente=-0.30, tubo=0.06, alto=None, travessa=None):
     """Banco de hiperextensão a 45° (Hiperextensão Lombar, lote 3, 05/10/2026), o modelo de academia em que o corpo fica
     inclinado `angulo` graus do chão (Technogym "Pure Strength 45 Degree Hyperextension Bench" PG05, o banco do estudo de
     Andersen et al., J Sports Sci Med 2021; Body-Solid GHYP345, "exact 45° angle"): 2 estofados das coxas lado a lado, 2
@@ -215,7 +215,9 @@ def banco_hiperextensao(nome="banco_hiper", origem=(0, 0, 1.0), angulo=45, estof
       rolos = (s, d_eixo, raio, comprimento, x): eixo dos 2 rolos (ao longo de X) em (s, d_eixo), centrados em ±x;
       plataforma = (s_topo, d0, d1, espessura, largura): topo das chapas no plano s = s_topo (onde a sola encosta), de d0
                    a d1;
-      viga = d do eixo da viga; frente = s onde a coluna da frente encontra a viga.
+      viga = d do eixo da viga; frente = s onde a coluna da frente encontra a viga; alto = s da ponta de cima da viga
+      (padrão: 5 cm antes da borda de cima do estofado); travessa = s da travessa embaixo dos estofados (padrão: o meio
+      deles) — embaixo, com o tronco dobrado, os braços cruzados passam perto da estrutura atrás do estofado.
     Devolve 4 raízes, cada uma um equipamento da cena: "estofado", "rolos" e "plataforma" são APOIO do corpo (encostar é o
     certo) e a "estrutura" não pode encostar nele. Tubos compridos em anéis (_em_aneis): a checagem fica rápida."""
     th = math.radians(90 - angulo)                            # inclinação do corpo a partir da vertical
@@ -252,14 +254,15 @@ def banco_hiperextensao(nome="banco_hiper", origem=(0, 0, 1.0), angulo=45, estof
         caixa(nome + "_chapa%+d" % k, P(s_p - esp_p / 2, (d0 + d1) / 2, k * (tubo / 2 + 0.01 + meia_p / 2)),
               (meia_p, d1 - d0, esp_p), mat_aco(), rot=rot_s, pai=pla, chanfro=0.003)
     # estrutura: viga inclinada embaixo dos estofados, da plataforma até perto da borda de cima
-    s_baixo, s_alto = s_p - 0.07, s1 - 0.05
+    s_baixo, s_alto = s_p - 0.07, (s1 - 0.05 if alto is None else alto)
     _em_aneis(caixa(nome + "_viga", P((s_baixo + s_alto) / 2, viga), (tubo, s_alto - s_baixo, tubo * 4 / 3), mat_estrutura(),
                     rot=rot_u, pai=estr, chanfro=0.006))
     # travessa embaixo dos estofados + poste até a viga
     d_trav = d_topo + esp + 0.025
-    _em_aneis(caixa(nome + "_travessa", P((s0 + s1) / 2, d_trav), (larg - 0.06, 0.05, 0.05), mat_estrutura(), rot=rot_u,
+    s_trav = (s0 + s1) / 2 if travessa is None else travessa
+    _em_aneis(caixa(nome + "_travessa", P(s_trav, d_trav), (larg - 0.06, 0.05, 0.05), mat_estrutura(), rot=rot_u,
                     pai=estr, chanfro=0.005))
-    caixa(nome + "_poste_estofado", P((s0 + s1) / 2, (d_trav + viga) / 2), (0.05, 0.05, viga - d_trav), mat_estrutura(),
+    caixa(nome + "_poste_estofado", P(s_trav, (d_trav + viga) / 2), (0.05, 0.05, viga - d_trav), mat_estrutura(),
           rot=rot_u, pai=estr, chanfro=0.005)
     # haste dos rolos: sai da viga e sobe entre os pés até o eixo dos rolos; eixo de aço de um rolo ao outro
     _em_aneis(caixa(nome + "_haste_rolos", P(s_r, (viga + d_r) / 2), (0.05, 0.05, viga - d_r + 0.03), mat_estrutura(),
