@@ -59,13 +59,14 @@ if os.path.exists(pontos) and not SO_FOTO:                       # closes: alvo 
 with sync_playwright() as pw:
     nav = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
     pag = nav.new_page(device_scale_factor=2, viewport={"width": 700, "height": 700})
+    pag.set_default_timeout(300000)            # CPU dividida (export + foto, 05/10/2026): o 3D pode levar > 2 min pra ficar pronto
     erros = []
     pag.on("pageerror", lambda e: erros.append(str(e)))
     for nome, p in pedidos.items():
         q = "&".join("%s=%s" % (k, val) for k, val in p.items())
         pag.goto(URL + "&" + q, wait_until="domcontentloaded", timeout=180000)
         pag.wait_for_function("document.body.dataset['3d'] === 'pronto' || document.body.dataset['3d'] === 'erro'",
-                              timeout=120000)
+                              timeout=300000)
         if pag.evaluate("document.body.dataset['3d']") == "erro":
             raise SystemExit("FOTO: o visualizador deu erro em %s: %s" % (nome, pag.inner_text("#erro")))
         for tentativa in range(3):             # CPU dividida com os exports: o SwiftShader atrasa o quadro e o print
