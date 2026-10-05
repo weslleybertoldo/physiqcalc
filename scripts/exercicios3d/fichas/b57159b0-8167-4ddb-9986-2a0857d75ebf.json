@@ -1,0 +1,216 @@
+{
+ "uuid": "b57159b0-8167-4ddb-9986-2a0857d75ebf",
+ "nome": "Desenvolvimento Arnold",
+ "cena": "desenvolvimento_arnold",
+ "grupo": "Ombro",
+ "subgrupo": "Deltoide anterior · lateral · tríceps",
+ "padrao_movimento": "desenvolvimento",
+ "equipamento": "halteres",
+ "variacao": "Arnold, com rotação",
+ "alvos": [
+  "deltoide"
+ ],
+ "auxiliares": [
+  "triceps",
+  "trapezio"
+ ],
+ "camera": {
+  "az": 32,
+  "el": 8,
+  "dist": 4.4,
+  "alvo": [
+   0,
+   0.05,
+   0.92
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado no banco com o encosto quase em pé, com o glúteo no assento, as costas e a cabeça no encosto e os pés chapados no chão, segura um halter em cada mão na frente dos ombros, na altura do queixo, com as palmas viradas para o rosto (pegada supinada, como no fim da rosca) e os cotovelos dobrados, embaixo dos punhos e na frente do tronco; empurra os halteres para cima abrindo os cotovelos para os lados e, ao mesmo tempo, gira as mãos até as palmas ficarem viradas para a frente, terminando com os braços estendidos acima da cabeça, sem travar os cotovelos e sem um halter encostar no outro; desce devagar pelo mesmo caminho, fechando os cotovelos na frente do corpo e girando as palmas de volta para o rosto.",
+ "cinesiologia": {
+  "plano": "sagital no começo (cotovelos na frente) e escapular no fim (cotovelos para o lado, 30° à frente do plano frontal), com rotação do antebraço no caminho; cadeia cinética aberta",
+  "articulacoes": "ombro (flexão e abdução na subida, com os cotovelos saindo da frente para o lado; adução e extensão na descida), cotovelo (extensão na subida, flexão na descida), radioulnar (pronação na subida — a palma sai virada para o rosto e termina para a frente —, supinação na descida) e escápula (rotação para cima na subida)",
+  "agonistas": "deltoide anterior",
+  "sinergistas": "deltoide lateral, supraespinal, tríceps braquial, coracobraquial, trapézio médio e inferior e serrátil anterior (digitações inferiores)",
+  "estabilizadores": "trapézio superior e levantador da escápula; cabeça longa do tríceps como estabilizador dinâmico",
+  "fases": "subida concêntrica (com a rotação das palmas), descida excêntrica (rotação de volta)"
+ },
+ "referencias": [
+  "ExRx.net — Dumbbell Arnold Press (cópia do Web Archive de 05/12/2024). https://exrx.net/WeightExercises/DeltoidAnterior/DBArnoldPress",
+  "ExRx.net — Dumbbell Shoulder Press (cópia do Web Archive de 26/12/2024). https://exrx.net/WeightExercises/DeltoidAnterior/DBShoulderPress",
+  "Raizada S, Bagchi A. Comparison among the EMG Activity of the Anterior Deltoid and Medial Deltoid During Two Variations of Dumbbell Shoulder Press Exercise. Indian J Public Health Res Dev. 2017;8(4):653-656. doi:10.5958/0976-5506.2017.00411.9",
+  "American Council on Exercise — Seated Overhead Press. https://www.acefitness.org/resources/everyone/exercise-library/45/seated-overhead-press/",
+  "The Prehab Guys (fisioterapeutas) — Arnold Press - Dumbbell. https://library.theprehabguys.com/vimeo-video/arnold-press-dumbbell/",
+  "Medical News Today — Arnold shoulder press: Benefits, risks, and how to do it properly (revisão de Danielle Hildreth, RN, CPT, 03/11/2025). https://www.medicalnewstoday.com/articles/arnold-press",
+  "BarBend — How to Do the Arnold Press: Proper Form & Variations (verificado por Jake Dickson, NASM-CPT, USAW-L2, 15/12/2023). https://barbend.com/arnold-press/"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "costas apoiadas no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Overhead Press (\"sit with your back against a back rest so that your head, shoulders and butt make contact with the bench\")"
+   },
+   {
+    "nome": "glúteo e coxas apoiados no assento",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Overhead Press (idem)"
+   },
+   {
+    "nome": "cabeça apoiada no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Overhead Press (idem)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "palmas viradas pro corpo embaixo (pegada supinada: pra trás e um pouco pra cima, pro rosto)",
+    "medida": "palma_frente",
+    "t": 0.0,
+    "graus": [
+     140,
+     180
+    ],
+    "fonte": "ExRx — Dumbbell Arnold Press (\"Stand with two dumbbells position in front of shoulders, palms facing body and elbows under wrists\"); Medical News Today (\"with palms facing towards the body\")"
+   },
+   {
+    "nome": "palmas viradas pra frente em cima",
+    "medida": "palma_frente",
+    "t": 1.0,
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "Medical News Today (\"rotate the wrists outward, so the palms now face forward at the top of the movement\"); BarBend (\"When the dumbbells lock out overhead, your palms should be facing away from you\")"
+   },
+   {
+    "nome": "a palma gira pelo meio (palmas uma pra outra), nunca virando pra fora",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -10,
+     100
+    ]
+   },
+   {
+    "nome": "cotovelo embaixo do punho embaixo",
+    "medida": "antebraco_vertical",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Dumbbell Arnold Press (\"palms facing body and elbows under wrists\")"
+   },
+   {
+    "nome": "antebraço em pé o movimento todo (peso em cima do cotovelo)",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Dumbbell Arnold Press (\"elbows under wrists\") e Dumbbell Shoulder Press (\"Position dumbbells to each side of shoulders with elbows below wrists\")"
+   },
+   {
+    "nome": "cotovelos na frente do tronco embaixo",
+    "medida": "braco_frente",
+    "t": 0.0,
+    "graus": [
+     25,
+     70
+    ],
+    "fonte": "The Prehab Guys (\"lower the dumbbells and rotate your palms to face you while you bring your elbows together in front of you\")"
+   },
+   {
+    "nome": "cotovelos fechados embaixo, sem abrir pro lado",
+    "medida": "cotovelo_tronco",
+    "t": 0.0,
+    "graus": [
+     -15,
+     20
+    ],
+    "fonte": "The Prehab Guys (\"Keep your elbows in tight when you rotate them down. Don't keep them out like a regular shoulder press\")"
+   },
+   {
+    "nome": "cotovelo dobrado embaixo, halteres na altura do queixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     110,
+     140
+    ],
+    "fonte": "Medical News Today (\"Hold a dumbbell in each hand at shoulder height, with palms facing towards the body and elbows bent\"); BarBend (\"Hold the dumbbells slightly in front of you, at face height\")"
+   },
+   {
+    "nome": "cotovelos pro lado na subida",
+    "medida": "braco_plano",
+    "t": [
+     0.5,
+     0.8
+    ],
+    "graus": [
+     10,
+     50
+    ],
+    "fonte": "ExRx — Dumbbell Arnold Press (\"Initiate movement by bringing elbows out to sides. Continue to raise elbows outward while pressing dumbbells overhead until arms are straight\")"
+   },
+   {
+    "nome": "braços estendidos acima da cabeça em cima, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx — Dumbbell Arnold Press (\"until arms are straight\"); Medical News Today (\"Fully extend the arms overhead without locking the elbows\")"
+   },
+   {
+    "nome": "braços acima da cabeça em cima",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     150,
+     180
+    ],
+    "fonte": "ExRx — Dumbbell Arnold Press (\"pressing dumbbells overhead\"); Medical News Today (\"The dumbbells should now be directly above the shoulders\")"
+   },
+   {
+    "nome": "halteres acima dos ombros em cima, sem encostar um no outro",
+    "medida": "pegada_largura",
+    "t": 1.0,
+    "faixa": [
+     0.9,
+     1.6
+    ],
+    "fonte": "Medical News Today (\"directly above the shoulders\"); BarBend (\"keep your arms perpendicular to the floor and parallel to each other\")"
+   }
+  ]
+ }
+}
