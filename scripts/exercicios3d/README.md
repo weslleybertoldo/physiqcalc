@@ -49,6 +49,7 @@ $BLENDER -b -P ver_anatomia.py -- /tmp/anat 300 400 4  # prova: "ANATOMIA pronta
 | `lib/cabelo3d.py` | cabelo curto e sobrancelhas (assets CC0) em cinza |
 | `lib/poses3d.py` | IK, giro de osso no mundo, dedos, utilidades de pose |
 | `lib/pegada3d.py` | mão fechando em volta da barra com ângulos medidos de pegada real |
+| `lib/polegar3d.py` | polegar dando a volta na barra (modo opcional `polegar_modo="volta"`, só exercícios novos): eixos anatômicos, pele por LBS, busca — testes em `test_polegar.py` |
 | `lib/equip3d.py` | barra, anilhas, caixas e tubos dos equipamentos |
 | `lib/checagem3d.py` | checagem de realismo em todos os quadros (mãos, pés, juntas, colisões, equipamento) |
 

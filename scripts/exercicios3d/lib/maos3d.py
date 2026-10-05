@@ -8,7 +8,11 @@ import pegada3d as pg
 
 
 class Maos:
-    def __init__(self, bon, raio_barra, polo_inicial=(0, 0.5, 0)):
+    def __init__(self, bon, raio_barra, polo_inicial=(0, 0.5, 0), polegar_modo=None):
+        # polegar_modo (lote 3, 05/10/2026): "volta" = o polegar dá a volta na barra (pg.polegar_em_volta) em toda
+        # chamada de pg.fechar_em_volta da cena — só nos exercícios NOVOS; None = não mexe (o polegar de hoje).
+        if polegar_modo is not None:
+            pg.usar_polegar(polegar_modo)
         rig = bon.rig
         self.bon, self.rig, self.raio = bon, rig, raio_barra
         self.punhos, self.polos, self.iks, self.furo = {}, {}, {}, {}
