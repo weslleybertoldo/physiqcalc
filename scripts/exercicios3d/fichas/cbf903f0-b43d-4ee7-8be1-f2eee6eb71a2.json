@@ -1,0 +1,200 @@
+{
+  "uuid": "cbf903f0-b43d-4ee7-8be1-f2eee6eb71a2",
+  "nome": "Agachamento Búlgaro com Halteres",
+  "cena": "agachamento_bulgaro_com_halteres",
+  "grupo": "Quadríceps / Glúteo",
+  "subgrupo": "Quadríceps · glúteo máximo · adutores",
+  "padrao_movimento": "afundo com o pé de trás elevado (agachamento unilateral)",
+  "equipamento": "halteres + banco reto",
+  "variacao": "peito do pé de trás em cima do banco, halteres ao lado do corpo",
+  "alvos": ["quadriceps", "gluteo"],
+  "auxiliares": ["adutores", "posterior", "panturrilha"],
+  "camera": {"az": 65, "el": 10, "dist": 4.8, "alvo": [0, 0.25, 0.82]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, de costas para um banco reto, com um halter em cada mão ao lado do corpo (braços estendidos, palmas viradas para o corpo); o peito do pé de trás fica apoiado em cima do banco e o pé da frente chapado no chão, uma passada à frente do banco, com os pés afastados na largura do quadril; desce dobrando o joelho e o quadril da perna da frente, com o tronco ereto (no máximo levemente inclinado à frente) e o quadril descendo quase reto e um pouco para trás, até a coxa da frente ficar paralela ao chão e o joelho de trás quase encostar no chão, com o joelho da frente na direção do pé, sem passar da ponta do pé, e o calcanhar da frente no chão; sobe empurrando com a perna da frente até voltar à posição inicial, com o pé de trás parado no banco. Depois troca de perna.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética fechada, unilateral (o pé de trás fica apoiado no banco e a perna da frente faz o trabalho)",
+    "articulacoes": "perna da frente: quadril (flexão na descida, extensão na subida), joelho (flexão/extensão) e tornozelo (dorsiflexão); perna de trás: joelho (flexão/extensão), quadril perto da posição neutra, na linha do tronco (alonga os flexores do quadril), e tornozelo em flexão plantar com o peito do pé no banco",
+    "agonistas": "quadríceps (vasto lateral, vasto medial, vasto intermédio e reto femoral) na extensão do joelho da frente; glúteo máximo na extensão do quadril da frente",
+    "sinergistas": "adutor magno e sóleo",
+    "estabilizadores": "isquiotibiais e gastrocnêmio (estabilizadores dinâmicos do joelho), glúteo médio e glúteo mínimo (pelve nivelada)",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Single Leg Split Squat (Weight Exercises › Quadriceps). https://exrx.net/WeightExercises/Quadriceps/DBSingleLegSplitSquat (lido na cópia do Internet Archive de 05/10/2022): \"Stand with dumbbells grasped to sides facing away from bench. Extend leg back and place top of foot on bench.\" \"Squat down by flexing knee and hip of front leg until knee of rear leg is almost in contact with floor. Return to original standing position by extending hip and knee of forward leg and repeat.\" \"Keep torso upright during squat; flexible hip flexors are important. Forward knee should point same direction as foot throughout movement. May also be referred to as Dumbbell Bulgarian Squat.\" Músculos: alvo quadríceps; sinergistas glúteo máximo, adutor magno e sóleo; estabilizadores dinâmicos isquiotibiais e gastrocnêmio; estabilizadores glúteo médio e glúteo mínimo.",
+    "NASM — Exercise Library, Bulgarian Split Squat. https://www.nasm.org/resource-center/exercise-library/bulgarian-split-squat: \"Stand facing away from a bench positioned behind you. Place one foot elevated on the bench with toes pointing downward\"; \"holding dumbbells at your sides\"; \"Descend into a squat by bending your front knee and hip, keeping your chest upright and your weight centered over your front leg. Descend until your front thigh is approximately parallel to the floor.\" Músculos principais: quadríceps e glúteos; secundários: estabilizadores do quadril e do tronco, isquiotibiais e adutores.",
+    "University of Sussex (Sport) — Bulgarian Split Squat (dumbbell). https://www.sussex.ac.uk/sport/documents/5-bulgarian-split-squat-dumbbell.pdf: \"The lace of your foot should be on the bench behind you\"; \"slowly lower down until the front thigh is parallel and the back knee just off the floor\"; \"The hips should drop straight down and slightly back\"; \"Make sure the front knee does not go past the toes\"; erros: \"knees turning in / out, heels coming off the floor, leaning forwards at the hips, not dropping straight down, knee moving in front of the toes, back foot directly in line with the front foot\".",
+    "Mackey ER, Riemann BL. Biomechanical Differences Between the Bulgarian Split-Squat and Back Squat. Int J Exerc Sci. 2021;14(1):533-543 (PMC8136570)",
+    "Helme M, Emmonds S, Low CJ. Is the rear foot elevated split squat unilateral? An investigation into the kinetic and kinematic demands. J Strength Cond Res. 2020. doi:10.1519/JSC.0000000000003727 (versão aceita no repositório da Leeds Beckett)",
+    "McCurdy K, Langford GA, Cline AL, Doscher M, Hoff R. The Reliability of 1- and 3RM Tests of Unilateral Strength in Trained and Untrained Men and Women. J Sports Sci Med. 2004;3:190-196",
+    "Arakawa H, Nakashima H, Li X, Tanimoto M. Rear Leg-Derived Moment Contributes to Resistance Against Hip Extension in Bulgarian Split Squats. Int J Exerc Sci. 2025;18(7):881-894. doi:10.70252/NEXQ5666 (resumo)",
+    "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29, tabela 5 (amplitude normal do tornozelo: flexão plantar 0–50°, dorsiflexão 0–20°)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "pe_fora_do_chao": ["D"],
+    "pe_fora_do_chao_fonte": "Pé direito (de trás) fora do chão de propósito: o peito do pé fica em cima do banco (ExRx — Dumbbell Single Leg Split Squat: \"Extend leg back and place top of foot on bench\"; Sussex: \"The lace of your foot should be on the bench behind you\"). Ele continua medido (tem que encostar no banco: zona abaixo) e o tornozelo dele não pode andar entre os quadros. O pé esquerdo (da frente) segue com a regra do chão, planta e calcanhar no chão o movimento todo (Helme 2020: \"The heel of the front foot maintained contact with the ground throughout the exercise\"; Sussex, erro: \"heels coming off the floor\").",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base do búlgaro: um pé à frente no chão e o outro em cima do banco, atrás, de propósito; as regras padrão de base paralela com os dois pés no chão (largura, um pé não fica à frente do outro, os dois pés virados igual) não servem. As que valem estão abaixo, com a fonte do búlgaro: joelho na direção do pé, coluna neutra, ponta do pé da frente, largura de lado a lado e a passada.",
+    "zonas": [
+      {
+        "nome": "peito do pé de trás apoiado no banco",
+        "equipamento": "banco",
+        "partes": ["RightFoot", "RightToeBase"],
+        "mm": [-12, 3],
+        "fonte": "ExRx — Dumbbell Single Leg Split Squat (\"place top of foot on bench\"); Sussex (\"The lace of your foot should be on the bench behind you\"); McCurdy 2004 (\"placed the top of the foot of the non-dominant leg on a support bar behind them\"). O estofado pode ceder até 12 mm."
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "coxa da frente paralela ao chão embaixo",
+        "medida": "inclinacao",
+        "segmento": ["UpLeg", "Leg"],
+        "lado": "E",
+        "t": 1.0,
+        "graus": [-8, 8],
+        "fonte": "NASM — Bulgarian Split Squat (\"Descend until your front thigh is approximately parallel to the floor\"); Sussex (\"lower down until the front thigh is parallel\")"
+      },
+      {
+        "nome": "joelho da frente perto de 90° embaixo",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 1.0,
+        "graus": [85, 115],
+        "fonte": "McCurdy 2004 (profundidade \"to attain a 90 degree angle between the femur and tibia\"); Mackey 2021 (\"descend to a depth of approximately 90-degree knee flexion\", com a patela em cima da ponta do pé da frente na posição paralela)"
+      },
+      {
+        "nome": "joelho da frente vai à frente do tornozelo, sem passar da ponta do pé",
+        "medida": "inclinacao",
+        "segmento": ["Leg", "Foot"],
+        "lado": "E",
+        "t": 1.0,
+        "graus": [70, 88],
+        "fonte": "Sussex (\"Make sure the front knee does not go past the toes\"; erro \"knee moving in front of the toes\"); Mackey 2021 (pé da frente posto onde, na posição paralela, \"their patella was directly over the lead toe\"); McCurdy 2004 (repetição inválida se a barra recua \"with no anterior movement of the knee joint\"). Canela a 70° do chão = pele da frente do joelho na ponta do pé (centro do joelho 15 cm à frente do tornozelo + ~5 cm de pele; os dedos vão 19,5 cm à frente)"
+      },
+      {
+        "nome": "joelho da frente quase estendido em cima",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [0, 20],
+        "fonte": "ExRx — Dumbbell Single Leg Split Squat (\"Return to original standing position by extending hip and knee of forward leg\")"
+      },
+      {
+        "nome": "joelho de trás quase encostando no chão embaixo, sem bater",
+        "medida": "joelho_altura",
+        "lado": "D",
+        "t": 1.0,
+        "mm": [60, 120],
+        "fonte": "ExRx — Dumbbell Single Leg Split Squat (\"until knee of rear leg is almost in contact with floor\"); Sussex (\"the back knee just off the floor\"); Helme 2020 (\"achieved a depth approximately equal to the height of the ankle on the lead limb\"). Centro do joelho a 60–120 mm do chão = pele do joelho de ~3 a ~9 cm do chão (o info da cena mede a pele em todo quadro)"
+      },
+      {
+        "nome": "coxa de trás na linha do tronco (quadril de trás perto de 180°)",
+        "medida": "flexao",
+        "junta": "UpLeg",
+        "lado": "D",
+        "t": "todos",
+        "graus": [0, 25],
+        "fonte": "Helme 2020 (\"The subject maintained a neutral posture, and hip angle of approximately 180°, from the rear leg\"); ExRx (\"flexible hip flexors are important\"). Medida = ângulo coxa × tronco (0 = coxa de trás na linha do tronco)"
+      },
+      {
+        "nome": "tornozelo de trás em flexão plantar sem passar do normal (peito do pé no banco)",
+        "medida": "tornozelo",
+        "lado": "D",
+        "t": "todos",
+        "graus": [26, 76],
+        "fonte": "Alazzawi et al. 2017, tabela 5 (flexão plantar normal 0–50°). A medida é o ângulo canela × pé: o boneco em pé com o pé chapado mede 76°, então flexão plantar de 0 a 50° = 76° a 26°. Em cima o tornozelo de trás fica um pouco levantado do estofado (só a frente do pé e os dedos encostam) pra não passar dos 50°"
+      },
+      {
+        "nome": "tronco ereto (no máximo levemente inclinado à frente)",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [0, 15],
+        "fonte": "ExRx (\"Keep torso upright during squat\"); NASM (\"keeping your chest upright\"); Sussex (erro: \"leaning forwards at the hips\"); Arakawa 2025 (búlgaro com a inclinação \"natural\" do tronco à frente, entre a \"additional\" e a \"reduced forward lean\")"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [0, 15],
+        "fonte": "Sussex (\"Keeping your core engaged, straight spine\"); Helme 2020 (\"The subject maintained a neutral posture\")"
+      },
+      {
+        "nome": "joelho da frente na direção do pé (sem entrar nem abrir)",
+        "medida": "joelho_valgo",
+        "lado": "E",
+        "t": "todos",
+        "mm": [-20, 40],
+        "fonte": "ExRx (\"Forward knee should point same direction as foot throughout movement\"); Sussex (erro: \"knees turning in / out\")"
+      },
+      {
+        "nome": "joelho da frente em cima do pé, de lado a lado",
+        "medida": "joelho_fora_do_pe",
+        "lado": "E",
+        "t": "todos",
+        "mm": [-25, 30],
+        "fonte": "ExRx (\"Forward knee should point same direction as foot throughout movement\"); Sussex (erro: \"knees turning in / out\")"
+      },
+      {
+        "nome": "joelho de trás descendo pro chão, sem abrir nem fechar",
+        "medida": "joelho_valgo",
+        "lado": "D",
+        "t": "todos",
+        "mm": [-20, 20],
+        "fonte": "Sussex (erro: \"knees turning in / out\")"
+      },
+      {
+        "nome": "ponta do pé da frente pra frente ou um pouco pra fora",
+        "medida": "ponta_pe",
+        "lado": "E",
+        "t": "todos",
+        "graus": [-5, 30],
+        "fonte": "faixa padrão da fábrica (Escamilla 2001; Schoenfeld 2010)"
+      },
+      {
+        "nome": "pés afastados de lado a lado (o de trás fora da linha do da frente)",
+        "medida": "pes_base_lateral",
+        "t": "todos",
+        "faixa": [0.9, 1.6],
+        "fonte": "Sussex (erro: \"back foot directly in line with the front foot\"); Mackey 2021 (\"the dominant leg placed anterior and in-line with hip joint\")"
+      },
+      {
+        "nome": "pé da frente uma passada à frente do banco",
+        "medida": "pes_alinhados",
+        "t": "todos",
+        "mm": [750, 1050],
+        "fonte": "Sussex (\"three feet in front of a bench\"; erros \"stride to far forwards, stride forwards not big enough\"); Mackey 2021 (distância do pé da frente acertada pra, na posição paralela, a patela ficar em cima da ponta do pé)"
+      },
+      {
+        "nome": "cotovelos estendidos",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [0, 20],
+        "fonte": "ExRx (\"Stand with dumbbells grasped to sides\"); NASM (\"holding dumbbells at your sides\")"
+      },
+      {
+        "nome": "braços pendurados ao lado do corpo",
+        "medida": "braco_elevacao",
+        "t": "todos",
+        "graus": [0, 22],
+        "fonte": "ExRx (\"dumbbells grasped to sides\"); NASM (\"holding dumbbells at your sides\"). Com o tronco inclinado, o braço pendurado na vertical fica uns graus à frente do tronco"
+      },
+      {
+        "nome": "halteres ao lado do corpo, por fora das coxas",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [1.2, 1.8],
+        "fonte": "ExRx (\"dumbbells grasped to sides\"); NASM (\"holding dumbbells at your sides\")"
+      },
+      {
+        "nome": "pelve nivelada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [-5, 5]
+      }
+    ]
+  }
+}

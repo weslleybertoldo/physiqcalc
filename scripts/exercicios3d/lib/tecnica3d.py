@@ -258,6 +258,19 @@ MEDIDAS.update({"escapula_frente": escapula_frente, "ombros_nivel": ombros_nivel
 UNIDADE.update({"escapula_frente": "mm"})
 
 
+# ── agachamento búlgaro (lote 2, 04/10/2026): o pé de trás fica com o peito do pé em cima do banco, em flexão
+# plantar — o tornozelo não pode passar da amplitude normal (Alazzawi S et al., World J Orthop 2017;8(1):21-29,
+# tabela 5: flexão plantar 0–50°, dorsiflexão 0–20°). O limites.py não tem o tornozelo.
+def tornozelo(j):
+    """Ângulo canela × pé (joelho → tornozelo × tornozelo → base dos dedos), graus [E, D]. O boneco em pé com o pé
+    chapado mede ~76°; flexão plantar (ponta do pé descendo) diminui o número e dorsiflexão (joelho indo à frente do
+    pé) aumenta: flexão plantar de 0 a 50° = ~76° a ~26° no boneco."""
+    return [_ang(j[L + "Foot"] - j[L + "Leg"], j[L + "ToeBase"] - j[L + "Foot"]) for L, _ in LADOS]
+
+
+MEDIDAS.update({"tornozelo": tornozelo})
+
+
 def medir(j):
     """Todas as medidas de técnica do quadro (o relatório mostra todas, com ou sem regra na ficha)."""
     return {nome: f(j) for nome, f in MEDIDAS.items()}

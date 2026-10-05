@@ -320,3 +320,19 @@ def test_medidas_novas_entram_no_medir():
     m = tc.medir(j)
     assert {"escapula_frente", "ombros_nivel", "pelve_nivel"} <= set(m)
     assert {"LeftShoulder", "RightShoulder"} <= set(tc.JUNTAS)
+
+
+def test_tornozelo_canela_x_pe_no_pe_de_tras_do_bulgaro():
+    """Agachamento búlgaro (lote 2): ângulo canela × pé. Em pé = o do pé chapado; o pé de trás virado no banco com 30°
+    de flexão plantar (ponta do pé descendo) dá 30° a menos, e o número não muda com o boneco curvado ou virado."""
+    j = em_pe()
+    canela = j["RightFoot"] - j["RightLeg"]
+    pe = j["RightToeBase"] - j["RightFoot"]
+    chapado = math.degrees(math.acos(canela @ pe / np.linalg.norm(canela) / np.linalg.norm(pe)))
+    assert tc.tornozelo(j) == pytest.approx([chapado, chapado], abs=1e-6)
+    eixo = np.cross(canela, pe)                                         # flexão plantar: o pé gira pra longe do joelho
+    j["RightToeBase"] = girar({"t": j["RightToeBase"]}, 30, -eixo, j["RightFoot"])["t"]
+    assert tc.tornozelo(j)[1] == pytest.approx(chapado - 30, abs=1e-6)
+    assert tc.tornozelo(girar(j, 70, (1, 0, 0), (0, 0, 0.9)))[1] == pytest.approx(chapado - 30, abs=1e-6)
+    assert "tornozelo" in tc.medir(dict(com_claviculas(j), **{L + "ToeBase_ponta": j[L + "ToeBase"]
+                                                              for L in ("Left", "Right")}))
