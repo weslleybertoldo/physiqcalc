@@ -1,0 +1,527 @@
+{
+  "uuid": "4270d1f6-1b90-416e-84cb-b058ee869780",
+  "nome": "Elevação Lateral na Polia",
+  "cena": "elevacao_lateral_na_polia",
+  "grupo": "Deltóide Lateral",
+  "subgrupo": "Deltoide lateral (médio)",
+  "padrao_movimento": "elevacao_lateral",
+  "equipamento": "polia",
+  "variacao": "unilateral",
+  "alvos": [
+    "deltoide"
+  ],
+  "auxiliares": [
+    "trapezio"
+  ],
+  "camera": {
+    "az": 25,
+    "el": 8,
+    "dist": 4.8,
+    "alvo": [
+      -0.15,
+      -0.1,
+      1.0
+    ]
+  },
+  "camera_vistas": {
+    "dist": 5.0,
+    "alvo": [
+      -0.1,
+      -0.1,
+      1.0
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, de lado para a polia baixa, com o lado direito virado para ela e um pouco atrás dela, os pés afastados um pouco mais que a largura do quadril, as pontas dos pés para a frente e os joelhos levemente dobrados. A mão direita fica espalmada na frente da torre, para dar apoio. Segura o puxador com a mão esquerda — a do lado de fora —, com o cabo passando na frente do corpo. Começa com o braço esquerdo quase estendido, pendurado um pouco à frente do corpo, com a mão logo na frente da coxa, perto do quadril, e a palma virada para o corpo. Com o cotovelo levemente dobrado e parado, sobe o braço pelo lado, um pouco à frente do corpo, até o cotovelo chegar na altura do ombro, com a palma virada para o chão, sem girar o braço; desce devagar pelo mesmo caminho até a mão voltar para a frente da coxa. O tronco fica ereto e parado (sem inclinar para longe da polia nem balançar), a cabeça alinhada com o tronco, o punho reto e as pernas paradas; o cabo vai da polia, embaixo do lado direito, até o puxador, cruzando na frente das pernas e do quadril sem encostar neles.",
+  "cinesiologia": {
+    "plano": "frontal, um pouco à frente dele (abdução do ombro na subida, adução na descida), de um braço só, cadeia cinética aberta: o braço sobe pelo lado, a ~15° à frente do plano frontal no fim (ACE, Single-arm Lateral Raise: \"lifting the left hand directly to the left (the cable should be passing in front of the body)\"; ExRx: \"raise arm to side away from low pulley until elbow is shoulder height\"). A resistência vem pelo cabo, que puxa a mão para baixo e para dentro, na direção da polia baixa do outro lado do corpo",
+    "articulacoes": "ombro (abdução de ~13° a ~88° e volta, sem rotação do úmero: ExRx, \"Stirrup is raised by shoulder abduction, not external rotation\"; Coratella 2020, LR-neutral: \"abduct laterally the humerus up to 90°, with the humerus neutrally rotated (i.e., thumbs forward)\"); cotovelo parado, levemente dobrado (~15°; ExRx: \"Maintain fixed elbow position (10° to 30° angle) throughout exercise\"); punho reto (Coratella 2020: \"the elbow was almost fully extended, and the wrist in line with the forearm\"); tronco ereto e parado, joelhos levemente dobrados e pés chapados (ACE, Single-arm Lateral Raise: \"Keep the chest tall, the hips straight, and press the feet into the floor\"; NSCA: \"Slightly flex knees and engage the core to stabilize the body\"); o braço de apoio fica parado, com a mão espalmada na torre (ExRx: \"Grasp ballet bar if available\")",
+    "agonistas": "deltoide lateral (médio) (ExRx, Cable One Arm Lateral Raise: Target \"Deltoid, Lateral\"; NSCA, Lateral Raises: \"Isolate and develop strength in the lateral deltoids\"). Com o úmero sem girar (polegar para a frente) ele trabalha mais do que com o polegar para cima, do que na elevação frontal e do que com o cotovelo dobrado a 90° (Coratella 2020: \"Medial deltoid showed greater sEMG RMS in LR-neutral than LR-external (ES: 1.47 (95% confidence-interval—CI: 0.43/2.38)), frontal raise (ES: 10.28(95% CI: 6.67/13.01)), and LR-flexed (ES: 6.41(95% CI: 4.04/8.23))\")",
+    "sinergistas": "deltoide anterior, supraespinal, trapézio (fibras médias e inferiores) e serrátil anterior (ExRx, Cable One Arm Lateral Raise: Synergists \"Deltoid, Anterior\", \"Supraspinatus\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\")",
+    "estabilizadores": "trapézio superior, levantador da escápula e extensores do punho (ExRx, Cable One Arm Lateral Raise: Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\", \"Wrist Extensors\"); os abdominais firmam o tronco e as escápulas ficam baixas e para trás (ACE, Lateral Raise: \"Stiffen your torso by contracting your abdominal and core muscles (\"bracing\"), and depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise\"). Girar o úmero para dentro (polegar para baixo) desvia o trabalho para o deltoide posterior e o trapézio superior (Coratella 2020: \"When humerus rotates internally, greater activation of posterior deltoid, triceps brachii, and upper trapezius occurs\")",
+    "fases": "subida concêntrica (soltando o ar) e descida excêntrica, devagar, até a mão voltar para a frente da coxa (ACE, Lateral Raise: \"Exhale and slowly raise the dumbbells up and out to your sides\"; \"Inhale and gently lower the dumbbells back towards your starting position keeping your elbows slightly extended\"; ACE, Single-arm Lateral Raise: \"slowly lowering the left arm to return the weight to its starting position\")"
+  },
+  "referencias": [
+    "ExRx.net — Cable One Arm Lateral Raise. https://exrx.net/WeightExercises/DeltoidLateral/CBOneArmLateralRaise (lido na cópia do Internet Archive de 30/07/2026; o site direto bloqueia a leitura automática): \"Grasp stirrup cable attachment. Stand facing with side of resting arm toward low pulley. Grasp ballet bar if available.\" \"With elbow slightly bent, raise arm to side away from low pulley until elbow is shoulder height. Lower and repeat. Continue with opposite arm.\" \"Maintain fixed elbow position (10° to 30° angle) throughout exercise.\" \"Stirrup is raised by shoulder abduction, not external rotation.\"",
+    "ExRx.net — Cable Lateral Raise (as 2 polias baixas, uma de cada lado). https://exrx.net/WeightExercises/DeltoidLateral/CBLateralRaise (cópia do Internet Archive de 24/08/2025): \"With elbows slightly bent, raise arms to sides until elbows are shoulder height.\" \"Maintain fixed slightly bent elbow position throughout exercise.\"",
+    "American Council on Exercise (ACE) — Exercise Library: Single-arm Lateral Raise (no cabo). https://www.acefitness.org/resources/everyone/exercise-library/354/single-arm-lateral-raise/",
+    "American Council on Exercise (ACE) — Exercise Library: Lateral Raise (com halteres). https://www.acefitness.org/resources/everyone/exercise-library/26/lateral-raise/",
+    "Sands WA, Wurth JJ, Hewit JK. The National Strength and Conditioning Association's (NSCA) Basics of Strength and Conditioning Manual, cap. 4, Lateral Raises (p. 41). https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (cópia do Internet Archive de 05/01/2024)",
+    "Coratella G, Tornatore G, Longo S, Esposito F, Cè E. An Electromyographic Analysis of Lateral Raise Variations and Frontal Raise in Competitive Bodybuilders. Int J Environ Res Public Health. 2020;17(17):6015. doi:10.3390/ijerph17176015 (texto completo no PMC7503819)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "o cabo passa na frente das pernas e do quadril, sem encostar",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Hips",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          40,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); ACE, Single-arm Lateral Raise (\"the cable should be passing in front of the body\"); medido da pele. A polia fica ~30 cm à frente da linha do corpo, do lado direito, e o cabo cruza na frente das pernas a ≥ 12 cm (a faixa é da cena)"
+      },
+      {
+        "nome": "o cabo passa longe do tronco",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); medido da pele (a cena fica a ≥ 29 cm; a faixa é da cena)"
+      },
+      {
+        "nome": "o cabo não encosta no braço que trabalha",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "LeftArm",
+          "LeftForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele (a cena fica a ≥ 15 cm; a faixa é da cena)"
+      },
+      {
+        "nome": "o cabo passa longe do braço de apoio",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "RightArm",
+          "RightForeArm",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele (a cena fica a ≥ 61 cm; a faixa é da cena)"
+      },
+      {
+        "nome": "o aro do puxador passa em volta dos dedos sem entrar na mão",
+        "equipamento": "puxador_alca",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "mm": [
+          1,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "o aro do puxador não encosta no antebraço, nas coxas nem no tronco",
+        "equipamento": "puxador_alca",
+        "partes": [
+          "LeftForeArm",
+          "LeftArm",
+          "Hips",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele. Embaixo o aro passa na frente da coxa (≥ 56 mm)"
+      },
+      {
+        "nome": "o mosquetão e a bola do cabo não encostam no corpo",
+        "equipamento": "puxador_engate",
+        "partes": [
+          "LeftForeArm",
+          "LeftArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "Hips",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "o pegador fica longe das coxas e do tronco",
+        "equipamento": "puxador_pegador",
+        "partes": [
+          "Hips",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "mão direita espalmada na frente da torre",
+        "equipamento": "polia_torre",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          -2,
+          3
+        ],
+        "fonte": "ExRx, Cable One Arm Lateral Raise (\"Grasp ballet bar if available\": a mão livre se apoia); pedido do Weslley (\"a outra mão apoiada na torre\"); medido da pele até a torre: −2 mm = a pele pode afundar até isso (o limite do corpo × corpo da checagem, PENETRA_MM; a palma afunda 1 mm) e 3 mm = o vão máximo de mão encostando da checagem (ENCOSTO_MAX)"
+      },
+      {
+        "nome": "o antebraço de apoio não encosta na torre",
+        "equipamento": "polia_torre",
+        "partes": [
+          "RightForeArm",
+          "RightArm"
+        ],
+        "mm": [
+          -1,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o equipamento); medido da pele: com a palma espalmada e o punho dobrado ~35°, a pele do punho (que é do antebraço) fica a ~1 mm da carenagem; −1 mm = encostando de leve, como a palma"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "começo: braço quase pendurado, um pouco à frente (mão na frente da coxa, perto do quadril)",
+        "medida": "braco_elevacao",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          8,
+          20
+        ],
+        "fonte": "ExRx, Cable One Arm Lateral Raise (\"Stand facing with side of resting arm toward low pulley\"; o cabo puxa a mão para a frente do corpo); NSCA, Lateral Raises (\"Let arms hang to the sides to the thighs\"); pedido do Weslley (\"desce até perto do quadril\"). A cena começa com o braço a 13° da vertical; a faixa é da cena"
+      },
+      {
+        "nome": "fim: cotovelo na altura do ombro (braço na horizontal)",
+        "medida": "braco_elevacao",
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          83,
+          95
+        ],
+        "fonte": "ExRx, Cable One Arm Lateral Raise (\"raise arm to side away from low pulley until elbow is shoulder height\"); ACE, Single-arm Lateral Raise (\"Lift the left arm until it is parallel to the floor\"); NSCA, Lateral Raises (\"raise dumbbells to the sides until they are at shoulder level\"); Coratella 2020 (\"abduct laterally the humerus up to 90°\"). A cena para a 88°"
+      },
+      {
+        "nome": "o braço não passa da altura do ombro",
+        "medida": "braco_elevacao",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          0,
+          95
+        ],
+        "fonte": "ExRx, Cable One Arm Lateral Raise (\"until elbow is shoulder height\"); ACE, Lateral Raise (\"Continue raising the dumbbells until your arms are level with your shoulders and approximately parallel with the floor\")"
+      },
+      {
+        "nome": "sobe pelo lado, um pouco à frente do corpo",
+        "medida": "braco_plano",
+        "lado": "E",
+        "t": [
+          0.5,
+          1.0
+        ],
+        "graus": [
+          5,
+          40
+        ],
+        "fonte": "ACE, Single-arm Lateral Raise (\"lifting the left hand directly to the left (the cable should be passing in front of the body)\"); ExRx, Cable One Arm Lateral Raise (\"raise arm to side\"). 0 = pro lado, 30 = plano da escápula, 90 = pra frente: no fim a cena fica a 15°"
+      },
+      {
+        "nome": "cotovelo levemente dobrado e parado",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          10,
+          30
+        ],
+        "fonte": "ExRx, Cable One Arm Lateral Raise (\"Maintain fixed elbow position (10° to 30° angle) throughout exercise\"). A cena usa 15°"
+      },
+      {
+        "nome": "punho reto (neutro)",
+        "medida": "flexao",
+        "junta": "Hand",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ACE, Lateral Raise (\"neutral wrist position (avoid flexion and extension of your wrists)\"); Coratella 2020 (\"the wrist in line with the forearm\")"
+      },
+      {
+        "nome": "começo: palma virada para o corpo (pegada neutra, polegar pra frente)",
+        "medida": "palma_dentro",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          70,
+          95
+        ],
+        "fonte": "ACE, Lateral Raise (\"closed, neutral grip (thumbs around the handles and palms facing your body)\"); Coratella 2020, LR-neutral (\"thumbs forward\"). +90 = palma virada pro meio do corpo"
+      },
+      {
+        "nome": "fim: palma virada para o chão (úmero sem girar)",
+        "medida": "palma_dentro",
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          -20,
+          20
+        ],
+        "fonte": "NSCA, Lateral Raises (\"Keep palms facing the ground\"); Coratella 2020, LR-neutral (\"with the humerus neutrally rotated (i.e., thumbs forward)\"); ExRx (\"Stirrup is raised by shoulder abduction, not external rotation\"). 0 = palma pra baixo, pra cima, pra frente ou pra trás; ±90 = virada pro meio ou pra fora"
+      },
+      {
+        "nome": "polegar pra frente o movimento todo (a palma não vira pra frente nem pra trás)",
+        "medida": "palma_frente",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          75,
+          105
+        ],
+        "fonte": "Coratella 2020, LR-neutral (\"with the humerus neutrally rotated (i.e., thumbs forward)\"); ExRx, Cable One Arm Lateral Raise (\"Stirrup is raised by shoulder abduction, not external rotation\"). 90 = palma de lado (pro corpo) ou pra baixo; 0 = pra frente, 180 = pra trás"
+      },
+      {
+        "nome": "tronco ereto e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          6
+        ],
+        "fonte": "ACE, Single-arm Lateral Raise (\"Keep the chest tall, the hips straight\"); ACE, Lateral Raise (\"Maintain your torso erect (no arching your low back)\"); NSCA, Lateral Raises (\"Maintain a constant body position\")"
+      },
+      {
+        "nome": "tronco sem inclinar pro lado (ombros nivelados)",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -5,
+          5
+        ],
+        "fonte": "ACE, Single-arm Lateral Raise (\"Keep the chest tall, the hips straight\"); NSCA, Lateral Raises (\"avoid rocking back and forth to complete the lift\")"
+      },
+      {
+        "nome": "cabeça na linha do tronco",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -20,
+          -2
+        ],
+        "fonte": "ACE, Lateral Raise (\"Your head position should be aligned with your spine\"); a cabeça não mexe em relação ao tronco: o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco); a faixa é da cena"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          3,
+          20
+        ],
+        "fonte": "NSCA, Lateral Raises (\"Slightly flex knees and engage the core to stabilize the body\"). A cena fica a ~7°"
+      },
+      {
+        "nome": "pés um pouco mais abertos que o quadril",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.2
+        ],
+        "fonte": "ACE, Lateral Raise (\"position your feet slightly wider than hip-width apart\"). Medida: distância entre os tornozelos ÷ entre as articulações do quadril (a cena dá 1,84); a faixa é da cena"
+      },
+      {
+        "nome": "pontas dos pés pra frente",
+        "medida": "ponta_pe",
+        "t": "todos",
+        "graus": [
+          -5,
+          12
+        ],
+        "fonte": "NSCA, Lateral Raises (\"Position feet hip-width apart with toes pointed straight ahead\")"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "começo: mão esquerda logo na frente da coxa, perto do quadril",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "Hips"
+        ],
+        "t": 0.0,
+        "mm": [
+          40,
+          140
+        ],
+        "fonte": "pedido do Weslley (\"desce até perto do quadril\"); ACE, Lateral Raise (\"Position the dumbbells alongside your thighs\"). Medido da pele da mão até a pele da coxa: a mão fica ~9 cm na frente dela porque o aro do puxador (14,5 cm) desce na frente da coxa sem encostar (a faixa é da cena)"
+      },
+      {
+        "nome": "antebraço e mão esquerdos não entram nas coxas nem no tronco",
+        "partes": [
+          "LeftForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM)"
+      }
+    ]
+  }
+}
