@@ -91,12 +91,12 @@ describe("limite de alunos e recusas do plano — W1 da loja", () => {
 });
 
 describe("Configurações › Aplicativo (baixar/atualizar o APK) — W1 da loja", () => {
-  it("na loja a aba some (também no link direto); no site continua para todos", () => {
+  it("na loja a aba some (também no link direto); no site continua para todos — W2 da loja: Excluir minha conta nas 2 versões", () => {
     const visiveis = (loja: boolean, ehDono: boolean) =>
       ABAS_CONFIG.filter((a) => estadoDaAbaConfig(a, { ehDono }, () => true, loja) !== null).map((a) => a.id);
-    expect(visiveis(true, true)).toEqual(["perfil", "conta", "equipe", "plano", "recebimento", "convite"]);
-    expect(visiveis(true, false)).toEqual(["perfil", "convite"]);
-    expect(visiveis(false, true)).toEqual(["perfil", "conta", "equipe", "plano", "recebimento", "convite", "aplicativo"]);
-    expect(visiveis(false, false)).toEqual(["perfil", "convite", "aplicativo"]);
+    expect(visiveis(true, true)).toEqual(["perfil", "conta", "equipe", "plano", "recebimento", "convite", "excluir-conta"]);
+    expect(visiveis(true, false)).toEqual(["perfil", "convite", "excluir-conta"]);
+    expect(visiveis(false, true)).toEqual(["perfil", "conta", "equipe", "plano", "recebimento", "convite", "aplicativo", "excluir-conta"]);
+    expect(visiveis(false, false)).toEqual(["perfil", "convite", "aplicativo", "excluir-conta"]);
   });
 });
