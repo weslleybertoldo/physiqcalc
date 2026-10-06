@@ -50,8 +50,9 @@ alter table {schema}.conta_membros add constraint conta_membros_removido_motivo_
   check (removido_motivo is null or removido_motivo in ('conta_excluida'));
 alter table {schema}.conta_membros drop constraint if exists conta_membros_check;
 alter table {schema}.conta_membros drop constraint if exists conta_membros_pessoa_ou_convite;
+-- coalesce: com removido_motivo vazio a comparação daria NULL — e CHECK com NULL PASSA (o teste do fk2 pegou isso)
 alter table {schema}.conta_membros add constraint conta_membros_pessoa_ou_convite
-  check (user_id is not null or email_convite is not null or (status = 'removido' and removido_motivo = 'conta_excluida'));
+  check (user_id is not null or email_convite is not null or (status = 'removido' and coalesce(removido_motivo, '') = 'conta_excluida'));
 
 -- a guarda da W2 + o marcador: pelo app (authenticated, fora do master) ninguém marca uma linha como "conta excluída"
 create or replace function {schema}.conta_membros_guard() returns trigger

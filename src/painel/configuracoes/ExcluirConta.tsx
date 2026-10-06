@@ -11,7 +11,7 @@ import { FluxoExclusao } from "./excluirConta/FluxoExclusao";
 export default function ExcluirConta() {
   return (
     <div data-config-aba="excluir-conta" className="flex max-w-[760px] flex-col gap-3.5">
-      <TopoPagina titulo="Excluir minha conta" subtitulo="Confira tudo antes de confirmar" />
+      <TopoPagina titulo="Excluir minha conta" subtitulo="Confira antes de confirmar" />
       <FluxoExclusao />
     </div>
   );
