@@ -240,6 +240,8 @@ begin
       update {schema}.pacientes set deleted_at = now() where conta_id = v_c.id and deleted_at is null;
       get diagnostics v_lixeira = row_count;
       -- b) a equipe perde o acesso (sou_membro na hora; o Treino pelo espelho) e fica sabendo pelo sino, como no remover_membro
+      select count(*) into v_removidos from {schema}.conta_membros m
+       where m.conta_id = v_c.id and m.status <> 'removido' and m.user_id is distinct from p_uid;
       insert into {schema}.avisos (destino_user_id, tipo, titulo, link)
       select m.user_id, 'membro_removido', left('Você não faz mais parte da equipe de ' || v_c.nome || ' (a conta foi encerrada)', 160), null
         from {schema}.conta_membros m where m.conta_id = v_c.id and m.status <> 'removido' and m.user_id is not null and m.user_id <> p_uid;
@@ -247,7 +249,6 @@ begin
          set status = 'removido', removido_em = now(),
              removido_motivo = case when user_id = p_uid then 'conta_excluida' else removido_motivo end
        where conta_id = v_c.id and status <> 'removido';
-      get diagnostics v_removidos = row_count;
       -- c) convites (aluno e membro) que ninguém aceitou não levam mais ninguém para a conta
       update {schema}.convites set status = 'revogado' where conta_id = v_c.id and status = 'pendente';
       get diagnostics v_revogados = row_count;
