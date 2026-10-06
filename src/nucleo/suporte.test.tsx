@@ -2,8 +2,18 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ erro: "profissional" }));
+const h = vi.hoisted(() => ({ erro: "profissional", erroProfissional: "nao_profissional" }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ sair: async () => {} }) }));
+// W2 da loja: a folha pergunta antes ao caminho do profissional ("nao_profissional" = só aluno → o de sempre; "profissional" = master)
+vi.mock("@/painel/configuracoes/excluirConta/api", async (orig) => {
+  const real = await orig<typeof import("@/painel/configuracoes/excluirConta/api")>();
+  return {
+    ...real,
+    conferirExclusaoProfissional: async () => {
+      throw new real.ErroExclusao(h.erroProfissional, h.erroProfissional === "profissional" ? { motivo: "master" } : {});
+    },
+  };
+});
 vi.mock("@/app-aluno/perfil/pecas/api", async (orig) => {
   const real = await orig<typeof import("@/app-aluno/perfil/pecas/api")>();
   return {
@@ -30,15 +40,25 @@ describe("H4 — o contato do suporte (constante única)", () => {
     render(<MemoryRouter initialEntries={["/privacidade"]}><Privacidade /></MemoryRouter>);
     expect(screen.getByText(new RegExp(`Contato: ${CONTATO_SUPORTE.replace(/[.]/g, "\\.")}\\.`))).toBeInTheDocument();
   });
-  it("profissional que tenta excluir a própria conta: continua NÃO excluindo, e a tela mostra o contato de verdade (não mais \"pelo painel\")", async () => {
+  it("W2 da loja: o profissional que tenta excluir pelo app do aluno vê o caminho certo (painel › Configurações), sem excluir nada", async () => {
+    h.erroProfissional = "nao_profissional";
     h.erro = "profissional";
+    render(<MemoryRouter><SheetExcluir aberto aoMudar={() => {}} /></MemoryRouter>);
+    expect(await screen.findByText(/a exclusão é feita no painel, em Configurações › Excluir minha conta/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Excluir no painel/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: CONTATO_SUPORTE })).toBeNull();
+    expect(screen.queryByLabelText(/Para confirmar, digite/)).toBeNull();
+  });
+  it("o master continua recusado e a tela mostra o contato de verdade do suporte", async () => {
+    h.erroProfissional = "profissional";
     render(<MemoryRouter><SheetExcluir aberto aoMudar={() => {}} /></MemoryRouter>);
     const link = await screen.findByRole("link", { name: CONTATO_SUPORTE });
     expect(link.getAttribute("href")).toBe(linkDoSuporte("Excluir minha conta"));
-    expect(screen.queryByText(/pelo painel/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Excluir no painel/ })).toBeNull();
     expect(screen.queryByLabelText(/Para confirmar, digite/)).toBeNull();
   });
   it("outra recusa (cobrança automática ligada) não mostra o suporte", async () => {
+    h.erroProfissional = "nao_profissional";
     h.erro = "assinatura_ativa";
     render(<MemoryRouter><SheetExcluir aberto aoMudar={() => {}} /></MemoryRouter>);
     expect(await screen.findByRole("button", { name: /Abrir Pagamentos/ })).toBeInTheDocument();

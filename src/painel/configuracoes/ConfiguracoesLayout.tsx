@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { tela } from "@/rotas/registro";
@@ -7,7 +8,7 @@ import { ABAS_CONFIG, estadoDaAbaConfig } from "./catalogoAbas";
 
 /**
  * Configurações do profissional (spec 4.6): Perfil · Conta · Equipe · Plano · Recebimento · Convite ·
- * Aplicativo. A aba é `src/painel/configuracoes/<arquivo>.tsx`; sem ela, a aba some. Conta, Equipe, Plano
+ * Aplicativo · Excluir minha conta (W2 da loja). A aba é `src/painel/configuracoes/<arquivo>.tsx`; sem ela, a aba some. Conta, Equipe, Plano
  * e Recebimento são do dono. A Configurações antiga (`?s=`) saiu na W6: o link antigo cai na aba nova; a
  * Planos do Calc (o fallback do Plano) saiu na W28.
  */
@@ -16,9 +17,14 @@ export default function ConfiguracoesLayout() {
   const { pathname } = useLocation();
   const abas = ABAS_CONFIG.filter((a) => estadoDaAbaConfig(a, dados) !== null);
   const atual = pathname.replace(/^\/painel\/configuracoes\/?/, "").split("/")[0];
+  // no celular as abas rolam de lado: a aberta (ex.: "Excluir minha conta", a última — W2 da loja) fica à vista
+  const barra = useRef<HTMLElement>(null);
+  useEffect(() => {
+    barra.current?.querySelector<HTMLElement>(`[data-aba-config="${atual}"]`)?.scrollIntoView?.({ inline: "center", block: "nearest" });
+  }, [atual]);
   return (
     <div data-configuracoes className="flex flex-col">
-      <nav aria-label="Abas das configurações" className="pq-sem-barra flex gap-1 overflow-x-auto border-b border-linha">
+      <nav ref={barra} aria-label="Abas das configurações" className="pq-sem-barra flex gap-1 overflow-x-auto border-b border-linha">
         {abas.map((a) => {
           const ativa = a.id === atual;
           const Icone = a.icone;

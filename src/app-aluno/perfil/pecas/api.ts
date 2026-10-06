@@ -104,7 +104,8 @@ export const excluirMinhaConta = (confirmacao: string) => chamar<ResultadoExclus
 export const MENSAGEM_ERRO_CONTA: Record<string, string> = {
   sem_internet: "Sem internet agora. Conecte-se e tente de novo.",
   confirmacao_invalida: `Digite ${PALAVRA_CONFIRMACAO} para confirmar.`,
-  profissional: "Como você também usa o painel de profissional, a conta não é excluída pelo app do aluno.",
+  // W2 da loja: o profissional exclui no painel (antes: "não é excluída pelo app do aluno")
+  profissional: "Como você também usa o painel de profissional, a exclusão é feita no painel, em Configurações › Excluir minha conta: lá você confere o que acontece com os seus alunos e a equipe e baixa os prontuários antes.",
   assinatura_ativa: "Você tem uma cobrança automática ligada no cartão. Cancele em Perfil › Pagamentos antes de excluir a conta.",
   treino_indisponivel: "Não foi possível falar com o banco do treino agora. Nada foi apagado — tente de novo em alguns minutos.",
   rate_limited: "Muitas tentativas. Tente de novo em alguns minutos.",

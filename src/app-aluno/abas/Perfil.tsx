@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, BellRing, CalendarDays, Download, Moon, Receipt, Settings, Sun, Trash2, Volume2 } from "lucide-react";
 import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
@@ -29,7 +29,8 @@ type Folha = "lembrete" | "som" | "exportar" | "excluir" | null;
 /**
  * Aba Perfil do app do aluno (W7 — spec 4.3, tela 5): engrenagem (Conta), card do aluno, Meus profissionais (WhatsApp — P24;
  * sem profissional, o código dele), Agenda, Pagamentos, Lembrete de treino, Som do descanso, Aparência, Exportar meus dados,
- * Excluir minha conta (falha F4 — C88, R11, P19), Sair e a versão. Aluno bloqueado (spec 9): só Sair, Exportar e Excluir.
+ * Excluir minha conta (falha F4 — C88, R11, P19; W2 da loja: /perfil?excluir=1 abre direto), Sair e a versão. Aluno bloqueado
+ * (spec 9): só Sair, Exportar e Excluir.
  * Lembrete, som e aparência ficam no aparelho, com as chaves de hoje; o resto vem do banco principal (online — 9A).
  */
 export default function Perfil() {
@@ -40,7 +41,16 @@ export default function Perfil() {
   const uid = usuario?.id ?? null;
   const modulos = situacao?.modulos_aluno ?? [];
   const temTreino = modulos.includes("treino");
-  const [folha, setFolha] = useState<Folha>(null);
+  // W2 da loja: /perfil?excluir=1 (a página /excluir-conta → "Entrar para excluir") abre direto o "Excluir minha conta"
+  const [busca, setBusca] = useSearchParams();
+  const [folha, setFolha] = useState<Folha>(() => (busca.get("excluir") === "1" ? "excluir" : null));
+  useEffect(() => {
+    if (!busca.has("excluir")) return;
+    const limpa = new URLSearchParams(busca);
+    limpa.delete("excluir");
+    setBusca(limpa, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na abertura da aba
+  }, []);
   const [lembrete, setLembrete] = useState(lerLembrete);
   const [som, setSom] = useState<SomDescanso>(lerSomDescanso);
   const { tema } = useTema();

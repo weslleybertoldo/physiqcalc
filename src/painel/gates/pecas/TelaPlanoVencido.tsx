@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { CalendarX2, Dumbbell, Lock, MessageCircle, Salad, ShieldAlert, Smartphone, Wallet } from "lucide-react";
+import { CalendarX2, Dumbbell, Lock, MessageCircle, Salad, ShieldAlert, Smartphone, Trash2, Wallet } from "lucide-react";
 import { ehLoja } from "@/lib/distribuicao";
 import type { ContaSituacao } from "@/nucleo/situacao";
 import { NOME_FAIXA, NOME_PLANO_CARTAO, dataBR, ehFaixa, ehPlano, reais, type MotivoTrava } from "@/nucleo/cobranca/regras";
@@ -83,6 +83,11 @@ export function TelaPlanoVencido({ conta, motivo, fim, dono }: { conta: ContaSit
             </span>
           )}
         </div>
+        {/* W2 da loja: excluir a conta abre mesmo com o painel travado (a Google Play exige) */}
+        <button type="button" onClick={() => navigate("/painel/configuracoes/excluir-conta")} data-plano-vencido-excluir
+          className="flex items-center gap-1.5 self-start text-[12.5px] font-semibold text-texto-3 transition-colors hover:text-texto-2">
+          <Trash2 aria-hidden className="h-3.5 w-3.5" /> Excluir minha conta
+        </button>
       </Cartao>
     </div>
   );

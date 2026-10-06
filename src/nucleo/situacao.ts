@@ -5,6 +5,7 @@
  * (testadas em situacao.test.ts); quem busca é o `sessao.tsx`.
  */
 import type { Modulo } from "@/ui/casca/dadosCasca";
+import { ehRotaDeExclusao } from "@/lib/pedidoExclusao";
 
 export type Papel = "dono" | "personal" | "nutricionista";
 /** "app" (W7b) = a conta do app: os alunos sem profissional pagam a mensalidade do app ao Physiq. */
@@ -225,6 +226,9 @@ export function rotuloDoPapel(s: Situacao | null | undefined, conta: ContaSituac
 
 /** Para onde vai quem acabou de entrar (spec 4.2). `de` = a página que pediu o login. */
 export function destinoDepoisDoLogin(s: Situacao | null | undefined, de?: string | null): string {
+  // W2 da loja: quem entrou pela página /excluir-conta volta para ela — mesmo sem nada (sem conta e sem matrícula), que iria para as
+  // Boas-vindas: a página leva cada um à tela de exclusão certa
+  if (ehRotaDeExclusao(de)) return de as string;
   if (s?.sem_nada) return "/boas-vindas";
   if (de && de.startsWith("/") && !de.startsWith("/entrar") && !de.startsWith("/boas-vindas")) return de;
   return "/";

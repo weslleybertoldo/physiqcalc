@@ -15,6 +15,8 @@ const h = vi.hoisted(() => ({
   erroConferencia: null as null | string,
   excluir: vi.fn(),
   previa: vi.fn(),
+  // W2 da loja: a folha pergunta antes ao caminho do profissional (null = só aluno → "nao_profissional")
+  profissional: null as null | Record<string, unknown>,
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/financeiro/useResumoFinanceiro", () => ({ useResumoFinanceiro: () => ({ resumo: h.resumo, carregando: false, erro: false }) }));
@@ -32,12 +34,23 @@ vi.mock("@/app-aluno/perfil/pecas/api", async (orig) => {
   };
 });
 
+vi.mock("@/painel/configuracoes/excluirConta/api", async (orig) => {
+  const real = await orig<typeof import("@/painel/configuracoes/excluirConta/api")>();
+  return {
+    ...real,
+    conferirExclusaoProfissional: async () => {
+      if (!h.profissional) throw new real.ErroExclusao("nao_profissional");
+      return h.profissional;
+    },
+  };
+});
+
 vi.mock("@/nucleo/vinculo", async (orig) => ({ ...(await orig<typeof import("@/nucleo/vinculo")>()), previaDoCodigo: (c: string) => h.previa(c) }));
 
 import Perfil from "./Perfil";
 import { PerfilReduzido } from "@/app-aluno/gates/pecas/PerfilReduzido";
 
-function montar(reduzido = false) {
+function montar(reduzido = false, rota = "/perfil") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tela = reduzido ? (
     <PerfilReduzido motivo="bloqueio-master" titulo="Acesso pausado" mensagem="Regularize com o Lucas.">
@@ -48,7 +61,7 @@ function montar(reduzido = false) {
   );
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/perfil"]}>{tela}</MemoryRouter>
+      <MemoryRouter initialEntries={[rota]}>{tela}</MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -77,6 +90,7 @@ beforeEach(() => {
   h.erroConferencia = null;
   h.excluir.mockReset();
   h.previa.mockReset();
+  h.profissional = null;
   sair.mockClear();
 });
 
@@ -180,13 +194,42 @@ describe("aba Perfil (tela 5)", () => {
     await waitFor(() => expect(sair).toHaveBeenCalled());
   });
 
-  it("Excluir de quem é profissional: recusa apontando o painel (nada é excluído)", async () => {
+  it("Excluir de quem é profissional: recusa apontando o painel › Configurações (W2 da loja — nada é excluído)", async () => {
     h.erroConferencia = "profissional";
     montar();
     fireEvent.click(await screen.findByText("Excluir minha conta"));
-    expect(await screen.findByText(/não é excluída pelo app do aluno/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ir para o painel/ })).toBeInTheDocument();
+    expect(await screen.findByText(/a exclusão é feita no painel, em Configurações › Excluir minha conta/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Excluir no painel/ })).toBeInTheDocument();
     expect(screen.queryByLabelText("Para confirmar, digite EXCLUIR")).toBeNull();
     expect(h.excluir).not.toHaveBeenCalled();
+  });
+
+  it("W2 da loja: o caminho do profissional reconhece o dono — a folha aponta o painel sem chamar o \"Excluir\" do aluno", async () => {
+    h.profissional = { ok: true, simulacao: true, perfil: "dono", nome: "Sofia", contas: [], equipes: [], ex_equipes: 0, sem_conta: null, aluno: null, treino: null,
+      cobrancas_a_cancelar: 0 };
+    h.conferencia = { ok: true, simulacao: true, apaga: { principal: {}, treino: null }, mantem: { principal: {}, treino: null } };
+    montar();
+    fireEvent.click(await screen.findByText("Excluir minha conta"));
+    expect(await screen.findByRole("button", { name: /Excluir no painel/ })).toBeInTheDocument();
+    expect(document.querySelector('[data-estado-excluir="profissional-dono"]')).not.toBeNull();
+    expect(screen.queryByLabelText("Para confirmar, digite EXCLUIR")).toBeNull();
+  });
+
+  it("W2 da loja: quem já foi membro de equipe (sem painel) exclui ali mesmo, pelo fluxo do profissional", async () => {
+    h.profissional = { ok: true, simulacao: true, perfil: "ex_profissional", nome: "Ex Membro", contas: [], equipes: [], ex_equipes: 1, sem_conta: null,
+      aluno: { matriculas: 1, contas: ["Consultoria"], apaga: {}, mantem: {} }, treino: null, cobrancas_a_cancelar: 0 };
+    montar();
+    fireEvent.click(await screen.findByText("Excluir minha conta"));
+    expect(await screen.findByText("Antes de excluir, confira o que acontece")).toBeInTheDocument();
+    expect(screen.getByText(/o que você registrou para os alunos de uma equipe fica com a conta da equipe/i)).toBeInTheDocument();
+    expect(document.querySelector("[data-excluir-fluxo-profissional]")).not.toBeNull();
+    expect(h.excluir).not.toHaveBeenCalled();
+  });
+
+  it("W2 da loja: /perfil?excluir=1 (a página /excluir-conta) abre direto o Excluir minha conta", async () => {
+    h.conferencia = { ok: true, simulacao: true, apaga: { principal: {}, treino: null }, mantem: { principal: { matriculas: 1 }, treino: null } };
+    montar(false, "/perfil?excluir=1");
+    expect(await screen.findByLabelText("Para confirmar, digite EXCLUIR")).toBeInTheDocument();
+    expect(document.querySelector("[data-sheet-excluir]")).not.toBeNull();
   });
 });

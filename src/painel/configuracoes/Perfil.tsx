@@ -16,6 +16,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro } from "@/ui/premium/Estados";
 import { Segmentado } from "@/ui/premium/Segmentado";
 import { useTema, type Tema } from "@/ui/tema/useTema";
+import { AtalhoExcluir } from "./excluirConta/AtalhoExcluir";
 import { CampoSelect, LinhaInfo, OpcoesPilula, SecaoForm, type OpcaoPilula } from "./pecas/Form";
 import { enviarFotoPerfil, validarFoto } from "./perfil/foto";
 import {
@@ -233,6 +234,7 @@ export default function Perfil() {
         <div className="flex flex-col gap-3.5">
           <AcessoPerfil email={usuario?.email ?? q.data?.email ?? ""} />
           <AparenciaPerfil />
+          <AtalhoExcluir />
         </div>
       </div>
     </div>
