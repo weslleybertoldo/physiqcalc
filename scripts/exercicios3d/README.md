@@ -50,7 +50,7 @@ $BLENDER -b -P ver_anatomia.py -- /tmp/anat 300 400 4  # prova: "ANATOMIA pronta
 | `lib/poses3d.py` | IK, giro de osso no mundo, dedos, utilidades de pose |
 | `lib/pegada3d.py` | mão fechando em volta da barra com ângulos medidos de pegada real |
 | `lib/polegar3d.py` | polegar dando a volta na barra (modo opcional `polegar_modo="volta"`, só exercícios novos): eixos anatômicos, pele por LBS, busca — testes em `test_polegar.py` |
-| `lib/equip3d.py` | barra, anilhas, caixas e tubos dos equipamentos; polia (`polia()`: estação de cabo com torre, roldana e o cabo que gira e estica até o engate — marca `anima_escala`, a única peça com escala no GLB; acessório `barra_polia()` + `por_acessorio()`) |
+| `lib/equip3d.py` | barra, anilhas, caixas e tubos dos equipamentos; polia (`polia()`: estação de cabo com torre, roldana e o cabo que gira e estica até o engate — marca `anima_escala`, a única peça com escala no GLB; acessório `barra_polia()` + `por_acessorio()`; `polia(gira=True)`: o garfo da roldana gira em volta do cabo que desce e fica virado pro cabo na diagonal, até ±90° — `PoliaGiratoria`; acessórios `corda_polia()` e `puxador_polia()`, o puxador D com pegador, aro e engate) |
 | `lib/checagem3d.py` | checagem de realismo em todos os quadros (mãos, pés, juntas, colisões, equipamento) |
 
 ## Licença dos assets

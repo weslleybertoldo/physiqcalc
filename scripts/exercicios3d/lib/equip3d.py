@@ -352,10 +352,13 @@ class Polia:
         return L
 
 
-def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.045, raio_cabo=0.003, alto=2.15):
+def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.045, raio_cabo=0.003, alto=2.15,
+          gira=False):
     """Estação de cabo de coluna única (ver o bloco acima): roldana com o eixo em (x, y, altura), virada pra `frente`
     (horizontal; padrão −Y), o cabo passando a `raio` m do eixo dela; trilho, carrinho, caixa da pilha de pesos e base
-    ficam atrás da roldana. Devolve um Polia (raizes, direcao(), ligar())."""
+    ficam atrás da roldana. Devolve um Polia (raizes, direcao(), ligar()).
+    gira=True (lote 3, 06/10/2026): o carrinho tem o garfo que gira (cabo saindo de lado ou na diagonal) — devolve uma
+    PoliaGiratoria (ver o bloco dela, no fim do arquivo); sem isso, nada muda."""
     f = Vector(frente)
     f = Vector((f.x, f.y, 0.0)).normalized()
     cima = Vector((0.0, 0.0, 1.0))
@@ -404,6 +407,11 @@ def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.04
     cabo.data.materials.append(mat_aco())
     _em_aneis(cabo)
     cabo["anima_escala"] = True                               # exportar_exercicio.py: grava a escala só deste objeto
+    if gira:                                                  # carrinho com o garfo que gira (PoliaGiratoria, abaixo)
+        roldana = _garfo_giratorio(nome, torre, P, giro, raio, altura)
+        pol = PoliaGiratoria(torre, roldana, cabo, P(-raio, 0, altura), raio, f)
+        pol.ligar(P(0.6, 0, altura + 0.3))
+        return pol
     pol = Polia(torre, cabo, P(0, 0, altura), raio, f)
     pol.ligar(P(0.6, 0, altura + 0.3))                        # pose de repouso (a cena põe o certo a cada quadro)
     return pol
@@ -593,3 +601,218 @@ def corda_polia(nome="corda", raio=0.014, perna=0.18, meia=0.05, raio_batente=0.
         m.width = 0.006
         m.segments = 3
     return Corda(gancho, pernas, pontas, perna, meia, raio, engate)
+
+
+# ── POLIA COM O GARFO QUE GIRA (Tríceps Francês Unilateral na Polia Baixa, lote 3, 06/10/2026; serve também pra Elevação
+# Lateral na Polia, em que o cabo sai na diagonal) ────────────────────────────────────────────────────────────────────────
+# polia(..., gira=True): o carrinho continua parado no trilho, mas a roldana fica num garfo que gira em volta de um eixo
+# VERTICAL — o do cabo que desce pelo trilho (ele não sai do lugar), como no carrinho giratório das estações de cabo — e
+# a roldana fica sempre virada pro cabo que sai dela: o cabo nunca sai de lado da roldana. O suporte do giro (fixo, em
+# cima do carrinho, com o rolamento) prende o garfo pelo pino; o garfo = 2 chapas em volta da roldana + a ponte em cima.
+# Com isso o carrinho fica mais raso na frente (2,5 cm atrás do cabo que desce) e o garfo gira até ±90° da `frente` sem
+# encostar nele (folga medida ≥ 3,3 mm, na ponte, a ~58°; 4 mm a 90°); a 95° o eixo da roldana já chega a 0,6 mm do
+# carrinho e a 100° entra nele — a cena vira a `frente` da polia pro lado em que o cabo sai. Uso igual ao da polia de
+# hoje (direcao, ligar); raizes = [torre, roldana, cabo]: a "<nome>_roldana" gira (só rotação no GLB, a origem fica no
+# eixo do giro) e o cabo gira e estica. Com gira=False (o padrão) a polia sai igual à de antes (conferido: mesmos
+# objetos, vértices, direção e comprimento do cabo).
+class PoliaGiratoria(Polia):
+    """Polia com o garfo que gira (polia(..., gira=True)): a cada direcao()/ligar() a roldana se vira pro ponto pedido
+    (o centro dela anda num círculo de raio `raio` em volta do eixo do giro) e o cabo sai no plano dela."""
+
+    def __init__(self, torre, roldana, cabo, eixo_giro, raio, frente):
+        f = Vector(frente)
+        Polia.__init__(self, torre, cabo, Vector(eixo_giro) + f * raio, raio, f)
+        self.roldana = roldana
+        self.raizes = [torre, roldana, cabo]
+        self.eixo_giro = Vector(eixo_giro)    # ponto do eixo vertical do giro, na altura do eixo da roldana
+        self.giro = 0.0                       # giro do garfo em relação à `frente` no último ligar() (graus, + = anti-horário)
+        self._M0 = roldana.matrix_world.copy()
+
+    def _virar(self, p):
+        """Vira a roldana pra p (o centro dela vai pra frente nova): devolve a frente nova (horizontal, unitária)."""
+        v = Vector(p) - self.eixo_giro
+        f = Vector((v.x, v.y, 0.0))
+        f = f.normalized() if f.length > 1e-6 else self.frente.copy()
+        self.centro = self.eixo_giro + f * self.raio
+        return f
+
+    def tangente(self, p):
+        self._virar(p)
+        return Polia.tangente(self, p)
+
+    def ligar(self, engate):
+        f = self._virar(engate)
+        L = Polia.ligar(self, engate)
+        ang = math.atan2(self.frente.cross(f).z, self.frente.dot(f))
+        A = self.eixo_giro
+        self.roldana.matrix_world = (Matrix.Translation(A) @ Matrix.Rotation(ang, 4, "Z") @ Matrix.Translation(-A)
+                                     @ self._M0)
+        self.giro = math.degrees(ang)
+        return L
+
+
+def _garfo_giratorio(nome, torre, P, giro, raio, altura):
+    """Troca o garfo fixo da polia() pelo giratório (gira=True): carrinho mais raso na frente, suporte e rolamento fixos em
+    cima dele e, numa raiz nova "<nome>_roldana" com a origem no eixo do giro, o pino, a ponte, as 2 chapas e a roldana de
+    hoje (flanges, miolo e eixo). P(df, ds, z) = ponto no referencial da polia (frente, lado, altura). Devolve a raiz."""
+    for sufixo in ("_carrinho", "_garfo+1", "_garfo-1"):
+        o = bpy.data.objects.get(nome + sufixo)
+        if o is not None:
+            bpy.data.objects.remove(o, do_unlink=True)
+    rot = (0, 0, giro)
+    # carrinho no trilho (eixo do trilho em df = −0,10), com a frente a 2,5 cm atrás do cabo que desce (df = −raio)
+    frente_carrinho = -raio - 0.025
+    caixa(nome + "_carrinho", P((frente_carrinho - 0.1425) / 2, 0, altura), (0.085, 0.1425 + frente_carrinho, 0.16),
+          mat_estrutura(), rot=rot, pai=torre, chanfro=0.005)
+    # suporte do giro (fixo): em cima do carrinho, avançando até passar do eixo do giro, com o rolamento embaixo
+    caixa(nome + "_suporte_giro", P(-raio - 0.015, 0, altura + 0.09), (0.04, 0.06, 0.02), mat_estrutura(), rot=rot,
+          pai=torre, chanfro=0.003)
+    _cilindro(nome + "_rolamento", 0.013, 0.012, P(-raio, 0, altura + 0.074), (0, 0, 0), mat_aco(), pai=torre)
+    # raiz que gira: origem no eixo do giro (na altura do eixo da roldana), sem rotação no repouso
+    A = P(-raio, 0, altura)
+    raiz = bpy.data.objects.new(nome + "_roldana", None)
+    bpy.context.scene.collection.objects.link(raiz)
+    raiz.location = A
+    bpy.context.view_layer.update()
+    inv = raiz.matrix_world.inverted()
+    pecas = [_cilindro(nome + "_pino_giro", 0.007, 0.008, P(-raio, 0, altura + 0.068), (0, 0, 0), mat_aco()),
+             caixa(nome + "_ponte", P(-raio + 0.033, 0, altura + 0.062), (0.038, 0.09, 0.008), mat_estrutura(), rot=rot,
+                   chanfro=0.002)]
+    for k in (-1, 1):                     # chapas do garfo em volta da roldana (do eixo da roldana ±3,3 cm), até a ponte
+        pecas.append(caixa(nome + "_chapa%+d" % k, P(0, k * 0.017, altura + 0.0125), (0.004, 0.066, 0.095),
+                           mat_estrutura(), rot=rot, chanfro=0.0015))
+    pecas += [bpy.data.objects[nome + n] for n in ("_flange+1", "_flange-1", "_miolo", "_eixo")]
+    for o in pecas:
+        M = o.matrix_world.copy()
+        o.parent = raiz
+        o.matrix_parent_inverse = inv
+        o.matrix_world = M
+    bpy.context.view_layer.update()
+    return raiz
+
+
+# ── PUXADOR D da polia (Tríceps Francês Unilateral na Polia Baixa, lote 3, 06/10/2026; serve também pra Elevação Lateral
+# na Polia e outros exercícios de um braço no cabo) ──────────────────────────────────────────────────────────────────────
+# Puxador em "D" (estribo) de academia: pegador reto de aço e o aro em D saindo das 2 pontas dele e fechando em
+# semicírculo; o mosquetão do cabo prende no topo do aro (o olhal). Medidas do Synergee Single D Handle: "Handle
+# Diameter: 25mm", "Handle Knurling: 4.9"" e "Diameter: 5.7" x 5.7"" (14,5 × 14,5 cm por fora); aro de aço redondo de
+# 10 mm (escolha da fábrica: 14,5 cm por fora − 12,5 cm de pegador = 2 × 1 cm). Como no de verdade, o aro gira livre em
+# volta do pegador (alinha com o cabo) e o mosquetão gira no olhal. 3 raízes (a checagem de rigidez é por raiz; as
+# zonas e folgas da ficha olham a raiz que quiserem — o aro sem o pegador que fica dentro da mão):
+#   pegador — o cano onde a mão fecha; origem no eixo, no meio dele; X local = eixo: ck.Barra(pegador, raio, meia);
+#   alca    — o aro em D (+ as cabeças dos parafusos), mesma origem e mesmo X do pegador, o olhal no +Y local;
+#   engate  — mosquetão + ponteira e bola do cabo, presos no olhal e virados pro cabo (Y local ao longo dele).
+# Uso numa cena (a mão segura o pegador com a linha dos nós dos dedos ao longo dele):
+#   pux = e3.puxador_polia("puxador")
+#   no pose(t): eng = pux.por(vao, eixo, pol.direcao)     # vao = eixo do pegador no meio da mão; eixo = ao longo dele
+#               pol.ligar(eng)
+#   Cena(pose, pux.raizes + pol.raizes, pegadas=[("Left", ck.Barra(pux.pegador, pux.raio, pux.meia))], ...)
+class Puxador:
+    """Puxador D pronto na cena (puxador_polia()): raizes = [pegador, alca, engate]."""
+
+    def __init__(self, pegador, alca, engate, raio, meia, olhal, comprimento):
+        self.pegador, self.alca, self.engate = pegador, alca, engate
+        self.raizes = [pegador, alca, engate]
+        self.raio = raio                  # raio do pegador (m)
+        self.meia = meia                  # meio comprimento do pegador (m)
+        self.olhal = olhal                # do eixo do pegador até o eixo do aro no olhal (m)
+        self.comprimento = comprimento    # do olhal até onde o cabo começa (dentro da bola), m
+        self.ponto_olhal = None           # olhal e começo do cabo no último por()
+        self.ponto_engate = None
+
+    def por(self, centro, eixo, direcao, voltas=5):
+        """Põe o puxador no quadro e devolve onde o cabo começa (polia.ligar(engate)). centro = ponto do eixo do pegador
+        no meio da mão; eixo = direção do pegador; direcao = polia.direcao (ponto → direção unitária do cabo, pra
+        roldana). O aro gira em volta do pegador até o olhal ficar no plano do cabo (a força do cabo passa pelo eixo do
+        pegador, sem torção) e o engate sai do olhal na direção do cabo."""
+        c = Vector(centro)
+        x = Vector(eixo).normalized()
+        u = Vector(direcao(c))
+        for _ in range(voltas):
+            y = u - x * u.dot(x)
+            if y.length < 1e-6:
+                raise ValueError("puxador: cabo ao longo do pegador (%s)" % (tuple(u),))
+            O = c + y.normalized() * self.olhal
+            u = Vector(direcao(O + u * self.comprimento))
+        por_acessorio(self.pegador, c, x, u)
+        por_acessorio(self.alca, c, x, u)
+        xe = x - u * x.dot(u)
+        xe = xe.normalized() if xe.length > 1e-6 else u.orthogonal().normalized()
+        self.engate.matrix_world = Matrix.Translation(O) @ Matrix((xe, u, xe.cross(u))).transposed().to_4x4()
+        self.ponto_olhal, self.ponto_engate = O, O + u * self.comprimento
+        return self.ponto_engate
+
+
+def _tubo_caminho(nome, pontos, raio, mat, pai=None, lados=12):
+    """Tubo redondo de raio `raio` seguindo a linha `pontos` (curva de Blender com bevel, virada malha), pontas fechadas."""
+    cu = bpy.data.curves.new(nome, "CURVE")
+    cu.dimensions = "3D"
+    cu.bevel_depth = raio
+    cu.bevel_resolution = max(1, lados // 4 - 1)
+    cu.use_fill_caps = True
+    sp = cu.splines.new("POLY")
+    sp.points.add(len(pontos) - 1)
+    for p_, q in zip(sp.points, pontos):
+        p_.co = (q[0], q[1], q[2], 1.0)
+    ob_c = bpy.data.objects.new(nome + "_curva", cu)
+    bpy.context.scene.collection.objects.link(ob_c)
+    bpy.context.view_layer.update()
+    me = bpy.data.meshes.new_from_object(ob_c.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(ob_c, do_unlink=True)
+    bpy.data.curves.remove(cu)
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    for pl in me.polygons:
+        pl.use_smooth = True
+    me.materials.append(mat)
+    if pai is not None:
+        o.parent = pai
+    return o
+
+
+def puxador_polia(nome="puxador", raio=0.0125, largura=0.145, altura=0.145, raio_aro=0.005):
+    """Puxador D da polia (ver o bloco acima): pegador de `raio` m entre os braços do aro, aro de `raio_aro` m com
+    `largura` m por fora (de lado a lado) e `altura` m por fora (do lado de fora do pegador até o topo do aro). Medidas
+    do Synergee Single D Handle (25 mm, 14,5 × 14,5 cm). Devolve um Puxador (raizes, pegador, por())."""
+    def raiz_nova(n):
+        r = bpy.data.objects.new(n, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    xa = largura / 2 - raio_aro                                # eixo dos braços do aro
+    meia = xa - raio_aro                                       # o pegador vai de um braço ao outro
+    ya = altura - raio - raio_aro                              # eixo do aro no topo (o olhal)
+    yc = ya - xa                                               # começo do semicírculo (braços retos até aqui)
+    rot_x = (0, math.radians(90), 0)
+    pegador = raiz_nova(nome + "_pegador")
+    _cilindro(nome + "_cano", raio, 2 * meia, (0, 0, 0), rot_x, mat_aco(), vertices=32, pai=pegador)
+    alca = raiz_nova(nome + "_alca")
+    caminho = [(xa, -raio * 0.6, 0), (xa, yc, 0)]
+    caminho += [(xa * math.cos(a), yc + xa * math.sin(a), 0) for a in [math.pi * k / 16 for k in range(1, 16)]]
+    caminho += [(-xa, yc, 0), (-xa, -raio * 0.6, 0)]
+    _tubo_caminho(nome + "_aro", caminho, raio_aro, mat_aco(), pai=alca)
+    for s in (-1, 1):                                          # cabeças dos parafusos do pegador, por fora do aro
+        _cilindro(nome + "_parafuso%+d" % s, 0.008, 0.004, (s * (xa + raio_aro + 0.002), 0, 0), rot_x, mat_aco(),
+                  vertices=16, pai=alca)
+    # engate: mosquetão em volta do topo do aro (no plano ⟂ ao aro ali), ponteira e bola do cabo; origem no olhal
+    engate = raiz_nova(nome + "_engate")
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.0035, major_segments=24, minor_segments=8,
+                                     location=(0, 0.012, 0), rotation=(0, math.radians(90), 0))
+    mosq = bpy.context.active_object
+    mosq.name = nome + "_mosquetao"
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    mosq.scale = (1.0, 1.6, 1.0)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.ops.object.shade_smooth()
+    mosq.data.materials.append(mat_aco())
+    mosq.parent = engate
+    _cilindro(nome + "_ponteira", 0.0045, 0.03, (0, 0.055, 0), (math.radians(-90), 0, 0), mat_aco(), vertices=16,
+              pai=engate)
+    comprimento = 0.075                                        # do olhal até onde o cabo começa (dentro da bola)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.012, segments=16, ring_count=8, location=(0, comprimento + 0.007, 0))
+    bola = bpy.context.active_object
+    bola.name = nome + "_bola"
+    bpy.ops.object.shade_smooth()
+    bola.data.materials.append(mat_borracha())
+    bola.parent = engate
+    return Puxador(pegador, alca, engate, raio, meia, ya, comprimento)
