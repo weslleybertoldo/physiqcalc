@@ -1,0 +1,215 @@
+{
+ "uuid": "0eed6ebd-c8bf-4e47-b1af-d59d52f8eaf9",
+ "nome": "Rosca Alternada Inclinada com Halteres",
+ "cena": "rosca_alternada_inclinada_com_halteres",
+ "grupo": "Bíceps",
+ "subgrupo": "Bíceps braquial (cabeça longa)",
+ "padrao_movimento": "rosca_direta",
+ "equipamento": "halteres",
+ "variacao": "alternada no banco inclinado",
+ "alvos": [
+  "biceps"
+ ],
+ "auxiliares": [
+  "antebraco"
+ ],
+ "camera": {
+  "az": 305,
+  "el": 14,
+  "dist": 3.8,
+  "alvo": [
+   0.0,
+   0.1,
+   0.55
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   0.1,
+   0.62
+  ]
+ },
+ "ida_s": 3.0,
+ "movimento": "Sentado no banco inclinado a 45°, com o glúteo no assento, as costas e a cabeça apoiadas no encosto e os pés chapados no chão, segura um halter em cada mão com as palmas viradas para a frente (pegada supinada) e deixa os braços pendurados na vertical, ao lado do encosto, com os cotovelos ao lado do corpo — assim o braço fica atrás da linha do tronco e a cabeça longa do bíceps começa alongada. Com o cotovelo parado, sem levar o braço para a frente, sobe um dos halteres dobrando só o cotovelo, com a palma virando para o ombro, até o halter chegar perto do ombro; desce devagar até esticar o braço de novo e só então sobe o outro, alternando os lados. O tronco e a cabeça ficam apoiados no encosto o tempo todo.",
+ "cinesiologia": {
+  "plano": "sagital, cadeia cinética aberta, um braço de cada vez (alternado)",
+  "articulacoes": "cotovelo (flexão na subida, extensão na descida) com o antebraço supinado; o ombro fica parado em extensão — o braço pendurado atrás da linha do tronco — e não flexiona na subida",
+  "agonistas": "bíceps braquial, com a cabeça longa alongada pela extensão do ombro no começo da subida (Oliveira 2009: \"In the IDC protocol the biceps brachii long head is initially lengthened\"; Kassiano 2025: \"a greater increase in the proximal elbow flexor thickness in the incline biceps curl compared to the preacher biceps curl\")",
+  "sinergistas": "braquial e braquiorradial (ExRx: \"Synergists: Brachialis, Brachioradialis\")",
+  "estabilizadores": "deltoide anterior, coracobraquial e flexores do punho (ExRx: \"Stabilizers: Deltoid, Anterior; Coracobrachialis; Wrist Flexors\"); o deltoide anterior trabalha menos que na rosca direta com barra (ACE, Young et al. 2014: \"for the AD, the incline curl, concentration curl and the chin-up had significantly less muscle activation than the barbell curl\")",
+  "fases": "subida concêntrica e descida excêntrica de um braço, com o outro parado embaixo; depois o outro braço (ExRx: \"Lower to original position and repeat with opposite arm\")"
+ },
+ "referencias": [
+  "ExRx.net — Dumbbell Incline Curl. https://exrx.net/WeightExercises/Biceps/DBInclineCurl (lido pela cópia do Internet Archive de 02/02/2026)",
+  "Oliveira LF, Matta TT, Alves DS, Garcia MAC, Vieira TMM. Effect of the shoulder position on the biceps brachii EMG in different dumbbell curls. J Sports Sci Med. 2009;8(1):24-29. https://pmc.ncbi.nlm.nih.gov/articles/PMC3737788/",
+  "Zabaleta-Korta A, Fernández-Peña E, Torres-Unda J, Francés M, Zubillaga A, Santos-Concejero J. Regional Hypertrophy: The Effect of Exercises at Long and Short Muscle Lengths in Recreationally Trained Women. J Hum Kinet. 2023;88:259-270. doi:10.5114/jhk/163561",
+  "Kassiano W, Costa B, Kunevaliki G, Lisboa F, Stavinski N, Prado A, Tricoli I, Francsuel J, Lima L, Nunes J, Ribeiro AS, Cyrino ES. Distinct muscle growth and strength adaptations after preacher and incline biceps curls. Int J Sports Med. 2025;46(5):334-343. doi:10.1055/a-2517-0509 (resumo no PubMed, PMID 39809454)",
+  "American Council on Exercise — Bicep Curl (Exercise Library). https://www.acefitness.org/resources/everyone/exercise-library/70/bicep-curl/",
+  "Young S, Porcari JP, Camic C, Kovacs A, Foster C. ACE Study Reveals Best Biceps Exercises. ACE ProSource, agosto de 2014 (estudo patrocinado pelo ACE; a rosca inclinada é um dos 8 exercícios medidos)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "costas apoiadas no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Dumbbell Incline Curl (\"Sit back on 45-60 degree incline bench\"); Zabaleta-Korta 2023 (\"lying supine on a bench with 45º inclination\")"
+   },
+   {
+    "nome": "glúteo apoiado no assento",
+    "equipamento": "banco",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Dumbbell Incline Curl (\"Sit back on 45-60 degree incline bench\")"
+   },
+   {
+    "nome": "cabeça apoiada no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Zabaleta-Korta 2023 (\"lying supine on a bench with 45º inclination\": deitado de costas no encosto)"
+   },
+   {
+    "nome": "braços passam do lado do encosto, sem entrar nele",
+    "equipamento": "banco",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     0,
+     5000
+    ],
+    "fonte": "ExRx — Dumbbell Incline Curl (\"With arms hanging down straight\"): os braços ficam pendurados ao lado do encosto; Weslley (nada entra no corpo nem o corpo no equipamento)"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "halter esquerdo não bate no banco",
+    "equipamento": "halter_Left",
+    "de": "banco",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "pedido do Weslley (o halter nunca bate no banco); 3 mm = FOLGA_MIN da checagem"
+   },
+   {
+    "nome": "halter direito não bate no banco",
+    "equipamento": "halter_Right",
+    "de": "banco",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "pedido do Weslley (o halter nunca bate no banco); 3 mm = FOLGA_MIN da checagem"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braço pendurado atrás da linha do tronco, parado",
+    "medida": "braco_frente",
+    "t": "todos",
+    "graus": [
+     -50,
+     -40
+    ],
+    "fonte": "ExRx — Dumbbell Incline Curl (\"Sit back on 45-60 degree incline bench. With arms hanging down straight\"; \"With elbows back to sides\"); Oliveira 2009 (\"seated with 50° of trunk hyperextension and the right arm hanging freely\"; \"The shoulder hyperextension, elicited by the IDC protocol, stretches the long head of biceps brachii muscle\"). Com o encosto a 45° e o braço na vertical, o braço fica ~45° atrás do tronco; a faixa de 10° não deixa o cotovelo ir pra frente na subida"
+   },
+   {
+    "nome": "cotovelo ao lado do corpo",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -5,
+     20
+    ],
+    "fonte": "ExRx — Dumbbell Incline Curl (\"With elbows back to sides\"); ACE — Bicep Curl (\"keeping them next to the middle of the body\")"
+   },
+   {
+    "nome": "pegada supinada (palma sem virar pro meio nem pra fora)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "Zabaleta-Korta 2023 (\"keep the hand always completely supinated\"); ExRx — Dumbbell Incline Curl (\"palm faces shoulder\" em cima)"
+   },
+   {
+    "nome": "braço esquerdo esticado embaixo enquanto o direito trabalha",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "E",
+    "t": [
+     0.0,
+     0.5
+    ],
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "ExRx — Dumbbell Incline Curl (\"With arms hanging down straight\"; \"Lower to original position and repeat with opposite arm\"); Oliveira 2009 (\"their movements started from a slightly flexed position (around 20°)\"); Zabaleta-Korta 2023 (\"The exercise began with the forearm perpendicular to the floor\")"
+   },
+   {
+    "nome": "braço direito esticado embaixo enquanto o esquerdo trabalha",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "D",
+    "t": [
+     0.5,
+     1.0
+    ],
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "idem (ExRx, Oliveira 2009, Zabaleta-Korta 2023)"
+   },
+   {
+    "nome": "cotovelo direito dobrado em cima (t=0)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "D",
+    "t": 0.0,
+    "graus": [
+     120,
+     145
+    ],
+    "fonte": "ExRx — Dumbbell Incline Curl (\"raise one dumbbell and rotate forearm until forearm is vertical and palm faces shoulder\"; \"allowing forearms to be no more than vertical\"): com o braço parado na vertical o antebraço não chega à vertical, então o topo é o cotovelo dobrado ao máximo com o halter perto do ombro; Oliveira 2009 (amplitude do cotovelo na rosca inclinada 134,3 ± 19,5°)"
+   },
+   {
+    "nome": "cotovelo esquerdo dobrado em cima (t=1)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "E",
+    "t": 1.0,
+    "graus": [
+     120,
+     145
+    ],
+    "fonte": "idem (ExRx, Oliveira 2009)"
+   }
+  ]
+ }
+}
