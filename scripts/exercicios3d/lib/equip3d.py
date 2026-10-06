@@ -452,3 +452,144 @@ def por_acessorio(raiz, centro, eixo, para_cabo):
     y = Vector(para_cabo) - x * Vector(para_cabo).dot(x)
     y.normalize()
     raiz.matrix_world = Matrix.Translation(Vector(centro)) @ Matrix((x, y, x.cross(y))).transposed().to_4x4()
+
+
+# ── CORDA de polia (Tríceps Testa na Polia Alta em Pé, lote 3, 05/10/2026; serve também pra Rosca Martelo na Polia) ──────
+# Corda de tríceps comum: 27" de ponta a ponta com o engate no meio, corda trançada e batentes de borracha maciça nas
+# pontas (CAP Barbell MB-ROPE: "Rope Length: 27 inches (end to end) with center attachment"; "Heavy duty braided
+# Polypropylene rope and solid rubber stoppers at each end"); grossura de 28 mm (pedido do Weslley: ~25–30 mm). A corda
+# dobra no meio dentro de uma luva de aço presa num olhal; o mosquetão do cabo prende no olhal (como na barra_polia).
+# As peças mexem uma em relação à outra (a distância entre as mãos muda), então cada uma é uma raiz (a checagem de
+# rigidez é por raiz) e todas entram em Cena.equipamentos junto com polia.raizes:
+#   gancho  — luva + olhal + mosquetão + ponteira e bola do cabo; origem no ponto onde as 2 pernas se juntam (dentro da
+#             luva), engate (+Y local) virado pro cabo;
+#   perna±1 — a corda do gancho até a entrada na mão: comprimento FIXO (a corda não estica) — é a posição do gancho que
+#             sai das 2 mãos (as 2 pernas esticadas, o gancho na linha do cabo). Sem escala no GLB;
+#   ponta±1 — a corda dentro da mão + o batente logo depois dela; origem no vão da mão, X local ao longo da corda, do
+#             lado do gancho (entrada) pro batente: checagem3d.Barra(ponta, raio, meia_pegada) mede a pegada.
+# Uso numa cena (polia alta atrás, mãos em pegada neutra; a mão +1 é a de +X):
+#   corda = e3.corda_polia("corda")
+#   no pose(t): eng = corda.por({1: (vao_E, eixo_E), -1: (vao_D, eixo_D)}, pol.direcao)   # eixo: entrada → batente
+#               pol.ligar(eng)
+#   Cena(pose, corda.raizes + pol.raizes, pegadas=[("Left", ck.Barra(corda.pontas[1], corda.raio, corda.meia)), ...])
+ENGATE_CORDA = 0.143               # do ponto onde as pernas se juntam até onde o cabo começa (dentro da bola do cabo)
+CORDA = (0.045, 0.045, 0.05, 1)
+
+
+def mat_corda():
+    return b3.material_liso("Corda", CORDA, rug=0.85)
+
+
+class Corda:
+    """Corda da polia pronta na cena (corda_polia()): raizes = [gancho, perna+1, perna−1, ponta+1, ponta−1]."""
+
+    def __init__(self, gancho, pernas, pontas, perna, meia, raio, engate):
+        self.gancho, self.pernas, self.pontas = gancho, pernas, pontas
+        self.raizes = [gancho, pernas[1], pernas[-1], pontas[1], pontas[-1]]
+        self.perna = perna                # comprimento de cada perna (junção → entrada na mão), m
+        self.meia = meia                  # vão da mão → entrada (e → saída) da corda na mão, m
+        self.raio = raio                  # raio da corda, m
+        self.engate = engate
+        self.juncao = None                # onde as pernas se juntam no último por()
+        self.entradas = {}                # onde cada perna entra na mão no último por()
+
+    def por(self, pegadas, direcao):
+        """Põe a corda no quadro e devolve o engate (onde o cabo começa: polia.ligar(engate)). pegadas = {+1: (vão,
+        eixo), −1: (vão, eixo)}: vão = ponto do eixo da corda no meio da mão (o da pegada3d) e eixo = direção da corda
+        dentro da mão, do lado por onde ela entra (o do gancho) pro lado do batente. direcao = polia.direcao (ponto →
+        direção unitária do cabo, pra roldana). As 2 pernas ficam esticadas no comprimento delas: o gancho fica a igual
+        distância das 2 entradas, na reta que sai do meio delas na direção do cabo (o equilíbrio das 3 forças)."""
+        E = {s: Vector(c) - Vector(e).normalized() * self.meia for s, (c, e) in pegadas.items()}
+        M = (E[1] + E[-1]) / 2
+        w = E[1] - E[-1]
+        if w.length / 2 >= self.perna * 0.98:
+            raise ValueError("corda: mãos longe demais pras pernas (%.3f m entre as entradas)" % w.length)
+        h = math.sqrt(self.perna ** 2 - (w.length / 2) ** 2)
+        wn = w.normalized()
+        u = Vector(direcao(M))
+        for _ in range(5):
+            up = (u - wn * u.dot(wn)).normalized()
+            J = M + up * h
+            u = Vector(direcao(J + u * self.engate))
+        por_acessorio(self.gancho, J, wn, u)
+        for s in (1, -1):
+            c, e = Vector(pegadas[s][0]), Vector(pegadas[s][1]).normalized()
+            z = (E[s] - J).normalized()               # perna: Z local da junção até a entrada na mão
+            x = wn - z * wn.dot(z)
+            x = x.normalized() if x.length > 1e-6 else z.orthogonal().normalized()
+            self.pernas[s].matrix_world = Matrix.Translation(J) @ Matrix((x, z.cross(x), z)).transposed().to_4x4()
+            y = (J - E[s]) - e * (J - E[s]).dot(e)    # ponta: X local ao longo da corda, Y pro lado do gancho
+            y = y.normalized() if y.length > 1e-6 else e.orthogonal().normalized()
+            self.pontas[s].matrix_world = Matrix.Translation(c) @ Matrix((e, y, e.cross(y))).transposed().to_4x4()
+        self.juncao, self.entradas = J, E
+        return J + u * self.engate
+
+
+def corda_polia(nome="corda", raio=0.014, perna=0.18, meia=0.05, raio_batente=0.021, compr_batente=0.045,
+                folga_batente=0.003, engate=ENGATE_CORDA):
+    """Corda de tríceps da polia (ver o bloco acima): corda de `raio` m, cada perna com `perna` m da junção até a entrada
+    na mão, `meia` m do vão da mão até a entrada/saída dela na mão, batente de borracha (`raio_batente`, `compr_batente`)
+    `folga_batente` m depois da saída. Medidas: 27" (0,686 m) de ponta a ponta ≈ 2 × (perna + 2 × meia + folga + batente
+    + ~1,5 cm dobrados dentro da luva) = 2 × 0,343 m. Devolve um Corda (raizes, pontas, por())."""
+    def raiz_nova(n):
+        r = bpy.data.objects.new(n, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    # gancho: luva (ao longo do +Y local, cobrindo a dobra), olhal, mosquetão, ponteira e bola do cabo
+    gancho = raiz_nova(nome + "_gancho")
+    rot_y = (math.radians(-90), 0, 0)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=raio, segments=16, ring_count=8, location=(0, 0, 0))
+    no = bpy.context.active_object
+    no.name = nome + "_dobra"
+    bpy.ops.object.shade_smooth()
+    no.data.materials.append(mat_corda())
+    no.parent = gancho
+    _cilindro(nome + "_luva", 0.020, 0.06, (0, 0.005, 0), rot_y, mat_aco(), pai=gancho)
+    caixa(nome + "_olhal", (0, 0.047, 0), (0.008, 0.026, 0.022), mat_aco(), pai=gancho, chanfro=0.003)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.0035, major_segments=24, minor_segments=8,
+                                     location=(0, 0.085, 0))
+    mosq = bpy.context.active_object
+    mosq.name = nome + "_mosquetao"
+    mosq.scale = (1.0, 1.6, 1.0)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.ops.object.shade_smooth()
+    mosq.data.materials.append(mat_aco())
+    mosq.parent = gancho
+    _cilindro(nome + "_ponteira", 0.0045, 0.03, (0, 0.123, 0), rot_y, mat_aco(), vertices=16, pai=gancho)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.012, segments=16, ring_count=8, location=(0, engate + 0.007, 0))
+    bola = bpy.context.active_object
+    bola.name = nome + "_bola"
+    bpy.ops.object.shade_smooth()
+    bola.data.materials.append(mat_borracha())
+    bola.parent = gancho
+    pernas, pontas = {}, {}
+    for s in (1, -1):
+        # perna: cilindro de 0 a `perna` no Z local (origem na junção)
+        bpy.ops.mesh.primitive_cylinder_add(radius=raio, depth=perna, location=(0, 0, perna / 2), vertices=16)
+        p = bpy.context.active_object
+        p.name = nome + "_perna%+d" % s
+        bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
+        bpy.ops.object.shade_smooth()
+        p.data.materials.append(mat_corda())
+        pernas[s] = p
+        # ponta: corda dentro da mão (de −meia até o meio do batente), dobra na entrada e o batente com as bordas
+        # arredondadas
+        r = pontas[s] = raiz_nova(nome + "_ponta%+d" % s)
+        x1 = meia + folga_batente
+        x2 = x1 + compr_batente
+        rot_x = (0, math.radians(90), 0)
+        _cilindro(nome + "_pegada%+d" % s, raio, x1 + compr_batente / 2 + meia, ((x1 + compr_batente / 2 - meia) / 2, 0, 0),
+                  rot_x, mat_corda(), vertices=16, pai=r)
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=raio, segments=16, ring_count=8, location=(-meia, 0, 0))
+        d = bpy.context.active_object
+        d.name = nome + "_entrada%+d" % s
+        bpy.ops.object.shade_smooth()
+        d.data.materials.append(mat_corda())
+        d.parent = r
+        b = _cilindro(nome + "_batente%+d" % s, raio_batente, compr_batente, ((x1 + x2) / 2, 0, 0), rot_x, mat_borracha(),
+                      vertices=32, pai=r)
+        m = b.modifiers.new("chanfro", "BEVEL")
+        m.width = 0.006
+        m.segments = 3
+    return Corda(gancho, pernas, pontas, perna, meia, raio, engate)
