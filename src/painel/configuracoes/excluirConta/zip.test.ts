@@ -61,5 +61,5 @@ describe("Baixar prontuários (ZIP com 1 PDF por paciente)", () => {
       expect(strFromU8(dentro[nome].subarray(0, 5))).toBe("%PDF-");
       expect(dentro[nome].length).toBeGreaterThan(1500);
     }
-  });
+  }, 30_000); // gera PDFs de verdade (jsPDF): ~4 s sozinho, mais com o vitest completo em paralelo
 });

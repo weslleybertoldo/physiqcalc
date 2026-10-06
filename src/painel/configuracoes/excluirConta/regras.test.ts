@@ -3,7 +3,7 @@ import { situacao, conta as contaSituacao } from "@/test/fixturesNucleo";
 import type { Conferencia, ContaDoDono } from "./api";
 import {
   destinoDaExclusao, listaApaga, listaFica, lotesParaBaixar, nomeDoZip, nomeUnico, papeisLegiveis, precisaBaixar, prontuariosDaConferencia,
-  resumoDaConfirmacao, textoDosAlunos, textosDaCobranca,
+  resumoDaConfirmacao, textoDosAlunos, textoDosAlunosDaEquipe, textosDaCobranca,
 } from "./regras";
 
 const contaDono = (extra: Partial<ContaDoDono> = {}): ContaDoDono => ({
@@ -45,6 +45,11 @@ describe("excluir conta do profissional — os textos da conferência", () => {
     expect(l.join(" ")).not.toMatch(/R\$|pague|assine|pix/i);
     expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 1 } }))).toEqual(["A cobrança automática de 1 aluno para você também é cancelada."]);
     expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 0 } }))).toEqual([]);
+  });
+  it("o membro que sai: os alunos dele ficam sem responsável (singular e plural)", () => {
+    expect(textoDosAlunosDaEquipe(1)).toBe("O seu aluno fica na conta, sem responsável, para o dono atribuir a outro profissional.");
+    expect(textoDosAlunosDaEquipe(3)).toMatch(/^Os seus 3 alunos ficam na conta/);
+    expect(textoDosAlunosDaEquipe(0)).toBe("Você não é responsável por nenhum aluno agora.");
   });
   it("papéis legíveis da equipe", () => {
     expect(papeisLegiveis(["personal", "nutricionista"])).toBe("Personal e Nutricionista");

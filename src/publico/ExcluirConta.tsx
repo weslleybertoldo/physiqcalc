@@ -183,7 +183,8 @@ export default function ExcluirConta() {
                 </a>.
               </p>
               <p className="flex items-center gap-1.5 text-[12.5px] text-texto-3">
-                <UserRound aria-hidden className="h-3.5 w-3.5" /> Veja também a <Link to="/privacidade" className="font-semibold text-violeta-3 underline-offset-2 hover:underline">Política de Privacidade</Link>.
+                <UserRound aria-hidden className="h-3.5 w-3.5" />
+                <span>Veja também a <Link to="/privacidade" className="font-semibold text-violeta-3 underline-offset-2 hover:underline">Política de Privacidade</Link>.</span>
               </p>
             </Secao>
           </div>

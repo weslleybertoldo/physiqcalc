@@ -30,6 +30,14 @@ export function textoDosAlunos(c: ContaDoDono, loja: boolean): string {
   return `${plural(total, "aluno", "alunos")}: ${partes.join("; ")}.`;
 }
 
+/** O membro que sai: os alunos dele ficam na conta do dono, sem responsável. */
+export function textoDosAlunosDaEquipe(n: number): string {
+  if (n <= 0) return "Você não é responsável por nenhum aluno agora.";
+  return n === 1
+    ? "O seu aluno fica na conta, sem responsável, para o dono atribuir a outro profissional."
+    : `Os seus ${n} alunos ficam na conta, sem responsável, para o dono atribuir a outro profissional.`;
+}
+
 /** As linhas da cobrança automática (só informação — nenhum valor, nenhum "pague"). */
 export function textosDaCobranca(c: ContaDoDono): string[] {
   const linhas: string[] = [];

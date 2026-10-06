@@ -17,7 +17,8 @@ import {
   ErroExclusao, PALAVRA_CONFIRMACAO, conferirExclusaoProfissional, excluirContaProfissional, mensagemErroExclusao, type Conferencia, type ContaDoDono,
 } from "./api";
 import {
-  listaApaga, listaFica, papeisLegiveis, precisaBaixar, prontuariosDaConferencia, resumoDaConfirmacao, textoDosAlunos, textosDaCobranca,
+  listaApaga, listaFica, papeisLegiveis, precisaBaixar, prontuariosDaConferencia, resumoDaConfirmacao, textoDosAlunos, textoDosAlunosDaEquipe,
+  textosDaCobranca,
 } from "./regras";
 import { montarZipDeProntuarios, salvarZip, type ZipPronto } from "./zip";
 
@@ -273,9 +274,7 @@ export function FluxoExclusao({ conferenciaInicial = null }: { conferenciaInicia
             </div>
             <Linha icone={Users} tom="var(--p-ambar-3)">
               Você sai da equipe{e.dono_nome ? ` (dono: ${e.dono_nome})` : ""}.{" "}
-              {e.alunos_treino + e.alunos_nutricao > 0
-                ? `Os seus ${e.alunos_treino + e.alunos_nutricao} aluno(s) ficam na conta, sem responsável, para o dono atribuir a outro profissional.`
-                : "Você não é responsável por nenhum aluno agora."}
+              {textoDosAlunosDaEquipe(e.alunos_treino + e.alunos_nutricao)}
             </Linha>
             <Linha icone={ShieldCheck} tom="var(--p-verde-2)">O que você registrou para os alunos (anotações, avaliações, treinos, dietas) fica com a conta.</Linha>
           </Cartao>

@@ -133,7 +133,7 @@ describe("Configurações › Excluir minha conta (W2 da loja)", () => {
     h.conferencia = MEMBRO;
     montar();
     expect(await screen.findByText("Equipe de W2L Estúdio Daniel")).toBeInTheDocument();
-    expect(screen.getByText(/Os seus 1 aluno\(s\) ficam na conta, sem responsável, para o dono atribuir/)).toBeInTheDocument();
+    expect(screen.getByText(/O seu aluno fica na conta, sem responsável, para o dono atribuir/)).toBeInTheDocument();
     expect(screen.queryByText(/Baixar prontuários/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     expect(await screen.findByText("Você sai da equipe de W2L Estúdio Daniel e o seu login é apagado. Não dá para desfazer.")).toBeInTheDocument();
