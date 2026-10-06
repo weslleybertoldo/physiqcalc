@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { CalendarX2, Dumbbell, Lock, MessageCircle, Salad, ShieldAlert, Smartphone, Wallet } from "lucide-react";
+import { ehLoja } from "@/lib/distribuicao";
 import type { ContaSituacao } from "@/nucleo/situacao";
 import { NOME_FAIXA, NOME_PLANO_CARTAO, dataBR, ehFaixa, ehPlano, reais, type MotivoTrava } from "@/nucleo/cobranca/regras";
 import { valorMensalDaConta } from "@/nucleo/cobranca/cartao";
@@ -11,7 +12,8 @@ import { KpiCompacto } from "@/ui/premium/Kpi";
 /**
  * Tela de plano vencido no lugar do painel (spec 6.2, 6.5 e 9), no visual das telas 6/7: o dono vai direto para
  * Configurações › Plano (Pagar); os outros membros veem "Fale com <dono>"; conta suspensa = "Fale com o suporte" (sem
- * Pagar). Os alunos continuam usando o app — a tela diz isso.
+ * Pagar). Os alunos continuam usando o app — a tela diz isso. W1 da loja: na versão da Google Play, sem "Pagar agora", sem o
+ * valor e sem as formas de pagar — o texto só diz que o plano não está ativo (o profissional paga pelo site).
  */
 export function TelaPlanoVencido({ conta, motivo, fim, dono }: { conta: ContaSituacao; motivo: MotivoTrava; fim: string | null; dono: boolean }) {
   const navigate = useNavigate();
@@ -24,9 +26,11 @@ export function TelaPlanoVencido({ conta, motivo, fim, dono }: { conta: ContaSit
   const titulo = suspensa ? (motivo === "cancelada" ? "Conta cancelada" : "Conta suspensa") : venceu ? `Seu plano venceu em ${venceu}` : "Seu plano venceu";
   const texto = suspensa
     ? "O painel desta conta está pausado. Fale com o suporte do Physiq para voltar a usar."
-    : `${tolerancia > 0 ? `Os ${tolerancia} dias de tolerância depois do vencimento acabaram. ` : ""}${dono
-      ? "Pague para voltar ao painel na hora — por Pix, cartão ou cobrança automática. Nada foi apagado."
-      : `O painel volta assim que ${conta.dono_nome || "o dono da conta"} pagar o plano. Nada foi apagado.`}`;
+    : `${tolerancia > 0 ? `Os ${tolerancia} dias de tolerância depois do vencimento acabaram. ` : ""}${ehLoja
+      ? "Seu plano não está ativo. O painel volta quando o plano estiver ativo de novo. Nada foi apagado."
+      : dono
+        ? "Pague para voltar ao painel na hora — por Pix, cartão ou cobrança automática. Nada foi apagado."
+        : `O painel volta assim que ${conta.dono_nome || "o dono da conta"} pagar o plano. Nada foi apagado.`}`;
   return (
     <div className="flex min-h-[62vh] items-center justify-center py-8" data-plano-vencido={motivo}>
       <Cartao brilho className="flex w-full max-w-[640px] flex-col gap-5 p-6 sm:p-7">
@@ -46,10 +50,10 @@ export function TelaPlanoVencido({ conta, motivo, fim, dono }: { conta: ContaSit
         </div>
 
         {!suspensa && (
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <div className={`grid grid-cols-1 gap-2.5 ${ehLoja ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
             <KpiCompacto rotulo="Plano" valor={ehPlano(conta.plano) ? NOME_PLANO_CARTAO[conta.plano].replace("Plano ", "") : "—"} tomDetalhe="neutro"
               detalhe={ehFaixa(conta.faixa) ? NOME_FAIXA[conta.faixa] : undefined} />
-            <KpiCompacto rotulo="Mensalidade" valor={reais(valor)} tomDetalhe="neutro" detalhe="Pix, cartão ou automático" />
+            {!ehLoja && <KpiCompacto rotulo="Mensalidade" valor={reais(valor)} tomDetalhe="neutro" detalhe="Pix, cartão ou automático" />}
             <KpiCompacto rotulo="Venceu em" valor={venceu ? venceu.slice(0, 5) : "—"} icone={CalendarX2} tomDetalhe="rosa" detalhe="painel travado" />
           </div>
         )}
@@ -60,7 +64,7 @@ export function TelaPlanoVencido({ conta, motivo, fim, dono }: { conta: ContaSit
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {!suspensa && dono && (
+          {!suspensa && dono && !ehLoja && (
             <button type="button" className="pq-botao pq-botao-w" onClick={() => navigate("/painel/configuracoes/plano")} data-plano-vencido-pagar>
               <Wallet aria-hidden /> Pagar agora
             </button>

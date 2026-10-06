@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { baixarNoNavegador, RELEASES_PAGE, ultimoApk } from "@/lib/apkRelease";
 import { downloadAndInstall } from "@/lib/apkUpdater";
+import { ehLoja } from "@/lib/distribuicao";
 import { instrucaoCurta } from "@/lib/instalacaoManual";
 import { useSessao } from "@/nucleo/sessao";
 import { versaoMaisNova } from "@/painel/configuracoes/pecas/regras";
@@ -17,7 +18,7 @@ const VERSAO = __APP_VERSION__;
 /**
  * Rodapé do Perfil (tela 5, `.rodape`; C20): "Sair" à esquerda e "Physiq 3.x · atualizado" à direita. No APK confere a
  * última release do GitHub (o mesmo canal do aviso de atualização) e oferece "Atualizar para 3.y"; no site, "Instalar"
- * (App Web ou o APK Android).
+ * (App Web ou o APK Android). W1 da loja: na versão da Google Play, só "Physiq 3.x" — quem atualiza é a loja.
  */
 export function RodapePerfil() {
   const { sair } = useSessao();
@@ -25,7 +26,7 @@ export function RodapePerfil() {
   const [confirmarSaida, setConfirmarSaida] = useState(false);
   const [instalar, setInstalar] = useState(false);
   const [progresso, setProgresso] = useState<number | null>(null);
-  const release = useQuery({ queryKey: ["apk-ultimo"], queryFn: () => ultimoApk(), enabled: nativo, staleTime: 10 * 60_000, retry: 1 });
+  const release = useQuery({ queryKey: ["apk-ultimo"], queryFn: () => ultimoApk(), enabled: nativo && !ehLoja, staleTime: 10 * 60_000, retry: 1 });
   const ultima = release.data?.version ?? null;
   const temNova = Boolean(nativo && ultima && versaoMaisNova(ultima, VERSAO));
 
@@ -47,7 +48,9 @@ export function RodapePerfil() {
   };
 
   let direita: React.ReactNode;
-  if (!nativo) {
+  if (ehLoja) {
+    direita = <span data-rodape-versao>Physiq {VERSAO}</span>;
+  } else if (!nativo) {
     direita = (
       <button type="button" onClick={() => setInstalar(true)} className="flex items-center gap-1.5 hover:text-texto" data-rodape-instalar>
         <span data-rodape-versao>Physiq {VERSAO}</span> · <Download aria-hidden className="h-3.5 w-3.5" /> Instalar
@@ -87,7 +90,7 @@ export function RodapePerfil() {
         </div>
       </PainelDeslizante>
 
-      {!nativo && <InstalarSheet aberto={instalar} aoMudar={setInstalar} />}
+      {!nativo && !ehLoja && <InstalarSheet aberto={instalar} aoMudar={setInstalar} />}
     </>
   );
 }

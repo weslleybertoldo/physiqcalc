@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { Ban, FileDown, Inbox, Search, Share2, TriangleAlert, UserPlus, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { useConta } from "@/nucleo/conta";
+import { ehLoja } from "@/lib/distribuicao";
 import { mensagemLimite } from "@/nucleo/cobranca/regras";
 import { TopoPagina } from "@/ui/casca/topo";
 import { Botao } from "@/ui/premium/Botao";
@@ -393,7 +394,8 @@ function Avisos({ lista, aoVerBloqueados, aoPlano }: { lista: ListaAlunos; aoVer
             {mensagemLimite(lista.vagas.limite, lista.eu.dono, lista.conta.dono_nome)}
             {lista.eu.dono ? ` (${lista.vagas.em_uso} de ${lista.vagas.limite} em uso)` : ""}
           </span>
-          {lista.eu.dono && <Botao tamanho="sm" onClick={aoPlano} data-aviso-limite-plano>Ver planos</Botao>}
+          {/* W1 da loja: na versão da Google Play, sem "Ver planos" (o profissional paga pelo site) */}
+          {lista.eu.dono && !ehLoja && <Botao tamanho="sm" onClick={aoPlano} data-aviso-limite-plano>Ver planos</Botao>}
         </div>
       )}
       {bloqueados > 0 && (

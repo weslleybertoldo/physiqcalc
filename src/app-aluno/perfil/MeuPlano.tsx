@@ -5,6 +5,7 @@ import { Dumbbell, ListChecks, Receipt, Repeat, Salad, Wallet } from "lucide-rea
 import { toast } from "sonner";
 import { ErroFinanceiro } from "@/financeiro/api";
 import { dataBR, mensagemErroFinanceiro } from "@/financeiro/regras";
+import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { buscarMeuPlano, ErroApp, mudarObjetivo, trocarPlano } from "@/app-aluno/sozinho/api";
 import { SeletorObjetivo, SeletorPlano } from "@/app-aluno/sozinho/pecas/Seletores";
@@ -23,6 +24,8 @@ import { useOnline } from "@/ui/premium/useOnline";
  * preços da tabela do banco), a situação (grátis até, em dia, vencido), Pagar/Assinar (Perfil › Pagamentos, a cobrança da W6
  * pelo Mercado Pago do Physiq), trocar de plano (vale a partir do próximo pagamento; a cobrança automática acompanha) e o
  * objetivo (as listas de treinos e pratos prontos). Vincular a um profissional pelo código no Perfil encerra o plano do app.
+ * W1 da loja: na versão da Google Play, só o plano e a situação (sem preço, sem Pagar/Assinar e sem trocar de plano — a mensalidade
+ * do app vai para o Play Billing na W6); o objetivo, os treinos prontos e os Pagamentos continuam.
  */
 export default function MeuPlano() {
   const navigate = useNavigate();
@@ -84,7 +87,9 @@ export default function MeuPlano() {
           <b className="text-[15px] font-semibold text-texto">{d?.com_profissional ? "Você está com um profissional" : "Você não está no plano do app"}</b>
           {d?.com_profissional
             ? `A sua mensalidade é a do seu profissional (Perfil › Pagamentos).${d.matricula?.encerrada_em ? ` O plano do app parou em ${dataBR(d.matricula.encerrada_em)}.` : ""}`
-            : "Quem treina sem profissional escolhe o plano nas Boas-vindas."}
+            : ehLoja
+              ? "Para treinar com um profissional, coloque o código dele no Perfil."
+              : "Quem treina sem profissional escolhe o plano nas Boas-vindas."}
         </Cartao>
       ) : (
         <>
@@ -94,33 +99,46 @@ export default function MeuPlano() {
                 {temAlimentacao ? <Salad aria-hidden className="h-5 w-5" strokeWidth={1.8} /> : <Dumbbell aria-hidden className="h-5 w-5" strokeWidth={1.8} />}
               </span>
               <div className="min-w-[150px] flex-1">
-                <div className="truncate text-[12px] font-medium text-texto-2">Plano do app · {planoAtual?.nome ?? m.plano_nome ?? "Treino"}</div>
-                <b className="block whitespace-nowrap text-[24px] font-bold tabular-nums tracking-[-0.03em] text-texto" data-meu-plano-valor>{precoMensal(m.valor)}</b>
+                {ehLoja ? (
+                  <>
+                    <div className="truncate text-[12px] font-medium text-texto-2">Plano do app</div>
+                    <b className="block truncate text-[24px] font-bold tracking-[-0.03em] text-texto" data-meu-plano-nome>{planoAtual?.nome ?? m.plano_nome ?? "Treino"}</b>
+                  </>
+                ) : (
+                  <>
+                    <div className="truncate text-[12px] font-medium text-texto-2">Plano do app · {planoAtual?.nome ?? m.plano_nome ?? "Treino"}</div>
+                    <b className="block whitespace-nowrap text-[24px] font-bold tabular-nums tracking-[-0.03em] text-texto" data-meu-plano-valor>{precoMensal(m.valor)}</b>
+                  </>
+                )}
               </div>
               {situacao && <Chip tom={situacao.tom} className="ml-auto flex-none" data-meu-plano-situacao={situacao.tipo}>{situacao.texto}</Chip>}
             </div>
-            <p className="text-[12.5px] leading-relaxed text-texto-2" data-meu-plano-linha>
-              {situacao?.tipo === "teste"
-                ? `Depois dos dias grátis, ${precoMensal(m.valor)} por Pix ou cartão. Sem pagar, o app fecha até você pagar.`
-                : situacao?.tipo === "isento"
-                  ? "Sem cobrança."
-                  : automatica
-                    ? `Cobrança automática no cartão ligada${m.assinatura?.proximo_vencimento ? ` · próxima em ${dataBR(m.assinatura.proximo_vencimento)}` : ""}.`
-                    : "Pague por Pix ou cartão, ou ligue a cobrança automática no cartão."}
-            </p>
-            {situacao?.tipo !== "isento" && !automatica && (
+            {(!ehLoja || situacao?.tipo === "isento") && (
+              <p className="text-[12.5px] leading-relaxed text-texto-2" data-meu-plano-linha>
+                {situacao?.tipo === "teste"
+                  ? `Depois dos dias grátis, ${precoMensal(m.valor)} por Pix ou cartão. Sem pagar, o app fecha até você pagar.`
+                  : situacao?.tipo === "isento"
+                    ? "Sem cobrança."
+                    : automatica
+                      ? `Cobrança automática no cartão ligada${m.assinatura?.proximo_vencimento ? ` · próxima em ${dataBR(m.assinatura.proximo_vencimento)}` : ""}.`
+                      : "Pague por Pix ou cartão, ou ligue a cobrança automática no cartão."}
+              </p>
+            )}
+            {!ehLoja && situacao?.tipo !== "isento" && !automatica && (
               <Botao variante="w" icone={Wallet} className="w-full" onClick={() => navigate("/perfil/pagamentos?pagar=mensalidade")} data-meu-plano-pagar>
                 {situacao?.tipo === "teste" ? `Assinar por ${precoMensal(m.valor)}` : `Pagar ${precoMensal(m.valor)}`}
               </Botao>
             )}
           </Cartao>
 
-          <Cartao className="flex flex-col gap-3 px-4 py-4" data-meu-plano-trocar>
-            <SeletorPlano rotulo="Trocar de plano" planos={d?.planos ?? []} valor={m.plano} aoMudar={(c) => {
-              const p = d?.planos.find((x) => x.codigo === c);
-              if (p && p.codigo !== m.plano) setTroca(p);
-            }} />
-          </Cartao>
+          {!ehLoja && (
+            <Cartao className="flex flex-col gap-3 px-4 py-4" data-meu-plano-trocar>
+              <SeletorPlano rotulo="Trocar de plano" planos={d?.planos ?? []} valor={m.plano} aoMudar={(c) => {
+                const p = d?.planos.find((x) => x.codigo === c);
+                if (p && p.codigo !== m.plano) setTroca(p);
+              }} />
+            </Cartao>
+          )}
 
           <Cartao className="flex flex-col gap-3 px-4 py-4" data-meu-plano-objetivo>
             <SeletorObjetivo valor={m.objetivo} aoMudar={(o) => { if (o !== m.objetivo) void escolherObjetivo(o); }} />
@@ -133,8 +151,9 @@ export default function MeuPlano() {
           </GrupoLista>
           <p className="px-1 text-[11.5px] leading-relaxed text-texto-3">
             <Repeat aria-hidden className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
-            Tem um profissional? Coloque o código dele no Perfil: a mensalidade do app para (a cobrança automática é cancelada) e você passa a pagar como
-            combinar com ele.
+            {ehLoja
+              ? "Tem um profissional? Coloque o código dele no Perfil para treinar com ele."
+              : "Tem um profissional? Coloque o código dele no Perfil: a mensalidade do app para (a cobrança automática é cancelada) e você passa a pagar como combinar com ele."}
           </p>
         </>
       )}

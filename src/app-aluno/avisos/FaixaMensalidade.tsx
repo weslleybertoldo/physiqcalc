@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, Wallet } from "lucide-react";
 import { faixaDoAluno } from "@/financeiro/regras";
 import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
+import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { ehProfissional } from "@/nucleo/situacao";
 
@@ -11,13 +12,15 @@ import { ehProfissional } from "@/nucleo/situacao";
  * Vale também para a cobrança avulsa do Nutri. Aguardando a confirmação do profissional, some. Profissional não vê.
  * W7b: o aluno sem profissional vê a faixa violeta nos dias grátis ("Seus dias grátis vão até 06/10 · Depois, R$ 29,90/mês ·
  * Assinar"); acabou o teste sem pagar, a vermelha (e a trava do inadimplente — a conta do app bloqueia).
+ * W1 da loja: na versão da Google Play a conta do app não entra na faixa (sem preço nem "Assinar" até o Play Billing da W6); a
+ * mensalidade e as cobranças do PROFISSIONAL continuam iguais.
  */
 export default function FaixaMensalidade() {
   const navigate = useNavigate();
   const { situacao } = useSessao();
   const { resumo } = useResumoFinanceiro();
   if (situacao && ehProfissional(situacao)) return null;
-  const f = faixaDoAluno(resumo);
+  const f = faixaDoAluno(ehLoja ? resumo?.filter((r) => !r.app) : resumo);
   if (!f) return null;
   const vermelha = f.tom === "r";
   const teste = f.tom === "t";

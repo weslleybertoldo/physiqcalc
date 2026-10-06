@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Briefcase, LogOut } from "lucide-react";
+import { ehLoja } from "@/lib/distribuicao";
 import { listar } from "@/rotas/registro";
 import { useSessao } from "@/nucleo/sessao";
 import { Cartao } from "@/ui/premium/Cartao";
@@ -14,6 +15,12 @@ import { MolduraEntrada, TituloEntrada } from "./pecas/Moldura";
  * aluno pode treinar sozinho, pagando a mensalidade do app) e por fim "Sou profissional" (W4).
  */
 const ORDEM = ["TenhoCodigo", "TreinarSemProfissional", "CriarConta"];
+
+/**
+ * W1 da loja: na versão da Google Play fica só o código do profissional. "Sou profissional" (o cadastro termina em pagar o plano,
+ * que é pelo site) e "Treinar sem profissional" (a mensalidade do app vai para o Play Billing na W6) são só do site.
+ */
+const SO_NO_SITE = ["TreinarSemProfissional", "CriarConta"];
 
 /** Enquanto a W4 não traz o "Sou profissional", o cartão avisa que o cadastro abre em breve. */
 function SouProfissionalEmBreve() {
@@ -42,7 +49,7 @@ function SouProfissionalEmBreve() {
  */
 export default function BoasVindas() {
   const { situacao, usuario, sair } = useSessao();
-  const opcoes = listar("onboarding", ORDEM);
+  const opcoes = listar("onboarding", ORDEM).filter((o) => !(ehLoja && SO_NO_SITE.includes(o.nome)));
   const temCriarConta = opcoes.some((o) => o.nome === "CriarConta");
   const primeiroNome = (situacao?.nome || usuario?.email?.split("@")[0] || "").split(" ")[0];
   const jaTemAlgo = !!situacao && !situacao.sem_nada;
@@ -64,7 +71,7 @@ export default function BoasVindas() {
             </Suspense>
           </LimiteDeErro>
         ))}
-        {!temCriarConta && <SouProfissionalEmBreve />}
+        {!temCriarConta && !ehLoja && <SouProfissionalEmBreve />}
       </div>
       {jaTemAlgo ? (
         <Link to="/" className="pq-botao pq-botao-g w-full" data-boas-vindas-continuar>
@@ -72,7 +79,9 @@ export default function BoasVindas() {
         </Link>
       ) : (
         <p className="px-1 text-center text-[12.5px] leading-relaxed text-texto-3">
-          Sem código? Treine sozinho com os dias grátis ou saia e volte depois — a sua conta fica guardada.
+          {ehLoja
+            ? "Sem código? Peça ao seu profissional ou saia e volte depois — a sua conta fica guardada."
+            : "Sem código? Treine sozinho com os dias grátis ou saia e volte depois — a sua conta fica guardada."}
         </p>
       )}
     </MolduraEntrada>

@@ -25,6 +25,7 @@ import { formatarDataRecibo, formatarNumeroRecibo } from "@/financeiro/recibos";
 import type { CobrancaVista, MatriculaPagamentos, ReciboVista } from "@/financeiro/tipos";
 import { ComprovanteVisor } from "@/financeiro/ui/ComprovanteVisor";
 import { LinhaCobranca } from "@/financeiro/ui/LinhaCobranca";
+import { ehLoja } from "@/lib/distribuicao";
 import { Botao, BotaoIcone } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
@@ -41,6 +42,10 @@ const CHAVE = ["pagamentos-aluno"] as const;
  * cobranças em aberto (as do Nutri também — o paciente paga por Pix com comprovante quando a conta tem chave), o que está
  * aguardando a confirmação, o histórico com os comprovantes (ver o anexado e baixar o PDF) e os recibos. Tudo do banco
  * principal (pagamentos-aluno); precisa de internet (9A).
+ * W1 da loja: na versão da Google Play, a conta do app (aluno sem profissional, até o Play Billing da W6) mostra o plano, a
+ * situação e o histórico, sem preço e sem Pagar/Assinar (nem pelo ?pagar=); a cobrança automática que já existe ainda dá para
+ * cancelar (é o que libera o "Excluir minha conta"). O que o aluno paga ao PROFISSIONAL (Pix com comprovante e o Mercado Pago da
+ * conta dele) continua igual.
  */
 export default function Pagamentos() {
   const navigate = useNavigate();
@@ -59,6 +64,7 @@ export default function Pagamentos() {
     const d = consulta.data;
     if (!pedido || !d) return;
     for (const m of d.matriculas) {
+      if (ehLoja && m.conta.app) continue;
       if (!podePagarPeloApp(m.conta.modo, !!m.chave)) continue;
       const c = m.cobrancas.find((x) => x.id === pedido && x.status === "aberta");
       if (c) {
@@ -148,7 +154,9 @@ function SecaoMatricula({
   const abertas = cobrancas.filter((c) => c.tipo === "avulsa" && (c.status === "aberta" || c.status === "aguardando_confirmacao"));
   const historico = cobrancas.filter((c) => !abertas.includes(c) && c !== aguardando && !(c.forma === "mp" && c.status === "aguardando_confirmacao"));
   const recusa = recusaVigente(m.cobrancas);
-  const pagarNoApp = podePagarPeloApp(m.conta.modo, !!m.chave);
+  // W1 da loja: a conta do app na versão da Google Play (sem pagar pelo app até a W6)
+  const lojaApp = ehLoja && !!m.conta.app;
+  const pagarNoApp = !lojaApp && podePagarPeloApp(m.conta.modo, !!m.chave);
   const profissional = m.conta.profissional || "seu profissional";
   const [cancelando, setCancelando] = useState(false);
 
@@ -182,7 +190,7 @@ function SecaoMatricula({
           <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[11px] bg-superficie text-violeta-3"><Repeat aria-hidden className="h-[18px] w-[18px]" /></span>
           <span className="min-w-0 flex-1 text-[12.5px] text-texto-2">
             <b className="block text-[13.5px] font-semibold text-texto">Cobrança automática {m.assinatura.status === "authorized" ? "ligada" : "pendente"}</b>
-            {reais(m.assinatura.valor)}/mês no cartão{m.assinatura.proximo_vencimento ? ` · próxima em ${dataBR(m.assinatura.proximo_vencimento)}` : ""}
+            {lojaApp ? "No cartão" : `${reais(m.assinatura.valor)}/mês no cartão`}{m.assinatura.proximo_vencimento ? ` · próxima em ${dataBR(m.assinatura.proximo_vencimento)}` : ""}
           </span>
           <Botao tamanho="sm" variante="g" disabled={cancelando} onClick={() => void cancelarAssinatura()}>Cancelar</Botao>
         </Cartao>
@@ -220,7 +228,7 @@ function SecaoMatricula({
                 <Botao tamanho="sm" variante="w" onClick={() => aoPagar({ tipo: "avulsa", cobranca: c })} data-pagar-cobranca={c.id}>Pagar</Botao>
               ) : null} />
           ))}
-          {!pagarNoApp && abertas.some((c) => c.status === "aberta") && (
+          {!pagarNoApp && !lojaApp && abertas.some((c) => c.status === "aberta") && (
             <p className="border-t border-linha-3 py-2.5 text-[12px] text-texto-3">Pague como combinado com {profissional}.</p>
           )}
         </Cartao>
@@ -263,12 +271,17 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
   const precisaPagar = e.situacao === "vencida" || e.situacao === "pendente" || e.situacao === "vence_em_breve" || e.situacao === "teste";
   const automatica = m.assinatura?.status === "authorized";
   const doApp = !!m.conta.app;
+  // W1 da loja: a conta do app na versão da Google Play — o plano e a situação, sem preço nem forma de pagar
+  const lojaApp = ehLoja && doApp;
   const formas = pagarNoApp ? formasDePagar(m.conta.modo, !!m.chave) : `combine com ${m.conta.profissional ?? "seu profissional"}`;
+  const quando = e.coberta ? `Pago até ${dataBR(e.vence)}` : textoDoVencimento(e).replace(/^./, (x) => x.toUpperCase());
   const linha = e.situacao === "pausada"
     ? doApp ? "Sem cobrança." : "Seu profissional parou a cobrança pelo app."
-    : e.situacao === "teste"
-      ? `Grátis até ${dataBR(e.vence)} · depois ${reais(ms.valor)}/mês · ${formas}`
-      : `${e.coberta ? `Pago até ${dataBR(e.vence)}` : textoDoVencimento(e).replace(/^./, (x) => x.toUpperCase())} · ${formas}`;
+    : lojaApp
+      ? e.situacao === "teste" ? `Grátis até ${dataBR(e.vence)}` : quando
+      : e.situacao === "teste"
+        ? `Grátis até ${dataBR(e.vence)} · depois ${reais(ms.valor)}/mês · ${formas}`
+        : `${quando} · ${formas}`;
   return (
     <Cartao brilho className="flex flex-col gap-3 px-4 py-4" data-mensalidade-aluno={e.situacao}>
       {/* o chip vai para a linha de baixo quando não cabe ao lado do valor ("Aguardando confirmação") */}
@@ -277,8 +290,17 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
           <Wallet aria-hidden className="h-5 w-5" strokeWidth={1.8} />
         </span>
         <div className="min-w-[150px] flex-1">
-          <div className="truncate text-[12px] font-medium text-texto-2">{doApp ? "Plano do app" : "Mensalidade"}{ms.plano ? ` · ${ms.plano}` : ""}</div>
-          <b className="block whitespace-nowrap text-[24px] font-bold tabular-nums tracking-[-0.03em] text-texto">{reais(ms.valor)}<span className="ml-1 text-[13px] font-medium text-texto-2">/mês</span></b>
+          {lojaApp ? (
+            <>
+              <div className="truncate text-[12px] font-medium text-texto-2">Plano do app</div>
+              <b className="block truncate text-[24px] font-bold tracking-[-0.03em] text-texto" data-plano-app-nome>{ms.plano ?? "Physiq"}</b>
+            </>
+          ) : (
+            <>
+              <div className="truncate text-[12px] font-medium text-texto-2">{doApp ? "Plano do app" : "Mensalidade"}{ms.plano ? ` · ${ms.plano}` : ""}</div>
+              <b className="block whitespace-nowrap text-[24px] font-bold tabular-nums tracking-[-0.03em] text-texto">{reais(ms.valor)}<span className="ml-1 text-[13px] font-medium text-texto-2">/mês</span></b>
+            </>
+          )}
         </div>
         <Chip tom={chip.tom} className="ml-auto flex-none" data-chip-mensalidade>{chip.texto}</Chip>
       </div>
@@ -297,7 +319,7 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
       )}
       {doApp && e.situacao !== "pausada" && (
         <button type="button" onClick={() => navigate("/perfil/meu-plano")} className="self-start text-[12.5px] font-semibold text-violeta-3" data-trocar-plano-app>
-          Trocar de plano ou de objetivo
+          {lojaApp ? "Ver meu plano" : "Trocar de plano ou de objetivo"}
         </button>
       )}
     </Cartao>

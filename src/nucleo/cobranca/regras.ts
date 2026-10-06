@@ -11,7 +11,11 @@
  *     "pague até" (marco "tolerancia", o X volta no dia seguinte);
  *   · faixa de alunos: "Seu plano permite N alunos ativos. Mude de faixa em Configurações › Plano."
  * Datas em "AAAA-MM-DD" no relógio de São Paulo (sem `Date` na conta de dias, para não trocar de dia com o fuso).
+ * W1 da loja: na versão da Google Play os textos ficam neutros — sem preço, sem "pague"/"escolha um plano"/"mude de faixa"
+ * (o profissional paga pelo site); o parâmetro `loja` (padrão: o build) deixa testar as duas versões.
  */
+import { ehLoja } from "@/lib/distribuicao";
+
 export type PlanoConta = "treino" | "nutricao" | "treino_nutricao";
 export type Faixa = "f10" | "f30" | "f100" | "livre";
 export type SituacaoConta = "teste" | "ativa" | "vencida" | "isenta" | "suspensa" | "cancelada";
@@ -292,7 +296,8 @@ export function chaveDoAviso(contaId: string, vence: string, marco: Marco, hoje:
   return marco === "tolerancia" ? `aviso-plano:${contaId}:${vence}:tolerancia:${hoje}` : `aviso-plano:${contaId}:${vence}:${marco}`;
 }
 
-export function textoDoAviso(a: Aviso, valor?: number | null): string {
+export function textoDoAviso(a: Aviso, valor?: number | null, loja: boolean = ehLoja): string {
+  if (loja) return textoDoAvisoNeutro(a);
   const quando = dataBR(a.vence);
   if (a.marco === "tolerancia") {
     const ate = dataBR(a.ate ?? a.vence);
@@ -363,10 +368,28 @@ export function podeAdicionarAluno(alunosAtivos: number, limite: number | null):
   return limite === null || alunosAtivos < limite;
 }
 
-export function mensagemLimite(limite: number, dono: boolean, nomeDono?: string | null): string {
+export function mensagemLimite(limite: number, dono: boolean, nomeDono?: string | null, loja: boolean = ehLoja): string {
+  if (dono && loja) return `Seu plano permite ${limite} alunos ativos.`;
   return dono
     ? `Seu plano permite ${limite} alunos ativos. Mude de faixa em Configurações › Plano.`
     : `O plano da conta permite ${limite} alunos ativos. Fale com ${nomeDono || "o dono da conta"}.`;
+}
+
+/**
+ * W1 da loja — a faixa de aviso na versão da Google Play: a situação e as datas, sem o valor e sem mandar pagar ou escolher plano
+ * ("Seu plano vence em 3 dias (09/10).", "Seu plano venceu em 05/10. O painel fica aberto até 12/10.").
+ */
+export function textoDoAvisoNeutro(a: Aviso): string {
+  const quando = dataBR(a.vence);
+  if (a.marco === "tolerancia") return `Seu plano venceu em ${quando}. O painel fica aberto até ${dataBR(a.ate ?? a.vence)}.`;
+  if (a.teste) {
+    if (a.dias <= 0) return "Seu teste grátis termina hoje.";
+    if (a.dias === 1) return `Seu teste grátis termina amanhã (${quando}).`;
+    return `Seu teste grátis termina em ${a.dias} dias (${quando}).`;
+  }
+  if (a.dias <= 0) return a.ate && a.ate > a.vence ? `Seu plano vence hoje. O painel fica aberto até ${dataBR(a.ate)}.` : "Seu plano vence hoje.";
+  if (a.dias === 1) return `Seu plano vence amanhã (${quando}).`;
+  return `Seu plano vence em ${a.dias} dias (${quando}).`;
 }
 
 // ───────────────────────── mudar de plano (regra do Calc — 6.2) ─────────────────────────

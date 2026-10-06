@@ -8,7 +8,10 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(CountdownNotificationPlugin.class);
-        registerPlugin(ApkInstallerPlugin.class);
+        // W1 da loja: a versão da Google Play (playRelease) não instala APK — a loja proíbe app que se atualiza por fora dela
+        if (!BuildConfig.LOJA) {
+            registerPlugin(ApkInstallerPlugin.class);
+        }
         registerPlugin(GalleryImagePlugin.class);
         registerPlugin(PushFirebasePlugin.class);
         super.onCreate(savedInstanceState);

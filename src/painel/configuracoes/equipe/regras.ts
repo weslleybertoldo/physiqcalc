@@ -3,6 +3,7 @@
  * principal (equipe_da_conta, convidar_membro, alterar_papeis_membro, remover_membro — migração 20260929120000_w05_equipe);
  * aqui ficam os textos, a normalização da resposta e o que a tela oferece a cada um.
  */
+import { ehLoja } from "@/lib/distribuicao";
 import type { Papel } from "@/nucleo/situacao";
 
 export type PapelModulo = "personal" | "nutricionista";
@@ -166,7 +167,14 @@ export const MENSAGEM_EQUIPE: Record<string, string> = {
   erro_interno: "Não deu certo agora. Tente de novo.",
 };
 
-export function mensagemErroEquipe(codigo: string | null | undefined): string {
+/** W1 da loja: na versão da Google Play, as recusas do plano sem mandar regularizar ou mudar o plano (ele paga pelo site). */
+export const MENSAGEM_EQUIPE_LOJA: Record<string, string> = {
+  conta_travada: "O plano está vencido: a equipe fica parada até o plano voltar a ficar ativo.",
+  papel_sem_modulo: "O plano da conta não tem o módulo desse papel.",
+};
+
+export function mensagemErroEquipe(codigo: string | null | undefined, loja: boolean = ehLoja): string {
+  if (loja && MENSAGEM_EQUIPE_LOJA[codigo ?? ""]) return MENSAGEM_EQUIPE_LOJA[codigo ?? ""];
   return MENSAGEM_EQUIPE[codigo ?? ""] ?? MENSAGEM_EQUIPE.erro_interno;
 }
 

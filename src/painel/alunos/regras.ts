@@ -2,6 +2,7 @@
  * Painel › Alunos (W13) — regras puras da lista (C27, C31, N-10, N-66), das mensagens (spec 9) e do CSV. Sem rede: testadas
  * no Vitest (regras.test.ts). A lista vem da alunos_da_conta() do banco principal (P1: dono vê todos, membro só os seus).
  */
+import { ehLoja } from "@/lib/distribuicao";
 import { mensagemLimite } from "@/nucleo/cobranca/regras";
 import { MENSAGEM_REPETIDO } from "@/nucleo/dadoRepetido";
 import type { TomChip } from "@/ui/premium/Chip";
@@ -316,13 +317,13 @@ export function acoesDoAluno(a: AlunoLinha, eu: ListaAlunos["eu"]): AcoesDisponi
   };
 }
 
-/** Mensagem da tela para cada erro do servidor (spec 9). */
-export function mensagemErroAlunos(codigo: string | null | undefined, extra: Record<string, unknown> = {}): string {
+/** Mensagem da tela para cada erro do servidor (spec 9). W1 da loja (`loja`): sem mandar regularizar/mudar o plano. */
+export function mensagemErroAlunos(codigo: string | null | undefined, extra: Record<string, unknown> = {}, loja: boolean = ehLoja): string {
   switch (codigo) {
     case "limite_plano": {
       const limite = Number(extra.limite);
       const base = Number.isFinite(limite) && limite > 0
-        ? mensagemLimite(limite, extra.sou_dono !== false, (extra.dono_nome as string) ?? null)
+        ? mensagemLimite(limite, extra.sou_dono !== false, (extra.dono_nome as string) ?? null, loja)
         : "O plano da conta chegou ao limite de alunos ativos.";
       const uso = Number(extra.em_uso);
       // o uso é da conta inteira: só o dono vê todos os alunos (número = tela); o membro recebe só o limite e o "fale com"
@@ -334,7 +335,10 @@ export function mensagemErroAlunos(codigo: string | null | undefined, extra: Rec
     // W16b: e-mail/CPF de outro aluno, em qualquer conta (o formulário mostra embaixo do campo; aqui é a frase das outras telas)
     case "email_repetido": case "paciente_email_repetido": return MENSAGEM_REPETIDO.email;
     case "cpf_repetido": case "paciente_cpf_repetido": return MENSAGEM_REPETIDO.cpf;
-    case "conta_travada": return "O plano da conta está vencido. Regularize em Configurações › Plano para cadastrar e convidar alunos.";
+    case "conta_travada":
+      return loja
+        ? "O plano da conta está vencido: o cadastro e o convite de alunos voltam quando o plano estiver ativo."
+        : "O plano da conta está vencido. Regularize em Configurações › Plano para cadastrar e convidar alunos.";
     case "conta_real_no_staging": return "Este é o ambiente de teste: só e-mails de teste.";
     case "email_invalido": return "Confira o e-mail.";
     case "nome_invalido": return "Escreva o nome do aluno.";
