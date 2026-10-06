@@ -1,0 +1,346 @@
+{
+ "uuid": "c2c93530-bb75-4501-b827-b70e387e8912",
+ "nome": "Rosca Punho com Halter",
+ "cena": "rosca_punho_com_halter",
+ "grupo": "Bíceps / Braquial",
+ "subgrupo": "Flexores do antebraço",
+ "padrao_movimento": "rosca_punho",
+ "equipamento": "halteres",
+ "variacao": "antebraço apoiado",
+ "alvos": [
+  "antebraco"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 25,
+  "el": 10,
+  "dist": 3.2,
+  "alvo": [
+   0.05,
+   -0.25,
+   0.64
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.2,
+   0.66
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na ponta de um banco reto, com os pés chapados no chão na largura do quadril, as pernas paralelas e as pontas dos pés para a frente, segura o halter com a mão esquerda com a palma virada para cima (pegada supinada). Inclina o tronco à frente, com as costas retas, até o cotovelo e o antebraço esquerdos ficarem deitados em cima da coxa esquerda, com o punho logo depois do joelho e a mão para fora da coxa; a mão direita fica apoiada na coxa direita, perto do joelho. Com o antebraço parado na coxa, deixa o punho estender devagar até o halter descer na frente do joelho, sem abrir a mão, e sobe o halter dobrando só o punho, levando os nós dos dedos para cima o máximo que der, sem tirar o antebraço da coxa. Depois troca de lado.",
+ "cinesiologia": {
+  "plano": "sagital do antebraço (flexão e extensão do punho), cadeia cinética aberta, unilateral, com o antebraço apoiado na coxa",
+  "articulacoes": "punho (flexão na subida, extensão na descida), com os dedos fechados em volta do halter o tempo todo; cotovelo, ombro, tronco e pernas parados",
+  "agonistas": "flexores do punho — flexor radial do carpo, flexor ulnar do carpo e palmar longo, com os flexores superficial e profundo dos dedos e o flexor longo do polegar (o grupo \"Wrist Flexors\" do ExRx)",
+  "sinergistas": "nenhum (ExRx: \"Synergists None\")",
+  "estabilizadores": "nenhum significativo (ExRx: \"No significant stabilizers\"); os flexores dos dedos seguram a pegada fechada e o antebraço fica parado apoiado na coxa",
+  "fases": "subida concêntrica (flexão do punho), descida excêntrica (extensão do punho)"
+ },
+ "referencias": [
+  "ExRx.net — Dumbbell Wrist Curl. https://exrx.net/WeightExercises/WristFlexors/DBWristCurl (lido pela cópia do Internet Archive de 01/02/2025)",
+  "ExRx.net — Wrist Flexors (Muscles Directory). https://exrx.net/Muscles/WristFlexors",
+  "American Council on Exercise — Wrist Curl - Flexion. https://www.acefitness.org/resources/everyone/exercise-library/30/wrist-curl-flexion/",
+  "National Strength and Conditioning Association. Exercise Technique Manual for Resistance Training, 3ª ed. Human Kinetics — Wrist Curl (trecho publicado: https://us.humankinetics.com/blogs/excerpt/wrist-curl)",
+  "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — valores de referência da AAOS (punho: flexão 0–80°, extensão 0–70°; a mesma fonte do limites.py)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "tecnica_padrao": {
+   "ponta_pe": [
+    -5,
+    15
+   ],
+   "pes_largura": [
+    0.8,
+    1.5
+   ]
+  },
+  "tecnica_padrao_motivo": "NSCA — Wrist Curl (\"position the feet hip-width apart with the legs parallel to each other and the toes pointing straight ahead\"): pés na largura do quadril (a medida é a distância entre os tornozelos ÷ a entre as articulações do quadril, ~1) e pontas dos pés pra frente",
+  "limites_juntas": {
+   "punhoE": [
+    0,
+    80
+   ]
+  },
+  "limites_juntas_fonte": "Punho esquerdo, o que trabalha: a rosca punho é exatamente estender e flexionar o punho, então vale a amplitude normal da AAOS (Norkin & White, a mesma referência do limites.py: flexão 0–80°, extensão 0–70°) e não o teto de 55° do limites.py, que é pra mão segurando peso SEM dobrar o punho. Os limites com sinal (extensão ≤ 70°, flexão ≤ 80°) estão nas regras do punho abaixo (medida punho_flexao).",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"Sit on one end of a flat bench\"); ExRx — Dumbbell Wrist Curl (\"Sit\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "antebraço esquerdo deitado na coxa esquerda (encostando sem entrar)",
+    "partes": [
+     "LeftForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "ExRx — Dumbbell Wrist Curl (\"Rest forearm on thigh with wrist just beyond knee\"); NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"place the elbows and forearms on top of the thighs\"); −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM) e 3 mm = o vão máximo de encostar (ENCOSTO_MAX)"
+   },
+   {
+    "nome": "mão direita (descanso) apoiada em cima da coxa direita, perto do joelho (encostando sem entrar)",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "braço livre em descanso, mão solta apoiada na coxa (a técnica só fala do braço que trabalha); −2 mm = PENETRA_MM e 3 mm = ENCOSTO_MAX"
+   },
+   {
+    "nome": "antebraço direito (descanso) não entra na coxa",
+    "partes": [
+     "RightForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "braços não entram nas coxas",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "mão esquerda (com o halter) não entra no joelho nem na perna",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços e mãos não entram no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tronco inclinado à frente (cotovelos e antebraços nas coxas)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     10,
+     40
+    ],
+    "fonte": "NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"Lean the torso forward to place the elbows and forearms on top of the thighs\"); o quanto inclina sai da cena: o tronco desce até o antebraço encostar na coxa"
+   },
+   {
+    "nome": "costas retas (coluna neutra)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"Maintain the same stationary body and arm positions with the feet flat on the floor\")"
+   },
+   {
+    "nome": "punho logo depois do joelho",
+    "medida": "punho_alem_joelho",
+    "lado": "E",
+    "t": "todos",
+    "mm": [
+     40,
+     120
+    ],
+    "fonte": "ExRx — Dumbbell Wrist Curl (\"wrist just beyond knee\"); NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"Move the forearms forward until the wrists extend slightly beyond the patellae\")"
+   },
+   {
+    "nome": "antebraço deitado na coxa, com o cotovelo pouco acima do punho",
+    "medida": "inclinacao",
+    "segmento": [
+     "ForeArm",
+     "Hand"
+    ],
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "ExRx — Dumbbell Wrist Curl (\"Keep elbow approximately wrist height to maintain resistance through full range of motion\"); NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"without lifting the wrists off the thighs\"). Com o antebraço encostado na coxa perto do cotovelo e no joelho perto do punho, o cotovelo fica uns 10 cm acima do punho (~24°): a coxa e o antebraço são mais grossos perto do cotovelo. Deixar o antebraço na horizontal tiraria o punho de cima do joelho (contra o NSCA); 30° é o teto que a cena aceita"
+   },
+   {
+    "nome": "pegada supinada (palma pra cima)",
+    "medida": "palma_cima",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     0,
+     85
+    ],
+    "fonte": "ExRx — Dumbbell Wrist Curl (\"grasp dumbbell with underhand grip\"); NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"closed, supinated grip\"); ACE — Wrist Curl - Flexion (\"the palms are facing upward\")"
+   },
+   {
+    "nome": "punho estendido embaixo (halter desce na frente do joelho)",
+    "medida": "punho_flexao",
+    "lado": "E",
+    "t": 0.0,
+    "graus": [
+     -70,
+     -40
+    ],
+    "fonte": "ACE — Wrist Curl - Flexion (\"slowly allow the wrists to move into extension (allow dumbbells to move towards the floor) without releasing your grip\"); extensão até 70° (AAOS, Norkin & White)"
+   },
+   {
+    "nome": "punho flexionado em cima, o máximo com a mão fechada",
+    "medida": "punho_flexao",
+    "lado": "E",
+    "t": 1.0,
+    "graus": [
+     45,
+     80
+    ],
+    "fonte": "ExRx — Dumbbell Wrist Curl (\"pointing knuckles up as high as possible\"); NSCA — Exercise Technique Manual for Resistance Training, 3ª ed., Wrist Curl (\"Continue flexing the wrists as far as possible without lifting the wrists off the thighs\"); flexão até 80° com a mão livre (AAOS); com a mão fechada no halter os músculos dos dedos limitam a ponta (ExRx, Wrist Flexors: \"active insufficiency\"). A cena sobe até 50°: dali pra cima a pele da base do polegar esticava além da trava da fábrica (2,5×) e o polegar trocava de postura no meio da subida"
+   },
+   {
+    "nome": "punho só entre a extensão e a flexão normais o movimento todo",
+    "medida": "punho_flexao",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     -70,
+     80
+    ],
+    "fonte": "AAOS (Norkin & White): extensão 0–70°, flexão 0–80°"
+   }
+  ]
+ }
+}
