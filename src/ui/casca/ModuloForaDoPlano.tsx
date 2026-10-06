@@ -1,12 +1,14 @@
 import { PackageX } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ehLoja } from "@/lib/distribuicao";
 
 const ROTULO: Record<string, string> = { treino: "Treino", nutricao: "Nutrição" };
 
 /**
  * Rota de um módulo que a conta não tem no plano (spec §9: "Conta perde um módulo" → "Este módulo não está no plano da conta"). Os
  * dados ficam guardados e escondidos; quem é dono muda o plano em Configurações › Plano. W27 (herdado da W26): antes a casca mostrava
- * "Página não encontrada". Vale para as páginas do painel e as abas do aluno.
+ * "Página não encontrada". Vale para as páginas do painel e as abas do aluno. W1 da loja: na versão da Google Play, sem o "Mudar
+ * o plano" (o profissional paga pelo site).
  */
 export function ModuloForaDoPlano({ modulo, ehDono, voltarPara = "/painel" }: { modulo: string; ehDono?: boolean; voltarPara?: string }) {
   const nome = ROTULO[modulo] ?? modulo;
@@ -21,7 +23,7 @@ export function ModuloForaDoPlano({ modulo, ehDono, voltarPara = "/painel" }: { 
         quando o plano tiver o módulo de novo.
       </p>
       <div className="flex flex-wrap justify-center gap-2">
-        {ehDono && <Link to="/painel/configuracoes/plano" className="pq-botao pq-botao-w" data-mudar-plano>Mudar o plano</Link>}
+        {ehDono && !ehLoja && <Link to="/painel/configuracoes/plano" className="pq-botao pq-botao-w" data-mudar-plano>Mudar o plano</Link>}
         <Link to={voltarPara} className="pq-botao pq-botao-g">Voltar ao painel</Link>
       </div>
       {!ehDono && <p className="text-[12px] text-texto-3">Quem muda o plano é o dono da conta.</p>}

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CalendarClock, X } from "lucide-react";
+import { ehLoja } from "@/lib/distribuicao";
 import { useConta } from "@/nucleo/conta";
 import { avisoDoPlano, chaveDoAviso, hojeSP, textoDoAviso } from "@/nucleo/cobranca/regras";
 import { recorrenteAtiva, valorMensalDaConta } from "@/nucleo/cobranca/cartao";
@@ -19,6 +20,8 @@ function jaFechou(chave: string): boolean {
  * W28 (legado Calc no núcleo): nos dias de tolerância, "Mensalidade de R$ X venceu em DD/MM. Pague até DD/MM para não perder o
  * acesso." (urgente; o X vale só no dia). Quem tem a cobrança automática no cartão não recebe aviso (Nativo OS W30a). Master, conta
  * que ainda estivesse com a cobrança antiga (cobranca_legada — nenhuma depois da virada) e conta do app, não.
+ * W1 da loja: na versão da Google Play a faixa só informa (texto neutro do textoDoAviso, sem o valor), sem "Pagar"/"Escolher
+ * plano" — o profissional paga pelo site.
  */
 export default function FaixaAvisoPlano({ children }: { children: ReactNode }) {
   const { conta, ehDono, ehMaster } = useConta();
@@ -54,7 +57,7 @@ export default function FaixaAvisoPlano({ children }: { children: ReactNode }) {
           {textoDoAviso(aviso, valorMensalDaConta(conta))}
           {!ehDono && ` Fale com ${conta.dono_nome || "o dono da conta"}.`}
         </span>
-        {ehDono && !naAbaPlano && (
+        {ehDono && !naAbaPlano && !ehLoja && (
           <button type="button" onClick={() => navigate("/painel/configuracoes/plano")} className="pq-botao pq-botao-g pq-botao-sm" data-faixa-aviso-pagar>
             {aviso.teste ? "Escolher plano" : "Pagar"}
           </button>

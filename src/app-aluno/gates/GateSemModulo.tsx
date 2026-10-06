@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Dumbbell, LayoutDashboard, UserRoundX } from "lucide-react";
+import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { ehProfissional } from "@/nucleo/situacao";
 import { lembrarArea } from "@/ui/casca/area";
@@ -14,7 +15,8 @@ import { TelaTrava } from "./pecas/TelaTrava";
  *   · W11: só Nutrição entra no app (Dieta · Evolução · Perfil) — a trava "use o site do PhysiqNutri por enquanto" da W3
  *     saiu com a aba Dieta nova (a cobrança a pagar segue na trava de pagamento e em Perfil › Pagamentos).
  * W7: o aluno sem módulo também abre o Perfil (Sair, Exportar, Excluir e o "Tenho um código do meu profissional").
- * W7b: e pode treinar sozinho (Boas-vindas › "Treinar sem profissional", com os dias grátis do plano do app).
+ * W7b: e pode treinar sozinho (Boas-vindas › "Treinar sem profissional", com os dias grátis do plano do app). W1 da loja: na versão
+ * da Google Play o "Treinar sem profissional" não existe (a mensalidade do app vai para o Play Billing na W6) — a trava fica sem o botão.
  * Sem a situação (principal fora do ar e nada guardado) não trava: vale o que o Treino sabe.
  */
 export default function GateSemModulo({ children }: { children: ReactNode }) {
@@ -50,11 +52,11 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
         tom="var(--p-ambar-3)"
         titulo="Seu profissional ainda não liberou seu acesso"
         texto="Assim que ele liberar o treino ou a dieta, tudo aparece aqui. O que você já tinha continua guardado."
-        acoes={
+        acoes={ehLoja ? undefined : (
           <button type="button" className="pq-botao pq-botao-g w-full" onClick={() => navigate("/boas-vindas")} data-trava-treinar-sozinho>
             <Dumbbell aria-hidden /> Treinar sem profissional
           </button>
-        }
+        )}
       />
     );
   }

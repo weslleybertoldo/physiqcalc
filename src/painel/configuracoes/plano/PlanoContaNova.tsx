@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, BadgeCheck, CalendarClock, CreditCard, Dumbbell, FlaskConical, Hourglass, QrCode, Repeat, Salad, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmarPerigo } from "@/ferramentas/Confirmar";
+import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { CONTATO_SUPORTE, linkDoSuporte } from "@/nucleo/suporte";
 import {
@@ -63,6 +64,8 @@ function mensagem(e: unknown): string {
  * W28 (virada): a conta legada com cobranca_legada = false também abre aqui. Com o preço e as regras de hoje (regras_legadas), o
  * card mostra "Preço de hoje mantido" (e a tolerância do legado Calc), os preços vêm do servidor (o travado só no plano/faixa atual)
  * e trocar de plano — no "Mudar plano" ou escolhendo outro na hora de pagar — pede confirmação: a conta sai do legado de vez.
+ * W1 da loja: na versão da Google Play, só o card do plano com a situação (o profissional paga pelo site): sem preço, sem escolher
+ * plano/faixa/periodicidade, sem Pix/cartão/cobrança automática, sem o Pix aberto e sem o histórico de faturas.
  */
 export function PlanoContaNova({ contaId }: { contaId: string }) {
   const { recarregarSituacao, usuario } = useSessao();
@@ -203,7 +206,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
   const linhaSituacao =
     efetiva === "teste" ? `Teste grátis até ${dataBR(c.teste_ate, false)}`
     : efetiva === "ativa" ? (recorrente ? `Ativa · renova sozinha em ${dataBR(c.vence_em ?? s.assinatura?.proximo_vencimento?.slice(0, 10))}`
-      : tolerancia ? `Venceu em ${dataBR(c.vence_em, false)} · pague até ${dataBR(fim, false)} para não perder o acesso`
+      : tolerancia ? (ehLoja ? `Venceu em ${dataBR(c.vence_em, false)} · o painel fica aberto até ${dataBR(fim, false)}` : `Venceu em ${dataBR(c.vence_em, false)} · pague até ${dataBR(fim, false)} para não perder o acesso`)
       : `Ativa até ${dataBR(c.vence_em, false)}`)
     : efetiva === "vencida" ? `Vencida em ${dataBR(vencimento, false)} — o painel está travado`
     : efetiva === "isenta" ? `Isenta${c.isenta_motivo ? ` · ${c.isenta_motivo}` : ""}`
@@ -225,12 +228,14 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
             </div>
             <h2 className="mt-3 font-body text-[26px] font-bold normal-case tracking-[-0.035em] text-texto" data-plano-nome>{NOME_PLANO_CARTAO[c.plano]}</h2>
             <p className={`mt-1 text-[14px] ${efetiva === "vencida" || efetiva === "suspensa" || tolerancia ? "text-rosa-3" : "text-texto-2"}`} data-plano-situacao>{linhaSituacao}</p>
-            {c.regras_legadas && (
+            {c.regras_legadas && (!ehLoja || c.tolerancia_dias > 0) && (
               <div className="mt-2.5 flex flex-col gap-1 text-[12.5px] text-texto-2" data-regras-de-hoje>
-                <span className="flex items-center gap-1.5" data-preco-de-hoje>
-                  <BadgeCheck aria-hidden className="h-3.5 w-3.5 flex-none text-verde-2" />
-                  Preço de hoje mantido: <b className="font-semibold text-texto">{reais(precoDeHoje)}/mês</b>
-                </span>
+                {!ehLoja && (
+                  <span className="flex items-center gap-1.5" data-preco-de-hoje>
+                    <BadgeCheck aria-hidden className="h-3.5 w-3.5 flex-none text-verde-2" />
+                    Preço de hoje mantido: <b className="font-semibold text-texto">{reais(precoDeHoje)}/mês</b>
+                  </span>
+                )}
                 {c.tolerancia_dias > 0 && (
                   <span className="flex items-center gap-1.5" data-tolerancia-de-hoje>
                     <Hourglass aria-hidden className="h-3.5 w-3.5 flex-none text-texto-3" />
@@ -240,21 +245,23 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:flex">
-            <KpiCompacto rotulo="Mensalidade" valor={reais(s.valor_mensal)} tomDetalhe="neutro"
-              detalhe={c.regras_legadas ? "preço de hoje" : c.valor_travado !== null ? "preço especial" : `${NOME_FAIXA[c.faixa]}`} />
+          <div className={`grid grid-cols-2 gap-2.5 ${ehLoja ? "" : "sm:grid-cols-3 "}lg:flex`}>
+            {!ehLoja && (
+              <KpiCompacto rotulo="Mensalidade" valor={reais(s.valor_mensal)} tomDetalhe="neutro"
+                detalhe={c.regras_legadas ? "preço de hoje" : c.valor_travado !== null ? "preço especial" : `${NOME_FAIXA[c.faixa]}`} />
+            )}
             <KpiCompacto rotulo="Alunos ativos" valor={`${s.alunos_ativos}${s.limite_alunos !== null ? ` de ${s.limite_alunos}` : ""}`}
               tomDetalhe={s.limite_alunos !== null && s.alunos_ativos >= s.limite_alunos ? "ambar" : "verde"}
               detalhe={s.limite_alunos === null ? "sem limite" : s.alunos_ativos >= s.limite_alunos ? "limite atingido" : `${s.limite_alunos - s.alunos_ativos} vagas`} />
             <KpiCompacto rotulo={efetiva === "teste" ? "Teste até" : efetiva === "vencida" ? "Venceu em" : "Acesso até"}
               valor={(efetiva === "vencida" ? vencimento : fim) ? dataBR(efetiva === "vencida" ? vencimento : fim) : "—"} icone={CalendarClock}
               tomDetalhe={efetiva === "vencida" || tolerancia ? "rosa" : diasFim !== null && diasFim <= 7 ? "ambar" : "verde"}
-              detalhe={efetiva === "vencida" ? "pague para liberar" : diasFim === null ? "sem vencimento" : diasFim === 0 ? (tolerancia ? "último dia" : "vence hoje") : `em ${diasFim} dias`} />
+              detalhe={efetiva === "vencida" ? (ehLoja ? "painel travado" : "pague para liberar") : diasFim === null ? "sem vencimento" : diasFim === 0 ? (tolerancia ? "último dia" : "vence hoje") : `em ${diasFim} dias`} />
           </div>
         </div>
       </Cartao>
 
-      {pixAberto && podePagar && (
+      {pixAberto && podePagar && !ehLoja && (
         <PixAberto fatura={pixAberto} simulacao={s.simulacao}
           aoAprovar={() => { setPixNovo(null); void atualizar(); }}
           aoGerarOutro={() => { setPixNovo(null); gerarPix(); }} />
@@ -262,7 +269,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="flex flex-col gap-4 xl:col-span-2">
-          {podePagar && (
+          {podePagar && !ehLoja && (
             <Cartao className="p-5" data-cartao-escolha>
               <CabecalhoCartao
                 titulo={ativa ? "Seu plano" : "Escolha o plano"}
@@ -344,7 +351,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
         </div>
 
         <div className="flex flex-col gap-4">
-          {s.assinatura && s.assinatura.status !== "cancelled" && (
+          {s.assinatura && s.assinatura.status !== "cancelled" && !ehLoja && (
             <Cartao className="p-5" data-assinatura={s.assinatura.status}>
               <CabecalhoCartao titulo="Cobrança automática"
                 extra={<Chip tom={s.assinatura.status === "authorized" ? "n" : s.assinatura.status === "paused" ? "a" : "g"}>
@@ -379,7 +386,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
               </div>
             </Cartao>
           )}
-          <HistoricoFaturas faturas={s.faturas} />
+          {!ehLoja && <HistoricoFaturas faturas={s.faturas} />}
         </div>
       </div>
 
@@ -391,7 +398,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
           seguir?.();
         }} data-confirmar-sai-do-legado />
 
-      {cartao && valor !== null && (
+      {cartao && valor !== null && !ehLoja && (
         <CartaoPagamento aberto aoMudar={(v) => !v && setCartao(null)} modo={cartao}
           valor={cartao === "assinar" ? (valorMes ?? 0) : valor} email={email}
           descricao={`${NOME_PLANO[escolha.plano]} · ${NOME_FAIXA[escolha.faixa]}${cartao === "assinar" ? (primeira ? ` · 1ª cobrança em ${dataBR(primeira)}` : " · 1ª cobrança hoje") : escolha.meses === 12 ? " · 12 meses" : " · 1 mês"}`}

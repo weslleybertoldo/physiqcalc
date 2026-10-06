@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- W1 da loja (build type playRelease — Google Play): sem a permissão de instalar APK. A loja proíbe app que se atualiza por fora
+     dela; a atualização fica com a própria Play. O MainActivity também não registra o ApkInstallerPlugin (BuildConfig.LOJA) e o
+     site desse build sai com VITE_DISTRIBUICAO=play (npm run build:loja), que esconde o aviso e os botões de atualizar. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+</manifest>

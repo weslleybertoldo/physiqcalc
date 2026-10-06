@@ -1,5 +1,6 @@
 import { Navigate, useNavigate } from "react-router-dom";
 import { Salad } from "lucide-react";
+import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { matriculaDoApp, temAlimentacaoDoApp } from "@/nucleo/situacao";
 import { CLASSE_PAGINA_APP, TopoItem } from "@/app-aluno/perfil/pecas/TopoItem";
@@ -10,7 +11,8 @@ import { Cartao } from "@/ui/premium/Cartao";
 /**
  * Perfil › Alimentação (W7b) — W11: os pratos prontos do plano Treino + Alimentação agora moram na aba Dieta (tela 3); este item
  * ficou como atalho (quem tem a Alimentação vai direto para a Dieta). O master sem o módulo continua revendo os pratos aqui, e
- * quem está no app só com o Treino vê como incluir a Alimentação — nada se perdeu.
+ * quem está no app só com o Treino vê como incluir a Alimentação — nada se perdeu. W1 da loja: na versão da Google Play, sem
+ * "Ver os planos" nem o convite a trocar de plano (a mensalidade do app vai para o Play Billing na W6).
  */
 export default function Alimentacao() {
   const navigate = useNavigate();
@@ -38,11 +40,13 @@ export default function Alimentacao() {
         </span>
         <b className="text-[16px] font-semibold text-texto">Pratos prontos pelo seu objetivo</b>
         <p className="text-[13px] leading-relaxed text-texto-2">
-          {doApp
-            ? "Os pratos prontos, com calorias e macros, estão no plano Treino + Alimentação. Troque de plano em Meu plano."
-            : "Os pratos prontos são para quem treina sem profissional, no plano Treino + Alimentação."}
+          {ehLoja
+            ? "Os pratos prontos, com calorias e macros, não fazem parte do seu plano."
+            : doApp
+              ? "Os pratos prontos, com calorias e macros, estão no plano Treino + Alimentação. Troque de plano em Meu plano."
+              : "Os pratos prontos são para quem treina sem profissional, no plano Treino + Alimentação."}
         </p>
-        {doApp && <Botao variante="w" className="w-full" onClick={() => navigate("/perfil/meu-plano")} data-ver-planos>Ver os planos</Botao>}
+        {doApp && !ehLoja && <Botao variante="w" className="w-full" onClick={() => navigate("/perfil/meu-plano")} data-ver-planos>Ver os planos</Botao>}
       </Cartao>
     </div>
   );

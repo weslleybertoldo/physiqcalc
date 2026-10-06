@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { Briefcase, ChevronRight, Download, Link2, Mail, RefreshCw, Salad, Dumbbell } from "lucide-react";
+import { ehLoja } from "@/lib/distribuicao";
 import { existe } from "@/rotas/registro";
 import { lerProfPendente } from "@/lib/profPendente";
 import { useSessao } from "@/nucleo/sessao";
@@ -53,6 +54,8 @@ function VerificarAtualizacao() {
  * Entrar (W3, spec 4.2 e tela 1): Google para todos, e-mail e senha para quem tem senha (o aluno criado pelo
  * profissional, as contas de teste) e o link do profissional. "Sou profissional — criar conta" abre com a W4; até lá
  * avisa que o cadastro abre em breve (o master continua convidando).
+ * W1 da loja: na versão da Google Play não há "Sou profissional — criar conta" (o cadastro termina em pagar o plano, que é pelo
+ * site — lá o profissional só entra na conta que já tem) nem o "Verificar atualizações" do APK (quem atualiza é a loja).
  */
 export default function Entrar() {
   const { entrarComGoogle } = useSessao();
@@ -103,22 +106,24 @@ export default function Entrar() {
         {erro && <MensagemForm>{erro}</MensagemForm>}
       </Cartao>
 
-      <button
-        type="button"
-        data-sou-profissional
-        onClick={() => setProfissional((v) => !v)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-linha bg-superficie px-3.5 py-3 text-left transition-colors hover:border-linha-2"
-      >
-        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[14px] border border-linha bg-superficie text-verde-3">
-          <Briefcase aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.8} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-semibold text-texto">Sou profissional — criar conta</span>
-          <span className="block text-[12.5px] text-texto-2">Personal trainer ou nutricionista</span>
-        </span>
-        <ChevronRight aria-hidden className="h-4 w-4 flex-none text-texto-3" />
-      </button>
-      {profissional && (
+      {!ehLoja && (
+        <button
+          type="button"
+          data-sou-profissional
+          onClick={() => setProfissional((v) => !v)}
+          className="flex w-full items-center gap-3 rounded-2xl border border-linha bg-superficie px-3.5 py-3 text-left transition-colors hover:border-linha-2"
+        >
+          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[14px] border border-linha bg-superficie text-verde-3">
+            <Briefcase aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold text-texto">Sou profissional — criar conta</span>
+            <span className="block text-[12.5px] text-texto-2">Personal trainer ou nutricionista</span>
+          </span>
+          <ChevronRight aria-hidden className="h-4 w-4 flex-none text-texto-3" />
+        </button>
+      )}
+      {profissional && !ehLoja && (
         <p data-cadastro-profissional className="-mt-2 px-1 text-[13px] leading-relaxed text-texto-2">
           {cadastroAberto
             ? "Entre com o Google (ou e-mail e senha) e escolha \"Sou profissional\" nas boas-vindas: a conta nasce com 14 dias grátis."
@@ -126,7 +131,7 @@ export default function Entrar() {
         </p>
       )}
 
-      {Capacitor.isNativePlatform() && (
+      {Capacitor.isNativePlatform() && !ehLoja && (
         <div className="flex justify-center">
           <VerificarAtualizacao />
         </div>

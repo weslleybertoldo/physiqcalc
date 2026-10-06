@@ -10,6 +10,8 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // W1 da loja: false no APK do site (debug e release); o playRelease liga (sem o instalador de APK — MainActivity)
+        buildConfigField "boolean", "LOJA", "false"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -37,6 +39,21 @@ android {
                 signingConfig signingConfigs.release
             }
         }
+        // W1 da loja (Google Play): igual ao release (minify, shrink e a mesma assinatura pelas variáveis de ambiente), mas o
+        // manifesto de src/playRelease/ tira a permissão REQUEST_INSTALL_PACKAGES e o MainActivity não registra o
+        // ApkInstallerPlugin (BuildConfig.LOJA) — a loja proíbe app que se atualiza por fora dela. Web: npm run build:loja.
+        playRelease {
+            initWith release
+            matchingFallbacks = ['release']
+            buildConfigField "boolean", "LOJA", "true"
+            def keystoreFile = System.getenv("KEYSTORE_FILE")
+            if (keystoreFile) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+    buildFeatures {
+        buildConfig true
     }
 }
 
