@@ -1,0 +1,415 @@
+{
+ "uuid": "3e848d7d-77d6-47b3-a200-9d49d4e271b0",
+ "nome": "Cadeira Flexora",
+ "cena": "cadeira_flexora",
+ "grupo": "Isquiotibiais",
+ "subgrupo": "Isquiotibiais (semitendíneo · semimembranáceo · bíceps femoral)",
+ "padrao_movimento": "flexao_joelho",
+ "equipamento": "maquina",
+ "variacao": "sentado",
+ "alvos": [
+  "posterior"
+ ],
+ "auxiliares": [
+  "panturrilha"
+ ],
+ "camera": {
+  "az": 62,
+  "el": 10,
+  "dist": 3.5,
+  "alvo": [
+   0.0,
+   -0.22,
+   0.7
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   -0.18,
+   0.72
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na cadeira flexora, com as costas e o glúteo encostados no encosto e as coxas no assento, o encosto regulado para o joelho ficar alinhado com o eixo da máquina (o ponto em que a alavanca gira), o rolo de cima preso por cima das coxas, logo acima dos joelhos, e o rolo da alavanca atrás das pernas, logo acima dos tornozelos; as pernas paralelas, os dedos dos pés virados para cima e as mãos segurando os pegadores ao lado do assento, com os braços quase esticados. Começa com as pernas esticadas para a frente, os joelhos só um pouco dobrados (sem travar), e dobra os joelhos puxando o rolo para baixo e para trás, levando os calcanhares em direção ao assento, até os joelhos ficarem dobrados a cerca de 90° ou um pouco mais; volta devagar, esticando os joelhos, até o começo. Só os joelhos mexem: as coxas ficam presas entre o assento e o rolo de cima, o quadril e o tronco ficam parados, encostados, e os pés acompanham as canelas, sem mexer o tornozelo.",
+ "cinesiologia": {
+  "plano": "sagital (flexão e extensão do joelho); as canelas giram em volta do eixo dos joelhos, que fica alinhado com o eixo da alavanca da máquina",
+  "articulacoes": "joelho (flexão na ida, de ~5° — quase esticado, sem travar — até ~95°; extensão na volta); quadril parado a ~98° entre o tronco e a coxa, com a coxa presa entre o assento e o rolo de cima; coluna neutra e parada, encostada; tornozelos parados em flexão dorsal leve (dedos pra cima); ombros, cotovelos e punhos parados, as mãos nos pegadores",
+  "agonistas": "isquiotibiais — bíceps femoral, semitendíneo e semimembranáceo (ExRx: alvo Hamstrings; NASM: \"Hamstring Group (Biceps Femoris, Semitendinosus, Semimembranosus)\"), em contração concêntrica na ida e excêntrica na volta; sentado, com o quadril dobrado, os isquiotibiais biarticulares trabalham mais alongados que na flexora deitada e cresceram mais no treino (Maeo et al. 2021: \"Training-induced increases in muscle volume were greater in Seated-Leg versus Prone-Leg for the whole hamstrings (+14% vs +9%)\")",
+  "sinergistas": "gastrocnêmio, grácil, sartório e poplíteo (ExRx: Synergists \"Gastrocnemius\", \"Gracilis\", \"Sartorius\", \"Popliteus\"; eGym M4: secundários \"Gastrocnemius\" e \"Popliteal\"; NASM: \"Gastrocnemius\"); com o tornozelo em flexão dorsal o gastrocnêmio ajuda mais (ExRx: \"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion\"). No app só a panturrilha (gastrocnêmio) fica marcada como auxiliar: o grácil e o sartório estão no grupo dos adutores do mapa, que pintaria a parte de dentro da coxa inteira, e o poplíteo é profundo, atrás do joelho",
+  "estabilizadores": "tibial anterior (ExRx: Antagonist Stabilizers \"Tibialis Anterior\" — segura o pé em flexão dorsal); as mãos nos pegadores e o abdome firmam o corpo no assento (eGym M4: \"Hold the side handles for stability and engage your core.\")",
+  "fases": "concêntrica (dobra os joelhos puxando o rolo para baixo e para trás, os calcanhares indo em direção ao assento — ExRx: \"Pull far padded lever toward back of thighs by flexing knees\") e excêntrica (volta devagar esticando os joelhos até quase esticar, sem travar — ExRx: \"Return lever until knees are straight\"; NASM: \"Stop just short of full extension to maintain continuous muscular tension throughout the set\"; Hoist: \"slowly return to the start position taking care not to lock your knees\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Seated Leg Curl (https://exrx.net/WeightExercises/Hamstrings/LVSeatedLegCurl, lido na cópia do Internet Archive de 02/02/2026; o site responde 403 direto): classificação \"Utility: Basic\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Sit on apparatus with back against padded back support. Place back of lower legs on top of far padded lever. Secure lap pad on thighs just above knees. Grasp handles on lap support.\"; Execution: \"Pull far padded lever toward back of thighs by flexing knees. Return lever until knees are straight. Repeat.\"; Comments: \"Position back of seat so knees are aligned with fulcrum of lever. Position lever pad so it makes contact with lowers leg just above ankles. Place leg closest to lever in machine first, followed by further leg. Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion.\"; músculos: Target \"Hamstrings\", Synergists \"Gastrocnemius\", \"Gracilis\", \"Sartorius\", \"Popliteus\", Antagonist Stabilizers \"Tibialis Anterior\"",
+  "eGym (fabricante) — Smart Strength, exercícios: M4 Leg Curl (https://knowledge.egym.com/en/smart-strength/work-out-on-smart-strength/exercises, lido em 06/10/2026): Primary muscles \"Hamstring\"; Secondary muscles \"Gastrocnemius\", \"Popliteal\"; Get ready: \"Sit with your glutes fully against the backrest. Adjust the backrest so the knee joint aligns with the machine’s rotational axis.\"; \"Position the lower roller pad between the calf and the Achilles tendon.\"; \"Secure the upper roller pad firmly on your thighs.\"; \"Hold the side handles for stability and engage your core.\"; Start exercising: \"Start with your legs extended and the knees slightly bent.\"; \"Bending at the knees, move your lower as far back as comfortable possible against the resistance. Keep your legs parallel and toes pointed upward.\"; \"Return to the starting position in a controlled motion.\"",
+  "Hoist Fitness (fabricante) — HD-3400 Leg Extension/Leg Curl, Leg Curl Exercise Adjustments (https://www.hoistfitness.com/pages/hd-3400-leg-extension-leg-curl, lido em 06/10/2026): \"Position it so that when seated with your back flat against the back pad, your knee joint is aligned with the pivot point of the exercise arm (the backs of your knees should be contacting the front edge of the seat pad).\"; \"Take your seat on the machine in an upright position with the lower pad sitting behind your ankles.\"; \"You may then adjust the thigh-stabilizing pad by releasing the pull pin and rotating the pad down to rest firmly on top of the thighs.\"; \"While grasping the handles bend at your knees pushing against the ankle pad arcing downward while exhaling until your knee is bent at a 90° angle. Hold for a moment, then while inhaling slowly return to the start position taking care not to lock your knees to complete a rep.\"",
+  "NASM — Seated Leg Curl (https://www.nasm.org/resource-center/exercise-library/seated-leg-curl, lido em 06/10/2026): \"Sit on the leg curl machine with your back firmly against the backrest.\"; \"Adjust the seat so the pad sits just above your ankles\"; \"Engage your core and position your hands on the machine for stability and support.\"; \"Curl the pad downward by flexing your hamstrings, bringing your heels toward your glutes while maintaining controlled movement.\"; \"Extend your legs to return to the starting position with control, maintaining tension in the hamstrings. Stop just short of full extension to maintain continuous muscular tension throughout the set.\"; Primary Muscles \"Hamstring Group (Biceps Femoris, Semitendinosus, Semimembranosus)\"; Secondary Muscles \"Gastrocnemius\"; Common Mistakes \"Allowing the hips to shift or rotate during the movement\". (A página da ACE e o texto da NSCA sobre a flexora sentada não foram lidos: não estão citados.)",
+  "Maeo S, Huang M, Wu Y, Sakurai H, Kusagawa Y, Sugiyama T, Kanehisa H, Isaka T. Greater Hamstrings Muscle Hypertrophy but Similar Damage Protection after Training at Long versus Short Muscle Lengths. Med Sci Sports Exerc. 2021;53(4):825-837. doi:10.1249/MSS.0000000000002523 — texto completo aberto (PMC7969179), lido em 06/10/2026: \"by using a modified (a backrest inserted) seated leg curl machine (Pro 2 Series, Life Fitness, Chicago, IL) with the hip joint fixed at ~90°\"; \"The knee joint range of motion was 0°–90° for both conditions, which we defined as the full range of motion\"; resumo: \"Training-induced increases in muscle volume were greater in Seated-Leg versus Prone-Leg for the whole hamstrings (+14% vs +9%)\"",
+  "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), tabela 5 lida em 06/10/2026: \"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"",
+  "Medidas da máquina (as mesmas da Cadeira Extensora: é a mesma máquina) — Titan Fitness, Leg Extension & Hamstring Curl Machine (https://titan.fitness/products/leg-extension-curl-machine, especificações lidas em 06/10/2026): \"Adjustable Seat Height: 24-in. – 26.5-in.\", \"Seat Pad Dimensions: 22-in. x 17-in. x 2-in.\", \"Back Pad Dimensions: 15-in. x 10-in. x 2-in.\", \"Roller Pad Dimensions: 17-in. x 5-in.\", \"Knee Pad Positions: 7\" (o rolo das coxas usa a mesma medida de rolo, a única que a ficha dá); Steelflex PLLE Plate Load Leg Extension (ficha em PDF, citada na extensora): \"exact 100° angle between the seat and back rest pad\""
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "sentado na máquina os pés ficam pendurados, fora do chão, com o rolo atrás das pernas (ExRx: \"Place back of lower legs on top of far padded lever\"); quem confere que nada além dos joelhos mexe são as zonas do assento, do encosto e do rolo das coxas, o eixo da máquina no joelho e as regras de coxa, quadril, tronco e tornozelo parados abaixo",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "cadeira_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl (\"Sit on apparatus\")"
+   },
+   {
+    "nome": "costas encostadas no encosto",
+    "equipamento": "cadeira_encosto",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl (\"with back against padded back support\"); NASM — Seated Leg Curl (\"with your back firmly against the backrest\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "cadeira_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "eGym — M4 Leg Curl (\"Sit with your glutes fully against the backrest\")"
+   },
+   {
+    "nome": "coxa esquerda presa pelo rolo de cima, logo acima do joelho",
+    "equipamento": "cadeira_almofada",
+    "partes": [
+     "LeftUpLeg"
+    ],
+    "mm": [
+     -10,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl (\"Secure lap pad on thighs just above knees\"); eGym — M4 Leg Curl (\"Secure the upper roller pad firmly on your thighs\"); Hoist — HD-3400 Leg Extension/Leg Curl (\"rotating the pad down to rest firmly on top of the thighs\")"
+   },
+   {
+    "nome": "coxa direita presa pelo rolo de cima, logo acima do joelho",
+    "equipamento": "cadeira_almofada",
+    "partes": [
+     "RightUpLeg"
+    ],
+    "mm": [
+     -10,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl, eGym — M4 Leg Curl e Hoist — HD-3400 Leg Extension/Leg Curl (idem)"
+   },
+   {
+    "nome": "perna esquerda encostada no rolo (atrás, logo acima do tornozelo)",
+    "equipamento": "cadeira_rolo",
+    "partes": [
+     "LeftLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl (\"Place back of lower legs on top of far padded lever\"; \"Position lever pad so it makes contact with lowers leg just above ankles\"); eGym — M4 Leg Curl (\"Position the lower roller pad between the calf and the Achilles tendon\")"
+   },
+   {
+    "nome": "perna direita encostada no rolo (atrás, logo acima do tornozelo)",
+    "equipamento": "cadeira_rolo",
+    "partes": [
+     "RightLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl e eGym — M4 Leg Curl (idem)"
+   },
+   {
+    "nome": "calcanhares e pés sem encostar no rolo (o rolo fica acima do tornozelo)",
+    "equipamento": "cadeira_rolo",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl (\"just above ankles\"); NASM — Seated Leg Curl (\"the pad sits just above your ankles\")"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "joelhos no eixo da alavanca",
+    "equipamento": "cadeira_alavanca",
+    "ossos": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl (\"Position back of seat so knees are aligned with fulcrum of lever\"); eGym — M4 Leg Curl (\"Adjust the backrest so the knee joint aligns with the machine’s rotational axis\"); Hoist — HD-3400 Leg Extension/Leg Curl (\"your knee joint is aligned with the pivot point of the exercise arm\")"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés pendurados, fora do chão",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     50,
+     5000
+    ],
+    "fonte": "sentado na máquina com o assento a 24\" do chão (Titan) os pés não alcançam o chão, nem com o joelho dobrado no fim"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelho quase esticado no começo, sem travar",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     2,
+     12
+    ],
+    "fonte": "eGym — M4 Leg Curl (\"Start with your legs extended and the knees slightly bent\"); NASM — Seated Leg Curl (\"Stop just short of full extension to maintain continuous muscular tension throughout the set\"); Hoist — HD-3400 Leg Extension/Leg Curl (\"taking care not to lock your knees\")"
+   },
+   {
+    "nome": "joelho dobrado a ~90° ou um pouco mais no fim",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     88,
+     100
+    ],
+    "fonte": "Hoist — HD-3400 Leg Extension/Leg Curl (\"until your knee is bent at a 90° angle\"); Maeo et al. 2021 (\"The knee joint range of motion was 0°–90°\"); eGym — M4 Leg Curl (\"move your lower as far back as comfortable possible\")"
+   },
+   {
+    "nome": "joelho nunca trava nem passa de 100°",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     2,
+     100
+    ],
+    "fonte": "Hoist — HD-3400 Leg Extension/Leg Curl e eGym — M4 Leg Curl (idem)"
+   },
+   {
+    "nome": "coxas paradas, deitadas no assento",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Leg Curl (\"Secure lap pad on thighs just above knees\"): a coxa fica presa entre o assento e o rolo de cima e não sai do lugar (só o joelho mexe)"
+   },
+   {
+    "nome": "quadril parado (~98° entre o tronco e a coxa, encostado)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     76,
+     88
+    ],
+    "fonte": "Maeo et al. 2021 (\"seated leg curl machine ... with the hip joint fixed at ~90°\"); Steelflex PLLE (\"exact 100° angle between the seat and back rest pad\"); a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra trás)"
+   },
+   {
+    "nome": "tronco parado, encostado e quase em pé",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     4,
+     14
+    ],
+    "fonte": "Hoist — HD-3400 Leg Extension/Leg Curl (\"Take your seat on the machine in an upright position\"); ExRx — Lever Seated Leg Curl (\"back against padded back support\")"
+   },
+   {
+    "nome": "coluna neutra, encostada",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NASM — Seated Leg Curl (\"Sit on the leg curl machine with your back firmly against the backrest\")"
+   },
+   {
+    "nome": "pernas paralelas, na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.6
+    ],
+    "fonte": "eGym — M4 Leg Curl (\"Keep your legs parallel\"): as coxas abrem só 3° (juntas e paralelas, as coxas musculosas do boneco entram uma na outra perto da virilha) e cada canela dobra na direção da sua coxa; a medida é a distância de lado a lado entre os tornozelos ÷ a distância entre as articulações do quadril"
+   },
+   {
+    "nome": "joelho na linha quadril–tornozelo (sem abrir nem fechar)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     -15,
+     15
+    ]
+   },
+   {
+    "nome": "pontas dos pés pra frente no fim (sem virar pra fora nem pra dentro)",
+    "medida": "ponta_pe",
+    "t": 1.0,
+    "graus": [
+     -10,
+     10
+    ]
+   },
+   {
+    "nome": "tornozelos em flexão dorsal leve e parados (dedos pra cima)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     80,
+     92
+    ],
+    "fonte": "eGym — M4 Leg Curl (\"toes pointed upward\"); ExRx — Lever Seated Leg Curl (\"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion\"); neutro do boneco em pé ~76° (tecnica3d.tornozelo), aqui +10° de flexão dorsal (amplitude normal 0–20°, Alazzawi 2017)"
+   },
+   {
+    "nome": "braços quase esticados, mãos nos pegadores do lado do assento",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     30
+    ],
+    "fonte": "eGym — M4 Leg Curl (\"Hold the side handles for stability and engage your core\"); Hoist — HD-3400 Leg Extension/Leg Curl (\"While grasping the handles\")"
+   },
+   {
+    "nome": "pegada neutra (palmas viradas pro assento)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ]
+   },
+   {
+    "nome": "pelve nivelada (o quadril não sai do lugar)",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "NASM — Seated Leg Curl (erro comum: \"Allowing the hips to shift or rotate during the movement\")"
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "NASM — Seated Leg Curl (idem)"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}

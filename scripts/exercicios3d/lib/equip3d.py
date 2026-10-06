@@ -877,6 +877,9 @@ def apoio_nordico(nome="apoio_nordico", almofada=(-0.12, 0.38, 0.0762, 0.457), c
 #   Extensora: rolo NA FRENTE da canela, logo acima do tornozelo; a alavanca sobe pra frente (girar(< 0)).
 #   Flexora sentada: rolo ATRÁS da canela, em cima do calcanhar (eGym M4 Leg Curl: "between the calf and the Achilles tendon"),
 #   e a almofada das coxas por cima delas, logo antes dos joelhos (almofada=(...)); a alavanca desce pra trás (girar(> 0)).
+#   A almofada das coxas pode ser um ROLO (rolo_coxa=(...), Cadeira Flexora, 06/10/2026): na coxa musculosa o topo sobe ~28°
+#   logo acima do joelho e a almofada reta só encostava no fim dela; o rolo encosta na subida ("Secure the upper roller pad
+#   firmly on your thighs", eGym M4 Leg Curl).
 #   Body-Solid GCEC340 (Cam Series Leg Extension & Curl, a mesma máquina pros 2): "wrapping legs over the 8-inch foam rollers, and
 #   press down to perform seated leg curl exercises" / "position your legs behind the oversized rollers, and lift and extend
 #   legs to work the quadriceps muscles".
@@ -952,7 +955,7 @@ def _prender(objs, raiz):
 def cadeira_joelho(nome="cadeira", eixo=(0.0, 0.67), assento=(0.12, 0.58, 0.61, 0.43, 0.05),
                    encosto=(0.52, 10.0, 0.60, 0.36, 0.06), rolo=(-0.09, 0.32, 0.0635, 0.43),
                    pegadores=(0.30, 0.58, 0.29, 0.14, 0.0145), lado=-1, almofada=None, x_alavanca=0.245, x_torre=0.345,
-                   pilha=True):
+                   pilha=True, rolo_coxa=None):
     """Cadeira extensora/flexora (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y (lado = −1: a
     torre do eixo, a alavanca e a pilha ficam do lado −X, o direito de quem senta):
       eixo      = (y, z) do eixo de giro (paralelo ao X): passa pelo centro dos 2 joelhos;
@@ -965,8 +968,13 @@ def cadeira_joelho(nome="cadeira", eixo=(0.0, 0.67), assento=(0.12, 0.58, 0.61, 
                   (±x, y, z);
       almofada  = None (extensora) ou (y0, y1, z_baixo, espessura, largura) (flexora): almofada por cima das coxas, de y0 a
                   y1, com a face de baixo em z_baixo, presa num braço que sai da torre do eixo;
-      x_alavanca, x_torre = |x| do plano do braço da alavanca e da torre do eixo; pilha = caixa da pilha de pesos.
+      x_alavanca, x_torre = |x| do plano do braço da alavanca e da torre do eixo; pilha = caixa da pilha de pesos;
+      rolo_coxa = None (padrão) ou (y, z, raio, comprimento) (flexora, no lugar da almofada reta): rolo de espuma por cima das
+                  coxas, com o eixo ao longo do X centrado em (0, y, z), preso por um eixo de aço num mancal do lado da torre,
+                  ligado ao alto da torre do eixo por um braço curto (raiz "<nome>_almofada", APOIO, como a almofada).
     Devolve um CadeiraJoelho (raizes, equipamentos, apoios, pegadores, girar())."""
+    if almofada is not None and rolo_coxa is not None:
+        raise ValueError("cadeira_joelho: use almofada OU rolo_coxa, não os dois")
     s = -1.0 if lado < 0 else 1.0
     ye, ze = eixo
     y_f, y_t, topo, larg, esp = assento
@@ -1094,6 +1102,27 @@ def cadeira_joelho(nome="cadeira", eixo=(0.0, 0.67), assento=(0.12, 0.58, 0.61, 
         _viga(nome + "_almofada_braco", (0, ym, z_braco), (s * x_torre, ym, z_braco), 0.05, 0.05, mat_estrutura(), pai=estr)
         _viga(nome + "_almofada_coluna", (s * x_torre, ym, z_braco + 0.025), (s * x_torre, ym, 0.06), 0.06, 0.06,
               mat_estrutura(), pai=estr)
+        raizes["almofada"] = alm
+    # ── rolo das coxas (flexora, no lugar da almofada reta): espuma (APOIO) e o eixo de aço até o mancal do lado da torre ──────
+    if rolo_coxa is not None:
+        yc, zc, rc, cc = rolo_coxa
+        alm = raiz_nova("almofada")
+        pecas = [_cilindro(nome + "_almofada_espuma", rc, cc, (0, yc, zc), rot_x90, mat_estofado(), vertices=48)]
+        for k in (1, -1):
+            pecas.append(_cilindro(nome + "_almofada_tampa%+d" % k, rc * 0.55, 0.006, (k * (cc / 2 + 0.001), yc, zc), rot_x90,
+                                   mat_borracha()))
+        _prender(pecas, alm)
+        x_col = s * x_torre
+        x_ent = s * (cc / 2 - 0.04)                          # o eixo entra 4 cm no rolo (o resto fica escondido dentro dele)
+        x_fim = -s * (cc / 2 + 0.008)
+        _em_aneis(_cilindro(nome + "_almofada_eixo", 0.0125, abs(x_col - x_ent), ((x_col + x_ent) / 2, yc, zc), rot_x90,
+                            mat_aco(), vertices=24, pai=estr), passo=0.04)
+        _cilindro(nome + "_almofada_ponta_eixo", 0.0125, 0.04, (x_fim + s * 0.012, yc, zc), rot_x90, mat_aco(), vertices=24,
+                  pai=estr)
+        _cilindro(nome + "_almofada_trava", 0.02, 0.012, (x_fim, yc, zc), rot_x90, mat_aco(), pai=estr)
+        _cilindro(nome + "_almofada_mancal", 0.035, 0.07, (x_col, yc, zc), rot_x90, mat_estrutura(), pai=estr)
+        # braço do mancal até o alto da torre do eixo (sem coluna até o chão: não tampa a mão no pegador vista da frente)
+        _viga(nome + "_almofada_braco", (x_col, yc, zc), (x_col, ye + 0.02, ze + 0.05), 0.05, 0.05, mat_estrutura(), pai=estr)
         raizes["almofada"] = alm
     bpy.context.view_layer.update()
     return CadeiraJoelho(raizes, P, pegs, raio_p, comp_p / 2)
