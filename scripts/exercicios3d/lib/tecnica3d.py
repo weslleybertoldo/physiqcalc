@@ -420,3 +420,26 @@ def torax_chao(j):
 
 
 MEDIDAS.update({"torax_chao": torax_chao})
+
+
+# ── crucifixo invertido com halteres (lote 3, 06/10/2026): com o tronco quase horizontal a cabeça fica na linha da
+# coluna, olhando pro chão (NSCA PTQ 9.4, posição de quadril dobrado: "neutral spine position (not rounded over) with
+# their chin tucked in looking straight at the floor"). O "pescoco" do checagem3d.medir_juntas não tem sinal: a cabeça
+# caída pro chão e a cabeça levantada olhando pra frente dão o mesmo número.
+JUNTAS = JUNTAS + ("Head",)
+
+
+def cabeca_tronco(j):
+    """Cabeça (base do pescoço → base da cabeça) × eixo do tronco (quadril → pescoço), no plano sagital do tronco, graus:
+    0 = cabeça na linha do tronco, + = levantada pra trás (extensão: olhando pra frente com o tronco inclinado), − = caída
+    pra frente (flexão, queixo pro peito). No referencial do tronco: vale em pé, curvado ou deitado (o boneco em pé, no
+    repouso, mede ~−11°). Sem a cabeça nas juntas (dicionários montados à mão nos testes antigos), devolve []."""
+    if "Head" not in j:
+        return []
+    cima, lado, frente = eixos_tronco(j)
+    c = j["Head"] - j["Neck"]
+    c = c - lado * (c @ lado)
+    return [math.degrees(math.atan2(-float(c @ frente), float(c @ cima)))]
+
+
+MEDIDAS.update({"cabeca_tronco": cabeca_tronco})

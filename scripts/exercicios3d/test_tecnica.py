@@ -436,3 +436,20 @@ def test_torax_chao_deitado_enrolando_so_a_parte_de_cima():
     assert tc.torax_chao(girar(enrolado, 40, (0, 0, 1))) == pytest.approx([30], abs=1e-6)
     assert tc.medir(dict(com_claviculas(enrolado), **{L + "ToeBase_ponta": enrolado[L + "ToeBase"]
                                                      for L in ("Left", "Right")}))["torax_chao"] == pytest.approx([30])
+
+
+def test_cabeca_tronco_com_sinal_em_pe_e_curvado():
+    """Crucifixo invertido (lote 3): cabeça na linha do tronco = 0; levantada pra trás (olhando pra frente com o tronco
+    inclinado) dá +, caída pro peito dá − — o "pescoco" do checagem3d não separa os dois. O mesmo número com o boneco
+    curvado 80° à frente (tronco quase horizontal) ou virado; sem a cabeça no dicionário (testes antigos), nada."""
+    j = dict(em_pe(), Head=np.array([0, 0, 1.65]))
+    assert tc.cabeca_tronco(j) == pytest.approx([0], abs=1e-6)
+    pra_tras = dict(j, Head=girar({"h": j["Head"]}, -20, (1, 0, 0), j["Neck"])["h"])   # topo da cabeça vai pra +Y
+    pra_frente = dict(j, Head=girar({"h": j["Head"]}, 15, (1, 0, 0), j["Neck"])["h"])
+    assert tc.cabeca_tronco(pra_tras) == pytest.approx([20], abs=1e-6)
+    assert tc.cabeca_tronco(pra_frente) == pytest.approx([-15], abs=1e-6)
+    curvado = girar(pra_frente, 80, (1, 0, 0), (0, 0, 0.95))                            # tronco quase horizontal
+    assert tc.cabeca_tronco(curvado) == pytest.approx([-15], abs=1e-6)
+    assert tc.cabeca_tronco(girar(pra_tras, 35, (0, 0, 1))) == pytest.approx([20], abs=1e-6)
+    assert tc.cabeca_tronco(em_pe()) == []
+    assert "Head" in tc.JUNTAS and "cabeca_tronco" in tc.MEDIDAS
