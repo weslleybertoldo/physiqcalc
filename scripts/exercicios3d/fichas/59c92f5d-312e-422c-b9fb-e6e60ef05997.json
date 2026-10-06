@@ -1,0 +1,94 @@
+{
+ "uuid": "59c92f5d-312e-422c-b9fb-e6e60ef05997",
+ "nome": "Abdominal Oblíquo com Pés no Banco",
+ "cena": "abdominal_obliquo_com_pes_no_banco",
+ "grupo": "Abdômen",
+ "subgrupo": "Oblíquos externo e interno · reto abdominal",
+ "padrao_movimento": "abdominal_obliquo",
+ "equipamento": "peso_corporal",
+ "variacao": "pés no banco",
+ "alvos": [
+  "obliquos"
+ ],
+ "auxiliares": [
+  "abdomen"
+ ],
+ "camera": {
+  "az": 110,
+  "el": 25,
+  "dist": 3.1,
+  "alvo": [
+   0,
+   0.1,
+   0.3
+  ]
+ },
+ "camera_vistas": {
+  "dist": 2.9,
+  "alvo": [
+   0,
+   0.1,
+   0.3
+  ]
+ },
+ "ida_s": 3.0,
+ "ida_s_motivo": "a ida do app (t de 0 a 1) tem duas fases — desce de um lado e sobe pro outro —, então 3 s dão 1,5 s por fase, o mesmo tempo da subida e da descida do abdominal supra (ida_s 1,5); devagar e controlado (Muscle & Strength: \"it's a slow movement not a quick jerk\")",
+ "movimento": "Deitado de costas no colchonete, com as pernas em cima de um banco atravessado na ponta do colchonete — coxas quase na vertical, joelhos dobrados a uns 90° e a parte de baixo das panturrilhas e os calcanhares apoiados no estofado —, coloca as mãos atrás da cabeça, com os dedos soltos encostando de leve, sem entrelaçar e sem puxar o pescoço, e os cotovelos abertos pros lados; com as pernas no banco a pelve fica inclinada pra trás e a lombar encostada no colchonete. Soltando o ar, enrola a parte de cima das costas girando o tronco pra um lado — o ombro e o cotovelo direitos sobem em direção ao joelho esquerdo — até as escápulas saírem do chão: a parte de cima das costas fica a uns 30° do chão, sem levantar o tronco inteiro. O giro vem do tronco: a lombar, o quadril e as pernas ficam parados, e a cabeça acompanha a coluna, com espaço entre o queixo e o peito. Volta devagar, desenrolando e desfazendo o giro, até a parte de trás dos ombros encostar no colchonete, e sobe girando pro outro lado (cotovelo esquerdo em direção ao joelho direito), alternando.",
+ "cinesiologia": {
+  "plano": "transverso (rotação do tronco) e sagital (flexão do tronco), com a pelve e as pernas paradas",
+  "articulacoes": "coluna torácica: flexão até as escápulas saírem do chão e rotação de ~30° pra cada lado, mais na parte de cima (de ~T7 pra cima); lombar e pelve paradas no colchonete, com a retroversão que as pernas no banco dão; quadril e joelhos parados a ~90°, com as pernas no banco; pescoço neutro; ombros e cotovelos parados (mãos atrás da cabeça, cotovelos abertos)",
+  "agonistas": "oblíquos externo e interno (ExRx: alvo). Girando pra esquerda (cotovelo direito → joelho esquerdo) trabalham o oblíquo externo direito e o oblíquo interno esquerdo, e o contrário pro outro lado (Sugaya 2014: \"during trunk rotation, the EO acts contralaterally whereas the IO and TrA act ipsilaterally\"). A rotação aumenta o trabalho do oblíquo externo em relação ao abdominal reto (Konrad 2001: \"External oblique muscle activity was increased from 28.71% to 36.2% MVC when the straight curl-up was varied to the cross curl-up\")",
+  "sinergistas": "reto abdominal e psoas maior (ExRx: sinergistas). O reto abdominal trabalha forte também com o giro (Konrad 2001: 55,96% da contração voluntária máxima no cross curl-up, contra 52,45% no curl-up reto, diferença não significativa)",
+  "estabilizadores": "as pernas apoiadas no banco seguram a pelve inclinada pra trás e a lombar no colchonete (ExRx: \"Leg elevation keeps pelvis tilted back keeping low back on mat\"); o giro vem do tronco, não do quadril (ACE: \"The rotation should come from your trunk and not your hips\")",
+  "fases": "subida concêntrica girando pra um lado, soltando o ar (ACE: \"Exhale, contract your abdominal and core muscles\"); descida excêntrica e controlada até a parte de trás dos ombros encostar no colchonete; subida pro outro lado (ExRx: \"Return until back of shoulders contact mat. Repeat to opposite side alternating twists\")"
+ },
+ "referencias": [
+  "ExRx.net — Twisting Crunch. https://exrx.net/WeightExercises/Obliques/BWTwistingCrunch (lido na cópia do Internet Archive de 19/08/2025)",
+  "Muscle & Strength — Twisting Bench Crunch Video Guide. https://www.muscleandstrength.com/node/3604 (lido na cópia do Internet Archive de 28/10/2017)",
+  "Konrad P, Schmitz K, Denner A. Neuromuscular evaluation of trunk-training exercises. J Athl Train. 2001;36(2):109-118. https://pmc.ncbi.nlm.nih.gov/articles/PMC155519/",
+  "Sugaya T, Abe Y, Sakamoto M. Ultrasound evaluation of muscle thickness changes in the external oblique, internal oblique, and transversus abdominis muscles considering the influence of posture and muscle contraction. J Phys Ther Sci. 2014;26(9):1399-1402. doi:10.1589/jpts.26.1399. https://pmc.ncbi.nlm.nih.gov/articles/PMC4175243/",
+  "American Council on Exercise (ACE) — Crunch. https://www.acefitness.org/resources/everyone/exercise-library/52/crunch/",
+  "American Council on Exercise (ACE) — Supine Bicycle Crunches. https://www.acefitness.org/resources/everyone/exercise-library/241/supine-bicycle-crunches/",
+  "Hildenbrand K, Noble L. Abdominal muscle activity while performing trunk-flexion exercises using the Ab Roller, ABslide, FitBall, and conventionally performed trunk curls. J Athl Train. 2004;39(1):37-43. https://pmc.ncbi.nlm.nih.gov/articles/PMC385260/",
+  "ExRx.net — Curl-up / Half Sit-up Test Protocols (ACSM Curl-up, de American College of Sports Medicine. ACSM's Guidelines for Exercise Testing and Prescription, 6ª ed., 2000, p. 84-85; YMCA Half Sit-up). https://exrx.net/Testing/CurlUpTests (lido na cópia do Internet Archive de 16/09/2025)",
+  "Ichikawa K, Otsuka T, Abduh HAM, Kuruma H. Assessing validity of thoracic spine rotation range of motion measurement methods: comparison of magnetic resonance imaging and clinical measurements. J Phys Ther Sci. 2024;36(3):95-101. https://pmc.ncbi.nlm.nih.gov/articles/PMC10904216/",
+  "International Powerlifting Federation (IPF). Technical Rules Book 2026 (atualizado em 01/01/2026), Bench, p. 10: \"Length - not less than 1.22 m\", \"Width - not less than 29 cm and not exceeding 32cm\", \"Height - not less than 42 cm and not exceeding 45 cm measured from the floor to the top of the padded surface\" (lido na cópia https://benchpresschampion.com/REGLEMENTS/IPF2026.pdf)"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "as pernas ficam em cima do banco o tempo todo (ExRx: \"Lie supine on mat with lower legs on bench\"); quem confere que elas não saem do lugar são as zonas do banco, o ângulo do joelho e a inclinação da coxa em todo quadro",
+  "zonas": [
+   {"nome": "sacro apoiado no colchonete", "equipamento": "colchonete", "partes": ["Hips"], "mm": [-20, 3], "fonte": "ExRx (\"Leg elevation keeps pelvis tilted back keeping low back on mat\"); ACE — Crunch (\"Your feet, tailbone and lower back should remain in contact with the mat at all times\")"},
+   {"nome": "lombar encostada no colchonete (as pernas no banco seguram a pelve em retroversão)", "equipamento": "colchonete", "partes": ["Spine"], "mm": [-20, 3], "fonte": "ExRx (\"Leg elevation keeps pelvis tilted back keeping low back on mat\"); ACE — Crunch (idem). Deitado com a pelve parada, a curva da lombar do boneco deixava a pele 2 cm acima do colchonete: a cena inclina a pelve 12° pra trás e dobra a lombar"},
+   {"nome": "costas e ombros apoiados no colchonete embaixo", "equipamento": "colchonete", "partes": ["Spine1", "Spine2"], "t": 0.5, "mm": [-20, 3], "fonte": "ExRx (\"Return until back of shoulders contact mat\"); ExRx, ACSM Curl-up (\"the subject slowly returns shoulder blades to mat\")"},
+   {"nome": "as duas escápulas fora do chão em cima (girando pra esquerda)", "equipamento": "colchonete", "partes": ["Spine2"], "t": 0.0, "mm": [5, 500], "fonte": "Hildenbrand 2004 (\"Subjects elevated the trunk by lifting the head and shoulders such that the scapulae were lifted above the ground\"); ACE — Crunch (\"Continue curling up until your upper back is lifted off the mat\"); ExRx, ACSM Curl-up (\"lifts the shoulder blades off the mat by flexing spine\"). Com o giro a escápula de baixo fica mais perto do colchonete (~12 mm) e a de cima sobe mais (~45 mm)"},
+   {"nome": "as duas escápulas fora do chão em cima (girando pra direita)", "equipamento": "colchonete", "partes": ["Spine2"], "t": 1.0, "mm": [5, 500], "fonte": "idem"},
+   {"nome": "panturrilha e calcanhar esquerdos apoiados no banco", "equipamento": "banco", "partes": ["LeftLeg", "LeftFoot", "LeftToeBase"], "mm": [-20, 3], "fonte": "ExRx (\"Lie supine on mat with lower legs on bench\"); Muscle & Strength (\"Your calves should be resting on the top of the bench\")"},
+   {"nome": "panturrilha e calcanhar direitos apoiados no banco", "equipamento": "banco", "partes": ["RightLeg", "RightFoot", "RightToeBase"], "mm": [-20, 3], "fonte": "idem"}
+  ],
+  "contatos": [
+   {"nome": "mão esquerda atrás da cabeça, encostando de leve (no cabelo) sem entrar", "partes": ["LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "com": ["Head", "Neck"], "cabelo": true, "mm": [-2, 3], "fonte": "ExRx (\"Place hands behind neck or head\"); ACE — Supine Bicycle Crunches (\"Do not pull forward on your head during the trunk curl. Support your head in your hands\")"},
+   {"nome": "mão direita atrás da cabeça, encostando de leve (no cabelo) sem entrar", "partes": ["RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Head", "Neck"], "cabelo": true, "mm": [-2, 3], "fonte": "idem"},
+   {"nome": "mãos soltas atrás da cabeça, uma sem entrar na outra", "partes": ["LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "com": ["RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "mm": [0.5, 100], "fonte": "corpo não atravessa o próprio corpo (regra da fábrica); dedos soltos, sem entrelaçar"},
+   {"nome": "antebraço e braço esquerdo sem entrar na cabeça", "partes": ["LeftArm", "LeftForeArm"], "com": ["Head", "Neck"], "cabelo": true, "mm": [0, 3000], "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"},
+   {"nome": "antebraço e braço direito sem entrar na cabeça", "partes": ["RightArm", "RightForeArm"], "com": ["Head", "Neck"], "cabelo": true, "mm": [0, 3000], "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"}
+  ],
+  "alturas": [
+   {"nome": "costas e glúteo sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)", "partes": ["Hips", "Spine", "Spine1", "Spine2"], "acima_de": "chao", "mm": [3, 2000], "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado). O corpo_no_apoio do checagem3d não vê a pele que passa do fundo de um colchonete fino, por isso a regra mede do chão (como no supra e no bicicleta)"},
+   {"nome": "braços, mãos e cabeça acima do colchonete (sem encostar nele)", "partes": ["LeftArm", "LeftForeArm", "RightArm", "RightForeArm", "LeftHand", "RightHand", "Head"], "acima_de": "chao", "mm": [12, 2000], "fonte": "regra da fábrica (o corpo não atravessa o chão): com o giro, o cotovelo do lado de baixo desce junto com o ombro"}
+  ],
+  "angulos": [
+   {"nome": "joelhos dobrados a ~90° (pernas no banco)", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [85, 105], "fonte": "Muscle & Strength (\"Your calves should be resting on the top of the bench and your legs should be bent at a right angle\"). A cena fica em ~97°: com o joelho a 90° e a canela deitada, a barriga da panturrilha (12 cm abaixo do eixo da canela) não deixava o calcanhar encostar no banco de 44 cm"},
+   {"nome": "coxas quase na vertical (quadril a ~90°)", "medida": "inclinacao", "segmento": ["UpLeg", "Leg"], "t": "todos", "graus": [-100, -75], "fonte": "Muscle & Strength (idem: \"your legs should be bent at a right angle\"). Medida: coxa (quadril → joelho) × horizontal, − = o joelho acima do quadril; −90 = coxa na vertical"},
+   {"nome": "embaixo: tórax deitado no colchonete", "medida": "torax_chao", "t": 0.5, "graus": [-5, 6], "fonte": "ExRx (\"Return until back of shoulders contact mat\"). Com a lombar achatada no colchonete o fim do tórax (~T12) fica 4–5° mais baixo que a base do pescoço"},
+   {"nome": "só a parte de cima das costas sobe: tórax a ~30° do chão em cima (girando pra esquerda)", "medida": "torax_chao", "t": 0.0, "graus": [25, 35], "fonte": "ExRx, citando o ACSM (curl-up: \"the subject slowly lifts the shoulder blades off the mat by flexing spine\"; \"Since elevation of the truck [tronco] to 30° is the important criteria\"); a amplitude do abdominal supra aprovado pelo Weslley em 05/10/2026 (tórax a 30°). Medido da transição toracolombar (~T11–T12) à base do pescoço"},
+   {"nome": "só a parte de cima das costas sobe: tórax a ~30° do chão em cima (girando pra direita)", "medida": "torax_chao", "t": 1.0, "graus": [25, 35], "fonte": "idem"},
+   {"nome": "tronco sem subir demais o movimento todo (não vira abdominal completo)", "medida": "torax_chao", "t": "todos", "graus": [-5, 35], "fonte": "idem; Weslley (05/10/2026, no supra: o tronco subia demais)"},
+   {"nome": "tronco girado pra esquerda em cima: ombro direito mais alto (cotovelo direito → joelho esquerdo)", "medida": "ombros_nivel", "t": 0.0, "graus": [20, 40], "fonte": "ExRx (\"Flex and twist waist to raise upper torso from mat to one side\"); Konrad 2001 (cross curl-up: \"the contralateral elbow is moved to the opposite knee\"); Muscle & Strength (\"bringing your right elbow up towards the left side of your waist\"). O teto vem de Ichikawa 2024 (rotação da coluna torácica pra um lado: 29,91 ± 6,57° na ressonância, 35,40 ± 7,81° no teste com a lombar travada); a cena gira o tórax ±33° em relação à pelve"},
+   {"nome": "tronco girado pra direita em cima: ombro esquerdo mais alto (cotovelo esquerdo → joelho direito)", "medida": "ombros_nivel", "t": 1.0, "graus": [-40, -20], "fonte": "idem (ExRx: \"Repeat to opposite side alternating twists\")"},
+   {"nome": "ombros nivelados embaixo", "medida": "ombros_nivel", "t": 0.5, "graus": [-5, 5], "fonte": "ExRx (\"Return until back of shoulders contact mat\"): embaixo o giro volta a zero e os dois ombros encostam"},
+   {"nome": "a pelve não gira: o giro vem do tronco", "medida": "pelve_nivel", "t": "todos", "graus": [-3, 3], "fonte": "ACE — Supine Bicycle Crunches (\"The rotation should come from your trunk and not your hips\")"},
+   {"nome": "cotovelos abertos pro lado (mãos atrás da cabeça), sem fechar na frente do rosto", "medida": "cotovelos_largura", "t": "todos", "faixa": [1.5, 2.2], "fonte": "ACE — Crunch (\"Place your hands behind your head, squeezing your scapulae (shoulder blades) together and pulling your elbows back... This elbow position should be maintained throughout the exercise\")"}
+  ]
+ }
+}
