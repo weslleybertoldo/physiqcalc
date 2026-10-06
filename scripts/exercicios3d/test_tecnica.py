@@ -497,3 +497,24 @@ def test_punho_com_sinal_palma_pra_cima_e_punho_alem_do_joelho_na_rosca_punho():
     assert tc.punho_flexao(dobrar_punho(pronada, 30)) == pytest.approx([-30, -30], abs=1e-6)   # pronada: subir = dorso
     assert tc.punho_alem_joelho(j)[0] == pytest.approx(80, abs=1e-6)
     assert {"punho_flexao", "palma_cima", "punho_alem_joelho"} <= set(tc.MEDIDAS)
+
+
+def test_linha_joelho_quadril_cabeca_na_flexao_nordica():
+    """Flexão nórdica (lote 4): joelho, quadril e cabeça em linha reta = 0; a cabeça (tronco) indo à frente da linha da coxa
+    (dobrou na cintura) dá +, indo pra trás (arqueou) dá −. O mesmo número com o corpo inteiro inclinado 70° à frente em
+    volta dos joelhos (a descida da nórdica) ou virado; sem a cabeça no dicionário (testes antigos), nada."""
+    j = dict(em_pe(), Head=np.array([0, 0, 1.65]))
+    for L, s in (("Left", 1), ("Right", -1)):                  # coxa em pé: joelho embaixo do quadril
+        j[L + "Leg"] = np.array([s * 0.09, 0, 0.5])
+    assert tc.linha_joelho_quadril_cabeca(j) == pytest.approx([0], abs=1e-6)
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    dobrou = dict(j, Head=girar({"h": j["Head"]}, 20, (1, 0, 0), quadril)["h"])      # cabeça vai pra −Y (frente)
+    arqueou = dict(j, Head=girar({"h": j["Head"]}, -10, (1, 0, 0), quadril)["h"])
+    assert tc.linha_joelho_quadril_cabeca(dobrou) == pytest.approx([20], abs=1e-6)
+    assert tc.linha_joelho_quadril_cabeca(arqueou) == pytest.approx([-10], abs=1e-6)
+    joelhos = (j["LeftLeg"] + j["RightLeg"]) / 2
+    inclinado = girar(dobrou, 70, (1, 0, 0), joelhos)                                 # corpo descendo à frente
+    assert tc.linha_joelho_quadril_cabeca(inclinado) == pytest.approx([20], abs=1e-6)
+    assert tc.linha_joelho_quadril_cabeca(girar(arqueou, 40, (0, 0, 1))) == pytest.approx([-10], abs=1e-6)
+    assert tc.linha_joelho_quadril_cabeca(em_pe()) == []
+    assert "linha_joelho_quadril_cabeca" in tc.MEDIDAS

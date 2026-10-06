@@ -816,3 +816,51 @@ def puxador_polia(nome="puxador", raio=0.0125, largura=0.145, altura=0.145, raio
     bola.data.materials.append(mat_borracha())
     bola.parent = engate
     return Puxador(pegador, alca, engate, raio, meia, ya, comprimento)
+
+
+# ── APOIO DA FLEXÃO NÓRDICA (Flexão Nórdica, lote 4, 06/10/2026) ───────────────────────────────────────────────────────────
+# Prancha nórdica de chão: uma chapa de aço no chão com a almofada dos joelhos em cima e, atrás dela, um poste no meio (entre as
+# pernas) que segura o eixo de 2 rolos de espuma — um em cima de cada calcanhar, prendendo a parte de trás do tornozelo enquanto
+# o corpo desce; o peso de quem ajoelha em cima da almofada segura a peça no lugar. É o "piece of equipment anchoring the ankle,
+# foot, and lower leg in a fixed position" da NSCA (Exercise Technique Manual for Resistance Training, 4ª ed., Nordic Hamstring
+# Curl), com os dedos dos pés no chão logo atrás da almofada ("ankles flexed and toes into the floor"); a chapa passa entre os
+# pés só no meio, até o poste. Medidas de banco nórdico de verdade: almofada de 3" de espessura e 18" de largura (Freak Athlete
+# Nordic Mini Pro: knee padding "3″ thickness, 18″ x 24″") e rolos de 4,33" de diâmetro × 5,9" (Shogun/Mr Infinity Nord Ex:
+# ankle pads "5.9″L x 4.33″D") — fichas dos 2 produtos na review do ShreddedDad. O comprimento da almofada e a posição dos
+# rolos saem do corpo: a cena monta a peça em volta dele (como o banco_hiperextensao).
+def apoio_nordico(nome="apoio_nordico", almofada=(-0.12, 0.38, 0.0762, 0.457), chapa=0.012, rolos=(0.40, 0.22, 0.055, 0.15, 0.15),
+                  poste=0.05, chanfro=0.02):
+    """Apoio da flexão nórdica (ver o bloco acima), com o boneco olhando pra −Y (os joelhos na frente da almofada, os pés atrás).
+      almofada = (y0, y1, espessura, largura): a almofada vai de y0 (frente) a y1 (atrás), em cima da chapa — topo em
+                 chapa + espessura; a chapa fica 2 cm maior que ela na frente e dos lados (atrás termina junto) e sai por trás
+                 como uma língua de `poste` m de largura, no meio, até o poste;
+      chapa    = espessura da chapa de aço no chão (m);
+      rolos    = (y, z, raio, comprimento, x): eixo dos 2 rolos ao longo de X em (y, z), cada rolo centrado em ±x;
+      poste    = lado do tubo quadrado do poste (sobe do fim da língua da chapa até o eixo dos rolos, em x = 0) e largura da língua.
+    Devolve 3 raízes, cada uma um equipamento da cena: "almofada" e "rolos" são APOIO do corpo (encostar é o certo) e a
+    "estrutura" (chapa, língua, poste, eixo de aço) não pode encostar nele."""
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    alm, rol, estr = (raiz_nova(n) for n in ("almofada", "rolos", "estrutura"))
+    y0, y1, esp, larg = almofada
+    caixa(nome + "_estofado", (0, (y0 + y1) / 2, chapa + esp / 2), (larg, y1 - y0, esp), mat_estofado(), pai=alm,
+          chanfro=chanfro)
+    # chapa embaixo da almofada (2 cm maior na frente e dos lados; atrás termina junto com ela, pros dedos dos pés ficarem no
+    # chão) e a língua que sai por trás, no meio, até o poste
+    y_r, z_r, raio, compr, x_r = rolos
+    caixa(nome + "_chapa", (0, (y0 - 0.02 + y1) / 2, chapa / 2), (larg + 0.04, y1 - y0 + 0.02, chapa), mat_estrutura(),
+          pai=estr, chanfro=0.003)
+    fim = y_r + poste / 2
+    caixa(nome + "_lingua", (0, (y1 + fim) / 2, chapa / 2), (poste, fim - y1, chapa), mat_estrutura(), pai=estr, chanfro=0.003)
+    # poste (tubo quadrado) do fim da língua até o eixo, e o eixo de aço de um rolo ao outro
+    _em_aneis(caixa(nome + "_poste", (0, y_r, (chapa + z_r) / 2), (poste, poste, z_r - chapa), mat_estrutura(), pai=estr,
+                    chanfro=0.005))
+    _em_aneis(_cilindro(nome + "_eixo", 0.012, 2 * x_r + compr - 0.02, (0, y_r, z_r), (0, math.radians(90), 0), mat_aco(),
+                        pai=estr))
+    for k in (-1, 1):                                         # rolos de espuma, um em cima de cada calcanhar
+        _cilindro(nome + "_rolo%+d" % k, raio, compr, (k * x_r, y_r, z_r), (0, math.radians(90), 0), mat_estofado(),
+                  vertices=32, pai=rol)
+    return {"almofada": alm, "rolos": rol, "estrutura": estr}

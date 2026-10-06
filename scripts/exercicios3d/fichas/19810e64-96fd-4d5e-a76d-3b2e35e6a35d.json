@@ -1,0 +1,113 @@
+{
+ "uuid": "19810e64-96fd-4d5e-a76d-3b2e35e6a35d",
+ "nome": "Flexão Nórdica",
+ "cena": "flexao_nordica",
+ "grupo": "Isquiotibiais",
+ "subgrupo": "Isquiotibiais (excêntrico) · bíceps femoral",
+ "padrao_movimento": "flexao_joelho",
+ "equipamento": "peso_corporal",
+ "variacao": "nórdica, de joelhos",
+ "alvos": [
+  "posterior"
+ ],
+ "auxiliares": [
+  "panturrilha",
+  "gluteo",
+  "lombar"
+ ],
+ "camera": {
+  "az": 70,
+  "el": 10,
+  "dist": 3.9,
+  "alvo": [
+   0,
+   -0.35,
+   0.55
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0,
+   -0.35,
+   0.5
+  ]
+ },
+ "ida_s": 3.75,
+ "movimento": "Ajoelhado na almofada, com os joelhos na largura do quadril, os dedos dos pés dobrados no chão (tornozelos em flexão) e a parte de trás dos tornozelos presa embaixo dos rolos do apoio, o corpo reto dos joelhos à cabeça — quadril estendido, glúteos contraídos, sem dobrar na cintura — e as mãos abertas à frente do peito, com os cotovelos dobrados: deixa o corpo cair à frente bem devagar, girando só nos joelhos e segurando a queda com os posteriores da coxa, sem dobrar o quadril; quando os posteriores não seguram mais, leva as mãos à frente até o chão e amortece o fim da descida como numa flexão de braço — mãos um pouco mais abertas que os ombros, dedos pra frente, cotovelos abrindo pro lado — até o corpo ficar a uns 5 cm do chão; volta empurrando o chão com as mãos e puxando com os posteriores da coxa até ficar ajoelhado ereto de novo.",
+ "cinesiologia": {
+  "plano": "sagital (extensão e flexão do joelho com o corpo reto acima dele); as canelas e os pés ficam presos e quem se move é o corpo do joelho pra cima, girando em volta do eixo dos joelhos",
+  "articulacoes": "joelho (extensão controlada na descida, de ~95° de flexão até ~20°, com o corpo a uns 5 cm do chão; flexão na volta); quadril estendido e parado, com a coxa na linha do tronco; coluna e pescoço neutros e parados; tornozelos parados em flexão dorsal, com os dedos dos pés dobrados no chão; ombros e cotovelos parados com as mãos à frente do peito até o joelho chegar a ~57°; daí os braços vão à frente até as mãos encostarem no chão (joelho a ~30°) e os cotovelos dobram como numa flexão de braço até embaixo",
+  "agonistas": "isquiotibiais — bíceps femoral, semitendíneo e semimembranáceo (ExRx: alvo), em contração excêntrica na descida (NSCA: \"use the hamstrings and the entire posterior chain to resist the rate at which the body falls toward the floor\"); no NHE padrão o semitendíneo chegou a 106,7 ± 15,5% da contração voluntária máxima e o bíceps femoral a 99,7 ± 22,2% (Šarabon et al. 2019)",
+  "sinergistas": "gastrocnêmio, grácil, sartório e poplíteo na flexão do joelho; no fim, peitoral, deltoide anterior e tríceps amortecem e empurram o chão (ExRx)",
+  "estabilizadores": "glúteo máximo, adutor magno e eretores da espinha seguram o quadril estendido e a coluna neutra (ExRx; NSCA: \"Keep the gluteals contracted\"); no NHE padrão os eretores chegaram a ~65% da contração máxima e o glúteo máximo ficou baixo (Šarabon 2019: \"relatively low during all variations of the NHE\")",
+  "fases": "descida excêntrica lenta, controlada pelos isquiotibiais até o ponto em que eles não seguram mais (o break-point, ~50° de flexão do joelho mesmo em jogador treinado — Soga et al. 2023), e amortecimento com as mãos no fim (NSCA); a volta, também da NSCA, empurra com as mãos e puxa com os isquiotibiais (\"performing a push-up motion ... contract the hamstrings to pull the fixed torso back toward the starting position\")"
+ },
+ "referencias": [
+  "NSCA — Exercise Technique Manual for Resistance Training, 4ª ed. (Human Kinetics), Nordic Hamstring Curl; trecho publicado pela Human Kinetics em https://us.humankinetics.com/blogs/excerpt/nordic-hamstring-curl (lido em 06/10/2026): \"Begin in a double kneeling position on a pad with ankles flexed and toes into the floor. Use a partner or piece of equipment to hold the ankles, feet, and lower legs in an anchored position. Hold the torso upright with the hips extended and gluteals contracted. Create a straight line between the ear, hip, and knee with the pelvis in a neutral, braced position. Hold the shoulders back with the arms hanging at the sides or on the front of the thighs.\"; \"Begin the downward phase by bracing the torso as described and allowing the knees to extend to slowly fall forward toward the floor. Keep the gluteals contracted and use the hamstrings and the entire posterior chain to resist the rate at which the body falls toward the floor. As the body nears the floor, reach forward and place the hands on the floor to decelerate the body during the last part of the lowering phase, as if doing a push-up. Lower the body to within 2 inches (5 cm) of the floor.\"; \"Begin the upward phase by performing a push-up motion, forcing the body backward toward the starting position. In the same moment, contract the hamstrings to pull the fixed torso back toward the starting position.\"",
+  "ExRx.net — Self-assisted Inverse Leg Curl (\"also known as Self-assisted Hamstring Raise\"; a nórdica num aparelho de glúteo-posterior, com as mãos apoiando numa plataforma). https://exrx.net/WeightExercises/Hamstrings/ASHamstringRaiseSelf (lido na cópia do Internet Archive de 30/05/2023): \"Lower body with hips straight by slowly straightening knees. Position hands forward, ready to push body weight back up off of surface. Control descent only with hamstrings as low as possible before catching body by quickly placing hands on elevated platform and rapidly pushing off against platform\"; \"Place hands on top of platform when controlled descent can no longer be maintained with hamstring strength alone. Also attempt to keep hips as straight as possible throughout movement.\"; \"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion.\"; músculos: alvo Hamstrings; sinergistas Gastrocnemius, Gracilis, Sartorius, Popliteus (e Pectoralis Major, Deltoid Anterior, Triceps Brachii, Wrist Flexors no empurrão); estabilizadores Gluteus Maximus, Adductor Magnus, Erector Spinae",
+  "Soga T, Yamaguchi S, Inami T, et al. Hamstring Activity Before and After Break-Point Angle Calculated By Smartphone Application During the Nordic Hamstring Exercise. Int J Sports Phys Ther. 2023;18(6):1290-1298. doi:10.26603/001c.89271: \"It involves maintaining a straight posture from the knees to the head while leaning the upper body forward to a level that the hamstring muscles can tolerate.\"; \"Given that the BPA is approximately 50° even in trained soccer players\"; \"Participants assumed a kneeling position on a bench of approximately 50 cm, with their elbows bent and hands open in front of them\"; \"They were instructed to lean forward slowly while maintaining a straight posture from the knee to the head.\"; break-point de 61,6 ± 10,7° (aplicativo) e 58,7 ± 11,2° (vídeo), com \"0° indicates a fully extended knee\"",
+  "Šarabon N, Marušič J, Marković G, Kozinc Ž. Kinematic and electromyographic analysis of variations in Nordic hamstring exercise. PLoS One. 2019;14(10):e0223437. doi:10.1371/journal.pone.0223437 (texto completo no Europe PMC, PMC6808554): a variação padrão com a perna apoiada a 0° e o quadril a 0° (\"from 0° (standard NHE)\"); \"Participants were instructed to position the hands along the body, with an approximately 130° elbow flexion in all variations\"; \"(106.7 ± 15.5% MVC for semitendinosus and 99.7 ± 22.2% MVC for biceps femoris)\"; eretores a \"65% MVC in the standard NHE\"; glúteo máximo \"relatively low during all variations of the NHE\"; \"Participants often flexed the lumbar spine instead of the hip, which could impose undesirable forces on the spine.\"; \"Only sufficiently strong athletes are able to take full advantage of the exercise, with an active descend lasting until nearly fully extended knee position.\"",
+  "Mjølsnes R, Arnason A, Østhagen T, Raastad T, Bahr R. A 10-week randomized trial comparing eccentric vs. concentric hamstring strength training in well-trained soccer players. Scand J Med Sci Sports. 2004;14(5):311-7. doi:10.1046/j.1600-0838.2003.367.x — lido só o resumo (PubMed; o texto completo é pago): \"Nordic hamstrings (NH), a partner exercise focusing the eccentric phase\"; \"In the NH group, there was an 11% increase in eccentric hamstring torque measured at 60 degrees s(-1)\"",
+  "FIFA 11+ — Hamstrings (beginner/intermediate/advanced), no folheto \"Injury Prevention Warm-Up\" da WakeMed (https://www.wakemed.org/sites/default/files/pdf/Ortho/injury%20prevention%20warmup.pdf): \"Kneel with knees hip-width apart; partner pins your ankles firmly to the ground with both hands. Exercise: Slowly lean forward, while keeping your body straight from the head to the knees. When you can no longer hold the position, gently take your weight on your hands, falling into a press-up position.\"; Kirkendall DT, Sayers A. Soccer Anatomy, 2ª ed. (Human Kinetics; trecho \"This Exercise Could Save Your ACL: The Nordic Hamstring Curl\"): \"Your body should be completely straight from the shoulders to the knees throughout the exercise.\"; \"When you can no longer hold the position, gently absorb your weight using your hands, falling into a push-up position.\"",
+  "American Council on Exercise (ACE) — Push-up. https://www.acefitness.org/resources/everyone/exercise-library/41/push-up/: \"Position your hands shoulder-width apart with your fingers facing forward or turned slightly inward.\"; \"Allow your elbows to flare outwards during the lowering phase.\"",
+  "Medidas do apoio nórdico: almofada dos joelhos do Freak Athlete Nordic Mini Pro (\"3″ thickness, 18″ x 24″\") e rolos dos tornozelos do Shogun/Mr Infinity Nord Ex (ankle pads \"5.9″L x 4.33″D\"), fichas dos produtos nas reviews do ShreddedDad (https://shreddeddad.com/freak-athlete-nordic-mini/ e https://shreddeddad.com/mr-infinity-nord-ex)",
+  "Amplitude do tornozelo: Alazzawi S et al., World J Orthop 2017;8(1):21-29, tabela 5 (flexão dorsal 0–20°, flexão plantar 0–50°) — a referência do tecnica3d.tornozelo (lote 2)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pe_na_ponta": ["E", "D"],
+  "pe_na_ponta_motivo": "Ajoelhado com os dedos dos pés dobrados no chão (NSCA: \"Begin in a double kneeling position on a pad with ankles flexed and toes into the floor\"): os dois pés ficam quase em pé, só os dedos encostam no chão e o calcanhar fica no alto, embaixo do rolo. A planta (a pele mais baixa do pé, nos dedos) continua medida no chão e a base dos dedos não pode escorregar entre os quadros; o calcanhar sobe de propósito.",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados no chão (largura, ponta do pé, alinhamento, joelho na direção do pé, coluna até 20°) não servem pra quem está ajoelhado com o pé quase em pé: a ponta_pe (tornozelo → base dos dedos visto de cima) perde o sentido com o pé vertical. As que valem estão abaixo, mais estreitas: pés e joelhos na largura do quadril, dedos pra frente, coluna neutra (até 8°).",
+  "limites_juntas": {"punhoE": [0, 70], "punhoD": [0, 70]},
+  "limites_juntas_fonte": "Punhos das mãos que apoiam no chão no fim da descida, espalmadas e sem segurar peso: vale a extensão normal do punho da AAOS, 0–70° (Norkin & White, a mesma referência do limites.py; a remada unilateral do lote 2 usa o mesmo teto pra mão de apoio). O teto de 55° do limites.py é pra mão segurando peso sem dobrar o punho. A mão encosta no chão à frente do ombro (NSCA: \"reach forward and place the hands on the floor\") e o cotovelo vai pra trás e pra fora na descida, o que deixa o antebraço inclinado e a extensão dentro dos 70°.",
+  "zonas": [
+   {"nome": "joelho e canela esquerdos apoiados na almofada", "equipamento": "apoio_nordico_almofada", "partes": ["LeftLeg"], "mm": [-12, 0.5], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Begin in a double kneeling position on a pad\")"},
+   {"nome": "joelho e canela direitos apoiados na almofada", "equipamento": "apoio_nordico_almofada", "partes": ["RightLeg"], "mm": [-12, 0.5], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (idem)"},
+   {"nome": "tornozelo esquerdo preso embaixo do rolo (atrás, em cima do calcanhar)", "equipamento": "apoio_nordico_rolos", "partes": ["LeftLeg", "LeftFoot"], "mm": [-10, 0.5], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Use a partner or piece of equipment to hold the ankles, feet, and lower legs in an anchored position\"); FIFA 11+ (\"partner pins your ankles firmly to the ground\")"},
+   {"nome": "tornozelo direito preso embaixo do rolo (atrás, em cima do calcanhar)", "equipamento": "apoio_nordico_rolos", "partes": ["RightLeg", "RightFoot"], "mm": [-10, 0.5], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (idem)"}
+  ],
+  "alturas": [
+   {"nome": "palma da mão esquerda espalmada no chão (do apoio até embaixo)", "partes": ["LeftHand"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"place the hands on the floor to decelerate the body during the last part of the lowering phase, as if doing a push-up\")"},
+   {"nome": "dedo indicador da mão esquerda deitado no chão", "partes": ["LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "dedo médio da mão esquerda deitado no chão", "partes": ["LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "dedo anelar da mão esquerda deitado no chão", "partes": ["LeftHandRing1", "LeftHandRing2", "LeftHandRing3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "dedo mínimo da mão esquerda deitado no chão", "partes": ["LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "palma da mão direita espalmada no chão (do apoio até embaixo)", "partes": ["RightHand"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"place the hands on the floor to decelerate the body during the last part of the lowering phase, as if doing a push-up\")"},
+   {"nome": "dedo indicador da mão direita deitado no chão", "partes": ["RightHandIndex1", "RightHandIndex2", "RightHandIndex3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "dedo médio da mão direita deitado no chão", "partes": ["RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "dedo anelar da mão direita deitado no chão", "partes": ["RightHandRing1", "RightHandRing2", "RightHandRing3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "dedo mínimo da mão direita deitado no chão", "partes": ["RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "acima_de": "chao", "t": [0.85, 1.0], "mm": [-3, 3]},
+   {"nome": "mãos e antebraços nunca abaixo do chão", "partes": ["LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3", "RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3", "LeftForeArm", "RightForeArm"], "acima_de": "chao", "mm": [-3, 5000], "fonte": "regra da fábrica (o corpo não atravessa o chão; a pele da palma pode afundar um pouco)"},
+   {"nome": "embaixo o corpo fica a ~5 cm do chão (sem encostar)", "partes": ["Hips", "Spine", "Spine1", "Spine2", "LeftUpLeg", "RightUpLeg"], "acima_de": "chao", "t": 1.0, "mm": [40, 70], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Lower the body to within 2 inches (5 cm) of the floor\"). A parte mais baixa embaixo é a frente das coxas, logo à frente da almofada (o corpo gira no joelho, que fica em cima dela); o peito fica uns 10 cm acima do chão"},
+   {"nome": "corpo nunca encosta no chão", "partes": ["Hips", "Spine", "Spine1", "Spine2", "Neck", "LeftUpLeg", "RightUpLeg", "LeftArm", "RightArm"], "acima_de": "chao", "mm": [30, 5000]},
+   {"nome": "cabeça longe do chão", "partes": ["Head"], "acima_de": "chao", "mm": [80, 5000]}
+  ],
+  "contatos": [
+   {"nome": "mãos longe da cabeça (sem encostar no rosto nem no cabelo)", "partes": ["LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3", "RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Head", "Neck"], "cabelo": true, "mm": [5, 2000]},
+   {"nome": "antebraços e mãos sem entrar no tronco", "partes": ["LeftForeArm", "RightForeArm", "LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3", "RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Hips", "Spine", "Spine1", "Spine2"], "mm": [-2, 2000], "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"}
+  ],
+  "angulos": [
+   {"nome": "ajoelhado ereto no começo (joelho ~90°)", "medida": "flexao", "junta": "Leg", "t": 0.0, "graus": [88, 100], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Begin in a double kneeling position\"; \"Hold the torso upright\"). A canela sobe ~6° do joelho pro tornozelo (os dedos dobrados no chão levantam o tornozelo), o que soma ~6° ao ângulo"},
+   {"nome": "tronco ereto no começo", "medida": "tronco", "t": 0.0, "graus": [0, 6], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Hold the torso upright with the hips extended\")"},
+   {"nome": "quadril estendido o movimento todo (coxa na linha do tronco, sem dobrar na cintura)", "medida": "quadril_sinal", "t": "todos", "graus": [-6, 6], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Hold the torso upright with the hips extended and gluteals contracted\"; \"Keep the gluteals contracted\"); ExRx (\"Lower body with hips straight\"; \"attempt to keep hips as straight as possible throughout movement\"); Šarabon 2019 (NHE padrão com o quadril a 0°). 0 = coxa na linha quadril → pescoço; + = dobrou na cintura"},
+   {"nome": "corpo em linha reta da orelha ao joelho o movimento todo", "medida": "linha_joelho_quadril_cabeca", "t": "todos", "graus": [-4, 6], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Create a straight line between the ear, hip, and knee\"); FIFA 11+ (\"keeping your body straight from the head to the knees\"); Soga 2023 (\"maintaining a straight posture from the knees to the head\")"},
+   {"nome": "coluna neutra (sem arredondar no lugar do quadril)", "medida": "coluna", "t": "todos", "graus": [0, 8], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"with the pelvis in a neutral, braced position\"); Šarabon 2019 (\"Participants often flexed the lumbar spine instead of the hip, which could impose undesirable forces on the spine\")"},
+   {"nome": "cabeça na linha do tronco", "medida": "cabeca_tronco", "t": "todos", "graus": [-18, -4], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"a straight line between the ear, hip, and knee\"). O boneco em pé, no repouso, mede ~−11°"},
+   {"nome": "joelho quase estendido embaixo", "medida": "flexao", "junta": "Leg", "t": 1.0, "graus": [5, 25], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"Lower the body to within 2 inches (5 cm) of the floor\"); Šarabon 2019 (\"an active descend lasting until nearly fully extended knee position\")"},
+   {"nome": "corpo quase deitado embaixo", "medida": "tronco", "t": 1.0, "graus": [72, 88]},
+   {"nome": "tornozelos em flexão dorsal, dedos dobrados no chão", "medida": "tornozelo", "t": "todos", "graus": [84, 96], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"ankles flexed and toes into the floor\"); ExRx (\"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion\"); limite da flexão dorsal de 20° (Alazzawi 2017) = ~96° no boneco (em pé ~76°)"},
+   {"nome": "joelhos e pés na largura do quadril", "medida": "pes_base_lateral", "t": "todos", "faixa": [1.0, 2.2], "fonte": "FIFA 11+ (\"Kneel with knees hip-width apart\")"},
+   {"nome": "dedos dos pés pra frente", "medida": "ponta_dedos", "t": "todos", "graus": [-10, 20]},
+   {"nome": "pelve nivelada", "medida": "pelve_nivel", "t": "todos", "graus": [-3, 3]},
+   {"nome": "tronco sem girar (ombros nivelados)", "medida": "ombros_nivel", "t": "todos", "graus": [-5, 5]},
+   {"nome": "mãos abertas à frente do peito, cotovelos dobrados (antes de ir pro chão)", "medida": "flexao", "junta": "ForeArm", "t": [0.0, 0.49], "graus": [90, 135], "fonte": "Soga 2023 (\"with their elbows bent and hands open in front of them\"); Šarabon 2019 (\"an approximately 130° elbow flexion\"); ExRx (\"Position hands forward, ready to push body weight back up off of surface\")"},
+   {"nome": "palmas pra frente, prontas pra amortecer", "medida": "palma_frente", "t": [0.0, 0.49], "graus": [0, 50]},
+   {"nome": "mãos um pouco mais abertas que os ombros no chão", "medida": "pegada_largura", "t": [0.85, 1.0], "faixa": [1.0, 1.6], "fonte": "ACE — Push-up (\"Position your hands shoulder-width apart\")"},
+   {"nome": "palmas viradas pro chão", "medida": "palma_cima", "t": [0.85, 1.0], "graus": [160, 180]},
+   {"nome": "cotovelos dobrando como numa flexão de braço embaixo", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [70, 130], "fonte": "NSCA, Exercise Technique Manual 4ª ed. (\"as if doing a push-up\")"},
+   {"nome": "cotovelos abrindo pro lado embaixo", "medida": "braco_abertura", "t": 1.0, "graus": [25, 80], "fonte": "ACE — Push-up (\"Allow your elbows to flare outwards during the lowering phase\")"}
+  ]
+ }
+}

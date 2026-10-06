@@ -479,3 +479,30 @@ def punho_alem_joelho(j):
 
 MEDIDAS.update({"punho_flexao": punho_flexao, "palma_cima": palma_cima, "punho_alem_joelho": punho_alem_joelho})
 UNIDADE.update({"punho_alem_joelho": "mm"})
+
+
+# ── flexão nórdica (lote 4, 06/10/2026): ajoelhado, com os tornozelos presos, o corpo desce RETO dos joelhos à cabeça girando
+# no joelho — sem dobrar o quadril nem arquear (NSCA, Exercise Technique Manual for Resistance Training, 4ª ed., Nordic Hamstring
+# Curl: "Create a straight line between the ear, hip, and knee"). O quadril_sinal compara a coxa com a linha quadril → pescoço;
+# aqui é a linha inteira joelho → quadril → base da cabeça (perto da orelha; o "Head" já está nas JUNTAS desde o lote 3).
+def linha_joelho_quadril_cabeca(j):
+    """Desvio da linha reta joelho → quadril → cabeça, no quadril, graus (com sinal), no plano sagital do tronco: a coxa
+    (centro dos joelhos → centro das articulações do quadril) × a linha quadril → base da cabeça (cabeça do osso Head, na
+    altura da orelha). 0 = joelho, quadril e orelha em linha reta (o "straight line between the ear, hip, and knee" da NSCA),
+    + = dobrou na cintura (a cabeça vai à frente da linha da coxa: quadril flexionado, bumbum pra trás), − = arqueou (a
+    cabeça vai pra trás da linha: quadril passou da linha, barriga pra frente). No referencial do tronco: vale em pé,
+    ajoelhado ou com o corpo inclinado; o boneco em pé, no repouso, mede ~7° (o joelho fica 3,5 cm à frente do quadril e a
+    cabeça um pouco à frente do tronco). Sem a cabeça nas juntas (dicionários antigos dos testes), devolve []."""
+    if "Head" not in j:
+        return []
+    cima, lado, frente = eixos_tronco(j)
+    joelho = (j["LeftLeg"] + j["RightLeg"]) / 2
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    angs = []
+    for v in (quadril - joelho, j["Head"] - quadril):          # inclinação de cada segmento pra frente, no plano sagital
+        v = v - lado * (v @ lado)
+        angs.append(math.degrees(math.atan2(float(v @ frente), float(v @ cima))))
+    return [angs[1] - angs[0]]
+
+
+MEDIDAS.update({"linha_joelho_quadril_cabeca": linha_joelho_quadril_cabeca})
