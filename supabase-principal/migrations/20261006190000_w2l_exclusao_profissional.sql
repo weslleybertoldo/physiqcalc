@@ -28,8 +28,9 @@
 --          situação 'cancelada' — a linha da conta FICA (as matrículas da lixeira guardam o histórico);
 --        · MEMBRO (não dono): sai da equipe como no remover_membro sem novo responsável — os alunos dele ficam "sem responsável" na
 --          conta do dono, os registros dele ficam com a conta; o dono recebe aviso no sino;
---        · o cadastro da pessoa limpo (fica o nome e o registro profissional, que identificam o autor no prontuário), avisos e
---          aparelhos de push apagados, a conexão do WhatsApp desligada.
+--        · o cadastro da pessoa limpo NOS 2 SCHEMAS (o gatilho handle_new_user cria o perfil em public e em staging — o Auth é um
+--          só): fica o nome e o registro profissional SÓ no schema em que ele assina algo (w2l_limpar_perfil); avisos e aparelhos de
+--          push apagados, a conexão do WhatsApp desligada. No staging o espelho em public só é limpo para e-mail de TESTE.
 --      O login sai depois, pela borda, por SOFT DELETE (auth.admin.deleteUser(id, true)) — o hard delete apagaria em cascata as
 --      matrículas e os prontuários (ver o item 1). A cobrança automática (plano e alunos → este profissional) é cancelada pela borda
 --      ANTES; aqui o "excluir" recusa (cobranca_ativa) se ainda houver alguma viva.
@@ -70,7 +71,67 @@ end;
 $$;
 
 -- ============================================================================================================
--- 2. A exclusão do profissional (conferência e exclusão) — SÓ service_role
+-- 2. O perfil da pessoa em UM schema (o em que a exclusão roda E o espelho — o gatilho handle_new_user cria o perfil nos 2)
+-- ============================================================================================================
+
+-- ele "assina" algo neste schema? É ou foi da equipe / dono de uma conta, ou é autor ou responsável em algum registro (as colunas de
+-- autoria que apontam para auth.users: nutricionista_id, personal_id, criado_por…). É onde o nome e o CRN/CREF precisam ficar.
+create or replace function {schema}.w2l_assina_no_schema(p_uid uuid, p_schema text) returns boolean
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  r record;
+  v boolean := false;
+begin
+  if p_schema not in ('public', 'staging') then
+    raise exception 'w2l_assina_no_schema: schema inválido %', p_schema;
+  end if;
+  execute format('select exists (select 1 from %1$I.conta_membros where user_id = $1) or exists (select 1 from %1$I.contas where dono_id = $1)', p_schema)
+    into v using p_uid;
+  if v then
+    return true;
+  end if;
+  for r in
+    select c.conrelid::regclass::text as tabela, a.attname::text as coluna
+      from pg_catalog.pg_constraint c
+      join pg_catalog.pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+     where c.contype = 'f' and c.confrelid = 'auth.users'::regclass and c.connamespace = p_schema::regnamespace
+       and cardinality(c.conkey) = 1
+       and a.attname in ('nutricionista_id', 'personal_id', 'profissional_id', 'criado_por', 'confirmado_por', 'registrado_por', 'responsavel_id')
+  loop
+    execute format('select exists (select 1 from %s where %I = $1)', r.tabela, r.coluna) into v using p_uid;
+    if v then
+      return true;
+    end if;
+  end loop;
+  return false;
+end;
+$$;
+
+-- o perfil anônimo: sem e-mail, carimbo, código de cadastro e contatos/foto; fica o nome e o registro profissional (CRN/CREF) SÓ
+-- onde ele assina algo (identificam o autor das anotações no prontuário — Res. CFN 594/2017); no espelho sem nada dele, sem nome
+create or replace function {schema}.w2l_limpar_perfil(p_uid uuid, p_schema text) returns jsonb
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  v_assina boolean := {schema}.w2l_assina_no_schema(p_uid, p_schema);
+  v_n integer;
+begin
+  execute format($u$update %1$I.profiles
+       set email = null, carimbo_url = null, codigo_cadastro = null, ativo = false,
+           nome = case when $2 then nome end,
+           dados_profissionais = case when $2 then jsonb_strip_nulls(jsonb_build_object(
+             'registro', dados_profissionais ->> 'registro', 'crn', dados_profissionais ->> 'crn', 'cref', dados_profissionais ->> 'cref'))
+             else '{}'::jsonb end,
+           config = coalesce(config, '{}'::jsonb) || jsonb_build_object('conta_excluida_em', now())
+     where id = $1$u$, p_schema) using p_uid, v_assina;
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('schema', p_schema, 'perfil', v_n, 'assina', v_assina);
+end;
+$$;
+revoke execute on function {schema}.w2l_assina_no_schema(uuid, text), {schema}.w2l_limpar_perfil(uuid, text) from public, anon, authenticated;
+grant execute on function {schema}.w2l_assina_no_schema(uuid, text), {schema}.w2l_limpar_perfil(uuid, text) to service_role;
+
+-- ============================================================================================================
+-- 3. A exclusão do profissional (conferência e exclusão) — SÓ service_role
 -- ============================================================================================================
 create or replace function {schema}.excluir_conta_profissional(p_uid uuid, p_simular boolean default true) returns jsonb
 language plpgsql volatile security definer set search_path = '' as $$
@@ -104,6 +165,8 @@ declare
   v_treino integer;
   v_nutri integer;
   v_feito jsonb;
+  v_email_login text;
+  v_perfis jsonb := '[]'::jsonb;
 begin
   if p_uid is null then
     raise exception 'excluir_conta_profissional: p_uid obrigatório';
@@ -137,8 +200,9 @@ begin
     return jsonb_build_object('ok', false, 'erro', 'nao_profissional');
   end if;
 
-  select coalesce(nullif(btrim(pr.nome), ''), nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''), split_part(coalesce(u.email, ''), '@', 1))
-    into v_nome from auth.users u left join {schema}.profiles pr on pr.id = u.id where u.id = p_uid;
+  select coalesce(nullif(btrim(pr.nome), ''), nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''), split_part(coalesce(u.email, ''), '@', 1)),
+         lower(u.email)
+    into v_nome, v_email_login from auth.users u left join {schema}.profiles pr on pr.id = u.id where u.id = p_uid;
 
   -- ---------- a parte de ALUNO (quem também é aluno em alguma conta — a mesma lista da excluir_dados_aluno, W7) ----------
   select coalesce(array_agg(p.id), array[]::uuid[]) into v_ids_aluno from {schema}.pacientes p where p.user_id = p_uid;
@@ -332,13 +396,15 @@ begin
 
   -- ---------- a pessoa (o login sai pela borda, por soft delete) ----------
   if not v_simular then
-    -- fica o nome e o registro profissional (CRN/CREF): identificam o autor das anotações no prontuário, que fica guardado
-    update {schema}.profiles
-       set email = null, carimbo_url = null, codigo_cadastro = null, ativo = false,
-           dados_profissionais = jsonb_strip_nulls(jsonb_build_object(
-             'registro', dados_profissionais ->> 'registro', 'crn', dados_profissionais ->> 'crn', 'cref', dados_profissionais ->> 'cref')),
-           config = coalesce(config, '{}'::jsonb) || jsonb_build_object('conta_excluida_em', now())
-     where id = p_uid;
+    -- o perfil: anônimo aqui e no ESPELHO (o gatilho handle_new_user cria o perfil nos 2 schemas). Fica o nome e o CRN/CREF só onde
+    -- ele assina algo (w2l_limpar_perfil). No staging só conta de teste chega aqui (a borda recusa conta real) e, mesmo assim, o
+    -- espelho em public só é limpo com e-mail de teste
+    v_perfis := jsonb_build_array({schema}.w2l_limpar_perfil(p_uid, '{schema}'));
+    if '{schema}' = 'public' then
+      v_perfis := v_perfis || {schema}.w2l_limpar_perfil(p_uid, 'staging');
+    elsif {schema}.email_de_teste(v_email_login) then
+      v_perfis := v_perfis || {schema}.w2l_limpar_perfil(p_uid, 'public');
+    end if;
     delete from {schema}.avisos where destino_user_id = p_uid;
     delete from {schema}.push_aparelhos where user_id = p_uid;
     update {schema}.whatsapp_instancias
@@ -353,14 +419,14 @@ begin
   return jsonb_build_object(
     'ok', true, 'simulacao', v_simular, 'perfil', v_perfil, 'nome', v_nome,
     'contas_dono', v_dono, 'equipes', v_equipes, 'ex_equipes', v_ex_equipes, 'sem_conta', v_sem_conta,
-    'aluno', v_aluno, 'arquivos', v_arquivos);
+    'aluno', v_aluno, 'arquivos', v_arquivos, 'perfis', v_perfis);
 end;
 $$;
 revoke execute on function {schema}.excluir_conta_profissional(uuid, boolean) from public, anon, authenticated;
 grant execute on function {schema}.excluir_conta_profissional(uuid, boolean) to service_role;
 
 -- ============================================================================================================
--- 3. Os prontuários que o dono baixa antes de excluir (o app monta 1 PDF por paciente e o ZIP) — authenticated, só o dono
+-- 4. Os prontuários que o dono baixa antes de excluir (o app monta 1 PDF por paciente e o ZIP) — authenticated, só o dono
 -- ============================================================================================================
 create or replace function {schema}.w2l_prontuarios_para_baixar(p_conta uuid, p_pacientes uuid[]) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
