@@ -597,6 +597,45 @@ def alturas(co, nomes, dono, equipamentos, regras, t=None):
     return medidas, falhas
 
 
+# ── folga entre uma peça do equipamento e outra coisa da cena (polia, lote 3, 05/10/2026): o cabo da polia passa por
+# cima da cabeça e do banco e não pode entrar no cabelo nem no banco (o equipamento × corpo de sempre só olha a pele).
+# Regra da ficha (checagens.folgas): {"nome", "equipamento": raiz da peça (ex. "polia_cabo"), "de": outra raiz da cena
+# (equipamento ou apoio, ex. "banco") ou "cabelo", "mm": [lo, hi], "t": número, [t0, t1] ou "todos" (sem "t" = todos)}.
+# A medida é a menor distância da superfície da peça (pontos a cada `passo`) até a superfície do outro, em mm: − = a peça
+# entrou nele (as caixas do banco são fechadas); o cabelo é uma casca aberta: só a distância, sem sinal. Sem "folgas" na
+# ficha nada muda.
+def folgas(bon, raizes, regras, t=None, passo=0.008):
+    falhas, medidas = [], {}
+    por_nome = {r.name: r for r in raizes}
+    for regra in regras:
+        if t is not None and not tc.vale_no_quadro(regra.get("t", "todos"), t):
+            continue
+        for chave in ("equipamento", "de"):
+            if regra[chave] not in por_nome and not (chave == "de" and regra[chave] == "cabelo"):
+                raise ValueError("folgas: %r não é raiz de equipamento/apoio da cena" % regra[chave])
+        pts = np.concatenate([_amostras(*_avaliar_simples(o), passo) for o in _malhas(por_nome[regra["equipamento"]])])
+        if regra["de"] == "cabelo":
+            alvos, fechado = [_avaliar_simples(bon.cabelo)], False
+        else:
+            alvos, fechado = [_avaliar_simples(o) for o in _malhas(por_nome[regra["de"]])], True
+        menor = 1e9
+        for eco, etri in alvos:
+            bvh = _bvh(eco, etri)
+            for p in pts:
+                v = Vector(p)
+                loc, nor, idx, dist = bvh.find_nearest(v)
+                if loc is None:
+                    continue
+                if fechado and dist < menor and (v - loc).dot(nor) < 0 and _dentro(bvh, v):
+                    dist = -dist
+                menor = min(menor, dist)
+        mm = menor * 1000
+        medidas[regra["nome"]] = mm
+        if not regra["mm"][0] <= mm <= regra["mm"][1]:
+            falhas.append("%s: %.1f mm (esperado %g a %g)" % (regra["nome"], mm, regra["mm"][0], regra["mm"][1]))
+    return medidas, falhas
+
+
 def completa(bon, cena, checagens, t, rotulo, estado):
     """Todos os itens num quadro (a pose já aplicada). estado: dict guardado entre quadros (anterior, referência)."""
     r = quadro(bon, equipamentos=cena.equipamentos, pegadas=cena.pegadas, rotulo=rotulo, apoio_mm=cena.apoio_mm)
@@ -623,6 +662,10 @@ def completa(bon, cena, checagens, t, rotulo, estado):
         r["falhas"] += f
     if checagens.get("alturas"):                           # queixo × barra, pés × chão (sai junto das zonas)
         med, f = alturas(co, nomes, dono, cena.equipamentos, checagens["alturas"], t=t)
+        itens["zonas"].update(med)
+        r["falhas"] += f
+    if checagens.get("folgas"):                            # cabo da polia × cabelo/banco (sai junto das zonas)
+        med, f = folgas(bon, cena.equipamentos + cena.apoios, checagens["folgas"], t=t)
         itens["zonas"].update(med)
         r["falhas"] += f
     itens["tecnica"] = tc.medir(posicoes(rig))

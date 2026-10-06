@@ -20,6 +20,8 @@ def em_pe():
                   L + "HandMiddle1": (s * 0.18, 0, 0.82), L + "UpLeg": (s * 0.09, 0, 0.95),
                   L + "Leg": (s * 0.10, -0.02, 0.5), L + "Foot": (s * 0.10, 0, 0.08),
                   L + "ToeBase": (s * 0.10, -0.14, 0.02)})
+        # base do indicador (na frente) e do mínimo (atrás): palma virada pra coxa (lote 3, desenvolvimento Arnold)
+        j.update({L + "HandIndex1": (s * 0.18, -0.035, 0.83), L + "HandPinky1": (s * 0.18, 0.03, 0.84)})
     return {k: np.array(v, float) for k, v in j.items()}
 
 
@@ -353,3 +355,101 @@ def test_cotovelos_largura_abertos_fechados_e_deitado():
     m = tc.medir(dict(com_claviculas(abertos), **{L + "ToeBase_ponta": abertos[L + "ToeBase"] for L in ("Left", "Right")}))
     assert m["cotovelos_largura"] == pytest.approx([larg], abs=1e-6)
     assert tc.valores("cotovelos_largura", [1.734]) == "1.73"
+
+
+def mao(j, L, dedos, palma):
+    """Base do indicador e do mínimo da mão `L` com os dedos apontando pra `dedos` e a palma pra `palma` (mundo)."""
+    s = 1 if L == "Left" else -1
+    d, n = np.array(dedos, float), np.array(palma, float)
+    k = s * np.cross(d, n)                                              # do indicador pro mínimo
+    m = j[L + "Hand"]
+    return dict(j, **{L + "HandIndex1": m + 0.08 * d - 0.02 * k, L + "HandPinky1": m + 0.08 * d + 0.02 * k})
+
+
+def test_palma_pro_corpo_pro_meio_e_pra_frente_no_arnold():
+    """Desenvolvimento Arnold (lote 3): a palma começa virada pro corpo (dedos pra cima, na frente do rosto), passa
+    pelo meio (palmas uma pra outra) e termina virada pra frente em cima; virar pra fora dá negativo. O número não
+    muda com o boneco sentado no encosto inclinado e virado."""
+    j = em_pe()
+    assert tc.palma_frente(j) == pytest.approx([90, 90], abs=1e-6)          # pendurado: palma pra coxa
+    assert tc.palma_dentro(j) == pytest.approx([90, 90], abs=1e-6)
+
+    def arnold(palma_e):
+        """As 2 mãos com os dedos pra cima; palma do esquerdo `palma_e` e a do direito espelhada."""
+        x, y, z = palma_e
+        return mao(mao(j, "Left", (0, 0, 1), (x, y, z)), "Right", (0, 0, 1), (-x, y, z))
+
+    comeco, meio, fim = arnold((0, 1, 0)), arnold((-1, 0, 0)), arnold((0, -1, 0))   # o boneco olha pra −Y
+    assert tc.palma_frente(comeco) == pytest.approx([180, 180], abs=1e-6)
+    assert tc.palma_dentro(comeco) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.palma_frente(meio) == pytest.approx([90, 90], abs=1e-6)
+    assert tc.palma_dentro(meio) == pytest.approx([90, 90], abs=1e-6)
+    assert tc.palma_frente(fim) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.palma_dentro(fim) == pytest.approx([0, 0], abs=1e-6)
+    a = math.radians(45)
+    caminho = arnold((-math.sin(a), math.cos(a), 0))                     # metade do caminho do corpo pro meio
+    assert tc.palma_frente(caminho) == pytest.approx([135, 135], abs=1e-6)
+    assert tc.palma_dentro(caminho) == pytest.approx([45, 45], abs=1e-6)
+    assert tc.palma_dentro(arnold((1, 0, 0))) == pytest.approx([-90, -90], abs=1e-6)   # virada pra fora
+    sentado = girar(girar(caminho, -5, (1, 0, 0), (0, 0, 1.0)), 40, (0, 0, 1))
+    assert tc.palma_frente(sentado) == pytest.approx([135, 135], abs=1e-6)
+    assert tc.palma_dentro(sentado) == pytest.approx([45, 45], abs=1e-6)
+    m = tc.medir(dict(com_claviculas(caminho), **{L + "ToeBase_ponta": j[L + "ToeBase"] for L in ("Left", "Right")}))
+    assert m["palma_frente"] == pytest.approx([135, 135], abs=1e-6)
+    assert {"LeftHandIndex1", "RightHandIndex1", "LeftHandPinky1", "RightHandPinky1"} <= set(tc.JUNTAS)
+
+
+def test_quadril_sinal_flexao_positiva_e_passar_da_linha_negativa():
+    """Hiperextensão lombar (lote 3): o tronco gira em volta do quadril e a coxa fica parada. Em pé a coxa do em_pe() sai
+    2,5° à frente da linha do tronco; dobrar o tronco 90° pra frente soma 90 e passar 10° da linha pra trás tira 10 (o
+    "quadril" do medir_juntas, sem sinal, não separa os dois). O boneco inteiro inclinado não muda o número."""
+    j = em_pe()
+    base = math.degrees(math.atan2(0.02, 0.45))
+    assert tc.quadril_sinal(j) == pytest.approx([base, base], abs=1e-6)
+    pivo = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    de_cima = ("Hips", "Spine1", "Neck", "LeftArm", "RightArm", "LeftForeArm", "RightForeArm", "LeftHand", "RightHand",
+               "LeftHandMiddle1", "RightHandMiddle1")
+
+    def tronco(graus):
+        return dict(j, **girar({k: j[k] for k in de_cima}, graus, (1, 0, 0), pivo))
+
+    assert tc.quadril_sinal(tronco(90)) == pytest.approx([base + 90] * 2, abs=1e-6)
+    assert tc.quadril_sinal(tronco(-10)) == pytest.approx([base - 10] * 2, abs=1e-6)
+    inclinado = girar(tronco(30), 45, (1, 0, 0), (0, 0, 0.1))
+    assert tc.quadril_sinal(inclinado) == pytest.approx([base + 30] * 2, abs=1e-6)
+    assert "quadril_sinal" in tc.MEDIDAS
+
+
+def test_torax_chao_deitado_enrolando_so_a_parte_de_cima():
+    """Abdominais refeitos (lote 3): deitado de costas o tórax fica no chão (0°); enrolar só a parte de cima 30° em
+    volta da transição toracolombar (Spine1), com a lombar parada, dá 30 — e o "tronco" do checagem3d (quadril →
+    pescoço) marca só ~18° do chão, por isso não pegava o tronco subindo demais. Virar o boneco em volta da vertical
+    não muda nada; em pé = 90."""
+    j = em_pe()
+    assert tc.torax_chao(j) == pytest.approx([90], abs=1e-6)
+    deitado = girar(j, -90, (1, 0, 0))                                   # de costas, cabeça pra +Y, rosto pra cima
+    assert tc.torax_chao(deitado) == pytest.approx([0], abs=1e-6)
+    enrolado = dict(deitado, Neck=girar({"n": deitado["Neck"]}, 30, (1, 0, 0), deitado["Spine1"])["n"])
+    assert tc.torax_chao(enrolado) == pytest.approx([30], abs=1e-6)
+    d = enrolado["Neck"] - enrolado["Hips"]
+    assert math.degrees(math.atan2(d[2], math.hypot(d[0], d[1]))) == pytest.approx(18.06, abs=0.01)
+    assert tc.torax_chao(girar(enrolado, 40, (0, 0, 1))) == pytest.approx([30], abs=1e-6)
+    assert tc.medir(dict(com_claviculas(enrolado), **{L + "ToeBase_ponta": enrolado[L + "ToeBase"]
+                                                     for L in ("Left", "Right")}))["torax_chao"] == pytest.approx([30])
+
+
+def test_cabeca_tronco_com_sinal_em_pe_e_curvado():
+    """Crucifixo invertido (lote 3): cabeça na linha do tronco = 0; levantada pra trás (olhando pra frente com o tronco
+    inclinado) dá +, caída pro peito dá − — o "pescoco" do checagem3d não separa os dois. O mesmo número com o boneco
+    curvado 80° à frente (tronco quase horizontal) ou virado; sem a cabeça no dicionário (testes antigos), nada."""
+    j = dict(em_pe(), Head=np.array([0, 0, 1.65]))
+    assert tc.cabeca_tronco(j) == pytest.approx([0], abs=1e-6)
+    pra_tras = dict(j, Head=girar({"h": j["Head"]}, -20, (1, 0, 0), j["Neck"])["h"])   # topo da cabeça vai pra +Y
+    pra_frente = dict(j, Head=girar({"h": j["Head"]}, 15, (1, 0, 0), j["Neck"])["h"])
+    assert tc.cabeca_tronco(pra_tras) == pytest.approx([20], abs=1e-6)
+    assert tc.cabeca_tronco(pra_frente) == pytest.approx([-15], abs=1e-6)
+    curvado = girar(pra_frente, 80, (1, 0, 0), (0, 0, 0.95))                            # tronco quase horizontal
+    assert tc.cabeca_tronco(curvado) == pytest.approx([-15], abs=1e-6)
+    assert tc.cabeca_tronco(girar(pra_tras, 35, (0, 0, 1))) == pytest.approx([20], abs=1e-6)
+    assert tc.cabeca_tronco(em_pe()) == []
+    assert "Head" in tc.JUNTAS and "cabeca_tronco" in tc.MEDIDAS

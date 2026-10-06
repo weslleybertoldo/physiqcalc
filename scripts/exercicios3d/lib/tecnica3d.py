@@ -350,3 +350,96 @@ def cotovelos_largura(j):
 
 MEDIDAS.update({"cotovelos_largura": cotovelos_largura})
 UNIDADE.update({"cotovelos_largura": "×"})
+
+
+# ── desenvolvimento Arnold (lote 3, 05/10/2026): a palma começa virada pro corpo (pegada supinada, como no topo da
+# rosca — ExRx Dumbbell Arnold Press: "palms facing body") e termina virada pra frente em cima, girando pelo meio
+# (palmas uma pra outra), nunca pra fora. A palma sai do punho (cabeça de Hand) e da base do indicador e do mínimo
+# (cabeça de HandIndex1 e HandPinky1), igual ao pegada3d._base que a cena usa pra virar a mão.
+JUNTAS = JUNTAS + ("LeftHandIndex1", "RightHandIndex1", "LeftHandPinky1", "RightHandPinky1")
+
+
+def _palma(j, L):
+    """Normal da palma da mão `L` (pra fora da mão pelo lado da palma), no mundo."""
+    s = 1.0 if L == "Left" else -1.0
+    m = j[L + "Hand"]
+    return _u(-s * np.cross(j[L + "HandIndex1"] - m, j[L + "HandPinky1"] - m))
+
+
+def palma_frente(j):
+    """Palma × frente do tronco, graus [E, D]: 0 = palma virada pra frente (pegada pronada em cima do desenvolvimento),
+    90 = palma de lado (neutra, ou virada pra cima/baixo), 180 = palma virada pro corpo (supinada: topo da rosca e
+    começo do desenvolvimento Arnold)."""
+    _, _, frente = eixos_tronco(j)
+    return [_ang(_palma(j, L), frente) for L, _ in LADOS]
+
+
+def palma_dentro(j):
+    """Palma virada pro meio do corpo (+) ou pra fora (−), graus [E, D]: asin(palma · direção pro meio), no referencial
+    do tronco — 0 = palma pra frente, pra trás, pra cima ou pra baixo; +90 = palmas uma pra outra (pegada neutra);
+    −90 = palma virada pra fora. No Arnold a palma passa pelo + (meio) entre o corpo e a frente."""
+    _, lado, _ = eixos_tronco(j)
+    return [math.degrees(math.asin(max(-1.0, min(1.0, float(_palma(j, L) @ (-s * lado)))))) for L, s in LADOS]
+
+
+MEDIDAS.update({"palma_frente": palma_frente, "palma_dentro": palma_dentro})
+
+
+# ── hiperextensão lombar (lote 3, 05/10/2026): o tronco desce dobrando no quadril até ficar perpendicular às pernas e
+# sobe até ficar alinhado com elas, sem passar da linha (Schoenfeld, Kolber, Contreras e Hanney, Strength Cond J 2017:
+# evitar a hiperextensão da coluna no fim da subida). O "quadril" do checagem3d.medir_juntas não tem sinal: o tronco 10°
+# atrás da linha das pernas dá o mesmo número que 10° à frente.
+def quadril_sinal(j):
+    """Flexão do quadril COM SINAL, graus [E, D]: coxa (quadril → joelho) × prolongamento do tronco pra baixo (pescoço →
+    quadril), no plano sagital do tronco: 0 = coxa alinhada com o tronco (corpo reto), + = coxa à frente da linha do
+    tronco (flexão: tronco dobrado pra frente, pra coxa; 90 = tronco perpendicular à coxa), − = coxa atrás da linha do
+    tronco (o tronco passou da linha das pernas pra trás). No referencial do tronco: vale em pé, curvado ou inclinado."""
+    cima, lado, frente = eixos_tronco(j)
+    out = []
+    for L, _ in LADOS:
+        c = j[L + "Leg"] - j[L + "UpLeg"]
+        c = c - lado * (c @ lado)
+        out.append(math.degrees(math.atan2(c @ frente, c @ -cima)))
+    return out
+
+
+MEDIDAS.update({"quadril_sinal": quadril_sinal})
+
+
+# ── abdominais refeitos (lote 3, 05/10/2026): no supra e no bicicleta só a parte de cima das costas enrola, até as
+# escápulas saírem do chão, e a lombar fica no colchonete (ACE Crunch: "Continue curling up until your upper back is
+# lifted off the mat"; ExRx, do ACSM: "elevation of the trunk to 30° is the important criteria"). O "tronco" do
+# checagem3d (quadril → pescoço × vertical) não pegava o tronco subindo demais: com a lombar parada no chão ele mede
+# só metade do que o tórax sobe — no supra do lote 2 marcava 30° do chão com o tórax a 50°.
+def torax_chao(j):
+    """Tórax (cabeça do Spine1 → base do pescoço: da transição toracolombar, ~T11–T12 no boneco, até ~C7) × o chão,
+    graus: 0 = deitado de costas com as costas no chão, + = a parte de cima subindo (90 = em pé). É quanto as costas
+    saem do colchonete nos abdominais, com a lombar parada no chão."""
+    d = j["Neck"] - j["Spine1"]
+    return [math.degrees(math.atan2(float(d[2]), math.hypot(float(d[0]), float(d[1]))))]
+
+
+MEDIDAS.update({"torax_chao": torax_chao})
+
+
+# ── crucifixo invertido com halteres (lote 3, 06/10/2026): com o tronco quase horizontal a cabeça fica na linha da
+# coluna, olhando pro chão (NSCA PTQ 9.4, posição de quadril dobrado: "neutral spine position (not rounded over) with
+# their chin tucked in looking straight at the floor"). O "pescoco" do checagem3d.medir_juntas não tem sinal: a cabeça
+# caída pro chão e a cabeça levantada olhando pra frente dão o mesmo número.
+JUNTAS = JUNTAS + ("Head",)
+
+
+def cabeca_tronco(j):
+    """Cabeça (base do pescoço → base da cabeça) × eixo do tronco (quadril → pescoço), no plano sagital do tronco, graus:
+    0 = cabeça na linha do tronco, + = levantada pra trás (extensão: olhando pra frente com o tronco inclinado), − = caída
+    pra frente (flexão, queixo pro peito). No referencial do tronco: vale em pé, curvado ou deitado (o boneco em pé, no
+    repouso, mede ~−11°). Sem a cabeça nas juntas (dicionários montados à mão nos testes antigos), devolve []."""
+    if "Head" not in j:
+        return []
+    cima, lado, frente = eixos_tronco(j)
+    c = j["Head"] - j["Neck"]
+    c = c - lado * (c @ lado)
+    return [math.degrees(math.atan2(-float(c @ frente), float(c @ cima)))]
+
+
+MEDIDAS.update({"cabeca_tronco": cabeca_tronco})

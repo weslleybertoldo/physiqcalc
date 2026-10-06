@@ -1,0 +1,56 @@
+{
+  "uuid": "4bacdb24-62da-5754-a4da-2e0047b13f94",
+  "nome": "Tríceps Testa na Polia Baixa Deitado",
+  "cena": "triceps_testa_na_polia",
+  "grupo": "Tríceps",
+  "subgrupo": "Tríceps (cabeça longa e lateral)",
+  "padrao_movimento": "triceps_frances",
+  "equipamento": "polia",
+  "variacao": "deitado (testa), polia baixa",
+  "alvos": ["triceps"],
+  "auxiliares": [],
+  "camera": {"az": 62, "el": 14, "dist": 4.6, "alvo": [0, 0.62, 0.85]},
+  "camera_vistas": {"dist": 4.3, "alvo": [0, 0.6, 0.85]},
+  "ida_s": 1.5,
+  "movimento": "Deitado de costas no banco reto, com a cabeça perto da polia (a roldana na posição mais baixa, atrás da cabeça), a cabeça, as costas e o glúteo apoiados e os pés chapados no chão, segura a barra reta da polia com as palmas viradas para os pés (pegada pronada fechada, com o polegar em volta da barra), mãos um pouco por dentro da largura dos ombros, e estica os braços com a barra em cima do rosto, os braços um pouco inclinados para trás, na direção da polia; com os braços parados nessa posição, os cotovelos apontando para o teto e na largura dos ombros (sem abrir) e os punhos retos, dobra só os cotovelos e desce a barra devagar, passando por cima da testa, até ela ficar logo acima do alto da cabeça, sem encostar; estica os cotovelos de volta até os braços ficarem estendidos. O cabo vai da polia até o meio da barra, por cima da cabeça.",
+  "cinesiologia": {
+    "plano": "sagital (flexão e extensão do cotovelo), cadeia cinética aberta; a resistência vem pelo cabo, que puxa a barra na direção da polia, atrás da cabeça",
+    "articulacoes": "cotovelo (flexão na descida, extensão na subida); ombro parado, com o braço um pouco além da vertical, inclinado para a polia (cerca de 100° de flexão do ombro); punho reto e firme; cabeça, costas e glúteo apoiados no banco e os dois pés no chão",
+    "agonistas": "tríceps braquial (ExRx: Target \"Triceps Brachii\"), as 3 cabeças: a longa, que sai da escápula e cruza também o ombro, e a lateral e a medial, só no cotovelo (Landin 2018: \"With the long head arising from the infraglenoid tubercle, the TB affects motion at both joints by acting as an extensor at each\"); a medial trabalha em toda extensão do cotovelo e a longa e a lateral quando ela é feita contra resistência (Landin 2018: \"The medial head is involved in all forms of elbow extension, while the long and lateral heads become active only when the elbow is extended against resistance\")",
+    "sinergistas": "nenhum (ExRx: Synergists \"None\")",
+    "estabilizadores": "deltoide anterior e posterior, peitoral maior (porções clavicular e esternal), latíssimo do dorso e redondo maior seguram o braço parado; os flexores do punho seguram a barra (ExRx: Stabilizers \"Deltoid, Anterior; Pectoralis Major, Clavicular; Pectoralis Major, Sternal; Latissimus Dorsi; Teres Major; Deltoid, Posterior; Wrist Flexors\")",
+    "fases": "descida excêntrica (dobra os cotovelos inspirando), subida concêntrica (estica os cotovelos soltando o ar) (ACE, na versão com barra: \"Inhale and slowly bend the elbows\"; \"Exhale and slowly return to your starting position\")"
+  },
+  "referencias": [
+    "ExRx.net — Cable Lying Triceps Extension. https://exrx.net/WeightExercises/Triceps/CBLyingTriExt (lido na cópia do Internet Archive de 13/04/2021; o site direto bloqueia a leitura automática)",
+    "Barbell Medicine — The 6 Best Triceps Exercises with Cable, item 3 \"Cable Lying Triceps Extensions\" (atualizado em 13/05/2026). https://www.barbellmedicine.com/blog/best-triceps-exercises-with-cable/ — usado só na montagem (banco perto da polia baixa, cabeça pro lado da polia); o movimento descrito lá mexe também o ombro e não é a variação testa",
+    "American Council on Exercise (ACE) — Lying Barbell Triceps Extensions. https://www.acefitness.org/resources/everyone/exercise-library/36/lying-barbell-triceps-extensions/",
+    "Achievable — CSCS Textbook (preparatório da certificação CSCS da NSCA), cap. 15.6 \"Exercise list part 5\": Lying triceps extension; e cap. 15.1 \"Fundamentals of exercise technique\": five-point body contact position. https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-5",
+    "Landin D, Thompson M, Jackson M. Functions of the Triceps Brachii in Humans: A Review. J Clin Med Res. 2018;10(4):290-293. doi:10.14740/jocmr3340w",
+    "Synergee — Straight Bar Cable Attachment (medidas da barra: 20\", pegada de borracha de 1,2\", engate giratório no meio). https://synergeefitness.com/products/synergee-straight-bar-cable-attachment"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no banco", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3], "fonte": "Achievable/CSCS (five-point body contact position: \"Shoulders/upper back on the bench\")"},
+      {"nome": "glúteo apoiado no banco", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3], "fonte": "Achievable/CSCS (idem: \"Buttocks on the bench or seat\")"},
+      {"nome": "cabeça apoiada no banco", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3], "fonte": "Achievable/CSCS (idem: \"Head on the bench or pad\"); Barbell Medicine (\"With your head on the bench close to the pulley\")"},
+      {"nome": "a barra e o engate nunca encostam na cabeça", "equipamento": "barra_polia", "partes": ["Head", "Neck"], "mm": [25, 5000], "fonte": "Weslley (a barra nunca encosta nem entra na cabeça); Achievable/CSCS (\"Lower the bar until it almost touches the head or face\"). Medido da PELE: o cabelo fica por cima dela (a folga do cabelo tem regra própria em folgas)"},
+      {"nome": "embaixo a barra fica logo acima do alto da cabeça, sem encostar", "equipamento": "barra_polia", "partes": ["Head"], "t": 1.0, "mm": [30, 70], "fonte": "ACE (\"lowering the bar in a controlled manner towards your forehead or slightly behind your head\"; \"Lower the bar until it sits just above your forehead\"); Achievable/CSCS (\"Lower the bar until it almost touches the head or face\"). A cena para a barra a 30 mm do cabelo, em cima do alto da cabeça (o braço inclinado pra polia leva a barra um pouco além da testa)"},
+      {"nome": "o cabo nunca encosta na cabeça", "equipamento": "polia_cabo", "partes": ["Head", "Neck"], "mm": [25, 5000], "fonte": "Weslley (o cabo segue a barra e nunca passa por dentro do corpo nem da cabeça); medido da pele"}
+    ],
+    "folgas": [
+      {"nome": "o cabo não entra no cabelo", "equipamento": "polia_cabo", "de": "cabelo", "mm": [10, 5000], "fonte": "Weslley (o cabo nunca passa por dentro da cabeça)"},
+      {"nome": "a barra e o engate não entram no cabelo", "equipamento": "barra_polia", "de": "cabelo", "mm": [10, 5000], "fonte": "Weslley (a barra nunca encosta nem entra na cabeça)"},
+      {"nome": "o cabo passa por cima do banco", "equipamento": "polia_cabo", "de": "banco", "mm": [20, 5000], "fonte": "Weslley (o cabo nunca passa por dentro do banco)"}
+    ],
+    "angulos": [
+      {"nome": "braços estendidos em cima", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 15], "fonte": "ExRx (\"With arms extended, position bar over forehead\"); Achievable/CSCS (\"with the elbows fully extended and the arms parallel\")"},
+      {"nome": "braço parado o movimento todo, um pouco inclinado pra trás, pra polia (o tronco está deitado: 90° do tronco = vertical)", "medida": "braco_frente", "t": "todos", "graus": [94, 106], "fonte": "ExRx, na polia (\"With arms extended, position bar over forehead\"): o braço vai além da vertical, pro lado da cabeça e da polia. Ao pé da letra (barra em cima da testa) seriam ~26° no boneco e a barra passaria por trás da cabeça (ExRx: \"As bar nears head, move elbows slightly back just enough to allow bar to clear around curvature of head\"), que é outra variação; a cena usa 10° (barra em cima do rosto no começo e logo acima do alto da cabeça no fim). Achievable/CSCS (\"Keeping the upper arms stationary\"); ACE (\"Lower the bar until it sits just above your forehead or until you notice the upper arms begin to drift backwards\": o braço não desliza durante o movimento). A faixa de ±6° é da cena"},
+      {"nome": "cotovelos sem abrir pro lado (braços paralelos)", "medida": "cotovelo_tronco", "t": "todos", "graus": [-6, 6], "fonte": "Achievable/CSCS (\"Point the elbows toward the knees (not out to the sides)\"; \"Keep the upper arms parallel to each other\"); ACE (\"keep your elbows shoulder-width apart\")"},
+      {"nome": "pegada fechada e estreita, na largura dos ombros ou um pouco menos", "medida": "pegada_largura", "t": "todos", "faixa": [0.75, 1.05], "fonte": "ExRx (\"grasp bar with narrow overhand grip\"); Achievable/CSCS (\"a closed, pronated grip about 12 inches (30 cm) wide\" = 0,75 da distância entre as articulações dos ombros do boneco, 40 cm); ACE (\"keep your elbows shoulder-width apart\")"},
+      {"nome": "punho reto (neutro)", "medida": "flexao", "junta": "Hand", "t": "todos", "graus": [0, 15], "fonte": "ACE (\"Maintain a neutral wrist position (no flexion or extension at the wrist)\"); Achievable/CSCS (\"Keep the wrists stiff\"). Os poucos graus medidos são desvio de lado, pra linha dos nós dos dedos ficar na barra, sem dobrar pra frente nem pra trás"},
+      {"nome": "cotovelo bem dobrado embaixo (barra logo acima do alto da cabeça)", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [95, 115], "fonte": "ACE (\"Lower the bar until it sits just above your forehead\"); Achievable/CSCS (\"Lower the bar until it almost touches the head or face\"). Com o braço 10° pra trás, a barra chega a 30 mm do cabelo com o cotovelo a ~105°"}
+    ]
+  }
+}

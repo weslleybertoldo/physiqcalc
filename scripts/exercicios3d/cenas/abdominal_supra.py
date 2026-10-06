@@ -1,9 +1,15 @@
-# Abdominal Supra (crunch) — cena da fábrica 3D (lote 2, 05/10/2026).
+# Abdominal Supra (crunch) — cena da fábrica 3D (lote 2, 05/10/2026; refeito no lote 3 no mesmo dia).
 # t = 0 deitado de costas no colchonete, joelhos dobrados (~100°) e pés chapados na largura do quadril, mãos atrás da
-# cabeça com a cabeça apoiada nelas e os cotovelos abertos pra trás, no colchonete · t = 1 tronco enrolado a ~30° do
-# chão (da pelve à base do pescoço; Moura 2011: "flexão controlada do tronco até aproximadamente 30°"), escápulas fora
-# do chão (Hildenbrand 2004) e a lombar encostada (ACE: "feet, tailbone and lower back should remain in contact with
-# the mat"). Joelho: Hildenbrand 2004 e Moura 2011 usam 90°; o ACE põe o calcanhar a 30–46 cm do cóccix (~105–125°
+# cabeça com a cabeça apoiada nelas e os cotovelos abertos pra trás, no colchonete · t = 1 só a parte de cima das
+# costas enrola, até as escápulas saírem do chão (Hildenbrand 2004: "lifting the head and shoulders such that the
+# scapulae were lifted above the ground"; ACE: "Continue curling up until your upper back is lifted off the mat"): o
+# tórax (da transição toracolombar à base do pescoço) fica a ~30° do chão (ACSM, citado pelo ExRx: "elevation of the
+# trunk to 30° is the important criteria"; YMCA: "30 degree spinal flexion"; Moura 2011: "flexão controlada do tronco
+# até aproximadamente 30°") e a lombar encostada (ACE: "feet, tailbone and lower back should remain in contact with
+# the mat"). REFEITO (Weslley, 05/10/2026, olhando no app: o tronco subia demais, parecia abdominal completo): o lote 2
+# media os 30° da pelve à base do pescoço — com a lombar no chão isso deixava o tórax a 50° do chão e a parte de cima
+# dele a 78°, com o peito e a cabeça quase na altura dos joelhos. Agora a ficha mede o tórax (tecnica3d.torax_chao).
+# Joelho: Hildenbrand 2004 e Moura 2011 usam 90°; o ACE põe o calcanhar a 30–46 cm do cóccix (~105–125°
 # neste boneco) — a cena fica no meio. Mãos atrás da cabeça (ACE: "Place your hands behind your head... pulling your
 # elbows back... This elbow position should be maintained"; ExRx: "Place hands behind neck or head"), sem entrelaçar:
 # palmas pra cima embaixo da nuca, dedos juntos em V pro alto da cabeça encostando no cabelo. Quem sobe é a coluna
@@ -29,9 +35,11 @@ AFUNDA_PE = 0.001
 PELVE = 3             # anteversão da pelve em relação à lombar embaixo (graus): com o quadril dobrado a pele do
                       # glúteo sobe ~1 cm junto com a coxa; 3° fazem o glúteo encostar com as costas afundando só 4 mm
                       # (descendo o corpo inteiro, as costas afundavam 12 mm no colchonete)
-CURL = (("Spine", 2), ("Spine1", 32), ("Spine2", 34))   # flexão de cada vértebra em cima (graus): o tronco fica a
-                      # 30° do chão e a pele de baixo das escápulas 19 mm acima do colchonete. Com 6/22/24 o tronco
-                      # parava em 21° (a retroversão abaixa o tronco); com mais na lombar (Spine) ela saía do chão
+CURL = (("Spine", 2), ("Spine1", 28), ("Spine2", 11))   # flexão de cada osso da coluna em cima (graus): o tórax fica
+                      # a ~30° do chão e a pele das costas acima da ponta das escápulas (~T8 pra cima) ~11 mm acima do
+                      # colchonete. A dobra fica mais embaixo (Spine1: ~T11–T8) que em cima (Spine2: ~T7–C7): com a
+                      # mesma inclinação do tórax, é a dobra de baixo que tira as escápulas do chão. Lote 2: 2/32/34
+                      # (tórax a 50° do chão). Com mais na lombar (Spine) ela sai do chão
 PSI = 40              # dedos em V: do "pro meio" girando pro alto da cabeça (graus) — as pontas chegam no meio da nuca
                       # sem uma mão passar por cima da outra; o punho dobra só ~24°
 TAU = 15              # palma virada um pouco pro meio, pra cabeça (graus)
@@ -42,9 +50,10 @@ AFUNDA_COTOVELO = 0.002
 FOLGA_CABELO = 0.001  # o cabelo da nuca encosta nas palmas: o pescoço estende até sobrar 1 mm
 ABRACO = (35, 25)     # dobra máxima das 2 últimas falanges de cada dedo (graus): cada dedo dobra até encostar no
                       # cabelo, sem entrar nele mais que 0,5 mm
-RETRO = 6             # retroversão da pelve em cima (graus, em volta do sacro no colchonete): a lombar, que embaixo
-                      # tem a curva natural (~1,3 cm de vão no meio), encosta no colchonete. Com 8–12° o tronco subia
-                      # menos e a lombar afundava 8–23 mm
+RETRO = 6.5           # retroversão da pelve em cima (graus, em volta do sacro no colchonete): a lombar, que embaixo
+                      # tem a curva natural (~1,3 cm de vão no meio), encosta no colchonete (vão de ~2 mm no meio).
+                      # Com menos a lombar fica no ar (5–6 mm com 5,5°); com mais ela e o fim do tórax afundam no
+                      # colchonete e as escápulas descem (retroversão abaixa o tronco inteiro)
 PESCOCO_CIMA = 12     # flexão do pescoço em cima (graus, além do começo): queixo um pouco pro peito, sem encostar
                       # (queixo × fúrcula do esterno: 71 mm embaixo, 63 mm em cima)
 AFUNDA_GLUTEO = 0.002
@@ -54,6 +63,12 @@ def montar(bon):
     rig = bon.rig
     PB = rig.pose.bones
     colchonete = e3.caixa("colchonete", (0, 0.0, TOPO / 2), (0.62, 1.90, TOPO), e3.mat_estofado(), chanfro=0.004)
+    # região das escápulas, marcada em pé (igual à do bicicleta): costas entre a ponta de baixo da escápula (~T7) e a
+    # espinha dela, de 4 a 15 cm do meio — só pro diagnóstico (info) de quanto elas saem do chão
+    co0, _, (nomes0, dono0) = ck._avaliar(bon.corpo, 1)
+    escapulas = (np.array([n in ("Hips", "Spine", "Spine1", "Spine2") for n in nomes0] + [False])[dono0]
+                 & (co0[:, 1] > 0.0) & (co0[:, 2] > 1.20) & (co0[:, 2] < 1.40) & (np.abs(co0[:, 0]) > 0.04)
+                 & (np.abs(co0[:, 0]) < 0.15))
     tornozelo_z = p3.ponta(rig, "LeftLeg").z
     coxa = (p3.cabeca(rig, "LeftLeg") - p3.cabeca(rig, "LeftUpLeg")).length
     canela = (p3.cabeca(rig, "LeftFoot") - p3.cabeca(rig, "LeftLeg")).length
@@ -376,7 +391,10 @@ def montar(bon):
         for n in OSSOS_T:
             PB[p3.P + n].matrix_basis = base[n].copy()
         p3.atualizar()
-        p3.girar_osso(rig, "Hips", p3.rot_x(-RETRO * t), pivo=sacro)    # retroversão: a crista ilíaca desce
+        # retroversão (a crista ilíaca desce) adiantada em relação ao enrolar: a lombar encosta no começo da subida e
+        # fica no chão (ACE: "lower back should remain in contact with the mat at all times"); com ela junto do enrolar
+        # (linear em t) o tórax mais baixo do lote 3 deixava a lombar 3–4 mm no ar em t = 0,80–0,85
+        p3.girar_osso(rig, "Hips", p3.rot_x(-RETRO * (1 - (1 - t) ** 2)), pivo=sacro)
         for n, g in CURL:
             p3.girar_osso(rig, n, p3.rot_x(g * t))
         p3.girar_osso(rig, "Neck", p3.rot_x(PESCOCO_CIMA * t))
@@ -400,9 +418,10 @@ def montar(bon):
         # colchonete
         enc = co[meio & (co[:, 2] < TOPO + 0.005) & (co[:, 1] > j["Hips"][1]) & (co[:, 1] < j["Neck"][1])]
         sai = float(enc[:, 1].max()) if len(enc) else float("nan")
-        return ("tronco %.0f° do chão | pele acima do colchonete (mm): %s lombar-meio %.0f | costas no chão até y %.3f"
-                " | queixo × fúrcula %.0f mm" % (
-                    tronco, " ".join("%s %.0f" % kv for kv in costas.items()), (lomb[:, 2].min() - TOPO) * 1000, sai,
+        return ("tórax %.0f° do chão (pelve → pescoço %.0f°) | escápulas %.0f mm acima do colchonete | pele acima do "
+                "colchonete (mm): %s lombar-meio %.0f | costas no chão até y %.3f | queixo × fúrcula %.0f mm" % (
+                    ck.tc.torax_chao(j)[0], tronco, (co[escapulas][:, 2].min() - TOPO) * 1000,
+                    " ".join("%s %.0f" % kv for kv in costas.items()), (lomb[:, 2].min() - TOPO) * 1000, sai,
                     np.linalg.norm(co[i_queixo] - co[i_furcula]) * 1000))
 
     return Cena(pose, [], pegadas=[], apoio_mm=0.0, foco_luz=(0, 0.0, 0.3),

@@ -1,4 +1,11 @@
-# Abdominal Bicicleta — cena da fábrica 3D (lote 2, 05/10/2026).
+# Abdominal Bicicleta — cena da fábrica 3D (lote 2, 05/10/2026; refeito no lote 3 no mesmo dia).
+# REFEITO (Weslley, 05/10/2026, olhando no app: "Na bicicleta só as escápulas saem do chão também. O problema maior é
+# só esse, o movimento está correto"): o tórax subia a 49° do chão no meio da pedalada e 55° nas pontas — o tronco
+# quase sentado. Agora só a parte de cima das costas sai do chão: no meio o tórax fica a ~32° (escápulas ~1 cm fora,
+# como no fim do abdominal supra) e nas pontas a ~40°, porque o giro sobe o ombro de cima — a escápula de baixo fica
+# rente ao chão (ACE: "lifting your left shoulder blade off the floor and rotating your trunk"). Com o tórax baixo, a
+# parte de baixo dele (~T8–T11) fica apoiada no colchonete e o giro vem de cima (Spine2, ~T7–C7): girando embaixo,
+# o lado de baixo das costas entrava no chão. O giro, as pernas, as mãos e os cotovelos ficam como no lote 2.
 # t = 0 cotovelo DIREITO indo em direção ao joelho ESQUERDO: tronco enrolado e girado pra esquerda, joelho esquerdo
 # dobrado vindo pro peito e a perna direita esticada no ar · t = 1 o contrário (cotovelo esquerdo → joelho direito,
 # perna esquerda esticada) — o app toca 0 → 1 e volta 1 → 0, então a volta é a outra pedalada, simétrica.
@@ -12,7 +19,8 @@
 # Como o rig faz isso: mãos atrás da cabeça montadas EM PÉ (IK do braço → FK, palma virada pra cabeça, dedos juntos
 # curvando até encostar no cabelo, polegar solto) — o braço vira filho do tórax e acompanha o tronco sem a mão sair
 # da cabeça; deitado, a pelve vai em retroversão e a lombar dobra até a curva sumir (lombar inteira no colchonete);
-# o tórax (Spine1/Spine2) enrola e gira; a lombar e a pelve não giram. Pernas por FK (quadril e joelho), em linha reta.
+# o tórax (Spine1/Spine2) enrola e a parte de cima dele (Spine2) gira; a lombar e a pelve não giram. Pernas por FK
+# (quadril e joelho), em linha reta.
 import math
 import numpy as np
 from mathutils import Matrix, Vector
@@ -25,7 +33,9 @@ import checagem3d as ck
 from cena import Cena
 
 TOPO = 0.012                  # colchonete de 12 mm no chão (o da elevação de pernas)
-AFUNDA = 0.004                # pele da lombar dentro do colchonete
+AFUNDA = 0.002                # pele da lombar dentro do colchonete (lote 2: 4 mm; com o tórax baixo, na ponta do giro
+                              # o lado de baixo da lombar afunda ~7 mm a mais e passava dos 9 mm da regra "costas sem
+                              # atravessar o colchonete")
 MAO_ANG = 112                 # onde a mão encosta na cabeça, graus em volta do eixo da cabeça (0 = rosto, 90 = orelha
                               # esquerda, 180 = nuca): atrás da orelha
 MAO_Z = 1.615                 # altura do contato na cabeça em pé (m): na altura do alto da orelha
@@ -37,11 +47,19 @@ POLO_COTOVELO = (0.55, -0.28, 0.0)   # polo do cotovelo em relação ao ombro (m
 DEDOS_DOBRA = (22, 18, 10)    # dobra de cada falange (graus × λ) quando o dedo se curva pra encostar na cabeça
 RETRO = 20                    # retroversão da pelve (graus): a lombar desce até o colchonete
 LOMBAR = 30                   # flexão da lombar (osso Spine) em relação à pelve: a curva da lombar some
-ENROLA = (24, 24)             # flexão do tórax no meio da pedalada (Spine1, Spine2), graus: escápulas fora do chão
-ENROLA_PONTA = (31, 31)       # flexão do tórax nas pontas (cotovelo indo ao joelho)
-GIRO = 48                     # giro do tórax nas pontas (graus): + = pra esquerda (ombro direito sobe)
-GIRO_PARTE = (0.0, 0.45, 0.55)   # quanto do giro vai em cada vértebra do rig (Spine, Spine1, Spine2): a lombar fica
-                                 # no chão e quem gira é o tórax
+ENROLA = (17, 8)              # flexão do tórax no meio da pedalada (Spine1, Spine2), graus: o tórax a ~32° do chão e as
+                              # escápulas ~1 cm fora dele (só elas saem do chão). Lote 2: (24, 24), tórax a 49°
+ENROLA_PONTA = (22, 12)       # flexão do tórax nas pontas (cotovelo indo ao joelho): o mínimo pra escápula do lado
+                              # de baixo do giro ficar rente ao chão sem entrar nele (~5 mm); tórax a ~40°. Lote 2:
+                              # (31, 31)
+GIRO = 44                     # giro do tórax nas pontas (graus): + = pra esquerda (ombro direito sobe). Mede ±38° do
+                              # tórax em relação à pelve, igual ao lote 2 (lá 48 com o giro espalhado em Spine1 e
+                              # Spine2)
+GIRO_PARTE = (0.0, 0.0, 1.0)  # quanto do giro vai em cada vértebra do rig (Spine, Spine1, Spine2): a lombar e o fim do
+                              # tórax (~T8–T11, que agora ficam no colchonete) não giram; quem gira é a parte de cima
+                              # (~T7–C7) — as vértebras de cima giram mais que as de baixo (Wilke 2017: 10–12° por
+                              # segmento em T1–T10, 7–8° em T10–T12). Lote 2: (0, 0,45, 0,55), que com o tórax baixo
+                              # levava o lado de baixo das costas pra dentro do chão
 DENTRO = (68, 110)            # perna que vem pro peito: quadril (graus além da pelve) e joelho
 FORA = (8, 5)                 # perna que estica, no ar
 PLANTAR = 20                  # pés soltos, apontando pra longe (flexão plantar, graus)
@@ -435,12 +453,14 @@ def montar(bon):
     def info():
         m = medidas()
         perto = lambda v: ("%.0f" % v) if v < 100 else ">100"          # pele a pele, só mede até 10 cm
-        return ("giro do tórax %+.0f° | escápula E %.0f D %.0f mm do colchonete | cotovelo D→joelho E %.0f mm, "
-                "cotovelo E→joelho D %.0f mm (centro a centro) | pele do braço × perna do outro lado E %s D %s mm | "
+        return ("tórax %.0f° do chão | giro do tórax %+.0f° | escápula E %.0f D %.0f mm do colchonete | "
+                "cotovelo D→joelho E %.0f mm, cotovelo E→joelho D %.0f mm (centro a centro) | pele do braço × perna do "
+                "outro lado E %s D %s mm | "
                 "braço mais baixo E %.0f D %.0f mm do chão | coxa × tronco cruzando E %.1f D %.1f mm (fora da virilha) | "
                 "mão × cabeça E %.1f D %.1f mm | mão × mão %.1f mm | pescoço × tórax %.0f° (a curva do pescoço de pé, "
                 "sem dobrar)" % (
-                    m["giro"], m["escapula"]["E"], m["escapula"]["D"], m["cot_joelhoR"], m["cot_joelhoL"],
+                    ck.tc.torax_chao(ck.posicoes(rig))[0], m["giro"], m["escapula"]["E"], m["escapula"]["D"],
+                    m["cot_joelhoR"], m["cot_joelhoL"],
                     perto(m["cot_coxaL"]), perto(m["cot_coxaR"]), m["braco_zL"], m["braco_zR"], m["coxa_troncoL"][0],
                     m["coxa_troncoR"][0], m["maoL"], m["maoR"], m["mao_mao"], m["pescoco_torax"]))
 

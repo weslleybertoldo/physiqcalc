@@ -1,0 +1,90 @@
+{
+ "uuid": "97550668-6b59-4f4b-a5ac-d56b0452880b",
+ "nome": "Hiperextensão Lombar",
+ "cena": "hiperextensao_lombar",
+ "grupo": "Lombar",
+ "subgrupo": "Eretores da espinha · glúteo máximo · isquiotibiais",
+ "padrao_movimento": "extensao_lombar",
+ "equipamento": "peso_corporal",
+ "variacao": "no banco",
+ "alvos": [
+  "lombar"
+ ],
+ "auxiliares": [
+  "gluteo",
+  "posterior"
+ ],
+ "camera": {
+  "az": 100,
+  "el": 16,
+  "dist": 4.1,
+  "alvo": [
+   0,
+   0.02,
+   0.9
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.7,
+  "alvo": [
+   0,
+   0.05,
+   0.85
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "No banco de hiperextensão a 45°, de bruços, com a parte de cima das coxas no apoio acolchoado — a borda de cima dele abaixo da dobra do quadril, para o tronco dobrar livre sem a barriga apertar o apoio —, a parte de trás dos tornozelos presa sob os rolos, os pés chapados na plataforma, as pernas estendidas e paralelas e os braços cruzados à frente do peito: começa com o tronco dobrado para baixo a partir do quadril, perpendicular às pernas, com as costas retas (coluna neutra, sem arredondar) e a cabeça na linha do tronco; sobe o tronco estendendo o quadril até o corpo ficar reto, alinhado com as pernas, sem passar dessa linha (sem arquear a lombar para trás); desce devagar, dobrando de novo só no quadril, até o tronco ficar perpendicular às pernas.",
+ "cinesiologia": {
+  "plano": "sagital (extensão do quadril com a coluna parada); as pernas ficam presas no banco e quem se move é o tronco",
+  "articulacoes": "quadril (extensão na subida, de ~90° de flexão até o corpo reto; flexão na descida); coluna lombar e torácica neutras e paradas, com a pelve travada junto (os eretores seguram a coluna em isometria); joelhos quase estendidos e tornozelos parados (pés chapados na plataforma); ombros, cotovelos e mãos parados (braços cruzados à frente do peito)",
+  "agonistas": "eretores da espinha (alvo do ExRx). Com a coluna neutra eles trabalham segurando a coluna enquanto o quadril estende (NSCA Coach 2020: \"when the spine remains neutral, the spinal erectors statically contract, stabilize the spine, and allow the glutes and hamstrings to contract dynamically to extend the hips\")",
+  "sinergistas": "glúteo máximo, isquiotibiais e adutor magno (ExRx). No banco a 45° o glúteo máximo ativou 140% mais e o bíceps femoral 174% mais que na máquina de extensão lombar sentado, e o bíceps femoral 71% mais que no levantamento terra romeno — a diferença aparece mais na metade de cima do movimento —, e os eretores ativaram igual nos três exercícios (Andersen et al. 2021)",
+  "estabilizadores": "nenhum significativo (ExRx); o abdômen ajuda a manter a pelve e a coluna neutras",
+  "fases": "subida concêntrica (extensão do quadril) e descida excêntrica e controlada. No banco a 45° o torque no quadril fica alto o movimento todo — máximo no meio — e não cai a zero nem em cima nem embaixo, ao contrário do banco horizontal e do good morning (Contreras et al. 2013)"
+ },
+ "referencias": [
+  "ExRx.net — 45° Hyperextension (arms crossed). https://exrx.net/WeightExercises/ErectorSpinae/BW45HyperextensionArmsCrossed (lido na cópia do Internet Archive de 26/10/2025): \"Position thighs prone on padding. Hook heels on platform lip or under padded brace. Cross arms across chest.\"; \"Raise upper body until hips and waist are fully extended. Lower body by bending hips and waist until mild stretch is felt or torso is approximately perpendicular to legs.\"; \"Position pad high enough to evenly distribute body weight on thigh but not so high that range of motion is limited; abdomen should not press on top side of pad when upper body is lowered.\"; músculos: alvo Erector Spinae, sinergistas Gluteus Maximus, Hamstrings, Adductor Magnus",
+  "Andersen V, Pedersen H, Fimland MS, Shaw M, Solstad TEJ, Stien N, Cumming KT, Saeterbakken AH. Comparison of Muscle Activity in Three Single-Joint, Hip Extension Exercises in Resistance-Trained Women. J Sports Sci Med. 2021;20(2):181-187. doi:10.52082/jssm.2021.181: \"performed in a 45-degree Roman chair (Lower back bench PG05, Technogym, Cesena, Italy)\"; \"The participants started in an upright position before lowering themselves down until the hip angle was approximately 90 degrees before returning to the starting position. The back had to be straight with a natural sway throughout the whole movement.\"",
+  "Contreras B, Cronin J, Schoenfeld BJ, Nates R, Sonmez GT. Are all hip extension exercises created equal? Strength Cond J. 2013;35(2):17-22 (manuscrito aceito): \"The spine and pelvis stay locked in neutral positions while the entire movement occurs at the hips.\"; \"The hips flex to 90 degrees\"; \"The knees stay relatively straight in each variation.\"",
+  "Schoenfeld B, Kolber MJ, Contreras B, Hanney WJ. Roman Chair Back Extension Is/Is Not a Safe and Effective Exercise? Strength Cond J. 2017;39(3):42-45: \"Using a controlled cadence and limiting spinal motion so that end-range spinal hyperextension is avoided, potential damage to the posterior elements of the spine can be minimized.\"; \"it seems prudent to avoid end ranges of both flexion and extension\"; \"crossing the arms in the 'mummy' position\"; \"an effort to stop the extension movement before end-available range is recommended\"",
+  "O'Toole K. Implementing core training concepts into strength training for sport. NSCA Coach. 2020;7(1):22-24: \"hip extension exercises like back extensions, good mornings, or hip thrusts with a neutral spine can be implemented ... when the spine remains neutral, the spinal erectors statically contract, stabilize the spine, and allow the glutes and hamstrings to contract dynamically to extend the hips.\"",
+  "Medidas do banco a 45°: Technogym Pure Strength 45 Degree Hyperextension Bench, modelo PG05 (\"47\\\" L by 30\\\" W by 36\\\" H\"; ficha do produto na Greentoe); Body-Solid GHYP345 45 Degree Back Hyperextension (\"exact 45° angle\", \"Extra-thick 3\\\" DuraFirm support pads\"; ficha do produto na Abt)"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "os pés ficam chapados na plataforma do banco a 45° (ExRx: \"Hook heels on platform lip or under padded brace\"), não no chão; a planta e os dedos de cada pé são conferidos encostando na plataforma nas zonas abaixo, e as pernas não saem do lugar (só o tronco gira em volta do quadril)",
+  "zonas": [
+   {"nome": "coxa esquerda apoiada no estofado", "equipamento": "banco_hiper_estofado", "partes": ["LeftUpLeg"], "mm": [-12, 3], "fonte": "ExRx (\"Position thighs prone on padding\")"},
+   {"nome": "coxa direita apoiada no estofado", "equipamento": "banco_hiper_estofado", "partes": ["RightUpLeg"], "mm": [-12, 3], "fonte": "ExRx (\"Position thighs prone on padding\")"},
+   {"nome": "embaixo a barriga não aperta o estofado (nem encosta)", "equipamento": "banco_hiper_estofado", "partes": ["Hips", "Spine", "Spine1", "Spine2"], "t": 0.0, "mm": [10, 5000], "fonte": "ExRx (\"abdomen should not press on top side of pad when upper body is lowered\")"},
+   {"nome": "embaixo os braços cruzados não encostam no estofado", "equipamento": "banco_hiper_estofado", "partes": ["LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand"], "t": 0.0, "mm": [3, 5000]},
+   {"nome": "parte de trás do tornozelo esquerdo presa sob o rolo", "equipamento": "banco_hiper_rolos", "partes": ["LeftLeg", "LeftFoot"], "mm": [-10, 3], "fonte": "ExRx (\"Hook heels on platform lip or under padded brace\")"},
+   {"nome": "parte de trás do tornozelo direito presa sob o rolo", "equipamento": "banco_hiper_rolos", "partes": ["RightLeg", "RightFoot"], "mm": [-10, 3], "fonte": "ExRx (idem)"},
+   {"nome": "calcanhar e meio do pé esquerdo na plataforma (pé chapado)", "equipamento": "banco_hiper_plataforma", "partes": ["LeftFoot"], "mm": [-8, 3], "fonte": "ExRx (\"Hook heels on platform lip\")"},
+   {"nome": "dedos do pé esquerdo na plataforma (pé chapado)", "equipamento": "banco_hiper_plataforma", "partes": ["LeftToeBase"], "mm": [-8, 3]},
+   {"nome": "calcanhar e meio do pé direito na plataforma (pé chapado)", "equipamento": "banco_hiper_plataforma", "partes": ["RightFoot"], "mm": [-8, 3], "fonte": "ExRx (idem)"},
+   {"nome": "dedos do pé direito na plataforma (pé chapado)", "equipamento": "banco_hiper_plataforma", "partes": ["RightToeBase"], "mm": [-8, 3]}
+  ],
+  "alturas": [
+   {"nome": "cabeça longe do chão embaixo", "partes": ["Head"], "acima_de": "chao", "mm": [200, 5000]}
+  ],
+  "contatos": [
+   {"nome": "mão direita no ombro esquerdo (frente do deltoide), encostando sem entrar", "partes": ["RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Spine", "Spine1", "Spine2", "LeftShoulder", "RightShoulder", "Neck", "LeftArm"], "mm": [-2, 3], "fonte": "ExRx (\"Cross arms across chest\"); Schoenfeld 2017 (\"crossing the arms in the 'mummy' position\"). Medido até a pele do tronco junto com a do braço esquerdo (o deltoide é pele do osso do braço): só o tronco tem um buraco no ombro e a medida com sinal errava ali"},
+   {"nome": "mão esquerda no lado direito do tronco, encostando sem entrar", "partes": ["LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "com": ["Spine", "Spine1", "Spine2", "LeftShoulder", "RightShoulder", "Neck", "RightArm"], "mm": [-2, 3], "fonte": "ExRx (\"Cross arms across chest\")"},
+   {"nome": "antebraço e mão direitos sem entrar no tronco nem no braço esquerdo", "partes": ["RightForeArm", "RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Spine", "Spine1", "Spine2", "LeftShoulder", "RightShoulder", "Neck", "LeftArm", "LeftForeArm", "LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "mm": [-2, 2000], "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"},
+   {"nome": "antebraço e mão esquerdos sem entrar no tronco nem no braço direito", "partes": ["LeftForeArm", "LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "com": ["Spine", "Spine1", "Spine2", "LeftShoulder", "RightShoulder", "Neck", "RightArm", "RightForeArm", "RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "mm": [-2, 2000], "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"},
+   {"nome": "mãos longe da cabeça", "partes": ["LeftHand", "RightHand", "LeftHandIndex3", "LeftHandMiddle3", "LeftHandRing3", "LeftHandPinky3", "RightHandIndex3", "RightHandMiddle3", "RightHandRing3", "RightHandPinky3", "LeftHandThumb3", "RightHandThumb3"], "com": ["Head"], "cabelo": true, "mm": [3, 2000]}
+  ],
+  "angulos": [
+   {"nome": "corpo reto em cima, sem passar da linha das pernas", "medida": "quadril_sinal", "t": 1.0, "graus": [0, 12], "fonte": "ExRx (\"Raise upper body until hips and waist are fully extended\"); Andersen 2021 (\"started in an upright position\"); Schoenfeld 2017 (\"limiting spinal motion so that end-range spinal hyperextension is avoided\"; \"an effort to stop the extension movement before end-available range is recommended\"). 0 = coxa na linha do tronco; o boneco em pé, reto, mede ~5° (a coxa sai um pouco à frente da linha quadril → pescoço); negativo = tronco passou da linha pra trás"},
+   {"nome": "tronco perpendicular às pernas embaixo (quadril a ~90°)", "medida": "quadril_sinal", "t": 0.0, "graus": [80, 100], "fonte": "Andersen 2021 (\"until the hip angle was approximately 90 degrees\"); ExRx (\"torso is approximately perpendicular to legs\"); Contreras 2013 (\"The hips flex to 90 degrees\")"},
+   {"nome": "corpo a 45° do chão em cima (banco a 45°)", "medida": "tronco", "t": 1.0, "graus": [40, 50], "fonte": "Andersen 2021 (\"45-degree Roman chair\"); Body-Solid GHYP345 (\"exact 45° angle\")"},
+   {"nome": "coluna neutra o movimento todo (sem arredondar nem arquear)", "medida": "coluna", "t": "todos", "graus": [0, 10], "fonte": "Andersen 2021 (\"The back had to be straight with a natural sway throughout the whole movement\"); Contreras 2013 (\"The spine and pelvis stay locked in neutral positions while the entire movement occurs at the hips\"); NSCA Coach 2020 (\"with a neutral spine\")"},
+   {"nome": "joelhos quase estendidos", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [0, 15], "fonte": "Contreras 2013 (\"The knees stay relatively straight in each variation\"); Schoenfeld 2017 (\"keeping a slight bend in the knees\")"},
+   {"nome": "pernas paralelas, pés entre a largura do quadril e a dos ombros", "medida": "pes_base_lateral", "t": "todos", "faixa": [1.0, 1.8]},
+   {"nome": "ponta dos pés pra frente", "medida": "ponta_pe", "t": "todos", "graus": [-10, 15]},
+   {"nome": "pelve nivelada", "medida": "pelve_nivel", "t": "todos", "graus": [-3, 3]},
+   {"nome": "tronco sem girar (ombros nivelados)", "medida": "ombros_nivel", "t": "todos", "graus": [-5, 5]}
+  ]
+ }
+}

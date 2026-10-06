@@ -1,0 +1,355 @@
+{
+  "uuid": "cc614132-6b3e-4629-9995-e19dd6537ab1",
+  "nome": "Rosca Martelo na Polia",
+  "cena": "rosca_martelo_na_polia",
+  "grupo": "Bíceps / Braquial",
+  "subgrupo": "Braquial · braquiorradial · bíceps",
+  "padrao_movimento": "rosca_martelo",
+  "equipamento": "polia",
+  "variacao": "pegada neutra",
+  "alvos": [
+    "biceps",
+    "antebraco"
+  ],
+  "auxiliares": [],
+  "camera": {
+    "az": 62,
+    "el": 8,
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.3,
+      0.95
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.8,
+    "alvo": [
+      0,
+      -0.3,
+      1.0
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, de frente para a polia baixa e perto dela, com os pés na largura dos ombros e os joelhos levemente dobrados, segura a corda com uma mão de cada lado, logo abaixo dos batentes, com as palmas viradas uma para a outra (pegada neutra, polegar para cima). Começa com os braços quase estendidos e as mãos na frente das coxas; com os cotovelos parados junto do tronco, dobra só os cotovelos e sobe a corda para a frente e para cima até as mãos chegarem na altura dos ombros, com os antebraços bem acima da linha do chão; desce devagar, estendendo os cotovelos, até os braços ficarem quase estendidos de novo. O tronco fica ereto e parado, os punhos retos e as mãos na mesma largura o tempo todo; o cabo sobe da polia até o gancho da corda, na frente das pernas.",
+  "cinesiologia": {
+    "plano": "sagital (flexão e extensão do cotovelo), cadeia cinética aberta; a resistência vem pelo cabo, que puxa a corda para a frente e para baixo, na direção da polia baixa",
+    "articulacoes": "cotovelo (flexão na subida, extensão na descida) com o antebraço em posição neutra, entre a pronação e a supinação; ombro parado, com o braço junto da lateral do tronco e um pouco à frente dela (embaixo o braço gira um pouco pra dentro em volta dele mesmo, sem o cotovelo sair do lugar, pra levar as mãos até a corda na frente das coxas); punho reto; tronco ereto, joelhos levemente dobrados e pés chapados, parados (ExRx, Cable Hammer Curl: \"With elbows to side, raise rope forward and upward with both arms\"; ACE, Hammer Curl: \"Maintain a neutral wrist position (wrist straight without any bend with your palms facing your body)\")",
+    "agonistas": "braquiorradial, braquial e bíceps braquial, os 3 flexores do cotovelo. A ExRx põe o braquiorradial como alvo (ExRx, Cable Hammer Curl: Target \"Brachioradialis\") e o CSCS lista os 3 (\"Major muscles involved: Brachialis, biceps brachii, brachioradialis\"). O braquial flexiona o cotovelo com o antebraço em qualquer posição (StatPearls: \"The brachialis provides elbow flexion at all physiologic positions and is considered a \"pure flexor\" of the forearm at the elbow\"). O braquiorradial trabalha na flexão do cotovelo em qualquer posição do antebraço (Boland 2008: \"No difference in muscular activation was found during elbow flexion tasks in the 3 forearm positions\"; Kleiber 2015: \"Significant differences in the contribution of brachioradialis were found in pronated hand position compared to supinated and neutral hand position while the muscular activity of biceps brachii shows no significant changes in any hand position\"). Em fisiculturistas, a pegada neutra ativou um pouco MENOS o bíceps e o braquiorradial que a supinada (Coratella 2023: \"biceps brachii excitation was greater with the supinated compared to the pronated [+19(7)%, ES: 2.60] and neutral handgrip [+12(9)%, ES: 1.24]\"; \"the brachioradialis showed greater excitation with the supinated compared to the pronated [+5(4)%, ES: 1.01] and neutral handgrip [+6(5)%, ES: 1.10]\") — a pegada neutra é uma variação da rosca, não um isolador do braquiorradial",
+    "sinergistas": "braquial e bíceps braquial (ExRx, Cable Hammer Curl: Synergists \"Brachialis\", \"Biceps Brachii\")",
+    "estabilizadores": "deltoide anterior, trapézio (fibras superiores e médias) e levantador da escápula seguram o ombro e o braço parados; flexor radial do carpo e extensor radial do carpo seguram o punho reto (ExRx, Cable Hammer Curl: Stabilizers \"Deltoid, Anterior\", \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\", \"Flexor Carpi Radialis\", \"Extensor Carpi Radialis\"); os abdominais firmam o tronco (ACE, Hammer Curl: \"stiffen your torso by contracting your abdominal/core muscles (\"bracing\")\"). Com a pegada neutra o deltoide anterior trabalha mais que com a supinada (Coratella 2023: \"the anterior deltoid excitation was greater with the pronated and neutral handgrip compared to the supinated condition [+6(3)% and +9(2)%, ES: 2.07 and 3.18, respectively]\")",
+    "fases": "subida concêntrica (soltando o ar) e descida excêntrica, devagar, até os braços quase estenderem (ACE, Hammer Curl: \"Exhale and slowly flex (bend) one or both elbows in unison\"; \"Inhale and gently lower the dumbbells back towards your starting position until the elbow(s) is/are fully extended\"; ExRx, Cable Hammer Curl: \"Lower until arms are fully extended\")"
+  },
+  "referencias": [
+    "ExRx.net — Cable Hammer Curl. https://exrx.net/WeightExercises/Brachioradialis/CBHammerCurl (lido na cópia do Internet Archive de 13/01/2023; o site direto bloqueia a leitura automática)",
+    "ExRx.net — Cable Curl (a rosca na polia baixa: \"Grasp low pulley cable bar with shoulder width underhand grip. Stand close to pulley.\"). https://exrx.net/WeightExercises/Biceps/CBCurl (cópia do Internet Archive de 05/01/2024)",
+    "American Council on Exercise (ACE) — Exercise Library: Hammer Curl (com halteres). https://www.acefitness.org/resources/everyone/exercise-library/10/hammer-curl/",
+    "American Council on Exercise (ACE) — Exercise Library: Bicep Curl. https://www.acefitness.org/resources/everyone/exercise-library/70/bicep-curl/",
+    "Achievable — CSCS Textbook (preparatório da certificação CSCS da NSCA), cap. 15.3 \"Exercise list part 2\": Hammer curl e Barbell biceps curl. https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2",
+    "Plantz MA, Bordoni B. Anatomy, Shoulder and Upper Limb, Brachialis Muscle. StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing; 2023 (PMID 31869094; resumo no PubMed)",
+    "Boland MR, Spigelman T, Uhl TL. The function of brachioradialis. J Hand Surg Am. 2008;33(10):1853-9. doi:10.1016/j.jhsa.2008.07.019 (resumo no PubMed 19084189)",
+    "Kleiber T, Kunz L, Disselhorst-Klug C. Muscular coordination of biceps brachii and brachioradialis in elbow flexion with respect to hand position. Front Physiol. 2015;6:215. doi:10.3389/fphys.2015.00215 (resumo no PubMed 26300781)",
+    "Coratella G, Tornatore G, Longo S, Toninelli N, Padovan R, Esposito F, Cè E. Biceps Brachii and Brachioradialis Excitation in Biceps Curl Exercise: Different Handgrips, Different Synergy. Sports (Basel). 2023;11(3):64. doi:10.3390/sports11030064 (resumo no PubMed 36976950)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "o cabo passa na frente das pernas e do tronco, sem encostar",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); medido da pele"
+      },
+      {
+        "nome": "o gancho da corda nunca encosta no corpo",
+        "equipamento": "corda_gancho",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          40,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "a perna da corda da mão esquerda não encosta no tronco nem nas coxas",
+        "equipamento": "corda_perna+1",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (a corda nunca passa por dentro do corpo); medido da pele. Embaixo a corda passa na frente das coxas"
+      },
+      {
+        "nome": "a perna da corda da mão direita não encosta no tronco nem nas coxas",
+        "equipamento": "corda_perna-1",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (a corda nunca passa por dentro do corpo); medido da pele. Embaixo a corda passa na frente das coxas"
+      },
+      {
+        "nome": "a corda e o batente da mão esquerda não encostam no tronco, nas coxas nem no rosto",
+        "equipamento": "corda_ponta+1",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftShoulder",
+          "RightShoulder",
+          "Neck",
+          "Head"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele. Em cima o batente fica do lado do polegar, virado pro ombro"
+      },
+      {
+        "nome": "a corda e o batente da mão direita não encostam no tronco, nas coxas nem no rosto",
+        "equipamento": "corda_ponta-1",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftShoulder",
+          "RightShoulder",
+          "Neck",
+          "Head"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele. Em cima o batente fica do lado do polegar, virado pro ombro"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "RightHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o mesmo limite do corpo × corpo da checagem (PENETRA_MM)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "começo: cotovelos quase estendidos",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          10,
+          25
+        ],
+        "fonte": "ExRx, Cable Hammer Curl (\"Lower until arms are fully extended\"); CSCS/NSCA (Achievable), Hammer curl (\"Hold the dumbbells at your sides with your elbows fully extended\"); pedido do Weslley (\"volta até quase esticar\"). A cena para a 18°: com o braço quase reto as mãos ficam na frente das coxas e a ponta da corda passa a ≥ 4 cm delas (com 16° e o braço a 10° da vertical ela ficava a 5 mm da coxa). A faixa é da cena"
+      },
+      {
+        "nome": "fim: cotovelos dobrados, mãos na altura dos ombros",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 1.0,
+        "graus": [
+          118,
+          140
+        ],
+        "fonte": "CSCS/NSCA (Achievable), Hammer curl (\"Flex one elbow until the dumbbell reaches shoulder height\"); ACE, Hammer Curl (\"until the dumbbell(s) near(s) the front of your shoulder\"); ExRx, Cable Hammer Curl (\"raise rope forward and upward with both arms until forearms are vertical\"; \"When elbows are fully flexed, they can travel forward slightly, allowing forearms to be no more than vertical\"). Com o cotovelo parado (pedido do Weslley) o antebraço não chega na vertical: a cena para a 128°, com as mãos na altura das articulações dos ombros"
+      },
+      {
+        "nome": "fim: antebraço bem acima da horizontal",
+        "medida": "inclinacao",
+        "segmento": [
+          "ForeArm",
+          "Hand"
+        ],
+        "t": 1.0,
+        "graus": [
+          -65,
+          -30
+        ],
+        "fonte": "pedido do Weslley (\"só o cotovelo dobra até o antebraço passar da horizontal\"); ExRx, Cable Hammer Curl (\"until forearms are vertical\"). Medida: − = punho acima do cotovelo"
+      },
+      {
+        "nome": "braços parados junto do tronco, um pouco à frente da linha dele",
+        "medida": "braco_frente",
+        "t": "todos",
+        "graus": [
+          8,
+          18
+        ],
+        "fonte": "ExRx, Cable Hammer Curl (\"With elbows to side\"); ACE, Hammer Curl (\"without moving your elbows forward\"); CSCS/NSCA (Achievable), Barbell biceps curl (\"Keep your torso and upper arms stationary\"); pedido do Weslley (\"cotovelos parados junto do tronco\"). O braço fica parado a 13° da linha do tronco: com 10–12° (e sem abrir) o braço entrava 3–6 mm no tronco perto da axila. A faixa é da cena"
+      },
+      {
+        "nome": "cotovelos junto da lateral do tronco, sem abrir",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -3,
+          8
+        ],
+        "fonte": "ExRx, Cable Hammer Curl (\"With elbows to side\"); ACE, Bicep Curl (\"keeping them next to the middle of the body\"); pedido do Weslley (\"cotovelos parados junto do tronco\")"
+      },
+      {
+        "nome": "tronco ereto e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          6
+        ],
+        "fonte": "ExRx, Cable Hammer Curl (\"Stand upright\"); ACE, Hammer Curl (\"keeping your torso erect (no arching your low back)\"); ACE, Bicep Curl (\"Keep chest still, using just the arms for the movement\")"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          10,
+          20
+        ],
+        "fonte": "CSCS/NSCA (Achievable), Hammer curl (\"Stand with your feet shoulder-width apart and your knees slightly flexed\")"
+      },
+      {
+        "nome": "pés na largura dos ombros",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.3
+        ],
+        "fonte": "CSCS/NSCA (Achievable), Hammer curl (\"Stand with your feet shoulder-width apart\"). A ACE sugere base de passada com halteres (\"Assume a split-stance position to stabilize your body\"); a cena segue a base paralela da ExRx (\"Stand upright\") e do CSCS. Medida: distância entre os tornozelos ÷ entre as articulações do quadril (~2 = largura dos ombros, tecnica3d.pes_largura)"
+      },
+      {
+        "nome": "punho reto (neutro)",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ACE, Hammer Curl (\"Maintain a neutral wrist position (wrist straight without any bend with your palms facing your body)\")"
+      },
+      {
+        "nome": "pegada neutra: palmas viradas uma pra outra",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          50,
+          90
+        ],
+        "fonte": "ExRx, Cable Hammer Curl (\"Grasp cable rope with palms facing inward\"); CSCS/NSCA (Achievable), Hammer curl (\"Grasp two dumbbells with a closed, neutral grip\"); pedido do Weslley (\"pegada neutra (palmas uma pra outra)\"). O antebraço fica neutro o tempo todo; embaixo o braço gira um pouco pra dentro em volta dele mesmo (a corda junta as mãos na frente das coxas) e a palma fica virada pro meio e um pouco pra trás (~55–60°); do meio pra cima ela fica a ~80°. 90 = palmas exatamente uma de frente pra outra"
+      },
+      {
+        "nome": "mãos na mesma largura o movimento todo",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.7,
+          0.88
+        ],
+        "fonte": "escolha da cena (as fontes não dão a largura da corda): os vãos das mãos (o meio da corda em cada mão) ficam a 28 cm um do outro o movimento todo (os ombros, a 40 cm), na frente das coxas embaixo — a corda de 27\" deixa as entradas das mãos a no máximo 35 cm uma da outra. A medida é entre as bases dos dedos médios ÷ entre as articulações dos ombros: as bases ficam um pouco por fora da corda e andam um pouco com o giro do braço (0,77 embaixo → 0,81 em cima)"
+      }
+    ]
+  }
+}
