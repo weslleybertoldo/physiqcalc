@@ -506,3 +506,24 @@ def linha_joelho_quadril_cabeca(j):
 
 
 MEDIDAS.update({"linha_joelho_quadril_cabeca": linha_joelho_quadril_cabeca})
+
+
+# ── cadeira abdutora (lote 4, 06/10/2026): sentado, com o quadril dobrado ~90° e a coxa deitada, abrir as pernas é a coxa girando
+# em volta da vertical que passa pela articulação do quadril (ExRx, Lever Seated Hip Abduction: "Move legs apart as far as
+# possible"). O "quadril" do checagem3d.medir_juntas (coxa × tronco) quase não muda nesse giro e o pes_base_lateral mede os pés,
+# não a coxa: aqui é a abertura da coxa, vista de cima.
+def coxa_abertura(j):
+    """Coxa (articulação do quadril → centro do joelho) aberta pra fora (+) ou fechada pra dentro (−) da frente da pelve, vista
+    de cima (no plano do chão), graus [E, D]: 0 = coxa apontando pra frente (as duas paralelas), 45 = aberta 45° pro lado. É a
+    abdução (+) / adução (−) do quadril na cadeira abdutora e na adutora. Só faz sentido com a coxa perto da horizontal
+    (quadril dobrado, sentado): em pé a coxa aponta pro chão e a medida perde o sentido (como o braco_plano com o braço
+    pendurado)."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, s in LADOS:
+        c = _chao(j[L + "Leg"] - j[L + "UpLeg"])
+        out.append(math.degrees(math.atan2(float(c @ (s * lado)), float(c @ frente))))
+    return out
+
+
+MEDIDAS.update({"coxa_abertura": coxa_abertura})

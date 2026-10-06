@@ -1097,3 +1097,246 @@ def cadeira_joelho(nome="cadeira", eixo=(0.0, 0.67), assento=(0.12, 0.58, 0.61, 
         raizes["almofada"] = alm
     bpy.context.view_layer.update()
     return CadeiraJoelho(raizes, P, pegs, raio_p, comp_p / 2)
+
+
+# ── CADEIRA ABDUTORA / ADUTORA (Cadeira Abdutora, lote 4, 06/10/2026; a MESMA peça serve à Cadeira Adutora) ────────────────
+# Máquina de quadril sentada: assento e encosto estofados e 2 BRAÇOS que giram, cada um em volta de um EIXO VERTICAL, com a
+# almofada do joelho e o apoio do pé — coxa, perna e pé andam juntos com o braço, o joelho não dobra nem estica (Hammer
+# Strength Select Hip Abduction: "the kneepads and dual foot positions provide leg support around the knees"; eGym M10 Abductor:
+# "Place your feet on the footrests and position the outside of your thighs or knees against the pads."; eGym M11 Adductor:
+# "Place your feet on the footrests and position your inner thighs or knees against the pads."). Sentado, com o quadril dobrado
+# ~90° e a coxa deitada, abrir e fechar as pernas é a coxa girando em volta da VERTICAL QUE PASSA PELA ARTICULAÇÃO DO QUADRIL:
+# o eixo de cada braço fica nessa vertical (a placa da Hammer Strength marca o eixo da máquina "to help cue correct alignment";
+# o encosto anda pra frente e pra trás — Titan Selectorized Hip Abductor Adductor: "Adjustable Seat Depth: 3.5-in." — até o
+# quadril ficar em cima do eixo) e o braço gira o MESMO ângulo da coxa: almofada e apoio do pé não escorregam na pele. Como a
+# cadeira_joelho, a cena monta a peça EM VOLTA do corpo: ela dá os 2 eixos (os 2 quadris), o assento, o encosto, as almofadas,
+# os apoios dos pés, onde fica o poste de cada braço e os pegadores; a peça liga tudo com a estrutura.
+#   Abdutora: almofada="fora"   — almofada no lado de FORA do joelho, presa direto no poste; girar(> 0) abre as pernas.
+#   Adutora:  almofada="dentro" — almofada no lado de DENTRO do joelho, presa por um suporte em U que sai do poste (do lado de
+#             fora, como na abdutora), cruza na frente do joelho e entra na ponta da frente da almofada; a cena monta com as
+#             pernas abertas (o começo da adução) e girar(< 0) fecha.
+# Medidas de máquina de verdade: torre da pilha de 1,40 m (Hammer Strength Select Hip Abduction: "Size (L x W x H): 61" x 26" x
+# 55" (metric cm: 155 x 66 x 140)"); assento de 13" × 14" e encosto de 12" × 17,5" (Titan Selectorized Hip Abductor Adductor:
+# "Seat Pad Dimensions: 13-in. x 14-in.", "Back Pad Dimensions: 12-in. x 17.5-in."). Tubos de 5–8 cm, almofada do joelho, apoio
+# do pé, cubo e mancal dos eixos são escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   cad = e3.cadeira_quadril("abdutora", eixos={1: (x, y), -1: (x, y)}, z_eixo=..., assento=(...), encosto=(...),
+#                            almofadas={1: (...), -1: (...)}, pes={1: (...), -1: (...)}, postes={1: (...), -1: (...)},
+#                            pegadores=(...), almofada="fora")
+#   no pose(t): cad.girar(graus)            # os 2 braços (com almofada e apoio do pé) abrem `graus` a partir da montagem
+#   Cena(pose, cad.equipamentos, pegadas=[("Left", ck.Barra(cad.pegadores[1], cad.raio_pegador, cad.meia_pegador,
+#        eixo=(0, 0, 1))), ...], apoios=cad.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_assento" e "<nome>_encosto" (APOIO), "<nome>_braco_esq"/"_dir" (giram; não encostam no corpo), "<nome>_almofada_esq"/
+# "_dir" e "<nome>_pe_esq"/"_dir" (giram junto com o braço do lado; APOIO). Cada braço, almofada e apoio do pé tem a origem NO
+# eixo do seu lado (na altura z_eixo) e o X local AO LONGO dele (pra cima) — a regra checagens.eixos da ficha mede o quadril
+# nessa reta.
+_X_PRA_CIMA = Matrix.Rotation(math.radians(-90.0), 4, "Y")       # X local → +Z do mundo (o eixo vertical do braço)
+
+
+class CadeiraQuadril:
+    """Cadeira abdutora/adutora pronta na cena (cadeira_quadril())."""
+
+    def __init__(self, raizes, eixos, z_eixo, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes          # {"estrutura", "assento", "encosto", "braco_esq", "braco_dir", "almofada_esq", ...}
+        self.equipamentos = [raizes[k] for k in ("estrutura", "braco_esq", "braco_dir")]
+        self.apoios = [raizes[k] for k in ("assento", "encosto", "almofada_esq", "almofada_dir", "pe_esq", "pe_dir")]
+        self.eixos = {s: Vector((x, y, z_eixo)) for s, (x, y) in eixos.items()}   # ponto de cada eixo (no cubo do braço)
+        self.pegadores = pegadores    # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+
+    def girar(self, graus):
+        """Os 2 braços (com a almofada e o apoio do pé de cada um) abertos `graus` a partir da montagem, cada um em volta do
+        seu eixo vertical: > 0 abre as pernas (o braço do lado +X gira no sentido anti-horário visto de cima, o do −X no
+        horário), < 0 fecha."""
+        for s, lado in ((1, "esq"), (-1, "dir")):
+            M = Matrix.Translation(self.eixos[s]) @ Matrix.Rotation(math.radians(s * graus), 4, "Z") @ _X_PRA_CIMA
+            for k in ("braco_", "almofada_", "pe_"):
+                self.raizes[k + lado].matrix_world = M
+        self.angulo = graus
+        bpy.context.view_layer.update()
+
+
+def _girada(u):
+    """Euler da caixa com o X local ao longo de `u` (horizontal), o Z local pra cima e o Y local = Z × u."""
+    u = Vector((u[0], u[1], 0.0)).normalized()
+    z = Vector((0.0, 0.0, 1.0))
+    return Matrix((u, z.cross(u), z)).transposed().to_euler()
+
+
+def cadeira_quadril(nome="abdutora", eixos=None, z_eixo=None, assento=(-0.20, 0.17, 0.54, 0.356, 0.05),
+                    encosto=(0.12, 5.0, 0.445, 0.305, 0.06), almofadas=None, pes=None, postes=None,
+                    pegadores=(0.06, 0.50, 0.30, 0.14, 0.0145), almofada="fora", volta_frente=0.16, pilha=True):
+    """Cadeira abdutora/adutora (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y; s = +1 é o lado +X
+    (o esquerdo de quem senta) e −1 o −X. Tudo NA MONTAGEM (pernas paradas no começo do movimento):
+      eixos     = {s: (x, y)}: a reta vertical em volta da qual o braço do lado s gira (passa pela articulação do quadril);
+      z_eixo    = altura do cubo dos braços (embaixo do assento; None = logo embaixo da travessa dos mancais): os braços
+                  correm nessa altura até o poste;
+      assento   = (y_frente, y_tras, topo, largura, espessura): estofado do assento, com o topo em `topo`;
+      encosto   = (y_base, angulo, altura, largura, espessura): a face da frente do estofado passa por (y_base, topo do
+                  assento) e sobe `angulo` graus inclinada pra trás (+Y) da vertical, por `altura` m;
+      almofadas = {s: (centro, u, n, (comprimento, altura, espessura))}: centro da FACE da almofada que encosta na perna,
+                  u = direção da coxa (horizontal; o comprimento da almofada vai ao longo dela), n = normal dessa face
+                  apontando PRA PERNA (pra dentro na abdutora, pra fora na adutora);
+      pes       = {s: (centro, f, (comprimento, largura, espessura))}: centro da face de CIMA do apoio do pé, f = direção do pé
+                  (horizontal, do calcanhar pros dedos);
+      postes    = {s: (x, y)}: onde fica o poste vertical do braço, do lado de fora da perna (do apoio do pé até a almofada);
+      pegadores = (y, z, x, comprimento, raio): um pegador de borracha de cada lado do assento, ao longo do Y, centrado em
+                  (±x, y, z), preso por trás;
+      almofada  = "fora" (abdutora: almofada presa direto no poste) ou "dentro" (adutora: suporte em U que sai do poste,
+                  cruza `volta_frente` m à frente do centro da almofada, na frente do joelho, e entra na ponta da frente
+                  dela — nada fica atrás da almofada, entre as pernas); pilha = caixa da pilha de pesos.
+    Devolve um CadeiraQuadril (raizes, equipamentos, apoios, pegadores, girar())."""
+    if almofada not in ("fora", "dentro"):
+        raise ValueError("cadeira_quadril: almofada %r (use \"fora\" ou \"dentro\")" % almofada)
+    y_f, y_t, topo, larg, esp = assento
+    y_b, ang_enc, alt_enc, larg_enc, esp_enc = encosto
+    y_p, z_p, x_p, comp_p, raio_p = pegadores
+    cima = Vector((0.0, 0.0, 1.0))
+
+    def raiz_nova(sufixo, M=None):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        if M is not None:
+            r.matrix_world = M
+        return r
+
+    estr, ass, enc = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("encosto")
+    # ── assento: estofado (APOIO) em cima de uma chapa ─────────────────────────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, y_t - y_f, esp), mat_estofado(), pai=ass,
+          chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.04, y_t - y_f - 0.03, 0.024),
+                          mat_estrutura(), pai=estr, chanfro=0)), passo=0.06)
+    z_baixo_chapa = z_chapa - 0.012
+    if z_eixo is None:                                       # cubo dos braços logo embaixo da travessa dos mancais
+        z_eixo = z_baixo_chapa - 0.115
+    # ── encosto: estofado inclinado (APOIO), chapa atrás dele e a viga que desce até a traseira do assento ───────────────────
+    a = math.radians(ang_enc)
+    u_enc = Vector((0, math.sin(a), math.cos(a)))            # ao longo do encosto, pra cima
+    n_enc = Vector((0, -math.cos(a), math.sin(a)))           # normal da face da frente (pro corpo)
+    base_enc = Vector((0, y_b, topo)) + u_enc * 0.012        # o estofado começa 1,2 cm acima do assento
+    caixa(nome + "_encosto_estofado", base_enc + u_enc * (alt_enc / 2) - n_enc * (esp_enc / 2), (larg_enc, esp_enc, alt_enc),
+          mat_estofado(), rot=(-a, 0, 0), pai=enc, chanfro=0.015)
+    meio_enc = base_enc + u_enc * (alt_enc * 0.5) - n_enc * (esp_enc + 0.012)
+    _em_aneis(_reto(caixa(nome + "_encosto_chapa", meio_enc, (larg_enc - 0.05, 0.024, alt_enc - 0.05), mat_estrutura(),
+                          rot=(-a, 0, 0), pai=estr, chanfro=0)), passo=0.06)
+    y_col = max(y_t - 0.05, y_b + 0.02)                      # coluna do assento/encosto: atrás do glúteo
+    _viga(nome + "_encosto_viga", meio_enc - n_enc * 0.03, (0, y_col, z_baixo_chapa - 0.03), 0.06, 0.06, mat_estrutura(),
+          pai=estr)
+    # ── base no chão: viga do meio (ao longo do Y), pé de trás (embaixo da pilha) e pé da frente (embaixo dos eixos) ────────
+    y_eixos = sum(y for _, y in eixos.values()) / 2
+    y_pilha = y_b + u_enc.y * alt_enc + 0.26                 # centro da pilha, atrás do encosto
+    y0b, y1b = y_eixos - 0.10, (y_pilha + 0.20) if pilha else (y_col + 0.12)
+    _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y0b + y1b) / 2, 0.03), (0.08, y1b - y0b, 0.06), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    for k, (y, meia) in enumerate(((y0b, 0.24), (y1b - 0.04, 0.33))):
+        _em_aneis(_reto(caixa(nome + "_base_pe%d" % k, (0, y, 0.025), (2 * meia, 0.08, 0.05), mat_estrutura(), pai=estr,
+                              chanfro=0)), passo=0.08)
+    # coluna do assento (da base até a chapa) e travessa dos mancais (embaixo do assento, de um eixo ao outro)
+    _viga(nome + "_coluna", (0, y_col, 0.06), (0, y_col, z_baixo_chapa), 0.08, 0.08, mat_estrutura(), pai=estr)
+    z_trav = z_eixo + 0.075
+    xs = sorted(x for x, _ in eixos.values())
+    _viga(nome + "_travessa_eixos", (xs[0] - 0.05, y_eixos + 0.06, z_trav), (xs[-1] + 0.05, y_eixos + 0.06, z_trav), 0.05, 0.05,
+          mat_estrutura(), pai=estr)
+    _viga(nome + "_travessa_chapa", (0, y_eixos + 0.06, z_trav + 0.025), (0, y_eixos + 0.06, z_baixo_chapa), 0.05, 0.05,
+          mat_estrutura(), pai=estr)
+    if y_col - 0.04 > y_eixos + 0.095:                       # a travessa longe da coluna: uma viga liga as duas
+        _viga(nome + "_viga_coluna", (0, y_eixos + 0.085, z_trav), (0, y_col - 0.04, z_trav), 0.05, 0.05, mat_estrutura(),
+              pai=estr)
+    # ── mancal de cada eixo (parado): caixa na travessa e o pino de aço que desce até o cubo do braço ─────────────────────
+    for s, (x, y) in eixos.items():
+        caixa(nome + "_mancal%+d" % s, (x, y + 0.03, z_trav), (0.07, 0.11, 0.07), mat_estrutura(), pai=estr, chanfro=0.006)
+        _cilindro(nome + "_pino%+d" % s, 0.018, 0.05, (x, y, z_eixo + 0.045), (0, 0, 0), mat_aco(), pai=estr)
+    # ── pilha de pesos (carenagem parada) atrás do encosto ───────────────────────────────────────────────────────────────────
+    if pilha:
+        _em_aneis(_reto(caixa(nome + "_pilha", (0, y_pilha, 0.06 + 1.34 / 2), (0.42, 0.30, 1.34), mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+        _viga(nome + "_pilha_braco", (0, y_col + 0.04, z_baixo_chapa - 0.06), (0, y_pilha - 0.15, z_baixo_chapa - 0.06), 0.06,
+              0.06, mat_estrutura(), pai=estr)
+    # ── pegadores: borracha ao longo do Y, presos por trás (suporte que vai pra trás e desce até a viga de trás do assento) ──
+    pegs = {}
+    y_sup = y_p + comp_p / 2 + 0.012
+    z_sup = z_baixo_chapa - 0.04
+    for k in (1, -1):
+        x = k * x_p
+        pegs[k] = _em_aneis(tubo(nome + "_pegador%+d" % k, (x, y_p + comp_p / 2, z_p), (x, y_p - comp_p / 2, z_p), raio_p,
+                                 mat_borracha(), pai=estr, vertices=32), passo=0.035)
+        _cilindro(nome + "_pegador_ponta%+d" % k, raio_p + 0.004, 0.012, (x, y_p - comp_p / 2 - 0.006, z_p),
+                  (math.radians(90), 0, 0), mat_borracha(), pai=estr)
+        tubo(nome + "_pegador_haste%+d" % k, (x, y_p + comp_p / 2 - 0.01, z_p), (x, y_sup + 0.012, z_p), 0.012, mat_aco(),
+             pai=estr)
+        _viga(nome + "_pegador_suporte%+d" % k, (x, y_sup, z_p + 0.012), (x, y_sup, z_sup), 0.03, 0.03, mat_estrutura(),
+              pai=estr, chanfro=0.003)
+        _viga(nome + "_pegador_braco%+d" % k, (x, y_sup, z_sup - 0.015), (k * 0.04, y_col, z_sup - 0.015), 0.03, 0.03,
+              mat_estrutura(), pai=estr, chanfro=0.003)
+    # ── os 2 braços: cubo no eixo, viga até o poste (em L: sai pra fora atrás da batata da perna e segue ao longo da coxa),
+    #    poste vertical do lado de fora da perna, suporte da almofada e do apoio do pé ─────────────────────────────────────────
+    raizes = {"estrutura": estr, "assento": ass, "encosto": enc}
+    for s, lado in ((1, "esq"), (-1, "dir")):
+        ex, ey = eixos[s]
+        M0 = Matrix.Translation(Vector((ex, ey, z_eixo))) @ _X_PRA_CIMA
+        bra, alm, pe = raiz_nova("braco_" + lado, M0), raiz_nova("almofada_" + lado, M0), raiz_nova("pe_" + lado, M0)
+        raizes.update({"braco_" + lado: bra, "almofada_" + lado: alm, "pe_" + lado: pe})
+        bpy.context.view_layer.update()
+        c_alm, u, n, (comp_a, alt_a, esp_a) = almofadas[s]
+        c_alm, u, n = Vector(c_alm), Vector((u[0], u[1], 0)).normalized(), Vector(n).normalized()
+        c_pe, f, (comp_pe, larg_pe, esp_pe) = pes[s]
+        c_pe, f = Vector(c_pe), Vector((f[0], f[1], 0)).normalized()
+        Q = Vector((postes[s][0], postes[s][1], 0.0))
+        fora = Vector((Q.x - ex, Q.y - ey, 0.0))
+        fora = (fora - u * fora.dot(u)).normalized()           # de lado, pra fora da perna (⟂ à coxa)
+        pecas_b = []
+        P0 = Vector((ex, ey, z_eixo))
+        pecas_b.append(_cilindro(nome + "_cubo_" + lado, 0.042, 0.06, P0, (0, 0, 0), mat_estrutura()))
+        pecas_b.append(_cilindro(nome + "_cubo_tampa_" + lado, 0.022, 0.064, P0, (0, 0, 0), mat_aco()))
+        C = Vector((Q.x, Q.y, z_eixo)) - u * 0.24              # dobra da viga: atrás da batata da perna
+        Qb = Vector((Q.x, Q.y, z_eixo))
+        pecas_b.append(_viga(nome + "_viga1_" + lado, P0 + (C - P0).normalized() * 0.03, C + (C - P0).normalized() * 0.025,
+                             0.05, 0.05, mat_estrutura()))
+        pecas_b.append(_viga(nome + "_viga2_" + lado, C - u * 0.025, Qb + u * 0.025, 0.05, 0.05, mat_estrutura()))
+        z_pe_baixo = c_pe.z - esp_pe - 0.03                    # o poste desce até embaixo do apoio do pé
+        z_alto = c_alm.z + alt_a / 2 - 0.02
+        pecas_b.append(_viga(nome + "_poste_" + lado, Vector((Q.x, Q.y, z_pe_baixo - 0.02)), Vector((Q.x, Q.y, z_alto)), 0.05,
+                             0.05, mat_estrutura()))
+        # apoio do pé: chapa de borracha (APOIO) sobre uma chapa de aço, ligada ao poste por uma barra embaixo dela
+        rot_pe = _girada(f)
+        lado_pe = cima.cross(f)
+        if lado_pe.dot(fora) < 0:
+            lado_pe = -lado_pe
+        _prender([caixa(nome + "_pe_borracha_" + lado, c_pe - cima * (esp_pe / 2), (comp_pe, larg_pe, esp_pe), mat_borracha(),
+                        rot=rot_pe, chanfro=0.004),
+                  caixa(nome + "_pe_chapa_" + lado, c_pe - cima * (esp_pe + 0.005), (comp_pe - 0.02, larg_pe - 0.02, 0.01),
+                        mat_aco(), rot=rot_pe, chanfro=0.002)], pe)
+        z_barra_pe = c_pe.z - esp_pe - 0.025
+        q_u = (Qb - c_pe).dot(f)                               # onde o poste fica ao longo do pé
+        q_u = max(-comp_pe / 2 + 0.03, min(comp_pe / 2 - 0.03, q_u))
+        borda = c_pe + f * q_u + lado_pe * (larg_pe / 2 - 0.04)
+        pecas_b.append(_viga(nome + "_barra_pe_" + lado, Vector((borda.x, borda.y, z_barra_pe)),
+                             Vector((Q.x, Q.y, z_barra_pe)) + lado_pe * 0.025, 0.04, 0.03, mat_estrutura()))
+        # almofada do joelho (APOIO): estofado + chapa atrás dele
+        rot_a = _girada(u)
+        costas_a = c_alm - n * (esp_a + 0.006)                 # centro da chapa atrás do estofado
+        _prender([caixa(nome + "_almofada_estofado_" + lado, c_alm - n * (esp_a / 2), (comp_a, esp_a, alt_a), mat_estofado(),
+                        rot=rot_a, chanfro=0.018),
+                  caixa(nome + "_almofada_chapa_" + lado, costas_a, (comp_a - 0.03, 0.012, alt_a - 0.03), mat_estrutura(),
+                        rot=rot_a, chanfro=0.003)], alm)
+        tras_a = costas_a - n * 0.006                          # onde o suporte encosta atrás da chapa
+        Qa = Vector((Q.x, Q.y, c_alm.z))
+        if almofada == "fora":                                  # suporte reto do poste até a chapa (o poste fica atrás dela)
+            pecas_b.append(_viga(nome + "_suporte_almofada_" + lado, Qa, tras_a, 0.04, 0.04, mat_estrutura()))
+        else:                                                   # em U: pra frente, cruza na frente do joelho e entra na
+            meio_a = c_alm - n * (esp_a / 2)                    # ponta da frente da almofada (nada atrás dela: as 2
+            F1 = Qa + u * (volta_frente + (c_alm - Qa).dot(u))  # almofadas podem se encostar no meio com as pernas fechadas)
+            F2 = F1 + fora * (meio_a - F1).dot(fora)
+            ponta_a = meio_a + u * (comp_a / 2 - 0.01)
+            for k, (A, B) in enumerate(((Qa, F1), (F1, F2), (F2, ponta_a))):
+                d = (B - A).normalized()
+                pecas_b.append(_viga(nome + "_suporte_almofada%d_" % k + lado, A - d * (0.02 if k else 0.0),
+                                     B + d * (0.02 if k < 2 else 0.0), 0.04, 0.04, mat_estrutura()))
+        _prender(pecas_b, bra)
+    bpy.context.view_layer.update()
+    return CadeiraQuadril(raizes, eixos, z_eixo, pegs, raio_p, comp_p / 2)

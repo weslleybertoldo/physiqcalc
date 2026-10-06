@@ -518,3 +518,24 @@ def test_linha_joelho_quadril_cabeca_na_flexao_nordica():
     assert tc.linha_joelho_quadril_cabeca(girar(arqueou, 40, (0, 0, 1))) == pytest.approx([-10], abs=1e-6)
     assert tc.linha_joelho_quadril_cabeca(em_pe()) == []
     assert "linha_joelho_quadril_cabeca" in tc.MEDIDAS
+
+
+def sentado_coxas(graus_e, graus_d):
+    """Sentado olhando pra −Y: coxas deitadas (joelho na altura do quadril) abertas `graus` pra fora, canelas em pé."""
+    j = dict(em_pe())
+    for L, s, g in (("Left", 1, graus_e), ("Right", -1, graus_d)):
+        a = math.radians(g)
+        h = j[L + "UpLeg"]
+        j[L + "Leg"] = h + 0.42 * np.array([s * math.sin(a), -math.cos(a), 0.0])
+        j[L + "Foot"] = j[L + "Leg"] + np.array([0, 0, -0.44])
+    return j
+
+
+def test_coxa_abertura_sentado_na_abdutora():
+    """Cadeira abdutora (lote 4): coxas paralelas pra frente = 0; abertas 40° pro lado = +40 nos dois lados; fechando
+    (cruzando pra dentro) = −; o mesmo número com o boneco virado em volta da vertical."""
+    assert tc.coxa_abertura(sentado_coxas(0, 0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.coxa_abertura(sentado_coxas(40, 40)) == pytest.approx([40, 40], abs=1e-6)
+    assert tc.coxa_abertura(sentado_coxas(25, -5)) == pytest.approx([25, -5], abs=1e-6)
+    assert tc.coxa_abertura(girar(sentado_coxas(40, 30), 65, (0, 0, 1))) == pytest.approx([40, 30], abs=1e-6)
+    assert "coxa_abertura" in tc.MEDIDAS
