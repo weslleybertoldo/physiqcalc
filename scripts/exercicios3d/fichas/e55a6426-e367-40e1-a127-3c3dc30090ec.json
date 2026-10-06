@@ -1,0 +1,387 @@
+{
+ "uuid": "e55a6426-e367-40e1-a127-3c3dc30090ec",
+ "nome": "Cadeira Extensora",
+ "cena": "cadeira_extensora",
+ "grupo": "Quadríceps",
+ "subgrupo": "Quadríceps (reto femoral e vastos)",
+ "padrao_movimento": "extensao_joelho",
+ "equipamento": "maquina",
+ "variacao": "sentado",
+ "alvos": [
+  "quadriceps"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 62,
+  "el": 10,
+  "dist": 3.5,
+  "alvo": [
+   0.0,
+   -0.22,
+   0.7
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   -0.18,
+   0.72
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na cadeira extensora, com as costas e o glúteo encostados no encosto, as coxas apoiadas no assento e a borda dele logo atrás dos joelhos, o encosto regulado para o joelho ficar alinhado com o eixo da máquina (o ponto em que a alavanca gira) e o rolo encostado na frente das canelas, logo acima dos tornozelos; as pernas paralelas, na largura do quadril, e as mãos segurando os pegadores ao lado do assento, com os braços quase esticados, puxando de leve para o glúteo não sair do assento. Começa com os joelhos dobrados a cerca de 90° e estende os joelhos empurrando o rolo para a frente e para cima até as pernas ficarem quase esticadas, sem travar os joelhos; volta devagar, dobrando os joelhos, até o começo. Só os joelhos mexem: as coxas, o quadril e o tronco ficam parados, encostados, e os pés acompanham as canelas, sem mexer o tornozelo.",
+ "cinesiologia": {
+  "plano": "sagital (extensão e flexão do joelho); as canelas giram em volta do eixo dos joelhos, que fica alinhado com o eixo da alavanca da máquina",
+  "articulacoes": "joelho (extensão na subida, de ~90° de flexão até ~7°, quase esticado e sem travar; flexão na volta); quadril parado a ~98° entre o tronco e a coxa, com a coxa no assento; coluna neutra e parada, encostada; tornozelos parados, neutros; ombros, cotovelos e punhos parados, as mãos nos pegadores",
+  "agonistas": "quadríceps — reto femoral, vasto lateral, vasto intermédio e vasto medial (ExRx: alvo Quadriceps; as 4 cabeças fazem a extensão do joelho), em contração concêntrica na subida e excêntrica na volta; no exercício de cadeia aberta (a extensora) a atividade do quadríceps é maior perto da extensão completa e o reto femoral trabalha mais que no agachamento e no leg press (Escamilla et al. 1998); sentado, com o quadril dobrado, no fim da extensão o reto femoral entra em insuficiência ativa e os vastos trabalham mais (ExRx, Quadriceps)",
+  "sinergistas": "nenhum (ExRx: Synergists \"None\")",
+  "estabilizadores": "as mãos nos pegadores seguram o corpo no assento contra a carga (ExRx: \"Stabilizers may be used during heavy resistances to prevent body rising off of seat\"; eGym: \"Hold the side handles to prevent your glutes from lifting out of the seat\"): trapézio superior e médio, levantador da escápula, braquiorradial, braquial e bíceps (ExRx)",
+  "fases": "concêntrica (estende os joelhos empurrando o rolo pra frente e pra cima, até as pernas ficarem quase esticadas) e excêntrica (volta devagar dobrando os joelhos, sem deixar a pilha bater no fim — The Wellness Network: \"make sure that the plates don't touch so you maintain some tension on the muscles\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Leg Extension (https://exrx.net/WeightExercises/Quadriceps/LVLegExtension, lido na cópia do Internet Archive de 26/12/2024; o site responde 403 direto): classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Push\"; Preparation: \"Sit on apparatus with back against padded back support. Place front of lower legs under padded lever. Position knee articulation at same axis as lever fulcrum. Grasp handles to sides for support.\"; Execution: \"Move lever forward and upward by extending knees until legs are straight. Return lever to original position by bending knees. Repeat.\"; Comments: \"Stabilizers may be used during heavy resistances to prevent body rising off of seat.\"; músculos: Target \"Quadriceps\", Synergists \"None\", Stabilizers \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\", \"Brachioradialis\", \"Brachialis\", \"Biceps Brachii\"",
+  "eGym (fabricante) — Smart Strength, exercícios: M1 Leg Extension e M4 Leg Curl (https://knowledge.egym.com/en/smart-strength/work-out-on-smart-strength/exercises, lido em 06/10/2026): Leg Extension — Primary muscles \"Quadriceps femoris\"; \"Sit with your glutes fully against the backrest. Adjust the backrest so your knee joint aligns with the machine’s rotational axis.\"; \"Position the roller pad just above your ankle.\"; \"Engage your core and lightly pull on the side handles for stability.\"; \"Hold the side handles to prevent your glutes from lifting out of the seat.\"; \"Start with your knees bent as far back as comfortably possible.\"; \"If bending the knees is uncomfortable, begin at approximately a 90° knee angle.\"; \"Extend your knees against the resistance until your legs are straight.\"; \"Return to the starting position, keeping your legs parallel.\" (o M4 Leg Curl, na mesma regulagem do encosto: \"Position the lower roller pad between the calf and the Achilles tendon.\", \"Secure the upper roller pad firmly on your thighs.\")",
+  "The Wellness Network — \"Your exercise routine: seated leg extensions\" (Ascension, biblioteca de pacientes: https://phl.ascension.org/wellness/fitness/your-exercise-routine-seated-leg-extensions, lido em 06/10/2026): \"The seat back needs to be positioned so that when you're in the seat, your knee lines up comfortably with the axis of rotation on the machine.\"; \"We have a pad that goes across the ankles and it should fit just across your ankles, and it should not fit too high on the shins.\"; \"You want to sit very straight, and then raise your legs up against the pad, stopping just before you maintain a straight leg position.\"; \"You do not want to hyper-extend or lock out the knees. So you want to have a slight v-shape in your knees.\"; \"when you lower the weight down you want to make sure that the plates don't touch so you maintain some tension on the muscles.\"; \"You want to complete this exercise without hyper-extending your back.\"",
+  "ExRx.net — Quadriceps (https://exrx.net/Muscles/Quadriceps, lido na cópia do Internet Archive de 04/01/2025): Heads \"Rectus Femoris\", \"Vastus Lateralis (Externus)\", \"Vastus Intermedius\", \"Vastus Medialis (Internus)\"; Movement \"Knee Extension [1, 2, 3, 4 ]\", \"Hip Flexion [1 ]\"; \"The biarticulate rectus femoris [1 ] enters active insufficiency through the completion of knee extension when the hips are more flexed (other heads of the quadriceps [2, 3, 4 ] become more active)\"",
+  "Escamilla RF, Fleisig GS, Zheng N, Barrentine SW, Wilk KE, Andrews JR. Biomechanics of the knee during closed kinetic chain and open kinetic chain exercises. Med Sci Sports Exerc. 1998;30(4):556-569. doi:10.1097/00005768-199804000-00014 — lido só o resumo (PubMed 9565938): \"Quadriceps muscle activity was greatest in CKCE when the knee was near full flexion and in OKCE when the knee was near full extension. OKCE produced more rectus femoris activity while CKCE produced more vasti muscle activity.\"; \"Tension in the anterior cruciate ligament was present only in OKCE, and occurred near full extension.\" (OKCE = a extensão do joelho na máquina)",
+  "ACE — Seated Leg Extension (https://www.acefitness.org/resources/everyone/exercise-library/183/seated-leg-extension/, lido em 06/10/2026, e as cópias de 2019, 2022 e 2024 no Internet Archive): a página só traz \"Body Part: Legs - Thighs\", \"Equipment: Weight Machines / Selectorized\" e \"Difficulty: Beginner\", sem os passos — não usada pra técnica. O trecho da NSCA sobre a extensora não estava aberto em nenhuma fonte que deu pra ler (o \"NSCA Lifting Proficiencies\" da Western Illinois University só tem o leg press)",
+  "Medidas da máquina — Titan Fitness, Leg Extension & Hamstring Curl Machine (https://titan.fitness/products/leg-extension-curl-machine, tabela de especificações lida em 06/10/2026; a mesma máquina faz extensora e flexora sentada): \"Adjustable Seat Height: 24-in. – 26.5-in.\", \"Seat Pad Dimensions: 22-in. x 17-in. x 2-in.\", \"Back Pad Dimensions: 15-in. x 10-in. x 2-in.\", \"Roller Pad Dimensions: 17-in. x 5-in.\", \"Seat Depth Positions: 7\", \"Knee Pad Positions: 7\"; Steelflex PLLE Plate Load Leg Extension (ficha do produto em PDF): \"exact 100° angle between the seat and back rest pad\", \"50 mm CGPC high density foam upholstery\"; Body-Solid GCEC340 Cam Series Leg Extension & Curl (https://bodysolid.com/body-solid-cam-leg-extension-curl e a ficha GCEC340B_PDS.pdf): \"Distance from top of seat pad to bottom of foam roller 16”\", \"position your legs behind the oversized rollers, and lift and extend legs to work the quadriceps muscles\", \"wrapping legs over the 8-inch foam rollers, and press down to perform seated leg curl exercises\"; Precor Resolute RSL0605 Leg Extension (ficha em PDF): \"The start position, roller pad, and gas-assisted back pad on the Resolute Strength Leg Extension all adjust easily from the seated position\", \"Weight Stack Tower Height: 58 in / 148 cm\""
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "sentado na máquina os pés ficam pendurados, fora do chão, com o rolo na frente das canelas (ExRx: \"Place front of lower legs under padded lever\"); quem confere que nada além dos joelhos mexe são as zonas do assento e do encosto, o eixo da máquina no joelho e as regras de coxa, quadril, tronco e tornozelo parados abaixo",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "cadeira_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Leg Extension (\"Sit on apparatus\")"
+   },
+   {
+    "nome": "costas encostadas no encosto",
+    "equipamento": "cadeira_encosto",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Leg Extension (\"with back against padded back support\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "cadeira_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "eGym — M1 Leg Extension (\"Sit with your glutes fully against the backrest\")"
+   },
+   {
+    "nome": "canela esquerda encostada no rolo (na frente, logo acima do tornozelo)",
+    "equipamento": "cadeira_rolo",
+    "partes": [
+     "LeftLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Lever Leg Extension (\"Place front of lower legs under padded lever\"); eGym — M1 Leg Extension (\"Position the roller pad just above your ankle\")"
+   },
+   {
+    "nome": "canela direita encostada no rolo (na frente, logo acima do tornozelo)",
+    "equipamento": "cadeira_rolo",
+    "partes": [
+     "RightLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Lever Leg Extension e eGym — M1 Leg Extension (idem)"
+   },
+   {
+    "nome": "pés sem encostar no rolo (o rolo fica na canela, não no peito do pé)",
+    "equipamento": "cadeira_rolo",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "The Wellness Network — Seated Leg Extensions (\"it should fit just across your ankles, and it should not fit too high on the shins\")"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "joelhos no eixo da alavanca",
+    "equipamento": "cadeira_alavanca",
+    "ossos": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Lever Leg Extension (\"Position knee articulation at same axis as lever fulcrum\"); eGym — M1 Leg Extension (\"Adjust the backrest so your knee joint aligns with the machine’s rotational axis\"); The Wellness Network — Seated Leg Extensions (\"your knee lines up comfortably with the axis of rotation on the machine\")"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés pendurados, fora do chão",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     50,
+     5000
+    ],
+    "fonte": "sentado na máquina com o assento a 24\" do chão (Titan) os pés não alcançam o chão"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelho dobrado a ~90° no começo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "eGym — M1 Leg Extension (\"If bending the knees is uncomfortable, begin at approximately a 90° knee angle.\"; \"Start with your knees bent as far back as comfortably possible\"); ExRx — Lever Leg Extension (\"Return lever to original position by bending knees\")"
+   },
+   {
+    "nome": "joelho quase esticado em cima, sem travar",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     3,
+     12
+    ],
+    "fonte": "ExRx — Lever Leg Extension (\"extending knees until legs are straight\"); The Wellness Network — Seated Leg Extensions (\"stopping just before you maintain a straight leg position. You do not want to hyper-extend or lock out the knees. So you want to have a slight v-shape in your knees\")"
+   },
+   {
+    "nome": "joelho nunca trava nem passa de 95°",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     3,
+     95
+    ],
+    "fonte": "The Wellness Network — Seated Leg Extensions (idem)"
+   },
+   {
+    "nome": "coxas paradas, deitadas no assento",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ExRx — Lever Leg Extension (\"Sit on apparatus\"); o assento é reto: a coxa fica na horizontal e não sai do lugar (só o joelho mexe)"
+   },
+   {
+    "nome": "quadril parado (~98° entre o tronco e a coxa, encostado)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     76,
+     88
+    ],
+    "fonte": "Steelflex PLLE (\"exact 100° angle between the seat and back rest pad\"); a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra trás)"
+   },
+   {
+    "nome": "tronco parado, encostado e quase em pé",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     4,
+     14
+    ],
+    "fonte": "The Wellness Network — Seated Leg Extensions (\"You want to sit very straight\"); ExRx — Lever Leg Extension (\"back against padded back support\")"
+   },
+   {
+    "nome": "coluna neutra, sem arquear as costas",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "The Wellness Network — Seated Leg Extensions (\"You want to complete this exercise without hyper-extending your back\")"
+   },
+   {
+    "nome": "joelhos e pés na largura do quadril (as pernas não fecham nem abrem)",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.6
+    ],
+    "fonte": "eGym — M1 Leg Extension (\"Return to the starting position, keeping your legs parallel\"): as coxas abrem só 3° (juntas e paralelas, as coxas musculosas do boneco entravam uma na outra perto da virilha) e cada canela estica na direção da sua coxa; a medida é a distância de lado a lado entre os tornozelos ÷ a distância entre as articulações do quadril (embaixo ~1,2, em cima ~1,4)"
+   },
+   {
+    "nome": "joelho na linha quadril–tornozelo (sem abrir nem fechar)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     -15,
+     15
+    ]
+   },
+   {
+    "nome": "pontas dos pés pra frente no começo",
+    "medida": "ponta_pe",
+    "t": 0.0,
+    "graus": [
+     -10,
+     10
+    ]
+   },
+   {
+    "nome": "tornozelos neutros e parados (os pés acompanham as canelas)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     70,
+     82
+    ],
+    "fonte": "neutro do boneco em pé ~76° (tecnica3d.tornozelo); amplitude do tornozelo de Alazzawi S et al., World J Orthop 2017 (flexão dorsal 0–20°, plantar 0–50°)"
+   },
+   {
+    "nome": "braços quase esticados, mãos nos pegadores",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     30
+    ],
+    "fonte": "ExRx — Lever Leg Extension (\"Grasp handles to sides for support\"); eGym — M1 Leg Extension (\"lightly pull on the side handles for stability\"; \"Hold the side handles to prevent your glutes from lifting out of the seat\")"
+   },
+   {
+    "nome": "pegada neutra (palmas viradas pro assento)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ]
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}

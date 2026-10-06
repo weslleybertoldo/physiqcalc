@@ -636,6 +636,34 @@ def folgas(bon, raizes, regras, t=None, passo=0.008):
     return medidas, falhas
 
 
+# ── eixo da máquina alinhado com a junta (Cadeira Extensora, lote 4, 06/10/2026): na máquina de alavanca (extensora,
+# flexora…) o eixo de giro da alavanca tem que passar pela junta que trabalha (ExRx, Lever Leg Extension: "Position knee
+# articulation at same axis as lever fulcrum"; eGym M1 Leg Extension: "Adjust the backrest so your knee joint aligns with
+# the machine’s rotational axis"). Regra da ficha (checagens.eixos): {"nome", "ossos": [ossos cuja CABEÇA é o centro da
+# junta, ex. "LeftLeg" = joelho esquerdo], "equipamento": raiz que gira em volta do eixo (origem NO eixo e X local AO LONGO
+# dele, como a alavanca do equip3d.cadeira_joelho), "mm": [lo, hi], "t": número, [t0, t1] ou "todos" (sem "t" = todos)}.
+# A medida é a maior distância (mm) do centro das juntas até a reta do eixo. Sem "eixos" na ficha nada muda.
+def eixos(rig, raizes, regras, t=None):
+    falhas, medidas = [], {}
+    por_nome = {r.name: r for r in raizes}
+    for regra in regras:
+        if t is not None and not tc.vale_no_quadro(regra.get("t", "todos"), t):
+            continue
+        if regra["equipamento"] not in por_nome:
+            raise ValueError("eixos: %r não é raiz de equipamento/apoio da cena" % regra["equipamento"])
+        M = por_nome[regra["equipamento"]].matrix_world
+        c = np.array(M.to_translation())
+        u = np.array((M.to_3x3() @ Vector((1.0, 0.0, 0.0))).normalized())
+        pior = 0.0
+        for osso in regra["ossos"]:
+            d = _cab(rig, osso) - c
+            pior = max(pior, float(np.linalg.norm(d - u * (d @ u))) * 1000)
+        medidas[regra["nome"]] = pior
+        if not regra["mm"][0] <= pior <= regra["mm"][1]:
+            falhas.append("%s: %.1f mm (esperado %g a %g)" % (regra["nome"], pior, regra["mm"][0], regra["mm"][1]))
+    return medidas, falhas
+
+
 def completa(bon, cena, checagens, t, rotulo, estado):
     """Todos os itens num quadro (a pose já aplicada). estado: dict guardado entre quadros (anterior, referência)."""
     r = quadro(bon, equipamentos=cena.equipamentos, pegadas=cena.pegadas, rotulo=rotulo, apoio_mm=cena.apoio_mm)
@@ -666,6 +694,10 @@ def completa(bon, cena, checagens, t, rotulo, estado):
         r["falhas"] += f
     if checagens.get("folgas"):                            # cabo da polia × cabelo/banco (sai junto das zonas)
         med, f = folgas(bon, cena.equipamentos + cena.apoios, checagens["folgas"], t=t)
+        itens["zonas"].update(med)
+        r["falhas"] += f
+    if checagens.get("eixos"):                             # eixo da máquina × junta (sai junto das zonas)
+        med, f = eixos(rig, cena.equipamentos + cena.apoios, checagens["eixos"], t=t)
         itens["zonas"].update(med)
         r["falhas"] += f
     itens["tecnica"] = tc.medir(posicoes(rig))
