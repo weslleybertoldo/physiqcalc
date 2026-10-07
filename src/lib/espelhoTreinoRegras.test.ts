@@ -135,6 +135,16 @@ describe("papel no Treino (app_metadata.role)", () => {
     expect(papelTreino(resumo(), "admin")).toBe("admin");
     expect(papelTreino(resumo({ membros: [membro()] }), "master")).toBe("master");
   });
+  it("hml-02 (H-04): o resumo do STAGING nunca dá master no Treino (Auth único); o do public, sim", () => {
+    expect(papelTreino(resumo({ master: true }), null, "staging")).toBeNull();
+    expect(papelTreino(resumo({ master: true, membros: [membro()] }), null, "staging")).toBe("professor");
+    expect(papelTreino(resumo({ master: true }), "professor", "staging")).toBeNull();
+    expect(papelTreino(resumo({ master: true }), null, "public")).toBe("master");
+  });
+  it("hml-02 (H-04): o staging também não tira o admin/master que veio da produção", () => {
+    expect(papelTreino(resumo(), "admin", "staging")).toBe("admin");
+    expect(papelTreino(resumo({ master: true }), "master", "staging")).toBe("master");
+  });
   it("ehPersonalComTreino", () => {
     expect(ehPersonalComTreino(resumo({ membros: [membro()] }))).toBe(true);
     expect(ehPersonalComTreino(resumo({ membros: [membro({ status: "convidado" })] }))).toBe(false);

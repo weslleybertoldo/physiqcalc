@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
     // 5. espelho: resumo do núcleo aplicado no Treino (papel, conta, professor, status)
     const resumo = await resumoDoPrincipal(principal.id, schema);
     if (!resumo) return erro("espelho_indisponivel", 502, origin);
-    const espelho: ResultadoEspelho = await aplicarResumo(db, authAdmin, treinoUser, resumo);
+    const espelho: ResultadoEspelho = await aplicarResumo(db, authAdmin, treinoUser, resumo, schema === "staging" ? "staging" : "public");
     await db.from("physiq_identidades").update({ visto_em: new Date().toISOString() }).eq("principal_user_id", principal.id);
 
     // W13 (F5): aluno bloqueado pelo profissional em todas as matrículas — e que não é profissional nem master (P7) — não ganha

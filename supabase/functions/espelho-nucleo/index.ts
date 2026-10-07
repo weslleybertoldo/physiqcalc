@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       if (!v) { resultados.push({ principal_user_id: pid, resultado: "sem_vinculo" }); continue; }
       const { data: tu, error: eu } = await authAdmin.auth.admin.getUserById((v as { treino_user_id: string }).treino_user_id);
       if (eu || !tu?.user) throw eu ?? new Error("usuário do Treino sumiu");
-      const espelho = await aplicarResumo(db, authAdmin, tu.user, r);
+      const espelho = await aplicarResumo(db, authAdmin, tu.user, r, schema === "staging" ? "staging" : "public");
       resultados.push({ principal_user_id: pid, resultado: "aplicado", espelho });
     } catch (e) {
       falhas++;

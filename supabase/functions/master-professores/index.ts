@@ -204,14 +204,14 @@ Deno.serve(async (req) => {
     if (action === "invite") {
       const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return jsonErr("email_invalido", 400, origin);
-      const { data: perfil } = await admin.from("physiq_profiles").select("id, nome, email").ilike("email", email).limit(1).maybeSingle();
+      const { data: perfil } = await admin.from("physiq_profiles").select("id, nome, email").eq("email", email).limit(1).maybeSingle();
       if (perfil) {
         const { data: jaProf } = await admin.from("physiq_professores").select("id").eq("id", (perfil as any).id).maybeSingle();
         if (jaProf) return jsonErr("ja_professor", 409, origin);
         const codigo = await promoverProfessor(admin, (perfil as any).id, (perfil as any).email, (perfil as any).nome || email.split("@")[0]);
         return jsonOk({ promovido: true, userId: (perfil as any).id, codigo }, origin);
       }
-      const { data: existente } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").ilike("email", email).maybeSingle();
+      const { data: existente } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").eq("email", email).maybeSingle();
       if (existente) return jsonOk({ promovido: false, convite: existente, jaExistia: true }, origin);
       const { data: conv, error } = await admin.from("physiq_convites").insert({ email, papel: "professor", criado_por: user.id }).select().single();
       if (error) throw error;

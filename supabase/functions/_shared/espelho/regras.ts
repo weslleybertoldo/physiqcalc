@@ -139,10 +139,12 @@ export function ehPersonalComTreino(r: ResumoNucleo): boolean {
 /**
  * Papel no app_metadata do Treino (spec 7.4): master se for master; professor se for personal numa conta com Treino;
  * sem papel se for aluno. Segurança: admin/master do Treino NUNCA é rebaixado sozinho (só pelo master, à mão).
+ * hml-02 (H-04): o Auth do Treino é um só para os 2 schemas — o resumo do STAGING nunca dá master (o master de teste vale só
+ * no principal, no staging.profiles); o papel de comando do Treino vem só do resumo do public.
  */
-export function papelTreino(r: ResumoNucleo, atual: string | null | undefined): PapelTreino {
+export function papelTreino(r: ResumoNucleo, atual: string | null | undefined, schema: "public" | "staging" = "public"): PapelTreino {
   const staffAtual = atual === "admin" || atual === "master";
-  if (r.master) return staffAtual ? (atual as PapelTreino) : "master";
+  if (r.master && schema === "public") return staffAtual ? (atual as PapelTreino) : "master";
   if (staffAtual) return atual as PapelTreino;
   if (ehPersonalComTreino(r)) return "professor";
   return null;

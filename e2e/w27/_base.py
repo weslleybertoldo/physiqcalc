@@ -2,8 +2,8 @@
 sessão por e-mail e senha no principal, Caso (navegador 1280 × 883 × 2 = as telas 6–8), SQL pela Management API.
 
 Contas de TESTE desta W (só *.teste.claude@physiqnutri.app — P26; senhas em ~/.physiq-teste-<nome>, criadas por e2e/w27/massa.py):
-  w27-master   "Master Teste W27"  MASTER só durante os testes (app_metadata.role master + perfil master do schema); o massa.py
-               --limpar tira o master dos 2 bancos (o Auth é um só para staging e produção)
+  w27-master   "Master Teste W27"  MASTER só durante os testes e SÓ no staging (perfil master em staging.profiles — hml-02/H-04:
+               nunca o claim global, que valeria na produção); o massa.py --limpar tira o master dos 2 bancos
   w27-dono-a   "Dona Ana W27"      conta "Estúdio Ana W27" criada PELO MASTER na tela/função (e-mail + senha; outra área)
   w27-dono-b   "Bruno Dono W27"    conta "Treino Bruno W27" criada pelo master (personal, Só Treino)
   w27-aluno    "Aluno Login W27"   pessoa com login e sem conta: o master põe numa conta e depois move de conta
@@ -104,12 +104,12 @@ def admin_auth(ref: str, metodo: str, caminho: str, corpo=None):
 
 
 def dar_master(conta: str = "w27-master") -> str:
-    """O master de teste: papel no JWT (Auth do principal) + perfil master no schema do teste."""
+    """O master de teste: SÓ o perfil master em staging.profiles (hml-02/H-04 — o Auth é um só para staging e produção: o claim
+    app_metadata.role valeria na produção). Na produção não existe master de teste."""
+    assert schema() == "staging", "hml-02 (H-04): master de teste só no staging"
     u = uid(conta)
     assert u, conta
-    st, r = admin_auth(PRINCIPAL_REF, "PUT", f"users/{u}", {"app_metadata": {"role": "master"}})
-    assert st == 200, (st, r)
-    sql_principal(f"update {schema()}.profiles set role = 'master', nome = {q(NOMES[conta])} where id = '{u}'")
+    sql_principal(f"update staging.profiles set role = 'master', nome = {q(NOMES[conta])} where id = '{u}'")
     _TOKENS.pop(conta, None)
     return u
 

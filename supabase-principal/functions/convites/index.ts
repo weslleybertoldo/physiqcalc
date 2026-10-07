@@ -16,9 +16,9 @@
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL (+ os automáticos).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { origemPermitida } from "../_shared/login-regras.ts";
+import { destinoDoEnvio } from "../_shared/enviar-aluno-regras.ts";
 import {
   assuntoDoConvite,
-  destinoDoEmail,
   htmlDoConvite,
   linkDoConvite,
   textoDoConvite,
@@ -131,7 +131,8 @@ Deno.serve(async (req) => {
     if (r.ok !== true) return json(r, STATUS_DO_ERRO[String(r.erro)] ?? 400, origin);
 
     // o e-mail (o convite já está gravado: se o e-mail falhar, a tela avisa e o dono pode mandar o link por outro caminho)
-    const destino = destinoDoEmail(String(r.email));
+    // hml-02 (H-05): no staging o e-mail vai SEMPRE para a caixa de teste (o convite pode ter um endereço real)
+    const destino = destinoDoEnvio(schema, String(r.email));
     const dados = {
       email: String(r.email),
       papeis: (r.papeis as string[]) ?? papeis,

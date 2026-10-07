@@ -139,7 +139,7 @@ async function legadoDaPessoa(body: Record<string, unknown>): Promise<Record<str
   }
   // convite de professor do master pendente pra este e-mail (ainda sem linha de professor): consome e gera o código
   if (!saida.professor && email) {
-    const { data: conv } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").ilike("email", email).maybeSingle();
+    const { data: conv } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").eq("email", email).maybeSingle();
     const conviteId = (conv as { id?: string } | null)?.id;
     if (conviteId) {
       const { data: cod, error: eg } = await admin.rpc("physiq_gerar_codigo_professor", { p_nome: nome || email.split("@")[0] });
@@ -244,13 +244,13 @@ Deno.serve(async (req) => {
     const admin = adminClient();
     const body = await req.json().catch(() => ({}));
     const codigo = typeof body?.codigo === "string" ? body.codigo.trim().toUpperCase().slice(0, 60) : null;
-    const email = (user.email || "").toLowerCase();
+    const email = (user.email || "").trim().toLowerCase();
     const role = (user.app_metadata as any)?.role;
     const nome = ((user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || email.split("@")[0] || "Professor") as string;
 
     // 1. convite de PROFESSOR pendente para este e-mail → promove (mesmo que ainda não tenha perfil)
     const { data: convProf } = email
-      ? await admin.from("physiq_convites").select("id, criado_por").eq("papel", "professor").eq("status", "pendente").ilike("email", email).maybeSingle()
+      ? await admin.from("physiq_convites").select("id, criado_por").eq("papel", "professor").eq("status", "pendente").eq("email", email).maybeSingle()
       : { data: null };
     if (convProf) {
       const { codigo: cod } = await promoverProfessor(admin, user.id, user.email, nome, (convProf as any).criado_por);
@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
     let professorId: string | null = null;
     let conviteId: string | null = null;
     const { data: convAluno } = email
-      ? await admin.from("physiq_convites").select("id, professor_id").eq("papel", "aluno").eq("status", "pendente").ilike("email", email).order("enviado_em", { ascending: false }).limit(1).maybeSingle()
+      ? await admin.from("physiq_convites").select("id, professor_id").eq("papel", "aluno").eq("status", "pendente").eq("email", email).order("enviado_em", { ascending: false }).limit(1).maybeSingle()
       : { data: null };
     if (convAluno?.professor_id) { professorId = (convAluno as any).professor_id; conviteId = (convAluno as any).id; }
     else if (codigo) {
