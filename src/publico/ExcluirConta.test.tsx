@@ -62,9 +62,10 @@ describe("/excluir-conta — sem login", () => {
     const suporte = screen.getByRole("link", { name: CONTATO_SUPORTE });
     expect(suporte.getAttribute("href")).toBe(linkDoSuporte("Excluir minha conta"));
   });
-  it("W3 da loja: as cópias de segurança com a MESMA frase da política, sem o 'até 7 dias'", () => {
+  it("W3/W4 da loja: as cópias de segurança com a MESMA frase da política — em até 30 dias, sem o 'até 7 dias'", () => {
     const { container } = abrir();
     expect(container.querySelector("[data-secao-excluir='guardado'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
+    expect(container.textContent).toMatch(/são apagadas em até 30 dias depois de feitas/);
     expect(container.textContent).not.toMatch(/até 7 dias/);
   });
   it("'Entrar para excluir' guarda o pedido e leva ao login voltando para esta página", () => {

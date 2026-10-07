@@ -2,13 +2,17 @@
  * Textos da Política de Privacidade (src/publico/Privacidade.tsx) que precisam morar num lugar só — W3 da loja:
  *
  * - FRASE_BACKUPS: a frase das cópias de segurança sai IGUAL na política (Retenção) e na /excluir-conta (O que fica guardado),
- *   para uma página nunca contradizer a outra. Sem prazo: antes as 2 diziam "até 7 dias", o que não se comprovava (os backups
- *   manuais feitos antes das manutenções ficam mais tempo que os do provedor). O prazo de descarte deles é decisão do Weslley.
+ *   para uma página nunca contradizer a outra. W4 da loja — decisão do Weslley de 06/10/2026 ("A"): os backups manuais (os feitos
+ *   antes das manutenções) são apagados em 30 dias; com isso a frase ganhou o prazo, "em até 30 dias". Os automáticos do provedor
+ *   não passam disso — conferido em 06/10/2026 na Management API do Supabase (só leitura): a organização dos 2 bancos está no plano
+ *   Free, que não tem backup diário (0 backups e PITR desligado nos 2 projetos), e a retenção documentada dos planos pagos vai de
+ *   7 dias (Pro) a 30 (Enterprise), com o PITR até 28. Histórico: até a W2 as 2 páginas diziam "até 7 dias", o que não se
+ *   comprovava; a W3 tirou o prazo até a decisão.
  * - SERVICOS_TERCEIROS: quem recebe dado pessoal fora do Physiq, o que recebe e para quê. Cada item foi conferido no código em
  *   06/10/2026 (o arquivo vai no comentário). Serviço que o código não usa não entra (o Google Play Billing só chega na W6).
  */
 export const FRASE_BACKUPS =
-  "Cópias de segurança do banco de dados — as do provedor e as feitas antes de manutenções — podem guardar os dados por mais um tempo, até serem descartadas; ficam protegidas e não são usadas para outro fim.";
+  "As cópias de segurança do banco de dados — as automáticas do provedor e as feitas antes de manutenções — são apagadas em até 30 dias depois de feitas; até lá, ficam protegidas e não são usadas para outro fim.";
 
 export interface ServicoTerceiro {
   /** marca do item (data-servico, para os testes e o E2E) */

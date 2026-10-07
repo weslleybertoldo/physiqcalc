@@ -50,7 +50,8 @@ describe("/privacidade e /termos (C13)", () => {
 describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)", () => {
   it("a data nova e os 9 serviços conferidos no código, cada um com o que recebe", () => {
     abrir(<Privacidade />, "/privacidade");
-    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 6 de outubro de 2026");
+    // W4 da loja: a frase dos backups com o prazo entrou em 7/10/2026
+    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 7 de outubro de 2026");
     expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "github"]);
     const t = document.querySelector("[data-servicos-terceiros]")?.textContent ?? "";
     for (const nome of ["Supabase", "PowerSync", "Cloudflare", "Vercel", "Google", "Resend", "Mercado Pago", "WhatsApp", "GitHub"]) expect(t).toContain(nome);
@@ -63,13 +64,16 @@ describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)"
     expect(document.body.textContent).toMatch(/Quem instala pela Google Play/);
   });
 
-  it("os dados de saúde (LGPD art. 11), o aviso de não ser dispositivo médico e a frase dos backups SEM prazo", () => {
+  it("os dados de saúde (LGPD art. 11), o aviso de não ser dispositivo médico e a frase dos backups com o prazo de 30 dias (W4)", () => {
     abrir(<Privacidade />, "/privacidade");
     expect(document.querySelector("[data-dados-saude]")?.textContent).toMatch(/dados pessoais sensíveis \(LGPD, art\. 11\)/);
     expect(document.body.textContent).toMatch(/não é um dispositivo médico e não diagnostica, não trata nem substitui o\s+acompanhamento de um profissional de saúde/);
     expect(document.querySelector("[data-secao-privacidade='retencao'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
     expect(document.body.textContent).not.toMatch(/7 dias/);
-    expect(FRASE_BACKUPS).not.toMatch(/\d/);
+    // decisão de 06/10/2026 ("A"): as do provedor e as manuais, apagadas em até 30 dias — o único prazo da frase
+    expect(FRASE_BACKUPS).toMatch(/as automáticas do provedor e as feitas antes de manutenções/);
+    expect(FRASE_BACKUPS).toMatch(/são apagadas em até 30 dias depois de feitas; até lá, ficam protegidas e não são usadas para outro fim/);
+    expect(FRASE_BACKUPS.match(/\d+/g)).toEqual(["30"]);
   });
 
   it("versão da Google Play: o GitHub (instalador e atualização do APK do site) não aparece; o resto é igual", () => {

@@ -70,6 +70,7 @@ function TelaExcluida({ feito }: { feito: Feito }) {
  * exclusão certa (o mesmo fluxo do app). Diz o que é apagado e o que fica guardado (e por quê) e o contato do suporte. Funciona sem
  * login e na versão da loja (sem nada de pagamento). Depois de excluir, o fluxo do painel cai aqui com o resumo ("Conta excluída").
  * W3 da loja: a frase das cópias de segurança é a MESMA da política (src/publico/privacidade/textos.ts), sem o "até 7 dias".
+ * W4 da loja: a mesma frase, agora com o prazo — as cópias são apagadas em até 30 dias.
  */
 export default function ExcluirConta() {
   const { pronto, usuario, situacao, erroSituacao } = useSessao();
