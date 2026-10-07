@@ -2262,3 +2262,222 @@ def supino_sentado(nome="supino", eixo=(-0.40, 0.13), x_braco=0.50, pegadores=(-
         pegs[s] = peg
     bpy.context.view_layer.update()
     return MaquinaSupino(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2)
+
+
+# ===== Panturrilha sentado na máquina ===============================================================================================
+# ── MÁQUINA DE PANTURRILHA SENTADO (Panturrilha Sentado na Máquina, lote 5, 07/10/2026) ───────────────────────────────────────────
+# Máquina de panturrilha sentado com o ASSENTO FIXO (sem encosto): o DEGRAU dos pés na frente — chapa estreita com a borracha em
+# cima, onde só a ponta dos pés apoia, os calcanhares pra fora, atrás da borda (ExRx, Lever Seated Calf Raise: "Place forefeet on
+# platform with heels extending off.") —, o BRAÇO que gira em volta de um eixo horizontal (ao longo do X) com a ALMOFADA por cima
+# das coxas logo acima dos joelhos ("Position lower thighs under lever pads.", idem), os 2 PEGADORES em pé em cima da almofada
+# ("Place hands on top of thigh pads.", idem: aqui uma barra por cima da almofada, com 2 luvas de borracha de 31,8 mm — a medida
+# dos 2 tubos do quadro da almofada da Body-Solid GSCR349, a máquina sentada do estudo de Kinoshita et al., Front Physiol 2023,
+# fechados com a tampa "ø31.8 round end cap" no desenho do manual), o PINO
+# de anilha na ponta do braço e a estrutura (base no chão, coluna do assento, poste do degrau, torre do eixo com o mancal).
+# O EIXO: sentado, com a ponta do pé presa no degrau e o glúteo no assento, quando o calcanhar sobe o tornozelo sobe e o joelho sobe
+# junto — a coxa gira em volta do QUADRIL. A cena põe o eixo do braço na reta das 2 articulações do quadril: a almofada gira o MESMO
+# ângulo da coxa e fica encostada nela sem escorregar, como o eixo no joelho da cadeira extensora/flexora e no quadril da abdutora.
+# (Escolha da fábrica: nas máquinas de anilha comerciais o assento costuma girar junto com o braço — Hammer Strength PL-CALF, "the
+# pivoting seat ... moves with them throughout the range of motion" —; aqui o assento é fixo e só o braço gira.) A cena monta a
+# peça EM VOLTA do corpo (como as cadeiras, o leg press e o Smith): ela dá o eixo, o assento, o degrau, a almofada e onde ficam os
+# pegadores; a peça liga tudo com a estrutura. Outro exercício na mesma máquina (unilateral, ou com outra altura de degrau) monta
+# com outros números: nada da peça é do exercício em si.
+# Medidas de máquina de verdade: assento de 10" × 13" (Titan Seated Calf Raise Machine: "Seat Dimensions: 10-in. x 13-in.") com
+# estofado de 3" (Body-Solid GSCR349: "ultra-thick 3" DuraFirm™ padding on the seat and knee pads"); almofada de 16,5" de
+# comprimento (Titan: "Adjustable Knee Pad Length: 16.5-in.") a 28,25"–32" do chão (Titan: "Adjustable Knee Pad Height:
+# 28.25-in. - 32-in."); degrau de 20" × 4" (Life Fitness Signature Series Plate-Loaded Seated Calf Raise: "Footplate: Textured,
+# non-slip steel (20"L x 4"W)"); pino de anilha de 49 mm × 9,5" (Titan: "Weight Post Diameter: 49 mm", "Weight Post Length:
+# 9.5-in."); pegadores de 31,8 mm (GSCR349, acima); tubo de 2" × 3" (Titan: "2 x 3-in. 11-Ga Steel"; GSCR349: "2" x 3" 11-gauge
+# high-tensile strength steel"). O desenho do braço, do cubo, da torre, do mancal, da base e a anilha (20 kg, Ø 450 mm) são
+# escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   mq = e3.panturrilha_sentado("panturrilha", eixo=(y, z), assento=(...), degrau=(...), almofada=(centro, u, (...)),
+#                               pegadores=(x, altura, comprimento, raio), lado=-1)
+#   no pose(t): mq.girar(graus)            # o braço (com a almofada e os pegadores) gira em volta do eixo; > 0 = a almofada SOBE
+#               c, u = mq.pegada(s)         # centro e eixo do pegador do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador,
+#        eixo=(0, 0, 1))), ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_assento" e "<nome>_degrau" (APOIO), "<nome>_braco" (gira; não encosta no corpo, fora as mãos nos pegadores) e
+# "<nome>_almofada" (gira junto com o braço; APOIO). O braço e a almofada têm a origem NO EIXO e o X local AO LONGO dele (a regra
+# checagens.eixos da ficha mede as articulações do quadril nessa reta). O pegador de cada lado é um tubo de borracha com o Z local
+# ao longo dele e a origem no meio (ck.Barra(..., eixo=(0, 0, 1))).
+class MaquinaPanturrilha:
+    """Máquina de panturrilha sentado pronta na cena (panturrilha_sentado())."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes                  # {"estrutura", "assento", "degrau", "braco", "almofada"}
+        self.equipamentos = [raizes["estrutura"], raizes["braco"]]
+        self.apoios = [raizes[k] for k in ("assento", "degrau", "almofada")]
+        self.eixo = Vector(eixo)              # ponto do eixo de giro do braço (no cubo); direção = X
+        self.pegadores = pegadores            # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in ("braco", "almofada")}
+
+    def _giro(self, graus):
+        return (Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(-graus), 4, "X")
+                @ Matrix.Translation(-self.eixo))
+
+    def girar(self, graus):
+        """O braço (com a almofada, os pegadores e o pino) girado `graus` em volta do eixo, a partir da montagem: com a pessoa
+        olhando pra −Y, > 0 SOBE a almofada (a frente do braço vai pra cima, como a coxa quando o calcanhar sobe)."""
+        R = self._giro(graus)
+        for k, M in self._M0.items():
+            self.raizes[k].matrix_world = R @ M
+        self.angulo = graus
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, graus=None):
+        """Centro e eixo (mundo, unitário) do pegador do lado s com o braço em `graus` (None = como está agora)."""
+        M = self.pegadores[s].matrix_world
+        if graus is not None:
+            M = self._giro(graus - self.angulo) @ M
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+def panturrilha_sentado(nome="panturrilha", eixo=(0.0, 0.69), assento=(-0.13, 0.124, 0.59, 0.33, 0.076),
+                        degrau=(-0.56, 0.18, 0.102, 0.508), almofada=None, pegadores=(0.17, 0.055, 0.13, 0.0159), lado=-1,
+                        x_braco=0.27, x_torre=0.36, pino=(0.241, 0.0245), frente_pino=0.13, anilha=None, secao=(0.05, 0.075)):
+    """Máquina de panturrilha sentado (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      eixo       = (y, z) do eixo de giro do braço (paralelo ao X): a reta das 2 articulações do quadril; o cubo do braço fica em
+                   x = lado·x_braco, preso no mancal da torre (x = lado·x_torre);
+      assento    = (y_frente, y_tras, topo, largura, espessura): estofado do assento (APOIO), da borda da frente até y_tras, com o
+                   topo em `topo`, em cima de uma chapa e de uma coluna até a base;
+      degrau     = (y_borda, topo, profundidade, largura): borracha do degrau (APOIO) com o topo em `topo`, da borda de trás
+                   (y_borda: a ponta dos pés apoia logo à frente dela e os calcanhares ficam pra fora, atrás) até y_borda −
+                   profundidade, centrada em x = 0, em cima da chapa de aço e do poste até a base;
+      almofada   = (centro, u, (comprimento, profundidade, espessura)): centro da face de BAIXO da almofada (a que encosta nas coxas,
+                   em x = 0), u = direção ao longo das coxas pro joelho (no plano YZ); a face de cima tem a chapa de aço e, por
+                   cima dela, a travessa (ao longo do X) que sai do braço;
+      pegadores  = (x, altura, comprimento, raio): a barra dos pegadores (aço, ao longo do X) fica `altura` m acima do topo da
+                   travessa (⟂ à almofada), em 2 postes por fora das mãos; um pegador de borracha (luva) de cada lado, centrado em
+                   x = ±x, onde a mão fecha por cima (pegada pronada);
+      lado       = lado do braço e da torre (−1 = −X, o direito de quem senta);
+      x_braco, x_torre = |x| do plano do braço (por fora da coxa e do quadril) e da torre do eixo;
+      pino       = (comprimento, raio): pino de anilha na ponta do braço, `frente_pino` m à frente da travessa, virado pra fora;
+      anilha     = None ou (raio, espessura): uma anilha no pino;
+      secao      = (lado menor, lado maior) do tubo retangular da estrutura e do braço.
+    Devolve um MaquinaPanturrilha (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
+    if almofada is None:
+        raise ValueError("panturrilha_sentado: falta a almofada (centro, u, (comprimento, profundidade, espessura))")
+    sl = -1.0 if lado < 0 else 1.0
+    ye, ze = eixo
+    y_f, y_t, topo, larg, esp = assento
+    y_bd, z_d, prof_d, larg_d = degrau
+    c_a, u_a, (comp_a, prof_a, esp_a) = almofada
+    x_p, alt_p, comp_p, raio_p = pegadores
+    t0, t1 = secao
+    X = Vector((1.0, 0.0, 0.0))
+    rot_x90 = (0, math.radians(90), 0)                      # cilindro deitado ao longo do X
+    c_a = Vector((0.0, c_a[1], c_a[2]))
+    u_a = Vector((0.0, u_a[1], u_a[2])).normalized()
+    w_a = u_a.cross(X)                                      # pra cima da almofada (⟂ a ela, no plano YZ)
+    if w_a.z < 0:
+        w_a = -w_a
+    P0 = Vector((sl * x_braco, ye, ze))                     # cubo do braço, no eixo
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, ass, deg = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("degrau")
+    bra, alm = raiz_nova("braco", (0.0, ye, ze)), raiz_nova("almofada", (0.0, ye, ze))
+    bpy.context.view_layer.update()
+
+    # ── assento: estofado (APOIO) em cima de uma chapa; coluna até a base ─────────────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, y_t - y_f, esp), mat_estofado(), pai=ass, chanfro=0.02)
+    z_chapa = topo - esp - 0.006
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.04, y_t - y_f - 0.03, 0.012), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    _viga(nome + "_coluna_assento", (0, y_ass, 0.05), (0, y_ass, z_chapa - 0.006), t1, t0, mat_estrutura(), pai=estr)
+    # ── degrau: borracha (APOIO) em cima da chapa de aço, num poste que sobe da base embaixo da frente dela ─────────────────────────
+    y_dm = y_bd - prof_d / 2
+    caixa(nome + "_degrau_borracha", (0, y_dm, z_d - 0.003), (larg_d, prof_d, 0.006), mat_borracha(), pai=deg, chanfro=0.002)
+    # chapa de aço embaixo da borracha (a borracha passa 8 mm dela atrás: bico de borracha); quinas chanfradas como as da borracha —
+    # a zona de apoio da checagem mede o sinal pela normal da face mais perto e, na quina viva, a normal fica ⟂ à pele e o sinal sai
+    # errado (a pele 2 cm acima da quina dava "−20 mm")
+    caixa(nome + "_degrau_chapa", (0, y_dm - 0.004, z_d - 0.006 - 0.005), (larg_d - 0.004, prof_d - 0.008, 0.010), mat_aco(), pai=deg,
+          chanfro=0.002)
+    z_baixo_d = z_d - 0.016                                 # embaixo da chapa do degrau
+    y_poste = y_bd - prof_d + t0 / 2 + 0.004                # o poste fica embaixo da frente do degrau (o calcanhar desce atrás)
+    _viga(nome + "_poste_degrau", (0, y_poste, 0.05), (0, y_poste, z_baixo_d - 0.012), t1, t0, mat_estrutura(), pai=estr)
+    _em_aneis(_reto(caixa(nome + "_degrau_suporte", (0, y_bd - prof_d / 2 - 0.012, z_baixo_d - 0.006),
+                          (larg_d - 0.06, prof_d - 0.04, 0.012), mat_estrutura(), pai=estr, chanfro=0)), passo=0.05)
+    # ── base no chão: viga do meio ao longo do Y (do assento ao degrau), pés de trás e da frente, braço até a torre ──────────────────
+    y0b, y1b = y_bd - prof_d - 0.08, y_t + 0.06
+    _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y0b + y1b) / 2, 0.025), (t1, y1b - y0b, 0.05), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    for k, (y, meia) in enumerate(((y0b + 0.04, 0.27), (y1b - 0.04, 0.27))):
+        _em_aneis(_reto(caixa(nome + "_base_pe%d" % k, (0, y, 0.025), (2 * meia, t1, 0.05), mat_estrutura(), pai=estr, chanfro=0)),
+                  passo=0.08)
+    x_t = sl * x_torre
+    _viga(nome + "_base_torre", (0, ye, 0.025), (x_t + sl * t0 / 2, ye, 0.025), t1, 0.05, mat_estrutura(), pai=estr)
+    _em_aneis(_reto(caixa(nome + "_base_pe_torre", (x_t, ye, 0.025), (t1, 0.40, 0.05), mat_estrutura(), pai=estr, chanfro=0)),
+              passo=0.08)
+    # ── torre do eixo (parada): coluna do lado, mancal no alto e o eixo de aço que entra no cubo do braço ─────────────────────────────
+    _viga(nome + "_torre", (x_t, ye, 0.05), (x_t, ye, ze + 0.065), t0, t1, mat_estrutura(), pai=estr)
+    _cilindro(nome + "_mancal", 0.05, 0.08, (x_t, ye, ze), rot_x90, mat_estrutura(), pai=estr)
+    _em_aneis(_cilindro(nome + "_eixo", 0.02, abs(x_t - P0.x) + 0.05, ((x_t + P0.x) / 2 + sl * 0.01, ye, ze), rot_x90, mat_aco(),
+                        pai=estr), passo=0.03)
+    _cilindro(nome + "_eixo_tampa", 0.03, 0.012, (x_t + sl * 0.046, ye, ze), rot_x90, mat_aco(), pai=estr)
+    # ── braço (gira): cubo no eixo, viga do cubo até a travessa, travessa por cima da almofada, pegadores, ponta com o pino ──────────
+    h_chapa = esp_a + 0.006                                 # meio da chapa de aço em cima do estofado (a partir da face de baixo)
+    h_trav = esp_a + 0.012 + t0 / 2                         # meio da travessa
+    Q = c_a + w_a * h_trav                                  # meio da travessa (x = 0)
+    Qb = Vector((P0.x, Q.y, Q.z))                           # onde a travessa encontra o braço
+    pecas = [_cilindro(nome + "_cubo", 0.06, 0.06, P0, rot_x90, mat_estrutura()),
+             _cilindro(nome + "_cubo_tampa", 0.03, 0.064, P0, rot_x90, mat_aco())]
+    d = (Qb - P0).normalized()
+    pecas.append(_viga(nome + "_braco_viga", P0 + d * 0.04, Qb + d * (t1 / 2), t0, t1, mat_estrutura()))
+    F = Qb + u_a * frente_pino                              # ponta do braço, com o pino
+    pecas.append(_viga(nome + "_braco_ponta", Qb - u_a * (t1 / 2), F + u_a * (t1 / 2), t0, t1, mat_estrutura()))
+    x_fim = -sl * (comp_a / 2 - 0.03)                       # a travessa vai do braço até perto da ponta de lá da almofada
+    pecas.append(_em_aneis(_reto(caixa(nome + "_travessa", Vector(((P0.x + x_fim) / 2, Q.y, Q.z)),
+                                       (abs(P0.x - x_fim) + t0, t0, t0), mat_estrutura(), rot=_rot_de(X, -u_a, w_a), chanfro=0)),
+                           passo=t0))
+    pecas.append(caixa(nome + "_travessa_tampa", Vector((x_fim - sl * (t0 / 2 + 0.003), Q.y, Q.z)), (0.006, t0 + 0.004, t0 + 0.004),
+                       mat_borracha(), rot=_rot_de(X, -u_a, w_a), chanfro=0.001))
+    # chapa de aço em cima do estofado da almofada (presa na travessa)
+    pecas.append(_em_aneis(_reto(caixa(nome + "_almofada_chapa", c_a + w_a * h_chapa, (comp_a - 0.03, prof_a - 0.02, 0.012),
+                                       mat_aco(), rot=_rot_de(X, -u_a, w_a), chanfro=0)), passo=0.06))
+    # barra dos pegadores (aço, ao longo do X) em 2 postes em cima da travessa, por fora das mãos, com as 2 luvas de borracha (os
+    # pegadores) onde as mãos fecham por cima (pegada pronada)
+    pegs = {}
+    topo_trav = Q + w_a * (t0 / 2)
+    x_ext = x_p + comp_p / 2 + 0.02                         # pontas da barra (e os postes), por fora das luvas
+    c_bar = Vector((0.0, topo_trav.y, topo_trav.z)) + w_a * alt_p   # eixo da barra, no meio
+    pecas.append(_em_aneis(_cilindro(nome + "_barra_pegador", 0.0125, 2 * x_ext + 0.03, c_bar, rot_x90, mat_aco(), vertices=24),
+                           passo=0.04))
+    for s in (1, -1):
+        topo_b = Vector((s * x_ext, c_bar.y, c_bar.z))
+        pecas.append(tubo(nome + "_poste_pegador%+d" % s, Vector((s * x_ext, topo_trav.y, topo_trav.z)) - w_a * 0.005,
+                          topo_b + w_a * 0.012, 0.013, mat_aco()))
+        a_peg, b_peg = Vector((s * (x_p + comp_p / 2), c_bar.y, c_bar.z)), Vector((s * (x_p - comp_p / 2), c_bar.y, c_bar.z))
+        pegs[s] = _em_aneis(tubo(nome + "_pegador%+d" % s, a_peg, b_peg, raio_p, mat_borracha(), vertices=32), passo=0.035)
+        pecas.append(pegs[s])
+        for k, xx in enumerate((x_p + comp_p / 2 + 0.005, x_p - comp_p / 2 - 0.005)):   # bordas da luva
+            pecas.append(_cilindro(nome + "_pegador_borda%+d%d" % (s, k), raio_p + 0.003, 0.01, Vector((s * xx, c_bar.y, c_bar.z)),
+                                   rot_x90, mat_borracha()))
+    # pino de anilha na ponta do braço, virado pra fora (lado), com o colar de encosto da anilha
+    x_p0 = F.x + sl * (t0 / 2)
+    c_pino = Vector((x_p0 + sl * pino[0] / 2, F.y, F.z))
+    pecas.append(_em_aneis(_cilindro(nome + "_pino", pino[1], pino[0], c_pino, rot_x90, mat_aco(), vertices=32), passo=0.04))
+    pecas.append(_cilindro(nome + "_pino_colar", 0.045, 0.014, Vector((x_p0 + sl * 0.007, F.y, F.z)), rot_x90, mat_aco()))
+    if anilha is not None:
+        r_an, e_an = anilha
+        xa = x_p0 + sl * (0.014 + 0.002 + e_an / 2)
+        pecas.append(_em_aneis(_cilindro(nome + "_anilha", r_an, e_an, Vector((xa, F.y, F.z)), rot_x90, mat_borracha(), vertices=48),
+                               passo=0.05))
+        pecas.append(_cilindro(nome + "_anilha_miolo", 0.045, e_an + 0.004, Vector((xa, F.y, F.z)), rot_x90, mat_aco()))
+    _prender(pecas, bra)
+    # ── almofada das coxas (APOIO, gira junto com o braço): estofado com a face de baixo em c_a ─────────────────────────────────────
+    _prender([caixa(nome + "_almofada_estofado", c_a + w_a * (esp_a / 2), (comp_a, prof_a, esp_a), mat_estofado(),
+                    rot=_rot_de(X, -u_a, w_a), chanfro=0.02)], alm)
+    bpy.context.view_layer.update()
+    raizes = {"estrutura": estr, "assento": ass, "degrau": deg, "braco": bra, "almofada": alm}
+    return MaquinaPanturrilha(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2)
