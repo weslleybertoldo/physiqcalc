@@ -70,3 +70,59 @@ describe("Android da loja (build type playRelease)", () => {
     expect(main.match(/registerPlugin\(ApkInstallerPlugin\.class\)/g)).toHaveLength(1);
   });
 });
+
+describe("W4 da loja — o AAB da Google Play (chave de upload)", () => {
+  const impressao = (nome: string) => ler("scripts/ci/aab-loja.sh").match(new RegExp(`^${nome}="([0-9A-F:]+)"`, "m"))?.[1];
+
+  it("o playRelease assina SÓ com a chave de upload: zera o signingConfig que o initWith copia do release (a chave do site)", () => {
+    const gradle = ler("android/app/build.gradle");
+    const play = gradle.slice(gradle.indexOf("playRelease {"), gradle.indexOf("buildFeatures"));
+    expect(play).toMatch(/initWith release[\s\S]*signingConfig = null\s+def lojaKeystoreFile = System\.getenv\("PLAY_UPLOAD_KEYSTORE_FILE"\)\s+if \(lojaKeystoreFile\) \{\s*signingConfig = signingConfigs\.loja\s*\}/);
+    expect(play).not.toMatch(/signingConfigs\.release|getenv\("KEYSTORE_FILE"\)/);
+    const loja = gradle.slice(gradle.indexOf("        loja {"), gradle.indexOf("    buildTypes {"));
+    for (const v of ["PLAY_UPLOAD_KEYSTORE_FILE", "PLAY_UPLOAD_KEYSTORE_PASSWORD", "PLAY_UPLOAD_KEY_ALIAS", "PLAY_UPLOAD_KEY_PASSWORD"]) {
+      expect(loja).toContain(`System.getenv("${v}")`);
+    }
+    // o release (o APK do site) continua como antes: KEYSTORE_*, minify e shrink
+    const release = gradle.slice(gradle.indexOf("    buildTypes {"), gradle.indexOf("playRelease {"));
+    expect(release).toMatch(/minifyEnabled true\s+shrinkResources true[\s\S]*if \(keystoreFile\) \{\s*signingConfig signingConfigs\.release\s*\}/);
+    expect(gradle).toMatch(/release \{\s*def keystoreFile = System\.getenv\("KEYSTORE_FILE"\)/);
+  });
+
+  it("a conferência espera a impressão digital da chave de upload — a mesma do assetlinks.json, ao lado da do site", () => {
+    const upload = impressao("SHA256_UPLOAD");
+    const site = impressao("SHA256_SITE");
+    for (const sha of [upload, site]) expect(sha).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+    expect(upload).not.toBe(site);
+    const assetlinks = JSON.parse(ler("public/.well-known/assetlinks.json"));
+    expect(assetlinks[0].target.sha256_cert_fingerprints).toEqual([site, upload]);
+  });
+
+  it("os 2 workflows geram o AAB pelo mesmo script, em paralelo ao APK e fora da release", () => {
+    const casos: [string, string, number][] = [
+      [".github/workflows/build-apk.yml", "-loja", 90],
+      [".github/workflows/build-apk-check.yml", "-loja-check", 7],
+    ];
+    for (const [arquivo, sufixo, dias] of casos) {
+      const wf = ler(arquivo);
+      const inicio = wf.indexOf("\n  aab-loja:");
+      expect(inicio, arquivo).toBeGreaterThan(0);
+      const job = wf.slice(inicio);
+      expect(job).not.toMatch(/^\s+needs:/m);
+      for (const passo of ["versao", "firebase", "web", "gradle", "conferir"]) expect(job).toContain(`bash scripts/ci/aab-loja.sh ${passo}`);
+      expect(job).toContain(`name: Physiq-v\${{ steps.version.outputs.current }}${sufixo}\n`);
+      expect(job).toContain(`retention-days: ${dias}`);
+      expect(job).not.toContain("action-gh-release");
+      // o job do APK (o que cria a release) não toca no AAB: a release continua só com o APK (os comentários não contam)
+      const semComentarios = wf.slice(0, inicio).split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
+      expect(semComentarios).not.toMatch(/\.aab|aab-loja\.sh/);
+    }
+    const principal = ler(".github/workflows/build-apk.yml");
+    expect(principal.slice(principal.indexOf("\n  aab-loja:"))).toMatch(/permissions:\s+contents: read/);
+    expect(ler(".github/workflows/build-apk-check.yml")).toMatch(/paths:[\s\S]*- "scripts\/ci\/\*\*"/);
+  });
+
+  it("npm run build:aab gera o AAB no notebook pelo mesmo script", () => {
+    expect(JSON.parse(ler("package.json")).scripts["build:aab"]).toBe("bash scripts/ci/aab-loja.sh local");
+  });
+});
