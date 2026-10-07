@@ -2743,3 +2743,277 @@ def rosca_scott(nome="scott", eixo=(-0.30, 0.74), almofada=None, recorte=None, a
     bpy.context.view_layer.update()
     return RoscaScott(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2, independentes)
 # ===== fim: Rosca Scott na máquina ==================================================================================================
+
+
+# ===== Remada sentada na máquina ====================================================================================================
+# ── MÁQUINA DE REMADA SENTADA COM APOIO DE PEITO (Remada Fechada na Máquina, lote 5, 07/10/2026; a MESMA peça serve à Remada Aberta na
+# Máquina — o pegador pronado — e, com o eixo no alto e a alavanca pendurada, ao High Row) ──────────────────────────────────────────
+# Máquina de puxar sentado, de frente pra máquina, com o peito encostado na ALMOFADA DO PEITO: o ASSENTO, a almofada (presa numa viga
+# que sai da torre da pilha, na frente), 2 BRAÇOS DE ALAVANCA independentes que giram em volta do MESMO eixo horizontal (ao longo do
+# X) e, na ponta de cada braço, o conjunto do PEGADOR — uma barra de aço ao longo do X com a borracha do pegador PRONADO (pegada
+# aberta, palma pra baixo) e, na ponta de dentro, o pegador NEUTRO (palma pro meio: a pegada fechada; pendurado embaixo da barra, como
+# os pegadores verticais da Life Fitness Signature Row na ficha da Sussex, ou pra cima) —, que gira livre em volta da barra (o pegador
+# se ajeita na mão e o punho fica reto o caminho todo); a estrutura (base no chão, o mancal de cada braço num
+# pedestal, a coluna do assento, a viga da almofada) e a torre da pilha de pesos (carenagem parada: o app não mostra a carga). É a
+# "Lever Seated Row" do ExRx ("Sit on seat and position chest against pad.", "Grasp narrower parallel grip handles."; na "Lever Wide
+# Grip Seated Row": "Grasp outer lever handles with overhand grip.") com os pegadores da Life Fitness Axiom Series Seated Row ("self-
+# adjusting handles with both vertical and horizontal grips to accommodate a wide range of arm lengths"; "Self adjusting handles
+# promote a proper wrist alignment throughout the range of motion") e os braços independentes da Hammer Strength MTS Iso-Lateral Row
+# ("separate weight stacks that provide independent diverging and converging motions"). A regulagem certa é a do fabricante: o
+# assento sobe ou desce até os pegadores ficarem na altura dos ombros com os braços esticados (ACE, Seated Row: "Adjust the seat
+# height to a level that positions the machine handles approximately level, or near level, with your shoulders."; NSCA: "Adjust your
+# arm position so your arms are parallel to the floor, with elbows fully extended") e a almofada anda até encostar no peito (ACE:
+# "Adjust the position the chest pad to contact your chest lightly."; ExRx: "Chest pad should be adjusted to allow shoulders to
+# stretch forward.") — por isso a cena monta a peça EM VOLTA do corpo (como as outras máquinas): ela dá o eixo dos braços, a barra
+# (onde o pegador fica no começo), os 2 pegadores, o assento e a almofada; a peça liga tudo com a estrutura. O eixo vale em qualquer
+# lugar: embaixo, na frente (a alavanca sobe do eixo até a barra, como os braços do supino sentado: a Remada Fechada) ou no alto (a
+# alavanca pendurada — o "overhead pivot" da Hammer Strength Select Seated Row: "The overhead pivot creates a natural arc of motion"
+# — e o arco de cima pra baixo do High Row); `caminho` dobra o braço.
+# Medidas de máquina de verdade: ~1,3 m de comprimento e 1,5–2,1 m de altura (Hammer Strength Select Seated Row: "Size (L x W x H):
+# 52" x 34" x 71" (metric cm: 132 x 86 x 180)"; Life Fitness Insignia Series Row: "Dimensions (L x W x H): 48.8" x 55.4" x 58.1" (124 x
+# 141 cm x 148 cm)"; Hammer Strength MTS Iso-Lateral Row: "Size (L x W x H): 51" x 62" x 82" (metric cm: 130 x 158 x 209)"); estofado de
+# 60 mm, como o do leg press 45 e do supino sentado (acima). Os braços (viga de 50 mm), cubos, mancais, a barra de aço do pegador
+# (25 mm), as borrachas (29 mm, o cilindro da mão de referência), o tamanho do assento e da almofada, a viga da almofada, a torre e a
+# base são escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   mq = e3.remada_sentada("remada", eixo=(y, z), x_braco=..., barra=(y, z), x_dentro=..., neutro=(comprimento, raio, inclinação),
+#                          pronado=(x_centro, comprimento, raio), assento=(...), almofada=(...))
+#   no pose(t): mq.girar(graus, pegador=psi)  # os 2 braços girados em volta do eixo e cada pegador virado psi graus (no mundo) em
+#                                             # volta da barra; lado=s gira só o braço do lado s (remada alternada)
+#               c, u = mq.pegada(s, "neutro")  # centro e eixo do pegador neutro (ou "pronado") do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores["neutro"][1], mq.raio_pegador["neutro"],
+#        mq.meia_pegador["neutro"], eixo=(0, 0, 1))), ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_assento" e "<nome>_almofada" (APOIO), "<nome>_braco_esq"/"_dir" (giram em volta do eixo; não encostam no corpo) e
+# "<nome>_pegador_esq"/"_dir" (andam com o braço do lado e giram em volta da barra; não encostam no corpo, fora as mãos no pegador).
+# Cada braço tem a origem NO EIXO (no cubo do seu lado) e o X local AO LONGO dele; cada pegador tem a origem no eixo da barra, na
+# ponta do braço, e o X local ao longo dela. O eixo de aço de cada braço é do braço e passa por dentro do mancal (tubo oco da
+# estrutura) com 5 mm de folga em volta; a barra do pegador passa do mesmo jeito por dentro do mancal da ponta do braço (tubo oco do
+# braço): a regra checagens.folgas mede braço × estrutura e pegador × braço sem peça atravessando a outra de propósito. Cada borracha
+# é um tubo com o Z local ao longo dele e a origem no meio (ck.Barra(..., eixo=(0, 0, 1))).
+_LADO_REMADA = {1: ("braco_esq", "pegador_esq"), -1: ("braco_dir", "pegador_dir")}
+
+
+class MaquinaRemada:
+    """Máquina de remada sentada com apoio de peito pronta na cena (remada_sentada())."""
+
+    def __init__(self, raizes, eixo, pegadores, raios, meias, pivos):
+        self.raizes = raizes          # {"estrutura", "assento", "almofada", "braco_esq", "braco_dir", "pegador_esq", "pegador_dir"}
+        self.equipamentos = [raizes[k] for k in ("estrutura", "braco_esq", "braco_dir", "pegador_esq", "pegador_dir")]
+        self.apoios = [raizes[k] for k in ("assento", "almofada")]
+        self.eixo = Vector(eixo)      # ponto do eixo de giro dos braços (em x = 0); direção = X
+        self.pegadores = pegadores    # {"neutro": {+1: borracha do lado +X, −1: do −X}, "pronado": {...}}; eixo de cada uma no Z local
+        self.raio_pegador = raios     # {"neutro": raio, "pronado": raio}
+        self.meia_pegador = meias     # {"neutro": meio comprimento, "pronado": ...}
+        self._pivo0 = {s: Vector(p) for s, p in pivos.items()}      # eixo da barra de cada lado na montagem (ponta do braço)
+        self.angulos = {1: 0.0, -1: 0.0}                             # giro de cada braço desde a montagem
+        self.giros_pegador = {1: 0.0, -1: 0.0}                       # giro de cada pegador, no mundo, desde a montagem
+        self._M0 = {k: raizes[k].matrix_world.copy() for par in _LADO_REMADA.values() for k in par}
+        self._rel = {(tipo, s): self._M0[_LADO_REMADA[s][1]].inverted() @ o.matrix_world
+                     for tipo, objs in pegadores.items() for s, o in objs.items()}
+
+    @property
+    def angulo(self):
+        return self.angulos[1]
+
+    def _giro(self, graus):
+        return (Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(graus), 4, "X")
+                @ Matrix.Translation(-self.eixo))
+
+    def _m_pegador(self, s, graus, pegador):
+        P = self._pivo0[s]
+        vira = Matrix.Translation(P) @ Matrix.Rotation(math.radians(pegador - graus), 4, "X") @ Matrix.Translation(-P)
+        return self._giro(graus) @ vira @ self._M0[_LADO_REMADA[s][1]]
+
+    def girar(self, graus, pegador=None, lado=None):
+        """Braços girados `graus` em volta do eixo (regra da mão direita no +X), a partir da montagem — com a pessoa olhando pra −Y,
+        < 0 leva pra trás (pra ela) a ponta de cima de um braço que sobe do eixo (puxar, com o eixo embaixo) e > 0 a ponta de baixo de
+        um braço pendurado (puxar, com o eixo no alto) — e o pegador de cada braço virado `pegador` graus em volta da barra, no mundo,
+        a partir da montagem (None = junto com o braço, como se fosse preso nele). lado = None gira os 2; +1 / −1 só o daquele lado."""
+        lados = (1, -1) if lado is None else ((1 if lado > 0 else -1),)
+        p = graus if pegador is None else pegador
+        for s in lados:
+            braco, peg = _LADO_REMADA[s]
+            self.raizes[braco].matrix_world = self._giro(graus) @ self._M0[braco]
+            self.raizes[peg].matrix_world = self._m_pegador(s, graus, p)
+            self.angulos[s], self.giros_pegador[s] = graus, p
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, tipo="neutro", graus=None, pegador=None):
+        """Centro e eixo (mundo, unitário) do pegador `tipo` ("neutro" ou "pronado") do lado s, com o braço em `graus` e o pegador em
+        `pegador` (None = como estão agora)."""
+        g = self.angulos[s] if graus is None else graus
+        p = self.giros_pegador[s] if pegador is None else pegador
+        M = self._m_pegador(s, g, p) @ self._rel[(tipo, s)]
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+    def pivo(self, s, graus=None):
+        """Ponto (mundo) do eixo da barra do lado s — em volta dele o pegador gira — com o braço em `graus` (None = agora)."""
+        return self._giro(self.angulos[s] if graus is None else graus) @ self._pivo0[s]
+
+
+def remada_sentada(nome="remada", eixo=(-0.70, 0.13), x_braco=0.42, barra=(-0.62, 0.95), x_dentro=0.19,
+                   neutro=(0.14, 0.0145, 0.0), pronado=(0.31, 0.12, 0.0145), caminho=None, assento=None, almofada=None,
+                   torre=None, pilha=True, viga=0.05, raio_barra=0.0125):
+    """Máquina de remada sentada com apoio de peito (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA
+    MONTAGEM:
+      eixo      = (y, z) do eixo de giro dos 2 braços (paralelo ao X); cada braço gira num cubo em x = ±x_braco, preso no mancal (tubo
+                  oco) de um pedestal que sai do trilho da base (x = ±(x_braco + 0,07));
+      x_braco   = |x| do plano dos braços (por fora das mãos, dos cotovelos e dos joelhos);
+      barra     = (y, z) do eixo da barra de aço de cada lado (ao longo do X), que sai da ponta do braço (x = ±x_braco) pra dentro até
+                  x = ±x_dentro: o pegador gira em volta dela;
+      x_dentro  = |x| da ponta de dentro da barra, de onde sai o pegador neutro;
+      neutro    = (comprimento, raio, inclinação): borracha do pegador NEUTRO, que sai da ponta de dentro da barra 2,2 cm depois do
+                  eixo dela, na direção (0, sen, cos) da `inclinação` (graus da vertical pro lado de quem senta, +Y): 0 = pra cima,
+                  180 = pendurado embaixo da barra (a Remada Fechada);
+      pronado   = (x_centro, comprimento, raio): borracha do pegador PRONADO na barra, centrada em |x| = x_centro;
+      caminho   = None (braço reto do cubo até a ponta) ou [(y, z), ...]: pontos do braço, no plano dele, entre o cubo e a ponta;
+      assento   = (y_frente, y_tras, topo, largura, espessura): estofado do assento, com o topo em `topo`;
+      almofada  = (y_face, z_baixo, z_cima, largura, espessura, ângulo): almofada do peito — a face que encosta no peito passa por
+                  (y_face, z_baixo) e sobe até z_cima inclinada `ângulo` graus da vertical pra frente (−Y); o estofado fica na frente
+                  da face, com a chapa e a viga que vai até a torre;
+      torre     = y do meio da torre (None = 34 cm na frente da barra: a face de trás dela fica 16 cm na frente da barra, entre os 2
+                  braços); pilha = a torre é a caixa da pilha de pesos (False = uma coluna de aço no lugar);
+      viga      = seção (m) da viga quadrada de cada braço; raio_barra = raio da barra de aço do pegador.
+    Devolve um MaquinaRemada (raizes, equipamentos, apoios, pegadores, girar(), pegada(), pivo())."""
+    if assento is None or almofada is None:
+        raise ValueError("remada_sentada: assento e almofada vêm da cena (a peça é montada em volta do corpo)")
+    ye, ze = eixo
+    yb, zb = barra
+    comp_n, raio_n, incl = neutro
+    xp, comp_p, raio_p = pronado
+    y_f, y_t, topo, larg, esp = assento
+    y_face, z_baixo, z_cima, larg_a, esp_a, ang_a = almofada
+    if raio_p <= raio_barra or raio_n <= raio_barra:
+        raise ValueError("remada_sentada: a borracha (%.4f / %.4f) tem que ser mais grossa que a barra (%.4f)" % (raio_n, raio_p,
+                                                                                                                  raio_barra))
+    if not x_dentro + 0.03 <= xp - comp_p / 2 - 0.012 or xp + comp_p / 2 + 0.012 > x_braco - 0.04:
+        raise ValueError("remada_sentada: a borracha pronada (|x| %.3f a %.3f) não cabe na barra entre o pegador neutro (%.3f) e o "
+                         "braço (%.3f)" % (xp - comp_p / 2, xp + comp_p / 2, x_dentro, x_braco))
+    X = Vector((1.0, 0.0, 0.0))
+    rot_x90 = (0, math.radians(90), 0)                        # cilindro deitado ao longo do X
+    x_m = x_braco + 0.07                                      # mancal, pedestal e trilho da base de cada lado (|x|)
+    r_eixo, r_folga = 0.018, 0.005                            # eixo de aço do braço e a folga dele no mancal
+    rb_ext, rb_int = raio_barra + 0.022, raio_barra + r_folga  # mancal da ponta do braço (a barra do pegador passa por dentro)
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, ass, alm = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("almofada")
+    bpy.context.view_layer.update()
+
+    # ── assento: estofado (APOIO) em cima de uma chapa; coluna até a viga do chão ──────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, y_t - y_f, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.05, y_t - y_f - 0.04, 0.024), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    _viga(nome + "_coluna_assento", (0, y_ass, 0.06), (0, y_ass, z_chapa - 0.012), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── almofada do peito: estofado (APOIO) na frente da face, a chapa e o bloco de fixação na frente dele ────────────────────────
+    a = math.radians(ang_a)
+    u_a = Vector((0.0, -math.sin(a), math.cos(a)))           # subindo pela face
+    n_a = Vector((0.0, math.cos(a), math.sin(a)))            # normal da face (pro peito, +Y)
+    rot_a = _rot_de(X, n_a, u_a)                             # caixa: X local = X, Y local = n_a, Z local subindo pela face
+    alt_a = (z_cima - z_baixo) / math.cos(a)
+    base_a = Vector((0.0, y_face, z_baixo))
+    meio_a = base_a + u_a * (alt_a / 2)
+    caixa(nome + "_almofada_estofado", meio_a - n_a * (esp_a / 2), (larg_a, esp_a, alt_a), mat_estofado(), rot=rot_a, pai=alm,
+          chanfro=0.018)
+    _em_aneis(_reto(caixa(nome + "_almofada_chapa", meio_a - n_a * (esp_a + 0.012), (larg_a - 0.04, 0.024, alt_a - 0.04),
+                          mat_estrutura(), rot=rot_a, pai=estr, chanfro=0)), passo=0.06)
+    bloco = meio_a - n_a * (esp_a + 0.024 + 0.02)
+    caixa(nome + "_almofada_suporte", bloco, (0.12, 0.04, 0.12), mat_estrutura(), rot=rot_a, pai=estr, chanfro=0.004)
+    # ── torre na frente (a pilha de pesos em carenagem, ou uma coluna de aço) e a viga da almofada até ela ───────────────────────────
+    y_tc = (yb - 0.34) if torre is None else torre
+    prof_t = 0.36 if pilha else 0.08
+    y_tt = y_tc + prof_t / 2                                  # face de trás da torre (pro lado de quem senta)
+    if pilha:
+        _em_aneis(_reto(caixa(nome + "_pilha", (0, y_tc, 0.06 + 1.42 / 2), (0.40, prof_t, 1.42), mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+        _em_aneis(_reto(caixa(nome + "_pilha_base", (0, y_tc, 0.03), (0.48, 0.44, 0.06), mat_estrutura(), pai=estr, chanfro=0)),
+                  passo=0.08)
+    else:
+        _viga(nome + "_torre", (0, y_tc, 0.06), (0, y_tc, bloco.z + 0.06), 0.08, 0.08, mat_estrutura(), pai=estr)
+    _viga(nome + "_viga_almofada", bloco - n_a * 0.015, (0, y_tt + 0.01, bloco.z), 0.06, 0.06, mat_estrutura(), pai=estr)
+    # ── base no chão: 2 trilhos ao longo do Y (por fora dos pés), as travessas da frente (embaixo da torre) e de trás, e a viga do
+    #    chão da coluna do assento até a de trás ──────────────────────────────────────────────────────────────────────────────────
+    y0b = min(y_tc - prof_t / 2, ye - 0.06) - 0.04
+    y1b = max(y_t, ye + 0.06) + 0.06
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base_trilho%+d" % s, (s * x_m, (y0b + y1b) / 2, 0.03), (0.08, y1b - y0b, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    for k, y in enumerate((y_tc, y1b - 0.04)):
+        _em_aneis(_reto(caixa(nome + "_base_travessa%d" % k, (0, y, 0.03), (2 * x_m - 0.08, 0.08, 0.06), mat_estrutura(), pai=estr,
+                              chanfro=0)), passo=0.08)
+    if y1b - 0.08 > y_ass + 0.04:
+        _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y_ass + y1b - 0.08) / 2, 0.03), (0.08, y1b - 0.08 - y_ass, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    # ── mancal de cada braço: pedestal do trilho até embaixo do eixo e o tubo oco ao longo do X (o eixo de aço passa por dentro) ───
+    for s in (1, -1):
+        if ze - 0.04 > 0.07:
+            _viga(nome + "_pedestal%+d" % s, (s * x_m, ye, 0.06), (s * x_m, ye, ze - 0.04), 0.07, 0.07, mat_estrutura(), pai=estr)
+        m = _tubo_oco(nome + "_mancal%+d" % s, (s * x_m, ye, ze), 0.045, r_eixo + r_folga, 0.06, mat_estrutura(), pai=estr)
+        m.rotation_euler = rot_x90
+    # ── os 2 braços (giram): cubo no eixo, eixo de aço pra fora (por dentro do mancal) com a porca, a viga do braço e o mancal da
+    #    ponta (tubo oco ao longo do X, onde a barra do pegador gira) ──────────────────────────────────────────────────────────────
+    raizes = {"estrutura": estr, "assento": ass, "almofada": alm}
+    pegs = {"neutro": {}, "pronado": {}}
+    pivos = {}
+    for s, (k_braco, k_peg) in _LADO_REMADA.items():
+        H = Vector((s * x_braco, ye, ze))
+        A = Vector((s * x_braco, yb, zb))                    # eixo da barra na ponta do braço
+        pivos[s] = A
+        bra = raiz_nova(k_braco, H)
+        peg = raiz_nova(k_peg, A)
+        raizes[k_braco], raizes[k_peg] = bra, peg
+        bpy.context.view_layer.update()
+        pc = [_cilindro(nome + "_cubo%+d" % s, 0.05, 0.06, H, rot_x90, mat_estrutura()),
+              _cilindro(nome + "_cubo_tampa%+d" % s, 0.025, 0.064, H, rot_x90, mat_aco())]
+        x0, x1 = x_braco + 0.03, x_m + 0.035                 # eixo de aço: do cubo até 5 mm depois do mancal
+        pc.append(_em_aneis(_cilindro(nome + "_eixo%+d" % s, r_eixo, x1 - x0, (s * (x0 + x1) / 2, ye, ze), rot_x90, mat_aco()),
+                            passo=0.04))
+        pc.append(_cilindro(nome + "_eixo_porca%+d" % s, r_eixo + 0.009, 0.012, (s * (x1 + 0.006), ye, ze), rot_x90, mat_aco(),
+                            vertices=6))
+        pts = [H] + [Vector((s * x_braco, yy, zz)) for yy, zz in (caminho or [])] + [A]
+        for i, (p, q) in enumerate(zip(pts, pts[1:])):
+            d = (q - p).normalized()
+            ini = p + d * (0.04 if i == 0 else -viga / 2)
+            fim = q - d * (rb_ext - 0.01) if i == len(pts) - 2 else q + d * (viga / 2)
+            pc.append(_viga(nome + "_braco%d%+d" % (i, s), ini, fim, viga, viga, mat_estrutura()))
+        pb = _tubo_oco(nome + "_ponta%+d" % s, A, rb_ext, rb_int, 0.06, mat_estrutura())
+        pb.rotation_euler = rot_x90
+        pc.append(pb)
+        _prender(pc, bra)
+        # ── o conjunto do pegador (gira em volta da barra): barra de aço por dentro do mancal da ponta, porca, colar, a borracha
+        #    pronada com os colares e, na ponta de dentro, o cotovelo de aço e o pegador neutro com a tampa ──────────────────────
+        w = Vector((0.0, math.sin(math.radians(incl)), math.cos(math.radians(incl))))   # pra onde o pegador neutro sai da barra
+        Ad = Vector((s * x_dentro, yb, zb))                  # ponta de dentro da barra (eixo do pegador neutro)
+        xb_fora = x_braco + 0.035                            # a barra passa 5 mm da face de fora do mancal da ponta
+        pc = [_em_aneis(tubo(nome + "_barra%+d" % s, (s * xb_fora, yb, zb), (s * (x_dentro + 0.01), yb, zb), raio_barra, mat_aco(),
+                             vertices=24), passo=0.035),
+              _cilindro(nome + "_barra_porca%+d" % s, raio_barra + 0.009, 0.012, (s * (xb_fora + 0.006), yb, zb), rot_x90, mat_aco(),
+                        vertices=6),
+              _cilindro(nome + "_barra_colar%+d" % s, raio_barra + 0.008, 0.010, (s * (x_braco - 0.03 - 0.005 - 0.005), yb, zb),
+                        rot_x90, mat_aco())]
+        g_fora, g_dentro = s * (xp + comp_p / 2), s * (xp - comp_p / 2)
+        pr = _em_aneis(tubo(nome + "_pronado%+d" % s, (g_fora, yb, zb), (g_dentro, yb, zb), raio_p, mat_borracha(), vertices=32),
+                       passo=0.035)
+        pc.append(pr)
+        for k, xg in enumerate((g_fora + s * 0.005, g_dentro - s * 0.005)):
+            pc.append(_cilindro(nome + "_pronado_colar%d%+d" % (k, s), raio_p + 0.004, 0.010, (xg, yb, zb), rot_x90, mat_aco()))
+        rot_w = _rot_de(X, w.cross(X), w)                    # caixa/cilindro com o Z local ao longo do pegador neutro
+        pc.append(_reto(caixa(nome + "_cotovelo%+d" % s, Ad + w * 0.004, (0.036, 0.036, 0.036), mat_aco(), rot=rot_w, chanfro=0)))
+        b0 = Ad + w * 0.022                                  # a borracha neutra começa 2,2 cm depois do eixo da barra
+        pc.append(_cilindro(nome + "_neutro_colar%+d" % s, raio_n + 0.004, 0.010, b0 - w * 0.004, rot_w, mat_aco()))
+        nt = _em_aneis(tubo(nome + "_neutro%+d" % s, b0, b0 + w * comp_n, raio_n, mat_borracha(), vertices=32), passo=0.035)
+        pc.append(nt)
+        pc.append(_cilindro(nome + "_neutro_tampa%+d" % s, raio_n + 0.004, 0.012, b0 + w * (comp_n + 0.006), rot_w, mat_borracha()))
+        _prender(pc, peg)
+        pegs["neutro"][s], pegs["pronado"][s] = nt, pr
+    bpy.context.view_layer.update()
+    return MaquinaRemada(raizes, (0.0, ye, ze), pegs, {"neutro": raio_n, "pronado": raio_p},
+                         {"neutro": comp_n / 2, "pronado": comp_p / 2}, pivos)
+# ===== fim: Remada sentada na máquina ===============================================================================================
