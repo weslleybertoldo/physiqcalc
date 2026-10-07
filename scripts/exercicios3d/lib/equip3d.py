@@ -1380,3 +1380,266 @@ def cadeira_quadril(nome="abdutora", eixos=None, z_eixo=None, assento=(-0.20, 0.
         _prender(pecas_b, bra)
     bpy.context.view_layer.update()
     return CadeiraQuadril(raizes, eixos, z_eixo, pegs, raio_p, comp_p / 2)
+
+
+# ── LEG PRESS 45° (Leg Press 45°, lote 4, 06/10/2026) ──────────────────────────────────────────────────────────────────────────
+# Máquina de empurrar com as pernas, deitado: 2 TRILHOS a 45° do chão (Hammer Strength Plate Loaded Linear Leg Press: "Featuring a
+# 45-degree angle"; Precor DPL0601 Angled Leg Press: "a 45 degree angled carriage sled"), o CARRINHO que corre neles (as 2 luvas de
+# rolamento, o chassi, a PLATAFORMA dos pés na frente, ⟂ ao trilho, e 2 suportes de anilha de cada lado — anilhas=True põe uma
+# anilha de 20 kg nos de baixo), o ASSENTO e o ENCOSTO reclinado (com o apoio lombar), os PEGADORES dos 2 lados do assento, as
+# TRAVAS de segurança nos trilhos (o batente onde o carrinho para, 3 cm abaixo do fim do curso), a base no chão e os postes que
+# seguram as 2 pontas dos trilhos (cada trilho em cima de uma viga inclinada). A cena monta a peça EM VOLTA do corpo (como a
+# cadeira_joelho e a cadeira_quadril): ela dá a plataforma (onde as solas encostam), o assento e o encosto (onde o glúteo, a
+# lombar, as costas e a cabeça encostam), os pegadores (onde as mãos fecham) e o curso do carrinho; a peça liga tudo com a
+# estrutura. Outro exercício na mesma máquina (leg press unilateral, panturrilha no leg press) monta com outra plataforma/curso:
+# nada da peça é do Leg Press 45° em si.
+# Medidas de máquina de verdade: trilho a 45°; encosto a 15°–30° da horizontal (Golparian, Anbarian e Golparian, J Adv Sport
+# Technol 2021: "the backrest of leg-press machine was adjusted at 15°, 20°, 25°, and 30° angles relative to the horizon");
+# plataforma de 28,35" × 19,92" = 72 × 51 cm (BodyKore G277 45 Degree Leg Press: "Platform Size : 28.35 X 19.92"); pino de anilha
+# de 49 mm com 11,25" de luva (Titan Leg Press Hack Squat Machine: "Weight Post Diameter: 49 mm", "Weight Post Sleeve: 11.25-in.");
+# máquina de ~2,4 m × 1,45 m de altura (Hammer Strength: "95 in x 65 in x 57 in (241 cm x 165 cm x 145 cm)"; Precor DPL0601:
+# "244 x 145 x 145 cm"); tubo de 50 × 100 mm e estofado de 60 mm (Gym Gear Sterling Series 45 Degree Leg Press: "2.5-3mm by 50 x
+# 100 square tubing", "60mm thick pads"). Luvas, chassi, postes, travas, o desenho dos pegadores e a anilha (20 kg, Ø 450 mm) são
+# escolha da fábrica; a plataforma fica ⟂ ao trilho (a chapa presa reta no carrinho, escolha da fábrica). Peças compridas em anéis
+# (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; a plataforma fica na frente, em cima):
+#   lp = e3.leg_press_45("leg_press", plataforma=(...), trilhos=(...), curso=(...), assento=(...), encosto=(...),
+#                        lombar=(...), pegadores=(...))
+#   no pose(t): lp.mover(metros)               # carrinho e plataforma andam no trilho a partir da montagem (< 0 = descem)
+#   Cena(pose, lp.equipamentos, pegadas=[("Left", ck.Barra(lp.pegadores[1], lp.raio_pegador, lp.meia_pegador,
+#        eixo=(0, 0, 1))), ...], apoios=lp.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo, fora as
+# mãos nos pegadores), "<nome>_assento" e "<nome>_encosto" (APOIO), "<nome>_carrinho" (anda; não encosta no corpo) e
+# "<nome>_plataforma" (anda junto com o carrinho; APOIO: as solas encostam nela). As luvas do carrinho abraçam os trilhos (o
+# trilho passa por dentro delas): a checagem do corpo não mede peça × peça.
+class LegPress:
+    """Leg press 45° pronto na cena (leg_press_45())."""
+
+    def __init__(self, raizes, direcao, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes              # {"estrutura", "assento", "encosto", "carrinho", "plataforma"}
+        self.equipamentos = [raizes["estrutura"], raizes["carrinho"]]
+        self.apoios = [raizes[k] for k in ("assento", "encosto", "plataforma")]
+        self.direcao = Vector(direcao)    # ao longo do trilho, subindo (unitário)
+        self.pegadores = pegadores        # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.deslocamento = 0.0
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in ("carrinho", "plataforma")}
+
+    def mover(self, metros):
+        """Carrinho e plataforma `metros` ao longo do trilho a partir da montagem (> 0 sobe, < 0 desce pra quem empurra)."""
+        T = Matrix.Translation(self.direcao * metros)
+        for k, M in self._M0.items():
+            self.raizes[k].matrix_world = T @ M
+        self.deslocamento = metros
+        bpy.context.view_layer.update()
+
+
+def _rot_de(x, y, z):
+    """Euler de uma caixa com os eixos locais X, Y, Z ao longo de x, y, z (base ortonormal)."""
+    return Matrix((Vector(x), Vector(y), Vector(z))).transposed().to_euler()
+
+
+def leg_press_45(nome="leg_press", angulo=45.0, plataforma=None, trilhos=(0.26, 0.30, 0.025), curso=(-0.30, 0.0),
+                 assento=None, encosto=None, lombar=None, pegadores=None, anilhas=False):
+    """Leg press 45° (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      angulo     = ângulo do trilho com o chão (graus): o carrinho sobe na direção D = (0, −cos, sen);
+      plataforma = (centro, largura, altura, espessura): centro da FACE da plataforma (onde as solas encostam), ⟂ a D; largura
+                   ao longo do X, altura ao longo de E (na face, pra cima: E = (0, sen, cos));
+      trilhos    = (x, recuo, raio): os 2 trilhos (barras redondas) em x = ±x, passando `recuo` m abaixo do centro da
+                   plataforma (ao longo de −E), paralelos a D;
+      curso      = (d_min, d_max): até onde o carrinho anda no trilho a partir da montagem (m, ao longo de D; < 0 = desce):
+                   os trilhos cobrem as luvas nas 2 pontas e a trava fica logo abaixo de d_min;
+      assento    = (centro, angulo, comprimento, largura, espessura): centro da face de CIMA do assento (onde o glúteo
+                   encosta), subindo `angulo` graus pra frente (−Y);
+      encosto    = (base, angulo, comprimento, largura, espessura): base = ponto da FACE na ponta de baixo (no meio), a face
+                   sobe pra trás (+Y) a `angulo` graus da horizontal por `comprimento` m;
+      lombar     = None ou (s, a, b, saliencia): apoio lombar — rolo de espuma achatado (elipse de semieixos a ao longo do
+                   encosto e b ⟂ a ele, eixo ao longo do X) embutido no encosto a `s` m da base ao longo dele, saindo `saliencia`
+                   m da face (encaixa na curva da lombar);
+      pegadores  = (centros, eixos, comprimento, raio): {s: centro} e {s: eixo} de cada pegador de borracha (s = +1 lado +X),
+                   em cima de um poste que desce até a base;
+      anilhas    = True põe uma anilha de 20 kg em cada suporte de baixo do carrinho (padrão: sem anilha, a visão das pernas e dos
+                   pés fica livre).
+    Devolve um LegPress (raizes, equipamentos, apoios, pegadores, mover())."""
+    a = math.radians(angulo)
+    D = Vector((0.0, -math.cos(a), math.sin(a)))              # ao longo do trilho, subindo
+    E = Vector((0.0, math.sin(a), math.cos(a)))               # na face da plataforma, pra cima (pros dedos)
+    X = Vector((1.0, 0.0, 0.0))
+    cima = Vector((0.0, 0.0, 1.0))
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, ass, enc, car, pla = (raiz_nova(k) for k in ("estrutura", "assento", "encosto", "carrinho", "plataforma"))
+    rot_p = _rot_de(X, E, D)                                  # caixa: X local = X, Y local = E, Z local = D
+
+    # ── plataforma (APOIO): chapa ⟂ ao trilho, a face na frente (pra quem empurra) ─────────────────────────────────────────────
+    c_p, larg_p, alt_p, esp_p = plataforma
+    c_p = Vector(c_p)
+    caixa(nome + "_plataforma_chapa", c_p + D * (esp_p / 2), (larg_p, alt_p, esp_p), mat_aco(), rot=rot_p, pai=pla,
+          chanfro=0.004)
+
+    # ── carrinho (anda): luvas nos trilhos, chassi atrás da plataforma, suportes de anilha e anilhas ───────────────────────────
+    x_t, recuo, raio_t = trilhos
+    d0, d1 = curso
+    L_luva = 0.30
+    atras = esp_p + 0.012                                     # o chassi começa logo atrás da chapa
+    base_t = c_p - E * recuo                                  # ponto do eixo dos trilhos na altura da plataforma (montagem)
+    pecas = []
+    for s in (1, -1):
+        eixo_s = base_t + X * (s * x_t)
+        c_luva = eixo_s + D * (atras + L_luva / 2)
+        pecas.append(_em_aneis(_cilindro(nome + "_luva%+d" % s, raio_t + 0.022, L_luva, c_luva,
+                                         D.to_track_quat("Z", "Y").to_euler(), mat_estrutura(), vertices=32), passo=0.05))
+        for k in (-1, 1):                                     # tampas das luvas (raspadores)
+            pecas.append(_cilindro(nome + "_luva_tampa%+d%+d" % (s, k), raio_t + 0.026, 0.014,
+                                   c_luva + D * (k * (L_luva / 2 + 0.007)), D.to_track_quat("Z", "Y").to_euler(), mat_borracha(),
+                                   vertices=32))
+        # coluna do chassi: da luva sobe (ao longo de E) por trás da chapa até perto da borda de cima
+        topo_e = alt_p / 2 - 0.06
+        pecas.append(_viga(nome + "_chassi_lado%+d" % s, eixo_s + D * (atras + 0.03) + E * (raio_t + 0.01),
+                           c_p + X * (s * x_t) + D * (atras + 0.03) + E * topo_e, 0.06, 0.06, mat_estrutura()))
+        # braço que liga a coluna à luva por trás (triângulo do chassi)
+        pecas.append(_viga(nome + "_chassi_diag%+d" % s, c_p + X * (s * x_t) + D * (atras + 0.05) + E * (topo_e - 0.10),
+                           eixo_s + D * (atras + L_luva - 0.03) + E * (raio_t + 0.035), 0.05, 0.05, mat_estrutura()))
+    # travessas do chassi (de um lado ao outro, atrás da chapa): embaixo (nas luvas) e em cima
+    for k, e_ in enumerate((-recuo + raio_t + 0.05, alt_p / 2 - 0.09)):
+        pecas.append(_em_aneis(_reto(caixa(nome + "_chassi_trav%d" % k, c_p + D * (atras + 0.03) + E * e_,
+                                           (2 * (x_t + 0.03), 0.06, 0.06), mat_estrutura(), rot=rot_p, chanfro=0)), passo=0.06))
+    # suportes de anilha: 2 de cada lado, pra fora (±X), na altura da luva e mais acima; colar de encosto da anilha na base
+    R_x = (0, math.radians(90), 0)
+    comp_pino, raio_pino = 0.286, 0.0245
+    for s in (1, -1):
+        e_d = (-recuo + raio_t + 0.015 + alt_p / 2 - 0.06 - 0.10) / 2       # meio do braço diagonal do chassi
+        d_d = (atras + 0.05 + atras + L_luva - 0.03) / 2
+        for k, (e_, d_) in enumerate(((-recuo + 0.03, atras + L_luva - 0.04), (e_d, d_d))):
+            c0 = c_p + D * d_ + E * e_ + X * (s * (x_t + 0.03))
+            x_ini = raio_t + 0.006 if k == 0 else 0.0           # a de baixo encosta na parede da luva, longe do trilho
+            pecas.append(_reto(caixa(nome + "_pino_base%+d%d" % (s, k), c0 + X * (s * ((x_ini + 0.09) / 2 - 0.03)),
+                                     (0.09 - x_ini, 0.07, 0.07), mat_estrutura(), rot=rot_p, chanfro=0)))
+            x0 = s * (x_t + 0.08)
+            pecas.append(_em_aneis(_cilindro(nome + "_pino%+d%d" % (s, k), raio_pino, comp_pino,
+                                             Vector((x0 + s * comp_pino / 2, c0.y, c0.z)), R_x, mat_aco(), vertices=24), passo=0.04))
+            pecas.append(_cilindro(nome + "_pino_colar%+d%d" % (s, k), 0.06, 0.016, Vector((x0 + s * 0.008, c0.y, c0.z)), R_x,
+                                   mat_aco(), vertices=32))
+            if anilhas and k == 0:                            # anilha de 20 kg (Ø 450 mm) no suporte de baixo
+                xa = x0 + s * (0.016 + 0.028)
+                an = _cilindro(nome + "_anilha%+d" % s, 0.225, 0.054, Vector((xa, c0.y, c0.z)), R_x, mat_borracha(), vertices=48)
+                pecas.append(_em_aneis(an, passo=0.05))
+                pecas.append(_cilindro(nome + "_anilha_miolo%+d" % s, 0.045, 0.058, Vector((xa, c0.y, c0.z)), R_x,
+                                       mat_aco(), vertices=32))
+    _prender(pecas, car)
+
+    # ── trilhos (parados) e as travas: barras redondas paralelas a D, das travas (embaixo do curso) até o pórtico ──────────────
+    d_baixo = d0 + atras - 0.13                               # ponta de baixo do trilho (ao longo de D, a partir da montagem)
+    d_cima = d1 + atras + L_luva + 0.28                       # ponta de cima (passa da luva no topo do curso)
+    pts = {}
+    for s in (1, -1):
+        eixo_s = base_t + X * (s * x_t)
+        A_t, B_t = eixo_s + D * d_baixo, eixo_s + D * d_cima
+        pts[s] = (A_t, B_t)
+        _em_aneis(tubo(nome + "_trilho%+d" % s, A_t, B_t, raio_t, mat_aco(), pai=estr, vertices=24), passo=0.05)
+        # trava de segurança: colar no trilho logo abaixo da luva no fim do curso, com a alavanca pra fora
+        c_tr = eixo_s + D * (d0 + atras - 0.014 - 0.03 - 0.02)   # 3 cm abaixo da tampa da luva no fim do curso
+        _cilindro(nome + "_trava%+d" % s, raio_t + 0.024, 0.04, c_tr, D.to_track_quat("Z", "Y").to_euler(), mat_estrutura(),
+                  vertices=32, pai=estr)
+        caixa(nome + "_trava_alavanca%+d" % s, c_tr + X * (s * (raio_t + 0.05)), (0.07, 0.022, 0.03), mat_estrutura(), pai=estr,
+              chanfro=0.003)
+        _cilindro(nome + "_trava_bola%+d" % s, 0.016, 0.03, c_tr + X * (s * (raio_t + 0.10)), R_x, mat_borracha(), pai=estr)
+    # ── pórtico: postes da ponta de baixo e da de cima dos trilhos até o chão, travessas e base no chão ──────────────────────────
+    for s in (1, -1):
+        A_t, B_t = pts[s]
+        _viga(nome + "_poste_baixo%+d" % s, A_t - E * 0.15, Vector((A_t.x, (A_t - E * 0.15).y, 0.06)), 0.07, 0.07, mat_estrutura(),
+              pai=estr)
+        _viga(nome + "_poste_cima%+d" % s, B_t + cima * 0.03, Vector((B_t.x, B_t.y, 0.06)), 0.08, 0.08, mat_estrutura(), pai=estr)
+        _viga(nome + "_base_lado%+d" % s, Vector((A_t.x, A_t.y + 0.04, 0.03)), Vector((B_t.x, B_t.y - 0.05, 0.03)), 0.08, 0.06,
+              mat_estrutura(), pai=estr)
+    for s in (1, -1):                                         # viga inclinada embaixo do trilho, de um poste ao outro
+        A_t, B_t = pts[s]
+        _viga(nome + "_viga_trilho%+d" % s, A_t - E * 0.12 - D * 0.02, B_t - E * 0.12 + D * 0.02, 0.08, 0.10, mat_estrutura(),
+              pai=estr)                                      # 4,5 cm abaixo do trilho: a luva passa por cima com folga
+        for P_, k in ((A_t, 0), (B_t, 1)):                     # mãos do trilho, nas 2 pontas (do trilho até a viga)
+            caixa(nome + "_trilho_suporte%+d%d" % (s, k), P_ - E * 0.05 + D * (0.02 if k == 0 else -0.02), (0.05, 0.06, 0.04),
+                  mat_estrutura(), rot=rot_p, pai=estr, chanfro=0.003)
+    A1, A2 = pts[1][0], pts[-1][0]
+    B1, B2 = pts[1][1], pts[-1][1]
+    _em_aneis(_reto(caixa(nome + "_trav_baixo", (A1 + A2) / 2 - E * 0.12 + D * 0.03, (2 * x_t - 0.08, 0.07, 0.07),
+                          mat_estrutura(), rot=rot_p, pai=estr, chanfro=0)), passo=0.07)
+    _viga(nome + "_trav_cima", B1 + X * 0.04 + cima * 0.07, B2 - X * 0.04 + cima * 0.07, 0.08, 0.08, mat_estrutura(), pai=estr)
+    for s in (1, -1):                                         # suporte do trilho no alto: cantoneira do trilho à travessa
+        caixa(nome + "_trilho_mao%+d" % s, pts[s][1] + cima * 0.035, (0.07, 0.07, 0.07), mat_estrutura(), pai=estr, chanfro=0.004)
+    _viga(nome + "_base_frente", Vector((A1.x + 0.04, A1.y, 0.03)), Vector((A2.x - 0.04, A2.y, 0.03)), 0.08, 0.06, mat_estrutura(),
+          pai=estr)
+    _viga(nome + "_base_fundo", Vector((B1.x + 0.04, B1.y, 0.03)), Vector((B2.x - 0.04, B2.y, 0.03)), 0.08, 0.06, mat_estrutura(),
+          pai=estr)
+
+    # ── encosto (APOIO): estofado reclinado, com o apoio lombar embutido; chapa e viga embaixo dele ───────────────────────────────
+    b_e, ang_e, comp_e, larg_e, esp_e = encosto
+    b_e = Vector(b_e)
+    ae = math.radians(ang_e)
+    u_e = Vector((0.0, math.cos(ae), math.sin(ae)))           # ao longo do encosto, subindo pra trás
+    n_e = Vector((0.0, -math.sin(ae), math.cos(ae)))          # normal da face (pro corpo)
+    rot_e = _rot_de(X, u_e, n_e)
+    caixa(nome + "_encosto_estofado", b_e + u_e * (comp_e / 2) - n_e * (esp_e / 2), (larg_e, comp_e, esp_e), mat_estofado(),
+          rot=rot_e, pai=enc, chanfro=0.018)
+    if lombar is not None:                                    # rolo achatado (elipse), todo dentro do estofado + o que sai
+        s_l, a_l, b_l, sai_l = lombar
+        bpy.ops.mesh.primitive_cylinder_add(radius=1.0, depth=larg_e - 0.03, vertices=64)
+        lo_ = bpy.context.active_object
+        lo_.name = nome + "_encosto_lombar"
+        lo_.scale = (b_l, a_l, 1.0)
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        lo_.matrix_world = (Matrix.Translation(b_e + u_e * s_l + n_e * (sai_l - b_l))
+                            @ Matrix((n_e, u_e, -X)).transposed().to_4x4())
+        bpy.ops.object.shade_smooth()
+        lo_.data.materials.append(mat_estofado())
+        _prender([lo_], enc)
+    _em_aneis(_reto(caixa(nome + "_encosto_chapa", b_e + u_e * (comp_e / 2) - n_e * (esp_e + 0.012),
+                          (larg_e - 0.05, comp_e - 0.05, 0.024), mat_estrutura(), rot=rot_e, pai=estr, chanfro=0)), passo=0.06)
+    z_viga = -n_e * (esp_e + 0.024 + 0.035)
+    e_a, e_b = b_e + u_e * 0.06 + z_viga, b_e + u_e * (comp_e - 0.10) + z_viga
+    _viga(nome + "_encosto_viga", e_a, e_b, 0.07, 0.07, mat_estrutura(), pai=estr)
+    _viga(nome + "_encosto_pe", e_b - cima * 0.035, Vector((e_b.x, e_b.y, 0.06)), 0.07, 0.07, mat_estrutura(), pai=estr)
+
+    # ── assento (APOIO): estofado subindo pra frente, na ponta de baixo do encosto; chapa e coluna até a base ──────────────────
+    c_s, ang_s, comp_s, larg_s, esp_s = assento
+    c_s = Vector(c_s)
+    as_ = math.radians(ang_s)
+    v_s = Vector((0.0, -math.cos(as_), math.sin(as_)))        # ao longo do assento, pra frente (subindo)
+    n_s = Vector((0.0, math.sin(as_), math.cos(as_)))         # normal da face (pro corpo)
+    rot_s = _rot_de(X, -v_s, n_s)
+    caixa(nome + "_assento_estofado", c_s - n_s * (esp_s / 2), (larg_s, comp_s, esp_s), mat_estofado(), rot=rot_s, pai=ass,
+          chanfro=0.018)
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", c_s - n_s * (esp_s + 0.012), (larg_s - 0.05, comp_s - 0.04, 0.024),
+                          mat_estrutura(), rot=rot_s, pai=estr, chanfro=0)), passo=0.06)
+    p_col = c_s - n_s * (esp_s + 0.024 + 0.03)
+    _viga(nome + "_assento_coluna", p_col, Vector((p_col.x, p_col.y, 0.06)), 0.08, 0.08, mat_estrutura(), pai=estr)
+    _viga(nome + "_assento_braco", p_col + cima * 0.01, e_a + u_e * 0.02, 0.06, 0.06, mat_estrutura(), pai=estr)
+    # base do meio no chão: da coluna do assento até o pé do encosto e até a travessa da frente
+    y_tras = e_b.y + 0.06
+    _viga(nome + "_base_meio", Vector((0.0, y_tras, 0.03)), Vector((0.0, A1.y + 0.04, 0.03)), 0.08, 0.06, mat_estrutura(),
+          pai=estr)
+    _viga(nome + "_base_pe_tras", Vector((0.32, y_tras - 0.04, 0.025)), Vector((-0.32, y_tras - 0.04, 0.025)), 0.08, 0.05,
+          mat_estrutura(), pai=estr)
+
+    # ── pegadores: borracha em cima de um poste que desce até a base, dos 2 lados do assento ─────────────────────────────────
+    centros, eixos_p, comp_g, raio_g = pegadores
+    pegs = {}
+    for s in (1, -1):
+        c_g, u_g = Vector(centros[s]), Vector(eixos_p[s]).normalized()
+        a_g, b_g = c_g - u_g * (comp_g / 2), c_g + u_g * (comp_g / 2)
+        pegs[s] = _em_aneis(tubo(nome + "_pegador%+d" % s, a_g, b_g, raio_g, mat_borracha(), pai=estr, vertices=32),
+                            passo=0.035)
+        _cilindro(nome + "_pegador_ponta%+d" % s, raio_g + 0.004, 0.012, b_g + u_g * 0.006,
+                  u_g.to_track_quat("Z", "Y").to_euler(), mat_borracha(), pai=estr)
+        tubo(nome + "_pegador_haste%+d" % s, a_g + u_g * 0.01, a_g - u_g * 0.05, 0.013, mat_aco(), pai=estr)
+        pe_g = a_g - u_g * 0.05
+        _viga(nome + "_pegador_poste%+d" % s, pe_g, Vector((pe_g.x, pe_g.y, 0.06)), 0.04, 0.04, mat_estrutura(), pai=estr)
+        _viga(nome + "_pegador_base%+d" % s, Vector((pe_g.x, pe_g.y, 0.025)), Vector((0.0, pe_g.y, 0.025)), 0.05, 0.05,
+              mat_estrutura(), pai=estr)
+    bpy.context.view_layer.update()
+    raizes = {"estrutura": estr, "assento": ass, "encosto": enc, "carrinho": car, "plataforma": pla}
+    return LegPress(raizes, D, pegs, raio_g, comp_g / 2)
