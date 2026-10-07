@@ -3261,3 +3261,164 @@ def remada_cavalinho(nome="cavalinho", eixo=None, ponta=None, pegadores=None, al
     raizes = {"estrutura": estr, "almofada": alm, "pedais": ped, "alavanca": alav}
     return MaquinaCavalinho(raizes, P, pegs, raio_p, comp_p / 2)
 # ===== fim: Remada cavalinho na máquina =============================================================================================
+
+
+# ===== Supino deitado na máquina ====================================================================================================
+# ── MÁQUINA DE SUPINO DEITADO ARTICULADA, DE ANILHAS (Supino Reto na Máquina Deitado, lote 5, 07/10/2026) ───────────────────────────
+# Banco reto com a pessoa deitada de costas e os pés no chão; atrás da cabeça, um PÓRTICO em arco sobre o banco (2 colunas, uma de
+# cada lado, por fora dos braços, a travessa de cima e a de baixo, onde a viga do banco se prende) com um MANCAL em cada coluna;
+# 2 BRAÇOS DE ALAVANCA independentes giram nesse eixo (ao longo do X), passam por fora da cabeça e dos ombros e chegam aos PEGADORES,
+# em cima do peito; cada braço tem um PINO DE ANILHA virado pra fora, perto do eixo (com uma anilha), e o banco tem uma perna no pé.
+# É a "Lever Bench Press (plate loaded)" do ExRx ("Lie supine on bench with chest under lever bar. Grasp lever bar with wide oblique
+# overhand grip."; "Press bar until arms are extended. Lower weight to upper chest.") com os braços separados da Hammer Strength
+# Plate-Loaded Iso-Lateral Horizontal Bench Press (Life Fitness: "Designed to position athletes as they would be on a standard bench
+# press"; "Max Load Capacity (per arm): 5 x 45 lb plates (5 x 20 kg plates)"). Aqui os 2 braços giram no MESMO eixo: o pegador anda
+# num arco no plano YZ, sem convergir, como a alavanca única do ExRx. A regulagem certa é a posição do corpo no banco (os pegadores,
+# embaixo, em cima da linha do peito): por isso a cena monta a peça EM VOLTA do corpo deitado — dá o eixo dos braços, os pegadores
+# e o banco — e a peça liga tudo com a estrutura. O eixo fica atrás da cabeça, na altura que faz o pegador subir e voltar um pouco
+# pra cabeça no fim, como a barra do supino (a cena escolhe; Hammer Strength: "the pivot is positioned to provide a consistent
+# resistance curve that mirrors a barbell press").
+# Medidas de máquina de verdade: a Hammer Strength IL-HBP tem "Dimensions (L x W x H): 60 in x 69 in x 57 in (153 cm x 175 cm x 146
+# cm)" (a desta peça sai do eixo que a cena dá: no Supino Reto na Máquina Deitado, ~1,73 × 1,60 × 1,26 m); banco de 30 cm de largura, 1,22 m de comprimento e 44 cm até o topo do estofado (IPF Technical Rules Book
+# 2026, Bench: "Length - not less than 1.22 m and shall be flat and level.", "Width - not less than 29 cm and not exceeding 32cm.",
+# "Height - not less than 42 cm and not exceeding 45 cm measured from the floor to the top of the padded surface"); estofado de 60 mm
+# (como o do supino sentado). O desenho do pórtico, dos braços (viga de 60 × 60 mm), do cubo, do mancal, do pegador (borracha com a
+# ponta de aço, numa barra de aço que sai do braço), o pino de anilha (Ø 49 mm, como o da panturrilha) e a anilha (20 kg, Ø 450 mm)
+# são escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (deitado de costas, com a cabeça pra +Y; s = +1 é o lado +X, o ESQUERDO da pessoa):
+#   mq = e3.supino_deitado("deitado", eixo=(y, z), x_braco=..., pegadores=(y, z, x, comprimento, raio), banco=(...))
+#   no pose(t): mq.girar(graus)            # os 2 braços (pegadores, pinos e anilhas juntos) giram em volta do eixo, a partir da
+#                                           # montagem: com o braço apontando pros pés, < 0 sobe a ponta (empurrar)
+#               c, u = mq.pegada(s)         # centro e eixo do pegador do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador, eixo=(0, 0, 1))),
+#        ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo), "<nome>_banco"
+# (APOIO: cabeça, costas e glúteo) e "<nome>_braco_esq"/"_dir" (giram; não encostam no corpo, fora as mãos nos pegadores). Cada braço
+# tem a origem NO EIXO; o pegador de cada lado é um tubo de borracha com o Z local ao longo dele e a origem no meio.
+class MaquinaSupinoDeitado(MaquinaSupino):
+    """Máquina de supino deitado pronta na cena (supino_deitado()): girar() e pegada() são os da MaquinaSupino."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes                  # {"estrutura", "banco", "braco_esq", "braco_dir"}
+        self.equipamentos = [raizes[k] for k in ("estrutura", "braco_esq", "braco_dir")]
+        self.apoios = [raizes["banco"]]
+        self.eixo = Vector(eixo)              # ponto do eixo de giro dos braços (em x = 0); direção = X
+        self.pegadores = pegadores            # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in ("braco_esq", "braco_dir")}
+
+
+def supino_deitado(nome="deitado", eixo=(1.20, 0.70), x_braco=0.53, pegadores=(0.33, 0.735, 0.38, 0.15, 0.0145),
+                   giro_pegador=0.0, banco=(-0.26, 0.96, 0.44, 0.30, 0.06), alto=1.22, viga_braco=0.06,
+                   pino=(0.241, 0.0245), r_pino=0.36, anilha=(0.225, 0.054)):
+    """Máquina de supino deitado (ver o bloco acima). Medidas no mundo, em m, com a pessoa deitada de costas e a cabeça pra +Y, tudo
+    NA MONTAGEM:
+      eixo         = (y, z) do eixo de giro dos 2 braços (paralelo ao X), atrás da cabeça; cada braço gira num cubo em x = ±x_braco,
+                     preso num mancal na coluna do pórtico (x = ±(x_braco + 0,085));
+      x_braco      = |x| do plano dos braços (por fora das mãos, dos cotovelos e da cabeça);
+      pegadores    = (y, z, x, comprimento, raio): centro do pegador de borracha do lado +X em (x, y, z) (o do −X em (−x, y, z)), onde
+                     a mão fecha; o pegador vai pra dentro, ao longo do X, e uma barra de aço liga a ponta de fora dele ao braço;
+      giro_pegador = graus: a ponta de DENTRO de cada pegador vai pra cabeça (+Y), girando no plano do chão (pegada entre a pronada
+                     e a neutra); 0 = pegadores ao longo do X (pronada);
+      banco        = (y_pe, y_cabeceira, topo, largura, espessura): estofado do banco, da ponta do pé (y_pe) até a cabeceira, com o
+                     topo em `topo`; a viga embaixo dele vai da perna do pé até a travessa de baixo do pórtico;
+      alto         = z da travessa de cima do pórtico (o arco sobre o banco, atrás da cabeça);
+      viga_braco   = seção (m) da viga quadrada de cada braço;
+      pino, r_pino = (comprimento, raio) do pino de anilha de cada braço, virado pra fora, a r_pino m do eixo ao longo do braço (longe
+                     o bastante da coluna pra anilha não bater nela em todo o arco);
+      anilha       = None ou (raio, espessura): uma anilha em cada pino.
+    Devolve um MaquinaSupinoDeitado (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
+    ye, ze = eixo
+    y_pg, z_pg, x_pg, comp_p, raio_p = pegadores
+    y_pe, y_cab, topo, larg, esp = banco
+    x_m = x_braco + 0.085                                    # coluna do pórtico e mancal de cada braço (|x|)
+    rot_x90 = (0, math.radians(90), 0)                       # cilindro deitado ao longo do X
+    g = math.radians(giro_pegador)
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, ban = raiz_nova("estrutura"), raiz_nova("banco")
+    bpy.context.view_layer.update()
+
+    # ── banco: estofado (APOIO) em cima de uma chapa, a viga embaixo (da perna do pé até o pórtico) e a perna do pé ─────────────
+    y_meio, compr = (y_pe + y_cab) / 2, y_cab - y_pe
+    caixa(nome + "_banco_estofado", (0, y_meio, topo - esp / 2), (larg, compr, esp), mat_estofado(), pai=ban, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_banco_chapa", (0, y_meio, z_chapa), (larg - 0.05, compr - 0.04, 0.024), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    z_viga = z_chapa - 0.012 - 0.04                          # viga de 80 × 80 mm logo embaixo da chapa
+    y_perna = y_pe + 0.12
+    _viga(nome + "_banco_viga", (0, y_perna - 0.04, z_viga), (0, ye - 0.035, z_viga), 0.08, 0.08, mat_estrutura(), pai=estr)
+    _viga(nome + "_banco_perna", (0, y_perna, 0.04), (0, y_perna, z_viga - 0.04), 0.07, 0.07, mat_estrutura(), pai=estr)
+    _em_aneis(_reto(caixa(nome + "_banco_pe", (0, y_perna, 0.02), (0.42, 0.08, 0.04), mat_estrutura(), pai=estr, chanfro=0)),
+              passo=0.08)
+    # ── pórtico atrás da cabeça: as 2 colunas (do trilho da base até a travessa de cima, em arco sobre o banco), a travessa de baixo
+    # (a viga do banco entra nela) e a base no chão (2 trilhos ao longo do Y, por fora, e as travessas da frente e de trás) ─────────
+    y_tr0, y_tr1 = ye - 0.55, ye + 0.15
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base_trilho%+d" % s, (s * x_m, (y_tr0 + y_tr1) / 2, 0.03), (0.08, y_tr1 - y_tr0, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+        _viga(nome + "_coluna%+d" % s, (s * x_m, ye, 0.06), (s * x_m, ye, alto + 0.035), 0.07, 0.07, mat_estrutura(), pai=estr)
+    for nome_b, yb in (("_base_frente", y_tr0 + 0.04), ("_base_tras", y_tr1 - 0.04)):
+        _em_aneis(_reto(caixa(nome + nome_b, (0, yb, 0.03), (2 * x_m - 0.08, 0.08, 0.06), mat_estrutura(), pai=estr, chanfro=0)),
+                  passo=0.08)
+    _viga(nome + "_travessa_cima", (-x_m - 0.035, ye, alto), (x_m + 0.035, ye, alto), 0.07, 0.07, mat_estrutura(), pai=estr)
+    _viga(nome + "_travessa_baixo", (-x_m + 0.035, ye, z_viga), (x_m - 0.035, ye, z_viga), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── mancal de cada braço na coluna, com o eixo de aço (parado) que entra no cubo ───────────────────────────────────────────
+    for s in (1, -1):
+        _cilindro(nome + "_mancal%+d" % s, 0.05, 0.08, (s * x_m, ye, ze), rot_x90, mat_estrutura(), pai=estr)
+        _cilindro(nome + "_eixo%+d" % s, 0.02, x_m - x_braco + 0.06, (s * (x_braco + x_m + 0.01) / 2, ye, ze), rot_x90, mat_aco(),
+                  pai=estr)
+        _cilindro(nome + "_eixo_tampa%+d" % s, 0.03, 0.012, (s * (x_m + 0.046), ye, ze), rot_x90, mat_aco(), pai=estr)
+    # ── os 2 braços (giram): cubo no eixo, viga até a barra do pegador, barra de aço, pegador de borracha e o pino com a anilha ────
+    raizes = {"estrutura": estr, "banco": ban}
+    pegs = {}
+    for s, lado_n in ((1, "esq"), (-1, "dir")):
+        P0 = Vector((s * x_braco, ye, ze))
+        bra = raiz_nova("braco_" + lado_n, P0)
+        raizes["braco_" + lado_n] = bra
+        bpy.context.view_layer.update()
+        d = Vector((-s * math.cos(g), math.sin(g), 0.0))    # ao longo do pegador, de fora pra dentro
+        c = Vector((s * x_pg, y_pg, z_pg))
+        fora = c - d * (comp_p / 2)                           # ponta de fora da borracha
+        A = fora + d * ((s * x_braco - fora.x) / d.x)         # a barra de aço vai da borracha até o plano do braço
+        dd = (A - P0).normalized()
+        pecas = [_cilindro(nome + "_cubo_" + lado_n, 0.06, 0.06, P0, rot_x90, mat_estrutura()),
+                 _cilindro(nome + "_cubo_tampa_" + lado_n, 0.03, 0.064, P0, rot_x90, mat_aco()),
+                 _viga(nome + "_braco_" + lado_n, P0 + dd * 0.04, A + dd * (viga_braco / 2), viga_braco, viga_braco, mat_estrutura()),
+                 caixa(nome + "_ponta_braco_" + lado_n, A, (viga_braco + 0.01, viga_braco + 0.01, viga_braco + 0.01), mat_estrutura(),
+                       chanfro=0.004),
+                 _em_aneis(tubo(nome + "_barra_pegador_" + lado_n, A, fora + d * 0.006, 0.016, mat_aco(), vertices=24), passo=0.035)]
+        peg = _em_aneis(tubo(nome + "_pegador_" + lado_n, fora, c + d * (comp_p / 2), raio_p, mat_borracha(), vertices=32),
+                        passo=0.035)
+        pecas += [peg,
+                  _cilindro(nome + "_pegador_ponta_" + lado_n, raio_p + 0.004, 0.012, c + d * (comp_p / 2 + 0.006),
+                            d.to_track_quat("Z", "Y").to_euler(), mat_aco()),
+                  _cilindro(nome + "_pegador_colar_" + lado_n, raio_p + 0.004, 0.010, fora - d * 0.005,
+                            d.to_track_quat("Z", "Y").to_euler(), mat_aco())]
+        # pino de anilha virado pra fora, a r_pino do eixo ao longo do braço, com o colar de encosto, a tampa e a anilha
+        Ph = P0 + dd * r_pino
+        x0 = Ph.x + s * viga_braco / 2
+        pecas += [_em_aneis(_cilindro(nome + "_pino_" + lado_n, pino[1], pino[0], Vector((x0 + s * pino[0] / 2, Ph.y, Ph.z)), rot_x90,
+                                      mat_aco(), vertices=32), passo=0.04),
+                  _cilindro(nome + "_pino_colar_" + lado_n, pino[1] + 0.02, 0.014, Vector((x0 + s * 0.007, Ph.y, Ph.z)), rot_x90,
+                            mat_aco()),
+                  _cilindro(nome + "_pino_tampa_" + lado_n, pino[1] + 0.003, 0.008, Vector((x0 + s * (pino[0] + 0.004), Ph.y, Ph.z)),
+                            rot_x90, mat_aco())]
+        if anilha is not None:
+            r_an, e_an = anilha
+            xa = x0 + s * (0.014 + 0.002 + e_an / 2)
+            pecas += [_em_aneis(_cilindro(nome + "_anilha_" + lado_n, r_an, e_an, Vector((xa, Ph.y, Ph.z)), rot_x90, mat_borracha(),
+                                          vertices=48), passo=0.05),
+                      _cilindro(nome + "_anilha_miolo_" + lado_n, 0.045, e_an + 0.004, Vector((xa, Ph.y, Ph.z)), rot_x90, mat_aco())]
+        _prender(pecas, bra)
+        pegs[s] = peg
+    bpy.context.view_layer.update()
+    return MaquinaSupinoDeitado(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2)
+# ===== fim: Supino deitado na máquina ===============================================================================================
