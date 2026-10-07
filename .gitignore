@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 *.keystore
+# W4 da loja: a chave de upload da Google Play (PKCS12) mora em ~/keystores e nos segredos do CI, nunca no repo
+*.p12
+*.jks
 keystore_base64.txt
 
 # Environment variables
