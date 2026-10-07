@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import wasm from "vite-plugin-wasm";
@@ -26,6 +26,19 @@ function padraoApi(origens: string[], caminho: string): RegExp {
   return new RegExp("^(?:" + unicas.map(escaparRegex).join("|") + ")" + caminho);
 }
 
+/**
+ * W4 da loja: o canal do build marcado no index.html — `<meta name="physiq-distribuicao" content="play">` no `npm run build:loja`
+ * e `content="site"` no resto. Vem do MESMO VITE_DISTRIBUICAO que o código lê (src/lib/distribuicao.ts: "play" só com o valor
+ * exato). O CI confere a marca dentro do AAB da Google Play (scripts/ci/aab-loja.sh): o AAB só passa com o site da loja.
+ */
+function marcaDistribuicao(valor: string | undefined): Plugin {
+  const distribuicao = valor === "play" ? "play" : "site";
+  return {
+    name: "physiq-distribuicao",
+    transformIndexHtml: () => [{ tag: "meta", attrs: { name: "physiq-distribuicao", content: distribuicao }, injectTo: "head" }],
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // URL da API que o client usa (mesma fonte do `import.meta.env.VITE_SUPABASE_URL`).
@@ -48,6 +61,7 @@ export default defineConfig(({ mode }) => {
     // Tailwind 4: a configuração mora no CSS (`@theme` em src/index.css), sem tailwind.config/postcss
     tailwindcss(),
     wasm(),
+    marcaDistribuicao(env.VITE_DISTRIBUICAO),
     VitePWA({
       registerType: "autoUpdate",
       workbox: {

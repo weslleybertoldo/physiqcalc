@@ -2,6 +2,7 @@ name: Check APK build
 
 # Compila o APK assinado DA BRANCH pra provar que o Java/Gradle compilam e pra testar no aparelho
 # ANTES do merge (mesmos passos do build-apk.yml até o APK). NÃO cria release nem faz bump de versão.
+# W4 da loja: também o AAB da Google Play (job `aab-loja`, o mesmo do build-apk.yml).
 # Roda sozinho no push de qualquer branch (menos main/staging) que mexa no código nativo — o
 # `workflow_dispatch` só funciona depois que o arquivo chegar na main (limite do GitHub).
 on:
@@ -12,6 +13,7 @@ on:
       - "android/**"
       - "capacitor.config.*"
       - ".github/workflows/build-apk-check.yml"
+      - "scripts/ci/**"
 
 permissions:
   contents: read
@@ -133,3 +135,72 @@ jobs:
           name: Physiq-v${{ steps.version.outputs.current }}-check
           path: android/app/build/outputs/apk/release/Physiq-v${{ steps.version.outputs.current }}-check.apk
           retention-days: 7
+
+  # W4 da loja — o MESMO job do AAB da Google Play do build-apk.yml (scripts/ci/aab-loja.sh), na branch: prova a assinatura com
+  # a chave de upload e as conferências com os segredos de verdade ANTES do merge. Artifact "-loja-check" (7 dias).
+  aab-loja:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          # igual ao job do APK: o Gradle baixa platforms/build-tools que faltarem
+          packages: platform-tools
+
+      - name: Versão (a mesma do APK)
+        id: version
+        run: bash scripts/ci/aab-loja.sh versao
+
+      - name: Firebase do push (google-services.json)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: bash scripts/ci/aab-loja.sh firebase
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Site da versão da loja (build:loja) + Capacitor
+        run: bash scripts/ci/aab-loja.sh web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_MP_PUBLIC_KEY: ${{ secrets.VITE_MP_PUBLIC_KEY }}
+          VITE_PRINCIPAL_URL: ${{ secrets.VITE_PRINCIPAL_URL }}
+          VITE_PRINCIPAL_ANON_KEY: ${{ secrets.VITE_PRINCIPAL_ANON_KEY }}
+
+      - name: AAB assinado com a chave de upload
+        run: bash scripts/ci/aab-loja.sh gradle
+        env:
+          PLAY_UPLOAD_KEYSTORE_BASE64: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          PLAY_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.PLAY_UPLOAD_KEYSTORE_PASSWORD }}
+          PLAY_UPLOAD_KEY_ALIAS: ${{ secrets.PLAY_UPLOAD_KEY_ALIAS }}
+          PLAY_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAY_UPLOAD_KEY_PASSWORD }}
+
+      - name: Conferir o AAB (assinatura, permissão, site da loja, versionCode, Firebase)
+        run: bash scripts/ci/aab-loja.sh conferir
+        env:
+          SUFIXO_AAB: -loja-check
+
+      - name: Upload AAB as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Physiq-v${{ steps.version.outputs.current }}-loja-check
+          path: android/app/build/outputs/bundle/playRelease/Physiq-v${{ steps.version.outputs.current }}-loja-check.aab
+          retention-days: 7
+          if-no-files-found: error

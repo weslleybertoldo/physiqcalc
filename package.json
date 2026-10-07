@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:loja": "VITE_DISTRIBUICAO=play vite build",
+    "build:aab": "bash scripts/ci/aab-loja.sh local",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

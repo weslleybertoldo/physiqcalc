@@ -7,7 +7,7 @@ import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { FRASE_BACKUPS, abertaPeloApp, servicosDaVersao } from "./privacidade/textos";
 
-const ATUALIZADA_EM = "6 de outubro de 2026";
+const ATUALIZADA_EM = "7 de outubro de 2026";
 
 const CLASSE_VOLTAR = "inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-texto-3 transition-colors hover:text-texto-2";
 
@@ -32,7 +32,8 @@ function Secao({ id, icone: Icone, titulo, children }: { id: string; icone: Luci
  * Exportar/Excluir no Perfil). W2 da loja: o parágrafo da Exclusão cobre o profissional e aponta a página /excluir-conta.
  * W3 da loja: os serviços de terceiros que recebem dado pessoal (conferidos no código — src/publico/privacidade/textos.ts; o GitHub
  * só fora da versão da Google Play), os dados de saúde, a frase dos backups sem prazo (a mesma da /excluir-conta) e o "Voltar" que
- * volta para o app quando a página foi aberta pelo Perfil ou pelas Configurações.
+ * volta para o app quando a página foi aberta pelo Perfil ou pelas Configurações. W4 da loja: a frase dos backups ganhou o prazo —
+ * em até 30 dias (decisão de 06/10/2026, ver textos.ts) — e a data passou a 7 de outubro de 2026.
  */
 export default function Privacidade() {
   const { pathname, state } = useLocation();
