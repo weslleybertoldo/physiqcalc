@@ -1643,3 +1643,208 @@ def leg_press_45(nome="leg_press", angulo=45.0, plataforma=None, trilhos=(0.26, 
     bpy.context.view_layer.update()
     raizes = {"estrutura": estr, "assento": ass, "encosto": enc, "carrinho": car, "plataforma": pla}
     return LegPress(raizes, D, pegs, raio_g, comp_g / 2)
+
+
+# ── SMITH (Agachamento no Smith, lote 4, 06/10/2026) ──────────────────────────────────────────────────────────────────────────
+# Máquina de barra GUIADA: a barra corre presa em 2 TRILHOS verticais e só sobe e desce (Cotterman, Darby e Skelly, J Strength
+# Cond Res 2005: "The Smith machine (SM) (vertical motion of bar on fixed path; fixed-form exercise)"; Gutierrez e Bahamonde, ISBS
+# 2009: "It consists of a barbell that is fixed within rails, so that it can only move vertically"; Gym Gear Elite Series Smith
+# Machine: "The linear bearings provide an exceptionally smooth, fluid vertical bar movement"). Peças: a BASE no chão (uma viga
+# embaixo de cada coluna, ao longo do Y, e a travessa de trás), as 2 COLUNAS com a travessa de cima, os 2 TRILHOS (barras redondas
+# de aço na frente das colunas, presas nelas por um suporte embaixo e outro em cima), a BARRA com os 2 CARRINHOS (luvas dos
+# rolamentos lineares que abraçam o trilho; a barra da pegada fica entre eles e a luva das anilhas, por fora), os GANCHOS (um em
+# cada carrinho, virado pros pinos da coluna: girar a barra engata o gancho num pino — Titan Smith Machine: "Just twist to rack and
+# unrack the bar."; ExRx, Smith Squat: "Disengage bar by rotating bar back."; os pinos a cada 10 cm, como os 16 encaixes da Precor
+# DPL0802: "16 Hook positions at 4 in / 10 cm spacing"), as ANILHAS nas luvas e as TRAVAS de segurança (um colar em cada trilho,
+# embaixo do curso da barra, preso na coluna; Titan: "Two adjustable safety catches").
+# Medidas de máquina de verdade: barra de 87" = 2,21 m, com 30 mm na pegada e luvas de anilha de 12,5" × 49 mm (Titan Smith
+# Machine: "Barbell Length: 87-in.", "Barbell Shaft Diameter: 30mm", "Barbell Sleeve Length: 12.5-in.", "Barbell Sleeve Diameter:
+# 49mm"); máquina de 86" = 2,18 m de altura e 54" = 1,37 m de fundo (Titan: "Overall Height: 86-in.", "Overall Depth: 54-in.");
+# trilho de 32 mm (Precor DPL0802 Smith Machine: "Shafting: 1.25 in / 32 mm case hardened, ground turned and polished linear
+# shafting"), com 2 rolamentos lineares de cada lado ("Qty. four (4) industrial grade linear bearings ... (2 per side)": o carrinho
+# tem 16 cm, a altura de 2 rolamentos); coluna de tubo 50 × 100 mm (Gym Gear Elite Series Smith Machine: "2.5-3mm by 50 x 100 oval
+# tubing"). Os trilhos ficam bem nas pontas da barra da pegada (entre ela e a luva das anilhas): com a barra de 2,21 m e luvas de
+# 0,3175 m, x = ±0,75 m. A anilha (20 kg, Ø 450 mm), o desenho do carrinho, do gancho, dos pinos, da trava e da base são escolha
+# da fábrica.
+# A cena monta a peça EM VOLTA do corpo (como as cadeiras e o leg press): ela dá a linha da barra (o y dos trilhos; a barra fica
+# centrada em x = 0), a altura da barra na montagem e o curso (até onde ela desce e sobe no exercício: as travas ficam 3 cm abaixo
+# do carrinho no fim do curso); a peça liga tudo com a estrutura. Outro exercício no Smith (afundo, panturrilha, supino) monta com
+# outra linha e outro curso: nada da peça é do agachamento em si.
+#   sm = e3.smith("smith", y=..., z=..., curso=(z_min, z_max))
+#   no pose(t): sm.mover(z)                  # a barra (com os carrinhos, os ganchos e as anilhas) na altura z — só na vertical
+#   Cena(pose, sm.equipamentos, pegadas=[("Left", ck.Barra(sm.barra, sm.raio, sm.meia)), ("Right", ...)], apoios=sm.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada: base, colunas, trilhos, pinos e
+# travas; não encosta no corpo) e "<nome>_barra" (anda só na vertical; origem no eixo da barra, no meio, X local ao longo dela).
+# A barra apoiada no trapézio é APOIO do corpo (como o estofado: encostar é o certo, afundar até o afunda_apoio_mm da cena), e
+# assim a estrutura continua com a folga de sempre (3 mm) do corpo. Os carrinhos e as travas abraçam os trilhos (o trilho passa
+# por dentro deles, com folga): a checagem do corpo não mede peça × peça — a cena mede à parte. Peças compridas em anéis
+# (_em_aneis / _viga): a checagem fica rápida.
+class Smith:
+    """Smith pronto na cena (smith())."""
+
+    def __init__(self, raizes, raio, meia, z0, curso):
+        self.raizes = raizes                  # {"estrutura", "barra"}
+        self.equipamentos = [raizes["estrutura"]]
+        self.apoios = [raizes["barra"]]
+        self.barra = raizes["barra"]          # origem no eixo da barra (no meio), X local ao longo dela (pegada: ck.Barra)
+        self.raio = raio                      # raio da barra da pegada
+        self.meia = meia                      # do meio da barra até a borda do carrinho (onde a mão pode fechar)
+        self.curso = tuple(curso)             # (z_min, z_max) do eixo da barra no exercício
+        self.z = z0
+        self._z0 = z0
+        self._M0 = raizes["barra"].matrix_world.copy()
+
+    def mover(self, z):
+        """Barra (com os carrinhos, os ganchos e as anilhas) com o eixo na altura z: só anda na vertical, presa nos trilhos, e não
+        passa do curso (embaixo dele ficam as travas)."""
+        if not self.curso[0] - 1e-6 <= z <= self.curso[1] + 1e-6:
+            raise ValueError("smith: barra em z = %.4f fora do curso %s (as travas ficam embaixo dele)" % (z, self.curso))
+        self.raizes["barra"].matrix_world = Matrix.Translation(Vector((0.0, 0.0, z - self._z0))) @ self._M0
+        self.z = z
+        bpy.context.view_layer.update()
+
+
+def _tubo_oco(nome, centro, raio_ext, raio_int, altura, mat, vertices=32, pai=None):
+    """Luva (tubo de parede grossa) em pé, ao longo do Z, centrada em `centro`: o furo do meio fica aberto (o trilho passa por
+    dentro dela com folga). Paredes com sombreamento suave, topo e fundo retos."""
+    import bmesh
+    bm = bmesh.new()
+    aneis = []
+    for r, z in ((raio_ext, -altura / 2), (raio_ext, altura / 2), (raio_int, altura / 2), (raio_int, -altura / 2)):
+        aneis.append([bm.verts.new((r * math.cos(2 * math.pi * k / vertices), r * math.sin(2 * math.pi * k / vertices), z))
+                      for k in range(vertices)])
+    for a, b in zip(aneis, aneis[1:] + aneis[:1]):          # parede de fora, topo, parede de dentro e fundo
+        for k in range(vertices):
+            k2 = (k + 1) % vertices
+            bm.faces.new((a[k], a[k2], b[k2], b[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    me = bpy.data.meshes.new(nome)
+    bm.to_mesh(me)
+    bm.free()
+    for pl in me.polygons:
+        pl.use_smooth = abs(pl.normal.z) < 0.5
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.location = centro
+    o.data.materials.append(mat)
+    if pai is not None:
+        o.parent = pai
+    return o
+
+
+def smith(nome="smith", y=0.0, z=1.40, curso=(0.90, 1.50), x_trilho=0.75, raio_trilho=0.016, altura=2.18, fundo=1.37,
+          barra=(2.21, 0.015, 0.3175, 0.0245), anilha=(0.225, 0.054), coluna=(0.16, 0.05, 0.10),
+          carrinho=(0.0375, 0.0195, 0.16)):
+    """Smith (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      y, z      = linha da barra: os 2 trilhos ficam em (±x_trilho, y) e o eixo da barra, ao longo do X e centrado em x = 0, na
+                  altura z;
+      curso     = (z_min, z_max): até onde o eixo da barra desce e sobe no exercício (mover() não deixa passar; as travas ficam
+                  3 cm abaixo do carrinho com a barra em z_min);
+      x_trilho, raio_trilho = meia distância entre os trilhos e o raio deles;
+      altura, fundo = altura das colunas (a travessa de cima fica no alto delas) e o comprimento da base no chão (ao longo do Y);
+      barra     = (comprimento, raio, luva, raio_luva): barra inteira de ponta a ponta, raio da pegada e a luva das anilhas
+                  (comprimento e raio) em cada ponta;
+      anilha    = None ou (raio, espessura): uma anilha em cada luva, encostada no colar;
+      coluna    = (recuo, x, y): a coluna (tubo retangular x × y) fica atrás do trilho, com o centro `recuo` m atrás dele (+Y);
+      carrinho  = (raio_ext, raio_int, altura): a luva dos rolamentos que abraça o trilho (raio_int > raio do trilho: folga).
+    Devolve um Smith (raizes, equipamentos, apoios, barra, raio, meia, mover())."""
+    comp_b, raio_b, luva_b, raio_luva = barra
+    recuo, cx, cy = coluna
+    r_ext, r_int, alt_c = carrinho
+    if r_int <= raio_trilho:
+        raise ValueError("smith: o furo do carrinho (%.4f) tem que ser maior que o trilho (%.4f)" % (r_int, raio_trilho))
+    if not curso[0] <= z <= curso[1]:
+        raise ValueError("smith: a barra na montagem (z = %.4f) fora do curso %s" % (z, tuple(curso)))
+    rot_x90 = (0, math.radians(90), 0)                      # cilindro deitado ao longo do X
+    rot_y90 = (math.radians(90), 0, 0)                      # cilindro deitado ao longo do Y
+    y_col = y + recuo
+    face_col = y_col - cy / 2                               # face da frente da coluna (de frente pro trilho)
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr = raiz_nova("estrutura")
+    bar = raiz_nova("barra", (0.0, y, z))
+    bpy.context.view_layer.update()
+
+    # ── base no chão: uma viga embaixo de cada coluna (ao longo do Y) e a travessa de trás ──────────────────────────────────────
+    y0b, y1b = y_col - fundo / 2, y_col + fundo / 2
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base%+d" % s, (s * x_trilho, (y0b + y1b) / 2, 0.03), (0.10, y1b - y0b, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.10)
+    _em_aneis(_reto(caixa(nome + "_base_tras", (0, y1b - 0.05, 0.03), (2 * x_trilho - 0.10, 0.08, 0.06), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.08)
+    # ── colunas (tubo 50 × 100: cx de lado, cy de frente pra trás) e a travessa de cima ───────────────────────────────────────
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_coluna%+d" % s, (s * x_trilho, y_col, (0.06 + altura) / 2), (cx, cy, altura - 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=max(cx, cy))
+    _em_aneis(_reto(caixa(nome + "_travessa", (0, y_col, altura - 0.04), (2 * x_trilho + cx, cy, 0.08), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.10)
+    # ── trilhos: barra redonda de aço na frente de cada coluna, presa por um suporte embaixo (na base) e outro em cima ──────────
+    z_t0, z_t1 = 0.10, altura - 0.14
+    for s in (1, -1):
+        x = s * x_trilho
+        _em_aneis(tubo(nome + "_trilho%+d" % s, (x, y, z_t0), (x, y, z_t1), raio_trilho, mat_aco(), pai=estr, vertices=24),
+                  passo=0.04)
+        for k, (zb, zc) in enumerate(((0.06, z_t0 + 0.03), (z_t1 - 0.03, z_t1 + 0.05))):   # o trilho entra 3 cm em cada bloco
+            caixa(nome + "_trilho_bloco%+d%d" % (s, k), (x, y, (zb + zc) / 2), (0.07, 0.07, zc - zb), mat_estrutura(), pai=estr,
+                  chanfro=0.004)
+            caixa(nome + "_trilho_suporte%+d%d" % (s, k), (x, (y + 0.035 + face_col) / 2, (zb + zc) / 2),
+                  (0.05, face_col - y - 0.035 + 0.004, zc - zb - 0.01), mat_estrutura(), pai=estr, chanfro=0.003)
+    # ── pinos dos ganchos na frente da coluna, a cada 10 cm (o gancho da barra engata num deles quando a barra gira) ─────────────
+    for s in (1, -1):
+        for k in range(int(round((altura - 0.60) / 0.10))):
+            zp = 0.40 + 0.10 * k
+            _cilindro(nome + "_pino%+d_%02d" % (s, k), 0.008, 0.026, (s * x_trilho, face_col - 0.012, zp), rot_y90, mat_aco(),
+                      vertices=16, pai=estr)
+    # ── travas de segurança: colar no trilho 3 cm abaixo do carrinho com a barra no fim do curso, preso na coluna ──────────────
+    z_trava = curso[0] - alt_c / 2 - 0.03 - 0.025               # centro do colar (5 cm de altura)
+    for s in (1, -1):
+        x = s * x_trilho
+        _tubo_oco(nome + "_trava%+d" % s, (x, y, z_trava), r_int + 0.012, r_int, 0.05, mat_estrutura(), pai=estr)
+        caixa(nome + "_trava_braco%+d" % s, (x, (y + r_int + 0.010 + face_col) / 2, z_trava),
+              (0.03, face_col - y - r_int - 0.010 + 0.004, 0.03), mat_estrutura(), pai=estr, chanfro=0.003)
+        # pino de regulagem com a bola, virado pra DENTRO (por fora fica a anilha, que desce até perto da trava)
+        _cilindro(nome + "_trava_pino%+d" % s, 0.007, 0.05, (x - s * 0.035, face_col - 0.02, z_trava), rot_x90, mat_aco(),
+                  vertices=16, pai=estr)
+        _cilindro(nome + "_trava_bola%+d" % s, 0.014, 0.02, (x - s * 0.065, face_col - 0.02, z_trava), rot_x90, mat_borracha(),
+                  vertices=24, pai=estr)
+
+    # ── barra (anda): pegada entre os carrinhos, carrinhos nos trilhos, ganchos, luvas, colares e anilhas ─────────────────────────
+    pecas = []
+    meia = x_trilho - r_ext                                  # a pegada vai do meio até a borda de dentro do carrinho
+    pecas.append(_em_aneis(_cilindro(nome + "_barra_pegada", raio_b, 2 * meia + 0.004, (0, y, z), rot_x90, mat_aco(),
+                                     vertices=32), passo=0.04))
+    for s in (1, -1):
+        x = s * x_trilho
+        pecas.append(_tubo_oco(nome + "_carrinho%+d" % s, (x, y, z), r_ext, r_int, alt_c, mat_estrutura()))
+        for k in (-1, 1):                                    # tampas dos rolamentos (raspadores) em cima e embaixo
+            pecas.append(_tubo_oco(nome + "_carrinho_tampa%+d%+d" % (s, k), (x, y, z + k * (alt_c / 2 + 0.004)), r_ext - 0.004,
+                                   r_int, 0.008, mat_borracha()))
+        # gancho: braço do carrinho pra trás (pra coluna) e a ponta virada pra baixo; para 1,5 cm antes dos pinos
+        y_g0, y_g1 = y + r_ext - 0.004, face_col - 0.026 - 0.015
+        pecas.append(caixa(nome + "_gancho%+d" % s, (x, (y_g0 + y_g1) / 2, z + 0.01), (0.010, y_g1 - y_g0, 0.028), mat_aco(),
+                           chanfro=0.002))
+        pecas.append(caixa(nome + "_gancho_ponta%+d" % s, (x, y_g1 - 0.006, z - 0.012), (0.010, 0.012, 0.036), mat_aco(),
+                           chanfro=0.002))
+        # luva das anilhas (por fora do carrinho, até a ponta da barra), colar e anilha
+        x_l0, x_l1 = x_trilho + r_ext, comp_b / 2
+        pecas.append(_cilindro(nome + "_luva%+d" % s, raio_luva, x_l1 - x_l0 + 0.004, (s * (x_l0 + x_l1) / 2, y, z), rot_x90,
+                               mat_aco(), vertices=32))
+        pecas.append(_cilindro(nome + "_colar%+d" % s, 0.035, 0.012, (s * (x_l0 + 0.006), y, z), rot_x90, mat_aco(),
+                               vertices=32))
+        if anilha is not None:
+            r_a, e_a = anilha
+            xa = x_l0 + 0.012 + 0.002 + e_a / 2
+            pecas.append(_em_aneis(_cilindro(nome + "_anilha%+d" % s, r_a, e_a, (s * xa, y, z), rot_x90, mat_borracha(),
+                                             vertices=48), passo=0.05))
+            pecas.append(_cilindro(nome + "_anilha_miolo%+d" % s, 0.045, e_a + 0.004, (s * xa, y, z), rot_x90, mat_aco(),
+                                   vertices=32))
+            pecas.append(_cilindro(nome + "_presilha%+d" % s, 0.034, 0.02, (s * (xa + e_a / 2 + 0.012), y, z), rot_x90,
+                                   mat_aco(), vertices=32))
+    _prender(pecas, bar)
+    bpy.context.view_layer.update()
+    return Smith({"estrutura": estr, "barra": bar}, raio_b, meia, z, curso)

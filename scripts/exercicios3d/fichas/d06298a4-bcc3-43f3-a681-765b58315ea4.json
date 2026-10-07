@@ -1,0 +1,207 @@
+{
+ "uuid": "d06298a4-bcc3-43f3-a681-765b58315ea4",
+ "nome": "Agachamento no Smith",
+ "cena": "agachamento_no_smith",
+ "grupo": "Quadríceps / Glúteo",
+ "subgrupo": "Quadríceps · glúteo máximo",
+ "padrao_movimento": "agachamento",
+ "equipamento": "smith",
+ "variacao": "no Smith",
+ "alvos": [
+  "quadriceps",
+  "gluteo"
+ ],
+ "auxiliares": [
+  "adutores",
+  "posterior",
+  "lombar"
+ ],
+ "camera": {
+  "az": 54,
+  "el": 8,
+  "dist": 4.6,
+  "alvo": [
+   0.0,
+   0.1,
+   0.95
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.6,
+  "alvo": [
+   0.0,
+   0.1,
+   0.98
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "No Smith a barra corre presa nos dois trilhos verticais da máquina e só sobe e desce. Em pé embaixo da barra, com ela apoiada no trapézio (atrás do pescoço, em cima dos ombros) e as mãos fechadas na barra por fora dos ombros; pés na largura dos ombros, pontas pra frente e um pouco à frente da linha da barra (a linha da barra passa logo atrás dos calcanhares), calcanhares no chão. Destrava a barra girando-a pra trás e desce levando o quadril pra trás e dobrando os joelhos ao mesmo tempo, com o tronco inclinado à frente — menos que no agachamento livre —, as costas retas, a cabeça olhando pra frente e os joelhos na direção dos pés, até a coxa ficar paralela ao chão; sobe estendendo o quadril e os joelhos até as pernas ficarem esticadas. A barra desce e sobe sempre na mesma linha vertical; os pés à frente dela deixam a canela mais em pé e o tronco menos inclinado que no agachamento livre.",
+ "cinesiologia": {
+  "plano": "sagital, cadeia cinética fechada; a barra guiada só anda na vertical, numa linha parada que passa logo atrás dos calcanhares (o calcanhar fica 1,5 cm à frente dela, o tornozelo 8 cm e o meio do pé 14 cm)",
+  "articulacoes": "quadril (flexão na descida, até ~119° entre o tronco e a coxa; extensão na subida), joelho (flexão até ~108° com a coxa paralela ao chão; extensão na subida, até as pernas esticadas — joelho e quadril dobram juntos, na mesma proporção), tornozelo (dorsiflexão na descida — menor que no agachamento livre, com a canela a ~18° da vertical embaixo —, flexão plantar na subida); coluna neutra e parada, o tronco inclina à frente até ~30° da vertical embaixo girando no quadril (no agachamento livre aprovado, 40°)",
+  "agonistas": "quadríceps — vasto lateral, vasto medial, vasto intermédio e reto femoral — na extensão do joelho (ExRx: alvo \"Quadriceps\"); glúteo máximo na extensão do quadril (ExRx: sinergista \"Gluteus Maximus\")",
+  "sinergistas": "glúteo máximo, adutor magno e sóleo (ExRx: Synergists \"Gluteus Maximus\", \"Adductor Magnus\", \"Soleus\"); os isquiotibiais e o gastrocnêmio como estabilizadores dinâmicos (ExRx: Dynamic Stabilizers \"Hamstrings\", \"Gastrocnemius\") — no Smith o gastrocnêmio, o bíceps femoral e o vasto medial trabalham menos que no agachamento livre (Schwanbeck, Chilibeck e Binsted 2009)",
+  "estabilizadores": "eretores da espinha (ExRx: Stabilizers \"Erector Spinae\") e o abdome — reto do abdome e oblíquos (ExRx: Antagonist Stabilizers \"Rectus Abdominis\", \"Obliques\"); a máquina tira o equilíbrio da barra (Gutierrez e Bahamonde 2009: \"Because of its fixed motion it decreases the need for balancing the bar and weight plates\")",
+  "fases": "descida excêntrica até a coxa paralela ao chão e subida concêntrica até as pernas esticadas, a barra sempre na mesma linha vertical"
+ },
+ "referencias": [
+  "ExRx.net — Smith Squat (https://exrx.net/WeightExercises/Quadriceps/SMSquat, lido na cópia do Internet Archive de 07/11/2025; o site responde 403 direto): classificação \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"With bar upper chest height, position bar on back of shoulders and grasp bar to sides. Place feet under bar. Disengage bar by rotating bar back.\"; Execution: \"Squat down by bending hips back while allowing knees to bend forward, keeping back straight and knees pointed same direction as feet. Descend until thighs are just past parallel to floor. Extend knees and hips until legs are straight. Return and repeat.\"; Comments: \"Keep head facing forward, back straight and feet flat on floor with equal distribution of weight through forefoot and heel. Knees should point same direction as feet throughout movement.\"; músculos: Target \"Quadriceps\"; Synergists \"Gluteus Maximus\", \"Adductor Magnus\", \"Soleus\"; Dynamic Stabilizers \"Hamstrings\", \"Gastrocnemius\"; Stabilizers \"Erector Spinae\"; Antagonist Stabilizers \"Rectus Abdominis\", \"Obliques\"",
+  "ExRx.net — Author's Analysis of Smith Squat (https://exrx.net/Kinesiology/SmithSquat1, a análise que a página do Smith Squat indica; lida na cópia do Internet Archive de 05/01/2024): \"I recommend a form similar to that of the barbell squat: knees and hips moving forward and backward the same distance respectively, weight distributed between forefoot and heel. If modifications are made, perhaps to emphasize glutes or avoid pain in a bad knee, I recommend only subtle changes from standard form; move feet forward just a couple inches forward or minimum modification that will accommodate the intended goal.\"; \"During a Smith squat with feet under the bar, back can be inadvertently positioned much more vertically that what would be possible on a regular barbell squat. This is accompanied by the knees traveling much more forward than they are probably accustomed to. The heel can consequently raises from floor, adding to already exaggerated torque forces of knee.\"; quadro final — evitar: \"Back too upright forcing knees forward\", \"Weight distributed to forefoot with heels raising up even slightly\"; buscar: \"Knees, hip, and lower back taking torque forces equally\", \"Weight distributed between forefoot and heel\"",
+  "Gutierrez A, Bahamonde R. Kinematic analysis of the traditional back squat and Smith machine squat exercises. ISBS Conference Proceedings Archive (27th International Conference on Biomechanics in Sports), 2009. https://ojs.ub.uni-konstanz.de/cpa/article/view/3199 (PDF lido em 06/10/2026): \"It consists of a barbell that is fixed within rails, so that it can only move vertically\"; \"Because of its fixed motion it decreases the need for balancing the bar and weight plates which increase the safety of the exercise.\"; os 8 levantadores \"were instructed on how to perform the squats according to guidelines of the National Strength and Conditioning Association (NCSA)\"; \"Due to the linear restriction of the bar motion along the vertical axis in the SMS the subjects positioned their feet forward to enable bar lowering. This feet placement positioned the bar farther away from the knee at the instance of maximal knee flexion.\"; \"Trunk and hip flexion ROM values were considerably greater in the TBS than in the SMS.\"; \"there was greater trunk flexion (ES = 1.49) during the TBS at MKF and less ankle dorsiflexion (ES = .54) during the SMS\"; \"it was clear that there was less trunk flexion and less ankle dorsiflexion. To achieve the desired ROM in the SMS the subjects had to position the feet farther forward which increased the horizontal distance from the bar to the knee.\" (figura 2 do artigo, lida no gráfico: amplitude do tronco ~26° no agachamento livre e ~17° no Smith; do tornozelo ~33° e ~27°)",
+  "Schwanbeck S, Chilibeck PD, Binsted G. A comparison of free weight squat to Smith machine squat using electromyography. J Strength Cond Res. 2009;23(9):2588-2591. doi:10.1519/JSC.0b013e3181b1b181 — lido só o resumo (PubMed 19855308): \"Electromyographic activity was significantly higher by 34, 26, and 49 in the gastrocnemius, biceps femoris, and vastus medialis, respectively, during the free weight squat compared to the Smith machine squat (p < 0.05).\"; \"the EMG averaged over all muscles during the free weight squat was 43% higher when compared to the Smith machine squat (p < 0.05)\"",
+  "Abelbeck KG. Biomechanical model and evaluation of a linear motion squat type exercise. J Strength Cond Res. 2002;16(4):516-524 — lido só o resumo (PubMed 12423179): \"Because the user's feet were positioned farther forward (anterior), the moment about the knee decreased whereas the moment about the hip increased.\"; \"Thus, foot position is a critical factor in hip and knee moments, and therefore in the muscle groups stressed, in a linear motion squat type exercise.\"",
+  "Biscarini A, Benvenuti P, Botti F, Mastrandrea F, Zanuso S. Modelling the joint torques and loadings during squatting at the Smith machine. J Sports Sci. 2011;29(5):457-469. doi:10.1080/02640414.2010.534859 — lido só o resumo (PubMed 21225486): \"For a given value of the included knee angle (θ(knee)), bending the trunk forward, moving the feet forward in front of the knees, and displacing the weight distribution towards the forefoot emphasizes hip and lumbosacral torques, while also reducing knee torque and compressive tibiofemoral and patellofemoral forces (and vice versa).\"",
+  "Cotterman ML, Darby LA, Skelly WA. Comparison of muscle force production using the Smith machine and free weights for bench press and squat exercises. J Strength Cond Res. 2005;19(1):169-176. doi:10.1519/14433.1 — lido só o resumo (PubMed 15705030): \"The Smith machine (SM) (vertical motion of bar on fixed path; fixed-form exercise)\"; \"The squat 1RM was greater for the SM than the FWs\"",
+  "NSCA — Basics of Strength and Conditioning Manual, cap. 4, 1a. Barbell Back Squat (pp. 47-49), https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (cópia do Internet Archive de 05/01/2024) — é o agachamento LIVRE (a NSCA não tem o do Smith nessa fonte; o artigo dela \"Squat Loading Position Considerations Based on Clients' Needs\", PTQ 11.1, 2024, que cita o Smith, é só pra sócios e não foi lido): \"High Bar Squat: The bar sits on top of the trapezius muscles near the base of the neck\"; \"All athletes should grip the bar with a closed, pronated grip\"; \"Head and eyes are positioned forward\"; \"Keep heels on the floor\"; \"Point toes out slightly from neutral to 30°\"; \"Simultaneously flex knees while pushing hips back\"; \"Keep shins as vertical as possible by sitting back into the squat\"; \"Proper depth is achieved when mid-thigh is parallel to the floor\"; \"The torso should be held between 35 and 45° from vertical\" (no livre; no Smith o tronco inclina menos — Gutierrez e Bahamonde)",
+  "Medidas da máquina — Titan Fitness, Smith Machine (https://titan.fitness/products/smith-machine, tabela lida em 06/10/2026): \"Overall Height: 86-in.\", \"Overall Width: 67-in. / 75-in. with Weight Sleeves\", \"Overall Depth: 54-in.\", \"Barbell Length: 87-in.\", \"Barbell Shaft Diameter: 30mm\", \"Barbell Sleeve Length: 12.5-in.\", \"Barbell Sleeve Diameter: 49mm\", \"Just twist to rack and unrack the bar.\", \"Two adjustable safety catches\"; Precor DPL0802 Smith Machine (ficha em PDF, 2017): \"Shafting: 1.25 in / 32 mm case hardened, ground turned and polished linear shafting\", \"Linear Bearings: Qty. four (4) industrial grade linear bearings at 1,500 lb / 681 kg dynamic load capacity each (2 per side)\", \"Smith Bar Hook Spacing: 16 Hook positions at 4 in / 10 cm spacing\" (essa Precor tem a guia a 11°; aqui só as medidas do trilho, dos rolamentos e dos encaixes); Gym Gear Elite Series Smith Machine (ficha em PDF): \"The linear bearings provide an exceptionally smooth, fluid vertical bar movement\", \"2.5-3mm by 50 x 100 oval tubing\", \"Independent safety catches with 10 racking positions\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "barra apoiada no trapézio",
+    "equipamento": "smith_barra",
+    "partes": [
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -4,
+     5
+    ],
+    "fonte": "ExRx — Smith Squat (\"position bar on back of shoulders\"); NSCA — Basics of Strength and Conditioning Manual (agachamento livre com barra) (\"High Bar Squat: The bar sits on top of the trapezius muscles near the base of the neck\"); a barra do Smith é APOIO do corpo (encostar é o certo)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "pernas esticadas em pé",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx — Smith Squat (\"Extend knees and hips until legs are straight\")"
+   },
+   {
+    "nome": "coxa paralela ao chão embaixo",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": 1.0,
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "ExRx — Smith Squat (\"Descend until thighs are just past parallel to floor\"); NSCA — Basics of Strength and Conditioning Manual (agachamento livre com barra) (\"Proper depth is achieved when mid-thigh is parallel to the floor\")"
+   },
+   {
+    "nome": "tronco inclinado à frente embaixo, menos que no agachamento livre (40°)",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     25,
+     35
+    ],
+    "fonte": "Gutierrez e Bahamonde, ISBS 2009 (\"there was greater trunk flexion (ES = 1.49) during the TBS at MKF\"; \"Trunk and hip flexion ROM values were considerably greater in the TBS than in the SMS\"); ExRx — Author's Analysis of Smith Squat (evitar: \"Back too upright forcing knees forward\"); o Agachamento Livre com Barra aprovado inclina 40°"
+   },
+   {
+    "nome": "tronco nunca passa da inclinação de baixo",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     35
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "canela mais em pé que no agachamento livre (o tornozelo dobra menos)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     70,
+     97
+    ],
+    "fonte": "Gutierrez e Bahamonde, ISBS 2009 (\"less ankle dorsiflexion (ES = .54) during the SMS\"); NSCA — Basics of Strength and Conditioning Manual (agachamento livre com barra) (\"Keep shins as vertical as possible by sitting back into the squat\"); medida da fábrica: canela × pé, ~76° em pé — no Agachamento Livre com Barra aprovado chega a 102°; amplitude do tornozelo de Alazzawi S et al., World J Orthop 2017 (dorsiflexão 0–20°, conta da fábrica no tecnica3d.tornozelo)"
+   },
+   {
+    "nome": "joelho na direção do pé (sem valgo)",
+    "medida": "joelho_fora_do_pe",
+    "t": 1.0,
+    "mm": [
+     -15,
+     120
+    ],
+    "fonte": "ExRx — Smith Squat (\"Knees should point same direction as feet throughout movement\")"
+   },
+   {
+    "nome": "pés na largura dos ombros",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     1.4,
+     2.6
+    ],
+    "fonte": "pedido do exercício (pés na largura dos ombros); medida da fábrica: distância entre os tornozelos ÷ distância entre as articulações do quadril — no boneco os tornozelos ficam 0,39 m um do outro e os ombros 0,40 m (≈1,9×)"
+   },
+   {
+    "nome": "joelho e quadril dobram juntos (no meio da descida, os dois na metade)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.5,
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "ExRx — Smith Squat (\"Squat down by bending hips back while allowing knees to bend forward\"); NSCA — Basics of Strength and Conditioning Manual (agachamento livre com barra) (\"Simultaneously flex knees while pushing hips back\"); embaixo o joelho dobra ~108°"
+   },
+   {
+    "nome": "quadril e joelho dobram juntos (no meio da descida, os dois na metade)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 0.5,
+    "graus": [
+     50,
+     80
+    ],
+    "fonte": "idem; embaixo o quadril dobra ~120°"
+   },
+   {
+    "nome": "costas retas (coluna neutra)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Smith Squat (\"keeping back straight\"); NSCA — Basics of Strength and Conditioning Manual (agachamento livre com barra) (\"Back should be kept flat and straight\")"
+   },
+   {
+    "nome": "cabeça olhando pra frente (sem cair pro peito nem jogar pra trás)",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "ExRx — Smith Squat (\"Keep head facing forward\"); NSCA — Basics of Strength and Conditioning Manual (agachamento livre com barra) (\"Head and eyes are positioned forward\"); medida da fábrica: cabeça × tronco, ~−11° em pé no repouso; o pescoço volta 75% da inclinação do tronco, como no agachamento livre aprovado"
+   },
+   {
+    "nome": "mãos por fora dos ombros na barra",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     2.6
+    ],
+    "fonte": "ExRx — Smith Squat (\"grasp bar to sides\"); NSCA — Basics of Strength and Conditioning Manual (agachamento livre com barra) (\"All athletes should grip the bar with a closed, pronated grip\")"
+   }
+  ]
+ }
+}
