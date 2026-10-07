@@ -1,0 +1,367 @@
+{
+ "uuid": "a7ff4aaf-94c0-4a15-9e9a-33dd4de78538",
+ "nome": "Desenvolvimento na Máquina",
+ "cena": "desenvolvimento_na_maquina",
+ "grupo": "Deltóide",
+ "subgrupo": "Deltoide anterior/lateral · tríceps",
+ "padrao_movimento": "desenvolvimento",
+ "equipamento": "maquina",
+ "variacao": "sentado",
+ "alvos": [
+  "deltoide"
+ ],
+ "auxiliares": [
+  "triceps"
+ ],
+ "camera": {
+  "az": 40,
+  "el": 10,
+  "dist": 4.1,
+  "alvo": [
+   0.0,
+   0.0,
+   0.88
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.0,
+  "alvo": [
+   0.0,
+   0.02,
+   0.86
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina de desenvolvimento, com o glúteo, a parte de cima das costas e a cabeça encostados no encosto (a cabeça na almofada de cima), a cabeça alinhada com o tronco e os pés chapados no chão, um pouco mais abertos que o quadril; o assento regulado para os pegadores ficarem na altura dos ombros, logo acima do topo deles. Segura os pegadores horizontais com a pegada pronada (palmas para a frente), um pouco mais aberta que os ombros, e o punho quase reto. Começa com as mãos do lado da cabeça, os cotovelos bem dobrados, embaixo das mãos e um pouco à frente do tronco, e empurra os pegadores para cima até os cotovelos ficarem quase esticados acima da cabeça, sem travar; desce devagar até as mãos voltarem para a altura dos ombros. Os braços da máquina giram em volta do eixo deles, atrás do encosto, e os pegadores sobem num arco que vai um pouco para a frente no meio e termina em cima dos ombros. O tronco, o quadril e os pés ficam parados, com as escápulas puxadas para trás e para baixo (sem encolher os ombros) e a lombar sem arquear.",
+ "cinesiologia": {
+  "plano": "frontal e sagital, no plano da escápula: abdução e flexão do ombro com extensão do cotovelo (o braço sobe do lado do tronco, um pouco à frente dele, até ficar acima da cabeça); cadeia cinética aberta",
+  "articulacoes": "ombro (abdução e flexão no plano da escápula na subida, adução e extensão na descida), cotovelo (extensão na subida, de ~138° de flexão até ~10°, sem travar; flexão na descida) e escápula (rotação para cima na subida, com o trapézio e o serrátil anterior); punho quase neutro e parado; escápulas puxadas para trás e para baixo, sem encolher; quadril, joelhos e tornozelos parados, com os pés no chão",
+  "agonistas": "deltoide anterior (ExRx: Target \"Deltoid, Anterior\"), em contração concêntrica na subida e excêntrica na descida",
+  "sinergistas": "deltoide lateral, supraespinal, peitoral maior (porção clavicular), tríceps braquial, trapézio (médio e inferior) e serrátil anterior (ExRx: Synergists \"Deltoid, Lateral\", \"Supraspinatus\", \"Pectoralis Major, Clavicular\", \"Triceps Brachii\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\"); a NSCA lista como principais \"Anterior and medial deltoids, triceps brachii\"; a eGym, \"Lateral deltoid\", \"Triceps brachii\" e \"Superior trapezius\"",
+  "estabilizadores": "tríceps (cabeça longa) e bíceps braquial como estabilizadores dinâmicos; trapézio superior e levantador da escápula (ExRx: Dynamic Stabilizers \"Triceps, Long Head\", \"Biceps Brachii\"; Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\")",
+  "fases": "concêntrica (empurra os pegadores para cima até os cotovelos quase esticarem — ExRx: \"Press lever upward until arms are extended overhead\") e excêntrica (desce devagar até as mãos voltarem para a altura dos ombros — NSCA: \"Allow the elbows to slowly flex to lower the handles back to the starting position\"; ACE: \"allowing your elbows to flex (bend) in a slow, controlled manner while returning to their starting 4 and 8 o'clock position\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Shoulder Press (https://exrx.net/WeightExercises/DeltoidAnterior/LVShoulderPress, lido na cópia do Internet Archive de 07/06/2023; o site responde 403 direto): \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Set and grasp lever handles to each side with overhand grip.\"; Execution: \"Press lever upward until arms are extended overhead. Lower and repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Deltoid, Anterior\", Synergists \"Deltoid, Lateral\", \"Supraspinatus\", \"Pectoralis Major, Clavicular\", \"Triceps Brachii\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\", Dynamic Stabilizers \"Triceps, Long Head\", \"Biceps Brachii\", Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\" (a mesma máquina com a pegada neutra, LVShoulderPressParGrip, cópia de 21/11/2023: \"Sit on seat and grasp parallel bar grips in front of shoulders on each side.\"; \"Parallel grip can be used for variety or when flexibility does not permit standard overhand grip further back.\")",
+  "ExRx.net — Dumbbell Shoulder Press (https://exrx.net/WeightExercises/DeltoidAnterior/DBShoulderPress, cópia do Internet Archive de 02/02/2026): \"Position dumbbells to each side of shoulders with elbows below wrists.\"; \"Press dumbbells upward until arms are extended overhead. Lower to sides of shoulders and repeat.\" (o mesmo movimento com halteres: o cotovelo embaixo do punho)",
+  "ACE — Seated Shoulder Press (https://www.acefitness.org/resources/everyone/exercise-library/186/seated-shoulder-press/, lido em 07/10/2026; \"Equipment: Weight Machines / Selectorized\"): \"Sit with your back firmly supported against the backrest. Adjust the seat height so that the handles are level with your shoulders or just higher than your shoulders. Grasp the handles firmly with a full grip (thumbs clasped around the handles) and maintain a neutral wrist position (i.e., wrists in line with your forearms). Position your elbows in the 4 and 8 o'clock position (i.e., slightly forward than the 3 and 9 o'clock positions where the elbows are aligned with the midline of your trunk). Position your feet firmly on the floor or on the foot rests to stabilize your body.\"; \"do not press your low back into the backrest. Maintain the natural arch in your low back and avoid arching your back throughout the exercise. Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"perform an upward pressing movement, extending your elbows overhead while maintaining a neutral wrist position, head aligned with your spine\"; \"Continue pressing until your elbows are fully extended, but not locked.\"; \"allowing your elbows to flex (bend) in a slow, controlled manner while returning to their starting 4 and 8 o'clock position\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-5 e ...-fundamentals-of-exercise-technique, lidos em 07/10/2026): Machine shoulder press — \"Major muscles involved: Anterior and medial deltoids, triceps brachii\"; \"Sit down and lean back so your body is in the five-point body contact position.\"; \"Grasp the handles with a closed, pronated grip.\"; \"Align the handles with the top of the shoulders.\"; \"If needed, adjust the seat height so the handles line up correctly.\"; \"Push the handles upward until the elbows are fully extended.\"; \"Maintain the five-point body contact position.\"; \"Don’t arch the lower back or forcefully lock out the elbows.\"; \"Allow the elbows to slowly flex to lower the handles back to the starting position.\"; posição de 5 pontos (\"For seated/supine exercises\"): \"Head on the bench or pad\", \"Shoulders/upper back on the bench\", \"Buttocks on the bench or seat\", \"Right foot flat on the floor\", \"Left foot flat on the floor\"; Barbell shoulder press: \"Use a grip slightly wider than shoulder-width.\", \"Keep the wrists stiff and the forearms parallel to each other.\"",
+  "eGym (fabricante) — Smart Strength, M17 Shoulder Press (https://knowledge.egym.com/en/smart-strength/work-out-on-smart-strength/exercises, lido em 07/10/2026): Primary muscles \"Lateral deltoid\", \"Triceps brachii\", \"Superior trapezius\"; \"Sit with your back straight against the backrest.\"; \"Hold the handles with your elbows bent.\"; \"Press the handles upward against the resistance until your arms are almost straight. Keep your shoulders lowered and avoid locking your elbows.\"; \"Return to the starting position in a controlled motion.\" (a mesma página manda \"Start with the handles at eye level.\" — regulagem da máquina da eGym, não usada: o pedido, a ACE e a NSCA põem os pegadores na altura dos ombros)",
+  "Medidas da máquina — Hammer Strength Select Shoulder Press (Life Fitness, https://www.lifefitness.com/en-us/catalog/strength-training/selectorized/hammer-strength-select-shoulder-press, lido em 07/10/2026): \"Seat position provides range-of-motion adjustments, and choice of grips gives users individual preferences.\", \"Size (L x W x H): 60\" x 56\" x 64\" (metric cm: 152 x 142 x 163)\", \"Axis of rotation marked with red indicator to help cue correct alignment\"; Life Fitness Insignia Series Shoulder Press (https://www.lifefitness.com/en-us/catalog/strength-training/selectorized/insignia-series-shoulder-press, lido em 07/10/2026): \"The Insignia Series Shoulder Press has independent converging arms that produce a natural overhead pressing motion.\", \"Dimensions (L x W x H): 64.4\" x 56.8\" x 72.8\" (164 cm x 144 cm x 185 cm)\"; a peça é a mesma do Supino Reto na Máquina Sentado (Spirit CSD-CPSP: \"The Chest Press and Shoulder Press machine offers various grip options for both chest and shoulder exercises.\")"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: no desenvolvimento a alavanca não fica alinhada com uma junta só (o empurrão é do ombro e do cotovelo juntos); a regulagem certa é a altura do assento, que põe os pegadores na altura dos ombros (NSCA: \"Align the handles with the top of the shoulders.\"; ACE: \"Adjust the seat height so that the handles are level with your shoulders or just higher than your shoulders\"). O eixo dos braços da máquina fica atrás do encosto, à mesma distância do pegador no começo e no fim: o pegador sobe num arco que vai ~4 cm pra frente no meio e termina em cima do ombro",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "desenv_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Machine shoulder press (\"Buttocks on the bench or seat\")"
+   },
+   {
+    "nome": "escápulas (parte de cima das costas) no encosto",
+    "equipamento": "desenv_encosto",
+    "partes": [
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Sit with your back firmly supported against the backrest\"); NSCA (Achievable CSCS) — Machine shoulder press (\"Shoulders/upper back on the bench\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "desenv_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Sit with your back firmly supported against the backrest\"); eGym — M17 Shoulder Press (\"Sit with your back straight against the backrest.\")"
+   },
+   {
+    "nome": "cabeça encostada na almofada da cabeça",
+    "equipamento": "desenv_encosto",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Machine shoulder press (\"Sit down and lean back so your body is in the five-point body contact position.\"; \"Head on the bench or pad\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos sem entrar no corpo (ombros e cabeça incluídos)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços sem entrar no tronco e na cabeça",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo bem dobrado no começo (pegadores logo acima do topo dos ombros)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     125,
+     145
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Adjust the seat height so that the handles are level with your shoulders or just higher than your shoulders\"); NSCA (Achievable CSCS) — Machine shoulder press (\"Align the handles with the top of the shoulders.\"): com o pegador ~5 cm acima do topo do ombro e o antebraço quase em pé, o cotovelo do boneco dobra ~138°"
+   },
+   {
+    "nome": "braços quase esticados no fim, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Continue pressing until your elbows are fully extended, but not locked.\"); NSCA (Achievable CSCS) — Machine shoulder press (\"Push the handles upward until the elbows are fully extended.\", \"Don’t arch the lower back or forcefully lock out the elbows.\"); eGym — M17 Shoulder Press (\"until your arms are almost straight. Keep your shoulders lowered and avoid locking your elbows.\")"
+   },
+   {
+    "nome": "braços acima da cabeça no fim",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     145,
+     180
+    ],
+    "fonte": "ExRx — Lever Shoulder Press (\"Press lever upward until arms are extended overhead.\")"
+   },
+   {
+    "nome": "braço embaixo no começo (cotovelos na altura do peito)",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     15,
+     50
+    ],
+    "fonte": "ExRx — Dumbbell Shoulder Press (\"Lower to sides of shoulders\"); NSCA (Achievable CSCS) — Machine shoulder press (\"Align the handles with the top of the shoulders.\"): com as mãos na altura dos ombros e o antebraço em pé, o braço fica pra baixo"
+   },
+   {
+    "nome": "cotovelos um pouco à frente do tronco (4 e 8 horas)",
+    "medida": "braco_plano",
+    "t": "todos",
+    "graus": [
+     10,
+     45
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Position your elbows in the 4 and 8 o'clock position (i.e., slightly forward than the 3 and 9 o'clock positions where the elbows are aligned with the midline of your trunk).\"; \"returning to their starting 4 and 8 o'clock position\")"
+   },
+   {
+    "nome": "antebraço quase em pé (cotovelo embaixo da mão)",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx — Dumbbell Shoulder Press (\"Position dumbbells to each side of shoulders with elbows below wrists.\"); NSCA (Achievable CSCS) — Barbell shoulder press (\"Keep the wrists stiff and the forearms parallel to each other.\")"
+   },
+   {
+    "nome": "pegada um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     1.95
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Barbell shoulder press (\"Use a grip slightly wider than shoulder-width.\"); ExRx — Lever Shoulder Press (\"Range of motion will be compromised if grip is too wide.\"). A medida divide a distância entre as mãos pela distância entre as articulações dos ombros (0,39 m no boneco); a largura dos ombros por fora (deltoides) é ~1,6 vez isso"
+   },
+   {
+    "nome": "pegada pronada (palmas pra frente)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     0,
+     35
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Machine shoulder press (\"Grasp the handles with a closed, pronated grip.\"); ExRx — Lever Shoulder Press (\"grasp lever handles to each side with overhand grip\")"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"maintain a neutral wrist position (i.e., wrists in line with your forearms)\"): até ~10° de extensão mais o desvio de lado que o pegador reto pede com o braço em V"
+   },
+   {
+    "nome": "tronco parado, encostado e quase em pé",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     4,
+     14
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Sit with your back firmly supported against the backrest\"); eGym — M17 Shoulder Press (\"Sit with your back straight against the backrest.\"); encosto 10° atrás da vertical"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Maintain the natural arch in your low back and avoid arching your back throughout the exercise.\"); NSCA (Achievable CSCS) — Machine shoulder press (\"Don’t arch the lower back\")"
+   },
+   {
+    "nome": "quadril parado (sentado, ~98° entre o tronco e a coxa)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     76,
+     88
+    ],
+    "fonte": "a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra trás)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Position your feet firmly on the floor\"); NSCA (Achievable CSCS) — Machine shoulder press (\"Right foot flat on the floor\", \"Left foot flat on the floor\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e paradas no encosto (sem levar o ombro pra frente)",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"); eGym — M17 Shoulder Press (\"Keep your shoulders lowered\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Shoulder Press (\"head aligned with your spine\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}

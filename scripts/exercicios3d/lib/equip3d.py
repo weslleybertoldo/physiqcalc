@@ -2139,7 +2139,7 @@ class MaquinaSupino:
 
 def supino_sentado(nome="supino", eixo=(-0.40, 0.13), x_braco=0.50, pegadores=(-0.17, 0.84, 0.39, 0.15, 0.0145),
                    giro_pegador=0.0, caminho=None, assento=(-0.30, 0.10, 0.42, 0.36, 0.06),
-                   encosto=(0.06, 10.0, 0.66, 0.30, 0.06), lado=-1, pilha=True, viga_braco=0.06):
+                   encosto=(0.06, 10.0, 0.66, 0.30, 0.06), lado=-1, pilha=True, viga_braco=0.06, cabeceira=None):
     """Máquina de supino sentado (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
       eixo         = (y, z) do eixo de giro dos 2 braços (paralelo ao X); cada braço gira num cubo em x = ±x_braco, preso num
                      mancal em cima de um pedestal que sai do trilho da base (x = ±(x_braco + 0,085));
@@ -2156,7 +2156,10 @@ def supino_sentado(nome="supino", eixo=(-0.40, 0.13), x_braco=0.50, pegadores=(-
       encosto      = (y_base, angulo, altura, largura, espessura): a face da frente do estofado passa por (y_base, topo do
                      assento) e sobe `angulo` graus inclinada pra trás (+Y) da vertical, por `altura` m;
       lado         = lado da torre da pilha (−1 = −X, o direito de quem senta); pilha = caixa da pilha de pesos;
-      viga_braco   = seção (m) da viga quadrada de cada braço.
+      viga_braco   = seção (m) da viga quadrada de cada braço;
+      cabeceira    = None (sem almofada da cabeça: o supino) ou (h, altura, espessura): almofada da cabeça deitada na face da frente
+                     do encosto, de h até h + altura ao longo dele (medido de (y_base, topo do assento)), `espessura` m pra frente
+                     da face (a cabeça encosta nela com as costas no encosto: Desenvolvimento na Máquina); é APOIO, na raiz do encosto.
     Devolve um MaquinaSupino (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
     ye, ze = eixo
     y_p, z_p, x_p, comp_p, raio_p = pegadores
@@ -2196,6 +2199,10 @@ def supino_sentado(nome="supino", eixo=(-0.40, 0.13), x_braco=0.50, pegadores=(-
     caixa(nome + "_encosto_suporte", meio_enc - n_e * 0.032, (0.12, 0.04, 0.12), mat_estrutura(), rot=(-a, 0, 0), pai=estr,
           chanfro=0.004)                                     # chapa de fixação atrás do encosto: a viga entra nela
     _viga(nome + "_encosto_viga", meio_enc - n_e * 0.03, (0, y_col + 0.03, z_chapa - 0.04), 0.06, 0.06, mat_estrutura(), pai=estr)
+    if cabeceira:                                            # almofada da cabeça na face do encosto (2 mm embutida nele)
+        h_c, alt_c, esp_c = cabeceira
+        caixa(nome + "_encosto_cabeceira", Vector((0, y_b, topo)) + u_e * (h_c + alt_c / 2) + n_e * (esp_c / 2 - 0.001),
+              (larg_enc - 0.04, esp_c + 0.002, alt_c), mat_estofado(), rot=(-a, 0, 0), pai=enc, chanfro=0.015)
     # ── base no chão: 2 trilhos ao longo do Y (por fora dos pés), a travessa de trás e a viga do meio até a coluna do assento ──────
     topo_enc_y = (base_enc + u_e * alt_enc - n_e * esp_enc).y
     y_tras_b = max(y_t, topo_enc_y, y_col, ye) + 0.10
