@@ -1143,7 +1143,8 @@ def cadeira_joelho(nome="cadeira", eixo=(0.0, 0.67), assento=(0.12, 0.58, 0.61, 
 #   Abdutora: almofada="fora"   — almofada no lado de FORA do joelho, presa direto no poste; girar(> 0) abre as pernas.
 #   Adutora:  almofada="dentro" — almofada no lado de DENTRO do joelho, presa por um suporte em U que sai do poste (do lado de
 #             fora, como na abdutora), cruza na frente do joelho e entra na ponta da frente da almofada; a cena monta com as
-#             pernas abertas (o começo da adução) e girar(< 0) fecha.
+#             pernas abertas (o começo da adução) e girar(< 0) fecha. Com as coxas abertas na montagem, poste_alinhado=True
+#             vira o poste junto com a coxa (Cadeira Adutora, 06/10/2026).
 # Medidas de máquina de verdade: torre da pilha de 1,40 m (Hammer Strength Select Hip Abduction: "Size (L x W x H): 61" x 26" x
 # 55" (metric cm: 155 x 66 x 140)"); assento de 13" × 14" e encosto de 12" × 17,5" (Titan Selectorized Hip Abductor Adductor:
 # "Seat Pad Dimensions: 13-in. x 14-in.", "Back Pad Dimensions: 12-in. x 17.5-in."). Tubos de 5–8 cm, almofada do joelho, apoio
@@ -1197,7 +1198,8 @@ def _girada(u):
 
 def cadeira_quadril(nome="abdutora", eixos=None, z_eixo=None, assento=(-0.20, 0.17, 0.54, 0.356, 0.05),
                     encosto=(0.12, 5.0, 0.445, 0.305, 0.06), almofadas=None, pes=None, postes=None,
-                    pegadores=(0.06, 0.50, 0.30, 0.14, 0.0145), almofada="fora", volta_frente=0.16, pilha=True):
+                    pegadores=(0.06, 0.50, 0.30, 0.14, 0.0145), almofada="fora", volta_frente=0.16, pilha=True,
+                    poste_alinhado=False):
     """Cadeira abdutora/adutora (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y; s = +1 é o lado +X
     (o esquerdo de quem senta) e −1 o −X. Tudo NA MONTAGEM (pernas paradas no começo do movimento):
       eixos     = {s: (x, y)}: a reta vertical em volta da qual o braço do lado s gira (passa pela articulação do quadril);
@@ -1216,7 +1218,11 @@ def cadeira_quadril(nome="abdutora", eixos=None, z_eixo=None, assento=(-0.20, 0.
                   (±x, y, z), preso por trás;
       almofada  = "fora" (abdutora: almofada presa direto no poste) ou "dentro" (adutora: suporte em U que sai do poste,
                   cruza `volta_frente` m à frente do centro da almofada, na frente do joelho, e entra na ponta da frente
-                  dela — nada fica atrás da almofada, entre as pernas); pilha = caixa da pilha de pesos.
+                  dela — nada fica atrás da almofada, entre as pernas); pilha = caixa da pilha de pesos;
+      poste_alinhado = False (padrão: o poste com as faces nos eixos X/Y do mundo na montagem — a abdutora monta com as coxas
+                  a 3°, quase paralelas a eles) ou True (Cadeira Adutora, 06/10/2026: o poste com as faces viradas pra coxa, ao
+                  longo de `u`, como as vigas do braço — a adutora monta com as coxas abertas a 40° e o poste ficava 40° torto em
+                  relação ao braço, com a quina virada pra perna).
     Devolve um CadeiraQuadril (raizes, equipamentos, apoios, pegadores, girar())."""
     if almofada not in ("fora", "dentro"):
         raise ValueError("cadeira_quadril: almofada %r (use \"fora\" ou \"dentro\")" % almofada)
@@ -1329,8 +1335,13 @@ def cadeira_quadril(nome="abdutora", eixos=None, z_eixo=None, assento=(-0.20, 0.
         pecas_b.append(_viga(nome + "_viga2_" + lado, C - u * 0.025, Qb + u * 0.025, 0.05, 0.05, mat_estrutura()))
         z_pe_baixo = c_pe.z - esp_pe - 0.03                    # o poste desce até embaixo do apoio do pé
         z_alto = c_alm.z + alt_a / 2 - 0.02
-        pecas_b.append(_viga(nome + "_poste_" + lado, Vector((Q.x, Q.y, z_pe_baixo - 0.02)), Vector((Q.x, Q.y, z_alto)), 0.05,
-                             0.05, mat_estrutura()))
+        a_poste, b_poste = Vector((Q.x, Q.y, z_pe_baixo - 0.02)), Vector((Q.x, Q.y, z_alto))
+        if poste_alinhado:                                     # faces viradas pra coxa (ao longo de u), como as vigas do braço
+            pecas_b.append(_em_aneis(_reto(caixa(nome + "_poste_" + lado, (a_poste + b_poste) / 2,
+                                                 (0.05, 0.05, (b_poste - a_poste).length), mat_estrutura(), rot=_girada(u),
+                                                 chanfro=0)), passo=0.05))
+        else:
+            pecas_b.append(_viga(nome + "_poste_" + lado, a_poste, b_poste, 0.05, 0.05, mat_estrutura()))
         # apoio do pé: chapa de borracha (APOIO) sobre uma chapa de aço, ligada ao poste por uma barra embaixo dela
         rot_pe = _girada(f)
         lado_pe = cima.cross(f)
