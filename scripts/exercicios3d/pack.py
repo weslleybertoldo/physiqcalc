@@ -46,6 +46,8 @@ def gerar(pub=PUB, fichas_dir=os.path.join(AQUI, "fichas"), ids_json=os.path.joi
             "camera": f["camera"],
             "ida_s": f.get("ida_s", 1.5),
         }
+        if f.get("ciclo"):  # movimento cíclico (t=1 = t=0, ex.: corrida): o app repete em vez de ir e voltar
+            man["exercicios"][uuid]["ciclo"] = True
     return man
 
 
