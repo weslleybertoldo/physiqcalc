@@ -29,8 +29,8 @@ type Folha = "lembrete" | "som" | "exportar" | "excluir" | null;
 /**
  * Aba Perfil do app do aluno (W7 — spec 4.3, tela 5): engrenagem (Conta), card do aluno, Meus profissionais (WhatsApp — P24;
  * sem profissional, o código dele), Agenda, Pagamentos, Lembrete de treino, Som do descanso, Aparência, Exportar meus dados,
- * Excluir minha conta (falha F4 — C88, R11, P19; W2 da loja: /perfil?excluir=1 abre direto), Sair e a versão. Aluno bloqueado
- * (spec 9): só Sair, Exportar e Excluir.
+ * Excluir minha conta (falha F4 — C88, R11, P19; W2 da loja: /perfil?excluir=1 abre direto), Sair e a versão e, embaixo, a política
+ * de privacidade e os termos (W3 da loja). Aluno bloqueado (spec 9): só Sair, Exportar e Excluir (e os links da política).
  * Lembrete, som e aparência ficam no aparelho, com as chaves de hoje; o resto vem do banco principal (online — 9A).
  */
 export default function Perfil() {
