@@ -1,0 +1,324 @@
+{
+ "uuid": "e6edd5b3-bd3a-48fa-9e4e-a3b387962bc2",
+ "nome": "Supino Reto na Máquina Sentado",
+ "cena": "supino_reto_na_maquina_sentado",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral médio (esternal) · tríceps · deltoide anterior",
+ "padrao_movimento": "supino_reto",
+ "equipamento": "maquina",
+ "variacao": "sentado",
+ "alvos": [
+  "peitoral"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "triceps"
+ ],
+ "camera": {
+  "az": 52,
+  "el": 12,
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.2,
+   0.75
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.5,
+  "alvo": [
+   0.0,
+   -0.18,
+   0.74
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina de supino, com o glúteo e a parte de cima das costas (as escápulas) encostados no encosto, a cabeça alinhada com o tronco e os pés chapados no chão, um pouco mais abertos que o quadril; o assento regulado para os pegadores ficarem na altura do meio do peito. Segura os pegadores horizontais com a pegada pronada (palmas para baixo), aberta, mais larga que os ombros, e o punho quase reto. Começa com as mãos perto da linha do peito, sem passar da frente dele, os cotovelos dobrados e abertos para o lado, um pouco abaixo dos ombros, e empurra os pegadores para a frente até os cotovelos ficarem quase esticados, sem travar; volta devagar até as mãos ficarem de novo perto do peito. Os braços da máquina giram em volta do eixo deles, embaixo, na frente, e os pegadores fazem um arco que sobe um pouco no começo. O tronco, o quadril e os pés ficam parados, com as escápulas puxadas para trás e para baixo, encostadas no encosto (sem levar os ombros para a frente no fim).",
+ "cinesiologia": {
+  "plano": "transverso e sagital: adução horizontal e flexão do ombro com extensão do cotovelo (o braço vai do lado do tronco para a frente); cadeia cinética aberta",
+  "articulacoes": "ombro (adução horizontal e flexão na ida, abdução horizontal e extensão na volta) e cotovelo (extensão na ida, de ~125° de flexão até ~10°, sem travar; flexão na volta); punho quase neutro e parado; escápulas retraídas e deprimidas (pra trás e pra baixo), paradas no encosto; quadril, joelhos e tornozelos parados, com os pés no chão",
+  "agonistas": "peitoral maior, porção esternal (ExRx: Target \"Pectoralis Major, Sternal\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "peitoral maior (porção clavicular), deltoide anterior, tríceps braquial e coracobraquial (ExRx: Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\"); a eGym lista como principais \"Pectoral, Triceps brachii, Anterior deltoid\" e como secundários \"Anterior serratus, Anconeus\"; a NSCA, \"Pectoralis major, anterior deltoids, triceps brachii\"",
+  "estabilizadores": "bíceps braquial, cabeça curta (ExRx: Dynamic Stabilizers \"Biceps Brachii, Short Head\")",
+  "fases": "concêntrica (empurra os pegadores para a frente até os cotovelos quase esticarem — ExRx: \"Press lever until arms are extended\") e excêntrica (volta devagar até as mãos ficarem perto do peito — ExRx: \"Return weight until chest muscles are slightly stretched\"; ACE: \"gently allow your elbows to flex (bend) in a slow, controlled manner\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Chest Press (https://exrx.net/WeightExercises/PectoralSternal/LVChestPress, lido na cópia do Internet Archive de 19/02/2026; o site responde 403 direto): \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Sit on seat with chest approximately height of horizontal handles. If available, push foot lever until lever is within grasping range. Grasp handles with wide overhand grip; elbows out to sides just below shoulders. Release foot lever.\"; Execution: \"Press lever until arms are extended. Return weight until chest muscles are slightly stretched. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Pectoralis Major, Sternal\", Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\", Dynamic Stabilizers \"Biceps Brachii, Short Head\" (a mesma página com a alavanca de cima, LVChestPressS, cópia de 21/04/2025: \"Sit on seat with chest approximately height of handles. Grasp handles with wide overhand grip; elbows out to sides just below shoulders.\")",
+  "ExRx.net — Bench Press Analyses (https://exrx.net/Kinesiology/BenchPress, cópia do Internet Archive de 01/02/2025; a Lever Chest Press manda ver: \"Also see Bench Press Analysis\"): \"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\"; \"Hand spacing of 2 biacromial width increases shoulder abduction above 75°, whereas hand spacing <1.5 biacromial width maintains shoulder abduction below 45° (Fees 1998)\"; \"a standard bench press grip of 1.5 to 1.7 times the biacromial width can be used for those who follow adaptation criteria with healthy shoulders and no risk factors\"; \"Coach Rippetoe (2015) ... suggests a 70º upper arm position with the forearms vertical at the lowest bench press position\"; \"Scapula Retraction Keep the scapula back and down.\"",
+  "ACE — Seated Chest Press (https://www.acefitness.org/resources/everyone/exercise-library/188/seated-chest-press/, lido em 07/10/2026; \"Equipment: Weight Machines / Selectorized\"): \"Sit with your back firmly supported against the backrest. Adjust the seat height so that the handles are level with your mid-chest (around nipple level) and the handles are positioned no deeper than chest level (level with the front of your chest). Grasp the handles firmly with a full grip (thumbs clasped around the handles) and maintain a neutral wrist position (i.e., wrists in line with your forearms). Position your feet firmly on the floor or on the foot rests to stabilize your body.\"; \"do not press your low back into the backrest. Maintain the natural arch in your low back\"; \"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"keep your head aligned with your spine\"; \"Continue pressing until your elbows are fully extended, but not locked. Your shoulder blades should continue to make contact with the backrest and not round or bend forward.\"; \"gently allow your elbows to flex (bend) in a slow, controlled manner while returning the bar back towards the starting position\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-3 e ...-fundamentals-of-exercise-technique, lidos em 07/10/2026): Vertical chest press (machine) — \"Major muscles involved: Pectoralis major, anterior deltoids, triceps brachii\"; \"Sit back against the seat pad with five-point contact.\"; \"Grasp the handles with a closed, pronated grip, aligned with your nipples.\"; \"Push the handles forward until your elbows are fully extended.\"; \"Keep your back against the pad, and avoid locking out your elbows.\"; \"Let the handles return slowly to the starting position.\"; posição de 5 pontos: \"Head on the bench or pad\", \"Shoulders/upper back on the bench\", \"Buttocks on the bench or seat\", \"Right foot flat on the floor\", \"Left foot flat on the floor\"",
+  "eGym (fabricante) — Smart Strength, M5 Chest Press (https://knowledge.egym.com/en/smart-strength/work-out-on-smart-strength/exercises, lido em 07/10/2026): Primary muscles \"Pectoral\", \"Triceps brachii\", \"Anterior deltoid\"; Secondary muscles \"Anterior serratus\", \"Anconeus\"; \"Adjust the seat so the handles are positioned between chest and shoulder height.\"; \"Hold the handles, keeping the shoulders lowered.\"; \"Pronated grip (palms facing the floor): more activation of the pectoralis major.\"; \"Start with your elbows bent and the handles at chest height.\"; \"Extend your arms forward against the resistance until your arms are almost straight. Avoid locking your elbows.\"; \"Return to the starting position in a controlled motion.\" (a mesma página manda \"Slide slightly forward so only your shoulders are in contact with the backrest.\" — regulagem da máquina da eGym, não usada: ACE e NSCA pedem as costas no encosto)",
+  "Medidas da máquina — Hammer Strength Select Chest Press (Life Fitness, https://www.lifefitness.com/en-us/catalog/strength-training/selectorized/hammer-strength-select-chest-press, lido em 07/10/2026): \"The pressing arm adjusts in five positions for multiple ranges of motion.\", \"Size (L x W x H): 41″ x 57″ x 64″ (metric cm: 104 x 145 x 163)\", \"Axis of rotation marked with red indicator to help cue correct alignment\" (nas fotos do fabricante os braços de pressão sobem de um eixo baixo, na frente, até os pegadores horizontais); Precor Resolute RSL0414 Converging Chest Press (ficha em PDF): \"Weight Stack Tower Height: 58 in / 148 cm\", \"independent moving arms\", \"The movement arm handles of the Resolute Strength Chest Press can be angled to keep wrists in correct alignment as the exerciser’s hands converge.\"; Life Fitness Insignia Series Chest Press (https://www.lifefitness.com/en-us/catalog/strength-training/selectorized/insignia-series-chest-press, lido em 07/10/2026): \"independent, converging arms that produce a natural pressing motion\", \"Dimensions (L x W x H) 43.2″ x 55.3″ x 58.1″ (110 cm x 140 cm x 148 cm)\"; Spirit CSD-CPSP (ficha em PDF): \"The Chest Press and Shoulder Press machine offers various grip options for both chest and shoulder exercises.\" (uma máquina pros 2 exercícios, como a peça da fábrica)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: no supino a alavanca não fica alinhada com uma junta só (o empurrão é do ombro e do cotovelo juntos); a regulagem certa é a altura do assento, que põe os pegadores na linha do meio do peito (ACE: \"Adjust the seat height so that the handles are level with your mid-chest (around nipple level)\"). O eixo dos braços da máquina fica embaixo, na frente, à mesma distância do pegador no começo e no fim: o arco do pegador acompanha o empurrão (sobe ~3 cm no meio)",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "supino_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Vertical chest press (machine) (\"Buttocks on the bench or seat\")"
+   },
+   {
+    "nome": "escápulas (parte de cima das costas) no encosto",
+    "equipamento": "supino_encosto",
+    "partes": [
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Chest Press (\"Your shoulder blades should continue to make contact with the backrest\"); NSCA (Achievable CSCS) — Vertical chest press (machine) (\"Keep your back against the pad\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "supino_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Chest Press (\"Sit with your back firmly supported against the backrest\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo bem dobrado no começo (mãos perto do peito)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     110,
+     140
+    ],
+    "fonte": "ExRx — Lever Chest Press (\"Return weight until chest muscles are slightly stretched\"); ACE — Seated Chest Press (\"the handles are positioned no deeper than chest level (level with the front of your chest)\"): o pegador começa 5 cm à frente da frente do peito"
+   },
+   {
+    "nome": "braços quase esticados no fim, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ACE — Seated Chest Press (\"Continue pressing until your elbows are fully extended, but not locked\"); NSCA (Achievable CSCS) — Vertical chest press (machine) (\"avoid locking out your elbows\"); eGym — M5 Chest Press (\"until your arms are almost straight. Avoid locking your elbows.\")"
+   },
+   {
+    "nome": "cotovelo a 45–70° do tronco no começo, abaixo do ombro",
+    "medida": "braco_abertura",
+    "t": 0.0,
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"a 45º to 70º angle between the shoulder and torso\"); ExRx — Lever Chest Press (\"elbows out to sides just below shoulders\")"
+   },
+   {
+    "nome": "cotovelos abertos pro lado o movimento todo (sem colar nem subir)",
+    "medida": "braco_abertura",
+    "t": "todos",
+    "graus": [
+     45,
+     75
+    ],
+    "fonte": "ExRx — Lever Chest Press (\"elbows out to sides just below shoulders\"); em cima, com o braço quase esticado, a abertura é a do braço apontando pro pegador (~70°)"
+   },
+   {
+    "nome": "pegada aberta, ~1,5–1,7 vez a largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     2.0
+    ],
+    "fonte": "ExRx — Lever Chest Press (\"Grasp handles with wide overhand grip\"; \"Range of motion will be compromised if grip is too wide\"); ExRx — Bench Press Analyses (\"a standard bench press grip of 1.5 to 1.7 times the biacromial width\"). A medida daqui divide pela distância entre as articulações dos ombros, menor que a biacromial: por isso a faixa fica acima de 1,5–1,7 (a mesma do supino reto com barra)"
+   },
+   {
+    "nome": "pegada pronada (palmas pra baixo)",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     130,
+     180
+    ],
+    "fonte": "eGym — M5 Chest Press (\"Pronated grip (palms facing the floor): more activation of the pectoralis major.\"); NSCA (Achievable CSCS) — Vertical chest press (machine) (\"a closed, pronated grip\"); ExRx — Lever Chest Press (\"overhand grip\")"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "ACE — Seated Chest Press (\"maintain a neutral wrist position (i.e., wrists in line with your forearms)\"): até ~15° de extensão (o pegador na linha do antebraço) mais o desvio de lado que o pegador reto pede quando o braço estica"
+   },
+   {
+    "nome": "antebraço na linha do empurrão no começo (pra frente e um pouco pra cima, como o braço da máquina)",
+    "medida": "inclinacao",
+    "segmento": [
+     "ForeArm",
+     "Hand"
+    ],
+    "t": 0.0,
+    "graus": [
+     -25,
+     -5
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"with the forearms vertical at the lowest bench press position\", Rippetoe — no supino deitado o antebraço fica na linha em que a barra anda; na máquina, a linha em que o pegador anda no começo do arco, ~16° acima da horizontal)"
+   },
+   {
+    "nome": "tronco parado, encostado e quase em pé",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     4,
+     14
+    ],
+    "fonte": "ACE — Seated Chest Press (\"Sit with your back firmly supported against the backrest\"); encosto 10° atrás da vertical"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Chest Press (\"Maintain the natural arch in your low back and avoid arching your back throughout the exercise\")"
+   },
+   {
+    "nome": "quadril parado (sentado, ~98° entre o tronco e a coxa)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     76,
+     88
+    ],
+    "fonte": "a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra trás)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE — Seated Chest Press (\"Position your feet firmly on the floor\"); NSCA (Achievable CSCS) — Vertical chest press (machine) (\"Right foot flat on the floor\", \"Left foot flat on the floor\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e paradas no encosto (o ombro não vai pra frente no fim)",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ACE — Seated Chest Press (\"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise\"; \"Your shoulder blades should continue to make contact with the backrest and not round or bend forward\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Chest Press (\"keep your head aligned with your spine\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}

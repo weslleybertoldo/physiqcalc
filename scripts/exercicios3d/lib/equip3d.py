@@ -2063,3 +2063,202 @@ def voador(nome="voador", eixos=None, pegadores=None, assento=None, encosto=None
         pegs[s] = peg
     bpy.context.view_layer.update()
     return Voador(raizes, eixos, z_eixo, pegs, raio_p, comp_p / 2)
+
+
+# ===== Supino sentado na máquina =====================================================================================================
+# ── MÁQUINA DE SUPINO SENTADO (Supino Reto na Máquina Sentado, lote 4, 07/10/2026; a MESMA peça serve ao Desenvolvimento na
+# Máquina, empurrando pra cima) ──────────────────────────────────────────────────────────────────────────────────────────────────────
+# Máquina de empurrar sentado com 2 BRAÇOS DE ALAVANCA independentes que giram em volta do MESMO eixo horizontal (ao longo do X),
+# cada um com o PEGADOR na ponta, o ASSENTO e o ENCOSTO estofados, a estrutura (base no chão, o mancal de cada braço num pedestal,
+# a coluna do assento, a viga do encosto) e a torre da pilha de pesos (carenagem parada: o app não mostra a carga). É a "Lever
+# Chest Press" do ExRx (alavanca que sobe da parte de baixo da máquina, pegadores horizontais: "Sit on seat with chest
+# approximately height of horizontal handles", "Grasp handles with wide overhand grip"), como a Hammer Strength Select Chest
+# Press (braços de pressão que sobem de um eixo baixo, na frente, até os pegadores; "The pressing arm adjusts in five positions
+# for multiple ranges of motion"; placa com o "Axis of rotation marked with red indicator to help cue correct alignment") e a
+# Precor Resolute RSL0414 ("independent moving arms"; "The movement arm handles ... can be angled to keep wrists in correct
+# alignment"). A regulagem certa é a do fabricante: o assento sobe ou desce até os pegadores ficarem na linha do meio do peito
+# (ACE, Seated Chest Press: "Adjust the seat height so that the handles are level with your mid-chest (around nipple level)") —
+# por isso a cena monta a peça EM VOLTA do corpo (como as cadeiras e o leg press): ela dá o eixo dos braços, os pegadores, o
+# assento e o encosto, e a peça liga tudo com a estrutura. Os pés ficam no chão entre os 2 trilhos da base (nada passa na frente
+# das canelas). Outro exercício na mesma máquina (Desenvolvimento na Máquina: pegadores na altura dos ombros, braços empurrando
+# pra cima) monta com outro eixo (atrás/acima), outro caminho dos braços (`caminho`), outro encosto: nada da peça é do supino em si
+# (a Spirit CSD-CPSP é uma máquina só pros 2: "The Chest Press and Shoulder Press machine offers various grip options for both
+# chest and shoulder exercises").
+# Medidas de máquina de verdade: torre da pilha de 148 cm (Precor Resolute RSL0414 Converging Chest Press: "Weight Stack Tower
+# Height: 58 in / 148 cm"); máquina de ~1,0–1,1 m × 1,4–1,45 m × 1,5–1,6 m (Hammer Strength Select Chest Press: "41" x 57" x
+# 64" (metric cm: 104 x 145 x 163)"; Life Fitness Insignia Series Chest Press: "43.2" x 55.3" x 58.1" (110 cm x 140 cm x 148
+# cm)"); estofado de 60 mm, como o do leg press 45 (acima). Os braços (viga de 60 × 60 mm), o cubo, o mancal, o pedestal, a base e
+# o desenho do pegador (borracha com a ponta de aço, preso numa barra de aço que sai do braço) são escolha da fábrica. Peças
+# compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   mq = e3.supino_sentado("supino", eixo=(y, z), x_braco=..., pegadores=(y, z, x, comprimento, raio), giro_pegador=...,
+#                          assento=(...), encosto=(...))
+#   no pose(t): mq.girar(graus)            # os 2 braços (com os pegadores) giram juntos em volta do eixo, a partir da montagem
+#               c, u = mq.pegada(s)         # centro e eixo do pegador do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador,
+#        eixo=(0, 0, 1))), ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_assento" e "<nome>_encosto" (APOIO) e "<nome>_braco_esq"/"_dir" (giram; não encostam no corpo, fora as mãos nos
+# pegadores). Cada braço tem a origem NO EIXO (no cubo do seu lado) e o X local AO LONGO dele (a regra checagens.eixos da ficha
+# pode medir uma junta nessa reta, se o exercício tiver uma). O pegador de cada lado é um tubo de borracha com o Z local ao longo
+# dele e a origem no meio (ck.Barra(..., eixo=(0, 0, 1))).
+class MaquinaSupino:
+    """Máquina de supino sentado pronta na cena (supino_sentado())."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes                  # {"estrutura", "assento", "encosto", "braco_esq", "braco_dir"}
+        self.equipamentos = [raizes[k] for k in ("estrutura", "braco_esq", "braco_dir")]
+        self.apoios = [raizes[k] for k in ("assento", "encosto")]
+        self.eixo = Vector(eixo)              # ponto do eixo de giro dos braços (em x = 0); direção = X
+        self.pegadores = pegadores            # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in ("braco_esq", "braco_dir")}
+
+    def _giro(self, graus):
+        return (Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(graus), 4, "X")
+                @ Matrix.Translation(-self.eixo))
+
+    def girar(self, graus):
+        """Os 2 braços (com os pegadores) girados `graus` em volta do eixo (regra da mão direita no +X), a partir da montagem:
+        com a pessoa olhando pra −Y, > 0 leva pra frente (−Y) a ponta de cima de um braço que sobe do eixo — empurrar no supino."""
+        R = self._giro(graus)
+        for k, M in self._M0.items():
+            self.raizes[k].matrix_world = R @ M
+        self.angulo = graus
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, graus=None):
+        """Centro e eixo (mundo, unitário) do pegador do lado s com os braços em `graus` (None = como estão agora)."""
+        M = self.pegadores[s].matrix_world
+        if graus is not None:
+            M = self._giro(graus - self.angulo) @ M
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+def supino_sentado(nome="supino", eixo=(-0.40, 0.13), x_braco=0.50, pegadores=(-0.17, 0.84, 0.39, 0.15, 0.0145),
+                   giro_pegador=0.0, caminho=None, assento=(-0.30, 0.10, 0.42, 0.36, 0.06),
+                   encosto=(0.06, 10.0, 0.66, 0.30, 0.06), lado=-1, pilha=True, viga_braco=0.06):
+    """Máquina de supino sentado (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      eixo         = (y, z) do eixo de giro dos 2 braços (paralelo ao X); cada braço gira num cubo em x = ±x_braco, preso num
+                     mancal em cima de um pedestal que sai do trilho da base (x = ±(x_braco + 0,085));
+      x_braco      = |x| do plano dos braços (por fora das mãos e dos cotovelos);
+      pegadores    = (y, z, x, comprimento, raio): centro do pegador de borracha do lado +X em (x, y, z) (o do −X em (−x, y, z)),
+                     onde a mão fecha; o pegador vai pra dentro, ao longo do X, e uma barra de aço liga a ponta de fora dele ao
+                     braço;
+      giro_pegador = graus: a ponta de DENTRO de cada pegador vai pra frente (−Y) girando no plano do chão (pegador angulado, como
+                     na Precor RSL0414); 0 = pegadores ao longo do X;
+      caminho      = None (braço reto do cubo até a barra do pegador) ou [(y, z), ...]: pontos do braço, no plano dele, entre o
+                     cubo e a barra do pegador (braço com dobras: o Desenvolvimento na Máquina passa por cima dos ombros);
+      assento      = (y_frente, y_tras, topo, largura, espessura): estofado do assento, da borda da frente até y_tras, com o topo
+                     em `topo`;
+      encosto      = (y_base, angulo, altura, largura, espessura): a face da frente do estofado passa por (y_base, topo do
+                     assento) e sobe `angulo` graus inclinada pra trás (+Y) da vertical, por `altura` m;
+      lado         = lado da torre da pilha (−1 = −X, o direito de quem senta); pilha = caixa da pilha de pesos;
+      viga_braco   = seção (m) da viga quadrada de cada braço.
+    Devolve um MaquinaSupino (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
+    ye, ze = eixo
+    y_p, z_p, x_p, comp_p, raio_p = pegadores
+    y_f, y_t, topo, larg, esp = assento
+    y_b, ang_enc, alt_enc, larg_enc, esp_enc = encosto
+    sl = -1.0 if lado < 0 else 1.0
+    x_m = x_braco + 0.085                                    # trilho da base, pedestal e mancal de cada braço (|x|)
+    rot_x90 = (0, math.radians(90), 0)                       # cilindro deitado ao longo do X
+    g = math.radians(giro_pegador)
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, ass, enc = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("encosto")
+    bpy.context.view_layer.update()
+
+    # ── assento: estofado (APOIO) em cima de uma chapa ─────────────────────────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, y_t - y_f, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.05, y_t - y_f - 0.04, 0.024), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    # ── encosto: estofado inclinado (APOIO), chapa atrás dele e a viga que desce até a coluna do assento ─────────────────────────
+    a = math.radians(ang_enc)
+    u_e = Vector((0, math.sin(a), math.cos(a)))              # ao longo do encosto, pra cima
+    n_e = Vector((0, -math.cos(a), math.sin(a)))             # normal da face da frente (pro corpo)
+    base_enc = Vector((0, y_b, topo)) + u_e * 0.012          # o estofado começa 1,2 cm acima do assento
+    caixa(nome + "_encosto_estofado", base_enc + u_e * (alt_enc / 2) - n_e * (esp_enc / 2), (larg_enc, esp_enc, alt_enc),
+          mat_estofado(), rot=(-a, 0, 0), pai=enc, chanfro=0.015)
+    meio_enc = base_enc + u_e * (alt_enc * 0.5) - n_e * (esp_enc + 0.012)
+    _em_aneis(_reto(caixa(nome + "_encosto_chapa", meio_enc, (larg_enc - 0.05, 0.024, alt_enc - 0.05), mat_estrutura(),
+                          rot=(-a, 0, 0), pai=estr, chanfro=0)), passo=0.06)
+    y_col = max(y_t - 0.05, y_b + 0.03)                      # coluna do assento: embaixo da traseira dele
+    caixa(nome + "_encosto_suporte", meio_enc - n_e * 0.032, (0.12, 0.04, 0.12), mat_estrutura(), rot=(-a, 0, 0), pai=estr,
+          chanfro=0.004)                                     # chapa de fixação atrás do encosto: a viga entra nela
+    _viga(nome + "_encosto_viga", meio_enc - n_e * 0.03, (0, y_col + 0.03, z_chapa - 0.04), 0.06, 0.06, mat_estrutura(), pai=estr)
+    # ── base no chão: 2 trilhos ao longo do Y (por fora dos pés), a travessa de trás e a viga do meio até a coluna do assento ──────
+    topo_enc_y = (base_enc + u_e * alt_enc - n_e * esp_enc).y
+    y_tras_b = max(y_t, topo_enc_y, y_col, ye) + 0.10
+    y_frente_b = min(ye, y_f) - 0.10
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base_trilho%+d" % s, (s * x_m, (y_frente_b + y_tras_b) / 2, 0.03),
+                              (0.08, y_tras_b - y_frente_b, 0.06), mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    _em_aneis(_reto(caixa(nome + "_base_tras", (0, y_tras_b - 0.04, 0.03), (2 * x_m - 0.08, 0.08, 0.06), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.08)    # entre os trilhos (sem face no mesmo plano que eles)
+    _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y_col - 0.04 + y_tras_b - 0.08) / 2, 0.03), (0.08, y_tras_b - 0.08 - y_col + 0.04,
+                          0.06), mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)   # da coluna do assento até a travessa
+    _viga(nome + "_coluna_assento", (0, y_col, 0.06), (0, y_col, z_chapa - 0.012), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── mancal de cada braço: pedestal do trilho até o eixo, caixa do mancal e o eixo de aço (parado) que entra no cubo ────────────
+    for s in (1, -1):
+        if ze > 0.12:
+            _viga(nome + "_pedestal%+d" % s, (s * x_m, ye, 0.06), (s * x_m, ye, ze), 0.07, 0.07, mat_estrutura(), pai=estr)
+        _cilindro(nome + "_mancal%+d" % s, 0.05, 0.07, (s * x_m, ye, ze), rot_x90, mat_estrutura(), pai=estr)
+        _cilindro(nome + "_eixo%+d" % s, 0.02, x_m - x_braco + 0.06, (s * (x_braco + x_m + 0.01) / 2, ye, ze), rot_x90, mat_aco(),
+                  pai=estr)
+        _cilindro(nome + "_eixo_tampa%+d" % s, 0.03, 0.012, (s * (x_m + 0.041), ye, ze), rot_x90, mat_aco(), pai=estr)
+    # ── torre da pilha de pesos (carenagem parada) do lado `lado`, ao lado do encosto, presa no trilho da base ────────────────────
+    if pilha:
+        x_t = sl * (x_m + 0.24)
+        y_tc = (y_col + topo_enc_y) / 2
+        _em_aneis(_reto(caixa(nome + "_pilha", (x_t, y_tc, 0.06 + 1.42 / 2), (0.30, 0.38, 1.42), mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+        _em_aneis(_reto(caixa(nome + "_pilha_base", (x_t, y_tc, 0.03), (0.40, 0.48, 0.06), mat_estrutura(), pai=estr, chanfro=0)),
+                  passo=0.08)                                # a base da torre encosta no trilho de fora
+        # caixa do cabo: do mancal do braço desse lado, por fora do trilho, até a torre (perto do chão)
+        _viga(nome + "_caixa_cabo", (sl * (x_m + 0.075), ye, 0.09), (sl * (x_m + 0.075), y_tc - 0.19, 0.09), 0.07, 0.07,
+              mat_carenagem(), pai=estr)
+    # ── os 2 braços (giram): cubo no eixo, viga do cubo até a barra do pegador, barra de aço e o pegador de borracha ──────────────
+    raizes = {"estrutura": estr, "assento": ass, "encosto": enc}
+    pegs = {}
+    for s, lado_n in ((1, "esq"), (-1, "dir")):
+        P0 = Vector((s * x_braco, ye, ze))
+        bra = raiz_nova("braco_" + lado_n, P0)
+        raizes["braco_" + lado_n] = bra
+        bpy.context.view_layer.update()
+        d = Vector((-s * math.cos(g), -math.sin(g), 0.0))   # ao longo do pegador, de fora pra dentro
+        c = Vector((s * x_p, y_p, z_p))
+        fora = c - d * (comp_p / 2)                           # ponta de fora da borracha
+        k = (s * x_braco - fora.x) / d.x                      # a barra de aço vai da borracha até o plano do braço
+        A = fora + d * k                                      # (k < 0: anda pra fora, contra o d)
+        pecas = [_cilindro(nome + "_cubo_" + lado_n, 0.06, 0.06, P0, rot_x90, mat_estrutura()),
+                 _cilindro(nome + "_cubo_tampa_" + lado_n, 0.03, 0.064, P0, rot_x90, mat_aco())]
+        pts = [P0] + [Vector((s * x_braco, yy, zz)) for yy, zz in (caminho or [])] + [A]
+        for i, (p, q) in enumerate(zip(pts, pts[1:])):
+            dd = (q - p).normalized()
+            pecas.append(_viga(nome + "_braco%d_" % i + lado_n, p + dd * (0.04 if i == 0 else -viga_braco / 2),
+                               q + dd * (viga_braco / 2), viga_braco, viga_braco, mat_estrutura()))
+        pecas.append(caixa(nome + "_ponta_braco_" + lado_n, A, (viga_braco + 0.01, viga_braco + 0.01, viga_braco + 0.01),
+                           mat_estrutura(), chanfro=0.004))
+        pecas.append(_em_aneis(tubo(nome + "_barra_pegador_" + lado_n, A, fora + d * 0.006, 0.016, mat_aco(), vertices=24),
+                               passo=0.035))
+        peg = _em_aneis(tubo(nome + "_pegador_" + lado_n, fora, c + d * (comp_p / 2), raio_p, mat_borracha(), vertices=32),
+                        passo=0.035)
+        pecas.append(peg)
+        pecas.append(_cilindro(nome + "_pegador_ponta_" + lado_n, raio_p + 0.004, 0.012, c + d * (comp_p / 2 + 0.006),
+                               d.to_track_quat("Z", "Y").to_euler(), mat_aco()))
+        pecas.append(_cilindro(nome + "_pegador_colar_" + lado_n, raio_p + 0.004, 0.010, fora - d * 0.005,
+                               d.to_track_quat("Z", "Y").to_euler(), mat_aco()))
+        _prender(pecas, bra)
+        pegs[s] = peg
+    bpy.context.view_layer.update()
+    return MaquinaSupino(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2)
