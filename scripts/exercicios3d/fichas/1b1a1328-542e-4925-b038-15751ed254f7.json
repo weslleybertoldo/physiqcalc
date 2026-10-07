@@ -1,0 +1,350 @@
+{
+ "uuid": "1b1a1328-542e-4925-b038-15751ed254f7",
+ "nome": "Supino Reto na Máquina Deitado",
+ "cena": "supino_reto_na_maquina_deitado",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral médio (porção esternal) · tríceps · deltoide anterior",
+ "padrao_movimento": "supino_reto",
+ "equipamento": "maquina",
+ "variacao": "deitado",
+ "alvos": [
+  "peitoral"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "triceps"
+ ],
+ "camera": {
+  "az": 40,
+  "el": 20,
+  "dist": 4.2,
+  "alvo": [
+   0.0,
+   0.3,
+   0.62
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.3,
+  "alvo": [
+   0.0,
+   0.45,
+   0.62
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado de costas no banco reto da máquina, com a cabeça, a parte de cima das costas e o glúteo apoiados e os pés chapados no chão, afastados; o corpo posicionado no banco para os pegadores ficarem em cima da linha do peito. Segura os pegadores com a pegada pronada (palmas viradas para os pés), aberta, mais larga que os ombros, e o punho quase reto. Começa com as mãos perto do peito, os antebraços em pé e os cotovelos dobrados, abertos para o lado (a cerca de 60° do tronco) e um pouco abaixo do banco; empurra os pegadores para cima até os cotovelos ficarem quase esticados, sem travar, com as mãos em cima dos ombros; volta devagar até as mãos ficarem de novo perto do peito. Os braços da máquina giram em volta do eixo deles, atrás da cabeça, e os pegadores fazem um arco que sobe e volta um pouco para a cabeça no fim. O tronco, o quadril e os pés ficam parados, com as escápulas puxadas para trás e para baixo, apoiadas no banco.",
+ "cinesiologia": {
+  "plano": "transverso e sagital: adução horizontal e flexão do ombro com extensão do cotovelo (o braço vai do lado do tronco para cima, até ficar em cima do ombro); cadeia cinética aberta",
+  "articulacoes": "ombro (adução horizontal e flexão na ida, abdução horizontal e extensão na volta) e cotovelo (extensão na ida, de ~128° de flexão até ~10°, sem travar; flexão na volta); punho quase neutro, um pouco estendido e parado; escápulas retraídas e deprimidas (para trás e para baixo), paradas no banco; quadril, joelhos e tornozelos parados, com os pés no chão",
+  "agonistas": "peitoral maior, porção esternal (ExRx: Target \"Pectoralis Major, Sternal\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "peitoral maior (porção clavicular), deltoide anterior, tríceps braquial e coracobraquial (ExRx: Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\"); a NSCA lista \"Pectoralis major, anterior deltoids, triceps brachii\"",
+  "estabilizadores": "bíceps braquial, cabeça curta (ExRx: Dynamic Stabilizers \"Biceps Brachii, Short Head\")",
+  "fases": "concêntrica (empurra os pegadores para cima até os cotovelos quase esticarem — ExRx: \"Press bar until arms are extended\"; NSCA: \"Push the bar upward and slightly backward until your elbows are fully extended\") e excêntrica (volta devagar até as mãos ficarem perto do peito — ExRx: \"Lower weight to upper chest\"; ACE: \"Slowly lower the bar to the chest by allowing the elbows to bend out to the side\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Bench Press (plate loaded) (https://exrx.net/WeightExercises/PectoralSternal/LVBenchPressH, lido na cópia do Internet Archive de 17/01/2025; o site responde 403 direto; a versão selectorizada, LVBenchPress, cópia de 21/04/2025, tem o mesmo texto): \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Lie supine on bench with chest under lever bar. Grasp lever bar with wide oblique overhand grip.\"; Execution: \"Press bar until arms are extended. Lower weight to upper chest. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide. Also see Bench Press Analysis.\"; músculos: Target \"Pectoralis Major, Sternal\", Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\", Dynamic Stabilizers \"Biceps Brachii, Short Head\"",
+  "ExRx.net — Bench Press Analyses (https://exrx.net/Kinesiology/BenchPress, cópia do Internet Archive de 01/02/2025; a Lever Bench Press manda ver: \"Also see Bench Press Analysis\"): \"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\"; \"Coach Rippetoe (2015) ... suggests a 70º upper arm position with the forearms vertical at the lowest bench press position\"; \"As the barbell is raise, it is positioned over the shoulders in the path of a J.\"; \"a standard bench press grip of 1.5 to 1.7 times the biacromial width can be used for those who follow adaptation criteria with healthy shoulders and no risk factors\"; \"Scapula Retraction Keep the scapula back and down.\"; \"For general strength training, the lower back forms a natural arch when the head, upper back, and hips are in contact with the bench. Placing the feet apart on the floor creates a more stable base of support.\"; \"Position the wrists directly under the bar by turning the wrists out slightly so bar is placed on lower outer portion of palm. This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2 e ...-fundamentals-of-exercise-technique, lidos em 07/10/2026): Flat barbell bench press — \"Major muscles involved: Pectoralis major, anterior deltoids, triceps brachii\"; \"Lie on a flat bench with five-point body contact.\"; \"Grasp the bar with a closed, pronated grip, slightly wider than shoulder-width.\"; \"Lower the bar to touch your chest at nipple level.\"; \"Maintain wrist/floor alignment and five-point contact.\"; \"Push the bar upward and slightly backward until your elbows are fully extended.\"; posição de 5 pontos: \"Head on the bench or pad\", \"Shoulders/upper back on the bench\", \"Buttocks on the bench or seat\", \"Right foot flat on the floor\", \"Left foot flat on the floor\"",
+  "ACE — Chest Press (https://www.acefitness.org/resources/everyone/exercise-library/5/chest-press/, lido em 07/10/2026; \"Equipment: Barbell, Bench\"): \"Lie face up on a flat bench, and grip a barbell with the hands slightly wider than shoulder-width. Press the feet into the ground and the hips into the bench while lifting the bar off the rack. Slowly lower the bar to the chest by allowing the elbows to bend out to the side. Stop when the elbows are just below the bench, and press feet into the floor to press the weight straight up to return to the starting position.\"",
+  "Máquina — Hammer Strength Plate-Loaded Iso-Lateral Horizontal Bench Press, IL-HBP (Life Fitness, https://www.lifefitness.com/en-gb/catalog/strength-training/plate-loaded/plate-loaded-iso-lateral-horizontal-bench-press, lido em 07/10/2026): \"The Hammer Strength Iso-Lateral Horizontal Bench Press delivers a natural, explosive pressing movement that elevates traditional bench training. Designed to position athletes as they would be on a standard bench press\"; \"Dimensions (L x W x H)\" \"60 in x 69 in x 57 in (153 cm x 175 cm x 146 cm)\"; \"Max Load Capacity (per arm)\" \"5 x 45 lb plates (5 x 20 kg plates)\"; \"Standard Weight Horns\" \"4\"; FAQ: \"The machine's independent arms move in a natural arc, mimicking how the body wants to press rather than locking you into a fixed bar path.\"; \"On the Horizontal Bench Press, the pivot is positioned to provide a consistent resistance curve that mirrors a barbell press\"; \"Unlike a barbell, the independent converging and diverging workarms allow for a more dynamic, sport-specific press\" (aqui os 2 braços giram no mesmo eixo, sem convergir, como a alavanca do ExRx). Nas fotos do fabricante: banco reto, um pórtico atrás da cabeça com o eixo dos 2 braços, os pegadores em cima do peito e o pino de anilha em cada braço",
+  "Banco — IPF Technical Rules Book 2026 (International Powerlifting Federation, updated 1 January 2026), Bench: \"Length - not less than 1.22 m and shall be flat and level.\", \"Width - not less than 29 cm and not exceeding 32cm.\", \"Height - not less than 42 cm and not exceeding 45 cm measured from the floor to the top of the padded surface of the bench without it being depressed or compacted.\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: no supino a alavanca não fica alinhada com uma junta só (o empurrão é do ombro e do cotovelo juntos); a regulagem certa é a posição do corpo no banco, com os pegadores em cima da linha do peito (ExRx: \"Lie supine on bench with chest under lever bar\"). O eixo dos braços da máquina fica atrás da cabeça, à mesma distância do pegador embaixo e em cima: o pegador sobe e volta um pouco pra cabeça no fim (ExRx: \"positioned over the shoulders in the path of a J\"; NSCA: \"upward and slightly backward\")",
+  "zonas": [
+   {
+    "nome": "cabeça apoiada no banco",
+    "equipamento": "deitado_banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — posição de 5 pontos de contato (\"Head on the bench or pad\")"
+   },
+   {
+    "nome": "costas (escápulas) apoiadas no banco",
+    "equipamento": "deitado_banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — posição de 5 pontos de contato (\"Shoulders/upper back on the bench\")"
+   },
+   {
+    "nome": "glúteo apoiado no banco",
+    "equipamento": "deitado_banco",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — posição de 5 pontos de contato (\"Buttocks on the bench or seat\"); ACE — Chest Press (\"Press the feet into the ground and the hips into the bench\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo bem dobrado no começo (mãos perto do peito)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     110,
+     140
+    ],
+    "fonte": "ExRx — Lever Bench Press (plate loaded) (\"Lower weight to upper chest\"); NSCA (Achievable CSCS) — Flat barbell bench press (\"Lower the bar to touch your chest at nipple level\"); ACE — Chest Press (\"Stop when the elbows are just below the bench\"): o pegador começa 3,5 cm acima da pele mais alta do peito e o cotovelo fica ~6 cm abaixo do topo do banco"
+   },
+   {
+    "nome": "braços quase esticados no fim, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ExRx — Lever Bench Press (plate loaded) (\"Press bar until arms are extended\"); NSCA (Achievable CSCS) — Flat barbell bench press (\"until your elbows are fully extended\"); sem travar o cotovelo, como nos supinos na máquina da fábrica (~10°)"
+   },
+   {
+    "nome": "cotovelo a 45–70° do tronco no começo",
+    "medida": "braco_abertura",
+    "t": 0.0,
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\")"
+   },
+   {
+    "nome": "cotovelos abertos pro lado na metade de baixo (sem colar no tronco)",
+    "medida": "braco_abertura",
+    "t": [
+     0.0,
+     0.5
+    ],
+    "graus": [
+     45,
+     75
+    ],
+    "fonte": "ACE — Chest Press (\"allowing the elbows to bend out to the side\"); com o braço quase em pé, no fim, a abertura vista de cima do peito perde o sentido (o braço aponta pro teto) e quem confere é a regra de baixo"
+   },
+   {
+    "nome": "braço em pé no fim, em cima do ombro",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"As the barbell is raise, it is positioned over the shoulders in the path of a J.\"); NSCA (Achievable CSCS) — Flat barbell bench press (\"Push the bar upward and slightly backward\")"
+   },
+   {
+    "nome": "antebraço em pé no começo",
+    "medida": "antebraco_vertical",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"with the forearms vertical at the lowest bench press position\", Rippetoe); NSCA (Achievable CSCS) — Flat barbell bench press (\"Maintain wrist/floor alignment\")"
+   },
+   {
+    "nome": "antebraço quase em pé o movimento todo",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "ExRx — Bench Press Analyses (idem); folga no meio e no fim, onde o pegador anda no arco da máquina"
+   },
+   {
+    "nome": "pegada aberta, ~1,5–1,7 vez a largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     2.0
+    ],
+    "fonte": "ExRx — Lever Bench Press (plate loaded) (\"Grasp lever bar with wide oblique overhand grip\"; \"Range of motion will be compromised if grip is too wide\"); ExRx — Bench Press Analyses (\"a standard bench press grip of 1.5 to 1.7 times the biacromial width\"). A medida daqui divide pela distância entre as articulações dos ombros, menor que a biacromial: por isso a faixa fica acima de 1,5–1,7 (a mesma do supino reto com barra)"
+   },
+   {
+    "nome": "pegada pronada (palmas pros pés, não neutra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Flat barbell bench press (\"Grasp the bar with a closed, pronated grip\"); ExRx — Lever Bench Press (plate loaded) (\"overhand grip\"): 0 = palma pros pés (ou pra cabeça), 90 = palmas uma pra outra (neutra)"
+   },
+   {
+    "nome": "palma de frente pros pés (nem pro teto nem pro peito)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     60,
+     120
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Flat barbell bench press (\"closed, pronated grip\"): deitado, a frente do tronco é o teto; 90 = palma pros pés"
+   },
+   {
+    "nome": "punho quase reto, sem dobrar pra trás",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar.\"): até ~20° de extensão (o pegador em cima do antebraço)"
+   },
+   {
+    "nome": "tronco deitado no banco reto",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "ExRx — Lever Bench Press (plate loaded) (\"Lie supine on bench\"); IPF 2026 (banco \"flat and level\")"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"For general strength training, the lower back forms a natural arch when the head, upper back, and hips are in contact with the bench.\")"
+   },
+   {
+    "nome": "quadril quase esticado (coxas na linha do banco)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "deitado com os pés no chão a coxa fica quase na linha do tronco (a medida da fábrica é coxa × prolongamento do tronco pra baixo)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     75,
+     100
+    ],
+    "fonte": "NSCA (Achievable CSCS) — posição de 5 pontos de contato (\"Right foot flat on the floor\", \"Left foot flat on the floor\"); ExRx — Bench Press Analyses (\"Placing the feet apart on the floor creates a more stable base of support.\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e pra baixo, paradas no banco",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"Scapula Retraction Keep the scapula back and down.\")"
+   },
+   {
+    "nome": "cabeça apoiada, na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA (Achievable CSCS) — posição de 5 pontos de contato (\"Head on the bench or pad\"); deitado, o pescoço estende ~16° até a cabeça encostar no banco (dt.deitar)"
+   }
+  ]
+ }
+}

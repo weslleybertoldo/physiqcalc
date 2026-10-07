@@ -1,6 +1,8 @@
+import * as THREE from "three";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { entrada3d, fotoDoExercicio, fundoGuardado, guardarFundo, type Manifesto3D } from "./exercicios3d";
 import { dadosDaTabela } from "./visualizador3d/cores";
+import { modoDeRepeticao } from "./visualizador3d/exercicio";
 import { criarMedidorDeQualidade } from "./visualizador3d/qualidade";
 
 const COM_3D = "11111111-2222-3333-4444-555555555555";
@@ -88,5 +90,12 @@ describe("qualidade adaptativa", () => {
     medir(t);
     for (let i = 0; i < 200; i++) medir((t += 16));
     expect(baixar).not.toHaveBeenCalled();
+  });
+});
+
+describe("repetição do movimento", () => {
+  it("vai e volta por padrão; o cíclico (corrida) repete o ciclo", () => {
+    expect(modoDeRepeticao({})).toBe(THREE.LoopPingPong);
+    expect(modoDeRepeticao({ ciclo: true })).toBe(THREE.LoopRepeat);
   });
 });

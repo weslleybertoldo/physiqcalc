@@ -5,7 +5,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { arquivoDoBoneco } from "./boneco";
-import { carregarExercicio } from "./exercicio";
+import { carregarExercicio, modoDeRepeticao } from "./exercicio";
 import { pintarMusculos, prepararMapa, tabelaDeCores } from "./cores";
 import { criarMedidorDeQualidade } from "./qualidade";
 import type { Boneco3D, CameraInicial, Entrada3D, Fundo } from "./tipos";
@@ -203,7 +203,7 @@ export function criarMotor(canvas: HTMLCanvasElement, opcoes: OpcoesMotor): Moto
       raiz.add(gltf.scene, ...exercicio.equipamento);
       mixer = new THREE.AnimationMixer(raiz);
       acao = mixer.clipAction(exercicio.clipe);
-      acao.setLoop(THREE.LoopPingPong, Infinity);
+      acao.setLoop(modoDeRepeticao(entrada), Infinity);
       acao.play();
       posicionar(entrada.camera);
       renderer.compile(cena, camera); // shaders prontos antes do primeiro quadro (sem engasgo)

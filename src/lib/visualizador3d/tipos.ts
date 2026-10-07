@@ -28,4 +28,6 @@ export interface Entrada3D {
   auxiliares: number[];
   camera: CameraInicial;
   ida_s: number;
+  /** Movimento cíclico (ex.: corrida): o fim é igual ao começo e o app repete o ciclo em vez de ir e voltar. */
+  ciclo?: boolean;
 }

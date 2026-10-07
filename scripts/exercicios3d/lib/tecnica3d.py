@@ -443,3 +443,87 @@ def cabeca_tronco(j):
 
 
 MEDIDAS.update({"cabeca_tronco": cabeca_tronco})
+
+
+# ── rosca punho com halter (lote 4, 06/10/2026): sentado, com o antebraço deitado na coxa e o punho logo depois do
+# joelho, só o punho mexe — estende (o halter desce) e flexiona (sobe) com a pegada supinada (ExRx, Dumbbell Wrist Curl:
+# "Sit and grasp dumbbell with underhand grip. Rest forearm on thigh with wrist just beyond knee."). O "punho" do
+# checagem3d.medir_juntas não tem sinal: a mão 50° pra cima e 50° pra baixo dão o mesmo número.
+def punho_flexao(j):
+    """Flexão (+) / extensão (−) do punho COM SINAL, graus [E, D]: 3º metacarpo (punho → base do dedo médio) × antebraço
+    (cotovelo → punho), em volta do eixo de flexão da mão (dedo médio × normal da palma): 0 = mão alinhada com o
+    antebraço, + = a mão dobra pro lado da palma (flexão), − = pro lado do dorso (extensão). O desvio radial/ulnar não
+    conta. Só usa a mão e o antebraço: vale com o boneco em pé, sentado ou virado."""
+    out = []
+    for L, _ in LADOS:
+        a = _u(j[L + "Hand"] - j[L + "ForeArm"])
+        d = _u(j[L + "HandMiddle1"] - j[L + "Hand"])
+        k = _u(np.cross(d, _palma(j, L)))
+        a = a - k * (a @ k)
+        out.append(math.degrees(math.atan2(float(np.cross(a, d) @ k), float(a @ d))))
+    return out
+
+
+def palma_cima(j):
+    """Palma × a vertical do mundo, graus [E, D]: 0 = palma virada pra cima, 90 = de lado (ou pra frente/trás), 180 =
+    virada pro chão. Com o antebraço deitado e a pegada supinada a palma fica pra cima e o punho, dobrando ou estendendo,
+    só a inclina pra trás ou pra frente; passar de 90 = palma pro chão (pegada pronada)."""
+    return [_ang(_palma(j, L), CIMA) for L, _ in LADOS]
+
+
+def punho_alem_joelho(j):
+    """Punho (cabeça da mão) à frente do centro do joelho ao longo da coxa (quadril → joelho), mm [E, D]: + = o punho
+    passou do joelho. Com o antebraço deitado na coxa é o "wrist just beyond knee" da rosca punho."""
+    return [float((j[L + "Hand"] - j[L + "Leg"]) @ _u(j[L + "Leg"] - j[L + "UpLeg"])) * 1000 for L, _ in LADOS]
+
+
+MEDIDAS.update({"punho_flexao": punho_flexao, "palma_cima": palma_cima, "punho_alem_joelho": punho_alem_joelho})
+UNIDADE.update({"punho_alem_joelho": "mm"})
+
+
+# ── flexão nórdica (lote 4, 06/10/2026): ajoelhado, com os tornozelos presos, o corpo desce RETO dos joelhos à cabeça girando
+# no joelho — sem dobrar o quadril nem arquear (NSCA, Exercise Technique Manual for Resistance Training, 4ª ed., Nordic Hamstring
+# Curl: "Create a straight line between the ear, hip, and knee"). O quadril_sinal compara a coxa com a linha quadril → pescoço;
+# aqui é a linha inteira joelho → quadril → base da cabeça (perto da orelha; o "Head" já está nas JUNTAS desde o lote 3).
+def linha_joelho_quadril_cabeca(j):
+    """Desvio da linha reta joelho → quadril → cabeça, no quadril, graus (com sinal), no plano sagital do tronco: a coxa
+    (centro dos joelhos → centro das articulações do quadril) × a linha quadril → base da cabeça (cabeça do osso Head, na
+    altura da orelha). 0 = joelho, quadril e orelha em linha reta (o "straight line between the ear, hip, and knee" da NSCA),
+    + = dobrou na cintura (a cabeça vai à frente da linha da coxa: quadril flexionado, bumbum pra trás), − = arqueou (a
+    cabeça vai pra trás da linha: quadril passou da linha, barriga pra frente). No referencial do tronco: vale em pé,
+    ajoelhado ou com o corpo inclinado; o boneco em pé, no repouso, mede ~7° (o joelho fica 3,5 cm à frente do quadril e a
+    cabeça um pouco à frente do tronco). Sem a cabeça nas juntas (dicionários antigos dos testes), devolve []."""
+    if "Head" not in j:
+        return []
+    cima, lado, frente = eixos_tronco(j)
+    joelho = (j["LeftLeg"] + j["RightLeg"]) / 2
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    angs = []
+    for v in (quadril - joelho, j["Head"] - quadril):          # inclinação de cada segmento pra frente, no plano sagital
+        v = v - lado * (v @ lado)
+        angs.append(math.degrees(math.atan2(float(v @ frente), float(v @ cima))))
+    return [angs[1] - angs[0]]
+
+
+MEDIDAS.update({"linha_joelho_quadril_cabeca": linha_joelho_quadril_cabeca})
+
+
+# ── cadeira abdutora (lote 4, 06/10/2026): sentado, com o quadril dobrado ~90° e a coxa deitada, abrir as pernas é a coxa girando
+# em volta da vertical que passa pela articulação do quadril (ExRx, Lever Seated Hip Abduction: "Move legs apart as far as
+# possible"). O "quadril" do checagem3d.medir_juntas (coxa × tronco) quase não muda nesse giro e o pes_base_lateral mede os pés,
+# não a coxa: aqui é a abertura da coxa, vista de cima.
+def coxa_abertura(j):
+    """Coxa (articulação do quadril → centro do joelho) aberta pra fora (+) ou fechada pra dentro (−) da frente da pelve, vista
+    de cima (no plano do chão), graus [E, D]: 0 = coxa apontando pra frente (as duas paralelas), 45 = aberta 45° pro lado. É a
+    abdução (+) / adução (−) do quadril na cadeira abdutora e na adutora. Só faz sentido com a coxa perto da horizontal
+    (quadril dobrado, sentado): em pé a coxa aponta pro chão e a medida perde o sentido (como o braco_plano com o braço
+    pendurado)."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, s in LADOS:
+        c = _chao(j[L + "Leg"] - j[L + "UpLeg"])
+        out.append(math.degrees(math.atan2(float(c @ (s * lado)), float(c @ frente))))
+    return out
+
+
+MEDIDAS.update({"coxa_abertura": coxa_abertura})

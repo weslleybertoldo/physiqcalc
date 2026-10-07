@@ -1,0 +1,395 @@
+{
+ "uuid": "9ff64ebf-6c63-4151-a8f7-0b2380a094cf",
+ "nome": "Rosca Scott na Máquina",
+ "cena": "rosca_scott_na_maquina",
+ "grupo": "Bíceps",
+ "subgrupo": "Bíceps braquial (cabeça curta) · braquial",
+ "padrao_movimento": "rosca_scott",
+ "equipamento": "maquina",
+ "variacao": "banco Scott",
+ "alvos": [
+  "biceps"
+ ],
+ "auxiliares": [
+  "antebraco"
+ ],
+ "camera": {
+  "az": 58,
+  "el": 12,
+  "dist": 3.0,
+  "alvo": [
+   0.0,
+   -0.22,
+   0.8
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.1,
+  "alvo": [
+   0.0,
+   -0.2,
+   0.8
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina de rosca Scott, com os pés chapados no chão, o tronco quase em pé (um pouco inclinado pra frente) e a parte de trás dos braços apoiada na almofada inclinada — o assento regulado pra o meio do cotovelo ficar alinhado com o eixo da alavanca (o ponto em que ela gira) —, segura o pegador com as palmas viradas pra cima (pegada supinada), as mãos na largura dos ombros e o punho reto, e começa com os cotovelos quase esticados, sem travar, com o antebraço encostando de leve na almofada. Dobra os cotovelos levando o pegador na direção dos ombros até o antebraço ficar quase na vertical, sem encostar a barra no rosto, e volta devagar até os braços ficarem quase esticados de novo. Só os cotovelos mexem: os braços ficam apoiados na almofada (o cotovelo um pouco acima dela), os ombros abaixados, a cabeça na linha do tronco e o tronco parado.",
+ "cinesiologia": {
+  "plano": "sagital (flexão e extensão do cotovelo), com o braço parado na almofada à frente do tronco (o ombro dobrado ~52°); o antebraço gira em volta do eixo do cotovelo, alinhado com o eixo da alavanca",
+  "articulacoes": "cotovelo (flexão na subida, de ~12° até ~125°, com o antebraço quase na vertical; extensão na volta, até quase esticar, sem travar), com o antebraço supinado; ombro parado, dobrado ~52° com o braço na almofada, e as escápulas um pouco pra trás e pra baixo; punho reto; tronco parado, quase em pé (~3° pra frente), com a cabeça na linha dele; quadril (~85°) e joelhos (~82°) parados, sentado, com os pés chapados no chão",
+  "agonistas": "braquial e bíceps braquial (ExRx: alvo \"Brachialis\", sinergista \"Biceps Brachii\"; eGym: músculos primários \"Biceps\" e \"Brachialis\"; NSCA, na rosca com barra: \"Biceps brachii, brachialis, brachioradialis\"), em contração concêntrica na subida e excêntrica na volta; com o ombro dobrado o bíceps trabalha mais encurtado e o pico de atividade da cabeça longa fica perto do braço esticado (Oliveira et al. 2009: \"For the Dumbbell Preacher Curl cycle, the activation of biceps brachii long head was maximal, only for elbow joint angles close to full extension\")",
+  "sinergistas": "braquiorradial (ExRx: \"Brachioradialis\"; eGym: músculo secundário \"Brachioradialis\")",
+  "estabilizadores": "flexores do punho (ExRx: \"Wrist Flexors\"), que seguram o punho reto na manopla; a cabeça longa do tríceps só trabalha como estabilizador antagonista perto da flexão máxima (ExRx: \"Long head of Triceps Brachii is only significant activated as antagonist stabilizer when it approaches passive insufficiency as elbow nears full flexion\")",
+  "fases": "concêntrica (dobra os cotovelos levando o pegador pros ombros, até o antebraço ficar quase na vertical) e excêntrica (volta devagar até quase esticar, sem travar — Yessis: \"Pause momentarily when the arms are almost straight and then repeat\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Preacher Curl (https://exrx.net/WeightExercises/Brachialis/LVPreacherCurl, lido na cópia do Internet Archive de 04/12/2023; o site responde 403 direto): classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Sit on curl machine placing back of arms on pad. Grasp lever handles with underhand grip. Align elbows at same pivot point as fulcrum of lever.\"; Execution: \"Raise lever handles toward shoulders. Lower handles until arms are fully extended. Repeat.\"; Comments: \"Seat should be adjusted to allow armpit to rest near top of pad. Back of upper arm should remain on pad throughout movement.\", \"Long head (lateral head) of Biceps Brachii is activated significantly more than short head (medial head) of Biceps Brachii since short head enters into active insufficiency as it continues to contract.\", \"Long head of Triceps Brachii is only significant activated as antagonist stabilizer when it approaches passive insufficiency as elbow nears full flexion.\"; músculos: Target \"Brachialis\", Synergists \"Biceps Brachii\", \"Brachioradialis\", Stabilizers \"Wrist Flexors\", Antagonist Stabilizers \"Triceps Brachii, Long Head\". Também lidos: Lever Curl (WeightExercises/Biceps/LVCurl, cópia de 05/01/2024: \"Raise lever handles until elbows are fully flexed with back of upper arm remaining on pad. Lower handles until arm is fully extended.\"; \"The biceps may be exercised alternating or simultaneous.\") e Lever Alternating Curl (LVAlternatingCurl, cópia de 22/09/2019: \"Repeat with opposite arm. Continue to alternate movement between sides.\")",
+  "ACE — Seated Biceps Curl, Exercise Library (https://www.acefitness.org/resources/everyone/exercise-library/184/seated-biceps-curl/, \"Equipment: Weight Machines / Selectorized\", lido em 07/10/2026): \"Starting Position: Sit in the machine, placing your arms over the incline pad. Adjust the seat height until the middle of your elbows aligns with the axis of rotation (fulcrum) of the moving lever (part) of the machine.\"; \"Grasp the handles firmly with a full grip (thumbs clasped around the handles) and maintain a neutral wrist position (wrists aligned with your forearms).\"; \"Your elbows should be extended, but not fully locked.\"; \"Stiffen (“brace”) your abdominal muscles to stabilize your spine, and attempt to avoid movement in your low back throughout the exercise.\"; \"Align your head with your spine, and depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"Gently exhale and slowly curl the bar upwards towards your chest by bending your elbows. Maintain a neutral wrist position and avoid any movement in your torso during the exercise.\"; \"Continue curling the bar upwards until your elbows can flex (bend) no further.\"; \"stopping when your arms are extended, but not locked and the backs of your forearms make light contact with the incline pad\"; \"This exercise can be performed unilaterally (one arm at a time)\"",
+  "eGym (fabricante) — Smart Strength, exercícios: M15 Bicep Curl (https://knowledge.egym.com/en/smart-strength/work-out-on-smart-strength/exercises, lido em 07/10/2026): Primary muscles \"Biceps\", \"Brachialis\"; Secondary muscles \"Brachioradialis\"; \"Sit on the seat and lean your upper body forward so your upper arms rest on the pad. Adjust the seat so the arm pad is at armpit height.\"; \"Position your elbows in line with the machine’s pivot point.\"; \"Hold the bar with an underhand grip.\"; \"Wide underhand grip: works the biceps short head muscle\"; \"Narrow underhand grip: works the biceps long head muscle\"; \"Start with your arms extended, with your elbows slightly bent.\"; \"Bend your arms upward against the resistance as far as comfortably possible. Keep your arms against the pad and your shoulders lowered.\"; \"Return to the starting position in a controlled motion.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2, lido em 07/10/2026): Barbell biceps curl (a rosca com barra; a NSCA não tem a rosca na máquina em nenhum texto aberto que deu pra ler) — \"Major muscles involved: Biceps brachii, brachialis, brachioradialis\"; \"Grasp the bar with a closed, supinated grip (shoulder-width).\"; \"Flex your elbows to raise the bar toward your anterior deltoids.\"; \"Keep your torso and upper arms stationary.\"; \"Lower the bar until your elbows fully extend.\"",
+  "Yessis M (Dr. Yessis SportLab) — Preacher Curl (https://doctoryessis.com/2013/01/01/preacher-curl/, lido em 07/10/2026; a versão em pé, com barra W): \"Adjust the pad height so that you have a fairly erect position.\"; \"The arms should be fairly straight but have a slight bend in the elbows. The elbows should be free of the support pad in the initial position and during execution. If this is not possible, be sure the pad is thick and well cushioned.\"; \"Raise the bar at a moderate rate of speed until the forearms are vertical or slightly beyond.\"; \"Pause momentarily when the arms are almost straight and then repeat.\"; \"Be sure to keep the upper arms in contact with the bench at all times. This is needed to isolate the movement to the elbow joints and to produce a stronger contraction.\"; \"you should not completely straighten the arm in the down position.\"",
+  "Attarieh P, Nunes JP, Khani S, et al. Comparison Between Shoulder Flexed and Extended Positions in Elbow Flexion Resistance Training on Regional Hypertrophy and Maximum Strength: Preacher versus Bayesian Cable Curls. Eur J Sport Sci. 2025;25(4):e12279. doi:10.1002/ejsc.12279 (texto completo, PMC11906226): \"Preacher (PREA; shoulder flexed 50°) and Bayesian (BAYE; shoulder extended 50°) biceps curls during the 10°–140° range of motion\"; \"unilateral Preacher cable curl (PREA), performed with the arms supported on an angled bench, keeping the shoulder in a flexed position\"",
+  "Pedrosa GF, Simões MG, Figueiredo MOC, et al. Training in the Initial Range of Motion Promotes Greater Muscle Adaptations Than at Final in the Arm Curl. Sports (Basel). 2023;11(2):39. doi:10.3390/sports11020039 (texto completo, PMC9960616): \"one repetition maximum (1RM) testing in the full ROM (0°–135°)\" (\"0° = extended elbow\"); \"who then performed a concentric muscle action until 135° of elbow flexion (forearm perpendicular to the ground)\"; \"Each attempt started with the elbow fully extended (0°), and the shoulder angle (humerus and trunk) fixed at 45°.\"",
+  "Nunes JP, Jacinto JL, Ribeiro AS, et al. Placing Greater Torque at Shorter or Longer Muscle Lengths? Effects of Cable vs. Barbell Preacher Curl Training on Muscular Strength and Hypertrophy in Young Adults. Int J Environ Res Public Health. 2020;17(16):5859. doi:10.3390/ijerph17165859 (texto completo, PMC7460162): \"The elbow was supported on a padded shelf with the shoulder flexed at an angle of 60°, similar to the preacher bench.\"; \"participants were instructed to hold the straight handle (or the bar) with hands supinated and shoulder-width apart.\"",
+  "Oliveira LF, Matta TT, Alves DS, Garcia MAC, Vieira TMM. Effect of the shoulder position on the biceps brachii EMG in different dumbbell curls. J Sports Sci Med. 2009;8(1):24-29 (texto completo no site da revista): \"in DPC the shoulder is flexed and, thus, the biceps long head is initially shortened\"; \"For the Dumbbell Preacher Curl cycle, the activation of biceps brachii long head was maximal, only for elbow joint angles close to full extension, and the elbow joint range of motion was shorter.\"; amplitude do cotovelo de \"115.50 ± 11.20 to 131.91 ± 18.25°\" nas 3 roscas",
+  "Medidas da máquina — Titan Fitness, Bicep Tricep Curl Machine (https://www.titan.fitness/strength/specialty-machines/upper-body/bicep-tricep-curl-machine/400789.html, tabela de especificações lida em 07/10/2026): \"Hand Grip Diameter: 32mm\", \"Handle Grip Length: 5-in. (each)\", \"Adjustable Seat Height: 16.5-in - 21-in.\"; Precor Resolute RSL0204 Biceps Curl (ficha em PDF, 2021): \"The angled arm pad and handles on the Resolute Biceps Curl align the exerciser’s elbows to the pivot point for maximum comfort and muscle engagement.\", \"Dimensions (L x W x H): 48 x 43 x 58 in / 122 x 110 x 148 cm\", \"Weight Stack Tower Height: 58 in / 148 cm\"; Precor Discovery DBR0202 Preacher Curl Bench (https://www.precor.com/en-US/products/DBR0202, lido em 07/10/2026): \"The oversized arm pad cushions both the chest area and arm area with extra thick padding for exerciser comfort and stability.\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "parte de trás dos braços apoiada na almofada",
+    "equipamento": "scott_almofada",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     -10,
+     3
+    ],
+    "fonte": "ExRx — Lever Preacher Curl (\"Sit on curl machine placing back of arms on pad\"; \"Back of upper arm should remain on pad throughout movement\"); eGym — M15 Bicep Curl (\"Keep your arms against the pad\")"
+   },
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "scott_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Preacher Curl (\"Sit on curl machine\"); eGym — M15 Bicep Curl (\"Sit on the seat\")"
+   },
+   {
+    "nome": "antebraços encostando de leve na almofada embaixo (t=0)",
+    "equipamento": "scott_almofada",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "t": 0.0,
+    "mm": [
+     -6,
+     6
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"stopping when your arms are extended, but not locked and the backs of your forearms make light contact with the incline pad\")"
+   },
+   {
+    "nome": "peito e barriga sem entrar na almofada (ficam no recorte do meio)",
+    "equipamento": "scott_almofada",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -3,
+     5000
+    ],
+    "fonte": "regra da fábrica: o corpo encosta no apoio sem afundar nele; Precor DBR0202 (\"The oversized arm pad cushions both the chest area and arm area\")"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "cotovelos no eixo da alavanca",
+    "equipamento": "scott_alavanca",
+    "ossos": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Lever Preacher Curl (\"Align elbows at same pivot point as fulcrum of lever\"); ACE — Seated Biceps Curl (\"Adjust the seat height until the middle of your elbows aligns with the axis of rotation (fulcrum) of the moving lever\"); eGym — M15 Bicep Curl (\"Position your elbows in line with the machine’s pivot point\")"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "alavanca sem bater na estrutura (eixo de aço por dentro do mancal)",
+    "equipamento": "scott_alavanca",
+    "de": "scott_estrutura",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica: peça nenhuma atravessa a outra; 3 mm = FOLGA_MIN da checagem"
+   },
+   {
+    "nome": "alavanca sem bater na almofada",
+    "equipamento": "scott_alavanca",
+    "de": "scott_almofada",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica: peça nenhuma atravessa a outra; 3 mm = FOLGA_MIN da checagem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços sem entrar no tronco, na cabeça nem nas pernas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo quase esticado embaixo, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     8,
+     20
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"Your elbows should be extended, but not fully locked\"); eGym — M15 Bicep Curl (\"Start with your arms extended, with your elbows slightly bent\"); Yessis — Preacher Curl (\"fairly straight but have a slight bend in the elbows\"); Attarieh et al. 2025 (\"10°–140° range of motion\")"
+   },
+   {
+    "nome": "cotovelo dobrado em cima, o pegador na direção dos ombros",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     115,
+     135
+    ],
+    "fonte": "ExRx — Lever Preacher Curl (\"Raise lever handles toward shoulders\"); ACE — Seated Biceps Curl (\"Continue curling the bar upwards until your elbows can flex (bend) no further\"); Yessis — Preacher Curl (\"until the forearms are vertical or slightly beyond\"); Pedrosa et al. 2023 (\"full ROM (0°–135°)\"; \"until 135° of elbow flexion (forearm perpendicular to the ground)\", com o ombro a 45° — aqui, com o braço ~55° da vertical, o antebraço fica na vertical com ~125°); Attarieh et al. 2025 (\"10°–140°\"). Aqui o antebraço chega a ~6° da vertical: a barra do pegador, de uma mão à outra, para a 4,5 cm do rosto"
+   },
+   {
+    "nome": "cotovelo nunca trava nem passa da flexão máxima",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     8,
+     140
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"extended, but not fully locked\"); Attarieh et al. 2025 (\"10°–140° range of motion\")"
+   },
+   {
+    "nome": "braço parado na almofada, ~50° à frente do tronco",
+    "medida": "braco_frente",
+    "t": "todos",
+    "graus": [
+     47,
+     57
+    ],
+    "fonte": "Attarieh et al. 2025 (\"Preacher (PREA; shoulder flexed 50°)\"); Pedrosa et al. 2023 (\"the shoulder angle (humerus and trunk) fixed at 45°\"); NSCA (Achievable CSCS) — Barbell biceps curl (\"Keep your torso and upper arms stationary\")"
+   },
+   {
+    "nome": "braços paralelos, cotovelos na largura dos ombros",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -6,
+     6
+    ],
+    "fonte": "os 2 braços apoiados na mesma almofada, paralelos ao plano sagital do tronco (ExRx — Lever Preacher Curl: \"placing back of arms on pad\")"
+   },
+   {
+    "nome": "pegada supinada (palmas pra cima, sem virar pro meio)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -25,
+     25
+    ],
+    "fonte": "ExRx — Lever Preacher Curl (\"Grasp lever handles with underhand grip\"); NSCA (Achievable CSCS) — Barbell biceps curl (\"closed, supinated grip\")"
+   },
+   {
+    "nome": "mãos na largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.4
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Barbell biceps curl (\"supinated grip (shoulder-width)\"); Nunes et al. 2020 (\"hands supinated and shoulder-width apart\")"
+   },
+   {
+    "nome": "punho reto",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"maintain a neutral wrist position (wrists aligned with your forearms)\")"
+   },
+   {
+    "nome": "tronco parado, quase em pé (um pouco inclinado pra frente)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     1,
+     6
+    ],
+    "fonte": "eGym — M15 Bicep Curl (\"lean your upper body forward so your upper arms rest on the pad\"); ACE — Seated Biceps Curl (\"avoid any movement in your torso during the exercise\")"
+   },
+   {
+    "nome": "coluna neutra, sem curvar",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"Stiffen (“brace”) your abdominal muscles to stabilize your spine, and attempt to avoid movement in your low back throughout the exercise\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"Align your head with your spine\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "sentado, quadril dobrado ~85° (tronco quase em pé, coxas descendo pro joelho)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     80,
+     92
+    ],
+    "fonte": "coxas descendo ~8° do quadril pro joelho e o tronco ~3° à frente (eGym — M15 Bicep Curl: \"lean your upper body forward\"; Yessis — Preacher Curl: \"Adjust the pad height so that you have a fairly erect position.\"); a medida da fábrica é coxa × prolongamento do tronco pra baixo"
+   },
+   {
+    "nome": "joelhos a ~80°, canelas em pé e pés chapados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     76,
+     90
+    ],
+    "fonte": "sentado com os pés no chão (os pés não mexem: regra pés_no_chao da fábrica)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}

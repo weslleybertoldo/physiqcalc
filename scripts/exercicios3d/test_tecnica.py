@@ -453,3 +453,89 @@ def test_cabeca_tronco_com_sinal_em_pe_e_curvado():
     assert tc.cabeca_tronco(girar(pra_tras, 35, (0, 0, 1))) == pytest.approx([20], abs=1e-6)
     assert tc.cabeca_tronco(em_pe()) == []
     assert "Head" in tc.JUNTAS and "cabeca_tronco" in tc.MEDIDAS
+
+
+def antebracos_deitados(palma_cima=True):
+    """Sentado (rosca punho, lote 4): antebraços deitados pra frente (−Y) em cima das coxas, punho 8 cm além do centro
+    do joelho, mão alinhada com o antebraço; palma pra cima (supinada: o indicador, do lado do polegar, fica pra fora)
+    ou pro chão (pronada: o indicador fica pra dentro)."""
+    j = {}
+    for L, s in (("Left", 1), ("Right", -1)):
+        x = s * 0.12
+        fora = s if palma_cima else -s
+        j.update({L + "UpLeg": (x, 0, 0.52), L + "Leg": (x, -0.42, 0.52), L + "ForeArm": (x, -0.24, 0.60),
+                  L + "Hand": (x, -0.50, 0.60), L + "HandMiddle1": (x, -0.60, 0.60),
+                  L + "HandIndex1": (x + fora * 0.03, -0.59, 0.60), L + "HandPinky1": (x - fora * 0.03, -0.58, 0.60)})
+    return {k: np.array(v, float) for k, v in j.items()}
+
+
+def dobrar_punho(j, graus):
+    """Dobra os dois punhos `graus` em volta do eixo de lado a lado (+ = dedos sobem, pro lado da palma de cima)."""
+    out = dict(j)
+    for L in ("Left", "Right"):
+        mao = {n: j[n] for n in (L + "HandMiddle1", L + "HandIndex1", L + "HandPinky1")}
+        out.update(girar(mao, graus, (-1, 0, 0), j[L + "Hand"]))
+    return out
+
+
+def test_punho_com_sinal_palma_pra_cima_e_punho_alem_do_joelho_na_rosca_punho():
+    """Rosca punho (lote 4): com a palma pra cima, a mão subindo pro lado da palma é flexão (+) e descendo pro lado do
+    dorso é extensão (−), nos dois lados e com o boneco virado — o "punho" do checagem3d dá o mesmo número nos dois. A
+    palma pra cima mede 0 e só inclina com o punho; pronada (palma pro chão) mede 180. O punho 8 cm além do joelho ao
+    longo da coxa = +80 mm."""
+    j = antebracos_deitados()
+    assert tc.punho_flexao(j) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.palma_cima(j) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.punho_flexao(dobrar_punho(j, 60)) == pytest.approx([60, 60], abs=1e-6)
+    assert tc.punho_flexao(dobrar_punho(j, -55)) == pytest.approx([-55, -55], abs=1e-6)
+    assert tc.palma_cima(dobrar_punho(j, 60)) == pytest.approx([60, 60], abs=1e-6)
+    assert tc.palma_cima(dobrar_punho(j, -55)) == pytest.approx([55, 55], abs=1e-6)
+    virado = girar(dobrar_punho(j, -40), 70, (0, 0, 1))
+    assert tc.punho_flexao(virado) == pytest.approx([-40, -40], abs=1e-6)
+    pronada = antebracos_deitados(palma_cima=False)
+    assert tc.palma_cima(pronada) == pytest.approx([180, 180], abs=1e-6)
+    assert tc.punho_flexao(dobrar_punho(pronada, 30)) == pytest.approx([-30, -30], abs=1e-6)   # pronada: subir = dorso
+    assert tc.punho_alem_joelho(j)[0] == pytest.approx(80, abs=1e-6)
+    assert {"punho_flexao", "palma_cima", "punho_alem_joelho"} <= set(tc.MEDIDAS)
+
+
+def test_linha_joelho_quadril_cabeca_na_flexao_nordica():
+    """Flexão nórdica (lote 4): joelho, quadril e cabeça em linha reta = 0; a cabeça (tronco) indo à frente da linha da coxa
+    (dobrou na cintura) dá +, indo pra trás (arqueou) dá −. O mesmo número com o corpo inteiro inclinado 70° à frente em
+    volta dos joelhos (a descida da nórdica) ou virado; sem a cabeça no dicionário (testes antigos), nada."""
+    j = dict(em_pe(), Head=np.array([0, 0, 1.65]))
+    for L, s in (("Left", 1), ("Right", -1)):                  # coxa em pé: joelho embaixo do quadril
+        j[L + "Leg"] = np.array([s * 0.09, 0, 0.5])
+    assert tc.linha_joelho_quadril_cabeca(j) == pytest.approx([0], abs=1e-6)
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    dobrou = dict(j, Head=girar({"h": j["Head"]}, 20, (1, 0, 0), quadril)["h"])      # cabeça vai pra −Y (frente)
+    arqueou = dict(j, Head=girar({"h": j["Head"]}, -10, (1, 0, 0), quadril)["h"])
+    assert tc.linha_joelho_quadril_cabeca(dobrou) == pytest.approx([20], abs=1e-6)
+    assert tc.linha_joelho_quadril_cabeca(arqueou) == pytest.approx([-10], abs=1e-6)
+    joelhos = (j["LeftLeg"] + j["RightLeg"]) / 2
+    inclinado = girar(dobrou, 70, (1, 0, 0), joelhos)                                 # corpo descendo à frente
+    assert tc.linha_joelho_quadril_cabeca(inclinado) == pytest.approx([20], abs=1e-6)
+    assert tc.linha_joelho_quadril_cabeca(girar(arqueou, 40, (0, 0, 1))) == pytest.approx([-10], abs=1e-6)
+    assert tc.linha_joelho_quadril_cabeca(em_pe()) == []
+    assert "linha_joelho_quadril_cabeca" in tc.MEDIDAS
+
+
+def sentado_coxas(graus_e, graus_d):
+    """Sentado olhando pra −Y: coxas deitadas (joelho na altura do quadril) abertas `graus` pra fora, canelas em pé."""
+    j = dict(em_pe())
+    for L, s, g in (("Left", 1, graus_e), ("Right", -1, graus_d)):
+        a = math.radians(g)
+        h = j[L + "UpLeg"]
+        j[L + "Leg"] = h + 0.42 * np.array([s * math.sin(a), -math.cos(a), 0.0])
+        j[L + "Foot"] = j[L + "Leg"] + np.array([0, 0, -0.44])
+    return j
+
+
+def test_coxa_abertura_sentado_na_abdutora():
+    """Cadeira abdutora (lote 4): coxas paralelas pra frente = 0; abertas 40° pro lado = +40 nos dois lados; fechando
+    (cruzando pra dentro) = −; o mesmo número com o boneco virado em volta da vertical."""
+    assert tc.coxa_abertura(sentado_coxas(0, 0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.coxa_abertura(sentado_coxas(40, 40)) == pytest.approx([40, 40], abs=1e-6)
+    assert tc.coxa_abertura(sentado_coxas(25, -5)) == pytest.approx([25, -5], abs=1e-6)
+    assert tc.coxa_abertura(girar(sentado_coxas(40, 30), 65, (0, 0, 1))) == pytest.approx([40, 30], abs=1e-6)
+    assert "coxa_abertura" in tc.MEDIDAS

@@ -1,0 +1,451 @@
+{
+ "uuid": "a7f62fd1-842d-4ae0-83ee-c62e902efb7b",
+ "nome": "Cadeira Adutora",
+ "cena": "cadeira_adutora",
+ "grupo": "Adutores da Coxa",
+ "subgrupo": "Adutores (longo · curto · magno)",
+ "padrao_movimento": "aducao_quadril",
+ "equipamento": "maquina",
+ "variacao": "sentado",
+ "alvos": [
+  "adutores"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 28,
+  "el": 20,
+  "dist": 3.5,
+  "alvo": [
+   0.0,
+   -0.2,
+   0.66
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.2,
+   0.62
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na cadeira adutora, com o glúteo e as costas encostados no encosto e o tronco quase em pé, os joelhos dobrados a 90°, os pés apoiados nos apoios dos pés e as almofadas encostadas do lado de dentro dos joelhos; o encosto regulado para o quadril ficar em cima do eixo de cada braço da máquina (o ponto em que o braço gira) e as mãos segurando os pegadores ao lado do assento, com os braços quase esticados. Começa com as pernas abertas, cada coxa uns 40° para o lado, até sentir um leve alongamento na parte de dentro das coxas, e fecha as pernas apertando as almofadas para dentro até elas quase se encostarem no meio; volta devagar, controlando, até as pernas ficarem abertas de novo. Só o quadril mexe: cada perna vai inteira, com o joelho parado a 90° e o pé no apoio, e o glúteo, o tronco e as costas ficam parados, encostados no banco.",
+ "cinesiologia": {
+  "plano": "transversal (horizontal): com o quadril dobrado ~90° e a coxa deitada, fechar e abrir as pernas é a coxa girando em volta da vertical que passa pela articulação do quadril — a adução do quadril com o quadril dobrado (ExRx, músculo Adductors (Hip): Movement \"Transverse Adduction\"); o eixo de cada braço da máquina fica nessa vertical",
+  "articulacoes": "quadril (adução na ida, de ~40° a ~7,7° cada coxa, com o quadril dobrado ~87°; abdução na volta); joelhos parados a 90°; tornozelos parados e neutros, os pés chapados nos apoios; coluna neutra e parada, encostada; ombros, cotovelos e punhos parados, as mãos nos pegadores",
+  "agonistas": "adutor longo, adutor curto e adutor magno (ExRx: Target \"Adductors, Hip\", grupo com as cabeças \"Adductor Brevis\", \"Adductor Longus\" e \"Adductor Magnus\"; eGym M11 Adductor: Primary muscles \"Medial compartment of thigh\"), em contração concêntrica ao fechar as pernas e excêntrica ao abrir; o adutor longo é o motor principal (Brandt et al. 2013: \"adductor longus (prime mover for hip adduction)\"). Com o quadril dobrado a 90° os adutores fazem menos força, mas a ativação do adutor longo não muda (Marušič et al. 2025: \"Eccentric hip adduction strength is reduced at 90° of flexion, likely due to mechanical disadvantage, while neural activation remains unchanged.\")",
+  "sinergistas": "pectíneo e grácil (ExRx: Synergists \"Pectineus\", \"Gracilis\"). No app não há auxiliar separado: o pectíneo e o grácil ficam na parte de dentro da coxa, dentro do grupo dos adutores do mapa, que já está marcado como alvo",
+  "estabilizadores": "sem estabilizador importante (ExRx: Stabilizers \"No significant stabilizers\"); as mãos seguram os pegadores só pra firmar o corpo no banco (ExRx: \"grasp bars to sides\"; eGym M11: \"Hold the side handles for stability.\"; Brandt et al. 2013: \"The participant was instructed to use the handles on the machine for balance and performance optimization.\") e o tronco fica parado (eGym M11: \"Keep your upper body stable throughout the movement.\")",
+  "fases": "concêntrica (fecha as pernas apertando as almofadas para dentro até elas quase se encontrarem — eGym M11: \"Press the knee pads inward against the resistance until your legs are close together.\"; ExRx: \"Move legs together.\") e excêntrica (volta devagar, controlando, até as pernas ficarem abertas de novo — eGym M11: \"Return to the starting position in a controlled motion.\"; Brandt et al. 2013: \"then eccentrically abducted the hips to the stating position (45° hip joint angle)\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Seated Hip Adduction (https://exrx.net/WeightExercises/HipAdductors/LVSeatedHipAdduction, lido na cópia do Internet Archive de 24/06/2026; o site responde 403 direto): classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Sit in machine with legs outside of vertical center pads. If available, place heels on foot bars. Disengage and pull lever brace to position legs apart until slight stretch is felt. Engage lever into locked position. Lie back and grasp bars to sides.\"; Execution: \"Move legs together. Return and repeat.\"; Comments: \"Sit in machine with leg levers together. Use release lever to extend legs apart in starting position.\"; músculos: Target \"Adductors, Hip\", Synergists \"Pectineus\", \"Gracilis\", Stabilizers \"No significant stabilizers\"",
+  "ExRx.net — músculo Adductors (Hip) (https://exrx.net/Muscles/Adductors, cópia do Internet Archive de 20/05/2026): Other Names \"Inner Thigh\"; Heads \"Adductor Brevis\", \"Adductor Longus\", \"Adductor Magnus\"; Movement (Hip) \"Adduction\", \"Transverse Adduction\", \"Flexion (initial)\", \"Extension\", \"External Rotation (during adduction)\"",
+  "eGym (fabricante) — Smart Strength, exercícios: M11 Adductor (https://knowledge.egym.com/en/smart-strength/work-out-on-smart-strength/exercises, lido em 06/10/2026): Primary muscles \"Medial compartment of thigh\"; Get ready: \"Sit with your glutes against the backrest.\"; Seat variation: \"Sit upright with your feet on the footrest closest to your body.\" / \"Sit against the backrest with your feet on the further footrest.\"; \"Place your feet on the footrests and position your inner thighs or knees against the pads.\"; \"Hold the side handles for stability.\"; Start exercising: \"Start with your legs open until a comfortable stretch is felt in your inner thighs.\"; \"Press the knee pads inward against the resistance until your legs are close together. Keep your upper body stable throughout the movement.\"; \"Return to the starting position in a controlled motion.\"",
+  "Brandt M, Jakobsen MD, Thorborg K, Sundstrup E, Jay K, Andersen LL. Perceived loading and muscle activity during hip strengthening exercises: comparison of elastic resistance and machine exercises. Int J Sports Phys Ther. 2013;8(6):811-819 (texto completo, PMC3867074, lido em 06/10/2026; no texto do PMC o sinal de grau sai como \"8\" — \"808\" = 80°): 16 mulheres adultas sem treino; na cadeira adutora: \"The participant was seated in upright position in an adductor machine, with an 80° hip flexion and the legs placed in bilateral hip abduction of 45°. The participant was instructed to use the handles on the machine for balance and performance optimization. The participant started adducting the hip to a 0° hip joint angle, and then eccentrically abducted the hips to the stating position (45° hip joint angle).\"; EMG do \"adductor longus (prime mover for hip adduction)\"",
+  "Marušič J, Cvjetičanin O, Šarabon N. Joint torque and electromyographic activity during eccentric exercise for hip adductors at different hip flexion angles. PLoS One. 2025;20(11):e0336699. doi:10.1371/journal.pone.0336699 (texto completo, lido em 06/10/2026): dinamômetro \"similar to conventional gym training equipment designed for strengthening the hip adductors in a seated position\", com o quadril a 0°, 45° e 90° e as pernas esticadas (contato \"just above the medial malleolus\" — não é a posição de joelho dobrado da máquina); \"The mean range of motion for all three variations was 42.7° ± 13.5°.\"; \"Eccentric hip adduction strength is reduced at 90° of flexion, likely due to mechanical disadvantage, while neural activation remains unchanged.\"",
+  "Cheatham S, Hanney WJ, Kolber MJ. Hip Range of Motion in Recreational Weight Training Participants: A Descriptive Report. Int J Sports Phys Ther. 2017;12(5):764-773 (texto completo, PMC5685413, lido em 06/10/2026): abdução passiva medida deitado — \"The subject was positioned supine on the examination table with legs extended.\"; \"The examiner passively abducted the subject's leg as far as possible, without causing any aberrant pelvic motion, and then took the measurement.\" — tabela 2 (todos): abdução 42,6 ± 11,3° (direita) e 43,2 ± 12,3° (esquerda)",
+  "Farias AM, Leal LCP, da Rocha RWG, Krause Neto W. Not All Hip Abductions Are Equal: The 45° Paradox Between Gluteus Medius and Tensor Fasciae Latae. Research Square, preprint (sem revisão por pares), doi:10.21203/rs.3.rs-8523653/v1 (texto lido em 06/10/2026) — postura sentada na cadeira ABDUTORA (a mesma máquina, do outro lado), usada aqui só pra postura: \"In the 90° hip flexion condition, participants sat upright with their trunks vertically, and their hips and knees flexed at approximately right angles. The pelvis was pressed against the backrest, and the torso stayed in contact throughout the entire exercise.\"; \"The arms rested lightly on the machine's lateral handles to aid stabilization without contributing to the movement.\"",
+  "Medidas da máquina (a mesma peça da Cadeira Abdutora) — Titan Fitness Selectorized Hip Abductor Adductor Machine (https://titan.fitness/products/selectorized-abductor-adductor-machine, lido em 06/10/2026): \"Back Pad Dimensions: 12-in. x 17.5-in.\", \"Seat Pad Dimensions: 13-in. x 14-in.\", \"Adjustable Seat Depth: 3.5-in.\"; \"Swiveling thigh pads keep transitions between moves simple—position the pads between your legs and push inward to engage the inner thighs, or position outside your legs and push outward to target the outer thighs and glute medius.\"; Hammer Strength Select Hip Adduction (Life Fitness, HS-HAD: https://lifefitness.com/en-gb/catalog/strength-training/selectorized/hammer-strength-select-hip-adduction, lido em 06/10/2026): \"Adjustable start position offers easy entry and exit\"; \"Instructional Placards: Easy-to-follow instructions illustrate proper use and muscles trained; Axis of rotation marked with red indicator to help cue correct alignment\"; \"61\" x 26\" x 55\" (metric cm: 155 x 66 x 140)\". A altura do assento (0,54 m), a almofada do joelho (20 × 14 × 6 cm), o apoio do pé (30 × 13 cm) e os tubos são escolha da fábrica (os mesmos da Cadeira Abdutora)",
+  "ACE e NSCA: a biblioteca de exercícios do ACE não tem a cadeira adutora (só a \"Standing Hip Adduction\", no cabo, outro exercício) e não achei o texto da NSCA sobre ela aberto em nenhuma fonte que deu pra ler — não usados"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "sentado na máquina os pés ficam nos apoios dos pés, presos nos braços que giram (eGym M11: \"Place your feet on the footrests\"; ExRx: \"place heels on foot bars\"), não no chão; quem confere os pés são as zonas dos apoios dos pés e a altura acima do chão abaixo",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "adutora_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Hip Adduction (\"Sit in machine\"); Brandt et al. 2013 (\"seated in upright position in an adductor machine\")"
+   },
+   {
+    "nome": "costas encostadas no encosto",
+    "equipamento": "adutora_encosto",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Hip Adduction (\"Lie back\"); Farias et al. (preprint), na mesma máquina (\"the torso stayed in contact throughout the entire exercise\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "adutora_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "eGym — M11 Adductor (\"Sit with your glutes against the backrest.\")"
+   },
+   {
+    "nome": "joelho esquerdo encostado na almofada, por dentro",
+    "equipamento": "adutora_almofada_esq",
+    "partes": [
+     "LeftUpLeg",
+     "LeftLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "eGym — M11 Adductor (\"position your inner thighs or knees against the pads\"); ExRx — Lever Seated Hip Adduction (\"legs outside of vertical center pads\")"
+   },
+   {
+    "nome": "joelho direito encostado na almofada, por dentro",
+    "equipamento": "adutora_almofada_dir",
+    "partes": [
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "eGym — M11 Adductor e ExRx — Lever Seated Hip Adduction (idem)"
+   },
+   {
+    "nome": "pé esquerdo chapado no apoio do pé",
+    "equipamento": "adutora_pe_esq",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "eGym — M11 Adductor (\"Place your feet on the footrests\"); ExRx — Lever Seated Hip Adduction (\"place heels on foot bars\")"
+   },
+   {
+    "nome": "pé direito chapado no apoio do pé",
+    "equipamento": "adutora_pe_dir",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "eGym — M11 Adductor e ExRx — Lever Seated Hip Adduction (idem)"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "quadril esquerdo no eixo do braço esquerdo",
+    "equipamento": "adutora_braco_esq",
+    "ossos": [
+     "LeftUpLeg"
+    ],
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "Hammer Strength Select Hip Adduction (placa: \"Axis of rotation marked with red indicator to help cue correct alignment\"); Titan (\"Adjustable Seat Depth: 3.5-in.\"): o encosto anda até o quadril ficar em cima do eixo — com a coxa deitada, a adução é a coxa girando em volta da vertical do quadril"
+   },
+   {
+    "nome": "quadril direito no eixo do braço direito",
+    "equipamento": "adutora_braco_dir",
+    "ossos": [
+     "RightUpLeg"
+    ],
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "Hammer Strength Select Hip Adduction e Titan (idem)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés nos apoios, fora do chão",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     50,
+     5000
+    ],
+    "fonte": "os apoios dos pés ficam nos braços da máquina, ~10 cm acima do chão (assento a 0,54 m)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo (as coxas abertas não chegam nas mãos)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "as almofadas nunca batem uma na outra",
+    "equipamento": "adutora_almofada_esq",
+    "de": "adutora_almofada_dir",
+    "t": "todos",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "equipamento não entra em equipamento (regra da fábrica): as 2 almofadas ficam entre os joelhos"
+   },
+   {
+    "nome": "no fim as almofadas quase se encontram",
+    "equipamento": "adutora_almofada_esq",
+    "de": "adutora_almofada_dir",
+    "t": 1.0,
+    "mm": [
+     3,
+     20
+    ],
+    "fonte": "eGym — M11 Adductor (\"until your legs are close together\"); ExRx — Lever Seated Hip Adduction (\"Move legs together.\"): as pernas fecham até as almofadas, entre os joelhos, ficarem a ~1 cm uma da outra"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "pernas abertas ~40° no começo",
+    "medida": "coxa_abertura",
+    "t": 0.0,
+    "graus": [
+     36,
+     44
+    ],
+    "fonte": "ExRx — Lever Seated Hip Adduction (\"position legs apart until slight stretch is felt\"); eGym — M11 Adductor (\"Start with your legs open until a comfortable stretch is felt in your inner thighs.\"); Brandt et al. 2013, na cadeira adutora (\"the legs placed in bilateral hip abduction of 45°\"); 40° fica logo antes da abdução máxima passiva de praticantes de musculação (Cheatham et al. 2017: 42,6°/43,2°, medida com o quadril esticado)"
+   },
+   {
+    "nome": "pernas fechadas no fim (almofadas quase se encontrando)",
+    "medida": "coxa_abertura",
+    "t": 1.0,
+    "graus": [
+     5.7,
+     9.7
+    ],
+    "fonte": "eGym — M11 Adductor (\"Press the knee pads inward against the resistance until your legs are close together.\"); ExRx — Lever Seated Hip Adduction (\"Move legs together.\"); Brandt et al. 2013 fechavam até 0° (\"started adducting the hip to a 0° hip joint angle\"): aqui as 2 almofadas da máquina (6 cm de espuma + a chapa de trás, de cada lado) ficam entre os joelhos e param as coxas a ~7,7° cada uma"
+   },
+   {
+    "nome": "abertura nunca passa de 45°",
+    "medida": "coxa_abertura",
+    "t": "todos",
+    "graus": [
+     0,
+     45
+    ],
+    "fonte": "Brandt et al. 2013 (\"bilateral hip abduction of 45°\"); Cheatham et al. 2017 (idem)"
+   },
+   {
+    "nome": "joelho parado a ~90°",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "Farias et al. (preprint), na mesma máquina (\"their hips and knees flexed at approximately right angles\"); o pé fica no apoio que gira junto com a almofada do joelho (eGym — M11 Adductor: \"Place your feet on the footrests and position your inner thighs or knees against the pads.\")"
+   },
+   {
+    "nome": "coxas deitadas (na horizontal) o movimento todo",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Hip Adduction (\"Sit in machine\"); a coxa só gira de lado, sem subir nem descer"
+   },
+   {
+    "nome": "quadril dobrado ~90°, parado",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     80,
+     95
+    ],
+    "fonte": "Brandt et al. 2013 (\"seated in upright position in an adductor machine, with an 80° hip flexion\"); Farias et al. (preprint), na mesma máquina (\"their hips and knees flexed at approximately right angles\")"
+   },
+   {
+    "nome": "tronco parado, encostado e quase em pé",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "eGym — M11 Adductor (\"Keep your upper body stable throughout the movement.\"); Brandt et al. 2013 (\"seated in upright position\")"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "eGym — M11 Adductor (\"Keep your upper body stable throughout the movement.\")"
+   },
+   {
+    "nome": "pés acompanham as coxas: ponta do pé aberta junto no começo",
+    "medida": "ponta_pe",
+    "t": 0.0,
+    "graus": [
+     33,
+     47
+    ],
+    "fonte": "o pé fica no apoio, que gira junto com o braço (eGym — M11 Adductor: \"Place your feet on the footrests\")"
+   },
+   {
+    "nome": "pés acompanham as coxas: ponta do pé quase pra frente no fim",
+    "medida": "ponta_pe",
+    "t": 1.0,
+    "graus": [
+     1.7,
+     13.7
+    ],
+    "fonte": "o pé fica no apoio, que gira junto com o braço (idem)"
+   },
+   {
+    "nome": "canelas em pé, o joelho em cima do pé, o movimento todo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Leg",
+     "Foot"
+    ],
+    "t": "todos",
+    "graus": [
+     84,
+     90
+    ],
+    "fonte": "o pé fica no apoio que gira junto com a almofada do joelho: a perna vai inteira, a canela não tomba pra dentro nem pra fora (o joelho_valgo, medido na linha quadril–tornozelo de quem está em pé, não serve com a coxa deitada)"
+   },
+   {
+    "nome": "tornozelos neutros e parados (pés chapados)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     68,
+     82
+    ],
+    "fonte": "neutro do boneco em pé ~76° (tecnica3d.tornozelo); amplitude do tornozelo de Alazzawi S et al., World J Orthop 2017 (flexão dorsal 0–20°, plantar 0–50°)"
+   },
+   {
+    "nome": "braços quase esticados, mãos nos pegadores",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     35
+    ],
+    "fonte": "ExRx — Lever Seated Hip Adduction (\"grasp bars to sides\"); eGym — M11 Adductor (\"Hold the side handles for stability.\")"
+   },
+   {
+    "nome": "pegada neutra (palmas viradas pro assento)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ]
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}

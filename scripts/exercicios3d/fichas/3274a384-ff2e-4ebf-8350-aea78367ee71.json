@@ -1,0 +1,391 @@
+{
+ "uuid": "3274a384-ff2e-4ebf-8350-aea78367ee71",
+ "nome": "Leg Press 45°",
+ "cena": "leg_press_45",
+ "grupo": "Quadríceps / Glúteo",
+ "subgrupo": "Quadríceps · glúteo máximo · isquiotibiais",
+ "padrao_movimento": "agachamento",
+ "equipamento": "maquina",
+ "variacao": "leg press",
+ "alvos": [
+  "quadriceps",
+  "gluteo"
+ ],
+ "auxiliares": [
+  "adutores",
+  "posterior",
+  "panturrilha"
+ ],
+ "camera": {
+  "az": 115,
+  "el": 16,
+  "dist": 3.9,
+  "alvo": [
+   0.0,
+   -0.3,
+   0.78
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.0,
+  "alvo": [
+   0.0,
+   -0.3,
+   0.78
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado no leg press 45°, com o encosto reclinado (20° do chão) e o glúteo, o sacro, a lombar, as costas e a cabeça encostados nele, e as mãos segurando os pegadores dos lados do assento, com os braços quase esticados. Os pés ficam chapados no meio da plataforma, na largura do quadril, com as pontas viradas um pouco pra fora e os joelhos apontando na mesma direção delas. Começa com as pernas quase esticadas, sem travar os joelhos, e desce o carrinho no trilho a 45° dobrando os joelhos e o quadril, devagar, até os joelhos chegarem a cerca de 90°, com os calcanhares chapados na plataforma, os joelhos sem entrar pra dentro e o glúteo e a lombar sem sair do encosto; depois empurra a plataforma de volta, com o calcanhar e a planta do pé, até as pernas ficarem quase esticadas de novo. O tronco, a pelve, a cabeça e os braços ficam parados, encostados; só as pernas e o carrinho mexem.",
+ "cinesiologia": {
+  "plano": "sagital (flexão e extensão do joelho e do quadril, com o tornozelo acompanhando); cada perna se mexe num plano fixo um pouco aberto pra fora — o que passa pelo quadril, pelo tornozelo e pela direção do trilho —, com o joelho sempre na direção da ponta do pé",
+  "articulacoes": "joelho (de ~10°, quase esticado, a ~88° de flexão na descida e de volta); quadril (de ~78° a ~120° entre a coxa e o tronco, com a pelve parada no encosto); tornozelo (de flexão plantar leve, ~8°, em cima a flexão dorsal de ~27° embaixo, sempre com o pé chapado); coluna neutra e parada, apoiada no encosto; ombros, cotovelos (~21°) e punhos parados, mãos nos pegadores",
+  "agonistas": "quadríceps — reto femoral e vastos lateral, intermédio e medial —, na extensão do joelho (ExRx: Target \"Quadriceps\"; NASM: Primary Muscles \"Quadriceps\"); glúteo máximo, na extensão do quadril (ExRx: Synergists \"Gluteus Maximus\"; NASM: Primary Muscles \"Glutes\"); concêntrica na subida do carrinho, excêntrica na descida",
+  "sinergistas": "glúteo máximo, adutor magno e sóleo (ExRx: Synergists \"Gluteus Maximus\", \"Adductor Magnus\", \"Soleus\"); a NSCA lista como músculos principais o glúteo máximo, os isquiotibiais (semimembranoso, semitendinoso, bíceps femoral) e o quadríceps",
+  "estabilizadores": "isquiotibiais e gastrocnêmio como estabilizadores dinâmicos (ExRx: Dynamic Stabilizers \"Hamstrings\", \"Gastrocnemius\"); o abdômen trava a coluna (ACE: \"Contract (\\\"brace\\\") your abdominal muscles to stabilize your spine\"; NASM: Secondary Muscles \"Core Stabilizers\"); as mãos nos pegadores seguram o corpo no encosto (NASM: \"Place your hands on the handles for stability\")",
+  "fases": "excêntrica (o carrinho desce devagar, dobrando joelhos e quadril até ~90° no joelho — NASM: \"Lower the platform back toward your body with control, returning to approximately 90 degrees of knee flexion\"; NSCA: \"Slowly flex your hips and knees\") e concêntrica (empurra com o calcanhar e a planta até quase esticar, sem travar — NASM: \"Press the platform forward by extending your legs, driving through your feet without locking out your knees\"; NSCA: \"Do not lock out your knees.\")"
+ },
+ "referencias": [
+  "ExRx.net — Sled 45° Leg Press (https://exrx.net/WeightExercises/Quadriceps/SL45LegPress, lido na cópia do Internet Archive de 02/02/2026; o site responde 403 direto): classificação \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Sit on machine with back on padded support. Place feet on platform. Extend hips and knees. Release dock lever and grasp handles to sides.\"; Execution: \"Lower sled by flexing hips and knees until knees are just short of complete flexion. Return by extending knees and hips. Repeat.\"; Comments: \"Adjust safety brace and back support to accommodate near full range of motion without forcing hips to bend at waist. Keep knees pointed same directions as feet. Do not allow heels to raise off of platform, pushing with both heel and forefoot. Placing feet slightly high on platform emphasizes Gluteus Maximus. Placing feet slightly lower on platform emphasizes Quadriceps.\"; músculos: Target \"Quadriceps\", Synergists \"Gluteus Maximus\", \"Adductor Magnus\", \"Soleus\", Dynamic Stabilizers \"Hamstrings\", \"Gastrocnemius\"",
+  "NSCA — técnica do leg press de máquina como a NSCA ensina pra certificação CSCS, lida no CSCS Textbook da Achievable, cap. \"Exercise list part 3\", Leg press (machine) (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-3, lido em 06/10/2026; o manual da NSCA não estava aberto): \"Major muscles involved: Gluteus maximus, semimembranosus, semitendinosus, biceps femoris, vastus lateralis, vastus intermedius, vastus medialis, rectus femoris\"; \"Sit in the machine with your back and hips against the pads.\"; \"Place your feet flat and hip-width apart on the platform.\"; \"Unlock the support mechanism, grasp the handles, and keep your knees and feet aligned.\"; \"Slowly flex your hips and knees until your thighs are parallel to the foot platform.\"; \"Keep your back against the pad, and do not let your hips or heels rise.\"; \"Extend your hips and knees to push the platform.\"; \"Do not lock out your knees.\"; \"Return to the starting position and reengage the safety supports.\" (a descida até a coxa ficar paralela à plataforma é mais funda que os ~90° de joelho do pedido, da ACE e da NASM: aqui ficou nos ~90°)",
+  "ACE — Seated Leg Press (https://www.acefitness.org/resources/everyone/exercise-library/154/seated-leg-press/, lido em 06/10/2026; a máquina da ACE é a de assento com placas, mas pé, joelho, lombar e quadril seguem as mesmas regras): \"Sit in the machine, positioning your back and sacrum (tailbone) flat against the machine's backrest. Place your feet on the resistance plate, toes pointing forward and adjust your seat and foot position so that the bend in your knees is at approximately 90 degrees with your heels flat. Lightly grasp any available handles to stabilize your upper extremity. Contract (\\\"brace\\\") your abdominal muscles to stabilize your spine, be careful to avoid movement in your low back throughout the exercise.\"; \"Continue extending your hips and knees until the knees reach a relaxed, extended position, with the heels still pressed firmly into the plate. Do not hyperextend (lock-out) your knees and avoid lifting your butt off the seat pad or rounding out your low back.\"; \"Do not allow your upper thighs to compress your ribcage.\"",
+  "NASM — Leg Press (https://www.nasm.org/resource-center/exercise-library/leg-press, lido em 06/10/2026): \"Sit on the leg press machine with your back and head firmly against the backrest. Position your feet on the platform hip-width apart with your knees bent at approximately 90 degrees.\"; \"Place your hands on the handles for stability and release the safety bars.\"; \"Press the platform forward by extending your legs, driving through your feet without locking out your knees.\"; \"Lower the platform back toward your body with control, returning to approximately 90 degrees of knee flexion.\"; Primary Muscles \"Quadriceps\", \"Glutes\"; Secondary Muscles \"Hamstrings\", \"Hip Adductors\", \"Core Stabilizers\"; Common Mistakes: \"Allowing knees to cave inward (valgus), which indicates poor motor control\", \"Locking out knees at full extension, which removes tension and stresses the joint\", \"Descending too far beyond 90 degrees of knee flexion, which reduces control\"; FAQ: \"Position feet hip-width apart with toes pointing slightly outward.\"",
+  "Escamilla RF, Fleisig GS, Zheng N, Lander JE, Barrentine SW, Andrews JR, Bergemann BW, Moorman CT 3rd. Effects of technique variations on knee biomechanics during the squat and leg press. Med Sci Sports Exerc. 2001;33(9):1552-1566. doi:10.1097/00005768-200109000-00020 — lido só o resumo (PubMed 11528346): \"Ten experienced male lifters performed the squat, a high foot placement leg press (LPH), and a low foot placement leg press (LPL) employing a wide stance (WS), narrow stance (NS), and two foot angle positions (feet straight and feet turned out 30 degrees).\"; \"No differences were found in muscle activity or knee forces between foot angle variations.\"; \"Because all forces increased with knee flexion, training within the functional 0-50 degrees range may be efficacious for those whose goal is to minimize knee forces.\"",
+  "Golparian M, Anbarian M, Golparian A. Effects of Trunk and Foot Positions on Electromyographic Activity and Co-contraction of Selected Lower Extremity Muscles During Leg-Press Resistance Training. J Adv Sport Technol. 2021;5(1):17-26. doi:10.22098/jast.2021.1149 — lido o resumo (https://jast.uma.ac.ir/article_1149.html): \"12 male powerlifters performed leg-press movement while the backrest of leg-press machine was adjusted at 15°, 20°, 25°, and 30° angles relative to the horizon.\"; \"it is recommended that, for the recruitment of more motor units when using the 45-degree leg-press machine, the backrest of the machine be adjusted at a 20° angle with the feet placed at the top of the foot-plate.\"",
+  "Hall EA, Docherty CL. Validity of clinical outcome measures to evaluate ankle range of motion during the weight-bearing lunge test. J Sci Med Sport. 2017;20(7):618-621. doi:10.1016/j.jsams.2016.11.001 — lido só o resumo (PubMed 28108266): flexão dorsal máxima com o pé no chão e o joelho dobrado, \"the motion capture angle (27.0°±6.0°)\" (a flexão dorsal no fundo do leg press fica dentro disso)",
+  "Medidas da máquina — Hammer Strength Plate Loaded Linear Leg Press (https://lifefitness.com/en-us/catalog/strength-training/plate-loaded/plate-loaded-linear-leg-press, lido em 06/10/2026): \"Featuring a 45-degree angle\", \"Dimensions (L x W x H) 95 in x 65 in x 57 in (241 cm x 165 cm x 145 cm)\", \"Storage Weight Horns 4\", \"The extra-wide lumbar pad provides optimal lower back support\"; Precor DPL0601 Angled Leg Press (ficha de venda em PDF, static.precor.com): \"a 45 degree angled carriage sled\", \"Dimensions (L x W x H): 96 x 57 x 57 in / 244 x 145 x 145 cm\", \"Dual rotating carriage stop handles\", \"A foot-activated seat back adjustment\", \"a four-position adjustable fail-safe stop\"; BodyKore G277 45 Degree Leg Press (https://www.bodykore.com/product/signature-series-45-degree-leg-press): \"Platform Size : 28.35 X 19.92\" (72 × 51 cm); Gym Gear Sterling Series 45 Degree Leg Press (ficha em PDF): \"2.5-3mm by 50 x 100 square tubing\", \"60mm thick pads\"; pino de anilha de 49 mm (Titan Leg Press Hack Squat Machine: \"Weight Post Diameter: 49 mm\")"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "deitado na máquina os pés ficam chapados na plataforma do carrinho, a ~1 m do chão, e andam com ela no trilho (NSCA: \"Place your feet flat and hip-width apart on the platform\"); as regras de pé no chão (planta a 0 ± 5 mm, sem escorregar no chão) e as de técnica com os pés no chão (ponta do pé e largura medidas no plano do chão) não servem: quem confere os pés são as zonas do calcanhar e da planta na plataforma em todo quadro (ExRx: \"Do not allow heels to raise off of platform, pushing with both heel and forefoot\"), a largura dos pés e o joelho na direção do pé abaixo, e a cena mede o pé parado na plataforma (pé × plataforma 0 mm em todo quadro: o carrinho anda junto com os pés)",
+  "zonas": [
+   {
+    "nome": "glúteo e sacro encostados no encosto",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Leg Press (\"positioning your back and sacrum (tailbone) flat against the machine's backrest\"); NSCA, pelo CSCS Textbook da Achievable — Leg press (machine) (\"Keep your back against the pad, and do not let your hips or heels rise\")"
+   },
+   {
+    "nome": "lombar apoiada (no apoio lombar do encosto)",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Spine"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Leg Press (\"be careful to avoid movement in your low back throughout the exercise\"; \"avoid lifting your butt off the seat pad or rounding out your low back\"); Hammer Strength Linear Leg Press (\"The extra-wide lumbar pad provides optimal lower back support\")"
+   },
+   {
+    "nome": "costas encostadas no encosto",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (\"Sit on machine with back on padded support\"); NSCA, pelo CSCS Textbook da Achievable — Leg press (machine) (\"Sit in the machine with your back and hips against the pads\")"
+   },
+   {
+    "nome": "cabeça encostada no encosto",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NASM — Leg Press (\"Sit on the leg press machine with your back and head firmly against the backrest\")"
+   },
+   {
+    "nome": "glúteo e coxas no assento no começo (pernas quase esticadas)",
+    "equipamento": "leg_press_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "t": 0.0,
+    "fonte": "NSCA, pelo CSCS Textbook da Achievable — Leg press (machine) (\"Sit in the machine\"): com as pernas quase esticadas a coxa perto do glúteo deita no assento; quando a coxa sobe, a pele dela sai da frente do assento e quem segura a pelve é o encosto (zona de cima)"
+   },
+   {
+    "nome": "calcanhar esquerdo chapado na plataforma",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "LeftFoot"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (\"Do not allow heels to raise off of platform, pushing with both heel and forefoot\")"
+   },
+   {
+    "nome": "calcanhar direito chapado na plataforma",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "RightFoot"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (idem)"
+   },
+   {
+    "nome": "planta e dedos do pé esquerdo na plataforma",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "LeftToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (\"pushing with both heel and forefoot\")"
+   },
+   {
+    "nome": "planta e dedos do pé direito na plataforma",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "RightToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (idem)"
+   },
+   {
+    "nome": "canelas sem encostar na plataforma",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "só os pés encostam na plataforma (NSCA, pelo CSCS Textbook da Achievable — Leg press (machine): \"Place your feet flat and hip-width apart on the platform\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "coxas longe das costelas (do peito pra baixo)",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "com": [
+     "Spine2"
+    ],
+    "mm": [
+     5,
+     2000
+    ],
+    "fonte": "ACE — Seated Leg Press (\"Do not allow your upper thighs to compress your ribcage.\"); mede a pele da coxa até a do peito e das costelas de cima (osso Spine2): mais embaixo, na lateral do quadril, a pele da coxa dobra pra dentro da cintura com o quadril a 120° (dobra da pele do boneco, não a coxa apertando a barriga)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelho quase esticado em cima, sem travar",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     5,
+     15
+    ],
+    "fonte": "NSCA, pelo CSCS Textbook da Achievable — Leg press (machine) (\"Do not lock out your knees.\"); ACE — Seated Leg Press (\"until the knees reach a relaxed, extended position\"; \"Do not hyperextend (lock-out) your knees\")"
+   },
+   {
+    "nome": "joelho a ~90° embaixo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "NASM — Leg Press (\"returning to approximately 90 degrees of knee flexion\"); ACE — Seated Leg Press (\"the bend in your knees is at approximately 90 degrees\")"
+   },
+   {
+    "nome": "joelho nunca trava nem passa de 95°",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     5,
+     95
+    ],
+    "fonte": "NASM — Leg Press (\"Descending too far beyond 90 degrees of knee flexion, which reduces control\"; \"Locking out knees at full extension\")"
+   },
+   {
+    "nome": "quadril sem dobrar demais (a lombar e o glúteo não saem do encosto)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     70,
+     123
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (\"Adjust safety brace and back support to accommodate near full range of motion without forcing hips to bend at waist\"); a flexão do quadril normal vai até 120° (AAOS, por Norkin & White, a fonte do limites.py) — aqui o fundo fica em ~120°, sem precisar enrolar a lombar"
+   },
+   {
+    "nome": "tronco parado, deitado no encosto a 20° do chão",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     66,
+     74
+    ],
+    "fonte": "Golparian et al. 2021 (encosto a 15°, 20°, 25° e 30° do chão; \"the backrest of the machine be adjusted at a 20° angle\"): o tronco fica ~70° da vertical"
+   },
+   {
+    "nome": "coluna neutra, apoiada",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Leg Press (\"avoid lifting your butt off the seat pad or rounding out your low back\")"
+   },
+   {
+    "nome": "joelhos na direção dos pés (sem entrar pra dentro)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     0,
+     90
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (\"Keep knees pointed same directions as feet\"); NSCA, pelo CSCS Textbook da Achievable — Leg press (machine) (\"keep your knees and feet aligned\"); NASM — Leg Press (\"Allowing knees to cave inward (valgus)\"): com as pontas dos pés um pouco pra fora o joelho vai pra fora da reta quadril–tornozelo quando dobra (embaixo ~7 cm), nunca pra dentro"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.2,
+     1.6
+    ],
+    "fonte": "NSCA, pelo CSCS Textbook da Achievable — Leg press (machine) (\"Place your feet flat and hip-width apart on the platform\"); NASM — Leg Press (\"Position your feet on the platform hip-width apart\"): distância entre os tornozelos ÷ entre as articulações do quadril (a largura de fora do quadril do boneco é ~1,5×)"
+   },
+   {
+    "nome": "tornozelo: flexão plantar leve em cima, dorsal embaixo, sem passar do normal",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     62,
+     106
+    ],
+    "fonte": "neutro do boneco em pé ~76° (tecnica3d.tornozelo); flexão plantar até 50° (Alazzawi et al., World J Orthop 2017) e flexão dorsal com o pé apoiado e o joelho dobrado de 27,0 ± 6,0° (Hall & Docherty 2017): 76 − 14 a 76 + 30"
+   },
+   {
+    "nome": "braços quase esticados, mãos nos pegadores",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     35
+    ],
+    "fonte": "ExRx — Sled 45° Leg Press (\"grasp handles to sides\"); NASM — Leg Press (\"Place your hands on the handles for stability\")"
+   },
+   {
+    "nome": "pegada neutra (palmas viradas pro corpo)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ]
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}
