@@ -2481,3 +2481,265 @@ def panturrilha_sentado(nome="panturrilha", eixo=(0.0, 0.69), assento=(-0.13, 0.
     bpy.context.view_layer.update()
     raizes = {"estrutura": estr, "assento": ass, "degrau": deg, "braco": bra, "almofada": alm}
     return MaquinaPanturrilha(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2)
+
+
+# ===== Rosca Scott na máquina =======================================================================================================
+# ── MÁQUINA DE ROSCA SCOTT (Rosca Scott na Máquina, lote 5, 07/10/2026; a MESMA peça serve à Rosca Alternada na Máquina, com os 2
+# braços da alavanca independentes) ───────────────────────────────────────────────────────────────────────────────────────────────────
+# Máquina de rosca sentada com a ALMOFADA DOS BRAÇOS inclinada (o "banco Scott"): a pessoa senta no ASSENTO atrás dela, passa os
+# braços por cima da borda de cima (a axila fica perto dela) e apoia a parte de trás dos braços na face inclinada; a ALAVANCA gira em
+# volta de um eixo horizontal (ao longo do X) que passa pelos 2 cotovelos e leva o PEGADOR (barra com 2 manoplas de borracha) na
+# ponta. É a "Lever Preacher Curl" do ExRx ("Sit on curl machine placing back of arms on pad. Grasp lever handles with underhand grip.
+# Align elbows at same pivot point as fulcrum of lever."; "Seat should be adjusted to allow armpit to rest near top of pad.") e a
+# "M15 Bicep Curl" da eGym ("Adjust the seat so the arm pad is at armpit height."; "Position your elbows in line with the machine's
+# pivot point."; "Hold the bar with an underhand grip."); a Precor Resolute RSL0204 Biceps Curl ("The angled arm pad and handles on
+# the Resolute Biceps Curl align the exerciser's elbows to the pivot point"). A regulagem certa é a do fabricante: o assento sobe ou
+# desce até o eixo da alavanca passar pelo meio dos cotovelos (ACE, Seated Biceps Curl: "Adjust the seat height until the middle of
+# your elbows aligns with the axis of rotation (fulcrum) of the moving lever (part) of the machine.") — por isso a cena monta a peça EM
+# VOLTA do corpo (como as cadeiras, o leg press, o Smith e o supino sentado): ela dá o eixo (os cotovelos), a face da almofada (a
+# parte de trás dos braços), o assento (o glúteo), o pegador (as mãos) e a frente da base (na frente dos pés); a peça liga tudo com a
+# estrutura. Os pés ficam no chão entre os 2 trilhos da base; a almofada fica presa nos 2 postes dos mancais (por fora das pernas),
+# sem nada passando entre os joelhos. A almofada pode ter um RECORTE no meio da borda de cima (recorte=...): vira um U, com 2 abas por
+# baixo dos braços e a base inteira embaixo — o peito e a barriga ficam no recorte (num corpo de peito grande, com o ombro dobrado
+# ~50°, o braço só passa da frente do tronco perto do cotovelo: uma almofada inteira não cabe mais alto que isso).
+#   Rosca Scott:            independentes=False — UMA alavanca: os 2 braços ligados pela barra do pegador giram juntos (girar(graus)).
+#   Rosca Alternada na Máquina: independentes=True — 2 braços independentes, cada um com a sua manopla (girar(graus, lado=s)): um
+#                           sobe enquanto o outro espera embaixo (ExRx, Lever Alternating Curl: "Repeat with opposite arm."; o
+#                           ACE, Seated Biceps Curl: "This exercise can be performed unilaterally (one arm at a time)").
+# Medidas de máquina de verdade: manopla de 32 mm e 5" (Titan Bicep Tricep Curl Machine: "Hand Grip Diameter: 32mm", "Handle Grip
+# Length: 5-in. (each)"); assento de 16,5"–21" do chão (Titan: "Adjustable Seat Height: 16.5-in - 21-in."); torre da pilha de 148 cm
+# (Precor Resolute RSL0204 Biceps Curl: "Weight Stack Tower Height: 58 in / 148 cm"; "Dimensions (L x W x H): 48 x 43 x 58 in / 122 x
+# 110 x 148 cm"); estofado de 60 mm, como o do leg press 45 e do supino sentado; a almofada "cushions both the chest area and arm
+# area" (Precor Discovery DBR0202 Preacher Curl Bench). O ângulo, o tamanho e o recorte da almofada saem do corpo na cena (o braço
+# apoiado com o ombro dobrado ~50° — Attarieh et al., Eur J Sport Sci 2025: "Preacher (PREA; shoulder flexed 50°)"), não são números
+# fixos da peça. A largura da almofada, os braços da alavanca (viga de 50 mm), cubos, mancais, postes, base, a barra de aço do pegador
+# e a pilha são escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   mq = e3.rosca_scott("scott", eixo=(y, z), almofada=(y, z, angulo, comprimento, largura, espessura), recorte=(x, profundidade),
+#                       assento=(...), pegadores=(y, z, x, comprimento, raio), y_poste=..., independentes=False)
+#   no pose(t): mq.girar(graus)            # > 0 SOBE o pegador (flexão do cotovelo), a partir da montagem; independentes:
+#                                          # mq.girar(graus, lado=s) gira só o braço do lado s
+#               c, u = mq.pegada(s)         # centro e eixo da manopla do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador, eixo=(0, 0, 1))),
+#        ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo), "<nome>_assento"
+# e "<nome>_almofada" (APOIO) e a parte que gira — "<nome>_alavanca" (alavanca única) ou "<nome>_braco_esq"/"_dir" (independentes);
+# não encosta no corpo, fora as mãos nas manoplas. A parte que gira tem a origem NO EIXO e o X local AO LONGO dele: a regra
+# checagens.eixos da ficha mede os cotovelos nessa reta. O eixo de aço de cada braço é da parte que gira e passa por dentro do mancal
+# (um tubo oco da estrutura) com 5 mm de folga em volta; o cubo fica 1 cm do mancal e a porca 5 mm dele: a regra checagens.folgas
+# mede alavanca × estrutura sem peça atravessando a outra de propósito. O pegador de cada lado é um tubo de borracha com o Z local ao
+# longo dele (ao longo do X) e a origem no meio (ck.Barra(..., eixo=(0, 0, 1))).
+class RoscaScott:
+    """Máquina de rosca Scott pronta na cena (rosca_scott())."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador, independentes):
+        self.raizes = raizes                  # {"estrutura", "assento", "almofada", "alavanca"} ou {..., "braco_esq", "braco_dir"}
+        self.independentes = independentes
+        self.moveis = ("braco_esq", "braco_dir") if independentes else ("alavanca",)
+        self.equipamentos = [raizes["estrutura"]] + [raizes[k] for k in self.moveis]
+        self.apoios = [raizes["assento"], raizes["almofada"]]
+        self.eixo = Vector(eixo)              # ponto do eixo de giro (em x = 0); direção = X
+        self.pegadores = pegadores            # {+1: manopla do lado +X, −1: do lado −X}; eixo de cada uma no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulos = {1: 0.0, -1: 0.0}
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in self.moveis}
+
+    @property
+    def angulo(self):
+        return self.angulos[1]
+
+    def _raiz(self, s):
+        return ("braco_esq" if s > 0 else "braco_dir") if self.independentes else "alavanca"
+
+    def _giro(self, graus):
+        return (Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(-graus), 4, "X")
+                @ Matrix.Translation(-self.eixo))
+
+    def girar(self, graus, lado=None):
+        """A alavanca (ou o braço do lado `lado`, na máquina de braços independentes) girada `graus` em volta do eixo, a partir da
+        montagem: com a pessoa olhando pra −Y e o pegador na frente dos cotovelos, > 0 SOBE o pegador (flexão do cotovelo, ele vai
+        pros ombros) e < 0 desce."""
+        if lado is None:
+            lados = (1, -1)
+        elif not self.independentes:
+            raise ValueError("rosca_scott: alavanca única — os 2 lados giram juntos (girar(graus), sem lado)")
+        else:
+            lados = (1 if lado > 0 else -1,)
+        R = self._giro(graus)
+        for s in lados:
+            k = self._raiz(s)
+            self.raizes[k].matrix_world = R @ self._M0[k]
+            self.angulos[s] = graus
+        if not self.independentes:
+            self.angulos = {1: graus, -1: graus}
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, graus=None):
+        """Centro e eixo (mundo, unitário) da manopla do lado s com a alavanca (ou o braço do lado s) em `graus` (None = agora)."""
+        M = self.pegadores[s].matrix_world
+        if graus is not None:
+            M = self._giro(graus - self.angulos[s]) @ M
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+def rosca_scott(nome="scott", eixo=(-0.30, 0.74), almofada=None, recorte=None, assento=None, pegadores=None, x_braco=0.34,
+                independentes=False, lado=-1, pilha=True, y_poste=None, viga=0.05, raio_barra=0.0127):
+    """Máquina de rosca Scott (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      eixo          = (y, z) do eixo de giro (paralelo ao X): passa pelo meio dos 2 cotovelos;
+      almofada      = (y, z, angulo, comprimento, largura, espessura): (y, z) = meio (x = 0) da BORDA DE CIMA da face da almofada (a
+                      face onde a parte de trás dos braços encosta; a axila fica perto dela), que desce pra frente (−Y) `angulo` graus
+                      da vertical por `comprimento` m (até passar dos cotovelos); o estofado fica atrás da face (do lado de quem senta),
+                      com `espessura` m, e uma chapa de aço atrás dele;
+      recorte       = None (almofada inteira) ou (x_dentro, profundidade): recorte no meio da borda de cima, de |x| < x_dentro, que
+                      desce `profundidade` m pela face — a almofada vira um U: 2 abas por baixo dos braços e a base inteira lá embaixo
+                      (o peito e a barriga ficam no recorte: com o ombro dobrado ~60° o braço só passa da frente do tronco perto do
+                      cotovelo);
+      assento       = (y_frente, y_tras, topo, largura, espessura): estofado do assento, com o topo em `topo`;
+      pegadores     = (y, z, x, comprimento, raio): centro da manopla de borracha do lado +X em (x, y, z) (a do −X em (−x, y, z)), ao
+                      longo do X, onde a mão fecha;
+      x_braco       = |x| do plano dos braços da alavanca (por fora das mãos e da almofada; o mancal de cada lado fica 7 cm pra fora);
+      independentes = False: alavanca única, os 2 braços ligados pela barra de aço do pegador (as 2 manoplas nela) giram juntos — Rosca
+                      Scott; True: 2 braços independentes, cada um com a sua manopla presa só nele — Rosca Alternada na Máquina;
+      lado          = lado da torre da pilha (−1 = −X, o direito de quem senta); pilha = caixa da pilha de pesos;
+      y_poste       = y da travessa da frente da base (na frente dos pés; None = 45 cm na frente do eixo);
+      viga          = seção (m) da viga quadrada de cada braço da alavanca; raio_barra = raio da barra de aço do pegador.
+    Devolve um RoscaScott (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
+    if almofada is None or assento is None or pegadores is None:
+        raise ValueError("rosca_scott: almofada, assento e pegadores vêm da cena (a peça é montada em volta do corpo)")
+    ye, ze = eixo
+    y_top, z_top, ang, comp_a, larg_a, esp_a = almofada
+    y_f, y_t, topo, larg, esp = assento
+    y_p, z_p, x_p, comp_p, raio_p = pegadores
+    if x_p + comp_p / 2 + 0.02 > x_braco - viga / 2:
+        raise ValueError("rosca_scott: a manopla (até x = %.3f) encosta no braço da alavanca (x_braco = %.3f)" % (
+            x_p + comp_p / 2, x_braco))
+    if larg_a / 2 > x_braco - 0.035:
+        raise ValueError("rosca_scott: a almofada (meia largura %.3f) bate no cubo da alavanca (x_braco = %.3f)" % (larg_a / 2, x_braco))
+    sl = -1.0 if lado < 0 else 1.0
+    X = Vector((1.0, 0.0, 0.0))
+    a = math.radians(ang)
+    u = Vector((0.0, -math.sin(a), -math.cos(a)))           # descendo pela face da almofada (pra frente e pra baixo)
+    n = Vector((0.0, -math.cos(a), math.sin(a)))            # normal da face (pros braços: pra cima e pra frente)
+    rot_a = _rot_de(X, -u, n)                                # caixa: X local = X, Y local subindo pela face, Z local = n
+    topo_a = Vector((0.0, y_top, z_top))
+    x_m = x_braco + 0.07                                     # mancal, poste do mancal e trilho da base de cada lado (|x|)
+    rot_x90 = (0, math.radians(90), 0)                       # cilindro deitado ao longo do X
+    y_poste = ye - 0.45 if y_poste is None else y_poste
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, ass, alm = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("almofada")
+    bpy.context.view_layer.update()
+
+    # ── assento: estofado (APOIO) em cima de uma chapa; coluna até a base ─────────────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, y_t - y_f, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.05, y_t - y_f - 0.04, 0.024), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    _viga(nome + "_coluna_assento", (0, y_ass, 0.06), (0, y_ass, z_chapa - 0.012), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── almofada dos braços: estofado inclinado (APOIO), a chapa de aço atrás dele e o bloco onde a viga do poste chega ────────────
+    if recorte is None or recorte[1] <= 0.0:
+        pedacos = [("", 0.0, larg_a / 2, 0.0, comp_a)]                    # (sufixo, |x| de dentro, |x| de fora, s0, s1) ao longo da face
+    else:
+        x_d, prof = recorte
+        if not 0.0 < x_d < larg_a / 2 - 0.04 or prof >= comp_a - 0.04:
+            raise ValueError("rosca_scott: recorte %s não cabe na almofada (largura %.3f, comprimento %.3f)" % (recorte, larg_a, comp_a))
+        pedacos = [("_aba%+d" % s, x_d, larg_a / 2, 0.0, prof) for s in (1, -1)] + [("_base", 0.0, larg_a / 2, prof, comp_a)]
+    for suf, x0, x1, s0, s1 in pedacos:
+        lados_p = (1, -1) if x0 > 0 else (0,)
+        for s in lados_p:
+            if suf.startswith("_aba") and s != int(suf[4:]):
+                continue
+            xc = s * (x0 + x1) / 2 if x0 > 0 else 0.0
+            largura = (x1 - x0) if x0 > 0 else 2 * x1
+            c_s = topo_a + u * ((s0 + s1) / 2) + Vector((xc, 0.0, 0.0))
+            caixa(nome + "_almofada_estofado" + suf, c_s - n * (esp_a / 2), (largura, s1 - s0, esp_a), mat_estofado(), rot=rot_a,
+                  pai=alm, chanfro=0.018)
+            _em_aneis(_reto(caixa(nome + "_almofada_chapa" + suf, c_s - n * (esp_a + 0.008), (largura - 0.04, s1 - s0 - 0.03, 0.016),
+                                  mat_estrutura(), rot=rot_a, pai=estr, chanfro=0)), passo=0.06)
+    s_base = (comp_a + (max(recorte[1], 0.0) if recorte is not None else 0.0)) / 2   # meio da base, ao longo da face
+    # ── base no chão: 2 trilhos ao longo do Y (por fora dos pés), travessas da frente e de trás, viga do meio até a coluna do assento ─
+    y0b, y1b = y_poste, max(y_t, y_ass + 0.10) + 0.04
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base_trilho%+d" % s, (s * x_m, (y0b + y1b) / 2, 0.03), (0.08, y1b - y0b + 0.08, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    for k, y in enumerate((y0b, y1b)):
+        _em_aneis(_reto(caixa(nome + "_base_travessa%d" % k, (0, y, 0.03), (2 * x_m - 0.08, 0.08, 0.06), mat_estrutura(), pai=estr,
+                              chanfro=0)), passo=0.08)
+    if y1b - 0.04 > y_ass + 0.04:
+        _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y_ass - 0.04 + y1b - 0.04) / 2, 0.03), (0.08, y1b - y_ass, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    # ── postes dos mancais (um de cada lado, do trilho até embaixo do eixo) e o mancal: tubo oco ao longo do X (o eixo de aço da
+    #    alavanca passa por dentro com 5 mm de folga) ─────────────────────────────────────────────────────────────────────────────
+    for s in (1, -1):
+        _viga(nome + "_poste_mancal%+d" % s, (s * x_m, ye, 0.06), (s * x_m, ye, ze - 0.04), 0.07, 0.07, mat_estrutura(), pai=estr)
+        m = _tubo_oco(nome + "_mancal%+d" % s, (s * x_m, ye, ze), 0.045, 0.023, 0.06, mat_estrutura(), pai=estr)
+        m.rotation_euler = rot_x90
+    # ── a almofada presa nos 2 postes dos mancais: de cada poste sai um braço até a chapa atrás da base, perto da ponta de fora dela
+    #    (por fora da barriga, embaixo da face: os antebraços passam por cima) ─────────────────────────────────────────────────────
+    for s in (1, -1):
+        F = topo_a + u * s_base - n * (esp_a + 0.016 + 0.025) + Vector((s * (larg_a / 2 - 0.045), 0.0, 0.0))   # atrás da chapa
+        caixa(nome + "_almofada_suporte%+d" % s, F + n * 0.012, (0.07, 0.10, 0.025), mat_estrutura(), rot=rot_a, pai=estr,
+              chanfro=0.003)
+        _viga(nome + "_almofada_braco%+d" % s, F, (s * (x_m - 0.035), ye, F.z), 0.05, 0.05, mat_estrutura(), pai=estr)
+    # ── torre da pilha de pesos (carenagem parada) do lado `lado`, ao lado do eixo, presa no trilho da base ───────────────────────────
+    if pilha:
+        x_t = sl * (x_m + 0.04 + 0.15 + 0.02)
+        _em_aneis(_reto(caixa(nome + "_pilha", (x_t, ye + 0.05, 0.06 + 1.42 / 2), (0.30, 0.40, 1.42), mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+        _em_aneis(_reto(caixa(nome + "_pilha_base", (x_t - sl * 0.02, ye + 0.05, 0.03), (0.34, 0.50, 0.06), mat_estrutura(),
+                              pai=estr, chanfro=0)), passo=0.08)
+    # ── a parte que gira: cubo no eixo, eixo de aço pra fora (por dentro do mancal) com a porca, braço do cubo até a ponta, a barra de
+    #    aço e as manoplas de borracha ────────────────────────────────────────────────────────────────────────────────────────────────
+    raizes = {"estrutura": estr, "assento": ass, "almofada": alm}
+    if independentes:
+        for s, lado_n in ((1, "esq"), (-1, "dir")):
+            raizes["braco_" + lado_n] = raiz_nova("braco_" + lado_n, (s * x_braco, ye, ze))
+    else:
+        raizes["alavanca"] = raiz_nova("alavanca", (0.0, ye, ze))
+    bpy.context.view_layer.update()
+    pegs = {}
+    pecas_lado = {1: [], -1: []}
+    for s in (1, -1):
+        pc = pecas_lado[s]
+        H = Vector((s * x_braco, ye, ze))
+        pc.append(_cilindro(nome + "_cubo%+d" % s, 0.05, 0.06, H, rot_x90, mat_estrutura()))
+        pc.append(_cilindro(nome + "_cubo_tampa%+d" % s, 0.025, 0.064, H, rot_x90, mat_aco()))
+        x0, x1 = x_braco + 0.03, x_m + 0.035                 # eixo de aço: do cubo até 5 mm depois do mancal
+        pc.append(_cilindro(nome + "_eixo%+d" % s, 0.018, x1 - x0, (s * (x0 + x1) / 2, ye, ze), rot_x90, mat_aco()))
+        pc.append(_cilindro(nome + "_eixo_porca%+d" % s, 0.027, 0.012, (s * (x_m + 0.035 + 0.006), ye, ze), rot_x90, mat_aco(),
+                            vertices=6))
+        A = Vector((s * x_braco, y_p, z_p))                  # ponta do braço: a barra do pegador entra nela
+        d = (A - H).normalized()
+        pc.append(_viga(nome + "_braco%+d" % s, H + d * 0.04, A, viga, viga, mat_estrutura()))
+        pc.append(_cilindro(nome + "_ponta%+d" % s, 0.032, viga + 0.008, A, rot_x90, mat_estrutura()))
+        g_fora, g_dentro = s * (x_p + comp_p / 2), s * (x_p - comp_p / 2)
+        peg = _em_aneis(tubo(nome + "_pegador%+d" % s, (g_fora, y_p, z_p), (g_dentro, y_p, z_p), raio_p, mat_borracha(), vertices=32),
+                        passo=0.035)
+        pc.append(peg)
+        pegs[s] = peg
+        pc.append(_cilindro(nome + "_colar%+d" % s, raio_p + 0.004, 0.010, (g_fora + s * 0.005, y_p, z_p), rot_x90, mat_aco()))
+        pc.append(_em_aneis(tubo(nome + "_barra%+d" % s, (s * (x_braco - 0.01), y_p, z_p), (g_fora + s * 0.006, y_p, z_p), raio_barra,
+                                 mat_aco()), passo=0.035))
+        if independentes:                                    # manopla presa só neste braço: ponta de dentro livre, com a tampa
+            pc.append(_cilindro(nome + "_pegador_ponta%+d" % s, raio_p + 0.004, 0.012, (g_dentro - s * 0.006, y_p, z_p), rot_x90,
+                                mat_borracha()))
+        else:
+            pc.append(_cilindro(nome + "_colar_dentro%+d" % s, raio_p + 0.004, 0.010, (g_dentro - s * 0.005, y_p, z_p), rot_x90,
+                                mat_aco()))
+    if independentes:
+        _prender(pecas_lado[1], raizes["braco_esq"])
+        _prender(pecas_lado[-1], raizes["braco_dir"])
+    else:                                                    # alavanca única: a barra do meio liga as 2 manoplas
+        xd = x_p - comp_p / 2 - 0.006
+        meio = _em_aneis(tubo(nome + "_barra_meio", (-xd, y_p, z_p), (xd, y_p, z_p), raio_barra, mat_aco()), passo=0.035)
+        _prender(pecas_lado[1] + pecas_lado[-1] + [meio], raizes["alavanca"])
+    bpy.context.view_layer.update()
+    return RoscaScott(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2, independentes)
+# ===== fim: Rosca Scott na máquina ==================================================================================================
