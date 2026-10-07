@@ -1,0 +1,381 @@
+{
+ "uuid": "3ff85379-f225-4fc0-964e-22a688904490",
+ "nome": "Remada Cavalinho na Máquina",
+ "cena": "remada_cavalinho_na_maquina",
+ "grupo": "Dorsal / Trapézio",
+ "subgrupo": "Latíssimo · trapézio médio/inferior · romboides",
+ "padrao_movimento": "remada",
+ "equipamento": "maquina",
+ "variacao": "cavalinho",
+ "alvos": [
+  "dorsal",
+  "trapezio"
+ ],
+ "auxiliares": [
+  "costas",
+  "deltoide",
+  "biceps",
+  "antebraco"
+ ],
+ "camera": {
+  "az": 62,
+  "el": 12,
+  "dist": 4.0,
+  "alvo": [
+   0.0,
+   -0.1,
+   0.75
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.2,
+  "alvo": [
+   0.0,
+   -0.05,
+   0.72
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Em pé nos pedais da máquina de remada cavalinho, com os pés na largura dos ombros, os joelhos levemente dobrados e o peito deitado na almofada inclinada (o tronco a uns 40° do chão, a coluna reta e a cabeça na linha do tronco). Segura os pegadores paralelos da alavanca com a pegada neutra (palmas uma pra outra), na largura dos ombros, com os braços pendurados quase esticados e os ombros soltos pro chão. Puxa a alavanca levando os cotovelos pra trás, rentes ao corpo, até ela chegar perto do peito, com os pegadores na cintura, do lado do corpo, e aproxima as escápulas no fim; volta devagar até os braços quase esticarem de novo. A alavanca gira em volta do pivô baixo, atrás dos pés, e passa entre as pernas. O peito fica apoiado na almofada e o tronco, o quadril, as pernas e a cabeça ficam parados o movimento todo.",
+ "cinesiologia": {
+  "plano": "sagital (extensão do ombro com o braço perto do corpo e flexão do cotovelo); cadeia cinética aberta",
+  "articulacoes": "ombro (extensão na subida, de ~40° de flexão com o braço pendurado até ~35° atrás da linha do tronco; flexão na descida), cotovelo (flexão na subida, de ~10° até ~105°; extensão na descida, sem travar), escápulas (retração na subida, protração na descida); punho neutro e parado; quadril dobrado (~64°), joelhos levemente dobrados (~20°) e tornozelos parados, com o peito apoiado",
+  "agonistas": "músculos das costas em geral (ExRx: Target \"Back, General\"): grande dorsal, trapézio médio e inferior e romboides",
+  "sinergistas": "trapézio médio e inferior, romboides, grande dorsal, redondo maior, deltoide posterior, infraespinhal, redondo menor, braquial, braquiorradial e peitoral maior (porção esternal) — ExRx, Lever Neutral Grip Incline Row e Lever Close Grip T-bar Row: Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\"; a NSCA, no bent-over row: \"Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"",
+  "estabilizadores": "bíceps braquial e cabeça longa do tríceps (ExRx: Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"). Com o peito apoiado, o ExRx da remada inclinada não lista os eretores da espinha nem os músculos das pernas como estabilizadores (na cavalinho livre, sem apoio, lista \"Erector Spinae\", \"Hamstrings\", \"Gluteus Maximus\", \"Adductor Magnus\", \"Quadriceps\")",
+  "fases": "concêntrica (puxa a alavanca até ela chegar perto do peito, com os pegadores na cintura, e aproxima as escápulas no fim — ExRx: \"Pull lever up. As lever approaches, hyperextend thoracic spine and squeeze shoulders back.\"; aqui o tronco fica parado no apoio, sem arquear a parte de cima das costas: o pedido do exercício é o tronco parado e a NSCA pede \"Keep your torso rigid\") e excêntrica (desce até os braços quase esticarem, com os ombros soltos pro chão — ExRx: \"Lower lever until arms are extended and shoulders are pulled downward.\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Neutral Grip Incline Row (plate loaded) (https://exrx.net/WeightExercises/BackGeneral/LVNeutralGripInclineRowPL, lido em 07/10/2026 por um leitor de páginas, o site responde 403 direto): Preparation \"Lie prone on inclined platform and place feet on foot rest. Grasp angled handles and lift lever out of support rack. Position lever directly under body with arms extended down.\"; Execution \"Pull lever up. As lever approaches, hyperextend thoracic spine and squeeze shoulders back. Lower lever until arms are extended and shoulders are pulled downward. Repeat.\"; Comments \"Near top of movement, arch upper back and pull shoulders back as shown. Some Incline Row apparatuses allow feet to be placed on floor, particularly if foot platform cannot be adjusted to accommodate height.\"; músculos: Target \"Back, General\"; Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\"; Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"",
+  "ExRx.net — Lever Close Grip T-bar Row (plate loaded) (https://exrx.net/WeightExercises/BackGeneral/LVCloseGripTBarRow, lido em 07/10/2026): Preparation \"Bend knees slightly and bend over lever handles with back straight. Grasp narrow grip parallel lever handles.\"; Execution \"Pull handles up to waist. Return until arms are extended and shoulders are stretched downward. Repeat.\"; Comments \"Closer grip increases lat involvement by emphasizing shoulder extension over transverse extension. Keep low back straight. Lighten load if torso raises beyond 45 degrees in order to complete repetition.\"; os mesmos sinergistas e estabilizadores dinâmicos da remada inclinada e, sem o apoio de peito, Stabilizers \"Erector Spinae\", \"Hamstrings\", \"Gluteus Maximus\", \"Adductor Magnus\", \"Quadriceps\". ExRx.net — Lever T-bar Row (plate loaded) (https://exrx.net/WeightExercises/BackGeneral/LVTBarRow): Preparation \"Bend knees slightly and bend over lever handles with back straight. Grasp lever handles with shoulder width to wide overhand grip.\"; Execution \"Pull lever up to torso. Return until arms are extended and shoulders are stretched downward.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-1, lido em 07/10/2026): Bent-over row — \"Major muscles involved: Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; \"Stand with a shoulder-width stance and knees slightly flexed\"; \"Flex at the hips so your torso is just above parallel to the floor\"; \"Keep a neutral spine and look ahead\"; \"Fully extend your arms\"; \"Pull the bar to your torso (lower chest/upper abdomen)\"; \"Keep your torso rigid and your knees flexed\"; \"Lower the bar while maintaining your position\"",
+  "ACE — Bent-Over Row (https://www.acefitness.org/resources/everyone/exercise-library/12/bent-over-row/, lido em 07/10/2026): \"Grip a barbell with palms down so that the wrists, elbows, and shoulders are in a straight line. Lift the bar from the rack, bend forward at the hips, and keep the back straight with a slight bend in the knees. Lower the bar towards the floor until the elbows are completely straight, and keep the back flat as the bar is pulled towards the belly button. Then slowly lower the bar to the starting position and repeat.\"",
+  "Medidas da máquina — Titan Fitness Chest-Supported T-Bar Row Machine (https://titan.fitness/products/chest-supported-t-bar-row-machine-adjustable, lido em 07/10/2026): \"HeftyGrip vinyl incline chest pad\", \"Grasp either vertical or horizontal grip handles\", \"Overall Height: 50-in.\", \"Overall Width: 43-in.\", \"Overall Depth: 84-in.\", \"Chest Pad Dimensions: 20-in. x 10-in.\", \"Footplate Dimensions: 23.5-in. x 17.5-in.\", \"Weight Sleeve Diameter: 50mm\", \"Vertical Grip Length: 9-in.\", \"Vertical Grip Spread: 17.5-in.\", \"Grip Diameter: 31mm\"; BodyKore Elite Series Standing T-Bar Row CF2173 (manual e ficha técnica em PDF, https://bodykore.com/product/elite-series-standing-row-cf2173): \"The Elite Series Standing T-Bar Row has a built-in chest support\", \"Multiple grip positions (narrow/wide)\", \"Chest pad and foot plates secure upper torso to isolate lats/rear deltoids\", \"Dimensions: 37\\\" x 70\\\" x 48\\\"\", lista de peças \"PAD,Chest 160*260*360*55\", \"Handgrip φ24*φ31.5*120\" (nas fotos do fabricante a alavanca sai de um pivô baixo, atrás, junto dos pedais, e passa embaixo da almofada até o pino de anilha na frente, com os pegadores numa armação que sobe dela; aqui o pivô fica mais atrás, depois dos pedais, e a alavanca passa entre as pernas, como a barra da remada cavalinho livre); Gymleco 116 Incline T-Bar Row (https://gymleco.com/products/116-incline-t-bar-row, lido em 07/10/2026): \"Incline T-Bar Row with chest support\", \"Length: 195-212 cm\"; Dynamic Fitness & Strength, model 713025 (https://beyondthebasicsfitness.com/product/dynamic-incline-lever-row/, lido em 07/10/2026): \"The Dynamic Fitness & Strength 40 Degree T-Bar Row provides the perfect experience for chest-supported horizontal rowing.\", \"Swiveling Handles with Multiple Grip Locations\", \"Adjustable Foot Plate\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "chao_mm": 150,
+  "chao_motivo": "os pés ficam chapados nos pedais, com o topo a 15 cm do chão: a regra do chão mede a planta e o calcanhar nessa altura",
+  "eixos_motivo": "sem regra de eixo × junta: na remada cavalinho o pivô da alavanca fica baixo, atrás dos pés, longe de qualquer junta (a alavanca comprida faz o pegador andar quase reto pra cima e pra trás, como a barra da cavalinho livre). A regulagem certa é a almofada no peito e os pegadores embaixo dos ombros com os braços pendurados (ExRx: \"Position lever directly under body with arms extended down\"): o pivô fica à mesma distância do pegador no começo e no fim",
+  "zonas": [
+   {
+    "nome": "peito apoiado na almofada",
+    "equipamento": "cavalinho_almofada",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Neutral Grip Incline Row (\"Lie prone on inclined platform\"); Titan (\"incline chest pad\")"
+   },
+   {
+    "nome": "pé esquerdo no pedal",
+    "equipamento": "cavalinho_pedais",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Neutral Grip Incline Row (\"place feet on foot rest\")"
+   },
+   {
+    "nome": "pé direito no pedal",
+    "equipamento": "cavalinho_pedais",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Neutral Grip Incline Row (idem)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "alavanca × estrutura (pivô, pedais, coluna e braço da almofada)",
+    "equipamento": "cavalinho_alavanca",
+    "de": "cavalinho_estrutura",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça): o eixo do pivô passa por dentro do cubo da alavanca com 5 mm de folga"
+   },
+   {
+    "nome": "alavanca × almofada do peito",
+    "equipamento": "cavalinho_alavanca",
+    "de": "cavalinho_almofada",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça): no fim a alavanca chega perto da almofada sem encostar"
+   },
+   {
+    "nome": "alavanca × pedais",
+    "equipamento": "cavalinho_alavanca",
+    "de": "cavalinho_pedais",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça): a alavanca passa entre os pedais"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tronco inclinado ~50° da vertical (peito na almofada a 40° do chão), parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     46,
+     54
+    ],
+    "fonte": "Dynamic Fitness & Strength (\"40 Degree T-Bar Row ... for chest-supported horizontal rowing\"); ExRx — Lever Close Grip T-bar Row (\"Lighten load if torso raises beyond 45 degrees\")"
+   },
+   {
+    "nome": "costas retas (coluna neutra)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx — Lever Close Grip T-bar Row (\"bend over lever handles with back straight\"; \"Keep low back straight\"); NSCA (Achievable CSCS) — Bent-over row (\"Keep a neutral spine\"); ACE — Bent-Over Row (\"keep the back straight\")"
+   },
+   {
+    "nome": "joelhos levemente dobrados, parados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     12,
+     30
+    ],
+    "fonte": "ExRx — Lever Close Grip T-bar Row (\"Bend knees slightly\"); NSCA (Achievable CSCS) — Bent-over row (\"knees slightly flexed\"; \"Keep your torso rigid and your knees flexed\"); ACE — Bent-Over Row (\"a slight bend in the knees\")"
+   },
+   {
+    "nome": "quadril dobrado e parado",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     56,
+     72
+    ],
+    "fonte": "ACE — Bent-Over Row (\"bend forward at the hips\"); a medida da fábrica é coxa × prolongamento do tronco pra baixo"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     5
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Bent-over row (\"Keep a neutral spine\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "pés na largura dos ombros",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     1.4,
+     2.1
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Bent-over row (\"Stand with a shoulder-width stance\"): tornozelos a 0,39 m um do outro, com os ombros (articulação) a 0,40 m"
+   },
+   {
+    "nome": "braços pendurados pro chão no começo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "t": 0.0,
+    "graus": [
+     78,
+     90
+    ],
+    "fonte": "ExRx — Lever Neutral Grip Incline Row (\"Position lever directly under body with arms extended down\")"
+   },
+   {
+    "nome": "braços quase esticados no começo, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ExRx — Lever Neutral Grip Incline Row (\"Lower lever until arms are extended\"); ExRx — Lever Close Grip T-bar Row (\"Return until arms are extended\"); NSCA (Achievable CSCS) — Bent-over row (\"Fully extend your arms\"). Quase esticados, sem travar (pedido do exercício)"
+   },
+   {
+    "nome": "ombros soltos pro chão no começo (escápulas abertas)",
+    "medida": "escapula_frente",
+    "t": 0.0,
+    "mm": [
+     10,
+     40
+    ],
+    "fonte": "ExRx — Lever Neutral Grip Incline Row (\"shoulders are pulled downward\"); ExRx — Lever Close Grip T-bar Row (\"shoulders are stretched downward\")"
+   },
+   {
+    "nome": "escápulas aproximadas no fim",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -30,
+     -5
+    ],
+    "fonte": "ExRx — Lever Neutral Grip Incline Row (\"As lever approaches, ... squeeze shoulders back\"; \"pull shoulders back\")"
+   },
+   {
+    "nome": "cotovelos dobrados no fim",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     85,
+     110
+    ],
+    "fonte": "ExRx — Lever Close Grip T-bar Row (\"Pull handles up to waist\"); ExRx — Lever T-bar Row (\"Pull lever up to torso\"); ACE — Bent-Over Row (\"the bar is pulled towards the belly button\"); NSCA (Achievable CSCS) — Bent-over row (\"Pull the bar to your torso (lower chest/upper abdomen)\")"
+   },
+   {
+    "nome": "cotovelos atrás da linha do tronco no fim",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -50,
+     -25
+    ],
+    "fonte": "ExRx — Lever T-bar Row (\"Pull lever up to torso\"); ExRx — Lever Close Grip T-bar Row (\"Closer grip increases lat involvement by emphasizing shoulder extension\")"
+   },
+   {
+    "nome": "cotovelos rentes ao corpo (não abrem pro lado)",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -5,
+     25
+    ],
+    "fonte": "ExRx — Lever Close Grip T-bar Row (\"Closer grip increases lat involvement by emphasizing shoulder extension over transverse extension\")"
+   },
+   {
+    "nome": "pegada neutra (palmas uma pra outra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     60,
+     90
+    ],
+    "fonte": "ExRx — Lever Close Grip T-bar Row (\"Grasp narrow grip parallel lever handles\")"
+   },
+   {
+    "nome": "pegada fechada (mãos na largura dos ombros)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.4
+    ],
+    "fonte": "ExRx — Lever Close Grip T-bar Row (\"narrow grip parallel lever handles\"); Titan (\"Vertical Grip Spread: 17.5-in.\")"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "ACE — Bent-Over Row (\"so that the wrists, elbows, and shoulders are in a straight line\"): o pegador é parte da alavanca e muda de ângulo com ela; o punho desvia até ~16° pro lado no meio do caminho"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}

@@ -3017,3 +3017,240 @@ def remada_sentada(nome="remada", eixo=(-0.70, 0.13), x_braco=0.42, barra=(-0.62
     return MaquinaRemada(raizes, (0.0, ye, ze), pegs, {"neutro": raio_n, "pronado": raio_p},
                          {"neutro": comp_n / 2, "pronado": comp_p / 2}, pivos)
 # ===== fim: Remada sentada na máquina ===============================================================================================
+
+
+# ===== Remada cavalinho na máquina ==================================================================================================
+# ── MÁQUINA DE REMADA CAVALINHO COM APOIO DE PEITO (Remada Cavalinho na Máquina, lote 5, 07/10/2026) ──────────────────────────────────
+# A remada cavalinho (T-bar) de anilha com apoio de peito: em pé nos 2 PEDAIS, com o peito deitado na ALMOFADA INCLINADA, a pessoa puxa
+# os pegadores de uma ALAVANCA comprida que gira em volta de um PIVÔ no chão, atrás dos pés (a "T": a alavanca passa entre as pernas,
+# como a barra da remada cavalinho livre, e os pegadores ficam embaixo do peito, ExRx, Lever Neutral Grip Incline Row (plate loaded):
+# "Lie prone on inclined platform and place feet on foot rest. Grasp angled handles and lift lever out of support rack. Position lever
+# directly under body with arms extended down."). Peças: a BASE no chão (2 trilhos ao longo do Y, as travessas de trás e da frente), o
+# PIVÔ atrás (2 orelhas na travessa de trás e o eixo de aço, ao longo do X, por dentro do cubo da alavanca — tubo oco, com folga), os
+# 2 PEDAIS (chapa com borracha, um embaixo de cada pé, presos num braço que sai do trilho do lado: nada passa no meio, por onde a
+# alavanca sobe), a COLUNA na frente com o BRAÇO que segura a almofada por baixo da ponta de cima dela, a ALMOFADA DO PEITO (estofado
+# numa chapa) e a ALAVANCA (a viga do pivô até a ponta, a travessa dos pegadores em cima dela, 2 hastes que sobem até os pegadores
+# NEUTROS — paralelos, um de cada lado, a palma virada pro meio: ExRx, Lever Close Grip T-bar Row (plate loaded): "Grasp narrow grip
+# parallel lever handles." — e o PINO de anilha na ponta, ao longo do X, pros 2 lados).
+# A cena monta a peça EM VOLTA do corpo (como as outras máquinas): ela dá o pivô, a ponta da alavanca, onde ficam os pegadores no começo
+# (as mãos com os braços pendurados), a almofada (encostada no peito) e os pedais (embaixo dos pés); a peça liga tudo com a estrutura.
+# Outro exercício na mesma máquina (pegada aberta pronada — a Lever Wide Grip Incline Row do ExRx: "Grasp wide handles") monta com
+# outros pegadores (`pegadores` com o x maior e o ângulo do pegador): nada da peça é da pegada fechada em si.
+# Medidas de máquina de verdade: almofada de 20" × 10" e pedais de 23,5" × 17,5" no total (Titan Chest-Supported T-Bar Row Machine:
+# "Chest Pad Dimensions: 20-in. x 10-in.", "Footplate Dimensions: 23.5-in. x 17.5-in."), pegadores neutros a 17,5" de centro a centro e
+# 31 mm de grossura (Titan: "Vertical Grip Spread: 17.5-in.", "Grip Diameter: 31mm"; a borracha da BodyKore Elite Series Standing
+# T-Bar Row CF2173, manual, lista de peças: "Handgrip φ24*φ31.5*120"), pino de anilha de 50 mm (Titan: "Weight Sleeve Diameter:
+# 50mm"), almofada a 40° do chão (Dynamic Fitness & Strength, model 713025: "The Dynamic Fitness & Strength 40 Degree T-Bar Row
+# provides the perfect experience for chest-supported horizontal rowing"), máquina de ~1,8–2,1 m de comprimento (Titan: "Overall
+# Depth: 84-in."; BodyKore CF2173: "Dimensions : 70\"x37\"x48\""; Gymleco 116 Incline T-Bar Row: "Length: 195-212 cm"). Estofado de
+# 60 mm, como o do leg press 45 e do supino sentado (acima). Tubos (viga da alavanca de 50 × 75 mm, base, coluna, braço da almofada),
+# o cubo, as orelhas do pivô, as hastes e a travessa dos pegadores e o comprimento do pino são escolha da fábrica. Peças compridas em
+# anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO dela):
+#   mq = e3.remada_cavalinho("cavalinho", eixo=(y, z), ponta=(y, z), pegadores=(y, z, x, comprimento, raio, angulo),
+#                            almofada=(centro, angulo, comprimento, largura, espessura), pedais=(y, topo, x, largura, profundidade))
+#   no pose(t): mq.girar(graus)            # a alavanca (com os pegadores e o pino) gira em volta do pivô; > 0 = SOBE (puxar)
+#               c, u = mq.pegada(s)         # centro e eixo do pegador do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador,
+#        eixo=(0, 0, 1))), ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo), "<nome>_almofada"
+# e "<nome>_pedais" (APOIO: o peito e as solas encostam) e "<nome>_alavanca" (gira; não encosta no corpo, fora as mãos nos pegadores).
+# A alavanca tem a origem NO PIVÔ e o X local AO LONGO do eixo dele. O eixo de aço é da estrutura e passa por dentro do cubo da alavanca
+# (tubo oco) com 5 mm de folga em volta, entre as 2 orelhas: a regra checagens.folgas mede alavanca × estrutura sem peça atravessando
+# a outra de propósito. Cada borracha de pegador é um tubo com o Z local ao longo dele e a origem no meio (ck.Barra(..., eixo=(0, 0, 1))).
+class MaquinaCavalinho:
+    """Máquina de remada cavalinho com apoio de peito pronta na cena (remada_cavalinho())."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes                  # {"estrutura", "almofada", "pedais", "alavanca"}
+        self.equipamentos = [raizes["estrutura"], raizes["alavanca"]]
+        self.apoios = [raizes[k] for k in ("almofada", "pedais")]
+        self.eixo = Vector(eixo)              # ponto do eixo do pivô (em x = 0); direção = X
+        self.pegadores = pegadores            # {+1: borracha do lado +X, −1: do −X}; eixo de cada uma no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+        self._M0 = raizes["alavanca"].matrix_world.copy()
+
+    def _giro(self, graus):
+        return (Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(-graus), 4, "X")
+                @ Matrix.Translation(-self.eixo))
+
+    def girar(self, graus):
+        """A alavanca (com os pegadores e o pino) girada `graus` em volta do pivô, a partir da montagem: com a pessoa olhando pra −Y e
+        o pivô atrás dela, > 0 SOBE a ponta da frente (puxar) e < 0 desce."""
+        self.raizes["alavanca"].matrix_world = self._giro(graus) @ self._M0
+        self.angulo = graus
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, graus=None):
+        """Centro e eixo (mundo, unitário) do pegador do lado s com a alavanca em `graus` (None = como está agora)."""
+        M = self.pegadores[s].matrix_world
+        if graus is not None:
+            M = self._giro(graus - self.angulo) @ M
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+def remada_cavalinho(nome="cavalinho", eixo=None, ponta=None, pegadores=None, almofada=None, pedais=None, coluna=None, base=0.40,
+                     viga=(0.05, 0.075), pino=(0.22, 0.025), anilha=None, aco=0.03):
+    """Máquina de remada cavalinho com apoio de peito (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA
+    MONTAGEM (a alavanca embaixo, braços pendurados):
+      eixo      = (y, z) do eixo do pivô (paralelo ao X, em x = 0), atrás dos pés, perto do chão;
+      ponta     = (y, z) da ponta da frente da alavanca (o eixo da viga vai do pivô até ela); o pino de anilha fica nela, ao longo do X;
+      pegadores = (y, z, x, comprimento, raio, angulo): centro da borracha do pegador do lado +X em (x, y, z) (o do −X em (−x, y, z)),
+                  onde a mão fecha; o eixo da borracha fica no plano YZ e vai pra trás (+Y) `angulo` graus acima da horizontal (a ponta
+                  de trás mais alta com > 0). Na ponta da FRENTE de cada borracha, um tubo de aço de `aco` m liga ela à haste, que desce
+                  ⟂ à viga até a travessa dos pegadores, em cima da viga;
+      almofada  = (centro, angulo, comprimento, largura, espessura): centro da FACE de cima (onde o peito encosta, em x = 0); a face sobe
+                  pra frente (−Y) `angulo` graus do chão por `comprimento` m; o estofado fica embaixo da face, na chapa, e o braço da
+                  coluna da frente segura a chapa por baixo da ponta de cima;
+      pedais    = (y, topo, x, largura, profundidade): um pedal embaixo de cada pé, centrado em (±x, y), com o topo em `topo`;
+      coluna    = y da coluna da frente (None = 22 cm na frente da ponta da alavanca, que é o mais longe que ela vai);
+      base      = |x| dos trilhos da base (por fora dos pés);
+      viga      = (largura, altura) da viga da alavanca; pino = (comprimento de cada lado, raio) do pino de anilha;
+      anilha    = None ou (raio, espessura): uma anilha em cada lado do pino.
+    Devolve um MaquinaCavalinho (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
+    if None in (eixo, ponta, pegadores, almofada, pedais):
+        raise ValueError("remada_cavalinho: eixo, ponta, pegadores, almofada e pedais vêm da cena (a peça é montada em volta do corpo)")
+    X = Vector((1.0, 0.0, 0.0))
+    rot_x90 = (0, math.radians(90), 0)                       # cilindro deitado ao longo do X
+    P = Vector((0.0, eixo[0], eixo[1]))
+    T = Vector((0.0, ponta[0], ponta[1]))
+    b = (T - P).normalized()                                 # ao longo da viga, do pivô pra ponta
+    n = X.cross(b)
+    if n.z < 0:
+        n = -n                                               # ⟂ à viga, pra cima (lado dos pegadores)
+    lv, av = viga
+    yp, zp, xp, comp_p, raio_p, ang_p = pegadores
+    a = math.radians(ang_p)
+    w = Vector((0.0, math.cos(a), math.sin(a)))              # eixo do pegador, da ponta da frente pra de trás
+    c_a, ang_a, comp_a, larg_a, esp_a = almofada
+    c_a = Vector((0.0, c_a[1], c_a[2]))
+    aa = math.radians(ang_a)
+    u_a = Vector((0.0, -math.cos(aa), math.sin(aa)))         # ao longo da face, subindo pra frente
+    n_a = Vector((0.0, math.sin(aa), math.cos(aa)))          # normal da face, pro peito
+    y_pe, topo_pe, x_pe, larg_pe, prof_pe = pedais
+    r_eixo, folga = 0.02, 0.005                              # eixo de aço do pivô e a folga dele no cubo
+    r_cubo, compr_cubo = r_eixo + folga + 0.022, 0.10
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, alm, ped = raiz_nova("estrutura"), raiz_nova("almofada"), raiz_nova("pedais")
+    alav = raiz_nova("alavanca", P)
+    bpy.context.view_layer.update()
+
+    # ── almofada do peito (APOIO): estofado embaixo da face, inclinado `angulo` graus; a chapa embaixo dele é da estrutura ──────────────
+    rot_a = _rot_de(X, -u_a, n_a)                            # caixa: X local = X, Y local ao longo da face, Z local = normal
+    caixa(nome + "_almofada_estofado", c_a - n_a * (esp_a / 2), (larg_a, comp_a, esp_a), mat_estofado(), rot=rot_a, pai=alm,
+          chanfro=0.015)
+    _em_aneis(_reto(caixa(nome + "_almofada_chapa", c_a - n_a * (esp_a + 0.006), (larg_a - 0.03, comp_a - 0.03, 0.012), mat_estrutura(),
+                          rot=rot_a, pai=estr, chanfro=0)), passo=0.06)
+    # bloco de fixação embaixo da chapa, perto da ponta de cima da almofada: o braço da coluna entra nele
+    s_bloco = comp_a / 2 - 0.09                              # a 9 cm da borda de cima, ao longo da face
+    bloco = c_a + u_a * s_bloco - n_a * (esp_a + 0.012 + 0.03)
+    caixa(nome + "_almofada_suporte", bloco, (0.10, 0.12, 0.06), mat_estrutura(), rot=rot_a, pai=estr, chanfro=0.004)
+
+    # ── pedais (APOIO): borracha em cima da chapa de aço, um embaixo de cada pé, com as quinas chanfradas (a zona de apoio da checagem
+    #    mede o sinal pela normal da face mais perto: na quina viva ele sai errado) ──────────────────────────────────────────────────────
+    for s in (1, -1):
+        cx = s * x_pe
+        caixa(nome + "_pedal_borracha%+d" % s, (cx, y_pe, topo_pe - 0.003), (larg_pe, prof_pe, 0.006), mat_borracha(), pai=ped,
+              chanfro=0.002)
+        caixa(nome + "_pedal_chapa%+d" % s, (cx, y_pe, topo_pe - 0.006 - 0.005), (larg_pe - 0.004, prof_pe - 0.004, 0.010), mat_aco(),
+              pai=ped, chanfro=0.002)
+
+    # ── base no chão: 2 trilhos ao longo do Y (por fora dos pés), as travessas de trás (com o pivô) e da frente (com a coluna) ─────────
+    y_col = (T.y - 0.22) if coluna is None else coluna
+    y0b, y1b = y_col - 0.10, P.y + 0.14                      # da frente da coluna até atrás do pivô
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base_trilho%+d" % s, (s * base, (y0b + y1b) / 2, 0.03), (0.07, y1b - y0b, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    for k, y in enumerate((P.y, y_col)):
+        _em_aneis(_reto(caixa(nome + "_base_travessa%d" % k, (0, y, 0.03), (2 * base - 0.07, 0.08, 0.06), mat_estrutura(), pai=estr,
+                              chanfro=0)), passo=0.08)
+
+    # ── pivô (parado): 2 orelhas na travessa de trás, por fora do cubo da alavanca, e o eixo de aço de uma à outra, com as porcas ────────
+    x_or = compr_cubo / 2 + 0.006 + 0.006                     # meio de cada orelha (6 mm de folga do cubo)
+    for s in (1, -1):
+        caixa(nome + "_orelha%+d" % s, (s * x_or, P.y, (0.06 + P.z + 0.05) / 2), (0.012, 0.11, P.z + 0.05 - 0.06), mat_estrutura(),
+              pai=estr, chanfro=0.002)
+        _cilindro(nome + "_eixo_porca%+d" % s, r_eixo + 0.01, 0.014, (s * (x_or + 0.013), P.y, P.z), rot_x90, mat_aco(), vertices=6,
+                  pai=estr)
+    _cilindro(nome + "_eixo", r_eixo, 2 * x_or + 0.024, (0.0, P.y, P.z), rot_x90, mat_aco(), pai=estr)
+
+    # ── pedais: braço de cada lado, do trilho até embaixo da chapa do pedal (fica por fora; o meio fica livre pra alavanca) ────────────
+    z_sup = topo_pe - 0.016 - 0.02                           # meio do braço, embaixo da chapa do pedal
+    x_dentro = x_pe - larg_pe / 2 + 0.03                      # o braço vai até perto da borda de dentro do pedal
+    for s in (1, -1):
+        _viga(nome + "_pedal_braco%+d" % s, (s * x_dentro, y_pe, z_sup), (s * (base - 0.035), y_pe, z_sup), 0.04, 0.04, mat_estrutura(),
+              pai=estr)
+        _viga(nome + "_pedal_poste%+d" % s, (s * base, y_pe, 0.06), (s * base, y_pe, z_sup + 0.02), 0.05, 0.05, mat_estrutura(),
+              pai=estr)
+
+    # ── coluna da frente (x = 0) e o braço até o bloco de baixo da almofada ──────────────────────────────────────────────────────────
+    z_col = bloco.z - 0.06
+    _viga(nome + "_coluna", (0, y_col, 0.06), (0, y_col, z_col + 0.04), 0.08, 0.08, mat_estrutura(), pai=estr)
+    _viga(nome + "_braco_almofada", (0, y_col, z_col), bloco - n_a * 0.02, 0.06, 0.06, mat_estrutura(), pai=estr)
+
+    # ── alavanca (gira em volta do pivô): cubo (tubo oco em volta do eixo), viga até a ponta, travessa e hastes dos pegadores, os
+    #    pegadores (aço + borracha + tampa) e o pino de anilha na ponta ─────────────────────────────────────────────────────────────────
+    pecas = []
+    cubo = _tubo_oco(nome + "_cubo", P, r_cubo, r_eixo + folga, compr_cubo, mat_estrutura())
+    cubo.rotation_euler = rot_x90
+    pecas.append(cubo)
+    pecas.append(_viga(nome + "_viga", P + b * (r_cubo - 0.01), T + b * 0.02, lv, av, mat_estrutura()))
+    pecas.append(_reto(caixa(nome + "_viga_tampa", T + b * 0.024, (lv + 0.004, 0.008, av + 0.004), mat_borracha(),
+                             rot=_rot_de(X, b, X.cross(b)), chanfro=0)))
+    pegs = {}
+    r_aco = 0.0125                                           # tubo de aço do pegador, da haste e da travessa
+    topos = []
+    for s in (1, -1):
+        c = Vector((s * xp, yp, zp))
+        f0 = c - w * (comp_p / 2)                            # ponta da frente da borracha
+        E = f0 - w * aco                                     # onde o pegador encontra a haste
+        topos.append(E)
+        peg = _em_aneis(tubo(nome + "_pegador%+d" % s, f0, c + w * (comp_p / 2), raio_p, mat_borracha(), vertices=32), passo=0.035)
+        pegs[s] = peg
+        pecas.append(peg)
+        pecas.append(_cilindro(nome + "_pegador_tampa%+d" % s, raio_p + 0.003, 0.012, c + w * (comp_p / 2 + 0.006),
+                               w.to_track_quat("Z", "Y").to_euler(), mat_borracha()))
+        pecas.append(_cilindro(nome + "_pegador_colar%+d" % s, raio_p + 0.003, 0.010, f0 - w * 0.005, w.to_track_quat("Z", "Y").to_euler(),
+                               mat_aco()))
+        pecas.append(tubo(nome + "_pegador_aco%+d" % s, E - w * r_aco, f0 + w * 0.01, r_aco, mat_aco()))
+    # travessa em cima da viga, embaixo das hastes: o meio da travessa fica na reta da viga, na altura de cima dela
+    E1 = topos[0]
+    r_H = (E1 - P).dot(b)
+    H = P + b * r_H + n * (av / 2 + r_aco)
+    pecas.append(_em_aneis(tubo(nome + "_travessa", Vector((-xp - r_aco, H.y, H.z)), Vector((xp + r_aco, H.y, H.z)), r_aco, mat_aco()),
+                           passo=0.04))
+    pecas.append(_reto(caixa(nome + "_travessa_base", P + b * r_H + n * (av / 2 + 0.006), (0.09, 0.07, 0.012), mat_estrutura(),
+                             rot=_rot_de(X, b, X.cross(b)), chanfro=0)))
+    for s, E in zip((1, -1), topos):
+        base_h = Vector((s * xp, H.y, H.z))
+        pecas.append(tubo(nome + "_haste%+d" % s, base_h - (E - base_h).normalized() * r_aco, E + (E - base_h).normalized() * r_aco,
+                          r_aco, mat_aco()))
+        pecas.append(_cilindro(nome + "_haste_cotovelo%+d" % s, r_aco + 0.002, 0.03, E, rot_x90, mat_aco(), vertices=24))
+    # pino de anilha na ponta, ao longo do X pros 2 lados (com o colar de encosto da anilha) e a anilha, se pedir
+    c_pino = T - n * 0.0
+    x_ini = lv / 2
+    for s in (1, -1):
+        pecas.append(_em_aneis(_cilindro(nome + "_pino%+d" % s, pino[1], pino[0], c_pino + X * (s * (x_ini + pino[0] / 2)), rot_x90,
+                                         mat_aco(), vertices=32), passo=0.04))
+        pecas.append(_cilindro(nome + "_pino_colar%+d" % s, pino[1] + 0.02, 0.014, c_pino + X * (s * (x_ini + 0.007)), rot_x90, mat_aco()))
+        pecas.append(_cilindro(nome + "_pino_tampa%+d" % s, pino[1] + 0.003, 0.008, c_pino + X * (s * (x_ini + pino[0] + 0.004)), rot_x90,
+                               mat_aco()))
+        if anilha is not None:
+            r_an, e_an = anilha
+            xa = x_ini + 0.014 + 0.002 + e_an / 2
+            pecas.append(_em_aneis(_cilindro(nome + "_anilha%+d" % s, r_an, e_an, c_pino + X * (s * xa), rot_x90, mat_borracha(),
+                                             vertices=48), passo=0.05))
+            pecas.append(_cilindro(nome + "_anilha_miolo%+d" % s, 0.045, e_an + 0.004, c_pino + X * (s * xa), rot_x90, mat_aco()))
+    _prender(pecas, alav)
+    bpy.context.view_layer.update()
+    raizes = {"estrutura": estr, "almofada": alm, "pedais": ped, "alavanca": alav}
+    return MaquinaCavalinho(raizes, P, pegs, raio_p, comp_p / 2)
+# ===== fim: Remada cavalinho na máquina =============================================================================================
