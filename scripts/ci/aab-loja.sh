@@ -133,7 +133,8 @@ passo_gradle() {
   local chave_tmp="" rc=0
   if [ -z "${PLAY_UPLOAD_KEYSTORE_FILE:-}" ] && [ -n "${PLAY_UPLOAD_KEYSTORE_BASE64:-}" ]; then
     chave_tmp="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/chave-upload.XXXXXX")"
-    (umask 077 && printf '%s' "$PLAY_UPLOAD_KEYSTORE_BASE64" | base64 -d > "$chave_tmp/upload.p12")
+    # o segredo pode vir quebrado em linhas (base64 de 76 colunas) ou com \r: só o alfabeto do base64 vai para o decode
+    (umask 077 && printf '%s' "$PLAY_UPLOAD_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$chave_tmp/upload.p12")
     export PLAY_UPLOAD_KEYSTORE_FILE="$chave_tmp/upload.p12"
   fi
   unset PLAY_UPLOAD_KEYSTORE_BASE64
