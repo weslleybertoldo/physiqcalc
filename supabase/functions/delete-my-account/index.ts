@@ -13,6 +13,11 @@
 //       excluir  → { ok, apaga, mantem, login: "removido" }      (physiq_excluir_aluno + "soft delete" do login + vínculo)
 //       sem vínculo (só Nutrição, nunca usou o Treino) → { ok: true, sem_vinculo: true }
 //       professor / master / membro de equipe → 403 { ok: false, erro: "profissional" }
+//     W2 da loja (Google Play) — a exclusão do PROFISSIONAL, SÓ pela excluir-minha-conta no pedido do app novo:
+//       conferir_profissional → { ok, simulacao: true, apaga, mantem, cobrancas }  (physiq_excluir_profissional — nada muda)
+//       excluir_profissional  → { ok, apaga, mantem, cobrancas, login: "removido" } (o que ele montou fica com os alunos; o professor
+//                               suspenso e sem Pix; o que é dele como usuário apagado; "soft delete" do login + vínculo)
+//       master → 403 { ok: false, erro: "profissional" }
 //     Idempotente: pedir de novo depois de um erro no meio refaz só o que faltou.
 //
 // Publicar: gh workflow run deploy-function.yml -f function=delete-my-account (verify_jwt true) ou
@@ -65,7 +70,7 @@ const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 // ───────────────────────── modo servidor (W7) ─────────────────────────
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ACOES = ["exportar", "conferir", "excluir"];
+const ACOES = ["exportar", "conferir", "excluir", "conferir_profissional", "excluir_profissional"];
 
 /** Comparação em tempo constante (o mesmo segredoConfere da vincular-professor/trocar-token). */
 function segredoConfere(recebido: string | null | undefined, esperado: string | null | undefined): boolean {
@@ -105,6 +110,27 @@ async function modoServidor(req: Request): Promise<Response> {
       const { data, error } = await admin.rpc("physiq_exportar_aluno", { p_user: treinoId });
       if (error) throw error;
       return jsonServidor({ ok: true, dados: data });
+    }
+
+    // W2 da loja: a exclusão do profissional (as ações de cima e de baixo, do aluno, não mudam)
+    if (acao === "conferir_profissional" || acao === "excluir_profissional") {
+      const simularProf = acao === "conferir_profissional";
+      const { data: rp, error: erp } = await admin.rpc("physiq_excluir_profissional", { p_user: treinoId, p_simular: simularProf });
+      if (erp) throw erp;
+      const resp = (rp ?? {}) as Record<string, unknown>;
+      if (resp.ok !== true) return jsonServidor(resp, resp.erro === "profissional" ? 403 : 409);
+      if (simularProf) return jsonServidor(resp);
+      // o login: "soft delete" do Auth, como o do aluno — a linha fica só como âncora do que ele montou para os alunos
+      if (resp.login_removido !== true) {
+        const authAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+        const { error: edp } = await authAdmin.auth.admin.deleteUser(treinoId, true);
+        if (edp) throw edp;
+      }
+      // o vínculo sai por último (se algo acima falhou, o pedido de novo ainda acha o profissional)
+      const { error: eip } = await admin.from("physiq_identidades").delete().eq("principal_user_id", principalId);
+      if (eip) throw eip;
+      await admin.from("physiq_identidade_conflitos").delete().eq("principal_user_id", principalId);
+      return jsonServidor({ ...resp, login: "removido" });
     }
 
     const simular = acao === "conferir";

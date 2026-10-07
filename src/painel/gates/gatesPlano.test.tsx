@@ -38,6 +38,19 @@ describe("GatePlano — conta nova: trava no dia seguinte ao vencimento (6.2)", 
     expect(screen.getByRole("button", { name: /Pagar agora/ })).toBeInTheDocument();
     expect(screen.getByText(/Seus alunos continuam usando o app/)).toBeInTheDocument();
   });
+  it("W2 da loja: Excluir minha conta abre com o painel travado — para o dono e para o membro — e a tela de plano vencido tem o atalho", () => {
+    h.conta = conta({ situacao: "teste", teste_ate: "2026-09-28" });
+    const r = montar(<GatePlano>{pagina}</GatePlano>, "/painel/configuracoes/excluir-conta");
+    expect(screen.getByText("página do painel")).toBeInTheDocument();
+    r.unmount();
+    h.ehDono = false;
+    h.conta = conta({ situacao: "suspensa", vence_em: "2027-01-01", papeis: ["personal"] });
+    const r2 = montar(<GatePlano>{pagina}</GatePlano>, "/painel/configuracoes/excluir-conta");
+    expect(screen.getByText("página do painel")).toBeInTheDocument();
+    r2.unmount();
+    montar(<GatePlano>{pagina}</GatePlano>, "/painel/alunos");
+    expect(screen.getByRole("button", { name: /Excluir minha conta/ })).toBeInTheDocument();
+  });
   it("teste acabado trava; o dono abre a aba Plano para pagar", () => {
     h.conta = conta({ situacao: "teste", teste_ate: "2026-09-28" });
     montar(<GatePlano>{pagina}</GatePlano>, "/painel/configuracoes/plano");

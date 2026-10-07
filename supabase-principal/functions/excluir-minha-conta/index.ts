@@ -17,12 +17,21 @@
 //   3. principal: excluir_dados_aluno (o que o aluno enviou + matrícula desligada) → arquivos do diário e a foto do Perfil;
 //   4. por último o login do principal (auth.admin.deleteUser) — a FK "on delete set null" desliga a matrícula.
 // Só age sobre o usuário do JWT (nenhum id vem do corpo).
+//
+// W2 da loja (Google Play) — o PROFISSIONAL (dono, membro de equipe, quem já foi membro) exclui a conta pelo painel › Configurações
+// e pela página /excluir-conta, SÓ no pedido do app novo: { fluxo: "profissional", simular: true } | { fluxo: "profissional",
+// confirmacao: "EXCLUIR" } → _shared/exclusao-profissional.ts (a ordem e as recusas em _shared/exclusao-profissional-regras.ts).
+// Sem o campo — o site de produção de hoje e todo APK antigo —, tudo abaixo segue IGUAL (403 "profissional" e o fluxo do aluno).
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions excluir-minha-conta true
-// Segredos: TREINO_URL, TREINO_ANON_KEY, ESPELHO_SEGREDO (+ os automáticos).
+// Segredos: TREINO_URL, TREINO_ANON_KEY, ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (o caminho novo cancela a
+// cobrança automática) (+ os automáticos).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import { STATUS_DA_RECUSA, confirmacaoValida } from "../_shared/conta-aluno-regras.ts";
 import { chamarTreino } from "../_shared/treino-servidor.ts";
+import { fluxoDoPedido } from "../_shared/exclusao-profissional-regras.ts";
+import { excluirContaProfissionalNaBorda } from "../_shared/exclusao-profissional.ts";
+import type { Schema } from "../_shared/cobranca-mp.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -42,6 +51,16 @@ const json = (body: unknown, status: number, origin: string | null) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...cors(origin) } });
 const recusa = (erro: string, origin: string | null, extra: Record<string, unknown> = {}) =>
   json({ ok: false, erro, ...extra }, STATUS_DA_RECUSA[erro] ?? 400, origin);
+
+/** O corpo JSON de um pedido (vazio se não for JSON) — W2 da loja: lido de req.clone() para escolher o caminho. */
+async function lerCorpo(r: Request): Promise<Record<string, unknown>> {
+  try {
+    const c = await r.json();
+    return c && typeof c === "object" && !Array.isArray(c) ? (c as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
 
 const janelas = new Map<string, number[]>();
 function permitido(chave: string, max = 10, janelaMs = 60 * 60_000): boolean {
@@ -72,6 +91,18 @@ Deno.serve(async (req) => {
   const user = ud.user;
   const email = String(user.email || "").trim().toLowerCase();
   if (schema === "staging" && !emailDeTeste(email)) return json({ ok: false, erro: "conta_real_no_staging" }, 403, origin);
+
+  // W2 da loja: só o pedido do app novo ({ fluxo: "profissional" }) entra no caminho do profissional (com o próprio limite de
+  // tentativas). A leitura é de uma CÓPIA do pedido — o corpo segue intacto para o caminho de hoje logo abaixo.
+  const pedido = await lerCorpo(req.clone());
+  if (fluxoDoPedido(pedido) === "profissional") {
+    if (!permitido(`profissional:${schema}:${user.id}`, 20)) return json({ ok: false, erro: "rate_limited" }, 429, origin);
+    const r = await excluirContaProfissionalNaBorda({
+      schema: schema as Schema, user, authAdmin, simular: pedido.simular === true, confirmacao: pedido.confirmacao,
+    });
+    return json(r.corpo, r.status, origin);
+  }
+
   if (!permitido(`${schema}:${user.id}`)) return json({ ok: false, erro: "rate_limited" }, 429, origin);
 
   let body: Record<string, unknown> = {};

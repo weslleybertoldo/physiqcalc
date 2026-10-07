@@ -1,4 +1,5 @@
-// Physiq W7 — conversa servidor → servidor com o Banco do Treino para "Exportar meus dados" e "Excluir minha conta".
+// Physiq W7 — conversa servidor → servidor com o Banco do Treino para "Exportar meus dados" e "Excluir minha conta" (W2 da loja: + as
+// ações da exclusão do profissional).
 // Chama a delete-my-account de lá em modo servidor (x-espelho-segredo, o segredo da W2). A delete-my-account tem verify_jwt =
 // true: vai o anon do Treino (TREINO_ANON_KEY, público — é o do APK) no Authorization só para passar pela borda do Supabase;
 // quem autoriza é o segredo. O id do aluno no Treino sai do vínculo physiq_identidades lá — daqui vai só o id do JWT.
@@ -18,7 +19,10 @@ export function treinoConfigurado(): boolean {
   return Boolean(TREINO_URL && TREINO_ANON_KEY && ESPELHO_SEGREDO.length >= 32);
 }
 
-export async function chamarTreino(schema: string, acao: "exportar" | "conferir" | "excluir", principalUserId: string): Promise<RespostaTreino> {
+/** W2 da loja: conferir_profissional / excluir_profissional = a exclusão do profissional (só o caminho novo da excluir-minha-conta). */
+export type AcaoTreino = "exportar" | "conferir" | "excluir" | "conferir_profissional" | "excluir_profissional";
+
+export async function chamarTreino(schema: string, acao: AcaoTreino, principalUserId: string): Promise<RespostaTreino> {
   if (!treinoConfigurado()) return { passo: "indisponivel", status: 0, corpo: { erro: "sem_configuracao" } };
   try {
     const r = await fetch(`${TREINO_URL}/functions/v1/delete-my-account`, {

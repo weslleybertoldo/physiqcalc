@@ -16,6 +16,7 @@
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { RELEASES_PAGE } from "@/lib/apkRelease";
+import { ROTA_EXCLUIR_CONTA, pedidoExclusaoPendente } from "@/lib/pedidoExclusao";
 
 /** Pacote do APK (o appId do capacitor.config.ts e o package_name do assetlinks.json). */
 export const PACOTE_APK = "com.bertoldo.physiqcalc";
@@ -119,9 +120,13 @@ export function esquecerDestino(): void {
   }
 }
 
-/** Para onde a entrada leva depois do login: a página que pediu o login; sem ela (ou só a raiz), o destino do link. */
+/**
+ * Para onde a entrada leva depois do login: a página que pediu o login; sem ela (ou só a raiz), o pedido de exclusão feito na página
+ * /excluir-conta (W2 da loja — a volta do Google perde o `state`) e, por último, o destino do link.
+ */
 export function destinoDaEntrada(de: string | null | undefined): string | null {
   if (de && de !== "/") return de;
+  if (pedidoExclusaoPendente()) return ROTA_EXCLUIR_CONTA;
   return destinoGuardado() ?? de ?? null;
 }
 

@@ -1,4 +1,4 @@
-import { Building2, Gem, Link2, Smartphone, User, Users, Wallet } from "lucide-react";
+import { Building2, Gem, Link2, Smartphone, Trash2, User, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ehLoja } from "@/lib/distribuicao";
 import { existe } from "@/rotas/registro";
@@ -23,6 +23,8 @@ export const ABAS_CONFIG: AbaConfig[] = [
   { id: "convite", arquivo: "Convite", rotulo: "Convite", icone: Link2, soDono: false },
   // W1 da loja: baixar e atualizar o APK (fora da loja) não existe na versão da Google Play — quem atualiza é a loja
   { id: "aplicativo", arquivo: "Aplicativo", rotulo: "Aplicativo", icone: Smartphone, soDono: false, soSite: true },
+  // W2 da loja: todo profissional exclui a própria conta (a Google Play exige) — dono e membro; vale também na versão da loja
+  { id: "excluir-conta", arquivo: "ExcluirConta", rotulo: "Excluir minha conta", icone: Trash2, soDono: false },
 ];
 
 /** nova = aba registrada (src/painel/configuracoes/<arquivo>.tsx) · null = escondida. W28: a Planos do Calc (fallback do Plano) saiu. */

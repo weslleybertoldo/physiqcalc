@@ -25,7 +25,7 @@ function Secao({ id, icone: Icone, titulo, children }: { id: string; icone: Luci
  * /privacidade e /termos (W26 — C13): a Política de Privacidade e os Termos de uso do Physiq, sem login, na marca Physiq (o mesmo texto
  * nas 2 rotas; /termos abre já na parte dos termos). Fica FORA das App Links do APK (como as outras públicas — H2). Substitui a
  * src/pages/PrivacidadePage.tsx antiga, com o texto atualizado ao app único (treino + alimentação, os 2 bancos, quem vê o quê,
- * Exportar/Excluir no Perfil).
+ * Exportar/Excluir no Perfil). W2 da loja: o parágrafo da Exclusão cobre o profissional e aponta a página /excluir-conta.
  */
 export default function Privacidade() {
   const { pathname } = useLocation();
@@ -89,7 +89,12 @@ export default function Privacidade() {
         <Secao id="direitos" icone={ShieldCheck} titulo="Seus direitos (LGPD, art. 18)">
           <ul className="space-y-1">
             <li><strong>Acesso e portabilidade</strong>: no app, Perfil › Exportar meus dados baixa os seus dados em JSON.</li>
-            <li><strong>Exclusão</strong>: Perfil › Excluir minha conta apaga o seu login nos dois bancos, os seus dados de treino e o que você enviou pelo app (fotos do diário, marcações, foto do perfil). O que o profissional registrou no atendimento (avaliações, planos, prontuário, cobranças e recibos) fica com ele, desligado do seu login. Operação irreversível.</li>
+            <li>
+              <strong>Exclusão</strong>: pelo app ou pela página{" "}
+              <Link to="/excluir-conta" className="font-semibold text-violeta-3 underline-offset-2 hover:underline" data-link-excluir-conta>Excluir conta</Link>.
+              Aluno: Perfil › Excluir minha conta apaga o seu login nos dois bancos, os seus dados de treino e o que você enviou pelo app (fotos do diário, marcações, foto do perfil); o que o profissional registrou no atendimento (avaliações, planos, prontuário, cobranças e recibos) fica com ele, desligado do seu login.
+              Profissional: Configurações › Excluir minha conta apaga o login e os dados do perfil e encerra a conta (a equipe perde o acesso e a cobrança automática do plano é cancelada); antes, ele baixa os prontuários, e o histórico de cada aluno fica guardado na matrícula dele (Res. CFN 594/2017 e Lei 13.787/2018). Operação irreversível.
+            </li>
             <li><strong>Correção</strong>: edite o seu perfil no app ou peça ao seu profissional.</li>
             <li><strong>Reclamação</strong>: você pode procurar a ANPD (gov.br/anpd).</li>
           </ul>

@@ -9,7 +9,24 @@ import { lembrarArea } from "@/ui/casca/area";
 import { Botao } from "@/ui/premium/Botao";
 import { Esqueleto } from "@/ui/premium/Estados";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
-import { ErroPerfil, PALAVRA_CONFIRMACAO, conferirExclusao, excluirMinhaConta, mensagemErroConta, type ResultadoExclusao } from "./api";
+import { ErroExclusao, conferirExclusaoProfissional, type Conferencia } from "@/painel/configuracoes/excluirConta/api";
+import { FluxoExclusao } from "@/painel/configuracoes/excluirConta/FluxoExclusao";
+import {
+  ErroPerfil, MENSAGEM_ERRO_CONTA, PALAVRA_CONFIRMACAO, conferirExclusao, excluirMinhaConta, mensagemErroConta, type ResultadoExclusao,
+} from "./api";
+
+/**
+ * W2 da loja: quem é (ou já foi) profissional exclui pelo caminho do profissional — o caminho novo da borda responde
+ * "nao_profissional" para quem é só aluno (aí segue o de sempre). Falha de rede/servidor nesse passo = o de sempre também.
+ */
+async function caminhoDoProfissional(): Promise<{ conferencia: Conferencia | null; master: boolean }> {
+  try {
+    return { conferencia: await conferirExclusaoProfissional(), master: false };
+  } catch (e) {
+    if (e instanceof ErroExclusao && e.codigo === "profissional") return { conferencia: null, master: true };
+    return { conferencia: null, master: false };
+  }
+}
 
 const soma = (o: Record<string, number> | null | undefined, chaves: string[]) => chaves.reduce((t, k) => t + (Number(o?.[k]) || 0), 0);
 
@@ -44,14 +61,17 @@ function resumoDaExclusao(r: ResultadoExclusao): { apaga: string[]; fica: string
 
 /**
  * Perfil › Excluir minha conta (falha F4 — C88, R11, P19): confere antes (nada muda) e mostra o que sai e o que fica com o
- * profissional; exclui só com a palavra digitada. Profissional (dono, membro de equipe, master) não exclui por aqui — a
- * conta sustenta alunos e equipe (mensagem apontando o painel). Cobrança automática ligada: cancelar em Pagamentos antes.
+ * profissional; exclui só com a palavra digitada. Cobrança automática ligada: cancelar em Pagamentos antes.
+ * W2 da loja: o profissional (dono, membro de equipe) exclui no painel › Configurações › Excluir minha conta — a folha aponta o
+ * caminho (antes dizia que não dava); quem já foi membro de equipe (sem painel) exclui aqui mesmo, pelo fluxo do profissional; o
+ * master continua recusado (fale com o suporte).
  */
 export function SheetExcluir({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v: boolean) => void }) {
   const navigate = useNavigate();
   const { sair } = useSessao();
   const [conferencia, setConferencia] = useState<ResultadoExclusao | null>(null);
-  const [recusa, setRecusa] = useState<{ codigo: string; texto: string } | null>(null);
+  const [recusa, setRecusa] = useState<{ codigo: string; texto: string; motivo: string } | null>(null);
+  const [profissional, setProfissional] = useState<Conferencia | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState("");
@@ -62,19 +82,42 @@ export function SheetExcluir({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v
     let vivo = true;
     setConferencia(null);
     setRecusa(null);
+    setProfissional(null);
     setTexto("");
     setErro("");
     setCarregando(true);
-    conferirExclusao()
-      .then((r) => vivo && setConferencia(r))
-      .catch((e) => vivo && setRecusa({ codigo: e instanceof ErroPerfil ? e.codigo : "erro_interno", texto: mensagemErroConta(e) }))
-      .finally(() => vivo && setCarregando(false));
+    void (async () => {
+      const prof = await caminhoDoProfissional();
+      if (!vivo) return;
+      if (prof.master) {
+        setRecusa({ codigo: "profissional", texto: "", motivo: "master" });
+        return setCarregando(false);
+      }
+      if (prof.conferencia) {
+        setProfissional(prof.conferencia);
+        return setCarregando(false);
+      }
+      try {
+        const r = await conferirExclusao();
+        if (vivo) setConferencia(r);
+      } catch (e) {
+        if (vivo) setRecusa({ codigo: e instanceof ErroPerfil ? e.codigo : "erro_interno", texto: mensagemErroConta(e),
+          motivo: e instanceof ErroPerfil ? String(e.extra?.motivo ?? "") : "" });
+      } finally {
+        if (vivo) setCarregando(false);
+      }
+    })();
     return () => {
       vivo = false;
     };
   }, [aberto]);
 
   const confere = texto.trim().toUpperCase() === PALAVRA_CONFIRMACAO;
+  const irParaOPainel = () => {
+    lembrarArea("painel");
+    aoMudar(false);
+    navigate("/painel/configuracoes/excluir-conta");
+  };
 
   const excluir = async () => {
     if (!confere) return setErro(`Digite ${PALAVRA_CONFIRMACAO} para confirmar.`);
@@ -96,26 +139,38 @@ export function SheetExcluir({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v
 
   return (
     <PainelDeslizante aberto={aberto} aoMudar={(v) => !excluindo && aoMudar(v)} titulo="Excluir minha conta">
-      <div className="flex flex-col gap-4 pt-1" data-sheet-excluir data-estado-excluir={carregando ? "conferindo" : recusa ? `recusa-${recusa.codigo}` : "pronto"}>
+      <div className="flex flex-col gap-4 pt-1" data-sheet-excluir
+        data-estado-excluir={carregando ? "conferindo" : recusa ? `recusa-${recusa.codigo}` : profissional ? `profissional-${profissional.perfil}` : "pronto"}>
         {carregando ? (
           <div className="flex flex-col gap-2" aria-busy="true" aria-label="Conferindo">
             <Esqueleto className="h-4 w-3/4" />
             <Esqueleto className="h-4 w-2/3" />
             <Esqueleto className="h-4 w-1/2" />
           </div>
+        ) : profissional && profissional.perfil !== "ex_profissional" ? (
+          <div className="flex flex-col gap-3" data-excluir-recusa="profissional" data-excluir-perfil={profissional.perfil}>
+            <p className="flex items-start gap-2 text-[13.5px] leading-relaxed text-texto">
+              <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />
+              <span>{MENSAGEM_ERRO_CONTA.profissional}</span>
+            </p>
+            <Botao icone={LayoutDashboard} onClick={irParaOPainel} data-excluir-painel>Excluir no painel</Botao>
+          </div>
+        ) : profissional ? (
+          // quem já foi membro de equipe (sem painel): o fluxo do profissional aqui mesmo (o que ele registrou fica com a conta)
+          <div data-excluir-fluxo-profissional><FluxoExclusao conferenciaInicial={profissional} /></div>
         ) : recusa ? (
           <div className="flex flex-col gap-3" data-excluir-recusa={recusa.codigo}>
             <p className="flex items-start gap-2 text-[13.5px] leading-relaxed text-texto">
               <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />
-              <span>{recusa.texto}{recusa.codigo === "profissional" && (
-                <> A sua conta sustenta os seus alunos e a sua equipe: para excluí-la, fale com o suporte do Physiq em{" "}
-                  <a href={linkDoSuporte("Excluir minha conta")} className="font-semibold text-violeta-3 underline-offset-2 hover:underline" data-excluir-suporte={CONTATO_SUPORTE}>{CONTATO_SUPORTE}</a>.</>
-              )}</span>
+              {recusa.codigo === "profissional" && recusa.motivo === "master" ? (
+                <span>Contas master não são excluídas pelo app: fale com o suporte do Physiq em{" "}
+                  <a href={linkDoSuporte("Excluir minha conta")} className="font-semibold text-violeta-3 underline-offset-2 hover:underline" data-excluir-suporte={CONTATO_SUPORTE}>{CONTATO_SUPORTE}</a>.</span>
+              ) : (
+                <span>{recusa.texto}</span>
+              )}
             </p>
-            {recusa.codigo === "profissional" && (
-              <Botao icone={LayoutDashboard} onClick={() => { lembrarArea("painel"); aoMudar(false); navigate("/painel"); }} data-excluir-painel>
-                Ir para o painel
-              </Botao>
+            {recusa.codigo === "profissional" && recusa.motivo !== "master" && (
+              <Botao icone={LayoutDashboard} onClick={irParaOPainel} data-excluir-painel>Excluir no painel</Botao>
             )}
             {recusa.codigo === "assinatura_ativa" && (
               <Botao icone={Wallet} onClick={() => { aoMudar(false); navigate("/perfil/pagamentos"); }} data-excluir-pagamentos>
