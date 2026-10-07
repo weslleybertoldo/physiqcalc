@@ -50,10 +50,11 @@ O app instalado pela loja é assinado pelo Google com a chave de assinatura **de
 
 - **Quem tem o APK do site desinstala antes de instalar pela loja**: as assinaturas são diferentes e o Android não deixa um
   instalar por cima do outro.
-- **assetlinks (W5):** o `public/.well-known/assetlinks.json` tem o SHA-256 do site e o da chave de upload. Depois de criar o
-  app, copie o SHA-256 do certificado da chave de assinatura do app (Play Console › Integridade do app › Assinatura de apps)
-  para o mesmo `sha256_cert_fingerprints`, sem tirar os outros. Sem ele, os links `https://physiqcalc.com.br/…` não abrem o
-  app instalado pela loja.
+- **assetlinks (W5):** o `public/.well-known/assetlinks.json` tem o SHA-256 do site, o da chave de upload e o da chave de
+  assinatura do app no Google, `9D:E1:9B:D4:45:6C:33:A6:43:D9:10:F4:0D:99:13:6D:34:6C:9E:92:95:9F:F3:9A:6E:4C:07:F5:04:D9:2C:76`
+  (Play Console › Protegido com o Google Play › Assinatura de apps; app criado em 07/10/2026). Sem ele, os links
+  `https://physiqcalc.com.br/…` não abrem o app instalado pela loja. Trocou a chave de assinatura no Console → somar a nova
+  aqui, sem tirar as outras.
 
 ## versionCode
 

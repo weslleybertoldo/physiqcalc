@@ -89,13 +89,15 @@ describe("W4 da loja — o AAB da Google Play (chave de upload)", () => {
     expect(gradle).toMatch(/release \{\s*def keystoreFile = System\.getenv\("KEYSTORE_FILE"\)/);
   });
 
-  it("a conferência espera a impressão digital da chave de upload — a mesma do assetlinks.json, ao lado da do site", () => {
+  it("a conferência espera a impressão digital da chave de upload — a mesma do assetlinks.json, ao lado da do site e da do Google", () => {
     const upload = impressao("SHA256_UPLOAD");
     const site = impressao("SHA256_SITE");
-    for (const sha of [upload, site]) expect(sha).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
-    expect(upload).not.toBe(site);
+    // W5: a chave de assinatura do app no Google (Play App Signing) — é ela que assina o app instalado pela loja
+    const google = "9D:E1:9B:D4:45:6C:33:A6:43:D9:10:F4:0D:99:13:6D:34:6C:9E:92:95:9F:F3:9A:6E:4C:07:F5:04:D9:2C:76";
+    for (const sha of [upload, site, google]) expect(sha).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+    expect(new Set([upload, site, google]).size).toBe(3);
     const assetlinks = JSON.parse(ler("public/.well-known/assetlinks.json"));
-    expect(assetlinks[0].target.sha256_cert_fingerprints).toEqual([site, upload]);
+    expect(assetlinks[0].target.sha256_cert_fingerprints).toEqual([site, upload, google]);
   });
 
   it("os 2 workflows geram o AAB pelo mesmo script, em paralelo ao APK e fora da release", () => {
