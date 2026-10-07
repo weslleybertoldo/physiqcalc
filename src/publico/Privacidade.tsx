@@ -1,11 +1,15 @@
 import { useEffect, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft, Database, FileCheck2, Lock, Scale, ShieldCheck, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Database, FileCheck2, Lock, Network, Scale, ShieldCheck, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import { ehLoja } from "@/lib/distribuicao";
 import { CONTATO_SUPORTE } from "@/nucleo/suporte";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
+import { FRASE_BACKUPS, abertaPeloApp, servicosDaVersao } from "./privacidade/textos";
 
-const ATUALIZADA_EM = "2 de outubro de 2026";
+const ATUALIZADA_EM = "6 de outubro de 2026";
+
+const CLASSE_VOLTAR = "inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-texto-3 transition-colors hover:text-texto-2";
 
 function Secao({ id, icone: Icone, titulo, children }: { id: string; icone: LucideIcon; titulo: string; children: ReactNode }) {
   return (
@@ -26,18 +30,29 @@ function Secao({ id, icone: Icone, titulo, children }: { id: string; icone: Luci
  * nas 2 rotas; /termos abre já na parte dos termos). Fica FORA das App Links do APK (como as outras públicas — H2). Substitui a
  * src/pages/PrivacidadePage.tsx antiga, com o texto atualizado ao app único (treino + alimentação, os 2 bancos, quem vê o quê,
  * Exportar/Excluir no Perfil). W2 da loja: o parágrafo da Exclusão cobre o profissional e aponta a página /excluir-conta.
+ * W3 da loja: os serviços de terceiros que recebem dado pessoal (conferidos no código — src/publico/privacidade/textos.ts; o GitHub
+ * só fora da versão da Google Play), os dados de saúde, a frase dos backups sem prazo (a mesma da /excluir-conta) e o "Voltar" que
+ * volta para o app quando a página foi aberta pelo Perfil ou pelas Configurações.
  */
 export default function Privacidade() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  const navigate = useNavigate();
   const termos = pathname.startsWith("/termos");
+  const doApp = abertaPeloApp(state);
   useEffect(() => {
     if (termos) document.getElementById("termos")?.scrollIntoView({ block: "start" });
   }, [termos]);
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-6 pt-5 sm:px-8" data-pagina-privacidade data-rota={termos ? "termos" : "privacidade"}>
-      <Link to="/" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-texto-3 transition-colors hover:text-texto-2" data-voltar>
-        <ArrowLeft aria-hidden className="h-4 w-4" /> Voltar
-      </Link>
+      {doApp ? (
+        <button type="button" onClick={() => navigate(-1)} className={CLASSE_VOLTAR} data-voltar="app">
+          <ArrowLeft aria-hidden className="h-4 w-4" /> Voltar
+        </button>
+      ) : (
+        <Link to="/" className={CLASSE_VOLTAR} data-voltar>
+          <ArrowLeft aria-hidden className="h-4 w-4" /> Voltar
+        </Link>
+      )}
       <header className="mb-4 mt-3">
         <div className="flex flex-wrap items-center gap-2">
           <Chip tom="t">PRIVACIDADE</Chip>
@@ -58,19 +73,25 @@ export default function Privacidade() {
         <Secao id="dados" icone={Database} titulo="Dados coletados">
           <ul className="space-y-1">
             <li><strong>Conta</strong>: nome, e-mail e foto (do Google, quando você entra com ele) ou e-mail e senha.</li>
-            <li><strong>Perfil e avaliações</strong>: dados que você ou o seu profissional inserirem (peso, altura, idade, sexo, dobras, medidas, fotos de avaliação, objetivo).</li>
+            <li><strong>Cadastro, perfil e avaliações</strong>: dados que você ou o seu profissional inserirem (telefone, CPF, data de nascimento, sexo, peso, altura, dobras, medidas, fotos de avaliação, objetivo).</li>
             <li><strong>Treino</strong>: séries, exercícios, cargas, repetições, datas e comentários.</li>
             <li><strong>Alimentação</strong>: plano alimentar, refeições marcadas, metas, fotos do diário alimentar e o que o seu nutricionista registrar (anamnese, antropometria, prontuário).</li>
             <li><strong>Agenda e pagamentos</strong>: consultas, mensalidades, comprovantes de Pix e recibos (pagamentos com cartão passam pelo Mercado Pago).</li>
-            <li><strong>Técnicos</strong>: identificador do usuário, datas e registros mínimos de erro para correção.</li>
+            <li><strong>Profissional</strong>: registro no conselho (CRN, CREF), WhatsApp, endereço, carimbo e a chave Pix de recebimento.</li>
+            <li><strong>Técnicos</strong>: identificador do usuário, datas, registros mínimos de erro para correção, o código do aparelho para as notificações e, no login com senha, um código embaralhado do endereço IP para limitar as tentativas.</li>
           </ul>
         </Secao>
 
         <Secao id="uso" icone={FileCheck2} titulo="Como usamos">
           <p>
-            Os dados são usados só para: (a) autenticar você; (b) calcular métricas (TMB, % de gordura, macros, adesão); (c) mostrar ao seu profissional
-            o que ele acompanha; (d) sincronizar o seu histórico entre aparelhos. Não há venda de dados, anúncios, analytics de terceiros (Google Analytics,
-            Facebook Pixel) nem cookies de rastreamento.
+            Os dados são usados só para: (a) autenticar você e proteger o login (captcha e limite de tentativas); (b) calcular métricas (TMB, % de
+            gordura, macros, adesão); (c) mostrar ao seu profissional o que ele acompanha; (d) sincronizar o seu histórico entre aparelhos; (e) mandar
+            os avisos que você ou o seu profissional pedirem (notificações, e-mails e mensagens de WhatsApp); (f) processar os pagamentos. Não há venda
+            de dados, anúncios, analytics de terceiros (Google Analytics, Facebook Pixel) nem cookies de rastreamento.
+          </p>
+          <p data-dados-saude>
+            Peso, medidas, avaliações, alimentação, anamnese e prontuário são dados de saúde — dados pessoais sensíveis (LGPD, art. 11). Eles servem
+            só ao acompanhamento com o seu profissional e às funções do app que você usa, nunca a publicidade.
           </p>
         </Secao>
 
@@ -83,6 +104,22 @@ export default function Privacidade() {
           <p>
             Você vê os seus dados. O seu personal vê o treino e as avaliações; o seu nutricionista vê a alimentação e o prontuário. As anotações
             clínicas ficam só com o nutricionista. O dono da conta do profissional vê os alunos da conta.
+          </p>
+        </Secao>
+
+        <Secao id="terceiros" icone={Network} titulo="Serviços de terceiros">
+          <p>
+            Para funcionar, o Physiq usa os serviços abaixo. Cada um recebe só o que precisa para fazer a sua parte, sempre por conexão criptografada
+            (HTTPS). Alguns ficam fora do Brasil, principalmente nos Estados Unidos.
+          </p>
+          <ul className="space-y-1" data-servicos-terceiros>
+            {servicosDaVersao(ehLoja).map((s) => (
+              <li key={s.id} data-servico={s.id}><strong>{s.nome}</strong>: {s.texto}</li>
+            ))}
+          </ul>
+          <p>
+            Quem instala pela Google Play: a instalação e as atualizações do app são feitas pela loja, segundo a política de privacidade do Google. O
+            login com o Google, o WhatsApp e o Mercado Pago também seguem as políticas de privacidade deles.
           </p>
         </Secao>
 
@@ -103,13 +140,14 @@ export default function Privacidade() {
         <Secao id="retencao" icone={Trash2} titulo="Retenção">
           <p>
             Séries de treino com mais de 12 meses saem do aparelho automaticamente. O que o profissional exclui fica 30 dias na lixeira e depois é
-            apagado de vez. Backups operacionais do Supabase podem guardar cópias por até 7 dias.
+            apagado de vez. <span data-frase-backups>{FRASE_BACKUPS}</span>
           </p>
         </Secao>
 
         <Secao id="termos" icone={Scale} titulo="Termos de uso">
           <p>
-            O Physiq é fornecido "como está", sem garantia médica. Os cálculos são estimativas baseadas em fórmulas reconhecidas (Mifflin-St Jeor,
+            O Physiq é fornecido "como está", sem garantia médica: ele não é um dispositivo médico e não diagnostica, não trata nem substitui o
+            acompanhamento de um profissional de saúde. Os cálculos são estimativas baseadas em fórmulas reconhecidas (Mifflin-St Jeor,
             Katch-McArdle, Jackson & Pollock) e <strong>não substituem a avaliação de um profissional</strong>. Consulte nutricionista e médico antes de
             começar uma dieta ou um treino. O profissional é responsável pelo que prescreve aos seus alunos.
           </p>

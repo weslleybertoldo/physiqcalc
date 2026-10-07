@@ -5,6 +5,7 @@ import { conta, situacao } from "@/test/fixturesNucleo";
 import { ROTA_EXCLUIR_CONTA, guardarPedidoExclusao, pedidoExclusaoPendente } from "@/lib/pedidoExclusao";
 import { CONTATO_SUPORTE, linkDoSuporte } from "@/nucleo/suporte";
 import type { Situacao } from "@/nucleo/situacao";
+import { FRASE_BACKUPS } from "./privacidade/textos";
 
 // W2 da loja — /excluir-conta (a URL do formulário "Segurança dos dados" da Google Play): sem login explica o caminho no app e no site
 // e o que é apagado/guardado; "Entrar para excluir" → login → a tela de exclusão certa; depois de excluir, o resumo.
@@ -61,6 +62,11 @@ describe("/excluir-conta — sem login", () => {
     const suporte = screen.getByRole("link", { name: CONTATO_SUPORTE });
     expect(suporte.getAttribute("href")).toBe(linkDoSuporte("Excluir minha conta"));
   });
+  it("W3 da loja: as cópias de segurança com a MESMA frase da política, sem o 'até 7 dias'", () => {
+    const { container } = abrir();
+    expect(container.querySelector("[data-secao-excluir='guardado'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
+    expect(container.textContent).not.toMatch(/até 7 dias/);
+  });
   it("'Entrar para excluir' guarda o pedido e leva ao login voltando para esta página", () => {
     abrir();
     fireEvent.click(screen.getByRole("button", { name: /Entrar para excluir/ }));
@@ -72,6 +78,7 @@ describe("/excluir-conta — sem login", () => {
     const { container } = abrir();
     expect(container.textContent).not.toMatch(/R\$|grátis|Mercado Pago|pague|assine|Pix/i);
     expect(screen.getByText(/os alunos com login continuam usando o app, sem profissional/)).toBeInTheDocument();
+    expect(container.querySelector("[data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
   });
 });
 

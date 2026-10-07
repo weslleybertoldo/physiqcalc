@@ -1,17 +1,35 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// W3 da loja: a política muda com a versão do build (o GitHub só fora da Google Play)
+const h = vi.hoisted(() => ({ loja: false }));
+vi.mock("@/lib/distribuicao", () => ({
+  get ehLoja() {
+    return h.loja;
+  },
+  get DISTRIBUICAO() {
+    return h.loja ? "play" : "site";
+  },
+}));
+
 import Calculadora from "./Calculadora";
 import Privacidade from "./Privacidade";
+import { ESTADO_ABERTA_PELO_APP, FRASE_BACKUPS, SERVICOS_TERCEIROS, servicosDaVersao } from "./privacidade/textos";
 
 // Physiq W26 — as páginas públicas novas (C13, C63): /privacidade = /termos e /calculator, sem login, na marca Physiq.
 const abrir = (no: React.ReactNode, caminho: string) => render(<MemoryRouter initialEntries={[caminho]}>{no}</MemoryRouter>);
+const servicosNaTela = () => [...document.querySelectorAll("[data-servico]")].map((s) => s.getAttribute("data-servico"));
+
+beforeEach(() => {
+  h.loja = false;
+});
 
 describe("/privacidade e /termos (C13)", () => {
-  it("política e termos do Physiq: as 7 seções, LGPD com Exportar/Excluir no Perfil e os 2 bancos", () => {
+  it("política e termos do Physiq: as 8 seções, LGPD com Exportar/Excluir no Perfil e os 2 bancos", () => {
     abrir(<Privacidade />, "/privacidade");
     const secoes = [...document.querySelectorAll("[data-secao-privacidade]")].map((s) => s.getAttribute("data-secao-privacidade"));
-    expect(secoes).toEqual(["quem-somos", "dados", "uso", "armazenamento", "direitos", "retencao", "termos"]);
+    expect(secoes).toEqual(["quem-somos", "dados", "uso", "armazenamento", "terceiros", "direitos", "retencao", "termos"]);
     expect(screen.getByText("Política de Privacidade e Termos")).toBeInTheDocument();
     expect(document.body.textContent).toContain("Perfil › Exportar meus dados");
     expect(document.body.textContent).toContain("Perfil › Excluir minha conta");
@@ -26,6 +44,58 @@ describe("/privacidade e /termos (C13)", () => {
     abrir(<Privacidade />, "/termos");
     expect(document.querySelector("[data-pagina-privacidade]")?.getAttribute("data-rota")).toBe("termos");
     expect(rolar).toHaveBeenCalled();
+  });
+});
+
+describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)", () => {
+  it("a data nova e os 9 serviços conferidos no código, cada um com o que recebe", () => {
+    abrir(<Privacidade />, "/privacidade");
+    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 6 de outubro de 2026");
+    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "github"]);
+    const t = document.querySelector("[data-servicos-terceiros]")?.textContent ?? "";
+    for (const nome of ["Supabase", "PowerSync", "Cloudflare", "Vercel", "Google", "Resend", "Mercado Pago", "WhatsApp", "GitHub"]) expect(t).toContain(nome);
+    expect(t).toContain("Firebase Cloud Messaging");
+    expect(t).toContain("Turnstile");
+    expect(t).toMatch(/número do cartão é digitado no formulário do próprio Mercado Pago/);
+    expect(t).toMatch(/sem empresa intermediária/);
+    // o Play Billing ainda não existe (W6): nada de citá-lo
+    expect(document.body.textContent).not.toMatch(/Billing|faturamento do Google/i);
+    expect(document.body.textContent).toMatch(/Quem instala pela Google Play/);
+  });
+
+  it("os dados de saúde (LGPD art. 11), o aviso de não ser dispositivo médico e a frase dos backups SEM prazo", () => {
+    abrir(<Privacidade />, "/privacidade");
+    expect(document.querySelector("[data-dados-saude]")?.textContent).toMatch(/dados pessoais sensíveis \(LGPD, art\. 11\)/);
+    expect(document.body.textContent).toMatch(/não é um dispositivo médico e não diagnostica, não trata nem substitui o\s+acompanhamento de um profissional de saúde/);
+    expect(document.querySelector("[data-secao-privacidade='retencao'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
+    expect(document.body.textContent).not.toMatch(/7 dias/);
+    expect(FRASE_BACKUPS).not.toMatch(/\d/);
+  });
+
+  it("versão da Google Play: o GitHub (instalador e atualização do APK do site) não aparece; o resto é igual", () => {
+    h.loja = true;
+    abrir(<Privacidade />, "/privacidade");
+    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp"]);
+    expect(document.body.textContent).not.toMatch(/GitHub|instalador/);
+    expect(servicosDaVersao(true)).toHaveLength(SERVICOS_TERCEIROS.length - 1);
+  });
+
+  it("aberta por um link do app: o Voltar volta para a tela de onde veio; sem ele, vai para o início", () => {
+    render(
+      <MemoryRouter initialEntries={["/perfil", { pathname: "/privacidade", state: ESTADO_ABERTA_PELO_APP }]} initialIndex={1}>
+        <Routes>
+          <Route path="/privacidade" element={<Privacidade />} />
+          <Route path="/perfil" element={<div data-tela-perfil>perfil</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Voltar/ }));
+    expect(document.querySelector("[data-tela-perfil]")).not.toBeNull();
+  });
+
+  it("aberta direto (sem o state do app): o Voltar é o link para o início, como antes", () => {
+    abrir(<Privacidade />, "/privacidade");
+    expect(screen.getByRole("link", { name: /Voltar/ }).getAttribute("href")).toBe("/");
   });
 });
 
