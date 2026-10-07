@@ -28,6 +28,18 @@ android {
                 keyPassword System.getenv("KEY_PASSWORD")
             }
         }
+        // W4 da loja: a chave de UPLOAD da Google Play (PKCS12, alias "upload") — só o playRelease usa. Vem das variáveis
+        // PLAY_UPLOAD_* (no CI, dos segredos de mesmo nome; no notebook, do ~/keystores/physiq-play-upload.env). O Google assina
+        // o app instalado pela loja com a chave de assinatura DELE (Play App Signing — W5); a chave do APK do site nunca vai à loja.
+        loja {
+            def lojaKeystoreFile = System.getenv("PLAY_UPLOAD_KEYSTORE_FILE")
+            if (lojaKeystoreFile) {
+                storeFile file(lojaKeystoreFile)
+                storePassword System.getenv("PLAY_UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("PLAY_UPLOAD_KEY_ALIAS")
+                keyPassword System.getenv("PLAY_UPLOAD_KEY_PASSWORD")
+            }
+        }
     }
     buildTypes {
         release {
@@ -39,16 +51,20 @@ android {
                 signingConfig signingConfigs.release
             }
         }
-        // W1 da loja (Google Play): igual ao release (minify, shrink e a mesma assinatura pelas variáveis de ambiente), mas o
-        // manifesto de src/playRelease/ tira a permissão REQUEST_INSTALL_PACKAGES e o MainActivity não registra o
-        // ApkInstallerPlugin (BuildConfig.LOJA) — a loja proíbe app que se atualiza por fora dela. Web: npm run build:loja.
+        // W1 da loja (Google Play): igual ao release (minify e shrink), mas o manifesto de src/playRelease/ tira a permissão
+        // REQUEST_INSTALL_PACKAGES e o MainActivity não registra o ApkInstallerPlugin (BuildConfig.LOJA) — a loja proíbe app que
+        // se atualiza por fora dela. Web: npm run build:loja. AAB: scripts/ci/aab-loja.sh (CI e npm run build:aab).
+        // W4 da loja: assina SÓ com a chave de upload (signingConfigs.loja). O initWith copia o signingConfig do release (a chave
+        // do APK do site, quando KEYSTORE_FILE existe): zerado aqui de propósito — sem PLAY_UPLOAD_KEYSTORE_FILE o playRelease
+        // sai SEM assinatura (a conferência do CI recusa), nunca com a chave do site.
         playRelease {
             initWith release
             matchingFallbacks = ['release']
             buildConfigField "boolean", "LOJA", "true"
-            def keystoreFile = System.getenv("KEYSTORE_FILE")
-            if (keystoreFile) {
-                signingConfig signingConfigs.release
+            signingConfig = null
+            def lojaKeystoreFile = System.getenv("PLAY_UPLOAD_KEYSTORE_FILE")
+            if (lojaKeystoreFile) {
+                signingConfig = signingConfigs.loja
             }
         }
     }
