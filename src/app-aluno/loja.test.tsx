@@ -160,6 +160,17 @@ describe("atualizador do APK — W1 da loja", () => {
     expect(screen.getByRole("button", { name: /Sair/ })).toBeInTheDocument();
   });
 
+  it("W3: rodapé do Perfil com 'Política de privacidade' e 'Termos de uso' — na loja, no APK do site e no site", async () => {
+    for (const [loja, nativo] of [[true, true], [false, true], [false, false]] as const) {
+      h.loja = loja;
+      h.nativo = nativo;
+      const r = montar(<RodapePerfil />, "/perfil");
+      expect(screen.getByRole("link", { name: "Política de privacidade" }).getAttribute("href")).toBe("/privacidade");
+      expect(screen.getByRole("link", { name: "Termos de uso" }).getAttribute("href")).toBe("/termos");
+      r.unmount();
+    }
+  });
+
   it("rodapé do Perfil: no APK do site, 'Atualizar para 3.99' (igual a hoje); no site, 'Instalar'", async () => {
     const r = montar(<RodapePerfil />, "/perfil");
     expect(await screen.findByText(/Atualizar para 3\.99/)).toBeInTheDocument();

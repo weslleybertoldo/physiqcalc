@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -226,5 +226,25 @@ describe("módulo fora do plano e a aba Aplicativo — W1 da loja", () => {
     h.loja = false;
     montar(rotas, "/painel/configuracoes/perfil");
     expect(document.querySelector('[data-aba-config="aplicativo"]')).not.toBeNull();
+  });
+
+  it("W3: o rodapé das Configurações tem 'Política de privacidade' e 'Termos de uso' — na loja e no site, para dono e membro", async () => {
+    const rotas = (
+      <Routes>
+        <Route path="/painel/configuracoes" element={<ConfiguracoesLayout />}>
+          <Route path=":aba" element={<AbaConfiguracoes />} />
+        </Route>
+      </Routes>
+    );
+    for (const [loja, dono, aba] of [[true, true, "perfil"], [false, true, "conta"], [true, false, "excluir-conta"]] as const) {
+      h.loja = loja;
+      h.ehDono = dono;
+      const r = montar(rotas, `/painel/configuracoes/${aba}`);
+      const rodape = document.querySelector("[data-config-rodape]") as HTMLElement;
+      expect(rodape).not.toBeNull();
+      expect(within(rodape).getByRole("link", { name: "Política de privacidade" }).getAttribute("href")).toBe("/privacidade");
+      expect(within(rodape).getByRole("link", { name: "Termos de uso" }).getAttribute("href")).toBe("/termos");
+      r.unmount();
+    }
   });
 });

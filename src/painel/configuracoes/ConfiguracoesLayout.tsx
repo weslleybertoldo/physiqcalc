@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { LinksPrivacidade } from "@/publico/privacidade/LinksPrivacidade";
 import { tela } from "@/rotas/registro";
 import { Carregavel } from "@/ui/casca/Carregavel";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
@@ -10,7 +11,8 @@ import { ABAS_CONFIG, estadoDaAbaConfig } from "./catalogoAbas";
  * Configurações do profissional (spec 4.6): Perfil · Conta · Equipe · Plano · Recebimento · Convite ·
  * Aplicativo · Excluir minha conta (W2 da loja). A aba é `src/painel/configuracoes/<arquivo>.tsx`; sem ela, a aba some. Conta, Equipe, Plano
  * e Recebimento são do dono. A Configurações antiga (`?s=`) saiu na W6: o link antigo cai na aba nova; a
- * Planos do Calc (o fallback do Plano) saiu na W28.
+ * Planos do Calc (o fallback do Plano) saiu na W28. W3 da loja: no rodapé, "Política de privacidade · Termos de uso" (as páginas
+ * públicas, com o Voltar que volta para a aba aberta).
  */
 export default function ConfiguracoesLayout() {
   const dados = useDadosCasca();
@@ -55,6 +57,10 @@ export default function ConfiguracoesLayout() {
       <div className="mt-5 min-w-0">
         <Outlet />
       </div>
+      {/* W3 da loja: a política e os termos à mão em todas as abas (dono e membro; também com o painel travado na aba Excluir) */}
+      <footer className="mt-8 border-t border-linha pt-2" data-config-rodape>
+        <LinksPrivacidade />
+      </footer>
     </div>
   );
 }

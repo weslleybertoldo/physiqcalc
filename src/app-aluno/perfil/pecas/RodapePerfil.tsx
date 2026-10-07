@@ -10,6 +10,7 @@ import { ehLoja } from "@/lib/distribuicao";
 import { instrucaoCurta } from "@/lib/instalacaoManual";
 import { useSessao } from "@/nucleo/sessao";
 import { versaoMaisNova } from "@/painel/configuracoes/pecas/regras";
+import { LinksPrivacidade } from "@/publico/privacidade/LinksPrivacidade";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 
@@ -19,6 +20,7 @@ const VERSAO = __APP_VERSION__;
  * Rodapé do Perfil (tela 5, `.rodape`; C20): "Sair" à esquerda e "Physiq 3.x · atualizado" à direita. No APK confere a
  * última release do GitHub (o mesmo canal do aviso de atualização) e oferece "Atualizar para 3.y"; no site, "Instalar"
  * (App Web ou o APK Android). W1 da loja: na versão da Google Play, só "Physiq 3.x" — quem atualiza é a loja.
+ * W3 da loja: embaixo, "Política de privacidade · Termos de uso" (as páginas públicas, com o Voltar que volta ao Perfil).
  */
 export function RodapePerfil() {
   const { sair } = useSessao();
@@ -81,6 +83,8 @@ export function RodapePerfil() {
         </button>
         {direita}
       </div>
+      {/* W3 da loja: a política e os termos à mão no app (antes só na entrada) — também no Perfil reduzido do aluno bloqueado */}
+      <LinksPrivacidade className="-mt-1 justify-center" />
 
       <PainelDeslizante aberto={confirmarSaida} aoMudar={setConfirmarSaida} titulo="Sair do Physiq?"
         descricao="Você sai deste aparelho. O que já está salvo continua na sua conta.">

@@ -114,6 +114,13 @@ describe("aba Perfil (tela 5)", () => {
     expect(screen.getByRole("button", { name: "Conta" })).toBeInTheDocument();
   });
 
+  it("W3 da loja: embaixo do Sair, os links da política de privacidade e dos termos", async () => {
+    montar();
+    expect(await screen.findByText("Aluno desde mar/2026 · Objetivo: definição")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Política de privacidade" }).getAttribute("href")).toBe("/privacidade");
+    expect(screen.getByRole("link", { name: "Termos de uso" }).getAttribute("href")).toBe("/termos");
+  });
+
   it("lembrete e som vêm das chaves de hoje do aparelho", async () => {
     localStorage.setItem("physiq_workout_reminder", JSON.stringify({ hour: 18, minute: 30, enabled: true }));
     localStorage.setItem("physiq_som_descanso", "sino");
@@ -170,6 +177,8 @@ describe("aba Perfil (tela 5)", () => {
       expect(screen.queryByText(l)).toBeNull();
     }
     expect(screen.queryByRole("button", { name: "Conta" })).toBeNull();
+    // W3 da loja: a política continua à mão para quem está bloqueado
+    expect(screen.getByRole("link", { name: "Política de privacidade" })).toBeInTheDocument();
   });
 
   it("Excluir: confere antes, o botão só liga com EXCLUIR digitado e então exclui e sai", async () => {

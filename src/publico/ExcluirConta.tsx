@@ -11,6 +11,7 @@ import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import type { ResultadoExclusao } from "@/painel/configuracoes/excluirConta/api";
 import { destinoDaExclusao } from "@/painel/configuracoes/excluirConta/regras";
+import { FRASE_BACKUPS } from "./privacidade/textos";
 
 function Secao({ id, icone: Icone, titulo, children }: { id: string; icone: LucideIcon; titulo: string; children: ReactNode }) {
   return (
@@ -68,6 +69,7 @@ function TelaExcluida({ feito }: { feito: Feito }) {
  * Excluir minha conta; profissional: Configurações › Excluir minha conta) e pelo site — "Entrar para excluir" → login → a tela de
  * exclusão certa (o mesmo fluxo do app). Diz o que é apagado e o que fica guardado (e por quê) e o contato do suporte. Funciona sem
  * login e na versão da loja (sem nada de pagamento). Depois de excluir, o fluxo do painel cai aqui com o resumo ("Conta excluída").
+ * W3 da loja: a frase das cópias de segurança é a MESMA da política (src/publico/privacidade/textos.ts), sem o "até 7 dias".
  */
 export default function ExcluirConta() {
   const { pronto, usuario, situacao, erroSituacao } = useSessao();
@@ -171,7 +173,7 @@ export default function ExcluirConta() {
                   ? "os alunos com login continuam usando o app, sem profissional;"
                   : "os alunos com login continuam no app, sem profissional, com 7 dias grátis;"} o histórico fica com cada aluno.</li>
                 <li>Quando um <strong>membro de equipe</strong> exclui: ele sai da equipe e os alunos dele ficam com o dono da conta.</li>
-                <li>Cópias de segurança do banco de dados podem guardar os dados por até 7 dias.</li>
+                <li data-frase-backups>{FRASE_BACKUPS}</li>
               </ul>
             </Secao>
 
