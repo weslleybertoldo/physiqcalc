@@ -13,7 +13,10 @@
 //   "caiu"      a sessão caiu/deu erro: status 'desconectado' ou 'erro' com o motivo
 //   "ping"      batida de vida (a tela avisa quando o celular está fora do ar)
 //   "resultado" marca uma mensagem da fila como enviada ou falhou
+// Physiq hml-06 (H-20): a fila sai por reserva com troca condicional (_shared/whatsapp-fila.ts) — tentativas soma a cada saída
+// e 2 'tarefas' juntas não pegam a mesma mensagem (antes: tentativas fixo em 1 e o paciente podia receber repetido para sempre).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { COLUNAS_FILA, reservarFila, type MensagemFila } from "../_shared/whatsapp-fila.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -67,21 +70,17 @@ Deno.serve(async (req) => {
       const derrubar = linhas.filter((l) => l.status === "desconectado").map((l) => l.nutricionista_id);
 
       // fila: só de quem está conectado, vencida, ainda com tentativa sobrando
-      let fila: Record<string, unknown>[] = [];
+      let fila: MensagemFila[] = [];
       if (manter.length) {
         const { data: msgs, error: em } = await db.from("mensagens_whatsapp")
-          .select("id, nutricionista_id, destino_e164, texto, tentativas, tipo")
+          .select(COLUNAS_FILA)
           .eq("status", "pendente").in("nutricionista_id", manter as string[])
           .lte("agendada_para", agora.toISOString()).lt("tentativas", MAX_TENTATIVAS)
           .order("agendada_para", { ascending: true }).limit(LIMITE_FILA);
         if (em) throw em;
-        fila = (msgs ?? []) as Record<string, unknown>[];
-        if (fila.length) {
-          // marca 'enviando' já — se o celular morrer no meio, a W47 devolve pra pendente pelo cron
-          await db.from("mensagens_whatsapp")
-            .update({ status: "enviando", tentativas: 1 })
-            .in("id", fila.map((m) => m.id as string));
-        }
+        // marca 'enviando' já, com tentativas + 1, e só leva o que ESTA chamada reservou — se o celular morrer no meio, a W47
+        // devolve pra pendente pelo cron (na 3ª saída sem resultado, vira 'falhou')
+        fila = await reservarFila(db, (msgs ?? []) as MensagemFila[]);
       }
       return json({ conectar, manter, derrubar, fila, agora: agora.toISOString() });
     }
