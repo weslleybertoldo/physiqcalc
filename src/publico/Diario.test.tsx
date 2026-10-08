@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ rpc: vi.fn(), upload: vi.fn(), remove: vi.fn() }));
 vi.mock("@/integrations/principal/client", () => ({
   principal: { rpc: h.rpc, storage: { from: () => ({ upload: h.upload, remove: h.remove }) } },
+  PRINCIPAL_SCHEMA: "public",
 }));
 
 import Diario from "./Diario";
