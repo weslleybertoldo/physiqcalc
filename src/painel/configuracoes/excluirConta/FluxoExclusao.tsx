@@ -200,6 +200,9 @@ export function FluxoExclusao({ conferenciaInicial = null }: { conferenciaInicia
       const r = await excluirContaProfissional(texto);
       // a página pública mostra o resumo (o painel e o app pedem login — e o login acabou de sair)
       navigate("/excluir-conta", { replace: true, state: { [ESTADO_EXCLUIDA]: { ...r.resultado, nome: conferencia?.nome ?? null } } });
+      // hml-09 (D6): a cópia do treino neste aparelho sai junto — nunca trava a saída. Sob demanda: o módulo cria o banco local ao
+      // carregar (no app, a casca já o carregou)
+      await import("@/lib/powersync/PowerSyncProvider").then((m) => m.apagarBancoLocal()).catch((err) => console.warn("[ExcluirConta] banco local:", err));
       void sair();
     } catch (e) {
       setErro(mensagemErroExclusao(e));

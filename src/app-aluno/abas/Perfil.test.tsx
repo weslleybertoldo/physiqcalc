@@ -17,8 +17,11 @@ const h = vi.hoisted(() => ({
   previa: vi.fn(),
   // W2 da loja: a folha pergunta antes ao caminho do profissional (null = só aluno → "nao_profissional")
   profissional: null as null | Record<string, unknown>,
+  // hml-09 (D6): a cópia do treino no aparelho (o SQLite do PowerSync — o de verdade não abre no jsdom)
+  apagar: vi.fn(async () => {}),
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
+vi.mock("@/lib/powersync/PowerSyncProvider", () => ({ apagarBancoLocal: () => h.apagar() }));
 vi.mock("@/financeiro/useResumoFinanceiro", () => ({ useResumoFinanceiro: () => ({ resumo: h.resumo, carregando: false, erro: false }) }));
 vi.mock("@/app-aluno/perfil/pecas/api", async (orig) => {
   const real = await orig<typeof import("@/app-aluno/perfil/pecas/api")>();
@@ -91,6 +94,7 @@ beforeEach(() => {
   h.excluir.mockReset();
   h.previa.mockReset();
   h.profissional = null;
+  h.apagar.mockReset();
   sair.mockClear();
 });
 
@@ -198,9 +202,43 @@ describe("aba Perfil (tela 5)", () => {
     expect(botao).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Para confirmar, digite EXCLUIR"), { target: { value: "excluir" } });
     expect(botao).not.toBeDisabled();
+    // hml-09 (D6): a conferência (simular) não mexe no aparelho
+    expect(h.apagar).not.toHaveBeenCalled();
     fireEvent.click(botao);
     await waitFor(() => expect(h.excluir).toHaveBeenCalledWith("excluir"));
     await waitFor(() => expect(sair).toHaveBeenCalled());
+    // hml-09 (D6): excluída a conta, a cópia do treino sai do aparelho — 1 vez, antes do sair
+    expect(h.apagar).toHaveBeenCalledTimes(1);
+    expect(h.apagar.mock.invocationCallOrder[0]).toBeGreaterThan(h.excluir.mock.invocationCallOrder[0]);
+    expect(h.apagar.mock.invocationCallOrder[0]).toBeLessThan(sair.mock.invocationCallOrder[0]);
+  });
+
+  it("hml-09 (D6): a exclusão falhou → a mensagem aparece e nada sai do aparelho (nem o login)", async () => {
+    const { ErroPerfil } = await import("@/app-aluno/perfil/pecas/api");
+    h.conferencia = { ok: true, simulacao: true, apaga: { principal: {}, treino: null }, mantem: { principal: {}, treino: null } };
+    h.excluir.mockRejectedValue(new ErroPerfil("treino_indisponivel"));
+    montar();
+    fireEvent.click(await screen.findByText("Excluir minha conta"));
+    fireEvent.change(await screen.findByLabelText("Para confirmar, digite EXCLUIR"), { target: { value: "EXCLUIR" } });
+    fireEvent.click(document.querySelector("[data-excluir-confirmar]") as HTMLButtonElement);
+    expect(await screen.findByText(/Não foi possível falar com o banco do treino agora\. Nada foi apagado/)).toBeInTheDocument();
+    expect(h.apagar).not.toHaveBeenCalled();
+    expect(sair).not.toHaveBeenCalled();
+  });
+
+  it("hml-09 (D6): apagar a cópia do aparelho falhou → a saída segue igual", async () => {
+    h.conferencia = { ok: true, simulacao: true, apaga: { principal: {}, treino: null }, mantem: { principal: {}, treino: null } };
+    h.excluir.mockResolvedValue({ ok: true });
+    h.apagar.mockRejectedValue(new Error("sqlite"));
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    montar();
+    fireEvent.click(await screen.findByText("Excluir minha conta"));
+    fireEvent.change(await screen.findByLabelText("Para confirmar, digite EXCLUIR"), { target: { value: "EXCLUIR" } });
+    fireEvent.click(document.querySelector("[data-excluir-confirmar]") as HTMLButtonElement);
+    await waitFor(() => expect(sair).toHaveBeenCalled());
+    expect(h.apagar).toHaveBeenCalledTimes(1);
+    expect(aviso).toHaveBeenCalledWith("[ExcluirConta] banco local:", expect.any(Error));
+    aviso.mockRestore();
   });
 
   it("Excluir de quem é profissional: recusa apontando o painel › Configurações (W2 da loja — nada é excluído)", async () => {

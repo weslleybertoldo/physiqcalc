@@ -39,6 +39,33 @@ async function prepararBancoLocal(userId: string): Promise<void> {
   }
 }
 
+// hml-09 (D6): o banco local não segura quem chama — sem resposta neste tempo, segue (o apagar continua por trás)
+const LIMITE_APAGAR_MS = 5000;
+
+/**
+ * Apaga a cópia local (o SQLite do PowerSync, com a fila que não subiu) e o dono guardado deste aparelho. hml-09 (D6): depois de
+ * EXCLUIR a conta, o treino da pessoa não fica no aparelho. Nunca falha nem trava: erro só fica no console (com o PowerSync
+ * desligado o banco local existe igual — e é apagado igual).
+ */
+export async function apagarBancoLocal(): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limite = new Promise<never>((_, falhar) => {
+    timer = setTimeout(() => falhar(new Error(`sem resposta em ${LIMITE_APAGAR_MS / 1000}s`)), LIMITE_APAGAR_MS);
+  });
+  try {
+    await Promise.race([powerSyncDb.disconnectAndClear(), limite]);
+  } catch (e) {
+    console.warn("[PowerSync] disconnectAndClear falhou:", e);
+  } finally {
+    clearTimeout(timer);
+  }
+  try {
+    localStorage.removeItem(CHAVE_DONO_LOCAL);
+  } catch {
+    /* sem armazenamento */
+  }
+}
+
 // Build sem PowerSync (staging, H-14): nada sincroniza. Apaga, uma vez por abertura, o que um build anterior tenha baixado
 // neste navegador — antes o staging conectava na instância de produção.
 let bancoSemSyncLimpo = false;
@@ -46,16 +73,7 @@ let bancoSemSyncLimpo = false;
 async function limparBancoSemSync(): Promise<void> {
   if (bancoSemSyncLimpo) return;
   bancoSemSyncLimpo = true;
-  try {
-    await powerSyncDb.disconnectAndClear();
-  } catch (e) {
-    console.warn("[PowerSync] disconnectAndClear falhou:", e);
-  }
-  try {
-    localStorage.removeItem(CHAVE_DONO_LOCAL);
-  } catch {
-    /* sem armazenamento */
-  }
+  await apagarBancoLocal();
 }
 
 export function PowerSyncProvider({ children }: { children: ReactNode }) {
