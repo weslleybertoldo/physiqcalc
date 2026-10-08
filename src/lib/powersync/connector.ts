@@ -5,6 +5,7 @@ import {
   UpdateType,
 } from "@powersync/web";
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
+import { avisarErro } from "@/lib/avisoDeErro";
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { instanciaPowerSync } from "./instancia";
 
@@ -108,6 +109,9 @@ class SupabaseConnector implements PowerSyncBackendConnector {
       } else if (FATAL_RESPONSE_CODES.some((regex) => regex.test(code))) {
         // Erro fatal irrecuperável — descarta para destravar a fila
         console.error(`[PowerSync] FATAL: descartando op ${lastOp?.op} em ${lastOp?.table} (code: ${code})`);
+        // hml-10 (H-26, D5): o dado do aparelho foi jogado fora — avisa o Weslley só com a tabela, a op e o código (nunca a linha
+        // nem a mensagem do banco, que ecoa o valor: "Key (aluno_id)=(…)")
+        avisarErro({ origem: "sync", mensagem: `op ${lastOp?.op} descartada · código ${code}`, lugar: `tabela ${lastOp?.table}` });
         await transaction.complete();
       } else {
         // Erro retentável — PowerSync vai tentar novamente

@@ -8,8 +8,10 @@ on:
     # (docs/guides/platform/free-project-pausing). Ping espacado (3-5 dias)
     # falhou no NutriTrack: runs verdes 28/06 e 01/07 e pausou 04/07/2026.
     - cron: '19 3,9,15,21 * * *'
-    # PowerSync: deploy real a cada 4 dias (deploy 4x/dia seria excessivo)
-    - cron: '19 9 */4 * *'
+    # PowerSync: deploy real a cada 4 dias (deploy 4x/dia seria excessivo), num MINUTO PRÓPRIO: com as 2 crons em '19 9'
+    # o GitHub dispara um run só (o github.event.schedule é o da de cima) e o job do PowerSync ficava "skipped" — de
+    # 05/09/2026 a 08/10/2026 ele só rodou à mão (hml-10).
+    - cron: '41 10 */4 * *'
   workflow_dispatch:
     inputs:
       so:
@@ -25,6 +27,8 @@ jobs:
     steps:
       # Troca da chave vazada (04/10/2026): a anon legada que ficava escrita aqui foi desligada → a publishable do Treino
       # vem do segredo TREINO_SUPABASE_PUBLISHABLE_KEY (chave pública, igual à do principal logo abaixo).
+      # hml-10 (08/10/2026): o visitante não lê mais tabela nenhuma (hml-01, H-10) → o ping é a RPC manter_ativo(), que vai
+      # ao Postgres como uma leitura e só devolve true (supabase/migrations/20261008100100_hml10_manter_ativo_treino.sql).
       - name: Pings REST/PostgREST (atividade que CONTA p/ o auto-pause)
         env:
           CHAVE: ${{ secrets.TREINO_SUPABASE_PUBLISHABLE_KEY }}
@@ -35,7 +39,7 @@ jobs:
           for i in 1 2 3; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" \
               -H "apikey: $CHAVE" \
-              "https://uxwpwdbbnlticxgtzcsb.supabase.co/rest/v1/app_config?select=*&limit=$i")
+              "https://uxwpwdbbnlticxgtzcsb.supabase.co/rest/v1/rpc/manter_ativo")
             echo "PhysiqCalc REST ping $i/3: HTTP $CODE"
             [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
             sleep 2
@@ -56,6 +60,8 @@ jobs:
   # Physiq W28 (virada): o BANCO PRINCIPAL (hkxvtsbwctxkrqzkkdoz, o Supabase do antigo PhysiqNutri) — o ping vinha do
   # keep-supabase-active.yml do repositório physiqnutri, que para quando ele é arquivado. Mesmo horário e mesma régua do de cima
   # (leituras REST de verdade + SQL pela Management API). Segredos: PRINCIPAL_SUPABASE_PUBLISHABLE_KEY (chave pública) e SUPABASE_PAT.
+  # hml-10 (08/10/2026): a leitura REST é a RPC manter_ativo() (supabase-principal/migrations/20261008100000_hml10_manter_ativo.sql)
+  # — o visitante não lê mais public.alimentos desde a hml-01 (H-10) e o ping dava 401.
   keep-alive-principal:
     if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","principal"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '19 3,9,15,21 * * *'
     runs-on: ubuntu-latest
@@ -72,7 +78,7 @@ jobs:
           [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
           for i in 1 2 3; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "apikey: $CHAVE" \
-              "https://hkxvtsbwctxkrqzkkdoz.supabase.co/rest/v1/alimentos?select=id&limit=$i")
+              "https://hkxvtsbwctxkrqzkkdoz.supabase.co/rest/v1/rpc/manter_ativo")
             echo "Principal REST ping $i/3: HTTP $CODE"
             [ "$CODE" = "200" ] || (echo "ERRO" && exit 1)
             sleep 2
@@ -91,7 +97,7 @@ jobs:
           [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
 
   keep-alive-powersync:
-    if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","powersync"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '19 9 */4 * *'
+    if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","powersync"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '41 10 */4 * *'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,7 +112,8 @@ jobs:
       # deploy real das sync rules a cada 4 dias, que conta como atividade e
       # mantem a instancia Production provisionada.
       # A instancia Development (PowerSync do staging) foi DESLIGADA em 03/09/2026
-      # para aliviar a VM Nano do Supabase (Disk IO); staging usa a Production.
+      # para aliviar a VM Nano do Supabase (Disk IO); desde a hml-04c (07/10/2026)
+      # o build de staging nao usa PowerSync nenhum.
       - name: Deploy sync-config (Production) — mantem instancia ativa
         env:
           PS_ADMIN_TOKEN: ${{ secrets.POWERSYNC_PAT }}

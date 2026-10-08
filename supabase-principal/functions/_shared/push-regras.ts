@@ -1,6 +1,7 @@
 // Physiq W20c — regras PURAS do push no celular (FCM HTTP v1): a mensagem que sai de cada aviso do sino, a leitura da
 // resposta do FCM (token recusado → o aparelho sai da lista), a rota segura do toque e a conta de serviço do Google. Sem
 // Deno, sem rede e sem banco: testadas no Vitest (src/push/mensagem.test.ts) e usadas pela função push-enviar e pelo app.
+// hml-10 (H-48): o push sai SEM nome e SEM valor — título e corpo só pelo tipo do aviso; o texto completo fica no sino.
 
 /** Canal de notificação do Android ("Avisos", importância alta) — o app cria; o FCM usa o mesmo id. */
 export const CANAL_AVISOS = "avisos";
@@ -23,7 +24,8 @@ export type Schema = "public" | "staging";
 export interface AvisoParaPush {
   id: string;
   tipo: string;
-  titulo: string;
+  /** O texto do aviso no sino (pode ter nome, valor, dia e hora): NUNCA vai no push (hml-10, H-48). */
+  titulo?: string | null;
   link: string | null;
 }
 
@@ -37,9 +39,33 @@ const TITULOS: Record<string, string> = {
   geral: "Physiq",
 };
 
-/** O título da notificação pelo tipo do aviso (o texto do aviso vai no corpo). */
+/** O título da notificação pelo tipo do aviso (o corpo também é pelo tipo: corpoDoPush). */
 export function tituloDoPush(tipo: string | null | undefined): string {
   return TITULOS[String(tipo ?? "")] ?? "Physiq";
+}
+
+/**
+ * hml-10 (H-48) — o corpo do push é um texto FIXO por tipo, sem nome, sem valor, sem dia e hora: a notificação aparece na tela
+ * bloqueada e passa pelo Google (FCM). O texto completo do aviso fica no sino do app, e o toque abre o aviso (data.link).
+ * Os tipos são os do avisos_tipo_check (migração da W06); o 'geral' e qualquer outro caem no CORPO_PADRAO_DO_PUSH.
+ */
+const CORPOS: Record<string, string> = {
+  comprovante_enviado: "Chegou um comprovante de pagamento.",
+  pagamento_confirmado: "Um pagamento foi confirmado.",
+  pagamento_recusado: "Um comprovante precisa da sua atenção.",
+  consulta_marcada: "Tem novidade na sua agenda.",
+  plano_atualizado: "Seu plano foi atualizado.",
+  avaliacao_nova: "Você tem uma avaliação nova.",
+  reacao_diario: "Tem novidade no seu diário.",
+  membro_removido: "Houve uma mudança na sua equipe.",
+};
+export const CORPO_PADRAO_DO_PUSH = "Você tem um aviso novo no Physiq.";
+
+/** O corpo da notificação pelo tipo do aviso (nunca o texto do aviso). */
+export function corpoDoPush(tipo: string | null | undefined): string {
+  const chave = String(tipo ?? "");
+  // só as chaves do próprio objeto: "constructor", "__proto__" e afins viram o texto padrão
+  return Object.prototype.hasOwnProperty.call(CORPOS, chave) ? CORPOS[chave] : CORPO_PADRAO_DO_PUSH;
 }
 
 /** Só caminho DENTRO do app ("/perfil/agenda", "/painel/agenda?data=…"); qualquer outra coisa abre o início. */
@@ -70,24 +96,28 @@ export interface MensagemFcm {
     android: {
       priority: "HIGH";
       ttl: string;
-      notification: { channel_id: string; icon: string; color: string; tag: string };
+      notification: { channel_id: string; icon: string; color: string; tag: string; visibility: "PRIVATE" };
     };
   };
 }
 
-/** A mensagem do FCM HTTP v1 de um aviso do sino. `validar` = validate_only (o FCM confere e não entrega). */
+/**
+ * A mensagem do FCM HTTP v1 de um aviso do sino. `validar` = validate_only (o FCM confere e não entrega).
+ * hml-10 (H-48): título e corpo só pelo tipo — o aviso.titulo (nome, valor, motivo, dia e hora) nunca entra na mensagem.
+ */
 export function montarMensagem(aviso: AvisoParaPush, token: string, opcoes: { validar?: boolean } = {}): MensagemFcm {
-  const corpo = String(aviso.titulo ?? "").replace(/\s+/g, " ").trim().slice(0, 240) || "Você tem um aviso novo no Physiq";
   const mensagem: MensagemFcm = {
     message: {
       token,
-      notification: { title: tituloDoPush(aviso.tipo), body: corpo },
+      notification: { title: tituloDoPush(aviso.tipo), body: corpoDoPush(aviso.tipo) },
       // os valores do data do FCM são sempre texto
       data: { link: rotaSegura(aviso.link), aviso_id: String(aviso.id), tipo: String(aviso.tipo ?? "geral") },
       android: {
         priority: "HIGH",
         ttl: "259200s",
-        notification: { channel_id: CANAL_AVISOS, icon: ICONE_PUSH, color: COR_PUSH, tag: `aviso-${aviso.id}` },
+        // PRIVATE é o padrão do Android e fica escrito: com "ocultar conteúdo sensível" ligado, a tela bloqueada esconde o
+        // conteúdo. Sozinho não protege (vem desligado na maioria dos celulares): quem protege é o corpo sem dado, acima.
+        notification: { channel_id: CANAL_AVISOS, icon: ICONE_PUSH, color: COR_PUSH, tag: `aviso-${aviso.id}`, visibility: "PRIVATE" },
       },
     },
   };
@@ -187,8 +217,11 @@ export function base64url(dado: string | Uint8Array): string {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** A chave privada PEM (PKCS#8) em bytes DER, para o crypto.subtle.importKey("pkcs8"). */
-export function pemParaDer(pem: string): Uint8Array {
+/**
+ * A chave privada PEM (PKCS#8) em bytes DER, para o crypto.subtle.importKey("pkcs8"). O retorno é Uint8Array<ArrayBuffer>: o
+ * importKey só aceita buffer comum (o deno check da push-enviar recusava o Uint8Array genérico — hml-10; só o tipo mudou).
+ */
+export function pemParaDer(pem: string): Uint8Array<ArrayBuffer> {
   const b64 = pem.replace(/-----BEGIN [^-]+-----/g, "").replace(/-----END [^-]+-----/g, "").replace(/\\n/g, "").replace(/\s+/g, "");
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);

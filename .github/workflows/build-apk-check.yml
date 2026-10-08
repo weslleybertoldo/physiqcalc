@@ -96,6 +96,9 @@ jobs:
           # banco principal do Physiq (spec 7.8): entra no APK antes da W3; ninguém lê ainda
           VITE_PRINCIPAL_URL: ${{ secrets.VITE_PRINCIPAL_URL }}
           VITE_PRINCIPAL_ANON_KEY: ${{ secrets.VITE_PRINCIPAL_ANON_KEY }}
+          # hml-10 (H-25): o build com banco exige o schema (vite.config.ts); os segredos acima são os de produção (os mesmos do
+          # build-apk.yml), então o schema também. Texto, não segredo
+          VITE_DB_SCHEMA: public
 
       - name: Conferir que o APK sai sem o painel master
         run: bash scripts/ci/sem-master.sh dist
@@ -187,6 +190,8 @@ jobs:
           VITE_MP_PUBLIC_KEY: ${{ secrets.VITE_MP_PUBLIC_KEY }}
           VITE_PRINCIPAL_URL: ${{ secrets.VITE_PRINCIPAL_URL }}
           VITE_PRINCIPAL_ANON_KEY: ${{ secrets.VITE_PRINCIPAL_ANON_KEY }}
+          # hml-10 (H-25): o build com banco exige o schema (vite.config.ts); segredos de produção, schema de produção. Texto
+          VITE_DB_SCHEMA: public
 
       - name: AAB assinado com a chave de upload
         run: bash scripts/ci/aab-loja.sh gradle

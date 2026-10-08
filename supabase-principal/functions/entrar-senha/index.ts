@@ -20,7 +20,12 @@
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions entrar-senha false
 // Segredos: TURNSTILE_SECRET (cofre › PhysiqCalc › "Physiq — Cloudflare Turnstile (entrar com senha, W8b)"), LOGIN_IP_SAL,
 // PROXY_SEGREDO (o mesmo do Worker physiq-principal-api) (+ os automáticos).
+// hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do GoTrue, só o status e o código do erro — nunca o corpo, que
+// pode trazer a sessão ou o e-mail); LOGIN_IP_SAL sem reserva: sem ele (ou com menos de 16 caracteres) não há conta por IP —
+// 503 indisponivel + log.erro, nada é conferido (falha fechada; o segredo existe); o catch final avisa (log.excecao).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import {
   captchaAceito,
@@ -31,15 +36,19 @@ import {
   hashDoToken,
   ipDoPedido,
   lerPedido,
+  motivoDoCaptcha,
   type EstadoBloqueio,
 } from "../_shared/entrar-senha-regras.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET") || "";
-const LOGIN_IP_SAL = Deno.env.get("LOGIN_IP_SAL") || SERVICE_ROLE.slice(-24);
+const LOGIN_IP_SAL = Deno.env.get("LOGIN_IP_SAL") || "";
 const PROXY_SEGREDO = Deno.env.get("PROXY_SEGREDO") || "";
 const SCHEMAS = ["public", "staging"];
+/** O sal do hash do IP (login_iniciar conta as tentativas por IP): menor que isto não serve. */
+const SAL_MINIMO = 16;
+const log = criarLog("entrar-senha", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -80,7 +89,7 @@ async function regras(db: { rpc: (fn: string) => PromiseLike<{ data: unknown; er
 }
 
 /** "aceito" | "recusado" | "indisponivel" (o Cloudflare não respondeu — quem chama RECUSA: falha fechada, homologação H-17). */
-async function conferirCaptcha(token: string, ip: string | null): Promise<"aceito" | "recusado" | "indisponivel"> {
+async function conferirCaptcha(token: string, ip: string | null, schema: string): Promise<"aceito" | "recusado" | "indisponivel"> {
   if (!token) return "recusado";
   const corpo = new URLSearchParams({ secret: TURNSTILE_SECRET, response: token });
   if (ip) corpo.set("remoteip", ip);
@@ -92,12 +101,12 @@ async function conferirCaptcha(token: string, ip: string | null): Promise<"aceit
     const d = await r.json().catch(() => null);
     if (!d) return "indisponivel";
     if (!captchaAceito(d)) {
-      console.warn("entrar-senha: captcha recusado", JSON.stringify((d as Record<string, unknown>)["error-codes"] ?? []));
+      log.aviso({ codigo: "captcha_recusado", schema, resultado: motivoDoCaptcha(d) });
       return "recusado";
     }
     return "aceito";
   } catch (e) {
-    console.error("entrar-senha: siteverify fora do ar", String((e as { message?: string })?.message || e));
+    log.excecao(e, { codigo: "siteverify_fora", schema });
     return "indisponivel";
   } finally {
     clearTimeout(timer);
@@ -110,6 +119,12 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
+  // hml-10 (D3): sem o sal não há conta por IP — ninguém entra por aqui até o segredo voltar (falha fechada; a tela mostra o
+  // "indisponivel" de sempre)
+  if (LOGIN_IP_SAL.length < SAL_MINIMO) {
+    log.erro({ codigo: "sem_configuracao", schema, msg: LOGIN_IP_SAL ? "LOGIN_IP_SAL curto" : "falta LOGIN_IP_SAL" });
+    return json({ ok: false, erro: "indisponivel" }, 503, origin);
+  }
 
   const lido = lerPedido(await req.json().catch(() => null));
   if (!lido.ok) return json({ ok: false, erro: lido.erro }, 400, origin);
@@ -128,9 +143,11 @@ Deno.serve(async (req) => {
     if (cfg.captcha !== false) {
       // falha FECHADA (homologação, H-17): sem o segredo ou com o Cloudflare fora do ar, ninguém entra sem captcha — a tela
       // mostra o aviso do captcha_invalido ("Não deu para confirmar que é você. Tente de novo.")
-      const v = TURNSTILE_SECRET ? await conferirCaptcha(captcha, ip) : "indisponivel";
+      const v = TURNSTILE_SECRET ? await conferirCaptcha(captcha, ip, schema) : "indisponivel";
       if (v !== "aceito") {
-        if (v === "indisponivel") console.error("entrar-senha: captcha indisponível — tentativa recusada (falha fechada)", TURNSTILE_SECRET ? "siteverify" : "sem TURNSTILE_SECRET");
+        if (v === "indisponivel") {
+          log.erro({ codigo: "captcha_indisponivel", schema, acao: "entrar", resultado: TURNSTILE_SECRET ? "siteverify" : "sem_turnstile_secret" });
+        }
         return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
       }
       // o siteverify aceita o MESMO token mais de uma vez (medido em 30/09): aqui cada token vale UMA tentativa
@@ -162,7 +179,7 @@ Deno.serve(async (req) => {
       status = r.status;
       corpo = await r.json().catch(() => null);
     } catch (e) {
-      console.error("entrar-senha: GoTrue não respondeu", String((e as { message?: string })?.message || e));
+      log.excecao(e, { codigo: "gotrue_sem_resposta", schema });
     }
 
     const cat = categoriaGoTrue(status, corpo);
@@ -173,7 +190,7 @@ Deno.serve(async (req) => {
     };
     if (cat === "ok") {
       // a senha está certa e a sessão existe: um tropeço do banco ao zerar o contador não pode barrar a entrada
-      await concluir("ok").catch((e) => console.error("entrar-senha: zerar o contador", String((e as { message?: string })?.message || e)));
+      await concluir("ok").catch((e) => log.excecao(e, { codigo: "zerar_contador_falhou", schema }));
       return json({ ok: true, sessao: corpo }, 200, origin);
     }
     if (cat === "senha_errada") return json(corpoSenhaErrada(await concluir("senha_errada")), 400, origin);
@@ -181,10 +198,12 @@ Deno.serve(async (req) => {
     if (cat === "desativado") return json({ ok: false, erro: "acesso_desativado" }, 403, origin);
     if (cat === "nao_confirmado") return json({ ok: false, erro: "email_nao_confirmado" }, 403, origin);
     if (cat === "limite") return json({ ok: false, erro: "limite_servidor" }, 429, origin);
-    console.error("entrar-senha: resposta inesperada do GoTrue", status, JSON.stringify(corpo).slice(0, 300));
+    // do GoTrue, só o código do erro (o corpo pode trazer o e-mail)
+    const doGoTrue = (corpo && typeof corpo === "object" ? corpo : {}) as Record<string, unknown>;
+    log.erro({ codigo: "gotrue_inesperado", schema, status, externo: { gotrue_codigo: doGoTrue.error_code ?? doGoTrue.code } });
     return json({ ok: false, erro: "indisponivel" }, 503, origin);
   } catch (e) {
-    console.error("entrar-senha erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { schema });
     return json({ ok: false, erro: "indisponivel" }, 503, origin);
   }
 });

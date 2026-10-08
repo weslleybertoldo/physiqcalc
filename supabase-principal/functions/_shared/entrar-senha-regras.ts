@@ -85,6 +85,17 @@ export function captchaAceito(r: unknown, acao = "entrar"): boolean {
   return !c.action || c.action === acao;
 }
 
+/**
+ * hml-10 (H-24) — o porquê da recusa do captcha para o log, no formato de código ([a-z0-9_]): o 1º "error-codes" do siteverify
+ * ("invalid-input-response" → "invalid_input_response"); sem código (o Turnstile aceitou, mas o widget era de outra ação) →
+ * "acao_diferente". O log confere o formato (fora dele, "?").
+ */
+export function motivoDoCaptcha(r: unknown): string {
+  const c = (r && typeof r === "object" ? r : {}) as Record<string, unknown>;
+  const codigos = Array.isArray(c["error-codes"]) ? c["error-codes"] : [];
+  return codigos.length ? String(codigos[0]).toLowerCase().replace(/-/g, "_") : "acao_diferente";
+}
+
 export interface EstadoBloqueio {
   erros?: number;
   bloqueado_ate?: string | null;

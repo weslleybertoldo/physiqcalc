@@ -2,7 +2,11 @@
 // login (GET /auth/v1/user pelo token da pessoa) e a conferência de que é master (app_metadata no Auth ou o perfil master do
 // schema — a mesma regra do sou_master() do banco). Quem não é master recebe 403; sem login, 401. As RPCs rodam COMO A PESSOA
 // (auth.uid() de verdade: o banco confere o master de novo e grava quem fez cada coisa nos eventos).
+// hml-10 (H-24, H-26): o log de cada função nasce aqui (criarLog com o nome dela) e vai no contexto; o catch final avisa
+// (log.excecao) e a resposta não muda.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "./avisar-erro.ts";
+import { criarLog, type Log } from "./log.ts";
 import { origemPermitida } from "./login-regras.ts";
 import { ehMaster, origemDoApp, schemaDoPedido, statusDoErro, type Schema } from "./master-regras.ts";
 
@@ -35,6 +39,8 @@ export interface Contexto {
   db: SupabaseClient;
   /** service_role do Auth (um só para os 2 schemas) */
   authAdmin: SupabaseClient;
+  /** o log da função (criarLog com o nome dela — o mesmo do catch final) */
+  log: Log;
 }
 
 // freio por pessoa nesta instância (as telas do master fazem poucas chamadas; isto segura laço de erro)
@@ -53,7 +59,7 @@ function permitido(chave: string, max: number, janelaMs: number): boolean {
 }
 
 /** Abre o pedido: OPTIONS, método, schema, login e master. Devolve o contexto ou a resposta de recusa. */
-export async function abrirPedido(req: Request, nome: string): Promise<Contexto | Response> {
+export async function abrirPedido(req: Request, nome: string, log: Log): Promise<Contexto | Response> {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
@@ -85,11 +91,11 @@ export async function abrirPedido(req: Request, nome: string): Promise<Contexto 
     db.from("profiles").select("role").eq("id", ud.user.id).maybeSingle(),
   ]);
   if (!ehMaster((u?.user?.app_metadata as Record<string, unknown>) ?? null, (perfil as { role?: string } | null)?.role ?? null)) {
-    console.warn(`${nome}: recusado (não é master)`, ud.user.id);
+    log.aviso({ codigo: "nao_e_master", schema, ref: ud.user.id });
     return json({ ok: false, erro: "so_master" }, 403, origin);
   }
   if (!permitido(`${nome}:${schema}:${ud.user.id}`, 240, 60_000)) return json({ ok: false, erro: "muitas_acoes" }, 429, origin);
-  return { schema, origin, corpo, userId: ud.user.id, comoPessoa, db, authAdmin };
+  return { schema, origin, corpo, userId: ud.user.id, comoPessoa, db, authAdmin, log };
 }
 
 /** Chama uma RPC como a pessoa e devolve o objeto (erro do Postgres = exceção). */
@@ -113,14 +119,19 @@ export function responder(r: Record<string, unknown>, origin: string | null): Re
 
 /** Envolve o handler: erros inesperados viram 500 com o código, sem vazar detalhe. */
 export function servir(nome: string, handler: (c: Contexto) => Promise<Response>) {
+  const log = criarLog(nome, { avisar: avisarErro });
   Deno.serve(async (req) => {
     const origin = req.headers.get("Origin");
+    let pedido: Contexto | null = null;
     try {
-      const c = await abrirPedido(req, nome);
+      const c = await abrirPedido(req, nome, log);
       if (c instanceof Response) return c;
+      pedido = c;
       return await handler(c);
     } catch (e) {
-      console.error(`${nome} erro`, String((e as { message?: string })?.message || e));
+      // hml-10 (D6): só o nome do erro, o código do Postgres e a mensagem limpa — e o aviso ao Weslley
+      const acao = typeof pedido?.corpo.acao === "string" ? pedido.corpo.acao : null;
+      log.excecao(e, { acao, schema: pedido?.schema ?? schemaDoPedido(req.headers.get("x-schema")) });
       return json({ ok: false, erro: "erro_interno" }, 500, origin);
     }
   });

@@ -13,13 +13,19 @@
 // verify_jwt = true (chamada com o login da pessoa). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions aluno-enviar true
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL (+ os automáticos).
+// hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do Resend, só o status e o código do erro — nunca o corpo); sem
+// reserva com valor de produção (sem RESEND_FROM ou, na produção, sem SITE_URL o e-mail não sai: o mesmo "sem_resend" de sempre,
+// com a reserva desfeita, + log.erro); o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { origemPermitida } from "../_shared/login-regras.ts";
 import type { Schema } from "../_shared/convites-regras.ts";
 import {
   assuntoDoEnvio,
   criarFreio,
   destinoDoEnvio,
+  faltaNoEmail,
   htmlDoEnvio,
   linkDoEnvio,
   modulosDoEnvio,
@@ -31,10 +37,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Physiq <convites@physiqcalc.com.br>";
-const SITE_URL = Deno.env.get("SITE_URL") ?? "https://physiqcalc.com.br";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "";
+const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 const SCHEMAS: Schema[] = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const log = criarLog("aluno-enviar", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -50,8 +57,12 @@ const json = (body: unknown, status: number, origin: string | null) =>
 
 const permitido = criarFreio(60, 60 * 60_000);
 
-async function enviarEmail(para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
-  if (!RESEND_API_KEY) return { id: null, erro: "sem_resend" };
+async function enviarEmail(schema: Schema, para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
+  const falta = faltaNoEmail(schema, { resendApiKey: RESEND_API_KEY, resendFrom: RESEND_FROM, siteUrl: SITE_URL });
+  if (falta.length) {
+    log.erro({ codigo: "sem_configuracao", schema, msg: `falta ${falta.join(", ")}` });
+    return { id: null, erro: "sem_resend" };
+  }
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -60,12 +71,12 @@ async function enviarEmail(para: string, assunto: string, html: string, texto: s
     });
     const corpo = await r.json().catch(() => ({})) as Record<string, unknown>;
     if (!r.ok) {
-      console.error("aluno-enviar: resend", r.status, JSON.stringify(corpo).slice(0, 300));
+      log.erro({ codigo: "resend_falhou", schema, status: r.status, externo: { resend_erro: corpo.name } });
       return { id: null, erro: `resend_${r.status}` };
     }
     return { id: typeof corpo.id === "string" ? corpo.id : null, erro: null };
   } catch (e) {
-    console.error("aluno-enviar: resend", String(e));
+    log.excecao(e, { codigo: "resend_rede", schema });
     return { id: null, erro: "resend_rede" };
   }
 }
@@ -128,19 +139,19 @@ Deno.serve(async (req) => {
       link: linkDoEnvio(schema, SITE_URL, e.link),
       paraTeste: destino.teste ? email : null,
     };
-    const envio = await enviarEmail(destino.para, assuntoDoEnvio(dados), htmlDoEnvio(dados), textoDoEnvio(dados));
+    const envio = await enviarEmail(schema, destino.para, assuntoDoEnvio(dados), htmlDoEnvio(dados), textoDoEnvio(dados));
     if (envio.erro !== null && typeof e.aviso_id === "string") {
       // o e-mail não saiu: desfaz a reserva (outro "Salvar e enviar" tenta de novo, sem esperar os 10 minutos)
       const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema }, auth: { persistSession: false } });
       const { error: ef } = await db.rpc("aluno_enviar_plano_falhou", { p_aviso: e.aviso_id });
-      if (ef) console.error("aluno-enviar: desfazer reserva", ef.message);
+      if (ef) log.excecao(ef, { codigo: "desfazer_reserva_falhou", schema });
     }
     return json({
       ...base,
       email: { enviado: envio.erro === null, motivo: envio.erro === null ? null : "falhou", teste: destino.teste, id: envio.id, erro: envio.erro },
     }, 200, origin);
   } catch (err) {
-    console.error("aluno-enviar erro", String((err as { message?: string })?.message || err));
+    log.excecao(err, { schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });

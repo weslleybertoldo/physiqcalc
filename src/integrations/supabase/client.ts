@@ -13,7 +13,7 @@ export const DB_SCHEMA = (import.meta.env.VITE_DB_SCHEMA as string) || "public";
 // do cliente do principal); POST de tabela, RPC que grava, função, auth e upload vão uma vez só.
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   global: {
-    fetch: criarFetchResiliente(2, 15000),
+    fetch: criarFetchResiliente(2, 15000, undefined, { banco: "treino" }),
     headers: { "x-schema": DB_SCHEMA },
   },
   db: { schema: DB_SCHEMA as "public" },

@@ -13,11 +13,16 @@
 // verify_jwt = false (público e servidor não têm JWT de pessoa; o app é validado aqui no GET /auth/v1/user). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions alunos false
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL, ESPELHO_SEGREDO, TURNSTILE_SECRET, MP_ACCESS_TOKEN_PROD/_TEST (+ os automáticos).
+// hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do Resend e do captcha, só o status e os códigos — nunca o corpo);
+// sem reserva com valor de produção (sem RESEND_FROM ou, na produção, sem SITE_URL o e-mail do convite não sai: o mesmo
+// "sem_resend" de sempre, + log.erro); o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { origemPermitida, segredoConfere } from "../_shared/login-regras.ts";
 import { type Schema } from "../_shared/convites-regras.ts";
-import { destinoDoEnvio } from "../_shared/enviar-aluno-regras.ts";
-import { captchaAceito, hashDoToken, ipDoPedido } from "../_shared/entrar-senha-regras.ts";
+import { destinoDoEnvio, faltaNoEmail } from "../_shared/enviar-aluno-regras.ts";
+import { captchaAceito, hashDoToken, ipDoPedido, motivoDoCaptcha } from "../_shared/entrar-senha-regras.ts";
 import { credencialDoSchema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import {
@@ -36,13 +41,14 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Physiq <convites@physiqcalc.com.br>";
-const SITE_URL = Deno.env.get("SITE_URL") ?? "https://physiqcalc.com.br";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "";
+const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET") || "";
 const PROXY_SEGREDO = Deno.env.get("PROXY_SEGREDO") || "";
 const SCHEMAS: Schema[] = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const log = criarLog("alunos", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -71,8 +77,12 @@ function permitido(chave: string, max: number, janelaMs: number): boolean {
   return true;
 }
 
-async function enviarEmail(para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
-  if (!RESEND_API_KEY) return { id: null, erro: "sem_resend" };
+async function enviarEmail(schema: Schema, para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
+  const falta = faltaNoEmail(schema, { resendApiKey: RESEND_API_KEY, resendFrom: RESEND_FROM, siteUrl: SITE_URL });
+  if (falta.length) {
+    log.erro({ codigo: "sem_configuracao", schema, msg: `falta ${falta.join(", ")}` });
+    return { id: null, erro: "sem_resend" };
+  }
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -81,12 +91,12 @@ async function enviarEmail(para: string, assunto: string, html: string, texto: s
     });
     const corpo = (await r.json().catch(() => ({}))) as Record<string, unknown>;
     if (!r.ok) {
-      console.error("alunos: resend", r.status, JSON.stringify(corpo).slice(0, 300));
+      log.erro({ codigo: "resend_falhou", schema, status: r.status, externo: { resend_erro: corpo.name } });
       return { id: null, erro: `resend_${r.status}` };
     }
     return { id: typeof corpo.id === "string" ? corpo.id : null, erro: null };
   } catch (e) {
-    console.error("alunos: resend", String(e));
+    log.excecao(e, { codigo: "resend_rede", schema });
     return { id: null, erro: "resend_rede" };
   }
 }
@@ -104,12 +114,12 @@ async function emailDoConvite(schema: Schema, r: Record<string, unknown>) {
     link: linkConviteAluno(schema, SITE_URL),
     paraTeste: destino.teste ? String(r.email) : null,
   };
-  const envio = await enviarEmail(destino.para, assuntoConviteAluno(dados), htmlConviteAluno(dados), textoConviteAluno(dados));
+  const envio = await enviarEmail(schema, destino.para, assuntoConviteAluno(dados), htmlConviteAluno(dados), textoConviteAluno(dados));
   return { email_enviado: envio.erro === null, email_teste: destino.teste, email_id: envio.id, erro_email: envio.erro, link: dados.link };
 }
 
 /** "aceito" | "recusado" | "indisponivel" (o Cloudflare não respondeu — quem chama RECUSA: falha fechada, homologação H-17). */
-async function conferirCaptcha(token: string, ip: string | null): Promise<"aceito" | "recusado" | "indisponivel"> {
+async function conferirCaptcha(token: string, ip: string | null, schema: Schema): Promise<"aceito" | "recusado" | "indisponivel"> {
   if (!token) return "recusado";
   const corpo = new URLSearchParams({ secret: TURNSTILE_SECRET, response: token });
   if (ip) corpo.set("remoteip", ip);
@@ -122,12 +132,13 @@ async function conferirCaptcha(token: string, ip: string | null): Promise<"aceit
     if (!d) return "indisponivel";
     // o widget do /c/ usa a ação "cadastro"; o do "Entrar com e-mail" (W8b), "entrar"
     if (!captchaAceito(d, "cadastro")) {
-      console.warn("alunos: captcha recusado", JSON.stringify((d as Record<string, unknown>)["error-codes"] ?? []), (d as Record<string, unknown>).action);
+      const acaoDoWidget = (d as Record<string, unknown>).action;
+      log.aviso({ codigo: "captcha_recusado", schema, acao: typeof acaoDoWidget === "string" ? acaoDoWidget : null, resultado: motivoDoCaptcha(d) });
       return "recusado";
     }
     return "aceito";
   } catch (e) {
-    console.error("alunos: siteverify fora do ar", String((e as { message?: string })?.message || e));
+    log.excecao(e, { codigo: "siteverify_fora", schema });
     return "indisponivel";
   } finally {
     clearTimeout(timer);
@@ -158,9 +169,11 @@ async function publico(req: Request, schema: Schema, corpo: Record<string, unkno
   if (captchaLigado) {
     // falha FECHADA (homologação, H-17): sem o segredo ou com o Cloudflare fora do ar, nenhum cadastro passa sem captcha
     const token = String(corpo.captcha ?? "");
-    const v = TURNSTILE_SECRET ? await conferirCaptcha(token, ip) : "indisponivel";
+    const v = TURNSTILE_SECRET ? await conferirCaptcha(token, ip, schema) : "indisponivel";
     if (v !== "aceito") {
-      if (v === "indisponivel") console.error("alunos: captcha indisponível — cadastro recusado (falha fechada)", TURNSTILE_SECRET ? "siteverify" : "sem TURNSTILE_SECRET");
+      if (v === "indisponivel") {
+        log.erro({ codigo: "captcha_indisponivel", schema, acao: "cadastro", resultado: TURNSTILE_SECRET ? "siteverify" : "sem_turnstile_secret" });
+      }
       return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
     }
     const { data: primeiro, error: eu } = await db.rpc("login_captcha_usar", { p_hash: await hashDoToken(token) });
@@ -241,9 +254,9 @@ async function app(schema: Schema, token: string, corpo: Record<string, unknown>
       if (r.ok === true && r.app_encerrado === true && typeof r.user_id === "string") {
         try {
           const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema }, auth: { persistSession: false } });
-          r.assinatura_app = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema), r.user_id, "vinculou_profissional");
+          r.assinatura_app = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema), r.user_id, "vinculou_profissional", log);
         } catch (e) {
-          console.error("alunos: cancelar assinatura do app", String((e as { message?: string })?.message || e));
+          log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema, acao });
           r.assinatura_app = { canceladas: 0, falhas: 1 };
         }
       }
@@ -292,7 +305,7 @@ Deno.serve(async (req) => {
     if (!auth.startsWith("Bearer ") || auth.length < 20) return json({ ok: false, erro: "sem_login" }, 401, origin);
     return await app(schema, auth.slice(7).trim(), corpo, origin);
   } catch (e) {
-    console.error("alunos erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao: typeof corpo.acao === "string" ? corpo.acao : null, schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });

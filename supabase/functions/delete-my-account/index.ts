@@ -29,8 +29,13 @@
 // Publicar: gh workflow run deploy-function.yml -f function=delete-my-account (verify_jwt true) ou
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions delete-my-account true
 // Segredos: ESPELHO_SEGREDO (W2) + os automáticos.
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+const log = criarLog("delete-my-account", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -177,7 +182,7 @@ async function modoServidor(req: Request): Promise<Response> {
     await admin.from("physiq_identidade_conflitos").delete().eq("principal_user_id", principalId);
     return jsonServidor({ ...res, login: "removido" });
   } catch (e) {
-    console.error("delete-my-account (servidor):", acao, (e as Error)?.message ?? String(e));
+    log.excecao(e, { acao, schema: currentSchema() });
     return jsonServidor({ ok: false, erro: "interno" }, 500);
   }
 }

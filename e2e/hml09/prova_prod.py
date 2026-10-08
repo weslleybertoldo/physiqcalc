@@ -270,7 +270,8 @@ def passo_criar(o: C.Saida, a, sess: C.Sessoes) -> None:
     est.update(email=EMAIL, uid=uid)
     C.json_arquivo(ESTADO, est)
     c = conta()
-    o.ok(c is not None and c["id"] == uid and c["confirmada"] and c["papel"] is None, "auth.users: 1 login, e-mail confirmado, sem papel (app_metadata.role vazio)")
+    o.ok(c is not None and c["id"] == uid and c["confirmada"] and c["papel"] in (None, "pessoa"),
+         f"auth.users: 1 login, e-mail confirmado, sem papel de comando (role {c['papel'] if c else None!r}: 'pessoa' é o que o handle_new_user dá a todo login sem convite)")
     u = C.txt(uid)
     r = C.ler(C.PRINCIPAL_REF, f"select (select count(*) from public.profiles where id = {u}::uuid)::int as public, "
                                f"(select count(*) from staging.profiles where id = {u}::uuid)::int as staging")[0]

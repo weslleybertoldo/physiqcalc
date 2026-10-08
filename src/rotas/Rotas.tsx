@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSessao } from "@/nucleo/sessao";
 import { destinoDepoisDoLogin } from "@/nucleo/situacao";
@@ -10,6 +10,7 @@ import PublicoLayout from "@/publico/PublicoLayout";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { Carregavel } from "@/ui/casca/Carregavel";
 import { NaoEncontrada } from "@/ui/casca/NaoEncontrada";
+import { EstadoCarregando } from "@/ui/premium/Estados";
 import { registro, rotasDaEntrada, rotasDaPaginaPublica, tela } from "./registro";
 import { ROTAS_ANTIGAS, destinoDaRotaAntiga } from "./redirecionamentos";
 
@@ -19,6 +20,10 @@ const RotasPainel = lazy(() => import("@/painel/RotasPainel"));
 // valor e o Rollup corta o import(): o código do master nem entra no bundle (src/lib/plataforma.ts). A expressão fica AQUI, sem
 // função no meio.
 const RotasMaster = import.meta.env.VITE_APP_NATIVO === "1" ? null : lazy(() => import("@/master/RotasMaster"));
+// hml-10 (H-26 e H-48, D5): /erro-teste — a página que quebra o app de propósito (as 2 telas de erro e os avisos) — SÓ no build de
+// staging. O Vite troca o import.meta.env.VITE_DB_SCHEMA pelo valor e, na produção, o Rollup corta o import(): a página nem entra no
+// bundle (o mesmo jeito do master na hml-08; a expressão fica AQUI, direto na condição, sem função no meio).
+const ErroDeTeste = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/ErroDeTeste")) : null;
 // W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx, pelo registro) — as antigas saíram
 
 /** Rota antiga dos 2 apps → rota nova (spec 4.8), levando a query e o #. */
@@ -94,6 +99,17 @@ export function Rotas() {
 
       {/* Páginas públicas (sem login) */}
       <Route element={<PublicoLayout />}>
+        {/* hml-10: só no staging e SEM o Carregavel — "quebrar a tela" tem que chegar ao ErrorBoundary de dentro do App (S1) */}
+        {ErroDeTeste && (
+          <Route
+            path="/erro-teste"
+            element={
+              <Suspense fallback={<EstadoCarregando />}>
+                <ErroDeTeste />
+              </Suspense>
+            }
+          />
+        )}
         {publicas.flatMap((r) =>
           rotasDaPaginaPublica(r.nome).map((caminho) => (
             <Route

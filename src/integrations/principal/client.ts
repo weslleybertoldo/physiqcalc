@@ -50,7 +50,7 @@ export const principal = createClient<Database>(
   ANON_PRINCIPAL || "principal-nao-configurado",
   {
     global: {
-      fetch: criarFetchResiliente(2, 15000),
+      fetch: criarFetchResiliente(2, 15000, undefined, { banco: "principal" }),
       headers: { "x-schema": PRINCIPAL_SCHEMA },
     },
     db: { schema: PRINCIPAL_SCHEMA as "public" },

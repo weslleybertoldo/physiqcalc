@@ -4,6 +4,11 @@
 // tabela, as RPCs VOLATILE, toda função (/functions/v1/*: cobrança, envio de e-mail/WhatsApp), o /auth/v1/* (o GoTrue repete
 // o refresh sozinho) e o upload do Storage vão UMA vez: o servidor pode ter feito e só a resposta se perdido (a pagamentos-aluno
 // cobrava o cartão de novo). RPC nova no front entra em RPC_SO_LEITURA ou em RPC_QUE_GRAVAM (o repeticao.test.ts confere).
+// hml-10 (H-26, D5): a resposta FINAL ≥ 500 de uma função (/functions/v1/<slug>, menos a própria erro-avisar) vira aviso ao
+// Weslley ("função <slug> · HTTP <st>", com "(Treino)" quando é do Treino: cada cliente diz de qual banco é) — src/lib/avisoDeErro.ts.
+// O aviso não muda nada para quem chamou: a resposta volta igual.
+import type { BancoErro } from "../../supabase-principal/functions/_shared/erros";
+import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 
 /** As 30 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026): podem repetir. */
 export const RPC_SO_LEITURA = new Set<string>([
@@ -45,16 +50,50 @@ export function podeRepetir(input: RequestInfo | URL, init?: RequestInit): boole
   return !!rpc && RPC_SO_LEITURA.has(rpc[1]);
 }
 
+/** O slug da função chamada (/functions/v1/<slug>, sem subcaminho nem query) — ou null quando o pedido não é de uma função. */
+export function funcaoDoPedido(input: RequestInfo | URL): string | null {
+  const pedido = typeof Request !== "undefined" && input instanceof Request ? input : null;
+  try {
+    const caminho = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : (pedido?.url ?? "")).pathname;
+    return /\/functions\/v1\/([^/]+)/.exec(caminho)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export interface OpcoesFetch {
+  /** De qual banco é o cliente: o aviso do 5xx de função diz "(Treino)" quando é do Treino (sem ele, o principal). */
+  banco?: BancoErro;
+  /** Quem recebe o 5xx final de uma função (o padrão é o avisarErro; o teste passa um falso). */
+  avisar?: (aviso: AvisoDoApp) => unknown;
+}
+
 /**
  * fetch com timeout e nova tentativa (a regra de antes dos 2 clientes): sem repetir em 401/403; em 5xx e 429, até `tentativas`
  * vezes a mais com espera crescente — SÓ no que podeRepetir; o resto vai 1 vez e volta como veio (resposta ou erro).
- * `base` = o fetch de verdade (o teste passa um falso).
+ * `base` = o fetch de verdade (o teste passa um falso). hml-10: a resposta final ≥ 500 de uma função (menos a erro-avisar) avisa.
  */
 export function criarFetchResiliente(
   tentativas = 2,
   timeoutMs = 15000,
   base: typeof fetch = (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init),
+  opcoes: OpcoesFetch = {},
 ) {
+  const avisar = opcoes.avisar ?? avisarErro;
+  /** A resposta que volta para quem chamou: se for o 5xx final de uma função, avisa antes (sem nunca atrapalhar a resposta). */
+  const devolver = (input: RequestInfo | URL, resposta: Response): Response => {
+    if (resposta.status >= 500) {
+      const funcao = funcaoDoPedido(input);
+      if (funcao && funcao !== "erro-avisar") {
+        try {
+          avisar({ origem: "funcao", funcao, banco: opcoes.banco ?? "principal", status: resposta.status });
+        } catch {
+          // o aviso nunca muda a resposta
+        }
+      }
+    }
+    return resposta;
+  };
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const max = podeRepetir(input, init) ? tentativas : 0;
     let ultimoErro: Error | null = null;
@@ -69,7 +108,7 @@ export function criarFetchResiliente(
           await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** tentativa, 10000) + Math.random() * 500));
           continue;
         }
-        return resposta;
+        return devolver(input, resposta);
       } catch (e) {
         clearTimeout(timer);
         ultimoErro = e as Error;

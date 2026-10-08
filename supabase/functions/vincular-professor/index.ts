@@ -13,9 +13,14 @@
 // verify_jwt = false desde a W3 (o modo servidor não tem JWT; o modo app valida o token aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions vincular-professor false   (FORCAR_VERIFY_JWT=1 na 1ª vez)
 // Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2).
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+const log = criarLog("vincular-professor", { avisar: avisarErro });
 
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -86,7 +91,7 @@ async function repassarAoPrincipal(admin: ClienteW3, treinoUserId: string, codig
     const corpo = (await r.json().catch(() => ({}))) as { ok?: boolean; erro?: string };
     return corpo.ok ? "repassado" : `recusado:${corpo.erro ?? r.status}`;
   } catch (e) {
-    console.error("vincular-professor: repasse", String(e));
+    log.excecao(e, { codigo: "principal_indisponivel", schema: currentSchema(), acao: "repasse" });
     return "principal_indisponivel";
   }
 }
@@ -233,7 +238,7 @@ Deno.serve(async (req) => {
       if (body.modo !== "servidor") return jsonErr("modo_invalido", 400, origin);
       return jsonOk(await legadoDaPessoa(body), origin);
     } catch (e) {
-      console.error("vincular-professor (servidor)", e);
+      log.excecao(e, { acao: "servidor", schema: currentSchema() });
       return jsonErr("internal", 500, origin);
     }
   }
@@ -293,7 +298,7 @@ Deno.serve(async (req) => {
     const repasse = prof?.codigo_convite ? await repassarAoPrincipal(admin, user.id, prof.codigo_convite) : "sem_codigo";
     return jsonOk({ papel: "aluno", vinculado: true, professor: prof?.nome ?? null, principal: repasse }, origin);
   } catch (e) {
-    console.error("vincular-professor", e);
+    log.excecao(e, { acao: "app", schema: currentSchema() });
     return jsonErr("internal", 500, origin);
   }
 });

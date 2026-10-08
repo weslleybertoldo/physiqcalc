@@ -1,5 +1,9 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+const log = criarLog("admin-delete-user", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -61,10 +65,14 @@ async function avisarPrincipalDoDesvinculo(admin: SupabaseClient, alunoTreino: s
       headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
       body: JSON.stringify({ acao: "desvincular", principal_user_id: aluno, profissional_principal_id: prof }),
     });
-    if (r.status !== 200) console.error("admin-delete-user: principal respondeu", r.status, (await r.text()).slice(0, 200));
+    if (r.status !== 200) {
+      // hml-10 (H-24): da resposta, só o status e o código de erro da vincular-aluno (o corpo nunca vai para o log)
+      const corpo = (await r.json().catch(() => null)) as { erro?: unknown; error?: unknown } | null;
+      log.erro({ codigo: "principal_respondeu", schema: currentSchema(), acao: "desvincular", status: r.status, externo: { principal_erro: corpo?.erro ?? corpo?.error } });
+    }
     return r.status === 200 ? "ok" : `http_${r.status}`;
   } catch (e) {
-    console.error("admin-delete-user: principal", String((e as Error)?.message || e));
+    log.excecao(e, { codigo: "principal_indisponivel", schema: currentSchema(), acao: "desvincular" });
     return "erro";
   }
 }
@@ -104,7 +112,7 @@ async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise
   const { data, error } = await admin.rpc("pode_ver_aluno_treino_por", { p_aluno: alunoId, p_usuario: user.id });
   if (error) {
     // schema ainda sem a função da W3 (a migração entra 1 schema de cada vez): vale a regra de antes
-    console.error("pode_ver_aluno_treino_por", error.message);
+    log.excecao(error, { codigo: "pode_ver_aluno_falhou", schema: currentSchema() });
     const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
     return (perfil as { professor_id?: string } | null)?.professor_id === user.id;
   }
@@ -172,5 +180,8 @@ Deno.serve(async (req) => {
     }
     await admin.from("physiq_profiles").delete().eq("id", userId);
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
-  } catch (_e) { return jsonErr("internal", 500, origin); }
+  } catch (e) {
+    log.excecao(e, { acao: caller?.papel === "professor" ? "desvincular" : "excluir", schema: currentSchema() });
+    return jsonErr("internal", 500, origin);
+  }
 });

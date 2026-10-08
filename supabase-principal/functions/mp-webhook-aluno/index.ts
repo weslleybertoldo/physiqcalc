@@ -15,7 +15,11 @@
 // lista de um profissional e o cancelamento no MP falhou na hora) → grava o pagamento (é dele) e cancela a assinatura do app.
 // Publicar SÓ ASSIM: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-webhook-aluno false
 // Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (ids técnicos e códigos, nada do corpo do MP); o catch final avisa
+// (log.excecao) e devolve o mesmo 500.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { preapprovalDoPagamento, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
 import { buscarNoMp, credencialDoSchema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDasMatriculas, matriculaEncerradaPeloVinculo } from "../_shared/app-sem-profissional.ts";
@@ -33,6 +37,7 @@ import {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SCHEMAS: Schema[] = ["public", "staging"];
+const log = criarLog("mp-webhook-aluno", { avisar: avisarErro });
 
 const ok = (resultado: string) => new Response(JSON.stringify({ ok: true, resultado }), { status: 200, headers: { "Content-Type": "application/json" } });
 
@@ -62,13 +67,14 @@ async function cancelarSeSaiuDoApp(db: SupabaseClient, schema: Schema, m: Matric
   if (!preId || m.conta?.origem !== "app" || m.ativo) return;
   try {
     if (!(await matriculaEncerradaPeloVinculo(db, m.id))) {
-      console.log("mp-webhook-aluno: matrícula do app inativa sem o vínculo (desativada à mão) — assinatura mantida", m.id);
+      // matrícula do app inativa sem o vínculo (desativada à mão): a assinatura fica
+      log.info({ codigo: "app_desativado_a_mao", schema, ref: m.id, resultado: "assinatura_mantida" });
       return;
     }
-    const r = await cancelarAssinaturasDasMatriculas(db, credencialDoSchema(schema), [m.id], "cobranca_depois_de_sair_do_app");
-    console.log("mp-webhook-aluno: assinatura do app encerrado", m.id, JSON.stringify(r));
+    const r = await cancelarAssinaturasDasMatriculas(db, credencialDoSchema(schema), [m.id], "cobranca_depois_de_sair_do_app", log);
+    log.info({ codigo: "assinatura_do_app_encerrado", schema, ref: m.id, n: r.canceladas, resultado: r.falhas ? `falhas_${r.falhas}` : "sem_falhas" });
   } catch (e) {
-    console.error("mp-webhook-aluno: cancelar assinatura do app", String((e as { message?: string })?.message || e));
+    log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema, ref: m.id });
   }
 }
 
@@ -93,13 +99,13 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
         c = ((await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("id", c.id).maybeSingle()).data as unknown as Cobranca | null) ?? c;
       }
       if (c.mp_payment_id !== String(pay.id)) return "cobranca_de_outro_pagamento";
-      const r = await aplicarPagamentoMp(db, c, pay);
+      const r = await aplicarPagamentoMp(db, c, pay, null, log, schema);
       return `cobranca_${r.status}${r.pagou ? "_paga" : ""}`;
     }
     // recorrente (cobrança da assinatura nova)
     const m = await carregarMatricula(db, ref.pacienteId);
     if (!m) return "matricula_inexistente";
-    const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preapprovalDoPagamento(pay), origem: "assinatura" });
+    const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preapprovalDoPagamento(pay), origem: "assinatura" }, log, schema);
     await cancelarSeSaiuDoApp(db, schema, m, preapprovalDoPagamento(pay));
     return r ? `recorrente_${r.status}` : "recorrente_sem_valor";
   }
@@ -113,14 +119,14 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
     const a = await assinaturaPorPreapproval(db, preId);
     const m = a ? await carregarMatricula(db, a.paciente_id) : calc ? await matriculaDoTreino(db, calc.treinoUserId) : null;
     if (!m) return a ? "matricula_inexistente" : "assinatura_inexistente";
-    const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preId, origem: calc ? "assinatura_calc" : "assinatura" });
+    const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preId, origem: calc ? "assinatura_calc" : "assinatura" }, log, schema);
     await cancelarSeSaiuDoApp(db, schema, m, preId);
     return r ? `assinatura_${r.status}` : "assinatura_sem_valor";
   }
   if (calc) {
     const m = await matriculaDoTreino(db, calc.treinoUserId);
     if (!m) return "aluno_sem_matricula";
-    const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { origem: "webhook_calc", mesRef: calc.mesRef });
+    const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { origem: "webhook_calc", mesRef: calc.mesRef }, log, schema);
     return r ? `calc_${r.status}` : "calc_sem_valor";
   }
   return "nao_e_de_aluno";
@@ -168,10 +174,13 @@ async function tratarCobrancaAutorizada(id: string, schema: Schema | null): Prom
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return ok("ignorado_metodo");
+  // hml-10: o que o catch final leva ao log (o ambiente pedido e o tópico do aviso, quando já se sabe)
+  let schema: Schema | null = null;
+  let topico = "";
   try {
     const url = new URL(req.url);
     const bruto = (url.searchParams.get("schema") || "").toLowerCase();
-    const schema = SCHEMAS.includes(bruto as Schema) ? (bruto as Schema) : null;
+    schema = SCHEMAS.includes(bruto as Schema) ? (bruto as Schema) : null;
     if (bruto && !schema) return ok("schema_invalido");
     const origem = url.searchParams.get("origem") === "treino" ? "treino" : "mp";
     let corpo: Record<string, unknown> = {};
@@ -181,17 +190,17 @@ Deno.serve(async (req) => {
       corpo = {}; // IPN antigo: tudo na query
     }
     const dados = (corpo.data ?? {}) as Record<string, unknown>;
-    const topico = String(corpo.type || corpo.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
+    topico = String(corpo.type || corpo.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
     const id = String(dados.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return ok("sem_id");
     let resultado = "topico_ignorado";
     if (topico === "payment") resultado = await tratarPagamento(id, schema);
     else if (topico === "subscription_preapproval" || topico === "preapproval") resultado = await tratarAssinatura(id, schema);
     else if (topico === "subscription_authorized_payment" || topico === "authorized_payment") resultado = await tratarCobrancaAutorizada(id, schema);
-    console.log("mp-webhook-aluno", origem, schema ?? "?", topico, id, resultado);
+    log.info({ codigo: origem === "treino" ? "aviso_mp_do_treino" : "aviso_mp", schema, acao: topico || null, ref: id, resultado });
     return ok(resultado);
   } catch (e) {
-    console.error("mp-webhook-aluno erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao: topico || null, schema });
     return new Response(JSON.stringify({ ok: false, resultado: "erro" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 });

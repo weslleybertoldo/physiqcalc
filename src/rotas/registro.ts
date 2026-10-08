@@ -105,7 +105,9 @@ export const registro = {
   // hml-08 (H-22): o master é só do site — no build do app (VITE_APP_NATIVO=1) as páginas dele nem entram no bundle
   // (src/lib/plataforma.ts; a expressão fica aqui, direto na condição, para o Rollup cortar o glob)
   paginasMaster: import.meta.env.VITE_APP_NATIVO === "1" ? ({} as Grupo) : montarGrupo(import.meta.glob(["/src/master/paginas/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  publico: montarGrupo(import.meta.glob(["/src/publico/*.tsx", "!/src/publico/PublicoLayout.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
+  // hml-10 (D5): a página de teste das telas de erro (ErroDeTeste.tsx) fica de fora — o glob a poria em /erro-de-teste em todo build,
+  // produção inclusive; a rota /erro-teste é do Rotas.tsx, só no build de staging
+  publico: montarGrupo(import.meta.glob(["/src/publico/*.tsx", "!/src/publico/PublicoLayout.tsx", "!/src/publico/ErroDeTeste.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
   cabecalhoAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/Cabecalho.tsx"])),
   editoresAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/Editores.tsx"])),
 };
