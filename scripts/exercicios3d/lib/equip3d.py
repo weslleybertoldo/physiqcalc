@@ -4732,3 +4732,220 @@ def abdominal_maquina(nome="abdominal", eixo=None, assento=None, encosto=None, c
     bpy.context.view_layer.update()
     return MaquinaAbdominal(raizes, (0.0, ye, ze), pegs, raio_pegador, comp_pegador / 2)
 # ===== fim: Abdominal na máquina ====================================================================================================
+
+
+# ===== Remada baixa na polia ========================================================================================================
+# ── BANCO DA REMADA BAIXA (Remada Baixa na Polia, lote 6, 08/10/2026; serve também à Remada Baixa Unilateral na Polia, lote 9) ───────
+# Banco da estação de remada baixa no cabo (seated cable row / "low row"): assento estofado COMPRIDO, ao longo do Y, e na frente dele o
+# APOIO DOS PÉS — 2 chapas inclinadas, uma por pé, com o vão no meio, por onde o cabo passa da roldana baixa (a da polia(), na frente
+# das chapas) até o acessório. É a estação do ExRx ("Sit slightly forward on seat or bench in order to grasp cable attachment. Place
+# feet on vertical platform. Slide hips back positioning knees with slight bend.", Cable Seated Row) e da NSCA ("Sit on the pad with
+# your feet on the supports and your legs parallel.", Low-pulley seated row, no resumo do Achievable CSCS); o apoio de 3 pontos (os 2
+# pés nas chapas e o glúteo no banco) é o que a separa da remada com os pés no chão (Ronai 2019, ACSM's Health & Fitness Journal 23(4):
+# "both feet against machine foot plates and the buttocks on a bench").
+# Medidas de fabricante: assento comprido como o da Legend Fitness 906 Seated Row ("The deep 38.25-inch seat allows users of all
+# heights to find a comfortable starting position", 97 cm; "Extended-length, top-stitched seat accommodates a wide variety of user
+# heights"); cada chapa a 30° da vertical, com o alto pra longe de quem senta, como a Valor Fitness BD-71 Low Row Foot Plate ("The
+# solid plate sits at a 30 degree angle"; o desenho de medidas mostra os 30° a partir da vertical; chapa de 16" × 10"), uma chapa por pé
+# com o cabo passando no meio, como o Ironmaster Low Row Foot Plate ("Large foot plates measure 15 cm x 23 cm / 6 in x 9 in"; "Foot
+# plates positioned 51 cm / 20 in on centre") e a Skelcore Power Series Cable Low Row (desenho do manual: 2 apoios inclinados dos lados
+# da saída do cabo); chapa de 16 × 30 cm (a largura do Ironmaster; um pouco mais alta que a Valor pra caber o pé inteiro, como o "Large
+# footplate" da Gymleco 210 Seated Row). O assento é o banco() da fábrica (estofado de 60 mm em cima da viga, 2 colunas e 2 pés no chão), com o
+# comprimento e a altura que a cena pedir. Como as outras máquinas, a cena monta a peça EM VOLTA do corpo: ela dá o assento (embaixo
+# do glúteo) e o ponto da face de cada chapa (embaixo da sola); a peça liga tudo com a estrutura no chão — uma viga no meio, ao longo
+# do Y, do pé da frente do banco até as chapas, 2 travessas no chão e, atrás de cada chapa, um braço na inclinação dela e um poste em
+# pé. Em x = 0, acima da viga do chão, não há nada: o cabo passa ali, entre as pernas, e entre as chapas quando a roldana fica mais
+# baixa que o alto delas (a Remada Baixa na Polia põe a roldana logo acima delas: o cabo passa por cima dos pés).
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO dela):
+#   bc = e3.banco_remada_baixa("remada_baixa", assento=(y_frente, y_tras, topo, largura, espessura),
+#                              chapas={1: (x, y, z), -1: (x, y, z)}, angulo=30)
+#   Cena(pose, bc.equipamentos + ..., apoios=bc.apoios)
+# As raízes: "<nome>_assento" e "<nome>_apoio" (APOIO: o estofado e as 2 chapas, com 2 mm de chanfro) e "<nome>_estrutura" (parada;
+# não encosta no corpo).
+class BancoRemadaBaixa:
+    """Banco da remada baixa (assento comprido + apoio dos pés) pronto na cena (banco_remada_baixa())."""
+
+    def __init__(self, raizes, chapas, normal, subida):
+        self.raizes = raizes                  # {"assento", "apoio", "estrutura"}
+        self.equipamentos = [raizes["estrutura"]]
+        self.apoios = [raizes["assento"], raizes["apoio"]]
+        self.chapas = chapas                  # {s: centro da FACE da chapa do lado s (onde a sola encosta)}
+        self.normal = normal                  # normal da face das chapas (pra quem senta e pra cima)
+        self.subida = subida                  # ao longo da chapa, pra cima (pro lado da torre)
+
+
+def banco_remada_baixa(nome="remada_baixa", assento=(-0.30, 0.67, 0.44, 0.30, 0.06), chapas=None, angulo=30.0,
+                       chapa=(0.16, 0.30, 0.012), viga=(0.08, 0.05), braco=0.04):
+    """Banco da remada baixa (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y:
+      assento = (y_frente, y_tras, topo, largura, espessura): o estofado (APOIO) do banco() da fábrica, de y_frente a y_tras, com o
+                topo em `topo`;
+      chapas  = {s: (x, y, z)}: o centro da FACE de cada chapa (onde a sola encosta) — s = +1 a do pé esquerdo (+X);
+      angulo  = graus da chapa a partir da vertical, com o alto pra longe de quem senta (−Y);
+      chapa   = (largura, altura ao longo da inclinação, espessura) de cada chapa;
+      viga    = (largura, altura) da viga e das travessas do chão; braco = seção dos braços e postes atrás das chapas.
+    Devolve um BancoRemadaBaixa (raizes, equipamentos, apoios, chapas, normal, subida)."""
+    if not chapas:
+        raise ValueError("banco_remada_baixa: as chapas vêm da cena (a peça é montada em volta do corpo)")
+    y_f, y_t, topo, larg, esp = assento
+    larg_c, alt_c, esp_c = chapa
+    lv, av = viga
+    a = math.radians(angulo)
+    sobe = Vector((0.0, -math.sin(a), math.cos(a)))           # ao longo da chapa, pra cima (pro lado da torre)
+    nrm = Vector((0.0, math.cos(a), math.sin(a)))             # normal da face (pra quem senta e pra cima)
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    # ── assento (APOIO): o banco() da fábrica, a raiz dele já é "<nome>_assento" ───────────────────────────────────────────────
+    ass = banco(nome + "_assento", y0=min(y_f, y_t), y1=max(y_f, y_t), topo=topo, largura=larg, espessura=esp)
+    apo, estr = raiz_nova("apoio"), raiz_nova("estrutura")
+    # ── apoio dos pés (APOIO): uma chapa por pé, a face passando pelo ponto dado; 2 mm de chanfro (quina viva engana a zona) ──────
+    faces = {}
+    for s, p in chapas.items():
+        C = Vector(p)
+        faces[s] = C
+        caixa(nome + "_chapa%+d" % s, C - nrm * (esp_c / 2), (larg_c, esp_c, alt_c), mat_estrutura(), rot=(a, 0, 0), pai=apo,
+              chanfro=0.002)
+    # ── estrutura no chão e atrás das chapas: braço na inclinação da chapa (do chão até perto do alto dela) e poste em pé ────────
+    ys_frente, ys_tras = [], []
+    for s, C in faces.items():
+        B = C - nrm * (esp_c + braco / 2)                     # eixo do braço, atrás da chapa
+        k_chao = (av / 2 - B.z) / sobe.z                      # o braço desce na inclinação da chapa até a travessa da frente
+        P0 = B + sobe * k_chao
+        P1 = B + sobe * (alt_c / 2 - 0.06)
+        _viga(nome + "_braco%+d" % s, P0, P1, braco, braco, mat_estrutura(), pai=estr)
+        y_p = P1.y - braco * 0.75                             # o poste fica atrás do braço (a quina de cima longe da face da chapa)
+        _viga(nome + "_poste%+d" % s, (P1.x, y_p, av / 2), (P1.x, y_p, P1.z), braco, braco, mat_estrutura(), pai=estr)
+        ys_frente.append(P0.y)
+        ys_tras.append(y_p)
+    x_max = max(abs(c.x) for c in faces.values()) + braco / 2
+    y_tf, y_tt = max(ys_frente), min(ys_tras)
+    for nome_, y in (("_travessa_frente", y_tf), ("_travessa_tras", y_tt)):
+        _viga(nome + nome_, (-x_max, y, av / 2), (x_max, y, av / 2), lv, av, mat_estrutura(), pai=estr)
+    y_banco = min(y_f, y_t) + 0.10                            # o pé da frente do banco()
+    _viga(nome + "_viga_chao", (0, y_banco, av / 2), (0, y_tt - lv / 2, av / 2), lv, av, mat_estrutura(), pai=estr)
+    bpy.context.view_layer.update()
+    return BancoRemadaBaixa({"assento": ass, "apoio": apo, "estrutura": estr}, faces, nrm, sobe)
+
+
+# ── TRIÂNGULO da polia (Remada Baixa na Polia, lote 6, 08/10/2026; serve também à Puxada com Triângulo, lote 9, e à Remada Cavalinho com
+# Barra, lote 13) ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# Puxador em V de pegada neutra fechada ("close grip row handle", o "triângulo" das academias): 2 pegadores retos de aço, paralelos e
+# perto um do outro, com tampas nas pontas; de cada ponta dos pegadores sobe uma haste até a chapa de cima, no meio, e as 4 hastes fazem
+# 2 triângulos (um em cada ponta); a chapa tem o furo onde o mosquetão do cabo prende. É o acessório que vem com a estação de remada
+# (Legend Fitness 906 Seated Row: "Supplied with narrow grip vee-handle") e o que o ExRx ("Grasp close grip cable attachment", Cable
+# Straight Back Seated Row), a NSCA ("Grasp the handles with a closed grip (neutral or pronated)", Low-pulley seated row) e o Ronai
+# 2019 ("Handlebars are grasped below shoulder height with a narrower than shoulder width, closed, neutral (midpronated) grip") usam na
+# remada sentada no cabo. Medidas do Corength (Decathlon) Weight Training Pull Triangle: "Handle diameter: 30 mm; Width: 17 cm, Length:
+# 19 cm, Height: 12 cm, Handle length:12 cm, Knurling length: 11 cm" ("Horizontal pull: attach the pull triangle to the low pulley")
+# — 17 cm de fora a fora dos pegadores = 14 cm entre os eixos. Hastes de 12 mm e chapa de 6 mm são escolha da fábrica (a foto do
+# fabricante). O triângulo é seguro pelas 2 mãos (elas dão a direção dos pegadores e o lado de cada um) e o mosquetão gira livre no
+# furo da chapa, com a ponteira e a bola do cabo, sempre na linha do cabo (como o engate do puxador_polia()): o cabo puxa o furo e o
+# punho fica reto. 2 raízes (a checagem de rigidez é por raiz):
+#   raiz   — pegadores, tampas, hastes e a chapa; vazio no meio entre os 2 pegadores, X local ao longo deles, o furo no +Y local (pro lado
+#            do cabo), os pegadores em ±Z local; um vazio filho no meio de cada pegador ("<nome>_pegador+1"/"-1", X local ao longo
+#            dele) pra checagem3d.Barra;
+#   engate — mosquetão, ponteira e bola; origem no furo, Y local ao longo do cabo, Z local no eixo do furo.
+# Uso numa cena (pegada neutra, as palmas uma pra outra: o pegador +1 fica em +Z local = eixo × cabo, o lado +X da pessoa):
+#   tri = e3.triangulo_polia("triangulo")
+#   no pose(t): eng = tri.por(c, eixo, pol.direcao)   # c = meio entre os pegadores; eixo = direção dos pegadores (das mãos)
+#               pol.ligar(eng)                        # cabo da saída da roldana até o engate
+#   Cena(pose, tri.raizes + pol.raizes, pegadas=[("Left", ck.Barra(tri.pegadores[1], tri.raio, tri.meia)), ...])
+class Triangulo:
+    """Triângulo da polia pronto na cena (triangulo_polia()): raizes = [raiz, engate]."""
+
+    def __init__(self, raiz, engate, pegadores, raio, meia, entre, furo, comprimento):
+        self.raiz, self.engate = raiz, engate
+        self.raizes = [raiz, engate]
+        self.pegadores = pegadores            # {+1: vazio no meio do pegador de +Z local, −1: de −Z local}
+        self.raio = raio                      # raio dos pegadores (m)
+        self.meia = meia                      # meio comprimento da faixa da mão (m): checagem3d.Barra
+        self.entre = entre                    # entre os eixos dos 2 pegadores (m)
+        self.furo = furo                      # meio dos pegadores → furo da chapa (m), no +Y local
+        self.comprimento = comprimento        # furo → onde o cabo começa (m), ao longo do cabo
+        self.ponto_furo = None                # furo e começo do cabo no último por()
+        self.ponto_engate = None
+
+    def por(self, centro, eixo, direcao, voltas=5):
+        """Põe o triângulo no quadro e devolve onde o cabo começa (polia.ligar(engate)). centro = meio entre os 2 pegadores; eixo =
+        direção dos pegadores (a das mãos); direcao = polia.direcao (ponto → direção unitária do cabo, pra roldana). O furo fica do
+        lado do cabo (o cabo tirado o que ele tem ao longo dos pegadores) e o engate sai do furo na direção do cabo."""
+        c = Vector(centro)
+        x = Vector(eixo).normalized()
+        u = Vector(direcao(c))
+        for _ in range(voltas):
+            y = u - x * u.dot(x)
+            if y.length < 1e-6:
+                raise ValueError("triângulo: cabo ao longo dos pegadores (%s)" % (tuple(u),))
+            O = c + y.normalized() * self.furo
+            u = Vector(direcao(O + u * self.comprimento))
+        por_acessorio(self.raiz, c, x, u)
+        z = (self.raiz.matrix_world.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()      # eixo do furo
+        ze = z - u * z.dot(u)
+        ze = ze.normalized() if ze.length > 1e-6 else u.orthogonal().normalized()
+        self.engate.matrix_world = Matrix.Translation(O) @ Matrix((u.cross(ze), u, ze)).transposed().to_4x4()
+        self.ponto_furo, self.ponto_engate = O, O + u * self.comprimento
+        return self.ponto_engate
+
+
+def triangulo_polia(nome="triangulo", raio=0.015, entre=0.14, pegada=0.12, comprimento=0.19, altura=0.12, haste=0.006,
+                    chapa=(0.035, 0.006), meia=0.055):
+    """Triângulo da polia (ver o bloco acima): pegadores de raio `raio` com `entre` m entre os eixos, `pegada` m livres entre as
+    hastes e `comprimento` m de ponta a ponta (com as tampas), `altura` m da parte de baixo dos pegadores até o alto da chapa, hastes
+    de raio `haste`, chapa de cima com `chapa` = (altura, espessura) e a faixa da mão com `meia` m pra cada lado do meio do pegador.
+    Medidas do Corength Weight Training Pull Triangle. Devolve um Triangulo (raiz, engate, pegadores, por())."""
+    def raiz_nova(n):
+        r = bpy.data.objects.new(n, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    raiz, eng = raiz_nova(nome), raiz_nova(nome + "_engate")
+    rot_x = (0, math.radians(90), 0)                          # cilindro deitado ao longo do X
+    x_h = pegada / 2 + haste                                  # eixo das hastes (fora da faixa livre)
+    x_t = x_h + haste                                         # começo das tampas
+    alt_ch, esp_ch = chapa
+    y_topo = altura - raio                                    # alto da chapa (o meio dos pegadores em y = 0)
+    y_ch = y_topo - alt_ch / 2
+    for s in (-1, 1):
+        z = s * entre / 2
+        _cilindro(nome + "_pegada%+d" % s, raio, 2 * x_t, (0, 0, z), rot_x, mat_aco(), pai=raiz)
+        for e in (-1, 1):
+            _cilindro(nome + "_tampa%+d%+d" % (s, e), raio + 0.0015, comprimento / 2 - x_t, (e * (x_t + comprimento / 2) / 2, 0, z),
+                      rot_x, mat_aco(), pai=raiz)
+            tubo(nome + "_haste%+d%+d" % (s, e), (e * x_h, 0, z), (e * x_h, y_ch - alt_ch / 2 + 0.006, 0), haste, mat_aco(),
+                 pai=raiz, vertices=16)
+    caixa(nome + "_chapa", (0, y_ch, 0), (2 * x_h + 0.02, alt_ch, esp_ch), mat_aco(), pai=raiz, chanfro=0.002)
+    y_furo = y_ch + alt_ch * 0.1
+    # engate (origem no furo): mosquetão (aro no plano YZ, passando pelo furo), ponteira e bola do cabo, como na barra_polia()
+    y_m = 0.016 * 1.6
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.0035, major_segments=24, minor_segments=8,
+                                     location=(0, y_m, 0), rotation=rot_x)
+    mosq = bpy.context.active_object
+    mosq.name = nome + "_mosquetao"
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    mosq.scale = (1.0, 1.6, 1.0)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.ops.object.shade_smooth()
+    mosq.data.materials.append(mat_aco())
+    mosq.parent = eng
+    _cilindro(nome + "_ponteira", 0.0045, 0.03, (0, y_m + 0.038, 0), (math.radians(-90), 0, 0), mat_aco(), vertices=16, pai=eng)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.012, segments=16, ring_count=8, location=(0, y_m + 0.065, 0))
+    bola = bpy.context.active_object
+    bola.name = nome + "_bola"
+    bpy.ops.object.shade_smooth()
+    bola.data.materials.append(mat_borracha())
+    bola.parent = eng
+    eng.matrix_world = Matrix.Translation((0.0, y_furo, 0.0))
+    pegadores = {}
+    for s in (-1, 1):                                         # vazio no meio de cada pegador, X local ao longo dele
+        o = bpy.data.objects.new(nome + "_pegador%+d" % s, None)
+        bpy.context.scene.collection.objects.link(o)
+        o.empty_display_size = 0.03
+        o.parent = raiz
+        o.matrix_basis = Matrix.Translation((0.0, 0.0, s * entre / 2))
+        pegadores[s] = o
+    bpy.context.view_layer.update()
+    return Triangulo(raiz, eng, pegadores, raio, meia, entre, y_furo, y_m + 0.058)
+# ===== fim: Remada baixa na polia ===================================================================================================
