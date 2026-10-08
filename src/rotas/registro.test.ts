@@ -50,6 +50,9 @@ describe("registro por convenção (spec 11.1)", () => {
     // o layout das Configurações e o do público não viram "aba"/"página"
     expect(existe("abasConfig", "ConfiguracoesLayout")).toBe(false);
     expect(existe("publico", "PublicoLayout")).toBe(false);
+    // hml-10 (D5): a página de teste das telas de erro (src/publico/ErroDeTeste.tsx) não entra pelo registro — ele a publicaria em
+    // /erro-de-teste em todo build, produção inclusive; a rota /erro-teste é do Rotas.tsx, só no build de staging
+    expect(existe("publico", "ErroDeTeste")).toBe(false);
     expect(tela("paginasPainel", "NaoExiste")).toBeNull();
     expect(listar("resumoAluno")).toEqual(expect.any(Array));
   });

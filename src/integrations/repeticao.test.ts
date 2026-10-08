@@ -113,6 +113,82 @@ describe("criarFetchResiliente com fetch falso", () => {
   });
 });
 
+describe("hml-10 (D5): a resposta final ≥ 500 de uma função vira aviso", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** Chama o fetch resiliente com um fetch falso (número = status; "rede" = falha de rede) e um aviso falso. */
+  async function chamar(resposta: number | "rede", url: string, opcoes: { init?: RequestInit; banco?: "principal" | "treino"; avisar?: (a: unknown) => unknown } = {}) {
+    const base = vi.fn(async () => {
+      if (resposta === "rede") throw new TypeError("Failed to fetch");
+      return new Response("{}", { status: resposta });
+    });
+    const avisar = vi.fn(opcoes.avisar ?? (() => "a1b2c3d4"));
+    const resultado = criarFetchResiliente(2, 15000, base as unknown as typeof fetch, { banco: opcoes.banco, avisar })(url, opcoes.init ?? { method: "POST", body: "{}" }).then(
+      (r) => ({ status: r.status, erro: null as unknown }),
+      (e) => ({ status: 0, erro: e as unknown }),
+    );
+    await vi.runAllTimersAsync();
+    return { ...(await resultado), avisar, chamadas: base.mock.calls.length };
+  }
+
+  it("5xx de função avisa 1× com o slug, o banco e o HTTP — nos 2 bancos — e a resposta volta igual para quem chamou", async () => {
+    const p = await chamar(502, `${P}/functions/v1/cobranca-conta`, { banco: "principal" });
+    expect(p).toMatchObject({ status: 502, chamadas: 1 });
+    expect(p.avisar).toHaveBeenCalledTimes(1);
+    expect(p.avisar).toHaveBeenCalledWith({ origem: "funcao", funcao: "cobranca-conta", banco: "principal", status: 502 });
+    const t = await chamar(503, `${T}/functions/v1/admin-get-user`, { banco: "treino" });
+    expect(t.avisar).toHaveBeenCalledTimes(1);
+    expect(t.avisar).toHaveBeenCalledWith({ origem: "funcao", funcao: "admin-get-user", banco: "treino", status: 503 });
+  });
+
+  it("o slug sai do caminho, sem subcaminho nem query", async () => {
+    const r = await chamar(500, `${P}/functions/v1/alunos/extra?acao=listar`, { banco: "principal" });
+    expect(r.avisar).toHaveBeenCalledWith(expect.objectContaining({ funcao: "alunos", status: 500 }));
+  });
+
+  it.each([400, 401, 403, 404, 409, 422, 429, 200, 204])("HTTP %i de função não avisa", async (status) => {
+    expect((await chamar(status, `${P}/functions/v1/pagamentos-aluno`, { banco: "principal" })).avisar).not.toHaveBeenCalled();
+  });
+
+  it("a própria erro-avisar nunca avisa, nem com 5xx", async () => {
+    const r = await chamar(500, `${P}/functions/v1/erro-avisar?schema=staging`, { banco: "principal" });
+    expect(r.status).toBe(500);
+    expect(r.avisar).not.toHaveBeenCalled();
+  });
+
+  it("5xx que não é de função (rest, rpc, auth, storage) não avisa — nem depois das novas tentativas", async () => {
+    const lendo = await chamar(503, `${P}/rest/v1/contas?select=*`, { init: { method: "GET" }, banco: "principal" });
+    expect(lendo).toMatchObject({ status: 503, chamadas: 3 });
+    expect(lendo.avisar).not.toHaveBeenCalled();
+    for (const url of [`${P}/rest/v1/rpc/diario_enviar`, `${P}/auth/v1/token?grant_type=refresh_token`, `${P}/storage/v1/object/comprovantes/a.pdf`]) {
+      expect((await chamar(502, url, { banco: "principal" })).avisar, url).not.toHaveBeenCalled();
+    }
+  });
+
+  it("falha de rede em função não avisa (e continua rejeitando como antes)", async () => {
+    const r = await chamar("rede", `${P}/functions/v1/cobranca-conta`, { banco: "principal" });
+    expect(r.erro).toBeInstanceOf(TypeError);
+    expect(r.avisar).not.toHaveBeenCalled();
+  });
+
+  it("um aviso que lança não muda a resposta de quem chamou", async () => {
+    const r = await chamar(502, `${P}/functions/v1/cobranca-conta`, {
+      banco: "principal",
+      avisar: () => {
+        throw new Error("aviso quebrado");
+      },
+    });
+    expect(r).toMatchObject({ status: 502, erro: null });
+  });
+
+  it("os 2 clientes dizem de qual banco são (o aviso diz \"(Treino)\" quando é de lá)", () => {
+    const ler = (arquivo: string) => readFileSync(resolve(__dirname, arquivo), "utf-8");
+    expect(ler("principal/client.ts")).toMatch(/criarFetchResiliente\(2, 15000, undefined, \{ banco: "principal" \}\)/);
+    expect(ler("supabase/client.ts")).toMatch(/criarFetchResiliente\(2, 15000, undefined, \{ banco: "treino" \}\)/);
+  });
+});
+
 describe("guarda: toda rpc(\"…\") do front está decidida", () => {
   const SRC = resolve(__dirname, "..");
   const arquivos = (readdirSync(SRC, { recursive: true }) as string[])

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -89,6 +89,7 @@ vi.mock("@/master/paginas/AppAluno", () => h.marcador("master-app-aluno"));
 vi.mock("@/master/paginas/Configuracoes", () => h.marcador("master-configuracoes"));
 vi.mock("@/pages/master/BibliotecaPage", () => h.marcador("antiga-master-biblioteca"));
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Rotas } from "./Rotas";
 
 function Onde() {
@@ -416,5 +417,34 @@ describe("páginas públicas (sem login)", () => {
   it("endereço que não existe mostra o 404 premium", async () => {
     abrir("/nao-existe");
     expect(await screen.findByText("Página não encontrada")).toBeInTheDocument();
+  });
+
+  // hml-10 (D5): a página de teste das telas de erro só existe no build de staging (o Vitest roda como staging; na produção o Rollup
+  // corta o import e o vite build com VITE_DB_SCHEMA=public não tem os textos dela no dist/assets). Ela não entra pelo registro.
+  it("/erro-teste (staging) abre a página de teste das telas de erro, na casca pública; /erro-de-teste não existe", async () => {
+    abrir("/erro-teste");
+    expect(await screen.findByRole("button", { name: "quebrar a tela" }, { timeout: 4000 })).toBeInTheDocument();
+    expect(document.querySelector('[data-casca="publico"]')).not.toBeNull();
+    cleanup();
+    abrir("/erro-de-teste");
+    expect(await screen.findByText("Página não encontrada")).toBeInTheDocument();
+  });
+
+  it("/erro-teste fica fora do Carregavel: \"quebrar a tela\" chega ao ErrorBoundary de dentro (a S1)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ErrorBoundary>
+        <QueryClientProvider client={qc}>
+          <MemoryRouter initialEntries={["/erro-teste"]}>
+            <Rotas />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ErrorBoundary>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "quebrar a tela" }, { timeout: 4000 }));
+    expect(await screen.findByRole("heading", { name: "Algo deu errado" })).toBeInTheDocument();
+    expect(screen.queryByText("Não deu para abrir esta parte")).toBeNull();
+    vi.mocked(console.error).mockRestore();
   });
 });
