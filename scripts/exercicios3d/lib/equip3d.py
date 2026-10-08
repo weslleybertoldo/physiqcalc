@@ -3422,3 +3422,199 @@ def supino_deitado(nome="deitado", eixo=(1.20, 0.70), x_braco=0.53, pegadores=(0
     bpy.context.view_layer.update()
     return MaquinaSupinoDeitado(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2)
 # ===== fim: Supino deitado na máquina ===============================================================================================
+
+
+# ===== Mesa flexora =================================================================================================================
+# ── MESA FLEXORA (Mesa Flexora, lote 6, 07/10/2026): a flexora DEITADA, de bruços ──────────────────────────────────────────────────
+# Máquina de flexão do joelho com a pessoa de bruços num banco em V invertido: a ALMOFADA DO PEITO desce do quadril pra cabeça e a
+# ALMOFADA DAS COXAS desce do quadril pros joelhos (o quadril fica no alto, no ÁPICE das 2), os joelhos ficam logo além da ponta da
+# almofada das coxas, na linha do EIXO da alavanca (horizontal, ao longo do X), a ALAVANCA gira em volta dele com o ROLO de espuma
+# atrás das pernas, perto dos tornozelos, e há um PEGADOR de cada lado da almofada do peito, na altura da cabeça. A torre do eixo,
+# o mancal e a pilha de pesos (carenagem parada: o app não mostra a carga) ficam do lado −X (o direito de quem deita, olhando pro
+# chão com a cabeça pra −Y). É a "Lever Lying Leg Curl" do ExRx ("Lie prone on bench with knees just beyond edge of bench and lower
+# legs under lever pads. Grasp handles."; "Most machines are angled at user's hip to position hamstring in more favorable mechanical
+# position") com a regulagem dos fabricantes (Hoist RS-2408 Prone Leg Curl: "Position knees aligned with RED PIVOT POINT and ankles
+# under rolling pads"; Precor Resolute RSL0606 Prone Leg Curl: "The angled hip and chest pads ... ensure proper alignment of the
+# exerciser’s knee with the pivot point"). Como a cadeira_joelho, a peça é montada EM VOLTA do corpo: a cena dá o ápice das
+# almofadas, o eixo (os joelhos), o rolo e os pegadores, e a peça liga tudo com a estrutura. A alavanca e o rolo giram juntos com
+# a CadeiraJoelho.girar (mesmo eixo X, mesma regra checagens.eixos).
+# Medidas de máquina de verdade — TRUE Fitness FUSE-1800 Horizontal Leg Curl (folha de venda: "Chest and thigh pads angled at 15°",
+# "DIMENSIONS (L x W x H) 62” x 40” x 57”"; manual do dono, Rev 101521, p. 10, vistas em escala, cotas "1591.38", "1055.46" e
+# "1438.24" mm, medidas no desenho): almofada do peito a 15° com ~774 mm ao longo dela, 390 mm de largura no quadril e 310 mm na
+# frente; almofada das coxas a 15° com ~321 mm e 390 mm de largura; ápice das almofadas a ~603 mm do chão; rolo de Ø ~142 mm ×
+# ~466 mm; pilha (carenagem) de 0,22 × 0,51 × 1,44 m do lado da alavanca, ao lado da frente da almofada do peito, ~0,67 m do meio.
+# Estofado de 65 mm (Precor RSL0606: "Total thickness is 2.5 inches (65 mm)"). Os pegadores (na altura da cabeça, dos lados: NFPT,
+# "Hold on to the handles located on the either side at head level"; Yessis, "grips usually situated by the head or onto the sides
+# of the bench"), os tubos de 5–8 cm, a torre do eixo, o cubo, o braço da alavanca e o ajuste do rolo são escolha da fábrica. Peças
+# compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (de bruços, a cabeça pra −Y; s = +1 é o lado +X, o ESQUERDO da pessoa):
+#   mq = e3.mesa_flexora("mesa", eixo=(y, z), apice=(y, z), peito=(...), coxas=(...), rolo=(...), pegadores=(...))
+#   no pose(t): mq.girar(graus)      # a alavanca e o rolo giram juntos em volta do eixo, a partir da montagem: > 0 = flexão do joelho
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador, eixo=(0, 0, 1))),
+#        ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo, fora as mãos
+# nos pegadores), "<nome>_peito" e "<nome>_coxas" (as 2 almofadas, APOIO), "<nome>_alavanca" (gira; não encosta no corpo) e
+# "<nome>_rolo" (gira; APOIO). A alavanca e o rolo têm a origem NO EIXO e o X local AO LONGO dele (checagens.eixos).
+class MesaFlexora(CadeiraJoelho):
+    """Mesa flexora pronta na cena (mesa_flexora()). O girar() é o da CadeiraJoelho: a alavanca e o rolo giram juntos `graus` em
+    volta do eixo (no X, pelos 2 joelhos); com a pessoa de bruços e a cabeça pra −Y, > 0 leva o rolo pra cima e pra cabeça (flexão
+    do joelho)."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes                          # {"estrutura", "peito", "coxas", "alavanca", "rolo"}
+        self.equipamentos = [raizes["estrutura"], raizes["alavanca"]]
+        self.apoios = [raizes[k] for k in ("peito", "coxas", "rolo")]
+        self.eixo = Vector(eixo)                      # ponto do eixo de giro (no cubo da alavanca); direção = X
+        self.pegadores = pegadores                    # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+
+
+def _afinar(o, y0, y1, fator):
+    """Afina a caixa no X local ao longo do Y local (só a malha): a largura fica igual em y0 e vai a `fator` × em y1 (a almofada do
+    peito da mesa flexora, mais larga no quadril que na frente)."""
+    for v in o.data.vertices:
+        k = max(0.0, min(1.0, (v.co.y - y0) / (y1 - y0)))
+        v.co.x *= 1.0 + (fator - 1.0) * k
+    o.data.update()
+    return o
+
+
+def mesa_flexora(nome="mesa", eixo=(0.42, 0.82), apice=(0.0, 0.603), peito=(15.0, 0.774, 0.39, 0.31, 0.065),
+                 coxas=(15.0, 0.321, 0.39, 0.065), rolo=(0.80, 0.86, 0.071, 0.466), pegadores=(0.62, 0.22, 0.26, 0.13, 0.0145),
+                 lado=-1, x_alavanca=0.34, x_torre=0.44, pilha=True):
+    """Mesa flexora (ver o bloco acima). Medidas no mundo, em m, com a pessoa de bruços e a cabeça pra −Y (lado = −1: a torre do
+    eixo, a alavanca e a pilha ficam do lado −X, o direito de quem deita):
+      apice     = (y, z) da aresta (ao longo do X) onde o topo das 2 almofadas se encontra, embaixo do quadril;
+      peito     = (angulo, comprimento, largura_quadril, largura_frente, espessura): almofada do peito, do ápice pra cabeça (−Y),
+                  descendo `angulo` graus, `comprimento` m ao longo dela, afinando da largura do quadril até a da frente;
+      coxas     = (angulo, comprimento, largura, espessura): almofada das coxas, do ápice pros joelhos (+Y), descendo `angulo` graus;
+      eixo      = (y, z) do eixo de giro (paralelo ao X): passa pelo centro dos 2 joelhos, além da ponta da almofada das coxas;
+      rolo      = (y, z, raio, comprimento): eixo do rolo (ao longo do X, centrado em x = 0) na montagem;
+      pegadores = (u, n, x, comprimento, raio): um pegador de borracha de cada lado da almofada do peito, paralelo a ela, com o centro
+                  `u` m do ápice ao longo dela, `n` m abaixo do plano do topo dela e em x = ±x; um suporte sai da ponta da frente de
+                  cada um, vai pro meio embaixo da almofada e sobe até a viga dela;
+      x_alavanca, x_torre = |x| do plano do braço da alavanca e da torre do eixo; pilha = caixa da pilha de pesos.
+    Devolve um MesaFlexora (raizes, equipamentos, apoios, pegadores, girar())."""
+    s = -1.0 if lado < 0 else 1.0
+    ya, za = apice
+    ang_t, comp_t, larg_q, larg_f, esp_t = peito
+    ang_c, comp_c, larg_c, esp_c = coxas
+    ye, ze = eixo
+    y_r, z_r, raio_r, comp_r = rolo
+    u_p, n_p, x_p, comp_p, raio_p = pegadores
+    bt, bc = math.radians(ang_t), math.radians(ang_c)
+    A = Vector((0.0, ya, za))
+    ut, nt = Vector((0.0, -math.cos(bt), -math.sin(bt))), Vector((0.0, -math.sin(bt), math.cos(bt)))   # peito: pra cabeça; normal
+    uc, nc = Vector((0.0, math.cos(bc), -math.sin(bc))), Vector((0.0, math.sin(bc), math.cos(bc)))     # coxas: pros joelhos; normal
+    rot_x90 = (0, math.radians(90), 0)                       # cilindro deitado ao longo do X
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, pei, cox = raiz_nova("estrutura"), raiz_nova("peito"), raiz_nova("coxas")
+    P = Vector((s * (x_alavanca + 0.04), ye, ze))            # ponto do eixo no cubo da alavanca
+    alav = raiz_nova("alavanca", P)
+    rol = raiz_nova("rolo", P)
+    bpy.context.view_layer.update()
+
+    # ── almofadas (APOIO): a do peito (afinando pra frente) e a das coxas, com o topo passando pelo ápice; chapa embaixo de cada ──
+    # (caixa com o Y local ao longo da almofada e o Z local na normal: o peito gira +ang_t no X, com o +Y local pro ápice; as coxas
+    # giram −ang_c, com o +Y local pros joelhos)
+    alm_t = caixa(nome + "_peito_estofado", A + ut * (comp_t / 2) - nt * (esp_t / 2), (larg_q, comp_t, esp_t), mat_estofado(),
+                  rot=(bt, 0, 0), pai=pei, chanfro=0.015)
+    _afinar(alm_t, comp_t / 2, -comp_t / 2, larg_f / larg_q)
+    caixa(nome + "_coxas_estofado", A + uc * (comp_c / 2) - nc * (esp_c / 2), (larg_c, comp_c, esp_c), mat_estofado(),
+          rot=(-bc, 0, 0), pai=cox, chanfro=0.015)
+    _em_aneis(_reto(caixa(nome + "_peito_chapa", A + ut * (comp_t / 2) - nt * (esp_t + 0.012), (larg_f - 0.05, comp_t - 0.04, 0.024),
+                          mat_estrutura(), rot=(bt, 0, 0), pai=estr, chanfro=0)), passo=0.06)
+    _em_aneis(_reto(caixa(nome + "_coxas_chapa", A + uc * (comp_c / 2) - nc * (esp_c + 0.012), (larg_c - 0.05, comp_c - 0.04, 0.024),
+                          mat_estrutura(), rot=(-bc, 0, 0), pai=estr, chanfro=0)), passo=0.06)
+    # ── vigas embaixo das chapas (8 × 8 cm), que se encontram embaixo do ápice; poste do ápice e perna da frente até a base ────────
+    dvt, dvc = esp_t + 0.024 + 0.04, esp_c + 0.024 + 0.04   # eixo de cada viga abaixo do topo da sua almofada (na normal)
+    # junção das 2 vigas: A + ut·a − nt·dvt = A + uc·b − nc·dvc
+    M = Matrix(((ut.y, -uc.y), (ut.z, -uc.z)))
+    rhs = Vector(((nt * dvt - nc * dvc).y, (nt * dvt - nc * dvc).z))
+    a_j, _b = M.inverted() @ rhs
+    J = A + ut * a_j - nt * dvt
+    frente_v = A + ut * (comp_t - 0.10) - nt * dvt            # onde a perna da frente pega a viga do peito
+    _viga(nome + "_peito_viga", J, A + ut * (comp_t - 0.04) - nt * dvt, 0.08, 0.08, mat_estrutura(), pai=estr)
+    _viga(nome + "_coxas_viga", J, A + uc * (comp_c - 0.04) - nc * dvc, 0.08, 0.08, mat_estrutura(), pai=estr)
+    _viga(nome + "_poste_apice", (0, J.y, 0.06), J + Vector((0, 0, 0.04)), 0.08, 0.08, mat_estrutura(), pai=estr)
+    _viga(nome + "_perna_frente", (0, frente_v.y, 0.06), frente_v + Vector((0, 0, 0.04)), 0.07, 0.07, mat_estrutura(), pai=estr)
+    # ── base no chão: viga do meio (ao longo do Y), pé da frente e pé de trás (ao longo do X, até a torre do eixo) ──────────────
+    y0b, y1b = frente_v.y - 0.04, ye + 0.06
+    _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y0b + y1b) / 2, 0.03), (0.08, y1b - y0b, 0.06), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    _em_aneis(_reto(caixa(nome + "_base_frente", (0, frente_v.y, 0.025), (0.50, 0.08, 0.05), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    xa, xb = -s * 0.25, s * (x_torre + 0.05)
+    _em_aneis(_reto(caixa(nome + "_base_tras", ((xa + xb) / 2, ye + 0.02, 0.025), (abs(xb - xa), 0.08, 0.05), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.08)
+    # ── torre do eixo: coluna do lado, mancal no alto e o eixo de aço (parado) que entra no cubo da alavanca ─────────────────────
+    _viga(nome + "_torre", (s * x_torre, ye + 0.02, 0.05), (s * x_torre, ye + 0.02, ze + 0.07), 0.07, 0.08, mat_estrutura(),
+          pai=estr)
+    _cilindro(nome + "_mancal", 0.05, 0.08, (s * x_torre, ye, ze), rot_x90, mat_estrutura(), pai=estr)
+    _em_aneis(_cilindro(nome + "_eixo", 0.02, x_torre - x_alavanca + 0.05, (s * (x_alavanca + x_torre + 0.03) / 2, ye, ze), rot_x90,
+                        mat_aco(), pai=estr), passo=0.03)
+    _cilindro(nome + "_eixo_tampa", 0.03, 0.012, (s * (x_torre + 0.046), ye, ze), rot_x90, mat_aco(), pai=estr)
+    # ── pilha de pesos (carenagem parada) do lado da torre, ao lado da frente da almofada do peito, e a caixa do cabo até a torre ──
+    if pilha:
+        y_pi = (A + ut * comp_t).y + 0.385                   # TRUE FUSE-1800: de 0,13 a 0,64 m da frente da almofada do peito
+        _em_aneis(_reto(caixa(nome + "_pilha", (s * 0.67, y_pi, 0.04 + 1.40 / 2), (0.22, 0.51, 1.40), mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+        _em_aneis(_reto(caixa(nome + "_pilha_pe", (s * 0.67, y_pi, 0.02), (0.30, 0.60, 0.04), mat_estrutura(), pai=estr,
+                              chanfro=0)), passo=0.08)
+        _viga(nome + "_caixa_cabo", (s * x_torre, ye + 0.02, 0.16), (s * 0.67, y_pi + 0.20, 0.16), 0.07, 0.07, mat_carenagem(),
+              pai=estr)
+    # ── pegadores: borracha paralela à almofada do peito, dos lados dela; da ponta da frente sai uma haste de aço, o braço do
+    # suporte vai pro meio embaixo da almofada e um poste sobe até a viga do peito ─────────────────────────────────────────────
+    pegs = {}
+    u_s = u_p + comp_p / 2 + 0.035                          # onde fica o braço do suporte, ao longo da almofada
+    for k in (1, -1):
+        Xk = Vector((k * x_p, 0.0, 0.0))
+        C = A + ut * u_p - nt * n_p + Xk
+        pegs[k] = _em_aneis(tubo(nome + "_pegador%+d" % k, C - ut * (comp_p / 2), C + ut * (comp_p / 2), raio_p, mat_borracha(),
+                                 pai=estr, vertices=32), passo=0.035)
+        _cilindro(nome + "_pegador_ponta%+d" % k, raio_p + 0.004, 0.012, C - ut * (comp_p / 2 + 0.006),
+                  ut.to_track_quat("Z", "Y").to_euler(), mat_borracha(), pai=estr)
+        tubo(nome + "_pegador_haste%+d" % k, C + ut * (comp_p / 2 - 0.01), C + ut * (u_s - u_p + 0.012), 0.012, mat_aco(), pai=estr)
+        B = A + ut * u_s - nt * n_p
+        _viga(nome + "_pegador_braco%+d" % k, B + Xk, B + Vector((k * 0.015, 0.0, 0.0)), 0.03, 0.03, mat_estrutura(), pai=estr,
+              chanfro=0.003)
+    B = A + ut * u_s
+    _viga(nome + "_pegador_poste", B - nt * (n_p + 0.015), B - nt * dvt, 0.04, 0.04, mat_estrutura(), pai=estr, chanfro=0.003)
+    # ── alavanca (gira em volta do eixo): cubo, braço do cubo até o eixo do rolo, luva de regulagem com o pino e o eixo do rolo ───
+    d = Vector((0.0, y_r - ye, z_r - ze))
+    du = d.normalized()
+    xa_ = s * x_alavanca
+    pecas = [_cilindro(nome + "_cubo", 0.085, 0.03, P, rot_x90, mat_estrutura()),
+             _cilindro(nome + "_cubo_tampa", 0.035, 0.034, P, rot_x90, mat_aco())]
+    topo_b, ponta_b = Vector((xa_, ye, ze)), Vector((xa_, y_r, z_r))   # o braço vai do eixo até o eixo do rolo
+    pecas.append(_viga(nome + "_braco", topo_b + du * 0.02, ponta_b - du * 0.05, 0.05, 0.05, mat_estrutura()))
+    luva = ponta_b - du * 0.11
+    pecas.append(caixa(nome + "_luva", luva, (0.062, 0.062, 0.12), mat_estrutura(), rot=du.to_track_quat("Z", "Y").to_euler(),
+                       chanfro=0.004))
+    pecas.append(_cilindro(nome + "_pino", 0.007, 0.03, luva + Vector((s * 0.046, 0, 0)), rot_x90, mat_aco()))
+    pecas.append(_cilindro(nome + "_pino_bola", 0.014, 0.018, luva + Vector((s * 0.068, 0, 0)), rot_x90, mat_borracha()))
+    pecas.append(_cilindro(nome + "_ponta_braco", 0.034, 0.056, ponta_b, rot_x90, mat_estrutura()))
+    x_ent = s * (comp_r / 2 - 0.04)                          # o eixo entra 4 cm no rolo (o resto fica escondido dentro dele)
+    x_fim = -s * (comp_r / 2 + 0.008)
+    pecas.append(_em_aneis(_cilindro(nome + "_eixo_rolo", 0.0125, abs(xa_ - x_ent), ((xa_ + x_ent) / 2, y_r, z_r), rot_x90,
+                                     mat_aco(), vertices=24), passo=0.04))
+    pecas.append(_cilindro(nome + "_ponta_eixo_rolo", 0.0125, 0.04, (x_fim + s * 0.012, y_r, z_r), rot_x90, mat_aco(), vertices=24))
+    pecas.append(_cilindro(nome + "_trava_rolo", 0.02, 0.012, (x_fim, y_r, z_r), rot_x90, mat_aco()))
+    _prender(pecas, alav)
+    # ── rolo de espuma (APOIO): ao longo do X, centrado em x = 0, com as tampas de borracha ──────────────────────────────────────
+    pecas = [_cilindro(nome + "_rolo_espuma", raio_r, comp_r, (0, y_r, z_r), rot_x90, mat_estofado(), vertices=48)]
+    for k in (1, -1):
+        pecas.append(_cilindro(nome + "_rolo_tampa%+d" % k, raio_r * 0.55, 0.006, (k * (comp_r / 2 + 0.001), y_r, z_r), rot_x90,
+                               mat_borracha()))
+    _prender(pecas, rol)
+    bpy.context.view_layer.update()
+    return MesaFlexora({"estrutura": estr, "peito": pei, "coxas": cox, "alavanca": alav, "rolo": rol}, P, pegs, raio_p, comp_p / 2)
+# ===== fim: Mesa flexora ============================================================================================================

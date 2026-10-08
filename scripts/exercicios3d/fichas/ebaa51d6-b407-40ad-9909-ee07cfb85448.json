@@ -1,0 +1,419 @@
+{
+ "uuid": "ebaa51d6-b407-40ad-9909-ee07cfb85448",
+ "nome": "Mesa Flexora",
+ "cena": "mesa_flexora",
+ "grupo": "Isquiotibiais",
+ "subgrupo": "Isquiotibiais · gastrocnêmio (assistência)",
+ "padrao_movimento": "flexao_joelho",
+ "equipamento": "maquina",
+ "variacao": "deitado",
+ "alvos": [
+  "posterior"
+ ],
+ "auxiliares": [
+  "panturrilha"
+ ],
+ "camera": {
+  "az": 120,
+  "el": 20,
+  "dist": 3.3,
+  "alvo": [
+   0.0,
+   0.05,
+   0.72
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.5,
+  "alvo": [
+   0.0,
+   0.02,
+   0.72
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Deitado de bruços na mesa flexora, com o peito e o quadril apoiados na almofada do peito e as coxas na almofada das coxas (a máquina é dobrada no quadril, que fica no ponto mais alto), os joelhos logo depois da ponta da almofada das coxas, alinhados com o eixo da máquina (o ponto em que a alavanca gira), e o rolo da alavanca encostado atrás das pernas, logo acima dos tornozelos; as pernas paralelas, afastadas na largura do quadril, os tornozelos com os dedos puxados um pouco para a canela (sem apontar os pés), a cabeça na linha do tronco e as mãos segurando os pegadores dos lados da almofada, na altura da cabeça. Começa com as pernas esticadas, os joelhos só um pouco dobrados (sem travar), e dobra os joelhos levantando o rolo e levando os calcanhares em direção ao glúteo, até o rolo chegar bem perto da parte de trás das coxas, junto do glúteo; volta devagar, esticando os joelhos, até quase esticar. Só os joelhos mexem: o quadril fica colado na almofada (sem levantar o quadril para ajudar), o tronco e a cabeça ficam parados e os pés acompanham as canelas, sem mexer o tornozelo.",
+ "cinesiologia": {
+  "plano": "sagital (flexão e extensão do joelho); as canelas giram em volta do eixo dos joelhos, que fica alinhado com o eixo da alavanca da máquina",
+  "articulacoes": "joelho (flexão na ida, de ~5° — quase esticado, sem travar — até ~135°; extensão na volta); quadril parado a ~24° de flexão, deitado no V das almofadas (o quadril no ápice); coluna neutra e parada, deitada; tornozelos parados em flexão dorsal leve; ombros, cotovelos e punhos parados, as mãos nos pegadores",
+  "agonistas": "isquiotibiais — bíceps femoral, semitendíneo e semimembranáceo (ExRx: alvo \"Hamstrings\"; NASM: \"Hamstring Group (Biceps Femoris, Semitendinosus, Semimembranosus)\"), em contração concêntrica na ida e excêntrica na volta; de bruços, com o quadril quase esticado, os isquiotibiais biarticulares trabalham mais curtos que na flexora sentada e cresceram menos no treino (Maeo et al. 2021: \"Training-induced increases in muscle volume were greater in Seated-Leg versus Prone-Leg for the whole hamstrings (+14% vs +9%)\"); a dobra da máquina no quadril põe o isquiotibial numa posição mecânica melhor (ExRx: \"Most machines are angled at user's hip to position hamstring in more favorable mechanical position\")",
+  "sinergistas": "gastrocnêmio, sartório, grácil e poplíteo (ExRx: Synergists \"Gastrocnemius\", \"Sartorius\", \"Gracilis\", \"Popliteus\"; NASM: secundários \"Gastrocnemius\", \"Calf Muscles\"); com o tornozelo em flexão dorsal o gastrocnêmio ajuda mais (ExRx: \"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion\"). No app só a panturrilha (gastrocnêmio) fica marcada como auxiliar: o grácil e o sartório estão no grupo dos adutores do mapa, que pintaria a parte de dentro da coxa inteira, e o poplíteo é profundo, atrás do joelho",
+  "estabilizadores": "tibial anterior e reto femoral (ExRx: Antagonist Stabilizers \"Tibialis Anterior\", \"Rectus Femoris\" — o tibial segura o pé em flexão dorsal; \"If this angle is sharp (as shown), Rectus Femoris is less likely involved as Antagonist Stabilizer\"); o abdome firma o tronco na almofada (ACE: \"By engaging (lightly contracting) your abdominal muscles, this will help prevent hip hiking and low back hyper-extension.\") e as mãos nos pegadores seguram o corpo no banco (Hoist: \"Keep your body on the pads and hands on handles at all times.\")",
+  "fases": "concêntrica (dobra os joelhos levantando o rolo até a parte de trás das coxas — ExRx: \"Raise lever pad to back of thighs by flexing knees\"; NASM: \"bringing your heels toward your glutes\") e excêntrica (volta devagar esticando os joelhos até quase esticar — ExRx: \"Lower lever pads until knees are straight\"; NASM: \"Stop just short of full extension to maintain continuous muscular tension\"; NFPT: \"Take two to three seconds to lower the pad until it is in the starting position\"; Hoist: \"Slowly return to start position\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Lying Leg Curl (https://exrx.net/WeightExercises/Hamstrings/LVLyingLegCurl, lido na cópia do Internet Archive de 27/01/2026; o site responde 403 direto): classificação \"Utility: Basic\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Facing bench, stand between bench and lever pads. Lie prone on bench with knees just beyond edge of bench and lower legs under lever pads. Grasp handles.\"; Execution: \"Raise lever pad to back of thighs by flexing knees. Lower lever pads until knees are straight. Repeat.\"; Comments: \"Keep torso on bench to reduce hyperextension of lower back. Most machines are angled at user's hip to position hamstring in more favorable mechanical position. If this angle is sharp (as shown), Rectus Femoris is less likely involved as Antagonist Stabilizer. Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion.\"; músculos: Target \"Hamstrings\", Synergists \"Gastrocnemius\", \"Sartorius\", \"Gracilis\", \"Popliteus\", Antagonist Stabilizers \"Tibialis Anterior\", \"Rectus Femoris\"",
+  "NASM — Lying Leg Curl (https://www.nasm.org/resource-center/exercise-library/lying-leg-curl, lido em 07/10/2026): \"Lie face down on the leg curl machine with your legs extended and the pad positioned just above your ankles. Ensure your hips remain on the machine throughout the movement.\"; \"Curl the pad upward by flexing your hamstrings, bringing your heels toward your glutes while maintaining controlled movement.\"; \"Extend your legs to return to the starting position with control, maintaining tension in the hamstrings. Stop just short of full extension to maintain continuous muscular tension.\"; Primary Muscles \"Hamstring Group (Biceps Femoris, Semitendinosus, Semimembranosus)\"; Secondary Muscles \"Gastrocnemius\", \"Calf Muscles\"; Common Mistakes \"Allowing the hips to shift or rotate during the movement\"",
+  "ACE — Prone (Lying) Hamstrings Curl (https://acefitness.org/resources/everyone/exercise-library/131/prone-lying-hamstrings-curl/, lido em 07/10/2026; é a versão no colchonete com caneleira de cabo/elástico, o mesmo movimento de bruços): \"Lie with feet hip-width apart. Gently contract your abdominal / core muscles (\"bracing\") to stiffen your torso and stabilize your spine. Keep your ankle lightly dorsi-flexed (toes pointed towards your shinbone) throughout the exercise.\"; \"Exhale and curl (bend) your knee, bringing your heel towards your buttock without moving your thigh (the top of your thigh remains on the mat), lifting your hips off the mat or arching your low back.\"; \"Continue bending your knee until your heels near, or touch your buttock, or you reach the limits of your comfort level. The point where you notice your hips or low-back beginning to move indicates that you have reached the limits of movement in your joint.\"; \"Inhale and slowly return your leg back to your starting position.\"",
+  "NFPT — How To Do Lying Leg Curls (Robert Bovee; https://nfpt.com/how-to-do-lying-leg-curls/, lido em 07/10/2026): \"Lie face-down on the bench with your knees just off the edge of the pad. Position your body so the leg pads are resting up against the Achilles tendon (just above your ankle). Hold on to the handles located on the either side at head level.\"; \"Bending your knees, raise the leg pad up as far as you can (at least 90 degrees). Take two to three seconds to lower the pad until it is in the starting position.\"; \"Keep your hips against the bench throughout the entire movement.\"; \"Do not bring your hips off the pad or twist your hips as you raise the leg pad up.\"; \"Do not point your toes during this exercise. This will place more stress on your calf muscles.\"",
+  "Dr. Michael Yessis — Lying Leg Curl (https://doctoryessis.com/2013/01/01/lying-leg-curl/, lido em 07/10/2026): \"Assume a face down lying position on a leg curl bench (angled bench is preferred).\"; \"The knees should be beyond the far edge of the bench and the resistance rollers should be adjusted so that they rest against the back of the lower shin.\"; \"Hold onto the grips usually situated by the head or onto the sides of the bench.\"; \"In the finish position the shins should be perpendicular to the thigh or slightly beyond.\"; \"The toes should remain in line with the shins as you execute the exercise.\"; \"If the knee is on the bench, tremendous pressure can build up under the knee cap which can cause injury.\"; \"The angled bench is preferred as it situates the hips up higher and places the upper end of the hamstrings on stretch.\"",
+  "Hoist Fitness (fabricante) — RS-2408 Prone Leg Curl (https://www.hoistfitness.com/pages/rs-2408-prone-leg-curl, lido em 07/10/2026; nessa máquina as almofadas se mexem — \"Your support pads are designed to move as you exercise.\" —, daqui só a regulagem e a execução): \"Laying face down on pads, adjust exercise arm so legs are not hyper-extended.\"; \"Position knees aligned with RED PIVOT POINT and ankles under rolling pads.\"; \"Grasp handles and curl legs by bending at the knee.\"; \"Slowly return to start position.\"; \"Keep your body on the pads and hands on handles at all times.\"",
+  "Precor (fabricante) — Resolute RSL0606 Prone Leg Curl (https://www.precor.com/en-US/products/RSL0606, lido em 07/10/2026): \"The ankle roller pad adjusts for varying leg lengths\"; \"The angled hip and chest pads on the Resolute Prone Leg Curl ensure proper alignment of the exerciser’s knee with the pivot point to maximize comfort while isolating the hamstring.\"; \"Dimensions (L x W x H) 61 x 48 x 58 in / 155 x 122 x 147 cm\"; \"Weight Stack Tower Height: 58 in / 148 cm\"; estofado: \"Total thickness is 2.5 inches (65 mm).\"",
+  "TRUE Fitness (fabricante) — FUSE-1800 Horizontal Leg Curl: folha de venda (REV 12-8-2023, https://cdn.shopify.com/s/files/1/0631/0871/0559/files/FUSE-1800-Sell-Sheet_72745a82-5a42-4bbe-88fa-f90db967419d.pdf, lida em 07/10/2026): \"Chest and thigh pads angled at 15° for proper alignment during exercise movement\", \"Ergonomically located handles with contoured grips provide support during exercise\", \"DIMENSIONS (L x W x H) 62” x 40” x 57” / 158 cm x 102 cm x 145 cm\"; manual do dono (Rev 101521, https://cdn.shopify.com/s/files/1/0631/0871/0559/files/FUSE1800-Owners-Manual-Rev-101521.pdf, p. 10 \"MACHINE SPECIFICATIONS\"): vistas de lado, de cima e de frente em escala com as cotas \"1591.38\", \"1055.46\" e \"1438.24\" (mm) — medidas no desenho (07/10/2026): almofadas a 15,0° e 14,95° do chão, o topo das 2 se encontrando a ~603 mm do chão; almofada do peito com ~774 mm ao longo dela, 390 mm de largura no quadril e 310 mm na frente; almofada das coxas com ~321 mm × 390 mm; o eixo da alavanca ~31 mm além da ponta da almofada das coxas; rolo de Ø ~142 mm × ~466 mm; pilha de ~0,22 × 0,51 × 1,44 m do lado da alavanca, ao lado da frente da almofada do peito; placa de instruções da máquina (manual, p. 11, \"WORKOUT PLACARD\", LBL-PR-FU218BK): \"Adjust ankle pad so it rests comfortably behind ankles when knees are aligned with pivot point.\", \"Lay on machine and grasp handles.\", \"Keeping hips firmly in contact with pad, slowly curl legs up as far as comfortable or until fully flexed.\", \"Return to initial position and repeat.\", músculos \"HAMSTRINGS\", \"GASTROCNEMIUS\" (os desenhos STARTING/ENDING mostram as pernas esticadas e, no fim, dobradas até o rolo chegar perto do glúteo)",
+  "Life Fitness (fabricante) — Insignia Series Leg Curl SS-LC (https://www.lifefitness.com.au/commercial/leg-curl-sslc-lc, lido em 07/10/2026): \"The Insignia Series Leg Curl features a diverging hip and chest pad angle, which minimises lower back stress and helps maintain proper alignment.\"; \"Dimensions (L x W x H) 62.6\" x 41.7\" x 58.1\" (159cm x 106cm x 148cm)\"",
+  "Patente US 7.150.702 B2 (Nautilus, Leg curl/leg extension weight training machine; https://patents.google.com/patent/US7150702B2/en, lida em 07/10/2026): \"In the prone position, the user is often bent somewhat at the waist (at an angle of between about 5 and 30 degrees).\"; \"Ideally, the pivot axis of the curl and extension movement arms would be coincident with the pivot axis of the knee joint, which is typically at a location just inside the dorsal surface of the knee when the leg is extended. If these pivot axes are not properly positioned, the exercise can place stress on the knee joint.\"",
+  "Maeo S, Huang M, Wu Y, Sakurai H, Kusagawa Y, Sugiyama T, Kanehisa H, Isaka T. Greater Hamstrings Muscle Hypertrophy but Similar Damage Protection after Training at Long versus Short Muscle Lengths. Med Sci Sports Exerc. 2021;53(4):825-837. doi:10.1249/MSS.0000000000002523 — texto completo aberto (PMC7969179), lido em 07/10/2026: \"a prone leg curl machine (Toredo, Senoh, Japan) with the hip joint fixed at ~30° (0° = anatomical position). The knee joint range of motion was 0°–90° for both conditions, which we defined as the full range of motion to standardize it among participants and between conditions/legs.\"; resumo: \"Training-induced increases in muscle volume were greater in Seated-Leg versus Prone-Leg for the whole hamstrings (+14% vs +9%)\"",
+  "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), tabela 5 lida em 07/10/2026: \"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\""
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "de bruços na máquina os pés ficam no ar, com o rolo atrás das pernas (ExRx: \"lower legs under lever pads\"); quem confere que nada além dos joelhos mexe são as zonas das almofadas e do rolo, o eixo da máquina no joelho e as regras de quadril, tronco, coluna, cabeça e tornozelo parados abaixo",
+  "zonas": [
+   {
+    "nome": "peito deitado na almofada do peito",
+    "equipamento": "mesa_peito",
+    "partes": [
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"Keep torso on bench to reduce hyperextension of lower back\")"
+   },
+   {
+    "nome": "quadril colado na almofada (o ápice)",
+    "equipamento": "mesa_peito",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "TRUE — FUSE-1800 Horizontal Leg Curl, placa (\"Keeping hips firmly in contact with pad\"); NASM — Lying Leg Curl (\"Ensure your hips remain on the machine throughout the movement\"); NFPT — How To Do Lying Leg Curls (\"Keep your hips against the bench throughout the entire movement\")"
+   },
+   {
+    "nome": "coxa esquerda na almofada das coxas",
+    "equipamento": "mesa_coxas",
+    "partes": [
+     "LeftUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"Lie prone on bench\"); ACE — Prone (Lying) Hamstrings Curl (\"without moving your thigh\")"
+   },
+   {
+    "nome": "coxa direita na almofada das coxas",
+    "equipamento": "mesa_coxas",
+    "partes": [
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl e ACE — Prone (Lying) Hamstrings Curl (idem)"
+   },
+   {
+    "nome": "joelhos além da ponta da almofada das coxas",
+    "equipamento": "mesa_coxas",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"knees just beyond edge of bench\"); NFPT — How To Do Lying Leg Curls (\"knees just off the edge of the pad\"); Yessis — Lying Leg Curl (\"If the knee is on the bench, tremendous pressure can build up under the knee cap\")"
+   },
+   {
+    "nome": "perna esquerda encostada no rolo (atrás, logo acima do tornozelo)",
+    "equipamento": "mesa_rolo",
+    "partes": [
+     "LeftLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "NASM — Lying Leg Curl (\"the pad positioned just above your ankles\"); NFPT — How To Do Lying Leg Curls (\"leg pads are resting up against the Achilles tendon (just above your ankle)\"); Hoist — RS-2408 Prone Leg Curl (\"ankles under rolling pads\")"
+   },
+   {
+    "nome": "perna direita encostada no rolo (atrás, logo acima do tornozelo)",
+    "equipamento": "mesa_rolo",
+    "partes": [
+     "RightLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "NASM — Lying Leg Curl, NFPT — How To Do Lying Leg Curls e Hoist — RS-2408 Prone Leg Curl (idem)"
+   },
+   {
+    "nome": "pés sem encostar no rolo (o rolo fica acima do tornozelo)",
+    "equipamento": "mesa_rolo",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "NFPT — How To Do Lying Leg Curls (\"just above your ankle\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco, sem encostar na almofada",
+    "equipamento": "mesa_peito",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "a cabeça fica parada na linha do tronco (regra da fábrica); a almofada da TRUE vai até a frente do rosto e o rosto fica logo acima dela"
+   },
+   {
+    "nome": "braços sem encostar na almofada do peito",
+    "equipamento": "mesa_peito",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "os braços descem dos lados da almofada até os pegadores (NFPT — How To Do Lying Leg Curls: \"handles located on the either side at head level\")"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "joelhos no eixo da alavanca",
+    "equipamento": "mesa_alavanca",
+    "ossos": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "Hoist — RS-2408 Prone Leg Curl (\"Position knees aligned with RED PIVOT POINT\"); TRUE — FUSE-1800 Horizontal Leg Curl, placa (\"when knees are aligned with pivot point\"); Precor — Resolute RSL0606 Prone Leg Curl (\"ensure proper alignment of the exerciser’s knee with the pivot point\"); patente US 7.150.702 (\"the pivot axis of the curl ... would be coincident with the pivot axis of the knee joint\")"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés no ar, fora do chão",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     50,
+     5000
+    ],
+    "fonte": "de bruços com o quadril a ~60 cm do chão (o ápice das almofadas da TRUE) os pés não chegam no chão"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelho quase esticado no começo, sem travar",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     2,
+     12
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"Lower lever pads until knees are straight\"); NASM — Lying Leg Curl (\"Stop just short of full extension to maintain continuous muscular tension\"); Hoist — RS-2408 Prone Leg Curl (\"adjust exercise arm so legs are not hyper-extended\")"
+   },
+   {
+    "nome": "joelho bem dobrado no fim, o rolo chegando na parte de trás das coxas",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     128,
+     140
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"Raise lever pad to back of thighs by flexing knees\"); TRUE — FUSE-1800 Horizontal Leg Curl, placa (\"slowly curl legs up as far as comfortable or until fully flexed\"); NFPT — How To Do Lying Leg Curls (\"raise the leg pad up as far as you can (at least 90 degrees)\"); ACE — Prone (Lying) Hamstrings Curl (\"until your heels near, or touch your buttock, or you reach the limits of your comfort level\"). Yessis — Lying Leg Curl para antes (\"the shins should be perpendicular to the thigh or slightly beyond\"): aqui vale o fim do ExRx e da TRUE (e a dica do app, \"flexione até o pad tocar o glúteo\"); a ~135° o rolo fica a ~3 cm da parte de trás da coxa e a panturrilha já aperta a coxa"
+   },
+   {
+    "nome": "joelho nunca trava nem passa de 140°",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     2,
+     140
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl e NASM — Lying Leg Curl (idem)"
+   },
+   {
+    "nome": "quadril parado (~24°, deitado no V das almofadas)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     18,
+     30
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"Most machines are angled at user's hip\"); TRUE — FUSE-1800 Horizontal Leg Curl (\"Chest and thigh pads angled at 15°\"); patente US 7.150.702 (\"bent somewhat at the waist (at an angle of between about 5 and 30 degrees)\"); Maeo et al. 2021 (\"with the hip joint fixed at ~30°\")"
+   },
+   {
+    "nome": "tronco parado, deitado na almofada",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     94,
+     102
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"Keep torso on bench\"); a medida é o tronco × a vertical: 90° deitado reto, +8° com a cabeça mais baixa que o quadril"
+   },
+   {
+    "nome": "coluna neutra, sem arquear a lombar",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Lever Lying Leg Curl (\"Keep torso on bench to reduce hyperextension of lower back\"); ACE — Prone (Lying) Hamstrings Curl (\"help prevent hip hiking and low back hyper-extension\")"
+   },
+   {
+    "nome": "pernas paralelas, na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.7
+    ],
+    "fonte": "ACE — Prone (Lying) Hamstrings Curl (\"Lie with feet hip-width apart\"): as coxas abrem só 3° (juntas e paralelas, as coxas musculosas do boneco entram uma na outra perto da virilha); a medida é a distância de lado a lado entre os tornozelos ÷ a distância entre as articulações do quadril"
+   },
+   {
+    "nome": "joelho na linha quadril–tornozelo (sem abrir nem fechar), enquanto a perna está esticada",
+    "medida": "joelho_valgo",
+    "t": [
+     0.0,
+     0.6
+    ],
+    "mm": [
+     -15,
+     15
+    ],
+    "fonte": "regra da fábrica (cadeira flexora: ±15 mm); só até t = 0,6 (joelho até ~95°): de bruços, com o joelho bem dobrado o tornozelo volta pra perto do quadril e a reta quadril–tornozelo fica curta e longe do joelho — a medida perde o sentido (os 3° de abertura da coxa viram ~18 mm no fim); quem segura as pernas paralelas o movimento todo é a regra pes_base_lateral"
+   },
+   {
+    "nome": "tornozelos em flexão dorsal leve e parados (sem apontar os pés)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     80,
+     92
+    ],
+    "fonte": "ACE — Prone (Lying) Hamstrings Curl (\"Keep your ankle lightly dorsi-flexed (toes pointed towards your shinbone) throughout the exercise\"); NFPT — How To Do Lying Leg Curls (\"Do not point your toes during this exercise\"); ExRx — Lever Lying Leg Curl (\"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius\"); neutro do boneco em pé ~76° (tecnica3d.tornozelo), aqui +10° de flexão dorsal (amplitude normal 0–20°, Alazzawi 2017)"
+   },
+   {
+    "nome": "cotovelos dobrados ~90°, mãos nos pegadores na altura da cabeça",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     75,
+     100
+    ],
+    "fonte": "NFPT — How To Do Lying Leg Curls (\"Hold on to the handles located on the either side at head level\"); Yessis — Lying Leg Curl (\"Hold onto the grips usually situated by the head or onto the sides of the bench\")"
+   },
+   {
+    "nome": "pelve nivelada (o quadril não gira nem sai do lugar)",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "NASM — Lying Leg Curl (erro comum: \"Allowing the hips to shift or rotate during the movement\"); NFPT — How To Do Lying Leg Curls (\"Do not bring your hips off the pad or twist your hips\")"
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "NASM — Lying Leg Curl (idem)"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}
