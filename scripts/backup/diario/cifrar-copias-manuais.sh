@@ -36,6 +36,12 @@ done
 [ -s "$DESTINATARIO" ] || { echo "sem a chave pública do age: $DESTINATARIO" >&2; exit 2; }
 command -v age > /dev/null 2>&1 || { echo "sem o age no PATH" >&2; exit 2; }
 mkdir -p "$(dirname "$LOG")"
+# A chave privada (só à mão) é lida UMA vez para a memória: pode vir de um <(...) do cofre, que só se lê uma vez.
+IDENTIDADE_CONTEUDO=""
+if [ -n "${AGE_IDENTIDADE:-}" ]; then
+  IDENTIDADE_CONTEUDO="$(cat "$AGE_IDENTIDADE")"
+  [[ "$IDENTIDADE_CONTEUDO" == *AGE-SECRET-KEY-* ]] || { echo "AGE_IDENTIDADE não tem uma chave privada do age" >&2; exit 2; }
+fi
 registrar() { printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; }
 
 if [ ! -d "$DIR" ]; then
@@ -73,9 +79,9 @@ cifrar_uma() {
   tar --sort=name -cf - -C "$DIR" "$nome" -C "$tmp" SHA256SUMS | age -R "$DESTINATARIO" -o "$parcial"
   [ -s "$parcial" ] || { echo "arquivo cifrado vazio: $nome" >&2; rm -f "$parcial"; return 1; }
   local conferida="sem conferir (sem a chave privada)"
-  if [ -n "${AGE_IDENTIDADE:-}" ]; then
+  if [ -n "$IDENTIDADE_CONTEUDO" ]; then
     mkdir "$tmp/volta"
-    age -d -i "$AGE_IDENTIDADE" "$parcial" | tar -xf - -C "$tmp/volta"
+    age -d -i <(printf '%s\n' "$IDENTIDADE_CONTEUDO") "$parcial" | tar -xf - -C "$tmp/volta"
     (cd "$tmp/volta" && sha256sum --quiet --strict -c SHA256SUMS)
     [ "$(cd "$tmp/volta" && find "$nome" -type f | wc -l)" -eq "$arquivos" ] || { echo "faltou arquivo na volta: $nome" >&2; rm -f "$parcial"; return 1; }
     conferida="conferida (decifrada, $arquivos arquivos com o mesmo sha256)"

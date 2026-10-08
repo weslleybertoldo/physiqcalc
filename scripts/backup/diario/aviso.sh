@@ -9,6 +9,7 @@ LOG="${PHYSIQ_BACKUP_LOG:-$HOME/.local/state/physiq-backup/aviso.log}"
 PONTE="${PHYSIQ_BACKUP_PONTE:-$HOME/remoto-telegram-mcp}"
 mkdir -p "$(dirname "$LOG")"
 case "$unidade" in
+  *teste*) rotina="TESTE do aviso (pode ignorar: hml-07 conferindo o caminho do aviso)" ;;
   physiq-backup-diario*) rotina="a cópia diária cifrada dos bancos" ;;
   physiq-backups-cifrar*) rotina="a cifra das cópias manuais" ;;
   physiq-backups-limpeza*) rotina="a limpeza das cópias com 29+ dias" ;;
