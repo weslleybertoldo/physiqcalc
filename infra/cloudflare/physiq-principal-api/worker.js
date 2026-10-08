@@ -11,12 +11,19 @@
 // cabeçalhos é descartado. O resto do tráfego (auth, rest, storage) segue igual.
 const ORIGIN = "https://hkxvtsbwctxkrqzkkdoz.supabase.co";
 
-// hml-05c (homologação, H-17): as 3 RPCs públicas (sem login: diário e pré-consulta) também levam o IP de verdade — o banco conta
-// os pedidos por hash do IP. Caminho normalizado ("//" e "/" no fim). Teste: node --test infra/cloudflare/physiq-principal-api/worker.test.mjs
+// hml-05c (homologação, H-17): as 3 RPCs públicas (sem login: diário e pré-consulta) levam o IP de verdade para o banco contar os
+// pedidos por IP — mas SEM o segredo (o pedido ao PostgREST pode ir para os logs): vai a assinatura HMAC-SHA256(segredo, "ip:minuto"),
+// que o banco confere com o segredo guardado no Vault. Caminho normalizado ("//" e "/" no fim).
+// Teste: node --test infra/cloudflare/physiq-principal-api/worker.test.mjs
 const RPC_PUBLICAS = /^\/rest\/v1\/rpc\/(preconsulta_responder|diario_listar|diario_enviar)$/;
-export function levaIp(caminho) {
-  if (caminho.startsWith("/functions/v1/")) return true;
+export function rpcPublica(caminho) {
   return RPC_PUBLICAS.test(caminho.replace(/\/{2,}/g, "/").replace(/\/+$/, ""));
+}
+
+export async function assinarIp(segredo, ip, minuto = Math.floor(Date.now() / 60000)) {
+  const chave = await crypto.subtle.importKey("raw", new TextEncoder().encode(segredo), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", chave, new TextEncoder().encode(`${ip}:${minuto}`));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export default {
@@ -30,9 +37,13 @@ export default {
     headers.delete("host");
     headers.delete("x-physiq-ip");
     headers.delete("x-physiq-proxy");
+    headers.delete("x-physiq-assinatura");
     const segredo = env && typeof env.PROXY_SEGREDO === "string" ? env.PROXY_SEGREDO : "";
     const ip = request.headers.get("cf-connecting-ip");
-    if (segredo && ip && levaIp(url.pathname)) {
+    if (segredo && ip && rpcPublica(url.pathname)) {
+      headers.set("x-physiq-ip", ip);
+      headers.set("x-physiq-assinatura", await assinarIp(segredo, ip));
+    } else if (segredo && ip && url.pathname.startsWith("/functions/v1/")) {
       headers.set("x-physiq-ip", ip);
       headers.set("x-physiq-proxy", segredo);
     }
