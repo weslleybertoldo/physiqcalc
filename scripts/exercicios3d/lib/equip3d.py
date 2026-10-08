@@ -4468,3 +4468,267 @@ def panturrilha_em_pe(nome="panturrilha_pe", eixo=(-0.95, 1.15), ombreiras=None,
     raizes = {"estrutura": estr, "degrau": deg, "braco": bra, "ombreiras": omb}
     return MaquinaPanturrilhaEmPe(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2, 1.0 if c_o.y > ye else -1.0)
 # ===== fim: Panturrilha em pé =======================================================================================================
+
+
+# ===== Abdominal na máquina =========================================================================================================
+# ── MÁQUINA DE ABDOMINAL SENTADO (Abdominal na Máquina, lote 6, 08/10/2026) ─────────────────────────────────────────────────────────
+# Máquina de abdominal sentado do tipo mais comum (a "Lever Seated Crunch" do ExRx, a "Abdominal crunch (machine)" da NSCA, a
+# "Seated Crunch" da ACE em máquina seletorizada; Life Fitness Insignia Abdominal SS-AB, Precor Resolute Ab Crunch RSL0714): a pessoa
+# senta com o quadril e a lombar na ALMOFADA DA LOMBAR (parada), as costas de cima na ALMOFADA DAS COSTAS da ALAVANCA, as canelas
+# atrás dos ROLOS, as mãos nos PEGADORES ao lado da cabeça e a parte de trás dos braços nas ALMOFADAS DOS BRAÇOS; flexiona o tronco e
+# a alavanca (almofadas + pegadores) gira junto pra frente e pra baixo, em volta de um eixo horizontal (ao longo do X) que passa pela
+# coluna, onde ela dobra (ExRx: "Sit on
+# machine with back and hips against back supports. If available, place lower legs under pads or on platform. Grasp handles above
+# and position back of arm against pads to each side." / "With hips stationary, flex waist so elbows travel downward."; NSCA: "Sit
+# with your back against the pad and your feet under the rollers", "Curl your torso forward toward your thighs, keeping your buttocks
+# and legs still"; Life Fitness SS-AB: "Adjust the seat height so that lower back pad is resting on your lower back."; Nautilus
+# Inspiration Abdominal Crunch: "provides a moving axis of rotation around the thoracic region of the spine"). Como as outras máquinas,
+# a cena monta a peça EM VOLTA do corpo: ela dá o eixo (o centro de giro que melhor segue o tórax na flexão), o assento, as 2
+# almofadas das costas, os pegadores (onde as mãos fecham), as almofadas dos braços e os rolos; a peça liga tudo com a estrutura.
+# A alavanca é um U em volta de quem senta: um cubo de cada lado, no eixo (por fora da cintura), com o braço que sobe por trás das
+# costas até a travessa da almofada das costas e daí, por trás e por fora do ombro, até a barra de aço que entra na ponta de trás do
+# pegador, e a barra que vem do cubo pra frente, por fora do corpo, até o pino da almofada do braço; os 2 cubos giram em mancais
+# (tubo oco) em postes que saem da base, com o eixo de aço da alavanca passando por dentro deles.
+# Medidas de máquina de verdade: torre da pilha de 148 cm e máquina de 133 × 117 × 148 cm (Life Fitness Insignia Series Abdominal
+# SS-AB, manual do dono 9481201 Rev BE: "cm = 133 x 117 x 148"); estofado de 60 mm, como o das outras máquinas sentadas (acima). O
+# desenho da alavanca, os tubos (viga de 50 mm), cubos, mancais, postes, a base, o pegador (borracha de 29 mm, o cilindro da mão de
+# referência) e os rolos (espuma de Ø 12,7 cm, como o da cadeira extensora) são escolha da fábrica. Peças compridas em anéis
+# (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   mq = e3.abdominal_maquina("abdominal", eixo=(y, z), assento=(...), encosto=(...), costas=(...), pegadores={1: (c, u), -1: (c, u)},
+#                             rolo=(...), bracos={1: (...), -1: (...)})
+#   no pose(t): mq.girar(graus)            # > 0 leva a almofada das costas e os pegadores pra frente e pra baixo (a flexão)
+#               c, u = mq.pegada(s)         # centro e eixo do pegador do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador, eixo=(0, 0, 1))),
+#        ...], apoios=mq.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_assento", "<nome>_encosto" (a almofada da lombar) e "<nome>_rolo" (APOIO, paradas), "<nome>_alavanca" (gira; não encosta
+# no corpo, fora as mãos nos pegadores), "<nome>_costas" (a almofada das costas) e "<nome>_bracos" (as almofadas dos braços, opcionais)
+# — as 2 giram junto com a alavanca; APOIO. A alavanca e as almofadas dela têm a origem NO EIXO (no cubo do lado +X) e o X local AO
+# LONGO dele: a regra checagens.eixos da ficha mede a coluna nessa reta. O pegador de cada lado é um tubo de borracha com o Z local
+# ao longo dele e a origem no meio (ck.Barra(..., eixo=(0, 0, 1))).
+class MaquinaAbdominal:
+    """Máquina de abdominal sentado pronta na cena (abdominal_maquina())."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes                  # {"estrutura", "assento", "encosto", "rolo", "alavanca", "costas"[, "bracos"]}
+        self.moveis = tuple(k for k in ("alavanca", "costas", "bracos") if k in raizes)
+        self.equipamentos = [raizes["estrutura"], raizes["alavanca"]]
+        self.apoios = [raizes[k] for k in ("assento", "encosto", "rolo", "costas", "bracos") if k in raizes]
+        self.eixo = Vector(eixo)              # ponto do eixo de giro da alavanca (em x = 0); direção = X
+        self.pegadores = pegadores            # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in self.moveis}
+
+    def _giro(self, graus):
+        return (Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(graus), 4, "X")
+                @ Matrix.Translation(-self.eixo))
+
+    def girar(self, graus):
+        """A alavanca e as almofadas dela (costas e braços) giradas `graus` em volta do eixo (regra da mão direita no +X), a partir
+        da montagem: com a pessoa olhando pra −Y, > 0 leva pra frente (−Y) e pra baixo o que está acima do eixo — a flexão do tronco."""
+        R = self._giro(graus)
+        for k, M in self._M0.items():
+            self.raizes[k].matrix_world = R @ M
+        self.angulo = graus
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, graus=None):
+        """Centro e eixo (mundo, unitário) do pegador do lado s com a alavanca em `graus` (None = como está agora)."""
+        M = self.pegadores[s].matrix_world
+        if graus is not None:
+            M = self._giro(graus - self.angulo) @ M
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+def _almofada_inclinada(nome, plano, mat, raiz, chanfro=0.015):
+    """Estofado com a face da frente no plano (y, z, angulo, h0, h1, largura, espessura): a face passa por (y, z) e sobe `angulo`
+    graus inclinada pra trás (+Y) da vertical; o estofado vai de h0 a h1 ao longo dela e fica atrás dela (preso na `raiz` sem sair
+    do lugar). Devolve (u, n, centro da face): u = ao longo da face, pra cima; n = normal da face (pro corpo)."""
+    y, z, ang, h0, h1, larg, esp = plano
+    a = math.radians(ang)
+    u = Vector((0.0, math.sin(a), math.cos(a)))
+    n = Vector((0.0, -math.cos(a), math.sin(a)))
+    face = Vector((0.0, y, z)) + u * ((h0 + h1) / 2)
+    _prender([caixa(nome, face - n * (esp / 2), (larg, esp, h1 - h0), mat, rot=(-a, 0, 0), chanfro=chanfro)], raiz)
+    return u, n, face
+
+
+def abdominal_maquina(nome="abdominal", eixo=None, assento=None, encosto=None, costas=None, pegadores=None, rolo=None,
+                      x_lado=0.33, lado=-1, pilha=True, viga=0.05, raio_pegador=0.0145, comp_pegador=0.15, y_pes=None,
+                      bracos=None, almofada_braco=(0.14, 0.08, 0.05)):
+    """Máquina de abdominal sentado (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      eixo      = (y, z) do eixo de giro da alavanca (paralelo ao X): passa pela coluna, onde ela dobra;
+      assento   = (y_frente, y_tras, topo, largura, espessura): estofado do assento, com o topo em `topo`;
+      encosto   = (y, z, angulo, h0, h1, largura, espessura): a almofada da lombar (parada; ver _almofada_inclinada);
+      costas    = (y, z, angulo, h0, h1, largura, espessura): a almofada das costas, no mesmo formato (gira com a alavanca);
+      pegadores = {s: (centro, eixo)}: centro (x, y, z) do pegador de borracha do lado s (onde a mão fecha) e a direção dele; a
+                  ponta do −eixo de cada pegador entra numa barra de aço que vai pro lado, ao longo do X, até o braço da alavanca;
+      rolo      = (y, z, raio, comprimento, x_meio): os 2 rolos de espuma das canelas, ao longo do X, centrados em (±x_meio, y, z),
+                  num eixo de aço que passa por um poste no meio (entre as pernas);
+      x_lado    = |x| do braço da alavanca de cada lado e do cubo no eixo (por fora do corpo); o mancal fica 7,5 cm mais pra fora;
+      lado      = lado da torre da pilha (−1 = −X, o direito de quem senta); pilha = caixa da pilha de pesos;
+      viga      = seção (m) da viga quadrada da alavanca; raio_pegador, comp_pegador = o pegador de borracha;
+      y_pes     = y da ponta dos pés no chão (None = rolo − 6 cm): a base vai até 10 cm na frente dela, sem passar embaixo dos pés;
+      bracos    = None (sem almofadas dos braços) ou {s: (centro, normal, ao_longo)}: a almofada do braço do lado s, com a face de cima
+                  centrada em `centro`, virada pra `normal` (pro braço) e comprida ao longo de `ao_longo` (o braço); almofada_braco =
+                  (comprimento, largura, espessura) dela. Cada uma fica numa chapa com um pino que desce até uma barra que vai pro lado,
+                  até o braço da alavanca, e daí até o cubo (raiz "<nome>_bracos", gira junto com a alavanca; APOIO).
+    Devolve um MaquinaAbdominal (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
+    if None in (eixo, assento, encosto, costas, pegadores, rolo):
+        raise ValueError("abdominal_maquina: eixo, assento, encosto, costas, pegadores e rolo vêm da cena (a peça é montada em volta "
+                         "do corpo)")
+    ye, ze = eixo
+    y_f, y_t, topo, larg, esp = assento
+    y_r, z_r, raio_r, comp_r, x_r = rolo
+    y_pes = y_r + 0.04 if y_pes is None else y_pes
+    if x_r - comp_r / 2 < 0.04:
+        raise ValueError("abdominal_maquina: os rolos (x_meio %.3f, comprimento %.3f) batem no poste do meio" % (x_r, comp_r))
+    sl = -1.0 if lado < 0 else 1.0
+    x_m = x_lado + 0.075                                     # mancal, poste do mancal e trilho da base de cada lado (|x|)
+    rot_x90 = (0, math.radians(90), 0)                       # cilindro deitado ao longo do X
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, ass, enc, rol = (raiz_nova(k) for k in ("estrutura", "assento", "encosto", "rolo"))
+    H = Vector((x_lado, ye, ze))                             # cubo do lado +X: a origem da parte que gira (no eixo)
+    alav, cos_ = raiz_nova("alavanca", H), raiz_nova("costas", H)
+    bpy.context.view_layer.update()
+
+    # ── assento: estofado (APOIO) em cima de uma chapa; coluna até a base ─────────────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, y_t - y_f, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.05, y_t - y_f - 0.04, 0.024), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    _viga(nome + "_coluna_assento", (0, y_ass, 0.06), (0, y_ass, z_chapa - 0.012), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── almofada da lombar (APOIO, parada): estofado, chapa atrás dele e a viga que desce até a base ─────────────────────────────────
+    u_e, n_e, f_e = _almofada_inclinada(nome + "_encosto_estofado", encosto, mat_estofado(), enc)
+    esp_e, larg_e, alt_e = encosto[6], encosto[5], encosto[4] - encosto[3]
+    chapa_e = f_e - n_e * (esp_e + 0.012)
+    _em_aneis(_reto(caixa(nome + "_encosto_chapa", chapa_e, (larg_e - 0.05, 0.024, alt_e - 0.04), mat_estrutura(),
+                          rot=(-math.radians(encosto[2]), 0, 0), pai=estr, chanfro=0)), passo=0.06)
+    y_col_e = chapa_e.y + 0.012 + 0.04                        # coluna da almofada da lombar: logo atrás da chapa
+    _viga(nome + "_coluna_encosto", (0, y_col_e, 0.06), (0, y_col_e, chapa_e.z + 0.02), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── base no chão: viga do meio (ao longo do Y, do poste dos rolos até atrás), trilhos dos mancais e a travessa de trás ───────────
+    y_tras_b = max(y_col_e, ye) + 0.30
+    y_frente_b = min(y_r - 0.06, y_pes - 0.10)               # o pé da frente fica na frente da ponta dos pés (não passa embaixo deles)
+    _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y_frente_b + y_tras_b) / 2, 0.03), (0.08, y_tras_b - y_frente_b, 0.06),
+                          mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    _em_aneis(_reto(caixa(nome + "_base_pe_frente", (0, y_frente_b + 0.04, 0.025), (0.56, 0.08, 0.05), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    y0_t = ye - 0.12                                          # trilhos dos mancais: do eixo pra trás até a travessa
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base_trilho%+d" % s, (s * x_m, (y0_t + y_tras_b) / 2, 0.03), (0.08, y_tras_b - y0_t, 0.06),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+    _em_aneis(_reto(caixa(nome + "_base_tras", (0, y_tras_b - 0.04, 0.03), (2 * x_m - 0.08, 0.08, 0.06), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    # ── poste dos rolos (no meio, entre as pernas), o eixo de aço e os 2 rolos de espuma (APOIO) ──────────────────────────────────────
+    _viga(nome + "_poste_rolo", (0, y_r, 0.06), (0, y_r, z_r + 0.03), 0.06, 0.06, mat_estrutura(), pai=estr)
+    x_fim_r = x_r + comp_r / 2 + 0.012
+    _em_aneis(_cilindro(nome + "_eixo_rolo", 0.0125, 2 * x_fim_r, (0, y_r, z_r), rot_x90, mat_aco(), vertices=24, pai=estr), passo=0.04)
+    pecas = []
+    for s in (1, -1):
+        _cilindro(nome + "_trava_rolo%+d" % s, 0.02, 0.012, (s * x_fim_r, y_r, z_r), rot_x90, mat_aco(), pai=estr)
+        pecas.append(_cilindro(nome + "_rolo_espuma%+d" % s, raio_r, comp_r, (s * x_r, y_r, z_r), rot_x90, mat_estofado(), vertices=48))
+        for k in (1, -1):
+            pecas.append(_cilindro(nome + "_rolo_tampa%+d%+d" % (s, k), raio_r * 0.55, 0.006,
+                                   (s * x_r + k * (comp_r / 2 + 0.001), y_r, z_r), rot_x90, mat_borracha()))
+    _prender(pecas, rol)
+    # ── postes dos mancais (um de cada lado, do trilho até embaixo do eixo) e o mancal: tubo oco ao longo do X ───────────────────────
+    for s in (1, -1):
+        _viga(nome + "_poste_mancal%+d" % s, (s * x_m, ye, 0.06), (s * x_m, ye, ze - 0.04), 0.07, 0.07, mat_estrutura(), pai=estr)
+        m = _tubo_oco(nome + "_mancal%+d" % s, (s * x_m, ye, ze), 0.045, 0.023, 0.06, mat_estrutura(), pai=estr)
+        m.rotation_euler = rot_x90
+    # ── torre da pilha de pesos (carenagem parada) do lado `lado`, atrás do mancal, e a caixa do cabo até o poste ─────────────────────
+    if pilha:
+        x_t = sl * (x_m + 0.04 + 0.15 + 0.03)
+        y_tc = ye + 0.12
+        _em_aneis(_reto(caixa(nome + "_pilha", (x_t, y_tc, 0.06 + 1.42 / 2), (0.30, 0.40, 1.42), mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+        _em_aneis(_reto(caixa(nome + "_pilha_base", (x_t, y_tc, 0.03), (0.40, 0.50, 0.06), mat_estrutura(), pai=estr, chanfro=0)),
+                  passo=0.08)
+        _viga(nome + "_caixa_cabo", (sl * (x_m + 0.035), ye + 0.06, 0.30), (x_t - sl * 0.15, ye + 0.06, 0.30), 0.07, 0.07,
+              mat_carenagem(), pai=estr)
+    # ── a alavanca (gira): cubo de cada lado no eixo, eixo de aço por dentro do mancal com a porca, o braço que sobe por trás das
+    #    costas até a travessa da almofada das costas e daí até a barra de aço que entra na ponta de trás do pegador ─────────────────
+    u_c, n_c, f_c = _almofada_inclinada(nome + "_costas_estofado", costas, mat_estofado(), cos_)
+    esp_c, larg_c, alt_c = costas[6], costas[5], costas[4] - costas[3]
+    chapa_c = f_c - n_c * (esp_c + 0.012)
+    J = chapa_c - n_c * (0.012 + viga / 2 + 0.004)           # travessa atrás da chapa da almofada das costas
+    pecas = [_em_aneis(_reto(caixa(nome + "_costas_chapa", chapa_c, (larg_c - 0.05, 0.024, alt_c - 0.04), mat_estrutura(),
+                                   rot=(-math.radians(costas[2]), 0, 0), chanfro=0)), passo=0.06)]
+    pecas.append(_viga(nome + "_travessa", (-x_lado - viga / 2, J.y, J.z), (x_lado + viga / 2, J.y, J.z), viga, viga, mat_estrutura()))
+    pegs = {}
+    for s in (1, -1):
+        Hs = Vector((s * x_lado, ye, ze))
+        pecas.append(_cilindro(nome + "_cubo%+d" % s, 0.055, 0.05, Hs, rot_x90, mat_estrutura()))
+        pecas.append(_cilindro(nome + "_cubo_tampa%+d" % s, 0.025, 0.054, Hs, rot_x90, mat_aco()))
+        x0, x1 = x_lado + 0.025, x_m + 0.035                 # eixo de aço: do cubo até 5 mm depois do mancal
+        pecas.append(_cilindro(nome + "_eixo%+d" % s, 0.018, x1 - x0, (s * (x0 + x1) / 2, ye, ze), rot_x90, mat_aco()))
+        pecas.append(_cilindro(nome + "_eixo_porca%+d" % s, 0.027, 0.012, (s * (x_m + 0.035 + 0.006), ye, ze), rot_x90, mat_aco(),
+                               vertices=6))
+        c, e = pegadores[s]
+        c, e = Vector(c), Vector(e).normalized()
+        A = c - e * (comp_pegador / 2 + 0.012)               # ponta de trás do pegador: a barra de aço sai dela pro lado
+        Js = Vector((s * x_lado, J.y, J.z))
+        Ks = Vector((s * x_lado, A.y, A.z))
+        for i, (p, q) in enumerate(((Hs, Js), (Js, Ks))):
+            d = (q - p).normalized()
+            pecas.append(_viga(nome + "_braco%d%+d" % (i, s), p + d * (0.045 if i == 0 else -viga / 2), q + d * (viga / 2), viga, viga,
+                               mat_estrutura()))
+        for nm, P in (("_canto_costas", Js), ("_canto_pegador", Ks)):
+            pecas.append(caixa(nome + nm + "%+d" % s, P, (viga + 0.01, viga + 0.01, viga + 0.01), mat_estrutura(), chanfro=0.004))
+        pecas.append(_em_aneis(tubo(nome + "_barra_pegador%+d" % s, Ks - Vector((s * viga / 2, 0, 0)), Vector((A.x, A.y, A.z)), 0.016,
+                                    mat_aco(), vertices=24), passo=0.035))
+        peg = _em_aneis(tubo(nome + "_pegador%+d" % s, c - e * (comp_pegador / 2), c + e * (comp_pegador / 2), raio_pegador,
+                             mat_borracha(), vertices=32), passo=0.035)
+        pecas.append(peg)
+        pegs[s] = peg
+        rot_e = e.to_track_quat("Z", "Y").to_euler()
+        pecas.append(_cilindro(nome + "_pegador_ponta%+d" % s, raio_pegador + 0.004, 0.012, c + e * (comp_pegador / 2 + 0.006), rot_e,
+                               mat_borracha()))
+        pecas.append(_cilindro(nome + "_pegador_colar%+d" % s, raio_pegador + 0.004, 0.024, c - e * (comp_pegador / 2 + 0.012), rot_e,
+                               mat_aco()))
+    raizes = {"estrutura": estr, "assento": ass, "encosto": enc, "rolo": rol, "alavanca": alav, "costas": cos_}
+    # ── almofadas dos braços (APOIO, giram com a alavanca): estofado embaixo da parte de trás do braço, perto do cotovelo, numa chapa
+    #    com um pino que desce até a barra que vai pro lado, até o braço da alavanca, e daí até o cubo ──────────────────────────────
+    if bracos is not None:
+        comp_b, larg_b, esp_b = almofada_braco
+        bra = raiz_nova("bracos", H)
+        bpy.context.view_layer.update()
+        almofadas = []
+        for s in (1, -1):
+            f0, nv, ao = (Vector(v) for v in bracos[s])
+            nv = nv.normalized()
+            ao = (ao - nv * ao.dot(nv)).normalized()
+            lx = ao.cross(nv)
+            rot_b = _rot_de(lx, ao, nv)
+            almofadas.append(caixa(nome + "_braco_estofado%+d" % s, f0 - nv * (esp_b / 2), (larg_b, comp_b, esp_b), mat_estofado(),
+                                   rot=rot_b, chanfro=0.012))
+            chapa_b = f0 - nv * (esp_b + 0.008)
+            pecas.append(_reto(caixa(nome + "_braco_chapa%+d" % s, chapa_b, (larg_b - 0.02, comp_b - 0.03, 0.016), mat_estrutura(),
+                                     rot=rot_b, chanfro=0)))
+            B0 = chapa_b - nv * 0.008
+            B1 = B0 - nv * 0.035                                 # pé do pino, na altura da barra que vai pro lado
+            pecas.append(_viga(nome + "_braco_pino%+d" % s, B0, B1 - nv * (viga / 2), 0.035, 0.035, mat_estrutura(), chanfro=0.003))
+            Bs = Vector((s * x_lado, B1.y, B1.z))
+            pecas.append(_viga(nome + "_braco_barra%+d" % s, B1 - Vector((s * viga / 2, 0, 0)), Bs + Vector((s * viga / 2, 0, 0)), viga,
+                               viga, mat_estrutura()))
+            Hs = Vector((s * x_lado, ye, ze))
+            d = (Hs - Bs).normalized()
+            pecas.append(_viga(nome + "_braco_ate_cubo%+d" % s, Bs - d * (viga / 2), Hs - d * 0.045, viga, viga, mat_estrutura()))
+            pecas.append(caixa(nome + "_canto_braco%+d" % s, Bs, (viga + 0.01, viga + 0.01, viga + 0.01), mat_estrutura(),
+                               chanfro=0.004))
+        _prender(almofadas, bra)
+        raizes["bracos"] = bra
+    _prender(pecas, alav)
+    bpy.context.view_layer.update()
+    return MaquinaAbdominal(raizes, (0.0, ye, ze), pegs, raio_pegador, comp_pegador / 2)
+# ===== fim: Abdominal na máquina ====================================================================================================
