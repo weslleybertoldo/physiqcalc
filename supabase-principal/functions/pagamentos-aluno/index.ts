@@ -263,9 +263,12 @@ Deno.serve(async (req) => {
     return (data as { id: string; tipo: string; chave: string; favorecido: string | null; banco: string | null } | null) ?? null;
   };
 
+  // hml-06 (H-20): sem ler a assinatura atual não se segue — o erro de banco virava "não tem" e o aluno_mp_assinar criava OUTRA
+  // sem cancelar a atual (o aluno pagava 2×); agora vira 500 erro_interno ANTES de qualquer POST ao MP
   const assinaturaDe = async (pacienteId: string) => {
-    const { data } = await db.from("aluno_assinaturas").select("id, paciente_id, conta_id, mp_preapproval_id, status, valor, proximo_vencimento, payload, criado_em")
+    const { data, error } = await db.from("aluno_assinaturas").select("id, paciente_id, conta_id, mp_preapproval_id, status, valor, proximo_vencimento, payload, criado_em")
       .eq("paciente_id", pacienteId).order("criado_em", { ascending: false }).limit(1);
+    if (error) throw error;
     return ((data ?? []) as Array<{ id: string; paciente_id: string; conta_id: string | null; mp_preapproval_id: string | null; status: string;
       valor: number | null; proximo_vencimento: string | null; payload: Record<string, unknown> | null; criado_em: string }>)[0] ?? null;
   };
@@ -544,8 +547,9 @@ Deno.serve(async (req) => {
       const metodo = acao === "aluno_mp_pix" ? "pix" : "cartao";
       if (metodo === "pix") {
         // Pix pendente igual e com mais de 30 min de validade → reaproveita; diferente → fecha no MP
-        const { data: abertos } = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("paciente_id", m.id).eq("forma", "mp")
+        const { data: abertos, error } = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("paciente_id", m.id).eq("forma", "mp")
           .eq("metodo", "pix").eq("status", "aguardando_confirmacao").is("deleted_at", null);
+        if (error) throw error; // hml-06: sem ler o Pix aberto não se cria outro
         for (const aberto of (abertos ?? []) as unknown as Cobranca[]) {
           const atual = await conferir(aberto, m);
           if (atual.status === "paga") return json({ ok: true, cobranca: vista(atual), aprovada: true }, 200, origin);

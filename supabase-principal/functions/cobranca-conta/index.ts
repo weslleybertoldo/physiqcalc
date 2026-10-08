@@ -208,12 +208,16 @@ Deno.serve(async (req) => {
     const alunosAtivos = Number(ativos ?? 0);
     const efetiva = situacaoEm(conta, hoje);
 
+    // hml-06 (H-20): leitura que falha não vira "não tem" — o assinar criava OUTRA assinatura e o upsert(conta_id) apagava o id da
+    // atual (que seguia cobrando sem rastro). O erro sobe e o catch devolve 500 erro_interno ANTES de qualquer POST ao MP.
     const buscarAssinatura = async (): Promise<AssinaturaConta | null> => {
-      const { data } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("conta_id", conta.id).maybeSingle();
+      const { data, error } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("conta_id", conta.id).maybeSingle();
+      if (error) throw error;
       return (data as AssinaturaConta | null) ?? null;
     };
     const buscarFatura = async (id: string): Promise<Fatura | null> => {
-      const { data } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("id", id).eq("conta_id", conta.id).maybeSingle();
+      const { data, error } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("id", id).eq("conta_id", conta.id).maybeSingle();
+      if (error) throw error;
       return (data as Fatura | null) ?? null;
     };
     const simulado = (id: string | null | undefined) => !!id && id.startsWith("sim-");
@@ -329,8 +333,9 @@ Deno.serve(async (req) => {
 
       if (acao === "pix_criar") {
         // Pix aberto igual e com mais de 30 min de validade → reaproveita; aberto diferente → fecha (não fica "pendente" pra sempre)
-        const { data: abertos } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id)
+        const { data: abertos, error } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id)
           .eq("forma", "pix").in("status", ["pending", "in_process"]).order("criado_em", { ascending: false });
+        if (error) throw error; // hml-06: sem ler o Pix aberto não se cria outro
         for (const aberto of (abertos ?? []) as Fatura[]) {
           const atual = await conferir(aberto);
           if (atual.status === "approved") return json({ ok: true, fatura: atual, aprovada: true }, 200, origin);
