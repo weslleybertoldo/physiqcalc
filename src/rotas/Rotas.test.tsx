@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Teste de rotas da W1: toda rota antiga do Calc abre a MESMA função dentro da casca nova e os redirecionamentos da 4.8
 // valem. As telas viram marcadores (o que importa aqui é QUAL tela abre e em QUAL casca). W28: as telas antigas que ainda
@@ -97,12 +97,12 @@ function Onde() {
   return <output data-testid="onde">{pathname + search}</output>;
 }
 
-function abrir(caminho: string) {
+function abrir(caminho: string, RotasDoTeste: typeof Rotas = Rotas) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[caminho]}>
-        <Rotas />
+        <RotasDoTeste />
         <Onde />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -404,14 +404,27 @@ describe("app (APK/AAB): sem o master", () => {
 });
 
 describe("páginas públicas (sem login)", () => {
-  it.each([
-    ["/calculator", "publica-calculadora"],
-    ["/privacidade", "publica-privacidade"],
-    ["/termos", "publica-privacidade"],
-  ])("%s", async (de, tela) => {
+  it.each([["/calculator", "publica-calculadora"]])("%s", async (de, tela) => {
     abrir(de);
     expect(await screen.findByTestId(tela)).toBeInTheDocument();
     expect(document.querySelector('[data-casca="publico"]')).not.toBeNull();
+  });
+
+  // hml-11 (H-28, D4): o Vitest roda como o build de staging — /privacidade, /termos e /assinatura são as páginas dos textos legais
+  // novos (com a faixa "em revisão"), na casca pública com o link "Assinatura" no rodapé; a Privacidade de hoje não responde por
+  // nenhuma rota. A produção fica no fim do arquivo.
+  it.each([
+    ["/privacidade", "politica"],
+    ["/termos", "termos"],
+    ["/assinatura", "assinatura"],
+  ])("staging: %s abre a página legal nova (%s)", async (de, doc) => {
+    abrir(de);
+    await waitFor(() => expect(document.querySelector(`[data-pagina-legal="${doc}"]`)).not.toBeNull(), { timeout: 4000 });
+    expect(document.querySelector('[data-casca="publico"]')).not.toBeNull();
+    expect(document.querySelector("[data-texto-em-revisao]")).not.toBeNull();
+    expect(document.querySelector("[data-rodape-assinatura]")?.getAttribute("href")).toBe("/assinatura");
+    expect(screen.queryByTestId("publica-privacidade")).toBeNull();
+    expect(onde()).toBe(de);
   });
 
   it("endereço que não existe mostra o 404 premium", async () => {
@@ -446,5 +459,37 @@ describe("páginas públicas (sem login)", () => {
     expect(await screen.findByRole("heading", { name: "Algo deu errado" })).toBeInTheDocument();
     expect(screen.queryByText("Não deu para abrir esta parte")).toBeNull();
     vi.mocked(console.error).mockRestore();
+  });
+});
+
+// hml-11 (H-28, D4): na produção (VITE_DB_SCHEMA=public) os textos legais novos não existem — /privacidade e /termos seguem com a
+// Privacidade de hoje e /assinatura cai em "Página não encontrada". A condição do Vite é lida quando o Rotas.tsx carrega: o módulo é
+// importado de novo com o schema trocado. Fica no FIM do arquivo: depois do resetModules, nenhum teste usa o Rotas do import de cima.
+describe("produção: sem os textos legais novos (hml-11)", () => {
+  async function rotasDaProducao() {
+    vi.stubEnv("VITE_DB_SCHEMA", "public");
+    vi.resetModules();
+    return (await import("./Rotas")).Rotas;
+  }
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ["/privacidade", "publica-privacidade"],
+    ["/termos", "publica-privacidade"],
+  ])("%s → a Privacidade de hoje, sem a faixa nem o link da assinatura", async (de, tela) => {
+    abrir(de, await rotasDaProducao());
+    expect(await screen.findByTestId(tela, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(document.querySelector('[data-casca="publico"]')).not.toBeNull();
+    expect(document.querySelector("[data-pagina-legal]")).toBeNull();
+    expect(document.querySelector("[data-texto-em-revisao]")).toBeNull();
+    expect(document.querySelector("[data-rodape-assinatura]")).toBeNull();
+  });
+
+  it("/assinatura → Página não encontrada", async () => {
+    abrir("/assinatura", await rotasDaProducao());
+    expect(await screen.findByText("Página não encontrada", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(document.querySelector("[data-pagina-legal]")).toBeNull();
   });
 });

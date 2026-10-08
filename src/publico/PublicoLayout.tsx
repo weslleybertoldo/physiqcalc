@@ -3,7 +3,7 @@ import { Marca } from "@/ui/premium/Marca";
 
 /**
  * Casca das páginas sem login (spec 4.8: /f, /d, /c, /p, /calculator, /privacidade, /termos): fundo
- * com o halo, a marca no topo e os links de privacidade e termos no rodapé.
+ * com o halo, a marca no topo e os links de privacidade e termos no rodapé (no staging, também o da assinatura — hml-11).
  */
 export default function PublicoLayout() {
   return (
@@ -25,6 +25,13 @@ export default function PublicoLayout() {
         <Link to="/termos" className="transition-colors hover:text-texto-2">
           Termos
         </Link>
+        {/* hml-11 (H-28, D5): os Termos de assinatura (/assinatura) só existem no staging até a virada — na produção o Vite troca a
+            condição pelo valor e o link nem entra no bundle */}
+        {import.meta.env.VITE_DB_SCHEMA === "staging" && (
+          <Link to="/assinatura" className="transition-colors hover:text-texto-2" data-rodape-assinatura>
+            Assinatura
+          </Link>
+        )}
       </footer>
     </div>
   );
