@@ -10,8 +10,8 @@ import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { EstadoCarregando, EstadoVazio } from "@/ui/premium/Estados";
 import {
-  APELIDO_MAX, EMAIL_MAX, FORM_VAZIO, MENSAGEM, MENSAGEM_EXISTE, NOME_MAX, OBSERVACOES_MAX, camposRepetidos, dadosDoCadastro, formatarCPF, problemaDoCadastro,
-  type CampoUnico, type FormCadastro,
+  APELIDO_MAX, EMAIL_MAX, FORM_VAZIO, MENSAGEM, NOME_MAX, OBSERVACOES_MAX, dadosDoCadastro, formatarCPF, problemaDoCadastro,
+  type FormCadastro,
 } from "./cadastro/regras";
 
 interface InfoLink {
@@ -32,9 +32,9 @@ function textoDepois(f: FormCadastro): string {
   return "Depois é só esperar o contato do profissional.";
 }
 
-/** O erro da função alunos: o código e, na trava de e-mail/CPF (W16b + H5), os campos repetidos. */
+/** O erro da função alunos: o código. */
 class ErroCadastro extends Error {
-  constructor(public codigo: string, public campos?: unknown) {
+  constructor(public codigo: string) {
     super(codigo);
   }
 }
@@ -49,7 +49,7 @@ async function chamar<T>(corpo: Record<string, unknown>): Promise<T> {
     } catch {
       c = null;
     }
-    throw new ErroCadastro(String(c?.erro ?? "erro_interno"), c?.campos);
+    throw new ErroCadastro(String(c?.erro ?? "erro_interno"));
   }
   return data as T;
 }
@@ -58,7 +58,7 @@ async function chamar<T>(corpo: Record<string, unknown>): Promise<T> {
  * /c/:codigo (N-57, spec 4.8): o auto-cadastro pelo link do profissional. O cadastro fica PENDENTE em Alunos › Pendentes até o
  * profissional aprovar (dentro do limite do plano). Sem login; o captcha invisível (Turnstile, o mesmo da W8b) é conferido no
  * servidor. H5 (DN-6): os campos do Nutri voltaram (apelido e CPF); só o nome é obrigatório, como lá; e-mail ou CPF que já é de um
- * aluno → a frase vermelha embaixo do campo (a trava de e-mail e CPF únicos da W16b, que agora vale também para o CPF daqui).
+ * aluno vira pendente como os outros: a tela não diz se a pessoa já é aluna (homologação, H-18) — o profissional vê o aviso ao aprovar.
  */
 export default function Cadastro() {
   const { codigo = "" } = useParams();
@@ -72,7 +72,6 @@ export default function Cadastro() {
   const [f, setF] = useState<FormCadastro>(FORM_VAZIO);
   const [erro, setErro] = useState("");
   // W16b + H5: o e-mail ou o CPF já é de um aluno (em qualquer conta) → mensagem vermelha embaixo do campo (sem dizer de quem)
-  const [repetidos, setRepetidos] = useState<CampoUnico[]>([]);
   const [indo, setIndo] = useState(false);
   const [feito, setFeito] = useState(false);
   const muda = <K extends keyof FormCadastro>(k: K, v: FormCadastro[K]) => {
@@ -88,7 +87,6 @@ export default function Cadastro() {
     if (problema) return setErro(MENSAGEM[problema] ?? "Confira os dados.");
     setIndo(true);
     setErro("");
-    setRepetidos([]);
     try {
       const token = await captcha.obterToken();
       await chamar({ acao: "cadastro_enviar", codigo, captcha: token, dados: dadosDoCadastro(f) });
@@ -97,14 +95,11 @@ export default function Cadastro() {
     } catch (err) {
       captcha.usado();
       const cod = err instanceof ErroCadastro ? err.codigo : "erro_interno";
-      const campos = camposRepetidos(cod, err instanceof ErroCadastro ? err.campos : undefined);
-      if (campos.length) setRepetidos(campos);
-      else setErro(MENSAGEM[cod] ?? "Não deu certo agora. Tente de novo.");
+      setErro(MENSAGEM[cod] ?? "Não deu certo agora. Tente de novo.");
     } finally {
       setIndo(false);
     }
   };
-  const erroDo = (c: CampoUnico) => (repetidos.includes(c) ? MENSAGEM_EXISTE[c] : undefined);
 
   const casca = (conteudo: React.ReactNode) => (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-8 sm:py-12" data-pagina-cadastro={codigo}>
@@ -151,11 +146,11 @@ export default function Cadastro() {
           <Campo rotulo="Nome" value={f.nome} maxLength={NOME_MAX} onChange={(e) => muda("nome", e.target.value)} placeholder="Nome e sobrenome" autoComplete="name" data-cad-nome />
           <Campo rotulo="Como prefere ser chamado(a)" value={f.apelido} maxLength={APELIDO_MAX} onChange={(e) => muda("apelido", e.target.value)} autoComplete="nickname" data-cad-apelido />
           <Campo rotulo="E-mail" type="email" value={f.email} maxLength={EMAIL_MAX} onChange={(e) => muda("email", e.target.value)} placeholder="seu@email.com"
-            autoComplete="email" data-cad-email erro={erroDo("email")} />
+            autoComplete="email" data-cad-email />
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <Campo rotulo="Telefone" inputMode="tel" value={f.telefone} onChange={(e) => muda("telefone", e.target.value)} placeholder="(82) 99999-0000" autoComplete="tel" data-cad-telefone />
             <Campo rotulo="CPF" inputMode="numeric" value={f.cpf} onChange={(e) => muda("cpf", formatarCPF(e.target.value))} placeholder="000.000.000-00" autoComplete="off"
-              data-cad-cpf erro={erroDo("cpf")} />
+              data-cad-cpf />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Campo rotulo="Nascimento" type="date" value={f.nascimento} onChange={(e) => muda("nascimento", e.target.value)} data-cad-nascimento />
