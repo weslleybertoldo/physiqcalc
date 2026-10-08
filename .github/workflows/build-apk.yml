@@ -83,7 +83,8 @@ jobs:
         run: npm test
 
       - name: Build web assets
-        run: npm run build
+        # hml-08 (H-22): o build do app (VITE_APP_NATIVO=1) — o painel master fica só no site (a Vercel segue no npm run build)
+        run: npm run build:apk
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -91,6 +92,9 @@ jobs:
           # banco principal do Physiq (spec 7.8): entra no APK antes da W3; ninguém lê ainda
           VITE_PRINCIPAL_URL: ${{ secrets.VITE_PRINCIPAL_URL }}
           VITE_PRINCIPAL_ANON_KEY: ${{ secrets.VITE_PRINCIPAL_ANON_KEY }}
+
+      - name: Conferir que o APK sai sem o painel master
+        run: bash scripts/ci/sem-master.sh dist
 
       - name: Sync Capacitor
         run: npx cap sync android
