@@ -199,6 +199,23 @@ export function erroDeCartao(status: number, body: unknown): boolean {
   return status === 400 || msg.includes("preapproval creation failed") || msg.includes("card_token") || msg.includes("card token");
 }
 
+// ───────────────────────── avisos do Mercado Pago (hml-06, H-19) ─────────────────────────
+// Cópia igual em supabase/functions/mp-webhook/regras.ts (o Treino não enxerga este _shared); o Vitest
+// (src/nucleo/cobranca/avisosMp.test.ts) confere que as 2 dão o mesmo resultado.
+
+/** MP sem resposta que permita decidir (fora do ar, limite, credencial recusada); 599 = rede (mpFetch). O aviso volta 500. */
+export const mpTransitorio = (st: number) => st >= 500 || st === 429 || st === 401;
+
+/**
+ * O id do aviso vai no CAMINHO da API do MP: só o formato que o MP manda (pagamento = só dígitos; assinatura = letras e
+ * dígitos). Sem isto, "../../users/me" fazia a função pública (sem JWT) ler qualquer rota do MP com o token de produção.
+ */
+export function idDoAvisoValido(topico: string, id: string): boolean {
+  if (topico === "payment" || topico === "subscription_authorized_payment" || topico === "authorized_payment") return /^\d{1,20}$/.test(id);
+  if (topico === "preapproval" || topico === "subscription_preapproval") return /^[A-Za-z0-9]{1,64}$/.test(id);
+  return false;
+}
+
 // ───────────────────────── datas (AAAA-MM-DD, relógio de São Paulo) ─────────────────────────
 
 export function hojeSP(agora: Date = new Date()): string {

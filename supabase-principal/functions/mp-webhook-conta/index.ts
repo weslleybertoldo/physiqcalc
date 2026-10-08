@@ -5,8 +5,9 @@
 // com a de produção; staging só com a de teste — um pagamento de sandbox nunca vale para uma conta de verdade) e só trata
 // o que é das contas do Physiq (external_reference physiq:<schema>:conta:…, ou a assinatura guardada em conta_assinaturas).
 // Idempotente: mp_payment_id único + aplicar_pagamento_conta uma vez só por fatura (spec 6.6, Nativo OS W30).
-// Tópicos: payment · subscription_preapproval (preapproval) · subscription_authorized_payment. Responde 200 sempre (o MP
-// repete em erro; a conferência da tela cobre o que falhar).
+// Tópicos: payment · subscription_preapproval (preapproval) · subscription_authorized_payment. Responde 200 no que tratou ou
+// ignorou (recurso que não existe nesta credencial também); hml-06 (H-19): erro de banco/rede ou o MP fora → 500, e o MP
+// manda o aviso de novo (antes era 200 "erro" e o aviso se perdia; as pontas são idempotentes).
 // W28 (virada): recebe também o REPASSE dos webhooks antigos — o mp-webhook do Banco do Treino (cobranças de professor do
 // Calc, ?origem=treino) e o mp-webhook do Nutri (assinaturas e Pix das nutris, ?origem=nutri). Referências antigas
 // (lerReferenciaLegada) caem na conta legada do dono, SÓ se ela já está no núcleo (cobranca_legada = false); antes disso o app
@@ -27,9 +28,9 @@ import {
   COLUNAS_ASSINATURA,
   COLUNAS_FATURA,
   aplicarStatus,
+  buscarNoMp,
   credencialDoSchema,
   espelhoAssinatura,
-  mpFetch,
   registrarCobrancaRecorrente,
   tokenMp,
   type AssinaturaConta,
@@ -97,9 +98,9 @@ async function tratarPagamentoLegado(db: SupabaseClient, r: ReferenciaLegada, pa
 }
 
 async function tratarPagamento(schema: Schema, id: string): Promise<string> {
-  const credencial = credencialDoSchema(schema);
-  const { status, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(id)}`);
-  if (status !== 200 || !pay?.id) return `pagamento_nao_encontrado_${status}`;
+  // hml-06: só a credencial do ambiente; o MP fora lança (500) em vez de "não encontrado" (200)
+  const pay = (await buscarNoMp<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schema))?.recurso;
+  if (!pay?.id) return "pagamento_nao_encontrado";
   const ref = lerReferencia(pay.external_reference);
   if (ref && ref.schema !== schema) return "outro_ambiente";
   const legada = ref ? null : lerReferenciaLegada(pay.external_reference);
@@ -112,7 +113,8 @@ async function tratarPagamento(schema: Schema, id: string): Promise<string> {
     let f = data as Fatura | null;
     if (!f) return "fatura_inexistente";
     if (!f.mp_payment_id) {
-      await db.from("conta_faturas").update({ mp_payment_id: String(pay.id) }).eq("id", f.id).is("mp_payment_id", null);
+      const { error } = await db.from("conta_faturas").update({ mp_payment_id: String(pay.id) }).eq("id", f.id).is("mp_payment_id", null);
+      if (error) throw error;
       f = ((await db.from("conta_faturas").select(COLUNAS_FATURA).eq("id", f.id).maybeSingle()).data as Fatura | null) ?? f;
     }
     if (f.mp_payment_id !== String(pay.id)) return "fatura_de_outro_pagamento";
@@ -143,9 +145,8 @@ async function tratarPagamento(schema: Schema, id: string): Promise<string> {
 }
 
 async function tratarAssinatura(schema: Schema, id: string): Promise<string> {
-  const credencial = credencialDoSchema(schema);
-  const { status, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(id)}`);
-  if (status !== 200 || !pre?.id) return `assinatura_nao_encontrada_${status}`;
+  const pre = (await buscarNoMp<AssinaturaMp>(`/preapproval/${encodeURIComponent(id)}`, schema))?.recurso;
+  if (!pre?.id) return "assinatura_nao_encontrada";
   const ref = lerReferencia(pre.external_reference);
   if (ref && ref.schema !== schema) return "outro_ambiente";
   const legada = ref ? null : lerReferenciaLegada(pre.external_reference);
@@ -161,13 +162,15 @@ async function tratarAssinatura(schema: Schema, id: string): Promise<string> {
     const { data: atual } = await db.from("conta_assinaturas").select("id, mp_preapproval_id, status").eq("conta_id", conta.id).maybeSingle();
     const linhaAtual = atual as { id: string; mp_preapproval_id: string | null; status: string } | null;
     if (linhaAtual?.mp_preapproval_id && linhaAtual.mp_preapproval_id !== String(pre.id) && linhaAtual.status !== "cancelled") return "assinatura_antiga";
-    await db.from("conta_assinaturas").upsert({ conta_id: conta.id, plano: conta.plano, faixa: conta.faixa,
+    const { error } = await db.from("conta_assinaturas").upsert({ conta_id: conta.id, plano: conta.plano, faixa: conta.faixa,
       ...espelhoAssinatura(pre, { origem: `legado_${legada.app}` }) }, { onConflict: "conta_id" });
+    if (error) throw error;
     return `legado_${legada.app}_assinatura_${pre.status}`;
   }
   if (a) {
     if (a.payload?.simulada === true) return "assinatura_simulada";
-    await db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(a.payload ?? {}) })).eq("id", a.id);
+    const { error } = await db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(a.payload ?? {}) })).eq("id", a.id);
+    if (error) throw error;
     return `assinatura_${pre.status}`;
   }
   if (!ref || ref.tipo !== "recorrente") return "nao_e_do_physiq";
@@ -175,14 +178,14 @@ async function tratarAssinatura(schema: Schema, id: string): Promise<string> {
   const { data: atual } = await db.from("conta_assinaturas").select("id, mp_preapproval_id").eq("conta_id", ref.contaId).maybeSingle();
   const linhaAtual = atual as { id: string; mp_preapproval_id: string | null } | null;
   if (linhaAtual?.mp_preapproval_id && linhaAtual.mp_preapproval_id !== String(pre.id)) return "assinatura_antiga";
-  await db.from("conta_assinaturas").upsert({ conta_id: ref.contaId, ...espelhoAssinatura(pre) }, { onConflict: "conta_id" });
+  const { error } = await db.from("conta_assinaturas").upsert({ conta_id: ref.contaId, ...espelhoAssinatura(pre) }, { onConflict: "conta_id" });
+  if (error) throw error;
   return `assinatura_${pre.status}_gravada`;
 }
 
 async function tratarCobrancaAutorizada(schema: Schema, id: string): Promise<string> {
-  const credencial = credencialDoSchema(schema);
-  const { status, body: ap } = await mpFetch<{ payment?: { id?: number | string | null } | null }>(credencial, `/authorized_payments/${encodeURIComponent(id)}`);
-  if (status !== 200 || !ap) return `cobranca_nao_encontrada_${status}`;
+  const ap = (await buscarNoMp<{ payment?: { id?: number | string | null } | null }>(`/authorized_payments/${encodeURIComponent(id)}`, schema))?.recurso;
+  if (!ap) return "cobranca_nao_encontrada";
   const pagamento = ap.payment?.id;
   if (pagamento === null || pagamento === undefined) return "cobranca_sem_pagamento_ainda";
   return await tratarPagamento(schema, String(pagamento));
@@ -212,7 +215,8 @@ Deno.serve(async (req) => {
     console.log("mp-webhook-conta", schema, topico, id, resultado);
     return ok(resultado);
   } catch (e) {
+    // hml-06: 500 → o MP (ou o repasse do Treino/Nutri) manda o aviso de novo; antes era 200 e o aviso se perdia
     console.error("mp-webhook-conta erro", String((e as { message?: string })?.message || e));
-    return ok("erro");
+    return new Response(JSON.stringify({ ok: false, resultado: "erro" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 });

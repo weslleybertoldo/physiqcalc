@@ -9,14 +9,15 @@
 // physiq:<schema>:aluno:…, a antiga do Calc <schema>:<user>…:aluno, ou a assinatura guardada em aluno_assinaturas).
 // Idempotente: mp_payment_id único + a cobrança vira "paga" uma vez só (a cobertura da mensalidade é refeita pelo gatilho).
 // Tópicos: payment · subscription_preapproval (preapproval) · subscription_authorized_payment. Responde 200 no que tratou ou
-// ignorou; erro de banco/rede → 500 (o MP — ou o repasse do Treino — manda de novo; o tratamento é idempotente).
+// ignorou; erro de banco/rede ou o MP fora (hml-06: buscarNoMp) → 500 (o MP — ou o repasse do Treino — manda de novo; o
+// tratamento é idempotente).
 // W7b (aluno sem profissional): cobrança recorrente que chega para uma matrícula da conta do app JÁ ENCERRADA (o aluno entrou na
 // lista de um profissional e o cancelamento no MP falhou na hora) → grava o pagamento (é dele) e cancela a assinatura do app.
 // Publicar SÓ ASSIM: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-webhook-aluno false
 // Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { preapprovalDoPagamento, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
-import { credencialDoSchema, mpFetch, tokenMp, type Credencial } from "../_shared/cobranca-mp.ts";
+import { buscarNoMp, credencialDoSchema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDasMatriculas, matriculaEncerradaPeloVinculo } from "../_shared/app-sem-profissional.ts";
 import { lerReferenciaAluno, lerReferenciaCalc, type Schema } from "../_shared/financeiro-regras.ts";
 import {
@@ -25,7 +26,6 @@ import {
   carregarMatricula,
   espelhoAssinaturaAluno,
   registrarPagamentoAvulsoDoMp,
-  schemaDaCredencial,
   type Cobranca,
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
@@ -38,17 +38,6 @@ const ok = (resultado: string) => new Response(JSON.stringify({ ok: true, result
 
 function dbDe(schema: Schema): SupabaseClient {
   return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
-}
-
-/** Busca o recurso no MP com a credencial do ambiente (ou, sem ambiente — repasse do Calc —, produção e depois teste). */
-async function buscar<T>(caminho: string, schema: Schema | null): Promise<{ recurso: T; schema: Schema } | null> {
-  const ordem: Credencial[] = schema === "staging" ? ["test"] : schema === "public" ? ["prod"] : ["prod", "test"];
-  for (const c of ordem) {
-    if (!tokenMp(c)) continue;
-    const { status, body } = await mpFetch<T>(c, caminho);
-    if (status === 200 && body) return { recurso: body, schema: schemaDaCredencial(c) };
-  }
-  return null;
 }
 
 /** A matrícula do aluno do Calc pelo id do Treino (a ativa primeiro). */
@@ -84,7 +73,7 @@ async function cancelarSeSaiuDoApp(db: SupabaseClient, schema: Schema, m: Matric
 }
 
 async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise<string> {
-  const achado = await buscar<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schemaPedido);
+  const achado = await buscarNoMp<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schemaPedido);
   if (!achado?.recurso?.id) return "pagamento_nao_encontrado";
   const pay = achado.recurso;
   const schema = achado.schema;
@@ -99,7 +88,8 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
       let c = data as unknown as Cobranca | null;
       if (!c) return "cobranca_inexistente";
       if (!c.mp_payment_id) {
-        await db.from("cobrancas").update({ mp_payment_id: String(pay.id) }).eq("id", c.id).is("mp_payment_id", null);
+        const { error } = await db.from("cobrancas").update({ mp_payment_id: String(pay.id) }).eq("id", c.id).is("mp_payment_id", null);
+        if (error) throw error; // hml-06: erro de banco → 500 e o MP manda de novo (antes seguia como se tivesse gravado)
         c = ((await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("id", c.id).maybeSingle()).data as unknown as Cobranca | null) ?? c;
       }
       if (c.mp_payment_id !== String(pay.id)) return "cobranca_de_outro_pagamento";
@@ -137,21 +127,23 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
 }
 
 async function tratarAssinatura(id: string, schemaPedido: Schema | null): Promise<string> {
-  const achado = await buscar<AssinaturaMp>(`/preapproval/${encodeURIComponent(id)}`, schemaPedido);
+  const achado = await buscarNoMp<AssinaturaMp>(`/preapproval/${encodeURIComponent(id)}`, schemaPedido);
   if (!achado?.recurso?.id) return "assinatura_nao_encontrada";
   const pre = achado.recurso;
   const db = dbDe(achado.schema);
   const a = await assinaturaPorPreapproval(db, String(pre.id));
   if (a) {
     if (a.payload?.simulada === true) return "assinatura_simulada";
-    await db.from("aluno_assinaturas").update(espelhoAssinaturaAluno(pre, { ...(a.payload ?? {}) })).eq("id", a.id);
+    const { error } = await db.from("aluno_assinaturas").update(espelhoAssinaturaAluno(pre, { ...(a.payload ?? {}) })).eq("id", a.id);
+    if (error) throw error;
     return `assinatura_${pre.status}`;
   }
   const ref = lerReferenciaAluno(pre.external_reference);
   if (ref && ref.schema === achado.schema && ref.tipo === "recorrente") {
     const m = await carregarMatricula(db, ref.pacienteId);
     if (!m) return "matricula_inexistente";
-    await db.from("aluno_assinaturas").insert({ paciente_id: m.id, conta_id: m.conta_id, ...espelhoAssinaturaAluno(pre) });
+    const { error } = await db.from("aluno_assinaturas").insert({ paciente_id: m.id, conta_id: m.conta_id, ...espelhoAssinaturaAluno(pre) });
+    if (error) throw error;
     return `assinatura_${pre.status}_gravada`;
   }
   const calc = lerReferenciaCalc(pre.external_reference);
@@ -159,14 +151,15 @@ async function tratarAssinatura(id: string, schemaPedido: Schema | null): Promis
     // assinatura antiga do Calc que o script 02 não viu (criada depois dele): grava pela matrícula do aluno do Treino
     const m = await matriculaDoTreino(db, calc.treinoUserId);
     if (!m) return "aluno_sem_matricula";
-    await db.from("aluno_assinaturas").insert({ paciente_id: m.id, conta_id: m.conta_id, ...espelhoAssinaturaAluno(pre, { origem: "calc" }) });
+    const { error } = await db.from("aluno_assinaturas").insert({ paciente_id: m.id, conta_id: m.conta_id, ...espelhoAssinaturaAluno(pre, { origem: "calc" }) });
+    if (error) throw error;
     return `assinatura_calc_${pre.status}_gravada`;
   }
   return "nao_e_de_aluno";
 }
 
 async function tratarCobrancaAutorizada(id: string, schema: Schema | null): Promise<string> {
-  const achado = await buscar<{ payment?: { id?: number | string | null } | null }>(`/authorized_payments/${encodeURIComponent(id)}`, schema);
+  const achado = await buscarNoMp<{ payment?: { id?: number | string | null } | null }>(`/authorized_payments/${encodeURIComponent(id)}`, schema);
   if (!achado?.recurso) return "cobranca_nao_encontrada";
   const pagamento = achado.recurso.payment?.id;
   if (pagamento === null || pagamento === undefined) return "cobranca_sem_pagamento_ainda";

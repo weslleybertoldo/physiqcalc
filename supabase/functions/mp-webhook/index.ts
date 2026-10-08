@@ -11,7 +11,12 @@
 // Physiq W28 (virada): os do PROFESSOR (plano_professor) também são repassados — para a mp-webhook-conta do principal
 // (segredo PRINCIPAL_WEBHOOK_CONTA_URL), que aplica na conta legada_calc do professor SÓ depois que ela passou para o núcleo
 // (cobranca_legada = false); antes disso ela ignora e vale o que este webhook grava aqui (as colunas antigas continuam).
+// Physiq hml-06 (H-19): o ambiente é o da CREDENCIAL que achou o recurso (produção → public, teste → staging), nunca o da
+// referência — Pix de sandbox com referência "public:" não paga nada no public, e o de produção não vale no staging
+// ("outro_ambiente": não grava nem repassa). O id do aviso só vai à API do MP no formato que o MP manda (regras.ts) e o MP
+// fora devolve 500 (o MP manda de novo; antes o aviso seguia sem o recurso e se perdia).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { idDoAvisoValido, mpTransitorio } from "./regras.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -19,16 +24,42 @@ const MP_API = "https://api.mercadopago.com";
 const TZ = "America/Sao_Paulo";
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 const _CONTEXTOS = ["aluno", "plano_professor"];
+const TOPICOS = ["payment", "subscription_preapproval", "preapproval", "subscription_authorized_payment"];
 
-function tokens(): string[] {
-  return [Deno.env.get("MP_ACCESS_TOKEN_PROD") || "", Deno.env.get("MP_ACCESS_TOKEN_TEST") || ""].filter(Boolean);
+type Cred = "prod" | "test";
+// hml-06: o schema onde o recurso vale é o da credencial que o achou
+const SCHEMA: Record<Cred, string> = { prod: "public", test: "staging" };
+
+/** hml-06: o MP não respondeu de um jeito que permita decidir — o aviso volta 500 e o MP manda de novo. */
+class MpIndisponivel extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`mp_indisponivel_${status}`);
+    this.status = status;
+  }
 }
 
-// tenta com prod e depois test — o recurso só existe na credencial que o criou
-async function mpGet(path: string): Promise<any | null> {
-  for (const tk of tokens()) {
-    const res = await fetch(`${MP_API}${path}`, { headers: { "Authorization": `Bearer ${tk}` } });
-    if (res.status === 200) return await res.json();
+function tokenDe(c: Cred): string {
+  return Deno.env.get(c === "prod" ? "MP_ACCESS_TOKEN_PROD" : "MP_ACCESS_TOKEN_TEST") || "";
+}
+
+// tenta com prod e depois test (ou só a credencial pedida) — o recurso só existe na credencial que o criou.
+// 404/403 = não é desta credencial; MP fora (5xx, 429, 401 ou rede) → MpIndisponivel
+async function buscarNoMp(caminho: string, cred?: Cred): Promise<{ body: any; cred: Cred } | null> {
+  for (const c of cred ? [cred] : (["prod", "test"] as Cred[])) {
+    const tk = tokenDe(c);
+    if (!tk) continue;
+    let status = 599; // rede
+    let body = null;
+    try {
+      const res = await fetch(`${MP_API}${caminho}`, { headers: { "Authorization": `Bearer ${tk}` } });
+      status = res.status;
+      body = await res.json().catch(() => null);
+    } catch {
+      status = 599;
+    }
+    if (status === 200 && body) return { body, cred: c };
+    if (mpTransitorio(status)) throw new MpIndisponivel(status);
   }
   return null;
 }
@@ -100,83 +131,86 @@ async function gravarPagamento(admin: any, row: Record<string, unknown>, pay: an
   }
 }
 
-// o que o aviso era: de quem (contexto) e de qual ambiente — decide o repasse ao principal (W6)
-interface Alvo { contexto: string | null; schema: string | null }
+// o que o aviso era: de quem (contexto) e de qual ambiente — decide o repasse ao principal (W6).
+// hml-06: ignorar = referência de outro ambiente (pula os 2 repasses)
+interface Alvo { contexto: string | null; schema: string | null; ignorar?: boolean }
 
-async function handlePayment(paymentId: string): Promise<Alvo> {
-  const pay = await mpGet(`/v1/payments/${paymentId}`);
-  if (!pay) return { contexto: null, schema: null };
+async function handlePayment(paymentId: string, cred?: Cred): Promise<Alvo> {
+  const achado = await buscarNoMp(`/v1/payments/${encodeURIComponent(paymentId)}`, cred);
+  if (!achado) return { contexto: null, schema: null };
+  const pay = achado.body;
+  const sch = SCHEMA[achado.cred];
   const ref = parseRef(pay.external_reference);
+  if (ref && ref.schema !== sch) return { contexto: ref.contexto, schema: null, ignorar: true };
   const tipo = pay.payment_method_id === "pix" ? "pix" : "cartao";
 
   // pagamento avulso criado por nós (tem external_reference schema:user:mes[:contexto:tipo])
   if (ref?.mesRef) {
-    const admin = adminFor(ref.schema);
+    const admin = adminFor(sch);
     await gravarPagamento(admin, { user_id: ref.userId, tipo, valor: Number(pay.transaction_amount), mes_ref: ref.mesRef }, pay, ref.contexto, ref.tipoCobranca);
-    return { contexto: ref.contexto, schema: ref.schema };
+    return { contexto: ref.contexto, schema: sch };
   }
 
   // pagamento gerado por assinatura: acha o dono pela preapproval
   const preapprovalId = pay.metadata?.preapproval_id || pay.point_of_interaction?.transaction_data?.subscription_id || null;
-  return await upsertPagamentoAssinatura(preapprovalId, pay, ref);
+  return await upsertPagamentoAssinatura(preapprovalId, pay, ref, sch);
 }
 
-async function upsertPagamentoAssinatura(preapprovalId: string | null, pay: any, ref: Ref | null): Promise<Alvo> {
-  const schemas = ref ? [ref.schema] : _ALLOWED_SCHEMAS;
-  for (const sch of schemas) {
-    const admin = adminFor(sch);
-    let userId = ref?.userId || null;
-    let contexto = ref?.contexto || "aluno";
-    if (preapprovalId) {
-      const { data } = await admin.from("physiq_assinaturas").select("user_id, contexto").eq("mp_preapproval_id", String(preapprovalId)).maybeSingle();
-      if (data) { userId = userId || (data as any).user_id; contexto = (data as any).contexto || contexto; }
-    }
-    if (!userId) continue;
-    await gravarPagamento(admin, {
-      user_id: userId, tipo: "cartao", valor: Number(pay.transaction_amount),
-      mes_ref: mesRefFromDate(pay.date_approved || pay.date_created),
-    }, pay, contexto, "mensal");
-    return { contexto, schema: sch };
+// hml-06: só no schema da credencial que achou o pagamento (antes, sem referência, varria os 2)
+async function upsertPagamentoAssinatura(preapprovalId: string | null, pay: any, ref: Ref | null, sch: string): Promise<Alvo> {
+  const admin = adminFor(sch);
+  let userId = ref?.userId || null;
+  let contexto = ref?.contexto || "aluno";
+  if (preapprovalId) {
+    const { data } = await admin.from("physiq_assinaturas").select("user_id, contexto").eq("mp_preapproval_id", String(preapprovalId)).maybeSingle();
+    if (data) { userId = userId || (data as any).user_id; contexto = (data as any).contexto || contexto; }
   }
-  return { contexto: ref?.contexto ?? null, schema: ref?.schema ?? null };
+  if (!userId) return { contexto: ref?.contexto ?? null, schema: sch };
+  await gravarPagamento(admin, {
+    user_id: userId, tipo: "cartao", valor: Number(pay.transaction_amount),
+    mes_ref: mesRefFromDate(pay.date_approved || pay.date_created),
+  }, pay, contexto, "mensal");
+  return { contexto, schema: sch };
 }
 
 async function handlePreapproval(preapprovalId: string): Promise<Alvo> {
-  const pre = await mpGet(`/preapproval/${preapprovalId}`);
-  if (!pre) return { contexto: null, schema: null };
+  const achado = await buscarNoMp(`/preapproval/${encodeURIComponent(preapprovalId)}`);
+  if (!achado) return { contexto: null, schema: null };
+  const pre = achado.body;
+  const sch = SCHEMA[achado.cred];
   const ref = parseRef(pre.external_reference);
-  const schemas = ref ? [ref.schema] : _ALLOWED_SCHEMAS;
-  for (const sch of schemas) {
-    const admin = adminFor(sch);
-    const { data } = await admin.from("physiq_assinaturas").select("id, contexto").eq("mp_preapproval_id", String(pre.id)).maybeSingle();
-    if (data) {
-      const linha = data as { id: string; contexto: string | null };
-      await admin.from("physiq_assinaturas").update({ status: pre.status, updated_at: new Date().toISOString() }).eq("id", linha.id);
-      return { contexto: linha.contexto || ref?.contexto || "aluno", schema: sch };
-    }
-    if (ref && sch === ref.schema) {
-      await admin.from("physiq_assinaturas").insert({
-        user_id: ref.userId, mp_preapproval_id: String(pre.id), contexto: ref.contexto,
-        status: pre.status || "pending", valor: Number(pre.auto_recurring?.transaction_amount || 0) || 1,
-      });
-      return { contexto: ref.contexto, schema: ref.schema };
-    }
+  if (ref && ref.schema !== sch) return { contexto: ref.contexto, schema: null, ignorar: true };
+  const admin = adminFor(sch);
+  const { data } = await admin.from("physiq_assinaturas").select("id, contexto").eq("mp_preapproval_id", String(pre.id)).maybeSingle();
+  if (data) {
+    const linha = data as { id: string; contexto: string | null };
+    await admin.from("physiq_assinaturas").update({ status: pre.status, updated_at: new Date().toISOString() }).eq("id", linha.id);
+    return { contexto: linha.contexto || ref?.contexto || "aluno", schema: sch };
   }
-  return { contexto: ref?.contexto ?? null, schema: ref?.schema ?? null };
+  if (ref) {
+    await admin.from("physiq_assinaturas").insert({
+      user_id: ref.userId, mp_preapproval_id: String(pre.id), contexto: ref.contexto,
+      status: pre.status || "pending", valor: Number(pre.auto_recurring?.transaction_amount || 0) || 1,
+    });
+    return { contexto: ref.contexto, schema: sch };
+  }
+  return { contexto: null, schema: sch };
 }
 
 async function handleAuthorizedPayment(authPaymentId: string): Promise<Alvo> {
-  const ap = await mpGet(`/authorized_payments/${authPaymentId}`);
-  if (!ap) return { contexto: null, schema: null };
+  const achado = await buscarNoMp(`/authorized_payments/${encodeURIComponent(authPaymentId)}`);
+  if (!achado) return { contexto: null, schema: null };
+  const ap = achado.body;
   const paymentId = ap.payment?.id;
-  if (paymentId) return await handlePayment(String(paymentId));
+  // o pagamento está na mesma credencial da cobrança autorizada
+  if (paymentId) return await handlePayment(String(paymentId), achado.cred);
   if (ap.preapproval_id) {
     return await upsertPagamentoAssinatura(String(ap.preapproval_id), {
       id: `ap-${ap.id}`, transaction_amount: ap.transaction_amount,
       date_created: ap.date_created, status: ap.status === "processed" ? "approved" : "pending",
-    }, null);
+    }, null, SCHEMA[achado.cred]);
   }
-  return { contexto: null, schema: null };
+  return { contexto: null, schema: SCHEMA[achado.cred] };
 }
 
 // ---- W6: repasse dos avisos de ALUNO para o banco principal ----
@@ -218,20 +252,29 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     let body: any = {};
     try { body = await req.json(); } catch { /* IPN via query */ }
-    const topic = body?.type || body?.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "";
-    const id = body?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "";
+    const topic = String(body?.type || body?.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
+    const id = String(body?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     if (!id) return new Response("ok", { status: 200 });
+    if (!TOPICOS.includes(topic)) return new Response("ok", { status: 200 }); // outros tópicos: ignora silenciosamente
+    // hml-06 (H-19): o id vai no caminho da API do MP — fora do formato que o MP manda, nem chega a ele
+    if (!idDoAvisoValido(topic, id)) return new Response("id_invalido", { status: 200 });
 
     let alvo: Alvo = { contexto: null, schema: null };
     try {
-      if (topic === "payment") alvo = await handlePayment(String(id));
-      else if (topic === "subscription_preapproval" || topic === "preapproval") alvo = await handlePreapproval(String(id));
-      else if (topic === "subscription_authorized_payment") alvo = await handleAuthorizedPayment(String(id));
-      else return new Response("ok", { status: 200 }); // outros tópicos: ignora silenciosamente
+      if (topic === "payment") alvo = await handlePayment(id);
+      else if (topic === "subscription_preapproval" || topic === "preapproval") alvo = await handlePreapproval(id);
+      else alvo = await handleAuthorizedPayment(id);
     } catch (e) {
+      // hml-06: o MP fora → 500 (o MP manda de novo; antes o aviso seguia sem o recurso e se perdia)
+      if (e instanceof MpIndisponivel) {
+        console.error("mp-webhook: MP indisponível", topic, e.status);
+        return new Response("mp_indisponivel", { status: 500 });
+      }
       // o Treino não gravou (o refresh da tela antiga cobria); o principal ainda recebe o aviso abaixo
       console.error("mp-webhook error", e);
     }
+    // hml-06 (H-19): referência de outro ambiente (sandbox com "public:", produção com "staging:") não grava nem repassa
+    if (alvo.ignorar) return new Response("outro_ambiente", { status: 200 });
 
     // W6: aviso de aluno (ou de dono desconhecido) vai também para o principal; sem sucesso → 500 (o MP manda de novo)
     if (alvo.contexto !== "plano_professor" && repasseLigado(alvo.schema)) {

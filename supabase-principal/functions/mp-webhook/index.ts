@@ -7,33 +7,30 @@
 // W50: aviso de `payment` cuja external_reference começa com "physiqnutri-pix:<schema>:<uid>" é um PIX avulso da assinatura →
 // re-busca o pagamento e, aprovado pela 1ª vez, grava pago_em / cobre_ate em pagamentos_assinatura e soma 30 dias em
 // profiles.pago_ate (mesma regra da action pix_status da mp-assinar; só quem troca pending→approved soma).
-// Responde 200 sempre (sem tempestade de retries do MP); o app também sincroniza ao abrir Configurações / voltar do checkout.
+// O app também sincroniza ao abrir Configurações / voltar do checkout.
 // Physiq W28 (virada): continua gravando o de sempre (assinaturas / pagamentos_assinatura / profiles.pago_ate) e REPASSA o
 // mesmo aviso para a mp-webhook-conta (?schema=<schema da referência>&origem=nutri), que aplica na conta legado_nutri da
 // nutri SÓ depois que ela passou para o núcleo (cobranca_legada = false). Repasse que falha → 500 (o MP manda de novo; as 2
 // pontas são idempotentes).
+// Physiq hml-06 (H-19): o ambiente é o da CREDENCIAL que achou o recurso (_shared/cobranca-mp.ts buscarNoMp: com ?schema= só a
+// dele; sem, produção e depois teste) — Pix de sandbox com referência "public" não paga nada no public, e o de produção não
+// vale no staging ("outro_ambiente": não grava nem repassa). O id do aviso só vai à API do MP no formato que o MP manda
+// (idDoAvisoValido), e erro de banco/rede ou o MP fora → 500 (antes era 200 e o aviso se perdia).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { idDoAvisoValido } from "../_shared/cobranca-regras.ts";
+import { buscarNoMp, type Schema } from "../_shared/cobranca-mp.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const MP_API = "https://api.mercadopago.com";
 const SCHEMAS = ["public", "staging"];
+const TOPICOS = ["subscription_preapproval", "preapproval", "subscription_authorized_payment", "payment"];
 const STATUS = ["pending", "authorized", "paused", "cancelled"];
 const VALOR_MENSAL = 80;
 const DIAS_PIX = 30;
 const PIX_PREFIXO = "physiqnutri-pix:";
 
-function tokens(): string[] {
-  return [Deno.env.get("MP_ACCESS_TOKEN_PROD") || "", Deno.env.get("MP_ACCESS_TOKEN_TEST") || ""].filter(Boolean);
-}
-// tenta prod e depois test — o recurso só existe na credencial que o criou
-async function mpGet(path: string): Promise<any | null> {
-  for (const tk of tokens()) {
-    const res = await fetch(`${MP_API}${path}`, { headers: { "Authorization": `Bearer ${tk}` } });
-    if (res.status === 200) return await res.json();
-  }
-  return null;
-}
+const resposta = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
 function parseRef(ref: unknown): { schema: string; uid: string } | null {
   if (typeof ref !== "string") return null;
   const p = ref.split(":");
@@ -61,13 +58,16 @@ function espelho(pre: any) {
   };
 }
 
-async function sincronizarPreapproval(id: string, ctx: { schema: string | null } = { schema: null }): Promise<string> {
-  const pre = await mpGet(`/preapproval/${id}`);
-  if (!pre?.id) return "mp_nao_achou";
+// hml-06: schemaPedido = o ?schema= do aviso, ou o ambiente da credencial que achou o pagamento/cobrança que levou até aqui
+async function sincronizarPreapproval(id: string, schemaPedido: Schema | null, ctx: { schema: string | null }): Promise<string> {
+  const achado = await buscarNoMp<any>(`/preapproval/${encodeURIComponent(id)}`, schemaPedido);
+  const pre = achado?.recurso;
+  if (!achado || !pre?.id) return "mp_nao_achou";
   const ref = parseRef(pre.external_reference);
   if (!ref) return "nao_e_do_physiqnutri";
-  ctx.schema = ref.schema;
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: ref.schema as "public" } });
+  if (ref.schema !== achado.schema) return "outro_ambiente"; // hml-06: nem grava nem repassa
+  ctx.schema = achado.schema;
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: achado.schema as "public" } });
   const { data: linha } = await admin.from("assinaturas").select("id, mp_preapproval_id").eq("nutricionista_id", ref.uid).maybeSingle();
   if (!linha) {
     const { error } = await admin.from("assinaturas").insert({ nutricionista_id: ref.uid, ...espelho(pre) });
@@ -109,10 +109,11 @@ function novoPagoAte(perfil: any): string {
     .filter((n) => Number.isFinite(n));
   return new Date(Math.max(Date.now(), ...futuros) + DIAS_PIX * 86_400_000).toISOString();
 }
-async function aplicarPagamentoPix(pay: any): Promise<string> {
+// hml-06: schema = o da credencial que achou o pagamento (quem chama já conferiu que é o mesmo da referência)
+async function aplicarPagamentoPix(pay: any, schema: Schema): Promise<string> {
   const ref = parseRefPix(pay?.external_reference);
   if (!ref) return "nao_e_pix_do_physiqnutri";
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: ref.schema as "public" } });
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" } });
   const { data: perfil } = await admin.from("profiles").select("id, pago_ate, teste_ate").eq("id", ref.uid).maybeSingle();
   if (!perfil) return "sem_perfil";
   const esp = espelhoPix(pay);
@@ -165,39 +166,53 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("ok", { status: 200 });
   try {
     const url = new URL(req.url);
+    // hml-06: o ?schema= (a notification_url da mp-assinar sempre trouxe) restringe a credencial; sem ele, produção e depois teste
+    const bruto = (url.searchParams.get("schema") || "").toLowerCase();
+    const schema = SCHEMAS.includes(bruto) ? (bruto as Schema) : null;
     let body: any = {};
     try { body = await req.json(); } catch { body = {}; }
     const topic = String(body?.type || body?.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
     const id = String(body?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
+    // hml-06 (H-19): o id vai no caminho da API do MP — fora do formato que o MP manda, nem chega a ele
+    if (id && TOPICOS.includes(topic) && !idDoAvisoValido(topic, id)) {
+      console.log("mp-webhook", topic, "id_invalido");
+      return resposta({ ok: true, resultado: "id_invalido" });
+    }
     let resultado = "ignorado";
     const ctx: { schema: string | null } = { schema: null };
     if (id) {
       if (topic === "subscription_preapproval" || topic === "preapproval") {
-        resultado = await sincronizarPreapproval(id, ctx);
+        resultado = await sincronizarPreapproval(id, schema, ctx);
       } else if (topic === "subscription_authorized_payment") {
-        const ap = await mpGet(`/authorized_payments/${id}`);
-        resultado = ap?.preapproval_id ? await sincronizarPreapproval(String(ap.preapproval_id), ctx) : "sem_preapproval";
+        const achado = await buscarNoMp<any>(`/authorized_payments/${encodeURIComponent(id)}`, schema);
+        const ap = achado?.recurso;
+        resultado = achado && ap?.preapproval_id ? await sincronizarPreapproval(String(ap.preapproval_id), achado.schema, ctx) : "sem_preapproval";
       } else if (topic === "payment") {
-        const pay = await mpGet(`/v1/payments/${id}`);
+        const achado = await buscarNoMp<any>(`/v1/payments/${encodeURIComponent(id)}`, schema);
+        const pay = achado?.recurso;
         const pix = parseRefPix(pay?.external_reference);
-        if (pix) {
-          ctx.schema = pix.schema;
-          resultado = await aplicarPagamentoPix(pay); // W50: PIX avulso da assinatura
+        if (achado && pix) {
+          if (pix.schema !== achado.schema) resultado = "outro_ambiente"; // hml-06: nem grava nem repassa
+          else {
+            ctx.schema = achado.schema;
+            resultado = await aplicarPagamentoPix(pay, achado.schema); // W50: PIX avulso da assinatura
+          }
         } else {
           const preId = pay?.metadata?.preapproval_id || pay?.point_of_interaction?.transaction_data?.subscription_id || null;
-          resultado = preId ? await sincronizarPreapproval(String(preId), ctx) : "sem_preapproval";
+          resultado = achado && preId ? await sincronizarPreapproval(String(preId), achado.schema, ctx) : "sem_preapproval";
         }
       }
     }
     console.log("mp-webhook", topic, id, resultado);
-    // W28: o mesmo aviso vai para a cobrança das contas (só o que é do PhysiqNutri: a referência deu o schema)
+    // W28: o mesmo aviso vai para a cobrança das contas (só o que é do PhysiqNutri e do ambiente da credencial)
     if (id && ctx.schema && SCHEMAS.includes(ctx.schema)) {
       const repasse = await repassarParaConta(topic, id, ctx.schema);
-      if (!repasse) return new Response(JSON.stringify({ ok: false, resultado, repasse: "falhou" }), { status: 500, headers: { "Content-Type": "application/json" } });
+      if (!repasse) return resposta({ ok: false, resultado, repasse: "falhou" }, 500);
     }
-    return new Response(JSON.stringify({ ok: true, resultado }), { status: 200, headers: { "Content-Type": "application/json" } });
+    return resposta({ ok: true, resultado });
   } catch (e) {
-    console.error("mp-webhook erro", e);
-    return new Response("ok", { status: 200 });
+    // hml-06: 500 → o MP manda o aviso de novo (antes era 200 e o aviso se perdia; as pontas são idempotentes)
+    console.error("mp-webhook erro", String((e as { message?: string })?.message || e));
+    return resposta({ ok: false, resultado: "erro" }, 500);
   }
 });
