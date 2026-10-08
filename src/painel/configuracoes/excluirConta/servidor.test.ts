@@ -85,6 +85,39 @@ describe("a trava: o caminho novo só no pedido do app novo", () => {
   });
 });
 
+describe("hml-09 (H-23): pelo staging, a conta de teste com dado em produção não é excluída (o Auth é o mesmo)", () => {
+  const fonte = readFileSync(resolve(__dirname, "../../../../supabase-principal/functions/excluir-minha-conta/index.ts"), "utf8");
+  it("a trava vem logo depois do e-mail de teste, só no staging, antes dos 2 fluxos (simular e excluir) e de qualquer passo", () => {
+    const email = fonte.indexOf('if (schema === "staging" && !emailDeTeste(email)) return json({ ok: false, erro: "conta_real_no_staging" }, 403, origin);');
+    const trava = fonte.indexOf('if (schema === "staging") {', email);
+    const fim = fonte.indexOf("\n  }\n", trava);
+    expect(email).toBeGreaterThan(0);
+    expect(trava).toBeGreaterThan(email);
+    // entre o e-mail de teste e a trava, só o comentário
+    expect(fonte.slice(email, trava).split("\n").slice(1).every((l) => l.trim() === "" || l.trim().startsWith("//"))).toBe(true);
+    const bloco = fonte.slice(trava, fim);
+    for (const linha of [
+      'const dbStaging = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });',
+      'const { data: pegada, error: epg } = await dbStaging.rpc("pegada_em_producao", { p_uid: user.id });',
+      'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
+      "if (pegadaBloqueia(pegada)) return dadosEmProducao(origin);",
+    ]) expect(bloco).toContain(linha);
+    expect(fonte).toContain('json({ ok: false, erro: "conta_real_no_staging", motivo: "dados_em_producao" }, 403, origin)');
+    // antes de ler o pedido, do desvio do profissional e do caminho do aluno; e só ali (produção: nem uma chamada a mais)
+    for (const depois of ["const pedido = await lerCorpo(req.clone());", 'if (fluxoDoPedido(pedido) === "profissional") {', 'db.rpc("excluir_dados_aluno"',
+      'chamarTreino(schema, "conferir"']) {
+      expect(fonte.indexOf(depois)).toBeGreaterThan(fim);
+    }
+    expect(fonte.split('.rpc("pegada_em_producao"').length - 1).toBe(1);
+  });
+  it("a recusa do Treino (conta_real) volta igual nos 2 passos do aluno; o STATUS_DA_RECUSA não muda", () => {
+    expect(fonte).toContain('if (treinoPre.passo === "conta_real") return dadosEmProducao(origin);');
+    expect(fonte).toContain('if (treino.passo === "conta_real") return dadosEmProducao(origin);');
+    expect(STATUS_DA_RECUSA).not.toHaveProperty("conta_real_no_staging");
+    expect(STATUS_DA_RECUSA_PROFISSIONAL.conta_real_no_staging).toBe(403);
+  });
+});
+
 describe("a exclusão do profissional: a ordem e as recusas", () => {
   it("o master nunca exclui por aqui (nada é chamado)", async () => {
     const chamadas: string[] = [];
@@ -129,6 +162,28 @@ describe("a exclusão do profissional: a ordem e as recusas", () => {
     expect(r.status).toBe(502);
     expect(r.corpo.erro).toBe("treino_indisponivel");
     expect(chamadas).toEqual(["conferir", "treino:conferir_profissional"]);
+  });
+  it("hml-09: pelo staging, o Treino recusa a conta com dado em produção (conta_real) → 403 e nada muda (simular e excluir)", async () => {
+    const recusaDoTreino = { ok: false, erro: "conta_real_no_staging", motivo: "dados_em_producao" };
+    for (const entrada of [{ simular: true, confirmacao: null }, { simular: false, confirmacao: "EXCLUIR" }]) {
+      const chamadas: string[] = [];
+      const r = await excluirContaProfissional({ ...entrada, papelAuth: "" },
+        falsos({ treino: async (acao) => { chamadas.push(`treino:${acao}`); return { passo: "conta_real", corpo: recusaDoTreino }; } }, chamadas));
+      expect(r).toEqual({ status: 403, corpo: { ok: false, erro: "conta_real_no_staging", motivo: "dados_em_producao" } });
+      expect(chamadas).toEqual(["conferir", "treino:conferir_profissional"]);
+    }
+  });
+  it("hml-09: o Treino recusa (conta_real) só na exclusão → 403; o principal e o login ficam", async () => {
+    const chamadas: string[] = [];
+    const r = await excluirContaProfissional({ simular: false, confirmacao: "EXCLUIR", papelAuth: "" },
+      falsos({ treino: async (acao) => {
+        chamadas.push(`treino:${acao}`);
+        return acao === "excluir_profissional" ? { passo: "conta_real", corpo: { ok: false, erro: "conta_real_no_staging" } } : { passo: "ok", corpo: TREINO };
+      } }, chamadas));
+    expect(r).toEqual({ status: 403, corpo: { ok: false, erro: "conta_real_no_staging", motivo: "dados_em_producao" } });
+    expect(chamadas).toContain("treino:excluir_profissional");
+    expect(chamadas).not.toContain("excluir");
+    expect(chamadas).not.toContain("login");
   });
   it("o Mercado Pago não confirmou um cancelamento → 502 e NADA mais muda (nem Treino, nem conta, nem login)", async () => {
     const chamadas: string[] = [];

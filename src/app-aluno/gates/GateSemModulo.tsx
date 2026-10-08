@@ -24,11 +24,12 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   if (!situacao) return <>{children}</>;
-  if (situacao.sem_nada) return <Navigate to="/boas-vindas" replace />;
+  const noPerfil = pathname === "/perfil" || pathname.startsWith("/perfil/");
+  // hml-09 (D7): quem ainda não tem nada também abre o Perfil (Sair, Exportar e Excluir) — antes, o "Entrar para excluir" da
+  // /excluir-conta (→ /perfil?excluir=1) caía nas Boas-vindas e a conta não tinha como se excluir
+  if (situacao.sem_nada) return noPerfil ? <>{children}</> : <Navigate to="/boas-vindas" replace />;
   const modulos = situacao.modulos_aluno;
   const profissional = ehProfissional(situacao);
-
-  const noPerfil = pathname === "/perfil" || pathname.startsWith("/perfil/");
 
   if (modulos.length === 0) {
     if (!profissional && noPerfil) return <>{children}</>;

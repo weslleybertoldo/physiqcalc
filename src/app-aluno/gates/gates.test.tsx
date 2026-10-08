@@ -63,6 +63,19 @@ describe("GateSemModulo", () => {
     montar(GateSemModulo);
     expect(screen.getByText("tela boas-vindas")).toBeInTheDocument();
   });
+  it("hml-09 (D7): sem nada também abre o Perfil (o \"Excluir minha conta\" da /excluir-conta) — o resto segue nas Boas-vindas", () => {
+    h.sessao.situacao = situacao({ sem_nada: true });
+    for (const rota of ["/perfil", "/perfil?excluir=1", "/perfil/conta"]) {
+      const { unmount } = montar(GateSemModulo, rota);
+      expect(screen.getByText("o app")).toBeInTheDocument();
+      unmount();
+    }
+    for (const rota of ["/", "/treino", "/dieta", "/perfilx"]) {
+      const { unmount } = montar(GateSemModulo, rota);
+      expect(screen.getByText("tela boas-vindas")).toBeInTheDocument();
+      unmount();
+    }
+  });
   it("matrícula sem módulo → 'Seu profissional ainda não liberou seu acesso'", () => {
     h.sessao.situacao = situacao({ matriculas: [matricula({ modulos: [] })], modulos_aluno: [] });
     montar(GateSemModulo);

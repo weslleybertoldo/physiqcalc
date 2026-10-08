@@ -78,11 +78,21 @@ export default function BoasVindas() {
           Continuar para o app <ArrowRight aria-hidden />
         </Link>
       ) : (
-        <p className="px-1 text-center text-[12.5px] leading-relaxed text-texto-3">
-          {ehLoja
-            ? "Sem código? Peça ao seu profissional ou saia e volte depois — a sua conta fica guardada."
-            : "Sem código? Treine sozinho com os dias grátis ou saia e volte depois — a sua conta fica guardada."}
-        </p>
+        <>
+          <p className="px-1 text-center text-[12.5px] leading-relaxed text-texto-3">
+            {ehLoja
+              ? "Sem código? Peça ao seu profissional ou saia e volte depois — a sua conta fica guardada."
+              : "Sem código? Treine sozinho com os dias grátis ou saia e volte depois — a sua conta fica guardada."}
+          </p>
+          {/* hml-09 (D7): quem ainda não tem nada também consegue excluir a conta pelo app (o Perfil abre o "Excluir minha conta") */}
+          <Link
+            to="/perfil?excluir=1"
+            className="block px-1 text-center text-[12.5px] text-texto-3 underline underline-offset-2"
+            data-boas-vindas-excluir
+          >
+            Excluir minha conta
+          </Link>
+        </>
       )}
     </MolduraEntrada>
   );

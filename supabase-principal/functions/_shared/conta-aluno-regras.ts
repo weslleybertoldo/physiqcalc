@@ -36,14 +36,31 @@ export function montarExportacao(p: PartesExportacao): Record<string, unknown> {
   };
 }
 
-/** Resposta da delete-my-account (Treino, modo servidor) → o que a borda do principal faz com ela. */
-export type PassoTreino = "ok" | "sem_vinculo" | "profissional" | "indisponivel";
+/**
+ * Resposta da delete-my-account (Treino, modo servidor) → o que a borda do principal faz com ela. hml-09 (H-23): "conta_real" =
+ * pelo staging, a pessoa tem dado em produção no Treino (403 conta_real_no_staging) — nada foi apagado lá.
+ */
+export type PassoTreino = "ok" | "sem_vinculo" | "profissional" | "conta_real" | "indisponivel";
 
 export function lerRespostaTreino(status: number, corpo: unknown): PassoTreino {
   const c = (corpo && typeof corpo === "object" ? corpo : {}) as Record<string, unknown>;
   if (status === 403 && c.erro === "profissional") return "profissional";
+  if (status === 403 && c.erro === "conta_real_no_staging") return "conta_real";
   if (status !== 200 || c.ok !== true) return "indisponivel";
   return c.sem_vinculo === true ? "sem_vinculo" : "ok";
+}
+
+/**
+ * hml-09 (H-23) — o Auth é o mesmo no staging e na produção: excluir pelo staging uma conta de teste que também tem dado em produção
+ * tiraria o login de lá. Resposta de staging.pegada_em_producao (principal) / staging.physiq_pegada_em_producao (Treino), no formato
+ * { em_producao, colunas } → a exclusão pelo staging para? SÓ em_producao = false (booleano) deixa seguir; qualquer outra forma
+ * bloqueia (falha fechada) — inclusive a incoerente, que diz "não" e lista coluna. A delete-my-account do Treino tem a mesma regra.
+ */
+export function pegadaBloqueia(resposta: unknown): boolean {
+  if (!resposta || typeof resposta !== "object" || Array.isArray(resposta)) return true;
+  const r = resposta as Record<string, unknown>;
+  if (r.em_producao !== false) return true;
+  return r.colunas != null && !(Array.isArray(r.colunas) && r.colunas.length === 0);
 }
 
 /** Motivo da recusa → HTTP (a tela traduz o código). */

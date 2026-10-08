@@ -27,6 +27,7 @@ export const STATUS_DA_RECUSA_PROFISSIONAL: Record<string, number> = {
   cobranca_ativa: 409, // sobrou cobrança automática viva no meio do caminho (nada mudou)
   cobranca_nao_cancelada: 502, // o Mercado Pago não confirmou o cancelamento (nada mais mudou)
   treino_indisponivel: 502,
+  conta_real_no_staging: 403, // hml-09: pelo staging, a conta de teste que também tem dado em produção (o Auth é o mesmo)
   erro_interno: 500,
 };
 
@@ -216,6 +217,7 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
     if (pre.ok !== true) return recusa(String(pre.erro ?? "erro_interno"), pre.motivo ? { motivo: pre.motivo } : {});
     const tPre = await d.treino("conferir_profissional");
     if (tPre.passo === "profissional") return recusa("profissional", { motivo: "treino" });
+    if (tPre.passo === "conta_real") return recusa("conta_real_no_staging", { motivo: "dados_em_producao" });
     if (tPre.passo === "indisponivel") return recusa("treino_indisponivel");
     const treinoPre = tPre.passo === "sem_vinculo" ? null : tPre.corpo;
     if (e.simular) return { status: 200, corpo: conferenciaParaATela(pre, treinoPre) };
@@ -242,6 +244,7 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
     // 3. Banco do Treino
     const t = await d.treino("excluir_profissional");
     if (t.passo === "profissional") return recusa("profissional", { motivo: "treino" });
+    if (t.passo === "conta_real") return recusa("conta_real_no_staging", { motivo: "dados_em_producao" });
     if (t.passo === "indisponivel") return recusa("treino_indisponivel");
 
     // 4. banco principal

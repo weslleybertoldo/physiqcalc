@@ -13,7 +13,10 @@ const h = vi.hoisted(() => ({
   zip: vi.fn(),
   salvar: vi.fn(),
   sair: vi.fn(async () => {}),
+  // hml-09 (D6): a cópia do treino no aparelho (o SQLite do PowerSync — o de verdade não abre no jsdom)
+  apagar: vi.fn(async () => {}),
 }));
+vi.mock("@/lib/powersync/PowerSyncProvider", () => ({ apagarBancoLocal: () => h.apagar() }));
 vi.mock("@/lib/distribuicao", () => ({
   get ehLoja() {
     return h.loja;
@@ -80,6 +83,7 @@ beforeEach(() => {
   h.zip.mockReset();
   h.salvar.mockReset();
   h.sair.mockClear();
+  h.apagar.mockReset();
   destino = null;
 });
 
@@ -112,11 +116,34 @@ describe("Configurações › Excluir minha conta (W2 da loja)", () => {
     expect(botao).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Para confirmar, digite EXCLUIR"), { target: { value: "excluir" } });
     expect(botao).not.toBeDisabled();
+    // hml-09 (D6): a conferência (simular) não mexe no aparelho
+    expect(h.apagar).not.toHaveBeenCalled();
     fireEvent.click(botao);
     await waitFor(() => expect(h.excluir).toHaveBeenCalledWith("excluir"));
     await waitFor(() => expect(destino?.pathname).toBe("/excluir-conta"));
     expect(destino?.state).toMatchObject({ excluida: { contas: ["W2L Consultoria Diana"], cobrancas_canceladas: 2, nome: "Diana Dono" } });
     await waitFor(() => expect(h.sair).toHaveBeenCalled());
+    // hml-09 (D6): excluída a conta, a cópia do treino sai do aparelho — 1 vez, antes do sair
+    expect(h.apagar).toHaveBeenCalledTimes(1);
+    expect(h.apagar.mock.invocationCallOrder[0]).toBeGreaterThan(h.excluir.mock.invocationCallOrder[0]);
+    expect(h.apagar.mock.invocationCallOrder[0]).toBeLessThan(h.sair.mock.invocationCallOrder[0]);
+  });
+
+  it("hml-09 (D6): apagar a cópia do aparelho falhou → o resumo e a saída seguem iguais", async () => {
+    h.conferencia = MEMBRO;
+    h.excluir.mockResolvedValue({ ok: true, perfil: "membro", resultado: { contas: [], alunos_para_o_app: 0, alunos_guardados: 0, membros_removidos: 0,
+      equipes_que_saiu: 1, cobrancas_canceladas: 0, treino: null, arquivos: 0 } });
+    h.apagar.mockRejectedValue(new Error("sqlite"));
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    montar();
+    fireEvent.click(await screen.findByRole("button", { name: "Continuar" }));
+    fireEvent.change(await screen.findByLabelText("Para confirmar, digite EXCLUIR"), { target: { value: "EXCLUIR" } });
+    fireEvent.click(document.querySelector("[data-exclusao-confirmar]") as HTMLButtonElement);
+    await waitFor(() => expect(destino?.pathname).toBe("/excluir-conta"));
+    await waitFor(() => expect(h.sair).toHaveBeenCalled());
+    expect(h.apagar).toHaveBeenCalledTimes(1);
+    expect(aviso).toHaveBeenCalledWith("[ExcluirConta] banco local:", expect.any(Error));
+    aviso.mockRestore();
   });
 
   it("dono: 'Não preciso baixar' libera o Continuar com o aviso", async () => {
@@ -156,6 +183,9 @@ describe("Configurações › Excluir minha conta (W2 da loja)", () => {
     fireEvent.click(document.querySelector("[data-exclusao-confirmar]") as HTMLButtonElement);
     expect(await screen.findByText(/O Mercado Pago não confirmou agora o cancelamento da cobrança automática\. Nada foi excluído/)).toBeInTheDocument();
     expect(destino).toBeNull();
+    // hml-09 (D6): sem exclusão, nada sai do aparelho (nem o login)
+    expect(h.apagar).not.toHaveBeenCalled();
+    expect(h.sair).not.toHaveBeenCalled();
   });
 
   it("versão da loja: nada de preço, 'grátis', Mercado Pago ou botão de pagar em nenhum passo", async () => {

@@ -11,6 +11,11 @@
 // app do aluno: nunca deixar conta/alunos órfãos) · 409 assinatura_ativa (cancelar a cobrança automática antes) ·
 // 502 treino_indisponivel (nada foi apagado aqui) · 401 · 403 conta_real_no_staging · 429 rate_limited · 500
 //
+// hml-09 (H-23) — o Auth é o MESMO no staging e na produção: pelo staging, a conta de teste que também tem dado em produção (uma
+// linha dela em public — staging.pegada_em_producao — ou no Treino de produção) não é excluída nem simulada: 403
+// conta_real_no_staging + motivo "dados_em_producao", antes de qualquer passo e nos 2 fluxos (o app já traduz o código). Sem
+// resposta do banco = 500 (falha fechada). Produção: nada muda.
+//
 // Ordem (idempotente — pedir de novo depois de um erro no meio refaz só o que faltou; depois de pronto o token deixa de valer):
 //   1. confere (principal: excluir_dados_aluno simular; Treino: conferir) — qualquer recusa para ANTES de mexer em algo;
 //   2. Treino: delete-my-account "excluir" (dados de treino + soft delete do login de lá + vínculo);
@@ -27,7 +32,7 @@
 // cobrança automática) (+ os automáticos).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
-import { STATUS_DA_RECUSA, confirmacaoValida } from "../_shared/conta-aluno-regras.ts";
+import { STATUS_DA_RECUSA, confirmacaoValida, pegadaBloqueia } from "../_shared/conta-aluno-regras.ts";
 import { chamarTreino } from "../_shared/treino-servidor.ts";
 import { fluxoDoPedido } from "../_shared/exclusao-profissional-regras.ts";
 import { excluirContaProfissionalNaBorda } from "../_shared/exclusao-profissional.ts";
@@ -51,6 +56,9 @@ const json = (body: unknown, status: number, origin: string | null) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...cors(origin) } });
 const recusa = (erro: string, origin: string | null, extra: Record<string, unknown> = {}) =>
   json({ ok: false, erro, ...extra }, STATUS_DA_RECUSA[erro] ?? 400, origin);
+// hml-09: fora do STATUS_DA_RECUSA de propósito (as recusas do caminho de hoje não mudam)
+const dadosEmProducao = (origin: string | null) =>
+  json({ ok: false, erro: "conta_real_no_staging", motivo: "dados_em_producao" }, 403, origin);
 
 /** O corpo JSON de um pedido (vazio se não for JSON) — W2 da loja: lido de req.clone() para escolher o caminho. */
 async function lerCorpo(r: Request): Promise<Record<string, unknown>> {
@@ -91,6 +99,16 @@ Deno.serve(async (req) => {
   const user = ud.user;
   const email = String(user.email || "").trim().toLowerCase();
   if (schema === "staging" && !emailDeTeste(email)) return json({ ok: false, erro: "conta_real_no_staging" }, 403, origin);
+  // hml-09 (H-23): a conta de teste que também tem dado em produção não sai pelo staging (simular e excluir, nos 2 fluxos)
+  if (schema === "staging") {
+    const dbStaging = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
+    const { data: pegada, error: epg } = await dbStaging.rpc("pegada_em_producao", { p_uid: user.id });
+    if (epg) {
+      console.error("excluir-minha-conta: pegada_em_producao", epg.message);
+      return json({ ok: false, erro: "erro_interno" }, 500, origin);
+    }
+    if (pegadaBloqueia(pegada)) return dadosEmProducao(origin);
+  }
 
   // W2 da loja: só o pedido do app novo ({ fluxo: "profissional" }) entra no caminho do profissional (com o próprio limite de
   // tentativas). A leitura é de uma CÓPIA do pedido — o corpo segue intacto para o caminho de hoje logo abaixo.
@@ -125,6 +143,7 @@ Deno.serve(async (req) => {
     if (conferencia.ok !== true) return recusa(String(conferencia.erro ?? "erro_interno"), origin, { motivo: conferencia.motivo ?? null });
     const treinoPre = await chamarTreino(schema, "conferir", user.id);
     if (treinoPre.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
+    if (treinoPre.passo === "conta_real") return dadosEmProducao(origin);
     if (treinoPre.passo === "indisponivel") return recusa("treino_indisponivel", origin);
     const tPre = treinoPre.passo === "sem_vinculo" ? null : treinoPre.corpo;
     if (simular) {
@@ -138,6 +157,7 @@ Deno.serve(async (req) => {
     // 2. Banco do Treino (dados de treino + login de lá)
     const treino = await chamarTreino(schema, "excluir", user.id);
     if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
+    if (treino.passo === "conta_real") return dadosEmProducao(origin);
     if (treino.passo === "indisponivel") return recusa("treino_indisponivel", origin);
     const t = treino.passo === "sem_vinculo" ? null : treino.corpo;
 

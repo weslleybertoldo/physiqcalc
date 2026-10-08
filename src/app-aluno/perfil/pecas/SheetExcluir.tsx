@@ -127,6 +127,9 @@ export function SheetExcluir({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v
       await excluirMinhaConta(texto);
       toast.success("Sua conta foi excluída.");
       aoMudar(false);
+      // hml-09 (D6): a cópia do treino neste aparelho sai junto — nunca trava a saída. Sob demanda: o módulo cria o banco local ao
+      // carregar (no app, a casca já o carregou)
+      await import("@/lib/powersync/PowerSyncProvider").then((m) => m.apagarBancoLocal()).catch((err) => console.warn("[ExcluirConta] banco local:", err));
       await sair();
       navigate("/entrar", { replace: true });
     } catch (e) {

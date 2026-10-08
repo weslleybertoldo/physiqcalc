@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  FORMATO_EXPORTACAO, PALAVRA_CONFIRMACAO, STATUS_DA_RECUSA, confirmacaoValida, lerRespostaTreino, montarExportacao, nomeDoArquivo,
+  FORMATO_EXPORTACAO, PALAVRA_CONFIRMACAO, STATUS_DA_RECUSA, confirmacaoValida, lerRespostaTreino, montarExportacao, nomeDoArquivo, pegadaBloqueia,
 } from "../../../../supabase-principal/functions/_shared/conta-aluno-regras";
 
 describe("excluir-minha-conta: confirmação digitada (P19)", () => {
@@ -29,6 +29,30 @@ describe("conversa com o Banco do Treino (delete-my-account, modo servidor)", ()
     expect(lerRespostaTreino(500, { ok: false, erro: "interno" })).toBe("indisponivel");
     expect(lerRespostaTreino(200, { ok: false })).toBe("indisponivel");
     expect(lerRespostaTreino(0, null)).toBe("indisponivel");
+  });
+  it("hml-09: pelo staging, a recusa da conta com dado em produção (403 conta_real_no_staging) → conta_real", () => {
+    expect(lerRespostaTreino(403, { erro: "conta_real_no_staging" })).toBe("conta_real");
+    expect(lerRespostaTreino(403, { ok: false, erro: "conta_real_no_staging", motivo: "dados_em_producao" })).toBe("conta_real");
+    // só o 403 com esse código: o resto continua "indisponível" (nada foi apagado)
+    expect(lerRespostaTreino(409, { ok: false, erro: "conta_real_no_staging" })).toBe("indisponivel");
+    expect(lerRespostaTreino(403, { ok: false, erro: "conta_real_protegida" })).toBe("indisponivel");
+  });
+});
+
+describe("hml-09 (H-23): a conta de teste com dado em produção não sai pelo staging (pegadaBloqueia)", () => {
+  it("em produção → bloqueia; só no staging → segue", () => {
+    expect(pegadaBloqueia({ em_producao: true, colunas: ["public.pacientes.user_id"] })).toBe(true);
+    expect(pegadaBloqueia({ em_producao: true, colunas: [] })).toBe(true);
+    expect(pegadaBloqueia({ em_producao: false, colunas: [] })).toBe(false);
+    expect(pegadaBloqueia({ em_producao: false })).toBe(false);
+    expect(pegadaBloqueia({ em_producao: false, colunas: null })).toBe(false);
+  });
+  it("nulo ou forma estranha → bloqueia (falha fechada)", () => {
+    for (const r of [null, undefined, {}, false, true, 0, "", "false", [], [{ em_producao: false, colunas: [] }], { em_producao: "false" },
+      { em_producao: 0 }, { em_producao: null }, { colunas: [] }, { em_producao: false, colunas: ["public.contas.dono_id"] },
+      { em_producao: false, colunas: "nenhuma" }, { em_producao: false, colunas: {} }]) {
+      expect(pegadaBloqueia(r)).toBe(true);
+    }
   });
 });
 

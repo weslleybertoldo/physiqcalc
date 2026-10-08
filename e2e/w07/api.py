@@ -159,9 +159,12 @@ def caso_api() -> None:
         p.check(st == 403 and r.get("erro") == "profissional", f"{staff} (conferir) → 403 profissional ({st} {r})")
         st, r = f_excluir(staff, {"confirmacao": "EXCLUIR"})
         p.check(st == 403 and r.get("erro") == "profissional", f"{staff} com EXCLUIR → 403 profissional ({st} {r})")
-    # o master de teste é de outra W: só a conferência (simular nunca apaga) — a recusa vem antes de qualquer coisa
+    # o master de teste é de outra W: só a conferência (simular nunca apaga) — a recusa vem antes de qualquer coisa. hml-09: ele
+    # também tem dado em produção, então pelo staging a trava da pegada responde primeiro (403 conta_real_no_staging)
     st, r = f_excluir("master", {"simular": True})
-    p.check(st == 403 and r.get("erro") == "profissional", f"master de teste (conferir) → 403 profissional ({st} {r})")
+    p.check(st == 403 and (r.get("erro") == "profissional"
+                           or (r.get("erro") == "conta_real_no_staging" and r.get("motivo") == "dados_em_producao")),
+            f"master de teste (conferir) → 403 profissional ou conta_real_no_staging ({st} {r})")
     for staff in ("w7-personal", "w7-nutri", "master"):
         p.check(B.uid(staff) is not None, f"{staff} continua com login")
     depois = foto("excluir1", "depois-negativos")
