@@ -44,7 +44,8 @@ def banco() -> None:
     p.check("null::date" in defs.get("w20_janela", ""), "[prod] w20_janela: 'livre' sem fim")
     p.check("assinatura_vencendo" not in defs.get("whatsapp_enfileirar", "") and "pago_ate" not in defs.get("whatsapp_enfileirar", "").replace("mensalidade_pago_ate", ""),
             "[prod] whatsapp_enfileirar sem o bloco antigo do aviso de Pix (nem profiles.pago_ate)")
-    p.check("cadastro_cpf_existe" in defs.get("cadastro_link_enviar", ""), "[prod] cadastro_link_enviar com a trava do CPF")
+    c = defs.get("cadastro_link_enviar", "")
+    p.check("cadastro_repetido" in c and "cadastro_cpf_existe" not in c, "[prod] cadastro_link_enviar sem dizer que o CPF já é de um aluno (hml-05b, H-18)")
     j = q(f"""select (select j_ate is null from {S}.w20_janela('livre', date '2026-10-01')) livre,
                      (select j_ate::text from {S}.w20_janela('mes', date '2026-10-01')) mes,
                      (select j_ate::text from {S}.w20_janela('mes_seguinte', date '2026-10-01')) seg""")[0]

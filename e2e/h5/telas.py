@@ -3,7 +3,7 @@
 
   agenda      N-11: Rafael (app) reagenda uma consulta da Camila com a janela "Sem trava" MÊS A MÊS — avança 7 meses e marca lá;
               (negativo) a do Lucas ("só no mês") continua numa lista só, sem as setas; o pacote de 6 meses do Lucas abre por mês;
-  cadastro    N-57: o /c/ com Apelido e CPF; CPF de aluno que existe → a frase vermelha embaixo do CPF (nada criado); só o nome → enviado;
+  cadastro    N-57: o /c/ com Apelido e CPF; CPF de aluno que existe → enviado como os outros, sem frase (hml-05b, H-18);
   metas       N-40: a Camila vê os ✓ que o Rafael marcou nas metas (7 dias); item 10: o Lucas (dono sem papel de nutri, só leitura)
               tem "Nova meta" travado e o "PDF das metas" baixando;
   editor      N-61 + achado 8: os totais do Nutri (meta × kcal, sódio, alimentos, refeições) e Subir/Descer refeição gravando a ordem;
@@ -185,7 +185,6 @@ def caso_agenda(nav) -> None:
 def caso_cadastro(nav) -> None:
     conta = B.conta_w13()
     cod = q(f"select codigo_convite c from {S}.conta_membros where conta_id = '{conta}' and user_id = '{B.uid('w13-dono')}'")[0]["c"]
-    antes = q(f"select count(*)::int n from {S}.cadastros_pendentes where conta_id = '{conta}'")[0]["n"]
     c = B.Caso(nav, ESTADO["base"], ESTADO["prefixo"], "cadastro", desktop=False)
     try:
         c.ir(f"/c/{cod}")
@@ -196,19 +195,8 @@ def caso_cadastro(nav) -> None:
         c.pg.fill("[data-cad-nome]", "Ana CPF Repetido H5")
         c.pg.fill("[data-cad-cpf]", "39053344705")
         p.check(c.pg.input_value("[data-cad-cpf]") == "390.533.447-05", "[/c/] o CPF ganha a máscara")
-        B.captcha(False)
-        try:
-            c.pg.click("[data-cad-enviar]")
-            ok = c.esperar(lambda: c.tem("[data-cad-cpf][aria-invalid='true']"), 40)
-        finally:
-            B.captcha(True)
-        txt = c.pg.locator("label:has([data-cad-cpf]) [data-erro-campo]").inner_text() if ok else ""
-        p.check(ok and txt == "Já existe cadastro com este CPF." and not c.tem("[data-cadastro-enviado]"), f"[/c/] (negativo) CPF de aluno que existe → embaixo do CPF: {txt!r}")
-        c.print("cadastro_cpf_existe")
-        p.check(q(f"select count(*)::int n from {S}.cadastros_pendentes where conta_id = '{conta}'")[0]["n"] == antes, "[/c/] (negativo) nada criado")
-        # positivo: troca o CPF por um novo (o aviso some) e envia só com nome + apelido + CPF
-        c.pg.fill("[data-cad-cpf]", "529.982.247-25")
-        p.check(not c.tem("[data-cad-cpf][aria-invalid='true']"), "[/c/] mexer no CPF tira o aviso")
+        # hml-05b (H-18, 08/10/2026): CPF de aluno que já existe não ganha mais a frase vermelha — vira pendente como os outros (quem
+        # tem o link não fica sabendo quem já é aluno); o aviso vai para o profissional ao aprovar (e2e/hml05b/telas.py)
         c.pg.fill("[data-cad-apelido]", "Aninha")
         B.captcha(False)
         try:
@@ -217,7 +205,7 @@ def caso_cadastro(nav) -> None:
         finally:
             B.captcha(True)
         linha = q(f"select apelido, cpf, email, telefone from {S}.cadastros_pendentes where conta_id = '{conta}' and nome = 'Ana CPF Repetido H5'")
-        p.check(ok and linha and linha[0]["apelido"] == "Aninha" and linha[0]["cpf"] == "52998224725" and not linha[0]["email"] and not linha[0]["telefone"],
+        p.check(ok and linha and linha[0]["apelido"] == "Aninha" and linha[0]["cpf"] == "39053344705" and not linha[0]["email"] and not linha[0]["telefone"],
                 f"[/c/] SEM e-mail e SEM telefone: enviado, com apelido e CPF ({linha})")
         c.print("cadastro_enviado")
     finally:

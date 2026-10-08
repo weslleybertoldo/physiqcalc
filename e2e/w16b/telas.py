@@ -5,8 +5,8 @@
                   outra conta) → mensagem vermelha embaixo do campo ao sair dele; "Cadastrar" não grava; e-mail único → some
   dados           Perfil do aluno › Editar dados (Rafael Moura): CPF e e-mail de outras pessoas → as 2 mensagens embaixo dos campos;
                   "Salvar" não grava; voltar ao que era → somem
-  cadastro_link   /c/<código do Lucas> (público, celular): e-mail que já é de um aluno → "Já existe cadastro com este e-mail."
-                  embaixo do campo; nenhum cadastro pendente criado
+  cadastro_link   /c/<código do Lucas> (público, celular): e-mail que já é de um aluno → enviado como os outros, sem frase
+                  (hml-05b, H-18: o aviso vai para o profissional ao aprovar); o pendente criado é apagado no fim
 Prints: ~/projetos/physiqcalc-scratch/prints/w16b/<prefixo>_trava_email.png, _trava_cpf.png, _trava_cadastro_link.png
 Pré-requisito: e2e/w16b/causa.py (a conta w16b-app com a matrícula do app no staging) e a massa da W13 (e2e/w13/massa.py).
 Uso: python3 e2e/w16b/telas.py --base http://localhost:5173 --prefixo local [--casos novo_email,dados,cadastro_link]
@@ -155,15 +155,16 @@ def cadastro_link(nav, base, pref):
         captcha(False)  # o Chromium automatizado cai no desafio do Turnstile: no staging, só neste envio, o captcha fica desligado
         try:
             c.pg.click("[data-cad-enviar]")
-            ok = c.esperar(lambda: "Já existe cadastro com este e-mail." in erro_do(c, "[data-cad-email]"), 40)
+            ok = c.esperar(lambda: c.tem("[data-cadastro-enviado]"), 40)
         finally:
             captcha(True)
-        p.check(ok and not c.tem("[data-cadastro-enviado]"), f"[/c/] e-mail que já é de um aluno → embaixo do campo: {erro_do(c, '[data-cad-email]')!r}")
+        p.check(ok and "Já existe" not in c.texto(), "[/c/] e-mail que já é de um aluno → enviado, sem dizer que já existe (hml-05b, H-18)")
         foto(c, "trava_cadastro_link")
         depois = q(f"select count(*)::int n from {S}.cadastros_pendentes where conta_id = '{conta}'")[0]["n"]
-        p.check(depois == antes, f"[/c/] nenhum cadastro pendente criado ({antes} → {depois})")
+        p.check(depois == antes + 1, f"[/c/] o cadastro pendente nasceu ({antes} → {depois})")
     finally:
         c.fim()
+        q(f"delete from {S}.cadastros_pendentes where conta_id = '{conta}' and nome = 'Wagner Cadastro W16b'")
 
 
 CASOS = {"novo_email": novo_email, "dados": dados, "cadastro_link": cadastro_link}
