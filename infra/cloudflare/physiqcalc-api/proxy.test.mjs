@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "node:test";
-import { criarProxy, ORIGIN } from "./proxy.js";
+import { chaveDoIp, criarProxy, ORIGIN } from "./proxy.js";
 
 const ANON_FALSA = "eyJ" + "x".repeat(60) + "." + "y".repeat(80) + "." + "z".repeat(63);
 const PUBLISHABLE = "sb_publishable_teste123";
@@ -136,4 +136,40 @@ test("refresh do token, logout e GET no Auth passam para a Supabase", async () =
   }
   assert.equal(pedidos.length, 3);
   assert.equal(pedidos[0].alvo, `${ORIGIN}/auth/v1/token?grant_type=refresh_token`);
+});
+
+// H-46: teto geral por IP (binding LIMITE)
+function limitador(respostas) {
+  const chaves = [];
+  return { chaves, limit: async ({ key }) => { chaves.push(key); const r = respostas.shift(); if (r instanceof Error) throw r; return { success: r }; } };
+}
+const comIp = (caminho, metodo = "GET", ip = "203.0.113.9") =>
+  new Request(`https://api.physiqcalc.com.br${caminho}`, { method: metodo, headers: { "cf-connecting-ip": ip } });
+
+test("chaveDoIp: IPv4 inteiro; IPv6 pela rede /64", () => {
+  assert.equal(chaveDoIp("203.0.113.9"), "203.0.113.9");
+  assert.equal(chaveDoIp("2001:db8::1"), "2001:db8:0:0::/64");
+  assert.equal(chaveDoIp("2804:14c:65a1:4000::abcd"), chaveDoIp("2804:14c:65a1:4000:1:2:3:4"));
+});
+
+test("teto: acima do limite → 429 muitos_pedidos sem ir à Supabase (antes até da barreira de senha); abaixo segue", async () => {
+  const { proxy, pedidos } = montar();
+  const lim = limitador([true, false, false]);
+  assert.equal((await proxy.fetch(comIp("/rest/v1/tb_exercicios"), { ...env, LIMITE: lim })).status, 200);
+  const r = await proxy.fetch(comIp("/rest/v1/tb_exercicios"), { ...env, LIMITE: lim });
+  assert.equal(r.status, 429);
+  assert.equal(JSON.parse(await r.text()).message, "muitos_pedidos");
+  assert.equal((await proxy.fetch(comIp("/auth/v1/token?grant_type=password", "POST"), { ...env, LIMITE: lim })).status, 429);
+  assert.equal(pedidos.length, 1);
+  assert.deepEqual(lim.chaves, ["203.0.113.9", "203.0.113.9", "203.0.113.9"]);
+});
+
+test("teto: preflight e /healthz não contam; sem binding ou com o limitador falhando, segue", async () => {
+  const { proxy } = montar();
+  const lim = limitador([]);
+  assert.equal((await proxy.fetch(comIp("/rest/v1/tb_exercicios", "OPTIONS"), { ...env, LIMITE: lim })).status, 200);
+  assert.equal((await proxy.fetch(comIp("/healthz"), { ...env, LIMITE: lim })).status, 200);
+  assert.equal(lim.chaves.length, 0);
+  assert.equal((await proxy.fetch(comIp("/rest/v1/tb_exercicios"), env)).status, 200);
+  assert.equal((await proxy.fetch(comIp("/rest/v1/tb_exercicios"), { ...env, LIMITE: limitador([new Error("fora do ar")]) })).status, 200);
 });

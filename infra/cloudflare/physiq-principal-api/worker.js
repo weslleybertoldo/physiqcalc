@@ -33,12 +33,46 @@ export async function assinarIp(segredo, ip, minuto = Math.floor(Date.now() / 60
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// H-46 (homologação, 08/10/2026): teto geral por IP — só segura enxurrada (um aparelho, ou vários atrás do mesmo IP, fica muito
+// abaixo). Binding de rate limiting da Cloudflare (LIMITE, gravado pelo deploy.sh): a conta é por local da Cloudflare e aproximada.
+// IPv6 conta pela rede /64 (cada aparelho costuma ter uma /64 inteira). Sem o binding não limita; o preflight (OPTIONS) não conta;
+// se o limitador falhar, o pedido segue (ele não pode derrubar a API).
+export function chaveDoIp(ip) {
+  const v = String(ip || "").trim();
+  if (!v.includes(":")) return v;
+  const [esq, dir] = v.split("::");
+  const a = esq ? esq.split(":") : [];
+  const b = dir ? dir.split(":") : [];
+  const grupos = v.includes("::") ? [...a, ...Array(Math.max(0, 8 - a.length - b.length)).fill("0"), ...b] : a;
+  return grupos.slice(0, 4).map((g) => (parseInt(g, 16) || 0).toString(16)).join(":") + "::/64";
+}
+
+export async function dentroDoTeto(request, env) {
+  const limitador = env && env.LIMITE;
+  const ip = request.headers.get("cf-connecting-ip");
+  if (request.method === "OPTIONS" || !ip || !limitador || typeof limitador.limit !== "function") return true;
+  try {
+    const { success } = await limitador.limit({ key: chaveDoIp(ip) });
+    return success !== false;
+  } catch {
+    return true;
+  }
+}
+
+export function muitosPedidos() {
+  return new Response(JSON.stringify({ code: "muitos_pedidos", message: "muitos_pedidos" }), {
+    status: 429,
+    headers: { "content-type": "application/json", "cache-control": "no-store", "retry-after": "60", "access-control-allow-origin": "*" },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/" || url.pathname === "/healthz") {
       return new Response("physiq-principal-api ok", { status: 200, headers: { "cache-control": "no-store" } });
     }
+    if (!(await dentroDoTeto(request, env))) return muitosPedidos();
     const target = ORIGIN + url.pathname + url.search;
     const headers = new Headers(request.headers);
     headers.delete("host");
