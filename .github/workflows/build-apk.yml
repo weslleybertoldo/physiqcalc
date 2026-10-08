@@ -98,6 +98,10 @@ jobs:
       - name: Conferir que o APK sai sem o painel master
         run: bash scripts/ci/sem-master.sh dist
 
+      - name: Conferir que o APK sai sem os textos legais novos
+        # hml-11 (H-28): a Política, os Termos e os Termos de assinatura novos esperam o advogado — só no build de staging até a virada
+        run: bash scripts/ci/sem-texto-legal-novo.sh dist
+
       - name: Sync Capacitor
         run: npx cap sync android
 
