@@ -48,10 +48,19 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 30 de leitura repetem; as 38 que gravam não; os 2 conjuntos não se cruzam", () => {
+  it("as 31 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
+    expect(RPC_SO_LEITURA.size).toBe(31);
+    expect(RPC_QUE_GRAVAM.size).toBe(40);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
     expect([...RPC_SO_LEITURA].filter((n) => RPC_QUE_GRAVAM.has(n))).toEqual([]);
+  });
+
+  it("hml-12: a ficha do responsável repete (STABLE); o aceite e o registro do responsável vão 1 vez (gravam)", () => {
+    expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel`, { method: "POST" })).toBe(true);
+    expect(podeRepetir(`${P}/rest/v1/rpc/aceitar_no_acesso`, { method: "POST" })).toBe(false);
+    expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel_registrar`, { method: "POST" })).toBe(false);
+    expect(RPC_QUE_GRAVAM.has("aceitar_no_acesso") && RPC_QUE_GRAVAM.has("aluno_responsavel_registrar")).toBe(true);
   });
 });
 

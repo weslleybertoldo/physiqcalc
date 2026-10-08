@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@/integrations/principal/client", () => ({ principal: { functions: { invoke: h.invoke } } }));
@@ -112,5 +112,53 @@ describe("H5 — /c/ com CPF e apelido (N-57 / DN-6) e a trava de e-mail/CPF", (
     expect(await screen.findByText("Não deu certo agora. Tente de novo.")).toBeInTheDocument();
     expect(screen.queryByText(/Já existe cadastro/)).not.toBeInTheDocument();
     expect(cpf()).not.toHaveAttribute("aria-invalid", "true");
+  });
+});
+
+// hml-12 (H-30): o banco recusa menor de 16 (com a versão dos textos ligada) e, no staging, a linha da idade mínima e da Política fica
+// antes do envio (P9: sem caixa de consentimento). Na produção, a tela de hoje (a condição do Vite é lida na tela).
+describe("hml-12 — /c/: a idade mínima", () => {
+  const infoOk = (corpo: Record<string, unknown> = { ok: true, id: "cp9" }, status = 200) =>
+    h.invoke.mockImplementation(async (_fn: string, { body }: { body: Record<string, unknown> }) =>
+      body.acao === "cadastro_info"
+        ? { data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null }
+        : status === 200
+          ? { data: corpo, error: null }
+          : { data: null, error: { context: new Response(JSON.stringify(corpo), { status, headers: { "Content-Type": "application/json" } }) } });
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("menor de 16 recusado pelo banco (400 menor_de_16) → a frase da idade mínima", async () => {
+    infoOk({ ok: false, erro: "menor_de_16" }, 400);
+    montar();
+    await screen.findByText("Lucas Ferreira");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana Lima" } });
+    fireEvent.change(document.querySelector("[data-cad-nascimento]")!, { target: { value: "2012-05-20" } });
+    fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
+    expect(await screen.findByText("O Physiq é para quem tem 16 anos ou mais. Confira a data de nascimento.")).toBeInTheDocument();
+    expect(screen.queryByText("Cadastro enviado")).toBeNull();
+  });
+
+  it("staging: a linha da idade mínima e para onde vão os dados, com a Política, antes do envio", async () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    infoOk();
+    montar();
+    await screen.findByText("Lucas Ferreira");
+    const linha = document.querySelector("[data-aviso-idade-cadastro]")!;
+    expect(linha.textContent).toBe(
+      "O Physiq é para quem tem 16 anos ou mais. Os seus dados vão para Lucas Ferreira, que cuida deles no seu atendimento — veja a Política de Privacidade.",
+    );
+    expect(linha.querySelector("a")).toHaveAttribute("href", "/privacidade");
+    expect(linha.querySelector("a")).toHaveAttribute("target", "_blank");
+  });
+
+  it("produção: sem a linha", async () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "public");
+    infoOk();
+    montar();
+    await screen.findByText("Lucas Ferreira");
+    expect(document.querySelector("[data-aviso-idade-cadastro]")).toBeNull();
+    expect(document.body.textContent).not.toContain("16 anos ou mais");
   });
 });

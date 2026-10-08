@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  AJUSTES, ajustesVisiveis, alturaEmMetros, ATALHOS_FLUXO, cadastroParaTreino, corpoDoAluno, formDoPerfil, idadeDe,
-  linhaDoCabecalho, linhaDoPerfil, linkLigado, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, rotaDoAtalho, textoDoLink, validarCPF,
+  AJUSTES, ajustesVisiveis, alturaEmMetros, ATALHOS_FLUXO, cadastroParaTreino, corpoDoAluno, faixaDeIdade, formDoPerfil, idadeDe,
+  linhaDoCabecalho, linhaDoPerfil, linkLigado, MENSAGEM_MENOR_DE_16, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, rotaDoAtalho, textoDoLink, validarCPF,
   validarForm, whatsappDoAluno,
 } from "./regras";
 import { perfil } from "@/test/fixturesPerfilAluno";
@@ -73,6 +73,24 @@ describe("W14 — Editar dados (C33)", () => {
     expect(mensagemErroPerfil("sem_acesso")).toMatch(/responsável/);
     expect(mensagemErroPerfil("telefone_invalido")).toMatch(/DDD/);
     expect(mensagemErroPerfil("xyz")).toMatch(/Tente de novo/);
+  });
+  it("hml-12 (H-30): o gatilho da idade mínima (menor_de_16) vira a frase da regra dos menores", () => {
+    expect(MENSAGEM_MENOR_DE_16).toBe("O Physiq é para quem tem 16 anos ou mais. Não cadastre menores de 16.");
+    expect(mensagemErroPerfil("menor_de_16")).toBe(MENSAGEM_MENOR_DE_16);
+    // o erro do gatilho chega como a mensagem do Postgres (o PostgREST repassa o texto do raise)
+    expect(mensagemErroPerfil("MENOR_DE_16")).toBe(MENSAGEM_MENOR_DE_16);
+  });
+});
+
+describe("hml-12 (H-30) — a faixa de idade da regra dos menores", () => {
+  it("menor de 16, de 16 a 17 e adulto, pela idade completa em São Paulo; sem data = null", () => {
+    expect(faixaDeIdade("2010-10-09", "2026-10-08")).toBe("menor_16"); // faz 16 amanhã
+    expect(faixaDeIdade("2010-10-08", "2026-10-08")).toBe("16_17");
+    expect(faixaDeIdade("2008-10-09", "2026-10-08")).toBe("16_17"); // faz 18 amanhã
+    expect(faixaDeIdade("2008-10-08", "2026-10-08")).toBe("adulto");
+    expect(faixaDeIdade(null, "2026-10-08")).toBeNull();
+    expect(faixaDeIdade("", "2026-10-08")).toBeNull();
+    expect(faixaDeIdade("2027-01-01", "2026-10-08")).toBeNull(); // data no futuro não tem idade
   });
 });
 

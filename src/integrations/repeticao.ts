@@ -10,28 +10,31 @@
 import type { BancoErro } from "../../supabase-principal/functions/_shared/erros";
 import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 
-/** As 30 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026): podem repetir. */
+/**
+ * As 31 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
+ * STABLE pela migração 20261008200000): podem repetir.
+ */
 export const RPC_SO_LEITURA = new Set<string>([
   "agenda_horarios", "aluno_agenda_horarios", "aluno_anotacoes", "aluno_compromissos", "aluno_convites", "aluno_evolucao",
-  "aluno_perfil", "aluno_treino", "alunos_da_conta", "alunos_novos_por_mes", "alunos_pendentes", "equipe_da_conta",
-  "financeiro_do_aluno", "grupos_alimentos", "lixeira_da_conta", "master_alunos_do_app", "mensagens_desligadas",
+  "aluno_perfil", "aluno_responsavel", "aluno_treino", "alunos_da_conta", "alunos_novos_por_mes", "alunos_pendentes",
+  "equipe_da_conta", "financeiro_do_aluno", "grupos_alimentos", "lixeira_da_conta", "master_alunos_do_app", "mensagens_desligadas",
   "meu_perfil_aluno", "meu_plano_app", "minha_agenda", "minha_dieta", "minha_evolucao", "minha_situacao",
   "minhas_regras_agenda", "paciente_dado_livre", "painel_resumo", "pratos_prontos_do_app", "w2l_prontuarios_para_baixar",
   "whatsapp_fila", "whatsapp_resumo",
 ]);
 
-/** As 38 VOLATILE que o front chama: nunca repetem. */
+/** As 40 VOLATILE que o front chama (+ as 2 da hml-12 que gravam o aceite e o consentimento do responsável): nunca repetem. */
 export const RPC_QUE_GRAVAM = new Set<string>([
   // sem escrita direta no corpo, mas mexem no limite_publico / garantir_* / matricular_no_app (6)
   "agenda_garantir_tags", "aluno_acesso", "diario_link", "diario_listar", "entrar_sem_profissional", "preconsulta_formulario",
-  // gravam (32)
-  "alterar_papeis_membro", "aluno_agenda_confirmar", "aluno_agenda_desistir", "aluno_agenda_marcar", "aluno_agenda_reagendar",
-  "aluno_avisar_avaliacao", "aluno_avisar_plano", "aluno_definir_pacote", "aluno_marcar_meta", "aluno_novo_link",
-  "aluno_salvar_ajustes", "aluno_salvar_dados", "criar_minha_conta", "diario_enviar", "garantir_meu_codigo", "lixeira_apagar",
-  "lixeira_restaurar", "marcar_aviso_mudanca", "mensagens_aviso_fechar", "mensagens_ligar_para_todos", "minha_senha_definida",
-  "mudar_objetivo_app", "paciente_criar_acesso", "paciente_marcar_refeicao", "paciente_redefinir_senha",
-  "preconsulta_responder", "push_esquecer", "push_registrar", "remover_membro", "whatsapp_limpar_falhas", "whatsapp_reenviar",
-  "whatsapp_salvar_config",
+  // gravam (34)
+  "aceitar_no_acesso", "alterar_papeis_membro", "aluno_agenda_confirmar", "aluno_agenda_desistir", "aluno_agenda_marcar",
+  "aluno_agenda_reagendar", "aluno_avisar_avaliacao", "aluno_avisar_plano", "aluno_definir_pacote", "aluno_marcar_meta",
+  "aluno_novo_link", "aluno_responsavel_registrar", "aluno_salvar_ajustes", "aluno_salvar_dados", "criar_minha_conta",
+  "diario_enviar", "garantir_meu_codigo", "lixeira_apagar", "lixeira_restaurar", "marcar_aviso_mudanca", "mensagens_aviso_fechar",
+  "mensagens_ligar_para_todos", "minha_senha_definida", "mudar_objetivo_app", "paciente_criar_acesso", "paciente_marcar_refeicao",
+  "paciente_redefinir_senha", "preconsulta_responder", "push_esquecer", "push_registrar", "remover_membro",
+  "whatsapp_limpar_falhas", "whatsapp_reenviar", "whatsapp_salvar_config",
 ]);
 
 /** O pedido pode ir de novo sem risco de fazer 2 vezes? GET/HEAD e POST das RPCs de leitura; o resto, não. */

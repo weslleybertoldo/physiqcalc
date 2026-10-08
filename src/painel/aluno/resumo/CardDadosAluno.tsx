@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { MessageCircle, Pencil } from "lucide-react";
+import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto } from "@/ui/premium/Estados";
@@ -10,6 +11,9 @@ import {
 } from "../dados/regras";
 import { SheetEditarDados } from "../dados/SheetEditarDados";
 import { usePerfilAluno, useTreinoDoAluno } from "../dados/usePerfilAluno";
+
+// hml-12 (H-30): o consentimento do responsável (16–17) — SÓ no build de staging até a virada; na produção o Rollup corta o import()
+const SecaoResponsavel = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/responsavel/SecaoResponsavel")) : null;
 
 function Linha({ rotulo, children, marca }: { rotulo: string; children: ReactNode; marca: string }) {
   const vazio = children === null || children === undefined || children === "";
@@ -26,6 +30,7 @@ function Linha({ rotulo, children, marca }: { rotulo: string; children: ReactNod
  * cadastro da matrícula (nome, apelido, nascimento e idade, sexo, CPF, telefone com o WhatsApp, e-mail, objetivo, tags, datas)
  * e o corpo (altura e peso: os do Banco do Treino para quem tem treino, senão os da última antropometria). "Editar" abre a
  * folha do cadastro (a mesma do ⋯ do cabeçalho). Substitui o "Dados" do Configurar aluno antigo embaixo dos cards.
+ * hml-12 (H-30): logo depois da grade, a seção "Consentimento do responsável" do aluno de 16 ou 17 anos (só no staging até a virada).
  */
 export default function CardDadosAluno({ alunoId }: { alunoId: string }) {
   const q = usePerfilAluno(alunoId);
@@ -99,6 +104,13 @@ export default function CardDadosAluno({ alunoId }: { alunoId: string }) {
           <Linha rotulo="Modificado em" marca="modificado">{dataHoraBR(p.atualizado_em)}</Linha>
         </div>
       </div>
+      {SecaoResponsavel && (
+        <LimiteDeErro silencioso nome="seção do responsável">
+          <Suspense fallback={null}>
+            <SecaoResponsavel alunoId={alunoId} nascimento={p.nascimento} />
+          </Suspense>
+        </LimiteDeErro>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2" data-dados-tags>
         <span className="text-[12px] text-texto-3">Tags</span>
         {p.tags.length ? p.tags.map((tag) => <Chip key={tag} tom="t" data-dados-tag={tag}>{tag}</Chip>) : <span className="text-[12px] text-texto-4">nenhuma</span>}

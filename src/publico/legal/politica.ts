@@ -12,6 +12,10 @@ import { ROTA_ASSINATURA, ROTA_TERMOS, VENDEDOR } from "./versao";
  * Um lugar só para o que a página de hoje e a /excluir-conta também dizem (src/publico/privacidade/textos.ts): a tabela de serviços
  * sai de `servicosDaVersao` (na versão da Google Play, sem o GitHub), os backups de `FRASE_BACKUPS` e o suporte de `FRASE_SUPORTE`.
  * O teste (textos.test.ts) confere o texto com o app.
+ *
+ * hml-12 (H-30, §1.3): o registro do aceite guarda também o responsável (nome, vínculo, como consentiu) e a origem (site, app ou
+ * Google Play); a prova do aceite fica até 5 anos depois da exclusão (P3); o aviso de versão nova é por e-mail, e no app ela aparece
+ * para o aceite no próximo acesso (P2).
  */
 
 /** Onde fica cada serviço da seção 7 (o que ele recebe é o texto de SERVICOS_TERCEIROS). Serviço novo lá → o teste pede o lugar aqui. */
@@ -95,7 +99,7 @@ Neste texto, "Physiq" e "nós" são quem oferece o aplicativo.
 | Agenda e pagamentos ao profissional | consultas, mensalidades, cobranças, comprovantes de Pix e recibos | o profissional organizar o atendimento e receber |
 | Pagamentos ao Physiq | plano, valor, situação, vencimento e o identificador do pagamento no Mercado Pago (o número do cartão não passa pelo Physiq) | cobrar o plano do profissional e o plano do app |
 | Profissional | registro no conselho (CRN, CREF), WhatsApp, endereço, carimbo, chave Pix de recebimento e, quando ele liga as mensagens automáticas, a conexão do WhatsApp dele | o perfil profissional, os recibos e os avisos aos alunos |
-| Aceite e consentimentos | data, hora e versão aceita dos Termos e desta política; o consentimento do dado de saúde; e, para quem tem 16 ou 17 anos, o consentimento do responsável | provar o aceite e o consentimento |
+| Aceite e consentimentos | data, hora e versão aceita dos Termos e desta política; o consentimento do dado de saúde; e, para quem tem 16 ou 17 anos, o consentimento do responsável (nome, vínculo e como consentiu, registrados pelo profissional); e de onde veio cada aceite (site, app ou Google Play) | provar o aceite e o consentimento |
 | Técnicos | identificador do usuário, datas, o código do aparelho para as notificações, um código feito a partir do endereço IP (não o IP) para limitar tentativas, e os avisos de erro, sem dado pessoal | segurança, notificações e correção de erros |
 
 Não usamos os seus dados para publicidade e não vendemos dados. Não há rastreadores de terceiros no site nem no app (como Google
@@ -189,6 +193,7 @@ A transferência segue o art. 33 da LGPD e as garantias de proteção de dados q
 | Registros dos serviços (login e servidor) | poucos dias, conforme cada serviço |
 | Cópias de segurança do banco | ${FRASE_BACKUPS} |
 | Pagamentos ao Physiq | 5 anos, pelos registros fiscais e de pagamento |
+| Aceite e consentimentos | enquanto a conta existir e até 5 anos depois de excluída, só para provar o aceite, sem uso para outro fim |
 
 No fim de cada prazo, os dados são apagados. Fica só o que a lei mandar guardar ou o que for preciso para a defesa em processo
 (LGPD, art. 16).
@@ -214,6 +219,7 @@ Você pode pedir, a qualquer momento e sem custo:
     - o login é desativado e fica sem e-mail;
     - a conta é encerrada, a equipe perde o acesso e a cobrança automática do plano é cancelada;
     - o histórico de cada aluno fica guardado com ele;
+  - **nos dois casos:** o registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite;
 - **informação** sobre com quem compartilhamos os seus dados (seção 7);
 - **informação** sobre a possibilidade de não dar o consentimento e o que acontece se você não der, e **revogação** do
   consentimento (seção 4);
@@ -281,8 +287,9 @@ O aviso diz:
 
 ## 15. Mudanças nesta política
 
-Quando esta política mudar de forma relevante, sai uma **versão nova**, com a data no topo desta página. Avisamos com **30 dias**
-de antecedência, no app e por e-mail, e quem já usa o Physiq aceita a versão nova no próximo acesso.
+Quando esta política mudar de forma relevante, sai uma **versão nova**, com a data no topo desta página. Avisamos por e-mail com
+**30 dias** de antecedência. No app, a versão nova aparece para o aceite no próximo acesso depois da data: quem já usa o Physiq
+aceita a versão nova nesse acesso.
 
 Quem não concordar pode excluir a conta. O profissional pode cancelar o plano sem multa
 ([Termos de assinatura](${ROTA_ASSINATURA})).

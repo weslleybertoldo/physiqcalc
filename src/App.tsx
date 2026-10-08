@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PWAInstallProvider } from "@/hooks/usePWAInstall";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
@@ -29,6 +29,11 @@ import { MasterSoNoSite } from "@/ui/casca/MasterSoNoSite";
 // fallback (spec 11.1) e os redirecionamentos das rotas antigas dos 2 apps (spec 4.8). Code-splitting:
 // a abertura do app (TreinosPage e a entrada) segue no JS inicial; painel, master, PDF, gráficos e o SDK
 // do Mercado Pago carregam sob demanda.
+
+// hml-12 (H-30, D6): a porta do aceite (os Termos de Uso e a Política, o consentimento de saúde e a trava de idade) — SÓ no build de
+// staging até a virada. Na produção o Rollup corta o import() (a porta nem entra no bundle; scripts/ci/sem-texto-legal-novo.sh
+// confere). A expressão fica AQUI, direto na condição, sem função no meio (src/publico/legal/guarda.test.ts confere).
+const PortaDoAceite = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/PortaDoAceite")) : null;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +78,20 @@ const AppRoutes = () => {
     return <CarregandoTela />;
   }
 
+  const rotas = (
+    <Suspense fallback={<CarregandoTela />}>
+      <Rotas />
+    </Suspense>
+  );
+  const avisos = (
+    <>
+      {/* janelas globais registradas em src/ui/avisos (ex.: "o Physiq mudou", W3) */}
+      {usuario && <AvisosGlobais />}
+      {/* H2: no APK, o link do site que abriu o app leva à tela dele */}
+      <AbrirLinkDoApp />
+    </>
+  );
+
   return (
     <BrowserRouter>
       <StagingGate>
@@ -82,13 +101,18 @@ const AppRoutes = () => {
         <BoasVindasNutri />
         {/* hml-08 (H-22): o painel master é só do site — no app, a conta master sai deste aparelho e vê "Conta master: use o site" */}
         <MasterSoNoSite>
-          <Suspense fallback={<CarregandoTela />}>
-            <Rotas />
-          </Suspense>
-          {/* janelas globais registradas em src/ui/avisos (ex.: "o Physiq mudou", W3) */}
-          {usuario && <AvisosGlobais />}
-          {/* H2: no APK, o link do site que abriu o app leva à tela dele */}
-          <AbrirLinkDoApp />
+          {/* hml-12 (H-30): quem não aceitou a versão vigente dos textos vê o aceite antes das rotas; os avisos vão à parte e só
+              montam sem nada pendente (numa rota livre com pendência, só as rotas) — só no staging */}
+          {PortaDoAceite ? (
+            <Suspense fallback={<CarregandoTela />}>
+              <PortaDoAceite avisos={avisos}>{rotas}</PortaDoAceite>
+            </Suspense>
+          ) : (
+            <>
+              {rotas}
+              {avisos}
+            </>
+          )}
         </MasterSoNoSite>
       </StagingGate>
     </BrowserRouter>

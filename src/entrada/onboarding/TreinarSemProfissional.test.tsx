@@ -38,7 +38,7 @@ vi.mock("@/nucleo/sessao", () => ({
 vi.mock("@/app-aluno/sozinho/api", async (orig) => ({
   ...(await orig<typeof import("@/app-aluno/sozinho/api")>()),
   buscarMeuPlano: () => h.plano(),
-  entrarSemProfissional: (o: string, p: string) => h.entrar(o, p),
+  entrarSemProfissional: (o: string, p: string, extra?: unknown) => h.entrar(o, p, extra),
 }));
 vi.mock("react-router-dom", async (orig) => ({ ...(await orig<typeof import("react-router-dom")>()), useNavigate: () => h.navegar }));
 
@@ -95,7 +95,8 @@ describe("Boas-vindas › Treinar sem profissional (W7b)", () => {
     fireEvent.click(screen.getByRole("radio", { name: /Ganhar massa/ }));
     fireEvent.click(screen.getByRole("radio", { name: /Treino \+ Alimentação/ }));
     fireEvent.click(screen.getByRole("button", { name: /Começar os 7 dias grátis/ }));
-    await waitFor(() => expect(h.entrar).toHaveBeenCalledWith("ganhar_massa", "app_treino_alimentacao"));
+    // hml-12: a produção manda a RPC de 2 argumentos (sem a data e sem o consentimento)
+    await waitFor(() => expect(h.entrar).toHaveBeenCalledWith("ganhar_massa", "app_treino_alimentacao", undefined));
     expect(await screen.findByText(/Pronto! Grátis até 06\/10/)).toBeInTheDocument();
     expect(h.recarregar).toHaveBeenCalled();
     await waitFor(() => expect(h.navegar).toHaveBeenCalledWith("/perfil/treinos-prontos?inicio=1", { replace: true }), { timeout: 3000 });
@@ -168,5 +169,108 @@ describe("Treinar sem profissional — hml-11: o resumo antes de começar só no
     expect(screen.getByRole("button", { name: /Começar os 7 dias grátis/ })).toBeInTheDocument();
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
     expect(h.importouResumo).toBe(0);
+  });
+});
+
+// hml-12 (H-30, P4): a data de nascimento (18+) e o consentimento dos dados de saúde, em destaque, antes de começar o plano do app — SÓ
+// no build de staging até a virada; com eles vai a RPC de 5 argumentos. Na produção, igual a hoje (fica no FIM do arquivo, pelo
+// resetModules, como o bloco da hml-11).
+describe("Treinar sem profissional — hml-12: a data (18+) e o consentimento de saúde só no staging", () => {
+  async function telaDoBuild(schema: "staging" | "public") {
+    vi.stubEnv("VITE_DB_SCHEMA", schema);
+    vi.resetModules();
+    return (await import("./TreinarSemProfissional")).default;
+  }
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+  const ano = new Date().getFullYear();
+  const data = () => document.querySelector("[data-campo-nascimento] input[type='date']") as HTMLInputElement;
+  const comecar = () => screen.getByRole("button", { name: /Começar os 7 dias grátis/ }) as HTMLButtonElement;
+
+  async function abrirNoStaging() {
+    const { VERSAO_TEXTOS } = await import("@/publico/legal/versao");
+    const Tela = await telaDoBuild("staging");
+    abrir(<Tela />);
+    fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
+    await waitFor(
+      () => {
+        if (!document.querySelector('[data-consentimento-saude="app"]') || !data()) throw new Error("a data e o consentimento ainda não apareceram");
+      },
+      { timeout: 5000 },
+    );
+    return VERSAO_TEXTOS;
+  }
+
+  it("staging: a data e o consentimento antes do resumo; 'Começar' travado até as 2; 17 anos → a frase, sem o banco", async () => {
+    await abrirNoStaging();
+    const consentimento = document.querySelector('[data-consentimento-saude="app"]')!;
+    // a ordem: a data, o consentimento em destaque, o resumo antes de pagar (hml-11) e o "Começar"
+    const resumo = await waitFor(
+      () => {
+        const el = document.querySelector('[data-resumo-antes-de-pagar="sem-profissional"]');
+        if (!el) throw new Error("o resumo ainda não apareceu");
+        return el;
+      },
+      { timeout: 5000 },
+    );
+    expect(data().compareDocumentPosition(consentimento) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(consentimento.compareDocumentPosition(resumo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(resumo.compareDocumentPosition(comecar()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole("radio", { name: /Emagrecer/ }));
+    expect(comecar().disabled).toBe(true);
+    fireEvent.change(data(), { target: { value: `${ano - 17}-01-01` } });
+    expect(comecar().disabled).toBe(true); // falta o consentimento
+    fireEvent.click(document.querySelector("[data-consentimento-saude-caixa]")!);
+    expect(comecar().disabled).toBe(false);
+    fireEvent.click(comecar());
+    expect(await screen.findByText(
+      "O plano sem profissional é para maiores de 18 anos. Se você tem 16 ou 17 anos, treine com um profissional: peça o código a ele.",
+    )).toBeInTheDocument();
+    expect(h.entrar).not.toHaveBeenCalled();
+  });
+
+  it("staging: 18+ e o consentimento → a RPC de 5 argumentos (a data, a versão do texto lido e a origem)", async () => {
+    h.entrar.mockResolvedValue({ paciente_id: "p1", teste_ate: "2026-10-15T02:59:59Z", ja_era: false });
+    const versao = await abrirNoStaging();
+    fireEvent.click(await screen.findByRole("radio", { name: /Ganhar massa/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Treino \+ Alimentação/ }));
+    fireEvent.change(data(), { target: { value: `${ano - 30}-05-20` } });
+    fireEvent.click(document.querySelector("[data-consentimento-saude-caixa]")!);
+    fireEvent.click(comecar());
+    await waitFor(() =>
+      expect(h.entrar).toHaveBeenCalledWith("ganhar_massa", "app_treino_alimentacao", {
+        nascimento: `${ano - 30}-05-20`,
+        consentimento: versao,
+        origem: "site",
+      }),
+    );
+    expect(await screen.findByText(/Pronto! Grátis até/)).toBeInTheDocument();
+  });
+
+  it("staging: o banco recusa (ex.: o consentimento de outra versão) → a frase", async () => {
+    await abrirNoStaging();
+    // o ErroApp do módulo que a tela importou (depois do resetModules)
+    const { ErroApp } = await import("@/app-aluno/sozinho/api");
+    h.entrar.mockRejectedValue(new ErroApp("sem_consentimento_saude"));
+    fireEvent.click(await screen.findByRole("radio", { name: /Emagrecer/ }));
+    fireEvent.change(data(), { target: { value: `${ano - 30}-05-20` } });
+    fireEvent.click(document.querySelector("[data-consentimento-saude-caixa]")!);
+    fireEvent.click(comecar());
+    expect(await screen.findByText("Marque o consentimento dos seus dados de saúde para começar.")).toBeInTheDocument();
+  });
+
+  it("produção: igual a hoje — sem a data e sem o consentimento; a RPC de 2 argumentos", async () => {
+    h.entrar.mockResolvedValue({ paciente_id: "p1", teste_ate: "2026-10-15T02:59:59Z", ja_era: false });
+    const Tela = await telaDoBuild("public");
+    abrir(<Tela />);
+    fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /Emagrecer/ }, { timeout: 5000 }));
+    expect(document.querySelector("[data-consentimento-saude]")).toBeNull();
+    expect(document.querySelector("[data-campo-nascimento]")).toBeNull();
+    expect(comecar().disabled).toBe(false);
+    fireEvent.click(comecar());
+    await waitFor(() => expect(h.entrar).toHaveBeenCalledWith("emagrecer", "app_treino", undefined));
   });
 });

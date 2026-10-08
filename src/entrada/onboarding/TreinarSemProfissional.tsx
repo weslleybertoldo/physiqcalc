@@ -17,6 +17,11 @@ import { MensagemForm } from "../pecas/Campo";
 // hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de começar o plano do app (Decreto 7.962/2013, art. 4º, I) — SÓ no build
 // de staging até a virada. Na produção o Rollup corta o import() (a expressão do Vite fica aqui, direto na condição, sem função no meio).
 const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
+// hml-12 (H-30, P4): a data de nascimento (o plano do app é para 18+) e o consentimento dos dados de saúde, em destaque, antes de
+// começar — SÓ no build de staging até a virada; com eles vai a RPC de 5 argumentos. Na produção o Rollup corta os import() (a
+// expressão do Vite fica aqui, direto na condição, sem função no meio — src/publico/legal/guarda.test.ts confere).
+const ConsentimentoSaude = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/ConsentimentoSaude")) : null;
+const CampoNascimento = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/CampoNascimento")) : null;
 
 /**
  * Boas-vindas › "Treinar sem profissional" (W7b — regra dele, 29/09): quem entra sem código treina sozinho. Escolhe o objetivo
@@ -34,6 +39,11 @@ export default function TreinarSemProfissional() {
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [pronto, setPronto] = useState<string | null>(null);
+  // hml-12 (só no staging): a data, o erro dela pela regra 18+ e o consentimento dado (a versão do texto lido e de onde veio)
+  const [nascimento, setNascimento] = useState("");
+  const [erroNascimento, setErroNascimento] = useState<string | null>(null);
+  const [consentimento, setConsentimento] = useState<{ versao: string; origem: string } | null>(null);
+  const pedeConsentimento = !!(ConsentimentoSaude && CampoNascimento);
   const consulta = useQuery({ queryKey: ["plano-app"], queryFn: buscarMeuPlano, staleTime: 60_000, retry: 1, networkMode: "online" });
   const planos = useMemo(() => consulta.data?.planos ?? [], [consulta.data]);
   const dias = consulta.data?.teste_dias ?? TESTE_DIAS_APP;
@@ -49,9 +59,14 @@ export default function TreinarSemProfissional() {
     if (!online) return setErro(mensagemApp("sem_internet"));
     if (!objetivo) return setErro(mensagemApp("objetivo_invalido"));
     if (!plano) return setErro(mensagemApp("plano_invalido"));
+    if (pedeConsentimento) {
+      if (!nascimento || erroNascimento) return setErro(mensagemApp(erroNascimento ?? "nascimento_invalido"));
+      if (!consentimento) return setErro(mensagemApp("sem_consentimento_saude"));
+    }
     setEnviando(true);
     try {
-      const r = await entrarSemProfissional(objetivo, plano);
+      const extra = pedeConsentimento && consentimento ? { nascimento, consentimento: consentimento.versao, origem: consentimento.origem } : undefined;
+      const r = await entrarSemProfissional(objetivo, plano, extra);
       setPronto(r.teste_ate);
       await recarregarSituacao();
       lembrarArea("aluno");
@@ -104,13 +119,33 @@ export default function TreinarSemProfissional() {
             {dias} dias grátis, até <b className="font-semibold text-texto">{dataBR(ultimoDiaGratis(dias))}</b>. Sem cartão agora: depois do teste, pague por
             Pix ou cartão em Perfil › Pagamentos. Sem o pagamento, o app fica fechado até pagar.
           </p>
+          {CampoNascimento && ConsentimentoSaude && (
+            <Suspense fallback={null}>
+              <CampoNascimento
+                valor={nascimento}
+                aoMudar={(valor, erroDaData) => { setNascimento(valor); setErroNascimento(erroDaData); setErro(""); }}
+                desabilitado={enviando}
+              />
+              <ConsentimentoSaude
+                variante="app"
+                marcado={!!consentimento}
+                aoMudar={(c) => { setConsentimento(c); setErro(""); }}
+                desabilitado={enviando}
+              />
+            </Suspense>
+          )}
           {ResumoAntesDePagar && !ehLoja && (
             <Suspense fallback={null}>
               <ResumoAntesDePagar tela="sem-profissional" />
             </Suspense>
           )}
           {erro && <MensagemForm data-sozinho-erro>{erro}</MensagemForm>}
-          <button type="submit" disabled={enviando || !planos.length} className="pq-botao pq-botao-w h-12 w-full rounded-2xl" data-sozinho-enviar>
+          <button
+            type="submit"
+            disabled={enviando || !planos.length || (pedeConsentimento && (!nascimento || !consentimento))}
+            className="pq-botao pq-botao-w h-12 w-full rounded-2xl"
+            data-sozinho-enviar
+          >
             {enviando ? "Começando…" : `Começar os ${dias} dias grátis`}
           </button>
           <p className="text-center text-[11.5px] leading-relaxed text-texto-3">

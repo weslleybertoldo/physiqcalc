@@ -29,6 +29,25 @@ describe("normalizarSituacao (o JSON da minha_situacao)", () => {
     expect(s.matriculas).toEqual([]);
     expect(s.precisa_treino).toBe(false);
   });
+
+  // hml-12 (H-30): o `legal` da minha_situacao (o aceite e os consentimentos) — dado, vai para todos os builds
+  it("legal: passa como veio; versão nula = desligado (nada pendente); falta ou forma estranha → null", () => {
+    const pendente = { versao: "2026-10-08", aceite_pendente: true, saude_pendente: false, nascimento_pendente: true, menor: "sem_responsavel" };
+    expect(normalizarSituacao({ user_id: "u1", legal: pendente })!.legal).toEqual(pendente);
+    expect(normalizarSituacao({ user_id: "u1", legal: { versao: null } })!.legal).toEqual({
+      versao: null, aceite_pendente: false, saude_pendente: false, nascimento_pendente: false, menor: null,
+    });
+    // servidor antigo (sem o campo) e formas estranhas: null (a porta do aceite deixa passar)
+    expect(normalizarSituacao({ user_id: "u1" })!.legal).toBeNull();
+    expect(normalizarSituacao({ user_id: "u1", legal: "2026-10-08" })!.legal).toBeNull();
+    expect(normalizarSituacao({ user_id: "u1", legal: {} })!.legal).toBeNull();
+    expect(normalizarSituacao({ user_id: "u1", legal: { ...pendente, versao: "8/10/2026" } })!.legal).toBeNull();
+    expect(normalizarSituacao({ user_id: "u1", legal: { ...pendente, aceite_pendente: "sim" } })!.legal).toBeNull();
+    expect(normalizarSituacao({ user_id: "u1", legal: { versao: "2026-10-08" } })!.legal).toBeNull();
+    // a trava desconhecida não trava
+    expect(normalizarSituacao({ user_id: "u1", legal: { ...pendente, menor: "outra" } })!.legal?.menor).toBeNull();
+    expect(normalizarSituacao({ user_id: "u1", legal: { ...pendente, menor: "menor_16" } })!.legal?.menor).toBe("menor_16");
+  });
 });
 
 describe("cache no aparelho (abre sem internet)", () => {

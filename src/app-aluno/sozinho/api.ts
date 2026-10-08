@@ -24,12 +24,30 @@ async function rpc<T>(nome: string, args: Record<string, unknown> = {}): Promise
   return data as T;
 }
 
-/** Boas-vindas › "Treinar sem profissional": matrícula no app com os dias grátis começando agora. */
-export async function entrarSemProfissional(objetivo: Objetivo, plano: string): Promise<{ paciente_id: string; teste_ate: string | null; ja_era: boolean }> {
-  const r = await rpc<{ ok?: boolean; erro?: string; paciente_id?: string; teste_ate?: string | null; ja_era?: boolean }>("entrar_sem_profissional", {
-    p_objetivo: objetivo,
-    p_plano: plano,
-  });
+/**
+ * hml-12 (H-30, P4): o que a tela nova manda junto (só o build de staging até a virada) — a data de nascimento (18+) e o consentimento
+ * de saúde: a versão do texto que a pessoa leu (VERSAO_TEXTOS) e de onde veio (site, apk ou loja).
+ */
+export interface ExtraSemProfissional {
+  nascimento: string;
+  consentimento: string;
+  origem: string;
+}
+
+/**
+ * Boas-vindas › "Treinar sem profissional": matrícula no app com os dias grátis começando agora. hml-12: com `extra` vai a sobrecarga
+ * de 5 argumentos (o banco confere a idade e grava o consentimento); sem ele, a de 2 de sempre — que, depois da virada (versão dos
+ * textos ligada no banco), responde atualize_o_app.
+ */
+export async function entrarSemProfissional(
+  objetivo: Objetivo,
+  plano: string,
+  extra?: ExtraSemProfissional,
+): Promise<{ paciente_id: string; teste_ate: string | null; ja_era: boolean }> {
+  const args = extra
+    ? { p_objetivo: objetivo, p_plano: plano, p_nascimento: extra.nascimento, p_consentimento: extra.consentimento, p_origem: extra.origem }
+    : { p_objetivo: objetivo, p_plano: plano };
+  const r = await rpc<{ ok?: boolean; erro?: string; paciente_id?: string; teste_ate?: string | null; ja_era?: boolean }>("entrar_sem_profissional", args);
   if (!r?.ok || !r.paciente_id) throw new ErroApp(r?.erro ?? "erro_interno");
   invalidarResumo();
   return { paciente_id: r.paciente_id, teste_ate: r.teste_ate ?? null, ja_era: r.ja_era === true };

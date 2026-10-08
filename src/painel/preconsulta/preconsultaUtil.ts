@@ -172,6 +172,8 @@ export function mensagemErroRpc(e: unknown): string {
   if (m.includes("nome_invalido")) return "Escreva seu nome (2 a 120 letras)";
   if (m.includes("email_invalido")) return "E-mail inválido";
   if (m.includes("telefone_invalido")) return "Telefone muito longo";
+  // hml-12 (H-30): o banco com a versão dos textos ligada recusa a resposta sem o consentimento da versão vigente
+  if (m.includes("sem_consentimento")) return "Recarregue a página e marque o consentimento para enviar.";
   if (m.includes("failed to fetch") || m.includes("network") || m.includes("abort") || m.includes("falha de rede")) return "Sem conexão. Confira a internet e tente de novo.";
   return "Não foi possível enviar as respostas. Tente de novo.";
 }
