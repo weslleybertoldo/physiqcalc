@@ -1,0 +1,7 @@
+[Unit]
+Description=Physiq: apagar as copias do banco com 29 dias ou mais (~/backups/physiq)
+OnFailure=physiq-backup-aviso@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/lib/physiq-backup/limpeza.sh

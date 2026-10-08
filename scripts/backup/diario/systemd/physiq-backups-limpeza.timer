@@ -1,0 +1,9 @@
+[Unit]
+Description=Physiq: limpeza diaria das copias do banco (politica: apagadas em ate 30 dias)
+
+[Timer]
+OnCalendar=*-*-* 04:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

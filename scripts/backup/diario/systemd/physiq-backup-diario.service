@@ -1,0 +1,12 @@
+[Unit]
+Description=Physiq: cópia diária cifrada dos 2 bancos (principal e Treino), com ensaio de restauração
+Documentation=https://github.com/weslleybertoldo/physiqcalc/blob/main/docs/backup.md
+OnFailure=physiq-backup-aviso@%n.service
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/lib/physiq-backup/copia.sh todos
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=45min
