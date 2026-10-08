@@ -862,6 +862,7 @@ def g_responsavel(o, nav, base: str, prefixo: str, sess, casos: set[str]) -> Non
                 falta = texto_de(prof, secao)
                 o.ok("falta o consentimento do responsável" in falta and "o app do aluno fica fechado" in falta
                      and prof.tem("[data-responsavel-registrar]"), f"T9 o aviso âmbar e 'Registrar consentimento': {falta!r}")
+                prof.pg.locator(secao).first.scroll_into_view_if_needed()  # o print mostra o aviso, não o topo da ficha
                 o.linha(f"   print: {prof.print('T9_aviso_16_17')}")
                 prof.pg.locator("[data-responsavel-registrar]").first.click()
                 folha = "[data-sheet-responsavel='registrar']"
