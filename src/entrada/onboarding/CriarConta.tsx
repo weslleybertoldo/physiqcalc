@@ -133,6 +133,12 @@ export default function CriarConta() {
           <button type="submit" disabled={enviando} className="pq-botao pq-botao-w h-12 w-full rounded-2xl" data-criar-conta-enviar>
             {enviando ? "Criando…" : `Criar conta com ${TESTE_DIAS} dias grátis`}
           </button>
+          {/* hml-12 (H-30): a declaração do profissional (18+ e o registro válido) — SÓ no build de staging até a virada */}
+          {import.meta.env.VITE_DB_SCHEMA === "staging" && (
+            <p className="text-center text-[11.5px] leading-relaxed text-texto-3" data-declaracao-profissional>
+              Ao criar a conta, você declara ter 18 anos ou mais e que o registro profissional informado é seu e está válido (Termos de Uso, seção 2).
+            </p>
+          )}
           <p className="text-center text-[11.5px] leading-relaxed text-texto-3">
             Depois do teste, escolha o plano em Configurações › Plano: Só Treino, Só Nutrição ou Treino + Nutrição.
           </p>

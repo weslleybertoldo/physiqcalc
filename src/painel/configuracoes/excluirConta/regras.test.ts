@@ -79,6 +79,13 @@ describe("excluir conta do profissional — os textos da conferência", () => {
     expect(fica[0]).toMatch(/Res\. CFN 594\/2017 e Lei 13\.787\/2018: 20 anos/);
     expect(fica).toContain("Os treinos e exercícios que você montou para os alunos (4) continuam com eles.");
   });
+  it("hml-12 (H-30, P3): no staging, o registro dos aceites fica 5 anos (a última linha do que fica); na produção, não", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    const fica = listaFica(conferencia());
+    expect(fica[fica.length - 1]).toBe("O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.");
+    vi.stubEnv("VITE_DB_SCHEMA", "public");
+    expect(listaFica(conferencia()).join(" ")).not.toContain("provar o aceite");
+  });
   it("a frase da última confirmação", () => {
     expect(resumoDaConfirmacao(conferencia())).toBe(
       "A conta W2L Consultoria é encerrada e 1 profissional perde o acesso, 3 cobranças automáticas são canceladas e o seu login é apagado. Não dá para desfazer.");

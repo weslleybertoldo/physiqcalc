@@ -142,3 +142,25 @@ describe("/excluir-conta — hml-11: a frase da desistência só no staging", ()
     expect(document.querySelector("[data-frase-desistencia]")).toBeNull();
   });
 });
+
+// hml-12 (H-30, P3): a prova do aceite fica 5 anos depois da exclusão (a Política nova diz) — o item novo do "O que fica guardado" só no
+// build de staging até a virada; na produção, a lista de hoje.
+describe("/excluir-conta — hml-12: o registro dos aceites fica 5 anos, só no staging", () => {
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("staging: o item no 'O que fica guardado', logo antes das cópias de segurança", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    const { container } = abrir();
+    const item = container.querySelector("[data-secao-excluir='guardado'] [data-frase-aceites]");
+    expect(item?.textContent).toBe("O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.");
+    expect(item?.nextElementSibling).toBe(container.querySelector("[data-frase-backups]"));
+  });
+
+  it("produção: sem o item", () => {
+    const { container } = abrir();
+    expect(container.querySelector("[data-frase-aceites]")).toBeNull();
+    expect(container.textContent).not.toContain("provar o aceite");
+  });
+});

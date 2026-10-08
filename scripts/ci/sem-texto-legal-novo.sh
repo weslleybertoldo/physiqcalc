@@ -11,7 +11,8 @@
 # Falha se achar, em qualquer arquivo da pasta, uma das marcas abaixo: strings que só existem no texto novo e nas peças dele (só ASCII,
 # para o grep achar mesmo se o minificador escapar os acentos). Controle positivo: todas têm que existir no src/ (fora dos testes). Se
 # o código mudar e uma sumir, o teste ficaria oco (passaria sempre); então ele falha pedindo para trocar a marca.
-# Na virada (D12, passo 5): o texto novo vai para a produção, e a guarda passa a conferir só a faixa "em revisão".
+# Na virada (D12, passo 5): o texto novo vai para a produção, e a guarda passa a conferir só a faixa "em revisão" (as marcas da
+# hml-12 saem da lista junto com as condições de staging das telas delas).
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -24,6 +25,18 @@ MARCAS=(
   "data-frase-desistencia"         # src/publico/ExcluirConta.tsx e excluirConta/FluxoExclusao.tsx: a frase nova da desistência
   "data-frase-renovacao"           # src/painel/configuracoes/plano/PlanoContaNova.tsx: a frase nova da renovação
   "salvo a desist"                 # src/painel/configuracoes/excluirConta/regras.ts: o texto da frase nova ("salvo a desistência…")
+  # hml-12 (H-30): o aceite, o consentimento de saúde e a idade — também só no staging até a virada (a mesma condição do Vite)
+  "data-aceite-no-acesso"          # src/publico/legal/aceite/TelaDoAceite.tsx: a tela do aceite (a porta do App.tsx)
+  "data-consentimento-saude"       # src/publico/legal/aceite/ConsentimentoSaude.tsx: Treinar sem profissional, o aceite e a pré-consulta /f/
+  "data-tela-menor"                # src/publico/legal/aceite/TelaMenor.tsx: a trava de idade
+  "data-secao-responsavel"         # src/publico/legal/responsavel/SecaoResponsavel.tsx: o consentimento do responsável na ficha
+  "data-rodape-aceite"             # src/entrada/pecas/Moldura.tsx: o rodapé da entrada só com os links
+  "data-aviso-idade-cadastro"      # src/publico/Cadastro.tsx: a linha da idade no link de cadastro /c/
+  "data-declaracao-profissional"   # src/entrada/onboarding/CriarConta.tsx: a declaração do "Sou profissional"
+  "data-pendente-idade"            # src/painel/alunos/Pendentes.tsx: a dica de idade dos cadastros pendentes
+  "data-novo-aviso-idade"          # src/painel/alunos/NovoAluno.tsx: a linha do responsável (16–17) no "Cadastrar aluno"
+  "data-frase-aceites"             # src/publico/ExcluirConta.tsx: o "O que fica guardado" da /excluir-conta (os aceites, 5 anos)
+  "registro dos seus aceites"      # src/painel/configuracoes/excluirConta/regras.ts e src/publico/ExcluirConta.tsx: o texto da frase (e a Política nova)
 )
 
 erro() {

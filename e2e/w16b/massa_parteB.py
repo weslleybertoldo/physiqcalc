@@ -92,7 +92,8 @@ def montar() -> dict:
         r = q(f"select {S}.matricular_na_conta('{um(k)}', '{calc}', '{mid}', null, 'calc', true) as r")[0]["r"]
         assert r.get("ok"), r
     # o mestre também é ALUNO do app (sem profissional), com plano de Treino + Alimentação
-    st, r = B.rpc(M, "entrar_sem_profissional", {"p_objetivo": "ganhar_massa", "p_plano": "app_treino_alimentacao"})
+    # hml-12 (H-30): a de 5 argumentos (data de adulto + consentimento de saúde); a de 2 devolve atualize_o_app no staging
+    st, r = B.rpc(M, "entrar_sem_profissional", B.B5.args_sem_profissional("ganhar_massa", "app_treino_alimentacao"))
     assert st == 200 and isinstance(r, dict) and r.get("ok"), (st, r)
     app = q(f"""select p.id::text from {S}.pacientes p join {S}.contas c on c.id = p.conta_id
                  where p.user_id = '{mid}' and c.origem = 'app' and p.deleted_at is null limit 1""")[0]["id"]

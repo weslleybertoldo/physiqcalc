@@ -16,6 +16,7 @@ Casos (positivos e negativos):
   conflito      e-mail e senha com e-mail que já existe no Treino sem vínculo → "Sua conta precisa de uma conferência"
   bloqueado     aluno de conta bloqueada pelo master → "Acesso pausado"
   offline       (build publicado) reabre SEM internet com as sessões guardadas e mostra o treino
+  (hml-12: no build de staging, logo depois do login a porta do aceite é aceita como a pessoa faria — Caso.aceitar_porta)
 Uso: python3 e2e/w03/telas.py --base http://localhost:5173 --prefixo local [--casos a,b] [--escrever] [--schema staging]
 """
 from __future__ import annotations
@@ -39,6 +40,19 @@ PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "w03"
 API_P = "https://api-principal.physiqcalc.com.br"
 CHAVE_PRINCIPAL = "physiq-principal-auth"
 p = Placar()
+# hml-12 (H-30): a porta do aceite (só no build de staging, com a versão dos textos ligada no banco) aparece logo depois do login para
+# quem não aceitou a versão vigente; o Caso.aceitar_porta() aceita como a pessoa faria (o mesmo do fechar_avisos() da base da W5)
+PORTA = "[data-aceite-no-acesso]"
+JS_LEGAL = """() => {
+  if (!localStorage.getItem('physiq-principal-auth')) return 'sem_login';
+  const k = Object.keys(localStorage).find((x) => x.startsWith('physiq_situacao:'));
+  if (!k) return 'carregando';
+  try {
+    const l = JSON.parse(localStorage.getItem(k)).legal;
+    if (!l || !l.versao) return 'livre';
+    return (l.aceite_pendente || l.saude_pendente || l.nascimento_pendente) ? 'pendente' : 'livre';
+  } catch (e) { return 'livre'; }
+}"""
 
 
 def kv(nome: str) -> dict:
@@ -84,6 +98,37 @@ class Caso:
         self.pg.get_by_placeholder("voce@email.com").fill(email, timeout=60000)
         self.pg.get_by_placeholder("Sua senha").fill(s)
         self.pg.locator("[data-btn-entrar]").click()
+        self.aceitar_porta()
+
+    def aceitar_porta(self, timeout: float = 40) -> bool:
+        """hml-12: a porta do aceite, se aparecer depois do login (o mesmo do fechar_avisos() de e2e/w05/_base.py): a caixa do
+        aceite; a caixa de saúde e a data de 30 anos atrás quando aparecem (aluno do app); "Aceitar e continuar"; espera a tela
+        sumir. Sem login, sem a versão ligada (produção), já aceito, a trava de idade ou o aviso "o Physiq mudou" na tela: nada."""
+        estado = {"v": "carregando"}
+
+        def decidiu() -> bool:
+            if self.tem(PORTA) or self.tem("[data-tela-menor]") or self.tem("[data-aviso-mudanca-ok]"):
+                return True
+            try:
+                estado["v"] = self.pg.evaluate(JS_LEGAL) or "carregando"
+            except Exception:  # noqa: BLE001 — navegando
+                estado["v"] = "carregando"
+            return estado["v"] != "carregando"
+
+        self.esperar(decidiu, timeout)
+        if not self.tem(PORTA) and not (estado["v"] == "pendente" and self.esperar(lambda: self.tem(PORTA), 10)):
+            return False
+        self.pg.locator("[data-aceite-caixa]").first.check()
+        if self.pg.locator(f"{PORTA} [data-consentimento-saude-caixa]").count():
+            self.pg.locator(f"{PORTA} [data-consentimento-saude-caixa]").first.check()
+        data = self.pg.locator(f"{PORTA} [data-campo-nascimento] input[type='date']")
+        if data.count():
+            h = dt.date.today()
+            data.first.fill((dt.date(h.year - 30, h.month, min(h.day, 28))).isoformat())
+        self.pg.locator("[data-aceitar]").first.click()
+        saiu = self.esperar(lambda: not self.tem(PORTA), 60)
+        p.check(saiu, f"[{self.nome}] porta do aceite (hml-12): aceitou e a tela abriu")
+        return saiu
 
     def injetar(self, conta: str) -> dict:
         email, s = CONTAS[conta]
@@ -332,6 +377,7 @@ def caso_professor(nav, a) -> None:
     c.preparar()
     c.injetar("professor")
     c.pg.goto(a.base + "/", wait_until="domcontentloaded")
+    c.aceitar_porta()  # hml-12
     p.check(c.esperar(lambda: "/painel" in c.caminho() and c.tem("[data-menu-lateral]"), 120), f"professor do Calc cai no painel ({c.caminho()})")
     c.fechar_aviso("aviso_mudanca_painel")
     p.check(c.esperar(lambda: "aluno1" in c.texto().lower() or "Aluno Um" in c.texto(), 90), "painel: os alunos dele (página antiga dentro da casca)")
@@ -348,6 +394,7 @@ def caso_master(nav, a) -> None:
     c.preparar()
     c.injetar("master")
     c.pg.goto(a.base + "/painel/alunos", wait_until="domcontentloaded")
+    c.aceitar_porta()  # hml-12
     p.check(c.esperar(lambda: c.tem("[data-menu-lateral]"), 120), "master: painel abre")
     c.fechar_aviso()
     c.pg.goto(a.base + "/master", wait_until="domcontentloaded")
@@ -363,6 +410,7 @@ def caso_nutri(nav, a) -> None:
     c.preparar()
     c.injetar("nutri")
     c.pg.goto(a.base + "/", wait_until="domcontentloaded")
+    c.aceitar_porta()  # hml-12
     p.check(c.esperar(lambda: "/painel" in c.caminho() and c.tem("[data-aviso-use-nutri]"), 120), f"nutri → painel com 'use o site do PhysiqNutri' ({c.caminho()})")
     c.fechar_aviso()
     itens = [x.inner_text().strip() for x in c.pg.locator("[data-menu-lateral] [data-nav]").all()]
@@ -426,6 +474,7 @@ def caso_offline(nav, a) -> None:
     sql_principal(f"""update {a.schema}.profiles set config = jsonb_set(coalesce(config,'{{}}'::jsonb), '{{aviso_mudanca_visto}}', '{{"1": "e2e"}}'::jsonb, true)
                       where id = (select id from auth.users where lower(email) = '{CONTAS['aluno'][0]}')""")
     c.pg.goto(a.base + "/treino", wait_until="domcontentloaded")
+    c.aceitar_porta()  # hml-12
     p.check(c.esperar(lambda: status_sync(c) == "SINCRONIZADO", 150), f"online: treino sincronizado ({status_sync(c)})")
     c.pg.wait_for_timeout(4000)
     c.ctx.set_offline(True)

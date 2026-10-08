@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { chaveRegistro } from "@/lib/rateLimitLogin";
 
 const h = vi.hoisted(() => {
@@ -265,5 +265,45 @@ describe("Boas-vindas › 'Sou profissional' (W4)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Criar conta com 14 dias grátis/ }));
     expect(await screen.findByText(/Você já faz parte de uma conta de profissional/)).toBeInTheDocument();
     expect(h.rpc).toHaveBeenCalledWith("criar_minha_conta", { p_nome: "Consultoria Moura", p_tipo: "nutricionista", p_registro: null });
+  });
+});
+
+// hml-12 (H-30): o aceite com registro é a porta depois do login — no staging o rodapé da entrada fica só com os links, e o "Sou
+// profissional" mostra a declaração dos Termos (18+ e o registro válido). Na produção, como hoje (a condição do Vite é lida na tela).
+describe("hml-12 — o rodapé da entrada e a declaração do profissional, só no staging", () => {
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("staging: o rodapé só com 'Termos de Uso · Política de Privacidade', sem o 'Ao continuar você aceita'", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    abrir(<Entrar />);
+    const rodape = document.querySelector("[data-rodape-aceite]")!;
+    expect(rodape.textContent).toBe("Termos de Uso · Política de Privacidade");
+    expect(Array.from(rodape.querySelectorAll("a")).map((a) => a.getAttribute("href"))).toEqual(["/termos", "/privacidade"]);
+    expect(document.body.textContent).not.toContain("Ao continuar você aceita");
+  });
+
+  it("produção: o rodapé de hoje, sem a marca", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "public");
+    abrir(<Entrar />);
+    expect(document.querySelector("[data-rodape-aceite]")).toBeNull();
+    expect(screen.getByText(/Ao continuar você aceita a/)).toBeInTheDocument();
+  });
+
+  it("Sou profissional: a declaração (18 anos ou mais e o registro válido) só no staging", () => {
+    h.situacao = { sem_nada: true, nome: "Rafael Moura" };
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    const r = abrir(<CriarConta />);
+    fireEvent.click(screen.getByRole("button", { name: "Criar minha conta" }));
+    expect(document.querySelector("[data-declaracao-profissional]")?.textContent).toBe(
+      "Ao criar a conta, você declara ter 18 anos ou mais e que o registro profissional informado é seu e está válido (Termos de Uso, seção 2).",
+    );
+    r.unmount();
+    vi.stubEnv("VITE_DB_SCHEMA", "public");
+    abrir(<CriarConta />);
+    fireEvent.click(screen.getByRole("button", { name: "Criar minha conta" }));
+    expect(document.querySelector("[data-form-criar-conta]")).not.toBeNull();
+    expect(document.querySelector("[data-declaracao-profissional]")).toBeNull();
   });
 });

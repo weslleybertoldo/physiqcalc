@@ -28,7 +28,8 @@ def montar() -> None:
     tem = B.sql_principal(f"""select 1 from {S}.pacientes p join {S}.contas c on c.id = p.conta_id
                               where p.user_id = '{B.uid('w27-app')}' and c.origem = 'app' and p.deleted_at is null""")
     if not tem:
-        st, r = B.rpc("w27-app", "entrar_sem_profissional", {"p_objetivo": "manter", "p_plano": "app_treino"})
+        # hml-12 (H-30): a de 5 argumentos (data de adulto + consentimento de saúde); a de 2 devolve atualize_o_app no staging
+        st, r = B.rpc("w27-app", "entrar_sem_profissional", B.B5.args_sem_profissional("manter", "app_treino"))
         assert st == 200 and isinstance(r, dict) and r.get("ok"), (st, r)
     print("massa pronta: master de teste =", B.EMAIL["w27-master"])
 

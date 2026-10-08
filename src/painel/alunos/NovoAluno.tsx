@@ -237,6 +237,12 @@ function Cadastrar({ lista, aoMudou, aoFechar }: { lista: ListaAlunos; aoMudou: 
         <OpcoesPilula<ModuloAluno> rotulo="O que você vai acompanhar" nome="modulos-novo" varias colunas={1} opcoes={opcoes} valores={modulos} aoMudar={setModulos} />
       )}
       <Responsaveis lista={lista} modulos={modulos} personal={personal} setPersonal={setPersonal} nutri={nutri} setNutri={setNutri} />
+      {/* hml-12 (H-30): a regra dos menores (o consentimento do responsável fica na ficha) — SÓ no build de staging até a virada */}
+      {import.meta.env.VITE_DB_SCHEMA === "staging" && (
+        <p className="text-[12px] leading-relaxed text-texto-3" data-novo-aviso-idade>
+          Aluno de 16 ou 17 anos? Registre o consentimento do responsável na ficha dele.
+        </p>
+      )}
       {erro && <MensagemForm data-novo-erro>{erro}</MensagemForm>}
       <Botao type="submit" variante="w" icone={UserPlus} disabled={indo} data-novo-cadastrar>{indo ? "Cadastrando…" : "Cadastrar aluno"}</Botao>
     </form>

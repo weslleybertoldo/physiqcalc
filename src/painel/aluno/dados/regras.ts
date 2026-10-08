@@ -53,6 +53,20 @@ export function idadeDe(nascimento: string | null | undefined, hoje: string = ho
   return idade >= 0 && idade < 130 ? idade : null;
 }
 
+/**
+ * hml-12 (H-30): a faixa de idade da regra dos menores (a mesma do banco: idade_em, em São Paulo) — menor de 16 não é cadastrado;
+ * de 16 a 17, só com o consentimento do responsável registrado na ficha. Sem data = null.
+ */
+export type FaixaDeIdade = "menor_16" | "16_17" | "adulto";
+export function faixaDeIdade(nascimento: string | null | undefined, hoje: string = hojeSP()): FaixaDeIdade | null {
+  const idade = idadeDe(nascimento, hoje);
+  if (idade === null) return null;
+  return idade < 16 ? "menor_16" : idade < 18 ? "16_17" : "adulto";
+}
+
+/** O erro `menor_de_16` (Editar dados e aprovar o cadastro pendente). */
+export const MENSAGEM_MENOR_DE_16 = "O Physiq é para quem tem 16 anos ou mais. Não cadastre menores de 16.";
+
 /** "12/03/1998" */
 export function dataBR(iso: string | null | undefined): string {
   if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return "";
@@ -235,6 +249,8 @@ export function mensagemErroPerfil(codigo: string | null | undefined): string {
   const c = String(codigo ?? "").toLowerCase();
   if (c.includes("nome_invalido")) return "Escreva o nome do aluno.";
   if (c.includes("nascimento_invalido")) return "Confira a data de nascimento.";
+  // hml-12 (H-30): o gatilho da idade mínima (só com a versão dos textos ligada no banco: na produção o código ainda não chega)
+  if (c.includes("menor_de_16")) return MENSAGEM_MENOR_DE_16;
   if (c.includes("genero_invalido")) return "Escolha o sexo.";
   if (c.includes("cpf_invalido")) return "Confira o CPF.";
   if (c.includes("telefone_invalido")) return "O telefone precisa ter DDD e 8 ou 9 números.";

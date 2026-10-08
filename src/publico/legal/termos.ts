@@ -1,3 +1,4 @@
+import { lerMarkdown, type ItemLista } from "./markdown";
 import { ROTA_ASSINATURA, ROTA_POLITICA, VENDEDOR } from "./versao";
 
 /**
@@ -6,10 +7,15 @@ import { ROTA_ASSINATURA, ROTA_POLITICA, VENDEDOR } from "./versao";
  * decisões padrão da spec (P3: o Physiq recebe em nome do profissional nas contas com o Mercado Pago ligado; P5: o limite de 3
  * mensalidades; P7: o e-mail do suporte; P8: versão nova com aviso de 30 dias) e sem os marcadores do rascunho. O Anexo é o acordo
  * de tratamento de dados entre o profissional (controlador) e o Physiq (operador). A volta do advogado é copiada para cá.
+ * hml-12 (H-30, §1.3): o aviso de versão nova é por e-mail, e no app ela aparece para o aceite no próximo acesso (P2); quem é
+ * emancipado fala com o atendimento (P4).
  */
 
 /** O título do Anexo (a Política aponta para a âncora dele). */
 export const TITULO_ANEXO = "Anexo — Acordo de tratamento de dados (profissional e Physiq)";
+
+/** O título do Resumo (a tela do aceite mostra os itens dele: resumoDosTermos). */
+export const TITULO_RESUMO_DOS_TERMOS = "Resumo — o mais importante";
 
 const EMAIL = `[${VENDEDOR.email}](mailto:${VENDEDOR.email})`;
 
@@ -19,7 +25,7 @@ Estes termos são o contrato entre o Physiq e quem usa o aplicativo e o site: o 
 [Termos de assinatura](${ROTA_ASSINATURA}) valem para quem paga um plano ao Physiq. O Anexo, no fim, é o acordo sobre os dados que o
 profissional guarda dos alunos dele.
 
-## Resumo — o mais importante
+## ${TITULO_RESUMO_DOS_TERMOS}
 
 - **O Physiq é uma ferramenta.** Ele não é dispositivo médico, não diagnostica, não trata e não substitui o profissional de saúde
   (seção 5).
@@ -58,7 +64,7 @@ ${EMAIL}. Respondemos em até **5 dias** (Decreto nº 7.962/2013, art. 4º, par�
   - **De 16 a 17 anos:** só como aluno de um profissional. O consentimento de um dos pais ou do responsável legal fica registrado
     no cadastro pelo profissional.
   - **Para treinar sem profissional (o plano do app) ou ser profissional:** é preciso ter 18 anos ou ser emancipado (Código Civil,
-    art. 5º).
+    art. 5º; quem é emancipado fala com o atendimento).
 - Quem cria uma conta de profissional declara que pode exercer a profissão e que o registro no conselho que informa (CREF, CRN) é
   dele e está válido.
 - Estes termos, os Termos de assinatura e a Política de Privacidade ficam no site, com link no rodapé e dentro do app. Dá para
@@ -213,8 +219,8 @@ Limites:
 
 - Podemos mudar estes termos. Quando a mudança for relevante:
   - sai uma **versão nova**, com a data no topo;
-  - avisamos no app e por e-mail com **30 dias** de antecedência;
-  - quem já usa aceita a versão nova no próximo acesso.
+  - avisamos por e-mail com **30 dias** de antecedência;
+  - no app, a versão nova aparece para o aceite no próximo acesso depois da data: quem já usa aceita a versão nova nesse acesso.
 - **Se não concordar, você pode excluir a conta, e o profissional pode cancelar o plano sem multa, antes de a mudança valer.**
 
 ## 14. Lei e foro
@@ -319,3 +325,16 @@ Nenhum sistema é infalível.
   estes termos, é responsabilidade do profissional, o profissional devolve ao Physiq o que ele pagou (LGPD, art. 42, § 4º, e
   Código Civil, art. 934).
 `;
+
+/**
+ * hml-12 (H-30, §4.3 T1) — o resumo dos Termos de Uso na tela do aceite: os itens da seção "Resumo" deste texto, com o negrito dele
+ * (a página /termos e a tela leem o MESMO texto). Sem a seção = erro (o teste acusa antes de a tela do aceite sair sem resumo). Molde:
+ * resumoDaAssinatura (assinatura.ts).
+ */
+export function resumoDosTermos(md: string = TERMOS_DE_USO): ItemLista[] {
+  const blocos = lerMarkdown(md);
+  const inicio = blocos.findIndex((b) => b.tipo === "titulo" && b.texto === TITULO_RESUMO_DOS_TERMOS);
+  const lista = inicio >= 0 ? blocos[inicio + 1] : undefined;
+  if (!lista || lista.tipo !== "lista") throw new Error(`Termos de Uso sem a seção "${TITULO_RESUMO_DOS_TERMOS}"`);
+  return lista.itens;
+}

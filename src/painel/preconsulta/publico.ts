@@ -21,15 +21,30 @@ export async function carregarFormularioPublico(slug: string): Promise<Formulari
 
 export type RespostaEnviada = { id: string; pontuacao: number; faixa: string; nivel: string };
 
-/** Grava a resposta pela RPC (validação, pontuação e limite por hora no banco; a conta vem do formulário pelo gatilho). */
-export async function responderFormularioPublico(slug: string, nome: string, email: string, telefone: string, respostas: Respostas): Promise<RespostaEnviada> {
-  const { data, error } = await principal.rpc("preconsulta_responder", {
+/**
+ * Grava a resposta pela RPC (validação, pontuação e limite por hora no banco; a conta vem do formulário pelo gatilho). hml-12 (H-30,
+ * H8): com o `consentimento` (a versão do texto que a pessoa leu — só o build de staging até a virada) vai a sobrecarga de 6
+ * argumentos, que o grava na própria resposta; sem ele, a de 5 de sempre — que, depois da virada (versão dos textos ligada no banco),
+ * recusa com sem_consentimento.
+ */
+export async function responderFormularioPublico(
+  slug: string,
+  nome: string,
+  email: string,
+  telefone: string,
+  respostas: Respostas,
+  consentimento?: string,
+): Promise<RespostaEnviada> {
+  const args = {
     p_slug: normalizarSlug(slug),
     p_nome: nome.trim(),
     p_email: email.trim(),
     p_telefone: telefone.trim(),
     p_respostas: respostas as unknown as Json,
-  });
+  };
+  const { data, error } = consentimento
+    ? await principal.rpc("preconsulta_responder" as never, { ...args, p_consentimento: consentimento } as never)
+    : await principal.rpc("preconsulta_responder", args);
   falhou(error);
   return data as unknown as RespostaEnviada;
 }

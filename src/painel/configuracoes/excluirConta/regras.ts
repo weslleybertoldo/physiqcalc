@@ -134,6 +134,9 @@ export function listaFica(c: Conferencia): string[] {
   if (montados) linhas.push(`Os treinos e exercícios que você montou para os alunos (${montados}) continuam com eles.`);
   if (c.aluno && c.aluno.matriculas > 0) linhas.push("A sua matrícula como aluno fica com o seu profissional, desligada do seu login (avaliações, planos e pagamentos).");
   linhas.push("Seu nome e registro profissional ficam nas anotações que você assinou.");
+  // hml-12 (H-30, P3): a prova do aceite fica depois da exclusão — a frase nova só no build de staging até a virada (a condição do Vite
+  // direto aqui: na produção a frase nem entra no bundle)
+  if (import.meta.env.VITE_DB_SCHEMA === "staging") linhas.push("O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.");
   return linhas;
 }
 

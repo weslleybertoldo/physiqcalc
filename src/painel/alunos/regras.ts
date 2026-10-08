@@ -344,6 +344,8 @@ export function mensagemErroAlunos(codigo: string | null | undefined, extra: Rec
     case "nome_invalido": return "Escreva o nome do aluno.";
     case "telefone_invalido": return "O telefone precisa ter DDD e 8 ou 9 números.";
     case "nascimento_invalido": return "Confira a data de nascimento.";
+    // hml-12 (H-30): o banco recusa menor de 16 (aprovar pendente, cadastrar) — o código só chega com a versão dos textos ligada
+    case "menor_de_16": return "O Physiq é para quem tem 16 anos ou mais. Não cadastre menores de 16.";
     case "proprio_email": return "Este é o seu e-mail.";
     case "sem_modulo": return "Escolha Treino, Nutrição ou os dois.";
     case "responsavel_invalido": return "Escolha quem vai acompanhar o aluno (um profissional da equipe com esse papel).";

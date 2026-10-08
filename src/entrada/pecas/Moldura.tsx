@@ -10,7 +10,7 @@ const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "";
 /**
  * Moldura das telas de entrada (W3) no padrão da tela 1: fundo com o halo violeta/verde, a marca no topo, o conteúdo
  * numa coluna de celular (390 px) e, embaixo, a versão e os termos. Mostra sozinha o aviso de sem internet e o de
- * ambiente de teste (P26).
+ * ambiente de teste (P26). hml-12 (H-30): no staging, o rodapé fica só com os links (o aceite com registro é a porta).
  */
 export function MolduraEntrada({ children, rodape = true, voltar }: { children: ReactNode; rodape?: boolean; voltar?: ReactNode }) {
   const online = useOnline();
@@ -40,11 +40,20 @@ export function MolduraEntrada({ children, rodape = true, voltar }: { children: 
         </main>
         {rodape && (
           <footer className="flex flex-col items-center gap-1.5 text-center text-[11.5px] leading-relaxed text-texto-3">
-            <p>
-              Ao continuar você aceita a{" "}
-              <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-medium text-violeta-3 hover:underline">Política de Privacidade</a>{" "}
-              e os <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-medium text-violeta-3 hover:underline">termos de uso</a>.
-            </p>
+            {/* hml-12 (H-30): o aceite é a porta depois do login (src/publico/legal/aceite), não o rodapé — SÓ no build de staging até a virada */}
+            {import.meta.env.VITE_DB_SCHEMA === "staging" ? (
+              <p data-rodape-aceite>
+                <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-medium text-violeta-3 hover:underline">Termos de Uso</a>
+                {" · "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-medium text-violeta-3 hover:underline">Política de Privacidade</a>
+              </p>
+            ) : (
+              <p>
+                Ao continuar você aceita a{" "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-medium text-violeta-3 hover:underline">Política de Privacidade</a>{" "}
+                e os <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-medium text-violeta-3 hover:underline">termos de uso</a>.
+              </p>
+            )}
             <p className="text-texto-4">Physiq {APP_VERSION}</p>
           </footer>
         )}

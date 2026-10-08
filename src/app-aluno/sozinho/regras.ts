@@ -453,6 +453,13 @@ export const MENSAGEM_APP: Record<string, string> = {
   sem_matricula_app: "Você não está no plano do app agora.",
   sem_plano_alimentacao: "Os pratos prontos estão no plano Treino + Alimentação.",
   nao_e_do_app: "Esta matrícula não é do plano do app.",
+  // hml-12 (H-30): a data de nascimento (18+) e o consentimento de saúde do plano sem profissional
+  nascimento_invalido: "Confira a sua data de nascimento.",
+  menor_de_18:
+    "O plano sem profissional é para maiores de 18 anos. Se você tem 16 ou 17 anos, treine com um profissional: peça o código a ele.",
+  sem_consentimento_saude: "Marque o consentimento dos seus dados de saúde para começar.",
+  atualize_o_app: "Atualize o app ou recarregue a página para começar o plano sem profissional.",
+  versao_desatualizada: "Os termos foram atualizados. Recarregue para ler a versão nova.",
   erro_interno: "Não deu certo agora. Tente de novo.",
 };
 

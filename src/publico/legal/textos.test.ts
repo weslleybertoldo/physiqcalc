@@ -7,9 +7,9 @@ import { FAIXAS, NOME_PLANO, PLANOS, PRECOS_PADRAO, TESTE_DIAS, TESTE_MAX_ALUNOS
 import { CONTATO_SUPORTE } from "@/nucleo/suporte";
 import { FRASE_BACKUPS, FRASE_SUPORTE, servicosDaVersao } from "@/publico/privacidade/textos";
 import { TERMOS_DE_ASSINATURA, TITULO_RESUMO, resumoDaAssinatura } from "./assinatura";
-import { lerMarkdown, type Bloco, type Trecho } from "./markdown";
+import { lerMarkdown, slug, type Bloco, type Trecho } from "./markdown";
 import { ONDE_FICA_O_SERVICO, politicaDePrivacidade } from "./politica";
-import { TERMOS_DE_USO, TITULO_ANEXO } from "./termos";
+import { TERMOS_DE_USO, TITULO_ANEXO, TITULO_RESUMO_DOS_TERMOS, resumoDosTermos } from "./termos";
 import { DATA_DOS_TEXTOS, ROTA_ASSINATURA, ROTA_POLITICA, ROTA_TERMOS, VENDEDOR, VERSAO_TEXTOS } from "./versao";
 
 // hml-11 (H-28, §3.2) — os 3 textos legais novos conferidos com o app: sem os marcadores do rascunho, o vendedor completo, âncoras
@@ -221,5 +221,48 @@ describe("Termos de Uso", () => {
     expect(tudo).toContain("não é um dispositivo médico");
     expect(tudo).toContain("3 mensalidades");
     expect(tudo).toContain("foro de Maceió/AL");
+  });
+});
+
+// hml-12 (H-30) — o resumo dos Termos de Uso na tela do aceite (§4.3 T1) e as 5 frases do §1.3 (P2, P3, P4), iguais nos .ts e no
+// pacote do advogado.
+describe("hml-12 — o resumo dos Termos de Uso e as frases do aceite", () => {
+  it("resumoDosTermos(): os itens da seção Resumo dos Termos de Uso, com o negrito do texto", () => {
+    const itens = resumoDosTermos();
+    expect(itens.length).toBeGreaterThan(5);
+    const textos = itens.map((i) => juntar(i.trechos));
+    expect(textos[0]).toMatch(/^O Physiq é uma ferramenta\./);
+    expect(textos).toContain(
+      "Idade: 16 anos ou mais. De 16 a 17, só como aluno de um profissional e com o consentimento do responsável. Sem profissional, ou como profissional, só a partir de 18 anos (seção 2).",
+    );
+    expect(itens.flatMap((i) => i.trechos).filter((t) => t.negrito).map((t) => t.texto)).toEqual(expect.arrayContaining(["Idade:", "O Physiq é uma ferramenta."]));
+    expect(ids(lerMarkdown(TERMOS_DE_USO))).toContain(slug(TITULO_RESUMO_DOS_TERMOS));
+  });
+
+  it("sem a seção Resumo no texto = erro (o teste acusa antes de a tela do aceite sair sem resumo)", () => {
+    expect(() => resumoDosTermos("## Outra seção\n\n- um item qualquer")).toThrow(TITULO_RESUMO_DOS_TERMOS);
+  });
+
+  it("Política: o que o registro guarda (o responsável e a origem), a retenção de 5 anos (P3) e o item da exclusão", () => {
+    const tudo = textoVisivel(lerMarkdown(politicaDePrivacidade(false))).join("\n");
+    expect(tudo).toContain(
+      "o consentimento do responsável (nome, vínculo e como consentiu, registrados pelo profissional); e de onde veio cada aceite (site, app ou Google Play)",
+    );
+    expect(tudo).toContain("Aceite e consentimentos | enquanto a conta existir e até 5 anos depois de excluída, só para provar o aceite, sem uso para outro fim");
+    expect(tudo).toContain("nos dois casos: o registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite;");
+  });
+
+  it("versão nova: o aviso de 30 dias é por e-mail e, no app, a versão aparece para o aceite no próximo acesso (P2)", () => {
+    const politica = textoVisivel(lerMarkdown(politicaDePrivacidade(false))).join("\n");
+    const termos = textoVisivel(lerMarkdown(TERMOS_DE_USO)).join("\n");
+    expect(politica).toContain("Avisamos por e-mail com 30 dias de antecedência. No app, a versão nova aparece para o aceite no próximo acesso depois da data");
+    expect(termos).toContain("avisamos por e-mail com 30 dias de antecedência;");
+    expect(termos).toContain("no app, a versão nova aparece para o aceite no próximo acesso depois da data: quem já usa aceita a versão nova nesse acesso.");
+    for (const texto of [politica, termos]) expect(texto).not.toMatch(/no app e por e-mail/);
+  });
+
+  it("Termos: quem é emancipado fala com o atendimento (P4)", () => {
+    const termos = textoVisivel(lerMarkdown(TERMOS_DE_USO)).join("\n");
+    expect(termos).toContain("é preciso ter 18 anos ou ser emancipado (Código Civil, art. 5º; quem é emancipado fala com o atendimento).");
   });
 });

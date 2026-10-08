@@ -30,6 +30,20 @@ describe("a condição do Vite fica direto no código (o Rollup corta o texto no
     );
   });
 
+  // hml-12 (H-30): a porta do aceite, o consentimento de saúde, a data de nascimento e o consentimento do responsável — o mesmo jeito
+  // (CardDadosAluno.tsx é do painel: a seção do responsável na ficha do aluno)
+  const lazyDoStaging = (nome: string, modulo: string) =>
+    `const ${nome} = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/${modulo}")) : null;`;
+  it.each([
+    ["src/App.tsx", "PortaDoAceite", "aceite/PortaDoAceite"],
+    ["src/entrada/onboarding/TreinarSemProfissional.tsx", "ConsentimentoSaude", "aceite/ConsentimentoSaude"],
+    ["src/entrada/onboarding/TreinarSemProfissional.tsx", "CampoNascimento", "aceite/CampoNascimento"],
+    ["src/publico/Formulario.tsx", "ConsentimentoSaude", "aceite/ConsentimentoSaude"],
+    ["src/painel/aluno/resumo/CardDadosAluno.tsx", "SecaoResponsavel", "responsavel/SecaoResponsavel"],
+  ])("hml-12 — %s: %s só no staging, com a expressão direto no lazy", (arquivo, nome, modulo) => {
+    expect(ler(arquivo)).toContain(lazyDoStaging(nome, modulo));
+  });
+
   it("nenhum arquivo fora de src/publico/legal importa o texto novo de forma estática (ele entraria no bundle da produção)", () => {
     const arquivos = (readdirSync(resolve(RAIZ, "src"), { recursive: true }) as string[]).filter(
       (c) => /\.tsx?$/.test(c) && !/\.test\.tsx?$/.test(c) && !c.startsWith(join("publico", "legal")),
@@ -45,6 +59,47 @@ describe("a guarda de CI: scripts/ci/sem-texto-legal-novo.sh", () => {
     const script = ler("scripts/ci/sem-texto-legal-novo.sh");
     for (const marca of ["Termos de assinatura do Physiq", "data-pagina-legal", "data-texto-em-revisao", "data-resumo-antes-de-pagar"]) {
       expect(script).toContain(`"${marca}"`);
+    }
+  });
+
+  // hml-12 (H-30, §4.5): as 11 marcas do aceite, do consentimento e da idade (ASCII; cada uma só no código cortado na produção) — as 3
+  // últimas vieram da revisão: a linha do Novo aluno e a frase dos aceites na exclusão (a marca e o texto)
+  const MARCAS_HML12 = [
+    "data-aceite-no-acesso",
+    "data-consentimento-saude",
+    "data-tela-menor",
+    "data-secao-responsavel",
+    "data-rodape-aceite",
+    "data-aviso-idade-cadastro",
+    "data-declaracao-profissional",
+    "data-pendente-idade",
+    "data-novo-aviso-idade",
+    "data-frase-aceites",
+    "registro dos seus aceites",
+  ];
+  it("hml-12: a guarda confere as 11 marcas do aceite, e cada uma existe no src/ fora dos testes", () => {
+    const script = ler("scripts/ci/sem-texto-legal-novo.sh");
+    const doSrc = (readdirSync(resolve(RAIZ, "src"), { recursive: true }) as string[])
+      .filter((c) => /\.tsx?$/.test(c) && !/\.test\.tsx?$/.test(c))
+      .map((c) => readFileSync(resolve(RAIZ, "src", c), "utf8"))
+      .join("\n");
+    for (const marca of MARCAS_HML12) {
+      expect(script, marca).toContain(`"${marca}"`);
+      expect(doSrc.includes(marca), `${marca} no src/`).toBe(true);
+    }
+  });
+
+  it("hml-12: um build com a porta do aceite (ou o consentimento) → a guarda falha e diz qual marca achou", () => {
+    const pasta = mkdtempSync(join(tmpdir(), "guarda-texto-legal-"));
+    try {
+      writeFileSync(join(pasta, "index-abc123.js"), 'console.log("Termos de Uso e Política de Privacidade")');
+      writeFileSync(join(pasta, "PortaDoAceite-xyz789.js"), 'jsx("div",{"data-aceite-no-acesso":"2026-10-08"}),jsx("section",{"data-consentimento-saude":"app"})');
+      const suja = guarda(pasta);
+      expect(suja.status).toBe(1);
+      expect(suja.stderr).toContain('"data-aceite-no-acesso" está em');
+      expect(suja.stderr).toContain('"data-consentimento-saude" está em');
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
     }
   });
 

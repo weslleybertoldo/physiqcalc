@@ -13,6 +13,7 @@ const h = vi.hoisted(() => ({
   mensagens: vi.fn(),
   ligar: vi.fn(),
   fechar: vi.fn(),
+  responsavel: vi.fn(),
 }));
 vi.mock("../dados/api", () => ({
   ErroPerfil: class extends Error {
@@ -29,6 +30,13 @@ vi.mock("../dados/api", () => ({
   buscarMensagensDesligadas: h.mensagens,
   ligarMensagensParaTodos: h.ligar,
   fecharAvisoMensagens: h.fechar,
+}));
+// hml-12: a seção do responsável (o Vitest roda como o build de staging: o card a carrega) lê pela API dela, aqui sem rede
+vi.mock("@/publico/legal/responsavel/api", () => ({
+  ErroResponsavel: class extends Error {},
+  buscarResponsavel: h.responsavel,
+  registrarResponsavel: vi.fn(),
+  retirarResponsavel: vi.fn(),
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ treino: { estado: "desnecessario", erro: null } }) }));
 vi.mock("@/nucleo/conta", () => ({ useConta: () => ({ conta: { id: "c1" } }) }));
@@ -52,6 +60,7 @@ const montar = (ui: React.ReactNode) =>
 beforeEach(() => {
   for (const f of Object.values(h)) f.mockReset();
   h.perfil.mockResolvedValue(perfil());
+  h.responsavel.mockResolvedValue({ ligado: true, faixa: "adulto", pode_editar: true, atual: null });
 });
 
 describe("W14 — cabeçalho da tela 7", () => {
@@ -83,6 +92,19 @@ describe("W14 — cards do Resumo", () => {
     expect(screen.getByText("84,2 kg")).toBeInTheDocument();
     expect(screen.getByText(/Altura e peso da antropometria de 14\/06\/2026/)).toBeInTheDocument();
     expect(screen.getByLabelText("Abrir no WhatsApp")).toHaveAttribute("href", "https://wa.me/5511987654321");
+  });
+  it("hml-12 (H-30): no build de staging, a seção do responsável entra logo depois da grade, lida pelo id da rota", async () => {
+    h.perfil.mockResolvedValue(perfil({ nascimento: "2009-06-01" }));
+    h.responsavel.mockResolvedValue({ ligado: true, faixa: "16_17", pode_editar: true, atual: null });
+    montar(<CardDadosAluno alunoId="p1" />);
+    const secao = await waitFor(() => {
+      const el = document.querySelector('[data-secao-responsavel="16_17"]');
+      if (!el) throw new Error("a seção do responsável ainda não carregou");
+      return el;
+    });
+    expect(h.responsavel).toHaveBeenCalledWith("p1");
+    expect(document.querySelector("[data-dados-grade]")!.nextElementSibling).toBe(secao);
+    expect(secao.querySelector("[data-responsavel-registrar]")).not.toBeNull();
   });
   it("Ajustes: os 4 (com o texto novo do link) e o interruptor grava o ajuste", async () => {
     h.ajuste.mockResolvedValue({ acesso_app: true, mensagens_automaticas: true, diario_alimentar: true, acesso_link: true });

@@ -96,6 +96,23 @@ export interface AvisoMudancaSituacao {
   visto: boolean;
 }
 
+/** hml-12 (H-30) — a trava de idade das matrículas de profissional: menor de 16, ou de 16 a 17 sem o consentimento do responsável. */
+export type MenorSituacao = "menor_16" | "sem_responsavel";
+
+/**
+ * hml-12 (H-30) — o aceite dos textos legais e os consentimentos, como o banco vê (o `legal` da minha_situacao). `versao` nula =
+ * desligado neste schema (a produção até a virada): nada pendente. Senão, o que falta a esta pessoa: o aceite da versão vigente dos
+ * Termos e da Política, o consentimento de saúde e a data de nascimento (os 2 só do aluno do app) e a trava de idade. Aqui é só
+ * dado (vai para todos os builds); a tela é a porta do aceite (src/publico/legal/aceite/, só no build de staging até a virada).
+ */
+export interface LegalSituacao {
+  versao: string | null;
+  aceite_pendente: boolean;
+  saude_pendente: boolean;
+  nascimento_pendente: boolean;
+  menor: MenorSituacao | null;
+}
+
 export interface Situacao {
   versao: number;
   user_id: string;
@@ -114,6 +131,8 @@ export interface Situacao {
   aviso_mudanca: AvisoMudancaSituacao | null;
   /** W7b — id da conta do app (a dos alunos sem profissional) */
   conta_app?: string | null;
+  /** hml-12 — o aceite e os consentimentos. Pode não vir (servidor antigo, cache de antes): vale null = nada a pedir. */
+  legal?: LegalSituacao | null;
   gerado_em: string;
 }
 
@@ -160,6 +179,28 @@ function soModulos(v: unknown): Modulo[] {
   return Array.isArray(v) ? (v.filter((m) => MODULOS.includes(m as Modulo)) as Modulo[]) : [];
 }
 
+const MENORES: MenorSituacao[] = ["menor_16", "sem_responsavel"];
+const VERSAO_LEGAL = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * hml-12 — o `legal` da minha_situacao (e da resposta do aceitar_no_acesso). Falta ou forma estranha → null: a porta do aceite deixa
+ * passar (só o "não" claro barra). `menor` desconhecido vale null.
+ */
+export function normalizarLegal(bruto: unknown): LegalSituacao | null {
+  if (!bruto || typeof bruto !== "object") return null;
+  const l = bruto as Record<string, unknown>;
+  if (l.versao === null) return { versao: null, aceite_pendente: false, saude_pendente: false, nascimento_pendente: false, menor: null };
+  if (typeof l.versao !== "string" || !VERSAO_LEGAL.test(l.versao)) return null;
+  if ([l.aceite_pendente, l.saude_pendente, l.nascimento_pendente].some((f) => typeof f !== "boolean")) return null;
+  return {
+    versao: l.versao,
+    aceite_pendente: l.aceite_pendente === true,
+    saude_pendente: l.saude_pendente === true,
+    nascimento_pendente: l.nascimento_pendente === true,
+    menor: MENORES.includes(l.menor as MenorSituacao) ? (l.menor as MenorSituacao) : null,
+  };
+}
+
 /** Normaliza o JSON da função (tolerante a campo faltando: nunca quebra a casca). */
 export function normalizarSituacao(bruto: unknown): Situacao | null {
   if (!bruto || typeof bruto !== "object") return null;
@@ -184,6 +225,7 @@ export function normalizarSituacao(bruto: unknown): Situacao | null {
     legado_nutri: (b.legado_nutri as LegadoNutri) ?? null,
     aviso_mudanca: (b.aviso_mudanca as AvisoMudancaSituacao) ?? null,
     conta_app: (b.conta_app as string) ?? null,
+    legal: normalizarLegal(b.legal),
     gerado_em: String(b.gerado_em ?? new Date().toISOString()),
   };
 }

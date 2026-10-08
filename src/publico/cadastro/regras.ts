@@ -40,6 +40,8 @@ export const MENSAGEM: Record<string, string> = {
   captcha_invalido: "Não deu para confirmar que é você. Tente de novo.",
   link_nao_encontrado: "Este link de cadastro não vale mais. Peça outro ao seu profissional.",
   conta_real_no_staging: "Este é o ambiente de teste: só e-mails de teste.",
+  // hml-12 (H-30): a idade mínima (o banco só recusa com a versão dos textos ligada: na produção o código ainda não chega)
+  menor_de_16: "O Physiq é para quem tem 16 anos ou mais. Confira a data de nascimento.",
 };
 
 export const apenasDigitos = (v: string | null | undefined): string => String(v ?? "").replace(/\D/g, "");

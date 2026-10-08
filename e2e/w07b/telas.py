@@ -3,7 +3,8 @@
 VM Nano), prints no tamanho do app (390 × 844 × 3,4; o master em 1280 × 883 × 2). Staging; só contas de TESTE (e2e/w07b/contas.py).
 
 Casos (na ordem):
-  entrada          w7b-novo (sem nada): Boas-vindas com as 3 opções (tela 1) → "Treinar sem profissional" → sem objetivo recusa →
+  entrada          w7b-novo (sem nada): Boas-vindas com as 3 opções (tela 1) → "Treinar sem profissional" → (hml-12, build de
+                   staging: data de nascimento de adulto + consentimento de saúde) → sem objetivo recusa →
                    Emagrecer + Treino + Alimentação → 7 dias grátis → abre os Treinos prontos
   treino_pronto    w7b-novo: detalhe de um treino pronto (tela 2) → SEM INTERNET "Usar este treino" → a aba Treino mostra o treino
                    dele (PowerSync no aparelho) → volta a internet → os treinos próprios e a semana sobem para o Banco do Treino
@@ -42,6 +43,17 @@ _espec.loader.exec_module(C)  # type: ignore[union-attr]
 TREINO_ESCOLHIDO = "emagrecer-intermediario"  # "Definição em 4 dias": A seg/qui, B ter/sex
 
 
+def consentir_no_cartao(c) -> bool:
+    """hml-12 (H-30): no build de staging o "Treinar sem profissional" pede a data de nascimento (18+) e o consentimento de saúde
+    antes de "Começar" (o botão fica travado sem os 2): data de 30 anos atrás e a caixa marcada. No build de produção (antes da
+    virada) não há os 2 e segue igual. True = preencheu."""
+    if not c.esperar(lambda: c.tem("[data-consentimento-saude='app']"), 6):
+        return False
+    c.pg.locator("[data-form-sozinho] [data-campo-nascimento] input[type='date']").first.fill(B.B5.nascimento_adulto())
+    B.B5.marcar(c.pg.locator("[data-form-sozinho] [data-consentimento-saude-caixa]"))
+    return True
+
+
 def abrir(nav, a, conta: str, rota: str, nome: str, desktop: bool = False) -> B.Caso:
     c = B.Caso(nav, a.base, a.prefixo, nome, desktop=desktop)
     c.entrar(conta, rota, zerar=True)
@@ -59,6 +71,8 @@ def caso_entrada(nav, a) -> None:
     c.print("entrada")
     c.pg.locator("[data-sozinho-abrir]").click()
     c.esperar(lambda: c.tem("[data-plano-app='app_treino_alimentacao']") and "R$ 49,90/mês" in c.texto(), 15)
+    if consentir_no_cartao(c):  # hml-12: a data (18+) e o consentimento de saúde, antes de qualquer clique em "Começar"
+        p.check(True, "hml-12: data de nascimento (adulto) e consentimento de saúde preenchidos no cartão (build de staging)")
     c.pg.locator("[data-sozinho-enviar]").click()
     p.check(c.esperar(lambda: "Escolha o seu objetivo." in c.texto(), 6), "sem objetivo: pede o objetivo (nada é criado)")
     p.check(B.app_da("w7b-novo") is None, "nada criado sem o objetivo")
@@ -130,7 +144,7 @@ def caso_treino_pronto(nav, a) -> None:
 
 
 def caso_faixa(nav, a) -> None:
-    c = abrir(nav, a, "w7b-novo", "/treino", "faixa")
+    c = abrir(nav, a, "w7b-novo", "/", "faixa")  # desde a W12 a aba de abertura é o Início (a faixa fica abaixo da saudação)
     ok = c.esperar(lambda: c.tem("[data-faixa-mensalidade='teste']"), 30)
     t = c.pg.locator("[data-faixa-mensalidade]").inner_text() if ok else ""
     p.check(ok and "Seus dias grátis vão até" in t and "R$ 49,90/mês" in t and "Assinar" in t, f"faixa violeta dos dias grátis ({t!r})")
