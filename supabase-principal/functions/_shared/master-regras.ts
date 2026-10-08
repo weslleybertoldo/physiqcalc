@@ -24,6 +24,17 @@ export function ehMaster(appMetadata: Record<string, unknown> | null | undefined
   return (appMetadata?.role as string | undefined) === "master" || papelPerfil === "master";
 }
 
+/**
+ * hml-08 (H-22): o painel master é só do site — o app (o WebView do Android serve em https://localhost; o do iOS, em
+ * capacitor://localhost) recebe 403 "so_no_site". Serve para desligar o master dos APKs antigos (≤ 3.71), que ainda têm o código;
+ * quem põe o Origin é o navegador (um curl manda qualquer um), então a barreira de verdade é o 2FA do master.
+ */
+export const ORIGENS_DO_APP = ["https://localhost", "capacitor://localhost"];
+
+export function origemDoApp(origin: string | null | undefined): boolean {
+  return typeof origin === "string" && ORIGENS_DO_APP.includes(origin);
+}
+
 /** Contas de TESTE (P26): o staging só cria/aceita estas (o Auth é o mesmo da produção). Igual ao criar_minha_conta (W4). */
 export function emailDeTeste(email: string | null | undefined): boolean {
   const e = (email || "").trim().toLowerCase();
@@ -100,6 +111,7 @@ export function statusDoErro(erro: unknown): number {
     case "sem_login":
       return 401;
     case "so_master":
+    case "so_no_site":
     case "nao_pode_a_si_mesmo":
       return 403;
     case "conta_inexistente":

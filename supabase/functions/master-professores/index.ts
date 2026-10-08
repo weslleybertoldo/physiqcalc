@@ -78,6 +78,9 @@ function papelDe(role: unknown): Papel | null {
 }
 async function requireMaster(req: Request, endpoint: string): Promise<{ user: any; error: Response | null }> {
   const origin = req.headers.get("Origin");
+  // hml-08 (H-22): o master é só do site — o app (WebView do Android: https://localhost; iOS: capacitor://localhost) recebe a
+  // recusa; o CORS segue aceitando a origem dele para o APK antigo ler o erro. A barreira de verdade é o 2FA do master.
+  if (origin === "https://localhost" || origin === "capacitor://localhost") return { user: null, error: jsonErr("so_no_site", 403, origin) };
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return { user: null, error: jsonErr("missing_auth", 401, origin) };
   const user = await usuarioDoToken(auth.slice(7), auth);

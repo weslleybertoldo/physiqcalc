@@ -28,8 +28,13 @@ Conferir um AAB baixado: `bash scripts/ci/aab-loja.sh conferir Physiq-v<versão>
 O job falha se: (a) o AAB não estiver assinado só com a chave de upload — sem assinatura, com outra chave ou com a do APK do
 site; (b) o manifesto tiver `REQUEST_INSTALL_PACKAGES`; (c) o site de dentro do AAB não for o da loja — a marca
 `<meta name="physiq-distribuicao" content="play">` que o `vite.config.ts` põe no `index.html` só no `build:loja`; (d) o
-versionCode não bater com a fórmula; (e) com o Firebase do push, faltar o `google_app_id`. O manifesto é lido de dentro do
-AAB pelo bundletool oficial (versão e SHA-256 fixos no script).
+versionCode não bater com a fórmula; (e) com o Firebase do push, faltar o `google_app_id`; (f) o JS do site de dentro do AAB
+levar o painel master. O manifesto é lido de dentro do AAB pelo bundletool oficial (versão e SHA-256 fixos no script).
+
+**Master só no site (hml-08):** o `build:loja` e o `build:apk` (o do APK do site) saem com `VITE_APP_NATIVO=1`, sem o painel
+master. Quem confere é o `scripts/ci/sem-master.sh`: no `dist/` (passo `web` e `build-apk.yml`) e, na (f), nos `.js` de
+dentro do AAB. Para conferir só a (f), sem o Android: `bash scripts/ci/aab-loja.sh sem-master <arquivo.aab>`. O site
+(Vercel) segue no `npm run build`, com o master.
 
 ## Chaves
 

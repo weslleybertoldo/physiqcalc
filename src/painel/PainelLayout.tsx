@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { masterNesteAparelho } from "@/lib/plataforma";
 import { contadoresPainel, fontesBusca, gatesPainel } from "@/rotas/registro";
 import { lembrarArea } from "@/ui/casca/area";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
@@ -68,7 +69,8 @@ export default function PainelLayout() {
         navigate("/");
       },
     },
-    ...(dados.ehMaster ? [{ id: "master", rotulo: "Master", icone: ShieldCheck, aoTocar: () => navigate("/master") }] : []),
+    // hml-08 (H-22): o painel master é só do site — no app, o item some
+    ...(dados.ehMaster && masterNesteAparelho() ? [{ id: "master", rotulo: "Master", icone: ShieldCheck, aoTocar: () => navigate("/master") }] : []),
     { id: "sair", rotulo: "Sair", icone: LogOut, perigo: true, aoTocar: () => void signOut() },
   ];
 

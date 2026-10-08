@@ -3,8 +3,8 @@ import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 
 // Cliente das edge functions do SaaS do Banco do Treino (master → professores → alunos), 12/09/2026: JWT da sessão + x-schema do
 // ambiente. W28: a cobrança antiga do Calc saiu (plano-*, receipt, master-financeiro, master-planos, professor-convites,
-// vincular-professor e o mp-payments) — ficam o papel do JWT, a lista de alunos (admin-list-users) e a lista de professores da
-// Biblioteca global (master-professores).
+// vincular-professor e o mp-payments) — ficam o papel do JWT e a lista de alunos (admin-list-users). hml-08: a lista de professores
+// da Biblioteca global (a função do master) mora na própria página (src/pages/master/BibliotecaPage.tsx), fora do bundle do app.
 
 const FN_BASE =
   (import.meta.env.VITE_MP_FUNCTIONS_URL as string | undefined) ||
@@ -97,7 +97,5 @@ export interface ListaAlunos {
 
 // ─────────────────────────── atalhos por edge ───────────────────────────
 
-export const masterProfessores = <T = unknown>(action: string, payload: Record<string, unknown> = {}) =>
-  invokeEdge<T>("master-professores", { action, ...payload });
 export const listarAlunos = (payload: { limit?: number; offset?: number; q?: string; professorId?: string | null; semProfessor?: boolean } = {}) =>
   invokeEdge<ListaAlunos>("admin-list-users", payload);

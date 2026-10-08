@@ -15,10 +15,13 @@ const h = vi.hoisted(() => {
   const marcador = (id: string) => ({
     default: (props: { userId?: string }) => <div data-testid={id}>{props.userId ? `${id}:${props.userId}` : id}</div>,
   });
-  return { estado, marcador };
+  // hml-08: os testes rodam como o site (o master abre); o bloco "app" troca para o app (APK/AAB), sem o master
+  const plataforma = { site: true };
+  return { estado, marcador, plataforma };
 });
 
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.estado.auth }));
+vi.mock("@/lib/plataforma", () => ({ BUILD_DO_APP: false, masterNesteAparelho: () => h.plataforma.site }));
 vi.mock("@/nucleo/sessao", () => ({
   SessaoProvider: ({ children }: { children: unknown }) => children,
   useSessao: () => ({
@@ -136,6 +139,7 @@ function logar(papel: "aluno" | "professor" | "master") {
 
 beforeEach(() => {
   localStorage.clear();
+  h.plataforma.site = true;
   h.estado.auth = { user: null, loading: false, papel: "aluno", isStaff: false, isMaster: false, signOut: async () => {} };
   h.estado.sessao = { usuario: null, situacao: null };
 });
@@ -374,6 +378,27 @@ describe("master: páginas novas na casca (W27) e a Biblioteca antiga", () => {
     abrir("/master/contas");
     expect(await screen.findByTestId("pagina-dashboard", {}, { timeout: 4000 })).toBeInTheDocument();
     expect(onde()).toBe("/painel");
+  });
+});
+
+// hml-08 (H-22): o painel master fica só no site — no app, /master… (inclusive as rotas antigas) não existe
+describe("app (APK/AAB): sem o master", () => {
+  beforeEach(() => {
+    h.plataforma.site = false;
+  });
+
+  it.each([
+    ["/master", "master"],
+    ["/master/professores", "master"],
+    ["/master", "sem login"],
+  ])("%s (%s) → Página não encontrada", async (de, quem) => {
+    if (quem === "master") logar("master");
+    abrir(de);
+    expect(await screen.findByText("Página não encontrada", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(document.querySelector('[data-casca="master"]')).toBeNull();
+    expect(screen.queryByTestId("master-visao-geral")).toBeNull();
+    expect(screen.queryByTestId("master-contas")).toBeNull();
+    expect(onde()).toMatch(/^\/master/);
   });
 });
 

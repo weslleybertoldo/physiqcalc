@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ehAcaoConta, ehMaster, emailDeTeste, idsDe, lerPedidoCriarConta, schemaDoPedido, statusDoErro, textoDoAvisoDePlano,
+  ehAcaoConta, ehMaster, emailDeTeste, idsDe, lerPedidoCriarConta, origemDoApp, schemaDoPedido, statusDoErro, textoDoAvisoDePlano,
 } from "../../supabase-principal/functions/_shared/master-regras";
 
 describe("funções do master (W27) — quem é master e o que cada ação recebe", () => {
@@ -38,6 +38,7 @@ describe("funções do master (W27) — quem é master e o que cada ação receb
     expect(idsDe(["a", "3f1b6c1e-1111-4111-8111-111111111111", "3f1b6c1e-1111-4111-8111-111111111111"])).toEqual(["3f1b6c1e-1111-4111-8111-111111111111"]);
     expect(idsDe("x")).toEqual([]);
     expect(statusDoErro("so_master")).toBe(403);
+    expect(statusDoErro("so_no_site")).toBe(403);
     expect(statusDoErro("sem_login")).toBe(401);
     expect(statusDoErro("conta_inexistente")).toBe(404);
     expect(statusDoErro("motivo_obrigatorio")).toBe(400);
@@ -45,5 +46,18 @@ describe("funções do master (W27) — quem é master e o que cada ação receb
     expect(textoDoAvisoDePlano({ situacao_efetiva: "teste", teste_ate: "2026-10-16" })).toContain("até 16/10");
     expect(textoDoAvisoDePlano({ situacao_efetiva: "ativa", vence_em: "2026-11-02" })).toContain("vence em 02/11");
     expect(textoDoAvisoDePlano({}, "  Mensagem do master  ")).toBe("Mensagem do master");
+  });
+});
+
+describe("hml-08 (H-22) — o painel master é só do site", () => {
+  it("as origens do app (WebView do Android e do iOS) são recusadas; as do site, não", () => {
+    expect(origemDoApp("https://localhost")).toBe(true);
+    expect(origemDoApp("capacitor://localhost")).toBe(true);
+    expect(origemDoApp("https://physiqcalc.com.br")).toBe(false);
+    expect(origemDoApp("https://physiqcalc-staging.vercel.app")).toBe(false);
+    expect(origemDoApp("http://localhost:8080")).toBe(false);
+    expect(origemDoApp("https://localhost.evil.com")).toBe(false);
+    expect(origemDoApp(null)).toBe(false);
+    expect(origemDoApp(undefined)).toBe(false);
   });
 });

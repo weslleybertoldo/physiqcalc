@@ -36,7 +36,8 @@ describe("distribuicao (W1 da loja)", () => {
 
   it("npm run build:loja liga a flag; o npm run build (site, Vercel e CI) continua sem ela", () => {
     const pkg = JSON.parse(ler("package.json"));
-    expect(pkg.scripts["build:loja"]).toBe("VITE_DISTRIBUICAO=play vite build");
+    // hml-08: o build:loja também é build do app (VITE_APP_NATIVO=1: sem o painel master — src/lib/plataforma.test.ts)
+    expect(pkg.scripts["build:loja"]).toBe("VITE_DISTRIBUICAO=play VITE_APP_NATIVO=1 vite build");
     expect(pkg.scripts.build).toBe("vite build");
   });
 });

@@ -7,10 +7,12 @@
 #
 #   versao          versionName e versionCode no android/app/build.gradle — a MESMA fórmula do APK do site (build-apk.yml)
 #   firebase        o google-services.json do segredo GOOGLE_SERVICES_JSON (igual ao job do APK; sem ele, o AAB sai sem push)
-#   web             npm run build:loja + npx cap sync android (os VITE_* vêm do ambiente, os mesmos do APK)
+#   web             npm run build:loja + o dist/ sem o painel master (scripts/ci/sem-master.sh) + npx cap sync android (os VITE_*
+#                   vêm do ambiente, os mesmos do APK)
 #   gradle          ./gradlew bundlePlayRelease com a chave de upload (PLAY_UPLOAD_*; no CI o .p12 vem em base64 no
 #                   PLAY_UPLOAD_KEYSTORE_BASE64). Sem a chave o AAB sai SEM assinatura — e a conferência recusa
 #   conferir [aab]  as conferências abaixo; passando todas, o AAB vira Physiq-v<versão>-loja.aab (SUFIXO_AAB troca o "-loja")
+#   sem-master aab  só a conferência (f), sem o Android (sem keytool, bundletool nem Gradle)
 #   local           versao + web + gradle + conferir no notebook, com a chave do ~/keystores/physiq-play-upload.env (lida só
 #                   no Gradle; PLAY_UPLOAD_ENV troca o arquivo), e devolve o build.gradle como estava
 #
@@ -20,7 +22,9 @@
 #   (c) o site dentro do AAB não for o do `npm run build:loja`: a marca <meta name="physiq-distribuicao" content="play"> que o
 #       vite.config.ts põe no index.html só nele (o site e o APK do site saem com content="site");
 #   (d) o versionCode (e o versionName) do AAB não baterem com o package.json pela fórmula;
-#   (e) com o google-services.json presente, o Gradle não tiver gerado o google_app_id do playRelease (a checagem do APK).
+#   (e) com o google-services.json presente, o Gradle não tiver gerado o google_app_id do playRelease (a checagem do APK);
+#   (f) o JS do site dentro do AAB levar o painel master (hml-08: o master é só do site) — o scripts/ci/sem-master.sh nos .js de
+#       base/assets/public/assets/.
 set -euo pipefail
 shopt -s inherit_errexit
 
@@ -126,6 +130,8 @@ passo_web() {
   cd "$RAIZ"
   npm run build:loja
   grep -qF "$MARCA_LOJA" dist/index.html || morre "o dist/ não é o site da loja (falta $MARCA_LOJA no index.html)"
+  # hml-08 (H-22): o painel master é só do site — o build:loja (VITE_APP_NATIVO=1) sai sem ele
+  bash "$RAIZ/scripts/ci/sem-master.sh" dist
   npx cap sync android
 }
 
@@ -145,6 +151,32 @@ passo_gradle() {
   # --no-daemon: o processo do Gradle termina com o build e não fica com as variáveis da chave na memória
   (cd "$RAIZ/android" && bash ./gradlew --no-daemon bundlePlayRelease) || rc=$?
   if [ -n "$chave_tmp" ]; then rm -rf "$chave_tmp"; fi
+  return "$rc"
+}
+
+# (f) hml-08 (H-22): os .js do site de dentro do AAB (base/assets/public/assets/) sem o painel master, pelo mesmo
+# scripts/ci/sem-master.sh do dist/. Fora do passo_conferir para rodar sem o Android: `aab-loja.sh sem-master <arquivo.aab>`.
+conferir_sem_master() {
+  local aab="$1" tmp rc=0 rc_sm=0
+  [ -f "$aab" ] || morre "AAB não encontrado: $aab"
+  tmp="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/aab-js.XXXXXX")"
+  unzip -qo "$aab" 'base/assets/public/assets/*.js' -d "$tmp" || true
+  if [ -z "$(find "$tmp" -type f -name '*.js' -print -quit)" ]; then
+    erro "(f) o AAB não tem o JS do site (base/assets/public/assets/*.js)"
+    rc=1
+  else
+    bash "$RAIZ/scripts/ci/sem-master.sh" "$tmp/base/assets/public/assets" || rc_sm=$?
+    if [ "$rc_sm" -eq 0 ]; then
+      log "OK (f) o JS do site dentro do AAB sai sem o painel master"
+    elif [ "$rc_sm" -eq 1 ]; then
+      erro "(f) o JS do site dentro do AAB leva o painel master — o master é só do site (o build:loja precisa de VITE_APP_NATIVO=1)"
+      rc=1
+    else
+      erro "(f) a conferência do master não rodou (scripts/ci/sem-master.sh saiu com $rc_sm)"
+      rc=1
+    fi
+  fi
+  rm -rf "$tmp"
   return "$rc"
 }
 
@@ -238,6 +270,9 @@ passo_conferir() {
     log "-- (e) AAB sem Firebase (sem o segredo GOOGLE_SERVICES_JSON): o push fica desligado"
   fi
 
+  # (f) o JS do site dentro do AAB sai sem o painel master (hml-08)
+  conferir_sem_master "$aab" || falhas=$((falhas + 1))
+
   if [ "$falhas" -gt 0 ]; then
     morre "o AAB NÃO passou: $falhas conferência(s) falharam"
   fi
@@ -273,9 +308,10 @@ case "${1:-}" in
   web) passo_web ;;
   gradle) passo_gradle ;;
   conferir) passo_conferir "${2:-}" ;;
+  sem-master) conferir_sem_master "${2:?uso: $0 sem-master <arquivo.aab>}" ;;
   local) passo_local ;;
   *)
-    echo "uso: $0 <versao|firebase|web|gradle|conferir [arquivo.aab]|local>" >&2
+    echo "uso: $0 <versao|firebase|web|gradle|conferir [arquivo.aab]|sem-master <arquivo.aab>|local>" >&2
     exit 2
     ;;
 esac

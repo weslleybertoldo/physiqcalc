@@ -4,7 +4,7 @@
 // (auth.uid() de verdade: o banco confere o master de novo e grava quem fez cada coisa nos eventos).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { origemPermitida } from "./login-regras.ts";
-import { ehMaster, schemaDoPedido, statusDoErro, type Schema } from "./master-regras.ts";
+import { ehMaster, origemDoApp, schemaDoPedido, statusDoErro, type Schema } from "./master-regras.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -57,6 +57,8 @@ export async function abrirPedido(req: Request, nome: string): Promise<Contexto 
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
+  // hml-08 (H-22): o master é só do site — o app (APK antigo) recebe a recusa; o CORS segue aceitando a origem dele para ler o erro
+  if (origemDoApp(origin)) return json({ ok: false, erro: "so_no_site" }, 403, origin);
   const schema = schemaDoPedido(req.headers.get("x-schema"));
   if (!schema) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
   const auth = req.headers.get("Authorization") || "";
