@@ -15,8 +15,13 @@
 // referência — Pix de sandbox com referência "public:" não paga nada no public, e o de produção não vale no staging
 // ("outro_ambiente": não grava nem repassa). O id do aviso só vai à API do MP no formato que o MP manda (regras.ts) e o MP
 // fora devolve 500 (o MP manda de novo; antes o aviso seguia sem o recurso e se perdia).
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { idDoAvisoValido, modoConfere, mpTransitorio } from "./regras.ts";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+const log = criarLog("mp-webhook", { avisar: avisarErro });
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -232,6 +237,16 @@ function repasseLigado(schema: string | null): boolean {
   return ligados.includes(schema || "public");
 }
 
+/** hml-10 (H-24): da resposta do principal ({ ok, resultado } ou { erro }), só os códigos — o texto nunca vai para o log. */
+function codigosDaResposta(txt: string): { resultado: unknown; erro: unknown } {
+  try {
+    const c = JSON.parse(txt) as Record<string, unknown> | null;
+    return { resultado: c?.resultado, erro: c?.erro ?? c?.error ?? c?.resultado };
+  } catch {
+    return { resultado: null, erro: null };
+  }
+}
+
 async function repassar(topic: string, id: string, schema: string | null, destino = "PRINCIPAL_WEBHOOK_URL"): Promise<boolean> {
   const base = Deno.env.get(destino)!;
   const url = `${base}${base.includes("?") ? "&" : "?"}origem=treino${schema ? `&schema=${schema}` : ""}`;
@@ -241,11 +256,14 @@ async function repassar(topic: string, id: string, schema: string | null, destin
       const t = setTimeout(() => ctrl.abort(), 20000);
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: topic, data: { id } }), signal: ctrl.signal });
       clearTimeout(t);
-      const txt = await res.text();
-      console.log("mp-webhook repasse", topic, id, schema ?? "?", res.status, txt.slice(0, 200));
-      if (res.ok) return true;
+      const resposta = codigosDaResposta(await res.text());
+      if (res.ok) {
+        log.info({ codigo: "repasse_ok", schema, acao: topic, ref: id, status: res.status, resultado: resposta.resultado });
+        return true;
+      }
+      log.erro({ codigo: "repasse_respondeu", schema, acao: topic, ref: id, status: res.status, externo: { principal_erro: resposta.erro } });
     } catch (e) {
-      console.error("mp-webhook repasse falhou", topic, id, String((e as { message?: string })?.message || e));
+      log.excecao(e, { codigo: "repasse_falhou", schema, acao: topic, ref: id });
     }
     await new Promise((r) => setTimeout(r, 1500));
   }
@@ -254,11 +272,15 @@ async function repassar(topic: string, id: string, schema: string | null, destin
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("ok", { status: 200 });
+  // hml-10 (D6): o que o catch final sabe do aviso (o tópico e, depois de achar o recurso, o ambiente)
+  let topico: string | null = null;
+  let schemaDoAviso: string | null = null;
   try {
     const url = new URL(req.url);
     let body: any = {};
     try { body = await req.json(); } catch { /* IPN via query */ }
     const topic = String(body?.type || body?.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
+    topico = topic;
     const id = String(body?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     if (!id) return new Response("ok", { status: 200 });
     if (!TOPICOS.includes(topic)) return new Response("ok", { status: 200 }); // outros tópicos: ignora silenciosamente
@@ -273,12 +295,13 @@ Deno.serve(async (req) => {
     } catch (e) {
       // hml-06: o MP fora → 500 (o MP manda de novo; antes o aviso seguia sem o recurso e se perdia)
       if (e instanceof MpIndisponivel) {
-        console.error("mp-webhook: MP indisponível", topic, e.status);
+        log.erro({ codigo: "mp_indisponivel", acao: topic, status: e.status });
         return new Response("mp_indisponivel", { status: 500 });
       }
       // o Treino não gravou (o refresh da tela antiga cobria); o principal ainda recebe o aviso abaixo
-      console.error("mp-webhook error", e);
+      log.excecao(e, { codigo: "gravar_falhou", acao: topic });
     }
+    schemaDoAviso = alvo.schema;
     // hml-06 (H-19): referência de outro ambiente (sandbox com "public:", produção com "staging:") não grava nem repassa
     if (alvo.ignorar) return new Response("outro_ambiente", { status: 200 });
 
@@ -294,7 +317,7 @@ Deno.serve(async (req) => {
     }
     return new Response("ok", { status: 200 });
   } catch (e) {
-    console.error("mp-webhook error", e);
+    log.excecao(e, { acao: topico, schema: schemaDoAviso });
     // 200 mesmo em erro pra não gerar tempestade de retries; o refresh do status cobre
     return new Response("ok", { status: 200 });
   }

@@ -9,9 +9,14 @@
 // verify_jwt = true (chamada com o token do Treino do professor). Publicar:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions professor-convites true
 // Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2), RESEND_* (não usados desde a W13).
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+const log = criarLog("professor-convites", { avisar: avisarErro });
 
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -87,7 +92,7 @@ async function repassarAoPrincipal(treinoUserId: string, corpo: Record<string, u
     });
     return { status: r.status, corpo: (await r.json().catch(() => ({}))) as Record<string, unknown> };
   } catch (e) {
-    console.error("professor-convites: repasse", String(e));
+    log.excecao(e, { codigo: "principal_indisponivel", schema: currentSchema(), acao: "repasse" });
     return { status: 502, corpo: { ok: false, erro: "principal_indisponivel" } };
   }
 }
@@ -145,10 +150,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
   const { user, error: authErr } = await requireStaff(req, "professor-convites");
   if (authErr) return authErr;
+  let acao: string | null = null; // hml-10 (D6): a ação, para o log do catch final
   try {
     const admin = adminClient();
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
+    acao = typeof action === "string" ? action.replace(/-/g, "_") : null;
     const { data: prof } = await admin.from("physiq_professores").select("id, nome, codigo_convite, status").eq("id", user.id).maybeSingle();
     if (!prof) return jsonErr("nao_professor", 404, origin);
     // Link público SEMPRE pelo ambiente: o Origin do APK é https://localhost / capacitor://localhost e o do dev é
@@ -187,7 +194,7 @@ Deno.serve(async (req) => {
 
     return jsonErr("unknown_action", 400, origin);
   } catch (e) {
-    console.error("professor-convites", e);
+    log.excecao(e, { acao, schema: currentSchema() });
     return jsonErr("internal", 500, origin);
   }
 });

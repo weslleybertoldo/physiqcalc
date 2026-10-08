@@ -2,7 +2,9 @@
 // Usado pela trocar-token (no login) e pela espelho-nucleo (quando o principal muda). Idempotente.
 // O vínculo que vale entre os 2 bancos é SÓ o physiq_identidades (service_role): nada que o app grava no principal
 // (ex.: pacientes.treino_user_id) decide qual usuário do Treino é de quem.
+// hml-10 (H-24): o log vem de quem chama (o da trocar-token ou o da espelho-nucleo), para a linha e o aviso dizerem a função.
 import type { SupabaseClient, User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import type { Log } from "../log.ts";
 import {
   acessoProfessor,
   alunoBloqueadoSemStaff,
@@ -41,6 +43,7 @@ export async function mapearTreino(db: SupabaseClient, principalIds: string[]): 
 export async function aplicarResumo(
   db: SupabaseClient,
   authAdmin: SupabaseClient,
+  log: Log,
   treinoUser: User,
   resumo: ResumoNucleo,
   schema: "public" | "staging" = "public",
@@ -161,7 +164,7 @@ export async function aplicarResumo(
       const antes = (perfil as { status: string | null }).status;
       if (campos.status === "bloqueado" && antes !== "bloqueado" && alunoBloqueadoSemStaff(resumo, papelNovo)) {
         const { data: n, error: es } = await db.rpc("physiq_encerrar_sessoes_treino", { p_user: treinoId });
-        if (es) console.error("espelho: encerrar sessões do aluno bloqueado", treinoId, es.message);
+        if (es) log.excecao(es, { codigo: "encerrar_sessoes_falhou", schema, ref: treinoId });
         else sessoesEncerradas = Number(n) || 0;
       }
     }

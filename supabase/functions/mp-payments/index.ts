@@ -2,6 +2,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { calcCobertura } from "./cobertura.ts";
+import { criarLog, type ExternoLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+const log = criarLog("mp-payments", { avisar: avisarErro });
+
+/** hml-10 (H-24): da resposta do Mercado Pago, só os códigos — o corpo traz o e-mail e o documento do pagador. */
+function externoMp(corpo: unknown): ExternoLog {
+  const c = (corpo ?? {}) as { error?: unknown; cause?: unknown; status_detail?: unknown };
+  return {
+    mp_erro: c.error,
+    mp_causas: Array.isArray(c.cause) ? c.cause.map((x) => (x as { code?: unknown } | null)?.code) : undefined,
+    mp_status_detail: c.status_detail,
+  };
+}
 
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
@@ -370,7 +385,7 @@ async function criarPagamentoMp(admin: any, o: {
       }),
     });
     if (status >= 300 || !pay?.id) {
-      console.error("mp pix fail", status, JSON.stringify(pay).slice(0, 500));
+      log.erro({ codigo: "mp_pix_falhou", schema: currentSchema(), acao: o.contexto, status, externo: externoMp(pay) });
       // SÓ STAGING: o sandbox do MP cai com 500 de vez em quando (12/09/2026 caiu o dia todo) → Pix simulado,
       // sem QR real, pra manter os testes do fluxo (pendente → plano-simular-aprovacao). Produção NUNCA simula.
       if (ehStaging() && status >= 500) {
@@ -408,7 +423,7 @@ async function criarPagamentoMp(admin: any, o: {
     method: "POST", headers: { "X-Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(payload),
   });
   if (status >= 300 || !pay?.id) {
-    console.error("mp card fail", status, JSON.stringify(pay).slice(0, 500));
+    log.erro({ codigo: "mp_cartao_falhou", schema: currentSchema(), acao: o.contexto, status, externo: externoMp(pay) });
     return { erro: "mp_error", http: 502 };
   }
   const { data: inserted, error: insErr } = await admin.from("physiq_pagamentos").insert({
@@ -475,9 +490,11 @@ Deno.serve(async (req) => {
   const papel = papelDe((user.app_metadata as any)?.role);
   user.papel = papel;
 
+  let acao: string | null = null; // hml-10 (D6): a ação, para o log do catch final
   try {
     const body = await req.json();
     const action = body?.action;
+    acao = typeof action === "string" ? action.replace(/-/g, "_") : null;
     const admin = adminClient();
     const hoje = hojeISO();
 
@@ -627,7 +644,7 @@ Deno.serve(async (req) => {
         }),
       });
       if (status >= 300 || !pre?.id) {
-        console.error("mp create-subscription fail", status, JSON.stringify(pre).slice(0, 500));
+        log.erro({ codigo: "mp_assinatura_falhou", schema: currentSchema(), acao: "create_subscription", status, externo: externoMp(pre) });
         // /preapproval não tem sandbox: com credencial TEST o MP responde 404 "Card token service not found"
         if (usingTestToken() && status === 404) return jsonErr("assinatura_sem_sandbox", 400, origin);
         return jsonErr("mp_error", 502, origin);
@@ -940,7 +957,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({}),
       });
       if (status >= 300) {
-        console.error("mp refund fail", status, JSON.stringify(ref).slice(0, 400));
+        log.erro({ codigo: "mp_reembolso_falhou", schema: currentSchema(), acao: "admin_refund", ref: (row as { id?: unknown }).id, status, externo: externoMp(ref) });
         return jsonErr("mp_error", 502, origin);
       }
       await admin.from("physiq_pagamentos").update({ status: "refunded", updated_at: new Date().toISOString() }).eq("id", (row as any).id);
@@ -1062,7 +1079,7 @@ Deno.serve(async (req) => {
           }),
         });
         if (status >= 300 || !pre?.id) {
-          console.error("mp plano-assinar fail", status, JSON.stringify(pre).slice(0, 500));
+          log.erro({ codigo: "mp_assinatura_falhou", schema: currentSchema(), acao: "plano_assinar", status, externo: externoMp(pre) });
           if (usingTestToken() && status === 404) return jsonErr("assinatura_sem_sandbox", 400, origin);
           return jsonErr("mp_error", 502, origin);
         }
@@ -1087,7 +1104,7 @@ Deno.serve(async (req) => {
 
     return jsonErr("unknown_action", 400, origin);
   } catch (e) {
-    console.error("mp-payments error", e);
+    log.excecao(e, { acao, schema: currentSchema() });
     return jsonErr("internal_error", 500, origin);
   }
 });

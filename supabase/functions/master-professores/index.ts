@@ -3,6 +3,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+const log = criarLog("master-professores", { avisar: avisarErro });
 
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -148,10 +153,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
   const { user, error: authErr } = await requireMaster(req, "master-professores");
   if (authErr) return authErr;
+  let acao: string | null = null; // hml-10 (D6): a ação, para o log do catch final
   try {
     const admin = adminClient();
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
+    acao = typeof action === "string" ? action.replace(/-/g, "_") : null;
     const hoje = hojeISO();
     // Physiq W28 (virada): professores, convites, planos e integrações passaram para o banco principal (Painel master › Contas e
     // Integrações: master-contas do principal). Só a lista fica (a Biblioteca global mostra o nome do dono de cada exercício);
@@ -165,8 +172,12 @@ Deno.serve(async (req) => {
       let query = admin.from("physiq_professores").select(SELECT_PROF, { count: "exact" }).order("created_at", { ascending: true }).range(offset, offset + limit - 1);
       if (body?.status === "ativo" || body?.status === "suspenso") query = query.eq("status", body.status);
       if (q) query = query.or(`nome.ilike.%${q}%,email.ilike.%${q}%,codigo_convite.ilike.%${q}%`);
-      const { data, error, count } = await query;
-      if (error) throw error;
+      const { data, error, count, status } = await query;
+      if (error) {
+        // hml-10 (H-24): o erro do PostgREST pode trazer o filtro de volta, com o termo de busca — no log, só o código e o status
+        log.erro({ codigo: "lista_falhou", schema: currentSchema(), acao: q ? "buscar" : "listar", status, pg: error.code });
+        return jsonErr("internal", 500, origin);
+      }
       const ids = ((data as any[]) || []).map((p) => p.id);
       const [alunosRes, integRes, tol] = await Promise.all([
         ids.length ? admin.from("physiq_profiles").select("professor_id").in("professor_id", ids) : Promise.resolve({ data: [] }),
@@ -330,7 +341,7 @@ Deno.serve(async (req) => {
 
     return jsonErr("unknown_action", 400, origin);
   } catch (e) {
-    console.error("master-professores", e);
+    log.excecao(e, { acao, schema: currentSchema() });
     return jsonErr("internal", 500, origin);
   }
 });

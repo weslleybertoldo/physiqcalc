@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+const log = criarLog("admin-list-users", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -96,7 +100,7 @@ async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise
   const { data, error } = await admin.rpc("pode_ver_aluno_treino_por", { p_aluno: alunoId, p_usuario: user.id });
   if (error) {
     // schema ainda sem a função da W3 (a migração entra 1 schema de cada vez): vale a regra de antes
-    console.error("pode_ver_aluno_treino_por", error.message);
+    log.excecao(error, { codigo: "pode_ver_aluno_falhou", schema: currentSchema() });
     const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
     return (perfil as { professor_id?: string } | null)?.professor_id === user.id;
   }
@@ -109,7 +113,7 @@ type _ClienteRpcW3 = { rpc: (fn: string, args: Record<string, unknown>) => Promi
 async function contasOndeSouDono(admin: _ClienteRpcW3, userId: string): Promise<string[]> {
   const { data, error } = await admin.rpc("contas_onde_sou_dono_treino", { p_usuario: userId });
   if (error) {
-    console.error("contas_onde_sou_dono_treino", error.message);
+    log.excecao(error, { codigo: "contas_onde_sou_dono_falhou", schema: currentSchema() });
     return [];
   }
   return ((data as unknown[]) || [])
@@ -189,11 +193,15 @@ Deno.serve(async (req) => {
       if (/^\d+$/.test(seguro)) partes.push(`user_code.eq.${Number(seguro)}`);
       q = q.or(partes.join(","));
     }
-    const { data, error, count } = await q;
-    if (error) throw error;
+    const { data, error, count, status } = await q;
+    if (error) {
+      // hml-10 (H-24): o erro do PostgREST pode trazer o filtro de volta, com o termo de busca — no log, só o código e o status
+      log.erro({ codigo: "lista_falhou", schema: currentSchema(), acao: busca ? "buscar" : "listar", status, pg: error.code });
+      return jsonErr("internal", 500, origin);
+    }
     return new Response(JSON.stringify({ users: data ?? [], total: count ?? (data?.length ?? 0), limit, offset }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
   } catch (e) {
-    console.error("admin-list-users", e);
+    log.excecao(e, { acao: "listar", schema: currentSchema() });
     return jsonErr("internal", 500, origin);
   }
 });

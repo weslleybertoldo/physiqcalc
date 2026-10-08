@@ -6,9 +6,14 @@
 // Quem ainda não tem vínculo (nunca entrou no Physiq) é pulado: a trocar-token aplica tudo no 1º login.
 // verify_jwt = false (autenticação pelo segredo compartilhado). Publicar:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions espelho-nucleo false
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { aplicarResumo } from "../_shared/espelho/aplicar.ts";
 import { segredoConfere, type ResumoNucleo } from "../_shared/espelho/regras.ts";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+const log = criarLog("espelho-nucleo", { avisar: avisarErro });
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -41,11 +46,11 @@ Deno.serve(async (req) => {
       if (!v) { resultados.push({ principal_user_id: pid, resultado: "sem_vinculo" }); continue; }
       const { data: tu, error: eu } = await authAdmin.auth.admin.getUserById((v as { treino_user_id: string }).treino_user_id);
       if (eu || !tu?.user) throw eu ?? new Error("usuário do Treino sumiu");
-      const espelho = await aplicarResumo(db, authAdmin, tu.user, r, schema === "staging" ? "staging" : "public");
+      const espelho = await aplicarResumo(db, authAdmin, log, tu.user, r, schema === "staging" ? "staging" : "public");
       resultados.push({ principal_user_id: pid, resultado: "aplicado", espelho });
     } catch (e) {
       falhas++;
-      console.error("espelho-nucleo", pid, String((e as { message?: string })?.message || e));
+      log.excecao(e, { acao: "aplicar", schema, ref: pid });
       resultados.push({ principal_user_id: pid, resultado: "erro", erro: String((e as { message?: string })?.message || e).slice(0, 200) });
     }
   }

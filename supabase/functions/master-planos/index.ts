@@ -5,6 +5,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+const log = criarLog("master-planos", { avisar: avisarErro });
 
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -117,10 +122,12 @@ Deno.serve(async (req) => {
   if (authErr) return authErr;
   // Physiq W28 (virada): a tabela de preços passou para o banco principal (Painel master › Planos: master-planos do principal). Toda ação responde "migrado" (410) — o painel master do Physiq não chama mais esta função.
   if (user) return jsonErr("migrado", 410, origin);
+  let acao: string | null = null; // hml-10 (D6): a ação, para o log do catch final
   try {
     const admin = adminClient();
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
+    acao = typeof action === "string" ? action.replace(/-/g, "_") : null;
 
     if (action === "list") {
       const [{ data: planos, error }, { data: profs }, { data: cfg }] = await Promise.all([
@@ -226,7 +233,7 @@ Deno.serve(async (req) => {
 
     return jsonErr("unknown_action", 400, origin);
   } catch (e) {
-    console.error("master-planos", e);
+    log.excecao(e, { acao, schema: currentSchema() });
     return jsonErr("internal", 500, origin);
   }
 });

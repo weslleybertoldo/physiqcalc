@@ -16,6 +16,7 @@
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions trocar-token false
 // NUNCA pelo workflow deploy-function.yml (ele liga o verify_jwt e a troca passa a responder 401 pra todo mundo).
 // Segredos: PRINCIPAL_URL, PRINCIPAL_ANON_KEY, ESPELHO_SEGREDO (+ os automáticos do Supabase).
+// hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { aplicarResumo, type ResultadoEspelho } from "../_shared/espelho/aplicar.ts";
 import {
@@ -28,6 +29,10 @@ import {
   type ResumoNucleo,
   type UsuarioPrincipal,
 } from "../_shared/espelho/regras.ts";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+const log = criarLog("trocar-token", { avisar: avisarErro });
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -88,13 +93,18 @@ async function resumoDoPrincipal(principalUserId: string, schema: string): Promi
     body: JSON.stringify({ principal_user_id: principalUserId }),
   });
   if (r.status !== 200) {
-    console.error("trocar-token: espelho-resumo respondeu", r.status, (await r.text()).slice(0, 300));
+    // hml-10 (H-24): da resposta, só o status e o código de erro da espelho-resumo (o corpo nunca vai para o log)
+    const corpo = (await r.json().catch(() => null)) as { error?: unknown; erro?: unknown } | null;
+    log.erro({ codigo: "espelho_resumo_respondeu", schema, status: r.status, externo: { principal_erro: corpo?.error ?? corpo?.erro } });
     return null;
   }
   return await r.json();
 }
 
-/** magic link gerado pelo servidor + verify = sessão nova do Treino (access + refresh), sem e-mail. */
+/**
+ * magic link gerado pelo servidor + verify = sessão nova do Treino (access + refresh), sem e-mail. Falha → lança
+ * "generate_link_<status>" ou "verify_<status>" (hml-10, H-24: sem o corpo do GoTrue, que traz o e-mail e o token).
+ */
 async function emitirSessao(email: string): Promise<Record<string, unknown>> {
   const g = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
     method: "POST",
@@ -103,7 +113,7 @@ async function emitirSessao(email: string): Promise<Record<string, unknown>> {
   });
   const link = await g.json().catch(() => ({}));
   const hashed = (link as Record<string, unknown>)?.hashed_token ?? ((link as Record<string, Record<string, unknown>>)?.properties?.hashed_token);
-  if (g.status !== 200 || typeof hashed !== "string") throw new Error(`generate_link ${g.status}: ${JSON.stringify(link).slice(0, 200)}`);
+  if (g.status !== 200 || typeof hashed !== "string") throw new Error(`generate_link_${g.status}`);
   const v = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
     method: "POST",
     headers: { apikey: ANON, "Content-Type": "application/json" },
@@ -111,7 +121,7 @@ async function emitirSessao(email: string): Promise<Record<string, unknown>> {
   });
   const sessao = await v.json().catch(() => ({}));
   if (v.status !== 200 || typeof (sessao as Record<string, unknown>)?.access_token !== "string") {
-    throw new Error(`verify ${v.status}: ${JSON.stringify(sessao).slice(0, 200)}`);
+    throw new Error(`verify_${v.status}`);
   }
   return sessao as Record<string, unknown>;
 }
@@ -138,13 +148,14 @@ Deno.serve(async (req) => {
     if (!r.user) return r.status >= 500 ? erro("principal_indisponivel", 502, origin) : erro("invalid_token", 401, origin);
     principal = r.user;
   } catch (e) {
-    console.error("trocar-token: principal fora do ar", String(e));
+    log.excecao(e, { codigo: "principal_indisponivel", schema });
     return erro("principal_indisponivel", 502, origin);
   }
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
   const authAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 
+  let acao = "limite"; // hml-10 (D6): o passo em que estava, para o log do catch final
   try {
     // 2. limite de tentativas por pessoa (20 por hora, a check_rate_limit do Calc)
     const { data: permitido, error: erl } = await db.rpc("check_rate_limit", {
@@ -159,6 +170,7 @@ Deno.serve(async (req) => {
     if (schema === "staging" && !emailDeTeste(email)) return erro("conta_real_no_staging", 403, origin);
 
     // 4. qual usuário do Treino é desta pessoa
+    acao = "vinculo";
     const loginGoogle = ehLoginGoogle(claimsDoJwt(token), principal);
     const { data: vinculo, error: ev } = await db.from("physiq_identidades")
       .select("treino_user_id, origem").eq("principal_user_id", principal.id).maybeSingle();
@@ -219,9 +231,10 @@ Deno.serve(async (req) => {
     if (!treinoUser.email) throw new Error("usuário do Treino sem e-mail");
 
     // 5. espelho: resumo do núcleo aplicado no Treino (papel, conta, professor, status)
+    acao = "espelho";
     const resumo = await resumoDoPrincipal(principal.id, schema);
     if (!resumo) return erro("espelho_indisponivel", 502, origin);
-    const espelho: ResultadoEspelho = await aplicarResumo(db, authAdmin, treinoUser, resumo, schema === "staging" ? "staging" : "public");
+    const espelho: ResultadoEspelho = await aplicarResumo(db, authAdmin, log, treinoUser, resumo, schema === "staging" ? "staging" : "public");
     await db.from("physiq_identidades").update({ visto_em: new Date().toISOString() }).eq("principal_user_id", principal.id);
 
     // W13 (F5): aluno bloqueado pelo profissional em todas as matrículas — e que não é profissional nem master (P7) — não ganha
@@ -229,6 +242,7 @@ Deno.serve(async (req) => {
     if (alunoBloqueadoSemStaff(resumo, espelho.papel)) return erro("aluno_bloqueado", 403, origin);
 
     // 6. sessão do Treino (o app grava com setSession; o PowerSync conecta com ela)
+    acao = "sessao";
     const sessao = await emitirSessao(treinoUser.email);
     return json({
       access_token: sessao.access_token,
@@ -242,7 +256,7 @@ Deno.serve(async (req) => {
       espelho,
     }, 200, origin);
   } catch (e) {
-    console.error("trocar-token erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao, schema });
     return erro("erro_interno", 500, origin);
   }
 });
