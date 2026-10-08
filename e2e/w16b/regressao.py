@@ -8,7 +8,10 @@ gravações de verdade e limpeza no fim). Em série; /health do Treino antes (o 
      "Consultoria Equipe W5" convida → a pessoa cria o login e entra → o convite vira matrícula (W3/W5/W13) — a trava não barra
      (o e-mail é o do próprio login)
   R3 /c/: cadastro pelo link com e-mail único → pendente → o dono aprova → matrícula (W13)
-  (o aluno do app — entrar_sem_profissional — e o pos-login dos 2 logins estão no e2e/w16b/causa.py --com-trava)
+  (o aluno do app — entrar_sem_profissional, a de 5 argumentos desde a hml-12 — e o pos-login dos 2 logins estão no
+  e2e/w16b/causa.py --com-trava)
+  hml-12: com a versão dos textos ligada no staging, o gatilho da idade mínima vale nos 3 fluxos; aqui nenhum manda data de nascimento,
+  então nada muda (a trava da idade é provada no e2e/hml12/banco.py)
 Uso: python3 e2e/w16b/regressao.py
 """
 from __future__ import annotations

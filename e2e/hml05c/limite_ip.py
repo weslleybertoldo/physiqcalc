@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import re
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "w02"))
@@ -31,7 +32,9 @@ ARGS = {
     "diario_enviar": {"p_codigo": COD, "p_path": "x", "p_mime": "image/jpeg", "p_tamanho": 1, "p_refeicao": "almoco",
                       "p_comentario": "", "p_data_hora": None},
     "preconsulta_formulario": {"p_slug": COD},
-    "preconsulta_responder": {"p_slug": COD, "p_nome": "Teste", "p_email": "", "p_telefone": "", "p_respostas": {}},
+    # hml-12 (H-30): a de 6 argumentos, com o consentimento (a versão do app); com a versão ligada, a de 5 recusa (sem_consentimento)
+    "preconsulta_responder": {"p_slug": COD, "p_nome": "Teste", "p_email": "", "p_telefone": "", "p_respostas": {},
+                              "p_consentimento": re.search(r'VERSAO_TEXTOS\s*=\s*"([0-9-]+)"', (Path(__file__).resolve().parents[2] / "src" / "publico" / "legal" / "versao.ts").read_text(encoding="utf-8")).group(1)},
     "cadastro_link_info": {"p_codigo": COD},
     "cadastro_publico_info": {"p_codigo": COD},
     "cadastro_publico_enviar": {"p_codigo": COD, "p_nome": "Teste", "p_apelido": "", "p_nascimento": "", "p_telefone": "",

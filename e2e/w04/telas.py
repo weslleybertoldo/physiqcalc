@@ -17,6 +17,7 @@ Casos (positivos e negativos), na ordem:
   legado      legado Calc: a tela Planos de hoje; legado Nutri: o aviso com o link para a Assinatura do PhysiqNutri
   master      o master nunca trava; "Conta master"
 Uso: python3 e2e/w04/telas.py --base http://localhost:5173 --prefixo local [--casos a,b] [--schema staging]
+(hml-12: no build de staging, logo depois do login a porta do aceite é aceita como a pessoa faria — Caso.aceitar_porta)
 Contas: novo.teste.claude@ e membro.teste.claude@physiqnutri.app (criadas aqui, só de teste — senhas em ~/.physiq-teste-<nome>).
 """
 from __future__ import annotations
@@ -41,6 +42,19 @@ MP = "https://api.mercadopago.com"
 p = Placar()
 SCHEMA = "staging"
 ATUAL: dict = {}
+# hml-12 (H-30): a porta do aceite (só no build de staging, com a versão dos textos ligada no banco) aparece logo depois do login para
+# quem não aceitou a versão vigente; o Caso.aceitar_porta() aceita como a pessoa faria (o mesmo do fechar_avisos() da base da W5)
+PORTA = "[data-aceite-no-acesso]"
+JS_LEGAL = """() => {
+  if (!localStorage.getItem('physiq-principal-auth')) return 'sem_login';
+  const k = Object.keys(localStorage).find((x) => x.startsWith('physiq_situacao:'));
+  if (!k) return 'carregando';
+  try {
+    const l = JSON.parse(localStorage.getItem(k)).legal;
+    if (!l || !l.versao) return 'livre';
+    return (l.aceite_pendente || l.saude_pendente || l.nascimento_pendente) ? 'pendente' : 'livre';
+  } catch (e) { return 'livre'; }
+}"""
 
 
 def kv(nome: str) -> dict:
@@ -151,6 +165,7 @@ class Caso:
         self.pg.evaluate("""([k, v]) => { localStorage.setItem(k, v); localStorage.setItem('physiq_pendencia_avisada_em', new Date().toLocaleDateString('pt-BR'));
             localStorage.setItem('physiqcalc-pwa-dismissed', 'true'); }""", [CHAVE_PRINCIPAL, json.dumps(sess)])
         self.pg.goto(self.base + rota, wait_until="domcontentloaded")
+        self.aceitar_porta()  # hml-12: a porta vem antes de tudo o que o caso confere (Boas-vindas, painel, plano)
 
     def esperar(self, cond, timeout: float, passo: float = 0.5) -> bool:
         t0 = time.time()
@@ -178,6 +193,36 @@ class Caso:
             return self.pg.evaluate("location.pathname + location.search")
         except Exception:  # noqa: BLE001
             return ""
+
+    def aceitar_porta(self, timeout: float = 40) -> bool:
+        """hml-12: a porta do aceite, se aparecer depois do login (o mesmo do fechar_avisos() de e2e/w05/_base.py): a caixa do
+        aceite; a caixa de saúde e a data de 30 anos atrás quando aparecem (aluno do app); "Aceitar e continuar"; espera a tela
+        sumir. Sem login, sem a versão ligada (produção), já aceito, a trava de idade ou o aviso "o Physiq mudou" na tela: nada."""
+        estado = {"v": "carregando"}
+
+        def decidiu() -> bool:
+            if self.tem(PORTA) or self.tem("[data-tela-menor]") or self.tem("[data-aviso-mudanca-ok]"):
+                return True
+            try:
+                estado["v"] = self.pg.evaluate(JS_LEGAL) or "carregando"
+            except Exception:  # noqa: BLE001 — navegando
+                estado["v"] = "carregando"
+            return estado["v"] != "carregando"
+
+        self.esperar(decidiu, timeout)
+        if not self.tem(PORTA) and not (estado["v"] == "pendente" and self.esperar(lambda: self.tem(PORTA), 10)):
+            return False
+        self.pg.locator("[data-aceite-caixa]").first.check()
+        if self.pg.locator(f"{PORTA} [data-consentimento-saude-caixa]").count():
+            self.pg.locator(f"{PORTA} [data-consentimento-saude-caixa]").first.check()
+        data = self.pg.locator(f"{PORTA} [data-campo-nascimento] input[type='date']")
+        if data.count():
+            h = dt.date.today()
+            data.first.fill((dt.date(h.year - 30, h.month, min(h.day, 28))).isoformat())
+        self.pg.locator("[data-aceitar]").first.click()
+        saiu = self.esperar(lambda: not self.tem(PORTA), 60)
+        p.check(saiu, f"[{self.nome}] porta do aceite (hml-12): aceitou e a tela abriu")
+        return saiu
 
     def fechar_aviso_mudanca(self) -> None:
         if self.esperar(lambda: self.tem("[data-aviso-mudanca-ok]"), 4):

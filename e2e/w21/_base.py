@@ -65,9 +65,20 @@ def rpc(conta_ou_token: str, funcao: str, args: dict) -> tuple[int, object]:
     return rest(conta_ou_token, "POST", f"rpc/{funcao}", "", args, prefer="")
 
 
+def versao_dos_textos() -> str:
+    """hml-12 (H-30): a versão dos textos (VERSAO_TEXTOS de src/publico/legal/versao.ts) que a página /f/ manda como consentimento."""
+    import re
+    m = re.search(r'VERSAO_TEXTOS\s*=\s*"(\d{4}-\d{2}-\d{2})"',
+                  (Path(__file__).resolve().parents[2] / "src" / "publico" / "legal" / "versao.ts").read_text(encoding="utf-8"))
+    if not m:
+        raise RuntimeError("VERSAO_TEXTOS não achada em src/publico/legal/versao.ts")
+    return m.group(1)
+
+
 def responder(slug: str, nome: str, email: str, respostas: dict, telefone: str = "") -> dict:
-    """Responde ao formulário como o público (anônimo), pela RPC da página /f/."""
-    st, r = rpc("", "preconsulta_responder", {"p_slug": slug, "p_nome": nome, "p_email": email, "p_telefone": telefone, "p_respostas": respostas})
+    """Responde ao formulário como o público (anônimo), pela RPC da página /f/ (com o consentimento da hml-12: a de 6 argumentos)."""
+    st, r = rpc("", "preconsulta_responder", {"p_slug": slug, "p_nome": nome, "p_email": email, "p_telefone": telefone,
+                                              "p_respostas": respostas, "p_consentimento": versao_dos_textos()})
     assert st == 200 and isinstance(r, dict) and r.get("id"), ("responder", st, r)
     return r
 

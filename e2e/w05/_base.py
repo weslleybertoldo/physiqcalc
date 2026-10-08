@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import secrets
 import sys
 import time
@@ -179,6 +180,122 @@ def hoje() -> dt.date:
     return (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=3)).date()
 
 
+# ───────────────────────── hml-12 (H-30): o aceite no acesso e o consentimento de saúde ─────────────────────────
+# No build de staging, com a versão dos textos ligada no banco (staging.app_config.textos_legais), quem não aceitou a versão vigente
+# vê a porta do aceite antes de qualquer área logada; o aluno do app sem o consentimento de saúde ou sem a data de nascimento vê
+# também a caixa de saúde e a data. Os E2E antigos entram com contas de TESTE que nunca aceitaram: o fechar_avisos() aceita como a
+# pessoa faria. A conta que aceitou uma vez não vê mais a porta (o aceite só cresce). Na produção (antes da virada) não há porta.
+REPO = Path(__file__).resolve().parents[2]
+PORTA = "[data-aceite-no-acesso]"
+# o estado da porta pela situação guardada no aparelho (src/nucleo/situacao.ts: physiq_situacao:<uid>, com o `legal` da hml-12) —
+# a mesma ordem da porta (src/publico/legal/aceite/regras.ts): o pendente vem antes da trava de idade
+_JS_LEGAL = """() => {
+  if (!localStorage.getItem('physiq-principal-auth')) return 'sem_login';
+  const k = Object.keys(localStorage).find((x) => x.startsWith('physiq_situacao:'));
+  if (!k) return 'carregando';
+  try {
+    const l = JSON.parse(localStorage.getItem(k)).legal;
+    if (!l || !l.versao) return 'livre';
+    if (l.aceite_pendente || l.saude_pendente || l.nascimento_pendente) return 'pendente';
+    return l.menor ? 'menor' : 'livre';
+  } catch (e) { return 'livre'; }
+}"""
+
+
+def versao_dos_textos() -> str:
+    """A versão dos textos legais que o app manda no aceite e no consentimento (VERSAO_TEXTOS de src/publico/legal/versao.ts; o
+    banco do staging guarda a mesma em app_config.textos_legais — o e2e/hml12/banco.py confere)."""
+    m = re.search(r'VERSAO_TEXTOS\s*=\s*"(\d{4}-\d{2}-\d{2})"', (REPO / "src" / "publico" / "legal" / "versao.ts").read_text(encoding="utf-8"))
+    if not m:
+        raise RuntimeError("VERSAO_TEXTOS não achada em src/publico/legal/versao.ts")
+    return m.group(1)
+
+
+def data_com_idade(anos: int, folga_dias: int = 60) -> str:
+    """Uma data de nascimento (AAAA-MM-DD) de quem tem `anos` completos hoje em São Paulo, longe do aniversário (folga em dias)."""
+    h = hoje()
+    return (dt.date(h.year - anos, h.month, min(h.day, 28)) - dt.timedelta(days=folga_dias)).isoformat()
+
+
+def nascimento_adulto() -> str:
+    """Data de adulto (30 anos) para o aceite e o plano sem profissional (18+)."""
+    return data_com_idade(30)
+
+
+def args_sem_profissional(objetivo: str, plano: str, nascimento: str | None = None) -> dict:
+    """Os argumentos da entrar_sem_profissional de 5 (hml-12): a de 2 devolve atualize_o_app com a versão dos textos ligada no banco
+    (o staging). Data de adulto (o plano do app é 18+), o consentimento de saúde da versão do app e a origem 'site'."""
+    return {"p_objetivo": objetivo, "p_plano": plano, "p_nascimento": nascimento or nascimento_adulto(),
+            "p_consentimento": versao_dos_textos(), "p_origem": "site"}
+
+
+def estado_da_porta(caso) -> str:
+    """sem_login · carregando (a situação ainda não chegou) · livre (sem a versão ligada ou nada pendente) · pendente · menor."""
+    try:
+        return caso.pg.evaluate(_JS_LEGAL) or "carregando"
+    except Exception:  # noqa: BLE001 — navegando
+        return "carregando"
+
+
+def porta_na_tela(caso, timeout: float = 40) -> bool:
+    """Espera a situação chegar e diz se a porta do aceite está na tela. Sem login, sem a versão ligada, nada pendente, a trava de
+    idade ou o aviso "o Physiq mudou" na tela (ele só monta depois da porta): False assim que souber. Pendente e a porta não vem
+    (rota livre — páginas públicas e exclusão — ou sem internet): False depois de 10 s."""
+    visto = {"estado": "carregando"}
+
+    def decidiu() -> bool:
+        if caso.tem(PORTA):
+            return True
+        if caso.tem("[data-tela-menor]") or caso.tem("[data-aviso-mudanca-ok]"):
+            visto["estado"] = "outra"
+            return True
+        visto["estado"] = estado_da_porta(caso)
+        return visto["estado"] != "carregando"
+
+    caso.esperar(decidiu, timeout)
+    if caso.tem(PORTA):
+        return True
+    return visto["estado"] == "pendente" and caso.esperar(lambda: caso.tem(PORTA), 10)
+
+
+def marcar(loc) -> None:
+    """Marca a caixa (input checkbox, [role=checkbox] ou o rótulo em volta dela), se ainda não estiver marcada."""
+    alvo = loc.first
+    for tentativa in (alvo, alvo.locator("input[type='checkbox'], [role='checkbox']").first):
+        try:
+            if tentativa.count() and not tentativa.is_checked():
+                tentativa.check(timeout=5000)
+            if tentativa.count():
+                return
+        except Exception:  # noqa: BLE001 — não é caixa: tenta a de dentro
+            continue
+    alvo.click()
+
+
+def preencher_porta(caso, nascimento: str | None = None) -> None:
+    """Na tela do aceite: a caixa do aceite e, quando aparecem (aluno do app), a caixa de saúde e a data de nascimento."""
+    pg = caso.pg
+    marcar(pg.locator("[data-aceite-caixa]"))
+    if pg.locator(f"{PORTA} [data-consentimento-saude-caixa]").count():
+        marcar(pg.locator(f"{PORTA} [data-consentimento-saude-caixa]"))
+    data = pg.locator(f"{PORTA} [data-campo-nascimento] input[type='date']")
+    if data.count() and data.first.is_visible():
+        data.first.fill(nascimento or nascimento_adulto())
+
+
+def aceitar_a_porta(caso, nascimento: str | None = None, timeout: float = 60) -> tuple[bool, str]:
+    """Preenche a tela do aceite, clica em "Aceitar e continuar" e espera a tela sumir. Devolve (saiu, o erro da tela, se ficou)."""
+    preencher_porta(caso, nascimento)
+    botao = caso.pg.locator("[data-aceitar]").first
+    caso.esperar(lambda: botao.is_enabled(), 10)
+    botao.click()
+    saiu = caso.esperar(lambda: not caso.tem(PORTA), timeout)
+    erro = ""
+    if not saiu and caso.pg.locator("[data-aceite-erro]").count():
+        erro = caso.pg.locator("[data-aceite-erro]").first.inner_text().strip()
+    return saiu, erro
+
+
 class Caso:
     """Um contexto limpo do navegador por caso (painel 1280 × 883 × 2 = 2560 × 1766, como as telas 6–8)."""
 
@@ -251,8 +368,18 @@ class Caso:
         except Exception:  # noqa: BLE001
             return ""
 
+    def aceitar_porta(self, timeout: float = 40) -> bool:
+        """hml-12: a porta do aceite, se aparecer — marca a caixa (e, no aluno do app, a caixa de saúde e a data de 30 anos atrás),
+        clica em "Aceitar e continuar" e espera a tela sumir. True = aceitou."""
+        if not porta_na_tela(self, timeout):
+            return False
+        saiu, erro = aceitar_a_porta(self)
+        p.check(saiu, f"[{self.nome}] porta do aceite (hml-12): aceitou e a tela abriu" + (f" — erro na tela: {erro!r}" if erro else ""))
+        return saiu
+
     def fechar_avisos(self) -> None:
-        """Fecha o aviso "o Physiq mudou" (1 vez por pessoa) se ele aparecer."""
+        """A porta do aceite (hml-12), se aparecer; depois fecha o aviso "o Physiq mudou" (1 vez por pessoa) se ele aparecer."""
+        self.aceitar_porta()
         if self.esperar(lambda: self.tem("[data-aviso-mudanca-ok]"), 4):
             self.pg.locator("[data-aviso-mudanca-ok]").click()
             self.pg.wait_for_timeout(500)

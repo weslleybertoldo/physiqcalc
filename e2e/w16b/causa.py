@@ -86,7 +86,8 @@ def main() -> int:
     # 1. A entra no app sem profissional
     ida = B.B5.garantir_usuario(B.EMAIL[A], B.CONTAS[A][1], B.NOMES[A])
     q(f"update {S}.profiles set nome = $n${B.NOMES[A]}$n$ where id = '{ida}'")
-    st, r = B.rpc(A, "entrar_sem_profissional", {"p_objetivo": "ganhar_massa", "p_plano": "app_treino_alimentacao"})
+    # hml-12 (H-30): a de 5 argumentos (data de adulto + consentimento de saúde); a de 2 devolve atualize_o_app no staging
+    st, r = B.rpc(A, "entrar_sem_profissional", B.B5.args_sem_profissional("ganhar_massa", "app_treino_alimentacao"))
     ma = matricula_app(ida)
     p.check(st == 200 and isinstance(r, dict) and r.get("ok") and ma and ma["ativo"], f"[1] A entrou no app sem profissional: matrícula do app ativa ({r})")
 

@@ -48,7 +48,9 @@ def ts(texto: str | None) -> dt.datetime | None:
 
 
 def entrar_app(conta: str, objetivo: str, plano: str) -> dict:
-    st, r = B.rpc(B.token(conta), "entrar_sem_profissional", {"p_objetivo": objetivo, "p_plano": plano})
+    # hml-12 (H-30): a de 5 argumentos (data de adulto + o consentimento de saúde da versão do app, origem site) — com a versão dos
+    # textos ligada no banco (o staging), a de 2 devolve atualize_o_app; as recusas de objetivo e plano vêm antes, iguais
+    st, r = B.rpc(B.token(conta), "entrar_sem_profissional", B.B5.args_sem_profissional(objetivo, plano))
     assert st == 200 and isinstance(r, dict), (conta, st, r)
     return r
 

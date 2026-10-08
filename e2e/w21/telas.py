@@ -20,6 +20,9 @@ Negativo:
              Camila; não vê "Importar"; o número do menu = o que o banco deixa ele ler.
   membro     Bruno (2º personal): só o formulário e a resposta dele.
 
+hml-12: no build de staging o /f/ pede o consentimento das respostas de saúde (consentir_preconsulta marca a caixa) e a resposta pela
+API vai pela preconsulta_responder de 6 argumentos (responder_api).
+
 Uso: python3 e2e/w21/telas.py --base http://localhost:5173 --prefixo local [--casos personal,nutri,...]
      (staging: --base https://physiqcalc-staging.vercel.app --prefixo staging; o site antigo: --antigo https://physiqnutri-staging.vercel.app).
      A massa: python3 e2e/w21/massa.py (antes) e python3 e2e/w21/massa.py --limpar (no fim).
@@ -147,6 +150,25 @@ def copiar_link(c, nome: str, f: dict) -> str:
     return url or esperado
 
 
+def consentir_preconsulta(pg) -> bool:
+    """hml-12 (H-30): no build de staging a pré-consulta pede o consentimento das respostas de saúde antes de "Enviar" (sem ele: "Para
+    enviar, marque o consentimento."): marca a caixa. No build de produção (antes da virada) não há a caixa e segue igual."""
+    if not esperar_pg(pg, lambda: pg.locator("[data-consentimento-saude='preconsulta']").count() > 0, 6):
+        return False
+    B.B5.marcar(pg.locator("[data-consentimento-saude='preconsulta'] [data-consentimento-saude-caixa]"))
+    return True
+
+
+def responder_api(slug: str, nome: str, email: str, respostas: dict, telefone: str = "") -> dict:
+    """Responde ao formulário como o público (anônimo), pela RPC da página /f/ — hml-12: a de 6 argumentos, com o consentimento da
+    versão do app (com a versão dos textos ligada no banco, o staging, a de 5 recusa com sem_consentimento). O e2e/w21/_base.py
+    (responder) segue com a de 5."""
+    st, r = B.rpc("", "preconsulta_responder", {"p_slug": slug, "p_nome": nome, "p_email": email, "p_telefone": telefone,
+                                                 "p_respostas": respostas, "p_consentimento": B.B5.versao_dos_textos()})
+    assert st == 200 and isinstance(r, dict) and r.get("id"), ("responder", st, r)
+    return r
+
+
 def responder_no_celular(nav, nome: str, slug: str, pessoa: str, email: str, preencher, print_antes: str | None = None, print_depois: str | None = None) -> bool:
     ctx, pg, erros = publico(nav, nome)
     try:
@@ -162,6 +184,7 @@ def responder_no_celular(nav, nome: str, slug: str, pessoa: str, email: str, pre
         pg.locator("[data-campo-nome-publico]").fill(pessoa)
         pg.locator("[data-campo-email-publico]").fill(email)
         preencher(pg)
+        consentir_preconsulta(pg)  # hml-12: o consentimento de saúde (só no build de staging)
         pg.locator("[data-btn-enviar-publico]").click()
         ok = esperar_pg(pg, lambda: pg.locator("[data-formulario-enviado]").count() > 0, 40)
         p.check(ok, f"[{nome}] enviou: 'Respostas enviadas'")
@@ -395,7 +418,7 @@ def caso_questionario(nav):
 def caso_cadastrar(nav):
     w13 = m()["conta_w13"]
     f = m()["formularios"]["camila"]
-    r1 = B.responder(f["slug"], f"{B.MARCA} Nova Aluna {B.carimbo()}", "w13.marina.teste.claude@physiqnutri.app", {"p1": "Saúde", "p2": False, "p3": 2})
+    r1 = responder_api(f["slug"], f"{B.MARCA} Nova Aluna {B.carimbo()}", "w13.marina.teste.claude@physiqnutri.app", {"p1": "Saúde", "p2": False, "p3": 2})
     c = abrir(nav, "cadastrar", "w13-nutri", "/painel/pre-consulta?aba=respostas")
     c.esperar(lambda: c.tem(f'[data-resposta="{r1["id"]}"]'), 40)
     ocioso(c)

@@ -168,7 +168,8 @@ def main() -> int:
         p.check(st == 200, f"6. Lucas desativa o formulário dele → {st}")
         st, r = B.rpc("", "preconsulta_formulario", {"p_slug": forms["luc"]["slug"]})
         p.check(st == 200 and r is None, f"6. o /f/ do inativo não acha o formulário → {r}")
-        st, r = B.rpc("", "preconsulta_responder", {"p_slug": forms["luc"]["slug"], "p_nome": "Fulano", "p_email": "", "p_telefone": "", "p_respostas": {"p1": "x"}})
+        st, r = B.rpc("", "preconsulta_responder", {"p_slug": forms["luc"]["slug"], "p_nome": "Fulano", "p_email": "", "p_telefone": "", "p_respostas": {"p1": "x"},
+                                                  "p_consentimento": B.versao_dos_textos()})
         p.check(st >= 400 and "formulario_nao_encontrado" in str(r), f"6. e não aceita resposta → {st}")
         st, r = B.rpc("", "preconsulta_formulario", {"p_slug": forms["bru"]["slug"]})
         p.check(st == 200 and isinstance(r, dict) and r.get("titulo", "").endswith("API bru") and r.get("nutricionista") == "Bruno Lima",
