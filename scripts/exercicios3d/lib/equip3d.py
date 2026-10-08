@@ -353,12 +353,17 @@ class Polia:
 
 
 def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.045, raio_cabo=0.003, alto=2.15,
-          gira=False):
+          gira=False, so_roldana=False):
     """Estação de cabo de coluna única (ver o bloco acima): roldana com o eixo em (x, y, altura), virada pra `frente`
     (horizontal; padrão −Y), o cabo passando a `raio` m do eixo dela; trilho, carrinho, caixa da pilha de pesos e base
     ficam atrás da roldana. Devolve um Polia (raizes, direcao(), ligar()).
     gira=True (lote 3, 06/10/2026): o carrinho tem o garfo que gira (cabo saindo de lado ou na diagonal) — devolve uma
-    PoliaGiratoria (ver o bloco dela, no fim do arquivo); sem isso, nada muda."""
+    PoliaGiratoria (ver o bloco dela, no fim do arquivo); sem isso, nada muda.
+    so_roldana=True (Puxada Frontal Aberta, lote 6, 08/10/2026): só a roldana (garfo, flanges, miolo e eixo) e o cabo que
+    mexe — sem base, pilha, trilho, viga, carrinho nem o cabo parado: quem chama põe a estrutura em volta (a estação de
+    puxada, estacao_puxada(), no fim do arquivo, pendura a roldana no braço de cima); sem isso, nada muda."""
+    if gira and so_roldana:
+        raise ValueError("polia: gira e so_roldana não andam juntos")
     f = Vector(frente)
     f = Vector((f.x, f.y, 0.0)).normalized()
     cima = Vector((0.0, 0.0, 1.0))
@@ -379,25 +384,27 @@ def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.04
     torre = bpy.data.objects.new(nome + "_torre", None)
     bpy.context.scene.collection.objects.link(torre)
     trilho = -0.10                                            # eixo do trilho (atrás da roldana)
-    bloco("_base", -0.22, 0, 0.0125, (0.56, 0.68, 0.025), mat_estrutura(), chanfro=0.004, aneis=True)
-    bloco("_pilha", -0.34, 0, 0.9625, (0.44, 0.36, 1.875), mat_carenagem(), chanfro=0.012)
-    bloco("_trilho", trilho, 0, (0.025 + alto) / 2, (0.05, 0.05, alto - 0.025), mat_estrutura(), aneis=True)
-    for k, z in enumerate((0.10, alto - 0.20)):
-        bloco("_suporte%d" % k, -0.1425, 0, z, (0.04, 0.035, 0.05), mat_estrutura(), chanfro=0.003)
-    bloco("_viga", -0.31, 0, alto - 0.03, (0.08, 0.42, 0.06), mat_estrutura(), aneis=True)
-    bloco("_roldana_alta", -0.06, 0, alto - 0.11, (0.06, 0.10, 0.10), mat_estrutura(), chanfro=0.004)
-    # carrinho no trilho: luva, pino de regulagem, garfo e roldana (flanges + miolo + eixo)
-    bloco("_carrinho", trilho, 0, altura, (0.085, 0.085, 0.16), mat_estrutura(), chanfro=0.005)
-    cilindro_lado("_pino", 0.007, 0.035, trilho, 0.0425 + 0.0175, altura, mat_aco())
-    cilindro_lado("_pino_bola", 0.012, 0.016, trilho, 0.0425 + 0.035 + 0.008, altura, mat_borracha())
+    if not so_roldana:                                        # a torre (so_roldana: quem chama põe a estrutura)
+        bloco("_base", -0.22, 0, 0.0125, (0.56, 0.68, 0.025), mat_estrutura(), chanfro=0.004, aneis=True)
+        bloco("_pilha", -0.34, 0, 0.9625, (0.44, 0.36, 1.875), mat_carenagem(), chanfro=0.012)
+        bloco("_trilho", trilho, 0, (0.025 + alto) / 2, (0.05, 0.05, alto - 0.025), mat_estrutura(), aneis=True)
+        for k, z in enumerate((0.10, alto - 0.20)):
+            bloco("_suporte%d" % k, -0.1425, 0, z, (0.04, 0.035, 0.05), mat_estrutura(), chanfro=0.003)
+        bloco("_viga", -0.31, 0, alto - 0.03, (0.08, 0.42, 0.06), mat_estrutura(), aneis=True)
+        bloco("_roldana_alta", -0.06, 0, alto - 0.11, (0.06, 0.10, 0.10), mat_estrutura(), chanfro=0.004)
+        # carrinho no trilho: luva, pino de regulagem, garfo e roldana (flanges + miolo + eixo)
+        bloco("_carrinho", trilho, 0, altura, (0.085, 0.085, 0.16), mat_estrutura(), chanfro=0.005)
+        cilindro_lado("_pino", 0.007, 0.035, trilho, 0.0425 + 0.0175, altura, mat_aco())
+        cilindro_lado("_pino_bola", 0.012, 0.016, trilho, 0.0425 + 0.035 + 0.008, altura, mat_borracha())
     for k in (-1, 1):
         bloco("_garfo%+d" % k, -0.015, k * 0.017, altura, (0.004, 0.09, 0.11), mat_estrutura(), chanfro=0.0015)
         cilindro_lado("_flange%+d" % k, raio + 0.007, 0.004, 0, k * 0.0095, altura, mat_aco())
     cilindro_lado("_miolo", raio - 0.0025, 0.015, 0, 0, altura, mat_aco())
     cilindro_lado("_eixo", 0.007, 0.042, 0, 0, altura, mat_aco())
     # cabo parado: sobe da roldana pelo lado da torre até a roldana de cima (dentro da caixinha no alto do trilho)
-    _em_aneis(tubo(nome + "_cabo_trilho", P(-raio, 0, altura), P(-raio, 0, alto - 0.16), raio_cabo, mat_aco(), pai=torre,
-                   vertices=12))
+    if not so_roldana:
+        _em_aneis(tubo(nome + "_cabo_trilho", P(-raio, 0, altura), P(-raio, 0, alto - 0.16), raio_cabo, mat_aco(), pai=torre,
+                       vertices=12))
     # cabo que mexe: cilindro de 1 m no Z local, a `raio` do eixo no Y local (a origem fica no eixo da roldana)
     bpy.ops.mesh.primitive_cylinder_add(radius=raio_cabo, depth=1.0, location=(0, raio, 0.5), vertices=12)
     cabo = bpy.context.active_object
@@ -4026,3 +4033,195 @@ def esteira(nome="esteira", y_rolo_frente=-0.70, espacamento=1.75, faixas=2, fai
     es.andar(0.0)
     return es
 # ===== fim: Esteira =================================================================================================================
+
+
+# ===== Estação de puxada ============================================================================================================
+# ── ESTAÇÃO DE PUXADA (Puxada Frontal Aberta, lote 6, 08/10/2026; a MESMA peça serve à Puxada Frontal Fechada e à Puxada Frontal
+# Supinada (lote 7) e à Puxada Frontal, à Puxada Atrás da Nuca e à Puxada com Triângulo (lote 9)) ─────────────────────────────────
+# Puxada alta (lat pulldown) de pilha: assento estofado num poste, 2 rolos de espuma por cima das coxas (um de cada lado de um poste
+# que sobe do chão entre as pernas, logo na frente do assento), a torre NA FRENTE de quem senta (2 colunas com a pilha de pesos no
+# meio, em carenagem parada: o app não mostra a carga) e o braço de cima, que sai do alto da torre pra trás, por cima de quem senta,
+# até a roldana alta — a da polia(so_roldana=True): garfo, flanges, miolo, eixo e o cabo que mexe. O cabo corre dentro do braço até
+# a torre (escondido) e sai da roldana até o engate do acessório: a barra longa (barra_puxada(), abaixo) ou outro acessório de polia
+# (o triângulo da Remada Baixa na Polia), posto a cada quadro com por_acessorio() e pol.ligar(), como no Tríceps Pulley. O cabo sai
+# do lado −Y da roldana (o lado da torre) e desce até o engate, que fica sempre atrás dela (+Y, o lado de quem senta): no fim da
+# puxada ele sobe da barra pra frente, longe do rosto.
+# A regulagem certa é a do fabricante: o assento sobe e desce até as coxas ficarem deitadas com os pés chapados ("Keep the feet flat
+# on the floor (adjust the seat height accordingly)", NFPT, Lat Pulldown) e os rolos descem até encostar firme em cima das coxas
+# ("adjusting the thigh pad to fit firmly against the top of your thighs", ACE, Seated Lat Pulldown; "Knee rollers are fully
+# upholstered and adjust to user height", Legend Fitness 905 Lat Pulldown) — por isso a cena monta a peça EM VOLTA do corpo: ela dá a
+# roldana, o assento, os rolos e a frente da torre; a peça liga tudo com a estrutura.
+# Medidas de máquina de verdade: altura de 2,21–2,29 m (Titan Lat Tower: "Overall Height 87-in."; Legend Fitness 905 Lat Pulldown:
+# "90” H", "48” W"; Gym Gear Pro Series Lat Pulldown / Low Row: "L 189 x W 122 x H 223 cm"), colunas de tubo 50 × 100 mm (Gym Gear
+# Pro Series: "functional part uses a 50*100 rectangular tube"), rolo de 5" (Ø 12,7 cm, o mesmo da cadeira extensora da fábrica).
+# Roldana de ~10,5 cm e cabo de 6 mm: os da polia(). Pilha, braço, cubo e postes são escolha da fábrica. Peças compridas em anéis
+# (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y, de frente pra torre):
+#   est = e3.estacao_puxada("puxada", roldana=(y, z), assento=(...), rolos=(...), torre=y_da_frente_da_torre)
+#   barra = e3.barra_puxada("barra_puxada", pegada=d)
+#   no pose(t): u = est.pol.direcao(c)                       # c = meio da barra no quadro
+#               e3.por_acessorio(barra.raiz, c, (1, 0, 0), u)  # o engate da barra virado pro cabo
+#               est.pol.ligar(c + u * barra.engate)           # cabo da saída da roldana até o engate
+#   Cena(pose, est.equipamentos + [barra.raiz], pegadas=[("Left", ck.Barra(barra.pegadores[1], barra.raio, barra.meia)), ...],
+#        apoios=est.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_assento" e "<nome>_rolos" (APOIO), e as 2 da polia: "<nome>_polia_torre" (a roldana, parada) e "<nome>_polia_cabo" (gira
+# e estica).
+class EstacaoPuxada:
+    """Estação de puxada pronta na cena (estacao_puxada())."""
+
+    def __init__(self, raizes, pol, roldana):
+        self.raizes = raizes                          # {"estrutura", "assento", "rolos"}
+        self.pol = pol                                # a roldana alta e o cabo (Polia: direcao(), ligar(), raizes)
+        self.roldana = Vector(roldana)                # eixo da roldana alta (mundo)
+        self.equipamentos = [raizes["estrutura"]] + list(pol.raizes)
+        self.apoios = [raizes["assento"], raizes["rolos"]]
+
+
+def estacao_puxada(nome="puxada", roldana=(-0.30, 2.10), assento=(-0.20, 0.14, 0.47, 0.38, 0.06),
+                   rolos=(-0.36, 0.66, 0.0635, 0.21, 0.035), torre=-0.80, raio_roldana=0.045, pilha=True):
+    """Estação de puxada (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, de frente pra torre:
+      roldana = (y, z) do eixo da roldana alta (em x = 0, eixo ao longo do X); o braço de cima passa logo acima dela;
+      assento = (y_frente, y_tras, topo, largura, espessura): estofado do assento (APOIO) num poste;
+      rolos   = (y, z, raio, comprimento, x_dentro): eixo dos 2 rolos das coxas (ao longo do X, em (y, z)); cada rolo vai de
+                |x| = x_dentro até x_dentro + comprimento (APOIO); o poste deles sobe do chão entre as pernas, em x = 0;
+      torre   = y da face da torre virada pra quem senta (a torre vai dali pra −Y, na frente dos pés);
+      raio_roldana = do eixo da roldana até o eixo do cabo no canal; pilha = caixa da pilha de pesos.
+    Devolve um EstacaoPuxada (raizes, pol, roldana, equipamentos, apoios)."""
+    y_p, z_p = roldana
+    y_f, y_t, topo, larg, esp = assento
+    y_r, z_r, raio_r, comp_r, x_d = rolos
+    rot_x90 = (0, math.radians(90), 0)                       # cilindro deitado ao longo do X
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, ass, rol = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("rolos")
+    # ── torre na frente (de y = torre pra −Y): 2 colunas de 50 × 100 mm, a travessa no alto e a pilha em carenagem no meio ────────
+    alt_braco = 0.10
+    z_bb = z_p + raio_roldana + 0.010                        # embaixo do braço de cima: o garfo da roldana (11 cm) encosta nele
+    z_top = z_bb + alt_braco
+    y_tc = torre - 0.21                                      # meio da torre, ao longo do Y
+    x_col = 0.29
+    for k in (-1, 1):
+        _viga(nome + "_coluna%+d" % k, (k * x_col, y_tc, 0.05), (k * x_col, y_tc, z_top), 0.05, 0.10, mat_estrutura(), pai=estr)
+    _viga(nome + "_travessa", (-x_col - 0.025, y_tc, z_top - alt_braco / 2), (x_col + 0.025, y_tc, z_top - alt_braco / 2), 0.10,
+          alt_braco, mat_estrutura(), pai=estr)
+    if pilha:
+        _em_aneis(_reto(caixa(nome + "_pilha", (0, y_tc, 0.05 + 1.80 / 2), (0.44, 0.32, 1.80), mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+    # ── braço de cima: do alto da torre pra trás, por cima de quem senta, até passar 7 cm da roldana (o cabo corre dentro dele) ──
+    _viga(nome + "_braco", (0, y_tc - 0.05, z_bb + alt_braco / 2), (0, y_p + 0.07, z_bb + alt_braco / 2), 0.08, alt_braco,
+          mat_estrutura(), pai=estr)
+    # ── base no chão: chapa da torre, viga do meio (ao longo do Y, entre os pés, até atrás do assento) e o pé de trás ─────────────
+    y_fim = y_t + 0.06
+    _em_aneis(_reto(caixa(nome + "_base_torre", (0, y_tc, 0.025), (2 * x_col + 0.20, 0.42, 0.05), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    _em_aneis(_reto(caixa(nome + "_base_meio", (0, (torre + y_fim) / 2, 0.03), (0.08, y_fim - torre, 0.06), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.08)
+    _em_aneis(_reto(caixa(nome + "_base_tras", (0, y_fim - 0.04, 0.025), (0.56, 0.08, 0.05), mat_estrutura(), pai=estr,
+                          chanfro=0)), passo=0.08)
+    # ── assento: estofado (APOIO) em cima de uma chapa; o poste entra numa luva presa na viga do meio (a regulagem da altura) ────
+    y_ass = (y_f + y_t) / 2
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, y_t - y_f, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.05, y_t - y_f - 0.04, 0.024), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    _viga(nome + "_poste_assento", (0, y_ass, 0.06), (0, y_ass, z_chapa - 0.012), 0.06, 0.06, mat_estrutura(), pai=estr)
+    _viga(nome + "_luva_assento", (0, y_ass, 0.06), (0, y_ass, min(0.26, z_chapa - 0.08)), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── rolos das coxas (APOIO): poste entre as pernas, luva de regulagem com o pino, cubo e o eixo de aço dentro dos 2 rolos ────────
+    _viga(nome + "_poste_rolos", (0, y_r, 0.06), (0, y_r, z_r - 0.035), 0.05, 0.05, mat_estrutura(), pai=estr)
+    _viga(nome + "_luva_rolos", (0, y_r, 0.06), (0, y_r, min(0.30, z_r - 0.10)), 0.07, 0.07, mat_estrutura(), pai=estr)
+    _cilindro(nome + "_pino_rolos", 0.007, 0.03, (0, y_r - 0.05, min(0.30, z_r - 0.10) - 0.03), (math.radians(90), 0, 0),
+              mat_aco(), pai=estr)
+    caixa(nome + "_cubo_rolos", (0, y_r, z_r), (0.06, 0.07, 0.07), mat_estrutura(), pai=estr, chanfro=0.005)
+    _em_aneis(_cilindro(nome + "_eixo_rolos", 0.0125, 2 * (x_d + comp_r) + 0.016, (0, y_r, z_r), rot_x90, mat_aco(), pai=estr),
+              passo=0.04)
+    for k in (-1, 1):
+        xc = k * (x_d + comp_r / 2)
+        _cilindro(nome + "_rolo%+d" % k, raio_r, comp_r, (xc, y_r, z_r), rot_x90, mat_estofado(), vertices=48, pai=rol)
+        for e in (-1, 1):
+            _cilindro(nome + "_rolo_tampa%+d%+d" % (k, e), raio_r * 0.55, 0.006, (xc + e * (comp_r / 2 + 0.001), y_r, z_r), rot_x90,
+                      mat_borracha(), pai=rol)
+    # ── roldana alta (a da polia, sem torre): garfo, flanges, miolo, eixo e o cabo que mexe ─────────────────────────────────────────
+    pol = polia(nome + "_polia", x=0.0, y=y_p, altura=z_p, frente=(0, 1, 0), raio=raio_roldana, so_roldana=True)
+    bpy.context.view_layer.update()
+    return EstacaoPuxada({"estrutura": estr, "assento": ass, "rolos": rol}, pol, (0.0, y_p, z_p))
+
+
+# ── BARRA LONGA DE PUXADA (Puxada Frontal Aberta, lote 6, 08/10/2026): a barra comum da estação de puxada, de aço, reta no meio e com
+# as 2 pontas dobradas pra baixo (pro lado de longe do cabo), com pegadas de borracha. 48" de ponta a ponta e núcleo de 1" (Titan Lat
+# Tower: "Lat Bar Width 48-in.", "Lat Bar Diameter 1-in."; Gym Gear 48” Standard Grip Lat Pulldown Bar (Wide): "Size 48”", "Chrome
+# plated solid steel construction", "the rubber grip handles provide maximum user comfort"), pontas dobradas a 25° (Eleiko Lat Pull
+# Down Bar: "The 25-degree bend allows for comfortable and effective hand positioning and a full range of motion", "25 mm grip on a
+# 1200 mm bar", "Dimensions (L x W x H) 1200 x 25 x 147 mm"). O reto do meio (74 cm) sai da foto do fabricante (Eleiko: a dobra
+# começa a ~3/8 do comprimento a partir de cada ponta). O reto é a barra_polia() (núcleo de 25 mm, borrachas de 1,2", anéis e o
+# engate no meio, com o cabo começando a `engate` m do eixo); as pontas dobradas (núcleo, borracha e a tampa) e uma esfera em cada
+# dobra são filhas da mesma raiz. Eixo do reto no X local e o engate no +Y local; as pontas descem pro −Y local.
+# A pegada (onde cada mão fecha, a `pegada` m do meio, medida AO LONGO da barra — no reto ou já na dobra) vira um vazio filho da raiz
+# em cada lado, com o X local ao longo da barra ali: checagem3d.Barra(barra.pegadores[s], barra.raio, barra.meia) mede a mão nele.
+class BarraPuxada:
+    """Barra longa de puxada pronta na cena (barra_puxada())."""
+
+    def __init__(self, raiz, raio, reto, dobra, ponta, engate, pegada, pegadores, meia):
+        self.raiz = raiz                              # vazio no eixo, no meio do reto: por_acessorio(raiz, ...) põe no quadro
+        self.raio = raio                              # raio da borracha onde a mão fecha
+        self.reto, self.dobra, self.ponta = reto, dobra, ponta     # reto do meio (m), dobra (graus), cada ponta dobrada (m)
+        self.engate = engate                          # eixo da barra → onde o cabo começa (m), no +Y local
+        self.pegada = pegada                          # cada mão fecha a `pegada` m do meio, ao longo da barra
+        self.pegadores = pegadores                    # {+1, −1}: vazio no meio da mão, X local ao longo da barra ali
+        self.meia = meia                              # meia largura da faixa da mão (checagem3d.Barra)
+
+    def local(self, s, d):
+        """Ponto do eixo da barra a `d` m do meio, medido ao longo dela, do lado s (+1 = +X), e a direção da barra ali, pra fora
+        (no referencial da raiz)."""
+        if d <= self.reto / 2:
+            return Vector((s * d, 0.0, 0.0)), Vector((float(s), 0.0, 0.0))
+        b = math.radians(self.dobra)
+        e = Vector((s * math.cos(b), -math.sin(b), 0.0))
+        return Vector((s * self.reto / 2, 0.0, 0.0)) + e * (d - self.reto / 2), e
+
+    def mundo(self, s, d=None):
+        """O mesmo no mundo, com a barra onde ela está agora (padrão: no meio da pegada)."""
+        p, e = self.local(s, self.pegada if d is None else d)
+        M = self.raiz.matrix_world
+        return M @ p, (M.to_3x3() @ e).normalized()
+
+
+def barra_puxada(nome="barra_puxada", comprimento=1.219, reto=0.74, dobra=25.0, raio=0.01524, pegada=0.45, meia=0.06,
+                 engate=ENGATE_BARRA_POLIA):
+    """Barra longa de puxada (ver o bloco acima): `comprimento` m de ponta a ponta (na horizontal), `reto` m de reto no meio, pontas
+    dobradas `dobra` graus pra baixo, borracha de raio `raio`, a mão fechando a `pegada` m do meio (ao longo da barra) e a faixa da mão
+    com `meia` m pra cada lado. Devolve um BarraPuxada (raiz, local(), mundo(), pegadores, ...)."""
+    raiz = barra_polia(nome, comprimento=reto, raio=raio, engate=engate)    # o reto do meio, com o engate
+    b = math.radians(dobra)
+    ponta = (comprimento - reto) / 2 / math.cos(b)                          # cada ponta dobrada, ao longo dela
+    for s in (-1, 1):
+        A = Vector((s * reto / 2, 0.0, 0.0))
+        e = Vector((s * math.cos(b), -math.sin(b), 0.0))
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=raio + 0.0012, segments=24, ring_count=12, location=A)
+        esf = bpy.context.active_object
+        esf.name = nome + "_dobra%+d" % s
+        bpy.ops.object.shade_smooth()
+        esf.data.materials.append(mat_aco())
+        esf.parent = raiz
+        _em_aneis(tubo(nome + "_ponta_nucleo%+d" % s, A, A + e * (ponta - 0.01), 0.0125, mat_aco(), pai=raiz), passo=0.04)
+        _em_aneis(tubo(nome + "_ponta_pegada%+d" % s, A + e * 0.025, A + e * (ponta - 0.03), raio, mat_borracha(), pai=raiz,
+                       vertices=32), passo=0.04)
+        tubo(nome + "_ponta_tampa%+d" % s, A + e * (ponta - 0.03), A + e * ponta, raio + 0.0025, mat_borracha(), pai=raiz, vertices=32)
+    bpy.context.view_layer.update()
+    barra = BarraPuxada(raiz, raio, reto, dobra, ponta, engate, pegada, {}, meia)
+    for s in (-1, 1):                                                        # vazio no meio de cada mão, X ao longo da barra
+        p, e = barra.local(s, pegada)
+        o = bpy.data.objects.new(nome + "_pegador%+d" % s, None)
+        bpy.context.scene.collection.objects.link(o)
+        o.empty_display_size = 0.03
+        o.parent = raiz
+        z = Vector((0.0, 0.0, 1.0))
+        o.matrix_basis = Matrix.Translation(p) @ Matrix((e, z.cross(e), z)).transposed().to_4x4()
+        barra.pegadores[s] = o
+    bpy.context.view_layer.update()
+    return barra
+# ===== fim: Estação de puxada =======================================================================================================
