@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dumbbell, ListChecks, Receipt, Repeat, Salad, Wallet } from "lucide-react";
@@ -18,6 +18,11 @@ import { EstadoCarregando, EstadoErro, EstadoSemInternet } from "@/ui/premium/Es
 import { GrupoLista, ItemLista } from "@/ui/premium/Lista";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useOnline } from "@/ui/premium/useOnline";
+
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura sobre o Assinar/Pagar do plano do app (Decreto 7.962/2013, art. 4º, I) — SÓ no
+// build de staging até a virada. Na produção o Rollup corta o import() (a expressão do Vite fica aqui, direto na condição, sem função
+// no meio). Nunca na versão da Google Play (lá não há pagamento) nem no pagamento ao profissional (não é venda do Physiq).
+const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
 
 /**
  * Perfil › Meu plano (W7b — aluno sem profissional): o plano do app (Treino R$ 29,90 · Treino + Alimentação R$ 49,90 — os
@@ -123,6 +128,11 @@ export default function MeuPlano() {
                       ? `Cobrança automática no cartão ligada${m.assinatura?.proximo_vencimento ? ` · próxima em ${dataBR(m.assinatura.proximo_vencimento)}` : ""}.`
                       : "Pague por Pix ou cartão, ou ligue a cobrança automática no cartão."}
               </p>
+            )}
+            {ResumoAntesDePagar && !ehLoja && situacao?.tipo !== "isento" && !automatica && (
+              <Suspense fallback={null}>
+                <ResumoAntesDePagar tela="meu-plano" />
+              </Suspense>
             )}
             {!ehLoja && situacao?.tipo !== "isento" && !automatica && (
               <Botao variante="w" icone={Wallet} className="w-full" onClick={() => navigate("/perfil/pagamentos?pagar=mensalidade")} data-meu-plano-pagar>

@@ -1,18 +1,39 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ComponentType } from "react";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PRECOS_PADRAO } from "@/nucleo/cobranca/regras";
 import { conta, situacao } from "@/test/fixturesNucleo";
 
-const h = vi.hoisted(() => ({
-  conta: null as unknown,
-  master: false,
-  situacao: null as unknown,
-  buscar: vi.fn(),
-  acao: vi.fn(),
-  recarregar: vi.fn(async () => null),
+const h = vi.hoisted(() => {
+  // hml-11 (D5): os testes de sempre rodam como a produção — sem o resumo antes de pagar e com a frase de hoje. O Vitest roda como o
+  // staging (vitest.config.ts) e a condição do Vite é lida quando a tela carrega: o schema troca ANTES dos imports.
+  vi.stubEnv("VITE_DB_SCHEMA", "public");
+  return {
+    conta: null as unknown,
+    master: false,
+    situacao: null as unknown,
+    buscar: vi.fn(),
+    acao: vi.fn(),
+    recarregar: vi.fn(async () => null),
+    loja: false,
+    importouResumo: 0,
+  };
+});
+vi.mock("@/lib/distribuicao", () => ({
+  get ehLoja() {
+    return h.loja;
+  },
+  get DISTRIBUICAO() {
+    return h.loja ? "play" : "site";
+  },
 }));
+// hml-11: conta quando a tela pede o resumo (o import() que a produção corta)
+vi.mock("@/publico/legal/ResumoAntesDePagar", async (orig) => {
+  h.importouResumo += 1;
+  return orig<typeof import("@/publico/legal/ResumoAntesDePagar")>();
+});
 vi.mock("@/nucleo/conta", () => ({ useConta: () => ({ conta: h.conta, ehMaster: h.master, ehDono: true }) }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ situacao: h.situacao, recarregarSituacao: h.recarregar, usuario: { id: "u1", email: "dono@teste.com" } }) }));
 vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: () => <div data-brick-falso>brick</div>, initMercadoPago: () => {} }));
@@ -24,12 +45,12 @@ import { ErroCobranca } from "./plano/api";
 // H4: a validade do Pix dos mocks era uma data fixa (02/10/2026 12:00Z) e o teste do Pix passou a falhar depois dela: 2 h a partir de agora
 const PIX_VALE_ATE = new Date(Date.now() + 2 * 3_600_000).toISOString();
 
-function montar() {
+function montar(Tela: ComponentType = Plano) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={["/painel/configuracoes/plano"]}>
-        <Plano />
+        <Tela />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -43,6 +64,9 @@ const status = (o: Record<string, unknown> = {}, c: Record<string, unknown> = {}
 });
 
 beforeEach(() => {
+  vi.stubEnv("VITE_DB_SCHEMA", "public");
+  h.loja = false;
+  h.importouResumo = 0;
   h.master = false;
   h.situacao = situacao();
   h.buscar.mockReset();
@@ -173,6 +197,9 @@ describe("Configurações › Plano — conta nova (6.5)", () => {
     expect(await screen.findByDisplayValue("00020126PIX")).toBeInTheDocument();
     expect(screen.getByText(/Aguardando confirmação do Mercado Pago/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Simular aprovação/ })).toBeInTheDocument();
+    // hml-11: estes testes rodam como a produção (o stub do topo) — sem o resumo antes de pagar
+    expect(h.importouResumo).toBe(0);
+    expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
   });
   it("faixa em que os alunos não cabem fica desabilitada", async () => {
     h.conta = conta();
@@ -217,5 +244,66 @@ describe("Configurações › Plano — conta nova (6.5)", () => {
     // a tela tenta 1 vez de novo antes de mostrar o erro (rede instável)
     expect(await screen.findByText("Não deu para carregar o plano", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Tentar de novo/ })).toBeInTheDocument();
+  });
+});
+
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de pagar (Decreto 7.962/2013, art. 4º, I) e a frase da renovação nova,
+// SÓ no build de staging até a virada, e nunca na versão da Google Play. Cada teste importa a tela de novo com o schema do build
+// (fica no FIM do arquivo: depois do resetModules, nenhum teste usa a tela do import de cima).
+describe("Configurações › Plano — hml-11: o resumo antes de pagar só no staging", () => {
+  async function planoDoBuild(schema: "staging" | "public") {
+    vi.stubEnv("VITE_DB_SCHEMA", schema);
+    vi.resetModules();
+    return (await import("./Plano")).default;
+  }
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("staging: o resumo acima dos botões de pagar, com os links, e 'renova todo mês até você cancelar'", async () => {
+    const PlanoDoStaging = await planoDoBuild("staging");
+    h.conta = conta();
+    h.buscar.mockResolvedValue(status());
+    montar(PlanoDoStaging);
+    const resumo = await waitFor(
+      () => {
+        const el = document.querySelector('[data-resumo-antes-de-pagar="plano-profissional"]');
+        if (!el) throw new Error("o resumo ainda não apareceu");
+        return el;
+      },
+      { timeout: 5000 },
+    );
+    expect(h.importouResumo).toBe(1);
+    expect(resumo.compareDocumentPosition(screen.getByRole("button", { name: /Pagar com Pix/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(resumo.querySelector('[data-link-legal="assinatura"]')?.getAttribute("href")).toBe("/assinatura");
+    expect(resumo.querySelector('[data-link-legal="politica"]')?.getAttribute("href")).toBe("/privacidade");
+    expect(resumo.textContent).toContain("Profissional:");
+    expect(resumo.textContent).not.toContain("Aluno sem profissional:");
+    const frase = document.querySelector("[data-frase-renovacao]");
+    expect(frase?.textContent).toMatch(/^Pix vale 72 h e confirma na hora\. Na cobrança automática a 1ª cobrança é em 13\/10 \(fim do teste\) e renova todo mês até você cancelar\.$/);
+    expect(document.body.textContent).not.toContain("sem aviso");
+  });
+
+  it("versão da Google Play (staging): nunca o resumo", async () => {
+    h.loja = true;
+    const PlanoDoStaging = await planoDoBuild("staging");
+    h.conta = conta();
+    h.buscar.mockResolvedValue(status());
+    montar(PlanoDoStaging);
+    expect(await screen.findByText(/Teste grátis até 13\/10\/2026/, {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
+    expect(h.importouResumo).toBe(0);
+  });
+
+  it("produção: sem o resumo (o import nem acontece) e com a frase de hoje", async () => {
+    const PlanoDaProducao = await planoDoBuild("public");
+    h.conta = conta();
+    h.buscar.mockResolvedValue(status());
+    montar(PlanoDaProducao);
+    expect(await screen.findByText("Escolha o plano", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByText(/e renova todo mês, sem aviso\.$/)).toBeInTheDocument();
+    expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
+    expect(document.querySelector("[data-frase-renovacao]")).toBeNull();
+    expect(h.importouResumo).toBe(0);
   });
 });

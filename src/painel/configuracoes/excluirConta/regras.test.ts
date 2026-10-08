@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { situacao, conta as contaSituacao } from "@/test/fixturesNucleo";
 import type { Conferencia, ContaDoDono } from "./api";
 import {
@@ -14,6 +14,11 @@ const contaDono = (extra: Partial<ContaDoDono> = {}): ContaDoDono => ({
   cobrancas: { plano: 1, alunos: 2 },
   prontuarios: [{ paciente_id: "p1", conta_id: "c1", nome: "Alice", registros: 1, restritos: 0 }, { paciente_id: "p2", conta_id: "c1", nome: "Bruno", registros: 2, restritos: 1 }],
   ...extra,
+});
+
+// hml-11 (D5): a frase da cobrança depende do build (VITE_DB_SCHEMA); cada teste dela diz qual
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 const conferencia = (extra: Partial<Conferencia> = {}): Conferencia => ({
@@ -37,6 +42,7 @@ describe("excluir conta do profissional — os textos da conferência", () => {
     expect(textoDosAlunos(contaDono({ alunos: { total: 0, para_o_app: 0, guardados: 0, lista: [] } }), false)).toBe("Nenhum aluno na conta agora.");
   });
   it("cobrança: só informação (cancelada, sem reembolso) — nenhum valor e nenhum 'pague'", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "public"); // hml-11: a frase de hoje é a da produção
     const l = textosDaCobranca(contaDono());
     expect(l).toEqual([
       "A cobrança automática do plano desta conta é cancelada agora (sem reembolso do que já foi pago).",
@@ -45,6 +51,15 @@ describe("excluir conta do profissional — os textos da conferência", () => {
     expect(l.join(" ")).not.toMatch(/R\$|pague|assine|pix/i);
     expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 1 } }))).toEqual(["A cobrança automática de 1 aluno para você também é cancelada."]);
     expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 0 } }))).toEqual([]);
+  });
+  it("hml-11 (D5): no staging, 'sem reembolso' vira a desistência em 7 dias dos Termos de assinatura novos (ainda só informação)", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    const l = textosDaCobranca(contaDono());
+    expect(l).toEqual([
+      "A cobrança automática do plano desta conta é cancelada agora (o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento).",
+      "As cobranças automáticas de 2 alunos para você também são canceladas.",
+    ]);
+    expect(l.join(" ")).not.toMatch(/R\$|pague|assine|pix|sem reembolso/i);
   });
   it("o membro que sai: os alunos dele ficam sem responsável (singular e plural)", () => {
     expect(textoDosAlunosDaEquipe(1)).toBe("O seu aluno fica na conta, sem responsável, para o dono atribuir a outro profissional.");

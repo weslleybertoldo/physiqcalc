@@ -163,7 +163,13 @@ export default function ExcluirConta() {
               <ul className="space-y-1">
                 <li><strong>O seu login</strong> (e-mail, senha e o acesso pelo Google): não dá mais para entrar com ele.</li>
                 <li><strong>Aluno</strong>: os seus dados de treino (séries, cargas, histórico), o que você enviou pelo app (fotos do diário, refeições e metas marcadas), a foto do perfil e os avisos.</li>
-                <li><strong>Profissional</strong>: a foto, os contatos e o carimbo do perfil e o código de convite. A sua conta é encerrada e a equipe perde o acesso; a cobrança automática do plano é cancelada (sem reembolso do que já foi pago).</li>
+                <li><strong>Profissional</strong>: a foto, os contatos e o carimbo do perfil e o código de convite. A sua conta é encerrada e a equipe perde o acesso; a cobrança automática do plano é cancelada ({/* hml-11 (D5): a frase nova só no staging até a virada */}
+                  {import.meta.env.VITE_DB_SCHEMA === "staging" ? (
+                    <span data-frase-desistencia>o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento</span>
+                  ) : (
+                    "sem reembolso do que já foi pago"
+                  )}
+                  ).</li>
               </ul>
             </Secao>
 
