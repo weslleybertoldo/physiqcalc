@@ -1,0 +1,10 @@
+[Unit]
+Description=Physiq: cópia diária cifrada dos bancos às 03:23
+
+[Timer]
+OnCalendar=*-*-* 03:23:00
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

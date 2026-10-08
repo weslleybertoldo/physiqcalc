@@ -1,0 +1,11 @@
+[Unit]
+Description=Physiq: cifrar as cópias manuais do banco (~/backups/physiq) paradas há 2 h ou mais
+Documentation=https://github.com/weslleybertoldo/physiqcalc/blob/main/docs/backup.md
+OnFailure=physiq-backup-aviso@%n.service
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/lib/physiq-backup/cifrar-copias-manuais.sh
+Nice=10
+IOSchedulingClass=idle

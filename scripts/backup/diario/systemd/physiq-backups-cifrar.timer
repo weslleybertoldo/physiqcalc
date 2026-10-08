@@ -1,0 +1,9 @@
+[Unit]
+Description=Physiq: cifrar as cópias manuais do banco de hora em hora
+
+[Timer]
+OnCalendar=*-*-* *:47:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

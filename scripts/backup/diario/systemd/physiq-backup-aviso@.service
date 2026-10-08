@@ -1,0 +1,6 @@
+[Unit]
+Description=Physiq: aviso de falha da rotina %i
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/lib/physiq-backup/aviso.sh %i
