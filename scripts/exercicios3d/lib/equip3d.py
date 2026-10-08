@@ -75,16 +75,23 @@ def barra(nome="barra", comprimento=2.0, raio_anilha=0.2, larg_anilha=0.05, pega
     return raiz
 
 
-def halter(nome="halter", pegada=0.13, raio=0.016, raio_anilha=0.07, larg_anilha=0.05):
-    """Halter ao longo do X, pegada no meio, centrado na origem do vazio devolvido (lotes de 04/10/2026)."""
+def halter(nome="halter", pegada=0.13, raio=0.016, raio_anilha=0.07, larg_anilha=0.05, chanfro=0.0):
+    """Halter ao longo do X, pegada no meio, centrado na origem do vazio devolvido (lotes de 04/10/2026).
+    chanfro > 0 (lote 7, 08/10/2026): a borda das anilhas fica arredondada (BEVEL, como a caixa()) — o halter que
+    também é APOIO das mãos (tríceps francês com halter: as palmas embaixo da anilha de cima) precisa disso, porque a
+    medida de zona de apoio erra o sinal em quina viva; 0 = sem chanfro, como sempre."""
     raiz = bpy.data.objects.new(nome, None)
     bpy.context.scene.collection.objects.link(raiz)
     rot = (0, math.radians(90), 0)
     _cilindro(nome + "_eixo", raio, pegada + 2 * larg_anilha + 0.02, (0, 0, 0), rot, mat_aco(), pai=raiz)
     for s in (-1, 1):
         x = s * (pegada / 2 + larg_anilha / 2)
-        _cilindro(nome + "_anilha%+d" % s, raio_anilha, larg_anilha, (x, 0, 0), rot, mat_borracha(), vertices=40,
-                  pai=raiz)
+        a = _cilindro(nome + "_anilha%+d" % s, raio_anilha, larg_anilha, (x, 0, 0), rot, mat_borracha(), vertices=40,
+                      pai=raiz)
+        if chanfro:
+            m = a.modifiers.new("chanfro", "BEVEL")
+            m.width = chanfro
+            m.segments = 3
     return raiz
 
 
