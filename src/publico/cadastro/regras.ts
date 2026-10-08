@@ -26,7 +26,6 @@ export interface FormCadastro {
 
 export const FORM_VAZIO: FormCadastro = { nome: "", apelido: "", email: "", telefone: "", cpf: "", nascimento: "", genero: "", observacoes: "" };
 
-
 /** As frases de cada código da função (alunos → cadastro_link_enviar). */
 export const MENSAGEM: Record<string, string> = {
   nome_invalido: "Escreva o seu nome.",
@@ -67,7 +66,6 @@ export function validarCPF(cpf: string): boolean {
   };
   return dv(9) === Number(d[9]) && dv(10) === Number(d[10]);
 }
-
 
 /** O 1º problema do formulário como código da função (o mesmo do banco), ou null quando está tudo certo. */
 export function problemaDoCadastro(f: FormCadastro, hoje: string = new Date().toISOString().slice(0, 10)): string | null {

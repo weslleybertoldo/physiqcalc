@@ -71,14 +71,11 @@ export default function Cadastro() {
   const captcha = useCaptcha("cadastro");
   const [f, setF] = useState<FormCadastro>(FORM_VAZIO);
   const [erro, setErro] = useState("");
-  // W16b + H5: o e-mail ou o CPF já é de um aluno (em qualquer conta) → mensagem vermelha embaixo do campo (sem dizer de quem)
   const [indo, setIndo] = useState(false);
   const [feito, setFeito] = useState(false);
   const muda = <K extends keyof FormCadastro>(k: K, v: FormCadastro[K]) => {
     setF((x) => ({ ...x, [k]: v }));
     if (erro) setErro("");
-    // mexeu no campo que a trava recusou → o aviso some até o próximo envio
-    if (k === "email" || k === "cpf") setRepetidos((r) => r.filter((c) => c !== k));
   };
 
   const enviar = async (e: FormEvent) => {
