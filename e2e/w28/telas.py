@@ -191,9 +191,7 @@ def caso_master(nav, base, pref):
     if not uid:
         r = sql(f"select id::text as id from auth.users where lower(email) = '{email}'")
         uid = r[0]["id"] if r else None
-    sk = B5.service(B5.PRINCIPAL_REF)
-    cab = {"apikey": sk, "Authorization": f"Bearer {sk}"}
-    B5.http("PUT", f"{B5.PRINCIPAL_URL}/auth/v1/admin/users/{uid}", {"app_metadata": {"role": "master"}}, cab)
+    # hml-02 (H-04): o master de teste só no staging.profiles (o claim app_metadata.role é global e valeria na produção)
     sql(f"update staging.profiles set role = 'master', nome = 'Master Teste W28' where id = '{uid}'")
     c = Caso(nav, base, pref, "master")
     try:

@@ -43,6 +43,7 @@ export async function aplicarResumo(
   authAdmin: SupabaseClient,
   treinoUser: User,
   resumo: ResumoNucleo,
+  schema: "public" | "staging" = "public",
 ): Promise<ResultadoEspelho> {
   const treinoId = treinoUser.id;
   const agora = new Date().toISOString();
@@ -50,7 +51,7 @@ export async function aplicarResumo(
   // 1. papel no JWT do Treino
   const meta = { ...((treinoUser.app_metadata as Record<string, unknown>) || {}) };
   const papelAtual = typeof meta.role === "string" ? meta.role : null;
-  const papelNovo = papelTreino(resumo, papelAtual);
+  const papelNovo = papelTreino(resumo, papelAtual, schema);
   const papelMudou = papelNovo !== papelAtual;
   if (papelMudou) {
     // app_metadata faz merge no GoTrue; role null apaga a chave

@@ -25,6 +25,9 @@ Passos (contas de TESTE; nada de pessoa real):
 Uso: python3 e2e/w16b/causa.py [--com-trava] [--limpar]
 """
 from __future__ import annotations
+import sys as _sys
+_sys.exit("desativado na hml-02 (H-04, 07/10/2026): dava o claim global de master (app_metadata.role) a uma conta de "
+          "teste — o Auth é um só para staging e produção. O master de teste agora vale só em staging.profiles.")
 
 import argparse
 import json

@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
           const { data: mats } = await consulta.limit(1);
           if (!(mats ?? []).length) {
             const { data: membro } = await db.from("conta_membros").select("conta_id, user_id")
-              .ilike("codigo_convite", lt.aluno.professor_codigo).eq("status", "ativo").not("user_id", "is", null).limit(1).maybeSingle();
+              .eq("codigo_convite", String(lt.aluno.professor_codigo).trim().toUpperCase()).eq("status", "ativo").not("user_id", "is", null).limit(1).maybeSingle();
             if (membro) {
               const m = membro as { conta_id: string; user_id: string };
               const { data, error } = await db.rpc("matricular_na_conta", {

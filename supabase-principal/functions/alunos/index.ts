@@ -15,7 +15,8 @@
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL, ESPELHO_SEGREDO, TURNSTILE_SECRET, MP_ACCESS_TOKEN_PROD/_TEST (+ os automáticos).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { origemPermitida, segredoConfere } from "../_shared/login-regras.ts";
-import { destinoDoEmail, type Schema } from "../_shared/convites-regras.ts";
+import { type Schema } from "../_shared/convites-regras.ts";
+import { destinoDoEnvio } from "../_shared/enviar-aluno-regras.ts";
 import { captchaAceito, hashDoToken, ipDoPedido } from "../_shared/entrar-senha-regras.ts";
 import { credencialDoSchema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
@@ -92,7 +93,8 @@ async function enviarEmail(para: string, assunto: string, html: string, texto: s
 
 /** Manda o e-mail do convite (o convite já está gravado: se o e-mail falhar, a tela avisa e o link segue valendo). */
 async function emailDoConvite(schema: Schema, r: Record<string, unknown>) {
-  const destino = destinoDoEmail(String(r.email));
+  // hml-02 (H-05): no staging o e-mail vai SEMPRE para a caixa de teste (o cadastro pode ter um endereço real)
+  const destino = destinoDoEnvio(schema, String(r.email));
   const dados: DadosEmailAluno = {
     email: String(r.email),
     modulos: (r.modulos as string[]) ?? ["treino"],

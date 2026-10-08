@@ -330,7 +330,8 @@ def main() -> int:
     p.check(st == 403 and r.get("erro") == "nao_pode_a_si_mesmo", "[master] não em si mesmo")
     espelho()
     st, tu = B.admin_auth(B.TREINO_REF, "GET", f"users/{B.treino_de('w27-dono-b')}")
-    p.check((tu or {}).get("app_metadata", {}).get("role") == "master", f"[2 bancos] o Treino recebe o papel master ({(tu or {}).get('app_metadata')})")
+    p.check((tu or {}).get("app_metadata", {}).get("role") not in ("master", "admin"),
+            f"[2 bancos] hml-02 (H-04): pelo staging o Treino NÃO recebe o papel master ({(tu or {}).get('app_metadata')})")
     B.tirar_master("w27-dono-b")
     B.admin_auth(B.TREINO_REF, "PUT", f"users/{B.treino_de('w27-dono-b')}", {"app_metadata": {"role": "professor"}})
     p.check(not B.sql_principal(f"select 1 from auth.users where id = '{ub}' and raw_app_meta_data ->> 'role' = 'master'"), "[master] o teste desfez o master do dono B")
