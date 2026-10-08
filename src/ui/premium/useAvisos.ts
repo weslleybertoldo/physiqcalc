@@ -86,6 +86,7 @@ export function useAvisos() {
       const { error } = await cliente.from("avisos").update({ lido_em: new Date().toISOString() }).in("id", ids);
       if (error) throw new Error(error.message || "avisos");
     },
+    retry: 1, // hml-06: marcar como lido é idempotente (o mesmo PATCH de lido_em) — o padrão das mutações passou a 0
     onSuccess: () => qc.invalidateQueries({ queryKey: CHAVE_AVISOS }),
   });
 

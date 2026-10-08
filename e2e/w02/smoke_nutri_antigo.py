@@ -13,6 +13,10 @@ Contexto limpo do Playwright, sessão da conta de teste injetada (nutri.teste.cl
      "Assinatura pendente".
 Uso: python3 e2e/w02/smoke_nutri_antigo.py --url https://physiqnutri-staging.vercel.app --schema staging --prints <pasta> [--pessoa]
 """
+import sys as _sys
+_sys.exit("desativado na hml-06 (H-19, 08/10/2026): é de antes da virada W28 — o site antigo do Nutri redireciona para o Physiq "
+          "desde 02/10/2026 e a mp-assinar foi desligada (410 migrado; a cobrança da conta é a cobranca-conta).")
+
 import argparse
 import json
 import secrets

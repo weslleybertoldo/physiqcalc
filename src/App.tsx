@@ -41,7 +41,9 @@ const queryClient = new QueryClient({
       networkMode: "offlineFirst",
     },
     mutations: {
-      retry: 1,
+      // hml-06 (H-20): mutação não repete sozinha — o servidor pode ter feito e só a resposta se perdido (cobrança 2×); a
+      // que é idempotente pede no próprio useMutation (useAvisos.marcar)
+      retry: 0,
       networkMode: "offlineFirst",
     },
   },

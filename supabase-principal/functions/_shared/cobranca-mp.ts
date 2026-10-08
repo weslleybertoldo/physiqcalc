@@ -3,6 +3,8 @@
 // registrar a cobrança mensal da assinatura. O aviso do MP nunca é a verdade: sempre se busca o recurso de novo na API.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import {
+  modoConfere,
+  mpTransitorio,
   statusAberto,
   statusDaFatura,
   type AssinaturaMp,
@@ -58,6 +60,38 @@ export async function mpFetch<T = Record<string, unknown>>(c: Credencial, caminh
     if (status < 500) break;
   }
   return { status, body };
+}
+
+/** hml-06: o MP não respondeu de um jeito que permita decidir (fora do ar, limite, credencial recusada) — o aviso volta 500. */
+export class MpIndisponivel extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`mp_indisponivel_${status}`);
+    this.name = "MpIndisponivel";
+    this.status = status;
+  }
+}
+
+/**
+ * hml-06 (H-19) — busca no MP o recurso de um aviso. Com o ambiente pedido (?schema=), só a credencial dele; sem ele (repasse
+ * do Calc, aviso antigo), produção e depois teste. O ambiente devolvido é SEMPRE o da credencial que achou (produção →
+ * public, teste → staging): um recurso de sandbox nunca vale no public, nem um de produção no staging (a referência de outro
+ * ambiente vira "outro_ambiente" em quem chama). 404/403 = não é desta credencial; MP fora → MpIndisponivel.
+ */
+export async function buscarNoMp<T>(caminho: string, schema: Schema | null): Promise<{ recurso: T; schema: Schema } | null> {
+  let recusado = 0; // 401 pode ser "recurso de outra conta": só vira MP fora se nenhuma credencial achar o recurso
+  for (const c of schema ? [credencialDoSchema(schema)] : (["prod", "test"] as Credencial[])) {
+    if (!tokenMp(c)) continue;
+    const { status, body } = await mpFetch<T>(c, caminho);
+    if (status === 200 && body) {
+      if (!modoConfere(c, body)) continue; // pagamento de produção lido pela credencial de teste: não vale no staging
+      return { recurso: body, schema: c === "prod" ? "public" : "staging" };
+    }
+    if (status === 401) recusado = status;
+    else if (mpTransitorio(status)) throw new MpIndisponivel(status); // o aviso volta 500 e o MP manda de novo
+  }
+  if (recusado) throw new MpIndisponivel(recusado);
+  return null; // 404/403: não é desta credencial
 }
 
 export interface Fatura {
