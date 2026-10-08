@@ -6,6 +6,16 @@
 export const mpTransitorio = (st: number) => st >= 500 || st === 429 || st === 401;
 
 /**
+ * O recurso só vale na credencial que o leu se o MODO dele bate: produção ↔ live_mode true, teste ↔ false. A credencial de
+ * TESTE também LÊ pagamentos de produção (o MP devolve 200 com live_mode=true — medido em 08/10/2026 no E2E da hml-06), e sem
+ * isto um pagamento real valia no staging. Sem o campo (nem todo recurso do MP traz), vale a credencial.
+ */
+export function modoConfere(credencial: "prod" | "test", recurso: unknown): boolean {
+  const modo = (recurso as { live_mode?: unknown } | null)?.live_mode;
+  return typeof modo !== "boolean" || modo === (credencial === "prod");
+}
+
+/**
  * O id do aviso vai no CAMINHO da API do MP: só o formato que o MP manda (pagamento = só dígitos; assinatura = letras e
  * dígitos). Sem isto, "../../users/me" fazia a função pública (sem JWT) ler qualquer rota do MP com o token de produção.
  */

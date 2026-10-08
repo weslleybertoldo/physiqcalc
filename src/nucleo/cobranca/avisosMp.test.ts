@@ -73,6 +73,30 @@ describe("hml-06: MP sem resposta que permita decidir (mpTransitorio) → o avis
   });
 });
 
+describe("hml-06: o recurso só vale na credencial cujo modo bate (modoConfere: produção ↔ live_mode true, teste ↔ false)", () => {
+  // [credencial, recurso, vale?] — a credencial de TESTE também lê pagamento de produção (live_mode=true; medido 08/10/2026)
+  const TABELA: Array<["prod" | "test", unknown, boolean]> = [
+    ["prod", { id: 1, live_mode: true }, true],
+    ["test", { id: 1, live_mode: false }, true],
+    ["test", { id: 1, live_mode: true }, false],
+    ["prod", { id: 1, live_mode: false }, false],
+    ["prod", { id: 1 }, true], // sem o campo: vale a credencial
+    ["test", { id: 1 }, true],
+    ["test", { id: 1, live_mode: "true" }, true], // só booleano conta
+    ["test", null, true],
+  ];
+  for (const [nome, regras] of COPIAS) {
+    it.each(TABELA)(`${nome}: %s com %j → %s`, (cred, recurso, vale) => {
+      expect(regras.modoConfere(cred, recurso)).toBe(vale);
+    });
+  }
+  it("as 2 buscas (principal e Treino) só devolvem o recurso depois do modoConfere", () => {
+    for (const arquivo of ["supabase-principal/functions/_shared/cobranca-mp.ts", "supabase/functions/mp-webhook/index.ts"]) {
+      expect(ler(arquivo), arquivo).toMatch(/if \(status === 200 && body\) \{\s*if \(!modoConfere\(c, body\)\) continue;/);
+    }
+  });
+});
+
 describe("hml-06: os webhooks usam as regras (contrato do código — os módulos com Deno não rodam no Vitest)", () => {
   const WEBHOOKS = [
     "supabase/functions/mp-webhook/index.ts",
@@ -101,7 +125,7 @@ describe("hml-06: os webhooks usam as regras (contrato do código — os módulo
 
   it("o Treino: o schema vem da credencial (SCHEMA[cred]) e o MP fora volta 500", () => {
     const fonte = ler("supabase/functions/mp-webhook/index.ts");
-    expect(fonte).toContain('import { idDoAvisoValido, mpTransitorio } from "./regras.ts"');
+    expect(fonte).toContain('import { idDoAvisoValido, modoConfere, mpTransitorio } from "./regras.ts"');
     expect(fonte).toContain('const SCHEMA: Record<Cred, string> = { prod: "public", test: "staging" }');
     expect(fonte).not.toMatch(/adminFor\(ref\.schema\)|const schemas = ref \?/);
     expect(fonte).toMatch(/if \(e instanceof MpIndisponivel\) \{[\s\S]{0,160}status: 500/);

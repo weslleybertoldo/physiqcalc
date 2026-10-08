@@ -16,7 +16,7 @@
 // ("outro_ambiente": não grava nem repassa). O id do aviso só vai à API do MP no formato que o MP manda (regras.ts) e o MP
 // fora devolve 500 (o MP manda de novo; antes o aviso seguia sem o recurso e se perdia).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { idDoAvisoValido, mpTransitorio } from "./regras.ts";
+import { idDoAvisoValido, modoConfere, mpTransitorio } from "./regras.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -59,7 +59,10 @@ async function buscarNoMp(caminho: string, cred?: Cred): Promise<{ body: any; cr
     } catch {
       status = 599;
     }
-    if (status === 200 && body) return { body, cred: c };
+    if (status === 200 && body) {
+      if (!modoConfere(c, body)) continue; // pagamento de produção lido pela credencial de teste: não vale no staging
+      return { body, cred: c };
+    }
     if (status === 401) recusado = status; // pode ser recurso da outra credencial: decide no fim
     else if (mpTransitorio(status)) throw new MpIndisponivel(status);
   }

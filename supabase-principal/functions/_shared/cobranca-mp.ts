@@ -3,6 +3,7 @@
 // registrar a cobrança mensal da assinatura. O aviso do MP nunca é a verdade: sempre se busca o recurso de novo na API.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import {
+  modoConfere,
   mpTransitorio,
   statusAberto,
   statusDaFatura,
@@ -82,7 +83,10 @@ export async function buscarNoMp<T>(caminho: string, schema: Schema | null): Pro
   for (const c of schema ? [credencialDoSchema(schema)] : (["prod", "test"] as Credencial[])) {
     if (!tokenMp(c)) continue;
     const { status, body } = await mpFetch<T>(c, caminho);
-    if (status === 200 && body) return { recurso: body, schema: c === "prod" ? "public" : "staging" };
+    if (status === 200 && body) {
+      if (!modoConfere(c, body)) continue; // pagamento de produção lido pela credencial de teste: não vale no staging
+      return { recurso: body, schema: c === "prod" ? "public" : "staging" };
+    }
     if (status === 401) recusado = status;
     else if (mpTransitorio(status)) throw new MpIndisponivel(status); // o aviso volta 500 e o MP manda de novo
   }
