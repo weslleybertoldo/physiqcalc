@@ -124,3 +124,15 @@ describe("hml-06: os webhooks usam as regras (contrato do código — os módulo
     expect(ler("supabase-principal/functions/mp-webhook-aluno/index.ts")).not.toMatch(/^\s*await db\.from\("(cobrancas|aluno_assinaturas)"\)\.(update|insert)\(/m);
   });
 });
+
+describe("hml-06 (H-19): mp-assinar desligada (a cobrança da conta é a cobranca-conta desde a W28)", () => {
+  const fonte = ler("supabase-principal/functions/mp-assinar/index.ts");
+  it("não lê token do MP nem chama a API dele", () => {
+    expect(fonte).not.toMatch(/MP_ACCESS_TOKEN|api\.mercadopago\.com|createClient/);
+  });
+  it("preflight com o CORS de antes; qualquer outro pedido → 410 migrado", () => {
+    expect(fonte).toMatch(/if \(req\.method === "OPTIONS"\) return new Response\("ok", \{ headers: cors\(origin\) \}\);/);
+    expect(fonte).toMatch(/JSON\.stringify\(\{ error: "migrado" \}\), \{ status: 410/);
+    expect(fonte).toContain('"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-schema"');
+  });
+});
