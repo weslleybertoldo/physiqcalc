@@ -572,7 +572,7 @@ describe("o aviso do Treino: manda à erro-avisar do principal (segredo de sempr
     Object.assign(env, troca);
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect(await avisarDoTreino(erroDoTreino(`t_conf_${troca.PRINCIPAL_URL === "" ? "url" : "seg"}`), "staging")).toBe("sem_configuracao");
+    expect(await avisarDoTreino(erroDoTreino(`t_conf_${"PRINCIPAL_URL" in troca ? "url" : "seg"}`), "staging")).toBe("sem_configuracao");
     expect(fetch).not.toHaveBeenCalled();
   });
 

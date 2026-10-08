@@ -15,9 +15,12 @@ import { criarLog } from "./log.ts";
 const trava = criarTrava();
 const log = criarLog("avisar-erro", { avisar: null }); // o aviso nunca avisa a si mesmo
 
+type ComDeno = { Deno?: { env: { get: (nome: string) => string | undefined } } };
+
 function variavel(nome: string): string {
   try {
-    return typeof Deno === "undefined" ? "" : (Deno.env.get(nome) || "").trim();
+    const deno = (globalThis as ComDeno).Deno; // pelo globalThis: o tsc do app (Vitest) não conhece o Deno
+    return deno ? (deno.env.get(nome) || "").trim() : "";
   } catch {
     return "";
   }
