@@ -1,4 +1,5 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/anexos.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
+import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { NOME_MAX, mimeDoArquivo, montarPath, normalizarDescricao } from "@/nutricao/editor/lib/anexosUtil";
@@ -9,7 +10,7 @@ import { NOME_MAX, mimeDoArquivo, montarPath, normalizarDescricao } from "@/nutr
 // verdade e faz soft delete na tabela (deleted_at → Lixeira, W32).
 
 export type Anexo = Database["public"]["Tables"]["anexos"]["Row"];
-export const BUCKET_ANEXOS = "anexos";
+export const BUCKET_ANEXOS = bucketDoAmbiente("anexos");
 
 const falhou = (error: { message: string } | null): void => {
   if (error) throw new Error(error.message);

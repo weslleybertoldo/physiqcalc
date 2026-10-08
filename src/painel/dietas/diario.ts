@@ -6,6 +6,7 @@
 //
 // FONTE DO "DIÁRIO DE HOJE" DO DASHBOARD (W25): listarDiarioDaConta(contaId, uid, inicioDoPeriodo(1).toISOString()) + urlsAssinadas
 // (miniaturas) — a mesma consulta e a mesma regra desta aba.
+import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { principal } from "@/integrations/principal/client";
 import type { Database } from "@/integrations/principal/types";
 import type { Reacao } from "@/nutricao/app/diarioUtil";
@@ -15,7 +16,7 @@ export type RegistroDiarioRow = Database["public"]["Tables"]["diario_alimentar"]
 type RegistroDiarioUpdate = Database["public"]["Tables"]["diario_alimentar"]["Update"];
 export type AlunoDoRegistro = AlunoDoDiario & { conta_id: string | null; nutricionista_id: string | null };
 export type RegistroDiarioNutri = RegistroDiarioRow & { paciente: AlunoDoRegistro | null };
-export const BUCKET_DIARIO = "diario";
+export const BUCKET_DIARIO = bucketDoAmbiente("diario");
 const SELECT_NUTRI = "*, paciente:pacientes!inner(id, nome, apelido, link_codigo, foto_url, conta_id, nutricionista_id)";
 
 const falhou = (error: { message: string } | null): void => {

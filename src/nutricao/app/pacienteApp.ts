@@ -5,11 +5,12 @@
 //   · foto do diário: sobe no bucket privado "diario" e grava pela diario_enviar com o código do próprio aluno — o mesmo caminho do
 //     link público (W30 do Nutri); a foto do próprio aluno volta por URL assinada (P29).
 // Online (9A): sem internet nada é gravado e a tela avisa.
+import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { principal } from "@/integrations/principal/client";
 import { mimeDaFotoDiario, nomeObjeto, type Refeicao } from "./diarioUtil";
 import type { DadosDieta, MatriculaNutricao, RegistroDiario } from "./tipos";
 
-export const BUCKET_DIARIO = "diario";
+export const BUCKET_DIARIO = bucketDoAmbiente("diario");
 /** Validade das URLs assinadas das fotos do diário (1 h, a mesma das fotos da Evolução). */
 export const VALIDADE_URL_S = 3600;
 

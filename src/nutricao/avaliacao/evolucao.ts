@@ -1,4 +1,5 @@
 // Physiq W17 — porta do PhysiqNutri (main ca9f66f, src/lib/evolucao.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { supabase, type Database } from "@/nutricao/editor/lib/banco";
 import { montarPath } from "@/nutricao/editor/lib/anexosUtil";
 import { OBSERVACAO_FOTO_MAX, mimeDaFoto, normalizarObservacao, type FormFoto, type Posicao } from "@/nutricao/editor/lib/evolucaoUtil";
@@ -9,7 +10,7 @@ import { OBSERVACAO_FOTO_MAX, mimeDaFoto, normalizarObservacao, type FormFoto, t
 // o objeto de verdade e faz soft delete na tabela (deleted_at → Lixeira, W32). Mesmo padrão dos anexos da W14.
 
 export type FotoEvolucao = Database["public"]["Tables"]["fotos_evolucao"]["Row"];
-export const BUCKET_EVOLUCAO = "evolucao";
+export const BUCKET_EVOLUCAO = bucketDoAmbiente("evolucao");
 
 const falhou = (error: { message: string } | null): void => {
   if (error) throw new Error(error.message);
