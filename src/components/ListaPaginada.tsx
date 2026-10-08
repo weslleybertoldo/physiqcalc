@@ -51,7 +51,7 @@ export function usePaginado<T>(
       if (meu !== reqRef.current) return; // resposta antiga
       setItens((prev) => (offset === 0 ? r.itens : [...prev, ...r.itens]));
       setTotal(r.total);
-    } catch (e: any) {
+    } catch (e) {
       if (meu !== reqRef.current) return;
       setErro(e?.message || "erro");
     } finally {

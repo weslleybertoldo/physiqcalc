@@ -9,7 +9,8 @@ export interface Manifesto3D {
   exercicios: Record<string, Entrada3D>;
 }
 
-const MANIFESTO = manifestoGerado as Manifesto3D;
+// o JSON chega com `alvo: number[]`; o pack.py grava sempre 3 números (a tupla do CameraInicial). Só tipo: o JS não muda.
+const MANIFESTO = manifestoGerado as unknown as Manifesto3D;
 
 export function entrada3d(id: string | null | undefined, manifesto: Manifesto3D = MANIFESTO): Entrada3D | null {
   return (id && manifesto.exercicios[id]) || null;

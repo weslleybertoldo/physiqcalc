@@ -16,10 +16,13 @@ const PWAInstallContext = createContext<PWAInstallContextType>({
   dismiss: () => {},
 });
 
+/** O evento `beforeinstallprompt` do Chrome (não está no lib.dom). */
+type EventoInstalar = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
+
 export const usePWAInstall = () => useContext(PWAInstallContext);
 
 export const PWAInstallProvider = ({ children }: { children: React.ReactNode }) => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<EventoInstalar | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem("physiqcalc-pwa-dismissed") === "true";
@@ -34,7 +37,7 @@ export const PWAInstallProvider = ({ children }: { children: React.ReactNode }) 
 
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as EventoInstalar);
     };
 
     const installedHandler = () => {
