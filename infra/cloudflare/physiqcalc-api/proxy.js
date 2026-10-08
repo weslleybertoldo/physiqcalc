@@ -19,6 +19,16 @@ async function sha256Hex(texto) {
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Homologação (H-17, 08/10/2026): o login do Treino é só pela troca de token do Physiq (função trocar-token) — login por senha e
+// cadastro direto por este endereço ficam barrados (o app não usa; o APK antigo que entrava assim ficou de fora, decisão do dono).
+// O resto do Auth (refresh_token, authorize, user, logout) passa igual. Caminho normalizado: "//" e "/" no fim não escapam.
+export function barrado(metodo, url) {
+  if (metodo !== "POST") return false;
+  const caminho = url.pathname.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+  if (caminho === "/auth/v1/signup") return true;
+  return caminho === "/auth/v1/token" && url.searchParams.getAll("grant_type").includes("password");
+}
+
 export function criarProxy({
   origin = ORIGIN,
   anonSha256 = ANON_LEGADA_SHA256,
@@ -32,6 +42,10 @@ export function criarProxy({
       const url = new URL(request.url);
       if (url.pathname === "/" || url.pathname === "/healthz") {
         return new Response("physiqcalc-api ok", { status: 200, headers: { "cache-control": "no-store" } });
+      }
+      if (barrado(request.method, url)) {
+        const corpo = { error: "barrado", error_description: "Senha e cadastro direto no Banco do Treino estão desligados: o login é pelo Physiq." };
+        return new Response(JSON.stringify(corpo), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
       }
       const headers = new Headers(request.headers);
       headers.delete("host");

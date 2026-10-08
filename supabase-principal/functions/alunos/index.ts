@@ -108,7 +108,7 @@ async function emailDoConvite(schema: Schema, r: Record<string, unknown>) {
   return { email_enviado: envio.erro === null, email_teste: destino.teste, email_id: envio.id, erro_email: envio.erro, link: dados.link };
 }
 
-/** "aceito" | "recusado" | "indisponivel" (o Cloudflare não respondeu: segue sem travar o cadastro). */
+/** "aceito" | "recusado" | "indisponivel" (o Cloudflare não respondeu — quem chama RECUSA: falha fechada, homologação H-17). */
 async function conferirCaptcha(token: string, ip: string | null): Promise<"aceito" | "recusado" | "indisponivel"> {
   if (!token) return "recusado";
   const corpo = new URLSearchParams({ secret: TURNSTILE_SECRET, response: token });
@@ -155,15 +155,17 @@ async function publico(req: Request, schema: Schema, corpo: Record<string, unkno
   // cadastro_enviar: o captcha (Turnstile, o mesmo da W8b) vale UMA vez; o master desliga em app_config.login_limite
   const { data: regras } = await db.rpc("login_regras");
   const captchaLigado = !(regras && typeof regras === "object" && (regras as Record<string, unknown>).captcha === false);
-  if (captchaLigado && TURNSTILE_SECRET) {
+  if (captchaLigado) {
+    // falha FECHADA (homologação, H-17): sem o segredo ou com o Cloudflare fora do ar, nenhum cadastro passa sem captcha
     const token = String(corpo.captcha ?? "");
-    const v = await conferirCaptcha(token, ip);
-    if (v === "recusado") return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
-    if (v === "aceito") {
-      const { data: primeiro, error: eu } = await db.rpc("login_captcha_usar", { p_hash: await hashDoToken(token) });
-      if (eu) throw eu;
-      if (primeiro !== true) return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
+    const v = TURNSTILE_SECRET ? await conferirCaptcha(token, ip) : "indisponivel";
+    if (v !== "aceito") {
+      if (v === "indisponivel") console.error("alunos: captcha indisponível — cadastro recusado (falha fechada)", TURNSTILE_SECRET ? "siteverify" : "sem TURNSTILE_SECRET");
+      return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
     }
+    const { data: primeiro, error: eu } = await db.rpc("login_captcha_usar", { p_hash: await hashDoToken(token) });
+    if (eu) throw eu;
+    if (primeiro !== true) return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
   }
   const dados = corpo.dados && typeof corpo.dados === "object" ? corpo.dados : {};
   const r = await rpcObjeto(db, "cadastro_link_enviar", { p_codigo: codigo, p_dados: dados });

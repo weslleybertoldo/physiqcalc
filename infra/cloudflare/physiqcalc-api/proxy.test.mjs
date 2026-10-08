@@ -107,3 +107,33 @@ test("valor do mesmo tamanho mas outra chave não é trocado", async () => {
   await proxy.fetch(new Request("https://api.physiqcalc.com.br/rest/v1/x", { headers: { apikey: parecida } }), env);
   assert.equal(pedidos[0].init.headers.get("apikey"), parecida);
 });
+
+// Homologação (H-17, 08/10/2026): senha e cadastro direto barrados no Worker; o resto do Auth passa.
+test("login por senha é barrado no Worker (sem chamar a Supabase), inclusive com // e / no fim", async () => {
+  const { proxy, pedidos } = montar();
+  for (const caminho of ["/auth/v1/token?grant_type=password", "/auth/v1//token/?grant_type=password", "/auth/v1/token?x=1&grant_type=password"]) {
+    const r = await proxy.fetch(new Request(`https://api.physiqcalc.com.br${caminho}`, { method: "POST", body: "{}" }), env);
+    assert.equal(r.status, 403, caminho);
+    assert.equal((await r.json()).error, "barrado");
+  }
+  assert.equal(pedidos.length, 0);
+});
+
+test("cadastro direto é barrado no Worker", async () => {
+  const { proxy, pedidos } = montar();
+  const r = await proxy.fetch(new Request("https://api.physiqcalc.com.br/auth/v1/signup", { method: "POST", body: "{}" }), env);
+  assert.equal(r.status, 403);
+  assert.equal(pedidos.length, 0);
+});
+
+test("refresh do token, logout e GET no Auth passam para a Supabase", async () => {
+  const { proxy, pedidos } = montar();
+  const casos = [["POST", "/auth/v1/token?grant_type=refresh_token"], ["POST", "/auth/v1/logout"], ["GET", "/auth/v1/user"]];
+  for (const [metodo, caminho] of casos) {
+    const init = metodo === "POST" ? { method: metodo, body: "{}" } : { method: metodo };
+    const r = await proxy.fetch(new Request(`https://api.physiqcalc.com.br${caminho}`, init), env);
+    assert.equal(r.status, 200, caminho);
+  }
+  assert.equal(pedidos.length, 3);
+  assert.equal(pedidos[0].alvo, `${ORIGIN}/auth/v1/token?grant_type=refresh_token`);
+});
