@@ -10,6 +10,7 @@
 // Google traz ?code= e só este cliente (que guardou o code_verifier) troca pela sessão — o cliente do Treino, em fluxo
 // implícito, ignora o retorno. Sem internet, o principal não tem cache (dieta e painel são online — decisão 9A).
 import { createClient } from "@supabase/supabase-js";
+import { criarFetchResiliente } from "../repeticao";
 import type { Database } from "./types";
 
 type Env = Record<string, string | boolean | undefined>;
@@ -40,37 +41,10 @@ export const PRINCIPAL_SCHEMA: SchemaPrincipal = resolverSchemaPrincipal(ENV);
 /** false = build sem as variáveis do principal (a tela deve mostrar "Parte do app está fora do ar", nunca quebrar). */
 export const principalConfigurado = Boolean(URL_PRINCIPAL && ANON_PRINCIPAL);
 
-// Fetch com timeout e nova tentativa (mesma regra do cliente do Treino): sem retry em 401/403; retry em 5xx e 429
-function criarFetchResiliente(tentativas = 2, timeoutMs = 15000) {
-  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    let ultimoErro: Error | null = null;
-    for (let tentativa = 0; tentativa <= tentativas; tentativa++) {
-      const controle = new AbortController();
-      const timer = setTimeout(() => controle.abort(), timeoutMs);
-      try {
-        const resposta = await fetch(input, { ...init, signal: controle.signal });
-        clearTimeout(timer);
-        if (resposta.status === 401 || resposta.status === 403) return resposta;
-        if ((resposta.status >= 500 || resposta.status === 429) && tentativa < tentativas) {
-          await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** tentativa, 10000) + Math.random() * 500));
-          continue;
-        }
-        return resposta;
-      } catch (e) {
-        clearTimeout(timer);
-        ultimoErro = e as Error;
-        if (tentativa < tentativas && (e as Error).name !== "AbortError") {
-          await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** tentativa, 10000)));
-          continue;
-        }
-      }
-    }
-    throw ultimoErro || new Error("Falha de rede no banco principal");
-  };
-}
-
 // Sem as variáveis, o cliente nasce apontando pra um endereço inválido: nada quebra ao importar e cada chamada falha
 // com erro de rede (a tela trata). Nunca cai no banco do Treino por engano.
+// Fetch com timeout e nova tentativa (o mesmo do cliente do Treino) — hml-06 (H-20): só o que é leitura repete
+// (src/integrations/repeticao.ts); POST de tabela, RPC que grava, função, auth e upload vão uma vez só.
 export const principal = createClient<Database>(
   URL_PRINCIPAL || "https://principal-nao-configurado.invalid",
   ANON_PRINCIPAL || "principal-nao-configurado",
