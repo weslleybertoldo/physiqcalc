@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Conferencia } from "./api";
 
 // W2 da loja — Configurações › Excluir minha conta: confere (nada muda) → baixa os prontuários (dono) → digita EXCLUIR → exclui e
@@ -76,6 +76,8 @@ const montar = () =>
   );
 
 beforeEach(() => {
+  // hml-11 (D5): os testes rodam como a produção (a frase de hoje da cobrança); o do staging troca o schema
+  vi.stubEnv("VITE_DB_SCHEMA", "public");
   h.loja = false;
   h.conferencia = DONO;
   h.erroConferencia = null;
@@ -214,5 +216,31 @@ describe("Configurações › Excluir minha conta (W2 da loja)", () => {
     montar();
     expect(await screen.findByText(/Cancele em Perfil › Pagamentos/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Abrir Pagamentos/ })).toBeNull();
+  });
+});
+
+// hml-11 (H-28, D5): "sem reembolso do que já foi pago" conflita com a desistência em 7 dias dos Termos de assinatura novos — a frase
+// nova (com a marca do E2E) só no build de staging até a virada; na produção, a de hoje e sem a marca.
+describe("Configurações › Excluir minha conta — hml-11: a frase da desistência só no staging", () => {
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("staging: a linha da cobrança do plano diz a desistência em 7 dias, com a marca [data-frase-desistencia]", async () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    montar();
+    expect(await screen.findByText("Antes de excluir, confira o que acontece")).toBeInTheDocument();
+    const frase = document.querySelector("[data-frase-desistencia]");
+    expect(frase?.textContent).toBe(
+      "A cobrança automática do plano desta conta é cancelada agora (o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento).",
+    );
+    expect(document.querySelectorAll("[data-frase-desistencia]")).toHaveLength(1);
+    expect(document.body.textContent).not.toContain("sem reembolso");
+  });
+
+  it("produção: a frase de hoje, sem a marca", async () => {
+    montar();
+    expect(await screen.findByText("A cobrança automática do plano desta conta é cancelada agora (sem reembolso do que já foi pago).")).toBeInTheDocument();
+    expect(document.querySelector("[data-frase-desistencia]")).toBeNull();
   });
 });

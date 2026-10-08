@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { conta, situacao } from "@/test/fixturesNucleo";
 import { ROTA_EXCLUIR_CONTA, guardarPedidoExclusao, pedidoExclusaoPendente } from "@/lib/pedidoExclusao";
 import { CONTATO_SUPORTE, linkDoSuporte } from "@/nucleo/suporte";
@@ -44,6 +44,8 @@ const abrir = (state?: unknown) =>
   );
 
 beforeEach(() => {
+  // hml-11 (D5): os testes rodam como a produção (a frase de hoje da cobrança); os do staging trocam o schema
+  vi.stubEnv("VITE_DB_SCHEMA", "public");
   localStorage.clear();
   h.loja = false;
   h.sessao = { pronto: true, usuario: null, situacao: null, erroSituacao: null };
@@ -65,7 +67,8 @@ describe("/excluir-conta — sem login", () => {
   it("W3/W4 da loja: as cópias de segurança com a MESMA frase da política — em até 30 dias, sem o 'até 7 dias'", () => {
     const { container } = abrir();
     expect(container.querySelector("[data-secao-excluir='guardado'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
-    expect(container.textContent).toMatch(/são apagadas em até 30 dias depois de feitas/);
+    // hml-11 (A2): a frase passou a dizer a cópia diária cifrada da hml-07 — o prazo é o mesmo
+    expect(container.textContent).toMatch(/são cifradas, guardadas no Brasil e apagadas em até 30 dias depois de feitas/);
     expect(container.textContent).not.toMatch(/até 7 dias/);
   });
   it("'Entrar para excluir' guarda o pedido e leva ao login voltando para esta página", () => {
@@ -106,5 +109,36 @@ describe("/excluir-conta — com login", () => {
     expect(screen.getByText("1 aluno com login continua no app, sem profissional.")).toBeInTheDocument();
     expect(screen.getByText("2 cobranças automáticas foram canceladas.")).toBeInTheDocument();
     expect(screen.getByText("O seu login foi apagado: não dá mais para entrar com ele.")).toBeInTheDocument();
+  });
+});
+
+// hml-11 (H-28, D5): "sem reembolso do que já foi pago" conflita com a desistência em 7 dias dos Termos de assinatura novos — a frase
+// nova (com a marca do E2E) só no build de staging até a virada; na produção, a de hoje e sem a marca.
+describe("/excluir-conta — hml-11: a frase da desistência só no staging", () => {
+  const profissional = () => screen.getByText((_texto, el) => el?.tagName === "LI" && /^Profissional: a foto/.test(el.textContent ?? ""));
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("staging: 'o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento', com a marca", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    abrir();
+    expect(document.querySelector("[data-frase-desistencia]")?.textContent).toBe("o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento");
+    expect(profissional().textContent).toMatch(/a cobrança automática do plano é cancelada \(o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento\)\.$/);
+    expect(document.body.textContent).not.toContain("sem reembolso");
+  });
+
+  it("staging, versão da Google Play: a frase nova também, ainda sem preço nem como pagar", () => {
+    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+    h.loja = true;
+    const { container } = abrir();
+    expect(container.querySelector("[data-frase-desistencia]")).not.toBeNull();
+    expect(container.textContent).not.toMatch(/R\$|grátis|Mercado Pago|pague|assine|Pix/i);
+  });
+
+  it("produção: a frase de hoje, sem a marca", () => {
+    abrir();
+    expect(profissional().textContent).toMatch(/a cobrança automática do plano é cancelada \(sem reembolso do que já foi pago\)\.$/);
+    expect(document.querySelector("[data-frase-desistencia]")).toBeNull();
   });
 });

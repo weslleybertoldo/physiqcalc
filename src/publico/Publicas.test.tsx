@@ -48,13 +48,13 @@ describe("/privacidade e /termos (C13)", () => {
 });
 
 describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)", () => {
-  it("a data nova e os 9 serviços conferidos no código, cada um com o que recebe", () => {
+  it("a data nova e os 10 serviços conferidos no código, cada um com o que recebe", () => {
     abrir(<Privacidade />, "/privacidade");
-    // W4 da loja: a frase dos backups com o prazo entrou em 7/10/2026
-    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 7 de outubro de 2026");
-    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "github"]);
+    // hml-11 (A2): as correções de fato entraram em 8/10/2026
+    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 8 de outubro de 2026");
+    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "telegram", "github"]);
     const t = document.querySelector("[data-servicos-terceiros]")?.textContent ?? "";
-    for (const nome of ["Supabase", "PowerSync", "Cloudflare", "Vercel", "Google", "Resend", "Mercado Pago", "WhatsApp", "GitHub"]) expect(t).toContain(nome);
+    for (const nome of ["Supabase", "PowerSync", "Cloudflare", "Vercel", "Google", "Resend", "Mercado Pago", "WhatsApp", "Telegram", "GitHub"]) expect(t).toContain(nome);
     expect(t).toContain("Firebase Cloud Messaging");
     expect(t).toContain("Turnstile");
     expect(t).toMatch(/número do cartão é digitado no formulário do próprio Mercado Pago/);
@@ -70,16 +70,34 @@ describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)"
     expect(document.body.textContent).toMatch(/não é um dispositivo médico e não diagnostica, não trata nem substitui o\s+acompanhamento de um profissional de saúde/);
     expect(document.querySelector("[data-secao-privacidade='retencao'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
     expect(document.body.textContent).not.toMatch(/7 dias/);
-    // decisão de 06/10/2026 ("A"): as do provedor e as manuais, apagadas em até 30 dias — o único prazo da frase
-    expect(FRASE_BACKUPS).toMatch(/as automáticas do provedor e as feitas antes de manutenções/);
-    expect(FRASE_BACKUPS).toMatch(/são apagadas em até 30 dias depois de feitas; até lá, ficam protegidas e não são usadas para outro fim/);
+    // hml-11 (A2): a cópia diária cifrada da hml-07 e as manuais, apagadas em até 30 dias — o único prazo da frase. O provedor (Free)
+    // não tem backup automático: a frase antiga ("as automáticas do provedor") saiu
+    expect(FRASE_BACKUPS).toMatch(/a cópia diária e as feitas antes de manutenções/);
+    expect(FRASE_BACKUPS).toMatch(/são cifradas, guardadas no Brasil e apagadas em até 30 dias depois de feitas; até lá, não são usadas para outro fim/);
+    expect(FRASE_BACKUPS).not.toMatch(/provedor/);
     expect(FRASE_BACKUPS.match(/\d+/g)).toEqual(["30"]);
+  });
+
+  it("hml-11 (A2): o push leva só o texto fixo, o Telegram dos avisos de erro, o país do us-east-1, a lixeira e as séries", () => {
+    abrir(<Privacidade />, "/privacidade");
+    const google = document.querySelector("[data-servico='google']")?.textContent ?? "";
+    expect(google).not.toMatch(/texto do aviso/);
+    expect(google).toMatch(/um texto curto, fixo para cada tipo de aviso \(por exemplo, "Tem novidade na sua agenda\."\), sem nome nem valor/);
+    const telegram = document.querySelector("[data-servico='telegram']")?.textContent ?? "";
+    expect(telegram).toMatch(/avisos de erro do app e do servidor/);
+    expect(telegram).toMatch(/tira e-mail, CPF, telefone, endereço IP, códigos de acesso e números longos/);
+    expect(document.body.textContent).toMatch(/us-east-1 \(Estados Unidos\)/);
+    expect(document.querySelector("[data-frase-series]")?.textContent).toBe("Séries de treino com mais de 12 meses são apagadas automaticamente, do aparelho e do banco.");
+    expect(document.body.textContent).not.toMatch(/saem do aparelho automaticamente/);
+    const lixeira = document.querySelector("[data-frase-lixeira]")?.textContent?.replace(/\s+/g, " ").trim();
+    expect(lixeira).toMatch(/\(respostas da pré-consulta, anamneses, antropometrias e planos alimentares\) fica 30 dias na lixeira/);
+    expect(lixeira).toMatch(/o cadastro de um aluno removido não é apagado pela lixeira e fica com o profissional\.$/);
   });
 
   it("versão da Google Play: o GitHub (instalador e atualização do APK do site) não aparece; o resto é igual", () => {
     h.loja = true;
     abrir(<Privacidade />, "/privacidade");
-    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp"]);
+    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "telegram"]);
     expect(document.body.textContent).not.toMatch(/GitHub|instalador/);
     expect(servicosDaVersao(true)).toHaveLength(SERVICOS_TERCEIROS.length - 1);
   });

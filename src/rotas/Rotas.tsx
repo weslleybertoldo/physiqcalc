@@ -24,6 +24,11 @@ const RotasMaster = import.meta.env.VITE_APP_NATIVO === "1" ? null : lazy(() => 
 // staging. O Vite troca o import.meta.env.VITE_DB_SCHEMA pelo valor e, na produção, o Rollup corta o import(): a página nem entra no
 // bundle (o mesmo jeito do master na hml-08; a expressão fica AQUI, direto na condição, sem função no meio).
 const ErroDeTeste = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/ErroDeTeste")) : null;
+// hml-11 (H-28, D4): os textos legais NOVOS (Política, Termos de Uso e Termos de assinatura — src/publico/legal/) esperam o advogado:
+// até a virada (D12), /privacidade, /termos e /assinatura com eles SÓ no build de staging. Na produção o Rollup corta o import() (o
+// texto novo nem entra no bundle; scripts/ci/sem-texto-legal-novo.sh confere) e as 2 primeiras seguem com a Privacidade de hoje. A
+// expressão fica AQUI, direto na condição, sem função no meio (o mesmo jeito do master na hml-08 e da /erro-teste na hml-10).
+const PaginaLegal = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/PaginaLegal")) : null;
 // W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx, pelo registro) — as antigas saíram
 
 /** Rota antiga dos 2 apps → rota nova (spec 4.8), levando a query e o #. */
@@ -63,7 +68,9 @@ export function RotaEntrada({ nome }: { nome: string }) {
  * públicas e os redirecionamentos das rotas antigas. As telas entram pelo registro por convenção.
  */
 export function Rotas() {
-  const publicas = Object.values(registro.publico);
+  // hml-11 (D4): com a página legal nova (só no staging), /privacidade e /termos são dela — a Privacidade de hoje sai das públicas,
+  // para nenhuma rota ter 2 donos
+  const publicas = Object.values(registro.publico).filter((r) => !(PaginaLegal && r.nome === "Privacidade"));
   return (
     <Routes>
       {/* App do aluno */}
@@ -110,6 +117,19 @@ export function Rotas() {
             }
           />
         )}
+        {/* hml-11 (D4): os textos legais novos, só no staging até a virada (a faixa "versão em revisão" fica na página) */}
+        {PaginaLegal &&
+          ["/privacidade", "/termos", "/assinatura"].map((caminho) => (
+            <Route
+              key={caminho}
+              path={caminho}
+              element={
+                <Carregavel nome="página legal">
+                  <PaginaLegal />
+                </Carregavel>
+              }
+            />
+          ))}
         {publicas.flatMap((r) =>
           rotasDaPaginaPublica(r.nome).map((caminho) => (
             <Route

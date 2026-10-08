@@ -1,17 +1,22 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Dumbbell } from "lucide-react";
 import { dataBR } from "@/financeiro/regras";
+import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { buscarMeuPlano, entrarSemProfissional, ErroApp } from "@/app-aluno/sozinho/api";
 import { SeletorObjetivo, SeletorPlano } from "@/app-aluno/sozinho/pecas/Seletores";
-import { mensagemApp, PLANO_TREINO, precoMensal, ultimoDiaGratis, type Objetivo } from "@/app-aluno/sozinho/regras";
+import { mensagemApp, PLANO_TREINO, precoMensal, TESTE_DIAS_APP, ultimoDiaGratis, type Objetivo } from "@/app-aluno/sozinho/regras";
 import { lembrarArea } from "@/ui/casca/area";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { useOnline } from "@/ui/premium/useOnline";
 import { MensagemForm } from "../pecas/Campo";
+
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de começar o plano do app (Decreto 7.962/2013, art. 4º, I) — SÓ no build
+// de staging até a virada. Na produção o Rollup corta o import() (a expressão do Vite fica aqui, direto na condição, sem função no meio).
+const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
 
 /**
  * Boas-vindas › "Treinar sem profissional" (W7b — regra dele, 29/09): quem entra sem código treina sozinho. Escolhe o objetivo
@@ -31,7 +36,7 @@ export default function TreinarSemProfissional() {
   const [pronto, setPronto] = useState<string | null>(null);
   const consulta = useQuery({ queryKey: ["plano-app"], queryFn: buscarMeuPlano, staleTime: 60_000, retry: 1, networkMode: "online" });
   const planos = useMemo(() => consulta.data?.planos ?? [], [consulta.data]);
-  const dias = consulta.data?.teste_dias ?? 7;
+  const dias = consulta.data?.teste_dias ?? TESTE_DIAS_APP;
   const menor = planos.length ? Math.min(...planos.map((p) => p.valor)) : null;
 
   useEffect(() => {
@@ -99,6 +104,11 @@ export default function TreinarSemProfissional() {
             {dias} dias grátis, até <b className="font-semibold text-texto">{dataBR(ultimoDiaGratis(dias))}</b>. Sem cartão agora: depois do teste, pague por
             Pix ou cartão em Perfil › Pagamentos. Sem o pagamento, o app fica fechado até pagar.
           </p>
+          {ResumoAntesDePagar && !ehLoja && (
+            <Suspense fallback={null}>
+              <ResumoAntesDePagar tela="sem-profissional" />
+            </Suspense>
+          )}
           {erro && <MensagemForm data-sozinho-erro>{erro}</MensagemForm>}
           <button type="submit" disabled={enviando || !planos.length} className="pq-botao pq-botao-w h-12 w-full rounded-2xl" data-sozinho-enviar>
             {enviando ? "Começando…" : `Começar os ${dias} dias grátis`}

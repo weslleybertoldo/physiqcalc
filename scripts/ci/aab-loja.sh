@@ -7,8 +7,9 @@
 #
 #   versao          versionName e versionCode no android/app/build.gradle — a MESMA fórmula do APK do site (build-apk.yml)
 #   firebase        o google-services.json do segredo GOOGLE_SERVICES_JSON (igual ao job do APK; sem ele, o AAB sai sem push)
-#   web             npm run build:loja + o dist/ sem o painel master (scripts/ci/sem-master.sh) + npx cap sync android (os VITE_*
-#                   vêm do ambiente, os mesmos do APK)
+#   web             npm run build:loja + o dist/ sem o painel master (scripts/ci/sem-master.sh) e sem os textos legais novos
+#                   (scripts/ci/sem-texto-legal-novo.sh, menos no build de staging) + npx cap sync android (os VITE_* vêm do
+#                   ambiente, os mesmos do APK)
 #   gradle          ./gradlew bundlePlayRelease com a chave de upload (PLAY_UPLOAD_*; no CI o .p12 vem em base64 no
 #                   PLAY_UPLOAD_KEYSTORE_BASE64). Sem a chave o AAB sai SEM assinatura — e a conferência recusa
 #   conferir [aab]  as conferências abaixo; passando todas, o AAB vira Physiq-v<versão>-loja.aab (SUFIXO_AAB troca o "-loja")
@@ -132,6 +133,14 @@ passo_web() {
   grep -qF "$MARCA_LOJA" dist/index.html || morre "o dist/ não é o site da loja (falta $MARCA_LOJA no index.html)"
   # hml-08 (H-22): o painel master é só do site — o build:loja (VITE_APP_NATIVO=1) sai sem ele
   bash "$RAIZ/scripts/ci/sem-master.sh" dist
+  # hml-11 (H-28): os textos legais novos esperam o advogado e ficam só no staging — o build de produção (o do CI, VITE_DB_SCHEMA=public)
+  # sai sem eles. O AAB de teste do notebook (npm run build:aab com o .env.local de staging) os leva: lá a conferência não vale. No CI
+  # (GITHUB_ACTIONS) ela roda sempre, diga o health.json o que disser.
+  if [ -z "${GITHUB_ACTIONS:-}" ] && grep -qF '"schema":"staging"' dist/health.json 2>/dev/null; then
+    log "build de staging: os textos legais novos são esperados no dist/ (sem a conferência da produção)"
+  else
+    bash "$RAIZ/scripts/ci/sem-texto-legal-novo.sh" dist
+  fi
   npx cap sync android
 }
 

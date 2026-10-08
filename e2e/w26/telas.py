@@ -328,15 +328,25 @@ def caso_publicas(nav) -> None:
     c.print("publica_calculator")
     c.fim()
     c2 = anonimo(nav, "publica_privacidade", "/privacidade")
-    p.check(c2.esperar(lambda: c2.tem('[data-pagina-privacidade][data-rota="privacidade"]'), 60), "[publicas] /privacidade abre sem login")
-    p.check(c2.pg.locator("[data-secao-privacidade]").count() == 7 and "Physiq" in c2.texto() and "PhysiqNutri" not in c2.texto(), "[publicas] 7 seções, marca Physiq")
+    # hml-11: o build de staging mostra o texto NOVO em revisão (src/publico/legal/, com a faixa) em /privacidade, /termos e
+    # /assinatura; a produção continua com a página de hoje (8 seções desde a W3 da loja). O caso aceita os 2, pelo que o build serve.
+    p.check(c2.esperar(lambda: c2.tem('[data-pagina-privacidade][data-rota="privacidade"]') or c2.tem("[data-pagina-legal='politica']"), 60),
+            "[publicas] /privacidade abre sem login")
+    novo = c2.tem("[data-pagina-legal='politica']")
+    if novo:
+        p.check(c2.tem("[data-texto-em-revisao]") and "Physiq" in c2.texto() and "PhysiqNutri" not in c2.texto(), "[publicas] Política nova em revisão (staging), marca Physiq")
+    else:
+        p.check(c2.pg.locator("[data-secao-privacidade]").count() == 8 and "Physiq" in c2.texto() and "PhysiqNutri" not in c2.texto(), "[publicas] 8 seções, marca Physiq")
     c2.print("app_privacidade")
     c2.fim()
     c3 = anonimo(nav, "publica_termos", "/termos")
-    p.check(c3.esperar(lambda: c3.tem('[data-pagina-privacidade][data-rota="termos"]'), 60), "[publicas] /termos abre a mesma página")
-    c3.pg.wait_for_timeout(600)
-    p.check(c3.pg.evaluate("() => { const r = document.getElementById('termos')?.getBoundingClientRect(); return !!r && r.top < window.innerHeight; }"),
-            "[publicas] /termos já mostra a parte dos termos")
+    if novo:
+        p.check(c3.esperar(lambda: c3.tem("[data-pagina-legal='termos']"), 60), "[publicas] /termos abre os Termos de Uso novos (staging), não a Política")
+    else:
+        p.check(c3.esperar(lambda: c3.tem('[data-pagina-privacidade][data-rota="termos"]'), 60), "[publicas] /termos abre a mesma página")
+        c3.pg.wait_for_timeout(600)
+        p.check(c3.pg.evaluate("() => { const r = document.getElementById('termos')?.getBoundingClientRect(); return !!r && r.top < window.innerHeight; }"),
+                "[publicas] /termos já mostra a parte dos termos")
     c3.print("app_termos")
     c3.fim()
 

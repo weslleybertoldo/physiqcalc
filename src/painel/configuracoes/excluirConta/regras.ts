@@ -38,10 +38,20 @@ export function textoDosAlunosDaEquipe(n: number): string {
     : `Os seus ${n} alunos ficam na conta, sem responsável, para o dono atribuir a outro profissional.`;
 }
 
-/** As linhas da cobrança automática (só informação — nenhum valor, nenhum "pague"). */
+/**
+ * As linhas da cobrança automática (só informação — nenhum valor, nenhum "pague"). hml-11 (H-28, D5): "sem reembolso" conflita com a
+ * desistência em 7 dias dos Termos de assinatura novos — a frase nova só no build de staging até a virada (a condição do Vite direto
+ * aqui: na produção a frase nova nem entra no bundle).
+ */
 export function textosDaCobranca(c: ContaDoDono): string[] {
   const linhas: string[] = [];
-  if (c.cobrancas.plano > 0) linhas.push("A cobrança automática do plano desta conta é cancelada agora (sem reembolso do que já foi pago).");
+  if (c.cobrancas.plano > 0) {
+    linhas.push(
+      import.meta.env.VITE_DB_SCHEMA === "staging"
+        ? "A cobrança automática do plano desta conta é cancelada agora (o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento)."
+        : "A cobrança automática do plano desta conta é cancelada agora (sem reembolso do que já foi pago).",
+    );
+  }
   if (c.cobrancas.alunos > 0) {
     linhas.push(`${c.cobrancas.alunos === 1 ? "A cobrança automática de 1 aluno" : `As cobranças automáticas de ${c.cobrancas.alunos} alunos`} para você também ${c.cobrancas.alunos === 1 ? "é cancelada" : "são canceladas"}.`);
   }

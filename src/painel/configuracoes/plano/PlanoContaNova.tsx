@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, BadgeCheck, CalendarClock, CreditCard, Dumbbell, FlaskConical, Hourglass, QrCode, Repeat, Salad, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +36,11 @@ import { CartaoPagamento, type DadosCartao } from "./CartaoPagamento";
 import { EscolhaPlano, type Escolha } from "./EscolhaPlano";
 import { HistoricoFaturas } from "./Historico";
 import { PixAberto } from "./PixAberto";
+
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de pagar (Decreto 7.962/2013, art. 4º, I) — SÓ no build de staging até a
+// virada (o texto espera o advogado). Na produção o Vite troca o import.meta.env.VITE_DB_SCHEMA pelo valor e o Rollup corta o import():
+// o resumo nem entra no bundle. A expressão fica AQUI, direto na condição, sem função no meio (o jeito da hml-08 e da hml-10).
+const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
 
 const ROTULO_SITUACAO = {
   teste: { chip: "TESTE", tom: "c" as const },
@@ -126,6 +131,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
   // W28: "venceu em" é o vencimento sem a tolerância (legado Calc); nas contas novas, o mesmo último dia com acesso
   const vencimento = vencimentoDoPlano(c) ?? fim;
   const tolerancia = !recorrente && emTolerancia(c, s.hoje);
+  const primeiraCobranca = primeira ? `em ${dataBR(primeira)} (fim do ${efetiva === "teste" ? "teste" : "mês pago"})` : "hoje";
   const diasFim = fim ? diasEntre(s.hoje, fim) : null;
   const email = usuario?.email ?? "";
   // o preço de hoje (o valor travado do legado — o servidor manda; sem ele, o valor mensal de hoje)
@@ -314,6 +320,11 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
                         Outro plano: o preço de hoje ({reais(precoDeHoje)}/mês) e as regras de hoje deixam de valer nesta conta.
                       </p>
                     )}
+                    {ResumoAntesDePagar && !ehLoja && (
+                      <Suspense fallback={null}>
+                        <ResumoAntesDePagar tela="plano-profissional" />
+                      </Suspense>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       <Botao variante="w" icone={QrCode} onClick={confirmandoTroca(gerarPix)} disabled={!!ocupado || recorrente || valor === null} data-botao-pix>
                         {ocupado === "pix" ? "Gerando…" : "Pagar com Pix"}
@@ -328,9 +339,14 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
                       )}
                     </div>
                     <p className="text-[11.5px] leading-relaxed text-texto-3">
-                      {recorrente
-                        ? "A cobrança automática já paga todo mês — para pagar por Pix, cancele-a antes."
-                        : `Pix vale 72 h e confirma na hora. Na cobrança automática a 1ª cobrança é ${primeira ? `em ${dataBR(primeira)} (fim do ${efetiva === "teste" ? "teste" : "mês pago"})` : "hoje"} e renova todo mês, sem aviso.`}
+                      {/* hml-11 (D5): "sem aviso" conflita com os Termos de assinatura novos — a frase nova só no staging até a virada */}
+                      {recorrente ? (
+                        "A cobrança automática já paga todo mês — para pagar por Pix, cancele-a antes."
+                      ) : import.meta.env.VITE_DB_SCHEMA === "staging" ? (
+                        <span data-frase-renovacao>{`Pix vale 72 h e confirma na hora. Na cobrança automática a 1ª cobrança é ${primeiraCobranca} e renova todo mês até você cancelar.`}</span>
+                      ) : (
+                        `Pix vale 72 h e confirma na hora. Na cobrança automática a 1ª cobrança é ${primeiraCobranca} e renova todo mês, sem aviso.`
+                      )}
                     </p>
                   </>
                 )}

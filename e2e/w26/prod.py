@@ -100,8 +100,9 @@ def main() -> int:
             c.fim()
             c = B.Caso(nav, base, "prod", "publica_privacidade", desktop=False)
             c.ir("/privacidade")
-            p.check(c.esperar(lambda: c.tem('[data-pagina-privacidade][data-rota="privacidade"]'), 60) and c.pg.locator("[data-secao-privacidade]").count() == 7,
-                    "/privacidade: a página do Physiq com as 7 seções")
+            # 8 seções desde a W3 da loja (Serviços de terceiros); o texto novo da hml-11 só existe no build de staging
+            p.check(c.esperar(lambda: c.tem('[data-pagina-privacidade][data-rota="privacidade"]'), 60) and c.pg.locator("[data-secao-privacidade]").count() == 8
+                    and c.pg.locator("[data-pagina-legal]").count() == 0, "/privacidade: a página do Physiq com as 8 seções (sem o texto em revisão)")
             c.print("app_privacidade")
             c.ir("/termos")
             p.check(c.esperar(lambda: c.tem('[data-pagina-privacidade][data-rota="termos"]'), 60), "/termos abre a mesma página")

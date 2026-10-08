@@ -45,6 +45,31 @@ export interface PlanoApp {
   descricao: string | null;
 }
 
+/** Os dias grátis do plano do app — o padrão da seed (app_config 'aluno_do_app'.teste_dias); o valor que vale vem do banco. */
+export const TESTE_DIAS_APP = 7;
+
+/**
+ * hml-11 (H-28): os 2 planos do app como a seed os carrega (planos_aluno da conta do app em
+ * supabase-principal/migrations/20260929190000_w07b_sem_profissional.sql). O preço que vale é o do banco (o master muda sem deploy,
+ * W27); os Termos de assinatura (src/publico/legal/assinatura.ts) escrevem os preços daqui, e o teste deles confere com a seed.
+ */
+export const PLANOS_APP_PADRAO: readonly PlanoApp[] = [
+  {
+    codigo: PLANO_TREINO,
+    nome: "Treino",
+    valor: 29.9,
+    modulos: ["treino"],
+    descricao: "Monte o seu treino ou use um treino pronto pelo seu objetivo. Funciona sem internet.",
+  },
+  {
+    codigo: PLANO_COMPLETO,
+    nome: "Treino + Alimentação",
+    valor: 49.9,
+    modulos: ["treino", "nutricao"],
+    descricao: "Tudo do Treino e mais os pratos prontos pelo seu objetivo, com calorias e macros.",
+  },
+];
+
 export interface AssinaturaApp {
   status: string;
   valor: number | null;
@@ -85,7 +110,7 @@ export function normalizarMeuPlano(bruto: unknown): MeuPlanoApp {
   const planos = (Array.isArray(b.planos) ? b.planos : []) as Array<Record<string, unknown>>;
   const m = (b.matricula && typeof b.matricula === "object" ? b.matricula : null) as Record<string, unknown> | null;
   return {
-    teste_dias: num(b.teste_dias) ?? 7,
+    teste_dias: num(b.teste_dias) ?? TESTE_DIAS_APP,
     planos: planos
       .filter((p) => typeof p.codigo === "string" && num(p.valor) !== null)
       .map((p) => ({
