@@ -98,8 +98,8 @@ describe("a guarda de CI: scripts/ci/sem-texto-legal-novo.sh", () => {
     const aab = ler("scripts/ci/aab-loja.sh");
     const web = aab.slice(aab.indexOf("passo_web() {"), aab.indexOf("passo_gradle() {"));
     expect(web).toMatch(/npm run build:loja[\s\S]*sem-master\.sh" dist[\s\S]*bash "\$RAIZ\/scripts\/ci\/sem-texto-legal-novo\.sh" dist[\s\S]*npx cap sync android/);
-    // só o AAB de teste do notebook (build de staging, o .env.local) pula a conferência; o CI builda com VITE_DB_SCHEMA=public
-    expect(web).toContain(`if grep -qF '"schema":"staging"' dist/health.json`);
+    // só o AAB de teste do notebook (build de staging, o .env.local) pula a conferência; no CI (GITHUB_ACTIONS) ela roda sempre
+    expect(web).toContain(`if [ -z "\${GITHUB_ACTIONS:-}" ] && grep -qF '"schema":"staging"' dist/health.json`);
     for (const arquivo of [".github/workflows/build-apk.yml", ".github/workflows/build-apk-check.yml"]) {
       const wf = ler(arquivo);
       const passo = wf.slice(wf.indexOf("run: bash scripts/ci/aab-loja.sh web"));

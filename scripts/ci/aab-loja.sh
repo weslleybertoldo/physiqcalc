@@ -134,8 +134,9 @@ passo_web() {
   # hml-08 (H-22): o painel master é só do site — o build:loja (VITE_APP_NATIVO=1) sai sem ele
   bash "$RAIZ/scripts/ci/sem-master.sh" dist
   # hml-11 (H-28): os textos legais novos esperam o advogado e ficam só no staging — o build de produção (o do CI, VITE_DB_SCHEMA=public)
-  # sai sem eles. O AAB de teste do notebook (npm run build:aab com o .env.local de staging) os leva: lá a conferência não vale.
-  if grep -qF '"schema":"staging"' dist/health.json 2>/dev/null; then
+  # sai sem eles. O AAB de teste do notebook (npm run build:aab com o .env.local de staging) os leva: lá a conferência não vale. No CI
+  # (GITHUB_ACTIONS) ela roda sempre, diga o health.json o que disser.
+  if [ -z "${GITHUB_ACTIONS:-}" ] && grep -qF '"schema":"staging"' dist/health.json 2>/dev/null; then
     log "build de staging: os textos legais novos são esperados no dist/ (sem a conferência da produção)"
   else
     bash "$RAIZ/scripts/ci/sem-texto-legal-novo.sh" dist
