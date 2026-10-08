@@ -14,12 +14,14 @@ import { assinatura, montarAviso, type ErroParaAviso, type SchemaAviso } from ".
 import { criarLog } from "../../supabase-principal/functions/_shared/log";
 import { avisarErro as avisarDoTreino } from "../../supabase/functions/_shared/avisar-erro";
 import { criarLog as criarLogDoTreino } from "../../supabase/functions/_shared/log";
+// Token falso montado aqui: o literal no formato de token do Telegram dispara o secret scanning do GitHub.
+const TOKEN_TELEGRAM_FALSO = ["1234567890", "AA" + "Hk3j4k5l6m7n8o9p0qRsTuVwXyZ12345"].join(":");
 
 // Homologação hml-10 (H-26, D4 e D6) — o aviso de erro no servidor, com peças falsas (nada vai à rede): a função erro-avisar
 // (atenderPedido), o caminho do aviso (criarAvisador: trava na memória → registrar_aviso_erro → Telegram) e o aviso do Banco do
 // Treino (que manda à erro-avisar do principal).
 const SEGREDO = "a1".repeat(32);
-const TOKEN = "1234567890:AAHk3j4k5l6m7n8o9p0qRsTuVwXyZ12345";
+const TOKEN = TOKEN_TELEGRAM_FALSO;
 const STAGING = "https://physiqcalc-staging.vercel.app";
 const URL_FUNCAO = "https://principal.teste.invalid/functions/v1/erro-avisar";
 

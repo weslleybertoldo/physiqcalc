@@ -9,6 +9,8 @@ import {
   ondeDoErro,
   type ErroParaAviso,
 } from "../../supabase-principal/functions/_shared/erros";
+// Token falso montado aqui: o literal no formato de token do Telegram dispara o secret scanning do GitHub.
+const TOKEN_TELEGRAM_FALSO = ["1234567890", "AA" + "Hk3j4k5l6m7n8o9p0qRsTuVwXyZ12345"].join(":");
 
 // PAT falso montado aqui: o literal no formato de um PAT do Supabase trava o push (secret scanning do GitHub).
 const PAT_FALSO = ["sbp", "0123456789abcdef".repeat(2) + "01234567"].join("_");
@@ -29,7 +31,7 @@ const CARGAS: Array<[string, string, string]> = [
   ["Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.abcDEF123 inválido", "eyJhbGci", "Bearer [token]"],
   ["chave sb_secret_AbCdEf123456789 recusada", "sb_secret_", "[token]"],
   ["mp APP_USR-1234567890-abcdef recusou", "APP_USR-", "[token]"],
-  ["bot 1234567890:AAHk3j4k5l6m7n8o9p0qRsTuVwXyZ12345 caiu", "AAHk3j", "[token]"],
+  [`bot ${TOKEN_TELEGRAM_FALSO} caiu`, "AAHk3j", "[token]"],
   ["falhou em https://nativoos.com.br/os-online/abc?token=segredo123&email=x@y.com", "segredo123", "https://nativoos.com.br/os-online/abc"],
   // as do Physiq
   ["e-mail maria.silva@gmail.com não confirmado", "maria.silva@gmail.com", "[e-mail]"],

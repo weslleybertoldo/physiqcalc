@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ErroParaAviso, SchemaAviso } from "../../supabase-principal/functions/_shared/erros";
 import { criarLog, emSegundoPlano } from "../../supabase-principal/functions/_shared/log";
+// Token falso montado aqui: o literal no formato de token do Telegram dispara o secret scanning do GitHub.
+const TOKEN_TELEGRAM_FALSO = ["1234567890", "AA" + "Hk3j4k5l6m7n8o9p0qRsTuVwXyZ12345"].join(":");
 
 // PAT falso montado aqui: o literal no formato de um PAT do Supabase trava o push (secret scanning do GitHub).
 const PAT_FALSO = ["sbp", "0123456789abcdef".repeat(2) + "01234567"].join("_");
@@ -119,7 +121,7 @@ describe("cada campo no formato fixo; fora dele vira \"?\"", () => {
       PAT_FALSO,
       "APP_USR-1234567890-abcdef",
       "TEST-1234567890-abcdef",
-      "1234567890:AAHk3j4k5l6m7n8o9p0qRsTuVwXyZ12345",
+      TOKEN_TELEGRAM_FALSO,
       "https://api.mercadopago.com/v1/payments?access_token=APP_USR-1",
     ];
     const log = semAviso();
