@@ -16,8 +16,8 @@ acabaram" (w7b-vence com o financeiro_do_aluno forçado vencido SÓ na resposta)
 S6–S9 e S11 só no modo staging (contas de TESTE do schema staging). NADA é pago, assinado, começado nem excluído: o script
 nunca clica em pagar, assinar, "Começar" nem confirma a exclusão; no fim, logout scope=local das sessões que abriu.
 
-Uso: python3 e2e/hml11/telas.py --base http://localhost:8080 --prefixo local --modo staging [--casos S3,S4]
-     python3 e2e/hml11/telas.py --base http://localhost:8081 --prefixo local-prod --modo producao
+Uso: python3 e2e/hml11/telas.py --base http://localhost:8080 --prefixo local --modo staging --canal msedge [--casos S3,S4]
+     python3 e2e/hml11/telas.py --base http://localhost:8081 --prefixo local-prod --modo producao --canal msedge
      python3 e2e/hml11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging --modo staging
      python3 e2e/hml11/telas.py --base https://physiqcalc.com.br --prefixo prod --modo producao
 Prints em ~/projetos/physiqcalc-scratch/prints/hml11/<prefixo>_<caso>.png; cópia da saída em ~/projetos/physiqcalc-scratch/hml/hml11/.
@@ -47,7 +47,8 @@ B5.PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml11"
 VERSAO = "2026-10-08"
 # marcas que só existem no texto novo (as mesmas da guarda scripts/ci/sem-texto-legal-novo.sh)
 MARCAS_NOVAS = ("Termos de assinatura do Physiq", "data-texto-em-revisao", "data-pagina-legal", "data-resumo-antes-de-pagar")
-MARCADORES_DE_RASCUNHO = re.compile(r"\[(?:CONFERIR|DEPENDE|P\d+\])|rascunho|a confirmar", re.I)
+# \b: o "para confirmar que é uma pessoa" do Cloudflare (SERVICOS_TERCEIROS) não é o "a confirmar" de pendência (o mesmo do textos.test.ts)
+MARCADORES_DE_RASCUNHO = re.compile(r"\[(?:CONFERIR|DEPENDE|P\d+\])|rascunho|\ba confirmar\b", re.I)
 CONTAS = {
     "w5-dono": "w5.dono.teste.claude@physiqnutri.app",
     "w7b-sozinho": "w7b.sozinho.teste.claude@physiqnutri.app",
@@ -55,6 +56,26 @@ CONTAS = {
     "excluir2": "excluir2.teste.claude@physiqnutri.app",
 }
 TODOS = ("S1", "S2", "S3", "S4", "S5", "S10", "S6", "S7", "S8", "S9", "S11", "JS")
+
+
+_PRINT_ORIGINAL = B5.Caso.print
+
+
+def _print_com_nova_tentativa(self, nome: str) -> str:
+    """O print com até 3 tentativas: no notebook o Chromium às vezes devolve "Unable to capture screenshot" num print isolado (o
+    processo de GPU reinicia); a página continua viva e a tentativa seguinte sai. Outro erro (página caída) sobe na hora."""
+    for tentativa in range(3):
+        try:
+            return _PRINT_ORIGINAL(self, nome)
+        except Exception as e:  # noqa: BLE001
+            if "Unable to capture screenshot" not in str(e) or tentativa == 2:
+                raise
+            print(f"   (print {nome}: 'Unable to capture screenshot' — tentativa {tentativa + 2} de 3)", flush=True)
+            self.pg.wait_for_timeout(1500)
+    raise AssertionError("inalcançável")
+
+
+B5.Caso.print = _print_com_nova_tentativa
 
 
 def texto_de(caso, seletor: str) -> str:
@@ -141,8 +162,15 @@ def conferir_documento(o, caso, tipo: str, titulo_caso: str) -> str:
     return corpo
 
 
-def s3_s5_textos_novos(o, nav, base: str, prefixo: str) -> None:
-    for desktop in (False, True):
+def abrir_pelo_link(caso, doc: str) -> None:
+    """Troca de documento pelo link do topo da página, como a pessoa faz (a navegação do app, sem recarregar). Recarregar 3 páginas
+    longas seguidas na mesma aba (goto) derruba o chromium_headless_shell do Playwright na 3ª ("Target crashed" / "Unable to capture
+    screenshot"; 6 de 6 em 08/10/2026) — no Chromium inteiro e no Edge a mesma sequência passa, e pelos links passa 10 de 10."""
+    caso.pg.locator(f"header [data-link-legal='{doc}']").first.click()
+
+
+def s3_s5_textos_novos(o, nav, base: str, prefixo: str, telas: tuple[bool, ...] = (False, True)) -> None:
+    for desktop in telas:
         caso = B5.Caso(nav, base, prefixo, "S3-S5" + ("-pc" if desktop else ""), desktop=desktop)
         sufixo = "_pc" if desktop else ""
         try:
@@ -153,11 +181,11 @@ def s3_s5_textos_novos(o, nav, base: str, prefixo: str) -> None:
                 for trecho in ("controlador", "operador", "16 anos", "18 anos", "Telegram", "art. 33"):
                     o.ok(trecho in politica, f"S3 a Política nova cita '{trecho}'")
             o.linha(f"   print: {caso.print('S3_politica_nova' + sufixo)}")
-            caso.ir("/termos")
+            abrir_pelo_link(caso, "termos")
             termos = conferir_documento(o, caso, "termos", f"S4{sufixo} /termos novo")
             o.ok(termos != politica and "não é um dispositivo médico" in termos and "Anexo" in termos, f"S4{sufixo} /termos ≠ /privacidade, com o Anexo")
             o.linha(f"   print: {caso.print('S4_termos' + sufixo)}")
-            caso.ir("/assinatura")
+            abrir_pelo_link(caso, "assinatura")
             assinatura = conferir_documento(o, caso, "assinatura", f"S5{sufixo} /assinatura")
             if not desktop:
                 for trecho in ("39,90", "59,90", "29,90", "49,90", "14 dias", "72 h", "7 dias", "Maceió"):
@@ -222,9 +250,31 @@ def s6_s9_dono(o, nav, base: str, prefixo: str, sess, casos: set[str]) -> None:
                 o.ok("renova todo mês até você cancelar" in texto_de(caso, "[data-frase-renovacao]"), "S6 a renovação sem 'sem aviso'")
             o.ok("sem aviso" not in caso.texto(), "S6 a frase 'renova todo mês, sem aviso' não aparece no staging")
         if "S9" in casos:
+            # a frase da desistência é a da cobrança automática do plano (regras.ts, textosDaCobranca): só aparece com ela ligada, e
+            # a conta de teste (em teste) não tem — forçada SÓ na resposta da conferência (simular: true; nada muda no banco)
+            forcados = {"n": 0}
+
+            def com_cobranca(route) -> None:
+                corpo_pedido = route.request.post_data or ""
+                if route.request.method != "POST" or '"simular":true' not in corpo_pedido.replace(" ", ""):
+                    route.continue_()
+                    return
+                r = route.fetch()
+                try:
+                    corpo = r.json()
+                except Exception:  # noqa: BLE001
+                    route.fulfill(response=r)
+                    return
+                for conta in corpo.get("contas") or [] if isinstance(corpo, dict) else []:
+                    if isinstance(conta, dict) and isinstance(conta.get("cobrancas"), dict):
+                        conta["cobrancas"]["plano"] = max(1, conta["cobrancas"].get("plano") or 0)
+                        forcados["n"] += 1
+                route.fulfill(response=r, json=corpo)
+
+            caso.pg.route("**/functions/v1/excluir-minha-conta*", com_cobranca)
             caso.ir("/painel/configuracoes/excluir-conta")
             o.ok(caso.esperar(lambda: caso.tem("[data-frase-desistencia]"), 45), "S9 Excluir minha conta (dono) com a frase da desistência")
-            o.ok("salvo a desistência em até 7 dias" in texto_de(caso, "[data-frase-desistencia]"), "S9 'salvo a desistência em até 7 dias depois do pagamento'")
+            o.ok("salvo a desistência em até 7 dias" in texto_de(caso, "[data-frase-desistencia]"), f"S9 'salvo a desistência em até 7 dias depois do pagamento' (cobrança forçada {forcados['n']}×)")
             rolar_ate(caso, "[data-frase-desistencia]")
             o.linha(f"   print: {caso.print('S9_excluir_conta_dono')}")
     finally:
@@ -357,6 +407,8 @@ def main() -> int:
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--modo", required=True, choices=("staging", "producao"))
     ap.add_argument("--casos", default=",".join(TODOS))
+    # no notebook, o Chromium do Playwright cai recarregando as telas do build local (vite preview) e o Edge não — 08/10/2026
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     base = a.base.rstrip("/")
     casos = {c.strip().upper() for c in a.casos.split(",") if c.strip()}
@@ -366,32 +418,55 @@ def main() -> int:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+
+        def rodar(fn, *args, **kw) -> None:
+            """Cada grupo de casos num navegador NOVO e, se o navegador cair no meio, 1 nova tentativa do grupo inteiro noutro. No
+            notebook (08/10/2026) o Chromium cai no meio dos prints destas páginas longas depois de alguns casos no mesmo navegador:
+            o chromium_headless_shell padrão com "trap int3" na thread Compositor (14×, sempre no mesmo endereço) e o Chromium
+            inteiro com o processo de GPU reiniciando (exit_code=9; o Vulkan incompleto do Mesa no Intel Ivy Bridge, máquina
+            carregada). Sozinha, cada tela passa (3 de 3) — é do navegador, não do app; no Edge a mesma sequência passa
+            (--canal msedge, o usado na fase local)."""
+            for tentativa in (1, 2):
+                nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
+                try:
+                    fn(o, nav, *args, **kw)
+                    return
+                except Exception as e:  # noqa: BLE001
+                    caiu = any(t in str(e) for t in ("Target crashed", "Unable to capture screenshot", "has been closed"))
+                    if not caiu or tentativa == 2:
+                        raise
+                    o.linha(f"   ({fn.__name__}: o navegador caiu no meio — o grupo de novo, num navegador novo)")
+                finally:
+                    try:
+                        nav.close()
+                    except Exception:  # noqa: BLE001
+                        pass
+
         try:
             if not staging:
                 if casos & {"S1", "S4", "S5"}:
-                    s1_politica_de_hoje(o, nav, base, a.prefixo)
+                    rodar(s1_politica_de_hoje, base, a.prefixo)
                 if "S2" in casos:
-                    s2_excluir_conta(o, nav, base, a.prefixo, staging=False)
+                    rodar(s2_excluir_conta, base, a.prefixo, staging=False)
                 if "JS" in casos:
                     js_sem_marcas(o, base)
             else:
                 if "S2" in casos:
-                    s2_excluir_conta(o, nav, base, a.prefixo, staging=True)
+                    rodar(s2_excluir_conta, base, a.prefixo, staging=True)
                 if casos & {"S3", "S4", "S5"}:
-                    s3_s5_textos_novos(o, nav, base, a.prefixo)
+                    rodar(s3_s5_textos_novos, base, a.prefixo, telas=(False,))  # celular
+                    rodar(s3_s5_textos_novos, base, a.prefixo, telas=(True,))  # computador, noutro navegador
                 if "S10" in casos:
-                    s10_impressao(o, nav, base, a.prefixo)
+                    rodar(s10_impressao, base, a.prefixo)
                 if casos & {"S6", "S9"}:
-                    s6_s9_dono(o, nav, base, a.prefixo, sess, casos)
+                    rodar(s6_s9_dono, base, a.prefixo, sess, casos)
                 if "S7" in casos:
-                    s7_sem_profissional(o, nav, base, a.prefixo, sess)
+                    rodar(s7_sem_profissional, base, a.prefixo, sess)
                 if "S8" in casos:
-                    s8_meu_plano(o, nav, base, a.prefixo, sess)
+                    rodar(s8_meu_plano, base, a.prefixo, sess)
                 if "S11" in casos:
-                    s11_trava(o, nav, base, a.prefixo, sess)
+                    rodar(s11_trava, base, a.prefixo, sess)
         finally:
-            nav.close()
             sess.fechar(o)
     graves = [t for bom, t in B5.p.itens if not bom]
     o.ok(not graves, f"sem erro de página ({graves[:2]})")
