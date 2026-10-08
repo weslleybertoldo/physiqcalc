@@ -7,7 +7,7 @@ import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { FRASE_BACKUPS, abertaPeloApp, servicosDaVersao } from "./privacidade/textos";
 
-const ATUALIZADA_EM = "7 de outubro de 2026";
+const ATUALIZADA_EM = "8 de outubro de 2026";
 
 const CLASSE_VOLTAR = "inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-texto-3 transition-colors hover:text-texto-2";
 
@@ -34,6 +34,9 @@ function Secao({ id, icone: Icone, titulo, children }: { id: string; icone: Luci
  * só fora da versão da Google Play), os dados de saúde, a frase dos backups sem prazo (a mesma da /excluir-conta) e o "Voltar" que
  * volta para o app quando a página foi aberta pelo Perfil ou pelas Configurações. W4 da loja: a frase dos backups ganhou o prazo —
  * em até 30 dias (decisão de 06/10/2026, ver textos.ts) — e a data passou a 7 de outubro de 2026.
+ * hml-11 (H-28, A2 — só correções de fato; o texto novo espera o advogado em src/publico/legal/): o país do us-east-1, a lixeira
+ * (as 4 fontes que a purga apaga; o aluno removido nunca — 20261001230000_w26_lixeira.sql), as séries de 12 meses (apagadas também
+ * do banco: src/treino/useTreinoDoDia.ts manda o DELETE pelo PowerSync), os serviços e a frase dos backups (textos.ts) e a data.
  */
 export default function Privacidade() {
   const { pathname, state } = useLocation();
@@ -98,7 +101,7 @@ export default function Privacidade() {
 
         <Secao id="armazenamento" icone={Lock} titulo="Onde ficam e quem vê">
           <p>
-            Em dois bancos de dados Supabase (PostgreSQL): o do treino na região us-east-1 e o principal (conta, alimentação, agenda e pagamentos) na
+            Em dois bancos de dados Supabase (PostgreSQL): o do treino na região us-east-1 (Estados Unidos) e o principal (conta, alimentação, agenda e pagamentos) na
             região sa-east-1 (São Paulo), com regras de acesso por linha (Row Level Security). Uma cópia do treino fica no aparelho (SQLite, PowerSync)
             para funcionar sem internet.
           </p>
@@ -140,8 +143,12 @@ export default function Privacidade() {
 
         <Secao id="retencao" icone={Trash2} titulo="Retenção">
           <p>
-            Séries de treino com mais de 12 meses saem do aparelho automaticamente. O que o profissional exclui fica 30 dias na lixeira e depois é
-            apagado de vez. <span data-frase-backups>{FRASE_BACKUPS}</span>
+            <span data-frase-series>Séries de treino com mais de 12 meses são apagadas automaticamente, do aparelho e do banco.</span>{" "}
+            <span data-frase-lixeira>
+              O que o profissional exclui (respostas da pré-consulta, anamneses, antropometrias e planos alimentares) fica 30 dias na lixeira e
+              depois é apagado de vez; o cadastro de um aluno removido não é apagado pela lixeira e fica com o profissional.
+            </span>{" "}
+            <span data-frase-backups>{FRASE_BACKUPS}</span>
           </p>
         </Secao>
 

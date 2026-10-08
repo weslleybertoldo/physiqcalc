@@ -185,7 +185,7 @@ describe("trava do pagamento (GatePagamentoPendente) — W1 da loja", () => {
   const vencidaApp = () => resumoApp({ pago_ate: dia(-2), teste_ate: dia(-2), desde: dia(-9) });
   const vencidaProf = () => resumo({ bloquear_inadimplente: true, pago_ate: dia(-5), desde: dia(-60) });
 
-  it("na loja, a conta do app travada: texto neutro, sem 'Pagar', sem preço e sem link — só 'Sair'", () => {
+  it("na loja, a conta do app travada: texto neutro, sem 'Pagar', sem preço e sem link — 'Exportar ou excluir meus dados' (hml-11) e 'Sair'", () => {
     h.loja = true;
     h.resumo = [vencidaApp()];
     montar(<GatePagamentoPendente><div>o app</div></GatePagamentoPendente>);
@@ -195,7 +195,16 @@ describe("trava do pagamento (GatePagamentoPendente) — W1 da loja", () => {
     expect(screen.queryByRole("button", { name: /Pagar/ })).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
     expect(document.body.textContent).not.toMatch(/R\$|Assine|Pague/);
+    expect(screen.getByRole("button", { name: /Exportar ou excluir meus dados/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Sair/ })).toBeInTheDocument();
+  });
+
+  it("hml-11 (D14): na loja, a conta do app travada também abre o Perfil reduzido (a exclusão é exigência da Play)", () => {
+    h.loja = true;
+    h.resumo = [vencidaApp()];
+    montar(<GatePagamentoPendente><div>o app</div></GatePagamentoPendente>, "/perfil");
+    expect(screen.getByText("o app")).toBeInTheDocument();
+    expect(document.querySelector("[data-trava-app]")).toBeNull();
   });
 
   it("no site, a mesma trava da conta do app tem 'Pagar' (igual a hoje)", () => {

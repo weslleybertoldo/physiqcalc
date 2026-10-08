@@ -14,7 +14,8 @@ import { TEXTO_BLOQUEIO_PROFISSIONAL, TITULO_BLOQUEIO_PROFISSIONAL, bloqueioDoPr
  * Trava do app: o profissional bloqueou o acesso do aluno (W13, falha F5 — R10, spec 9: "Acesso pausado pelo seu profissional").
  * Lê a situação do banco principal e o espelho do Treino pelo PowerSync (vale sem internet depois da 1ª sincronização — ver
  * ./pecas/bloqueioAluno.ts). O Perfil continua abrindo, reduzido a Sair, Exportar e Excluir (spec 9). Diferente da trava do
- * master (GateBloqueioMaster, que vem antes) e da do inadimplente (GatePagamentoPendente, que só abre Pagamentos).
+ * master (GateBloqueioMaster, que vem antes) e da do inadimplente (GatePagamentoPendente, que abre Pagamentos e, desde a hml-11,
+ * o Perfil reduzido).
  */
 export default function GateBloqueioAluno({ children }: { children: ReactNode }) {
   const { situacao, recarregarSituacao, treino, tentarTreinoDeNovo } = useSessao();

@@ -88,7 +88,7 @@ describe("W7 — só Nutrição e aluno sem módulo abrem o Perfil", () => {
   });
 });
 
-describe("W7 — inadimplente com o bloqueio ligado: só Perfil › Pagamentos abre (spec 9, R15)", () => {
+describe("W7 — inadimplente com o bloqueio ligado: Perfil › Pagamentos abre (spec 9, R15) e, desde a hml-11 (D14), o Perfil reduzido", () => {
   beforeEach(() => {
     h.resumo = [{
       paciente_id: "p1", conta_id: "c1", conta_nome: "Nutri", recebimento_modo: "pix_manual", bloquear_inadimplente: true, tem_chave: true,
@@ -96,11 +96,28 @@ describe("W7 — inadimplente com o bloqueio ligado: só Perfil › Pagamentos a
       aguardando: false, assinatura_ativa: false, abertas: [], aguardando_avulsas: 0,
     }];
   });
-  it("/perfil fica na trava 'Pagamento pendente'; /perfil/pagamentos abre", () => {
-    const r = montar(GatePagamentoPendente, "/perfil");
-    expect(screen.getByText("Pagamento pendente")).toBeInTheDocument();
-    r.unmount();
-    montar(GatePagamentoPendente, "/perfil/pagamentos");
+  it("/perfil/pagamentos abre; as abas e os outros itens do Perfil ficam na trava 'Pagamento pendente'", () => {
+    const r = montar(GatePagamentoPendente, "/perfil/pagamentos");
     expect(screen.getByText("o app")).toBeInTheDocument();
+    r.unmount();
+    for (const rota of ["/treino", "/", "/perfil/conta"]) {
+      const t = montar(GatePagamentoPendente, rota);
+      expect(screen.getByText("Pagamento pendente")).toBeInTheDocument();
+      expect(screen.queryByText("o app")).toBeNull();
+      t.unmount();
+    }
+  });
+  it("hml-11 (D14): /perfil e /perfil?excluir=1 (a volta da /excluir-conta) abrem o Perfil reduzido — Sair, Exportar e Excluir", () => {
+    for (const rota of ["/perfil", "/perfil?excluir=1"]) {
+      const r = montar(GatePagamentoPendente, rota);
+      expect(screen.getByText(/^perfil reduzido: Pagamento pendente — Há um pagamento de R\$\s?150,00 vencido com Camila\./)).toBeInTheDocument();
+      r.unmount();
+    }
+  });
+  it("hml-11 (D14): a trava tem 'Pagar' e 'Exportar ou excluir meus dados', que leva ao Perfil reduzido", () => {
+    montar(GatePagamentoPendente, "/treino");
+    expect(screen.getByRole("button", { name: /Pagar/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Exportar ou excluir meus dados/ }));
+    expect(screen.getByText(/^perfil reduzido: Pagamento pendente/)).toBeInTheDocument();
   });
 });

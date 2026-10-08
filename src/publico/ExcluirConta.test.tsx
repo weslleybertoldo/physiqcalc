@@ -65,7 +65,8 @@ describe("/excluir-conta — sem login", () => {
   it("W3/W4 da loja: as cópias de segurança com a MESMA frase da política — em até 30 dias, sem o 'até 7 dias'", () => {
     const { container } = abrir();
     expect(container.querySelector("[data-secao-excluir='guardado'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
-    expect(container.textContent).toMatch(/são apagadas em até 30 dias depois de feitas/);
+    // hml-11 (A2): a frase passou a dizer a cópia diária cifrada da hml-07 — o prazo é o mesmo
+    expect(container.textContent).toMatch(/são cifradas, guardadas no Brasil e apagadas em até 30 dias depois de feitas/);
     expect(container.textContent).not.toMatch(/até 7 dias/);
   });
   it("'Entrar para excluir' guarda o pedido e leva ao login voltando para esta página", () => {

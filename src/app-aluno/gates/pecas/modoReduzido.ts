@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
  * Perfil reduzido (spec 9, W7): quando uma trava fecha o app por BLOQUEIO (o master pausou os alunos da conta — a
  * GateBloqueioMaster; e o "Bloquear acesso" do profissional, R10, na W13), o Perfil continua abrindo só com Sair, Exportar e
  * Excluir (LGPD: a pessoa sempre consegue levar os dados e apagar a conta). A trava deixa passar a rota /perfil dentro deste
- * contexto (componente PerfilReduzido) e a aba Perfil lê daqui.
+ * contexto (componente PerfilReduzido) e a aba Perfil lê daqui. hml-11 (D14): a trava do inadimplente (GatePagamentoPendente) também.
  */
 export interface ModoReduzido {
   motivo: string;

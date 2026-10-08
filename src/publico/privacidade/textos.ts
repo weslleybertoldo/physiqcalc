@@ -10,9 +10,19 @@
  *   comprovava; a W3 tirou o prazo até a decisão.
  * - SERVICOS_TERCEIROS: quem recebe dado pessoal fora do Physiq, o que recebe e para quê. Cada item foi conferido no código em
  *   06/10/2026 (o arquivo vai no comentário). Serviço que o código não usa não entra (o Google Play Billing só chega na W6).
+ *
+ * hml-11 (H-28, A2 — correções de fato, sem base legal, papel, direito nem prazo novo): a frase dos backups passou a dizer o que
+ * existe desde a hml-07 (a cópia diária cifrada no notebook, docs/backup.md: 03:23, age, apagada com 29 dias; o provedor no Free
+ * não tem backup); o Google (FCM) recebe só o texto fixo por tipo desde a hml-10 (_shared/push-regras.ts, corpoDoPush); o
+ * Telegram (os avisos de erro da hml-10, _shared/erros.ts limpa antes) entrou na lista. FRASE_SUPORTE é a "frase A" da hml-08
+ * (H-22) para a Política nova (src/publico/legal/politica.ts); a página de hoje não a usa.
  */
 export const FRASE_BACKUPS =
-  "As cópias de segurança do banco de dados — as automáticas do provedor e as feitas antes de manutenções — são apagadas em até 30 dias depois de feitas; até lá, ficam protegidas e não são usadas para outro fim.";
+  "As cópias de segurança do banco de dados — a cópia diária e as feitas antes de manutenções — são cifradas, guardadas no Brasil e apagadas em até 30 dias depois de feitas; até lá, não são usadas para outro fim.";
+
+/** hml-08 (H-22, frase A): o acesso do suporte, que existe só pelo site. A frase B ("cada acesso fica registrado") só com o registro de leitura. */
+export const FRASE_SUPORTE =
+  "O suporte do Physiq (quem opera a plataforma) tem acesso administrativo pelo site e pode ver os dados das contas, inclusive os de saúde, só quando for preciso para dar suporte, corrigir um erro, atender a um pedido seu ou do seu profissional, ou cumprir uma obrigação legal. Esse acesso não existe no aplicativo.";
 
 export interface ServicoTerceiro {
   /** marca do item (data-servico, para os testes e o E2E) */
@@ -56,7 +66,7 @@ export const SERVICOS_TERCEIROS: readonly ServicoTerceiro[] = [
   {
     id: "google",
     nome: "Google",
-    texto: "o login com o Google, que envia ao Physiq o seu nome, e-mail e foto quando você autoriza, e as notificações do app no Android (Firebase Cloud Messaging), que recebem o código do aparelho e o texto do aviso — por exemplo, a consulta marcada.",
+    texto: "o login com o Google, que envia ao Physiq o seu nome, e-mail e foto quando você autoriza, e as notificações do app no Android (Firebase Cloud Messaging), que recebem o código do aparelho e um texto curto, fixo para cada tipo de aviso (por exemplo, \"Tem novidade na sua agenda.\"), sem nome nem valor; o aviso completo fica só dentro do app.",
   },
   // supabase-principal/functions/convites, alunos, agenda-avisar e aluno-enviar (api.resend.com)
   {
@@ -78,6 +88,13 @@ export const SERVICOS_TERCEIROS: readonly ServicoTerceiro[] = [
     id: "whatsapp",
     nome: "WhatsApp",
     texto: "quando o profissional liga as mensagens automáticas (lembrete de consulta, cobrança, parabéns), elas saem pelo WhatsApp dele, conectado por QR code como no WhatsApp Web, sem empresa intermediária; o WhatsApp recebe o seu número e o texto da mensagem. Os botões de WhatsApp do app só abrem a conversa no seu próprio WhatsApp.",
+  },
+  // hml-10: src/lib/avisoDeErro.ts (app) · supabase-principal/functions/erro-avisar e _shared/avisar-erro.ts (servidor) · a limpeza
+  // é a do _shared/erros.ts (limparMensagem, limparRota) — api.telegram.org, grupo de quem opera o Physiq
+  {
+    id: "telegram",
+    nome: "Telegram",
+    texto: "recebe os avisos de erro do app e do servidor (a tela ou a função que falhou, a versão e a mensagem técnica), dos quais o sistema tira e-mail, CPF, telefone, endereço IP, códigos de acesso e números longos antes de mandar. Vão só para quem opera o Physiq.",
   },
   // src/lib/apkRelease.ts · src/components/UpdateChecker.tsx · src/entrada/Entrar.tsx (api.github.com) — nada disso existe na
   // versão da Google Play (W1)
