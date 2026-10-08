@@ -5,6 +5,8 @@ import {
   CANAL_AVISOS,
   claimsDoGoogle,
   contaAutenticou,
+  CORPO_PADRAO_DO_PUSH,
+  corpoDoPush,
   fimDoToken,
   ICONE_PUSH,
   lerContaDeServico,
@@ -23,15 +25,31 @@ import {
 const TOKEN = "fGx1y2z3:APA91bH-exemplo_de_token.do-FCM_com_mais_de_vinte";
 const AVISO = { id: "7b0b8a8e-1d2c-4f7e-9a51-2a8f1c3d4e5f", tipo: "consulta_marcada", titulo: "Consulta marcada: qui 02/10 às 08:30. Confirme no app", link: "/perfil/agenda" };
 
+// hml-10 (H-48): os 9 tipos do avisos_tipo_check (migração da W06) com um aviso do jeito que o banco e as funções gravam
+// (supabase-principal/migrations e functions): nome da pessoa, valor, motivo, dia e hora — nada disso pode ir no push.
+const AVISOS_DE_VERDADE: Array<{ tipo: string; titulo: string; corpo: string }> = [
+  { tipo: "comprovante_enviado", titulo: "Joana Prado enviou um comprovante · R$ 189,90", corpo: "Chegou um comprovante de pagamento." },
+  { tipo: "pagamento_confirmado", titulo: "Pagamento confirmado · R$ 189,90", corpo: "Um pagamento foi confirmado." },
+  { tipo: "pagamento_recusado", titulo: "Comprovante recusado: valor diferente do combinado", corpo: "Um comprovante precisa da sua atenção." },
+  { tipo: "consulta_marcada", titulo: "Joana Prado desistiu da consulta de qui 02/10 às 08:30", corpo: "Tem novidade na sua agenda." },
+  { tipo: "plano_atualizado", titulo: "Seu treino e sua dieta foram atualizados", corpo: "Seu plano foi atualizado." },
+  { tipo: "avaliacao_nova", titulo: "Nova avaliação no seu histórico", corpo: "Você tem uma avaliação nova." },
+  { tipo: "reacao_diario", titulo: "Carla Nutri reagiu à foto Café da manhã: 👏 — menos açúcar no café", corpo: "Tem novidade no seu diário." },
+  { tipo: "membro_removido", titulo: "Você não faz mais parte da equipe de Studio Prado", corpo: "Houve uma mudança na sua equipe." },
+  { tipo: "geral", titulo: "Bruno Lima excluiu a conta e saiu da equipe · 3 aluno(s) sem responsável", corpo: CORPO_PADRAO_DO_PUSH },
+];
+
 describe("W20c — a mensagem do FCM HTTP v1 de cada aviso do sino", () => {
-  it("consulta marcada: título pelo tipo, o texto do aviso no corpo, a rota no data, canal Avisos, prioridade alta", () => {
+  it("consulta marcada: título e corpo pelo tipo, a rota no data, canal Avisos, prioridade alta, visibilidade PRIVATE", () => {
     const m = montarMensagem(AVISO, TOKEN);
     expect(m.validate_only).toBeUndefined();
     expect(m.message.token).toBe(TOKEN);
-    expect(m.message.notification).toEqual({ title: "Agenda", body: AVISO.titulo });
+    expect(m.message.notification).toEqual({ title: "Agenda", body: "Tem novidade na sua agenda." });
     expect(m.message.data).toEqual({ link: "/perfil/agenda", aviso_id: AVISO.id, tipo: "consulta_marcada" });
     expect(m.message.android.priority).toBe("HIGH");
-    expect(m.message.android.notification).toMatchObject({ channel_id: CANAL_AVISOS, icon: ICONE_PUSH, tag: `aviso-${AVISO.id}` });
+    expect(m.message.android.notification).toEqual({
+      channel_id: CANAL_AVISOS, icon: ICONE_PUSH, color: "#8B5CF6", tag: `aviso-${AVISO.id}`, visibility: "PRIVATE",
+    });
     expect(CANAL_AVISOS).toBe("avisos");
     // os valores do data do FCM são sempre texto
     expect(Object.values(m.message.data).every((v) => typeof v === "string")).toBe(true);
@@ -47,11 +65,6 @@ describe("W20c — a mensagem do FCM HTTP v1 de cada aviso do sino", () => {
     expect(tituloDoPush("outro")).toBe("Physiq");
     expect(tituloDoPush(null)).toBe("Physiq");
   });
-  it("corpo vazio vira um texto padrão; corpo longo é cortado; quebras de linha somem", () => {
-    expect(montarMensagem({ ...AVISO, titulo: "   " }, TOKEN).message.notification.body).toBe("Você tem um aviso novo no Physiq");
-    expect(montarMensagem({ ...AVISO, titulo: "a".repeat(500) }, TOKEN).message.notification.body).toHaveLength(240);
-    expect(montarMensagem({ ...AVISO, titulo: "linha 1\nlinha 2" }, TOKEN).message.notification.body).toBe("linha 1 linha 2");
-  });
   it("link fora do app (outro site, //host, javascript:) nunca vai no data: abre o início", () => {
     expect(montarMensagem({ ...AVISO, link: "https://golpe.example" }, TOKEN).message.data.link).toBe("/");
     expect(rotaSegura("//golpe.example/x")).toBe("/");
@@ -59,6 +72,41 @@ describe("W20c — a mensagem do FCM HTTP v1 de cada aviso do sino", () => {
     expect(rotaSegura("/painel/agenda?data=2026-10-02")).toBe("/painel/agenda?data=2026-10-02");
     expect(rotaSegura(null)).toBe("/");
     expect(rotaSegura("/a\nb")).toBe("/");
+  });
+});
+
+describe("hml-10 (H-48) — o push sai sem nome e sem valor: o corpo é fixo por tipo; o texto completo fica no sino", () => {
+  it("corpo por tipo: os 9 tipos do banco; o 'geral', tipo desconhecido, vazio e chave do Object caem no texto padrão", () => {
+    for (const a of AVISOS_DE_VERDADE) expect(corpoDoPush(a.tipo), a.tipo).toBe(a.corpo);
+    expect(CORPO_PADRAO_DO_PUSH).toBe("Você tem um aviso novo no Physiq.");
+    for (const t of ["geral", "outro", "", null, undefined, "constructor", "__proto__", "toString", "Consulta_Marcada"]) {
+      expect(corpoDoPush(t), String(t)).toBe(CORPO_PADRAO_DO_PUSH);
+    }
+  });
+  it("o título do aviso (nome, valor, motivo, dia e hora) nunca vai no push — em nenhum campo da mensagem", () => {
+    for (const a of AVISOS_DE_VERDADE) {
+      const m = montarMensagem({ id: AVISO.id, tipo: a.tipo, titulo: a.titulo, link: "/perfil/pagamentos" }, TOKEN);
+      expect(m.message.notification, a.tipo).toEqual({ title: tituloDoPush(a.tipo), body: a.corpo });
+      const tudo = JSON.stringify(m);
+      expect(tudo, a.tipo).not.toContain(a.titulo);
+      for (const pedaco of ["Joana", "Prado", "Carla", "Bruno", "R$", "189,90", "02/10", "08:30", "recusado:", "açúcar", "Studio"]) {
+        expect(tudo, `${a.tipo}: ${pedaco}`).not.toContain(pedaco);
+      }
+    }
+  });
+  it("aviso sem título, com título vazio ou enorme: o corpo é o do tipo (o título não é lido)", () => {
+    expect(montarMensagem({ ...AVISO, titulo: "   " }, TOKEN).message.notification.body).toBe("Tem novidade na sua agenda.");
+    expect(montarMensagem({ ...AVISO, titulo: null }, TOKEN).message.notification.body).toBe("Tem novidade na sua agenda.");
+    expect(montarMensagem({ id: AVISO.id, tipo: "avaliacao_nova", link: null }, TOKEN).message.notification.body).toBe("Você tem uma avaliação nova.");
+    expect(montarMensagem({ ...AVISO, titulo: "a".repeat(500) }, TOKEN).message.notification.body).toBe("Tem novidade na sua agenda.");
+  });
+  it("visibilidade PRIVATE escrita em toda mensagem (inclusive a da verificação da conta de serviço)", () => {
+    for (const a of AVISOS_DE_VERDADE) {
+      expect(montarMensagem({ id: AVISO.id, tipo: a.tipo, titulo: a.titulo, link: null }, TOKEN).message.android.notification.visibility).toBe("PRIVATE");
+    }
+    const verificacao = montarMensagem({ id: "verificacao", tipo: "geral", titulo: "Verificação", link: "/" }, TOKEN_DE_VERIFICACAO, { validar: true });
+    expect(verificacao.message.android.notification.visibility).toBe("PRIVATE");
+    expect(verificacao.message.notification).toEqual({ title: "Physiq", body: CORPO_PADRAO_DO_PUSH });
   });
 });
 

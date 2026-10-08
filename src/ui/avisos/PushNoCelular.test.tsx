@@ -142,8 +142,9 @@ describe("W20c — os eventos do FCM", () => {
     expect(h.salvar).toHaveBeenCalledWith("u1", "fGx1y2z3:APA91bH-exemplo_de_token.do-FCM");
     act(() => h.ouvintes!.aoTocar({ actionId: "tap", notification: { data: { link: "/perfil/agenda" } } }));
     await waitFor(() => expect(screen.getByTestId("onde").textContent).toBe("/perfil/agenda"));
-    act(() => h.ouvintes!.aoReceber({ title: "Agenda", body: "Consulta marcada: qui 02/10 às 08:30. Confirme no app", data: { link: "/perfil/agenda" } }));
-    expect(h.toast).toHaveBeenCalledWith("Agenda", expect.objectContaining({ description: "Consulta marcada: qui 02/10 às 08:30. Confirme no app" }));
+    // hml-10 (H-48): o push chega com o corpo genérico do tipo (push-regras.ts → corpoDoPush); o toast mostra o que chegou
+    act(() => h.ouvintes!.aoReceber({ title: "Agenda", body: "Tem novidade na sua agenda.", data: { link: "/perfil/agenda" } }));
+    expect(h.toast).toHaveBeenCalledWith("Agenda", expect.objectContaining({ description: "Tem novidade na sua agenda." }));
   });
   it("toque com link de fora: abre o início (nunca outro site)", async () => {
     h.permissao = "granted";
