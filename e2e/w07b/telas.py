@@ -144,7 +144,7 @@ def caso_treino_pronto(nav, a) -> None:
 
 
 def caso_faixa(nav, a) -> None:
-    c = abrir(nav, a, "w7b-novo", "/treino", "faixa")
+    c = abrir(nav, a, "w7b-novo", "/", "faixa")  # desde a W12 a aba de abertura é o Início (a faixa fica abaixo da saudação)
     ok = c.esperar(lambda: c.tem("[data-faixa-mensalidade='teste']"), 30)
     t = c.pg.locator("[data-faixa-mensalidade]").inner_text() if ok else ""
     p.check(ok and "Seus dias grátis vão até" in t and "R$ 49,90/mês" in t and "Assinar" in t, f"faixa violeta dos dias grátis ({t!r})")
