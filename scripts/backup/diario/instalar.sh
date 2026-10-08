@@ -27,7 +27,11 @@ fi
 command -v age > /dev/null 2>&1 || { echo "sem o age no PATH (~/.local/bin)" >&2; exit 1; }
 mkdir -p "$LIB" "$UNI" "$CONF"
 chmod 700 "$CONF"
-install -m 0755 "$AQUI"/copia.sh "$AQUI"/cifrar-copias-manuais.sh "$AQUI"/aviso.sh "$AQUI"/limpeza.sh "$LIB/"
+# todos os scripts da pasta (menos o teste e este instalador): script novo entra sem precisar lembrar daqui
+for s in "$AQUI"/*.sh; do
+  case "$(basename "$s")" in teste-local.sh | instalar.sh) continue ;; esac
+  install -m 0755 "$s" "$LIB/"
+done
 install -m 0644 "$AQUI"/preparar-restauro.sql "$AQUI"/destinatario.age "$LIB/"
 git -C "$AQUI" log -1 --format='%h %cs' > "$LIB/VERSAO" 2> /dev/null || echo "sem git" > "$LIB/VERSAO"
 install -m 0644 "$AQUI"/systemd/* "$UNI/"
