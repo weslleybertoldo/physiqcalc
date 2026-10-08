@@ -1,7 +1,9 @@
-// delete-my-account (Banco do Treino) — 2 jeitos:
+// delete-my-account (Banco do Treino) — só o modo servidor:
 //
-//   · modo app (JWT do Treino): o fluxo de staff de hoje, na engrenagem da TreinosPage antiga (professor/master: "Exportar
-//     meus dados" / "Excluir minha conta" com "DELETAR"). Igual ao de sempre — some junto com a TreinosPage na W8.
+//   · modo app (JWT do Treino, sem o segredo): DESLIGADO na hml-09 (H-23) → 410 { ok: false, error: "migrado" }, com CORS (o
+//     OPTIONS segue 200). Era o "Excluir minha conta" da TreinosPage antiga (APK ≤ 3.7; a tela saiu na W8): apagava DE VEZ (hard
+//     delete) o login do Treino de qualquer papel e deixava o banco principal intacto. A exclusão é pelo app novo (Perfil › Excluir
+//     minha conta → excluir-minha-conta do principal, que chama o modo servidor abaixo) ou pela página /excluir-conta.
 //
 //   · modo servidor (Physiq W7, falha F4 — C88, R11, P19): chamado SÓ pelas funções exportar-meus-dados e excluir-minha-conta
 //     do banco principal, servidor → servidor. Cabeçalhos: x-espelho-segredo (ESPELHO_SEGREDO, o mesmo da W2) · x-schema ·
@@ -18,6 +20,10 @@
 //       excluir_profissional  → { ok, apaga, mantem, cobrancas, login: "removido" } (o que ele montou fica com os alunos; o professor
 //                               suspenso e sem Pix; o que é dele como usuário apagado; "soft delete" do login + vínculo)
 //       master → 403 { ok: false, erro: "profissional" }
+//     hml-09 (H-23) — o Auth é o mesmo nos 2 ambientes: pelo staging, quem também tem dado em produção (staging.
+//       physiq_pegada_em_producao: o vínculo de public ou uma linha em public) → 403 { ok: false, erro: "conta_real_no_staging",
+//       motivo: "dados_em_producao" } em todas as ações menos o exportar, antes do sem_vinculo (o soft delete tiraria o login da
+//       produção). Erro ao conferir = 500 (falha fechada).
 //     Idempotente: pedir de novo depois de um erro no meio refaz só o que faltou.
 //
 // Publicar: gh workflow run deploy-function.yml -f function=delete-my-account (verify_jwt true) ou
@@ -56,7 +62,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   };
 }
 function jsonErr(msg: string, status: number, origin: string | null) {
-  return new Response(JSON.stringify({ error: msg }), {
+  return new Response(JSON.stringify({ ok: false, error: msg }), {
     status,
     headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
   });
@@ -85,6 +91,18 @@ function jsonServidor(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
+/**
+ * hml-09 (H-23): a resposta de staging.physiq_pegada_em_producao ({ em_producao, colunas }) bloqueia a ação? SÓ em_producao = false
+ * deixa seguir; qualquer outra forma bloqueia (falha fechada). É a MESMA regra do pegadaBloqueia do principal
+ * (supabase-principal/functions/_shared/conta-aluno-regras.ts) — cada banco publica as suas funções; o vitest confere as 2 cópias.
+ */
+function pegadaBloqueia(resposta: unknown): boolean {
+  if (!resposta || typeof resposta !== "object" || Array.isArray(resposta)) return true;
+  const r = resposta as Record<string, unknown>;
+  if (r.em_producao !== false) return true;
+  return r.colunas != null && !(Array.isArray(r.colunas) && r.colunas.length === 0);
+}
+
 async function modoServidor(req: Request): Promise<Response> {
   if (!segredoConfere(req.headers.get("x-espelho-segredo"), ESPELHO_SEGREDO)) return jsonServidor({ ok: false, erro: "segredo_invalido" }, 401);
   let body: Record<string, unknown> = {};
@@ -103,6 +121,13 @@ async function modoServidor(req: Request): Promise<Response> {
     const { data: v, error: ev } = await admin.from("physiq_identidades").select("treino_user_id").eq("principal_user_id", principalId).maybeSingle();
     if (ev) throw ev;
     const treinoId = (v as { treino_user_id?: string } | null)?.treino_user_id ?? null;
+    // hml-09 (H-23): pelo staging, quem também tem dado em produção não é conferido nem excluído (todas as ações menos o
+    // exportar). Antes do sem_vinculo: sem o vínculo do staging, a pessoa ainda pode ter o de produção.
+    if ((currentSchema() as string) === "staging" && acao !== "exportar") {
+      const { data: pg, error: epg } = await admin.rpc("physiq_pegada_em_producao", { p_principal: principalId, p_treino: treinoId });
+      if (epg) throw epg;
+      if (pegadaBloqueia(pg)) return jsonServidor({ ok: false, erro: "conta_real_no_staging", motivo: "dados_em_producao" }, 403);
+    }
     if (!treinoId) return jsonServidor({ ok: true, sem_vinculo: true, dados: null });
 
     if (acao === "exportar") {
@@ -168,51 +193,6 @@ Deno.serve(async (req) => {
     return await modoServidor(req);
   }
 
-  const auth = req.headers.get("Authorization");
-  if (!auth?.startsWith("Bearer ")) return jsonErr("missing_auth", 401, origin);
-  const token = auth.slice(7);
-
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const userClient = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
-  const { data, error } = await userClient.auth.getUser(token);
-  if (error || !data?.user) return jsonErr("invalid_token", 401, origin);
-  const userId = data.user.id;
-
-  // staging só apaga CONTA DE TESTE (user_metadata.ambiente='staging') — auth é global,
-  // apagar uma conta real pelo staging sumiria com ela da produção
-  if ((currentSchema() as string) === "staging" && (data.user.user_metadata as any)?.ambiente !== "staging") {
-    return jsonErr("conta_real_protegida", 403, origin);
-  }
-
-  // Rate limit: 3 tentativas por hora por user
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
-  const { data: allowed } = await admin.rpc("check_rate_limit", {
-    p_user_id: userId, p_endpoint: "delete-my-account", p_max_count: 3, p_window_secs: 3600,
-  });
-  if (allowed === false) return jsonErr("rate_limited", 429, origin);
-
-  try {
-    const body = await req.json();
-    if (body?.confirm !== "DELETE_MY_ACCOUNT") return jsonErr("confirmation_required", 400, origin);
-  } catch { return jsonErr("invalid_body", 400, origin); }
-
-  try {
-    await admin.from("tb_treino_series").delete().eq("user_id", userId);
-    await admin.from("tb_treino_concluido").delete().eq("user_id", userId);
-    await admin.from("tb_treino_dia_override").delete().eq("user_id", userId);
-    await admin.from("treino_historico").delete().eq("user_id", userId);
-    await admin.from("exercicio_ordem_usuario").delete().eq("user_id", userId);
-    await admin.from("tb_grupos_treino_usuario").delete().eq("user_id", userId);
-    await admin.from("tb_exercicios_usuario").delete().eq("user_id", userId);
-    await admin.from("tb_grupos_exercicios_usuario").delete().eq("user_id", userId);
-    await admin.from("tb_exercicio_comentarios").delete().eq("user_id", userId);
-    await admin.from("physiq_avaliacoes").delete().eq("user_id", userId);
-    await admin.from("physiq_user_tags").delete().eq("user_id", userId);
-    await admin.from("physiq_profiles").delete().eq("id", userId);
-    const { error: delErr } = await admin.auth.admin.deleteUser(userId);
-    if (delErr) throw delErr;
-    return new Response(JSON.stringify({ ok: true }), {
-      headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
-    });
-  } catch (_e) { return jsonErr("internal", 500, origin); }
+  // hml-09 (H-23): o modo app saiu (o cabeçalho explica) — o APK antigo lê o 410 e mostra o erro dele; nada é lido nem apagado
+  return jsonErr("migrado", 410, origin);
 });
