@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSessao } from "@/nucleo/sessao";
 import { destinoDepoisDoLogin } from "@/nucleo/situacao";
 import { destinoDaEntrada } from "@/lib/linksDoApp";
+import { masterNesteAparelho } from "@/lib/plataforma";
 import AppAlunoLayout from "@/app-aluno/AppAlunoLayout";
 import { RotaAba, RotaInicialApp, RotaItemPerfil } from "@/app-aluno/RotasApp";
 import PublicoLayout from "@/publico/PublicoLayout";
@@ -14,7 +15,10 @@ import { ROTAS_ANTIGAS, destinoDaRotaAntiga } from "./redirecionamentos";
 
 // Painel e master carregam sob demanda (o aluno não baixa nada deles); a abertura do app fica no JS inicial
 const RotasPainel = lazy(() => import("@/painel/RotasPainel"));
-const RotasMaster = lazy(() => import("@/master/RotasMaster"));
+// hml-08 (H-22): o master é só do site. No build do app (VITE_APP_NATIVO=1) o Vite troca o import.meta.env.VITE_APP_NATIVO pelo
+// valor e o Rollup corta o import(): o código do master nem entra no bundle (src/lib/plataforma.ts). A expressão fica AQUI, sem
+// função no meio.
+const RotasMaster = import.meta.env.VITE_APP_NATIVO === "1" ? null : lazy(() => import("@/master/RotasMaster"));
 // W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx, pelo registro) — as antigas saíram
 
 /** Rota antiga dos 2 apps → rota nova (spec 4.8), levando a query e o #. */
@@ -77,9 +81,11 @@ export function Rotas() {
           <Route key={r.nome} path={rotasDaEntrada(r.nome)} element={<RotaEntrada nome={r.nome} />} />
         ))}
 
-      {/* Site do profissional e master */}
+      {/* Site do profissional e master (hml-08: o master só no site — no app, /master… cai em "Página não encontrada") */}
       <Route path="/painel/*" element={<Carregavel esqueleto={<CarregandoTela />} nome="painel"><RotasPainel /></Carregavel>} />
-      <Route path="/master/*" element={<Carregavel esqueleto={<CarregandoTela />} nome="master"><RotasMaster /></Carregavel>} />
+      {RotasMaster && masterNesteAparelho() && (
+        <Route path="/master/*" element={<Carregavel esqueleto={<CarregandoTela />} nome="master"><RotasMaster /></Carregavel>} />
+      )}
 
       {/* Rotas antigas do Calc e do Nutri */}
       {ROTAS_ANTIGAS.map((caminho) => (
