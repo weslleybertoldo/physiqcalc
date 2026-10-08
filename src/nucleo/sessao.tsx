@@ -53,6 +53,14 @@ export interface ErroEntrada {
   agora?: string | null;
 }
 
+/**
+ * hml-08: `{ escopo: "local" }` revoga só a sessão DESTE aparelho (o login no site e noutros aparelhos continua) — é o da conta
+ * master que entrou no app (src/ui/casca/MasterSoNoSite.tsx). Sem ele, o sair de sempre (o padrão do supabase-js).
+ */
+export interface OpcoesSair {
+  escopo?: "local";
+}
+
 export interface SessaoValor {
   /** o login do principal já foi lido do aparelho (com ou sem sessão) */
   pronto: boolean;
@@ -68,7 +76,7 @@ export interface SessaoValor {
   entrarComGoogle: () => Promise<{ erro?: string }>;
   /** W8b: pelo servidor (entrar-senha: captcha + limite de tentativas); `captcha` = token do Turnstile da tela */
   entrarComEmail: (email: string, senha: string, captcha?: string) => Promise<{ erro?: ErroEntrada }>;
-  sair: () => Promise<void>;
+  sair: (opcoes?: OpcoesSair) => Promise<void>;
   recarregarSituacao: () => Promise<Situacao | null>;
   tentarTreinoDeNovo: () => void;
   vincularCodigo: (codigo: string) => Promise<ResultadoVinculo>;
@@ -433,7 +441,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     return {};
   }, []);
 
-  const sair = useCallback(async () => {
+  const sair = useCallback(async (opcoes?: OpcoesSair) => {
     saindo.current = true;
     if (timerTroca.current) clearTimeout(timerTroca.current);
     try {
@@ -460,8 +468,10 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     }
     // W20c: este aparelho deixa de receber o push desta pessoa (antes do signOut — a função do banco precisa do login)
     await esquecerAparelhoPush().catch(() => undefined);
-    const r1 = await principal.auth.signOut().catch((e) => ({ error: e }));
-    const r2 = await supabase.auth.signOut().catch((e) => ({ error: e }));
+    // hml-08: o escopo local revoga só a sessão deste aparelho nos 2 bancos; sem ele, o signOut de sempre (sem argumento)
+    const local = opcoes?.escopo === "local";
+    const r1 = await (local ? principal.auth.signOut({ scope: "local" }) : principal.auth.signOut()).catch((e) => ({ error: e }));
+    const r2 = await (local ? supabase.auth.signOut({ scope: "local" }) : supabase.auth.signOut()).catch((e) => ({ error: e }));
     // sem internet o supabase-js não apaga a sessão guardada: apaga aqui (sair vale nos 2 bancos)
     if (r1?.error || r2?.error) {
       try {

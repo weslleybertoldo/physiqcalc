@@ -22,6 +22,7 @@ import { AvisosGlobais } from "@/ui/casca/AvisosGlobais";
 import { BoasVindasNutri } from "@/ui/casca/BoasVindasNutri";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { FaixaAbrirNoApp } from "@/ui/casca/FaixaAbrirNoApp";
+import { MasterSoNoSite } from "@/ui/casca/MasterSoNoSite";
 
 // W1 (Physiq): as rotas agora são montadas pelas cascas novas (src/rotas/Rotas.tsx) — app do aluno
 // com 5 abas, site do profissional, master, entrada e páginas públicas — com as telas antigas como
@@ -79,13 +80,16 @@ const AppRoutes = () => {
         <FaixaAbrirNoApp />
         {/* W28: quem chegou do site antigo do Nutri (logado ou não) — "O PhysiqNutri agora é o Physiq" por cima */}
         <BoasVindasNutri />
-        <Suspense fallback={<CarregandoTela />}>
-          <Rotas />
-        </Suspense>
-        {/* janelas globais registradas em src/ui/avisos (ex.: "o Physiq mudou", W3) */}
-        {usuario && <AvisosGlobais />}
-        {/* H2: no APK, o link do site que abriu o app leva à tela dele */}
-        <AbrirLinkDoApp />
+        {/* hml-08 (H-22): o painel master é só do site — no app, a conta master sai deste aparelho e vê "Conta master: use o site" */}
+        <MasterSoNoSite>
+          <Suspense fallback={<CarregandoTela />}>
+            <Rotas />
+          </Suspense>
+          {/* janelas globais registradas em src/ui/avisos (ex.: "o Physiq mudou", W3) */}
+          {usuario && <AvisosGlobais />}
+          {/* H2: no APK, o link do site que abriu o app leva à tela dele */}
+          <AbrirLinkDoApp />
+        </MasterSoNoSite>
       </StagingGate>
     </BrowserRouter>
   );
