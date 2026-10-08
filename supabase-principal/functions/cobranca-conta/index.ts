@@ -413,9 +413,11 @@ Deno.serve(async (req) => {
       }
       // o webhook pode ter chegado antes e já gravado o id: segue com a mesma fatura (o id é único)
       await db.from("conta_faturas").update({ mp_payment_id: String(pay.id) }).eq("id", fatura.id).is("mp_payment_id", null);
-      const f2 = (await buscarFatura(fatura.id)) ?? fatura;
+      // o cartão JÁ foi cobrado: erro de leitura aqui não pode virar 500 (a pessoa clicaria de novo e pagaria 2×) — usa o que tem
+      const lerDepois = (id: string) => buscarFatura(id).catch((e) => (console.error("cobranca-conta: leitura depois da cobrança", e), null));
+      const f2 = (await lerDepois(fatura.id)) ?? fatura;
       const r = await aplicarStatus(db, f2, pay, user.id);
-      return json({ ok: true, fatura: await buscarFatura(fatura.id), status: r.status, aplicou: r.aplicou, status_detail: pay.status_detail ?? null }, 200, origin);
+      return json({ ok: true, fatura: (await lerDepois(fatura.id)) ?? f2, status: r.status, aplicou: r.aplicou, status_detail: pay.status_detail ?? null }, 200, origin);
     }
 
     if (acao === "assinar") {

@@ -500,8 +500,9 @@ Deno.serve(async (req) => {
       } else {
         // mensalidade: um aviso pendente por vez — troca o comprovante do pendente em vez de empilhar (regra do Calc)
         const alvo = await alvoDoPagamento(m, null, true);
-        const { data: pend } = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("paciente_id", m.id).eq("tipo", "mensalidade")
+        const { data: pend, error: ep } = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("paciente_id", m.id).eq("tipo", "mensalidade")
           .eq("forma", "pix_manual").eq("status", "aguardando_confirmacao").is("deleted_at", null).limit(1);
+        if (ep) throw ep; // sem ler o pendente, criaria um 2º aviso
         const pendente = ((pend ?? []) as unknown as Cobranca[])[0];
         if (pendente) {
           const { data, error } = await db.from("cobrancas").update({ comprovante_path: caminho, valor: alvo.valor, enviado_em: agora })

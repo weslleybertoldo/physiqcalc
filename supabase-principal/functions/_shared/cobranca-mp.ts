@@ -78,12 +78,15 @@ export class MpIndisponivel extends Error {
  * ambiente vira "outro_ambiente" em quem chama). 404/403 = não é desta credencial; MP fora → MpIndisponivel.
  */
 export async function buscarNoMp<T>(caminho: string, schema: Schema | null): Promise<{ recurso: T; schema: Schema } | null> {
+  let recusado = 0; // 401 pode ser "recurso de outra conta": só vira MP fora se nenhuma credencial achar o recurso
   for (const c of schema ? [credencialDoSchema(schema)] : (["prod", "test"] as Credencial[])) {
     if (!tokenMp(c)) continue;
     const { status, body } = await mpFetch<T>(c, caminho);
     if (status === 200 && body) return { recurso: body, schema: c === "prod" ? "public" : "staging" };
-    if (mpTransitorio(status)) throw new MpIndisponivel(status); // o aviso volta 500 e o MP manda de novo
+    if (status === 401) recusado = status;
+    else if (mpTransitorio(status)) throw new MpIndisponivel(status); // o aviso volta 500 e o MP manda de novo
   }
+  if (recusado) throw new MpIndisponivel(recusado);
   return null; // 404/403: não é desta credencial
 }
 

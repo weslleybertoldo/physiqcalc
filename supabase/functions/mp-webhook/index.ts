@@ -46,6 +46,7 @@ function tokenDe(c: Cred): string {
 // tenta com prod e depois test (ou só a credencial pedida) — o recurso só existe na credencial que o criou.
 // 404/403 = não é desta credencial; MP fora (5xx, 429, 401 ou rede) → MpIndisponivel
 async function buscarNoMp(caminho: string, cred?: Cred): Promise<{ body: any; cred: Cred } | null> {
+  let recusado = 0;
   for (const c of cred ? [cred] : (["prod", "test"] as Cred[])) {
     const tk = tokenDe(c);
     if (!tk) continue;
@@ -59,8 +60,10 @@ async function buscarNoMp(caminho: string, cred?: Cred): Promise<{ body: any; cr
       status = 599;
     }
     if (status === 200 && body) return { body, cred: c };
-    if (mpTransitorio(status)) throw new MpIndisponivel(status);
+    if (status === 401) recusado = status; // pode ser recurso da outra credencial: decide no fim
+    else if (mpTransitorio(status)) throw new MpIndisponivel(status);
   }
+  if (recusado) throw new MpIndisponivel(recusado);
   return null;
 }
 
