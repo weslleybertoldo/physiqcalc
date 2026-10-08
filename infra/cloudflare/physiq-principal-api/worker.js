@@ -11,20 +11,80 @@
 // cabeçalhos é descartado. O resto do tráfego (auth, rest, storage) segue igual.
 const ORIGIN = "https://hkxvtsbwctxkrqzkkdoz.supabase.co";
 
+// hml-05c (homologação, H-17): as 9 RPCs públicas (sem login, pelo código do link: diário, pré-consulta e cadastro) levam o IP de
+// verdade para o banco contar os pedidos por IP — mas SEM o segredo (o pedido ao PostgREST pode ir para os logs): vai a assinatura
+// HMAC-SHA256(segredo, "ip:minuto"), que o banco confere com o segredo guardado no Vault (physiq_proxy_segredo). A lista tem que ser a
+// mesma do banco (supabase-principal/migrations/20261008020000_hml05c_limite_ip_publico.sql): RPC limitada sem a assinatura cairia
+// no balde do IP do Worker. Caminho normalizado ("//" e "/" no fim).
+// Teste: node --test infra/cloudflare/physiq-principal-api/worker.test.mjs
+export const RPCS_COM_LIMITE = [
+  "diario_link", "diario_listar", "diario_enviar", "diario_paciente",
+  "preconsulta_formulario", "preconsulta_responder",
+  "cadastro_link_info", "cadastro_publico_info", "cadastro_publico_enviar",
+];
+const RPC_PUBLICAS = new RegExp(`^/rest/v1/rpc/(${RPCS_COM_LIMITE.join("|")})$`);
+export function rpcPublica(caminho) {
+  return RPC_PUBLICAS.test(caminho.replace(/\/{2,}/g, "/").replace(/\/+$/, ""));
+}
+
+export async function assinarIp(segredo, ip, minuto = Math.floor(Date.now() / 60000)) {
+  const chave = await crypto.subtle.importKey("raw", new TextEncoder().encode(segredo), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", chave, new TextEncoder().encode(`${ip}:${minuto}`));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// H-46 (homologação, 08/10/2026): teto geral por IP — só segura enxurrada (um aparelho, ou vários atrás do mesmo IP, fica muito
+// abaixo). Binding de rate limiting da Cloudflare (LIMITE, gravado pelo deploy.sh): a conta é por local da Cloudflare e aproximada.
+// IPv6 conta pela rede /64 (cada aparelho costuma ter uma /64 inteira). Sem o binding não limita; o preflight (OPTIONS) não conta;
+// se o limitador falhar, o pedido segue (ele não pode derrubar a API).
+export function chaveDoIp(ip) {
+  const v = String(ip || "").trim();
+  if (!v.includes(":")) return v;
+  const [esq, dir] = v.split("::");
+  const a = esq ? esq.split(":") : [];
+  const b = dir ? dir.split(":") : [];
+  const grupos = v.includes("::") ? [...a, ...Array(Math.max(0, 8 - a.length - b.length)).fill("0"), ...b] : a;
+  return grupos.slice(0, 4).map((g) => (parseInt(g, 16) || 0).toString(16)).join(":") + "::/64";
+}
+
+export async function dentroDoTeto(request, env) {
+  const limitador = env && env.LIMITE;
+  const ip = request.headers.get("cf-connecting-ip");
+  if (request.method === "OPTIONS" || !ip || !limitador || typeof limitador.limit !== "function") return true;
+  try {
+    const { success } = await limitador.limit({ key: chaveDoIp(ip) });
+    return success !== false;
+  } catch {
+    return true;
+  }
+}
+
+export function muitosPedidos() {
+  return new Response(JSON.stringify({ code: "muitos_pedidos", message: "muitos_pedidos" }), {
+    status: 429,
+    headers: { "content-type": "application/json", "cache-control": "no-store", "retry-after": "60", "access-control-allow-origin": "*" },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/" || url.pathname === "/healthz") {
       return new Response("physiq-principal-api ok", { status: 200, headers: { "cache-control": "no-store" } });
     }
+    if (!(await dentroDoTeto(request, env))) return muitosPedidos();
     const target = ORIGIN + url.pathname + url.search;
     const headers = new Headers(request.headers);
     headers.delete("host");
     headers.delete("x-physiq-ip");
     headers.delete("x-physiq-proxy");
+    headers.delete("x-physiq-assinatura");
     const segredo = env && typeof env.PROXY_SEGREDO === "string" ? env.PROXY_SEGREDO : "";
     const ip = request.headers.get("cf-connecting-ip");
-    if (segredo && ip && url.pathname.startsWith("/functions/v1/")) {
+    if (segredo && ip && rpcPublica(url.pathname)) {
+      headers.set("x-physiq-ip", ip);
+      headers.set("x-physiq-assinatura", await assinarIp(segredo, ip));
+    } else if (segredo && ip && url.pathname.startsWith("/functions/v1/")) {
       headers.set("x-physiq-ip", ip);
       headers.set("x-physiq-proxy", segredo);
     }

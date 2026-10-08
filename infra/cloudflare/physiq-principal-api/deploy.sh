@@ -13,8 +13,10 @@ HOST="api-principal.physiqcalc.com.br"
 API="https://api.cloudflare.com/client/v4/accounts/$CONTA/workers"
 
 echo "→ script (mantém os secrets do Worker — PROXY_SEGREDO, W8b)"
+# H-46 (homologação, 08/10/2026): binding LIMITE = teto geral por IP (rate limiting da Cloudflare, 1200 pedidos por 60 s,
+# namespace 460001 — um por Worker, senão os 2 dividem o contador). Aproximado e por local: só segura enxurrada.
 curl -sS -X PUT "$API/scripts/$NOME" -H "Authorization: Bearer $TOKEN" \
-  -F 'metadata={"main_module":"worker.js","compatibility_date":"2026-09-01","compatibility_flags":["nodejs_compat"],"keep_bindings":["secret_text"]};type=application/json' \
+  -F 'metadata={"main_module":"worker.js","compatibility_date":"2026-09-01","compatibility_flags":["nodejs_compat"],"keep_bindings":["secret_text"],"bindings":[{"type":"ratelimit","name":"LIMITE","namespace_id":"460001","simple":{"limit":1200,"period":60}}]};type=application/json' \
   -F "worker.js=@worker.js;type=application/javascript+module" \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print("  success:", d["success"], d.get("errors"))'
 
