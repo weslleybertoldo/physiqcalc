@@ -16,10 +16,15 @@ import checagem3d as ck
 args = sys.argv[sys.argv.index("--") + 1:]
 UUID = args[0]
 SO_CHECAR = len(args) > 1 and args[1] == "checar"
-FPS = 16                                       # 25 quadros = 1,5 s descendo
 T0 = time.time()
 
 ficha = json.load(open(os.path.join(AQUI, "fichas", UUID + ".json")))
+# 16 quadros/s: 25 quadros = 1,5 s descendo. Movimento rápido (corrida na esteira, lote 6: a ponta do pé que balança chega a
+# ~4,7 m/s) pede mais quadros/s na ficha ("fps") pra nenhum osso passar de SALTO_MM entre 2 quadros; o clipe continua com ida_s s.
+FPS = ficha.get("fps", 16)
+# movimento cíclico (ficha "ciclo": true, t = 1 igual a t = 0; o app repete): tempo em passo constante — o ease seno das idas e
+# voltas frearia o ciclo na emenda
+CICLO = bool(ficha.get("ciclo"))
 # quadros de ida (o app faz a volta): ida_s da ficha × FPS — 1,5 s = 24 (25 quadros); um movimento longo e rápido
 # (pernas estendidas subindo 80°) pede mais tempo pra nenhum osso passar de SALTO_MM por quadro; menos só pra testar
 NQ = int(args[2]) if len(args) > 2 else round(ficha.get("ida_s", 1.5) * FPS)
@@ -40,7 +45,7 @@ objs_eq = [o for raiz in c.equipamentos + c.apoios for o in arvore(raiz)]   # o 
 resultados, quadros, estado = [], [], {}
 pontos = {"mao_esq": {}, "mao_dir": {}, "pe_esq": {}, "pe_dir": {}}   # alvos dos closes (foto.py)
 for k in range(NQ + 1):
-    t = p3.suave(k / NQ)
+    t = k / NQ if CICLO else p3.suave(k / NQ)
     c.pose(t)
     p3.atualizar()
     r = ck.completa(bon, c, ficha.get("checagens", {}), t, "k%02d t=%.3f" % (k, t), estado)

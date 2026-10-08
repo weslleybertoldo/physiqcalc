@@ -1,0 +1,383 @@
+{
+ "uuid": "17e52ced-abc2-41a1-8776-c6162309e306",
+ "nome": "Abdominal na Máquina",
+ "cena": "abdominal_na_maquina",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · oblíquos",
+ "padrao_movimento": "abdominal_supra",
+ "equipamento": "maquina",
+ "variacao": "sentado",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "obliquos"
+ ],
+ "camera": {
+  "az": 62,
+  "el": 10,
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.1,
+   0.7
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.0,
+  "alvo": [
+   0.0,
+   -0.05,
+   0.8
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina de abdominal, com o quadril e a lombar encostados na almofada de baixo e a parte de cima das costas na almofada da alavanca, as canelas encostadas nos rolos (os pés embaixo deles, chapados no chão) e as mãos segurando os pegadores ao lado da cabeça com as palmas viradas para dentro (pegada neutra), os cotovelos dobrados para a frente e a parte de trás dos braços apoiada nas almofadas dos braços. Soltando o ar, contrai o abdômen e enrola o tronco para a frente e para baixo, levando as costelas na direção do quadril: a coluna dobra, a parte de cima das costas curva e os cotovelos descem, com a alavanca girando junto em volta do eixo que fica na altura da coluna, onde ela dobra. O quadril, o glúteo e as pernas ficam parados, a cabeça acompanha a coluna e os braços só acompanham a alavanca, sem puxar. Volta devagar, desenrolando a coluna até as costas encostarem de novo, sem soltar o peso.",
+ "cinesiologia": {
+  "plano": "sagital (flexão do tronco), com a pelve e as pernas paradas",
+  "articulacoes": "coluna torácica e transição toracolombar (flexão na ida, extensão na volta: a coluna dobra ~35° e o tórax sai de ~8° atrás da vertical, encostado, até ~31° à frente dela), com a lombar baixa e a pelve paradas na almofada da lombar; pescoço acompanhando a coluna, com leve flexão; quadril e joelhos parados (~90°), pés chapados no chão; ombros e cotovelos parados (os braços só guiam a alavanca)",
+  "agonistas": "reto abdominal (ExRx: Target \"Rectus Abdominis\"; NSCA: \"Major muscle involved: Rectus abdominis\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "oblíquos interno e externo (ExRx: Synergists \"Obliques\")",
+  "estabilizadores": "peitoral maior (porção esternal), latíssimo do dorso, redondo maior, deltoide posterior e cabeça longa do tríceps, que seguram os braços nas almofadas (ExRx: Stabilizers \"Pectoralis Major, Sternal\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Triceps, Long Head\")",
+  "fases": "concêntrica (enrola o tronco soltando o ar e os cotovelos descem — ExRx: \"With hips stationary, flex waist so elbows travel downward.\"; NSCA: \"Curl your torso forward toward your thighs, keeping your buttocks and legs still\") e excêntrica (volta devagar até as costas encostarem — ACE: \"Return slowly to the starting position.\"; Life Fitness: \"Maintaining control, return to the start position and repeat the motion.\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Seated Crunch (https://exrx.net/WeightExercises/RectusAbdominis/LVSeatedCrunch, lido na cópia do Internet Archive de 12/12/2023; o site responde 403 direto): \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Sit on machine with back and hips against back supports. If available, place lower legs under pads or on platform. Grasp handles above and position back of arm against pads to each side.\"; Execution: \"With hips stationary, flex waist so elbows travel downward. Return and repeat.\"; músculos: Target \"Rectus Abdominis\", Synergists \"Obliques\", Stabilizers \"Pectoralis Major, Sternal\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Triceps, Long Head\". As 2 variações (cópias de 01/02/2024): Lever Seated Crunch (chest pad) — \"Position seat so chest is same height of padded lever. Sit on machine with back of hips against hip pad. Place hands on outside of lever pad.\", \"With hips stationary, flex waist in \"C\" shape so shoulders travel forward and downward.\"; Lever Seated Crunch (arm pad) — \"Position seat so shoulders are same height of padded lever. Sit on machine and place arms over lever pad.\", \"With hips stationary, flex waist in \"C\" shape so elbows point downward.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15.2 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-1, lido em 08/10/2026): Abdominal crunch (machine) — \"Major muscle involved: Rectus abdominis\"; Starting position: \"Sit with your back against the pad and your feet under the rollers\", \"Grasp the handles with a neutral grip\", \"Press your upper arms against the pads\"; Forward movement: \"Curl your torso forward toward your thighs, keeping your buttocks and legs still\"; Backward movement: \"Return to the starting position\"",
+  "ACE — Seated Crunch, Exercise Library (https://www.acefitness.org/resources/everyone/exercise-library/291/seated-crunch/, \"Equipment: Weight Machines / Selectorized\", lido em 08/10/2026): \"Adjust the seat to a comfortable height and the weight to the appropriate level before beginning. Sitting with the hips pressed against the back of the seat, push the shins against the padded roller and tighten the abs. Grasp the handles in both hands, and pull down on them to lean forward. Return slowly to the starting position.\"",
+  "Life Fitness — Insignia Series Owner's Manual 9481201 Rev BE (PDF de 2024), Abdominal (SS-AB): \"Muscles Used: Abdominal\"; Setup: \"Adjust the seat height so that lower back pad is resting on your lower back. Check the weight stack to ensure appropriate resistance. Grip handles.\"; Movement: \"With a controlled motion upper torso crunch, emphasize the use of your abdominal muscles. Avoid using your arms to power through the motion, they should provide a guide for the motion.\"; \"Maintaining control, return to the start position and repeat the motion.\"; Product Dimensions: \"Size (L x W x H): in. = 52.4 x 46.3 x 58.1 cm = 133 x 117 x 148\"",
+  "Precor — Resolute Strength Ab Crunch RSL0714 (ficha em PDF, 2021): \"A fixed, non-slip footplate contributes stabilization to the supportive design of the Resolute Ab Crunch to assist exercisers while their torso contracts, mimicking a sit-up or crunch.\"; \"Exercisers can set themselves up for a successful set of crunches by using the easy-to-locate seat adjustment to reach the proper height.\"",
+  "Nautilus (Core Health & Fitness) — Inspiration Abdominal Crunch IPAC5 (ficha do produto, PDF): \"Fixed path of motion with the axis of rotation highlighted for precise user positioning. Combination of upper and lower movement arms with the four-bar linkage on upper movement arm provides a moving axis of rotation around the thoracic region of the spine for ultimate user feel and provides true abdominal crunch motion.\"; Hammer Strength Select Abdominal Crunch (Life Fitness, https://www.lifefitness.com/en-us/catalog/strength-training/selectorized/hammer-strength-select-abdominal-crunch, lido em 08/10/2026): \"AbCam System replicates natural ab crunch movement\", \"Axis of rotation marked with red indicator to help cue correct alignment\"",
+  "ExRx.net — Curl-up / Half Sit-up Test Protocols (https://exrx.net/Testing/CurlUpTests, lido na cópia do Internet Archive de 16/09/2025): ACSM Curl-up \"Since elevation of the truck to 30° is the important criteria\"; YMCA Half Sit-up \"3.5\" (9 cm) apart (ensures 30 degree spinal flexion)\" — a flexão da coluna do crunch, a mesma do Abdominal Supra"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "tecnica_padrao": {
+   "coluna": [
+    0,
+    45
+   ]
+  },
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "abdominal_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Crunch (\"Sitting with the hips pressed against the back of the seat\"); NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"keeping your buttocks and legs still\")"
+   },
+   {
+    "nome": "quadril e lombar encostados na almofada da lombar (parados)",
+    "equipamento": "abdominal_encosto",
+    "partes": [
+     "Hips",
+     "Spine"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Crunch (\"Sit on machine with back and hips against back supports.\", \"With hips stationary\"); Life Fitness — Abdominal SS-AB (\"Adjust the seat height so that lower back pad is resting on your lower back.\")"
+   },
+   {
+    "nome": "costas de cima na almofada das costas (vai junto)",
+    "equipamento": "abdominal_costas",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"Sit with your back against the pad\"); ExRx — Lever Seated Crunch (\"with back and hips against back supports\"). A almofada gira junto com o tórax (o eixo segue o tórax): a pele das costas fica entre +0,8 e −2,1 mm da face dela"
+   },
+   {
+    "nome": "canelas encostadas nos rolos",
+    "equipamento": "abdominal_rolo",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Crunch (\"push the shins against the padded roller\"); NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"your feet under the rollers\"); ExRx — Lever Seated Crunch (\"If available, place lower legs under pads or on platform.\")"
+   },
+   {
+    "nome": "parte de trás dos braços nas almofadas",
+    "equipamento": "abdominal_bracos",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     -15,
+     3
+    ],
+    "fonte": "ExRx — Lever Seated Crunch (\"Grasp handles above and position back of arm against pads to each side.\"); NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"Press your upper arms against the pads\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos sem entrar no corpo (cabeça incluída)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftArm",
+     "RightArm"
+    ],
+    "cabelo": true,
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços sem entrar no tronco, na cabeça e nas pernas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "alavanca sem bater na estrutura",
+    "equipamento": "abdominal_alavanca",
+    "de": "abdominal_estrutura",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica: peça nenhuma atravessa a outra; 3 mm = FOLGA_MIN da checagem (o eixo de aço da alavanca passa por dentro do mancal com 5 mm de folga)"
+   },
+   {
+    "nome": "alavanca sem bater na almofada da lombar",
+    "equipamento": "abdominal_alavanca",
+    "de": "abdominal_encosto",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica: peça nenhuma atravessa a outra; 3 mm = FOLGA_MIN da checagem (o eixo de aço da alavanca passa por dentro do mancal com 5 mm de folga)"
+   },
+   {
+    "nome": "almofada das costas sem bater na almofada da lombar",
+    "equipamento": "abdominal_costas",
+    "de": "abdominal_encosto",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica: peça nenhuma atravessa a outra; 3 mm = FOLGA_MIN da checagem (o eixo de aço da alavanca passa por dentro do mancal com 5 mm de folga)"
+   },
+   {
+    "nome": "almofadas dos braços sem bater na estrutura",
+    "equipamento": "abdominal_bracos",
+    "de": "abdominal_estrutura",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica: peça nenhuma atravessa a outra; 3 mm = FOLGA_MIN da checagem (o eixo de aço da alavanca passa por dentro do mancal com 5 mm de folga)"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "eixo da alavanca na coluna, na transição toracolombar",
+    "equipamento": "abdominal_alavanca",
+    "ossos": [
+     "Spine1"
+    ],
+    "mm": [
+     0,
+     45
+    ],
+    "fonte": "Nautilus — Inspiration Abdominal Crunch (\"provides a moving axis of rotation around the thoracic region of the spine\"); Hammer Strength — Select Abdominal Crunch (\"Axis of rotation marked with red indicator to help cue correct alignment\"). O eixo é o centro de giro fixo que melhor segue o tórax na flexão (ombros, base do pescoço e a pele das costas onde a almofada encosta, em 11 quadros; resíduo de 1,4 mm): fica 1 cm atrás e 3 cm acima da cabeça do osso Spine1 do boneco (~T12–L1), a 33 cm do assento"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "coluna reta embaixo",
+    "medida": "coluna",
+    "t": 0.0,
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "ExRx — Lever Seated Crunch (\"Sit on machine with back and hips against back supports.\"): sentado com as costas nos apoios, a coluna reta"
+   },
+   {
+    "nome": "coluna flexionada em cima",
+    "medida": "coluna",
+    "t": 1.0,
+    "graus": [
+     30,
+     42
+    ],
+    "fonte": "ExRx — Lever Seated Crunch (\"flex waist so elbows travel downward\"; na variação com almofada do peito: \"flex waist in \"C\" shape\"); NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"Curl your torso forward toward your thighs\"); Life Fitness — Abdominal SS-AB (\"With a controlled motion upper torso crunch\"). É a flexão de coluna do crunch: ExRx, citando o ACSM (\"Since elevation of the truck to 30° is the important criteria\") e o YMCA (\"ensures 30 degree spinal flexion\"); a medida (lombar × torácica) chega a ~36° com a coluna saindo reta"
+   },
+   {
+    "nome": "tórax quase em pé embaixo (encostado)",
+    "medida": "torax_chao",
+    "t": 0.0,
+    "graus": [
+     78,
+     90
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"Sit with your back against the pad\"); o plano das costas fica 10° atrás da vertical, como nas outras máquinas sentadas (o tórax ~8° atrás dela)"
+   },
+   {
+    "nome": "tórax ~30° pra frente em cima",
+    "medida": "torax_chao",
+    "t": 1.0,
+    "graus": [
+     54,
+     66
+    ],
+    "fonte": "ACE — Seated Crunch (\"pull down on them to lean forward\"); NSCA (\"Curl your torso forward toward your thighs\"): o tórax (base do Spine1 → base do pescoço) sai de ~8° atrás da vertical e chega a ~31° à frente dela (o mesmo ~30° de flexão do crunch do ACSM/YMCA, acima)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"keeping your buttocks and legs still\"); ACE — Seated Crunch (\"push the shins against the padded roller\")"
+   },
+   {
+    "nome": "cotovelos dobrados e parados (os braços só guiam)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     125,
+     145
+    ],
+    "fonte": "Life Fitness — Abdominal SS-AB (\"Avoid using your arms to power through the motion, they should provide a guide for the motion.\"): o braço fica parado em relação ao tórax, só o tronco dobra"
+   },
+   {
+    "nome": "pegada neutra (palmas pro meio)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     70,
+     100
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Abdominal crunch (machine) (\"Grasp the handles with a neutral grip\")"
+   },
+   {
+    "nome": "punho reto",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "regra da fábrica: a mão segue o antebraço no pegador, sem dobrar o punho (os braços só guiam — Life Fitness)"
+   },
+   {
+    "nome": "braços pra frente, cotovelos na largura dos ombros",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -10,
+     15
+    ],
+    "fonte": "ExRx — Lever Seated Crunch (\"Grasp handles above and position back of arm against pads to each side.\"): os cotovelos pra frente, em cima das almofadas dos braços"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ],
+  "tecnica_padrao_motivo": "a coluna dobra de propósito: o exercício É a flexão do tronco (ExRx: \"flex waist so elbows travel downward\"; NSCA: \"Curl your torso forward toward your thighs\"), até ~36° na medida lombar × torácica; a coluna reta embaixo e a curva em cima estão nos ângulos da ficha",
+  "pelve_motivo": "o quadril não mexe (ExRx: \"With hips stationary\"; NSCA: \"keeping your buttocks and legs still\"): a pelve fica parada por construção (a cena só gira os ossos da coluna e do pescoço) — o diagnóstico de cada quadro mostra a pelve a −0,6° da vertical em todos; as zonas do assento e da almofada da lombar e os pés chapados conferem"
+ }
+}

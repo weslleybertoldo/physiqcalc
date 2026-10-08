@@ -1,0 +1,377 @@
+{
+ "uuid": "a3df3ffc-425b-49c5-b99f-f2980cd79e21",
+ "nome": "Panturrilha em Pé na Máquina",
+ "cena": "panturrilha_em_pe_na_maquina",
+ "grupo": "Panturrilha",
+ "subgrupo": "Gastrocnêmio · sóleo",
+ "padrao_movimento": "panturrilha",
+ "equipamento": "maquina",
+ "variacao": "em pé",
+ "alvos": [
+  "panturrilha"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 125,
+  "el": 8,
+  "dist": 4.5,
+  "alvo": [
+   0.0,
+   -0.3,
+   1.0
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.0,
+  "alvo": [
+   0.0,
+   -0.4,
+   0.95
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Em pé na máquina de panturrilha, de frente pra torre, com as ombreiras em cima dos ombros e as mãos fechadas nos pegadores que descem na frente dos ombros; os joelhos e o quadril estendidos (o corpo reto, em pé), os pés na largura do quadril e com as pontas para a frente, só a ponta dos pés (os dedos e a parte da frente da sola, embaixo da base dos dedos) apoiada no degrau e os calcanhares para fora dele. Começa com os calcanhares embaixo, abaixo da altura do degrau, a panturrilha alongada, e sobe os calcanhares o máximo que conseguir, ficando na ponta dos pés, com uma pausa no alto; desce devagar, controlando, até a panturrilha alongar de novo. Só o tornozelo trabalha: os dedos ficam apoiados no degrau, os joelhos esticados e o corpo inteiro sobe e desce reto junto com as ombreiras da máquina.",
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "em pé na máquina, só a ponta dos pés fica no degrau (a 15 cm do chão) e os calcanhares ficam pra fora dele, descendo e subindo (ExRx, Lever Standing Calf Raise: \"Position toes and balls of feet on calf block with arches and heels extending off\"): as regras de pé chapado no chão (planta e calcanhar a 0 ± 5 mm, sem escorregar) e as de técnica medidas no plano do chão não servem; quem confere os pés são as zonas da ponta do pé no degrau em todo quadro, a altura do calcanhar embaixo e os ângulos do tornozelo, da largura e da ponta dos pés abaixo (os dedos ficam parados no degrau: a cena prende a base deles)",
+  "zonas": [
+   {
+    "nome": "ombro esquerdo embaixo da ombreira",
+    "equipamento": "panturrilha_pe_ombreiras",
+    "partes": [
+     "LeftShoulder",
+     "LeftArm"
+    ],
+    "mm": [
+     -8,
+     3
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Place shoulders under padded lever.\"): a ombreira fica em cima do ombro (acrômio e trapézio) em todo quadro e o corpo sobe e desce junto com ela; a pele afunda uns milímetros no estofado"
+   },
+   {
+    "nome": "ombro direito embaixo da ombreira",
+    "equipamento": "panturrilha_pe_ombreiras",
+    "partes": [
+     "RightShoulder",
+     "RightArm"
+    ],
+    "mm": [
+     -8,
+     3
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Place shoulders under padded lever.\"): a ombreira fica em cima do ombro (acrômio e trapézio) em todo quadro e o corpo sobe e desce junto com ela; a pele afunda uns milímetros no estofado"
+   },
+   {
+    "nome": "ponta do pé esquerdo (metatarsos e dedos) apoiada no degrau, sem entrar nele",
+    "equipamento": "panturrilha_pe_degrau",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     -6,
+     2
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Position toes and balls of feet on calf block with arches and heels extending off\"): os dedos e a planta embaixo das cabeças dos metatarsos apoiados no degrau em todo quadro; a planta afunda até 6 mm na borracha (o coxim do antepé) na borda dele, embaixo, e na dobra da base dos dedos, em cima"
+   },
+   {
+    "nome": "ponta do pé direito (metatarsos e dedos) apoiada no degrau, sem entrar nele",
+    "equipamento": "panturrilha_pe_degrau",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -6,
+     2
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Position toes and balls of feet on calf block with arches and heels extending off\"): os dedos e a planta embaixo das cabeças dos metatarsos apoiados no degrau em todo quadro; a planta afunda até 6 mm na borracha (o coxim do antepé) na borda dele, embaixo, e na dobra da base dos dedos, em cima"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "calcanhares abaixo do degrau no começo (alongado): 5 a 8 cm abaixo do topo dele, que fica a 15 cm do chão",
+    "partes": [
+     "LeftFoot",
+     "RightFoot"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     70,
+     100
+    ],
+    "t": 0.0,
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Lower heels by bending ankles until calves are stretched\"; \"heels extending off\"): o calcanhar desce abaixo do degrau (a pele mais baixa do pé a 5–8 cm abaixo do topo dele, que fica a 15 cm do chão)"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "garfo, pegadores e alavanca longe do cabelo",
+    "equipamento": "panturrilha_pe_braco",
+    "de": "cabelo",
+    "mm": [
+     15,
+     1000000000000000.0
+    ],
+    "fonte": "a cabeça fica entre as 2 ombreiras, sem encostar no braço da máquina (regra da fábrica: nada entra no corpo)"
+   },
+   {
+    "nome": "ombreiras longe do cabelo",
+    "equipamento": "panturrilha_pe_ombreiras",
+    "de": "cabelo",
+    "mm": [
+     5,
+     1000000000000000.0
+    ],
+    "fonte": "a ombreira fica no ombro, por fora do pescoço (regra da fábrica)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tornozelo em flexão dorsal embaixo, calcanhar abaixo do degrau (20°)",
+    "medida": "tornozelo",
+    "t": 0.0,
+    "graus": [
+     94,
+     98
+    ],
+    "fonte": "Kinoshita et al. 2023, legenda da figura 1 (\"Postures of the standing and seated calf-raise exercises [...] during the exercises\", \"with the knee joint 0° [...] and the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions\"); ExRx — Lever Standing Calf Raise (\"Lower heels by bending ankles until calves are stretched\"); neutro do boneco 75,95° (tecnica3d.tornozelo, o pé chapado em pé): 20° de flexão dorsal = 95,95°"
+   },
+   {
+    "nome": "tornozelo em flexão plantar em cima, na ponta dos pés (30°)",
+    "medida": "tornozelo",
+    "t": 1.0,
+    "graus": [
+     43,
+     49
+    ],
+    "fonte": "Kinoshita et al. 2023 (idem: 30° de flexão plantar = 45,95° no boneco); ExRx — Lever Standing Calf Raise (\"Raise heels by extending ankles as high as possible\")"
+   },
+   {
+    "nome": "tornozelo dentro da amplitude normal o movimento todo",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     25.9,
+     96.5
+    ],
+    "fonte": "Alazzawi et al. 2017, tabela 5 (\"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"): 75,95° + 20° = 95,95° (+0,5° de tolerância, como no limites.py) e 75,95° − 50° = 25,95°"
+   },
+   {
+    "nome": "joelhos estendidos o movimento todo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Keep knees straight throughout exercise or bend knees slightly only during stretch.\"; \"Stand erect by extending hips and knees.\"); ACE — Calf Raises (\"Keep a slight bend in knees\"): a perna reta do boneco em pé mede ~7,5°"
+   },
+   {
+    "nome": "quadril estendido (em pé)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Stand erect by extending hips and knees.\")"
+   },
+   {
+    "nome": "tronco em pé, sem inclinar",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Stand erect\"); o corpo sobe e desce reto junto com as ombreiras (inclina no máximo ~0,5° no meio)"
+   },
+   {
+    "nome": "coluna neutra, parada",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Stand erect\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.7
+    ],
+    "fonte": "ACE — Calf Raises (\"placing both feet approximately hip-width apart\"): distância de lado a lado entre os tornozelos ÷ entre as articulações do quadril (~1,56: as coxas musculosas do boneco já se tocam; mais fechado, entram uma na outra)"
+   },
+   {
+    "nome": "pontas dos pés pra frente",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     -5,
+     10
+    ],
+    "fonte": "ACE — Calf Raises (\"with the toes pointed forward\"); Kinoshita et al. 2023 (\"Participants were instructed to place/keep their foot in a neutral position\"); NSCA, PTQ 8.4 (\"Do not allow your foot to rotate outwards at any point, keep it straight throughout.\")"
+   },
+   {
+    "nome": "os dois pés virados igual",
+    "medida": "ponta_pe_diferenca",
+    "t": "todos",
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "Kinoshita et al. 2023 (idem)"
+   },
+   {
+    "nome": "joelho na linha do pé (sem entrar pra dentro)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     -20,
+     20
+    ],
+    "fonte": "perna reta: o joelho fica na reta quadril–tornozelo (o boneco em pé, no repouso, mede ~−11 mm)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "o corpo sobe reto, sem pender pro lado"
+   },
+   {
+    "nome": "ombros nivelados",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "braços: cotovelos dobrados embaixo dos ombros, as mãos nos pegadores",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     100,
+     135
+    ],
+    "fonte": "ExRx — Lever Standing Calf Raise (\"Grasp handles or sides of padded lever.\"): as mãos vão junto com o braço da máquina; o cotovelo fica dobrado ~117° o movimento todo"
+   },
+   {
+    "nome": "pegada neutra nos pegadores (palmas pro meio)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     55,
+     90
+    ],
+    "fonte": "o pegador desce na frente do ombro, quase no plano de frente pra trás: a palma fica virada pro meio do corpo"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -20,
+     15
+    ],
+    "fonte": "os dedos na linha do antebraço, o pegador ⟂ a ele (a mão só segura: a força é das panturrilhas)"
+   }
+  ]
+ },
+ "cinesiologia": {
+  "plano": "sagital (flexão plantar e flexão dorsal do tornozelo). Com a ponta do pé presa no degrau, a base dos dedos é o eixo (ExRx, Calf Exercise Analyses: \"Axis: Ball of Foot\"): quando o calcanhar sobe, o tornozelo gira em volta dela e o corpo inteiro (reto, rígido do tornozelo pra cima) sobe e vai um pouco pra frente junto com as ombreiras, que andam num arco em volta do eixo da máquina",
+  "articulacoes": "tornozelo (flexão plantar na ida, de 20° de flexão dorsal — calcanhar abaixo do degrau — até 30° de flexão plantar; flexão dorsal na volta); base dos dedos (metatarsofalângica) estendendo na subida, com os dedos apoiados no degrau; joelho e quadril estendidos e parados; tronco, coluna e cabeça parados (o corpo inteiro só sobe e desce); ombros, cotovelos e punhos parados segurando os pegadores, que vão junto com o braço da máquina",
+  "agonistas": "gastrocnêmio (ExRx: Target \"Gastrocnemius\"), em contração concêntrica na subida e excêntrica na descida: com o joelho estendido ele trabalha alongado (Kinoshita et al. 2023: \"The LG and MG are biarticular muscles crossing the knee joint, and are lengthened more in a knee-extended than knee-flexed position\"; Signorile et al. 2002: \"the SOL can be targeted most effectively with the knee flexed at 90 degrees and the MG with the leg fully extended\"; NSCA, PTQ 8.4: \"doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity\")",
+  "sinergistas": "sóleo (ExRx: Synergists \"Soleus\"; ExRx, Calf Exercise Analyses: \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\"); Kinoshita et al. 2023: depois do treino em pé o volume cresceu mais que no sentado no gastrocnêmio — \"lateral gastrocnemius (12.4% vs. 1.7%), medial gastrocnemius (9.2% vs. 0.6%), and whole triceps surae (5.6% vs. 2.1%)\". No mapa do app gastrocnêmio e sóleo são o mesmo grupo (panturrilha), marcado como alvo; não há auxiliar marcado (o grupo \"tibial\" do mapa é o tibial anterior, o antagonista)",
+  "estabilizadores": "trapézio superior e médio e levantador da escápula, segurando a carga das ombreiras em cima dos ombros (ExRx: Stabilizers \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\"); as mãos nos pegadores ajudam a manter o corpo reto (ExRx: \"Grasp handles or sides of padded lever.\")",
+  "fases": "concêntrica (sobe os calcanhares o máximo — ExRx: \"Raise heels by extending ankles as high as possible\"; ACE: \"Pause at the top\") e excêntrica (desce devagar até alongar — ExRx: \"Lower heels by bending ankles until calves are stretched\"; Kinoshita et al. 2023: \"taking 2 s for each of the concentric/lifting and eccentric/lowering phases\"; NSCA, PTQ 8.4: \"Do not bounce; control the lowering (eccentric) portion of each repetition\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Standing Calf Raise (https://exrx.net/WeightExercises/Gastrocnemius/LVStandingCalfRaise, lido na cópia do Internet Archive de 07/04/2023, a mais nova que existe; o site responde 403 direto), lido em 08/10/2026: classificação \"Utility: Basic\", \"Mechanics: Isolated\", \"Force: Push\"; Preparation: \"Place shoulders under padded lever. Position toes and balls of feet on calf block with arches and heels extending off. Grasp handles or sides of padded lever. Stand erect by extending hips and knees.\"; Execution: \"Raise heels by extending ankles as high as possible. Lower heels by bending ankles until calves are stretched. Repeat.\"; Comments: \"If possible, position lever just below lowest range of motion. Keep knees straight throughout exercise or bend knees slightly only during stretch. Quadriceps serve as synergist muscle if knees are bent slightly during stretch.\"; músculos: Target \"Gastrocnemius\", Synergists \"Soleus\", Stabilizers \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\"",
+  "ExRx.net — Calf Exercise Analyses (https://exrx.net/Kinesiology/CalfExercises, a análise que a página do exercício indica; lida na cópia do Internet Archive de 06/02/2026, em 08/10/2026): \"Calf Raises, although essentially similar to the Calf Press, could be classified as a 2nd class lever: Axis: Ball of Foot Motive Force: Bodyweight plus added weight transferred through ankle Resistive Force: Plantar Flexors attached at Calcaneous\"; \"the calf raise (typically performed on an elevated calf block)\"; \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\"; \"Although calf raises are most commonly performed with the knees straight throughout the movement, some individuals choose to bend their knees slightly at the bottom of the standing calf raise and extend their knee as they raise the weight upward.\"",
+  "Kinoshita M, Maeo S, Kobayashi Y, Eihara Y, Ono M, Sato M, Sugiyama T, Kanehisa H, Isaka T. Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training. Front Physiol. 2023;14:1272106. doi:10.3389/fphys.2023.1272106 — texto completo aberto, lido em 08/10/2026 (figuras 1 e 2 vistas): treino \"using standing (IMH703, Coming Health Tech, Qingdao, China) and seated (GSCR349, Bodysolid, Forest Park, Illinois, United States) calf-raise machines\" (na figura 2A, a máquina em pé de alavanca, com as ombreiras e os pegadores na ponta dela); legenda da figura 1 (as posturas do exercício que os autores modelaram no OpenSim; a parte do treino nos métodos não dá a amplitude do tornozelo em graus): \"Postures of the standing and seated calf-raise exercises and operating ranges of each triceps surae muscle on the normalized force–length curve during the exercises. These were obtained using the OpenSim Gait 2392 model (Delp et al., 2007), with the knee joint 0° and 90° for the standing and seated conditions, respectively, and the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions for both conditions.\"; \"Participants were instructed to place/keep their foot in a neutral position\"; \"taking 2 s for each of the concentric/lifting and eccentric/lowering phases\"; \"The LG and MG are biarticular muscles crossing the knee joint, and are lengthened more in a knee-extended than knee-flexed position\"; resultados: \"The changes in muscle volume were significantly greater for the standing than seated condition leg in the lateral gastrocnemius (12.4% vs. 1.7%), medial gastrocnemius (9.2% vs. 0.6%), and whole triceps surae (5.6% vs. 2.1%)\"",
+  "NSCA — Personal Training Quarterly 8.4 (2021), Tumminello N., \"How to Improve Ankle Dorsiflexion and Calf Strength for Better Performance\" (PDF em nsca.com, lido em 08/10/2026): \"Research shows that doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity, while doing these raises with a bent knee creates superior soleus muscle activity\"; \"Traditional calf exercises, such as standing barbell and dumbbell calf raises, standing machine calf raises, and seated machine calf raises, are focused on improving calf strength.\"; no calf raise com o pé elevado (Dumbbell Foot-Elevated Calf Raise): \"lift your heel up as high as you can off of the floor, thus ending up on the ball of your foot\", \"Do not allow your foot to rotate outwards at any point, keep it straight throughout.\", \"Do not bounce; control the lowering (eccentric) portion of each repetition\". (O Exercise Technique Manual da NSCA, que tem a panturrilha em pé na máquina, não foi lido: não está citado.)",
+  "ACE — Calf Raises (exercise library 51, acefitness.org, lido em 08/10/2026; é a panturrilha em pé com barra, a da ACE com os pés no apoio): \"placing both feet approximately hip-width apart and squarely set on the floor with the toes pointed forward. (Tip: for more development on the outside of calves point feet slightly inwards.) Keep a slight bend in knees, and press the toes into the ground while lifting the heels up. Pause at the top, and slowly roll the heels back down to the floor\"",
+  "Signorile JF, Applegate B, Duque M, Cole N, Zink A. Selective recruitment of the triceps surae muscles with changes in knee angle. J Strength Cond Res. 2002;16(3):433-439 (resumo, PMID 12173959, lido na Europe PMC em 08/10/2026): \"Results suggest that the SOL can be targeted most effectively with the knee flexed at 90 degrees and the MG with the leg fully extended.\"",
+  "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), tabela 5 lida em 08/10/2026: \"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"",
+  "Medidas da máquina — Hoist RPL-5405 Standing Calf Raise (manual do dono, RPL-5405-OM.pdf, lista de peças lida em 08/10/2026): \"12\" X 5\" MOLDED PAD\" (2), \"GRIP OPEN END 1.19\" X 10.00\" LG.\" (2), \"FOOTPLATE\" (2); Life Fitness Signature Series Plate-Loaded Standing Calf Raise (performbetter.com, lido em 08/10/2026): \"Footplate: Non-slip steel (23.5\"L x 6\"W)\", \"Shoulder pads: 5 height adjustments in 1.25\" increments\", \"Dimensions (L x W x H): 63.6\" x 54.1\" x 68.1\" 1615mm x 1375mm x 1730mm\"; Cybex Prestige Strength VRS Standing Calf (lifefitness.com, lido em 08/10/2026): \"Shoulder pads are angled to match natural angle of shoulder.\", \"Curved footplate allows for a comfortable stretch to the start position.\", \"Input arm adjusts for varying user heights.\", \"48 x 37 x 68 in (122 x 94 x 173 cm)\"; Legend Fitness SelectEDGE Standing Calf Raise, modelo 1115 (legendfitness.com, lido em 08/10/2026, com a foto de medidas): \"Heavy duty flange pillow block bearings allow for smooth pivots and extended life.\", \"High quality foam shoulder pads, finished in durable vinyl, adjusts up to 8 inches in 1-inch increments with a single pop pin. Long grips next to the shoulder pads and an anti-skid footplate keep users secure while they exercise\", \"53.5 x 54 x 75 in\"; na foto: \"HEIGHT FROM FOOTPLATE TO PADS* 49\"\" (\"*MEASURED WITH PADS AT THEIR LOWEST\") e \"PADS ADJUST UP TO 8 INCHES IN 1-INCH INCREMENTS\" — aqui as ombreiras ficam a ~1,40 m (55\") do degrau embaixo, dentro dos 49\"–57\""
+ ]
+}
