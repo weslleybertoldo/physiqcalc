@@ -11,11 +11,18 @@
 // cabeçalhos é descartado. O resto do tráfego (auth, rest, storage) segue igual.
 const ORIGIN = "https://hkxvtsbwctxkrqzkkdoz.supabase.co";
 
-// hml-05c (homologação, H-17): as 3 RPCs públicas (sem login: diário e pré-consulta) levam o IP de verdade para o banco contar os
-// pedidos por IP — mas SEM o segredo (o pedido ao PostgREST pode ir para os logs): vai a assinatura HMAC-SHA256(segredo, "ip:minuto"),
-// que o banco confere com o segredo guardado no Vault. Caminho normalizado ("//" e "/" no fim).
+// hml-05c (homologação, H-17): as 9 RPCs públicas (sem login, pelo código do link: diário, pré-consulta e cadastro) levam o IP de
+// verdade para o banco contar os pedidos por IP — mas SEM o segredo (o pedido ao PostgREST pode ir para os logs): vai a assinatura
+// HMAC-SHA256(segredo, "ip:minuto"), que o banco confere com o segredo guardado no Vault (physiq_proxy_segredo). A lista tem que ser a
+// mesma do banco (supabase-principal/migrations/20261008020000_hml05c_limite_ip_publico.sql): RPC limitada sem a assinatura cairia
+// no balde do IP do Worker. Caminho normalizado ("//" e "/" no fim).
 // Teste: node --test infra/cloudflare/physiq-principal-api/worker.test.mjs
-const RPC_PUBLICAS = /^\/rest\/v1\/rpc\/(preconsulta_responder|diario_listar|diario_enviar)$/;
+export const RPCS_COM_LIMITE = [
+  "diario_link", "diario_listar", "diario_enviar", "diario_paciente",
+  "preconsulta_formulario", "preconsulta_responder",
+  "cadastro_link_info", "cadastro_publico_info", "cadastro_publico_enviar",
+];
+const RPC_PUBLICAS = new RegExp(`^/rest/v1/rpc/(${RPCS_COM_LIMITE.join("|")})$`);
 export function rpcPublica(caminho) {
   return RPC_PUBLICAS.test(caminho.replace(/\/{2,}/g, "/").replace(/\/+$/, ""));
 }

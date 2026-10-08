@@ -2,13 +2,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHmac } from "node:crypto";
-import worker, { assinarIp, rpcPublica } from "./worker.js";
+import worker, { RPCS_COM_LIMITE, assinarIp, rpcPublica } from "./worker.js";
 
-test("rpcPublica: as 3 RPCs públicas (caminho normalizado); o resto não", () => {
-  for (const c of ["/rest/v1/rpc/diario_listar", "/rest/v1/rpc/diario_enviar/", "/rest/v1//rpc/preconsulta_responder"]) {
+test("rpcPublica: as 9 RPCs públicas (caminho normalizado); o resto não", () => {
+  assert.equal(RPCS_COM_LIMITE.length, 9);
+  for (const nome of RPCS_COM_LIMITE) assert.equal(rpcPublica(`/rest/v1/rpc/${nome}`), true, nome);
+  for (const c of ["/rest/v1/rpc/diario_enviar/", "/rest/v1//rpc/preconsulta_responder", "/rest/v1/rpc/diario_link//"]) {
     assert.equal(rpcPublica(c), true, c);
   }
-  for (const c of ["/functions/v1/entrar-senha", "/rest/v1/rpc/outra_funcao", "/rest/v1/pacientes", "/auth/v1/token", "/rest/v1/rpc/diario_listar_x"]) {
+  for (const c of ["/functions/v1/entrar-senha", "/rest/v1/rpc/outra_funcao", "/rest/v1/pacientes", "/auth/v1/token", "/rest/v1/rpc/diario_listar_x",
+                   "/rest/v1/rpc/xdiario_link", "/rest/v1/rpc/diario_pasta_valida", "/rest/v1/rpc/cadastro_link_enviar"]) {
     assert.equal(rpcPublica(c), false, c);
   }
 });
