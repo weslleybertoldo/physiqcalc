@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FORM_VAZIO, camposRepetidos, dadosDoCadastro, formatarCPF, problemaDoCadastro, validarCPF } from "./regras";
+import { FORM_VAZIO, dadosDoCadastro, formatarCPF, problemaDoCadastro, validarCPF } from "./regras";
 
 const form = (extra: Partial<typeof FORM_VAZIO> = {}) => ({ ...FORM_VAZIO, nome: "Ana Lima", ...extra });
 
@@ -28,11 +28,5 @@ describe("H5 — /c/ (cadastro pelo link): só o nome é obrigatório, como no N
   it("o que vai para o banco: aparado, telefone e CPF só com os dígitos", () => {
     expect(dadosDoCadastro(form({ nome: "  Ana   Lima ", apelido: " Aninha ", cpf: "529.982.247-25", telefone: "(82) 99999-0000", email: " a@b.com " })))
       .toMatchObject({ nome: "Ana Lima", apelido: "Aninha", cpf: "52998224725", telefone: "82999990000", email: "a@b.com" });
-  });
-  it("a trava de e-mail/CPF: os campos que voltaram do banco (os 2 de uma vez) ou o do código", () => {
-    expect(camposRepetidos("cadastro_email_existe", ["email", "cpf"])).toEqual(["email", "cpf"]);
-    expect(camposRepetidos("cadastro_cpf_existe")).toEqual(["cpf"]);
-    expect(camposRepetidos("cadastro_email_existe")).toEqual(["email"]);
-    expect(camposRepetidos("cadastro_repetido")).toEqual([]);
   });
 });

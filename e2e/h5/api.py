@@ -4,8 +4,8 @@
   agenda    N-11 / DN-7 "Sem trava" = qualquer mês: com a janela 'livre', o Rafael (aluno, login de verdade, RLS de verdade) vê horários
             8 meses à frente e reagenda para lá; com 'mes' (negativo) a janela acaba no mês da consulta e o banco recusa a data longe
             (fora_da_janela); 'mes_seguinte' continua até o fim do mês seguinte;
-  cadastro  N-57 / DN-6 o /c/ com CPF e apelido: só o nome basta; apelido e CPF gravam no pendente; CPF de aluno que existe →
-            cadastro_cpf_existe (+ campos); e-mail e CPF → os 2 campos; CPF com dígitos de menos → cpf_invalido; pendente repetido
+  cadastro  N-57 / DN-6 o /c/ com CPF e apelido: só o nome basta; apelido e CPF gravam no pendente; CPF ou e-mail de aluno que
+            existe → ok, sem dizer que já existe (hml-05b, H-18); CPF com dígitos de menos → cpf_invalido; pendente repetido
             pelo CPF → cadastro_repetido; e a função alunos (com o captcha desligado só no envio, no staging) repassa tudo;
   aviso_pix achado 2 do FIM-1b: numa transação DESFEITA (nada fica na fila; o agente do Moto G7 nunca vê), com o Lucas "conectado"
             só ali: o enfileirador ANTIGO mandaria o lembrete do PhysiqNutri com a data/valor velhos (o defeito), o NOVO não manda nada;
@@ -145,18 +145,18 @@ def caso_cadastro() -> None:
         linha = q(f"select apelido, cpf, telefone from {S}.cadastros_pendentes where id = '{r.get('id')}'") if r.get("ok") else []
         p.check(r.get("ok") is True and linha and linha[0] == {"apelido": "Ivinho", "cpf": CPF_NOVO, "telefone": "82988880505"},
                 f"[/c/] apelido e CPF gravam no pendente (aparados, CPF só dígitos) → {linha}")
+        # hml-05b (H-18, 08/10/2026): e-mail/CPF de aluno que já existe NÃO volta mais como cadastro_*_existe — vira pendente como os
+        # outros (quem tem o link não fica sabendo quem já é aluno); o aviso vai para o profissional ao aprovar (e2e/hml05b/telas.py)
         r = enviar({"nome": "Otávio de Novo H5", "cpf": "390.533.447-05"})
-        p.check(r.get("ok") is False and r.get("erro") == "cadastro_cpf_existe" and r.get("campos") == ["cpf"],
-                f"[/c/] (negativo) CPF que já é de um aluno → cadastro_cpf_existe, campos [cpf] → {r}")
+        p.check(r.get("ok") is True and "campos" not in r, f"[/c/] CPF que já é de um aluno → ok, sem dizer que já existe → {r}")
         r = enviar({"nome": "Rafa de Novo H5", "cpf": CPF_EXISTE, "email": raf["email"]})
-        p.check(r.get("ok") is False and r.get("erro") == "cadastro_email_existe" and r.get("campos") == ["cpf", "email"],
-                f"[/c/] (negativo) e-mail e CPF que já existem → os 2 campos de uma vez → {r}")
+        p.check(r.get("ok") is True and "campos" not in r, f"[/c/] e-mail e CPF que já existem → ok, sem dizer que já existem → {r}")
         r = enviar({"nome": "Curto H5", "cpf": "1234567890"})
         p.check(r.get("erro") == "cpf_invalido", f"[/c/] (negativo) CPF com 10 dígitos → cpf_invalido → {r}")
         r = enviar({"nome": "Outro Nome H5", "cpf": CPF_NOVO})
         p.check(r.get("erro") == "cadastro_repetido", f"[/c/] (negativo) o mesmo CPF já pendente para este profissional → cadastro_repetido → {r}")
 
-        # a função alunos (o caminho da tela): repassa apelido e CPF e devolve os campos da trava
+        # a função alunos (o caminho da tela): repassa apelido e CPF e não diz se o CPF já é de um aluno (H-18)
         B.captcha(False)
         try:
             st, r = B.alunos_publico("cadastro_enviar", {"codigo": cod, "captcha": "", "dados": {"nome": "Edu Pela Função H5", "apelido": "Edu", "cpf": CPF_NOVO2}})
@@ -166,9 +166,8 @@ def caso_cadastro() -> None:
             B.captcha(True)
         linha = q(f"select apelido, cpf from {S}.cadastros_pendentes where id = '{r.get('id')}'") if ok1 else []
         p.check(ok1 and linha and linha[0] == {"apelido": "Edu", "cpf": CPF_NOVO2}, f"[/c/] pela função alunos: 200 e o pendente com apelido e CPF → {st} {linha}")
-        p.check(st2 == 409 or (st2 >= 400 and r2.get("erro") == "cadastro_cpf_existe" and r2.get("campos") == ["cpf"]),
-                f"[/c/] pela função alunos: CPF repetido → {st2} {r2}")
-        p.check(r2.get("erro") == "cadastro_cpf_existe" and r2.get("campos") == ["cpf"], f"[/c/] a função devolve o código e os campos para a tela → {r2}")
+        p.check(r2.get("erro") not in ("cadastro_cpf_existe", "cadastro_email_existe") and "campos" not in r2,
+                f"[/c/] pela função alunos: CPF de aluno → não diz que já existe (H-18) → {st2} {r2}")
         cap = q(f"select valor->>'captcha' c from {S}.app_config where chave = 'login_limite'")[0]["c"]
         p.check(cap == "true", f"[/c/] o captcha do staging voltou a ligar ({cap})")
     finally:

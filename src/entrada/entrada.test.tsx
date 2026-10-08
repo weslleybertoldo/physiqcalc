@@ -101,6 +101,17 @@ describe("Entrar com e-mail e senha — o limite de tentativas mora no servidor 
     await waitFor(() => expect(screen.getByText("E-mail ou senha incorretos.")).toBeInTheDocument());
     expect(registro()).toBeNull();
   });
+  it("H-47: e-mail sem ponto no domínio não sai do aparelho (nem o captcha é pedido)", async () => {
+    h.token.mockClear();
+    h.entrarComEmail.mockClear();
+    abrir(<EntrarEmail />);
+    fireEvent.change(screen.getByPlaceholderText("voce@email.com"), { target: { value: "teste@sem-ponto" } });
+    fireEvent.change(screen.getByPlaceholderText("Sua senha"), { target: { value: "qualquer-senha" } });
+    fireEvent.submit(document.querySelector("[data-form-email]")!);
+    expect(await screen.findByText("Confira o e-mail.")).toBeInTheDocument();
+    expect(h.entrarComEmail).not.toHaveBeenCalled();
+    expect(h.token).not.toHaveBeenCalled();
+  });
   it("o servidor bloqueou (4ª errada → 1 min): contador, botão travado com a MESMA senha e o aparelho não chama de novo", async () => {
     h.entrarComEmail.mockResolvedValue({ erro: { status: 0, code: "senha_errada", bloqueado_ate: emMs(60_000), bloqueado_de_vez: false, agora: agoraIso() } });
     abrir(<EntrarEmail />);

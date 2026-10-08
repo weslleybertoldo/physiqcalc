@@ -2,10 +2,11 @@
  * /c/:codigo — o cadastro pelo link do profissional (W13; H5 — N-57 / DN-6): regras PURAS do formulário, espelho da função do banco
  * `cadastro_link_enviar` (migração 20261002090100_h5_agenda_cadastro_aviso_pix.sql). Como no Nutri (CadastroPublico, W41): só o NOME é
  * obrigatório; apelido, nascimento, telefone, CPF, e-mail, gênero e observações são opcionais; o CPF confere o dígito verificador
- * aqui (o banco confere os 11 dígitos); e-mail ou CPF que já é de um aluno (em qualquer conta) volta do banco como
- * `cadastro_email_existe` / `cadastro_cpf_existe` (+ `campos`, os 2 de uma vez) e a tela mostra a frase vermelha embaixo do campo,
- * sem dizer de quem (trava da W16b).
+ * aqui (o banco confere os 11 dígitos); e-mail ou CPF que já é de um aluno vira pendente como os outros — a tela não diz se a
+ * pessoa já é aluna em alguma conta (homologação, H-18, 08/10/2026); o profissional vê o aviso ao aprovar (paciente_email_repetido).
  */
+import { EMAIL_RE } from "@/lib/email";
+
 export const NOME_MIN = 2;
 export const NOME_MAX = 120;
 export const APELIDO_MAX = 60;
@@ -25,8 +26,6 @@ export interface FormCadastro {
 
 export const FORM_VAZIO: FormCadastro = { nome: "", apelido: "", email: "", telefone: "", cpf: "", nascimento: "", genero: "", observacoes: "" };
 
-export type CampoUnico = "email" | "cpf";
-
 /** As frases de cada código da função (alunos → cadastro_link_enviar). */
 export const MENSAGEM: Record<string, string> = {
   nome_invalido: "Escreva o seu nome.",
@@ -41,12 +40,6 @@ export const MENSAGEM: Record<string, string> = {
   captcha_invalido: "Não deu para confirmar que é você. Tente de novo.",
   link_nao_encontrado: "Este link de cadastro não vale mais. Peça outro ao seu profissional.",
   conta_real_no_staging: "Este é o ambiente de teste: só e-mails de teste.",
-};
-
-/** A frase vermelha embaixo do campo (só diz que já existe — quem preenche é o próprio aluno). */
-export const MENSAGEM_EXISTE: Record<CampoUnico, string> = {
-  email: "Já existe cadastro com este e-mail.",
-  cpf: "Já existe cadastro com este CPF.",
 };
 
 export const apenasDigitos = (v: string | null | undefined): string => String(v ?? "").replace(/\D/g, "");
@@ -73,8 +66,6 @@ export function validarCPF(cpf: string): boolean {
   };
   return dv(9) === Number(d[9]) && dv(10) === Number(d[10]);
 }
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** O 1º problema do formulário como código da função (o mesmo do banco), ou null quando está tudo certo. */
 export function problemaDoCadastro(f: FormCadastro, hoje: string = new Date().toISOString().slice(0, 10)): string | null {
@@ -104,11 +95,3 @@ export function dadosDoCadastro(f: FormCadastro): Record<string, string> {
   };
 }
 
-/** Os campos repetidos da resposta de erro: o `campos` do banco (os 2 de uma vez) ou o do código. */
-export function camposRepetidos(erro: string, campos?: unknown): CampoUnico[] {
-  const lista = Array.isArray(campos) ? campos.filter((x): x is CampoUnico => x === "email" || x === "cpf") : [];
-  if (lista.length) return [...new Set(lista)];
-  if (erro === "cadastro_email_existe") return ["email"];
-  if (erro === "cadastro_cpf_existe") return ["cpf"];
-  return [];
-}

@@ -136,7 +136,8 @@ def main() -> int:
     p.check((r.get("livre_o_proprio") or {}).get("email_livre") is True, f"[pré-checagem] o e-mail que o aluno já tem conta como livre ({r.get('livre_o_proprio')})")
     p.check((r.get("livre_de_outro_aluno") or {}).get("erro") == "sem_acesso", f"[pré-checagem] aluno que não é dele → sem_acesso ({r.get('livre_de_outro_aluno')})")
     p.check((r.get("aprovar_repetido") or {}).get("erro") == "email_repetido", f"[Pendentes] aprovar cadastro com e-mail de outro aluno → email_repetido ({r.get('aprovar_repetido')})")
-    p.check((r.get("link_repetido") or {}).get("erro") == "cadastro_email_existe", f"[/c/] cadastro pelo link com e-mail de aluno → cadastro_email_existe ({r.get('link_repetido')})")
+    # hml-05b (H-18, 08/10/2026): o /c/ não diz mais que o e-mail já é de um aluno — vira pendente; o aviso fica na aprovação (acima)
+    p.check((r.get("link_repetido") or {}).get("ok") is True, f"[/c/] cadastro pelo link com e-mail de aluno → ok, sem dizer que já existe ({r.get('link_repetido')})")
 
     # quem não é profissional não sonda
     c_aluno = {"sub": ida, "role": "authenticated", "aud": "authenticated", "app_metadata": {"role": "paciente"}}

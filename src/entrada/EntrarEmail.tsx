@@ -6,6 +6,7 @@ import { useCaptcha } from "@/nucleo/captcha";
 import { formatarRestante, gravarRegistro, lerRegistro, registroDaResposta, restanteBloqueioMs } from "@/lib/rateLimitLogin";
 import { Cartao } from "@/ui/premium/Cartao";
 import { useOnline } from "@/ui/premium/useOnline";
+import { emailValido } from "@/lib/email";
 import { BotaoGoogle } from "./pecas/BotaoGoogle";
 import { Campo, MensagemForm } from "./pecas/Campo";
 import { TEXTO_BLOQUEADA_DE_VEZ, textoErroEntrar, textoErroServidor } from "./pecas/textos";
@@ -46,6 +47,7 @@ export default function EntrarEmail() {
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (travado || carregando) return; // Enter no campo também cai aqui e não chama o servidor
+    if (!emailValido(email)) return setErro("Confira o e-mail."); // H-47: "teste@sem-ponto" não sai do navegador
     setErro("");
     setCarregando(true);
     try {

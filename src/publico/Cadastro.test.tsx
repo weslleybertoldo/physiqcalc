@@ -98,30 +98,19 @@ describe("H5 — /c/ com CPF e apelido (N-57 / DN-6) e a trava de e-mail/CPF", (
     expect(h.invoke).toHaveBeenCalledTimes(1);
   });
 
-  it("CPF de um aluno que já existe: a frase vermelha embaixo do CPF; e-mail e CPF: embaixo dos 2", async () => {
-    let resposta: Record<string, unknown> = { ok: false, erro: "cadastro_cpf_existe", campos: ["cpf"] };
+  it("H-18: a tela nunca diz se o e-mail ou o CPF já é de um aluno (o banco aceita e o profissional vê ao aprovar)", async () => {
+    // o banco de hoje responde ok mesmo com e-mail/CPF de aluno; um código antigo de "já existe" vira só a falha genérica
     h.invoke.mockImplementation(async (_fn: string, { body }: { body: Record<string, unknown> }) =>
-      body.acao === "cadastro_info" ? { data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null } : erroDoBanco(resposta));
+      body.acao === "cadastro_info" ? { data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null }
+        : erroDoBanco({ ok: false, erro: "cadastro_cpf_existe", campos: ["cpf", "email"] }));
     montar();
     await screen.findByText("Lucas Ferreira");
-    // o aviso fica dentro do <label> (Campo): o campo pelo seletor
     const cpf = () => document.querySelector<HTMLInputElement>("[data-cad-cpf]")!;
-    const email = () => document.querySelector<HTMLInputElement>("[data-cad-email]")!;
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana Lima" } });
     fireEvent.change(cpf(), { target: { value: "52998224725" } });
     fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
-    expect(await screen.findByText("Já existe cadastro com este CPF.")).toBeInTheDocument();
-    expect(cpf()).toHaveAttribute("aria-invalid", "true");
-    expect(screen.queryByText("Já existe cadastro com este e-mail.")).not.toBeInTheDocument();
-    // mexer no CPF tira o aviso
-    fireEvent.change(cpf(), { target: { value: "529.982.247-2" } });
-    expect(screen.queryByText("Já existe cadastro com este CPF.")).not.toBeInTheDocument();
-    resposta = { ok: false, erro: "cadastro_email_existe", campos: ["cpf", "email"] };
-    fireEvent.change(cpf(), { target: { value: "52998224725" } });
-    fireEvent.change(email(), { target: { value: "ana@x.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /Enviar cadastro/ }));
-    expect(await screen.findByText("Já existe cadastro com este e-mail.")).toBeInTheDocument();
-    expect(screen.getByText("Já existe cadastro com este CPF.")).toBeInTheDocument();
-    expect(screen.queryByText("Cadastro enviado")).not.toBeInTheDocument();
+    expect(await screen.findByText("Não deu certo agora. Tente de novo.")).toBeInTheDocument();
+    expect(screen.queryByText(/Já existe cadastro/)).not.toBeInTheDocument();
+    expect(cpf()).not.toHaveAttribute("aria-invalid", "true");
   });
 });
