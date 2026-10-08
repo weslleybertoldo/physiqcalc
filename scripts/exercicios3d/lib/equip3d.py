@@ -3812,3 +3812,217 @@ def supino_declinado_alto(nome="declinado", eixo=(-0.12, 1.60), x_braco=0.57, pe
     bpy.context.view_layer.update()
     return MaquinaSupino(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2)
 # ===== fim: Supino declinado (eixo alto) ============================================================================================
+
+
+# ===== Esteira ======================================================================================================================
+# ── ESTEIRA ERGOMÉTRICA (Corrida na Esteira, lote 6, 07/10/2026) ─────────────────────────────────────────────────────────────────────
+# Esteira de academia: a BASE (2 laterais do chão até a plataforma lateral, com os pés reguladores), a LONA (correia sem fim que dá a
+# volta nos 2 ROLOS, o da frente embaixo do capô do motor e o de trás no fim da base), as PLATAFORMAS LATERAIS (onde se pisa pra subir,
+# com a borracha antiderrapante), as tampas de trás, o CAPÔ do motor na frente, as 2 COLUNAS que sobem do capô até o PAINEL e os
+# CORRIMÃOS (o da frente, embaixo do painel, e os 2 dos lados, que vêm do painel pra trás). Medidas de esteira de verdade (Life
+# Fitness, Integrity Series Treadmill, ficha técnica: "Length" 82" (209cm), "Width" 36" (92cm), "Height" 56" (142cm), "Step Up
+# Height" 8" (20.3 cm), "Running Surface Width" 22", "Running Surface Length" 60", "Rollers" "3.5 inch / 9 centimeter diameter,
+# precision-crowned, front and back", "Handrails" 16" (40.6 cm)): lona de 56 cm de largura com o topo a 20,3 cm do chão, rolos de
+# 9 cm, ~2,09 m de comprimento, ~1,42 m até o alto do painel e corrimãos dos lados de 40,6 cm. A espessura da lona (2 mm), o desenho do
+# capô, das colunas, do painel e dos corrimãos (tubo de 32 mm) são escolha da fábrica.
+# A lona anda pra trás (+Y: quem corre olha pra −Y) e o pé de apoio vai junto com ela. Pra o app ver a lona andar, ela tem FAIXAS
+# (marcas claras de lado a lado) que dão a volta junto com ela: em cima, em volta do rolo de trás, embaixo (dentro da base) e em volta
+# do rolo da frente (embaixo do capô). Cada faixa é uma peça (uma raiz) que translada e gira no caminho da lona — o export leva o
+# movimento. A volta inteira da lona mede `faixas` × `espacamento` (os 2 rolos ficam a essa distância), então, quando a lona anda
+# exatamente `espacamento` (a cena dá: 1 passada = o que a lona anda num ciclo da corrida), cada faixa cai onde estava a seguinte e o
+# ciclo emenda sem salto. Por isso a esteira sai do tamanho da passada: com a da cena (1,75 m e 2 faixas) os rolos ficam a ~1,60 m um
+# do outro — a lona de 1,52 m da Integrity mais a volta nos rolos.
+# Uso numa cena (a pessoa olha pra −Y; x = 0 no meio da lona):
+#   es = e3.esteira("esteira", y_rolo_frente=-0.70, espacamento=1.75, faixas=2, faixa_y0=0.0)
+#   no pose(t): es.andar(metros)          # a lona andou `metros` pra trás desde a montagem (faixas no lugar certo do caminho)
+#   Cena(pose, es.equipamentos, apoios=es.apoios)   # a estrutura não encosta no corpo; lona e faixas são APOIO (o pé pisa)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada: base, plataformas, tampas, capô,
+# rolos, colunas, painel e corrimãos; não encosta no corpo), "<nome>_lona" (parada: a forma da lona em volta dos rolos, APOIO — o topo
+# dela fica em z_lona) e "<nome>_faixa_<i>" (andam com a lona, APOIO: o pé pisa em cima quando passam embaixo dele). Peças compridas
+# em anéis (_em_aneis / _viga): a checagem fica rápida.
+FAIXA_LONA = (0.40, 0.41, 0.43, 1)
+
+
+def mat_faixa_lona():
+    return b3.material_liso("FaixaLona", FAIXA_LONA, rug=0.6)
+
+
+class Esteira:
+    """Esteira ergométrica pronta na cena (esteira())."""
+
+    def __init__(self, raizes, faixas, y_frente, y_tras, z_eixo, raio_caminho, espacamento, s0):
+        self.raizes = raizes                  # {"estrutura", "lona", "faixa_0", …}
+        self.faixas = faixas                  # as raízes das faixas, na ordem do caminho
+        self.equipamentos = [raizes["estrutura"]]
+        self.apoios = [raizes["lona"]] + faixas
+        self.y_frente, self.y_tras, self.z_eixo, self.raio = y_frente, y_tras, z_eixo, raio_caminho
+        self.reta = y_tras - y_frente         # trecho reto (de eixo a eixo dos rolos)
+        self.volta = 2 * self.reta + 2 * math.pi * raio_caminho
+        self.espacamento = espacamento
+        self.s0 = s0                          # onde cada faixa estava na montagem (m ao longo do caminho)
+        self.andado = 0.0
+
+    def ponto(self, s):
+        """Centro e giro (rad, em volta do X) da faixa a `s` m do começo do caminho (em cima, no eixo do rolo da frente, andando
+        pra trás), na superfície da lona: em cima, desce em volta do rolo de trás, volta por baixo e sobe em volta do da frente."""
+        s %= self.volta
+        R, C, ye, z0 = self.raio, self.reta, self.y_frente, self.z_eixo
+        arco = math.pi * R
+        if s < C:                                             # em cima, pra trás
+            return Vector((0.0, ye + s, z0 + R)), 0.0
+        if s < C + arco:                                      # em volta do rolo de trás, descendo
+            a = (s - C) / R
+            return Vector((0.0, self.y_tras + R * math.sin(a), z0 + R * math.cos(a))), -a
+        if s < 2 * C + arco:                                  # embaixo, pra frente (de cabeça pra baixo)
+            return Vector((0.0, self.y_tras - (s - C - arco), z0 - R)), -math.pi
+        a = (s - 2 * C - arco) / R                            # em volta do rolo da frente, subindo
+        return Vector((0.0, ye - R * math.sin(a), z0 - R * math.cos(a))), -math.pi - a
+
+    def andar(self, metros):
+        """A lona andou `metros` pra trás desde a montagem: cada faixa vai pro ponto do caminho `metros` adiante."""
+        for f, s in zip(self.faixas, self.s0):
+            P, ang = self.ponto(s + metros)
+            f.matrix_world = Matrix.Translation(P) @ Matrix.Rotation(ang, 4, "X")
+        self.andado = metros
+        bpy.context.view_layer.update()
+
+
+def _estadio(nome, y0, y1, z_eixo, raio, largura, mat, lados=24):
+    """Sólido em forma de pista (a lona em volta dos 2 rolos): seção no plano YZ (2 retas tangentes a 2 semicírculos de raio `raio`
+    com centro em (y0, z_eixo) e (y1, z_eixo)) e largura `largura` ao longo do X, centrado em x = 0. Convexo (a checagem do apoio usa
+    "dentro da face mais perto = dentro dele"); faces retas nas retas e lisas nos rolos."""
+    import bmesh
+    perfil, liso = [], []
+    for k in range(lados + 1):                                # rolo de trás: de cima (90°) até embaixo (−90°)
+        a = math.pi / 2 - math.pi * k / lados
+        perfil.append((y1 + raio * math.cos(a), z_eixo + raio * math.sin(a)))
+    for k in range(lados + 1):                                # rolo da frente: de baixo (−90°) até em cima (−270°)
+        a = -math.pi / 2 - math.pi * k / lados
+        perfil.append((y0 + raio * math.cos(a), z_eixo + raio * math.sin(a)))
+    n = len(perfil)
+    bm = bmesh.new()
+    esq = [bm.verts.new((-largura / 2, y, z)) for y, z in perfil]
+    dir_ = [bm.verts.new((largura / 2, y, z)) for y, z in perfil]
+    for k in range(n):
+        k2 = (k + 1) % n
+        bm.faces.new((esq[k], esq[k2], dir_[k2], dir_[k]))
+        liso.append(not (k == lados or k == n - 1))            # as 2 faces retas (embaixo e em cima) ficam planas
+    bm.faces.new(dir_)
+    bm.faces.new(list(reversed(esq)))
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    me = bpy.data.meshes.new(nome)
+    bm.to_mesh(me)
+    bm.free()
+    for pl, s in zip(me.polygons, liso + [False, False]):
+        pl.use_smooth = s
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(mat)
+    return o
+
+
+def esteira(nome="esteira", y_rolo_frente=-0.70, espacamento=1.75, faixas=2, faixa_y0=0.0, z_lona=0.203, largura_lona=0.56,
+            raio_rolo=0.045, espessura_lona=0.002, faixa=(0.035, 0.0008), plataforma=(0.14, 0.010), capo=(0.40, 0.15, 0.115),
+            alto_painel=1.42, corrimao=(1.12, 0.36, 0.406, 0.016)):
+    """Esteira ergométrica (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      y_rolo_frente = y do eixo do rolo da frente (embaixo do capô); o de trás fica atrás dele o que a volta da lona pede;
+      espacamento   = distância entre as faixas ao longo da lona (= o que a lona anda num ciclo do movimento, a cena dá);
+      faixas        = quantas faixas na volta inteira da lona: a volta mede faixas × espacamento;
+      faixa_y0      = y da 1ª faixa em cima da lona na montagem (as outras vêm atrás dela, a cada `espacamento` ao longo do caminho);
+      z_lona        = topo da lona (o "chão" de quem corre); largura_lona, raio_rolo, espessura_lona = a lona e os rolos;
+      faixa         = (comprimento ao longo da lona, espessura) de cada faixa (de lado a lado, 2 cm mais estreita que a lona);
+      plataforma    = (largura, altura acima da lona) de cada plataforma lateral;
+      capo          = (comprimento à frente do eixo do rolo da frente, comprimento atrás dele, altura acima da lona) do capô do motor;
+      alto_painel   = z do alto do painel;
+      corrimao      = (z, |x|, comprimento dos de lado, raio do tubo) dos corrimãos.
+    Devolve uma Esteira (raizes, equipamentos, apoios, faixas, andar())."""
+    R_lona = raio_rolo + espessura_lona                      # raio de fora da lona em volta dos rolos
+    R_cam = R_lona + faixa[1] / 2 + 0.0001                   # caminho do meio da faixa (logo em cima da lona)
+    z_eixo = z_lona - R_lona
+    volta = faixas * espacamento
+    reta = (volta - 2 * math.pi * R_cam) / 2
+    if reta < 1.2:
+        raise ValueError("esteira: volta da lona de %.2f m (faixas × espacamento) curta demais pros rolos" % volta)
+    y_f, y_t = y_rolo_frente, y_rolo_frente + reta
+    meia = largura_lona / 2
+    x_pl0, x_pl1 = meia + 0.012, meia + 0.012 + plataforma[0]   # plataforma lateral (|x|): 12 mm de vão da lona
+    z_pl = z_lona + plataforma[1]
+    y_pl0, y_pl1 = y_f + capo[1], y_t + 0.10                 # do capô até a tampa de trás
+    rot_x90 = (0, math.radians(90), 0)
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, lona_r = raiz_nova("estrutura"), raiz_nova("lona")
+    bpy.context.view_layer.update()
+    # ── lona (APOIO) em volta dos 2 rolos, e os rolos (com o eixo que entra na lateral) ──────────────────────────────────────────
+    lona = _estadio(nome + "_lona_correia", y_f, y_t, z_eixo, R_lona, largura_lona, mat_borracha())
+    lona.parent = lona_r
+    for yr, nm in ((y_f, "frente"), (y_t, "tras")):
+        _cilindro(nome + "_rolo_" + nm, raio_rolo, largura_lona + 0.016, (0, yr, z_eixo), rot_x90, mat_aco(), vertices=32, pai=estr)
+        _cilindro(nome + "_rolo_eixo_" + nm, 0.012, 2 * x_pl0 + 0.04, (0, yr, z_eixo), rot_x90, mat_aco(), vertices=16, pai=estr)
+    # ── base: as 2 laterais (do chão até embaixo da plataforma), a plataforma com a borracha, a tampa de trás e os pés ──────────────
+    for s in (1, -1):
+        xm = s * (x_pl0 + x_pl1) / 2
+        y_l0 = y_f - R_lona - 0.012                          # a lateral começa atrás da frente do capô (que desce até o chão)
+        _em_aneis(_reto(caixa(nome + "_lateral%+d" % s, (xm, (y_l0 + y_pl1) / 2, (z_pl - 0.012) / 2 + 0.01),
+                              (plataforma[0], y_pl1 - y_l0, z_pl - 0.032), mat_estrutura(), chanfro=0)), passo=0.10).parent = estr
+        pl = _em_aneis(_reto(caixa(nome + "_plataforma%+d" % s, (xm, (y_pl0 + y_pl1) / 2, z_pl - 0.006),
+                                   (plataforma[0], y_pl1 - y_pl0, 0.012), mat_estrutura(), chanfro=0)), passo=0.10)
+        pl.parent = estr
+        _em_aneis(_reto(caixa(nome + "_plataforma_borracha%+d" % s, (xm, (y_pl0 + 0.05 + y_pl1 - 0.12) / 2, z_pl + 0.002),
+                              (plataforma[0] - 0.03, y_pl1 - y_pl0 - 0.17, 0.004), mat_borracha(), chanfro=0)), passo=0.10).parent = estr
+        caixa(nome + "_tampa_tras%+d" % s, (s * (x_pl0 + x_pl1) / 2 - s * 0.004, y_t + 0.045, (z_pl + 0.004) / 2 + 0.01),
+              (plataforma[0] + 0.008, 0.13, z_pl - 0.012), mat_carenagem(), pai=estr, chanfro=0.012)
+        for yp in (y_f - capo[0] + 0.10, y_t + 0.06):
+            _cilindro(nome + "_pe%+d" % s, 0.025, 0.02, (s * (x_pl1 - 0.03), yp, 0.01), (0, 0, 0), mat_borracha(), pai=estr)
+    # ── capô do motor (na frente: cobre o rolo da frente e a ponta da lona por cima e pela frente, com folga) ────────────────────────
+    x_capo = x_pl1 + 0.01
+    caixa(nome + "_capo", (0, y_f + (capo[1] - capo[0]) / 2, z_lona + 0.012 + (capo[2] - 0.012) / 2),
+          (2 * x_capo, capo[0] + capo[1], capo[2] - 0.012), mat_carenagem(), pai=estr, chanfro=0.03)
+    caixa(nome + "_capo_frente", (0, y_f - capo[0] / 2 - (R_lona + 0.012) / 2, (z_lona + 0.012) / 2 + 0.005),
+          (2 * x_capo, capo[0] - R_lona - 0.012, z_lona + 0.002), mat_carenagem(), pai=estr, chanfro=0.012)
+    # ── colunas (do capô até o painel, um pouco inclinadas pra trás), painel e corrimãos ─────────────────────────────────────────────
+    z_cor, x_cor, comp_cor, r_cor = corrimao
+    y_col0, y_col1 = y_f - capo[0] + 0.12, y_f - capo[0] + 0.22
+    z_col0 = z_lona + capo[2] - 0.02
+    z_col1 = alto_painel - 0.30
+    for s in (1, -1):
+        _viga(nome + "_coluna%+d" % s, (s * (x_capo - 0.03), y_col0, z_col0), (s * (x_cor + 0.01), y_col1, z_col1), 0.07, 0.05,
+              mat_estrutura(), pai=estr)
+    a = math.radians(32)                                     # painel virado pra quem corre (topo pra frente)
+    u = Vector((0.0, -math.sin(a), math.cos(a)))              # ao longo do painel, pra cima
+    n = Vector((0.0, math.cos(a), math.sin(a)))               # normal da tela (pra quem corre)
+    alto_p = 0.30
+    centro_p = Vector((0.0, y_col1 + 0.02, alto_painel - u.z * alto_p / 2 - 0.004))
+    caixa(nome + "_painel", centro_p, (2 * x_cor - 0.02, 0.07, alto_p), mat_carenagem(), rot=(a, 0, 0), pai=estr, chanfro=0.015)
+    caixa(nome + "_painel_tela", centro_p + n * 0.036 + u * 0.02, (0.34, 0.004, 0.17), mat_borracha(), rot=(a, 0, 0), pai=estr,
+          chanfro=0.003)
+    y_c0 = y_col1 + 0.01                                     # corrimãos saem da frente, embaixo do painel
+    _em_aneis(tubo(nome + "_corrimao_frente", (-x_cor, y_c0, z_cor), (x_cor, y_c0, z_cor), r_cor, mat_aco(), vertices=20),
+              passo=0.04).parent = estr
+    for s in (1, -1):
+        _em_aneis(tubo(nome + "_corrimao%+d" % s, (s * x_cor, y_c0 - 0.005, z_cor), (s * x_cor, y_c0 + comp_cor, z_cor), r_cor,
+                       mat_aco(), vertices=20), passo=0.04).parent = estr
+        _em_aneis(tubo(nome + "_corrimao_borracha%+d" % s, (s * x_cor, y_c0 + 0.08, z_cor), (s * x_cor, y_c0 + comp_cor - 0.02, z_cor),
+                       r_cor + 0.003, mat_borracha(), vertices=20), passo=0.04).parent = estr
+        _cilindro(nome + "_corrimao_ponta%+d" % s, r_cor + 0.003, 0.014, (s * x_cor, y_c0 + comp_cor, z_cor), (math.radians(90), 0, 0),
+                  mat_borracha(), vertices=20, pai=estr)
+        _viga(nome + "_corrimao_suporte%+d" % s, (s * x_cor, y_col1 - 0.02, z_col1 - 0.02), (s * x_cor, y_c0, z_cor + 0.01), 0.04,
+              0.03, mat_estrutura(), pai=estr)
+    # ── faixas da lona (andam com ela, APOIO) ────────────────────────────────────────────────────────────────────────────────────
+    raizes = {"estrutura": estr, "lona": lona_r}
+    lista = []
+    s_ini = faixa_y0 - y_f                                   # a 1ª faixa começa em cima, em y = faixa_y0
+    for i in range(faixas):
+        f = caixa(nome + "_faixa_%d" % i, (0, 0, 0), (largura_lona - 0.02, faixa[0], faixa[1]), mat_faixa_lona(), chanfro=0)
+        _reto(f)
+        raizes["faixa_%d" % i] = f
+        lista.append(f)
+    es = Esteira(raizes, lista, y_f, y_t, z_eixo, R_cam, espacamento, [s_ini - i * espacamento for i in range(faixas)])
+    es.z_lona = z_lona
+    es.andar(0.0)
+    return es
+# ===== fim: Esteira =================================================================================================================
