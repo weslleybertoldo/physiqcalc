@@ -491,6 +491,7 @@ def passo_tela(o: C.Saida, a, sess: C.Sessoes) -> None:
                 caso.esperar(lambda: caso.caminho().startswith("/boas-vindas") and caso.tem("[data-boas-vindas-excluir]"), 60)
                 o.ok(caso.caminho().startswith("/boas-vindas") and caso.tem("[data-boas-vindas-excluir]"),
                      f"D7: sem nada → Boas-vindas com o link 'Excluir minha conta' ({caso.caminho()})")
+                caso.pg.locator("[data-boas-vindas-excluir]").first.scroll_into_view_if_needed()  # o link fica no fim da página
                 o.linha(f"   print: {caso.print('boas_vindas')}")
                 caso.pg.locator("[data-boas-vindas-excluir]").first.click()
             else:
