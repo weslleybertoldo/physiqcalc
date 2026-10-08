@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import autoTable, { type CellHookData } from "jspdf-autotable";
 import {
   desenharCabecalho, desenharTituloSecao, desenharCard,
   desenharRodape, novaPagina, estiloTabela, hexToRgb,
@@ -10,6 +10,9 @@ import { agoraFormatado } from "@/utils/formatDate";
 import { MedidasCorporais } from "@/types/medidas";
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { salvarPdf } from "@/lib/salvarPdf";
+
+/** O jspdf-autotable guarda a última tabela no doc (fora dos tipos do jsPDF). */
+type DocComTabela = jsPDF & { lastAutoTable: { finalY: number } };
 
 export interface ReportData {
   name: string;
@@ -151,7 +154,7 @@ export function generateReport(data: ReportData) {
       ...estiloTabela(),
       margin: { left: 14, right: 14 },
     });
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as DocComTabela).lastAutoTable.finalY + 8;
   }
 
   // Tabela de Referência — % Gordura Corporal
@@ -177,7 +180,7 @@ export function generateReport(data: ReportData) {
     body: refData.map(r => [r[0], r[1], r[2]]),
     ...estiloTabela(),
     margin: { left: 14, right: 14 },
-    didParseCell: (cellData: any) => {
+    didParseCell: (cellData: CellHookData) => {
       if (cellData.section === 'body') {
         const rowLabel = refData[cellData.row.index][0];
         // Highlight the row matching user's classification
@@ -193,7 +196,7 @@ export function generateReport(data: ReportData) {
       }
     },
   });
-  y = (doc as any).lastAutoTable.finalY + 4;
+  y = (doc as DocComTabela).lastAutoTable.finalY + 4;
 
   doc.setFontSize(6);
   doc.setTextColor(...hexToRgb(TEMA.cinzaEscuro));

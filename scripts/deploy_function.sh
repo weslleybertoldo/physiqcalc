@@ -7,7 +7,7 @@
 #   Principal:  scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-assinar true
 #
 # Trava de segurança: se a função já existe com OUTRO verify_jwt, para (mp-webhook, whatsapp-agente, trocar-token e as
-# espelho-* precisam de false; o workflow deploy-function.yml liga o verify_jwt e derruba essas). Pra trocar de propósito:
+# espelho-* precisam de false; o antigo workflow deploy-function.yml, que saiu na hml-13, ligava o verify_jwt e derrubava essas). Pra trocar de propósito:
 # FORCAR_VERIFY_JWT=1. PAT em ~/.pc-pat (a Management API exige User-Agent).
 set -euo pipefail
 

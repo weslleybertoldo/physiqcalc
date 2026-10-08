@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import autoTable, { type CellHookData } from "jspdf-autotable";
 import {
   desenharCabecalho, desenharTituloSecao, desenharCard,
   desenharRodape, novaPagina, estiloTabela, hexToRgb,
@@ -10,6 +10,9 @@ import { agoraFormatado, formatarDataCurta, calcularIdade } from "@/utils/format
 import { MEDIDA_FIELDS, MEDIDA_GROUPS } from "@/lib/medidas";
 import { salvarPdf } from "@/lib/salvarPdf";
 import { dadosBalanca, rotuloMetodo, tmbEscolhida } from "@/lib/avaliacao";
+
+/** O jspdf-autotable guarda a última tabela no doc (fora dos tipos do jsPDF). */
+type DocComTabela = jsPDF & { lastAutoTable: { finalY: number } };
 
 // texto do PDF sem emoji e sem acento (mesmo padrão dos títulos: "Composicao Corporal")
 const pdfTexto = (t: string) => limparTexto(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -36,6 +39,7 @@ export interface AdminProfile {
   tmb_katch: number | null;
   tmb_metodo: string | null;
   user_code: number | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- linha do banco com colunas a mais (lidas pelo nome)
   [key: string]: any;
 }
 
@@ -49,6 +53,7 @@ export interface Avaliacao {
   massa_magra: number | null;
   tmb_mifflin: number | null;
   tmb_katch: number | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- linha do banco com colunas a mais (lidas pelo nome)
   [key: string]: any;
 }
 
@@ -160,7 +165,7 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
       }),
       ...estiloTabela(),
       margin: { left: 14, right: 14 },
-      didParseCell: (data: any) => {
+      didParseCell: (data: CellHookData) => {
         if (data.column.index === 6 && data.section === 'body') {
           const av = avaliacoes[data.row.index];
           if (av?.percentual_gordura) {
@@ -171,7 +176,7 @@ export function generateAdminPDF(profile: AdminProfile, avaliacoes?: Avaliacao[]
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as DocComTabela).lastAutoTable.finalY + 8;
   }
 
   desenharRodape(doc, 'Formulas: Mifflin-St Jeor - Jackson & Pollock - Katch-McArdle');

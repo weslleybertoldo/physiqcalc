@@ -30,7 +30,7 @@ const RETRYABLE_INTEGRITY_CODES = [
 ];
 
 /** Converte strings JSON em objetos antes de enviar ao Supabase (evita dupla codificação em colunas jsonb) */
-function prepareForSupabase(data: Record<string, any>): Record<string, any> {
+function prepareForSupabase(data: Record<string, unknown>): Record<string, unknown> {
   const result = { ...data };
   for (const [key, value] of Object.entries(result)) {
     if (typeof value === "string" && (value.startsWith("[") || value.startsWith("{"))) {
@@ -71,6 +71,7 @@ class SupabaseConnector implements PowerSyncBackendConnector {
     try {
       for (const op of transaction.crud) {
         lastOp = op;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- nome da tabela vem do PowerSync (string), fora do tipo Database
         const table = (supabase.from as any)(op.table);
         let result: PostgrestSingleResponse<null>;
 
@@ -98,7 +99,7 @@ class SupabaseConnector implements PowerSyncBackendConnector {
       }
 
       await transaction.complete();
-    } catch (ex: any) {
+    } catch (ex) {
       const code = typeof ex?.code === "string" ? ex.code : "";
       console.warn("[PowerSync] Upload exception:", code, ex?.message, "op:", lastOp?.table, lastOp?.op);
 

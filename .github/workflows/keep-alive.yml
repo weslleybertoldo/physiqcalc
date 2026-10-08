@@ -45,21 +45,10 @@ jobs:
             sleep 2
           done
 
-      - name: Executar SQL real no Postgres (camada extra Supabase)
-        run: |
-          set -e
-          RES=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_PAT }}" \
-            -H "Content-Type: application/json" \
-            -d '{"query":"SELECT 1 as alive, now() as ts"}' \
-            "https://api.supabase.com/v1/projects/uxwpwdbbnlticxgtzcsb/database/query")
-          CODE=$(echo "$RES" | tail -1)
-          echo "PhysiqCalc SQL ping: HTTP $CODE"
-          [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
-
   # Physiq W28 (virada): o BANCO PRINCIPAL (hkxvtsbwctxkrqzkkdoz, o Supabase do antigo PhysiqNutri) — o ping vinha do
   # keep-supabase-active.yml do repositório physiqnutri, que para quando ele é arquivado. Mesmo horário e mesma régua do de cima
-  # (leituras REST de verdade + SQL pela Management API). Segredos: PRINCIPAL_SUPABASE_PUBLISHABLE_KEY (chave pública) e SUPABASE_PAT.
+  # (leituras REST de verdade). Segredo: PRINCIPAL_SUPABASE_PUBLISHABLE_KEY (chave pública). hml-13 (H-45): o SQL pela
+  # Management API ("camada extra", com o SUPABASE_PAT, dono da organização) saiu — a RPC manter_ativo já é a atividade que conta.
   # hml-10 (08/10/2026): a leitura REST é a RPC manter_ativo() (supabase-principal/migrations/20261008100000_hml10_manter_ativo.sql)
   # — o visitante não lê mais public.alimentos desde a hml-01 (H-10) e o ping dava 401.
   keep-alive-principal:
@@ -84,25 +73,13 @@ jobs:
             sleep 2
           done
 
-      - name: Executar SQL real no Postgres do principal (camada extra Supabase)
-        run: |
-          set -e
-          RES=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_PAT }}" \
-            -H "Content-Type: application/json" -H "User-Agent: physiqcalc-keepalive" \
-            -d '{"query":"SELECT 1 as alive, now() as ts"}' \
-            "https://api.supabase.com/v1/projects/hkxvtsbwctxkrqzkkdoz/database/query")
-          CODE=$(echo "$RES" | tail -1)
-          echo "Principal SQL ping: HTTP $CODE"
-          [ "$CODE" = "200" ] || [ "$CODE" = "201" ] || (echo "ERRO" && exit 1)
-
   keep-alive-powersync:
     if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","powersync"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '41 10 */4 * *'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
 
@@ -118,7 +95,7 @@ jobs:
         env:
           PS_ADMIN_TOKEN: ${{ secrets.POWERSYNC_PAT }}
         run: |
-          npx -y powersync@latest deploy sync-config \
+          npx -y powersync@0.10.2 deploy sync-config \
             --instance-id 69cc4d1df69619e9d4834456 \
             --project-id 69cc4d1caaa9a30007b4ec2c \
             --org-id 69cc4bec866ae00007694860 < /dev/null

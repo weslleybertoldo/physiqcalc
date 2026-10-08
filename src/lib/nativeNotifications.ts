@@ -129,7 +129,7 @@ export async function showTimerFinishedNotification(
           icon: "/icon-192.png",
           tag: "descanso-concluido",
         });
-      } catch {}
+      } catch { /* sem o plugin ou sem permissão: segue sem o aviso */ }
     }
     return;
   }
@@ -144,13 +144,13 @@ export async function cancelTimerNotification(): Promise<void> {
 
   try {
     await CountdownNotification.stopCountdown();
-  } catch {}
+  } catch { /* sem o plugin ou sem permissão: segue sem o aviso */ }
 
   try {
     await LocalNotifications.cancel({
       notifications: [{ id: TIMER_FINISHED_ID }],
     });
-  } catch {}
+  } catch { /* sem o plugin ou sem permissão: segue sem o aviso */ }
 }
 
 /**
@@ -189,7 +189,7 @@ export async function cancelarAvisosTreinoLongo(): Promise<void> {
     await LocalNotifications.cancel({
       notifications: MARCOS_TREINO_LONGO_MIN.map((min) => ({ id: idMarco(min) })),
     });
-  } catch {}
+  } catch { /* sem o plugin ou sem permissão: segue sem o aviso */ }
 }
 
 /** Web/PWA: notificação do navegador ao cruzar um marco (no Android o agendamento nativo cuida) */
@@ -199,6 +199,6 @@ export function avisarTreinoLongoWeb(grupoNome: string, min: number): void {
     try {
       const { title, body } = textoAvisoTreinoLongo(grupoNome, min);
       new Notification(`Physiq — ${title}`, { body, icon: "/icon-192.png", tag: `treino-longo-${min}` });
-    } catch {}
+    } catch { /* sem o plugin ou sem permissão: segue sem o aviso */ }
   }
 }

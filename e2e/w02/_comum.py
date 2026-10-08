@@ -3,6 +3,8 @@ senhas das contas de teste em ~/.physiq-teste-<nome>, segredo do espelho em ~/.p
 import json
 import os
 import subprocess
+import sys
+import time
 import urllib.error
 import urllib.request
 from functools import lru_cache
@@ -142,4 +144,26 @@ class Placar:
     def fim(self) -> int:
         falhas = [t for ok, t in self.itens if not ok]
         print(f"\n{len(self.itens) - len(falhas)}/{len(self.itens)} ok" + (f" — FALHAS: {falhas}" if falhas else ""))
+        registrar_rodada(len(self.itens) - len(falhas), len(self.itens))
         return 1 if falhas else 0
+
+
+# H-50 (hml-13): cada rodada fica registrada sozinha, FORA do repo (1 linha por rodada; o docs/e2e-rodadas.md recebe as linhas
+# da worktree no fim dela). Nunca derruba o teste. Segredo não vai por argumento nos E2E (vem de ~/.physiq-* ou do ambiente).
+REGISTRO = Path(os.environ.get("PHYSIQ_E2E_REGISTRO", str(Path.home() / "projetos/physiqcalc-scratch/e2e-rodadas.tsv")))
+
+
+def registrar_rodada(ok: int, total: int) -> None:
+    try:
+        script = Path(sys.argv[0]).resolve()
+        git = ["git", "-C", str(script.parent)]
+        commit = subprocess.run(git + ["rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5).stdout.strip()
+        branch = subprocess.run(git + ["rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5).stdout.strip()
+        raiz = subprocess.run(git + ["rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=5).stdout.strip()
+        rel = os.path.relpath(script, raiz) if raiz else script.name
+        campos = [time.strftime("%Y-%m-%d %H:%M:%S"), branch, commit, rel, " ".join(sys.argv[1:]), f"{ok}/{total}"]
+        REGISTRO.parent.mkdir(parents=True, exist_ok=True)
+        with REGISTRO.open("a", encoding="utf-8") as f:
+            f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in campos) + "\n")
+    except Exception:  # noqa: BLE001 — registro nunca derruba o teste
+        pass
