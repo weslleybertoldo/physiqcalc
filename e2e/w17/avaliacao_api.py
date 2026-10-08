@@ -75,7 +75,7 @@ def main() -> int:
         p.check(st == 200, f"a URL assinada da foto mensal abre ({st})")
         path = (B.rpc(personal, "aluno_evolucao", {"p_aluno": DIEGO})[1].get("fotos") or [{}])[0].get("path")
         for nome, tok, esperado in (("personal", personal, 200), ("outra conta", outro, None)):
-            st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/evolucao/{path}", {"expiresIn": 60},
+            st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/{B.bucket_do_ambiente('evolucao')}/{path}", {"expiresIn": 60},
                               {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {tok}"})
             if esperado:
                 p.check(st == esperado and "signedURL" in (r or {}), f"{nome}: assina a URL da foto da nutri (Storage da W17) ({st})")

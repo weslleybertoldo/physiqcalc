@@ -58,6 +58,11 @@ def schema() -> str:
     return ESTADO["schema"]
 
 
+def bucket_do_ambiente(nome: str) -> str:
+    """hml-02b (H-14): no staging os buckets de dado de saúde têm versão própria "-staging"."""
+    return f"{nome}-staging" if schema() == "staging" else nome
+
+
 def garantir_nutri2(conta: str, ativa: bool = True) -> str:
     """A 2ª nutricionista descartável da conta (membro ativo com papel de nutricionista, ou removida)."""
     chave, email, nome = NUTRI2
@@ -90,7 +95,7 @@ def n_linhas(token: str, tabela: str, filtro: str) -> int:
 
 
 def storage(token: str, metodo: str, caminho: str, corpo: bytes | dict | None = None, tipo: str = "application/pdf") -> tuple[int, object]:
-    """Storage do banco principal (bucket privado "anexos") COMO a pessoa (o texto da resposta; JSON quando for JSON)."""
+    """Storage do banco principal (bucket privado "anexos"; no staging, "anexos-staging") COMO a pessoa (o texto da resposta; JSON quando for JSON)."""
     cab = {"apikey": anon(PRINCIPAL_REF), "Authorization": f"Bearer {token}"}
     if isinstance(corpo, bytes):
         cab.update({"Content-Type": tipo, "x-upsert": "false"})
@@ -98,12 +103,13 @@ def storage(token: str, metodo: str, caminho: str, corpo: bytes | dict | None = 
     return st, r
 
 
-def apagar_arquivos(caminhos: list[str]) -> None:
-    """Apaga arquivos do bucket "anexos" pela API do Storage com a service_role (o Supabase não deixa apagar direto na tabela)."""
+def apagar_arquivos(caminhos: list[str], bucket: str | None = None) -> None:
+    """Apaga arquivos do bucket "anexos" (no staging, "anexos-staging"; ou o `bucket` dado) pela API do Storage com a service_role
+    (o Supabase não deixa apagar direto na tabela)."""
     if not caminhos:
         return
     sp = service(PRINCIPAL_REF)
-    st, r, _ = http("DELETE", f"{PRINCIPAL_URL}/storage/v1/object/anexos", {"prefixes": caminhos},
+    st, r, _ = http("DELETE", f"{PRINCIPAL_URL}/storage/v1/object/{bucket or bucket_do_ambiente('anexos')}", {"prefixes": caminhos},
                     {"apikey": sp, "Authorization": f"Bearer {sp}"}, timeout=60)
     assert st == 200, ("apagar arquivos do Storage", st, r)
 

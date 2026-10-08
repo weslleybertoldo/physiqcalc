@@ -169,8 +169,9 @@ def main() -> int:
         fid = r.get("id") if isinstance(r, dict) else None
         st, rr = B.rest("w24-dono", "PATCH", "diario_alimentar", f"id=eq.{fid}&deleted_at=is.null&select=id", {"deleted_at": dt.datetime.now(dt.timezone.utc).isoformat()})
         tok = B.sessao("w24-dono")["access_token"]
-        sp_, rm, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/diario", {"prefixes": [cam_f]}, {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {tok}"})
-        sobrou = q(f"select count(*)::int n from storage.objects where bucket_id = 'diario' and name = '{cam_f}'")[0]["n"]
+        bucket = B.bucket_do_ambiente("diario")
+        sp_, rm, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/{bucket}", {"prefixes": [cam_f]}, {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {tok}"})
+        sobrou = q(f"select count(*)::int n from storage.objects where bucket_id = '{bucket}' and name = '{cam_f}'")[0]["n"]
         p.check(st == 200 and len(rr) == 1 and sp_ == 200 and sobrou == 0, f"F1 o dono-nutri exclui a foto da aluna da Sofia: linha na Lixeira e o arquivo (pasta da Sofia) sai ({st}/{sp_}/{sobrou})")
         st, rr = B.rest("w24-nutri", "PATCH", "diario_alimentar", f"id=eq.{q(f'select id::text from {S}.diario_alimentar where paciente_id = ' + chr(39) + bru['id'] + chr(39) + ' limit 1')[0]['id']}&select=id",
                         {"deleted_at": dt.datetime.now(dt.timezone.utc).isoformat()})

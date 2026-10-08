@@ -153,8 +153,8 @@ def main() -> int:
             pn.wait_for_selector("[data-secao-anexos] [data-anexo]", timeout=45000)
             pn.locator("[data-anexo] [data-btn-ver-anexo]").first.click()
             ok = False
-            for _ in range(40):
-                if pn.locator("[data-iframe-anexo][src*='/object/sign/anexos/']").count():
+            for _ in range(40):  # hml-02b: o Physiq assina no bucket do ambiente (no staging, "anexos-staging")
+                if pn.locator(f"[data-iframe-anexo][src*='/object/sign/{B.bucket_do_ambiente('anexos')}/']").count():
                     ok = True
                     break
                 pn.wait_for_timeout(500)
@@ -197,8 +197,9 @@ def main() -> int:
                 p.check(any("PHYSIQNUTRI" in t for t in velho) and any(t.startswith("PHYSIQ ·") for t in novo), "3. a marca: PHYSIQNUTRI no antigo, PHYSIQ no Physiq")
             nav.close()
     finally:
+        # hml-02b: o site antigo da Nutri continua nos buckets sem "-staging" (o anexo que ele subiu fica no "anexos", também no staging)
         for o in B.sql_principal(f"select name from storage.objects where bucket_id = 'anexos' and name like '%/{pid}/%'"):
-            B.apagar_arquivos([o["name"]])
+            B.apagar_arquivos([o["name"]], "anexos")
         B.sql_principal(f"delete from {S}.pacientes where id = '{pid}'")
     p.check(not erros, f"sem erro de página nos 2 sites ({erros[:3]})")
     print(f"\nW18 · site antigo do Nutri ({a.prefixo}) · {time.time() - t0:.0f}s")

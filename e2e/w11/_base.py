@@ -57,6 +57,11 @@ def schema() -> str:
     return ESTADO["schema"]
 
 
+def bucket_do_ambiente(nome: str) -> str:
+    """hml-02b (H-14): no staging os buckets de dado de saúde têm versão própria "-staging"."""
+    return f"{nome}-staging" if schema() == "staging" else nome
+
+
 def abrir(nav, base: str, prefixo: str, nome: str, conta: str, rota: str = "/dieta", esperar: str | None = "[data-aba-dieta]") -> "Caso":
     """Contexto limpo no celular (390 × 844 × 3,4 = 1326 × 2870, como as telas do app), sessão injetada e a rota."""
     c = Caso(nav, base, prefixo, nome, desktop=False)

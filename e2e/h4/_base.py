@@ -66,6 +66,11 @@ def schema() -> str:
     return ESTADO["schema"]
 
 
+def bucket_do_ambiente(nome: str) -> str:
+    """hml-02b (H-14): no staging os buckets de dado de saúde têm versão própria "-staging"."""
+    return f"{nome}-staging" if schema() == "staging" else nome
+
+
 def token(conta: str, novo: bool = False) -> str:
     agora = time.time()
     t = _TOKENS.get(conta)

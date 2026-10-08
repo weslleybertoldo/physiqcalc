@@ -5,7 +5,7 @@
                 Banco do Treino (staging): o perfil com a composição atual (7 dobras), 6 avaliações do personal (14/03 → 22/09) e
                 as fotos mensais de junho e setembro (Frente, Costas, Lateral D e E) no bucket registros-staging.
                 Banco principal (staging): 2 antropometrias da Camila (28/05 e 26/08, Pollock 3) e as fotos de evolução de 26/08
-                (Frente, Lado D, Costas) no bucket evolucao.
+                (Frente, Lado D, Costas) no bucket evolucao-staging.
                 → os 2 bancos juntos na série: 8 avaliações (7 nos últimos 6 meses), fotos das 2 origens.
   w10-paciente  "Paula Lima" (só Nutrição, com a Camila): 1 antropometria (10/09, Pollock 7), sem foto.
 As fotos são as de banco grátis das telas aprovadas (assets/fotos do gerador) — nenhuma foto de gente real.
@@ -153,7 +153,7 @@ def principal_diego(pid: str) -> None:
     q(f"delete from {S}.fotos_evolucao where paciente_id = '{pid}'")
     for pos, arq in FOTOS_NUTRI.items():
         caminho = f"{camila}/{pid}/w10-2026-08-26-{pos}.jpg"
-        subir(B.PRINCIPAL_URL, sp, "evolucao", caminho, arq)
+        subir(B.PRINCIPAL_URL, sp, B.bucket_do_ambiente("evolucao"), caminho, arq)
         tam = (B.FOTOS / arq).stat().st_size
         q(f"""insert into {S}.fotos_evolucao (nutricionista_id, paciente_id, posicao, data, path, tamanho, mime, observacao)
               values ('{camila}', '{pid}', '{pos}', '2026-08-26', '{caminho}', {tam}, 'image/jpeg', 'obs interna')""")

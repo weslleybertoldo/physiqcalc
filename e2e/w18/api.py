@@ -11,7 +11,7 @@ e2e/w18/massa.py (o prontuário do Rafael Moura).
             anexo (tabela e arquivo); só o autor edita e exclui a anotação; a nutri muda a visibilidade da dela
   removida  a nutricionista REMOVIDA da equipe (W5) deixa de ler o que escreveu (anotação, consulta, anamnese, anexo e o arquivo) e
             a nova responsável lê, edita e apaga o que ela deixou
-  bucket    as restritivas do Storage valem só para o bucket "anexos" (a foto do perfil continua subindo)
+  bucket    as restritivas do Storage valem só para o bucket "anexos" (no staging, "anexos-staging"; a foto do perfil continua subindo)
 
 Uso: python3 e2e/w18/api.py [--so papeis,escrita,removida,bucket]
 """
@@ -47,11 +47,11 @@ def anotacoes(token: str, aluno: str) -> tuple[int, dict]:
 
 
 def assinar(token: str, caminho: str) -> tuple[int, object]:
-    return B.storage(token, "POST", f"object/sign/anexos/{caminho}", {"expiresIn": 60})
+    return B.storage(token, "POST", f"object/sign/{B.bucket_do_ambiente('anexos')}/{caminho}", {"expiresIn": 60})
 
 
 def baixar(token: str, caminho: str) -> tuple[int, object]:
-    return B.storage(token, "GET", f"object/authenticated/anexos/{caminho}")
+    return B.storage(token, "GET", f"object/authenticated/{B.bucket_do_ambiente('anexos')}/{caminho}")
 
 
 def recusado(st: int, r: object) -> bool:
@@ -148,8 +148,9 @@ def bloco_escrita(m: dict) -> None:
             st, r = B.rest(tl, "POST", "consultas", corpo={"nutricionista_id": lucas, "paciente_id": aluno, "data": "2026-07-20T10:00:00-03:00", "origem": "manual"})
             p.check(recusado(st, r), f"consulta → recusada ({st})")
             caminho = f"{lucas}/{aluno}/{uuid.uuid4()}-personal.pdf"
-            st, r = B.storage(tl, "POST", f"object/anexos/{caminho}", B.pdf_minimo("personal"))
-            p.check(recusado(st, r), f"arquivo no bucket anexos → recusado ({st} {str(r)[:80]})")
+            bucket = B.bucket_do_ambiente("anexos")
+            st, r = B.storage(tl, "POST", f"object/{bucket}/{caminho}", B.pdf_minimo("personal"))
+            p.check(recusado(st, r), f"arquivo no bucket {bucket} → recusado ({st} {str(r)[:80]})")
             if st == 200:
                 B.apagar_arquivos([caminho])
             st, r = B.rest(tl, "POST", "anexos", corpo={"nutricionista_id": lucas, "paciente_id": aluno, "nome": "x.pdf", "path": f"{lucas}/{aluno}/x.pdf",
@@ -188,6 +189,7 @@ def bloco_removida(m: dict) -> None:
                                values ('{n2}', '{bruno}', '{conta}', 'Aluno Prontuario W18', 'novo', true) returning id::text""")[0]["id"]
     filtro = f"paciente_id=eq.{aluno}"
     caminho = f"{n2}/{aluno}/{uuid.uuid4()}-exame.pdf"
+    bucket = B.bucket_do_ambiente("anexos")
     t2 = B.token("w18-nutri2")
     try:
         with bloco("a nutri responsável (nutri2) escreve o prontuário do aluno"):
@@ -199,7 +201,7 @@ def bloco_removida(m: dict) -> None:
             st, an = B.rest(t2, "POST", "anamneses", corpo={"nutricionista_id": n2, "paciente_id": aluno, "titulo": "Anamnese nutri2",
                                                              "data": "2026-07-20T10:10:00-03:00", "conteudo": []})
             p.check(st == 201, f"anamnese ({st})")
-            st, r = B.storage(t2, "POST", f"object/anexos/{caminho}", B.pdf_minimo("nutri2"))
+            st, r = B.storage(t2, "POST", f"object/{bucket}/{caminho}", B.pdf_minimo("nutri2"))
             p.check(st == 200, f"arquivo do anexo na pasta dela ({st} {str(r)[:80]})")
             st, ax = B.rest(t2, "POST", "anexos", corpo={"nutricionista_id": n2, "paciente_id": aluno, "nome": "exame.pdf", "path": caminho,
                                                           "tamanho": 900, "mime": "application/pdf"})
@@ -226,7 +228,7 @@ def bloco_removida(m: dict) -> None:
             p.check(recusado(st, r), f"removida: download recusado ({st})")
             st, r = B.rest(t2b, "PATCH", "consultas", f"id=eq.{cons[0]['id']}", {"observacao": "mexi"})
             p.check(st in (200, 204) and not r, f"removida: não edita a consulta (0 linhas; {st})")
-            st, r = B.storage(t2b, "POST", f"object/anexos/{n2}/{aluno}/{uuid.uuid4()}-novo.pdf", B.pdf_minimo("x"))
+            st, r = B.storage(t2b, "POST", f"object/{bucket}/{n2}/{aluno}/{uuid.uuid4()}-novo.pdf", B.pdf_minimo("x"))
             p.check(recusado(st, r), f"removida: não sobe arquivo novo para o aluno ({st})")
         with bloco("a nova responsável (Camila) lê, edita e apaga o que a removida deixou"):
             tc = B.token("w13-nutri")
@@ -238,19 +240,19 @@ def bloco_removida(m: dict) -> None:
             p.check(st == 200 and r, f"edita a consulta (W18: editar pela conta) ({st})")
             st, r = assinar(tc, caminho)
             p.check(st == 200, f"assina a URL do arquivo da nutri2 ({st})")
-            st, r = B.storage(tc, "DELETE", "object/anexos", {"prefixes": [caminho]})
+            st, r = B.storage(tc, "DELETE", f"object/{bucket}", {"prefixes": [caminho]})
             p.check(st == 200 and isinstance(r, list) and len(r) == 1, f"apaga o arquivo (pode_apagar_anexo) ({st} {str(r)[:80]})")
             st, r = B.rest(tc, "PATCH", "anexos", f"id=eq.{ax[0]['id']}", {"deleted_at": "2026-10-01T00:00:00Z"})
             p.check(st == 200 and r, f"e manda a linha para a Lixeira ({st})")
     finally:
-        B.apagar_arquivos([o["name"] for o in B.sql_principal(f"select name from storage.objects where bucket_id = 'anexos' and name like '%/{aluno}/%'")])
+        B.apagar_arquivos([o["name"] for o in B.sql_principal(f"select name from storage.objects where bucket_id = '{bucket}' and name like '%/{aluno}/%'")])
         B.sql_principal(f"delete from {S}.pacientes where id = '{aluno}'")
         B.garantir_nutri2(conta, ativa=False)
 
 
 def bloco_bucket(m: dict) -> None:
     tl, lucas = B.token("w13-dono"), m["lucas"]
-    with bloco("restritivas do Storage só no bucket \"anexos\""):
+    with bloco(f"restritivas do Storage só no bucket \"{B.bucket_do_ambiente('anexos')}\""):
         png = bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000" "1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082")
         caminho = f"{lucas}/teste-w18-{uuid.uuid4().hex[:8]}.png"
         st, r = B.storage(tl, "POST", f"object/fotos-perfil-staging/{caminho}", png, "image/png")

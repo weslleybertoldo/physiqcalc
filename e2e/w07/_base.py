@@ -79,6 +79,11 @@ def schema() -> str:
     return ESTADO["schema"]
 
 
+def bucket_do_ambiente(nome: str) -> str:
+    """hml-02b (H-14): no staging os buckets de dado de saúde têm versão própria "-staging"."""
+    return f"{nome}-staging" if schema() == "staging" else nome
+
+
 def saude_treino(limite_s: float = 10.0) -> bool:
     """/health do Banco do Treino (a VM Nano trava com carga): UNHEALTHY ou lento → o caso para (nada de restart aqui)."""
     t0 = time.time()

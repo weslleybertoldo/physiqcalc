@@ -60,6 +60,11 @@ def schema() -> str:
     return ESTADO["schema"]
 
 
+def bucket_do_ambiente(nome: str) -> str:
+    """hml-02b (H-14): no staging os buckets de dado de saúde têm versão própria "-staging"."""
+    return f"{nome}-staging" if schema() == "staging" else nome
+
+
 def q(v) -> str:
     """Literal SQL seguro (dólar-cotado) — só para os valores dos testes."""
     if v is None:
@@ -87,9 +92,9 @@ def rpc_anon(funcao: str, args: dict) -> tuple[int, object]:
 
 
 def subir_foto(caminho: str, arquivo: Path, token: str | None = None) -> int:
-    """Sobe a foto no bucket "diario" como o anônimo (token None) ou como a pessoa (o upload do app/link — sem upsert)."""
+    """Sobe a foto no bucket "diario" (no staging, "diario-staging") como o anônimo (token None) ou como a pessoa (o upload do app/link — sem upsert)."""
     a = anon(PRINCIPAL_REF)
-    req = urllib.request.Request(f"{PRINCIPAL_URL}/storage/v1/object/diario/{caminho}", data=arquivo.read_bytes(), method="POST",
+    req = urllib.request.Request(f"{PRINCIPAL_URL}/storage/v1/object/{bucket_do_ambiente('diario')}/{caminho}", data=arquivo.read_bytes(), method="POST",
                                  headers={"Authorization": f"Bearer {token or a}", "apikey": a, "Content-Type": "image/jpeg", "x-upsert": "false",
                                           "User-Agent": "physiq-e2e-w24"})
     try:
@@ -99,18 +104,20 @@ def subir_foto(caminho: str, arquivo: Path, token: str | None = None) -> int:
         return e.code
 
 
-def apagar_fotos(caminhos: list[str]) -> int:
+def apagar_fotos(caminhos: list[str], bucket: str | None = None) -> int:
+    """Apaga as fotos do bucket "diario" do ambiente (ou do `bucket` dado: o site antigo da Nutri fica no "diario" também no staging)."""
     if not caminhos:
         return 200
     sp = service(PRINCIPAL_REF)
-    st, _, _ = http("DELETE", f"{PRINCIPAL_URL}/storage/v1/object/diario", {"prefixes": caminhos}, {"apikey": sp, "Authorization": f"Bearer {sp}"}, timeout=90)
+    st, _, _ = http("DELETE", f"{PRINCIPAL_URL}/storage/v1/object/{bucket or bucket_do_ambiente('diario')}", {"prefixes": caminhos},
+                    {"apikey": sp, "Authorization": f"Bearer {sp}"}, timeout=90)
     return st
 
 
 def assinar(conta_ou_token: str, caminho: str) -> int:
     """createSignedUrl COMO a pessoa (a regra do Storage): 200 = lê a foto."""
     tok = sessao(conta_ou_token)["access_token"] if conta_ou_token in CONTAS else conta_ou_token
-    st, _, _ = http("POST", f"{PRINCIPAL_URL}/storage/v1/object/sign/diario/{caminho}", {"expiresIn": 60},
+    st, _, _ = http("POST", f"{PRINCIPAL_URL}/storage/v1/object/sign/{bucket_do_ambiente('diario')}/{caminho}", {"expiresIn": 60},
                     {"apikey": anon(PRINCIPAL_REF), "Authorization": f"Bearer {tok}"}, timeout=60)
     return st
 

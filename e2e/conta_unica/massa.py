@@ -121,7 +121,7 @@ def montar() -> dict:
         foto = jpeg()
         if foto:
             sp = B.service(B.PRINCIPAL_REF)
-            st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/diario/{caminho}", foto,
+            st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/{B.bucket_do_ambiente('diario')}/{caminho}", foto,
                               {"apikey": sp, "Authorization": f"Bearer {sp}", "Content-Type": "image/jpeg", "x-upsert": "true"})
             assert st in (200, 201), (st, r)
         q(f"""insert into {S}.diario_alimentar (nutricionista_id, paciente_id, data_hora, refeicao, path, mime, tamanho, comentario)
@@ -190,7 +190,7 @@ def limpar() -> None:
         fotos = q(f"select path from {S}.diario_alimentar where nutricionista_id in ({lista})")
         sp = B.service(B.PRINCIPAL_REF)
         for f in fotos:
-            B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/diario/{f['path']}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
+            B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/{B.bucket_do_ambiente('diario')}/{f['path']}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
         q(f"""delete from {S}.respostas_preconsulta where nutricionista_id in ({lista});
               delete from {S}.formularios_preconsulta where nutricionista_id in ({lista});
               delete from {S}.agendamentos where nutricionista_id in ({lista});

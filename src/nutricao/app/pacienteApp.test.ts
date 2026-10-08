@@ -12,6 +12,7 @@ vi.mock("@/integrations/principal/client", () => ({
     rpc: (...a: unknown[]) => h.rpc(...a),
     storage: { from: () => ({ upload: h.upload, remove: h.remove, createSignedUrls: h.assinar }) },
   },
+  PRINCIPAL_SCHEMA: "public",
 }));
 
 import { enviarFotoDiario, marcarMeta, marcarRefeicao, minhaDieta, normalizarDieta, urlsDoDiario } from "./pacienteApp";

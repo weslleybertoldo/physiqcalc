@@ -2,10 +2,11 @@
 // liberado sem expor dado de ninguém), o envio da foto pelo MESMO caminho de hoje (bucket privado "diario" + diario_enviar — a do
 // site antigo e a do app do aluno, W11) e os últimos 7 dias (diario_listar). O cliente anônimo nunca lê nem escreve nas tabelas.
 // Módulo leve de propósito: a página /d/:codigo carrega só isto (e as regras puras), nada do painel.
+import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { principal } from "@/integrations/principal/client";
 import { nomeObjeto, mimeDaFotoDiario, type Refeicao } from "@/nutricao/app/diarioUtil";
 
-export const BUCKET_DIARIO = "diario";
+export const BUCKET_DIARIO = bucketDoAmbiente("diario");
 
 export type SituacaoLink = "ok" | "diario_desligado" | "link_desligado" | "sem_nutricionista" | "invalido";
 export type LinkDoDiario =

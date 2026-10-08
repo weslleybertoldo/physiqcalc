@@ -126,7 +126,8 @@ def main() -> int:
     tok_d = B.sessao("w10-aluno")["access_token"]
     caminho = f"{diego['nutri']}/{diego['id']}/{uuid.uuid4()}.jpg"
     dados = (B.FOTOS / "almoco.jpg").read_bytes()
-    st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/diario/{caminho}", dados,
+    bucket = B.bucket_do_ambiente("diario")
+    st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/{bucket}/{caminho}", dados,
                       {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {tok_d}", "Content-Type": "image/jpeg", "x-upsert": "false"})
     p.check(st in (200, 201), f"5. o aluno sobe a foto na pasta dele ({st} {str(r)[:80]})")
     codigo = B.sql_principal(f"select link_codigo from {S}.pacientes where id = '{diego['id']}'")[0]["link_codigo"]
@@ -136,10 +137,10 @@ def main() -> int:
     p.check(st == 200 and isinstance(r, dict) and r.get("id"), f"5. diario_enviar grava o registro ({st})")
     st, d = rpc("w10-aluno", "minha_dieta", {"p_dia": hoje})
     p.check([x["path"] for x in d["diario"]] == [caminho], "5. a minha_dieta devolve o registro com o arquivo (P29)")
-    st, assinada, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/diario/{caminho}", {"expiresIn": 60},
+    st, assinada, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/{bucket}/{caminho}", {"expiresIn": 60},
                              {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {tok_d}"})
     p.check(st == 200 and isinstance(assinada, dict) and assinada.get("signedURL"), f"5. o aluno assina a URL da PRÓPRIA foto ({st})")
-    st, outro, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/diario/{caminho}", {"expiresIn": 60},
+    st, outro, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/{bucket}/{caminho}", {"expiresIn": 60},
                           {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {tok_paula}"})
     p.check(st >= 400, f"5. outra aluna NÃO assina a foto do Diego ({st})")
     fila_depois = B.sql_principal(f"select count(*)::int as n from {S}.mensagens_whatsapp")[0]["n"]

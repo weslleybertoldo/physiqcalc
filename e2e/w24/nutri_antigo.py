@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Physiq W24 — o diário, os alimentos e as receitas do SITE ANTIGO do PhysiqNutri lado a lado com o Painel › Dietas (as MESMAS
-tabelas, o MESMO bucket e as MESMAS funções), com a nutri de teste do legado (nutri.teste.claude, legado_nutri — conta de teste) e um
+tabelas, o MESMO bucket e as MESMAS funções — no staging, desde a hml-02b, o site antigo continua no bucket "diario" e o Physiq usa o
+"diario-staging"), com a nutri de teste do legado (nutri.teste.claude, legado_nutri — conta de teste) e um
 paciente DESCARTÁVEL de teste (e-mail único, sem telefone e sem login = nenhuma mensagem nem aviso):
 
   1. o /d/<código> DO SITE ANTIGO continua abrindo e aceitando a foto (o link de hoje vale até a W28);
@@ -31,9 +32,11 @@ CHAVE_LS_NUTRI = f"sb-{B.PRINCIPAL_REF}-auth-token"
 
 
 def contar(S: str, nutri: str) -> dict:
+    # hml-02b: o site antigo da Nutri continua nos buckets sem "-staging" (a foto dele fica no "diario"); a do Physiq vai para o bucket do ambiente
+    buckets = ", ".join(f"'{b}'" for b in sorted({"diario", B.bucket_do_ambiente("diario")}))
     return B.sql_principal(f"""select (select count(*) from {S}.diario_alimentar)::int diario, (select count(*) from {S}.pacientes)::int pacientes,
                                       (select count(*) from {S}.alimentos)::int alimentos, (select count(*) from {S}.avisos)::int avisos,
-                                      (select count(*) from storage.objects where bucket_id = 'diario')::int fotos""")[0]
+                                      (select count(*) from storage.objects where bucket_id in ({buckets}))::int fotos""")[0]
 
 
 def main() -> int:
@@ -56,7 +59,8 @@ def main() -> int:
     carimbo = B.carimbo()
     pid = None
     alimento = None
-    fotos: list[str] = []
+    fotos: list[str] = []  # as do Physiq (bucket do ambiente)
+    fotos_antigo: list[str] = []  # hml-02b: o site antigo da Nutri continua nos buckets sem "-staging" (as dele ficam no "diario")
     try:
         st, r = B.rest("nutri-legado", "POST", "pacientes", "select=id,link_codigo,nome",
                        {"nome": f"W24 Paciente {carimbo}", "nutricionista_id": nutri, "email": f"w24.lado.{carimbo}.teste.claude@physiqnutri.app"})
@@ -81,7 +85,7 @@ def main() -> int:
             pg.wait_for_selector("[data-envio-ok]", timeout=60000)
             reg_antigo = B.sql_principal(f"select id::text, path from {S}.diario_alimentar where paciente_id = '{pid}' and comentario = 'Pelo site antigo {carimbo}'")
             p.check(len(reg_antigo) == 1, "1. a foto mandada pelo site antigo gravou (o mesmo bucket e a mesma função)")
-            fotos += [x["path"] for x in reg_antigo]
+            fotos_antigo += [x["path"] for x in reg_antigo]
             pg.screenshot(path=str(B.PRINTS / f"{a.prefixo}_nutri_antigo_d.png"))
             cel.close()
             # 2. no Diário do Physiq, a nutri reage
@@ -159,6 +163,8 @@ def main() -> int:
             ctx.close()
             nav.close()
     finally:
+        if fotos_antigo:
+            B.apagar_fotos(fotos_antigo, "diario")
         if fotos:
             B.apagar_fotos(fotos)
         if pid:

@@ -8,12 +8,13 @@
  *     (a política de Storage da W10 deixa o aluno dono assinar a própria foto).
  * Nada é copiado de um banco para o outro — a série é somada no aparelho (`serie.ts`).
  */
+import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { principal, principalConfigurado } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { BUCKET_REGISTROS } from "@/lib/registrosFotos";
 import type { AntropometriaPrincipal, FotoPrincipal, LinhaFotoTreino, LinhaTreino, ParteTreino, PartePrincipal } from "./tipos";
 
-export const BUCKET_EVOLUCAO = "evolucao";
+export const BUCKET_EVOLUCAO = bucketDoAmbiente("evolucao");
 /** Validade da URL assinada das fotos (a mesma da tela antiga). */
 export const VALIDADE_URL_S = 3600;
 

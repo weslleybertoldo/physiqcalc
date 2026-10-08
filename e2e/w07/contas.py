@@ -158,7 +158,7 @@ def descartaveis() -> None:
         # uma foto do diário de verdade no bucket (a exclusão tem que apagar o arquivo também)
         caminho = f"{p1}/w7-diario.jpg"
         sp = B.service(B.PRINCIPAL_REF)
-        req = urllib.request.Request(f"{B.PRINCIPAL_URL}/storage/v1/object/diario/{caminho}", data=(B.FOTOS / "almoco.jpg").read_bytes(), method="POST",
+        req = urllib.request.Request(f"{B.PRINCIPAL_URL}/storage/v1/object/{B.bucket_do_ambiente('diario')}/{caminho}", data=(B.FOTOS / "almoco.jpg").read_bytes(), method="POST",
                                      headers={"Authorization": f"Bearer {sp}", "apikey": sp, "Content-Type": "image/jpeg", "x-upsert": "true", "User-Agent": "physiq-e2e-w07"})
         with urllib.request.urlopen(req, timeout=60) as r:
             assert r.status in (200, 201), r.status

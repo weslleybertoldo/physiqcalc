@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Physiq W10 — E2E de SERVIDOR da regra de leitura do aluno no banco principal (minha_evolucao + Storage "evolucao").
+"""Physiq W10 — E2E de SERVIDOR da regra de leitura do aluno no banco principal (minha_evolucao + Storage "evolucao"; no staging, "evolucao-staging").
 
   1. o aluno (w10-aluno) lê as PRÓPRIAS antropometrias e fotos, com a autora e sem a observação interna da nutricionista
   2. outro aluno (w10-paciente) lê só as dele — nunca as do Diego
@@ -34,7 +34,8 @@ def rpc(token: str | None, schema: str) -> tuple[int, object]:
     return st, r
 
 
-def assinar(token: str | None, caminho: str, bucket: str = "evolucao", url: str | None = None, ref: str | None = None) -> tuple[int, object]:
+def assinar(token: str | None, caminho: str, bucket: str | None = None, url: str | None = None, ref: str | None = None) -> tuple[int, object]:
+    bucket = bucket or B.bucket_do_ambiente("evolucao")  # hml-02b: sem bucket dado = o "evolucao" do ambiente (o do Treino vai explícito)
     base = url or B.PRINCIPAL_URL
     c = {"apikey": B.anon(ref or B.PRINCIPAL_REF)}
     c["Authorization"] = f"Bearer {token or B.anon(ref or B.PRINCIPAL_REF)}"

@@ -47,6 +47,11 @@ def schema() -> str:
     return ESTADO["schema"]
 
 
+def bucket_do_ambiente(nome: str) -> str:
+    """hml-02b (H-14): no staging os buckets de dado de saúde têm versão própria "-staging"."""
+    return f"{nome}-staging" if schema() == "staging" else nome
+
+
 def q(valor) -> str:
     """Literal SQL de texto."""
     return "null" if valor is None else "'" + str(valor).replace("'", "''") + "'"

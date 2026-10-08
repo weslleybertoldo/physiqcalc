@@ -5,7 +5,7 @@
                · 4 anotações — as 3 do card da tela 7 (16/07 e 14/06 do Lucas, personal, "Equipe"; 02/07 da Camila, "Equipe") e
                  1 da Camila "Só nutricionistas" (09/07), que o Lucas NÃO vê;
                · clínico da Camila (nutricionista responsável): 2 consultas, 1 anamnese, 1 pedido de exames + 3 resultados (2 fora da
-                 referência), 1 atestado, 1 medicamento e 1 anexo em PDF (Storage privado "anexos")
+                 referência), 1 atestado, 1 medicamento e 1 anexo em PDF (Storage privado "anexos"; no staging, "anexos-staging")
   --limpar     apaga o prontuário do Rafael no staging (anotações, clínico e o arquivo do anexo)
 
 Uso: python3 e2e/w18/massa.py [--limpar]
@@ -42,7 +42,7 @@ def criar(token: str, tabela: str, corpo: dict) -> dict:
 
 def limpar_rafael(pid: str) -> None:
     caminhos = [a["path"] for a in q(f"select path from {S}.anexos where paciente_id = '{pid}'")]
-    caminhos += [o["name"] for o in q(f"select name from storage.objects where bucket_id = 'anexos' and name like '%/{pid}/%'")]
+    caminhos += [o["name"] for o in q(f"select name from storage.objects where bucket_id = '{B.bucket_do_ambiente('anexos')}' and name like '%/{pid}/%'")]
     B.apagar_arquivos(sorted(set(caminhos)))
     for t in B.TABELAS:
         q(f"delete from {S}.{t} where paciente_id = '{pid}'")
@@ -89,7 +89,7 @@ def montar() -> dict:
     # anexo: o arquivo no Storage (pasta da Camila / do Rafael) e a linha — como o site antigo e a aba nova fazem
     caminho = f"{camila}/{pid}/{uuid.uuid4()}-exames-junho.pdf"
     corpo = B.pdf_minimo("Exames de junho - Rafael Moura (teste W18)")
-    st, r = B.storage(tc, "POST", f"object/anexos/{caminho}", corpo)
+    st, r = B.storage(tc, "POST", f"object/{B.bucket_do_ambiente('anexos')}/{caminho}", corpo)
     assert st == 200, ("upload do anexo", st, r)
     anx = criar(tc, "anexos", {"nutricionista_id": camila, "paciente_id": pid, "nome": "exames-junho.pdf", "path": caminho, "tamanho": len(corpo),
                                "mime": "application/pdf", "descricao": "Resultados de junho"})["id"]
