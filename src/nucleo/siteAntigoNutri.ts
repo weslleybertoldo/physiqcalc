@@ -10,7 +10,8 @@ import { existe } from "@/rotas/registro";
  */
 export const SITE_ANTIGO_NUTRI: Record<SchemaPrincipal, string> = {
   public: "https://nutri.physiqcalc.com.br",
-  staging: "https://physiqnutri-staging.vercel.app",
+  // hml-04 (H-07): o staging do site antigo não existe mais (domínio da Vercel sem dono) — a volta fica no staging do Physiq
+  staging: "https://physiqcalc-staging.vercel.app",
 };
 
 export function siteAntigoNutri(schema: SchemaPrincipal = PRINCIPAL_SCHEMA): string {

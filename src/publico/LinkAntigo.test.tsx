@@ -9,9 +9,9 @@ import LinkAntigo from "./LinkAntigo";
 describe("W14 (F1, R13) — o link do diário num lugar só", () => {
   it("o site antigo do Nutri (prod ou staging, pelo schema) continua sabido; sem a página do Physiq, o /d/ era o de lá", () => {
     expect(siteAntigoNutri("public")).toBe("https://nutri.physiqcalc.com.br");
-    expect(siteAntigoNutri("staging")).toBe("https://physiqnutri-staging.vercel.app");
+    expect(siteAntigoNutri("staging")).toBe("https://physiqcalc-staging.vercel.app");
     expect(enderecoDoDiario(" ABC234xyz9 ", { schema: "public", temPagina: () => false })).toBe("https://nutri.physiqcalc.com.br/d/abc234xyz9");
-    expect(enderecoDoDiario("abc", { schema: "staging", temPagina: () => false })).toBe("https://physiqnutri-staging.vercel.app/d/abc");
+    expect(enderecoDoDiario("abc", { schema: "staging", temPagina: () => false })).toBe("https://physiqcalc-staging.vercel.app/d/abc");
     expect(normalizarCodigoDiario("a/b?c=1")).toBe("abc1");
   });
   it("W24: a página /d/:codigo do Physiq existe (src/publico/Diario.tsx) — o link passa para ela SOZINHO (registro por convenção)", () => {
