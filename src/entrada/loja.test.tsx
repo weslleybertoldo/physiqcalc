@@ -86,3 +86,21 @@ describe("Boas-vindas — W1 da loja", () => {
     expect(screen.getByText(/Treine sozinho com os dias grátis/)).toBeInTheDocument();
   });
 });
+
+describe("Boas-vindas — hml-09 (D7): excluir a conta", () => {
+  it("sem nada (no site e na loja): o link 'Excluir minha conta' leva ao Perfil com o Excluir aberto", () => {
+    for (const loja of [false, true]) {
+      h.loja = loja;
+      const { unmount } = abrir(<BoasVindas />);
+      const link = screen.getByRole("link", { name: "Excluir minha conta" });
+      expect(link.getAttribute("href")).toBe("/perfil?excluir=1");
+      unmount();
+    }
+  });
+  it("quem já tem algo vê o 'Continuar para o app' (o Excluir fica no Perfil de sempre)", () => {
+    h.situacao = { sem_nada: false, nome: "Ana Souza" };
+    abrir(<BoasVindas />);
+    expect(screen.getByText(/Continuar para o app/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Excluir minha conta" })).toBeNull();
+  });
+});
