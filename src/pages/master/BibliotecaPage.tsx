@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { ITENS_PAGINA, ListaPaginada } from "@/components/ListaPaginada";
 import { supabase } from "@/integrations/supabase/client";
-import { masterProfessores, type ProfessorRow } from "@/lib/saasApi";
+import { invokeEdge, type ProfessorRow } from "@/lib/saasApi";
 import {
   CAMPOS_EQUIVALENCIA_VAZIOS, camposDoExercicio, camposParaGravar, rotuloEquipamento, rotuloPadrao, type CamposEquivalencia,
 } from "@/treino/equivalencia";
@@ -26,6 +26,11 @@ interface GrupoMuscular { id: string; nome: string; professor_id: string | null 
 
 const EMOJIS = ["🏋️", "🏋️‍♂️", "💪", "🦵", "🍑", "🫁", "🔙", "🎯", "🧘", "🏃", "🏃‍♂️", "🔵"];
 const OUTRO_GRUPO = "__outro__";
+
+// hml-08: a função do master no Treino mora só aqui (saiu do lib/saasApi.ts) — o app não leva esta página (src/lib/plataforma.ts)
+function masterProfessores<T = unknown>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  return invokeEdge<T>("master-professores", { action, ...payload });
+}
 
 // tipos gerados não conhecem `professor_id` → `(supabase.from as any)(...)` como o AdminTreinos (mantém o `this` do client)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

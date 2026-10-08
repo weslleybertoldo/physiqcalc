@@ -106,30 +106,3 @@ export async function buscarTreinosProntos(): Promise<TreinoPronto[]> {
   }
   return lista;
 }
-
-// ───────────────────────── master ─────────────────────────
-
-export interface AlunoDoAppMaster {
-  paciente_id: string;
-  user_id: string | null;
-  nome: string;
-  email: string | null;
-  ativo: boolean;
-  plano: string | null;
-  plano_nome: string | null;
-  valor: number | null;
-  objetivo: string | null;
-  teste_ate: string | null;
-  pago_ate: string | null;
-  pausada: boolean;
-  assinatura: string | null;
-  encerrada_em: string | null;
-  encerrada_motivo: string | null;
-}
-
-/** Os alunos do app (C8 "Sem professor" virou "alunos do app") — só o master. */
-export async function buscarAlunosDoApp(): Promise<AlunoDoAppMaster[]> {
-  const r = await rpc<{ ok?: boolean; erro?: string; alunos?: AlunoDoAppMaster[] }>("master_alunos_do_app");
-  if (!r?.ok) throw new ErroApp(r?.erro ?? "erro_interno");
-  return r.alunos ?? [];
-}
