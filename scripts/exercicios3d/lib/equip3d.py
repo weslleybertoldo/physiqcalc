@@ -4225,3 +4225,236 @@ def barra_puxada(nome="barra_puxada", comprimento=1.219, reto=0.74, dobra=25.0, 
     bpy.context.view_layer.update()
     return barra
 # ===== fim: Estação de puxada =======================================================================================================
+
+
+# ===== Panturrilha em pé ============================================================================================================
+# ── PANTURRILHA EM PÉ NA MÁQUINA (Panturrilha em Pé na Máquina, lote 6, 08/10/2026) e o DEGRAU DE PANTURRILHA solto ──────────────────
+# O DEGRAU (degrau_panturrilha) é uma peça SOLTA, que serve sozinha (no chão: a Panturrilha no Step e a Panturrilha em Pé no Smith,
+# lote 14) ou em cima da base de uma máquina: borracha antiderrapante em cima de uma chapa de aço, as duas com as quinas chanfradas
+# (a medida da zona de apoio da checagem erra o sinal em quina viva), e o corpo do degrau embaixo até o chão/base, recuado da borda
+# de trás — a ponta dos pés apoia logo à frente da borda e o calcanhar desce atrás dela sem encostar em nada (ExRx, Lever Standing
+# Calf Raise: "Position toes and balls of feet on calf block with arches and heels extending off."). Molde: o degrau da
+# panturrilha_sentado() (a mesma borracha de 6 mm, com o bico de 8 mm atrás da chapa de aço de 10 mm).
+# A MÁQUINA (panturrilha_em_pe) é a de panturrilha em pé com as ombreiras num BRAÇO de alavanca (ExRx: "Place shoulders under padded
+# lever."; Legend Fitness SelectEDGE Standing Calf Raise: "Heavy duty flange pillow block bearings allow for smooth pivots"): a pessoa
+# fica de frente pra TORRE da pilha (carenagem parada, aberta do lado dela, com as placas e as 2 guias à vista), em pé no DEGRAU em
+# cima da base, com as 2 OMBREIRAS em cima dos ombros; cada ombreira fica embaixo de uma viga curta do GARFO, que na frente do ombro
+# desce num tubo — o PEGADOR, onde a mão fecha (ExRx: "Grasp handles or sides of padded lever."; SelectEDGE: "Long grips next to the
+# shoulder pads") — até a TRAVESSA na frente do peito; da travessa sai a ALAVANCA até o CUBO no EIXO, em cima da torre (mancais nas
+# 2 orelhas). A pilha é simplificada (parada; o cabo e o came ficam dentro da torre).
+# O EIXO não fica numa junta: na panturrilha em pé o corpo inteiro sobe e desce em cima da ponta dos pés (ExRx, Calf Exercise
+# Analyses: "Axis: Ball of Foot"); a cena põe o eixo na frente da pessoa e um pouco abaixo dos ombros, onde o arco das ombreiras
+# acompanha o caminho dos ombros quando o calcanhar sobe (o tornozelo gira em volta da base dos dedos e vai pra cima e um pouco pra
+# frente): o corpo sobe e desce reto, sem inclinar. Outra regulagem (outra altura, outra pessoa) monta com outros números: nada da
+# peça é do exercício em si.
+# Medidas de máquina de verdade: ombreiras de 12" × 5" (Hoist RPL-5405, manual do dono, lista de peças: "12" X 5" MOLDED PAD"),
+# viradas pro lado como a inclinação do ombro (Cybex Prestige Strength VRS Standing Calf: "Shoulder pads are angled to match natural
+# angle of shoulder."); pegadores de 1,19" × 10" (RPL-5405: "GRIP OPEN END 1.19" X 10.00" LG."); degrau de 23,5" × 6" (Life Fitness
+# Signature Series Plate-Loaded Standing Calf Raise: "Footplate: Non-slip steel (23.5"L x 6"W)"); tubo da alavanca de 2" × 3" (o da
+# panturrilha_sentado). O desenho do garfo, da alavanca, da torre, das orelhas e da base, a espessura do estofado (3") e o número de
+# placas da pilha são escolha da fábrica.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO dela):
+#   mq = e3.panturrilha_em_pe("panturrilha_pe", eixo=(y, z), ombreiras=(c, n, (comp, larg, esp)), pegadores=(c, e, comp, raio),
+#                             degrau=(y_borda, topo, profundidade, largura), torre=(y_frente, y_tras, largura))
+#   no pose(t): mq.girar(graus)            # o braço (com as ombreiras e os pegadores) gira em volta do eixo; > 0 = as ombreiras SOBEM
+#               c, u = mq.pegada(s)         # centro e eixo do pegador do lado s agora (onde a mão fecha)
+#   Cena(pose, mq.equipamentos, pegadas=[("Left", ck.Barra(mq.pegadores[1], mq.raio_pegador, mq.meia_pegador,
+#        eixo=(0, 0, 1))), ...], apoios=mq.apoios)
+#   degrau solto: d = e3.degrau_panturrilha("degrau", y_borda=..., topo=..., base=0.0) → Cena(..., apoios=[d])
+# As raízes: "<nome>_estrutura" (parada: base, torre, pilha, orelhas, mancais e eixo; não encosta no corpo), "<nome>_degrau" (parada,
+# APOIO), "<nome>_braco" (gira: cubo, alavanca, travessa, garfo, chapas das ombreiras e pegadores; não encosta no corpo, fora as mãos
+# nos pegadores) e "<nome>_ombreiras" (gira junto com o braço; APOIO). O braço e as ombreiras têm a origem NO EIXO e o X local AO
+# LONGO dele. O pegador de cada lado é um tubo de borracha com o Z local ao longo dele e a origem no meio. Peças compridas em anéis
+# (_em_aneis / _viga): a checagem fica rápida.
+def degrau_panturrilha(nome="degrau", y_borda=0.0, topo=0.15, profundidade=0.152, largura=0.597, base=0.0, recuo=0.03, x=0.0):
+    """Degrau de panturrilha solto (ver o bloco acima), APOIO da ponta dos pés. Medidas no mundo, em m, com a pessoa olhando pra −Y:
+      y_borda      = borda de trás da borracha (a ponta dos pés apoia logo à frente dela e os calcanhares ficam pra fora, atrás);
+      topo         = altura do topo da borracha;
+      profundidade = da borda de trás até a da frente (pra −Y); largura = de lado a lado (X), centrado em x = `x`;
+      base         = onde o corpo do degrau assenta (0 = o chão; numa máquina, o topo da base dela);
+      recuo        = o corpo do degrau fica esse tanto à frente da borda de trás (o calcanhar desce atrás dela sem encostar).
+    Devolve a raiz "<nome>" (vazio na origem, com tudo como filho)."""
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    y_m = y_borda - profundidade / 2
+    caixa(nome + "_borracha", (x, y_m, topo - 0.003), (largura, profundidade, 0.006), mat_borracha(), pai=raiz, chanfro=0.002)
+    caixa(nome + "_chapa", (x, y_m - 0.004, topo - 0.011), (largura - 0.004, profundidade - 0.008, 0.010), mat_aco(), pai=raiz,
+          chanfro=0.002)
+    z0, z1 = base, topo - 0.016
+    if z1 - z0 > 0.01:
+        y0, y1 = y_borda - profundidade + 0.012, y_borda - recuo
+        # quinas chanfradas também no corpo (é APOIO): um vértice do pé bem em cima da quina de trás dele dava "−22,6 mm" na zona
+        _em_aneis(caixa(nome + "_corpo", (x, (y0 + y1) / 2, (z0 + z1) / 2), (largura - 0.03, y1 - y0, z1 - z0), mat_estrutura(),
+                        pai=raiz, chanfro=0.003), passo=0.05)
+    bpy.context.view_layer.update()
+    return raiz
+
+
+def _dobrar(pontos, raio, n=4):
+    """Linha com as quinas arredondadas: em cada ponto do meio, um arco (Bézier quadrática) começando `raio` m antes dele."""
+    P = [Vector(p) for p in pontos]
+    out = [P[0]]
+    for a, b, c in zip(P, P[1:], P[2:]):
+        r = min(raio, (b - a).length / 2, (c - b).length / 2)
+        p1, p2 = b + (a - b).normalized() * r, b + (c - b).normalized() * r
+        out += [p1 * (1 - k / n) ** 2 + b * 2 * (k / n) * (1 - k / n) + p2 * (k / n) ** 2 for k in range(n + 1)]
+    out.append(P[-1])
+    return out
+
+
+class MaquinaPanturrilhaEmPe:
+    """Máquina de panturrilha em pé pronta na cena (panturrilha_em_pe())."""
+
+    def __init__(self, raizes, eixo, pegadores, raio_pegador, meia_pegador, sinal):
+        self.raizes = raizes                  # {"estrutura", "degrau", "braco", "ombreiras"}
+        self.equipamentos = [raizes["estrutura"], raizes["braco"]]
+        self.apoios = [raizes["degrau"], raizes["ombreiras"]]
+        self.eixo = Vector(eixo)              # ponto do eixo de giro do braço (no cubo, x = 0); direção = X
+        self.pegadores = pegadores            # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.angulo = 0.0
+        self._sinal = sinal                   # +1: as ombreiras ficam atrás do eixo (+Y) e o giro no +X as sobe
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in ("braco", "ombreiras")}
+
+    def _giro(self, graus):
+        return (Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(self._sinal * graus), 4, "X")
+                @ Matrix.Translation(-self.eixo))
+
+    def girar(self, graus):
+        """O braço (com as ombreiras e os pegadores) girado `graus` em volta do eixo, a partir da montagem: > 0 SOBE as ombreiras."""
+        R = self._giro(graus)
+        for k, M in self._M0.items():
+            self.raizes[k].matrix_world = R @ M
+        self.angulo = graus
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, graus=None):
+        """Centro e eixo (mundo, unitário) do pegador do lado s com o braço em `graus` (None = como está agora)."""
+        M = self.pegadores[s].matrix_world
+        if graus is not None:
+            M = self._giro(graus - self.angulo) @ M
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+def panturrilha_em_pe(nome="panturrilha_pe", eixo=(-0.95, 1.15), ombreiras=None, pegadores=None, degrau=(-0.14, 0.15, 0.152, 0.597),
+                      torre=(-1.30, -0.88, 0.50), x_base=0.33, secao=(0.05, 0.075), raio_garfo=0.0127, placas=14):
+    """Máquina de panturrilha em pé (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      eixo       = (y, z) do eixo de giro do braço (paralelo ao X), em cima da torre, na frente da pessoa;
+      ombreiras  = (centro, normal, (comprimento, largura, espessura)): centro da face de BAIXO da ombreira ESQUERDA (x > 0; a da
+                   direita é o espelho em x), a normal dessa face pra dentro da ombreira (pra cima, virada pro lado de fora como a
+                   inclinação do ombro) e as medidas — comprimento ao longo do Y, largura de lado a lado;
+      pegadores  = (centro, eixo, comprimento, raio): centro e direção do pegador ESQUERDO (a da direita é o espelho), o eixo do
+                   pegador descendo pra frente, da viga da ombreira até a travessa na frente do peito;
+      degrau     = (y_borda, topo, profundidade, largura): o degrau_panturrilha() em cima da base;
+      torre      = (y_frente, y_tras, largura): carenagem da pilha (aberta do lado da pessoa, +Y), com o topo embaixo do eixo;
+      x_base     = |x| das 2 vigas da base no chão; secao = (lado menor, lado maior) do tubo da alavanca;
+      raio_garfo = raio do tubo do garfo (o pegador de borracha vai por cima dele); placas = placas à vista na pilha.
+    Devolve um MaquinaPanturrilhaEmPe (raizes, equipamentos, apoios, pegadores, girar(), pegada())."""
+    if ombreiras is None or pegadores is None:
+        raise ValueError("panturrilha_em_pe: faltam as ombreiras (centro, normal, medidas) e os pegadores (centro, eixo, comp, raio)")
+    ye, ze = eixo
+    E = Vector((0.0, ye, ze))
+    c_o, n_o, (comp_o, larg_o, esp_o) = ombreiras
+    c_o, n_o = Vector(c_o), Vector(n_o).normalized()
+    c_p, e_p, comp_p, raio_p = pegadores
+    c_p, e_p = Vector(c_p), Vector(e_p).normalized()
+    y_bd, z_d, prof_d, larg_d = degrau
+    y_tf, y_tt, larg_t = torre
+    t0, t1 = secao
+    rot_x90 = (0, math.radians(90), 0)                      # cilindro deitado ao longo do X
+    Yv = Vector((0.0, 1.0, 0.0))
+
+    def espelho(v):
+        return Vector((-v.x, v.y, v.z))
+
+    def raiz_nova(sufixo, loc=(0.0, 0.0, 0.0)):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        r.location = loc
+        return r
+
+    estr, bra, omb = raiz_nova("estrutura"), raiz_nova("braco", E), raiz_nova("ombreiras", E)
+    bpy.context.view_layer.update()
+
+    # ── base no chão: 2 vigas ao longo do Y (da frente da torre até antes da borda do degrau, onde o calcanhar desce) e 2
+    #    travessas, uma embaixo da torre e outra embaixo do degrau ─────────────────────────────────────────────────────────────────
+    z_base = 0.05
+    y0b, y1b = y_tf - 0.04, y_bd - 0.03
+    for s in (1, -1):
+        _em_aneis(_reto(caixa(nome + "_base%+d" % s, (s * x_base, (y0b + y1b) / 2, z_base / 2), (0.06, y1b - y0b, z_base),
+                              mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
+        for k, y in enumerate((y0b + 0.03, y1b - 0.03)):
+            caixa(nome + "_pe%+d%d" % (s, k), (s * x_base, y, 0.003), (0.08, 0.05, 0.006), mat_borracha(), pai=estr, chanfro=0.002)
+    for k, (y, prof) in enumerate((((y_tf + y_tt) / 2, 0.10), (y_bd - prof_d / 2, 0.08))):
+        _em_aneis(_reto(caixa(nome + "_base_travessa%d" % k, (0, y, z_base / 2), (2 * x_base - 0.06, prof, z_base), mat_estrutura(),
+                              pai=estr, chanfro=0)), passo=0.08)
+    # ── degrau solto em cima da travessa de trás (APOIO) ───────────────────────────────────────────────────────────────────────
+    deg = degrau_panturrilha(nome + "_degrau", y_bd, z_d, prof_d, larg_d, base=z_base)
+    # ── torre da pilha (parada): carenagem aberta do lado da pessoa (+Y), com as placas e as 2 guias à vista ──────────────────────
+    xt, ec = larg_t / 2, 0.012
+    z_topo = ze - 0.07                                      # o topo da torre fica embaixo do eixo (as orelhas sobem dele)
+    for s in (1, -1):
+        _em_aneis(caixa(nome + "_torre_lado%+d" % s, (s * (xt - ec / 2), (y_tf + y_tt) / 2, (z_base + z_topo) / 2),
+                        (ec, y_tt - y_tf, z_topo - z_base), mat_carenagem(), pai=estr, chanfro=0.004), passo=0.10)
+    _em_aneis(caixa(nome + "_torre_frente", (0, y_tf + ec / 2, (z_base + z_topo) / 2), (larg_t, ec, z_topo - z_base),
+                    mat_carenagem(), pai=estr, chanfro=0.004), passo=0.10)
+    _em_aneis(caixa(nome + "_torre_topo", (0, (y_tf + y_tt) / 2, z_topo - 0.012), (larg_t, y_tt - y_tf, 0.024), mat_carenagem(),
+                    pai=estr, chanfro=0.006), passo=0.10)
+    y_pl = (y_tf + y_tt) / 2
+    for k in range(placas):
+        caixa(nome + "_placa%02d" % k, (0, y_pl, z_base + 0.03 + k * 0.026), (0.26, 0.11, 0.022), mat_estrutura(), pai=estr,
+              chanfro=0.002)
+    for s in (1, -1):
+        _em_aneis(tubo(nome + "_guia%+d" % s, (s * 0.10, y_pl, z_base), (s * 0.10, y_pl, z_topo - 0.024), 0.009, mat_aco(),
+                       pai=estr, vertices=16), passo=0.05)
+    # ── orelhas do eixo em cima da torre, nas 2 pontas do cubo, com os mancais e o eixo de aço ────────────────────────────────────
+    for s in (1, -1):
+        caixa(nome + "_orelha%+d" % s, (s * 0.075, ye, (z_topo + ze + 0.05) / 2), (0.014, 0.12, ze + 0.05 - z_topo),
+              mat_estrutura(), pai=estr, chanfro=0.003)
+        _cilindro(nome + "_mancal%+d" % s, 0.035, 0.03, (s * 0.097, ye, ze), rot_x90, mat_estrutura(), pai=estr)
+    _cilindro(nome + "_eixo", 0.016, 0.25, (0, ye, ze), rot_x90, mat_aco(), pai=estr)
+
+    # ── braço (gira): cubo no eixo, alavanca, travessa na frente do peito e o garfo (viga em cima de cada ombreira, tubo que desce
+    #    na frente do ombro com o pegador de borracha); as chapas de aço em cima das ombreiras ──────────────────────────────────────
+    pecas = [_cilindro(nome + "_cubo", 0.045, 0.13, E, rot_x90, mat_estrutura()),
+             _cilindro(nome + "_cubo_tampa", 0.025, 0.134, E, rot_x90, mat_aco())]
+    pegs, ombs, K = {}, [], {}
+    for s in (1, -1):
+        c = c_o if s > 0 else espelho(c_o)
+        n = n_o if s > 0 else espelho(n_o)
+        u = (Yv - n * n.dot(Yv)).normalized()               # ao longo da ombreira, pra trás
+        w = u.cross(n)
+        R = _rot_de(w, u, n)
+        ombs.append(caixa(nome + "_ombreira%+d" % s, c + n * (esp_o / 2), (larg_o, comp_o, esp_o), mat_estofado(), rot=R,
+                          chanfro=0.02))
+        pecas.append(_reto(caixa(nome + "_ombreira_chapa%+d" % s, c + n * (esp_o + 0.006), (larg_o - 0.02, comp_o - 0.03, 0.012),
+                                 mat_aco(), rot=R, chanfro=0)))
+        h = esp_o + 0.012 + 0.02                            # meio da viga do garfo (4 × 4 cm) acima da face de baixo da ombreira
+        a_tras, a_frente = c + n * h + u * 0.03, c + n * h - u * (comp_o / 2 - 0.01)   # a viga segura a metade da frente da
+                                                            # ombreira (atrás, só a chapa: de costas não aparece nada em cima dela)
+        pecas.append(_caixa_ao_longo(nome + "_garfo%+d" % s, a_tras, a_frente, 0.04, 0.04, w, mat_estrutura()))
+        pecas.append(caixa(nome + "_garfo_tampa%+d" % s, a_tras + u * 0.003, (0.044, 0.006, 0.044), mat_borracha(), rot=R,
+                           chanfro=0.001))
+        cp = c_p if s > 0 else espelho(c_p)
+        ep = e_p if s > 0 else espelho(e_p)
+        T, B = cp - ep * (comp_p / 2), cp + ep * (comp_p / 2)
+        K[s] = B + ep * 0.045
+        pontos = _dobrar([a_frente + u * 0.02, a_frente - u * 0.02, T - ep * 0.05, T, B, K[s]], 0.04)
+        pecas.append(_tubo_caminho(nome + "_garfo_tubo%+d" % s, pontos, raio_garfo, mat_aco(), lados=16))
+        pegs[s] = _em_aneis(tubo(nome + "_pegador%+d" % s, T, B, raio_p, mat_borracha(), vertices=32), passo=0.035)
+        pecas.append(pegs[s])
+        for k, (P, sg) in enumerate(((T, -1.0), (B, 1.0))):                                   # bordas da luva
+            pecas.append(tubo(nome + "_pegador_borda%+d%d" % (s, k), P + ep * (sg * 0.001), P + ep * (sg * 0.011), raio_p + 0.003,
+                              mat_borracha(), vertices=32))
+    pecas.append(_em_aneis(tubo(nome + "_travessa", K[1] + Vector((0.02, 0, 0)), K[-1] - Vector((0.02, 0, 0)), 0.02,
+                                mat_estrutura(), vertices=24), passo=0.04))
+    Q = (K[1] + K[-1]) / 2
+    d = (E - Q).normalized()
+    pecas.append(_viga(nome + "_alavanca", Q - d * 0.01, E - d * 0.03, t0, t1, mat_estrutura()))
+    _prender(pecas, bra)
+    _prender(ombs, omb)
+    bpy.context.view_layer.update()
+    raizes = {"estrutura": estr, "degrau": deg, "braco": bra, "ombreiras": omb}
+    return MaquinaPanturrilhaEmPe(raizes, (0.0, ye, ze), pegs, raio_p, comp_p / 2, 1.0 if c_o.y > ye else -1.0)
+# ===== fim: Panturrilha em pé =======================================================================================================
