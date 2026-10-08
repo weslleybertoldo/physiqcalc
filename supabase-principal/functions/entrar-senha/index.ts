@@ -79,7 +79,7 @@ async function regras(db: { rpc: (fn: string) => PromiseLike<{ data: unknown; er
   return valor;
 }
 
-/** "aceito" | "recusado" | "indisponivel" (o Cloudflare não respondeu: segue sem travar o login de todo mundo). */
+/** "aceito" | "recusado" | "indisponivel" (o Cloudflare não respondeu — quem chama RECUSA: falha fechada, homologação H-17). */
 async function conferirCaptcha(token: string, ip: string | null): Promise<"aceito" | "recusado" | "indisponivel"> {
   if (!token) return "recusado";
   const corpo = new URLSearchParams({ secret: TURNSTILE_SECRET, response: token });
@@ -125,15 +125,18 @@ Deno.serve(async (req) => {
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
   try {
     const cfg = await regras(db, schema);
-    if (cfg.captcha !== false && TURNSTILE_SECRET) {
-      const v = await conferirCaptcha(captcha, ip);
-      if (v === "recusado") return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
-      // o siteverify aceita o MESMO token mais de uma vez (medido em 30/09): aqui cada token vale UMA tentativa
-      if (v === "aceito") {
-        const { data: primeiro, error: eu } = await db.rpc("login_captcha_usar", { p_hash: await hashDoToken(captcha) });
-        if (eu) throw eu;
-        if (primeiro !== true) return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
+    if (cfg.captcha !== false) {
+      // falha FECHADA (homologação, H-17): sem o segredo ou com o Cloudflare fora do ar, ninguém entra sem captcha — a tela
+      // mostra o aviso do captcha_invalido ("Não deu para confirmar que é você. Tente de novo.")
+      const v = TURNSTILE_SECRET ? await conferirCaptcha(captcha, ip) : "indisponivel";
+      if (v !== "aceito") {
+        if (v === "indisponivel") console.error("entrar-senha: captcha indisponível — tentativa recusada (falha fechada)", TURNSTILE_SECRET ? "siteverify" : "sem TURNSTILE_SECRET");
+        return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
       }
+      // o siteverify aceita o MESMO token mais de uma vez (medido em 30/09): aqui cada token vale UMA tentativa
+      const { data: primeiro, error: eu } = await db.rpc("login_captcha_usar", { p_hash: await hashDoToken(captcha) });
+      if (eu) throw eu;
+      if (primeiro !== true) return json({ ok: false, erro: "captcha_invalido" }, 400, origin);
     }
 
     const ipHash = ip ? await hashDoIp(ip, LOGIN_IP_SAL) : null;
