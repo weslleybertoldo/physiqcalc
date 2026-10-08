@@ -389,8 +389,13 @@ def js_sem_marcas(o, base: str) -> None:
     vistos: set[str] = set()
     fila = set(re.findall(r'(?:src|href)="(/assets/[^"]+\.js)"', html))
     achados: list[str] = []
-    while fila and len(vistos) < 800:
-        lote = sorted(fila - vistos)[:40]
+    while len(vistos) < 800:
+        # um nome pode entrar na fila e ser baixado no MESMO lote: tirar os já vistos antes de montar o próximo (sem isso o lote
+        # sai vazio, a fila nunca diminui e o laço não termina — travou 2× em 08/10/2026)
+        fila -= vistos
+        if not fila:
+            break
+        lote = sorted(fila)[:40]
         fila -= set(lote)
         with cf.ThreadPoolExecutor(8) as ex:
             for caminho, corpo in zip(lote, ex.map(lambda c: baixar(base + c), lote)):
