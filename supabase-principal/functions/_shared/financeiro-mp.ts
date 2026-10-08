@@ -2,9 +2,12 @@
 // profissional: gravar o que o MP disse de um pagamento na cobrança (uma vez só — mp_payment_id único; a cobertura da
 // mensalidade é refeita pelo gatilho do banco), registrar a cobrança mensal de uma assinatura e avisar no sino (NF9).
 // O aviso do MP nunca é a verdade: quem chama sempre busca o recurso de novo na API.
+// hml-10 (H-24): quem grava o aviso do sino recebe o log de quem chama + o schema do pedido (o aviso de erro diz a função de
+// verdade e o [staging] certo) — o db não diz o schema.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import type { AssinaturaMp, PagamentoMp } from "./cobranca-regras.ts";
 import { cobrancaDoStatusMp, descricaoMensalidade, diaSP, mesRefDe, mpEmAberto, type Schema } from "./financeiro-regras.ts";
+import type { Log } from "./log.ts";
 
 export const COLUNAS_COBRANCA =
   "id, paciente_id, conta_id, nutricionista_id, criado_por, tipo, descricao, valor, vencimento, status, forma, metodo, mes_ref, " +
@@ -110,10 +113,19 @@ export function recebedor(m: Matricula): string | null {
   return m.conta?.dono_id ?? m.personal_id ?? m.nutricionista_id ?? null;
 }
 
-export async function avisar(db: SupabaseClient, destino: string | null | undefined, tipo: string, titulo: string, link: string | null): Promise<void> {
+export async function avisar(
+  db: SupabaseClient,
+  destino: string | null | undefined,
+  tipo: string,
+  titulo: string,
+  link: string | null,
+  log: Log,
+  schema: Schema,
+): Promise<void> {
   if (!destino) return;
   const { error } = await db.from("avisos").insert({ destino_user_id: destino, tipo, titulo: titulo.slice(0, 160), link });
-  if (error) console.error("financeiro aviso", tipo, error.message);
+  // o título (nome, valor, motivo) fica só no sino: no log, o tipo e o erro do banco
+  if (error) log.excecao(error, { codigo: "aviso_do_sino_falhou", schema, acao: tipo });
 }
 
 const reais = (v: number) => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
@@ -134,7 +146,14 @@ export interface ResultadoMp {
  * avisado 1 vez (só na virada para paga). Estorno depois de paga → cancelada com reembolsado_em. Pix de 72 h que venceu com o
  * MP ainda dizendo "pending" → cancelada (a cobrança avulsa volta a ficar em aberto).
  */
-export async function aplicarPagamentoMp(db: SupabaseClient, c: Cobranca, pay: PagamentoMp, m?: Matricula | null): Promise<ResultadoMp> {
+export async function aplicarPagamentoMp(
+  db: SupabaseClient,
+  c: Cobranca,
+  pay: PagamentoMp,
+  m: Matricula | null | undefined,
+  log: Log,
+  schema: Schema,
+): Promise<ResultadoMp> {
   let mpStatus = String(pay.status || "pending");
   if (mpEmAberto(mpStatus) && c.pix_expira_em && new Date(c.pix_expira_em).getTime() < Date.now() - 60_000) mpStatus = "expired";
   const alvo = cobrancaDoStatusMp(mpStatus);
@@ -160,7 +179,7 @@ export async function aplicarPagamentoMp(db: SupabaseClient, c: Cobranca, pay: P
   const pagou = status === "paga" && c.status !== "paga";
   if (pagou) {
     const mat = m ?? (await carregarMatricula(db, c.paciente_id));
-    await avisar(db, mat?.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos");
+    await avisar(db, mat?.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos", log, schema);
   }
   return { status, mudou: true, pagou };
 }
@@ -175,6 +194,8 @@ export async function registrarPagamentoAvulsoDoMp(
   m: Matricula,
   pay: PagamentoMp,
   extra: { preapprovalId?: string | null; origem: string; mesRef?: string | null },
+  log: Log,
+  schema: Schema,
 ): Promise<ResultadoMp | null> {
   if (pay?.id === undefined || pay?.id === null) return null;
   const mpId = String(pay.id);
@@ -198,7 +219,7 @@ export async function registrarPagamentoAvulsoDoMp(
     linha = nova ?? (await db.from("cobrancas").select(colunas).eq("mp_payment_id", mpId).maybeSingle()).data;
   }
   if (!linha) return null;
-  return await aplicarPagamentoMp(db, linha as unknown as Cobranca, pay, m);
+  return await aplicarPagamentoMp(db, linha as unknown as Cobranca, pay, m, log, schema);
 }
 
 /** O que vai pra aluno_assinaturas a partir da assinatura do MP (fonte da verdade). */

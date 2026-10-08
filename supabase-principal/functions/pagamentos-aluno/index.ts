@@ -36,9 +36,14 @@
 // cobrança → mp-webhook-aluno?schema=<schema> (a configuração global do app do MP, dos apps antigos, não muda).
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pagamentos-aluno true
 // Segredos: MP_ACCESS_TOKEN_PROD (produção), MP_ACCESS_TOKEN_TEST (staging), MP_TEST_PAYER_EMAIL (+ os automáticos).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts — do Mercado Pago, só o status e os códigos (error, cause, status_detail),
+// nunca o corpo; o título do aviso do sino (nome, valor) não vai para o log; o catch final avisa (log.excecao) e devolve o
+// mesmo 500.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
-import { erroDeCartao, hojeSP, recusaDoSandbox, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
+import { codigosDoMp, erroDeCartao, hojeSP, recusaDoSandbox, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
 import { credencialDoSchema, mpFetch, tokenMp } from "../_shared/cobranca-mp.ts";
 import {
   COMPROVANTE_MAX_BYTES,
@@ -85,6 +90,7 @@ const PIX_HORAS = 72;
 // W7b: dentro da janela do aviso (7 dias antes do fim da cobertura — o teste grátis do app inclusive) dá para pagar adiantado
 // pelo Mercado Pago; a cobertura nova começa no fim da atual (a régua do Calc)
 const JANELA_ADIANTAR_MS = 7 * 86_400_000;
+const log = criarLog("pagamentos-aluno", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -285,7 +291,7 @@ Deno.serve(async (req) => {
     if (!c.mp_payment_id || simulado(c.mp_payment_id) || c.forma !== "mp" || !mpEmAberto(c.mp_status) || c.status !== "aguardando_confirmacao") return c;
     const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(c.mp_payment_id)}`);
     if (st !== 200 || !pay?.id) return c;
-    await aplicarPagamentoMp(db, c, pay, m);
+    await aplicarPagamentoMp(db, c, pay, m, log, schema);
     return await buscarCobranca(c.id);
   };
 
@@ -330,7 +336,7 @@ Deno.serve(async (req) => {
       observacao: "Lançado pela cobrança do aluno (Physiq)",
     }).select("id").single();
     if (error) {
-      console.error("financeiro lançar", error.message);
+      log.excecao(error, { codigo: "lancar_falhou", schema, acao, ref: c.id });
       return null;
     }
     const id = (data as { id: string }).id;
@@ -343,7 +349,7 @@ Deno.serve(async (req) => {
     try {
       await db.rpc("cobrancas_atualizar_bloqueio");
     } catch (e) {
-      console.error("cobrancas_atualizar_bloqueio", String((e as { message?: string })?.message || e));
+      log.excecao(e, { codigo: "atualizar_bloqueio_falhou", schema, acao });
     }
   };
 
@@ -423,9 +429,9 @@ Deno.serve(async (req) => {
     if (acao === "aluno_status") {
       // W7b (rede de segurança): saiu do app para um profissional e a assinatura do app ainda está viva → cancela no MP
       try {
-        await cancelarAssinaturasDoAppEncerrado(db, credencial, user.id, "vinculou_profissional");
+        await cancelarAssinaturasDoAppEncerrado(db, credencial, user.id, "vinculou_profissional", log);
       } catch (e) {
-        console.error("pagamentos-aluno: assinatura do app encerrado", String((e as { message?: string })?.message || e));
+        log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema, acao });
       }
       const { data: mats, error } = await db.from("pacientes").select("id").eq("user_id", user.id).is("deleted_at", null)
         .eq("ativo", true).order("created_at");
@@ -526,7 +532,7 @@ Deno.serve(async (req) => {
       if (!atualizado) {
         const titulo = `${m.nome} enviou um comprovante · ${reais(c.valor)}`;
         const destinos = new Set([recebedor(m), c.nutricionista_id].filter(Boolean) as string[]);
-        for (const d of destinos) await avisar(db, d, "comprovante_enviado", titulo, linkDoAlunoNoPainel(m));
+        for (const d of destinos) await avisar(db, d, "comprovante_enviado", titulo, linkDoAlunoNoPainel(m), log, schema);
       }
       await recalcularTravaNutri();
       return json({ ok: true, cobranca: vista(c), atualizado }, 200, origin);
@@ -581,7 +587,7 @@ Deno.serve(async (req) => {
         });
         const td = pay?.point_of_interaction?.transaction_data;
         if (st >= 300 || !pay?.id || !td?.qr_code) {
-          console.error("pagamentos-aluno pix falhou", st, JSON.stringify(pay).slice(0, 400));
+          log.erro({ codigo: "mp_pix_falhou", schema, acao, ref: linha.id, status: st, externo: codigosDoMp(pay) });
           if (schema === "staging" && st >= 500) {
             // SÓ STAGING: o sandbox do MP cai com 500 de vez em quando → Pix simulado (sem QR real) pra manter o fluxo de teste
             const { data: sim } = await db.from("cobrancas").update({ mp_payment_id: `sim-${crypto.randomUUID()}`, pix_copia_cola: "SIMULADO-SANDBOX-MP-INDISPONIVEL" })
@@ -611,13 +617,13 @@ Deno.serve(async (req) => {
       if (body.issuer_id !== undefined && body.issuer_id !== null && body.issuer_id !== "") pedido.issuer_id = body.issuer_id;
       const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, "/v1/payments", { method: "POST", body: JSON.stringify(pedido) });
       if (st >= 300 || !pay?.id) {
-        console.error("pagamentos-aluno cartao falhou", st, JSON.stringify(pay).slice(0, 400));
+        log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: linha.id, status: st, externo: codigosDoMp(pay) });
         await desfazerLinha(linha);
         return erro(erroDeCartao(st, pay) ? "cartao_recusado" : "mp_error", erroDeCartao(st, pay) ? 400 : 502, origin,
           { detalhe: String((pay as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
       }
       await db.from("cobrancas").update({ mp_payment_id: String(pay.id) }).eq("id", linha.id).is("mp_payment_id", null);
-      const r = await aplicarPagamentoMp(db, await buscarCobranca(linha.id), pay, m);
+      const r = await aplicarPagamentoMp(db, await buscarCobranca(linha.id), pay, m, log, schema);
       return json({ ok: true, cobranca: vista(await buscarCobranca(linha.id)), status: r.status, status_detail: pay.status_detail ?? null }, 200, origin);
     }
 
@@ -655,7 +661,7 @@ Deno.serve(async (req) => {
         ({ status: st, body: pre } = await pendente());
       }
       if (st >= 300 || !pre?.id) {
-        console.error("pagamentos-aluno assinar falhou", st, JSON.stringify(pre).slice(0, 400));
+        log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, externo: codigosDoMp(pre) });
         if (erroDeCartao(st, pre)) falhar("cartao_recusado", 400, { detalhe: String((pre as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
         falhar("mp_error", 502, { status_mp: st });
       }
@@ -707,7 +713,7 @@ Deno.serve(async (req) => {
             method: "PUT", body: JSON.stringify({ auto_recurring: { transaction_amount: Number(r.valor), currency_id: "BRL" } }),
           });
           if (st >= 300 || !pre?.id) {
-            console.error("pagamentos-aluno: valor da assinatura do app", st, JSON.stringify(pre).slice(0, 300));
+            log.erro({ codigo: "mp_valor_assinatura_app_falhou", schema, acao, ref: a.id, status: st, externo: codigosDoMp(pre) });
             assinatura = "falhou";
           } else {
             await db.from("aluno_assinaturas").update({ ...espelhoAssinaturaAluno(pre, { ...(a.payload ?? {}), valor_trocado_em: new Date().toISOString() }), valor: Number(r.valor) }).eq("id", a.id);
@@ -743,7 +749,7 @@ Deno.serve(async (req) => {
         await mpFetch(credencial, `/v1/payments/${encodeURIComponent(c.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
       }
       await db.from("cobrancas").update({ status: "paga", mp_status: "approved", pago_em: new Date().toISOString(), metodo: c.metodo ?? "pix" }).eq("id", c.id);
-      await avisar(db, m!.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos");
+      await avisar(db, m!.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos", log, schema);
       return json({ ok: true, simulado: true, cobranca: vista(await buscarCobranca(c.id)) }, 200, origin);
     }
 
@@ -898,7 +904,7 @@ Deno.serve(async (req) => {
         const { error } = await db.from("cobrancas").update({ status: "paga", pago_em: pagoEm, confirmado_por: user.id, confirmado_em: agora }).eq("id", c.id);
         if (error) throw error;
         if (body.lancar === true) await lancar(c, diaSP(pagoEm) ?? hoje, "pix");
-        await avisar(db, m.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos");
+        await avisar(db, m.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos", log, schema);
       } else {
         const motivo = textoCurto(body.motivo, 200) || "Comprovante não confere";
         const patch = c.tipo === "avulsa"
@@ -906,7 +912,7 @@ Deno.serve(async (req) => {
           : { status: "cancelada", recusado_motivo: motivo, recusado_em: agora, confirmado_por: user.id };
         const { error } = await db.from("cobrancas").update(patch).eq("id", c.id);
         if (error) throw error;
-        await avisar(db, m.user_id, "pagamento_recusado", `Comprovante recusado: ${motivo}`.slice(0, 160), "/perfil/pagamentos");
+        await avisar(db, m.user_id, "pagamento_recusado", `Comprovante recusado: ${motivo}`.slice(0, 160), "/perfil/pagamentos", log, schema);
       }
       await recalcularTravaNutri();
       return json({ ok: true, cobranca: vista(await buscarCobranca(c.id)) }, 200, origin);
@@ -1010,11 +1016,11 @@ Deno.serve(async (req) => {
         method: "POST", body: JSON.stringify({}),
       });
       if (st >= 300) {
-        console.error("pagamentos-aluno reembolso falhou", st, JSON.stringify(ref).slice(0, 300));
+        log.erro({ codigo: "mp_reembolso_falhou", schema, acao, ref: c.id, status: st, externo: codigosDoMp(ref) });
         falhar("mp_error", 502, { status_mp: st });
       }
       const { status: sp, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(mpId)}`);
-      if (sp === 200 && pay?.id) await aplicarPagamentoMp(db, c, pay, m);
+      if (sp === 200 && pay?.id) await aplicarPagamentoMp(db, c, pay, m, log, schema);
       else await db.from("cobrancas").update({ status: "cancelada", mp_status: "refunded", reembolsado_em: new Date().toISOString() }).eq("id", c.id);
       return json({ ok: true, refund_id: ref?.id ?? null }, 200, origin);
     }
@@ -1029,7 +1035,7 @@ Deno.serve(async (req) => {
     return erro("acao_invalida", 400, origin);
   } catch (e) {
     if (e instanceof ErroAcao) return erro(e.codigo, e.http, origin, e.extra);
-    console.error("pagamentos-aluno erro", acao, String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao, schema });
     return erro("erro_interno", 500, origin);
   }
 });

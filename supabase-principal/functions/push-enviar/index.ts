@@ -15,7 +15,11 @@
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions push-enviar false
 // Segredos: FCM_SERVICE_ACCOUNT (JSON da chave da conta fcm-envio@physiq-br), PUSH_SEGREDO (o mesmo do Vault
 // 'physiq_push_segredo', que o gatilho manda no cabeçalho) — gravados pela Management API (e2e/w20c/segredos_push.py).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (do aparelho, só o fim do token; do FCM, o status e o código); o catch
+// final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import {
   avisoVelho,
   base64url,
@@ -42,6 +46,7 @@ const PUSH_SEGREDO = Deno.env.get("PUSH_SEGREDO") ?? "";
 const CONTA = lerContaDeServico(Deno.env.get("FCM_SERVICE_ACCOUNT"));
 const SCHEMAS: Schema[] = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const log = criarLog("push-enviar", { avisar: avisarErro });
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
@@ -66,12 +71,12 @@ async function tokenDoGoogle(): Promise<string> {
   return acesso.token;
 }
 
-async function enviarFcm(mensagem: MensagemFcm): Promise<ResultadoFcm> {
+async function enviarFcm(mensagem: MensagemFcm, schema: Schema): Promise<ResultadoFcm> {
   let token: string;
   try {
     token = await tokenDoGoogle();
   } catch (e) {
-    console.error("push-enviar: oauth", String((e as Error)?.message ?? e));
+    log.excecao(e, { codigo: "fcm_oauth_falhou", schema });
     return { desfecho: "falha", status: 0, codigo: "OAUTH" };
   }
   try {
@@ -83,7 +88,7 @@ async function enviarFcm(mensagem: MensagemFcm): Promise<ResultadoFcm> {
     if (r.status === 401) acesso = null; // token do Google vencido/recusado: o próximo pede outro
     return lerRespostaFcm(r.status, await r.json().catch(() => ({})));
   } catch (e) {
-    console.error("push-enviar: rede", String((e as Error)?.message ?? e));
+    log.excecao(e, { codigo: "fcm_rede", schema });
     return { desfecho: "falha", status: 0, codigo: "REDE" };
   }
 }
@@ -103,8 +108,8 @@ Deno.serve(async (req) => {
   }
 
   if (corpo.verificar === true) {
-    const r = await enviarFcm(montarMensagem({ id: "verificacao", tipo: "geral", titulo: "Verificação", link: "/" }, TOKEN_DE_VERIFICACAO, { validar: true }));
-    console.log(`push-enviar: verificar schema=${schema} fcm=${r.status} ${r.codigo}`);
+    const r = await enviarFcm(montarMensagem({ id: "verificacao", tipo: "geral", titulo: "Verificação", link: "/" }, TOKEN_DE_VERIFICACAO, { validar: true }), schema);
+    log.info({ codigo: "push_verificar", schema, status: r.status, externo: { fcm_codigo: r.codigo } });
     return json({ ok: true, autenticado: contaAutenticou(r), projeto: CONTA.project_id, fcm: { status: r.status, codigo: r.codigo, mensagem: r.mensagem ?? null } });
   }
 
@@ -134,21 +139,24 @@ Deno.serve(async (req) => {
     const resultados: ResultadoFcm[] = [];
     const registro: Array<Record<string, unknown>> = [];
     for (const a of aparelhos ?? []) {
-      const r = await enviarFcm(montarMensagem(aviso, a.token));
+      const r = await enviarFcm(montarMensagem(aviso, a.token), schema);
       resultados.push(r);
       registro.push({ aparelho: fimDoToken(a.token), status: r.status, desfecho: r.desfecho, codigo: r.codigo, ...(r.mensagem ? { mensagem: r.mensagem } : {}) });
-      console.log(`push-enviar: schema=${schema} aviso=${aviso.id} tipo=${aviso.tipo} aparelho=${fimDoToken(a.token)} fcm=${r.status} ${r.codigo} → ${r.desfecho}`);
+      log.info({
+        codigo: "push_enviado", schema, ref: aviso.id, acao: aviso.tipo, aparelho: fimDoToken(a.token), status: r.status,
+        externo: { fcm_codigo: r.codigo }, resultado: r.desfecho,
+      });
       if (r.desfecho === "token_invalido") {
         const { error: ed } = await db.from("push_aparelhos").delete().eq("id", a.id);
-        if (ed) console.error("push-enviar: apagar aparelho", ed.message);
+        if (ed) log.excecao(ed, { codigo: "apagar_aparelho_falhou", schema, ref: aviso.id });
       }
     }
     const resumo = resumirEnvio(resultados);
     const { error: eu } = await db.from("push_envios").update({ ...resumo, resultado: registro, concluido_em: new Date().toISOString() }).eq("aviso_id", aviso.id);
-    if (eu) console.error("push-enviar: registrar envio", eu.message);
+    if (eu) log.excecao(eu, { codigo: "registrar_envio_falhou", schema, ref: aviso.id });
     return json({ ok: true, ...resumo });
   } catch (err) {
-    console.error("push-enviar erro", String((err as { message?: string })?.message || err));
+    log.excecao(err, { schema });
     return json({ ok: false, erro: "erro_interno" }, 500);
   }
 });

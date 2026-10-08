@@ -18,6 +18,27 @@ export function destinoDoEnvio(schema: Schema, email: string): { para: string; t
   return destinoDoEmail(email);
 }
 
+/** A configuração do e-mail das funções (os segredos, como chegam do Deno.env; ausente = ""). */
+export interface ConfigEmail {
+  resendApiKey: string;
+  resendFrom: string;
+  siteUrl: string;
+}
+
+/**
+ * hml-10 (D3, H-25) — o que falta para o e-mail sair, SEM reserva com valor de produção (antes o remetente e o endereço do site
+ * caíam num valor fixo): a chave e o remetente do Resend sempre; o SITE_URL só na produção (o staging usa o endereço dele —
+ * siteDoConvite). Vazio = pode mandar. Quem chama (convites, alunos, agenda-avisar, aluno-enviar) trata a falta como o
+ * "sem_resend" de sempre — o e-mail não sai e a reserva no banco, quando há, é desfeita — e avisa pelo log.erro.
+ */
+export function faltaNoEmail(schema: Schema, config: ConfigEmail): string[] {
+  const falta: string[] = [];
+  if (!config.resendApiKey) falta.push("RESEND_API_KEY");
+  if (!config.resendFrom) falta.push("RESEND_FROM");
+  if (schema !== "staging" && !config.siteUrl) falta.push("SITE_URL");
+  return falta;
+}
+
 /** Só os caminhos do app que o aviso usa (a tela de abertura, o Treino e a Dieta). */
 export function caminhoDoEnvio(link: unknown): "/" | "/treino" | "/dieta" {
   return link === "/treino" || link === "/dieta" ? link : "/";

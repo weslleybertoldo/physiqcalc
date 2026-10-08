@@ -15,7 +15,11 @@
 //   "resultado" marca uma mensagem da fila como enviada ou falhou
 // Physiq hml-06 (H-20): a fila sai por reserva com troca condicional (_shared/whatsapp-fila.ts) — tentativas soma a cada saída
 // e 2 'tarefas' juntas não pegam a mesma mensagem (antes: tentativas fixo em 1 e o paciente podia receber repetido para sempre).
+// Physiq hml-10 (H-26, H-48): o erro inesperado vai para o log (_shared/log.ts: nome, código do Postgres e a mensagem limpa) e
+// avisa; a resposta ao celular leva só o código (antes o texto cru do erro ia junto e parava no log do agente).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { COLUNAS_FILA, reservarFila, type MensagemFila } from "../_shared/whatsapp-fila.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -26,10 +30,11 @@ const SCHEMAS = ["public", "staging"];
 const PEDIDO_VALIDO_MIN = 5;
 const MAX_TENTATIVAS = 3;
 const LIMITE_FILA = 20;
+const log = criarLog("whatsapp-agente", { avisar: avisarErro });
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-const erro = (codigo: string, status: number, detalhe?: unknown) => json({ error: codigo, detalhe }, status);
+const erro = (codigo: string, status: number) => json({ error: codigo }, status);
 
 /** comparação em tempo constante — o token vive em secret e não deve vazar por timing */
 function tokenConfere(recebido: string): boolean {
@@ -139,7 +144,7 @@ Deno.serve(async (req) => {
     if (es) throw es;
     return json({ instancia: salvo });
   } catch (e) {
-    console.error("whatsapp-agente", acao, String(e));
-    return erro("erro_interno", 500, String(e).slice(0, 300));
+    log.excecao(e, { acao, schema });
+    return erro("erro_interno", 500);
   }
 });

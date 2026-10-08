@@ -4,10 +4,14 @@
 // matrícula do app em matricular_na_conta). Usado pela vincular-aluno, pela pos-login, pela pagamentos-aluno (rede de segurança
 // no Pagamentos) e pela mp-webhook-aluno (cobrança recorrente que chegou para uma matrícula do app já encerrada).
 // Regras puras (sem Deno e sem rede) em _shared/app-sem-profissional-regras.ts — testadas no Vitest (src/app-aluno/sozinho/regras.test.ts).
+// hml-10 (H-24): o cancelamento recebe o log de quem chama (o aviso de erro diz a função de verdade); o schema do log sai da
+// credencial (teste = staging, produção = public — o inverso do credencialDoSchema).
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { assinaturaSoNoBanco, encerradaPeloVinculo } from "./app-sem-profissional-regras.ts";
-import type { AssinaturaMp } from "./cobranca-regras.ts";
+import { codigosDoMp, type AssinaturaMp } from "./cobranca-regras.ts";
 import { mpFetch, type Credencial } from "./cobranca-mp.ts";
+import { schemaDaCredencial } from "./financeiro-mp.ts";
+import type { Log } from "./log.ts";
 
 export { assinaturaSoNoBanco, assinaturaViva, encerradaPeloVinculo } from "./app-sem-profissional-regras.ts";
 
@@ -61,6 +65,7 @@ export async function cancelarAssinaturasDoAppEncerrado(
   credencial: Credencial,
   userId: string,
   motivo: string,
+  log: Log,
 ): Promise<{ canceladas: number; falhas: number }> {
   const app = await contaDoApp(db);
   if (!app) return { canceladas: 0, falhas: 0 };
@@ -69,7 +74,7 @@ export async function cancelarAssinaturasDoAppEncerrado(
   const ids = ((mats ?? []) as Array<{ id: string; ativo: boolean | null; app_encerrada_em: string | null }>)
     .filter(encerradaPeloVinculo).map((m) => m.id);
   if (!ids.length) return { canceladas: 0, falhas: 0 };
-  return await cancelarAssinaturasDasMatriculas(db, credencial, ids, motivo);
+  return await cancelarAssinaturasDasMatriculas(db, credencial, ids, motivo, log);
 }
 
 /** A matrícula (do app) foi encerrada pelo vínculo? Lê o marcador no banco (o webhook só cancela nesse caso — W19). */
@@ -84,6 +89,7 @@ export async function cancelarAssinaturasDasMatriculas(
   credencial: Credencial,
   pacienteIds: string[],
   motivo: string,
+  log: Log,
 ): Promise<{ canceladas: number; falhas: number }> {
   const { data } = await db.from("aluno_assinaturas").select("id, paciente_id, mp_preapproval_id, status, payload")
     .in("paciente_id", pacienteIds).in("status", ["authorized", "pending", "paused"]);
@@ -106,7 +112,11 @@ export async function cancelarAssinaturasDasMatriculas(
         await db.from("aluno_assinaturas").update({ status: "cancelled", payload }).eq("id", a.id);
         canceladas++;
       } else {
-        console.error("app: cancelar assinatura falhou", a.id, status, JSON.stringify(body).slice(0, 300));
+        // hml-10 (H-24): só os códigos do MP (o corpo da resposta pode trazer dado de quem paga)
+        log.erro({
+          codigo: "mp_cancelar_falhou", schema: schemaDaCredencial(credencial), acao: "assinatura_do_app", ref: a.id, status,
+          externo: codigosDoMp(body),
+        });
         falhas++;
       }
       continue;

@@ -14,9 +14,14 @@
 // verify_jwt = true (chamada com o login da pessoa). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions convites true
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL (+ os automáticos).
+// hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do Resend, só o status e o código do erro — nunca o corpo); sem
+// reserva com valor de produção (sem RESEND_FROM ou, na produção, sem SITE_URL o e-mail não sai: o mesmo "sem_resend" de sempre,
+// + log.erro); o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { origemPermitida } from "../_shared/login-regras.ts";
-import { destinoDoEnvio } from "../_shared/enviar-aluno-regras.ts";
+import { destinoDoEnvio, faltaNoEmail } from "../_shared/enviar-aluno-regras.ts";
 import {
   assuntoDoConvite,
   htmlDoConvite,
@@ -28,10 +33,11 @@ import {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Physiq <convites@physiqcalc.com.br>";
-const SITE_URL = Deno.env.get("SITE_URL") ?? "https://physiqcalc.com.br";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "";
+const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 const SCHEMAS: Schema[] = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const log = criarLog("convites", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -63,8 +69,12 @@ const STATUS_DO_ERRO: Record<string, number> = {
   muitos_convites: 429, conta_real_no_staging: 403, convite_nao_pendente: 409,
 };
 
-async function enviarEmail(para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
-  if (!RESEND_API_KEY) return { id: null, erro: "sem_resend" };
+async function enviarEmail(schema: Schema, para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
+  const falta = faltaNoEmail(schema, { resendApiKey: RESEND_API_KEY, resendFrom: RESEND_FROM, siteUrl: SITE_URL });
+  if (falta.length) {
+    log.erro({ codigo: "sem_configuracao", schema, msg: `falta ${falta.join(", ")}` });
+    return { id: null, erro: "sem_resend" };
+  }
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -73,12 +83,12 @@ async function enviarEmail(para: string, assunto: string, html: string, texto: s
     });
     const corpo = await r.json().catch(() => ({})) as Record<string, unknown>;
     if (!r.ok) {
-      console.error("convites: resend", r.status, JSON.stringify(corpo).slice(0, 300));
+      log.erro({ codigo: "resend_falhou", schema, status: r.status, externo: { resend_erro: corpo.name } });
       return { id: null, erro: `resend_${r.status}` };
     }
     return { id: typeof corpo.id === "string" ? corpo.id : null, erro: null };
   } catch (e) {
-    console.error("convites: resend", String(e));
+    log.excecao(e, { codigo: "resend_rede", schema });
     return { id: null, erro: "resend_rede" };
   }
 }
@@ -141,14 +151,14 @@ Deno.serve(async (req) => {
       link: linkDoConvite(schema, SITE_URL),
       paraTeste: destino.teste ? String(r.email) : null,
     };
-    const envio = await enviarEmail(destino.para, assuntoDoConvite(dados), htmlDoConvite(dados), textoDoConvite(dados));
+    const envio = await enviarEmail(schema, destino.para, assuntoDoConvite(dados), htmlDoConvite(dados), textoDoConvite(dados));
     return json({
       ok: true, convite_id: r.convite_id, reenvio: r.reenvio === true, email: r.email, papeis: r.papeis,
       email_enviado: envio.erro === null, email_teste: destino.teste, email_id: envio.id, erro_email: envio.erro,
       link: dados.link,
     }, 200, origin);
   } catch (e) {
-    console.error("convites erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao, schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });

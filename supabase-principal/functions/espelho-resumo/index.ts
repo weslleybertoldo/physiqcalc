@@ -6,7 +6,10 @@
 // 200 → ResumoNucleo · 404 usuario_nao_encontrado · 401 segredo_invalido.
 // verify_jwt = false. Publicar (a partir do physiqcalc):
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions espelho-resumo false
+// hml-10 (H-26): o catch final avisa (log.excecao, _shared/log.ts) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { resumoDaPessoa } from "../_shared/resumo.ts";
 import { segredoConfere } from "../_shared/resumo-regras.ts";
 
@@ -15,6 +18,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 const SCHEMAS = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const log = criarLog("espelho-resumo", { avisar: avisarErro });
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
@@ -34,7 +38,7 @@ Deno.serve(async (req) => {
     if (!resumo) return json({ error: "usuario_nao_encontrado" }, 404);
     return json(resumo);
   } catch (e) {
-    console.error("espelho-resumo", String((e as { message?: string })?.message || e));
+    log.excecao(e, { schema });
     return json({ error: "erro_interno" }, 500);
   }
 });

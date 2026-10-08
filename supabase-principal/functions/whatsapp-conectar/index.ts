@@ -11,7 +11,11 @@
 //   "desconectar" marca 'desconectado' e limpa QR/número; o agente derruba a sessão na próxima rodada.
 //   "teste"       enfileira UMA mensagem de teste pro número conectado (prova viva do fim a fim, sem depender de paciente).
 // Quem envia de verdade é o agente no celular (ver whatsapp-agente + ~/whatsapp-pn/agente.js no Moto G7).
+// Physiq hml-10 (H-26, H-48): o erro inesperado vai para o log (_shared/log.ts: nome, código do Postgres e a mensagem limpa) e
+// avisa; a resposta à tela leva só o código (antes o texto cru do erro ia junto; a tela sempre leu só o código).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -21,6 +25,7 @@ const SCHEMAS = ["public", "staging"];
 const SITE: Record<string, string> = { public: "https://physiqcalc.com.br", staging: "https://physiqcalc-staging.vercel.app" };
 // o agente republica o QR a cada ~20 s; passou disso sem ping, a tela mostra "celular fora do ar"
 const PEDIDO_VALIDO_MIN = 5;
+const log = criarLog("whatsapp-conectar", { avisar: avisarErro });
 
 // Physiq W2 (spec 7.2): o site e o app do Physiq também chamam (as origens do Nutri continuam)
 const ORIGEM_PHYSIQ = /^(https:\/\/(www\.)?physiqcalc\.com\.br|https:\/\/physiqcalc-staging\.vercel\.app|https:\/\/localhost|capacitor:\/\/localhost)$/;
@@ -47,7 +52,7 @@ function cors(origin: string | null): Record<string, string> {
 }
 const json = (body: unknown, status: number, origin: string | null) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...cors(origin) } });
-const erro = (codigo: string, status: number, origin: string | null, detalhe?: unknown) => json({ error: codigo, detalhe }, status, origin);
+const erro = (codigo: string, status: number, origin: string | null) => json({ error: codigo }, status, origin);
 
 // E.164 COM o "+" — é o formato que Configurações (W35) grava em dados_profissionais.whatsapp_e164 e que
 // formatarWhatsapp() espera na tela. O agente tira o "+" só na hora de montar o endereço do WhatsApp.
@@ -149,7 +154,7 @@ Deno.serve(async (req) => {
     if (em) throw em;
     return json({ mensagem: msg, repetida: false }, 200, origin);
   } catch (e) {
-    console.error("whatsapp-conectar", acao, String(e));
-    return erro("erro_interno", 500, origin, String(e).slice(0, 300));
+    log.excecao(e, { acao, schema });
+    return erro("erro_interno", 500, origin);
   }
 });

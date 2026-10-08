@@ -19,7 +19,11 @@
 // verify_jwt = false (validado aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pos-login false
 // Segredos: TREINO_URL, ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (W7b) (+ os automáticos).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (da vincular-professor do Treino, só o status e o código do erro — nunca o
+// corpo); o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import {
   claimsDoJwt,
   contaLegadoCalc,
@@ -44,6 +48,7 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const TREINO_URL = (Deno.env.get("TREINO_URL") || "").replace(/\/+$/, "");
 const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 const SCHEMAS = ["public", "staging"];
+const log = criarLog("pos-login", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -76,6 +81,16 @@ interface LegadoTreino {
   aluno: { professor_codigo: string | null } | null;
 }
 
+/** hml-10 (H-24): o código de erro da resposta da vincular-professor ({ error }) — só ele vai para o log, nunca o corpo. */
+function codigoDoTreino(texto: string): unknown {
+  try {
+    const c = JSON.parse(texto) as { error?: unknown; erro?: unknown } | null;
+    return c?.error ?? c?.erro ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function perguntarAoTreino(schema: string, corpo: Record<string, unknown>): Promise<LegadoTreino | null> {
   if (!TREINO_URL || ESPELHO_SEGREDO.length < 32) return null;
   const r = await fetch(`${TREINO_URL}/functions/v1/vincular-professor`, {
@@ -84,7 +99,8 @@ async function perguntarAoTreino(schema: string, corpo: Record<string, unknown>)
     body: JSON.stringify({ modo: "servidor", ...corpo }),
   });
   if (r.status !== 200) {
-    console.error("pos-login: vincular-professor respondeu", r.status, (await r.text()).slice(0, 300));
+    const codigo = codigoDoTreino(await r.text());
+    log.erro({ codigo: "treino_respondeu", schema, acao: "vincular_professor", status: r.status, externo: { treino_erro: codigo } });
     return null;
   }
   return await r.json();
@@ -120,14 +136,14 @@ Deno.serve(async (req) => {
       // physiq_tem_senha mora no schema public (bloco compartilhado: o Auth é um só)
       const dbPublic = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: "public" }, auth: { persistSession: false } });
       const { data: temSenha, error: ets } = await dbPublic.rpc("physiq_tem_senha", { p_user: user.id });
-      if (ets) console.error("pos-login: physiq_tem_senha", ets.message);
+      if (ets) log.excecao(ets, { codigo: "tem_senha_falhou", schema });
       if (deveTrocarSenha({ loginGoogle, temIdentidadeEmail: true, temSenha: temSenha === true, jaTrocou: false })) {
         // W8b: a senha que o profissional criou (provisória) também deixa de valer — some a marca de "crie a sua senha"
         const { error } = await authAdmin.auth.admin.updateUserById(user.id, {
           password: senhaAleatoria(),
           app_metadata: { ...app, senha_trocada_google_em: new Date().toISOString(), senha_provisoria: false },
         });
-        if (error) console.error("pos-login: P25", error.message);
+        if (error) log.excecao(error, { codigo: "trocar_senha_falhou", schema });
         else saida.senha_trocada = true;
       }
     }
@@ -136,13 +152,13 @@ Deno.serve(async (req) => {
     // cria a senha no Perfil › Conta). Só o Google: um login por senha feito direto no Auth não destrava o bloqueio "de vez".
     if (loginGoogle) {
       const { data: destravou, error: ed } = await db.rpc("login_destravar", { p_email: email });
-      if (ed) console.error("pos-login: destravar", ed.message);
+      if (ed) log.excecao(ed, { codigo: "destravar_falhou", schema });
       saida.destravou = destravou === true;
     }
 
     // 2. convites pendentes do e-mail confirmado
     const { data: conv, error: ec } = await db.rpc("aceitar_convites_do_email", { p_user: user.id, p_email: email });
-    if (ec) console.error("pos-login: convites", ec.message);
+    if (ec) log.excecao(ec, { codigo: "convites_falhou", schema });
     saida.convites = conv ?? { aceitos: 0, recusados: [] };
 
     // 3. ponte do Calc (não trava o login se o Treino estiver fora do ar)
@@ -201,16 +217,16 @@ Deno.serve(async (req) => {
         }
       }
     } catch (e) {
-      console.error("pos-login: ponte do Calc", String((e as { message?: string })?.message || e));
+      log.excecao(e, { codigo: "ponte_do_calc_falhou", schema });
       legado.erro = "ponte_indisponivel";
     }
     saida.legado = legado;
 
     // W7b: saiu do app (convite ou ponte do Calc encerraram a matrícula do app) → cancela a assinatura do app no Mercado Pago
     try {
-      saida.assinatura_app = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), user.id, "vinculou_profissional");
+      saida.assinatura_app = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), user.id, "vinculou_profissional", log);
     } catch (e) {
-      console.error("pos-login: cancelar assinatura do app", String((e as { message?: string })?.message || e));
+      log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema });
     }
 
     // 4. situação atualizada (com o token da pessoa: a função lê auth.uid())
@@ -224,7 +240,7 @@ Deno.serve(async (req) => {
     saida.situacao = situacao;
     return json(saida, 200, origin);
   } catch (e) {
-    console.error("pos-login erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });

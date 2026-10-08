@@ -12,6 +12,8 @@
 // 200 → { ok: true, ... } · 401 sem login · 403 quem não é master · 4xx { ok: false, erro } (a tela traduz).
 // verify_jwt = true. Publicar:  scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions master-contas true
 // Segredos: MP_ACCESS_TOKEN_PROD/_TEST (+ os automáticos).
+// hml-10 (H-24, H-26): o log é o do contexto (c.log, criado pela master-porta com o nome desta função); o catch final também
+// mora lá (avisa e devolve o mesmo 500).
 import { credencialDoSchema, mpFetch } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { ehAcaoConta, ehUuid, idsDe, lerPedidoCriarConta } from "../_shared/master-regras.ts";
@@ -60,7 +62,7 @@ async function garantirLogin(c: Contexto, email: string, nome: string, senha: st
     email, email_confirm: true, user_metadata: { full_name: nome }, ...(senha ? { password: senha } : {}),
   });
   if (error || !data?.user) {
-    console.error("master-contas: criar login", String(error?.message || error));
+    c.log.excecao(error, { codigo: "criar_login_falhou", schema: c.schema, acao: "criar" });
     return { erro: "erro_criar_login" };
   }
   return { id: data.user.id, criado: true };
@@ -90,7 +92,7 @@ servir("master-contas", async (c) => {
           const valor = Number((r.conta as Record<string, unknown> | undefined)?.valor_mensal ?? 0) || null;
           r.efeitos = await efeitosDoPlano(c, String(corpo.conta_id), valor);
         } catch (e) {
-          console.error("master-contas: efeitos do plano", String((e as { message?: string })?.message || e));
+          c.log.excecao(e, { codigo: "efeitos_do_plano_falhou", schema: c.schema, acao, ref: String(corpo.conta_id) });
           r.efeitos = { erro: "mp" };
         }
       }
@@ -138,7 +140,7 @@ servir("master-contas", async (c) => {
         let falhas = 0;
         for (const uid of enc) {
           try {
-            const s = await cancelarAssinaturasDoAppEncerrado(c.db, credencialDoSchema(c.schema), uid, "vinculou_profissional");
+            const s = await cancelarAssinaturasDoAppEncerrado(c.db, credencialDoSchema(c.schema), uid, "vinculou_profissional", c.log);
             canceladas += s.canceladas;
             falhas += s.falhas;
           } catch {

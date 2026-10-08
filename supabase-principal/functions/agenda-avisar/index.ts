@@ -15,10 +15,15 @@
 // verify_jwt = true (chamada com o login da pessoa). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions agenda-avisar true
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL (+ os automáticos).
+// hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do Resend, só o status e o código do erro — nunca o corpo); sem
+// reserva com valor de produção (sem RESEND_FROM ou, na produção, sem SITE_URL o e-mail não sai: o mesmo "sem_resend" de sempre,
+// com a reserva desfeita, + log.erro); o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { origemPermitida } from "../_shared/login-regras.ts";
 import type { Schema } from "../_shared/convites-regras.ts";
-import { criarFreio } from "../_shared/enviar-aluno-regras.ts";
+import { criarFreio, faltaNoEmail } from "../_shared/enviar-aluno-regras.ts";
 import {
   assuntoDaAgenda,
   consultasComDetalhes,
@@ -36,10 +41,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Physiq <convites@physiqcalc.com.br>";
-const SITE_URL = Deno.env.get("SITE_URL") ?? "https://physiqcalc.com.br";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "";
+const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 const SCHEMAS: Schema[] = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const log = criarLog("agenda-avisar", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -55,8 +61,12 @@ const json = (body: unknown, status: number, origin: string | null) =>
 
 const permitido = criarFreio(60, 60 * 60_000);
 
-async function enviarEmail(para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
-  if (!RESEND_API_KEY) return { id: null, erro: "sem_resend" };
+async function enviarEmail(schema: Schema, para: string, assunto: string, html: string, texto: string): Promise<{ id: string | null; erro: string | null }> {
+  const falta = faltaNoEmail(schema, { resendApiKey: RESEND_API_KEY, resendFrom: RESEND_FROM, siteUrl: SITE_URL });
+  if (falta.length) {
+    log.erro({ codigo: "sem_configuracao", schema, msg: `falta ${falta.join(", ")}` });
+    return { id: null, erro: "sem_resend" };
+  }
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -65,12 +75,12 @@ async function enviarEmail(para: string, assunto: string, html: string, texto: s
     });
     const corpo = await r.json().catch(() => ({})) as Record<string, unknown>;
     if (!r.ok) {
-      console.error("agenda-avisar: resend", r.status, JSON.stringify(corpo).slice(0, 300));
+      log.erro({ codigo: "resend_falhou", schema, status: r.status, externo: { resend_erro: corpo.name } });
       return { id: null, erro: `resend_${r.status}` };
     }
     return { id: typeof corpo.id === "string" ? corpo.id : null, erro: null };
   } catch (e) {
-    console.error("agenda-avisar: resend", String(e));
+    log.excecao(e, { codigo: "resend_rede", schema });
     return { id: null, erro: "resend_rede" };
   }
 }
@@ -78,21 +88,21 @@ async function enviarEmail(para: string, assunto: string, html: string, texto: s
 type Cliente = ReturnType<typeof createClient>;
 
 /** Status, reagendamentos e mês das consultas reservadas + as regras do profissional (só leitura; erro → sem "Reagendar"). */
-async function detalhesDaReserva(db: Cliente, ids: string[]): Promise<{ detalhes: unknown[]; regras: RegrasDoReagendamento | null }> {
+async function detalhesDaReserva(db: Cliente, ids: string[], schema: Schema): Promise<{ detalhes: unknown[]; regras: RegrasDoReagendamento | null }> {
   if (!ids.length) return { detalhes: [], regras: null };
   try {
     const { data, error } = await db.from("agendamentos").select("id, status, reagendamentos, mes_referencia, nutricionista_id").in("id", ids);
     if (error || !Array.isArray(data) || !data.length) {
-      if (error) console.error("agenda-avisar: detalhes", error.message);
+      if (error) log.excecao(error, { codigo: "detalhes_falhou", schema });
       return { detalhes: [], regras: null };
     }
     const prof = (data[0] as { nutricionista_id?: string | null }).nutricionista_id;
     if (!prof) return { detalhes: data, regras: null };
     const { data: regras, error: er } = await db.rpc("agenda_regras_de", { p_prof: prof });
-    if (er) console.error("agenda-avisar: regras", er.message);
+    if (er) log.excecao(er, { codigo: "regras_falhou", schema });
     return { detalhes: data, regras: er ? null : regrasDoReagendamento(regras) };
   } catch (e) {
-    console.error("agenda-avisar: detalhes", String(e));
+    log.excecao(e, { codigo: "detalhes_falhou", schema });
     return { detalhes: [], regras: null };
   }
 }
@@ -143,7 +153,7 @@ Deno.serve(async (req) => {
     const email = String(r.para ?? "");
     const ids = (Array.isArray(r.consultas) ? r.consultas : []).map((c) => String((c as { id?: unknown })?.id ?? "")).filter((id) => UUID.test(id));
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema }, auth: { persistSession: false } });
-    const { detalhes, regras } = await detalhesDaReserva(db, ids);
+    const { detalhes, regras } = await detalhesDaReserva(db, ids, schema);
     const consultas = consultasComDetalhes(consultasDoEmail(r.consultas), detalhes);
     const destino = destinoDoEmailAgenda(schema, email);
     const dados = {
@@ -155,11 +165,11 @@ Deno.serve(async (req) => {
       paraTeste: destino.teste ? email : null,
       regras,
     };
-    const envio = await enviarEmail(destino.para, assuntoDaAgenda(dados), htmlDaAgenda(dados), textoDaAgenda(dados));
+    const envio = await enviarEmail(schema, destino.para, assuntoDaAgenda(dados), htmlDaAgenda(dados), textoDaAgenda(dados));
     if (envio.erro !== null && ids.length) {
       // o e-mail não saiu: desfaz a reserva (a próxima consulta marcada tenta de novo, sem esperar os 10 minutos)
       const { error: ef } = await db.rpc("agenda_reserva_email_falhou", { p_ids: ids });
-      if (ef) console.error("agenda-avisar: desfazer reserva", ef.message);
+      if (ef) log.excecao(ef, { codigo: "desfazer_reserva_falhou", schema });
     }
     return json({
       ok: true,
@@ -173,7 +183,7 @@ Deno.serve(async (req) => {
       },
     }, 200, origin);
   } catch (err) {
-    console.error("agenda-avisar erro", String((err as { message?: string })?.message || err));
+    log.excecao(err, { schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });

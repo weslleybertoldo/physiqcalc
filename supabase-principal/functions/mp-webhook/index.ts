@@ -16,9 +16,13 @@
 // dele; sem, produção e depois teste) — Pix de sandbox com referência "public" não paga nada no public, e o de produção não
 // vale no staging ("outro_ambiente": não grava nem repassa). O id do aviso só vai à API do MP no formato que o MP manda
 // (idDoAvisoValido), e erro de banco/rede ou o MP fora → 500 (antes era 200 e o aviso se perdia).
+// Physiq hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts — do repasse, só o status e o código que a mp-webhook-conta
+// devolveu (nunca o corpo); o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
 import { idDoAvisoValido } from "../_shared/cobranca-regras.ts";
 import { buscarNoMp, type Schema } from "../_shared/cobranca-mp.ts";
+import { criarLog } from "../_shared/log.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -28,6 +32,7 @@ const STATUS = ["pending", "authorized", "paused", "cancelled"];
 const VALOR_MENSAL = 80;
 const DIAS_PIX = 30;
 const PIX_PREFIXO = "physiqnutri-pix:";
+const log = criarLog("mp-webhook", { avisar: avisarErro });
 
 const resposta = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
@@ -143,6 +148,16 @@ async function aplicarPagamentoPix(pay: any, schema: Schema): Promise<string> {
 }
 
 // ---- W28: repasse para a mp-webhook-conta (mesmo projeto) ----
+/** hml-10 (H-24): da resposta da mp-webhook-conta ({ ok, resultado }) só o código vai para o log — nunca o corpo. */
+function resultadoDoRepasse(texto: string): string | null {
+  try {
+    const r = (JSON.parse(texto) as { resultado?: unknown } | null)?.resultado;
+    return typeof r === "string" ? r : null;
+  } catch {
+    return null;
+  }
+}
+
 async function repassarParaConta(topic: string, id: string, schema: string): Promise<boolean> {
   const url = `${SUPABASE_URL}/functions/v1/mp-webhook-conta?schema=${schema}&origem=nutri`;
   for (let tentativa = 0; tentativa < 2; tentativa++) {
@@ -151,35 +166,47 @@ async function repassarParaConta(topic: string, id: string, schema: string): Pro
       const t = setTimeout(() => ctrl.abort(), 20000);
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: topic, data: { id } }), signal: ctrl.signal });
       clearTimeout(t);
-      const txt = await res.text();
-      console.log("mp-webhook repasse conta", topic, id, schema, res.status, txt.slice(0, 200));
-      if (res.ok) return true;
+      const resultado = resultadoDoRepasse(await res.text());
+      if (res.ok) {
+        log.info({ codigo: "repasse_conta", schema, acao: topic, ref: id, status: res.status, resultado });
+        return true;
+      }
+      log.erro({ codigo: "repasse_respondeu", schema, acao: topic, ref: id, status: res.status, externo: { principal_erro: resultado } });
     } catch (e) {
-      console.error("mp-webhook repasse conta falhou", topic, id, String((e as { message?: string })?.message || e));
+      log.excecao(e, { codigo: "repasse_falhou", schema, acao: topic, ref: id });
     }
     await new Promise((r) => setTimeout(r, 1500));
   }
   return false;
 }
 
+/** "erro_insert:23505" → resultado "erro_insert" + pg "23505" (o log só aceita [a-z0-9_] no resultado). */
+function resultadoParaOLog(resultado: string): { resultado: string; pg: string | null } {
+  const [codigo, pg] = resultado.split(":");
+  return { resultado: codigo, pg: pg ?? null };
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("ok", { status: 200 });
+  // hml-10: o que o catch final leva ao log (o ambiente e o tópico do aviso, quando já se sabe)
+  let schema: Schema | null = null;
+  let topic = "";
+  const ctx: { schema: string | null } = { schema: null };
   try {
     const url = new URL(req.url);
     // hml-06: o ?schema= (a notification_url da mp-assinar sempre trouxe) restringe a credencial; sem ele, produção e depois teste
     const bruto = (url.searchParams.get("schema") || "").toLowerCase();
-    const schema = SCHEMAS.includes(bruto) ? (bruto as Schema) : null;
+    schema = SCHEMAS.includes(bruto) ? (bruto as Schema) : null;
     let body: any = {};
     try { body = await req.json(); } catch { body = {}; }
-    const topic = String(body?.type || body?.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
+    topic = String(body?.type || body?.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
     const id = String(body?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     // hml-06 (H-19): o id vai no caminho da API do MP — fora do formato que o MP manda, nem chega a ele
     if (id && TOPICOS.includes(topic) && !idDoAvisoValido(topic, id)) {
-      console.log("mp-webhook", topic, "id_invalido");
+      log.info({ codigo: "aviso_mp", schema, acao: topic, resultado: "id_invalido" });
       return resposta({ ok: true, resultado: "id_invalido" });
     }
     let resultado = "ignorado";
-    const ctx: { schema: string | null } = { schema: null };
     if (id) {
       if (topic === "subscription_preapproval" || topic === "preapproval") {
         resultado = await sincronizarPreapproval(id, schema, ctx);
@@ -203,7 +230,7 @@ Deno.serve(async (req) => {
         }
       }
     }
-    console.log("mp-webhook", topic, id, resultado);
+    log.info({ codigo: "aviso_mp", schema: ctx.schema ?? schema, acao: topic || null, ref: id || null, ...resultadoParaOLog(resultado) });
     // W28: o mesmo aviso vai para a cobrança das contas (só o que é do PhysiqNutri e do ambiente da credencial)
     if (id && ctx.schema && SCHEMAS.includes(ctx.schema)) {
       const repasse = await repassarParaConta(topic, id, ctx.schema);
@@ -212,7 +239,7 @@ Deno.serve(async (req) => {
     return resposta({ ok: true, resultado });
   } catch (e) {
     // hml-06: 500 → o MP manda o aviso de novo (antes era 200 e o aviso se perdia; as pontas são idempotentes)
-    console.error("mp-webhook erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao: topic || null, schema: ctx.schema ?? schema });
     return resposta({ ok: false, resultado: "erro" }, 500);
   }
 });

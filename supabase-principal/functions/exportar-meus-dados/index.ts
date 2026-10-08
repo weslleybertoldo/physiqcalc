@@ -8,7 +8,11 @@
 // Só age sobre o usuário do JWT (nenhum id vem do corpo). Nada é gravado.
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions exportar-meus-dados true
 // Segredos: TREINO_URL, TREINO_ANON_KEY, ESPELHO_SEGREDO (+ os automáticos).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (da resposta do Treino, só o código); o catch final avisa (log.excecao) e
+// devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import { montarExportacao } from "../_shared/conta-aluno-regras.ts";
 import { chamarTreino } from "../_shared/treino-servidor.ts";
@@ -16,6 +20,7 @@ import { chamarTreino } from "../_shared/treino-servidor.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SCHEMAS = ["public", "staging"];
+const log = criarLog("exportar-meus-dados", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -65,7 +70,7 @@ Deno.serve(async (req) => {
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
     const { data: principal, error } = await db.rpc("exportar_dados_aluno", { p_uid: user.id });
     if (error) throw error;
-    const treino = await chamarTreino(schema, "exportar", user.id);
+    const treino = await chamarTreino(schema, "exportar", user.id, log);
     if (treino.passo === "indisponivel") return json({ ok: false, erro: "treino_indisponivel" }, 502, origin);
     const arquivo = montarExportacao({
       ambiente: schema,
@@ -75,7 +80,7 @@ Deno.serve(async (req) => {
     });
     return json(arquivo, 200, origin);
   } catch (e) {
-    console.error("exportar-meus-dados:", (e as Error)?.message ?? String(e));
+    log.excecao(e, { schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });

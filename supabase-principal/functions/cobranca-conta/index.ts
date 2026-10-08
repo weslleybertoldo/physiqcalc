@@ -23,11 +23,16 @@
 // → mp-webhook-conta?schema=<schema> (a configuração global do app do MP, dos apps antigos, não muda).
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions cobranca-conta true
 // Segredos: MP_ACCESS_TOKEN_PROD (produção), MP_ACCESS_TOKEN_TEST (staging), MP_TEST_PAYER_EMAIL (+ os automáticos).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts — do Mercado Pago, só o status e os códigos (error, cause, status_detail),
+// nunca o corpo; o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import {
   PIX_EXPIRA_HORAS,
   avaliarMudanca,
+  codigosDoMp,
   descricaoCobranca,
   ehFaixa,
   ehPlano,
@@ -68,6 +73,7 @@ const SCHEMAS: Schema[] = ["public", "staging"];
 const SITE: Record<Schema, string> = { public: "https://physiqcalc.com.br", staging: "https://physiqcalc-staging.vercel.app" };
 const ACOES = ["status", "pix_criar", "pix_status", "cartao_pagar", "assinar", "cancelar_assinatura", "mudar_plano",
   "simular_aprovacao", "simular_recorrente"];
+const log = criarLog("cobranca-conta", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -373,7 +379,7 @@ Deno.serve(async (req) => {
         });
         const td = pay?.point_of_interaction?.transaction_data;
         if (st >= 300 || !pay?.id || !td?.qr_code) {
-          console.error("cobranca-conta pix_criar falhou", st, JSON.stringify(pay).slice(0, 400));
+          log.erro({ codigo: "mp_pix_falhou", schema, acao, ref: fatura.id, status: st, externo: codigosDoMp(pay) });
           // SÓ STAGING: o sandbox do MP cai com 500 de vez em quando → Pix simulado (sem QR real) pra manter o fluxo de teste
           if (schema === "staging" && st >= 500) {
             const { data: sim } = await db.from("conta_faturas").update({
@@ -406,7 +412,7 @@ Deno.serve(async (req) => {
       if (body.issuer_id !== undefined && body.issuer_id !== null && body.issuer_id !== "") pedido.issuer_id = body.issuer_id;
       const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, "/v1/payments", { method: "POST", body: JSON.stringify(pedido) });
       if (st >= 300 || !pay?.id) {
-        console.error("cobranca-conta cartao_pagar falhou", st, JSON.stringify(pay).slice(0, 400));
+        log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: fatura.id, status: st, externo: codigosDoMp(pay) });
         await db.from("conta_faturas").delete().eq("id", fatura.id);
         return erro(erroDeCartao(st, pay) ? "cartao_recusado" : "mp_error", erroDeCartao(st, pay) ? 400 : 502, origin,
           { detalhe: String((pay as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
@@ -414,7 +420,8 @@ Deno.serve(async (req) => {
       // o webhook pode ter chegado antes e já gravado o id: segue com a mesma fatura (o id é único)
       await db.from("conta_faturas").update({ mp_payment_id: String(pay.id) }).eq("id", fatura.id).is("mp_payment_id", null);
       // o cartão JÁ foi cobrado: erro de leitura aqui não pode virar 500 (a pessoa clicaria de novo e pagaria 2×) — usa o que tem
-      const lerDepois = (id: string) => buscarFatura(id).catch((e) => (console.error("cobranca-conta: leitura depois da cobrança", e), null));
+      const lerDepois = (id: string) =>
+        buscarFatura(id).catch((e) => (log.excecao(e, { codigo: "leitura_depois_da_cobranca", schema, acao, ref: id }), null));
       const f2 = (await lerDepois(fatura.id)) ?? fatura;
       const r = await aplicarStatus(db, f2, pay, user.id);
       return json({ ok: true, fatura: (await lerDepois(fatura.id)) ?? f2, status: r.status, aplicou: r.aplicou, status_detail: pay.status_detail ?? null }, 200, origin);
@@ -468,7 +475,7 @@ Deno.serve(async (req) => {
         ({ status: st, body: pre } = await pendente());
       }
       if (st >= 300 || !pre?.id) {
-        console.error("cobranca-conta assinar falhou", st, JSON.stringify(pre).slice(0, 400));
+        log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: conta.id, status: st, externo: codigosDoMp(pre) });
         if (erroDeCartao(st, pre)) return erro("cartao_recusado", 400, origin, { detalhe: String((pre as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
         return erro("mp_error", 502, origin, { status_mp: st });
       }
@@ -565,7 +572,7 @@ Deno.serve(async (req) => {
 
     return erro("acao_invalida", 400, origin);
   } catch (e) {
-    console.error("cobranca-conta erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao, schema });
     return erro("erro_interno", 500, origin);
   }
 });

@@ -199,6 +199,29 @@ export function erroDeCartao(status: number, body: unknown): boolean {
   return status === 400 || msg.includes("preapproval creation failed") || msg.includes("card_token") || msg.includes("card token");
 }
 
+/** Os códigos de uma resposta do Mercado Pago que podem ir para o log (o campo `externo` do _shared/log.ts). */
+export interface CodigosDoMp {
+  mp_erro?: unknown;
+  mp_causas?: unknown;
+  mp_status_detail?: unknown;
+}
+
+/**
+ * hml-10 (H-24) — o MP recusou: para o log vão SÓ os códigos da resposta (`error`, os `cause[].code` e o `status_detail`),
+ * nunca o corpo (a resposta do MP pode trazer e-mail, nome e documento de quem paga). O log confere o formato de cada um.
+ */
+export function codigosDoMp(corpo: unknown): CodigosDoMp {
+  const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
+  const causas = (Array.isArray(c.cause) ? c.cause : [])
+    .map((x) => (x && typeof x === "object" ? (x as { code?: unknown }).code : null))
+    .filter((x) => x !== null && x !== undefined);
+  return {
+    ...(c.error !== undefined && c.error !== null ? { mp_erro: c.error } : {}),
+    ...(causas.length ? { mp_causas: causas } : {}),
+    ...(c.status_detail !== undefined && c.status_detail !== null ? { mp_status_detail: c.status_detail } : {}),
+  };
+}
+
 // ───────────────────────── avisos do Mercado Pago (hml-06, H-19) ─────────────────────────
 // Cópia igual em supabase/functions/mp-webhook/regras.ts (o Treino não enxerga este _shared); o Vitest
 // (src/nucleo/cobranca/avisosMp.test.ts) confere que as 2 dão o mesmo resultado.

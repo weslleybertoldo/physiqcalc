@@ -14,7 +14,10 @@
 // antigo é quem aplica e aqui nada muda. Mesma idempotência (mp_payment_id único; aplicar uma vez por fatura).
 // Publicar SÓ ASSIM: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-webhook-conta false
 // Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts; o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import {
   faturaDaReferenciaLegada,
   lerReferencia,
@@ -41,6 +44,7 @@ import {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SCHEMAS: Schema[] = ["public", "staging"];
+const log = criarLog("mp-webhook-conta", { avisar: avisarErro });
 
 const ok = (resultado: string) => new Response(JSON.stringify({ ok: true, resultado }), { status: 200, headers: { "Content-Type": "application/json" } });
 
@@ -193,10 +197,14 @@ async function tratarCobrancaAutorizada(schema: Schema, id: string): Promise<str
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return ok("ignorado_metodo");
+  // hml-10: o que o catch final leva ao log (o ambiente e o tópico do aviso, quando já se sabe)
+  let schemaDoLog: Schema | null = null;
+  let topico = "";
   try {
     const url = new URL(req.url);
     const schema = (url.searchParams.get("schema") || "public").toLowerCase() as Schema;
     if (!SCHEMAS.includes(schema)) return ok("schema_invalido");
+    schemaDoLog = schema;
     if (!tokenMp(credencialDoSchema(schema))) return ok("mp_nao_configurado");
     let corpo: Record<string, unknown> = {};
     try {
@@ -205,18 +213,18 @@ Deno.serve(async (req) => {
       corpo = {}; // IPN antigo: tudo na query
     }
     const dados = (corpo.data ?? {}) as Record<string, unknown>;
-    const topico = String(corpo.type || corpo.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
+    topico = String(corpo.type || corpo.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
     const id = String(dados.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return ok("sem_id");
     let resultado = "topico_ignorado";
     if (topico === "payment") resultado = await tratarPagamento(schema, id);
     else if (topico === "subscription_preapproval" || topico === "preapproval") resultado = await tratarAssinatura(schema, id);
     else if (topico === "subscription_authorized_payment" || topico === "authorized_payment") resultado = await tratarCobrancaAutorizada(schema, id);
-    console.log("mp-webhook-conta", schema, topico, id, resultado);
+    log.info({ codigo: "aviso_mp", schema, acao: topico || null, ref: id, resultado });
     return ok(resultado);
   } catch (e) {
     // hml-06: 500 → o MP (ou o repasse do Treino/Nutri) manda o aviso de novo; antes era 200 e o aviso se perdia
-    console.error("mp-webhook-conta erro", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao: topico || null, schema: schemaDoLog });
     return new Response(JSON.stringify({ ok: false, resultado: "erro" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 });

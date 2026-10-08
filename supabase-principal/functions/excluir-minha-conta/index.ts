@@ -30,7 +30,11 @@
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions excluir-minha-conta true
 // Segredos: TREINO_URL, TREINO_ANON_KEY, ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (o caminho novo cancela a
 // cobrança automática) (+ os automáticos).
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (o mesmo log vai para o caminho do profissional e para a conversa com o
+// Treino — o aviso de erro diz esta função); o catch final avisa (log.excecao) e devolve o mesmo 500.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import { STATUS_DA_RECUSA, confirmacaoValida, pegadaBloqueia } from "../_shared/conta-aluno-regras.ts";
 import { chamarTreino } from "../_shared/treino-servidor.ts";
@@ -42,6 +46,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SCHEMAS = ["public", "staging"];
 const BUCKET_FOTOS: Record<string, string> = { public: "fotos-perfil", staging: "fotos-perfil-staging" };
+const log = criarLog("excluir-minha-conta", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -104,7 +109,7 @@ Deno.serve(async (req) => {
     const dbStaging = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
     const { data: pegada, error: epg } = await dbStaging.rpc("pegada_em_producao", { p_uid: user.id });
     if (epg) {
-      console.error("excluir-minha-conta: pegada_em_producao", epg.message);
+      log.excecao(epg, { codigo: "pegada_em_producao_falhou", schema });
       return json({ ok: false, erro: "erro_interno" }, 500, origin);
     }
     if (pegadaBloqueia(pegada)) return dadosEmProducao(origin);
@@ -116,7 +121,7 @@ Deno.serve(async (req) => {
   if (fluxoDoPedido(pedido) === "profissional") {
     if (!permitido(`profissional:${schema}:${user.id}`, 20)) return json({ ok: false, erro: "rate_limited" }, 429, origin);
     const r = await excluirContaProfissionalNaBorda({
-      schema: schema as Schema, user, authAdmin, simular: pedido.simular === true, confirmacao: pedido.confirmacao,
+      schema: schema as Schema, user, authAdmin, simular: pedido.simular === true, confirmacao: pedido.confirmacao, log,
     });
     return json(r.corpo, r.status, origin);
   }
@@ -141,7 +146,7 @@ Deno.serve(async (req) => {
     if (ep) throw ep;
     const conferencia = (pre ?? {}) as Record<string, unknown>;
     if (conferencia.ok !== true) return recusa(String(conferencia.erro ?? "erro_interno"), origin, { motivo: conferencia.motivo ?? null });
-    const treinoPre = await chamarTreino(schema, "conferir", user.id);
+    const treinoPre = await chamarTreino(schema, "conferir", user.id, log);
     if (treinoPre.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
     if (treinoPre.passo === "conta_real") return dadosEmProducao(origin);
     if (treinoPre.passo === "indisponivel") return recusa("treino_indisponivel", origin);
@@ -155,7 +160,7 @@ Deno.serve(async (req) => {
     }
 
     // 2. Banco do Treino (dados de treino + login de lá)
-    const treino = await chamarTreino(schema, "excluir", user.id);
+    const treino = await chamarTreino(schema, "excluir", user.id, log);
     if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
     if (treino.passo === "conta_real") return dadosEmProducao(origin);
     if (treino.passo === "indisponivel") return recusa("treino_indisponivel", origin);
@@ -173,7 +178,7 @@ Deno.serve(async (req) => {
     for (const [bucket, caminhos] of porBucket) {
       for (let i = 0; i < caminhos.length; i += 100) {
         const { data: rem, error: er } = await authAdmin.storage.from(bucket).remove(caminhos.slice(i, i + 100));
-        if (er) console.error("excluir-minha-conta: storage", bucket, er.message);
+        if (er) log.excecao(er, { codigo: "storage_falhou", schema, ref: bucket });
         arquivosApagados += rem?.length ?? 0;
       }
     }
@@ -183,7 +188,7 @@ Deno.serve(async (req) => {
     const caminhosFoto = (fotos ?? []).filter((f) => f?.name).map((f) => `${user.id}/${f.name}`);
     if (caminhosFoto.length) {
       const { data: rem, error: er } = await authAdmin.storage.from(bucketFoto).remove(caminhosFoto);
-      if (er) console.error("excluir-minha-conta: foto", er.message);
+      if (er) log.excecao(er, { codigo: "foto_falhou", schema });
       arquivosApagados += rem?.length ?? 0;
     }
 
@@ -197,7 +202,7 @@ Deno.serve(async (req) => {
       mantem: { principal: feito.mantem ?? {}, treino: t?.mantem ?? null },
     }, 200, origin);
   } catch (e) {
-    console.error("excluir-minha-conta:", (e as Error)?.message ?? String(e));
+    log.excecao(e, { acao: simular ? "simular" : "excluir", schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });

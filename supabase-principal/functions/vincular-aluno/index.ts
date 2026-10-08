@@ -23,7 +23,10 @@
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions vincular-aluno false
 // Segredos: ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (cancelar a assinatura do app) (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
 // pelo espelho) — e a fila espelho_pendencias leva a mudança para quem já tem vínculo.
+// hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts; os catches que devolvem 500 avisam (log.excecao) com a resposta de antes.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { criarLog } from "../_shared/log.ts";
 import { emailConfirmado, emailDeTeste, origemPermitida, segredoConfere } from "../_shared/login-regras.ts";
 import { credencialDoSchema, type Schema } from "../_shared/cobranca-mp.ts";
 import { appDaPessoa, cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
@@ -33,6 +36,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 const SCHEMAS = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const log = criarLog("vincular-aluno", { avisar: avisarErro });
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -85,7 +89,7 @@ Deno.serve(async (req) => {
       if (error) throw error;
       return json(data ?? { ok: true }, 200, origin);
     } catch (e) {
-      console.error("vincular-aluno (desvincular)", String((e as { message?: string })?.message || e));
+      log.excecao(e, { acao: "desvincular", schema });
       return json({ ok: false, erro: "erro_interno" }, 500, origin);
     }
   }
@@ -123,7 +127,7 @@ Deno.serve(async (req) => {
         modulos: Array.isArray(r.modulos) ? r.modulos : [], profissional: r.profissional, previa: true,
         app: app ? { valor: app.valor, plano: app.plano, assinatura_ativa: app.assinatura_ativa } : null }, 200, origin);
     } catch (e) {
-      console.error("vincular-aluno (previa)", String((e as { message?: string })?.message || e));
+      log.excecao(e, { acao: "previa", schema });
       return json({ ok: false, erro: "erro_interno" }, 500, origin);
     }
   }
@@ -142,14 +146,14 @@ Deno.serve(async (req) => {
     // W7b: saiu do app (a matrícula do app encerrou) → a assinatura do app no Mercado Pago é cancelada (não trava o vínculo)
     let assinaturaApp = { canceladas: 0, falhas: 0 };
     try {
-      assinaturaApp = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), userId, "vinculou_profissional");
+      assinaturaApp = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), userId, "vinculou_profissional", log);
     } catch (e) {
-      console.error("vincular-aluno: cancelar assinatura do app", String((e as { message?: string })?.message || e));
+      log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema, acao: "vincular" });
       assinaturaApp = { canceladas: 0, falhas: 1 };
     }
     return json({ ...r, assinatura_app: assinaturaApp }, 200, origin);
   } catch (e) {
-    console.error("vincular-aluno", String((e as { message?: string })?.message || e));
+    log.excecao(e, { acao: "vincular", schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
   }
 });
