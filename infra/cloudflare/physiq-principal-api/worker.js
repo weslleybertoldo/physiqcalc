@@ -11,6 +11,14 @@
 // cabeçalhos é descartado. O resto do tráfego (auth, rest, storage) segue igual.
 const ORIGIN = "https://hkxvtsbwctxkrqzkkdoz.supabase.co";
 
+// hml-05c (homologação, H-17): as 3 RPCs públicas (sem login: diário e pré-consulta) também levam o IP de verdade — o banco conta
+// os pedidos por hash do IP. Caminho normalizado ("//" e "/" no fim). Teste: node --test infra/cloudflare/physiq-principal-api/worker.test.mjs
+const RPC_PUBLICAS = /^\/rest\/v1\/rpc\/(preconsulta_responder|diario_listar|diario_enviar)$/;
+export function levaIp(caminho) {
+  if (caminho.startsWith("/functions/v1/")) return true;
+  return RPC_PUBLICAS.test(caminho.replace(/\/{2,}/g, "/").replace(/\/+$/, ""));
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -24,7 +32,7 @@ export default {
     headers.delete("x-physiq-proxy");
     const segredo = env && typeof env.PROXY_SEGREDO === "string" ? env.PROXY_SEGREDO : "";
     const ip = request.headers.get("cf-connecting-ip");
-    if (segredo && ip && url.pathname.startsWith("/functions/v1/")) {
+    if (segredo && ip && levaIp(url.pathname)) {
       headers.set("x-physiq-ip", ip);
       headers.set("x-physiq-proxy", segredo);
     }
