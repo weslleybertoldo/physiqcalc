@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Pontos de extensão do site do profissional (spec 11.1): páginas, contadores do menu, fontes da busca,
 // travas, abas/cards/KPIs do perfil do aluno e abas das Configurações. Registro falso: as telas "novas"
@@ -21,9 +21,12 @@ const h = vi.hoisted(() => ({
     plano: { nome: "Plano Treino + Nutrição", modulos: ["treino", "nutricao"], linha: "Renova em 12/08 · cartão", tom: "ok" },
     contadores: { Alunos: 132 },
   },
+  // hml-08: o site (o master abre); o app (APK/AAB) não
+  site: true,
 }));
 
 vi.mock("@/ui/casca/dadosCasca", () => ({ useDadosCasca: () => h.dados }));
+vi.mock("@/lib/plataforma", () => ({ BUILD_DO_APP: false, masterNesteAparelho: () => h.site }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: null, isStaff: true, signOut: async () => {} }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { functions: { invoke: vi.fn(async () => ({ data: { profile: { nome: "Rafael Moura" } }, error: null })) } } }));
 vi.mock("@/integrations/principal/client", () => ({ principalConfigurado: false, principal: {} }));
@@ -121,5 +124,35 @@ describe("site do profissional: páginas e peças registradas entram sozinhas", 
     abrir("/painel/configuracoes");
     expect(await screen.findByTestId("config-Perfil")).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[data-aba-config="perfil"]')?.getAttribute("aria-current")).toBe("page"));
+  });
+});
+
+// hml-08 (H-22): o painel master fica só no site — no app, o menu do usuário fica sem o "Master"
+describe("menu do usuário: o Master só no site (hml-08)", () => {
+  afterEach(() => {
+    h.dados.ehMaster = false;
+    h.site = true;
+  });
+
+  // as ações do menu do usuário também entram na busca Ctrl K (grupo "Conta")
+  async function acoesNaBusca(): Promise<string[]> {
+    abrir("/painel");
+    await screen.findByTestId("paginas-Dashboard");
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    await screen.findByTestId("fonte-alunos");
+    return [...document.querySelectorAll("[data-paleta-busca] [cmdk-item]")].map((e) => e.textContent ?? "");
+  }
+
+  it("site: a conta master tem o item Master", async () => {
+    h.dados.ehMaster = true;
+    expect(await acoesNaBusca()).toEqual(expect.arrayContaining(["Meu app de aluno", "Master", "Sair"]));
+  });
+
+  it("app: o item Master some, mesmo para a conta master", async () => {
+    h.dados.ehMaster = true;
+    h.site = false;
+    const itens = await acoesNaBusca();
+    expect(itens).toEqual(expect.arrayContaining(["Meu app de aluno", "Sair"]));
+    expect(itens).not.toContain("Master");
   });
 });
