@@ -2,7 +2,7 @@ import { PowerSyncContext } from "@powersync/react";
 import { PowerSyncDatabase } from "@powersync/web";
 import { ReactNode, useEffect, useRef, useCallback } from "react";
 import { AppSchema } from "./schema";
-import { connector } from "./connector";
+import { connector, POWERSYNC_LIGADO } from "./connector";
 import { useAuth } from "@/hooks/useAuth";
 
 // Cria o banco SQLite local — singleton, criado uma vez
@@ -39,6 +39,25 @@ async function prepararBancoLocal(userId: string): Promise<void> {
   }
 }
 
+// Build sem PowerSync (staging, H-14): nada sincroniza. Apaga, uma vez por abertura, o que um build anterior tenha baixado
+// neste navegador — antes o staging conectava na instância de produção.
+let bancoSemSyncLimpo = false;
+
+async function limparBancoSemSync(): Promise<void> {
+  if (bancoSemSyncLimpo) return;
+  bancoSemSyncLimpo = true;
+  try {
+    await powerSyncDb.disconnectAndClear();
+  } catch (e) {
+    console.warn("[PowerSync] disconnectAndClear falhou:", e);
+  }
+  try {
+    localStorage.removeItem(CHAVE_DONO_LOCAL);
+  } catch {
+    /* sem armazenamento */
+  }
+}
+
 export function PowerSyncProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -48,6 +67,10 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
 
   const connectWithRetry = useCallback(async () => {
     if (connectedRef.current || !userId) return;
+    if (!POWERSYNC_LIGADO) {
+      await limparBancoSemSync();
+      return;
+    }
 
     try {
       await prepararBancoLocal(userId);
