@@ -225,7 +225,7 @@ def caso_secoes(nav) -> None:
             p.check(sum(1 for x in fora if re.search(r"acima|abaixo|fora", x, re.I)) >= 2, "[secoes] exames: 2 fora da referência em destaque")
         if sid == "anexos":
             c.pg.locator("[data-anexo] [data-btn-ver-anexo]").first.click()
-            ok = c.esperar(lambda: c.pg.locator("[data-iframe-anexo][src*='/object/sign/anexos/']").count() > 0, 30)
+            ok = c.esperar(lambda: c.pg.locator(f"[data-iframe-anexo][src*='/object/sign/{B.bucket_do_ambiente('anexos')}/']").count() > 0, 30)
             p.check(ok, "[secoes] anexo abre pela URL assinada")
             c.print("secao_anexos_ver")
             c.pg.keyboard.press("Escape")

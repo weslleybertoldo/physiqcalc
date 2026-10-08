@@ -171,7 +171,7 @@ def limpar() -> None:
         fotos = [r["path"] for r in q(f"select d.path from {S}.diario_alimentar d join {S}.pacientes p on p.id = d.paciente_id where p.conta_id in ({cs})")]
         if fotos:
             sp = B.service(B.PRINCIPAL_REF)
-            st, r, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/diario", {"prefixes": fotos}, {"apikey": sp, "Authorization": f"Bearer {sp}"})
+            st, r, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/{B.bucket_do_ambiente('diario')}", {"prefixes": fotos}, {"apikey": sp, "Authorization": f"Bearer {sp}"})
             print("fotos do diário apagadas do storage:", st, len(fotos))
         print("apagando:", q(f"""with d as (delete from {S}.diario_alimentar where paciente_id in (select id from {S}.pacientes where conta_id in ({cs})) returning 1),
               r as (delete from {S}.recibos where conta_id in ({cs}) or paciente_id in (select id from {S}.pacientes where conta_id in ({cs})) returning 1),

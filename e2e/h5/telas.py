@@ -450,7 +450,7 @@ def caso_prontuario(nav) -> None:
                     values ('Aluno Leitura H5', '{conta}', '{camila}', '{n2}', 'novo', true) returning id::text""")[0]["id"]
         caminho = f"{camila}/{pid}/{uuid.uuid4()}-exames-h5.pdf"
         corpo = B.B18.pdf_minimo("Exames H5 - teste do modo so leitura")
-        st, r = B.B18.storage(B.token("w13-nutri"), "POST", f"object/anexos/{caminho}", corpo)
+        st, r = B.B18.storage(B.token("w13-nutri"), "POST", f"object/{B.bucket_do_ambiente('anexos')}/{caminho}", corpo)
         assert st == 200, ("upload do anexo", st, r)
         q(f"""insert into {S}.anexos (nutricionista_id, paciente_id, nome, path, tamanho, mime, descricao, conta_id)
               values ('{camila}', '{pid}', 'exames-h5.pdf', '{caminho}', {len(corpo)}, 'application/pdf', 'Teste H5', '{conta}')""")

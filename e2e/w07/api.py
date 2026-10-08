@@ -215,7 +215,8 @@ def conferir(conta: str) -> None:
         lista = ",".join(f"'{x}'" for x in antes["matriculas"])
         m = B.sql_principal(f"select id::text, user_id::text, ativo, config ->> 'conta_excluida_em' as excluida from {B.schema()}.pacientes where id in ({lista})")
         p.check(all(x["user_id"] is None and x["ativo"] is False and x["excluida"] for x in m), f"matrícula desligada do login e desativada ({m})")
-        arq = B.sql_principal(f"select count(*)::int n from storage.objects where bucket_id = 'diario' and name like '{antes['matriculas'][0]}/%'")[0]["n"]
+        bucket_diario = B.bucket_do_ambiente("diario")
+        arq = B.sql_principal(f"select count(*)::int n from storage.objects where bucket_id = '{bucket_diario}' and name like '{antes['matriculas'][0]}/%'")[0]["n"]
         p.check(arq == 0, f"fotos do diário apagadas do Storage ({arq})")
     if antes["principal_user_id"]:
         bucket = "fotos-perfil-staging" if B.schema() == "staging" else "fotos-perfil"

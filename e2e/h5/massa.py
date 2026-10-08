@@ -3,7 +3,7 @@
 Ferreira W13" (Rafael Moura, aluno da Camila e do Lucas):
   · 2 metas do Rafael ("Beber 3 L de água H5" todos os dias; "Caminhar 30 min H5" seg/qua/sex) com ✓ em dias dos últimos 7 (N-40);
   · 2 antropometrias a mais com % de gordura (abr e ago; o peso sobe em ago e a gordura cai — as 2 linhas se separam) — achado 9;
-  · 3 fotos de evolução da Camila (frente, lado, costas) no bucket privado `evolucao` (N-34: ver grande, baixar, editar);
+  · 3 fotos de evolução da Camila (frente, lado, costas) no bucket privado `evolucao` (no staging, `evolucao-staging`; N-34: ver grande, baixar, editar);
   · o aluno "Otávio CPF H5" (sem login) com um CPF válido — a trava de CPF do /c/ (N-57).
 Uso: python3 e2e/h5/massa.py [--limpar]   (staging; tudo marcado com H5 e apagado no --limpar)
 """
@@ -30,7 +30,7 @@ NOME_CPF = "Otávio CPF H5"
 
 def subir(caminho: str, arquivo: Path) -> int:
     sk = B.service(B.PRINCIPAL_REF)
-    req = urllib.request.Request(f"{B.PRINCIPAL_URL}/storage/v1/object/evolucao/{caminho}", data=arquivo.read_bytes(), method="POST",
+    req = urllib.request.Request(f"{B.PRINCIPAL_URL}/storage/v1/object/{B.bucket_do_ambiente('evolucao')}/{caminho}", data=arquivo.read_bytes(), method="POST",
                                  headers={"Authorization": f"Bearer {sk}", "apikey": sk, "Content-Type": "image/jpeg", "x-upsert": "false", "User-Agent": "physiq-e2e-h5"})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
@@ -43,7 +43,7 @@ def apagar_arquivos(caminhos: list[str]) -> int:
     if not caminhos:
         return 200
     sk = B.service(B.PRINCIPAL_REF)
-    st, _, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/evolucao", {"prefixes": caminhos}, {"apikey": sk, "Authorization": f"Bearer {sk}"}, timeout=90)
+    st, _, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/{B.bucket_do_ambiente('evolucao')}", {"prefixes": caminhos}, {"apikey": sk, "Authorization": f"Bearer {sk}"}, timeout=90)
     return st
 
 

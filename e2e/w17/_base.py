@@ -47,3 +47,8 @@ for _k, _e in (("w7-personal", "w7.personal.teste.claude@physiqnutri.app"), ("w7
 DIEGO = "2102f4e1-1950-44d9-be55-94bb9cd6fee3"
 PAULA = "bc3ce350-f197-4e2f-9690-5c2648b1ba42"
 CONTA_W7 = "46a4f549-8daf-4d56-a49c-7b059ceab471"
+
+
+def bucket_do_ambiente(nome: str) -> str:
+    """hml-02b (H-14): no staging os buckets de dado de saúde têm versão própria "-staging"."""
+    return f"{nome}-staging" if ESTADO["schema"] == "staging" else nome

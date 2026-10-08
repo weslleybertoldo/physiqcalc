@@ -100,7 +100,7 @@ def limpar(ids_pac: list[str]) -> dict:
     fotos = q(f"select path from {S}.diario_alimentar where paciente_id in ({lista})")
     if fotos:
         sp = B.service(B.PRINCIPAL_REF)
-        st, r, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/diario", {"prefixes": [f["path"] for f in fotos]},
+        st, r, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/storage/v1/object/{B.bucket_do_ambiente('diario')}", {"prefixes": [f["path"] for f in fotos]},
                           {"apikey": sp, "Authorization": f"Bearer {sp}"})
         assert st in (200, 204), (st, r)
     n = q(f"""with a as (delete from {S}.refeicoes_concluidas where paciente_id in ({lista}) returning 1),

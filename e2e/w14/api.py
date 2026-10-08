@@ -90,6 +90,7 @@ def whatsapp_desfeito(S: str, nutri: str) -> None:
 
 def diario_desfeito(S: str, nutri: str) -> None:
     """F2/F1: o /d/ público e o envio respeitam o diário e o "envio de fotos pelo link" (numa transação desfeita)."""
+    # hml-02b: a função da pasta do Storage é uma por schema (a public.diario_pasta_valida só olha a produção; no staging vale a staging.*)
     r = dryrun(f"""
       with n as (insert into {S}.pacientes (nutricionista_id, nome, ativo, config) values ('{nutri}', 'W14 Diario Teste', true, '{{}}'::jsonb) returning id, link_codigo)
       select jsonb_build_object('id', id, 'codigo', link_codigo) into r from n;
@@ -98,7 +99,7 @@ def diario_desfeito(S: str, nutri: str) -> None:
                                    'lista_ligado', jsonb_typeof({S}.diario_listar(r ->> 'codigo')));
       update {S}.pacientes set config = '{{"diario_alimentar": false}}'::jsonb where id = (r ->> 'id')::uuid;
       r := r || jsonb_build_object('diario_off_abre', {S}.diario_paciente(r ->> 'codigo') is not null,
-        'pasta_diario_off', (select public.diario_pasta_valida('{nutri}/' || (r ->> 'id') || '/00000000-0000-0000-0000-000000000000.jpg')));
+        'pasta_diario_off', (select {S}.diario_pasta_valida('{nutri}/' || (r ->> 'id') || '/00000000-0000-0000-0000-000000000000.jpg')));
       begin
         perform {S}.diario_enviar(r ->> 'codigo', 'x', 'image/jpeg', 10, 'almoco', '', now());
         r := r || jsonb_build_object('diario_off_envio', 'aceitou');
@@ -114,7 +115,7 @@ def diario_desfeito(S: str, nutri: str) -> None:
         perform {S}.diario_enviar(r ->> 'codigo', 'x', 'image/jpeg', 10, 'almoco', '', now());
         r := r || jsonb_build_object('ligado_envio', 'aceitou');
       exception when others then r := r || jsonb_build_object('ligado_envio', sqlerrm); end;
-      r := r || jsonb_build_object('pasta_off', (select public.diario_pasta_valida('{nutri}/' || (r ->> 'id') || '/00000000-0000-0000-0000-000000000000.jpg')));
+      r := r || jsonb_build_object('pasta_off', (select {S}.diario_pasta_valida('{nutri}/' || (r ->> 'id') || '/00000000-0000-0000-0000-000000000000.jpg')));
     """)
     print("   DRYRUN diário:", {k: v for k, v in r.items() if k not in ("id", "codigo")})
     p.check(r.get("ligado") is True and r.get("lista_ligado") == "array", f"[{S}] diário e link ligados (o padrão) → o /d/ abre")

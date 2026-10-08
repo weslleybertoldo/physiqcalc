@@ -81,7 +81,7 @@ def api(estado: str) -> None:
 
     # a foto do diário abre (Storage: o caminho guarda o id da matrícula antiga; quem lê é pela linha do diário)
     for quem, tok in (("aluna", ta), ("profissional", tp)):
-        st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/diario/{I['foto']}", {"expiresIn": 60},
+        st, r, _ = B.http("POST", f"{B.PRINCIPAL_URL}/storage/v1/object/sign/{B.bucket_do_ambiente('diario')}/{I['foto']}", {"expiresIn": 60},
                           {"apikey": B.anon(B.PRINCIPAL_REF), "Authorization": f"Bearer {tok}"})
         p.check(st == 200 and isinstance(r, dict) and (r.get("signedURL") or r.get("signedUrl")), f"[foto] a {quem} abre a foto do diário (HTTP {st})")
 
