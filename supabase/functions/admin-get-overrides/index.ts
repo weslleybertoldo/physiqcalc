@@ -15,7 +15,6 @@ const ALLOWED_ORIGINS = new Set([
   "https://physiqcalc.com.br",
   "https://www.physiqcalc.com.br",
   "https://physiqcalc-staging.vercel.app",
-  "https://physiqcalc.lovable.app",
   "capacitor://localhost",
   "https://localhost",
   "http://localhost:8080",
