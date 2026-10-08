@@ -1,0 +1,434 @@
+{
+  "uuid": "3bdc8fa0-2546-468b-a70c-81138c884c24",
+  "nome": "Face Pull na Polia",
+  "cena": "face_pull_na_polia",
+  "grupo": "Deltóide Posterior",
+  "subgrupo": "Deltoide posterior · trapézio médio · rotadores externos",
+  "padrao_movimento": "crucifixo_invertido",
+  "equipamento": "polia",
+  "variacao": "corda na altura do rosto",
+  "alvos": [
+    "deltoide"
+  ],
+  "auxiliares": [
+    "trapezio",
+    "costas",
+    "biceps",
+    "antebraco"
+  ],
+  "camera": {
+    "az": 145,
+    "el": 12,
+    "dist": 5.0,
+    "alvo": [
+      0,
+      -0.35,
+      1.0
+    ]
+  },
+  "camera_vistas": {
+    "dist": 5.3,
+    "alvo": [
+      0,
+      -0.45,
+      1.05
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, de frente para a polia com a roldana na altura do rosto, segura a corda com uma mão de cada lado, logo antes dos batentes, com as palmas viradas para o chão (pegada pronada). Dá passos para trás até o cabo ficar tenso com os braços esticados na frente do rosto, apontando para a roldana, e os cotovelos virados para os lados. Pés paralelos, na largura do quadril, joelhos levemente dobrados, tronco ereto e cabeça alinhada com a coluna. Começa aproximando as escápulas, ainda com os braços esticados; depois puxa a corda em direção ao rosto abrindo os braços para os lados e dobrando os cotovelos, com os cotovelos na altura dos ombros; no fim gira os ombros para fora, levando os antebraços para cima, até as mãos ficarem dos lados do rosto e o meio da corda perto do rosto, sem encostar. Volta devagar pelo mesmo caminho até os braços esticarem de novo. O tronco, as pernas e os punhos (retos) ficam parados; o cabo vai da roldana até o gancho da corda, quase na horizontal, na frente do rosto.",
+  "cinesiologia": {
+    "plano": "transverso (abdução horizontal do ombro, com o braço na altura do ombro, e flexão do cotovelo), com rotação externa do ombro no fim; cadeia cinética aberta; a resistência vem pelo cabo, que puxa a corda para a frente, na direção da roldana na altura do rosto",
+    "articulacoes": "escápulas (retração no começo da puxada, protração na volta); ombro (abdução horizontal com o braço perpendicular ao tronco e o cotovelo na altura do ombro, depois rotação externa; na volta, rotação interna e adução horizontal); cotovelo (flexão na puxada, extensão na volta); punho reto; tronco ereto, joelhos levemente dobrados e pés paralelos, parados (NSCA, Face Pull (Machine): \"Begin the exercise by first retracting the scapulae with the elbows still fully extended\"; \"Pull the handle toward the face by horizontally abducting the shoulders and flexing the elbows\"; \"When the upper arms become aligned with the frontal plane at the shoulders, externally rotate the upper arms and continue the backward movement until the center clasp of the handle comes close to the face\"; ExRx, Cable Standing Rear Delt Row (with rope): \"keeping elbows at shoulder height\", \"Keep upper arms perpendicular to trunk\")",
+    "agonistas": "deltoide posterior (ExRx, Cable Standing Rear Delt Row (with rope): Target \"Deltoid, Posterior\"). Kolber 2010 (revisão de lesões do ombro no treino de força) aponta o desequilíbrio entre os rotadores internos e externos e entre o trapézio superior e o inferior como fator de risco (\"Resistance training routines often focus on large muscle groups such as the pectoralis major, upper trapezius, and deltoids, while neglecting muscles responsible for shoulder stabilization such as the rotator cuff and scapular musculature, thus predisposing participants to injury\") e recomenda \"Incorporating exercises to strengthen the lower trapezius and external rotators\" — o que o face pull trabalha junto",
+    "sinergistas": "infraespinhal e redondo menor (os rotadores externos), deltoide lateral, trapézio médio e inferior, romboides, braquial e braquiorradial (ExRx: Synergists \"Infraspinatus\", \"Teres Minor\", \"Deltoid, Lateral\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Brachialis\", \"Brachioradialis\")",
+    "estabilizadores": "bíceps braquial (estabilizador dinâmico) e eretores da espinha; reto do abdome e oblíquos seguram o tronco ereto contra o cabo (ExRx: Dynamic Stabilizers \"Biceps Brachii\"; Stabilizers \"Erector Spinae\"; Antagonist Stabilizers \"Rectus Abdominis\", \"Obliques\"; NSCA: \"Maintain the same head, torso, and body position throughout the movement\")",
+    "fases": "puxada concêntrica (escápulas, abertura dos braços e rotação externa) e volta excêntrica, devagar, pelo mesmo caminho (NSCA: \"Allow the upper arms to internally rotate, the elbows to extend, the shoulders to horizontally adduct, and the scapulae to protract back to the starting position\"). A dica do app pede 1 s parado no fim; a ACE, na remada alta com corda (High Row), pede 2–3 s (\"then pause for 2-3 seconds\") — o 3D faz a ida e a volta sem a pausa"
+  },
+  "referencias": [
+    "NSCA — Exercise Technique Manual for Resistance Training, 3ª ed. (Human Kinetics), trecho \"Face Pull (Machine)\", NSCA Kinetic Select, março de 2020. https://www.nsca.com/education/articles/kinetic-select/face-pull-machine/ (lido na cópia do Internet Archive de 16/08/2026; o site direto bloqueia a leitura automática): \"Stand facing a high-pulley cable machine and grasp a rope handle with a closed, pronated grip and the palms facing the floor.\" \"Step back far enough from the machine so there is tension on the cable when the arms are fully extended in front of the face with the elbows pointing out to the sides. Use a parallel foot stance with flexed knees to create a stable body position.\" \"Check that the head is in line with the spine and the torso is fully erect.\" \"Begin the exercise by first retracting the scapulae with the elbows still fully extended.\" \"Pull the handle toward the face by horizontally abducting the shoulders and flexing the elbows.\" \"When the upper arms become aligned with the frontal plane at the shoulders, externally rotate the upper arms and continue the backward movement until the center clasp of the handle comes close to the face.\" \"Allow the upper arms to internally rotate, the elbows to extend, the shoulders to horizontally adduct, and the scapulae to protract back to the starting position.\" \"Maintain the same head, torso, and body position throughout the movement.\"",
+    "ExRx.net — Cable Standing Rear Delt Row (with rope) (o face pull com corda do ExRx). https://exrx.net/WeightExercises/DeltoidPosterior/CBStandingRearDeltRowRope (lido na cópia do Internet Archive de 31/03/2023; o site direto bloqueia a leitura automática): \"Stand facing rope attachment on high pulley cable. Grasp each end of rope just above enlarged ends. Step back with one foot so arms and shoulders are positioned straight forward with cable taut. Point elbows outward.\" \"Pull rope to upper chest or neck, keeping elbows at shoulder height until elbows travel slightly behind back. Keep upper arms perpendicular to trunk. Return until arms are extended forward.\" \"The relatively powerful Latissimus Dorsi becomes involved: if upper arm travels closer than perpendicular to trunk; if torso is positioned forward beyond vertical\". Músculos: alvo Deltoid, Posterior; sinergistas Infraspinatus, Teres Minor, Deltoid Lateral, Trapezius Middle, Trapezius Lower, Rhomboids, Brachialis, Brachioradialis; estabilizador dinâmico Biceps Brachii; estabilizador Erector Spinae; estabilizadores antagonistas Rectus Abdominis, Obliques.",
+    "American Council on Exercise (ACE) — Exercise Library: High Row (a remada com corda na polia da ACE; a biblioteca da ACE não tem o face pull). https://www.acefitness.org/resources/everyone/exercise-library/336/high-row/ : \"Stand with the feet hip-width apart, the hips straight, the back tall, and the knees slightly bent. Place the cable pulley at about shoulder-height, attach a rope handle, and hold one end of the rope in each hand with the palms facing down. Turn to face the machine. Lift the chest up and pull the elbows back until the hands are right in front of the shoulders, then pause for 2-3 seconds. Slowly straighten the arms to return the weight to the starting position.\"",
+    "Kolber MJ, Beekhuizen KS, Cheng MS, Hellman MA. Shoulder injuries attributed to resistance training: a brief review. J Strength Cond Res. 2010;24(6):1696-1704. doi:10.1519/JSC.0b013e3181dc4330 (PubMed 20508476; texto completo): \"Incorporating exercises to strengthen the lower trapezius and external rotators may serve to mitigate common strength imbalances associated with RT.\" \"Avoiding the true 'high-five' position (Figure 1A) with basic technique modifications may serve useful in preventing more common RT-induced shoulder disorders.\" (Figure 1A: \"Position places the arm in end-range external rotation with abduction.\") — o estudo citado na dica do app",
+    "CAP Barbell — MB-ROPE, a corda de tríceps comum que o equip3d.corda_polia() desenha (\"Rope Length: 27 inches (end to end) with center attachment.\"; \"Heavy duty braided Polypropylene rope and solid rubber stoppers at each end.\"). https://www.ironcompany.com/cap-barbell-tricep-rope-cable-attachment"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "o cabo passa na frente do rosto, sem encostar",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          40,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro da cabeça, do rosto nem do pescoço); medido da pele (o cabelo tem regra própria em folgas)"
+      },
+      {
+        "nome": "o gancho da corda nunca encosta no rosto",
+        "equipamento": "corda_gancho",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          15,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "a perna da corda da mão esquerda nunca encosta no rosto",
+        "equipamento": "corda_perna+1",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (a corda nunca passa por dentro do rosto); medido da pele"
+      },
+      {
+        "nome": "a perna da corda da mão direita nunca encosta no rosto",
+        "equipamento": "corda_perna-1",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (a corda nunca passa por dentro do rosto); medido da pele"
+      },
+      {
+        "nome": "a corda na mão esquerda e o batente não encostam na cabeça",
+        "equipamento": "corda_ponta+1",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "a corda na mão direita e o batente não encostam na cabeça",
+        "equipamento": "corda_ponta-1",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "o cabo não entra no cabelo",
+        "equipamento": "polia_cabo",
+        "de": "cabelo",
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro da cabeça)"
+      },
+      {
+        "nome": "o gancho da corda não entra no cabelo",
+        "equipamento": "corda_gancho",
+        "de": "cabelo",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra na cabeça)"
+      },
+      {
+        "nome": "a perna da corda da mão esquerda não entra no cabelo",
+        "equipamento": "corda_perna+1",
+        "de": "cabelo",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (a corda nunca passa por dentro da cabeça)"
+      },
+      {
+        "nome": "a perna da corda da mão direita não entra no cabelo",
+        "equipamento": "corda_perna-1",
+        "de": "cabelo",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (a corda nunca passa por dentro da cabeça)"
+      },
+      {
+        "nome": "a corda e o batente da mão esquerda não entram no cabelo",
+        "equipamento": "corda_ponta+1",
+        "de": "cabelo",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra na cabeça)"
+      },
+      {
+        "nome": "a corda e o batente da mão direita não entram no cabelo",
+        "equipamento": "corda_ponta-1",
+        "de": "cabelo",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra na cabeça)"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "antebraços e mãos passam do lado da cabeça sem encostar",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "RightHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Head",
+          "Neck"
+        ],
+        "cabelo": true,
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); medido até o cabelo (ou a pele sem cabelo): no fim as mãos ficam dos lados do rosto"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "tronco ereto e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          6
+        ],
+        "fonte": "NSCA (\"Check that the head is in line with the spine and the torso is fully erect\"; \"Maintain the same head, torso, and body position throughout the movement\"); ExRx (o dorsal entra \"if torso is positioned forward beyond vertical\")"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "NSCA (\"the torso is fully erect\")"
+      },
+      {
+        "nome": "cabeça na linha da coluna",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -20,
+          5
+        ],
+        "fonte": "NSCA (\"Check that the head is in line with the spine\"); o boneco em pé, no repouso, mede ~−11°"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          10,
+          25
+        ],
+        "fonte": "NSCA (\"Use a parallel foot stance with flexed knees to create a stable body position\"); ACE, High Row (\"the knees slightly bent\"). A cena usa 15°"
+      },
+      {
+        "nome": "pés paralelos, na largura do quadril",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.0,
+          1.6
+        ],
+        "fonte": "NSCA (\"Use a parallel foot stance\"); ACE, High Row (\"Stand with the feet hip-width apart\"): tornozelos a 0,28 m um do outro (as articulações do quadril, a 0,21 m). A ExRx põe um pé atrás (\"Step back with one foot\"); a cena segue a NSCA, que é o face pull"
+      },
+      {
+        "nome": "começo: braços esticados à frente do rosto",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "NSCA (\"the arms are fully extended in front of the face\"); ExRx (\"Return until arms are extended forward\"). A cena para a 5° (esticado sem travar)"
+      },
+      {
+        "nome": "começo: braços apontando pra frente, pra roldana",
+        "medida": "braco_plano",
+        "t": 0.0,
+        "graus": [
+          80,
+          100
+        ],
+        "fonte": "NSCA (\"the arms are fully extended in front of the face\"); ExRx (\"arms and shoulders are positioned straight forward with cable taut\"). 90 = braço pra frente"
+      },
+      {
+        "nome": "braço perpendicular ao tronco (cotovelos na altura dos ombros)",
+        "medida": "braco_elevacao",
+        "t": "todos",
+        "graus": [
+          85,
+          105
+        ],
+        "fonte": "ExRx (\"keeping elbows at shoulder height\"; \"Keep upper arms perpendicular to trunk\"; o dorsal entra \"if upper arm travels closer than perpendicular to trunk\"). No começo o braço aponta pra roldana, ~12° acima da horizontal"
+      },
+      {
+        "nome": "fim: cotovelos na altura dos ombros",
+        "medida": "inclinacao",
+        "segmento": [
+          "Arm",
+          "ForeArm"
+        ],
+        "t": 1.0,
+        "graus": [
+          -10,
+          5
+        ],
+        "fonte": "ExRx (\"keeping elbows at shoulder height\"). Medida: − = cotovelo acima do ombro"
+      },
+      {
+        "nome": "fim: braço aberto, perto do plano dos ombros",
+        "medida": "braco_plano",
+        "t": 1.0,
+        "graus": [
+          5,
+          25
+        ],
+        "fonte": "NSCA (\"When the upper arms become aligned with the frontal plane at the shoulders\"); ExRx (\"until elbows travel slightly behind back\"). A corda de 27\" (a de tríceps comum) não deixa as mãos se afastarem mais que ~40 cm: com o meio da corda perto do rosto, o braço para ~15° à frente do plano dos ombros. 0 = braço pro lado, 90 = pra frente"
+      },
+      {
+        "nome": "fim: cotovelos dobrados, mãos dos lados do rosto",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 1.0,
+        "graus": [
+          110,
+          130
+        ],
+        "fonte": "NSCA (\"flexing the elbows\"; \"until the center clasp of the handle comes close to the face\"). Nenhuma fonte dá o ângulo: sai da corda (mãos a ~40 cm) com o braço aberto. A faixa é da cena"
+      },
+      {
+        "nome": "fim: ombro girado pra fora (antebraço apontando pra cima)",
+        "medida": "inclinacao",
+        "segmento": [
+          "ForeArm",
+          "Hand"
+        ],
+        "t": 1.0,
+        "graus": [
+          -55,
+          -30
+        ],
+        "fonte": "NSCA (\"externally rotate the upper arms\"); dica do app (\"girando os ombros para fora\"). Kolber 2010 manda evitar o fim da rotação externa com o braço aberto (\"end-range external rotation with abduction\"): a cena para no meio da rotação (~55°), com o antebraço ~42° acima da horizontal. Medida: − = punho acima do cotovelo"
+      },
+      {
+        "nome": "começo: palmas viradas pro chão (pegada pronada)",
+        "medida": "palma_cima",
+        "t": 0.0,
+        "graus": [
+          140,
+          180
+        ],
+        "fonte": "NSCA (\"grasp a rope handle with a closed, pronated grip and the palms facing the floor\"); ACE, High Row (\"with the palms facing down\"). 180 = palma pro chão"
+      },
+      {
+        "nome": "fim: palmas viradas pra frente (a pegada pronada depois da rotação externa)",
+        "medida": "palma_frente",
+        "t": 1.0,
+        "graus": [
+          0,
+          50
+        ],
+        "fonte": "NSCA (pegada pronada + \"externally rotate the upper arms\"): girando o ombro pra fora, a palma que olhava pro chão passa a olhar pra frente. 0 = palma pra frente"
+      },
+      {
+        "nome": "escápulas soltas no começo (braços esticados)",
+        "medida": "ombro_frente",
+        "t": 0.0,
+        "mm": [
+          0,
+          30
+        ],
+        "fonte": "NSCA (\"the scapulae to protract back to the starting position\")"
+      },
+      {
+        "nome": "escápulas aproximadas no fim",
+        "medida": "ombro_frente",
+        "t": 1.0,
+        "mm": [
+          -35,
+          -5
+        ],
+        "fonte": "NSCA (\"Begin the exercise by first retracting the scapulae with the elbows still fully extended\")"
+      },
+      {
+        "nome": "punho reto (neutro)",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "escolha da cena (as fontes não falam do punho): punho firme e reto segurando a corda"
+      }
+    ]
+  }
+}
