@@ -37,8 +37,8 @@ Regra geral: primeiro voltar, depois corrigir pela esteira normal (local → sta
   - `<verify_jwt>`: o mesmo de hoje (as 17 com `false` estão em [desvios.md](desvios.md)). O script para se o pedido for diferente
     do que está publicado; só `FORCAR_VERIFY_JWT=1` troca;
   - o script leva a pasta da função e a `_shared/` da mesma pasta. O PAT fica em `~/.pc-pat`.
-- **Nunca pelo workflow `deploy-function.yml`:** ele publica no Treino com o `verify_jwt` ligado e derruba as funções que
-  precisam de `false`.
+- **Só pelo `scripts/deploy_function.sh`:** o workflow `deploy-function.yml` saiu na hml-13 (publicava no Treino com o
+  `verify_jwt` ligado e derrubava as funções que precisam de `false`; com ele saiu também o `SUPABASE_PAT` do GitHub).
 - **Conferir depois:** o repo não tem um script para isso. A conferência é baixar a função publicada e comparar, arquivo a
   arquivo, com o commit bom:
 
@@ -108,3 +108,24 @@ Regra geral: primeiro voltar, depois corrigir pela esteira normal (local → sta
 - **Voltar um script:** de um checkout do commit bom, rodar `scripts/backup/diario/instalar.sh` de novo.
 - **Desligar tudo:** `scripts/backup/diario/instalar.sh --desinstalar`. Desliga os timers e apaga a cópia dos scripts; ficam o
   `~/.config/physiq-backup/` e as cópias em `~/backups/physiq` ([backup.md](backup.md)).
+
+## Main protegida (hml-13)
+
+- A `main` só recebe PR com o check `checar-pr` verde (`.github/workflows/ci-pr.yml`: lint, tipos, `SECURITY DEFINER` nas
+  migrations novas, testes de Node e Vitest), 0 aprovações, só squash. Ruleset "main protegida (hml-13)"; sem force push e sem
+  apagar a branch. A `staging` fica fora.
+- Merge: `gh pr checks <n> --watch --fail-fast && gh pr merge <n> --squash`. Nada de `--admin`.
+- **Nunca `[skip ci]`/`[skip actions]` num commit da branch do PR:** o GitHub não roda o check e o PR fica travado ("Expected").
+  PR sem release (só E2E ou doc): o marcador vai só no título do squash
+  (`gh pr merge <n> --squash --subject "<título> [skip actions] (#<n>)"`). Já travou: `gh workflow run ci-pr.yml --ref <branch>`.
+- Quem fura a regra: só a deploy key do bump de versão (job `bump` do `build-apk.yml`, environment `release`, só a `main`).
+- **Voltar uma versão com a main protegida:** o Instant Rollback da Vercel (seção "Site") não depende do git; o revert "de vez"
+  vira `git revert` do squash numa branch → PR → check verde → merge (uns 6 min a mais que antes).
+- **Emergência** (GitHub Actions fora do ar, check quebrado), só com o OK do Weslley — desligar e religar logo depois:
+
+  ```bash
+  R=weslleybertoldo/physiqcalc
+  ID=$(gh api repos/$R/rulesets --jq '.[] | select(.name=="main protegida (hml-13)") | .id')
+  gh api -X PUT repos/$R/rulesets/$ID -f enforcement=disabled   # desliga
+  gh api -X PUT repos/$R/rulesets/$ID -f enforcement=active     # religa
+  ```

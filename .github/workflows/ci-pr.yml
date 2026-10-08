@@ -1,0 +1,60 @@
+name: CI do PR
+
+# hml-13 (H-31): todo PR para a main passa por aqui ANTES do merge — lint, tipos, SECURITY DEFINER nas migrations novas, testes
+# dos Workers e dos scripts de CI (node --test) e o Vitest. O ruleset "main protegida" exige o check "checar-pr" (app GitHub Actions).
+# SEM filtro de caminho de propósito: check obrigatório que não roda fica "Expected" e trava o PR.
+# NÃO pôr [skip ci]/[skip actions] nos commits da branch (o GitHub não roda este workflow e o PR trava). PR sem release (só E2E,
+# doc): o marcador vai só no título do squash — gh pr merge <n> --squash --subject "<título> [skip actions] (#<n>)".
+# PR travado por um commit com marcador: gh workflow run ci-pr.yml --ref <branch> (roda o check na mesma ponta).
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checar-pr:
+    name: checar-pr
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        id: deps
+        run: npm ci
+
+      # Daqui em diante cada passo roda mesmo se o anterior falhou (o PR mostra todos os erros de uma vez); o job fica vermelho
+      # se qualquer um falhar.
+      - name: Lint
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: npm run lint
+
+      - name: Tipos (app e vite.config)
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: npm run tipos
+
+      - name: SECURITY DEFINER nas migrations novas
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: node scripts/ci/checar-definer.mjs
+
+      - name: Testes dos Workers e dos scripts de CI (node --test)
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: npm run test:node
+
+      - name: Vitest
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: npm test

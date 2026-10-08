@@ -50,4 +50,5 @@ Conferido em 08/10/2026 na lista publicada dos 2 projetos (Management API, só l
 
 - Publicar só pelo `scripts/deploy_function.sh <ref> <pasta> <slug> false`. Ele para se o pedido for diferente do que está
   publicado (só `FORCAR_VERIFY_JWT=1` troca).
-- Nunca pelo workflow `deploy-function.yml`: ele publica no Treino com o `verify_jwt` ligado, e a função passa a responder 401.
+- Só pelo `scripts/deploy_function.sh`: o workflow `deploy-function.yml` saiu na hml-13 (publicava no Treino com o `verify_jwt`
+  ligado, e a função passava a responder 401).
