@@ -2868,7 +2868,7 @@ class MaquinaRemada:
 
 def remada_sentada(nome="remada", eixo=(-0.70, 0.13), x_braco=0.42, barra=(-0.62, 0.95), x_dentro=0.19,
                    neutro=(0.14, 0.0145, 0.0), pronado=(0.31, 0.12, 0.0145), caminho=None, assento=None, almofada=None,
-                   torre=None, pilha=True, viga=0.05, raio_barra=0.0125):
+                   torre=None, pilha=True, viga=0.05, raio_barra=0.0125, poste=None):
     """Máquina de remada sentada com apoio de peito (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA
     MONTAGEM:
       eixo      = (y, z) do eixo de giro dos 2 braços (paralelo ao X); cada braço gira num cubo em x = ±x_braco, preso no mancal (tubo
@@ -2888,7 +2888,11 @@ def remada_sentada(nome="remada", eixo=(-0.70, 0.13), x_braco=0.42, barra=(-0.62
                   da face, com a chapa e a viga que vai até a torre;
       torre     = y do meio da torre (None = 34 cm na frente da barra: a face de trás dela fica 16 cm na frente da barra, entre os 2
                   braços); pilha = a torre é a caixa da pilha de pesos (False = uma coluna de aço no lugar);
-      viga      = seção (m) da viga quadrada de cada braço; raio_barra = raio da barra de aço do pegador.
+      viga      = seção (m) da viga quadrada de cada braço; raio_barra = raio da barra de aço do pegador;
+      poste     = None (o pedestal de cada mancal sobe do trilho até embaixo do eixo) ou o y de um POSTE na frente (Remada Baixa
+                  na Máquina, lote 6, 08/10/2026): o pedestal sobe nesse y até a altura do eixo e uma viga de cima vai dele até o
+                  mancal — com o eixo no alto e o braço pendurado passando embaixo dele (o arco cruza a vertical do eixo), a ponta
+                  da barra não bate no pedestal; sem isso, nada muda.
     Devolve um MaquinaRemada (raizes, equipamentos, apoios, pegadores, girar(), pegada(), pivo())."""
     if assento is None or almofada is None:
         raise ValueError("remada_sentada: assento e almofada vêm da cena (a peça é montada em volta do corpo)")
@@ -2954,8 +2958,9 @@ def remada_sentada(nome="remada", eixo=(-0.70, 0.13), x_braco=0.42, barra=(-0.62
     _viga(nome + "_viga_almofada", bloco - n_a * 0.015, (0, y_tt + 0.01, bloco.z), 0.06, 0.06, mat_estrutura(), pai=estr)
     # ── base no chão: 2 trilhos ao longo do Y (por fora dos pés), as travessas da frente (embaixo da torre) e de trás, e a viga do
     #    chão da coluna do assento até a de trás ──────────────────────────────────────────────────────────────────────────────────
-    y0b = min(y_tc - prof_t / 2, ye - 0.06) - 0.04
-    y1b = max(y_t, ye + 0.06) + 0.06
+    y_pe = ye if poste is None else poste                     # y do pé do pedestal de cada mancal (poste: na frente)
+    y0b = min(y_tc - prof_t / 2, ye - 0.06, y_pe - 0.06) - 0.04
+    y1b = max(y_t, ye + 0.06, y_pe + 0.06) + 0.06
     for s in (1, -1):
         _em_aneis(_reto(caixa(nome + "_base_trilho%+d" % s, (s * x_m, (y0b + y1b) / 2, 0.03), (0.08, y1b - y0b, 0.06),
                               mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
@@ -2967,7 +2972,12 @@ def remada_sentada(nome="remada", eixo=(-0.70, 0.13), x_braco=0.42, barra=(-0.62
                               mat_estrutura(), pai=estr, chanfro=0)), passo=0.08)
     # ── mancal de cada braço: pedestal do trilho até embaixo do eixo e o tubo oco ao longo do X (o eixo de aço passa por dentro) ───
     for s in (1, -1):
-        if ze - 0.04 > 0.07:
+        if poste is not None:                                 # poste na frente até a altura do eixo + viga de cima até o mancal
+            _viga(nome + "_pedestal%+d" % s, (s * x_m, poste, 0.06), (s * x_m, poste, ze + 0.035), 0.07, 0.07, mat_estrutura(),
+                  pai=estr)
+            _viga(nome + "_pedestal_viga%+d" % s, (s * x_m, poste + math.copysign(0.035, ye - poste), ze),
+                  (s * x_m, ye - math.copysign(0.045, ye - poste), ze), 0.07, 0.07, mat_estrutura(), pai=estr)
+        elif ze - 0.04 > 0.07:
             _viga(nome + "_pedestal%+d" % s, (s * x_m, ye, 0.06), (s * x_m, ye, ze - 0.04), 0.07, 0.07, mat_estrutura(), pai=estr)
         m = _tubo_oco(nome + "_mancal%+d" % s, (s * x_m, ye, ze), 0.045, r_eixo + r_folga, 0.06, mat_estrutura(), pai=estr)
         m.rotation_euler = rot_x90

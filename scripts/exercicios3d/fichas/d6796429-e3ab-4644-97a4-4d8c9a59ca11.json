@@ -1,0 +1,449 @@
+{
+ "uuid": "d6796429-e3ab-4644-97a4-4d8c9a59ca11",
+ "nome": "Remada Baixa na Máquina",
+ "cena": "remada_baixa_na_maquina",
+ "grupo": "Dorsal",
+ "subgrupo": "Latíssimo do dorso (porção inferior) · romboides · trapézio inferior · bíceps",
+ "padrao_movimento": "remada",
+ "equipamento": "maquina",
+ "variacao": "remada baixa",
+ "alvos": [
+  "dorsal",
+  "trapezio"
+ ],
+ "auxiliares": [
+  "costas",
+  "biceps",
+  "deltoide",
+  "antebraco"
+ ],
+ "camera": {
+  "az": 128,
+  "el": 14,
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.25,
+   0.75
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   -0.3,
+   0.75
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina de remada baixa, de frente pra ela, com a parte de baixo do peito encostada na almofada, o tronco em pé e parado e os pés chapados no chão, um pouco mais abertos que o quadril. Segura os pegadores baixos, na frente dos joelhos, com a pegada neutra (palmas uma para a outra, mãos na largura dos ombros) e o punho reto. Começa com os braços esticados para a frente e para baixo, sem travar os cotovelos, e os ombros levados para a frente (escápulas abertas); puxa os pegadores em direção ao abdômen dobrando os cotovelos e levando-os para trás, junto do corpo, até as mãos chegarem do lado do abdômen, com os cotovelos atrás das costas e as escápulas se aproximando (ombros para trás e um pouco para baixo); volta devagar até os braços quase esticarem, deixando as escápulas abrirem de novo. O peito fica encostado na almofada e o tronco não balança. Os braços da máquina ficam pendurados de um eixo no alto, na frente, e os pegadores sobem em arco junto com as mãos, da frente dos joelhos até o lado do abdômen; cada pegador gira em volta da barra dele e se ajeita na mão, com o punho reto o caminho todo.",
+ "cinesiologia": {
+  "plano": "sagital: extensão do ombro com flexão do cotovelo, os braços passando junto do corpo (sem abrir pro lado), saindo de baixo e da frente até o lado do abdômen, e retração/protração das escápulas; cadeia cinética aberta, com o tronco apoiado no peito",
+  "articulacoes": "ombro (extensão na ida, do braço ~40° abaixo da horizontal, pra frente, até o cotovelo ~42° atrás do tronco; flexão na volta), cotovelo (flexão na ida, de ~12° até ~120°; extensão na volta, sem travar), escápulas (retração e um pouco de depressão na ida — os ombros vão pra trás e pra baixo —, protração na volta — os ombros vão pra frente); punho reto e parado (o pegador gira em volta da barra e acompanha o antebraço); tronco, quadril, joelhos e tornozelos parados, com o peito na almofada e os pés no chão",
+  "agonistas": "músculos das costas — latíssimo do dorso (com a puxada baixa, o braço descendo junto do corpo), redondo maior, trapézio médio e romboides (ExRx: Target \"Back, General\"; NSCA: \"Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; Life Fitness: \"This movement pattern reinforces lat strength, scapular control, and shoulder stability\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "trapézio inferior, deltoide posterior, infraespinhal, redondo menor, braquial, braquiorradial e peitoral maior (porção esternal) (ExRx: Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\")",
+  "estabilizadores": "bíceps braquial e cabeça longa do tríceps (ExRx: Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"); abdominais firmes pro tronco não balançar (ACE: \"Stiffen (“brace”) your abdominal muscles to stabilize your spine\")",
+  "fases": "concêntrica (puxa até os cotovelos passarem atrás das costas — ExRx: \"Pull levers back until elbows are behind back and shoulders are pulled back\"; ACE: \"Continue pulling until your elbows pass the sides of your body\"; dica: \"Puxe em direção ao abdômen levando os cotovelos para trás e junto ao corpo, junte as escápulas no fim\") e excêntrica (volta devagar até os braços esticarem — ExRx: \"Return until arms are extended and shoulders are stretched forward\"; dica: \"volte devagar até sentir alongar\"; NSCA: \"Return the handles to the starting position in a controlled motion\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Isolateral Seated Low Row (plate loaded) (https://exrx.net/WeightExercises/BackGeneral/LVSeatedLowRow, lido na cópia do Internet Archive de 30/07/2026 — a de 22/08/2019 tem o mesmo texto com o nome \"Lever Seated Low Row (plate loaded)\"; o site responde 403 direto): \"Utility: Auxiliary\", \"Mechanics: Compound\", \"Force: Pull\"; Preparation: \"Sit on seat and position chest against pad. Grasp lever handles with overhand/neutral grip.\"; Execution: \"Pull levers back until elbows are behind back and shoulders are pulled back. Return until arms are extended and shoulders are stretched forward. Repeat.\"; Comments: \"Seat height and grip should be adjusted to allow wrists to follow lower arm. When completing pull, lift chest allowing shoulder girdle to be pulled back while keeping lower chest on pad. Let shoulders roll forward when arms extend.\"; músculos: Target \"Back, General\", Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\", Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\". A animação da página (Hammer Strength, ©2012 ExRx.net) mostra os braços esticados pra frente e pra baixo até os pegadores, na frente dos joelhos, no começo e as mãos do lado da cintura, com os cotovelos atrás das costas, no fim",
+  "Life Fitness — Hammer Strength Plate Loaded Iso-Lateral Low Row (https://www.lifefitness.com/en-us/catalog/strength-training/plate-loaded/plate-loaded-iso-lateral-low-row, lido em 08/10/2026): \"Its low pulling path is engineered to develop the explosive power athletes need to dominate—whether they’re grappling, sprinting, or driving off the line.\", \"This movement pattern reinforces lat strength, scapular control, and shoulder stability\", \"Chest Supported\", \"Dimensions (L x W x H): 50 x 48 x 66 in (127 x 122 x 168 cm)\"; FAQ: \"Why does this machine have an overhand grip? The overhand grip was designed with ergonomics in mind—it places the shoulders, wrists, and elbows in a strong, natural position while targeting the lats and mid-back.\"; o trajeto: \"The pulling path of the Iso-Lateral Low Row mimics the kind of movement athletes rely on in real-world situations—like ripping an opponent off balance, bracing during a takedown, or driving through a powerful clean pull. It’s not just building the back—it’s training the body to generate force from a low, grounded position and carry it upward with intent.\", \"Its unique low pulling angle trains strength from the ground up, mimicking real-life and sport-specific pulling movements.\" As fotos do produto (Strength-PlateLoaded-IsoLateralLowRow-7 e -8) mostram o eixo dos braços no alto do quadro, na frente, e os braços pendurados até os pegadores baixos, na frente do assento: é o desenho que a máquina daqui copia (o eixo no alto, na frente, e o pegador que SOBE em arco, da frente dos joelhos até o lado do abdômen); a pegada daqui é a neutra, que o ExRx e a NSCA também aceitam",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-1, cópia de 07/10/2026): Seated row (machine) — \"Major muscles involved : Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; \"Sit erect with your feet flat and your chest against the pad\"; \"Grasp the handles with a closed grip (pronated or neutral)\"; \"Adjust your arm position so your arms are parallel to the floor, with elbows fully extended\" (é a remada com os pegadores na altura dos ombros — a Remada Fechada na Máquina; aqui os pegadores começam baixos, como na low row do ExRx e da Life Fitness); \"Pull the handles to your chest or upper abdomen\"; \"Maintain an erect torso and keep your elbows close to your body\"; \"Return the handles to the starting position in a controlled motion\"",
+  "ACE — Seated Row (https://www.acefitness.org/resources/everyone/exercise-library/168/seated-row/, lido em 08/10/2026; \"Equipment: Weight Machines / Selectorized\"): \"Position your feet firmly on the floor or foot pads to stabilize your body.\"; \"Adjust the position the chest pad to contact your chest lightly.\"; \"Stiffen (“brace”) your abdominal muscles to stabilize your spine\"; \"maintain a neutral wrist position (i.e., wrist in line with your forearms)\"; \"Flex (bend) your elbows and pull them towards your chest keeping your elbows close to the sides of your body. Continue to maintain a neutral wrist position, and contact with your chest against the chest pad. Avoid leaning back and arching your low back and attempt to minimize any movement of your head during the movement.\"; \"Continue pulling until your elbows pass the sides of your body. Pause momentarily then slowly return to your starting position, allowing your arms to move forward and elbows to extend (straighten) in a slow, controlled manner\" (a ACE ensina com as escápulas paradas — \"Depress and retract your scapulae (pull shoulders back and down)\" e \"avoid forward rounding of your scapulae\" —; aqui vale o ExRx e a dica: as escápulas abrem na volta e fecham na ida)",
+  "Dica do exercício no app (scripts/gifs_catalogo/catalogo.py): \"Peito no apoio e pegadas baixas. Puxe em direção ao abdômen levando os cotovelos para trás e junto ao corpo, junte as escápulas no fim e volte devagar até sentir alongar.\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: na remada a alavanca não fica alinhada com uma junta só (a puxada é do ombro, do cotovelo e das escápulas juntos); a regulagem certa é o assento e a almofada (ExRx: \"Seat height and grip should be adjusted to allow wrists to follow lower arm\"; ACE: \"Adjust the position the chest pad to contact your chest lightly\"). O eixo dos braços da máquina fica no alto, na frente da pessoa (como o da Hammer Strength Iso-Lateral Low Row), à mesma distância da barra do pegador no começo e no fim; como a mão termina ~7 cm mais alta que começa, ele cai quase em cima da barra do começo e o pegador SOBE em arco, da frente dos joelhos até o lado do abdômen (Life Fitness: \"generate force from a low, grounded position and carry it upward with intent\")",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "remada_baixa_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Seated row (machine) (\"Sit erect with your feet flat and your chest against the pad\")"
+   },
+   {
+    "nome": "parte de baixo do peito encostada na almofada",
+    "equipamento": "remada_baixa_almofada",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"keeping lower chest on pad\"); ACE — Seated Row (\"contact with your chest against the chest pad\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "RightHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM; as mãos passam por cima dos joelhos e das coxas e terminam do lado do abdômen"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "braço esquerdo da máquina × estrutura",
+    "equipamento": "remada_baixa_braco_esq",
+    "de": "remada_baixa_estrutura",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica): o eixo do braço passa no mancal com 5 mm de folga"
+   },
+   {
+    "nome": "braço direito da máquina × estrutura",
+    "equipamento": "remada_baixa_braco_dir",
+    "de": "remada_baixa_estrutura",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "pegador esquerdo × braço da máquina",
+    "equipamento": "remada_baixa_pegador_esq",
+    "de": "remada_baixa_braco_esq",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "peça não atravessa peça: a barra do pegador passa no mancal da ponta do braço com 5 mm de folga"
+   },
+   {
+    "nome": "pegador direito × braço da máquina",
+    "equipamento": "remada_baixa_pegador_dir",
+    "de": "remada_baixa_braco_dir",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "pegador esquerdo × estrutura",
+    "equipamento": "remada_baixa_pegador_esq",
+    "de": "remada_baixa_estrutura",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "a ponta da barra passa embaixo do eixo, atrás do poste (regra da fábrica)"
+   },
+   {
+    "nome": "pegador direito × estrutura",
+    "equipamento": "remada_baixa_pegador_dir",
+    "de": "remada_baixa_estrutura",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "pegador esquerdo × almofada do peito",
+    "equipamento": "remada_baixa_pegador_esq",
+    "de": "remada_baixa_almofada",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "os pegadores passam do lado da almofada no fim (regra da fábrica)"
+   },
+   {
+    "nome": "pegador direito × almofada do peito",
+    "equipamento": "remada_baixa_pegador_dir",
+    "de": "remada_baixa_almofada",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços esticados no começo, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     5,
+     22
+    ],
+    "fonte": "ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"Return until arms are extended\"); pedido: \"volta devagar até os braços esticarem\""
+   },
+   {
+    "nome": "braços pra frente e pra baixo no começo (pegadores baixos)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "t": 0.0,
+    "graus": [
+     25,
+     45
+    ],
+    "fonte": "dica do app (catálogo) (\"pegadas baixas\"); Life Fitness — Hammer Strength Plate Loaded Iso-Lateral Low Row (\"Its low pulling path\"). A medida é o braço × a horizontal (+ = o cotovelo abaixo do ombro)"
+   },
+   {
+    "nome": "mãos baixas e na frente no começo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "HandMiddle1"
+    ],
+    "t": 0.0,
+    "graus": [
+     22,
+     42
+    ],
+    "fonte": "pedido (\"braços esticados pra frente e pra baixo segurando os pegadores\"); a animação do ExRx — Lever Isolateral Seated Low Row (plate loaded) (as mãos na frente dos joelhos). A medida é a reta ombro → mão × a horizontal (+ = a mão abaixo do ombro)"
+   },
+   {
+    "nome": "escápulas abertas no começo (ombros pra frente)",
+    "medida": "escapula_frente",
+    "t": 0.0,
+    "mm": [
+     10,
+     40
+    ],
+    "fonte": "ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"shoulders are stretched forward\"; \"Let shoulders roll forward when arms extend\")"
+   },
+   {
+    "nome": "escápulas fechadas no fim (ombros pra trás)",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -35,
+     -3
+    ],
+    "fonte": "ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"shoulders are pulled back\"; \"allowing shoulder girdle to be pulled back\"); dica do app (catálogo) (\"junte as escápulas no fim\")"
+   },
+   {
+    "nome": "cotovelos dobrados no fim",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     95,
+     125
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Seated row (machine) (\"Pull the handles to your chest or upper abdomen\"); dica do app (catálogo) (\"Puxe em direção ao abdômen\")"
+   },
+   {
+    "nome": "cotovelos atrás do tronco no fim",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -55,
+     -25
+    ],
+    "fonte": "ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"Pull levers back until elbows are behind back\"); ACE — Seated Row (\"Continue pulling until your elbows pass the sides of your body\")"
+   },
+   {
+    "nome": "cotovelos junto ao corpo (não abrem pro lado)",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -5,
+     20
+    ],
+    "fonte": "dica do app (catálogo) (\"levando os cotovelos para trás e junto ao corpo\"); NSCA (Achievable CSCS) — Seated row (machine) (\"keep your elbows close to your body\"); ACE — Seated Row (\"keeping your elbows close to the sides of your body\")"
+   },
+   {
+    "nome": "mão do lado do abdômen no fim (abaixo do cotovelo)",
+    "medida": "inclinacao",
+    "segmento": [
+     "ForeArm",
+     "Hand"
+    ],
+    "t": 1.0,
+    "graus": [
+     8,
+     35
+    ],
+    "fonte": "dica do app (catálogo) (\"Puxe em direção ao abdômen\"); ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"Seat height and grip should be adjusted to allow wrists to follow lower arm\"). + = o punho abaixo do cotovelo"
+   },
+   {
+    "nome": "mão na altura do abdômen no fim",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "HandMiddle1"
+    ],
+    "t": 1.0,
+    "graus": [
+     44,
+     68
+    ],
+    "fonte": "dica do app (catálogo) (\"Puxe em direção ao abdômen\"); NSCA (Achievable CSCS) — Seated row (machine) (\"Pull the handles to your chest or upper abdomen\"). A medida é a reta ombro → mão × a horizontal: a mão termina ~25 cm abaixo do ombro e ~19 cm acima do quadril, do lado do abdômen (44° ≈ a parte de cima do abdômen, 68° ≈ o umbigo)"
+   },
+   {
+    "nome": "pegada neutra (palmas uma pra outra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     70,
+     90
+    ],
+    "fonte": "ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"Grasp lever handles with overhand/neutral grip\"); NSCA (Achievable CSCS) — Seated row (machine) (\"Grasp the handles with a closed grip (pronated or neutral)\")"
+   },
+   {
+    "nome": "pegada na largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.9,
+     1.4
+    ],
+    "fonte": "a medida divide pela distância entre as articulações dos ombros (~1,1 = mãos na linha dos ombros); os pegadores passam por fora das coxas"
+   },
+   {
+    "nome": "punho reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Row (\"maintain a neutral wrist position (i.e., wrist in line with your forearms)\"); ExRx — Lever Isolateral Seated Low Row (plate loaded) (\"Seat height and grip should be adjusted to allow wrists to follow lower arm\")"
+   },
+   {
+    "nome": "tronco em pé e parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Seated row (machine) (\"Sit erect\"; \"Maintain an erect torso\"); ACE — Seated Row (\"Avoid leaning back\")"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ACE — Seated Row (\"Maintain the natural arch in your low back and avoid arching your back throughout the exercise\")"
+   },
+   {
+    "nome": "quadril parado (sentado, ~90°)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra frente)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Seated row (machine) (\"Sit erect with your feet flat\"); ACE — Seated Row (\"Position your feet firmly on the floor or foot pads to stabilize your body\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "cabeça na linha do tronco, parada",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Row (\"attempt to minimize any movement of your head during the movement\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}
