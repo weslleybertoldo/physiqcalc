@@ -2,7 +2,10 @@
 // cobrança, comprovante e Mercado Pago), o financeiro_do_aluno() (resumo leve do app, guardado no aparelho) e o envio do
 // comprovante pelo link assinado (o servidor escolhe o caminho no Storage).
 import { principal } from "@/integrations/principal/client";
-import type { AlunoResumo, FinanceiroProfissional, MensalidadesDaConta, ResumoConta, ResumoMatricula, StatusAluno } from "./tipos";
+import type { Pagina } from "@/lib/paginacao";
+import type {
+  AlunoResumo, CobrancaVista, FinanceiroProfissional, MensalidadesDaConta, ReciboVista, ResumoConta, ResumoMatricula, StatusAluno, TotaisDoAluno,
+} from "./tipos";
 
 export class ErroFinanceiro extends Error {
   constructor(public codigo: string, public extra: Record<string, unknown> = {}) {
@@ -41,6 +44,30 @@ export const buscarResumoDaConta = (contaId: string) => acaoFinanceiro<ResumoCon
 /** hml-14b (B21): a página da tela Mensalidades (prof_resumo com `pagina`): 20 com mensalidade, 20 sem, a busca e os números. */
 export const buscarMensalidadesDaConta = (contaId: string, p: { pagina: number; paginaSem: number; busca: string }) =>
   acaoFinanceiro<MensalidadesDaConta>("prof_resumo", { conta_id: contaId, pagina: p.pagina, pagina_sem: p.paginaSem, busca: p.busca });
+
+/** Uma página de uma lista do aluno vinda da pagamentos-aluno ({ ok, itens, total }). */
+async function paginaDaFuncao<T>(acao: string, corpo: Record<string, unknown>): Promise<Pagina<T>> {
+  const r = await acaoFinanceiro<{ itens?: T[]; total?: number }>(acao, corpo);
+  if (!Array.isArray(r.itens) || typeof r.total !== "number") throw new ErroFinanceiro("erro_interno");
+  return { itens: r.itens, total: r.total };
+}
+
+/** hml-14d (B21 · D31 · P7): o "Ver todos" de Perfil › Pagamentos — uma página (20) das cobranças ou dos recibos da matrícula, com o total. */
+export const buscarHistoricoDoAluno = (pacienteId: string, tipo: "cobrancas" | "recibos", pagina: number) =>
+  paginaDaFuncao<CobrancaVista | ReciboVista>("aluno_historico", { paciente_id: pacienteId, tipo, pagina });
+
+/** hml-14d (B21 · D31 · P7): o "Ver todas" das cobranças no Financeiro do aluno — uma página (20) já filtrada por quem pode ver, com o total. */
+export const buscarCobrancasDoAluno = (aluno: string, pagina: number) => paginaDaFuncao<CobrancaVista>("prof_aluno_cobrancas", { aluno, pagina });
+
+/** hml-14d (B21 · D31): os totais dos lançamentos do aluno somados no banco (antes, no navegador sobre até 500). */
+export async function buscarTotaisDoAluno(pacienteId: string): Promise<TotaisDoAluno> {
+  const { data, error } = await principal.rpc("financeiro_totais_do_aluno" as never, { p_aluno: pacienteId } as never);
+  if (error) throw new ErroFinanceiro("erro_interno", { mensagem: error.message });
+  const d = (data ?? {}) as Record<string, unknown>;
+  if (d.ok !== true) throw new ErroFinanceiro("erro_interno");
+  const data10 = (v: unknown) => (typeof v === "string" && v ? v.slice(0, 10) : null);
+  return { recebido: Number(d.recebido) || 0, gasto: Number(d.gasto) || 0, total: Number(d.total) || 0, primeira: data10(d.primeira), ultima: data10(d.ultima) };
+}
 
 export const LIMITE_PDF_BYTES = 5 * 1024 * 1024;
 

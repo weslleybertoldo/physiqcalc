@@ -27,6 +27,18 @@ const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: 
 const DIAS_CAB = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 /**
+ * hml-14d (B21 · D29): a janela do mês para o SQL — do dia ANTES do 1º ao dia DEPOIS do último (o fim fica de fora), em
+ * `AAAA-MM-DD`. O `iniciado_em` é texto em UTC: o gravado no aparelho é "…T…Z" e o que vem do servidor pode ser "… …Z"; o
+ * prefixo da data compara certo nos 2, e o dia de folga cobre o fuso do aparelho. O mês exato (no fuso do aparelho) continua
+ * no `chaveMes`.
+ */
+function janelaDoMes(ano: number, mes0: number): [string, string] {
+  const dia = (m0: number, d: number) => new Date(Date.UTC(ano, m0, d)).toISOString().slice(0, 10);
+  // o dia 0 é o último do mês anterior; o fim (de fora) é o 2º dia do mês seguinte
+  return [dia(mes0, 0), dia(mes0 + 1, 2)];
+}
+
+/**
  * Histórico (C14/C21 — o calendário da aba Treino): mês a mês, com os dias treinados no calendário, os números do mês
  * (treinos, tempo total, média) e cada treino com o detalhe (duração, academia, volume, séries), compartilhar e excluir.
  * Lê o SQLite local (funciona sem internet); excluir também vale sem internet e sincroniza depois.
@@ -41,15 +53,21 @@ export function Historico({ userId, aoVoltar }: { userId: string; aoVoltar: () =
   const [confirmarExcluir, setConfirmarExcluir] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
-  const { data } = useQuery<LinhaHistorico>("SELECT * FROM treino_historico WHERE user_id = ? ORDER BY concluido_em DESC LIMIT 500", [userId]);
-  const todos = useMemo(() => data ?? [], [data]);
+  // hml-14d (D29): só o mês na leitura (sem o LIMIT 500 de antes: do 501º treino em diante os meses antigos ficavam vazios e os
+  // números do mês erravam); a consulta continua reativa (o excluir de baixo atualiza a lista)
+  const [desde, ate] = janelaDoMes(mes.ano, mes.mes0);
+  const { data } = useQuery<LinhaHistorico>(
+    "SELECT * FROM treino_historico WHERE user_id = ? AND iniciado_em >= ? AND iniciado_em < ? ORDER BY concluido_em DESC",
+    [userId, desde, ate],
+  );
+  const daJanela = useMemo(() => data ?? [], [data]);
   const chave = `${mes.ano}-${String(mes.mes0 + 1).padStart(2, "0")}`;
   // dias marcados como concluídos sem o cronômetro também contam (a contagem "treinos no mês" de hoje = dias treinados)
   const { data: concluidos } = useQuery<{ data_treino: string }>(
     "SELECT DISTINCT data_treino FROM tb_treino_concluido WHERE user_id = ? AND data_treino >= ? AND data_treino <= ?",
     [userId, `${chave}-01`, `${chave}-31`],
   );
-  const doMes = useMemo(() => todos.filter((h) => chaveMes(new Date(h.iniciado_em)) === chave), [todos, chave]);
+  const doMes = useMemo(() => daJanela.filter((h) => chaveMes(new Date(h.iniciado_em)) === chave), [daJanela, chave]);
   const diasTreinados = useMemo(() => {
     const s = new Set(doMes.map((h) => chaveData(new Date(h.iniciado_em))));
     for (const c of concluidos ?? []) s.add(c.data_treino);

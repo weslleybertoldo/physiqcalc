@@ -24,15 +24,22 @@ const colunas = (f: FormRegistro) => {
   return { data: r.data, agua_ml: r.agua_ml, sintomas: r.sintomas as unknown as Json, observacao: r.observacao };
 };
 
-/** Registros vivos do paciente, dia mais recente primeiro. */
-export async function listarRegistrosDoPaciente(pacienteId: string): Promise<RegistroDiario[]> {
+/**
+ * Registros vivos do paciente NO PERÍODO (`de`–`ate`, AAAA-MM-DD, as 2 pontas valem), dia mais recente primeiro.
+ * hml-14d (B21 · D34 · P10): o período vai ao banco — antes vinham todos os registros do aluno (cortados calados em 1000) e a tela
+ * filtrava. Sem página: a janela é o teto (até 366 dias, 1 registro vivo por dia). Ordem estável (desempate pelo id).
+ */
+export async function listarRegistrosDoPaciente(pacienteId: string, de: string, ate: string): Promise<RegistroDiario[]> {
   const { data, error } = await supabase
     .from(TABELA)
     .select("*")
     .eq("paciente_id", pacienteId)
     .is("deleted_at", null)
+    .gte("data", de)
+    .lte("data", ate)
     .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
   falhou(error);
   return (data ?? []) as RegistroDiario[];
 }

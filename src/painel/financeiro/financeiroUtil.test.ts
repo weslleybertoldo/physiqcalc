@@ -1,8 +1,8 @@
 // Physiq W19 — porta do teste do PhysiqNutri (main ca9f66f, src/lib/financeiroUtil.test.ts) + a forma de pagamento.
 import { describe, expect, it } from "vitest";
 import {
-  CATEGORIAS_PADRAO, filtrarTransacoes, filtrosAtivos, filtrosDaURL, filtrosParaURL, fmtBRL, fmtValorComSinal, formParaRegistro, formVazio, formatarData,
-  inserirOrdenado, limparValorDigitado, noPeriodo, ordenarCategorias, ordenarTransacoes, parseValor, periodoDoPreset, periodoValido, presetDoPeriodo,
+  CATEGORIAS_PADRAO, filtrosAtivos, filtrosDaURL, filtrosParaURL, fmtBRL, fmtValorComSinal, formParaRegistro, formVazio, formatarData,
+  limparValorDigitado, noPeriodo, ordenarCategorias, parseValor, periodoDoPreset, periodoValido, presetDoPeriodo,
   registroParaForm, rotuloMetodo, rotuloPeriodo, rotuloTipo, textoContagem, textoValor, totais, validarNomeCategoria, valorValido, type Metodo, type Tipo,
 } from "./financeiroUtil";
 
@@ -130,32 +130,6 @@ describe("formulário ⇄ registro", () => {
 });
 
 describe("lista", () => {
-  type L = { id: string; data: string; created_at: string; tipo: string; categoria_id: string | null; descricao: string; categoria: { nome: string } | null; paciente: { nome: string } | null; observacao: string | null };
-  const t = (id: string, data: string, created: string, extra: Partial<L> = {}): L => ({
-    id, data, created_at: created, tipo: "entrada", categoria_id: null, descricao: id, categoria: null, paciente: null, observacao: null, ...extra,
-  });
-  it("ordenarTransacoes: data desc, empate → gravada por último primeiro; inserirOrdenado troca pelo id", () => {
-    const a = t("a", "2026-09-10", "2026-09-10T10:00:00Z");
-    const b = t("b", "2026-09-12", "2026-09-12T10:00:00Z");
-    const c = t("c", "2026-09-12", "2026-09-12T11:00:00Z");
-    expect(ordenarTransacoes([a, b, c]).map((x) => x.id)).toEqual(["c", "b", "a"]);
-    expect(inserirOrdenado([a, b], { ...a, data: "2026-09-13" }).map((x) => x.id)).toEqual(["a", "b"]);
-    expect(inserirOrdenado([a], c).map((x) => x.id)).toEqual(["c", "a"]);
-  });
-  it("filtrarTransacoes por tipo, categoria e texto sem acento (todas as palavras)", () => {
-    const lista = [
-      t("1", "2026-09-10", "2026-09-10T10:00:00Z", { tipo: "entrada", categoria_id: "c1", descricao: "Consulta inicial", categoria: { nome: "Consulta" }, paciente: { nome: "João Silva" } }),
-      t("2", "2026-09-11", "2026-09-11T10:00:00Z", { tipo: "saida", categoria_id: "c2", descricao: "Papel A4", categoria: { nome: "Material" }, observacao: "papelaria da esquina" }),
-    ];
-    expect(filtrarTransacoes(lista, { tipo: "saida", categoria: "", q: "" }).map((x) => x.id)).toEqual(["2"]);
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "c1", q: "" }).map((x) => x.id)).toEqual(["1"]);
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "", q: "joao" }).map((x) => x.id)).toEqual(["1"]);
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "", q: "material papel" }).map((x) => x.id)).toEqual(["2"]);
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "", q: "esquina" }).map((x) => x.id)).toEqual(["2"]);
-    expect(filtrarTransacoes(lista, { tipo: "entrada", categoria: "c2", q: "" })).toEqual([]);
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "", q: "xyz" })).toEqual([]);
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "", q: "" })).toHaveLength(2);
-  });
   it("contagem, rótulos, categorias", () => {
     expect(textoContagem(0)).toBe("Nenhuma movimentação");
     expect(textoContagem(1)).toBe("1 movimentação");
@@ -183,15 +157,5 @@ describe("W19 — forma de pagamento (spec 4.4: entradas e saídas por categoria
     expect(filtrosDaURL(params({ forma: "cheque" }), hoje).metodo).toBe("");
     expect(filtrosParaURL({ ...filtrosDaURL(params({}), hoje), metodo: "pix" }, hoje)).toEqual({ forma: "pix" });
     expect(filtrosAtivos({ tipo: "", categoria: "", metodo: "boleto", q: "" })).toBe(true);
-  });
-  it("filtrarTransacoes pela forma (junto com tipo e texto)", () => {
-    const lista = [
-      { id: "1", tipo: "entrada", categoria_id: null, metodo: "pix", descricao: "Consulta" },
-      { id: "2", tipo: "entrada", categoria_id: null, metodo: "dinheiro", descricao: "Consulta" },
-      { id: "3", tipo: "saida", categoria_id: null, metodo: "pix", descricao: "Aluguel" },
-    ];
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "", metodo: "pix", q: "" }).map((x) => x.id)).toEqual(["1", "3"]);
-    expect(filtrarTransacoes(lista, { tipo: "entrada", categoria: "", metodo: "pix", q: "" }).map((x) => x.id)).toEqual(["1"]);
-    expect(filtrarTransacoes(lista, { tipo: "", categoria: "", metodo: "dinheiro", q: "consulta" }).map((x) => x.id)).toEqual(["2"]);
   });
 });

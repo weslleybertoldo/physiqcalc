@@ -129,11 +129,7 @@ export const tirarExame = (lista: string[], nome: string): string[] => lista.fil
 export const textoContagemExames = (n: number): string => (n === 0 ? "Nenhum exame" : n === 1 ? "1 exame" : `${n} exames`);
 
 // ---- Pedidos ----
-/** Pedido mais recente primeiro (data desc); empate → o criado por último primeiro. */
-export const ordenarPedidos = <T extends { data: string; created_at: string }>(lista: T[]): T[] =>
-  [...lista].sort((a, b) => b.data.localeCompare(a.data) || b.created_at.localeCompare(a.created_at));
-/** Substitui (pelo id) ou acrescenta e devolve a lista já ordenada. */
-export const inserirPedido = <T extends { id: string; data: string; created_at: string }>(lista: T[], p: T): T[] => ordenarPedidos([...lista.filter((x) => x.id !== p.id), p]);
+// hml-14d (D32): a ordem e a página dos pedidos e dos resultados (e os números do topo) vêm do banco — exames.ts
 /** 'Nenhum pedido' / '1 pedido' / '3 pedidos'. */
 export const textoContagemPedidos = (n: number): string => (n === 0 ? "Nenhum pedido" : n === 1 ? "1 pedido" : `${n} pedidos`);
 
@@ -151,36 +147,8 @@ export function agruparResultadosPorData<T extends { data: string; exame: string
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([data, itens]) => ({ data, itens: [...itens].sort((a, b) => a.exame.localeCompare(b.exame, "pt-BR") || b.created_at.localeCompare(a.created_at)) }));
 }
-/** Filtro por exame ('' = todos); compara sem caixa/acento. */
-export const filtrarPorExame = <T extends { exame: string }>(lista: T[], exame: string): T[] => {
-  const k = chave(texto1(exame));
-  return k ? lista.filter((r) => chave(r.exame) === k) : lista;
-};
-/** Nomes que já têm resultado (únicos, alfabéticos) — opções do filtro. */
-export function nomesComResultado<T extends { exame: string }>(lista: T[]): string[] {
-  const vistos = new Set<string>();
-  const nomes: string[] = [];
-  for (const r of lista) {
-    const k = chave(r.exame);
-    if (vistos.has(k)) continue;
-    vistos.add(k);
-    nomes.push(r.exame);
-  }
-  return nomes.sort((a, b) => a.localeCompare(b, "pt-BR"));
-}
-/** Substitui (pelo id) ou acrescenta cada um dos novos. */
-export const inserirResultados = <T extends { id: string }>(lista: T[], novos: T[]): T[] => {
-  const ids = new Set(novos.map((n) => n.id));
-  return [...lista.filter((x) => !ids.has(x.id)), ...novos];
-};
 /** 'Nenhum resultado' / '1 resultado' / '3 resultados'. */
 export const textoContagemResultados = (n: number): string => (n === 0 ? "Nenhum resultado" : n === 1 ? "1 resultado" : `${n} resultados`);
-/** Quantos resultados estão fora da referência (abaixo ou acima). */
-export const contarForaDaReferencia = <T extends { valor: number | null; ref_min: number | null; ref_max: number | null }>(lista: T[]): number =>
-  lista.filter((r) => {
-    const s = situacaoDoResultado(r);
-    return s === "abaixo" || s === "acima";
-  }).length;
 
 // ---- Datas ----
 export const dataValida = (s: string | null | undefined): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s ?? "") && isValid(parseISO(s ?? ""));

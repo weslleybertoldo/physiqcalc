@@ -1,11 +1,15 @@
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ agenda: [] as Array<Record<string, unknown>> }));
+const h = vi.hoisted(() => ({ agenda: [] as Array<Record<string, unknown>>, lista: vi.fn() }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u1", email: "aluno@teste.com" } }) }));
-vi.mock("./pecas/api", async (orig) => ({ ...(await orig<typeof import("./pecas/api")>()), minhaAgenda: async () => h.agenda }));
+vi.mock("./pecas/api", async (orig) => ({
+  ...(await orig<typeof import("./pecas/api")>()),
+  minhaAgenda: async () => h.agenda,
+  minhaAgendaLista: (...a: unknown[]) => h.lista(...a),
+}));
 vi.mock("./agenda/api", async (orig) => ({ ...(await orig<typeof import("./agenda/api")>()), minhasRegrasAgenda: async () => [] }));
 
 import Agenda from "./Agenda";
@@ -62,5 +66,48 @@ describe("Perfil › Agenda — o ícone da consulta (H1: a ÁREA vence o papel)
     montar();
     await waitFor(() => expect(linha("nutri")).not.toBeNull());
     expect(document.querySelector("[data-tag-pilula]")).toBeNull();
+  });
+});
+
+describe("Perfil › Agenda — Próximas: as 20 primeiras + 'Ver todas (N)' em páginas do banco (hml-14d, P7)", () => {
+  beforeEach(() => {
+    h.agenda = [
+      ...Array.from({ length: 41 }, (_, i) => consulta(`f${String(i).padStart(2, "0")}`, i + 1, { modulo: "nutricao", papel: "nutricionista" })),
+      consulta("passada", -3, { modulo: "nutricao", papel: "nutricionista" }),
+    ];
+    // o banco (minha_agenda_lista 'proximas'): a mesma regra, em páginas de 20
+    h.lista.mockReset();
+    h.lista.mockImplementation(async (_tipo: string, pagina: number) => {
+      const proximas = h.agenda.filter((a) => a.id !== "passada");
+      return { itens: proximas.slice((pagina - 1) * 20, pagina * 20), total: proximas.length };
+    });
+  });
+
+  it("o cartão mostra 20 de 41 e 'Ver todas (41)'; a folha abre na página 1 com '1–20 de 41' e vai até a 41ª", async () => {
+    montar();
+    await waitFor(() => expect(linha("f00")).not.toBeNull());
+    expect(document.querySelectorAll('[data-agenda-lista="proximas"] [data-agendamento]')).toHaveLength(20);
+    expect(document.querySelector("[data-pagina-agenda]")?.getAttribute("data-proximos")).toBe("41");
+    const botao = document.querySelector('[data-ver-todos="agenda"]')!;
+    expect(botao.textContent).toBe("Ver todas (41)");
+    fireEvent.click(botao);
+    const folha = () => document.body.querySelector('[data-folha-todos="agenda"]');
+    await waitFor(() => expect(folha()?.querySelectorAll('[data-lista="app-agenda"] [data-item]')).toHaveLength(20));
+    expect(h.lista).toHaveBeenLastCalledWith("proximas", 1);
+    const pag = folha()!.querySelector('[data-paginacao="app-agenda"]')!;
+    expect(pag.getAttribute("data-total")).toBe("41");
+    expect(pag.querySelector("[data-paginacao-rotulo]")?.textContent).toBe("1–20 de 41");
+    fireEvent.click(pag.querySelector("[data-pagina-proxima]")!);
+    await waitFor(() => expect(h.lista).toHaveBeenLastCalledWith("proximas", 2));
+    fireEvent.click(folha()!.querySelector("[data-pagina-proxima]")!);
+    await waitFor(() => expect(folha()?.querySelector('[data-agendamento="f40"]')).not.toBeNull());
+  });
+
+  it("com até 20 próximas não há 'Ver todas'", async () => {
+    h.agenda = h.agenda.slice(0, 20);
+    montar();
+    await waitFor(() => expect(linha("f00")).not.toBeNull());
+    expect(document.querySelectorAll('[data-agenda-lista="proximas"] [data-agendamento]')).toHaveLength(20);
+    expect(document.querySelector('[data-ver-todos="agenda"]')).toBeNull();
   });
 });

@@ -60,12 +60,20 @@ async function assinar(bucket: BucketAssinavel, caminhos: string[]): Promise<Rec
 const assinarTreino: Assinador = (c) => assinar(supabase.storage.from(BUCKET_REGISTROS), c);
 const assinarPrincipal: Assinador = (c) => assinar(principal.storage.from(BUCKET_EVOLUCAO), c);
 
+/** hml-14d (D30): quantas avaliações e fotos mensais a Evolução lê (as MAIS NOVAS). */
+export const MAX_AVALIACOES = 200;
+export const MAX_FOTOS = 200;
+
 /** A parte do Banco do Treino (o usuário do Treino é o da troca de token). */
 export async function carregarTreino(treinoId: string, assinador: Assinador = assinarTreino): Promise<ParteTreino> {
   const [perfil, avaliacoes, fotos] = await Promise.all([
     supabase.from("physiq_profiles").select(COLUNAS_PERFIL).eq("id", treinoId).maybeSingle(),
-    supabase.from("physiq_avaliacoes").select("*").eq("user_id", treinoId).order("data_avaliacao", { ascending: true }).limit(200),
-    supabase.from("physiq_registros_fotos").select("id, mes_ref, tipo, storage_path, created_at").eq("user_id", treinoId).order("mes_ref", { ascending: false }),
+    // hml-14d (B21 · D30): as 200 MAIS NOVAS (antes, as 200 mais antigas: acima de 200 a avaliação nova sumia) — devolvidas em
+    // ordem crescente, como antes (desempate pelo id)
+    supabase.from("physiq_avaliacoes").select("*").eq("user_id", treinoId)
+      .order("data_avaliacao", { ascending: false }).order("id", { ascending: false }).limit(MAX_AVALIACOES),
+    supabase.from("physiq_registros_fotos").select("id, mes_ref, tipo, storage_path, created_at").eq("user_id", treinoId)
+      .order("mes_ref", { ascending: false }).limit(MAX_FOTOS),
   ]);
   const erro = perfil.error ?? avaliacoes.error ?? fotos.error;
   if (erro) throw new ErroFonte("treino", erro.message);
@@ -73,7 +81,7 @@ export async function carregarTreino(treinoId: string, assinador: Assinador = as
   const urls = await assinador(linhasFotos.map((f) => f.storage_path));
   return {
     perfil: (perfil.data as unknown as LinhaTreino | null) ?? null,
-    avaliacoes: (avaliacoes.data ?? []) as unknown as LinhaTreino[],
+    avaliacoes: [...((avaliacoes.data ?? []) as unknown as LinhaTreino[])].reverse(),
     fotos: linhasFotos.map((f) => ({ ...f, url: urls[f.storage_path] ?? null })),
   };
 }
