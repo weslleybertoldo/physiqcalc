@@ -2,6 +2,8 @@
 // Nasce de uma ENTRADA (descrição, valor e data dela) ou avulso ("Novo recibo" — na página, escolhendo o aluno). Modelo (★ primeiro),
 // descrição, valor em BRL com prévia, data e a PRÉVIA do texto com as tags substituídas ao vivo (nº = o próximo do profissional).
 // Emitir grava o recibo (o número vem do banco), liga a movimentação e baixa o PDF — o mesmo de hoje, com a marca Physiq.
+// hml-14b (B19): no recibo avulso o aluno é escolhido pelo SeletorDeAluno (busca no banco: nome, apelido, e-mail, telefone e CPF,
+// sem acento, 20 por vez; o CPF do recibo vem junto) — era um <select> com a lista de até 1000 alunos (a prop `alunos`, que sai).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { chaveDia, dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { BTN_LINK, BTN_PRI, BTN_SEC, Campo, DESCRICAO_JANELA, INPUT, JANELA, SELECT, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { DESCRICAO_RECIBO_MAX, aplicarTags, formatarCPF, formatarNumeroRecibo, ordenarModelosRecibo, temTagPendente } from "@/financeiro/recibos";
+import { SeletorDeAluno } from "@/painel/alunos/SeletorDeAluno";
+import { useAlunoDoSeletor } from "@/painel/alunos/useSeletorDeAluno";
 import { emitirRecibo, type AlunoResumido, type ModeloRecibo, type Recibo } from "./dados";
 import { fmtBRL, fmtValorComSinal, formatarData, limparValorDigitado, parseValor, textoValor, valorValido } from "./financeiroUtil";
 import { formInicial, formParaRegistro, modeloInicial, type FormRecibo, type PadraoRecibo } from "./recibosUtil";
@@ -38,8 +42,9 @@ export interface OrigemRecibo {
 interface Props {
   open: boolean;
   onOpenChange: (aberto: boolean) => void;
-  /** o aluno do recibo; null = escolher na lista (recibo avulso da página) */
+  /** o aluno do recibo; null = escolher no seletor (recibo avulso da página) */
   aluno: AlunoResumido | null;
+  /** hml-14b (B19): não é mais usada (o seletor busca no banco) — sai quando quem chama parar de mandar */
   alunos?: AlunoResumido[];
   /** movimentação de origem (recibo de uma entrada) ou null (avulso) */
   transacao?: OrigemRecibo | null;
@@ -55,7 +60,7 @@ interface Props {
 }
 
 export default function ReciboDialog({
-  open, onOpenChange, aluno, alunos = [], transacao, modelos, proximoNumero, nomeProfissional, padrao, uid, contaId, onSalvo, onGerenciarModelos,
+  open, onOpenChange, aluno, transacao, modelos, proximoNumero, nomeProfissional, padrao, uid, contaId, onSalvo, onGerenciarModelos,
 }: Props) {
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   const [alunoId, setAlunoId] = useState("");
@@ -79,7 +84,10 @@ export default function ReciboDialog({
 
   const v = montarForm(watch());
   const modelo = ordenados.find((m) => m.id === v.modeloId) ?? null;
-  const pessoa = aluno ?? alunos.find((a) => a.id === alunoId) ?? null;
+  // o escolhido no seletor (do cache da busca, ou lido pelo id): nome e CPF para a prévia e o recibo
+  const escolhido = useAlunoDoSeletor(contaId, aluno ? null : alunoId || null);
+  const doSeletor = !aluno && alunoId && escolhido.data ? escolhido.data : null;
+  const pessoa: AlunoResumido | null = aluno ?? (doSeletor ? { id: doSeletor.id, nome: doSeletor.nome, apelido: doSeletor.apelido, cpf: doSeletor.cpf } : null);
 
   // sem modelo escolhido (ou o escolhido foi excluído) → cai no 1º favorito
   useEffect(() => {
@@ -156,10 +164,8 @@ export default function ReciboDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate data-form-recibo>
           {!aluno && (
             <Campo rotulo={`${padrao.rotuloPaciente} *`}>
-              <select className={SELECT} value={alunoId} onChange={(e) => setAlunoId(e.target.value)} data-campo-aluno-recibo>
-                <option value="">Escolha o {padrao.rotuloPaciente.toLowerCase()}</option>
-                {alunos.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
-              </select>
+              <SeletorDeAluno campo="recibo" contaId={contaId} valor={alunoId || null} aoMudar={(a) => setAlunoId(a?.id ?? "")}
+                rotulo={`Buscar o ${padrao.rotuloPaciente.toLowerCase()} do recibo`} />
             </Campo>
           )}
           <Campo rotulo="Modelo *" erro={errors.modeloId?.message}>

@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  ATRIBUIR_POR_VEZ,
   CABECALHO_CSV,
   FILTROS_PADRAO,
+  LIMITE_SELETOR,
   MAX_EXPORTACAO,
   acoesDoAluno,
+  alunoDaTabela,
+  alunoDoSeletor,
+  contatoDoAluno,
+  digitosDaBusca,
+  emLotes,
+  situacaoDoAluno,
+  termoDoSeletor,
+  textoMaisAlunos,
   chipsDosModulos,
   comPeriodo,
   dataHoraCSV,
@@ -234,5 +244,57 @@ describe("H4 — exportar TODOS os alunos (N-66: sem o corte calado em 500)", ()
   });
   it("1 aluno: texto no singular", async () => {
     expect(textoExportacao({ itens: fila(1), total: 1, completo: true })).toBe("1 aluno exportado.");
+  });
+});
+
+describe("hml-14b (D15) — seleção em lote: a gravação vai em lotes de 200", () => {
+  it("450 ids → 200 + 200 + 50, na ordem; 200 → 1 lote; nenhum → nenhum lote", () => {
+    const ids = Array.from({ length: 450 }, (_, i) => `p${i}`);
+    const lotes = emLotes(ids);
+    expect(ATRIBUIR_POR_VEZ).toBe(200);
+    expect(lotes.map((l) => l.length)).toEqual([200, 200, 50]);
+    expect(lotes.flat()).toEqual(ids);
+    expect(emLotes(ids.slice(0, 200))).toHaveLength(1);
+    expect(emLotes([])).toEqual([]);
+    expect(emLotes(["a", "b", "c"], 2)).toEqual([["a", "b"], ["c"]]);
+  });
+});
+
+describe("hml-14b (B19 · D16) — regras do seletor de aluno", () => {
+  it('"20 de N — refine a busca"; 20 por busca', () => {
+    expect(LIMITE_SELETOR).toBe(20);
+    expect(textoMaisAlunos(20, 41)).toBe("20 de 41 — refine a busca");
+  });
+  it("o termo vai ao banco sem espaço sobrando; os dígitos são os do CPF e do telefone", () => {
+    expect(termoDoSeletor("  Zé   Último ")).toBe("Zé Último");
+    expect(termoDoSeletor(null)).toBe("");
+    expect(digitosDaBusca("123.456.789-00")).toBe("12345678900");
+    expect(digitosDaBusca("(82) 99999-1234")).toBe("82999991234");
+    expect(digitosDaBusca("Zé")).toBe("");
+  });
+  it("item da alunos_da_conta → aluno do seletor (responsáveis pelo id, apelido e CPF da exportação)", () => {
+    expect(alunoDoSeletor(aluno({ apelido: "Rafa", cpf: "12345678900", tem_login: false, bloqueado: true }))).toEqual({
+      id: "p1", nome: "Rafael Moura", apelido: "Rafa", email: "rafael@x.com", telefone: "82999990000", cpf: "12345678900", foto_url: null,
+      ativo: true, bloqueado: true, conta_excluida: false, tem_login: false, personal_id: "u-lucas", nutricionista_id: "u-camila",
+    });
+    expect(alunoDoSeletor(aluno({ personal: null, nutricionista: null }))).toMatchObject({ apelido: null, cpf: null, personal_id: null, nutricionista_id: null });
+  });
+  it("linha de pacientes (lida pelo id) → aluno do seletor: foto só endereço (a regra da w13_foto_do_aluno), login, bloqueio e conta excluída", () => {
+    const base = {
+      id: "p9", nome: "Ana", apelido: null, email: null, telefone: null, cpf: null, foto_url: "https://x/f.jpg", ativo: true,
+      acesso_bloqueado_em: null, user_id: null, personal_id: "u1", nutricionista_id: null, conta_excluida_em: null,
+    };
+    expect(alunoDaTabela(base)).toMatchObject({ foto_url: "https://x/f.jpg", tem_login: false, bloqueado: false, conta_excluida: false, ativo: true });
+    expect(alunoDaTabela({ ...base, foto_url: "fotos/p9.jpg", user_id: "u9", acesso_bloqueado_em: "2026-10-01", ativo: false, conta_excluida_em: "2026-10-02" }))
+      .toMatchObject({ foto_url: null, tem_login: true, bloqueado: true, ativo: false, conta_excluida: true });
+  });
+  it("o que a linha diz além do nome: conta excluída > desativado > bloqueado; contato ou 'sem contato'", () => {
+    const a = alunoDoSeletor(aluno());
+    expect(situacaoDoAluno(a)).toBe("");
+    expect(situacaoDoAluno({ ...a, bloqueado: true })).toBe("bloqueado");
+    expect(situacaoDoAluno({ ...a, ativo: false, bloqueado: true })).toBe("desativado");
+    expect(situacaoDoAluno({ ...a, ativo: false, conta_excluida: true })).toBe("conta excluída");
+    expect(contatoDoAluno(a)).toBe("rafael@x.com · (82) 99999-0000");
+    expect(contatoDoAluno({ email: null, telefone: null })).toBe("sem contato");
   });
 });

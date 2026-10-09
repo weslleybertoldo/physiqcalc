@@ -1,16 +1,24 @@
-import { useEffect, useMemo, useState, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, FileDown, Inbox, Search, Share2, TriangleAlert, UserPlus, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useConta } from "@/nucleo/conta";
 import { ehLoja } from "@/lib/distribuicao";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { mensagemLimite } from "@/nucleo/cobranca/regras";
+import { BTN_PRI, BTN_SEC, DESCRICAO_JANELA, JANELA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { TopoPagina } from "@/ui/casca/topo";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { TEXTO_CONVITE_ALUNO } from "@/painel/configuracoes/equipe/regras";
 import { atribuirAlunos, ErroAlunos, listarAlunos, paginaDaExportacao } from "@/painel/alunos/api";
 import { LinhaAluno } from "@/painel/alunos/Linha";
@@ -24,8 +32,8 @@ import {
   ORDENS,
   PERIODOS_FILTRO,
   SITUACOES,
-  TAMANHO_PAGINA,
   comPeriodo,
+  emLotes,
   exportarTodos,
   filtrosAtivos,
   limiteAtingido,
@@ -105,14 +113,18 @@ function filtrosDaUrl(sp: URLSearchParams): FiltrosAlunos {
     ...FILTROS_PADRAO,
     situacao: sit && SITUACOES.some((s) => s.valor === sit) ? sit : FILTROS_PADRAO.situacao,
     responsavel: sp.get("responsavel") ?? "",
+    // hml-14b (D15): a busca também fica no endereço (abrir um aluno e voltar mantém a busca e a página)
+    q: (sp.get("q") ?? "").trim(),
   };
 }
 
 /**
- * Painel › Alunos (W13 — spec 4.4, telas 6 e 7): a lista da conta ativa (20 com "Ver mais"), busca, filtros de situação, módulo,
- * responsável, tag e pagamento, selos, exportar CSV, Pendentes do link /c/, Novo aluno (cadastrar, convidar, link e código) e o
- * menu ⋮ de cada aluno (abrir, PDF, bloquear acesso, desativar, remover). O número do menu = o total desta lista no filtro
- * padrão "Ativos" (lição da W10: número = tela).
+ * Painel › Alunos (W13 — spec 4.4, telas 6 e 7): a lista da conta ativa, busca, filtros de situação, módulo, responsável, tag e
+ * pagamento, selos, exportar CSV, Pendentes do link /c/, Novo aluno (cadastrar, convidar, link e código) e o menu ⋮ de cada aluno
+ * (abrir, PDF, bloquear acesso, desativar, remover). O número do menu = o total desta lista no filtro padrão "Ativos" (lição da
+ * W10: número = tela). hml-14b (D15): páginas de 20 vindas do BANCO (a alunos_da_conta com deslocamento e o total do filtro),
+ * "1–20 de N" e a página no endereço — acabou o "Ver mais" que parava no 500º; a seleção em lote vale por página, mais "todos os
+ * N do filtro" com confirmação.
  */
 export default function Alunos() {
   const { conta } = useConta();
@@ -120,12 +132,13 @@ export default function Alunos() {
   const qc = useQueryClient();
   const [sp, setSp] = useSearchParams();
   const [filtros, setFiltros] = useState<FiltrosAlunos>(() => filtrosDaUrl(sp));
-  const [busca, setBusca] = useState("");
-  const [paginas, setPaginas] = useState(1);
+  const [busca, setBusca] = useState(() => filtrosDaUrl(sp).q);
   const [novoAberto, setNovoAberto] = useState(sp.get("novo") === "1");
   const [pendentesAbertos, setPendentesAbertos] = useState(sp.get("pendentes") === "1");
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [exportando, setExportando] = useState(false);
+  // o total que o banco respondeu (página além do fim → a última); a página "de espera" (keepPreviousData) não conta
+  const [totalLido, setTotalLido] = useState<number | null>(null);
   const meuLink = useMeuLink();
 
   // busca com espera (300 ms), como a lista antiga
@@ -133,30 +146,51 @@ export default function Alunos() {
     const t = setTimeout(() => setFiltros((f) => (f.q === busca.trim() ? f : { ...f, q: busca.trim() })), 300);
     return () => clearTimeout(t);
   }, [busca]);
+  // filtro ou conta mudou: a seleção zera (a página volta à 1 no usePaginaNaUrl); trocar de página mantém a seleção
   useEffect(() => {
-    setPaginas(1);
     setSelecionados([]);
   }, [filtros, conta?.id]);
-  // a situação e o responsável ficam no endereço (o aviso do sino e o "sem responsável" abrem direto)
+
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: filtros, total: totalLido });
+  // trocar a conta ativa (de uma para outra) volta à página 1 — a conta chegando pela 1ª vez não conta (o ?pagina= do endereço vale)
+  const contaAntes = useRef(conta?.id);
   useEffect(() => {
+    const antes = contaAntes.current;
+    contaAntes.current = conta?.id;
+    if (antes && conta?.id && antes !== conta.id) irPara(1);
+  }, [conta?.id, irPara]);
+
+  // a situação, o responsável e a busca ficam no endereço (o aviso do sino e o "sem responsável" abrem direto). hml-14b: este
+  // efeito vem DEPOIS do usePaginaNaUrl — os 2 gravam o endereço no mesmo commit e vale o último; quando o filtro daqui muda, ele
+  // já tira a página junto (senão a página velha voltaria ao endereço). Na 1ª montagem a página do endereço fica.
+  const filtroNoEndereco = `${filtros.situacao}|${filtros.responsavel}|${filtros.q}`;
+  const filtroNoEnderecoAntes = useRef(filtroNoEndereco);
+  useEffect(() => {
+    const mudou = filtroNoEnderecoAntes.current !== filtroNoEndereco;
+    filtroNoEnderecoAntes.current = filtroNoEndereco;
     const novo = new URLSearchParams(sp);
     if (filtros.situacao !== "ativos") novo.set("situacao", filtros.situacao); else novo.delete("situacao");
     if (filtros.responsavel) novo.set("responsavel", filtros.responsavel); else novo.delete("responsavel");
+    if (filtros.q) novo.set("q", filtros.q); else novo.delete("q");
+    if (mudou) novo.delete("pagina");
     novo.delete("novo");
     novo.delete("pendentes");
     if (novo.toString() !== sp.toString()) setSp(novo, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só os filtros mudam o endereço
-  }, [filtros.situacao, filtros.responsavel]);
+  }, [filtroNoEndereco]);
 
   const q = useQuery({
-    queryKey: ["alunos", conta?.id, filtros, paginas],
-    queryFn: () => listarAlunos(conta!.id, filtros, 0, TAMANHO_PAGINA * paginas),
+    queryKey: ["alunos", conta?.id, filtros, pagina],
+    queryFn: () => listarAlunos(conta!.id, filtros, deslocamento(pagina), POR_PAGINA),
     enabled: Boolean(conta?.id),
     placeholderData: keepPreviousData,
     staleTime: 20_000,
     retry: 1,
   });
   const lista = q.data ?? null;
+  useEffect(() => {
+    if (q.data && !q.isPlaceholderData) setTotalLido(q.data.total);
+  }, [q.data, q.isPlaceholderData]);
 
   const recarregar = () => {
     void qc.invalidateQueries({ queryKey: ["alunos"] });
@@ -250,7 +284,7 @@ export default function Alunos() {
               type="search"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por nome, e-mail, telefone ou tag"
+              placeholder="Buscar por nome, e-mail, telefone, CPF ou tag"
               className="h-11 w-full rounded-[14px] border border-linha-2 bg-superficie pl-10 pr-3 text-[14px] text-texto outline-none placeholder:text-texto-4 focus:border-violeta/60"
               data-busca-alunos
             />
@@ -333,16 +367,17 @@ export default function Alunos() {
         </div>
       </Cartao>
 
-      <Cartao className="px-4 pb-2 pt-4" data-lista-alunos>
+      <Cartao className="px-4 pb-2 pt-4" data-lista-alunos data-lista="alunos">
         <CabecalhoCartao
           titulo={`${lista.total} ${lista.total === 1 ? "aluno" : "alunos"}`}
           extra={<Chip tom="g" data-situacao-atual>{(SITUACOES.find((s) => s.valor === filtros.situacao)?.rotulo ?? "").toUpperCase()}</Chip>}
           acao={q.isFetching ? <span className="text-[12px] text-texto-3">Atualizando…</span> : null}
         />
-        {filtros.responsavel === "sem" && lista.eu.dono && lista.itens.length > 0 && (
-          <Atribuir lista={lista} selecionados={selecionados} setSelecionados={setSelecionados} aoFeito={() => { setSelecionados([]); recarregar(); }} />
+        {filtros.responsavel === "sem" && lista.eu.dono && lista.total > 0 && (
+          <Atribuir lista={lista} filtros={filtros} selecionados={selecionados} setSelecionados={setSelecionados}
+            aoFeito={() => { setSelecionados([]); recarregar(); }} />
         )}
-        {lista.itens.length === 0 ? (
+        {lista.total === 0 ? (
           filtrosAtivos(filtros) ? (
             <EstadoVazio icone={Search} titulo="Nenhum aluno com esses filtros" texto="Mude a busca ou os filtros."
               acao={<Botao onClick={() => { setBusca(""); setFiltros(FILTROS_PADRAO); }}>Limpar filtros</Botao>} className="my-6" />
@@ -365,12 +400,8 @@ export default function Alunos() {
             ))}
           </div>
         )}
-        {lista.itens.length < lista.total && (
-          <div className="flex items-center justify-center gap-3 border-t border-linha-3 py-3">
-            <span className="text-[12.5px] text-texto-3" data-mostrando>Mostrando {lista.itens.length} de {lista.total}</span>
-            <Botao tamanho="sm" onClick={() => setPaginas((p) => p + 1)} disabled={q.isFetching} data-ver-mais>Ver mais</Botao>
-          </div>
-        )}
+        {/* hml-14b (D15): a página vem do banco (20 por vez, o total do filtro); a página fica no endereço */}
+        <Paginacao nome="alunos" pagina={pagina} total={lista.total} aoMudar={irPara} carregando={q.isFetching} className="border-t border-linha-3" />
       </Cartao>
 
       <NovoAluno aberto={novoAberto} aoMudar={setNovoAberto} lista={lista} aoMudou={recarregar} />
@@ -411,9 +442,14 @@ function Avisos({ lista, aoVerBloqueados, aoPlano }: { lista: ListaAlunos; aoVer
   );
 }
 
-/** Atribuir em lote (herdado da W5): os alunos que ficaram sem responsável passam para um profissional da equipe. */
-function Atribuir({ lista, selecionados, setSelecionados, aoFeito }: {
+/**
+ * Atribuir em lote (herdado da W5): os alunos que ficaram sem responsável passam para um profissional da equipe. hml-14b (D15): a
+ * seleção vale por página ("todos desta página") e, com confirmação, para "todos os N do filtro" — os ids vêm do banco pela leitura
+ * de 500 em 500 da exportação; a gravação vai em lotes de 200 (o máximo da alunos_atribuir por chamada).
+ */
+function Atribuir({ lista, filtros, selecionados, setSelecionados, aoFeito }: {
   lista: ListaAlunos;
+  filtros: FiltrosAlunos;
   selecionados: string[];
   setSelecionados: (ids: string[]) => void;
   aoFeito: () => void;
@@ -422,33 +458,81 @@ function Atribuir({ lista, selecionados, setSelecionados, aoFeito }: {
   const [modulo, setModulo] = useState<ModuloAluno>(modulos[0] ?? "treino");
   const candidatos = useMemo(() => lista.responsaveis.filter((r) => r.papeis.includes(modulo === "treino" ? "personal" : "nutricionista")), [lista.responsaveis, modulo]);
   const [resp, setResp] = useState("");
-  const [indo, setIndo] = useState(false);
+  const [indo, setIndo] = useState<{ feitos: number; total: number } | null>(null);
+  const [confirmarTodos, setConfirmarTodos] = useState(false);
+  const [lendoTodos, setLendoTodos] = useState(false);
   useEffect(() => {
     if (!candidatos.some((c) => c.id === resp)) setResp(candidatos[0]?.id ?? "");
   }, [candidatos, resp]);
-  const todos = lista.itens.map((a) => a.id);
-  const ir = async () => {
-    if (!selecionados.length || !resp) return;
-    setIndo(true);
+  const daPagina = lista.itens.map((a) => a.id);
+  const paginaToda = daPagina.length > 0 && daPagina.every((id) => selecionados.includes(id));
+  const todosDoFiltro = lista.total > 0 && selecionados.length >= lista.total;
+  const nomeResp = candidatos.find((c) => c.id === resp)?.nome ?? "o profissional";
+
+  const alternarPagina = () =>
+    setSelecionados(paginaToda ? selecionados.filter((id) => !daPagina.includes(id)) : [...new Set([...selecionados, ...daPagina])]);
+
+  // "todos os N do filtro": os ids de todas as páginas, de 500 em 500 (a mesma leitura da exportação, sem as colunas do CSV)
+  const selecionarTodos = async () => {
+    setLendoTodos(true);
     try {
-      const r = await atribuirAlunos(lista.conta.id, selecionados, modulo, resp);
-      toast.success(`${r.atualizados} ${r.atualizados === 1 ? "aluno passou" : "alunos passaram"} para ${candidatos.find((c) => c.id === resp)?.nome ?? "o profissional"}.`);
-      aoFeito();
+      const e = await exportarTodos((offset, limite) => listarAlunos(lista.conta.id, filtros, offset, limite));
+      setSelecionados(e.itens.map((a) => a.id));
+      if (!e.completo) toast.warning(`${e.itens.length} de ${e.total} alunos selecionados: a seleção parou no limite. Use os filtros para o resto.`, { duration: 12_000 });
     } catch (e) {
       toast.error(mensagemErroAlunos(e instanceof ErroAlunos ? e.codigo : null));
     } finally {
-      setIndo(false);
+      setLendoTodos(false);
+      setConfirmarTodos(false);
     }
   };
+
+  const ir = async () => {
+    if (!selecionados.length || !resp) return;
+    const lotes = emLotes(selecionados);
+    let feitos = 0;
+    let atualizados = 0;
+    setIndo({ feitos: 0, total: selecionados.length });
+    try {
+      for (const lote of lotes) {
+        const r = await atribuirAlunos(lista.conta.id, lote, modulo, resp);
+        atualizados += Number(r.atualizados) || 0;
+        feitos += lote.length;
+        setIndo({ feitos, total: selecionados.length });
+      }
+      toast.success(`${atualizados} ${atualizados === 1 ? "aluno passou" : "alunos passaram"} para ${nomeResp}.`);
+      aoFeito();
+    } catch (e) {
+      const msg = mensagemErroAlunos(e instanceof ErroAlunos ? e.codigo : null);
+      // parte dos lotes já foi: a lista recarrega para mostrar quem ainda está sem responsável
+      if (feitos > 0) {
+        toast.error(`${msg} ${atualizados} ${atualizados === 1 ? "aluno já passou" : "alunos já passaram"} para ${nomeResp}.`);
+        aoFeito();
+      } else toast.error(msg);
+    } finally {
+      setIndo(null);
+    }
+  };
+
   return (
     <div className="mb-2 flex flex-wrap items-end gap-2.5 rounded-2xl border border-linha bg-superficie px-3.5 py-3" data-atribuir-lote>
       <div className="flex min-w-[140px] flex-col gap-1">
         <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-texto-4">Selecionados</span>
         <span className="text-[14px] font-semibold text-texto" data-atribuir-quantos={selecionados.length}>
-          {selecionados.length} de {lista.itens.length}{" "}
-          <button type="button" className="ml-1 text-[12px] font-medium text-violeta-3" onClick={() => setSelecionados(selecionados.length === todos.length ? [] : todos)} data-atribuir-todos>
-            {selecionados.length === todos.length ? "limpar" : "todos"}
+          {selecionados.length} de {lista.total}
+        </span>
+        <span className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-medium">
+          <button type="button" className="text-violeta-3" onClick={alternarPagina} disabled={!daPagina.length} data-atribuir-todos data-atribuir-pagina={paginaToda ? "toda" : ""}>
+            {paginaToda ? "limpar esta página" : "todos desta página"}
           </button>
+          {lista.total > daPagina.length && !todosDoFiltro && (
+            <button type="button" className="text-violeta-3" onClick={() => setConfirmarTodos(true)} disabled={lendoTodos} data-atribuir-todos-filtro={lista.total}>
+              {lendoTodos ? "selecionando…" : `todos os ${lista.total} do filtro`}
+            </button>
+          )}
+          {selecionados.length > 0 && (
+            <button type="button" className="text-texto-3 hover:text-texto" onClick={() => setSelecionados([])} data-atribuir-limpar>limpar</button>
+          )}
         </span>
       </div>
       {modulos.length > 1 && (
@@ -459,9 +543,28 @@ function Atribuir({ lista, selecionados, setSelecionados, aoFeito }: {
       <Filtro largo rotulo="Atribuir a" value={resp} onChange={(e) => setResp(e.target.value)} data-atribuir-responsavel>
         {candidatos.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.eu ? " (você)" : ""}</option>)}
       </Filtro>
-      <Botao variante="w" onClick={() => void ir()} disabled={indo || !selecionados.length || !resp} data-atribuir-confirmar>
-        {indo ? "Atribuindo…" : "Atribuir"}
+      <Botao variante="w" onClick={() => void ir()} disabled={!!indo || lendoTodos || !selecionados.length || !resp} data-atribuir-confirmar>
+        {indo ? (indo.total > indo.feitos && indo.feitos > 0 ? `Atribuindo… ${indo.feitos} de ${indo.total}` : "Atribuindo…") : "Atribuir"}
       </Botao>
+
+      <AlertDialog open={confirmarTodos} onOpenChange={(a) => { if (!lendoTodos) setConfirmarTodos(a); }}>
+        <AlertDialogContent className={JANELA} data-confirmar-todos-filtro={lista.total}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className={TITULO_JANELA}>Selecionar os {lista.total} alunos do filtro?</AlertDialogTitle>
+            <AlertDialogDescription className={DESCRICAO_JANELA}>
+              A seleção passa a valer para todos os {lista.total} alunos sem responsável deste filtro, não só os desta página. Depois,
+              escolha para quem eles vão e toque em Atribuir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className={BTN_SEC} disabled={lendoTodos}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className={BTN_PRI} disabled={lendoTodos} onClick={(e) => { e.preventDefault(); void selecionarTodos(); }}
+              data-atribuir-confirmar-todos>
+              {lendoTodos ? "Selecionando…" : `Selecionar os ${lista.total}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

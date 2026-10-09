@@ -93,8 +93,6 @@ export function intervaloPeriodo(p: PeriodoFiltro, de: string, ate: string, agor
   return { de: d.toISOString() };
 }
 
-export const TAMANHO_PAGINA = 20;
-
 export const SITUACOES: { valor: SituacaoFiltro; rotulo: string }[] = [
   { valor: "ativos", rotulo: "Ativos" },
   { valor: "bloqueados", rotulo: "Bloqueados" },
@@ -479,4 +477,126 @@ export function textoExportacao(e: Exportacao): string {
 export function nomeDoCSV(agora = new Date()): string {
   const d = agora.toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
   return `alunos-${d}.csv`;
+}
+
+// ───────────────────────── seleção em lote (hml-14b, D15) ─────────────────────────
+
+/** A alunos_atribuir aceita até 200 alunos por chamada: "todos os N do filtro" vai em lotes. */
+export const ATRIBUIR_POR_VEZ = 200;
+
+/** Os ids em lotes de `tamanho` (a ordem não muda; lista vazia = nenhum lote). */
+export function emLotes<T>(itens: T[], tamanho = ATRIBUIR_POR_VEZ): T[][] {
+  const n = Math.max(1, Math.floor(tamanho));
+  const r: T[][] = [];
+  for (let i = 0; i < itens.length; i += n) r.push(itens.slice(i, i + n));
+  return r;
+}
+
+// ───────────────────────── seletor de aluno (hml-14b, B19 · D16) ─────────────────────────
+
+/** Os 4 campos que escolhem aluno no painel (vai no `data-seletor-aluno`). */
+export type CampoSeletor = "ligar" | "agendamento" | "movimentacao" | "recibo";
+/**
+ * Quem o campo oferece: "todos" (o Ligar aluno da pré-consulta: qualquer aluno da conta fora da lixeira) ou
+ * "ativos_e_bloqueados" (Agendamento, Movimentação e Recibo: ativo = true, com ou sem bloqueio — o que eles listavam antes).
+ */
+export type SituacaoSeletor = "todos" | "ativos_e_bloqueados";
+
+/** 20 resultados por busca (o resto aparece refinando a busca). */
+export const LIMITE_SELETOR = 20;
+/** Espera depois da última tecla antes de ir ao banco. */
+export const ESPERA_SELETOR = 300;
+
+/** O aluno como o seletor mostra e devolve a quem usa (o mesmo formato vindo da busca ou lido pelo id). */
+export interface AlunoDoSeletor {
+  id: string;
+  nome: string;
+  apelido: string | null;
+  email: string | null;
+  telefone: string | null;
+  cpf: string | null;
+  foto_url: string | null;
+  ativo: boolean;
+  bloqueado: boolean;
+  conta_excluida: boolean;
+  tem_login: boolean;
+  personal_id: string | null;
+  nutricionista_id: string | null;
+}
+
+/** Um item da alunos_da_conta (com `exportar`: apelido e CPF) no formato do seletor. */
+export function alunoDoSeletor(a: AlunoLinha): AlunoDoSeletor {
+  return {
+    id: a.id,
+    nome: a.nome ?? "",
+    apelido: a.apelido ?? null,
+    email: a.email ?? null,
+    telefone: a.telefone ?? null,
+    cpf: a.cpf ?? null,
+    foto_url: a.foto_url ?? null,
+    ativo: a.ativo !== false,
+    bloqueado: !!a.bloqueado,
+    conta_excluida: !!a.conta_excluida,
+    tem_login: !!a.tem_login,
+    personal_id: a.personal?.id ?? null,
+    nutricionista_id: a.nutricionista?.id ?? null,
+  };
+}
+
+/** A linha de `pacientes` lida pelo id (o aluno já escolhido). */
+export interface PacienteDoSeletor {
+  id: string;
+  nome: string | null;
+  apelido: string | null;
+  email: string | null;
+  telefone: string | null;
+  cpf: string | null;
+  foto_url: string | null;
+  ativo: boolean | null;
+  acesso_bloqueado_em: string | null;
+  user_id: string | null;
+  personal_id: string | null;
+  nutricionista_id: string | null;
+  conta_excluida_em: string | null;
+}
+
+/** A linha da tabela no formato do seletor; a foto só quando é endereço (a regra da w13_foto_do_aluno). */
+export function alunoDaTabela(p: PacienteDoSeletor): AlunoDoSeletor {
+  const foto = (p.foto_url ?? "").trim();
+  return {
+    id: p.id,
+    nome: p.nome ?? "",
+    apelido: p.apelido ?? null,
+    email: p.email ?? null,
+    telefone: p.telefone ?? null,
+    cpf: p.cpf ?? null,
+    foto_url: /^https?:\/\//i.test(foto) ? foto : null,
+    ativo: p.ativo !== false,
+    bloqueado: !!p.acesso_bloqueado_em,
+    conta_excluida: !!p.conta_excluida_em,
+    tem_login: !!p.user_id,
+    personal_id: p.personal_id ?? null,
+    nutricionista_id: p.nutricionista_id ?? null,
+  };
+}
+
+/** O termo como vai ao banco: pontas fora e espaços repetidos viram 1 (o banco tira acento e caixa). */
+export const termoDoSeletor = (t: string | null | undefined): string => (t ?? "").replace(/\s+/g, " ").trim();
+/** Só os dígitos do que foi digitado (a busca por CPF e telefone; o banco compara a partir de 3). */
+export const digitosDaBusca = (t: string | null | undefined): string => (t ?? "").replace(/\D/g, "");
+
+/** "20 de 41 — refine a busca": o seletor mostra só os primeiros; o resto aparece refinando. */
+export const textoMaisAlunos = (mostrando: number, total: number): string => `${mostrando} de ${total} — refine a busca`;
+
+/** O que a linha do aluno diz além do nome: "desativado" · "bloqueado" · "conta excluída" (ativo = vazio). */
+export function situacaoDoAluno(a: Pick<AlunoDoSeletor, "ativo" | "bloqueado" | "conta_excluida">): string {
+  if (a.conta_excluida) return "conta excluída";
+  if (!a.ativo) return "desativado";
+  if (a.bloqueado) return "bloqueado";
+  return "";
+}
+
+/** "e-mail · (82) 99999-1234" (o que tiver); sem nenhum = "sem contato". */
+export function contatoDoAluno(a: Pick<AlunoDoSeletor, "email" | "telefone">): string {
+  return [a.email, formatarTelefone(a.telefone)].filter(Boolean).join(" · ") || "sem contato";
 }

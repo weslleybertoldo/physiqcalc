@@ -3,7 +3,10 @@
  * função `alunos` (limite da faixa, e-mail do convite pelo Resend, espelho no Treino). A regra toda é do banco.
  */
 import { principal } from "@/integrations/principal/client";
-import { filtrosParaServidor, normalizarLista, type FiltrosAlunos, type ListaAlunos, type ModuloAluno } from "./regras";
+import {
+  LIMITE_SELETOR, alunoDaTabela, alunoDoSeletor, filtrosParaServidor, normalizarLista, termoDoSeletor, type AlunoDoSeletor, type FiltrosAlunos,
+  type ListaAlunos, type ModuloAluno, type PacienteDoSeletor, type SituacaoSeletor,
+} from "./regras";
 
 export class ErroAlunos extends Error {
   constructor(public codigo: string, public extra: Record<string, unknown> = {}) {
@@ -66,6 +69,46 @@ export async function paginaDaExportacao(contaId: string, filtros: FiltrosAlunos
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
   return lista;
+}
+
+// ───────────────────────── seletor de aluno (hml-14b, B19 · D16) ─────────────────────────
+
+/**
+ * A busca do seletor de aluno: a MESMA lista da página Alunos (alunos_da_conta — só a conta, regra P1, fora da lixeira), com o
+ * termo (nome, apelido, e-mail, tag; telefone e CPF pelos dígitos; sem acento desde a D17), só os primeiros `limite` e o total.
+ * `exportar` traz apelido e CPF (o Recibo mostra o CPF). Erro do banco → lança (o seletor mostra o erro, nunca "nenhum aluno").
+ */
+export async function buscarAlunosDoSeletor(
+  contaId: string,
+  termo: string,
+  situacao: SituacaoSeletor,
+  limite = LIMITE_SELETOR,
+): Promise<{ itens: AlunoDoSeletor[]; total: number }> {
+  const q = termoDoSeletor(termo);
+  const r = await rpc("alunos_da_conta", {
+    p_conta: contaId, p_filtros: { situacao, ...(q ? { q } : {}), exportar: "true" }, p_offset: 0, p_limite: limite,
+  });
+  const lista = normalizarLista(r);
+  if (!lista) throw new ErroAlunos("erro_interno");
+  return { itens: lista.itens.map(alunoDoSeletor), total: lista.total };
+}
+
+/**
+ * O aluno já escolhido (o `?aluno=` da Agenda, a consulta, a movimentação ou a resposta que já têm aluno), lido pelo id: só desta
+ * conta e fora da lixeira — a RLS de pacientes confere o resto (P1). Não achou (removido, de outra conta, sem acesso) = null.
+ */
+export async function alunoDoSeletorPorId(contaId: string, id: string): Promise<AlunoDoSeletor | null> {
+  if (!online()) throw new ErroAlunos("sem_internet");
+  // `as never`: o caminho no jsonb (config->>conta_excluida_em) estoura a inferência de tipos do supabase-js (TS2589)
+  const { data, error } = await principal
+    .from("pacientes" as never)
+    .select("id, nome, apelido, email, telefone, cpf, foto_url, ativo, acesso_bloqueado_em, user_id, personal_id, nutricionista_id, conta_excluida_em:config->>conta_excluida_em")
+    .eq("id", id)
+    .eq("conta_id", contaId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new ErroAlunos("erro_interno", { detalhe: error.message });
+  return data ? alunoDaTabela(data as unknown as PacienteDoSeletor) : null;
 }
 
 export interface ConviteAluno {
