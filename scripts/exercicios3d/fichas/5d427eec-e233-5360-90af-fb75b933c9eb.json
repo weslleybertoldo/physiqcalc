@@ -1,0 +1,295 @@
+{
+  "uuid": "5d427eec-e233-5360-90af-fb75b933c9eb",
+  "nome": "Remada Curvada com Halteres",
+  "cena": "remada_curvada_com_halteres",
+  "grupo": "Dorsal / Rombóide",
+  "subgrupo": "Latíssimo do dorso · romboides · trapézio médio · bíceps",
+  "padrao_movimento": "remada",
+  "equipamento": "halteres",
+  "variacao": "em pé, tronco inclinado",
+  "alvos": [
+    "dorsal",
+    "trapezio"
+  ],
+  "auxiliares": [
+    "costas",
+    "deltoide",
+    "biceps",
+    "antebraco",
+    "lombar"
+  ],
+  "camera": {
+    "az": 135,
+    "el": 22,
+    "dist": 3.6,
+    "alvo": [
+      0,
+      -0.1,
+      0.72
+    ]
+  },
+  "camera_vistas": {
+    "dist": 3.6,
+    "alvo": [
+      0,
+      -0.1,
+      0.72
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés na largura do quadril e as pontas para a frente, segura um halter em cada mão com as palmas viradas para o corpo (pegada pronada). Com os joelhos levemente dobrados, leva o quadril para trás e inclina o tronco à frente, com as costas retas, até ele ficar bem inclinado, perto da horizontal, com a cabeça na linha da coluna; os braços ficam esticados, pendurados embaixo dos ombros, com os halteres na frente das pernas. Sem mexer o tronco, puxa os dois halteres juntos até perto da cintura, embaixo da barriga, levando os cotovelos para trás e para cima, junto do corpo, até passarem da linha das costas, e aproxima as escápulas no fim; desce devagar pelo mesmo caminho até esticar os braços de novo, deixando os ombros descerem um pouco.",
+  "cinesiologia": {
+    "plano": "sagital (extensão do ombro na subida, flexão na descida), cadeia cinética aberta; os dois braços juntos",
+    "articulacoes": "ombro (extensão na subida: o braço sai pendurado, ~62° à frente da linha do tronco, e termina ~45° atrás dela, com o cotovelo junto do corpo — ~15° aberto pro lado no fim; flexão na descida), cotovelo (flexão de ~10° a ~128° na subida, extensão na descida), escápulas (retração na subida, protração na descida, com os ombros descendo um pouco pro chão); punho reto; tronco parado a 65° da vertical, coluna neutra, quadril, joelhos (~30°) e pés parados",
+    "agonistas": "latíssimo do dorso, trapézio médio e romboides (ExRx, Dumbbell e Barbell Bent-over Row: alvo \"Back, General\"; free-exercise-db: músculo principal \"middle back\", secundários \"biceps\", \"lats\" e \"shoulders\")",
+    "sinergistas": "trapézio inferior, redondo maior, deltoide posterior, infraespinhal, redondo menor, braquial, braquiorradial e peitoral maior, porção esternal (ExRx, Dumbbell e Barbell Bent-over Row: Synergists)",
+    "estabilizadores": "bíceps braquial e cabeça longa do tríceps (estabilizadores dinâmicos do braço); eretores da espinha, isquiotibiais, glúteo máximo, adutor magno e quadríceps seguram o tronco inclinado e os joelhos parados; reto do abdome e oblíquos como estabilizadores antagonistas (ExRx, Barbell Bent-over Row: Dynamic Stabilizers, Stabilizers e Antagonist Stabilizers)",
+    "fases": "subida concêntrica (soltando o ar) e descida excêntrica, devagar, puxando o ar (free-exercise-db: \"lift the dumbbells to your side (as you breathe out)\"; \"Slowly lower the weight again to the starting position as you inhale\"; NSCA: \"Return the bar to the start position in a slow, controlled manner\")"
+  },
+  "referencias": [
+    "free-exercise-db (yuhonas), Bent Over Two-Dumbbell Row — a lista aberta de onde veio o nome do catálogo (fonte_en), domínio público (The Unlicense). https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Two-Dumbbell_Row.json : \"With a dumbbell in each hand (palms facing your torso), bend your knees slightly and bring your torso forward by bending at the waist; as you bend make sure to keep your back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The weights should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.\" \"While keeping the torso stationary, lift the dumbbells to your side (as you breathe out), keeping the elbows close to the body (do not exert any force with the forearm other than holding the weights). On the top contracted position, squeeze the back muscles and hold for a second.\" \"Slowly lower the weight again to the starting position as you inhale.\" Músculos: primary \"middle back\"; secondary \"biceps\", \"lats\", \"shoulders\". A pegada neutra é outro exercício da mesma lista, Bent Over Two-Dumbbell Row With Palms In: \"With a dumbbell in each hand (palms facing each other)\"; \"lift the dumbbells to your side as you breathe out, squeezing your shoulder blades together\" — por isso a pegada padrão desta é a pronada (as fotos da lista mostram os halteres atravessados, com as palmas pras pernas).",
+    "ExRx.net — Dumbbell Bent-over Row (Back, General; a de 1 braço, com joelho e mão no banco). https://exrx.net/WeightExercises/BackGeneral/DBBentOverRow (lido na cópia do Internet Archive de 18/09/2026): \"Pull dumbbell to up to side until it makes contact with ribs or until upper arm is just beyond horizontal. Return until arm is extended and shoulder is stretched downward.\" \"Allow scapula to articulate but do not rotate torso in effort to throw weight up. Torso should be close to horizontal.\" Músculos: alvo Back, General; sinergistas Trapezius Middle, Trapezius Lower, Rhomboids, Latissimus Dorsi, Teres Major, Deltoid Posterior, Infraspinatus, Teres Minor, Brachialis, Brachioradialis, Pectoralis Major Sternal; estabilizadores dinâmicos Biceps Brachii e Triceps Long Head.",
+    "ExRx.net — Barbell Bent-over Row. https://exrx.net/WeightExercises/BackGeneral/BBBentOverRow (cópia do Internet Archive de 22/06/2026): \"Bend knees slightly and bend over bar with back straight.\" \"Pull bar to upper waist. Return until arms are extended and shoulders are stretched downward.\" \"Torso may be kept horizontal for strict execution. Knees are bent in effort to keep low back straight\"; \"If low back becomes rounded due to tight hamstrings, either try bending knees more or don't position torso as low.\" \"A shoulder width or underhand grip can increase lat involvement by emphasizing shoulder extension over transverse extension. A wide overhand grip involves overall back musculature while slightly emphasizing Rear Delt, Infraspinatus and Teres Minor involvement.\" Estabilizadores: Erector Spinae, Hamstrings, Gluteus Maximus, Adductor Magnus, Quadriceps; antagonistas Rectus Abdominis, Obliques.",
+    "National Strength and Conditioning Association. Basics of Strength and Conditioning Manual (2012), cap. 4, 4d. Bent-Over Row (com barra), p. 45–46: \"place feet hip-width apart with toes pointed straight ahead\"; \"Keep back flat and shoulder blades pulled together\"; \"Squat down to grasp the bar with a pronated grip slightly wider than shoulder-width\"; \"Keep arms extended and elbows pointed out\"; \"Keeping the back flat and knees slightly flexed, push hips backward and lower torso until it is parallel with the floor\"; \"Maintain a torso position parallel to the floor, squeeze shoulder blades together, and flex elbows to pull them up and slightly outward\"; \"Pull the bar upward until it touches the upper abdomen\"; \"Return the bar to the start position in a slow, controlled manner\"; \"Weight should remain on the heels of the feet with knees slightly flexed\"; \"Maintain a flat back position throughout the entire lift\"; \"Concentrate on squeezing the shoulder blades back and down to achieve a full range of motion\"; \"Avoid using momentum to complete the lift\".",
+    "Linkul R. Resistance training progressions for the older adult — pulls and rows. NSCA Personal Training Quarterly. 2022;9(4):14-20 (gorilla/gardeners row, com 2 kettlebells ou 2 halteres, tronco dobrado no quadril). https://www.nsca.com/contentassets/1cf6f81b246549cfa07473dbd8516ff1/ptq-9.4.3-resistance-training-progressions-for-the-older-adult-pulls-and-rows.pdf : \"hinge at the hip with a slight bend in the knees\"; \"Encourage clients to push their tailbones up and retract their shoulders to a neutral spine position (not rounded over) with their chin tucked in looking straight at the floor prior to performing the row\"; \"pull their elbow as high as possible and keep the elbow close to the ribs as they row. The core should be tight with no thoracic rotation.\"",
+    "American Council on Exercise (ACE) — Exercise Library, Bent-over Row (barra). https://www.acefitness.org/resources/everyone/exercise-library/12/bent-over-row/ : \"Grip a barbell with palms down so that the wrists, elbows, and shoulders are in a straight line.\" \"bend forward at the hips, and keep the back straight with a slight bend in the knees. Lower the bar towards the floor until the elbows are completely straight, and keep the back flat as the bar is pulled towards the belly button.\" E Single-arm Row (halter): https://www.acefitness.org/resources/everyone/exercise-library/126/single-arm-row/ : \"Your back should be flat and head aligned with your spine.\" \"Keep your arm close to the side of your body\"; \"Avoid rotating your body or changing the position of your spine throughout the lift.\"",
+    "Fenwick CM, Brown SH, McGill SM. Comparison of different rowing exercises: trunk muscle activation and lumbar spine motion, load, and stiffness. J Strength Cond Res. 2009;23(2):350-358 (remada curvada com barra em pé: \"flexed the trunk over the hips, and were instructed to keep a neutral spine while they pulled the bar to their chest, bending their arms at the elbows\"; \"The standing bent-over row resulted in the highest spine compression and the largest amount of spine flexion\"; \"to spare the spine, it is critical for a trainer to ensure that proper technique is followed and that posture is impeccable\").",
+    "Lehman GJ, Buchan DD, Lundy A, Myers N, Nalborczyk A. Variations in muscle activation levels during traditional latissimus dorsi weight training exercises: an experimental study. Dyn Med. 2004;3:4 (remada sentada com a pegada em \"mid pronated position\", até \"the shoulder was at 0 degrees of flexion and 90 degrees of elbow flexion\": \"the seated row while recruiting the latissimus dorsi and biceps brachii more or equally effectively as the lat pulldown also recruits the middle trapezius/rhomboid muscle group to a greater extent\"; \"Actively retracting the scapula does not appear to increase activation levels of the middle trapezius/rhomboid muscle group\")."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": {
+      "ponta_pe": [
+        -5,
+        15
+      ],
+      "coluna": [
+        0,
+        10
+      ]
+    },
+    "tecnica_padrao_fonte": "NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"place feet hip-width apart with toes pointed straight ahead\"; \"Maintain a flat back position throughout the entire lift\"); free-exercise-db, Bent Over Two-Dumbbell Row (\"keep your back straight\"); Fenwick 2009 (\"keep a neutral spine\"; a remada curvada em pé teve a maior flexão da coluna das 3 remadas: postura impecável)",
+    "zonas": [
+      {
+        "nome": "halter esquerdo chega perto da cintura no fim (sem encostar)",
+        "equipamento": "halter_Left",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "t": 1.0,
+        "mm": [
+          3,
+          30
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"Pull the bar upward until it touches the upper abdomen\"); ExRx, Barbell Bent-over Row (\"Pull bar to upper waist\"); free-exercise-db, Bent Over Two-Dumbbell Row (\"lift the dumbbells to your side\"). Medido da anilha até a pele; 3 mm é a folga mínima de peso × corpo da checagem"
+      },
+      {
+        "nome": "halter direito chega perto da cintura no fim (sem encostar)",
+        "equipamento": "halter_Right",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "t": 1.0,
+        "mm": [
+          3,
+          30
+        ],
+        "fonte": "idem"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "tronco inclinado à frente, quase paralelo ao chão",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          55,
+          80
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"until it is almost parallel to the floor\"); ExRx, Dumbbell Bent-over Row (\"Torso should be close to horizontal\"); ExRx, Barbell Bent-over Row (\"Torso may be kept horizontal for strict execution\"; \"If low back becomes rounded due to tight hamstrings, either try bending knees more or don't position torso as low\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"lower torso until it is parallel with the floor\")"
+      },
+      {
+        "nome": "tronco parado (sem dar tranco)",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          63,
+          67
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"While keeping the torso stationary\"); ExRx, Dumbbell Bent-over Row (\"do not rotate torso in effort to throw weight up\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"Avoid using momentum to complete the lift\")"
+      },
+      {
+        "nome": "joelhos levemente dobrados, parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          20,
+          35
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"bend your knees slightly\"); ExRx, Barbell Bent-over Row (\"Bend knees slightly\"; \"Knees are bent in effort to keep low back straight\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"knees slightly flexed\"); ACE, Bent-over Row (\"a slight bend in the knees\"); NSCA PTQ 9.4 (\"hinge at the hip with a slight bend in the knees\")"
+      },
+      {
+        "nome": "joelho em cima do pé (canela quase em pé)",
+        "medida": "joelho_plano_pe",
+        "t": "todos",
+        "mm": [
+          -20,
+          25
+        ]
+      },
+      {
+        "nome": "pés na largura do quadril",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.0,
+          1.6
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"place feet hip-width apart with toes pointed straight ahead\"): tornozelos a 0,28 m um do outro, com o quadril do boneco (pele) de 0,325 m de largura"
+      },
+      {
+        "nome": "braços esticados embaixo",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ExRx, Dumbbell Bent-over Row (\"Return until arm is extended\"); ExRx, Barbell Bent-over Row (\"Return until arms are extended\"); ACE, Bent-over Row (\"Lower the bar towards the floor until the elbows are completely straight\")"
+      },
+      {
+        "nome": "halteres pendurados embaixo dos ombros (antebraço na vertical)",
+        "medida": "antebraco_vertical",
+        "t": 0.0,
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"The weights should hang directly in front of you as your arms hang perpendicular to the floor\")"
+      },
+      {
+        "nome": "braço pendurado pro chão embaixo",
+        "medida": "inclinacao",
+        "segmento": [
+          "Arm",
+          "ForeArm"
+        ],
+        "t": 0.0,
+        "graus": [
+          78,
+          90
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"your arms hang perpendicular to the floor\")"
+      },
+      {
+        "nome": "cotovelo dobrado em cima",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 1.0,
+        "graus": [
+          100,
+          135
+        ]
+      },
+      {
+        "nome": "cotovelos junto do corpo (um pouco pra fora, sem abrir em T)",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -5,
+          25
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"keeping the elbows close to the body\"); NSCA PTQ 9.4 (\"keep the elbow close to the ribs as they row\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"flex elbows to pull them up and slightly outward\")"
+      },
+      {
+        "nome": "cotovelo passa da linha das costas no fim",
+        "medida": "braco_frente",
+        "t": 1.0,
+        "graus": [
+          -55,
+          -30
+        ],
+        "fonte": "ExRx, Dumbbell Bent-over Row (\"until upper arm is just beyond horizontal\", com o tronco perto da horizontal); NSCA PTQ 9.4 (\"pull their elbow as high as possible\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"Pull the bar upward until it touches the upper abdomen\")"
+      },
+      {
+        "nome": "pegada pronada: palmas viradas pro corpo, não uma pra outra",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          -20,
+          20
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"palms facing your torso\"; a de palmas uma pra outra é a \"Bent Over Two-Dumbbell Row With Palms In\": \"palms facing each other\")"
+      },
+      {
+        "nome": "pegada pronada: palmas pras pernas, não pra frente (supinada)",
+        "medida": "palma_frente",
+        "t": "todos",
+        "graus": [
+          90,
+          130
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"palms facing your torso\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"pronated grip\"); ACE, Bent-over Row (\"palms down\")"
+      },
+      {
+        "nome": "mãos na largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.9,
+          1.4
+        ],
+        "fonte": "ExRx, Barbell Bent-over Row (\"A shoulder width or underhand grip can increase lat involvement by emphasizing shoulder extension over transverse extension\")"
+      },
+      {
+        "nome": "escápulas soltas embaixo (os ombros descem pro chão)",
+        "medida": "escapula_frente",
+        "t": 0.0,
+        "mm": [
+          12,
+          40
+        ],
+        "fonte": "ExRx, Dumbbell Bent-over Row (\"Return until arm is extended and shoulder is stretched downward\"; \"Allow scapula to articulate\"); ExRx, Barbell Bent-over Row (\"shoulders are stretched downward\")"
+      },
+      {
+        "nome": "escápulas aproximadas em cima",
+        "medida": "escapula_frente",
+        "t": 1.0,
+        "mm": [
+          -40,
+          -10
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"On the top contracted position, squeeze the back muscles\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"squeeze shoulder blades together\"; \"Concentrate on squeezing the shoulder blades back and down\")"
+      },
+      {
+        "nome": "cabeça na linha da coluna",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "ACE, Single-arm Row (\"head aligned with your spine\"); NSCA PTQ 9.4 (\"neutral spine position (not rounded over) with their chin tucked in looking straight at the floor\"). A lista do nome pede \"keep the head up\" (free-exercise-db, Bent Over Two-Dumbbell Row); valeu a ACE e a NSCA: cabeça na linha da coluna, olhando o chão um pouco à frente"
+      },
+      {
+        "nome": "punho reto (neutro)",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "free-exercise-db, Bent Over Two-Dumbbell Row (\"do not exert any force with the forearm other than holding the weights\"); ACE, Bent-over Row (\"Grip a barbell with palms down so that the wrists, elbows, and shoulders are in a straight line\")"
+      }
+    ]
+  }
+}
