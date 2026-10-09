@@ -26,6 +26,10 @@
 #   (e) com o google-services.json presente, o Gradle não tiver gerado o google_app_id do playRelease (a checagem do APK);
 #   (f) o JS do site dentro do AAB levar o painel master (hml-08: o master é só do site) — o scripts/ci/sem-master.sh nos .js de
 #       base/assets/public/assets/.
+#
+# hml-16b (H-45): CHECK_DESCARTAVEL=1 (o check da branch, build-apk-check.yml) troca o certificado esperado na (a) pelo da chave
+# DESCARTÁVEL que o job gerou (SHA256_UPLOAD_ESPERADO, impressão dela) — e aí a chave de upload real e a do site viram erro: a
+# branch nunca recebe chave real (elas moram no environment "assinatura", só da main).
 set -euo pipefail
 shopt -s inherit_errexit
 
@@ -195,8 +199,16 @@ passo_conferir() {
   # keytool e jarsigner em inglês (o notebook está em pt-BR): a conferência lê a saída deles
   local en=(-J-Duser.language=en -J-Duser.country=US)
 
-  # (a) a assinatura: um único certificado, o da chave de upload, e a assinatura íntegra
-  local cert sha256s verificacao
+  # (a) a assinatura: um único certificado, o da chave de upload (no check da branch, o da descartável), e a assinatura íntegra
+  local cert sha256s verificacao esperado="$SHA256_UPLOAD" nome_chave="a chave de upload"
+  if [ "${CHECK_DESCARTAVEL:-}" = "1" ]; then
+    esperado="${SHA256_UPLOAD_ESPERADO:-}"
+    nome_chave="a chave descartável do check"
+    [ -n "$esperado" ] || morre "(a) CHECK_DESCARTAVEL=1 sem SHA256_UPLOAD_ESPERADO (a impressão da chave descartável do job)"
+    if [ "$esperado" = "$SHA256_UPLOAD" ] || [ "$esperado" = "$SHA256_SITE" ]; then
+      morre "(a) a chave 'descartável' é uma chave REAL (upload ou site) — o check da branch não recebe chave real"
+    fi
+  fi
   cert="$(jdk keytool "${en[@]}" -printcert -jarfile "$aab" 2>&1 || true)"
   sha256s="$(printf '%s\n' "$cert" | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | tr -d '\r' | sort -u)"
   verificacao="$(jdk jarsigner "${en[@]}" -verify "$aab" 2>&1 || true)"
@@ -209,14 +221,17 @@ passo_conferir() {
   elif [ -z "$sha256s" ]; then
     erro "(a) a assinatura do AAB não se lê (keytool): $(head -2 <<< "$cert" | tr '\n' ' ')"
     falhas=$((falhas + 1))
-  elif [ "$sha256s" != "$SHA256_UPLOAD" ]; then
+  elif [ "${CHECK_DESCARTAVEL:-}" = "1" ] && grep -qF "$SHA256_UPLOAD" <<< "$cert"; then
+    erro "(a) o AAB do check está assinado com a chave de upload REAL — a branch não recebe chave real"
+    falhas=$((falhas + 1))
+  elif [ "$sha256s" != "$esperado" ]; then
     erro "(a) o AAB está assinado com outra chave: $(printf '%s' "$sha256s" | tr '\n' ' ')"
     falhas=$((falhas + 1))
   elif ! grep -q '^jar verified\.' <<< "$verificacao"; then
     erro "(a) a assinatura do AAB não confere (jarsigner -verify): $(printf '%s' "$verificacao" | head -3 | tr '\n' ' ')"
     falhas=$((falhas + 1))
   else
-    log "OK (a) assinado só com a chave de upload — SHA-256 $sha256s (jarsigner: jar verified)"
+    log "OK (a) assinado só com $nome_chave — SHA-256 $sha256s (jarsigner: jar verified)"
   fi
 
   # (b) e (d) o manifesto final, lido de dentro do AAB pelo bundletool

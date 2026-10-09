@@ -13,6 +13,8 @@ jobs:
     # hml-13: nunca sobre o commit de bump (o push com deploy key dispara workflow; o [skip ci] já evita — isto é a 2ª trava)
     if: "${{ !startsWith(github.event.head_commit.message, 'chore: bump version to v') }}"
     runs-on: ubuntu-latest
+    # hml-16b (H-45): a chave do APK do site mora no environment "assinatura", que só a main acessa (nenhuma branch a vê)
+    environment: assinatura
     permissions:
       contents: write # a release (softprops) usa o GITHUB_TOKEN; o push do bump agora é no job "bump"
 
@@ -63,10 +65,6 @@ jobs:
           echo "versionCode=$CODE versionName=$V"
           grep -E "versionCode|versionName" android/app/build.gradle
 
-      - name: Decode keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/physiqcalc-release.keystore
-
       - name: Firebase do push (google-services.json)
         # Physiq W20c: o arquivo vem do segredo GOOGLE_SERVICES_JSON e NUNCA entra no git; o android/app/build.gradle só aplica
         # o plugin do Google quando ele existe. Sem o segredo o APK sai sem push (o app segue com sino, e-mail e notificação local).
@@ -113,9 +111,19 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build signed APK
-        run: cd android && ./gradlew assembleRelease
+        # hml-16b (H-45): a chave só existe no disco DURANTE este passo (antes era decodificada antes do npm ci, dos testes e do build:
+        # código de dependência rodava com o arquivo presente). --no-daemon: o Gradle não fica com as variáveis da chave na memória.
+        run: |
+          D="$(mktemp -d "$RUNNER_TEMP/chave-site.XXXXXX")"
+          (umask 077 && printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$D/physiqcalc-release.keystore")
+          unset KEYSTORE_BASE64
+          export KEYSTORE_FILE="$D/physiqcalc-release.keystore"
+          rc=0
+          (cd android && ./gradlew --no-daemon assembleRelease) || rc=$?
+          rm -rf "$D"
+          exit "$rc"
         env:
-          KEYSTORE_FILE: physiqcalc-release.keystore
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -208,6 +216,8 @@ jobs:
     # hml-13: nunca sobre o commit de bump (o push com deploy key dispara workflow; o [skip ci] já evita — isto é a 2ª trava)
     if: "${{ !startsWith(github.event.head_commit.message, 'chore: bump version to v') }}"
     runs-on: ubuntu-latest
+    # hml-16b (H-45): a chave de upload da Play também mora no environment "assinatura" (só a main)
+    environment: assinatura
     permissions:
       contents: read
 

@@ -29,6 +29,18 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 18:36 | hml-16 | `03906a2` | `e2e/h3/emails.py` | staging | 55/57 | H-36 (R2): e-mails reais das 4 funções com a chave só de envio; as 2 = `convite-aluno` 409 `limite_plano` (massa: o plano de teste em 10/10) |
+| 09/10 18:28 | hml-16 | `03906a2` | `e2e/w26/prod.py --canal msedge` | produção | 21/21 | F7: depois da revogação do HS256 do principal |
+| 09/10 18:28 | hml-16 | `03906a2` | `e2e/w07/smoke_prod.py telas --versao 3.86 --canal msedge` | produção | 13/13 | F7 |
+| 09/10 18:27 | hml-16 | `03906a2` | `e2e/w02/proxy_principal.py` | staging | 10/12 | F7; = base (as 2 antigas) |
+| 09/10 18:27 | hml-16 | `03906a2` | `e2e/w16/api.py` | staging | 40/41 | F7; = base |
+| 09/10 18:26 | hml-16 | `03906a2` | `e2e/w02/trocar_token.py` | staging | 24/25 | F7; = base |
+| 09/10 18:21 | hml-16 | `03906a2` | `e2e/w07/smoke_prod.py telas --versao 3.86 --canal msedge` | produção | 13/13 | F6: depois de desligar as legadas do principal |
+| 09/10 18:20 | hml-16 | `03906a2` | `e2e/hml05c/limite_ip.py --schema staging --so ip,normal` | staging | 23/23 | F6; = base |
+| 09/10 18:20 | hml-16 | `03906a2` | `e2e/w02/proxy_principal.py` | staging | 10/12 | F6; = base |
+| 09/10 18:20 | hml-16 | `03906a2` | `e2e/w16/api.py` | staging | 40/41 | F6; = base |
+| 09/10 18:19 | hml-16 | `03906a2` | `e2e/w02/trocar_token.py` | staging | 24/25 | F6; = base |
+| 09/10 18:10 | hml-16 | `03906a2` | `e2e/w07/smoke_prod.py telas --versao 3.86 --canal msedge` | produção | 13/13 | F5: produção no ar com o PR #170 (`c9b9d31`) |
 | 09/10 18:01 | hml-16 | `f6eb484` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_16 --casos espera --canal msedge` | staging | 14/14 | F5: o site do staging já com a publishable do principal (build `f6eb484`). O `--canal` é deste PR |
 | 09/10 17:58 | hml-16 | `f6eb484` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_16 --casos espera` | staging | 5/6 | as 4 tentativas erradas e a espera ✅; a 6ª = o Chromium embutido caiu ("Target crashed") → a rodada de cima, com o Edge |
 | 09/10 ~17:57 | hml-16 | `f6eb484` | `e2e/hml12/telas.py --base staging --prefixo staging_16 --canal msedge --casos T13,T8` | staging | 12/12 | F5: o site do staging com a publishable do principal |
