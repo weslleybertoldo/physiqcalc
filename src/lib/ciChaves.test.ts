@@ -77,15 +77,14 @@ describe("hml-16b (H-45): segredos do GitHub por environment", () => {
       expect(check[nome], nome).toContain("-validity 2");
       expect(check[nome], nome).toContain('echo "::add-mask::$');
     }
-    expect(check.build).toContain("apksigner\"");
-    expect(check.build).toContain('if [ "$DIG" = "$SITE" ] || [ "$DIG" = "$UPLOAD" ]');
+    expect(check.build).toContain('bash scripts/ci/apk-assinatura.sh descartavel "$APK" "$APK_SHA256_DESCARTAVEL"');
     expect(check.build).toContain("-check-descartavel\n");
     expect(check["aab-loja"]).toContain('CHECK_DESCARTAVEL: "1"');
     expect(check["aab-loja"]).toContain('echo "SHA256_UPLOAD_ESPERADO=$FP" >> "$GITHUB_ENV"');
     // o job do aparelho: só à mão, com aprovação, artefato de 1 dia, e o APK confere que saiu com a chave do site
     expect(check["apk-aparelho"]).toMatch(/^ {4}if: \$\{\{ inputs\.chave_real \}\}$/m);
     expect(check["apk-aparelho"]).toContain("retention-days: 1\n");
-    expect(check["apk-aparelho"]).toContain("o APK não saiu com a chave do site");
+    expect(check["apk-aparelho"]).toContain('bash scripts/ci/apk-assinatura.sh site "$APK"');
     expect(ler(".github/workflows/build-apk-check.yml")).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}chave_real:\n[\s\S]*?type: boolean\n {8}default: false/);
   });
 
@@ -118,14 +117,22 @@ describe("hml-16b (H-45): segredos do GitHub por environment", () => {
     }
   });
 
-  it("as impressões do site e do upload no check são as mesmas do aab-loja.sh", () => {
-    const aab = ler("scripts/ci/aab-loja.sh");
-    const impressao = (nome: string) => aab.match(new RegExp(`^${nome}="([0-9A-F:]+)"`, "m"))?.[1];
-    const check = ler(".github/workflows/build-apk-check.yml");
+  it("as impressões do site e do upload do apk-assinatura.sh são as mesmas do aab-loja.sh", () => {
+    const impressao = (arquivo: string, nome: string) => ler(arquivo).match(new RegExp(`^${nome}="([0-9A-F:]+)"`, "m"))?.[1];
     for (const nome of ["SHA256_SITE", "SHA256_UPLOAD"]) {
-      const valor = impressao(nome);
+      const valor = impressao("scripts/ci/aab-loja.sh", nome);
       expect(valor, nome).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
-      expect(check, nome).toContain(`'${valor}'`);
+      expect(impressao("scripts/ci/apk-assinatura.sh", nome), nome).toBe(valor);
     }
+  });
+
+  it("o apk-assinatura.sh recusa chave real no modo descartável e pede a do site no modo site", () => {
+    const script = ler("scripts/ci/apk-assinatura.sh");
+    expect(script).toContain('if [ "$esperado" = "$site" ] || [ "$esperado" = "$upload" ]; then');
+    expect(script).toContain('if [ "$dig" = "$site" ] || [ "$dig" = "$upload" ]; then');
+    expect(script).toContain('if [ "$dig" != "$esperado" ]; then');
+    expect(script).toContain('if [ "$dig" != "$(printf \'%s\' "$SHA256_SITE" | norm)" ]; then');
+    // a leitura que falha mostra a saída do apksigner (só certificado e impressões) em vez de sair calada
+    expect(script).toContain("a saída do apksigner não tem a impressão SHA-256 do certificado:");
   });
 });
