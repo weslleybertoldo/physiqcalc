@@ -527,3 +527,36 @@ def coxa_abertura(j):
 
 
 MEDIDAS.update({"coxa_abertura": coxa_abertura})
+
+
+# ── agachamento sumô com halteres (lote 7, 08/10/2026): pés bem afastados e virados ~45° pra fora, com o joelho em cima do pé e sem
+# passar da frente dele (ACE, Dumbbell Sumo Squat: "the toes pointed out to the sides about 45 degrees"; "keep the knees in line with
+# the ankles while in the squat position and do not let the knee cross in front of the foot"; ExRx, Dumbbell Squat: "Knees should
+# point same direction as feet throughout movement"). Com a base larga e a perna dobrada, o joelho_valgo (joelho × reta quadril →
+# tornozelo) dá +24 cm sem nada errado, e o joelho_fora_do_pe mede de lado a lado da PELVE — com o pé virado, isso mistura o joelho
+# ir pra frente (na direção do pé) com ir pro lado. Aqui as 2 medidas ficam no referencial do PRÓPRIO pé, visto de cima.
+def _pe_frente_fora(j, L, s):
+    """Direção do pé `L` (tornozelo → base dos dedos, no chão) e a normal dela no chão apontando pra fora do corpo."""
+    lado, _ = eixos_pelve(j)
+    p = _u(_chao(j[L + "ToeBase"] - j[L + "Foot"]))
+    n = np.cross(CIMA, p)
+    return p, (n if float(n @ (s * lado)) >= 0 else -n)
+
+
+def joelho_plano_pe(j):
+    """Centro do joelho pra fora (+) ou pra dentro (−, valgo) do plano vertical do pé — o que passa pelo tornozelo na direção
+    tornozelo → base dos dedos —, mm [E, D]: 0 = joelho bem em cima da linha do pé, com o pé virado pra fora ou não."""
+    return [float((j[L + "Leg"] - j[L + "Foot"]) @ _pe_frente_fora(j, L, s)[1]) * 1000 for L, s in LADOS]
+
+
+def joelho_alem_dos_dedos(j):
+    """Centro do joelho à frente (+) ou atrás (−) da ponta dos dedos (ponta do osso ToeBase), ao longo da direção do pé vista de
+    cima, mm [E, D]: + = o joelho passou da frente do pé. Sem a ponta dos dedos nas juntas (dicionários antigos dos testes),
+    devolve []."""
+    if "LeftToeBase_ponta" not in j or "RightToeBase_ponta" not in j:
+        return []
+    return [float((j[L + "Leg"] - j[L + "ToeBase_ponta"]) @ _pe_frente_fora(j, L, s)[0]) * 1000 for L, s in LADOS]
+
+
+MEDIDAS.update({"joelho_plano_pe": joelho_plano_pe, "joelho_alem_dos_dedos": joelho_alem_dos_dedos})
+UNIDADE.update({"joelho_plano_pe": "mm", "joelho_alem_dos_dedos": "mm"})
