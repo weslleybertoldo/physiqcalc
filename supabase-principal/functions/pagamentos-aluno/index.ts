@@ -5,6 +5,8 @@
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, ... }
 //  ALUNO (a própria matrícula — pacientes.user_id = quem chama):
 //   aluno_status                     mensalidade, chave Pix ativa, assinatura, cobranças e recibos (confere no MP o que ainda muda)
+//                                    hml-14d: + total_cobrancas e total_recibos por matrícula (o "Ver todos (N)"; só chaves novas)
+//   aluno_historico   { paciente_id, tipo: "cobrancas"|"recibos", pagina }   hml-14d: o "Ver todos" — 20 por página + o total
 //   aluno_upload      { paciente_id, tipo }                 URL assinada para subir o comprovante (o servidor escolhe o caminho)
 //   aluno_avisar_pix  { paciente_id, comprovante_path, cobranca_id? }   "Já paguei": Pix na chave da conta com comprovante
 //   aluno_comprovante { cobranca_id }                       URL assinada (5 min) do comprovante anexado
@@ -23,6 +25,7 @@
 //                     { conta_id, pagina, pagina_sem?, busca? }   hml-14b: a página da tela Mensalidades (20 com mensalidade + 20
 //                                                            sem, a busca, o total e os números da conta — mensalidades.ts)
 //   prof_aluno        { aluno }                             o Financeiro de um aluno (aluno = id da matrícula ou do Treino)
+//   prof_aluno_cobrancas { aluno, pagina }                  hml-14d: o "Ver todas" das cobranças do aluno — 20 por página + o total
 //   prof_definir      { aluno, plano_aluno_id?, plano_novo?, valor }   plano e valor (valor vazio = sem mensalidade)
 //   prof_pausar       { aluno, pausar }                     "não cobrar pelo app" / reativar
 //   prof_confirmar    { cobranca_id, lancar? }              confirma o Pix com comprovante (lancar = entrada no financeiro)
@@ -89,7 +92,7 @@ import {
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
-import { PaginaInvalida, lerPagina, paginaDasMensalidades, type AlunoDoResumo } from "./mensalidades.ts";
+import { POR_PAGINA, PaginaInvalida, lerPagina, paginaDasMensalidades, type AlunoDoResumo } from "./mensalidades.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -345,6 +348,27 @@ Deno.serve(async (req) => {
     return (data ?? []) as Array<Record<string, unknown>>;
   };
 
+  /** hml-14d (B21 · D31): quantos vivos o aluno tem (cobranças ou recibos) — o "Ver todos (N)" do app. Erro do banco lança. */
+  const totalDoAluno = async (tabela: "cobrancas" | "recibos", pacienteId: string): Promise<number> => {
+    const { count, error } = await db.from(tabela).select("id", { count: "exact", head: true }).eq("paciente_id", pacienteId).is("deleted_at", null);
+    if (error) throw error;
+    if (count === null) throw new Error(`sem contagem de ${tabela}`);
+    return count;
+  };
+
+  /** hml-14d: a página pedida (1 sem o campo); fora de 1, 2, 3… → 400 pagina_invalida. Devolve o `[de, ate]` do `.range`. */
+  const intervaloDaPagina = (v: unknown): [number, number] => {
+    let pagina = 1;
+    try {
+      pagina = lerPagina(v) ?? 1;
+    } catch (e) {
+      if (e instanceof PaginaInvalida) falhar("pagina_invalida");
+      throw e;
+    }
+    const de = (pagina - 1) * POR_PAGINA;
+    return [de, de + POR_PAGINA - 1];
+  };
+
   const urlAssinada = async (caminho: string): Promise<string> => {
     const { data, error } = await storage.storage.from(bucket).createSignedUrl(caminho, 300);
     if (error || !data?.signedUrl) falhar("storage_error", 502);
@@ -488,9 +512,33 @@ Deno.serve(async (req) => {
           assinatura: assinaturaVista(assinatura),
           cobrancas: cobs.map((c) => vista(c, c.id === pixAberto?.id)),
           recibos: await recibosDe(atual.id),
+          // hml-14d (B21 · D31): o "Ver todos (N)" do app — as listas acima continuam com as 48/24 de sempre (o APK antigo usa)
+          total_cobrancas: await totalDoAluno("cobrancas", atual.id),
+          total_recibos: await totalDoAluno("recibos", atual.id),
         });
       }
       return json({ ok: true, ambiente: schema, simulacao: schema === "staging", hoje, agora: new Date().toISOString(), matriculas }, 200, origin);
+    }
+
+    if (acao === "aluno_historico") {
+      // hml-14d (B21 · D31): o "Ver todos" de Perfil › Pagamentos — uma página de 20 da matrícula do aluno logado, com o total:
+      // as cobranças (o mesmo vista do aluno_status, sem o QR; a mais nova primeiro) ou os recibos (as colunas do recibosDe; o número
+      // mais alto primeiro). Desempate pelo id: a mesma ordem em todas as páginas.
+      const tipo = body.tipo === "cobrancas" || body.tipo === "recibos" ? body.tipo : falhar("tipo_invalido");
+      const [de, ate] = intervaloDaPagina(body.pagina);
+      const m = await minhaMatricula(body.paciente_id);
+      if (tipo === "cobrancas") {
+        const { data, error, count } = await db.from("cobrancas").select(COLUNAS_COBRANCA, { count: "exact" }).eq("paciente_id", m.id)
+          .is("deleted_at", null).order("created_at", { ascending: false }).order("id").range(de, ate);
+        if (error) throw error;
+        if (count === null) throw new Error("sem contagem de cobrancas");
+        return json({ ok: true, itens: ((data ?? []) as unknown as Cobranca[]).map((c) => vista(c)), total: count }, 200, origin);
+      }
+      const { data, error, count } = await db.from("recibos").select("id, numero, data, valor, descricao, texto, nutricionista_id, created_at", { count: "exact" })
+        .eq("paciente_id", m.id).is("deleted_at", null).order("numero", { ascending: false }).order("id").range(de, ate);
+      if (error) throw error;
+      if (count === null) throw new Error("sem contagem de recibos");
+      return json({ ok: true, itens: data ?? [], total: count }, 200, origin);
     }
 
     if (acao === "aluno_upload") {
@@ -915,6 +963,21 @@ Deno.serve(async (req) => {
         assinatura: veMensalidade ? assinaturaVista(assinatura) : null,
         cobrancas: cobs.map((c) => vista(c)),
       }, 200, origin);
+    }
+
+    if (acao === "prof_aluno_cobrancas") {
+      // hml-14d (B21 · D31): o "Ver todas" das cobranças no Financeiro do aluno (painel) — uma página de 20, a mais nova primeiro, com
+      // o total. O podeVerCobranca do prof_aluno vira o FILTRO da consulta (antes ele filtrava as 72 já cortadas): o master e o dono
+      // veem todas; o responsável, as que criou ou são dele.
+      const [de, ate] = intervaloDaPagina(body.pagina);
+      const { m, p } = await matriculaDoPainel(body.aluno);
+      if (!p.master && !p.dono && !p.responsavel) return json({ ok: true, itens: [], total: 0 }, 200, origin);
+      let consulta = db.from("cobrancas").select(COLUNAS_COBRANCA, { count: "exact" }).eq("paciente_id", m.id).is("deleted_at", null);
+      if (!p.master && !p.dono) consulta = consulta.or(`criado_por.eq.${p.userId},nutricionista_id.eq.${p.userId}`);
+      const { data, error, count } = await consulta.order("created_at", { ascending: false }).order("id").range(de, ate);
+      if (error) throw error;
+      if (count === null) throw new Error("sem contagem de cobrancas");
+      return json({ ok: true, itens: ((data ?? []) as unknown as Cobranca[]).map((c) => vista(c)), total: count }, 200, origin);
     }
 
     if (acao === "prof_definir") {

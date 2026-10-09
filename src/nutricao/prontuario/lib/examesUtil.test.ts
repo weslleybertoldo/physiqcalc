@@ -1,10 +1,13 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/examesUtil.test.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { describe, expect, it } from "vitest";
+// hml-14d (D32): contarForaDaReferencia, nomesComResultado, filtrarPorExame, ordenarPedidos, inserirPedido e inserirResultados saíram com
+// os testes delas — a tela de Exames lê as páginas, os números do topo e os nomes do filtro do banco (exames_do_aluno, a mesma regra;
+// a prova da regra no SQL é a da migration, no PGlite)
 import {
-  CATALOGO_PADRAO, EXAMES_POR_PEDIDO_MAX, OUTRO_EXAME, acrescentarExame, adicionarLinha, agruparResultadosPorData, alternarExame, atualizarLinha, contarForaDaReferencia,
-  dataValida, exameCatalogoParaForm, filtrarPorExame, formInicialPedido, formParaRegistroExameCatalogo, formParaRegistroPedido, formParaRegistroResultado, formatarDataExame,
-  formatarValor, hojeISO, inserirPedido, inserirResultados, lerExames, linhaDoCatalogo, linhaVazia, nomeArquivoPDFPedido, nomesComResultado, normalizarExames, normalizarNumero,
-  opcaoDoSelect, ordenarCatalogo, ordenarPedidos, pedidoParaForm, removerLinha, resultadoParaForm, situacaoDaLinha, situacaoDoResultado, situacaoResultado, temExame,
+  CATALOGO_PADRAO, EXAMES_POR_PEDIDO_MAX, OUTRO_EXAME, acrescentarExame, adicionarLinha, agruparResultadosPorData, alternarExame, atualizarLinha,
+  dataValida, exameCatalogoParaForm, formInicialPedido, formParaRegistroExameCatalogo, formParaRegistroPedido, formParaRegistroResultado, formatarDataExame,
+  formatarValor, hojeISO, lerExames, linhaDoCatalogo, linhaVazia, nomeArquivoPDFPedido, normalizarExames, normalizarNumero,
+  opcaoDoSelect, ordenarCatalogo, pedidoParaForm, removerLinha, resultadoParaForm, situacaoDaLinha, situacaoDoResultado, situacaoResultado, temExame,
   textoContagemExames, textoContagemPedidos, textoContagemResultados, textoReferencia, textoResumoData, textoSituacao, textoSituacaoCurto, textoValor, tirarExame, validarExameCatalogo,
   validarLinhaResultado, validarPedido,
 } from "./examesUtil";
@@ -71,11 +74,6 @@ describe("situação e referência", () => {
     expect(textoValor(5.6, "x")).toBe("5,6");
     expect(textoValor(null, "negativo")).toBe("negativo");
     expect(textoValor(null, "")).toBe("—");
-  });
-  it("contarForaDaReferencia", () => {
-    expect(contarForaDaReferencia([
-      { valor: 110, ref_min: 70, ref_max: 99 }, { valor: 55, ref_min: 40, ref_max: null }, { valor: 18, ref_min: 30, ref_max: 100 }, { valor: 12, ref_min: null, ref_max: null },
-    ])).toBe(2);
   });
 });
 
@@ -170,16 +168,6 @@ describe("exames do pedido", () => {
 });
 
 describe("pedidos", () => {
-  const pedidos = [
-    { id: "a", data: "2026-09-18", created_at: "2026-09-18T10:00:00Z" },
-    { id: "b", data: "2026-09-19", created_at: "2026-09-19T08:00:00Z" },
-    { id: "c", data: "2026-09-19", created_at: "2026-09-19T09:00:00Z" },
-  ];
-  it("ordenarPedidos: data desc, depois created_at desc; inserirPedido substitui ou acrescenta", () => {
-    expect(ordenarPedidos(pedidos).map((p) => p.id)).toEqual(["c", "b", "a"]);
-    expect(inserirPedido(pedidos, { id: "a", data: "2026-09-20", created_at: "2026-09-20T10:00:00Z" }).map((p) => p.id)).toEqual(["a", "c", "b"]);
-    expect(inserirPedido(pedidos, { id: "d", data: "2026-09-17", created_at: "2026-09-17T10:00:00Z" }).map((p) => p.id)).toEqual(["c", "b", "a", "d"]);
-  });
   it("formInicialPedido / pedidoParaForm / formParaRegistroPedido", () => {
     expect(formInicialPedido(hoje)).toEqual({ data: "2026-09-19", exames: [], observacao: "" });
     expect(pedidoParaForm({ data: "2026-09-10", exames: ["TSH", "HDL"], observacao: null })).toEqual({ data: "2026-09-10", exames: ["TSH", "HDL"], observacao: "" });
@@ -200,13 +188,6 @@ describe("resultados", () => {
     expect(grupos[0].itens.map((r) => r.exame)).toEqual(["Cortisol", "Glicemia de jejum", "HDL"]);
     expect(grupos[1].itens.map((r) => r.id)).toEqual(["2"]);
     expect(agruparResultadosPorData([])).toEqual([]);
-  });
-  it("filtrarPorExame / nomesComResultado / inserirResultados", () => {
-    expect(filtrarPorExame(lista, "glicemia de jejum").map((r) => r.id)).toEqual(["1", "2"]);
-    expect(filtrarPorExame(lista, "")).toHaveLength(4);
-    expect(nomesComResultado(lista)).toEqual(["Cortisol", "Glicemia de jejum", "HDL"]);
-    const nova = inserirResultados(lista, [{ id: "1", data: "2026-09-19", exame: "Glicemia de jejum", created_at: "x" }, { id: "5", data: "2026-09-19", exame: "TSH", created_at: "y" }]);
-    expect(nova.map((r) => r.id)).toEqual(["2", "3", "4", "1", "5"]);
   });
   it("editor de linhas: catálogo preenche unidade/referência; adicionar/atualizar/remover; nunca fica sem linha", () => {
     const l = linhaDoCatalogo({ nome: "Glicemia de jejum", unidade: "mg/dL", ref_min: 70, ref_max: 99, referencia_texto: "" });

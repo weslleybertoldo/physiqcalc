@@ -16,7 +16,7 @@ const h = vi.hoisted(() => ({
   conta: { id: "c1", nome: "Consultoria Ferreira", papeis: ["dono", "personal", "nutricionista"], modulos: ["treino", "nutricao"] } as { id: string; nome: string; papeis: string[]; modulos: string[] },
   treino: "ok" as string,
   principal: vi.fn(), treinoResumo: vi.fn(), respostas: vi.fn(), alunos: vi.fn(), novos: vi.fn(), rpc: vi.fn(), trans: vi.fn(), cobs: vi.fn(), resumoFin: vi.fn(),
-  agenda: vi.fn(), alunosAgenda: vi.fn(), tags: vi.fn(), diario: vi.fn(), urls: vi.fn(), novas: vi.fn(),
+  agenda: vi.fn(), alunosAgenda: vi.fn(), tags: vi.fn(), diario: vi.fn(), urls: vi.fn(), novas: vi.fn(), contar: vi.fn(),
 }));
 vi.mock("@/nucleo/conta", () => ({ useConta: () => ({ conta: h.conta, ehMaster: false, ehDono: h.conta.papeis.includes("dono") }) }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-lucas", email: "lucas@x.com", user_metadata: {} }, situacao: { nome: "Lucas Ferreira" } }) }));
@@ -39,9 +39,13 @@ vi.mock("@/financeiro/api", async (orig) => ({ ...(await orig<typeof import("@/f
 vi.mock("@/painel/agenda/dados", async (orig) => ({
   ...(await orig<typeof import("@/painel/agenda/dados")>()), listarAgendamentos: h.agenda, listarAlunosDaAgenda: h.alunosAgenda, listarTags: h.tags,
 }));
-vi.mock("@/painel/dietas/diario", async (orig) => ({ ...(await orig<typeof import("@/painel/dietas/diario")>()), listarDiarioDaConta: h.diario, urlsAssinadas: h.urls }));
+// hml-14d (D36): as fotos sem reação dos 7 dias vêm do HEAD (contarDiario) — a lista dos 7 dias saiu; a de hoje (1 dia) fica no card
+vi.mock("@/painel/dietas/diario", async (orig) => ({
+  ...(await orig<typeof import("@/painel/dietas/diario")>()), listarDiarioDaConta: h.diario, urlsAssinadas: h.urls, contarDiario: h.contar,
+}));
 vi.mock("@/painel/preconsulta/novas", async (orig) => ({ ...(await orig<typeof import("@/painel/preconsulta/novas")>()), contarRespostasNovas: h.novas }));
 
+import { inicioDoPeriodo } from "@/painel/dietas/diarioPainel";
 import Dashboard from "./Dashboard";
 
 const aluno = (o: Record<string, unknown>) => ({
@@ -124,6 +128,7 @@ beforeEach(() => {
   ]);
   h.urls.mockReset().mockResolvedValue({ d1: "https://x.invalid/1.jpg" });
   h.novas.mockReset().mockResolvedValue(2);
+  h.contar.mockReset().mockResolvedValue(0);
 });
 
 const valor = (sel: string, attr: string) => document.querySelector(sel)?.getAttribute(attr);
@@ -196,6 +201,20 @@ describe("W25 — Painel › Dashboard (tela 6)", () => {
     expect(document.querySelector("[data-cartao-diario-hoje]")).toBeNull();
     expect(document.querySelector('[data-atencao-item="dieta"]')).toBeNull();
     expect(h.diario).not.toHaveBeenCalled();
+    expect(h.contar).not.toHaveBeenCalled();
+  });
+
+  it("hml-14d (D36): as fotos sem reação dos 7 dias vêm contadas do banco (HEAD); a lista do diário só traz o dia de hoje", async () => {
+    h.contar.mockResolvedValue(3);
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-atencao-contador]")?.textContent).toBe("7"));
+    fireEvent.click(document.querySelector("[data-atencao-ver-todas]")!);
+    expect(document.querySelector('[data-atencao-item="diario"]')?.textContent).toContain("3 fotos do diário");
+    // o mesmo pedido do número da aba Dietas › Diário (7 dias, sem aluno, só as não reagidas) — 1 só, contado no banco
+    expect(h.contar).toHaveBeenCalledTimes(1);
+    expect(h.contar).toHaveBeenCalledWith("c1", "u-lucas", { deIso: inicioDoPeriodo(7).toISOString(), alunoId: "", soNaoReagidas: true });
+    // a lista do diário (até 1000) só para o "Diário de hoje": nenhum pedido dos 7 dias
+    expect(h.diario.mock.calls.map((c) => c[2])).toEqual([inicioDoPeriodo(1).toISOString()]);
   });
 
   it("conta só de Nutrição: sem o resumo do Treino (nem chama a função); a nutricionista sem a sessão do Treino também não", async () => {

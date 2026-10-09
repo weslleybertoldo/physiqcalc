@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
-"""Physiq hml-14b (B21 · B19, 09/10/2026) — massa das listas paginadas do painel no STAGING, SÓ por SQL no schema staging.
+"""Physiq hml-14b + hml-14d (B21 · B19, 09/10/2026) — massa das listas paginadas no STAGING, SÓ por SQL em staging.<tabela> dos 2
+bancos. 4 partes (--partes, padrão: todas), a MESMA marca "HOMOLOG lista HHhMM" em todas:
+  14b      a do painel (abaixo; o P7 — Pré-consulta — e o M5 — Master › Alunos acha o Zé Último — reaproveitam esta)
+  treino   hml-14d D42, banco do Treino: 41 modelos, 41 exercícios, 1 pasta com 5, 1 linha e 41 treinos feitos no mês do professor
+           e do aluno de teste (e2e/hml14/massa_treino.py)
+  master   hml-14d: o master de teste SÓ no staging.profiles (dar_master; o --limpar faz o tirar_master) + 41 alunos sem login na
+           conta do app (e2e/hml14/massa_principal.py)
+  aluno    hml-14d: por aluno — 41 cobranças, lançamentos, recibos, anotações, resultados (41 datas), pedidos de exame e consultas
+           futuras do aluno de teste com login, vistos pela nutricionista dele no painel (e2e/hml14/massa_principal.py)
+Contas, alunos e professores são resolvidos na hora (só leitura) e o script PARA com a mensagem certa se não achar — antes de
+gravar qualquer coisa. O estado (o que o telas.py lê) vai para ~/projetos/physiqcalc-scratch/hml/hml14d/D/massa_staging.json.
 
+A parte 14b:
 O Auth do staging é o da produção: NENHUM login é criado. A massa são só linhas das tabelas do schema staging na conta de TESTE
 (padrão: a da nutri.teste.claude — a nutri-legado dos E2E —, conta legado_nutri com Nutrição, faixa "livre": a f10 barra o 11º
 aluno). Tudo leva a marca "HOMOLOG lista <hora>" (ex.: "HOMOLOG lista 09h15") no nome, na descrição, no título ou no comentário:
@@ -21,20 +32,21 @@ aluno). Tudo leva a marca "HOMOLOG lista <hora>" (ex.: "HOMOLOG lista 09h15") no
   gêmeo        (B19: "não aparece aluno de outra conta") "Zé Último · HOMOLOG lista 09h15 · outra conta", com o MESMO telefone do Zé e
                outro CPF (o CPF é único entre alunos vivos — W16b), noutra conta de TESTE do staging (dono *.teste.claude, com vaga).
 
-  --criar        limpa as sobras (pela marca) e cria a massa desta hora; imprime as contagens antes e depois e grava o estado
-                 (~/projetos/physiqcalc-scratch/hml/hml14b/D/massa_staging.json) que o telas.py lê.
-  --conferir     só leitura: a conta, as contagens da massa e do "fundo" (o que a conta já tinha em cada lista) e o estado de novo.
-  --limpar       apaga SÓ o que tem a marca (de qualquer hora; --marca para uma só) nas tabelas acima, na conta de teste e — o gêmeo —
-                 nas contas de teste; imprime antes e depois. Não depende do estado nem da prova: roda mesmo se ela falhou.
-  --mostrar-sql  o SQL do --criar com ids de exemplo (não fala com o banco).
-Escrita só pela trava sql_staging (todo insert/delete em staging.<tabela>; nada cita public.), pela Management API (~/.pc-pat).
-Leitura com read_only. Nenhum segredo vai para a saída.
+  --criar        resolve tudo (só leitura), limpa as sobras (pela marca) e cria a massa desta hora; imprime as contagens antes e
+                 depois e grava o estado que o telas.py lê.
+  --conferir     só leitura: as contas, as contagens da massa e do "fundo" (o que já existia em cada lista) e o estado de novo.
+  --limpar       apaga SÓ o que tem a marca (de qualquer hora; --marca para uma só), nos 2 bancos, e faz o tirar_master; imprime
+                 antes e depois. Não depende do estado nem da prova: roda mesmo se ela falhou.
+  --mostrar-sql  o SQL do --criar e do --limpar com ids de exemplo (não fala com o banco).
+Escrita só pela trava (trava_staging: todo insert/update/delete em staging.<tabela>; nada cita public.), pela Management API
+(~/.pc-pat). Leitura com read_only. Nenhum segredo vai para a saída.
 
-Uso: python3 e2e/hml14/massa.py --criar [--sem-gemeo] [--outra-conta <uuid>]
+Uso: python3 e2e/hml14/massa.py --criar [--partes 14b,treino,master,aluno] [--sem-gemeo] [--outra-conta <uuid>]
      python3 e2e/hml14/massa.py --conferir
      python3 e2e/hml14/massa.py --limpar [--marca "HOMOLOG lista 09h15"]
      python3 e2e/hml14/massa.py --mostrar-sql
-     (outra conta de teste: --login <e-mail *.teste.claude> [--conta-id <uuid>])
+     (outra conta de teste da 14b: --login <e-mail *.teste.claude> [--conta-id <uuid>]; 14d: --professor, --aluno-treino,
+     --aluno-app, --master <e-mail de teste>)
 """
 from __future__ import annotations
 
@@ -49,14 +61,17 @@ import sys
 from pathlib import Path
 
 sys.dont_write_bytecode = True
+# os módulos da 14d (massa_treino, massa_principal) fazem "import massa": o MESMO módulo, não uma 2ª cópia
+sys.modules.setdefault("massa", sys.modules[__name__])
 AQUI = Path(__file__).resolve().parent
 REPO = AQUI.parents[1]
 S = "staging"
 N = 41
 LOGIN_PADRAO = "nutri.teste.claude@physiqnutri.app"
 CHAVE_PADRAO = "nutri-legado"  # a mesma conta nas CONTAS da W5 (e2e/w05/_base.py): é com ela que o telas.py entra
-SAIDA = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml14b" / "D"
+SAIDA = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml14d" / "D"  # hml-14d: as saídas da W (a 14b ficou em hml14b/D)
 ESTADO = SAIDA / "massa_staging.json"
+PARTES = ("14b", "treino", "master", "aluno")
 PADRAO_MARCA = "HOMOLOG lista [0-9]{2}h[0-9]{2}"  # regex do Postgres: qualquer hora
 FORMATO_MARCA = re.compile(r"^HOMOLOG lista \d{2}h\d{2}$")
 SUFIXO_TESTE = ".teste.claude@physiqnutri.app"
@@ -102,12 +117,17 @@ def ler(sql: str) -> list[dict]:
     return r if isinstance(r, list) else []
 
 
-def sql_staging(sql: str) -> list:
-    """Escrita SÓ no schema staging (a trava da hml-12): todo insert/update/delete aponta para staging.<tabela> e nada cita public."""
+def trava_staging(sql: str) -> None:
+    """A trava da hml-12: todo insert/update/delete aponta para staging.<tabela> e nada cita public. (vale nos 2 bancos)."""
     sem_texto = re.sub(r"\$(\w*)\$.*?\$\1\$|'(?:[^']|'')*'", "''", sql, flags=re.S)
     alvos = re.findall(r"\b(?:insert\s+into|update|delete\s+from)\s+([^\s(;]+(?:\s*\.\s*[^\s(;]+)?)", sem_texto, flags=re.I)
     if not alvos or re.search(r"\bpublic\s*\.", sem_texto, flags=re.I) or any(not re.match(r"staging\s*\.", a, flags=re.I) for a in alvos):
         raise SystemExit(f"trava: escrita fora do schema staging recusada ({alvos})")
+
+
+def sql_staging(sql: str) -> list:
+    """Escrita SÓ no schema staging do banco principal (trava_staging)."""
+    trava_staging(sql)
     return _w02().sql_principal(sql)
 
 
@@ -292,7 +312,9 @@ def contar(ctx: dict, marca: str | None = None) -> dict:
             and d.data_hora >= ((c.hoje - 6)::timestamp at time zone 'America/Sao_Paulo'))::int as diario_fundo,
         (select count(*) from {S}.receitas r, c where r.nutricionista_id = c.dono and r.nome ~ {m})::int as receitas,
         (select count(*) from {S}.receitas r, c where r.nutricionista_id = c.dono and r.deleted_at is null and r.nome !~ {m})::int as receitas_fundo,
-        (select count(*) from {S}.pacientes p, c where p.nome ~ {m} and p.conta_id is distinct from c.conta)::int as gemeos""")
+        -- o gêmeo pelo nome (nome_gemeo): a massa do master (14d) põe 41 alunos com a mesma marca na conta do app
+        (select count(*) from {S}.pacientes p, c where p.nome ~ {m} and p.nome ~ ' · outra conta$'
+            and p.conta_id is distinct from c.conta)::int as gemeos""")
     return r[0] if r else {}
 
 
@@ -474,7 +496,9 @@ def limpar(ctx: dict, marca: str | None = None, mostrar: bool = True) -> bool:
     return not sobra and not falhas
 
 
-def criar(ctx: dict, gemeo: bool = True, outra_conta: str | None = None, marca: str | None = None, arquivo: Path = ESTADO) -> dict | None:
+def criar(ctx: dict, gemeo: bool = True, outra_conta: str | None = None, marca: str | None = None, arquivo: Path = ESTADO,
+          salvar: bool = True) -> dict:
+    """A parte 14b. Devolve o estado com "faltas" (vazio = completa); salvar=False: quem chama junta as partes e grava."""
     print(f"conta de teste: {ctx['conta_nome']!r} ({ctx['conta_id']}) · {ctx['origem']}/{ctx['plano']}/faixa {ctx['faixa']}/{ctx['situacao']}"
           f" · dono {ctx['email']}")
     antes = contar(ctx)
@@ -505,21 +529,23 @@ def criar(ctx: dict, gemeo: bool = True, outra_conta: str | None = None, marca: 
     imprimir("depois", depois)
     estado = estado_do_banco(ctx, marca, telefone, cpf_ze)
     estado["contagens"] = depois
-    print(f"\nestado: {salvar_estado(estado, arquivo)}")
-    faltas = massa_completa(depois, tem_gemeo)
-    print("✅ massa completa (41 em cada lista)" if not faltas else f"❌ massa incompleta: {faltas}")
-    return estado if not faltas else None
+    estado["faltas"] = massa_completa(depois, tem_gemeo)
+    if salvar:
+        print(f"\nestado: {salvar_estado(estado, arquivo)}")
+    print("✅ massa completa (41 em cada lista)" if not estado["faltas"] else f"❌ massa incompleta: {estado['faltas']}")
+    return estado
 
 
-def conferir(ctx: dict, arquivo: Path = ESTADO) -> bool:
+def conferir(ctx: dict, arquivo: Path = ESTADO, salvar: bool = True) -> dict | None:
+    """A parte 14b, só leitura: o estado da marca mais nova da conta (com "faltas"), ou None sem massa."""
     print(f"conta de teste: {ctx['conta_nome']!r} ({ctx['conta_id']}) · {ctx['origem']}/{ctx['plano']}/faixa {ctx['faixa']}/{ctx['situacao']}"
           f" · dono {ctx['email']}")
     marcas = [x["m"] for x in ler(f"""select distinct substring(p.nome from {lit(PADRAO_MARCA)}) as m from {S}.pacientes p
                                        where p.conta_id = {lit(ctx['conta_id'])}::uuid and p.nome ~ {lit(PADRAO_MARCA)} order by 1""")]
     if not marcas:
         imprimir("sem massa (fundo da conta)", contar(ctx))
-        print("❌ nenhuma massa no staging: rode --criar")
-        return False
+        print("❌ nenhuma massa da 14b no staging: rode --criar")
+        return None
     if len(marcas) > 1:
         print(f"⚠️ mais de uma marca na conta ({marcas}): vale a última; --limpar tira todas")
     marca = marcas[-1]
@@ -528,18 +554,21 @@ def conferir(ctx: dict, arquivo: Path = ESTADO) -> bool:
     estado = estado_do_banco(ctx, marca)
     estado["contagens"] = cont
     print(f"Zé Último: {'ok' if estado['ze'] else 'NÃO ACHADO'} · gêmeo noutra conta: {'ok' if estado['gemeo'] else 'não tem'}")
-    print(f"estado: {salvar_estado(estado, arquivo)}")
     faltas = massa_completa(cont, bool(estado["gemeo"]))
     if not estado["ze"]:
         faltas.append("Zé Último")
+    estado["faltas"] = faltas
+    if salvar:
+        print(f"estado: {salvar_estado(estado, arquivo)}")
     print("✅ massa completa (41 em cada lista)" if not faltas else f"❌ massa incompleta: {faltas}")
-    return not faltas
+    return estado
 
 
 def mostrar_sql(marca: str | None) -> None:
     """O SQL do --criar com ids de exemplo — para ler antes de rodar (não fala com o banco)."""
     ctx = {"email": LOGIN_PADRAO, "dono_id": "00000000-0000-4000-8000-0000000000d0", "conta_id": "00000000-0000-4000-8000-0000000000c0"}
     marca = marca or marca_agora()
+    print("-- ===== parte 14b: banco PRINCIPAL (schema staging), a conta de teste da nutri =====\n")
     for rotulo, sql in sql_da_massa(ctx, marca, telefone_de_teste(915), "52998224725", "hml14b-exemplo"):
         print(f"-- {rotulo}{sql};\n")
     print(f"-- gêmeo (outra conta de teste){sql_do_gemeo('00000000-0000-4000-8000-0000000000e0', marca, telefone_de_teste(915), '11144477735')};\n")
@@ -547,38 +576,178 @@ def mostrar_sql(marca: str | None) -> None:
         print(f"-- limpar: {rotulo}\n{sql};\n")
 
 
+# ───────────────────────── as 4 partes juntas (hml-14d) ─────────────────────────
+def _modulos():
+    """As partes da 14d (carregadas só quando usadas: o --help não lê nada)."""
+    sys.path.insert(0, str(AQUI))
+    import massa_principal as MP  # noqa: PLC0415
+    import massa_treino as MT  # noqa: PLC0415
+    return MT, MP
+
+
+def resolver_partes(a, partes: tuple[str, ...]) -> dict:
+    """Só leitura, ANTES de gravar qualquer coisa: cada parte acha as suas contas (e para com a mensagem certa se não achar)."""
+    MT, MP = _modulos()
+    ctx: dict = {}
+    if "14b" in partes:
+        ctx["14b"] = resolver(a.login, a.conta_id)
+    if "treino" in partes:
+        ctx["treino"] = MT.resolver(a.professor, a.aluno_treino)
+    if "master" in partes:
+        ctx["master"] = MP.resolver_master(a.master)
+    if "aluno" in partes:
+        ctx["aluno"] = MP.resolver_aluno(a.aluno_app)
+    return ctx
+
+
+def criar_tudo(a, partes: tuple[str, ...], arquivo: Path) -> bool:
+    MT, MP = _modulos()
+    ctx = resolver_partes(a, partes)
+    marca = a.marca or marca_agora()
+    padrao(marca)
+    estado: dict = {"versao": 2, "marca": marca, "schema": S, "partes": list(partes)}
+    faltas: dict[str, list] = {}
+    if "14b" in partes:
+        e = criar(ctx["14b"], gemeo=not a.sem_gemeo, outra_conta=a.outra_conta, marca=marca, arquivo=arquivo, salvar=False)
+        estado.update(e)
+        faltas["14b"] = e.get("faltas") or []
+    if "treino" in partes:
+        e, f = MT.criar(ctx["treino"], marca)
+        estado["treino"] = {**e, "faltas": f}
+        faltas["treino"] = f
+    if "master" in partes:
+        e, f = MP.criar_master(ctx["master"], marca)
+        estado["master"] = {**e, "faltas": f}
+        faltas["master"] = f
+    if "aluno" in partes:
+        e, f = MP.criar_aluno(ctx["aluno"], marca)
+        estado["aluno"] = {**e, "faltas": f}
+        faltas["aluno"] = f
+    estado["marca"] = marca
+    print(f"\nestado: {salvar_estado(estado, arquivo)}")
+    ruins = {k: v for k, v in faltas.items() if v}
+    print(f"✅ massa '{marca}' completa ({', '.join(partes)})" if not ruins else f"❌ massa incompleta: {ruins}")
+    return not ruins
+
+
+def conferir_tudo(a, partes: tuple[str, ...], arquivo: Path) -> bool:
+    MT, MP = _modulos()
+    ctx = resolver_partes(a, partes)
+    anterior = ler_estado(arquivo) or {}
+    estado: dict = {"versao": 2, "schema": S, "partes": list(partes)}
+    faltas: dict[str, list] = {}
+    if "14b" in partes:
+        e = conferir(ctx["14b"], arquivo, salvar=False)
+        if e:
+            estado.update(e)
+        faltas["14b"] = (e or {}).get("faltas", ["sem massa"]) if e else ["sem massa"]
+    if "treino" in partes:
+        e, f = MT.conferir(ctx["treino"])
+        estado["treino"] = {**(e or {}), "faltas": f}
+        faltas["treino"] = f
+    marca_p = MP.marca_no_banco(ctx.get("aluno"), ctx.get("master")) if ("master" in partes or "aluno" in partes) else None
+    if "master" in partes:
+        # o papel de ANTES do dar_master fica do estado anterior (o banco agora diz 'master')
+        papel = ((anterior.get("master") or {}).get("papel")) or "pessoa"
+        e, f = MP.conferir_master({**ctx["master"], "papel": papel if papel != "master" else "pessoa"}, marca_p)
+        estado["master"] = {**(e or {}), "faltas": f}
+        faltas["master"] = f
+    if "aluno" in partes:
+        e, f = MP.conferir_aluno(ctx["aluno"], marca_p)
+        estado["aluno"] = {**(e or {}), "faltas": f}
+        faltas["aluno"] = f
+    estado["marca"] = estado.get("marca") or (estado.get("treino") or {}).get("marca") or marca_p
+    print(f"\nestado: {salvar_estado(estado, arquivo)}")
+    ruins = {k: v for k, v in faltas.items() if v}
+    print(f"✅ massa completa ({', '.join(partes)})" if not ruins else f"❌ massa incompleta: {ruins}")
+    return not ruins
+
+
+def limpar_tudo(a, partes: tuple[str, ...], arquivo: Path) -> bool:
+    """Pela marca (qualquer hora; --marca para uma só), cada parte por si: uma que falha não impede as outras; o tirar_master sempre."""
+    MT, MP = _modulos()
+    estado = ler_estado(arquivo) or {}
+    ok = True
+    if "14b" in partes:
+        try:
+            try:
+                ctx = resolver(a.login, a.conta_id)
+            except SystemExit as e:
+                if not estado.get("conta_id"):
+                    raise
+                print(f"⚠️ {e} — limpando pela conta do estado ({estado['conta_id']})")
+                ctx = contexto_do_estado(estado)
+            ok = limpar(ctx, a.marca) and ok
+        except (Exception, SystemExit) as e:  # noqa: BLE001 — as outras partes limpam mesmo assim
+            print(f"❌ limpeza da parte 14b: {e}")
+            ok = False
+    if "treino" in partes:
+        try:
+            ok = MT.limpar(a.marca) and ok
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            print(f"❌ limpeza do Treino: {e}")
+            ok = False
+    if "master" in partes or "aluno" in partes:
+        master_id = papel = None
+        if "master" in partes:
+            em = estado.get("master") or {}
+            master_id, papel = em.get("master_id"), em.get("papel")
+            if not master_id:
+                try:
+                    master_id = MP.resolver_master(a.master)["master_id"]
+                except (Exception, SystemExit) as e:  # noqa: BLE001
+                    print(f"⚠️ tirar_master: não achei o master de teste ({e})")
+        try:
+            ok = MP.limpar(a.marca, master_id, papel) and ok
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            print(f"❌ limpeza do principal (14d): {e}")
+            ok = False
+    print("\n✅ tudo limpo" if ok else "\n❌ a limpeza deixou coisa — veja acima e rode de novo")
+    return ok
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-14b — massa das listas paginadas no STAGING (só SQL no schema staging; detalhes no topo)")
+    ap = argparse.ArgumentParser(description="hml-14b + hml-14d — massa das listas paginadas no STAGING dos 2 bancos (só SQL em staging.*; "
+                                             "detalhes no topo do arquivo)")
     acao = ap.add_mutually_exclusive_group(required=True)
-    acao.add_argument("--criar", action="store_true", help="limpa as sobras (pela marca) e cria a massa desta hora; grava o estado")
+    acao.add_argument("--criar", action="store_true", help="resolve as contas (só leitura), limpa as sobras (pela marca) e cria a massa desta hora; grava o estado")
     acao.add_argument("--conferir", action="store_true", help="só leitura: contagens da massa e do fundo + o estado de novo")
-    acao.add_argument("--limpar", action="store_true", help="apaga só o que tem a marca (qualquer hora; --marca para uma só)")
-    acao.add_argument("--mostrar-sql", action="store_true", help="imprime o SQL do --criar com ids de exemplo (sem banco)")
-    ap.add_argument("--login", default=LOGIN_PADRAO, help=f"e-mail da conta de teste dona da massa (padrão: {LOGIN_PADRAO} = {CHAVE_PADRAO})")
-    ap.add_argument("--conta-id", help="a conta (uuid) quando o login tem mais de uma que serve")
+    acao.add_argument("--limpar", action="store_true", help="apaga só o que tem a marca (qualquer hora; --marca para uma só) e faz o tirar_master")
+    acao.add_argument("--mostrar-sql", action="store_true", help="imprime o SQL do --criar e do --limpar com ids de exemplo (sem banco)")
+    ap.add_argument("--partes", default=",".join(PARTES), help=f"quais partes (padrão: todas — {', '.join(PARTES)})")
+    ap.add_argument("--login", default=LOGIN_PADRAO, help=f"14b: e-mail da conta de teste dona da massa (padrão: {LOGIN_PADRAO} = {CHAVE_PADRAO})")
+    ap.add_argument("--conta-id", help="14b: a conta (uuid) quando o login tem mais de uma que serve")
     ap.add_argument("--marca", help='só esta marca no --limpar (ex.: "HOMOLOG lista 09h15"); no --criar, a marca em vez da hora de agora')
-    ap.add_argument("--sem-gemeo", action="store_true", help="--criar sem o aluno gêmeo noutra conta de teste")
-    ap.add_argument("--outra-conta", help="--criar: a conta de teste (uuid) do gêmeo (padrão: a 1ª conta de teste com vaga, a livre primeiro)")
+    ap.add_argument("--sem-gemeo", action="store_true", help="14b: --criar sem o aluno gêmeo noutra conta de teste")
+    ap.add_argument("--outra-conta", help="14b: --criar com o gêmeo nesta conta de teste (uuid; padrão: a 1ª conta de teste com vaga, a livre primeiro)")
+    ap.add_argument("--professor", default="w13.dono.teste.claude@physiqnutri.app", help="treino: o professor de teste (padrão: w13-dono, o dos E2E w15/w23)")
+    ap.add_argument("--aluno-treino", default="w13.aluno.teste.claude@physiqnutri.app", help="treino: o aluno de teste dele (padrão: w13-aluno)")
+    ap.add_argument("--master", default="w27.master.teste.claude@physiqnutri.app", help="master: o master de teste (padrão: w27-master)")
+    ap.add_argument("--aluno-app", default="w13.aluno.teste.claude@physiqnutri.app",
+                    help="aluno: o aluno de teste com login e matrícula (padrão: w13-aluno; a profissional do painel é a nutricionista dele)")
     ap.add_argument("--estado", default=str(ESTADO), help=f"arquivo do estado (padrão: {ESTADO})")
     a = ap.parse_args()
+    partes = tuple(x.strip().lower() for x in a.partes.split(",") if x.strip())
+    if not partes or set(partes) - set(PARTES):
+        raise SystemExit(f"--partes: {sorted(set(partes) - set(PARTES)) or 'vazio'} (conhecidas: {', '.join(PARTES)})")
+    partes = tuple(p for p in PARTES if p in partes)
     if a.mostrar_sql:
-        mostrar_sql(a.marca)
+        marca = a.marca or marca_agora()
+        padrao(marca)
+        MT, MP = _modulos()
+        if "14b" in partes:
+            mostrar_sql(marca)
+        if "treino" in partes:
+            MT.mostrar_sql(marca)
+        if "master" in partes or "aluno" in partes:
+            MP.mostrar_sql(marca)
         return 0
     arquivo = Path(a.estado)
     if a.limpar:
-        try:
-            ctx = resolver(a.login, a.conta_id)
-        except SystemExit as e:
-            estado = ler_estado(arquivo)
-            if not estado:
-                raise
-            print(f"⚠️ {e} — limpando pela conta do estado ({estado['conta_id']})")
-            ctx = contexto_do_estado(estado)
-        return 0 if limpar(ctx, a.marca) else 1
-    ctx = resolver(a.login, a.conta_id)
+        return 0 if limpar_tudo(a, partes, arquivo) else 1
     if a.conferir:
-        return 0 if conferir(ctx, arquivo) else 1
-    return 0 if criar(ctx, gemeo=not a.sem_gemeo, outra_conta=a.outra_conta, marca=a.marca, arquivo=arquivo) else 1
+        return 0 if conferir_tudo(a, partes, arquivo) else 1
+    return 0 if criar_tudo(a, partes, arquivo) else 1
 
 
 if __name__ == "__main__":

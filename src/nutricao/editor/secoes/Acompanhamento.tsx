@@ -59,11 +59,12 @@ export default function Acompanhamento() {
   const [erroIntervalo, setErroIntervalo] = useState<string | null>(null);
   const mostrado = rascunho ?? intervalo;
 
-  const chaveReg = useMemo(() => ["registros-diarios", p.id], [p.id]);
+  // hml-14d (D34): o cache dos registros é POR PERÍODO (o período vai ao banco)
+  const chaveReg = useMemo(() => ["registros-diarios", p.id, intervalo.de, intervalo.ate], [p.id, intervalo.de, intervalo.ate]);
   const planosQ = useQuery({ queryKey: ["acompanhamento-planos", p.id], queryFn: () => listarPlanos(p.id) });
   const antroQ = useQuery({ queryKey: ["acompanhamento-antropometrias", p.id], queryFn: () => listarAntropometrias(p.id) });
   const calcQ = useQuery({ queryKey: ["acompanhamento-calculos", p.id], queryFn: () => listarCalculos(p.id) });
-  const regQ = useQuery({ queryKey: chaveReg, queryFn: () => listarRegistrosDoPaciente(p.id) });
+  const regQ = useQuery({ queryKey: chaveReg, queryFn: () => listarRegistrosDoPaciente(p.id, intervalo.de, intervalo.ate) });
   const carregando = !uid || planosQ.isPending || antroQ.isPending || calcQ.isPending || regQ.isPending;
   const atualizando = carregando || planosQ.isFetching || antroQ.isFetching || calcQ.isFetching || regQ.isFetching;
   const erro = planosQ.error ?? antroQ.error ?? calcQ.error ?? regQ.error;
@@ -82,7 +83,7 @@ export default function Acompanhamento() {
   const [filtroPeso, setFiltroPeso] = useState(PRESETS_PESO[0]);
   const pesos = useMemo(() => ultimosPesos(antroQ.data ?? [], filtroPeso), [antroQ.data, filtroPeso]);
   const variacao = useMemo(() => variacaoPeso(pesos), [pesos]);
-  // registros diários do intervalo → água + sintomas + lista
+  // registros diários do intervalo (lidos do banco já no período) → água + sintomas + lista
   const registros = useMemo(() => regQ.data ?? [], [regQ.data]);
   const noPeriodo = useMemo(() => ordenarRegistros(registros.filter((r) => noIntervalo(r.data, intervalo.de, intervalo.ate))), [registros, intervalo]);
   const agua = useMemo(() => serieAgua(noPeriodo, intervalo.de, intervalo.ate), [noPeriodo, intervalo]);
@@ -112,7 +113,9 @@ export default function Acompanhamento() {
   };
 
   const onSalvo = (r: RegistroDiario) => {
-    qc.setQueryData<RegistroDiario[]>(chaveReg, (old) => inserirRegistro(old ?? [], r));
+    // o registro entra na hora no período da tela (se for dele); os outros períodos guardados ficam velhos e releem quando voltarem
+    if (noIntervalo(r.data, intervalo.de, intervalo.ate)) qc.setQueryData<RegistroDiario[]>(chaveReg, (old) => inserirRegistro(old ?? [], r));
+    void qc.invalidateQueries({ queryKey: ["registros-diarios", p.id], refetchType: "none" });
     void recarregar(); // o banco mexeu em pacientes.updated_at (trigger)
   };
   const excluir = async () => {
@@ -123,6 +126,7 @@ export default function Acompanhamento() {
     try {
       await excluirRegistro(alvo.id);
       qc.setQueryData<RegistroDiario[]>(chaveReg, (old) => (old ?? []).filter((x) => x.id !== alvo.id));
+      void qc.invalidateQueries({ queryKey: ["registros-diarios", p.id], refetchType: "none" });
       setParaExcluir(null);
       toast.success("Registro excluído");
     } catch (e) {
@@ -407,6 +411,7 @@ export default function Acompanhamento() {
         pacienteId={p.id}
         registro={modal.registro}
         registros={registros}
+        periodo={intervalo}
         onSalvo={onSalvo}
       />
 

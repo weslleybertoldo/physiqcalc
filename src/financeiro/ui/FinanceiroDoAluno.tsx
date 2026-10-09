@@ -12,10 +12,11 @@ import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
-import { ErroFinanceiro } from "../api";
-import { criarLancamento, garantirCategorias, listarLancamentosDoAluno, rotuloMetodoLancamento, totais, valorComSinal, type Lancamento } from "../lancamentos";
-import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, listarRecibosDoAluno, podeEmitirRecibo } from "../recibos";
-import { LANCAMENTOS_MAX, LANCAMENTOS_VISIVEIS, rotaDosLancamentosDoAluno } from "@/painel/aluno/dados/regras";
+import { Paginacao } from "@/ui/premium/Paginacao";
+import { buscarCobrancasDoAluno, buscarTotaisDoAluno, ErroFinanceiro } from "../api";
+import { criarLancamento, garantirCategorias, paginaLancamentosDoAluno, rotuloMetodoLancamento, valorComSinal, type Lancamento } from "../lancamentos";
+import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, paginaRecibosDoAluno, podeEmitirRecibo, type Recibo } from "../recibos";
+import { LANCAMENTOS_VISIVEIS, rotaDosLancamentosDoAluno } from "@/painel/aluno/dados/regras";
 import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
 import { pdfDoRecibo } from "@/painel/financeiro/pdfRecibo";
 import ReciboDialog from "@/painel/financeiro/ReciboDialog";
@@ -26,7 +27,11 @@ import { ComprovanteVisor } from "./ComprovanteVisor";
 import { DialogoLancamento, DialogoNovaCobranca, DialogoRegistrar } from "./Dialogos";
 import { LinhaCobranca } from "./LinhaCobranca";
 import { TagsDoAluno } from "./TagsDoAluno";
-import { useFinanceiroDoAluno } from "./useFinanceiroDoAluno";
+import { chaveFinanceiroDoAluno, useFinanceiroDoAluno, usePaginaDoAluno } from "./useFinanceiroDoAluno";
+
+/** hml-14d (B21 · P7): quantos os cartões mostram antes do "Ver todos (N)" (as cobranças e os lançamentos, os de hoje). */
+const COBRANCAS_NO_CARTAO = 8;
+const RECIBOS_NO_CARTAO = 12;
 
 const MODO_TEXTO: Record<string, string> = { pix_manual: "Pix na chave da conta, com comprovante", mercadopago: "Mercado Pago (Pix e cartão, automático)", nenhum: "Não cobra pelo app (por fora)" };
 
@@ -82,7 +87,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
     <div className="flex flex-col gap-3.5" data-financeiro-aluno={d.aluno.paciente_id}>
       <div className={compacto ? "grid gap-3.5" : "grid gap-3.5 md:grid-cols-2 xl:grid-cols-3"}>
         <CartaoMensalidade d={d} agir={f.agir} />
-        <CartaoCobrancas d={d} agir={f.agir} aoVerComprovante={setComprovante} aoRegistrar={(c) => setRegistrar({ cobranca: c })}
+        <CartaoCobrancas d={d} alunoId={alunoId} compacto={compacto} agir={f.agir} aoVerComprovante={setComprovante} aoRegistrar={(c) => setRegistrar({ cobranca: c })}
           aoNovaCobranca={() => setNovaCobranca(true)} aoRegistrarMensalidade={() => setRegistrar({ cobranca: null })} />
         <div className="flex flex-col gap-3.5">
           {aguardando.map((c) => <ComprovantePixCard key={c.id} item={c} onResolvido={() => void f.recarregar()} />)}
@@ -92,7 +97,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
         </div>
       </div>
       <div className={compacto ? "grid gap-3.5" : "grid gap-3.5 xl:grid-cols-2"}>
-        <CartaoLancamentosERecibos d={d} reciboAvulso={reciboAvulso} aoFecharReciboAvulso={() => setReciboAvulso(false)} aoAbrirReciboAvulso={() => setReciboAvulso(true)} />
+        <CartaoLancamentosERecibos d={d} compacto={compacto} reciboAvulso={reciboAvulso} aoFecharReciboAvulso={() => setReciboAvulso(false)} aoAbrirReciboAvulso={() => setReciboAvulso(true)} />
       </div>
 
       <ComprovanteVisor cobrancaId={comprovante} quem="prof" aoFechar={() => setComprovante(null)} />
@@ -189,46 +194,83 @@ function espelharNoTreino(treinoUserId: string | null, planoNome: string | null,
     .catch(() => undefined);
 }
 
-function CartaoCobrancas({ d, agir, aoVerComprovante, aoRegistrar, aoNovaCobranca, aoRegistrarMensalidade }: {
+/** "Ver todas"/"Ver todos" começa aberto quando o endereço já traz uma página além da 1ª (a 1ª não vai para o endereço). */
+function abertaPeloEndereco(params: URLSearchParams, chave: string, compacto: boolean): boolean {
+  return !compacto && Number.parseInt(params.get(chave) ?? "", 10) > 1;
+}
+
+function CartaoCobrancas({ d, alunoId, compacto, agir, aoVerComprovante, aoRegistrar, aoNovaCobranca, aoRegistrarMensalidade }: {
   d: FinanceiroProfissional;
+  alunoId: string;
+  compacto: boolean;
   agir: ReturnType<typeof useFinanceiroDoAluno>["agir"];
   aoVerComprovante: (id: string) => void;
   aoRegistrar: (c: CobrancaVista) => void;
   aoNovaCobranca: () => void;
   aoRegistrarMensalidade: () => void;
 }) {
-  const [todas, setTodas] = useState(false);
+  const [params] = useSearchParams();
+  const [todas, setTodas] = useState(() => abertaPeloEndereco(params, "pagina_cobrancas", compacto));
   const lista = ordenarCobrancas(d.cobrancas);
-  const visiveis = todas ? lista : lista.slice(0, 8);
   const dono = d.permissoes.mensalidade;
+  // hml-14d (B21 · D31 · P7): o cartão segue com as 8 primeiras do prof_aluno (o Resumo, o KPI e a trava usam as 72 dele); "Ver todas
+  // (N)" abre a lista do banco em páginas de 20 (prof_aluno_cobrancas, já filtrada por quem pode ver) com o total do banco
+  const pag = usePaginaDoAluno({
+    chave: "pagina_cobrancas", compacto, queryKey: [...chaveFinanceiroDoAluno(alunoId), "cobrancas"],
+    ler: (pagina) => buscarCobrancasDoAluno(alunoId, pagina),
+  });
+  const total = pag.total ?? d.cobrancas.length;
+  const fechar = () => {
+    setTodas(false);
+    pag.irPara(1);
+  };
+  const acoesDe = (c: CobrancaVista) => (
+    <span className="flex flex-none items-center gap-1">
+      {c.comprovante && <IconeAcao icone={Eye} rotulo="Ver o comprovante" onClick={() => aoVerComprovante(c.id)} marca="ver" />}
+      {c.status === "aberta" && <IconeAcao icone={Banknote} rotulo="Registrar pago por fora" onClick={() => aoRegistrar(c)} marca="pago-por-fora" />}
+      {c.status === "aberta" && <IconeAcao icone={Ban} rotulo="Cancelar a cobrança" perigo marca="cancelar"
+        onClick={() => { if (window.confirm(`Cancelar "${c.descricao}"?`)) void agir("prof_cobranca_cancelar", { cobranca_id: c.id }, "Cobrança cancelada."); }} />}
+      {dono && c.status === "paga" && c.forma === "mp" && c.mp && <IconeAcao icone={Undo2} rotulo="Estornar no Mercado Pago" perigo marca="estornar"
+        onClick={() => { if (window.confirm(`Estornar ${reais(c.valor)} no Mercado Pago? O dinheiro volta para o aluno.`)) void agir("prof_reembolsar", { cobranca_id: c.id }, "Estorno pedido ao Mercado Pago."); }} />}
+      {dono && c.status === "paga" && c.forma === "manual" && c.tipo === "mensalidade" && <IconeAcao icone={Trash2} rotulo="Remover o pagamento por fora" perigo marca="remover"
+        onClick={() => { if (window.confirm(`Remover este pagamento de ${reais(c.valor)}? Sem outra cobertura, o aluno volta a ficar pendente.`)) void agir("prof_remover", { cobranca_id: c.id }, "Pagamento removido."); }} />}
+    </span>
+  );
   return (
     <Cartao className="flex flex-col p-5" data-cartao-cobrancas>
-      <CabecalhoCartao titulo="Cobranças" extra={<Chip tom="g">{d.cobrancas.length}</Chip>} />
+      <CabecalhoCartao titulo="Cobranças" extra={<Chip tom="g">{total}</Chip>} />
       <div className="mb-2 flex flex-wrap gap-2">
         {dono && d.mensalidade && <Botao tamanho="sm" icone={Banknote} onClick={aoRegistrarMensalidade} data-btn-registrar-pagamento>Registrar pagamento</Botao>}
         <Botao tamanho="sm" icone={Plus} onClick={aoNovaCobranca} data-btn-nova-cobranca>Nova cobrança</Botao>
       </div>
-      {lista.length === 0 ? (
+      {todas ? (
+        pag.q.isError ? (
+          <EstadoErro titulo="Não deu para abrir as cobranças" aoTentar={() => void pag.q.refetch()} />
+        ) : !pag.q.data ? (
+          <Esqueleto className="h-24 w-full" />
+        ) : (
+          <div data-lista-cobrancas>
+            <div data-lista="aluno-cobrancas">
+              {pag.q.data.itens.map((c) => (
+                <div key={c.id} data-item className="border-t border-linha-3 first:border-t-0">
+                  <LinhaCobranca cobranca={c} hoje={d.hoje} acoes={acoesDe(c)} />
+                </div>
+              ))}
+            </div>
+            <Paginacao nome="aluno-cobrancas" pagina={pag.pagina} total={pag.q.data.total} aoMudar={pag.irPara} carregando={pag.q.isFetching} />
+            <button type="button" onClick={fechar} className="text-[12.5px] font-semibold text-violeta-3" data-cobrancas-ver-todas data-ver-menos="cobrancas">
+              Ver menos
+            </button>
+          </div>
+        )
+      ) : lista.length === 0 ? (
         <p className="py-3 text-[12.5px] text-texto-3">Nenhuma cobrança ainda.</p>
       ) : (
         <div data-lista-cobrancas>
-          {visiveis.map((c) => (
-            <LinhaCobranca key={c.id} cobranca={c} hoje={d.hoje} acoes={
-              <span className="flex flex-none items-center gap-1">
-                {c.comprovante && <IconeAcao icone={Eye} rotulo="Ver o comprovante" onClick={() => aoVerComprovante(c.id)} marca="ver" />}
-                {c.status === "aberta" && <IconeAcao icone={Banknote} rotulo="Registrar pago por fora" onClick={() => aoRegistrar(c)} marca="pago-por-fora" />}
-                {c.status === "aberta" && <IconeAcao icone={Ban} rotulo="Cancelar a cobrança" perigo marca="cancelar"
-                  onClick={() => { if (window.confirm(`Cancelar "${c.descricao}"?`)) void agir("prof_cobranca_cancelar", { cobranca_id: c.id }, "Cobrança cancelada."); }} />}
-                {dono && c.status === "paga" && c.forma === "mp" && c.mp && <IconeAcao icone={Undo2} rotulo="Estornar no Mercado Pago" perigo marca="estornar"
-                  onClick={() => { if (window.confirm(`Estornar ${reais(c.valor)} no Mercado Pago? O dinheiro volta para o aluno.`)) void agir("prof_reembolsar", { cobranca_id: c.id }, "Estorno pedido ao Mercado Pago."); }} />}
-                {dono && c.status === "paga" && c.forma === "manual" && c.tipo === "mensalidade" && <IconeAcao icone={Trash2} rotulo="Remover o pagamento por fora" perigo marca="remover"
-                  onClick={() => { if (window.confirm(`Remover este pagamento de ${reais(c.valor)}? Sem outra cobertura, o aluno volta a ficar pendente.`)) void agir("prof_remover", { cobranca_id: c.id }, "Pagamento removido."); }} />}
-              </span>
-            } />
-          ))}
-          {lista.length > 8 && (
-            <button type="button" onClick={() => setTodas((v) => !v)} className="mt-2 text-[12.5px] font-semibold text-violeta-3" data-cobrancas-ver-todas>
-              {todas ? "Ver menos" : `Ver todas (${lista.length})`}
+          {lista.slice(0, COBRANCAS_NO_CARTAO).map((c) => <LinhaCobranca key={c.id} cobranca={c} hoje={d.hoje} acoes={acoesDe(c)} />)}
+          {total > COBRANCAS_NO_CARTAO && (
+            <button type="button" onClick={() => setTodas(true)} className="mt-2 text-[12.5px] font-semibold text-violeta-3" data-cobrancas-ver-todas data-ver-todos="cobrancas">
+              Ver todas ({total})
             </button>
           )}
         </div>
@@ -254,8 +296,9 @@ function CartaoAssinatura({ d, agir }: { d: FinanceiroProfissional; agir: Return
   );
 }
 
-function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAbrirReciboAvulso }: {
+function CartaoLancamentosERecibos({ d, compacto, reciboAvulso, aoFecharReciboAvulso, aoAbrirReciboAvulso }: {
   d: FinanceiroProfissional;
+  compacto: boolean;
   reciboAvulso: boolean;
   aoFecharReciboAvulso: () => void;
   aoAbrirReciboAvulso: () => void;
@@ -266,20 +309,41 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
   const fin = useFinanceiroConta({ categorias: false });
   const qc = useQueryClient();
   const pid = d.aluno.paciente_id;
-  const lanc = useQuery({ queryKey: ["financeiro-lancamentos", pid], queryFn: () => listarLancamentosDoAluno(pid), enabled: !!uid });
-  const recibos = useQuery({ queryKey: ["financeiro-recibos", pid], queryFn: () => listarRecibosDoAluno(pid), enabled: !!uid });
+  const [params] = useSearchParams();
+  // hml-14d (B21 · D31 · P7): as 2 listas em páginas de 20 do banco, com o total; os cartões mostram as primeiras e "Ver todos (N)"
+  // abre as páginas (?pagina_lancamentos= e ?pagina_recibos=). Os totais "Recebido/Gasto" vêm somados do banco (antes: até 500 aqui).
+  const [todos, setTodos] = useState(() => abertaPeloEndereco(params, "pagina_lancamentos", compacto));
+  const [todosRecibos, setTodosRecibos] = useState(() => abertaPeloEndereco(params, "pagina_recibos", compacto));
+  const lanc = usePaginaDoAluno<Lancamento>({
+    chave: "pagina_lancamentos", compacto, queryKey: ["financeiro-lancamentos", pid], ler: (pagina) => paginaLancamentosDoAluno(pid, pagina), ativo: !!uid,
+  });
+  const recibos = usePaginaDoAluno<Recibo>({
+    chave: "pagina_recibos", compacto, queryKey: ["financeiro-recibos", pid], ler: (pagina) => paginaRecibosDoAluno(pid, pagina), ativo: !!uid,
+  });
+  const totaisQ = useQuery({ queryKey: ["financeiro-totais-aluno", pid], queryFn: () => buscarTotaisDoAluno(pid), enabled: !!uid, staleTime: 30_000, retry: 1 });
   const categorias = useQuery({ queryKey: ["financeiro-categorias", uid], queryFn: () => garantirCategorias(uid), enabled: !!uid });
   const [novoLanc, setNovoLanc] = useState(false);
   const [reciboDe, setReciboDe] = useState<Lancamento | null>(null);
   const [modelosAberto, setModelosAberto] = useState(false);
-  // N-45: os 12 mais recentes; "Ver todos" mostra a lista inteira (a consulta traz até 500)
-  const [todos, setTodos] = useState(false);
-  const lista = useMemo(() => lanc.data ?? [], [lanc.data]);
-  const visiveis = todos ? lista : lista.slice(0, LANCAMENTOS_VISIVEIS);
-  const t = totais(lista);
+  // N-45: os 12 mais recentes; "Ver todos (N)" abre a lista inteira em páginas de 20
+  const daPagina = useMemo(() => lanc.q.data?.itens ?? [], [lanc.q.data]);
+  const visiveis = todos ? daPagina : daPagina.slice(0, LANCAMENTOS_VISIVEIS);
+  const nLancamentos = totaisQ.data?.total ?? lanc.total ?? 0;
+  const recibosDaPagina = recibos.q.data?.itens ?? [];
+  const recibosVisiveis = todosRecibos ? recibosDaPagina : recibosDaPagina.slice(0, RECIBOS_NO_CARTAO);
+  const nRecibos = recibos.total ?? 0;
+  const t = totaisQ.data;
   const recarregar = async () => {
-    await Promise.all(["financeiro-lancamentos", "financeiro-recibos"].map((k) => qc.invalidateQueries({ queryKey: [k, pid] })));
+    await Promise.all(["financeiro-lancamentos", "financeiro-recibos", "financeiro-totais-aluno"].map((k) => qc.invalidateQueries({ queryKey: [k, pid] })));
     await fin.recarregar("recibos");
+  };
+  const fecharLancamentos = () => {
+    setTodos(false);
+    lanc.irPara(1);
+  };
+  const fecharRecibos = () => {
+    setTodosRecibos(false);
+    recibos.irPara(1);
   };
   const pdf = async (r: { numero: number; valor: number | string; data: string; descricao: string; texto: string; nutricionista_id: string }) => {
     try {
@@ -292,35 +356,52 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
     <>
       <Cartao className="flex flex-col p-5" data-cartao-lancamentos>
         <CabecalhoCartao titulo="Lançamentos do aluno" acao={<Botao tamanho="sm" icone={Plus} onClick={() => setNovoLanc(true)} data-btn-novo-lancamento>Registrar</Botao>} />
-        <div className="mb-3 grid grid-cols-2 gap-2.5">
-          <div className="rounded-2xl border border-linha bg-superficie-3 px-3.5 py-2.5"><div className="text-[11.5px] text-texto-2">Recebido</div><b className="text-[17px] font-bold tabular-nums text-verde-2">{reais(t.entradas)}</b></div>
-          <div className="rounded-2xl border border-linha bg-superficie-3 px-3.5 py-2.5"><div className="text-[11.5px] text-texto-2">Gasto com o aluno</div><b className="text-[17px] font-bold tabular-nums text-rosa-3">{reais(t.saidas)}</b></div>
-        </div>
-        {lanc.isLoading ? <Esqueleto className="h-24 w-full" /> : lista.length === 0 ? (
-          <p className="py-2 text-[12.5px] text-texto-3">Nenhum lançamento. Confirmar um Pix ou registrar um pagamento pode lançar a entrada aqui.</p>
-        ) : visiveis.map((l) => (
-          <div key={l.id} className="flex min-h-[46px] items-center gap-2.5 border-t border-linha-3 py-1.5 first:border-t-0" data-lancamento={l.id}>
-            {l.tipo === "saida" ? <ArrowDownCircle aria-hidden className="h-4 w-4 flex-none text-rosa-3" /> : <ArrowUpCircle aria-hidden className="h-4 w-4 flex-none text-verde-2" />}
-            <span className="min-w-0 flex-1">
-              <span className={`block truncate text-[13px] text-texto ${l.estornada ? "line-through opacity-60" : ""}`}>{l.descricao}</span>
-              <span className="block truncate text-[11.5px] text-texto-3">{formatarDataRecibo(l.data)} · {l.categoria?.nome ?? "sem categoria"} · {rotuloMetodoLancamento(l.metodo)}</span>
-            </span>
-            <b className={`text-[13px] font-semibold tabular-nums ${l.tipo === "saida" ? "text-rosa-3" : "text-verde-2"}`}>{valorComSinal(l.tipo, Number(l.valor))}</b>
-            {l.recibo_id ? <Chip tom="t" className="h-[22px] text-[10.5px]">RECIBO</Chip> : podeEmitirRecibo({ ...l, deleted_at: null }) && (
-              <IconeAcao icone={ReceiptText} rotulo="Emitir recibo" onClick={() => setReciboDe(l)} marca="emitir-recibo" />
-            )}
+        {totaisQ.isError ? (
+          <EstadoErro titulo="Não deu para somar os lançamentos" aoTentar={() => void totaisQ.refetch()} />
+        ) : (
+          <div className="mb-3 grid grid-cols-2 gap-2.5" data-totais-aluno data-recebido={t?.recebido ?? ""} data-gasto={t?.gasto ?? ""}>
+            <div className="rounded-2xl border border-linha bg-superficie-3 px-3.5 py-2.5"><div className="text-[11.5px] text-texto-2">Recebido</div><b className="text-[17px] font-bold tabular-nums text-verde-2">{t ? reais(t.recebido) : "—"}</b></div>
+            <div className="rounded-2xl border border-linha bg-superficie-3 px-3.5 py-2.5"><div className="text-[11.5px] text-texto-2">Gasto com o aluno</div><b className="text-[17px] font-bold tabular-nums text-rosa-3">{t ? reais(t.gasto) : "—"}</b></div>
           </div>
-        ))}
-        {lista.length > 0 && (
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-linha-3 pt-2.5 text-[12.5px]" data-lancamentos-rodape={lista.length}>
-            {lista.length > LANCAMENTOS_VISIVEIS ? (
-              <button type="button" onClick={() => setTodos((x) => !x)} className="font-semibold text-violeta-3" data-lancamentos-ver-todos={todos ? "aberto" : "fechado"}>
-                {todos ? `Mostrar só os ${LANCAMENTOS_VISIVEIS} mais recentes` : `Ver todos (${lista.length}${lista.length >= LANCAMENTOS_MAX ? "+" : ""})`}
+        )}
+        {lanc.q.isError ? (
+          <EstadoErro titulo="Não deu para abrir os lançamentos" aoTentar={() => void lanc.q.refetch()} />
+        ) : !lanc.q.data ? <Esqueleto className="h-24 w-full" /> : daPagina.length === 0 ? (
+          <p className="py-2 text-[12.5px] text-texto-3">Nenhum lançamento. Confirmar um Pix ou registrar um pagamento pode lançar a entrada aqui.</p>
+        ) : (
+          <div {...(todos ? { "data-lista": "aluno-lancamentos" } : {})}>
+            {visiveis.map((l) => (
+              <div key={l.id} className="flex min-h-[46px] items-center gap-2.5 border-t border-linha-3 py-1.5 first:border-t-0" data-lancamento={l.id} {...(todos ? { "data-item": "" } : {})}>
+                {l.tipo === "saida" ? <ArrowDownCircle aria-hidden className="h-4 w-4 flex-none text-rosa-3" /> : <ArrowUpCircle aria-hidden className="h-4 w-4 flex-none text-verde-2" />}
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-[13px] text-texto ${l.estornada ? "line-through opacity-60" : ""}`}>{l.descricao}</span>
+                  <span className="block truncate text-[11.5px] text-texto-3">{formatarDataRecibo(l.data)} · {l.categoria?.nome ?? "sem categoria"} · {rotuloMetodoLancamento(l.metodo)}</span>
+                </span>
+                <b className={`text-[13px] font-semibold tabular-nums ${l.tipo === "saida" ? "text-rosa-3" : "text-verde-2"}`}>{valorComSinal(l.tipo, Number(l.valor))}</b>
+                {l.recibo_id ? <Chip tom="t" className="h-[22px] text-[10.5px]">RECIBO</Chip> : podeEmitirRecibo({ ...l, deleted_at: null }) && (
+                  <IconeAcao icone={ReceiptText} rotulo="Emitir recibo" onClick={() => setReciboDe(l)} marca="emitir-recibo" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {todos && lanc.q.data && (
+          <Paginacao nome="aluno-lancamentos" pagina={lanc.pagina} total={lanc.q.data.total} aoMudar={lanc.irPara} carregando={lanc.q.isFetching} />
+        )}
+        {nLancamentos > 0 && (
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-linha-3 pt-2.5 text-[12.5px]" data-lancamentos-rodape={nLancamentos}>
+            {todos ? (
+              <button type="button" onClick={fecharLancamentos} className="font-semibold text-violeta-3" data-lancamentos-ver-todos="aberto">
+                {`Mostrar só os ${LANCAMENTOS_VISIVEIS} mais recentes`}
+              </button>
+            ) : nLancamentos > LANCAMENTOS_VISIVEIS ? (
+              <button type="button" onClick={() => setTodos(true)} className="font-semibold text-violeta-3" data-lancamentos-ver-todos="fechado" data-ver-todos="lancamentos">
+                {`Ver todos (${nLancamentos})`}
               </button>
             ) : (
-              <span className="text-texto-3">{lista.length === 1 ? "1 lançamento" : `${lista.length} lançamentos`}</span>
+              <span className="text-texto-3">{nLancamentos === 1 ? "1 lançamento" : `${nLancamentos} lançamentos`}</span>
             )}
-            <Link to={rotaDosLancamentosDoAluno(d.aluno.nome, lista.map((l) => l.data), hojeSP())} className="font-semibold text-texto-2 hover:text-texto"
+            <Link to={rotaDosLancamentosDoAluno(d.aluno.nome, [t?.primeira ?? "", t?.ultima ?? ""], hojeSP())} className="font-semibold text-texto-2 hover:text-texto"
               title="Painel › Financeiro › Lançamentos, só deste aluno" data-lancamentos-no-financeiro>
               Editar, estornar ou excluir no Financeiro
             </Link>
@@ -328,28 +409,46 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
         )}
       </Cartao>
       <Cartao className="flex flex-col p-5" data-cartao-recibos>
-        <CabecalhoCartao titulo="Recibos" extra={<Chip tom="g">{recibos.data?.length ?? 0}</Chip>} acao={
+        <CabecalhoCartao titulo="Recibos" extra={<Chip tom="g">{nRecibos}</Chip>} acao={
           <span className="flex gap-2">
             <Botao tamanho="sm" icone={Tags} onClick={() => setModelosAberto(true)} data-btn-modelos-recibo>Modelos</Botao>
             <Botao tamanho="sm" icone={Plus} onClick={aoAbrirReciboAvulso} data-btn-novo-recibo>Novo recibo</Botao>
           </span>
         } />
-        {recibos.isLoading ? <Esqueleto className="h-24 w-full" /> : (recibos.data ?? []).length === 0 ? (
+        {recibos.q.isError ? (
+          <EstadoErro titulo="Não deu para abrir os recibos" aoTentar={() => void recibos.q.refetch()} />
+        ) : !recibos.q.data ? <Esqueleto className="h-24 w-full" /> : recibosDaPagina.length === 0 ? (
           <p className="py-2 text-[12.5px] text-texto-3">Nenhum recibo. Emita de um lançamento ou um recibo avulso; o número é sequencial e o PDF sai na hora.</p>
-        ) : (recibos.data ?? []).map((r) => (
-          <div key={r.id} className="flex min-h-[46px] items-center gap-2.5 border-t border-linha-3 py-1.5 first:border-t-0" data-recibo={r.numero}>
-            <ReceiptText aria-hidden className="h-4 w-4 flex-none text-violeta-3" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] text-texto">Nº {formatarNumeroRecibo(r.numero)} · <b className="font-semibold tabular-nums">{reais(r.valor)}</b></span>
-              <span className="block truncate text-[11.5px] text-texto-3">{formatarDataRecibo(r.data)} · {r.descricao}</span>
-            </span>
-            <IconeAcao icone={FileDown} rotulo="Baixar o PDF" onClick={() => void pdf(r)} marca="pdf-recibo" />
-            <IconeAcao icone={Trash2} rotulo="Excluir o recibo" perigo marca="excluir-recibo" onClick={() => {
-              if (!window.confirm(`Mandar o recibo nº ${formatarNumeroRecibo(r.numero)} para a lixeira? O número não é reaproveitado.`)) return;
-              void excluirRecibo(r.id).then(recarregar).catch(() => toast.error("Não deu para excluir."));
-            }} />
+        ) : (
+          <div {...(todosRecibos ? { "data-lista": "aluno-recibos" } : {})}>
+            {recibosVisiveis.map((r) => (
+              <div key={r.id} className="flex min-h-[46px] items-center gap-2.5 border-t border-linha-3 py-1.5 first:border-t-0" data-recibo={r.numero} {...(todosRecibos ? { "data-item": "" } : {})}>
+                <ReceiptText aria-hidden className="h-4 w-4 flex-none text-violeta-3" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] text-texto">Nº {formatarNumeroRecibo(r.numero)} · <b className="font-semibold tabular-nums">{reais(r.valor)}</b></span>
+                  <span className="block truncate text-[11.5px] text-texto-3">{formatarDataRecibo(r.data)} · {r.descricao}</span>
+                </span>
+                <IconeAcao icone={FileDown} rotulo="Baixar o PDF" onClick={() => void pdf(r)} marca="pdf-recibo" />
+                <IconeAcao icone={Trash2} rotulo="Excluir o recibo" perigo marca="excluir-recibo" onClick={() => {
+                  if (!window.confirm(`Mandar o recibo nº ${formatarNumeroRecibo(r.numero)} para a lixeira? O número não é reaproveitado.`)) return;
+                  void excluirRecibo(r.id).then(recarregar).catch(() => toast.error("Não deu para excluir."));
+                }} />
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+        {todosRecibos && recibos.q.data && (
+          <Paginacao nome="aluno-recibos" pagina={recibos.pagina} total={recibos.q.data.total} aoMudar={recibos.irPara} carregando={recibos.q.isFetching} />
+        )}
+        {todosRecibos ? (
+          <button type="button" onClick={fecharRecibos} className="mt-1 self-start text-[12.5px] font-semibold text-violeta-3" data-ver-menos="recibos-aluno">
+            {`Mostrar só os ${RECIBOS_NO_CARTAO} mais recentes`}
+          </button>
+        ) : nRecibos > RECIBOS_NO_CARTAO ? (
+          <button type="button" onClick={() => setTodosRecibos(true)} className="mt-2 self-start text-[12.5px] font-semibold text-violeta-3" data-ver-todos="recibos-aluno">
+            {`Ver todos (${nRecibos})`}
+          </button>
+        ) : null}
       </Cartao>
       <DialogoLancamento aberto={novoLanc} aoFechar={() => setNovoLanc(false)} categorias={categorias.data ?? []}
         aoSalvar={async (x) => {

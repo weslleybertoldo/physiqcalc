@@ -2,6 +2,7 @@
 // (src/lib/financeiroUtil.ts e src/lib/financeiro.ts de lá) para o banco principal: entradas e saídas ligadas ao aluno,
 // categorias do profissional (as 6 padrão nascem no 1º uso) e totais (estornadas ficam fora). A W19 usa as mesmas peças.
 import { principal } from "@/integrations/principal/client";
+import { paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
 
 export type TipoLancamento = "entrada" | "saida";
 export type MetodoLancamento = "pix" | "dinheiro" | "cartao_credito" | "cartao_debito" | "transferencia" | "boleto" | "outro";
@@ -42,33 +43,8 @@ export interface Lancamento {
   created_at: string;
 }
 
-export interface Totais {
-  entradas: number;
-  saidas: number;
-  nEntradas: number;
-  nSaidas: number;
-  nEstornadas: number;
-}
-
-const arred = (n: number) => Math.round(n * 100) / 100;
-
-export function totais(lista: Array<Pick<Lancamento, "tipo" | "valor" | "estornada">>): Totais {
-  const t: Totais = { entradas: 0, saidas: 0, nEntradas: 0, nSaidas: 0, nEstornadas: 0 };
-  for (const x of lista) {
-    if (x.estornada) {
-      t.nEstornadas += 1;
-      continue;
-    }
-    if (x.tipo === "saida") {
-      t.saidas += Number(x.valor) || 0;
-      t.nSaidas += 1;
-    } else {
-      t.entradas += Number(x.valor) || 0;
-      t.nEntradas += 1;
-    }
-  }
-  return { ...t, entradas: arred(t.entradas), saidas: arred(t.saidas) };
-}
+// hml-14d (B21 · D31): os totais "Recebido" e "Gasto com o aluno" saíram daqui para o banco (financeiro_totais_do_aluno, a mesma
+// regra: o estornado fica fora; saída = gasto; o resto = recebido; 2 casas) — a tela somava os até 500 que a lista trazia.
 
 /** "+R$ 150,00" / "−R$ 40,50" */
 export function valorComSinal(tipo: string, valor: number): string {
@@ -80,12 +56,20 @@ const falhou = (error: { message: string } | null) => {
   if (error) throw new Error(error.message);
 };
 
-export async function listarLancamentosDoAluno(pacienteId: string): Promise<Lancamento[]> {
-  const { data, error } = await principal.from("transacoes")
-    .select("id, nutricionista_id, paciente_id, tipo, descricao, valor, data, metodo, observacao, estornada, recibo_id, categoria_id, created_at, categoria:categorias_financeiras(nome)")
-    .eq("paciente_id", pacienteId).is("deleted_at", null).order("data", { ascending: false }).order("created_at", { ascending: false }).limit(500);
-  falhou(error);
-  return (data ?? []) as unknown as Lancamento[];
+/**
+ * hml-14d (B21 · D31): uma página (20) dos lançamentos do aluno, a data mais recente primeiro (desempate: criado por último, id), e o
+ * total — o cartão mostra os 12 primeiros e o "Ver todos (N)" abre as páginas (antes: até 500 de uma vez). Erro do banco lança.
+ */
+export function paginaLancamentosDoAluno(pacienteId: string, pagina: number): Promise<Pagina<Lancamento>> {
+  return paginar<Lancamento>(
+    (de, ate) =>
+      principal.from("transacoes")
+        .select("id, nutricionista_id, paciente_id, tipo, descricao, valor, data, metodo, observacao, estornada, recibo_id, categoria_id, created_at, categoria:categorias_financeiras(nome)", { count: "exact" })
+        .eq("paciente_id", pacienteId).is("deleted_at", null)
+        .order("data", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(de, ate) as unknown as PromiseLike<RespostaComContagem<Lancamento>>,
+    pagina,
+  );
 }
 
 const lerCategorias = async (uid: string): Promise<Categoria[]> => {

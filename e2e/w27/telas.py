@@ -59,6 +59,13 @@ def sem_carregando(c, timeout: float = 30) -> None:
     c.esperar(lambda: not c.tem('[data-estado="carregando"]') and not c.tem("[data-esqueleto]") and "Carregando" not in c.texto()[:4000], timeout)
 
 
+def buscar_na_lista(c, campo: str, termo: str, timeout: float = 30) -> None:
+    """hml-14d (D39): as listas do master vêm em páginas de 20 — o item procurado pela busca da lista (no banco, 300 ms)."""
+    if c.esperar(lambda: c.tem(campo), timeout):
+        c.pg.locator(campo).fill(termo)
+        c.pg.wait_for_timeout(800)  # passa da espera de 300 ms da busca antes de marcar/clicar
+
+
 @caso
 def caso_direto(nav):
     c = abrir(nav, "direto", "w27-master", "/master")
@@ -91,9 +98,11 @@ def caso_contas(nav):
     ca = B.conta_id(B.CONTA_A)
     c = abrir(nav, "contas", "w27-master", "/master/contas")
     p.check(pagina(c, "contas") and c.esperar(lambda: c.tem("[data-tabela-contas]"), 45), "[contas] tabela das contas")
-    p.check(c.tem(f'[data-linha-conta="{B.CONTA_A}"]'), "[contas] a conta A está na lista")
     sem_carregando(c)
     c.print("tela6_master_contas")
+    # hml-14d (D39): a conta A pode estar na 2ª página (20 por página) — pela busca da lista
+    buscar_na_lista(c, "[data-busca-contas]", B.CONTA_A)
+    p.check(c.esperar(lambda: c.tem(f'[data-linha-conta="{B.CONTA_A}"]'), 30), "[contas] a conta A está na lista (pela busca)")
     c.pg.locator(f'[data-linha-conta="{B.CONTA_A}"]').first.click()
     p.check(c.esperar(lambda: c.tem("[data-detalhe-acoes]") and c.tem("[data-detalhe-membros]"), 30), "[contas] folha da conta com ações e membros")
     p.check(c.tem('[data-acao="isentar"]') and c.tem('[data-acao="suspender"]') and c.tem('[data-acao="bloquear_alunos"]'), "[contas] ações de isentar, suspender e bloquear alunos")
@@ -139,6 +148,7 @@ def caso_alunos(nav):
     c.print("tela6_master_alunos")
     if alvo:
         c.ir(f"/master/alunos?conta={cb}")
+        buscar_na_lista(c, "[data-busca-alunos]", "Aluno Sem Login W27")  # hml-14d (D39): 20 por página — o alvo pela busca
         c.esperar(lambda: c.tem('[data-marcar-aluno="Aluno Sem Login W27"]'), 30)
         c.pg.locator('[data-marcar-aluno="Aluno Sem Login W27"]').check()
         c.pg.locator("[data-master-mover]").click()

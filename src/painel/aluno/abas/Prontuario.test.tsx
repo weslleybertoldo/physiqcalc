@@ -83,7 +83,8 @@ describe("W18 — aba Prontuário por papel (spec 4.1)", () => {
     // só o autor edita/exclui
     expect(document.querySelector('[data-anotacao="a2"] [data-btn-editar-anotacao]')).not.toBeNull();
     expect(document.querySelector('[data-anotacao="a1"] [data-btn-editar-anotacao]')).toBeNull();
-    expect(h.rpc).toHaveBeenCalledWith("aluno_anotacoes", { p_aluno: "p1", p_limite: null });
+    // hml-14d (D33): a aba pede a 1ª página (20) do banco; o card do Resumo segue com { p_aluno, p_limite: 3 }
+    expect(h.rpc).toHaveBeenCalledWith("aluno_anotacoes", { p_aluno: "p1", p_limite: 20, p_offset: 0 });
   });
 
   it("personal: só as anotações da equipe (o banco já filtra), sem seções clínicas — nem pela URL", async () => {

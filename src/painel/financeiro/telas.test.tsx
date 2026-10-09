@@ -23,8 +23,19 @@ vi.mock("./dados", async (original) => {
   const pag = await import("@/lib/paginacao");
   const { diaSP } = await import("@/financeiro/regras");
   const doPeriodo = (de: string, ate: string) => (h.transacoes as Transacao[]).filter((t) => t.data >= de && t.data <= ate);
-  // a ordem do banco: data, criação (a mais recente primeiro)
-  const filtrar = (de: string, ate: string, f: FiltrosLancamentos) => util.ordenarTransacoes(util.filtrarTransacoes(doPeriodo(de, ate), f));
+  // o filtro e a ordem do banco (financeiro_transacoes_visiveis): tipo, categoria e forma; o texto (todas as palavras, sem acento/caixa)
+  // na descrição, no aluno, na categoria e na observação; a data mais recente primeiro (empate: a gravada por último) — hml-14d (D41):
+  // aqui no mock, no lugar do filtrarTransacoes/ordenarTransacoes (só de teste), que saíram
+  const semAcento = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  // as palavras da busca (at\u00e9 6, sem acento/caixa) \u2014 como o banco corta o termo
+  const palavras = (q: string | null | undefined) => semAcento(q ?? "").split(" ").filter(Boolean).slice(0, 6);
+  const filtrar = (de: string, ate: string, f: FiltrosLancamentos) => {
+    const ps = palavras(f.q);
+    return doPeriodo(de, ate)
+      .filter((t) => (!f.tipo || t.tipo === f.tipo) && (!f.categoria || t.categoria_id === f.categoria) && (!f.metodo || t.metodo === f.metodo))
+      .filter((t) => ps.every((p) => semAcento([t.descricao, t.paciente?.nome, t.categoria?.nome, t.observacao].filter(Boolean).join(" ")).includes(p)))
+      .sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+  };
   const totais = (de: string, ate: string, f: FiltrosLancamentos) => {
     const t = util.totais(filtrar(de, ate, f));
     const cats = new Map<string, string>();
@@ -68,9 +79,9 @@ vi.mock("./dados", async (original) => {
     listarRecibos: vi.fn(async (_c: string, busca: string, pagina: number) => {
       h.pedidos.push({ nome: "recibos", pagina, busca });
       if (h.erro) throw h.erro;
-      const ps = util.palavrasBusca(busca);
+      const ps = palavras(busca);
       const todos = (h.recibos as Recibo[]).filter((r) => {
-        const alvo = util.palavrasBusca([r.paciente?.nome, r.descricao, String(r.numero).padStart(4, "0")].filter(Boolean).join(" ")).join(" ");
+        const alvo = palavras([r.paciente?.nome, r.descricao, String(r.numero).padStart(4, "0")].filter(Boolean).join(" ")).join(" ");
         return ps.every((p) => alvo.includes(p));
       });
       const [a, b] = pag.intervalo(pagina);

@@ -5,12 +5,15 @@
  * Os números saem das mesmas contas do editor da W15 (séries, duração estimada) — o que o profissional vê = o que o aluno recebe.
  */
 import { estimarDuracaoMin } from "@/app-aluno/inicio/pecas/regras";
-import { blocoDoGrupoMuscular } from "@/lib/gruposMusculares";
+import { MUSCULOS_PRIMARIOS_CONHECIDOS, musculosDosBlocos } from "@/lib/gruposMusculares";
 import { SERIES_PADRAO_DEFAULT, clampSeries } from "@/lib/seriesPadrao";
 import { DESCANSO_PADRAO, GRUPOS_VOLUME, subtituloDoExercicio } from "@/treino/editor/regras";
 import type { ExercicioEditor, PrescricaoEditavel } from "@/treino/editor/tipos";
 import { rotuloEquipamento, rotuloPadrao } from "@/treino/equivalencia";
-import type { AbaTreinos, Catalogo, ExercicioCatalogo, LinhaModelo, ModeloTela, PastaTela, PerfilRecebe, QuemMexe } from "./tipos";
+import { codigosDaBusca } from "@/treino/equivalenciaBusca";
+import type {
+  AbaTreinos, AlunoDaLista, Catalogo, ExercicioCatalogo, FiltrosExercicios, LinhaModelo, ModeloTela, PastaRow, PastaTela, PerfilRecebe, QuemMexe,
+} from "./tipos";
 
 export const ABAS_TREINOS: readonly AbaTreinos[] = ["treinos", "biblioteca", "historico", "relatorio"];
 
@@ -103,8 +106,12 @@ export function colunasDaPrescricao(antes: Pick<LinhaModelo, "num_series">, edit
 
 const porNome = (a: { nome: string }, b: { nome: string }) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" });
 
-/** Os modelos que a tela mostra, com os exercícios na ordem do modelo, as pastas, quantos alunos meus recebem, séries e duração. */
-export function montarModelos(c: Catalogo, q: QuemMexe, perfis: readonly PerfilRecebe[], meusAlunos: ReadonlySet<string>): ModeloTela[] {
+/**
+ * Os modelos que a tela mostra, com os exercícios na ordem do modelo, as pastas, quantos alunos meus recebem, séries e duração.
+ * `meusAlunos` null = todos os perfis contam (hml-14d: o quemRecebe já devolve só os alunos de quem chama — a lista de alunos não
+ * é mais baixada inteira).
+ */
+export function montarModelos(c: Catalogo, q: QuemMexe, perfis: readonly PerfilRecebe[], meusAlunos: ReadonlySet<string> | null = null): ModeloTela[] {
   const exercicios = new Map(c.exercicios.map((e) => [e.id, e]));
   const pastasVisiveis = new Set(c.pastas.filter((p) => visivel(p, q.meuId)).map((p) => p.id));
   const pastasDe = new Map<string, string[]>();
@@ -118,7 +125,7 @@ export function montarModelos(c: Catalogo, q: QuemMexe, perfis: readonly PerfilR
   for (const l of c.linhas) linhasDe.set(l.grupo_id, [...(linhasDe.get(l.grupo_id) ?? []), l]);
   const alunosDe = new Map<string, Set<string>>();
   for (const p of perfis) {
-    if (!meusAlunos.has(p.user_id)) continue;
+    if (meusAlunos && !meusAlunos.has(p.user_id)) continue;
     const s = alunosDe.get(p.grupo_id) ?? new Set<string>();
     s.add(p.user_id);
     alunosDe.set(p.grupo_id, s);
@@ -154,30 +161,22 @@ export function montarModelos(c: Catalogo, q: QuemMexe, perfis: readonly PerfilR
     .sort(porNome);
 }
 
-export function montarPastas(c: Catalogo, q: QuemMexe): PastaTela[] {
-  const modelosVisiveis = new Set(c.modelos.filter((m) => visivel(m, q.meuId)).map((m) => m.id));
-  return c.pastas
+/**
+ * As pastas da coluna da esquerda (as visíveis: globais e minhas), cada uma com quantos treinos tem — hml-14d: o número vem do
+ * banco (`por_pasta` da modelos_da_lista), porque a tela só tem os treinos da página.
+ */
+export function montarPastas(pastas: readonly PastaRow[], porPasta: Readonly<Record<string, number>>, q: QuemMexe): PastaTela[] {
+  return pastas
     .filter((p) => visivel(p, q.meuId))
-    .map<PastaTela>((p) => ({
-      id: p.id,
-      nome: p.nome,
-      global: ehGlobal(p),
-      editavel: podeEditar(p, q),
-      modelos: [...new Set(c.vinculos.filter((v) => v.pasta_id === p.id && modelosVisiveis.has(v.grupo_id)).map((v) => v.grupo_id))],
-    }))
+    .map<PastaTela>((p) => ({ id: p.id, nome: p.nome, global: ehGlobal(p), editavel: podeEditar(p, q), total: Number(porPasta[p.id] ?? 0) || 0 }))
     .sort(porNome);
 }
 
-export const normalizar = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
-/** A lista da esquerda: os modelos da pasta aberta (ou todos) que batem com a busca (nome do treino ou de um exercício). */
-export function filtrarModelos(modelos: readonly ModeloTela[], pasta: PastaTela | null, busca: string): ModeloTela[] {
-  const termo = normalizar(busca.trim());
-  return modelos.filter(
-    (m) =>
-      (!pasta || pasta.modelos.includes(m.id)) &&
-      (!termo || normalizar(m.nome).includes(termo) || m.exercicios.some((e) => normalizar(e.nome).includes(termo))),
-  );
+/** hml-14d (D23): os modelos na ordem da página que veio do banco (texto_busca(nome), id) — o montarModelos ordena por nome no
+ * navegador, e a página precisa da ordem do banco para não trocar item de página. */
+export function naOrdemDaPagina<T extends { id: string }>(itens: readonly T[], ids: readonly string[]): T[] {
+  const pos = new Map(ids.map((id, i) => [id, i]));
+  return [...itens].sort((a, b) => (pos.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (pos.get(b.id) ?? Number.MAX_SAFE_INTEGER));
 }
 
 /** Nome de treino ou de pasta: obrigatório, até 60 letras (o limite do "+" do editor da W15). */
@@ -197,31 +196,51 @@ export const textoExercicios = (n: number): string => (n === 1 ? "1 exercício" 
 
 export type EscopoBiblioteca = "global" | "minha";
 
-/** Em qual grupo da tela (Peito, Costas, Pernas, Ombros, Braços…) o exercício cai — os mesmos filtros do "Adicionar exercício". */
-export function grupoDaTela(grupoMuscular: string | null | undefined): string {
-  const bloco = blocoDoGrupoMuscular(grupoMuscular || "");
-  return GRUPOS_VOLUME.find((g) => (g.blocos as readonly string[]).includes(bloco))?.chave ?? "outros";
-}
-
 /** "Bíceps / Braquial · Rosca martelo · Halteres" — grupo · movimento · equipamento (o que a troca por equivalente usa). */
 export function linhaDaBiblioteca(e: Pick<ExercicioCatalogo, "grupo_muscular" | "padrao_movimento" | "equipamento">): string {
   return [e.grupo_muscular, rotuloPadrao(e.padrao_movimento), rotuloEquipamento(e.equipamento)].filter(Boolean).join(" · ");
 }
 
-export function filtrarExercicios(
-  lista: readonly ExercicioCatalogo[],
-  escopo: EscopoBiblioteca,
-  meuId: string | null,
-  grupo: string,
-  busca: string,
-): ExercicioCatalogo[] {
-  const termo = normalizar(busca.trim());
-  return lista
-    .filter((e) => (escopo === "global" ? ehGlobal(e) : ehMeu(e, meuId)))
-    .filter((e) => grupo === "todos" || grupoDaTela(e.grupo_muscular) === grupo)
-    .filter((e) => !termo || normalizar(`${e.nome} ${e.grupo_muscular} ${e.subgrupo ?? ""} ${linhaDaBiblioteca(e)}`).includes(termo))
-    .sort(porNome);
+/** O termo de busca como vai ao banco: sem espaços sobrando, até 80 letras. */
+export const termoDaBusca = (t: string): string => t.trim().replace(/\s+/g, " ").slice(0, 80);
+
+/**
+ * hml-14d (B21 · D24): a busca e o grupo da biblioteca como o banco entende (RPC exercicios_da_lista) — antes eram filtros no
+ * navegador sobre a tabela inteira. `q` = o termo (nome, grupo muscular, subgrupo e variação, sem acento); `codigos` = os de
+ * movimento/equipamento cujos RÓTULOS casam com o termo (o que a linha "grupo · movimento · equipamento" mostra); o grupo da tela
+ * vira `musculos` (os músculos primários dos blocos dele — o mesmo mapa do filtro de grupo que o navegador fazia, blocoDoGrupoMuscular)
+ * ou, em "outros", `fora` (nenhum conhecido).
+ */
+export function filtrosDaBiblioteca(termo: string, grupo: string): Pick<FiltrosExercicios, "q" | "codigos" | "musculos" | "fora"> {
+  const f: Pick<FiltrosExercicios, "q" | "codigos" | "musculos" | "fora"> = {};
+  const q = termoDaBusca(termo);
+  if (q) {
+    f.q = q;
+    const codigos = codigosDaBusca(q);
+    if (codigos.length) f.codigos = codigos;
+  }
+  if (grupo === "outros") f.fora = [...MUSCULOS_PRIMARIOS_CONHECIDOS];
+  else {
+    const g = GRUPOS_VOLUME.find((x) => x.chave === grupo);
+    if (g) f.musculos = musculosDosBlocos(g.blocos);
+  }
+  return f;
 }
+
+// ───────────────────────── seletor de aluno do Treino (B19 · D26) ─────────────────────────
+
+/** Quantos alunos o seletor mostra por busca (o resto aparece refinando). */
+export const LIMITE_SELETOR_TREINO = 20;
+/** A espera depois da última tecla antes de buscar (as listas do painel). */
+export const ESPERA_BUSCA = 300;
+
+/** O aluno da lista do Treino (admin-list-users) como a tela mostra: o nome, senão o e-mail, senão "Aluno" (como antes). */
+export function alunoDaLista(u: { id: string; nome?: string | null; email?: string | null; foto_url?: string | null }): AlunoDaLista {
+  return { id: u.id, nome: (u.nome || u.email || "").trim() || "Aluno", email: u.email || "", foto_url: u.foto_url ?? null };
+}
+
+/** "20 de 41 — refine a busca" (o mesmo texto do seletor da 14b). */
+export const textoMaisAlunosTreino = (mostrando: number, total: number): string => `${mostrando} de ${total} — refine a busca`;
 
 /** O exercício está completo para a troca por equivalente (movimento + equipamento — W9)? */
 export const classificado = (e: Pick<ExercicioCatalogo, "padrao_movimento" | "equipamento">): boolean => !!e.padrao_movimento && !!e.equipamento;

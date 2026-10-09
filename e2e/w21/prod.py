@@ -63,7 +63,10 @@ def main() -> int:
             nav = pw.chromium.launch(args=["--no-sandbox"])
             c = T.abrir(nav, "prod", "nutri-legado", "/painel/pre-consulta")
             c.esperar(lambda: c.tem("[data-cartao-formularios]") and not c.tem("[data-carregando-formularios]"), 40)
-            p.check(c.pg.locator('[data-nav="/painel/pre-consulta"]').count() == 1 and c.tem("[data-resumo-preconsulta]"), "1. o item do menu e os 4 números")
+            # hml-14d (D35): os 4 números vêm da preconsulta_numeros (saiu a leitura das 1000 respostas) — espera o resumo sair do
+            # "carregando" (o data-resumo-preconsulta="carregando" também casava com o seletor antigo)
+            numeros = c.esperar(lambda: c.tem("[data-resumo-preconsulta][data-novas]"), 40)
+            p.check(c.pg.locator('[data-nav="/painel/pre-consulta"]').count() == 1 and numeros, "1. o item do menu e os 4 números")
             c.pg.locator("[data-btn-novo-formulario]").first.click()
             p.check(c.esperar(lambda: c.tem('[data-etapa-formulario="origem"]'), 15), "1. Novo formulário começa na origem (nutricionista)")
             c.pg.locator('[data-origem="questionario"]').click()

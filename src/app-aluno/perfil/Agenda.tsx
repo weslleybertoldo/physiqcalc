@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarCheck, CalendarDays, CalendarPlus, Check, Dumbbell, Package, RefreshCw, Repeat, Salad, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -11,11 +11,13 @@ import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoSemInternet, EstadoVazio } from "@/ui/premium/Estados";
 import { GrupoLista } from "@/ui/premium/Lista";
+import { Paginacao } from "@/ui/premium/Paginacao";
+import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useOnline } from "@/ui/premium/useOnline";
-import { minhaAgenda } from "./pecas/api";
+import { minhaAgenda, minhaAgendaLista } from "./pecas/api";
 import {
-  agendamentosAnteriores, areaDaConsulta, ehCancelado, emQuantosDias, inicioDaAgenda, proximosAgendamentos, quandoAgendamento, rotuloStatus, ROTULO_PAPEL,
-  type AreaDaConsulta,
+  agendamentosAnteriores, areaDaConsulta, ehCancelado, emQuantosDias, inicioDaAgenda, proximosAgendamentos, PROXIMAS_NO_CARTAO, quandoAgendamento, rotuloStatus,
+  ROTULO_PAPEL, type AreaDaConsulta,
 } from "./pecas/regras";
 import { CLASSE_PAGINA_APP, TopoItem } from "./pecas/TopoItem";
 import { confirmarConsulta, mensagemErroAgenda, minhasRegrasAgenda, type ConsultaAluno, type ProfissionalDaAgenda } from "./agenda/api";
@@ -63,14 +65,14 @@ function Acoes({ a, ctx, aoConfirmar, aoReagendar, aoDesistir, confirmando }: {
   );
 }
 
-function Linha({ a, acoes }: { a: ConsultaAluno; acoes?: ReactNode }) {
+function Linha({ a, acoes, item = false }: { a: ConsultaAluno; acoes?: ReactNode; item?: boolean }) {
   const cancelado = ehCancelado(a.status);
   const area = areaDaConsulta(a);
   const Icone = ICONE_DA_AREA[area];
   const quem = a.profissional ? `${a.profissional}${a.papel ? ` · ${ROTULO_PAPEL[a.papel]}` : ""}` : null;
   const espera = aguardandoAluno(a.status) && new Date(a.inicio).getTime() > Date.now();
   return (
-    <li className="flex items-start gap-3 py-2.5" data-agendamento={a.id} data-agendamento-status={a.status} data-agendamento-area={area}>
+    <li className="flex items-start gap-3 py-2.5" data-agendamento={a.id} data-agendamento-status={a.status} data-agendamento-area={area} {...(item ? { "data-item": "" } : {})}>
       <span className="mt-0.5 flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[10px] bg-superficie text-suave" data-icone-area={area}>
         <Icone aria-hidden className="h-4 w-4" strokeWidth={1.75} />
       </span>
@@ -129,6 +131,47 @@ function CartaoPacote({ p, aoMarcar }: { p: ProfissionalDaAgenda; aoMarcar: () =
 type Folha = { tipo: "reagendar" | "desistir"; consulta: ConsultaAluno } | { tipo: "marcar"; prof: ProfissionalDaAgenda } | null;
 
 /**
+ * hml-14d (B21 · D31 · P7): a folha "Ver todas" das próximas consultas — a lista inteira em páginas de 20 do banco (minha_agenda_lista,
+ * a mesma janela e a mesma regra das "Próximas"), com "1–20 de N" e as ações de cada consulta. A página fica no estado da folha:
+ * fechar volta à 1. O erro aparece na folha.
+ */
+function FolhaProximas({ aberta, uid, aoFechar, acoesDe }: { aberta: boolean; uid: string | null; aoFechar: () => void; acoesDe: (a: ConsultaAluno) => ReactNode }) {
+  const [pagina, setPagina] = useState(1);
+  const q = useQuery({
+    queryKey: ["agenda-aluno", uid, "lista", "proximas", pagina],
+    queryFn: () => minhaAgendaLista("proximas", pagina),
+    enabled: aberta && Boolean(uid),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    retry: 1,
+    networkMode: "online",
+  });
+  const fechar = () => {
+    setPagina(1);
+    aoFechar();
+  };
+  return (
+    <PainelDeslizante aberto={aberta} aoMudar={(a) => !a && fechar()} titulo="Próximas consultas"
+      descricao={q.data ? (q.data.total === 1 ? "1 consulta marcada" : `${q.data.total} consultas marcadas`) : undefined} lado="baixo">
+      <div data-folha-todos="agenda">
+        {q.isError ? (
+          <EstadoErro aoTentar={() => void q.refetch()} />
+        ) : !q.data ? (
+          <EstadoCarregando linhas={3} rotulo="Carregando as consultas" />
+        ) : q.data.itens.length === 0 ? (
+          <p className="py-3 text-[13px] text-texto-2">Nenhuma consulta marcada daqui para frente.</p>
+        ) : (
+          <ul className="divide-y divide-linha-3" data-lista="app-agenda">
+            {(q.data.itens as ConsultaAluno[]).map((a) => <Linha key={a.id} a={a} acoes={acoesDe(a)} item />)}
+          </ul>
+        )}
+        {q.data && <Paginacao nome="app-agenda" pagina={pagina} total={q.data.total} aoMudar={setPagina} carregando={q.isFetching} />}
+      </div>
+    </PainelDeslizante>
+  );
+}
+
+/**
  * Perfil › Agenda (N-53 — porte da agenda do paciente do PhysiqNutri — + o pedido dele de 01/10, W20): as próximas consultas e as
  * dos últimos 3 meses, com o status na voz do aluno; a consulta que o profissional marcou pede a resposta do aluno: CONFIRMAR,
  * REAGENDAR (1 slot; nº de vezes e janela pelas regras do profissional, com a mensagem clara) ou DESISTIR (com o aviso do que
@@ -142,13 +185,17 @@ export default function Agenda() {
   const q = useQuery({ queryKey: ["agenda-aluno", uid], queryFn: () => minhaAgenda(inicioDaAgenda()), enabled: Boolean(uid), staleTime: 60_000, retry: 1, networkMode: "online" });
   const regrasQ = useQuery({ queryKey: ["agenda-aluno-regras", uid], queryFn: minhasRegrasAgenda, enabled: Boolean(uid), staleTime: 60_000, retry: 1, networkMode: "online" });
   const [folha, setFolha] = useState<Folha>(null);
+  const [verTodas, setVerTodas] = useState(false);
   const [confirmando, setConfirmando] = useState<string | null>(null);
 
   const agora = new Date();
   const lista = (q.data ?? []) as ConsultaAluno[];
-  const proximos = proximosAgendamentos(lista, agora, 50);
+  // hml-14d (B21 · P7): o cartão "Próximas" mostra as 20 primeiras (antes, 50 sem "ver todas"); a regra de reagendar e o destaque
+  // seguem sobre TODAS as próximas da minha_agenda; "Ver todas (N)" abre a folha em páginas de 20 do banco
+  const todasProximas = proximosAgendamentos(lista, agora);
+  const proximos = todasProximas.slice(0, PROXIMAS_NO_CARTAO);
   const anteriores = agendamentosAnteriores(lista, agora);
-  const pendentes = proximos.filter((a) => aguardandoAluno(a.status) && !a.dia_inteiro && new Date(a.inicio).getTime() > agora.getTime());
+  const pendentes = todasProximas.filter((a) => aguardandoAluno(a.status) && !a.dia_inteiro && new Date(a.inicio).getTime() > agora.getTime());
   const profs = regrasQ.data ?? [];
   const comPacote = profs.filter((p) => p.pacote);
   const primeira = proximos[0] ?? null;
@@ -156,7 +203,7 @@ export default function Agenda() {
 
   const contextoDe = (c: ConsultaAluno): ContextoDaConsulta => {
     const p = profs.find((x) => x.profissional_id === c.profissional_id);
-    const outrasNoMes = proximos.filter((x) => x.id !== c.id && x.profissional_id === c.profissional_id && !x.dia_inteiro
+    const outrasNoMes = todasProximas.filter((x) => x.id !== c.id && x.profissional_id === c.profissional_id && !x.dia_inteiro
       && (x.mes_referencia ?? "").slice(0, 7) === (c.mes_referencia ?? "").slice(0, 7)).length;
     return { regras: normalizarRegras(c.regras ?? p?.regras), pacote: p?.pacote ?? null, profissional: c.profissional ?? p?.profissional ?? null, outrasNoMes };
   };
@@ -185,7 +232,7 @@ export default function Agenda() {
   const nadaAinda = proximos.length === 0 && anteriores.length === 0 && comPacote.length === 0;
 
   return (
-    <div data-pagina-agenda data-proximos={proximos.length} data-anteriores={anteriores.length} data-pendentes={pendentes.length} className={CLASSE_PAGINA_APP}>
+    <div data-pagina-agenda data-proximos={todasProximas.length} data-anteriores={anteriores.length} data-pendentes={pendentes.length} className={CLASSE_PAGINA_APP}>
       <TopoItem titulo="Agenda"
         acao={<BotaoIcone icone={RefreshCw} rotulo="Atualizar" onClick={() => { void q.refetch(); void regrasQ.refetch(); }} className={q.isFetching ? "[&>svg]:animate-spin" : undefined} />} />
       <p className="-mt-1 px-0.5 text-[13px] text-texto-2">Suas consultas: confirme, reagende ou desista pelo app.</p>
@@ -250,6 +297,12 @@ export default function Agenda() {
             ) : (
               <p className="py-3 text-[13px] text-texto-2" data-agenda-sem-proximas>Nenhuma consulta marcada daqui para frente.</p>
             )}
+            {todasProximas.length > PROXIMAS_NO_CARTAO && (
+              <button type="button" onClick={() => setVerTodas(true)} className="block w-full border-t border-linha-3 py-2.5 text-left text-[12.5px] font-semibold text-violeta-3"
+                data-ver-todos="agenda">
+                Ver todas ({todasProximas.length})
+              </button>
+            )}
           </GrupoLista>
           {anteriores.length > 0 && (
             <GrupoLista titulo="Anteriores">
@@ -259,6 +312,7 @@ export default function Agenda() {
         </>
       )}
 
+      <FolhaProximas aberta={verTodas} uid={uid} aoFechar={() => setVerTodas(false)} acoesDe={acoesDe} />
       <SheetReagendar consulta={folha?.tipo === "reagendar" ? consultaDaFolha : null} contexto={consultaDaFolha ? contextoDe(consultaDaFolha) : null}
         aberto={folha?.tipo === "reagendar"} aoMudar={(v) => !v && setFolha(null)} aoFeito={atualizar} />
       <SheetDesistir consulta={folha?.tipo === "desistir" ? consultaDaFolha : null} contexto={consultaDaFolha ? contextoDe(consultaDaFolha) : null}

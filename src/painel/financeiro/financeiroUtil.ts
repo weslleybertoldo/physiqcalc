@@ -3,7 +3,8 @@
 // ordenação, filtro por tipo/categoria/forma/texto e contagem. Novo aqui: o filtro pela FORMA de pagamento (spec 4.4 —
 // "entradas e saídas por categoria e forma de pagamento"). Nada de rede; testado no Vitest (financeiroUtil.test.ts).
 // hml-14b (B21 · D14): a tela não filtra nem soma mais aqui — o banco faz (financeiro_lancamentos e financeiro_resumo_periodo, migration
-// 20261009010000). `filtrarTransacoes` e `totais` ficam como o ESPELHO da regra do banco (a prova local da migration compara os 2).
+// 20261009010000). `totais` fica como o ESPELHO da regra do banco (a prova local da migration compara os 2); o filtro, a ordem e as
+// palavras da busca saíram na hml-14d (D41 — só os testes usavam).
 import { endOfMonth, endOfYear, format, isValid, parseISO, startOfDay, startOfMonth, startOfYear, subDays, subMonths } from "date-fns";
 import { chaveDia, dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
@@ -275,40 +276,10 @@ export function registroParaForm(t: {
   };
 }
 
-// ---- Ordenação, filtro e contagem ----
-/** Mais recente primeiro (pela data; empate → gravada por último primeiro). */
-export function ordenarTransacoes<T extends { data: string; created_at: string }>(lista: T[]): T[] {
-  return [...lista].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-}
-/** Substitui (pelo id) ou acrescenta e devolve a lista já ordenada. */
-export const inserirOrdenado = <T extends { id: string; data: string; created_at: string }>(lista: T[], t: T): T[] =>
-  ordenarTransacoes([...lista.filter((x) => x.id !== t.id), t]);
-
-export type TransacaoFiltravel = {
-  tipo: string;
-  categoria_id: string | null;
-  metodo?: string | null;
-  descricao: string;
-  categoria?: { nome: string } | null;
-  paciente?: { nome: string } | null;
-  observacao?: string | null;
-};
+// ---- Filtro e contagem ----
+// hml-14d (D41): ordenarTransacoes, inserirOrdenado, filtrarTransacoes e palavrasBusca (o espelho, no navegador, do filtro e da ordem
+// que o banco já faz — financeiro_transacoes_visiveis/financeiro_lancamentos, hml-14b) saíram: nenhum código usava, só os testes.
 const normalizar = (s: string | null | undefined): string => semAcento(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
-/** Palavras da busca (até 6), sem acento/caixa. */
-export const palavrasBusca = (q: string | null | undefined): string[] => normalizar(q).split(" ").filter(Boolean).slice(0, 6);
-/** Tipo, categoria (pelo id), forma e texto — descrição, aluno, categoria e observação; TODAS as palavras precisam aparecer.
- *  O espelho do filtro do banco (financeiro_transacoes_visiveis: texto_busca dos 2 lados, até 6 palavras). */
-export function filtrarTransacoes<T extends TransacaoFiltravel>(lista: T[], f: { tipo: string; categoria: string; metodo?: string; q: string }): T[] {
-  const ps = palavrasBusca(f.q);
-  return lista.filter((t) => {
-    if (f.tipo && t.tipo !== f.tipo) return false;
-    if (f.categoria && t.categoria_id !== f.categoria) return false;
-    if (f.metodo && t.metodo !== f.metodo) return false;
-    if (!ps.length) return true;
-    const alvo = normalizar([t.descricao, t.paciente?.nome, t.categoria?.nome, t.observacao].filter(Boolean).join(" "));
-    return ps.every((p) => alvo.includes(p));
-  });
-}
 export function textoContagem(n: number): string {
   if (n === 0) return "Nenhuma movimentação";
   if (n === 1) return "1 movimentação";

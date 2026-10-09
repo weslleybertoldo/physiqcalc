@@ -97,6 +97,18 @@ const MAPA_PRIMARIO: Record<string, string> = {
   caminhada: "cardio",
 };
 
+/**
+ * hml-14d (B21): os músculos primários conhecidos (as chaves acima: minúsculas, sem acento) que caem nos blocos — a tela manda ao
+ * banco o grupo escolhido (`musculos` da RPC exercicios_da_lista do Treino, que compara com o trecho antes da "/" do
+ * `grupo_muscular`, sem acento) e, para "Outros", todos os conhecidos (`fora`).
+ */
+export function musculosDosBlocos(blocos: readonly string[]): string[] {
+  return Object.keys(MAPA_PRIMARIO).filter((m) => blocos.includes(MAPA_PRIMARIO[m]));
+}
+
+/** hml-14d (B21): todos os músculos primários conhecidos — o que NÃO é nenhum deles cai em "Outros". */
+export const MUSCULOS_PRIMARIOS_CONHECIDOS: readonly string[] = Object.keys(MAPA_PRIMARIO);
+
 /** Minúsculo, sem acento e sem espaços extras — para comparação e busca */
 export const normalizar = (texto: string): string =>
   (texto || "")

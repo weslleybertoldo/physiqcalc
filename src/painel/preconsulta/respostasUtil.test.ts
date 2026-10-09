@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import type { Pergunta } from "@/nutricao/prontuario/lib/questionariosUtil";
 import {
   FILTROS_VAZIOS, anamneseDaResposta, aplicacaoDaResposta, chaveTexto, dadosAlunoDaResposta, ehNova, filtrosAtivos, filtrosDaURL,
-  filtrosParaURL, iniciaisDe, linkAluno, linkImportada, motivoSemImportar, origemDaResposta, podeDesligar, podeImportar, pontosDaResposta,
-  respostasDoMes, respostasPorFormulario, respostasPorSemana, situacaoFormulario, sugerirAluno, textoConfirmarImportar, textoContagemRespostas, textoImportada, textoSituacaoFormulario,
+  filtrosParaURL, inicioDoMesLocal, linkAluno, linkImportada, motivoSemImportar, normalizarNumeros, origemDaResposta, podeDesligar, pontosDaResposta,
+  situacaoFormulario, sugerirAluno, textoConfirmarImportar, textoContagemRespostas, textoImportada, textoSituacaoFormulario,
   textoSugestao, tipoImportacao, titulosFormularios, filtrosParaBanco, normalizarPaginaRespostas, type FormularioDaResposta, type RespostaBase,
 } from "./respostasUtil";
 
@@ -124,10 +124,7 @@ describe("ligar a um aluno", () => {
 });
 
 describe("importação", () => {
-  it("podeImportar/podeDesligar/textoImportada/linkImportada (a seção do Prontuário da W18)", () => {
-    expect(podeImportar(base())).toBe(false);
-    expect(podeImportar(base({ paciente_id: "a" }))).toBe(true);
-    expect(podeImportar(base({ paciente_id: "a", importada_em: QUANDO }))).toBe(false);
+  it("podeDesligar/textoImportada/linkImportada (a seção do Prontuário da W18)", () => {
     expect(podeDesligar(base({ paciente_id: "a" }))).toBe(true);
     expect(podeDesligar(base({ paciente_id: "a", importada_em: QUANDO }))).toBe(false);
     expect(textoImportada(base())).toBe("");
@@ -176,7 +173,7 @@ describe("importação", () => {
   });
 });
 
-describe("W21 — quem importa e os números", () => {
+describe("W21 — quem importa", () => {
   const nutri = { uid: "n1", souNutri: true, souDono: false };
   it("motivoSemImportar: só a nutricionista; com aluno ligado, que tenha nutrição e seja dela (ou ela é a dona) — como o banco (W3/W18)", () => {
     const ligada = base({ paciente_id: "a" });
@@ -189,21 +186,36 @@ describe("W21 — quem importa e os números", () => {
     expect(motivoSemImportar(ligada, { ...nutri, souDono: true }, { id: "a", nutricionista_id: "outra" })).toBeNull();
     expect(motivoSemImportar(base({ paciente_id: "a", importada_em: QUANDO }), nutri, { id: "a", nutricionista_id: "n1" })).toMatch(/já foi importada/);
   });
-  it("respostasPorFormulario/respostasDoMes/iniciaisDe", () => {
-    const m = respostasPorFormulario([base({ formulario_id: "f1" }), base({ formulario_id: "f1", paciente_id: "a" }), base({ formulario_id: null }), base({ formulario_id: "f2" })]);
-    expect(m.get("f1")).toEqual({ total: 2, novas: 1 });
-    expect(m.get("f2")).toEqual({ total: 1, novas: 1 });
-    expect(m.size).toBe(2);
-    const hoje = new Date(2026, 9, 15, 12);
-    expect(respostasDoMes([{ respondido_em: new Date(2026, 9, 1, 9).toISOString() }, { respondido_em: new Date(2026, 8, 30, 9).toISOString() }], hoje)).toBe(1);
-    const agora = new Date(2026, 9, 15, 12);
-    const dias = (n: number) => new Date(agora.getTime() - n * 86400000).toISOString();
-    expect(respostasPorSemana([{ respondido_em: dias(1) }, { respondido_em: dias(2) }, { respondido_em: dias(8) }, { respondido_em: dias(60) }], agora)).toEqual([0, 0, 0, 0, 0, 0, 1, 2]);
-    // W27: a mesma função de iniciais do Avatar (W25) — primeira e última palavra, só letras
-    expect(iniciaisDe("  ana  maria silva ")).toBe("AS");
-    expect(iniciaisDe("Conta Teste (prova)")).toBe("CP");
-    expect(iniciaisDe("(Ana) 2026")).toBe("A");
-    expect(iniciaisDe("")).toBe("?");
+});
+
+// hml-14d (B21 · D35): os números do topo e dos formulários vêm do banco (preconsulta_numeros) — as regras de contar moram lá agora
+// (a prova de que dão o mesmo que a tela contava: o teste PGlite da hml-14d, fora do repo)
+describe("hml-14d — os números da pré-consulta vêm do banco", () => {
+  it("inicioDoMesLocal: o 1º instante do mês no fuso do navegador (o que vai no p_inicio_mes)", () => {
+    const d = inicioDoMesLocal(new Date(2026, 9, 31, 23, 59));
+    expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()]).toEqual([2026, 9, 1, 0, 0]);
+    expect(inicioDoMesLocal(new Date(2026, 0, 1, 0, 0)).getMonth()).toBe(0);
+  });
+
+  it("normalizarNumeros: os números, as 8 semanas e as contagens por formulário", () => {
+    const n = normalizarNumeros({
+      ok: true, total: 1203, novas: 7, ligadas: 1190, importadas: 40, mes: 31, semanas: [1, 0, 2, 3, 0, 5, 8, 9],
+      por_formulario: { f1: { total: 1100, novas: 5 }, f2: { total: 103, novas: 2 }, ruim: { total: "x", novas: 0 } },
+    });
+    expect(n).toEqual({ total: 1203, novas: 7, ligadas: 1190, importadas: 40, mes: 31, semanas: [1, 0, 2, 3, 0, 5, 8, 9],
+      porFormulario: { f1: { total: 1100, novas: 5 }, f2: { total: 103, novas: 2 } } });
+    expect(normalizarNumeros({ ok: true, total: 0, novas: 0, ligadas: 0, importadas: 0, mes: 0, semanas: [0, 0, 0, 0, 0, 0, 0, 0], por_formulario: {} })?.porFormulario).toEqual({});
+  });
+
+  it("formato inesperado → null (a tela mostra o erro, nunca zeros inventados)", () => {
+    const ok = { ok: true, total: 1, novas: 0, ligadas: 1, importadas: 0, mes: 1, semanas: [0, 0, 0, 0, 0, 0, 0, 1], por_formulario: {} };
+    expect(normalizarNumeros(ok)).not.toBeNull();
+    expect(normalizarNumeros(null)).toBeNull();
+    expect(normalizarNumeros({ ...ok, ok: false })).toBeNull();
+    expect(normalizarNumeros({ ...ok, total: "1" })).toBeNull();
+    expect(normalizarNumeros({ ...ok, semanas: [0, 1] })).toBeNull();
+    expect(normalizarNumeros({ ...ok, semanas: [0, 0, 0, 0, 0, 0, 0, -1] })).toBeNull();
+    expect(normalizarNumeros({ ...ok, mes: undefined })).toBeNull();
   });
 });
 

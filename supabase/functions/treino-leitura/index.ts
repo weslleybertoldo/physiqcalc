@@ -24,7 +24,8 @@
 // hml-14 (H-32, D3): um prazo de 20 s por pedido (o painel espera 25 s); o GoTrue do principal espera no máximo 5 s e a RPC
 // aluno_treino 8 s, dentro dele; estourou (até ler o corpo) → o erro_interno de sempre, nunca um 401/403 por corpo vazio.
 // hml-14 (H-51 item 4): a trava por conta (passo 3) é a regra pura treinoVisivelPelaConta (_shared/espelho/regras.ts), testada.
-/* eslint-disable @typescript-eslint/no-explicit-any -- função Deno: respostas do supabase-js (service_role, sem os tipos gerados) */
+// `any` de propósito: respostas do supabase-js (service_role, sem os tipos gerados) — a regra já vem desligada para supabase/functions
+// no eslint.config.js (hml-14d: a diretiva eslint-disable daqui não tinha efeito e virava aviso)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { treinoVisivelPelaConta } from "../_shared/espelho/regras.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
@@ -310,7 +311,10 @@ const COLUNAS_PERFIL_AVALIACAO = [
 async function lerAvaliacoes(admin: any, userId: string, schema: string) {
   const [perfilRes, avRes, fotosRes] = await Promise.all([
     admin.from("physiq_profiles").select(COLUNAS_PERFIL_AVALIACAO).eq("id", userId).maybeSingle(),
-    admin.from("physiq_avaliacoes").select("*").eq("user_id", userId).order("data_avaliacao", { ascending: true }).limit(200),
+    // hml-14d (B21 · D30): as 200 MAIS NOVAS (antes, as 200 mais antigas: acima de 200 a avaliação nova sumia e o "já saiu" do
+    // painel ficava falso), com desempate pelo id — e a resposta segue em ordem CRESCENTE, como antes (o reverse lá embaixo)
+    admin.from("physiq_avaliacoes").select("*").eq("user_id", userId)
+      .order("data_avaliacao", { ascending: false }).order("id", { ascending: false }).limit(200),
     admin.from("physiq_registros_fotos").select("id, mes_ref, tipo, storage_path, created_at").eq("user_id", userId).order("mes_ref", { ascending: false }).limit(200),
   ]);
   for (const r of [perfilRes, avRes, fotosRes]) if (r.error) throw r.error;
@@ -325,7 +329,7 @@ async function lerAvaliacoes(admin: any, userId: string, schema: string) {
   }
   return {
     perfil: perfilRes.data ?? null,
-    avaliacoes: avRes.data ?? [],
+    avaliacoes: [...((avRes.data as any[]) || [])].reverse(),
     fotos: fotos.map((f) => ({ ...f, url: urls[f.storage_path] ?? null })),
   };
 }

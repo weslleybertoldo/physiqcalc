@@ -89,6 +89,10 @@ export interface MatriculaPagamentos {
   assinatura: AssinaturaVista | null;
   cobrancas: CobrancaVista[];
   recibos: ReciboVista[];
+  /** hml-14d (B21 · D31): quantas cobranças e recibos vivos a matrícula tem — o "Ver todos (N)" (as listas acima param em 48/24).
+   *  Ausentes na função de antes de publicar a 14d. */
+  total_cobrancas?: number;
+  total_recibos?: number;
 }
 
 export interface StatusAluno {
@@ -190,4 +194,14 @@ export interface ResumoMatricula {
   app?: boolean;
   teste_ate?: string | null;
   plano_codigo?: string | null;
+}
+
+/** hml-14d (B21 · D31): "Recebido" e "Gasto com o aluno" somados no banco (financeiro_totais_do_aluno), quantos lançamentos o aluno
+ *  tem (estornados inclusive) e o período deles (a 1ª e a última data — o link "Editar … no Financeiro"). */
+export interface TotaisDoAluno {
+  recebido: number;
+  gasto: number;
+  total: number;
+  primeira: string | null;
+  ultima: string | null;
 }

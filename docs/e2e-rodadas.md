@@ -29,6 +29,28 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 05:05 | hml-14c | `0e3ea2c` | `e2e/w26/prod.py --canal msedge` | produção | 21/21 | SÓ LEITURA (H-68) |
+| 09/10 04:52 | hml-14c | `003df92` | `e2e/w15/api.py` | staging | 45/53 | teste do H-51 item 5 atualizado (`34663cd`) |
+| 09/10 04:49 | hml-14c | `003df92` | `e2e/w23/api.py` | staging | 22/22 | regressão depois das 18 funções |
+| 09/10 04:47 | hml-14c | `003df92` | `e2e/w17/avaliacao_api.py` | staging | 34/34 | regressão depois |
+| 09/10 04:47 | hml-14c | `003df92` | `e2e/w16/api.py` | staging | 40/41 | = antes |
+| 09/10 04:46 | hml-14c | `003df92` | `e2e/w15/api.py` | staging | 43/52 | = antes |
+| 09/10 04:42 | hml-14c | `003df92` | `e2e/w10/api.py --schema staging` | staging | 22/22 | regressão depois |
+| 09/10 04:41 | hml-14c | `003df92` | `e2e/w02/trocar_token.py` | staging | 24/25 | login do Treino = antes; rodou 2× (04:40 e 04:41) |
+| 09/10 04:11 | hml-14c | `064d3b8` | `e2e/w23/api.py` | staging | 22/22 | regressão antes |
+| 09/10 04:09 | hml-14c | `064d3b8` | `e2e/w17/avaliacao_api.py` | staging | 34/34 | regressão antes |
+| 09/10 04:08 | hml-14c | `064d3b8` | `e2e/w16/api.py` | staging | 40/41 | regressão antes |
+| 09/10 04:08 | hml-14c | `064d3b8` | `e2e/w15/api.py` | staging | 43/52 | regressão antes |
+| 09/10 04:04 | hml-14c | `064d3b8` | `e2e/w10/api.py --schema staging` | staging | 22/22 | regressão antes |
+| 09/10 03:12 | hml-14b | `d9fd873` | `e2e/hml14/telas.py --base prod --canal msedge` | produção | 82/82 | SÓ LEITURA; a guarda barrou 18 POST em `modelos_recibo` (nada gravou) |
+| 09/10 03:00 | hml-14b | `fac94b7` | `e2e/hml14/telas.py --base staging --canal msedge` | staging | 322/324 | as 2 ❌ a 390 px (Diário e Agenda, H-40) |
+| 09/10 02:44 | hml-14b | `fd4baef` | `e2e/hml14/telas.py --base local --canal msedge` | local | 322/326 | as 2 de 390 px + 2 de cache (L5) |
+| 08/10 23:50 | hml-14 | `4871ad6` | `e2e/w10/api.py --schema staging` | staging | 22/22 | |
+| 08/10 23:50 | hml-14 | `4871ad6` | `e2e/w20c/api.py --schema staging` | staging | 35/35 | |
+| 08/10 23:49 | hml-14 | `4871ad6` | `e2e/w07b/api.py tudo` | staging | 52/54 | só massa (fase 6) |
+| 08/10 23:46 | hml-14 | `4871ad6` | `e2e/w06/api.py --casos pix,porfora,acesso,nutri,mp,antigo` | staging | 54/55 | só massa (fase 6) |
+| 08/10 23:44 | hml-14 | `4871ad6` | `e2e/w04/cobranca_api.py` | staging | 50/50 | |
+| 08/10 23:43 | hml-14 | `178f5d6` | `e2e/w26/prod.py --canal msedge` | produção | 21/21 | SÓ LEITURA (H-68); antes do merge da 14a (23:51), com as funções novas já publicadas |
 | 08/10 21:06 | hml-13 | `93c6c1b` | `e2e/w25/api.py` | staging | 23/30 | as 7 = massa de outro dia ("hoje", "há N dias"); rodar o `massa.py` antes |
 | 08/10 21:05 | hml-13 | `93c6c1b` | `e2e/w10/api.py` | staging | 22/22 | |
 | 08/10 21:04 | hml-13 | `93c6c1b` | `e2e/w07/api.py api` | staging | caiu | a conta `excluir1` não existe (excluída na hml-09) |

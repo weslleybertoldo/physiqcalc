@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
+import { fatiar, ordemDoHistorico, ordemDoMes, paginaPedida } from "./regras.ts";
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -585,6 +586,10 @@ Deno.serve(async (req) => {
       }));
 
       itens.sort((a, b) => (a.data === b.data ? a.pessoa.localeCompare(b.pessoa) : b.data.localeCompare(a.data)));
+      // hml-14d (B21 · D26): com `pagina` (o Histórico do painel), 20 por vez + o total do mês (com o `userId` do seletor, o do
+      // aluno); a mesma ordem com o desempate pela chave, estável entre as páginas. Sem `pagina`: o mês inteiro, como antes.
+      const pagina = paginaPedida(body?.pagina);
+      if (pagina !== null) return jsonOk(fatiar([...itens].sort(ordemDoMes), pagina), origin);
       return jsonOk({ itens }, origin);
     }
 
@@ -626,6 +631,33 @@ Deno.serve(async (req) => {
     if (action === "historicoUsuario") {
       const userId = body?.userId;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
+
+      // hml-14d (B21 · D26): com `pagina` (a folha "Todo o histórico" do painel) — TODOS os treinos de cronômetro (em páginas de 1000,
+      // sem o teto de 500) + os sem cronômetro dos últimos 12 meses (como abaixo), o mais novo primeiro; 20 por vez + o total.
+      // Sem `pagina`: o código de antes, abaixo, intocado.
+      const pagina = paginaPedida(body?.pagina);
+      if (pagina !== null) {
+        const todosTimer = await todasAsPaginas<any>((de, ate) => admin.from("treino_historico")
+          .select("id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos")
+          .eq("user_id", userId)
+          .order("concluido_em", { ascending: false }).order("id")
+          .range(de, ate));
+        const comTimerP = new Set<string>(todosTimer.map((h) => dataBRT(h.iniciado_em)));
+        const hojeP = new Date();
+        const fimP = hojeP.toLocaleDateString("en-CA", { timeZone: TZ });
+        const inicioP = new Date(hojeP.getTime() - 365 * 24 * 3600 * 1000).toLocaleDateString("en-CA", { timeZone: TZ });
+        const conclP = await todasAsPaginas<any>((de, ate) => admin.from("tb_treino_concluido")
+          .select("data_treino")
+          .eq("user_id", userId).eq("concluido", true)
+          .gte("data_treino", inicioP).lte("data_treino", fimP)
+          .order("data_treino").order("id")
+          .range(de, ate));
+        const datasP = new Set<string>(conclP.map((c) => String(c.data_treino).split("T")[0]));
+        const sinteticosP = await sintetizarDeSeries(admin, userId, inicioP, fimP, comTimerP, datasP);
+        const completo = [...todosTimer.map(normalizarTreino), ...sinteticosP].sort(ordemDoHistorico);
+        const { itens, total } = fatiar(completo, pagina);
+        return jsonOk({ historico: itens, total }, origin);
+      }
 
       // os 500 treinos de cronômetro mais recentes (teto escolhido, abaixo do corte de 1000; a página é da 14d)
       const { data: timerRows, error: timerErr } = await admin.from("treino_historico")

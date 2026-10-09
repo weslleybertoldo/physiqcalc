@@ -11,10 +11,15 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- os tipos gerados do supabase não conhecem professor_id/colunas novas (como no admin antigo) */
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { listarAlunos } from "@/lib/saasApi";
-import { ErroTreinoPainel, invocar, tirarTreino, type ItemHistorico } from "@/treino/editor/api";
+import { ErroTreinoPainel, exerciciosDaLista, invocar, tirarTreino, type ItemHistorico } from "@/treino/editor/api";
 import type { CamposEquivalencia } from "@/treino/equivalencia";
-import type { AlunoDaLista, Catalogo, ExercicioCatalogo, GrupoMuscularRow, LinhaModelo, ModeloRow, PastaRow, PerfilRecebe, VinculoPasta } from "./tipos";
+import { LIMITE_SELETOR_TREINO, alunoDaLista } from "./regras";
+import type {
+  AlunoDaLista, AlunoQuemRecebe, Catalogo, DetalhesDosModelos, ExercicioCatalogo, FiltrosExercicios, FiltrosModelos, GrupoMuscularRow, LinhaModelo,
+  ModeloAberto, ModeloRow, PaginaModelos, PaginaQuemRecebe, PastaRow, PerfilRecebe, QuemMexe, VinculoPasta,
+} from "./tipos";
 
 // staging tem bucket próprio de mídias — upload não polui as fotos de produção (o mesmo do admin antigo)
 export const BUCKET_EXERCICIOS = DB_SCHEMA === "staging" ? "exercicios-staging" : "exercicios";
@@ -45,53 +50,149 @@ const doEscopo = (q: any, meuId: string | null) => (meuId ? q.or(`professor_id.i
 
 const COLS_LINHA = "grupo_id, exercicio_id, ordem, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg";
 const COLS_EXERCICIO = "id, nome, grupo_muscular, emoji, tipo, imagem_url, subgrupo, dica, professor_id, padrao_movimento, equipamento, variacao";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** O max_rows do PostgREST no Treino: uma leitura nunca traz mais que isso. */
+const POR_LEITURA = 1000;
+
+/**
+ * hml-14d (B21 · D18/D23): todas as páginas de 1000 de uma leitura (a consulta com ordem ESTÁVEL — desempate pelo id — e
+ * `.range(de, ate)`), sem o corte calado do PostgREST (antes: `.limit(2000/3000)`, que valiam 1000). Erro do banco → lança.
+ */
+async function todasAsPaginas<T>(montar: (de: number, ate: number) => PromiseLike<{ data: unknown; error: { message?: string; code?: string } | null }>): Promise<T[]> {
+  const saida: T[] = [];
+  for (let de = 0; de < 100 * POR_LEITURA; de += POR_LEITURA) {
+    const r = await montar(de, de + POR_LEITURA - 1);
+    if (r.error) falhou(r.error);
+    const linhas = (r.data ?? []) as T[];
+    saida.push(...linhas);
+    if (linhas.length < POR_LEITURA) return saida;
+  }
+  throw new ErroTreinoPainel("lista_grande_demais");
+}
+
+const linhasDosModelos = (ids: string[]) =>
+  emLotes(ids, (lote) => todasAsPaginas<LinhaModelo>((de, ate) => tabela("tb_grupos_exercicios").select(COLS_LINHA).in("grupo_id", lote).order("ordem").order("id").range(de, ate)));
+
+const vinculosDasPastas = (ids: string[]) =>
+  emLotes(ids, (lote) => todasAsPaginas<VinculoPasta>((de, ate) => tabela("tb_pastas_treino_grupos").select("pasta_id, grupo_id").in("pasta_id", lote).order("id").range(de, ate)));
+
+const vinculosDosModelos = (ids: string[]) =>
+  emLotes(ids, (lote) => todasAsPaginas<VinculoPasta>((de, ate) => tabela("tb_pastas_treino_grupos").select("pasta_id, grupo_id").in("grupo_id", lote).order("id").range(de, ate)));
+
+/** As pastas que a pessoa vê (as dela e as globais) — inteiras (teto natural: 2 por profissional hoje). */
+export const carregarPastas = (meuId: string | null) => {
+  exigirInternet();
+  return todasAsPaginas<PastaRow>((de, ate) => doEscopo(tabela("tb_pastas_treino").select("id, nome, professor_id"), meuId).order("nome").order("id").range(de, ate));
+};
+
+/** Os grupos musculares (globais e meus) — o formulário do exercício e a folha "Grupos musculares". */
+export const carregarMusculos = (meuId: string | null) => {
+  exigirInternet();
+  return todasAsPaginas<GrupoMuscularRow>((de, ate) => doEscopo(tabela("grupos_musculares").select("id, nome, professor_id"), meuId).order("nome").order("id").range(de, ate));
+};
+
+/**
+ * O catálogo inteiro (Ferramentas › Modelos): tudo em páginas de 1000 com `order(nome, id)` — antes `.limit(2000/3000)` (= 1000,
+ * calado: o exercício fora dos 1000 sumia do modelo sem aviso).
+ */
 export async function carregarCatalogo(meuId: string | null): Promise<Catalogo> {
   exigirInternet();
-  const [mo, pa, ex, mu] = await Promise.all([
-    doEscopo(tabela("tb_grupos_treino").select("id, nome, professor_id"), meuId).order("nome").limit(2000),
-    doEscopo(tabela("tb_pastas_treino").select("id, nome, professor_id"), meuId).order("nome").limit(1000),
-    doEscopo(tabela("tb_exercicios").select(COLS_EXERCICIO), meuId).order("nome").limit(3000),
-    doEscopo(tabela("grupos_musculares").select("id, nome, professor_id"), meuId).order("nome").limit(1000),
+  const [modelos, pastas, exercicios, musculos] = await Promise.all([
+    todasAsPaginas<ModeloRow>((de, ate) => doEscopo(tabela("tb_grupos_treino").select("id, nome, professor_id"), meuId).order("nome").order("id").range(de, ate)),
+    carregarPastas(meuId),
+    todasAsPaginas<ExercicioCatalogo>((de, ate) => doEscopo(tabela("tb_exercicios").select(COLS_EXERCICIO), meuId).order("nome").order("id").range(de, ate)),
+    carregarMusculos(meuId),
   ]);
-  for (const r of [mo, pa, ex, mu]) if (r.error) falhou(r.error);
-  const modelos = (mo.data ?? []) as ModeloRow[];
-  const pastas = (pa.data ?? []) as PastaRow[];
-  const [linhas, vinculos] = await Promise.all([
-    emLotes(modelos.map((m) => m.id), async (lote) => {
-      const r = await tabela("tb_grupos_exercicios").select(COLS_LINHA).in("grupo_id", lote).order("ordem");
-      if (r.error) falhou(r.error);
-      return (r.data ?? []) as LinhaModelo[];
-    }),
-    emLotes(pastas.map((p) => p.id), async (lote) => {
-      const r = await tabela("tb_pastas_treino_grupos").select("pasta_id, grupo_id").in("pasta_id", lote);
-      if (r.error) falhou(r.error);
-      return (r.data ?? []) as VinculoPasta[];
-    }),
-  ]);
-  return { modelos, pastas, vinculos, linhas, exercicios: (ex.data ?? []) as ExercicioCatalogo[], musculos: (mu.data ?? []) as GrupoMuscularRow[] };
+  const [linhas, vinculos] = await Promise.all([linhasDosModelos(modelos.map((m) => m.id)), vinculosDasPastas(pastas.map((p) => p.id))]);
+  return { modelos, pastas, vinculos, linhas, exercicios, musculos };
 }
 
-/** Os alunos da lista do profissional (os dele, ele mesmo e os das contas de que é dono; o master, os dele — como no admin antigo). */
-export async function carregarAlunos(master: boolean, meuId: string | null): Promise<AlunoDaLista[]> {
-  exigirInternet();
-  const todos: AlunoDaLista[] = [];
-  for (let pagina = 0; pagina < 20; pagina++) {
-    const r = await listarAlunos({ limit: 100, offset: pagina * 100, professorId: master ? meuId : undefined });
-    const lista = (r?.users ?? []) as { id: string; nome?: string | null; email?: string | null; foto_url?: string | null }[];
-    for (const u of lista) todos.push({ id: u.id, nome: (u.nome || u.email || "").trim() || "Aluno", email: u.email || "", foto_url: u.foto_url ?? null });
-    const total = Number((r as { total?: number })?.total ?? lista.length);
-    if (lista.length < 100 || todos.length >= total) break;
-  }
-  const vistos = new Set<string>();
-  return todos.filter((a) => (vistos.has(a.id) ? false : (vistos.add(a.id), true))).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+const SEM_DETALHES: DetalhesDosModelos = { linhas: [], exercicios: [], vinculos: [] };
+
+/** hml-14d (D23): as linhas, os exercícios citados (globais ou meus — o de fora do catálogo continua fora) e os vínculos de pasta
+ * SÓ dos treinos pedidos (a página: até 20). */
+async function detalhesDosModelos(ids: string[], meuId: string | null): Promise<DetalhesDosModelos> {
+  if (!ids.length) return SEM_DETALHES;
+  const [linhas, vinculos] = await Promise.all([linhasDosModelos(ids), vinculosDosModelos(ids)]);
+  const citados = [...new Set(linhas.map((l) => l.exercicio_id))];
+  const exercicios = await emLotes(citados, (lote) =>
+    todasAsPaginas<ExercicioCatalogo>((de, ate) => doEscopo(tabela("tb_exercicios").select(COLS_EXERCICIO), meuId).in("id", lote).order("id").range(de, ate)));
+  return { linhas, exercicios, vinculos };
 }
+
+const rpc = (nome: string, args: Record<string, unknown>) => (supabase.rpc as any)(nome, args) as PromiseLike<{ data: unknown; error: { message?: string; code?: string } | null }>;
+
+/**
+ * hml-14d (B21 · D23): uma página de Meus treinos — a RPC modelos_da_lista (busca pelo nome do treino ou de um exercício dele,
+ * sem acento; a pasta aberta; ordem e total no banco) e os detalhes SÓ dos 20 da página.
+ */
+export async function carregarPaginaDeModelos(meuId: string | null, filtros: FiltrosModelos, pagina: number): Promise<PaginaModelos> {
+  exigirInternet();
+  const p_filtros: Record<string, string> = {};
+  if (filtros.q.trim()) p_filtros.q = filtros.q.trim();
+  if (filtros.pasta) p_filtros.pasta = filtros.pasta;
+  const { data, error } = await rpc("modelos_da_lista", { p_filtros, p_offset: deslocamento(pagina), p_limite: POR_PAGINA });
+  if (error) falhou(error);
+  const r = (data ?? {}) as { total?: number; total_geral?: number; por_pasta?: Record<string, number>; itens?: ModeloRow[] };
+  const itens = Array.isArray(r.itens) ? r.itens : [];
+  return {
+    itens,
+    total: Number(r.total ?? 0) || 0,
+    totalGeral: Number(r.total_geral ?? 0) || 0,
+    porPasta: r.por_pasta ?? {},
+    detalhes: await detalhesDosModelos(itens.map((m) => m.id), meuId),
+  };
+}
+
+/** hml-14d (D23): o `?treino=<id>` que não está na página abre pelo id (global ou meu; outro id → null, como antes). */
+export async function carregarModeloPorId(meuId: string | null, id: string): Promise<ModeloAberto> {
+  exigirInternet();
+  if (!UUID.test(id)) return { modelo: null, detalhes: SEM_DETALHES };
+  const { data, error } = await doEscopo(tabela("tb_grupos_treino").select("id, nome, professor_id"), meuId).eq("id", id).maybeSingle();
+  if (error) falhou(error);
+  const modelo = (data as ModeloRow | null) ?? null;
+  return { modelo, detalhes: modelo ? await detalhesDosModelos([modelo.id], meuId) : SEM_DETALHES };
+}
+
+/** hml-14d (B21 · D24): uma página da biblioteca (painel) com as contagens do topo — a RPC exercicios_da_lista. */
+export const listarExercicios = (filtros: FiltrosExercicios, pagina: number, porPagina = POR_PAGINA) =>
+  exerciciosDaLista<ExercicioCatalogo>(filtros, pagina, porPagina);
 
 /** Quais dos meus alunos recebem cada modelo (função — a RLS só deixa ler os que têm o profissional como professor). */
 export async function carregarQuemRecebe(grupos: string[]): Promise<PerfilRecebe[]> {
   if (!grupos.length) return [];
   const r = await invocar<{ perfis?: PerfilRecebe[] }>("admin-semana-treinos", { action: "quemRecebe", grupos });
   return r.perfis ?? [];
+}
+
+/**
+ * hml-14d (B19/B21 · D25): o "Quem recebe" de um modelo, uma página de 20 vinda do servidor — quem recebe primeiro, depois o nome;
+ * a busca sem acento (nome e e-mail); o chip "N DE M" do servidor.
+ */
+export async function carregarQuemRecebeLista(grupo: string, busca: string, pagina: number): Promise<PaginaQuemRecebe> {
+  const corpo: Record<string, unknown> = { action: "quemRecebeLista", grupo, pagina };
+  if (busca.trim()) corpo.q = busca.trim();
+  const r = await invocar<{ itens?: AlunoQuemRecebe[]; total?: number; total_recebem?: number; total_alunos?: number }>("admin-semana-treinos", corpo);
+  return {
+    grupo,
+    itens: r.itens ?? [],
+    total: Number(r.total ?? 0) || 0,
+    totalRecebem: Number(r.total_recebem ?? 0) || 0,
+    totalAlunos: Number(r.total_alunos ?? 0) || 0,
+  };
+}
+
+/**
+ * hml-14d (B19 · D26): o seletor de aluno do Histórico e do Relatório — a lista de alunos do Treino (admin-list-users) buscando no
+ * banco: parte do nome ou do e-mail, sem acento, 20 por vez, em ordem de nome, com o total (o "20 de N — refine a busca").
+ * O master busca nos alunos dele (professorId = ele, como antes).
+ */
+export async function buscarAlunosDoTreino(q: QuemMexe, termo: string): Promise<{ itens: AlunoDaLista[]; total: number }> {
+  exigirInternet();
+  const r = await listarAlunos({ q: termo.trim() || undefined, limit: LIMITE_SELETOR_TREINO, offset: 0, ordem: "nome", professorId: q.master ? q.meuId : undefined });
+  const users = (r?.users ?? []) as { id: string; nome?: string | null; email?: string | null; foto_url?: string | null }[];
+  return { itens: users.map(alunoDaLista), total: Number(r?.total ?? users.length) || 0 };
 }
 
 // ───────────────────────── modelos ─────────────────────────
@@ -250,9 +351,17 @@ export async function excluirMusculo(id: string): Promise<void> {
 
 // ───────────────────────── histórico ─────────────────────────
 
-/** Os treinos feitos no mês por TODOS os meus alunos (o Histórico antigo: o professor vê os dele; o master, todos). */
-export const carregarHistoricoDoMes = (ano: number, mes: number) =>
-  invocar<{ itens: ItemHistorico[] }>("admin-relatorio", { action: "historicoMes", ano, mes }).then((r) => r.itens ?? []);
+/**
+ * Os treinos feitos no mês pelos meus alunos (o Histórico antigo: o professor vê os dele; o master, todos) — hml-14d (B21 · D26):
+ * 20 por página com o total do mês; o aluno do seletor vai como `userId` (o filtro no servidor).
+ */
+export async function carregarHistoricoDoMes(ano: number, mes: number, pagina: number, userId?: string | null): Promise<{ itens: ItemHistorico[]; total: number }> {
+  const corpo: Record<string, unknown> = { action: "historicoMes", ano, mes, pagina };
+  if (userId) corpo.userId = userId;
+  const r = await invocar<{ itens?: ItemHistorico[]; total?: number }>("admin-relatorio", corpo);
+  const itens = r.itens ?? [];
+  return { itens, total: Number(r.total ?? itens.length) || 0 };
+}
 
 export interface TreinoDoHistoricoCompleto {
   id: string;
@@ -264,6 +373,9 @@ export interface TreinoDoHistoricoCompleto {
   sem_cronometro?: boolean;
 }
 
-/** O histórico completo de um aluno (o "Buscar" do Histórico antigo). */
-export const carregarHistoricoCompleto = (userId: string) =>
-  invocar<{ historico: TreinoDoHistoricoCompleto[] }>("admin-relatorio", { action: "historicoUsuario", userId }).then((r) => r.historico ?? []);
+/** O histórico completo de um aluno (o "Buscar" do Histórico antigo) — hml-14d (D26): 20 por página com o total (antes parava em 500). */
+export async function carregarHistoricoCompleto(userId: string, pagina: number): Promise<{ itens: TreinoDoHistoricoCompleto[]; total: number }> {
+  const r = await invocar<{ historico?: TreinoDoHistoricoCompleto[]; total?: number }>("admin-relatorio", { action: "historicoUsuario", userId, pagina });
+  const itens = r.historico ?? [];
+  return { itens, total: Number(r.total ?? itens.length) || 0 };
+}

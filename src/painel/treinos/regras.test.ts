@@ -1,24 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
   abaDaUrl,
+  alunoDaLista,
   classificado,
   donoAoCriar,
   erroDoNome,
   exercicioDoModelo,
-  filtrarExercicios,
-  filtrarModelos,
-  grupoDaTela,
+  filtrosDaBiblioteca,
   linhaDaBiblioteca,
   montarModelos,
   montarPastas,
+  naOrdemDaPagina,
   podeCriar,
   podeEditar,
   camposEditados,
   colunasDaPrescricao,
   resumoDoMes,
+  termoDaBusca,
   textoAlunos,
+  textoMaisAlunosTreino,
   visivel,
 } from "./regras";
+import { MUSCULOS_PRIMARIOS_CONHECIDOS, blocoDoGrupoMuscular } from "@/lib/gruposMusculares";
+import { GRUPOS_VOLUME } from "@/treino/editor/regras";
 import { montarGruposTroca } from "@/treino/equivalencia";
 import type { Catalogo, ExercicioCatalogo, LinhaModelo, QuemMexe } from "./tipos";
 
@@ -156,23 +160,27 @@ describe("W23 — modelos e pastas da tela", () => {
     expect(g1.editavel).toBe(true);
     expect(g1.global).toBe(false);
   });
-  it("as pastas do modelo são só as visíveis (a do outro profissional fica fora)", () => {
+  it("as pastas do modelo são só as visíveis (a do outro profissional fica fora); o número de cada pasta vem do banco", () => {
     expect(modelos.find((m) => m.id === "g1")!.pastas).toEqual(["p1"]);
-    const pastas = montarPastas(catalogo, personal);
-    expect(pastas.map((p) => [p.nome, p.editavel, p.modelos])).toEqual([
-      ["Hipertrofia", true, ["g1"]],
-      ["Iniciante (global)", false, ["g2"]],
+    const pastas = montarPastas(catalogo.pastas, { p1: 5, p3: 9 }, personal);
+    expect(pastas.map((p) => [p.nome, p.editavel, p.total])).toEqual([
+      ["Hipertrofia", true, 5],
+      ["Iniciante (global)", false, 0],
     ]);
+  });
+  it("hml-14d: sem a lista de alunos (null), conta todo perfil que o quemRecebe devolveu (ele já é só dos alunos de quem chama)", () => {
+    const g1 = montarModelos(catalogo, personal, perfis, null).find((m) => m.id === "g1")!;
+    expect(g1.alunos).toBe(3);
+    expect(montarModelos(catalogo, personal, perfis).find((m) => m.id === "g1")!.alunos).toBe(3);
+  });
+  it("hml-14d: os modelos na ordem da página do banco (o montarModelos ordena por nome no navegador)", () => {
+    expect(naOrdemDaPagina(modelos, ["g1", "g2"]).map((m) => m.id)).toEqual(["g1", "g2"]);
+    expect(naOrdemDaPagina(modelos, ["g2", "g1"]).map((m) => m.id)).toEqual(["g2", "g1"]);
+    expect(naOrdemDaPagina([...modelos, { ...modelos[0], id: "fora" }], ["g2"]).map((m) => m.id)[0]).toBe("g2");
   });
   it("o global é só leitura para o personal e editável para o master", () => {
     expect(modelos.find((m) => m.id === "g2")!.editavel).toBe(false);
     expect(montarModelos(catalogo, master, [], new Set()).find((m) => m.id === "g2")!.editavel).toBe(true);
-  });
-  it("filtro: pela pasta aberta e pela busca (nome do treino ou de um exercício, sem acento)", () => {
-    const pastas = montarPastas(catalogo, personal);
-    expect(filtrarModelos(modelos, pastas[0], "").map((m) => m.id)).toEqual(["g1"]);
-    expect(filtrarModelos(modelos, null, "puxada").map((m) => m.id)).toEqual(["g2"]);
-    expect(filtrarModelos(modelos, null, "TRICEPS").map((m) => m.id)).toEqual(["g1"]);
   });
   it("nome obrigatório e com limite", () => {
     expect(erroDoNome("   ")).toBe("Dê um nome.");
@@ -185,19 +193,51 @@ describe("W23 — modelos e pastas da tela", () => {
 });
 
 describe("W23 — biblioteca (global só leitura + a própria)", () => {
-  it("Global = os do master; Minha = os meus (o de outro profissional não aparece em nenhuma)", () => {
-    expect(filtrarExercicios(catalogo.exercicios, "global", LUCAS, "todos", "").map((e) => e.id)).toEqual(["e3", "e2", "e1"]);
-    expect(filtrarExercicios(catalogo.exercicios, "minha", LUCAS, "todos", "").map((e) => e.id)).toEqual(["e4"]);
+  it("hml-14d: a busca e o grupo vão ao banco — q, os códigos dos rótulos (movimento/equipamento) e os músculos do grupo", () => {
+    expect(filtrosDaBiblioteca("", "todos")).toEqual({});
+    expect(filtrosDaBiblioteca("  supino   reto ", "todos")).toEqual({ q: "supino reto", codigos: ["supino_reto"] });
+    expect(filtrosDaBiblioteca("cabo", "todos")).toEqual({ q: "cabo", codigos: ["polia"] });
+    expect(filtrosDaBiblioteca("rafael", "todos")).toEqual({ q: "rafael" });
+    expect(filtrosDaBiblioteca("", "peito")).toEqual({ musculos: ["peito", "peitoral", "peitorais"] });
+    const pernas = filtrosDaBiblioteca("", "pernas").musculos ?? [];
+    expect(pernas).toEqual(expect.arrayContaining(["quadriceps", "isquiotibiais", "gluteo", "panturrilha", "adutores"]));
+    expect(filtrosDaBiblioteca("", "outros")).toEqual({ fora: [...MUSCULOS_PRIMARIOS_CONHECIDOS] });
+    expect(filtrosDaBiblioteca("", "xyz")).toEqual({});
   });
-  it("filtro por grupo da tela e busca pelo equipamento/movimento", () => {
-    expect(filtrarExercicios(catalogo.exercicios, "global", LUCAS, "costas", "").map((e) => e.id)).toEqual(["e3"]);
-    expect(filtrarExercicios(catalogo.exercicios, "minha", LUCAS, "bracos", "polia").map((e) => e.id)).toEqual(["e4"]);
+  it("hml-14d: os músculos de cada grupo que vão ao banco = o grupoDaTela de cada um (o mapa do navegador e o do banco batem)", () => {
+    // o filtro de grupo que o navegador fazia até a hml-14c (o grupoDaTela saiu do código na integração da 14d — só este teste usava)
+    const grupoDaTela = (grupoMuscular: string): string => {
+      const bloco = blocoDoGrupoMuscular(grupoMuscular || "");
+      return GRUPOS_VOLUME.find((x) => (x.blocos as readonly string[]).includes(bloco))?.chave ?? "outros";
+    };
+    for (const g of GRUPOS_VOLUME) {
+      if (g.chave === "outros") continue;
+      const musculos = filtrosDaBiblioteca("", g.chave).musculos ?? [];
+      expect(musculos.length).toBeGreaterThan(0);
+      for (const m of musculos) expect(grupoDaTela(m)).toBe(g.chave);
+    }
+    // todo músculo conhecido cai em algum grupo; o que não é conhecido cai em "outros"
+    for (const m of MUSCULOS_PRIMARIOS_CONHECIDOS) expect(grupoDaTela(m)).not.toBe("outros");
+    expect(grupoDaTela("Mobilidade")).toBe("outros");
     expect(grupoDaTela("Bíceps / Braquial")).toBe("bracos");
+  });
+  it("hml-14d: o termo vai sem espaços sobrando e com até 80 letras", () => {
+    expect(termoDaBusca("  a   b ")).toBe("a b");
+    expect(termoDaBusca("x".repeat(90))).toHaveLength(80);
   });
   it("a linha da biblioteca: grupo · movimento · equipamento (o que a troca por equivalente usa)", () => {
     expect(linhaDaBiblioteca(catalogo.exercicios[3])).toBe("Bíceps / Braquial · Rosca martelo · Polia (cabo)");
     expect(classificado(catalogo.exercicios[3])).toBe(true);
     expect(classificado({ padrao_movimento: null, equipamento: "barra" })).toBe(false);
+  });
+});
+
+describe("hml-14d — seletor de aluno do Treino (Histórico e Relatório)", () => {
+  it("o aluno como a tela mostra (nome, senão e-mail, senão 'Aluno') e o texto de 'refine a busca'", () => {
+    expect(alunoDaLista({ id: "a", nome: " Rafael Moura ", email: "r@x.com", foto_url: "f" })).toEqual({ id: "a", nome: "Rafael Moura", email: "r@x.com", foto_url: "f" });
+    expect(alunoDaLista({ id: "b", nome: null, email: "b@x.com" })).toEqual({ id: "b", nome: "b@x.com", email: "b@x.com", foto_url: null });
+    expect(alunoDaLista({ id: "c" })).toEqual({ id: "c", nome: "Aluno", email: "", foto_url: null });
+    expect(textoMaisAlunosTreino(20, 41)).toBe("20 de 41 — refine a busca");
   });
 });
 

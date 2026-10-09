@@ -1,4 +1,5 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/exames.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
+import { deslocamento, intervalo, paginar, POR_PAGINA, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { CATALOGO_PADRAO, ordenarCatalogo, type RegistroExameCatalogo, type RegistroPedido, type RegistroResultado } from "@/nutricao/prontuario/lib/examesUtil";
@@ -90,17 +91,24 @@ export async function excluirExameCatalogo(id: string): Promise<void> {
 }
 
 // ---- Pedidos do paciente ----
-/** Pedidos vivos do paciente, mais recente primeiro. */
-export async function listarPedidosDoPaciente(pacienteId: string): Promise<PedidoExame[]> {
-  const { data, error } = await supabase
-    .from("pedidos_exame")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as PedidoExame[];
+/**
+ * Uma página (20) dos pedidos vivos do paciente, mais recente primeiro (data, criado por último, id), e o total.
+ * hml-14d (B21 · D32): antes vinham todos sem `range` (cortados calados em 1000). Erro do banco lança.
+ */
+export function paginaPedidosDoPaciente(pacienteId: string, pagina: number): Promise<Pagina<PedidoExame>> {
+  return paginar<PedidoExame>(
+    (de, ate) =>
+      supabase
+        .from("pedidos_exame")
+        .select("*", { count: "exact" })
+        .eq("paciente_id", pacienteId)
+        .is("deleted_at", null)
+        .order("data", { ascending: false })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(de, ate) as unknown as PromiseLike<RespostaComContagem<PedidoExame>>,
+    pagina,
+  );
 }
 
 export async function criarPedido(nutricionistaId: string, pacienteId: string, r: RegistroPedido): Promise<PedidoExame> {
@@ -131,17 +139,69 @@ export async function excluirPedido(id: string): Promise<void> {
 }
 
 // ---- Resultados do paciente ----
-/** Resultados vivos do paciente (a tela agrupa por data). */
+/** hml-14d (D32): leituras de 1000 (o teto do PostgREST) até a última — e um limite de segurança. */
+const RESULTADOS_POR_LEITURA = 1000;
+const MAX_LEITURAS_RESULTADOS = 50;
+
+/**
+ * TODOS os resultados vivos do paciente (a Avaliação integrada cruza todos; a tela de Exames lê por página — paginaDeExames).
+ * hml-14d (B21 · D32): em leituras de 1000 com ordem estável (data, exame, id) até a última — antes era 1 leitura sem `range`, que o
+ * PostgREST cortava calada em 1000. Erro do banco lança.
+ */
 export async function listarResultadosDoPaciente(pacienteId: string): Promise<ResultadoExame[]> {
-  const { data, error } = await supabase
-    .from("resultados_exame")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("exame", { ascending: true });
+  const saida: ResultadoExame[] = [];
+  for (let leitura = 1; leitura <= MAX_LEITURAS_RESULTADOS; leitura += 1) {
+    const [de, ate] = intervalo(leitura, RESULTADOS_POR_LEITURA);
+    const { data, error } = await supabase
+      .from("resultados_exame")
+      .select("*")
+      .eq("paciente_id", pacienteId)
+      .is("deleted_at", null)
+      .order("data", { ascending: false })
+      .order("exame", { ascending: true })
+      .order("id", { ascending: true })
+      .range(de, ate);
+    falhou(error);
+    const linhas = (data ?? []) as ResultadoExame[];
+    saida.push(...linhas);
+    if (linhas.length < RESULTADOS_POR_LEITURA) return saida;
+  }
+  throw new Error("Resultados de exame demais para ler de uma vez.");
+}
+
+/** Uma página dos resultados do paciente POR DATA (exames_do_aluno). */
+export interface PaginaDeExames {
+  /** quantas datas (com o filtro "Ver evolução de") — a paginação é de 20 datas */
+  totalDatas: number;
+  /** os números do topo, do aluno inteiro (sem o filtro) */
+  totalResultados: number;
+  foraReferencia: number;
+  /** os nomes para o filtro (1 por nome sem caixa/acento), em ordem alfabética */
+  exames: string[];
+  /** as datas da página, a mais recente primeiro, cada uma com TODOS os resultados dela (o dia nunca é partido) */
+  datas: Array<{ data: string; resultados: ResultadoExame[] }>;
+}
+
+/**
+ * hml-14d (B21 · D32): os resultados por data — 20 DATAS por página com o dia inteiro em cada uma, o total de datas e os números do
+ * topo (total de resultados, fora da referência, os nomes do filtro) somados no banco com a regra do examesUtil (RPC exames_do_aluno,
+ * pela RLS de quem chama). `exame` = o "Ver evolução de" ('' = todos). Antes a tela lia todos (sem `range`) e agrupava aqui.
+ */
+export async function paginaDeExames(pacienteId: string, exame: string, pagina: number): Promise<PaginaDeExames> {
+  const { data, error } = await supabase.rpc("exames_do_aluno" as never, {
+    p_aluno: pacienteId, p_exame: exame.trim() || null, p_offset: deslocamento(pagina), p_limite: POR_PAGINA,
+  } as never);
   falhou(error);
-  return (data ?? []) as ResultadoExame[];
+  const r = (data ?? {}) as Record<string, unknown>;
+  if (r.ok !== true) throw new Error("Não foi possível carregar os exames");
+  const datas = Array.isArray(r.datas) ? (r.datas as Array<{ data: string; resultados?: unknown }>) : [];
+  return {
+    totalDatas: Number(r.total_datas) || 0,
+    totalResultados: Number(r.total_resultados) || 0,
+    foraReferencia: Number(r.fora_referencia) || 0,
+    exames: (Array.isArray(r.exames) ? (r.exames as unknown[]) : []).filter((x): x is string => typeof x === "string").sort((a, b) => a.localeCompare(b, "pt-BR")),
+    datas: datas.map((d) => ({ data: String(d.data), resultados: Array.isArray(d.resultados) ? (d.resultados as ResultadoExame[]) : [] })),
+  };
 }
 
 /** Lançamento em LOTE: 1 insert com todas as linhas da mesma data (cada uma já com unidade/referência copiadas). */

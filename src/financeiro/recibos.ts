@@ -4,6 +4,7 @@
 // de um lançamento. A W19 (Painel › Financeiro) usa estas mesmas peças. hml-14b: os modelos (garantir, salvar, excluir) e o último
 // número são lidos e gravados por src/painel/financeiro/dados.ts — as cópias daqui, sem uso, saíram.
 import { principal } from "@/integrations/principal/client";
+import { paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
 
 export const TITULO_MODELO_MAX = 120;
 export const CONTEUDO_MODELO_MAX = 8000;
@@ -169,11 +170,19 @@ const falhou = (error: { message: string } | null) => {
   if (error) throw new Error(error.message);
 };
 
-export async function listarRecibosDoAluno(pacienteId: string): Promise<Recibo[]> {
-  const { data, error } = await principal.from("recibos").select("id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at")
-    .eq("paciente_id", pacienteId).is("deleted_at", null).order("numero", { ascending: false });
-  falhou(error);
-  return (data ?? []) as unknown as Recibo[];
+/**
+ * hml-14d (B21 · D31): uma página (20) dos recibos do aluno, o número mais alto primeiro (desempate pelo id), e o total — o cartão
+ * mostra os 12 primeiros e o "Ver todos (N)" abre as páginas (antes: todos de uma vez, cortados calados em 1000). Erro do banco lança.
+ */
+export function paginaRecibosDoAluno(pacienteId: string, pagina: number): Promise<Pagina<Recibo>> {
+  return paginar<Recibo>(
+    (de, ate) =>
+      principal.from("recibos")
+        .select("id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at", { count: "exact" })
+        .eq("paciente_id", pacienteId).is("deleted_at", null).order("numero", { ascending: false }).order("id", { ascending: true })
+        .range(de, ate) as unknown as PromiseLike<RespostaComContagem<Recibo>>,
+    pagina,
+  );
 }
 
 // hml-14b (B14): o `emitirRecibo` duplicado que morava aqui (sem uso — a emissão é a de src/painel/financeiro/dados.ts, que confere

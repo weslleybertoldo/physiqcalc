@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agruparPorMes, chaveMes, formParaRegistro, formVazio, formatarDataHoraRegistro, inserirOrdenado, nomeArquivoPDFProntuario, ordenarRegistros,
-  registroParaForm, resumoRegistro, rotuloMes, textoContagem, textoNascimento, textoVazio, ultimoRegistro,
+  registroParaForm, resumoRegistro, rotuloMes, textoContagem, textoNascimento, textoVazio,
 } from "./prontuarioUtil";
 
 const iso = (ano: number, mes: number, dia: number, hora: number, minuto: number): string => new Date(ano, mes - 1, dia, hora, minuto).toISOString();
@@ -76,8 +76,6 @@ describe("ordenação", () => {
   const b2 = reg("b2", iso(2026, 9, 19, 9, 0), iso(2026, 9, 19, 9, 1));
   it("mais recente primeiro; empate = gravado por último primeiro", () => {
     expect(ordenarRegistros([a, b, b2]).map((x) => x.id)).toEqual(["b2", "b", "a"]);
-    expect(ultimoRegistro([a, b])?.id).toBe("b");
-    expect(ultimoRegistro([])).toBeNull();
   });
   it("inserirOrdenado substitui pelo id e reordena", () => {
     expect(inserirOrdenado([b, a], { ...a, data: iso(2026, 9, 20, 8, 0) }).map((x) => x.id)).toEqual(["a", "b"]);

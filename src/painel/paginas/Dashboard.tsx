@@ -57,7 +57,7 @@ export default function Dashboard() {
   const k = d.financeiro?.k ?? null;
   const carregandoAlunos = d.alunosQ.isLoading || d.novosQ.isLoading;
   const carregandoAtencao = d.principalQ.isLoading || d.transQ.isLoading || d.cobsQ.isLoading || (d.treinoLigado && d.treinoQ.isLoading)
-    || (comDiario && d.diario7.q.isLoading);
+    || (comDiario && d.naoReagidasQ.isLoading);
   const treinoFalhou = d.temTreino && (d.treinoQ.isError || d.sessaoTreino.tipo === "erro");
   const aviso = treinoFalhou ? (
     <p className="mt-2 border-t border-linha-3 pt-2 text-[11.5px] leading-snug text-texto-3" data-aviso-treino>

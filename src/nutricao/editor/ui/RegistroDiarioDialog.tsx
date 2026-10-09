@@ -1,13 +1,14 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/components/acompanhamento/RegistroDiarioDialog.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BTN_PRI, BTN_SEC, Campo, INPUT, TEXTAREA } from "@/nutricao/editor/ui/estilos";
-import { atualizarRegistro, salvarRegistro, type RegistroDiario } from "@/nutricao/editor/lib/acompanhamento";
+import { atualizarRegistro, contarRegistrosDoDia, salvarRegistro, type RegistroDiario } from "@/nutricao/editor/lib/acompanhamento";
 import {
   AGUA_ATALHOS, AGUA_MAX, AGUA_PASSO, OBSERVACAO_REGISTRO_MAX, SINTOMAS, SINTOMAS_MAX, adicionarSintomaLivre, alternarSintoma, fmtAgua, formDoRegistro, formInicialRegistro,
-  formatarDataRegistro, hojeISO, registroDoDia, rotuloSintoma, sintomasLivres, somarAgua, validarRegistro, type FormRegistro,
+  formatarDataRegistro, hojeISO, noIntervalo, registroDoDia, rotuloSintoma, sintomasLivres, somarAgua, validarRegistro, type FormRegistro,
 } from "@/nutricao/editor/lib/acompanhamentoUtil";
 
 const CHIP = "pq-chip pq-chip-g";
@@ -27,10 +28,17 @@ interface Props {
   registro: RegistroDiario | null;
   /** registros vivos do paciente (pra avisar dia já registrado); vem MEMOIZADO do pai */
   registros: RegistroDiario[];
+  /**
+   * hml-14d (D34): o período que `registros` cobre (a tela só lê o período do banco). O dia escolhido fora dele é perguntado ao banco
+   * (contarRegistrosDoDia) para o aviso não sumir. Sem período = `registros` são todos (o de antes).
+   */
+  periodo?: { de: string; ate: string };
   onSalvo: (r: RegistroDiario, criado: boolean) => void;
 }
 
-export default function RegistroDiarioDialog({ open, onOpenChange, nutricionistaId, pacienteId, registro, registros, onSalvo }: Props) {
+const DIA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+export default function RegistroDiarioDialog({ open, onOpenChange, nutricionistaId, pacienteId, registro, registros, periodo, onSalvo }: Props) {
   const editar = !!registro;
   const hoje = hojeISO();
   const [form, setForm] = useState<FormRegistro>(() => formInicialRegistro(hoje));
@@ -46,6 +54,18 @@ export default function RegistroDiarioDialog({ open, onOpenChange, nutricionista
   const campo = <K extends keyof FormRegistro>(k: K, v: FormRegistro[K]) => setForm((f) => ({ ...f, [k]: v }));
   // dia que já tem registro (só no modo novo): o salvar vira atualização daquele dia
   const existente = !editar ? registroDoDia(registros, form.data) : null;
+  // hml-14d (D34): fora do período da tela, quem sabe é o banco — 1 HEAD por dia escolhido; a chave tem o dia (a resposta de um dia
+  // antigo não vale para o novo) e o "registros-diarios" do paciente (salvar/excluir deixam velha)
+  const perguntar = open && !editar && !existente && !!periodo && DIA_ISO.test(form.data) && !noIntervalo(form.data, periodo.de, periodo.ate);
+  const diaQ = useQuery({
+    queryKey: ["registros-diarios", pacienteId, "dia", form.data],
+    queryFn: () => contarRegistrosDoDia(pacienteId, form.data),
+    enabled: perguntar,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const noBanco = perguntar && (diaQ.data ?? 0) > 0;
+  const semResposta = perguntar && !!diaQ.error;
   const livres = sintomasLivres(form.sintomas);
   const aguaAtual = Number(form.agua_ml) || 0;
 
@@ -108,6 +128,16 @@ export default function RegistroDiarioDialog({ open, onOpenChange, nutricionista
             {existente && (
               <p className="text-xs text-verde-3 font-body pt-1" role="status" data-aviso-dia-existente={existente.id}>
                 Já existe registro neste dia ({fmtAgua(existente.agua_ml)}) — salvar vai atualizar.
+              </p>
+            )}
+            {noBanco && (
+              <p className="text-xs text-verde-3 font-body pt-1" role="status" data-aviso-dia-existente={form.data} data-aviso-dia-banco>
+                Já existe registro neste dia — salvar vai atualizar.
+              </p>
+            )}
+            {semResposta && (
+              <p className="text-xs text-texto-3 font-body pt-1" role="status" data-aviso-dia-erro>
+                Não deu para conferir se este dia já tem registro — se tiver, salvar vai atualizar.
               </p>
             )}
           </Campo>
@@ -204,7 +234,7 @@ export default function RegistroDiarioDialog({ open, onOpenChange, nutricionista
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" className={BTN_SEC} onClick={() => onOpenChange(false)} disabled={salvando} data-btn-cancelar-registro>Cancelar</button>
             <button type="submit" className={BTN_PRI} disabled={salvando} data-btn-salvar-registro>
-              {salvando ? "Salvando..." : editar || existente ? "Salvar" : "Registrar"}
+              {salvando ? "Salvando..." : editar || existente || noBanco ? "Salvar" : "Registrar"}
             </button>
           </div>
         </form>

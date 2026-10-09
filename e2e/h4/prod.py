@@ -106,6 +106,10 @@ def main() -> int:
             c = B.Caso(nav, BASE, "prod", "prod_master", desktop=True)
             c.entrar("w27-master", "/master/contas", zerar=False)
             c.fechar_avisos()
+            # hml-14d (D39): Contas em páginas de 20 — a conta de teste pela busca da lista (no banco, 300 ms; só leitura)
+            if c.esperar(lambda: c.tem("[data-busca-contas]"), 90):
+                c.pg.locator("[data-busca-contas]").fill(CONTA_TESTE)
+                c.pg.wait_for_timeout(800)
             ok = c.esperar(lambda: c.tem(f'[data-linha-conta="{CONTA_TESTE}"]'), 90)
             p.check(ok, "[prod] master: Contas com a conta de teste")
             if ok:

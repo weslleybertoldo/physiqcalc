@@ -2,10 +2,12 @@
  * Perfil do aluno (W7) — acesso a dados, tudo no BANCO PRINCIPAL (online — 9A):
  *   meu_perfil_aluno()        card do aluno e "Meus profissionais"
  *   minha_agenda(p_desde)     a agenda (N-53)
+ *   minha_agenda_lista(p_tipo, p_offset, p_limite)   hml-14d: o "Ver todas" da Agenda (as próximas em páginas de 20, com o total)
  *   exportar-meus-dados       o JSON dos 2 bancos (a função junta o Banco do Treino servidor → servidor)
  *   excluir-minha-conta       conferir (simular) e excluir (P19)
  */
 import { principal } from "@/integrations/principal/client";
+import { deslocamento, POR_PAGINA, type Pagina } from "@/lib/paginacao";
 import { nomeDoArquivo, PALAVRA_CONFIRMACAO } from "../../../../supabase-principal/functions/_shared/conta-aluno-regras";
 import type { AgendamentoAluno, PapelProfissional } from "./regras";
 
@@ -87,6 +89,18 @@ export async function minhaAgenda(desde: Date): Promise<AgendamentoAluno[]> {
   const { data, error } = await principal.rpc("minha_agenda" as never, { p_desde: desde.toISOString() } as never);
   if (error) throw new ErroPerfil("erro_interno", { mensagem: error.message });
   return Array.isArray(data) ? (data as AgendamentoAluno[]) : [];
+}
+
+/**
+ * hml-14d (B21 · D31 · P7): uma página (20) das consultas do aluno — 'proximas' (não terminou e não foi desmarcada; da mais perto) ou
+ * 'anteriores' (terminou ou foi desmarcada; da mais recente) — da mesma janela da minha_agenda, com o total. Erro do banco lança.
+ */
+export async function minhaAgendaLista(tipo: "proximas" | "anteriores", pagina: number): Promise<Pagina<AgendamentoAluno>> {
+  const { data, error } = await principal.rpc("minha_agenda_lista" as never, { p_tipo: tipo, p_offset: deslocamento(pagina), p_limite: POR_PAGINA } as never);
+  if (error) throw new ErroPerfil("erro_interno", { mensagem: error.message });
+  const d = (data ?? {}) as { ok?: boolean; itens?: unknown; total?: unknown };
+  if (d.ok !== true || !Array.isArray(d.itens)) throw new ErroPerfil("erro_interno");
+  return { itens: d.itens as AgendamentoAluno[], total: Number(d.total) || 0 };
 }
 
 /** O arquivo pronto para salvar (nome + texto). */

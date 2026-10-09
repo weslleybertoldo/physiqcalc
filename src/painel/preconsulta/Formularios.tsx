@@ -2,7 +2,8 @@
 // telas 6/7): os formulários da conta agrupados pela origem (Pré-anamnese · Questionários de saúde · Personalizados), cada um com o
 // link público /f/<slug> (Copiar link mostra o endereço sempre — o clipboard pode faltar), Abrir, Editar, Duplicar (slug novo),
 // Desativar/Ativar e Excluir (soft — as respostas já recebidas continuam), e quantas respostas chegaram (e quantas são novas).
-// O dono vê os da equipe (com o autor); o membro, os seus (P1).
+// O dono vê os da equipe (com o autor); o membro, os seus (P1). hml-14d (B21 · D35): o "N respostas · M novas" de cada um vem
+// contado do banco (preconsulta_numeros) — antes, de uma lista de até 1000 respostas no navegador.
 import { useMemo, useState } from "react";
 import { ClipboardList, Copy, CopyPlus, ExternalLink, FileText, Link2, ListChecks, Lock, Pencil, PenLine, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +20,7 @@ import { atualizarFormulario, duplicarFormulario, excluirFormulario, type Formul
 import { linkDoFormulario } from "./link";
 import { Acao, BTN_MINI } from "./pecas";
 import { agruparPorOrigem, lerOrigem, resumoFormulario, textoContagemFormularios, type Origem } from "./preconsultaUtil";
-import { respostasPorFormulario, textoContagemRespostas } from "./respostasUtil";
+import { textoContagemRespostas } from "./respostasUtil";
 import type { ContextoPreConsulta, DadosPreConsulta } from "./usePreConsulta";
 
 const ICONE_ORIGEM: Record<Origem, typeof FileText> = { anamnese: FileText, questionario: ListChecks, personalizado: PenLine };
@@ -33,7 +34,8 @@ export default function Formularios({ ctx, d, aoNovo, aoEditar, aoVerRespostas }
 }) {
   const formularios = d.formularios;
   const grupos = useMemo(() => agruparPorOrigem(formularios), [formularios]);
-  const contagens = useMemo(() => respostasPorFormulario(d.respostas), [d.respostas]);
+  // os números do banco (null enquanto carregam ou se falharam: o botão mostra "…" — nunca "Nenhuma resposta" inventado)
+  const contagens = d.numeros?.porFormulario ?? null;
   const ativos = formularios.filter((f) => f.ativo).length;
   const [linkMostrado, setLinkMostrado] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export default function Formularios({ ctx, d, aoNovo, aoEditar, aoVerRespostas }
                   {g.itens.map((f) => {
                     const Icone = ICONE_ORIGEM[lerOrigem(f.origem)];
                     const url = linkDoFormulario(f.slug);
-                    const c = contagens.get(f.id) ?? { total: 0, novas: 0 };
+                    const c = contagens?.[f.id] ?? { total: 0, novas: 0 };
                     const pessoa = f.nutricionista_id !== ctx.uid ? ctx.pessoas.get(f.nutricionista_id) : undefined;
                     const autor = f.nutricionista_id !== ctx.uid ? pessoa?.nome ?? "outro profissional" : null;
                     // formulário de nutricionista visto por quem não é nutri: as respostas são clínicas (regra da W18) — não "Nenhuma resposta"
@@ -153,8 +155,8 @@ export default function Formularios({ ctx, d, aoNovo, aoEditar, aoVerRespostas }
                             </span>
                           ) : (
                             <button type="button" onClick={() => aoVerRespostas(f.titulo)} className="flex-none text-[12.5px] font-semibold text-violeta-3 hover:text-violeta-2 disabled:text-texto-4"
-                              disabled={c.total === 0} data-btn-ver-respostas-formulario>
-                              {textoContagemRespostas(c.total)}
+                              disabled={!contagens || c.total === 0} data-btn-ver-respostas-formulario>
+                              {contagens ? textoContagemRespostas(c.total) : "…"}
                             </button>
                           )}
                           <span className="flex flex-none flex-wrap items-center gap-1.5">

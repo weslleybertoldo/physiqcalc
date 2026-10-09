@@ -1,6 +1,21 @@
 #!/usr/bin/env python3
-"""Physiq hml-14b (B21 · B19, 09/10/2026) — E2E das telas: as listas do painel em páginas de 20 ("1–20 de 41", ← Anterior ·
-Próxima →, a página no endereço) e o campo que escolhe aluno nos 4 diálogos (a busca vai ao banco enquanto digita).
+"""Physiq hml-14b + hml-14d (B21 · B19, 09/10/2026) — E2E das telas: as listas em páginas de 20 do banco ("1–20 de 41", ← Anterior ·
+Próxima →, a página no endereço ou no estado da folha) e os campos que escolhem aluno (a busca vai ao banco enquanto digita).
+
+hml-14d (casos novos; os da 14b — L1–L8, M9, B1–B5 — continuam iguais, abaixo):
+  T1–T8 Treino (telas_treino.py; conta w13-dono, a massa "treino"): Meus treinos, Biblioteca, Quem recebe, Histórico do mês, Histórico
+        completo, seletor do Relatório, folhas Modelos e Biblioteca do editor
+  M1–M7 Master (telas_master.py; w27-master, master SÓ no staging.profiles pela massa "master"): Contas, Financeiro, Integrações, App do
+        aluno, Alunos, Sem conta, Biblioteca do master
+  P1–P8 por aluno, app e pendências (telas_aluno.py; a massa "aluno" — a nutricionista do aluno no painel, o aluno no app —, P7/P8 com
+        a da 14b): Financeiro do aluno, Anotações, Exames, Acompanhamento, app Pagamentos e Agenda, Pré-consulta, Dashboard
+  X1    produção, SÓ LEITURA: as listas novas que as contas do e2e/w26/prod.py alcançam (Treino com a "master", só Treino; por aluno com
+        a nutri-legado), "1–N de N" e o pedido com a página
+  --casos: os nomes da 14b (alunos, …, b19), os códigos (T1, M3, P5…), "treino" (T1–T8), "master" (M1–M7), "aluno" (P1–P8), "14b"
+  (só os da 14b), "14d" (só os novos); padrão: todos. Prints em ~/projetos/physiqcalc-scratch/prints/hml14d/; saídas, pedidos e o
+  estado da massa em ~/projetos/physiqcalc-scratch/hml/hml14d/D/.
+
+A parte da 14b:
 
 Bases (antes de entrar com qualquer conta, a guarda do build: a faixa "Ambiente de teste" na /entrar existe no build de staging e
 não existe no de produção — se não bater, nada roda com conta):
@@ -65,18 +80,21 @@ import math
 import re
 import sys
 import time
+import unicodedata
 import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.dont_write_bytecode = True
+# os casos da 14d (telas_treino, telas_master, telas_aluno) fazem "import telas": o MESMO módulo, não uma 2ª cópia
+sys.modules.setdefault("telas", sys.modules[__name__])
 AQUI = Path(__file__).resolve().parent
 REPO = AQUI.parents[1]
 sys.path.insert(0, str(AQUI))
 import massa as M  # noqa: E402 — só funções; nada lê banco nem credencial ao importar
 
 SAIDA = M.SAIDA
-PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml14b"
+PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml14d"  # hml-14d (a 14b ficou em prints/hml14b)
 BASES = {"local": "http://localhost:8080", "staging": "https://physiqcalc-staging.vercel.app", "prod": "https://physiqcalc.com.br"}
 HOSTS_DE_PRODUCAO = {"physiqcalc.com.br", "www.physiqcalc.com.br"}
 POR_PAGINA = 20
@@ -88,8 +106,8 @@ CONTAS_PROD = ("nutri-legado", "master")
 TABELAS_PROD = ("pacientes", "transacoes", "recibos", "respostas_preconsulta", "formularios_preconsulta", "diario_alimentar", "receitas",
                 "alimentos", "calendarios", "modelos_recibo", "conta_eventos", "avisos")
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
-CHAVES_PAGINA = ("p_limite", "p_limit", "limite", "p_por_pagina", "por_pagina", "p_offset", "offset", "p_deslocamento", "pagina", "p_pagina",
-                 "pagina_sem")
+CHAVES_PAGINA = ("p_limite", "p_limit", "limite", "limit", "p_por_pagina", "por_pagina", "p_offset", "offset", "p_deslocamento", "pagina",
+                 "p_pagina", "pagina_sem")
 
 
 @dataclass(frozen=True)
@@ -103,8 +121,15 @@ class Lista:
     nutricao: bool = False                   # só numa conta com Nutrição (Dietas)
     nomes: tuple[str, ...] = ()              # outros nomes aceitos no data-lista / data-paginacao (vazio = só o nome)
     nome_item: str | None = None             # onde está o nome do item (a busca dos Alimentos, sem massa)
-    fundo: str | None = None                 # a contagem do "fundo" no estado da massa
+    fundo: str | None = None                 # a contagem do "fundo" no estado da massa (da parte da lista)
     chave: str = "pagina"                    # a página no endereço (?pagina= ou ?pagina_<lista>=, a 1ª não aparece)
+    # hml-14d
+    acoes: tuple[str, ...] = ()              # função: as ações (acao/action) que trazem a página (vazio = a regra da 14b: prof_resumo)
+    conta: str | None = None                 # a conta de TESTE que entra (chave das CONTAS; None = a da 14b)
+    parte: str = "14b"                       # a parte da massa (a marca e o fundo vêm dela): 14b | treino | master | aluno
+    saida: str = "/painel"                   # sem item para abrir: sai para esta rota e Voltar (o master: /master)
+    filtro: str | None = None                # sem busca de texto: como filtrar pelo item da última página ("diario" | "seletor-treino" | "nenhum")
+    antes: str | None = None                 # o botão que mostra a lista (o "Ver todos" do Financeiro do aluno) — produção (X1)
 
     @property
     def candidatos(self) -> tuple[str, ...]:
@@ -150,6 +175,9 @@ CAMPOS = (
     Campo("ligar", "/painel/pre-consulta?aba=respostas", "[data-btn-ligar-resposta]", "[data-modal-ligar]"),
 )
 TODOS = tuple(L.nome for L in LISTAS) + tuple(f"b19-{F.nome}" for F in CAMPOS)
+# hml-14d: as contas de teste dos casos novos (chave das CONTAS da W5 → e-mail); a senha é a de ~/.physiq-teste-<chave>
+CONTAS_14D = {"w13-dono": "w13.dono.teste.claude@physiqnutri.app", "w13-nutri": "w13.nutri.teste.claude@physiqnutri.app",
+              "w13-aluno": "w13.aluno.teste.claude@physiqnutri.app", "w27-master": "w27.master.teste.claude@physiqnutri.app"}
 BORRAR = "[data-lista] [data-item], [data-lista] [data-item] * { filter: blur(7px) !important; }"
 
 # o estado da lista na tela (1 chamada): a paginação, as linhas, o endereço e a largura
@@ -169,14 +197,29 @@ JS_LISTA = r"""([nomes, seletorNome]) => {
       rotulo: rot ? rot.textContent.replace(/\s+/g, ' ').trim() : null,
       anterior: botao('[data-pagina-anterior]'), proxima: botao('[data-pagina-proxima]'),
       textos: itens.map((e) => (e.innerText || '').replace(/\s+/g, ' ').trim()),
-      nomesItens: seletorNome ? itens.map((e) => ((e.querySelector(seletorNome) || {}).innerText || '').trim()) : [],
+      // o id da linha: o valor do data-item ou o 1º atributo de id conhecido (na linha ou num filho) — hml-14d. O `data-item` sem
+      // valor do JSX sai "true" no DOM: não é id (antes, toda linha dos pedidos de exame virava o mesmo "true")
+      ids: itens.map((e) => {
+        const v = e.getAttribute('data-item'); if (v && v !== 'true') return v;
+        for (const a of ['data-grupo-data', 'data-pedido', 'data-agendamento', 'data-anotacao', 'data-cobranca', 'data-recibo', 'data-lancamento',
+                         'data-modelo', 'data-exercicio-biblioteca']) {
+          if (e.getAttribute(a)) return e.getAttribute(a);
+          const f = e.querySelector(`[${a}]`); if (f && f.getAttribute(a)) return f.getAttribute(a);
+        }
+        return ''; }),
+      linhas1: itens.map((e) => ((e.innerText || '').split('\n').map((x) => x.trim()).filter(Boolean)[0] || '')),
+      // "@data-x" = o valor do atributo (no item ou num filho); senão, o texto do seletor
+      nomesItens: seletorNome ? itens.map((e) => {
+        if (seletorNome.startsWith('@')) { const a = seletorNome.slice(1); const el = e.hasAttribute(a) ? e : e.querySelector(`[${a}]`);
+                                           return el ? (el.getAttribute(a) || '').trim() : ''; }
+        return ((e.querySelector(seletorNome) || {}).innerText || '').trim(); }) : [],
       url: location.pathname + location.search,
       largura: document.documentElement.scrollWidth,
       direita: pag ? Math.round(pag.getBoundingClientRect().right) : null,
     };
   }
   return { nome: null, temPaginacao: false, temLista: false, pagina: null, total: null, rotulo: null, anterior: 'ausente',
-           proxima: 'ausente', textos: [], nomesItens: [], url: location.pathname + location.search,
+           proxima: 'ausente', textos: [], ids: [], linhas1: [], nomesItens: [], url: location.pathname + location.search,
            largura: document.documentElement.scrollWidth, direita: null };
 }"""
 # o seletor de aluno aberto: o termo que o banco respondeu (data-termo), se ainda busca e os ids das opções à vista
@@ -203,6 +246,9 @@ def carregar(schema: str):
     B5.ESTADO["schema"] = schema
     C.SAIDA = SAIDA
     B5.PRINTS = PRINTS
+    for chave, email in CONTAS_14D.items():  # hml-14d: o professor/nutri/aluno da W13 e o master de teste da W27 (logins que já existem)
+        if chave not in B5.CONTAS:
+            B5.CONTAS[chave] = (email, B5.senha_de(chave))
     original = B5.Caso.print
 
     def print_com_nova_tentativa(self, nome: str) -> str:
@@ -269,9 +315,14 @@ def lista_e_total(dados) -> tuple[list | None, int | None]:
     total = dados.get("total")
     if isinstance(total, dict):
         total = total.get("paciente", total.get("alunos"))
+    if total is None and isinstance(dados.get("total_datas"), int):  # hml-14d: exames_do_aluno (a página são DATAS)
+        total = dados["total_datas"]
     if not isinstance(total, int) or isinstance(total, bool):
         total = None
-    for k in ("itens", "ids", "items", "alunos", "lista", "linhas", "registros", "dados", "data"):
+    # hml-14d: modelos (admin-semana-treinos), historico (historicoUsuario), users (admin-list-users), contas (master), pessoas (sem
+    # conta), datas (exames_do_aluno), anotacoes (aluno_anotacoes)
+    for k in ("itens", "ids", "items", "alunos", "lista", "linhas", "registros", "dados", "data", "modelos", "historico", "users", "contas",
+              "pessoas", "datas", "anotacoes"):
         if isinstance(dados.get(k), list):
             return dados[k], total
     return None, total
@@ -280,7 +331,7 @@ def lista_e_total(dados) -> tuple[list | None, int | None]:
 def analisar(ev: dict, dados) -> dict:
     """Do pedido: limite/deslocamento (ou a página), o termo da busca; da resposta: quantas linhas vieram e o total."""
     out: dict = {"n": None, "total": None, "limite": None, "deslocamento": None, "pagina": None, "q": None, "pagina_sem": None,
-                 "total_sem": None, "situacao": None, "exportar": None, "com_cpf": None}
+                 "total_sem": None, "situacao": None, "exportar": None, "com_cpf": None, "numeros": None}
     if ev["tipo"] == "tabela":
         q = ev["query"]
         out["limite"] = primeiro_int(q, ("limit",))
@@ -295,7 +346,7 @@ def analisar(ev: dict, dados) -> dict:
             out["n"] = len(dados)
         return out
     corpo = ev.get("corpo") or {}
-    out["limite"] = primeiro_int(corpo, ("p_limite", "p_limit", "limite", "p_por_pagina", "por_pagina"))
+    out["limite"] = primeiro_int(corpo, ("p_limite", "p_limit", "limite", "limit", "p_por_pagina", "por_pagina"))
     out["deslocamento"] = primeiro_int(corpo, ("p_offset", "offset", "p_deslocamento"))
     out["pagina"] = primeiro_int(corpo, ("pagina", "p_pagina"))
     out["q"] = termo_do_pedido(corpo)
@@ -307,6 +358,8 @@ def analisar(ev: dict, dados) -> dict:
     sem = dados.get("sem") if isinstance(dados, dict) else None
     if isinstance(sem, dict) and isinstance(sem.get("total"), int):
         out["total_sem"] = sem["total"]
+    if ev["nome"] == "preconsulta_numeros" and isinstance(dados, dict):  # hml-14d (P7): os números do topo, só contagens
+        out["numeros"] = {k: dados.get(k) for k in ("total", "novas", "ligadas", "importadas", "mes")}
     # B5 (o seletor de aluno): o pedido pediu o CPF (exportar)? alguma opção da resposta veio com CPF?
     if ev["nome"] == "alunos_da_conta":
         filtros = corpo.get("p_filtros") if isinstance(corpo.get("p_filtros"), dict) else {}
@@ -321,7 +374,7 @@ class Rede:
     QUANTAS linhas vieram com o total. Do conteúdo, só a contagem: nenhum nome, e-mail ou id de pessoa vai para a saída."""
 
     def __init__(self, caso, fontes) -> None:
-        self.fontes = set(fontes)
+        self.fontes = {tuple(f[:2]) for f in fontes}
         self.eventos: list[dict] = []
         caso.pg.on("response", self._resposta)
 
@@ -345,7 +398,10 @@ class Rede:
                 except Exception:  # noqa: BLE001 — corpo vazio ou não-JSON
                     dados = None
             ev = {"i": len(self.eventos), "t": round(time.time(), 2), "tipo": fonte[0], "nome": fonte[1], "metodo": req.method,
-                  "status": r.status, "query": query, "corpo": corpo, "content_range": (r.headers or {}).get("content-range")}
+                  "status": r.status, "query": query, "corpo": corpo, "content_range": (r.headers or {}).get("content-range"),
+                  # hml-14d: a ação da função (principal: acao; Treino: action) e a query crua (chave repetida: data=gte & data=lte)
+                  "acao": (corpo or {}).get("acao") or (corpo or {}).get("action"),
+                  "query_pares": urllib.parse.parse_qsl(urllib.parse.urlparse(r.url).query)}
             ev.update(analisar(ev, dados))
             self.eventos.append(ev)
         except Exception:  # noqa: BLE001 — a página fechando no meio
@@ -358,8 +414,9 @@ class Rede:
             corpo = e.get("corpo") or {}
             saida.append({"tipo": e["tipo"], "nome": e["nome"], "metodo": e["metodo"], "status": e["status"],
                           "query": {k: v for k, v in e["query"].items() if k in ("limit", "offset", "order")},
-                          "corpo": {k: corpo[k] for k in ("acao", *CHAVES_PAGINA) if k in corpo},
+                          "corpo": {k: corpo[k] for k in ("acao", "action", "tipo", "p_tipo", *CHAVES_PAGINA) if k in corpo},
                           "q_tamanho": len(e["q"]) if e.get("q") else 0, "content_range": e["content_range"], "n": e["n"], "total": e["total"],
+                          **({"numeros": e.get("numeros")} if e.get("numeros") else {}),
                           **({"exportar": e.get("exportar"), "com_cpf": e.get("com_cpf")} if e["nome"] == "alunos_da_conta" else {})})
         return saida
 
@@ -374,20 +431,25 @@ def descr(e: dict | None) -> str:
         pedido = f"rpc {e['nome']} p_offset={e['deslocamento']} p_limite={e['limite']}" + (f" pagina={e['pagina']}" if e["pagina"] else "")
         resposta = f"total {e['total']}"
     else:
-        acao = (e.get("corpo") or {}).get("acao")
-        pedido = f"função {e['nome']}{' ' + acao if acao else ''} pagina={e['pagina']}"
+        acao = e.get("acao") or (e.get("corpo") or {}).get("acao")
+        extra = f" limite={e['limite']} offset={e['deslocamento']}" if e["pagina"] is None and e["limite"] is not None else ""
+        pedido = f"função {e['nome']}{' ' + acao if acao else ''} pagina={e['pagina']}{extra}"
         resposta = f"total {e['total']}"
     return f"{pedido} → {e['n']} linha(s), {resposta} (HTTP {e['status']})"
 
 
 def pedido_da_pagina(rede: Rede, L: Lista, desde: int, pagina: int) -> dict | None:
-    """O último pedido da página `pagina` a uma das fontes da lista, a partir do evento `desde`."""
+    """O último pedido da página `pagina` a uma das fontes da lista, a partir do evento `desde`. Pedido com outro tamanho (o "(N com
+    GIF)" da Meus treinos: exercicios_da_lista com p_limite 1, só as contagens) não é a página: fica de fora."""
     achados = []
+    fontes = {tuple(f[:2]) for f in L.fontes}
     for e in rede.eventos[desde:]:
-        if e["status"] >= 300 or e["metodo"] == "HEAD" or (e["tipo"], e["nome"]) not in L.fontes:
+        if e["status"] >= 300 or e["metodo"] == "HEAD" or (e["tipo"], e["nome"]) not in fontes:
             continue
         if e["tipo"] == "funcao":
-            if (e.get("corpo") or {}).get("acao") in (None, "prof_resumo") and e["pagina"] == pagina:
+            acoes = L.acoes or (None, "prof_resumo")
+            if e.get("acao") in acoes and (e["pagina"] == pagina or (e["pagina"] is None and e["limite"] == POR_PAGINA
+                                                                       and (e["deslocamento"] or 0) == (pagina - 1) * POR_PAGINA)):
                 achados.append(e)
         elif e["limite"] == POR_PAGINA and (e["deslocamento"] or 0) == (pagina - 1) * POR_PAGINA:
             achados.append(e)
@@ -413,7 +475,9 @@ def nao_veio(rede: Rede, L: Lista, desde: int) -> str:
 
 
 def pedidos_grandes(rede: Rede, L: Lista, desde: int) -> list[dict]:
-    return [e for e in rede.eventos[desde:] if (e["tipo"], e["nome"]) in L.fontes and (e["n"] or 0) > POR_PAGINA]
+    fontes = {tuple(f[:2]) for f in L.fontes}
+    return [e for e in rede.eventos[desde:] if (e["tipo"], e["nome"]) in fontes and (e["n"] or 0) > POR_PAGINA
+            and (not L.acoes or e["tipo"] != "funcao" or e.get("acao") in L.acoes)]
 
 
 # ───────────────────────── a tela ─────────────────────────
@@ -441,11 +505,16 @@ def na_pagina(url: str, pagina: int, chave: str = "pagina") -> bool:
     return p in (None, 1) if pagina == 1 else p == pagina
 
 
+def sem_acento(texto: str) -> str:
+    """Minúsculo e sem acento (a busca das telas é assim)."""
+    return "".join(c for c in unicodedata.normalize("NFD", texto or "") if not unicodedata.combining(c)).lower()
+
+
 def token(texto: str, tipo: str | None) -> str | None:
-    """O número da massa na linha ("aluno #07" → "07")."""
+    """O número da massa na linha ("aluno #07" → "07"; hml-14d: sem acento — "exercício #07" = "exercicio #07")."""
     if not tipo:
         return None
-    m = re.search(rf"(?i)\b{re.escape(tipo)}\s+#(\d{{2}})\b", texto or "")
+    m = re.search(rf"\b{re.escape(sem_acento(tipo))}\s+#(\d{{2}})\b", sem_acento(texto))
     return m.group(1) if m else None
 
 
@@ -466,7 +535,7 @@ def ler(caso, L: Lista) -> dict:
     try:
         return caso.pg.evaluate(JS_LISTA, [list(L.candidatos), L.nome_item or ""])
     except Exception:  # noqa: BLE001 — navegando
-        return {"nome": None, "temPaginacao": False, "textos": [], "nomesItens": [], "url": caso.caminho(), "pagina": None, "total": None,
+        return {"nome": None, "temPaginacao": False, "textos": [], "ids": [], "linhas1": [], "nomesItens": [], "url": caso.caminho(), "pagina": None, "total": None,
                 "rotulo": None, "anterior": "ausente", "proxima": "ausente", "largura": -1, "direita": None}
 
 
@@ -558,25 +627,34 @@ def abrir_e_voltar(caso, L: Lista, nome: str, antes: dict) -> tuple[bool, str]:
             como = "abriu o diálogo"
         if not abriu:
             return False, f"o item não abriu ({sel})"
+        caso.pg.wait_for_timeout(800)
+        caso.print(f"{L.nome}_pagina2_item_aberto")  # hml-14d: a página 2 com a folha/diálogo do item aberto (spec §4)
         if volta == "voltar":
             caso.pg.go_back(wait_until="domcontentloaded")
             como += " · Voltar do navegador"
         else:
             como += " · Esc" if fechar_dialogo(caso) else " · o diálogo NÃO fechou com Esc"
+            if espera.startswith("url:"):  # hml-14d: a folha da URL (Master › Contas ?conta=) sai do endereço ao fechar
+                caso.esperar(lambda: espera[4:] not in caso.caminho(), 10)
     else:
-        caso.ir("/painel")
+        caso.ir(L.saida)
         caso.esperar(lambda: caso.tem("[data-menu-lateral]"), 30)
         caso.pg.go_back(wait_until="domcontentloaded")
-        como = "a lista não abre item: saiu para o Dashboard e Voltar do navegador"
+        como = f"a lista não abre item: saiu para {L.saida} e Voltar do navegador"
     velhas = chaves(antes, L)
     ok, depois = esperar_lista(caso, L, lambda e: e["pagina"] == 2 and chaves(e, L) == velhas, 60)
     return ok and na_pagina(depois.get("url") or "", 2, L.chave), f"{como}; depois: página {depois.get('pagina')}, {depois.get('url')}"
 
 
 # ───────────────────────── a rodada (contas, sessões, guarda) ─────────────────────────
+LEITURAS_PAGAMENTOS = ("prof_resumo", "prof_aluno", "prof_aluno_cobrancas", "aluno_status", "aluno_historico")  # hml-14d: + as leituras
+LEITURAS_SEMANA = ("get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno", "quemRecebe",
+                   "quemRecebeLista", "modelos")  # admin-semana-treinos: ACOES_LEITURA + modelos
+
+
 class Guarda:
     """Bloqueia no navegador toda escrita que as telas tentarem — o molde do e2e/w26/prod.py:Guarda (tabela, RPC que grava, Storage)
-    — e, na função pagamentos-aluno, tudo o que não for a leitura prof_resumo."""
+    — e, na função pagamentos-aluno, tudo o que não for leitura (hml-14d: + as funções do Treino que gravam)."""
 
     ESCRITA_RPC = re.compile(r"/rest/v1/rpc/(lixeira_restaurar|lixeira_apagar|aluno_remover|marcar_aviso|marcar|salvar|criar|"
                              r"registrar|aceitar|excluir|apagar|atualizar|enviar|garantir|agenda_garantir_tags|aluno_acesso|diario_link)")
@@ -593,7 +671,13 @@ class Guarda:
                 self.ESCRITA_TABELA.search(u) or self.ESCRITA_RPC.search(u)
                 or ("/storage/v1/object/" in u and "/storage/v1/object/sign/" not in u))
             if not escrita and m == "POST" and "/functions/v1/pagamentos-aluno" in u:
-                escrita = (corpo_json(request.post_data) or {}).get("acao") != "prof_resumo"
+                escrita = (corpo_json(request.post_data) or {}).get("acao") not in LEITURAS_PAGAMENTOS
+            if not escrita and m == "POST" and "/functions/v1/admin-" in u:  # hml-14d: as funções do Treino que gravam
+                funcao = u.split("/functions/v1/")[1].split("?")[0]
+                acao = (corpo_json(request.post_data) or {}).get("action")
+                escrita = funcao in ("admin-delete-user", "admin-update-user") or (
+                    funcao == "admin-semana-treinos" and acao not in LEITURAS_SEMANA) or (
+                    funcao == "admin-tags" and not str(acao or "").lower().startswith(("list", "get")))
             if escrita:
                 self.bloqueadas.append(f"{m} {u.split('?')[0]}")
                 route.abort()
@@ -625,6 +709,15 @@ class Rodada:
     @property
     def marca(self) -> str:
         return (self.massa or {}).get("marca", "")
+
+    def parte(self, nome: str) -> dict:
+        """hml-14d: o estado de uma parte da massa (a 14b mora no topo do estado; treino, master e aluno em chaves próprias)."""
+        if nome == "14b":
+            return self.massa or {}
+        return (self.massa or {}).get(nome) or {}
+
+    def marca_de(self, L: Lista) -> str:
+        return self.parte(L.parte).get("marca") or self.marca
 
     def sessao(self, chave: str) -> dict:
         """A sessão da conta de TESTE (login por senha, como o B5), guardada por 40 min — menos logins no Auth (o da produção)."""
@@ -661,7 +754,7 @@ class Rodada:
         caso.fechar_avisos()
 
     def fundo(self, L: Lista) -> int | None:
-        cont = (self.massa or {}).get("contagens") or {}
+        cont = self.parte(L.parte).get("contagens") or {}
         return cont.get(L.fundo) if L.fundo else None
 
     def aviso(self, texto: str) -> None:
@@ -712,7 +805,7 @@ def provar_lista(o, nav, R: Rodada, L: Lista) -> None:
     t = f"[{L.nome}]"
     caso, rede = R.novo_caso(nav, f"lista_{L.nome}", fontes=L.fontes)
     try:
-        R.entrar(caso, L.rota)
+        R.entrar(caso, L.rota, L.conta)
         ok, st = esperar_lista(caso, L, lambda e: e["temPaginacao"] and e["textos"], 90)
         if not o.ok(ok, f"{t} a lista abre com data-lista / data-paginacao ('{' | '.join(L.candidatos)}') e as linhas data-item"):
             caso.diagnostico()
@@ -725,6 +818,8 @@ def provar_lista(o, nav, R: Rodada, L: Lista) -> None:
             o.ok(N >= MASSA, f"{t} L1 o total da lista: {N}{no_banco}")
             if isinstance(fundo, int) and N != MASSA + fundo:
                 R.aviso(f"{t} o total da tela ({N}) difere da conta do massa.py (41 + {fundo}): o filtro padrão da tela não é o que o massa.py supõe")
+        elif isinstance(R.fundo(L), int):  # hml-14d: lista sem massa com a contagem do banco (as do master)
+            o.ok(N == R.fundo(L), f"{t} L1 o total da lista: {N} (no banco, com a regra da RPC: {R.fundo(L)})")
         else:
             o.ok(N > 3 * POR_PAGINA, f"{t} L1 o total da lista: {N} (a TACO + os próprios)")
         o.ok(st["rotulo"] == rotulo(1, N) and len(st["textos"]) == min(POR_PAGINA, N) and st["pagina"] == 1 and na_pagina(st["url"], 1, L.chave),
@@ -743,6 +838,7 @@ def provar_lista(o, nav, R: Rodada, L: Lista) -> None:
         if not ok:
             caso.diagnostico()
             return
+        o.linha(f"   print: {caso.print(f'{L.nome}_pagina2')}")  # hml-14d: os prints da spec §4 ("… na página 2")
         # L3 — abrir e voltar; recarregar; Anterior
         ok3, como = abrir_e_voltar(caso, L, nome, st2)
         o.ok(ok3, f"{t} L3 abrir um item e voltar mantém ?pagina=2 e as mesmas linhas ({como})")
@@ -810,6 +906,7 @@ def provar_sem_mensalidade(o, caso, rede: Rede, R: Rodada, Lm: Lista) -> None:
 
 def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st1: dict) -> None:
     t = f"[{L.nome}]"
+    marca = R.marca_de(L)
     busca = campo_busca(caso, L) if L.busca else None
     # L4 — a massa: a busca pela marca (o Diário: a lista dos 7 dias)
     if L.busca and not o.ok(busca is not None, f"{t} L4 o campo de busca da lista ({' | '.join(L.busca)})"):
@@ -817,11 +914,11 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
         return
     if busca:
         desde = len(rede.eventos)
-        busca.fill(R.marca)
+        busca.fill(marca)
         ok, sm = esperar_lista(caso, L, lambda e: e["total"] == MASSA and len(e["textos"]) == POR_PAGINA
-                               and all(marca_em(x, R.marca) for x in e["textos"]), 30)
+                               and all(marca_em(x, marca) for x in e["textos"]), 30)
         o.ok(ok and sm["rotulo"] == rotulo(1, MASSA) and sm["pagina"] == 1,
-             f"{t} L4 a busca pela marca '{R.marca}' → '{sm.get('rotulo')}', {len(sm.get('textos') or [])} linhas da massa (esperado '{rotulo(1, MASSA)}')")
+             f"{t} L4 a busca pela marca '{marca}' → '{sm.get('rotulo')}', {len(sm.get('textos') or [])} linhas da massa (esperado '{rotulo(1, MASSA)}')")
         ev = esperar_pedido(caso, rede, L, desde, 1)
         o.ok(pedido_ok(ev, MASSA, POR_PAGINA), f"{t} L4 o pedido da busca traz só 20 e o total 41: {descr(ev) or nao_veio(rede, L, desde)}")
         if not ok:
@@ -879,7 +976,7 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
         o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1, L.chave),
              f"{t} L6 estando na página 1, a busca '{termo}' (o item da página {ultima}) acha o item ('{sb.get('rotulo')}') e fica na página 1")
         # L7 — na página 2, mudar a busca volta à 1; limpar a busca
-        busca.fill(R.marca)
+        busca.fill(marca)
         ok, s1 = esperar_lista(caso, L, lambda e: e["total"] == MASSA and e["pagina"] == 1 and len(e["textos"]) == POR_PAGINA, 30)
         ok2, s2 = mudar_pagina(caso, L, nome, "proxima", 2, s1) if ok else (False, s1)
         busca.fill(termo)
@@ -889,6 +986,12 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
         busca.fill("")
         ok4, s4 = esperar_lista(caso, L, lambda e: e["total"] == N and e["pagina"] == 1, 30)
         o.ok(ok4 and s4["rotulo"] == rotulo(1, N), f"{t} L7 limpar a busca → a lista inteira de novo, na página 1 ('{s4.get('rotulo')}')")
+        return
+    if L.filtro and L.filtro != "diario":
+        filtrar = FILTROS.get(L.filtro)
+        if not o.ok(filtrar is not None, f"{t} L6 o filtro '{L.filtro}' da lista"):
+            return
+        filtrar(o, caso, rede, R, L, nome, N, alvo)
         return
     # o Diário: o filtro Aluno (o registro #NN é do aluno #NN)
     paciente = (R.massa or {}).get("alunos", {}).get(alvo)
@@ -915,41 +1018,61 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
     o.ok(ok4, f"{t} L7 tirar o filtro → a lista inteira de novo, na página 1 ('{s4.get('rotulo')}')")
 
 
+def nome_do_item(st: dict, i: int, L: Lista) -> str:
+    """O nome do item i da página: o seletor do nome (nome_item; "@data-x" = o atributo) ou, sem ele, a 1ª linha do texto da linha."""
+    nomes = st.get("nomesItens") or []
+    if L.nome_item and i < len(nomes) and nomes[i]:
+        return nomes[i]
+    linhas = st.get("linhas1") or []
+    return linhas[i] if i < len(linhas) else ""
+
+
 def provar_sem_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st1: dict) -> None:
-    """Os Alimentos (a TACO, sem massa): as páginas 1 → 3, a busca pelo 1º da página 3 estando na 1 e o volta à 1."""
+    """Listas sem massa (os Alimentos da 14b; hml-14d: Contas, Financeiro, Integrações e a Biblioteca do master): as páginas 1 → a
+    última (até a 3ª), a busca pelo 1º item da última estando na 1 e, na página 2, mudar a busca volta à 1."""
     t = f"[{L.nome}]"
     o.linha(f"   print: {caso.print(f'{L.nome}_pagina1')}")
     atual = st1
-    for P in (2, 3):
+    ultima = min(math.ceil(N / POR_PAGINA), 3)
+    for P in range(2, ultima + 1):
         desde = len(rede.eventos)
         ok, atual = mudar_pagina(caso, L, nome, "proxima", P, atual)
-        o.ok(ok and atual["rotulo"] == rotulo(P, N) and len(atual["textos"]) == POR_PAGINA and na_pagina(atual["url"], P, L.chave),
-             f"{t} L5 página {P}: '{atual.get('rotulo')}', {len(atual.get('textos') or [])} linhas, {atual.get('url')}")
+        exp = min(POR_PAGINA, N - (P - 1) * POR_PAGINA)
+        o.ok(ok and atual["rotulo"] == rotulo(P, N) and len(atual["textos"]) == exp and na_pagina(atual["url"], P, L.chave),
+             f"{t} L5 página {P}: '{atual.get('rotulo')}' (esperado '{rotulo(P, N)}'), {len(atual.get('textos') or [])} linha(s), {atual.get('url')}")
         ev = esperar_pedido(caso, rede, L, desde, P)
         if ev is None and ok and P <= 2:
             # a página 2 já foi pedida no L2/L3: o React Query devolve do cache (mesma chave) — o pedido dela já foi provado
             R.aviso(f"{t} L5 a página {P} veio do cache da tela (o pedido dela foi provado no L2)")
         else:
-            o.ok(pedido_ok(ev, N, POR_PAGINA), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
+            o.ok(pedido_ok(ev, N, exp), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
         if not ok:
             caso.diagnostico()
             return
-    o.linha(f"   print: {caso.print(f'{L.nome}_pagina3')}")
-    alvo = next((x for x in atual.get("nomesItens") or [] if x), "")
-    for P in (2, 1):
+    if ultima > 1:
+        o.ok(atual["proxima"] in ("desligado", "ausente") or ultima < math.ceil(N / POR_PAGINA),
+             f"{t} L5 na última página ({ultima}) o Próxima fica desligado ({atual['proxima']})")
+        o.linha(f"   print: {caso.print(f'{L.nome}_pagina{ultima}')}")
+    alvo = nome_do_item(atual, 0, L)
+    for P in range(ultima - 1, 0, -1):
         ok, atual = mudar_pagina(caso, L, nome, "anterior", P, atual)
-    busca = campo_busca(caso, L)
-    if not o.ok(busca is not None and alvo and atual.get("pagina") == 1, f"{t} L6 na página 1, o campo de busca e o nome do 1º item da página 3"):
+    busca = campo_busca(caso, L) if L.busca else None
+    if not L.busca:
         return
+    if not o.ok(busca is not None and alvo and atual.get("pagina") == 1, f"{t} L6 na página 1, o campo de busca e o nome do 1º item da página {ultima}"):
+        return
+    achou = (lambda e: any(alvo in x for x in (e.get("nomesItens") or []) + (e.get("textos") or [])) and (e["total"] or 0) < N)
     busca.fill(alvo)
-    ok, sb = esperar_lista(caso, L, lambda e: alvo in (e.get("nomesItens") or []) and (e["total"] or 0) < N, 30)
+    ok, sb = esperar_lista(caso, L, achou, 30)
     o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1, L.chave),
-         f"{t} L6 estando na página 1, a busca pelo 1º item da página 3 ({alvo!r}) acha o item ('{sb.get('rotulo')}') e fica na página 1")
+         f"{t} L6 estando na página 1, a busca pelo 1º item da página {ultima} ({alvo!r}) acha o item ('{sb.get('rotulo')}') e fica na página 1")
     busca.fill("")
     ok, s1 = esperar_lista(caso, L, lambda e: e["total"] == N and e["pagina"] == 1, 30)
+    if ultima < 2:
+        return
     ok2, s2 = mudar_pagina(caso, L, nome, "proxima", 2, s1) if ok else (False, s1)
     busca.fill(alvo)
-    ok3, s3 = esperar_lista(caso, L, lambda e: alvo in (e.get("nomesItens") or []) and (e["total"] or 0) < N, 30)
+    ok3, s3 = esperar_lista(caso, L, achou, 30)
     o.ok(ok and ok2 and ok3 and s3["pagina"] == 1 and na_pagina(s3["url"], 1, L.chave),
          f"{t} L7 na página 2, mudar a busca volta à 1 (antes {s2.get('url')}; depois {s3.get('url')})")
     busca.fill("")
@@ -959,14 +1082,14 @@ def provar_lista_celular(o, nav, R: Rodada, L: Lista) -> None:
     t = f"[{L.nome} 390px]"
     caso, _ = R.novo_caso(nav, f"lista_{L.nome}_390px", desktop=False, fontes=L.fontes)
     try:
-        R.entrar(caso, L.rota)
+        R.entrar(caso, L.rota, L.conta)
         ok, st = esperar_lista(caso, L, lambda e: e["temPaginacao"] and e["textos"], 90)
         if not o.ok(ok, f"{t} a lista abre no celular"):
             caso.diagnostico()
             return
         busca = campo_busca(caso, L) if (L.tipo and L.busca) else None
         if busca:
-            busca.fill(R.marca)
+            busca.fill(R.marca_de(L))
             esperar_lista(caso, L, lambda e: e["total"] == MASSA and len(e["textos"]) == POR_PAGINA, 30)
         rolar_ate(caso, f'[data-paginacao="{st["nome"]}"]')
         st = ler(caso, L)
@@ -1167,6 +1290,12 @@ def provar_lista_producao(o, nav, R: Rodada, chave: str, L: Lista, desktop: bool
     caso, rede = R.novo_caso(nav, f"prod_{chave}_{L.nome}" + ("" if desktop else "_390px"), desktop=desktop, fontes=L.fontes)
     try:
         R.entrar(caso, L.rota, chave)
+        if L.antes:  # hml-14d: a lista só aparece pelo botão (o "Ver todos (N)"); sem o botão, a lista cabe no cartão
+            botao = caso.pg.locator(L.antes).first
+            if not caso.esperar(lambda: botao.count() > 0 and botao.is_visible(), 45):
+                o.linha(f"   {t} sem o botão {L.antes} (a lista cabe no cartão): fica de fora")
+                return
+            botao.click()
         ev = esperar_pedido(caso, rede, L, 0, 1, 60)
         caso.pg.wait_for_timeout(1500)
         st = ler(caso, L)
@@ -1199,49 +1328,261 @@ def provar_lista_producao(o, nav, R: Rodada, chave: str, L: Lista, desktop: bool
         caso.fim()
 
 
+# ───────────────────────── hml-14d: peças dos casos novos (usadas por telas_treino/_master/_aluno) ─────────────────────────
+FILTROS: dict = {  # listas sem busca de texto: o filtro pelo item da última página (telas_treino registra o "seletor-treino")
+    "nenhum": lambda o, caso, rede, R, L, nome, N, alvo: o.linha(f"   [{L.nome}] L6/L7: a lista não tem busca nem filtro (a página é a do banco)"),
+}
+
+
+@dataclass(frozen=True)
+class Caso14d:
+    codigo: str                     # T1 · M3 · P5…
+    titulo: str
+    parte: str                      # a parte da massa que o caso usa (treino | master | aluno | 14b)
+    fn: object                      # fn(o, nav, R, desktop: bool)
+    modos: tuple[bool, ...] = (True, False)  # True = computador 1280; False = celular 390 (o --sem-celular tira)
+
+
+def massa_ns(a) -> argparse.Namespace:
+    """Os argumentos do massa.py (os padrões dele) para o --massa daqui."""
+    return argparse.Namespace(login=M.LOGIN_PADRAO, conta_id=None, marca=None, sem_gemeo=False, outra_conta=None,
+                              professor="w13.dono.teste.claude@physiqnutri.app", aluno_treino="w13.aluno.teste.claude@physiqnutri.app",
+                              master="w27.master.teste.claude@physiqnutri.app", aluno_app="w13.aluno.teste.claude@physiqnutri.app",
+                              estado=a.estado)
+
+
+def chave_do_email(R: Rodada, email: str | None) -> str | None:
+    """A chave das CONTAS da W5 de um login de teste do estado da massa (as da 14d estão em CONTAS_14D)."""
+    e = (email or "").strip().lower()
+    for k, (em, _) in R.B5.CONTAS.items():
+        if em.lower() == e:
+            return k
+    return None
+
+
+def ate_a_ultima(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, Nm: int, st: dict, t: str, max_paginas: int = MAX_PAGINAS) -> tuple[dict, dict]:
+    """Próxima até a última página (até max_paginas): o rótulo, as linhas e o pedido de cada uma. Devolve ({página: tokens}, o estado
+    da última)."""
+    ultima = min(math.ceil(Nm / POR_PAGINA), max_paginas)
+    paginas = {1: tokens(st, L.tipo)}
+    ids = {1: list(st.get("ids") or [])}
+    atual = st
+    for P in range(2, ultima + 1):
+        desde = len(rede.eventos)
+        ok, prox = mudar_pagina(caso, L, nome, "proxima", P, atual)
+        exp = min(POR_PAGINA, Nm - (P - 1) * POR_PAGINA)
+        o.ok(ok and prox["rotulo"] == rotulo(P, Nm) and len(prox["textos"]) == exp and (L.chave is None or na_pagina(prox["url"], P, L.chave)),
+             f"{t} página {P}: '{prox.get('rotulo')}' (esperado '{rotulo(P, Nm)}'), {len(prox.get('textos') or [])} linha(s), {prox.get('url')}")
+        ev = esperar_pedido(caso, rede, L, desde, P)
+        if ev is None and ok and P <= 2:
+            R.aviso(f"{t} a página {P} veio do cache da tela (o pedido dela foi provado antes)")
+        else:
+            o.ok(pedido_ok(ev, Nm, exp), f"{t} o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
+        if not ok:
+            caso.diagnostico()
+            break
+        paginas[P] = tokens(prox, L.tipo)
+        ids[P] = list(prox.get("ids") or [])
+        atual = prox
+    IDS_DAS_PAGINAS[L.nome] = ids
+    return paginas, atual
+
+
+IDS_DAS_PAGINAS: dict[str, dict] = {}  # os ids das linhas de cada página da última ate_a_ultima de cada lista (P1–P6)
+
+
+def conferir_massa_nas_paginas(o, paginas: dict, L: Lista, t: str, quantos: int = MASSA) -> str | None:
+    """Os N da massa aparecem 1 vez cada nas páginas; devolve o número do último item da massa na última página."""
+    vistos = [x for P in sorted(paginas) for x in paginas[P] if x]
+    repetidos = sorted({x for x in vistos if vistos.count(x) > 1})
+    faltam = sorted({f"{i:02d}" for i in range(1, quantos + 1)} - set(vistos))
+    ultima = max(paginas)
+    alvo = next((x for x in reversed(paginas[ultima]) if x), None)
+    o.ok(not repetidos and not faltam, f"{t} os {quantos} da massa aparecem 1 vez cada nas {len(paginas)} páginas (faltam: {faltam or '—'}; "
+                                       f"repetidos: {repetidos or '—'}); na página {ultima}: {L.tipo} #{alvo}")
+    return alvo
+
+
+def conferir_ids(o, L: Lista, esperados, t: str) -> None:
+    """Sem o número da massa no texto da linha: os ids da massa (do estado) aparecem 1 vez cada nas páginas (o id da linha)."""
+    paginas = IDS_DAS_PAGINAS.get(L.nome) or {}
+    vistos = [x for P in sorted(paginas) for x in paginas[P] if x]
+    alvo = list(esperados.values()) if isinstance(esperados, dict) else list(esperados or [])
+    faltam = [x for x in alvo if x not in vistos]
+    repetidos = sorted({x for x in vistos if vistos.count(x) > 1})
+    o.ok(bool(alvo) and not faltam and not repetidos, f"{t} os {len(alvo)} da massa aparecem 1 vez cada nas {len(paginas)} páginas, pelo id "
+                                                      f"da linha (faltam {len(faltam)}; repetidos {len(repetidos)})")
+
+
+def conferir_massa(o, paginas: dict, L: Lista, esperados, t: str, quantos: int = MASSA) -> str | None:
+    """Pelo número da massa no texto da linha; se nenhuma linha mostra o número (ex.: a consulta do app mostra a área, não o título),
+    pelos ids do estado."""
+    if any(x for P in paginas for x in paginas[P]) or not esperados:
+        return conferir_massa_nas_paginas(o, paginas, L, t, quantos)
+    conferir_ids(o, L, esperados, t)
+    return None
+
+
+def provar_folha(o, caso, rede: Rede, R: Rodada, L: Lista, abrir, t: str, quantos: int | None = None, busca_massa: bool = True,
+                 esperados=None) -> None:
+    """Lista DENTRO de uma folha (a página no estado da folha — fecha = volta à 1; o "Ver todos" do app e as folhas do editor): abre,
+    "1–20 de N" + o pedido só com 20, (com busca) a marca → 41, Próxima até a última (os 41 aparecem), a busca pelo item da última
+    página volta à 1, fecha e abre de novo → página 1. `abrir()` abre a folha e devolve se abriu."""
+    if not o.ok(abrir(), f"{t} a folha abre"):
+        caso.diagnostico()
+        return
+    ok, st = esperar_lista(caso, L, lambda e: e["temPaginacao"] and e["textos"], 60)
+    if not o.ok(ok, f"{t} a lista da folha com data-lista / data-paginacao ('{' | '.join(L.candidatos)}') e as linhas data-item"):
+        caso.diagnostico()
+        return
+    nome, N = st["nome"], int(st["total"] or 0)
+    fundo = R.fundo(L)
+    o.ok(N >= (quantos or MASSA), f"{t} o total: {N}" + (f" (no banco: {quantos or MASSA} da massa + {fundo} de fundo)" if isinstance(fundo, int) else ""))
+    if isinstance(fundo, int) and N != (quantos or MASSA) + fundo:
+        R.aviso(f"{t} o total da tela ({N}) difere da conta do massa.py ({quantos or MASSA} + {fundo})")
+    o.ok(st["rotulo"] == rotulo(1, N) and len(st["textos"]) == min(POR_PAGINA, N), f"{t} '{st['rotulo']}' (esperado '{rotulo(1, N)}'), {len(st['textos'])} linhas")
+    ev = esperar_pedido(caso, rede, L, 0, 1)
+    o.ok(pedido_ok(ev, N, min(POR_PAGINA, N)), f"{t} o pedido traz só 20: {descr(ev) or nao_veio(rede, L, 0)}")
+    avisar_grandes(R, t, rede, L, 0)
+    marca = R.marca_de(L)
+    busca = campo_busca(caso, L) if L.busca else None
+    Nm, sm = N, st
+    if busca and busca_massa:
+        desde = len(rede.eventos)
+        busca.fill(marca)
+        ok, sm = esperar_lista(caso, L, lambda e: e["total"] == (quantos or MASSA) and e["pagina"] == 1 and len(e["textos"]) == POR_PAGINA
+                               and all(marca_em(x, marca) for x in e["textos"]), 30)
+        Nm = quantos or MASSA
+        o.ok(ok and sm["rotulo"] == rotulo(1, Nm), f"{t} a busca pela marca → '{sm.get('rotulo')}' (esperado '{rotulo(1, Nm)}')")
+        ev = esperar_pedido(caso, rede, L, desde, 1)
+        o.ok(pedido_ok(ev, Nm, POR_PAGINA), f"{t} o pedido da busca: {descr(ev) or nao_veio(rede, L, desde)}")
+        if not ok:
+            caso.diagnostico()
+            return
+    o.linha(f"   print: {caso.print(f'{L.nome}_pagina1')}")
+    paginas, _ = ate_a_ultima(o, caso, rede, R, L, nome, Nm, sm, t)
+    alvo = conferir_massa(o, paginas, L, esperados, t, quantos or MASSA) if L.tipo and Nm <= MAX_PAGINAS * POR_PAGINA else None
+    o.linha(f"   print: {caso.print(f'{L.nome}_pagina{max(paginas)}')}")
+    if busca and alvo:
+        termo = f"{L.tipo} #{alvo}"
+        busca.fill(termo)
+        ok, sb = esperar_lista(caso, L, lambda e: alvo in tokens(e, L.tipo) and e["pagina"] == 1, 30)
+        o.ok(ok, f"{t} na página {max(paginas)}, a busca '{termo}' acha o item e volta à página 1 ('{sb.get('rotulo')}')")
+    fechar_dialogo(caso)
+    reaberta = abrir()
+    ok, st2 = esperar_lista(caso, L, lambda e: e["temPaginacao"] and e["textos"], 30) if reaberta else (False, {})
+    o.ok(reaberta and ok and st2.get("pagina") == 1, f"{t} fechar e abrir de novo → página 1 ('{st2.get('rotulo')}')")
+    fechar_dialogo(caso)
+
+
 # ───────────────────────── staging: a massa ─────────────────────────
-def preparar_massa(o, R: Rodada, a) -> bool:
+def preparar_massa(o, R: Rodada, a, partes: set[str]) -> set[str]:
+    """O estado da massa (ou --massa: cria as partes que os casos usam) e, para cada parte, se está inteira no banco (só leitura).
+    Devolve as partes prontas; os casos de uma parte que falta ficam de fora com o ❌ dela."""
+    arquivo = Path(a.estado)
     if a.massa:
-        print("\n== massa (--massa): criando no staging")
-        ctx = M.resolver(R.B5.CONTAS[R.chave][0])
-        estado = M.criar(ctx, arquivo=Path(a.estado))
-    else:
-        estado = M.ler_estado(a.estado)
-    if not o.ok(bool(estado), f"o estado da massa ({a.estado}) — sem ele: python3 e2e/hml14/massa.py --criar (ou --massa aqui)"):
-        return False
-    if not o.ok(estado.get("schema") == "staging" and estado.get("login") == R.B5.CONTAS[R.chave][0].lower(),
-                f"a massa é do schema staging e da conta de teste {R.chave} ({estado.get('login')})"):
-        return False
-    try:
-        cont = M.contar(M.contexto_do_estado(estado), estado["marca"])
-        R.conta_ids = {x["id"] for x in R.C.ler(R.C.PRINCIPAL_REF, f"""select id::text as id from staging.pacientes
-                                                                       where conta_id = {R.C.txt(estado['conta_id'])}::uuid and deleted_at is null""")}
-    except Exception as e:  # noqa: BLE001
-        o.ok(False, f"a massa no staging (só leitura): {type(e).__name__}: {str(e)[:200]}")
-        return False
-    faltas = M.massa_completa(cont, bool(estado.get("gemeo")))
-    if not estado.get("ze"):
-        faltas.append("Zé Último")
-    estado["contagens"] = cont
+        print(f"\n== massa (--massa): criando no staging ({', '.join(sorted(partes))})")
+        M.criar_tudo(massa_ns(a), tuple(x for x in M.PARTES if x in partes), arquivo)
+    estado = M.ler_estado(arquivo)
+    if not o.ok(bool(estado), f"o estado da massa ({arquivo}) — sem ele: python3 e2e/hml14/massa.py --criar (ou --massa aqui)"):
+        return set()
+    if not o.ok(estado.get("schema") == "staging", f"a massa é do schema staging ({estado.get('schema')})"):
+        return set()
     R.massa = estado
-    R.conta_ativa[R.chave] = estado["conta_id"]
-    return o.ok(not faltas, f"a massa '{estado['marca']}' está inteira no staging (conta {estado.get('conta_nome')!r}; "
-                            f"fundo: {', '.join(f'{k} {cont.get(k)}' for k in ('alunos_fundo', 'lancamentos_fundo', 'recibos_fundo', 'respostas_fundo', 'diario_fundo', 'receitas_fundo', 'removidos_fundo'))})"
-                            + (f" — falta: {faltas}" if faltas else ""))
+    prontas: set[str] = set()
+    if "14b" in partes:
+        if o.ok(estado.get("login") == R.B5.CONTAS[R.chave][0].lower() and estado.get("conta_id"),
+                f"a massa da 14b é da conta de teste {R.chave} ({estado.get('login')})"):
+            try:
+                cont = M.contar(M.contexto_do_estado(estado), estado["marca"])
+                R.conta_ids = {x["id"] for x in R.C.ler(R.C.PRINCIPAL_REF, f"""select id::text as id from staging.pacientes
+                                                                               where conta_id = {R.C.txt(estado['conta_id'])}::uuid and deleted_at is null""")}
+                faltas = M.massa_completa(cont, bool(estado.get("gemeo")))
+                if not estado.get("ze"):
+                    faltas.append("Zé Último")
+                estado["contagens"] = cont
+                R.conta_ativa[R.chave] = estado["conta_id"]
+                if o.ok(not faltas, f"a massa '{estado['marca']}' da 14b está inteira no staging (conta {estado.get('conta_nome')!r}; fundo: "
+                                    f"{', '.join(f'{k} {cont.get(k)}' for k in ('alunos_fundo', 'lancamentos_fundo', 'recibos_fundo', 'respostas_fundo', 'diario_fundo', 'receitas_fundo', 'removidos_fundo'))})"
+                                    + (f" — falta: {faltas}" if faltas else "")):
+                    prontas.add("14b")
+            except Exception as e:  # noqa: BLE001
+                o.ok(False, f"a massa da 14b no staging (só leitura): {type(e).__name__}: {str(e)[:200]}")
+    MT, MP = M._modulos()
+    for parte in ("treino", "master", "aluno"):
+        if parte not in partes:
+            continue
+        e = estado.get(parte) or {}
+        if not o.ok(bool(e.get("marca")), f"a parte '{parte}' da massa está no estado — sem ela: massa.py --criar --partes {parte}"):
+            continue
+        try:  # as contagens de agora (só leitura): o fundo de cada lista e se a massa continua inteira
+            if parte == "treino":
+                cont = MT.contar(e, e["marca"])
+                faltas = MT.massa_completa(cont)
+            elif parte == "master":
+                cont = MP.contar_master(e, e["marca"])
+                faltas = ([] if cont.get("app_massa") == MASSA else [f"app_massa {cont.get('app_massa')}"]) + (
+                    [] if cont.get("papel") == "master" else [f"o master de teste não é master no staging (papel {cont.get('papel')!r})"])
+            else:
+                cont = MP.contar_aluno(e, e["marca"])
+                faltas = MP.massa_aluno_completa(cont)
+            e["contagens"] = cont
+        except Exception as x:  # noqa: BLE001
+            o.ok(False, f"a parte '{parte}' no staging (só leitura): {type(x).__name__}: {str(x)[:200]}")
+            continue
+        if o.ok(not faltas, f"a parte '{parte}' da massa '{e['marca']}' está inteira no staging" + (f" — falta: {faltas}" if faltas else "")):
+            prontas.add(parte)
+    aluno = estado.get("aluno") or {}
+    for chave in (chave_do_email(R, aluno.get("profissional_email")),):
+        if chave and aluno.get("conta_id"):
+            R.conta_ativa[chave] = aluno["conta_id"]
+    return prontas
+
+
+def interpretar_casos(texto: str, c14d: dict) -> set[str]:
+    """Os nomes da 14b, os códigos da 14d e os grupos (b19, treino, master, aluno, 14b, 14d, x1)."""
+    grupos = {"b19": {f"b19-{F.nome}" for F in CAMPOS}, "14b": set(TODOS), "14d": set(c14d),
+              "treino": {k for k in c14d if k.startswith("T")}, "master": {k for k in c14d if k.startswith("M")},
+              "aluno": {k for k in c14d if k.startswith("P")}}
+    casos: set[str] = set()
+    for c in (x.strip() for x in texto.split(",") if x.strip()):
+        chave = c.lower()
+        if chave in grupos:
+            casos |= grupos[chave]
+        elif c.upper() in c14d or c.upper() == "X1":
+            casos.add(c.upper())
+        else:
+            casos.add(chave)
+    desconhecidos = casos - set(TODOS) - set(c14d) - {"X1"}
+    if desconhecidos:
+        raise SystemExit(f"casos desconhecidos: {sorted(desconhecidos)} (conhecidos: {', '.join(TODOS)}, {', '.join(c14d)}, X1; grupos: "
+                         f"{', '.join(grupos)})")
+    return casos
+
+
+# os casos da 14d (importados depois das peças acima: eles usam "import telas" no topo)
+import telas_aluno as TA  # noqa: E402
+import telas_master as TM  # noqa: E402
+import telas_treino as TT  # noqa: E402
+
+CASOS_14D: dict[str, Caso14d] = {**TT.CASOS, **TM.CASOS, **TA.CASOS}
 
 
 # ───────────────────────── principal ─────────────────────────
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-14b — E2E das listas paginadas do painel e do campo que escolhe aluno (casos e uso no topo)")
+    ap = argparse.ArgumentParser(description="hml-14b + hml-14d — E2E das listas paginadas (painel, Treino, master, por aluno e app) e dos campos "
+                                             "que escolhem aluno (casos e uso no topo)")
     ap.add_argument("--base", required=True, help="local (http://localhost:8080) | staging | prod | <url> (ex.: http://localhost:5173)")
     ap.add_argument("--prefixo", help="o começo dos prints e o nome da saída (padrão: local — também para localhost:5173 —, staging ou prod)")
     # no notebook o Chromium do Playwright cai nas páginas longas e o Edge não (hml-11, 08/10/2026): lá, --canal msedge
     ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
-    ap.add_argument("--casos", default=",".join(TODOS), help=f"listas e campos (padrão: todos — {', '.join(TODOS)}; 'b19' = os 4 campos)")
-    ap.add_argument("--sem-celular", action="store_true", help="pula as rodadas de 390 px (L8 e B4)")
-    ap.add_argument("--massa", action="store_true", help="staging/local: cria a massa antes (massa.py --criar) e limpa no fim, mesmo se a prova falhar")
+    ap.add_argument("--casos", default="14b,14d,X1", help=f"listas, campos e casos (padrão: todos — os da 14b: {', '.join(TODOS)}; b19 = os 4 "
+                                                       f"campos; os da 14d: {', '.join(CASOS_14D)} (grupos treino, master, aluno, 14d); X1 = produção)")
+    ap.add_argument("--sem-celular", action="store_true", help="pula as rodadas de 390 px (L8, B4 e as dos casos da 14d)")
+    ap.add_argument("--massa", action="store_true", help="staging/local: cria a massa antes (massa.py --criar das partes dos casos) e limpa no fim, "
+                                                        "mesmo se a prova falhar")
     ap.add_argument("--estado", default=str(M.ESTADO), help="o estado da massa que o massa.py grava")
-    ap.add_argument("--conta-teste", default=CONTA_PADRAO, help="staging/local: a conta de teste dona da massa (chave das CONTAS da W5)")
+    ap.add_argument("--conta-teste", default=CONTA_PADRAO, help="staging/local: a conta de teste dona da massa da 14b (chave das CONTAS da W5)")
     ap.add_argument("--contas-prod", default=",".join(CONTAS_PROD), help="produção: as contas de teste do e2e/w26/prod.py")
     a = ap.parse_args()
 
@@ -1252,18 +1593,14 @@ def main() -> int:
         raise SystemExit("--base prod precisa ser a produção")
     if producao and a.massa:
         raise SystemExit("--massa na produção: recusado (a produção é só leitura)")
-    casos: set[str] = set()
-    for c in (x.strip().lower() for x in a.casos.split(",") if x.strip()):
-        casos |= {f"b19-{F.nome}" for F in CAMPOS} if c == "b19" else {c}
-    desconhecidos = casos - set(TODOS)
-    if desconhecidos:
-        raise SystemExit(f"casos desconhecidos: {sorted(desconhecidos)} (conhecidos: {', '.join(TODOS)}, b19)")
+    casos = interpretar_casos(a.casos, CASOS_14D)
     prefixo = a.prefixo or (a.base if a.base in BASES else "local" if host in ("localhost", "127.0.0.1") else "url")
 
     C, B5 = carregar("public" if producao else "staging")
     o = C.Saida(f"telas_{prefixo}", parar=False)
     R = Rodada(C=C, B5=B5, o=o, base=base, prefixo=prefixo, producao=producao, chave=a.conta_teste, sess=C.Sessoes())
-    o.linha(f"base {base} · {'produção (só leitura)' if producao else 'schema staging'} · casos {', '.join(c for c in TODOS if c in casos)}"
+    o.linha(f"base {base} · {'produção (só leitura)' if producao else 'schema staging'} · casos "
+            f"{', '.join([c for c in TODOS if c in casos] + [c for c in CASOS_14D if c in casos] + (['X1'] if 'X1' in casos else []))}"
             + (" · sem celular" if a.sem_celular else ""))
     if not producao and (a.conta_teste not in B5.CONTAS or not C.eh_email_de_teste(B5.CONTAS[a.conta_teste][0])):
         raise SystemExit(f"--conta-teste {a.conta_teste}: não é conta de teste das CONTAS da W5")
@@ -1327,25 +1664,39 @@ def main() -> int:
                         rodar(provar_lista_producao, chave, L, True)
                         if not a.sem_celular:
                             rodar(provar_lista_producao, chave, L, False)
-            elif preparar_massa(o, R, a):
+                    if "X1" in casos:  # hml-14d: as listas novas que a conta alcança (SÓ LEITURA)
+                        for L in TA.listas_x1(o, R, chave, navs) + TT.listas_x1(o, R, chave, navs):
+                            rodar(provar_lista_producao, chave, L, True)
+                            if not a.sem_celular:
+                                rodar(provar_lista_producao, chave, L, False)
+            else:
+                partes = ({"14b"} if any(c in casos for c in TODOS) else set()) | {CASOS_14D[c].parte for c in casos if c in CASOS_14D}
+                prontas = preparar_massa(o, R, a, partes)
                 for L in LISTAS:
-                    if L.nome in casos:
+                    if L.nome in casos and "14b" in prontas:
                         rodar(provar_lista, L)
                         if not a.sem_celular:
                             rodar(provar_lista_celular, L)
                 for F in CAMPOS:
-                    if f"b19-{F.nome}" in casos:
+                    if f"b19-{F.nome}" in casos and "14b" in prontas:
                         rodar(provar_campo, F, True)
                         if not a.sem_celular:
                             rodar(provar_campo, F, False)
+                for codigo, K in CASOS_14D.items():  # hml-14d
+                    if codigo not in casos:
+                        continue
+                    if K.parte not in prontas:
+                        o.ok(False, f"[{codigo}] {K.titulo}: fica de fora — a parte '{K.parte}' da massa não está pronta (acima)")
+                        continue
+                    for desktop in K.modos:
+                        if desktop or not a.sem_celular:
+                            rodar(K.fn, desktop)
         finally:
             if a.massa and not producao:
-                print("\n== massa (--massa): limpando pela marca")
+                print("\n== massa (--massa): limpando pela marca (as 4 partes; o tirar_master)")
                 try:
-                    estado = M.ler_estado(a.estado)
-                    ctx = M.contexto_do_estado(estado) if estado else M.resolver(B5.CONTAS[R.chave][0])
-                    o.ok(M.limpar(ctx, None), "a massa foi limpa pela marca (nada sobrou)")
-                except Exception as e:  # noqa: BLE001
+                    o.ok(M.limpar_tudo(massa_ns(a), M.PARTES, Path(a.estado)), "a massa foi limpa pela marca nos 2 bancos (nada sobrou)")
+                except (Exception, SystemExit) as e:  # noqa: BLE001
                     o.ok(False, f"a limpeza da massa: {type(e).__name__}: {str(e)[:200]} — rode python3 e2e/hml14/massa.py --limpar")
             R.sess.fechar(o)
     if producao:

@@ -80,6 +80,13 @@ def sem_carregando(c, timeout: float = 30) -> None:
     c.esperar(lambda: not c.tem('[data-estado="carregando"]') and not c.tem("[data-esqueleto]") and "Carregando" not in c.texto()[:4000], timeout)
 
 
+def buscar_na_lista(c, campo: str, termo: str, timeout: float = 45) -> None:
+    """hml-14d (D39): as listas do master vêm em páginas de 20 — o item procurado pela busca da lista (no banco, 300 ms)."""
+    if c.esperar(lambda: c.tem(campo), timeout):
+        c.pg.locator(campo).fill(termo)
+        c.pg.wait_for_timeout(800)  # passa da espera de 300 ms da busca antes de clicar
+
+
 def ler_csv(caminho: str) -> list[list[str]]:
     texto = Path(caminho).read_text(encoding="utf-8-sig")
     return list(csvlib.reader(io.StringIO(texto), delimiter=";"))
@@ -93,6 +100,7 @@ def caso_master(nav):
     B.dar_master("w27-master")
     try:
         c = abrir(nav, "master", "w27-master", "/master/contas")
+        buscar_na_lista(c, "[data-busca-contas]", B.CONTA_SUSP, 60)  # hml-14d (D39): a suspensa pode cair na 2ª página
         p.check(c.esperar(lambda: c.tem('[data-pagina-master="contas"]') and c.tem(f'[data-linha-conta="{B.CONTA_SUSP}"]'), 60), "[master] Contas com a Conta Suspensa H4")
         c.pg.locator(f'[data-linha-conta="{B.CONTA_SUSP}"]').first.click()
         ok = c.esperar(lambda: c.tem("[data-detalhe-membros]") and c.tem('[data-copiar-codigo="PROF-MAURO-REIS-H4"]'), 30)
@@ -111,6 +119,7 @@ def caso_master(nav):
         c.print("master_conta_codigo_ultimo_acesso")
         # C57/N-5: Alunos › Abrir a aluna de OUTRA conta (o master de teste não tem conta: as abas vêm da conta da aluna)
         c.ir(f"/master/alunos?conta={c1}")
+        buscar_na_lista(c, "[data-busca-alunos]", B.ALUNA_VENCIDA)  # hml-14d (D39): 20 por página — a aluna pela busca
         p.check(c.esperar(lambda: c.tem(f'[data-abrir-aluno="{B.ALUNA_VENCIDA}"]'), 45), "[master] Alunos da Clínica H4 com o botão Abrir")
         sem_carregando(c)
         c.print("master_alunos_abrir")
@@ -162,9 +171,13 @@ def caso_dono(nav):
     p.check(ok and vis == 12, f"[dono] N-45: 12 lançamentos + 'Ver todos' ({vis})")
     if ok:
         c.pg.locator("[data-lancamentos-ver-todos]").click()
-        c.pg.wait_for_timeout(500)
-        vis = c.pg.locator("[data-cartao-lancamentos] [data-lancamento]").count()
-        p.check(vis == 15, f"[dono] 'Ver todos' mostra os 15 ({vis})")
+        # hml-14d (D39): "Ver todos" abre a lista em páginas de 20 do banco (data-lista="aluno-lancamentos"): os 15 = o total da
+        # paginação, todos na 1ª página (antes: o mesmo cartão aberto em 500 ms)
+        pag = c.pg.locator('[data-paginacao="aluno-lancamentos"]')
+        itens = c.pg.locator('[data-lista="aluno-lancamentos"] [data-item]')
+        ok15 = c.esperar(lambda: pag.count() > 0 and pag.first.get_attribute("data-total") == "15" and itens.count() == 15, 30)
+        total = pag.first.get_attribute("data-total") if pag.count() else None
+        p.check(ok15, f"[dono] 'Ver todos' mostra os 15 ({itens.count()} na página · total {total})")
         c.pg.locator("[data-cartao-lancamentos]").scroll_into_view_if_needed()
         c.print("dono_financeiro_ver_todos")
         c.pg.locator("[data-lancamentos-rodape]").scroll_into_view_if_needed()

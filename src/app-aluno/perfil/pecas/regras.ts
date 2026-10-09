@@ -82,8 +82,11 @@ export function areaDaConsulta(a: Pick<AgendamentoAluno, "modulo" | "papel">): A
 
 export const ehCancelado = (status: string): boolean => status === "desmarcado" || status === "paciente_desmarcou";
 
-/** As próximas N (ainda não terminaram e não foram desmarcadas), da mais perto para a mais longe (a regra do Nutri). */
-export function proximosAgendamentos<T extends { inicio: string; fim: string; status: string }>(lista: T[], agora: Date = new Date(), n = 50): T[] {
+/** hml-14d (B21 · P7): quantas próximas o cartão "Próximas" mostra; "Ver todas (N)" abre o resto em páginas de 20 do banco. */
+export const PROXIMAS_NO_CARTAO = 20;
+
+/** As próximas N (ainda não terminaram e não foram desmarcadas), da mais perto para a mais longe (a regra do Nutri). Sem `n`: todas. */
+export function proximosAgendamentos<T extends { inicio: string; fim: string; status: string }>(lista: T[], agora: Date = new Date(), n = Infinity): T[] {
   return lista
     .filter((a) => new Date(a.fim).getTime() >= agora.getTime() && !ehCancelado(a.status))
     .sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())

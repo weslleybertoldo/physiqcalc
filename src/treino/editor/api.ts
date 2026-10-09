@@ -6,6 +6,7 @@
 import { principal } from "@/integrations/principal/client";
 import { criarFetchResiliente, TEMPO_FUNCAO_MS } from "@/integrations/repeticao";
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { calcularVolumeSemanal, type GrupoVolume, type SemanaRowVolume } from "@/lib/volumeSemanal";
 import type { SeriePadraoRow } from "@/lib/seriesPadrao";
@@ -111,22 +112,76 @@ export interface ExercicioPraticadoApi {
 export const carregarVolumePraticado = (userId: string, inicio: string, fim: string) =>
   semana<{ exercicios: ExercicioPraticadoApi[] }>("volumePraticado", userId, { inicio, fim }).then((r) => r.exercicios ?? []);
 
-export async function carregarModelos(userId: string): Promise<ModeloTreino[]> {
-  const r = await semana<{ modelos: ModeloTreino[] }>("modelos", userId);
-  return r.modelos ?? [];
+/**
+ * A folha "Modelos": os treinos que quem mexe pode dar ao aluno (os globais e os dele) — hml-14d (B19/B21): 20 por página, com a
+ * busca pelo nome (sem acento) e o total vindos da função (antes a lista inteira, sem busca).
+ */
+export async function carregarModelos(userId: string, pagina = 1, busca = ""): Promise<{ modelos: ModeloTreino[]; total: number }> {
+  const extra: Record<string, unknown> = { pagina };
+  if (busca.trim()) extra.busca = busca.trim();
+  const r = await semana<{ modelos?: ModeloTreino[]; total?: number }>("modelos", userId, extra);
+  const modelos = r.modelos ?? [];
+  return { modelos, total: Number(r.total ?? modelos.length) || 0 };
 }
 
-/** A biblioteca que o aluno enxerga no app: os globais do master (81 com GIF) + os do professor dele. */
-export async function carregarBiblioteca(professorDoAluno: string | null): Promise<ExercicioBiblioteca[]> {
+// ───────────────────────── a biblioteca no banco (hml-14d, B21 · D24) ─────────────────────────
+
+export type EscopoDaBiblioteca = "global" | "minha" | "visiveis" | "professores";
+
+/** Os filtros da RPC exercicios_da_lista do Treino (supabase/migrations/20261009050000_hml14d_treino_listas.sql). */
+export interface FiltrosDaBiblioteca {
+  /** global · minha · visiveis (global + meus, o padrão) · professores (só o master no Treino) */
+  escopo?: EscopoDaBiblioteca;
+  /** os globais + os desse profissional (a folha do editor com o professor do aluno) — vale no lugar do escopo */
+  professor?: string | null;
+  /** nome, grupo muscular, subgrupo e variação, sem acento */
+  q?: string;
+  /** chaves de movimento/equipamento cujos rótulos casaram com o termo (src/treino/equivalenciaBusca.ts) */
+  codigos?: string[];
+  /** músculos primários do grupo da tela (src/lib/gruposMusculares.ts → musculosDosBlocos) */
+  musculos?: string[];
+  /** o grupo "Outros": nenhum dos músculos conhecidos */
+  fora?: string[];
+}
+
+/** Uma página da biblioteca + as contagens do topo (estas sem busca nem grupo). */
+export interface PaginaDaBiblioteca<T> {
+  itens: T[];
+  total: number;
+  totalGlobal: number;
+  totalMeu: number;
+  totalProfessores: number;
+  comGif: number;
+  /** o escopo inteiro, sem busca nem grupo (o "N na biblioteca" da folha) */
+  totalEscopo: number;
+  semClassificacao: number;
+}
+
+/**
+ * Uma página da biblioteca: a RPC exercicios_da_lista (filtro, busca, grupo, ordem e contagens no banco — antes a tela baixava a
+ * tabela inteira, sem `range`, e filtrava no navegador). Só vão os filtros com valor. Erro do banco → lança (a tela mostra o erro).
+ */
+export async function exerciciosDaLista<T = ExercicioBiblioteca>(filtros: FiltrosDaBiblioteca, pagina: number, porPagina = POR_PAGINA): Promise<PaginaDaBiblioteca<T>> {
   if (!online()) throw new ErroTreinoPainel("sem_internet");
-  let q = supabase
-    .from("tb_exercicios")
-    .select("id, nome, grupo_muscular, subgrupo, imagem_url, tipo, professor_id, padrao_movimento, equipamento, variacao")
-    .order("nome");
-  q = professorDoAluno ? q.or(`professor_id.is.null,professor_id.eq.${professorDoAluno}`) : q.is("professor_id", null);
-  const { data, error } = await q;
-  if (error) throw new ErroTreinoPainel(error.message || "erro_interno");
-  return (data ?? []) as unknown as ExercicioBiblioteca[];
+  const p_filtros: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(filtros)) {
+    if (v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
+    p_filtros[k] = v;
+  }
+  const { data, error } = await supabase.rpc("exercicios_da_lista" as never, { p_filtros, p_offset: deslocamento(pagina, porPagina), p_limite: porPagina } as never);
+  if (error) throw new ErroTreinoPainel((error as { message?: string }).message || "erro_interno");
+  const r = (data ?? {}) as Record<string, unknown>;
+  const n = (k: string) => Number(r[k] ?? 0) || 0;
+  return {
+    itens: (Array.isArray(r.itens) ? r.itens : []) as T[],
+    total: n("total"),
+    totalGlobal: n("total_global"),
+    totalMeu: n("total_meu"),
+    totalProfessores: n("total_professores"),
+    comGif: n("com_gif"),
+    totalEscopo: n("total_escopo"),
+    semClassificacao: n("sem_classificacao"),
+  };
 }
 
 // ───────────────────────── escrita ─────────────────────────

@@ -13,7 +13,6 @@ import {
   type Nivel, type RegistroAplicacao,
 } from "@/nutricao/prontuario/lib/questionariosUtil";
 import { EMAIL_MAX, NOME_MAX, TELEFONE_MAX } from "./preconsultaUtil";
-import { iniciais } from "@/ui/premium/texto";
 
 export type OrigemResposta = "anamnese" | "questionario" | "personalizado";
 export type TipoImportacao = "anamnese" | "questionario";
@@ -59,41 +58,9 @@ const numero = (v: unknown): number => {
 /** Nova = viva e sem aluno ligado (o critério do Nutri; o painel conta as do recorte da conta ativa). */
 export const ehNova = (r: { paciente_id: string | null; deleted_at?: string | null }): boolean => !r.paciente_id && !r.deleted_at;
 
-// ---- Contagens (hml-14b: a lista, a ordem, os filtros e a busca são do banco — respostas_da_conta; os números do topo e da aba
-// Formulários ainda saem da leitura de até 1000 do usePreConsulta) ----
+// ---- Contagens (hml-14b: a lista, a ordem, os filtros e a busca são do banco — respostas_da_conta; hml-14d: os números do topo e
+// da aba Formulários também — preconsulta_numeros, mais abaixo) ----
 export const textoContagemRespostas = (n: number): string => (n === 0 ? "Nenhuma resposta" : n === 1 ? "1 resposta" : `${n} respostas`);
-/** Respostas por formulário (a lista de formulários mostra "N respostas · M novas"). */
-export function respostasPorFormulario(lista: { formulario_id: string | null; paciente_id: string | null; deleted_at?: string | null }[]): Map<string, { total: number; novas: number }> {
-  const m = new Map<string, { total: number; novas: number }>();
-  for (const r of lista) {
-    if (!r.formulario_id) continue;
-    const c = m.get(r.formulario_id) ?? { total: 0, novas: 0 };
-    c.total += 1;
-    if (ehNova(r)) c.novas += 1;
-    m.set(r.formulario_id, c);
-  }
-  return m;
-}
-/** Respostas do mês corrente (fuso local) — o número do topo. */
-export const respostasDoMes = (lista: { respondido_em: string }[], hoje: Date = new Date()): number =>
-  lista.filter((r) => {
-    const d = new Date(r.respondido_em);
-    return d.getFullYear() === hoje.getFullYear() && d.getMonth() === hoje.getMonth();
-  }).length;
-
-const SEMANA = 7 * 24 * 60 * 60 * 1000;
-
-/** Respostas por semana nas últimas 8 semanas (a mais antiga primeiro) — a linha do número "Respostas no mês". */
-export function respostasPorSemana(lista: { respondido_em: string }[], agora: Date = new Date(), semanas = 8): number[] {
-  const fim = agora.getTime();
-  const saida = Array.from({ length: semanas }, () => 0);
-  for (const r of lista) {
-    const t = new Date(r.respondido_em).getTime();
-    const i = Math.floor((fim - t) / SEMANA);
-    if (i >= 0 && i < semanas) saida[semanas - 1 - i] += 1;
-  }
-  return saida;
-}
 
 // ---- Filtros (na URL: ?formulario=<título>&q=<busca>&sem=1&aluno=<id>) ----
 export type FiltrosRespostas = { formulario: string; busca: string; soNovas: boolean; aluno: string };
@@ -169,6 +136,42 @@ export function normalizarPaginaRespostas<T>(bruto: unknown): PaginaRespostas<T>
   };
 }
 
+// ---- hml-14d (B21 · D35): os números do topo, da aba Respostas e da aba Formulários contados no banco (preconsulta_numeros) ----
+// Antes saíam de uma leitura de até 1000 respostas no navegador; as regras são as mesmas que a tela aplicava: nova = viva e sem aluno
+// ligado; o mês = o mês corrente no fuso do navegador; 8 semanas inteiras antes de agora, a mais antiga primeiro; por formulário.
+/** Os números da Pré-consulta (o recorte da conta ativa, com a RLS de quem pede). */
+export type NumerosPreConsulta = {
+  total: number;
+  novas: number;
+  ligadas: number;
+  importadas: number;
+  mes: number;
+  /** as 8 últimas semanas, a mais antiga primeiro (a linha do "Respostas no mês") */
+  semanas: number[];
+  /** por formulário: "N respostas · M novas" */
+  porFormulario: Record<string, { total: number; novas: number }>;
+};
+/** O 1º instante do mês corrente no fuso do navegador (o "mês" do topo é o de quem olha) — vai à preconsulta_numeros. */
+export const inicioDoMesLocal = (agora: Date = new Date()): Date => new Date(agora.getFullYear(), agora.getMonth(), 1);
+/** A resposta da preconsulta_numeros → os números da tela (null = formato inesperado: a tela mostra o erro, nunca zeros inventados). */
+export function normalizarNumeros(bruto: unknown): NumerosPreConsulta | null {
+  if (!bruto || typeof bruto !== "object") return null;
+  const b = bruto as Record<string, unknown>;
+  const [total, novas, ligadas, importadas, mes] = ["total", "novas", "ligadas", "importadas", "mes"].map((k) => contagem(b[k]));
+  const semanas = Array.isArray(b.semanas) ? b.semanas.map(contagem) : [];
+  if (b.ok !== true || total === null || novas === null || ligadas === null || importadas === null || mes === null) return null;
+  if (semanas.length !== 8 || semanas.some((n) => n === null)) return null;
+  const porFormulario: NumerosPreConsulta["porFormulario"] = {};
+  const pf = b.por_formulario && typeof b.por_formulario === "object" ? (b.por_formulario as Record<string, unknown>) : {};
+  for (const [id, v] of Object.entries(pf)) {
+    const c = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+    const t = contagem(c.total);
+    const n = contagem(c.novas);
+    if (t !== null && n !== null) porFormulario[id] = { total: t, novas: n };
+  }
+  return { total, novas, ligadas, importadas, mes, semanas: semanas as number[], porFormulario };
+}
+
 // ---- Origem e situação do formulário ----
 /** 'questionario' se o formulário veio de um questionário OU se a resposta tem faixas; senão pela origem do embed; removido → personalizado. */
 export function origemDaResposta(r: Pick<RespostaBase, "faixas" | "formulario">): OrigemResposta {
@@ -179,7 +182,6 @@ export function origemDaResposta(r: Pick<RespostaBase, "faixas" | "formulario">)
 }
 /** Para onde a importação vai: questionário de saúde (aplicação) ou anamnese. */
 export const tipoImportacao = (r: Pick<RespostaBase, "faixas" | "formulario">): TipoImportacao => (origemDaResposta(r) === "questionario" ? "questionario" : "anamnese");
-export const textoOrigemResposta = (o: OrigemResposta): string => (o === "questionario" ? "Questionário de saúde" : o === "anamnese" ? "Pré-anamnese" : "Personalizado");
 export const textoTipoImportacao = (t: string | null | undefined): string => (t === "questionario" ? "questionário" : "anamnese");
 export type SituacaoFormulario = "ativo" | "inativo" | "excluido" | "removido";
 /** `formulario_id` null (hard delete) ou sem embed → removido; `deleted_at` → excluído (soft); senão ativo/inativo. */
@@ -244,8 +246,6 @@ export const dadosAlunoDaResposta = (r: Pick<RespostaBase, "nome" | "email" | "t
 
 // ---- Importação (só nutricionista com Nutrição — a anamnese e os questionários são clínicos, regra da W18) ----
 export const importada = (r: Pick<RespostaBase, "importada_em">): boolean => !!r.importada_em;
-/** Importar exige aluno ligado e acontece 1 vez. */
-export const podeImportar = (r: Pick<RespostaBase, "paciente_id" | "importada_em">): boolean => !!r.paciente_id && !r.importada_em;
 /** Depois de importada o vínculo fica travado (a anamnese/aplicação já está no aluno). */
 export const podeDesligar = (r: Pick<RespostaBase, "paciente_id" | "importada_em">): boolean => !!r.paciente_id && !r.importada_em;
 
@@ -316,6 +316,3 @@ export function aplicacaoDaResposta(r: RespostaBase): RegistroAplicacao {
     observacao: `Importada da pré-consulta (${contato})`.slice(0, OBSERVACAO_QUESTIONARIO_MAX),
   };
 }
-
-/** Iniciais de quem respondeu (avatar da linha) — W27: a MESMA função do Avatar (W25: só letras; "Ana (mãe)" → "AM", nunca "A("). */
-export const iniciaisDe = (nome: string): string => iniciais(linha1(nome));

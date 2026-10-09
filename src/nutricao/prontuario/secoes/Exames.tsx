@@ -1,6 +1,6 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Exames.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, ClipboardList, FileDown, FlaskConical, PenLine, Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -15,15 +15,17 @@ import SituacaoBadge from "@/nutricao/prontuario/ui/SituacaoBadge";
 import { useAuth } from "@/nutricao/prontuario/ui/contexto";
 import type { DadosProfissionais } from "@/nutricao/prontuario/lib/documentosUtil";
 import {
-  dadosProfissionais, excluirPedido, excluirResultado, garantirCatalogoExames, listarPedidosDoPaciente, listarResultadosDoPaciente, nomeDaNutricionista, type PedidoExame,
+  dadosProfissionais, excluirPedido, excluirResultado, garantirCatalogoExames, nomeDaNutricionista, paginaDeExames, paginaPedidosDoPaciente, type PedidoExame,
   type ResultadoExame,
 } from "@/nutricao/prontuario/lib/exames";
 import { baixarPDFPedido } from "@/nutricao/prontuario/lib/examesPdf";
 import {
-  agruparResultadosPorData, contarForaDaReferencia, filtrarPorExame, formatarDataExame, inserirPedido, inserirResultados, lerExames, nomesComResultado, ordenarPedidos,
-  situacaoDoResultado, textoContagemPedidos, textoContagemResultados, textoReferencia, textoResumoData, textoValor,
+  agruparResultadosPorData, formatarDataExame, lerExames, situacaoDoResultado, textoContagemPedidos, textoContagemResultados, textoReferencia, textoResumoData,
+  textoValor,
 } from "@/nutricao/prontuario/lib/examesUtil";
 import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
+import { Paginacao } from "@/ui/premium/Paginacao";
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-[rgba(244,63,94,.35)] bg-transparent px-2.5 text-[11.5px] font-semibold text-rosa-3 transition-colors hover:bg-[rgba(244,63,94,.08)] disabled:opacity-40";
@@ -53,12 +55,31 @@ export default function Exames() {
 
   const chavePedidos = useMemo(() => ["pedidos-exame", p.id], [p.id]);
   const chaveResultados = useMemo(() => ["resultados-exame", p.id], [p.id]);
-  const pedidosQ = useQuery({ queryKey: chavePedidos, queryFn: () => listarPedidosDoPaciente(p.id) });
-  const resultadosQ = useQuery({ queryKey: chaveResultados, queryFn: () => listarResultadosDoPaciente(p.id) });
+  const [filtro, setFiltro] = useState("");
+  // hml-14d (B21 · D32): as 2 listas em páginas do banco, com a página no endereço — os pedidos em páginas de 20 (?pagina_pedidos=) e
+  // os resultados em páginas de 20 DATAS, cada uma com o dia inteiro (?pagina_exames=; o "Ver evolução de" volta à 1)
+  const [totalPedidosLido, setTotalPedidosLido] = useState<number | null>(null);
+  const [totalDatasLido, setTotalDatasLido] = useState<number | null>(null);
+  const { pagina: paginaPedidos, irPara: irParaPedidos } = usePaginaNaUrl({ chave: "pagina_pedidos", total: totalPedidosLido });
+  const { pagina: paginaExames, irPara: irParaExames } = usePaginaNaUrl({ chave: "pagina_exames", filtro, total: totalDatasLido });
+  const pedidosQ = useQuery({ queryKey: [...chavePedidos, paginaPedidos], queryFn: () => paginaPedidosDoPaciente(p.id, paginaPedidos), placeholderData: keepPreviousData });
+  const resultadosQ = useQuery({
+    queryKey: [...chaveResultados, filtro, paginaExames], queryFn: () => paginaDeExames(p.id, filtro, paginaExames), placeholderData: keepPreviousData,
+  });
   const catalogoQ = useQuery({ queryKey: ["exames-catalogo", uid], queryFn: () => garantirCatalogoExames(uid!), enabled: !!uid });
+  const totalPedidosDaResposta = pedidosQ.data && !pedidosQ.isPlaceholderData ? pedidosQ.data.total : null;
+  const totalDatasDaResposta = resultadosQ.data && !resultadosQ.isPlaceholderData ? resultadosQ.data.totalDatas : null;
+  useEffect(() => {
+    if (totalPedidosDaResposta !== null) setTotalPedidosLido(totalPedidosDaResposta);
+  }, [totalPedidosDaResposta]);
+  useEffect(() => {
+    if (totalDatasDaResposta !== null) setTotalDatasLido(totalDatasDaResposta);
+  }, [totalDatasDaResposta]);
 
-  const pedidos = useMemo(() => ordenarPedidos(pedidosQ.data ?? []), [pedidosQ.data]);
-  const resultados = useMemo(() => resultadosQ.data ?? [], [resultadosQ.data]);
+  const pedidos = useMemo(() => pedidosQ.data?.itens ?? [], [pedidosQ.data]);
+  const totalPedidos = pedidosQ.data?.total ?? 0;
+  const paginaResultados = resultadosQ.data;
+  const totalResultados = paginaResultados?.totalResultados ?? 0;
   const catalogo = useMemo(() => catalogoQ.data ?? [], [catalogoQ.data]);
 
   const carregando = !uid || pedidosQ.isPending || resultadosQ.isPending || catalogoQ.isPending;
@@ -71,28 +92,30 @@ export default function Exames() {
   const [paraExcluir, setParaExcluir] = useState<Alvo | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
-  const [filtro, setFiltro] = useState("");
   const [salvando, setSalvando] = useState(0); // gravações assíncronas fora dos modais — o E2E espera voltar a 0
 
-  const nomesFiltro = useMemo(() => nomesComResultado(resultados), [resultados]);
-  const filtrados = useMemo(() => filtrarPorExame(resultados, filtro), [resultados, filtro]);
-  const grupos = useMemo(() => agruparResultadosPorData(filtrados), [filtrados]);
-  const foraDaReferencia = useMemo(() => contarForaDaReferencia(resultados), [resultados]);
+  // os nomes do filtro, os números do topo e as datas da página vêm do banco (exames_do_aluno); o agrupamento e a ordem dentro do dia
+  // seguem o examesUtil
+  const nomesFiltro = useMemo(() => paginaResultados?.exames ?? [], [paginaResultados]);
+  const grupos = useMemo(() => agruparResultadosPorData((paginaResultados?.datas ?? []).flatMap((d) => d.resultados)), [paginaResultados]);
+  const foraDaReferencia = paginaResultados?.foraReferencia ?? 0;
 
   useEffect(() => {
-    if (filtro && !nomesFiltro.some((n) => n === filtro)) setFiltro(""); // o exame filtrado sumiu (excluído/editado)
-  }, [filtro, nomesFiltro]);
+    // o exame filtrado sumiu (excluído/editado) — conferido na resposta nova, não na de antes que segura a tela
+    if (filtro && paginaResultados && !resultadosQ.isPlaceholderData && !nomesFiltro.some((n) => n === filtro)) setFiltro("");
+  }, [filtro, nomesFiltro, paginaResultados, resultadosQ.isPlaceholderData]);
 
-  const onPedidoSalvo = (ped: PedidoExame) => {
-    qc.setQueryData<PedidoExame[]>(chavePedidos, (old) => inserirPedido(old ?? [], ped));
+  // hml-14d: gravou → a página relê do banco (a lista em páginas não é mais montada aqui)
+  const onPedidoSalvo = (_ped: PedidoExame) => {
+    void qc.invalidateQueries({ queryKey: chavePedidos });
     void recarregar(); // o banco mexeu em pacientes.updated_at (trigger)
   };
-  const onResultadosSalvos = (novos: ResultadoExame[]) => {
-    qc.setQueryData<ResultadoExame[]>(chaveResultados, (old) => inserirResultados(old ?? [], novos));
+  const onResultadosSalvos = (_novos: ResultadoExame[]) => {
+    void qc.invalidateQueries({ queryKey: chaveResultados });
     void recarregar();
   };
-  const onResultadoEditado = (r: ResultadoExame) => {
-    qc.setQueryData<ResultadoExame[]>(chaveResultados, (old) => inserirResultados(old ?? [], [r]));
+  const onResultadoEditado = (_r: ResultadoExame) => {
+    void qc.invalidateQueries({ queryKey: chaveResultados });
     void recarregar();
   };
   const catalogoMudou = async () => {
@@ -116,11 +139,11 @@ export default function Exames() {
     try {
       if (alvo.tipo === "pedido") {
         await excluirPedido(alvo.item.id);
-        qc.setQueryData<PedidoExame[]>(chavePedidos, (old) => (old ?? []).filter((x) => x.id !== alvo.item.id));
+        void qc.invalidateQueries({ queryKey: chavePedidos });
         toast.success(`Pedido de ${formatarDataExame(alvo.item.data)} excluído`);
       } else {
         await excluirResultado(alvo.item.id);
-        qc.setQueryData<ResultadoExame[]>(chaveResultados, (old) => (old ?? []).filter((x) => x.id !== alvo.item.id));
+        void qc.invalidateQueries({ queryKey: chaveResultados });
         toast.success(`Resultado de ${alvo.item.exame} excluído`);
       }
       setParaExcluir(null);
@@ -149,8 +172,8 @@ export default function Exames() {
         <header className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-texto font-body normal-case">Pedidos de exames</h2>
-            <p className="text-[11px] text-texto-3 font-body" data-contagem-pedidos={pedidos.length}>
-              {carregando ? "Carregando..." : textoContagemPedidos(pedidos.length)}
+            <p className="text-[11px] text-texto-3 font-body" data-contagem-pedidos={totalPedidos}>
+              {carregando ? "Carregando..." : textoContagemPedidos(totalPedidos)}
             </p>
           </div>
           <button type="button" onClick={() => setModalPedido({ aberto: true, pedido: null })} className={BTN_PRI} disabled={carregando} data-btn-novo-pedido>
@@ -158,7 +181,7 @@ export default function Exames() {
           </button>
         </header>
 
-        {!carregando && !erro && pedidos.length === 0 && (
+        {!carregando && !erro && totalPedidos === 0 && (
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-pedidos-vazio>
             <ClipboardList className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhum pedido de exames</p>
@@ -167,12 +190,12 @@ export default function Exames() {
         )}
 
         {pedidos.length > 0 && (
-          <ul className="divide-y divide-linha border-t border-linha" data-lista-pedidos>
+          <ul className="divide-y divide-linha border-t border-linha" data-lista-pedidos data-lista="pedidos-exame">
             {pedidos.map((ped) => {
               const exames = lerExames(ped.exames);
               const aberto = !!abertos[ped.id];
               return (
-                <li key={ped.id} className="py-3 space-y-2" data-pedido={ped.id} data-pedido-data={ped.data} data-pedido-exames={exames.length}>
+                <li key={ped.id} className="py-3 space-y-2" data-pedido={ped.id} data-pedido-data={ped.data} data-pedido-exames={exames.length} data-item>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 flex items-start gap-2">
                       <ClipboardList className="h-4 w-4 mt-0.5 shrink-0 text-verde-3" aria-hidden="true" />
@@ -213,6 +236,7 @@ export default function Exames() {
             })}
           </ul>
         )}
+        <Paginacao nome="pedidos-exame" pagina={paginaPedidos} total={totalPedidos} aoMudar={irParaPedidos} carregando={pedidosQ.isFetching} />
       </section>
 
       {/* ---- BLOCO 2: resultados ---- */}
@@ -220,8 +244,8 @@ export default function Exames() {
         <header className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-texto font-body normal-case">Resultados</h2>
-            <p className="text-[11px] text-texto-3 font-body" data-contagem-resultados={resultados.length} data-fora-referencia={foraDaReferencia}>
-              {carregando ? "Carregando..." : textoContagemResultados(resultados.length)}
+            <p className="text-[11px] text-texto-3 font-body" data-contagem-resultados={totalResultados} data-fora-referencia={foraDaReferencia}>
+              {carregando ? "Carregando..." : textoContagemResultados(totalResultados)}
               {!carregando && foraDaReferencia > 0 && <span className="text-rosa-3"> · {foraDaReferencia} fora da referência</span>}
             </p>
           </div>
@@ -235,7 +259,7 @@ export default function Exames() {
           </div>
         </header>
 
-        {resultados.length > 0 && (
+        {totalResultados > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-[10px] uppercase tracking-wider text-texto-2 font-body" htmlFor="filtro-exame">Ver evolução de</label>
             <select id="filtro-exame" className={`${SELECT} sm:max-w-xs`} value={filtro} onChange={(e) => setFiltro(e.target.value)} data-filtro-exame>
@@ -247,7 +271,7 @@ export default function Exames() {
           </div>
         )}
 
-        {!carregando && !erro && resultados.length === 0 && (
+        {!carregando && !erro && totalResultados === 0 && (
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-resultados-vazio>
             <FlaskConical className="mx-auto h-6 w-6 text-texto-3" aria-hidden="true" />
             <p className="text-sm text-texto font-body">Nenhum resultado lançado</p>
@@ -255,62 +279,67 @@ export default function Exames() {
           </div>
         )}
 
-        {grupos.map((g) => (
-          <div key={g.data} className="space-y-1" data-grupo-data={g.data} data-grupo-total={g.itens.length}>
-            <h3 className="font-semibold text-[11px] uppercase tracking-wider text-texto pt-1 font-body" data-grupo-titulo>{textoResumoData(g.data, g.itens.length)}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full border-t border-linha">
-                <thead>
-                  <tr className="border-b border-linha">
-                    <th className={TH}>Exame</th>
-                    <th className={`${TH} text-right`}>Valor</th>
-                    <th className={TH}>Unidade</th>
-                    <th className={TH}>Referência</th>
-                    <th className={TH}>Situação</th>
-                    <th className={TH}><span className="sr-only">Ações</span></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-linha">
-                  {g.itens.map((r) => {
-                    const s = situacaoDoResultado(r);
-                    const fora = s === "acima" || s === "abaixo";
-                    return (
-                      <tr
-                        key={r.id}
-                        className={linhaFora(s)}
-                        data-resultado={r.id}
-                        data-resultado-exame={r.exame}
-                        data-resultado-valor={textoValor(r.valor, r.valor_texto)}
-                        data-resultado-unidade={r.unidade ?? ""}
-                        data-resultado-ref={textoReferencia(r.ref_min, r.ref_max, r.referencia_texto)}
-                        data-situacao={s}
-                      >
-                        <td className={`${TD} text-texto`}>
-                          {r.exame}
-                          {(r.observacao ?? "").trim() && <p className="text-[11px] text-texto-2 whitespace-pre-wrap" data-resultado-observacao>{r.observacao}</p>}
-                        </td>
-                        <td className={`${TD} text-right tabular-nums ${fora ? "font-semibold text-texto" : "text-texto"}`}>{textoValor(r.valor, r.valor_texto)}</td>
-                        <td className={`${TD} text-texto-2`}>{r.unidade || "—"}</td>
-                        <td className={`${TD} text-texto-2`}>{textoReferencia(r.ref_min, r.ref_max, r.referencia_texto)}</td>
-                        <td className={TD}><SituacaoBadge situacao={s} curto /></td>
-                        <td className={`${TD} text-right`}>
-                          <div className="inline-flex items-center gap-1.5">
-                            <button type="button" onClick={() => setModalResultados({ aberto: true, resultado: r })} className={BTN_MINI} data-btn-editar-resultado>
-                              <PenLine size={12} aria-hidden="true" /> Editar
-                            </button>
-                            <button type="button" onClick={() => setParaExcluir({ tipo: "resultado", item: r })} className={BTN_MINI_PERIGO} data-btn-excluir-resultado>
-                              <Trash2 size={12} aria-hidden="true" /> Excluir
-                            </button>
-                          </div>
-                        </td>
+        {grupos.length > 0 && (
+          <div className="space-y-3" data-lista="exames">
+            {grupos.map((g) => (
+              <div key={g.data} className="space-y-1" data-grupo-data={g.data} data-grupo-total={g.itens.length} data-item>
+                <h3 className="font-semibold text-[11px] uppercase tracking-wider text-texto pt-1 font-body" data-grupo-titulo>{textoResumoData(g.data, g.itens.length)}</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-t border-linha">
+                    <thead>
+                      <tr className="border-b border-linha">
+                        <th className={TH}>Exame</th>
+                        <th className={`${TH} text-right`}>Valor</th>
+                        <th className={TH}>Unidade</th>
+                        <th className={TH}>Referência</th>
+                        <th className={TH}>Situação</th>
+                        <th className={TH}><span className="sr-only">Ações</span></th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-linha">
+                      {g.itens.map((r) => {
+                        const s = situacaoDoResultado(r);
+                        const fora = s === "acima" || s === "abaixo";
+                        return (
+                          <tr
+                            key={r.id}
+                            className={linhaFora(s)}
+                            data-resultado={r.id}
+                            data-resultado-exame={r.exame}
+                            data-resultado-valor={textoValor(r.valor, r.valor_texto)}
+                            data-resultado-unidade={r.unidade ?? ""}
+                            data-resultado-ref={textoReferencia(r.ref_min, r.ref_max, r.referencia_texto)}
+                            data-situacao={s}
+                          >
+                            <td className={`${TD} text-texto`}>
+                              {r.exame}
+                              {(r.observacao ?? "").trim() && <p className="text-[11px] text-texto-2 whitespace-pre-wrap" data-resultado-observacao>{r.observacao}</p>}
+                            </td>
+                            <td className={`${TD} text-right tabular-nums ${fora ? "font-semibold text-texto" : "text-texto"}`}>{textoValor(r.valor, r.valor_texto)}</td>
+                            <td className={`${TD} text-texto-2`}>{r.unidade || "—"}</td>
+                            <td className={`${TD} text-texto-2`}>{textoReferencia(r.ref_min, r.ref_max, r.referencia_texto)}</td>
+                            <td className={TD}><SituacaoBadge situacao={s} curto /></td>
+                            <td className={`${TD} text-right`}>
+                              <div className="inline-flex items-center gap-1.5">
+                                <button type="button" onClick={() => setModalResultados({ aberto: true, resultado: r })} className={BTN_MINI} data-btn-editar-resultado>
+                                  <PenLine size={12} aria-hidden="true" /> Editar
+                                </button>
+                                <button type="button" onClick={() => setParaExcluir({ tipo: "resultado", item: r })} className={BTN_MINI_PERIGO} data-btn-excluir-resultado>
+                                  <Trash2 size={12} aria-hidden="true" /> Excluir
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+        <Paginacao nome="exames" pagina={paginaExames} total={paginaResultados?.totalDatas ?? 0} aoMudar={irParaExames} carregando={resultadosQ.isFetching} />
       </section>
 
       <PedidoExameDialog

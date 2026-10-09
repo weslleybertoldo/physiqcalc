@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, Clock, Download, FileText, QrCode, ReceiptText, RefreshCw, Repeat, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { acaoFinanceiro, buscarStatusAluno, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
+import { acaoFinanceiro, buscarHistoricoDoAluno, buscarStatusAluno, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
 import { baixarComprovantePdf, baixarReciboPdf, type DetalheMp } from "@/financeiro/pdf";
 import {
   chipDaMensalidade,
@@ -30,12 +30,15 @@ import { Botao, BotaoIcone } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoSemInternet, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useOnline } from "@/ui/premium/useOnline";
 import { PagarMercadoPago } from "./pagamentos/PagarMercadoPago";
 import { PagarPixManual, type AlvoPagamento } from "./pagamentos/PagarPixManual";
 
 const CHAVE = ["pagamentos-aluno"] as const;
+/** hml-14d (B21 · P7): o que a folha "Ver todos" mostra — as cobranças ou os recibos de uma matrícula. */
+type Todos = { m: MatriculaPagamentos; tipo: "cobrancas" | "recibos" } | null;
 
 /**
  * Perfil › Pagamentos (spec 4.3, tela 5; C23, C98–C100, N-54, R16): a mensalidade (plano, valor, situação e Pagar), as
@@ -56,6 +59,7 @@ export default function Pagamentos() {
   const [detalhe, setDetalhe] = useState<{ m: MatriculaPagamentos; c: CobrancaVista } | null>(null);
   const [recibo, setRecibo] = useState<{ m: MatriculaPagamentos; r: ReciboVista } | null>(null);
   const [comprovante, setComprovante] = useState<string | null>(null);
+  const [todos, setTodos] = useState<Todos>(null);
 
   // ?pagar=mensalidade | <cobranca_id> (a faixa do topo e a trava mandam direto para o Pagar)
   const [params, setParams] = useSearchParams();
@@ -112,7 +116,7 @@ export default function Pagamentos() {
         dados.matriculas.map((m) => (
           <SecaoMatricula key={m.paciente_id} m={m} hoje={dados.hoje} varias={dados.matriculas.length > 1}
             aoPagar={(alvo) => setPagar({ m, alvo })} aoAbrir={(c) => setDetalhe({ m, c })} aoAbrirRecibo={(r) => setRecibo({ m, r })}
-            aoVerComprovante={setComprovante} aoMudou={() => void recarregar()} />
+            aoVerComprovante={setComprovante} aoMudou={() => void recarregar()} aoVerTodos={(tipo) => setTodos({ m, tipo })} />
         ))
       )}
 
@@ -123,6 +127,8 @@ export default function Pagamentos() {
         <PagarPixManual matricula={pagar.m} alvo={pagar.alvo} aoFechar={() => setPagar(null)}
           aoEnviado={() => { setPagar(null); void recarregar(); }} />
       ))}
+      <FolhaTodos todos={todos} hoje={dados?.hoje} aoFechar={() => setTodos(null)}
+        aoAbrir={(m, c) => setDetalhe({ m, c })} aoAbrirRecibo={(m, r) => setRecibo({ m, r })} />
       <DetalheCobranca item={detalhe} aoFechar={() => setDetalhe(null)} aoVerComprovante={setComprovante} />
       <DetalheRecibo item={recibo} aoFechar={() => setRecibo(null)} />
       <ComprovanteVisor cobrancaId={comprovante} quem="aluno" aoFechar={() => setComprovante(null)} />
@@ -139,6 +145,7 @@ function SecaoMatricula({
   aoAbrirRecibo,
   aoVerComprovante,
   aoMudou,
+  aoVerTodos,
 }: {
   m: MatriculaPagamentos;
   hoje: string;
@@ -148,6 +155,7 @@ function SecaoMatricula({
   aoAbrirRecibo: (r: ReciboVista) => void;
   aoVerComprovante: (id: string) => void;
   aoMudou: () => void;
+  aoVerTodos: (tipo: "cobrancas" | "recibos") => void;
 }) {
   const cobrancas = ordenarCobrancas(m.cobrancas);
   const aguardando = cobrancas.find((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao" && c.forma === "pix_manual") ?? null;
@@ -159,6 +167,10 @@ function SecaoMatricula({
   const pagarNoApp = !lojaApp && podePagarPeloApp(m.conta.modo, !!m.chave);
   const profissional = m.conta.profissional || "seu profissional";
   const [cancelando, setCancelando] = useState(false);
+  // hml-14d (B21 · D31 · P7): os cartões seguem com as 24 de sempre; "Ver todos (N)" abre a lista inteira do banco em páginas de 20
+  // (N = o total da matrícula; a função de antes não manda o total: fica o que veio)
+  const totalCobrancas = m.total_cobrancas ?? m.cobrancas.length;
+  const totalRecibos = m.total_recibos ?? m.recibos.length;
 
   const cancelarAssinatura = async () => {
     if (!window.confirm("Cancelar a cobrança automática? Ela para na hora.")) return;
@@ -241,24 +253,104 @@ function SecaoMatricula({
         ) : (
           historico.slice(0, 24).map((c) => <LinhaCobranca key={c.id} cobranca={c} hoje={hoje} aoTocar={() => aoAbrir(c)} />)
         )}
+        {totalCobrancas > 0 && (
+          <button type="button" onClick={() => aoVerTodos("cobrancas")} className="block border-t border-linha-3 py-2.5 text-left text-[12.5px] font-semibold text-violeta-3"
+            data-ver-todos="pagamentos">
+            Ver todos ({totalCobrancas})
+          </button>
+        )}
       </Cartao>
 
       {m.recibos.length > 0 && (
         <Cartao className="px-4 py-1" data-recibos-aluno>
           <div className="pq-eyebrow pb-1 pt-2.5">Recibos</div>
-          {m.recibos.map((r) => (
-            <button key={r.id} type="button" onClick={() => aoAbrirRecibo(r)} data-recibo-aluno={r.numero}
-              className="flex min-h-[48px] w-full items-center gap-3 border-t border-linha-3 py-1.5 text-left first:border-t-0">
-              <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[10px] bg-superficie text-suave"><ReceiptText aria-hidden className="h-4 w-4" /></span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] text-texto">Recibo nº {formatarNumeroRecibo(r.numero)} · <b className="font-semibold tabular-nums">{reais(r.valor)}</b></span>
-                <span className="block truncate text-[11.5px] text-texto-3">{formatarDataRecibo(r.data)} · {r.descricao}</span>
-              </span>
+          {m.recibos.map((r) => <LinhaRecibo key={r.id} r={r} aoTocar={() => aoAbrirRecibo(r)} />)}
+          {totalRecibos > m.recibos.length && (
+            <button type="button" onClick={() => aoVerTodos("recibos")} className="block border-t border-linha-3 py-2.5 text-left text-[12.5px] font-semibold text-violeta-3"
+              data-ver-todos="recibos">
+              Ver todos ({totalRecibos})
             </button>
-          ))}
+          )}
         </Cartao>
       )}
     </section>
+  );
+}
+
+function LinhaRecibo({ r, aoTocar }: { r: ReciboVista; aoTocar: () => void }) {
+  return (
+    <button type="button" onClick={aoTocar} data-recibo-aluno={r.numero}
+      className="flex min-h-[48px] w-full items-center gap-3 border-t border-linha-3 py-1.5 text-left first:border-t-0">
+      <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[10px] bg-superficie text-suave"><ReceiptText aria-hidden className="h-4 w-4" /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] text-texto">Recibo nº {formatarNumeroRecibo(r.numero)} · <b className="font-semibold tabular-nums">{reais(r.valor)}</b></span>
+        <span className="block truncate text-[11.5px] text-texto-3">{formatarDataRecibo(r.data)} · {r.descricao}</span>
+      </span>
+    </button>
+  );
+}
+
+/**
+ * hml-14d (B21 · D31 · P7): a folha "Ver todos" — todas as cobranças (de qualquer situação, a mais nova primeiro) ou todos os recibos
+ * (o número mais alto primeiro) da matrícula, em páginas de 20 do banco (aluno_historico), com "1–20 de N". A página fica no estado
+ * da folha: fechar volta à 1; tocar num item abre o detalhe por cima e voltar mantém a página. O erro aparece na folha.
+ */
+function FolhaTodos({ todos, hoje, aoFechar, aoAbrir, aoAbrirRecibo }: {
+  todos: Todos;
+  hoje?: string;
+  aoFechar: () => void;
+  aoAbrir: (m: MatriculaPagamentos, c: CobrancaVista) => void;
+  aoAbrirRecibo: (m: MatriculaPagamentos, r: ReciboVista) => void;
+}) {
+  const [pagina, setPagina] = useState(1);
+  const cobrancas = todos?.tipo === "cobrancas";
+  const q = useQuery({
+    queryKey: [...CHAVE, "todos", todos?.m.paciente_id, todos?.tipo, pagina],
+    queryFn: () => buscarHistoricoDoAluno(todos!.m.paciente_id, todos!.tipo, pagina),
+    enabled: !!todos,
+    // a página anterior segura a folha enquanto a nova chega — só da MESMA lista (cobranças × recibos têm outra forma)
+    // (a chave: [pagamentos-aluno, todos, paciente_id, tipo, pagina])
+    placeholderData: (anterior, consulta) =>
+      consulta && consulta.queryKey[2] === todos?.m.paciente_id && consulta.queryKey[3] === todos?.tipo ? anterior : undefined,
+    staleTime: 15_000,
+    retry: 1,
+    networkMode: "online",
+  });
+  const fechar = () => {
+    setPagina(1);
+    aoFechar();
+  };
+  const nome = cobrancas ? "app-pagamentos" : "app-recibos";
+  return (
+    <PainelDeslizante aberto={!!todos} aoMudar={(a) => !a && fechar()} titulo={cobrancas ? "Todos os pagamentos" : "Todos os recibos"}
+      descricao={todos && q.data ? `${q.data.total} ${cobrancas ? (q.data.total === 1 ? "pagamento" : "pagamentos") : q.data.total === 1 ? "recibo" : "recibos"}` : undefined} lado="baixo">
+      {todos && (
+        <div data-folha-todos={cobrancas ? "pagamentos" : "recibos"}>
+          {q.isError ? (
+            <EstadoErro texto={mensagemErroFinanceiro(q.error instanceof ErroFinanceiro ? q.error.codigo : null, "Confira a internet e tente de novo.")} aoTentar={() => void q.refetch()} />
+          ) : !q.data ? (
+            <EstadoCarregando linhas={3} rotulo={cobrancas ? "Carregando os pagamentos" : "Carregando os recibos"} />
+          ) : q.data.itens.length === 0 ? (
+            <p className="py-3 text-[12.5px] text-texto-3">{cobrancas ? "Nenhum pagamento ainda." : "Nenhum recibo ainda."}</p>
+          ) : (
+            <div data-lista={nome}>
+              {cobrancas
+                ? (q.data.itens as CobrancaVista[]).map((c) => (
+                    <div key={c.id} data-item className="border-t border-linha-3 first:border-t-0">
+                      <LinhaCobranca cobranca={c} hoje={hoje} aoTocar={() => aoAbrir(todos.m, c)} />
+                    </div>
+                  ))
+                : (q.data.itens as ReciboVista[]).map((r) => (
+                    <div key={r.id} data-item className="border-t border-linha-3 first:border-t-0">
+                      <LinhaRecibo r={r} aoTocar={() => aoAbrirRecibo(todos.m, r)} />
+                    </div>
+                  ))}
+            </div>
+          )}
+          {q.data && <Paginacao nome={nome} pagina={pagina} total={q.data.total} aoMudar={setPagina} carregando={q.isFetching} />}
+        </div>
+      )}
+    </PainelDeslizante>
   );
 }
 

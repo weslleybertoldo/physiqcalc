@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ResumoMatricula } from "@/financeiro/tipos";
 import {
-  agendamentosAnteriores, areaDaConsulta, chipDePagamentos, diaCurto, emQuantosDias, lerHora, linhaDoAluno, linkWhatsapp, mesAno, proximosAgendamentos,
+  agendamentosAnteriores, areaDaConsulta, chipDePagamentos, diaCurto, emQuantosDias, lerHora, linhaDoAluno, linkWhatsapp, mesAno, proximosAgendamentos, PROXIMAS_NO_CARTAO,
   quandoAgendamento, rotuloStatus, valorDoLembrete,
 } from "./regras";
 
@@ -42,6 +42,14 @@ describe("agenda do aluno (N-53, a regra do Nutri)", () => {
   it("próximas: não terminaram e não foram desmarcadas, da mais perto para a mais longe", () => {
     expect(proximosAgendamentos(lista, AGORA).map((a) => a.id)).toEqual(["e", "d", "a"]);
     expect(proximosAgendamentos(lista, AGORA, 1).map((a) => a.id)).toEqual(["e"]);
+  });
+  it("hml-14d (P7): sem n, TODAS as próximas (a regra de reagendar conta sobre todas; o cartão corta em PROXIMAS_NO_CARTAO)", () => {
+    const muitas = Array.from({ length: 60 }, (_, i) => ({
+      id: `p${i}`, inicio: new Date(AGORA.getTime() + (i + 1) * 86_400_000).toISOString(), fim: new Date(AGORA.getTime() + (i + 1) * 86_400_000 + 3_600_000).toISOString(),
+      status: "agendado",
+    }));
+    expect(proximosAgendamentos(muitas, AGORA)).toHaveLength(60);
+    expect(PROXIMAS_NO_CARTAO).toBe(20);
   });
   it("anteriores: passaram ou foram desmarcadas, da mais recente para a mais antiga", () => {
     expect(agendamentosAnteriores(lista, AGORA).map((a) => a.id)).toEqual(["c", "b"]);

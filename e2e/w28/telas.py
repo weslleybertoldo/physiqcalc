@@ -204,12 +204,19 @@ def caso_master(nav, base, pref):
                 f"receita comparada com o MESMO período do mês anterior ({txt[:80]})")
         c.print("tela6_master_visao_geral")
         c.ir("/master/contas")
+        # hml-14d (D39): Contas em páginas de 20 — as legadas de teste pela busca da lista (no banco, 300 ms), não pela 1ª página
+        if c.esperar(lambda: c.tem("[data-busca-contas]"), 40):
+            c.pg.locator("[data-busca-contas]").fill("W28")
+            c.pg.wait_for_timeout(800)
         p.check(c.esperar(lambda: "W28 Calc" in c.texto() or "W28 Nutri" in c.texto(), 40), "Contas lista as legadas de teste")
         p.check("Cobrança legada até a virada" not in c.texto(), "sem 'Cobrança legada até a virada'")
         c.print("tela6_master_contas")
     finally:
         c.fim()
-        # o master de TESTE só durante o caso (o Auth é o mesmo da produção)
+        # o master de TESTE só durante o caso (o Auth é o mesmo da produção) — hml-14d: o `cab` (a chave de serviço do principal, como
+        # no garantir_usuario do w05/_base.py) não existia aqui: o NameError parava a limpeza antes de tirar o master do staging.profiles
+        sp = B5.service(B5.PRINCIPAL_REF)
+        cab = {"apikey": sp, "Authorization": f"Bearer {sp}"}
         B5.http("PUT", f"{B5.PRINCIPAL_URL}/auth/v1/admin/users/{uid}", {"app_metadata": {"role": None}}, cab)
         sql(f"update staging.profiles set role = 'pessoa' where id = '{uid}'; update public.profiles set role = 'pessoa' where id = '{uid}' and role = 'master'")
         r = sql(f"select raw_app_meta_data->>'role' as r from auth.users where id = '{uid}'")

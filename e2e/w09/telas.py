@@ -318,8 +318,9 @@ def caso_biblioteca_master(nav, a) -> None:
                 and c.pg.locator("[data-exercicio-sem-equivalencia]").count() == 0, "toda linha mostra o movimento e o equipamento (nenhum 'sem movimento')")
         c.print("biblioteca_master_lista")
         c.pg.locator("[data-input-busca-exercicio]").fill("martelo")
-        c.pg.wait_for_timeout(700)
         linha_polia = c.pg.locator(f'[data-exercicio-linha="{EX["martelo_polia"]}"]')
+        # hml-14d (D39): 20 por página e a busca no banco (300 ms + o pedido ao Treino) — espera a linha, não os 700 ms fixos
+        c.esperar(lambda: linha_polia.count() > 0, 20)
         txt_polia = linha_polia.inner_text().lower() if linha_polia.count() else ""
         p.check("rosca martelo" in txt_polia and "polia (cabo)" in txt_polia, f"a linha da rosca martelo na polia mostra o movimento e o equipamento ('{txt_polia[:90]}')")
         linha_polia.locator("[data-btn-editar-exercicio]").click()

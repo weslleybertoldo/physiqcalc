@@ -77,8 +77,10 @@ describe("Boas-vindas › Treinar sem profissional (W7b)", () => {
   it("aparece entre o código e o 'Sou profissional', com os dias grátis e o menor preço", async () => {
     abrir(<BoasVindas />);
     expect(await screen.findByText("Treinar sem profissional")).toBeInTheDocument();
-    const cartoes = [...document.querySelectorAll("[data-onboarding]")].map((e) => e.getAttribute("data-onboarding"));
-    expect(cartoes).toEqual(["TenhoCodigo", "TreinarSemProfissional", "CriarConta"]);
+    // cada cartão carrega no seu Suspense (lazy, rotas/registro.ts): com a máquina carregada o "Treinar sem profissional" chegava antes
+    // do "Tenho um código" — espera os 3 antes de conferir a ordem (hml-14d, integração)
+    const cartoes = () => [...document.querySelectorAll("[data-onboarding]")].map((e) => e.getAttribute("data-onboarding"));
+    await waitFor(() => expect(cartoes()).toEqual(["TenhoCodigo", "TreinarSemProfissional", "CriarConta"]), { timeout: 3000 });
     expect(await screen.findByText(/a partir de R\$ 29,90\/mês/)).toBeInTheDocument();
     expect(screen.getByText("7 DIAS GRÁTIS")).toBeInTheDocument();
   });

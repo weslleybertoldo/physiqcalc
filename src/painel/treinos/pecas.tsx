@@ -21,30 +21,8 @@ export function SeletorMes({ ano, mes, mover, noMesAtual }: { ano: number; mes: 
   );
 }
 
-/** Seletor de aluno (Histórico e Relatório) no visual premium. */
-export function SeletorAluno({
-  alunos,
-  valor,
-  aoMudar,
-  todos,
-  className,
-}: {
-  alunos: { id: string; nome: string; email?: string }[];
-  valor: string;
-  aoMudar: (id: string) => void;
-  /** texto da opção vazia ("Todos os alunos" ou "Escolha o aluno") */
-  todos: string;
-  className?: string;
-}) {
-  return (
-    <select value={valor} onChange={(e) => aoMudar(e.target.value)} className={cn(CLASSE_CAMPO, "h-9 w-auto min-w-[200px] max-w-[280px] [color-scheme:dark]", className)} data-seletor-aluno>
-      <option value="" className="bg-tela text-texto">{todos}</option>
-      {alunos.map((a) => (
-        <option key={a.id} value={a.id} className="bg-tela text-texto">{a.nome}</option>
-      ))}
-    </select>
-  );
-}
+// hml-14d (B19 · D26): o seletor de aluno do Histórico e do Relatório (um <select> com a lista inteira) virou o SeletorAlunoTreino,
+// com a busca no banco.
 
 /** Folha para dar (ou trocar) o nome de um treino ou de uma pasta. */
 export function FolhaNome({

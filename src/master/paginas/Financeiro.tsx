@@ -1,5 +1,4 @@
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CircleDollarSign, FlaskConical, Wallet } from "lucide-react";
 import { TopoPagina } from "@/ui/casca/topo";
 import { Avatar } from "@/ui/premium/Avatar";
@@ -7,9 +6,11 @@ import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Kpi } from "@/ui/premium/Kpi";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { Tabela, TabelaCabeca, TabelaCelula, TabelaCorpo, TabelaLinha, TabelaTitulo } from "@/ui/premium/Tabela";
 import { ErroMaster, financeiro } from "../api";
 import { DetalheConta } from "../contas/DetalheConta";
+import { usePaginaDoMaster } from "../pecas/lista";
 import { ChipSituacao, Filtros } from "../pecas/ui";
 import { ROTULO_PLANO, dataCurta, linhaVencimento, moeda, textoErro } from "../regras";
 
@@ -26,12 +27,18 @@ const STATUS_FATURA: Record<string, { rotulo: string; tom: "n" | "a" | "r" | "g"
  * tolerância, em teste, isentas, em dia). W28: o filtro "Legadas" saiu (as legadas são cobradas pelo núcleo). A linha abre a conta:
  * registrar pagamento feito por fora, ajustar o vencimento, mudar plano, liberar, isentar com motivo ("Pausar cobrança" virou
  * isenção), reenviar aviso, bloquear os alunos, cancelar a assinatura.
+ * hml-14d (B21 · D28): as contas em páginas de 20 do banco (master_financeiro com p_offset/p_limite; `?pagina=` convive com
+ * `?conta=`); "Faturas recentes" continua o cartão das 10 mais novas, e o chip mostra o total de faturas do banco (P6).
  */
 export default function Financeiro() {
   const [sp, setSp] = useSearchParams();
   const filtro = (sp.get("filtro") as Filtro) || "todas";
   const aberta = sp.get("conta");
-  const q = useQuery({ queryKey: ["master", "financeiro", filtro], queryFn: () => financeiro(filtro), staleTime: 15_000 });
+  const { q, pagina, irPara, total } = usePaginaDoMaster({
+    filtro: { filtro },
+    queryKey: ["master", "financeiro", filtro],
+    buscar: (n) => financeiro(filtro, n),
+  });
   const r = q.data?.resumo ?? {};
   const contas = q.data?.contas ?? [];
   const mudar = (chave: string, valor: string | null) => {
@@ -64,37 +71,41 @@ export default function Financeiro() {
             : q.isError ? <EstadoErro texto={textoErro(q.error instanceof ErroMaster ? q.error.codigo : "erro_interno")} aoTentar={() => void q.refetch()} />
               : contas.length === 0 ? <EstadoVazio icone={Wallet} titulo="Nenhuma conta neste filtro" />
                 : (
-                  <Tabela data-tabela-financeiro-master>
-                    <TabelaCabeca>
-                      <tr><TabelaTitulo>Conta</TabelaTitulo><TabelaTitulo>Situação</TabelaTitulo><TabelaTitulo>Vencimento</TabelaTitulo><TabelaTitulo className="text-right">Mensal</TabelaTitulo></tr>
-                    </TabelaCabeca>
-                    <TabelaCorpo>
-                      {contas.map((c) => (
-                        <TabelaLinha key={c.id} className="cursor-pointer" onClick={() => mudar("conta", c.id)} data-linha-financeiro={c.nome}>
-                          <TabelaCelula>
-                            <span className="flex min-w-[180px] max-w-[290px] items-center gap-2.5"><Avatar nome={c.nome} tamanho={30} />
-                              <span className="min-w-0"><b className="block truncate text-[13.5px]">{c.nome}</b>
-                                <span className="block truncate text-[12px] text-texto-3">
-                                  {ROTULO_PLANO[c.plano]} · {c.assinatura?.status === "authorized" ? "cartão automático" : c.ultima_fatura ? `última ${moeda(c.ultima_fatura.valor)} em ${dataCurta(c.ultima_fatura.pago_em ?? c.ultima_fatura.criado_em)}` : "sem faturas"}
+                  <>
+                    <Tabela data-tabela-financeiro-master data-lista="master-financeiro">
+                      <TabelaCabeca>
+                        <tr><TabelaTitulo>Conta</TabelaTitulo><TabelaTitulo>Situação</TabelaTitulo><TabelaTitulo>Vencimento</TabelaTitulo><TabelaTitulo className="text-right">Mensal</TabelaTitulo></tr>
+                      </TabelaCabeca>
+                      <TabelaCorpo>
+                        {contas.map((c) => (
+                          <TabelaLinha key={c.id} className="cursor-pointer" onClick={() => mudar("conta", c.id)} data-linha-financeiro={c.nome} data-item>
+                            <TabelaCelula>
+                              <span className="flex min-w-[180px] max-w-[290px] items-center gap-2.5"><Avatar nome={c.nome} tamanho={30} />
+                                <span className="min-w-0"><b className="block truncate text-[13.5px]">{c.nome}</b>
+                                  <span className="block truncate text-[12px] text-texto-3">
+                                    {ROTULO_PLANO[c.plano]} · {c.assinatura?.status === "authorized" ? "cartão automático" : c.ultima_fatura ? `última ${moeda(c.ultima_fatura.valor)} em ${dataCurta(c.ultima_fatura.pago_em ?? c.ultima_fatura.criado_em)}` : "sem faturas"}
+                                  </span>
                                 </span>
                               </span>
-                            </span>
-                          </TabelaCelula>
-                          <TabelaCelula>
-                            <span className="flex flex-col items-start gap-1">
-                              <ChipSituacao conta={c} />
-                            </span>
-                          </TabelaCelula>
-                          <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>
-                          <TabelaCelula className="whitespace-nowrap text-right font-semibold">{c.situacao_efetiva === "isenta" ? "—" : moeda(c.valor_mensal)}</TabelaCelula>
-                        </TabelaLinha>
-                      ))}
-                    </TabelaCorpo>
-                  </Tabela>
+                            </TabelaCelula>
+                            <TabelaCelula>
+                              <span className="flex flex-col items-start gap-1">
+                                <ChipSituacao conta={c} />
+                              </span>
+                            </TabelaCelula>
+                            <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>
+                            <TabelaCelula className="whitespace-nowrap text-right font-semibold">{c.situacao_efetiva === "isenta" ? "—" : moeda(c.valor_mensal)}</TabelaCelula>
+                          </TabelaLinha>
+                        ))}
+                      </TabelaCorpo>
+                    </Tabela>
+                    <Paginacao nome="master-financeiro" pagina={pagina} total={total} aoMudar={irPara} carregando={q.isFetching} />
+                  </>
                 )}
         </Cartao>
         <Cartao className="px-[18px] pb-3 pt-4" data-cartao-faturas-master>
-          <CabecalhoCartao titulo="Faturas recentes" extra={<Chip tom="g">{q.data?.faturas.length ?? 0}</Chip>} />
+          <CabecalhoCartao titulo="Faturas recentes"
+            extra={<Chip tom="g" data-faturas-total={q.data?.faturas_total ?? 0} title="Faturas no total">{q.data?.faturas_total ?? 0}</Chip>} />
           {(q.data?.faturas ?? []).length === 0 ? <p className="py-6 text-center text-[13px] text-texto-3">Nenhuma fatura ainda.</p> : (
             <div className="divide-y divide-linha-3">
               {(q.data?.faturas ?? []).slice(0, 10).map((f) => {

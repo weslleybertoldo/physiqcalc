@@ -3,7 +3,8 @@
 // nela até a W28: o que ele grava nasce "Só nutricionistas"). Ler = função aluno_anotacoes (a regra da visibilidade + o nome, a
 // foto e o papel de quem escreveu — o personal não lê o perfil da nutri pela RLS); escrever = REST pela RLS (políticas da W2 + a
 // restritiva da W18: "Só nutricionistas" só quem vê o clínico, e o papel gravado é o de verdade).
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { deslocamento, POR_PAGINA } from "@/lib/paginacao";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import { formParaRegistro, type FormRegistro } from "@/nutricao/editor/lib/prontuarioUtil";
 import type { PapelAutor, Visibilidade } from "./acesso";
@@ -31,6 +32,8 @@ export interface AnotacoesDoAluno {
   /** quem chama vê as "Só nutricionistas" (e o clínico) */
   clinico: boolean;
   anotacoes: Anotacao[];
+  /** hml-14d: só na leitura por página — a mais recente de todas (o "última em" do topo, que a página 2 em diante não traz) */
+  ultima?: { id: string; data: string } | null;
 }
 
 export type FormAnotacao = FormRegistro & { visibilidade: Visibilidade };
@@ -62,18 +65,25 @@ function normalizar(a: Partial<Anotacao> & Record<string, unknown>): Anotacao {
   };
 }
 
-/** As anotações que quem chama vê, mais recente primeiro (com limite = as últimas, para o card do Resumo). */
-export async function listarAnotacoes(alunoId: string, limite?: number): Promise<AnotacoesDoAluno> {
-  const { data, error } = await supabase.rpc("aluno_anotacoes" as never, { p_aluno: alunoId, p_limite: limite ?? null } as never);
+/**
+ * As anotações que quem chama vê, mais recente primeiro (com limite = as últimas, para o card do Resumo; sem limite = todas, para o
+ * PDF). hml-14d (B21 · D33): com `offset` é uma PÁGINA (a aba Anotações: `limite` por página, 20 por padrão) e vem `ultima`; o
+ * p_offset só vai quando pagina — a chamada de antes ({ p_aluno, p_limite }) segue igual.
+ */
+export async function listarAnotacoes(alunoId: string, limite?: number, offset?: number): Promise<AnotacoesDoAluno> {
+  const args = offset === undefined ? { p_aluno: alunoId, p_limite: limite ?? null } : { p_aluno: alunoId, p_limite: limite ?? POR_PAGINA, p_offset: offset };
+  const { data, error } = await supabase.rpc("aluno_anotacoes" as never, args as never);
   falhou(error);
   const r = (data ?? {}) as Record<string, unknown>;
   if (r.ok === false) throw new Error(mensagemDoErro(String(r.erro ?? "erro_interno")));
   const lista = Array.isArray(r.anotacoes) ? (r.anotacoes as Record<string, unknown>[]) : [];
+  const ultima = r.ultima as { id?: unknown; data?: unknown } | null | undefined;
   return {
     paciente_id: String(r.paciente_id ?? ""),
     total: Number(r.total ?? lista.length) || 0,
     clinico: r.clinico === true,
     anotacoes: lista.map((a) => normalizar(a)),
+    ...(offset === undefined ? {} : { ultima: ultima && ultima.id ? { id: String(ultima.id), data: String(ultima.data) } : null }),
   };
 }
 
@@ -87,6 +97,21 @@ export function useAnotacoes(alunoId: string, limite?: number) {
     staleTime: 20_000,
     retry: 1,
     networkMode: "online",
+  });
+}
+
+/** hml-14d (B21 · D33): a aba Anotações em páginas de 20 do banco (a página anterior segura a tela enquanto a nova chega). */
+export const chaveAnotacoesPagina = (alunoId: string, pagina: number) => ["prontuario-anotacoes", alunoId, "pagina", pagina] as const;
+
+export function useAnotacoesPagina(alunoId: string, pagina: number) {
+  return useQuery({
+    queryKey: chaveAnotacoesPagina(alunoId, pagina),
+    queryFn: () => listarAnotacoes(alunoId, POR_PAGINA, deslocamento(pagina)),
+    enabled: !!alunoId,
+    staleTime: 20_000,
+    retry: 1,
+    networkMode: "online",
+    placeholderData: keepPreviousData,
   });
 }
 

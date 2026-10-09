@@ -11,7 +11,6 @@ import FormularioDialog from "@/painel/preconsulta/FormularioDialog";
 import Formularios from "@/painel/preconsulta/Formularios";
 import Respostas from "@/painel/preconsulta/Respostas";
 import ResumoPreConsulta from "@/painel/preconsulta/ResumoPreConsulta";
-import { ehNova } from "@/painel/preconsulta/respostasUtil";
 import { useContextoPreConsulta, useDadosPreConsulta } from "@/painel/preconsulta/usePreConsulta";
 
 type IdAba = "formularios" | "respostas";
@@ -33,7 +32,8 @@ export default function PreConsulta() {
   const [sp, setSp] = useSearchParams();
   const aba: IdAba = sp.get("aba") === "respostas" ? "respostas" : "formularios";
   const [modal, setModal] = useState<{ aberto: boolean; formulario: FormularioPreconsulta | null }>({ aberto: false, formulario: null });
-  const novas = d.respostas.filter(ehNova).length;
+  // hml-14d (B21 · D35): as respostas novas contadas no banco (preconsulta_numeros) — o mesmo número do topo
+  const novas = d.numeros?.novas ?? 0;
 
   const irPara = (id: IdAba, extra: Record<string, string> = {}) => {
     const q = new URLSearchParams(id === "respostas" ? extra : {});

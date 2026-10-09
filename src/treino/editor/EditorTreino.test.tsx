@@ -18,6 +18,8 @@ const h = vi.hoisted(() => ({
   carregarVolume: vi.fn(),
   estado: vi.fn(),
   toastErro: vi.fn(),
+  carregarModelos: vi.fn(),
+  exerciciosDaLista: vi.fn(),
 }));
 vi.mock("./api", () => ({
   ErroTreinoPainel: class extends Error {
@@ -35,8 +37,8 @@ vi.mock("./api", () => ({
   carregarSemanaAtual: h.carregarSemanaAtual,
   carregarVolume: h.carregarVolume,
   carregarVolumePraticado: vi.fn().mockResolvedValue([]),
-  carregarModelos: vi.fn().mockResolvedValue([]),
-  carregarBiblioteca: vi.fn().mockResolvedValue([]),
+  carregarModelos: h.carregarModelos,
+  exerciciosDaLista: h.exerciciosDaLista,
   carregarHistoricoMes: vi.fn().mockResolvedValue([]),
   carregarTreinoDoHistorico: vi.fn(),
   carregarPlanoParaPdf: vi.fn(),
@@ -104,6 +106,8 @@ beforeEach(() => {
   h.salvarConfig.mockResolvedValue({ ok: true, config: {} });
   h.carregarSemanaAtual.mockResolvedValue({ overrides: [], concluidos: [] });
   h.carregarVolume.mockResolvedValue([]);
+  h.carregarModelos.mockResolvedValue({ modelos: [], total: 0 });
+  h.exerciciosDaLista.mockResolvedValue({ itens: [], total: 0, totalGlobal: 0, totalMeu: 0, totalProfessores: 0, comGif: 0, totalEscopo: 0, semClassificacao: 0 });
 });
 
 describe("W15 — editor do treino (tela 8, lado esquerdo)", () => {
@@ -241,5 +245,59 @@ describe("W15 — card Treino do Resumo (tela 7) e a aba", () => {
       expect(await screen.findByText(t)).toBeInTheDocument();
     }
     expect(screen.getByText("Segunda")).toBeInTheDocument();
+  });
+});
+
+describe("hml-14d (B19/B21) — as folhas do editor com página e busca no banco", () => {
+  const exercicio = (i: number) => ({
+    id: `x${i}`, nome: `Exercício ${String(i).padStart(2, "0")}`, grupo_muscular: "Costas", subgrupo: null, imagem_url: null, tipo: "musculacao",
+    professor_id: null, padrao_movimento: null, equipamento: null, variacao: null,
+  });
+
+  it("Biblioteca: a RPC com o professor do aluno; chips de grupo e busca (rótulos → códigos) no banco; '1–20 de 41' e a página na folha", async () => {
+    h.exerciciosDaLista.mockImplementation(async (_f: unknown, pagina: number) => ({
+      itens: Array.from({ length: pagina === 3 ? 1 : 20 }, (_, i) => exercicio((pagina - 1) * 20 + i + 1)),
+      total: 41, totalGlobal: 144, totalMeu: 3, totalProfessores: 0, comGif: 81, totalEscopo: 147, semClassificacao: 0,
+    }));
+    montar(<EditorTreino treinoUserId="t1" />);
+    fireEvent.click(await screen.findByText("Adicionar exercício da biblioteca (81 com GIF)"));
+    await waitFor(() => expect(h.exerciciosDaLista).toHaveBeenCalledWith({ professor: "prof" }, 1));
+    expect(await screen.findByText(/147 na biblioteca · 81 com GIF\./)).toBeInTheDocument();
+    const folha = () => document.body.querySelector("[data-folha-biblioteca]") as HTMLElement;
+    await waitFor(() => expect(folha().querySelector('[data-lista="folha-biblioteca"]')?.querySelectorAll("[data-item]")).toHaveLength(20));
+    expect(folha().querySelector('[data-paginacao="folha-biblioteca"] [data-paginacao-rotulo]')?.textContent).toBe("1–20 de 41");
+    fireEvent.click(folha().querySelector('[data-paginacao="folha-biblioteca"] [data-pagina-proxima]')!);
+    await waitFor(() => expect(h.exerciciosDaLista).toHaveBeenLastCalledWith({ professor: "prof" }, 2));
+    fireEvent.click(folha().querySelector('[data-biblioteca-grupo="costas"]')!);
+    await waitFor(() => expect(h.exerciciosDaLista).toHaveBeenLastCalledWith({ professor: "prof", musculos: expect.arrayContaining(["costas", "dorsal"]) }, 1));
+    fireEvent.click(folha().querySelector('[data-biblioteca-grupo="todos"]')!);
+    fireEvent.change(folha().querySelector("[data-biblioteca-busca]")!, { target: { value: "cabo" } });
+    await waitFor(() => expect(h.exerciciosDaLista).toHaveBeenLastCalledWith({ professor: "prof", q: "cabo", codigos: ["polia"] }, 1));
+  });
+
+  it("Biblioteca sem professor do aluno: só os globais (escopo 'global'); erro do banco → o estado de erro", async () => {
+    h.carregarEditor.mockResolvedValue(dados({ professorDoAluno: null }));
+    h.exerciciosDaLista.mockRejectedValue(new Error("statement timeout"));
+    montar(<EditorTreino treinoUserId="t1" />);
+    fireEvent.click(await screen.findByText("Adicionar exercício da biblioteca (81 com GIF)"));
+    await waitFor(() => expect(h.exerciciosDaLista).toHaveBeenCalledWith({ escopo: "global" }, 1));
+    expect(await screen.findByText("Não deu para abrir a biblioteca", {}, { timeout: 4000 })).toBeInTheDocument();
+  });
+
+  it("Modelos: 20 por página da função, com a busca (300 ms) e a página na folha; fechar volta à 1", async () => {
+    const modelo = (i: number) => ({ id: `m${i}`, nome: `Modelo ${String(i).padStart(2, "0")}`, global: false, meu: true, exercicios: 3, pastas: i % 2 ? ["A"] : [], ja_tem: false });
+    h.carregarModelos.mockImplementation(async (_u: string, pagina: number, busca: string) =>
+      busca ? { modelos: [modelo(7)], total: 1 } : { modelos: Array.from({ length: pagina === 2 ? 5 : 20 }, (_, i) => modelo((pagina - 1) * 20 + i + 1)), total: 25 });
+    montar(<EditorTreino treinoUserId="t1" />);
+    fireEvent.click(await screen.findByText("Modelos"));
+    await waitFor(() => expect(h.carregarModelos).toHaveBeenCalledWith("t1", 1, ""));
+    const folha = () => document.body.querySelector('[data-folha-modelos="modelos"]') as HTMLElement;
+    await waitFor(() => expect(folha().querySelector('[data-lista="folha-modelos"]')?.querySelectorAll("[data-item]")).toHaveLength(20));
+    expect(folha().querySelector('[data-paginacao="folha-modelos"] [data-paginacao-rotulo]')?.textContent).toBe("1–20 de 25");
+    fireEvent.click(folha().querySelector('[data-paginacao="folha-modelos"] [data-pagina-proxima]')!);
+    await waitFor(() => expect(h.carregarModelos).toHaveBeenLastCalledWith("t1", 2, ""));
+    fireEvent.change(folha().querySelector("[data-folha-modelos-busca]")!, { target: { value: "modelo 07" } });
+    await waitFor(() => expect(h.carregarModelos).toHaveBeenLastCalledWith("t1", 1, "modelo 07"));
+    await waitFor(() => expect([...folha().querySelectorAll("[data-modelo]")].map((e) => e.getAttribute("data-modelo"))).toEqual(["Modelo 07"]));
   });
 });

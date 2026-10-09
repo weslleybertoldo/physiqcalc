@@ -20,9 +20,9 @@ import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 export const TEMPO_FUNCAO_MS = 25_000;
 
 /**
- * As 36 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
- * STABLE pela migração 20261008200000; + as 5 das listas da hml-14b, STABLE pelas migrações 20261009010000 e 20261009040000):
- * podem repetir.
+ * As 42 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
+ * STABLE pela migração 20261008200000; + as 5 das listas da hml-14b, STABLE pelas migrações 20261009010000 e 20261009040000; + as
+ * 6 da hml-14d, STABLE pelas migrações 20261009050000 (Treino), 20261009070000 e 20261009080000): podem repetir.
  */
 export const RPC_SO_LEITURA = new Set<string>([
   "agenda_horarios", "aluno_agenda_horarios", "aluno_anotacoes", "aluno_compromissos", "aluno_convites", "aluno_evolucao",
@@ -33,6 +33,9 @@ export const RPC_SO_LEITURA = new Set<string>([
   "whatsapp_fila", "whatsapp_resumo",
   // hml-14b (B21): as listas do painel por página, com o total e as somas do banco
   "financeiro_lancamentos", "financeiro_recibos", "financeiro_resumo_periodo", "receitas_da_nutricionista", "respostas_da_conta",
+  // hml-14d (B21): as listas do Treino (banco do Treino), os números da Pré-consulta e as listas/somas por aluno
+  "exames_do_aluno", "exercicios_da_lista", "financeiro_totais_do_aluno", "minha_agenda_lista", "modelos_da_lista",
+  "preconsulta_numeros",
 ]);
 
 /** As 40 VOLATILE que o front chama (+ as 2 da hml-12 que gravam o aceite e o consentimento do responsável): nunca repetem. */

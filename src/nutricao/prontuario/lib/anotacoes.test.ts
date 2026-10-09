@@ -65,3 +65,29 @@ describe("W18 — anotações da equipe (dados)", () => {
     expect(h.update.mock.calls[1][1]).toBe("a1");
   });
 });
+
+describe("hml-14d (B21 · D33) — a aba em páginas: o p_offset só vai quando pagina", () => {
+  it("com offset: { p_aluno, p_limite, p_offset } e a 'ultima' de todas; sem offset: a chamada de antes, sem p_offset nem ultima", async () => {
+    h.rpc.mockResolvedValue({
+      data: { ok: true, paciente_id: "p1", total: 41, clinico: true, offset: 20, limite: 20, ultima: { id: "a0", data: "2026-10-01T10:00:00Z" },
+        anotacoes: [{ id: "a20", data: "2026-08-01T10:00:00Z", texto: "x", visibilidade: "equipe", autor_papel: "personal", autor_id: "u1" }] },
+      error: null,
+    });
+    const pagina = await listarAnotacoes("p1", 20, 20);
+    expect(h.rpc).toHaveBeenLastCalledWith("aluno_anotacoes", { p_aluno: "p1", p_limite: 20, p_offset: 20 });
+    expect(pagina).toMatchObject({ total: 41, ultima: { id: "a0", data: "2026-10-01T10:00:00Z" } });
+    expect(pagina.anotacoes.map((a) => a.id)).toEqual(["a20"]);
+
+    const semLimite = await listarAnotacoes("p1", undefined, 0);
+    expect(h.rpc).toHaveBeenLastCalledWith("aluno_anotacoes", { p_aluno: "p1", p_limite: 20, p_offset: 0 });
+    expect(semLimite.ultima).toEqual({ id: "a0", data: "2026-10-01T10:00:00Z" });
+
+    h.rpc.mockResolvedValue({ data: { ok: true, paciente_id: "p1", total: 0, clinico: true, anotacoes: [], offset: 0, limite: 20, ultima: null }, error: null });
+    expect((await listarAnotacoes("p1", 20, 0)).ultima).toBeNull();
+
+    h.rpc.mockResolvedValue({ data: { ok: true, paciente_id: "p1", total: 2, clinico: true, anotacoes: [] }, error: null });
+    const todas = await listarAnotacoes("p1");
+    expect(h.rpc).toHaveBeenLastCalledWith("aluno_anotacoes", { p_aluno: "p1", p_limite: null });
+    expect("ultima" in todas).toBe(false);
+  });
+});

@@ -192,6 +192,9 @@ const ERROS: Record<string, string> = {
   refeicao_invalida: "Escolha a refeição.",
   objetivo_invalido: "Marque pelo menos um objetivo.",
   muitas_acoes: "Muitas ações seguidas. Espere um pouco.",
+  // hml-14d (B21): a página do banco
+  pagina_invalida: "Página inválida. Volte para a primeira página.",
+  formato_inesperado: "A lista veio num formato inesperado. Atualize a página.",
 };
 
 export function textoErro(codigo: string | null | undefined): string {

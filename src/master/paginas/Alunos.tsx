@@ -1,25 +1,28 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, ExternalLink, KeyRound, Lock, LockOpen, Users } from "lucide-react";
 import { toast } from "sonner";
 import { SheetSenhaAluno } from "@/painel/aluno/resumo/acesso/SheetSenhaAluno";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { cn } from "@/lib/utils";
 import { TopoPagina } from "@/ui/casca/topo";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao, BotaoIcone } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { Tabela, TabelaCabeca, TabelaCelula, TabelaCorpo, TabelaLinha, TabelaTitulo } from "@/ui/premium/Tabela";
 import { MoverAlunosDialog } from "../alunos/MoverAlunosDialog";
 import { bloquearAluno, ErroMaster, listarAlunos, semConta } from "../api";
+import { useAtrasado } from "../pecas/lista";
 import { CampoBusca, ChipsModulos, Filtros, SELECT } from "../pecas/ui";
 import { dataCurta, textoErro } from "../regras";
 import type { Aluno } from "../tipos";
 
 type Modo = "ativos" | "app" | "bloqueados" | "inativos" | "sem_responsavel" | "p7" | "sem_conta" | "todos";
-const POR_PAGINA = 50;
 
 /**
  * Painel master › Alunos (C57, C8, P7): todos os alunos de todas as contas, filtro por conta, "do app" (sem profissional), "sem conta"
@@ -27,27 +30,54 @@ const POR_PAGINA = 50;
  * nos 2 bancos) e criar a senha nova (a do card "Acesso do aluno" — W8b: senha provisória + "Crie a sua senha" no 1º login).
  * H4 (C57/N-5): "Abrir" leva ao perfil do aluno no painel (/painel/alunos/<matrícula>), também de outra conta — o banco deixa o
  * master (pode_mexer_no_acesso), como o "Configurar (Admin)" do Calc e o Consultório do Nutri.
+ * hml-14d (B19/B21 · D28): 20 por página do banco, a página no endereço (`?pagina=`) com o modo, a conta e a busca (`?busca=`) no
+ * filtro — abrir um aluno e voltar mantém a busca e a página; a busca vai ao banco 300 ms depois da digitação e acha também pelo
+ * CPF e pelo telefone (a coluna busca); "Marcar todos" marca a página. O "Sem conta" também vem em páginas (master_sem_conta).
  */
 export default function Alunos() {
   const navigate = useNavigate();
   const [sp, setSp] = useSearchParams();
   const modo = (sp.get("modo") as Modo) || "ativos";
   const conta = sp.get("conta") || "";
-  const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(0);
+  const termo = sp.get("busca")?.trim() ?? "";
+  const [busca, setBusca] = useState(termo);
+  const digitada = useAtrasado(busca.trim());
   const [selecao, setSelecao] = useState<Set<string>>(new Set());
   const [mover, setMover] = useState(false);
   const [senha, setSenha] = useState<Aluno | null>(null);
-  const termo = busca.trim();
+  // a busca vai ao endereço quando a pessoa para de digitar (e daí ao banco); a seleção continua (marcar de buscas diferentes)
+  useEffect(() => {
+    if (digitada === termo) return;
+    setSp((atual) => {
+      const n = new URLSearchParams(atual);
+      if (digitada) n.set("busca", digitada); else n.delete("busca");
+      return n;
+    }, { replace: true });
+  }, [digitada]); // eslint-disable-line react-hooks/exhaustive-deps -- só a digitação grava
+
+  // uma página só na tela (a da lista do modo): filtro novo volta à 1; o total vem da resposta de verdade (não da anterior)
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: { modo, conta, termo }, total: totalLido });
   const lista = useQuery({
     // no "Sem conta" a lista só traz as contas (destino do Mover) e os números dos filtros
-    queryKey: ["master", "alunos", modo, conta, termo, pagina],
+    queryKey: ["master", "alunos", modo, conta, termo, modo === "sem_conta" ? 0 : pagina],
     queryFn: () => (modo === "sem_conta" ? listarAlunos({ modo: "ativos" }, 0, 1)
-      : listarAlunos({ modo, conta_id: conta || null, busca: termo || null }, pagina * POR_PAGINA, POR_PAGINA)),
+      : listarAlunos({ modo, conta_id: conta || null, busca: termo || null }, deslocamento(pagina), POR_PAGINA)),
     placeholderData: keepPreviousData,
     staleTime: 10_000,
   });
-  const pessoas = useQuery({ queryKey: ["master", "sem-conta", termo], queryFn: () => semConta(termo || undefined), enabled: modo === "sem_conta" });
+  const pessoas = useQuery({
+    queryKey: ["master", "sem-conta", termo, pagina],
+    queryFn: () => semConta(termo, pagina),
+    enabled: modo === "sem_conta",
+    placeholderData: keepPreviousData,
+  });
+  const ativa = modo === "sem_conta" ? pessoas : lista;
+  const totalDaResposta = ativa.data && !ativa.isPlaceholderData ? ativa.data.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
+  const total = ativa.data?.total ?? 0;
   const contas = lista.data?.contas ?? [];
   const cont = lista.data?.contagens;
   const alunos = useMemo(() => lista.data?.alunos ?? [], [lista.data]);
@@ -55,7 +85,6 @@ export default function Alunos() {
     const n = new URLSearchParams(sp);
     if (valor) n.set(chave, valor); else n.delete(chave);
     setSp(n, { replace: true });
-    setPagina(0);
     setSelecao(new Set());
   };
   const alternar = (id: string) => setSelecao((s) => {
@@ -106,7 +135,7 @@ export default function Alunos() {
             {contas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
         )}
-        <CampoBusca valor={busca} aoMudar={(v) => { setBusca(v); setPagina(0); }} placeholder="Buscar por nome ou e-mail" data-busca-alunos />
+        <CampoBusca valor={busca} aoMudar={setBusca} placeholder="Buscar por nome, e-mail, CPF ou telefone" data-busca-alunos />
         {modo === "p7" && (
           <p className="text-[12.5px] text-texto-3" data-explica-p7>Caso da migração: o mesmo login ativo em 2 contas (ex.: treino numa, dieta noutra). Mova para juntar numa conta só, ou deixe como está.</p>
         )}
@@ -116,91 +145,92 @@ export default function Alunos() {
         {carregando ? <EstadoCarregando linhas={6} />
           : erro ? <EstadoErro texto={textoErro(erro instanceof ErroMaster ? erro.codigo : "erro_interno")} aoTentar={() => void (modo === "sem_conta" ? pessoas.refetch() : lista.refetch())} />
             : modo === "sem_conta" ? (
-              (pessoas.data?.pessoas ?? []).length === 0 ? <EstadoVazio icone={Users} titulo="Ninguém sem conta" texto="Toda pessoa com login é aluno ou profissional de alguma conta." /> : (
-                <Tabela data-tabela-sem-conta>
-                  <TabelaCabeca>
-                    <tr>
-                      <TabelaTitulo className="w-8"><input type="checkbox" aria-label="Marcar todos" checked={todosMarcados} onChange={() => setSelecao(todosMarcados ? new Set() : new Set(idsVisiveis))} /></TabelaTitulo>
-                      <TabelaTitulo>Pessoa</TabelaTitulo><TabelaTitulo>Entrou em</TabelaTitulo><TabelaTitulo>Último acesso</TabelaTitulo>
-                    </tr>
-                  </TabelaCabeca>
-                  <TabelaCorpo>
-                    {(pessoas.data?.pessoas ?? []).map((p) => (
-                      <TabelaLinha key={p.user_id} data-linha-sem-conta={p.email ?? ""}>
-                        <TabelaCelula><input type="checkbox" aria-label={`Marcar ${p.nome}`} checked={selecao.has(p.user_id)} onChange={() => alternar(p.user_id)} /></TabelaCelula>
-                        <TabelaCelula>
-                          <span className="flex items-center gap-2.5"><Avatar nome={p.nome ?? p.email} tamanho={30} />
-                            <span className="min-w-0"><b className="block truncate text-[13.5px]">{p.nome ?? "—"}</b><span className="block truncate text-[12px] text-texto-3">{p.email}</span></span>
-                          </span>
-                        </TabelaCelula>
-                        <TabelaCelula className="text-texto-2">{dataCurta(p.criado_em)}</TabelaCelula>
-                        <TabelaCelula className="text-texto-2">{dataCurta(p.ultimo_acesso)}</TabelaCelula>
-                      </TabelaLinha>
-                    ))}
-                  </TabelaCorpo>
-                </Tabela>
+              (pessoas.data?.pessoas ?? []).length === 0 ? (termo
+                ? <EstadoVazio icone={Users} titulo="Ninguém sem conta com essa busca" texto="Confira o nome ou o e-mail." />
+                : <EstadoVazio icone={Users} titulo="Ninguém sem conta" texto="Toda pessoa com login é aluno ou profissional de alguma conta." />) : (
+                <>
+                  <Tabela data-tabela-sem-conta data-lista="master-sem-conta">
+                    <TabelaCabeca>
+                      <tr>
+                        <TabelaTitulo className="w-8"><input type="checkbox" aria-label="Marcar todos" checked={todosMarcados} onChange={() => setSelecao(todosMarcados ? new Set() : new Set(idsVisiveis))} /></TabelaTitulo>
+                        <TabelaTitulo>Pessoa</TabelaTitulo><TabelaTitulo>Entrou em</TabelaTitulo><TabelaTitulo>Último acesso</TabelaTitulo>
+                      </tr>
+                    </TabelaCabeca>
+                    <TabelaCorpo>
+                      {(pessoas.data?.pessoas ?? []).map((p) => (
+                        <TabelaLinha key={p.user_id} data-linha-sem-conta={p.email ?? ""} data-item>
+                          <TabelaCelula><input type="checkbox" aria-label={`Marcar ${p.nome}`} checked={selecao.has(p.user_id)} onChange={() => alternar(p.user_id)} /></TabelaCelula>
+                          <TabelaCelula>
+                            <span className="flex items-center gap-2.5"><Avatar nome={p.nome ?? p.email} tamanho={30} />
+                              <span className="min-w-0"><b className="block truncate text-[13.5px]">{p.nome ?? "—"}</b><span className="block truncate text-[12px] text-texto-3">{p.email}</span></span>
+                            </span>
+                          </TabelaCelula>
+                          <TabelaCelula className="text-texto-2">{dataCurta(p.criado_em)}</TabelaCelula>
+                          <TabelaCelula className="text-texto-2">{dataCurta(p.ultimo_acesso)}</TabelaCelula>
+                        </TabelaLinha>
+                      ))}
+                    </TabelaCorpo>
+                  </Tabela>
+                  <Paginacao nome="master-sem-conta" pagina={pagina} total={total} aoMudar={irPara} carregando={pessoas.isFetching} />
+                </>
               )
             ) : alunos.length === 0 ? <EstadoVazio icone={Users} titulo="Nenhum aluno neste filtro" texto="Troque o filtro, a conta ou a busca." />
               : (
-                <Tabela data-tabela-alunos-master>
-                  <TabelaCabeca>
-                    <tr>
-                      <TabelaTitulo className="w-8"><input type="checkbox" aria-label="Marcar todos" checked={todosMarcados} onChange={() => setSelecao(todosMarcados ? new Set() : new Set(idsVisiveis))} data-marcar-todos /></TabelaTitulo>
-                      <TabelaTitulo>Aluno</TabelaTitulo>
-                      <TabelaTitulo>Conta e módulos</TabelaTitulo>
-                      <TabelaTitulo>Responsáveis</TabelaTitulo>
-                      <TabelaTitulo>Situação</TabelaTitulo>
-                      <TabelaTitulo className="text-right">Ações</TabelaTitulo>
-                    </tr>
-                  </TabelaCabeca>
-                  <TabelaCorpo>
-                    {alunos.map((a) => (
-                      <TabelaLinha key={a.paciente_id} data-linha-aluno={a.nome ?? ""}>
-                        <TabelaCelula><input type="checkbox" aria-label={`Marcar ${a.nome}`} checked={selecao.has(a.paciente_id)} onChange={() => alternar(a.paciente_id)} data-marcar-aluno={a.nome ?? ""} /></TabelaCelula>
-                        <TabelaCelula>
-                          <span className="flex min-w-[180px] max-w-[250px] items-center gap-2.5"><Avatar nome={a.nome} tamanho={30} />
-                            <span className="min-w-0"><b className="block truncate text-[13.5px]">{a.nome}</b><span className="block truncate text-[12px] text-texto-3">{a.email ?? "sem e-mail"}{a.tem_login ? "" : " · sem login"}</span></span>
-                          </span>
-                        </TabelaCelula>
-                        <TabelaCelula className="text-texto-2">
-                          {a.conta ? <span className="block max-w-[190px] truncate">{a.conta.nome}</span> : "—"}
-                          {a.app ? <span className="block max-w-[190px] truncate text-[11.5px] text-texto-3">{a.app.plano ?? "App"}{a.app.pago_ate ? ` · pago até ${dataCurta(a.app.pago_ate)}` : a.app.teste_ate ? ` · teste até ${dataCurta(a.app.teste_ate)}` : ""}</span>
-                            : a.modulos.length ? <span className="mt-1 block"><ChipsModulos modulos={a.modulos} /></span> : null}
-                        </TabelaCelula>
-                        <TabelaCelula className="text-[12.5px] text-texto-2">
-                          <span className="block max-w-[160px] truncate" title={[a.personal?.nome && `Personal: ${a.personal.nome}`, a.nutricionista?.nome && `Nutri: ${a.nutricionista.nome}`].filter(Boolean).join(" · ")}>
-                            {[a.personal?.nome && `Personal: ${a.personal.nome}`, a.nutricionista?.nome && `Nutri: ${a.nutricionista.nome}`].filter(Boolean).join(" · ") || "Sem responsável"}
-                          </span>
-                        </TabelaCelula>
-                        <TabelaCelula>
-                          <span className="flex flex-wrap gap-1">
-                            {!a.ativo ? <Chip tom="g">Inativo</Chip> : a.bloqueado ? <Chip tom="r">Bloqueado</Chip> : <Chip tom="n">Ativo</Chip>}
-                            {a.conta_bloqueada && <Chip tom="r">Conta bloqueada</Chip>}
-                            {a.p7 && <Chip tom="a">2 contas</Chip>}
-                          </span>
-                        </TabelaCelula>
-                        <TabelaCelula className="text-right">
-                          <span className="inline-flex items-center gap-1.5">
-                            <Botao tamanho="sm" icone={ExternalLink} onClick={() => navigate(`/painel/alunos/${encodeURIComponent(a.paciente_id)}`)}
-                              title={`Abrir o perfil de ${a.nome ?? "o aluno"}`} data-abrir-aluno={a.nome ?? ""}>Abrir</Botao>
-                            {a.tem_login && <BotaoIcone icone={KeyRound} rotulo={`Senha nova para ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => setSenha(a)} data-senha-nova={a.nome ?? ""} />}
-                            {a.conta && !a.conta.eh_app && a.ativo && (a.bloqueado
-                              ? <BotaoIcone icone={LockOpen} rotulo={`Desbloquear ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => void bloquear(a, false)} data-desbloquear-aluno={a.nome ?? ""} />
-                              : <BotaoIcone icone={Lock} rotulo={`Bloquear ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => void bloquear(a, true)} data-bloquear-aluno={a.nome ?? ""} />)}
-                          </span>
-                        </TabelaCelula>
-                      </TabelaLinha>
-                    ))}
-                  </TabelaCorpo>
-                </Tabela>
+                <>
+                  <Tabela data-tabela-alunos-master data-lista="master-alunos">
+                    <TabelaCabeca>
+                      <tr>
+                        <TabelaTitulo className="w-8"><input type="checkbox" aria-label="Marcar todos" checked={todosMarcados} onChange={() => setSelecao(todosMarcados ? new Set() : new Set(idsVisiveis))} data-marcar-todos /></TabelaTitulo>
+                        <TabelaTitulo>Aluno</TabelaTitulo>
+                        <TabelaTitulo>Conta e módulos</TabelaTitulo>
+                        <TabelaTitulo>Responsáveis</TabelaTitulo>
+                        <TabelaTitulo>Situação</TabelaTitulo>
+                        <TabelaTitulo className="text-right">Ações</TabelaTitulo>
+                      </tr>
+                    </TabelaCabeca>
+                    <TabelaCorpo>
+                      {alunos.map((a) => (
+                        <TabelaLinha key={a.paciente_id} data-linha-aluno={a.nome ?? ""} data-item>
+                          <TabelaCelula><input type="checkbox" aria-label={`Marcar ${a.nome}`} checked={selecao.has(a.paciente_id)} onChange={() => alternar(a.paciente_id)} data-marcar-aluno={a.nome ?? ""} /></TabelaCelula>
+                          <TabelaCelula>
+                            <span className="flex min-w-[180px] max-w-[250px] items-center gap-2.5"><Avatar nome={a.nome} tamanho={30} />
+                              <span className="min-w-0"><b className="block truncate text-[13.5px]">{a.nome}</b><span className="block truncate text-[12px] text-texto-3">{a.email ?? "sem e-mail"}{a.tem_login ? "" : " · sem login"}</span></span>
+                            </span>
+                          </TabelaCelula>
+                          <TabelaCelula className="text-texto-2">
+                            {a.conta ? <span className="block max-w-[190px] truncate">{a.conta.nome}</span> : "—"}
+                            {a.app ? <span className="block max-w-[190px] truncate text-[11.5px] text-texto-3">{a.app.plano ?? "App"}{a.app.pago_ate ? ` · pago até ${dataCurta(a.app.pago_ate)}` : a.app.teste_ate ? ` · teste até ${dataCurta(a.app.teste_ate)}` : ""}</span>
+                              : a.modulos.length ? <span className="mt-1 block"><ChipsModulos modulos={a.modulos} /></span> : null}
+                          </TabelaCelula>
+                          <TabelaCelula className="text-[12.5px] text-texto-2">
+                            <span className="block max-w-[160px] truncate" title={[a.personal?.nome && `Personal: ${a.personal.nome}`, a.nutricionista?.nome && `Nutri: ${a.nutricionista.nome}`].filter(Boolean).join(" · ")}>
+                              {[a.personal?.nome && `Personal: ${a.personal.nome}`, a.nutricionista?.nome && `Nutri: ${a.nutricionista.nome}`].filter(Boolean).join(" · ") || "Sem responsável"}
+                            </span>
+                          </TabelaCelula>
+                          <TabelaCelula>
+                            <span className="flex flex-wrap gap-1">
+                              {!a.ativo ? <Chip tom="g">Inativo</Chip> : a.bloqueado ? <Chip tom="r">Bloqueado</Chip> : <Chip tom="n">Ativo</Chip>}
+                              {a.conta_bloqueada && <Chip tom="r">Conta bloqueada</Chip>}
+                              {a.p7 && <Chip tom="a">2 contas</Chip>}
+                            </span>
+                          </TabelaCelula>
+                          <TabelaCelula className="text-right">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Botao tamanho="sm" icone={ExternalLink} onClick={() => navigate(`/painel/alunos/${encodeURIComponent(a.paciente_id)}`)}
+                                title={`Abrir o perfil de ${a.nome ?? "o aluno"}`} data-abrir-aluno={a.nome ?? ""}>Abrir</Botao>
+                              {a.tem_login && <BotaoIcone icone={KeyRound} rotulo={`Senha nova para ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => setSenha(a)} data-senha-nova={a.nome ?? ""} />}
+                              {a.conta && !a.conta.eh_app && a.ativo && (a.bloqueado
+                                ? <BotaoIcone icone={LockOpen} rotulo={`Desbloquear ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => void bloquear(a, false)} data-desbloquear-aluno={a.nome ?? ""} />
+                                : <BotaoIcone icone={Lock} rotulo={`Bloquear ${a.nome ?? "o aluno"}`} tamanho={34} onClick={() => void bloquear(a, true)} data-bloquear-aluno={a.nome ?? ""} />)}
+                            </span>
+                          </TabelaCelula>
+                        </TabelaLinha>
+                      ))}
+                    </TabelaCorpo>
+                  </Tabela>
+                  <Paginacao nome="master-alunos" pagina={pagina} total={total} aoMudar={irPara} carregando={lista.isFetching} />
+                </>
               )}
-        {modo !== "sem_conta" && (lista.data?.total ?? 0) > POR_PAGINA && (
-          <div className="flex items-center justify-center gap-3 border-t border-linha-3 py-3 text-[12.5px] text-texto-3" data-paginas-alunos>
-            <Botao tamanho="sm" disabled={pagina === 0} onClick={() => setPagina((x) => x - 1)}>Anteriores</Botao>
-            {pagina * POR_PAGINA + 1}–{Math.min((pagina + 1) * POR_PAGINA, lista.data?.total ?? 0)} de {lista.data?.total}
-            <Botao tamanho="sm" disabled={(pagina + 1) * POR_PAGINA >= (lista.data?.total ?? 0)} onClick={() => setPagina((x) => x + 1)}>Próximos</Botao>
-          </div>
-        )}
       </Cartao>
 
       <MoverAlunosDialog aberta={mover} aoMudar={setMover} contas={contas} contaAtual={conta || null}

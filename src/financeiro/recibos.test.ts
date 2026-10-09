@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { totais, valorComSinal } from "./lancamentos";
+import { valorComSinal } from "./lancamentos";
 import {
   aplicarTags,
   CONTEUDO_MODELO_PADRAO,
@@ -51,13 +51,9 @@ describe("recibo do aluno", () => {
 });
 
 describe("lançamentos do aluno", () => {
-  it("totais ignoram o estornado; o sinal segue o tipo", () => {
-    const t = totais([
-      { tipo: "entrada", valor: 249, estornada: false },
-      { tipo: "entrada", valor: 100, estornada: true },
-      { tipo: "saida", valor: 40, estornada: false },
-    ]);
-    expect(t).toEqual({ entradas: 249, saidas: 40, nEntradas: 1, nSaidas: 1, nEstornadas: 1 });
+  // hml-14d (D31): os totais (estornado fora, saída = gasto) são somados no banco — financeiro_totais_do_aluno (o teste da regra é o
+  // da migration, no PGlite); aqui fica o sinal
+  it("o sinal segue o tipo", () => {
     expect(valorComSinal("entrada", 249)).toBe("+R$ 249,00");
     expect(valorComSinal("saida", 40.5)).toBe("−R$ 40,50");
   });

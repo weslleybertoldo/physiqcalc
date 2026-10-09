@@ -2,6 +2,7 @@
  * Painel › Treinos (W23 — spec 4.4 "Treinos", C42–C45): o que vem do Banco do Treino (os modelos, as pastas, a biblioteca e os
  * grupos musculares — as MESMAS tabelas da aba "Treinos" do admin antigo) e o modelo de tela montado a partir disso (regras.ts).
  */
+import type { FiltrosDaBiblioteca } from "@/treino/editor/api";
 import type { ExercicioEditor } from "@/treino/editor/tipos";
 
 /** Um treino-modelo (tb_grupos_treino): do profissional (professor_id) ou GLOBAL do master (professor_id null). */
@@ -108,7 +109,60 @@ export interface PastaTela {
   nome: string;
   global: boolean;
   editavel: boolean;
-  modelos: string[];
+  /** quantos treinos (global ou meu) a pasta tem — o `por_pasta` do banco (hml-14d: a tela não tem mais todos os treinos) */
+  total: number;
 }
 
 export type AbaTreinos = "treinos" | "biblioteca" | "historico" | "relatorio";
+
+// ───────────────────────── hml-14d (B21 · D23–D26): as páginas que vêm do banco ─────────────────────────
+
+/** Os filtros da lista de treinos (Meus treinos) — vão à RPC modelos_da_lista. */
+export interface FiltrosModelos {
+  q: string;
+  /** a pasta aberta (só se ela existe na lista de pastas) */
+  pasta: string | null;
+}
+
+/** As linhas, os exercícios citados e os vínculos de pasta SÓ dos treinos da página (ou do treino aberto por id). */
+export interface DetalhesDosModelos {
+  linhas: LinhaModelo[];
+  exercicios: ExercicioCatalogo[];
+  vinculos: VinculoPasta[];
+}
+
+/** Uma página de Meus treinos: os treinos (id, nome, dono), o total com os filtros, o total sem filtro, os números das pastas e
+ * os detalhes dos treinos da página. */
+export interface PaginaModelos {
+  itens: ModeloRow[];
+  total: number;
+  totalGeral: number;
+  porPasta: Record<string, number>;
+  detalhes: DetalhesDosModelos;
+}
+
+/** O treino aberto por `?treino=` fora da página (null = não existe ou não é visível). */
+export interface ModeloAberto {
+  modelo: ModeloRow | null;
+  detalhes: DetalhesDosModelos;
+}
+
+/** Os filtros da RPC exercicios_da_lista (Biblioteca do painel e a folha do editor): o contrato mora em src/treino/editor/api.ts
+ * (a folha do editor usa o mesmo). */
+export type FiltrosExercicios = FiltrosDaBiblioteca;
+
+/** Um aluno da lista "Quem recebe" (a ação quemRecebeLista: a página já vem marcada). */
+export interface AlunoQuemRecebe extends AlunoDaLista {
+  recebe: boolean;
+}
+
+export interface PaginaQuemRecebe {
+  /** o modelo da resposta (a página anterior que fica à vista enquanto a nova chega pode ser de outro modelo) */
+  grupo: string;
+  itens: AlunoQuemRecebe[];
+  /** com a busca */
+  total: number;
+  /** o chip "N DE M" (sem a busca) */
+  totalRecebem: number;
+  totalAlunos: number;
+}
