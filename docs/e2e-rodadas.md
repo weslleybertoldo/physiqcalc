@@ -29,6 +29,10 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 16:00 | hml-15b | `d698f24` | `e2e/hml15b/convite.py --base prod --prefixo prod_antes --canal msedge` | produção | 10/12 | SÓ LEITURA, ANTES da correção: C1 (script antes do formulário) e C3 (/entrar/email → /c/) ❌ = o widget do Turnstile não monta (H-78 reproduzido); C2 ✅ |
+| 09/10 15:59 | hml-15b | `d698f24`+ | `e2e/hml15b/convite.py --base local --prefixo local --canal msedge --fonte http://localhost:5174` | local | 24/24 | build com a correção (CSP valendo); C4 com token REAL (`e2e/w08b/fonte_turnstile.py --acao cadastro`) → cadastro pendente no staging, apagado; as 2 rodadas de 23/24 antes = o C1 sem a ordem (ver o commit) |
+| 09/10 15:16 | hml-15 | `d698f24` | `e2e/hml15/csp.py --base prod --canal msedge --modo valendo` | produção | 128/128 | SÓ LEITURA; CSP VALENDO: 0 violação inesperada; `headers.py` 6/6 |
+| 09/10 14:53 | hml-15 | `e9ab5dc` | `e2e/hml15/csp.py --base staging --canal msedge --modo valendo` | staging | 140/140 | 0 violação inesperada; aviso do `/c/` = H-78 |
 | 09/10 14:33 | hml-15 | `7780b62` | `e2e/hml15/csp.py --base prod --canal msedge --modo relatorio` | produção | 128/128 | SÓ LEITURA; CSP relatando: 0 violação (inclui o app do aluno a 390 px com o Treino) |
 | 09/10 14:17 | hml-15 | `9757a5a` | `e2e/hml15/dominio.py` | produção | 27/28 | a ❌ = o teste do CAA exigia o texto exato (a Cloudflare põe `pki.goog; cansignhttpexchanges=yes`): corrigido no passo 2 → `--so caa` 2/2 |
 | 09/10 14:09 | hml-15 | `e237012` | `e2e/hml15/csp.py --base staging --canal msedge --modo relatorio` | staging | 140/140 | 0 violação inesperada; aviso: o Turnstile do `/c/` não monta quando o script carrega antes do formulário (H-78) |
