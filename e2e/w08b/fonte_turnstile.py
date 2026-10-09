@@ -7,12 +7,14 @@ Cada vez que um teste pede um token (`pedir_token()`), a página roda o widget e
 Playwright (automatizado) cai no desafio (erro 600010) — por isso os testes pegam o token aqui e mandam pela página/HTTP.
 
 Uso:  python3 fonte_turnstile.py --porta 5173            (fica rodando; Ctrl+C encerra o Edge e o servidor)
+      python3 fonte_turnstile.py --porta 5174 --acao cadastro   (hml-15b: tokens com a ação do widget do /c/)
 Nos testes: from fonte_turnstile import pedir_token  → pedir_token("http://localhost:5173")
 """
 import argparse, json, os, shutil, subprocess, sys, threading, time, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SITEKEY = "0x4AAAAAAFJzUMo7DzTQWuLP"
+ACAO = "entrar"  # --acao cadastro: o token do /c/ (hml-15b; a função alunos confere a ação do widget)
 PAGINA = """<!doctype html><html><head><meta charset="utf-8"><title>Physiq W8b - fonte de tokens Turnstile</title>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script></head>
 <body style="font-family:sans-serif;background:#111;color:#ddd"><p>Fonte de tokens do Turnstile (testes da W8b). Pode ignorar.</p>
@@ -21,7 +23,7 @@ PAGINA = """<!doctype html><html><head><meta charset="utf-8"><title>Physiq W8b -
 let id=null, ocupado=false, desde=0;
 const log=(t)=>{document.getElementById('log').textContent=(new Date().toLocaleTimeString()+' '+t+'\\n'+document.getElementById('log').textContent).slice(0,3000)};
 function montarWidget(){
-  id=turnstile.render('#w',{sitekey:'%SITEKEY%',action:'entrar',appearance:'interaction-only',execution:'execute',
+  id=turnstile.render('#w',{sitekey:'%SITEKEY%',action:'%ACAO%',appearance:'interaction-only',execution:'execute',
     callback:async(t)=>{await fetch('/token',{method:'POST',body:t}); log('token enviado'); ocupado=false;},
     'error-callback':(e)=>{log('erro '+e); ocupado=false; try{turnstile.reset(id)}catch(_){} return true;},
     'expired-callback':()=>{log('expirou')},
@@ -58,7 +60,7 @@ class H(BaseHTTPRequestHandler):
                     t = ESTADO["tokens"].pop(0); return self._txt(200, t[1])
                 ESTADO["pedidos"] = max(ESTADO["pedidos"], 1)
             return self._txt(204, "")
-        return self._txt(200, PAGINA.replace("%SITEKEY%", SITEKEY), "text/html; charset=utf-8")
+        return self._txt(200, PAGINA.replace("%SITEKEY%", SITEKEY).replace("%ACAO%", ACAO), "text/html; charset=utf-8")
     def do_POST(self):
         if self.path.startswith("/token"):
             t = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode()
@@ -79,7 +81,10 @@ def pedir_token(base="http://localhost:5173", limite=60) -> str:
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--porta", type=int, default=5173); ap.add_argument("--sem-edge", action="store_true")
+    ap.add_argument("--acao", default="entrar", choices=("entrar", "cadastro"))
     a = ap.parse_args()
+    global ACAO
+    ACAO = a.acao
     srv = ThreadingHTTPServer(("127.0.0.1", a.porta), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     # perfil próprio do Edge FORA do repo (cookies do Cloudflare; nada de chaveiro: --password-store=basic)

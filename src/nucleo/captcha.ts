@@ -5,8 +5,10 @@
  * Cada token vale UMA tentativa (e ~5 min): depois de usar, o widget gera outro.
  * Sem o script do Cloudflare (sem internet, bloqueado) a tentativa vai sem token e o servidor decide (o master pode desligar o
  * captcha em app_config 'login_limite' sem deploy).
+ * hml-15b (H-78): o widget monta quando a CAIXA entra na tela (ref de callback), não quando o script carrega. No /c/ a caixa só
+ * aparece depois do pedido do formulário; com o script já carregado o widget não montava e o cadastro saía sem token.
  */
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Chave pública do widget "Physiq - entrar com senha (W8b)" (domínios physiqcalc.com.br, o staging e localhost — o APK). */
 export const TURNSTILE_SITE_KEY =
@@ -91,8 +93,8 @@ export function carregarTurnstile(limiteMs = 15_000): Promise<TurnstileApi> {
 export type EstadoCaptcha = "carregando" | "pronto" | "interacao" | "erro";
 
 export interface Captcha {
-  /** onde o widget mora (fica vazio/invisível, a não ser que o Cloudflare peça o clique) */
-  refCaixa: RefObject<HTMLDivElement | null>;
+  /** onde o widget mora (fica vazio/invisível, a não ser que o Cloudflare peça o clique); o widget monta quando ela entra na tela */
+  refCaixa: (el: HTMLDivElement | null) => void;
   estado: EstadoCaptcha;
   /** token para UMA tentativa ("" se o captcha não carregou — o servidor decide) */
   obterToken: () => Promise<string>;
@@ -104,7 +106,8 @@ type Espera = { resolver: (t: string) => void; timer: number };
 
 /** O widget do Turnstile da tela (invisível; a caixinha só aparece se o Cloudflare pedir). */
 export function useCaptcha(acao = "entrar"): Captcha {
-  const refCaixa = useRef<HTMLDivElement | null>(null);
+  const [caixa, setCaixa] = useState<HTMLDivElement | null>(null);
+  const refCaixa = useCallback((el: HTMLDivElement | null) => setCaixa(el), []);
   const id = useRef<string | undefined>(undefined);
   const api = useRef<TurnstileApi | null>(null);
   const token = useRef<string>("");
@@ -122,14 +125,23 @@ export function useCaptcha(acao = "entrar"): Captcha {
     }
   }, []);
 
+  // o script começa a carregar quando a tela abre (no /c/, junto do pedido do formulário); o widget espera a caixa
   useEffect(() => {
+    carregarTurnstile().catch(() => {
+      /* o efeito da caixa tenta de novo e marca o erro */
+    });
+  }, []);
+
+  useEffect(() => {
+    // sem a caixa na tela (o /c/ mostra "Abrindo o cadastro" antes do formulário) não há onde montar: espera ela entrar
+    if (!caixa) return;
     let vivo = true;
     const tema = typeof document !== "undefined" && document.documentElement.getAttribute("data-tema") === "claro" ? "light" : "dark";
     carregarTurnstile()
       .then((t) => {
-        if (!vivo || !refCaixa.current) return;
+        if (!vivo) return;
         api.current = t;
-        id.current = t.render(refCaixa.current, {
+        id.current = t.render(caixa, {
           sitekey: TURNSTILE_SITE_KEY,
           action: acao,
           appearance: "interaction-only",
@@ -177,7 +189,7 @@ export function useCaptcha(acao = "entrar"): Captcha {
       }
       id.current = undefined;
     };
-  }, [acao, entregar]);
+  }, [acao, entregar, caixa]);
 
   const obterToken = useCallback(async (): Promise<string> => {
     if (token.current) return token.current;
