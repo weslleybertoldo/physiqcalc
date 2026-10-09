@@ -1,0 +1,60 @@
+{
+  "uuid": "d716cf5f-1989-4364-887b-010ceffd4826",
+  "nome": "Levantamento Terra",
+  "cena": "levantamento_terra",
+  "grupo": "Posterior de Coxa",
+  "subgrupo": "Glúteo máximo · isquiotibiais · eretores · quadríceps",
+  "padrao_movimento": "terra_stiff",
+  "equipamento": "barra",
+  "variacao": "do chão",
+  "alvos": ["gluteo", "posterior", "lombar", "quadriceps"],
+  "auxiliares": ["adutores", "dorsal", "trapezio", "antebraco", "panturrilha"],
+  "camera": {"az": 50, "el": 10, "dist": 4.4, "alvo": [0, -0.05, 0.8]},
+  "camera_vistas": {"dist": 4.0, "alvo": [0, -0.05, 0.82]},
+  "ida_s": 1.5,
+  "movimento": "Em pé atrás da barra apoiada no chão, com os pés na largura do quadril, as pontas um pouco para fora e a barra em cima dos pés, junto às canelas: leva o quadril para trás e para baixo (o quadril fica acima dos joelhos e abaixo dos ombros) e segura a barra com as palmas viradas para o corpo (pegada pronada), um pouco mais aberta que os ombros e por fora das pernas, com os braços esticados, a coluna neutra e os ombros um pouco à frente da barra. Sobe empurrando o chão com as pernas: os joelhos estendem primeiro e as canelas ficam em pé enquanto a barra sobe rente a elas, com o tronco quase no mesmo ângulo; quando a barra passa dos joelhos, estende o quadril levando-o à frente, com a barra subindo rente às coxas, até ficar em pé com os joelhos e o quadril estendidos e os ombros para trás, sem inclinar o tronco para trás.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética fechada",
+    "articulacoes": "quadril (extensão na subida, flexão na descida), joelho (extensão na subida, quase toda antes de a barra passar dos joelhos), tornozelo (flexão plantar na subida: a canela fica em pé); coluna neutra (isometria)",
+    "agonistas": "glúteo máximo (extensão do quadril), quadríceps (extensão do joelho) e eretores da espinha (em isometria, segurando a coluna neutra)",
+    "sinergistas": "adutor magno, isquiotibiais (na metade de cima da subida) e sóleo",
+    "estabilizadores": "isquiotibiais (metade de baixo) e gastrocnêmio como estabilizadores dinâmicos; latíssimo do dorso (barra junto ao corpo), trapézio médio e superior, elevador da escápula e romboides (escápulas), flexores do antebraço (pegada); reto abdominal e oblíquos",
+    "fases": "subida concêntrica (do chão até em pé), descida excêntrica"
+  },
+  "referencias": [
+    "ExRx.net. Barbell Deadlift (Gluteus Maximus e Erector Spinae). https://exrx.net/WeightExercises/GluteusMaximus/BBDeadlift",
+    "ExRx.net. Deadlift Analysis. https://exrx.net/Kinesiology/Deadlift",
+    "National Strength and Conditioning Association. Basics of Strength and Conditioning Manual (2012), cap. 4, Barbell Clean Deadlift.",
+    "American Council on Exercise. Exercise Library: Deadlift. https://www.acefitness.org/resources/everyone/exercise-library/6/deadlift/",
+    "Martín-Fuentes I, Oliva-Lozano JM, Muyor JM. Electromyographic activity in deadlift exercise and its variants. A systematic review. PLoS One. 2020;15(2):e0229507.",
+    "McAllister MJ, Hammond KG, Schilling BK, Ferreria LC, Reed JP, Weiss LW. Muscle activation during various hamstring exercises. J Strength Cond Res. 2014;28(6):1573-1580.",
+    "Escamilla RF, Francisco AC, Fleisig GS, et al. A three-dimensional biomechanical analysis of sumo and conventional style deadlifts. Med Sci Sports Exerc. 2000;32(7):1265-1275.",
+    "International Powerlifting Federation. Technical Rules Book (2026): Bars and Discs; Deadlift.",
+    "International Weightlifting Federation. Equipment: discs (\"The diameter of the largest discs: 450 mm with a tolerance of ± 1 mm\")."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "limites_juntas": {"quadrilE": [0, 135], "quadrilD": [0, 135]},
+    "tecnica_padrao": {"ponta_pe": [0, 25], "coluna": [0, 10]},
+    "zonas": [
+      {"nome": "barra rente às canelas, aos joelhos e às coxas", "equipamento": "barra", "partes": ["LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg"], "mm": [3, 20], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Clean Deadlift (\"keep the bar in contact with the shins\"); ExRx, Barbell Deadlift (\"Keep bar close to body\")"}
+    ],
+    "angulos": [
+      {"nome": "joelho dobrado com a barra no chão", "medida": "flexao", "junta": "Leg", "t": 0.0, "graus": [65, 95], "fonte": "ExRx, Deadlift Analysis (\"the knees may start in a 75% flexed position (90 degree flexion / 120 degree full-range)\")"},
+      {"nome": "quadril acima dos joelhos com a barra no chão", "medida": "inclinacao", "segmento": ["UpLeg", "Leg"], "t": 0.0, "graus": [5, 35], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Clean Deadlift (\"the hips should be slightly higher than the knees\")"},
+      {"nome": "tronco inclinado com a barra no chão (quadril abaixo dos ombros)", "medida": "tronco", "t": 0.0, "graus": [45, 70], "fonte": "ExRx, Barbell Deadlift (\"keep hips low, shoulders high\")"},
+      {"nome": "tronco quase no mesmo ângulo no começo da subida", "medida": "tronco", "t": [0.0, 0.31], "graus": [55, 70], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Clean Deadlift (\"Maintain a constant back angle during the initial lift-off\")"},
+      {"nome": "joelho a 30–40° quando a barra passa dos joelhos", "medida": "flexao", "junta": "Leg", "t": 0.5, "graus": [28, 45], "fonte": "ExRx, Deadlift Analysis (\"When the bar clears the knees, the knees and hip flexion are approximately 30-40 degrees (25-33% flexed) and 70 degrees (60%) respectively\")"},
+      {"nome": "canela em pé quando a barra passa dos joelhos", "medida": "tornozelo", "t": 0.5, "graus": [70, 82], "fonte": "ExRx, Deadlift Analysis (\"allowing the shin to become upright from the forward angled position at the bottom of the deadlift\")"},
+      {"nome": "joelhos travados em pé", "medida": "flexao", "junta": "Leg", "t": 1.0, "graus": [0, 8], "fonte": "IPF Technical Rules, Deadlift (\"the knees shall be locked in a straight position\"); ACE, Deadlift (\"the legs straight\")"},
+      {"nome": "tronco em pé no fim, sem inclinar para trás", "medida": "tronco", "t": 1.0, "graus": [0, 6], "fonte": "dica do app (\"Trave no topo sem inclinar para trás\"); IPF Technical Rules, Deadlift (\"stand erect with the shoulders back\")"},
+      {"nome": "quadril estendido sem passar da linha no fim", "medida": "quadril_sinal", "t": 1.0, "graus": [-3, 8], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Clean Deadlift (\"shoulders, hips, knees, and ankles should be in alignment\")"},
+      {"nome": "braços esticados", "medida": "flexao", "junta": "ForeArm", "t": "todos", "graus": [0, 15], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Clean Deadlift (\"arms straight\"); ExRx, Barbell Deadlift (\"arms and back straight\")"},
+      {"nome": "braços pendurados perto do corpo", "medida": "cotovelo_tronco", "t": "todos", "graus": [-5, 20], "fonte": "ExRx, Barbell Deadlift (\"Keep bar close to body\")"},
+      {"nome": "pés na largura do quadril", "medida": "pes_largura", "t": "todos", "faixa": [0.9, 1.6], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Clean Deadlift (\"Place feet hip-width apart\"); Escamilla et al. 2000 (convencional: 32 ± 8 cm)"},
+      {"nome": "pegada um pouco mais aberta que os ombros, por fora das pernas", "medida": "pegada_largura", "t": "todos", "faixa": [1.1, 1.6], "fonte": "ExRx, Barbell Deadlift (\"shoulder width or slightly wider\"); NSCA, Basics of Strength and Conditioning Manual (\"slightly wider than shoulder-width\"); Escamilla et al. 2000 (convencional: 55 ± 10 cm entre as mãos)"},
+      {"nome": "joelho em cima do pé", "medida": "joelho_plano_pe", "t": "todos", "mm": [-20, 25], "fonte": "ExRx, Barbell Deadlift (\"Knees should point same direction as feet throughout movement\")"},
+      {"nome": "cabeça neutra, olhando à frente", "medida": "cabeca_tronco", "t": "todos", "graus": [-15, 20], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Clean Deadlift (\"Head remains in a neutral position looking forward throughout the entire lift\")"}
+    ]
+  }
+}
