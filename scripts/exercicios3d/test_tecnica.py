@@ -589,3 +589,25 @@ def test_joelho_no_plano_do_pe_e_alem_dos_dedos_no_agachamento_sumo():
     assert tc.joelho_plano_pe(girar(j2, 70, (0, 0, 1))) == pytest.approx([-20, 20], abs=1e-6)
     assert tc.joelho_alem_dos_dedos(em_pe()) == []
     assert {"joelho_plano_pe", "joelho_alem_dos_dedos"} <= set(tc.MEDIDAS)
+
+
+def test_punho_desvio_com_sinal_no_rack_do_agachamento_frontal():
+    """Agachamento frontal (lote 8): mão na linha do antebraço = 0; dobrando de lado pro polegar (radial) dá +, pro dedo
+    mínimo (ulnar) dá −, nos dois lados; o punho estendido 60° não muda o desvio (e o desvio não muda o punho_flexao); o
+    mesmo número com o boneco virado."""
+    j = antebracos_deitados()
+
+    def desviar(j, graus):                     # + = a mão vai pro lado do polegar (o indicador fica pra fora nos 2 lados)
+        out = dict(j)
+        for L, s in (("Left", 1), ("Right", -1)):
+            mao = {n: j[n] for n in (L + "HandMiddle1", L + "HandIndex1", L + "HandPinky1")}
+            out.update(girar(mao, s * graus, (0, 0, 1), j[L + "Hand"]))
+        return out
+
+    assert tc.punho_desvio(j) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.punho_desvio(desviar(j, 20)) == pytest.approx([20, 20], abs=1e-6)
+    assert tc.punho_desvio(desviar(j, -25)) == pytest.approx([-25, -25], abs=1e-6)
+    assert tc.punho_flexao(desviar(j, 20)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.punho_desvio(dobrar_punho(j, -60)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.punho_desvio(girar(desviar(j, 15), 70, (0, 0, 1))) == pytest.approx([15, 15], abs=1e-6)
+    assert "punho_desvio" in tc.MEDIDAS

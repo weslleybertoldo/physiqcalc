@@ -596,3 +596,26 @@ def joelho_alem_dos_dedos(j):
 
 MEDIDAS.update({"joelho_plano_pe": joelho_plano_pe, "joelho_alem_dos_dedos": joelho_alem_dos_dedos})
 UNIDADE.update({"joelho_plano_pe": "mm", "joelho_alem_dos_dedos": "mm"})
+
+
+# ── agachamento frontal com barra (lote 8, 09/10/2026): no rack da pegada de clean o punho dobra muito pra trás, e o
+# punho_flexao (a dobra no plano da mão) não vê o punho dobrando de LADO — na 1ª montagem o antebraço chegava no punho quase
+# paralelo à barra, com a mão atravessando a barra: o punho ficava ~86° desviado pro lado do polegar enquanto o punho_flexao
+# marcava de −53° a 0°. A amplitude normal é desvio radial 20° e ulnar 30° (limites.py: Norkin & White, valores da AAOS).
+def punho_desvio(j):
+    """Desvio do punho COM SINAL, graus [E, D]: antebraço (cotovelo → punho) × 3º metacarpo (punho → base do dedo médio),
+    no plano da palma: 0 = mão na linha do antebraço, + = a mão dobra pro lado do polegar (desvio radial), − = pro lado do
+    dedo mínimo (ulnar). A flexão/extensão não conta (é o punho_flexao). Só usa a mão e o antebraço."""
+    out = []
+    for L, _ in LADOS:
+        a = _u(j[L + "Hand"] - j[L + "ForeArm"])
+        d = _u(j[L + "HandMiddle1"] - j[L + "Hand"])
+        p = _palma(j, L)
+        r = j[L + "HandIndex1"] - j[L + "HandPinky1"]              # pro lado do polegar
+        r = _u(r - d * (r @ d))
+        aq = a - p * (a @ p)
+        out.append(math.degrees(math.atan2(float(-(aq @ r)), float(aq @ d))))
+    return out
+
+
+MEDIDAS.update({"punho_desvio": punho_desvio})
