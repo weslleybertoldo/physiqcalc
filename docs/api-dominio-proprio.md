@@ -72,3 +72,37 @@ do principal; cofre › PhysiqCalc › "Physiq — segredo do proxy api-principa
 o segredo certo; o que o aparelho mandar nesses 2 cabeçalhos é descartado pelo Worker. Direto no `supabase.co` vale o
 `cf-connecting-ip` (a Cloudflare recusa esse cabeçalho vindo do cliente). Quem usa: `entrar-senha` (limite de tentativas por IP).
 O `deploy.sh` publica o código mantendo os secrets (`keep_bindings`) e grava o `PROXY_SEGREDO` de `~/.physiq-proxy-segredo`.
+
+## Domínio (hml-15, 09/10/2026: H-33, H-34 e H-52)
+
+O site (Vercel) recebe os cabeçalhos de segurança pelo `vercel.json` (CSP, `X-Frame-Options: DENY`, `nosniff`,
+`Referrer-Policy`, `Permissions-Policy` e `X-Robots-Tag` só no staging; guarda no CI: `scripts/ci/cabecalhos.test.mjs`; prova:
+`e2e/hml15/csp.py`). As 2 APIs (`api.` e `api-principal.`, os únicos hosts com proxy da Cloudflare) e o DNS mudam pela API v4
+da Cloudflare, com o token de conta de sempre (`~/.cloudflare-pessoal-token`). Cada mudança tem conferência e volta:
+
+```bash
+T="$(cat ~/.cloudflare-pessoal-token)"; Z=efa77ce5a75431cf5ae1a4c176a8d7dd
+cf() { curl -sS -X "$1" "https://api.cloudflare.com/client/v4/zones/$Z$2" -H "Authorization: Bearer $T" -H "Content-Type: application/json" ${3:+--data "$3"}; }
+# antes de cada item: cf GET <caminho> > ~/projetos/physiqcalc-scratch/hml/hml15/cf_<item>_antes.json; os ids criados vão para cf_ids.json
+```
+
+| # | Mudança | Chamada | Conferência | Volta |
+|---|---|---|---|---|
+| 1 | Always Use HTTPS | `cf PATCH /settings/always_use_https '{"value":"on"}'` | `http://` das 2 APIs → `301` + `location: https://…` | `'{"value":"off"}'` |
+| 2 | TLS mínimo 1.2 | `cf PATCH /settings/min_tls_version '{"value":"1.2"}'` | `openssl s_client … -tls1_1 -cipher 'DEFAULT@SECLEVEL=0'` → recusado; `-tls1_2` e `-tls1_3` → OK (os 2 hosts) | `'{"value":"1.0"}'` |
+| 3 | HSTS + nosniff nas APIs | `cf PATCH /settings/security_header '{"value":{"strict_transport_security":{"enabled":true,"max_age":31536000,"include_subdomains":false,"preload":false,"nosniff":true}}}'` | `curl -sI https://api.physiqcalc.com.br/healthz` (e o `api-principal`) com `max-age=31536000` e `nosniff`. Sem o cabeçalho: os 2 Workers mandam (código + teste) | `max_age:0` (o navegador esquece na visita seguinte), depois `enabled:false` |
+| 4 | SSL Full (strict) | `cf PATCH /settings/ssl '{"value":"strict"}'` | `https://api-principal.physiqcalc.com.br/healthz` = 200 + a regressão das APIs | `'{"value":"full"}'` |
+| 5 | DMARC `p=none` com relatório | `cf POST /dns_records '{"type":"TXT","name":"_dmarc.physiqcalc.com.br","content":"\"v=DMARC1; p=none\"","ttl":3600,"comment":"hml-15 H-34"}'` e depois `cf PATCH /email/auth/dmarc-reports '{"enabled":true}'` | `dig +short TXT _dmarc.physiqcalc.com.br @1.1.1.1` → `v=DMARC1; p=none; rua=mailto:…`; `cf GET /email/auth/dmarc-reports` → `enabled:true`, sem `status` | `cf PATCH /email/auth/dmarc-reports '{"enabled":false}'` + `cf DELETE /dns_records/<id>`. O `p=quarantine` (de 23/10 a 06/11/2026) = `cf PATCH /dns_records/<id>` com o conteúdo lido + `p=quarantine` |
+| 6 | SPF do apex | `cf POST /dns_records '{"type":"TXT","name":"physiqcalc.com.br","content":"\"v=spf1 -all\"","ttl":3600,"comment":"hml-15 H-34: o apex nao envia e-mail"}'` | `dig +short TXT physiqcalc.com.br` → `"v=spf1 -all"`; o `send.` igual a antes; e-mail de teste do staging pelo Resend entregue | `cf DELETE /dns_records/<id>` |
+| 7 | CAA (4 registros) | `cf POST /dns_records '{"type":"CAA","name":"physiqcalc.com.br","data":{"flags":0,"tag":"issue","value":"letsencrypt.org"},"ttl":3600}'`, idem `pki.goog`, `sectigo.com` e `ssl.com` | `dig +short CAA physiqcalc.com.br`; `cf GET /ssl/certificate_packs` → os 4 pacotes `active` (repetir na semana da renovação) | `cf DELETE /dns_records/<id>` de cada um |
+| 8 | DNSSEC | `cf PATCH /dnssec '{"status":"active"}'` → guardar `ds`, `key_tag`, `algorithm` (13), `digest_type` (2) e `digest` em `hml15/dnssec_ds.txt` | `cf GET /dnssec` → `pending`; com o DS no Registro.br, `active`, `dig +short DS physiqcalc.com.br @a.dns.br` e `delv @1.1.1.1 physiqcalc.com.br` → "fully validated" | sem DS: `cf PATCH /dnssec '{"status":"disabled"}'`. Com DS: 1º o dono tira o DS no Registro.br, 2º espera o TTL do DS no `.br`, 3º desliga |
+
+- **Ordem:** primeiro o que não tem risco (5, 6 e 7), depois 1 a 4 e por último o 8. Depois de cada item, a conferência e
+  `python3 e2e/hml15/dominio.py` (só leitura: grava `dominio_depois.txt`), mais a regressão das APIs (`e2e/w02/proxy_principal.py`,
+  `e2e/hml05a/entrada.py`, `e2e/hml05c/limite_ip.py`).
+- **HSTS:** o das APIs vale 1 ano, sem `includeSubDomains` e sem `preload`. O do site continua o da Vercel (2 anos), sem mudança.
+- **Nunca** pôr `X-Frame-Options`/`frame-ancestors` nas respostas dos Workers: o anexo em PDF (resposta do `api-principal`) abre
+  num `<iframe>` do painel.
+- **DS no Registro.br (passo do dono, sem credencial):** registro.br → Painel → Domínios → `physiqcalc.com.br` → DNS / DNSSEC →
+  "Adicionar DS" com o Key Tag, o Algoritmo 13 (ECDSA P-256 SHA-256), o Tipo de digest 2 (SHA-256) e o Digest do item 8. A
+  Cloudflare passa para `active` sozinha. Até lá o DNSSEC fica "pendente" sem dano: o perigo é só desligar com o DS no Registro.br.
