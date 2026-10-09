@@ -10,6 +10,7 @@ import {
   type AssinaturaMp,
   type PagamentoMp,
 } from "./cobranca-regras.ts";
+import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo as novoPrazo, tempoEsgotado, type Prazo } from "./tempo.ts";
 
 export const MP_API = "https://api.mercadopago.com";
 export type Schema = "public" | "staging";
@@ -29,33 +30,66 @@ export interface RespostaMp<T> {
   body: T | null;
 }
 
-/** fetch na API do MP com nova tentativa em 5xx (o MP tem 500 passageiro); o POST leva X-Idempotency-Key. */
-export async function mpFetch<T = Record<string, unknown>>(c: Credencial, caminho: string, init: RequestInit = {}): Promise<RespostaMp<T>> {
-  let status = 0;
-  let body: T | null = null;
+/** hml-14 (H-32, D4): o prazo do pedido inteiro (um por atendimento; `prazo(ORCAMENTO_MS.usuario | .servidor)` de ./tempo.ts). */
+export interface OpcoesMp {
+  prazo?: Prazo;
+}
+
+/** Abaixo disto o MP não dá tempo de responder: nem tenta (599 `tempo_esgotado`, o mesmo caminho da rede fora). */
+const MINIMO_TENTATIVA_MS = 1_000;
+/** Nova tentativa em 5xx só com isto sobrando no prazo (depois da espera entre as tentativas). */
+const MINIMO_REPETIR_MS = 2_000;
+
+/**
+ * fetch na API do MP com nova tentativa em 5xx (o MP tem 500 passageiro); o POST leva X-Idempotency-Key — a MESMA nas
+ * tentativas, então repetir depois de um tempo esgotado não cria cobrança dobrada. hml-14 (H-32, D4): cada tentativa espera no
+ * máximo `min(TEMPO_MS.mp, o que falta do prazo)`; nova tentativa só com ≥ 2 s sobrando. Tempo esgotado ou rede → 599 (o
+ * `mpTransitorio` já trata: MpIndisponivel → 500, e o MP manda o aviso de novo). Sem `opcoes.prazo`, o prazo é o desta chamada
+ * (ORCAMENTO_MS.usuario) — quem faz várias chamadas no mesmo pedido passa o prazo do pedido.
+ */
+export async function mpFetch<T = Record<string, unknown>>(
+  c: Credencial,
+  caminho: string,
+  init: RequestInit = {},
+  opcoes: OpcoesMp = {},
+): Promise<RespostaMp<T>> {
+  const p = opcoes.prazo ?? novoPrazo(ORCAMENTO_MS.usuario);
+  let status = 599;
+  let body: T | null = { message: "tempo_esgotado" } as unknown as T;
   const metodo = (init.method || "GET").toUpperCase();
   const idem = metodo === "POST" ? crypto.randomUUID() : null;
   for (let tentativa = 0; tentativa < 3; tentativa++) {
-    if (tentativa > 0) await new Promise((r) => setTimeout(r, 800 * tentativa));
+    if (tentativa > 0) {
+      const espera = 800 * tentativa;
+      if (p.restante() - espera < MINIMO_REPETIR_MS) break;
+      await new Promise((r) => setTimeout(r, espera));
+    }
+    const ms = Math.min(TEMPO_MS.mp, p.restante());
+    if (ms < MINIMO_TENTATIVA_MS) break;
     try {
-      const res = await fetch(`${MP_API}${caminho}`, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${tokenMp(c)}`,
-          "Content-Type": "application/json",
-          ...(idem ? { "X-Idempotency-Key": idem } : {}),
-          ...((init.headers as Record<string, string>) || {}),
+      const res = await buscarComTempo(
+        `${MP_API}${caminho}`,
+        {
+          ...init,
+          headers: {
+            Authorization: `Bearer ${tokenMp(c)}`,
+            "Content-Type": "application/json",
+            ...(idem ? { "X-Idempotency-Key": idem } : {}),
+            ...((init.headers as Record<string, string>) || {}),
+          },
         },
-      });
+        ms,
+      );
       status = res.status;
       try {
         body = (await res.json()) as T;
-      } catch {
+      } catch (e) {
+        if (tempoEsgotado(e)) throw e; // o tempo vale até ler o corpo: sem corpo, a resposta não serve
         body = null;
       }
     } catch (e) {
       status = 599;
-      body = { message: String((e as Error)?.message || e) } as unknown as T;
+      body = { message: tempoEsgotado(e) ? "tempo_esgotado" : String((e as Error)?.message || e) } as unknown as T;
     }
     if (status < 500) break;
   }
@@ -78,11 +112,15 @@ export class MpIndisponivel extends Error {
  * public, teste → staging): um recurso de sandbox nunca vale no public, nem um de produção no staging (a referência de outro
  * ambiente vira "outro_ambiente" em quem chama). 404/403 = não é desta credencial; MP fora → MpIndisponivel.
  */
-export async function buscarNoMp<T>(caminho: string, schema: Schema | null): Promise<{ recurso: T; schema: Schema } | null> {
+export async function buscarNoMp<T>(
+  caminho: string,
+  schema: Schema | null,
+  opcoes: OpcoesMp = {},
+): Promise<{ recurso: T; schema: Schema } | null> {
   let recusado = 0; // 401 pode ser "recurso de outra conta": só vira MP fora se nenhuma credencial achar o recurso
   for (const c of schema ? [credencialDoSchema(schema)] : (["prod", "test"] as Credencial[])) {
     if (!tokenMp(c)) continue;
-    const { status, body } = await mpFetch<T>(c, caminho);
+    const { status, body } = await mpFetch<T>(c, caminho, {}, opcoes);
     if (status === 200 && body) {
       if (!modoConfere(c, body)) continue; // pagamento de produção lido pela credencial de teste: não vale no staging
       return { recurso: body, schema: c === "prod" ? "public" : "staging" };
