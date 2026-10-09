@@ -3,7 +3,8 @@
 // busca — H-72). Agora a busca vai ao BANCO enquanto digita (300 ms; a alunos_da_conta com `q`, só a conta e a regra P1 da página
 // Alunos), por nome, apelido, e-mail, telefone e CPF (só os dígitos), sem acento (D17); mostra os 20 primeiros e "20 de N — refine
 // a busca"; resposta velha é descartada (número do pedido); o aluno já escolhido é lido pelo id. O campo de busca fica sempre à
-// vista; a lista abre ao tocar ou digitar (no Ligar aluno, sempre aberta, como era).
+// vista; a lista abre ao tocar ou digitar (no Ligar aluno, sempre aberta, como era). Só o campo do Recibo (que imprime o CPF) pede
+// o CPF e o apelido ao banco; nos outros 3, a busca pelo CPF continua no banco, mas o CPF não vem para o navegador.
 import { useId, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { Check, Search, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -57,10 +58,12 @@ export function SeletorDeAluno({
   const idLista = useId();
   const raiz = useRef<HTMLDivElement>(null);
   const guardar = useGuardarAlunoDoSeletor();
-  const escolhido = useAlunoDoSeletor(contaId, valor || null);
+  // hml-14b (B19): dado pessoal mínimo — só o Recibo traz o CPF do banco
+  const comCpf = campo === "recibo";
+  const escolhido = useAlunoDoSeletor(contaId, valor || null, comCpf);
   const semConta = !contaId;
   const listaVisivel = !semConta && (listaSempreAberta || aberta);
-  const busca = useBuscaDeAlunos({ contaId, termo, situacao, ligada: listaVisivel });
+  const busca = useBuscaDeAlunos({ contaId, termo, situacao, ligada: listaVisivel, comCpf });
   const r = busca.resultado;
   const itens = r?.itens ?? [];
   const porNumero = digitosDaBusca(termo).length >= 3;
@@ -69,7 +72,7 @@ export function SeletorDeAluno({
   const idOpcao = (i: number) => `${idLista}-opcao-${i}`;
 
   const escolher = (a: AlunoDoSeletor | null) => {
-    if (a) guardar(contaId, a);
+    if (a) guardar(contaId, a, comCpf);
     aoMudar(a);
     setTermo("");
     setAtiva(-1);
@@ -202,7 +205,7 @@ export function SeletorDeAluno({
                 const s = situacaoDoAluno(x);
                 const linha2 = [
                   contatoDoAluno(x),
-                  porNumero && x.cpf ? `CPF ${formatarCPF(x.cpf)}` : "",
+                  comCpf && porNumero && x.cpf ? `CPF ${formatarCPF(x.cpf)}` : "",
                   // o aviso da consulta só sai para quem tem login no app (o Agendamento mostrava "sem login")
                   campo === "agendamento" && !x.tem_login ? "sem login" : "",
                 ].filter(Boolean).join(" · ");

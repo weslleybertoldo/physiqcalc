@@ -20,7 +20,7 @@ vi.mock("./dados", async (original) => ({
   listarRespostasPagina: h.respostasPagina,
 }));
 
-import type { AlunoPreconsulta, FormularioPreconsulta, RespostaComFormulario, RespostaDaLista } from "./dados";
+import type { FormularioPreconsulta, RespostaComFormulario, RespostaDaLista } from "./dados";
 import FormularioDialog from "./FormularioDialog";
 import Formularios from "./Formularios";
 import { origemDoLink } from "./link";
@@ -40,9 +40,6 @@ const resp = (p: Partial<RespostaComFormulario>): RespostaComFormulario => ({
   importada_em: null, importada_tipo: null, importada_id: null,
   formulario: { id: "f1", titulo: "Pré-consulta do treino", origem: "personalizado", origem_id: null, slug: "abcd2345", ativo: true, deleted_at: null }, ...p,
 } as RespostaComFormulario);
-const aluno = (p: Partial<AlunoPreconsulta>): AlunoPreconsulta => ({
-  id: "a1", nome: "Rafael Moura", apelido: null, email: "rafael@x.com", telefone: null, ativo: true, foto_url: null, personal_id: "u-personal", nutricionista_id: null, ...p,
-});
 
 function contexto(p: Partial<ContextoPreConsulta>): ContextoPreConsulta {
   return {
@@ -50,11 +47,11 @@ function contexto(p: Partial<ContextoPreConsulta>): ContextoPreConsulta {
     pessoas: new Map([["u-personal", { nome: "Rafael Lima", papeis: ["dono", "personal"] }], ["u-nutri", { nome: "Camila Rocha", papeis: ["nutricionista"] }]]), pronto: true, ...p,
   } as unknown as ContextoPreConsulta;
 }
-function dados(p: { formularios?: FormularioPreconsulta[]; respostas?: RespostaComFormulario[]; alunos?: AlunoPreconsulta[] }): DadosPreConsulta {
+function dados(p: { formularios?: FormularioPreconsulta[]; respostas?: RespostaComFormulario[] }): DadosPreConsulta {
   const q = (data: unknown) => ({ data, isLoading: false, isError: false, isFetching: false, refetch: vi.fn() });
   return {
-    formulariosQ: q(p.formularios ?? []), respostasQ: q(p.respostas ?? []), alunosQ: q(p.alunos ?? []),
-    formularios: p.formularios ?? [], respostas: p.respostas ?? [], alunos: p.alunos ?? [], modelos: [], questionarios: [], recarregar: vi.fn(async () => {}),
+    formulariosQ: q(p.formularios ?? []), respostasQ: q(p.respostas ?? []),
+    formularios: p.formularios ?? [], respostas: p.respostas ?? [], modelos: [], questionarios: [], recarregar: vi.fn(async () => {}),
   } as unknown as DadosPreConsulta;
 }
 function montar(el: React.ReactNode, rota = "/") {
@@ -138,7 +135,7 @@ describe("W21 — Pré-consulta › Respostas", () => {
 
   it("personal: liga a um aluno e NÃO vê Importar (a anamnese é da nutricionista)", async () => {
     h.respostasPagina.mockResolvedValue(paginaDe([daLista({}), daLista({ id: "r2", paciente_id: "a1", aluno: RAFAEL })]));
-    montar(<RespostasNaRota ctx={contexto({})} d={dados({ alunos: [aluno({})] })} />, ROTA);
+    montar(<RespostasNaRota ctx={contexto({})} d={dados({})} />, ROTA);
     await achar('[data-resposta="r1"]');
     expect(h.respostasPagina).toHaveBeenCalledWith("c1", { formulario: "", busca: "", soNovas: false, aluno: "" }, 1);
     expect(document.querySelector('[data-resposta="r1"]')?.getAttribute("data-resposta-nova")).toBe("1");

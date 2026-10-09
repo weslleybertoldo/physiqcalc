@@ -123,8 +123,10 @@ def main() -> int:
             # 5. liga no Physiq → o site antigo mostra o paciente
             if pac:
                 c.pg.locator(f'[data-resposta="{r1["id"]}"] [data-btn-ligar-resposta]').click()
-                c.esperar(lambda: c.tem(f'[data-opcao-aluno-ligar="{pac["id"]}"]'), 20)
-                c.pg.locator(f'[data-opcao-aluno-ligar="{pac["id"]}"]').click()
+                # hml-14b (B19): a lista do "Ligar" é a busca do banco (o SeletorDeAluno) — acha o paciente pelo nome
+                c.pg.locator('[data-seletor-aluno="ligar"] [data-seletor-aluno-busca]').fill(pac["nome"])
+                c.esperar(lambda: c.tem(f'[data-seletor-aluno="ligar"] [data-opcao-aluno="{pac["id"]}"]'), 20)
+                c.pg.locator(f'[data-seletor-aluno="ligar"] [data-opcao-aluno="{pac["id"]}"]').click()
                 c.pg.locator("[data-btn-salvar-ligar]").click()
                 ok = c.esperar(lambda: c.pg.locator(f'[data-resposta="{r1["id"]}"]').get_attribute("data-resposta-aluno") == pac["id"], 30)
                 p.check(ok, f"5. ligou ao paciente dela ({pac['nome']}) no Physiq")

@@ -21,7 +21,7 @@ export type RespostaComFormulario = RespostaPreconsulta & { formulario: Formular
 /** A resposta na lista paginada (hml-14b): + o aluno ligado, quando é da conta ativa e está fora da lixeira (senão null). */
 export type RespostaDaLista = RespostaComFormulario & { aluno: AlunoDaResposta | null };
 
-/** O aluno nos seletores (ligar a resposta) e na importação (de quem é a nutrição dele). */
+/** O aluno que a resposta ganhou ao ligar (o do SeletorDeAluno ou o cadastrado com os dados da resposta) — vai a quem chama. */
 export interface AlunoPreconsulta {
   id: string;
   nome: string;
@@ -163,19 +163,6 @@ export const marcarImportada = (id: string, tipo: TipoImportacao, alvoId: string
 export async function excluirResposta(id: string): Promise<void> {
   const { error } = await principal.from("respostas_preconsulta").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(mensagemDoBanco(new Error(error.message), "Não foi possível excluir"));
-}
-
-// ───────────────────────── alunos (P1: os que você vê na conta) ─────────────────────────
-export async function listarAlunosParaLigar(contaId: string): Promise<AlunoPreconsulta[]> {
-  const { data, error } = await principal
-    .from("pacientes")
-    .select("id, nome, apelido, email, telefone, ativo, foto_url, personal_id, nutricionista_id")
-    .eq("conta_id", contaId)
-    .is("deleted_at", null)
-    .order("nome", { ascending: true })
-    .limit(2000);
-  falhou(error);
-  return (data ?? []) as unknown as AlunoPreconsulta[];
 }
 
 export { contarRespostasNovas, recorteDaConta } from "./novas";

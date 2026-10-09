@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  AVISO_LIXEIRA, CHAVES_LIXEIRA, DIAS_LIXEIRA, TIPOS_LIXEIRA, abaInicial, abasDaPessoa, contarPorTipo, diasParaPurga, ehTipoLixeira, filtrarItens,
+  AVISO_LIXEIRA, CHAVES_LIXEIRA, DIAS_LIXEIRA, TIPOS_LIXEIRA, abaInicial, abasDaPessoa, contagemZerada, diasParaPurga, ehTipoLixeira,
   infoTipo, mensagemDaRecusa, normalizarLixeira, ordenarItens, rotaDoItem, textoConfirmarApagar, textoContagem, textoPurga, textoVazioAba, tituloDoItem,
   type ItemLixeira,
 } from "./regras";
@@ -86,11 +86,11 @@ describe("Lixeira — normalizar e ordenar", () => {
   });
 });
 
-describe("Lixeira — abas, busca e contagem", () => {
-  const l = normalizarLixeira(bruto)!;
-  const c = contarPorTipo(l.itens);
-  it("conta por tipo", () => {
-    expect(c).toEqual({ resposta: 1, anamnese: 1, antropometria: 1, plano: 1, paciente: 1 });
+describe("Lixeira — abas e textos", () => {
+  // os números das abas vêm do banco (hml-14b); aqui, 1 em cada
+  const c = { resposta: 1, anamnese: 1, antropometria: 1, plano: 1, paciente: 1 };
+  it("os números zerados (antes da página do banco chegar)", () => {
+    expect(contagemZerada()).toEqual({ resposta: 0, anamnese: 0, antropometria: 0, plano: 0, paciente: 0 });
   });
   it("aba da URL vale se a pessoa tem a aba; senão a 1ª com itens", () => {
     const todas = abasDaPessoa(true);
@@ -98,12 +98,6 @@ describe("Lixeira — abas, busca e contagem", () => {
     expect(abaInicial(abasDaPessoa(false), c, "plano")).toBe("resposta");
     expect(abaInicial(todas, { ...c, resposta: 0 }, null)).toBe("anamnese");
     expect(abaInicial(abasDaPessoa(false), { resposta: 0, anamnese: 0, antropometria: 0, plano: 0, paciente: 0 }, "x")).toBe("resposta");
-  });
-  it("busca sem acento por palavras no título, no detalhe e no aluno", () => {
-    expect(filtrarItens(l.itens, "anamnese", "joana acao").map((i) => i.id)).toEqual(["a1"]);
-    expect(filtrarItens(l.itens, "paciente", "JOANA@").map((i) => i.id)).toEqual(["pac1"]);
-    expect(filtrarItens(l.itens, "resposta", "carla inicial").map((i) => i.id)).toEqual(["r1"]);
-    expect(filtrarItens(l.itens, "resposta", "nada")).toEqual([]);
   });
   it("textos", () => {
     expect(textoContagem(0)).toBe("Lixeira vazia");

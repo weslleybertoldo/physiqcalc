@@ -57,7 +57,7 @@ describe("hml-14b (B19) — Movimentação", () => {
     h.criarTransacao.mockImplementation(async (_u: string, _c: string, reg: Record<string, unknown>) => ({ id: "t1", ...reg }));
     montar(<MovimentacaoDialog open onOpenChange={vi.fn()} transacao={null} uid="u1" contaId="c1" categorias={[]} onSalvo={vi.fn()} onGerenciarCategorias={vi.fn()} />);
     await escolherNaBusca("movimentacao", "ze");
-    expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20);
+    expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20, false); // sem o CPF
     expect(document.querySelector("[data-campo-paciente]")?.getAttribute("data-campo-paciente")).toBe("ze");
     fireEvent.change(document.querySelector("[data-campo-descricao]")!, { target: { value: "Mensalidade" } });
     fireEvent.change(document.querySelector("[data-campo-valor]")!, { target: { value: "150" } });
@@ -75,7 +75,7 @@ describe("hml-14b (B19) — Movimentação", () => {
     };
     montar(<MovimentacaoDialog open onOpenChange={vi.fn()} transacao={transacao} uid="u1" contaId="c1" categorias={[]} onSalvo={vi.fn()} onGerenciarCategorias={vi.fn()} />);
     await waitFor(() => expect(document.querySelector('[data-seletor-aluno-escolhido="removido"]')?.textContent).toContain("Carlos Antigo"));
-    expect(h.porId).toHaveBeenCalledWith("c1", "removido");
+    expect(h.porId).toHaveBeenCalledWith("c1", "removido", false);
     fireEvent.click(document.querySelector("[data-seletor-aluno-limpar]")!);
     expect(document.querySelector("[data-campo-paciente]")?.getAttribute("data-campo-paciente")).toBe("nenhum");
   });
@@ -91,7 +91,9 @@ describe("hml-14b (B19) — Recibo avulso", () => {
     expect(document.querySelector("select[data-campo-aluno-recibo]")).toBeNull();
     expect((document.querySelector("[data-btn-salvar-recibo]") as HTMLButtonElement).disabled).toBe(true);
     await escolherNaBusca("recibo", "ze");
+    expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20, true); // só o Recibo pede o CPF ao banco
     await waitFor(() => expect(document.querySelector("[data-previa-recibo]")?.textContent).toBe("Recebi de Zé Último, CPF 123.456.789-00."));
+    expect(h.porId).not.toHaveBeenCalled(); // o escolhido (com o CPF) veio do cache da busca
     expect((document.querySelector("[data-btn-salvar-recibo]") as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -122,11 +124,11 @@ describe("hml-14b (B19) — Agendamento", () => {
     h.buscar.mockResolvedValue({ itens: [ZE], total: 1 });
     abrir("p9");
     await waitFor(() => expect(document.querySelector('[data-seletor-aluno-escolhido="p9"]')?.textContent).toContain("Ana Lima"));
-    expect(h.porId).toHaveBeenCalledWith("c1", "p9");
+    expect(h.porId).toHaveBeenCalledWith("c1", "p9", false);
     expect(document.querySelector("[data-campo-paciente]")?.getAttribute("data-campo-paciente")).toBe("p9");
     expect((document.querySelector("[data-campo-avisar] input") as HTMLInputElement).disabled).toBe(true); // sem login no app
     await escolherNaBusca("agendamento", "ze");
-    expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20);
+    expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20, false);
     expect(document.querySelector("[data-campo-paciente]")?.getAttribute("data-campo-paciente")).toBe("ze");
     expect((document.querySelector("[data-campo-avisar] input") as HTMLInputElement).disabled).toBe(false);
     expect(document.querySelector("[data-campo-avisar]")?.textContent).toContain("Avisar Zé");
@@ -155,7 +157,7 @@ describe("hml-14b (B19) — Ligar aluno (pré-consulta)", () => {
     h.ligar.mockResolvedValue(resposta({ paciente_id: "a1" }));
     const onLigada = vi.fn();
     montar(<LigarAlunoDialog open onOpenChange={vi.fn()} resposta={resposta()} contaId="c1" onLigada={onLigada} />);
-    await waitFor(() => expect(h.buscar).toHaveBeenCalledWith("c1", "", "todos", 20)); // a lista abre já buscando (como era)
+    await waitFor(() => expect(h.buscar).toHaveBeenCalledWith("c1", "", "todos", 20, false)); // a lista abre já buscando (como era), sem o CPF
     await waitFor(() => expect(document.querySelector('[data-sugestao-aluno="a1"]')?.getAttribute("data-sugestao-por")).toBe("email"));
     expect(h.buscar).toHaveBeenCalledWith("c1", "ana.teste@x.com", "todos", 50);
     fireEvent.click(document.querySelector("[data-btn-usar-sugestao]")!);

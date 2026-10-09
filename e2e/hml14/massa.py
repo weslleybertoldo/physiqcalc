@@ -67,7 +67,8 @@ PERGUNTAS = '[{"id": "q1", "texto": "Qual o seu objetivo?", "tipo": "texto", "ma
 # o que é da massa em cada contagem (massa, fundo): o "fundo" é o que a conta já tinha na mesma lista, com o filtro padrão da tela
 LINHAS = (
     ("Alunos (Ativos)", "alunos", "alunos_fundo"),
-    ("Mensalidades (os vivos)", "alunos", "mensalidades_fundo"),
+    ("Mensalidades (com mensalidade)", "alunos", "mensalidades_fundo"),
+    ("Mensalidades › sem mensalidade", "mensalidades_sem", "mensalidades_sem_fundo"),
     ("Lixeira › Alunos", "removidos", "removidos_fundo"),
     ("Lançamentos (30 dias)", "lancamentos_na_janela", "lancamentos_fundo"),
     ("Recibos", "recibos", "recibos_fundo"),
@@ -260,7 +261,14 @@ def contar(ctx: dict, marca: str | None = None) -> dict:
         (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is null and p.nome ~ {m})::int as alunos,
         (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is null and p.ativo
             and p.acesso_bloqueado_em is null and p.nome !~ {m})::int as alunos_fundo,
-        (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is null and p.nome !~ {m})::int as mensalidades_fundo,
+        -- Mensalidades (prof_resumo): "com mensalidade" = vivo com mensalidade_valor > 0 (a cobrança pausada conta); o resto vai para
+        -- "sem mensalidade" (a seção que abre fechada) — a massa fica toda em "com" (R$ 150, pausada)
+        (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is null and coalesce(p.mensalidade_valor, 0) > 0
+            and p.nome !~ {m})::int as mensalidades_fundo,
+        (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is null and coalesce(p.mensalidade_valor, 0) <= 0
+            and p.nome ~ {m})::int as mensalidades_sem,
+        (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is null and coalesce(p.mensalidade_valor, 0) <= 0
+            and p.nome !~ {m})::int as mensalidades_sem_fundo,
         (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is not null and p.nome ~ {m})::int as removidos,
         (select count(*) from {S}.pacientes p, c where p.conta_id = c.conta and p.deleted_at is not null and p.nome !~ {m})::int as removidos_fundo,
         (select count(*) from {S}.transacoes t, c where t.nutricionista_id = c.dono and t.descricao ~ {m})::int as lancamentos,
@@ -301,6 +309,8 @@ def massa_completa(cont: dict, gemeo: bool | None = None) -> list[str]:
     """O que falta para a massa estar inteira (vazio = completa)."""
     faltas = [f"{k} {cont.get(k)}" for k in ("alunos", "removidos", "lancamentos_na_janela", "recibos", "respostas", "diario_na_janela", "receitas")
               if cont.get(k) != N]
+    if cont.get("mensalidades_sem"):  # a massa entra toda em "com mensalidade" (mensalidade_valor 150 com a cobrança pausada)
+        faltas.append(f"mensalidades_sem {cont.get('mensalidades_sem')} (aluno da massa sem mensalidade)")
     if cont.get("formularios") != 1:
         faltas.append(f"formularios {cont.get('formularios')}")
     if gemeo is True and cont.get("gemeos") != 1:

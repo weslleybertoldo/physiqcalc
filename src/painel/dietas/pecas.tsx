@@ -5,10 +5,9 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Botao } from "@/ui/premium/Botao";
 
-// Physiq W24 — peças das 3 abas do Painel › Dietas no visual premium (spec 4.9): busca, seletor com rótulo, "Ver mais" (20 por vez,
-// decisão 14) e a confirmação de excluir.
+// Physiq W24 — peças das 3 abas do Painel › Dietas no visual premium (spec 4.9): busca, seletor com rótulo e a confirmação de
+// excluir. hml-14b: o "Ver mais" (20 por vez) saiu — as listas são páginas do banco (Paginacao).
 
 export const CLASSE_BUSCA =
   "h-11 w-full rounded-[14px] border border-linha-2 bg-superficie pl-10 pr-3 text-[14px] text-texto outline-none placeholder:text-texto-4 focus:border-verde/60";
@@ -36,16 +35,6 @@ export function Filtro({ rotulo, largo, children, className, ...props }: { rotul
         {children}
       </select>
     </label>
-  );
-}
-
-export function VerMais({ mostrando, total, aoVerMais, carregando, rotulo }: { mostrando: number; total: number; aoVerMais: () => void; carregando?: boolean; rotulo: string }) {
-  if (!total || mostrando >= total) return null;
-  return (
-    <div className="flex items-center justify-center gap-3 border-t border-linha-3 py-3">
-      <span className="text-[12.5px] text-texto-3" data-mostrando={mostrando}>Mostrando {mostrando} de {total} {rotulo}</span>
-      <Botao tamanho="sm" onClick={aoVerMais} disabled={carregando} data-ver-mais>{carregando ? "Carregando…" : `Ver mais (${total - mostrando})`}</Botao>
-    </div>
   );
 }
 

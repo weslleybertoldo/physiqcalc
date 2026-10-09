@@ -258,7 +258,6 @@ describe("W24 — Painel › Dietas › Diário (N-18)", () => {
 
   it("nutricionista: as fotos da conta ativa por dia; reagir grava (Ótimo + comentário) e o número da aba conta as não reagidas", async () => {
     const registros = [reg("d1"), reg("d2", { refeicao: "jantar", data_hora: new Date(2026, 9, 1, 20, 5).toISOString(), reacao_nutri: "bom", reagido_em: "2026-10-01T23:10:00Z" })];
-    h.diario.mockResolvedValue(registros); // o número da aba (Dietas): os 7 dias, como antes
     h.diarioPagina.mockResolvedValue({ itens: registros, total: 2, porDia: {} });
     h.alunosDiario.mockResolvedValue([RAFAEL]);
     h.contarDiario.mockResolvedValue(1);
@@ -268,7 +267,10 @@ describe("W24 — Painel › Dietas › Diário (N-18)", () => {
     expect(h.diarioPagina).toHaveBeenCalledWith("c1", UID, { deIso: expect.any(String), alunoId: "", soNaoReagidas: false }, 1);
     expect(h.contarDiario).toHaveBeenCalledWith("c1", UID, { deIso: expect.any(String), alunoId: "", soNaoReagidas: true });
     expect(within(d1).getByText("Almoço · 12:40")).toBeInTheDocument();
-    expect(document.querySelector("[data-contador-nao-reagidas]")?.textContent).toBe("1");
+    // hml-14b (B21): o número da aba e o "Só não reagidas (N)" dividem a contagem do banco (1 pedido); a lista dos 7 dias não é baixada
+    await waitFor(() => expect(document.querySelector("[data-contador-nao-reagidas]")?.textContent).toBe("1"));
+    expect(h.contarDiario).toHaveBeenCalledTimes(1);
+    expect(h.diario).not.toHaveBeenCalled();
     await waitFor(() => expect(document.querySelector("[data-btn-nao-reagidas]")?.getAttribute("data-badge-nao-reagidas")).toBe("1"));
     expect(document.querySelector("[data-contagem-diario]")?.textContent).toBe("últimos 7 dias · 2 registros · 1 não reagida");
     fireEvent.click(within(d1).getByRole("button", { name: "Ótimo" }));
@@ -276,6 +278,20 @@ describe("W24 — Painel › Dietas › Diário (N-18)", () => {
     fireEvent.click(within(d1).getByRole("button", { name: /Enviar reação/ }));
     await waitFor(() => expect(h.reagir).toHaveBeenCalledWith("d1", "otimo", "Boa escolha!"));
     expect(within(document.querySelector('[data-registro="d2"]') as HTMLElement).getByText("BOM")).toBeInTheDocument();
+  });
+
+  it("hml-14b: fora da aba Diário, o número dela vem do banco (as não reagidas dos 7 dias, sem aluno) — sem baixar a lista", async () => {
+    h.contarDiario.mockResolvedValue(3);
+    montar("/painel/dietas");
+    await waitFor(() => expect(document.querySelector("[data-contador-nao-reagidas]")?.textContent).toBe("3"));
+    expect(h.contarDiario).toHaveBeenCalledWith("c1", UID, { deIso: expect.any(String), alunoId: "", soNaoReagidas: true });
+    const deIso = h.contarDiario.mock.calls[0][2].deIso as string;
+    const seteDias = new Date();
+    seteDias.setHours(0, 0, 0, 0);
+    seteDias.setDate(seteDias.getDate() - 6);
+    expect(deIso).toBe(seteDias.toISOString());
+    expect(h.diario).not.toHaveBeenCalled();
+    expect(h.diarioPagina).not.toHaveBeenCalled();
   });
 
   it("hml-14b: 20 por página do banco; o dia partido pela página diz o total do dia (do banco), não só o que coube", async () => {

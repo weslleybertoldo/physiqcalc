@@ -1,7 +1,8 @@
 // Physiq W6 — recibos do aluno (N-45, N-54, N-59): porte das regras e do acesso a dados do PhysiqNutri
 // (src/lib/recibosUtil.ts e src/lib/recibos.ts de lá) para o banco principal. Tags do modelo (`*|NOME_PACIENTE|*`…), valor por
 // extenso em pt-BR, número com 4 dígitos (sequencial por profissional — gatilho numerar_recibo), modelo padrão, emitir a partir
-// de um lançamento. A W19 (Painel › Financeiro) usa estas mesmas peças.
+// de um lançamento. A W19 (Painel › Financeiro) usa estas mesmas peças. hml-14b: os modelos (garantir, salvar, excluir) e o último
+// número são lidos e gravados por src/painel/financeiro/dados.ts — as cópias daqui, sem uso, saíram.
 import { principal } from "@/integrations/principal/client";
 
 export const TITULO_MODELO_MAX = 120;
@@ -150,14 +151,6 @@ export function validarModelo(titulo: string, conteudo: string): string | null {
 
 // ───────────────────────── dados (banco principal; RLS: cada profissional os seus — o dono da conta vê os da conta) ─────────
 
-export interface ModeloRecibo {
-  id: string;
-  nutricionista_id: string;
-  titulo: string;
-  conteudo: string;
-  favorito: boolean;
-}
-
 export interface Recibo {
   id: string;
   nutricionista_id: string;
@@ -181,38 +174,6 @@ export async function listarRecibosDoAluno(pacienteId: string): Promise<Recibo[]
     .eq("paciente_id", pacienteId).is("deleted_at", null).order("numero", { ascending: false });
   falhou(error);
   return (data ?? []) as unknown as Recibo[];
-}
-
-export async function garantirModelosRecibo(uid: string): Promise<ModeloRecibo[]> {
-  const { data, error } = await principal.from("modelos_recibo").select("id, nutricionista_id, titulo, conteudo, favorito").eq("nutricionista_id", uid).is("deleted_at", null);
-  falhou(error);
-  const lista = (data ?? []) as ModeloRecibo[];
-  if (lista.length) return ordenarModelosRecibo(lista);
-  const { data: novo, error: e2 } = await principal.from("modelos_recibo")
-    .insert({ nutricionista_id: uid, titulo: TITULO_MODELO_PADRAO, conteudo: CONTEUDO_MODELO_PADRAO, favorito: true })
-    .select("id, nutricionista_id, titulo, conteudo, favorito").single();
-  falhou(e2);
-  return [novo as ModeloRecibo];
-}
-
-export async function salvarModeloRecibo(uid: string, m: { id?: string; titulo: string; conteudo: string; favorito: boolean }): Promise<void> {
-  const dados = { titulo: m.titulo.trim(), conteudo: m.conteudo, favorito: m.favorito };
-  const { error } = m.id
-    ? await principal.from("modelos_recibo").update(dados).eq("id", m.id)
-    : await principal.from("modelos_recibo").insert({ nutricionista_id: uid, ...dados });
-  falhou(error);
-}
-
-export async function excluirModeloRecibo(id: string): Promise<void> {
-  const { error } = await principal.from("modelos_recibo").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
-}
-
-/** Maior número já emitido pelo profissional (inclusive os da lixeira — número não volta); 0 sem recibo. */
-export async function ultimoNumeroRecibo(uid: string): Promise<number> {
-  const { data, error } = await principal.from("recibos").select("numero").eq("nutricionista_id", uid).order("numero", { ascending: false }).limit(1);
-  falhou(error);
-  return ((data ?? []) as { numero: number }[])[0]?.numero ?? 0;
 }
 
 // hml-14b (B14): o `emitirRecibo` duplicado que morava aqui (sem uso — a emissão é a de src/painel/financeiro/dados.ts, que confere

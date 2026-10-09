@@ -22,7 +22,6 @@ import {
   fotosSemReacao,
   itensAniversario,
   LINK_FOTOS_SEM_REACAO,
-  recibosDoMes,
   juntarAlunos,
   juntarAtencao,
   preConsultasNovas,
@@ -299,7 +298,8 @@ describe("Agenda de hoje = o número do 'Consultas hoje' da Agenda", () => {
   });
 });
 
-describe("H4 — o que o Nutri mostrava no Dashboard e o Physiq não: fotos aguardando reação e recibos no mês", () => {
+// o "Recibos no mês" (H4) é contado no banco desde a hml-14b (financeiro_recibos — useDashboard), não mais aqui
+describe("H4 — o que o Nutri mostrava no Dashboard e o Physiq não: fotos aguardando reação", () => {
   it("fotos do diário sem reação: 1 item com o número e o link do Diário que mostra o MESMO número (7 dias, só não reagidas)", () => {
     expect(fotosSemReacao(0)).toEqual([]);
     const [i] = fotosSemReacao(3);
@@ -311,10 +311,5 @@ describe("H4 — o que o Nutri mostrava no Dashboard e o Physiq não: fotos agua
     const dieta = semMarcarDieta([], HOJE);
     const lista = juntarAtencao(cadastrosPendentes(2), fotosSemReacao(4), dieta, preConsultasNovas(1));
     expect(lista.map((x) => x.tipo)).toEqual(["diario", "cadastro", "preconsulta"]);
-  });
-  it("recibos no mês: os recibos com a data no mês de hoje (o KPI do Nutri), da lista de Financeiro › Recibos", () => {
-    const recibos = [{ data: "2026-10-01" }, { data: "2026-10-31" }, { data: "2026-09-30" }, { data: "2025-10-15" }, { data: "" }];
-    expect(recibosDoMes(recibos, HOJE)).toBe(2);
-    expect(recibosDoMes([], HOJE)).toBe(0);
   });
 });

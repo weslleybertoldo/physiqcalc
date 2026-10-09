@@ -263,7 +263,7 @@ function CartaoLancamentosERecibos({ d, reciboAvulso, aoFecharReciboAvulso, aoAb
   const { usuario } = useSessao();
   const uid = usuario?.id ?? "";
   // W19: o recibo, os modelos ★ e o PDF são os do Painel › Financeiro (o do Nutri: emitir e baixar o PDF, marca Physiq)
-  const fin = useFinanceiroConta({ alunos: false, categorias: false });
+  const fin = useFinanceiroConta({ categorias: false });
   const qc = useQueryClient();
   const pid = d.aluno.paciente_id;
   const lanc = useQuery({ queryKey: ["financeiro-lancamentos", pid], queryFn: () => listarLancamentosDoAluno(pid), enabled: !!uid });

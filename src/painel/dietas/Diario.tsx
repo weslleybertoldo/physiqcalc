@@ -13,13 +13,13 @@ import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados"
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { Segmentado } from "@/ui/premium/Segmentado";
 import type { ContextoDietas } from "./contexto";
-import { contarDiario, excluirRegistro, listarAlunosDoDiario, listarDiarioPaginaComDias, reagir, type RegistroDiarioNutri } from "./diario";
+import { excluirRegistro, listarAlunosDoDiario, listarDiarioPaginaComDias, reagir, type RegistroDiarioNutri } from "./diario";
 import {
   PERIODOS, agruparPorDia, inicioDoPeriodo, nomeAluno, periodoDaURL, plural, primeiroNomeAluno, textoPeriodo, textoReacaoNutri, textoRegistro, tituloDia,
 } from "./diarioPainel";
 import { AcaoLinha, ConfirmarExclusao, Filtro } from "./pecas";
 import ReacaoInline from "./ReacaoInline";
-import { CHAVE_DIARIO, useMiniaturas } from "./useDiario";
+import { CHAVE_DIARIO, useMiniaturas, useNaoReagidas } from "./useDiario";
 import VerFotoDiarioDialog from "./VerFotoDiarioDialog";
 
 // Physiq W24 — Painel › Dietas › Diário (N-18): porta da tela "Diário alimentar" do PhysiqNutri (src/pages/consultorio/Diario.tsx) no
@@ -88,13 +88,8 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
     enabled: ligado,
     staleTime: 20_000,
   });
-  // o "Só não reagidas (N)": as do período (e do aluno do filtro), contadas no banco
-  const naoReagidasQ = useQuery({
-    queryKey: [...CHAVE_DIARIO, "nao-reagidas", ctx.contaId, ctx.uid, dias, alunoId],
-    queryFn: () => contarDiario(ctx.contaId, ctx.uid, { deIso, alunoId, soNaoReagidas: true }),
-    enabled: ligado,
-    staleTime: 20_000,
-  });
+  // o "Só não reagidas (N)": as do período (e do aluno do filtro), contadas no banco (a mesma chave do número da aba)
+  const naoReagidasQ = useNaoReagidas(ctx.contaId, ctx.uid, dias, alunoId, ligado);
 
   const itens = useMemo(() => q.data?.itens ?? [], [q.data]);
   const total = q.data?.total ?? 0;

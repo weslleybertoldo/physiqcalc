@@ -11,8 +11,13 @@ Local e staging falam com o schema staging e usam a massa do e2e/hml14/massa.py 
 cria antes e limpa no fim, mesmo se a prova falhar). Conta: a nutri-legado (nutri.teste.claude, conta legado_nutri, faixa livre).
 
 Listas (atributos do contrato: data-lista / data-item / data-paginacao + data-pagina, data-total, data-paginacao-rotulo,
-data-pagina-anterior/-proxima): alunos · lancamentos · recibos · mensalidades · respostas · diario · receitas · lixeira (os alunos
-removidos) · alimentos (a TACO, sem massa)
+data-pagina-anterior/-proxima): alunos · lancamentos · recibos · mensalidades (+ mensalidades-sem) · respostas · diario · receitas ·
+lixeira (a aba Alunos: os removidos) · alimentos (a TACO, sem massa). De onde vem a página (o que o pedido confere): alunos_da_conta,
+financeiro_lancamentos, financeiro_recibos, a função pagamentos-aluno (prof_resumo com pagina/pagina_sem), respostas_da_conta,
+diario_alimentar (tabela), receitas_da_nutricionista, lixeira_da_conta e alimentos (tabela). A página no endereço: ?pagina= (Alunos,
+Lançamentos, Respostas, Dietas e Lixeira), ?pagina_recibos=, ?pagina_mensalidades= e ?pagina_mensalidades_sem= (Financeiro). A busca
+de cada lista: data-busca-alunos · -transacoes · -recibos · -mensalidades · -respostas · -alimentos, data-campo-busca-receitas e
+data-campo-busca-lixeira (o Diário filtra pelo aluno, no data-campo-aluno).
   L1  sem filtro: 20 linhas, "1–20 de N" (N = 41 da massa + o que a conta já tinha) e o pedido só com 20 (tabela: limit 20/offset 0
       e content-range 0-19/N; RPC: p_limite 20/p_offset 0 e total N; função: pagina 1 e total N); outro pedido à mesma fonte com
       mais de 20 linhas vira aviso (⚠️, não conta como falha: a janela de datas do D18 é assim)
@@ -26,6 +31,9 @@ removidos) · alimentos (a TACO, sem massa)
       filtra pelo aluno do registro, no filtro Aluno da tela)
   L7  na página 2, mudar a busca → volta à 1 (o endereço sem ?pagina); limpar a busca → a lista inteira de novo
   L8  celular (390 px): a lista com a paginação sem rolar para o lado (scrollWidth ≤ 392) + print
+  M9  Mensalidades: a seção "Alunos sem mensalidade" abre FECHADA (data-btn-sem-mensalidade); aberta, "1–20 de N" (data-paginacao=
+      "mensalidades-sem", o pedido com pagina_sem) e, com mais de 20, Próxima → ?pagina_mensalidades_sem=2 (a massa não tem aluno sem
+      mensalidade: os da conta; sem nenhum, a seção não aparece)
 B19 — os 4 campos (data-seletor-aluno = ligar · agendamento · movimentacao · recibo; data-seletor-aluno-busca, data-opcao-aluno,
 data-seletor-aluno-mais, data-seletor-aluno-cadastrar); nada é salvo (o diálogo fecha com Esc):
   B1  acha o "Zé Último" por parte do nome ("Últim"), por "ze ultimo" (sem acento), pelo telefone (só os dígitos) e pelo CPF; o pedido
@@ -34,6 +42,8 @@ data-seletor-aluno-mais, data-seletor-aluno-cadastrar); nada é salvo (o diálog
   B2  a marca acha os 41: 20 opções e "20 de 41 — refine a busca"
   B3  digitar rápido: a resposta da busca anterior (retida no navegador até a nova chegar) não aparece por cima da nova
   B4  celular (390 px): a busca pelo CPF sem rolar para o lado + print
+  B5  dado pessoal mínimo: só o Recibo (que imprime o CPF) pede o CPF ao banco (p_filtros.exportar); nos outros 3 a busca pelo CPF
+      acha no banco, mas nenhuma resposta da alunos_da_conta traz CPF
 Produção (SÓ LEITURA, sem massa): as contas de teste do e2e/w26/prod.py (nutri-legado; master = admin.teste.claude, conta só de
 Treino: as listas de Dietas ficam de fora), a guarda de escrita do w26 no navegador (+ a pagamentos-aluno só com prof_resumo), as
 contagens do banco iguais antes e depois. Cada lista: "1–N de N" sem setas (N ≤ 20; N = 0: sem paginação) ou "1–20 de N" e a
@@ -77,9 +87,9 @@ CONTA_PADRAO = M.CHAVE_PADRAO
 CONTAS_PROD = ("nutri-legado", "master")
 TABELAS_PROD = ("pacientes", "transacoes", "recibos", "respostas_preconsulta", "formularios_preconsulta", "diario_alimentar", "receitas",
                 "alimentos", "calendarios", "modelos_recibo", "conta_eventos", "avisos")
-BUSCA_GENERICA = "input[type='search']"
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
-CHAVES_PAGINA = ("p_limite", "p_limit", "limite", "p_por_pagina", "por_pagina", "p_offset", "offset", "p_deslocamento", "pagina", "p_pagina")
+CHAVES_PAGINA = ("p_limite", "p_limit", "limite", "p_por_pagina", "por_pagina", "p_offset", "offset", "p_deslocamento", "pagina", "p_pagina",
+                 "pagina_sem")
 
 
 @dataclass(frozen=True)
@@ -91,9 +101,10 @@ class Lista:
     busca: tuple[str, ...] = ()              # o campo de busca (o 1º visível); () = sem busca de texto (o Diário filtra pelo aluno)
     abrir: tuple[str, str, str] | None = None  # (dentro da linha, "url:<trecho>" | "dialogo", "voltar" | "esc"); None = sair e Voltar
     nutricao: bool = False                   # só numa conta com Nutrição (Dietas)
-    nomes: tuple[str, ...] = ()              # outros nomes aceitos no data-lista (a Lixeira: lixeira-paciente)
+    nomes: tuple[str, ...] = ()              # outros nomes aceitos no data-lista / data-paginacao (vazio = só o nome)
     nome_item: str | None = None             # onde está o nome do item (a busca dos Alimentos, sem massa)
     fundo: str | None = None                 # a contagem do "fundo" no estado da massa
+    chave: str = "pagina"                    # a página no endereço (?pagina= ou ?pagina_<lista>=, a 1ª não aparece)
 
     @property
     def candidatos(self) -> tuple[str, ...]:
@@ -108,26 +119,29 @@ class Campo:
     modal: str   # o diálogo
 
 
+# hml-14b (integração): como as telas ficaram — a fonte da página (a 1ª), o campo de busca (o atributo estável de cada uma), o que
+# abre um item e a chave da página no endereço. Respostas: a tabela respostas_preconsulta segue como 2ª fonte só para o aviso da
+# leitura de até 1000 que os números do topo e da aba Formulários ainda fazem (o usePreConsulta) — não é a página.
 LISTAS = (
-    Lista("alunos", "/painel/alunos", (("rpc", "alunos_da_conta"),), "aluno", ("[data-busca-alunos]", BUSCA_GENERICA),
+    Lista("alunos", "/painel/alunos", (("rpc", "alunos_da_conta"),), "aluno", ("[data-busca-alunos]",),
           ("[data-abrir-aluno]", "url:/painel/alunos/", "voltar"), fundo="alunos_fundo"),
-    Lista("lancamentos", "/painel/financeiro?aba=lancamentos", (("rpc", "financeiro_lancamentos"), ("tabela", "transacoes")), "lanc",
-          ("[data-busca-transacoes]", BUSCA_GENERICA), ("[data-btn-editar-transacao]", "dialogo", "esc"), fundo="lancamentos_fundo"),
-    Lista("recibos", "/painel/financeiro?aba=recibos", (("rpc", "financeiro_recibos"), ("tabela", "recibos")), "recibo",
-          ("[data-busca-recibos]", BUSCA_GENERICA), ("[data-btn-ver-recibo]", "dialogo", "esc"), fundo="recibos_fundo"),
+    Lista("lancamentos", "/painel/financeiro?aba=lancamentos", (("rpc", "financeiro_lancamentos"),), "lanc",
+          ("[data-busca-transacoes]",), ("[data-btn-editar-transacao]", "dialogo", "esc"), fundo="lancamentos_fundo"),
+    Lista("recibos", "/painel/financeiro?aba=recibos", (("rpc", "financeiro_recibos"),), "recibo",
+          ("[data-busca-recibos]",), ("[data-btn-ver-recibo]", "dialogo", "esc"), fundo="recibos_fundo", chave="pagina_recibos"),
     Lista("mensalidades", "/painel/financeiro?aba=mensalidades", (("funcao", "pagamentos-aluno"),), "aluno",
-          ("[data-busca-mensalidades]", "[data-aba-financeiro-conteudo='mensalidades'] input[type='search']", BUSCA_GENERICA),
-          ("a[href$='/financeiro']", "url:/painel/alunos/", "voltar"), fundo="mensalidades_fundo"),
+          ("[data-busca-mensalidades]",), ("a[href$='/financeiro']", "url:/painel/alunos/", "voltar"), fundo="mensalidades_fundo",
+          chave="pagina_mensalidades"),
     Lista("respostas", "/painel/pre-consulta?aba=respostas", (("rpc", "respostas_da_conta"), ("tabela", "respostas_preconsulta")), "resposta",
-          ("[data-busca-respostas]", BUSCA_GENERICA), ("[data-btn-ligar-resposta]", "dialogo", "esc"), fundo="respostas_fundo"),
-    Lista("diario", "/painel/dietas?aba=diario", (("tabela", "diario_alimentar"), ("rpc", "diario_da_conta")), "diario", (),
+          ("[data-busca-respostas]",), ("[data-btn-ligar-resposta]", "dialogo", "esc"), fundo="respostas_fundo"),
+    Lista("diario", "/painel/dietas?aba=diario", (("tabela", "diario_alimentar"),), "diario", (),
           ("[data-registro-nome]", "url:/painel/alunos/", "voltar"), nutricao=True, fundo="diario_fundo"),
-    Lista("receitas", "/painel/dietas?aba=receitas", (("rpc", "receitas_da_nutricionista"), ("tabela", "receitas")), "receita",
-          ("[data-campo-busca-receitas]", BUSCA_GENERICA), ("[data-btn-ver-receita]", "dialogo", "esc"), nutricao=True, fundo="receitas_fundo"),
-    Lista("lixeira", "/painel/lixeira?tipo=paciente", (("rpc", "lixeira_da_conta"),), "removido", ("[data-campo-busca-lixeira]", BUSCA_GENERICA),
-          None, nomes=("lixeira-paciente", "lixeira"), fundo="removidos_fundo"),
-    Lista("alimentos", "/painel/dietas?aba=alimentos", (("tabela", "alimentos"), ("rpc", "alimentos_da_conta")), None,
-          ("[data-busca-alimentos]", BUSCA_GENERICA), None, nutricao=True, nome_item="[data-alimento-nome]"),
+    Lista("receitas", "/painel/dietas?aba=receitas", (("rpc", "receitas_da_nutricionista"),), "receita",
+          ("[data-campo-busca-receitas]",), ("[data-btn-ver-receita]", "dialogo", "esc"), nutricao=True, fundo="receitas_fundo"),
+    Lista("lixeira", "/painel/lixeira?tipo=paciente", (("rpc", "lixeira_da_conta"),), "removido", ("[data-campo-busca-lixeira]",),
+          None, fundo="removidos_fundo"),
+    Lista("alimentos", "/painel/dietas?aba=alimentos", (("tabela", "alimentos"),), None,
+          ("[data-busca-alimentos]",), None, nutricao=True, nome_item="[data-alimento-nome]"),
 )
 CAMPOS = (
     Campo("movimentacao", "/painel/financeiro?aba=lancamentos", "[data-nova-movimentacao]", "[data-modal-movimentacao]"),
@@ -265,7 +279,8 @@ def lista_e_total(dados) -> tuple[list | None, int | None]:
 
 def analisar(ev: dict, dados) -> dict:
     """Do pedido: limite/deslocamento (ou a página), o termo da busca; da resposta: quantas linhas vieram e o total."""
-    out: dict = {"n": None, "total": None, "limite": None, "deslocamento": None, "pagina": None, "q": None}
+    out: dict = {"n": None, "total": None, "limite": None, "deslocamento": None, "pagina": None, "q": None, "pagina_sem": None,
+                 "total_sem": None, "situacao": None, "exportar": None, "com_cpf": None}
     if ev["tipo"] == "tabela":
         q = ev["query"]
         out["limite"] = primeiro_int(q, ("limit",))
@@ -287,6 +302,17 @@ def analisar(ev: dict, dados) -> dict:
     lista, total = lista_e_total(dados)
     out["n"] = len(lista) if lista is not None else None
     out["total"] = total
+    # Mensalidades (prof_resumo com pagina): a página dos sem mensalidade vem em `sem`
+    out["pagina_sem"] = primeiro_int(corpo, ("pagina_sem",))
+    sem = dados.get("sem") if isinstance(dados, dict) else None
+    if isinstance(sem, dict) and isinstance(sem.get("total"), int):
+        out["total_sem"] = sem["total"]
+    # B5 (o seletor de aluno): o pedido pediu o CPF (exportar)? alguma opção da resposta veio com CPF?
+    if ev["nome"] == "alunos_da_conta":
+        filtros = corpo.get("p_filtros") if isinstance(corpo.get("p_filtros"), dict) else {}
+        out["situacao"] = filtros.get("situacao")
+        out["exportar"] = str(filtros.get("exportar", "")).lower() == "true"
+        out["com_cpf"] = any(isinstance(x, dict) and x.get("cpf") for x in (lista or []))
     return out
 
 
@@ -333,7 +359,8 @@ class Rede:
             saida.append({"tipo": e["tipo"], "nome": e["nome"], "metodo": e["metodo"], "status": e["status"],
                           "query": {k: v for k, v in e["query"].items() if k in ("limit", "offset", "order")},
                           "corpo": {k: corpo[k] for k in ("acao", *CHAVES_PAGINA) if k in corpo},
-                          "q_tamanho": len(e["q"]) if e.get("q") else 0, "content_range": e["content_range"], "n": e["n"], "total": e["total"]})
+                          "q_tamanho": len(e["q"]) if e.get("q") else 0, "content_range": e["content_range"], "n": e["n"], "total": e["total"],
+                          **({"exportar": e.get("exportar"), "com_cpf": e.get("com_cpf")} if e["nome"] == "alunos_da_conta" else {})})
         return saida
 
 
@@ -398,19 +425,19 @@ def rotulo(pagina: int, total: int) -> str:
     return f"{de + 1}–{min(de + POR_PAGINA, total)} de {total}"
 
 
-def pagina_da_url(url: str) -> int | None:
-    """A página no endereço (?pagina= ou ?pagina_<lista>=); a 1ª não aparece (None)."""
-    for k, v in urllib.parse.parse_qs(urllib.parse.urlparse(url or "").query).items():
-        if k == "pagina" or k.startswith("pagina_"):
-            try:
-                return int(v[0])
-            except (ValueError, IndexError):
-                return -1
-    return None
+def pagina_da_url(url: str, chave: str = "pagina") -> int | None:
+    """A página da lista no endereço (a chave dela: ?pagina=, ?pagina_recibos=, ?pagina_mensalidades=…); a 1ª não aparece (None)."""
+    v = urllib.parse.parse_qs(urllib.parse.urlparse(url or "").query).get(chave)
+    if not v:
+        return None
+    try:
+        return int(v[0])
+    except (ValueError, IndexError):
+        return -1
 
 
-def na_pagina(url: str, pagina: int) -> bool:
-    p = pagina_da_url(url)
+def na_pagina(url: str, pagina: int, chave: str = "pagina") -> bool:
+    p = pagina_da_url(url, chave)
     return p in (None, 1) if pagina == 1 else p == pagina
 
 
@@ -543,7 +570,7 @@ def abrir_e_voltar(caso, L: Lista, nome: str, antes: dict) -> tuple[bool, str]:
         como = "a lista não abre item: saiu para o Dashboard e Voltar do navegador"
     velhas = chaves(antes, L)
     ok, depois = esperar_lista(caso, L, lambda e: e["pagina"] == 2 and chaves(e, L) == velhas, 60)
-    return ok and na_pagina(depois.get("url") or "", 2), f"{como}; depois: página {depois.get('pagina')}, {depois.get('url')}"
+    return ok and na_pagina(depois.get("url") or "", 2, L.chave), f"{como}; depois: página {depois.get('pagina')}, {depois.get('url')}"
 
 
 # ───────────────────────── a rodada (contas, sessões, guarda) ─────────────────────────
@@ -552,7 +579,7 @@ class Guarda:
     — e, na função pagamentos-aluno, tudo o que não for a leitura prof_resumo."""
 
     ESCRITA_RPC = re.compile(r"/rest/v1/rpc/(lixeira_restaurar|lixeira_apagar|aluno_remover|marcar_aviso|marcar|salvar|criar|"
-                             r"registrar|aceitar|excluir|apagar|atualizar|enviar)")
+                             r"registrar|aceitar|excluir|apagar|atualizar|enviar|garantir|agenda_garantir_tags|aluno_acesso|diario_link)")
     ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 
     def __init__(self, hosts: tuple[str, ...]) -> None:
@@ -700,7 +727,7 @@ def provar_lista(o, nav, R: Rodada, L: Lista) -> None:
                 R.aviso(f"{t} o total da tela ({N}) difere da conta do massa.py (41 + {fundo}): o filtro padrão da tela não é o que o massa.py supõe")
         else:
             o.ok(N > 3 * POR_PAGINA, f"{t} L1 o total da lista: {N} (a TACO + os próprios)")
-        o.ok(st["rotulo"] == rotulo(1, N) and len(st["textos"]) == min(POR_PAGINA, N) and st["pagina"] == 1 and na_pagina(st["url"], 1),
+        o.ok(st["rotulo"] == rotulo(1, N) and len(st["textos"]) == min(POR_PAGINA, N) and st["pagina"] == 1 and na_pagina(st["url"], 1, L.chave),
              f"{t} L1 sem filtro: {len(st['textos'])} linhas e '{st['rotulo']}' (esperado '{rotulo(1, N)}'), página {st['pagina']}, {st['url']}")
         ev = esperar_pedido(caso, rede, L, 0, 1)
         o.ok(pedido_ok(ev, N, min(POR_PAGINA, N)), f"{t} L1 o pedido traz só 20: {descr(ev) or nao_veio(rede, L, 0)}")
@@ -709,7 +736,7 @@ def provar_lista(o, nav, R: Rodada, L: Lista) -> None:
         desde = len(rede.eventos)
         ok, st2 = mudar_pagina(caso, L, nome, "proxima", 2, st)
         exp2 = min(POR_PAGINA, N - POR_PAGINA)
-        o.ok(ok and st2["rotulo"] == rotulo(2, N) and len(st2["textos"]) == exp2 and na_pagina(st2["url"], 2),
+        o.ok(ok and st2["rotulo"] == rotulo(2, N) and len(st2["textos"]) == exp2 and na_pagina(st2["url"], 2, L.chave),
              f"{t} L2 Próxima → '{st2.get('rotulo')}', {len(st2.get('textos') or [])} linhas, {st2.get('url')}")
         ev = esperar_pedido(caso, rede, L, desde, 2)
         o.ok(pedido_ok(ev, N, exp2), f"{t} L2 o pedido da página 2: {descr(ev) or nao_veio(rede, L, desde)}")
@@ -721,15 +748,64 @@ def provar_lista(o, nav, R: Rodada, L: Lista) -> None:
         o.ok(ok3, f"{t} L3 abrir um item e voltar mantém ?pagina=2 e as mesmas linhas ({como})")
         caso.pg.reload(wait_until="domcontentloaded")
         ok, st3 = esperar_lista(caso, L, lambda e: e["pagina"] == 2 and chaves(e, L) == chaves(st2, L), 60)
-        o.ok(ok and na_pagina(st3["url"], 2), f"{t} L3 recarregar a tela → continua na página 2 com as mesmas linhas ({st3.get('url')})")
+        o.ok(ok and na_pagina(st3["url"], 2, L.chave), f"{t} L3 recarregar a tela → continua na página 2 com as mesmas linhas ({st3.get('url')})")
         ok, st1 = mudar_pagina(caso, L, nome, "anterior", 1, st3)
-        o.ok(ok and na_pagina(st1["url"], 1) and st1["rotulo"] == rotulo(1, N), f"{t} L3 Anterior → página 1, o endereço sem ?pagina ({st1.get('url')})")
+        o.ok(ok and na_pagina(st1["url"], 1, L.chave) and st1["rotulo"] == rotulo(1, N), f"{t} L3 Anterior → página 1, o endereço sem ?pagina ({st1.get('url')})")
         if L.tipo is None:
             provar_sem_massa(o, caso, rede, R, L, nome, N, st1)
         else:
             provar_massa(o, caso, rede, R, L, nome, N, st1)
+        if L.nome == "mensalidades":
+            provar_sem_mensalidade(o, caso, rede, R, L)
     finally:
         caso.fim()
+
+
+def pedido_sem_mensalidade(rede: Rede, L: Lista, desde: int, pagina_sem: int) -> dict | None:
+    """O último prof_resumo (com `pagina`) que pediu a página `pagina_sem` dos sem mensalidade."""
+    achados = [e for e in rede.eventos[desde:] if (e["tipo"], e["nome"]) in L.fontes and e["status"] < 300 and e["pagina"] is not None
+               and (e.get("pagina_sem") or 1) == pagina_sem]
+    return achados[-1] if achados else None
+
+
+def provar_sem_mensalidade(o, caso, rede: Rede, R: Rodada, Lm: Lista) -> None:
+    """M9: a seção "Alunos sem mensalidade" abre FECHADA (data-btn-sem-mensalidade); aberta, a paginação dela (data-paginacao=
+    "mensalidades-sem", a página da MESMA resposta do prof_resumo: pagina_sem) e, com mais de 20, Próxima → ?pagina_mensalidades_sem=2
+    com o pedido de pagina_sem 2, e Anterior → sem a chave. A massa não tem aluno sem mensalidade: são os da conta."""
+    t = "[mensalidades-sem]"
+    L = Lista("mensalidades-sem", Lm.rota, Lm.fontes, None, chave="pagina_mensalidades_sem")
+    caso.ir(Lm.rota)  # do zero: sem busca (com busca a seção abre sozinha) e com a seção fechada
+    if not caso.esperar(lambda: caso.tem('[data-paginacao="mensalidades"]') or caso.tem("[data-cobranca-vazio]"), 60):
+        o.ok(False, f"{t} M9 a aba Mensalidades não abriu de novo")
+        return
+    botao = caso.pg.locator("[data-btn-sem-mensalidade]").first
+    if not caso.esperar(lambda: botao.count() > 0, 10):
+        o.linha(f"   {t} M9 a conta não tem aluno sem mensalidade: a seção não aparece (nada a provar)")
+        return
+    expandida = botao.get_attribute("aria-expanded")
+    o.ok(expandida == "false" and not caso.tem('[data-lista="mensalidades-sem"]'),
+         f"{t} M9 a seção 'Alunos sem mensalidade' abre FECHADA (data-btn-sem-mensalidade, aria-expanded={expandida})")
+    botao.click()
+    ok, st = esperar_lista(caso, L, lambda e: e["temPaginacao"] and e["textos"], 20)
+    N = int(st.get("total") or 0)
+    no_banco = ((R.massa or {}).get("contagens") or {}).get("mensalidades_sem_fundo")
+    if isinstance(no_banco, int) and no_banco != N:
+        R.aviso(f"{t} o total da tela ({N}) difere da conta do massa.py ({no_banco} vivos da conta sem mensalidade)")
+    ev = pedido_sem_mensalidade(rede, L, 0, 1)
+    o.ok(ok and st["rotulo"] == rotulo(1, N) and len(st["textos"]) == min(POR_PAGINA, N) and na_pagina(st["url"], 1, L.chave),
+         f"{t} M9 aberta: '{st.get('rotulo')}' (esperado '{rotulo(1, N)}'), {len(st.get('textos') or [])} linha(s), {st.get('url')}")
+    o.ok(bool(ev) and ev.get("total_sem") == N, f"{t} M9 a página vem do prof_resumo (pagina_sem 1, total_sem {ev.get('total_sem') if ev else '—'})")
+    if N <= POR_PAGINA:
+        o.linha(f"   {t} M9 {N} aluno(s) sem mensalidade: uma página só (sem Próxima)")
+        return
+    desde = len(rede.eventos)
+    ok2, st2 = mudar_pagina(caso, L, L.nome, "proxima", 2, st)
+    ev2 = pedido_sem_mensalidade(rede, L, desde, 2)
+    o.ok(ok2 and st2["rotulo"] == rotulo(2, N) and na_pagina(st2["url"], 2, L.chave) and na_pagina(st2["url"], 1, Lm.chave),
+         f"{t} M9 Próxima → '{st2.get('rotulo')}', ?{L.chave}=2 e a página dos com mensalidade intacta ({st2.get('url')})")
+    o.ok(bool(ev2) and ev2.get("total_sem") == N, f"{t} M9 o pedido de pagina_sem 2 ({'veio' if ev2 else 'não veio'})")
+    ok3, st3 = mudar_pagina(caso, L, L.nome, "anterior", 1, st2)
+    o.ok(ok3 and na_pagina(st3["url"], 1, L.chave), f"{t} M9 Anterior → página 1, o endereço sem ?{L.chave} ({st3.get('url')})")
 
 
 def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st1: dict) -> None:
@@ -764,7 +840,7 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
         desde = len(rede.eventos)
         ok, prox = mudar_pagina(caso, L, nome, "proxima", P, atual)
         exp = min(POR_PAGINA, Nm - (P - 1) * POR_PAGINA)
-        o.ok(ok and prox["rotulo"] == rotulo(P, Nm) and len(prox["textos"]) == exp and na_pagina(prox["url"], P),
+        o.ok(ok and prox["rotulo"] == rotulo(P, Nm) and len(prox["textos"]) == exp and na_pagina(prox["url"], P, L.chave),
              f"{t} L5 página {P}: '{prox.get('rotulo')}' (esperado '{rotulo(P, Nm)}'), {len(prox.get('textos') or [])} linha(s), {prox.get('url')}")
         ev = esperar_pedido(caso, rede, L, desde, P)
         o.ok(pedido_ok(ev, Nm, exp), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
@@ -791,12 +867,12 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
         ok, atual = mudar_pagina(caso, L, nome, "anterior", P, atual)
         if not ok:
             break
-    o.ok(atual.get("pagina") == 1 and na_pagina(atual.get("url") or "", 1), f"{t} L6 de volta à página 1 pelo Anterior ({atual.get('url')})")
+    o.ok(atual.get("pagina") == 1 and na_pagina(atual.get("url") or "", 1, L.chave), f"{t} L6 de volta à página 1 pelo Anterior ({atual.get('url')})")
     if busca:
         termo = f"{L.tipo} #{alvo}"
         busca.fill(termo)
         ok, sb = esperar_lista(caso, L, lambda e: alvo in tokens(e, L.tipo) and (e["total"] or 0) < MASSA, 30)
-        o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1),
+        o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1, L.chave),
              f"{t} L6 estando na página 1, a busca '{termo}' (o item da página {ultima}) acha o item ('{sb.get('rotulo')}') e fica na página 1")
         # L7 — na página 2, mudar a busca volta à 1; limpar a busca
         busca.fill(R.marca)
@@ -804,7 +880,7 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
         ok2, s2 = mudar_pagina(caso, L, nome, "proxima", 2, s1) if ok else (False, s1)
         busca.fill(termo)
         ok3, s3 = esperar_lista(caso, L, lambda e: alvo in tokens(e, L.tipo) and (e["total"] or 0) < MASSA, 30)
-        o.ok(ok and ok2 and ok3 and s3["pagina"] == 1 and na_pagina(s3["url"], 1),
+        o.ok(ok and ok2 and ok3 and s3["pagina"] == 1 and na_pagina(s3["url"], 1, L.chave),
              f"{t} L7 na página 2, mudar a busca volta à 1 (antes {s2.get('url')}; depois {s3.get('url')}, '{s3.get('rotulo')}')")
         busca.fill("")
         ok4, s4 = esperar_lista(caso, L, lambda e: e["total"] == N and e["pagina"] == 1, 30)
@@ -818,7 +894,7 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
     ok, sb = esperar_lista(caso, L, lambda e: alvo in tokens(e, L.tipo) and (e["total"] or 0) < N, 30)
     o.ok(via == "tela", f"{t} L6 o filtro Aluno da tela oferece o aluno do registro da página {ultima} estando na página 1 "
                         f"({'sim' if via == 'tela' else 'não: ' + via + ' — filtrado pelo endereço ?aluno='})")
-    o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1),
+    o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1, L.chave),
          f"{t} L6 filtrado pelo aluno do registro #{alvo} (página {ultima}): ele aparece e a página é a 1 ('{sb.get('rotulo')}', {sb.get('url')})")
     if via != "tela":
         return
@@ -828,7 +904,7 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
     ok2, s2 = mudar_pagina(caso, L, nome, "proxima", 2, s1) if ok else (False, s1)
     sel.select_option(paciente)
     ok3, s3 = esperar_lista(caso, L, lambda e: alvo in tokens(e, L.tipo) and (e["total"] or 0) < N, 30)
-    o.ok(ok and ok2 and ok3 and s3["pagina"] == 1 and na_pagina(s3["url"], 1),
+    o.ok(ok and ok2 and ok3 and s3["pagina"] == 1 and na_pagina(s3["url"], 1, L.chave),
          f"{t} L7 na página 2, mudar o filtro Aluno volta à 1 (antes {s2.get('url')}; depois {s3.get('url')})")
     sel.select_option("")
     ok4, s4 = esperar_lista(caso, L, lambda e: e["total"] == N and e["pagina"] == 1, 30)
@@ -843,7 +919,7 @@ def provar_sem_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int
     for P in (2, 3):
         desde = len(rede.eventos)
         ok, atual = mudar_pagina(caso, L, nome, "proxima", P, atual)
-        o.ok(ok and atual["rotulo"] == rotulo(P, N) and len(atual["textos"]) == POR_PAGINA and na_pagina(atual["url"], P),
+        o.ok(ok and atual["rotulo"] == rotulo(P, N) and len(atual["textos"]) == POR_PAGINA and na_pagina(atual["url"], P, L.chave),
              f"{t} L5 página {P}: '{atual.get('rotulo')}', {len(atual.get('textos') or [])} linhas, {atual.get('url')}")
         ev = esperar_pedido(caso, rede, L, desde, P)
         o.ok(pedido_ok(ev, N, POR_PAGINA), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
@@ -859,14 +935,14 @@ def provar_sem_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int
         return
     busca.fill(alvo)
     ok, sb = esperar_lista(caso, L, lambda e: alvo in (e.get("nomesItens") or []) and (e["total"] or 0) < N, 30)
-    o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1),
+    o.ok(ok and sb["pagina"] == 1 and na_pagina(sb["url"], 1, L.chave),
          f"{t} L6 estando na página 1, a busca pelo 1º item da página 3 ({alvo!r}) acha o item ('{sb.get('rotulo')}') e fica na página 1")
     busca.fill("")
     ok, s1 = esperar_lista(caso, L, lambda e: e["total"] == N and e["pagina"] == 1, 30)
     ok2, s2 = mudar_pagina(caso, L, nome, "proxima", 2, s1) if ok else (False, s1)
     busca.fill(alvo)
     ok3, s3 = esperar_lista(caso, L, lambda e: alvo in (e.get("nomesItens") or []) and (e["total"] or 0) < N, 30)
-    o.ok(ok and ok2 and ok3 and s3["pagina"] == 1 and na_pagina(s3["url"], 1),
+    o.ok(ok and ok2 and ok3 and s3["pagina"] == 1 and na_pagina(s3["url"], 1, L.chave),
          f"{t} L7 na página 2, mudar a busca volta à 1 (antes {s2.get('url')}; depois {s3.get('url')})")
     busca.fill("")
 
@@ -1025,6 +1101,17 @@ def provar_campo(o, nav, R: Rodada, F: Campo, desktop: bool = True) -> None:
             mais = texto_de(caso, "[data-seletor-aluno-mais]")
             o.ok(len(ids) == POR_PAGINA and bool(re.search(rf"\b{POR_PAGINA}\s+de\s+{MASSA}\b", mais)),
                  f"{t} B2 a marca acha os 41: {len(ids)} opções e '{mais}' (esperado '20 de 41 — refine a busca')")
+            # B5 — as buscas do seletor (situação dele; o número do menu e o do cadastro usam 'ativos' e ficam de fora)
+            buscas = [e for e in rede.eventos if e["nome"] == "alunos_da_conta" and e["status"] < 300
+                      and e.get("situacao") in ("ativos_e_bloqueados", "todos")]
+            com_cpf = sum(1 for e in buscas if e.get("com_cpf"))
+            pediu = sum(1 for e in buscas if e.get("exportar"))
+            if F.nome == "recibo":
+                o.ok(bool(buscas) and pediu == len(buscas),
+                     f"{t} B5 o Recibo (imprime o CPF) pede o CPF ao banco: {pediu} de {len(buscas)} busca(s) com exportar; {com_cpf} com CPF")
+            else:
+                o.ok(bool(buscas) and pediu == 0 and com_cpf == 0,
+                     f"{t} B5 dado pessoal mínimo: {len(buscas)} busca(s), {pediu} pediram o CPF e {com_cpf} trouxeram (a busca pelo CPF acha no banco)")
             provar_resposta_velha(o, caso, busca, R, t)
         o.ok(fechar_dialogo(caso) and not caso.tem(F.modal), f"{t} o diálogo fechou com Esc, sem salvar")
     finally:
@@ -1090,7 +1177,7 @@ def provar_lista_producao(o, nav, R: Rodada, chave: str, L: Lista, desktop: bool
                 desde = len(rede.eventos)
                 ok, st2 = mudar_pagina(caso, L, st["nome"], "proxima", 2, st)
                 exp2 = min(POR_PAGINA, N - POR_PAGINA)
-                o.ok(ok and st2["rotulo"] == rotulo(2, N) and na_pagina(st2["url"], 2), f"{t} Próxima → '{st2.get('rotulo')}' e ?pagina=2 (só leitura)")
+                o.ok(ok and st2["rotulo"] == rotulo(2, N) and na_pagina(st2["url"], 2, L.chave), f"{t} Próxima → '{st2.get('rotulo')}' e ?pagina=2 (só leitura)")
                 ev2 = esperar_pedido(caso, rede, L, desde, 2)
                 o.ok(pedido_ok(ev2, N, exp2), f"{t} o pedido da página 2: {descr(ev2) or nao_veio(rede, L, desde)}")
         if not desktop:

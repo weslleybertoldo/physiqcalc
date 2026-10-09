@@ -103,7 +103,7 @@ export default function Financeiro() {
       </div>
 
       <MovimentacaoDialog open={nova} onOpenChange={setNova} transacao={null} uid={f.uid} contaId={f.contaId} categorias={f.categorias.data ?? []}
-        alunos={f.alunos.data ?? []} onGerenciarCategorias={() => setCategoriasAberto(true)}
+        onGerenciarCategorias={() => setCategoriasAberto(true)}
         onSalvo={() => { void f.recarregar("transacoes"); void qc.invalidateQueries({ queryKey: ["financeiro-lancamentos"] }); }} />
       <CategoriasDialog open={categoriasAberto} onOpenChange={setCategoriasAberto} uid={f.uid} contaId={f.contaId || null} categorias={f.categorias.data ?? []}
         carregando={f.categoriasCarregando} erro={f.categoriasErro} onMudou={() => void f.recarregar("categorias")} />

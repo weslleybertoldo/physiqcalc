@@ -2,7 +2,7 @@
 // src/components/financeiro/MovimentacaoDialog.tsx) no visual premium. Tipo entrada/saída, valor em BRL com prévia ("150", "150,00",
 // "1.234,56"), data, categoria (com o atalho para gerenciar), forma, aluno opcional (busca por nome) e observação. Grava na conta ativa.
 // hml-14b (B19): o campo Aluno é o SeletorDeAluno (busca no banco: nome, apelido, e-mail, telefone e CPF, sem acento, 20 por vez);
-// a lista de até 1000 alunos que vinha pela prop `alunos` não é mais usada.
+// sem a lista de até 1000 alunos que vinha pela prop `alunos` (saiu).
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { BTN_LINK, BTN_PRI, BTN_SEC, Campo, DESCRICAO_JANELA, INPUT, JANELA, SELECT, TEXTAREA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { SeletorDeAluno } from "@/painel/alunos/SeletorDeAluno";
-import { atualizarTransacao, criarTransacao, type AlunoResumido, type CategoriaFinanceira, type Transacao } from "./dados";
+import { atualizarTransacao, criarTransacao, type CategoriaFinanceira, type Transacao } from "./dados";
 import {
   DESCRICAO_MAX, METODOS, OBSERVACAO_MAX, TIPOS, ehMetodo, ehTipo, fmtBRL, formParaRegistro, formVazio, limparValorDigitado, parseValor, registroParaForm,
   textoValor, valorValido, type FormMovimentacao,
@@ -57,8 +57,6 @@ interface Props {
   uid: string;
   contaId: string;
   categorias: CategoriaFinanceira[];
-  /** hml-14b (B19): não é mais usada (o campo Aluno busca no banco) — sai quando quem chama parar de mandar */
-  alunos?: AlunoResumido[];
   onSalvo: (t: Transacao, modo: "criado" | "editado") => void;
   onGerenciarCategorias: () => void;
 }

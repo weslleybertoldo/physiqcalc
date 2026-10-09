@@ -350,21 +350,14 @@ export async function excluirRecibo(id: string): Promise<void> {
   falhou(e2);
 }
 
-// ───────────────────────── alunos, nomes e cobranças (o resumo) ─────────────────────────
+// ───────────────────────── o aluno do recibo, nomes e cobranças (o resumo) ─────────────────────────
 
+/** O aluno de um recibo (o da entrada, o da aba do aluno ou o escolhido no SeletorDeAluno — hml-14b: não há mais a lista de 1000). */
 export interface AlunoResumido {
   id: string;
   nome: string;
   apelido: string | null;
   cpf: string | null;
-}
-
-/** Alunos ativos da conta ativa (a RLS recorta: o dono vê todos; o membro, os dele). */
-export async function listarAlunosDaConta(contaId: string): Promise<AlunoResumido[]> {
-  const { data, error } = await principal.from("pacientes").select("id, nome, apelido, cpf").eq("conta_id", contaId).is("deleted_at", null)
-    .eq("ativo", true).order("nome", { ascending: true }).limit(1000);
-  falhou(error);
-  return (data ?? []) as AlunoResumido[];
 }
 
 /** Nome do profissional como o site antigo assina (profiles.nome). */

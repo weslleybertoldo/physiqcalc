@@ -58,14 +58,9 @@ const numero = (v: unknown): number => {
 // ---- Novas (badge do menu) ----
 /** Nova = viva e sem aluno ligado (o critério do Nutri; o painel conta as do recorte da conta ativa). */
 export const ehNova = (r: { paciente_id: string | null; deleted_at?: string | null }): boolean => !r.paciente_id && !r.deleted_at;
-export const contarNovas = (lista: { paciente_id: string | null; deleted_at?: string | null }[]): number => lista.filter(ehNova).length;
-export const textoNovas = (n: number): string => (n === 0 ? "nenhuma nova" : n === 1 ? "1 nova" : `${n} novas`);
 
-// ---- Ordem e contagens ----
-/** Mais recente primeiro (respondido_em desc, created_at desc). */
-export function ordenarRespostas<T extends { respondido_em: string; created_at: string }>(lista: T[]): T[] {
-  return [...lista].sort((a, b) => (b.respondido_em || "").localeCompare(a.respondido_em || "") || (b.created_at || "").localeCompare(a.created_at || ""));
-}
+// ---- Contagens (hml-14b: a lista, a ordem, os filtros e a busca são do banco — respostas_da_conta; os números do topo e da aba
+// Formulários ainda saem da leitura de até 1000 do usePreConsulta) ----
 export const textoContagemRespostas = (n: number): string => (n === 0 ? "Nenhuma resposta" : n === 1 ? "1 resposta" : `${n} respostas`);
 /** Respostas por formulário (a lista de formulários mostra "N respostas · M novas"). */
 export function respostasPorFormulario(lista: { formulario_id: string | null; paciente_id: string | null; deleted_at?: string | null }[]): Map<string, { total: number; novas: number }> {
@@ -121,25 +116,6 @@ export function filtrosParaURL(f: FiltrosRespostas): Record<string, string> {
   return saida;
 }
 export const filtrosAtivos = (f: FiltrosRespostas): boolean => !!linha1(f.formulario) || !!linha1(f.busca) || f.soNovas || !!linha1(f.aluno);
-/** Busca com ≥ 2 dígitos também compara com o telefone (só dígitos). */
-export const BUSCA_DIGITOS_MIN = 2;
-/** Formulário = título copiado igual (sem caixa/acento); busca sem acento em nome/e-mail e por dígitos no telefone; só novas; um aluno. */
-export function filtrarRespostas<T extends Pick<RespostaBase, "titulo" | "nome" | "email" | "telefone" | "paciente_id">>(lista: T[], f: FiltrosRespostas): T[] {
-  const form = chaveTexto(f.formulario);
-  const busca = chaveTexto(f.busca);
-  const digitos = apenasDigitos(f.busca);
-  return lista.filter((r) => {
-    if (form && chaveTexto(r.titulo) !== form) return false;
-    if (f.soNovas && r.paciente_id) return false;
-    if (f.aluno && r.paciente_id !== f.aluno) return false;
-    if (busca) {
-      const bateTexto = chaveTexto(r.nome).includes(busca) || chaveTexto(r.email).includes(busca);
-      const bateTelefone = digitos.length >= BUSCA_DIGITOS_MIN && apenasDigitos(r.telefone).includes(digitos);
-      if (!bateTexto && !bateTelefone) return false;
-    }
-    return true;
-  });
-}
 /** Títulos únicos (sem caixa/acento), em ordem alfabética — opções do filtro por formulário. */
 export function titulosFormularios(lista: { titulo: string }[]): string[] {
   const vistos = new Map<string, string>();
@@ -259,14 +235,6 @@ export function sugerirAluno<T extends AlunoParaLigar>(r: Pick<RespostaBase, "no
   return null;
 }
 export const textoSugestao = (por: MotivoSugestao): string => (por === "email" ? "mesmo e-mail" : por === "telefone" ? "mesmo telefone" : "mesmo nome");
-/** Busca no seletor de alunos: nome/e-mail sem acento; ≥ 2 dígitos também no telefone. */
-export function filtrarAlunos<T extends AlunoParaLigar>(alunos: T[], busca: string): T[] {
-  const q = chaveTexto(busca);
-  const d = apenasDigitos(busca);
-  if (!q) return alunos;
-  return alunos.filter((a) => chaveTexto(a.nome).includes(q) || chaveTexto(a.email).includes(q) || (d.length >= BUSCA_DIGITOS_MIN && apenasDigitos(a.telefone).includes(d)));
-}
-export const nomeDoAluno = (id: string | null | undefined, alunos: { id: string; nome: string }[]): string => (id ? alunos.find((a) => a.id === id)?.nome ?? "" : "");
 /** Nome/e-mail/telefone de quem respondeu, prontos para o "Cadastrar aluno com estes dados" (limites da RPC pública). */
 export const dadosAlunoDaResposta = (r: Pick<RespostaBase, "nome" | "email" | "telefone">): { nome: string; email: string; telefone: string } => ({
   nome: linha1(r.nome).slice(0, NOME_MAX),

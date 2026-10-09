@@ -12,7 +12,6 @@ export const CHAVES_PRECONSULTA = {
   tudo: ["preconsulta"] as const,
   formularios: (conta: string, uid: string) => ["preconsulta", "formularios", conta, uid] as const,
   respostas: (conta: string, uid: string) => ["preconsulta", "respostas", conta, uid] as const,
-  alunos: (conta: string) => ["preconsulta", "alunos", conta] as const,
   modelos: (uid: string) => ["preconsulta", "modelos", uid] as const,
   questionarios: (uid: string) => ["preconsulta", "questionarios", uid] as const,
   equipe: (conta: string) => ["preconsulta", "equipe", conta] as const,

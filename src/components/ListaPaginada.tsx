@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
-// Listas de 20 em 20 com "Ver mais" (decisão 14 do Weslley, 12/09/2026).
+// Listas de 20 em 20 com "Ver mais" (decisão 14 do Weslley, 12/09/2026) — hoje só a Biblioteca do master. hml-14b: o usePaginado
+// (as páginas acumuladas no navegador) saiu; as listas do painel são páginas do banco (src/ui/premium/Paginacao.tsx).
 export const ITENS_PAGINA = 20;
 
 interface Props {
@@ -24,47 +23,4 @@ export function ListaPaginada({ total, mostrando, carregandoMais, onVerMais, rot
       )}
     </div>
   );
-}
-
-/**
- * Acumula páginas de uma fonte paginada { itens, total }.
- * `fetchPage(offset, limit)` deve devolver a página; `deps` reinicia a lista (ex.: busca).
- */
-export function usePaginado<T>(
-  fetchPage: (offset: number, limit: number) => Promise<{ itens: T[]; total: number }>,
-  deps: unknown[] = [],
-  limit = ITENS_PAGINA,
-) {
-  const [itens, setItens] = useState<T[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [carregandoMais, setCarregandoMais] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const reqRef = useRef(0);
-
-  const carregar = useCallback(async (offset: number) => {
-    const meu = ++reqRef.current;
-    if (offset === 0) setLoading(true); else setCarregandoMais(true);
-    setErro(null);
-    try {
-      const r = await fetchPage(offset, limit);
-      if (meu !== reqRef.current) return; // resposta antiga
-      setItens((prev) => (offset === 0 ? r.itens : [...prev, ...r.itens]));
-      setTotal(r.total);
-    } catch (e) {
-      if (meu !== reqRef.current) return;
-      setErro(e?.message || "erro");
-    } finally {
-      if (meu === reqRef.current) { setLoading(false); setCarregandoMais(false); }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchPage, limit]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void carregar(0); }, deps);
-
-  const verMais = useCallback(() => { void carregar(itens.length); }, [carregar, itens.length]);
-  const recarregar = useCallback(() => carregar(0), [carregar]);
-
-  return { itens, total, loading, carregandoMais, erro, verMais, recarregar, setItens };
 }

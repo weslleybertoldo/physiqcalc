@@ -1,9 +1,9 @@
 // Physiq W26 — regras PURAS da Ferramentas › Lixeira (N-21; porte do src/lib/lixeiraUtil.ts do PhysiqNutri, main 294887a). A Lixeira
 // não tem tabela própria: a função lixeira_da_conta (banco principal, migração 20261001230000_w26_lixeira.sql) devolve o que tem
 // `deleted_at` nas 5 fontes — respostas de pré-consulta, anamneses, antropometrias, planos alimentares e alunos — já com a regra de
-// quem vê (P1 + a regra clínica da W18). Aqui: as abas, a ordem, a busca sem acento, os dias que faltam para a purga (30 dias; o
-// aluno fica até restaurar), os textos e as frases das recusas.
-import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
+// quem vê (P1 + a regra clínica da W18). Aqui: as abas, a ordem, os dias que faltam para a purga (30 dias; o aluno fica até
+// restaurar), os textos e as frases das recusas. hml-14b (B21): a busca e os números das abas são do banco (a página da
+// lixeira_da_conta) — o filtro e a contagem que eram feitos aqui saíram.
 import { mensagemErroAlunos } from "@/painel/alunos/regras";
 
 export const DIAS_LIXEIRA = 30;
@@ -91,7 +91,7 @@ export function normalizarLixeira(bruto: unknown): Lixeira | null {
   }
   const l: Lixeira = { veClinico: b.ve_clinico === true, temNutricao: b.tem_nutricao === true, itens: ordenarItens(itens) };
   if (paginada && contagemValida(b.total)) {
-    const totais = contarPorTipo([]);
+    const totais = contagemZerada();
     for (const t of CHAVES_LIXEIRA) {
       const n = (b.totais as Record<string, unknown>)[t];
       if (contagemValida(n)) totais[t] = n;
@@ -120,29 +120,14 @@ export function abasDaPessoa(veClinico: boolean): InfoTipoLixeira[] {
 }
 
 export type ContagemLixeira = Record<TipoLixeira, number>;
-export function contarPorTipo(itens: ItemLixeira[]): ContagemLixeira {
-  const c: ContagemLixeira = { resposta: 0, anamnese: 0, antropometria: 0, plano: 0, paciente: 0 };
-  for (const i of itens) c[i.tipo] += 1;
-  return c;
-}
+/** Os números das abas zerados (a página do banco preenche os que vieram). */
+export const contagemZerada = (): ContagemLixeira => ({ resposta: 0, anamnese: 0, antropometria: 0, plano: 0, paciente: 0 });
 
 /** `?tipo=` válido e disponível → ela (mesmo vazia); senão a 1ª aba com itens; senão a 1ª. */
 export function abaInicial(abas: InfoTipoLixeira[], c: ContagemLixeira, tipoURL: string | null | undefined): TipoLixeira {
   const ids = abas.map((a) => a.id);
   if (ehTipoLixeira(tipoURL) && ids.includes(tipoURL)) return tipoURL;
   return ids.find((t) => c[t] > 0) ?? ids[0] ?? "paciente";
-}
-
-/** Busca sem acento por palavras (no título, no detalhe e no nome do aluno). */
-export function casaComBusca(i: ItemLixeira, busca: string): boolean {
-  const termos = semAcento(busca).toLowerCase().split(/\s+/).filter(Boolean);
-  if (!termos.length) return true;
-  const alvo = semAcento(`${i.titulo} ${i.detalhe ?? ""} ${i.paciente_nome ?? ""}`).toLowerCase();
-  return termos.every((t) => alvo.includes(t));
-}
-
-export function filtrarItens(itens: ItemLixeira[], aba: TipoLixeira, busca: string): ItemLixeira[] {
-  return itens.filter((i) => i.tipo === aba && casaComBusca(i, busca));
 }
 
 /** 30 − dias inteiros desde a exclusão (mínimo 0); null = o aluno, que fica até restaurar. */

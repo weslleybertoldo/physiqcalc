@@ -3,7 +3,7 @@
 // descrição, valor em BRL com prévia, data e a PRÉVIA do texto com as tags substituídas ao vivo (nº = o próximo do profissional).
 // Emitir grava o recibo (o número vem do banco), liga a movimentação e baixa o PDF — o mesmo de hoje, com a marca Physiq.
 // hml-14b (B19): no recibo avulso o aluno é escolhido pelo SeletorDeAluno (busca no banco: nome, apelido, e-mail, telefone e CPF,
-// sem acento, 20 por vez; o CPF do recibo vem junto) — era um <select> com a lista de até 1000 alunos (a prop `alunos`, que sai).
+// sem acento, 20 por vez; o CPF do recibo vem junto) — era um <select> com a lista de até 1000 alunos (a prop `alunos`, que saiu).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,8 +44,6 @@ interface Props {
   onOpenChange: (aberto: boolean) => void;
   /** o aluno do recibo; null = escolher no seletor (recibo avulso da página) */
   aluno: AlunoResumido | null;
-  /** hml-14b (B19): não é mais usada (o seletor busca no banco) — sai quando quem chama parar de mandar */
-  alunos?: AlunoResumido[];
   /** movimentação de origem (recibo de uma entrada) ou null (avulso) */
   transacao?: OrigemRecibo | null;
   modelos: ModeloRecibo[];
@@ -84,8 +82,8 @@ export default function ReciboDialog({
 
   const v = montarForm(watch());
   const modelo = ordenados.find((m) => m.id === v.modeloId) ?? null;
-  // o escolhido no seletor (do cache da busca, ou lido pelo id): nome e CPF para a prévia e o recibo
-  const escolhido = useAlunoDoSeletor(contaId, aluno ? null : alunoId || null);
+  // o escolhido no seletor (do cache da busca, ou lido pelo id — com o CPF, que só o Recibo pede): nome e CPF para a prévia e o recibo
+  const escolhido = useAlunoDoSeletor(contaId, aluno ? null : alunoId || null, true);
   const doSeletor = !aluno && alunoId && escolhido.data ? escolhido.data : null;
   const pessoa: AlunoResumido | null = aluno ?? (doSeletor ? { id: doSeletor.id, nome: doSeletor.nome, apelido: doSeletor.apelido, cpf: doSeletor.cpf } : null);
 

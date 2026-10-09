@@ -11,8 +11,9 @@ import type { BancoErro } from "../../supabase-principal/functions/_shared/erros
 import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 
 /**
- * As 31 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
- * STABLE pela migração 20261008200000): podem repetir.
+ * As 36 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
+ * STABLE pela migração 20261008200000; + as 5 das listas da hml-14b, STABLE pelas migrações 20261009010000 e 20261009040000):
+ * podem repetir.
  */
 export const RPC_SO_LEITURA = new Set<string>([
   "agenda_horarios", "aluno_agenda_horarios", "aluno_anotacoes", "aluno_compromissos", "aluno_convites", "aluno_evolucao",
@@ -21,6 +22,8 @@ export const RPC_SO_LEITURA = new Set<string>([
   "meu_perfil_aluno", "meu_plano_app", "minha_agenda", "minha_dieta", "minha_evolucao", "minha_situacao",
   "minhas_regras_agenda", "paciente_dado_livre", "painel_resumo", "pratos_prontos_do_app", "w2l_prontuarios_para_baixar",
   "whatsapp_fila", "whatsapp_resumo",
+  // hml-14b (B21): as listas do painel por página, com o total e as somas do banco
+  "financeiro_lancamentos", "financeiro_recibos", "financeiro_resumo_periodo", "receitas_da_nutricionista", "respostas_da_conta",
 ]);
 
 /** As 40 VOLATILE que o front chama (+ as 2 da hml-12 que gravam o aceite e o consentimento do responsável): nunca repetem. */

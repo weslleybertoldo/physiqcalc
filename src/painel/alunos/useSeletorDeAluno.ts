@@ -1,18 +1,19 @@
 // Physiq hml-14b (B19 · D16) — o que o SeletorDeAluno (e os diálogos que o usam) precisam do banco: a busca com espera que
 // descarta resposta velha e o aluno já escolhido lido pelo id (no cache do React Query: quem escolhe na busca já guarda).
+// `comCpf` = o campo do Recibo (imprime o CPF): só ele pede o CPF ao banco; o aluno com e sem CPF ficam em chaves separadas do cache.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { alunoDoSeletorPorId, buscarAlunosDoSeletor } from "./api";
 import { ESPERA_SELETOR, LIMITE_SELETOR, termoDoSeletor, type AlunoDoSeletor, type SituacaoSeletor } from "./regras";
 
-export const chaveAlunoDoSeletor = (contaId: string | null | undefined, id: string | null | undefined) =>
-  ["seletor-aluno", contaId ?? "", id ?? ""] as const;
+export const chaveAlunoDoSeletor = (contaId: string | null | undefined, id: string | null | undefined, comCpf = false) =>
+  ["seletor-aluno", contaId ?? "", id ?? "", comCpf ? "com-cpf" : "sem-cpf"] as const;
 
 /** O aluno escolhido, lido pelo id (só da conta). `data` null = não achou (removido, de outra conta ou sem acesso). */
-export function useAlunoDoSeletor(contaId: string | null | undefined, id: string | null | undefined) {
+export function useAlunoDoSeletor(contaId: string | null | undefined, id: string | null | undefined, comCpf = false) {
   return useQuery({
-    queryKey: chaveAlunoDoSeletor(contaId, id),
-    queryFn: () => alunoDoSeletorPorId(contaId as string, id as string),
+    queryKey: chaveAlunoDoSeletor(contaId, id, comCpf),
+    queryFn: () => alunoDoSeletorPorId(contaId as string, id as string, comCpf),
     enabled: Boolean(contaId && id),
     staleTime: 60_000,
     retry: 1,
@@ -23,7 +24,7 @@ export function useAlunoDoSeletor(contaId: string | null | undefined, id: string
 export function useGuardarAlunoDoSeletor() {
   const qc = useQueryClient();
   return useCallback(
-    (contaId: string | null | undefined, a: AlunoDoSeletor) => qc.setQueryData(chaveAlunoDoSeletor(contaId, a.id), a),
+    (contaId: string | null | undefined, a: AlunoDoSeletor, comCpf = false) => qc.setQueryData(chaveAlunoDoSeletor(contaId, a.id, comCpf), a),
     [qc],
   );
 }
@@ -48,6 +49,7 @@ export function useBuscaDeAlunos({
   situacao,
   ligada,
   espera = ESPERA_SELETOR,
+  comCpf = false,
 }: {
   contaId: string | null | undefined;
   termo: string;
@@ -55,6 +57,8 @@ export function useBuscaDeAlunos({
   /** a lista está à vista (fechada não busca) */
   ligada: boolean;
   espera?: number;
+  /** só o Recibo: o CPF (e o apelido) vêm na busca */
+  comCpf?: boolean;
 }) {
   const [resultado, setResultado] = useState<ResultadoDaBusca | null>(null);
   const [erro, setErro] = useState<unknown>(null);
@@ -74,7 +78,7 @@ export function useBuscaDeAlunos({
     const atraso = acabouDeAbrir ? 0 : espera;
     const t = setTimeout(() => {
       setErro(null);
-      buscarAlunosDoSeletor(contaId, q, situacao, LIMITE_SELETOR).then(
+      buscarAlunosDoSeletor(contaId, q, situacao, LIMITE_SELETOR, comCpf).then(
         (r) => {
           if (meu !== pedido.current) return; // resposta velha: já saiu um pedido depois deste
           setResultado({ contaId, termo: q, itens: r.itens, total: r.total });
@@ -89,7 +93,7 @@ export function useBuscaDeAlunos({
       );
     }, atraso);
     return () => clearTimeout(t);
-  }, [contaId, q, situacao, ligada, espera, tentativa]);
+  }, [contaId, q, situacao, ligada, espera, tentativa, comCpf]);
 
   const tentarDeNovo = useCallback(() => setTentativa((n) => n + 1), []);
   return { resultado: resultado && resultado.contaId === contaId ? resultado : null, erro, buscando, tentarDeNovo };

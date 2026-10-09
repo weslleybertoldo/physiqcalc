@@ -5,8 +5,9 @@
 //               cobranças em aberto e do mês e o prof_resumo da W6) e as regras dele;
 //   Agenda      os agendamentos da conta (o recorte da Agenda) e os alunos dela; os calendários escondidos na Agenda ficam fora aqui também;
 //               H1: + as tags dos profissionais dessas consultas (só ler; a pílula da TAG na "Agenda de hoje", como na página Agenda);
-//   Diário      useDiarioDaConta(conta, você, 1) da W24 (só para a nutricionista da conta — a regra clínica); H4: + a de 7 dias (a MESMA
-//               do número da aba Diário e do "Só não reagidas" no período padrão) para as fotos aguardando reação;
+//   Diário      useDiarioDaConta(conta, você, 1) da W24 (só para a nutricionista da conta — a regra clínica); H4: + a de 7 dias para as
+//               fotos aguardando reação (o mesmo número da aba Diário e do "Só não reagidas" no período padrão — lá, desde a hml-14b,
+//               contado no banco por useNaoReagidas; aqui ainda contado na lista dos 7 dias, até 1000);
 //   Recibos     H4: o "Recibos no mês" — hml-14b: contado no banco (financeiro_recibos, a função da aba Recibos, só o total);
 //   Pré-consulta o contador do menu (respostas novas);
 //   e as 2 leituras novas: painel_resumo (principal) e painel-resumo-treino (Treino, com a sessão do Treino).
@@ -140,7 +141,7 @@ export function useDashboard() {
 
   // ── Diário de hoje (W24) e Pré-consulta (o contador do menu) ──
   const diario = useDiarioDaConta(contaId, uid, 1, pronto && temNutricao && souNutri);
-  // H4: as fotos sem reação dos últimos 7 dias (a mesma consulta e o mesmo número da aba Diário)
+  // H4: as fotos sem reação dos últimos 7 dias (o mesmo número da aba Diário — lá contado no banco: useNaoReagidas)
   const diario7 = useDiarioDaConta(contaId, uid, 7, pronto && temNutricao && souNutri);
   const fotosAguardando = temNutricao && souNutri ? contarNaoReagidas(diario7.registros) : 0;
   const novasQ = useQuery({

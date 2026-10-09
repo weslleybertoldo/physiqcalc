@@ -16,7 +16,7 @@ import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados"
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { CHAVE_LIXEIRA, ErroLixeira, apagarDeVez, listarLixeira, restaurar } from "@/ferramentas/lixeira/dados";
 import {
-  AVISO_LIXEIRA, abaInicial, abasDaPessoa, contarPorTipo, diasParaPurga, infoTipo, mensagemDaRecusa, rotaDoItem, textoConfirmarApagar,
+  AVISO_LIXEIRA, abaInicial, abasDaPessoa, contagemZerada, diasParaPurga, infoTipo, mensagemDaRecusa, rotaDoItem, textoConfirmarApagar,
   textoContagem, textoExcluidoEm, textoPurga, textoVazioAba, tituloDoItem, type ItemLixeira, type TipoLixeira,
 } from "@/ferramentas/lixeira/regras";
 
@@ -73,7 +73,7 @@ export default function Lixeira() {
   const itens = useMemo(() => dados?.itens ?? [], [dados]);
   // as abas clínicas: só a nutricionista da conta (W18) — e só numa conta com Nutrição (sem o módulo, abas e itens somem — spec 9)
   const abas = useMemo(() => abasDaPessoa(!!dados?.veClinico && !!dados?.temNutricao), [dados?.veClinico, dados?.temNutricao]);
-  const contagem = useMemo(() => dados?.pagina?.totais ?? contarPorTipo([]), [dados]);
+  const contagem = useMemo(() => dados?.pagina?.totais ?? contagemZerada(), [dados]);
   // a aba que o banco mostrou; enquanto a página nova não chega (outra aba), a da URL
   const aba: TipoLixeira = dados?.pagina && !consulta.isPlaceholderData ? dados.pagina.tipo : abaInicial(abas, contagem, tipoURL);
   // a página que está na tela é de outra aba (trocou de aba e a nova ainda não chegou): espera, sem mostrar a aba velha

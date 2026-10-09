@@ -4,7 +4,7 @@
 // aluno (W13: função `alunos` — limite da faixa, módulos e responsáveis, espelho no Treino) e respeita a trava de e-mail único da
 // W16b (mensagem vermelha embaixo do campo). Quem chama recebe a resposta atualizada e o aluno pelo `onLigada`.
 // hml-14b (B19): a busca e a sugestão vão ao BANCO (SeletorDeAluno: nome, apelido, e-mail, telefone e CPF, sem acento, 20 por vez);
-// a lista de até 1000 alunos que vinha pela prop `alunos` não é mais usada.
+// sem a lista de até 1000 alunos que vinha pela prop `alunos` (saiu).
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -28,8 +28,6 @@ interface Props {
   open: boolean;
   onOpenChange: (aberto: boolean) => void;
   resposta: RespostaComFormulario | null;
-  /** hml-14b (B19): não é mais usada (a busca vai ao banco) — sai quando quem chama parar de mandar */
-  alunos?: AlunoPreconsulta[];
   contaId: string;
   onLigada: (r: RespostaComFormulario, aluno: AlunoPreconsulta) => void;
 }

@@ -24,7 +24,8 @@ interface Props {
   noLimite?: boolean;
 }
 
-function AvisoLimite() {
+/** O aviso do teto da janela — a Semana e o Mês (paginas/Agenda.tsx) mostram o mesmo. */
+export function AvisoLimiteAgenda() {
   return (
     <p role="status" className="flex items-center gap-2 rounded-xl border border-[rgba(245,158,11,.35)] bg-[rgba(245,158,11,.08)] px-3 py-2 text-[12.5px] text-ambar-3"
       data-aviso-limite-agenda>
@@ -41,7 +42,7 @@ export default function VisaoLista({ ancora, eventos, hoje = new Date(), onAbrir
   if (!grupos.length) {
     return (
       <div className="flex flex-col gap-3" data-visao="lista" data-lista-vazia>
-        {noLimite && <AvisoLimite />}
+        {noLimite && <AvisoLimiteAgenda />}
         <EstadoVazio icone={CalendarX2} titulo="Nenhum agendamento neste mês" texto="Marque a próxima consulta: ela aparece aqui, no mês e na semana."
           acao={<Botao variante="g" tamanho="sm" icone={CalendarPlus} onClick={() => onNovo(hoje)} data-btn-novo-na-lista>Novo agendamento</Botao>} />
       </div>
@@ -50,7 +51,7 @@ export default function VisaoLista({ ancora, eventos, hoje = new Date(), onAbrir
 
   return (
     <div className="flex flex-col gap-3" data-visao="lista">
-      {noLimite && <AvisoLimite />}
+      {noLimite && <AvisoLimiteAgenda />}
       {grupos.map(({ dia, eventos: evs }) => {
         const ehHoje = isSameDay(dia, hoje);
         return (

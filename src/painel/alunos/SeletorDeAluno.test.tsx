@@ -62,7 +62,7 @@ describe("SeletorDeAluno (hml-14b, B19 · D16)", () => {
     fireEvent.focus(campo());
     await waitFor(() => expect(opcoes()).toHaveLength(20));
     expect(h.buscar).toHaveBeenCalledTimes(1);
-    expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20);
+    expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20, false); // fora do Recibo, sem o CPF
     const mais = document.querySelector("[data-seletor-aluno-mais]");
     expect(mais?.textContent).toBe("20 de 41 — refine a busca");
     expect(mais?.getAttribute("data-total")).toBe("41");
@@ -77,13 +77,31 @@ describe("SeletorDeAluno (hml-14b, B19 · D16)", () => {
     digitar("ze ul"); // digitou de novo antes dos 300 ms: o "ze" nem sai
     expect(h.buscar).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(h.buscar).toHaveBeenCalledTimes(2), { timeout: 1500 });
-    expect(h.buscar.mock.calls[1]).toEqual(["c1", "ze ul", "todos", 20]);
+    expect(h.buscar.mock.calls[1]).toEqual(["c1", "ze ul", "todos", 20, false]);
     digitar("123.456.789-00");
     await waitFor(() => expect(h.buscar).toHaveBeenCalledTimes(3), { timeout: 1500 });
     expect(h.buscar.mock.calls[2][1]).toBe("123.456.789-00");
-    // buscando por número, a linha mostra o CPF que achou
-    await waitFor(() => expect(document.querySelector('[data-opcao-aluno="ze"]')?.textContent).toContain("CPF 123.456.789-00"));
+    // a busca pelo CPF é do banco; fora do Recibo o CPF não vem nem aparece na linha (dado pessoal mínimo)
+    await waitFor(() => expect(document.querySelector("[data-seletor-aluno-lista]")?.getAttribute("data-termo")).toBe("123.456.789-00"));
+    expect(document.querySelector('[data-opcao-aluno="ze"]')?.textContent).not.toContain("CPF");
     expect(document.querySelector("[data-seletor-aluno-mais]")).toBeNull(); // 1 de 1: nada para refinar
+  });
+
+  it("só o Recibo pede o CPF ao banco (o recibo imprime o CPF): buscando por número, a linha mostra o CPF que achou", async () => {
+    h.buscar.mockResolvedValue({ itens: [ZE], total: 1 });
+    const aoMudar = vi.fn();
+    const { qc } = montar(<Controlado campo="recibo" aoMudar={aoMudar} />);
+    fireEvent.focus(campo());
+    await waitFor(() => expect(h.buscar).toHaveBeenCalledWith("c1", "", "ativos_e_bloqueados", 20, true));
+    digitar("12345678900");
+    await waitFor(() => expect(document.querySelector("[data-seletor-aluno-lista]")?.getAttribute("data-termo")).toBe("12345678900"), { timeout: 1500 });
+    expect(h.buscar).toHaveBeenLastCalledWith("c1", "12345678900", "ativos_e_bloqueados", 20, true);
+    expect(document.querySelector('[data-opcao-aluno="ze"]')?.textContent).toContain("CPF 123.456.789-00");
+    fireEvent.click(document.querySelector('[data-opcao-aluno="ze"]')!);
+    expect(aoMudar).toHaveBeenCalledWith(ZE);
+    // o escolhido fica no cache COM o CPF (a chave do Recibo); a dos outros campos (sem CPF) não recebe o CPF
+    expect(qc.getQueryData(["seletor-aluno", "c1", "ze", "com-cpf"])).toEqual(ZE);
+    expect(qc.getQueryData(["seletor-aluno", "c1", "ze", "sem-cpf"])).toBeUndefined();
   });
 
   it("descarta a resposta velha: digitar rápido nunca deixa o resultado de um termo antigo por cima", async () => {
@@ -111,7 +129,7 @@ describe("SeletorDeAluno (hml-14b, B19 · D16)", () => {
     h.porId.mockResolvedValue(aluno({ id: "p9", nome: "Ana Lima", email: "ana@x.com", bloqueado: true }));
     const r = montar(<Controlado inicial="p9" />);
     await waitFor(() => expect(document.querySelector('[data-seletor-aluno-escolhido="p9"]')?.textContent).toContain("Ana Lima"));
-    expect(h.porId).toHaveBeenCalledWith("c1", "p9");
+    expect(h.porId).toHaveBeenCalledWith("c1", "p9", false);
     expect(document.querySelector("[data-seletor-aluno-escolhido]")?.textContent).toContain("bloqueado");
     expect(document.querySelector("[data-seletor-aluno-escolhido]")?.textContent).toContain("ana@x.com");
     expect(h.buscar).not.toHaveBeenCalled(); // a lista só busca quando abre
@@ -212,33 +230,36 @@ describe("SeletorDeAluno (hml-14b, B19 · D16)", () => {
 });
 
 describe("hml-14b (B19) — o banco por trás do seletor", () => {
-  it("busca: a alunos_da_conta (só a conta, P1) com o termo, a situação, exportar (apelido/CPF), offset 0 e 20", async () => {
+  it("busca: a alunos_da_conta (só a conta, P1) com o termo, a situação, offset 0 e 20 — o CPF (exportar) só quando o campo pede", async () => {
     const api = await vi.importActual<typeof import("./api")>("./api");
-    h.rpc.mockResolvedValue({
-      data: {
-        ok: true, total: 41,
-        itens: [{
-          id: "ze", rota_id: "ze", treino_user_id: null, tem_login: false, nome: "Zé Último", email: null, telefone: "82988887777", foto_url: null, tags: [],
-          ativo: true, bloqueado: false, conta_excluida: false, personal: { id: "u-lucas", nome: "Lucas" }, nutricionista: null, apelido: "Zé", cpf: "12345678900",
-        }],
-      },
-      error: null,
-    });
+    const linha = {
+      id: "ze", rota_id: "ze", treino_user_id: null, tem_login: false, nome: "Zé Último", email: null, telefone: "82988887777", foto_url: null, tags: [],
+      ativo: true, bloqueado: false, conta_excluida: false, personal: { id: "u-lucas", nome: "Lucas" }, nutricionista: null,
+    };
+    // sem `exportar` o banco não manda apelido nem CPF (a busca pelo CPF continua lá)
+    h.rpc.mockResolvedValue({ data: { ok: true, total: 41, itens: [linha] }, error: null });
     const r = await api.buscarAlunosDoSeletor("c1", "  Zé   Último ", "ativos_e_bloqueados");
     expect(h.rpc).toHaveBeenCalledWith("alunos_da_conta", {
-      p_conta: "c1", p_filtros: { situacao: "ativos_e_bloqueados", q: "Zé Último", exportar: "true" }, p_offset: 0, p_limite: 20,
+      p_conta: "c1", p_filtros: { situacao: "ativos_e_bloqueados", q: "Zé Último" }, p_offset: 0, p_limite: 20,
     });
     expect(r.total).toBe(41);
-    expect(r.itens[0]).toMatchObject({ id: "ze", apelido: "Zé", cpf: "12345678900", tem_login: false, personal_id: "u-lucas", nutricionista_id: null });
+    expect(r.itens[0]).toMatchObject({ id: "ze", apelido: null, cpf: null, tem_login: false, personal_id: "u-lucas", nutricionista_id: null });
+    // o Recibo (comCpf): com `exportar`, apelido e CPF vêm junto
+    h.rpc.mockResolvedValue({ data: { ok: true, total: 1, itens: [{ ...linha, apelido: "Zé", cpf: "12345678900" }] }, error: null });
+    const recibo = await api.buscarAlunosDoSeletor("c1", "123.456.789-00", "ativos_e_bloqueados", 20, true);
+    expect(h.rpc).toHaveBeenLastCalledWith("alunos_da_conta", {
+      p_conta: "c1", p_filtros: { situacao: "ativos_e_bloqueados", q: "123.456.789-00", exportar: "true" }, p_offset: 0, p_limite: 20,
+    });
+    expect(recibo.itens[0]).toMatchObject({ id: "ze", apelido: "Zé", cpf: "12345678900" });
     // termo vazio: sem `q` (a 1ª página da conta)
     await api.buscarAlunosDoSeletor("c1", "   ", "todos", 50);
-    expect(h.rpc).toHaveBeenLastCalledWith("alunos_da_conta", { p_conta: "c1", p_filtros: { situacao: "todos", exportar: "true" }, p_offset: 0, p_limite: 50 });
+    expect(h.rpc).toHaveBeenLastCalledWith("alunos_da_conta", { p_conta: "c1", p_filtros: { situacao: "todos" }, p_offset: 0, p_limite: 50 });
     // erro do banco lança (o seletor mostra o erro)
     h.rpc.mockResolvedValue({ data: null, error: { message: "timeout" } });
     await expect(api.buscarAlunosDoSeletor("c1", "ze", "todos")).rejects.toMatchObject({ codigo: "erro_interno" });
   });
 
-  it("pelo id: só desta conta e fora da lixeira; foto só endereço; não achou = null", async () => {
+  it("pelo id: só desta conta e fora da lixeira; foto só endereço; o CPF só quando o campo pede; não achou = null", async () => {
     const api = await vi.importActual<typeof import("./api")>("./api");
     const chamadas: unknown[][] = [];
     const resposta = { data: null as unknown, error: null as unknown };
@@ -249,16 +270,23 @@ describe("hml-14b (B19) — o banco por trás do seletor", () => {
       maybeSingle: async () => resposta,
     };
     h.from.mockImplementation((t: string) => (chamadas.push(["from", t]), cadeia));
-    resposta.data = {
-      id: "p9", nome: "Ana Lima", apelido: null, email: "ana@x.com", telefone: null, cpf: "98765432100", foto_url: "fotos/p9.jpg", ativo: true,
+    const linha = {
+      id: "p9", nome: "Ana Lima", apelido: null, email: "ana@x.com", telefone: null, foto_url: "fotos/p9.jpg", ativo: true,
       acesso_bloqueado_em: "2026-10-01T10:00:00Z", user_id: "u9", personal_id: null, nutricionista_id: "u-camila", conta_excluida_em: null,
     };
+    resposta.data = linha;
     const a = await api.alunoDoSeletorPorId("c1", "p9");
     expect(chamadas).toEqual([
       ["from", "pacientes"], ["select", expect.stringContaining("conta_excluida_em:config->>conta_excluida_em")],
       ["eq", "id", "p9"], ["eq", "conta_id", "c1"], ["is", "deleted_at", null],
     ]);
-    expect(a).toMatchObject({ id: "p9", foto_url: null, bloqueado: true, conta_excluida: false, tem_login: true, cpf: "98765432100", nutricionista_id: "u-camila" });
+    expect(chamadas[1][1]).not.toMatch(/\bcpf\b/); // fora do Recibo, o CPF nem é pedido
+    expect(a).toMatchObject({ id: "p9", foto_url: null, bloqueado: true, conta_excluida: false, tem_login: true, cpf: null, nutricionista_id: "u-camila" });
+    chamadas.length = 0;
+    resposta.data = { ...linha, cpf: "98765432100" };
+    const doRecibo = await api.alunoDoSeletorPorId("c1", "p9", true);
+    expect(chamadas[1][1]).toMatch(/\bcpf\b/);
+    expect(doRecibo).toMatchObject({ id: "p9", cpf: "98765432100" });
     resposta.data = null;
     expect(await api.alunoDoSeletorPorId("c1", "de-outra-conta")).toBeNull();
     resposta.error = { message: "permission denied" };

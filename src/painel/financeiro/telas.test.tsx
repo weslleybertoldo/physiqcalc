@@ -106,7 +106,7 @@ const f = {
   pronto: true, nomeProfissional: "Camila Rocha", pessoas: new Map(),
   assinaturaDe: (id: string) => ({ nome: id === "u-camila" ? "Camila Rocha" : "Lucas Ferreira", padrao: padraoDoRecibo(papeis), rotulo: "Lucas Ferreira (personal trainer)" }),
   recarregar: vi.fn(async () => {}),
-  categorias: { data: [{ id: "cat1", nome: "Consulta", nutricionista_id: "u-camila" }] }, alunos: { data: [] }, modelos: { data: [] }, ultimo: { data: 6 }, equipe: { data: undefined },
+  categorias: { data: [{ id: "cat1", nome: "Consulta", nutricionista_id: "u-camila" }] }, modelos: { data: [] }, ultimo: { data: 6 }, equipe: { data: undefined },
 } as unknown as FinanceiroConta;
 
 const tx = (p: Partial<Transacao>): Transacao => ({

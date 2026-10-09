@@ -7,7 +7,7 @@
 // calendário, senão a base da área que o tipo de antes escolhia (papel, aluno, módulo da conta). A área da tag é o modulo gravado.
 // Sem as tags carregadas, volta o Tipo de antes (o banco põe a base da área).
 // hml-14b (B19): o campo Aluno é o SeletorDeAluno (busca no banco: nome, apelido, e-mail, telefone e CPF, sem acento, 20 por vez);
-// o aluno escolhido (ou o do ?aluno=) é lido pelo id. A lista de até 1000 alunos que vinha pela prop `alunos` não é mais usada.
+// o aluno escolhido (ou o do ?aluno=) é lido pelo id — sem a lista de até 1000 alunos que vinha pela prop `alunos` (saiu).
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ import type { AlunoDoSeletor } from "@/painel/alunos/regras";
 import { SeletorDeAluno } from "@/painel/alunos/SeletorDeAluno";
 import { useAlunoDoSeletor } from "@/painel/alunos/useSeletorDeAluno";
 import {
-  atualizarAgendamento, avisarPorEmail, criarAgendamento, horariosDoDia, type Agendamento, type AlunoAgenda, type Calendario, type NovoAgendamento,
+  atualizarAgendamento, avisarPorEmail, criarAgendamento, horariosDoDia, type Agendamento, type Calendario, type NovoAgendamento,
   type SlotDoDia,
 } from "./dados";
 import TagDialog from "./TagDialog";
@@ -62,8 +62,6 @@ interface Props {
   agendamento?: Agendamento | null;
   inicial?: Partial<FormAgendamento>;
   calendarios: Calendario[];
-  /** hml-14b (B19): não é mais usada (o campo Aluno busca no banco) — sai quando a página parar de mandar */
-  alunos?: AlunoAgenda[];
   eventos: EventoPainel[];
   bloqueios: BloqueioPainel[];
   travas: TravaRecorrente[];

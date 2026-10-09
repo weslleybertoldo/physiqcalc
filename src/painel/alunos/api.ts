@@ -76,17 +76,20 @@ export async function paginaDaExportacao(contaId: string, filtros: FiltrosAlunos
 /**
  * A busca do seletor de aluno: a MESMA lista da página Alunos (alunos_da_conta — só a conta, regra P1, fora da lixeira), com o
  * termo (nome, apelido, e-mail, tag; telefone e CPF pelos dígitos; sem acento desde a D17), só os primeiros `limite` e o total.
- * `exportar` traz apelido e CPF (o Recibo mostra o CPF). Erro do banco → lança (o seletor mostra o erro, nunca "nenhum aluno").
+ * `comCpf` (só o Recibo, que imprime o CPF) pede o `exportar`: apelido e CPF vêm junto. Nos outros campos a busca pelo CPF
+ * continua no banco, mas o CPF não vem para o navegador (dado pessoal mínimo). Erro do banco → lança (o seletor mostra o erro,
+ * nunca "nenhum aluno").
  */
 export async function buscarAlunosDoSeletor(
   contaId: string,
   termo: string,
   situacao: SituacaoSeletor,
   limite = LIMITE_SELETOR,
+  comCpf = false,
 ): Promise<{ itens: AlunoDoSeletor[]; total: number }> {
   const q = termoDoSeletor(termo);
   const r = await rpc("alunos_da_conta", {
-    p_conta: contaId, p_filtros: { situacao, ...(q ? { q } : {}), exportar: "true" }, p_offset: 0, p_limite: limite,
+    p_conta: contaId, p_filtros: { situacao, ...(q ? { q } : {}), ...(comCpf ? { exportar: "true" } : {}) }, p_offset: 0, p_limite: limite,
   });
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
@@ -96,13 +99,14 @@ export async function buscarAlunosDoSeletor(
 /**
  * O aluno já escolhido (o `?aluno=` da Agenda, a consulta, a movimentação ou a resposta que já têm aluno), lido pelo id: só desta
  * conta e fora da lixeira — a RLS de pacientes confere o resto (P1). Não achou (removido, de outra conta, sem acesso) = null.
+ * O CPF só vem com `comCpf` (o Recibo); nos outros campos, não (dado pessoal mínimo).
  */
-export async function alunoDoSeletorPorId(contaId: string, id: string): Promise<AlunoDoSeletor | null> {
+export async function alunoDoSeletorPorId(contaId: string, id: string, comCpf = false): Promise<AlunoDoSeletor | null> {
   if (!online()) throw new ErroAlunos("sem_internet");
   // `as never`: o caminho no jsonb (config->>conta_excluida_em) estoura a inferência de tipos do supabase-js (TS2589)
   const { data, error } = await principal
     .from("pacientes" as never)
-    .select("id, nome, apelido, email, telefone, cpf, foto_url, ativo, acesso_bloqueado_em, user_id, personal_id, nutricionista_id, conta_excluida_em:config->>conta_excluida_em")
+    .select(`id, nome, apelido, email, telefone, ${comCpf ? "cpf, " : ""}foto_url, ativo, acesso_bloqueado_em, user_id, personal_id, nutricionista_id, conta_excluida_em:config->>conta_excluida_em`)
     .eq("id", id)
     .eq("conta_id", contaId)
     .is("deleted_at", null)

@@ -1,13 +1,14 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/receitasUtil.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { MACROS_VAZIOS, casaComBusca, fmtQtd, macrosPorGramas, normalizarBusca, semAcento, type Macros } from "@/nutricao/editor/lib/alimentosUtil";
+import { MACROS_VAZIOS, fmtQtd, macrosPorGramas, semAcento, type Macros } from "@/nutricao/editor/lib/alimentosUtil";
 import { arred, numero } from "@/nutricao/editor/lib/antropometriaUtil";
 import { fmtKcal } from "@/nutricao/editor/lib/energeticoUtil";
 import { gramasDaMedida, medidaDoItem, somarMacros, type AlimentoDoItem, type ItemCalc, type MedidaDoAlimento, type Totais } from "@/nutricao/editor/lib/dietaUtil";
 
 // Regras puras das receitas culinárias (W28): a receita é CALCULADA dos ingredientes (alimentos TACO + próprios da W8) — totais
 // pela regra de 3 da W9 (macros/100 g × gramas, 2 casas), valor por PORÇÃO, peso (rendimento informado ou soma das gramas),
-// escala dos ingredientes pra N porções (atalho 'Da receita' no plano), formulário ⇄ registro, validações, ordenação/filtro da
-// lista, nome da cópia e textos. Nada de rede aqui; testado no vitest.
+// escala dos ingredientes pra N porções (atalho 'Da receita' no plano), formulário ⇄ registro, validações, ordenação da lista,
+// nome da cópia e textos. Nada de rede aqui; testado no vitest. hml-14b (B21): o filtro e as contagens da lista saíram daqui — a
+// página, a busca, o grupo, as favoritas e os números vêm do banco (receitas_da_nutricionista, src/nutricao/editor/lib/receitas.ts).
 
 export { arred, fmtKcal, fmtQtd, numero };
 
@@ -18,7 +19,7 @@ export const OBSERVACAO_RECEITA_MAX = 1000;
 export const OBSERVACAO_INGREDIENTE_MAX = 300;
 export const MAX_INGREDIENTES = 40;
 export const PORCOES_MAX = 999;
-/** valor do select de grupo que filtra as receitas SEM grupo */
+/** valor do select de grupo que filtra as receitas SEM grupo (vai ao banco como `grupo: 'sem'`) */
 export const FILTRO_SEM_GRUPO = "sem";
 
 // ---- Cálculo ----
@@ -299,18 +300,6 @@ export function ordenarIngredientes<T extends { ordem: number; created_at?: stri
 export function ordenarGrupos<T extends { ordem: number; nome: string }>(lista: T[]): T[] {
   return [...lista].sort((a, b) => a.ordem - b.ordem || chaveNome(a.nome).localeCompare(chaveNome(b.nome), "pt-BR"));
 }
-/** Busca por palavras sem acento no nome; grupo = '' (todos) · FILTRO_SEM_GRUPO · id; só favoritas. */
-export function filtrarReceitas<T extends { nome: string; grupo_id: string | null; favorita: boolean }>(lista: T[], busca: string, grupoId: string, soFavoritas: boolean): T[] {
-  const q = normalizarBusca(busca);
-  return lista.filter(
-    (r) =>
-      (!q || casaComBusca(r.nome, q)) &&
-      (!grupoId || (grupoId === FILTRO_SEM_GRUPO ? !r.grupo_id : r.grupo_id === grupoId)) &&
-      (!soFavoritas || r.favorita),
-  );
-}
-export const contarFavoritas = (lista: { favorita: boolean }[]): number => lista.filter((r) => r.favorita).length;
-export const receitasDoGrupo = (lista: { grupo_id: string | null }[], grupoId: string): number => lista.filter((r) => r.grupo_id === grupoId).length;
 
 /** 'Bolinho de atum' → 'Bolinho de atum (cópia)'; já existe → '(cópia 2)', '(cópia 3)'… (duplicar uma cópia não empilha sufixo). */
 export function nomeCopia(nome: string, existentes: string[]): string {
