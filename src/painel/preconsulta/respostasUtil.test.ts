@@ -6,7 +6,7 @@ import {
   FILTROS_VAZIOS, anamneseDaResposta, aplicacaoDaResposta, chaveTexto, contarNovas, dadosAlunoDaResposta, ehNova, filtrarAlunos, filtrarRespostas, filtrosAtivos, filtrosDaURL,
   filtrosParaURL, iniciaisDe, linkAluno, linkImportada, motivoSemImportar, nomeDoAluno, ordenarRespostas, origemDaResposta, podeDesligar, podeImportar, pontosDaResposta,
   respostasDoMes, respostasPorFormulario, respostasPorSemana, situacaoFormulario, sugerirAluno, textoConfirmarImportar, textoContagemRespostas, textoImportada, textoNovas, textoSituacaoFormulario,
-  textoSugestao, tipoImportacao, titulosFormularios, type FormularioDaResposta, type RespostaBase,
+  textoSugestao, tipoImportacao, titulosFormularios, filtrosParaBanco, normalizarPaginaRespostas, type FormularioDaResposta, type RespostaBase,
 } from "./respostasUtil";
 
 const FORM_Q: FormularioDaResposta = { id: "f1", titulo: "Disbiose", origem: "questionario", origem_id: "q1", slug: "abcdefgh", ativo: true, deleted_at: null };
@@ -241,5 +241,30 @@ describe("W21 — quem importa e os números", () => {
     expect(iniciaisDe("Conta Teste (prova)")).toBe("CP");
     expect(iniciaisDe("(Ana) 2026")).toBe("A");
     expect(iniciaisDe("")).toBe("?");
+  });
+});
+
+// hml-14b (B21): a lista vem do banco (respostas_da_conta) — os filtros da URL viram os do banco e a resposta vira a página da tela
+describe("hml-14b — a página das respostas vem do banco", () => {
+  it("filtrosParaBanco: só o que está preenchido; novas = 'true'; a busca e o título vão como a pessoa digitou (o banco normaliza)", () => {
+    expect(filtrosParaBanco(FILTROS_VAZIOS)).toEqual({});
+    expect(filtrosParaBanco({ formulario: "  Pré-anamnese ", busca: " Zé  Último ", soNovas: true, aluno: "a1" }))
+      .toEqual({ formulario: "Pré-anamnese", q: "Zé Último", novas: "true", aluno: "a1" });
+  });
+
+  it("normalizarPaginaRespostas: os números, os títulos (sem repetir, em ordem) e o aluno do filtro", () => {
+    const p = normalizarPaginaRespostas<{ id: string }>({
+      ok: true, total: 41, total_conta: 50, novas: 3, titulos: ["Pré-anamnese", "disbiose", "pre-anamnese", 7], aluno: { id: "a1", nome: "Zé Último" },
+      itens: [{ id: "r1" }],
+    });
+    expect(p).toEqual({ itens: [{ id: "r1" }], total: 41, totalConta: 50, novas: 3, titulos: ["disbiose", "Pré-anamnese"], alunoFiltro: { id: "a1", nome: "Zé Último" } });
+    expect(normalizarPaginaRespostas({ ok: true, total: 0, total_conta: 0, novas: 0, itens: [], titulos: [], aluno: null })?.alunoFiltro).toBeNull();
+  });
+
+  it("formato inesperado → null (a tela mostra o erro, nunca uma lista vazia no lugar)", () => {
+    expect(normalizarPaginaRespostas(null)).toBeNull();
+    expect(normalizarPaginaRespostas({ ok: false, erro: "sem_acesso" })).toBeNull();
+    expect(normalizarPaginaRespostas({ ok: true, itens: [], total: "41", total_conta: 41, novas: 0 })).toBeNull();
+    expect(normalizarPaginaRespostas({ ok: true, total: 1, total_conta: 1, novas: 0 })).toBeNull();
   });
 });

@@ -151,6 +151,48 @@ export function titulosFormularios(lista: { titulo: string }[]): string[] {
   return [...vistos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
+// ---- hml-14b (B21): a lista vem do banco, uma página por vez (respostas_da_conta) ----
+/** O aluno ligado, como a lista mostra: só o da conta ativa e fora da lixeira (senão "fora da sua lista") — vem junto da resposta. */
+export type AlunoDaResposta = { id: string; nome: string; nutricionista_id: string | null };
+/** A página da tela: as respostas, o total com os filtros, o total sem filtro, as novas, os títulos do filtro e o aluno do ?aluno=. */
+export type PaginaRespostas<T> = {
+  itens: T[];
+  total: number;
+  totalConta: number;
+  novas: number;
+  titulos: string[];
+  alunoFiltro: { id: string; nome: string } | null;
+};
+/** Os filtros da URL no formato da respostas_da_conta (o banco normaliza busca e título do mesmo jeito: sem acento, sem caixa). */
+export function filtrosParaBanco(f: FiltrosRespostas): Record<string, string> {
+  const saida: Record<string, string> = {};
+  if (linha1(f.formulario)) saida.formulario = linha1(f.formulario);
+  if (linha1(f.busca)) saida.q = linha1(f.busca);
+  if (f.soNovas) saida.novas = "true";
+  if (linha1(f.aluno)) saida.aluno = linha1(f.aluno);
+  return saida;
+}
+const contagem = (v: unknown): number | null => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null);
+/** A resposta da respostas_da_conta → a página (null = formato inesperado: a tela mostra o erro, nunca uma lista vazia no lugar). */
+export function normalizarPaginaRespostas<T>(bruto: unknown): PaginaRespostas<T> | null {
+  if (!bruto || typeof bruto !== "object") return null;
+  const b = bruto as Record<string, unknown>;
+  const total = contagem(b.total);
+  const totalConta = contagem(b.total_conta);
+  const novas = contagem(b.novas);
+  if (b.ok !== true || !Array.isArray(b.itens) || total === null || totalConta === null || novas === null) return null;
+  const titulos = (Array.isArray(b.titulos) ? b.titulos : []).filter((t): t is string => typeof t === "string").map((titulo) => ({ titulo }));
+  const a = b.aluno && typeof b.aluno === "object" ? (b.aluno as Record<string, unknown>) : null;
+  return {
+    itens: b.itens as T[],
+    total,
+    totalConta,
+    novas,
+    titulos: titulosFormularios(titulos),
+    alunoFiltro: a && typeof a.id === "string" ? { id: a.id, nome: typeof a.nome === "string" ? a.nome : "" } : null,
+  };
+}
+
 // ---- Origem e situação do formulário ----
 /** 'questionario' se o formulário veio de um questionário OU se a resposta tem faixas; senão pela origem do embed; removido → personalizado. */
 export function origemDaResposta(r: Pick<RespostaBase, "faixas" | "formulario">): OrigemResposta {

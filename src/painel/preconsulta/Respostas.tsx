@@ -3,8 +3,11 @@
 // com os filtros na URL (formulário, busca por nome/e-mail/telefone, "Novas" = sem aluno ligado — o ?sem=1 do Nutri — e ?aluno=<id>).
 // Cada resposta: Ver (pergunta · resposta · pontos), Ligar a um aluno (P1), Importar para o prontuário (só a nutricionista com
 // Nutrição: questionário → aplicação de questionário; pré-anamnese/personalizado → anamnese — W18), Desligar e Excluir (soft).
+// hml-14b (B21): a lista vem do banco 20 por vez (respostas_da_conta) — filtros, busca, contagem e os títulos do filtro também; a
+// página fica no endereço (?pagina=) e o aluno ligado vem junto da resposta (sem a lista de alunos da conta).
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Download, Eraser, Inbox, Search, Trash2, Unlink, UserCheck, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,20 +16,23 @@ import {
 import { cn } from "@/lib/utils";
 import { BTN_PERIGO, BTN_PRI, BTN_SEC, DESCRICAO_JANELA, JANELA, SELECT, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { formatarPontos, textoPontuacao } from "@/nutricao/prontuario/lib/questionariosUtil";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { Segmentado } from "@/ui/premium/Segmentado";
-import { criarAnamnese, criarAplicacao, excluirResposta, ligarAluno, marcarImportada, type AlunoPreconsulta, type RespostaComFormulario } from "./dados";
+import { criarAnamnese, criarAplicacao, excluirResposta, ligarAluno, listarRespostasPagina, marcarImportada, type RespostaDaLista } from "./dados";
 import LigarAlunoDialog from "./LigarAlunoDialog";
+import { CHAVES_PRECONSULTA } from "./novas";
 import { Acao, BTN_MINI, SeloNivel } from "./pecas";
 import RespostaDetalhe from "./RespostaDetalhe";
 import {
-  anamneseDaResposta, aplicacaoDaResposta, contatoResposta, ehNova, filtrarRespostas, filtrosAtivos, filtrosDaURL, filtrosParaURL, formatarDataHoraResposta, linkAluno, linkImportada,
-  motivoSemImportar, nomeDoAluno, podeDesligar, pontosDaResposta, situacaoFormulario, textoConfirmarImportar, textoContagemRespostas, textoImportada, textoSituacaoFormulario,
-  tipoImportacao, titulosFormularios, type FiltrosRespostas,
+  anamneseDaResposta, aplicacaoDaResposta, contatoResposta, ehNova, filtrosAtivos, filtrosDaURL, filtrosParaURL, formatarDataHoraResposta, linkAluno, linkImportada,
+  motivoSemImportar, podeDesligar, pontosDaResposta, situacaoFormulario, textoConfirmarImportar, textoContagemRespostas, textoImportada, textoSituacaoFormulario,
+  tipoImportacao, type FiltrosRespostas,
 } from "./respostasUtil";
 import type { ContextoPreConsulta, DadosPreConsulta } from "./usePreConsulta";
 
@@ -39,25 +45,39 @@ export default function Respostas({ ctx, d, params, setParams }: {
   const navigate = useNavigate();
   const filtros = useMemo(() => filtrosDaURL(params), [params]);
   const [busca, setBusca] = useState(filtros.busca);
-  const respostas = d.respostas;
-  const alunos = d.alunos;
-  const mapaAlunos = useMemo(() => new Map(alunos.map((a) => [a.id, a])), [alunos]);
-  const titulos = useMemo(() => titulosFormularios(respostas), [respostas]);
-  const lista = useMemo(() => filtrarRespostas(respostas, filtros), [respostas, filtros]);
-  const novas = useMemo(() => respostas.filter(ehNova).length, [respostas]);
+
+  // hml-14b (B21): a página do banco; filtro novo volta à 1 e a página além do fim (a lista encolheu) vai para a última
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: filtros, total: totalLido });
+  const q = useQuery({
+    queryKey: [...CHAVES_PRECONSULTA.respostas(ctx.contaId, ctx.uid), "pagina", filtros, pagina],
+    queryFn: () => listarRespostasPagina(ctx.contaId, filtros, pagina),
+    enabled: ctx.pronto,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+  const totalDaResposta = q.data && !q.isPlaceholderData ? q.data.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
+  const respostas = useMemo(() => q.data?.itens ?? [], [q.data]);
+  const total = q.data?.total ?? 0;
+  const totalConta = q.data?.totalConta ?? 0;
+  const novas = q.data?.novas ?? 0;
+  const titulos = q.data?.titulos ?? [];
 
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
-  const [ligando, setLigando] = useState<RespostaComFormulario | null>(null);
-  const [paraImportar, setParaImportar] = useState<RespostaComFormulario | null>(null);
-  const [paraExcluir, setParaExcluir] = useState<RespostaComFormulario | null>(null);
+  const [ligando, setLigando] = useState<RespostaDaLista | null>(null);
+  const [paraImportar, setParaImportar] = useState<RespostaDaLista | null>(null);
+  const [paraExcluir, setParaExcluir] = useState<RespostaDaLista | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(0); // gravações fora do modal — o E2E espera voltar a 0
 
   const atualizar = (mudanca: Partial<FiltrosRespostas>) => {
     const novos = { ...filtrosDaURL(params), ...mudanca };
-    const q = new URLSearchParams(filtrosParaURL(novos));
-    q.set("aba", "respostas");
-    setParams(q, { replace: true });
+    const url = new URLSearchParams(filtrosParaURL(novos));
+    url.set("aba", "respostas");
+    setParams(url, { replace: true });
   };
   useEffect(() => {
     const t = setTimeout(() => {
@@ -81,7 +101,7 @@ export default function Respostas({ ctx, d, params, setParams }: {
     }
   };
 
-  const desligar = (r: RespostaComFormulario) => comOcupado(r.id, async () => {
+  const desligar = (r: RespostaDaLista) => comOcupado(r.id, async () => {
     try {
       await ligarAluno(r.id, null);
       await d.recarregar("respostas");
@@ -130,16 +150,15 @@ export default function Respostas({ ctx, d, params, setParams }: {
     });
   };
 
-  const q = d.respostasQ;
-  const alunoFiltro = filtros.aluno ? mapaAlunos.get(filtros.aluno) : null;
-  const nomeParaImportar = paraImportar ? nomeDoAluno(paraImportar.paciente_id, alunos) : "";
+  const alunoFiltro = filtros.aluno ? q.data?.alunoFiltro : null;
+  const nomeParaImportar = paraImportar?.aluno?.nome ?? "";
 
   return (
-    <div data-aba-respostas data-salvando-resposta={salvando} data-atualizando={q.isFetching || d.alunosQ.isFetching ? "1" : "0"}>
-      <Cartao className="px-[22px] pb-3 pt-[18px]" data-cartao-respostas data-contagem-respostas={respostas.length} data-novas={novas}>
+    <div data-aba-respostas data-salvando-resposta={salvando} data-atualizando={q.isFetching ? "1" : "0"}>
+      <Cartao className="px-[22px] pb-3 pt-[18px]" data-cartao-respostas data-contagem-respostas={totalConta} data-novas={novas}>
         <CabecalhoCartao titulo="Caixa de entrada"
           extra={novas > 0 ? <Chip tom="a" className="h-[22px] text-[10.5px]" data-chip-novas>{novas} {novas === 1 ? "NOVA" : "NOVAS"}</Chip> : undefined}
-          acao={<span className="text-[12px] text-texto-3">{q.isLoading ? "" : `${textoContagemRespostas(respostas.length)}${lista.length !== respostas.length ? ` · ${lista.length} no filtro` : ""}`}</span>} />
+          acao={<span className="text-[12px] text-texto-3">{q.isPending ? "" : `${textoContagemRespostas(totalConta)}${total !== totalConta ? ` · ${total} no filtro` : ""}`}</span>} />
 
         <div className="mb-2 grid grid-cols-1 items-center gap-2.5 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto]" data-filtros-respostas>
           <div className="relative">
@@ -171,27 +190,27 @@ export default function Respostas({ ctx, d, params, setParams }: {
 
         {q.isError ? (
           <EstadoErro titulo="Não deu para carregar as respostas" texto={q.error instanceof Error ? q.error.message : undefined} aoTentar={() => void q.refetch()} className="my-3" />
-        ) : q.isLoading ? (
+        ) : q.isPending ? (
           <div className="flex flex-col gap-2 py-2" data-carregando-respostas>{[0, 1, 2].map((i) => <Esqueleto key={i} className="h-[62px] w-full" />)}</div>
-        ) : respostas.length === 0 ? (
+        ) : totalConta === 0 ? (
           <EstadoVazio icone={Inbox} className="my-3" titulo="Nenhuma resposta ainda"
             texto="Copie o link de um formulário e mande para quem vai responder: a pessoa responde sem login e a resposta aparece aqui." />
-        ) : lista.length === 0 ? (
+        ) : total === 0 ? (
           <EstadoVazio icone={Search} className="my-3" titulo="Nenhuma resposta com esses filtros" acao={<Botao tamanho="sm" icone={X} onClick={limparFiltros}>Limpar filtros</Botao>} />
         ) : (
-          <div className="divide-y divide-linha-3 border-t border-linha-3" data-lista-respostas>
-            {lista.map((r) => {
+          <div className="divide-y divide-linha-3 border-t border-linha-3" data-lista="respostas" data-lista-respostas>
+            {respostas.map((r) => {
               const pts = pontosDaResposta(r);
               const situacao = situacaoFormulario(r);
-              const aluno: AlunoPreconsulta | undefined = r.paciente_id ? mapaAlunos.get(r.paciente_id) : undefined;
+              const aluno = r.aluno ?? null;
               const nomeAluno = aluno?.nome ?? "";
               const linkImp = linkImportada(r);
               const aberto = !!abertos[r.id];
               const contato = contatoResposta(r);
               const nova = ehNova(r);
-              const motivo = ctx.souNutri ? motivoSemImportar(r, { uid: ctx.uid, souNutri: ctx.souNutri, souDono: ctx.dono }, aluno ?? null) : null;
+              const motivo = ctx.souNutri ? motivoSemImportar(r, { uid: ctx.uid, souNutri: ctx.souNutri, souDono: ctx.dono }, aluno) : null;
               return (
-                <div key={r.id} className="py-3" data-resposta={r.id} data-resposta-nome={r.nome} data-resposta-formulario={r.titulo} data-resposta-aluno={r.paciente_id ?? ""}
+                <div key={r.id} className="py-3" data-item data-resposta={r.id} data-resposta-nome={r.nome} data-resposta-formulario={r.titulo} data-resposta-aluno={r.paciente_id ?? ""}
                   data-resposta-nova={nova ? "1" : "0"} data-resposta-pontos={formatarPontos(pts.pontos)} data-resposta-nivel={pts.nivel}
                   data-resposta-importada={r.importada_em ? "1" : "0"}>
                   <div className="flex flex-wrap items-center gap-3">
@@ -253,9 +272,10 @@ export default function Respostas({ ctx, d, params, setParams }: {
             })}
           </div>
         )}
+        {!q.isError && <Paginacao nome="respostas" pagina={pagina} total={total} aoMudar={irPara} carregando={q.isFetching} />}
       </Cartao>
 
-      <LigarAlunoDialog open={!!ligando} onOpenChange={(a) => { if (!a) setLigando(null); }} resposta={ligando} alunos={alunos} contaId={ctx.contaId}
+      <LigarAlunoDialog open={!!ligando} onOpenChange={(a) => { if (!a) setLigando(null); }} resposta={ligando} contaId={ctx.contaId}
         onLigada={() => { void d.recarregar("tudo"); }} />
 
       <AlertDialog open={!!paraImportar} onOpenChange={(aberto) => { if (!aberto) setParaImportar(null); }}>

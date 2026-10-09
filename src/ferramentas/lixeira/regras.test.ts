@@ -66,6 +66,19 @@ describe("Lixeira — normalizar e ordenar", () => {
     const base: ItemLixeira = { tipo: "plano", id: "b", titulo: "B", detalhe: null, paciente_id: null, paciente_nome: null, excluido_em: D1, pode_restaurar: true, pode_apagar: true };
     expect(ordenarItens([base, { ...base, id: "a" }]).map((i) => i.id)).toEqual(["a", "b"]);
   });
+  it("hml-14b (B21): a resposta paginada traz a aba, os números das abas (os que faltam = 0) e o total da aba com a busca", () => {
+    const pag = normalizarLixeira({
+      ok: true, ve_clinico: false, tem_nutricao: true, tipo: "paciente", totais: { paciente: 41, resposta: 2, lixo: 9, plano: -1 }, total: 3,
+      itens: [bruto.itens[4]],
+    })!;
+    expect(pag.itens.map((i) => i.id)).toEqual(["pac1"]);
+    expect(pag.pagina).toEqual({ tipo: "paciente", totais: { resposta: 2, anamnese: 0, antropometria: 0, plano: 0, paciente: 41 }, total: 3 });
+    // aba estranha → a 1ª; sem o total da aba = formato inesperado (a tela mostra o erro, nunca a lista vazia)
+    expect(normalizarLixeira({ ok: true, tipo: "x", totais: {}, total: 0, itens: [] })?.pagina?.tipo).toBe("resposta");
+    expect(normalizarLixeira({ ok: true, tipo: "paciente", totais: { paciente: 1 }, itens: [] })).toBeNull();
+    // o formato de antes (APK antigo) continua sem a página
+    expect(normalizarLixeira(bruto)?.pagina).toBeUndefined();
+  });
   it("títulos por tipo", () => {
     expect(tituloDoItem(l.itens.find((i) => i.id === "r1")!)).toBe("Pré-consulta inicial · Carla");
     expect(tituloDoItem(l.itens.find((i) => i.id === "t1")!)).toBe("Antropometria de 10/09/2026");

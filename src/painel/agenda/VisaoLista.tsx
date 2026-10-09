@@ -1,14 +1,16 @@
 // Physiq W20 — visão LISTA (porta da VisaoLista do PhysiqNutri): as consultas do mês por dia (só os dias com consulta), no padrão
 // da "Agenda de hoje" da tela 6 (hora, foto, aluno, título, a TAG — W2: o chip TREINO/NUTRI virou a pílula da tag na cor dela) + o
-// status. Vazio = estado vazio com a ação.
+// status. Vazio = estado vazio com a ação. hml-14b (D18): o mês é uma JANELA de datas (fica fora da paginação) lida até 1000 — quando
+// chega ao teto (`noLimite`), o aviso diz que pode ter agendamento de fora.
 import { addDays, eachDayOfInterval, isSameDay } from "date-fns";
-import { CalendarPlus, CalendarX2 } from "lucide-react";
+import { CalendarPlus, CalendarX2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ESTILO_CONFIRMACAO, ESTILO_STATUS } from "@/agenda/regras";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoVazio } from "@/ui/premium/Estados";
+import { AVISO_LIMITE_AGENDA } from "./dados";
 import PilulaTag from "./PilulaTag";
 import { agruparPorDia, chaveDia, faixaHora, intervaloVisao, nomeDoDiaLongo, nomeDoEvento, type EventoPainel } from "./visao";
 
@@ -18,16 +20,28 @@ interface Props {
   hoje?: Date;
   onAbrir: (ev: EventoPainel) => void;
   onNovo: (dia: Date) => void;
+  /** a leitura da janela veio com 1000 (o teto — `janelaNoLimite(d.agendamentosQ.data)`): mostra o aviso */
+  noLimite?: boolean;
 }
 
-export default function VisaoLista({ ancora, eventos, hoje = new Date(), onAbrir, onNovo }: Props) {
+function AvisoLimite() {
+  return (
+    <p role="status" className="flex items-center gap-2 rounded-xl border border-[rgba(245,158,11,.35)] bg-[rgba(245,158,11,.08)] px-3 py-2 text-[12.5px] text-ambar-3"
+      data-aviso-limite-agenda>
+      <TriangleAlert aria-hidden className="h-4 w-4 flex-none" /> {AVISO_LIMITE_AGENDA}
+    </p>
+  );
+}
+
+export default function VisaoLista({ ancora, eventos, hoje = new Date(), onAbrir, onNovo, noLimite = false }: Props) {
   const { inicio, fim } = intervaloVisao(ancora, "lista");
   const dias = eachDayOfInterval({ start: inicio, end: addDays(fim, -1) });
   const grupos = agruparPorDia(eventos.filter((e) => e.inicio < fim && e.fim > inicio), dias);
 
   if (!grupos.length) {
     return (
-      <div data-visao="lista" data-lista-vazia>
+      <div className="flex flex-col gap-3" data-visao="lista" data-lista-vazia>
+        {noLimite && <AvisoLimite />}
         <EstadoVazio icone={CalendarX2} titulo="Nenhum agendamento neste mês" texto="Marque a próxima consulta: ela aparece aqui, no mês e na semana."
           acao={<Botao variante="g" tamanho="sm" icone={CalendarPlus} onClick={() => onNovo(hoje)} data-btn-novo-na-lista>Novo agendamento</Botao>} />
       </div>
@@ -36,6 +50,7 @@ export default function VisaoLista({ ancora, eventos, hoje = new Date(), onAbrir
 
   return (
     <div className="flex flex-col gap-3" data-visao="lista">
+      {noLimite && <AvisoLimite />}
       {grupos.map(({ dia, eventos: evs }) => {
         const ehHoje = isSameDay(dia, hoje);
         return (

@@ -52,15 +52,24 @@ export interface Lixeira {
   veClinico: boolean;
   temNutricao: boolean;
   itens: ItemLixeira[];
+  /**
+   * hml-14b (B21): só na resposta paginada (lixeira_da_conta com p_tipo/p_busca/p_offset/p_limite) — a aba que o banco mostrou, os
+   * números das abas (sem a busca) e o total da aba com a busca; `itens` é então UMA página dessa aba.
+   */
+  pagina?: { tipo: TipoLixeira; totais: ContagemLixeira; total: number };
 }
 
 const texto = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+const contagemValida = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
 
 /** Normaliza a resposta da lixeira_da_conta (tolerante: item estranho fica de fora, nunca quebra a tela). */
 export function normalizarLixeira(bruto: unknown): Lixeira | null {
   if (!bruto || typeof bruto !== "object") return null;
   const b = bruto as Record<string, unknown>;
   if (b.ok !== true) return null;
+  // a resposta paginada sem o total da aba = formato inesperado (a tela mostra o erro, nunca uma lista vazia no lugar)
+  const paginada = !!b.totais && typeof b.totais === "object";
+  if (paginada && !contagemValida(b.total)) return null;
   const itens: ItemLixeira[] = [];
   for (const x of Array.isArray(b.itens) ? b.itens : []) {
     if (!x || typeof x !== "object") continue;
@@ -80,7 +89,16 @@ export function normalizarLixeira(bruto: unknown): Lixeira | null {
       pode_apagar: i.pode_apagar === true && i.tipo !== "paciente",
     });
   }
-  return { veClinico: b.ve_clinico === true, temNutricao: b.tem_nutricao === true, itens: ordenarItens(itens) };
+  const l: Lixeira = { veClinico: b.ve_clinico === true, temNutricao: b.tem_nutricao === true, itens: ordenarItens(itens) };
+  if (paginada && contagemValida(b.total)) {
+    const totais = contarPorTipo([]);
+    for (const t of CHAVES_LIXEIRA) {
+      const n = (b.totais as Record<string, unknown>)[t];
+      if (contagemValida(n)) totais[t] = n;
+    }
+    l.pagina = { tipo: ehTipoLixeira(b.tipo) ? b.tipo : "resposta", totais, total: b.total };
+  }
+  return l;
 }
 
 /** Mais recentemente excluído primeiro; empate → ordem das abas → id (determinístico). */

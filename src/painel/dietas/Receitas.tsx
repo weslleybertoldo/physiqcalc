@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChefHat, Copy, Eye, FileDown, FolderOpen, Pencil, Search, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  alternarFavorita, dadosProfissionais, duplicarReceita, excluirReceita, listarGrupos, listarReceitas, nomeDaNutricionista, type Receita,
+  alternarFavorita, dadosProfissionais, duplicarReceita, excluirReceita, listarGrupos, listarReceitasPagina, nomeDaNutricionista, nomesParaCopia, type FiltrosReceitas,
+  type Receita,
 } from "@/nutricao/editor/lib/receitas";
-import { FILTRO_SEM_GRUPO, calcularReceita, contarFavoritas, filtrarReceitas, nomeCopia, resumoReceita, textoContagemReceitas } from "@/nutricao/editor/lib/receitasUtil";
+import { FILTRO_SEM_GRUPO, calcularReceita, nomeCopia, resumoReceita, textoContagemReceitas } from "@/nutricao/editor/lib/receitasUtil";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import type { ContextoDietas } from "./contexto";
 import GruposDialog from "./GruposDialog";
 import { AcaoLinha, CampoBusca, ConfirmarExclusao, Filtro } from "./pecas";
@@ -24,6 +27,8 @@ import VerReceitaDialog from "./VerReceitaDialog";
 // por grupo (todos / sem grupo / cada grupo) e Favoritas (na URL: ?q=&grupo=&fav=1), Nova receita e Grupos; a lista com as favoritas
 // primeiro, Ver, PDF (marca PHYSIQ), Editar, Duplicar e Excluir (soft). As receitas são de quem criou (a mesma regra do site antigo e
 // do "Da receita" do editor da W16): a lista mostra só as SUAS — também para o master.
+// hml-14b (B21): 20 por página, do banco (receitas_da_nutricionista: só as suas, separadas ANTES do corte; busca sem acento, grupo,
+// favoritas e as contagens lá), com a página no endereço (?pagina=).
 
 export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }: {
   ctx: ContextoDietas;
@@ -38,9 +43,22 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
   const grupoFiltro = params.get("grupo") ?? "";
   const soFavoritas = params.get("fav") === "1";
   const [buscaLocal, setBuscaLocal] = useState(busca);
+  const filtros = useMemo<FiltrosReceitas>(() => ({ q: busca, grupo: grupoFiltro, favoritas: soFavoritas }), [busca, grupoFiltro, soFavoritas]);
 
-  const receitasQ = useQuery({ queryKey: CHAVE_RECEITAS, queryFn: listarReceitas, enabled: !!uid });
-  const gruposQ = useQuery({ queryKey: CHAVE_GRUPOS_RECEITA, queryFn: listarGrupos, enabled: !!uid });
+  // hml-14b (B21): a página do banco; filtro novo volta à 1 e a página além do fim (a lista encolheu) vai para a última
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: filtros, total: totalLido });
+  const receitasQ = useQuery({
+    queryKey: [...CHAVE_RECEITAS, "pagina", uid, filtros, pagina],
+    queryFn: () => listarReceitasPagina(filtros, pagina),
+    enabled: !!uid,
+    placeholderData: keepPreviousData,
+  });
+  const totalDaResposta = receitasQ.data && !receitasQ.isPlaceholderData ? receitasQ.data.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
+  const gruposQ = useQuery({ queryKey: [...CHAVE_GRUPOS_RECEITA, uid], queryFn: () => listarGrupos(uid), enabled: !!uid });
   const perfilQ = useQuery({
     queryKey: ["perfil-pdf", uid],
     enabled: !!uid,
@@ -49,9 +67,13 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
       return { nome, profissional };
     },
   });
-  // só as suas (o master lê as de todos pela regra do banco — aqui é o painel dele de profissional)
-  const receitas = useMemo(() => (receitasQ.data ?? []).filter((r) => r.nutricionista_id === uid), [receitasQ.data, uid]);
-  const grupos = useMemo(() => (gruposQ.data ?? []).filter((g) => g.nutricionista_id === uid), [gruposQ.data, uid]);
+  // só as suas (o master lê as de todos pela regra do banco — aqui é o painel dele de profissional): o banco já separa
+  const receitas = useMemo(() => receitasQ.data?.itens ?? [], [receitasQ.data]);
+  const grupos = useMemo(() => gruposQ.data ?? [], [gruposQ.data]);
+  const total = receitasQ.data?.total ?? 0;
+  const totalGeral = receitasQ.data?.totalGeral ?? 0;
+  const favoritas = receitasQ.data?.favoritas ?? 0;
+  const porGrupo = useMemo(() => receitasQ.data?.porGrupo ?? {}, [receitasQ.data]);
   const carregando = receitasQ.isLoading || gruposQ.isLoading;
 
   const [salvando, setSalvando] = useState(false);
@@ -88,8 +110,7 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
     return () => clearTimeout(t);
   }, [buscaLocal, busca, setFiltro]);
 
-  const filtradas = useMemo(() => filtrarReceitas(receitas, busca, grupoFiltro, soFavoritas), [receitas, busca, grupoFiltro, soFavoritas]);
-  const nomeDoGrupo = (id: string | null): string | null => (id ? (gruposQ.data ?? []).find((g) => g.id === id)?.nome ?? null : null);
+  const nomeDoGrupo = (id: string | null): string | null => (id ? grupos.find((g) => g.id === id)?.nome ?? null : null);
 
   const invalidar = async () => {
     await Promise.all([qc.invalidateQueries({ queryKey: CHAVE_RECEITAS }), qc.invalidateQueries({ queryKey: CHAVE_GRUPOS_RECEITA })]);
@@ -114,7 +135,8 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
     }, "Não foi possível favoritar a receita");
   const duplicar = (r: Receita) =>
     rodar(async () => {
-      const copia = await duplicarReceita(r, nomeCopia(r.nome, receitas.map((x) => x.nome)));
+      // o "(cópia N)" livre entre TODAS as suas receitas (não só as da página): os nomes parecidos vêm do banco
+      const copia = await duplicarReceita(r, nomeCopia(r.nome, await nomesParaCopia(uid, r.nome)));
       toast.success("Receita duplicada", { description: copia.nome });
     }, "Não foi possível duplicar a receita");
   const excluir = async () => {
@@ -155,7 +177,7 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
   const erro = receitasQ.error ?? gruposQ.error;
 
   return (
-    <div className="flex flex-col gap-4" data-pagina-receitas data-total-receitas={receitas.length} data-total-filtradas={filtradas.length} data-total-grupos={grupos.length}
+    <div className="flex flex-col gap-4" data-pagina-receitas data-total-receitas={totalGeral} data-total-filtradas={total} data-total-grupos={grupos.length}
       data-salvando-receitas={salvando ? "1" : "0"} data-carregando={carregando ? "1" : "0"}>
       <Cartao className="p-4">
         <div className="flex flex-wrap items-end gap-2.5">
@@ -188,14 +210,14 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
 
       <Cartao className="px-4 pb-1 pt-4">
         <CabecalhoCartao
-          titulo={<span data-contagem-receitas={receitas.length} data-contagem-favoritas={contarFavoritas(receitas)}>{carregando ? "Contando…" : textoContagemReceitas(receitas.length, contarFavoritas(receitas))}</span>}
+          titulo={<span data-contagem-receitas={totalGeral} data-contagem-favoritas={favoritas}>{carregando ? "Contando…" : textoContagemReceitas(totalGeral, favoritas)}</span>}
           extra={soFavoritas ? <Chip tom="a">FAVORITAS</Chip> : undefined}
         />
         {erro ? (
           <EstadoErro texto={`Não foi possível carregar as receitas: ${(erro as Error).message}`} aoTentar={() => void invalidar()} className="my-4" />
         ) : carregando ? (
           <EstadoCarregando linhas={3} rotulo="Carregando as receitas" className="pb-3" />
-        ) : receitas.length === 0 ? (
+        ) : totalGeral === 0 ? (
           <EstadoVazio
             icone={ChefHat}
             titulo="Nenhuma receita culinária"
@@ -203,17 +225,18 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
             acao={ctx.souNutri ? <Botao variante="w" onClick={() => setModalReceita({ aberto: true, receita: null })} data-btn-nova-receita-vazio>Nova receita</Botao> : undefined}
             className="my-4"
           />
-        ) : filtradas.length === 0 ? (
+        ) : total === 0 ? (
           <EstadoVazio icone={Search} titulo="Nenhuma receita com esse filtro" texto="Mude a busca, o grupo ou tire as Favoritas." className="my-4" />
         ) : (
-          <ul className="divide-y divide-linha-3" data-lista-receitas>
-            {filtradas.map((r) => {
+          <ul className="divide-y divide-linha-3" data-lista="receitas" data-lista-receitas>
+            {receitas.map((r) => {
               const calc = calcularReceita({ porcoes: Number(r.porcoes), rendimento_g: r.rendimento_g === null ? null : Number(r.rendimento_g) }, r.ingredientes);
               const grupo = nomeDoGrupo(r.grupo_id);
               return (
                 <li
                   key={r.id}
                   className="flex flex-wrap items-center justify-between gap-2 py-3"
+                  data-item
                   data-receita={r.id}
                   data-favorita={r.favorita ? "1" : "0"}
                   data-receita-grupo={r.grupo_id ?? ""}
@@ -260,9 +283,10 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
             })}
           </ul>
         )}
-        {!erro && !carregando && filtradas.length > 0 && filtradas.length < receitas.length && (
-          <p className="border-t border-linha-3 py-3 text-center text-[12px] text-texto-4" data-receitas-filtradas>{filtradas.length} de {receitas.length} receitas</p>
+        {!erro && !carregando && total > 0 && total < totalGeral && (
+          <p className="border-t border-linha-3 pt-3 text-center text-[12px] text-texto-4" data-receitas-filtradas>{total} de {totalGeral} receitas</p>
         )}
+        {!erro && <Paginacao nome="receitas" pagina={pagina} total={total} aoMudar={irPara} carregando={receitasQ.isFetching} />}
       </Cartao>
 
       <ReceitaDialog
@@ -283,7 +307,7 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
         onPdf={pdf}
         onEditar={abrirEdicao}
       />
-      <GruposDialog open={modalGrupos} onOpenChange={setModalGrupos} nutricionistaId={uid} grupos={grupos} receitas={receitas} onMudou={invalidar} />
+      <GruposDialog open={modalGrupos} onOpenChange={setModalGrupos} nutricionistaId={uid} grupos={grupos} porGrupo={porGrupo} onMudou={invalidar} />
       <ConfirmarExclusao
         aberto={!!paraExcluir}
         aoMudar={(a) => !a && setParaExcluir(null)}

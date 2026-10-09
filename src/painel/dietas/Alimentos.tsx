@@ -1,25 +1,32 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Apple, ChevronDown, ChevronUp, Pencil, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { usePaginado } from "@/components/ListaPaginada";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { cn } from "@/lib/utils";
 import { listarGrupos, type Alimento, type GrupoAlimentos } from "@/nutricao/editor/lib/alimentos";
 import {
-  FILTROS_PADRAO, FONTES, MACROS, TACO_DESCRICAO, etiquetaAlimento, filtrosAtivos, fmtComUnidade, fmtQtd, inserirOrdenado, macrosPorGramas, nutrientesListados,
+  FILTROS_PADRAO, FONTES, MACROS, TACO_DESCRICAO, etiquetaAlimento, filtrosAtivos, fmtComUnidade, fmtQtd, macrosPorGramas, nutrientesListados,
   porGramas, resumoMacros, rotuloMedida, textoTotal, type FiltroFonte, type FiltrosAlimentos,
 } from "@/nutricao/editor/lib/alimentosUtil";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import AlimentoDialog from "./AlimentoDialog";
 import { alimentoEhMeu, excluirAlimentoDoPainel, listarAlimentosDoPainel } from "./alimentosPainel";
 import type { ContextoDietas } from "./contexto";
-import { AcaoLinha, CampoBusca, ConfirmarExclusao, Filtro, VerMais } from "./pecas";
+import { AcaoLinha, CampoBusca, ConfirmarExclusao, Filtro } from "./pecas";
 
 // Physiq W24 — Painel › Dietas › Alimentos (N-16): porta da tela "Meus alimentos" do PhysiqNutri (src/pages/consultorio/Alimentos.tsx)
 // no visual premium — a base pública TACO (597 itens, só leitura) + os alimentos próprios (marca e medidas caseiras): busca pelo nome
-// (sem acento, inclui a marca), filtros de fonte e grupo, total, lista de 20 com "Ver mais", Ver (por 100 g, demais nutrientes, porção
+// (sem acento, inclui a marca), filtros de fonte e grupo, total, lista de 20 por página, Ver (por 100 g, demais nutrientes, porção
 // de referência e medidas caseiras com os macros de cada uma) e cadastrar/editar/excluir SÓ os seus (a TACO nem mostra os botões).
+// hml-14b (P1): o "Ver mais" que acumulava virou páginas numeradas ("1–20 de 597", Anterior · Próxima), a página no endereço.
+
+/** Chave do react-query da lista (salvar e excluir recarregam a página). */
+const CHAVE_ALIMENTOS = ["painel-alimentos"] as const;
 
 /** Etiqueta do alimento: a MARCA quando é próprio e tem marca, senão a fonte (TACO / Meu alimento). */
 function Etiqueta({ a }: { a: { fonte: string; marca: string | null } }) {
@@ -125,8 +132,24 @@ export function Alimentos({ ctx, pedidoNovo, aoAtenderPedido }: { ctx: ContextoD
     if (ctx.souNutri) setModal({ aberto: true, alimento: null });
   }, [pedidoNovo, aoAtenderPedido, ctx.souNutri]);
 
-  const fetchPage = useCallback((offset: number, limit: number) => listarAlimentosDoPainel(filtros, uid, offset, limit), [filtros, uid]);
-  const { itens, total, loading, carregandoMais, erro, verMais, recarregar, setItens } = usePaginado<Alimento>(fetchPage, [filtros, uid]);
+  // hml-14b (P1): a página do banco (com o total); filtro novo volta à 1 e a página além do fim vai para a última
+  const qc = useQueryClient();
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: filtros, total: totalLido });
+  const lista = useQuery({
+    queryKey: [...CHAVE_ALIMENTOS, uid, filtros, pagina],
+    queryFn: () => listarAlimentosDoPainel(filtros, uid, deslocamento(pagina), POR_PAGINA),
+    placeholderData: keepPreviousData,
+  });
+  const totalDaResposta = lista.data && !lista.isPlaceholderData ? lista.data.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
+  const itens = lista.data?.itens ?? [];
+  const total = lista.data?.total ?? 0;
+  const loading = lista.isLoading;
+  const erro = lista.error ? (lista.error instanceof Error ? lista.error.message : String(lista.error)) : null;
+  const recarregar = useCallback(() => qc.invalidateQueries({ queryKey: CHAVE_ALIMENTOS }), [qc]);
 
   const carregarGrupos = useCallback(async () => {
     try {
@@ -141,9 +164,9 @@ export function Alimentos({ ctx, pedidoNovo, aoAtenderPedido }: { ctx: ContextoD
 
   const comFiltro = filtrosAtivos(filtros);
   const alternar = (id: string) => setAbertos((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
-  const onSalvo = (a: Alimento, modo: "criado" | "editado") => {
-    if (modo === "editado") setItens((prev) => inserirOrdenado(prev, a));
-    else void recarregar();
+  // criado ou editado: a página volta do banco (a ordem é a do banco — o editado pode mudar de lugar)
+  const onSalvo = () => {
+    void recarregar();
     void carregarGrupos();
   };
   const excluir = async () => {
@@ -191,7 +214,7 @@ export function Alimentos({ ctx, pedidoNovo, aoAtenderPedido }: { ctx: ContextoD
           extra={filtros.fonte ? <Chip tom={filtros.fonte === "proprio" ? "n" : "g"}>{filtros.fonte === "proprio" ? "MEUS ALIMENTOS" : "TACO"}</Chip> : undefined}
         />
         {erro ? (
-          <EstadoErro texto={`Não foi possível carregar os alimentos: ${erro}`} aoTentar={() => void recarregar()} className="my-4" />
+          <EstadoErro texto={`Não foi possível carregar os alimentos: ${erro}`} aoTentar={() => void lista.refetch()} className="my-4" />
         ) : loading ? (
           <EstadoCarregando linhas={4} rotulo="Carregando os alimentos" className="pb-3" />
         ) : itens.length === 0 ? (
@@ -201,12 +224,12 @@ export function Alimentos({ ctx, pedidoNovo, aoAtenderPedido }: { ctx: ContextoD
             <EstadoVazio icone={Apple} titulo="Nenhum alimento por aqui" texto="Cadastre o primeiro alimento próprio no botão Novo alimento." className="my-4" />
           )
         ) : (
-          <ul className="divide-y divide-linha-3" data-lista-alimentos>
+          <ul className="divide-y divide-linha-3" data-lista="alimentos" data-lista-alimentos>
             {itens.map((a) => {
               const aberto = abertos.includes(a.id);
               const meu = alimentoEhMeu(a, uid);
               return (
-                <li key={a.id} className="py-3" data-alimento={a.id} data-fonte={a.fonte} data-aberto={aberto ? "1" : "0"} data-editavel={meu ? "1" : "0"}>
+                <li key={a.id} className="py-3" data-item data-alimento={a.id} data-fonte={a.fonte} data-aberto={aberto ? "1" : "0"} data-editavel={meu ? "1" : "0"}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-3">
                       <span className={cn("flex h-9 w-9 flex-none items-center justify-center rounded-[12px] border border-linha", meu ? "bg-[rgba(16,185,129,.1)] text-verde-3" : "bg-superficie text-texto-3")}>
@@ -241,7 +264,7 @@ export function Alimentos({ ctx, pedidoNovo, aoAtenderPedido }: { ctx: ContextoD
             })}
           </ul>
         )}
-        {!erro && !loading && <VerMais mostrando={itens.length} total={total} aoVerMais={verMais} carregando={carregandoMais} rotulo="alimentos" />}
+        {!erro && <Paginacao nome="alimentos" pagina={pagina} total={total} aoMudar={irPara} carregando={lista.isFetching} />}
       </Cartao>
 
       <AlimentoDialog

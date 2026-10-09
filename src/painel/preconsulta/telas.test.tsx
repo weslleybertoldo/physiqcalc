@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation, useSearchParams } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   criarAplicacao: vi.fn(),
   marcarImportada: vi.fn(),
   ligarAluno: vi.fn(),
+  respostasPagina: vi.fn(),
 }));
 vi.mock("@/integrations/principal/client", () => ({ principal: {}, PRINCIPAL_SCHEMA: "public" }));
 vi.mock("./dados", async (original) => ({
@@ -16,9 +17,10 @@ vi.mock("./dados", async (original) => ({
   criarAplicacao: h.criarAplicacao,
   marcarImportada: h.marcarImportada,
   ligarAluno: h.ligarAluno,
+  listarRespostasPagina: h.respostasPagina,
 }));
 
-import type { AlunoPreconsulta, FormularioPreconsulta, RespostaComFormulario } from "./dados";
+import type { AlunoPreconsulta, FormularioPreconsulta, RespostaComFormulario, RespostaDaLista } from "./dados";
 import FormularioDialog from "./FormularioDialog";
 import Formularios from "./Formularios";
 import { origemDoLink } from "./link";
@@ -55,10 +57,34 @@ function dados(p: { formularios?: FormularioPreconsulta[]; respostas?: RespostaC
     formularios: p.formularios ?? [], respostas: p.respostas ?? [], alunos: p.alunos ?? [], modelos: [], questionarios: [], recarregar: vi.fn(async () => {}),
   } as unknown as DadosPreConsulta;
 }
-function montar(el: React.ReactNode) {
+function montar(el: React.ReactNode, rota = "/") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={qc}><MemoryRouter initialEntries={[rota]}>{el}</MemoryRouter></QueryClientProvider>);
 }
+/** A aba Respostas como na página: os parâmetros são os do endereço (a página da lista também mora lá). */
+function RespostasNaRota({ ctx, d }: { ctx: ContextoPreConsulta; d: DadosPreConsulta }) {
+  const [sp, setSp] = useSearchParams();
+  const local = useLocation();
+  return (
+    <>
+      <Respostas ctx={ctx} d={d} params={sp} setParams={setSp} />
+      <output data-endereco={local.search} />
+    </>
+  );
+}
+const endereco = () => document.querySelector("[data-endereco]")?.getAttribute("data-endereco") ?? "";
+/** A resposta como a respostas_da_conta devolve: com o aluno ligado embutido (só o da conta, fora da lixeira). */
+const daLista = (p: Partial<RespostaDaLista>): RespostaDaLista => ({ aluno: null, ...resp(p), ...p }) as RespostaDaLista;
+/** A página do banco (por padrão, só estas e sem filtro). */
+const paginaDe = (itens: RespostaDaLista[], extra: Record<string, unknown> = {}) => ({
+  itens, total: itens.length, totalConta: itens.length, novas: itens.filter((r) => !r.paciente_id).length, titulos: ["Pré-consulta do treino"], alunoFiltro: null, ...extra,
+});
+/** espera o elemento aparecer (waitFor só repete quando o callback lança) */
+const achar = (sel: string) => waitFor(() => {
+  const el = document.querySelector(sel) as HTMLElement | null;
+  expect(el).not.toBeNull();
+  return el as HTMLElement;
+});
 
 beforeEach(() => {
   for (const f of Object.values(h)) f.mockReset();
@@ -107,11 +133,14 @@ describe("W21 — Pré-consulta › Formulários", () => {
 });
 
 describe("W21 — Pré-consulta › Respostas", () => {
-  const params = new URLSearchParams("aba=respostas");
+  const ROTA = "/painel/pre-consulta?aba=respostas";
+  const RAFAEL = { id: "a1", nome: "Rafael Moura", nutricionista_id: null };
 
-  it("personal: liga a um aluno e NÃO vê Importar (a anamnese é da nutricionista)", () => {
-    const d = dados({ respostas: [resp({}), resp({ id: "r2", paciente_id: "a1" })], alunos: [aluno({})] });
-    montar(<Respostas ctx={contexto({})} d={d} params={params} setParams={vi.fn()} />);
+  it("personal: liga a um aluno e NÃO vê Importar (a anamnese é da nutricionista)", async () => {
+    h.respostasPagina.mockResolvedValue(paginaDe([daLista({}), daLista({ id: "r2", paciente_id: "a1", aluno: RAFAEL })]));
+    montar(<RespostasNaRota ctx={contexto({})} d={dados({ alunos: [aluno({})] })} />, ROTA);
+    await achar('[data-resposta="r1"]');
+    expect(h.respostasPagina).toHaveBeenCalledWith("c1", { formulario: "", busca: "", soNovas: false, aluno: "" }, 1);
     expect(document.querySelector('[data-resposta="r1"]')?.getAttribute("data-resposta-nova")).toBe("1");
     expect(document.querySelector('[data-resposta="r1"] [data-resposta-chip-nova]')).not.toBeNull();
     expect(document.querySelector('[data-resposta="r2"] [data-resposta-aluno-nome]')?.getAttribute("data-resposta-aluno-nome")).toBe("Rafael Moura");
@@ -120,30 +149,33 @@ describe("W21 — Pré-consulta › Respostas", () => {
     expect(document.querySelector("[data-cartao-respostas]")?.getAttribute("data-novas")).toBe("1");
   });
 
-  it("filtro ?aluno= e ?sem=1 (novas)", () => {
-    const d = dados({ respostas: [resp({}), resp({ id: "r2", paciente_id: "a1" })], alunos: [aluno({})] });
-    const r = montar(<Respostas ctx={contexto({})} d={d} params={new URLSearchParams("aba=respostas&aluno=a1")} setParams={vi.fn()} />);
-    expect([...document.querySelectorAll("[data-resposta]")].map((x) => x.getAttribute("data-resposta"))).toEqual(["r2"]);
+  it("hml-14b: o filtro ?aluno= e o ?sem=1 (novas) vão ao banco; o chip mostra o aluno que o banco achou", async () => {
+    h.respostasPagina.mockResolvedValue(paginaDe([daLista({ id: "r2", paciente_id: "a1", aluno: RAFAEL })], { totalConta: 2, alunoFiltro: { id: "a1", nome: "Rafael Moura" } }));
+    const r = montar(<RespostasNaRota ctx={contexto({})} d={dados({})} />, `${ROTA}&aluno=a1`);
+    await achar('[data-resposta="r2"]');
+    expect(h.respostasPagina).toHaveBeenLastCalledWith("c1", expect.objectContaining({ aluno: "a1", soNovas: false }), 1);
     expect(document.querySelector("[data-filtro-aluno]")?.textContent).toContain("Rafael Moura");
+    expect(screen.getByText("2 respostas · 1 no filtro")).toBeInTheDocument();
     r.unmount();
-    montar(<Respostas ctx={contexto({})} d={d} params={new URLSearchParams("aba=respostas&sem=1")} setParams={vi.fn()} />);
-    expect([...document.querySelectorAll("[data-resposta]")].map((x) => x.getAttribute("data-resposta"))).toEqual(["r1"]);
-  });
+    h.respostasPagina.mockResolvedValue(paginaDe([daLista({})], { totalConta: 2 }));
+    montar(<RespostasNaRota ctx={contexto({})} d={dados({})} />, `${ROTA}&sem=1`);
+    await achar('[data-resposta="r1"]');
+    expect(h.respostasPagina).toHaveBeenLastCalledWith("c1", expect.objectContaining({ soNovas: true, aluno: "" }), 1);
+  }, 15_000);
 
   it("nutricionista: Importar com o motivo quando não dá; importa a pré-anamnese para a anamnese do aluno dela", async () => {
     const nutri = contexto({ uid: "u-nutri", souNutri: true, papeis: ["nutricionista"], modulos: ["nutricao"] });
     const formA = { id: "f2", titulo: "Pré-anamnese", origem: "anamnese", origem_id: "m1", slug: "bcdefghj", ativo: true, deleted_at: null };
-    const d = dados({
-      respostas: [
-        resp({ id: "r1", nutricionista_id: "u-nutri", formulario: formA }),
-        resp({ id: "r2", nutricionista_id: "u-nutri", paciente_id: "a2", formulario: formA }),
-        resp({ id: "r3", nutricionista_id: "u-nutri", paciente_id: "a3", formulario: formA }),
-      ],
-      alunos: [aluno({ id: "a2", nome: "Marina Alves", nutricionista_id: "u-nutri" }), aluno({ id: "a3", nome: "Carlos Souza", nutricionista_id: "u-outra" })],
-    });
+    h.respostasPagina.mockResolvedValue(paginaDe([
+      daLista({ id: "r1", nutricionista_id: "u-nutri", formulario: formA }),
+      daLista({ id: "r2", nutricionista_id: "u-nutri", paciente_id: "a2", formulario: formA, aluno: { id: "a2", nome: "Marina Alves", nutricionista_id: "u-nutri" } }),
+      daLista({ id: "r3", nutricionista_id: "u-nutri", paciente_id: "a3", formulario: formA, aluno: { id: "a3", nome: "Carlos Souza", nutricionista_id: "u-outra" } }),
+    ]));
+    const d = dados({});
     h.criarAnamnese.mockResolvedValue({ id: "an1" });
     h.marcarImportada.mockResolvedValue(resp({ id: "r2", paciente_id: "a2", importada_em: QUANDO, importada_tipo: "anamnese", importada_id: "an1" }));
-    montar(<Respostas ctx={nutri} d={d} params={params} setParams={vi.fn()} />);
+    montar(<RespostasNaRota ctx={nutri} d={d} />, ROTA);
+    await achar('[data-resposta="r2"]');
     const botao = (id: string) => document.querySelector(`[data-resposta="${id}"] [data-btn-importar-resposta]`) as HTMLButtonElement;
     expect(botao("r1").disabled).toBe(true);
     expect(botao("r1").getAttribute("data-motivo-sem-importar")).toMatch(/Ligue a resposta/);
@@ -157,5 +189,37 @@ describe("W21 — Pré-consulta › Respostas", () => {
     expect(h.criarAnamnese).toHaveBeenCalledWith("u-nutri", "a2", null, expect.objectContaining({ titulo: "Pré-consulta do treino" }));
     expect(h.criarAplicacao).not.toHaveBeenCalled();
     expect(d.recarregar).toHaveBeenCalledWith("respostas");
+  });
+
+  it("hml-14b: 20 por página do banco — \"1–20 de 41\", Próxima pede a 2 (no endereço) e a busca nova volta à 1", async () => {
+    const vinte = Array.from({ length: 20 }, (_, i) => daLista({ id: `r${i + 1}`, nome: `Pessoa ${i + 1}` }));
+    h.respostasPagina.mockImplementation(async (_conta: string, _f: unknown, pagina: number) =>
+      paginaDe(pagina === 3 ? [daLista({ id: "r41", nome: "Zé Último" })] : vinte, { total: 41, totalConta: 41, novas: 41 }));
+    montar(<RespostasNaRota ctx={contexto({})} d={dados({})} />, ROTA);
+    const pag = await achar('[data-paginacao="respostas"]');
+    expect(pag.querySelector("[data-paginacao-rotulo]")?.textContent).toBe("1–20 de 41");
+    expect(document.querySelectorAll('[data-lista="respostas"] [data-item]').length).toBe(20);
+    fireEvent.click(pag.querySelector("[data-pagina-proxima]")!);
+    await waitFor(() => expect(h.respostasPagina).toHaveBeenLastCalledWith("c1", expect.anything(), 2), { timeout: 4000 });
+    expect(endereco()).toContain("pagina=2");
+    fireEvent.change(document.querySelector("[data-busca-respostas]")!, { target: { value: "zé" } });
+    await waitFor(() => expect(h.respostasPagina).toHaveBeenLastCalledWith("c1", expect.objectContaining({ busca: "zé" }), 1), { timeout: 4000 });
+    expect(endereco()).not.toContain("pagina=");
+  }, 15_000);
+
+  it("hml-14b: o endereço com ?pagina=3 abre a 3 (abrir um aluno e voltar mantém a página)", async () => {
+    h.respostasPagina.mockResolvedValue(paginaDe([daLista({ id: "r41" })], { total: 41, totalConta: 41 }));
+    montar(<RespostasNaRota ctx={contexto({})} d={dados({})} />, `${ROTA}&pagina=3`);
+    await achar('[data-resposta="r41"]');
+    expect(h.respostasPagina).toHaveBeenCalledWith("c1", expect.anything(), 3);
+    expect(document.querySelector('[data-paginacao="respostas"] [data-paginacao-rotulo]')?.textContent).toBe("41–41 de 41");
+  });
+
+  it("hml-14b: erro do banco = o estado de erro (nunca \"Nenhuma resposta\")", async () => {
+    h.respostasPagina.mockRejectedValue(new Error("permission denied for function respostas_da_conta"));
+    montar(<RespostasNaRota ctx={contexto({})} d={dados({})} />, ROTA);
+    expect(await screen.findByText("Não deu para carregar as respostas")).toBeInTheDocument();
+    expect(screen.queryByText("Nenhuma resposta ainda")).toBeNull();
+    expect(document.querySelector('[data-paginacao="respostas"]')).toBeNull();
   });
 });

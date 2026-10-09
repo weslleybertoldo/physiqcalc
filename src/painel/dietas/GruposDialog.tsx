@@ -3,24 +3,25 @@ import { FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { criarGrupo, excluirGrupo, renomearGrupo, type GrupoReceita } from "@/nutricao/editor/lib/receitas";
-import { NOME_GRUPO_MAX, receitasDoGrupo, validarGrupo } from "@/nutricao/editor/lib/receitasUtil";
+import { NOME_GRUPO_MAX, validarGrupo } from "@/nutricao/editor/lib/receitasUtil";
 import { BTN_PRI, BTN_SEC, DESCRICAO_JANELA, INPUT, JANELA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { AcaoLinha, ConfirmarExclusao } from "./pecas";
 
 // Physiq W24 — porta do PhysiqNutri (src/components/receitas/GruposDialog.tsx) no visual premium: os grupos de receitas com a contagem
 // de cada um, Renomear na linha, Excluir (soft: as receitas do grupo ficam sem grupo) e "Novo grupo". Nome único entre os vivos (sem
-// caixa) — validado aqui e pelo índice do banco.
+// caixa) — validado aqui e pelo índice do banco. hml-14b (B21): o número de cada grupo vem do banco (a lista de receitas é paginada).
 
 interface Props {
   open: boolean;
   onOpenChange: (aberto: boolean) => void;
   nutricionistaId: string;
   grupos: GrupoReceita[];
-  receitas: { grupo_id: string | null }[];
+  /** receitas vivas por grupo (do banco — a tela de receitas só tem a página) */
+  porGrupo: Record<string, number>;
   onMudou: () => Promise<void> | void;
 }
 
-export default function GruposDialog({ open, onOpenChange, nutricionistaId, grupos, receitas, onMudou }: Props) {
+export default function GruposDialog({ open, onOpenChange, nutricionistaId, grupos, porGrupo, onMudou }: Props) {
   const [novo, setNovo] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [renomeando, setRenomeando] = useState<{ id: string; nome: string } | null>(null);
@@ -83,7 +84,7 @@ export default function GruposDialog({ open, onOpenChange, nutricionistaId, grup
       toast.success("Grupo excluído");
     }, "Não foi possível excluir o grupo");
 
-  const nExcluir = paraExcluir ? receitasDoGrupo(receitas, paraExcluir.id) : 0;
+  const nExcluir = paraExcluir ? (porGrupo[paraExcluir.id] ?? 0) : 0;
   const avisoExcluir = paraExcluir
     ? `"${paraExcluir.nome}" vai para a lixeira. ` + (nExcluir === 0 ? "Nenhuma receita usa este grupo." : `As ${nExcluir} receita(s) dele continuam — só ficam sem grupo.`)
     : "";
@@ -128,7 +129,7 @@ export default function GruposDialog({ open, onOpenChange, nutricionistaId, grup
           ) : (
             <ul className="divide-y divide-linha-3 rounded-[16px] border border-linha bg-superficie px-3.5" data-lista-grupos>
               {grupos.map((g) => {
-                const n = receitasDoGrupo(receitas, g.id);
+                const n = porGrupo[g.id] ?? 0;
                 const emRenome = renomeando?.id === g.id;
                 return (
                   <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5" data-grupo={g.id} data-grupo-receitas={n}>

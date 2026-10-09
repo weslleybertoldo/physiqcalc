@@ -201,12 +201,22 @@ export async function excluirTag(id: string): Promise<void> {
 }
 
 // ───────────────────────── agendamentos ─────────────────────────
-/** Os que tocam [inicio, fim). */
+/**
+ * hml-14b (D18): a agenda lê uma JANELA de datas (a da visão: lista, semana ou mês; os números do topo; o Dashboard) — no máximo 1000
+ * por janela (o teto do banco, agora escrito), os MAIS RECENTES; quando vem 1000, a tela avisa (`janelaNoLimite` + `AVISO_LIMITE_AGENDA`).
+ */
+export const LIMITE_JANELA_AGENDA = 1000;
+export const AVISO_LIMITE_AGENDA = "Mostrando os 1000 mais recentes — encurte o período.";
+/** A leitura da janela chegou ao teto (pode ter ficado agendamento de fora): a tela mostra o aviso. */
+export const janelaNoLimite = (lista: readonly unknown[] | null | undefined): boolean => (lista?.length ?? 0) >= LIMITE_JANELA_AGENDA;
+
+/** Os que tocam [inicio, fim), em ordem de início (o teto de 1000 guarda os mais recentes: lê do fim para o começo e desvira). */
 export async function listarAgendamentos(inicio: Date, fim: Date, uid: string, contaId: string | null): Promise<Agendamento[]> {
   const { data, error } = await principal.from("agendamentos").select("*").is("deleted_at", null).or(minhaOuDaConta(uid, contaId))
-    .lt("inicio", fim.toISOString()).gt("fim", inicio.toISOString()).order("inicio", { ascending: true }).limit(2000);
+    .lt("inicio", fim.toISOString()).gt("fim", inicio.toISOString())
+    .order("inicio", { ascending: false }).order("id", { ascending: false }).limit(LIMITE_JANELA_AGENDA);
   falhou(error);
-  return (data ?? []) as unknown as Agendamento[];
+  return ((data ?? []) as unknown as Agendamento[]).reverse();
 }
 
 export type NovoAgendamento = Pick<Agendamento, "nutricionista_id" | "calendario_id" | "paciente_id" | "titulo" | "inicio" | "fim" | "dia_inteiro"

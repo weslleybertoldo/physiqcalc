@@ -1,24 +1,25 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Copy, ImageOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { enderecoDoDiario } from "@/nucleo/siteAntigoNutri";
 import { tomReacao, type Reacao } from "@/nutricao/app/diarioUtil";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { Segmentado } from "@/ui/premium/Segmentado";
 import type { ContextoDietas } from "./contexto";
-import { excluirRegistro, reagir, type RegistroDiarioNutri } from "./diario";
+import { contarDiario, excluirRegistro, listarAlunosDoDiario, listarDiarioPaginaComDias, reagir, type RegistroDiarioNutri } from "./diario";
 import {
-  PERIODOS, agruparPorDia, alunosDaLista, contarNaoReagidas, filtrarRegistros, nomeAluno, periodoDaURL, primeiroNomeAluno, textoContagem, textoPeriodo,
-  textoReacaoNutri, textoRegistro,
+  PERIODOS, agruparPorDia, inicioDoPeriodo, nomeAluno, periodoDaURL, plural, primeiroNomeAluno, textoPeriodo, textoReacaoNutri, textoRegistro, tituloDia,
 } from "./diarioPainel";
 import { AcaoLinha, ConfirmarExclusao, Filtro } from "./pecas";
 import ReacaoInline from "./ReacaoInline";
-import { CHAVE_DIARIO, useDiarioDaConta, useMiniaturas } from "./useDiario";
+import { CHAVE_DIARIO, useMiniaturas } from "./useDiario";
 import VerFotoDiarioDialog from "./VerFotoDiarioDialog";
 
 // Physiq W24 — Painel › Dietas › Diário (N-18): porta da tela "Diário alimentar" do PhysiqNutri (src/pages/consultorio/Diario.tsx) no
@@ -27,6 +28,12 @@ import VerFotoDiarioDialog from "./VerFotoDiarioDialog";
 // (?nao_reagidas=1), agrupadas por dia, com a miniatura (URL assinada — bucket privado), o aluno (abre o perfil), "Almoço · 12:40", o
 // comentário dele, a reação (Ótimo, Bom, Atenção, Evitar + comentário — vira aviso no sino do aluno) e Excluir (soft + a foto sai).
 // Quem lê e reage é a nutricionista da conta (a responsável pelo aluno ou o dono com papel de nutri — P1); o banco garante.
+// hml-14b (B21): 20 fotos por página, do banco (o período, o aluno e o "Só não reagidas" filtram lá), a página no endereço (?pagina=);
+// as opções do filtro de aluno e as contagens também vêm do banco.
+
+/** "41 registros · 3 não reagidas" (o total vem do banco; quantos dias ele cobre ficou de fora — a página não traz todos). */
+const textoDaContagem = (total: number, naoReagidas: number): string =>
+  !total ? "Nenhum registro" : `${plural(total, "registro", "registros")}${naoReagidas > 0 ? ` · ${plural(naoReagidas, "não reagida", "não reagidas")}` : ""}`;
 
 function FotoDoCartao({ registro, url, aoAbrir, aoFalhar }: { registro: RegistroDiarioNutri; url?: string; aoAbrir: () => void; aoFalhar: () => void }) {
   const reacao = textoReacaoNutri(registro).split(" — ")[0];
@@ -54,16 +61,56 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
   const dias = periodoDaURL(params.get("dias"));
   const alunoId = params.get("aluno") ?? params.get("paciente") ?? "";
   const soNaoReagidas = params.get("nao_reagidas") === "1";
-  const { q, registros } = useDiarioDaConta(ctx.contaId, ctx.uid, dias, ctx.souNutri);
+  // o início do período muda só quando muda o número de dias (à meia-noite a página é recarregada pelo foco)
+  const deIso = useMemo(() => inicioDoPeriodo(dias).toISOString(), [dias]);
+  const ligado = ctx.souNutri && !!ctx.contaId && !!ctx.uid;
+  const filtro = useMemo(() => ({ dias, alunoId, soNaoReagidas }), [dias, alunoId, soNaoReagidas]);
 
-  const alunos = useMemo(() => alunosDaLista(registros), [registros]);
-  const doAluno = useMemo(() => filtrarRegistros(registros, alunoId, false), [registros, alunoId]);
-  const naoReagidas = useMemo(() => contarNaoReagidas(doAluno), [doAluno]);
-  const filtrados = useMemo(() => filtrarRegistros(registros, alunoId, soNaoReagidas), [registros, alunoId, soNaoReagidas]);
-  const grupos = useMemo(() => agruparPorDia(filtrados), [filtrados]);
+  // hml-14b (B21): a página do banco; filtro novo volta à 1 e a página além do fim (a lista encolheu) vai para a última
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro, total: totalLido });
+  const q = useQuery({
+    queryKey: [...CHAVE_DIARIO, "pagina", ctx.contaId, ctx.uid, dias, alunoId, soNaoReagidas, pagina],
+    queryFn: () => listarDiarioPaginaComDias(ctx.contaId, ctx.uid, { deIso, alunoId, soNaoReagidas }, pagina),
+    enabled: ligado,
+    placeholderData: keepPreviousData,
+    staleTime: 20_000,
+    refetchOnWindowFocus: true,
+  });
+  const totalDaResposta = q.data && !q.isPlaceholderData ? q.data.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
+  // as opções do filtro "Aluno": quem tem foto no período — do banco, não da página que carregou
+  const alunosQ = useQuery({
+    queryKey: [...CHAVE_DIARIO, "alunos", ctx.contaId, ctx.uid, dias],
+    queryFn: () => listarAlunosDoDiario(ctx.contaId, ctx.uid, deIso),
+    enabled: ligado,
+    staleTime: 20_000,
+  });
+  // o "Só não reagidas (N)": as do período (e do aluno do filtro), contadas no banco
+  const naoReagidasQ = useQuery({
+    queryKey: [...CHAVE_DIARIO, "nao-reagidas", ctx.contaId, ctx.uid, dias, alunoId],
+    queryFn: () => contarDiario(ctx.contaId, ctx.uid, { deIso, alunoId, soNaoReagidas: true }),
+    enabled: ligado,
+    staleTime: 20_000,
+  });
+
+  const itens = useMemo(() => q.data?.itens ?? [], [q.data]);
+  const total = q.data?.total ?? 0;
+  const alunos = useMemo(() => alunosQ.data ?? [], [alunosQ.data]);
+  const naoReagidas = naoReagidasQ.data ?? 0;
+  // o dia que a página partiu ao meio diz o total do dia (do banco), não só o que coube aqui
+  const grupos = useMemo(() => {
+    const porDia = q.data?.porDia ?? {};
+    return agruparPorDia(itens).map((g) => {
+      const n = porDia[g.chave] ?? g.itens.length;
+      return { ...g, total: n, titulo: n === g.itens.length ? g.titulo : tituloDia(new Date(g.itens[0].data_hora), n) };
+    });
+  }, [itens, q.data]);
   const codigoAluno = alunos.find((p) => p.id === alunoId)?.link_codigo ?? "";
   const alunoForaDaLista = !!alunoId && !alunos.some((p) => p.id === alunoId);
-  const { urls, renovar } = useMiniaturas(filtrados);
+  const { urls, renovar } = useMiniaturas(itens);
 
   const setFiltro = useCallback(
     (mud: { dias?: number; aluno?: string; nao_reagidas?: boolean }) => {
@@ -131,10 +178,11 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
     );
   }
 
-  const contagemTexto = q.isLoading ? "Contando…" : `${textoPeriodo(dias)} · ${textoContagem(filtrados.length, grupos.length, contarNaoReagidas(filtrados))}`;
+  const contagemTexto = q.isLoading ? "Contando…" : `${textoPeriodo(dias)} · ${textoDaContagem(total, soNaoReagidas ? total : naoReagidas)}`;
+  const semFiltro = !alunoId && !soNaoReagidas;
 
   return (
-    <div className="flex flex-col gap-4" data-pagina-diario data-total-registros={registros.length} data-total-filtrados={filtrados.length} data-nao-reagidas={naoReagidas}
+    <div className="flex flex-col gap-4" data-pagina-diario data-total-filtrados={total} data-nao-reagidas={naoReagidas}
       data-periodo-ativo={dias} data-aluno-filtro={alunoId} data-salvando-diario={salvando ? "1" : "0"} data-carregando={q.isLoading ? "1" : "0"} data-atualizando={q.isFetching ? "1" : "0"}>
       <Cartao className="p-4">
         <div className="flex flex-wrap items-end gap-2.5" data-filtros-diario>
@@ -147,7 +195,7 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
             {alunos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
-            {alunoForaDaLista && <option value={alunoId}>Aluno sem fotos no período</option>}
+            {alunoForaDaLista && <option value={alunoId}>{alunosQ.isPending ? "Carregando…" : "Aluno sem fotos no período"}</option>}
           </Filtro>
           <button
             type="button"
@@ -164,59 +212,62 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
             Copiar link do diário
           </AcaoLinha>
         </div>
-        <p className="mt-2.5 text-[12.5px] text-texto-2" data-contagem-diario={filtrados.length}>{contagemTexto}</p>
+        <p className="mt-2.5 text-[12.5px] text-texto-2" data-contagem-diario={total}>{contagemTexto}</p>
       </Cartao>
 
       {q.error ? (
         <EstadoErro texto={`Não foi possível carregar o diário: ${(q.error as Error).message}`} aoTentar={() => void q.refetch()} />
       ) : q.isLoading ? (
         <EstadoCarregando linhas={3} rotulo="Carregando o diário" />
-      ) : registros.length === 0 ? (
+      ) : total === 0 && semFiltro ? (
         <div data-diario-vazio>
           <EstadoVazio icone={Camera} titulo="Nenhuma foto no diário"
             texto="Os alunos mandam as fotos das refeições pelo app (Dieta › Foto pro diário) ou pelo link do diário, que fica no perfil de cada aluno (Resumo › Link do diário)." />
         </div>
-      ) : filtrados.length === 0 ? (
+      ) : total === 0 ? (
         <div data-diario-filtro-vazio>
           <EstadoVazio icone={ImageOff} titulo="Nenhuma foto com esse filtro" texto="Mude o período, o aluno ou tire o “Só não reagidas”." />
         </div>
       ) : (
-        grupos.map((g) => (
-          <section key={g.chave} className="flex flex-col gap-2.5" data-dia={g.chave} data-dia-total={g.itens.length}>
-            <h2 className="pq-eyebrow px-1" data-dia-titulo>{g.titulo}</h2>
-            <ul className="grid gap-3 lg:grid-cols-2">
-              {g.itens.map((r) => (
-                <li key={r.id}>
-                  <Cartao className="flex gap-3.5 p-3" data-registro={r.id} data-reagido={r.reacao_nutri ? "1" : "0"} data-registro-paciente={r.paciente_id}>
-                    <FotoDoCartao registro={r} url={urls[r.id]} aoAbrir={() => setVerFoto(r)} aoFalhar={() => renovar(r.id)} />
-                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <Link to={`/painel/alunos/${r.paciente_id}`} className="block truncate text-[14px] font-semibold text-texto hover:text-verde-3" data-registro-nome>
-                            {nomeAluno(r)}
-                          </Link>
-                          <p className="text-[12px] text-texto-3" data-registro-refeicao>{textoRegistro(r)}</p>
+        <div className="flex flex-col gap-4" data-lista="diario">
+          {grupos.map((g) => (
+            <section key={g.chave} className="flex flex-col gap-2.5" data-dia={g.chave} data-dia-total={g.total}>
+              <h2 className="pq-eyebrow px-1" data-dia-titulo>{g.titulo}</h2>
+              <ul className="grid gap-3 lg:grid-cols-2">
+                {g.itens.map((r) => (
+                  <li key={r.id} data-item>
+                    <Cartao className="flex gap-3.5 p-3" data-registro={r.id} data-reagido={r.reacao_nutri ? "1" : "0"} data-registro-paciente={r.paciente_id}>
+                      <FotoDoCartao registro={r} url={urls[r.id]} aoAbrir={() => setVerFoto(r)} aoFalhar={() => renovar(r.id)} />
+                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <Link to={`/painel/alunos/${r.paciente_id}`} className="block truncate text-[14px] font-semibold text-texto hover:text-verde-3" data-registro-nome>
+                              {nomeAluno(r)}
+                            </Link>
+                            <p className="text-[12px] text-texto-3" data-registro-refeicao>{textoRegistro(r)}</p>
+                          </div>
+                          {podeReagir(r) && (
+                            <button type="button" className="pq-ibtn flex-none !text-texto-3 hover:!text-rosa-3" style={{ width: 32, height: 32, borderRadius: 10 }}
+                              onClick={() => setParaExcluir(r)} disabled={salvando} aria-label="Excluir a foto" title="Excluir a foto" data-btn-excluir-registro>
+                              <Trash2 aria-hidden />
+                            </button>
+                          )}
                         </div>
-                        {podeReagir(r) && (
-                          <button type="button" className="pq-ibtn flex-none !text-texto-3 hover:!text-rosa-3" style={{ width: 32, height: 32, borderRadius: 10 }}
-                            onClick={() => setParaExcluir(r)} disabled={salvando} aria-label="Excluir a foto" title="Excluir a foto" data-btn-excluir-registro>
-                            <Trash2 aria-hidden />
-                          </button>
-                        )}
+                        {r.comentario && <p className="line-clamp-3 whitespace-pre-wrap text-[12.5px] text-texto-2" data-registro-comentario>“{r.comentario}”</p>}
+                        <div className="mt-auto pt-1">
+                          <ReacaoInline key={`${r.id}:${r.reacao_nutri ?? ""}:${r.reagido_em ?? ""}`} registro={r} salvando={salvando} podeReagir={podeReagir(r)}
+                            onReagir={(reacao, comentario) => reagirEm(r, reacao, comentario)} />
+                        </div>
                       </div>
-                      {r.comentario && <p className="line-clamp-3 whitespace-pre-wrap text-[12.5px] text-texto-2" data-registro-comentario>“{r.comentario}”</p>}
-                      <div className="mt-auto pt-1">
-                        <ReacaoInline key={`${r.id}:${r.reacao_nutri ?? ""}:${r.reagido_em ?? ""}`} registro={r} salvando={salvando} podeReagir={podeReagir(r)}
-                          onReagir={(reacao, comentario) => reagirEm(r, reacao, comentario)} />
-                      </div>
-                    </div>
-                  </Cartao>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
+                    </Cartao>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
+      {!q.error && <Paginacao nome="diario" pagina={pagina} total={total} aoMudar={irPara} carregando={q.isFetching} />}
 
       <VerFotoDiarioDialog open={!!verFoto} onOpenChange={(a) => !a && setVerFoto(null)} registro={verFoto} irmas={irmas} onTrocar={setVerFoto} />
       <ConfirmarExclusao

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Physiq W26 — as telas das Ferramentas (Lixeira, Modelos, Impressos, Calculadora) com os dados simulados: o que a tela mostra, as
@@ -39,16 +39,36 @@ import Modelos from "./Modelos";
 import Impressos from "./Impressos";
 import Calculadora from "./Calculadora";
 
+function Endereco() {
+  return <output data-endereco={useLocation().search} />;
+}
+const endereco = () => document.querySelector("[data-endereco]")?.getAttribute("data-endereco") ?? "";
+
 function abrir(no: React.ReactNode, caminho = "/painel") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[caminho]}>{no}</MemoryRouter>
+      <MemoryRouter initialEntries={[caminho]}>{no}<Endereco /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 const ONTEM = new Date(Date.now() - 86_400_000).toISOString();
+type ItemDeTeste = { tipo: string; id: string; titulo: string } & Record<string, unknown>;
+/**
+ * hml-14b (B21): o banco devolve UMA página da aba (a pedida, se a pessoa tem a aba; senão a 1ª com itens) com os números das abas — o
+ * falso faz igual com a lista de teste (a busca e o corte por página também).
+ */
+function lixeiraDoBanco(itens: ItemDeTeste[], veClinico: boolean, temNutricao: boolean) {
+  return async (_conta: string, p: { tipo: string | null; busca: string; pagina: number }) => {
+    const abas = veClinico && temNutricao ? ["resposta", "anamnese", "antropometria", "plano", "paciente"] : ["resposta", "paciente"];
+    const totais = { resposta: 0, anamnese: 0, antropometria: 0, plano: 0, paciente: 0 } as Record<string, number>;
+    for (const i of itens) if (abas.includes(i.tipo)) totais[i.tipo] += 1;
+    const tipo = p.tipo && abas.includes(p.tipo) ? p.tipo : abas.find((a) => totais[a] > 0) ?? "resposta";
+    const daAba = itens.filter((i) => i.tipo === tipo && (!p.busca || i.titulo.toLowerCase().includes(p.busca.toLowerCase())));
+    return { veClinico, temNutricao, itens: daAba.slice((p.pagina - 1) * 20, p.pagina * 20), pagina: { tipo, totais, total: daAba.length } };
+  };
+}
 const itensLixeira = [
   { tipo: "paciente", id: "pac1", titulo: "Joana Prado", detalhe: "joana@teste.com", paciente_id: null, paciente_nome: null, excluido_em: ONTEM, pode_restaurar: true, pode_apagar: false },
   { tipo: "anamnese", id: "a1", titulo: "Anamnese geral", detalhe: null, paciente_id: "pac2", paciente_nome: "Rafael Moura", excluido_em: ONTEM, pode_restaurar: true, pode_apagar: true },
@@ -57,7 +77,7 @@ const itensLixeira = [
 
 beforeEach(() => {
   h.conta = { id: "c1", nome: "Consultoria Ferreira", modulos: ["treino", "nutricao"], papeis: ["dono", "nutricionista"], profissionais: 2 };
-  h.lixeira.mockReset().mockResolvedValue({ veClinico: true, temNutricao: true, itens: itensLixeira });
+  h.lixeira.mockReset().mockImplementation(lixeiraDoBanco(itensLixeira, true, true));
   h.restaurar.mockReset().mockResolvedValue({ ok: true });
   h.apagar.mockReset().mockResolvedValue(undefined);
   h.modelos.mockReset();
@@ -73,7 +93,8 @@ describe("Ferramentas › Lixeira (N-21)", () => {
     expect(abas).toEqual(["resposta", "anamnese", "antropometria", "plano", "paciente"]);
     expect(screen.getByText(/fica até você restaurar/)).toBeInTheDocument();
     expect(document.querySelector("[data-btn-apagar-de-vez]")).toBeNull(); // aluno não apaga de vez
-    expect(h.lixeira).toHaveBeenCalledWith("c1");
+    expect(h.lixeira).toHaveBeenCalledWith("c1", { tipo: "paciente", busca: "", pagina: 1 });
+    expect(document.querySelector('[data-aba-lixeira-botao="plano"]')?.getAttribute("data-aba-total")).toBe("1");
   });
 
   it("restaurar aluno com e-mail repetido: a frase vermelha aparece na linha e nada muda", async () => {
@@ -102,7 +123,7 @@ describe("Ferramentas › Lixeira (N-21)", () => {
   });
 
   it("sem o papel de nutricionista: só Pré-consulta e Alunos (regra clínica da W18) e o aviso", async () => {
-    h.lixeira.mockResolvedValue({ veClinico: false, temNutricao: true, itens: [itensLixeira[0]] });
+    h.lixeira.mockImplementation(lixeiraDoBanco([itensLixeira[0]], false, true));
     abrir(<Lixeira />, "/painel/lixeira?tipo=anamnese");
     expect(await screen.findByText("Joana Prado")).toBeInTheDocument();
     const abas = [...document.querySelectorAll("[data-aba-lixeira-botao]")].map((b) => b.getAttribute("data-aba-lixeira-botao"));
@@ -111,10 +132,50 @@ describe("Ferramentas › Lixeira (N-21)", () => {
   });
 
   it("conta sem Nutrição (o master numa conta só de Treino): sem as abas clínicas", async () => {
-    h.lixeira.mockResolvedValue({ veClinico: true, temNutricao: false, itens: [itensLixeira[0]] });
+    h.lixeira.mockImplementation(lixeiraDoBanco([itensLixeira[0]], true, false));
     abrir(<Lixeira />, "/painel/lixeira");
     expect(await screen.findByText("Joana Prado")).toBeInTheDocument();
     expect([...document.querySelectorAll("[data-aba-lixeira-botao]")].map((b) => b.getAttribute("data-aba-lixeira-botao"))).toEqual(["resposta", "paciente"]);
+  });
+
+  it("hml-14b: UMA página da aba vem do banco — \"1–20 de 41\", Próxima pede a 2 (no endereço); trocar de aba volta à 1", async () => {
+    const removidos = Array.from({ length: 41 }, (_, i) => ({ ...itensLixeira[0], id: `pac${i + 1}`, titulo: i === 40 ? "Zé Último" : `Aluno ${i + 1}` }));
+    h.lixeira.mockImplementation(lixeiraDoBanco([...removidos, itensLixeira[2]], true, true));
+    abrir(<Lixeira />, "/painel/lixeira?tipo=paciente");
+    const pag = await waitFor(() => {
+      const el = document.querySelector('[data-paginacao="lixeira"]');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(pag.querySelector("[data-paginacao-rotulo]")?.textContent).toBe("1–20 de 41");
+    expect(document.querySelectorAll('[data-lista="lixeira"] [data-item]').length).toBe(20);
+    expect(document.querySelector('[data-aba-lixeira-botao="paciente"]')?.getAttribute("data-aba-total")).toBe("41");
+    fireEvent.click(pag.querySelector("[data-pagina-proxima]")!);
+    await waitFor(() => expect(h.lixeira).toHaveBeenLastCalledWith("c1", { tipo: "paciente", busca: "", pagina: 2 }), { timeout: 4000 });
+    expect(endereco()).toContain("pagina=2");
+    fireEvent.click(document.querySelector('[data-aba-lixeira-botao="plano"]')!);
+    await waitFor(() => expect(h.lixeira).toHaveBeenLastCalledWith("c1", { tipo: "plano", busca: "", pagina: 1 }), { timeout: 4000 });
+    expect(await screen.findByText("Plano 1800")).toBeInTheDocument();
+    expect(endereco()).not.toContain("pagina=");
+  }, 15_000);
+
+  it("hml-14b: a busca vai ao banco e volta à página 1", async () => {
+    const removidos = Array.from({ length: 41 }, (_, i) => ({ ...itensLixeira[0], id: `pac${i + 1}`, titulo: i === 40 ? "Zé Último" : `Aluno ${i + 1}` }));
+    h.lixeira.mockImplementation(lixeiraDoBanco(removidos, true, true));
+    abrir(<Lixeira />, "/painel/lixeira?tipo=paciente&pagina=2");
+    await waitFor(() => expect(h.lixeira).toHaveBeenCalledWith("c1", { tipo: "paciente", busca: "", pagina: 2 }), { timeout: 4000 });
+    fireEvent.change(document.querySelector("[data-campo-busca-lixeira]")!, { target: { value: "Zé" } });
+    await waitFor(() => expect(h.lixeira).toHaveBeenLastCalledWith("c1", { tipo: "paciente", busca: "Zé", pagina: 1 }), { timeout: 4000 });
+    expect(await screen.findByText("Zé Último")).toBeInTheDocument();
+    expect(endereco()).not.toContain("pagina=");
+  }, 15_000);
+
+  it("hml-14b: erro do banco = o estado de erro (nunca a lixeira vazia)", async () => {
+    h.lixeira.mockRejectedValue(new ErroLixeira("erro_interno"));
+    abrir(<Lixeira />, "/painel/lixeira?tipo=paciente");
+    // a consulta da Lixeira tenta 2 vezes (retry: 1) antes do erro
+    expect(await screen.findByText(/Não foi possível abrir a lixeira/, {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.queryByText("Nenhum aluno na lixeira.")).toBeNull();
   });
 
   it("sem conta ativa: estado vazio, sem consultar", () => {
