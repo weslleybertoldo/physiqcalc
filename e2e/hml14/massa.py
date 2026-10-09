@@ -312,7 +312,9 @@ def contar(ctx: dict, marca: str | None = None) -> dict:
             and d.data_hora >= ((c.hoje - 6)::timestamp at time zone 'America/Sao_Paulo'))::int as diario_fundo,
         (select count(*) from {S}.receitas r, c where r.nutricionista_id = c.dono and r.nome ~ {m})::int as receitas,
         (select count(*) from {S}.receitas r, c where r.nutricionista_id = c.dono and r.deleted_at is null and r.nome !~ {m})::int as receitas_fundo,
-        (select count(*) from {S}.pacientes p, c where p.nome ~ {m} and p.conta_id is distinct from c.conta)::int as gemeos""")
+        -- o gêmeo pelo nome (nome_gemeo): a massa do master (14d) põe 41 alunos com a mesma marca na conta do app
+        (select count(*) from {S}.pacientes p, c where p.nome ~ {m} and p.nome ~ ' · outra conta$'
+            and p.conta_id is distinct from c.conta)::int as gemeos""")
     return r[0] if r else {}
 
 
