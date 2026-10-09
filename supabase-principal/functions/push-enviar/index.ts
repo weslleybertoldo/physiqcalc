@@ -17,6 +17,8 @@
 // 'physiq_push_segredo', que o gatilho manda no cabeçalho) — gravados pela Management API (e2e/w20c/segredos_push.py).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (do aparelho, só o fim do token; do FCM, o status e o código); o catch
 // final avisa (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): o Google (OAuth) e o FCM esperam no máximo TEMPO_MS.google cada — estourou → o fcm_oauth_falhou / fcm_rede de
+// sempre (falha daquele aparelho; os outros seguem).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -39,6 +41,7 @@ import {
   type ResultadoFcm,
   type Schema,
 } from "../_shared/push-regras.ts";
+import { TEMPO_MS, buscarComTempo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -60,11 +63,11 @@ async function tokenDoGoogle(): Promise<string> {
   const claims = base64url(JSON.stringify(claimsDoGoogle(CONTA, Math.floor(Date.now() / 1000))));
   const chave = await crypto.subtle.importKey("pkcs8", pemParaDer(CONTA.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
   const assinatura = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", chave, new TextEncoder().encode(`${cabecalho}.${claims}`)));
-  const r = await fetch(CONTA.token_uri, {
+  const r = await buscarComTempo(CONTA.token_uri, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: `${cabecalho}.${claims}.${base64url(assinatura)}` }),
-  });
+  }, TEMPO_MS.google);
   const corpo = await r.json().catch(() => ({})) as { access_token?: unknown; expires_in?: unknown; error?: unknown };
   if (!r.ok || typeof corpo.access_token !== "string") throw new Error(`oauth_${r.status}_${String(corpo.error ?? "")}`.slice(0, 80));
   acesso = { token: corpo.access_token, expira: Date.now() + (Number(corpo.expires_in) || 3600) * 1000 };
@@ -80,11 +83,11 @@ async function enviarFcm(mensagem: MensagemFcm, schema: Schema): Promise<Resulta
     return { desfecho: "falha", status: 0, codigo: "OAUTH" };
   }
   try {
-    const r = await fetch(`https://fcm.googleapis.com/v1/projects/${CONTA!.project_id}/messages:send`, {
+    const r = await buscarComTempo(`https://fcm.googleapis.com/v1/projects/${CONTA!.project_id}/messages:send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify(mensagem),
-    });
+    }, TEMPO_MS.google);
     if (r.status === 401) acesso = null; // token do Google vencido/recusado: o próximo pede outro
     return lerRespostaFcm(r.status, await r.json().catch(() => ({})));
   } catch (e) {
@@ -130,8 +133,10 @@ Deno.serve(async (req) => {
       throw er;
     }
 
-    // aparelho que não abre o app há 270 dias: token vencido no FCM — sai antes
-    await db.from("push_aparelhos").delete().eq("user_id", aviso.destino_user_id).lt("atualizado_em", limiteDoTokenVencido());
+    // aparelho que não abre o app há 270 dias: token vencido no FCM — sai antes. hml-14: o erro avisa e o envio segue (o aviso já
+    // está reservado: parar aqui perderia o push; o token vencido que sobrar é recusado pelo FCM e sai logo abaixo)
+    const { error: ev } = await db.from("push_aparelhos").delete().eq("user_id", aviso.destino_user_id).lt("atualizado_em", limiteDoTokenVencido());
+    if (ev) log.excecao(ev, { codigo: "apagar_vencidos_falhou", schema, ref: aviso.id });
     const { data: aparelhos, error: el } = await db.from("push_aparelhos").select("id,token,plataforma")
       .eq("user_id", aviso.destino_user_id).order("atualizado_em", { ascending: false }).limit(MAX_APARELHOS);
     if (el) throw el;

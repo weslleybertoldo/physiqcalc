@@ -10,12 +10,15 @@
 // Segredos: TREINO_URL, TREINO_ANON_KEY, ESPELHO_SEGREDO (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (da resposta do Treino, só o código); o catch final avisa (log.excecao) e
 // devolve o mesmo 500.
+// hml-14 (H-32, D3): o app chama pelo supabase-js — um prazo por pedido (o de usuário); a ida ao Treino espera no máximo o que falta
+// dele (e os 15 s da ação exportar): estourou → 502 treino_indisponivel, como o Treino fora.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import { montarExportacao } from "../_shared/conta-aluno-regras.ts";
 import { chamarTreino } from "../_shared/treino-servidor.ts";
+import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -53,6 +56,7 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido inteiro
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
 
@@ -70,7 +74,7 @@ Deno.serve(async (req) => {
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
     const { data: principal, error } = await db.rpc("exportar_dados_aluno", { p_uid: user.id });
     if (error) throw error;
-    const treino = await chamarTreino(schema, "exportar", user.id, log);
+    const treino = await chamarTreino(schema, "exportar", user.id, log, { prazo: p });
     if (treino.passo === "indisponivel") return json({ ok: false, erro: "treino_indisponivel" }, 502, origin);
     const arquivo = montarExportacao({
       ambiente: schema,

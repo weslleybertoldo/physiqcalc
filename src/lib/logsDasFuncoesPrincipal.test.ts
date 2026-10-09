@@ -240,7 +240,12 @@ describe("hml-10 (D3): sem reserva com valor de produção", () => {
     expect(fonte).not.toMatch(/Deno\.env\.get\("(RESEND_FROM|SITE_URL)"\)\s*(\?\?|\|\|)\s*"[^"]/);
     expect(fonte).toContain('const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "";');
     expect(fonte).toContain('const SITE_URL = Deno.env.get("SITE_URL") ?? "";');
-    const envio = fonte.slice(fonte.indexOf("async function enviarEmail("), fonte.indexOf('fetch("https://api.resend.com/emails"'));
+    // hml-14: o envio ao Resend passou a ser pelo buscarComTempo (tempo de 8 s) — o fim do trecho é essa chamada.
+    const inicio = fonte.indexOf("async function enviarEmail(");
+    const fim = fonte.indexOf('buscarComTempo("https://api.resend.com/emails"');
+    expect(inicio).toBeGreaterThanOrEqual(0);
+    expect(fim).toBeGreaterThan(inicio);
+    const envio = fonte.slice(inicio, fim);
     expect(envio).toMatch(
       /const falta = faltaNoEmail\(schema, \{ resendApiKey: RESEND_API_KEY, resendFrom: RESEND_FROM, siteUrl: SITE_URL \}\);\s*if \(falta\.length\) \{\s*log\.erro\(\{ codigo: "sem_configuracao", schema, .*\);\n\s*return \{ id: null, erro: "sem_resend" \};\s*\}/,
     );

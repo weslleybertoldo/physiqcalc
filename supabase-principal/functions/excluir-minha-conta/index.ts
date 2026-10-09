@@ -32,6 +32,8 @@
 // cobrança automática) (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (o mesmo log vai para o caminho do profissional e para a conversa com o
 // Treino — o aviso de erro diz esta função); o catch final avisa (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): um prazo por pedido limita as chamadas ao Treino (orcamentoDoPedido); a foto do Perfil sai INTEIRA (todas as
+// páginas do Storage) e, se o Storage falhar, a resposta é 500 ANTES de apagar o login (a pessoa pede de novo).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -39,14 +41,24 @@ import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import { STATUS_DA_RECUSA, confirmacaoValida, pegadaBloqueia } from "../_shared/conta-aluno-regras.ts";
 import { chamarTreino } from "../_shared/treino-servidor.ts";
 import { fluxoDoPedido } from "../_shared/exclusao-profissional-regras.ts";
-import { excluirContaProfissionalNaBorda } from "../_shared/exclusao-profissional.ts";
+import { apagarFotosDoPerfil, excluirContaProfissionalNaBorda } from "../_shared/exclusao-profissional.ts";
 import type { Schema } from "../_shared/cobranca-mp.ts";
+import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SCHEMAS = ["public", "staging"];
-const BUCKET_FOTOS: Record<string, string> = { public: "fotos-perfil", staging: "fotos-perfil-staging" };
 const log = criarLog("excluir-minha-conta", { avisar: avisarErro });
+
+/**
+ * hml-14 (H-32, D3): o orçamento do pedido (ms), que limita as chamadas ao Treino. O profissional vem do painel, que chama direto
+ * e espera 45 s ao conferir e 120 s ao excluir (painel/configuracoes/excluirConta/api.ts): 40 s / 90 s. O aluno vem do app pelo
+ * supabase-js (app-aluno/perfil/pecas/api.ts, functions.invoke), que desiste antes: o orçamento de usuário.
+ */
+function orcamentoDoPedido(pedido: Record<string, unknown>): number {
+  if (fluxoDoPedido(pedido) !== "profissional") return ORCAMENTO_MS.usuario;
+  return pedido.simular === true ? 40_000 : 90_000;
+}
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -118,10 +130,11 @@ Deno.serve(async (req) => {
   // W2 da loja: só o pedido do app novo ({ fluxo: "profissional" }) entra no caminho do profissional (com o próprio limite de
   // tentativas). A leitura é de uma CÓPIA do pedido — o corpo segue intacto para o caminho de hoje logo abaixo.
   const pedido = await lerCorpo(req.clone());
+  const p = prazo(orcamentoDoPedido(pedido));
   if (fluxoDoPedido(pedido) === "profissional") {
     if (!permitido(`profissional:${schema}:${user.id}`, 20)) return json({ ok: false, erro: "rate_limited" }, 429, origin);
     const r = await excluirContaProfissionalNaBorda({
-      schema: schema as Schema, user, authAdmin, simular: pedido.simular === true, confirmacao: pedido.confirmacao, log,
+      schema: schema as Schema, user, authAdmin, simular: pedido.simular === true, confirmacao: pedido.confirmacao, log, prazo: p,
     });
     return json(r.corpo, r.status, origin);
   }
@@ -146,7 +159,7 @@ Deno.serve(async (req) => {
     if (ep) throw ep;
     const conferencia = (pre ?? {}) as Record<string, unknown>;
     if (conferencia.ok !== true) return recusa(String(conferencia.erro ?? "erro_interno"), origin, { motivo: conferencia.motivo ?? null });
-    const treinoPre = await chamarTreino(schema, "conferir", user.id, log);
+    const treinoPre = await chamarTreino(schema, "conferir", user.id, log, { prazo: p });
     if (treinoPre.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
     if (treinoPre.passo === "conta_real") return dadosEmProducao(origin);
     if (treinoPre.passo === "indisponivel") return recusa("treino_indisponivel", origin);
@@ -160,7 +173,7 @@ Deno.serve(async (req) => {
     }
 
     // 2. Banco do Treino (dados de treino + login de lá)
-    const treino = await chamarTreino(schema, "excluir", user.id, log);
+    const treino = await chamarTreino(schema, "excluir", user.id, log, { prazo: p });
     if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
     if (treino.passo === "conta_real") return dadosEmProducao(origin);
     if (treino.passo === "indisponivel") return recusa("treino_indisponivel", origin);
@@ -182,15 +195,9 @@ Deno.serve(async (req) => {
         arquivosApagados += rem?.length ?? 0;
       }
     }
-    // a foto do Perfil (pasta da pessoa no bucket fotos-perfil do schema)
-    const bucketFoto = BUCKET_FOTOS[schema];
-    const { data: fotos } = await authAdmin.storage.from(bucketFoto).list(user.id, { limit: 100 });
-    const caminhosFoto = (fotos ?? []).filter((f) => f?.name).map((f) => `${user.id}/${f.name}`);
-    if (caminhosFoto.length) {
-      const { data: rem, error: er } = await authAdmin.storage.from(bucketFoto).remove(caminhosFoto);
-      if (er) log.excecao(er, { codigo: "foto_falhou", schema });
-      arquivosApagados += rem?.length ?? 0;
-    }
+    // a foto do Perfil (a pasta da pessoa no bucket público, inteira) — hml-14 (H-32): o Storage falhou → lança: o catch responde
+    // 500 ANTES de apagar o login (a pessoa pede de novo; sem o login não daria e a foto ficaria pública)
+    arquivosApagados += await apagarFotosDoPerfil(authAdmin, schema as Schema, user.id);
 
     // 4. por último o login (a matrícula fica, desligada — pacientes.user_id "on delete set null")
     const { error: ed } = await authAdmin.auth.admin.deleteUser(user.id);

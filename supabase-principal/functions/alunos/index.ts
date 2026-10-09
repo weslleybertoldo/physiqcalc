@@ -16,6 +16,7 @@
 // hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do Resend e do captcha, só o status e os códigos — nunca o corpo);
 // sem reserva com valor de produção (sem RESEND_FROM ou, na produção, sem SITE_URL o e-mail do convite não sai: o mesmo
 // "sem_resend" de sempre, + log.erro); o catch final avisa (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): o Resend espera no máximo TEMPO_MS.email (estourou → o resend_rede de sempre) e as idas ao MP têm o prazo do pedido.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -25,6 +26,7 @@ import { destinoDoEnvio, faltaNoEmail } from "../_shared/enviar-aluno-regras.ts"
 import { captchaAceito, hashDoToken, ipDoPedido, motivoDoCaptcha } from "../_shared/entrar-senha-regras.ts";
 import { credencialDoSchema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
+import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, type Prazo } from "../_shared/tempo.ts";
 import {
   acaoApp,
   acaoPublica,
@@ -84,11 +86,11 @@ async function enviarEmail(schema: Schema, para: string, assunto: string, html: 
     return { id: null, erro: "sem_resend" };
   }
   try {
-    const r = await fetch("https://api.resend.com/emails", {
+    const r = await buscarComTempo("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({ from: RESEND_FROM, to: [para], subject: assunto, html, text: texto }),
-    });
+    }, TEMPO_MS.email);
     const corpo = (await r.json().catch(() => ({}))) as Record<string, unknown>;
     if (!r.ok) {
       log.erro({ codigo: "resend_falhou", schema, status: r.status, externo: { resend_erro: corpo.name } });
@@ -202,7 +204,7 @@ async function repasse(schema: Schema, corpo: Record<string, unknown>, origin: s
 }
 
 // ───────────────────────── app: o painel do profissional ─────────────────────────
-async function app(schema: Schema, token: string, corpo: Record<string, unknown>, origin: string | null): Promise<Response> {
+async function app(schema: Schema, token: string, corpo: Record<string, unknown>, origin: string | null, p: Prazo): Promise<Response> {
   const comoPessoa = createClient(SUPABASE_URL, ANON, {
     db: { schema },
     auth: { persistSession: false },
@@ -254,7 +256,9 @@ async function app(schema: Schema, token: string, corpo: Record<string, unknown>
       if (r.ok === true && r.app_encerrado === true && typeof r.user_id === "string") {
         try {
           const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema }, auth: { persistSession: false } });
-          r.assinatura_app = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema), r.user_id, "vinculou_profissional", log);
+          r.assinatura_app = await cancelarAssinaturasDoAppEncerrado(
+            db, credencialDoSchema(schema), r.user_id, "vinculou_profissional", log, { prazo: p },
+          );
         } catch (e) {
           log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema, acao });
           r.assinatura_app = { canceladas: 0, falhas: 1 };
@@ -287,6 +291,7 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido inteiro (todas as idas ao MP)
   const schema = (req.headers.get("x-schema") || "public").toLowerCase() as Schema;
   if (!SCHEMAS.includes(schema)) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
   let corpo: Record<string, unknown> = {};
@@ -303,7 +308,7 @@ Deno.serve(async (req) => {
     if (acaoPublica(corpo.acao)) return await publico(req, schema, corpo, origin);
     const auth = req.headers.get("Authorization") || "";
     if (!auth.startsWith("Bearer ") || auth.length < 20) return json({ ok: false, erro: "sem_login" }, 401, origin);
-    return await app(schema, auth.slice(7).trim(), corpo, origin);
+    return await app(schema, auth.slice(7).trim(), corpo, origin, p);
   } catch (e) {
     log.excecao(e, { acao: typeof corpo.acao === "string" ? corpo.acao : null, schema });
     return json({ ok: false, erro: "erro_interno" }, 500, origin);
