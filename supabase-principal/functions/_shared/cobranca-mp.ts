@@ -183,14 +183,17 @@ export async function aplicarStatus(db: SupabaseClient, f: Fatura, pay: Pagament
   if (f.pago_em && st !== "refunded" && st !== "charged_back") return { status: f.status, aplicou: false };
   if (f.status === "approved" && statusAberto(st)) return { status: f.status, aplicou: false };
   if (st !== f.status) {
-    const { error } = await db.from("conta_faturas").update({ status: st }).eq("id", f.id);
-    if (error) throw error;
+    // hml-14 (H-32): o evento do estorno vai ANTES do status e o erro dele lança (500: o aviso volta). Na ordem de antes, o
+    // status já gravado fazia o aviso repetido pular o evento que falhou; agora o pior caso é o evento repetido.
     if ((st === "refunded" || st === "charged_back") && f.pago_em) {
-      await db.from("conta_eventos").insert({
+      const { error: erroEvento } = await db.from("conta_eventos").insert({
         conta_id: f.conta_id, tipo: "pagamento", antes: { fatura_id: f.id, status: f.status },
         depois: { fatura_id: f.id, status: st, mp_payment_id: f.mp_payment_id, estorno: true }, por: porUsuario,
       });
+      if (erroEvento) throw erroEvento;
     }
+    const { error } = await db.from("conta_faturas").update({ status: st }).eq("id", f.id);
+    if (error) throw error;
   }
   return { status: st, aplicou: false };
 }
@@ -222,7 +225,10 @@ export async function registrarCobrancaRecorrente(
 ): Promise<ResultadoAplicar | null> {
   if (pay?.id === undefined || pay?.id === null) return null;
   const mpId = String(pay.id);
-  let { data: linha } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle();
+  // hml-14 (H-32): erro de banco lança em toda leitura e gravação daqui (antes a leitura que falhava virava "não tem")
+  const achada = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle();
+  if (achada.error) throw achada.error;
+  let linha = achada.data;
   // W28: assinatura que veio de um app antigo na virada — a cobrança de ANTES da virada já valia lá (o vencimento migrado já a
   // conta): entra só como histórico ('migrado', paga), sem somar mais 1 mês (nada de cobrança dobrada no acesso)
   if (!linha && cobrancaAntesDaVirada(a, pay)) {
@@ -244,12 +250,19 @@ export async function registrarCobrancaRecorrente(
       descricao: "Physiq — cobrança automática no cartão (1 mês)", origem: "assinatura",
     }).select(COLUNAS_FATURA).maybeSingle();
     if (error && !String(error.message || "").includes("duplicate")) throw error;
-    linha = nova ?? (await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle()).data;
+    linha = nova;
+    if (!linha) {
+      // o "duplicate": o aviso ou a conferência gravou a fatura antes — relê a dela
+      const relida = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle();
+      if (relida.error) throw relida.error;
+      linha = relida.data;
+    }
   }
   if (!linha) return null;
   const r = await aplicarStatus(db, linha as Fatura, pay);
   if (r.status === "approved") {
-    await db.from("conta_assinaturas").update({ ultimo_pagamento_em: pay.date_approved ?? new Date().toISOString() }).eq("id", a.id);
+    const { error } = await db.from("conta_assinaturas").update({ ultimo_pagamento_em: pay.date_approved ?? new Date().toISOString() }).eq("id", a.id);
+    if (error) throw error;
   }
   return r;
 }

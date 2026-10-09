@@ -18,11 +18,16 @@
 // (idDoAvisoValido), e erro de banco/rede ou o MP fora → 500 (antes era 200 e o aviso se perdia).
 // Physiq hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts — do repasse, só o status e o código que a mp-webhook-conta
 // devolveu (nunca o corpo); o catch final avisa (log.excecao) e devolve o mesmo 500.
+// Physiq hml-14 (H-32): um prazo por aviso (ORCAMENTO_MS.servidor) em toda ida ao MP (o repasse segue com os 20 s × 2 dele); as
+// 3 leituras das tabelas antigas lançam no erro do banco (antes viravam "não tem": insert repetido → 200 "erro_insert", ou
+// 200 "sem_perfil", e a tabela antiga ficava sem o aviso). As gravações seguem "erro_*" + repasse: a conta (núcleo) é a que vale
+// e lançar ali, num erro que não passa, travaria o repasse para sempre.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { idDoAvisoValido } from "../_shared/cobranca-regras.ts";
 import { buscarNoMp, type Schema } from "../_shared/cobranca-mp.ts";
 import { criarLog } from "../_shared/log.ts";
+import { ORCAMENTO_MS, prazo, type Prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,8 +69,8 @@ function espelho(pre: any) {
 }
 
 // hml-06: schemaPedido = o ?schema= do aviso, ou o ambiente da credencial que achou o pagamento/cobrança que levou até aqui
-async function sincronizarPreapproval(id: string, schemaPedido: Schema | null, ctx: { schema: string | null }): Promise<string> {
-  const achado = await buscarNoMp<any>(`/preapproval/${encodeURIComponent(id)}`, schemaPedido);
+async function sincronizarPreapproval(id: string, schemaPedido: Schema | null, ctx: { schema: string | null }, p: Prazo): Promise<string> {
+  const achado = await buscarNoMp<any>(`/preapproval/${encodeURIComponent(id)}`, schemaPedido, { prazo: p });
   const pre = achado?.recurso;
   if (!achado || !pre?.id) return "mp_nao_achou";
   const ref = parseRef(pre.external_reference);
@@ -73,7 +78,8 @@ async function sincronizarPreapproval(id: string, schemaPedido: Schema | null, c
   if (ref.schema !== achado.schema) return "outro_ambiente"; // hml-06: nem grava nem repassa
   ctx.schema = achado.schema;
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: achado.schema as "public" } });
-  const { data: linha } = await admin.from("assinaturas").select("id, mp_preapproval_id").eq("nutricionista_id", ref.uid).maybeSingle();
+  const { data: linha, error: erroLinha } = await admin.from("assinaturas").select("id, mp_preapproval_id").eq("nutricionista_id", ref.uid).maybeSingle();
+  if (erroLinha) throw erroLinha;
   if (!linha) {
     const { error } = await admin.from("assinaturas").insert({ nutricionista_id: ref.uid, ...espelho(pre) });
     return error ? `erro_insert:${error.code}` : "inserida";
@@ -119,10 +125,13 @@ async function aplicarPagamentoPix(pay: any, schema: Schema): Promise<string> {
   const ref = parseRefPix(pay?.external_reference);
   if (!ref) return "nao_e_pix_do_physiqnutri";
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" } });
-  const { data: perfil } = await admin.from("profiles").select("id, pago_ate, teste_ate").eq("id", ref.uid).maybeSingle();
+  const { data: perfil, error: erroPerfil } = await admin.from("profiles").select("id, pago_ate, teste_ate").eq("id", ref.uid).maybeSingle();
+  if (erroPerfil) throw erroPerfil;
   if (!perfil) return "sem_perfil";
   const esp = espelhoPix(pay);
-  let { data: linha } = await admin.from("pagamentos_assinatura").select("*").eq("mp_payment_id", String(pay.id)).maybeSingle();
+  const lida = await admin.from("pagamentos_assinatura").select("*").eq("mp_payment_id", String(pay.id)).maybeSingle();
+  if (lida.error) throw lida.error;
+  let linha = lida.data;
   if (!linha) {
     // a tela pode não ter gravado (function caiu depois do POST no MP): a linha nasce daqui
     const { data: nova, error } = await admin.from("pagamentos_assinatura")
@@ -187,6 +196,7 @@ function resultadoParaOLog(resultado: string): { resultado: string; pg: string |
 }
 
 Deno.serve(async (req) => {
+  const p = prazo(ORCAMENTO_MS.servidor); // hml-14 (H-32): o prazo do aviso inteiro (todas as idas ao MP)
   if (req.method !== "POST") return new Response("ok", { status: 200 });
   // hml-10: o que o catch final leva ao log (o ambiente e o tópico do aviso, quando já se sabe)
   let schema: Schema | null = null;
@@ -209,13 +219,13 @@ Deno.serve(async (req) => {
     let resultado = "ignorado";
     if (id) {
       if (topic === "subscription_preapproval" || topic === "preapproval") {
-        resultado = await sincronizarPreapproval(id, schema, ctx);
+        resultado = await sincronizarPreapproval(id, schema, ctx, p);
       } else if (topic === "subscription_authorized_payment") {
-        const achado = await buscarNoMp<any>(`/authorized_payments/${encodeURIComponent(id)}`, schema);
+        const achado = await buscarNoMp<any>(`/authorized_payments/${encodeURIComponent(id)}`, schema, { prazo: p });
         const ap = achado?.recurso;
-        resultado = achado && ap?.preapproval_id ? await sincronizarPreapproval(String(ap.preapproval_id), achado.schema, ctx) : "sem_preapproval";
+        resultado = achado && ap?.preapproval_id ? await sincronizarPreapproval(String(ap.preapproval_id), achado.schema, ctx, p) : "sem_preapproval";
       } else if (topic === "payment") {
-        const achado = await buscarNoMp<any>(`/v1/payments/${encodeURIComponent(id)}`, schema);
+        const achado = await buscarNoMp<any>(`/v1/payments/${encodeURIComponent(id)}`, schema, { prazo: p });
         const pay = achado?.recurso;
         const pix = parseRefPix(pay?.external_reference);
         if (achado && pix) {
@@ -226,7 +236,7 @@ Deno.serve(async (req) => {
           }
         } else {
           const preId = pay?.metadata?.preapproval_id || pay?.point_of_interaction?.transaction_data?.subscription_id || null;
-          resultado = achado && preId ? await sincronizarPreapproval(String(preId), achado.schema, ctx) : "sem_preapproval";
+          resultado = achado && preId ? await sincronizarPreapproval(String(preId), achado.schema, ctx, p) : "sem_preapproval";
         }
       }
     }

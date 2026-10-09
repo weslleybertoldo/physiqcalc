@@ -15,6 +15,9 @@
 // Publicar SÓ ASSIM: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-webhook-conta false
 // Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts; o catch final avisa (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): um prazo por aviso (ORCAMENTO_MS.servidor) em toda ida ao MP; a leitura que acha a conta, a fatura ou a
+// assinatura lança no erro do banco (antes virava "não tem": 200 com legado sem conta, assinatura inexistente ou a trava da
+// assinatura antiga pulada — e o aviso se perdia).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -40,6 +43,7 @@ import {
   type Fatura,
   type Schema,
 } from "../_shared/cobranca-mp.ts";
+import { ORCAMENTO_MS, prazo, type Prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -66,12 +70,14 @@ interface ContaLegada { id: string; plano: string; faixa: string; cobranca_legad
 /** W28: a conta legada do dono de uma referência antiga (Calc: pelo usuário do Treino; Nutri: pelo dono). */
 async function contaDaReferenciaLegada(db: SupabaseClient, r: ReferenciaLegada): Promise<ContaLegada | null> {
   if (r.app === "nutri") {
-    const { data } = await db.from("contas").select("id, plano, faixa, cobranca_legada").eq("dono_id", r.userId)
+    const { data, error } = await db.from("contas").select("id, plano, faixa, cobranca_legada").eq("dono_id", r.userId)
       .eq("origem", "legado_nutri").order("criado_em").limit(1);
+    if (error) throw error;
     return ((data ?? []) as ContaLegada[])[0] ?? null;
   }
-  const { data } = await db.from("conta_membros").select("conta_id, contas!inner(id, plano, faixa, cobranca_legada, origem)")
+  const { data, error } = await db.from("conta_membros").select("conta_id, contas!inner(id, plano, faixa, cobranca_legada, origem)")
     .eq("treino_user_id", r.userId).contains("papeis", ["dono"]).eq("contas.origem", "legado_calc").limit(1);
+  if (error) throw error;
   const linha = ((data ?? []) as Array<{ contas: ContaLegada | null }>)[0];
   return linha?.contas ?? null;
 }
@@ -92,7 +98,9 @@ async function tratarPagamentoLegado(db: SupabaseClient, r: ReferenciaLegada, pa
       origem: `legado_${r.app}`, pix_expira_em: pay.date_of_expiration ?? null,
     });
     if (error && !String(error.message || "").includes("duplicate")) throw error;
-    data = (await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle()).data;
+    const relida = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("mp_payment_id", mpId).maybeSingle();
+    if (relida.error) throw relida.error;
+    data = relida.data;
   }
   const fatura = data as Fatura | null;
   if (!fatura) return `legado_${r.app}_sem_fatura`;
@@ -101,9 +109,9 @@ async function tratarPagamentoLegado(db: SupabaseClient, r: ReferenciaLegada, pa
   return `legado_${r.app}_${res.status}${res.aplicou ? "_aplicada" : ""}`;
 }
 
-async function tratarPagamento(schema: Schema, id: string): Promise<string> {
+async function tratarPagamento(schema: Schema, id: string, p: Prazo): Promise<string> {
   // hml-06: só a credencial do ambiente; o MP fora lança (500) em vez de "não encontrado" (200)
-  const pay = (await buscarNoMp<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schema))?.recurso;
+  const pay = (await buscarNoMp<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schema, { prazo: p }))?.recurso;
   if (!pay?.id) return "pagamento_nao_encontrado";
   const ref = lerReferencia(pay.external_reference);
   if (ref && ref.schema !== schema) return "outro_ambiente";
@@ -113,13 +121,16 @@ async function tratarPagamento(schema: Schema, id: string): Promise<string> {
 
   // cobrança avulsa (Pix ou cartão à vista): a referência traz a fatura
   if (ref?.faturaId) {
-    const { data } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("id", ref.faturaId).eq("conta_id", ref.contaId).maybeSingle();
+    const { data, error } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("id", ref.faturaId).eq("conta_id", ref.contaId).maybeSingle();
+    if (error) throw error;
     let f = data as Fatura | null;
     if (!f) return "fatura_inexistente";
     if (!f.mp_payment_id) {
       const { error } = await db.from("conta_faturas").update({ mp_payment_id: String(pay.id) }).eq("id", f.id).is("mp_payment_id", null);
       if (error) throw error;
-      f = ((await db.from("conta_faturas").select(COLUNAS_FATURA).eq("id", f.id).maybeSingle()).data as Fatura | null) ?? f;
+      const relida = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("id", f.id).maybeSingle();
+      if (relida.error) throw relida.error;
+      f = (relida.data as Fatura | null) ?? f;
     }
     if (f.mp_payment_id !== String(pay.id)) return "fatura_de_outro_pagamento";
     const r = await aplicarStatus(db, f, pay);
@@ -130,11 +141,13 @@ async function tratarPagamento(schema: Schema, id: string): Promise<string> {
   const preId = preapprovalDoPagamento(pay);
   let assinatura: AssinaturaConta | null = null;
   if (preId) {
-    const { data } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("mp_preapproval_id", preId).maybeSingle();
+    const { data, error } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("mp_preapproval_id", preId).maybeSingle();
+    if (error) throw error;
     assinatura = (data as AssinaturaConta | null) ?? null;
   }
   if (!assinatura && ref?.tipo === "recorrente") {
-    const { data } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("conta_id", ref.contaId).maybeSingle();
+    const { data, error } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("conta_id", ref.contaId).maybeSingle();
+    if (error) throw error;
     assinatura = (data as AssinaturaConta | null) ?? null;
   }
   // W28: pagamento avulso de um app antigo (sem assinatura migrada por trás)
@@ -148,22 +161,24 @@ async function tratarPagamento(schema: Schema, id: string): Promise<string> {
   return r ? `recorrente_${r.status}${r.aplicou ? "_aplicada" : ""}` : "recorrente_sem_id";
 }
 
-async function tratarAssinatura(schema: Schema, id: string): Promise<string> {
-  const pre = (await buscarNoMp<AssinaturaMp>(`/preapproval/${encodeURIComponent(id)}`, schema))?.recurso;
+async function tratarAssinatura(schema: Schema, id: string, p: Prazo): Promise<string> {
+  const pre = (await buscarNoMp<AssinaturaMp>(`/preapproval/${encodeURIComponent(id)}`, schema, { prazo: p }))?.recurso;
   if (!pre?.id) return "assinatura_nao_encontrada";
   const ref = lerReferencia(pre.external_reference);
   if (ref && ref.schema !== schema) return "outro_ambiente";
   const legada = ref ? null : lerReferenciaLegada(pre.external_reference);
   if (legada && legada.schema !== schema) return "outro_ambiente";
   const db = dbDe(schema);
-  const { data } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("mp_preapproval_id", String(pre.id)).maybeSingle();
+  const { data, error: erroLida } = await db.from("conta_assinaturas").select(COLUNAS_ASSINATURA).eq("mp_preapproval_id", String(pre.id)).maybeSingle();
+  if (erroLida) throw erroLida;
   const a = data as AssinaturaConta | null;
   if (!a && legada) {
     // W28: assinatura de um app antigo que a virada não trouxe (criada lá depois do 03): liga à conta legada já no núcleo
     const conta = await contaDaReferenciaLegada(db, legada);
     if (!conta) return `legado_${legada.app}_sem_conta`;
     if (conta.cobranca_legada) return `legado_${legada.app}_cobranca_antiga`;
-    const { data: atual } = await db.from("conta_assinaturas").select("id, mp_preapproval_id, status").eq("conta_id", conta.id).maybeSingle();
+    const { data: atual, error: erroAtual } = await db.from("conta_assinaturas").select("id, mp_preapproval_id, status").eq("conta_id", conta.id).maybeSingle();
+    if (erroAtual) throw erroAtual; // hml-14 (H-32): sem a atual, a trava "assinatura_antiga" seria pulada e o upsert a trocaria
     const linhaAtual = atual as { id: string; mp_preapproval_id: string | null; status: string } | null;
     if (linhaAtual?.mp_preapproval_id && linhaAtual.mp_preapproval_id !== String(pre.id) && linhaAtual.status !== "cancelled") return "assinatura_antiga";
     const { error } = await db.from("conta_assinaturas").upsert({ conta_id: conta.id, plano: conta.plano, faixa: conta.faixa,
@@ -179,7 +194,8 @@ async function tratarAssinatura(schema: Schema, id: string): Promise<string> {
   }
   if (!ref || ref.tipo !== "recorrente") return "nao_e_do_physiq";
   // o aviso chegou antes de a cobranca-conta gravar a linha: grava pela conta da referência (1 assinatura por conta)
-  const { data: atual } = await db.from("conta_assinaturas").select("id, mp_preapproval_id").eq("conta_id", ref.contaId).maybeSingle();
+  const { data: atual, error: erroAtual } = await db.from("conta_assinaturas").select("id, mp_preapproval_id").eq("conta_id", ref.contaId).maybeSingle();
+  if (erroAtual) throw erroAtual; // hml-14 (H-32): idem — a assinatura viva não pode ser sobrescrita pela do aviso
   const linhaAtual = atual as { id: string; mp_preapproval_id: string | null } | null;
   if (linhaAtual?.mp_preapproval_id && linhaAtual.mp_preapproval_id !== String(pre.id)) return "assinatura_antiga";
   const { error } = await db.from("conta_assinaturas").upsert({ conta_id: ref.contaId, ...espelhoAssinatura(pre) }, { onConflict: "conta_id" });
@@ -187,15 +203,16 @@ async function tratarAssinatura(schema: Schema, id: string): Promise<string> {
   return `assinatura_${pre.status}_gravada`;
 }
 
-async function tratarCobrancaAutorizada(schema: Schema, id: string): Promise<string> {
-  const ap = (await buscarNoMp<{ payment?: { id?: number | string | null } | null }>(`/authorized_payments/${encodeURIComponent(id)}`, schema))?.recurso;
+async function tratarCobrancaAutorizada(schema: Schema, id: string, p: Prazo): Promise<string> {
+  const ap = (await buscarNoMp<{ payment?: { id?: number | string | null } | null }>(`/authorized_payments/${encodeURIComponent(id)}`, schema, { prazo: p }))?.recurso;
   if (!ap) return "cobranca_nao_encontrada";
   const pagamento = ap.payment?.id;
   if (pagamento === null || pagamento === undefined) return "cobranca_sem_pagamento_ainda";
-  return await tratarPagamento(schema, String(pagamento));
+  return await tratarPagamento(schema, String(pagamento), p);
 }
 
 Deno.serve(async (req) => {
+  const p = prazo(ORCAMENTO_MS.servidor); // hml-14 (H-32): o prazo do aviso inteiro (todas as idas ao MP)
   if (req.method !== "POST") return ok("ignorado_metodo");
   // hml-10: o que o catch final leva ao log (o ambiente e o tópico do aviso, quando já se sabe)
   let schemaDoLog: Schema | null = null;
@@ -217,9 +234,9 @@ Deno.serve(async (req) => {
     const id = String(dados.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return ok("sem_id");
     let resultado = "topico_ignorado";
-    if (topico === "payment") resultado = await tratarPagamento(schema, id);
-    else if (topico === "subscription_preapproval" || topico === "preapproval") resultado = await tratarAssinatura(schema, id);
-    else if (topico === "subscription_authorized_payment" || topico === "authorized_payment") resultado = await tratarCobrancaAutorizada(schema, id);
+    if (topico === "payment") resultado = await tratarPagamento(schema, id, p);
+    else if (topico === "subscription_preapproval" || topico === "preapproval") resultado = await tratarAssinatura(schema, id, p);
+    else if (topico === "subscription_authorized_payment" || topico === "authorized_payment") resultado = await tratarCobrancaAutorizada(schema, id, p);
     log.info({ codigo: "aviso_mp", schema, acao: topico || null, ref: id, resultado });
     return ok(resultado);
   } catch (e) {

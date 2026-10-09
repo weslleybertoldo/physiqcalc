@@ -159,7 +159,10 @@ export async function aplicarPagamentoMp(
   const alvo = cobrancaDoStatusMp(mpStatus);
   // paga é final: só estorno/chargeback mudam (aviso atrasado de "cancelled" do sandbox não desfaz o que foi pago)
   if (c.status === "paga" && !alvo.reembolso) {
-    if (c.mp_status !== mpStatus && mpStatus === "approved") await db.from("cobrancas").update({ mp_status: mpStatus }).eq("id", c.id);
+    if (c.mp_status !== mpStatus && mpStatus === "approved") {
+      const { error } = await db.from("cobrancas").update({ mp_status: mpStatus }).eq("id", c.id);
+      if (error) throw error; // hml-14 (H-32): a gravação que falha lança (no aviso: 500 e o MP manda de novo)
+    }
     return { status: c.status, mudou: false, pagou: false };
   }
   const patch: Record<string, unknown> = { mp_status: mpStatus };
@@ -200,7 +203,10 @@ export async function registrarPagamentoAvulsoDoMp(
   if (pay?.id === undefined || pay?.id === null) return null;
   const mpId = String(pay.id);
   const colunas = COLUNAS_COBRANCA;
-  let { data: linha } = await db.from("cobrancas").select(colunas).eq("mp_payment_id", mpId).maybeSingle();
+  // hml-14 (H-32): erro de banco lança na leitura e na releitura (antes a leitura que falhava virava "não tem")
+  const achada = await db.from("cobrancas").select(colunas).eq("mp_payment_id", mpId).maybeSingle();
+  if (achada.error) throw achada.error;
+  let linha = achada.data;
   if (!linha) {
     const dia = diaSP(pay.date_approved ?? pay.date_created ?? new Date().toISOString()) ?? new Date().toISOString().slice(0, 10);
     const mes = extra.mesRef ?? mesRefDe(dia);
@@ -216,7 +222,13 @@ export async function registrarPagamentoAvulsoDoMp(
       plano_aluno_id: m.plano_aluno_id, origem: extra.origem,
     }).select(colunas).maybeSingle();
     if (error && !String(error.message || "").includes("duplicate")) throw error;
-    linha = nova ?? (await db.from("cobrancas").select(colunas).eq("mp_payment_id", mpId).maybeSingle()).data;
+    linha = nova;
+    if (!linha) {
+      // o "duplicate": o aviso ou a conferência gravou a cobrança antes — relê a dela
+      const relida = await db.from("cobrancas").select(colunas).eq("mp_payment_id", mpId).maybeSingle();
+      if (relida.error) throw relida.error;
+      linha = relida.data;
+    }
   }
   if (!linha) return null;
   return await aplicarPagamentoMp(db, linha as unknown as Cobranca, pay, m, log, schema);
