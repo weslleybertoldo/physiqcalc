@@ -5629,3 +5629,190 @@ def barra_apoio_polia(nome, pol, altura=1.0, meia=0.30, raio=0.016, frente=0.09,
     bpy.context.view_layer.update()
     return raiz
 # ===== fim: Tornozeleira da polia ===================================================================================================
+
+
+# ===== Banco Scott ==================================================================================================================
+# ── BANCO SCOTT LIVRE (Rosca Scott com Halteres, lote 8, 09/10/2026; o MESMO banco serve à Rosca Scott com Barra) ─────────────────────
+# Banco de rosca Scott de peso livre, sem alavanca e sem pilha (o "preacher curl bench"): o ASSENTO (estofado afinando pra frente numa
+# coluna com a luva da regulagem de altura e o pino), a ALMOFADA DOS BRAÇOS inclinada (estofado grosso numa chapa de aço) — inteira ou com
+# o RECORTE do peito no meio da borda de cima, do jeito da almofada da máquina (rosca_scott(), acima) —, os 2 TUBOS LATERAIS que seguram
+# a almofada por fora e descem inclinados até a travessa da frente, a BASE no chão (travessa da frente, trilho do meio e travessa de trás,
+# com sapatas de borracha) e, opcional, os 2 GANCHOS da barra (o "suporte"). É o banco da "Dumbbell Preacher Curl" e da "Barbell Preacher
+# Curl" do ExRx ("Grasp dumbbell and sit on preacher bench. With arm bent and palm facing shoulder, place back of arm down on pad."; "Sit
+# on preacher bench placing back of arms on pad."; "Seat should be adjusted to allow armpit to rest near top of pad.") e o Precor Discovery
+# DBR0202 Preacher Curl Bench ("The oversized arm pad cushions both the chest area and arm area with extra thick padding for exerciser
+# comfort and stability."; "The tapered seat enhances entry and exit and features an intuitive, ratcheting seat adjustment for precise
+# exerciser fit."; "High-impact, polyurethane wear guards help protect the bench and bar from metal-on-metal contact"). Como as máquinas,
+# a cena monta o banco EM VOLTA do corpo: ela dá a face da almofada (encostada na parte de trás dos braços, a axila perto da borda de
+# cima), o recorte (o peito e a barriga no meio), o assento (embaixo do glúteo) e a frente da base (na frente dos pés); a peça liga tudo
+# com a estrutura. Os pés ficam no chão entre os 2 tubos, dos lados do trilho do meio; nada passa entre os joelhos.
+#   Rosca Scott com Halteres: um braço por vez (o outro descansa na almofada); Rosca Scott com Barra: os 2 braços, a barra passando por
+#   cima da almofada (os ganchos ficam por fora das mãos: x_suporte).
+# Medidas de banco de verdade: estofado da almofada de 65 mm (Precor DBR0202: "Total thickness is 2.5 inches (65 mm)"); banco de ~0,9 m de
+# altura e ~1,07 m de comprimento (Precor DBR0202: "Dimensions (L x W x H): 42 x 37 x 36 in / 107 x 94 x 91 cm"; Titan Preacher Curl Bench
+# V3: "Overall Height 35-in."); almofada de ~59 × 36 cm e assento de ~28 × 30 cm, estofados de 2", com o assento regulando de 16" a 20,5" do
+# chão (Titan V3: "Pad Dimensions 14-in x 23.25-in x 2-in.", "Bench Dimensions 11-in x 12-in x 2-in.", "Adjustable Seat 16-in – 20.5-in.");
+# os ganchos da barra a ~72 cm um do outro (Titan V3: "Rack Width 28.5-in."); tubo de 2 × 3" (Titan V3: "Frame Material 2 x 3-in. 11-Ga
+# Steel"). O ângulo, o comprimento e o recorte da almofada e a altura do assento saem do corpo na cena (como na máquina), não são números
+# fixos da peça. Coluna do assento, luva, pino, base, sapatas, os braços que prendem a almofada nos tubos e o desenho dos ganchos são
+# escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga / _caixa_ao_longo): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   bs = e3.banco_scott("banco_scott", almofada=(y, z, angulo, comprimento, largura, espessura), recorte=(x, profundidade),
+#                       assento=(y_frente, y_tras, topo, largura, espessura, largura_frente), y_frente=..., suporte=(y, z))
+#   Cena(pose, [halter] + bs.equipamentos, ..., apoios=bs.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo), "<nome>_assento"
+# e "<nome>_almofada" (APOIO: encostar é o certo). Estofados com as quinas chanfradas (a medida da zona de apoio erra o sinal em quina
+# viva). bs.topo, bs.u e bs.n dão a face da almofada no mundo (meio da borda de cima, descendo pela face e a normal pros braços).
+class BancoScott:
+    """Banco Scott livre pronto na cena (banco_scott())."""
+
+    def __init__(self, raizes, topo, u, n, ganchos):
+        self.raizes = raizes                  # {"estrutura", "assento", "almofada"}
+        self.equipamentos = [raizes["estrutura"]]
+        self.apoios = [raizes["assento"], raizes["almofada"]]
+        self.topo = topo                      # meio (x = 0) da borda de cima da face da almofada, no mundo
+        self.u, self.n = u, n                 # descendo pela face (pra frente e pra baixo) e a normal dela (pros braços)
+        self.ganchos = ganchos                # {+1: centro da barra apoiada no gancho do lado +X, −1: do −X}; vazio sem suporte
+
+
+def banco_scott(nome="banco_scott", almofada=None, recorte=None, assento=None, y_frente=None, x_tubo=None, s_tubo=None, ang_tubo=None,
+                suporte=None, x_suporte=None, tubo=(0.05, 0.076), raio_barra=0.0145):
+    """Banco Scott livre (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y:
+      almofada  = (y, z, angulo, comprimento, largura, espessura): (y, z) = meio (x = 0) da BORDA DE CIMA da face da almofada (onde a
+                  parte de trás dos braços encosta; a axila fica perto dela), que desce pra frente (−Y) `angulo` graus da vertical por
+                  `comprimento` m; o estofado fica atrás da face (do lado de quem senta), com `espessura` m, numa chapa de aço (como a
+                  almofada da rosca_scott());
+      recorte   = None (almofada inteira) ou (x_dentro, profundidade): recorte do peito no meio da borda de cima, de |x| < x_dentro, que
+                  desce `profundidade` m pela face — a almofada vira um U: 2 abas por baixo dos braços e a base inteira embaixo;
+      assento   = (y_frente, y_tras, topo, largura, espessura[, largura_frente]): estofado do assento com o topo em `topo`, afinando até
+                  `largura_frente` na frente (padrão: sem afinar);
+      y_frente  = y da travessa da frente da base, no chão, na frente dos pés (None = onde o tubo lateral chega ao chão 12° mais em pé
+                  que a almofada); o tubo não pode ficar mais deitado que a almofada (passaria por ela);
+      x_tubo    = |x| dos 2 tubos laterais, que seguram a almofada por fora (None = encostados nos lados dela);
+      s_tubo    = onde o tubo lateral começa, ao longo da face, a partir da borda de cima (None = 2 cm: o tubo sobe até o alto da
+                  almofada; perto do `comprimento` = o tubo sai da parte de baixo dela e fica mais curto);
+      ang_tubo  = None: o tubo desce até a travessa da frente (como o Precor DBR0202), com um trilho no meio da base até a travessa de
+                  trás; graus da vertical: o tubo desce mais em pé até um trilho no chão de cada lado dos pés (|x| = x_tubo), que vai
+                  da travessa da frente até a de trás (sem o trilho do meio);
+      suporte   = None (sem ganchos) ou (y, z): centro de uma barra de raio `raio_barra` apoiada nos 2 ganchos (V de borracha num braço
+                  que sai do tubo lateral), em x = ±x_suporte (None = x_tubo);
+      tubo      = seção (m) do tubo lateral: largura (no X) e altura.
+    Devolve um BancoScott (raizes, equipamentos, apoios, topo, u, n, ganchos)."""
+    if almofada is None or assento is None:
+        raise ValueError("banco_scott: almofada e assento vêm da cena (o banco é montado em volta do corpo)")
+    y_top, z_top, ang, comp_a, larg_a, esp_a = almofada
+    y_f, y_t, topo, larg, esp = assento[:5]
+    larg_fr = assento[5] if len(assento) > 5 and assento[5] else larg
+    lt, at = tubo
+    x_t = larg_a / 2 + lt / 2 + 0.003 if x_tubo is None else x_tubo
+    x_s = x_t if x_suporte is None else x_suporte
+    if x_t - lt / 2 < larg_a / 2 - 0.001:
+        raise ValueError("banco_scott: o tubo lateral (x = %.3f) entra na almofada (meia largura %.3f)" % (x_t, larg_a / 2))
+    X = Vector((1.0, 0.0, 0.0))
+    a = math.radians(ang)
+    u = Vector((0.0, -math.sin(a), -math.cos(a)))           # descendo pela face da almofada (pra frente e pra baixo)
+    n = Vector((0.0, -math.cos(a), math.sin(a)))            # normal da face (pros braços: pra cima e pra frente)
+    rot_a = _rot_de(X, -u, n)                                # caixa: X local = X, Y local subindo pela face, Z local = n
+    topo_a = Vector((0.0, y_top, z_top))
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, ass, alm = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("almofada")
+    bpy.context.view_layer.update()
+    pecas = []                                               # peças da estrutura sem pai (presas na raiz no fim, sem sair do lugar)
+
+    # ── almofada dos braços: estofado inclinado (APOIO), inteiro ou em U, com a chapa de aço atrás ─────────────────────────────────
+    if recorte is None or recorte[1] <= 0.0:
+        pedacos = [("", 0, 0.0, larg_a / 2, 0.0, comp_a)]   # (sufixo, lado, |x| de dentro, |x| de fora, s0, s1) ao longo da face
+    else:
+        x_d, prof = recorte
+        if not 0.0 < x_d < larg_a / 2 - 0.04 or prof >= comp_a - 0.04:
+            raise ValueError("banco_scott: recorte %s não cabe na almofada (largura %.3f, comprimento %.3f)" % (recorte, larg_a, comp_a))
+        pedacos = [("_aba%+d" % s, s, x_d, larg_a / 2, 0.0, prof) for s in (1, -1)] + [("_base", 0, 0.0, larg_a / 2, prof, comp_a)]
+    for suf, s, x0, x1, s0, s1 in pedacos:
+        xc, largura = (s * (x0 + x1) / 2, x1 - x0) if s else (0.0, 2 * x1)
+        c_s = topo_a + u * ((s0 + s1) / 2) + X * xc
+        caixa(nome + "_almofada_estofado" + suf, c_s - n * (esp_a / 2), (largura, s1 - s0, esp_a), mat_estofado(), rot=rot_a,
+              pai=alm, chanfro=0.02)
+        _em_aneis(_reto(caixa(nome + "_almofada_chapa" + suf, c_s - n * (esp_a + 0.008), (largura - 0.02, s1 - s0 - 0.02, 0.016),
+                              mat_estrutura(), rot=rot_a, pai=estr, chanfro=0)), passo=0.06)
+    # ── os 2 tubos laterais: de perto da almofada (ao lado dela, atrás da face) até o chão — a travessa da frente ou o trilho lateral ─
+    z_trav = 0.038                                           # eixo das travessas do chão (em cima das sapatas de 8 mm)
+    s_t = 0.02 if s_tubo is None else s_tubo
+    T = topo_a + u * s_t - n * (esp_a + 0.016 - at / 2)     # topo do eixo do tubo (no plano x = ±x_tubo): a face da frente do tubo
+    z_pe = z_trav + 0.03                                     # fica um pouco atrás da face da almofada
+    if y_frente is None:
+        y_frente = T.y - (T.z - z_pe) * math.tan(math.radians(ang - 12.0))
+    y_pe = y_frente if ang_tubo is None else T.y - (T.z - z_pe) * math.tan(math.radians(ang_tubo))   # onde o tubo chega ao chão
+    if T.y - y_pe > (T.z - z_pe) * math.tan(a) + 1e-6:
+        raise ValueError("banco_scott: o tubo lateral (até y = %.3f) ficaria mais deitado que a almofada (%.1f°) e passaria por ela" % (
+            y_pe, ang))
+    if y_pe < y_frente - 1e-6:
+        raise ValueError("banco_scott: o pé do tubo lateral (y = %.3f) passa da travessa da frente (y = %.3f)" % (y_pe, y_frente))
+    d_t = (Vector((0.0, y_pe, z_pe)) - Vector((0.0, T.y, T.z))).normalized()   # descendo pelo tubo
+    for s in (1, -1):
+        Ts = Vector((s * x_t, T.y, T.z))
+        Fs = Vector((s * x_t, y_pe, z_pe))
+        pecas.append(_caixa_ao_longo(nome + "_tubo%+d" % s, Ts, Fs, lt, at, X, mat_estrutura()))
+        pecas.append(_reto(caixa(nome + "_tubo_tampa%+d" % s, Ts - d_t * 0.003, (lt + 0.004, at + 0.004, 0.006), mat_borracha(),
+                                 rot=_rot_de(X, X.cross(d_t), -d_t), chanfro=0)))
+        # 2 braços curtos prendendo a chapa da almofada no tubo (perto da borda de cima e da de baixo, ou em volta do topo do tubo)
+        braco_s = (0.06, comp_a - 0.06) if s_tubo is None else (max(0.06, s_t - 0.06), min(comp_a - 0.04, s_t + 0.02))
+        for k, sk in enumerate(braco_s):
+            P = topo_a + u * sk - n * (esp_a + 0.008) + X * (s * (larg_a / 2 - 0.03))
+            Q = Vector((0.0, T.y, T.z)) + d_t * max(0.0, (Vector((0.0, P.y, P.z)) - Vector((0.0, T.y, T.z))).dot(d_t))
+            pecas.append(_viga(nome + "_almofada_braco%+d%d" % (s, k), P, Vector((s * x_t, Q.y, Q.z)), 0.04, 0.03, mat_estrutura()))
+    # ── base no chão: travessa da frente, trilho do meio (ou os 2 trilhos laterais) até a travessa de trás (embaixo do assento) e
+    #    sapatas de borracha ───────────────────────────────────────────────────────────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    x_tras = 0.20 if ang_tubo is None else x_t + 0.04
+    _viga(nome + "_base_frente", (-(x_t + 0.05), y_frente, z_trav), (x_t + 0.05, y_frente, z_trav), 0.08, 0.06, mat_estrutura(), pai=estr)
+    if ang_tubo is None:
+        _viga(nome + "_base_meio", (0.0, y_frente + 0.04, z_trav - 0.005), (0.0, y_ass - 0.04, z_trav - 0.005), 0.06, 0.05,
+              mat_estrutura(), pai=estr)
+    else:
+        for s in (1, -1):
+            _viga(nome + "_base_trilho%+d" % s, (s * x_t, y_frente + 0.04, z_trav), (s * x_t, y_ass - 0.04, z_trav), 0.06, 0.06,
+                  mat_estrutura(), pai=estr)
+    _viga(nome + "_base_tras", (-x_tras, y_ass, z_trav), (x_tras, y_ass, z_trav), 0.08, 0.06, mat_estrutura(), pai=estr)
+    for s in (1, -1):
+        for k, (x, y) in enumerate(((s * (x_t + 0.02), y_frente), (s * (x_tras - 0.03), y_ass))):
+            caixa(nome + "_sapata%+d%d" % (s, k), (x, y, 0.004), (0.09, 0.09, 0.008), mat_borracha(), pai=estr, chanfro=0.002)
+    # ── assento: estofado (APOIO) afinando pra frente, a chapa embaixo dele, a coluna com a luva da regulagem e o pino ────────────────
+    prof_a = y_t - y_f
+    est = caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, prof_a, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    chapa = caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.04, prof_a - 0.04, 0.024), mat_estrutura(), pai=estr, chanfro=0)
+    if larg_fr < larg:
+        _afinar(est, prof_a / 2, -prof_a / 2, larg_fr / larg)
+        _afinar(chapa, prof_a / 2 - 0.02, -prof_a / 2 + 0.02, max(0.3, (larg_fr - 0.04) / (larg - 0.04)))
+    _em_aneis(_reto(chapa), passo=0.06)
+    z_luva = min(0.30, z_chapa - 0.12)
+    _viga(nome + "_coluna_assento", (0, y_ass, z_trav + 0.03), (0, y_ass, z_chapa - 0.012), 0.06, 0.06, mat_estrutura(), pai=estr)
+    _viga(nome + "_luva", (0, y_ass, z_trav + 0.03), (0, y_ass, z_luva), 0.08, 0.08, mat_estrutura(), pai=estr)
+    _cilindro(nome + "_pino", 0.008, 0.07, (0.06, y_ass, z_luva - 0.04), (0, math.radians(90), 0), mat_aco(), pai=estr)
+    _cilindro(nome + "_pino_botao", 0.016, 0.02, (0.10, y_ass, z_luva - 0.04), (0, math.radians(90), 0), mat_borracha(), pai=estr)
+    # ── ganchos da barra (opcional): um V de borracha embaixo da barra apoiada, num braço que sai do tubo lateral ────────────────────
+    ganchos = {}
+    if suporte is not None:
+        ys, zs = suporte
+        for s in (1, -1):
+            C = Vector((s * x_s, ys, zs))
+            ganchos[s] = C
+            for k, lado_v in enumerate((1, -1)):              # as 2 abas do V, a 40° da horizontal, abrindo pra cima
+                v = Vector((0.0, lado_v * math.cos(math.radians(40.0)), math.sin(math.radians(40.0))))
+                nv = Vector((0.0, -v.z, v.y)) * lado_v           # normal da aba, pro lado da barra
+                c_v = C + v * 0.012 - nv * (raio_barra + 0.006)
+                pecas.append(_reto(caixa(nome + "_gancho_v%+d%d" % (s, k), c_v, (0.04, 0.06, 0.012), mat_borracha(),
+                                         rot=_rot_de(X, v, X.cross(v)), chanfro=0)))
+            corpo = C - Vector((0.0, 0.0, raio_barra + 0.03))    # corpo do gancho, embaixo do V
+            pecas.append(_reto(caixa(nome + "_gancho_corpo%+d" % s, corpo, (0.04, 0.05, 0.03), mat_estrutura(), chanfro=0)))
+            Q = Vector((0.0, T.y, T.z)) + d_t * max(0.0, (Vector((0.0, corpo.y, corpo.z)) - Vector((0.0, T.y, T.z))).dot(d_t))
+            pecas.append(_viga(nome + "_gancho_braco%+d" % s, Vector((s * x_t, Q.y, Q.z)), corpo, 0.04, 0.03, mat_estrutura()))
+    _prender(pecas, estr)
+    bpy.context.view_layer.update()
+    return BancoScott({"estrutura": estr, "assento": ass, "almofada": alm}, topo_a, u, n, ganchos)
+# ===== fim: Banco Scott =============================================================================================================
