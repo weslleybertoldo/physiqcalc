@@ -1,10 +1,16 @@
-// master-professores (SaaS 12/09/2026) — SÓ MASTER: gestão dos professores, movimentação de alunos e integrações.
-// actions: list | get | invite | promote | suspend | reactivate | move-alunos | set-plano | remove | integracoes-list | integracao-set
+// master-professores (SaaS 12/09/2026) — SÓ MASTER: a lista dos professores do Banco do Treino (action: list).
+// Physiq hml-14 (H-51 item 7, D10/P4, 08/10/2026): só a `list` ficou — a Biblioteca global do master (src/pages/master/
+// BibliotecaPage.tsx: { action: "list", limit: 100 }) mostra o nome do dono de cada exercício. As outras ações (get, invite,
+// promote, suspend, reactivate, move-alunos, set-plano, remove, integracoes-list, integracao-set) já respondiam 410 "migrado"
+// desde a virada W28 (professores, convites, planos e integrações estão na master-contas do principal) e saíram; o código de
+// antes está no histórico do git (178f5d6). Qualquer outra ação responde 410 {"error":"migrado"} antes do login e sem banco.
+// Publicar SÓ ASSIM: scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions master-professores true
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 const log = criarLog("master-professores", { avisar: avisarErro });
@@ -48,7 +54,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TZ = "America/Sao_Paulo";
 function adminClient() { return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } }); }
-function authAdmin() { return createClient(SUPABASE_URL, SERVICE_ROLE); }
 
 const janelasRate = new Map<string, number[]>();
 function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): boolean {
@@ -117,229 +122,66 @@ async function tolerancia(admin: any): Promise<number> {
   return Number.isFinite(n) ? n : 7;
 }
 
-// promove o usuário a PROFESSOR (mesma lógica da edge vincular-professor)
-async function promoverProfessor(admin: any, userId: string, email: string | null, nome: string) {
-  const [{ data: cod }, { data: trialCfg }, { data: start }] = await Promise.all([
-    admin.rpc("physiq_gerar_codigo_professor", { p_nome: nome }),
-    admin.from("app_config").select("value").eq("key", "trial_dias").maybeSingle(),
-    admin.from("physiq_planos_professor").select("id").eq("nome", "Start").maybeSingle(),
-  ]);
-  const trialDias = Number((trialCfg as any)?.value) || 14;
-  const { data: existente } = await admin.from("physiq_professores").select("id, codigo_convite").eq("id", userId).maybeSingle();
-  let codigo = (existente as any)?.codigo_convite as string | undefined;
-  if (!existente) {
-    codigo = cod as string;
-    const { error } = await admin.from("physiq_professores").insert({
-      id: userId, nome, email, codigo_convite: codigo, plano_id: (start as any)?.id ?? null, trial_ate: addDias(hojeISO(), trialDias), status: "ativo",
-    });
-    if (error) throw error;
-  }
-  await admin.from("physiq_integracoes").upsert({ professor_id: userId, tipo: "pix_manual" }, { onConflict: "professor_id", ignoreDuplicates: true });
-  await admin.from("physiq_profiles").upsert({ id: userId, nome, email }, { onConflict: "id", ignoreDuplicates: true });
-  const aa = authAdmin();
-  const { data: u } = await aa.auth.admin.getUserById(userId);
-  const meta = { ...((u?.user?.app_metadata as Record<string, unknown>) || {}) };
-  if (meta.role !== "admin" && meta.role !== "master") meta.role = "professor";
-  const { error: metaErr } = await aa.auth.admin.updateUserById(userId, { app_metadata: meta });
-  if (metaErr) throw metaErr;
-  return codigo;
-}
-
 const SELECT_PROF = "id, nome, email, foto_url, status, codigo_convite, plano_id, trial_ate, adesao_paga_em, ciclo_inicio, ciclo_vence_em, ciclo_valor, anual_ate, cobranca_pausada, acesso_liberado_ate, alunos_bloqueados_em, alunos_bloqueados_msg, created_at, physiq_planos_professor(id, nome, valor_mensal, valor_anual, max_alunos)";
 
 Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
+  // Physiq W28 (virada) + hml-14 (D10): só a lista fica; o resto responde "migrado" (410) — antes do login, sem banco
+  const body = await req.json().catch(() => ({}));
+  const action = body?.action;
+  if (action !== "list") return jsonErr("migrado", 410, origin);
   const { user, error: authErr } = await requireMaster(req, "master-professores");
   if (authErr) return authErr;
-  let acao: string | null = null; // hml-10 (D6): a ação, para o log do catch final
+  const acao = "list"; // hml-10 (D6): a ação, para o log do catch final
   try {
     const admin = adminClient();
-    const body = await req.json().catch(() => ({}));
-    const action = body?.action;
-    acao = typeof action === "string" ? action.replace(/-/g, "_") : null;
     const hoje = hojeISO();
-    // Physiq W28 (virada): professores, convites, planos e integrações passaram para o banco principal (Painel master › Contas e
-    // Integrações: master-contas do principal). Só a lista fica (a Biblioteca global mostra o nome do dono de cada exercício);
-    // o resto responde "migrado" (410).
-    if (action !== "list") return jsonErr("migrado", 410, origin);
-
-    if (action === "list") {
-      const limit = Math.min(Math.max(Number(body?.limit) || 20, 1), 100);
-      const offset = Math.max(Number(body?.offset) || 0, 0);
-      const q = typeof body?.q === "string" ? body.q.trim().replace(/[%,()]/g, " ").slice(0, 80) : "";
-      let query = admin.from("physiq_professores").select(SELECT_PROF, { count: "exact" }).order("created_at", { ascending: true }).range(offset, offset + limit - 1);
-      if (body?.status === "ativo" || body?.status === "suspenso") query = query.eq("status", body.status);
-      if (q) query = query.or(`nome.ilike.%${q}%,email.ilike.%${q}%,codigo_convite.ilike.%${q}%`);
-      const { data, error, count, status } = await query;
-      if (error) {
-        // hml-10 (H-24): o erro do PostgREST pode trazer o filtro de volta, com o termo de busca — no log, só o código e o status
-        log.erro({ codigo: "lista_falhou", schema: currentSchema(), acao: q ? "buscar" : "listar", status, pg: error.code });
-        return jsonErr("internal", 500, origin);
-      }
-      const ids = ((data as any[]) || []).map((p) => p.id);
-      const [alunosRes, integRes, tol] = await Promise.all([
-        ids.length ? admin.from("physiq_profiles").select("professor_id").in("professor_id", ids) : Promise.resolve({ data: [] }),
-        ids.length ? admin.from("physiq_integracoes").select("professor_id, tipo").in("professor_id", ids) : Promise.resolve({ data: [] }),
-        tolerancia(admin),
-      ]);
-      const nAlunos: Record<string, number> = {};
-      for (const a of ((alunosRes.data as any[]) || [])) nAlunos[a.professor_id] = (nAlunos[a.professor_id] || 0) + 1;
-      const integ = new Map(((integRes.data as any[]) || []).map((i) => [i.professor_id, i.tipo]));
-      // fila "sem professor" = alunos sem vínculo, excluindo os perfis dos próprios professores (mesma régua do admin-list-users)
-      const { data: todosProfs } = await admin.from("physiq_professores").select("id");
-      const idsTodosProfs = ((todosProfs as any[]) || []).map((p) => p.id);
-      let semQ = admin.from("physiq_profiles").select("id", { count: "exact", head: true }).is("professor_id", null);
-      if (idsTodosProfs.length) semQ = semQ.not("id", "in", `(${idsTodosProfs.join(",")})`);
-      const { count: semProfessor } = await semQ;
-      const professores = ((data as any[]) || []).map((p) => ({
-        ...p, plano: p.physiq_planos_professor ?? null, physiq_planos_professor: undefined,
-        alunos: nAlunos[p.id] || 0, integracao: integ.get(p.id) ?? "pix_manual", acessoOk: acessoOk(p, tol, hoje), ehMaster: p.id === user.id,
-      }));
-      return jsonOk({ professores, total: count ?? professores.length, limit, offset, semProfessor: semProfessor ?? 0 }, origin);
+    const limit = Math.min(Math.max(Number(body?.limit) || 20, 1), 100);
+    const offset = Math.max(Number(body?.offset) || 0, 0);
+    const q = typeof body?.q === "string" ? body.q.trim().replace(/[%,()]/g, " ").slice(0, 80) : "";
+    let query = admin.from("physiq_professores").select(SELECT_PROF, { count: "exact" }).order("created_at", { ascending: true }).range(offset, offset + limit - 1);
+    if (body?.status === "ativo" || body?.status === "suspenso") query = query.eq("status", body.status);
+    if (q) query = query.or(`nome.ilike.%${q}%,email.ilike.%${q}%,codigo_convite.ilike.%${q}%`);
+    const { data, error, count, status } = await query;
+    if (error) {
+      // hml-10 (H-24): o erro do PostgREST pode trazer o filtro de volta, com o termo de busca — no log, só o código e o status
+      log.erro({ codigo: "lista_falhou", schema: currentSchema(), acao: q ? "buscar" : "listar", status, pg: error.code });
+      return jsonErr("internal", 500, origin);
     }
-
-    if (action === "get") {
-      const userId = body?.userId;
-      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
-      const [{ data: p }, { count }, { data: integ }, tol] = await Promise.all([
-        admin.from("physiq_professores").select(SELECT_PROF).eq("id", userId).maybeSingle(),
-        admin.from("physiq_profiles").select("id", { count: "exact", head: true }).eq("professor_id", userId),
-        admin.from("physiq_integracoes").select("tipo, status, config").eq("professor_id", userId).maybeSingle(),
-        tolerancia(admin),
-      ]);
-      if (!p) return jsonErr("not_found", 404, origin);
-      return jsonOk({ professor: { ...(p as any), plano: (p as any).physiq_planos_professor ?? null, physiq_planos_professor: undefined, alunos: count ?? 0, integracao: (integ as any)?.tipo ?? "pix_manual", integracaoConfig: (integ as any)?.config ?? {}, acessoOk: acessoOk(p, tol, hoje), ehMaster: (p as any).id === user.id } }, origin);
-    }
-
-    // convite por e-mail: se a pessoa já tem conta (perfil no ambiente), promove na hora; senão fica pendente até ela entrar com Google
-    if (action === "invite") {
-      const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return jsonErr("email_invalido", 400, origin);
-      const { data: perfil } = await admin.from("physiq_profiles").select("id, nome, email").eq("email", email).limit(1).maybeSingle();
-      if (perfil) {
-        const { data: jaProf } = await admin.from("physiq_professores").select("id").eq("id", (perfil as any).id).maybeSingle();
-        if (jaProf) return jsonErr("ja_professor", 409, origin);
-        const codigo = await promoverProfessor(admin, (perfil as any).id, (perfil as any).email, (perfil as any).nome || email.split("@")[0]);
-        return jsonOk({ promovido: true, userId: (perfil as any).id, codigo }, origin);
-      }
-      const { data: existente } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").eq("email", email).maybeSingle();
-      if (existente) return jsonOk({ promovido: false, convite: existente, jaExistia: true }, origin);
-      const { data: conv, error } = await admin.from("physiq_convites").insert({ email, papel: "professor", criado_por: user.id }).select().single();
-      if (error) throw error;
-      return jsonOk({ promovido: false, convite: conv }, origin);
-    }
-
-    if (action === "promote") {
-      const userId = body?.userId;
-      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
-      const { data: perfil } = await admin.from("physiq_profiles").select("id, nome, email").eq("id", userId).maybeSingle();
-      if (!perfil) return jsonErr("not_found", 404, origin);
-      const { data: jaProf } = await admin.from("physiq_professores").select("id").eq("id", userId).maybeSingle();
-      if (jaProf) return jsonErr("ja_professor", 409, origin);
-      const codigo = await promoverProfessor(admin, userId, (perfil as any).email, (perfil as any).nome || ((perfil as any).email || "professor").split("@")[0]);
-      return jsonOk({ ok: true, codigo }, origin);
-    }
-
-    if (action === "suspend" || action === "reactivate") {
-      const userId = body?.userId;
-      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
-      if (userId === user.id) return jsonErr("nao_pode_suspender_master", 400, origin);
-      const { data, error } = await admin.from("physiq_professores").update({ status: action === "suspend" ? "suspenso" : "ativo" }).eq("id", userId).select("id, status").maybeSingle();
-      if (error) throw error;
-      if (!data) return jsonErr("not_found", 404, origin);
-      return jsonOk({ ok: true, professor: data }, origin);
-    }
-
-    // move alunos entre professores (paraId = null → fila "Sem professor")
-    if (action === "move-alunos") {
-      const deId = typeof body?.deId === "string" ? body.deId : null;
-      const paraId = typeof body?.paraId === "string" ? body.paraId : null;
-      const alunoIds: string[] | null = Array.isArray(body?.alunoIds) ? body.alunoIds.filter((x: unknown) => typeof x === "string").slice(0, 500) : null;
-      if (!alunoIds && !deId) return jsonErr("missing_alunos", 400, origin);
-      if (paraId) {
-        const { data: destino } = await admin.from("physiq_professores").select("id, status, plano_id, physiq_planos_professor(max_alunos)").eq("id", paraId).maybeSingle();
-        if (!destino || (destino as any).status !== "ativo") return jsonErr("destino_invalido", 400, origin);
-        const max = (destino as any).physiq_planos_professor?.max_alunos ?? null;
-        if (max !== null) {
-          const { count: atuais } = await admin.from("physiq_profiles").select("id", { count: "exact", head: true }).eq("professor_id", paraId);
-          let movendo = 0;
-          if (alunoIds) movendo = alunoIds.length;
-          else { const { count } = await admin.from("physiq_profiles").select("id", { count: "exact", head: true }).eq("professor_id", deId); movendo = count ?? 0; }
-          if ((atuais ?? 0) + movendo > max) return jsonErr("limite_plano_destino", 409, origin);
-        }
-      }
-      let q = admin.from("physiq_profiles").update({ professor_id: paraId });
-      if (alunoIds) q = q.in("id", alunoIds); else q = q.eq("professor_id", deId);
-      // nunca transforma um professor em aluno de outro por acidente
-      const { data: profs } = await admin.from("physiq_professores").select("id");
-      const idsProf = ((profs as any[]) || []).map((p) => p.id);
-      if (idsProf.length) q = q.not("id", "in", `(${idsProf.join(",")})`);
-      const { data, error } = await q.select("id");
-      if (error) throw error;
-      return jsonOk({ ok: true, movidos: (data as any[])?.length ?? 0 }, origin);
-    }
-
-    if (action === "set-plano") {
-      const userId = body?.userId;
-      const planoId = body?.planoId ?? null;
-      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
-      const { data: p } = await admin.from("physiq_professores").select("id, plano_id").eq("id", userId).maybeSingle();
-      if (!p) return jsonErr("not_found", 404, origin);
-      if (planoId) {
-        const { data: pl } = await admin.from("physiq_planos_professor").select("id").eq("id", planoId).maybeSingle();
-        if (!pl) return jsonErr("plano_invalido", 400, origin);
-      }
-      const { error } = await admin.from("physiq_professores").update({ plano_id: planoId }).eq("id", userId);
-      if (error) throw error;
-      await admin.from("physiq_planos_professor_hist").insert({ plano_id: planoId, professor_id: userId, alterado_por: user.id, antes: { plano_id: (p as any).plano_id }, depois: { plano_id: planoId, por: "master" } });
-      return jsonOk({ ok: true }, origin);
-    }
-
-    // remove o papel de professor (só sem alunos); a pessoa volta a ser aluno comum
-    if (action === "remove") {
-      const userId = body?.userId;
-      if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
-      if (userId === user.id) return jsonErr("nao_pode_remover_master", 400, origin);
-      const { count } = await admin.from("physiq_profiles").select("id", { count: "exact", head: true }).eq("professor_id", userId);
-      if ((count ?? 0) > 0) return jsonErr("tem_alunos", 409, origin);
-      const { error } = await admin.from("physiq_professores").delete().eq("id", userId);
-      if (error) throw error;
-      const aa = authAdmin();
-      const { data: u } = await aa.auth.admin.getUserById(userId);
-      const meta = { ...((u?.user?.app_metadata as Record<string, unknown>) || {}) };
-      if (meta.role === "professor") { delete meta.role; await aa.auth.admin.updateUserById(userId, { app_metadata: meta }); }
-      return jsonOk({ ok: true }, origin);
-    }
-
-    if (action === "integracoes-list") {
-      const [{ data: profs }, { data: integ }] = await Promise.all([
-        admin.from("physiq_professores").select("id, nome, email, status, pix_chave, pix_tipo, pix_exibir").order("nome"),
-        admin.from("physiq_integracoes").select("professor_id, tipo, status, config, atualizado_em"),
-      ]);
-      const mapa = new Map(((integ as any[]) || []).map((i) => [i.professor_id, i]));
-      return jsonOk({
-        integracoes: ((profs as any[]) || []).map((p) => ({
-          professorId: p.id, nome: p.nome, email: p.email, status: p.status, temPix: !!p.pix_chave, pixExibir: p.pix_exibir,
-          tipo: mapa.get(p.id)?.tipo ?? "pix_manual", config: mapa.get(p.id)?.config ?? {}, atualizadoEm: mapa.get(p.id)?.atualizado_em ?? null, ehMaster: p.id === user.id,
-        })),
-      }, origin);
-    }
-
-    if (action === "integracao-set") {
-      const professorId = body?.professorId;
-      const tipo = body?.tipo;
-      if (!professorId || typeof professorId !== "string") return jsonErr("missing_professorId", 400, origin);
-      if (!["pix_manual", "none", "mercadopago"].includes(tipo)) return jsonErr("tipo_invalido", 400, origin);
-      // Mercado Pago só na conta do próprio master (fase 8a = MP de cada professor)
-      if (tipo === "mercadopago" && professorId !== user.id) return jsonErr("mercadopago_so_master", 400, origin);
-      const { error } = await admin.from("physiq_integracoes").upsert({ professor_id: professorId, tipo, atualizado_em: new Date().toISOString() }, { onConflict: "professor_id" });
-      if (error) throw error;
-      return jsonOk({ ok: true, tipo }, origin);
-    }
-
-    return jsonErr("unknown_action", 400, origin);
+    const ids = ((data as any[]) || []).map((p) => p.id);
+    // hml-14 (H-32): os alunos dos professores da página vêm em todas as páginas (o PostgREST corta em 1000 calado e a contagem
+    // por professor saía errada) e o erro de cada leitura vai para o catch (antes: 0 alunos e "pix_manual" sem aviso)
+    const [alunos, integRes, tol] = await Promise.all([
+      emLotes(ids, 150, (lote) =>
+        todasAsPaginas<{ professor_id: string }>((de, ate) =>
+          admin.from("physiq_profiles").select("professor_id").in("professor_id", lote).order("id").range(de, ate))),
+      ids.length ? admin.from("physiq_integracoes").select("professor_id, tipo").in("professor_id", ids) : Promise.resolve({ data: [], error: null }),
+      tolerancia(admin),
+    ]);
+    if (integRes.error) throw integRes.error;
+    const nAlunos: Record<string, number> = {};
+    for (const a of alunos) nAlunos[a.professor_id] = (nAlunos[a.professor_id] || 0) + 1;
+    const integ = new Map(((integRes.data as any[]) || []).map((i) => [i.professor_id, i.tipo]));
+    // fila "sem professor" = alunos sem vínculo, excluindo os perfis dos próprios professores (mesma régua do admin-list-users).
+    // hml-14 (H-32): os professores vêm todos (antes: até 1000) e a conta é "sem vínculo" − "professores sem vínculo", em lotes
+    // de 150 ids (o `not in (todos os ids)` crescia na URL com o número de professores)
+    const idsTodosProfs = (await todasAsPaginas<{ id: string }>((de, ate) =>
+      admin.from("physiq_professores").select("id").order("id").range(de, ate))).map((p) => p.id);
+    const { count: semVinculo, error: semErr } = await admin.from("physiq_profiles").select("id", { count: "exact", head: true }).is("professor_id", null);
+    if (semErr) throw semErr;
+    const profsSemVinculo = await emLotes(idsTodosProfs, 150, async (lote) => {
+      const { count: n, error: loteErr } = await admin.from("physiq_profiles").select("id", { count: "exact", head: true }).is("professor_id", null).in("id", lote);
+      if (loteErr) throw loteErr;
+      return [n ?? 0];
+    });
+    const semProfessor = Math.max(0, (semVinculo ?? 0) - profsSemVinculo.reduce((s, n) => s + n, 0));
+    const professores = ((data as any[]) || []).map((p) => ({
+      ...p, plano: p.physiq_planos_professor ?? null, physiq_planos_professor: undefined,
+      alunos: nAlunos[p.id] || 0, integracao: integ.get(p.id) ?? "pix_manual", acessoOk: acessoOk(p, tol, hoje), ehMaster: p.id === user.id,
+    }));
+    return jsonOk({ professores, total: count ?? professores.length, limit, offset, semProfessor }, origin);
   } catch (e) {
     log.excecao(e, { acao, schema: currentSchema() });
     return jsonErr("internal", 500, origin);

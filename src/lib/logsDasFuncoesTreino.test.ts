@@ -11,6 +11,8 @@ import { describe, expect, it } from "vitest";
 // Controle positivo: os detectores acham o padrão nas 10 funções que esta W não publica e em amostras escritas aqui; comentário e
 // texto entre aspas não contam (a "estrutura" do código tira os 2), e o leitor confere o próprio trabalho (parênteses e chaves
 // fecham em todo arquivo lido).
+// hml-14 (H-51 item 7, D10): master-financeiro e master-planos viraram CASCAS (410 "migrado" a tudo, sem import, segredo, banco
+// nem log — o molde da mp-assinar do principal) e saem da lista das 12; a guarda delas é a de baixo (e a do console continua).
 const raiz = resolve(__dirname, "../..");
 const FUNCOES = resolve(raiz, "supabase/functions");
 const LOG = resolve(FUNCOES, "_shared/log.ts");
@@ -18,14 +20,12 @@ const ler = (arquivo: string) => readFileSync(arquivo, "utf-8");
 const rel = (arquivo: string) => relative(raiz, arquivo);
 const indice = (slug: string) => resolve(FUNCOES, slug, "index.ts");
 
-/** As 12 do Treino publicadas na hml-10 (spec §3.1 e §4). */
+/** As 12 do Treino publicadas na hml-10 (spec §3.1 e §4), menos as 2 que viraram casca na hml-14 (CASCAS, abaixo). */
 const PUBLICADAS = [
   "trocar-token",
   "admin-delete-user",
   "admin-list-users",
   "mp-webhook",
-  "master-financeiro",
-  "master-planos",
   "master-professores",
   "professor-convites",
   "vincular-professor",
@@ -33,6 +33,9 @@ const PUBLICADAS = [
   "espelho-nucleo",
   "delete-my-account",
 ] as const;
+
+/** hml-14 (D10): respondem 410 {"error":"migrado"} a qualquer pedido (fora o preflight, com o CORS de antes). */
+const CASCAS = ["master-financeiro", "master-planos"] as const;
 
 /**
  * As 10 do Treino que esta W NÃO publica (P4, spec §2 D1): só têm console com a mensagem do erro (b: nada de corpo de resposta,
@@ -52,18 +55,20 @@ const FORA: Record<string, string> = {
   "treino-leitura": "2 console (b): a mensagem do erro ao assinar as fotos e a do catch final, com a ação",
 };
 
-/** A resposta do catch final de cada uma — a MESMA de antes da hml-10 (D6: só o log muda). */
+/**
+ * A resposta do catch final de cada uma — a MESMA de antes da hml-10 (D6: só o log muda), fora as 2 que a hml-14 (H-32) trocou de
+ * propósito: o mp-webhook responde 500 (antes 200: o aviso se perdia; agora o MP manda de novo) e o status-lite da mp-payments
+ * responde "bloqueado" (falha fechada: o app antigo libera quando recebe erro).
+ */
 const RESPOSTA_DO_CATCH_FINAL: Record<(typeof PUBLICADAS)[number], string> = {
   "trocar-token": 'return erro("erro_interno", 500, origin);',
   "admin-delete-user": 'return jsonErr("internal", 500, origin);',
   "admin-list-users": 'return jsonErr("internal", 500, origin);',
-  "mp-webhook": 'return new Response("ok", { status: 200 });',
-  "master-financeiro": 'return jsonErr("internal", 500, origin);',
-  "master-planos": 'return jsonErr("internal", 500, origin);',
+  "mp-webhook": 'return new Response("erro", { status: 500 });',
   "master-professores": 'return jsonErr("internal", 500, origin);',
   "professor-convites": 'return jsonErr("internal", 500, origin);',
   "vincular-professor": 'return jsonErr("internal", 500, origin);',
-  "mp-payments": 'return jsonErr("internal_error", 500, origin);',
+  "mp-payments": "return jsonOk(statusLite(true), origin);",
   // a espelho-nucleo não tem catch em volta de tudo: o final é o de cada resumo, que anota o erro e segue para o próximo
   "espelho-nucleo": 'resultados.push({ principal_user_id: pid, resultado: "erro", erro: String((e as { message?: string })?.message || e).slice(0, 200) });',
   "delete-my-account": 'return jsonServidor({ ok: false, erro: "interno" }, 500);',
@@ -248,21 +253,22 @@ function arquivosDa(slug: string): string[] {
   return [...vistos].sort();
 }
 
-const doTreino = [...new Set(PUBLICADAS.flatMap(arquivosDa))].sort();
+const doTreino = [...new Set([...PUBLICADAS, ...CASCAS].flatMap(arquivosDa))].sort();
 const semOLog = doTreino.filter((a) => a !== LOG);
 
 // ───────────────────────── os testes ─────────────────────────
 
-describe("hml-10: toda função do Treino está numa das 2 listas (as 12 publicadas nesta W ou as 10 que ficam, com o porquê)", () => {
-  it("as pastas de supabase/functions são exatamente as 12 + as 10", () => {
+describe("hml-10: toda função do Treino está numa das listas (as publicadas na hml-10, as cascas da hml-14 ou as 10 que ficam, com o porquê)", () => {
+  it("as pastas de supabase/functions são exatamente as 10 publicadas + as 2 cascas + as 10", () => {
     const pastas = readdirSync(FUNCOES)
       .filter((p) => p !== "_shared" && statSync(resolve(FUNCOES, p)).isDirectory())
       .sort();
-    expect(pastas).toEqual([...PUBLICADAS, ...Object.keys(FORA)].sort());
-    expect(PUBLICADAS.filter((p) => p in FORA)).toEqual([]);
+    expect(pastas).toEqual([...PUBLICADAS, ...CASCAS, ...Object.keys(FORA)].sort());
+    expect([...PUBLICADAS, ...CASCAS].filter((p) => p in FORA)).toEqual([]);
+    expect(PUBLICADAS.filter((p) => (CASCAS as readonly string[]).includes(p))).toEqual([]);
   });
 
-  it("o leitor segue os imports: as 12 carregam o log, o aviso do Treino e o saneador, e as peças de cada uma", () => {
+  it("o leitor segue os imports: as publicadas carregam o log, o aviso do Treino e o saneador, e as peças de cada uma", () => {
     const relativos = doTreino.map(rel);
     for (const arquivo of [
       "supabase/functions/_shared/log.ts",
@@ -271,7 +277,9 @@ describe("hml-10: toda função do Treino está numa das 2 listas (as 12 publica
       "supabase/functions/_shared/espelho/aplicar.ts",
       "supabase/functions/_shared/espelho/regras.ts",
       "supabase/functions/mp-webhook/regras.ts",
-      "supabase/functions/mp-payments/cobertura.ts",
+      // hml-14: o tempo do MP (mp-webhook) e as páginas (master-professores); o cobertura.ts da mp-payments ficou só para o Vitest
+      "supabase/functions/_shared/tempo.ts",
+      "supabase/functions/_shared/paginas.ts",
     ]) {
       expect(relativos).toContain(arquivo);
     }
@@ -293,7 +301,7 @@ describe("hml-10: toda função do Treino está numa das 2 listas (as 12 publica
   });
 });
 
-describe("hml-10 (H-24, D1): nenhum console.* nas 12 nem nos arquivos que elas carregam (fora o _shared/log.ts)", () => {
+describe("hml-10 (H-24, D1): nenhum console.* nas publicadas, nas cascas nem nos arquivos que elas carregam (fora o _shared/log.ts)", () => {
   it.each(semOLog.map(rel))("%s", (arquivo) => {
     expect(consoles(ler(resolve(raiz, arquivo)))).toBe(0);
   });
@@ -342,16 +350,11 @@ describe("hml-10 (H-24, D2): corpo de resposta nunca vai para o log", () => {
     },
   );
 
-  it("mp-payments: as 5 falhas do MP (código morto e o reembolso) gravam só os códigos do MP (externoMp), nunca o corpo", () => {
-    const doMp = chamadasDeLog(ler(indice("mp-payments"))).filter((c) => /codigo: "mp_/.test(c.fonte));
-    expect(doMp.map((c) => /codigo: "(mp_[a-z_]+)"/.exec(c.fonte)?.[1]).sort()).toEqual([
-      "mp_assinatura_falhou",
-      "mp_assinatura_falhou",
-      "mp_cartao_falhou",
-      "mp_pix_falhou",
-      "mp_reembolso_falhou",
-    ]);
-    for (const c of doMp) expect(c.fonte).toMatch(/externo: externoMp\((?:pay|pre|ref)\)/);
+  it("mp-payments (hml-14, D10): só o status-lite ficou — sem token nem API do MP, então nenhuma resposta do MP chega ao log", () => {
+    // até a hml-13 eram 5 falhas do MP (código morto e o reembolso) logando só os códigos (externoMp)
+    const fonte = ler(indice("mp-payments"));
+    expect(fonte).not.toMatch(/MP_ACCESS_TOKEN|api\.mercadopago\.com|externoMp/);
+    expect(chamadasDeLog(fonte).filter((c) => /codigo: "mp_/.test(c.fonte))).toEqual([]);
   });
 });
 
@@ -367,6 +370,38 @@ describe("hml-10 (H-26, D6): o catch final chama log.excecao e devolve a mesma r
   it.each(semOLog.map(rel))("%s: todo catch que devolve 5xx passa pelo log", (arquivo) => {
     const calados = blocosCatch(ler(resolve(raiz, arquivo))).filter((b) => devolve5xx(b) && !passaPeloLog(b));
     expect(calados.map((b) => b.fonte)).toEqual([]);
+  });
+});
+
+/** O que uma casca não pode ter: import, segredo, banco, rede, log ou console (o detector, na estrutura do código). */
+const PROIBIDO_NA_CASCA = /^\s*import\b|\bDeno\s*\.\s*env\b|\bcreateClient\s*\(|\.\s*(?:from|rpc)\s*\(|\bfetch\s*\(|\blog\s*\.|\bconsole\s*\./m;
+
+describe("hml-14 (H-51 item 7, D10): as cascas respondem 410 migrado a tudo, com o CORS de antes, sem segredo nem banco", () => {
+  it.each(CASCAS)("%s: sem import, segredo, banco, rede, log, console nem catch — só o index.ts", (slug) => {
+    const fonte = ler(indice(slug));
+    expect(estrutura(fonte).match(PROIBIDO_NA_CASCA)).toBeNull();
+    expect(arquivosDa(slug).map(rel)).toEqual([`supabase/functions/${slug}/index.ts`]);
+    expect(blocosCatch(fonte)).toEqual([]);
+  });
+
+  it.each(CASCAS)("%s: o preflight com o CORS de antes; qualquer outro pedido → 410 {\"error\":\"migrado\"}", (slug) => {
+    const fonte = ler(indice(slug));
+    expect(fonte).toContain('if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });');
+    expect(fonte).toContain('const allow = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://physiqcalc.vercel.app";');
+    expect(fonte).toContain('"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-schema"');
+    expect(fonte).toMatch(/return new Response\(JSON\.stringify\(\{ error: "migrado" \}\), \{ status: 410, headers: \{ "Content-Type": "application\/json", \.\.\.corsHeaders\(origin\) \} \}\);/);
+    expect(fonte).toContain("178f5d6"); // o código de antes, no cabeçalho
+  });
+
+  it("mp-payments e master-professores: a ação que não vive mais responde 410 antes do login (sem banco)", () => {
+    for (const [slug, viva, login] of [
+      ["mp-payments", 'if (body?.action !== "status-lite") return jsonErr("migrado", 410, origin);', "await requireUser(req)"],
+      ["master-professores", 'if (action !== "list") return jsonErr("migrado", 410, origin);', 'await requireMaster(req, "master-professores")'],
+    ]) {
+      const serve = ler(indice(slug)).split("Deno.serve(")[1] ?? "";
+      expect(serve.indexOf(viva), slug).toBeGreaterThan(-1);
+      expect(serve.indexOf(viva), slug).toBeLessThan(serve.indexOf(login));
+    }
   });
 });
 
@@ -401,6 +436,24 @@ describe("hml-10: controle positivo (os detectores acham o que procuram — sen�
     // catch que devolve 5xx sem passar pelo log é achado
     const [calado] = blocosCatch('try { a(); } catch (e) { return erro("principal_indisponivel", 502, origin); }');
     expect(devolve5xx(calado) && !passaPeloLog(calado)).toBe(true);
+  });
+
+  it("hml-14: o detector das cascas acha import, segredo, banco, rede, log e console; o mesmo texto em comentário ou entre aspas não conta", () => {
+    const acha = (fonte: string) => PROIBIDO_NA_CASCA.test(estrutura(fonte));
+    for (const ruim of [
+      'import { criarLog } from "../_shared/log.ts";',
+      'const URL_ = Deno.env.get("SUPABASE_URL")!;',
+      "const db = createClient(a, b);",
+      'await admin.from("physiq_pagamentos").update({});',
+      'await admin.rpc("physiq_aluno_bloqueado", {});',
+      "const r = await fetch(url);",
+      'log.excecao(e, { acao: "x" });',
+      'console.error("x");',
+    ]) {
+      expect(acha(ruim), ruim).toBe(true);
+    }
+    expect(acha('// import x; Deno.env.get("A"); fetch(u)\nconst t = "createClient( .from( log.erro( console.log(";')).toBe(false);
+    expect(acha(ler(indice("mp-payments")))).toBe(true); // a mp-payments não é casca: lê o banco e loga
   });
 
   it("o leitor não se perde com // e aspas dentro de texto, de template e de regex", () => {

@@ -16,10 +16,15 @@
 // ("outro_ambiente": não grava nem repassa). O id do aviso só vai à API do MP no formato que o MP manda (regras.ts) e o MP
 // fora devolve 500 (o MP manda de novo; antes o aviso seguia sem o recurso e se perdia).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+// hml-14 (H-32): cada ida ao MP espera no máximo 8 s (TEMPO_MS.mp) dentro do prazo do aviso (ORCAMENTO_MS.servidor, 25 s) — o
+// MP pendurado vira MpIndisponivel → 500 (antes a função ficava presa até o limite da plataforma). Erro do banco ao gravar no
+// Treino não é mais engolido: o aviso ainda vai ao principal e a resposta sai 500 (o MP manda de novo; as 2 pontas são
+// idempotentes). Nenhum caminho de erro responde 200 (o "refresh do status" que cobria isso saiu na W6/W28).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { idDoAvisoValido, modoConfere, mpTransitorio } from "./regras.ts";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
 
 const log = criarLog("mp-webhook", { avisar: avisarErro });
 
@@ -48,19 +53,27 @@ function tokenDe(c: Cred): string {
   return Deno.env.get(c === "prod" ? "MP_ACCESS_TOKEN_PROD" : "MP_ACCESS_TOKEN_TEST") || "";
 }
 
+/** hml-14 (H-32, D4): nova ida ao MP só com isto sobrando no prazo do aviso (como o mpFetch do principal). */
+const MINIMO_TENTATIVA_MS = 2_000;
+
 // tenta com prod e depois test (ou só a credencial pedida) — o recurso só existe na credencial que o criou.
-// 404/403 = não é desta credencial; MP fora (5xx, 429, 401 ou rede) → MpIndisponivel
-async function buscarNoMp(caminho: string, cred?: Cred): Promise<{ body: any; cred: Cred } | null> {
+// 404/403 = não é desta credencial; MP fora (5xx, 429, 401, rede ou tempo esgotado) → MpIndisponivel.
+// hml-14 (H-32, D4): cada ida espera no máximo min(8 s, o que falta do prazo); sem 2 s sobrando não dá para decidir → 599
+async function buscarNoMp(caminho: string, p: Prazo, cred?: Cred): Promise<{ body: any; cred: Cred } | null> {
   let recusado = 0;
   for (const c of cred ? [cred] : (["prod", "test"] as Cred[])) {
     const tk = tokenDe(c);
     if (!tk) continue;
-    let status = 599; // rede
+    if (p.restante() < MINIMO_TENTATIVA_MS) throw new MpIndisponivel(599);
+    let status = 599; // rede ou tempo esgotado
     let body = null;
     try {
-      const res = await fetch(`${MP_API}${caminho}`, { headers: { "Authorization": `Bearer ${tk}` } });
+      const res = await buscarComTempo(`${MP_API}${caminho}`, { headers: { "Authorization": `Bearer ${tk}` } }, Math.min(TEMPO_MS.mp, p.restante()));
       status = res.status;
-      body = await res.json().catch(() => null);
+      body = await res.json().catch((e) => {
+        if (tempoEsgotado(e)) throw e; // o tempo vale até ler o corpo: sem ele não dá para decidir
+        return null;
+      });
     } catch {
       status = 599;
     }
@@ -107,36 +120,44 @@ function addMes(d: string): string {
 }
 
 // ---- cobrança do PROFESSOR (pós-pago): efeito de um pagamento aprovado — MESMA lógica do mp-payments ----
+// hml-14 (H-32): toda leitura e gravação confere o erro e lança (o aviso volta 500 e o MP manda de novo)
 async function aplicarPagamentoPlano(admin: any, userId: string, tipoCobranca: string | null, dataAprov: Date) {
-  const { data: p } = await admin.from("physiq_professores").select("ciclo_vence_em, plano_id, adesao_paga_em").eq("id", userId).maybeSingle();
+  const { data: p, error } = await admin.from("physiq_professores").select("ciclo_vence_em, plano_id, adesao_paga_em").eq("id", userId).maybeSingle();
+  if (error) throw error;
   if (!p) return;
   const hoje = dataAprov.toLocaleDateString("en-CA", { timeZone: TZ });
-  const { data: pl } = (p as any).plano_id
-    ? await admin.from("physiq_planos_professor").select("valor_mensal").eq("id", (p as any).plano_id).maybeSingle()
-    : { data: null };
-  const valorMensal = (pl as any)?.valor_mensal ?? null;
+  let valorMensal: number | null = null;
+  if ((p as any).plano_id) {
+    const { data: pl, error: plErr } = await admin.from("physiq_planos_professor").select("valor_mensal").eq("id", (p as any).plano_id).maybeSingle();
+    if (plErr) throw plErr;
+    valorMensal = (pl as any)?.valor_mensal ?? null;
+  }
+  let patch: Record<string, unknown> | null = null;
   if (tipoCobranca === "adesao") {
-    await admin.from("physiq_professores").update({
-      adesao_paga_em: (p as any).adesao_paga_em ?? hoje, ciclo_inicio: hoje, ciclo_vence_em: addDias(hoje, 30), ciclo_valor: valorMensal, trial_ate: null,
-    }).eq("id", userId);
+    patch = { adesao_paga_em: (p as any).adesao_paga_em ?? hoje, ciclo_inicio: hoje, ciclo_vence_em: addDias(hoje, 30), ciclo_valor: valorMensal, trial_ate: null };
   } else if (tipoCobranca === "mensal") {
     const vence = (p as any).ciclo_vence_em as string | null;
     const base = vence && vence > hoje ? vence : hoje;
-    await admin.from("physiq_professores").update({ ciclo_inicio: base, ciclo_vence_em: addMes(base), ciclo_valor: valorMensal }).eq("id", userId);
+    patch = { ciclo_inicio: base, ciclo_vence_em: addMes(base), ciclo_valor: valorMensal };
   } else if (tipoCobranca === "anual") {
     const x = new Date(`${hoje}T00:00:00Z`); x.setUTCFullYear(x.getUTCFullYear() + 1);
-    await admin.from("physiq_professores").update({ anual_ate: x.toISOString().slice(0, 10), adesao_paga_em: (p as any).adesao_paga_em ?? hoje, trial_ate: null }).eq("id", userId);
+    patch = { anual_ate: x.toISOString().slice(0, 10), adesao_paga_em: (p as any).adesao_paga_em ?? hoje, trial_ate: null };
   }
+  if (!patch) return;
+  const { error: upErr } = await admin.from("physiq_professores").update(patch).eq("id", userId);
+  if (upErr) throw upErr;
 }
 
 // grava/atualiza o pagamento e, se acabou de ser APROVADO num contexto de plano, aplica o efeito (idempotente:
 // só aplica na transição para approved — webhook e refresh do app podem chegar os dois)
 async function gravarPagamento(admin: any, row: Record<string, unknown>, pay: any, contexto: string, tipoCobranca: string | null) {
-  const { data: antes } = await admin.from("physiq_pagamentos").select("status").eq("mp_payment_id", String(pay.id)).maybeSingle();
-  await admin.from("physiq_pagamentos").upsert({
+  const { data: antes, error } = await admin.from("physiq_pagamentos").select("status").eq("mp_payment_id", String(pay.id)).maybeSingle();
+  if (error) throw error;
+  const { error: upErr } = await admin.from("physiq_pagamentos").upsert({
     ...row, mp_payment_id: String(pay.id), status: pay.status || "pending", contexto, tipo_cobranca: tipoCobranca,
     updated_at: new Date().toISOString(),
   }, { onConflict: "mp_payment_id" });
+  if (upErr) throw upErr;
   if (contexto === "plano_professor" && pay.status === "approved" && (antes as any)?.status !== "approved") {
     await aplicarPagamentoPlano(admin, row.user_id as string, tipoCobranca, new Date(pay.date_approved || pay.date_created || Date.now()));
   }
@@ -146,8 +167,8 @@ async function gravarPagamento(admin: any, row: Record<string, unknown>, pay: an
 // hml-06: ignorar = referência de outro ambiente (pula os 2 repasses)
 interface Alvo { contexto: string | null; schema: string | null; ignorar?: boolean }
 
-async function handlePayment(paymentId: string, cred?: Cred): Promise<Alvo> {
-  const achado = await buscarNoMp(`/v1/payments/${encodeURIComponent(paymentId)}`, cred);
+async function handlePayment(paymentId: string, p: Prazo, cred?: Cred): Promise<Alvo> {
+  const achado = await buscarNoMp(`/v1/payments/${encodeURIComponent(paymentId)}`, p, cred);
   if (!achado) return { contexto: null, schema: null };
   const pay = achado.body;
   const sch = SCHEMA[achado.cred];
@@ -173,7 +194,8 @@ async function upsertPagamentoAssinatura(preapprovalId: string | null, pay: any,
   let userId = ref?.userId || null;
   let contexto = ref?.contexto || "aluno";
   if (preapprovalId) {
-    const { data } = await admin.from("physiq_assinaturas").select("user_id, contexto").eq("mp_preapproval_id", String(preapprovalId)).maybeSingle();
+    const { data, error } = await admin.from("physiq_assinaturas").select("user_id, contexto").eq("mp_preapproval_id", String(preapprovalId)).maybeSingle();
+    if (error) throw error;
     if (data) { userId = userId || (data as any).user_id; contexto = (data as any).contexto || contexto; }
   }
   if (!userId) return { contexto: ref?.contexto ?? null, schema: sch };
@@ -184,37 +206,41 @@ async function upsertPagamentoAssinatura(preapprovalId: string | null, pay: any,
   return { contexto, schema: sch };
 }
 
-async function handlePreapproval(preapprovalId: string): Promise<Alvo> {
-  const achado = await buscarNoMp(`/preapproval/${encodeURIComponent(preapprovalId)}`);
+async function handlePreapproval(preapprovalId: string, p: Prazo): Promise<Alvo> {
+  const achado = await buscarNoMp(`/preapproval/${encodeURIComponent(preapprovalId)}`, p);
   if (!achado) return { contexto: null, schema: null };
   const pre = achado.body;
   const sch = SCHEMA[achado.cred];
   const ref = parseRef(pre.external_reference);
   if (ref && ref.schema !== sch) return { contexto: ref.contexto, schema: null, ignorar: true };
   const admin = adminFor(sch);
-  const { data } = await admin.from("physiq_assinaturas").select("id, contexto").eq("mp_preapproval_id", String(pre.id)).maybeSingle();
+  const { data, error } = await admin.from("physiq_assinaturas").select("id, contexto").eq("mp_preapproval_id", String(pre.id)).maybeSingle();
+  if (error) throw error;
   if (data) {
     const linha = data as { id: string; contexto: string | null };
-    await admin.from("physiq_assinaturas").update({ status: pre.status, updated_at: new Date().toISOString() }).eq("id", linha.id);
+    const { error: upErr } = await admin.from("physiq_assinaturas").update({ status: pre.status, updated_at: new Date().toISOString() }).eq("id", linha.id);
+    if (upErr) throw upErr;
     return { contexto: linha.contexto || ref?.contexto || "aluno", schema: sch };
   }
   if (ref) {
-    await admin.from("physiq_assinaturas").insert({
+    // 2 avisos ao mesmo tempo: o 2º bate no UNIQUE mp_preapproval_id → lança, o MP manda de novo e aí cai no update de cima
+    const { error: insErr } = await admin.from("physiq_assinaturas").insert({
       user_id: ref.userId, mp_preapproval_id: String(pre.id), contexto: ref.contexto,
       status: pre.status || "pending", valor: Number(pre.auto_recurring?.transaction_amount || 0) || 1,
     });
+    if (insErr) throw insErr;
     return { contexto: ref.contexto, schema: sch };
   }
   return { contexto: null, schema: sch };
 }
 
-async function handleAuthorizedPayment(authPaymentId: string): Promise<Alvo> {
-  const achado = await buscarNoMp(`/authorized_payments/${encodeURIComponent(authPaymentId)}`);
+async function handleAuthorizedPayment(authPaymentId: string, p: Prazo): Promise<Alvo> {
+  const achado = await buscarNoMp(`/authorized_payments/${encodeURIComponent(authPaymentId)}`, p);
   if (!achado) return { contexto: null, schema: null };
   const ap = achado.body;
   const paymentId = ap.payment?.id;
   // o pagamento está na mesma credencial da cobrança autorizada
-  if (paymentId) return await handlePayment(String(paymentId), achado.cred);
+  if (paymentId) return await handlePayment(String(paymentId), p, achado.cred);
   if (ap.preapproval_id) {
     return await upsertPagamentoAssinatura(String(ap.preapproval_id), {
       id: `ap-${ap.id}`, transaction_amount: ap.transaction_amount,
@@ -272,6 +298,7 @@ async function repassar(topic: string, id: string, schema: string | null, destin
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("ok", { status: 200 });
+  const p = prazo(ORCAMENTO_MS.servidor); // hml-14 (H-32, D3): quem espera é o MP — um prazo para o aviso inteiro
   // hml-10 (D6): o que o catch final sabe do aviso (o tópico e, depois de achar o recurso, o ambiente)
   let topico: string | null = null;
   let schemaDoAviso: string | null = null;
@@ -288,18 +315,21 @@ Deno.serve(async (req) => {
     if (!idDoAvisoValido(topic, id)) return new Response("id_invalido", { status: 200 });
 
     let alvo: Alvo = { contexto: null, schema: null };
+    let gravouNoTreino = true;
     try {
-      if (topic === "payment") alvo = await handlePayment(id);
-      else if (topic === "subscription_preapproval" || topic === "preapproval") alvo = await handlePreapproval(id);
-      else alvo = await handleAuthorizedPayment(id);
+      if (topic === "payment") alvo = await handlePayment(id, p);
+      else if (topic === "subscription_preapproval" || topic === "preapproval") alvo = await handlePreapproval(id, p);
+      else alvo = await handleAuthorizedPayment(id, p);
     } catch (e) {
       // hml-06: o MP fora → 500 (o MP manda de novo; antes o aviso seguia sem o recurso e se perdia)
       if (e instanceof MpIndisponivel) {
         log.erro({ codigo: "mp_indisponivel", acao: topic, status: e.status });
         return new Response("mp_indisponivel", { status: 500 });
       }
-      // o Treino não gravou (o refresh da tela antiga cobria); o principal ainda recebe o aviso abaixo
+      // o Treino não gravou: o principal ainda recebe o aviso abaixo e, no fim, a resposta sai 500 — hml-14 (H-32): antes era
+      // 200 e o MP não mandava de novo (o "refresh da tela antiga" que cobria isso saiu na W6/W28)
       log.excecao(e, { codigo: "gravar_falhou", acao: topic });
+      gravouNoTreino = false;
     }
     schemaDoAviso = alvo.schema;
     // hml-06 (H-19): referência de outro ambiente (sandbox com "public:", produção com "staging:") não grava nem repassa
@@ -315,10 +345,12 @@ Deno.serve(async (req) => {
       const ok = await repassar(String(topic), String(id), alvo.schema, "PRINCIPAL_WEBHOOK_CONTA_URL");
       if (!ok) return new Response("repasse_falhou", { status: 500 });
     }
+    if (!gravouNoTreino) return new Response("gravar_falhou", { status: 500 });
     return new Response("ok", { status: 200 });
   } catch (e) {
     log.excecao(e, { acao: topico, schema: schemaDoAviso });
-    // 200 mesmo em erro pra não gerar tempestade de retries; o refresh do status cobre
-    return new Response("ok", { status: 200 });
+    // hml-14 (H-32): 500 — o MP manda de novo (antes era 200 "pra não gerar tempestade de retries; o refresh do status cobre",
+    // mas esse refresh saiu na W6/W28 e o aviso se perdia; o MP desiste sozinho depois de algumas tentativas)
+    return new Response("erro", { status: 500 });
   }
 });
