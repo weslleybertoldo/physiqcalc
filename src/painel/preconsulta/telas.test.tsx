@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useSearchParams } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,8 @@ const h = vi.hoisted(() => ({
   marcarImportada: vi.fn(),
   ligarAluno: vi.fn(),
   respostasPagina: vi.fn(),
+  numeros: vi.fn(),
+  formularios: vi.fn(),
 }));
 vi.mock("@/integrations/principal/client", () => ({ principal: {}, PRINCIPAL_SCHEMA: "public" }));
 vi.mock("./dados", async (original) => ({
@@ -18,6 +20,8 @@ vi.mock("./dados", async (original) => ({
   marcarImportada: h.marcarImportada,
   ligarAluno: h.ligarAluno,
   listarRespostasPagina: h.respostasPagina,
+  buscarNumerosPreConsulta: h.numeros,
+  listarFormularios: h.formularios,
 }));
 
 import type { FormularioPreconsulta, RespostaComFormulario, RespostaDaLista } from "./dados";
@@ -25,7 +29,9 @@ import FormularioDialog from "./FormularioDialog";
 import Formularios from "./Formularios";
 import { origemDoLink } from "./link";
 import Respostas from "./Respostas";
-import type { ContextoPreConsulta, DadosPreConsulta } from "./usePreConsulta";
+import ResumoPreConsulta from "./ResumoPreConsulta";
+import type { NumerosPreConsulta } from "./respostasUtil";
+import { useDadosPreConsulta, type ContextoPreConsulta, type DadosPreConsulta } from "./usePreConsulta";
 
 const QUANDO = "2026-09-30T15:30:00.000+00:00";
 const form = (p: Partial<FormularioPreconsulta>): FormularioPreconsulta => ({
@@ -47,11 +53,16 @@ function contexto(p: Partial<ContextoPreConsulta>): ContextoPreConsulta {
     pessoas: new Map([["u-personal", { nome: "Rafael Lima", papeis: ["dono", "personal"] }], ["u-nutri", { nome: "Camila Rocha", papeis: ["nutricionista"] }]]), pronto: true, ...p,
   } as unknown as ContextoPreConsulta;
 }
-function dados(p: { formularios?: FormularioPreconsulta[]; respostas?: RespostaComFormulario[] }): DadosPreConsulta {
-  const q = (data: unknown) => ({ data, isLoading: false, isError: false, isFetching: false, refetch: vi.fn() });
+/** hml-14d (B21 · D35): os números como o banco devolve (preconsulta_numeros, já normalizados) — por padrão, tudo zero. */
+const numerosDe = (p: Partial<NumerosPreConsulta> = {}): NumerosPreConsulta => ({
+  total: 0, novas: 0, ligadas: 0, importadas: 0, mes: 0, semanas: [0, 0, 0, 0, 0, 0, 0, 0], porFormulario: {}, ...p,
+});
+function dados(p: { formularios?: FormularioPreconsulta[]; numeros?: NumerosPreConsulta | null; erroNumeros?: Error }): DadosPreConsulta {
+  const q = (data: unknown, erro?: Error) => ({ data, error: erro ?? null, isLoading: false, isError: !!erro, isFetching: false, refetch: vi.fn() });
+  const numeros = p.numeros === undefined ? numerosDe() : p.numeros;
   return {
-    formulariosQ: q(p.formularios ?? []), respostasQ: q(p.respostas ?? []),
-    formularios: p.formularios ?? [], respostas: p.respostas ?? [], modelos: [], questionarios: [], recarregar: vi.fn(async () => {}),
+    formulariosQ: q(p.formularios ?? []), numerosQ: q(numeros ?? undefined, p.erroNumeros),
+    formularios: p.formularios ?? [], numeros, modelos: [], questionarios: [], recarregar: vi.fn(async () => {}),
   } as unknown as DadosPreConsulta;
 }
 function montar(el: React.ReactNode, rota = "/") {
@@ -89,9 +100,10 @@ beforeEach(() => {
 
 describe("W21 — Pré-consulta › Formulários", () => {
   it("o dono vê os da equipe com o autor, as respostas (e novas) de cada um e o link público no site do ambiente", async () => {
+    // hml-14d: as contagens de cada formulário vêm do banco (preconsulta_numeros.por_formulario) — não de uma lista de respostas
     const d = dados({
       formularios: [form({}), form({ id: "f2", titulo: "Pré-anamnese", origem: "anamnese", nutricionista_id: "u-nutri", slug: "bcdefghj", ativo: false })],
-      respostas: [resp({}), resp({ id: "r2", paciente_id: "a1" })],
+      numeros: numerosDe({ total: 2, novas: 1, ligadas: 1, porFormulario: { f1: { total: 2, novas: 1 } } }),
     });
     montar(<Formularios ctx={contexto({ dono: true })} d={d} aoNovo={vi.fn()} aoEditar={vi.fn()} aoVerRespostas={vi.fn()} />);
     const linha = document.querySelector('[data-formulario="f1"]')!;
@@ -108,6 +120,14 @@ describe("W21 — Pré-consulta › Formulários", () => {
     fireEvent.click(linha.querySelector("[data-btn-copiar-link]")!);
     await waitFor(() => expect(document.querySelector("[data-link-publico]")).not.toBeNull());
     expect(document.querySelector("[data-link-publico]")?.getAttribute("data-link-publico")).toBe(`${origemDoLink()}/f/abcd2345`);
+  });
+
+  it("hml-14d: os números do banco ainda não chegaram (ou falharam) → \"…\", nunca \"Nenhuma resposta\" inventado", () => {
+    montar(<Formularios ctx={contexto({})} d={dados({ formularios: [form({})], numeros: null })} aoNovo={vi.fn()} aoEditar={vi.fn()} aoVerRespostas={vi.fn()} />);
+    const botao = document.querySelector('[data-formulario="f1"] [data-btn-ver-respostas-formulario]') as HTMLButtonElement;
+    expect(botao.textContent).toBe("…");
+    expect(botao.disabled).toBe(true);
+    expect(screen.queryByText("Nenhuma resposta")).toBeNull();
   });
 
   it("vazio: o texto do personal fala de formulário em branco", () => {
@@ -218,5 +238,52 @@ describe("W21 — Pré-consulta › Respostas", () => {
     expect(await screen.findByText("Não deu para carregar as respostas")).toBeInTheDocument();
     expect(screen.queryByText("Nenhuma resposta ainda")).toBeNull();
     expect(document.querySelector('[data-paginacao="respostas"]')).toBeNull();
+  });
+});
+
+// hml-14d (B21 · D35): o topo, a aba e os formulários contados no BANCO (preconsulta_numeros) — sai a leitura de até 1000 respostas
+describe("hml-14d — os números da pré-consulta vêm do banco", () => {
+  it("o topo mostra os números do banco (acima de 1000: o que a lista cortada não contava)", () => {
+    const d = dados({
+      formularios: [form({}), form({ id: "f2", ativo: false })],
+      numeros: numerosDe({ total: 1203, novas: 7, ligadas: 1190, importadas: 40, mes: 31, semanas: [1, 0, 2, 3, 0, 5, 8, 9] }),
+    });
+    montar(<ResumoPreConsulta ctx={contexto({ souNutri: true })} d={d} />);
+    const topo = document.querySelector("[data-resumo-preconsulta]")!;
+    expect([topo.getAttribute("data-novas"), topo.getAttribute("data-mes"), topo.getAttribute("data-ativos"), topo.getAttribute("data-ligadas")])
+      .toEqual(["7", "31", "1", "1190"]);
+    expect(screen.getByText("1203 no total")).toBeInTheDocument();
+    expect(screen.getByText("40 importadas para o prontuário")).toBeInTheDocument();
+  });
+
+  it("erro do banco nos números = o estado de erro com \"Tentar de novo\" (nunca zeros)", () => {
+    const d = dados({ formularios: [form({})], numeros: null, erroNumeros: new Error("permission denied for function preconsulta_numeros") });
+    montar(<ResumoPreConsulta ctx={contexto({})} d={d} />);
+    expect(document.querySelector('[data-resumo-preconsulta="erro"]')).not.toBeNull();
+    expect(screen.getByText("Não deu para carregar os números da pré-consulta")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Tentar de novo"));
+    expect(d.numerosQ.refetch).toHaveBeenCalled();
+    expect(document.querySelector("[data-resumo-preconsulta][data-novas]")).toBeNull();
+  });
+
+  it("o hook pede os números ao banco com o início do mês do navegador; ligar/importar/excluir (recarregar \"respostas\") pede de novo", async () => {
+    h.formularios.mockResolvedValue([form({})]);
+    h.numeros.mockResolvedValue(numerosDe({ total: 3, novas: 1 }));
+    let atual: DadosPreConsulta | null = null;
+    function Sonda() {
+      atual = useDadosPreConsulta(contexto({}));
+      return <output data-novas-hook={atual.numeros?.novas ?? ""} />;
+    }
+    montar(<Sonda />);
+    await waitFor(() => expect(document.querySelector("[data-novas-hook]")?.getAttribute("data-novas-hook")).toBe("1"));
+    const agora = new Date();
+    expect(h.numeros).toHaveBeenCalledWith("c1", new Date(agora.getFullYear(), agora.getMonth(), 1));
+    expect(h.numeros).toHaveBeenCalledTimes(1);
+    await act(async () => { await atual!.recarregar("formularios"); });
+    expect(h.numeros).toHaveBeenCalledTimes(1);
+    await act(async () => { await atual!.recarregar("respostas"); });
+    await waitFor(() => expect(h.numeros).toHaveBeenCalledTimes(2));
+    await act(async () => { await atual!.recarregar("tudo"); });
+    await waitFor(() => expect(h.numeros).toHaveBeenCalledTimes(3));
   });
 });

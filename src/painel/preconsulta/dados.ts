@@ -10,7 +10,8 @@ import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { copiaDeFormulario, gerarSlug, type RegistroFormulario } from "./preconsultaUtil";
 import { recorteDaConta } from "./novas";
 import {
-  filtrosParaBanco, normalizarPaginaRespostas, type AlunoDaResposta, type FiltrosRespostas, type FormularioDaResposta, type PaginaRespostas, type TipoImportacao,
+  filtrosParaBanco, normalizarNumeros, normalizarPaginaRespostas, type AlunoDaResposta, type FiltrosRespostas, type FormularioDaResposta, type NumerosPreConsulta,
+  type PaginaRespostas, type TipoImportacao,
 } from "./respostasUtil";
 
 export type FormularioPreconsulta = Database["public"]["Tables"]["formularios_preconsulta"]["Row"];
@@ -130,20 +131,16 @@ export async function listarRespostasPagina(contaId: string, f: FiltrosRespostas
 }
 
 /**
- * Respostas vivas do recorte, com o formulário embutido, mais recente primeiro. hml-14b: a aba Respostas lê a página acima; esta
- * leitura (até 1000) sobra só para os números do topo e da aba Formulários (usePreConsulta).
+ * hml-14d (B21 · D35): os números do topo (novas, no mês com as 8 semanas, ligadas, importadas, o total), da aba Respostas e de cada
+ * formulário, contados no banco (preconsulta_numeros, com a RLS de quem pede, sobre o recorte da conta) — antes, uma leitura de até
+ * 1000 respostas contada aqui. `inicioMes` = o 1º instante do mês no fuso do navegador. Erro do banco → lança.
  */
-export async function listarRespostas(contaId: string, uid: string): Promise<RespostaComFormulario[]> {
-  const { data, error } = await principal
-    .from("respostas_preconsulta")
-    .select(SELECT_RESPOSTA)
-    .is("deleted_at", null)
-    .or(recorteDaConta(contaId, uid))
-    .order("respondido_em", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(1000);
+export async function buscarNumerosPreConsulta(contaId: string, inicioMes: Date): Promise<NumerosPreConsulta> {
+  const { data, error } = await principal.rpc("preconsulta_numeros" as never, { p_conta: contaId, p_inicio_mes: inicioMes.toISOString() } as never);
   falhou(error);
-  return (data ?? []) as unknown as RespostaComFormulario[];
+  const n = normalizarNumeros(data);
+  if (!n) throw new Error("Os números da pré-consulta voltaram num formato inesperado.");
+  return n;
 }
 
 async function atualizarResposta(id: string, dados: RespostaUpdate): Promise<RespostaComFormulario> {

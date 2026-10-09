@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Building2, Plus } from "lucide-react";
 import { TopoPagina } from "@/ui/casca/topo";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { Tabela, TabelaCabeca, TabelaCelula, TabelaCorpo, TabelaLinha, TabelaTitulo } from "@/ui/premium/Tabela";
 import { ErroMaster, listarContas } from "../api";
 import { DetalheConta } from "../contas/DetalheConta";
 import { NovaContaDialog } from "../contas/NovaContaDialog";
 import { cn } from "@/lib/utils";
+import { useAtrasado, usePaginaDoMaster } from "../pecas/lista";
 import { CampoBusca, ChipOrigem, ChipSituacao, ChipsModulos, Filtros, SELECT } from "../pecas/ui";
 import { ROTULO_FAIXA, ROTULO_ORIGEM, linhaAlunos, linhaVencimento, textoErro } from "../regras";
 
@@ -20,22 +21,23 @@ type Filtro = "todas" | "ativas" | "vencida" | "teste" | "isenta" | "suspensas";
 /**
  * Painel master › Contas (C56 — ex-Professores do Calc + Profissionais do Nutri; R6: conta com membros, N-5, N-8, N-22): todas as
  * contas com dono, membros, módulos, faixa, situação, vencimento, alunos, isenção e origem. A linha abre a folha da conta (ações).
+ * hml-14d (B21 · D28): 20 por página do banco (master_contas com p_offset/p_limite) — filtro, ordem, total e a busca (nome da conta,
+ * nome e e-mail do dono, sem acento) no banco; `?pagina=` convive com `?conta=` (abrir e fechar a conta mantém a página).
  */
 export default function Contas() {
   const [sp, setSp] = useSearchParams();
   const filtro = (sp.get("situacao") as Filtro) || "todas";
   const origem = sp.get("origem") || "";
   const [busca, setBusca] = useState("");
+  const termo = useAtrasado(busca.trim());
   const [nova, setNova] = useState(false);
   const aberta = sp.get("conta");
-  const q = useQuery({
-    queryKey: ["master", "contas", filtro, origem],
-    queryFn: () => listarContas({ situacao: filtro === "todas" ? null : filtro, origem: origem || null }),
-    staleTime: 15_000,
+  const { q, pagina, irPara, total } = usePaginaDoMaster({
+    filtro: { filtro, origem, termo },
+    queryKey: ["master", "contas", filtro, origem, termo],
+    buscar: (n) => listarContas({ situacao: filtro === "todas" ? null : filtro, origem: origem || null, busca: termo || null }, n),
   });
-  const todas = q.data?.contas ?? [];
-  const termo = busca.trim().toLowerCase();
-  const contas = termo ? todas.filter((c) => `${c.nome} ${c.dono?.nome ?? ""} ${c.dono?.email ?? ""}`.toLowerCase().includes(termo)) : todas;
+  const contas = q.data?.contas ?? [];
   const r = q.data?.resumo ?? {};
   const mudar = (chave: string, valor: string | null) => {
     const n = new URLSearchParams(sp);
@@ -44,7 +46,7 @@ export default function Contas() {
   };
 
   return (
-    <div className="flex flex-col gap-3.5" data-pagina-master="contas" data-total-contas={contas.length}>
+    <div className="flex flex-col gap-3.5" data-pagina-master="contas" data-total-contas={total}>
       <TopoPagina titulo="Contas" subtitulo={`${r.todas ?? "…"} contas · profissionais, planos e situação`}
         acoes={<Botao variante="w" icone={Plus} onClick={() => setNova(true)} data-master-nova-conta>Nova conta</Botao>} />
       <div className="flex flex-wrap items-center gap-2.5">
@@ -66,49 +68,52 @@ export default function Contas() {
       <Cartao className="px-4 pb-2 pt-3">
         {q.isLoading ? <EstadoCarregando linhas={6} />
           : q.isError ? <EstadoErro texto={textoErro(q.error instanceof ErroMaster ? q.error.codigo : "erro_interno")} aoTentar={() => void q.refetch()} />
-            : contas.length === 0 ? <EstadoVazio icone={Building2} titulo="Nenhuma conta neste filtro" texto="Troque o filtro ou crie uma conta nova." />
+            : contas.length === 0 ? <EstadoVazio icone={Building2} titulo={termo ? "Nenhuma conta com essa busca" : "Nenhuma conta neste filtro"} texto="Troque o filtro ou crie uma conta nova." />
               : (
-                <Tabela data-tabela-contas>
-                  <TabelaCabeca>
-                    <tr>
-                      <TabelaTitulo>Conta</TabelaTitulo>
-                      <TabelaTitulo>Plano</TabelaTitulo>
-                      <TabelaTitulo>Situação</TabelaTitulo>
-                      <TabelaTitulo>Vencimento</TabelaTitulo>
-                      <TabelaTitulo>Alunos</TabelaTitulo>
-                      <TabelaTitulo>Origem</TabelaTitulo>
-                    </tr>
-                  </TabelaCabeca>
-                  <TabelaCorpo>
-                    {contas.map((c) => (
-                      <TabelaLinha key={c.id} className="cursor-pointer" onClick={() => mudar("conta", c.id)} data-linha-conta={c.nome}>
-                        <TabelaCelula>
-                          <span className="flex min-w-[190px] max-w-[250px] items-center gap-2.5">
-                            <Avatar nome={c.nome} tamanho={32} />
-                            <span className="min-w-0">
-                              <b className="block truncate text-[13.5px] font-semibold">{c.nome}</b>
-                              <span className="block truncate text-[12px] text-texto-3">{c.dono?.email ?? "sem dono"}{c.membros > 1 ? ` · ${c.membros} profissionais` : ""}</span>
+                <>
+                  <Tabela data-tabela-contas data-lista="master-contas">
+                    <TabelaCabeca>
+                      <tr>
+                        <TabelaTitulo>Conta</TabelaTitulo>
+                        <TabelaTitulo>Plano</TabelaTitulo>
+                        <TabelaTitulo>Situação</TabelaTitulo>
+                        <TabelaTitulo>Vencimento</TabelaTitulo>
+                        <TabelaTitulo>Alunos</TabelaTitulo>
+                        <TabelaTitulo>Origem</TabelaTitulo>
+                      </tr>
+                    </TabelaCabeca>
+                    <TabelaCorpo>
+                      {contas.map((c) => (
+                        <TabelaLinha key={c.id} className="cursor-pointer" onClick={() => mudar("conta", c.id)} data-linha-conta={c.nome} data-item>
+                          <TabelaCelula>
+                            <span className="flex min-w-[190px] max-w-[250px] items-center gap-2.5">
+                              <Avatar nome={c.nome} tamanho={32} />
+                              <span className="min-w-0">
+                                <b className="block truncate text-[13.5px] font-semibold">{c.nome}</b>
+                                <span className="block truncate text-[12px] text-texto-3">{c.dono?.email ?? "sem dono"}{c.membros > 1 ? ` · ${c.membros} profissionais` : ""}</span>
+                              </span>
                             </span>
-                          </span>
-                        </TabelaCelula>
-                        <TabelaCelula>
-                          <span className="flex flex-col gap-1">
-                            <span className="flex flex-nowrap gap-1"><ChipsModulos modulos={c.modulos} /></span>
-                            <span className="whitespace-nowrap text-[11.5px] text-texto-3">{ROTULO_FAIXA[c.faixa]}</span>
-                          </span>
-                        </TabelaCelula>
-                        <TabelaCelula>
-                          <span className="flex flex-col items-start gap-1">
-                            <ChipSituacao conta={c} />
-                          </span>
-                        </TabelaCelula>
-                        <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>
-                        <TabelaCelula className="whitespace-nowrap text-[12.5px]">{linhaAlunos(c)}</TabelaCelula>
-                        <TabelaCelula><ChipOrigem origem={c.origem} /></TabelaCelula>
-                      </TabelaLinha>
-                    ))}
-                  </TabelaCorpo>
-                </Tabela>
+                          </TabelaCelula>
+                          <TabelaCelula>
+                            <span className="flex flex-col gap-1">
+                              <span className="flex flex-nowrap gap-1"><ChipsModulos modulos={c.modulos} /></span>
+                              <span className="whitespace-nowrap text-[11.5px] text-texto-3">{ROTULO_FAIXA[c.faixa]}</span>
+                            </span>
+                          </TabelaCelula>
+                          <TabelaCelula>
+                            <span className="flex flex-col items-start gap-1">
+                              <ChipSituacao conta={c} />
+                            </span>
+                          </TabelaCelula>
+                          <TabelaCelula className="text-[12.5px] text-texto-2"><span className="line-clamp-2 block max-w-[190px]" title={linhaVencimento(c)}>{linhaVencimento(c)}</span></TabelaCelula>
+                          <TabelaCelula className="whitespace-nowrap text-[12.5px]">{linhaAlunos(c)}</TabelaCelula>
+                          <TabelaCelula><ChipOrigem origem={c.origem} /></TabelaCelula>
+                        </TabelaLinha>
+                      ))}
+                    </TabelaCorpo>
+                  </Tabela>
+                  <Paginacao nome="master-contas" pagina={pagina} total={total} aoMudar={irPara} carregando={q.isFetching} />
+                </>
               )}
       </Cartao>
       <DetalheConta contaId={aberta} aoFechar={() => mudar("conta", null)} aoMudou={() => void q.refetch()} />

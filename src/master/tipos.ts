@@ -217,6 +217,37 @@ export interface Prato {
   itens: ItemPrato[];
 }
 
+/**
+ * hml-14d (B21 · D28): uma PÁGINA de uma lista do master — as chaves de hoje das RPCs master_* + `total` (a lista inteira com o
+ * filtro e a busca; a página vem do banco, 20 por vez).
+ */
+export interface PaginaContas {
+  contas: ContaLinha[];
+  resumo: Record<string, number>;
+  hoje: string;
+  total: number;
+}
+export interface PaginaFinanceiro extends PaginaContas {
+  /** as 40 faturas mais novas (o cartão "Faturas recentes" mostra 10) */
+  faturas: Fatura[];
+  /** todas as faturas do banco (o chip do cartão — P6) */
+  faturas_total: number;
+}
+export interface PaginaIntegracoes {
+  contas: ContaLinha[];
+  resumo: Record<string, number>;
+  total: number;
+}
+export interface PaginaAlunosDoApp {
+  alunos: AlunoDoApp[];
+  conta_id: string | null;
+  total: number;
+}
+export interface PaginaSemConta {
+  pessoas: PessoaSemConta[];
+  total: number;
+}
+
 export interface AlunoDoApp {
   paciente_id: string;
   user_id: string | null;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  COMENTARIO_NUTRI_MAX, PERIODOS, agruparPorDia, alunosDaLista, chaveDia, contarNaoReagidas, filtrarRegistros, formatarReagidoEm, inicioDoPeriodo, nomeAluno,
+  COMENTARIO_NUTRI_MAX, PERIODOS, agruparPorDia, chaveDia, formatarReagidoEm, inicioDoPeriodo, nomeAluno,
   periodoDaURL, primeiroNomeAluno, textoContagem, textoPeriodo, textoReacaoNutri, textoReagidoEm, textoRegistro, textoRegistroCompleto, type RegistroBase,
 } from "./diarioPainel";
 
@@ -54,16 +54,9 @@ describe("lista da nutricionista", () => {
     expect(g[1].titulo).toBe("sábado, 19/09/2026 · 1 registro");
     expect(agruparPorDia([])).toEqual([]);
   });
-  it("filtra por aluno e por não reagidas", () => {
-    expect(filtrarRegistros(lista, "p1", false).map((r) => r.id)).toEqual(["a", "b"]);
-    expect(filtrarRegistros(lista, "", true).map((r) => r.id)).toEqual(["a", "c"]);
-    expect(filtrarRegistros(lista, "p1", true).map((r) => r.id)).toEqual(["a"]);
-    expect(contarNaoReagidas(lista)).toBe(2);
-  });
-  it("alunos únicos ordenados por nome sem acento; o nome e o primeiro nome da legenda", () => {
-    const ps = alunosDaLista(lista);
-    expect(ps.map((p) => p.nome)).toEqual(["Ana Souza", "Érica Lima"]);
-    expect(ps[1].link_codigo).toBe("zzz9999999");
+  // hml-14d (D41): o filtro por aluno/não reagidas, a contagem e os alunos da lista saíram daqui — a aba Diário e o Dashboard filtram e
+  // contam no banco desde a hml-14b/14d (diario.ts, contarDiario/useNaoReagidas)
+  it("o nome e o primeiro nome da legenda", () => {
     expect(nomeAluno(reg("x", iso(2026, 1, 1, 1, 1), { paciente: null }))).toBe("Aluno");
     expect(primeiroNomeAluno(lista[0])).toBe("Ana");
     expect(primeiroNomeAluno(lista[2])).toBe("Eri");

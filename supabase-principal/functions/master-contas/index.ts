@@ -5,9 +5,9 @@
 // antigo e o valor da assinatura ao mudar o plano; a assinatura do app de quem vai para um profissional).
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, ... }
-//   visao_geral · listar {filtros} · detalhe {conta_id} · acao {conta_id, tipo, args} · criar {email, nome, nome_conta, tipo,
-//   registro?, plano, faixa, isentar?, motivo?, modo: senha|google, senha?} · tornar_master {user_id} · integracoes
-//   alunos {filtros, offset, limite} · sem_conta {busca} · mover {pacientes, usuarios, conta_id, personal_id, nutricionista_id}
+//   visao_geral · listar {filtros, pagina?} · detalhe {conta_id} · acao {conta_id, tipo, args} · criar {email, nome, nome_conta, tipo,
+//   registro?, plano, faixa, isentar?, motivo?, modo: senha|google, senha?} · tornar_master {user_id} · integracoes {pagina?}
+//   alunos {filtros, offset, limite} · sem_conta {busca, pagina?} · mover {pacientes, usuarios, conta_id, personal_id, nutricionista_id}
 //   bloquear_aluno / desbloquear_aluno {paciente_id, mensagem?}
 // 200 → { ok: true, ... } · 401 sem login · 403 quem não é master · 4xx { ok: false, erro } (a tela traduz).
 // verify_jwt = true. Publicar:  scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions master-contas true
@@ -18,6 +18,10 @@
 // ANTES da master_conta_acao (leitura que falha lança: 500 e nada muda) e cada gravação confere o erro; o plano e a faixa da
 // assinatura vêm da conta que a RPC devolve (antes a releitura com erro gravava só o valor e a próxima cobrança no cartão
 // voltava a conta ao plano antigo).
+// hml-14d (B21 · D28): `listar {filtros, pagina?}`, `integracoes {pagina?}` e `sem_conta {busca?, pagina?}` — com `pagina` (inteiro
+// ≥ 1) a RPC recebe p_offset/p_limite (20 por página) e devolve só a página + `total` (a busca de Contas vai nos filtros, ao
+// banco); SEM `pagina` a RPC é chamada exatamente como antes (o APK antigo e a tela de produção). `alunos` não muda (a tela
+// manda limite 20).
 import { MpIndisponivel, credencialDoSchema, mpFetch, type OpcoesMp } from "../_shared/cobranca-mp.ts";
 import { mpTransitorio } from "../_shared/cobranca-regras.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
@@ -26,6 +30,16 @@ import { json, responder, rpc, servir, type Contexto } from "../_shared/master-p
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const simulado = (id: string | null | undefined) => !!id && id.startsWith("sim-");
+
+/** hml-14d (B21): a página pedida — sem o campo (ou null) = a chamada de hoje (null); inteiro ≥ 1 (número ou texto) = a página. */
+const POR_PAGINA = 20;
+function lerPagina(v: unknown): number | null | "invalida" {
+  if (v === undefined || v === null) return null;
+  const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 1_000_000 ? n : "invalida";
+}
+const daPagina = (pagina: number) => ({ p_offset: (pagina - 1) * POR_PAGINA, p_limite: POR_PAGINA });
+const textoDaBusca = (v: unknown) => (typeof v === "string" ? v.slice(0, 80) : null);
 
 /** O que a troca de plano lê ANTES de mexer: o Pix aberto (com o preço antigo) e a assinatura no cartão. Erro do banco lança. */
 interface LidoDoPlano {
@@ -108,10 +122,21 @@ servir("master-contas", async (c) => {
   switch (acao) {
     case "visao_geral":
       return responder(await rpc(c.comoPessoa, "master_visao_geral", {}), origin);
-    case "listar":
-      return responder(await rpc(c.comoPessoa, "master_contas", { p_filtros: corpo.filtros && typeof corpo.filtros === "object" ? corpo.filtros : {} }), origin);
-    case "integracoes":
-      return responder(await rpc(c.comoPessoa, "master_integracoes", {}), origin);
+    case "listar": {
+      const filtros = corpo.filtros && typeof corpo.filtros === "object" ? (corpo.filtros as Record<string, unknown>) : {};
+      const pagina = lerPagina(corpo.pagina);
+      if (pagina === "invalida") return json({ ok: false, erro: "pagina_invalida" }, 400, origin);
+      if (pagina === null) return responder(await rpc(c.comoPessoa, "master_contas", { p_filtros: filtros }), origin);
+      // hml-14d (B21): a página do banco, com a busca da tela nos filtros (sem acento e literal lá na RPC)
+      return responder(await rpc(c.comoPessoa, "master_contas", {
+        p_filtros: { ...filtros, busca: textoDaBusca(filtros.busca) }, ...daPagina(pagina),
+      }), origin);
+    }
+    case "integracoes": {
+      const pagina = lerPagina(corpo.pagina);
+      if (pagina === "invalida") return json({ ok: false, erro: "pagina_invalida" }, 400, origin);
+      return responder(await rpc(c.comoPessoa, "master_integracoes", pagina === null ? {} : daPagina(pagina)), origin);
+    }
     case "detalhe": {
       if (!ehUuid(corpo.conta_id)) return json({ ok: false, erro: "conta_inexistente" }, 404, origin);
       return responder(await rpc(c.comoPessoa, "master_conta_detalhe", { p_conta: corpo.conta_id }), origin);
@@ -162,8 +187,12 @@ servir("master-contas", async (c) => {
         p_filtros: filtros, p_offset: Number(corpo.offset) || 0, p_limite: Number(corpo.limite) || 50,
       }), origin);
     }
-    case "sem_conta":
-      return responder(await rpc(c.comoPessoa, "master_sem_conta", { p_busca: typeof corpo.busca === "string" ? corpo.busca.slice(0, 80) : null }), origin);
+    case "sem_conta": {
+      const pagina = lerPagina(corpo.pagina);
+      if (pagina === "invalida") return json({ ok: false, erro: "pagina_invalida" }, 400, origin);
+      const busca = textoDaBusca(corpo.busca);
+      return responder(await rpc(c.comoPessoa, "master_sem_conta", pagina === null ? { p_busca: busca } : { p_busca: busca, ...daPagina(pagina) }), origin);
+    }
     case "mover": {
       if (!ehUuid(corpo.conta_id)) return json({ ok: false, erro: "conta_inexistente" }, 404, origin);
       const r = await rpc(c.comoPessoa, "master_mover_alunos", {

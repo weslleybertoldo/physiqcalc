@@ -5,13 +5,15 @@
 // master-contas (as mesmas ações aparecem nas 2 telas). Contas legadas: "Cobrança legada até a virada" (W28).
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, ... }
-//   listar {filtro} · registrar_pagamento {conta_id, valor, meses, pago_em?, descricao?} · cancelar_assinatura {conta_id}
+//   listar {filtro, pagina?} · registrar_pagamento {conta_id, valor, meses, pago_em?, descricao?} · cancelar_assinatura {conta_id}
 //   reenviar_aviso {conta_id, mensagem?}
 // 200 → { ok: true, ... } · 401 sem login · 403 quem não é master · 4xx { ok: false, erro }.
 // verify_jwt = true. Publicar:  scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions master-financeiro true
 // Segredos: MP_ACCESS_TOKEN_PROD/_TEST (+ os automáticos).
 // hml-14 (H-32): um prazo por pedido (ORCAMENTO_MS.usuario) na ida ao MP; a leitura da assinatura e as gravações conferem o erro
 // (antes a leitura com erro respondia 400 "sem_assinatura" e o master lia que não havia cobrança automática).
+// hml-14d (B21 · D28): `listar {filtro, pagina?}` — com `pagina` (inteiro ≥ 1) a RPC recebe p_offset/p_limite (20 por página) e
+// devolve só a página das contas + `total` e `faturas_total` (o chip "Faturas recentes"); SEM `pagina`, a chamada de hoje.
 import { credencialDoSchema, espelhoAssinatura, mpFetch } from "../_shared/cobranca-mp.ts";
 import type { AssinaturaMp } from "../_shared/cobranca-regras.ts";
 import { ehUuid, textoDoAvisoDePlano } from "../_shared/master-regras.ts";
@@ -20,13 +22,26 @@ import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const simulado = (id: string | null | undefined) => !!id && id.startsWith("sim-");
 
+/** hml-14d (B21): a página pedida — sem o campo (ou null) = a chamada de hoje (null); inteiro ≥ 1 (número ou texto) = a página. */
+const POR_PAGINA = 20;
+function lerPagina(v: unknown): number | null | "invalida" {
+  if (v === undefined || v === null) return null;
+  const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 1_000_000 ? n : "invalida";
+}
+
 servir("master-financeiro", async (c) => {
   const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido — vai na ida ao MP ({ prazo: p })
   const { corpo, origin } = c;
   const acao = String(corpo.acao ?? "");
   if (acao === "listar") {
     const filtro = typeof corpo.filtro === "string" ? corpo.filtro.slice(0, 20) : "todas";
-    return responder(await rpc(c.comoPessoa, "master_financeiro", { p_filtro: filtro }), origin);
+    const pagina = lerPagina(corpo.pagina);
+    if (pagina === "invalida") return json({ ok: false, erro: "pagina_invalida" }, 400, origin);
+    if (pagina === null) return responder(await rpc(c.comoPessoa, "master_financeiro", { p_filtro: filtro }), origin);
+    return responder(await rpc(c.comoPessoa, "master_financeiro", {
+      p_filtro: filtro, p_offset: (pagina - 1) * POR_PAGINA, p_limite: POR_PAGINA,
+    }), origin);
   }
   if (!ehUuid(corpo.conta_id)) return json({ ok: false, erro: "conta_inexistente" }, 404, origin);
   const contaId = String(corpo.conta_id);

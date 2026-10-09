@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Edit2, Globe, Image as ImageIcon, Plus, Search, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ITENS_PAGINA, ListaPaginada } from "@/components/ListaPaginada";
 import { supabase } from "@/integrations/supabase/client";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { invokeEdge, type ProfessorRow } from "@/lib/saasApi";
 import {
   CAMPOS_EQUIVALENCIA_VAZIOS, camposDoExercicio, camposParaGravar, rotuloEquipamento, rotuloPadrao, type CamposEquivalencia,
 } from "@/treino/equivalencia";
+import { codigosDaBusca } from "@/treino/equivalenciaBusca";
 import { FormExercicioBiblioteca } from "@/treino/ui/FormExercicioBiblioteca";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import {
   BTN_MINI_PRIMARIO, BTN_NEUTRO, BTN_PRIMARIO, Campo, Carregando, DIALOG_CONTENT, ErroCarregar, Etiqueta, INPUT, LINHA, SELECT_CONTENT,
   SELECT_TRIGGER, Secao, TEXTAREA, TituloPagina, Vazio, mensagemErro, useConfirmacao, useDebounce,
@@ -36,6 +40,61 @@ function masterProfessores<T = unknown>(action: string, payload: Record<string, 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tabela = (nome: string) => (supabase.from as any)(nome);
 
+/**
+ * hml-14d (B21 · D24): uma página da Biblioteca pela RPC do Treino exercicios_da_lista (SECURITY INVOKER: a RLS do master) — o
+ * escopo (os globais ou os dos professores, este só para o master no Treino), a busca sem acento no nome, grupo, subgrupo e variação
+ * OU pelos rótulos de movimento/equipamento (os códigos que casaram — codigosDaBusca), a ordem, o total e os números do topo, tudo
+ * no banco. Antes a página lia tb_exercicios inteira (sem range) e filtrava, contava e fatiava no navegador.
+ */
+interface PaginaExercicios {
+  itens: Exercicio[];
+  total: number;
+  totalGlobal: number;
+  totalProfessores: number;
+  semClassificacao: number;
+}
+async function listarExercicios(dosProfessores: boolean, termo: string, pagina: number): Promise<PaginaExercicios> {
+  const { data, error } = await supabase.rpc("exercicios_da_lista" as never, {
+    p_filtros: { escopo: dosProfessores ? "professores" : "global", q: termo, codigos: codigosDaBusca(termo) },
+    p_offset: deslocamento(pagina), p_limite: POR_PAGINA,
+  } as never);
+  if (error) throw error;
+  const r = (data ?? {}) as Record<string, unknown>;
+  if (r.ok !== true || !Array.isArray(r.itens) || !Number.isInteger(r.total)) throw new Error("A biblioteca voltou num formato inesperado.");
+  const n = (k: string) => Number(r[k] ?? 0) || 0;
+  return { itens: r.itens as Exercicio[], total: n("total"), totalGlobal: n("total_global"), totalProfessores: n("total_professores"), semClassificacao: n("sem_classificacao") };
+}
+
+/** Os grupos musculares globais (catálogo pequeno — 23 —, inteiro; o filtro "global" no banco). */
+async function lerGruposGlobais(): Promise<GrupoMuscular[]> {
+  const { data, error } = await tabela("grupos_musculares").select("id, nome, professor_id").is("professor_id", null).order("nome").order("id");
+  if (error) throw error;
+  return (data as GrupoMuscular[]) ?? [];
+}
+
+/** Quantos exercícios GLOBAIS usam esse nome de grupo (contado no banco, só o número — o aviso antes de excluir o grupo). */
+async function contarGlobaisDoGrupo(nome: string): Promise<number> {
+  const { count, error } = await tabela("tb_exercicios").select("id", { count: "exact", head: true }).is("professor_id", null).eq("grupo_muscular", nome);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * hml-14d (B21): o nome do dono SÓ dos exercícios da página — a lista do master-professores de 100 em 100 até achar todos (antes:
+ * os 100 primeiros, uma vez, e o dono do 101º ficava "professor").
+ */
+async function nomesDosDonos(ids: string[]): Promise<Map<string, string>> {
+  const faltam = new Set(ids);
+  const nomes = new Map<string, string>();
+  for (let offset = 0; faltam.size > 0; offset += 100) {
+    const r = await masterProfessores<{ professores: ProfessorRow[]; total?: number }>("list", { limit: 100, offset });
+    for (const p of r.professores ?? []) if (faltam.delete(p.id)) nomes.set(p.id, p.nome);
+    if ((r.professores ?? []).length < 100 || offset + 100 >= (r.total ?? 0)) break;
+  }
+  return nomes;
+}
+const SEM_NOMES = new Map<string, string>();
+
 function erroBanco(e: unknown): string {
   const err = (e ?? {}) as { code?: string; message?: string };
   if (err.code === "23505") return "Já existe um registro com esse nome.";
@@ -46,55 +105,42 @@ function erroBanco(e: unknown): string {
 
 // Biblioteca GLOBAL (master): exercícios e grupos musculares com professor_id NULL (visíveis a todos os professores).
 // Imagens/GIFs continuam em Admin › Treinos › Biblioteca.
+// hml-14d (B21 · D24): 20 por página do banco (exercicios_da_lista), a página no endereço (`?pagina=`; o switch e a busca voltam
+// à 1), a busca no banco 300 ms depois da digitação e os números do topo do banco; a ListaPaginada (que só fatiava) saiu.
 const BibliotecaPage = () => {
-  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
-  const [grupos, setGrupos] = useState<GrupoMuscular[]>([]);
-  const [nomesProf, setNomesProf] = useState<Map<string, string>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
   const [dosProfessores, setDosProfessores] = useState(false);
   const [q, setQ] = useState("");
-  const qDeb = useDebounce(q.trim().toLowerCase(), 300);
-  const [mostrando, setMostrando] = useState(ITENS_PAGINA);
+  const termo = useDebounce(q.trim(), 300);
   const [busyId, setBusyId] = useState<string | null>(null);
   const { confirmar, dialogo } = useConfirmacao();
 
-  const carregar = useCallback(async (silencioso = false) => {
-    if (!silencioso) setLoading(true);
-    setErro(null);
-    try {
-      const [ex, gm] = await Promise.all([
-        tabela("tb_exercicios").select("id, nome, grupo_muscular, emoji, subgrupo, dica, professor_id, imagem_url, tipo, padrao_movimento, equipamento, variacao").order("nome"),
-        tabela("grupos_musculares").select("id, nome, professor_id").order("nome"),
-      ]);
-      if (ex.error) throw ex.error;
-      if (gm.error) throw gm.error;
-      setExercicios((ex.data as Exercicio[]) ?? []);
-      setGrupos((gm.data as GrupoMuscular[]) ?? []);
-    } catch (e) {
-      setErro(erroBanco(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: { dosProfessores, termo }, total: totalLido });
+  const lista = useQuery({
+    queryKey: ["master", "biblioteca", dosProfessores, termo, pagina],
+    queryFn: () => listarExercicios(dosProfessores, termo, pagina),
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+  const totalDaResposta = lista.data && !lista.isPlaceholderData ? lista.data.total : null;
   useEffect(() => {
-    void carregar();
-    masterProfessores<{ professores: ProfessorRow[] }>("list", { limit: 100 })
-      .then((r) => setNomesProf(new Map(r.professores.map((p) => [p.id, p.nome]))))
-      .catch(() => { /* só pra nomear o dono; não bloqueia */ });
-  }, [carregar]);
-  useEffect(() => { setMostrando(ITENS_PAGINA); }, [qDeb, dosProfessores]);
-
-  const gruposGlobais = useMemo(() => grupos.filter((g) => g.professor_id === null), [grupos]);
-  const visiveis = useMemo(() => exercicios
-    .filter((e) => (dosProfessores ? e.professor_id !== null : e.professor_id === null))
-    .filter((e) => !qDeb || [e.nome, e.grupo_muscular, e.subgrupo, rotuloPadrao(e.padrao_movimento), rotuloEquipamento(e.equipamento), e.variacao]
-      .some((t) => (t || "").toLowerCase().includes(qDeb))),
-  [exercicios, dosProfessores, qDeb]);
-  const totalGlobais = useMemo(() => exercicios.filter((e) => e.professor_id === null).length, [exercicios]);
-  const totalProfs = exercicios.length - totalGlobais;
-  const semClassificacao = useMemo(() => exercicios.filter((e) => e.professor_id === null && (!e.padrao_movimento || !e.equipamento)).length, [exercicios]);
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
+  const gruposQ = useQuery({ queryKey: ["master", "biblioteca-grupos"], queryFn: lerGruposGlobais, staleTime: 60_000 });
+  const gruposGlobais = useMemo(() => gruposQ.data ?? [], [gruposQ.data]);
+  // o "dos professores" só vale para o master no Treino (para os outros a RPC devolveria os globais): sem nenhum, a lista fica vazia
+  const exercicios = useMemo(() => (dosProfessores && (lista.data?.totalProfessores ?? 0) === 0 ? [] : lista.data?.itens ?? []), [lista.data, dosProfessores]);
+  const total = exercicios.length ? lista.data?.total ?? 0 : 0;
+  const donos = useMemo(() => [...new Set(exercicios.map((e) => e.professor_id).filter((id): id is string => !!id))].sort(), [exercicios]);
+  const nomesQ = useQuery({
+    queryKey: ["master", "biblioteca-donos", donos.join(",")],
+    queryFn: () => nomesDosDonos(donos),
+    enabled: donos.length > 0,
+    staleTime: 5 * 60_000,
+    retry: 1, // só pra nomear o dono; não bloqueia
+  });
+  const nomesProf = nomesQ.data ?? SEM_NOMES;
+  const numeros = lista.data;
 
   // ── editor (novo / editar) ──
   const [editor, setEditor] = useState<{ ex: Exercicio | null } | null>(null);
@@ -139,7 +185,7 @@ const BibliotecaPage = () => {
         toast.success("Exercício global criado. Foto/GIF: Admin › Treinos › Biblioteca.");
       }
       setEditor(null);
-      await carregar(true);
+      void lista.refetch();
     } catch (e) {
       toast.error(erroBanco(e));
     } finally {
@@ -158,7 +204,7 @@ const BibliotecaPage = () => {
       const { error } = await tabela("tb_exercicios").delete().eq("id", ex.id);
       if (error) throw error;
       toast.success("Exercício excluído.");
-      await carregar(true);
+      void lista.refetch();
     } catch (e) {
       toast.error(erroBanco(e));
     } finally {
@@ -178,7 +224,7 @@ const BibliotecaPage = () => {
       const { error } = await tabela("tb_exercicios").update({ professor_id: null }).eq("id", ex.id);
       if (error) throw error;
       toast.success("Exercício promovido para global.");
-      await carregar(true);
+      void lista.refetch();
     } catch (e) {
       toast.error(erroBanco(e));
     } finally {
@@ -198,7 +244,7 @@ const BibliotecaPage = () => {
       if (error) throw error;
       setNovoGrupo("");
       toast.success("Grupo muscular criado.");
-      await carregar(true);
+      void gruposQ.refetch();
     } catch (e) {
       toast.error(erroBanco(e));
     } finally {
@@ -206,7 +252,13 @@ const BibliotecaPage = () => {
     }
   };
   const excluirGrupo = async (g: GrupoMuscular) => {
-    const emUso = exercicios.filter((e) => e.professor_id === null && e.grupo_muscular === g.nome).length;
+    let emUso: number;
+    try {
+      emUso = await contarGlobaisDoGrupo(g.nome);
+    } catch (e) {
+      toast.error(erroBanco(e));
+      return;
+    }
     const ok = await confirmar({
       titulo: `Excluir o grupo "${g.nome}"?`,
       descricao: emUso > 0 ? `${emUso} exercício(s) global(is) usam esse nome — eles NÃO mudam (o campo é texto livre), só o grupo sai da lista.` : "Exercícios vinculados não são afetados.",
@@ -217,7 +269,7 @@ const BibliotecaPage = () => {
       const { error } = await tabela("grupos_musculares").delete().eq("id", g.id);
       if (error) throw error;
       toast.success("Grupo excluído.");
-      await carregar(true);
+      void gruposQ.refetch();
     } catch (e) {
       toast.error(erroBanco(e));
     }
@@ -227,7 +279,9 @@ const BibliotecaPage = () => {
     <div data-pagina="master-biblioteca">
       <TituloPagina
         titulo="Biblioteca global"
-        sub={<>{totalGlobais} exercício(s) global(is) · {totalProfs} dos professores{semClassificacao > 0 ? ` · ${semClassificacao} global(is) sem movimento/equipamento` : " · todos os globais com movimento e equipamento"}. Foto/GIF: pela Biblioteca do seu painel de professor (Treinos › Biblioteca).</>}
+        sub={numeros
+          ? <>{numeros.totalGlobal} exercício(s) global(is) · {numeros.totalProfessores} dos professores{numeros.semClassificacao > 0 ? ` · ${numeros.semClassificacao} global(is) sem movimento/equipamento` : " · todos os globais com movimento e equipamento"}. Foto/GIF: pela Biblioteca do seu painel de professor (Treinos › Biblioteca).</>
+          : <>Foto/GIF: pela Biblioteca do seu painel de professor (Treinos › Biblioteca).</>}
         acao={(
           <button type="button" onClick={() => abrirEditor(null)} className={BTN_PRIMARIO} data-btn-novo-exercicio>
             <Plus size={12} className="inline mr-1 -mt-0.5" />Novo exercício
@@ -246,13 +300,13 @@ const BibliotecaPage = () => {
         </label>
       </div>
 
-      {erro && <ErroCarregar texto={erro} onRetry={() => void carregar()} />}
-      {loading ? <Carregando /> : visiveis.length === 0 ? (
-        <Vazio texto={dosProfessores ? "Nenhum exercício criado por professores." : qDeb ? "Nenhum exercício encontrado." : "Biblioteca global vazia."} />
-      ) : (
-        <div data-lista-exercicios>
-          {visiveis.slice(0, mostrando).map((ex) => (
-            <div key={ex.id} className={`${LINHA} flex items-center gap-2 ${busyId === ex.id ? "opacity-60" : ""}`} data-exercicio-linha={ex.id}>
+      {lista.isError ? <ErroCarregar texto={erroBanco(lista.error)} onRetry={() => void lista.refetch()} />
+        : lista.isPending ? <Carregando /> : exercicios.length === 0 ? (
+          <Vazio texto={termo ? "Nenhum exercício encontrado." : dosProfessores ? "Nenhum exercício criado por professores." : "Biblioteca global vazia."} />
+        ) : (
+        <div data-lista-exercicios data-lista="master-biblioteca">
+          {exercicios.map((ex) => (
+            <div key={ex.id} className={`${LINHA} flex items-center gap-2 ${busyId === ex.id ? "opacity-60" : ""}`} data-exercicio-linha={ex.id} data-item>
               <div className="flex-1 min-w-0">
                 <p className="font-heading text-sm text-foreground truncate">{ex.nome}</p>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground font-body">
@@ -291,11 +345,12 @@ const BibliotecaPage = () => {
               </div>
             </div>
           ))}
-          <ListaPaginada total={visiveis.length} mostrando={mostrando} onVerMais={() => setMostrando((m) => m + ITENS_PAGINA)} rotulo="exercícios" />
+          <Paginacao nome="master-biblioteca" pagina={pagina} total={total} aoMudar={irPara} carregando={lista.isFetching} />
         </div>
       )}
 
       <Secao titulo={`Grupos musculares globais (${gruposGlobais.length})`}>
+        {gruposQ.isError && <ErroCarregar texto={erroBanco(gruposQ.error)} onRetry={() => void gruposQ.refetch()} />}
         <div className="flex flex-wrap gap-1.5 mb-3" data-lista-grupos>
           {gruposGlobais.length === 0 && <span className="text-xs text-muted-foreground font-body">Nenhum grupo global.</span>}
           {gruposGlobais.map((g) => (

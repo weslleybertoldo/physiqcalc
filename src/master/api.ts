@@ -6,12 +6,14 @@
 import { principal } from "@/integrations/principal/client";
 import type {
   Aluno,
-  AlunoDoApp,
   ContaLinha,
   DetalheConta,
-  Fatura,
   ListaAlunos,
-  PessoaSemConta,
+  PaginaAlunosDoApp,
+  PaginaContas,
+  PaginaFinanceiro,
+  PaginaIntegracoes,
+  PaginaSemConta,
   PlanosMaster,
   Prato,
   VisaoGeral,
@@ -51,10 +53,21 @@ export async function chamar<T = Record<string, unknown>>(funcao: FuncaoMaster, 
   return r as T;
 }
 
+/**
+ * hml-14d (B21 · D28): as listas do master vêm em PÁGINAS de 20 do banco — o pedido leva `pagina` e a resposta traz `total`.
+ * Resposta sem `total` (função ou banco de antes) = erro na tela, nunca uma lista que parece completa e não é.
+ */
+async function pagina<T extends { total: number }>(funcao: FuncaoMaster, corpo: Record<string, unknown>): Promise<T> {
+  const r = await chamar<T>(funcao, corpo);
+  if (!Number.isInteger(r.total) || r.total < 0) throw new ErroMaster("formato_inesperado");
+  return r;
+}
+
 // ───────────────────────── master-contas ─────────────────────────
 export const visaoGeral = () => chamar<VisaoGeral>("master-contas", { acao: "visao_geral" });
-export const listarContas = (filtros: Record<string, unknown> = {}) =>
-  chamar<{ contas: ContaLinha[]; resumo: Record<string, number>; hoje: string }>("master-contas", { acao: "listar", filtros });
+/** Contas: a página `n` com os filtros (situação, origem e a busca — sem acento, no banco). */
+export const listarContas = (filtros: Record<string, unknown>, n: number) =>
+  pagina<PaginaContas>("master-contas", { acao: "listar", filtros, pagina: n });
 export const detalheConta = (contaId: string) => chamar<DetalheConta>("master-contas", { acao: "detalhe", conta_id: contaId });
 export const acaoConta = (contaId: string, tipo: string, args: Record<string, unknown> = {}) =>
   chamar<{ conta?: ContaLinha; excluida?: boolean; efeitos?: Record<string, unknown> }>("master-contas", { acao: "acao", conta_id: contaId, tipo, args });
@@ -75,10 +88,10 @@ export interface NovaConta {
 export const criarConta = (dados: NovaConta) =>
   chamar<{ conta_id: string; codigo_convite: string | null; login_criado: boolean; user_id: string; conta: ContaLinha }>("master-contas", { acao: "criar", ...dados });
 export const tornarMaster = (userId: string) => chamar("master-contas", { acao: "tornar_master", user_id: userId });
-export const integracoes = () => chamar<{ contas: ContaLinha[]; resumo: Record<string, number> }>("master-contas", { acao: "integracoes" });
+export const integracoes = (n: number) => pagina<PaginaIntegracoes>("master-contas", { acao: "integracoes", pagina: n });
 export const listarAlunos = (filtros: Record<string, unknown>, offset = 0, limite = 50) =>
   chamar<ListaAlunos>("master-contas", { acao: "alunos", filtros, offset, limite });
-export const semConta = (busca?: string) => chamar<{ pessoas: PessoaSemConta[] }>("master-contas", { acao: "sem_conta", busca: busca ?? null });
+export const semConta = (busca: string, n: number) => pagina<PaginaSemConta>("master-contas", { acao: "sem_conta", busca: busca || null, pagina: n });
 export const moverAlunos = (p: { pacientes: string[]; usuarios: string[]; conta_id: string; personal_id: string | null; nutricionista_id: string | null }) =>
   chamar<{ movidos: number; erros: Array<{ paciente_id?: string; user_id?: string; erro: string }>; assinatura_app?: { canceladas: number; falhas: number } }>(
     "master-contas", { acao: "mover", ...p });
@@ -86,8 +99,7 @@ export const bloquearAluno = (pacienteId: string, bloquear: boolean, mensagem?: 
   chamar("master-contas", { acao: bloquear ? "bloquear_aluno" : "desbloquear_aluno", paciente_id: pacienteId, mensagem: mensagem ?? null });
 
 // ───────────────────────── master-financeiro ─────────────────────────
-export const financeiro = (filtro: string) =>
-  chamar<{ contas: ContaLinha[]; faturas: Fatura[]; resumo: Record<string, number>; hoje: string }>("master-financeiro", { acao: "listar", filtro });
+export const financeiro = (filtro: string, n: number) => pagina<PaginaFinanceiro>("master-financeiro", { acao: "listar", filtro, pagina: n });
 export const registrarPagamento = (contaId: string, valor: number, meses: number, pagoEm: string | null, descricao: string | null) =>
   chamar<{ vence_em: string; situacao: string }>("master-financeiro", { acao: "registrar_pagamento", conta_id: contaId, valor, meses, pago_em: pagoEm, descricao });
 export const cancelarAssinatura = (contaId: string) => chamar("master-financeiro", { acao: "cancelar_assinatura", conta_id: contaId });
@@ -104,6 +116,6 @@ export const salvarPrato = (prato: Record<string, unknown>) => chamar<{ id: stri
 export const buscarAlimentos = (termo: string) =>
   chamar<{ alimentos: Array<{ id: string; nome: string; energia_kcal: number | null; proteina_g: number | null; carboidrato_g: number | null; lipidio_g: number | null }> }>(
     "master-planos", { acao: "buscar_alimentos", termo });
-export const alunosDoApp = () => chamar<{ alunos: AlunoDoApp[]; conta_id: string | null }>("master-planos", { acao: "alunos_app" });
+export const alunosDoApp = (n: number, busca: string) => pagina<PaginaAlunosDoApp>("master-planos", { acao: "alunos_app", pagina: n, busca: busca || null });
 
 export type { Aluno };

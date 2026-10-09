@@ -1,6 +1,5 @@
 import { format } from "date-fns";
 import { ordenarRegistros, rotuloReacao, rotuloRefeicao } from "@/nutricao/app/diarioUtil";
-import { semAcento } from "@/nutricao/app/numeros";
 
 // Physiq W24 — regras PURAS do Diário alimentar do lado da nutricionista (Painel › Dietas › Diário), portadas do PhysiqNutri
 // (src/lib/diarioUtil.ts, W30 de lá: período de 7 a 90 dias, filtro por aluno, "só não reagidas", grupos por dia e os textos). O que
@@ -63,29 +62,12 @@ export function agruparPorDia<T extends { id: string; data_hora: string }>(lista
   }
   return [...grupos.entries()].map(([chave, g]) => ({ chave, titulo: tituloDia(g.data, g.itens.length), itens: g.itens }));
 }
-export function filtrarRegistros<T extends { paciente_id: string; reacao_nutri: string | null }>(lista: T[], alunoId: string, soNaoReagidas: boolean): T[] {
-  return lista.filter((r) => (!alunoId || r.paciente_id === alunoId) && (!soNaoReagidas || !r.reacao_nutri));
-}
-export const contarNaoReagidas = <T extends { reacao_nutri: string | null }>(lista: T[]): number => lista.filter((r) => !r.reacao_nutri).length;
 export const nomeAluno = (r: Pick<RegistroBase, "paciente">): string => (r.paciente?.nome ?? "").trim() || "Aluno";
 /** O primeiro nome (o apelido, se houver) — a legenda da foto, como no "Diário de hoje" da tela 6. */
 export function primeiroNomeAluno(r: Pick<RegistroBase, "paciente">): string {
   const apelido = (r.paciente?.apelido ?? "").trim();
   if (apelido) return apelido;
   return nomeAluno(r).split(/\s+/)[0] || "Aluno";
-}
-/** Alunos com registro na lista, únicos, por nome sem acento (desempate por id). */
-export function alunosDaLista(lista: RegistroBase[]): AlunoDoDiario[] {
-  const mapa = new Map<string, AlunoDoDiario>();
-  for (const r of lista) {
-    if (!mapa.has(r.paciente_id)) mapa.set(r.paciente_id, { id: r.paciente_id, nome: nomeAluno(r), link_codigo: r.paciente?.link_codigo ?? "", foto_url: r.paciente?.foto_url ?? null });
-  }
-  return [...mapa.values()].sort((a, b) => {
-    const x = semAcento(a.nome).toLowerCase();
-    const y = semAcento(b.nome).toLowerCase();
-    if (x !== y) return x < y ? -1 : 1;
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-  });
 }
 export function textoContagem(total: number, dias: number, naoReagidas: number): string {
   if (!total) return "Nenhum registro";
