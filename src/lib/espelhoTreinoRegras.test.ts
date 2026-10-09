@@ -3,6 +3,7 @@ import {
   acessoProfessor,
   claimsDoJwt,
   decidirVinculo,
+  decidirVinculoDuplicado,
   deveTirarAcessoDoEspelho,
   linhaSoDoEspelho,
   ehLoginGoogle,
@@ -15,6 +16,7 @@ import {
   segredoConfere,
   sexoTreino,
   statusDoPerfil,
+  treinoVisivelPelaConta,
   type ContaResumo,
   type MatriculaResumo,
   type MembroResumo,
@@ -98,6 +100,56 @@ describe("decidir o vínculo (quem é quem no Banco do Treino)", () => {
   it("e-mail e senha sem vínculo: e-mail que já existe no Treino = conflito (ninguém toma a conta do outro)", () => {
     expect(decidirVinculo({ temVinculo: false, loginGoogle: false, treinoIdPorEmail: "t1" })).toBe("conflito");
     expect(decidirVinculo({ temVinculo: false, loginGoogle: false, treinoIdPorEmail: null })).toBe("criar");
+  });
+});
+
+describe("hml-14 (H-51 item 3): gravar o vínculo bateu no 23505 — relido o vínculo deste login", () => {
+  it("aponta para o MESMO usuário do Treino (outra chamada da pessoa ligou antes) → segue com ele", () => {
+    expect(decidirVinculoDuplicado({ tentado: "t1", gravado: "t1", criadoAgora: false })).toEqual({ caminho: "seguir", treinoUserId: "t1" });
+    expect(decidirVinculoDuplicado({ tentado: "t1", gravado: "t1", criadoAgora: true })).toEqual({ caminho: "seguir", treinoUserId: "t1" });
+  });
+  it("nenhum vínculo deste login → o 23505 veio do ÚNICO em treino_user_id: o Treino é de OUTRO login → conflito", () => {
+    expect(decidirVinculoDuplicado({ tentado: "t1", gravado: null, criadoAgora: false })).toEqual({ caminho: "conflito" });
+    expect(decidirVinculoDuplicado({ tentado: "t1", gravado: null, criadoAgora: true })).toEqual({ caminho: "conflito" });
+  });
+  it("corrida (2 chamadas ao mesmo tempo): vale o vínculo gravado; o usuário criado agora é o órfão", () => {
+    expect(decidirVinculoDuplicado({ tentado: "t-novo", gravado: "t-gravado", criadoAgora: true }))
+      .toEqual({ caminho: "usar_gravado", treinoUserId: "t-gravado", orfao: "t-novo" });
+  });
+  it("o gravado é outro mas o tentado já existia (achado pelo e-mail) → vale o gravado e ninguém fica órfão", () => {
+    expect(decidirVinculoDuplicado({ tentado: "t-email", gravado: "t-gravado", criadoAgora: false }))
+      .toEqual({ caminho: "usar_gravado", treinoUserId: "t-gravado", orfao: null });
+  });
+  it("nunca devolve o usuário tentado quando ele não é o do vínculo deste login", () => {
+    for (const criadoAgora of [true, false]) {
+      for (const gravado of [null, "t-gravado"]) {
+        const d = decidirVinculoDuplicado({ tentado: "t-de-outro", gravado, criadoAgora });
+        const usado = d.caminho === "conflito" ? null : d.treinoUserId;
+        expect(usado, `${gravado} · criadoAgora ${criadoAgora}`).not.toBe("t-de-outro");
+      }
+    }
+  });
+});
+
+describe("hml-14 (H-51 item 4): a trava por conta da treino-leitura (regra escrita, comportamento de antes)", () => {
+  it("perfil do Treino SEM conta → mostra (o treino do próprio aluno, para a nutricionista dele)", () => {
+    expect(treinoVisivelPelaConta("conta-a", null)).toBe(true);
+    expect(treinoVisivelPelaConta("conta-a", undefined)).toBe(true);
+    expect(treinoVisivelPelaConta("conta-a", "")).toBe(true);
+  });
+  it("mesma conta → mostra; conta DIFERENTE → não mostra (403 sem_acesso)", () => {
+    expect(treinoVisivelPelaConta("conta-a", "conta-a")).toBe(true);
+    expect(treinoVisivelPelaConta("conta-a", "conta-b")).toBe(false);
+  });
+  it("matrícula sem conta: nada a comparar → mostra (o principal já decidiu que quem chama vê o aluno)", () => {
+    expect(treinoVisivelPelaConta(null, "conta-b")).toBe(true);
+    expect(treinoVisivelPelaConta(null, null)).toBe(true);
+  });
+  it("é a mesma regra de antes da hml-14 (contaTreino && contaTreino !== conta_id → 403), caso a caso", () => {
+    const antes = (contaMatricula: string | null, contaTreino: string | null) =>
+      !(contaMatricula && contaTreino && contaTreino !== contaMatricula);
+    const valores = [null, "", "conta-a", "conta-b"];
+    for (const m of valores) for (const t of valores) expect(treinoVisivelPelaConta(m, t), `${m} × ${t}`).toBe(antes(m, t));
   });
 });
 

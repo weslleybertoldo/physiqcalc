@@ -2,6 +2,7 @@
 // Usado pela espelho-resumo (a trocar-token pede no login) e pela espelho-enviar (fila de mudanças).
 // hml-14 (H-32): os alunos do personal vêm em todas as páginas (antes, sem range, paravam calados no 1000º — o max_rows — e o
 // espelho não religava os outros no Treino; a faixa "livre" e as contas legadas não têm limite de alunos).
+// hml-14 (H-76): erro do login (GoTrue) lança; só o "não existe" de verdade (404) devolve null.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { todasAsPaginas } from "./paginas.ts";
 import {
@@ -15,10 +16,16 @@ import {
 
 export type Resumo = ReturnType<typeof montarResumo>;
 
-/** db = service_role no schema do ambiente; authAdmin = service_role (Auth é um só pros 2 schemas). */
+/**
+ * db = service_role no schema do ambiente; authAdmin = service_role (Auth é um só pros 2 schemas).
+ * null = o login não existe (a espelho-resumo responde 404; a espelho-enviar não tem o que mandar). Erro do GoTrue (rede, 5xx,
+ * tempo) LANÇA: hml-14 (H-76) — antes virava "não existe", a espelho-enviar dava a pendência como feita sem mandar nada.
+ */
 export async function resumoDaPessoa(db: SupabaseClient, authAdmin: SupabaseClient, principalUserId: string): Promise<Resumo | null> {
   const { data: u, error: eu } = await authAdmin.auth.admin.getUserById(principalUserId);
-  if (eu || !u?.user) return null;
+  // o "não existe" do GoTrue é o 404 (user_not_found); qualquer outro erro é falha de verdade
+  if (eu && eu.status !== 404) throw eu;
+  if (!u?.user) return null;
   const user = u.user;
 
   const [perfilQ, membrosQ, matriculasQ] = await Promise.all([

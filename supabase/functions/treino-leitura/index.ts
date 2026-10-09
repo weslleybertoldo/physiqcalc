@@ -21,8 +21,13 @@
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions treino-leitura false
 // NUNCA pelo workflow deploy-function.yml (ele liga o verify_jwt e a função passa a responder 401).
 // Segredos: PRINCIPAL_URL, PRINCIPAL_ANON_KEY (os mesmos da trocar-token) + os automáticos do Supabase.
+// hml-14 (H-32, D3): um prazo de 20 s por pedido (o painel espera 25 s); o GoTrue do principal espera no máximo 5 s e a RPC
+// aluno_treino 8 s, dentro dele; estourou (até ler o corpo) → o erro_interno de sempre, nunca um 401/403 por corpo vazio.
+// hml-14 (H-51 item 4): a trava por conta (passo 3) é a regra pura treinoVisivelPelaConta (_shared/espelho/regras.ts), testada.
 /* eslint-disable @typescript-eslint/no-explicit-any -- função Deno: respostas do supabase-js (service_role, sem os tipos gerados) */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { treinoVisivelPelaConta } from "../_shared/espelho/regras.ts";
+import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -71,10 +76,17 @@ function freio(chave: string, max: number, janelaMs = 60_000): boolean {
   return true;
 }
 
-async function usuarioDoPrincipal(token: string): Promise<{ id: string | null; status: number }> {
-  const r = await fetch(`${PRINCIPAL_URL}/auth/v1/user`, { headers: { apikey: PRINCIPAL_ANON_KEY, Authorization: `Bearer ${token}` } });
+/** hml-14 (H-32): o tempo vale até ler o corpo — estourou no meio dele, lança (o catch responde 500), não vira "sem corpo". */
+function semCorpo(e: unknown): null {
+  if (tempoEsgotado(e)) throw e;
+  return null;
+}
+
+async function usuarioDoPrincipal(token: string, p: Prazo): Promise<{ id: string | null; status: number }> {
+  const r = await buscarComTempo(`${PRINCIPAL_URL}/auth/v1/user`, { headers: { apikey: PRINCIPAL_ANON_KEY, Authorization: `Bearer ${token}` } },
+    Math.min(TEMPO_MS.gotruePrincipal, p.restante()));
   if (r.status === 200) {
-    const u = await r.json().catch(() => null);
+    const u = await r.json().catch(semCorpo);
     return { id: typeof u?.id === "string" ? u.id : null, status: 200 };
   }
   await r.body?.cancel();
@@ -82,8 +94,8 @@ async function usuarioDoPrincipal(token: string): Promise<{ id: string | null; s
 }
 
 /** O principal diz se quem chama vê o aluno (a regra do perfil do aluno) e devolve o login e o id do Treino guardado. */
-async function alunoNoPrincipal(token: string, aluno: string, schema: string): Promise<{ ok: true; user_id: string | null; treino_user_id: string | null; conta_id: string | null } | { ok: false; status: number; codigo: string }> {
-  const r = await fetch(`${PRINCIPAL_URL}/rest/v1/rpc/aluno_treino`, {
+async function alunoNoPrincipal(token: string, aluno: string, schema: string, p: Prazo): Promise<{ ok: true; user_id: string | null; treino_user_id: string | null; conta_id: string | null } | { ok: false; status: number; codigo: string }> {
+  const r = await buscarComTempo(`${PRINCIPAL_URL}/rest/v1/rpc/aluno_treino`, {
     method: "POST",
     headers: {
       apikey: PRINCIPAL_ANON_KEY,
@@ -93,8 +105,8 @@ async function alunoNoPrincipal(token: string, aluno: string, schema: string): P
       "Accept-Profile": schema,
     },
     body: JSON.stringify({ p_aluno: aluno }),
-  });
-  const corpo = await r.json().catch(() => null);
+  }, Math.min(TEMPO_MS.principal, p.restante()));
+  const corpo = await r.json().catch(semCorpo);
   if (r.status === 200 && corpo && corpo.ok === true) {
     return { ok: true, user_id: corpo.user_id ?? null, treino_user_id: corpo.treino_user_id ?? null, conta_id: corpo.conta_id ?? null };
   }
@@ -105,6 +117,8 @@ async function alunoNoPrincipal(token: string, aluno: string, schema: string): P
 }
 
 // ───────────────────────── leituras (as mesmas da admin-semana-treinos, sem nada de escrita) ─────────────────────────
+// hml-14 (H-32): todas são de UM aluno (o treino dele: dezenas de linhas; o período da semana tem no máximo 14 dias) — teto
+// natural longe das 1000 do PostgREST, sem página.
 
 async function gruposDisponiveis(admin: any, userId: string) {
   const [perf, pess] = await Promise.all([
@@ -250,6 +264,8 @@ async function lerVolume(admin: any, userId: string) {
     idsNovosCat.length ? admin.from("tb_exercicios").select("id, nome, grupo_muscular, tipo").in("id", idsNovosCat) : vazio,
     idsNovosPess.length ? admin.from("tb_exercicios_usuario").select("id, nome, grupo_muscular, tipo").in("id", idsNovosPess).eq("user_id", userId) : vazio,
   ]);
+  // hml-14 (H-32): sem isto, o banco fora fazia o volume contar o exercício trocado no lugar do substituto, sem aviso
+  for (const r of [novosCat, novosPess]) if (r.error) throw r.error;
   const detNovoCat = new Map(((novosCat.data as any[]) || []).map((e) => [e.id, e]));
   const detNovoPess = new Map(((novosPess.data as any[]) || []).map((e) => [e.id, e]));
   const grupos: Record<string, { nome: string; exercicios: any[] }> = {};
@@ -318,6 +334,7 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return erro("metodo", 405, origin);
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32, D3): o prazo do pedido inteiro (as 2 idas ao principal)
   if (!PRINCIPAL_URL || !PRINCIPAL_ANON_KEY) return erro("nao_configurada", 500, origin);
 
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
@@ -350,12 +367,12 @@ Deno.serve(async (req) => {
 
   try {
     // 1. quem chama: o login do principal (assinatura, validade e revogação conferidas lá)
-    const u = await usuarioDoPrincipal(token);
+    const u = await usuarioDoPrincipal(token, p);
     if (!u.id) return u.status >= 500 ? erro("principal_indisponivel", 502, origin) : erro("invalid_token", 401, origin);
     if (!freio(`u:${u.id}`, 60)) return erro("rate_limited", 429, origin);
 
     // 2. o principal decide se essa pessoa vê o aluno (e devolve o login dele)
-    const a = await alunoNoPrincipal(token, aluno, schema);
+    const a = await alunoNoPrincipal(token, aluno, schema, p);
     if (!a.ok) return erro(a.codigo, a.status, origin);
 
     // 3. o usuário do Treino do aluno: o guardado na matrícula ou o vínculo de identidade
@@ -367,12 +384,13 @@ Deno.serve(async (req) => {
       treinoUserId = (v as { treino_user_id?: string } | null)?.treino_user_id ?? null;
     }
     if (!treinoUserId) return erro("sem_treino", 404, origin);
-    // o mesmo login pode ter matrícula em 2 contas (P7): só o treino do aluno NESTA conta (espelho do núcleo no Treino)
+    // o mesmo login pode ter matrícula em 2 contas (P7): só o treino do aluno NESTA conta (espelho do núcleo no Treino).
+    // hml-14 (H-51 item 4): perfil do Treino sem conta → mostra (o treino do próprio aluno); conta diferente → 403
     if (a.conta_id) {
       const { data: pf, error: epf } = await admin.from("physiq_profiles").select("conta_id").eq("id", treinoUserId).maybeSingle();
       if (epf) throw epf;
       const contaTreino = (pf as { conta_id?: string | null } | null)?.conta_id ?? null;
-      if (contaTreino && contaTreino !== a.conta_id) return erro("sem_acesso", 403, origin);
+      if (!treinoVisivelPelaConta(a.conta_id, contaTreino)) return erro("sem_acesso", 403, origin);
     }
 
     // 4. só leitura

@@ -127,6 +127,38 @@ export function decidirVinculo(p: { temVinculo: boolean; loginGoogle: boolean; t
   return p.treinoIdPorEmail ? "conflito" : "criar";
 }
 
+/** hml-14 (H-51 item 3): o que a troca faz quando gravar o vínculo bate no 23505 (decidirVinculoDuplicado). */
+export type DecisaoVinculoDuplicado =
+  | { caminho: "seguir"; treinoUserId: string }
+  | { caminho: "usar_gravado"; treinoUserId: string; orfao: string | null }
+  | { caminho: "conflito" };
+
+/**
+ * hml-14 (H-51 item 3) — o insert do vínculo (physiq_identidades: PK em principal_user_id, ÚNICO em treino_user_id) bateu no
+ * 23505 e a troca releu o vínculo DESTE login (`gravado`):
+ *   · o mesmo usuário do Treino que ela tentou ligar → outra chamada da mesma pessoa ligou antes: segue;
+ *   · OUTRO usuário do Treino → 2 chamadas ao mesmo tempo: vale o gravado; o usuário que esta chamada acabou de criar fica sem
+ *     vínculo (`orfao`: a troca loga usuario_orfao para limpar à mão);
+ *   · nenhum → o 23505 veio do ÚNICO em treino_user_id: o usuário do Treino já é de OUTRO login (o e-mail mudou de dono) →
+ *     conflito (409 conta_em_conflito + registro para o master) — nunca a sessão do Treino de outra pessoa.
+ */
+export function decidirVinculoDuplicado(p: { tentado: string; gravado: string | null; criadoAgora: boolean }): DecisaoVinculoDuplicado {
+  if (!p.gravado) return { caminho: "conflito" };
+  if (p.gravado === p.tentado) return { caminho: "seguir", treinoUserId: p.tentado };
+  return { caminho: "usar_gravado", treinoUserId: p.gravado, orfao: p.criadoAgora ? p.tentado : null };
+}
+
+/**
+ * hml-14 (H-51 item 4) — a trava por conta da treino-leitura (o mesmo login pode ter matrícula em 2 contas, P7): quem vê o aluno
+ * pela matrícula de uma conta só lê o treino quando o perfil do Treino é DESSA conta. Perfil do Treino sem conta = o treino do
+ * próprio aluno (nenhum profissional de outra conta o montou): mostra — é o esperado para a nutricionista dele. Matrícula sem
+ * conta: nada a comparar (o principal já decidiu que quem chama vê o aluno). Conta diferente → false (403 sem_acesso).
+ */
+export function treinoVisivelPelaConta(contaDaMatricula: string | null | undefined, contaDoTreino: string | null | undefined): boolean {
+  if (!contaDaMatricula || !contaDoTreino) return true;
+  return contaDaMatricula === contaDoTreino;
+}
+
 function temModulo(conta: ContaResumo | null | undefined, m: Modulo): boolean {
   return !!conta && Array.isArray(conta.modulos) && conta.modulos.includes(m);
 }
