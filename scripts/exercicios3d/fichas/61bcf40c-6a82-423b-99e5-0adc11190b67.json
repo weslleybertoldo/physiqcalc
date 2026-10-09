@@ -1,0 +1,441 @@
+{
+ "uuid": "61bcf40c-6a82-423b-99e5-0adc11190b67",
+ "nome": "Rosca Concentrada com Halter",
+ "cena": "rosca_concentrada_com_halter",
+ "grupo": "Bíceps",
+ "subgrupo": "Bíceps braquial (pico) · braquial",
+ "padrao_movimento": "rosca_scott",
+ "equipamento": "halteres",
+ "variacao": "concentrada, sentado",
+ "alvos": [
+  "biceps"
+ ],
+ "auxiliares": [
+  "antebraco"
+ ],
+ "camera": {
+  "az": 305,
+  "el": 14,
+  "dist": 2.9,
+  "alvo": [
+   -0.1,
+   -0.32,
+   0.6
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.2,
+  "alvo": [
+   0.0,
+   -0.22,
+   0.6
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na ponta de um banco reto, com as pernas afastadas e os pés chapados no chão, inclina o tronco à frente (pelo quadril, com as costas retas) e segura um halter com a mão direita, com a palma virada pra frente (pegada supinada), deixando o halter pendurado entre os pés. Apoia a parte de trás do braço direito, um pouco acima do cotovelo, na parte de dentro da coxa direita, perto do joelho, com o ombro direito um pouco mais baixo, e apoia a mão esquerda em cima do joelho esquerdo. Com o braço parado, encostado na coxa, dobra só o cotovelo e sobe o halter até a frente do ombro, perto do peito, o máximo que der (o pico), com o punho reto; depois desce devagar até esticar o braço de novo, sem tirar o braço da coxa. Faz todas as repetições e troca de braço.",
+ "cinesiologia": {
+  "plano": "sagital do braço que trabalha (o antebraço sobe pra frente, no plano do cotovelo), cadeia cinética aberta, um braço por vez, com o braço parado apoiado na coxa",
+  "articulacoes": "cotovelo direito (flexão na subida, de ~8° até ~135°; extensão na descida), com o antebraço supinado e o punho reto; ombro direito parado (o braço quase na vertical, encostado na coxa, com a cintura escapular um pouco abaixada e à frente); tronco parado, inclinado ~41° à frente pelo quadril, com a cabeça na linha dele; quadril (~126°) e joelhos (~91°) parados, sentado, com os pés chapados no chão; braço esquerdo parado, com a mão apoiada no joelho esquerdo",
+  "agonistas": "bíceps braquial e braquial — o catálogo do app põe \"Bíceps braquial (pico) · braquial\"; a ExRx põe o braquial como alvo (\"Target Brachialis\") e o bíceps como sinergista (\"Synergists Biceps Brachii, Brachioradialis\"); o estudo do ACE achou na rosca concentrada a maior ativação do bíceps entre 8 exercícios (Young et al. 2014: \"the concentration curl came out on top, eliciting significantly higher muscle activation of the biceps than any other exercise tested\"). Contração concêntrica na subida e excêntrica na descida",
+  "sinergistas": "braquiorradial (ExRx: \"Brachioradialis\"); o deltoide anterior trabalha menos que na rosca direta com barra (Young et al. 2014: \"for the AD, the incline curl, concentration curl and the chin-up had significantly less muscle activation than the barbell curl\")",
+  "estabilizadores": "trapézio (fibras de cima e do meio), levantador da escápula, oblíquos, eretores da espinha e flexores do punho (ExRx: \"Stabilizers Trapezius, Upper; Trapezius, Middle; Levator Scapulae; Obliques; Erector Spinae; Wrist Flexors\")",
+  "fases": "subida concêntrica (dobra o cotovelo até o pico, com o halter na frente do ombro) e descida excêntrica controlada até esticar o braço (NFPT: \"Take two to three seconds to lower the dumbbell down to the extended position\"); depois o outro braço (ExRx: \"Continue with opposite arm\")"
+ },
+ "referencias": [
+  "ExRx.net — Dumbbell Concentration Curl (https://exrx.net/WeightExercises/Brachialis/DBConcentrationCurl, lido na cópia do Internet Archive de 15/09/2025; o site responde 403 direto): classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Sit on bench. Grasp dumbbell between feet. Place back of upper arm to inner thigh. Lean into leg to raise elbow slightly.\"; Execution: \"Raise dumbbell to front of shoulder. Lower dumbbell until arm is fully extended. Repeat. Continue with opposite arm.\"; Comments: \"The long head (lateral head) of Biceps Brachii is activated significantly more than short head (medial head) of Biceps Brachii since short head enters into active insufficiency as it continues to contract.\"; músculos: Target \"Brachialis\", Synergists \"Biceps Brachii\", \"Brachioradialis\", Stabilizers \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\", \"Obliques\", \"Erector Spinae\", \"Wrist Flexors\". O vídeo da página (braço direito) mostra o halter pendurado por dentro do pé direito, o cotovelo na parte de dentro da coxa perto do joelho e a mão esquerda em cima do joelho esquerdo",
+  "American Council on Exercise — Thielen S. Build Your Biceps Workout (blog do ACE, 19/10/2015; https://www.acefitness.org/resources/everyone/blog/5694/build-your-biceps-workout/ — é o link de \"Concentration curl\" do artigo do ACE \"Building Better Biceps\", de 05/12/2025): \"Sit down on a chair or bench while holding one dumbbell in your right hand; allow the dumbbell to hand between your legs. Place the back of your right upper arm against the inside of your inner right thigh. With the palm facing forward, curl the dumbbell toward the shoulder and slowing release back to the starting position, all while keeping the upper arm in contact with the inner thigh. Perform the suggested number of reps and then switch to the left arm.\"",
+  "Young S, Porcari JP, Camic C, Kovacs A, Foster C. ACE Study Reveals Best Biceps Exercises. ACE ProSource, agosto de 2014 (PDF do ACE, lido em 09/10/2026; o estudo da dica do catálogo, 8 exercícios de bíceps, 16 pessoas, EMG no bíceps, deltoide anterior e braquiorradial): \"the concentration curl came out on top, eliciting significantly higher muscle activation of the biceps than any other exercise tested\"; \"This may be because during a concentration curl, the humerus is pressed against the leg and does not allow the upper arm to sway, which isolates the biceps.\"; \"for the AD, the incline curl, concentration curl and the chin-up had significantly less muscle activation than the barbell curl\"",
+  "Yessis M (Dr. Yessis SportLab) — Concentration Curl (https://doctoryessis.com/2013/01/01/concentration-curl/, lido em 09/10/2026): \"Sit on the edge of an exercise bench with your legs apart and feet flat on the floor.\"; \"Bend over and place the elbow or hand of the left arm on the left thigh for support. The elbow of the right arm which is to be exercised should be placed on the inside of the right thigh.\"; \"Hold a dumbbell in the right hand with an underhand (supinated) grip and press the elbow (or upper arm) into the middle of the thigh for stability.\"; \"Start with the elbow bent approximately 160-170\" (o símbolo de grau sai quebrado no site); \"raise the dumbbell so that it comes close to touching the chest\"; \"Pause momentarily in the up position\"; \"hold the elbow in place pressed in against the thigh at all times\"; \"be sure you do not fully extend the elbow on each repetition\"; \"In the concentration curl the biceps brachii, brachialis and brachioradialis are the key muscles.\"; \"In the concentration curl there is only elbow joint flexion\"",
+  "NFPT (National Federation of Professional Trainers) — Bovee R. Seated Dumbbell Concentration Curl (https://nfpt.com/seated-dumbbell-concentration-curl/, 11/08/2025, lido em 09/10/2026): \"With a dumbbell in your right hand, sit on a flat bench, feet flat on the floor. Lean forward with your right arm extended toward the floor and your elbow straight. Rest your right elbow against the inside of your right thigh (just inside your knee).\"; \"Raise the dumbbell up at a right angle to your thigh. Raise it as high as possible without moving your elbow. Contract your bicep hard. Take two to three seconds to lower the dumbbell down to the extended position.\"; \"If you allow your elbow to rise up as you raise the dumbbell, you will be using your shoulder to move the dumbbell, no longer isolating the bicep.\"",
+  "American Council on Exercise — Seated Biceps Curl (dumbbells), Exercise Library (https://www.acefitness.org/resources/everyone/exercise-library/44/seated-biceps-curl/, lido em 09/10/2026; outra rosca com halter do ACE, citada só pela pegada e pelo punho): \"Grasp two dumbbells with a closed, supinated grip (palms facing forward and thumbs wrapped around the handles)\"; \"Maintain a neutral wrist position (avoid flexion and extension of your wrists)\"",
+  "NSCA: não achei texto aberto da NSCA com a técnica da rosca concentrada; a única menção lida é um exemplo de ensino (Smith A. Teaching for Skill Acquisition in Fitness — Best Practices for Fitness Pedagogy. NSCA Coach 7.4: \"When performing a concentration curl with a dumbbell, if you want the client to supinate the wrist during the second phase of the movement, you can slow down the demonstration\")",
+  "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — valores de referência da AAOS (a mesma fonte do limites.py)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "tecnica_padrao": {
+   "pes_largura": [
+    0.8,
+    3.0
+   ],
+   "joelho_valgo": [
+    -20,
+    130
+   ]
+  },
+  "tecnica_padrao_motivo": "Pernas afastadas, sentado: Yessis — \"Sit on the edge of an exercise bench with your legs apart and feet flat on the floor\"; ExRx — \"Grasp dumbbell between feet\" (o halter fica pendurado entre os pés). Os tornozelos ficam a ~2,8 × a distância entre as articulações do quadril (o padrão vai até 2,6, pensado pra base em pé). O joelho fica bem em cima do tornozelo (canela em pé) e na linha do pé (regra 'joelho em cima do pé' abaixo, joelho_plano_pe ~4 mm); com a coxa aberta e o quadril mais alto que o joelho, a reta quadril → tornozelo passa por baixo e por dentro do joelho e o joelho_valgo (feito pra agachamento em pé) marca ~104 mm 'pra fora' sem nada errado.",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Dumbbell Concentration Curl (\"Sit on bench\"); Yessis — Concentration Curl (\"Sit on the edge of an exercise bench\"); NFPT — Seated Dumbbell Concentration Curl (\"sit on a flat bench\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "parte de trás do braço direito encostada na parte de dentro da coxa direita (encosta sem entrar)",
+    "partes": [
+     "RightArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "ExRx — Dumbbell Concentration Curl (\"Place back of upper arm to inner thigh\"); ACE — Build Your Biceps Workout, Concentration Curl (\"Place the back of your right upper arm against the inside of your inner right thigh\"; \"keeping the upper arm in contact with the inner thigh\"); NFPT — Seated Dumbbell Concentration Curl (\"Rest your right elbow against the inside of your right thigh\"); Yessis — Concentration Curl (\"hold the elbow in place pressed in against the thigh at all times\"); −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM) e 3 mm = o vão máximo de encostar (ENCOSTO_MAX)"
+   },
+   {
+    "nome": "antebraço direito não entra nas pernas (passa por dentro da coxa e do joelho)",
+    "partes": [
+     "RightForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "mão direita (com o halter) não entra nas pernas",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "mão esquerda apoiada em cima do joelho esquerdo (encosta sem entrar)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "Yessis — Concentration Curl (\"Bend over and place the elbow or hand of the left arm on the left thigh for support\"); o vídeo da ExRx mostra a mão esquerda em cima do joelho esquerdo; −2 mm = PENETRA_MM e 3 mm = ENCOSTO_MAX"
+   },
+   {
+    "nome": "braço e antebraço esquerdos não entram nas pernas",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços e mãos não entram no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "mão e antebraço direitos não encostam na cabeça (nem no cabelo) em cima",
+    "partes": [
+     "RightForeArm",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "Weslley (o peso nunca entra no corpo); ExRx — Dumbbell Concentration Curl (\"Raise dumbbell to front of shoulder\"): em cima o halter fica na frente do ombro, não no rosto"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "o halter não encosta no cabelo",
+    "equipamento": "halter",
+    "de": "cabelo",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "Weslley (o peso nunca entra no corpo): o cabelo é uma malha à parte, fora do peso × corpo da checagem"
+   },
+   {
+    "nome": "o halter não encosta no banco",
+    "equipamento": "halter",
+    "de": "banco",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "peça × peça (lição dos lotes anteriores): o halter passa entre os pés, na frente da ponta do banco"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tronco inclinado à frente pelo quadril",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     35,
+     47
+    ],
+    "fonte": "Yessis — Concentration Curl (\"Bend over\"); NFPT — Seated Dumbbell Concentration Curl (\"Lean forward\"); ExRx — Dumbbell Concentration Curl (\"Lean into leg\"). O quanto inclina sai da cena: o ombro desce até a parte de trás do braço alcançar a parte de dentro da coxa; com o quadril dobrado ~126° (dentro dos 130° do limites.py)"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     5
+    ],
+    "fonte": "as fontes da rosca concentrada não falam da cabeça; a cena deixa a cabeça na linha do tronco (o repouso do boneco mede ~−11°, tecnica3d.cabeca_tronco) e assim o rosto fica longe do halter em cima"
+   },
+   {
+    "nome": "cotovelo quase esticado embaixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "D",
+    "t": 0.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx — Dumbbell Concentration Curl (\"Lower dumbbell until arm is fully extended\"); NFPT — Seated Dumbbell Concentration Curl (\"your right arm extended toward the floor and your elbow straight\"; \"lower the dumbbell down to the extended position\"); Yessis — Concentration Curl (\"Start with the elbow bent approximately 160-170\" = 10–20° de flexão; \"be sure you do not fully extend the elbow\"); dica do catálogo (\"desça completo\"). A cena desce até 8°: quase esticado, sem travar"
+   },
+   {
+    "nome": "cotovelo dobrado ao máximo em cima (o pico)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "D",
+    "t": 1.0,
+    "graus": [
+     125,
+     145
+    ],
+    "fonte": "ExRx — Dumbbell Concentration Curl (\"Raise dumbbell to front of shoulder\"); NFPT — Seated Dumbbell Concentration Curl (\"Raise it as high as possible without moving your elbow\"); Yessis — Concentration Curl (\"raise the dumbbell so that it comes close to touching the chest\"); ACE — Build Your Biceps Workout, Concentration Curl (\"curl the dumbbell toward the shoulder\"); dica do catálogo (\"Flexione até o pico\"). A cena sobe até 135°: em cima o halter fica ~22 cm à frente do ombro e ~5 cm acima dele, a mão a ~4 cm do peito, e a pele do antebraço não entra na do bíceps além do vinco do cotovelo"
+   },
+   {
+    "nome": "braço direito parado (só o cotovelo mexe): o mesmo ângulo com o tronco o movimento todo",
+    "medida": "braco_frente",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     45,
+     53
+    ],
+    "fonte": "ACE — Build Your Biceps Workout, Concentration Curl (\"all while keeping the upper arm in contact with the inner thigh\"); NFPT — Seated Dumbbell Concentration Curl (\"If you allow your elbow to rise up as you raise the dumbbell, you will be using your shoulder to move the dumbbell\"); Young et al. 2014 (ACE) (\"the humerus is pressed against the leg and does not allow the upper arm to sway\"); Yessis — Concentration Curl (\"there is only elbow joint flexion\"). Com o tronco inclinado ~41° e o braço quase na vertical, o braço fica ~49° à frente da linha do tronco"
+   },
+   {
+    "nome": "braço direito quase na vertical, pendurado do ombro até a coxa",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     75,
+     83
+    ],
+    "fonte": "ExRx — Dumbbell Concentration Curl (\"Lean into leg to raise elbow slightly\"); vídeo da ExRx: o braço desce do ombro até a parte de dentro da coxa, perto do joelho; a cena põe o cotovelo 8° à frente da vertical e ~8° pra dentro"
+   },
+   {
+    "nome": "braço direito sem abrir pro lado (o cotovelo por dentro da coxa)",
+    "medida": "cotovelo_tronco",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     -12,
+     5
+    ],
+    "fonte": "ExRx — Dumbbell Concentration Curl (\"Place back of upper arm to inner thigh\"); ACE — Build Your Biceps Workout, Concentration Curl (\"against the inside of your inner right thigh\"): o braço passa por dentro da coxa, quase no plano do tronco (− = um pouco pra dentro)"
+   },
+   {
+    "nome": "pegada supinada (palma pra frente, sem virar pro meio: não é a pegada neutra do martelo)",
+    "medida": "palma_dentro",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "Yessis — Concentration Curl (\"underhand (supinated) grip\"); ACE — Build Your Biceps Workout, Concentration Curl (\"With the palm facing forward\"); ACE — Seated Biceps Curl (\"closed, supinated grip (palms facing forward and thumbs wrapped around the handles)\")"
+   },
+   {
+    "nome": "punho reto",
+    "medida": "punho_flexao",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"Maintain a neutral wrist position (avoid flexion and extension of your wrists)\"); as fontes da rosca concentrada não falam do punho"
+   },
+   {
+    "nome": "joelho em cima do pé",
+    "medida": "joelho_plano_pe",
+    "t": "todos",
+    "mm": [
+     -30,
+     30
+    ],
+    "fonte": "sentado com os pés chapados e as pernas afastadas (Yessis — Concentration Curl: \"legs apart and feet flat on the floor\"): o joelho na linha do pé (tecnica3d.joelho_plano_pe)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "sentado no banco, com os dois glúteos no assento (Yessis — Concentration Curl: \"Sit on the edge of an exercise bench\")"
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados na base das clavículas)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "Yessis — Concentration Curl (\"there is only elbow joint flexion\"); o tronco fica parado. A medida usa a base das clavículas: o ombro direito mais baixo (cintura escapular abaixada, ESCAPULA da cena) não conta como giro do tronco"
+   }
+  ]
+ }
+}

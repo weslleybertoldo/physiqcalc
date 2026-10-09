@@ -508,6 +508,42 @@ def linha_joelho_quadril_cabeca(j):
 MEDIDAS.update({"linha_joelho_quadril_cabeca": linha_joelho_quadril_cabeca})
 
 
+# ── flexão de braço (lote 7, 08/10/2026): de bruços, apoiado nas mãos e na ponta dos pés, o corpo fica reto da cabeça ao calcanhar,
+# sem o quadril cair nem subir (ACE, Push-up: "Do not allow your low back to sag or your hips to hike upwards"), com as mãos
+# espalmadas no chão e os dedos pra frente ou um pouco pra dentro (ACE: "with your fingers facing forward or turned slightly
+# inward"). O linha_joelho_quadril_cabeca mede o ângulo no quadril; aqui é a distância do quadril até a reta do corpo.
+def quadril_linha_ombro_tornozelo(j):
+    """Centro das articulações do quadril acima (+, pro lado das costas) ou abaixo (−, pro lado da barriga) da reta ombro → tornozelo
+    (do meio das cabeças do úmero ao meio dos tornozelos), no eixo frente do tronco, mm: 0 = quadril na linha do corpo; de bruços
+    (flexão de braço), + = o quadril subiu e − = o quadril caiu (lombar afundando). No referencial do tronco: vale em pé, deitado ou
+    inclinado; o boneco em pé, no repouso, mede ~+21 (o quadril fica 2 cm atrás da reta, com o joelho dobrado 7°)."""
+    _, _, frente = eixos_tronco(j)
+    ombro = (j["LeftArm"] + j["RightArm"]) / 2
+    pe = (j["LeftFoot"] + j["RightFoot"]) / 2
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    u = _u(ombro - pe)
+    d = (quadril - pe) - u * float((quadril - pe) @ u)
+    return [-float(d @ frente) * 1000]
+
+
+def dedos_mao_dentro(j):
+    """Dedos da mão (punho → base do dedo médio, vistos de cima, no plano do chão) virados pra dentro (+, pro meio do corpo) ou pra
+    fora (−) em relação à direção da cabeça (quadril → pescoço, no chão), graus [E, D]: 0 = dedos apontando pra frente, na direção
+    da cabeça. É a mão espalmada no chão da flexão de braço; com o tronco em pé (na vertical) a medida perde o sentido."""
+    frente_chao = _u(_chao(j["Neck"] - j["Hips"]))
+    lado = _chao(j["RightArm"] - j["LeftArm"])
+    lado = _u(lado - frente_chao * (lado @ frente_chao))
+    out = []
+    for L, s in LADOS:
+        d = _chao(j[L + "HandMiddle1"] - j[L + "Hand"])
+        out.append(math.degrees(math.atan2(float(d @ (-s * lado)), float(d @ frente_chao))))
+    return out
+
+
+MEDIDAS.update({"quadril_linha_ombro_tornozelo": quadril_linha_ombro_tornozelo, "dedos_mao_dentro": dedos_mao_dentro})
+UNIDADE.update({"quadril_linha_ombro_tornozelo": "mm"})
+
+
 # ── cadeira abdutora (lote 4, 06/10/2026): sentado, com o quadril dobrado ~90° e a coxa deitada, abrir as pernas é a coxa girando
 # em volta da vertical que passa pela articulação do quadril (ExRx, Lever Seated Hip Abduction: "Move legs apart as far as
 # possible"). O "quadril" do checagem3d.medir_juntas (coxa × tronco) quase não muda nesse giro e o pes_base_lateral mede os pés,
@@ -527,3 +563,36 @@ def coxa_abertura(j):
 
 
 MEDIDAS.update({"coxa_abertura": coxa_abertura})
+
+
+# ── agachamento sumô com halteres (lote 7, 08/10/2026): pés bem afastados e virados ~45° pra fora, com o joelho em cima do pé e sem
+# passar da frente dele (ACE, Dumbbell Sumo Squat: "the toes pointed out to the sides about 45 degrees"; "keep the knees in line with
+# the ankles while in the squat position and do not let the knee cross in front of the foot"; ExRx, Dumbbell Squat: "Knees should
+# point same direction as feet throughout movement"). Com a base larga e a perna dobrada, o joelho_valgo (joelho × reta quadril →
+# tornozelo) dá +24 cm sem nada errado, e o joelho_fora_do_pe mede de lado a lado da PELVE — com o pé virado, isso mistura o joelho
+# ir pra frente (na direção do pé) com ir pro lado. Aqui as 2 medidas ficam no referencial do PRÓPRIO pé, visto de cima.
+def _pe_frente_fora(j, L, s):
+    """Direção do pé `L` (tornozelo → base dos dedos, no chão) e a normal dela no chão apontando pra fora do corpo."""
+    lado, _ = eixos_pelve(j)
+    p = _u(_chao(j[L + "ToeBase"] - j[L + "Foot"]))
+    n = np.cross(CIMA, p)
+    return p, (n if float(n @ (s * lado)) >= 0 else -n)
+
+
+def joelho_plano_pe(j):
+    """Centro do joelho pra fora (+) ou pra dentro (−, valgo) do plano vertical do pé — o que passa pelo tornozelo na direção
+    tornozelo → base dos dedos —, mm [E, D]: 0 = joelho bem em cima da linha do pé, com o pé virado pra fora ou não."""
+    return [float((j[L + "Leg"] - j[L + "Foot"]) @ _pe_frente_fora(j, L, s)[1]) * 1000 for L, s in LADOS]
+
+
+def joelho_alem_dos_dedos(j):
+    """Centro do joelho à frente (+) ou atrás (−) da ponta dos dedos (ponta do osso ToeBase), ao longo da direção do pé vista de
+    cima, mm [E, D]: + = o joelho passou da frente do pé. Sem a ponta dos dedos nas juntas (dicionários antigos dos testes),
+    devolve []."""
+    if "LeftToeBase_ponta" not in j or "RightToeBase_ponta" not in j:
+        return []
+    return [float((j[L + "Leg"] - j[L + "ToeBase_ponta"]) @ _pe_frente_fora(j, L, s)[0]) * 1000 for L, s in LADOS]
+
+
+MEDIDAS.update({"joelho_plano_pe": joelho_plano_pe, "joelho_alem_dos_dedos": joelho_alem_dos_dedos})
+UNIDADE.update({"joelho_plano_pe": "mm", "joelho_alem_dos_dedos": "mm"})

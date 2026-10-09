@@ -520,6 +520,31 @@ def test_linha_joelho_quadril_cabeca_na_flexao_nordica():
     assert "linha_joelho_quadril_cabeca" in tc.MEDIDAS
 
 
+def test_quadril_na_reta_e_dedos_da_mao_na_flexao_de_braco():
+    """Flexão de braço (lote 7): ombros, quadril e tornozelos numa reta = 0; o quadril 3 cm pras costas (subiu) = +30, pra barriga
+    (caiu) = −30; o mesmo número de bruços, inclinado 10° (a cabeça mais alta), ou virado em volta da vertical. Mãos espalmadas no
+    chão: dedos na direção da cabeça = 0; virados 10° pro meio do corpo = +10 nas duas mãos; pra fora = −."""
+    j = em_pe()                                                   # ombros, quadril e tornozelos no eixo x = 0, y = 0
+    assert tc.quadril_linha_ombro_tornozelo(j) == pytest.approx([0], abs=1e-6)
+    for mm, dy in ((30, 0.03), (-30, -0.03)):                     # em pé, as costas ficam pra +Y
+        k = dict(j, **{L + "UpLeg": j[L + "UpLeg"] + np.array([0, dy, 0]) for L in ("Left", "Right")})
+        assert tc.quadril_linha_ombro_tornozelo(k) == pytest.approx([mm], abs=1e-6)
+        de_brucos = girar(k, 80, (1, 0, 0))                       # cabeça pra −Y, costas pra cima, a cabeça 10° acima dos pés
+        assert de_brucos["Neck"][1] < -1.0 and de_brucos["Neck"][2] > 0.2
+        assert tc.quadril_linha_ombro_tornozelo(de_brucos) == pytest.approx([mm], abs=1e-6)
+        assert tc.quadril_linha_ombro_tornozelo(girar(de_brucos, 35, (0, 0, 1))) == pytest.approx([mm], abs=1e-6)
+    j = girar(em_pe(), 80, (1, 0, 0))
+    for L, s in (("Left", 1), ("Right", -1)):                     # mão espalmada no chão, ao lado do ombro
+        j[L + "Hand"] = np.array([s * 0.28, -1.20, 0.03])
+    for graus in (0, 10, -15):
+        for L, s in (("Left", 1), ("Right", -1)):                 # "pra dentro" = −s·x (o esquerdo fica em +X)
+            a = math.radians(graus)
+            j[L + "HandMiddle1"] = j[L + "Hand"] + 0.11 * np.array([-s * math.sin(a), -math.cos(a), 0.0])
+        assert tc.dedos_mao_dentro(j) == pytest.approx([graus, graus], abs=1e-6)
+        assert tc.dedos_mao_dentro(girar(j, 50, (0, 0, 1))) == pytest.approx([graus, graus], abs=1e-6)
+    assert {"quadril_linha_ombro_tornozelo", "dedos_mao_dentro"} <= set(tc.MEDIDAS)
+
+
 def sentado_coxas(graus_e, graus_d):
     """Sentado olhando pra −Y: coxas deitadas (joelho na altura do quadril) abertas `graus` pra fora, canelas em pé."""
     j = dict(em_pe())
@@ -539,3 +564,28 @@ def test_coxa_abertura_sentado_na_abdutora():
     assert tc.coxa_abertura(sentado_coxas(25, -5)) == pytest.approx([25, -5], abs=1e-6)
     assert tc.coxa_abertura(girar(sentado_coxas(40, 30), 65, (0, 0, 1))) == pytest.approx([40, 30], abs=1e-6)
     assert "coxa_abertura" in tc.MEDIDAS
+
+
+def test_joelho_no_plano_do_pe_e_alem_dos_dedos_no_agachamento_sumo():
+    """Agachamento sumô (lote 7): pés virados 45° pra fora. Joelho em cima da linha do pé (tornozelo → base dos dedos) = 0, com o
+    pé reto ou virado; joelho 2 cm pra dentro dessa linha (valgo) = −20, 2 cm pra fora = +20; o mesmo número com o boneco virado
+    em volta da vertical. O joelho_alem_dos_dedos mede ao longo do pé até a ponta dos dedos: atrás = −, passou = +."""
+    j = em_pe()
+    for L in ("Left", "Right"):
+        j[L + "ToeBase_ponta"] = j[L + "ToeBase"] + np.array([0, -0.05, -0.01])
+    assert tc.joelho_plano_pe(j) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.joelho_alem_dos_dedos(j) == pytest.approx([-170, -170], abs=1e-6)       # joelho 2 cm à frente do tornozelo
+    for L, s in (("Left", 1), ("Right", -1)):                                          # pés 45° pra fora, joelho em cima do pé
+        j = pe_virado(j, L, 45)
+        j[L + "ToeBase_ponta"] = girar({"t": j[L + "ToeBase_ponta"]}, s * 45, (0, 0, 1), j[L + "Foot"])["t"]
+        p = np.array([s * math.sin(math.radians(45)), -math.cos(math.radians(45)), 0.0])
+        j[L + "Leg"] = j[L + "Foot"] + 0.12 * p + np.array([0, 0, 0.40])
+    assert tc.joelho_plano_pe(j) == pytest.approx([0, 0], abs=1e-6)
+    ate_ponta = float(np.linalg.norm((j["LeftToeBase_ponta"] - j["LeftFoot"])[:2]))
+    assert tc.joelho_alem_dos_dedos(j) == pytest.approx([(0.12 - ate_ponta) * 1000] * 2, abs=1e-6)
+    fora = np.array([math.cos(math.radians(45)), math.sin(math.radians(45)), 0.0])     # normal do pé esquerdo, pra fora
+    j2 = dict(j, LeftLeg=j["LeftLeg"] - 0.02 * fora, RightLeg=j["RightLeg"] + 0.02 * fora * np.array([-1, 1, 1]))
+    assert tc.joelho_plano_pe(j2) == pytest.approx([-20, 20], abs=1e-6)
+    assert tc.joelho_plano_pe(girar(j2, 70, (0, 0, 1))) == pytest.approx([-20, 20], abs=1e-6)
+    assert tc.joelho_alem_dos_dedos(em_pe()) == []
+    assert {"joelho_plano_pe", "joelho_alem_dos_dedos"} <= set(tc.MEDIDAS)

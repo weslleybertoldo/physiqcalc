@@ -75,16 +75,23 @@ def barra(nome="barra", comprimento=2.0, raio_anilha=0.2, larg_anilha=0.05, pega
     return raiz
 
 
-def halter(nome="halter", pegada=0.13, raio=0.016, raio_anilha=0.07, larg_anilha=0.05):
-    """Halter ao longo do X, pegada no meio, centrado na origem do vazio devolvido (lotes de 04/10/2026)."""
+def halter(nome="halter", pegada=0.13, raio=0.016, raio_anilha=0.07, larg_anilha=0.05, chanfro=0.0):
+    """Halter ao longo do X, pegada no meio, centrado na origem do vazio devolvido (lotes de 04/10/2026).
+    chanfro > 0 (lote 7, 08/10/2026): a borda das anilhas fica arredondada (BEVEL, como a caixa()) — o halter que
+    também é APOIO das mãos (tríceps francês com halter: as palmas embaixo da anilha de cima) precisa disso, porque a
+    medida de zona de apoio erra o sinal em quina viva; 0 = sem chanfro, como sempre."""
     raiz = bpy.data.objects.new(nome, None)
     bpy.context.scene.collection.objects.link(raiz)
     rot = (0, math.radians(90), 0)
     _cilindro(nome + "_eixo", raio, pegada + 2 * larg_anilha + 0.02, (0, 0, 0), rot, mat_aco(), pai=raiz)
     for s in (-1, 1):
         x = s * (pegada / 2 + larg_anilha / 2)
-        _cilindro(nome + "_anilha%+d" % s, raio_anilha, larg_anilha, (x, 0, 0), rot, mat_borracha(), vertices=40,
-                  pai=raiz)
+        a = _cilindro(nome + "_anilha%+d" % s, raio_anilha, larg_anilha, (x, 0, 0), rot, mat_borracha(), vertices=40,
+                      pai=raiz)
+        if chanfro:
+            m = a.modifiers.new("chanfro", "BEVEL")
+            m.width = chanfro
+            m.segments = 3
     return raiz
 
 
@@ -4949,3 +4956,295 @@ def triangulo_polia(nome="triangulo", raio=0.015, entre=0.14, pegada=0.12, compr
     bpy.context.view_layer.update()
     return Triangulo(raiz, eng, pegadores, raio, meia, entre, y_furo, y_m + 0.058)
 # ===== fim: Remada baixa na polia ===================================================================================================
+
+
+# ===== Hack ==========================================================================================================================
+# ── HACK (Agachamento no Hack, lote 7, 08/10/2026): o sled hack squat ─────────────────────────────────────────────────────────────────
+# Máquina de agachar com as costas apoiadas: 2 TRILHOS inclinados (barras redondas, como os do leg_press_45: Hammer Strength Plate
+# Loaded Hack Squat PL-HSQ2: "a 45-degree pressing angle and ultra-smooth linear bearings"), o CARRINHO que corre neles — as 2 luvas de
+# rolamento abraçando os trilhos, o chassi atrás do ENCOSTO (costas, com o APOIO DA CABEÇA em cima: Sorinex Hack Squat Machine,
+# "Elevated Head Pad: Ergonomically positioned for improved comfort and body alignment during lifts."), as 2 OMBREIRAS em cima dos
+# ombros (ExRx, Sled Hack Squat: "Lie supine on back pad with shoulders under shoulder pad."; Atlantis PW412 Hack Squat Pro: "Shoulder
+# pads are strategically angled to alleviate stress on trapezius muscles.") com o PEGADOR na frente de cada uma, e os 2 pinos de anilha
+# (Hammer Strength PL-HSQ2: "The two XL weight rods can handle up to eight 45 lb plates per side"; sem anilha: a visão das pernas fica
+# livre) — e a PLATAFORMA dos pés embaixo, PARADA, as TRAVAS nos trilhos (o batente onde o carrinho para, logo abaixo do fim do curso),
+# a base no chão e os postes que seguram as 2 pontas dos trilhos (cada trilho em cima de uma viga inclinada). Diferença do leg press:
+# no hack quem anda é o carrinho com o corpo em cima (as costas não escorregam no encosto: ExRx, "To lower sled, bend hips and knees");
+# a plataforma fica parada. Como as outras máquinas, a cena monta a peça EM VOLTA do corpo: ela dá a face do encosto (glúteo, sacro e
+# costas), a do apoio da cabeça, as ombreiras (em cima dos ombros), os pegadores (onde as mãos fecham), a plataforma (onde as solas
+# encostam) e o curso; a peça liga tudo com a estrutura.
+# Medidas de máquina de verdade: trilhos a 45° do chão (Hammer Strength PL-HSQ2: "a 45-degree pressing angle"); a plataforma inclinada
+# como uma cunha embaixo do calcanhar em relação à reta ⟂ aos trilhos (PL-HSQ2: "Its adjustable foot platform shifts 8 degrees, giving
+# athletes the equivalent of both a 3°and 10° heel wedge"); plataforma de 25,25" × 23,25", encosto de 11,5" de largura e 2,75" de
+# estofado, pegador de 31 mm e 8", pino de anilha de 50 mm e 9,75" (Titan Plate-Loaded Linear Hack Squat Machine: "Footplate Dimensions
+# 25.25-in x 23.25-in.", "Back Pad Dimensions 20-in x 11.5-in x 2.75-in.", "Handle Diameter 31mm", "Handle Length 8-in.", "Weight
+# Sleeve Diameter 50mm", "Weight Sleeve Length 9.75-in."); ombreiras de 12" × 5" (Hoist RPL-5405, a da panturrilha_em_pe: "12" X 5"
+# MOLDED PAD"); máquina de ~2,2 m × 1,5 m de altura (PL-HSQ2: "Dimensions (L x W x H): 85 x 61 x 59 in (216 x 155 x 153 cm)"). O
+# comprimento do encosto e do apoio da cabeça, a saliência do apoio da cabeça, a espessura das ombreiras (3", a da panturrilha_em_pe),
+# luvas, chassi, postes, travas, o garfo das ombreiras e a base são escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga): a
+# checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y, com as costas no encosto; s = +1 é o lado +X, o ESQUERDO dela):
+#   hk = e3.hack("hack", angulo=45, encosto=(...), cabeceira=(...), ombreiras=(...), pegadores=(...), plataforma=(...),
+#                trilhos=(...), curso=(...))
+#   no pose(t): hk.mover(metros)           # carrinho, encosto e ombreiras andam no trilho a partir da montagem (< 0 = descem)
+#   Cena(pose, hk.equipamentos, pegadas=[("Left", ck.Barra(hk.pegadores[1], hk.raio_pegador, hk.meia_pegador, eixo=(0, 0, 1))),
+#        ...], apoios=hk.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_plataforma" (parada; APOIO: as solas), "<nome>_carrinho" (anda; não encosta no corpo, fora as mãos nos pegadores),
+# "<nome>_encosto" (anda junto; APOIO: glúteo, costas e cabeça) e "<nome>_ombreiras" (anda junto; APOIO: o topo dos ombros). As luvas
+# do carrinho abraçam os trilhos (o trilho passa por dentro delas): a checagem do corpo não mede peça × peça. A plataforma e as
+# ombreiras têm as quinas chanfradas (a medida da zona de apoio erra o sinal em quina viva).
+class Hack:
+    """Hack (sled hack squat) pronto na cena (hack())."""
+
+    def __init__(self, raizes, direcao, pegadores, raio_pegador, meia_pegador):
+        self.raizes = raizes              # {"estrutura", "plataforma", "carrinho", "encosto", "ombreiras"}
+        self.equipamentos = [raizes["estrutura"], raizes["carrinho"]]
+        self.apoios = [raizes[k] for k in ("encosto", "ombreiras", "plataforma")]
+        self.direcao = Vector(direcao)    # ao longo dos trilhos, subindo (unitário)
+        self.pegadores = pegadores        # {+1: pegador do lado +X, −1: do lado −X}; eixo de cada um no Z local
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.deslocamento = 0.0
+        self._M0 = {k: raizes[k].matrix_world.copy() for k in ("carrinho", "encosto", "ombreiras")}
+
+    def mover(self, metros):
+        """Carrinho, encosto e ombreiras `metros` ao longo dos trilhos a partir da montagem (> 0 sobe, < 0 desce)."""
+        T = Matrix.Translation(self.direcao * metros)
+        for k, M in self._M0.items():
+            self.raizes[k].matrix_world = T @ M
+        self.deslocamento = metros
+        bpy.context.view_layer.update()
+
+
+def hack(nome="hack", angulo=45.0, encosto=None, gluteo=None, cabeceira=None, ombreiras=None, pegadores=None, plataforma=None,
+         trilhos=(0.21, 0.20, 0.025), curso=(-0.35, 0.0), luva=(0.20, 0.30), pinos=(0.40, 0.025, 0.248)):
+    """Hack (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      angulo     = ângulo dos trilhos com o chão (graus): o carrinho sobe na direção D = (0, cos, sen), pra trás de quem está nele;
+                   a face do encosto é paralela aos trilhos, com a normal F = (0, −sen, cos) (pro corpo);
+      encosto    = (base, comprimento, largura, espessura): base = ponto da FACE do encosto na ponta de baixo (no meio, x = 0); a face
+                   sobe ao longo de D por `comprimento` m;
+      gluteo     = None ou (comprimento, saliencia): o encosto em 2 almofadas (como o "Seat Pad" e o "Back Pad" do Titan) — a de baixo,
+                   do glúteo e do sacro, da base até `comprimento` m ao longo de D, com a face `saliencia` m na frente da face do
+                   encosto (a pele do glúteo do boneco sai pra frente quando o quadril dobra: a almofada saliente segue encostando), e a
+                   de cima, das costas, até o fim do encosto;
+      cabeceira  = None ou (s, comprimento, largura, saliencia): apoio da cabeça, de `s` a `s + comprimento` m ao longo de D a partir da
+                   base do encosto, com a face `saliencia` m na frente da face do encosto (o estofado vai da face até o plano de trás
+                   do encosto);
+      ombreiras  = (centro, normal, (comprimento, largura, espessura)): centro da face de BAIXO da ombreira ESQUERDA (x > 0; a da
+                   direita é o espelho em x), a normal dessa face pra dentro da ombreira (ao longo de D, virada pro lado de fora como a
+                   inclinação do ombro) e as medidas — comprimento ao longo da frente (F), largura de lado a lado;
+      pegadores  = (centro, eixo, comprimento, raio): centro e direção do pegador ESQUERDO (o direito é o espelho), o eixo indo pra
+                   frente (e descendo); um tubo de aço sai da frente da viga em cima da ombreira até a ponta de trás dele;
+      plataforma = (centro, normal, largura, profundidade, espessura): centro da FACE da plataforma (onde as solas encostam) e a normal
+                   dela pra cima (pros pés); largura ao longo do X, profundidade ao longo da plataforma (pra frente, X × normal);
+      trilhos    = (x, recuo, raio): os 2 trilhos em x = ±x, com o eixo `recuo` m atrás da face do encosto (ao longo de −F),
+                   paralelos a D;
+      curso      = (d_min, d_max): até onde o carrinho anda a partir da montagem (m, ao longo de D; < 0 = desce): os trilhos cobrem as
+                   luvas nas 2 pontas e a trava fica logo abaixo de d_min;
+      luva       = (s, comprimento): o meio de cada luva a `s` m da base do encosto ao longo de D, e o comprimento dela;
+      pinos      = None ou (s, raio, comprimento): um pino de anilha de cada lado do carrinho, a `s` m da base do encosto ao longo de D,
+                   pra fora (±X), sem anilha.
+    Devolve um Hack (raizes, equipamentos, apoios, pegadores, mover())."""
+    if encosto is None or ombreiras is None or pegadores is None or plataforma is None:
+        raise ValueError("hack: encosto, ombreiras, pegadores e plataforma vêm da cena (a peça é montada em volta do corpo)")
+    a = math.radians(angulo)
+    D = Vector((0.0, math.cos(a), math.sin(a)))               # ao longo dos trilhos, subindo
+    F = Vector((0.0, -math.sin(a), math.cos(a)))              # normal da face do encosto (pro corpo)
+    X = Vector((1.0, 0.0, 0.0))
+    cima = Vector((0.0, 0.0, 1.0))
+    rot_D = D.to_track_quat("Z", "Y").to_euler()              # cilindro ao longo de D
+    rot_X = (0, math.radians(90), 0)                          # cilindro ao longo de X
+
+    def espelho(v):
+        return Vector((-v.x, v.y, v.z))
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, pla, car, enc, omb = (raiz_nova(k) for k in ("estrutura", "plataforma", "carrinho", "encosto", "ombreiras"))
+    rot_e = _rot_de(X, D, F)                                  # caixa: X local = X, Y local = D, Z local = F
+
+    # ── encosto (APOIO, anda): estofado das costas e o apoio da cabeça em cima, saliente ─────────────────────────────────────────
+    b_e, comp_e, larg_e, esp_e = encosto
+    b_e = Vector(b_e)
+    if gluteo is None:
+        estofados = [caixa(nome + "_encosto_estofado", b_e + D * (comp_e / 2) - F * (esp_e / 2), (larg_e, comp_e, esp_e),
+                           mat_estofado(), rot=rot_e, chanfro=0.015)]
+    else:
+        comp_g, sai_g = gluteo
+        estofados = [caixa(nome + "_encosto_gluteo", b_e + D * (comp_g / 2) + F * ((sai_g - esp_e) / 2), (larg_e, comp_g, esp_e + sai_g),
+                           mat_estofado(), rot=rot_e, chanfro=0.015),
+                     caixa(nome + "_encosto_estofado", b_e + D * ((comp_g + 0.012 + comp_e) / 2) - F * (esp_e / 2),
+                           (larg_e, comp_e - comp_g - 0.012, esp_e), mat_estofado(), rot=rot_e, chanfro=0.015)]
+    topo_chapa = comp_e
+    if cabeceira is not None:
+        s_c, comp_c, larg_c, sai_c = cabeceira
+        prof_c = sai_c + esp_e                                # da face (saliente) até o plano de trás do encosto
+        estofados.append(caixa(nome + "_cabeceira", b_e + D * (s_c + comp_c / 2) + F * (sai_c - prof_c / 2), (larg_c, comp_c, prof_c),
+                               mat_estofado(), rot=rot_e, chanfro=0.015))
+        topo_chapa = max(topo_chapa, s_c + comp_c)
+    _prender(estofados, enc)
+
+    # ── carrinho (anda): chapa atrás do encosto, 2 longarinas, travessas, luvas nos trilhos, garfo das ombreiras, pegadores e pinos ─
+    x_t, recuo, raio_t = trilhos
+    d0, d1 = curso
+    s_l, L_luva = luva
+    pecas = []
+    f_chapa = -(esp_e + 0.012)                                # meio da chapa de aço (24 mm) atrás do estofado
+    pecas.append(_em_aneis(_reto(caixa(nome + "_chapa", b_e + D * (comp_e / 2) + F * f_chapa, (larg_e - 0.03, comp_e - 0.02, 0.024),
+                                       mat_estrutura(), rot=rot_e, chanfro=0)), passo=0.06))
+    if topo_chapa > comp_e:                                   # a de cima, estreita (do encosto até o alto do apoio da cabeça): as
+        larg_a = (larg_c if cabeceira is not None else larg_e) - 0.03   # ombreiras ficam dos lados dela, sem encostar
+        pecas.append(_em_aneis(_reto(caixa(nome + "_chapa_alta", b_e + D * ((comp_e - 0.06 + topo_chapa - 0.01) / 2) + F * f_chapa,
+                                           (larg_a, topo_chapa - 0.01 - comp_e + 0.06, 0.024), mat_estrutura(), rot=rot_e,
+                                           chanfro=0)), passo=0.06))
+    f_long = f_chapa - 0.012 - 0.025                          # longarinas (5 × 5 cm) atrás da chapa, em cima dos trilhos
+    s0_l, s1_l = 0.02, max(s_l + L_luva / 2 + 0.06, topo_chapa - 0.30)
+    for s in (1, -1):
+        pecas.append(_caixa_ao_longo(nome + "_longarina%+d" % s, b_e + X * (s * x_t) + D * s0_l + F * f_long,
+                                     b_e + X * (s * x_t) + D * s1_l + F * f_long, 0.05, 0.05, F, mat_estrutura()))
+    for k, s_ in enumerate((0.05, s_l, s1_l - 0.03)):          # travessas de uma longarina à outra, atrás da chapa
+        pecas.append(_caixa_ao_longo(nome + "_travessa%d" % k, b_e + X * (x_t + 0.025) + D * s_ + F * f_long,
+                                     b_e - X * (x_t + 0.025) + D * s_ + F * f_long, 0.05, 0.05, F, mat_estrutura()))
+    for s in (1, -1):                                         # luva de rolamento em cada trilho + raspadores de borracha
+        eixo_s = b_e + X * (s * x_t) - F * recuo
+        c_luva = eixo_s + D * s_l
+        pecas.append(_em_aneis(_cilindro(nome + "_luva%+d" % s, raio_t + 0.022, L_luva, c_luva, rot_D, mat_estrutura(), vertices=32),
+                               passo=0.05))
+        for k in (-1, 1):
+            pecas.append(_cilindro(nome + "_luva_tampa%+d%+d" % (s, k), raio_t + 0.026, 0.014, c_luva + D * (k * (L_luva / 2 + 0.007)),
+                                   rot_D, mat_borracha(), vertices=32))
+        # orelha que liga a luva à longarina (de cima da luva até a face de trás da longarina)
+        p_a, p_b = c_luva + F * (raio_t + 0.018), b_e + X * (s * x_t) + D * s_l + F * (f_long - 0.02)
+        if (p_b - p_a).dot(F) > 0.005:
+            pecas.append(_caixa_ao_longo(nome + "_luva_orelha%+d" % s, p_a, p_b, 0.04, 0.12, X, mat_estrutura()))
+    if pinos is not None:                                     # pino de anilha de cada lado, pra fora da longarina
+        s_p, raio_p_, comp_pino = pinos
+        for s in (1, -1):
+            c0 = b_e + X * (s * (x_t + 0.025)) + D * s_p + F * f_long
+            pecas.append(_reto(caixa(nome + "_pino_base%+d" % s, c0 + X * (s * 0.045), (0.09, 0.07, 0.07), mat_estrutura(), rot=rot_e,
+                                     chanfro=0)))
+            x0 = s * (x_t + 0.025 + 0.09)
+            pecas.append(_em_aneis(_cilindro(nome + "_pino%+d" % s, raio_p_, comp_pino, Vector((x0 + s * comp_pino / 2, c0.y, c0.z)),
+                                             rot_X, mat_aco(), vertices=24), passo=0.04))
+            pecas.append(_cilindro(nome + "_pino_colar%+d" % s, 0.06, 0.016, Vector((x0 + s * 0.008, c0.y, c0.z)), rot_X, mat_aco(),
+                                   vertices=32))
+
+    # garfo das ombreiras: travessa atrás das ombreiras (presa na chapa) e uma viga em cima de cada ombreira até a frente dela
+    c_o, n_o, (comp_o, larg_o, esp_o) = ombreiras
+    c_o, n_o = Vector(c_o), Vector(n_o).normalized()
+    c_p, e_p, comp_p, raio_p = pegadores
+    c_p, e_p = Vector(c_p), Vector(e_p).normalized()
+    ombs, pegs, frentes = [], {}, {}
+    h = esp_o + 0.012 + 0.02                                  # meio da viga do garfo (4 × 4 cm) acima da face de baixo da ombreira
+    for s in (1, -1):
+        c = c_o if s > 0 else espelho(c_o)
+        n = n_o if s > 0 else espelho(n_o)
+        u = (F - n * n.dot(F)).normalized()                   # ao longo da ombreira, pra frente
+        w = u.cross(n)
+        R = _rot_de(w, u, n)
+        ombs.append(caixa(nome + "_ombreira%+d" % s, c + n * (esp_o / 2), (larg_o, comp_o, esp_o), mat_estofado(), rot=R,
+                          chanfro=0.02))
+        pecas.append(_reto(caixa(nome + "_ombreira_chapa%+d" % s, c + n * (esp_o + 0.006), (larg_o - 0.02, comp_o - 0.03, 0.012),
+                                 mat_aco(), rot=R, chanfro=0)))
+        a_frente = c + n * h + u * (comp_o / 2 - 0.01)
+        # a viga vai da frente da ombreira até a travessa atrás dela (no plano da longarina, atrás da chapa)
+        a_tras = c + n * h - u * ((c + n * h - b_e).dot(F) - f_long + 0.025) / max(u.dot(F), 0.3)
+        pecas.append(_caixa_ao_longo(nome + "_garfo%+d" % s, a_tras, a_frente, 0.04, 0.04, w, mat_estrutura()))
+        pecas.append(caixa(nome + "_garfo_tampa%+d" % s, a_frente + u * 0.003, (0.044, 0.006, 0.044), mat_borracha(), rot=R,
+                           chanfro=0.001))
+        frentes[s] = (a_tras, a_frente, u)
+        # pegador: tubo de aço saindo da frente da viga da ombreira até a ponta de trás do pegador de borracha (a da frente, livre)
+        cp = c_p if s > 0 else espelho(c_p)
+        ep = e_p if s > 0 else espelho(e_p)
+        T, B = cp - ep * (comp_p / 2), cp + ep * (comp_p / 2)
+        pontos = _dobrar([a_frente - u * 0.02, a_frente, T - ep * 0.02, T, B + ep * 0.008], 0.03)
+        pecas.append(_tubo_caminho(nome + "_garfo_tubo%+d" % s, pontos, 0.0127, mat_aco(), lados=16))
+        pegs[s] = _em_aneis(tubo(nome + "_pegador%+d" % s, T, B, raio_p, mat_borracha(), vertices=32), passo=0.035)
+        pecas.append(pegs[s])
+        for k, (P_, sg) in enumerate(((T, -1.0), (B, 1.0))):                              # bordas da luva de borracha
+            pecas.append(tubo(nome + "_pegador_borda%+d%d" % (s, k), P_ + ep * (sg * 0.001), P_ + ep * (sg * 0.011), raio_p + 0.003,
+                              mat_borracha(), vertices=32))
+    # travessa do garfo: de uma viga à outra, atrás das ombreiras, encostada na chapa
+    t1, t2 = frentes[1][0], frentes[-1][0]
+    pecas.append(_caixa_ao_longo(nome + "_garfo_travessa", t1 + X * 0.02, t2 - X * 0.02, 0.05, 0.05, F, mat_estrutura()))
+    for s in (1, -1):                                         # da travessa do garfo até a longarina (desce ao longo de −D)
+        p_top = frentes[s][0]
+        p_bot = b_e + X * (s * x_t) + D * (s1_l - 0.02) + F * f_long
+        pecas.append(_caixa_ao_longo(nome + "_garfo_poste%+d" % s, p_top, p_bot, 0.05, 0.05, F, mat_estrutura()))
+    _prender(pecas, car)
+    _prender(ombs, omb)
+
+    # ── plataforma (APOIO, parada): chapa antiderrapante inclinada, num quadro com 2 longarinas e os pés até a base ─────────────────
+    c_pl, n_pl, larg_pl, prof_pl, esp_pl = plataforma
+    c_pl, n_pl = Vector(c_pl), Vector(n_pl).normalized()
+    P_f = X.cross(n_pl).normalized()                          # ao longo da plataforma, pra frente (pras pontas dos pés)
+    rot_pl = _rot_de(X, P_f, X.cross(P_f))                    # destro: o Z local é −n_pl (a espessura da caixa vale nos 2 sentidos)
+    caixa(nome + "_plataforma_chapa", c_pl - n_pl * (esp_pl / 2), (larg_pl, prof_pl, esp_pl), mat_aco(), rot=rot_pl, pai=pla,
+          chanfro=0.004)
+    f_baixo = -(esp_pl + 0.032)                               # longarinas (6 × 6 cm) embaixo da chapa, 2 mm abaixo dela
+    cantos = {}
+    for s in (1, -1):
+        A_ = c_pl + X * (s * (larg_pl / 2 - 0.06)) + n_pl * f_baixo - P_f * (prof_pl / 2 - 0.03)
+        B_ = c_pl + X * (s * (larg_pl / 2 - 0.06)) + n_pl * f_baixo + P_f * (prof_pl / 2 - 0.03)
+        _prender([_caixa_ao_longo(nome + "_plataforma_longarina%+d" % s, A_, B_, 0.06, 0.06, X, mat_estrutura())], estr)
+        cantos[s] = (A_, B_)
+        for k, P_ in enumerate((A_, B_)):                     # pés da plataforma, de baixo da longarina até a base
+            _viga(nome + "_plataforma_pe%+d%d" % (s, k), P_ - n_pl * 0.03 - cima * 0.035, Vector((P_.x, P_.y, 0.06)), 0.06, 0.06,
+                  mat_estrutura(), pai=estr)
+    for k in (0, 1):
+        _prender([_caixa_ao_longo(nome + "_plataforma_travessa%d" % k, cantos[1][k] - X * 0.03, cantos[-1][k] + X * 0.03, 0.06, 0.06,
+                                  n_pl, mat_estrutura())], estr)
+
+    # ── trilhos (parados) e as travas: barras redondas paralelas a D, atrás do encosto ─────────────────────────────────────────────
+    d_baixo = d0 + s_l - L_luva / 2 - 0.13                    # ponta de baixo do trilho (ao longo de D, a partir da base do encosto)
+    d_cima = d1 + s_l + L_luva / 2 + 0.28                     # ponta de cima (passa da luva no topo do curso)
+    pts = {}
+    for s in (1, -1):
+        eixo_s = b_e + X * (s * x_t) - F * recuo
+        A_t, B_t = eixo_s + D * d_baixo, eixo_s + D * d_cima
+        pts[s] = (A_t, B_t)
+        _em_aneis(tubo(nome + "_trilho%+d" % s, A_t, B_t, raio_t, mat_aco(), pai=estr, vertices=24), passo=0.05)
+        c_tr = eixo_s + D * (d0 + s_l - L_luva / 2 - 0.014 - 0.03 - 0.02)   # 3 cm abaixo da tampa da luva no fim do curso
+        _cilindro(nome + "_trava%+d" % s, raio_t + 0.024, 0.04, c_tr, rot_D, mat_estrutura(), vertices=32, pai=estr)
+        caixa(nome + "_trava_alavanca%+d" % s, c_tr + X * (s * (raio_t + 0.05)), (0.07, 0.022, 0.03), mat_estrutura(), pai=estr,
+              chanfro=0.003)
+        _cilindro(nome + "_trava_bola%+d" % s, 0.016, 0.03, c_tr + X * (s * (raio_t + 0.10)), rot_X, mat_borracha(), pai=estr)
+    # ── viga inclinada embaixo de cada trilho, postes das 2 pontas até o chão, travessas e base no chão ──────────────────────────────
+    for s in (1, -1):
+        A_t, B_t = pts[s]
+        _viga(nome + "_viga_trilho%+d" % s, A_t - F * 0.12 - D * 0.02, B_t - F * 0.12 + D * 0.02, 0.08, 0.10, mat_estrutura(), pai=estr)
+        for P_, k in ((A_t, 0), (B_t, 1)):                    # mãos do trilho, nas 2 pontas (do trilho até a viga)
+            caixa(nome + "_trilho_suporte%+d%d" % (s, k), P_ - F * 0.05 + D * (0.02 if k == 0 else -0.02), (0.05, 0.04, 0.06),
+                  mat_estrutura(), rot=rot_e, pai=estr, chanfro=0.003)
+        pe_a, pe_b = A_t - F * 0.15, B_t - F * 0.15
+        _viga(nome + "_poste_baixo%+d" % s, pe_a, Vector((pe_a.x, pe_a.y, 0.06)), 0.07, 0.07, mat_estrutura(), pai=estr)
+        _viga(nome + "_poste_cima%+d" % s, pe_b, Vector((pe_b.x, pe_b.y, 0.06)), 0.08, 0.08, mat_estrutura(), pai=estr)
+    A1, A2 = pts[1][0] - F * 0.15, pts[-1][0] - F * 0.15
+    B1, B2 = pts[1][1] - F * 0.15, pts[-1][1] - F * 0.15
+    _viga(nome + "_trav_baixo", A1 + X * 0.035, A2 - X * 0.035, 0.07, 0.07, mat_estrutura(), pai=estr)
+    _viga(nome + "_trav_cima", B1 + X * 0.04, B2 - X * 0.04, 0.08, 0.08, mat_estrutura(), pai=estr)
+    # base: 2 vigas no chão ao longo do Y, da frente da plataforma até o poste de cima, e 2 travessas (frente e fundo)
+    y_frente = min(min(P_.y for P_ in cantos[s]) for s in (1, -1)) - 0.04
+    y_fundo = max(B1.y, B2.y) + 0.05
+    x_b = max(x_t, larg_pl / 2 - 0.06)
+    for s in (1, -1):
+        _viga(nome + "_base_lado%+d" % s, Vector((s * x_b, y_frente, 0.03)), Vector((s * x_b, y_fundo, 0.03)), 0.08, 0.06,
+              mat_estrutura(), pai=estr)
+        for k, P_ in enumerate((A1 if s > 0 else A2, B1 if s > 0 else B2)):   # o poste do trilho chega na base (se ela é mais larga)
+            if abs(abs(P_.x) - x_b) > 0.04:
+                _viga(nome + "_base_braco%+d%d" % (s, k), Vector((P_.x, P_.y, 0.03)), Vector((s * x_b, P_.y, 0.03)), 0.07, 0.06,
+                      mat_estrutura(), pai=estr)
+        for k, y in enumerate((y_frente + 0.03, y_fundo - 0.03)):
+            caixa(nome + "_base_sapata%+d%d" % (s, k), (s * x_b, y, 0.003), (0.10, 0.06, 0.006), mat_borracha(), pai=estr,
+                  chanfro=0.002)
+    for k, y in enumerate((y_frente + 0.04, y_fundo - 0.04)):
+        _viga(nome + "_base_travessa%d" % k, Vector((x_b - 0.04, y, 0.03)), Vector((-x_b + 0.04, y, 0.03)), 0.08, 0.06,
+              mat_estrutura(), pai=estr)
+    bpy.context.view_layer.update()
+    raizes = {"estrutura": estr, "plataforma": pla, "carrinho": car, "encosto": enc, "ombreiras": omb}
+    return Hack(raizes, D, pegs, raio_p, comp_p / 2)
+# ===== fim: Hack =====================================================================================================================
