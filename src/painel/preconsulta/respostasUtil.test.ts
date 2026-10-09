@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 // (aluno no lugar de paciente, "novas" = sem aluno, ?aluno=, links do painel, quem importa).
 import type { Pergunta } from "@/nutricao/prontuario/lib/questionariosUtil";
 import {
-  FILTROS_VAZIOS, anamneseDaResposta, aplicacaoDaResposta, chaveTexto, contarNovas, dadosAlunoDaResposta, ehNova, filtrarAlunos, filtrarRespostas, filtrosAtivos, filtrosDaURL,
-  filtrosParaURL, iniciaisDe, linkAluno, linkImportada, motivoSemImportar, nomeDoAluno, ordenarRespostas, origemDaResposta, podeDesligar, podeImportar, pontosDaResposta,
-  respostasDoMes, respostasPorFormulario, respostasPorSemana, situacaoFormulario, sugerirAluno, textoConfirmarImportar, textoContagemRespostas, textoImportada, textoNovas, textoSituacaoFormulario,
-  textoSugestao, tipoImportacao, titulosFormularios, type FormularioDaResposta, type RespostaBase,
+  FILTROS_VAZIOS, anamneseDaResposta, aplicacaoDaResposta, chaveTexto, dadosAlunoDaResposta, ehNova, filtrosAtivos, filtrosDaURL,
+  filtrosParaURL, iniciaisDe, linkAluno, linkImportada, motivoSemImportar, origemDaResposta, podeDesligar, podeImportar, pontosDaResposta,
+  respostasDoMes, respostasPorFormulario, respostasPorSemana, situacaoFormulario, sugerirAluno, textoConfirmarImportar, textoContagemRespostas, textoImportada, textoSituacaoFormulario,
+  textoSugestao, tipoImportacao, titulosFormularios, filtrosParaBanco, normalizarPaginaRespostas, type FormularioDaResposta, type RespostaBase,
 } from "./respostasUtil";
 
 const FORM_Q: FormularioDaResposta = { id: "f1", titulo: "Disbiose", origem: "questionario", origem_id: "q1", slug: "abcdefgh", ativo: true, deleted_at: null };
@@ -51,23 +51,14 @@ const ALUNOS = [
   { id: "c", nome: "Carlos", email: "carlos@exemplo.com", telefone: "5511988881234" },
 ];
 
-describe("ordem e contagens", () => {
-  it("ordenarRespostas: respondido_em desc, depois created_at desc", () => {
-    const a = base({ id: "a", respondido_em: "2026-09-19T10:00:00+00:00", created_at: "2026-09-19T10:00:00+00:00" });
-    const b = base({ id: "b", respondido_em: "2026-09-19T12:00:00+00:00", created_at: "2026-09-19T12:00:00+00:00" });
-    const c = base({ id: "c", respondido_em: "2026-09-19T12:00:00+00:00", created_at: "2026-09-19T12:00:01+00:00" });
-    expect(ordenarRespostas([a, b, c]).map((r) => r.id)).toEqual(["c", "b", "a"]);
-  });
-  it("textoContagemRespostas/contarNovas (nova = viva e sem aluno — o critério do Nutri)", () => {
+describe("contagens", () => {
+  it("textoContagemRespostas/ehNova (nova = viva e sem aluno — o critério do Nutri)", () => {
     expect(textoContagemRespostas(0)).toBe("Nenhuma resposta");
     expect(textoContagemRespostas(1)).toBe("1 resposta");
     expect(textoContagemRespostas(3)).toBe("3 respostas");
-    expect(contarNovas([base(), base({ paciente_id: "a" }), base(), base({ deleted_at: QUANDO })])).toBe(2);
     expect(ehNova(base())).toBe(true);
     expect(ehNova(base({ paciente_id: "a" }))).toBe(false);
-    expect(textoNovas(0)).toBe("nenhuma nova");
-    expect(textoNovas(1)).toBe("1 nova");
-    expect(textoNovas(4)).toBe("4 novas");
+    expect(ehNova(base({ deleted_at: QUANDO }))).toBe(false);
   });
 });
 
@@ -82,25 +73,6 @@ describe("filtros", () => {
     expect(filtrosAtivos(FILTROS_VAZIOS)).toBe(false);
     expect(filtrosAtivos({ ...FILTROS_VAZIOS, soNovas: true })).toBe(true);
     expect(filtrosAtivos({ ...FILTROS_VAZIOS, aluno: "a" })).toBe(true);
-  });
-  it("filtrarRespostas: formulário sem caixa/acento, busca sem acento em nome/e-mail, telefone por dígitos, só sem paciente", () => {
-    const lista = [
-      base({ id: "1", titulo: "Pré-anamnese", nome: "José Antônio", email: "jose@exemplo.com", telefone: "(21) 3333-4444" }),
-      base({ id: "2", titulo: "Disbiose", nome: "Maria", email: "MARIA@Exemplo.com", telefone: "11 98888-1234", paciente_id: "a" }),
-      base({ id: "3", titulo: "Disbiose", nome: "Beltrano", email: "", telefone: "" }),
-    ];
-    const ids = (f: Partial<typeof FILTROS_VAZIOS>) => filtrarRespostas(lista, { ...FILTROS_VAZIOS, ...f }).map((r) => r.id);
-    expect(ids({})).toEqual(["1", "2", "3"]);
-    expect(ids({ formulario: "disbiose" })).toEqual(["2", "3"]);
-    expect(ids({ formulario: "PRE-ANAMNESE" })).toEqual(["1"]);
-    expect(ids({ busca: "jose antonio" })).toEqual(["1"]);
-    expect(ids({ busca: "maria@" })).toEqual(["2"]);
-    expect(ids({ busca: "1234" })).toEqual(["2"]);
-    expect(ids({ busca: "(21) 3333" })).toEqual(["1"]);
-    expect(ids({ busca: "1" })).toEqual([]); // 1 dígito só não compara com telefone
-    expect(ids({ soNovas: true })).toEqual(["1", "3"]);
-    expect(ids({ formulario: "Disbiose", soNovas: true, busca: "bel" })).toEqual(["3"]);
-    expect(ids({ aluno: "a" })).toEqual(["2"]);
   });
   it("titulosFormularios: únicos sem caixa/acento, alfabéticos", () => {
     expect(titulosFormularios([{ titulo: "Disbiose" }, { titulo: "disbiose" }, { titulo: " Pré-anamnese " }, { titulo: "" }, { titulo: "Cafeína" }])).toEqual(["Cafeína", "Disbiose", "Pré-anamnese"]);
@@ -145,15 +117,6 @@ describe("ligar a um aluno", () => {
     expect(sugerirAluno(base({ email: "ninguem@exemplo.com", telefone: "1234", nome: "fulana  teste" }), ALUNOS)).toEqual({ aluno: ALUNOS[1], por: "nome" });
     expect(sugerirAluno(base({ email: "ninguem@exemplo.com", telefone: "(11) 90000-0000", nome: "Ninguém" }), ALUNOS)).toBeNull();
     expect(textoSugestao("email")).toBe("mesmo e-mail");
-  });
-  it("filtrarAlunos/nomeDoAluno", () => {
-    expect(filtrarAlunos(ALUNOS, "").length).toBe(3);
-    expect(filtrarAlunos(ALUNOS, "ANA").map((p) => p.id)).toEqual(["a", "b"]); // 'Ana' e 'Fulana'
-    expect(filtrarAlunos(ALUNOS, "carlos@").map((p) => p.id)).toEqual(["c"]);
-    expect(filtrarAlunos(ALUNOS, "7777").map((p) => p.id)).toEqual(["a"]);
-    expect(nomeDoAluno("c", ALUNOS)).toBe("Carlos");
-    expect(nomeDoAluno("x", ALUNOS)).toBe("");
-    expect(nomeDoAluno(null, ALUNOS)).toBe("");
   });
   it("dadosAlunoDaResposta: 1 linha, e-mail em minúsculas", () => {
     expect(dadosAlunoDaResposta(base({ nome: "  Fulana   Teste ", email: " Fulana@Exemplo.com ", telefone: " (11) 98888-1234 " }))).toEqual({ nome: "Fulana Teste", email: "fulana@exemplo.com", telefone: "(11) 98888-1234" });
@@ -241,5 +204,30 @@ describe("W21 — quem importa e os números", () => {
     expect(iniciaisDe("Conta Teste (prova)")).toBe("CP");
     expect(iniciaisDe("(Ana) 2026")).toBe("A");
     expect(iniciaisDe("")).toBe("?");
+  });
+});
+
+// hml-14b (B21): a lista vem do banco (respostas_da_conta) — os filtros da URL viram os do banco e a resposta vira a página da tela
+describe("hml-14b — a página das respostas vem do banco", () => {
+  it("filtrosParaBanco: só o que está preenchido; novas = 'true'; a busca e o título vão como a pessoa digitou (o banco normaliza)", () => {
+    expect(filtrosParaBanco(FILTROS_VAZIOS)).toEqual({});
+    expect(filtrosParaBanco({ formulario: "  Pré-anamnese ", busca: " Zé  Último ", soNovas: true, aluno: "a1" }))
+      .toEqual({ formulario: "Pré-anamnese", q: "Zé Último", novas: "true", aluno: "a1" });
+  });
+
+  it("normalizarPaginaRespostas: os números, os títulos (sem repetir, em ordem) e o aluno do filtro", () => {
+    const p = normalizarPaginaRespostas<{ id: string }>({
+      ok: true, total: 41, total_conta: 50, novas: 3, titulos: ["Pré-anamnese", "disbiose", "pre-anamnese", 7], aluno: { id: "a1", nome: "Zé Último" },
+      itens: [{ id: "r1" }],
+    });
+    expect(p).toEqual({ itens: [{ id: "r1" }], total: 41, totalConta: 50, novas: 3, titulos: ["disbiose", "Pré-anamnese"], alunoFiltro: { id: "a1", nome: "Zé Último" } });
+    expect(normalizarPaginaRespostas({ ok: true, total: 0, total_conta: 0, novas: 0, itens: [], titulos: [], aluno: null })?.alunoFiltro).toBeNull();
+  });
+
+  it("formato inesperado → null (a tela mostra o erro, nunca uma lista vazia no lugar)", () => {
+    expect(normalizarPaginaRespostas(null)).toBeNull();
+    expect(normalizarPaginaRespostas({ ok: false, erro: "sem_acesso" })).toBeNull();
+    expect(normalizarPaginaRespostas({ ok: true, itens: [], total: "41", total_conta: 41, novas: 0 })).toBeNull();
+    expect(normalizarPaginaRespostas({ ok: true, total: 1, total_conta: 1, novas: 0 })).toBeNull();
   });
 });

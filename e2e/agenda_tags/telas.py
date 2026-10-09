@@ -91,9 +91,9 @@ def esperar_tags(c, n_min: int = 3) -> bool:
 
 
 def escolher_aluno(c, paciente_id: str, nome: str) -> None:
-    c.pg.locator("[data-campo-paciente]").click()
-    c.pg.locator("[data-busca-paciente]").fill(nome.split(" ")[0])
-    c.pg.locator(f'[data-opcao-paciente="{paciente_id}"]').click()
+    # hml-14b (B19): o campo Aluno é o SeletorDeAluno (a busca vai ao banco; o data-campo-paciente segue com o id escolhido)
+    c.pg.locator('[data-seletor-aluno="agendamento"] [data-seletor-aluno-busca]').fill(nome.split(" ")[0])
+    c.pg.locator(f'[data-seletor-aluno="agendamento"] [data-opcao-aluno="{paciente_id}"]').click()
     c.pg.wait_for_timeout(300)
 
 

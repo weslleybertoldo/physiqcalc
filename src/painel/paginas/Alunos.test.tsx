@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AlunoLinha, ListaAlunos } from "@/painel/alunos/regras";
 
-const h = vi.hoisted(() => ({ listar: vi.fn(), rpc: vi.fn() }));
+const h = vi.hoisted(() => ({ listar: vi.fn(), rpc: vi.fn(), atribuir: vi.fn(), endereco: "" }));
 vi.mock("@/nucleo/conta", () => ({
   useConta: () => ({ conta: { id: "c1", nome: "Consultoria Ferreira", codigo_convite: "PROF-LUCAS-FERREIRA", papeis: ["dono", "personal"] } }),
 }));
@@ -14,7 +14,7 @@ vi.mock("@/ui/casca/topo", () => ({
     <header><h1>{titulo}</h1><p data-testid="subtitulo">{subtitulo}</p>{acoes}</header>
   ),
 }));
-vi.mock("@/painel/alunos/api", async (orig) => ({ ...(await orig<typeof import("@/painel/alunos/api")>()), listarAlunos: h.listar }));
+vi.mock("@/painel/alunos/api", async (orig) => ({ ...(await orig<typeof import("@/painel/alunos/api")>()), listarAlunos: h.listar, atribuirAlunos: h.atribuir }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { functions: { invoke: vi.fn() } } }));
 vi.mock("@/integrations/principal/client", () => ({ PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, functions: { invoke: vi.fn() } } }));
 
@@ -40,12 +40,19 @@ function lista(o: Partial<ListaAlunos> = {}): ListaAlunos {
   };
 }
 
-function montar() {
+/** O endereço atual (a página e os filtros que ficam nele). */
+function Endereco() {
+  h.endereco = useLocation().search;
+  return null;
+}
+
+function montar(endereco = "/painel/alunos") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/painel/alunos"]}>
+      <MemoryRouter initialEntries={[endereco]}>
         <Alunos />
+        <Endereco />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -57,6 +64,8 @@ const NOVOS = { ok: true, mes_atual: "2026-10", meses: [
 
 beforeEach(() => {
   h.listar.mockReset();
+  h.atribuir.mockReset();
+  h.endereco = "";
   h.rpc.mockReset().mockImplementation(async (nome: string) => (nome === "alunos_novos_por_mes" ? { data: NOVOS, error: null } : { data: null, error: null }));
 });
 
@@ -77,16 +86,78 @@ describe("W13 — Painel › Alunos (telas 6/7)", () => {
     expect(h.listar.mock.calls[0][1]).toMatchObject({ situacao: "ativos" });
   });
 
-  it("filtro de situação vai para o servidor; Ver mais pede a próxima página", async () => {
-    h.listar.mockResolvedValue(lista({ total: 25 }));
+  it("hml-14b (D15): a página vem do BANCO — 20 por vez com o deslocamento, \"1–20 de 41\" e a página no endereço", async () => {
+    h.listar.mockResolvedValue(lista({ total: 41 }));
     montar();
     await screen.findByText("Rafael Moura");
-    expect(screen.getByText("Mostrando 2 de 25")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Ver mais" }));
-    await waitFor(() => expect(h.listar.mock.calls.some((c) => c[3] === 40)).toBe(true));
-    fireEvent.click(document.querySelector('[data-situacao-filtro="bloqueados"]')!);
-    await waitFor(() => expect(h.listar.mock.calls.some((c) => c[1].situacao === "bloqueados")).toBe(true));
+    expect(h.listar.mock.calls[0].slice(2)).toEqual([0, 20]);
+    const pag = () => document.querySelector('[data-lista="alunos"] [data-paginacao="alunos"]');
+    expect(pag()?.querySelector("[data-paginacao-rotulo]")?.textContent).toBe("1–20 de 41");
+    expect(document.querySelectorAll('[data-lista="alunos"] [data-item]')).toHaveLength(2);
+    expect(document.querySelector("[data-ver-mais]")).toBeNull(); // o "Ver mais" (que parava no 500º) saiu
+    fireEvent.click(pag()!.querySelector("[data-pagina-proxima]")!);
+    await waitFor(() => expect(h.listar.mock.calls.some((c) => c[2] === 20 && c[3] === 20)).toBe(true));
+    await waitFor(() => expect(h.endereco).toBe("?pagina=2"));
+    expect(pag()?.getAttribute("data-pagina")).toBe("2");
   });
+
+  it("hml-14b (D15): filtro mudou → volta à página 1 (e o endereço perde a página); a situação vai ao servidor", async () => {
+    h.listar.mockResolvedValue(lista({ total: 61 }));
+    montar("/painel/alunos?pagina=3");
+    await screen.findByText("Rafael Moura");
+    expect(h.listar.mock.calls[0].slice(2)).toEqual([40, 20]); // o endereço que chega com ?pagina=3 vale
+    fireEvent.click(document.querySelector('[data-situacao-filtro="bloqueados"]')!);
+    await waitFor(() => expect(h.listar.mock.calls.some((c) => c[1].situacao === "bloqueados" && c[2] === 0)).toBe(true));
+    expect(h.listar.mock.calls.some((c) => c[1].situacao === "bloqueados" && c[2] !== 0)).toBe(false);
+    await waitFor(() => expect(h.endereco).toBe("?situacao=bloqueados"));
+  });
+
+  it("hml-14b (D15): abrir um aluno e voltar mantém a página e a busca (os 2 no endereço); a busca nova volta à 1", async () => {
+    h.listar.mockResolvedValue(lista({ total: 41 }));
+    montar("/painel/alunos?q=rafa&pagina=2");
+    await screen.findByText("Rafael Moura");
+    expect(h.listar.mock.calls[0][1]).toMatchObject({ q: "rafa" });
+    expect(h.listar.mock.calls[0].slice(2)).toEqual([20, 20]);
+    expect((document.querySelector("[data-busca-alunos]") as HTMLInputElement).value).toBe("rafa");
+    fireEvent.change(document.querySelector("[data-busca-alunos]")!, { target: { value: "ana" } });
+    await waitFor(() => expect(h.listar.mock.calls.some((c) => c[1].q === "ana" && c[2] === 0)).toBe(true), { timeout: 1500 });
+    await waitFor(() => expect(h.endereco).toBe("?q=ana"));
+  });
+
+  it("hml-14b (regra 4): erro do banco na página → o estado de erro da tela, nunca a lista vazia", async () => {
+    h.listar.mockRejectedValue(new Error("banco fora"));
+    montar();
+    // a página tenta 1 vez de novo (retry: 1) antes de mostrar o erro
+    expect(await screen.findByText("Não deu para carregar os alunos", undefined, { timeout: 4000 })).toBeInTheDocument();
+    expect(document.querySelector('[data-pagina-alunos][data-estado="erro"]')).not.toBeNull();
+    expect(screen.queryByText("Nenhum aluno ainda")).toBeNull();
+  });
+
+  it("hml-14b (D15): seleção em lote por página + \"todos os N do filtro\" com confirmação (500 em 500); atribui em lotes de 200", async () => {
+    const todos = Array.from({ length: 250 }, (_, i) => aluno({ id: `s${i}`, nome: `Sem Resp ${i}`, personal: null, nutricionista: null }));
+    h.listar.mockImplementation(async (_c: string, _f: unknown, offset: number, limite: number) =>
+      lista({ total: 250, itens: todos.slice(offset, offset + Math.min(limite, 500)) }));
+    h.atribuir.mockImplementation(async (_c: string, ids: string[]) => ({ atualizados: ids.length }));
+    montar("/painel/alunos?responsavel=sem");
+    await screen.findByText("Sem Resp 0");
+    const quantos = () => document.querySelector("[data-atribuir-quantos]")?.getAttribute("data-atribuir-quantos");
+    expect(document.querySelectorAll('[data-lista="alunos"] [data-item]')).toHaveLength(20);
+    fireEvent.click(document.querySelector("[data-atribuir-todos]")!);
+    expect(quantos()).toBe("20");
+    expect(document.querySelector("[data-atribuir-quantos]")?.textContent).toBe("20 de 250");
+    // "todos os 250 do filtro" pede confirmação antes de ler
+    fireEvent.click(document.querySelector('[data-atribuir-todos-filtro="250"]')!);
+    expect(await screen.findByText("Selecionar os 250 alunos do filtro?")).toBeInTheDocument();
+    const antes = h.listar.mock.calls.length;
+    fireEvent.click(document.querySelector("[data-atribuir-confirmar-todos]")!);
+    await waitFor(() => expect(quantos()).toBe("250"));
+    expect(h.listar.mock.calls.slice(antes).map((c) => [c[2], c[3]])).toEqual([[0, 500]]);
+    fireEvent.click(document.querySelector("[data-atribuir-confirmar]")!);
+    await waitFor(() => expect(h.atribuir).toHaveBeenCalledTimes(2));
+    expect(h.atribuir.mock.calls.map((c) => (c[1] as string[]).length)).toEqual([200, 50]);
+    expect(h.atribuir.mock.calls[0]).toEqual(["c1", todos.slice(0, 200).map((a) => a.id), "treino", "u-lucas"]);
+    await waitFor(() => expect(quantos()).toBe("0"));
+  }, 20_000);
 
   it("limite da faixa atingido: aviso com a mensagem da W4 e o uso atual", async () => {
     h.listar.mockResolvedValue(lista({ vagas: { em_uso: 10, limite: 10, origem: "nova", faixa: "f10" } }));

@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { AlimentoDoItem } from "./dietaUtil";
 import {
-  calcularReceita, escalarIngredientes, filtrarReceitas, formIngredienteNovo, formReceitaNova, gramasDoFormIngrediente, gramasPorPorcao, ingredientesParaBanco,
+  calcularReceita, escalarIngredientes, formIngredienteNovo, formReceitaNova, gramasDoFormIngrediente, gramasPorPorcao, ingredientesParaBanco,
   ingredientesParaForm, medidaInteira, nomeArquivoPDFReceita, nomeCopia, ordenarReceitas, pesoReceita, porPorcao, previaReceita, receitaParaBanco, receitaParaForm,
   resumoReceita, textoContagemReceitas, textoDadosReceita, textoPorPorcao, textoReceitaInteira, totaisReceita, validarGrupo, validarReceita, type FormIngrediente,
   type IngredienteCalc,
@@ -123,15 +123,6 @@ describe("lista", () => {
   it("favoritas primeiro (mesmo quando NÃO é a 1ª alfabética), depois nome sem acento", () => {
     const l = ordenarReceitas([rec("Bolinho", true), rec("Arroz"), rec("Água"), rec("Zebra", true)]);
     expect(l.map((r) => r.nome)).toEqual(["Bolinho", "Zebra", "Água", "Arroz"]);
-  });
-  it("filtra por palavras sem acento, grupo (todos / sem grupo / id) e favoritas", () => {
-    const l = [rec("Bolinho de atum", true, "g1"), rec("Arroz integral", false, null), rec("Bolo de açúcar", false, "g2")];
-    expect(filtrarReceitas(l, "BOLINHO", "", false)).toHaveLength(1);
-    expect(filtrarReceitas(l, "acucar", "", false)[0].nome).toBe("Bolo de açúcar");
-    expect(filtrarReceitas(l, "bolo atum", "", false)).toHaveLength(0);
-    expect(filtrarReceitas(l, "", "g1", false)).toHaveLength(1);
-    expect(filtrarReceitas(l, "", "sem", false)[0].nome).toBe("Arroz integral");
-    expect(filtrarReceitas(l, "", "", true)).toHaveLength(1);
   });
   it("nome da cópia não empilha sufixo e numera quando repete", () => {
     expect(nomeCopia("Bolinho de atum", ["Bolinho de atum"])).toBe("Bolinho de atum (cópia)");

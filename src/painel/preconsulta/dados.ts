@@ -6,17 +6,22 @@
 // conflito (23505), como no site antigo.
 import { principal } from "@/integrations/principal/client";
 import type { Database, Json } from "@/integrations/principal/types";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { copiaDeFormulario, gerarSlug, type RegistroFormulario } from "./preconsultaUtil";
 import { recorteDaConta } from "./novas";
-import type { FormularioDaResposta, TipoImportacao } from "./respostasUtil";
+import {
+  filtrosParaBanco, normalizarPaginaRespostas, type AlunoDaResposta, type FiltrosRespostas, type FormularioDaResposta, type PaginaRespostas, type TipoImportacao,
+} from "./respostasUtil";
 
 export type FormularioPreconsulta = Database["public"]["Tables"]["formularios_preconsulta"]["Row"];
 type FormularioUpdate = Database["public"]["Tables"]["formularios_preconsulta"]["Update"];
 export type RespostaPreconsulta = Database["public"]["Tables"]["respostas_preconsulta"]["Row"];
 type RespostaUpdate = Database["public"]["Tables"]["respostas_preconsulta"]["Update"];
 export type RespostaComFormulario = RespostaPreconsulta & { formulario: FormularioDaResposta | null };
+/** A resposta na lista paginada (hml-14b): + o aluno ligado, quando é da conta ativa e está fora da lixeira (senão null). */
+export type RespostaDaLista = RespostaComFormulario & { aluno: AlunoDaResposta | null };
 
-/** O aluno nos seletores (ligar a resposta) e na importação (de quem é a nutrição dele). */
+/** O aluno que a resposta ganhou ao ligar (o do SeletorDeAluno ou o cadastrado com os dados da resposta) — vai a quem chama. */
 export interface AlunoPreconsulta {
   id: string;
   nome: string;
@@ -110,7 +115,24 @@ export const duplicarFormulario = (f: FormularioPreconsulta, uid: string, contaI
 export { carregarFormularioPublico, responderFormularioPublico, type FormularioPublico, type RespostaEnviada } from "./publico";
 
 // ───────────────────────── respostas ─────────────────────────
-/** Respostas vivas do recorte, com o formulário embutido, mais recente primeiro. */
+/**
+ * hml-14b (B21): UMA página (20) das respostas vivas do recorte da conta, com os filtros (formulário, busca, novas, aluno), a contagem
+ * e os títulos do filtro — tudo no banco (respostas_da_conta, com a RLS de quem chama). Erro do banco → lança (a tela mostra o erro).
+ */
+export async function listarRespostasPagina(contaId: string, f: FiltrosRespostas, pagina: number): Promise<PaginaRespostas<RespostaDaLista>> {
+  const { data, error } = await principal.rpc("respostas_da_conta" as never, {
+    p_conta: contaId, p_filtros: filtrosParaBanco(f), p_offset: deslocamento(pagina), p_limite: POR_PAGINA,
+  } as never);
+  falhou(error);
+  const p = normalizarPaginaRespostas<RespostaDaLista>(data);
+  if (!p) throw new Error("A lista de respostas voltou num formato inesperado.");
+  return p;
+}
+
+/**
+ * Respostas vivas do recorte, com o formulário embutido, mais recente primeiro. hml-14b: a aba Respostas lê a página acima; esta
+ * leitura (até 1000) sobra só para os números do topo e da aba Formulários (usePreConsulta).
+ */
 export async function listarRespostas(contaId: string, uid: string): Promise<RespostaComFormulario[]> {
   const { data, error } = await principal
     .from("respostas_preconsulta")
@@ -141,19 +163,6 @@ export const marcarImportada = (id: string, tipo: TipoImportacao, alvoId: string
 export async function excluirResposta(id: string): Promise<void> {
   const { error } = await principal.from("respostas_preconsulta").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(mensagemDoBanco(new Error(error.message), "Não foi possível excluir"));
-}
-
-// ───────────────────────── alunos (P1: os que você vê na conta) ─────────────────────────
-export async function listarAlunosParaLigar(contaId: string): Promise<AlunoPreconsulta[]> {
-  const { data, error } = await principal
-    .from("pacientes")
-    .select("id, nome, apelido, email, telefone, ativo, foto_url, personal_id, nutricionista_id")
-    .eq("conta_id", contaId)
-    .is("deleted_at", null)
-    .order("nome", { ascending: true })
-    .limit(2000);
-  falhou(error);
-  return (data ?? []) as unknown as AlunoPreconsulta[];
 }
 
 export { contarRespostasNovas, recorteDaConta } from "./novas";

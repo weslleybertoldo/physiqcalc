@@ -20,6 +20,8 @@
 //   simular_aprovacao { cobranca_id }                        SÓ STAGING (o Pix do sandbox não se paga)
 //  PROFISSIONAL (dono da conta, responsável pelo aluno ou master — quem vê o quê: spec 4.1 e P6):
 //   prof_resumo       { conta_id }                          alunos da conta com mensalidade e selos + comprovantes aguardando
+//                     { conta_id, pagina, pagina_sem?, busca? }   hml-14b: a página da tela Mensalidades (20 com mensalidade + 20
+//                                                            sem, a busca, o total e os números da conta — mensalidades.ts)
 //   prof_aluno        { aluno }                             o Financeiro de um aluno (aluno = id da matrícula ou do Treino)
 //   prof_definir      { aluno, plano_aluno_id?, plano_novo?, valor }   plano e valor (valor vazio = sem mensalidade)
 //   prof_pausar       { aluno, pausar }                     "não cobrar pelo app" / reativar
@@ -87,6 +89,7 @@ import {
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
+import { PaginaInvalida, lerPagina, paginaDasMensalidades, type AlunoDoResumo } from "./mensalidades.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -817,6 +820,17 @@ Deno.serve(async (req) => {
     if (acao === "prof_resumo") {
       if (!ehUuidFin(body.conta_id)) falhar("conta_invalida");
       const contaId = String(body.conta_id);
+      // hml-14b (B21): com `pagina` a tela Mensalidades recebe só a página (e `pagina_sem`, a dos sem mensalidade) com a `busca`;
+      // sem `pagina` a resposta é a de hoje, campo a campo (o APK antigo, o Resumo, o Dashboard e Configurações › Recebimento)
+      let pagina: number | null = null;
+      let paginaSem = 1;
+      try {
+        pagina = lerPagina(body.pagina);
+        if (pagina !== null) paginaSem = lerPagina(body.pagina_sem) ?? 1;
+      } catch (e) {
+        if (e instanceof PaginaInvalida) falhar("pagina_invalida");
+        throw e;
+      }
       const { data: membro } = await db.from("conta_membros").select("papeis").eq("conta_id", contaId).eq("user_id", user.id).eq("status", "ativo").maybeSingle();
       const papeis = ((membro as { papeis: string[] } | null)?.papeis ?? []) as string[];
       if (!ehMaster && !papeis.length) falhar("sem_permissao", 403);
@@ -850,20 +864,26 @@ Deno.serve(async (req) => {
         abertas = ab.filter((c) => dono || c.nutricionista_id === user.id || c.criado_por === user.id);
       }
       const porId = new Map(lista.map((a) => [a.id, a]));
+      const agora = new Date();
+      const linhas: AlunoDoResumo[] = lista.map((a) => ({
+        paciente_id: a.id, treino_user_id: a.treino_user_id, nome: a.nome, email: a.email, ativo: a.ativo,
+        mensalidade_valor: dono && a.mensalidade_valor !== null ? Number(a.mensalidade_valor) : null,
+        plano: dono ? (a.plano?.nome ?? null) : null, pausada: dono ? a.cobranca_pausada : false,
+        pago_ate: dono ? a.mensalidade_pago_ate : null, desde: dono ? a.mensalidade_desde : null,
+        aguardando: pendentes.find((c) => c.paciente_id === a.id)?.id ?? null,
+        abertas: abertas.filter((c) => c.paciente_id === a.id).length,
+      }));
+      const comprovantes = pendentes.map((c) => ({
+        ...vista(c), aluno: { paciente_id: c.paciente_id, treino_user_id: porId.get(c.paciente_id)?.treino_user_id ?? null,
+                              nome: porId.get(c.paciente_id)?.nome ?? null, email: porId.get(c.paciente_id)?.email ?? null },
+      }));
+      if (pagina === null) {
+        return json({ ok: true, hoje, agora: agora.toISOString(), dono, alunos: linhas, pendentes: comprovantes }, 200, origin);
+      }
+      const p = paginaDasMensalidades(linhas, { pagina, paginaSem, busca: body.busca, agora });
       return json({
-        ok: true, hoje, agora: new Date().toISOString(), dono,
-        alunos: lista.map((a) => ({
-          paciente_id: a.id, treino_user_id: a.treino_user_id, nome: a.nome, email: a.email, ativo: a.ativo,
-          mensalidade_valor: dono && a.mensalidade_valor !== null ? Number(a.mensalidade_valor) : null,
-          plano: dono ? (a.plano?.nome ?? null) : null, pausada: dono ? a.cobranca_pausada : false,
-          pago_ate: dono ? a.mensalidade_pago_ate : null, desde: dono ? a.mensalidade_desde : null,
-          aguardando: pendentes.find((c) => c.paciente_id === a.id)?.id ?? null,
-          abertas: abertas.filter((c) => c.paciente_id === a.id).length,
-        })),
-        pendentes: pendentes.map((c) => ({
-          ...vista(c), aluno: { paciente_id: c.paciente_id, treino_user_id: porId.get(c.paciente_id)?.treino_user_id ?? null,
-                                nome: porId.get(c.paciente_id)?.nome ?? null, email: porId.get(c.paciente_id)?.email ?? null },
-        })),
+        ok: true, hoje, agora: agora.toISOString(), dono, pagina: p.pagina, por_pagina: p.por_pagina, total: p.total, alunos: p.alunos,
+        sem: p.sem, contagens: p.contagens, pendentes: comprovantes,
       }, 200, origin);
     }
 

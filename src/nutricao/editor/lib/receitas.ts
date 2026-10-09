@@ -1,8 +1,9 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/receitas.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
+import { POR_PAGINA, deslocamento, type Pagina } from "@/lib/paginacao";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import type { Alimento, MedidaCaseira } from "@/nutricao/editor/lib/alimentos";
-import { ordenarMedidas } from "@/nutricao/editor/lib/alimentosUtil";
+import { ordenarMedidas, palavrasBusca } from "@/nutricao/editor/lib/alimentosUtil";
 import { criarItensEmLote, type Item } from "@/nutricao/editor/lib/planos";
 import { escalarIngredientes, medidaInteira, ordenarGrupos, ordenarIngredientes, ordenarReceitas, type RegistroIngrediente, type RegistroReceita } from "@/nutricao/editor/lib/receitasUtil";
 
@@ -45,8 +46,11 @@ const montarIngrediente = (i: IngredienteBruto): Ingrediente => ({
 const montarReceita = (r: ReceitaBruta): Receita => ({ ...r, ingredientes: ordenarIngredientes((r.ingredientes ?? []).map(montarIngrediente)) });
 
 // ---- Grupos ----
-export async function listarGrupos(): Promise<GrupoReceita[]> {
-  const { data, error } = await supabase.from("grupos_receita").select("*").is("deleted_at", null).order("ordem").order("nome");
+/** Os grupos vivos; com `nutricionistaId`, só os dela (hml-14b: o painel separa no banco — a RLS do master lê os de todos). */
+export async function listarGrupos(nutricionistaId?: string): Promise<GrupoReceita[]> {
+  let q = supabase.from("grupos_receita").select("*").is("deleted_at", null);
+  if (nutricionistaId) q = q.eq("nutricionista_id", nutricionistaId);
+  const { data, error } = await q.order("ordem").order("nome");
   falhou(error);
   return ordenarGrupos((data ?? []) as GrupoReceita[]);
 }
@@ -74,6 +78,77 @@ export async function excluirGrupo(id: string): Promise<void> {
 }
 
 // ---- Receitas ----
+/** O que filtra a lista do painel (hml-14b): busca por palavras no nome, grupo ('' todos · FILTRO_SEM_GRUPO · id) e favoritas. */
+export interface FiltrosReceitas {
+  q: string;
+  grupo: string;
+  favoritas: boolean;
+}
+/** A página das SUAS receitas + os números do cabeçalho e dos grupos — tudo do banco. */
+export interface PaginaReceitas extends Pagina<Receita> {
+  totalGeral: number;
+  favoritas: number;
+  /** receitas vivas por grupo (o número de cada grupo na janela Grupos) */
+  porGrupo: Record<string, number>;
+}
+
+const contagem = (v: unknown): number | null => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null);
+/** A resposta da receitas_da_nutricionista (null = formato inesperado: a tela mostra o erro, nunca a lista vazia no lugar). */
+export function lerPaginaReceitas(bruto: unknown): { ids: string[]; total: number; totalGeral: number; favoritas: number; porGrupo: Record<string, number> } | null {
+  if (!bruto || typeof bruto !== "object") return null;
+  const b = bruto as Record<string, unknown>;
+  const total = contagem(b.total);
+  const totalGeral = contagem(b.total_geral);
+  const favoritas = contagem(b.favoritas);
+  if (b.ok !== true || !Array.isArray(b.ids) || total === null || totalGeral === null || favoritas === null) return null;
+  const porGrupo: Record<string, number> = {};
+  for (const [g, n] of Object.entries(b.por_grupo && typeof b.por_grupo === "object" ? (b.por_grupo as Record<string, unknown>) : {})) {
+    const v = contagem(n);
+    if (v !== null) porGrupo[g] = v;
+  }
+  return { ids: b.ids.filter((x): x is string => typeof x === "string"), total, totalGeral, favoritas, porGrupo };
+}
+
+/**
+ * hml-14b (B21): UMA página (20) das SUAS receitas — também para o master: o banco separa as dele ANTES de cortar (receitas_da_
+ * nutricionista, com a RLS de quem chama) —, com a busca sem acento, o grupo e as favoritas no banco; depois lê as receitas da página
+ * (com os ingredientes) pelos ids, na ordem do banco: favoritas primeiro, depois o nome.
+ */
+export async function listarReceitasPagina(f: FiltrosReceitas, pagina: number): Promise<PaginaReceitas> {
+  const filtros: Record<string, string> = {};
+  const q = palavrasBusca(f.q).join(" ");
+  if (q) filtros.q = q;
+  if (f.grupo) filtros.grupo = f.grupo;
+  if (f.favoritas) filtros.favoritas = "true";
+  const { data, error } = await supabase.rpc("receitas_da_nutricionista" as never, { p_filtros: filtros, p_offset: deslocamento(pagina), p_limite: POR_PAGINA } as never);
+  falhou(error);
+  const r = lerPaginaReceitas(data);
+  if (!r) throw new Error("A lista de receitas voltou num formato inesperado.");
+  const numeros = { total: r.total, totalGeral: r.totalGeral, favoritas: r.favoritas, porGrupo: r.porGrupo };
+  if (!r.ids.length) return { itens: [], ...numeros };
+  const { data: linhas, error: erroLinhas } = await supabase.from("receitas").select(SELECT_RECEITA).in("id", r.ids).is("deleted_at", null);
+  falhou(erroLinhas);
+  const porId = new Map(((linhas ?? []) as unknown as ReceitaBruta[]).map((x) => [x.id, montarReceita(x)]));
+  // a que saiu entre as 2 leituras (excluída agora) fica de fora
+  return { itens: r.ids.flatMap((id) => porId.get(id) ?? []), ...numeros };
+}
+
+/**
+ * Os nomes das suas receitas vivas que começam como a receita (sem o "(cópia N)") — o Duplicar escolhe o "(cópia N)" livre sem ler
+ * a lista inteira (a mesma base do nomeCopia).
+ */
+export async function nomesParaCopia(nutricionistaId: string, nome: string): Promise<string[]> {
+  const base = nome.replace(/\s*\(cópia(?: \d+)?\)\s*$/i, "").trim() || nome.trim();
+  const { data, error } = await supabase
+    .from("receitas")
+    .select("nome")
+    .eq("nutricionista_id", nutricionistaId)
+    .is("deleted_at", null)
+    .ilike("nome", `${base.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+  falhou(error);
+  return ((data ?? []) as { nome: string }[]).map((x) => x.nome);
+}
+
 /** Todas as receitas vivas da nutricionista, com ingredientes e alimentos (a lista mostra kcal/porção e macros). */
 export async function listarReceitas(): Promise<Receita[]> {
   const { data, error } = await supabase.from("receitas").select(SELECT_RECEITA).is("deleted_at", null).order("nome");

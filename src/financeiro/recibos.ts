@@ -1,7 +1,8 @@
 // Physiq W6 — recibos do aluno (N-45, N-54, N-59): porte das regras e do acesso a dados do PhysiqNutri
 // (src/lib/recibosUtil.ts e src/lib/recibos.ts de lá) para o banco principal. Tags do modelo (`*|NOME_PACIENTE|*`…), valor por
 // extenso em pt-BR, número com 4 dígitos (sequencial por profissional — gatilho numerar_recibo), modelo padrão, emitir a partir
-// de um lançamento. A W19 (Painel › Financeiro) usa estas mesmas peças.
+// de um lançamento. A W19 (Painel › Financeiro) usa estas mesmas peças. hml-14b: os modelos (garantir, salvar, excluir) e o último
+// número são lidos e gravados por src/painel/financeiro/dados.ts — as cópias daqui, sem uso, saíram.
 import { principal } from "@/integrations/principal/client";
 
 export const TITULO_MODELO_MAX = 120;
@@ -150,14 +151,6 @@ export function validarModelo(titulo: string, conteudo: string): string | null {
 
 // ───────────────────────── dados (banco principal; RLS: cada profissional os seus — o dono da conta vê os da conta) ─────────
 
-export interface ModeloRecibo {
-  id: string;
-  nutricionista_id: string;
-  titulo: string;
-  conteudo: string;
-  favorito: boolean;
-}
-
 export interface Recibo {
   id: string;
   nutricionista_id: string;
@@ -183,74 +176,8 @@ export async function listarRecibosDoAluno(pacienteId: string): Promise<Recibo[]
   return (data ?? []) as unknown as Recibo[];
 }
 
-export async function garantirModelosRecibo(uid: string): Promise<ModeloRecibo[]> {
-  const { data, error } = await principal.from("modelos_recibo").select("id, nutricionista_id, titulo, conteudo, favorito").eq("nutricionista_id", uid).is("deleted_at", null);
-  falhou(error);
-  const lista = (data ?? []) as ModeloRecibo[];
-  if (lista.length) return ordenarModelosRecibo(lista);
-  const { data: novo, error: e2 } = await principal.from("modelos_recibo")
-    .insert({ nutricionista_id: uid, titulo: TITULO_MODELO_PADRAO, conteudo: CONTEUDO_MODELO_PADRAO, favorito: true })
-    .select("id, nutricionista_id, titulo, conteudo, favorito").single();
-  falhou(e2);
-  return [novo as ModeloRecibo];
-}
-
-export async function salvarModeloRecibo(uid: string, m: { id?: string; titulo: string; conteudo: string; favorito: boolean }): Promise<void> {
-  const dados = { titulo: m.titulo.trim(), conteudo: m.conteudo, favorito: m.favorito };
-  const { error } = m.id
-    ? await principal.from("modelos_recibo").update(dados).eq("id", m.id)
-    : await principal.from("modelos_recibo").insert({ nutricionista_id: uid, ...dados });
-  falhou(error);
-}
-
-export async function excluirModeloRecibo(id: string): Promise<void> {
-  const { error } = await principal.from("modelos_recibo").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
-}
-
-/** Maior número já emitido pelo profissional (inclusive os da lixeira — número não volta); 0 sem recibo. */
-export async function ultimoNumeroRecibo(uid: string): Promise<number> {
-  const { data, error } = await principal.from("recibos").select("numero").eq("nutricionista_id", uid).order("numero", { ascending: false }).limit(1);
-  falhou(error);
-  return ((data ?? []) as { numero: number }[])[0]?.numero ?? 0;
-}
-
-/**
- * Emite o recibo (o número sai do gatilho do banco) e, quando nasce de um lançamento, liga o lançamento a ele. Se o número
- * real saiu diferente do previsto na prévia, o texto é refeito com o número certo.
- */
-export async function emitirRecibo(p: {
-  uid: string;
-  contaId: string | null;
-  pacienteId: string;
-  transacaoId: string | null;
-  modelo: ModeloRecibo | null;
-  descricao: string;
-  valor: number;
-  data: string;
-  dadosTags: Omit<DadosTags, "numero" | "valor" | "data">;
-  numeroPrevisto: number;
-}): Promise<Recibo> {
-  const conteudo = p.modelo?.conteudo ?? CONTEUDO_MODELO_PADRAO;
-  const texto = aplicarTags(conteudo, { ...p.dadosTags, valor: p.valor, data: p.data, numero: p.numeroPrevisto });
-  const { data, error } = await principal.from("recibos").insert({
-    nutricionista_id: p.uid, conta_id: p.contaId, paciente_id: p.pacienteId, transacao_id: p.transacaoId, modelo_id: p.modelo?.id ?? null,
-    valor: p.valor, data: p.data, descricao: p.descricao.trim().slice(0, DESCRICAO_RECIBO_MAX) || DESCRICAO_RECIBO_PADRAO, texto,
-  }).select("id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at").single();
-  falhou(error);
-  let recibo = data as unknown as Recibo;
-  if (recibo.numero !== p.numeroPrevisto) {
-    const certo = aplicarTags(conteudo, { ...p.dadosTags, valor: p.valor, data: p.data, numero: recibo.numero });
-    const { data: d2 } = await principal.from("recibos").update({ texto: certo }).eq("id", recibo.id)
-      .select("id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at").single();
-    if (d2) recibo = d2 as unknown as Recibo;
-  }
-  if (p.transacaoId) {
-    const { error: e3 } = await principal.from("transacoes").update({ recibo_id: recibo.id }).eq("id", p.transacaoId);
-    falhou(e3);
-  }
-  return recibo;
-}
+// hml-14b (B14): o `emitirRecibo` duplicado que morava aqui (sem uso — a emissão é a de src/painel/financeiro/dados.ts, que confere
+// cada erro) saiu; ele ignorava o erro ao regravar o texto com o número certo.
 
 export async function excluirRecibo(id: string): Promise<void> {
   const { error } = await principal.from("recibos").update({ deleted_at: new Date().toISOString() }).eq("id", id);

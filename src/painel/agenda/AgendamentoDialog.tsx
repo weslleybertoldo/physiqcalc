@@ -6,17 +6,17 @@
 // W2: o "Tipo" virou "Tag" — os chips são as tags do DONO do calendário (+ "Nova tag", só nos seus); vem marcada a tag padrão do
 // calendário, senão a base da área que o tipo de antes escolhia (papel, aluno, módulo da conta). A área da tag é o modulo gravado.
 // Sem as tags carregadas, volta o Tipo de antes (o banco põe a base da área).
+// hml-14b (B19): o campo Aluno é o SeletorDeAluno (busca no banco: nome, apelido, e-mail, telefone e CPF, sem acento, 20 por vez);
+// o aluno escolhido (ou o do ?aluno=) é lido pelo id — sem a lista de até 1000 alunos que vinha pela prop `alunos` (saiu).
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, ChevronsUpDown, Lock, Minus, Plus, Trash2 } from "lucide-react";
+import { Lock, Minus, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { BTN_PERIGO, BTN_PRI, BTN_SEC, Campo, DESCRICAO_JANELA, INPUT, JANELA, SELECT, TEXTAREA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import {
@@ -24,9 +24,11 @@ import {
   tagPadraoDoCalendario, tagsDe, tipoDe, tipoPadrao, tituloPadrao, type RegrasAgenda, type StatusAgenda, type TagAgenda, type TipoAgendamento,
   type TravaRecorrente,
 } from "@/agenda/regras";
-import { Avatar } from "@/ui/premium/Avatar";
+import type { AlunoDoSeletor } from "@/painel/alunos/regras";
+import { SeletorDeAluno } from "@/painel/alunos/SeletorDeAluno";
+import { useAlunoDoSeletor } from "@/painel/alunos/useSeletorDeAluno";
 import {
-  atualizarAgendamento, avisarPorEmail, criarAgendamento, horariosDoDia, type Agendamento, type AlunoAgenda, type Calendario, type NovoAgendamento,
+  atualizarAgendamento, avisarPorEmail, criarAgendamento, horariosDoDia, type Agendamento, type Calendario, type NovoAgendamento,
   type SlotDoDia,
 } from "./dados";
 import TagDialog from "./TagDialog";
@@ -60,7 +62,6 @@ interface Props {
   agendamento?: Agendamento | null;
   inicial?: Partial<FormAgendamento>;
   calendarios: Calendario[];
-  alunos: AlunoAgenda[];
   eventos: EventoPainel[];
   bloqueios: BloqueioPainel[];
   travas: TravaRecorrente[];
@@ -85,12 +86,14 @@ function duracaoRotulo(min: number, slot: number): string {
   return d;
 }
 
-export default function AgendamentoDialog({ open, onOpenChange, agendamento, inicial, calendarios, alunos, eventos, bloqueios, travas, regras, ctx, tags, onTagCriada, onSalvo, onExcluir }: Props) {
+/** O que a tag sugerida olha do aluno: quem o acompanha. */
+type RelacaoAluno = Pick<AlunoDoSeletor, "personal_id" | "nutricionista_id">;
+
+export default function AgendamentoDialog({ open, onOpenChange, agendamento, inicial, calendarios, eventos, bloqueios, travas, regras, ctx, tags, onTagCriada, onSalvo, onExcluir }: Props) {
   const editando = !!agendamento;
   const [f, setF] = useState<FormAgendamento | null>(null);
   const [tipoMexido, setTipoMexido] = useState(false);
   const [tituloMexido, setTituloMexido] = useState(false);
-  const [buscaAberta, setBuscaAberta] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
@@ -102,13 +105,17 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
 
   const calPadrao = useMemo(() => calendarios.find((c) => c.nutricionista_id === ctx.uid && c.padrao) ?? calendarios.find((c) => c.nutricionista_id === ctx.uid) ?? calendarios[0], [calendarios, ctx.uid]);
 
+  // hml-14b (B19): o aluno escolhido, lido pelo id (o escolhido na busca já vem do cache)
+  const alunoQ = useAlunoDoSeletor(ctx.contaId, f?.pacienteId ?? null);
+  const aluno = f?.pacienteId ? alunoQ.data ?? null : null;
+
   /** A área que o tipo de antes escolhia (papel do dono do calendário, relação com o aluno, módulo da conta). */
-  const areaPeloPapel = (c: Calendario | null | undefined, a: AlunoAgenda | null): TipoAgendamento => {
+  const areaPeloPapel = (c: Calendario | null | undefined, a: RelacaoAluno | null): TipoAgendamento => {
     const dono = c?.nutricionista_id ?? ctx.uid;
     return tipoPadrao(ctx.pessoas.get(dono)?.papeis ?? ctx.papeis, dono, a, ctx.modulos);
   };
   /** A tag sugerida: a padrão do calendário, senão a base da área do papel. */
-  const tagSugerida = (c: Calendario | null | undefined, a: AlunoAgenda | null): { tagId: string | null; modulo: TipoAgendamento } => {
+  const tagSugerida = (c: Calendario | null | undefined, a: RelacaoAluno | null): { tagId: string | null; modulo: TipoAgendamento } => {
     const area = areaPeloPapel(c, a);
     const t = tagPadraoDoCalendario(c ?? null, todasTags, area);
     return { tagId: t?.id ?? null, modulo: t?.area ?? area };
@@ -118,7 +125,6 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
     if (!open) return;
     setErros({});
     setConfirmarExclusao(false);
-    setBuscaAberta(false);
     setCriadas([]);
     setNovaTagAberta(false);
     if (agendamento) {
@@ -147,13 +153,13 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
     }
     const cal = calendarios.find((c) => c.id === inicial?.calendarioId) ?? calPadrao;
     const slot = cal?.slot_minutos ?? regras.slot_minutos;
-    const aluno = alunos.find((a) => a.id === inicial?.pacienteId) ?? null;
-    const sug = tagSugerida(cal, aluno);
+    // hml-14b (B19): o aluno do ?aluno= é lido pelo id depois de abrir (efeito abaixo: acerta a tag ou tira o aluno que não achou)
+    const sug = tagSugerida(cal, null);
     const tipo = sug.modulo;
     setTipoMexido(false);
     setTituloMexido(false);
     setF({
-      pacienteId: aluno?.id ?? null,
+      pacienteId: inicial?.pacienteId ?? null,
       titulo: tituloPadrao(tipo),
       calendarioId: cal?.id ?? "",
       data: inicial?.data ?? chaveDia(new Date()),
@@ -180,14 +186,13 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
       return;
     }
     if (tipoMexido) return;
-    const sug = tagSugerida(c, alunos.find((a) => a.id === f.pacienteId) ?? null);
+    const sug = tagSugerida(c, aluno);
     if (sug.tagId) setF((x) => (x && !x.tagId ? { ...x, tagId: sug.tagId, modulo: sug.modulo, titulo: tituloMexido ? x.titulo : tituloPadrao(sug.modulo) } : x));
   }, [open, todasTags, f?.calendarioId, f?.tagId]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando as tags chegam ou o calendário muda
 
   const cal = calendarios.find((c) => c.id === f?.calendarioId) ?? null;
   const donoCal = cal?.nutricionista_id ?? ctx.uid;
   const slotCal = cal?.slot_minutos ?? regras.slot_minutos;
-  const aluno = f?.pacienteId ? alunos.find((a) => a.id === f.pacienteId) ?? null : null;
 
   const horarios = useQuery({
     queryKey: ["agenda-painel", "horarios", f?.calendarioId, f?.data, f?.duracao, agendamento?.id ?? null],
@@ -203,14 +208,14 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
   const tagsDoDono = useMemo(() => tagsDe(todasTags, donoCal), [todasTags, donoCal]);
   const meuCalendario = donoCal === ctx.uid;
 
-  const recalcularTipo = (pacienteId: string | null, calendarioId: string) => {
+  const recalcularTipo = (a: RelacaoAluno | null, calendarioId: string) => {
     if (!f) return;
     const c = calendarios.find((x) => x.id === calendarioId);
     const dono = c?.nutricionista_id ?? ctx.uid;
     // a tag escolhida à mão continua — a não ser que o calendário novo seja de outro profissional (a tag dele não vale lá)
     const tagAindaVale = !!f.tagId && tagsDe(todasTags, dono).some((t) => t.id === f.tagId);
     if (tipoMexido && (tagAindaVale || !f.tagId)) return;
-    const sug = tagSugerida(c, alunos.find((a) => a.id === pacienteId) ?? null);
+    const sug = tagSugerida(c, a);
     setF((x) => (x ? { ...x, modulo: sug.modulo, tagId: sug.tagId, titulo: tituloMexido ? x.titulo : tituloPadrao(sug.modulo) } : x));
   };
 
@@ -219,11 +224,22 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
     setF((x) => (x ? { ...x, tagId: t.id, modulo: t.area, titulo: tituloMexido ? x.titulo : tituloPadrao(t.area) } : x));
   };
 
-  const escolherAluno = (a: AlunoAgenda | null) => {
+  const escolherAluno = (a: AlunoDoSeletor | null) => {
     set("pacienteId", a?.id ?? null);
-    recalcularTipo(a?.id ?? null, f?.calendarioId ?? "");
-    setBuscaAberta(false);
+    recalcularTipo(a, f?.calendarioId ?? "");
   };
+
+  // hml-14b (B19): o aluno que veio no ?aluno= (novo agendamento) chegou do banco — a tag sugerida passa a considerar quem o
+  // acompanha (antes a lista inteira já estava na mão ao abrir); não achou (de outra conta, removido) → sem aluno, como antes
+  const doInicio = open && !editando && !!f?.pacienteId && f.pacienteId === (inicial?.pacienteId ?? null);
+  useEffect(() => {
+    if (!doInicio || !alunoQ.isSuccess || !f) return;
+    if (!alunoQ.data) {
+      setF((x) => (x && x.pacienteId === f.pacienteId ? { ...x, pacienteId: null } : x));
+      return;
+    }
+    if (!tipoMexido) recalcularTipo(alunoQ.data, f.calendarioId);
+  }, [doInicio, alunoQ.isSuccess, alunoQ.data]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando o aluno do início chega
 
   const previa = useMemo(() => {
     if (!f || !dataValida(f.data) || (!f.diaInteiro && !horaValida(f.hora)) || !f.calendarioId) return null;
@@ -296,7 +312,7 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
       onOpenChange(false);
       // o aviso por e-mail (o sino o banco já deu): consulta futura, viva, de aluno com login
       const futura = !f.diaInteiro && previa.inicio.getTime() > Date.now() && !(f.status === "desmarcado" || f.status === "paciente_desmarcou" || f.status === "nao_compareceu");
-      if (f.avisar && futura && aluno?.user_id) {
+      if (f.avisar && futura && aluno?.tem_login) {
         void avisarPorEmail(salvo.id).then((r) => {
           if (r.enviado) toast.success(`${aluno.nome.split(" ")[0]} foi avisado no app e por e-mail${r.teste ? " (caixa de teste)" : ""}`);
           else if (r.motivo === "repetido") toast(`${aluno.nome.split(" ")[0]} foi avisado no app (o e-mail já saiu há pouco)`);
@@ -351,36 +367,11 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
 
           <div className={cn("grid grid-cols-1 gap-3", tagsDoDono.length > 0 ? "" : "sm:grid-cols-[3fr_2fr]")}>
             <Campo rotulo="Aluno">
-              <Popover open={buscaAberta} onOpenChange={setBuscaAberta}>
-                <PopoverTrigger asChild>
-                  <button type="button" role="combobox" aria-expanded={buscaAberta} className={cn(SELECT, "flex items-center gap-2 text-left")} data-campo-paciente={f.pacienteId ?? "nenhum"}>
-                    {aluno && <Avatar src={aluno.foto_url} nome={aluno.nome} tamanho={22} />}
-                    <span className={cn("min-w-0 flex-1 truncate", !aluno && "text-texto-3")}>{aluno ? aluno.nome : f.pacienteId ? "Aluno selecionado" : "Sem aluno (compromisso avulso)"}</span>
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] border-linha-2 bg-tela p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar aluno…" data-busca-paciente />
-                    <CommandList className="max-h-60">
-                      <CommandEmpty>Nenhum aluno com esse nome.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem value="__nenhum__ sem aluno" onSelect={() => escolherAluno(null)} data-opcao-paciente="nenhum">
-                          <Check className={cn("mr-2 h-4 w-4", f.pacienteId ? "opacity-0" : "opacity-100")} aria-hidden="true" />
-                          Sem aluno
-                        </CommandItem>
-                        {alunos.map((p) => (
-                          <CommandItem key={p.id} value={`${p.nome} ${p.apelido ?? ""} ${p.id}`} onSelect={() => escolherAluno(p)} data-opcao-paciente={p.id}>
-                            <Check className={cn("mr-2 h-4 w-4", f.pacienteId === p.id ? "opacity-100" : "opacity-0")} aria-hidden="true" />
-                            <span className="truncate">{p.nome}</span>
-                            {!p.user_id && <span className="ml-auto pl-2 text-[11px] text-texto-4">sem login</span>}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              {/* hml-14b (B19): a busca no banco; o data-campo-paciente segue com o id escolhido (os E2E antigos conferem o valor) */}
+              <div data-campo-paciente={f.pacienteId ?? "nenhum"}>
+                <SeletorDeAluno campo="agendamento" contaId={ctx.contaId} valor={f.pacienteId} aoMudar={escolherAluno} opcional
+                  rotuloNenhum="Sem aluno (compromisso avulso)" rotulo="Buscar o aluno do agendamento" />
+              </div>
             </Campo>
             {tagsDoDono.length > 0 ? (
               <Campo rotulo="Tag">
@@ -456,7 +447,7 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
                   const novo = e.target.value;
                   const c = calendarios.find((x) => x.id === novo);
                   setF((x) => (x ? { ...x, calendarioId: novo, duracao: editando ? x.duracao : c?.slot_minutos ?? regras.slot_minutos } : x));
-                  recalcularTipo(f.pacienteId, novo);
+                  recalcularTipo(aluno, novo);
                 }}>
                 {calendarios.map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}{c.nutricionista_id !== ctx.uid ? ` · ${ctx.pessoas.get(c.nutricionista_id)?.nome ?? "equipe"}` : ""}</option>
@@ -534,10 +525,10 @@ export default function AgendamentoDialog({ open, onOpenChange, agendamento, ini
 
           {aluno && !editando && (
             <label className="flex cursor-pointer items-start gap-2 text-[13px] text-texto" data-campo-avisar>
-              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#8B5CF6]" checked={f.avisar} onChange={(e) => set("avisar", e.target.checked)} disabled={!aluno.user_id} />
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#8B5CF6]" checked={f.avisar} onChange={(e) => set("avisar", e.target.checked)} disabled={!aluno.tem_login} />
               <span>
                 Avisar {aluno.nome.split(" ")[0]} no app e por e-mail para confirmar, reagendar ou desistir
-                {!aluno.user_id && <span className="block text-[11.5px] text-texto-3">Sem acesso ao app ainda: o aviso sai quando ele tiver login.</span>}
+                {!aluno.tem_login && <span className="block text-[11.5px] text-texto-3">Sem acesso ao app ainda: o aviso sai quando ele tiver login.</span>}
               </span>
             </label>
           )}

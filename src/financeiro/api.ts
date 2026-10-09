@@ -2,7 +2,7 @@
 // cobrança, comprovante e Mercado Pago), o financeiro_do_aluno() (resumo leve do app, guardado no aparelho) e o envio do
 // comprovante pelo link assinado (o servidor escolhe o caminho no Storage).
 import { principal } from "@/integrations/principal/client";
-import type { AlunoResumo, FinanceiroProfissional, ResumoConta, ResumoMatricula, StatusAluno } from "./tipos";
+import type { AlunoResumo, FinanceiroProfissional, MensalidadesDaConta, ResumoConta, ResumoMatricula, StatusAluno } from "./tipos";
 
 export class ErroFinanceiro extends Error {
   constructor(public codigo: string, public extra: Record<string, unknown> = {}) {
@@ -38,6 +38,9 @@ export async function acaoFinanceiro<T = Record<string, unknown>>(acao: string, 
 export const buscarStatusAluno = () => acaoFinanceiro<StatusAluno>("aluno_status");
 export const buscarFinanceiroDoAluno = (aluno: string) => acaoFinanceiro<FinanceiroProfissional>("prof_aluno", { aluno });
 export const buscarResumoDaConta = (contaId: string) => acaoFinanceiro<ResumoConta>("prof_resumo", { conta_id: contaId });
+/** hml-14b (B21): a página da tela Mensalidades (prof_resumo com `pagina`): 20 com mensalidade, 20 sem, a busca e os números. */
+export const buscarMensalidadesDaConta = (contaId: string, p: { pagina: number; paginaSem: number; busca: string }) =>
+  acaoFinanceiro<MensalidadesDaConta>("prof_resumo", { conta_id: contaId, pagina: p.pagina, pagina_sem: p.paginaSem, busca: p.busca });
 
 export const LIMITE_PDF_BYTES = 5 * 1024 * 1024;
 

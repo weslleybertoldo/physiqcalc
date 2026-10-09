@@ -236,9 +236,9 @@ def caso_lancamentos(nav) -> None:
     c.pg.fill("[data-campo-valor]", "210")
     c.pg.locator("[data-campo-categoria]").select_option(label="Consulta")
     c.pg.locator("[data-campo-metodo]").select_option("pix")
-    c.pg.locator("[data-campo-paciente]").click()
-    c.pg.fill("[data-busca-paciente]", "Rafael")
-    c.pg.locator(f'[data-opcao-paciente="{m()["alunos"]["Rafael Moura"]}"]').click()
+    # hml-14b (B19): o campo Aluno é o SeletorDeAluno (a busca vai ao banco)
+    c.pg.locator('[data-seletor-aluno="movimentacao"] [data-seletor-aluno-busca]').fill("Rafael")
+    c.pg.locator(f'[data-seletor-aluno="movimentacao"] [data-opcao-aluno="{m()["alunos"]["Rafael Moura"]}"]').click()
     c.pg.fill("[data-campo-observacao-transacao]", "Pago na recepção")
     c.print("dialogo_movimentacao")
     c.pg.locator("[data-btn-salvar-movimentacao]").click()
@@ -316,7 +316,9 @@ def caso_recibos(nav) -> None:
     # recibo avulso, escolhendo o aluno, com o modelo novo (★ abre primeiro)
     c.pg.locator("[data-btn-novo-recibo]").click()
     c.esperar(lambda: c.tem('[data-modal-recibo="avulso"]'), 15)
-    c.pg.locator("[data-campo-aluno-recibo]").select_option(m()["alunos"]["Beatriz Lima"])
+    # hml-14b (B19): o <select> com a lista inteira virou o SeletorDeAluno (a busca vai ao banco)
+    c.pg.locator('[data-seletor-aluno="recibo"] [data-seletor-aluno-busca]').fill("Beatriz")
+    c.pg.locator(f'[data-seletor-aluno="recibo"] [data-opcao-aluno="{m()["alunos"]["Beatriz Lima"]}"]').click()
     opcoes = c.pg.locator("[data-campo-modelo-recibo] option").all_inner_texts()
     favoritos = [o for o in opcoes if o.startswith("★")]
     # os ★ primeiro (em ordem alfabética, a regra do Nutri) e o modelo novo entre eles
@@ -380,7 +382,7 @@ def caso_aluno_recibo(nav) -> None:
     if ok:
         c.pg.locator("[data-card-financeiro-recibo]").click()
         ok = c.esperar(lambda: c.tem('[data-modal-recibo="avulso"]') and c.pg.locator("[data-campo-modelo-recibo] option").count() > 0, 60)
-        p.check(ok and not c.tem("[data-campo-aluno-recibo]") and "recibo=novo" not in c.caminho() and "/financeiro" in c.caminho(),
+        p.check(ok and not c.tem('[data-seletor-aluno="recibo"]') and "recibo=novo" not in c.caminho() and "/financeiro" in c.caminho(),
                 f"[aluno_recibo] 'Emitir recibo' abre o recibo novo da aba Financeiro, com o aluno fixo ({c.caminho()})")
         c.pg.fill("[data-campo-valor-recibo]", "120")
         c.esperar(lambda: "Rafael Moura" in c.pg.inner_text("[data-previa-recibo]"), 10)

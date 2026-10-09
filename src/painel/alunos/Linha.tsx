@@ -36,6 +36,7 @@ export function LinhaAluno({
   const apagado = !aluno.ativo || aluno.conta_excluida;
   return (
     <div
+      data-item={aluno.id}
       data-aluno-linha={aluno.id}
       data-aluno-nome={aluno.nome}
       data-aluno-bloqueado={aluno.bloqueado || undefined}

@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 import { Alimentos } from "@/painel/dietas/Alimentos";
 import { useContextoDietas } from "@/painel/dietas/contexto";
 import { Diario } from "@/painel/dietas/Diario";
-import { contarNaoReagidas } from "@/painel/dietas/diarioPainel";
+import { PERIODO_PADRAO } from "@/painel/dietas/diarioPainel";
 import { Receitas } from "@/painel/dietas/Receitas";
 import { abaDietasDaUrl, type AbaDietas } from "@/painel/dietas/regras";
-import { useDiarioDaConta } from "@/painel/dietas/useDiario";
+import { useNaoReagidas } from "@/painel/dietas/useDiario";
 import { TopoPagina } from "@/ui/casca/topo";
 import { Botao } from "@/ui/premium/Botao";
 import { EstadoCarregando } from "@/ui/premium/Estados";
@@ -32,9 +32,9 @@ export default function Dietas() {
   const aba = abaDietasDaUrl(sp);
   const [pedido, setPedido] = useState<null | AbaDietas>(null);
   const atendido = useCallback(() => setPedido(null), []);
-  // o número da aba Diário: as fotos não reagidas dos últimos 7 dias (a mesma consulta da aba, em cache)
-  const { registros } = useDiarioDaConta(ctx.contaId, ctx.uid, 7, ctx.souNutri && ctx.pronto);
-  const naoReagidas = contarNaoReagidas(registros);
+  // o número da aba Diário: as fotos não reagidas dos últimos 7 dias — hml-14b (B21): contadas no banco, na mesma chave do "Só não
+  // reagidas (N)" da aba no período padrão (antes: até 1000 registros dos 7 dias baixados e contados aqui)
+  const naoReagidas = useNaoReagidas(ctx.contaId, ctx.uid, PERIODO_PADRAO, "", ctx.souNutri && ctx.pronto).data ?? 0;
 
   const irPara = (id: AbaDietas) => {
     const n = new URLSearchParams();

@@ -1,6 +1,8 @@
 // Physiq W19 — Painel › Financeiro › Resumo (spec 4.4: recebido, previsto, em aberto, vencido + "Receita por mês" e "Cobranças do mês"),
 // no padrão da tela 6: os 4 cartões com o mini gráfico, a "Receita" grande com 30D · 6M · Ano, a rosca do mês, e embaixo "Precisam de
 // atenção" (Pix aguardando, mensalidades e cobranças vencidas), as movimentações recentes e as entradas do mês por categoria.
+// hml-14b (D14): o recebido (lançamentos + cobranças pagas sem lançamento) chega SOMADO do banco por dia (financeiro_resumo_periodo)
+// e as 6 recentes vêm de financeiro_lancamentos — antes o navegador baixava até 1000 lançamentos e somava.
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownCircle, ArrowUpCircle, CalendarClock, CircleAlert, ReceiptText, TrendingUp, Wallet } from "lucide-react";
@@ -11,41 +13,57 @@ import { Chip } from "@/ui/premium/Chip";
 import { EstadoErro, Esqueleto } from "@/ui/premium/Estados";
 import { Kpi } from "@/ui/premium/Kpi";
 import CobrancasDoMes from "./CobrancasDoMes";
-import { listarCobrancasDoResumo, listarTransacoes } from "./dados";
+import { SEM_FILTROS, listarCobrancasDoResumo, listarLancamentos, resumoDoPeriodo } from "./dados";
 import { fmtBRL, fmtValorComSinal, formatarData, rotuloMetodo } from "./financeiroUtil";
 import GraficoReceita from "./GraficoReceita";
 import {
-  aReceber, cobrancasDoMes, entradasPorCategoria, kpis, nomeDoMesLongo, precisamDeAtencao, recebimentos, type BarraCategoria, type ItemAtencao,
+  aReceber, cobrancasDoMes, entradasPorCategoria, fimDoMes, inicioDoMes, kpis, nomeDoMesLongo, precisamDeAtencao, recebimentos, type BarraCategoria,
+  type ItemAtencao,
 } from "./resumo";
 import { CHAVES, useResumoDaConta, type FinanceiroConta } from "./useFinanceiro";
 
 const curto = (n: number) => fmtBRL(n).replace(/,00$/, "");
+const RECENTES = 6;
 
 export default function Resumo({ f, irPara }: { f: FinanceiroConta; irPara: (aba: "mensalidades" | "lancamentos" | "recibos", extra?: Record<string, string>) => void }) {
   const hoje = hojeSP();
   // desde 1º de janeiro do ano passado: o "Ano" compara com o mesmo pedaço do ano anterior
   const desde = `${Number(hoje.slice(0, 4)) - 1}-01-01`;
-  const trans = useQuery({ queryKey: CHAVES.resumoTransacoes(f.contaId), queryFn: () => listarTransacoes(f.contaId, f.uid, desde, hoje), enabled: f.pronto, staleTime: 15_000 });
-  const cobs = useQuery({ queryKey: CHAVES.cobrancas(f.contaId), queryFn: () => listarCobrancasDoResumo(f.contaId, f.uid, desde), enabled: f.pronto, staleTime: 15_000 });
+  const trans = useQuery({ queryKey: CHAVES.resumoTransacoes(f.contaId), queryFn: () => resumoDoPeriodo(f.contaId, desde, hoje), enabled: f.pronto, staleTime: 15_000 });
+  const cobs = useQuery({
+    queryKey: CHAVES.cobrancas(f.contaId),
+    queryFn: () => listarCobrancasDoResumo(f.contaId, f.uid, inicioDoMes(hoje), fimDoMes(hoje)),
+    enabled: f.pronto,
+    staleTime: 15_000,
+  });
+  const recentesQ = useQuery({
+    queryKey: CHAVES.recentes(f.contaId, desde, hoje),
+    queryFn: () => listarLancamentos(f.contaId, desde, hoje, SEM_FILTROS, 1, RECENTES),
+    enabled: f.pronto,
+    staleTime: 15_000,
+  });
   const resumo = useResumoDaConta(f);
 
   const calc = useMemo(() => {
     if (!trans.data || !cobs.data) return null;
     const agora = new Date();
     const alunos = resumo.data?.alunos ?? [];
-    const recs = recebimentos(trans.data, cobs.data);
+    const recs = recebimentos(trans.data);
     const lista = aReceber(cobs.data, alunos, hoje, agora);
     return {
       recs,
       k: kpis(recs, lista, hoje),
       fatias: cobrancasDoMes(cobs.data, lista, hoje),
       atencao: precisamDeAtencao(resumo.data?.pendentes ?? [], lista),
-      barras: entradasPorCategoria(trans.data, cobs.data, hoje),
+      barras: entradasPorCategoria(trans.data, hoje),
     };
   }, [trans.data, cobs.data, resumo.data, hoje]);
 
-  if (trans.isError || cobs.isError) {
-    return <EstadoErro titulo="Não deu para carregar o resumo" texto="Confira a internet e tente de novo." aoTentar={() => { void trans.refetch(); void cobs.refetch(); }} />;
+  if (trans.isError || cobs.isError || recentesQ.isError) {
+    return (
+      <EstadoErro titulo="Não deu para carregar o resumo" texto="Confira a internet e tente de novo."
+        aoTentar={() => { void trans.refetch(); void cobs.refetch(); void recentesQ.refetch(); }} />
+    );
   }
   if (!calc) {
     return (
@@ -58,7 +76,7 @@ export default function Resumo({ f, irPara }: { f: FinanceiroConta; irPara: (aba
   const { k } = calc;
   const mes = nomeDoMesLongo(hoje);
   const v = k.variacaoMes;
-  const recentes = [...(trans.data ?? [])].slice(0, 6);
+  const recentes = recentesQ.data?.itens ?? [];
 
   return (
     <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="resumo" data-recebido-mes={k.recebidoMes.toFixed(2)} data-previsto-mes={k.previstoMes.toFixed(2)}
@@ -86,7 +104,7 @@ export default function Resumo({ f, irPara }: { f: FinanceiroConta; irPara: (aba
 
       <div className="grid gap-3.5 xl:grid-cols-3">
         <Atencao itens={calc.atencao} aoAbrir={(i) => irPara("mensalidades", i.chip === "PIX" ? { ver: "comprovantes" } : {})} />
-        <Recentes itens={recentes} aoVerTodos={() => irPara("lancamentos")} />
+        <Recentes itens={recentes} carregando={recentesQ.isLoading} aoVerTodos={() => irPara("lancamentos")} />
         <PorCategoria barras={calc.barras} mes={mes} />
       </div>
     </div>
@@ -117,11 +135,13 @@ function Atencao({ itens, aoAbrir }: { itens: ItemAtencao[]; aoAbrir: (i: ItemAt
   );
 }
 
-function Recentes({ itens, aoVerTodos }: { itens: { id: string; tipo: string; descricao: string; valor: number; data: string; metodo: string; estornada: boolean; paciente: { nome: string } | null }[]; aoVerTodos: () => void }) {
+function Recentes({ itens, carregando, aoVerTodos }: { itens: { id: string; tipo: string; descricao: string; valor: number; data: string; metodo: string; estornada: boolean; paciente: { nome: string } | null }[]; carregando: boolean; aoVerTodos: () => void }) {
   return (
     <Cartao className="px-[22px] pb-3 pt-[18px]" data-cartao-recentes>
       <CabecalhoCartao titulo="Movimentações recentes" acao={<button type="button" onClick={aoVerTodos} className="text-[12.5px] font-semibold text-violeta-3" data-ver-lancamentos>Ver todas</button>} />
-      {itens.length === 0 ? (
+      {carregando ? (
+        <div className="flex flex-col gap-2 py-2"><Esqueleto className="h-10 w-full rounded-xl" /><Esqueleto className="h-10 w-full rounded-xl" /></div>
+      ) : itens.length === 0 ? (
         <p className="py-3 text-[12.5px] text-texto-3">Nenhuma movimentação ainda. Registre entradas e saídas em Lançamentos.</p>
       ) : (
         <div className="divide-y divide-linha-3">

@@ -48,8 +48,8 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 31 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
-    expect(RPC_SO_LEITURA.size).toBe(31);
+  it("as 36 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
+    expect(RPC_SO_LEITURA.size).toBe(36);
     expect(RPC_QUE_GRAVAM.size).toBe(40);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
@@ -61,6 +61,12 @@ describe("podeRepetir", () => {
     expect(podeRepetir(`${P}/rest/v1/rpc/aceitar_no_acesso`, { method: "POST" })).toBe(false);
     expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel_registrar`, { method: "POST" })).toBe(false);
     expect(RPC_QUE_GRAVAM.has("aceitar_no_acesso") && RPC_QUE_GRAVAM.has("aluno_responsavel_registrar")).toBe(true);
+  });
+
+  it("hml-14b: as 5 RPCs das listas por página (STABLE) repetem — as do financeiro vão pelo rpcFinanceiro, que a guarda não lê", () => {
+    for (const nome of ["financeiro_lancamentos", "financeiro_recibos", "financeiro_resumo_periodo", "receitas_da_nutricionista", "respostas_da_conta"]) {
+      expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
+    }
   });
 });
 

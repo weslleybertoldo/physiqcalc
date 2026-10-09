@@ -88,11 +88,23 @@ export async function listarLancamentosDoAluno(pacienteId: string): Promise<Lanc
   return (data ?? []) as unknown as Lancamento[];
 }
 
-export async function garantirCategorias(uid: string): Promise<Categoria[]> {
+const lerCategorias = async (uid: string): Promise<Categoria[]> => {
   const { data, error } = await principal.from("categorias_financeiras").select("id, nome").eq("nutricionista_id", uid).is("deleted_at", null).order("nome");
   falhou(error);
-  if ((data ?? []).length) return data as Categoria[];
-  const { data: novas } = await principal.from("categorias_financeiras").insert(CATEGORIAS_PADRAO.map((nome) => ({ nutricionista_id: uid, nome }))).select("id, nome");
+  return (data ?? []) as Categoria[];
+};
+
+export async function garantirCategorias(uid: string): Promise<Categoria[]> {
+  const lista = await lerCategorias(uid);
+  if (lista.length) return lista;
+  const { data: novas, error } = await principal.from("categorias_financeiras").insert(CATEGORIAS_PADRAO.map((nome) => ({ nutricionista_id: uid, nome }))).select("id, nome");
+  if (error) {
+    // hml-14b (B14): o erro era ignorado e a tela ficava sem categoria nenhuma. Duas abas ao mesmo tempo: a 2ª bate no índice
+    // único (nome por profissional) e relê as que a 1ª criou; outro erro (sem nada para reler) vai para a tela.
+    const relidas = await lerCategorias(uid);
+    if (relidas.length) return relidas;
+    throw new Error(error.message);
+  }
   return ((novas ?? []) as Categoria[]).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 

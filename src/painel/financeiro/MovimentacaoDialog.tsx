@@ -1,19 +1,20 @@
 // Physiq W19 — "Nova movimentação" / "Editar movimentação" (N-19): porta do PhysiqNutri (main ca9f66f,
 // src/components/financeiro/MovimentacaoDialog.tsx) no visual premium. Tipo entrada/saída, valor em BRL com prévia ("150", "150,00",
 // "1.234,56"), data, categoria (com o atalho para gerenciar), forma, aluno opcional (busca por nome) e observação. Grava na conta ativa.
+// hml-14b (B19): o campo Aluno é o SeletorDeAluno (busca no banco: nome, apelido, e-mail, telefone e CPF, sem acento, 20 por vez);
+// sem a lista de até 1000 alunos que vinha pela prop `alunos` (saiu).
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowDownCircle, ArrowUpCircle, Check, ChevronsUpDown, Tags } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ArrowDownCircle, ArrowUpCircle, Tags } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { BTN_LINK, BTN_PRI, BTN_SEC, Campo, DESCRICAO_JANELA, INPUT, JANELA, SELECT, TEXTAREA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
-import { atualizarTransacao, criarTransacao, type AlunoResumido, type CategoriaFinanceira, type Transacao } from "./dados";
+import { SeletorDeAluno } from "@/painel/alunos/SeletorDeAluno";
+import { atualizarTransacao, criarTransacao, type CategoriaFinanceira, type Transacao } from "./dados";
 import {
   DESCRICAO_MAX, METODOS, OBSERVACAO_MAX, TIPOS, ehMetodo, ehTipo, fmtBRL, formParaRegistro, formVazio, limparValorDigitado, parseValor, registroParaForm,
   textoValor, valorValido, type FormMovimentacao,
@@ -56,14 +57,12 @@ interface Props {
   uid: string;
   contaId: string;
   categorias: CategoriaFinanceira[];
-  alunos: AlunoResumido[];
   onSalvo: (t: Transacao, modo: "criado" | "editado") => void;
   onGerenciarCategorias: () => void;
 }
 
-export default function MovimentacaoDialog({ open, onOpenChange, transacao, uid, contaId, categorias, alunos, onSalvo, onGerenciarCategorias }: Props) {
+export default function MovimentacaoDialog({ open, onOpenChange, transacao, uid, contaId, categorias, onSalvo, onGerenciarCategorias }: Props) {
   const editando = !!transacao;
-  const [buscaAberta, setBuscaAberta] = useState(false);
   const [erroGeral, setErroGeral] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<Valores>({
@@ -74,22 +73,17 @@ export default function MovimentacaoDialog({ open, onOpenChange, transacao, uid,
   useEffect(() => {
     if (!open) return;
     setErroGeral(null);
-    setBuscaAberta(false);
     reset(transacao ? registroParaForm(transacao) : formVazio());
   }, [open, transacao, reset]);
 
   const v = montarForm(watch());
   const valorNum = parseValor(v.valor);
-  const alunoAtual = alunos.find((p) => p.id === v.pacienteId) ?? null;
-  // aluno da movimentação editada que não está mais na lista (inativo/excluído): mostra o nome gravado
-  const nomeAlunoFora = !alunoAtual && v.pacienteId && transacao?.paciente_id === v.pacienteId ? transacao?.paciente?.nome ?? null : null;
+  // aluno da movimentação editada que não é mais achado (removido, de fora): o seletor mostra o nome gravado
+  const nomeAlunoGravado = v.pacienteId && transacao?.paciente_id === v.pacienteId ? transacao?.paciente?.nome ?? null : null;
   const categoriaFora = transacao?.categoria_id && !categorias.some((c) => c.id === transacao.categoria_id) ? transacao : null;
   const valorReg = register("valor");
 
-  const escolherAluno = (p: AlunoResumido | null) => {
-    setValue("pacienteId", p?.id ?? null, { shouldDirty: true });
-    setBuscaAberta(false);
-  };
+  const escolherAluno = (id: string | null) => setValue("pacienteId", id, { shouldDirty: true });
 
   const onSubmit = async (valores: Valores) => {
     setErroGeral(null);
@@ -199,43 +193,11 @@ export default function MovimentacaoDialog({ open, onOpenChange, transacao, uid,
           </div>
 
           <Campo rotulo="Aluno" erro={errors.pacienteId?.message} dica="opcional — liga a movimentação ao aluno (a entrada pode virar recibo)">
-            <Popover open={buscaAberta} onOpenChange={setBuscaAberta}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  role="combobox"
-                  aria-expanded={buscaAberta}
-                  className={cn(SELECT, "flex items-center justify-between text-left")}
-                  data-campo-paciente={v.pacienteId ?? "nenhum"}
-                >
-                  <span className={cn("truncate", !alunoAtual && !nomeAlunoFora && "text-texto-4")}>
-                    {alunoAtual ? alunoAtual.nome : nomeAlunoFora ?? (v.pacienteId ? "Aluno selecionado" : "Sem aluno")}
-                  </span>
-                  <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] border-linha-2 bg-tela p-0 font-body text-texto" align="start">
-                <Command>
-                  <CommandInput placeholder="Buscar aluno…" data-busca-paciente />
-                  <CommandList className="max-h-56">
-                    <CommandEmpty>Nenhum aluno com esse nome.</CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem value="__nenhum__ sem aluno" onSelect={() => escolherAluno(null)} data-opcao-paciente="nenhum">
-                        <Check className={cn("mr-2 h-4 w-4", v.pacienteId ? "opacity-0" : "opacity-100")} aria-hidden="true" />
-                        Sem aluno
-                      </CommandItem>
-                      {alunos.map((p) => (
-                        <CommandItem key={p.id} value={`${p.nome} ${p.apelido ?? ""} ${p.id}`} onSelect={() => escolherAluno(p)} data-opcao-paciente={p.id}>
-                          <Check className={cn("mr-2 h-4 w-4", v.pacienteId === p.id ? "opacity-100" : "opacity-0")} aria-hidden="true" />
-                          <span className="truncate">{p.nome}</span>
-                          {p.apelido && <span className="ml-2 truncate text-xs text-texto-3">{p.apelido}</span>}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            {/* hml-14b (B19): a busca no banco; o data-campo-paciente segue com o id escolhido (os E2E antigos conferem o valor) */}
+            <div data-campo-paciente={v.pacienteId ?? "nenhum"}>
+              <SeletorDeAluno campo="movimentacao" contaId={contaId} valor={v.pacienteId} aoMudar={(a) => escolherAluno(a?.id ?? null)} opcional
+                rotuloNenhum="Sem aluno" nomeGravado={nomeAlunoGravado} rotulo="Buscar o aluno da movimentação" />
+            </div>
           </Campo>
 
           <Campo rotulo="Observação" erro={errors.observacao?.message}>

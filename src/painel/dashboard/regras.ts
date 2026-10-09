@@ -11,7 +11,8 @@
 //     pela data marcada (sem data, 60 dias da última), 3 dias sem marcar a dieta, cadastros pendentes do link /c/ (o "Pendentes" de
 //     Alunos), respostas novas da pré-consulta (o número do menu) e os aniversariantes da semana (a regra do Dashboard do Nutri);
 //     H4: + as fotos do diário aguardando reação (o "Só não reagidas" de Dietas › Diário nos 7 dias — só para quem vê o diário);
-//   · H4: Recibos no mês = os recibos de Financeiro › Recibos (a mesma consulta) com a data no mês de hoje (o KPI do Nutri).
+//   · H4: Recibos no mês = os recibos de Financeiro › Recibos com a data no mês de hoje (o KPI do Nutri) — hml-14b: contado no
+//     banco (financeiro_recibos, a função da aba Recibos, só o total — useDashboard), não mais aqui;
 //   · H1: a "Agenda de hoje" mostra a pílula da TAG da consulta (a da página Agenda), lendo só as tags dos profissionais dela.
 import { primeiroNome, resumoDaSemana } from "@/app-aluno/inicio/pecas/regras";
 import { cancelado, diaSP, somarDias } from "@/agenda/regras";
@@ -400,12 +401,6 @@ export function fotosSemReacao(n: number): ItemAtencao[] {
     chave: "diario", tipo: "diario", nome: plural(n, "foto do diário", "fotos do diário"), foto: null, chip: "DIÁRIO", tom: "n",
     texto: "Aguardando a sua reação (últimos 7 dias)", link: LINK_FOTOS_SEM_REACAO, ordem: ordem("diario", n, ""),
   }];
-}
-
-/** H4: "Recibos no mês" (o KPI do Nutri) — os recibos com a data no mês de hoje, da lista de Financeiro › Recibos. */
-export function recibosDoMes(recibos: readonly { data: string }[], hoje: string): number {
-  const mes = hoje.slice(0, 7);
-  return recibos.filter((r) => (r.data ?? "").slice(0, 7) === mes).length;
 }
 
 /** O "Pendentes" da página Alunos (auto-cadastros pelo link /c/): 1 item com o número. */

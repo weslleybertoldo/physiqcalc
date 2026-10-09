@@ -16,7 +16,7 @@ import { BTN_PERIGO, BTN_SEC, DESCRICAO_JANELA, JANELA, TITULO_JANELA } from "@/
 import AgendamentoDialog, { type FormAgendamento } from "@/painel/agenda/AgendamentoDialog";
 import CalendarioDialog from "@/painel/agenda/CalendarioDialog";
 import {
-  buscarAluno, excluirAgendamento, excluirBloqueio, excluirTag, excluirTrava, listarAgendamentos, type Agendamento, type AlunoAgenda, type Bloqueio,
+  buscarAluno, excluirAgendamento, excluirBloqueio, excluirTag, excluirTrava, janelaNoLimite, listarAgendamentos, type Agendamento, type Bloqueio,
   type Calendario,
 } from "@/painel/agenda/dados";
 import PainelAgenda from "@/painel/agenda/PainelAgenda";
@@ -28,7 +28,7 @@ import { CHAVES_AGENDA, useContextoAgenda, useDadosAgenda } from "@/painel/agend
 import {
   VISOES, ancoraDaURL, chaveDia, ehVisao, faixaDaSemana, formatarHora, moverAncora, paraEvento, tituloPeriodo, type EventoPainel, type Visao,
 } from "@/painel/agenda/visao";
-import VisaoLista from "@/painel/agenda/VisaoLista";
+import VisaoLista, { AvisoLimiteAgenda } from "@/painel/agenda/VisaoLista";
 import VisaoMes from "@/painel/agenda/VisaoMes";
 import VisaoSemana from "@/painel/agenda/VisaoSemana";
 import { TopoPagina } from "@/ui/casca/topo";
@@ -94,14 +94,12 @@ export default function Agenda() {
   const [regrasAberto, setRegrasAberto] = useState(false);
   const [travaAberta, setTravaAberta] = useState(false);
   const [exportando, setExportando] = useState(false);
-  const [alunoExtra, setAlunoExtra] = useState<AlunoAgenda | null>(null);
   const [dialogTag, setDialogTag] = useState<{ aberto: boolean; tag: TagAgenda | null }>({ aberto: false, tag: null });
   const [tagExcluir, setTagExcluir] = useState<TagAgenda | null>(null);
   const [excluindoTag, setExcluindoTag] = useState(false);
   const minhasTags = useMemo(() => tagsDe(d.tags, ctx.uid), [d.tags, ctx.uid]);
   const destinoExcluir = tagExcluir ? destinoAoExcluir(tagExcluir, d.tags) : null;
 
-  const alunos = useMemo(() => (alunoExtra && !d.alunos.some((a) => a.id === alunoExtra.id) ? [alunoExtra, ...d.alunos] : d.alunos), [d.alunos, alunoExtra]);
   const minhasTravas = useMemo(() => d.travas.filter((t) => t.profissional_id === ctx.uid), [d.travas, ctx.uid]);
   const nomes = useMemo(() => new Map([...ctx.pessoas.values()].map((p) => [p.id, p.nome])), [ctx.pessoas]);
   const meuSlot = useMemo(() => {
@@ -109,6 +107,8 @@ export default function Agenda() {
     return meu?.slot_minutos ?? d.regras.slot_minutos;
   }, [d.calendarios, ctx.uid, d.regras.slot_minutos]);
   const faixa = useMemo(() => faixaDaSemana(d.visiveis.length ? d.visiveis : d.calendarios, d.regras), [d.visiveis, d.calendarios, d.regras]);
+  // hml-14b (D18): a janela da visão é lida até 1000 — no teto, o aviso (na lista, na semana e no mês)
+  const noLimite = janelaNoLimite(d.agendamentosQ.data);
 
   // atalho "Agendar" do Resumo do aluno (?aluno=<id>&novo=1) e os links do site antigo (?paciente=<id>)
   const alunoParam = params.get("aluno") ?? params.get("paciente");
@@ -119,7 +119,6 @@ export default function Agenda() {
     const conhecido = d.alunos.find((a) => a.id === alunoParam) ?? null;
     void (conhecido ? Promise.resolve(conhecido) : buscarAluno(alunoParam).catch(() => null)).then((a) => {
       if (!ativo) return;
-      if (a && !conhecido) setAlunoExtra(a);
       setDialogAg({ aberto: true, agendamento: null, inicial: { pacienteId: a?.id ?? null } });
       const next = new URLSearchParams(params);
       next.delete("aluno");
@@ -243,12 +242,18 @@ export default function Agenda() {
           ) : d.carregando ? (
             <div className="pq-cartao p-4" data-carregando-agenda><Esqueleto className="h-[420px] w-full" /></div>
           ) : visao === "mes" ? (
-            <VisaoMes ancora={ancora} eventos={d.eventos} bloqueios={d.bloqueios} regras={d.regras} hoje={hoje} onNovo={novoNoDia} onAbrir={abrirEvento} />
+            <>
+              {noLimite && <AvisoLimiteAgenda />}
+              <VisaoMes ancora={ancora} eventos={d.eventos} bloqueios={d.bloqueios} regras={d.regras} hoje={hoje} onNovo={novoNoDia} onAbrir={abrirEvento} />
+            </>
           ) : visao === "semana" ? (
-            <VisaoSemana ancora={ancora} eventos={d.eventos} bloqueios={d.bloqueios} travas={minhasTravas} regras={d.regras} slot={meuSlot} faixa={faixa}
-              hoje={new Date()} onNovo={novoNoHorario} onAbrir={abrirEvento} />
+            <>
+              {noLimite && <AvisoLimiteAgenda />}
+              <VisaoSemana ancora={ancora} eventos={d.eventos} bloqueios={d.bloqueios} travas={minhasTravas} regras={d.regras} slot={meuSlot} faixa={faixa}
+                hoje={new Date()} onNovo={novoNoHorario} onAbrir={abrirEvento} />
+            </>
           ) : (
-            <VisaoLista ancora={ancora} eventos={d.eventos} hoje={hoje} onAbrir={abrirEvento} onNovo={novoNoDia} />
+            <VisaoLista ancora={ancora} eventos={d.eventos} hoje={hoje} onAbrir={abrirEvento} onNovo={novoNoDia} noLimite={noLimite} />
           )}
         </section>
 
@@ -264,7 +269,7 @@ export default function Agenda() {
       </div>
 
       <AgendamentoDialog open={dialogAg.aberto} onOpenChange={(aberto) => setDialogAg((x) => ({ ...x, aberto }))} agendamento={dialogAg.agendamento}
-        inicial={dialogAg.inicial} calendarios={d.calendarios} alunos={alunos} eventos={[...d.eventos, ...d.eventosEstat.filter((e) => !d.eventos.some((x) => x.id === e.id))]}
+        inicial={dialogAg.inicial} calendarios={d.calendarios} eventos={[...d.eventos, ...d.eventosEstat.filter((e) => !d.eventos.some((x) => x.id === e.id))]}
         bloqueios={d.bloqueios} travas={d.travas} regras={d.regras} ctx={ctx} tags={d.tags} onTagCriada={() => void qc.invalidateQueries({ queryKey: ["agenda-painel", "tags"] })}
         onSalvo={invalidar} onExcluir={excluir} />
       <CalendarioDialog open={dialogCal.aberto} onOpenChange={(aberto) => setDialogCal((x) => ({ ...x, aberto }))} calendario={dialogCal.calendario}

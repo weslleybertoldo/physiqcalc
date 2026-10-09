@@ -12,7 +12,8 @@ type Bruto = Alimento & { medidas_caseiras: MedidaCaseira[] | null };
 export const recorteAlimentos = (uid: string): string => (uid ? `fonte.eq.taco,nutricionista_id.eq.${uid}` : "fonte.eq.taco");
 
 export async function listarAlimentosDoPainel(f: FiltrosAlimentos, uid: string, offset: number, limit: number): Promise<{ itens: Alimento[]; total: number }> {
-  const { data, error, count } = await montarConsulta(f).or(recorteAlimentos(uid)).range(offset, offset + limit - 1);
+  // hml-14b (B21): o id desempata a ordem (nome + marca, fonte) — 2 alimentos iguais não trocam de página entre um pedido e outro
+  const { data, error, count } = await montarConsulta(f).or(recorteAlimentos(uid)).order("id", { ascending: true }).range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
   return { itens: ((data ?? []) as Bruto[]).map((r) => ({ ...r, medidas_caseiras: ordenarMedidas(r.medidas_caseiras ?? []) })), total: count ?? 0 };
 }

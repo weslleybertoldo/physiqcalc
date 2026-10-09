@@ -2,6 +2,8 @@
 // presets de período, estado na URL, valor em BRL (ler/escrever), totais do período (estornadas fora), formulário ⇄ registro,
 // ordenação, filtro por tipo/categoria/forma/texto e contagem. Novo aqui: o filtro pela FORMA de pagamento (spec 4.4 —
 // "entradas e saídas por categoria e forma de pagamento"). Nada de rede; testado no Vitest (financeiroUtil.test.ts).
+// hml-14b (B21 · D14): a tela não filtra nem soma mais aqui — o banco faz (financeiro_lancamentos e financeiro_resumo_periodo, migration
+// 20261009010000). `filtrarTransacoes` e `totais` ficam como o ESPELHO da regra do banco (a prova local da migration compara os 2).
 import { endOfMonth, endOfYear, format, isValid, parseISO, startOfDay, startOfMonth, startOfYear, subDays, subMonths } from "date-fns";
 import { chaveDia, dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
@@ -178,7 +180,7 @@ export const textoValor = (n: number | null | undefined): string => (n === null 
 /** Enquanto digita: só dígitos, ponto e vírgula. */
 export const limparValorDigitado = (s: string): string => s.replace(/[^\d.,]/g, "");
 
-// ---- Totais (estornadas NÃO contam) ----
+// ---- Totais (estornadas NÃO contam) — o espelho de financeiro_resumo_periodo ----
 export type Totais = { entradas: number; saidas: number; saldo: number; nEntradas: number; nSaidas: number; nEstornadas: number; total: number };
 export function totais(lista: { tipo: string; valor: number; estornada: boolean }[]): Totais {
   let entradas = 0;
@@ -294,7 +296,8 @@ export type TransacaoFiltravel = {
 const normalizar = (s: string | null | undefined): string => semAcento(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 /** Palavras da busca (até 6), sem acento/caixa. */
 export const palavrasBusca = (q: string | null | undefined): string[] => normalizar(q).split(" ").filter(Boolean).slice(0, 6);
-/** Tipo, categoria (pelo id), forma e texto — descrição, aluno, categoria e observação; TODAS as palavras precisam aparecer. */
+/** Tipo, categoria (pelo id), forma e texto — descrição, aluno, categoria e observação; TODAS as palavras precisam aparecer.
+ *  O espelho do filtro do banco (financeiro_transacoes_visiveis: texto_busca dos 2 lados, até 6 palavras). */
 export function filtrarTransacoes<T extends TransacaoFiltravel>(lista: T[], f: { tipo: string; categoria: string; metodo?: string; q: string }): T[] {
   const ps = palavrasBusca(f.q);
   return lista.filter((t) => {

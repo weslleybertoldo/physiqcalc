@@ -3,6 +3,7 @@
 // lixeira_apagar conferem de novo quem pode (P1 + clínico da W18) e, no aluno, a trava de e-mail/CPF (W16b) e o P7. A recusa volta
 // como { ok: false, erro } e vira ErroLixeira (a tela mostra a frase em vermelho; nada muda).
 import { principal } from "@/integrations/principal/client";
+import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { normalizarLixeira, type Lixeira, type TipoLixeira } from "./regras";
 
 export class ErroLixeira extends Error {
@@ -24,10 +25,21 @@ async function rpc(nome: string, args: Record<string, unknown>): Promise<Record<
 
 export const CHAVE_LIXEIRA = ["lixeira"] as const;
 
-export async function listarLixeira(contaId: string): Promise<Lixeira> {
-  const r = await rpc("lixeira_da_conta", { p_conta: contaId });
+/**
+ * hml-14b (B21): UMA página (20) de uma aba — a aba (?tipo=; sem ela, o banco abre a 1ª com itens), a busca (sem acento, por palavras)
+ * e a página vão ao banco; volta a página, a aba mostrada, os números das abas e o total da aba (com a busca). Chamada só com p_conta
+ * (o APK antigo), a lixeira_da_conta responde como antes (até 300 por tipo).
+ */
+export async function listarLixeira(contaId: string, p: { tipo: string | null; busca: string; pagina: number }): Promise<Lixeira> {
+  const r = await rpc("lixeira_da_conta", {
+    p_conta: contaId,
+    p_tipo: p.tipo || null,
+    p_busca: p.busca.trim() || null,
+    p_offset: deslocamento(p.pagina),
+    p_limite: POR_PAGINA,
+  });
   const l = normalizarLixeira(r);
-  if (!l) throw new ErroLixeira("erro_interno");
+  if (!l?.pagina) throw new ErroLixeira("erro_interno");
   return l;
 }
 

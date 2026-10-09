@@ -1,34 +1,61 @@
 // Physiq W21 — porta de src/components/respostas-preconsulta/VincularPacienteDialog.tsx do PhysiqNutri (main 294887a) para o painel:
-// "Ligar a um aluno". SUGESTÃO automática (mesmo e-mail → mesmo telefone → mesmo nome) com "Usar sugestão", a busca na lista dos alunos
+// "Ligar a um aluno". SUGESTÃO automática (mesmo e-mail → mesmo telefone → mesmo nome) com "Usar sugestão", a busca dos alunos
 // que VOCÊ vê na conta (P1 — o banco confere de novo ao gravar) e "Cadastrar aluno com estes dados", que usa o MESMO caminho do Novo
 // aluno (W13: função `alunos` — limite da faixa, módulos e responsáveis, espelho no Treino) e respeita a trava de e-mail único da
 // W16b (mensagem vermelha embaixo do campo). Quem chama recebe a resposta atualizada e o aluno pelo `onLigada`.
+// hml-14b (B19): a busca e a sugestão vão ao BANCO (SeletorDeAluno: nome, apelido, e-mail, telefone e CPF, sem acento, 20 por vez);
+// sem a lista de até 1000 alunos que vinha pela prop `alunos` (saiu).
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Dumbbell, Salad, Search, Sparkles, UserCheck, UserPlus } from "lucide-react";
+import { Dumbbell, Salad, Sparkles, UserCheck, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { conferirDadoLivre } from "@/nucleo/dadoLivre";
 import { DICA_REPETIDO, MENSAGEM_REPETIDO, camposDoErro, precisaConferir } from "@/nucleo/dadoRepetido";
-import { criarAluno, ErroAlunos, listarAlunos } from "@/painel/alunos/api";
-import { FILTROS_PADRAO, limiteAtingido, mensagemErroAlunos, type ListaAlunos, type ModuloAluno } from "@/painel/alunos/regras";
+import { buscarAlunosDoSeletor, criarAluno, ErroAlunos, listarAlunos } from "@/painel/alunos/api";
+import { FILTROS_PADRAO, limiteAtingido, mensagemErroAlunos, type AlunoDoSeletor, type ListaAlunos, type ModuloAluno } from "@/painel/alunos/regras";
+import { SeletorDeAluno } from "@/painel/alunos/SeletorDeAluno";
+import { useAlunoDoSeletor, useGuardarAlunoDoSeletor } from "@/painel/alunos/useSeletorDeAluno";
 import { CampoSelect, OpcoesPilula, type OpcaoPilula } from "@/painel/configuracoes/pecas/Form";
 import { BTN_PRI, BTN_SEC } from "@/nutricao/editor/ui/estilos";
-import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { ligarAluno, type AlunoPreconsulta, type RespostaComFormulario } from "./dados";
 import { CHAVES_PRECONSULTA } from "./novas";
-import { contatoResposta, dadosAlunoDaResposta, filtrarAlunos, sugerirAluno, textoSugestao } from "./respostasUtil";
+import { TELEFONE_DIGITOS_MIN, apenasDigitos, contatoResposta, dadosAlunoDaResposta, sugerirAluno, textoSugestao, type Sugestao } from "./respostasUtil";
 
 interface Props {
   open: boolean;
   onOpenChange: (aberto: boolean) => void;
   resposta: RespostaComFormulario | null;
-  alunos: AlunoPreconsulta[];
   contaId: string;
   onLigada: (r: RespostaComFormulario, aluno: AlunoPreconsulta) => void;
+}
+
+/** O aluno do seletor no formato que a pré-consulta devolve a quem chama. */
+const paraAlunoPreconsulta = (a: AlunoDoSeletor): AlunoPreconsulta => ({
+  id: a.id, nome: a.nome, apelido: a.apelido, email: a.email, telefone: a.telefone, ativo: a.ativo, foto_url: a.foto_url,
+  personal_id: a.personal_id, nutricionista_id: a.nutricionista_id,
+});
+
+/** Até quantos alunos cada busca da sugestão olha (o e-mail, o telefone e o nome são termos estreitos). */
+const LIMITE_SUGESTAO = 50;
+
+/**
+ * hml-14b (B19): a sugestão sem a lista inteira — busca no banco pelo e-mail, pelos 8 últimos dígitos do telefone (tolera o DDI,
+ * como a regra) e pelo nome, nessa ordem, e aplica a MESMA regra (sugerirAluno) ao que voltou; para no 1º que achar.
+ */
+async function sugerirNoBanco(contaId: string, r: RespostaComFormulario): Promise<Sugestao<AlunoDoSeletor> | null> {
+  const tel = apenasDigitos(r.telefone);
+  const termos = [(r.email ?? "").trim(), tel.length >= TELEFONE_DIGITOS_MIN ? tel.slice(-TELEFONE_DIGITOS_MIN) : "", (r.nome ?? "").trim()].filter(Boolean);
+  const vistos = new Map<string, AlunoDoSeletor>();
+  for (const termo of termos) {
+    const { itens } = await buscarAlunosDoSeletor(contaId, termo, "todos", LIMITE_SUGESTAO);
+    for (const a of itens) vistos.set(a.id, a);
+    const s = sugerirAluno(r, [...vistos.values()]);
+    if (s) return s;
+  }
+  return null;
 }
 
 /** O mesmo do Novo aluno (W13): os módulos que dá para acompanhar nesta conta, conforme quem cadastra. */
@@ -49,18 +76,18 @@ const modulosIniciais = (lista: ListaAlunos): ModuloAluno[] =>
 const responsavelPadrao = (lista: ListaAlunos, papel: "personal" | "nutricionista"): string =>
   (lista.responsaveis.find((r) => r.eu && r.papeis.includes(papel)) ?? lista.responsaveis.find((r) => r.papeis.includes(papel)))?.id ?? "";
 
-export default function LigarAlunoDialog({ open, onOpenChange, resposta, alunos, contaId, onLigada }: Props) {
-  const [busca, setBusca] = useState("");
+export default function LigarAlunoDialog({ open, onOpenChange, resposta, contaId, onLigada }: Props) {
   const [selecionado, setSelecionado] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<"" | "ligar" | "cadastrar">("");
   const [modo, setModo] = useState<"escolher" | "cadastrar">("escolher");
   const abriuRef = useRef(false);
+  const guardar = useGuardarAlunoDoSeletor();
+  const escolhido = useAlunoDoSeletor(contaId, selecionado || null);
 
   // reinicia SÓ ao abrir (o aluno atual, se houver, já vem selecionado)
   useEffect(() => {
     if (open && !abriuRef.current) {
-      setBusca("");
       setSelecionado(resposta?.paciente_id ?? "");
       setErro(null);
       setOcupado("");
@@ -69,8 +96,14 @@ export default function LigarAlunoDialog({ open, onOpenChange, resposta, alunos,
     abriuRef.current = open;
   }, [open, resposta]);
 
-  const sugestao = useMemo(() => (resposta ? sugerirAluno(resposta, alunos) : null), [resposta, alunos]);
-  const filtrados = useMemo(() => filtrarAlunos(alunos, busca), [alunos, busca]);
+  const sugestaoQ = useQuery({
+    queryKey: ["preconsulta", "sugestao-aluno", contaId, resposta?.id ?? "", resposta?.email ?? "", resposta?.telefone ?? "", resposta?.nome ?? ""],
+    queryFn: () => sugerirNoBanco(contaId, resposta as RespostaComFormulario),
+    enabled: open && !!resposta && !!contaId,
+    staleTime: 30_000,
+    retry: 0,
+  });
+  const sugestao = sugestaoQ.data ?? null;
   const contato = resposta ? contatoResposta(resposta) : "";
   const trocando = !!resposta?.paciente_id;
 
@@ -93,9 +126,17 @@ export default function LigarAlunoDialog({ open, onOpenChange, resposta, alunos,
   };
 
   const salvar = () => {
-    const a = alunos.find((x) => x.id === selecionado);
-    if (!a) return setErro("Escolha um aluno (ou cadastre um com os dados da resposta)");
-    void ligar(a, "ligar");
+    if (!selecionado) return setErro("Escolha um aluno (ou cadastre um com os dados da resposta)");
+    // o escolhido na busca já está no cache; sem ele (raro), liga pelo id do mesmo jeito
+    const a = escolhido.data;
+    void ligar(a ? paraAlunoPreconsulta(a) : {
+      id: selecionado, nome: "o aluno", apelido: null, email: null, telefone: null, ativo: true, foto_url: null, personal_id: null, nutricionista_id: null,
+    }, "ligar");
+  };
+
+  const usarSugestao = (a: AlunoDoSeletor) => {
+    guardar(contaId, a);
+    setSelecionado(a.id);
   };
 
   return (
@@ -123,45 +164,16 @@ export default function LigarAlunoDialog({ open, onOpenChange, resposta, alunos,
                   <Sparkles aria-hidden className="h-4 w-4 flex-none text-violeta-3" />
                   <span className="min-w-0">Parece ser <b className="font-semibold">{sugestao.aluno.nome}</b><span className="text-texto-3"> · {textoSugestao(sugestao.por)}</span></span>
                 </p>
-                <button type="button" className={BTN_PRI} onClick={() => setSelecionado(sugestao.aluno.id)} data-btn-usar-sugestao>
+                <button type="button" className={BTN_PRI} onClick={() => usarSugestao(sugestao.aluno)} data-btn-usar-sugestao>
                   <UserCheck aria-hidden /> Usar sugestão
                 </button>
               </div>
             )}
 
-            <div>
-              <div className="relative">
-                <Search aria-hidden className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
-                <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar aluno por nome, e-mail ou telefone"
-                  className="h-11 w-full rounded-[14px] border border-linha-2 bg-superficie pl-10 pr-3 text-[14px] text-texto outline-none placeholder:text-texto-4 focus:border-violeta/60"
-                  data-busca-aluno-ligar />
-              </div>
-              <div className="mt-2 max-h-[260px] overflow-y-auto rounded-2xl border border-linha" role="listbox" aria-label="Alunos" data-lista-alunos-ligar>
-                {filtrados.length === 0 ? (
-                  <p className="px-3.5 py-4 text-[12.5px] text-texto-3" data-alunos-ligar-vazio>
-                    {alunos.length ? "Nenhum aluno com essa busca." : "Você ainda não tem alunos nesta conta — cadastre um com os dados da resposta."}
-                  </p>
-                ) : (
-                  <div className="divide-y divide-linha-3">
-                    {filtrados.slice(0, 60).map((a) => {
-                      const ativo = a.id === selecionado;
-                      return (
-                        <button key={a.id} type="button" role="option" aria-selected={ativo} onClick={() => setSelecionado(a.id)}
-                          className={cn("flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition-colors", ativo ? "bg-superficie-2" : "hover:bg-[rgba(255,255,255,.03)]")}
-                          data-opcao-aluno-ligar={a.id}>
-                          <Avatar src={a.foto_url} nome={a.nome} tamanho={32} />
-                          <span className="min-w-0 flex-1">
-                            <b className="block truncate text-[13.5px] font-semibold text-texto">{a.nome}{a.ativo === false ? <span className="font-normal text-texto-3"> · desativado</span> : null}</b>
-                            <span className="block truncate text-[12px] text-texto-3">{[a.email, a.telefone].filter(Boolean).join(" · ") || "sem contato"}</span>
-                          </span>
-                          {ativo && <UserCheck aria-hidden className="h-4 w-4 flex-none text-verde-3" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* hml-14b (B19): a busca no banco (a lista fica aberta, como era); não achou → "Cadastrar aluno" com os dados da resposta */}
+            <SeletorDeAluno campo="ligar" contaId={contaId} valor={selecionado || null} situacao="todos" listaSempreAberta
+              rotulo="Buscar aluno para ligar" aoMudar={(a) => { setErro(null); setSelecionado(a?.id ?? ""); }}
+              aoCadastrar={resposta?.nome && !ocupado ? () => { setErro(null); setModo("cadastrar"); } : undefined} />
 
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-linha-2 px-3.5 py-3">
               <p className="min-w-0 text-[12.5px] text-texto-3">

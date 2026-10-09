@@ -5,12 +5,15 @@
 // conta do site antigo continua da nutri dele) e as fotos por URL assinada (bucket privado "diario").
 //
 // FONTE DO "DIÁRIO DE HOJE" DO DASHBOARD (W25): listarDiarioDaConta(contaId, uid, inicioDoPeriodo(1).toISOString()) + urlsAssinadas
-// (miniaturas) — a mesma consulta e a mesma regra desta aba.
+// (miniaturas) — a mesma regra desta aba. hml-14b (B21): a aba lê UMA página (20) do período no banco (listarDiarioPaginaComDias),
+// com o filtro de aluno e o "só não reagidas" no banco, as opções do filtro de aluno do banco (listarAlunosDoDiario) e as contagens
+// no banco (contarDiario) — nada de baixar o período e filtrar no navegador.
 import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { principal } from "@/integrations/principal/client";
 import type { Database } from "@/integrations/principal/types";
+import { POR_PAGINA, deslocamento, paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
 import type { Reacao } from "@/nutricao/app/diarioUtil";
-import { COMENTARIO_NUTRI_MAX, type AlunoDoDiario } from "./diarioPainel";
+import { COMENTARIO_NUTRI_MAX, chaveDia, type AlunoDoDiario } from "./diarioPainel";
 
 export type RegistroDiarioRow = Database["public"]["Tables"]["diario_alimentar"]["Row"];
 type RegistroDiarioUpdate = Database["public"]["Tables"]["diario_alimentar"]["Update"];
@@ -26,7 +29,122 @@ const falhou = (error: { message: string } | null): void => {
 /** O recorte da conta ativa: o aluno da conta, ou o paciente sem conta da própria nutri (site antigo). A RLS decide o resto. */
 export const recorteDiario = (contaId: string, uid: string): string => `conta_id.eq.${contaId},and(conta_id.is.null,nutricionista_id.eq.${uid})`;
 
-/** Registros VIVOS a partir de `deIso` dos alunos da conta ativa que você vê, mais recente primeiro, com o aluno embutido. */
+// ───────────────────────── a aba Diário, 20 por página (hml-14b, B21) ─────────────────────────
+/** O que filtra a aba: o início do período (?dias=), o aluno (?aluno=) e o "Só não reagidas" (?nao_reagidas=1). */
+export interface FiltrosDiario {
+  deIso: string;
+  alunoId: string;
+  soNaoReagidas: boolean;
+}
+
+// o ?aluno= do endereço só vai ao banco se for um id; lixo = um id que não existe (a lista fica vazia, como antes — nunca erro do banco)
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const NENHUM_ALUNO = "00000000-0000-0000-0000-000000000000";
+export const alunoDoFiltro = (v: string): string => (!v ? "" : UUID.test(v) ? v : NENHUM_ALUNO);
+
+/** UMA página dos registros do período (o aluno e o "só não reagidas" no banco), mais recente primeiro; o total vem junto. */
+export function listarDiarioPagina(contaId: string, uid: string, f: FiltrosDiario, pagina: number): Promise<Pagina<RegistroDiarioNutri>> {
+  return paginar<RegistroDiarioNutri>((de, ate) => {
+    let q = principal
+      .from("diario_alimentar")
+      .select(SELECT_NUTRI, { count: "exact" })
+      .is("deleted_at", null)
+      .gte("data_hora", f.deIso)
+      .or(recorteDiario(contaId, uid), { referencedTable: "paciente" });
+    const aluno = alunoDoFiltro(f.alunoId);
+    if (aluno) q = q.eq("paciente_id", aluno);
+    if (f.soNaoReagidas) q = q.is("reacao_nutri", null);
+    return q
+      .order("data_hora", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(de, ate) as unknown as PromiseLike<RespostaComContagem<RegistroDiarioNutri>>;
+  }, pagina);
+}
+
+/** Quantos registros (HEAD: só a contagem, no banco) — o "Só não reagidas (N)" e o total de um dia que a página partiu ao meio. */
+export async function contarDiario(contaId: string, uid: string, f: FiltrosDiario & { ateIso?: string }): Promise<number> {
+  let q = principal
+    .from("diario_alimentar")
+    .select("id, paciente:pacientes!inner(id)", { count: "exact", head: true })
+    .is("deleted_at", null)
+    .gte("data_hora", f.deIso)
+    .or(recorteDiario(contaId, uid), { referencedTable: "paciente" });
+  if (f.ateIso) q = q.lt("data_hora", f.ateIso);
+  const aluno = alunoDoFiltro(f.alunoId);
+  if (aluno) q = q.eq("paciente_id", aluno);
+  if (f.soNaoReagidas) q = q.is("reacao_nutri", null);
+  const { count, error } = await q;
+  falhou(error);
+  if (count == null) throw new Error("O banco não devolveu a contagem do diário.");
+  return count;
+}
+
+const meiaNoite = (iso: string): Date => {
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+};
+
+/**
+ * Os dias (meia-noite LOCAL) da página que podem continuar em outra página: o 1º, se a página não é a 1ª; o último, se há registros
+ * depois dela. Os do meio estão inteiros na página (a ordem é por data e hora).
+ */
+export function diasQuePodemContinuar(itens: { data_hora: string }[], pagina: number, total: number, porPagina = POR_PAGINA): Date[] {
+  if (!itens.length) return [];
+  const saida: Date[] = [];
+  if (pagina > 1) saida.push(meiaNoite(itens[0].data_hora));
+  if (deslocamento(pagina, porPagina) + itens.length < total) {
+    const ultimo = meiaNoite(itens[itens.length - 1].data_hora);
+    if (!saida.some((d) => d.getTime() === ultimo.getTime())) saida.push(ultimo);
+  }
+  return saida;
+}
+
+/** A página + o total de cada dia que ela partiu (chave dd/MM/yyyy): o título do dia diz quantos o dia tem, não só os que couberam. */
+export async function listarDiarioPaginaComDias(
+  contaId: string,
+  uid: string,
+  f: FiltrosDiario,
+  pagina: number,
+): Promise<Pagina<RegistroDiarioNutri> & { porDia: Record<string, number> }> {
+  const p = await listarDiarioPagina(contaId, uid, f, pagina);
+  const dias = diasQuePodemContinuar(p.itens, pagina, p.total);
+  const inicio = new Date(f.deIso).getTime();
+  const totais = await Promise.all(
+    dias.map((d) =>
+      contarDiario(contaId, uid, {
+        ...f,
+        deIso: new Date(Math.max(d.getTime(), inicio)).toISOString(),
+        ateIso: new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString(),
+      }),
+    ),
+  );
+  const porDia: Record<string, number> = {};
+  dias.forEach((d, i) => {
+    porDia[chaveDia(d.toISOString())] = totais[i];
+  });
+  return { ...p, porDia };
+}
+
+/** Os alunos com foto no período (as opções do filtro "Aluno": do banco, não da página que carregou), por nome. */
+export async function listarAlunosDoDiario(contaId: string, uid: string, deIso: string): Promise<AlunoDoDiario[]> {
+  const { data, error } = await principal
+    .from("pacientes")
+    .select("id, nome, apelido, link_codigo, foto_url, registros:diario_alimentar!inner(id)")
+    .or(recorteDiario(contaId, uid))
+    .is("registros.deleted_at", null)
+    .gte("registros.data_hora", deIso)
+    .limit(1, { referencedTable: "registros" })
+    .order("nome", { ascending: true })
+    .order("id", { ascending: true });
+  falhou(error);
+  return ((data ?? []) as unknown as (AlunoDoDiario & { registros?: unknown })[]).map(({ registros: _registros, ...aluno }) => aluno);
+}
+
+/**
+ * Registros VIVOS a partir de `deIso` dos alunos da conta ativa que você vê, mais recente primeiro, com o aluno embutido. hml-14b: é
+ * uma JANELA (o "Diário de hoje" do Dashboard e o número da aba: 1 e 7 dias) — no máximo 1000 (D18); a aba Diário usa a página.
+ */
 export async function listarDiarioDaConta(contaId: string, uid: string, deIso: string): Promise<RegistroDiarioNutri[]> {
   const { data, error } = await principal
     .from("diario_alimentar")

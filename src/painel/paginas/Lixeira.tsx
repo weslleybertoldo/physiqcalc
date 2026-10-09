@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, FileText, Ruler, RotateCcw, Search, Trash2, User, Utensils, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -9,12 +9,14 @@ import { useSessao } from "@/nucleo/sessao";
 import { AcaoLinha, CampoBusca } from "@/painel/dietas/pecas";
 import { ConfirmarPerigo } from "@/ferramentas/Confirmar";
 import { TopoPagina } from "@/ui/casca/topo";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { CHAVE_LIXEIRA, ErroLixeira, apagarDeVez, listarLixeira, restaurar } from "@/ferramentas/lixeira/dados";
 import {
-  AVISO_LIXEIRA, abaInicial, abasDaPessoa, contarPorTipo, diasParaPurga, filtrarItens, infoTipo, mensagemDaRecusa, rotaDoItem, textoConfirmarApagar,
+  AVISO_LIXEIRA, abaInicial, abasDaPessoa, contagemZerada, diasParaPurga, infoTipo, mensagemDaRecusa, rotaDoItem, textoConfirmarApagar,
   textoContagem, textoExcluidoEm, textoPurga, textoVazioAba, tituloDoItem, type ItemLixeira, type TipoLixeira,
 } from "@/ferramentas/lixeira/regras";
 
@@ -34,6 +36,8 @@ const chave = (i: Pick<ItemLixeira, "tipo" | "id">) => `${i.tipo}:${i.id}`;
  * do banco, a mesma do site antigo); o aluno fica até restaurar. Quem vê o quê é do banco (lixeira_da_conta): o dono vê o da conta
  * inteira e o membro só o dele (P1); as abas clínicas só para a nutricionista da conta (W18). Restaurar o aluno volta a matrícula como
  * era e respeita o e-mail/CPF únicos (W16b) e o P7 — a recusa aparece em vermelho na linha e nada muda.
+ * hml-14b (B21): UMA página (20) da aba vem do banco (lixeira_da_conta com a aba, a busca e a página — sem o corte de 300 por tipo);
+ * os números das abas e o total também; a página fica no endereço (?pagina=).
  */
 export default function Lixeira() {
   const { conta } = useConta();
@@ -47,21 +51,34 @@ export default function Lixeira() {
   const [agindo, setAgindo] = useState<string | null>(null);
   const [recusas, setRecusas] = useState<Record<string, string>>({});
   const [paraApagar, setParaApagar] = useState<ItemLixeira | null>(null);
+  const tipoURL = sp.get("tipo") ?? "";
+  const buscaURL = (sp.get("q") ?? "").trim();
 
+  // trocar de aba ou de busca volta à página 1; a página além do fim (a aba encolheu) vai para a última
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara: irParaPagina } = usePaginaNaUrl({ filtro: { tipo: tipoURL, q: buscaURL }, total: totalLido });
   const consulta = useQuery({
-    queryKey: [...CHAVE_LIXEIRA, contaId, usuario?.id ?? ""],
-    queryFn: () => listarLixeira(contaId),
+    queryKey: [...CHAVE_LIXEIRA, contaId, usuario?.id ?? "", tipoURL, buscaURL, pagina],
+    queryFn: () => listarLixeira(contaId, { tipo: tipoURL || null, busca: buscaURL, pagina }),
     enabled: pronto,
     staleTime: 15_000,
     retry: 1,
+    placeholderData: keepPreviousData,
   });
   const dados = consulta.data;
+  const totalDaResposta = dados?.pagina && !consulta.isPlaceholderData ? dados.pagina.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
   const itens = useMemo(() => dados?.itens ?? [], [dados]);
   // as abas clínicas: só a nutricionista da conta (W18) — e só numa conta com Nutrição (sem o módulo, abas e itens somem — spec 9)
   const abas = useMemo(() => abasDaPessoa(!!dados?.veClinico && !!dados?.temNutricao), [dados?.veClinico, dados?.temNutricao]);
-  const contagem = useMemo(() => contarPorTipo(itens), [itens]);
-  const aba = abaInicial(abas, contagem, sp.get("tipo"));
-  const visiveis = useMemo(() => filtrarItens(itens, aba, busca), [itens, aba, busca]);
+  const contagem = useMemo(() => dados?.pagina?.totais ?? contagemZerada(), [dados]);
+  // a aba que o banco mostrou; enquanto a página nova não chega (outra aba), a da URL
+  const aba: TipoLixeira = dados?.pagina && !consulta.isPlaceholderData ? dados.pagina.tipo : abaInicial(abas, contagem, tipoURL);
+  // a página que está na tela é de outra aba (trocou de aba e a nova ainda não chegou): espera, sem mostrar a aba velha
+  const outraAba = !!dados?.pagina && dados.pagina.tipo !== aba;
+  const total = dados?.pagina?.total ?? 0;
   const totalVisivel = abas.reduce((s, a) => s + contagem[a.id], 0);
 
   // a busca vai para a URL (?q=) com um atraso curto, como nas outras telas
@@ -192,21 +209,21 @@ export default function Lixeira() {
             extra={<Chip tom="g" data-contagem-aba={contagem[aba]}>{contagem[aba]}</Chip>} />
           {consulta.error ? (
             <EstadoErro texto={`Não foi possível abrir a lixeira: ${mensagemDaRecusa((consulta.error as ErroLixeira).codigo)}`} aoTentar={() => void consulta.refetch()} className="my-4" />
-          ) : consulta.isLoading || !pronto ? (
+          ) : consulta.isLoading || !pronto || outraAba ? (
             <EstadoCarregando linhas={3} rotulo="Abrindo a lixeira" className="pb-3" />
-          ) : visiveis.length === 0 ? (
-            <EstadoVazio icone={busca.trim() ? Search : Trash2} titulo={textoVazioAba(aba, busca)}
-              texto={busca.trim() ? "Mude a busca ou troque de aba." : "Tudo o que for excluído nesta conta aparece aqui por 30 dias."} className="my-4" />
+          ) : itens.length === 0 ? (
+            <EstadoVazio icone={buscaURL ? Search : Trash2} titulo={textoVazioAba(aba, buscaURL)}
+              texto={buscaURL ? "Mude a busca ou troque de aba." : "Tudo o que for excluído nesta conta aparece aqui por 30 dias."} className="my-4" />
           ) : (
-            <ul className="divide-y divide-linha-3" data-lista-lixeira>
-              {visiveis.map((i) => {
+            <ul className="divide-y divide-linha-3" data-lista="lixeira" data-lista-lixeira data-lista-tipo={aba}>
+              {itens.map((i) => {
                 const Icone = ICONES[i.tipo];
                 const dias = diasParaPurga(i.tipo, i.excluido_em, agora);
                 const recusa = recusas[chave(i)];
                 const ocupado = agindo === chave(i);
                 const titulo = tituloDoItem(i);
                 return (
-                  <li key={chave(i)} className="flex flex-col gap-1.5 py-3" data-item-lixeira={chave(i)} data-item-tipo={i.tipo} data-item-titulo={titulo}>
+                  <li key={chave(i)} className="flex flex-col gap-1.5 py-3" data-item data-item-lixeira={chave(i)} data-item-tipo={i.tipo} data-item-titulo={titulo}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[12px] border border-linha bg-superficie text-texto-2">
@@ -248,8 +265,11 @@ export default function Lixeira() {
               })}
             </ul>
           )}
-          {!consulta.isLoading && visiveis.length > 0 && visiveis.length < contagem[aba] && (
-            <p className="border-t border-linha-3 py-3 text-center text-[12px] text-texto-4" data-lixeira-filtrados>{visiveis.length} de {contagem[aba]}</p>
+          {!consulta.isLoading && !outraAba && total > 0 && total < contagem[aba] && (
+            <p className="border-t border-linha-3 pt-3 text-center text-[12px] text-texto-4" data-lixeira-filtrados>{total} de {contagem[aba]}</p>
+          )}
+          {!consulta.error && !outraAba && (
+            <Paginacao nome="lixeira" pagina={pagina} total={total} aoMudar={irParaPagina} carregando={consulta.isFetching} />
           )}
         </Cartao>
       </div>

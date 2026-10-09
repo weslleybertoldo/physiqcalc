@@ -3,8 +3,10 @@
 // categoria e FORMA de pagamento (novo — spec 4.4), lista com "ver detalhes", editar, estornar/desfazer e excluir (lixeira) — e, para a
 // entrada ligada a um aluno, "Emitir recibo" (o recibo do Nutri, a partir da entrada). Estado dos filtros na URL
 // (?de=&ate=&tipo=&categoria=&forma=&q=), como no site antigo — o mesmo período mostra os mesmos números.
+// hml-14b (B21 · D14): a lista chega por página (20) do banco, com a página no endereço (?pagina=); o filtro, a busca, a contagem e
+// os totais saem do banco (financeiro_lancamentos e financeiro_resumo_periodo) — antes vinham só até 1000 e eram somados aqui.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownCircle, ArrowUpCircle, ChevronDown, ChevronUp, Pencil, Plus, ReceiptText, RotateCcw, Search, Tags, Trash2, Undo2, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -14,23 +16,25 @@ import {
 import { cn } from "@/lib/utils";
 import { BTN_PERIGO, BTN_PRI, BTN_SEC, DESCRICAO_JANELA, INPUT, JANELA, SELECT, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { podeEmitirRecibo } from "@/financeiro/recibos";
+import type { Pagina } from "@/lib/paginacao";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { BTN_MINI, CategoriasDialog } from "./Categorias";
-import { excluirTransacao, listarTransacoes, marcarEstorno, type Transacao } from "./dados";
+import { excluirTransacao, listarLancamentos, marcarEstorno, totaisDoPeriodo, type FiltrosLancamentos, type Transacao } from "./dados";
 import {
-  CHAVES_FILTRO_URL, FILTRO_TIPOS, METODOS, PRESETS, ehMetodo, ehPreset, ehTipo, filtrarTransacoes, filtrosAtivos, filtrosDaURL, filtrosParaURL, fmtBRL,
-  fmtValorComSinal, formatarData, formatarDataHora, inserirOrdenado, noPeriodo, ordenarTransacoes, periodoDoPreset, presetDoPeriodo, rotuloMetodo,
-  rotuloPeriodo, rotuloTipo, textoContagem, totais, type FiltrosFinanceiro, type Preset,
+  CHAVES_FILTRO_URL, FILTRO_TIPOS, METODOS, PRESETS, ehMetodo, ehPreset, ehTipo, filtrosAtivos, filtrosDaURL, filtrosParaURL, fmtBRL,
+  fmtValorComSinal, formatarData, formatarDataHora, periodoDoPreset, presetDoPeriodo, rotuloMetodo, rotuloPeriodo, rotuloTipo, textoContagem,
+  type FiltrosFinanceiro, type Preset,
 } from "./financeiroUtil";
 import MovimentacaoDialog from "./MovimentacaoDialog";
 import ModelosReciboDialog from "./ModelosReciboDialog";
 import ReciboDialog from "./ReciboDialog";
 import { CHAVES, type FinanceiroConta } from "./useFinanceiro";
 
-const PAGINA = 20;
 const ROTULO = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-texto-4";
 
 function Par({ rotulo, valor, marca }: { rotulo: string; valor: string; marca?: string }) {
@@ -114,22 +118,36 @@ export default function Lancamentos({ f, params, setParams, aoNova }: {
     atualizar({ tipo: "", categoria: "", metodo: "", q: "" });
   };
 
-  const chave = useMemo(() => CHAVES.transacoes(f.contaId, filtros.de, filtros.ate), [f.contaId, filtros.de, filtros.ate]);
-  const transacoesQ = useQuery({ queryKey: chave, queryFn: () => listarTransacoes(f.contaId, f.uid, filtros.de, filtros.ate), enabled: f.pronto });
-  const lista = useMemo(() => transacoesQ.data ?? [], [transacoesQ.data]);
-  const filtradas = useMemo(() => filtrarTransacoes(lista, filtros), [lista, filtros]);
-  const tot = useMemo(() => totais(filtradas), [filtradas]);
+  // hml-14b (B21 · D14): o filtro vai ao banco; os totais (com os mesmos filtros) e a página vêm de lá
+  const filtrosBanco = useMemo<FiltrosLancamentos>(() => ({ tipo: filtros.tipo, categoria: filtros.categoria, metodo: filtros.metodo, q: filtros.q }),
+    [filtros.tipo, filtros.categoria, filtros.metodo, filtros.q]);
+  const totaisQ = useQuery({
+    queryKey: CHAVES.totais(f.contaId, filtros.de, filtros.ate, filtrosBanco),
+    queryFn: () => totaisDoPeriodo(f.contaId, filtros.de, filtros.ate, filtrosBanco),
+    enabled: f.pronto,
+    placeholderData: keepPreviousData,
+  });
+  const filtroDaLista = useMemo(() => ({ de: filtros.de, ate: filtros.ate, ...filtrosBanco }), [filtros.de, filtros.ate, filtrosBanco]);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: filtroDaLista, total: totaisQ.data?.total ?? null });
+  const chave = useMemo(() => CHAVES.lancamentos(f.contaId, filtros.de, filtros.ate, filtrosBanco, pagina), [f.contaId, filtros.de, filtros.ate, filtrosBanco, pagina]);
+  const paginaQ = useQuery({
+    queryKey: chave,
+    queryFn: () => listarLancamentos(f.contaId, filtros.de, filtros.ate, filtrosBanco, pagina),
+    enabled: f.pronto,
+    placeholderData: keepPreviousData,
+  });
+  const visiveis = paginaQ.data?.itens ?? [];
+  const tot = totaisQ.data;
+  const totalFiltrado = tot?.total ?? paginaQ.data?.total ?? 0;
+  const totalPeriodo = tot?.totalPeriodo ?? 0;
   const comFiltro = filtrosAtivos(filtros);
-  const [mostrando, setMostrando] = useState(PAGINA);
-  useEffect(() => setMostrando(PAGINA), [filtros.de, filtros.ate, filtros.tipo, filtros.categoria, filtros.metodo, filtros.q]);
-  const visiveis = filtradas.slice(0, mostrando);
-  // categorias do filtro: as suas + as que aparecem no período (o dono vê as dos lançamentos da equipe)
+  // categorias do filtro: as suas + as usadas no período (o dono vê as dos lançamentos da equipe) — estas vêm do banco
   const opcoesCategoria = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of f.categorias.data ?? []) m.set(c.id, c.nome);
-    for (const t of lista) if (t.categoria_id && t.categoria?.nome && !m.has(t.categoria_id)) m.set(t.categoria_id, t.categoria.nome);
+    for (const c of tot?.categorias ?? []) if (!m.has(c.id)) m.set(c.id, c.nome);
     return [...m.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  }, [f.categorias.data, lista]);
+  }, [f.categorias.data, tot?.categorias]);
 
   const [modal, setModal] = useState<{ aberto: boolean; transacao: Transacao | null }>({ aberto: false, transacao: null });
   const [categoriasAberto, setCategoriasAberto] = useState(false);
@@ -142,16 +160,13 @@ export default function Lancamentos({ f, params, setParams, aoNova }: {
 
   const alternar = (id: string) => setAbertos((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
 
-  /** Aplica a linha devolvida pelo banco na lista em memória (saiu do período? some) e confere com o servidor. */
+  /** Troca a linha devolvida pelo banco na página que está na tela e pede de novo a página e os totais (a ordem e o total são do banco). */
   const aplicar = (t: Transacao) => {
-    qc.setQueryData<Transacao[]>(chave, (old) => {
-      const base = (old ?? []).filter((x) => x.id !== t.id);
-      return noPeriodo(t.data, filtros) ? inserirOrdenado(base, t) : ordenarTransacoes(base);
-    });
+    qc.setQueryData<Pagina<Transacao>>(chave, (old) => (old ? { ...old, itens: old.itens.map((x) => (x.id === t.id ? t : x)) } : old));
     void f.recarregar("transacoes");
   };
   const remover = (id: string) => {
-    qc.setQueryData<Transacao[]>(chave, (old) => (old ?? []).filter((x) => x.id !== id));
+    qc.setQueryData<Pagina<Transacao>>(chave, (old) => (old ? { ...old, itens: old.itens.filter((x) => x.id !== id) } : old));
     void f.recarregar("transacoes");
   };
 
@@ -186,20 +201,25 @@ export default function Lancamentos({ f, params, setParams, aoNova }: {
     }
   };
 
-  const carregando = (transacoesQ.isLoading && !transacoesQ.data) || (f.categorias.isLoading && !f.categorias.data);
-  const contagem = carregando
-    ? "Carregando..."
-    : comFiltro
-      ? `${textoContagem(filtradas.length)} de ${lista.length} no período`
-      : `${textoContagem(lista.length)} no período`;
+  const carregando = (paginaQ.isLoading && !paginaQ.data) || (totaisQ.isLoading && !totaisQ.data) || (f.categorias.isLoading && !f.categorias.data);
+  // erro do banco na lista ou nos totais: o aviso de erro (nunca "nenhuma movimentação" no lugar dele)
+  const erro = paginaQ.error ?? totaisQ.error;
+  const contagem = erro
+    ? "Não deu para carregar"
+    : carregando
+      ? "Carregando..."
+      : comFiltro
+        ? `${textoContagem(totalFiltrado)} de ${totalPeriodo} no período`
+        : `${textoContagem(totalPeriodo)} no período`;
   const autor = (t: Transacao) => (f.dono && t.nutricionista_id !== f.uid ? f.assinaturaDe(t.nutricionista_id).nome ?? "outro profissional" : null);
   const alunoDo = (t: Transacao) => (t.paciente_id ? { id: t.paciente_id, nome: t.paciente?.nome ?? "Aluno", apelido: null, cpf: t.paciente?.cpf ?? null } : null);
 
   return (
-    <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="lancamentos" data-pagina-financeiro data-atualizando={transacoesQ.isFetching ? "1" : "0"}>
+    <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="lancamentos" data-pagina-financeiro
+      data-atualizando={paginaQ.isFetching || totaisQ.isFetching ? "1" : "0"}>
       <Cartao className="p-4" data-filtros-financeiro>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <p className="min-w-0 flex-1 text-[13px] text-texto-2" data-contagem={filtradas.length} data-contagem-periodo={lista.length}>{contagem}</p>
+          <p className="min-w-0 flex-1 text-[13px] text-texto-2" data-contagem={totalFiltrado} data-contagem-periodo={totalPeriodo}>{contagem}</p>
           <Botao tamanho="sm" icone={Tags} onClick={() => setCategoriasAberto(true)} data-btn-categorias>Categorias</Botao>
         </div>
         <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1.4fr_1fr_1fr_auto]" data-periodo={`${filtros.de}|${filtros.ate}`}>
@@ -249,35 +269,41 @@ export default function Lancamentos({ f, params, setParams, aoNova }: {
         </div>
       </Cartao>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-totais>
-        <TotalCartao rotulo="Entradas" valor={tot.entradas} cor="text-verde-2" marca="entradas" sub={`${tot.nEntradas} ${tot.nEntradas === 1 ? "entrada" : "entradas"}`} />
-        <TotalCartao rotulo="Saídas" valor={tot.saidas} cor="text-rosa-3" marca="saidas" sub={`${tot.nSaidas} ${tot.nSaidas === 1 ? "saída" : "saídas"}`} />
-        <TotalCartao rotulo="Saldo" valor={tot.saldo} cor={tot.saldo < 0 ? "text-rosa-3" : "text-texto"} marca="saldo"
-          sub={tot.nEstornadas ? `${tot.nEstornadas} estornada${tot.nEstornadas === 1 ? "" : "s"} fora dos totais` : "entradas − saídas"} />
-      </div>
+      {tot ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-totais>
+          <TotalCartao rotulo="Entradas" valor={tot.entradas} cor="text-verde-2" marca="entradas" sub={`${tot.nEntradas} ${tot.nEntradas === 1 ? "entrada" : "entradas"}`} />
+          <TotalCartao rotulo="Saídas" valor={tot.saidas} cor="text-rosa-3" marca="saidas" sub={`${tot.nSaidas} ${tot.nSaidas === 1 ? "saída" : "saídas"}`} />
+          <TotalCartao rotulo="Saldo" valor={tot.saldo} cor={tot.saldo < 0 ? "text-rosa-3" : "text-texto"} marca="saldo"
+            sub={tot.nEstornadas ? `${tot.nEstornadas} estornada${tot.nEstornadas === 1 ? "" : "s"} fora dos totais` : "entradas − saídas"} />
+        </div>
+      ) : !erro ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-totais-carregando>
+          {[0, 1, 2].map((i) => <Cartao key={i} className="h-[92px] px-[18px] py-3.5"><Esqueleto className="h-full w-full" /></Cartao>)}
+        </div>
+      ) : null}
 
       <Cartao className="px-[18px] pb-2 pt-4" data-lista-movimentacoes>
-        <CabecalhoCartao titulo="Movimentações" extra={<Chip tom="g">{filtradas.length}</Chip>}
+        <CabecalhoCartao titulo="Movimentações" extra={<Chip tom="g">{totalFiltrado}</Chip>}
           acao={comFiltro ? <button type="button" onClick={limparFiltros} className={BTN_MINI} data-btn-limpar-filtros><X size={12} aria-hidden="true" /> Limpar filtros</button> : undefined} />
-        {transacoesQ.error && (
-          <EstadoErro titulo="Não foi possível carregar o financeiro" texto={transacoesQ.error instanceof Error ? transacoesQ.error.message : "erro"} aoTentar={() => void transacoesQ.refetch()} />
-        )}
-        {carregando ? (
+        {erro ? (
+          <EstadoErro titulo="Não foi possível carregar o financeiro" texto={erro instanceof Error ? erro.message : "erro"}
+            aoTentar={() => { void paginaQ.refetch(); void totaisQ.refetch(); }} />
+        ) : carregando ? (
           <div className="flex flex-col gap-2 pb-3" data-carregando-financeiro><Esqueleto className="h-12 w-full rounded-2xl" /><Esqueleto className="h-12 w-full rounded-2xl" /></div>
-        ) : lista.length === 0 && !comFiltro ? (
+        ) : totalPeriodo === 0 && !comFiltro ? (
           <EstadoVazio icone={Wallet} className="my-5" titulo="Nenhuma movimentação no período" texto="Registre entradas (consultas, planos) e saídas (aluguel, material) para ver o saldo do seu trabalho."
             acao={<Botao variante="w" icone={Plus} onClick={aoNova} data-btn-primeira-movimentacao>Nova movimentação</Botao>} />
-        ) : filtradas.length === 0 ? (
+        ) : totalFiltrado === 0 ? (
           <EstadoVazio icone={Search} className="my-5" titulo="Nenhuma movimentação com esses filtros" acao={<Botao icone={X} onClick={limparFiltros}>Limpar filtros</Botao>} />
         ) : (
-          <ul data-lista-transacoes>
+          <ul data-lista-transacoes data-lista="lancamentos">
             {visiveis.map((t) => {
               const aberto = abertos.includes(t.id);
               const entrada = t.tipo === "entrada";
               const por = autor(t);
               const pode = t.nutricionista_id === f.uid || f.dono;
               return (
-                <li key={t.id} className="space-y-2 border-t border-linha-3 py-2.5 first:border-t-0" data-transacao={t.id} data-tipo={t.tipo}
+                <li key={t.id} className="space-y-2 border-t border-linha-3 py-2.5 first:border-t-0" data-item data-transacao={t.id} data-tipo={t.tipo}
                   data-estornada={t.estornada ? "1" : "0"} data-aberto={aberto ? "1" : "0"} data-valor={Number(t.valor).toFixed(2)}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -345,16 +371,13 @@ export default function Lancamentos({ f, params, setParams, aoNova }: {
             })}
           </ul>
         )}
-        {filtradas.length > mostrando && (
-          <div className="flex items-center justify-center gap-3 border-t border-linha-3 py-3">
-            <span className="text-[12.5px] text-texto-3" data-mostrando>Mostrando {visiveis.length} de {filtradas.length} movimentações</span>
-            <Botao tamanho="sm" onClick={() => setMostrando((m) => m + PAGINA)} data-ver-mais>Ver mais</Botao>
-          </div>
+        {!erro && !carregando && (
+          <Paginacao nome="lancamentos" pagina={pagina} total={totalFiltrado} aoMudar={irPara} carregando={paginaQ.isFetching} className="border-t border-linha-3" />
         )}
       </Cartao>
 
       <MovimentacaoDialog open={modal.aberto} onOpenChange={(aberto) => setModal((m) => ({ ...m, aberto }))} transacao={modal.transacao} uid={f.uid} contaId={f.contaId}
-        categorias={f.categorias.data ?? []} alunos={f.alunos.data ?? []} onSalvo={aplicar} onGerenciarCategorias={() => setCategoriasAberto(true)} />
+        categorias={f.categorias.data ?? []} onSalvo={aplicar} onGerenciarCategorias={() => setCategoriasAberto(true)} />
       <CategoriasDialog open={categoriasAberto} onOpenChange={setCategoriasAberto} uid={f.uid} contaId={f.contaId || null} categorias={f.categorias.data ?? []}
         carregando={f.categoriasCarregando} erro={f.categoriasErro} onMudou={() => void f.recarregar("categorias")} />
       <ReciboDialog open={!!reciboDe} onOpenChange={(a) => { if (!a) setReciboDe(null); }} aluno={reciboDe ? alunoDo(reciboDe) : null}
