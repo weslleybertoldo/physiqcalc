@@ -140,8 +140,10 @@ Deno.serve(async (req) => {
     const { data: profile, error } = await admin.from("physiq_profiles").select("*").eq("id", userId).maybeSingle();
     if (error) throw error;
     if (!profile) return jsonErr("not_found", 404, origin);
-    const { data: avaliacoes } = await admin.from("physiq_avaliacoes")
+    // hml-14 (H-32 e H-51 item 6): o erro do banco vai para o catch (500) — antes o perfil abria "sem avaliação", sem aviso
+    const { data: avaliacoes, error: avErr } = await admin.from("physiq_avaliacoes")
       .select("*").eq("user_id", userId).order("data_avaliacao", { ascending: true });
+    if (avErr) throw avErr;
     const lista = avaliacoes ?? [];
     return new Response(
       JSON.stringify({ profile, user: profile, avaliacoes: lista, avaliacao: lista[lista.length - 1] ?? null }),

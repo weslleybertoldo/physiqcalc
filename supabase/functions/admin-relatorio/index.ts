@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -213,6 +214,7 @@ async function resolverNomesTreino(
   if (datas.length === 0) return mapa;
 
   const ordenadas = [...datas].sort();
+  // hml-14 (H-32): o erro de cada leitura vai para o catch (500) — antes o treino virava "Treino", sem o nome, sem aviso
   const [overRes, semanaRes] = await Promise.all([
     admin.from("tb_treino_dia_override")
       .select("data_treino, slot_idx, grupo_id, grupo_usuario_id")
@@ -223,15 +225,19 @@ async function resolverNomesTreino(
       .select("dia_semana, slot_idx, grupo_id, grupo_usuario_id")
       .eq("user_id", userId),
   ]);
+  if (overRes.error) throw overRes.error;
+  if (semanaRes.error) throw semanaRes.error;
 
   const linhas = [...((overRes.data as any[]) || []), ...((semanaRes.data as any[]) || [])];
   const idsCat = [...new Set(linhas.map((l) => l.grupo_id).filter(Boolean))];
   const idsPess = [...new Set(linhas.map((l) => l.grupo_usuario_id).filter(Boolean))];
 
   const [cat, pess] = await Promise.all([
-    idsCat.length ? admin.from("tb_grupos_treino").select("id, nome").in("id", idsCat) : Promise.resolve({ data: [] }),
-    idsPess.length ? admin.from("tb_grupos_treino_usuario").select("id, nome").in("id", idsPess) : Promise.resolve({ data: [] }),
+    idsCat.length ? admin.from("tb_grupos_treino").select("id, nome").in("id", idsCat) : Promise.resolve({ data: [], error: null }),
+    idsPess.length ? admin.from("tb_grupos_treino_usuario").select("id, nome").in("id", idsPess) : Promise.resolve({ data: [], error: null }),
   ]);
+  if (cat.error) throw cat.error;
+  if (pess.error) throw pess.error;
   const nomePorId = new Map<string, string>();
   ((cat.data as any[]) || []).forEach((g) => nomePorId.set(g.id, g.nome));
   ((pess.data as any[]) || []).forEach((g) => nomePorId.set(g.id, g.nome));
@@ -283,7 +289,10 @@ async function sintetizarDeSeries(
   datasComTimer: Set<string>,
   datasConcluidas: Set<string>,
 ): Promise<any[]> {
-  const { data: series } = await admin.from("tb_treino_series")
+  // hml-14 (H-32): todas as páginas, na mesma ordem (+ id, para a página não pular linha) — o histórico do aluno lê 12 meses
+  // e um aluno real já tem 975 séries em 210 dias (o limite de 5000 valia 1000, calado); o erro vai para o catch (antes os
+  // treinos sem cronômetro sumiam do histórico, sem aviso)
+  const series = await todasAsPaginas<any>((de, ate) => admin.from("tb_treino_series")
     .select("data_treino, slot_idx, numero_serie, peso, reps, exercicio_id, exercicio_usuario_id, academia_nome")
     .eq("user_id", userId)
     .eq("concluida", true)
@@ -291,9 +300,10 @@ async function sintetizarDeSeries(
     .lte("data_treino", fim)
     .order("data_treino")
     .order("numero_serie")
-    .limit(5000);
+    .order("id")
+    .range(de, ate));
 
-  const linhas = ((series as any[]) || []).filter((s) => {
+  const linhas = series.filter((s) => {
     const data = String(s.data_treino).split("T")[0];
     return !datasComTimer.has(data) && datasConcluidas.has(data);
   });
@@ -302,10 +312,13 @@ async function sintetizarDeSeries(
   // Nomes dos exercícios
   const idsCat = [...new Set(linhas.map((s) => s.exercicio_id).filter(Boolean))];
   const idsPess = [...new Set(linhas.map((s) => s.exercicio_usuario_id).filter(Boolean))];
+  // hml-14 (H-32): erro → catch (500); antes o exercício virava "Exercício", sem o nome, sem aviso
   const [cat, pess] = await Promise.all([
-    idsCat.length ? admin.from("tb_exercicios").select("id, nome").in("id", idsCat) : Promise.resolve({ data: [] }),
-    idsPess.length ? admin.from("tb_exercicios_usuario").select("id, nome").in("id", idsPess) : Promise.resolve({ data: [] }),
+    idsCat.length ? admin.from("tb_exercicios").select("id, nome").in("id", idsCat) : Promise.resolve({ data: [], error: null }),
+    idsPess.length ? admin.from("tb_exercicios_usuario").select("id, nome").in("id", idsPess) : Promise.resolve({ data: [], error: null }),
   ]);
+  if (cat.error) throw cat.error;
+  if (pess.error) throw pess.error;
   const nomeEx = new Map<string, string>();
   ((cat.data as any[]) || []).forEach((e) => nomeEx.set(e.id, e.nome));
   ((pess.data as any[]) || []).forEach((e) => nomeEx.set(e.id, e.nome));
@@ -386,13 +399,15 @@ Deno.serve(async (req) => {
       }
       const { inicio, fim } = limitesDoMes(ano, mes);
 
-      const [concluidosRes, seriesRes] = await Promise.all([
+      // hml-14 (H-32): as séries do mês em todas as páginas, na mesma ordem (+ id) — o limite de 5000 valia 1000, calado. Os
+      // concluídos: 1 aluno e 1 mês (teto natural: 31 dias × 4 treinos)
+      const [concluidosRes, series] = await Promise.all([
         admin.from("tb_treino_concluido")
           .select("data_treino, slot_idx")
           .eq("user_id", userId).eq("concluido", true)
           .gte("data_treino", inicio).lte("data_treino", fim)
           .order("data_treino"),
-        admin.from("tb_treino_series")
+        todasAsPaginas<any>((de, ate) => admin.from("tb_treino_series")
           .select(`
             data_treino, numero_serie, peso, reps, concluida, slot_idx,
             exercicio_id, exercicio_usuario_id,
@@ -401,16 +416,14 @@ Deno.serve(async (req) => {
           `)
           .eq("user_id", userId).eq("concluida", true)
           .gte("data_treino", inicio).lte("data_treino", fim)
-          .order("data_treino").order("numero_serie")
-          .limit(5000),
+          .order("data_treino").order("numero_serie").order("id")
+          .range(de, ate)),
       ]);
       if (concluidosRes.error) throw concluidosRes.error;
-      if (seriesRes.error) throw seriesRes.error;
 
       const concluidos = ((concluidosRes.data as any[]) || []).map((c) => ({
         data_treino: String(c.data_treino).split("T")[0],
       }));
-      const series = (seriesRes.data as any[]) || [];
 
       // Nome do treino por data: override → programação da semana.
       const datas = [...new Set([
@@ -452,43 +465,51 @@ Deno.serve(async (req) => {
 
       // escopo: professor vê só os alunos dele (master vê todos); W15: com userId (aba Treino do perfil do aluno), só ele —
       // o alunoDoProfessor lá em cima já conferiu que quem chama vê esse aluno
-      let perfisQ = admin.from("physiq_profiles").select("id, nome, email, user_code");
+      let escopo: (q: any) => any = (q) => q;
       if (typeof body?.userId === "string") {
-        perfisQ = perfisQ.eq("id", body.userId);
+        const uid = body.userId;
+        escopo = (q) => q.eq("id", uid);
       } else if (user.papel === "professor") {
         const contas = await contasOndeSouDono(admin, user.id);
-        perfisQ = contas.length
-          ? perfisQ.or(`professor_id.eq.${user.id},conta_id.in.(${contas.join(",")})`)
-          : perfisQ.eq("professor_id", user.id);
+        escopo = (q) => contas.length
+          ? q.or(`professor_id.eq.${user.id},conta_id.in.(${contas.join(",")})`)
+          : q.eq("professor_id", user.id);
       }
-      const perfisRes = await perfisQ;
-      if (perfisRes.error) throw perfisRes.error;
+      // hml-14 (H-32): perfis, treinos com cronômetro e concluídos do mês em todas as páginas (o master lê TODOS os perfis; os
+      // limites de 1000 e 2000 valiam 1000, calados) e os alunos do escopo em lotes de 150 no .in()
+      const perfis = await todasAsPaginas<any>((de, ate) =>
+        escopo(admin.from("physiq_profiles").select("id, nome, email, user_code")).order("id").range(de, ate));
       const idsEscopo: string[] | null = user.papel !== "master" || typeof body?.userId === "string"
-        ? (((perfisRes.data as any[]) || []).map((p) => p.id).concat(["00000000-0000-0000-0000-000000000000"]))
+        ? perfis.map((p) => p.id)
         : null;
-      let timerQ = admin.from("treino_historico")
-        .select("id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos")
-        .gte("iniciado_em", deIso).lte("iniciado_em", ateIso)
-        .order("iniciado_em", { ascending: false })
-        .limit(1000);
-      let conclQ = admin.from("tb_treino_concluido")
-        .select("user_id, data_treino, slot_idx")
-        .eq("concluido", true)
-        .gte("data_treino", inicio).lte("data_treino", fim)
-        .limit(2000);
-      if (idsEscopo) { timerQ = timerQ.in("user_id", idsEscopo); conclQ = conclQ.in("user_id", idsEscopo); }
-      const [timerRes, concluidosRes] = await Promise.all([timerQ, conclQ]);
-      if (timerRes.error) throw timerRes.error;
-      if (concluidosRes.error) throw concluidosRes.error;
+      const timerDoMes = (lote: string[] | null) => todasAsPaginas<any>((de, ate) => {
+        let q = admin.from("treino_historico")
+          .select("id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos")
+          .gte("iniciado_em", deIso).lte("iniciado_em", ateIso);
+        if (lote) q = q.in("user_id", lote);
+        return q.order("iniciado_em", { ascending: false }).order("id").range(de, ate);
+      });
+      const concluidosDoMes = (lote: string[] | null) => todasAsPaginas<any>((de, ate) => {
+        let q = admin.from("tb_treino_concluido")
+          .select("user_id, data_treino, slot_idx")
+          .eq("concluido", true)
+          .gte("data_treino", inicio).lte("data_treino", fim);
+        if (lote) q = q.in("user_id", lote);
+        // por dia e treino (slot): no dia com 2 treinos sem cronômetro, a linha da lista leva o 1º
+        return q.order("data_treino").order("slot_idx").order("id").range(de, ate);
+      });
+      const [timerRows, concluidosRows] = await Promise.all(idsEscopo
+        ? [emLotes(idsEscopo, 150, timerDoMes), emLotes(idsEscopo, 150, concluidosDoMes)]
+        : [timerDoMes(null), concluidosDoMes(null)]);
 
       const perfil = new Map<string, any>();
-      ((perfisRes.data as any[]) || []).forEach((p) => perfil.set(p.id, p));
+      perfis.forEach((p) => perfil.set(p.id, p));
 
       const itens: any[] = [];
       const timerPorUsuarioData = new Map<string, Set<string>>();
 
       // 1) Treinos com cronômetro: nome, duração e academia já gravados.
-      ((timerRes.data as any[]) || []).forEach((h) => {
+      timerRows.forEach((h) => {
         const data = dataBRT(h.iniciado_em);
         if (data < inicio || data > fim) return;
         if (!timerPorUsuarioData.has(h.user_id)) timerPorUsuarioData.set(h.user_id, new Set());
@@ -511,7 +532,7 @@ Deno.serve(async (req) => {
       });
 
       // 2) Treinos marcados como concluídos que não passaram pelo cronômetro.
-      const semTimer = ((concluidosRes.data as any[]) || []).filter((c) => {
+      const semTimer = concluidosRows.filter((c) => {
         const data = String(c.data_treino).split("T")[0];
         return !timerPorUsuarioData.get(c.user_id)?.has(data);
       });
@@ -531,13 +552,16 @@ Deno.serve(async (req) => {
       // Contagem de exercícios distintos por (usuário, data) para os sem cronômetro.
       await Promise.all([...porUsuario.entries()].map(async ([uid, datas]) => {
         const ordenadas = [...datas].sort();
-        const { data: sRows } = await admin.from("tb_treino_series")
+        // hml-14 (H-32): todas as páginas (o limite de 3000 valia 1000, calado) e o erro vai para o catch (antes a lista do mês
+        // mostrava 0 exercícios nos treinos sem cronômetro, sem aviso)
+        const sRows = await todasAsPaginas<any>((de, ate) => admin.from("tb_treino_series")
           .select("data_treino, exercicio_id, exercicio_usuario_id")
           .eq("user_id", uid).eq("concluida", true)
           .gte("data_treino", ordenadas[0]).lte("data_treino", ordenadas[ordenadas.length - 1])
-          .limit(3000);
+          .order("id")
+          .range(de, ate));
         const exsPorData = new Map<string, Set<string>>();
-        ((sRows as any[]) || []).forEach((s) => {
+        sRows.forEach((s) => {
           const d = String(s.data_treino).split("T")[0];
           if (!exsPorData.has(d)) exsPorData.set(d, new Set());
           const exId = s.exercicio_usuario_id ?? s.exercicio_id;
@@ -603,6 +627,7 @@ Deno.serve(async (req) => {
       const userId = body?.userId;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
 
+      // os 500 treinos de cronômetro mais recentes (teto escolhido, abaixo do corte de 1000; a página é da 14d)
       const { data: timerRows, error: timerErr } = await admin.from("treino_historico")
         .select("id, user_id, nome_treino, iniciado_em, concluido_em, duracao_segundos, exercicios_concluidos")
         .eq("user_id", userId)
@@ -617,14 +642,15 @@ Deno.serve(async (req) => {
       const fim = hoje.toLocaleDateString("en-CA", { timeZone: TZ });
       const dozeMesesAtras = new Date(hoje.getTime() - 365 * 24 * 3600 * 1000);
       const inicio = dozeMesesAtras.toLocaleDateString("en-CA", { timeZone: TZ });
-      const { data: conclRows } = await admin.from("tb_treino_concluido")
+      // hml-14 (H-32): todas as páginas (o limite de 2000 valia 1000, calado) e o erro vai para o catch (antes o histórico vinha
+      // só com os treinos de cronômetro, sem aviso)
+      const conclRows = await todasAsPaginas<any>((de, ate) => admin.from("tb_treino_concluido")
         .select("data_treino")
         .eq("user_id", userId).eq("concluido", true)
         .gte("data_treino", inicio).lte("data_treino", fim)
-        .limit(2000);
-      const datasConcluidas = new Set<string>(
-        ((conclRows as any[]) || []).map((c) => String(c.data_treino).split("T")[0]),
-      );
+        .order("data_treino").order("id")
+        .range(de, ate));
+      const datasConcluidas = new Set<string>(conclRows.map((c) => String(c.data_treino).split("T")[0]));
 
       const sinteticos = await sintetizarDeSeries(admin, userId, inicio, fim, comTimer, datasConcluidas);
 

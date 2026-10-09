@@ -2,6 +2,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
+import { periodoDoVolumeValido, respostaDoResolver } from "./regras.ts";
+// hml-14 (H-51 item 5): log em JSON sem dado pessoal (_shared/log.ts) — por enquanto só o resolver_sem_acesso (os console.error
+// de antes ficam para o resto do H-48)
+const log = criarLog("admin-semana-treinos", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -135,6 +142,10 @@ async function gruposDisponiveis(admin: any, userId: string): Promise<{ catalogo
     admin.from("tb_grupos_treino_perfis").select("grupo_id, tb_grupos_treino(id, nome, professor_id)").eq("user_id", userId),
     admin.from("tb_grupos_treino_usuario").select("id, nome").eq("user_id", userId),
   ]);
+  // hml-14 (H-32): o erro vai para o catch (500) — antes o aluno aparecia sem nenhum treino e as gravações recusavam o treino
+  // como "grupo_nao_disponivel", sem aviso
+  if (perf.error) throw perf.error;
+  if (pess.error) throw pess.error;
   const catalogo = new Set<string>();
   const lista: any[] = [];
   ((perf.data as any[]) || []).forEach((p) => {
@@ -258,6 +269,8 @@ const temPrescricao = (l: any): boolean =>
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ehUuid = (v: unknown): v is string => typeof v === "string" && UUID_RE.test(v);
+/** Um uuid que não é de ninguém (o resolverAluno sem vínculo passa pela mesma regra do banco — H-51 item 5). */
+const NINGUEM = "00000000-0000-0000-0000-000000000000";
 
 /** Repetições-alvo (NF1): "10" ou a faixa "8-12" (1 a 999); vazio = sem prescrição (como hoje). */
 function lerReps(v: unknown): { ok: boolean; valor: string | null } {
@@ -442,9 +455,14 @@ Deno.serve(async (req) => {
       const { data: v, error: ev } = await adminR.from("physiq_identidades").select("treino_user_id").eq("principal_user_id", pid).maybeSingle();
       if (ev) throw ev;
       const tid = (v as { treino_user_id?: string } | null)?.treino_user_id ?? null;
-      if (!tid) return okJson({ treino_user_id: null }, origin);
-      if (!(await alunoDoProfessor(adminR, user, tid))) return jsonErr("forbidden", 403, origin);
-      return okJson({ treino_user_id: tid }, origin);
+      // hml-14 (H-51 item 5): sem vínculo e com vínculo que quem chama não vê → a MESMA resposta, { treino_user_id: null }
+      // (regras.ts; antes o 2º era 403 e um principal_user_id qualquer dizia se a pessoa tinha treino). O caminho também é o
+      // mesmo: a regra do banco roda nos 2 casos (sem vínculo, com um id que não existe), para nem o tempo de resposta separar.
+      // O "sem acesso" fica só no log, sem dado pessoal, para um problema de permissão de verdade continuar aparecendo.
+      const ve = await alunoDoProfessor(adminR, user, tid ?? NINGUEM);
+      const { resposta, semAcesso } = respostaDoResolver(tid, ve);
+      if (semAcesso) log.aviso({ codigo: "resolver_sem_acesso", schema: currentSchema(), acao: "resolver_aluno", resultado: user.papel });
+      return okJson(resposta, origin);
     }
     if (action === "quemRecebe") {
       // W23 (Painel › Treinos › "Quem recebe"): quais dos alunos de quem chama recebem cada modelo. Os alunos são os da lista de
@@ -455,15 +473,13 @@ Deno.serve(async (req) => {
       const adminQ = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
       const contas = await contasOndeSouDono(adminQ, user.id);
       const extra = contas.length ? `,conta_id.in.(${contas.join(",")})` : "";
-      const { data: alunos, error: ea } = await adminQ.from("physiq_profiles").select("id").or(`professor_id.eq.${user.id},id.eq.${user.id}${extra}`).limit(2000);
-      if (ea) throw ea;
-      const ids = ((alunos as any[]) || []).map((a) => a.id as string);
-      const perfis: { grupo_id: string; user_id: string }[] = [];
-      for (let i = 0; i < ids.length; i += 150) {
-        const { data, error } = await adminQ.from("tb_grupos_treino_perfis").select("grupo_id, user_id").in("grupo_id", grupos).in("user_id", ids.slice(i, i + 150));
-        if (error) throw error;
-        perfis.push(...((data as any[]) || []));
-      }
+      // hml-14 (H-32): os alunos em todas as páginas (o limite de 2000 valia 1000, calado) e, em lotes de 150 alunos, todas as
+      // páginas de quem recebe (150 alunos × os modelos pedidos também passam de 1000)
+      const alunos = await todasAsPaginas<{ id: string }>((de, ate) =>
+        adminQ.from("physiq_profiles").select("id").or(`professor_id.eq.${user.id},id.eq.${user.id}${extra}`).order("id").range(de, ate));
+      const perfis = await emLotes(alunos.map((a) => a.id), 150, (lote) =>
+        todasAsPaginas<{ grupo_id: string; user_id: string }>((de, ate) =>
+          adminQ.from("tb_grupos_treino_perfis").select("grupo_id, user_id").in("grupo_id", grupos).in("user_id", lote).order("id").range(de, ate)));
       return okJson({ perfis }, origin);
     }
     const userId = body?.userId;
@@ -643,6 +659,9 @@ Deno.serve(async (req) => {
           ? admin.from("tb_exercicios_usuario").select("id, nome, grupo_muscular, tipo").in("id", idsNovosPess).eq("user_id", userId)
           : Promise.resolve({ data: [], error: null }),
       ]);
+      // hml-14 (H-32): erro → catch (500); antes o exercício trocado pelo aluno voltava a ser o original no volume, sem aviso
+      if (novosCat.error) throw novosCat.error;
+      if (novosPess.error) throw novosPess.error;
       const detNovoCat = new Map(((novosCat.data as any[]) || []).map((e) => [e.id, e]));
       const detNovoPess = new Map(((novosPess.data as any[]) || []).map((e) => [e.id, e]));
 
@@ -860,20 +879,19 @@ Deno.serve(async (req) => {
     if (action === "volumePraticado") {
       const inicio = body?.inicio;
       const fim = body?.fim;
-      const reData = /^\d{4}-\d{2}-\d{2}$/;
-      if (!reData.test(inicio ?? "") || !reData.test(fim ?? "") || inicio > fim) {
-        return jsonErr("periodo_invalido", 400, origin);
-      }
-      const { data: seriesRows, error: serErr } = await admin.from("tb_treino_series")
+      // hml-14 (H-32, D9): datas que existem, início ≤ fim e no máximo 31 dias (regras.ts; a tela pede 7) — antes qualquer período
+      if (!periodoDoVolumeValido(inicio, fim)) return jsonErr("periodo_invalido", 400, origin);
+      // hml-14 (H-32): todas as páginas (o limite de 2000 valia 1000, calado); em 31 dias o maior aluno de hoje tem 232 séries
+      const seriesRows = await todasAsPaginas<any>((de, ate) => admin.from("tb_treino_series")
         .select("exercicio_id, exercicio_usuario_id")
         .eq("user_id", userId).eq("concluida", true)
         .gte("data_treino", inicio).lte("data_treino", fim)
-        .limit(2000);
-      if (serErr) throw serErr;
+        .order("id")
+        .range(de, ate));
 
       // conta séries concluídas por exercício no período
       const porEx = new Map<string, { id: string; isPessoal: boolean; series: number }>();
-      ((seriesRows as any[]) || []).forEach((r) => {
+      seriesRows.forEach((r) => {
         const isPessoal = !!r.exercicio_usuario_id;
         const id = r.exercicio_usuario_id ?? r.exercicio_id;
         if (!id) return;
@@ -893,6 +911,9 @@ Deno.serve(async (req) => {
           ? admin.from("tb_exercicios_usuario").select("id, nome, grupo_muscular, tipo").in("id", idsPess).eq("user_id", userId)
           : Promise.resolve({ data: [], error: null }),
       ]);
+      // hml-14 (H-32): erro → catch (500); antes todo exercício virava "(exercício removido)", sem aviso
+      if (detCat.error) throw detCat.error;
+      if (detPess.error) throw detPess.error;
       const nomes = new Map<string, any>();
       ((detCat.data as any[]) || []).forEach((e) => nomes.set(`c:${e.id}`, e));
       ((detPess.data as any[]) || []).forEach((e) => nomes.set(`p:${e.id}`, e));
@@ -1025,22 +1046,22 @@ Deno.serve(async (req) => {
 
     if (action === "modelos") {
       // "Modelos": os treinos que quem mexe pode dar ao aluno — os globais do master e os dele (os mesmos do Painel › Treinos)
-      const { data: gs, error } = await admin.from("tb_grupos_treino").select("id, nome, professor_id")
-        .or(`professor_id.is.null,professor_id.eq.${user.id}`).order("nome").limit(500);
-      if (error) throw error;
-      const lista = (gs as any[]) || [];
-      const ids = lista.map((g) => g.id);
+      // hml-14 (H-32): os modelos em todas as páginas (antes paravam no 500º — B19) e, em lotes de 150 modelos, todas as páginas
+      // dos exercícios e das pastas deles (150 modelos × os exercícios de cada um passam de 1000)
+      const lista = await todasAsPaginas<any>((de, ate) => admin.from("tb_grupos_treino").select("id, nome, professor_id")
+        .or(`professor_id.is.null,professor_id.eq.${user.id}`).order("nome").order("id").range(de, ate));
+      const ids = lista.map((g) => g.id as string);
       const [exs, pastas, disp] = await Promise.all([
-        ids.length ? admin.from("tb_grupos_exercicios").select("grupo_id").in("grupo_id", ids) : Promise.resolve({ data: [], error: null }),
-        ids.length ? admin.from("tb_pastas_treino_grupos").select("grupo_id, tb_pastas_treino(nome)").in("grupo_id", ids) : Promise.resolve({ data: [], error: null }),
+        emLotes(ids, 150, (lote) => todasAsPaginas<any>((de, ate) =>
+          admin.from("tb_grupos_exercicios").select("grupo_id").in("grupo_id", lote).order("id").range(de, ate))),
+        emLotes(ids, 150, (lote) => todasAsPaginas<any>((de, ate) =>
+          admin.from("tb_pastas_treino_grupos").select("grupo_id, tb_pastas_treino(nome)").in("grupo_id", lote).order("id").range(de, ate))),
         gruposDisponiveis(admin, userId),
       ]);
-      if (exs.error) throw exs.error;
-      if (pastas.error) throw pastas.error;
       const nEx = new Map<string, number>();
-      ((exs.data as any[]) || []).forEach((r) => nEx.set(r.grupo_id, (nEx.get(r.grupo_id) ?? 0) + 1));
+      exs.forEach((r) => nEx.set(r.grupo_id, (nEx.get(r.grupo_id) ?? 0) + 1));
       const pastasDe = new Map<string, string[]>();
-      ((pastas.data as any[]) || []).forEach((r) => {
+      pastas.forEach((r) => {
         const nome = r.tb_pastas_treino?.nome;
         if (nome) pastasDe.set(r.grupo_id, [...(pastasDe.get(r.grupo_id) ?? []), nome]);
       });
