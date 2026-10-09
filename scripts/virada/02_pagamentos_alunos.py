@@ -34,7 +34,6 @@ import urllib.parse
 import urllib.request
 from collections import defaultdict
 from decimal import Decimal
-from functools import lru_cache
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -44,11 +43,11 @@ from _base import (  # noqa: E402
     SCHEMAS,
     TREINO_REF,
     _service_principal,
+    chave_servidor,
     email_de_teste,
     hoje_sp,
     http,
     lit,
-    pat,
     salvar_json,
     sql_principal,
     sql_treino,
@@ -60,12 +59,9 @@ MODO_INTEGRACAO = {"mercadopago": "mercadopago", "pix_manual": "pix_manual", "no
 MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
 
 
-@lru_cache(maxsize=None)
 def service_treino() -> str:
-    st, lista = http("GET", f"https://api.supabase.com/v1/projects/{TREINO_REF}/api-keys?reveal=true", cab={"Authorization": f"Bearer {pat()}"})
-    if st != 200:
-        raise RuntimeError(f"api-keys do Treino: HTTP {st}")
-    return {k["name"]: k["api_key"] for k in lista}["service_role"]
+    # a service_role legada do Treino morreu na troca da chave vazada (04/10/2026): vai a chave de servidor (hml-16)
+    return chave_servidor(TREINO_REF)
 
 
 def bucket(schema: str) -> str:

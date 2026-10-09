@@ -29,6 +29,13 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 16:15 | hml-15b | `3753bd2` | `e2e/hml15b/convite.py --base prod --prefixo prod --canal msedge` | produção | 12/12 | SÓ LEITURA, DEPOIS do merge (#169): C1, C2 e C3 ✅ — o widget do Turnstile monta nos 3 (antes da correção, 10/12) |
+| 09/10 16:13 | hml-15b | `596eda5` | `e2e/hml12/telas.py --base staging --prefixo staging_15b --canal msedge --casos T13,T8` | staging | 12/12 | rotina do fim da worktree: o rodapé da entrada e a linha da idade no `/c/`; o captcha do staging voltou ao valor de antes |
+| 09/10 16:12 | hml-15b | `596eda5` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_15b --casos espera` | staging | 14/14 | rotina do fim da worktree: a escada de espera do login até o bloqueio |
+| 09/10 16:10 | hml-15b | `596eda5` | `e2e/w25/api.py` | staging | 23/30 | = a rodada de 08/10: a massa do dia não monta (o Carlos tem login no principal); só API |
+| 09/10 16:09 | hml-15b | `596eda5` | `e2e/w10/api.py` | staging | 22/22 | rotina do fim da worktree |
+| 09/10 16:09 | hml-15b | `596eda5` | `e2e/hml05a/entrada.py --schema staging` | staging | 14/14 | rotina do fim da worktree |
+| 09/10 16:08 | hml-15b | `596eda5` | `e2e/hml15b/convite.py --base staging --prefixo staging --canal msedge --fonte http://localhost:5174` | staging | 24/24 | C1–C3 o widget monta; C4 token REAL → "Cadastro enviado" + 1 pendente, apagado; C5 token inventado → a frase do captcha, nada criado |
 | 09/10 16:00 | hml-15b | `d698f24` | `e2e/hml15b/convite.py --base prod --prefixo prod_antes --canal msedge` | produção | 10/12 | SÓ LEITURA, ANTES da correção: C1 (script antes do formulário) e C3 (/entrar/email → /c/) ❌ = o widget do Turnstile não monta (H-78 reproduzido); C2 ✅ |
 | 09/10 15:59 | hml-15b | `d698f24`+ | `e2e/hml15b/convite.py --base local --prefixo local --canal msedge --fonte http://localhost:5174` | local | 24/24 | build com a correção (CSP valendo); C4 com token REAL (`e2e/w08b/fonte_turnstile.py --acao cadastro`) → cadastro pendente no staging, apagado; as 2 rodadas de 23/24 antes = o C1 sem a ordem (ver o commit) |
 | 09/10 15:16 | hml-15 | `d698f24` | `e2e/hml15/csp.py --base prod --canal msedge --modo valendo` | produção | 128/128 | SÓ LEITURA; CSP VALENDO: 0 violação inesperada; `headers.py` 6/6 |

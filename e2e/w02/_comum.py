@@ -63,16 +63,29 @@ def chaves(ref: str) -> dict:
     return {(k["name"] if k.get("type") in (None, "legacy") else f'{k["type"]}:{k["name"]}'): k["api_key"] for k in lista}
 
 
-# Troca da chave vazada (04/10/2026): as chaves LEGADAS do Treino foram desligadas → no Treino vão as novas (a publishable no
-# lugar da anon; a secret servidor_2026_10 no lugar da service_role). O principal segue com as dele.
+# Troca das chaves LEGADAS (JWT): desligadas no Treino em 04/10/2026 (troca da chave vazada); no principal saem na hml-16 (H-35) →
+# nos 2 projetos vão as novas: a publishable "default" no lugar da anon e a secret "servidor_2026_10" (a chave de servidor dos
+# scripts e dos E2E; a secret "default" fica só com as funções e o painel) no lugar da service_role. Sem a chave, erro claro.
+# As legadas seguem em chaves(ref) pelo nome ("anon", "service_role"), para as provas de que morreram.
+CHAVE_PUBLICA = "publishable:default"
+CHAVE_SERVIDOR = "secret:servidor_2026_10"
+
+
+def _chave(ref: str, nome: str) -> str:
+    valor = chaves(ref).get(nome)
+    if valor:
+        return valor
+    tipo, rotulo = nome.split(":", 1)
+    criar = f' — criar: POST /v1/projects/{ref}/api-keys {{"type": "secret", "name": "{rotulo}"}} (hml-16, H-35)' if tipo == "secret" else ""
+    raise RuntimeError(f"a chave {tipo} {rotulo!r} não existe no projeto {ref} (Management API › api-keys){criar}")
+
+
 def anon(ref: str) -> str:
-    c = chaves(ref)
-    return c.get("publishable:default") or c["anon"] if ref == TREINO_REF else c["anon"]
+    return _chave(ref, CHAVE_PUBLICA)
 
 
 def service(ref: str) -> str:
-    c = chaves(ref)
-    return c.get("secret:servidor_2026_10") or c.get("secret:default") or c["service_role"] if ref == TREINO_REF else c["service_role"]
+    return _chave(ref, CHAVE_SERVIDOR)
 
 
 def sql_mgmt(ref: str, query: str) -> list:
@@ -108,9 +121,9 @@ def senha(nome: str) -> str:
 
 
 def cab_login(url: str, anon_key: str) -> dict:
-    """W28: com o captcha global do Auth do principal ligado, o login de TESTE por REST vai como servidor (service_role, que o
-    GoTrue não submete ao captcha — o mesmo que a função entrar-senha faz depois de conferir o Turnstile). O Treino não tem
-    captcha: segue com a chave anon."""
+    """W28: com o captcha global do Auth do principal ligado, o login de TESTE por REST vai como servidor (a chave de servidor,
+    service(); o GoTrue não submete o servidor ao captcha — o mesmo que a função entrar-senha faz depois de conferir o
+    Turnstile). O Treino não tem captcha: segue com a chave pública."""
     if PRINCIPAL_REF in url or "api-principal." in url:
         sk = service(PRINCIPAL_REF)
         return {"apikey": sk, "Authorization": f"Bearer {sk}"}

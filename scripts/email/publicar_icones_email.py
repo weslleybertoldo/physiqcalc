@@ -8,8 +8,8 @@ Uso:
   python3 scripts/email/publicar_icones_email.py             # publica e confere a URL pública de cada um
 
 URL pública (a que o molde usa): https://api-principal.physiqcalc.com.br/storage/v1/object/public/email/v1/<arquivo>.png
-Credenciais: PAT pessoal em ~/.pc-pat → a chave service_role pela Management API (nunca gravada em arquivo).
-A Management API exige User-Agent.
+Credenciais: PAT pessoal em ~/.pc-pat → a chave de servidor (secret "servidor_2026_10"; a service_role legada sai na hml-16)
+pela Management API (nunca gravada em arquivo). A Management API exige User-Agent.
 """
 import json
 import os
@@ -24,6 +24,7 @@ PASTA = Path(__file__).resolve().parent.parent.parent / "supabase-principal" / "
 ORIGEM = f"https://{REF}.supabase.co"
 PUBLICO = "https://api-principal.physiqcalc.com.br/storage/v1/object/public/email/v1"
 CACHE = "max-age=604800"
+CHAVE_SERVIDOR = "servidor_2026_10"  # a chave de servidor dos scripts (hml-16, H-35); a secret "default" fica só com as funções
 
 
 def pedir(metodo: str, url: str, corpo: bytes | None = None, cab: dict | None = None) -> tuple[int, bytes, dict]:
@@ -35,15 +36,16 @@ def pedir(metodo: str, url: str, corpo: bytes | None = None, cab: dict | None = 
         return e.code, e.read(), dict(e.headers)
 
 
-def chave_service_role() -> str:
+def chave_servidor() -> str:
     pat = Path.home().joinpath(".pc-pat").read_text(encoding="utf-8").strip()
     st, corpo, _ = pedir("GET", f"https://api.supabase.com/v1/projects/{REF}/api-keys?reveal=true", cab={"Authorization": f"Bearer {pat}"})
     if st != 200:
         raise SystemExit(f"api-keys: HTTP {st} {corpo[:300]!r}")
     for k in json.loads(corpo):
-        if k.get("name") == "service_role" and k.get("api_key"):
+        if k.get("type") == "secret" and k.get("name") == CHAVE_SERVIDOR and k.get("api_key"):
             return k["api_key"]
-    raise SystemExit("não achei a chave service_role")
+    raise SystemExit(f"não achei a chave secret {CHAVE_SERVIDOR!r} no projeto {REF} (criar: POST /v1/projects/{REF}/api-keys "
+                     f'{{"type": "secret", "name": "{CHAVE_SERVIDOR}"}})')
 
 
 def publico_igual(nome: str, tamanho: int) -> bool:
@@ -57,7 +59,7 @@ def main() -> None:
     arquivos = sorted(PASTA.glob("*.png"))
     if not arquivos:
         raise SystemExit(f"nenhum PNG em {PASTA}")
-    chave = None if dry else chave_service_role()
+    chave = None if dry else chave_servidor()
     subiu = pulou = 0
     for arq in arquivos:
         dados = arq.read_bytes()
