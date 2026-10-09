@@ -69,14 +69,18 @@ def largura_ok(o, caso, t: str) -> None:
 
 
 # ───────────────────────── o seletor de aluno do Treino (Histórico e Relatório) ─────────────────────────
+# termo/buscando: o data-termo (o termo da resposta que está na tela) e o data-buscando da lista aberta; valor: o aluno escolhido
 JS_OPCOES = r"""(raiz) => {
   const vis = (e) => !!e && e.getClientRects().length > 0;
   const r = document.querySelector(`[data-seletor-aluno-treino="${raiz}"]`);
   const todas = [...document.querySelectorAll('[data-opcao-aluno-treino]')].filter(vis);
+  const lista = r && [...r.querySelectorAll('[data-seletor-aluno-treino-lista]')].find(vis);
   return { ids: todas.map((e) => e.getAttribute('data-opcao-aluno-treino')).filter((v) => v),
            todos: [...document.querySelectorAll('[data-opcao-aluno-treino-todos]')].some(vis),
            mais: (() => { const m = [...document.querySelectorAll('[data-seletor-aluno-treino-mais]')].find(vis); return m ? m.getAttribute('data-total') : null; })(),
            erro: [...document.querySelectorAll('[data-seletor-aluno-treino-erro]')].some(vis),
+           termo: lista ? lista.getAttribute('data-termo') : null, buscando: lista ? lista.getAttribute('data-buscando') === '1' : false,
+           valor: r ? r.getAttribute('data-seletor-aluno-treino-valor') : null,
            raiz: !!r && vis(r) };
 }"""
 
@@ -85,7 +89,17 @@ def opcoes(caso, raiz: str) -> dict:
     try:
         return caso.pg.evaluate(JS_OPCOES, raiz)
     except Exception:  # noqa: BLE001 — navegando
-        return {"ids": [], "todos": False, "mais": None, "erro": False, "raiz": False}
+        return {"ids": [], "todos": False, "mais": None, "erro": False, "termo": None, "buscando": False, "valor": None, "raiz": False}
+
+
+def termo_do_banco(termo: str) -> str:
+    """O termo como vai ao banco (termoDaBusca de src/painel/treinos/regras.ts): sem espaços sobrando, até 80 letras."""
+    return " ".join((termo or "").split())[:80]
+
+
+def mesmo_termo(pedido: str | None, termo: str) -> bool:
+    """O termo do pedido é o digitado (sem caixa: a tela manda como foi digitado e o banco busca sem caixa)."""
+    return termo_do_banco(pedido or "").lower() == termo_do_banco(termo).lower()
 
 
 def campo_seletor(caso, raiz: str):
@@ -105,11 +119,19 @@ def campo_seletor(caso, raiz: str):
 
 
 def buscar_aluno(caso, raiz: str, termo: str, cond, timeout: float = 25) -> list[str]:
+    """Digita o termo e espera a RESPOSTA dele na lista (data-termo = o termo e data-buscando 0): as opções da busca anterior ficam à
+    vista até a nova chegar (300 ms de espera + o pedido) — conferir antes disso confere a busca velha."""
     busca = campo_seletor(caso, raiz)
     if busca is None:
         return []
     busca.fill(termo)
-    caso.esperar(lambda: cond(opcoes(caso, raiz)["ids"]), timeout)
+    alvo = termo_do_banco(termo)
+
+    def respondeu() -> bool:
+        op = opcoes(caso, raiz)
+        return op["termo"] == alvo and not op["buscando"] and bool(cond(op["ids"]))
+
+    caso.esperar(respondeu, timeout)
     caso.pg.wait_for_timeout(400)
     return opcoes(caso, raiz)["ids"]
 
@@ -141,35 +163,89 @@ def escolher_todos(caso, raiz: str) -> bool:
     return True
 
 
-def pedidos_usuarios(rede, desde: int = 0) -> list[dict]:
-    return [e for e in rede.eventos[desde:] if e["nome"] == FUNCAO_USUARIOS and e["status"] < 300]
+def pedido_com_termo(caso, rede, desde: int, nome: str, acao: str | None, termo: str, timeout: float = 20) -> dict | None:
+    """Espera (até `timeout` s) o pedido à função `nome` (e à ação `acao`) com o `q` = o termo digitado, a partir do evento `desde`.
+    A busca só vai ao servidor depois da espera de 300 ms (useTermoComEspera / useBuscaDeAlunosTreino) e a lista anterior fica à
+    vista enquanto isso: sem esperar o pedido, a conferência pega a busca velha."""
+    def achar() -> dict | None:
+        return next((x for x in reversed(rede.eventos[desde:]) if x["nome"] == nome and x["status"] < 300
+                     and (acao is None or x.get("acao") == acao) and mesmo_termo(x.get("q"), termo)), None)
+
+    caso.esperar(lambda: achar() is not None, timeout)
+    return achar()
+
+
+def pedido_historico_do_aluno(rede, desde: int, aluno: str, pagina: int = 1) -> dict | None:
+    """O último pedido historicoMes da página `pagina` com o userId do aluno (o filtro do seletor), a partir do evento `desde`."""
+    return next((e for e in reversed(rede.eventos[desde:]) if e["nome"] == FUNCAO_RELATORIO and e.get("acao") == "historicoMes"
+                 and e["status"] < 300 and (e.get("corpo") or {}).get("userId") == aluno and e["pagina"] == pagina), None)
+
+
+def lista_parada(caso, nome: str) -> bool:
+    """A lista sem pedido em andamento (data-atualizando="0"): a página na tela é a da última resposta, não a anterior que o
+    keepPreviousData deixa à vista enquanto a nova chega."""
+    try:
+        loc = caso.pg.locator(f'[data-lista="{nome}"]').first
+        return loc.count() > 0 and loc.get_attribute("data-atualizando") == "0"
+    except Exception:  # noqa: BLE001 — navegando
+        return False
+
+
+def so_do_aluno(st: dict, nome_aluno: str) -> bool:
+    """Todas as linhas da página são do aluno (a linha do Histórico do mês mostra "<pessoa> · <treino>")."""
+    textos = st.get("textos") or []
+    return bool(textos) and bool(nome_aluno) and all(nome_aluno in x for x in textos)
 
 
 def filtrar_pelo_seletor(o, caso, rede, R, L: Lista, nome: str, N: int, alvo: str) -> None:
-    """FILTROS["seletor-treino"] (T4, L6/L7): estando na página 1, escolhe o aluno da massa no seletor novo → o item da última página
-    aparece, a página continua a 1 e o pedido historicoMes leva o userId; "Todos os alunos" volta à lista inteira; na página 2, trocar
-    o aluno volta à 1."""
+    """FILTROS["seletor-treino"] (T4, L6/L7): estando na página 1, escolhe o aluno da massa no seletor novo → o pedido historicoMes leva
+    o userId e a lista mostra SÓ os feitos dele, na página 1, com o total do aluno (o da resposta); "Todos os alunos" volta à lista
+    inteira; na página 2, trocar o aluno volta à 1 (o endereço sem ?pagina).
+    O total do aluno não é menor que o da lista inteira por regra: no staging o professor de teste tem 1 aluno com treino no mês
+    (D42 — os 41 da massa e o de fundo são todos dele), então o filtro não muda o total e o feito #alvo continua na última página —
+    a conferência é pelo total da resposta com o userId, pelas linhas (só dele) e pela página, não pelo #alvo subir para a 1."""
     t = f"[{L.nome}]"
-    aluno = tr(R).get("aluno")
+    e = tr(R)
+    aluno, nome_aluno = e.get("aluno"), (e.get("aluno_nome") or "").strip()
+    massa_no_mes = int((e.get("contagens") or {}).get("feitos_no_mes") or T.MASSA)
+    termo = "Rafa" if "Rafael" in nome_aluno else nome_aluno[:4]
     desde = len(rede.eventos)
-    ok = escolher_aluno(caso, "historico", "Rafa" if "Rafael" in (tr(R).get("aluno_nome") or "") else (tr(R).get("aluno_nome") or "")[:4], aluno)
+    ok = escolher_aluno(caso, "historico", termo, aluno)
     o.ok(ok, f"{t} L6 o seletor novo (data-seletor-aluno-treino='historico') acha o aluno da massa por parte do nome")
-    okl, sb = T.esperar_lista(caso, L, lambda e: alvo in T.tokens(e, L.tipo) and e["pagina"] == 1, 30)
-    com_user = [e for e in rede.eventos[desde:] if e["nome"] == FUNCAO_RELATORIO and e.get("acao") == "historicoMes"
-                and ((e.get("corpo") or {}).get("userId") == aluno)]
-    o.ok(okl and T.na_pagina(sb["url"], 1, L.chave), f"{t} L6 filtrado pelo aluno: o feito #{alvo} (da última página) aparece na página 1 "
-                                                     f"('{sb.get('rotulo')}', {sb.get('url')})")
-    o.ok(bool(com_user), f"{t} L6 o pedido historicoMes leva o userId do aluno ({T.descr(com_user[-1]) if com_user else 'nenhum com userId'})")
+    caso.esperar(lambda: pedido_historico_do_aluno(rede, desde, aluno) is not None, 30)
+    ev = pedido_historico_do_aluno(rede, desde, aluno)
+    Na = (ev or {}).get("total")
+    o.ok(ev is not None and isinstance(Na, int) and T.pedido_ok(ev, Na, min(POR_PAGINA, Na)),
+         f"{t} L6 o pedido historicoMes leva o userId do aluno, página 1, só 20 ({T.descr(ev) or 'nenhum com userId'})")
+    okl, sb = T.esperar_lista(caso, L, lambda x: Na is not None and x["total"] == Na and x["pagina"] == 1 and so_do_aluno(x, nome_aluno)
+                              and lista_parada(caso, L.nome), 30)
+    valor = opcoes(caso, "historico")["valor"]
+    o.ok(okl and sb.get("rotulo") == T.rotulo(1, Na or 0) and T.na_pagina(sb.get("url") or "", 1, L.chave) and valor == aluno,
+         f"{t} L6 filtrado pelo aluno: só os feitos dele ({len(sb.get('textos') or [])} linha(s) com '{nome_aluno}'), '{sb.get('rotulo')}' = o total "
+         f"da resposta com o userId, página 1 ({sb.get('url')}; o seletor com o aluno: {'sim' if valor == aluno else 'não'})")
+    o.ok(isinstance(Na, int) and massa_no_mes <= Na <= N,
+         f"{t} L6 o total do aluno ({Na}) fica entre os feitos dele da massa no mês ({massa_no_mes}) e a lista inteira ({N})")
+    if Na == N:
+        o.linha(f"   {t} L6 os {N} feitos do mês são todos do aluno da massa (o professor de teste tem 1 aluno com treino no mês — D42): "
+                f"o filtro não muda o total e o feito #{alvo} continua na última página")
     o.linha(f"   print: {caso.print('historico_mes_seletor_aluno')}")
     ok_todos = escolher_todos(caso, "historico")
-    ok1, s1 = T.esperar_lista(caso, L, lambda e: e["total"] == N and e["pagina"] == 1, 30)
-    o.ok(ok_todos and ok1, f"{t} L7 'Todos os alunos' (data-opcao-aluno-treino-todos) volta à lista inteira ('{s1.get('rotulo')}')")
+    ok1, s1 = T.esperar_lista(caso, L, lambda x: x["total"] == N and x["pagina"] == 1, 30)
+    o.ok(ok_todos and ok1 and not opcoes(caso, "historico")["valor"],
+         f"{t} L7 'Todos os alunos' (data-opcao-aluno-treino-todos) volta à lista inteira ('{s1.get('rotulo')}')")
     if not ok1 or N <= POR_PAGINA:
         return
     ok2, s2 = T.mudar_pagina(caso, L, nome, "proxima", 2, s1)
-    escolher_aluno(caso, "historico", "Rafa", aluno)
-    ok3, s3 = T.esperar_lista(caso, L, lambda e: alvo in T.tokens(e, L.tipo) and e["pagina"] == 1, 30)
-    o.ok(ok2 and ok3 and T.na_pagina(s3["url"], 1, L.chave), f"{t} L7 na página 2, trocar o aluno volta à 1 (antes {s2.get('url')}; depois {s3.get('url')})")
+    velhas = T.chaves(s2, L)
+    desde = len(rede.eventos)
+    ok_aluno = escolher_aluno(caso, "historico", termo, aluno)
+    ok3, s3 = T.esperar_lista(caso, L, lambda x: x["pagina"] == 1 and T.na_pagina(x["url"], 1, L.chave) and (Na is None or x["total"] == Na)
+                              and T.chaves(x, L) != velhas and so_do_aluno(x, nome_aluno) and lista_parada(caso, L.nome), 30)
+    valor = opcoes(caso, "historico")["valor"]
+    o.ok(ok2 and T.na_pagina(s2.get("url") or "", 2, L.chave) and ok_aluno and ok3 and valor == aluno,
+         f"{t} L7 na página 2, trocar o aluno volta à 1 (antes {s2.get('url')}; depois {s3.get('url')}, '{s3.get('rotulo')}', só os feitos dele)")
+    if pedido_historico_do_aluno(rede, desde, aluno) is None:
+        R.aviso(f"{t} L7 a página 1 do aluno veio do cache da tela (o pedido dela, com o userId, foi provado no L6)")
 
 
 T.FILTROS["seletor-treino"] = filtrar_pelo_seletor
@@ -341,10 +417,16 @@ def t3(o, nav, R, desktop: bool) -> None:
                 for termo in ("rafael", "MOURA"):
                     desde = len(rede.eventos)
                     busca.fill(termo)
-                    okb = caso.esperar(lambda: caso.tem(f'[data-quem-recebe-aluno="{aluno}"]'), 20)
-                    pedido = [x for x in rede.eventos[desde:] if x["nome"] == FUNCAO_SEMANA and x.get("acao") == "quemRecebeLista"]
-                    o.ok(okb and bool(pedido), f"{t} a busca '{termo}' (parte do nome, sem caixa) acha o aluno e vai ao servidor "
-                                               f"({T.descr(pedido[-1]) if pedido else 'sem pedido'})")
+                    # o aluno já está à vista (a página anterior fica na tela — keepPreviousData — e a busca só sai depois de 300 ms):
+                    # espera o pedido quemRecebeLista com o q = o termo e a lista da RESPOSTA dele (o total e as linhas) com o aluno
+                    ev = pedido_com_termo(caso, rede, desde, FUNCAO_SEMANA, "quemRecebeLista", termo, 20)
+                    okb, sb = T.esperar_lista(caso, QUEM_RECEBE, lambda x, ev_=ev: ev_ is not None and x["total"] == ev_["total"]
+                                              and x["pagina"] == 1 and len(x["textos"]) == ev_["n"] and lista_parada(caso, QUEM_RECEBE.nome),
+                                              20) if ev else (False, {})
+                    okb = okb and caso.esperar(lambda: caso.tem(f'[data-quem-recebe-aluno="{aluno}"]'), 5)
+                    o.ok(okb and bool(ev) and ((ev or {}).get("n") or 0) >= 1 and ((ev or {}).get("corpo") or {}).get("grupo") == modelo,
+                         f"{t} a busca '{termo}' (parte do nome, sem caixa) acha o aluno e vai ao servidor "
+                         f"({T.descr(ev) or 'sem pedido com esse termo em 20 s'}; na tela '{sb.get('rotulo')}')")
                     if termo == "rafael":
                         o.linha(f"   print: {caso.print('quem_recebe_busca')}")
                 busca.fill("zzz-ninguem-hml14d")
@@ -411,13 +493,16 @@ def t6(o, nav, R, desktop: bool) -> None:
         termos = (("parte do nome", "afael"), ("sem caixa", "RAFAEL MOURA")) if desktop else (("parte do nome", "afael"),)
         for rot, termo in termos:
             desde = len(rede.eventos)
+            # buscar_aluno espera a resposta DESTE termo na lista (data-termo); o pedido com o termo, até 20 s (na 2ª busca o aluno já
+            # está nas opções da 1ª enquanto a nova não chega)
             ids = buscar_aluno(caso, "relatorio", termo, lambda ids: aluno in ids)
-            o.ok(aluno in ids, f"{t} acha o aluno por {rot} ({termo!r} → {len(ids)} opção(ões))")
-            ped = [x for x in pedidos_usuarios(rede, desde) if (x.get("q") or "").strip().lower() == termo.strip().lower()]
-            corpo = (ped[-1].get("corpo") or {}) if ped else {}
+            ev = pedido_com_termo(caso, rede, desde, FUNCAO_USUARIOS, None, termo, 20)
+            o.ok(aluno in ids and opcoes(caso, "relatorio")["termo"] == termo_do_banco(termo),
+                 f"{t} acha o aluno por {rot} ({termo!r} → {len(ids)} opção(ões))")
+            corpo = (ev or {}).get("corpo") or {}
             if desktop:
-                o.ok(bool(ped) and corpo.get("limit") == POR_PAGINA and corpo.get("ordem") == "nome",
-                     f"{t} o pedido do admin-list-users por {rot}: q, limit 20, ordem 'nome' ({T.descr(ped[-1]) if ped else 'nenhum com esse termo'})")
+                o.ok(bool(ev) and corpo.get("limit") == POR_PAGINA and corpo.get("ordem") == "nome",
+                     f"{t} o pedido do admin-list-users por {rot}: q, limit 20, ordem 'nome' ({T.descr(ev) or 'nenhum com esse termo em 20 s'})")
         o.linha(f"   {t} acento de verdade ('jose' acha 'José') e '20 de N — refine a busca': só no deno test/Vitest (os alunos de teste do "
                 f"professor não têm acento e são {len(opcoes(caso, 'relatorio')['ids'])})")
         if desktop:
