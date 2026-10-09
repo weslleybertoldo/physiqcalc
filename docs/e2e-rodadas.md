@@ -29,6 +29,39 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 13:45 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo relatorio` | local | 142/142 | Report-Only: 14 violações, todas esperadas (as sondas) |
+| 09/10 13:28 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --com-sw` | local | 151/151 | SW ligado em todo contexto: a 2ª abertura do / e do /treino sem rede vem do precache; 0 violação vinda do sw.js |
+| 09/10 13:09 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --so plano --emular-host physiqcalc.com.br` | local | 10/10 | host emulado `physiqcalc.com.br` com a CSP valendo: o antifraude do MP (variante .br) roda com o nonce, `MP_DEVICE_SESSION_ID` definido, 0 violação |
+| 09/10 13:08 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --com-tela --so impressos` | local | 9/9 | D4 com janela (Edge): o PDF dos Impressos abre na aba blob: com `object-src 'none'`, que fica |
+| 09/10 13:07 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo` | local | 142/142 | CSP valendo: 9 violações, todas esperadas (as sondas barradas); Turnstile, brick do MP, anexo em iframe, 3D, master e app do aluno funcionando |
+| 09/10 12:45 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --so plano --emular-host physiqcalc.com.br --prefixo ensaio` | local | 10/10 | iteração (sem commit), host emulado `physiqcalc.com.br` com a CSP valendo |
+| 09/10 12:44 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --com-sw --so offline --prefixo ensaio` | local | 14/14 | iteração (sem commit) do grupo offline (SW ligado) |
+| 09/10 12:42 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --com-tela --so impressos --prefixo ensaio` | local | 9/9 | iteração (sem commit), D4 com janela |
+| 09/10 12:41 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --prefixo ensaio` | local | 142/142 | iteração (sem commit) com a CSP valendo: 0 violação inesperada |
+| 09/10 12:13 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo relatorio --so clinico,treino,master,aluno --prefixo ensaio` | local | 55/55 | iteração (sem commit): 0 violação (anexo em iframe, 3D, master com o papel devolvido) |
+| 09/10 12:04 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo relatorio --so plano --emular-host physiqcalc-staging.vercel.app --prefixo ensaio` | local | 10/10 | iteração (sem commit), host emulado do staging: os mesmos hosts do localhost, 0 violação |
+| 09/10 12:02 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo relatorio --so plano --emular-host physiqcalc.com.br --prefixo ensaio` | local | 7/10 | iteração (sem commit), host emulado `physiqcalc.com.br`: no domínio .br o antifraude manda o pixel para `www.mercadopago.com.br` (img-src), liberado |
+| 09/10 11:58 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo relatorio --so painel,impressos,plano,sondas --prefixo ensaio` | local | 50/54 | iteração (sem commit): o antifraude do MP rodou com o nonce e pediu `www.mercadolibre.com` (connect-src e img-src) e `www.mercadolivre.com` (img-src), liberados; a sonda do `<embed>` de PDF também dá `frame-src blob:` (entrou nas esperadas) |
+| 09/10 11:52 | hml-15 | `596c2a6` | `e2e/hml15/csp.py --base local --canal msedge --modo relatorio --so cabecalhos,publicas --prefixo ensaio` | local | 39/41 | iteração (mudanças sem commit): as 2 ❌ = `bluetooth=()` desconhecido no Permissions-Policy do Edge (saiu) e o /c/ sem o widget do Turnstile (corrida do app, fora da CSP: o teste passou a conferir que o script rodou) |
+| 09/10 10:19 | hml-14d | `a915c65` | `e2e/hml14/telas.py --base prod --canal msedge` | produção | 98/99 | SÓ LEITURA (rodou da branch `18a5477`, a mesma árvore do squash); a ❌ = a Biblioteca do master a 390 px (469 px, a mesma linha do front antigo: H-40) |
+| 09/10 10:08 | hml-14d | `18a5477` | `e2e/hml14/telas.py --base staging --canal msedge` | staging | 757/769 | as 12 ❌ = larguras de 390 px que o front antigo já tinha (H-40) |
+| 09/10 09:30 | hml-14d | `3e80932` | `e2e/hml14/telas.py --base local --canal msedge --casos P1 --prefixo local_m4` | local | 55/58 | as 3 ❌ = o Financeiro do aluno a 390 px (427 px, igual ao front antigo: H-40) |
+| 09/10 09:25 | hml-14d | `3e80932` | `e2e/hml14/telas.py --base local --canal msedge --casos P1 --prefixo local_m3` | local | 49/50 | a 390 px o clique do teste errava o alvo (corrigido no `18a5477`) |
+| 09/10 09:21 | hml-14d | `3e80932` | `e2e/hml14/telas.py --base local --canal msedge --casos P1,P2,P3,P7,P8 --prefixo local_m2` | local | 111/113 | o clique a 390 px (acima) + Exames a 390 px (H-40) |
+| 09/10 09:16 | hml-14d | `3e80932` | `e2e/hml14/telas.py --base local --canal msedge --casos M5,M7 --prefixo local_m1` | local | 38/38 | testes do master esperando a resposta do termo |
+| 09/10 09:12 | hml-14d | `29603b3` | `e2e/hml14/telas.py --base local --canal msedge --casos T3,T6,T4 --prefixo local_t` | local | 57/58 | a ❌ = o Histórico do mês a 390 px (H-40); testes do Treino corrigidos no `3e80932` |
+| 09/10 09:01 | hml-14d | `29603b3` | `e2e/hml14/telas.py --base local --canal msedge` | local | 683/707 | as 24 falhas eram dos TESTES (esperas e massa) → `3e80932` e `18a5477`; sobram as larguras de 390 px |
+| 09/10 08:26 | hml-14d | `e19fbac` | `e2e/w15/api.py` | staging | 46/53 | = antes, depois de zerar a sobra do w23 da rodada 'antes' |
+| 09/10 08:22 | hml-14d | `e19fbac` | `e2e/w27/api.py` | staging | 79/81 | = antes (o master do staging não grava no Treino — hml-02) |
+| 09/10 08:17 | hml-14d | `e19fbac` | `e2e/w23/api.py` | staging | 22/22 | regressão depois das 8 funções |
+| 09/10 08:15 | hml-14d | `e19fbac` | `e2e/w17/avaliacao_api.py` | staging | 34/34 | regressão depois |
+| 09/10 08:14 | hml-14d | `e19fbac` | `e2e/w16/api.py` | staging | 40/41 | = antes |
+| 09/10 08:13 | hml-14d | `e19fbac` | `e2e/w15/api.py` | staging | 45/53 | 1 cópia personalizada que o w23 da rodada 'antes' deixou (o w15 só limpa no fim) |
+| 09/10 06:04 | hml-14d | `33cfae9` | `e2e/w27/api.py` | staging | 79/81 | regressão antes (worktree destacada da `main`) |
+| 09/10 05:58 | hml-14d | `33cfae9` | `e2e/w23/api.py` | staging | 22/22 | regressão antes |
+| 09/10 05:57 | hml-14d | `33cfae9` | `e2e/w17/avaliacao_api.py` | staging | 34/34 | regressão antes |
+| 09/10 05:56 | hml-14d | `33cfae9` | `e2e/w16/api.py` | staging | 40/41 | regressão antes |
+| 09/10 05:56 | hml-14d | `33cfae9` | `e2e/w15/api.py` | staging | 46/53 | regressão antes |
 | 09/10 05:05 | hml-14c | `0e3ea2c` | `e2e/w26/prod.py --canal msedge` | produção | 21/21 | SÓ LEITURA (H-68) |
 | 09/10 04:52 | hml-14c | `003df92` | `e2e/w15/api.py` | staging | 45/53 | teste do H-51 item 5 atualizado (`34663cd`) |
 | 09/10 04:49 | hml-14c | `003df92` | `e2e/w23/api.py` | staging | 22/22 | regressão depois das 18 funções |
