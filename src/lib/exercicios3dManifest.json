@@ -5,6 +5,30 @@
   "mapa": "/exercicios3d/musculos-1791091845.png"
  },
  "exercicios": {
+  "049e0404-02e8-4064-9bc4-e2a99a856e7e": {
+   "v": "1791490304",
+   "movimento": "/exercicios3d/049e0404-02e8-4064-9bc4-e2a99a856e7e-1791490304.glb",
+   "foto": "/exercicios3d/049e0404-02e8-4064-9bc4-e2a99a856e7e-1791490304.webp",
+   "bytes": 154812,
+   "alvos": [
+    12
+   ],
+   "auxiliares": [
+    6,
+    7
+   ],
+   "camera": {
+    "az": 30,
+    "el": 12,
+    "dist": 5.2,
+    "alvo": [
+     0.0,
+     -0.25,
+     1.1
+    ]
+   },
+   "ida_s": 1.5
+  },
   "0cf2c040-e048-40d1-a932-5b78aa1f7a4e": {
    "v": "1791259957",
    "movimento": "/exercicios3d/0cf2c040-e048-40d1-a932-5b78aa1f7a4e-1791259957.glb",
@@ -51,6 +75,31 @@
     ]
    },
    "ida_s": 3.0
+  },
+  "0fab29a1-94b3-4763-bece-b00fe613a640": {
+   "v": "1791510892",
+   "movimento": "/exercicios3d/0fab29a1-94b3-4763-bece-b00fe613a640-1791510892.glb",
+   "foto": "/exercicios3d/0fab29a1-94b3-4763-bece-b00fe613a640-1791510892.webp",
+   "bytes": 59146,
+   "alvos": [
+    12
+   ],
+   "auxiliares": [
+    19,
+    6,
+    1
+   ],
+   "camera": {
+    "az": 58,
+    "el": 16,
+    "dist": 3.1,
+    "alvo": [
+     0,
+     -0.05,
+     0.24
+    ]
+   },
+   "ida_s": 2.0
   },
   "17e52ced-abc2-41a1-8776-c6162309e306": {
    "v": "1791459384",
@@ -99,6 +148,33 @@
     ]
    },
    "ida_s": 3.75
+  },
+  "1ad63bb7-2a99-40a0-a5e4-78b2749d780e": {
+   "v": "1791472191",
+   "movimento": "/exercicios3d/1ad63bb7-2a99-40a0-a5e4-78b2749d780e-1791472191.glb",
+   "foto": "/exercicios3d/1ad63bb7-2a99-40a0-a5e4-78b2749d780e-1791472191.webp",
+   "bytes": 156242,
+   "alvos": [
+    7
+   ],
+   "auxiliares": [
+    5,
+    4,
+    18,
+    3,
+    12
+   ],
+   "camera": {
+    "az": 135,
+    "el": 12,
+    "dist": 5.6,
+    "alvo": [
+     0.0,
+     -0.2,
+     1.1
+    ]
+   },
+   "ida_s": 1.5
   },
   "1b1a1328-542e-4925-b038-15751ed254f7": {
    "v": "1791399354",
@@ -326,6 +402,27 @@
    },
    "ida_s": 1.5
   },
+  "3ee805c7-8279-4dba-9411-02c2bb7cbe22": {
+   "v": "1791480853",
+   "movimento": "/exercicios3d/3ee805c7-8279-4dba-9411-02c2bb7cbe22-1791480853.glb",
+   "foto": "/exercicios3d/3ee805c7-8279-4dba-9411-02c2bb7cbe22-1791480853.webp",
+   "bytes": 75736,
+   "alvos": [
+    19
+   ],
+   "auxiliares": [],
+   "camera": {
+    "az": 120,
+    "el": 8,
+    "dist": 4.6,
+    "alvo": [
+     0,
+     0.1,
+     0.95
+    ]
+   },
+   "ida_s": 1.5
+  },
   "3f6e172a-9b35-4f8c-ad22-ddd942d7d667": {
    "v": "1791235929",
    "movimento": "/exercicios3d/3f6e172a-9b35-4f8c-ad22-ddd942d7d667-1791235929.glb",
@@ -535,6 +632,33 @@
    },
    "ida_s": 1.5
   },
+  "5143c9ed-f192-4a84-a2b0-9ce146ac8d9c": {
+   "v": "1791509131",
+   "movimento": "/exercicios3d/5143c9ed-f192-4a84-a2b0-9ce146ac8d9c-1791509131.glb",
+   "foto": "/exercicios3d/5143c9ed-f192-4a84-a2b0-9ce146ac8d9c-1791509131.webp",
+   "bytes": 69052,
+   "alvos": [
+    2,
+    8,
+    15
+   ],
+   "auxiliares": [
+    14,
+    11,
+    9
+   ],
+   "camera": {
+    "az": 35,
+    "el": 8,
+    "dist": 4.3,
+    "alvo": [
+     0,
+     -0.05,
+     0.75
+    ]
+   },
+   "ida_s": 1.5
+  },
   "58dccb5e-4411-468c-ab53-fdbb1cbf97fa": {
    "v": "1791156671",
    "movimento": "/exercicios3d/58dccb5e-4411-468c-ab53-fdbb1cbf97fa-1791156671.glb",
@@ -613,6 +737,29 @@
    },
    "ida_s": 3.0
   },
+  "61bcf40c-6a82-423b-99e5-0adc11190b67": {
+   "v": "1791525174",
+   "movimento": "/exercicios3d/61bcf40c-6a82-423b-99e5-0adc11190b67-1791525174.glb",
+   "foto": "/exercicios3d/61bcf40c-6a82-423b-99e5-0adc11190b67-1791525174.webp",
+   "bytes": 72130,
+   "alvos": [
+    4
+   ],
+   "auxiliares": [
+    3
+   ],
+   "camera": {
+    "az": 305,
+    "el": 14,
+    "dist": 2.9,
+    "alvo": [
+     -0.1,
+     -0.32,
+     0.6
+    ]
+   },
+   "ida_s": 1.5
+  },
   "6e06bce6-1909-4f5d-902b-ea3c80695aec": {
    "v": "1791315100",
    "movimento": "/exercicios3d/6e06bce6-1909-4f5d-902b-ea3c80695aec-1791315100.glb",
@@ -681,6 +828,30 @@
     ]
    },
    "ida_s": 1.5
+  },
+  "76a9b295-0c39-4c2e-98d1-4b87f7caa66d": {
+   "v": "1791527163",
+   "movimento": "/exercicios3d/76a9b295-0c39-4c2e-98d1-4b87f7caa66d-1791527163.glb",
+   "foto": "/exercicios3d/76a9b295-0c39-4c2e-98d1-4b87f7caa66d-1791527163.webp",
+   "bytes": 63088,
+   "alvos": [
+    6
+   ],
+   "auxiliares": [
+    12,
+    18
+   ],
+   "camera": {
+    "az": 60,
+    "el": 8,
+    "dist": 4.4,
+    "alvo": [
+     0,
+     -0.25,
+     1.0
+    ]
+   },
+   "ida_s": 2.0
   },
   "79c9f663-691b-4c17-9a75-2e47599167e4": {
    "v": "1791127234",
@@ -1208,6 +1379,33 @@
    },
    "ida_s": 1.5
   },
+  "ca81c43e-1360-44a6-a8d4-784ed0dd6fa0": {
+   "v": "1791515679",
+   "movimento": "/exercicios3d/ca81c43e-1360-44a6-a8d4-784ed0dd6fa0-1791515679.glb",
+   "foto": "/exercicios3d/ca81c43e-1360-44a6-a8d4-784ed0dd6fa0-1791515679.webp",
+   "bytes": 156360,
+   "alvos": [
+    7
+   ],
+   "auxiliares": [
+    4,
+    5,
+    18,
+    3,
+    12
+   ],
+   "camera": {
+    "az": 125,
+    "el": 12,
+    "dist": 5.6,
+    "alvo": [
+     0.0,
+     -0.2,
+     1.1
+    ]
+   },
+   "ida_s": 1.5
+  },
   "cbf903f0-b43d-4ee7-8be1-f2eee6eb71a2": {
    "v": "1791166417",
    "movimento": "/exercicios3d/cbf903f0-b43d-4ee7-8be1-f2eee6eb71a2-1791166417.glb",
@@ -1305,6 +1503,36 @@
      0.0,
      -0.25,
      0.75
+    ]
+   },
+   "ida_s": 1.5
+  },
+  "d716cf5f-1989-4364-887b-010ceffd4826": {
+   "v": "1791521353",
+   "movimento": "/exercicios3d/d716cf5f-1989-4364-887b-010ceffd4826-1791521353.glb",
+   "foto": "/exercicios3d/d716cf5f-1989-4364-887b-010ceffd4826-1791521353.webp",
+   "bytes": 72508,
+   "alvos": [
+    8,
+    14,
+    9,
+    15
+   ],
+   "auxiliares": [
+    2,
+    7,
+    18,
+    3,
+    11
+   ],
+   "camera": {
+    "az": 50,
+    "el": 10,
+    "dist": 4.4,
+    "alvo": [
+     0,
+     -0.05,
+     0.8
     ]
    },
    "ida_s": 1.5
@@ -1489,6 +1717,32 @@
     ]
    },
    "ida_s": 1.5
+  },
+  "f7742b0d-2365-40c8-8ae8-b49d375ed6f8": {
+   "v": "1791501918",
+   "movimento": "/exercicios3d/f7742b0d-2365-40c8-8ae8-b49d375ed6f8-1791501918.glb",
+   "foto": "/exercicios3d/f7742b0d-2365-40c8-8ae8-b49d375ed6f8-1791501918.webp",
+   "bytes": 169884,
+   "alvos": [
+    15
+   ],
+   "auxiliares": [
+    8,
+    2,
+    14,
+    11
+   ],
+   "camera": {
+    "az": 75,
+    "el": 12,
+    "dist": 3.4,
+    "alvo": [
+     0.0,
+     -0.35,
+     0.78
+    ]
+   },
+   "ida_s": 2.0
   },
   "fb7b3cf3-b689-4905-b9bf-c40c016f493d": {
    "v": "1791202613",

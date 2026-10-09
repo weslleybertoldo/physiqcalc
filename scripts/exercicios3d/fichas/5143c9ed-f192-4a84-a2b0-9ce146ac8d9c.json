@@ -1,0 +1,364 @@
+{
+  "uuid": "5143c9ed-f192-4a84-a2b0-9ce146ac8d9c",
+  "nome": "Agachamento Sumô com Halteres",
+  "cena": "agachamento_sumo_com_halteres",
+  "grupo": "Quadríceps / Glúteo",
+  "subgrupo": "Adutores · glúteo máximo · quadríceps",
+  "padrao_movimento": "agachamento",
+  "equipamento": "halteres",
+  "variacao": "sumô, pés afastados",
+  "alvos": [
+    "adutores",
+    "gluteo",
+    "quadriceps"
+  ],
+  "auxiliares": [
+    "posterior",
+    "panturrilha",
+    "lombar"
+  ],
+  "camera": {
+    "az": 35,
+    "el": 8,
+    "dist": 4.3,
+    "alvo": [
+      0,
+      -0.05,
+      0.75
+    ]
+  },
+  "camera_vistas": {
+    "dist": 3.8,
+    "alvo": [
+      0,
+      -0.05,
+      0.68
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés bem mais afastados que o quadril e as pontas viradas uns 45° pra fora, segurando UM halter em pé com as duas mãos pela cabeça de cima (uma palma de cada lado dela, os dedos por baixo e os polegares na frente), braços esticados e perto do corpo, o halter pendurado entre as pernas; desce dobrando os joelhos e o quadril com o tronco ereto e os joelhos indo na direção das pontas dos pés, sem passar da frente deles, até as coxas ficarem paralelas ao chão, com o halter quase encostando no chão (sem encostar); sobe empurrando o chão e apertando o glúteo até ficar em pé, com os calcanhares no chão o tempo todo.",
+  "cinesiologia": {
+    "plano": "sagital, com o quadril aberto (abdução e rotação externa: pés e joelhos virados pra fora); cadeia cinética fechada",
+    "articulacoes": "quadril (flexão na descida e extensão na subida, mantendo a abertura e a rotação pra fora), joelho (flexão/extensão) e tornozelo (dorsiflexão/flexão plantar); ombros, cotovelos e punhos parados, segurando o halter",
+    "agonistas": "adutores da coxa (adutor magno e adutor longo), glúteo máximo e quadríceps (vasto lateral, vasto medial, vasto intermédio e reto femoral)",
+    "sinergistas": "sóleo",
+    "estabilizadores": "isquiotibiais e gastrocnêmio (estabilizadores dinâmicos do joelho), eretores da espinha (tronco ereto), trapézio, levantador da escápula e romboides (seguram o halter com os braços pendurados), reto abdominal e oblíquos",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "Antoian F. 5 Variations of the Body-weight Squat — Dumbbell Sumo Squat. American Council on Exercise (ACE), Expert Articles, 18/03/2016. https://www.acefitness.org/resources/pros/expert-articles/5875/5-variations-of-the-body-weight-squat/ : \"Squats work many muscles in the legs, but the Dumbbell Sumo Squat is particularly effective for focusing on the muscles of the inner thighs. Stand with the feet wider than the hips and the toes pointed out to the sides about 45 degrees. Hold one dumbbell in both hands and extend the arms toward the floor. Bend the knees and lower the body until the thighs are parallel to the floor. Straighten the legs to return to the starting position. Keep the arms straight and close to the body throughout the entire movement. Also, try to keep the knees in line with the ankles while in the squat position and do not let the knee cross in front of the foot.\" A foto do artigo mostra o halter em pé, pendurado entre as pernas, seguro pelas 2 mãos na cabeça de cima.",
+    "ExRx.net — Dumbbell Squat (Weight Exercises › Quadriceps), https://exrx.net/WeightExercises/Quadriceps/DBSquat (lido na cópia do Internet Archive): \"keeping back straight and knees pointed same direction as feet\"; \"Keep head facing forward, back straight, chest high, arms straight to sides, and feet flat on floor with equal distribution of weight through forefoot and heel. Knees should point same direction as feet throughout movement.\"; músculos: alvo quadríceps; sinergistas glúteo máximo, adutor magno e sóleo; estabilizadores dinâmicos isquiotibiais e gastrocnêmio; estabilizadores eretores da espinha, trapézio superior e médio, levantador da escápula e romboides; estabilizadores antagonistas reto abdominal e oblíquos.",
+    "ExRx.net — Squat Variations (Kinesiology), https://exrx.net/Kinesiology/SquatVariations (cópia do Internet Archive): \"The hips typically travel back further with the torso bent forward on power lift type squat unless the stance is substantially wide, as in a sumo stance. However, a wide stance requires greater hip torque (requiring greater strength through hip abduction) while reducing both knee and spinal torque.\"; \"An Excessively wide stance may cause the adductor muscles to reach the end of their extensibility early.\"",
+    "ExRx.net — Squat Analysis (Kinesiology), https://exrx.net/Kinesiology/Squats (cópia do Internet Archive): \"A wider stance increases Hip Adductor involvement but does not appear to alter Quadriceps or Biceps Femoris involvement (McCaw and Melrose 1999). The Gluteus Maximus involvement increases with a wider stance, but only at heavier load\"; Signorile 1995: \"Extreme outward toe point greatly reduces stability\".",
+    "Paoli A, Marcolin G, Petrone N. The effect of stance width on the electromyographical activity of eight superficial thigh muscles during back squat with different bar loads. J Strength Cond Res. 2009;23(1):246-250. doi:10.1519/JSC.0b013e3181876811 — bases de 100, 150 e 200% da distância entre os trocânteres (GTd = 44,3 ± 1 cm): \"there was a higher electrical activity of this muscle [gluteus maximus] when back squats were performed at the maximum stance widths at 0 and 70% 1RM\"; \"a large width is necessary for a greater activation of the gluteus maximus during back squats\".",
+    "Escamilla RF, Fleisig GS, Lowry TM, Barrentine SW, Andrews JR. A three-dimensional biomechanical analysis of the squat during varying stance widths. Med Sci Sports Exerc. 2001;33(6):984-998 (resumo no PubMed 11404665): base larga (WS) = 169 ± 12% da largura dos ombros; \"the shanks were 5-9 degrees more vertical and the feet were turned out 6 degrees more during the WS\"; \"No significant differences occurred in trunk positions.\"",
+    "Escamilla RF, Fleisig GS, Zheng N, et al. Effects of technique variations on knee biomechanics during the squat and leg press. Med Sci Sports Exerc. 2001;33(9):1552-1566 (resumo no PubMed 11528346): base larga e estreita, pés retos ou virados 30° pra fora; \"No differences were found in muscle activity or knee forces between foot angle variations.\"",
+    "Coratella G, Tornatore G, Caccavale F, Longo S, Esposito F, Cè E. The Activation of Gluteal, Thigh, and Lower Back Muscles in Different Squat Variations Performed by Competitive Bodybuilders. Int J Environ Res Public Health. 2021;18(2):772. doi:10.3390/ijerph18020772 (PMC7831128): agachamento sumô com a base 2× a normal e as coxas paralelas; \"both sumo-BS and external-rotated-sumo-BS showed greater vastus lateralis and adductor longus activation compared to all other exercises\"; \"larger stance and feet external rotation increased the adductor longus activation\".",
+    "Rusin J, DeBell R. Anthropometrical considerations for customizing the squat pattern. NSCA Personal Training Quarterly (PTQ) 5.4. https://www.nsca.com/contentassets/65ff7dabfee140d4876c556ddb748fef/ptq-5.4.1-anthropometrical-considerations-for-customizing-the-squat-pattern.pdf : uma das bases comuns do agachamento é \"Wide foot stance with increased foot abduction angle\"; \"it is recommended that athlete comfort dictates the combination of width and toe out taken in the squat stance, as long as known biomechanical faults (knees collapsing in, lumbar flexion, heels elevating) are not present\"."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base do sumô de propósito: pés bem mais afastados que os ombros e pontas viradas ~45° pra fora (ACE: \"Stand with the feet wider than the hips and the toes pointed out to the sides about 45 degrees\"), então as faixas padrão de largura (até 2,6×) e de ponta do pé (até 30°) não servem; e com a base larga e a perna dobrada o joelho_valgo padrão (joelho × reta quadril → tornozelo) passa de +20 cm sem erro nenhum (o joelho vai pra fora, em cima do pé). As outras regras padrão (os dois pés virados igual, um pé não à frente do outro e coluna neutra) estão abaixo, e o joelho na direção do pé é medido no referencial do próprio pé (tecnica3d.joelho_plano_pe e joelho_alem_dos_dedos, novas no lote 7).",
+    "zonas": [
+      {
+        "nome": "dedos da mão esquerda por baixo da cabeça do halter, encostando",
+        "equipamento": "halter",
+        "partes": [
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "mm": [
+          -2,
+          3
+        ],
+        "fonte": "foto do ACE (Dumbbell Sumo Squat): os dedos dobram por baixo da cabeça de cima — é o que segura o peso pendurado"
+      },
+      {
+        "nome": "dedos da mão direita por baixo da cabeça do halter, encostando",
+        "equipamento": "halter",
+        "partes": [
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          -2,
+          3
+        ],
+        "fonte": "foto do ACE (idem)"
+      },
+      {
+        "nome": "o halter não encosta nas coxas, nos joelhos, nas pernas nem nos pés",
+        "equipamento": "halter",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          15,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (o peso pendurado nunca entra nas coxas, nos joelhos nem no chão: no fundo fica entre as pernas)"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "as duas mãos podem se encostar, sem se atravessar",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "pedido do Weslley (1 halter com as 2 mãos: as mãos podem encostar uma na outra, mas não se atravessam)"
+      },
+      {
+        "nome": "antebraços e mãos não encostam nas coxas nem nos joelhos",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "ACE (\"Keep the arms straight and close to the body\"): os braços descem entre os joelhos, sem apoiar nas coxas"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "coxas paralelas ao chão embaixo",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "t": 1.0,
+        "graus": [
+          -5,
+          8
+        ],
+        "fonte": "ACE (\"Bend the knees and lower the body until the thighs are parallel to the floor\"); Coratella et al. 2021 (sumô até \"the thighs were parallel to the ground\")"
+      },
+      {
+        "nome": "joelhos esticados em pé, sem travar",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": 0.0,
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "ACE (\"Straighten the legs to return to the starting position\")"
+      },
+      {
+        "nome": "pés bem afastados (base de sumô)",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          3.3,
+          3.7
+        ],
+        "fonte": "ACE (\"Stand with the feet wider than the hips\"); Escamilla et al. 2001 (base larga = 169 ± 12% da largura dos ombros); Paoli et al. 2009 (base de até 200% da distância entre os trocânteres). No boneco: tornozelos a 0,74 m = 1,85 × os 0,40 m entre os ombros e 3,5 × os 0,21 m entre as articulações do quadril (a medida: distância entre os tornozelos ÷ entre as articulações do quadril, tecnica3d.pes_largura)"
+      },
+      {
+        "nome": "pontas dos pés ~45° pra fora",
+        "medida": "ponta_pe",
+        "t": "todos",
+        "graus": [
+          40,
+          50
+        ],
+        "fonte": "ACE (\"the toes pointed out to the sides about 45 degrees\"); NSCA PTQ 5.4 (\"Wide foot stance with increased foot abduction angle\")"
+      },
+      {
+        "nome": "os dois pés virados igual",
+        "medida": "ponta_pe_diferenca",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "regra padrão da fábrica (tecnica3d), mais estreita"
+      },
+      {
+        "nome": "um pé não fica à frente do outro",
+        "medida": "pes_alinhados",
+        "t": "todos",
+        "mm": [
+          0,
+          20
+        ],
+        "fonte": "regra padrão da fábrica (tecnica3d), mais estreita"
+      },
+      {
+        "nome": "joelho em cima da linha do pé, sem entrar nem abrir (dobrando)",
+        "medida": "joelho_plano_pe",
+        "t": [
+          0.4,
+          1.0
+        ],
+        "mm": [
+          -15,
+          15
+        ],
+        "fonte": "ACE (\"try to keep the knees in line with the ankles while in the squat position\"); ExRx — Dumbbell Squat (\"Knees should point same direction as feet throughout movement\"); NSCA PTQ 5.4 (\"knees collapsing in\" é erro); dica do app (\"desça mantendo os joelhos alinhados com os pés\"). Medida: centro do joelho × plano vertical do pé (tornozelo → base dos dedos), − = joelho entrando (valgo). Em pé, com a perna quase esticada, o joelho fica entre o quadril e o tornozelo (não alcança o plano do pé)"
+      },
+      {
+        "nome": "joelho não passa da frente do pé",
+        "medida": "joelho_alem_dos_dedos",
+        "t": "todos",
+        "mm": [
+          -300,
+          -20
+        ],
+        "fonte": "ACE (\"do not let the knee cross in front of the foot\"). Medida: centro do joelho × ponta dos dedos, ao longo do pé (+ = passou)"
+      },
+      {
+        "nome": "canela quase em pé embaixo (joelho em cima do pé)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Leg",
+          "Foot"
+        ],
+        "t": 1.0,
+        "graus": [
+          66,
+          82
+        ],
+        "fonte": "ACE (\"keep the knees in line with the ankles while in the squat position\"); Escamilla et al. 2001 (\"the shanks were 5-9 degrees more vertical ... during the WS\")"
+      },
+      {
+        "nome": "tronco ereto",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          25
+        ],
+        "fonte": "dica do app (\"o tronco ereto\"); ExRx — Squat Variations (com a base bem larga, como no sumô, o quadril não vai tão pra trás e o tronco não inclina tanto); ExRx — Dumbbell Squat (\"back straight, chest high\")"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          10
+        ],
+        "fonte": "ExRx — Dumbbell Squat (\"keeping back straight\"); NSCA PTQ 5.4 (\"lumbar flexion\" é erro)"
+      },
+      {
+        "nome": "cotovelos esticados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ACE (\"extend the arms toward the floor\"; \"Keep the arms straight\")"
+      },
+      {
+        "nome": "braços pendurados perto do corpo",
+        "medida": "braco_elevacao",
+        "t": "todos",
+        "graus": [
+          0,
+          40
+        ],
+        "fonte": "ACE (\"Keep the arms straight and close to the body throughout the entire movement\")"
+      }
+    ]
+  }
+}

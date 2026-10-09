@@ -1,0 +1,123 @@
+{
+ "uuid": "0fab29a1-94b3-4763-bece-b00fe613a640",
+ "nome": "Flexão de Braço",
+ "cena": "flexao_de_braco",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral médio · tríceps · core (estabilização)",
+ "padrao_movimento": "supino_reto",
+ "equipamento": "peso_corporal",
+ "variacao": "no solo",
+ "alvos": [
+  "peitoral"
+ ],
+ "auxiliares": [
+  "triceps",
+  "deltoide",
+  "abdomen"
+ ],
+ "camera": {
+  "az": 58,
+  "el": 16,
+  "dist": 3.1,
+  "alvo": [
+   0,
+   -0.05,
+   0.24
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.3,
+  "alvo": [
+   0,
+   0.0,
+   0.24
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "De bruços, com as mãos espalmadas no chão um pouco mais abertas que os ombros, os dedos apontando para a frente (um pouco para dentro) e os ombros bem em cima das mãos, e apoiado na ponta dos pés (tornozelos dobrados, os dedos dos pés dobrados no chão e os calcanhares para cima), com os pés afastados mais ou menos na largura do quadril: os braços estendidos, sem travar, e o corpo reto da cabeça aos calcanhares — quadril e joelhos estendidos, abdômen e glúteos firmes e a cabeça alinhada com a coluna. Desce devagar dobrando os cotovelos, que abrem para os lados até ficarem a cerca de 45° do tronco, aproximando as escápulas, até o peito quase tocar o chão, sem o quadril cair nem subir; sobe empurrando o chão até estender os braços de novo, afastando as escápulas, sem perder o alinhamento. As mãos e as pontas dos pés não saem do lugar: o corpo, reto como uma prancha, gira na ponta dos pés.",
+ "cinesiologia": {
+  "plano": "transverso e sagital: o úmero desce para trás e para o lado (extensão e abdução horizontal do ombro) e volta; cadeia cinética fechada — as mãos e a ponta dos pés ficam paradas no chão e o corpo, reto, gira em volta da ponta dos pés",
+  "articulacoes": "ombro (extensão e abdução horizontal na descida, com o braço a cerca de 45° do tronco embaixo; flexão e adução horizontal na subida); cotovelo (flexão na descida, de ~5° em cima a ~125° embaixo; extensão na subida); escápulas (retraem na descida e protraem na subida); punho estendido com a mão espalmada (~88° em cima, ~67° embaixo); coluna, quadril e joelhos parados e estendidos; tornozelos em flexão dorsal e dedos dos pés dobrados no chão, parados",
+  "agonistas": "peitoral maior, porção esternal (ExRx: alvo); na flexão padrão o peitoral maior chega a ~61% da contração voluntária máxima (Contreras et al. 2012, tabela 1)",
+  "sinergistas": "peitoral maior (porção clavicular), deltoide anterior, tríceps braquial e coracobraquial (ExRx); tríceps ~66% e deltoide anterior ~42% da contração voluntária máxima (Contreras 2012, tabela 1)",
+  "estabilizadores": "serrátil anterior e peitoral menor (escápulas), reto do abdômen, oblíquos e quadríceps (o corpo reto); eretores da espinha como estabilizadores antagonistas e a cabeça curta do bíceps como estabilizador dinâmico (ExRx); serrátil anterior ~56% da contração voluntária máxima (Contreras 2012, tabela 1)",
+  "fases": "descida excêntrica controlada (~2 s) e subida concêntrica empurrando o chão (Calatayud et al. 2015: \"a 2:2 ratio (i.e., 2-second rate for descent and 2-second rate for ascent)\")"
+ },
+ "referencias": [
+  "American Council on Exercise (ACE) — Push-up. https://www.acefitness.org/resources/everyone/exercise-library/41/push-up/ (lido em 08/10/2026): \"Starting Position: Kneel on an exercise mat or floor and bring your feet together behind you.\"; \"Slowly bend forward to place your palms flat on the mat, positioning your hands shoulder-width apart with your fingers facing forward or turned slightly inward. Slowly shift your weight forward until your shoulders are positioned directly over your hands. Reposition your hands as needed to allow full extension of your body without any bend at the hips or knees. Stiffen your torso by contracting your core/abdominal muscles (“bracing”), your glute and quadriceps muscles and align your head with your spine. Place your feet together with your ankles dorsiflexed (toes pointed towards your shins).\"; \"Downward Phase: Slowly lower your body towards the floor while maintaining a rigid torso and head aligned with your spine. Do not allow your low back to sag or your hips to hike upwards during this downward phase. Continue to lower yourself until your chest or chin touch the mat/floor. Allow your elbows to flare outwards during the lowering phase.\"; \"Upward Phase: Press upwards through your arms while maintaining a rigid torso and head aligned with your spine. For extra strength think about pushing the floor away from you. Do not allow your low back to sag or your hips to hike upwards. Continue pressing until the arms are fully extended at the elbows.\"; \"Pushing through the heel and outside surface of your palm provides greater force in your press and stability to your shoulders.\"",
+  "ExRx.net — Push-up. https://exrx.net/WeightExercises/PectoralSternal/BWPushup (lido na cópia do Internet Archive de 28/08/2026): \"Lie prone with forefeet on floor and hands slightly wider than shoulder width. Raise body up off floor by extending arms with body straight.\"; \"Keeping body straight, lower body to floor by bending arms. Push body up until arms are extended. Repeat.\"; \"Both upper and lower body must be kept straight throughout movement.\"; músculos: alvo Pectoralis Major, Sternal; sinergistas Pectoralis Major Clavicular, Deltoid Anterior, Triceps Brachii, Coracobrachialis; estabilizador dinâmico Biceps Brachii Short Head; estabilizadores Serratus Anterior, Pectoralis Minor, Rectus Abdominis, Obliques, Quadriceps; estabilizador antagonista Erector Spinae. A versão mais difícil cita \"pushing shoulders forward at top of movement\" (push-up plus): na flexão padrão a escápula não vai à protração máxima em cima.",
+  "National Academy of Sports Medicine (NASM) — Push-Up. https://www.nasm.org/resource-center/exercise-library/push-up (lido em 08/10/2026): \"Start in a plank position with hands positioned slightly wider than shoulder-width apart and feet together or hip-width apart.\"; \"Create a straight line from your head to heels, maintaining a neutral spine throughout the movement.\"; \"Lower your body toward the floor by bending your elbows, descending until your chest nearly touches the floor. Keep your elbows at approximately 45 degrees from your body.\"; \"Avoid locking out your elbows at the top to maintain continuous tension.\"; erros comuns: \"Allowing the hips to sag\" e \"Elbows flaring too wide, which increases shoulder stress and reduces chest activation\"; músculos primários peitoral maior e tríceps, secundários deltoide anterior, peitoral menor, serrátil anterior e estabilizadores do core.",
+  "Contreras B, Schoenfeld B, Mike J, Tiryaki-Sonmez G, Cronin J, Vaino E. The Biomechanics of the Push-up: Implications for Resistance Training Programs. Strength Cond J (NSCA). 2012;34(5):41-46. doi:10.1519/SSC.0b013e31826d877b — lido no manuscrito aceito (https://www.lookgreatnaked.com/articles/biomechanics_of_the_Pushup.pdf): \"The standard push-up requires a general stiffening of the knee joints, hip joints, pelvis, and spine to keep the body in a straight line from head to feet while the shoulders and elbows flex and extend to raise and lower the body and the scapulae retract and protract to facilitate glenohumeral range of motion.\"; \"the most common classifications include wide base (150% shoulder width), normal base (shoulder width) and narrow base (50% shoulder width)\"; tabela 1 (flexão padrão): peitoral maior 61%, tríceps braquial 66%, deltoide anterior 42% e serrátil anterior 56% da contração voluntária máxima; 69% do peso do corpo nas mãos em cima e 75% embaixo.",
+  "Calatayud J, Borreani S, Colado JC, Martin F, Tella V, Andersen LL. Bench press and push-up at comparable levels of muscle activity results in similar strength gains. J Strength Cond Res. 2015;29(1):246-253. doi:10.1519/JSC.0000000000000589 (o estudo da dica; texto completo no repositório da Universidade de Valência, RODERIC): \"participants stretched the band to perform the exercise with the proper grip width (i.e., biacromial width distance +50%)\"; \"During the 6RM push-up testing, participants started the exercise in an extended arm position with forearms and wrists pronated, feet at biacromial (shoulder) width, and fingers flexed. Hip and spine were maintained neutral during all the repetitions.\"; as 2 provas \"were performed with the aforementioned bench press technique\" (\"the elbow flexed 90°, and the shoulder abducted 45°\"); \"a 2:2 ratio (i.e., 2-second rate for descent and 2-second rate for ascent)\". A flexão do estudo era com elástico nas costas e as mãos segurando o elástico no chão (por isso \"fingers flexed\"); a flexão do app é a de peso do corpo, com a mão espalmada.",
+  "Nunes MO, Leporace G, Pino AV, Menegaldo LL, Souza MN. Inverse kinematics of push-up exercise using ISB protocol for JCS. Congresso da International Society of Biomechanics (ISB), 2013, apresentação oral (https://media.isbweb.org/images/conferences/isb-congresses/2013/oral/cb-shoulder2.08.pdf): flexão no chão com 6 homens; \"The flexion/extension amplitude for elbow was 110.83 ± 7.66 (mean ± SD)\"; \"The clavicle protraction/ retraction and elevation/ depression were 23.32 ± 8.19, 12.22 ± 6.03 degrees, respectively\".",
+  "Polovinets O, Wolf A, Wollstein R. Force transmission through the wrist during performance of push-ups on a hyperextended and a neutral wrist. J Hand Ther. 2018;31(3):322-330. doi:10.1016/j.jht.2017.04.005 — lido só o resumo (PubMed): \"Push-ups are used ubiquitously to evaluate and strengthen the upper body. They are usually performed in 1 of 2 main ways: with the wrist in hyperextension and with the wrist in a neutral position.\" A flexão com a mão espalmada no chão é a do punho em hiperextensão (a de punho neutro é em punho fechado ou em pegador).",
+  "Amplitude normal das juntas: Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry (valores da AAOS; a referência do limites.py): extensão do punho 0–70°. Tornozelo: Alazzawi S et al., World J Orthop 2017;8(1):21-29, tabela 5 (flexão dorsal 0–20°) — a referência do tecnica3d.tornozelo (lote 2)."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pe_na_ponta": [
+   "E",
+   "D"
+  ],
+  "pe_na_ponta_motivo": "Apoiado na ponta dos pés (ExRx: \"Lie prone with forefeet on floor\"; ACE: \"Place your feet together with your ankles dorsiflexed (toes pointed towards your shins)\"): os dois pés ficam quase em pé, só os dedos (e a base deles) encostam no chão e o calcanhar fica no alto, como na Flexão Nórdica. A planta (a pele mais baixa do pé) continua medida no chão e a base dos dedos (o eixo em que o corpo gira) não pode escorregar entre os quadros; o calcanhar sobe de propósito.",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados no chão (ponta do pé, alinhamento, joelho na direção do pé, coluna até 20°) foram feitas pra quem está em pé: com o pé quase em pé a ponta_pe (tornozelo → base dos dedos visto de cima) perde o sentido, e o pes_largura (padrão 0,8–2,6) não aceita os pés juntos da ACE. As que valem estão abaixo, mais estreitas: pés entre juntos e a largura dos ombros, sem um à frente do outro, dedos dos pés pra frente, coluna neutra (até 8°), pelve e ombros nivelados.",
+  "limites_juntas": {
+   "punhoE": [
+    0,
+    92
+   ],
+   "punhoD": [
+    0,
+    92
+   ]
+  },
+  "limites_juntas_fonte": "Punhos das mãos espalmadas no chão, sem segurar peso: com a palma chapada no chão e os ombros bem em cima das mãos (ACE: \"place your palms flat on the mat\"; \"until your shoulders are positioned directly over your hands\") o antebraço fica quase em pé em cima e o punho, ~88° estendido — é a flexão \"with the wrist in hyperextension\", um dos 2 jeitos usuais (Polovinets et al. 2018; o outro é o punho neutro, em punho fechado ou pegador). Embaixo o cotovelo vai pra trás e pra fora do punho e a extensão cai pra ~67°. O teto de 55° do limites.py é pra mão segurando peso sem dobrar o punho e o de 70° (AAOS, Norkin & White) é a extensão ativa medida sem carga; aqui o peso do corpo estende o punho além da amplitude ativa, só em cima.",
+  "zonas": [],
+  "alturas": [
+   {"nome": "palma da mão esquerda espalmada no chão", "partes": ["LeftHand"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5], "fonte": "ACE — Push-up (\"place your palms flat on the mat\"); pedido: palma encostando, sem afundar mais que ~1 mm"},
+   {"nome": "dedo indicador da mão esquerda no chão", "partes": ["LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "dedo médio da mão esquerda no chão", "partes": ["LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "dedo anelar da mão esquerda no chão", "partes": ["LeftHandRing1", "LeftHandRing2", "LeftHandRing3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "dedo mínimo da mão esquerda no chão", "partes": ["LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "polegar da mão esquerda no chão", "partes": ["LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "palma da mão direita espalmada no chão", "partes": ["RightHand"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5], "fonte": "ACE — Push-up (\"place your palms flat on the mat\"); pedido: palma encostando, sem afundar mais que ~1 mm"},
+   {"nome": "dedo indicador da mão direita no chão", "partes": ["RightHandIndex1", "RightHandIndex2", "RightHandIndex3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "dedo médio da mão direita no chão", "partes": ["RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "dedo anelar da mão direita no chão", "partes": ["RightHandRing1", "RightHandRing2", "RightHandRing3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "dedo mínimo da mão direita no chão", "partes": ["RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "polegar da mão direita no chão", "partes": ["RightHandThumb1", "RightHandThumb2", "RightHandThumb3"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 1.5]},
+   {"nome": "antebraços nunca entram no chão (a pele do punho, no pé da mão, encosta junto com a palma)", "partes": ["LeftForeArm", "RightForeArm"], "acima_de": "chao", "t": "todos", "mm": [-1.5, 5000], "fonte": "regra da fábrica (o corpo não atravessa o chão); a pele do antebraço na dobra do punho fica no pé da mão, que apoia no chão (ACE: \"Pushing through the heel and outside surface of your palm\")"},
+   {"nome": "peito quase toca o chão embaixo", "partes": ["Spine1", "Spine2", "LeftShoulder", "RightShoulder"], "acima_de": "chao", "t": 1.0, "mm": [25, 45], "fonte": "dica do app (\"Desça até o peito quase tocar o chão\"); NASM (\"descending until your chest nearly touches the floor\"); ACE (\"Continue to lower yourself until your chest or chin touch the mat/floor\"); ExRx (\"lower body to floor by bending arms\")"},
+   {"nome": "corpo nunca encosta no chão", "partes": ["Hips", "Spine", "Spine1", "Spine2", "Neck", "LeftShoulder", "RightShoulder", "LeftArm", "RightArm", "LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg"], "acima_de": "chao", "t": "todos", "mm": [20, 5000], "fonte": "regra da fábrica (o corpo não atravessa o chão; só as mãos e a ponta dos pés encostam)"},
+   {"nome": "cabeça longe do chão", "partes": ["Head"], "acima_de": "chao", "t": "todos", "mm": [30, 5000]}
+  ],
+  "contatos": [
+   {"nome": "mãos longe da cabeça (sem encostar no rosto nem no cabelo)", "partes": ["LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3", "RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Head", "Neck"], "cabelo": true, "mm": [20, 2000]},
+   {"nome": "antebraços e mãos sem entrar no tronco", "partes": ["LeftForeArm", "RightForeArm", "LeftHand", "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3", "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3", "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3", "LeftHandRing1", "LeftHandRing2", "LeftHandRing3", "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3", "RightHand", "RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandPinky1", "RightHandPinky2", "RightHandPinky3"], "com": ["Hips", "Spine", "Spine1", "Spine2"], "mm": [-2, 2000], "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"}
+  ],
+  "angulos": [
+   {"nome": "braços estendidos em cima, sem travar", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 10], "fonte": "ACE (\"Continue pressing until the arms are fully extended at the elbows\"); NASM (\"Avoid locking out your elbows at the top\"); ExRx (\"Push body up until arms are extended\")"},
+   {"nome": "ombros bem em cima das mãos em cima (braço quase na vertical)", "medida": "inclinacao", "segmento": ["Arm", "Hand"], "t": 0.0, "graus": [78, 90], "fonte": "ACE (\"Slowly shift your weight forward until your shoulders are positioned directly over your hands\"). Com as mãos um pouco mais abertas que os ombros o braço inclina uns 9° pro lado"},
+   {"nome": "cotovelos a ~45° do tronco na descida (sem abrir em T)", "medida": "braco_abertura", "t": [0.5, 1.0], "graus": [35, 55], "fonte": "NASM (\"Keep your elbows at approximately 45 degrees from your body\"; erro comum: \"Elbows flaring too wide\"); Calatayud 2015 (\"the shoulder abducted 45°\"); ACE (\"Allow your elbows to flare outwards during the lowering phase\")"},
+   {"nome": "cotovelo bem dobrado embaixo", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [100, 135], "fonte": "Nunes et al. 2013, ISB (\"The flexion/extension amplitude for elbow was 110.83 ± 7.66\"). No boneco, com os braços curtos pro peito fundo, o peito chega a ~3 cm do chão com o cotovelo a ~125°"},
+   {"nome": "mãos um pouco mais abertas que os ombros", "medida": "pegada_largura", "t": "todos", "faixa": [1.25, 1.6], "fonte": "dica do app (\"Mãos um pouco mais abertas que os ombros\"); ExRx (\"hands slightly wider than shoulder width\"); NASM (\"hands positioned slightly wider than shoulder-width apart\"); Calatayud 2015 (150% da biacromial) no limite de cima. A medida divide pela distância entre as cabeças do úmero (no boneco ~1,2 = mãos na largura dos ombros)"},
+   {"nome": "dedos das mãos pra frente ou um pouco pra dentro", "medida": "dedos_mao_dentro", "t": "todos", "graus": [-5, 20], "fonte": "ACE (\"with your fingers facing forward or turned slightly inward\")"},
+   {"nome": "palmas viradas pro chão", "medida": "palma_cima", "t": "todos", "graus": [165, 180], "fonte": "ACE (\"place your palms flat on the mat\")"},
+   {"nome": "corpo reto: quadril na reta ombro → tornozelo, sem cair nem subir", "medida": "quadril_linha_ombro_tornozelo", "t": "todos", "mm": [-25, 25], "fonte": "ACE (\"Do not allow your low back to sag or your hips to hike upwards\"); NASM (\"Create a straight line from your head to heels\"); ExRx (\"Both upper and lower body must be kept straight throughout movement\"); Contreras 2012 (\"to keep the body in a straight line from head to feet\"). O número muda ±13 mm porque a escápula leva o ombro (a ponta da reta) pra frente em cima e pra trás embaixo; o quadril não mexe em relação ao tronco"},
+   {"nome": "quadril estendido, sem dobrar", "medida": "quadril_sinal", "t": "todos", "graus": [-5, 5], "fonte": "ACE (\"full extension of your body without any bend at the hips or knees\"); Calatayud 2015 (\"Hip and spine were maintained neutral during all the repetitions\")"},
+   {"nome": "joelho, quadril e cabeça em linha reta", "medida": "linha_joelho_quadril_cabeca", "t": "todos", "graus": [-4, 5], "fonte": "NASM (\"Create a straight line from your head to heels\"); dica do app (\"corpo reto da cabeça ao calcanhar\")"},
+   {"nome": "joelhos estendidos", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [0, 6], "fonte": "ACE (\"full extension of your body without any bend at the hips or knees\")"},
+   {"nome": "coluna neutra", "medida": "coluna", "t": "todos", "graus": [0, 8], "fonte": "NASM (\"maintaining a neutral spine throughout the movement\"); Calatayud 2015 (\"Hip and spine were maintained neutral\"); ACE (\"maintaining a rigid torso\")"},
+   {"nome": "cabeça alinhada com a coluna", "medida": "cabeca_tronco", "t": "todos", "graus": [-18, -4], "fonte": "ACE (\"align your head with your spine\"; \"head aligned with your spine\"). O boneco em pé, no repouso, mede ~−11°"},
+   {"nome": "tornozelos em flexão dorsal (dedos pra canela)", "medida": "tornozelo", "t": "todos", "graus": [84, 96], "fonte": "ACE (\"Place your feet together with your ankles dorsiflexed (toes pointed towards your shins)\"); limite da flexão dorsal de 20° (Alazzawi 2017) = ~96° no boneco (em pé ~76°)"},
+   {"nome": "pés entre juntos e a largura dos ombros", "medida": "pes_base_lateral", "t": "todos", "faixa": [0.4, 2.0], "fonte": "ACE (\"bring your feet together behind you\"); NASM (\"feet together or hip-width apart\"); Calatayud 2015 (\"feet at biacromial (shoulder) width\"). No boneco os pés ficam a ~1,3 × a distância entre os quadris: mais juntos que isso a parte de dentro de uma coxa entra na outra (o boneco musculoso não amassa)"},
+   {"nome": "um pé não fica à frente do outro", "medida": "pes_alinhados", "t": "todos", "mm": [0, 20]},
+   {"nome": "dedos dos pés pra frente", "medida": "ponta_dedos", "t": "todos", "graus": [-10, 20]},
+   {"nome": "escápulas protraídas em cima", "medida": "escapula_frente", "t": 0.0, "mm": [5, 35], "fonte": "Contreras 2012 (\"the scapulae retract and protract to facilitate glenohumeral range of motion\"); ExRx (protração máxima em cima é a variação mais difícil: \"pushing shoulders forward at top of movement\")"},
+   {"nome": "escápulas retraídas embaixo", "medida": "escapula_frente", "t": 1.0, "mm": [-35, -5], "fonte": "Contreras 2012 (idem); Nunes et al. 2013 (clavícula: \"protraction/ retraction ... 23.32 ± 8.19\" graus de amplitude na flexão)"},
+   {"nome": "pelve nivelada", "medida": "pelve_nivel", "t": "todos", "graus": [-3, 3]},
+   {"nome": "tronco sem girar (ombros nivelados)", "medida": "ombros_nivel", "t": "todos", "graus": [-5, 5]}
+  ]
+ }
+}
