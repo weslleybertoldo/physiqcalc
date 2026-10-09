@@ -10,11 +10,14 @@
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions professor-convites true
 // Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2), RESEND_* (não usados desde a W13).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+// hml-14 (H-32): o repasse espera no máximo TEMPO_MS.principal (alunos: máx. medido 1,1 s; estourou → o 502
+// principal_indisponivel de sempre); erro do banco ao achar o professor lança → 500 (antes, 404 "nao_professor" calado).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { TEMPO_MS, buscarComTempo, tempoEsgotado } from "../_shared/tempo.ts";
 
 const log = criarLog("professor-convites", { avisar: avisarErro });
 
@@ -81,16 +84,22 @@ function statusParaApkAntigo(status: unknown): "pendente" | "aceito" | "revogado
 }
 async function repassarAoPrincipal(treinoUserId: string, corpo: Record<string, unknown>): Promise<{ status: number; corpo: Record<string, unknown> }> {
   if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return { status: 500, corpo: { ok: false, erro: "sem_configuracao" } };
-  const { data: v } = await adminClient().from("physiq_identidades").select("principal_user_id").eq("treino_user_id", treinoUserId).maybeSingle();
+  const { data: v, error: ev } = await adminClient().from("physiq_identidades").select("principal_user_id").eq("treino_user_id", treinoUserId).maybeSingle();
+  if (ev) throw ev; // o catch do pedido responde 500
   const principalId = (v as { principal_user_id?: string } | null)?.principal_user_id;
   if (!principalId) return { status: 404, corpo: { ok: false, erro: "nao_professor" } };
   try {
-    const r = await fetch(`${PRINCIPAL_URL}/functions/v1/alunos`, {
+    const r = await buscarComTempo(`${PRINCIPAL_URL}/functions/v1/alunos`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
       body: JSON.stringify({ acao: "repasse", principal_user_id: principalId, ...corpo }),
-    });
-    return { status: r.status, corpo: (await r.json().catch(() => ({}))) as Record<string, unknown> };
+    }, TEMPO_MS.principal);
+    // o tempo vale até ler o corpo: estourou no meio dele → o catch (502), não um "200 sem corpo" que viraria 400 internal
+    const resposta = (await r.json().catch((e) => {
+      if (tempoEsgotado(e)) throw e;
+      return {};
+    })) as Record<string, unknown>;
+    return { status: r.status, corpo: resposta };
   } catch (e) {
     log.excecao(e, { codigo: "principal_indisponivel", schema: currentSchema(), acao: "repasse" });
     return { status: 502, corpo: { ok: false, erro: "principal_indisponivel" } };
@@ -156,7 +165,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
     acao = typeof action === "string" ? action.replace(/-/g, "_") : null;
-    const { data: prof } = await admin.from("physiq_professores").select("id, nome, codigo_convite, status").eq("id", user.id).maybeSingle();
+    const { data: prof, error: ep } = await admin.from("physiq_professores").select("id, nome, codigo_convite, status").eq("id", user.id).maybeSingle();
+    if (ep) throw ep;
     if (!prof) return jsonErr("nao_professor", 404, origin);
     // Link público SEMPRE pelo ambiente: o Origin do APK é https://localhost / capacitor://localhost e o do dev é
     // localhost:8080 — nenhum serve pra um aluno abrir. staging → site de staging; public → site oficial.
