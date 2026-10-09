@@ -1,0 +1,382 @@
+{
+  "uuid": "76a9b295-0c39-4c2e-98d1-4b87f7caa66d",
+  "nome": "Elevação Frontal com Halteres",
+  "cena": "elevacao_frontal_com_halteres",
+  "grupo": "Deltóide",
+  "subgrupo": "Deltoide anterior",
+  "padrao_movimento": "elevacao_frontal",
+  "equipamento": "halteres",
+  "variacao": "em pé",
+  "alvos": [
+    "deltoide"
+  ],
+  "auxiliares": [
+    "peitoral",
+    "trapezio"
+  ],
+  "camera": {
+    "az": 60,
+    "el": 8,
+    "dist": 4.4,
+    "alvo": [
+      0,
+      -0.25,
+      1.0
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.15,
+      1.0
+    ]
+  },
+  "ida_s": 2.0,
+  "movimento": "Em pé, ereto, com os pés na largura do quadril e as pontas para a frente e os joelhos levemente dobrados, segura um halter em cada mão com as palmas viradas para as coxas (pegada pronada fechada, com o polegar em volta do pegador), os halteres logo na frente das coxas e os cotovelos levemente dobrados. Sem mexer os cotovelos, sobe os dois halteres juntos pela frente, com os braços paralelos, até os braços passarem um pouco da horizontal e os halteres ficarem na altura dos ombros, com as palmas viradas para baixo; perto do fim, gira os braços um pouco para fora, e o lado do polegar do halter fica um pouco mais alto. Desce devagar (2 a 3 s) pelo mesmo caminho até os halteres voltarem para a frente das coxas. O tronco fica ereto e parado (sem balançar), a cabeça na linha da coluna, os punhos retos e as pernas paradas.",
+  "cinesiologia": {
+    "plano": "sagital (flexão do ombro na subida, extensão na descida), cadeia cinética aberta; os dois braços sobem juntos (Coratella 2020: \"Frontal raise was performed on the sagittal plane, lifting up the upper limb in neutral rotation by a frontal flexion, with a straight elbow\"; NSCA: \"raise dumbbells directly to the front\")",
+    "articulacoes": "ombro (flexão de ~16° a ~96° e volta; depois de ~65° de elevação o braço gira um pouco para fora, ~15° no fim, e volta na descida); cotovelo parado, levemente dobrado (~12°); punho reto; escápulas paradas; tronco ereto, joelhos levemente dobrados (~12°) e pés chapados, parados (ExRx, Dumbbell Front Raise: \"Raise dumbbells forward and upward until upper arms are above horizontal\"; \"Elbows may be kept straight or slightly bent throughout movement\"; ACE, Front Raise: \"As your arms move past 60 - 70 degrees (nearing shoulder level), slowly rotate them upwards somewhat so that the inside edge of the dumbbells point slightly upwards\"; \"Maintain an erect torso (no arching of your low back) and neutral wrist position (avoid flexion and extension of your wrists)\"; NSCA: \"Slightly flex knees and engage the core to stabilize the body\"; \"Maintain a constant head, body, and arm position throughout the entire lift\")",
+    "agonistas": "deltoide anterior (ExRx, Dumbbell Front Raise: Target \"Deltoid, Anterior\"; NSCA: \"Exercise Objective: Isolate and develop strength in the anterior deltoids\"). Na elevação frontal ele trabalha mais que nas variações da elevação lateral, e o deltoide médio e o posterior quase não trabalham (Coratella 2020, fisiculturistas sentados: \"During the concentric phase, anterior deltoid and posterior deltoid showed greater sEMG RMS in frontal raise (effect size (ES)-range: 1.78/9.25)) and LR-internal (ES-range: 10.79/21.34), respectively, vs. all other exercises\"; \"both medial and posterior deltoids appeared to play a negligible role in frontal raise\")",
+    "sinergistas": "porção clavicular do peitoral maior, deltoide lateral, coracobraquial, trapézio (fibras médias e inferiores) e serrátil anterior (ExRx, Dumbbell Front Raise: Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Lateral\", \"Coracobrachialis\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\"). A porção clavicular do peitoral foi, junto com o deltoide anterior, o que mais trabalhou na elevação frontal (Coratella 2020: \"As a whole, frontal raise appears to mainly require the activation of the anterior deltoid and the clavicular head of the pectoralis major\")",
+    "estabilizadores": "trapézio superior, levantador da escápula e extensores do punho (ExRx, Dumbbell Front Raise: Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\", \"Wrist Extensors\"); o tríceps segura o cotovelo no mesmo ângulo (Coratella 2020: \"triceps brachii is a strong stabilizer of the elbow during all LR variations and frontal raise\"); os abdominais firmam o tronco e as escápulas ficam baixas e para trás (ACE, Front Raise: \"Stiffen your torso by contracting your abdominal/core muscles (\"bracing\"), and depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise\"; NSCA: \"pull shoulder blades back and down\")",
+    "fases": "subida concêntrica (soltando o ar) e descida excêntrica devagar, pelo mesmo caminho, até os halteres voltarem para a frente das coxas; cada fase leva 2 s no app, como no estudo (Coratella 2020: \"Each exercise was performed with the pacing of 2 s for the concentric and 2 s for the eccentric phase\"; ACE, Front Raise: \"Exhale and slowly raise the dumbbells up in front of your body\"; \"Inhale and gently lower the dumbbells back towards your starting position keeping your elbows slightly extended\"; NSCA: \"lower dumbbells slowly, back to the start position\"; \"Avoid using momentum to complete the lift\")"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Front Raise. https://exrx.net/WeightExercises/DeltoidAnterior/DBFrontRaise (lido na cópia do Internet Archive de 15/07/2026; o site direto bloqueia a leitura automática): \"Grasp dumbbells in both hands. Position dumbbells in front of upper legs with elbows straight or slightly bent.\" \"Raise dumbbells forward and upward until upper arms are above horizontal. Lower and repeat.\" \"Height of movement may depend on range of motion. Raise should be limited to height achieved just before tightness is felt in shoulder capsule. Alternatively, height just above horizontal may be considered adequate. Elbows may be kept straight or slightly bent throughout movement. Also see Dumbbell Alternating Front Raise.\" Músculos: alvo Deltoid, Anterior; sinergistas Pectoralis Major, Clavicular; Deltoid, Lateral; Coracobrachialis; Trapezius, Middle; Trapezius, Lower; Serratus Anterior, Inferior Digitations; estabilizadores Trapezius, Upper; Levator Scapulae; Wrist Extensors.",
+    "ExRx.net — Dumbbell Alternating Front Raise. https://exrx.net/WeightExercises/DeltoidAnterior/DBAlternatingFrontRaise (cópia do Internet Archive de 12/10/2023): \"Raise one dumbbell forward and upward with palms positioned downward until upper arm is above horizontal. Lower and repeat with opposite arm, alternating between arms.\" (a mesma técnica, um braço por vez; o app usa os dois juntos, o Dumbbell Front Raise).",
+    "American Council on Exercise (ACE) — Exercise Library: Front Raise (com halteres). https://www.acefitness.org/resources/everyone/exercise-library/54/front-raise/ (lido em 09/10/2026): \"Starting Position: Stand holding dumbbells in front of you thighs using a closed, pronated grip (thumbs around the handles and palms facing your thighs). Position the dumbbells lightly touching the fronts of your thighs with your elbows extended or holding a slight bend. Assume either a split-stance position to stabilize your body or position your feet slightly wider than hip-width apart.\" \"Stiffen your torso by contracting your abdominal/core muscles (\"bracing\"), and depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise. Your head position should be aligned with your spine.\" \"Upward Phase: Exhale and slowly raise the dumbbells up in front of your body. Your elbows and upper arms should rise together and be slightly ahead of your forearms and dumbbells. As your arms move past 60 - 70 degrees (nearing shoulder level), slowly rotate them upwards somewhat so that the inside edge of the dumbbells point slightly upwards. Continue raising the dumbbells until your arms are level with your shoulders and approximately parallel with the floor. Maintain an erect torso (no arching of your low back) and neutral wrist position (avoid flexion and extension of your wrists).\" \"Downward Phase: Inhale and gently lower the dumbbells back towards your starting position keeping your elbows slightly extended. Maintain your foot, torso, shoulder and wrist positions while lowering the dumbbells and rotating them slightly inwards as your arms pass that 60-70 degree mark.\" \"Traditionally, this exercise positions the arms into internal rotation during the lift, so the slight external rotation initiated at the 60-70 degree mark may reduce potential impingement in the shoulder joint.\"",
+    "Sands WA, Wurth JJ, Hewit JK. The National Strength and Conditioning Association's (NSCA) Basics of Strength and Conditioning Manual. NSCA; 2012. Cap. 4 (Exercise Technique), \"3a. Dumbbell Shoulder Raises — Front Raises\", p. 41. https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (lido na cópia do Internet Archive de 12/02/2022): \"Exercise Objective: Isolate and develop strength in the anterior deltoids\"; Start Position: \"1. Stand erect with a dumbbell in each hand\" \"2. Let arms hang in front of the thighs, and pull shoulder blades back and down\" \"3. Position feet hip-width apart with toes pointed straight ahead\" \"4. Slightly flex knees and engage the core to stabilize the body and prevent arching of the back (avoid rocking back and forth to complete the lift)\"; Procedure: \"1. Maintain a constant body position and raise dumbbells directly to the front until they are at shoulder level\" \"2. Keep palms facing the ground and lower dumbbells slowly, back to the start position\"; Coaching Points: \"Maintain a constant head, body, and arm position throughout the entire lift\" \"Avoid using momentum to complete the lift\".",
+    "Coratella G, Tornatore G, Longo S, Esposito F, Cè E. An Electromyographic Analysis of Lateral Raise Variations and Frontal Raise in Competitive Bodybuilders. Int J Environ Res Public Health. 2020;17(17):6015. doi:10.3390/ijerph17176015 (texto completo no PMC7503819, lido em 09/10/2026): \"each exercise was performed seated with a load that allowed eight repetitions (i.e., 8-RM)\"; \"Each exercise was performed with the pacing of 2 s for the concentric and 2 s for the eccentric phase and 0.5 s for the isometric phase at the beginning and at the end of each movement\"; \"All exercises were performed avoiding any movement in elbow and wrist flexion/extension or wrist pronation/supination\"; \"For frontal raise, the participants were required to frontally flex the humerus up to 90°, with humerus neutrally rotated (i.e., thumb-to-thumb). For all these exercises, the elbow was almost fully extended, and the wrist in line with the forearm\"; \"Frontal raise mainly activates anterior deltoid and pectoralis major.\""
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "começo: o halter esquerdo fica logo na frente das coxas, quase encostando (sem entrar)",
+        "equipamento": "halter_Left",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "t": 0.0,
+        "mm": [
+          3,
+          20
+        ],
+        "fonte": "ACE, Front Raise (\"Position the dumbbells lightly touching the fronts of your thighs\"); NSCA (\"Let arms hang in front of the thighs\"); ExRx, Dumbbell Front Raise (\"Position dumbbells in front of upper legs\"); pedido do Weslley (encosta de leve no máximo, sem entrar). Medido da anilha até a pele; 3 mm é a folga mínima de peso × corpo da checagem; a faixa é da cena"
+      },
+      {
+        "nome": "começo: o halter direito fica logo na frente das coxas, quase encostando (sem entrar)",
+        "equipamento": "halter_Right",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "t": 0.0,
+        "mm": [
+          3,
+          20
+        ],
+        "fonte": "as mesmas da regra do halter esquerdo"
+      },
+      {
+        "nome": "o halter esquerdo passa longe do rosto e do pescoço",
+        "equipamento": "halter_Left",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          150,
+          5000
+        ],
+        "fonte": "pedido do Weslley (em cima, nada entra no rosto); medido da pele (a faixa é da cena)"
+      },
+      {
+        "nome": "o halter direito passa longe do rosto e do pescoço",
+        "equipamento": "halter_Right",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          150,
+          5000
+        ],
+        "fonte": "pedido do Weslley (em cima, nada entra no rosto); medido da pele (a faixa é da cena)"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "os 2 halteres não encostam um no outro",
+        "equipamento": "halter_Left",
+        "de": "halter_Right",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento não atravessa nada); medido de superfície a superfície (o mais perto é embaixo, entre as anilhas de dentro, na frente das coxas; a faixa é da cena)"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "RightHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o mesmo limite do corpo × corpo da checagem (PENETRA_MM)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "começo: braços quase pendurados, um pouco à frente do corpo (halteres na frente das coxas)",
+        "medida": "braco_frente",
+        "t": 0.0,
+        "graus": [
+          10,
+          25
+        ],
+        "fonte": "ExRx, Dumbbell Front Raise (\"Position dumbbells in front of upper legs\"); NSCA (\"Let arms hang in front of the thighs\"); ACE, Front Raise (\"Stand holding dumbbells in front of you thighs\"). A cena começa com o braço a 16° da vertical (a anilha fica logo na frente da coxa); a faixa é da cena"
+      },
+      {
+        "nome": "fim: braços um pouco acima da horizontal",
+        "medida": "braco_frente",
+        "t": 1.0,
+        "graus": [
+          90,
+          102
+        ],
+        "fonte": "ExRx, Dumbbell Front Raise (\"Raise dumbbells forward and upward until upper arms are above horizontal\"; \"height just above horizontal may be considered adequate\"); ACE, Front Raise (\"Continue raising the dumbbells until your arms are level with your shoulders and approximately parallel with the floor\"); Coratella 2020 (\"frontally flex the humerus up to 90°\"). A cena para a 96°. A dica do app diz \"até a altura dos olhos\": nenhuma dessas fontes sobe tanto"
+      },
+      {
+        "nome": "fim: halteres na altura dos ombros (o punho pouco acima do ombro)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Arm",
+          "Hand"
+        ],
+        "t": 1.0,
+        "graus": [
+          -16,
+          0
+        ],
+        "fonte": "NSCA (\"raise dumbbells directly to the front until they are at shoulder level\"); ACE, Front Raise (\"until your arms are level with your shoulders\"). Reta do ombro (cabeça do úmero) até o punho × a horizontal: 0 = punho na altura da articulação do ombro, − = acima; a faixa é da cena"
+      },
+      {
+        "nome": "o braço não passa muito da horizontal",
+        "medida": "braco_elevacao",
+        "t": "todos",
+        "graus": [
+          0,
+          102
+        ],
+        "fonte": "ExRx, Dumbbell Front Raise (\"Raise should be limited to height achieved just before tightness is felt in shoulder capsule. Alternatively, height just above horizontal may be considered adequate\")"
+      },
+      {
+        "nome": "sobe pela frente, no plano sagital (braços quase paralelos)",
+        "medida": "braco_plano",
+        "t": [
+          0.5,
+          1.0
+        ],
+        "graus": [
+          75,
+          100
+        ],
+        "fonte": "Coratella 2020 (\"Frontal raise was performed on the sagittal plane\"); NSCA (\"raise dumbbells directly to the front\"). 90 = braço apontando pra frente; o braço fica 2° aberto, então mede ~88°"
+      },
+      {
+        "nome": "cotovelos sem abrir pro lado",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -3,
+          10
+        ],
+        "fonte": "Coratella 2020 (\"Frontal raise was performed on the sagittal plane\"). O braço fica 2° aberto, parado: embaixo passa rente à lateral do tronco sem entrar nela; a faixa é da cena"
+      },
+      {
+        "nome": "cotovelos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          5,
+          20
+        ],
+        "fonte": "ExRx, Dumbbell Front Raise (\"Position dumbbells in front of upper legs with elbows straight or slightly bent\"; \"Elbows may be kept straight or slightly bent throughout movement\"); ACE, Front Raise (\"with your elbows extended or holding a slight bend\"; \"keeping your elbows slightly extended\"); Coratella 2020 (\"the elbow was almost fully extended\"). A cena usa 12°"
+      },
+      {
+        "nome": "punho reto (neutro)",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ACE, Front Raise (\"neutral wrist position (avoid flexion and extension of your wrists)\"); Coratella 2020 (\"the wrist in line with the forearm\")"
+      },
+      {
+        "nome": "começo: palmas viradas pras coxas (pra trás)",
+        "medida": "palma_frente",
+        "t": 0.0,
+        "graus": [
+          140,
+          180
+        ],
+        "fonte": "ACE, Front Raise (\"using a closed, pronated grip (thumbs around the handles and palms facing your thighs)\"). 180 = palma virada pro corpo"
+      },
+      {
+        "nome": "fim: palmas viradas pra baixo",
+        "medida": "palma_frente",
+        "t": 1.0,
+        "graus": [
+          65,
+          105
+        ],
+        "fonte": "NSCA (\"Keep palms facing the ground\"); ExRx, Dumbbell Alternating Front Raise (\"with palms positioned downward\"); Coratella 2020 (\"humerus neutrally rotated (i.e., thumb-to-thumb)\"). 90 = palma de lado em relação à frente do tronco (pra baixo)"
+      },
+      {
+        "nome": "pegada pronada: palmas sem virar pra fora nem pro meio",
+        "medida": "palma_dentro",
+        "t": [
+          0.0,
+          0.5
+        ],
+        "graus": [
+          -12,
+          12
+        ],
+        "fonte": "ACE, Front Raise (\"closed, pronated grip\"; \"palms facing your thighs\"); NSCA (\"Keep palms facing the ground\"). 0 = palma pra trás, pra frente, pra cima ou pra baixo; + = virando pro meio do corpo"
+      },
+      {
+        "nome": "fim: o lado do polegar do halter sobe um pouco (o braço gira um pouco pra fora)",
+        "medida": "palma_dentro",
+        "t": 1.0,
+        "graus": [
+          5,
+          25
+        ],
+        "fonte": "ACE, Front Raise (\"As your arms move past 60 - 70 degrees (nearing shoulder level), slowly rotate them upwards somewhat so that the inside edge of the dumbbells point slightly upwards\"; \"the slight external rotation initiated at the 60-70 degree mark may reduce potential impingement in the shoulder joint\"); NSCA (\"Keep palms facing the ground\"). A cena gira 15° (a palma continua pra baixo, um pouco virada pro meio)"
+      },
+      {
+        "nome": "mãos na frente das coxas (um pouco por dentro da largura dos ombros)",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.55,
+          0.9
+        ],
+        "fonte": "NSCA (\"Let arms hang in front of the thighs\"); ACE, Front Raise (\"Stand holding dumbbells in front of you thighs\"). Distância entre as bases dos dedos médios ÷ entre as articulações dos ombros; a faixa é da cena"
+      },
+      {
+        "nome": "tronco ereto e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          6
+        ],
+        "fonte": "ACE, Front Raise (\"Maintain an erect torso (no arching of your low back)\"); NSCA (\"Stand erect\"; \"Maintain a constant head, body, and arm position throughout the entire lift\"; \"avoid rocking back and forth to complete the lift\")"
+      },
+      {
+        "nome": "cabeça na linha da coluna",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -20,
+          0
+        ],
+        "fonte": "ACE, Front Raise (\"Your head position should be aligned with your spine\"). O boneco em pé, no repouso, mede ~−11°; a faixa é da cena"
+      },
+      {
+        "nome": "escápulas paradas (os ombros não vão pra frente)",
+        "medida": "ombro_frente",
+        "t": "todos",
+        "mm": [
+          -15,
+          20
+        ],
+        "fonte": "ACE, Front Raise (\"depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise\"); NSCA (\"pull shoulder blades back and down\"). O boneco em pé, no repouso, mede ~6 mm; a faixa é da cena"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          8,
+          20
+        ],
+        "fonte": "NSCA (\"Slightly flex knees and engage the core to stabilize the body and prevent arching of the back\"). A cena usa 12°"
+      },
+      {
+        "nome": "pés na largura do quadril",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.3,
+          1.8
+        ],
+        "fonte": "NSCA (\"Position feet hip-width apart with toes pointed straight ahead\"); ACE, Front Raise (\"position your feet slightly wider than hip-width apart\"). Os tornozelos ficam a 33 cm um do outro (a pele do quadril tem ~32 cm de largura). Medida: distância entre os tornozelos ÷ entre as articulações do quadril (tecnica3d.pes_largura); a faixa é da cena"
+      },
+      {
+        "nome": "pontas dos pés pra frente",
+        "medida": "ponta_pe",
+        "t": "todos",
+        "graus": [
+          -6,
+          8
+        ],
+        "fonte": "NSCA (\"Position feet hip-width apart with toes pointed straight ahead\")"
+      }
+    ]
+  }
+}
