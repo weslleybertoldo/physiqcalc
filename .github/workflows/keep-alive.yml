@@ -76,6 +76,9 @@ jobs:
   keep-alive-powersync:
     if: (github.event_name == 'workflow_dispatch' && contains(fromJSON('["todos","powersync"]'), github.event.inputs.so || 'todos')) || github.event.schedule == '41 10 */4 * *'
     runs-on: ubuntu-latest
+    # hml-16b (H-45): o POWERSYNC_PAT mora no environment "powersync", que só a main acessa — uma branch não publica regras de
+    # sync na produção
+    environment: powersync
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 

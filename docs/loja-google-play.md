@@ -8,7 +8,8 @@ Desde a W4 da loja (06/10/2026) a versão da Google Play sai como **AAB** (Andro
 
 - **CI (o que vai para a loja):** job `aab-loja` do `.github/workflows/build-apk.yml`, a cada merge na `main`, em paralelo
   ao APK — mesmo commit e mesma versão; não bloqueia a release nem o bump. Na branch, o mesmo job roda no
-  `build-apk-check.yml` (push que mexe em `android/**` ou `scripts/ci/**`).
+  `build-apk-check.yml` (push que mexe em `android/**` ou `scripts/ci/**`), assinado com uma chave de upload **descartável**
+  gerada no próprio job (hml-16b): prova o build e as conferências, mas esse AAB não vai para a loja.
 - **Notebook (teste):** `npm run build:aab` → `android/app/build/outputs/bundle/playRelease/Physiq-v<versão>-loja.aab`.
   Lê a chave de `~/keystores/physiq-play-upload.env` só no Gradle e precisa do JDK 21 e do Android SDK (`~/jdk21` e
   `~/android-sdk` quando `JAVA_HOME`/`ANDROID_HOME` não dizem outros). O site vai com o `.env.local` da pasta — numa
@@ -18,7 +19,7 @@ Desde a W4 da loja (06/10/2026) a versão da Google Play sai como **AAB** (Andro
 ## Onde baixar
 
 Actions › o run do "Build APK" (ou do "Check APK build") › **Artifacts**: `Physiq-v<versão>-loja` (90 dias) ou
-`Physiq-v<versão>-loja-check` (7 dias). Pelo terminal: `gh run download <id-do-run> -n Physiq-v<versão>-loja`.
+`Physiq-v<versão>-loja-check` (7 dias; chave descartável, não serve para a loja). Pelo terminal: `gh run download <id-do-run> -n Physiq-v<versão>-loja`.
 O AAB **não** vai para a GitHub Release: o site e o atualizador do APK leem a release, que continua só com o APK.
 
 Conferir um AAB baixado: `bash scripts/ci/aab-loja.sh conferir Physiq-v<versão>-loja.aab`.
@@ -30,6 +31,8 @@ site; (b) o manifesto tiver `REQUEST_INSTALL_PACKAGES`; (c) o site de dentro do 
 `<meta name="physiq-distribuicao" content="play">` que o `vite.config.ts` põe no `index.html` só no `build:loja`; (d) o
 versionCode não bater com a fórmula; (e) com o Firebase do push, faltar o `google_app_id`; (f) o JS do site de dentro do AAB
 levar o painel master. O manifesto é lido de dentro do AAB pelo bundletool oficial (versão e SHA-256 fixos no script).
+No check da branch a (a) roda com `CHECK_DESCARTAVEL=1` + `SHA256_UPLOAD_ESPERADO` (a impressão da chave descartável do job):
+aí a chave de upload real e a do site viram erro — a branch nunca recebe chave real (hml-16b).
 
 **Master só no site (hml-08):** o `build:loja` e o `build:apk` (o do APK do site) saem com `VITE_APP_NATIVO=1`, sem o painel
 master. Quem confere é o `scripts/ci/sem-master.sh`: no `dist/` (passo `web` e `build-apk.yml`) e, na (f), nos `.js` de
@@ -42,11 +45,18 @@ dentro do AAB. Para conferir só a (f), sem o Android: `bash scripts/ci/aab-loja
   `54:AE:BB:B0:27:71:0B:EA:01:C0:47:53:46:DB:17:8C:66:4F:73:11:41:DD:8C:94:BA:88:4F:D2:38:A5:26:4D`.
   - No notebook: `~/keystores/physiq-play-upload.p12` + `~/keystores/physiq-play-upload.env` (`PLAY_UPLOAD_KEYSTORE_FILE`,
     `PLAY_UPLOAD_KEYSTORE_PASSWORD`, `PLAY_UPLOAD_KEY_ALIAS`, `PLAY_UPLOAD_KEY_PASSWORD`).
-  - No CI, 4 segredos: `PLAY_UPLOAD_KEYSTORE_BASE64` (o `.p12` em base64), `PLAY_UPLOAD_KEYSTORE_PASSWORD`,
-    `PLAY_UPLOAD_KEY_ALIAS` e `PLAY_UPLOAD_KEY_PASSWORD` — só o passo do Gradle os recebe.
+  - No CI, 4 segredos no environment **`assinatura`** (só a `main`; hml-16b): `PLAY_UPLOAD_KEYSTORE_BASE64` (o `.p12` em
+    base64), `PLAY_UPLOAD_KEYSTORE_PASSWORD`, `PLAY_UPLOAD_KEY_ALIAS` e `PLAY_UPLOAD_KEY_PASSWORD` — só o passo do Gradle do
+    job `aab-loja` do `build-apk.yml` os recebe. Nenhuma branch os vê: o check usa uma chave descartável.
   - Cofre: item "Physiq — chave de upload da Google Play (keystore PKCS12)", projeto PhysiqCalc.
 - **Chave do APK do site** (`KEYSTORE_*`, SHA-256 `CF:F7:EC:90:…:89:38:9F:6C`): só o `release` usa. **Nunca assina o AAB** —
   o `playRelease` zera a assinatura que o `initWith release` copiaria e, sem `PLAY_UPLOAD_KEYSTORE_FILE`, sai sem assinatura.
+  - No CI (hml-16b): environment **`assinatura`** (só a `main`: o APK da release) e **`assinatura-aparelho`** (o job
+    `apk-aparelho` do `build-apk-check.yml`, para instalar por cima do app a partir de uma branch: Actions › "Check APK build" ›
+    Run workflow › a branch + `chave_real`; espera a aprovação do dono no GitHub; artefato de 1 dia). A chave só existe no
+    disco durante o passo do Gradle.
+  - Cofre: item "Physiq — chave do APK do site (keystore + senhas; cópia do GitHub, hml-16b)", projeto PhysiqCalc (até a
+    hml-16b ela só existia como segredo do GitHub, sem cópia). Perder = nenhum APK novo instala por cima do app.
 
 ## Play App Signing (decisão de 20/09/2026)
 
