@@ -3,9 +3,12 @@
 // os alunos sem mensalidade e os comprovantes Pix aguardando a confirmação (confirmar ou recusar — o professor do Calc confere aqui).
 // Lê o banco principal (pagamentos-aluno › prof_resumo da conta ativa — W6). O botão "Cobrança" abre o Financeiro do aluno no painel
 // lateral (o mesmo da aba Financeiro do perfil do aluno).
-import { useEffect, useMemo, useState } from "react";
+// hml-14b (B21): o prof_resumo com `pagina` devolve só a página (20 com mensalidade e 20 sem), o total, a busca e os números da conta
+// (o servidor filtra, ordena e conta — antes vinham todos os alunos e o "Ver mais" fatiava aqui); a página fica no endereço
+// (?pagina_mensalidades= e ?pagina_mensalidades_sem=).
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronUp, CircleCheck, Clock, Receipt, Users, Wallet } from "lucide-react";
+import { ChevronDown, ChevronUp, CircleCheck, Clock, Receipt, Search, Users, Wallet } from "lucide-react";
 import ComprovantePixCard, { BadgePagamento } from "@/components/admin/ComprovantePixCard";
 import { badgeDoAluno, ErroFinanceiro } from "@/financeiro/api";
 import { mensagemErroFinanceiro, reais } from "@/financeiro/regras";
@@ -16,61 +19,79 @@ import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
 import { Kpi } from "@/ui/premium/Kpi";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import PainelCobranca from "./PainelCobranca";
-import { useResumoDaConta, type FinanceiroConta } from "./useFinanceiro";
+import { useMensalidadesDaConta, usePaginaComTotal, type FinanceiroConta } from "./useFinanceiro";
 
-const PAGINA = 20;
-const porNome = (a: AlunoResumo, b: AlunoResumo) => (a.nome || a.email || "").localeCompare(b.nome || b.email || "");
 /** Id do aluno nas rotas do painel: o do Treino para o aluno do Calc, senão o da matrícula. */
 const idDoAluno = (a: Pick<AlunoResumo, "treino_user_id" | "paciente_id">) => a.treino_user_id ?? a.paciente_id;
 
 export default function Mensalidades({ f, focarComprovantes }: { f: FinanceiroConta; focarComprovantes?: boolean }) {
-  const consulta = useResumoDaConta(f);
-  const [mostrar, setMostrar] = useState(PAGINA);
-  const [mostrarSem, setMostrarSem] = useState(PAGINA);
+  const [busca, setBusca] = useState("");
+  // a busca (nome ou e-mail, sem acento) vai ao servidor 300 ms depois da última tecla; as 2 listas voltam à página 1
+  const [buscaAplicada, setBuscaAplicada] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaAplicada(busca.trim()), 300);
+    return () => clearTimeout(t);
+  }, [busca]);
+  const filtro = useMemo(() => ({ q: buscaAplicada }), [buscaAplicada]);
+  const com = usePaginaComTotal({ chave: "pagina_mensalidades", filtro });
+  const semPag = usePaginaComTotal({ chave: "pagina_mensalidades_sem", filtro });
+  const consulta = useMensalidadesDaConta(f, { pagina: com.pagina, paginaSem: semPag.pagina, busca: buscaAplicada });
   const [semAberto, setSemAberto] = useState(false);
   const [comprovantesAberto, setComprovantesAberto] = useState(true);
   const [aluno, setAluno] = useState<AlunoResumo | null>(null);
 
   const dados = consulta.data;
-  const alunos = useMemo(() => dados?.alunos ?? [], [dados]);
+  const { informarTotal: informarCom } = com;
+  const { informarTotal: informarSem } = semPag;
+  useEffect(() => {
+    if (!dados) return;
+    informarCom(dados.total);
+    informarSem(dados.sem.total);
+  }, [dados, informarCom, informarSem]);
+  const ordenados = useMemo(() => dados?.alunos ?? [], [dados]);
+  const semMensalidade = useMemo(() => dados?.sem.alunos ?? [], [dados]);
   const pendentes = useMemo(() => dados?.pendentes ?? [], [dados]);
-  const comMensalidade = useMemo(() => alunos.filter((a) => Number(a.mensalidade_valor) > 0), [alunos]);
-  const semMensalidade = useMemo(() => alunos.filter((a) => !(Number(a.mensalidade_valor) > 0)).sort(porNome), [alunos]);
-  const selos = useMemo(() => new Map(comMensalidade.map((a) => [a.paciente_id, badgeDoAluno(a)])), [comMensalidade]);
-  const kpis = useMemo(() => {
-    const lista = [...selos.values()].filter(Boolean);
-    return {
-      comMensalidade: comMensalidade.length,
-      emDia: lista.filter((b) => b!.s === "pago").length,
-      pendentes: lista.filter((b) => b!.s === "pendente").length,
-      comprovantes: pendentes.length,
-    };
-  }, [selos, comMensalidade.length, pendentes.length]);
-  // comprovante para conferir primeiro, depois pendentes, em dia e cobrança parada; dentro, por nome
-  const ordenados = useMemo(() => {
-    const peso = (a: AlunoResumo) => (a.aguardando ? 0 : selos.get(a.paciente_id)?.s === "pendente" ? 1 : selos.get(a.paciente_id)?.s === "pago" ? 2 : 3);
-    return [...comMensalidade].sort((a, b) => peso(a) - peso(b) || porNome(a, b));
-  }, [comMensalidade, selos]);
+  // o selo de cada linha (a ordem e os números vêm prontos do servidor, com a mesma regra)
+  const selos = useMemo(() => new Map(ordenados.map((a) => [a.paciente_id, badgeDoAluno(a)])), [ordenados]);
+  const kpis = {
+    comMensalidade: dados?.contagens.com_mensalidade ?? 0,
+    emDia: dados?.contagens.em_dia ?? 0,
+    pendentes: dados?.contagens.pendentes ?? 0,
+    comprovantes: pendentes.length,
+  };
+  const totalCom = dados?.total ?? 0;
+  const totalSem = dados?.sem.total ?? 0;
+  const nenhumAluno = (dados?.contagens.alunos ?? 0) === 0;
 
   const irParaComprovantes = () => {
     setComprovantesAberto(true);
     window.setTimeout(() => document.getElementById("comprovantes")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
-  // "Precisam de atenção" do Resumo (Pix aguardando) abre direto nos comprovantes
+  // "Precisam de atenção" do Resumo (Pix aguardando) abre direto nos comprovantes — 1 vez, quando a 1ª resposta chega (trocar de
+  // página traz outra resposta e não pode rolar a tela de novo)
+  const focou = useRef(false);
   useEffect(() => {
-    if (focarComprovantes && dados) irParaComprovantes();
+    if (!focarComprovantes || !dados || focou.current) return;
+    focou.current = true;
+    irParaComprovantes();
   }, [focarComprovantes, dados]);
   const recarregar = () => void f.recarregar("resumo", "transacoes");
   const carregando = consulta.isLoading;
 
-  return (
-    <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="mensalidades" data-pagina-cobranca>
-      {consulta.isError && (
+  // erro do servidor: só o aviso (nunca "nenhum aluno" nem os números zerados no lugar dele)
+  if (consulta.isError) {
+    return (
+      <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="mensalidades" data-pagina-cobranca data-estado="erro">
         <EstadoErro texto={mensagemErroFinanceiro(consulta.error instanceof ErroFinanceiro ? consulta.error.codigo : null, "Não deu para carregar as mensalidades. Tente de novo.")}
           aoTentar={() => void consulta.refetch()} />
-      )}
+      </div>
+    );
+  }
 
+  return (
+    <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="mensalidades" data-pagina-cobranca data-atualizando={consulta.isFetching ? "1" : "0"}>
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Kpi icone={Users} titulo="Com mensalidade" tom="violeta" valor={carregando ? "—" : kpis.comMensalidade} />
         <Kpi icone={CircleCheck} titulo="Em dia" tom="verde" valor={carregando ? "—" : kpis.emDia} />
@@ -80,47 +101,57 @@ export default function Mensalidades({ f, focarComprovantes }: { f: FinanceiroCo
         </button>
       </div>
 
+      {!nenhumAluno && (
+        <label className="relative flex items-center">
+          <Search aria-hidden className="pointer-events-none absolute left-3.5 h-4 w-4 text-texto-3" />
+          <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar aluno por nome ou e-mail"
+            className="h-10 w-full rounded-[14px] border border-linha-2 bg-superficie pl-10 pr-3 text-[13.5px] text-texto outline-none placeholder:text-texto-4 focus:border-violeta/60"
+            data-busca-mensalidades />
+        </label>
+      )}
+
       <Cartao className="px-[18px] pb-2 pt-4" data-secao-com-mensalidade>
-        <CabecalhoCartao titulo="Alunos com mensalidade" extra={<Chip tom="g">{comMensalidade.length}</Chip>}
+        <CabecalhoCartao titulo="Alunos com mensalidade" extra={<Chip tom="g">{totalCom}</Chip>}
           acao={dados && !dados.dono ? <span className="text-[12px] text-texto-3">a mensalidade é do dono da conta</span> : undefined} />
         {carregando ? (
           <div className="flex flex-col gap-2 pb-2"><Esqueleto className="h-14 w-full rounded-2xl" /><Esqueleto className="h-14 w-full rounded-2xl" /></div>
-        ) : ordenados.length === 0 ? (
+        ) : totalCom === 0 ? (
           <p className="pb-3 text-[13px] text-texto-2" data-cobranca-vazio>
-            {alunos.length === 0 ? "Nenhum aluno na sua conta ainda." : dados?.dono === false
+            {nenhumAluno ? "Nenhum aluno na sua conta ainda." : dados?.dono === false
               ? "As mensalidades dos alunos são do dono da conta. Aqui você vê os comprovantes e as cobranças que são suas."
-              : "Nenhum aluno com mensalidade. Use o botão Cobrança de um aluno abaixo para definir o plano e o valor."}
+              : buscaAplicada && kpis.comMensalidade > 0 ? "Nenhum aluno com mensalidade com essa busca."
+                : "Nenhum aluno com mensalidade. Use o botão Cobrança de um aluno abaixo para definir o plano e o valor."}
           </p>
         ) : (
           <>
-            <div className="divide-y divide-linha-3">
-              {ordenados.slice(0, mostrar).map((a) => (
+            <div className="divide-y divide-linha-3" data-lista="mensalidades">
+              {ordenados.map((a) => (
                 <LinhaAluno key={a.paciente_id} a={a} selo={selos.get(a.paciente_id) ?? null} aoCobranca={() => setAluno(a)} aoComprovante={irParaComprovantes} />
               ))}
             </div>
-            {ordenados.length > mostrar && (
-              <div className="py-2"><Botao tamanho="sm" variante="g" onClick={() => setMostrar((m) => m + PAGINA)}>Ver mais ({ordenados.length - mostrar})</Botao></div>
-            )}
+            <Paginacao nome="mensalidades" pagina={com.pagina} total={totalCom} aoMudar={com.irPara} carregando={consulta.isFetching} className="border-t border-linha-3" />
           </>
         )}
       </Cartao>
 
-      {!carregando && semMensalidade.length > 0 && (
+      {!carregando && totalSem > 0 && (
         <Cartao className="px-[18px] py-3" data-secao-sem-mensalidade>
-          <button type="button" onClick={() => setSemAberto((v) => !v)} aria-expanded={semAberto} className="flex w-full items-center gap-2 text-left text-[14px] font-semibold text-texto" data-btn-sem-mensalidade>
-            {semAberto ? <ChevronUp aria-hidden className="h-4 w-4 text-texto-3" /> : <ChevronDown aria-hidden className="h-4 w-4 text-texto-3" />}
+          <button type="button" onClick={() => setSemAberto((v) => !v)} aria-expanded={semAberto || !!buscaAplicada} className="flex w-full items-center gap-2 text-left text-[14px] font-semibold text-texto" data-btn-sem-mensalidade>
+            {semAberto || buscaAplicada ? <ChevronUp aria-hidden className="h-4 w-4 text-texto-3" /> : <ChevronDown aria-hidden className="h-4 w-4 text-texto-3" />}
             {dados?.dono === false ? "Seus alunos" : "Alunos sem mensalidade"}
-            <Chip tom="g" className="ml-auto">{semMensalidade.length}</Chip>
+            <Chip tom="g" className="ml-auto">{totalSem}</Chip>
           </button>
-          {semAberto && (
-            <div className="mt-2 divide-y divide-linha-3" data-lista-sem-mensalidade>
-              {semMensalidade.slice(0, mostrarSem).map((a) => (
-                <LinhaAluno key={a.paciente_id} a={a} selo={null} aoCobranca={() => setAluno(a)} aoComprovante={irParaComprovantes} semValor />
-              ))}
-              {semMensalidade.length > mostrarSem && (
-                <div className="py-2"><Botao tamanho="sm" variante="g" onClick={() => setMostrarSem((m) => m + PAGINA)}>Ver mais ({semMensalidade.length - mostrarSem})</Botao></div>
-              )}
-            </div>
+          {/* com uma busca a lista abre sozinha (quem procura um aluno sem mensalidade acha sem mais um toque) */}
+          {(semAberto || !!buscaAplicada) && (
+            <>
+              <div className="mt-2 divide-y divide-linha-3" data-lista-sem-mensalidade data-lista="mensalidades-sem">
+                {semMensalidade.map((a) => (
+                  <LinhaAluno key={a.paciente_id} a={a} selo={null} aoCobranca={() => setAluno(a)} aoComprovante={irParaComprovantes} semValor />
+                ))}
+              </div>
+              <Paginacao nome="mensalidades-sem" pagina={semPag.pagina} total={totalSem} aoMudar={semPag.irPara} carregando={consulta.isFetching}
+                className="border-t border-linha-3" />
+            </>
           )}
         </Cartao>
       )}
@@ -147,7 +178,7 @@ export default function Mensalidades({ f, focarComprovantes }: { f: FinanceiroCo
         )}
       </Cartao>
 
-      {!carregando && !consulta.isError && alunos.length === 0 && (
+      {!carregando && nenhumAluno && (
         <EstadoVazio icone={Wallet} titulo="Nenhum aluno ainda" texto="As mensalidades aparecem aqui quando você tem alunos na conta." />
       )}
 
@@ -164,7 +195,7 @@ function LinhaAluno({ a, selo, aoCobranca, aoComprovante, semValor }: {
   semValor?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 py-3" data-cobranca-aluno={idDoAluno(a)}>
+    <div className="flex items-center gap-3 py-3" data-item data-cobranca-aluno={idDoAluno(a)}>
       <Avatar nome={a.nome || a.email} tamanho={38} />
       <div className="min-w-0 flex-1">
         <Link to={`/painel/alunos/${idDoAluno(a)}/financeiro`} className="block truncate text-[14px] font-semibold text-texto hover:text-violeta-3">{a.nome || "Sem nome"}</Link>

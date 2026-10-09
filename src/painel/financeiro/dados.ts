@@ -3,9 +3,14 @@
 // da conta, os da conta inteira (políticas "dono da conta"). O filtro daqui só RECORTA a conta ativa: as linhas da conta + as do
 // próprio profissional sem conta (o site antigo do Nutri grava sem conta_id até a W28) — o master não vê as de todo mundo.
 // Exclusão é SOFT (deleted_at → Lixeira). O número do recibo vem do gatilho do banco (sequencial por profissional, nunca volta).
+// hml-14b (B21 · D14): Lançamentos e Recibos chegam por PÁGINA (20) do banco, com o total, os totais e a busca calculados lá
+// (financeiro_lancamentos, financeiro_resumo_periodo e financeiro_recibos — a migration 20261009010000, com as mesmas regras e o
+// mesmo "quem vê o quê" de antes); o Resumo e o Dashboard recebem o recebido já somado por dia.
 import { principal } from "@/integrations/principal/client";
-import { CATEGORIAS_PADRAO, ordenarCategorias, type RegistroMovimentacao } from "./financeiroUtil";
+import { POR_PAGINA, deslocamento, intervalo, type Pagina } from "@/lib/paginacao";
+import { CATEGORIAS_PADRAO, ordenarCategorias, type RegistroMovimentacao, type Totais } from "./financeiroUtil";
 import { TITULO_MODELO_PADRAO, aplicarTags, ordenarModelosRecibo, type DadosTags } from "@/financeiro/recibos";
+import type { CobrancaDoDia, EntradaDoDia, RecebidoDoPeriodo } from "./resumo";
 import type { RegistroRecibo } from "./recibosUtil";
 
 const falhou = (error: { message: string; code?: string } | null, amigavel?: Record<string, string>): void => {
@@ -13,11 +18,29 @@ const falhou = (error: { message: string; code?: string } | null, amigavel?: Rec
   throw new Error((error.code && amigavel?.[error.code]) || error.message);
 };
 const ERROS_CATEGORIA = { "23505": "Já existe uma categoria com esse nome" };
-/** Até 2000 movimentações por período — o filtro por tipo/categoria/forma/texto é feito na tela (como no Nutri). */
-const LIMITE_PERIODO = 2000;
 
 /** O recorte da conta ativa (PostgREST `or`): as linhas da conta + as minhas sem conta. */
 export const recorteDaConta = (contaId: string, uid: string): string => `conta_id.eq.${contaId},and(conta_id.is.null,nutricionista_id.eq.${uid})`;
+
+// ───────────────────────── as RPCs do Financeiro (hml-14b) ─────────────────────────
+
+const ERROS_RPC: Record<string, string> = {
+  sem_login: "Sua sessão expirou. Entre de novo.",
+  sem_acesso: "Você não faz mais parte desta conta.",
+  conta_inexistente: "Conta não encontrada.",
+  periodo_invalido: "Período inválido.",
+};
+
+/** Erro do banco ou `{ ok: false }` → lança (a tela mostra o erro — nunca uma lista vazia no lugar dele). */
+async function rpcFinanceiro<T>(nome: string, args: Record<string, unknown>): Promise<T> {
+  const { data, error } = await principal.rpc(nome as never, args as never);
+  falhou(error as { message: string; code?: string } | null);
+  const r = data as ({ ok?: boolean; erro?: string } & T) | null;
+  if (!r || r.ok !== true) throw new Error(ERROS_RPC[r?.erro ?? ""] ?? "Não deu para carregar o financeiro.");
+  return r;
+}
+
+const numero = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 // ───────────────────────── movimentações (transacoes) ─────────────────────────
 
@@ -44,12 +67,73 @@ const SELECT_TX =
   "id, nutricionista_id, conta_id, paciente_id, tipo, descricao, valor, data, metodo, observacao, estornada, recibo_id, categoria_id, created_at, " +
   "categoria:categorias_financeiras(nome), paciente:pacientes(nome, cpf)";
 
-/** Movimentações do período (datas yyyy-MM-dd inclusivas), mais recente primeiro, com categoria e aluno. */
-export async function listarTransacoes(contaId: string, uid: string, de: string, ate: string): Promise<Transacao[]> {
-  const { data, error } = await principal.from("transacoes").select(SELECT_TX).or(recorteDaConta(contaId, uid)).is("deleted_at", null)
-    .gte("data", de).lte("data", ate).order("data", { ascending: false }).order("created_at", { ascending: false }).limit(LIMITE_PERIODO);
-  falhou(error);
-  return (data ?? []) as unknown as Transacao[];
+/** Os filtros de Lançamentos que vão ao banco (o período vai à parte): vazio = sem filtro. */
+export interface FiltrosLancamentos {
+  tipo: string;
+  categoria: string;
+  metodo: string;
+  q: string;
+}
+
+export const SEM_FILTROS: FiltrosLancamentos = { tipo: "", categoria: "", metodo: "", q: "" };
+
+const filtrosParaBanco = (f: FiltrosLancamentos): Record<string, string> => {
+  const saida: Record<string, string> = {};
+  if (f.tipo) saida.tipo = f.tipo;
+  if (f.categoria) saida.categoria = f.categoria;
+  if (f.metodo) saida.metodo = f.metodo;
+  if (f.q.trim()) saida.q = f.q.trim();
+  return saida;
+};
+
+/**
+ * Uma página das movimentações do período (datas yyyy-MM-dd inclusivas) com os filtros, a mais recente primeiro (data, criação),
+ * com categoria e aluno, e o total com os filtros — financeiro_lancamentos (filtro, busca sem acento, ordem e contagem no banco).
+ */
+export async function listarLancamentos(contaId: string, de: string, ate: string, filtros: FiltrosLancamentos, pagina: number,
+  porPagina = POR_PAGINA): Promise<Pagina<Transacao>> {
+  const r = await rpcFinanceiro<{ total: number; itens: Transacao[] | null }>("financeiro_lancamentos", {
+    p_conta: contaId, p_de: de, p_ate: ate, p_filtros: filtrosParaBanco(filtros), p_offset: deslocamento(pagina, porPagina), p_limite: porPagina,
+  });
+  return { itens: r.itens ?? [], total: numero(r.total) };
+}
+
+/** Os totais do período com os filtros (estornadas fora), o total do período sem filtro e as categorias usadas nele. */
+export interface TotaisDoPeriodo extends Totais {
+  totalPeriodo: number;
+  categorias: { id: string; nome: string }[];
+}
+
+interface RespostaResumo {
+  entradas: number | string;
+  saidas: number | string;
+  saldo: number | string;
+  n_entradas: number;
+  n_saidas: number;
+  n_estornadas: number;
+  total: number;
+  total_periodo: number;
+  categorias: { id: string; nome: string }[] | null;
+  entradas_por_dia?: EntradaDoDia[] | null;
+  cobrancas_por_dia?: CobrancaDoDia[] | null;
+}
+
+const paraTotais = (r: RespostaResumo): TotaisDoPeriodo => ({
+  entradas: numero(r.entradas), saidas: numero(r.saidas), saldo: numero(r.saldo), nEntradas: numero(r.n_entradas), nSaidas: numero(r.n_saidas),
+  nEstornadas: numero(r.n_estornadas), total: numero(r.total), totalPeriodo: numero(r.total_periodo), categorias: r.categorias ?? [],
+});
+
+/** financeiro_resumo_periodo: entradas, saídas, saldo e contagens com os mesmos filtros da lista (D14). */
+export async function totaisDoPeriodo(contaId: string, de: string, ate: string, filtros: FiltrosLancamentos): Promise<TotaisDoPeriodo> {
+  return paraTotais(await rpcFinanceiro<RespostaResumo>("financeiro_resumo_periodo", { p_conta: contaId, p_de: de, p_ate: ate, p_filtros: filtrosParaBanco(filtros) }));
+}
+
+export type ResumoDoPeriodo = TotaisDoPeriodo & RecebidoDoPeriodo;
+
+/** O Resumo e o Dashboard: os totais do período + o recebido por dia (entradas por dia e categoria, cobranças pagas sem lançamento). */
+export async function resumoDoPeriodo(contaId: string, de: string, ate: string): Promise<ResumoDoPeriodo> {
+  const r = await rpcFinanceiro<RespostaResumo>("financeiro_resumo_periodo", { p_conta: contaId, p_de: de, p_ate: ate, p_filtros: { resumo: true } });
+  return { ...paraTotais(r), entradasPorDia: r.entradas_por_dia ?? [], cobrancasPorDia: r.cobrancas_por_dia ?? [] };
 }
 
 const colunas = (r: RegistroMovimentacao) => ({
@@ -156,12 +240,26 @@ export interface Recibo {
 const SELECT_RECIBO = "id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at, " +
   "paciente:pacientes(nome, cpf), transacao:transacoes!recibos_transacao_id_fkey(descricao, data)";
 
-/** Recibos vivos da conta ativa, o mais recente primeiro. */
-export async function listarRecibos(contaId: string, uid: string): Promise<Recibo[]> {
-  const { data, error } = await principal.from("recibos").select(SELECT_RECIBO).or(recorteDaConta(contaId, uid)).is("deleted_at", null)
-    .order("data", { ascending: false }).order("numero", { ascending: false }).limit(1000);
-  falhou(error);
-  return (data ?? []) as unknown as Recibo[];
+/** Uma página de recibos + o total e a SOMA dos valores de todos os que passam na busca. */
+export interface PaginaRecibos extends Pagina<Recibo> {
+  soma: number;
+}
+
+/**
+ * Recibos vivos da conta ativa, o mais recente primeiro (data, número), por página — financeiro_recibos: a busca (aluno, descrição,
+ * número com 4 dígitos, descrição da entrada de origem; sem acento, todas as palavras), o total e a soma saem do banco.
+ */
+export async function listarRecibos(contaId: string, busca: string, pagina: number, porPagina = POR_PAGINA): Promise<PaginaRecibos> {
+  const r = await rpcFinanceiro<{ total: number; soma: number | string; itens: Recibo[] | null }>("financeiro_recibos", {
+    p_conta: contaId, p_filtros: busca.trim() ? { q: busca.trim() } : {}, p_offset: deslocamento(pagina, porPagina), p_limite: porPagina,
+  });
+  return { itens: r.itens ?? [], total: numero(r.total), soma: numero(r.soma) };
+}
+
+/** Quantos recibos com a data no período (o "Recibos no mês" do Dashboard): a mesma função da lista, só o total. */
+export async function contarRecibos(contaId: string, de: string, ate: string): Promise<number> {
+  const r = await rpcFinanceiro<{ total: number }>("financeiro_recibos", { p_conta: contaId, p_filtros: { de, ate }, p_offset: 0, p_limite: 0 });
+  return numero(r.total);
 }
 
 /** Maior número já emitido pelo profissional (inclusive os da lixeira — número não volta); 0 sem recibo. A prévia mostra o próximo. */
@@ -294,11 +392,26 @@ export interface CobrancaResumo {
   paciente: { nome: string } | null;
 }
 
-/** Cobranças da conta para o Resumo: as em aberto/aguardando (qualquer data) + as pagas desde `desdeIso`. */
-export async function listarCobrancasDoResumo(contaId: string, uid: string, desdeIso: string): Promise<CobrancaResumo[]> {
-  const { data, error } = await principal.from("cobrancas")
-    .select("id, paciente_id, nutricionista_id, tipo, descricao, valor, vencimento, status, forma, pago_em, transacao_id, reembolsado_em, enviado_em, created_at, paciente:pacientes(nome)")
-    .or(recorteDaConta(contaId, uid)).or(`status.in.(aberta,aguardando_confirmacao),pago_em.gte.${desdeIso}`).is("deleted_at", null).limit(5000);
-  falhou(error);
-  return (data ?? []) as unknown as CobrancaResumo[];
+const COBRANCAS_POR_LEITURA = 1000; // o max_rows do PostgREST
+const MAX_LEITURAS_COBRANCAS = 20;
+
+/**
+ * Cobranças da conta para o Resumo (o "a receber" e a rosca do mês): as em aberto/aguardando (qualquer data) + as que vencem no
+ * mês (`mesDe`–`mesAte`, qualquer situação). As PAGAS de antes não vêm mais: o recebido chega somado do banco (resumoDoPeriodo).
+ * hml-14b (D18): em leituras de 1000 com ordem estável até a última — o `.limit(5000)` de antes virava 1000 calados.
+ */
+export async function listarCobrancasDoResumo(contaId: string, uid: string, mesDe: string, mesAte: string): Promise<CobrancaResumo[]> {
+  const saida: CobrancaResumo[] = [];
+  for (let leitura = 1; leitura <= MAX_LEITURAS_COBRANCAS; leitura += 1) {
+    const [de, ate] = intervalo(leitura, COBRANCAS_POR_LEITURA);
+    const { data, error } = await principal.from("cobrancas")
+      .select("id, paciente_id, nutricionista_id, tipo, descricao, valor, vencimento, status, forma, pago_em, transacao_id, reembolsado_em, enviado_em, created_at, paciente:pacientes(nome)")
+      .or(recorteDaConta(contaId, uid)).or(`status.in.(aberta,aguardando_confirmacao),and(vencimento.gte.${mesDe},vencimento.lte.${mesAte})`)
+      .is("deleted_at", null).order("id").range(de, ate);
+    falhou(error);
+    const linhas = (data ?? []) as unknown as CobrancaResumo[];
+    saida.push(...linhas);
+    if (linhas.length < COBRANCAS_POR_LEITURA) return saida;
+  }
+  throw new Error("Cobranças em aberto demais para o resumo.");
 }

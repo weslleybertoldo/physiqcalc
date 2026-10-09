@@ -1,12 +1,13 @@
 // Physiq W25 — o que o Dashboard junta (tela 6). Reaproveita as MESMAS consultas das telas de origem, com as MESMAS chaves do
 // react-query (o número do Dashboard e o da tela que ele abre saem do mesmo dado — lição da W10):
 //   Alunos      alunos_da_conta no filtro "Ativos" (o número do menu e da página) + alunos_novos_por_mes (o card da página Alunos);
-//   Financeiro  as 3 leituras do Resumo (lançamentos desde 1º/jan do ano passado, cobranças e o prof_resumo da W6) e as regras dele;
+//   Financeiro  as 3 leituras do Resumo (o recebido por dia desde 1º/jan do ano passado — financeiro_resumo_periodo, hml-14b —, as
+//               cobranças em aberto e do mês e o prof_resumo da W6) e as regras dele;
 //   Agenda      os agendamentos da conta (o recorte da Agenda) e os alunos dela; os calendários escondidos na Agenda ficam fora aqui também;
 //               H1: + as tags dos profissionais dessas consultas (só ler; a pílula da TAG na "Agenda de hoje", como na página Agenda);
 //   Diário      useDiarioDaConta(conta, você, 1) da W24 (só para a nutricionista da conta — a regra clínica); H4: + a de 7 dias (a MESMA
 //               do número da aba Diário e do "Só não reagidas" no período padrão) para as fotos aguardando reação;
-//   Recibos     H4: a lista de Financeiro › Recibos (a mesma chave CHAVES.recibos) para o "Recibos no mês";
+//   Recibos     H4: o "Recibos no mês" — hml-14b: contado no banco (financeiro_recibos, a função da aba Recibos, só o total);
 //   Pré-consulta o contador do menu (respostas novas);
 //   e as 2 leituras novas: painel_resumo (principal) e painel-resumo-treino (Treino, com a sessão do Treino).
 // Nada aqui grava: o Dashboard só lê (nem cria o calendário padrão, nem as categorias padrão do Financeiro).
@@ -26,15 +27,15 @@ import { paraEvento, type EventoPainel } from "@/painel/agenda/visao";
 import { useDiarioDaConta } from "@/painel/dietas/useDiario";
 import { podeEscreverNutricao } from "@/painel/dietas/contexto";
 import { contarNaoReagidas } from "@/painel/dietas/diarioPainel";
-import { listarCobrancasDoResumo, listarRecibos, listarTransacoes } from "@/painel/financeiro/dados";
-import { aReceber, kpis, precisamDeAtencao, recebimentos } from "@/painel/financeiro/resumo";
+import { contarRecibos, listarCobrancasDoResumo, resumoDoPeriodo } from "@/painel/financeiro/dados";
+import { aReceber, fimDoMes, inicioDoMes, kpis, precisamDeAtencao, recebimentos } from "@/painel/financeiro/resumo";
 import { CHAVES, useResumoDaConta } from "@/painel/financeiro/useFinanceiro";
 import { CHAVES_PRECONSULTA, contarRespostasNovas } from "@/painel/preconsulta/novas";
 import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 import { buscarResumoPrincipal, buscarResumoTreino, listarRespostasRecentes } from "./dados";
 import {
   adesaoMedia, atencaoDoFinanceiro, atividadeRecente, avaliacoesVencidas, cadastrosPendentes, consultasDeHoje, fotosSemReacao, itensAniversario, juntarAlunos,
-  juntarAtencao, preConsultasNovas, profissionaisDasConsultas, recibosDoMes, semMarcarDieta, semTreinar, ultimosDiasAte,
+  juntarAtencao, preConsultasNovas, profissionaisDasConsultas, semMarcarDieta, semTreinar, ultimosDiasAte,
 } from "./regras";
 
 export const CHAVES_DASHBOARD = {
@@ -99,13 +100,25 @@ export function useDashboard() {
   });
 
   // ── Financeiro (as leituras do Resumo, com as chaves dele) ──
+  // hml-14b (D14): o recebido chega somado do banco por dia (financeiro_resumo_periodo — antes: até 1000 lançamentos somados aqui)
   const desdeFin = `${Number(hoje.slice(0, 4)) - 1}-01-01`;
-  const transQ = useQuery({ queryKey: CHAVES.resumoTransacoes(contaId), queryFn: () => listarTransacoes(contaId, uid, desdeFin, hoje), enabled: pronto, staleTime: 15_000 });
-  const cobsQ = useQuery({ queryKey: CHAVES.cobrancas(contaId), queryFn: () => listarCobrancasDoResumo(contaId, uid, desdeFin), enabled: pronto, staleTime: 15_000 });
+  const transQ = useQuery({ queryKey: CHAVES.resumoTransacoes(contaId), queryFn: () => resumoDoPeriodo(contaId, desdeFin, hoje), enabled: pronto, staleTime: 15_000 });
+  const cobsQ = useQuery({
+    queryKey: CHAVES.cobrancas(contaId),
+    queryFn: () => listarCobrancasDoResumo(contaId, uid, inicioDoMes(hoje), fimDoMes(hoje)),
+    enabled: pronto,
+    staleTime: 15_000,
+  });
   const resumoFinQ = useResumoDaConta({ contaId, pronto });
-  // H4: "Recibos no mês" — a lista da aba Recibos (o dono vê os da conta; o membro, os dele — a regra do banco)
-  const recibosQ = useQuery({ queryKey: CHAVES.recibos(contaId), queryFn: () => listarRecibos(contaId, uid), enabled: pronto, staleTime: 15_000 });
-  const recibosMes = recibosQ.data ? recibosDoMes(recibosQ.data, hoje) : null;
+  // H4: "Recibos no mês" — os recibos da aba Recibos com a data neste mês (o dono vê os da conta; o membro, os dele — a regra do
+  // banco); hml-14b: só o total, contado no banco (financeiro_recibos com o período), em vez de baixar a lista (até 1000)
+  const recibosQ = useQuery({
+    queryKey: CHAVES.recibosNoPeriodo(contaId, inicioDoMes(hoje), fimDoMes(hoje)),
+    queryFn: () => contarRecibos(contaId, inicioDoMes(hoje), fimDoMes(hoje)),
+    enabled: pronto,
+    staleTime: 15_000,
+  });
+  const recibosMes = recibosQ.data ?? null;
 
   // ── Agenda: os últimos 14 dias até hoje (o mini gráfico e o "hoje") ──
   const deAgenda = useMemo(() => startOfDay(addDays(new Date(`${hoje}T12:00:00`), -13)), [hoje]);
@@ -149,7 +162,7 @@ export function useDashboard() {
 
   const financeiro = useMemo(() => {
     if (!transQ.data || !cobsQ.data) return null;
-    const recs = recebimentos(transQ.data, cobsQ.data);
+    const recs = recebimentos(transQ.data);
     const lista = aReceber(cobsQ.data, resumoFinQ.data?.alunos ?? [], hoje, new Date());
     return { recs, k: kpis(recs, lista, hoje), atencao: precisamDeAtencao(resumoFinQ.data?.pendentes ?? [], lista) };
   }, [transQ.data, cobsQ.data, resumoFinQ.data, hoje]);

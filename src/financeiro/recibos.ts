@@ -215,42 +215,8 @@ export async function ultimoNumeroRecibo(uid: string): Promise<number> {
   return ((data ?? []) as { numero: number }[])[0]?.numero ?? 0;
 }
 
-/**
- * Emite o recibo (o número sai do gatilho do banco) e, quando nasce de um lançamento, liga o lançamento a ele. Se o número
- * real saiu diferente do previsto na prévia, o texto é refeito com o número certo.
- */
-export async function emitirRecibo(p: {
-  uid: string;
-  contaId: string | null;
-  pacienteId: string;
-  transacaoId: string | null;
-  modelo: ModeloRecibo | null;
-  descricao: string;
-  valor: number;
-  data: string;
-  dadosTags: Omit<DadosTags, "numero" | "valor" | "data">;
-  numeroPrevisto: number;
-}): Promise<Recibo> {
-  const conteudo = p.modelo?.conteudo ?? CONTEUDO_MODELO_PADRAO;
-  const texto = aplicarTags(conteudo, { ...p.dadosTags, valor: p.valor, data: p.data, numero: p.numeroPrevisto });
-  const { data, error } = await principal.from("recibos").insert({
-    nutricionista_id: p.uid, conta_id: p.contaId, paciente_id: p.pacienteId, transacao_id: p.transacaoId, modelo_id: p.modelo?.id ?? null,
-    valor: p.valor, data: p.data, descricao: p.descricao.trim().slice(0, DESCRICAO_RECIBO_MAX) || DESCRICAO_RECIBO_PADRAO, texto,
-  }).select("id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at").single();
-  falhou(error);
-  let recibo = data as unknown as Recibo;
-  if (recibo.numero !== p.numeroPrevisto) {
-    const certo = aplicarTags(conteudo, { ...p.dadosTags, valor: p.valor, data: p.data, numero: recibo.numero });
-    const { data: d2 } = await principal.from("recibos").update({ texto: certo }).eq("id", recibo.id)
-      .select("id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at").single();
-    if (d2) recibo = d2 as unknown as Recibo;
-  }
-  if (p.transacaoId) {
-    const { error: e3 } = await principal.from("transacoes").update({ recibo_id: recibo.id }).eq("id", p.transacaoId);
-    falhou(e3);
-  }
-  return recibo;
-}
+// hml-14b (B14): o `emitirRecibo` duplicado que morava aqui (sem uso — a emissão é a de src/painel/financeiro/dados.ts, que confere
+// cada erro) saiu; ele ignorava o erro ao regravar o texto com o número certo.
 
 export async function excluirRecibo(id: string): Promise<void> {
   const { error } = await principal.from("recibos").update({ deleted_at: new Date().toISOString() }).eq("id", id);

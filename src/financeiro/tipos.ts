@@ -155,6 +155,19 @@ export interface ResumoConta {
   pendentes: PendenteResumo[];
 }
 
+/**
+ * hml-14b (B21) — prof_resumo com `pagina` (a tela Mensalidades): `alunos` = a página dos COM mensalidade (comprovante para
+ * conferir, pendentes, em dia, cobrança parada; dentro, por nome), `total` = quantos com a busca; `sem` = a página dos SEM
+ * mensalidade (por nome); `contagens` = os números da conta inteira (sem a busca); `pendentes` = os comprovantes aguardando.
+ */
+export interface MensalidadesDaConta extends ResumoConta {
+  pagina: number;
+  por_pagina: number;
+  total: number;
+  sem: { pagina: number; total: number; alunos: AlunoResumo[] };
+  contagens: { alunos: number; com_mensalidade: number; em_dia: number; pendentes: number; sem_mensalidade: number };
+}
+
 /** O resumo leve do app do aluno (financeiro_do_aluno() — faixa do Início, trava do inadimplente, chip do Perfil). */
 export interface ResumoMatricula {
   paciente_id: string;

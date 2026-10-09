@@ -3,7 +3,7 @@
 // dobro: os LANÇAMENTOS (entradas do Nutri) e as COBRANÇAS pagas que não viraram lançamento (Pix confirmado/Mercado Pago do Calc —
 // quando o profissional marca "lançar a entrada", a cobrança aponta para o lançamento em transacao_id e conta só por ele). As
 // mensalidades do Calc não têm linha até serem pagas: a régua da W6 (estadoDaMensalidade) diz quando cada uma vence.
-import { diaSP, estadoDaMensalidade } from "@/financeiro/regras";
+import { estadoDaMensalidade } from "@/financeiro/regras";
 import type { AlunoResumo, PendenteResumo } from "@/financeiro/tipos";
 
 const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -43,11 +43,29 @@ const entre = (dia: string | null | undefined, de: string, ate: string): boolean
 
 // ───────────────────────── recebido (lançamentos + cobranças pagas sem lançamento) ─────────────────────────
 
-export interface TransacaoDoResumo {
-  tipo: string;
+/**
+ * hml-14b (D14): o recebido vem SOMADO do banco (financeiro_resumo_periodo com `resumo: true`), por dia — antes o navegador baixava
+ * os lançamentos e as cobranças (cortados em 1000) e somava. As regras ficaram no banco: entrada sem estorno (por dia e categoria;
+ * a saída e a estornada ficam fora) e cobrança PAGA, sem estorno e sem lançamento (a lançada conta só pelo lançamento), pelo dia
+ * de São Paulo. Aqui os dias viram os recebimentos que os cartões e o gráfico somam por mês.
+ */
+export interface EntradaDoDia {
+  /** AAAA-MM-DD */
+  dia: string;
+  /** o nome da categoria; null = sem categoria (ou uma que você não lê) */
+  categoria: string | null;
   valor: number | string;
-  data: string;
-  estornada: boolean;
+}
+
+export interface CobrancaDoDia {
+  /** AAAA-MM-DD (São Paulo) */
+  dia: string;
+  valor: number | string;
+}
+
+export interface RecebidoDoPeriodo {
+  entradasPorDia: EntradaDoDia[];
+  cobrancasPorDia: CobrancaDoDia[];
 }
 
 export interface CobrancaDoResumo {
@@ -70,18 +88,12 @@ export interface Recebimento {
   origem: "lancamento" | "cobranca";
 }
 
-/** Tudo o que entrou: entradas não estornadas + cobranças pagas (sem estorno) que não estão ligadas a um lançamento. */
-export function recebimentos(trans: TransacaoDoResumo[], cobs: CobrancaDoResumo[]): Recebimento[] {
-  const saida: Recebimento[] = [];
-  for (const t of trans) {
-    if (t.tipo !== "entrada" || t.estornada) continue;
-    saida.push({ dia: t.data, valor: num(t.valor), origem: "lancamento" });
-  }
-  for (const c of cobs) {
-    if (c.status !== "paga" || c.reembolsado_em || c.transacao_id) continue;
-    const dia = diaSP(c.pago_em);
-    if (dia) saida.push({ dia, valor: num(c.valor), origem: "cobranca" });
-  }
+/** Tudo o que entrou, por dia: as entradas não estornadas (somadas por dia) + as cobranças pagas sem lançamento (já somadas no banco). */
+export function recebimentos(r: RecebidoDoPeriodo): Recebimento[] {
+  const porDia = new Map<string, number>();
+  for (const e of r.entradasPorDia) porDia.set(e.dia, (porDia.get(e.dia) ?? 0) + num(e.valor));
+  const saida: Recebimento[] = [...porDia.entries()].map(([dia, valor]) => ({ dia, valor: arred2(valor), origem: "lancamento" }));
+  for (const c of r.cobrancasPorDia) saida.push({ dia: c.dia, valor: num(c.valor), origem: "cobranca" });
   return saida;
 }
 
@@ -373,17 +385,17 @@ export interface BarraCategoria {
 }
 
 /** Entradas do mês por categoria (as cobranças pagas sem lançamento entram como "Mensalidades e cobranças"), maior primeiro. */
-export function entradasPorCategoria(trans: Array<TransacaoDoResumo & { categoria?: { nome: string } | null }>, cobs: CobrancaDoResumo[], hoje: string): BarraCategoria[] {
+export function entradasPorCategoria(r: RecebidoDoPeriodo, hoje: string): BarraCategoria[] {
   const de = inicioDoMes(hoje);
   const ate = fimDoMes(hoje);
   const mapa = new Map<string, number>();
-  for (const t of trans) {
-    if (t.tipo !== "entrada" || t.estornada || !entre(t.data, de, ate)) continue;
-    const nome = t.categoria?.nome ?? "Sem categoria";
-    mapa.set(nome, (mapa.get(nome) ?? 0) + num(t.valor));
+  for (const e of r.entradasPorDia) {
+    if (!entre(e.dia, de, ate)) continue;
+    const nome = e.categoria ?? "Sem categoria";
+    mapa.set(nome, (mapa.get(nome) ?? 0) + num(e.valor));
   }
-  for (const c of cobs) {
-    if (c.status !== "paga" || c.reembolsado_em || c.transacao_id || !entre(diaSP(c.pago_em), de, ate)) continue;
+  for (const c of r.cobrancasPorDia) {
+    if (!entre(c.dia, de, ate)) continue;
     mapa.set("Mensalidades e cobranças", (mapa.get("Mensalidades e cobranças") ?? 0) + num(c.valor));
   }
   return [...mapa.entries()].map(([nome, valor]) => ({ nome, valor: arred2(valor) })).sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome, "pt-BR"));

@@ -18,14 +18,16 @@ import {
   variacao,
   comparacaoDoMes,
   type CobrancaDoResumo,
-  type TransacaoDoResumo,
+  type EntradaDoDia,
 } from "./resumo";
 
 // a quinta-feira da tela 6: 16/07/2026, meio-dia em São Paulo
 const HOJE = "2026-07-16";
 const AGORA = new Date("2026-07-16T15:00:00Z");
 
-const tx = (data: string, valor: number, tipo = "entrada", estornada = false): TransacaoDoResumo => ({ data, valor, tipo, estornada });
+// hml-14b (D14): as entradas chegam do banco já somadas por dia e categoria (financeiro_resumo_periodo — a saída e a estornada ficam
+// fora lá; a prova da regra é a da migration, ~/projetos/physiqcalc-scratch/hml/hml14b/A/pglite/sql_test.mjs)
+const ent = (dia: string, valor: number | string, categoria: string | null = null): EntradaDoDia => ({ dia, valor, categoria });
 let n = 0;
 const cob = (p: Partial<CobrancaDoResumo>): CobrancaDoResumo => ({
   id: `c${++n}`, paciente_id: "p1", tipo: "avulsa", descricao: "Consulta", valor: 100, vencimento: HOJE, status: "aberta", pago_em: null, transacao_id: null,
@@ -50,21 +52,18 @@ describe("datas do resumo", () => {
   });
 });
 
-describe("recebido: lançamentos + cobranças pagas, sem contar em dobro", () => {
-  it("entrada conta; estornada e saída não; cobrança paga sem lançamento conta pelo dia de São Paulo; a lançada conta só pelo lançamento", () => {
-    const recs = recebimentos(
-      [tx("2026-07-02", 180), tx("2026-07-03", 90, "entrada", true), tx("2026-07-04", 40, "saida")],
-      [
-        cob({ status: "paga", valor: 249, pago_em: "2026-07-01T02:30:00Z" }), // 30/06 23:30 em SP
-        cob({ status: "paga", valor: 249, pago_em: "2026-07-05T15:00:00Z", transacao_id: "t1" }),
-        cob({ status: "paga", valor: 50, pago_em: "2026-07-06T15:00:00Z", reembolsado_em: "2026-07-07T10:00:00Z" }),
-        cob({ status: "aberta", valor: 70 }),
-      ],
-    );
+describe("recebido: lançamentos + cobranças pagas, sem contar em dobro (somados no banco por dia)", () => {
+  it("as entradas do mesmo dia (de categorias diferentes) viram 1 recebimento; as cobranças pagas sem lançamento entram pelo dia delas", () => {
+    const recs = recebimentos({
+      entradasPorDia: [ent("2026-07-02", 180, "Consulta"), ent("2026-07-02", "20.50", null), ent("2026-07-03", 90, "Retorno")],
+      cobrancasPorDia: [{ dia: "2026-06-30", valor: "249.00" }],
+    });
     expect(recs).toEqual([
-      { dia: "2026-07-02", valor: 180, origem: "lancamento" },
+      { dia: "2026-07-02", valor: 200.5, origem: "lancamento" },
+      { dia: "2026-07-03", valor: 90, origem: "lancamento" },
       { dia: "2026-06-30", valor: 249, origem: "cobranca" },
     ]);
+    expect(recebimentos({ entradasPorDia: [], cobrancasPorDia: [] })).toEqual([]);
   });
 });
 
@@ -102,7 +101,7 @@ describe("a receber: cobranças abertas e a régua das mensalidades (W6)", () =>
 });
 
 describe("os 4 cartões da tela 6", () => {
-  const trans = [tx("2026-07-02", 180), tx("2026-07-10", 320), tx("2026-06-15", 300), tx("2026-06-20", 100)];
+  const entradas = [ent("2026-07-02", 180), ent("2026-07-10", 320), ent("2026-06-15", 300), ent("2026-06-20", 100)];
   const cobs = [
     cob({ id: "pago", status: "paga", valor: 249, vencimento: "2026-07-05", pago_em: "2026-07-05T15:00:00Z" }),
     cob({ id: "aberta", vencimento: "2026-07-28", valor: 150 }),
@@ -110,7 +109,8 @@ describe("os 4 cartões da tela 6", () => {
     cob({ id: "atrasada", vencimento: "2026-07-01", valor: 60 }),
   ];
   const alunos = [aluno({ paciente_id: "a2", pago_ate: "2026-07-25T12:00:00Z" }), aluno({ paciente_id: "a1", pago_ate: "2026-06-30T12:00:00Z" })];
-  const recs = recebimentos(trans, cobs);
+  // o Pix confirmado (a cobrança "pago", sem lançamento) chega somado no dia dele
+  const recs = recebimentos({ entradasPorDia: entradas, cobrancasPorDia: [{ dia: "2026-07-05", valor: 249 }] });
   const lista = aReceber(cobs, alunos, HOJE, AGORA);
   const k = kpis(recs, lista, HOJE);
 
@@ -140,7 +140,10 @@ describe("os 4 cartões da tela 6", () => {
 });
 
 describe("gráfico Receita (30D · 6M · Ano)", () => {
-  const recs = recebimentos([tx("2026-01-10", 100), tx("2026-05-10", 200), tx("2026-07-02", 300), tx("2026-07-16", 50), tx("2025-03-01", 125), tx("2026-06-20", 10)], []);
+  const recs = recebimentos({
+    entradasPorDia: [ent("2026-01-10", 100), ent("2026-05-10", 200), ent("2026-07-02", 300), ent("2026-07-16", 50), ent("2025-03-01", 125), ent("2026-06-20", 10)],
+    cobrancasPorDia: [],
+  });
   it("6M: por mês, rótulos dos meses e variação contra os 6 anteriores", () => {
     const s = serieReceita(recs, HOJE, "6m");
     expect(s.rotulos).toEqual(["Fev", "Mar", "Abr", "Mai", "Jun", "Jul"]);
@@ -200,12 +203,10 @@ describe("Precisam de atenção (tela 6)", () => {
 
 describe("Entradas do mês por categoria", () => {
   it("agrupa pela categoria; as cobranças pagas sem lançamento viram \"Mensalidades e cobranças\"", () => {
-    const b = entradasPorCategoria(
-      [{ ...tx("2026-07-02", 180), categoria: { nome: "Consulta" } }, { ...tx("2026-07-09", 120), categoria: { nome: "Consulta" } },
-        { ...tx("2026-07-10", 90), categoria: null }, { ...tx("2026-06-30", 999), categoria: { nome: "Consulta" } }, { ...tx("2026-07-11", 50, "saida"), categoria: { nome: "Aluguel" } }],
-      [cob({ status: "paga", valor: 249, pago_em: "2026-07-05T12:00:00Z" })],
-      HOJE,
-    );
+    const b = entradasPorCategoria({
+      entradasPorDia: [ent("2026-07-02", 180, "Consulta"), ent("2026-07-09", 120, "Consulta"), ent("2026-07-10", 90, null), ent("2026-06-30", 999, "Consulta")],
+      cobrancasPorDia: [{ dia: "2026-07-05", valor: 249 }, { dia: "2026-06-29", valor: 70 }],
+    }, HOJE);
     expect(b).toEqual([{ nome: "Consulta", valor: 300 }, { nome: "Mensalidades e cobranças", valor: 249 }, { nome: "Sem categoria", valor: 90 }]);
   });
 });

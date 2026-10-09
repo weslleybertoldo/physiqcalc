@@ -33,7 +33,8 @@ vi.mock("@/painel/dashboard/dados", async (orig) => ({
   buscarResumoPrincipal: h.principal, buscarResumoTreino: h.treinoResumo, listarRespostasRecentes: h.respostas,
 }));
 vi.mock("@/painel/alunos/api", async (orig) => ({ ...(await orig<typeof import("@/painel/alunos/api")>()), listarAlunos: h.alunos }));
-vi.mock("@/painel/financeiro/dados", async (orig) => ({ ...(await orig<typeof import("@/painel/financeiro/dados")>()), listarTransacoes: h.trans, listarCobrancasDoResumo: h.cobs }));
+// hml-14b (D14): o recebido do Financeiro chega somado do banco por dia (resumoDoPeriodo → financeiro_resumo_periodo)
+vi.mock("@/painel/financeiro/dados", async (orig) => ({ ...(await orig<typeof import("@/painel/financeiro/dados")>()), resumoDoPeriodo: h.trans, listarCobrancasDoResumo: h.cobs }));
 vi.mock("@/financeiro/api", async (orig) => ({ ...(await orig<typeof import("@/financeiro/api")>()), buscarResumoDaConta: h.resumoFin }));
 vi.mock("@/painel/agenda/dados", async (orig) => ({
   ...(await orig<typeof import("@/painel/agenda/dados")>()), listarAgendamentos: h.agenda, listarAlunosDaAgenda: h.alunosAgenda, listarTags: h.tags,
@@ -79,6 +80,13 @@ const AGENDA = [
   { id: "ag3", nutricionista_id: "u-lucas", calendario_id: "cal", paciente_id: "m-carlos", titulo: "Cancelada", inicio: hojeAs(11), fim: hojeAs(12), dia_inteiro: false, status: "desmarcado", confirmacao: "desmarcado", modulo: "treino" },
 ];
 
+/** o que o banco devolve para o Resumo/Dashboard (financeiro_resumo_periodo com resumo: true) */
+function resumoFin(entradasPorDia: { dia: string; categoria: string | null; valor: number }[]) {
+  const entradas = entradasPorDia.reduce((s, e) => s + e.valor, 0);
+  return { entradas, saidas: 0, saldo: entradas, nEntradas: entradasPorDia.length, nSaidas: 0, nEstornadas: 0, total: entradasPorDia.length,
+    totalPeriodo: entradasPorDia.length, categorias: [], entradasPorDia, cobrancasPorDia: [] };
+}
+
 function montar() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -100,7 +108,7 @@ beforeEach(() => {
   // o card da página Alunos e o KPI usam a MESMA função do banco (alunos_novos_por_mes)
   h.novos.mockReset().mockResolvedValue({ ok: true, mes_atual: HOJE.slice(0, 7), meses: [{ mes: "2026-09", novos: 1 }, { mes: HOJE.slice(0, 7), novos: 2 }] });
   h.rpc.mockReset().mockImplementation(async (nome: string) => (nome === "alunos_novos_por_mes" ? { data: await h.novos(), error: null } : { data: null, error: null }));
-  h.trans.mockReset().mockResolvedValue([{ id: "t1", tipo: "entrada", valor: 300, data: HOJE, estornada: false, descricao: "Consulta", metodo: "pix", paciente: null }]);
+  h.trans.mockReset().mockResolvedValue(resumoFin([{ dia: HOJE, categoria: "Consulta", valor: 300 }]));
   h.cobs.mockReset().mockResolvedValue([]);
   h.resumoFin.mockReset().mockResolvedValue({
     ok: true, hoje: HOJE, agora: new Date().toISOString(), dono: true, alunos: [],
@@ -204,7 +212,7 @@ describe("W25 — Painel › Dashboard (tela 6)", () => {
     h.respostas.mockResolvedValue([]);
     h.alunos.mockResolvedValue({ total: 0, pendentes: 0, itens: [] });
     h.novos.mockResolvedValue({ ok: true, mes_atual: HOJE.slice(0, 7), meses: [{ mes: HOJE.slice(0, 7), novos: 0 }] });
-    h.trans.mockResolvedValue([]);
+    h.trans.mockResolvedValue(resumoFin([]));
     h.resumoFin.mockResolvedValue({ ok: true, hoje: HOJE, agora: new Date().toISOString(), dono: true, alunos: [], pendentes: [] });
     h.agenda.mockResolvedValue([]);
     h.diario.mockResolvedValue([]);
