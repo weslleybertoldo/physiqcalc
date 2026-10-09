@@ -14,40 +14,73 @@
 // Segredos: MP_ACCESS_TOKEN_PROD/_TEST (+ os automáticos).
 // hml-10 (H-24, H-26): o log é o do contexto (c.log, criado pela master-porta com o nome desta função); o catch final também
 // mora lá (avisa e devolve o mesmo 500).
-import { credencialDoSchema, mpFetch } from "../_shared/cobranca-mp.ts";
+// hml-14 (H-32): um prazo por pedido (ORCAMENTO_MS.usuario) em toda ida ao MP. Troca de plano: lê o Pix aberto e a assinatura
+// ANTES da master_conta_acao (leitura que falha lança: 500 e nada muda) e cada gravação confere o erro; o plano e a faixa da
+// assinatura vêm da conta que a RPC devolve (antes a releitura com erro gravava só o valor e a próxima cobrança no cartão
+// voltava a conta ao plano antigo).
+import { MpIndisponivel, credencialDoSchema, mpFetch, type OpcoesMp } from "../_shared/cobranca-mp.ts";
+import { mpTransitorio } from "../_shared/cobranca-regras.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { ehAcaoConta, ehUuid, idsDe, lerPedidoCriarConta } from "../_shared/master-regras.ts";
 import { json, responder, rpc, servir, type Contexto } from "../_shared/master-porta.ts";
+import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const simulado = (id: string | null | undefined) => !!id && id.startsWith("sim-");
 
-/** Mudou o plano: fecha o Pix aberto com o preço antigo e leva o valor novo à assinatura no cartão (a regra do cobranca-conta). */
-async function efeitosDoPlano(c: Contexto, contaId: string, valorNovo: number | null): Promise<Record<string, unknown>> {
-  const credencial = credencialDoSchema(c.schema);
-  const saida: Record<string, unknown> = { pix_cancelados: 0, assinatura_atualizada: null };
-  const { data: abertos } = await c.db.from("conta_faturas").select("id, mp_payment_id").eq("conta_id", contaId).eq("forma", "pix")
+/** O que a troca de plano lê ANTES de mexer: o Pix aberto (com o preço antigo) e a assinatura no cartão. Erro do banco lança. */
+interface LidoDoPlano {
+  abertos: Array<{ id: string; mp_payment_id: string | null }>;
+  assinatura: { id: string; mp_preapproval_id: string | null; status: string } | null;
+}
+
+async function lerAntesDoPlano(c: Contexto, contaId: string): Promise<LidoDoPlano> {
+  const { data: abertos, error } = await c.db.from("conta_faturas").select("id, mp_payment_id").eq("conta_id", contaId).eq("forma", "pix")
     .in("status", ["pending", "in_process"]);
-  for (const f of (abertos ?? []) as Array<{ id: string; mp_payment_id: string | null }>) {
+  if (error) throw error;
+  const { data: a, error: erroAssinatura } = await c.db.from("conta_assinaturas").select("id, mp_preapproval_id, status").eq("conta_id", contaId).maybeSingle();
+  if (erroAssinatura) throw erroAssinatura;
+  return {
+    abertos: (abertos ?? []) as LidoDoPlano["abertos"],
+    assinatura: (a as LidoDoPlano["assinatura"]) ?? null,
+  };
+}
+
+/**
+ * Mudou o plano: fecha o Pix aberto com o preço antigo e leva o valor novo (com o plano e a faixa) à assinatura no cartão (a
+ * regra do cobranca-conta). `novo` = a conta que a master_conta_acao devolveu. Erro do banco lança.
+ */
+async function efeitosDoPlano(
+  c: Contexto,
+  lido: LidoDoPlano,
+  novo: { plano: unknown; faixa: unknown; valor: number | null },
+  opcoes: OpcoesMp,
+): Promise<Record<string, unknown>> {
+  const credencial = credencialDoSchema(c.schema);
+  // sem plano e faixa a assinatura ficaria com os antigos (a próxima cobrança desfaria a troca): para antes de ir ao MP
+  if (typeof novo.plano !== "string" || !novo.plano || typeof novo.faixa !== "string" || !novo.faixa) throw new Error("conta_sem_plano");
+  const saida: Record<string, unknown> = { pix_cancelados: 0, assinatura_atualizada: null };
+  for (const f of lido.abertos) {
     if (f.mp_payment_id && !simulado(f.mp_payment_id)) {
-      await mpFetch(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
+      const { status } = await mpFetch(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, opcoes);
+      // o MP sem resposta que decida (fora do ar, limite, prazo esgotado): a fatura fica aberta no banco, como no MP (e avisa)
+      if (mpTransitorio(status)) throw new MpIndisponivel(status);
     }
-    await c.db.from("conta_faturas").update({ status: "cancelled" }).eq("id", f.id);
+    const { error } = await c.db.from("conta_faturas").update({ status: "cancelled" }).eq("id", f.id);
+    if (error) throw error;
     saida.pix_cancelados = Number(saida.pix_cancelados) + 1;
   }
-  const { data: a } = await c.db.from("conta_assinaturas").select("id, mp_preapproval_id, status").eq("conta_id", contaId).maybeSingle();
-  const ass = a as { id: string; mp_preapproval_id: string | null; status: string } | null;
-  if (ass?.mp_preapproval_id && ["authorized", "pending", "paused"].includes(ass.status) && valorNovo) {
+  const ass = lido.assinatura;
+  if (ass?.mp_preapproval_id && ["authorized", "pending", "paused"].includes(ass.status) && novo.valor) {
     let ok = true;
     if (!simulado(ass.mp_preapproval_id)) {
       const { status } = await mpFetch(credencial, `/preapproval/${encodeURIComponent(ass.mp_preapproval_id)}`, {
-        method: "PUT", body: JSON.stringify({ auto_recurring: { transaction_amount: valorNovo } }),
-      });
+        method: "PUT", body: JSON.stringify({ auto_recurring: { transaction_amount: novo.valor } }),
+      }, opcoes);
       ok = status < 300;
     }
     if (ok) {
-      const { data: conta } = await c.db.from("contas").select("plano, faixa").eq("id", contaId).maybeSingle();
-      await c.db.from("conta_assinaturas").update({ valor: valorNovo, plano: (conta as { plano?: string } | null)?.plano, faixa: (conta as { faixa?: string } | null)?.faixa })
-        .eq("id", ass.id);
+      const { error } = await c.db.from("conta_assinaturas").update({ valor: novo.valor, plano: novo.plano, faixa: novo.faixa }).eq("id", ass.id);
+      if (error) throw error;
     }
     saida.assinatura_atualizada = ok;
   }
@@ -69,6 +102,7 @@ async function garantirLogin(c: Contexto, email: string, nome: string, senha: st
 }
 
 servir("master-contas", async (c) => {
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido — vai em toda ida ao MP ({ prazo: p })
   const { corpo, origin } = c;
   const acao = String(corpo.acao ?? "");
   switch (acao) {
@@ -86,11 +120,14 @@ servir("master-contas", async (c) => {
       if (!ehUuid(corpo.conta_id)) return json({ ok: false, erro: "conta_inexistente" }, 404, origin);
       if (!ehAcaoConta(corpo.tipo)) return json({ ok: false, erro: "acao_invalida" }, 400, origin);
       const args = corpo.args && typeof corpo.args === "object" ? corpo.args : {};
+      // hml-14 (H-32): troca de plano lê ANTES de mexer (a RPC grava o plano novo): a leitura que falha lança aqui (500) e nada muda
+      const lido = corpo.tipo === "plano" ? await lerAntesDoPlano(c, String(corpo.conta_id)) : null;
       const r = await rpc(c.comoPessoa, "master_conta_acao", { p_conta: corpo.conta_id, p_acao: corpo.tipo, p_args: args });
-      if (r.ok === true && corpo.tipo === "plano" && r.sem_mudanca !== true) {
+      if (lido && r.ok === true && r.sem_mudanca !== true) {
         try {
-          const valor = Number((r.conta as Record<string, unknown> | undefined)?.valor_mensal ?? 0) || null;
-          r.efeitos = await efeitosDoPlano(c, String(corpo.conta_id), valor);
+          const conta = (r.conta ?? {}) as Record<string, unknown>;
+          const valor = Number(conta.valor_mensal ?? 0) || null;
+          r.efeitos = await efeitosDoPlano(c, lido, { plano: conta.plano, faixa: conta.faixa, valor }, { prazo: p });
         } catch (e) {
           c.log.excecao(e, { codigo: "efeitos_do_plano_falhou", schema: c.schema, acao, ref: String(corpo.conta_id) });
           r.efeitos = { erro: "mp" };
@@ -140,10 +177,12 @@ servir("master-contas", async (c) => {
         let falhas = 0;
         for (const uid of enc) {
           try {
-            const s = await cancelarAssinaturasDoAppEncerrado(c.db, credencialDoSchema(c.schema), uid, "vinculou_profissional", c.log);
+            const s = await cancelarAssinaturasDoAppEncerrado(c.db, credencialDoSchema(c.schema), uid, "vinculou_profissional", c.log, { prazo: p });
             canceladas += s.canceladas;
             falhas += s.falhas;
-          } catch {
+          } catch (e) {
+            // hml-14 (H-32): o cancelamento agora lança no erro do banco e no MP sem resposta — registra e avisa (antes calava)
+            c.log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema: c.schema, acao, ref: uid });
             falhas++;
           }
         }

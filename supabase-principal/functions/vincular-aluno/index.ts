@@ -24,12 +24,15 @@
 // Segredos: ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (cancelar a assinatura do app) (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
 // pelo espelho) — e a fila espelho_pendencias leva a mudança para quem já tem vínculo.
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts; os catches que devolvem 500 avisam (log.excecao) com a resposta de antes.
+// hml-14 (H-32): o cancelamento da assinatura do app vai ao MP com o prazo do pedido e lança no erro do banco (o catch dele já
+// registra e responde falhas: 1, sem travar o vínculo); a prévia com erro do banco responde 500 (antes dizia "não é aluno do app").
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { emailConfirmado, emailDeTeste, origemPermitida, segredoConfere } from "../_shared/login-regras.ts";
 import { credencialDoSchema, type Schema } from "../_shared/cobranca-mp.ts";
 import { appDaPessoa, cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
+import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -68,6 +71,7 @@ const STATUS_DO_ERRO: Record<string, number> = {
 };
 
 Deno.serve(async (req) => {
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido — vai na ida ao MP ({ prazo: p })
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
@@ -146,7 +150,7 @@ Deno.serve(async (req) => {
     // W7b: saiu do app (a matrícula do app encerrou) → a assinatura do app no Mercado Pago é cancelada (não trava o vínculo)
     let assinaturaApp = { canceladas: 0, falhas: 0 };
     try {
-      assinaturaApp = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), userId, "vinculou_profissional", log);
+      assinaturaApp = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), userId, "vinculou_profissional", log, { prazo: p });
     } catch (e) {
       log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema, acao: "vincular" });
       assinaturaApp = { canceladas: 0, falhas: 1 };

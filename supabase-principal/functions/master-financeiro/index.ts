@@ -10,14 +10,18 @@
 // 200 → { ok: true, ... } · 401 sem login · 403 quem não é master · 4xx { ok: false, erro }.
 // verify_jwt = true. Publicar:  scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions master-financeiro true
 // Segredos: MP_ACCESS_TOKEN_PROD/_TEST (+ os automáticos).
+// hml-14 (H-32): um prazo por pedido (ORCAMENTO_MS.usuario) na ida ao MP; a leitura da assinatura e as gravações conferem o erro
+// (antes a leitura com erro respondia 400 "sem_assinatura" e o master lia que não havia cobrança automática).
 import { credencialDoSchema, espelhoAssinatura, mpFetch } from "../_shared/cobranca-mp.ts";
 import type { AssinaturaMp } from "../_shared/cobranca-regras.ts";
 import { ehUuid, textoDoAvisoDePlano } from "../_shared/master-regras.ts";
 import { json, responder, rpc, servir } from "../_shared/master-porta.ts";
+import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const simulado = (id: string | null | undefined) => !!id && id.startsWith("sim-");
 
 servir("master-financeiro", async (c) => {
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido — vai na ida ao MP ({ prazo: p })
   const { corpo, origin } = c;
   const acao = String(corpo.acao ?? "");
   if (acao === "listar") {
@@ -43,20 +47,24 @@ servir("master-financeiro", async (c) => {
   if (conta.cobranca_legada === true) return json({ ok: false, erro: "cobranca_legada", origem: conta.origem }, 400, origin);
 
   if (acao === "cancelar_assinatura") {
-    const { data: a } = await c.db.from("conta_assinaturas").select("id, mp_preapproval_id, status, payload").eq("conta_id", contaId).maybeSingle();
+    const { data: a, error } = await c.db.from("conta_assinaturas").select("id, mp_preapproval_id, status, payload").eq("conta_id", contaId).maybeSingle();
+    if (error) throw error;
     const ass = a as { id: string; mp_preapproval_id: string | null; status: string; payload: Record<string, unknown> | null } | null;
     if (!ass?.mp_preapproval_id || !["authorized", "pending", "paused"].includes(ass.status)) return json({ ok: false, erro: "sem_assinatura" }, 400, origin);
     if (!simulado(ass.mp_preapproval_id)) {
       const { status, body: pre } = await mpFetch<AssinaturaMp>(credencialDoSchema(c.schema), `/preapproval/${encodeURIComponent(ass.mp_preapproval_id)}`, {
         method: "PUT", body: JSON.stringify({ status: "cancelled" }),
-      });
+      }, { prazo: p });
       if (status >= 300 || !pre?.id) return json({ ok: false, erro: "mp_error", status_mp: status }, 502, origin);
-      await c.db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(ass.payload ?? {}), cancelada_por: c.userId })).eq("id", ass.id);
+      const { error: erroCancelada } = await c.db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(ass.payload ?? {}), cancelada_por: c.userId })).eq("id", ass.id);
+      if (erroCancelada) throw erroCancelada;
     } else {
-      await c.db.from("conta_assinaturas").update({ status: "cancelled" }).eq("id", ass.id);
+      const { error: erroCancelada } = await c.db.from("conta_assinaturas").update({ status: "cancelled" }).eq("id", ass.id);
+      if (erroCancelada) throw erroCancelada;
     }
-    await c.db.from("conta_eventos").insert({ conta_id: contaId, tipo: "plano", antes: { assinatura: ass.status },
+    const { error: erroEvento } = await c.db.from("conta_eventos").insert({ conta_id: contaId, tipo: "plano", antes: { assinatura: ass.status },
       depois: { assinatura: "cancelled", por: "master" }, por: c.userId });
+    if (erroEvento) throw erroEvento;
     return json({ ok: true, cancelada: true }, 200, origin);
   }
 
@@ -68,7 +76,9 @@ servir("master-financeiro", async (c) => {
     const { data: aviso, error } = await c.db.from("avisos").insert({ destino_user_id: dono.id, tipo: "geral", titulo, link: "/painel/configuracoes/plano" })
       .select("id, criado_em").single();
     if (error) throw error;
-    await c.db.from("conta_eventos").insert({ conta_id: contaId, tipo: "aviso", depois: { aviso_id: (aviso as { id: string }).id, titulo, por: "master" }, por: c.userId });
+    // hml-14 (H-32): melhor esforço — o aviso já foi; um 500 aqui faria o master reenviar (aviso em dobro no sino do dono)
+    const { error: erroEvento } = await c.db.from("conta_eventos").insert({ conta_id: contaId, tipo: "aviso", depois: { aviso_id: (aviso as { id: string }).id, titulo, por: "master" }, por: c.userId });
+    if (erroEvento) c.log.excecao(erroEvento, { codigo: "evento_do_aviso_falhou", schema: c.schema, acao, ref: contaId });
     return json({ ok: true, aviso_id: (aviso as { id: string }).id, titulo }, 200, origin);
   }
 
