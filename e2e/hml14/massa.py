@@ -201,7 +201,9 @@ def resolver(login: str, conta_id: str | None = None) -> dict:
     dono = r[0]["id"]
     contas = ler(f"""
       select c.id::text as id, c.nome, c.origem, c.plano, c.faixa, c.situacao, c.dono_id::text as dono, m.papeis,
-             {S}.modulos_do_plano(c.plano) as modulos, {S}.w13_conta_travada(c.id) as travada
+             {S}.modulos_do_plano(c.plano) as modulos,
+             -- a w13_conta_travada é interna (o papel só leitura não executa): a mesma regra pela situação gravada
+             (not coalesce(c.cobranca_legada, false) and c.situacao in ('vencida', 'suspensa', 'cancelada')) as travada
         from {S}.contas c join {S}.conta_membros m on m.conta_id = c.id
        where m.user_id = {lit(dono)}::uuid and m.status = 'ativo' and c.origem <> 'app'
        order by c.criado_em""")
@@ -239,15 +241,13 @@ def outra_conta_de_teste(ctx: dict, forcar: str | None = None) -> dict | None:
     """A conta do gêmeo: OUTRA conta de teste do staging (dono *.teste.claude, não a do app), com vaga — a livre primeiro."""
     filtro = f" and c.id = {lit(uuid_ok(forcar, '--outra-conta'))}::uuid" if forcar else ""
     linhas = ler(f"""
-      select c.id::text as id, c.nome, c.faixa, {S}.conta_limite_alunos(c.id) as limite, {S}.conta_alunos_ativos(c.id) as ativos
+      select c.id::text as id, c.nome, c.faixa
         from {S}.contas c join auth.users u on u.id = c.dono_id
-       where c.id <> {lit(ctx['conta_id'])}::uuid and c.origem <> 'app' and {S}.email_de_teste(u.email)
+       where c.id <> {lit(ctx['conta_id'])}::uuid and c.origem <> 'app' and c.faixa = 'livre'
          and lower(u.email) like '%.teste.claude@physiq%' and lower(u.email) <> {lit(ctx['email'])}{filtro}
-       order by (c.faixa = 'livre') desc, c.criado_em""")
-    for c in linhas:
-        if c["limite"] is None or (c["ativos"] or 0) + 1 <= c["limite"]:
-            return c
-    return None
+       order by c.criado_em""")
+    # as funções de limite e de e-mail de teste são internas (o papel só leitura não executa): só conta "livre" (sem teto)
+    return linhas[0] if linhas else None
 
 
 # ───────────────────────── contagens (só leitura) ─────────────────────────
