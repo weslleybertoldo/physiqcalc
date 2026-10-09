@@ -117,7 +117,8 @@ Regra geral: primeiro voltar, depois corrigir pela esteira normal (local → sta
 - Merge: `gh pr checks <n> --watch --fail-fast && gh pr merge <n> --squash`. Nada de `--admin`.
 - **Nunca `[skip ci]`/`[skip actions]` num commit da branch do PR:** o GitHub não roda o check e o PR fica travado ("Expected").
   PR sem release (só E2E ou doc): o marcador vai só no título do squash
-  (`gh pr merge <n> --squash --subject "<título> [skip actions] (#<n>)"`). Já travou: `gh workflow run ci-pr.yml --ref <branch>`.
+  (`gh pr merge <n> --squash --subject "<título> [skip actions] (#<n>)"`). Já travou: commit novo SEM o marcador na branch (`git commit --allow-empty -m "rodar o check"` + push). O
+  `gh workflow run ci-pr.yml --ref <branch>` roda o check, mas NÃO destrava o PR (provado na hml-13, PR #160).
 - Quem fura a regra: só a deploy key do bump de versão (job `bump` do `build-apk.yml`, environment `release`, só a `main`).
 - **Voltar uma versão com a main protegida:** o Instant Rollback da Vercel (seção "Site") não depende do git; o revert "de vez"
   vira `git revert` do squash numa branch → PR → check verde → merge (uns 6 min a mais que antes).

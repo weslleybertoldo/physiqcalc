@@ -67,7 +67,7 @@ class Guarda:
                 route.abort()
                 return
             route.continue_()
-        for host in ("api-principal.physiqcalc.com.br", "api.physiqcalc.com.br", f"{B.PRINCIPAL_REF}.supabase.co", f"{B.TREINO_REF}.supabase.co"):
+        for host in ("api-principal.physiqcalc.com.br", "api.physiqcalc.com.br", f"{B.PRINCIPAL_REF}.supabase.co", f"{B.B25.TREINO_REF}.supabase.co"):
             ctx.route(f"https://{host}/**", rota)
 
 
