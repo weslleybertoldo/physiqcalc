@@ -1,0 +1,38 @@
+{
+  "sobre": "hml-15 (H-33): as violações de CSP ESPERADAS no e2e/hml15/csp.py. Cada regra casa pelos campos que tiver (regex, re.search): diretiva (a effectiveDirective), bloqueado (a blockedURI), amostra (o começo do script, com 'report-sample'), origem (o arquivo que causou) e documento (a página ou o worker). Qualquer violação que não casar com nenhuma regra = FALHA, com print. Hoje só as sondas negativas: o antifraude do Mercado Pago roda com o nonce (desvio 20 do docs/desvios.md) e não tem violação esperada.",
+  "esperadas": [
+    {
+      "id": "sonda-inline",
+      "diretiva": "^script-src(-elem)?$",
+      "bloqueado": "^inline$",
+      "amostra": "__sondaInline",
+      "motivo": "sonda: <script> inline injetado sem nonce tem que ser barrado (a prova de que a CSP está viva)"
+    },
+    {
+      "id": "sonda-atributo",
+      "diretiva": "^script-src(-attr)?$",
+      "bloqueado": "^inline$",
+      "amostra": "__sondaAtributo",
+      "motivo": "sonda: atributo de evento (onerror=) tem que ser barrado mesmo com o nonce do antifraude"
+    },
+    {
+      "id": "sonda-javascript",
+      "diretiva": "^script-src(-elem)?$",
+      "bloqueado": "^inline$",
+      "amostra": "__sondaJs",
+      "motivo": "sonda: link javascript: tem que ser barrado mesmo com o nonce do antifraude"
+    },
+    {
+      "id": "sonda-embed",
+      "diretiva": "^(object|frame)-src$",
+      "bloqueado": "^blob",
+      "motivo": "sonda do D4 (<embed type=application/pdf src=blob:>), informativa: o object-src 'none' barra o plugin, e o visualizador de PDF do Chromium abre um frame interno blob: (frame-src) — o PDF dos Impressos abre em ABA, não em <embed>"
+    },
+    {
+      "id": "sonda-worker",
+      "diretiva": "^connect-src$",
+      "bloqueado": "csp-sonda\\.invalid",
+      "motivo": "sonda: fetch para um host fora da lista DENTRO de um worker blob: (a prova de que o coletor local vê o que acontece nos workers)"
+    }
+  ]
+}
