@@ -1,0 +1,422 @@
+{
+ "uuid": "f7742b0d-2365-40c8-8ae8-b49d375ed6f8",
+ "nome": "Agachamento no Hack",
+ "cena": "agachamento_no_hack",
+ "grupo": "Quadríceps",
+ "subgrupo": "Quadríceps (vastos) · glúteo",
+ "padrao_movimento": "agachamento",
+ "equipamento": "maquina",
+ "variacao": "hack",
+ "alvos": [
+  "quadriceps"
+ ],
+ "auxiliares": [
+  "gluteo",
+  "adutores",
+  "posterior",
+  "panturrilha"
+ ],
+ "camera": {
+  "az": 75,
+  "el": 12,
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.35,
+   0.78
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   -0.35,
+   0.8
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "No hack, deitado de costas no encosto do carrinho — inclinado a 45°, junto com os trilhos —, com o glúteo, as costas e a cabeça encostados nele, os ombros embaixo das ombreiras e as mãos fechadas nos pegadores na frente delas, do lado da cabeça. Os pés ficam chapados no meio da plataforma, na largura dos ombros, com as pontas um pouco pra fora e os joelhos apontando na mesma direção delas. Começa em cima, com as pernas quase esticadas, sem travar os joelhos, e desce o carrinho no trilho dobrando os joelhos e o quadril, devagar, até o joelho chegar a cerca de 100° com a coxa paralela à plataforma, sem tirar os calcanhares da plataforma nem o glúteo e as costas do encosto; depois empurra a plataforma com o calcanhar e a planta do pé até as pernas ficarem quase esticadas de novo. O tronco, a pelve, a cabeça e os braços descem e sobem junto com o carrinho, parados em cima dele; só as pernas dobram.",
+ "cinesiologia": {
+  "plano": "sagital (flexão e extensão do joelho e do quadril, com o tornozelo acompanhando); cada perna se mexe num plano fixo um pouco aberto pra fora — o que passa pelo tornozelo e pela reta do quadril, paralela ao trilho —, com o joelho sempre na direção da ponta do pé",
+  "articulacoes": "joelho (de ~10°, quase esticado, a ~100° de flexão na descida e de volta); quadril (de ~23° a ~80° entre a coxa e o tronco, com a pelve parada no encosto); tornozelo (de flexão plantar de ~26° em cima, com as pernas quase esticadas e os pés à frente do corpo, a flexão dorsal de ~7° embaixo, sempre com o pé chapado); coluna neutra e parada, apoiada no encosto; cabeça neutra no apoio da cabeça; ombros, cotovelos (~126°) e punhos parados, mãos nos pegadores",
+  "agonistas": "quadríceps — reto femoral e vastos lateral, intermédio e medial —, na extensão do joelho (ExRx, Sled Hack Squat: Target \"Quadriceps\"; NFPT: \"The primary muscles recruited in this movement are biased towards the quadriceps, then glutes and hamstrings.\"); concêntrica na subida do carrinho, excêntrica na descida",
+  "sinergistas": "glúteo máximo, adutor magno e sóleo (ExRx, Sled Hack Squat: Synergists \"Gluteus Maximus\", \"Adductor Magnus\", \"Soleus\"), na extensão do quadril e no tornozelo",
+  "estabilizadores": "isquiotibiais e gastrocnêmio como estabilizadores dinâmicos (ExRx, Sled Hack Squat: Dynamic Stabilizers \"Hamstrings\", \"Gastrocnemius\"); o encosto segura o tronco, então os músculos do tronco trabalham menos que no agachamento livre (Clark, Lambert e Hunter 2019: \"Back squat TMA was significantly greater (p ≤ 0.05) than HS for all muscles and phases except rectus abdominus in concentric phase.\"; NFPT: \"being braced by the machine significantly reduces the involvement of the core muscles versus a barbell or free standing squat\"); as mãos nos pegadores e os ombros embaixo das ombreiras prendem o corpo no carrinho",
+  "fases": "excêntrica (o carrinho desce devagar, dobrando joelhos e quadril até ~100° no joelho — NFPT: \"While bending at the hips and knees, take two to three seconds to lower the weight down until your knees are at 90 degrees.\"; ExRx: \"To lower sled, bend hips and knees\") e concêntrica (empurra com o calcanhar e a planta até quase esticar, sem travar — NFPT: \"Press up through the heels of your feet to the starting position.\", \"Do not lock out your knees.\"; ExRx: \"Raise sled by extending knees and hips.\")"
+ },
+ "referencias": [
+  "ExRx.net — Sled Hack Squat (https://exrx.net/WeightExercises/Quadriceps/SLHackSquat, lido na cópia do Internet Archive de 17/07/2026; o site responde 403 direto; a página \"Lever Hack Squat (plate loaded)\" não existe no ExRx — a cópia de 14/12/2023 dá \"Page Not Found\" e a lista de exercícios de coxa de 28/08/2026 só tem o Sled Hack Squat): classificação \"Utility: Basic or Auxiliary\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Lie supine on back pad with shoulders under shoulder pad. Place feet on platform slightly higher than base of sled. Extend hips and knees. Release dock levers.\"; Execution: \"To lower sled, bend hips and knees until knees are just short of complete flexion. Raise sled by extending knees and hips. Repeat.\"; Comments: \"Re-engage support lever in extended position before dismounting. If insufficient hip flexibility forces pelvis to pull away from back pad at lower portions of movement, only lower sled just short of spinal articulation. Keep knees pointed same directions as feet. Do not allow heels to raise off of platform, pushing with both heel and forefoot. Placing feet slightly high on platform emphasizes Gluteus Maximus. Placing feet slightly lower on platform emphasizes Quadriceps.\"; músculos: Target \"Quadriceps\", Synergists \"Gluteus Maximus\", \"Adductor Magnus\", \"Soleus\", Dynamic Stabilizers \"Hamstrings\", \"Gastrocnemius\"; a animação da página (© 2012 ExRx.net) mostra o encosto inclinado ~45°, em cima as pernas quase esticadas com os pés à frente do corpo e o tornozelo em flexão plantar, as mãos nos pegadores do lado da cabeça e, embaixo, os joelhos acima do quadril",
+  "Clark DR, Lambert MI, Hunter AM. Trunk Muscle Activation in the Back and Hack Squat at the Same Relative Loads. J Strength Cond Res. 2019;33 Suppl 1:S60-S69. doi:10.1519/JSC.0000000000002144 — resumo (PubMed 28704312): \"The hack squat (HS) is likely to produce a greater 1 repetition maximum (1RM) compared with the back squat (BS). This can be attributed to the support of the trunk during the HS compared with no support during BS.\"; \"Back squat TMA was significantly greater (p ≤ 0.05) than HS for all muscles and phases except rectus abdominus in concentric phase.\"; o método lido no mesmo estudo dentro da tese de Clark (Univ. de Stirling, 2018, https://storre.stir.ac.uk/handle/1893/28080, cap. do estudo 4): \"Hack squats were performed with the back placed against the padded surface, shoulders wedged under the yokes and feet placed shoulder width apart to the front of the footplate.\"; \"Both squat versions comprised of a descent through knee and hip flexion to where mid-point of the thigh joint was below mid-point of the knee joint with a minimum knee flexion of 90o. The transition between the descent and the ascent was visually assessed as the point where the top of the thighs were horizontal in BS and parallel to the footplate in HS.\" (a técnica do hack ali cita Sigmon C, Duncan D. The hack squat. Natl Strength Cond Assoc J. August 1990:28-32 — o artigo da NSCA, que não está aberto: não foi lido)",
+  "Escamilla RF. Knee biomechanics of the dynamic squat exercise. Med Sci Sports Exerc. 2001;33(1):127-141. doi:10.1097/00005768-200101000-00020 — o estudo da dica do app, lido só o resumo (PubMed 11194098): \"Quadriceps, hamstrings, and gastrocnemius activity generally increased as knee flexion increased, which supports athletes with healthy knees performing the parallel squat (thighs parallel to ground at maximum knee flexion) between 0 and 100 degrees knee flexion.\"; \"For athletes with healthy knees, performing the parallel squat is recommended over the deep squat, because injury potential to the menisci and cruciate and collateral ligaments may increase with the deep squat.\" (o resumo não fala do hack nem do encosto: a parte da dica sobre o apoio do tronco está em Clark et al. 2019)",
+  "Escamilla RF, Fleisig GS, Zheng N, Lander JE, Barrentine SW, Andrews JR, Bergemann BW, Moorman CT 3rd. Effects of technique variations on knee biomechanics during the squat and leg press. Med Sci Sports Exerc. 2001;33(9):1552-1566. doi:10.1097/00005768-200109000-00020 — lido só o resumo (PubMed 11528346): \"two foot angle positions (feet straight and feet turned out 30 degrees)\"; \"No differences were found in muscle activity or knee forces between foot angle variations.\"",
+  "NFPT (National Federation of Professional Trainers) — How to do Hack Squats, Robert Bovee, 11/08/2025 (https://nfpt.com/how-to-do-hack-squats/, lido em 08/10/2026): \"Lay on the machine with your shoulders up against the shoulder pads and your feet on the platform. Push up against the shoulder pads until you are in a standing position. Flip the side handles in and hold them until you have completed the exercise.\"; \"her back should be flat and supported, with shoulders touching the padding behind her. Once feet are set in position and she is ready to perform, she should pick her head, anatomically forward, looking toward the upper corner of the room.\"; \"While bending at the hips and knees, take two to three seconds to lower the weight down until your knees are at 90 degrees. Press up through the heels of your feet to the starting position.\"; \"Medium Stance – The feet are placed shoulder width apart.\"; \"Do not let your hips come off the pad or arch your back at any time during this movement.\"; \"Do not let your heels rise up off the platform and do not let your knees move into a position where they are farther forward than your toes.\"; \"Do not lock out your knees.\"; \"The primary muscles recruited in this movement are biased towards the quadriceps, then glutes and hamstrings. The secondary muscles stressed include soleus, abdominals, and lower back core musculature. However, being braced by the machine significantly reduces the involvement of the core muscles versus a barbell or free standing squat.\"",
+  "Hall EA, Docherty CL. Validity of clinical outcome measures to evaluate ankle range of motion during the weight-bearing lunge test. J Sci Med Sport. 2017;20(7):618-621. doi:10.1016/j.jsams.2016.11.001 — lido só o resumo (PubMed 28108266): flexão dorsal máxima com o pé apoiado e o joelho dobrado, \"the motion capture angle (27.0°±6.0°)\"; Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29, tabela 5: \"Dorsiflexion\" \"0-20 degrees\", \"Plantar flexion\" \"0-50 degrees\"",
+  "Medidas da máquina — Hammer Strength Plate Loaded Hack Squat PL-HSQ2 (https://www.lifefitness.com/en-us/catalog/strength-training/plate-loaded/hack-squat, lido em 08/10/2026): \"a 45-degree pressing angle and ultra-smooth linear bearings\", \"Its adjustable foot platform shifts 8 degrees, giving athletes the equivalent of both a 3°and 10° heel wedge to fine-tune knee travel and dial in their quad focus.\", \"Flip-in, flip-out racking handles make transitions quick and secure, keeping athletes locked in and ready to push.\", \"The two XL weight rods can handle up to eight 45 lb plates per side\", \"Dimensions (L x W x H): 85 x 61 x 59 in (216 x 155 x 153 cm)\"; Titan Plate-Loaded Linear Hack Squat Machine, SKU 401231 (https://titan.fitness/products/plate-loaded-linear-hack-squat-machine, lido em 08/10/2026): \"Footplate Dimensions\" \"25.25-in x 23.25-in.\", \"Back Pad Dimensions\" \"20-in x 11.5-in x 2.75-in.\", \"Seat Pad Dimensions\" \"13.5-in x 11.5-in x 2.75-in.\", \"Handle Diameter\" \"31mm\", \"Handle Length\" \"8-in.\", \"Weight Sleeve Diameter\" \"50mm\", \"Weight Sleeve Length\" \"9.75-in.\"; Hoist RPL-5405 (manual do dono, lista de peças, a ombreira da panturrilha_em_pe): \"12\" X 5\" MOLDED PAD\"; Sorinex Hack Squat Machine (https://www.sorinex.com/products/hack-squat-machine): \"Elevated Head Pad: Ergonomically positioned for improved comfort and body alignment during lifts.\"; Atlantis PW412 Hack Squat Pro (ficha em PDF): \"Shoulder pads are strategically angled to alleviate stress on trapezius muscles.\""
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "no hack os pés ficam chapados na plataforma da máquina, a 26–65 cm do chão e inclinada 35° (ExRx: \"Place feet on platform\"); as regras de pé no chão (planta a 0 ± 5 mm, sem escorregar no chão) e as de técnica com os pés no chão (ponta do pé e largura medidas no plano do chão) não servem: quem confere os pés são as zonas do calcanhar e da planta na plataforma em todo quadro (ExRx: \"Do not allow heels to raise off of platform, pushing with both heel and forefoot\"), a largura dos pés e o joelho na direção do pé abaixo, e a cena mede o tornozelo parado no lugar (0 mm em todo quadro: a plataforma não anda, quem anda é o carrinho)",
+  "zonas": [
+   {
+    "nome": "glúteo e sacro encostados no encosto",
+    "equipamento": "hack_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NFPT — How to do Hack Squats (\"Do not let your hips come off the pad or arch your back at any time during this movement.\"); ExRx — Sled Hack Squat (\"If insufficient hip flexibility forces pelvis to pull away from back pad at lower portions of movement, only lower sled just short of spinal articulation.\"): o encosto anda junto com o corpo e a pelve não sai dele; o encosto tem 2 almofadas (como o \"Back Pad\" e o \"Seat Pad\" do Titan) e a de baixo, do glúteo, fica uns 13 mm mais saliente: a pele do glúteo do boneco sai ~8 mm pra frente quando o quadril dobra, então ela afunda ~10 mm no estofado em cima e 2 mm embaixo"
+   },
+   {
+    "nome": "costas encostadas no encosto",
+    "equipamento": "hack_encosto",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Sled Hack Squat (\"Lie supine on back pad with shoulders under shoulder pad.\"); Clark et al. 2019 (\"Hack squats were performed with the back placed against the padded surface\"); NFPT (\"her back should be flat and supported\")"
+   },
+   {
+    "nome": "cabeça encostada no apoio da cabeça",
+    "equipamento": "hack_encosto",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Sorinex Hack Squat Machine (\"Elevated Head Pad: Ergonomically positioned for improved comfort and body alignment during lifts.\"): o apoio da cabeça fica saliente na frente do encosto e a cabeça, neutra (NFPT: \"pick her head, anatomically forward\"), encosta nele"
+   },
+   {
+    "nome": "ombro esquerdo embaixo da ombreira",
+    "equipamento": "hack_ombreiras",
+    "partes": [
+     "LeftShoulder",
+     "LeftArm"
+    ],
+    "mm": [
+     -8,
+     3
+    ],
+    "fonte": "ExRx — Sled Hack Squat (\"Lie supine on back pad with shoulders under shoulder pad.\"); Clark et al. 2019 (\"shoulders wedged under the yokes\"); NFPT (\"Lay on the machine with your shoulders up against the shoulder pads\"): a pele do topo do ombro afunda uns milímetros no estofado"
+   },
+   {
+    "nome": "ombro direito embaixo da ombreira",
+    "equipamento": "hack_ombreiras",
+    "partes": [
+     "RightShoulder",
+     "RightArm"
+    ],
+    "mm": [
+     -8,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "calcanhar esquerdo chapado na plataforma",
+    "equipamento": "hack_plataforma",
+    "partes": [
+     "LeftFoot"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Sled Hack Squat (\"Do not allow heels to raise off of platform, pushing with both heel and forefoot.\"); NFPT (\"Do not let your heels rise up off the platform\")"
+   },
+   {
+    "nome": "calcanhar direito chapado na plataforma",
+    "equipamento": "hack_plataforma",
+    "partes": [
+     "RightFoot"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "planta e dedos do pé esquerdo na plataforma",
+    "equipamento": "hack_plataforma",
+    "partes": [
+     "LeftToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Sled Hack Squat (\"pushing with both heel and forefoot\")"
+   },
+   {
+    "nome": "planta e dedos do pé direito na plataforma",
+    "equipamento": "hack_plataforma",
+    "partes": [
+     "RightToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "canelas sem encostar na plataforma",
+    "equipamento": "hack_plataforma",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "só os pés encostam na plataforma (ExRx — Sled Hack Squat: \"Place feet on platform\")"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "carrinho (garfo, pegadores, chapa) longe do cabelo",
+    "equipamento": "hack_carrinho",
+    "de": "cabelo",
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "a cabeça encosta só no apoio da cabeça (regra da fábrica: nada entra no corpo)"
+   },
+   {
+    "nome": "ombreiras longe do cabelo",
+    "equipamento": "hack_ombreiras",
+    "de": "cabelo",
+    "mm": [
+     5,
+     1000000000000000.0
+    ],
+    "fonte": "a ombreira fica no ombro, por fora do pescoço e da cabeça (regra da fábrica)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelho quase esticado em cima, sem travar",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     5,
+     15
+    ],
+    "fonte": "dica do app (\"suba sem travar os joelhos\"); NFPT — How to do Hack Squats (\"Do not lock out your knees.\"); ExRx — Sled Hack Squat (\"Extend hips and knees.\")"
+   },
+   {
+    "nome": "joelho a ~100° embaixo (pelo menos 90°)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     95,
+     105
+    ],
+    "fonte": "dica do app (\"Desça até pelo menos 90°\"); Clark et al. 2019 (\"a minimum knee flexion of 90o\"); Escamilla 2001 (\"the parallel squat (thighs parallel to ground at maximum knee flexion) between 0 and 100 degrees knee flexion\"; \"performing the parallel squat is recommended over the deep squat\")"
+   },
+   {
+    "nome": "joelho nunca trava nem passa do fundo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     5,
+     105
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "coxa paralela à plataforma embaixo (a plataforma fica a 35° do chão)",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": 1.0,
+    "graus": [
+     -38,
+     -27
+    ],
+    "fonte": "Clark et al. 2019 (\"the top of the thighs were horizontal in BS and parallel to the footplate in HS\"): medida da fábrica, a coxa (quadril → joelho) × o chão — paralela a uma plataforma a 35° do chão, com a coxa aberta ~20° pro lado no plano dela, fica ~33° acima da horizontal (a cena mede também a coxa × plataforma: 0° embaixo)"
+   },
+   {
+    "nome": "quadril dobrando sem tirar a pelve do encosto",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     15,
+     90
+    ],
+    "fonte": "ExRx — Sled Hack Squat (\"If insufficient hip flexibility forces pelvis to pull away from back pad at lower portions of movement, only lower sled just short of spinal articulation.\"); embaixo o quadril fica em ~80° (a flexão do quadril normal vai até 120°: AAOS, por Norkin & White, a fonte do limites.py)"
+   },
+   {
+    "nome": "tronco parado, deitado no encosto a 45°",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     42,
+     48
+    ],
+    "fonte": "Hammer Strength PL-HSQ2 (\"a 45-degree pressing angle\"); ExRx — Sled Hack Squat (\"Lie supine on back pad\"): o encosto é paralelo aos trilhos e o tronco fica ~45° da vertical o movimento todo"
+   },
+   {
+    "nome": "coluna neutra, apoiada",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NFPT — How to do Hack Squats (\"Do not let your hips come off the pad or arch your back at any time during this movement.\")"
+   },
+   {
+    "nome": "cabeça neutra, olhando pra frente",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "NFPT — How to do Hack Squats (\"she should pick her head, anatomically forward, looking toward the upper corner of the room\"); medida da fábrica: cabeça × tronco, ~−11° em pé no repouso (a cabeça fica como em pé)"
+   },
+   {
+    "nome": "joelhos na direção dos pés (sem entrar pra dentro)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     0,
+     120
+    ],
+    "fonte": "ExRx — Sled Hack Squat (\"Keep knees pointed same directions as feet.\"): com os pés na largura dos ombros e as pontas um pouco pra fora o joelho vai pra fora da reta quadril–tornozelo quando dobra (embaixo ~9 cm), nunca pra dentro"
+   },
+   {
+    "nome": "pés na largura dos ombros",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.6,
+     2.1
+    ],
+    "fonte": "Clark et al. 2019 (\"feet placed shoulder width apart\"); NFPT (\"Medium Stance – The feet are placed shoulder width apart.\"): distância entre os tornozelos ÷ entre as articulações do quadril — no boneco os tornozelos ficam 0,39 m um do outro e os ombros 0,40 m (≈1,8×)"
+   },
+   {
+    "nome": "tornozelo: flexão plantar em cima e dorsal leve embaixo, dentro do normal",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     44,
+     96
+    ],
+    "fonte": "neutro do boneco em pé ~76° (tecnica3d.tornozelo); Alazzawi et al. 2017 (flexão plantar \"0-50 degrees\", dorsal \"0-20 degrees\"): 76 − 32 a 76 + 20; em cima, com os pés à frente do corpo na plataforma inclinada, o tornozelo fica em flexão plantar (~26°), como na animação do ExRx"
+   },
+   {
+    "nome": "cotovelos dobrados, mãos nos pegadores do lado da cabeça",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     110,
+     140
+    ],
+    "fonte": "NFPT (\"Flip the side handles in and hold them until you have completed the exercise.\"); Hammer Strength PL-HSQ2 (\"Flip-in, flip-out racking handles make transitions quick and secure, keeping athletes locked in and ready to push.\"): as mãos ficam nos pegadores da frente das ombreiras, na altura do queixo (como na animação do ExRx)"
+   },
+   {
+    "nome": "pegada neutra (palmas viradas pro meio)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ]
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}
