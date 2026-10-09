@@ -411,6 +411,7 @@ export default function Acompanhamento() {
         pacienteId={p.id}
         registro={modal.registro}
         registros={registros}
+        periodo={intervalo}
         onSalvo={onSalvo}
       />
 

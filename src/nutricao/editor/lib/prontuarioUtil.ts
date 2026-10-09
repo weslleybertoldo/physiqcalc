@@ -50,8 +50,7 @@ export function ordenarRegistros<T extends { data: string; created_at: string }>
 /** Substitui (pelo id) ou acrescenta e devolve a lista já ordenada. */
 export const inserirOrdenado = <T extends { id: string; data: string; created_at: string }>(lista: T[], r: T): T[] =>
   ordenarRegistros([...lista.filter((x) => x.id !== r.id), r]);
-
-export const ultimoRegistro = <T extends { data: string; created_at: string }>(lista: T[]): T | null => ordenarRegistros(lista)[0] ?? null;
+// hml-14d (D41): o ultimoRegistro do Nutri saiu — a aba Anotações pagina no banco e o "última em" vem de lá (aluno_anotacoes › ultima).
 
 /** `yyyy-MM` do mês do registro (fuso local). */
 export const chaveMes = (iso: string): string => format(new Date(iso), "yyyy-MM");

@@ -438,7 +438,8 @@ def descr(e: dict | None) -> str:
 
 
 def pedido_da_pagina(rede: Rede, L: Lista, desde: int, pagina: int) -> dict | None:
-    """O último pedido da página `pagina` a uma das fontes da lista, a partir do evento `desde`."""
+    """O último pedido da página `pagina` a uma das fontes da lista, a partir do evento `desde`. Pedido com outro tamanho (o "(N com
+    GIF)" da Meus treinos: exercicios_da_lista com p_limite 1, só as contagens) não é a página: fica de fora."""
     achados = []
     fontes = {tuple(f[:2]) for f in L.fontes}
     for e in rede.eventos[desde:]:

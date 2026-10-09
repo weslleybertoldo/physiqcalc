@@ -6,9 +6,17 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Chamada = { tabela: string; metodos: Array<[string, unknown[]]> };
-const h = vi.hoisted(() => ({ chamadas: [] as Array<{ tabela: string; metodos: Array<[string, unknown[]]> }>, registros: [] as Array<Record<string, unknown>> }));
+const h = vi.hoisted(() => ({
+  chamadas: [] as Array<{ tabela: string; metodos: Array<[string, unknown[]]> }>,
+  registros: [] as Array<Record<string, unknown>>,
+  erroDia: null as string | null,
+}));
 
-/** o supabase-js falso: anota cada método da consulta; registros_diarios responde com o que cai no gte/lte pedido */
+/** o pedido é um HEAD (só a contagem)? — o do aviso "dia já registrado" */
+const ehHead = (c: Chamada) => c.metodos.some(([m, a]) => m === "select" && (a[1] as { head?: boolean } | undefined)?.head === true);
+
+/** o supabase-js falso: anota cada método da consulta; registros_diarios responde com o que cai no gte/lte pedido (ou, no HEAD, a
+ * contagem do dia do eq) */
 function consulta(tabela: string): unknown {
   const c: Chamada = { tabela, metodos: [] };
   h.chamadas.push(c);
@@ -17,6 +25,11 @@ function consulta(tabela: string): unknown {
       if (k === "then") {
         return (ok: (v: unknown) => void) => {
           if (tabela !== "registros_diarios") return ok({ data: [], error: null });
+          if (ehHead(c)) {
+            if (h.erroDia) return ok({ data: null, count: null, error: { message: h.erroDia } });
+            const dia = c.metodos.find(([m, a]) => m === "eq" && a[0] === "data")?.[1][1];
+            return ok({ data: null, count: h.registros.filter((r) => r.data === dia).length, error: null });
+          }
           const de = c.metodos.find(([m, a]) => m === "gte" && a[0] === "data")?.[1][1] as string | undefined;
           const ate = c.metodos.find(([m, a]) => m === "lte" && a[0] === "data")?.[1][1] as string | undefined;
           ok({ data: h.registros.filter((r) => (!de || String(r.data) >= de) && (!ate || String(r.data) <= ate)), error: null });
@@ -62,6 +75,7 @@ const registro = (data: string) => ({ id: `r-${data}`, paciente_id: "p1", data, 
 
 beforeEach(() => {
   h.chamadas = [];
+  h.erroDia = null;
   h.registros = ["2026-08-31", "2026-09-01", "2026-09-15", "2026-09-30", "2026-10-01"].map(registro);
 });
 
@@ -88,5 +102,53 @@ describe("Acompanhamento — o período vai ao banco (hml-14d, D34)", () => {
     const m = pedidosDeRegistros()[1].metodos;
     expect(m).toContainEqual(["gte", ["data", p30.de]]);
     expect(m).toContainEqual(["lte", ["data", p30.ate]]);
+  });
+});
+
+describe("o aviso \"dia já registrado\" com a tela só no período (hml-14d, D34)", () => {
+  const headsDoDia = (dia: string) =>
+    h.chamadas.filter((c) => c.tabela === "registros_diarios" && ehHead(c) && c.metodos.some(([m, a]) => m === "eq" && a[0] === "data" && a[1] === dia));
+  const abrirDialogo = async () => {
+    montar("/painel/alunos/p1/dieta?secao=acompanhamento&de=2026-09-01&ate=2026-09-30");
+    await waitFor(() => expect(document.querySelector("[data-btn-novo-registro]")?.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(document.querySelector("[data-btn-novo-registro]")!);
+    return await waitFor(() => {
+      const campo = document.querySelector<HTMLInputElement>("[data-campo-data-registro]");
+      expect(campo).not.toBeNull();
+      return campo!;
+    });
+  };
+  const botaoSalvar = () => document.querySelector("[data-btn-salvar-registro]")?.textContent;
+
+  it("dia FORA do período: 1 HEAD ao banco (o dia e o aluno, só os vivos) e o aviso; DENTRO: o aviso de antes, sem pedido", async () => {
+    const campo = await abrirDialogo();
+    fireEvent.change(campo, { target: { value: "2026-08-31" } });
+    await waitFor(() => expect(document.querySelector('[data-aviso-dia-existente="2026-08-31"][data-aviso-dia-banco]')).not.toBeNull());
+    expect(document.querySelector("[data-aviso-dia-banco]")?.textContent).toContain("Já existe registro neste dia — salvar vai atualizar.");
+    expect(botaoSalvar()).toBe("Salvar");
+    expect(headsDoDia("2026-08-31")).toHaveLength(1);
+    const m = headsDoDia("2026-08-31")[0].metodos;
+    expect(m).toContainEqual(["select", ["id", { count: "exact", head: true }]]);
+    expect(m).toContainEqual(["eq", ["paciente_id", "p1"]]);
+    expect(m).toContainEqual(["is", ["deleted_at", null]]);
+    // dentro do período: a lista da tela responde (o aviso de antes, com a água e o id), sem pedido novo
+    const antes = h.chamadas.filter(ehHead).length;
+    fireEvent.change(campo, { target: { value: "2026-09-15" } });
+    await waitFor(() => expect(document.querySelector('[data-aviso-dia-existente="r-2026-09-15"]')).not.toBeNull());
+    expect(document.querySelector("[data-aviso-dia-banco]")).toBeNull();
+    expect(h.chamadas.filter(ehHead)).toHaveLength(antes);
+    // fora do período e sem registro: pergunta e não avisa (a resposta do dia anterior não vale para este)
+    fireEvent.change(campo, { target: { value: "2026-08-20" } });
+    await waitFor(() => expect(headsDoDia("2026-08-20")).toHaveLength(1));
+    await waitFor(() => expect(botaoSalvar()).toBe("Registrar"));
+    expect(document.querySelector("[data-aviso-dia-existente]")).toBeNull();
+  });
+
+  it("erro do banco no HEAD: diz que não deu para conferir (nada de sumir calado)", async () => {
+    h.erroDia = "statement timeout";
+    const campo = await abrirDialogo();
+    fireEvent.change(campo, { target: { value: "2026-08-31" } });
+    await waitFor(() => expect(document.querySelector("[data-aviso-dia-erro]")).not.toBeNull());
+    expect(document.querySelector("[data-aviso-dia-existente]")).toBeNull();
   });
 });

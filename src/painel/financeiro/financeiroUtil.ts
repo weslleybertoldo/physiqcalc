@@ -3,7 +3,8 @@
 // ordenação, filtro por tipo/categoria/forma/texto e contagem. Novo aqui: o filtro pela FORMA de pagamento (spec 4.4 —
 // "entradas e saídas por categoria e forma de pagamento"). Nada de rede; testado no Vitest (financeiroUtil.test.ts).
 // hml-14b (B21 · D14): a tela não filtra nem soma mais aqui — o banco faz (financeiro_lancamentos e financeiro_resumo_periodo, migration
-// 20261009010000). `filtrarTransacoes` e `totais` ficam como o ESPELHO da regra do banco (a prova local da migration compara os 2).
+// 20261009010000). `totais` fica como o ESPELHO da regra do banco (a prova local da migration compara os 2); o filtro, a ordem e as
+// palavras da busca saíram na hml-14d (D41 — só os testes usavam).
 import { endOfMonth, endOfYear, format, isValid, parseISO, startOfDay, startOfMonth, startOfYear, subDays, subMonths } from "date-fns";
 import { chaveDia, dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
@@ -276,11 +277,9 @@ export function registroParaForm(t: {
 }
 
 // ---- Filtro e contagem ----
-// hml-14d (D41): ordenarTransacoes, inserirOrdenado e filtrarTransacoes (o espelho, no navegador, do filtro e da ordem que o banco já
-// faz — financeiro_transacoes_visiveis/financeiro_lancamentos, hml-14b) saíram: nenhum código usava, só os testes.
+// hml-14d (D41): ordenarTransacoes, inserirOrdenado, filtrarTransacoes e palavrasBusca (o espelho, no navegador, do filtro e da ordem
+// que o banco já faz — financeiro_transacoes_visiveis/financeiro_lancamentos, hml-14b) saíram: nenhum código usava, só os testes.
 const normalizar = (s: string | null | undefined): string => semAcento(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
-/** Palavras da busca (até 6), sem acento/caixa. */
-export const palavrasBusca = (q: string | null | undefined): string[] => normalizar(q).split(" ").filter(Boolean).slice(0, 6);
 export function textoContagem(n: number): string {
   if (n === 0) return "Nenhuma movimentação";
   if (n === 1) return "1 movimentação";

@@ -459,9 +459,11 @@ export function bloqueadoPorPagamento(d: FinanceiroProfissional | null | undefin
   return !!r && travaDoInadimplente(r, agora);
 }
 
-/** N-45: o Financeiro do aluno mostra os 12 lançamentos mais recentes; "Ver todos" abre a lista inteira (até os 500 que a consulta traz). */
+/**
+ * N-45: o Financeiro do aluno mostra os 12 lançamentos mais recentes; "Ver todos (N)" abre a lista inteira — hml-14d (B21): em páginas
+ * de 20 do banco (?pagina_lancamentos=), sem o teto de 500 de antes.
+ */
 export const LANCAMENTOS_VISIVEIS = 12;
-export const LANCAMENTOS_MAX = 500;
 
 /**
  * N-45: "Editar, estornar ou excluir" (o "Abrir no Financeiro" do Nutri): Painel › Financeiro › Lançamentos com a busca pelo nome do

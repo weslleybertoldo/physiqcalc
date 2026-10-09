@@ -5,7 +5,7 @@
  * Os números saem das mesmas contas do editor da W15 (séries, duração estimada) — o que o profissional vê = o que o aluno recebe.
  */
 import { estimarDuracaoMin } from "@/app-aluno/inicio/pecas/regras";
-import { MUSCULOS_PRIMARIOS_CONHECIDOS, blocoDoGrupoMuscular, musculosDosBlocos } from "@/lib/gruposMusculares";
+import { MUSCULOS_PRIMARIOS_CONHECIDOS, musculosDosBlocos } from "@/lib/gruposMusculares";
 import { SERIES_PADRAO_DEFAULT, clampSeries } from "@/lib/seriesPadrao";
 import { DESCANSO_PADRAO, GRUPOS_VOLUME, subtituloDoExercicio } from "@/treino/editor/regras";
 import type { ExercicioEditor, PrescricaoEditavel } from "@/treino/editor/tipos";
@@ -196,12 +196,6 @@ export const textoExercicios = (n: number): string => (n === 1 ? "1 exercício" 
 
 export type EscopoBiblioteca = "global" | "minha";
 
-/** Em qual grupo da tela (Peito, Costas, Pernas, Ombros, Braços…) o exercício cai — os mesmos filtros do "Adicionar exercício". */
-export function grupoDaTela(grupoMuscular: string | null | undefined): string {
-  const bloco = blocoDoGrupoMuscular(grupoMuscular || "");
-  return GRUPOS_VOLUME.find((g) => (g.blocos as readonly string[]).includes(bloco))?.chave ?? "outros";
-}
-
 /** "Bíceps / Braquial · Rosca martelo · Halteres" — grupo · movimento · equipamento (o que a troca por equivalente usa). */
 export function linhaDaBiblioteca(e: Pick<ExercicioCatalogo, "grupo_muscular" | "padrao_movimento" | "equipamento">): string {
   return [e.grupo_muscular, rotuloPadrao(e.padrao_movimento), rotuloEquipamento(e.equipamento)].filter(Boolean).join(" · ");
@@ -214,7 +208,8 @@ export const termoDaBusca = (t: string): string => t.trim().replace(/\s+/g, " ")
  * hml-14d (B21 · D24): a busca e o grupo da biblioteca como o banco entende (RPC exercicios_da_lista) — antes eram filtros no
  * navegador sobre a tabela inteira. `q` = o termo (nome, grupo muscular, subgrupo e variação, sem acento); `codigos` = os de
  * movimento/equipamento cujos RÓTULOS casam com o termo (o que a linha "grupo · movimento · equipamento" mostra); o grupo da tela
- * vira `musculos` (os músculos primários dos blocos dele — o mesmo mapa do grupoDaTela) ou, em "outros", `fora` (nenhum conhecido).
+ * vira `musculos` (os músculos primários dos blocos dele — o mesmo mapa do filtro de grupo que o navegador fazia, blocoDoGrupoMuscular)
+ * ou, em "outros", `fora` (nenhum conhecido).
  */
 export function filtrosDaBiblioteca(termo: string, grupo: string): Pick<FiltrosExercicios, "q" | "codigos" | "musculos" | "fora"> {
   const f: Pick<FiltrosExercicios, "q" | "codigos" | "musculos" | "fora"> = {};

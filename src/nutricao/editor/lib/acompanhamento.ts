@@ -44,6 +44,23 @@ export async function listarRegistrosDoPaciente(pacienteId: string, de: string, 
   return (data ?? []) as RegistroDiario[];
 }
 
+/**
+ * Quantos registros vivos o paciente tem NESTE dia (0 ou 1 — o índice único parcial). hml-14d (D34): o aviso "já existe registro
+ * neste dia" do diálogo olhava a lista inteira do aluno; agora a tela só tem o período, e o dia escolhido FORA dele é perguntado
+ * aqui — HEAD (só a contagem, no banco). O tempo é o do cliente principal (15 s por tentativa, criarFetchResiliente — hml-14 D5).
+ */
+export async function contarRegistrosDoDia(pacienteId: string, dia: string): Promise<number> {
+  const { count, error } = await supabase
+    .from(TABELA)
+    .select("id", { count: "exact", head: true })
+    .eq("paciente_id", pacienteId)
+    .eq("data", dia)
+    .is("deleted_at", null);
+  falhou(error);
+  if (count == null) throw new Error("O banco não devolveu a contagem do dia.");
+  return count;
+}
+
 async function registroVivoDoDia(pacienteId: string, dia: string): Promise<RegistroDiario | null> {
   const { data, error } = await supabase
     .from(TABELA)

@@ -2,7 +2,7 @@
  * Painel › Treinos (W23 — spec 4.4 "Treinos", C42–C45): o que vem do Banco do Treino (os modelos, as pastas, a biblioteca e os
  * grupos musculares — as MESMAS tabelas da aba "Treinos" do admin antigo) e o modelo de tela montado a partir disso (regras.ts).
  */
-import type { EscopoDaBiblioteca, FiltrosDaBiblioteca, PaginaDaBiblioteca } from "@/treino/editor/api";
+import type { FiltrosDaBiblioteca } from "@/treino/editor/api";
 import type { ExercicioEditor } from "@/treino/editor/tipos";
 
 /** Um treino-modelo (tb_grupos_treino): do profissional (professor_id) ou GLOBAL do master (professor_id null). */
@@ -147,11 +147,9 @@ export interface ModeloAberto {
   detalhes: DetalhesDosModelos;
 }
 
-/** Os filtros e a página da RPC exercicios_da_lista (Biblioteca do painel e a folha do editor): o contrato mora em
- * src/treino/editor/api.ts (a folha do editor usa o mesmo). */
-export type EscopoExercicios = EscopoDaBiblioteca;
+/** Os filtros da RPC exercicios_da_lista (Biblioteca do painel e a folha do editor): o contrato mora em src/treino/editor/api.ts
+ * (a folha do editor usa o mesmo). */
 export type FiltrosExercicios = FiltrosDaBiblioteca;
-export type PaginaExercicios = PaginaDaBiblioteca<ExercicioCatalogo>;
 
 /** Um aluno da lista "Quem recebe" (a ação quemRecebeLista: a página já vem marcada). */
 export interface AlunoQuemRecebe extends AlunoDaLista {

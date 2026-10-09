@@ -7,7 +7,6 @@ import {
   erroDoNome,
   exercicioDoModelo,
   filtrosDaBiblioteca,
-  grupoDaTela,
   linhaDaBiblioteca,
   montarModelos,
   montarPastas,
@@ -22,7 +21,7 @@ import {
   textoMaisAlunosTreino,
   visivel,
 } from "./regras";
-import { MUSCULOS_PRIMARIOS_CONHECIDOS } from "@/lib/gruposMusculares";
+import { MUSCULOS_PRIMARIOS_CONHECIDOS, blocoDoGrupoMuscular } from "@/lib/gruposMusculares";
 import { GRUPOS_VOLUME } from "@/treino/editor/regras";
 import { montarGruposTroca } from "@/treino/equivalencia";
 import type { Catalogo, ExercicioCatalogo, LinhaModelo, QuemMexe } from "./tipos";
@@ -206,6 +205,11 @@ describe("W23 — biblioteca (global só leitura + a própria)", () => {
     expect(filtrosDaBiblioteca("", "xyz")).toEqual({});
   });
   it("hml-14d: os músculos de cada grupo que vão ao banco = o grupoDaTela de cada um (o mapa do navegador e o do banco batem)", () => {
+    // o filtro de grupo que o navegador fazia até a hml-14c (o grupoDaTela saiu do código na integração da 14d — só este teste usava)
+    const grupoDaTela = (grupoMuscular: string): string => {
+      const bloco = blocoDoGrupoMuscular(grupoMuscular || "");
+      return GRUPOS_VOLUME.find((x) => (x.blocos as readonly string[]).includes(bloco))?.chave ?? "outros";
+    };
     for (const g of GRUPOS_VOLUME) {
       if (g.chave === "outros") continue;
       const musculos = filtrosDaBiblioteca("", g.chave).musculos ?? [];

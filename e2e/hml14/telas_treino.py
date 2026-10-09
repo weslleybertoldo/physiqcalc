@@ -191,6 +191,11 @@ def t1(o, nav, R, desktop: bool) -> None:
             caso.diagnostico()
             return
         N = int(st["total"] or 0)
+        # o "(N com GIF)" do "Adicionar exercício da biblioteca": 1 pedido à exercicios_da_lista SÓ com as contagens (p_limite 1) — não é
+        # a página de nenhuma lista (o pedido_da_pagina só pega o p_limite 20 da fonte da lista; o da Meus treinos é a modelos_da_lista)
+        gif = [x for x in rede.eventos if x["nome"] == "exercicios_da_lista" and x["status"] < 300]
+        o.ok(all(x["limite"] == 1 and (x["n"] or 0) <= 1 for x in gif),
+             f"{t} o '(N com GIF)': {len(gif)} pedido(s) à exercicios_da_lista, só com p_limite 1 ({T.descr(gif[0]) if gif else 'nenhum'})")
         # a busca pelo nome de um EXERCÍCIO (sem acento) acha o modelo que o usa
         busca = T.campo_busca(caso, MODELOS)
         termo = f"exercicio #{e.get('exercicio_da_linha', '07')}"

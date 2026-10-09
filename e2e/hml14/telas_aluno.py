@@ -10,7 +10,8 @@ aluno_anotacoes (p_offset), exames_do_aluno (20 DATAS) e minha_agenda_lista (p_t
   P2  Anotações: "1–20 de N", ?pagina_anotacoes=, os 41 aparecem (L1–L5, L8)
   P3  Exames: as datas em páginas de 20 (?pagina_exames=; a data nunca é partida: o grupo da data tem os resultados dela), "Ver evolução
       de" pede só aquele exame (p_exame) → 21 datas; os pedidos de exame em páginas (?pagina_pedidos=)
-  P4  Acompanhamento: todo pedido a registros_diarios leva o período (data=gte & data=lte) — nenhum sem período
+  P4  Acompanhamento: todo pedido a registros_diarios leva o período (data=gte & data=lte) — nenhum sem período (o HEAD de 1 dia,
+      data=eq., é o aviso "dia já registrado" do diálogo para um dia fora do período)
   P5  app › Pagamentos: "Ver todos (N)" de pagamentos e de recibos → folha em páginas de 20 (aluno_historico), os 41 aparecem, fecha = 1
   P6  app › Agenda: "Próximas" com as 20 primeiras + "Ver todas (N)" → folha em páginas (minha_agenda_lista), os 41 aparecem
   P7  Pré-consulta (nutri-legado, massa da 14b): os números do topo = os da preconsulta_numeros = o banco; nenhum pedido de 1000 respostas
@@ -245,10 +246,12 @@ def p4(o, nav, R, desktop: bool) -> None:
                 preset.nth(1).click()
                 caso.pg.wait_for_timeout(2500)
         leituras = [e for e in rede.eventos if e["nome"] == "registros_diarios" and e["metodo"] in ("GET", "HEAD")]
-        sem = [e for e in leituras if not (any(k == "data" and str(v).startswith("gte.") for k, v in e.get("query_pares") or [])
-                                           and any(k == "data" and str(v).startswith("lte.") for k, v in e.get("query_pares") or []))]
+        # o aviso "dia já registrado" do diálogo pergunta 1 dia FORA do período (HEAD só com a contagem, data=eq.) — não é a lista
+        do_dia = [e for e in leituras if e["metodo"] == "HEAD" and any(k == "data" and str(v).startswith("eq.") for k, v in e.get("query_pares") or [])]
+        sem = [e for e in leituras if e not in do_dia and not (any(k == "data" and str(v).startswith("gte.") for k, v in e.get("query_pares") or [])
+                                                               and any(k == "data" and str(v).startswith("lte.") for k, v in e.get("query_pares") or []))]
         o.ok(ok and leituras and not sem, f"{t} todo pedido a registros_diarios leva o período (data=gte e data=lte): {len(leituras)} pedido(s), "
-                                          f"{len(sem)} sem o período")
+                                          f"{len(sem)} sem o período" + (f" (+ {len(do_dia)} HEAD de 1 dia do diálogo)" if do_dia else ""))
         if not desktop:
             largura_ok(o, caso, t)
         o.linha(f"   print: {caso.print('acompanhamento' + ('' if desktop else '_390px'))}")
