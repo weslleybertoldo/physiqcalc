@@ -520,6 +520,31 @@ def test_linha_joelho_quadril_cabeca_na_flexao_nordica():
     assert "linha_joelho_quadril_cabeca" in tc.MEDIDAS
 
 
+def test_quadril_na_reta_e_dedos_da_mao_na_flexao_de_braco():
+    """Flexão de braço (lote 7): ombros, quadril e tornozelos numa reta = 0; o quadril 3 cm pras costas (subiu) = +30, pra barriga
+    (caiu) = −30; o mesmo número de bruços, inclinado 10° (a cabeça mais alta), ou virado em volta da vertical. Mãos espalmadas no
+    chão: dedos na direção da cabeça = 0; virados 10° pro meio do corpo = +10 nas duas mãos; pra fora = −."""
+    j = em_pe()                                                   # ombros, quadril e tornozelos no eixo x = 0, y = 0
+    assert tc.quadril_linha_ombro_tornozelo(j) == pytest.approx([0], abs=1e-6)
+    for mm, dy in ((30, 0.03), (-30, -0.03)):                     # em pé, as costas ficam pra +Y
+        k = dict(j, **{L + "UpLeg": j[L + "UpLeg"] + np.array([0, dy, 0]) for L in ("Left", "Right")})
+        assert tc.quadril_linha_ombro_tornozelo(k) == pytest.approx([mm], abs=1e-6)
+        de_brucos = girar(k, 80, (1, 0, 0))                       # cabeça pra −Y, costas pra cima, a cabeça 10° acima dos pés
+        assert de_brucos["Neck"][1] < -1.0 and de_brucos["Neck"][2] > 0.2
+        assert tc.quadril_linha_ombro_tornozelo(de_brucos) == pytest.approx([mm], abs=1e-6)
+        assert tc.quadril_linha_ombro_tornozelo(girar(de_brucos, 35, (0, 0, 1))) == pytest.approx([mm], abs=1e-6)
+    j = girar(em_pe(), 80, (1, 0, 0))
+    for L, s in (("Left", 1), ("Right", -1)):                     # mão espalmada no chão, ao lado do ombro
+        j[L + "Hand"] = np.array([s * 0.28, -1.20, 0.03])
+    for graus in (0, 10, -15):
+        for L, s in (("Left", 1), ("Right", -1)):                 # "pra dentro" = −s·x (o esquerdo fica em +X)
+            a = math.radians(graus)
+            j[L + "HandMiddle1"] = j[L + "Hand"] + 0.11 * np.array([-s * math.sin(a), -math.cos(a), 0.0])
+        assert tc.dedos_mao_dentro(j) == pytest.approx([graus, graus], abs=1e-6)
+        assert tc.dedos_mao_dentro(girar(j, 50, (0, 0, 1))) == pytest.approx([graus, graus], abs=1e-6)
+    assert {"quadril_linha_ombro_tornozelo", "dedos_mao_dentro"} <= set(tc.MEDIDAS)
+
+
 def sentado_coxas(graus_e, graus_d):
     """Sentado olhando pra −Y: coxas deitadas (joelho na altura do quadril) abertas `graus` pra fora, canelas em pé."""
     j = dict(em_pe())
