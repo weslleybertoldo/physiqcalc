@@ -176,7 +176,8 @@ def item_spf() -> None:
 
 def item_caa() -> None:
     caa = dig("CAA", DOMINIO)
-    faltam = [ca for ca in CAS if not re.search(rf'^0 issue "{re.escape(ca)}"$', caa, flags=re.M)]
+    # a Cloudflare junta os registros dela (e põe parâmetros, ex. "pki.goog; cansignhttpexchanges=yes") e o issuewild
+    faltam = [ca for ca in CAS if not re.search(rf'^0 issue "{re.escape(ca)}(;[^"]*)?"$', caa, flags=re.M)]
     ok(not faltam, f"[caa] CAA {DOMINIO}: {caa.splitlines() or '(vazio)'}" + (f" — falta: {faltam}" if faltam else ""))
     r = cf_get("/ssl/certificate_packs?status=all")
     pacotes = [(x.get("type"), x.get("certificate_authority"), x.get("status")) for x in r.get("result") or []]

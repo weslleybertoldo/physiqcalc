@@ -29,6 +29,13 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 14:33 | hml-15 | `7780b62` | `e2e/hml15/csp.py --base prod --canal msedge --modo relatorio` | produção | 128/128 | SÓ LEITURA; CSP relatando: 0 violação (inclui o app do aluno a 390 px com o Treino) |
+| 09/10 14:17 | hml-15 | `9757a5a` | `e2e/hml15/dominio.py` | produção | 27/28 | a ❌ = o teste do CAA exigia o texto exato (a Cloudflare põe `pki.goog; cansignhttpexchanges=yes`): corrigido no passo 2 → `--so caa` 2/2 |
+| 09/10 14:09 | hml-15 | `e237012` | `e2e/hml15/csp.py --base staging --canal msedge --modo relatorio` | staging | 140/140 | 0 violação inesperada; aviso: o Turnstile do `/c/` não monta quando o script carrega antes do formulário (H-78) |
+| 09/10 11:26 | hml-15 | `596c2a6` | `e2e/hml05c/limite_ip.py --schema staging --so ip,normal` | staging | 23/23 | regressão depois da Cloudflare (TLS 1.2, Always HTTPS, HSTS, SSL strict) |
+| 09/10 11:26 | hml-15 | `596c2a6` | `e2e/hml05a/entrada.py --schema public --so treino` | produção | 6/6 | regressão depois da Cloudflare (só leitura) |
+| 09/10 11:25 | hml-15 | `596c2a6` | `e2e/hml05a/entrada.py --schema staging --so treino` | staging | 6/6 | regressão depois da Cloudflare |
+| 09/10 11:25 | hml-15 | `596c2a6` | `e2e/w02/proxy_principal.py` | produção | 10/12 | as 2 ❌ já existiam: login por senha → 400 `captcha_failed` também direto no banco (captcha da hml-05a) e o redirect `localhost` fora da lista (hml-04) |
 | 09/10 13:45 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo relatorio` | local | 142/142 | Report-Only: 14 violações, todas esperadas (as sondas) |
 | 09/10 13:28 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --com-sw` | local | 151/151 | SW ligado em todo contexto: a 2ª abertura do / e do /treino sem rede vem do precache; 0 violação vinda do sw.js |
 | 09/10 13:09 | hml-15 | `fadbef4` | `e2e/hml15/csp.py --base local --canal msedge --modo valendo --so plano --emular-host physiqcalc.com.br` | local | 10/10 | host emulado `physiqcalc.com.br` com a CSP valendo: o antifraude do MP (variante .br) roda com o nonce, `MP_DEVICE_SESSION_ID` definido, 0 violação |
