@@ -29,6 +29,9 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 18:01 | hml-16 | `f6eb484` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_16 --casos espera --canal msedge` | staging | 14/14 | F5: o site do staging já com a publishable do principal (build `f6eb484`). O `--canal` é deste PR |
+| 09/10 17:58 | hml-16 | `f6eb484` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_16 --casos espera` | staging | 5/6 | as 4 tentativas erradas e a espera ✅; a 6ª = o Chromium embutido caiu ("Target crashed") → a rodada de cima, com o Edge |
+| 09/10 ~17:57 | hml-16 | `f6eb484` | `e2e/hml12/telas.py --base staging --prefixo staging_16 --canal msedge --casos T13,T8` | staging | 12/12 | F5: o site do staging com a publishable do principal |
 | 09/10 17:53 | hml-16 | `a987783` | `e2e/w07/smoke_prod.py telas --versao 3.85 --canal msedge` | produção | 13/13 | F4 (depois da espera de 15 min da troca do `PRINCIPAL_ANON_KEY` do Treino). O `--canal` é deste PR: sem ele, 2 rodadas caíram no print da Conta (o Chromium embutido do Playwright dá SIGSEGV no print da página inteira mais alta que a tela; sem placar) |
 | 09/10 17:47 | hml-16 | `a987783` | `e2e/w16/api.py` | staging | 40/41 | F4; = base (a prescrição da tela 8: 0 linhas com reps) |
 | 09/10 17:47 | hml-16 | `a987783` | `e2e/w02/trocar_token.py` | staging | 24/25 | F4, 16 min depois da troca; = base (a 1 = dado da conta de teste) |
