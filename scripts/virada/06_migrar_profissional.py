@@ -39,11 +39,12 @@ import os
 import subprocess
 import sys
 import uuid
-from functools import lru_cache
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _base import PRINCIPAL_REF, TREINO_CONN, TREINO_REF, email_de_teste, http, lit, pat, salvar_json, sql_principal, sql_treino  # noqa: E402
+from _base import (  # noqa: E402
+    PRINCIPAL_REF, TREINO_CONN, TREINO_REF, chave_servidor, email_de_teste, http, lit, pat, salvar_json, sql_principal, sql_treino,
+)
 
 TREINO_URL = f"https://{TREINO_REF}.supabase.co"
 PASTA_PADRAO = Path.home() / "backups" / "physiq" / "2026-09-30-w16b" / "parteB"
@@ -66,16 +67,9 @@ T_HISTORICO = {("physiq_avaliacoes", "created_by"), ("edge_rate_limits", "user_i
 
 # ───────────────────────── acesso ─────────────────────────
 
-@lru_cache(maxsize=None)
-def chaves(ref: str) -> dict:
-    st, lista = http("GET", f"https://api.supabase.com/v1/projects/{ref}/api-keys?reveal=true", cab={"Authorization": f"Bearer {pat()}"})
-    if st != 200:
-        raise RuntimeError(f"api-keys {ref}: HTTP {st}")
-    return {k["name"]: k["api_key"] for k in lista}
-
-
 def admin_treino(metodo: str, caminho: str, corpo=None) -> tuple[int, object]:
-    k = chaves(TREINO_REF)["service_role"]
+    # a service_role legada do Treino morreu na troca da chave vazada (04/10/2026): vai a chave de servidor (hml-16)
+    k = chave_servidor(TREINO_REF)
     return http(metodo, f"{TREINO_URL}/auth/v1/admin/{caminho.lstrip('/')}", corpo, {"apikey": k, "Authorization": f"Bearer {k}"})
 
 

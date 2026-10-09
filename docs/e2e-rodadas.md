@@ -29,6 +29,28 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 09/10 18:01 | hml-16 | `f6eb484` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_16 --casos espera --canal msedge` | staging | 14/14 | F5: o site do staging já com a publishable do principal (build `f6eb484`). O `--canal` é deste PR |
+| 09/10 17:58 | hml-16 | `f6eb484` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_16 --casos espera` | staging | 5/6 | as 4 tentativas erradas e a espera ✅; a 6ª = o Chromium embutido caiu ("Target crashed") → a rodada de cima, com o Edge |
+| 09/10 ~17:57 | hml-16 | `f6eb484` | `e2e/hml12/telas.py --base staging --prefixo staging_16 --canal msedge --casos T13,T8` | staging | 12/12 | F5: o site do staging com a publishable do principal |
+| 09/10 17:53 | hml-16 | `a987783` | `e2e/w07/smoke_prod.py telas --versao 3.85 --canal msedge` | produção | 13/13 | F4 (depois da espera de 15 min da troca do `PRINCIPAL_ANON_KEY` do Treino). O `--canal` é deste PR: sem ele, 2 rodadas caíram no print da Conta (o Chromium embutido do Playwright dá SIGSEGV no print da página inteira mais alta que a tela; sem placar) |
+| 09/10 17:47 | hml-16 | `a987783` | `e2e/w16/api.py` | staging | 40/41 | F4; = base (a prescrição da tela 8: 0 linhas com reps) |
+| 09/10 17:47 | hml-16 | `a987783` | `e2e/w02/trocar_token.py` | staging | 24/25 | F4, 16 min depois da troca; = base (a 1 = dado da conta de teste) |
+| 09/10 17:31 | hml-16 | `a987783` | `e2e/w02/trocar_token.py` | staging | 24/25 | F4, logo depois da troca |
+| 09/10 17:29 | hml-16 | `a987783` | `e2e/w07/smoke_prod.py telas --versao 3.85` | produção | 13/13 | F3 (Worker do principal com a troca no ar); a base 11/13 era só o '3.6' fixo do teste |
+| 09/10 17:28 | hml-16 | `a987783` | `e2e/hml05c/limite_ip.py --schema staging --so ip,normal` | staging | 23/23 | F3; = base (a assinatura do IP intacta) |
+| 09/10 17:28 | hml-16 | `a987783` | `e2e/w02/proxy_principal.py` | produção | 10/12 | F3; = base (as 2 falhas são antigas: captcha da hml-05a e `localhost` fora da lista desde a hml-04) |
+| 09/10 16:55 | hml-16 | `f7c6194` | `e2e/w07/smoke_prod.py telas` | produção | 11/13 | F0 base: o teste procura a versão '3.6' no rodapé (o site está na 3.85) |
+| 09/10 16:54 | hml-16 | `f7c6194` | `e2e/hml05c/limite_ip.py --schema staging --so ip,normal` | staging | 23/23 | F0 base |
+| 09/10 16:54 | hml-16 | `f7c6194` | `e2e/w16/api.py` | staging | 40/41 | F0 base |
+| 09/10 16:53 | hml-16 | `f7c6194` | `e2e/w02/trocar_token.py` | staging | 24/25 | F0 base |
+| 09/10 16:52 | hml-16 | `f7c6194` | `e2e/w02/proxy_principal.py` | produção | 10/12 | F0 base |
+| 09/10 16:15 | hml-15b | `3753bd2` | `e2e/hml15b/convite.py --base prod --prefixo prod --canal msedge` | produção | 12/12 | SÓ LEITURA, DEPOIS do merge (#169): C1, C2 e C3 ✅ — o widget do Turnstile monta nos 3 (antes da correção, 10/12) |
+| 09/10 16:13 | hml-15b | `596eda5` | `e2e/hml12/telas.py --base staging --prefixo staging_15b --canal msedge --casos T13,T8` | staging | 12/12 | rotina do fim da worktree: o rodapé da entrada e a linha da idade no `/c/`; o captcha do staging voltou ao valor de antes |
+| 09/10 16:12 | hml-15b | `596eda5` | `e2e/w08b/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging_15b --casos espera` | staging | 14/14 | rotina do fim da worktree: a escada de espera do login até o bloqueio |
+| 09/10 16:10 | hml-15b | `596eda5` | `e2e/w25/api.py` | staging | 23/30 | = a rodada de 08/10: a massa do dia não monta (o Carlos tem login no principal); só API |
+| 09/10 16:09 | hml-15b | `596eda5` | `e2e/w10/api.py` | staging | 22/22 | rotina do fim da worktree |
+| 09/10 16:09 | hml-15b | `596eda5` | `e2e/hml05a/entrada.py --schema staging` | staging | 14/14 | rotina do fim da worktree |
+| 09/10 16:08 | hml-15b | `596eda5` | `e2e/hml15b/convite.py --base staging --prefixo staging --canal msedge --fonte http://localhost:5174` | staging | 24/24 | C1–C3 o widget monta; C4 token REAL → "Cadastro enviado" + 1 pendente, apagado; C5 token inventado → a frase do captcha, nada criado |
 | 09/10 16:00 | hml-15b | `d698f24` | `e2e/hml15b/convite.py --base prod --prefixo prod_antes --canal msedge` | produção | 10/12 | SÓ LEITURA, ANTES da correção: C1 (script antes do formulário) e C3 (/entrar/email → /c/) ❌ = o widget do Turnstile não monta (H-78 reproduzido); C2 ✅ |
 | 09/10 15:59 | hml-15b | `d698f24`+ | `e2e/hml15b/convite.py --base local --prefixo local --canal msedge --fonte http://localhost:5174` | local | 24/24 | build com a correção (CSP valendo); C4 com token REAL (`e2e/w08b/fonte_turnstile.py --acao cadastro`) → cadastro pendente no staging, apagado; as 2 rodadas de 23/24 antes = o C1 sem a ordem (ver o commit) |
 | 09/10 15:16 | hml-15 | `d698f24` | `e2e/hml15/csp.py --base prod --canal msedge --modo valendo` | produção | 128/128 | SÓ LEITURA; CSP VALENDO: 0 violação inesperada; `headers.py` 6/6 |

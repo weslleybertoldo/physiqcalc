@@ -14,7 +14,7 @@ Casos (na ordem):
   criar        w8b-personal: o Bruno (sem login) → "Criar acesso" com o e-mail do cadastro; o Bruno entra e vê "Crie a sua senha"
   celular      o card no painel em 390 px
   negativo     outra profissional abre o Rafael: o card não oferece criar senha
-Uso: python3 e2e/w08b/telas.py --base http://localhost:8080 --prefixo local [--casos a,b]
+Uso: python3 e2e/w08b/telas.py --base http://localhost:8080 --prefixo local [--casos a,b] [--canal msedge]
      produção (só a escada, com a descartável): --base https://physiqcalc.com.br --prefixo prod --schema public --casos espera
 """
 from __future__ import annotations
@@ -271,6 +271,7 @@ def main() -> int:
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default=",".join(CASOS))
     ap.add_argument("--schema", default="staging", choices=["staging", "public"])
+    ap.add_argument("--canal", default="msedge", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     a.base = a.base.rstrip("/")
     B.ESTADO["schema"] = a.schema
@@ -278,7 +279,8 @@ def main() -> int:
         print("a fonte de tokens do Turnstile não está rodando (python3 e2e/w08b/fonte_turnstile.py --porta 5173)")
         return 2
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        # o Chromium embutido do Playwright cai (SIGSEGV) no print da página inteira mais alta que a tela; o Edge não (hml-16)
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
         try:
             for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
                 print(f"\n== {nome}", flush=True)

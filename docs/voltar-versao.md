@@ -66,8 +66,13 @@ Regra geral: primeiro voltar, depois corrigir pela esteira normal (local → sta
 ## Workers (Cloudflare)
 
 - O código fica em `infra/cloudflare/physiq-principal-api/` e `infra/cloudflare/physiqcalc-api/`. Voltar: de um checkout do
-  commit bom, `bash infra/cloudflare/<worker>/deploy.sh`. Ele mantém os secrets do Worker e grava de novo o `PROXY_SEGREDO`
-  (principal) ou o `TREINO_PUBLISHABLE` (Treino) a partir dos arquivos do notebook.
+  commit bom, `bash infra/cloudflare/<worker>/deploy.sh`. Ele mantém os secrets do Worker e grava de novo o `PROXY_SEGREDO` e o
+  `PRINCIPAL_PUBLISHABLE` (principal) ou o `TREINO_PUBLISHABLE` (Treino) a partir dos arquivos do notebook. O do principal não
+  publica a produção sem o `~/.physiq-principal-publishable` (hml-16).
+- **A troca da anon legada pela publishable tem que ficar em qualquer volta:** com as chaves legadas desligadas, sem ela os
+  APKs antigos deixam de falar com o banco. Não voltar o `physiq-principal-api` para um código (ou versão na Cloudflare) de
+  antes da hml-16, nem o `physiqcalc-api` para antes de 04/10/2026, e não apagar o `PRINCIPAL_PUBLISHABLE`/`TREINO_PUBLISHABLE`
+  com as legadas desligadas ([api-dominio-proprio.md](api-dominio-proprio.md)).
 - Sem checkout: cada publicação é uma versão na Cloudflare, e dá para pôr a anterior a 100%
   ([api-dominio-proprio.md](api-dominio-proprio.md)).
 

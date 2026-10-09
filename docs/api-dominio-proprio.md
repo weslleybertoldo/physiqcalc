@@ -73,6 +73,24 @@ o segredo certo; o que o aparelho mandar nesses 2 cabeçalhos é descartado pelo
 `cf-connecting-ip` (a Cloudflare recusa esse cabeçalho vindo do cliente). Quem usa: `entrar-senha` (limite de tentativas por IP).
 O `deploy.sh` publica o código mantendo os secrets (`keep_bindings`) e grava o `PROXY_SEGREDO` de `~/.physiq-proxy-segredo`.
 
+### Troca da anon legada pela publishable no principal (hml-16, H-35, 09/10/2026)
+
+A mesma troca do `physiqcalc-api` (acima), agora no `physiq-principal-api`. Os APKs instalados desde a v3.2 (não atualizam
+sozinhos), o AAB da loja e o site antigo levam a anon **legada** (JWT) do principal, e as legadas do principal vão ser
+desligadas. Quando o `apikey` (cabeçalho ou `?apikey=`) ou o `Authorization: Bearer` é **exatamente** a anon legada (conferida
+pelo SHA-256 e pelo tamanho, constantes no `worker.js` — a chave não fica no código), o Worker põe no lugar a **publishable** do
+principal (secret `PRINCIPAL_PUBLISHABLE` do Worker). Qualquer outra chave passa sem mexer — a `service_role` nunca vira chave
+de servidor. Sem o secret, o Worker volta a ser só o proxy. O IP de quem chama (W8b e hml-05c) não muda.
+
+- `deploy.sh` publica a produção (`physiq-principal-api` + domínio) e grava o `PRINCIPAL_PUBLISHABLE` de
+  `~/.physiq-principal-publishable` (600). Sem o arquivo, ou com algo que não seja uma `sb_publishable_…`, ele **para antes de
+  publicar**. `deploy.sh <outro-nome>` sobe um ensaio só no `*.workers.dev` (sem o arquivo, como proxy puro; sem o
+  `PROXY_SEGREDO`).
+- Teste: `node --test infra/cloudflare/physiq-principal-api/worker.test.mjs` (com uma anon legada FALSA).
+- Fica sem prazo para sair, como a do Treino: o atualizador do app não obriga ninguém a atualizar.
+- Voltar: a versão anterior a 100% (`POST …/workers/scripts/physiq-principal-api/deployments`) ou apagar o secret (proxy puro).
+  Com as legadas já desligadas, sem a troca os APKs antigos deixam de falar com o principal.
+
 ## Domínio (hml-15, 09/10/2026: H-33, H-34 e H-52)
 
 O site (Vercel) recebe os cabeçalhos de segurança pelo `vercel.json` (CSP, `X-Frame-Options: DENY`, `nosniff`,

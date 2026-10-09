@@ -2,7 +2,8 @@
 
   Banco do Treino (uxwpwdbbnlticxgtzcsb): psql pelo pooler de sessão com a senha em ~/.pgpass (TREINO_CONN sobrescreve).
   Banco principal (hkxvtsbwctxkrqzkkdoz): SQL pela Management API (PAT em ~/.pc-pat; a API exige User-Agent) e Auth pela
-  API admin do GoTrue com a service_role (lida na hora pela Management API — nunca gravada em arquivo).
+  API admin do GoTrue com a chave de servidor (secret "servidor_2026_10", lida na hora pela Management API — nunca gravada em
+  arquivo; a service_role legada do Treino foi desligada em 04/10/2026 e a do principal sai na hml-16).
 
 Os scripts são idempotentes, têm --dry-run e escrevem um relatório JSON. O staging só mexe em contas de teste (P26).
 """
@@ -103,12 +104,25 @@ def exec_treino(comando: str) -> str:
     return r.stdout.strip()
 
 
+# hml-16 (H-35): a chave de servidor dos scripts é a secret "servidor_2026_10" de cada projeto, no lugar das service_role legadas
+# (JWT); a secret "default" fica só com as funções e o painel.
+CHAVE_SERVIDOR = "servidor_2026_10"
+
+
 @lru_cache(maxsize=None)
-def _service_principal() -> str:
-    st, lista = http("GET", f"https://api.supabase.com/v1/projects/{PRINCIPAL_REF}/api-keys?reveal=true", cab={"Authorization": f"Bearer {pat()}"})
+def chave_servidor(ref: str) -> str:
+    st, lista = http("GET", f"https://api.supabase.com/v1/projects/{ref}/api-keys?reveal=true", cab={"Authorization": f"Bearer {pat()}"})
     if st != 200:
-        raise RuntimeError(f"api-keys do principal: HTTP {st}")
-    return {k["name"]: k["api_key"] for k in lista}["service_role"]
+        raise RuntimeError(f"api-keys de {ref}: HTTP {st}")
+    for k in lista:
+        if k.get("type") == "secret" and k.get("name") == CHAVE_SERVIDOR and k.get("api_key"):
+            return k["api_key"]
+    raise RuntimeError(f"não achei a chave secret {CHAVE_SERVIDOR!r} no projeto {ref} (criar: POST /v1/projects/{ref}/api-keys "
+                       f'{{"type": "secret", "name": "{CHAVE_SERVIDOR}"}})')
+
+
+def _service_principal() -> str:
+    return chave_servidor(PRINCIPAL_REF)
 
 
 def admin_principal(metodo: str, caminho: str, corpo=None) -> tuple[int, object]:

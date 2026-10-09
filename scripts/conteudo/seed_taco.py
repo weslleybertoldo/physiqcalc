@@ -17,7 +17,8 @@ Chave ausente no jsonb = não determinado na fonte.
 
 Uso: python3 scripts/seed_taco.py [--so public|staging] [--dry-run] [--atualizar]
   --atualizar baixa os CSVs de novo (senão usa o cache em ~/.cache/physiqnutri-taco/).
-Credenciais (fora do repo): ref do projeto em ~/.physiqnutri-ref, service role em ~/.physiqnutri-service.
+Credenciais (fora do repo): ref do projeto em ~/.physiqnutri-ref; em ~/.physiqnutri-service (600), a chave de servidor
+sb_secret_ do principal — a do cofre (PhysiqCalc, secret "servidor_2026_10"). A service_role legada (JWT) sai na hml-16: não serve.
 """
 import argparse
 import csv
@@ -168,7 +169,12 @@ def main() -> int:
         return 0
 
     ref = Path.home().joinpath(".physiqnutri-ref").read_text(encoding="utf-8").strip()
-    service = Path.home().joinpath(".physiqnutri-service").read_text(encoding="utf-8").strip()
+    arq_chave = Path.home() / ".physiqnutri-service"
+    service = arq_chave.read_text(encoding="utf-8").strip() if arq_chave.exists() else ""
+    if not service.startswith("sb_secret_"):
+        print(f"ERRO: {arq_chave} tem que ter a chave de servidor sb_secret_ do principal — a do cofre (PhysiqCalc, secret "
+              "servidor_2026_10), não a service_role legada (JWT), que sai na hml-16 (H-35).")
+        return 1
     url = f"https://{ref}.supabase.co/rest/v1/alimentos"
     falhas = 0
     for schema in SCHEMAS:

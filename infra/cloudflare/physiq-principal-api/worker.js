@@ -9,7 +9,22 @@
 // manda o IP de verdade em x-physiq-ip junto com o segredo do proxy (x-physiq-proxy, secret PROXY_SEGREDO do Worker = o mesmo
 // segredo das funções do principal); a função só acredita no x-physiq-ip com o segredo certo. O que o aparelho mandar nesses 2
 // cabeçalhos é descartado. O resto do tráfego (auth, rest, storage) segue igual.
-const ORIGIN = "https://hkxvtsbwctxkrqzkkdoz.supabase.co";
+//
+// Troca da anon legada (hml-16, H-35, 09/10/2026): os APKs instalados desde a v3.2 (não atualizam sozinhos), o AAB da loja
+// e o site antigo mandam a anon LEGADA (JWT) do principal, e as chaves legadas vão ser desligadas. Quando o apikey (cabeçalho
+// ou ?apikey=) ou o Authorization: Bearer é EXATAMENTE a anon legada — conferida pelo SHA-256 e pelo tamanho, a chave não fica
+// no código —, o Worker põe no lugar a publishable do principal (secret PRINCIPAL_PUBLISHABLE do Worker, gravado pelo
+// deploy.sh). Qualquer outra chave passa sem mexer, inclusive a service_role: ela morre com as legadas e nunca é trocada por
+// uma chave de servidor. Sem o secret, o Worker é só o proxy de antes. É a mesma troca do physiqcalc-api
+// (infra/cloudflare/physiqcalc-api/proxy.js, 04/10/2026); o IP de quem chama (abaixo) não muda.
+export const ORIGIN = "https://hkxvtsbwctxkrqzkkdoz.supabase.co";
+export const ANON_LEGADA_SHA256 = "e606b707377f46d03e857a20964a74cdc9240e44cb042a02280e1ea2201f244f";
+export const ANON_LEGADA_TAMANHO = 208;
+
+async function sha256Hex(texto) {
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 // hml-05c (homologação, H-17): as 9 RPCs públicas (sem login, pelo código do link: diário, pré-consulta e cadastro) levam o IP de
 // verdade para o banco contar os pedidos por IP — mas SEM o segredo (o pedido ao PostgREST pode ir para os logs): vai a assinatura
@@ -66,37 +81,58 @@ export function muitosPedidos() {
   });
 }
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === "/" || url.pathname === "/healthz") {
-      return new Response("physiq-principal-api ok", { status: 200, headers: { "cache-control": "no-store" } });
-    }
-    if (!(await dentroDoTeto(request, env))) return muitosPedidos();
-    const target = ORIGIN + url.pathname + url.search;
-    const headers = new Headers(request.headers);
-    headers.delete("host");
-    headers.delete("x-physiq-ip");
-    headers.delete("x-physiq-proxy");
-    headers.delete("x-physiq-assinatura");
-    const segredo = env && typeof env.PROXY_SEGREDO === "string" ? env.PROXY_SEGREDO : "";
-    const ip = request.headers.get("cf-connecting-ip");
-    if (segredo && ip && rpcPublica(url.pathname)) {
-      headers.set("x-physiq-ip", ip);
-      headers.set("x-physiq-assinatura", await assinarIp(segredo, ip));
-    } else if (segredo && ip && url.pathname.startsWith("/functions/v1/")) {
-      headers.set("x-physiq-ip", ip);
-      headers.set("x-physiq-proxy", segredo);
-    }
-    const init = {
-      method: request.method,
-      headers,
-      redirect: "manual",
-      cache: "no-store",
-    };
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      init.body = request.body;
-    }
-    return fetch(target, init);
-  },
-};
+// criarProxy({ anonSha256, anonTamanho, buscar }) existe para o teste trocar a anon legada por uma FALSA e ver o pedido que sairia.
+export function criarProxy({
+  origin = ORIGIN,
+  anonSha256 = ANON_LEGADA_SHA256,
+  anonTamanho = ANON_LEGADA_TAMANHO,
+  buscar = (alvo, init) => fetch(alvo, init),
+} = {}) {
+  const ehAnonLegada = async (valor) => Boolean(valor) && valor.length === anonTamanho && (await sha256Hex(valor)) === anonSha256;
+
+  return {
+    async fetch(request, env) {
+      const url = new URL(request.url);
+      if (url.pathname === "/" || url.pathname === "/healthz") {
+        return new Response("physiq-principal-api ok", { status: 200, headers: { "cache-control": "no-store" } });
+      }
+      if (!(await dentroDoTeto(request, env))) return muitosPedidos();
+      const headers = new Headers(request.headers);
+      headers.delete("host");
+      headers.delete("x-physiq-ip");
+      headers.delete("x-physiq-proxy");
+      headers.delete("x-physiq-assinatura");
+      const segredo = env && typeof env.PROXY_SEGREDO === "string" ? env.PROXY_SEGREDO : "";
+      const ip = request.headers.get("cf-connecting-ip");
+      if (segredo && ip && rpcPublica(url.pathname)) {
+        headers.set("x-physiq-ip", ip);
+        headers.set("x-physiq-assinatura", await assinarIp(segredo, ip));
+      } else if (segredo && ip && url.pathname.startsWith("/functions/v1/")) {
+        headers.set("x-physiq-ip", ip);
+        headers.set("x-physiq-proxy", segredo);
+      }
+      let busca = url.search;
+      const publishable = env && typeof env.PRINCIPAL_PUBLISHABLE === "string" ? env.PRINCIPAL_PUBLISHABLE.trim() : "";
+      if (publishable) {
+        if (await ehAnonLegada(headers.get("apikey"))) headers.set("apikey", publishable);
+        const auth = headers.get("authorization") || "";
+        if (/^bearer /i.test(auth) && (await ehAnonLegada(auth.slice(7).trim()))) headers.set("authorization", `Bearer ${publishable}`);
+        // troca só o valor do ?apikey= (sem remontar a query: os filtros do PostgREST seguem byte a byte iguais)
+        const daBusca = url.searchParams.get("apikey");
+        if (daBusca && (await ehAnonLegada(daBusca))) busca = busca.replace(`apikey=${daBusca}`, `apikey=${publishable}`);
+      }
+      const init = {
+        method: request.method,
+        headers,
+        redirect: "manual",
+        cache: "no-store",
+      };
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        init.body = request.body;
+      }
+      return buscar(origin + url.pathname + busca, init);
+    },
+  };
+}
+
+export default criarProxy();

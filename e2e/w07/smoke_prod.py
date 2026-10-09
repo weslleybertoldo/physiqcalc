@@ -8,7 +8,7 @@
             matrícula em conta nenhuma — nenhum dado de cliente perto): troca de token (nasce o usuário do Treino), prévia de
             código errado, Exportar (os 2 bancos), Excluir com a conferência e as contagens antes/depois; no fim, a âncora de
             teste do Treino é apagada (é resto do teste, não de cliente)
-Uso: python3 smoke_prod.py [telas|descartavel|tudo] [--base https://physiqcalc.com.br] [--versao 3.6]
+Uso: python3 smoke_prod.py [telas|descartavel|tudo] [--base https://physiqcalc.com.br] [--versao 3.6] [--canal msedge]
 """
 from __future__ import annotations
 
@@ -35,7 +35,8 @@ B.EMAIL[DESC] = B.CONTAS[DESC][0]
 
 def telas(a) -> None:
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        # o Chromium embutido do Playwright cai (SIGSEGV) no print da página inteira mais alta que a tela; o Edge não (hml-16)
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
         try:
             c = B.Caso(nav, a.base, "prod", "perfil", desktop=False)
             c.entrar("aluno-calc", "/perfil", zerar=False)
@@ -113,6 +114,7 @@ def main() -> int:
     ap.add_argument("modo", nargs="?", default="tudo")
     ap.add_argument("--base", default="https://physiqcalc.com.br")
     ap.add_argument("--versao", default="3.6")
+    ap.add_argument("--canal", default="msedge", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     if a.modo in ("telas", "tudo"):
         telas(a)
