@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // W1 da loja — a entrada na versão da Google Play: sem "Sou profissional — criar conta" (o cadastro termina em pagar o plano, pelo
 // site), sem "Treinar sem profissional" (Play Billing na W6) e sem o "Verificar atualizações" do APK. Sem a flag: igual a hoje.
@@ -61,6 +61,34 @@ describe("Entrar — W1 da loja", () => {
     abrir(<Entrar />);
     expect(screen.getByRole("button", { name: /Sou profissional — criar conta/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Verificar atualizações/ })).toBeInTheDocument();
+  });
+});
+
+describe("Entrar — hml-14 (H-32, D5): 'Verificar atualizações' desiste do GitHub em 8 s", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("o GitHub que não responde é largado em 8 s (1 pedido só) e cai no catch de hoje: 'Você está na versão mais recente'", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(
+      (_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_, rejeitar) => init?.signal?.addEventListener("abort", () => rejeitar(new DOMException("aborted", "AbortError")))),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    abrir(<Entrar />);
+    fireEvent.click(screen.getByRole("button", { name: /Verificar atualizações/ }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(7_999);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: /Verificar atualizações/ })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(screen.getByRole("button", { name: "Você está na versão mais recente" })).toBeEnabled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -10,6 +10,7 @@
  * Escrever é pelo caminho de cada banco (avaliacaoApi.ts).
  */
 import { principal, principalConfigurado } from "@/integrations/principal/client";
+import { criarFetchResiliente, TEMPO_FUNCAO_MS } from "@/integrations/repeticao";
 import { DB_SCHEMA } from "@/integrations/supabase/client";
 import { BUCKET_EVOLUCAO, ErroFonte, VALIDADE_URL_S } from "@/evolucao/fontes";
 import type { AntropometriaPrincipal, FotoPrincipal, LinhaFotoTreino, LinhaTreino, ParteTreino, PartePrincipal } from "@/evolucao/tipos";
@@ -23,14 +24,18 @@ export interface TreinoDoPainel {
   proxima: string | null;
 }
 
-/** A parte do Banco do Treino (null = o aluno ainda não tem treino: nunca entrou no app). */
+/**
+ * A parte do Banco do Treino (null = o aluno ainda não tem treino: nunca entrou no app). hml-14 (H-32, D5): a treino-leitura vai 1 vez
+ * só, até 25 s (TEMPO_FUNCAO_MS); estourou → "sem_internet", o caminho de hoje.
+ */
 export async function carregarTreinoDoPainel(alunoIdDaRota: string, f: typeof fetch = fetch): Promise<TreinoDoPainel | null> {
   const { data } = await principal.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new ErroFonte("treino", "invalid_token");
+  const buscar = criarFetchResiliente(0, TEMPO_FUNCAO_MS, f, { banco: "treino" });
   let r: Response;
   try {
-    r = await f(URL_LEITURA, {
+    r = await buscar(URL_LEITURA, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "x-schema": DB_SCHEMA },
       body: JSON.stringify({ action: "avaliacoes", aluno: alunoIdDaRota }),

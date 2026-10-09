@@ -30,6 +30,11 @@
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions delete-my-account true
 // Segredos: ESPELHO_SEGREDO (W2) + os automáticos.
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+// hml-14 (H-32): quem chama (o treino-servidor.ts do principal) espera 15 s no exportar, 30 s ao conferir e 60 s ao excluir
+//   (máximo medido em 7 dias: 10 s); daqui não sai chamada para fora (só o banco e o Auth do próprio Treino) e o Storage não é
+//   tocado. Todo erro do banco ou do Auth lança → 500 (a resposta de sempre); o que é lido vem ANTES de apagar, e os conflitos
+//   de login (com o e-mail) saem antes do vínculo, com o erro conferido — antes saíam depois, calados: o erro deixava o e-mail
+//   para trás e, sem o vínculo, o pedido de novo já parava no sem_vinculo.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
@@ -155,10 +160,12 @@ async function modoServidor(req: Request): Promise<Response> {
         const { error: edp } = await authAdmin.auth.admin.deleteUser(treinoId, true);
         if (edp) throw edp;
       }
+      // hml-14 (H-32): os conflitos de login antes do vínculo (o erro lança e o pedido de novo refaz a partir daqui)
+      const { error: ecp } = await admin.from("physiq_identidade_conflitos").delete().eq("principal_user_id", principalId);
+      if (ecp) throw ecp;
       // o vínculo sai por último (se algo acima falhou, o pedido de novo ainda acha o profissional)
       const { error: eip } = await admin.from("physiq_identidades").delete().eq("principal_user_id", principalId);
       if (eip) throw eip;
-      await admin.from("physiq_identidade_conflitos").delete().eq("principal_user_id", principalId);
       return jsonServidor({ ...resp, login: "removido" });
     }
 
@@ -176,10 +183,12 @@ async function modoServidor(req: Request): Promise<Response> {
       const { error: ed } = await authAdmin.auth.admin.deleteUser(treinoId, true);
       if (ed) throw ed;
     }
+    // hml-14 (H-32): os conflitos de login antes do vínculo (o erro lança e o pedido de novo refaz a partir daqui)
+    const { error: ec } = await admin.from("physiq_identidade_conflitos").delete().eq("principal_user_id", principalId);
+    if (ec) throw ec;
     // o vínculo sai por último (se algo acima falhou, o pedido de novo ainda acha o aluno)
     const { error: ei } = await admin.from("physiq_identidades").delete().eq("principal_user_id", principalId);
     if (ei) throw ei;
-    await admin.from("physiq_identidade_conflitos").delete().eq("principal_user_id", principalId);
     return jsonServidor({ ...res, login: "removido" });
   } catch (e) {
     log.excecao(e, { acao, schema: currentSchema() });

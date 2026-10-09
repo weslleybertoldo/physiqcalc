@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { Briefcase, ChevronRight, Download, Link2, Mail, RefreshCw, Salad, Dumbbell } from "lucide-react";
+import { criarFetchResiliente } from "@/integrations/repeticao";
 import { ehLoja } from "@/lib/distribuicao";
 import { existe } from "@/rotas/registro";
 import { lerProfPendente } from "@/lib/profPendente";
@@ -17,6 +18,8 @@ import { MolduraEntrada, TituloEntrada } from "./pecas/Moldura";
 // constante do build (vite define); nos testes pode não existir
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "";
 const RELEASES_URL = "https://api.github.com/repos/weslleybertoldo/physiqcalc/releases/latest";
+// hml-14 (H-32, D5): o GitHub em até 8 s, 1 vez só; estourou → o catch de hoje ("Você está na versão mais recente")
+const buscarRelease = criarFetchResiliente(0, 8_000);
 
 /** "Verificar atualizações" na entrada do APK (como a tela de login antiga): quem não consegue entrar pode estar numa versão velha. */
 function VerificarAtualizacao() {
@@ -24,7 +27,7 @@ function VerificarAtualizacao() {
   const verificar = async () => {
     setEstado("vendo");
     try {
-      const r = await fetch(RELEASES_URL, { cache: "no-store" });
+      const r = await buscarRelease(RELEASES_URL, { cache: "no-store" });
       const rel = await r.json();
       const remota = String(rel.tag_name || "").replace(/^v/, "").split(".").map(Number);
       const local = APP_VERSION.split(".").map(Number);

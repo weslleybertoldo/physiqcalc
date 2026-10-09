@@ -4,6 +4,7 @@
  * usuário do Treino de uma matrícula nova). Tudo online: o painel não tem PowerSync.
  */
 import { principal } from "@/integrations/principal/client";
+import { criarFetchResiliente, TEMPO_FUNCAO_MS } from "@/integrations/repeticao";
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { calcularVolumeSemanal, type GrupoVolume, type SemanaRowVolume } from "@/lib/volumeSemanal";
@@ -217,6 +218,9 @@ export const carregarTreinoDoHistorico = (userId: string, chave: string) =>
 // ───────────────────────── W16: só leitura, para quem não tem sessão do Treino (a nutricionista — spec 4.1) ─────────────────────────
 
 const URL_LEITURA = `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1/treino-leitura`;
+// hml-14 (H-32, D5): a treino-leitura vai 1 vez só (0 = não repete), até 25 s (o orçamento dela é ≤ 20 s; máximo medido 13,4 s).
+// Estourou → "sem_internet", o caminho de hoje.
+const buscarLeitura = criarFetchResiliente(0, TEMPO_FUNCAO_MS, undefined, { banco: "treino" });
 
 /**
  * A função treino-leitura do Banco do Treino (W16): recebe o token do BANCO PRINCIPAL, pergunta lá se quem chama vê o aluno (a
@@ -229,7 +233,7 @@ async function lerPeloPrincipal<T>(acao: "get" | "semanaAtual" | "volume", aluno
   if (!token) throw new ErroTreinoPainel("invalid_token", 401);
   let r: Response;
   try {
-    r = await fetch(URL_LEITURA, {
+    r = await buscarLeitura(URL_LEITURA, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "x-schema": DB_SCHEMA },
       body: JSON.stringify({ action: acao, aluno: alunoIdDaRota, ...extra }),

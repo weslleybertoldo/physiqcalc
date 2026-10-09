@@ -75,6 +75,8 @@ Deno.serve(async (req) => {
       }
       const resumos: Resumo[] = [];
       for (const id of [...new Set(pessoas)]) {
+        // null = o login não existe mais (nada a mandar); erro do GoTrue lança (hml-14, H-76) → a pendência falha e volta com a
+        // nova tentativa (antes virava null e a pendência era dada como feita sem mandar nada)
         const r = await resumoDaPessoa(db, authAdmin, id);
         if (r) resumos.push(r);
       }

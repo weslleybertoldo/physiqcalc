@@ -154,7 +154,9 @@ async function tratarPagamento(schema: Schema, id: string, p: Prazo): Promise<st
   if (!assinatura && legada && legada.tipo !== "recorrente") return await tratarPagamentoLegado(db, legada, pay);
   if (!assinatura) return ref ? "assinatura_inexistente" : legada ? `legado_${legada.app}_assinatura_inexistente` : "nao_e_do_physiq";
   if (legada) {
-    const { data: c } = await db.from("contas").select("cobranca_legada").eq("id", assinatura.conta_id).maybeSingle();
+    // hml-14 (H-32): a trava não pode falhar aberta — com o banco fora, lança (500) e o MP manda o aviso de novo
+    const { data: c, error: ec } = await db.from("contas").select("cobranca_legada").eq("id", assinatura.conta_id).maybeSingle();
+    if (ec) throw ec;
     if ((c as { cobranca_legada?: boolean } | null)?.cobranca_legada) return `legado_${legada.app}_cobranca_antiga`;
   }
   const r = await registrarCobrancaRecorrente(db, assinatura, pay, await valorMensal(db, assinatura));

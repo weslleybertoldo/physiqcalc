@@ -8,6 +8,7 @@
  * "Tente em alguns minutos".
  */
 import type { Session } from "@supabase/supabase-js";
+import { criarFetchResiliente } from "@/integrations/repeticao";
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 
 export type ErroTroca = "rede" | "invalido" | "conflito" | "limite" | "staging" | "email" | "indisponivel" | "interno" | "bloqueado";
@@ -133,11 +134,18 @@ export function depoisDaFalha(erro: ErroTroca, feitas: number): { tentarEm: numb
 
 const URL_TROCA = `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1/trocar-token`;
 
-/** Chama a `trocar-token` com o token do principal (nada é gravado aqui). */
-export async function pedirTroca(tokenPrincipal: string, fetchImpl: typeof fetch = fetch): Promise<ResultadoTroca> {
+/**
+ * hml-14 (H-32, D5): quanto o login espera a `trocar-token` — 40 s (máximo medido em 7 dias: 26,3 s; o orçamento da função é ≤ 35 s).
+ * Estourou → "rede", o caminho de sem internet de hoje (a espera crescente de quem chama tenta de novo).
+ */
+export const TEMPO_TROCA_MS = 40_000;
+
+/** Chama a `trocar-token` com o token do principal (nada é gravado aqui). Vai 1 vez só (0 = não repete, a regra da hml-06). */
+export async function pedirTroca(tokenPrincipal: string, fetchImpl: typeof fetch = fetch, tempoMs = TEMPO_TROCA_MS): Promise<ResultadoTroca> {
+  const buscar = criarFetchResiliente(0, tempoMs, fetchImpl, { banco: "treino" });
   let r: Response;
   try {
-    r = await fetchImpl(URL_TROCA, {
+    r = await buscar(URL_TROCA, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenPrincipal}`, "x-schema": DB_SCHEMA },
       body: "{}",

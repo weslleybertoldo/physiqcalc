@@ -183,17 +183,20 @@ Deno.serve(async (req) => {
     const grupoUsuIds = [...new Set(semanaRows.map((r) => r.grupo_usuario_id).filter(Boolean))];
 
     // Nomes dos grupos (global + pessoal) + nº de séries configurado pro aluno
+    // hml-14 (H-32 e H-51 item 6): o erro de cada leitura vai para o catch (500) — antes o PDF saía com "Treino" no lugar dos nomes
     const [gGlob, gUsu, seriesCfg] = await Promise.all([
       grupoIds.length
         ? admin.from("tb_grupos_treino").select("id, nome").in("id", grupoIds)
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as any[], error: null }),
       grupoUsuIds.length
         ? admin.from("tb_grupos_treino_usuario").select("id, nome").in("id", grupoUsuIds)
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as any[], error: null }),
       admin.from("tb_series_padrao_usuario")
         .select("grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg, observacao")
         .eq("user_id", userId),
     ]);
+    if (gGlob.error) throw gGlob.error;
+    if (gUsu.error) throw gUsu.error;
     if (seriesCfg.error) throw seriesCfg.error;
     const nomeGrupoGlob = new Map((gGlob.data ?? []).map((g: any) => [g.id, g.nome]));
     const nomeGrupoUsu = new Map((gUsu.data ?? []).map((g: any) => [g.id, g.nome]));
@@ -248,23 +251,27 @@ Deno.serve(async (req) => {
     };
 
     // Vínculos exercício↔grupo (global e pessoal)
+    // hml-14 (H-32 e H-51 item 6): erro → catch (500); antes o PDF saía sem os exercícios ou fora da ordem do aluno
     const [geGlob, geUsu, ordemUsu] = await Promise.all([
       grupoIds.length
         ? admin.from("tb_grupos_exercicios").select("grupo_id, exercicio_id, ordem").in("grupo_id", grupoIds)
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as any[], error: null }),
       grupoUsuIds.length
         ? admin.from("tb_grupos_exercicios_usuario")
             .select("grupo_usuario_id, exercicio_id, exercicio_usuario_id, ordem")
             .in("grupo_usuario_id", grupoUsuIds)
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as any[], error: null }),
       // Reordenação pessoal de exercícios em grupos globais
       grupoIds.length
         ? admin.from("exercicio_ordem_usuario")
             .select("grupo_id, exercicio_id, posicao")
             .eq("user_id", userId)
             .in("grupo_id", grupoIds)
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as any[], error: null }),
     ]);
+    if (geGlob.error) throw geGlob.error;
+    if (geUsu.error) throw geUsu.error;
+    if (ordemUsu.error) throw ordemUsu.error;
     const posUsu = new Map(
       (ordemUsu.data ?? []).map((o: any) => [`${o.grupo_id}|${o.exercicio_id}`, o.posicao]),
     );
@@ -277,14 +284,17 @@ Deno.serve(async (req) => {
       ]),
     ];
     const exUsuIds = [...new Set((geUsu.data ?? []).map((r: any) => r.exercicio_usuario_id).filter(Boolean))];
+    // hml-14 (H-32 e H-51 item 6): erro → catch (500); antes o exercício sem nome sumia do PDF
     const [exGlob, exUsu] = await Promise.all([
       exGlobIds.length
         ? admin.from("tb_exercicios").select("id, nome, grupo_muscular, subgrupo").in("id", exGlobIds)
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as any[], error: null }),
       exUsuIds.length
         ? admin.from("tb_exercicios_usuario").select("id, nome, grupo_muscular").in("id", exUsuIds)
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as any[], error: null }),
     ]);
+    if (exGlob.error) throw exGlob.error;
+    if (exUsu.error) throw exUsu.error;
     const exMapGlob = new Map((exGlob.data ?? []).map((e: any) => [e.id, e]));
     const exMapUsu = new Map((exUsu.data ?? []).map((e: any) => [e.id, e]));
 

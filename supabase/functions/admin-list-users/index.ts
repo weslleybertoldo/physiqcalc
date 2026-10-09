@@ -3,6 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { todasAsPaginas } from "../_shared/paginas.ts";
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 const log = criarLog("admin-list-users", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
@@ -170,10 +171,13 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
     if (semProfessor) {
-      // fila "Sem professor" = alunos sem vínculo; professores/master têm perfil próprio (professor_id NULL) e ficam de fora
+      // fila "Sem professor" = alunos sem vínculo; professores/master têm perfil próprio (professor_id NULL) e ficam de fora.
+      // hml-14 (H-32): os professores vêm todos, em páginas (antes: até 1000, calado), e o erro vai para o catch (antes: a fila
+      // passava a listar os perfis dos professores, sem aviso). O `not in` cresce com o nº de professores (4 hoje).
+      const profs = await todasAsPaginas<{ id: string }>((de, ate) =>
+        admin.from("physiq_professores").select("id").order("id").range(de, ate));
       q = q.is("professor_id", null);
-      const { data: profs } = await admin.from("physiq_professores").select("id");
-      const idsProf = ((profs as any[]) || []).map((p) => p.id);
+      const idsProf = profs.map((p) => p.id);
       if (idsProf.length) q = q.not("id", "in", `(${idsProf.join(",")})`);
     } else if (professorId) {
       // O professor enxerga o PRÓPRIO perfil na sua lista de alunos (pedido do Weslley 18/09/2026: "o acesso do

@@ -2,7 +2,11 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { TEMPO_MS, buscarComTempo } from "../_shared/tempo.ts";
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+// hml-14 (H-32): o aviso ao principal espera no máximo TEMPO_MS.principal (vincular-aluno: máx. medido 1,1 s; estourou → "erro",
+// o desvínculo do Treino continua valendo); o perfil é lido ANTES de apagar o login (erro → 500 e nada apagado); depois do login
+// apagado, a limpeza que falhar avisa e a resposta segue ok (um 500 ali não teria volta: o login já não existe).
 const log = criarLog("admin-delete-user", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
@@ -53,6 +57,7 @@ const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 async function avisarPrincipalDoDesvinculo(admin: SupabaseClient, alunoTreino: string, profTreino: string): Promise<string> {
   if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return "principal_nao_configurado";
   try {
+    // teto natural: até 2 linhas (os 2 ids; treino_user_id é único em physiq_identidades)
     const { data, error } = await admin.from("physiq_identidades").select("principal_user_id, treino_user_id")
       .in("treino_user_id", [alunoTreino, profTreino]);
     if (error) return "sem_identidades";
@@ -60,11 +65,11 @@ async function avisarPrincipalDoDesvinculo(admin: SupabaseClient, alunoTreino: s
     const aluno = mapa.get(alunoTreino);
     const prof = mapa.get(profTreino);
     if (!aluno || !prof) return "sem_vinculo";
-    const r = await fetch(`${PRINCIPAL_URL}/functions/v1/vincular-aluno`, {
+    const r = await buscarComTempo(`${PRINCIPAL_URL}/functions/v1/vincular-aluno`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
       body: JSON.stringify({ acao: "desvincular", principal_user_id: aluno, profissional_principal_id: prof }),
-    });
+    }, TEMPO_MS.principal);
     if (r.status !== 200) {
       // hml-10 (H-24): da resposta, só o status e o código de erro da vincular-aluno (o corpo nunca vai para o log)
       const corpo = (await r.json().catch(() => null)) as { erro?: unknown; error?: unknown } | null;
@@ -172,13 +177,19 @@ Deno.serve(async (req) => {
         return jsonErr("conta_real_protegida", 403, origin);
       }
     }
-    const { data: profile } = await admin.from("physiq_profiles").select("*").eq("id", userId).maybeSingle();
+    const { data: profile, error: epf } = await admin.from("physiq_profiles").select("*").eq("id", userId).maybeSingle();
+    if (epf) throw epf; // hml-14 (H-32): antes de apagar qualquer coisa
     const { error: delErr } = await admin.auth.admin.deleteUser(userId);
     if (delErr) {
-      if (profile) await admin.from("physiq_profiles").upsert(profile);
+      if (profile) {
+        const { error: erp } = await admin.from("physiq_profiles").upsert(profile);
+        if (erp) log.excecao(erp, { codigo: "perfil_nao_restaurado", schema: currentSchema(), acao: "excluir" });
+      }
       throw delErr;
     }
-    await admin.from("physiq_profiles").delete().eq("id", userId);
+    // o perfil já cai junto com o login (cascata); esta limpeza falhar não volta atrás nem vira 500 — avisa
+    const { error: eap } = await admin.from("physiq_profiles").delete().eq("id", userId);
+    if (eap) log.excecao(eap, { codigo: "perfil_nao_apagado", schema: currentSchema(), acao: "excluir" });
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
   } catch (e) {
     log.excecao(e, { acao: caller?.papel === "professor" ? "desvincular" : "excluir", schema: currentSchema() });

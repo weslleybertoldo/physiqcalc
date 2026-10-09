@@ -1,6 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+import { buscarComTempo, TEMPO_MS } from "../_shared/tempo.ts";
+// hml-14 (H-51 item 2): log em JSON sem dado pessoal (_shared/log.ts) — por enquanto só o GoTrue que não responde (o
+// console.error de antes fica para o resto do H-48)
+const log = criarLog("admin-update-user", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -58,23 +63,23 @@ async function checkRateLimit(userId: string, endpoint: string, maxCount: number
   }
 }
 
-// JWT validado LOCALMENTE (JWKS do GoTrue, cacheado no isolate) — poupa a ida ao /auth/v1/user
-// na VM Nano a cada chamada. Token que o JWKS não reconhece cai no getUser (compatibilidade).
-// Sessão revogada só é percebida quando o token expira (1 h) — por isso as funções destrutivas
-// (delete) continuam com getUser sempre.
-const JWKS = createRemoteJWKSet(new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`));
-async function usuarioDoToken(token: string, auth: string): Promise<any | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWKS, { issuer: `${SUPABASE_URL}/auth/v1`, audience: "authenticated" });
-    if (payload.sub) {
-      const p = payload as Record<string, unknown>;
-      return { id: payload.sub, email: (p.email as string | undefined) ?? null, app_metadata: (p.app_metadata as Record<string, unknown>) ?? {}, user_metadata: (p.user_metadata as Record<string, unknown>) ?? {} };
-    }
-  } catch (_e) { /* assinatura/alg/kid desconhecido → getUser */ }
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const userClient = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
-  const { data, error } = await userClient.auth.getUser(token);
-  return error || !data?.user ? null : data.user;
+// As funções do Treino que só LEEM validam o JWT localmente (JWKS do GoTrue, cacheado no isolate) — poupa a ida ao
+// /auth/v1/user na VM Nano, mas sessão revogada só é percebida quando o token expira (1 h). Esta GRAVA o perfil do aluno em
+// todo pedido, então confere a sessão no GoTrue sempre — como as destrutivas (delete) e as ações que gravam da admin-avaliacoes.
+// hml-14 (H-51 item 2): até aqui esta também ia só pelo JWKS — "sair de todos", a conta apagada e o papel tirado seguiam gravando
+// até o token vencer. GET /auth/v1/user (o getUser): 4xx = o token não vale mais (null → 401); sem resposta em
+// TEMPO_MS.gotrueTreino, rede ou 5xx → lança (quem chama responde o 500 de sempre).
+async function usuarioDaSessao(auth: string): Promise<any | null> {
+  const r = await buscarComTempo(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: Deno.env.get("SUPABASE_ANON_KEY")!, Authorization: auth },
+  }, TEMPO_MS.gotrueTreino);
+  if (!r.ok) {
+    await r.body?.cancel().catch(() => undefined);
+    if (r.status >= 400 && r.status < 500) return null;
+    throw new Error(`gotrue_${r.status}`);
+  }
+  const u = await r.json();
+  return u && typeof u === "object" && typeof u.id === "string" ? u : null;
 }
 
 // ---- SaaS (12/09/2026): papéis master (role admin|master) e professor; escopo por professor_id ----
@@ -107,8 +112,13 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   const origin = req.headers.get("Origin");
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return { user: null, error: jsonErr("missing_auth", 401, origin) };
-  const token = auth.slice(7);
-  const user = await usuarioDoToken(token, auth);
+  let user: any;
+  try {
+    user = await usuarioDaSessao(auth);
+  } catch (e) {
+    log.excecao(e, { codigo: "gotrue_indisponivel", schema: currentSchema(), acao: "conferir_sessao" });
+    return { user: null, error: jsonErr("internal", 500, origin) };
+  }
   if (!user) return { user: null, error: jsonErr("invalid_token", 401, origin) };
   const role = (user.app_metadata as any)?.role;
   const papel = papelDe(role);

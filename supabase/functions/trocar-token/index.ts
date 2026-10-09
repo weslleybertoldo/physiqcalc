@@ -17,12 +17,19 @@
 // NUNCA pelo workflow deploy-function.yml (ele liga o verify_jwt e a troca passa a responder 401 pra todo mundo).
 // Segredos: PRINCIPAL_URL, PRINCIPAL_ANON_KEY, ESPELHO_SEGREDO (+ os automáticos do Supabase).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+// hml-14 (H-32, D3): o login tem um prazo de 35 s (o front espera 40 s) e cada chamada para fora espera no máximo o tempo do
+// destino dentro dele — GoTrue do principal 5 s, espelho-resumo 8 s, GoTrue do Treino 10 s (generate_link, verify, getUserById e
+// o updateUserById do espelho; o createUser do 1º login, o que sobra do prazo); estourou → o caminho de erro de sempre
+// (principal_indisponivel ou erro_interno), nada novo no front.
+// hml-14 (H-51 item 3): o 23505 ao gravar o vínculo não passa calado (gravarVinculo): usuário do Treino de OUTRO login → 409
+// conta_em_conflito + registro para o master; 2 chamadas ao mesmo tempo → vale o vínculo gravado e o órfão vai para o log.
+import { createClient, type SupabaseClient, type User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { aplicarResumo, type ResultadoEspelho } from "../_shared/espelho/aplicar.ts";
 import {
   alunoBloqueadoSemStaff,
   claimsDoJwt,
   decidirVinculo,
+  decidirVinculoDuplicado,
   ehLoginGoogle,
   emailConfirmado,
   emailDeTeste,
@@ -31,8 +38,12 @@ import {
 } from "../_shared/espelho/regras.ts";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
 
 const log = criarLog("trocar-token", { avisar: avisarErro });
+
+/** hml-14 (H-32, D3): o prazo do login inteiro (o front desiste em 40 s; o máximo medido em 7 dias foi 26,3 s). */
+const ORCAMENTO_LOGIN_MS = 35_000;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -79,19 +90,20 @@ function freioPorIp(ip: string, max = 60, janelaMs = 60_000): boolean {
   return true;
 }
 
-async function usuarioDoPrincipal(token: string): Promise<{ user: UsuarioPrincipal & Record<string, unknown> | null; status: number }> {
-  const r = await fetch(`${PRINCIPAL_URL}/auth/v1/user`, { headers: { apikey: PRINCIPAL_ANON_KEY, Authorization: `Bearer ${token}` } });
+async function usuarioDoPrincipal(token: string, p: Prazo): Promise<{ user: UsuarioPrincipal & Record<string, unknown> | null; status: number }> {
+  const r = await buscarComTempo(`${PRINCIPAL_URL}/auth/v1/user`, { headers: { apikey: PRINCIPAL_ANON_KEY, Authorization: `Bearer ${token}` } },
+    Math.min(TEMPO_MS.gotruePrincipal, p.restante()));
   if (r.status === 200) return { user: await r.json(), status: 200 };
   await r.body?.cancel();
   return { user: null, status: r.status };
 }
 
-async function resumoDoPrincipal(principalUserId: string, schema: string): Promise<ResumoNucleo | null> {
-  const r = await fetch(`${PRINCIPAL_URL}/functions/v1/espelho-resumo`, {
+async function resumoDoPrincipal(principalUserId: string, schema: string, p: Prazo): Promise<ResumoNucleo | null> {
+  const r = await buscarComTempo(`${PRINCIPAL_URL}/functions/v1/espelho-resumo`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": schema },
     body: JSON.stringify({ principal_user_id: principalUserId }),
-  });
+  }, Math.min(TEMPO_MS.principal, p.restante()));
   if (r.status !== 200) {
     // hml-10 (H-24): da resposta, só o status e o código de erro da espelho-resumo (o corpo nunca vai para o log)
     const corpo = (await r.json().catch(() => null)) as { error?: unknown; erro?: unknown } | null;
@@ -101,35 +113,87 @@ async function resumoDoPrincipal(principalUserId: string, schema: string): Promi
   return await r.json();
 }
 
+/** hml-14 (H-32): o tempo vale até ler o corpo — estourou no meio dele, lança o tempo esgotado (não vira "corpo vazio"). */
+function semCorpo(e: unknown): Record<string, unknown> {
+  if (tempoEsgotado(e)) throw e;
+  return {};
+}
+
 /**
  * magic link gerado pelo servidor + verify = sessão nova do Treino (access + refresh), sem e-mail. Falha → lança
  * "generate_link_<status>" ou "verify_<status>" (hml-10, H-24: sem o corpo do GoTrue, que traz o e-mail e o token).
  */
-async function emitirSessao(email: string): Promise<Record<string, unknown>> {
-  const g = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+async function emitirSessao(email: string, p: Prazo): Promise<Record<string, unknown>> {
+  const g = await buscarComTempo(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
     method: "POST",
     headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" },
     body: JSON.stringify({ type: "magiclink", email }),
-  });
-  const link = await g.json().catch(() => ({}));
+  }, Math.min(TEMPO_MS.gotrueTreino, p.restante()));
+  const link = await g.json().catch(semCorpo);
   const hashed = (link as Record<string, unknown>)?.hashed_token ?? ((link as Record<string, Record<string, unknown>>)?.properties?.hashed_token);
   if (g.status !== 200 || typeof hashed !== "string") throw new Error(`generate_link_${g.status}`);
-  const v = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+  const v = await buscarComTempo(`${SUPABASE_URL}/auth/v1/verify`, {
     method: "POST",
     headers: { apikey: ANON, "Content-Type": "application/json" },
     body: JSON.stringify({ type: "email", token_hash: hashed }),
-  });
-  const sessao = await v.json().catch(() => ({}));
+  }, Math.min(TEMPO_MS.gotrueTreino, p.restante()));
+  const sessao = await v.json().catch(semCorpo);
   if (v.status !== 200 || typeof (sessao as Record<string, unknown>)?.access_token !== "string") {
     throw new Error(`verify_${v.status}`);
   }
   return sessao as Record<string, unknown>;
 }
 
+/**
+ * Registra o conflito para o master resolver (W27). hml-14 (H-51 item 3): falhar aqui não muda o 409 (ninguém entra no Treino
+ * de outra pessoa), mas avisa — é o registro que leva o caso ao master ("Já avisamos o suporte", no app).
+ */
+async function registrarConflito(
+  db: SupabaseClient,
+  schema: string,
+  linha: { principal_user_id: string; email: string; treino_user_id: string | null; motivo?: string },
+): Promise<void> {
+  const { error } = await db.from("physiq_identidade_conflitos").upsert(
+    { ...linha, ultima_em: new Date().toISOString() },
+    { onConflict: "principal_user_id" },
+  );
+  if (error) log.excecao(error, { codigo: "conflito_nao_gravado", schema });
+}
+
+/**
+ * Grava o vínculo deste login com o usuário do Treino e devolve o usuário do Treino que vale; null = ele já é de OUTRO login
+ * (quem chama responde conta_em_conflito). hml-14 (H-51 item 3): antes o 23505 passava calado e a troca emitia a sessão desse
+ * Treino — o login novo entrava no treino do antigo (e-mail que mudou de dono) ou, na corrida, seguia com um usuário sem
+ * vínculo. Agora relê o vínculo deste login e decide pela regra pura (decidirVinculoDuplicado, _shared/espelho/regras.ts).
+ */
+async function gravarVinculo(
+  db: SupabaseClient,
+  schema: string,
+  linha: { principal_user_id: string; treino_user_id: string; email: string; origem: "google" | "criado" },
+  criadoAgora: boolean,
+): Promise<string | null> {
+  const { error } = await db.from("physiq_identidades").insert(linha);
+  if (!error) return linha.treino_user_id;
+  if (error.code !== "23505") throw error;
+  const { data: gravado, error: eg } = await db.from("physiq_identidades")
+    .select("treino_user_id").eq("principal_user_id", linha.principal_user_id).maybeSingle();
+  if (eg) throw eg;
+  const decisao = decidirVinculoDuplicado({
+    tentado: linha.treino_user_id,
+    gravado: (gravado as { treino_user_id?: string } | null)?.treino_user_id ?? null,
+    criadoAgora,
+  });
+  if (decisao.caminho === "conflito") return null;
+  // sem dado pessoal: só o id do usuário do Treino que ficou sem vínculo (para apagar à mão)
+  if (decisao.caminho === "usar_gravado" && decisao.orfao) log.erro({ codigo: "usuario_orfao", schema, ref: decisao.orfao });
+  return decisao.treinoUserId;
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return erro("metodo", 405, origin);
+  const p = prazo(ORCAMENTO_LOGIN_MS); // hml-14 (H-32, D3): o prazo do login inteiro (todas as chamadas para fora)
   if (!PRINCIPAL_URL || !PRINCIPAL_ANON_KEY || ESPELHO_SEGREDO.length < 32) return erro("nao_configurada", 500, origin);
 
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
@@ -144,7 +208,7 @@ Deno.serve(async (req) => {
   // 1. token do principal validado no próprio principal (assinatura, validade e revogação)
   let principal: UsuarioPrincipal & Record<string, unknown>;
   try {
-    const r = await usuarioDoPrincipal(token);
+    const r = await usuarioDoPrincipal(token, p);
     if (!r.user) return r.status >= 500 ? erro("principal_indisponivel", 502, origin) : erro("invalid_token", 401, origin);
     principal = r.user;
   } catch (e) {
@@ -153,7 +217,14 @@ Deno.serve(async (req) => {
   }
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
-  const authAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+  // hml-14 (H-32, D3): o cliente do GoTrue do Treino (supabase-js) com tempo em cada chamada — sem isto, o GoTrue parado prendia o
+  // login no getUserById, antes do generate_link. getUserById e o updateUserById do espelho: TEMPO_MS.gotrueTreino (cortar só faz
+  // tentar de novo). Estourou → o erro do supabase-js → erro_interno. O `db` (PostgREST) segue sem tempo (D6).
+  const clienteAuth = (ms: () => number) => createClient(SUPABASE_URL, SERVICE_ROLE, {
+    auth: { persistSession: false },
+    global: { fetch: (entrada, init) => buscarComTempo(entrada, init ?? {}, ms()) },
+  });
+  const authAdmin = clienteAuth(() => Math.min(TEMPO_MS.gotrueTreino, p.restante()));
 
   let acao = "limite"; // hml-10 (D6): o passo em que estava, para o log do catch final
   try {
@@ -187,22 +258,26 @@ Deno.serve(async (req) => {
     let treinoUserId: string;
     let origemVinculo: string;
     if (decisao === "conflito") {
-      await db.from("physiq_identidade_conflitos").upsert(
-        { principal_user_id: principal.id, email, treino_user_id: treinoIdPorEmail, ultima_em: new Date().toISOString() },
-        { onConflict: "principal_user_id" },
-      );
+      await registrarConflito(db, schema, { principal_user_id: principal.id, email, treino_user_id: treinoIdPorEmail });
       return erro("conta_em_conflito", 409, origin);
     } else if (decisao === "usar_vinculo") {
       treinoUserId = (vinculo as { treino_user_id: string }).treino_user_id;
       origemVinculo = (vinculo as { origem: string }).origem;
     } else if (decisao === "vincular_por_email") {
-      treinoUserId = treinoIdPorEmail!;
+      const ligado = await gravarVinculo(db, schema, { principal_user_id: principal.id, treino_user_id: treinoIdPorEmail!, email, origem: "google" }, false);
+      if (!ligado) {
+        // hml-14 (H-51 item 3): o usuário do Treino com este e-mail já é de OUTRO login (o e-mail mudou de dono)
+        await registrarConflito(db, schema, { principal_user_id: principal.id, email, treino_user_id: treinoIdPorEmail, motivo: "treino_de_outro_login" });
+        return erro("conta_em_conflito", 409, origin);
+      }
+      treinoUserId = ligado;
       origemVinculo = "google";
-      const { error } = await db.from("physiq_identidades").insert({ principal_user_id: principal.id, treino_user_id: treinoUserId, email, origem: "google" });
-      if (error && error.code !== "23505") throw error;
     } else {
-      // criar: sem usuário no Treino com esse e-mail (no staging o gatilho do Calc cria o perfil só no schema staging)
-      const { data: novo, error: ec } = await authAdmin.auth.admin.createUser({
+      // criar: sem usuário no Treino com esse e-mail (no staging o gatilho do Calc cria o perfil só no schema staging).
+      // hml-14 (H-32): o createUser espera o que sobra do prazo do login, não os 10 s — cortar depois de o GoTrue criar deixaria o
+      // usuário do Treino sem vínculo, e o próximo login por senha cairia em conta_em_conflito (sobram ≥ 30 s: o máximo medido do
+      // login inteiro é 26,3 s)
+      const { data: novo, error: ec } = await clienteAuth(() => p.restante()).auth.admin.createUser({
         email,
         email_confirm: true,
         user_metadata: {
@@ -218,9 +293,13 @@ Deno.serve(async (req) => {
         if (!v2) throw ec ?? new Error("createUser sem usuário");
         treinoUserId = (v2 as { treino_user_id: string }).treino_user_id;
       } else {
-        treinoUserId = novo.user.id;
-        const { error } = await db.from("physiq_identidades").insert({ principal_user_id: principal.id, treino_user_id: treinoUserId, email, origem: "criado" });
-        if (error && error.code !== "23505") throw error;
+        const ligado = await gravarVinculo(db, schema, { principal_user_id: principal.id, treino_user_id: novo.user.id, email, origem: "criado" }, true);
+        if (!ligado) {
+          // hml-14 (H-51 item 3): o usuário recém-criado já ligado a OUTRO login (não deveria acontecer): nunca a sessão dele
+          await registrarConflito(db, schema, { principal_user_id: principal.id, email, treino_user_id: novo.user.id, motivo: "treino_de_outro_login" });
+          return erro("conta_em_conflito", 409, origin);
+        }
+        treinoUserId = ligado;
       }
       origemVinculo = "criado";
     }
@@ -232,7 +311,7 @@ Deno.serve(async (req) => {
 
     // 5. espelho: resumo do núcleo aplicado no Treino (papel, conta, professor, status)
     acao = "espelho";
-    const resumo = await resumoDoPrincipal(principal.id, schema);
+    const resumo = await resumoDoPrincipal(principal.id, schema, p);
     if (!resumo) return erro("espelho_indisponivel", 502, origin);
     const espelho: ResultadoEspelho = await aplicarResumo(db, authAdmin, log, treinoUser, resumo, schema === "staging" ? "staging" : "public");
     await db.from("physiq_identidades").update({ visto_em: new Date().toISOString() }).eq("principal_user_id", principal.id);
@@ -243,7 +322,7 @@ Deno.serve(async (req) => {
 
     // 6. sessão do Treino (o app grava com setSession; o PowerSync conecta com ela)
     acao = "sessao";
-    const sessao = await emitirSessao(treinoUser.email);
+    const sessao = await emitirSessao(treinoUser.email, p);
     return json({
       access_token: sessao.access_token,
       refresh_token: sessao.refresh_token,

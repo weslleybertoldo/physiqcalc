@@ -3,7 +3,9 @@
 // no Banco do Treino (spec §7.4). Só o servidor chama: autenticação pelo segredo compartilhado ESPELHO_SEGREDO.
 //
 // POST, headers: x-espelho-segredo · x-schema: public|staging. Corpo: { principal_user_id }.
-// 200 → ResumoNucleo · 404 usuario_nao_encontrado · 401 segredo_invalido.
+// 200 → ResumoNucleo · 404 usuario_nao_encontrado · 401 segredo_invalido · 500 erro_interno.
+// hml-14 (H-76): o 404 é só o login que não existe de verdade (o 404 do GoTrue); erro do GoTrue (rede, 5xx, tempo) vai para o
+// catch → 500 e avisa. A trocar-token trata os 2 do mesmo jeito de antes (espelho_indisponivel, que o app tenta de novo).
 // verify_jwt = false. Publicar (a partir do physiqcalc):
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions espelho-resumo false
 // hml-10 (H-26): o catch final avisa (log.excecao, _shared/log.ts) e devolve o mesmo 500.

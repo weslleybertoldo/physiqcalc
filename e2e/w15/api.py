@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -192,8 +193,11 @@ def main() -> int:
     p.check(st == 403, f"Bruno relatório do Rafael → 403 ({st})")
     st, r = B.funcao_treino("w13-dono", "admin-semana-treinos", {"action": "resolverAluno", "principalUserId": B.uid("w13-aluno")}, base=BASE)
     p.check(st == 200 and r.get("treino_user_id") == rafael, f"resolverAluno (matrícula sem treino_user_id) → o Treino do Rafael ({st} {r})")
+    # hml-14c (H-51 item 5): quem não vê o aluno recebe a MESMA resposta de um id sem treino (antes o 403 dizia que o Rafael tinha treino)
     st, r = B.funcao_treino("w13-personal2", "admin-semana-treinos", {"action": "resolverAluno", "principalUserId": B.uid("w13-aluno")}, base=BASE)
-    p.check(st == 403, f"resolverAluno pelo Bruno → 403 ({st})")
+    p.check(st == 200 and r.get("treino_user_id") is None, f"resolverAluno pelo Bruno → sem o Treino do Rafael ({st} {r})")
+    st2, r2 = B.funcao_treino("w13-personal2", "admin-semana-treinos", {"action": "resolverAluno", "principalUserId": str(uuid.uuid4())}, base=BASE)
+    p.check((st2, r2) == (st, r), f"resolverAluno de um id que não existe → a mesma resposta ({st2} {r2})")
     st, r, _ = B.http("POST", f"{BASE}/functions/v1/admin-semana-treinos", {"action": "get", "userId": rafael},
                       {"apikey": B.anon(B.TREINO_REF), "x-schema": S, "Origin": "https://physiqcalc-staging.vercel.app"})
     p.check(st == 401, f"sem login → 401 ({st})")

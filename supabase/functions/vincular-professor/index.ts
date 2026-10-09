@@ -14,11 +14,15 @@
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions vincular-professor false   (FORCAR_VERIFY_JWT=1 na 1ª vez)
 // Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
+// hml-14 (H-32): o repasse ao principal espera no máximo TEMPO_MS.principal (vincular-aluno: máx. medido 1,1 s; estourou → o
+// principal_indisponivel de sempre); erro do banco lança (o catch responde 500 e avisa) — antes virava "não tem" calado; o
+// vínculo do APK antigo confere a linha gravada (sem linha mudada: nada de convite aceito, repasse nem vinculado: true).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { TEMPO_MS, buscarComTempo, tempoEsgotado } from "../_shared/tempo.ts";
 
 const log = criarLog("vincular-professor", { avisar: avisarErro });
 
@@ -79,16 +83,21 @@ function segredoConfere(recebido: string | null | undefined, esperado: string | 
 type ClienteW3 = ReturnType<typeof adminClient>;
 async function repassarAoPrincipal(admin: ClienteW3, treinoUserId: string, codigo: string): Promise<string> {
   if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return "sem_configuracao";
-  const { data: v } = await admin.from("physiq_identidades").select("principal_user_id").eq("treino_user_id", treinoUserId).maybeSingle();
+  const { data: v, error: ev } = await admin.from("physiq_identidades").select("principal_user_id").eq("treino_user_id", treinoUserId).maybeSingle();
+  if (ev) throw ev; // hml-14 (H-32): antes virava "sem_login_no_physiq" calado
   const principalId = (v as { principal_user_id?: string } | null)?.principal_user_id;
   if (!principalId) return "sem_login_no_physiq";
   try {
-    const r = await fetch(`${PRINCIPAL_URL}/functions/v1/vincular-aluno`, {
+    const r = await buscarComTempo(`${PRINCIPAL_URL}/functions/v1/vincular-aluno`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
       body: JSON.stringify({ principal_user_id: principalId, codigo }),
-    });
-    const corpo = (await r.json().catch(() => ({}))) as { ok?: boolean; erro?: string };
+    }, TEMPO_MS.principal);
+    // o tempo vale até ler o corpo: estourou no meio dele → o catch (não um "recusado" sem corpo)
+    const corpo = (await r.json().catch((e) => {
+      if (tempoEsgotado(e)) throw e;
+      return {};
+    })) as { ok?: boolean; erro?: string };
     return corpo.ok ? "repassado" : `recusado:${corpo.erro ?? r.status}`;
   } catch (e) {
     log.excecao(e, { codigo: "principal_indisponivel", schema: currentSchema(), acao: "repasse" });
@@ -103,6 +112,8 @@ interface LinhaProfessorW3 {
 }
 
 // modo servidor: o que o Calc sabe desta pessoa (o pos-login do principal cria a conta/matrícula que faltar)
+// hml-14 (H-32): erro do banco ou do Auth lança → 500 (o pos-login registra, o login segue e a ponte tenta de novo no próximo
+// login) — antes cada leitura que falhava virava "não tem" e o pos-login decidia com a resposta errada
 async function legadoDaPessoa(body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const admin = adminClient();
   const principalId = typeof body.principal_user_id === "string" && UUID.test(body.principal_user_id) ? body.principal_user_id : null;
@@ -110,22 +121,26 @@ async function legadoDaPessoa(body: Record<string, unknown>): Promise<Record<str
   const nome = typeof body.nome === "string" ? body.nome.trim().slice(0, 120) : "";
   let treinoUserId: string | null = null;
   if (principalId) {
-    const { data: v } = await admin.from("physiq_identidades").select("treino_user_id").eq("principal_user_id", principalId).maybeSingle();
+    const { data: v, error: ev } = await admin.from("physiq_identidades").select("treino_user_id").eq("principal_user_id", principalId).maybeSingle();
+    if (ev) throw ev;
     treinoUserId = (v as { treino_user_id?: string } | null)?.treino_user_id ?? null;
   }
   // sem vínculo: só procura pelo e-mail quando o login do principal foi Google (a mesma regra da trocar-token)
   if (!treinoUserId && body.google === true && email) {
-    const { data: achado } = await admin.rpc("physiq_auth_user_id_por_email", { p_email: email });
+    const { data: achado, error: ea } = await admin.rpc("physiq_auth_user_id_por_email", { p_email: email });
+    if (ea) throw ea;
     treinoUserId = (achado as string | null) ?? null;
   }
   const saida: Record<string, unknown> = { treino_user_id: treinoUserId, professor: null, convite_professor: null, aluno: null };
   if (treinoUserId) {
-    const { data: prof } = await admin.from("physiq_professores")
+    const { data: prof, error: ep } = await admin.from("physiq_professores")
       .select("codigo_convite, nome, status, trial_ate, adesao_paga_em, ciclo_vence_em, anual_ate, cobranca_pausada, acesso_liberado_ate, physiq_planos_professor(nome)")
       .eq("id", treinoUserId).maybeSingle();
+    if (ep) throw ep;
     const p = prof as LinhaProfessorW3 | null;
     if (p) {
-      const { data: u } = await authAdmin().auth.admin.getUserById(treinoUserId);
+      const { data: u, error: eu } = await authAdmin().auth.admin.getUserById(treinoUserId);
+      if (eu) throw eu; // sem ler o login, o master viraria master: false
       const role = (u?.user?.app_metadata as { role?: string } | undefined)?.role;
       saida.professor = {
         codigo_convite: p.codigo_convite, nome: p.nome, status: p.status, plano_nome: p.physiq_planos_professor?.nome ?? null,
@@ -133,23 +148,28 @@ async function legadoDaPessoa(body: Record<string, unknown>): Promise<Record<str
         cobranca_pausada: p.cobranca_pausada, acesso_liberado_ate: p.acesso_liberado_ate, master: role === "admin" || role === "master",
       };
     } else {
-      const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", treinoUserId).maybeSingle();
+      const { data: perfil, error: epf } = await admin.from("physiq_profiles").select("professor_id").eq("id", treinoUserId).maybeSingle();
+      if (epf) throw epf;
       const profId = (perfil as { professor_id?: string | null } | null)?.professor_id;
       if (profId) {
-        const { data: p2 } = await admin.from("physiq_professores").select("codigo_convite").eq("id", profId).maybeSingle();
+        const { data: p2, error: ep2 } = await admin.from("physiq_professores").select("codigo_convite").eq("id", profId).maybeSingle();
+        if (ep2) throw ep2;
         saida.aluno = { professor_codigo: (p2 as { codigo_convite?: string | null } | null)?.codigo_convite ?? null };
       }
     }
   }
   // convite de professor do master pendente pra este e-mail (ainda sem linha de professor): consome e gera o código
   if (!saida.professor && email) {
-    const { data: conv } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").eq("email", email).maybeSingle();
+    const { data: conv, error: ec } = await admin.from("physiq_convites").select("id").eq("papel", "professor").eq("status", "pendente").eq("email", email).maybeSingle();
+    if (ec) throw ec;
     const conviteId = (conv as { id?: string } | null)?.id;
     if (conviteId) {
       const { data: cod, error: eg } = await admin.rpc("physiq_gerar_codigo_professor", { p_nome: nome || email.split("@")[0] });
       if (eg) throw eg;
-      const { data: marcado } = await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() })
+      // sem linha marcada = outro pedido já consumiu o convite; erro do banco lança (antes parecia "outro consumiu")
+      const { data: marcado, error: em } = await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() })
         .eq("id", conviteId).eq("status", "pendente").select("id").maybeSingle();
+      if (em) throw em;
       if (marcado) saida.convite_professor = { codigo: cod as string, nome: nome || null };
     }
   }
@@ -198,12 +218,15 @@ function addDias(d: string, n: number): string {
 }
 
 // promove o usuário a PROFESSOR: linha em physiq_professores (código fixo, plano Start, trial), integração pix_manual, claim no JWT
+// hml-14 (H-32): leituras e gravações conferem o erro — antes o trial (14 dias) e o plano (nenhum) eram gravados com o padrão
+// calado, a integração e o perfil podiam não nascer e, sem ler o login, o papel admin/master virava "professor"
 async function promoverProfessor(admin: any, userId: string, email: string | null, nome: string, criadoPor: string | null) {
-  const [{ data: cod }, { data: trialCfg }, { data: start }] = await Promise.all([
+  const [{ data: cod, error: e1 }, { data: trialCfg, error: e2 }, { data: start, error: e3 }] = await Promise.all([
     admin.rpc("physiq_gerar_codigo_professor", { p_nome: nome }),
     admin.from("app_config").select("value").eq("key", "trial_dias").maybeSingle(),
     admin.from("physiq_planos_professor").select("id").eq("nome", "Start").maybeSingle(),
   ]);
+  if (e1 || e2 || e3) throw e1 || e2 || e3;
   const trialDias = Number((trialCfg as any)?.value) || 14;
   const { data: existente } = await admin.from("physiq_professores").select("id, codigo_convite").eq("id", userId).maybeSingle();
   let codigo = (existente as any)?.codigo_convite as string | undefined;
@@ -214,14 +237,18 @@ async function promoverProfessor(admin: any, userId: string, email: string | nul
     });
     if (error) throw error;
   }
-  await admin.from("physiq_integracoes").upsert({ professor_id: userId, tipo: "pix_manual" }, { onConflict: "professor_id", ignoreDuplicates: true });
+  const { error: ei } = await admin.from("physiq_integracoes").upsert({ professor_id: userId, tipo: "pix_manual" }, { onConflict: "professor_id", ignoreDuplicates: true });
+  if (ei) throw ei;
   // o professor também tem perfil (é usuário do app) — se não tiver, cria
-  await admin.from("physiq_profiles").upsert({ id: userId, nome, email }, { onConflict: "id", ignoreDuplicates: true });
+  const { error: epf } = await admin.from("physiq_profiles").upsert({ id: userId, nome, email }, { onConflict: "id", ignoreDuplicates: true });
+  if (epf) throw epf;
   const aa = authAdmin();
-  const { data: u } = await aa.auth.admin.getUserById(userId);
+  const { data: u, error: eu } = await aa.auth.admin.getUserById(userId);
+  if (eu) throw eu;
   const meta = { ...((u?.user?.app_metadata as Record<string, unknown>) || {}) };
   if (meta.role !== "admin" && meta.role !== "master") meta.role = "professor";
-  await aa.auth.admin.updateUserById(userId, { app_metadata: meta });
+  const { error: eup } = await aa.auth.admin.updateUserById(userId, { app_metadata: meta });
+  if (eup) throw eup;
   return { codigo, promovidoPor: criadoPor };
 }
 
@@ -253,12 +280,15 @@ Deno.serve(async (req) => {
     const nome = ((user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || email.split("@")[0] || "Professor") as string;
 
     // 1. convite de PROFESSOR pendente para este e-mail → promove (mesmo que ainda não tenha perfil)
-    const { data: convProf } = email
+    // hml-14 (H-32): erro do banco lança (antes virava "sem convite" e a pessoa seguia como aluno)
+    const { data: convProf, error: ecp } = email
       ? await admin.from("physiq_convites").select("id, criado_por").eq("papel", "professor").eq("status", "pendente").eq("email", email).maybeSingle()
-      : { data: null };
+      : { data: null, error: null };
+    if (ecp) throw ecp;
     if (convProf) {
       const { codigo: cod } = await promoverProfessor(admin, user.id, user.email, nome, (convProf as any).criado_por);
-      await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() }).eq("id", (convProf as any).id);
+      const { error: eac } = await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() }).eq("id", (convProf as any).id);
+      if (eac) throw eac;
       return jsonOk({ papel: "professor", codigo: cod, refresh: true }, origin);
     }
     // staff já é staff: nada a vincular
@@ -266,20 +296,27 @@ Deno.serve(async (req) => {
     if (role === "professor") return jsonOk({ papel: "professor", vinculado: false, motivo: "ja_professor" }, origin);
 
     // 2. aluno: já tem professor? não mexe (só o master move)
-    const { data: perfil } = await admin.from("physiq_profiles").select("id, professor_id").eq("id", user.id).maybeSingle();
+    // hml-14 (H-32): sem ler o perfil → 500 (antes seguia como "sem professor" e respondia vinculado: true sem vincular)
+    const { data: perfil, error: epf } = await admin.from("physiq_profiles").select("id, professor_id").eq("id", user.id).maybeSingle();
+    if (epf) throw epf;
     if ((perfil as any)?.professor_id) return jsonOk({ papel: "aluno", vinculado: false, motivo: "ja_tem_professor" }, origin);
     // perfil ainda não existe (trigger atrasado / conta antiga sem perfil): cria pra poder vincular
-    if (!perfil) await admin.from("physiq_profiles").upsert({ id: user.id, nome, email: user.email }, { onConflict: "id", ignoreDuplicates: true });
+    if (!perfil) {
+      const { error: ecr } = await admin.from("physiq_profiles").upsert({ id: user.id, nome, email: user.email }, { onConflict: "id", ignoreDuplicates: true });
+      if (ecr) throw ecr;
+    }
 
     // 3. convite de ALUNO por e-mail tem prioridade sobre o código do link
     let professorId: string | null = null;
     let conviteId: string | null = null;
-    const { data: convAluno } = email
+    const { data: convAluno, error: eca } = email
       ? await admin.from("physiq_convites").select("id, professor_id").eq("papel", "aluno").eq("status", "pendente").eq("email", email).order("enviado_em", { ascending: false }).limit(1).maybeSingle()
-      : { data: null };
+      : { data: null, error: null };
+    if (eca) throw eca; // hml-14 (H-32): antes o código do link passava na frente do convite
     if (convAluno?.professor_id) { professorId = (convAluno as any).professor_id; conviteId = (convAluno as any).id; }
     else if (codigo) {
-      const { data: prof } = await admin.from("physiq_professores").select("id, status").eq("codigo_convite", codigo).maybeSingle();
+      const { data: prof, error: ep } = await admin.from("physiq_professores").select("id, status").eq("codigo_convite", codigo).maybeSingle();
+      if (ep) throw ep; // hml-14 (H-32): antes "codigo_invalido" com o banco fora
       if (!prof) return jsonErr("codigo_invalido", 404, origin);
       if ((prof as any).status !== "ativo") return jsonErr("professor_inativo", 409, origin);
       professorId = (prof as any).id;
@@ -289,10 +326,17 @@ Deno.serve(async (req) => {
 
     const { data: pode } = await admin.rpc("physiq_professor_pode_convidar", { pid: professorId });
     if (pode !== true) return jsonErr("limite_plano", 409, origin);
-    const { error } = await admin.from("physiq_profiles").update({ professor_id: professorId }).eq("id", user.id).is("professor_id", null);
+    // hml-14 (H-32): confere a linha gravada — o perfil existe (lido ou criado acima), então nenhuma linha mudada quer dizer que
+    // outro pedido ligou um professor depois da leitura (a trava .is): é o "ja_tem_professor", sem convite, repasse nem vínculo
+    const { data: ligado, error } = await admin.from("physiq_profiles").update({ professor_id: professorId }).eq("id", user.id).is("professor_id", null).select("id");
     if (error) throw error;
-    if (conviteId) await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() }).eq("id", conviteId);
-    const { data: nomeProf } = await admin.from("physiq_professores").select("nome, codigo_convite").eq("id", professorId).maybeSingle();
+    if (!ligado?.length) return jsonOk({ papel: "aluno", vinculado: false, motivo: "ja_tem_professor" }, origin);
+    if (conviteId) {
+      const { error: eac } = await admin.from("physiq_convites").update({ status: "aceito", aceito_em: new Date().toISOString() }).eq("id", conviteId);
+      if (eac) throw eac;
+    }
+    const { data: nomeProf, error: enp } = await admin.from("physiq_professores").select("nome, codigo_convite").eq("id", professorId).maybeSingle();
+    if (enp) throw enp; // hml-14 (H-32): antes o repasse ao principal não saía ("sem_codigo") e ninguém sabia
     // Physiq W3: a matrícula nasce no principal quando a pessoa já tem login lá
     const prof = nomeProf as { nome?: string | null; codigo_convite?: string | null } | null;
     const repasse = prof?.codigo_convite ? await repassarAoPrincipal(admin, user.id, prof.codigo_convite) : "sem_codigo";

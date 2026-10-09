@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { criarFetchResiliente, TEMPO_FUNCAO_MS } from "@/integrations/repeticao";
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 
 // Cliente das edge functions do SaaS do Banco do Treino (master → professores → alunos), 12/09/2026: JWT da sessão + x-schema do
@@ -28,11 +29,15 @@ export class EdgeError extends Error {
   }
 }
 
+// hml-14 (H-32, D5): as funções do Treino daqui (a lista de alunos, a Biblioteca do master) vão 1 vez só (0 = não repete), até 25 s
+// (TEMPO_FUNCAO_MS, o mesmo dos 2 clientes); estourou → rejeita como a falha de rede de hoje.
+const buscarFuncao = criarFetchResiliente(0, TEMPO_FUNCAO_MS, undefined, { banco: "treino" });
+
 export async function invokeEdge<T = unknown>(fn: string, body: Record<string, unknown> = {}): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const session = data?.session;
   if (!session) throw new EdgeError("not_authenticated", 401);
-  const res = await fetch(`${FN_BASE}/${fn}`, {
+  const res = await buscarFuncao(`${FN_BASE}/${fn}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
+import { tagsQueNaoPodemEntrar, trocaDeTags, type TagComDono } from "./regras.ts";
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -41,6 +43,7 @@ function jsonErr(msg: string, status: number, origin: string | null) {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function checkRateLimit(userId: string, endpoint: string, maxCount: number, windowSecs: number): Promise<boolean> {
   try {
@@ -144,11 +147,21 @@ Deno.serve(async (req) => {
       const { data: t } = await admin.from("physiq_tags").select("professor_id").eq("id", tagId).maybeSingle();
       return (t as any)?.professor_id === user.id;
     };
-    // catálogo visível: master = tudo; professor = globais (NULL) + as dele
+    // catálogo visível: master = tudo; professor = globais (NULL) + as dele (a mesma régua do tagVisivel, regras.ts)
     const tagsVisiveis = () => {
       let q = admin.from("physiq_tags").select("*").order("nome");
       if (professor) q = q.or(`professor_id.is.null,professor_id.eq.${user.id}`);
       return q;
+    };
+    // hml-14 (H-51 item 1): as tags que vão ENTRAR no aluno precisam ser visíveis para quem chama (global ou dele) — antes o
+    // setUserTags e o assign-tag gravavam qualquer tag_id e o list-user-tags devolvia nome e cor da tag privada de outro
+    // professor. Id que não é uuid conta como tag que não existe (não chega ao banco). Devolve as que não podem (vazio = ok).
+    const naoPodemEntrar = async (entram: string[]): Promise<string[]> => {
+      const ids = entram.filter((id) => UUID_RE.test(id));
+      if (!ids.length) return entram;
+      const { data, error } = await admin.from("physiq_tags").select("id, professor_id").in("id", ids);
+      if (error) throw error;
+      return tagsQueNaoPodemEntrar(entram, (data ?? []) as TagComDono[], { id: user.id, papel: user.papel });
     };
     if (action === "list-tags" || action === "list") {
       const { data, error } = await tagsVisiveis();
@@ -185,16 +198,22 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ tags: tagsRes.data ?? [], tagIds }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
     if (action === "getAllUserTags") {
-      let q = admin.from("physiq_user_tags").select("user_id, tag_id");
+      // hml-14 (H-32): tudo em páginas (o PostgREST corta em 1000, calado) e o erro de cada leitura vai para o catch (antes o
+      // professor recebia o mapa vazio, sem aviso); os alunos do professor em lotes de 150 no .in() (sem aluno: nenhum)
+      type UserTag = { user_id: string; tag_id: string };
+      const marcacoes = (lote: string[] | null) => todasAsPaginas<UserTag>((de, ate) => {
+        const q = admin.from("physiq_user_tags").select("user_id, tag_id");
+        return (lote ? q.in("user_id", lote) : q).order("id").range(de, ate);
+      });
+      let userTags: UserTag[];
       if (professor) {
-        // só alunos do professor (lista vazia → filtro impossível, devolve [])
-        const { data: alunos } = await admin.from("physiq_profiles").select("id").eq("professor_id", user.id);
-        const ids = ((alunos as any[]) || []).map((a) => a.id);
-        q = q.in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+        const alunos = await todasAsPaginas<{ id: string }>((de, ate) =>
+          admin.from("physiq_profiles").select("id").eq("professor_id", user.id).order("id").range(de, ate));
+        userTags = await emLotes(alunos.map((a) => a.id), 150, marcacoes);
+      } else {
+        userTags = await marcacoes(null);
       }
-      const { data, error } = await q;
-      if (error) throw error;
-      return new Response(JSON.stringify({ userTags: data ?? [] }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+      return new Response(JSON.stringify({ userTags }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
     if (action === "create-tag" || action === "create") {
       const nome = body?.tag?.nome ?? body?.nome;
@@ -226,25 +245,35 @@ Deno.serve(async (req) => {
       if (e2) throw e2;
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
-    // substitui o conjunto de tags de um usuario (AdminTagSelector)
+    // substitui o conjunto de tags de um usuario (TagsDoAluno; o AdminTagSelector do app antigo)
     if (action === "setUserTags") {
       const userId = body?.userId;
       const tagIds = body?.tagIds;
       if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
       if (!Array.isArray(tagIds)) return jsonErr("missing_tagIds", 400, origin);
-      const { error: delErr } = await admin.from("physiq_user_tags").delete().eq("user_id", userId);
-      if (delErr) throw delErr;
-      if (tagIds.length > 0) {
-        const rows = tagIds.map((t: string) => ({ user_id: userId, tag_id: t }));
-        const { error: insErr } = await admin.from("physiq_user_tags").insert(rows);
+      // hml-14 (H-51 item 1): insere as que entram e apaga as que saíram (regras.ts) — antes apagava TODAS e inseria de novo, e
+      // com o insert falhando o aluno ficava sem nenhuma tag. Nada é gravado antes de conferir as que entram (403).
+      const { data: atuais, error: atuaisErr } = await admin.from("physiq_user_tags").select("tag_id").eq("user_id", userId);
+      if (atuaisErr) throw atuaisErr;
+      const pedidas = tagIds.map((t: unknown) => (typeof t === "string" ? t.toLowerCase() : String(t)));
+      const { entram, saem } = trocaDeTags(((atuais ?? []) as Array<{ tag_id: string }>).map((r) => r.tag_id), pedidas);
+      if ((await naoPodemEntrar(entram)).length) return jsonErr("forbidden", 403, origin);
+      if (entram.length) {
+        const { error: insErr } = await admin.from("physiq_user_tags").insert(entram.map((t) => ({ user_id: userId, tag_id: t })));
         if (insErr) throw insErr;
+      }
+      if (saem.length) {
+        const { error: delErr } = await admin.from("physiq_user_tags").delete().eq("user_id", userId).in("tag_id", saem);
+        if (delErr) throw delErr;
       }
       return new Response(JSON.stringify({ ok: true, tagIds }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
     }
     if (action === "assign-tag") {
       const userId = body?.userId;
       const tagId = body?.tagId;
-      if (!userId || !tagId) return jsonErr("missing_ids", 400, origin);
+      // hml-14 (H-51 item 1): ids em texto (o userId que não é texto pulava a conferência do aluno lá em cima) e só tag visível
+      if (!userId || !tagId || typeof userId !== "string" || typeof tagId !== "string") return jsonErr("missing_ids", 400, origin);
+      if ((await naoPodemEntrar([tagId.toLowerCase()])).length) return jsonErr("forbidden", 403, origin);
       const { data, error } = await admin.from("physiq_user_tags").insert({ user_id: userId, tag_id: tagId }).select().maybeSingle();
       if (error) throw error;
       return new Response(JSON.stringify({ userTag: data }), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });

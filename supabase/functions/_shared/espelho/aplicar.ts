@@ -3,8 +3,11 @@
 // O vínculo que vale entre os 2 bancos é SÓ o physiq_identidades (service_role): nada que o app grava no principal
 // (ex.: pacientes.treino_user_id) decide qual usuário do Treino é de quem.
 // hml-10 (H-24): o log vem de quem chama (o da trocar-token ou o da espelho-nucleo), para a linha e o aviso dizerem a função.
+// hml-14 (H-32): o vínculo dos alunos do personal é lido em lotes e com todas as páginas (mapearTreino) e o perfil do professor
+// novo confere o erro do banco.
 import type { SupabaseClient, User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import type { Log } from "../log.ts";
+import { emLotes, todasAsPaginas } from "../paginas.ts";
 import {
   acessoProfessor,
   alunoBloqueadoSemStaff,
@@ -34,9 +37,13 @@ export async function mapearTreino(db: SupabaseClient, principalIds: string[]): 
   const ids = [...new Set(principalIds.filter(Boolean))];
   const mapa = new Map<string, string>();
   if (!ids.length) return mapa;
-  const { data, error } = await db.from("physiq_identidades").select("principal_user_id, treino_user_id").in("principal_user_id", ids);
-  if (error) throw error;
-  for (const l of (data ?? []) as Array<{ principal_user_id: string; treino_user_id: string }>) mapa.set(l.principal_user_id, l.treino_user_id);
+  // hml-14 (H-32): os alunos do personal não têm teto (faixa "livre" e contas legadas): em lotes de 150 (o .in() com centenas de
+  // uuid estoura a URL) e com todas as páginas na ordem da chave (estável; antes parava calado no 1000º); erro do banco lança
+  const linhas = await emLotes(ids, 150, (lote) =>
+    todasAsPaginas<{ principal_user_id: string; treino_user_id: string }>((de, ate) =>
+      db.from("physiq_identidades").select("principal_user_id, treino_user_id").in("principal_user_id", lote)
+        .order("principal_user_id").range(de, ate)));
+  for (const l of linhas) mapa.set(l.principal_user_id, l.treino_user_id);
   return mapa;
 }
 
@@ -113,8 +120,10 @@ export async function aplicarResumo(
         status: acesso.ponte?.status ?? "ativo", ...campos,
       });
       if (ei) throw ei;
-      // o professor também é usuário do app: garante o perfil (o gatilho do Calc já cria no cadastro)
-      await db.from("physiq_profiles").upsert({ id: treinoId, nome, email: treinoUser.email }, { onConflict: "id", ignoreDuplicates: true });
+      // o professor também é usuário do app: garante o perfil (o gatilho do Calc já cria no cadastro). hml-14 (H-32): o erro do
+      // banco lança como os outros passos (antes passava calado e o professor podia ficar sem perfil sem ninguém saber)
+      const { error: epf } = await db.from("physiq_profiles").upsert({ id: treinoId, nome, email: treinoUser.email }, { onConflict: "id", ignoreDuplicates: true });
+      if (epf) throw epf;
       professor = "criado";
     } else {
       const { error: eu } = await db.from("physiq_professores").update(campos).eq("id", treinoId);
