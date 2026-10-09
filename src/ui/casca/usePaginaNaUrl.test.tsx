@@ -1,5 +1,6 @@
 import { act, render } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { MemoryRouter, useLocation, useSearchParams } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { usePaginaNaUrl } from "./usePaginaNaUrl";
 
@@ -72,5 +73,44 @@ describe("usePaginaNaUrl (hml-14b, D13)", () => {
   it("total ainda desconhecido não mexe na página", () => {
     montar("/x?pagina=9", { total: null });
     expect(h.pagina).toBe(9);
+  });
+
+  // a tela grava o filtro no endereço num efeito do MESMO commit em que a página volta à 1: as 2 escritas partem do endereço do
+  // render anterior e a última vence — nos 2 sentidos o endereço tem que terminar com o filtro novo e sem a página velha
+  it.each([
+    ["a tela grava antes", true],
+    ["a tela grava depois", false],
+  ])("filtro gravado pela tela no mesmo commit (%s): termina com o filtro novo e sem a página velha", (_nome, telaAntes) => {
+    function GravaFiltro({ q }: { q: string }) {
+      const [sp, setSp] = useSearchParams();
+      useEffect(() => {
+        if (sp.get("q") === q) return;
+        setSp((atual) => {
+          const n = new URLSearchParams(atual);
+          n.set("q", q);
+          return n;
+        }, { replace: true });
+      }, [q, sp, setSp]);
+      return null;
+    }
+    function Tela({ q }: { q: string }) {
+      return (
+        <>
+          {telaAntes && <GravaFiltro q={q} />}
+          <Sonda opcoes={{ filtro: { q } }} />
+          {!telaAntes && <GravaFiltro q={q} />}
+        </>
+      );
+    }
+    const tela = (q: string) => (
+      <MemoryRouter initialEntries={["/x?q=a&pagina=3"]}>
+        <Tela q={q} />
+      </MemoryRouter>
+    );
+    const r = render(tela("a"));
+    expect(h.pagina).toBe(3);
+    r.rerender(tela("b"));
+    expect(h.pagina).toBe(1);
+    expect(h.busca).toBe("?q=b");
   });
 });
