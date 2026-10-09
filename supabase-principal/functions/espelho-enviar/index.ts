@@ -11,11 +11,15 @@
 // hml-10 (H-24, H-26, H-48): log em JSON pelo _shared/log.ts; a espelho-nucleo que recusa vira o código espelho_nucleo_<status>
 // (sem o corpo dela — o mesmo texto vai para espelho_pendencias.erro); a resposta de erro leva só o código (sem a mensagem do
 // banco); cada pendência que falha avisa (log.excecao).
+// hml-14 (H-32): a espelho-nucleo espera no máximo TEMPO_MS.espelhoNucleo por pendência (estourou → a pendência falha e volta com
+// a nova tentativa de sempre); o lote para de pegar pendência nova aos ORCAMENTO_MS.loteEspelho (a sobra fica para a próxima
+// rodada, intacta); gravar "feito" que falha vira falha da pendência, e a falha que não grava avisa.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { resumoDaPessoa, type Resumo } from "../_shared/resumo.ts";
 import { MAX_TENTATIVAS_ESPELHO, proximaTentativaMs, segredoConfere } from "../_shared/resumo-regras.ts";
+import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -31,6 +35,7 @@ interface Pendencia { id: number; tipo: "pessoa" | "conta"; payload: Record<stri
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "metodo" }, 405);
+  const lote = prazo(ORCAMENTO_MS.loteEspelho); // hml-14 (H-32): o lote inteiro (ninguém espera; a sobra vai para a próxima rodada)
   if (!segredoConfere(req.headers.get("x-espelho-segredo"), ESPELHO_SEGREDO)) return json({ error: "segredo_invalido" }, 401);
   if (!TREINO_URL) return json({ error: "nao_configurada" }, 500);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
@@ -51,7 +56,12 @@ Deno.serve(async (req) => {
   }
 
   const saida: Array<Record<string, unknown>> = [];
-  for (const p of (fila ?? []) as Pendencia[]) {
+  const pendencias = (fila ?? []) as Pendencia[];
+  for (const p of pendencias) {
+    if (lote.esgotado()) {
+      log.aviso({ codigo: "lote_no_limite", schema, n: pendencias.length - saida.length });
+      break;
+    }
     try {
       const pessoas: string[] = [];
       if (p.tipo === "pessoa" && typeof p.payload?.principal_user_id === "string" && UUID.test(p.payload.principal_user_id)) {
@@ -69,23 +79,27 @@ Deno.serve(async (req) => {
         if (r) resumos.push(r);
       }
       if (resumos.length) {
-        const resp = await fetch(`${TREINO_URL}/functions/v1/espelho-nucleo`, {
+        const resp = await buscarComTempo(`${TREINO_URL}/functions/v1/espelho-nucleo`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": schema },
           body: JSON.stringify({ resumos }),
-        });
-        await resp.text(); // lê até o fim (a conexão fica livre); o corpo não vai para o log nem para a fila
+        }, TEMPO_MS.espelhoNucleo);
+        await resp.text(); // lê até o fim (a conexão fica livre; o tempo vale até aqui); o corpo não vai para o log nem para a fila
         if (resp.status !== 200) throw new Error(`espelho_nucleo_${resp.status}`);
       }
-      await db.from("espelho_pendencias").update({ feito_em: new Date().toISOString(), erro: null }).eq("id", p.id);
+      // hml-14: sem o "feito" gravado, conta como falha (a nova tentativa manda de novo — o espelho é idempotente)
+      const { error: efeito } = await db.from("espelho_pendencias").update({ feito_em: new Date().toISOString(), erro: null }).eq("id", p.id);
+      if (efeito) throw efeito;
       saida.push({ id: p.id, resultado: "feito", pessoas: resumos.length });
     } catch (e) {
       const tentativas = (p.tentativas ?? 0) + 1;
       const msg = String((e as { message?: string })?.message || e).slice(0, 500);
-      await db.from("espelho_pendencias").update({
+      const { error: efalha } = await db.from("espelho_pendencias").update({
         tentativas, erro: msg, proxima_em: new Date(Date.now() + proximaTentativaMs(tentativas)).toISOString(),
       }).eq("id", p.id);
       log.excecao(e, { codigo: "pendencia_falhou", schema, ref: p.id, n: tentativas });
+      // hml-14: a falha que não gravou também avisa (sem ela a pendência volta já na próxima rodada, sem a espera entre tentativas)
+      if (efalha) log.excecao(efalha, { codigo: "pendencia_nao_gravada", schema, ref: p.id });
       saida.push({ id: p.id, resultado: "falhou", tentativas, erro: msg });
     }
   }

@@ -29,6 +29,8 @@ import {
 } from "./erros.ts";
 import type { CamposLog, Log } from "./log.ts";
 import { origemPermitida, segredoConfere } from "./login-regras.ts";
+// hml-14: o "tempo esgotou" do AbortSignal.timeout vem do ajudante comum (não conta como falha de rede).
+import { tempoEsgotado } from "./tempo.ts";
 
 // ───────────────────────── o caminho do aviso ─────────────────────────
 
@@ -84,12 +86,6 @@ export type ResultadoAviso = "enviado" | "segurado" | "desligado" | "sem_configu
 export interface Avisador {
   /** Nunca lança: um erro ao avisar não pode virar outro erro. */
   enviarAviso(erro: ErroParaAviso, schema: SchemaAviso): Promise<ResultadoAviso>;
-}
-
-/** O AbortSignal.timeout do fetch (DOMException "TimeoutError"): não conta como falha de rede. */
-function tempoEsgotado(e: unknown): boolean {
-  const nome = e && typeof e === "object" ? (e as { name?: unknown }).name : null;
-  return nome === "TimeoutError" || nome === "AbortError";
 }
 
 /** Texto de um erro para o log sem o token e sem URL nenhuma (a do Telegram leva o token), limpo e com até 200 caracteres. */

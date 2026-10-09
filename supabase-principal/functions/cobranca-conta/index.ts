@@ -25,6 +25,9 @@
 // Segredos: MP_ACCESS_TOKEN_PROD (produção), MP_ACCESS_TOKEN_TEST (staging), MP_TEST_PAYER_EMAIL (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts — do Mercado Pago, só o status e os códigos (error, cause, status_detail),
 // nunca o corpo; o catch final avisa (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): um prazo por pedido (ORCAMENTO_MS.usuario) em toda ida ao MP; erro do banco lança (o catch final responde 500)
+// em toda leitura que alimenta a resposta e em toda gravação que muda a cobrança; o mudar_plano lê o Pix aberto e a assinatura
+// ANTES de mexer (antes, o Pix lido com erro virava "nenhum": seguia aberto com o preço antigo e, pago, voltava o plano antigo).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -40,6 +43,7 @@ import {
   erroDeCartao,
   hojeSP,
   inicioDaAssinatura,
+  mpTransitorio,
   precoDoPlano,
   recusaDoSandbox,
   referenciaConta,
@@ -66,6 +70,7 @@ import {
   type Fatura,
   type Schema,
 } from "../_shared/cobranca-mp.ts";
+import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -154,6 +159,7 @@ function maxAlunos(precos: Preco[], plano: string, faixa: string): number | null
 }
 
 Deno.serve(async (req) => {
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido inteiro — vai em toda ida ao MP ({ prazo: p })
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return erro("metodo", 405, origin);
@@ -189,9 +195,10 @@ Deno.serve(async (req) => {
     // ---- a conta: a pedida (se a pessoa é dona) ou a conta nova de que ela é dona ----
     let contaId = ehUuid(body.conta_id) ? String(body.conta_id) : null;
     if (!contaId) {
-      const { data } = await db.from("conta_membros").select("conta_id, contas!inner(origem, cobranca_legada, criado_em)")
+      const { data, error } = await db.from("conta_membros").select("conta_id, contas!inner(origem, cobranca_legada, criado_em)")
         .eq("user_id", user.id).eq("status", "ativo").contains("papeis", ["dono"]).eq("contas.cobranca_legada", false)
         .neq("contas.origem", "app").limit(1);
+      if (error) throw error; // hml-14: o erro virava 404 sem_conta
       contaId = ((data ?? []) as Array<{ conta_id: string }>)[0]?.conta_id ?? null;
     }
     if (!contaId) return erro("sem_conta", 404, origin);
@@ -205,11 +212,14 @@ Deno.serve(async (req) => {
     if (conta.cobranca_legada) return erro("conta_legada", 400, origin, { origem: conta.origem });
     if (conta.origem === "app") return erro("isenta", 400, origin);
 
-    const [{ data: precosRows }, { data: ativos }, { data: limite }] = await Promise.all([
+    // hml-14 (H-32): o erro de qualquer uma lança — os alunos ativos viravam 0 e liberavam pagar ou descer para uma faixa menor que
+    // o número de alunos (escolha, mudar_plano). O conta_limite_alunos daqui saiu: o resultado não era usado (o status relê).
+    const [{ data: precosRows, error: erroPrecos }, { data: ativos, error: erroAtivos }] = await Promise.all([
       db.from("plano_precos").select("plano, faixa, min_alunos, max_alunos, valor_mensal, valor_anual, ordem").eq("ativo", true).order("ordem"),
       db.rpc("conta_alunos_ativos", { p_conta: conta.id }),
-      db.rpc("conta_limite_alunos", { p_conta: conta.id }),
     ]);
+    if (erroPrecos) throw erroPrecos;
+    if (erroAtivos) throw erroAtivos;
     const precos = (precosRows ?? []) as Preco[];
     const alunosAtivos = Number(ativos ?? 0);
     const efetiva = situacaoEm(conta, hoje);
@@ -231,7 +241,7 @@ Deno.serve(async (req) => {
     // confere no MP uma fatura que ainda pode mudar (webhook atrasado/perdido)
     const conferir = async (f: Fatura): Promise<Fatura> => {
       if (!f.mp_payment_id || simulado(f.mp_payment_id) || !statusAberto(f.status)) return f;
-      const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`);
+      const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`, {}, { prazo: p });
       if (st !== 200 || !pay?.id) return f;
       await aplicarStatus(db, f, pay, user.id);
       return (await buscarFatura(f.id)) ?? f;
@@ -241,18 +251,20 @@ Deno.serve(async (req) => {
     const conferirAssinatura = async (a: AssinaturaConta | null): Promise<AssinaturaConta | null> => {
       // simulada no staging (simular_recorrente): o MP segue com a do sandbox pendente — não sobrescreve a simulação
       if (!a?.mp_preapproval_id || simulado(a.mp_preapproval_id) || a.payload?.simulada === true) return a;
-      const { status: st, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`);
+      const { status: st, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {}, { prazo: p });
       if (st === 200 && pre?.id) {
         const esp = espelhoAssinatura(pre, { ...(a.payload ?? {}) });
-        await db.from("conta_assinaturas").update(esp).eq("id", a.id);
+        const { error: erroEspelho } = await db.from("conta_assinaturas").update(esp).eq("id", a.id);
+        if (erroEspelho) throw erroEspelho;
         if (credencial === "prod" && pre.status === "authorized") {
           const busca = await mpFetch<{ results?: Array<{ payment?: { id?: number | string | null } | null }> }>(
-            credencial, `/authorized_payments/search?preapproval_id=${encodeURIComponent(a.mp_preapproval_id)}&sort=date_created&criteria=desc&limit=6`);
+            credencial, `/authorized_payments/search?preapproval_id=${encodeURIComponent(a.mp_preapproval_id)}&sort=date_created&criteria=desc&limit=6`,
+            {}, { prazo: p });
           const ids = [...new Set(((busca.body?.results) ?? []).map((r) => r.payment?.id).filter((x) => x !== null && x !== undefined).map(String))];
           for (const pid of ids) {
             const { data: ja } = await db.from("conta_faturas").select("id, status").eq("mp_payment_id", pid).maybeSingle();
             if (ja && !statusAberto((ja as { status: string }).status)) continue;
-            const { status: sp, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(pid)}`);
+            const { status: sp, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(pid)}`, {}, { prazo: p });
             if (sp === 200 && pay?.id) await registrarCobrancaRecorrente(db, a, pay, precoDe(conta, precos, a.plano ?? conta.plano, a.faixa ?? conta.faixa, 1));
           }
         }
@@ -261,16 +273,22 @@ Deno.serve(async (req) => {
       return a;
     };
 
+    // hml-14 (H-32): cada leitura daqui lança no erro — antes a tela Plano ficava sem faturas, sem "Pix aberto", com 0 alunos
+    // ativos ou sem o limite, sem aviso
     const montarStatus = async () => {
-      const { data: contaAtual } = await db.from("contas").select(COLUNAS_CONTA).eq("id", conta.id).maybeSingle();
+      const { data: contaAtual, error: erroConta } = await db.from("contas").select(COLUNAS_CONTA).eq("id", conta.id).maybeSingle();
+      if (erroConta) throw erroConta;
       const c = (contaAtual as Conta | null) ?? conta;
-      const { data: fats } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id)
+      const { data: fats, error: erroFaturas } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id)
         .order("criado_em", { ascending: false }).limit(24);
+      if (erroFaturas) throw erroFaturas;
       const faturas = (fats ?? []) as Fatura[];
       const assinatura = await buscarAssinatura();
       const pixAberto = faturas.find((f) => f.forma === "pix" && statusAberto(f.status) && (!f.pix_expira_em || new Date(f.pix_expira_em).getTime() > Date.now())) ?? null;
-      const { data: at } = await db.rpc("conta_alunos_ativos", { p_conta: conta.id });
-      const { data: lim } = await db.rpc("conta_limite_alunos", { p_conta: conta.id });
+      const { data: at, error: erroAtivosAgora } = await db.rpc("conta_alunos_ativos", { p_conta: conta.id });
+      if (erroAtivosAgora) throw erroAtivosAgora;
+      const { data: lim, error: erroLimite } = await db.rpc("conta_limite_alunos", { p_conta: conta.id });
+      if (erroLimite) throw erroLimite;
       return {
         ok: true,
         ambiente: schema,
@@ -292,8 +310,9 @@ Deno.serve(async (req) => {
     };
 
     if (acao === "status") {
-      const { data: abertas } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id)
+      const { data: abertas, error: erroAbertas } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id)
         .in("status", ["pending", "in_process"]).not("mp_payment_id", "is", null).order("criado_em", { ascending: false }).limit(5);
+      if (erroAbertas) throw erroAbertas; // hml-14: sem ler, a tela mostrava pendente o que já foi pago
       for (const f of (abertas ?? []) as Fatura[]) await conferir(f);
       await conferirAssinatura(await buscarAssinatura());
       return json(await montarStatus(), 200, origin);
@@ -352,9 +371,10 @@ Deno.serve(async (req) => {
           }
           if (statusAberto(atual.status)) {
             if (atual.mp_payment_id && !simulado(atual.mp_payment_id)) {
-              await mpFetch(credencial, `/v1/payments/${encodeURIComponent(atual.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
+              await mpFetch(credencial, `/v1/payments/${encodeURIComponent(atual.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: p });
             }
-            await db.from("conta_faturas").update({ status: "cancelled" }).eq("id", atual.id);
+            const { error: erroFechar } = await db.from("conta_faturas").update({ status: "cancelled" }).eq("id", atual.id);
+            if (erroFechar) throw erroFechar;
           }
         }
       }
@@ -368,6 +388,11 @@ Deno.serve(async (req) => {
       if (ef) throw ef;
       const fatura = nova as Fatura;
       const referencia = referenciaConta(schema, conta.id, tipoRef, fatura.id);
+      // hml-14 (H-32): a fatura que não foi ao MP sai; o erro lança (antes ficava "pendente" sem código — o Pix vazio aparecia aberto)
+      const apagarFatura = async () => {
+        const { error: erroApagar } = await db.from("conta_faturas").delete().eq("id", fatura.id);
+        if (erroApagar) throw erroApagar;
+      };
 
       if (acao === "pix_criar") {
         const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, "/v1/payments", {
@@ -376,18 +401,19 @@ Deno.serve(async (req) => {
             transaction_amount: e.valor, description: descricao, payment_method_id: "pix", payer: { email: pagador },
             external_reference: referencia, notification_url: notificacao, date_of_expiration: expira.toISOString().replace("Z", "-00:00"),
           }),
-        });
+        }, { prazo: p });
         const td = pay?.point_of_interaction?.transaction_data;
         if (st >= 300 || !pay?.id || !td?.qr_code) {
           log.erro({ codigo: "mp_pix_falhou", schema, acao, ref: fatura.id, status: st, externo: codigosDoMp(pay) });
           // SÓ STAGING: o sandbox do MP cai com 500 de vez em quando → Pix simulado (sem QR real) pra manter o fluxo de teste
           if (schema === "staging" && st >= 500) {
-            const { data: sim } = await db.from("conta_faturas").update({
+            const { data: sim, error: erroSim } = await db.from("conta_faturas").update({
               mp_payment_id: `sim-${crypto.randomUUID()}`, pix_copia_cola: "SIMULADO-SANDBOX-MP-INDISPONIVEL",
             }).eq("id", fatura.id).select(COLUNAS_FATURA).single();
+            if (erroSim) throw erroSim; // hml-14: antes respondia ok com fatura: null
             return json({ ok: true, fatura: sim, simulado: true }, 200, origin);
           }
-          await db.from("conta_faturas").delete().eq("id", fatura.id);
+          await apagarFatura();
           return erro("pix_indisponivel", 502, origin, { status_mp: st });
         }
         const { data: salva, error: es } = await db.from("conta_faturas").update({
@@ -401,7 +427,7 @@ Deno.serve(async (req) => {
       // cartão à vista (Card Payment Brick: o número do cartão nunca passa por aqui)
       const cardToken = typeof body.card_token === "string" ? body.card_token : "";
       if (!cardToken) {
-        await db.from("conta_faturas").delete().eq("id", fatura.id);
+        await apagarFatura();
         return erro("missing_card_token", 400, origin);
       }
       const pedido: Record<string, unknown> = {
@@ -410,15 +436,17 @@ Deno.serve(async (req) => {
       };
       if (typeof body.payment_method_id === "string" && body.payment_method_id) pedido.payment_method_id = body.payment_method_id;
       if (body.issuer_id !== undefined && body.issuer_id !== null && body.issuer_id !== "") pedido.issuer_id = body.issuer_id;
-      const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, "/v1/payments", { method: "POST", body: JSON.stringify(pedido) });
+      const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, "/v1/payments", { method: "POST", body: JSON.stringify(pedido) }, { prazo: p });
       if (st >= 300 || !pay?.id) {
         log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: fatura.id, status: st, externo: codigosDoMp(pay) });
-        await db.from("conta_faturas").delete().eq("id", fatura.id);
+        await apagarFatura();
         return erro(erroDeCartao(st, pay) ? "cartao_recusado" : "mp_error", erroDeCartao(st, pay) ? 400 : 502, origin,
           { detalhe: String((pay as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
       }
-      // o webhook pode ter chegado antes e já gravado o id: segue com a mesma fatura (o id é único)
-      await db.from("conta_faturas").update({ mp_payment_id: String(pay.id) }).eq("id", fatura.id).is("mp_payment_id", null);
+      // o webhook pode ter chegado antes e já gravado o id: segue com a mesma fatura (o id é único). hml-14: o cartão JÁ foi
+      // cobrado — o erro daqui não vira 500 (a pessoa pagaria 2×): registra e avisa; o aviso do MP acha a fatura pela referência
+      const { error: erroId } = await db.from("conta_faturas").update({ mp_payment_id: String(pay.id) }).eq("id", fatura.id).is("mp_payment_id", null);
+      if (erroId) log.excecao(erroId, { codigo: "gravacao_depois_da_cobranca", schema, acao, ref: fatura.id });
       // o cartão JÁ foi cobrado: erro de leitura aqui não pode virar 500 (a pessoa clicaria de novo e pagaria 2×) — usa o que tem
       const lerDepois = (id: string) =>
         buscarFatura(id).catch((e) => (log.excecao(e, { codigo: "leitura_depois_da_cobranca", schema, acao, ref: id }), null));
@@ -438,14 +466,15 @@ Deno.serve(async (req) => {
       const atual = await buscarAssinatura();
       if (atual?.mp_preapproval_id && ["authorized", "pending", "paused"].includes(atual.status)) {
         if (!simulado(atual.mp_preapproval_id)) {
-          const { status: sa, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(atual.mp_preapproval_id)}`);
+          const { status: sa, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(atual.mp_preapproval_id)}`, {}, { prazo: p });
           if (sa === 200 && pre?.status === "authorized" && atual.payload?.sandbox !== true) {
-            await db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(atual.payload ?? {}) })).eq("id", atual.id);
+            const { error: erroEspelho } = await db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(atual.payload ?? {}) })).eq("id", atual.id);
+            if (erroEspelho) throw erroEspelho;
             return erro("assinatura_ja_ativa", 400, origin);
           }
           // a que sobrou (pendente, pausada, do checkout do sandbox): cancela pra não ficarem 2 no MP
           if (sa === 200 && pre?.status !== "cancelled") {
-            await mpFetch(credencial, `/preapproval/${encodeURIComponent(atual.mp_preapproval_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
+            await mpFetch(credencial, `/preapproval/${encodeURIComponent(atual.mp_preapproval_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: p });
           }
         }
       }
@@ -459,14 +488,14 @@ Deno.serve(async (req) => {
           reason: motivo, external_reference: referencia, payer_email: pagador, auto_recurring: recorrencia,
           back_url: voltaDoCheckout(origin, schema), notification_url: notificacao, status: "pending",
         }),
-      });
+      }, { prazo: p });
       let { status: st, body: pre } = checkout ? await pendente() : await mpFetch<AssinaturaMp>(credencial, "/preapproval", {
         method: "POST",
         body: JSON.stringify({
           reason: motivo, external_reference: referencia, payer_email: pagador, card_token_id: cardToken,
           auto_recurring: recorrencia, back_url: voltaDoCheckout(origin, schema), notification_url: notificacao, status: "authorized",
         }),
-      });
+      }, { prazo: p });
       let sandbox = false;
       if (!checkout && (st >= 300 || !pre?.id) && credencial === "test" && recusaDoSandbox(st, pre)) {
         // STAGING: o MP não tem assinatura com cartão no sandbox → a assinatura nasce PENDENTE (checkout hospedado do MP),
@@ -485,7 +514,8 @@ Deno.serve(async (req) => {
       };
       const { data: salva, error: es } = await db.from("conta_assinaturas").upsert(linha, { onConflict: "conta_id" }).select(COLUNAS_ASSINATURA).single();
       if (es) throw es;
-      await db.from("conta_eventos").insert({ conta_id: conta.id, tipo: "plano", depois: { assinatura: statusDaAssinatura(pre), plano: e.plano, faixa: e.faixa, valor: e.valor, inicio, sandbox }, por: user.id });
+      const { error: erroEvento } = await db.from("conta_eventos").insert({ conta_id: conta.id, tipo: "plano", depois: { assinatura: statusDaAssinatura(pre), plano: e.plano, faixa: e.faixa, valor: e.valor, inicio, sandbox }, por: user.id });
+      if (erroEvento) throw erroEvento;
       return json({ ok: true, assinatura: salva, primeira_cobranca: inicio, sandbox, init_point: sandbox || checkout ? pre.init_point ?? null : null }, 200, origin);
     }
 
@@ -495,13 +525,16 @@ Deno.serve(async (req) => {
       if (!simulado(a.mp_preapproval_id)) {
         const { status: sc, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {
           method: "PUT", body: JSON.stringify({ status: "cancelled" }),
-        });
+        }, { prazo: p });
         if (sc >= 300 || !pre?.id) return erro("mp_error", 502, origin, { status_mp: sc });
-        await db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(a.payload ?? {}), cancelada_por: user.id })).eq("id", a.id);
+        const { error: erroCancelada } = await db.from("conta_assinaturas").update(espelhoAssinatura(pre, { ...(a.payload ?? {}), cancelada_por: user.id })).eq("id", a.id);
+        if (erroCancelada) throw erroCancelada;
       } else {
-        await db.from("conta_assinaturas").update({ status: "cancelled" }).eq("id", a.id);
+        const { error: erroCancelada } = await db.from("conta_assinaturas").update({ status: "cancelled" }).eq("id", a.id);
+        if (erroCancelada) throw erroCancelada;
       }
-      await db.from("conta_eventos").insert({ conta_id: conta.id, tipo: "plano", antes: { assinatura: a.status }, depois: { assinatura: "cancelled" }, por: user.id });
+      const { error: erroEvento } = await db.from("conta_eventos").insert({ conta_id: conta.id, tipo: "plano", antes: { assinatura: a.status }, depois: { assinatura: "cancelled" }, por: user.id });
+      if (erroEvento) throw erroEvento;
       return json(await montarStatus(), 200, origin);
     }
 
@@ -513,33 +546,51 @@ Deno.serve(async (req) => {
       const valorNovo = ehPlano(plano) && ehFaixa(faixa) ? precoDe(conta, precos, plano, faixa, 1) : null;
       const r = avaliarMudanca({ atual: conta, novo: { plano, faixa }, alunosAtivos, maxNovo: max, temPreco: valorNovo !== null });
       if (!r.ok) return erro(r.erro, 400, origin, r.erro === "alunos_acima_do_limite" ? { limite: max, alunos: alunosAtivos } : {});
-      const { error: eu2 } = await db.from("contas").update({ plano, faixa }).eq("id", conta.id);
-      if (eu2) throw eu2;
-      await db.from("conta_eventos").insert({ conta_id: conta.id, tipo: "plano", antes: { plano: conta.plano, faixa: conta.faixa },
-        depois: { plano, faixa, valor_mensal: valorNovo, por: "dono" }, por: user.id });
-      // Pix aberto com o preço antigo: fecha
-      const { data: abertos } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id).eq("forma", "pix").in("status", ["pending", "in_process"]);
+      // hml-14 (H-32): LÊ TUDO ANTES de mexer — o Pix aberto com o preço antigo e a assinatura. A leitura que falha lança aqui e
+      // nada muda (nem no banco, nem no MP); antes o Pix lido com erro virava "nenhum", seguia aberto e, se pago,
+      // aplicar_pagamento_conta voltava a conta ao plano/faixa dele. Depois, cada gravação confere o erro.
+      const { data: abertos, error: erroAbertos } = await db.from("conta_faturas").select(COLUNAS_FATURA).eq("conta_id", conta.id).eq("forma", "pix").in("status", ["pending", "in_process"]);
+      if (erroAbertos) throw erroAbertos;
+      const a = await buscarAssinatura();
+      // Pix aberto com o preço antigo: fecha ANTES de trocar o plano — o que falhar aqui (o banco lança; o MP sem resposta que
+      // decida — fora do ar, limite, prazo do pedido esgotado — volta o mp_error de sempre) para com o plano ainda o de antes
+      // (fechar um Pix do preço antigo não estraga nada); antes o Pix seguia aberto no MP, "cancelled" no banco e o plano trocado
       for (const f of (abertos ?? []) as Fatura[]) {
         if (f.mp_payment_id && !simulado(f.mp_payment_id)) {
-          await mpFetch(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
+          const { status: sf } = await mpFetch(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: p });
+          if (mpTransitorio(sf)) {
+            log.aviso({ codigo: "pix_antigo_sem_resposta_do_mp", schema, acao, ref: f.id, status: sf });
+            return erro("mp_error", 502, origin, { status_mp: sf });
+          }
         }
-        await db.from("conta_faturas").update({ status: "cancelled" }).eq("id", f.id);
+        const { error: erroFechar } = await db.from("conta_faturas").update({ status: "cancelled" }).eq("id", f.id);
+        if (erroFechar) throw erroFechar;
       }
+      const { error: eu2 } = await db.from("contas").update({ plano, faixa }).eq("id", conta.id);
+      if (eu2) throw eu2;
       // assinatura no cartão acompanha o valor novo
       let assinaturaAtualizada: boolean | null = null;
-      const a = await buscarAssinatura();
       if (a?.mp_preapproval_id && ["authorized", "pending", "paused"].includes(a.status)) {
         if (!simulado(a.mp_preapproval_id)) {
           const { status: sp } = await mpFetch(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {
             method: "PUT", body: JSON.stringify({ auto_recurring: { transaction_amount: valorNovo } }),
-          });
+          }, { prazo: p });
           assinaturaAtualizada = sp < 300;
         } else {
           assinaturaAtualizada = true;
         }
-        if (assinaturaAtualizada) await db.from("conta_assinaturas").update({ valor: valorNovo, plano, faixa }).eq("id", a.id);
+        if (assinaturaAtualizada) {
+          const { error: erroValor } = await db.from("conta_assinaturas").update({ valor: valorNovo, plano, faixa }).eq("id", a.id);
+          if (erroValor) throw erroValor;
+        }
       }
-      await db.rpc("espelho_disparar");
+      // o evento da linha do tempo vai depois dos efeitos: o erro dele (500) não deixa nada pela metade
+      const { error: erroEvento } = await db.from("conta_eventos").insert({ conta_id: conta.id, tipo: "plano", antes: { plano: conta.plano, faixa: conta.faixa },
+        depois: { plano, faixa, valor_mensal: valorNovo, por: "dono" }, por: user.id });
+      if (erroEvento) throw erroEvento;
+      // melhor esforço: só acorda a fila do espelho (a pendência fica em espelho_pendencias e vai na próxima rodada)
+      const { error: erroEspelho } = await db.rpc("espelho_disparar");
+      if (erroEspelho) log.excecao(erroEspelho, { codigo: "espelho_disparar_falhou", schema, acao, ref: conta.id });
       return json({ ...(await montarStatus()), assinatura_atualizada: assinaturaAtualizada }, 200, origin);
     }
 
@@ -550,7 +601,7 @@ Deno.serve(async (req) => {
       if (!f) return erro("fatura_inexistente", 404, origin);
       if (f.mp_payment_id && !simulado(f.mp_payment_id) && statusAberto(f.status)) {
         // o Pix do sandbox fica aberto no MP até vencer: fecha, pra não sobrar nada pendente
-        await mpFetch(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
+        await mpFetch(credencial, `/v1/payments/${encodeURIComponent(f.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: p });
       }
       const { data: ap, error: ea } = await db.rpc("aplicar_pagamento_conta", { p_fatura: f.id, p_pago_em: new Date().toISOString() });
       if (ea) throw ea;
@@ -562,7 +613,8 @@ Deno.serve(async (req) => {
       const a = await buscarAssinatura();
       if (!a || a.status === "cancelled") return erro("sem_assinatura", 400, origin);
       // o sandbox não autoriza nem cobra a assinatura: simula as duas coisas (a assinatura de verdade do MP segue pendente)
-      await db.from("conta_assinaturas").update({ status: "authorized", payload: { ...(a.payload ?? {}), simulada: true } }).eq("id", a.id);
+      const { error: erroSimulada } = await db.from("conta_assinaturas").update({ status: "authorized", payload: { ...(a.payload ?? {}), simulada: true } }).eq("id", a.id);
+      if (erroSimulada) throw erroSimulada;
       const r = await registrarCobrancaRecorrente(db, { ...a, status: "authorized" }, {
         id: `sim-rec-${crypto.randomUUID()}`, status: "approved", transaction_amount: Number(a.valor ?? 0),
         date_approved: new Date().toISOString(), metadata: { preapproval_id: a.mp_preapproval_id },

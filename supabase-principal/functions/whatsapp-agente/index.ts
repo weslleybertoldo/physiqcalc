@@ -17,6 +17,9 @@
 // e 2 'tarefas' juntas não pegam a mesma mensagem (antes: tentativas fixo em 1 e o paciente podia receber repetido para sempre).
 // Physiq hml-10 (H-26, H-48): o erro inesperado vai para o log (_shared/log.ts: nome, código do Postgres e a mensagem limpa) e
 // avisa; a resposta ao celular leva só o código (antes o texto cru do erro ia junto e parava no log do agente).
+// Physiq hml-14 (H-32): as 2 gravações que tinham o resultado jogado fora agora conferem o erro — o ping geral responde 500 (o
+// celular tenta de novo); o pedido vencido que não voltou a "desconectado" só avisa (é limpo de novo na próxima chamada, segundos
+// depois — derrubar as "tarefas" pararia a fila de mensagens de todos).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -68,8 +71,9 @@ Deno.serve(async (req) => {
       // pedido velho sem ninguém para ler: volta pra desconectado, a tela para de girar
       const expirados = linhas.filter((l) => l.status === "aguardando_qr" && (typeof l.pedido_em !== "string" || l.pedido_em < desde));
       for (const l of expirados) {
-        await db.from("whatsapp_instancias").update({ status: "desconectado", qr_code: null, erro: "pedido expirou" })
+        const { error: ex } = await db.from("whatsapp_instancias").update({ status: "desconectado", qr_code: null, erro: "pedido expirou" })
           .eq("id", l.id as string);
+        if (ex) log.excecao(ex, { codigo: "expirar_pedido_falhou", schema, ref: l.id });
       }
       const manter = linhas.filter((l) => l.status === "conectado").map((l) => l.nutricionista_id);
       const derrubar = linhas.filter((l) => l.status === "desconectado").map((l) => l.nutricionista_id);
@@ -121,7 +125,8 @@ Deno.serve(async (req) => {
       campos = { ultimo_ping: agora.toISOString() };
       if (!instanciaId && !nutriId) {
         // ping geral: o celular está vivo, mesmo sem instância conectada
-        await db.from("whatsapp_instancias").update(campos).neq("status", "xxx");
+        const { error: ep } = await db.from("whatsapp_instancias").update(campos).neq("status", "xxx");
+        if (ep) throw ep;
         return json({ ok: true, agora: agora.toISOString() });
       }
     } else if (acao === "resultado") {

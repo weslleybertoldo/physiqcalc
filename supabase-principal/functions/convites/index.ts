@@ -17,6 +17,7 @@
 // hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do Resend, só o status e o código do erro — nunca o corpo); sem
 // reserva com valor de produção (sem RESEND_FROM ou, na produção, sem SITE_URL o e-mail não sai: o mesmo "sem_resend" de sempre,
 // + log.erro); o catch final avisa (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): o Resend espera no máximo TEMPO_MS.email — estourou → o resend_rede de sempre (o e-mail pode ter saído).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -29,6 +30,7 @@ import {
   textoDoConvite,
   type Schema,
 } from "../_shared/convites-regras.ts";
+import { TEMPO_MS, buscarComTempo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -76,11 +78,11 @@ async function enviarEmail(schema: Schema, para: string, assunto: string, html: 
     return { id: null, erro: "sem_resend" };
   }
   try {
-    const r = await fetch("https://api.resend.com/emails", {
+    const r = await buscarComTempo("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({ from: RESEND_FROM, to: [para], subject: assunto, html, text: texto }),
-    });
+    }, TEMPO_MS.email);
     const corpo = await r.json().catch(() => ({})) as Record<string, unknown>;
     if (!r.ok) {
       log.erro({ codigo: "resend_falhou", schema, status: r.status, externo: { resend_erro: corpo.name } });

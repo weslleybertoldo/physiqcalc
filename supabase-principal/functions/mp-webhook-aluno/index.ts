@@ -17,6 +17,8 @@
 // Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (ids técnicos e códigos, nada do corpo do MP); o catch final avisa
 // (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): um prazo por aviso (ORCAMENTO_MS.servidor) em toda ida ao MP; a leitura que acha a matrícula, a assinatura ou a
+// cobrança lança no erro do banco (antes virava "não tem": 200 e o aviso se perdia, ou o crédito ia para outra matrícula).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -33,6 +35,7 @@ import {
   type Cobranca,
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
+import { ORCAMENTO_MS, prazo, type Prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -47,39 +50,41 @@ function dbDe(schema: Schema): SupabaseClient {
 
 /** A matrícula do aluno do Calc pelo id do Treino (a ativa primeiro). */
 async function matriculaDoTreino(db: SupabaseClient, treinoUserId: string): Promise<Matricula | null> {
-  const { data } = await db.from("pacientes").select("id").eq("treino_user_id", treinoUserId).is("deleted_at", null)
+  const { data, error } = await db.from("pacientes").select("id").eq("treino_user_id", treinoUserId).is("deleted_at", null)
     .order("ativo", { ascending: false }).order("created_at").limit(1);
+  if (error) throw error;
   const id = ((data ?? []) as Array<{ id: string }>)[0]?.id;
   return id ? await carregarMatricula(db, id) : null;
 }
 
 async function assinaturaPorPreapproval(db: SupabaseClient, preId: string) {
-  const { data } = await db.from("aluno_assinaturas").select("id, paciente_id, conta_id, mp_preapproval_id, status, payload")
+  const { data, error } = await db.from("aluno_assinaturas").select("id, paciente_id, conta_id, mp_preapproval_id, status, payload")
     .eq("mp_preapproval_id", preId).maybeSingle();
+  // hml-14 (H-32): a assinatura não lida virava "não tem" e o pagamento caía na matrícula ativa mais nova (matriculaDoTreino)
+  if (error) throw error;
   return (data as { id: string; paciente_id: string; conta_id: string | null; mp_preapproval_id: string; status: string; payload: Record<string, unknown> | null } | null) ?? null;
 }
 
 /**
  * W7b: a assinatura é de uma matrícula do app que já encerrou (o aluno foi para um profissional) → cancela no MP.
  * W19: só a encerrada PELO VÍNCULO (app_encerrada_em); a desativada à mão segue com a assinatura.
+ * hml-14 (H-32): o erro do banco (e o MP que não deixa decidir) LANÇA — antes este catch engolia, o aviso respondia 200 e a
+ * assinatura do app seguia viva. Agora o aviso volta 500 e o MP manda de novo: o pagamento já gravado não se repete
+ * (mp_payment_id único; "paga" é final; o sino só na virada para paga) e cancelar de novo não muda o que já foi cancelado.
  */
-async function cancelarSeSaiuDoApp(db: SupabaseClient, schema: Schema, m: Matricula, preId: string | null): Promise<void> {
+async function cancelarSeSaiuDoApp(db: SupabaseClient, schema: Schema, m: Matricula, preId: string | null, p: Prazo): Promise<void> {
   if (!preId || m.conta?.origem !== "app" || m.ativo) return;
-  try {
-    if (!(await matriculaEncerradaPeloVinculo(db, m.id))) {
-      // matrícula do app inativa sem o vínculo (desativada à mão): a assinatura fica
-      log.info({ codigo: "app_desativado_a_mao", schema, ref: m.id, resultado: "assinatura_mantida" });
-      return;
-    }
-    const r = await cancelarAssinaturasDasMatriculas(db, credencialDoSchema(schema), [m.id], "cobranca_depois_de_sair_do_app", log);
-    log.info({ codigo: "assinatura_do_app_encerrado", schema, ref: m.id, n: r.canceladas, resultado: r.falhas ? `falhas_${r.falhas}` : "sem_falhas" });
-  } catch (e) {
-    log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema, ref: m.id });
+  if (!(await matriculaEncerradaPeloVinculo(db, m.id))) {
+    // matrícula do app inativa sem o vínculo (desativada à mão): a assinatura fica
+    log.info({ codigo: "app_desativado_a_mao", schema, ref: m.id, resultado: "assinatura_mantida" });
+    return;
   }
+  const r = await cancelarAssinaturasDasMatriculas(db, credencialDoSchema(schema), [m.id], "cobranca_depois_de_sair_do_app", log, { prazo: p });
+  log.info({ codigo: "assinatura_do_app_encerrado", schema, ref: m.id, n: r.canceladas, resultado: r.falhas ? `falhas_${r.falhas}` : "sem_falhas" });
 }
 
-async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise<string> {
-  const achado = await buscarNoMp<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schemaPedido);
+async function tratarPagamento(id: string, schemaPedido: Schema | null, p: Prazo): Promise<string> {
+  const achado = await buscarNoMp<PagamentoMp>(`/v1/payments/${encodeURIComponent(id)}`, schemaPedido, { prazo: p });
   if (!achado?.recurso?.id) return "pagamento_nao_encontrado";
   const pay = achado.recurso;
   const schema = achado.schema;
@@ -90,13 +95,16 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
   if (ref) {
     if (ref.schema !== schema) return "outro_ambiente";
     if (ref.cobrancaId) {
-      const { data } = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("id", ref.cobrancaId).eq("paciente_id", ref.pacienteId).maybeSingle();
+      const { data, error } = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("id", ref.cobrancaId).eq("paciente_id", ref.pacienteId).maybeSingle();
+      if (error) throw error;
       let c = data as unknown as Cobranca | null;
       if (!c) return "cobranca_inexistente";
       if (!c.mp_payment_id) {
         const { error } = await db.from("cobrancas").update({ mp_payment_id: String(pay.id) }).eq("id", c.id).is("mp_payment_id", null);
         if (error) throw error; // hml-06: erro de banco → 500 e o MP manda de novo (antes seguia como se tivesse gravado)
-        c = ((await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("id", c.id).maybeSingle()).data as unknown as Cobranca | null) ?? c;
+        const relida = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("id", c.id).maybeSingle();
+        if (relida.error) throw relida.error;
+        c = (relida.data as unknown as Cobranca | null) ?? c;
       }
       if (c.mp_payment_id !== String(pay.id)) return "cobranca_de_outro_pagamento";
       const r = await aplicarPagamentoMp(db, c, pay, null, log, schema);
@@ -106,7 +114,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
     const m = await carregarMatricula(db, ref.pacienteId);
     if (!m) return "matricula_inexistente";
     const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preapprovalDoPagamento(pay), origem: "assinatura" }, log, schema);
-    await cancelarSeSaiuDoApp(db, schema, m, preapprovalDoPagamento(pay));
+    await cancelarSeSaiuDoApp(db, schema, m, preapprovalDoPagamento(pay), p);
     return r ? `recorrente_${r.status}` : "recorrente_sem_valor";
   }
 
@@ -120,7 +128,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
     const m = a ? await carregarMatricula(db, a.paciente_id) : calc ? await matriculaDoTreino(db, calc.treinoUserId) : null;
     if (!m) return a ? "matricula_inexistente" : "assinatura_inexistente";
     const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preId, origem: calc ? "assinatura_calc" : "assinatura" }, log, schema);
-    await cancelarSeSaiuDoApp(db, schema, m, preId);
+    await cancelarSeSaiuDoApp(db, schema, m, preId, p);
     return r ? `assinatura_${r.status}` : "assinatura_sem_valor";
   }
   if (calc) {
@@ -132,8 +140,8 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null): Promise
   return "nao_e_de_aluno";
 }
 
-async function tratarAssinatura(id: string, schemaPedido: Schema | null): Promise<string> {
-  const achado = await buscarNoMp<AssinaturaMp>(`/preapproval/${encodeURIComponent(id)}`, schemaPedido);
+async function tratarAssinatura(id: string, schemaPedido: Schema | null, p: Prazo): Promise<string> {
+  const achado = await buscarNoMp<AssinaturaMp>(`/preapproval/${encodeURIComponent(id)}`, schemaPedido, { prazo: p });
   if (!achado?.recurso?.id) return "assinatura_nao_encontrada";
   const pre = achado.recurso;
   const db = dbDe(achado.schema);
@@ -164,15 +172,16 @@ async function tratarAssinatura(id: string, schemaPedido: Schema | null): Promis
   return "nao_e_de_aluno";
 }
 
-async function tratarCobrancaAutorizada(id: string, schema: Schema | null): Promise<string> {
-  const achado = await buscarNoMp<{ payment?: { id?: number | string | null } | null }>(`/authorized_payments/${encodeURIComponent(id)}`, schema);
+async function tratarCobrancaAutorizada(id: string, schema: Schema | null, p: Prazo): Promise<string> {
+  const achado = await buscarNoMp<{ payment?: { id?: number | string | null } | null }>(`/authorized_payments/${encodeURIComponent(id)}`, schema, { prazo: p });
   if (!achado?.recurso) return "cobranca_nao_encontrada";
   const pagamento = achado.recurso.payment?.id;
   if (pagamento === null || pagamento === undefined) return "cobranca_sem_pagamento_ainda";
-  return await tratarPagamento(String(pagamento), achado.schema);
+  return await tratarPagamento(String(pagamento), achado.schema, p);
 }
 
 Deno.serve(async (req) => {
+  const p = prazo(ORCAMENTO_MS.servidor); // hml-14 (H-32): o prazo do aviso inteiro (todas as idas ao MP)
   if (req.method !== "POST") return ok("ignorado_metodo");
   // hml-10: o que o catch final leva ao log (o ambiente pedido e o tópico do aviso, quando já se sabe)
   let schema: Schema | null = null;
@@ -194,9 +203,9 @@ Deno.serve(async (req) => {
     const id = String(dados.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
     if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return ok("sem_id");
     let resultado = "topico_ignorado";
-    if (topico === "payment") resultado = await tratarPagamento(id, schema);
-    else if (topico === "subscription_preapproval" || topico === "preapproval") resultado = await tratarAssinatura(id, schema);
-    else if (topico === "subscription_authorized_payment" || topico === "authorized_payment") resultado = await tratarCobrancaAutorizada(id, schema);
+    if (topico === "payment") resultado = await tratarPagamento(id, schema, p);
+    else if (topico === "subscription_preapproval" || topico === "preapproval") resultado = await tratarAssinatura(id, schema, p);
+    else if (topico === "subscription_authorized_payment" || topico === "authorized_payment") resultado = await tratarCobrancaAutorizada(id, schema, p);
     log.info({ codigo: origem === "treino" ? "aviso_mp_do_treino" : "aviso_mp", schema, acao: topico || null, ref: id, resultado });
     return ok(resultado);
   } catch (e) {

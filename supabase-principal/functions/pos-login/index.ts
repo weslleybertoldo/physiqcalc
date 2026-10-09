@@ -21,6 +21,8 @@
 // Segredos: TREINO_URL, ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (W7b) (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (da vincular-professor do Treino, só o status e o código do erro — nunca o
 // corpo); o catch final avisa (log.excecao) e devolve o mesmo 500.
+// hml-14 (H-32): a ida ao Treino espera no máximo TEMPO_MS.treino e as idas ao MP têm o prazo do pedido; erro do banco na ponte do
+// Calc (e a conta do app, que agora lança) cai no catch dela — o login segue, como com o Treino fora.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -41,6 +43,7 @@ import {
 } from "../_shared/login-regras.ts";
 import { credencialDoSchema, type Schema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado, contaDoApp } from "../_shared/app-sem-profissional.ts";
+import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -93,11 +96,12 @@ function codigoDoTreino(texto: string): unknown {
 
 async function perguntarAoTreino(schema: string, corpo: Record<string, unknown>): Promise<LegadoTreino | null> {
   if (!TREINO_URL || ESPELHO_SEGREDO.length < 32) return null;
-  const r = await fetch(`${TREINO_URL}/functions/v1/vincular-professor`, {
+  // estourou (até ler o corpo) → lança: o catch da ponte do Calc registra e o login segue
+  const r = await buscarComTempo(`${TREINO_URL}/functions/v1/vincular-professor`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": schema },
     body: JSON.stringify({ modo: "servidor", ...corpo }),
-  });
+  }, TEMPO_MS.treino);
   if (r.status !== 200) {
     const codigo = codigoDoTreino(await r.text());
     log.erro({ codigo: "treino_respondeu", schema, acao: "vincular_professor", status: r.status, externo: { treino_erro: codigo } });
@@ -110,6 +114,7 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ ok: false, erro: "metodo" }, 405, origin);
+  const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32): o prazo do pedido inteiro (todas as idas ao MP)
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
   const auth = req.headers.get("Authorization") || "";
@@ -184,7 +189,8 @@ Deno.serve(async (req) => {
           if (error) throw error;
           legado.conta_legado_calc = data;
         } else if (lt.convite_professor && !jaPersonal) {
-          const { data: cfg } = await db.from("app_config").select("valor").eq("chave", "teste_dias").maybeSingle();
+          const { data: cfg, error: ecfg } = await db.from("app_config").select("valor").eq("chave", "teste_dias").maybeSingle();
+          if (ecfg) throw ecfg; // hml-14: antes valiam os 14 dias da semente, calado
           const dias = Number((cfg as { valor?: unknown } | null)?.valor) || 14;
           const { data, error } = await db.rpc("registrar_profissional_treino", {
             p_user: user.id, p_nome: lt.convite_professor.nome || nome, p_codigo: lt.convite_professor.codigo, p_origem: "nova",
@@ -199,10 +205,13 @@ Deno.serve(async (req) => {
           const app = await contaDoApp(db);
           let consulta = db.from("pacientes").select("id").eq("user_id", user.id).is("deleted_at", null);
           if (app) consulta = consulta.or(`conta_id.is.null,conta_id.neq.${app}`);
-          const { data: mats } = await consulta.limit(1);
+          // hml-14: erro na leitura lança — antes virava "sem matrícula" e matriculava pulando a regra de 1 conta ativa
+          const { data: mats, error: emats } = await consulta.limit(1);
+          if (emats) throw emats;
           if (!(mats ?? []).length) {
-            const { data: membro } = await db.from("conta_membros").select("conta_id, user_id")
+            const { data: membro, error: emembro } = await db.from("conta_membros").select("conta_id, user_id")
               .eq("codigo_convite", String(lt.aluno.professor_codigo).trim().toUpperCase()).eq("status", "ativo").not("user_id", "is", null).limit(1).maybeSingle();
+            if (emembro) throw emembro; // hml-14: antes virava "professor_sem_conta"
             if (membro) {
               const m = membro as { conta_id: string; user_id: string };
               const { data, error } = await db.rpc("matricular_na_conta", {
@@ -224,7 +233,9 @@ Deno.serve(async (req) => {
 
     // W7b: saiu do app (convite ou ponte do Calc encerraram a matrícula do app) → cancela a assinatura do app no Mercado Pago
     try {
-      saida.assinatura_app = await cancelarAssinaturasDoAppEncerrado(db, credencialDoSchema(schema as Schema), user.id, "vinculou_profissional", log);
+      saida.assinatura_app = await cancelarAssinaturasDoAppEncerrado(
+        db, credencialDoSchema(schema as Schema), user.id, "vinculou_profissional", log, { prazo: p },
+      );
     } catch (e) {
       log.excecao(e, { codigo: "cancelar_assinatura_do_app", schema });
     }
