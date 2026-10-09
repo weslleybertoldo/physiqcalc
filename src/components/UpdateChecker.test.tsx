@@ -9,7 +9,7 @@ const { isNativeMock } = vi.hoisted(() => {
 vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: isNativeMock, getPlatform: () => "web" } }));
 vi.mock("@/lib/apkUpdater", () => ({ downloadAndInstall: vi.fn() }));
 
-import UpdateChecker, { ATRASO_CHECK_UPDATE_MS } from "./UpdateChecker";
+import UpdateChecker, { ATRASO_CHECK_UPDATE_MS, TEMPO_RELEASE_MS } from "./UpdateChecker";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -46,6 +46,32 @@ describe("UpdateChecker", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toContain("/releases/latest");
+  });
+
+  it("hml-14 (D5): o GitHub que não responde é largado em 8 s, 1 pedido só, e nada aparece (o catch de hoje)", async () => {
+    isNativeMock.mockReturnValue(true);
+    let sinal: AbortSignal | null | undefined;
+    const fetchMock = vi.fn(
+      (_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_, rejeitar) => {
+          sinal = init?.signal;
+          sinal?.addEventListener("abort", () => rejeitar(new DOMException("aborted", "AbortError")));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = render(<UpdateChecker />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ATRASO_CHECK_UPDATE_MS + TEMPO_RELEASE_MS - 1);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sinal?.aborted).toBe(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(sinal?.aborted).toBe(true);
+    expect(TEMPO_RELEASE_MS).toBe(8_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("desmontar antes do atraso cancela a consulta", () => {

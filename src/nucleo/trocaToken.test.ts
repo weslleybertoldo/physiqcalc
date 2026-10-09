@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ setSession: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabase: { auth: { setSession: h.setSession } } }));
@@ -18,6 +18,7 @@ import {
   pedirTroca,
   retentavel,
   sessaoTreinoServe,
+  TEMPO_TROCA_MS,
   tentativasAutomaticas,
   treinoDe,
 } from "./trocaToken";
@@ -70,6 +71,32 @@ describe("pedirTroca", () => {
   });
   it("200 sem tokens não vira sessão", async () => {
     expect((await pedirTroca("t", (async () => resposta(200, { ok: true })) as unknown as typeof fetch)).ok).toBe(false);
+  });
+});
+
+describe("hml-14 (H-32, D5): o login desiste da trocar-token em 40 s", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("a função que não responde vira \"rede\" (o caminho de sem internet de hoje) aos 40 s, com 1 pedido só", async () => {
+    vi.useFakeTimers();
+    const pendurado = vi.fn(
+      (_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_, rejeitar) => init?.signal?.addEventListener("abort", () => rejeitar(new DOMException("aborted", "AbortError")))),
+    );
+    let r: unknown = "esperando";
+    void pedirTroca("t", pendurado as unknown as typeof fetch).then((x) => (r = x));
+    await vi.advanceTimersByTimeAsync(TEMPO_TROCA_MS - 1);
+    expect(r).toBe("esperando");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(r).toEqual({ ok: false, erro: "rede", status: 0 });
+    expect(pendurado).toHaveBeenCalledTimes(1);
+    expect(TEMPO_TROCA_MS).toBe(40_000);
+  });
+
+  it("o pedido leva o sinal do relógio; a resposta que chega antes segue igual (502 → \"indisponivel\")", async () => {
+    const f = vi.fn(async () => resposta(502, { error: "x" }));
+    expect(await pedirTroca("t", f as unknown as typeof fetch)).toEqual({ ok: false, erro: "indisponivel", status: 502 });
+    expect((f.mock.calls[0] as unknown as [string, RequestInit])[1].signal).toBeInstanceOf(AbortSignal);
   });
 });
 

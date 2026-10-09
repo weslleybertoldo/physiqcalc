@@ -7,8 +7,17 @@
 // hml-10 (H-26, D5): a resposta FINAL ≥ 500 de uma função (/functions/v1/<slug>, menos a própria erro-avisar) vira aviso ao
 // Weslley ("função <slug> · HTTP <st>", com "(Treino)" quando é do Treino: cada cliente diz de qual banco é) — src/lib/avisoDeErro.ts.
 // O aviso não muda nada para quem chamou: a resposta volta igual.
+// hml-14 (H-32, D5): função espera 25 s (TEMPO_FUNCAO_MS); tabela, RPC, Auth e Storage seguem com o tempo de quem criou (15 s nos
+// 2 clientes). Os fetch diretos do front (login, treino-leitura, invokeEdge, release do GitHub, foto) usam criarFetchResiliente(0, ms).
 import type { BancoErro } from "../../supabase-principal/functions/_shared/erros";
 import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
+
+/**
+ * hml-14 (H-32, D5): o MÍNIMO que o front espera uma função (/functions/v1/*). Medido na hml-14 (7 dias): pelo supabase-js, a
+ * admin-semana-treinos chega a 14,0 s, o pos-login a 13,5 s e a admin-get-user a 13,2 s — rente aos 15 s de antes. A função tem
+ * orçamento de 20 s e assim responde o próprio erro antes de o front desistir. Quem cria com mais (o login, 40 s) fica com o seu.
+ */
+export const TEMPO_FUNCAO_MS = 25_000;
 
 /**
  * As 36 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
@@ -72,12 +81,19 @@ export interface OpcoesFetch {
   banco?: BancoErro;
   /** Quem recebe o 5xx final de uma função (o padrão é o avisarErro; o teste passa um falso). */
   avisar?: (aviso: AvisoDoApp) => unknown;
+  /**
+   * hml-14 (D5): o relógio segue armado até quem chamou ler o corpo (o arquivo baixado, como a foto) — sem isto ele para quando
+   * chegam os cabeçalhos (a regra dos 2 clientes). Desarmar depois do corpo lido não muda nada.
+   */
+  ateOCorpo?: boolean;
 }
 
 /**
  * fetch com timeout e nova tentativa (a regra de antes dos 2 clientes): sem repetir em 401/403; em 5xx e 429, até `tentativas`
  * vezes a mais com espera crescente — SÓ no que podeRepetir; o resto vai 1 vez e volta como veio (resposta ou erro).
  * `base` = o fetch de verdade (o teste passa um falso). hml-10: a resposta final ≥ 500 de uma função (menos a erro-avisar) avisa.
+ * hml-14 (D5): o tempo de cada tentativa é `timeoutMs`, e o de uma função, no mínimo TEMPO_FUNCAO_MS (25 s). Estourou a última
+ * tentativa → rejeita com o AbortError; `tentativas` 0 = 1 vez só (os fetch diretos).
  */
 export function criarFetchResiliente(
   tentativas = 2,
@@ -102,15 +118,17 @@ export function criarFetchResiliente(
   };
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const max = podeRepetir(input, init) ? tentativas : 0;
+    const tempo = funcaoDoPedido(input) ? Math.max(timeoutMs, TEMPO_FUNCAO_MS) : timeoutMs;
     let ultimoErro: Error | null = null;
     for (let tentativa = 0; tentativa <= max; tentativa++) {
       const controle = new AbortController();
-      const timer = setTimeout(() => controle.abort(), timeoutMs);
+      const timer = setTimeout(() => controle.abort(), tempo);
       try {
         const resposta = await base(input, { ...init, signal: controle.signal });
-        clearTimeout(timer);
+        if (!opcoes.ateOCorpo) clearTimeout(timer);
         if (resposta.status === 401 || resposta.status === 403) return resposta;
         if ((resposta.status >= 500 || resposta.status === 429) && tentativa < max) {
+          clearTimeout(timer);
           await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** tentativa, 10000) + Math.random() * 500));
           continue;
         }

@@ -6,6 +6,7 @@ import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { ROTULO_POSICAO } from "@/evolucao/formato";
+import { criarFetchResiliente } from "@/integrations/repeticao";
 import type { Foto } from "@/evolucao/tipos";
 
 const dataBR = (d: string): string => d.split("-").reverse().join("/");
@@ -47,12 +48,24 @@ function base64DoBlob(b: Blob): Promise<string> {
   });
 }
 
+const FOTO_NAO_ABRIU = "A foto não abriu. Feche e abra de novo.";
+/** hml-14 (H-32, D5): a foto do APK baixa em até 30 s, contando o arquivo inteiro (o relógio vale até ler o corpo); 1 vez só. */
+export const TEMPO_FOTO_MS = 30_000;
+const buscarFoto = criarFetchResiliente(0, TEMPO_FOTO_MS, undefined, { ateOCorpo: true });
+
 /** Baixa (site) ou compartilha (APK) a foto. */
 export async function baixarFoto(url: string, nome: string): Promise<"baixado" | "compartilhado"> {
   if (Capacitor.isNativePlatform()) {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error("A foto não abriu. Feche e abra de novo.");
-    const { uri } = await Filesystem.writeFile({ path: nome, data: await base64DoBlob(await r.blob()), directory: Directory.Cache });
+    let foto: Blob;
+    try {
+      const r = await buscarFoto(url);
+      if (!r.ok) throw new Error(FOTO_NAO_ABRIU);
+      foto = await r.blob();
+    } catch {
+      // sem internet ou passou dos 30 s: a frase de quando a foto não abre (nada novo na tela)
+      throw new Error(FOTO_NAO_ABRIU);
+    }
+    const { uri } = await Filesystem.writeFile({ path: nome, data: await base64DoBlob(foto), directory: Directory.Cache });
     await Share.share({ title: nome, files: [uri] });
     return "compartilhado";
   }

@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { criarFetchResiliente } from "@/integrations/repeticao";
 import { downloadAndInstall } from "@/lib/apkUpdater";
 
 /** Espera a abertura assentar antes de perguntar ao GitHub se há APK novo. */
 export const ATRASO_CHECK_UPDATE_MS = 5000;
+/** hml-14 (H-32, D5): o GitHub responde em até 8 s ou a consulta desiste (1 vez só; o catch de hoje ignora em silêncio). */
+export const TEMPO_RELEASE_MS = 8_000;
+const buscarRelease = criarFetchResiliente(0, TEMPO_RELEASE_MS);
 
 const CURRENT_VERSION = __APP_VERSION__;
 // Busca a última release via GitHub API (funciona em repos privados e públicos)
@@ -44,7 +48,7 @@ const UpdateChecker = () => {
     if (!Capacitor.isNativePlatform()) return;
     const checkUpdate = async () => {
       try {
-        const res = await fetch(RELEASES_URL, { cache: "no-store" });
+        const res = await buscarRelease(RELEASES_URL, { cache: "no-store" });
         if (!res.ok) return;
         const release = await res.json();
 

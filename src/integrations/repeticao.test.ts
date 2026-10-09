@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RPC_QUE_GRAVAM, RPC_SO_LEITURA, criarFetchResiliente, podeRepetir } from "./repeticao";
+import { RPC_QUE_GRAVAM, RPC_SO_LEITURA, TEMPO_FUNCAO_MS, criarFetchResiliente, podeRepetir } from "./repeticao";
 
 // Homologação hml-06 (H-20) — o fetch dos 2 clientes só repete leitura (a pagamentos-aluno cobrava o cartão de novo quando o
 // cliente repetia o POST de uma resposta perdida).
@@ -127,6 +127,104 @@ describe("criarFetchResiliente com fetch falso", () => {
     expect(init.method).toBe("GET");
   });
 });
+
+describe("hml-14 (H-32, D5): quanto o front espera — função 25 s; tabela e RPC seguem com 15 s", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** O servidor que pendura: o fetch falso só termina quando o sinal aborta; guarda em que ms cada tentativa foi largada. */
+  function pendurado() {
+    const inicio = Date.now();
+    const largouEm: number[] = [];
+    const f = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_, rejeitar) => {
+          init?.signal?.addEventListener("abort", () => {
+            largouEm.push(Date.now() - inicio);
+            rejeitar(new DOMException("The operation was aborted.", "AbortError"));
+          });
+        }),
+    );
+    return { f, base: f as unknown as typeof fetch, largouEm };
+  }
+
+  it("o mínimo de função é 25 s", () => {
+    expect(TEMPO_FUNCAO_MS).toBe(25_000);
+  });
+
+  it("função pelos 2 clientes (2, 15000): espera 25 s, 1 tentativa só, e rejeita com o AbortError", async () => {
+    const { f, base, largouEm } = pendurado();
+    const p = criarFetchResiliente(2, 15000, base)(`${T}/functions/v1/admin-semana-treinos`, { method: "POST", body: "{}" }).catch((e: Error) => e);
+    await vi.advanceTimersByTimeAsync(24_999);
+    expect(largouEm).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(largouEm).toEqual([25_000]);
+    expect((await p as Error).name).toBe("AbortError");
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it("tabela (GET) e RPC de leitura: 15 s por tentativa, com as novas tentativas de hoje; RPC que grava: 15 s e 1 vez", async () => {
+    const tabela = pendurado();
+    void criarFetchResiliente(2, 15000, tabela.base)(`${P}/rest/v1/contas?select=*`).catch(() => null);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(tabela.largouEm).toEqual([15_000, 30_000, 45_000]);
+
+    const leitura = pendurado();
+    void criarFetchResiliente(2, 15000, leitura.base)(`${P}/rest/v1/rpc/minha_situacao`, { method: "POST" }).catch(() => null);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(leitura.largouEm).toEqual([15_000, 30_000, 45_000]);
+
+    const grava = pendurado();
+    void criarFetchResiliente(2, 15000, grava.base)(`${P}/rest/v1/rpc/diario_enviar`, { method: "POST", body: "{}" }).catch(() => null);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(grava.largouEm).toEqual([15_000]);
+  });
+
+  it("fetch direto: quem cria com mais tempo fica com o seu (login, 40 s); fora de função vale o tempo de quem criou (GitHub, 8 s)", async () => {
+    const login = pendurado();
+    void criarFetchResiliente(0, 40_000, login.base)(`${T}/functions/v1/trocar-token`, { method: "POST", body: "{}" }).catch(() => null);
+    const github = pendurado();
+    void criarFetchResiliente(0, 8_000, github.base)("https://api.github.com/repos/weslleybertoldo/physiqcalc/releases/latest").catch(() => null);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(login.largouEm).toEqual([40_000]);
+    expect(github.largouEm).toEqual([8_000]);
+    expect([login.f.mock.calls.length, github.f.mock.calls.length]).toEqual([1, 1]);
+  });
+
+  it("ateOCorpo: o relógio segue até ler o corpo (a foto que trava no meio); sem ele, para quando chegam os cabeçalhos", async () => {
+    /** Os cabeçalhos chegam na hora; o corpo só termina quando o sinal aborta. */
+    const corpoPendurado = () =>
+      vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => ({
+        ok: true,
+        status: 200,
+        blob: () =>
+          new Promise<Blob>((_, rejeitar) => init?.signal?.addEventListener("abort", () => rejeitar(new DOMException("aborted", "AbortError")))),
+      })) as unknown as typeof fetch;
+    const FOTO = `${P}/storage/v1/object/sign/evolucao/a.jpg?token=x`;
+    let comOCorpo: unknown = "esperando";
+    let semOCorpo: unknown = "esperando";
+    (await criarFetchResiliente(0, 30_000, corpoPendurado(), { ateOCorpo: true })(FOTO)).blob().catch((e: Error) => (comOCorpo = e.name));
+    (await criarFetchResiliente(0, 30_000, corpoPendurado())(FOTO)).blob().catch((e: Error) => (semOCorpo = e.name));
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(comOCorpo).toBe("esperando");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(comOCorpo).toBe("AbortError");
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(semOCorpo).toBe("esperando");
+  });
+
+  it("ateOCorpo com resposta rápida: nada muda (a resposta volta igual e o relógio que dispara depois não quebra nada)", async () => {
+    const r = await criarFetchResiliente(0, 30_000, falsoOk(), { ateOCorpo: true })(`${P}/storage/v1/object/sign/evolucao/a.jpg`);
+    expect(await r.text()).toBe("{}");
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(r.status).toBe(200);
+  });
+});
+
+/** fetch falso que responde 200 "{}" na hora. */
+function falsoOk() {
+  return (async () => new Response("{}", { status: 200 })) as unknown as typeof fetch;
+}
 
 describe("hml-10 (D5): a resposta final ≥ 500 de uma função vira aviso", () => {
   beforeEach(() => vi.useFakeTimers());
