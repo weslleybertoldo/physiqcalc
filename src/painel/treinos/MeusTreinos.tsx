@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Check, ChevronRight, Dumbbell, FolderClosed, FolderPlus, Lock, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -6,14 +7,16 @@ import { Botao, BotaoIcone } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
-import { colocarNaPasta, criarModelo, criarPasta, excluirModelo, excluirPasta, renomearModelo, renomearPasta } from "./api";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
+import { colocarNaPasta, criarModelo, criarPasta, excluirModelo, excluirPasta, listarExercicios, renomearModelo, renomearPasta } from "./api";
 import { DetalheModelo } from "./DetalheModelo";
 import { FolhaNome } from "./pecas";
 import { QuemRecebe } from "./QuemRecebe";
-import { donoAoCriar, filtrarModelos, podeCriar, textoAlunos, textoExercicios } from "./regras";
-import type { ModeloTela, PastaTela, QuemMexe } from "./tipos";
-import { mensagemDoErro, useRecarregar, useTreinosDaTela } from "./useTreinos";
+import { donoAoCriar, podeCriar, textoAlunos, textoExercicios } from "./regras";
+import type { FiltrosModelos, ModeloTela, PastaTela, QuemMexe } from "./tipos";
+import { CHAVE_EXERCICIOS, mensagemDoErro, usePastas, useRecarregar, useTermoComEspera, useTreinosDaTela } from "./useTreinos";
 
 type Folha = null | { tipo: "novo-treino" } | { tipo: "nova-pasta" } | { tipo: "renomear-treino"; m: ModeloTela } | { tipo: "renomear-pasta"; p: PastaTela } | { tipo: "pastas"; m: ModeloTela };
 
@@ -21,6 +24,9 @@ type Folha = null | { tipo: "novo-treino" } | { tipo: "nova-pasta" } | { tipo: "
  * Painel › Treinos › Meus treinos (C42): as pastas e os treinos-modelo (os do profissional + os globais do master, só leitura),
  * cada treino no padrão da tela 8 (exercícios com GIF e a prescrição do modelo) e "Quem recebe". Estado na URL: ?pasta=&treino=
  * (os links antigos do /admin/treinos chegam com ?t=grupos&pasta=).
+ * hml-14d (B21 · D23): a lista de treinos vem do banco em páginas de 20 ("1–20 de N", `?pagina=`), com a busca (nome do treino ou de
+ * um exercício dele, sem acento, 300 ms) e a pasta no banco; os detalhes (exercícios, pastas, quem recebe) só dos treinos da página;
+ * o `?treino=` fora da página abre pelo id; as pastas vêm inteiras, com o número de treinos de cada uma vindo do banco.
  */
 export function MeusTreinos({
   q,
@@ -36,21 +42,37 @@ export function MeusTreinos({
   pedidoNovo: boolean;
   aoAtenderPedido: () => void;
 }) {
-  const t = useTreinosDaTela(q);
   const recarregar = useRecarregar();
   const [busca, setBusca] = useState("");
+  const termo = useTermoComEspera(busca);
   const [folha, setFolha] = useState<Folha>(null);
   const pastaId = params.get("pasta");
   const treinoId = params.get("treino");
+  // a pasta do endereço vale enquanto as pastas carregam e, depois, só se existir (outra = a lista inteira, como antes)
+  const pastasQ = usePastas(q);
+  const pastaDoFiltro = pastaId && (!pastasQ.data || pastasQ.data.some((p) => p.id === pastaId)) ? pastaId : null;
+  const filtros: FiltrosModelos = useMemo(() => ({ q: termo, pasta: pastaDoFiltro }), [termo, pastaDoFiltro]);
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara: irParaPagina } = usePaginaNaUrl({ filtro: filtros, total: totalLido });
+  const t = useTreinosDaTela(q, filtros, pagina, treinoId);
+  const totalDaResposta = t.pagina.data && !t.pagina.isPlaceholderData ? t.pagina.data.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
   const pasta = t.pastas.find((p) => p.id === pastaId) ?? null;
-  const lista = useMemo(() => filtrarModelos(t.modelos, pasta, busca), [t.modelos, pasta, busca]);
-  const aberto = t.modelos.find((m) => m.id === treinoId) ?? lista[0] ?? null;
+  const lista = t.modelos;
+  const abrindoPeloId = !!treinoId && !t.todos.some((m) => m.id === treinoId) && t.abertoQ.isFetching;
+  const aberto = t.todos.find((m) => m.id === treinoId) ?? lista[0] ?? null;
   const pastasEditaveis = t.pastas.filter((p) => p.editavel);
   const criar = podeCriar(q);
-  const comGif = useMemo(
-    () => (t.catalogo.data?.exercicios ?? []).filter((e) => e.imagem_url && (!e.professor_id || (!!q.meuId && e.professor_id === q.meuId))).length,
-    [t.catalogo.data, q.meuId],
-  );
+  // "Adicionar exercício da biblioteca (N com GIF)": a contagem do banco (globais + meus com GIF)
+  const resumoBiblioteca = useQuery({
+    queryKey: [CHAVE_EXERCICIOS, q.meuId, "resumo"],
+    queryFn: () => listarExercicios({ escopo: "visiveis" }, 1, 1),
+    staleTime: 5 * 60_000,
+    networkMode: "online",
+  });
+  const comGif = resumoBiblioteca.data?.comGif ?? 0;
 
   useEffect(() => {
     if (pedidoNovo) {
@@ -71,7 +93,7 @@ export function MeusTreinos({
   };
   const erro = (e: unknown) => toast.error(mensagemDoErro(e));
 
-  if (t.catalogo.isLoading) {
+  if (t.pagina.isLoading) {
     return (
       <div className="grid gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos="carregando">
         <Cartao className="flex flex-col gap-2 p-4">{[0, 1, 2, 3, 4].map((i) => <Esqueleto key={i} className="h-12 w-full" />)}</Cartao>
@@ -79,8 +101,17 @@ export function MeusTreinos({
       </div>
     );
   }
-  if (t.catalogo.error || !t.catalogo.data) {
-    return <EstadoErro titulo="Não deu para abrir os treinos" texto={mensagemDoErro(t.catalogo.error)} aoTentar={() => void t.catalogo.refetch()} />;
+  if (t.pagina.error || t.pastasQ.error || !t.pagina.data) {
+    return (
+      <EstadoErro
+        titulo="Não deu para abrir os treinos"
+        texto={mensagemDoErro(t.pagina.error ?? t.pastasQ.error)}
+        aoTentar={() => {
+          void t.pagina.refetch();
+          void t.pastasQ.refetch();
+        }}
+      />
+    );
   }
 
   const novoTreino = async (nome: string, naPasta: boolean) => {
@@ -132,12 +163,14 @@ export function MeusTreinos({
     }
   };
 
-  const abas = pasta ? filtrarModelos(t.modelos, pasta, "") : aberto ? [aberto] : [];
-  const linhasAberto = (t.catalogo.data.linhas ?? []).filter((l) => l.grupo_id === aberto?.id);
+  // pasta aberta: os treinos dela (a página) viram as abas
+  const abas = pasta ? lista : aberto ? [aberto] : [];
+  const linhasAberto = t.linhas.filter((l) => l.grupo_id === aberto?.id);
   const nomeDaPasta = (id: string) => t.pastas.find((p) => p.id === id)?.nome ?? "";
+  const buscando = !!(termo || busca.trim());
 
   return (
-    <div className="grid items-start gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos={t.modelos.length}>
+    <div className="grid items-start gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos={t.totalGeral}>
       {/* ── esquerda: pastas e treinos ── */}
       <Cartao className="flex min-w-0 flex-col px-3.5 py-3.5" data-lista-modelos>
         <label className="mb-3 flex h-9 items-center gap-2 rounded-xl border border-linha bg-superficie px-3 text-[13px] text-texto-2">
@@ -169,7 +202,9 @@ export function MeusTreinos({
                 </button>
               )}
             </div>
-            {t.pastas.length === 0 ? (
+            {t.pastasQ.isLoading ? (
+              <Esqueleto className="mb-2 h-9 w-full" />
+            ) : t.pastas.length === 0 ? (
               <p className="mb-2 px-1 text-[12px] text-texto-3" data-sem-pastas>Nenhuma pasta. Pastas juntam os treinos de um programa (ex.: A, B e C).</p>
             ) : (
               <ul className="mb-2 flex flex-col gap-1" data-lista-pastas={t.pastas.length}>
@@ -180,7 +215,7 @@ export function MeusTreinos({
                       <FolderClosed aria-hidden className="h-4 w-4 flex-none text-violeta-3" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-texto">{p.nome}</span>
                       {p.global && !p.editavel && <Lock aria-label="Global — só leitura" className="h-3 w-3 flex-none text-texto-3" />}
-                      <span className="flex-none text-[11.5px] text-texto-3">{p.modelos.length}</span>
+                      <span className="flex-none text-[11.5px] text-texto-3" data-pasta-total={p.total}>{p.total}</span>
                       <ChevronRight aria-hidden className="h-3.5 w-3.5 flex-none text-texto-3" />
                     </button>
                   </li>
@@ -200,14 +235,14 @@ export function MeusTreinos({
         </div>
         {lista.length === 0 ? (
           <p className="px-1 py-2 text-[12.5px] text-texto-3" data-sem-modelos>
-            {busca ? "Nenhum treino com esse nome ou exercício." : pasta ? "Nenhum treino nesta pasta ainda." : "Nenhum treino ainda."}
+            {buscando ? "Nenhum treino com esse nome ou exercício." : pasta ? "Nenhum treino nesta pasta ainda." : "Nenhum treino ainda."}
           </p>
         ) : (
-          <ul className="flex flex-col gap-1" data-lista-treinos={lista.length}>
+          <ul className="flex flex-col gap-1" data-lista-treinos={lista.length} data-lista="modelos" data-atualizando={t.pagina.isFetching ? "1" : "0"}>
             {lista.map((m) => {
               const ativo = m.id === aberto?.id;
               return (
-                <li key={m.id}>
+                <li key={m.id} data-item>
                   <button type="button" onClick={() => irPara({ treino: m.id })}
                     className={cn("flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-colors",
                       ativo ? "border-[rgba(167,139,250,.45)] bg-[rgba(139,92,246,.09)]" : "border-transparent hover:bg-[rgba(255,255,255,.04)]")}
@@ -229,6 +264,7 @@ export function MeusTreinos({
             })}
           </ul>
         )}
+        <Paginacao nome="modelos" pagina={pagina} total={t.total} aoMudar={irParaPagina} carregando={t.pagina.isFetching} className="px-1" />
         {!q.staff && (
           <p className="mt-3 rounded-xl border border-linha bg-superficie px-3 py-2 text-[12px] text-texto-2" data-so-ver>
             Você vê os treinos da conta; quem cria e muda é o personal.
@@ -238,7 +274,9 @@ export function MeusTreinos({
 
       {/* ── direita: o treino aberto e quem recebe ── */}
       <div className="flex min-w-0 flex-col gap-3.5">
-        {aberto ? (
+        {abrindoPeloId ? (
+          <Cartao className="flex flex-col gap-3 p-5" data-modelo-abrindo={treinoId}><Esqueleto className="h-8 w-1/2" />{[0, 1, 2].map((i) => <Esqueleto key={i} className="h-14 w-full" />)}</Cartao>
+        ) : aberto ? (
           <>
             <DetalheModelo
               modelo={aberto}
@@ -253,18 +291,7 @@ export function MeusTreinos({
               aoExcluir={() => void excluirTreino(aberto)}
               aoPastas={() => setFolha({ tipo: "pastas", m: aberto })}
             />
-            <QuemRecebe
-              modelo={aberto}
-              alunos={t.alunos.data ?? []}
-              perfis={t.perfis}
-              carregando={t.alunos.isLoading || (t.recebe.isLoading && !t.recebe.data)}
-              erro={t.alunos.error || t.recebe.error}
-              aoTentar={() => {
-                void t.alunos.refetch();
-                void t.recebe.refetch();
-              }}
-              q={q}
-            />
+            <QuemRecebe modelo={aberto} q={q} />
           </>
         ) : (
           <EstadoVazio
@@ -328,7 +355,7 @@ export function MeusTreinos({
       <FolhaPastasDoTreino
         aberto={folha?.tipo === "pastas"}
         aoMudar={(a) => !a && setFolha(null)}
-        modelo={folha?.tipo === "pastas" ? (t.modelos.find((m) => m.id === folha.m.id) ?? folha.m) : null}
+        modelo={folha?.tipo === "pastas" ? (t.todos.find((m) => m.id === folha.m.id) ?? folha.m) : null}
         pastas={t.pastas}
         editaveis={pastasEditaveis}
         aoAlternar={async (p, colocar) => {
@@ -404,13 +431,14 @@ function FolhaPastasDoTreino({
 }) {
   const [indo, setIndo] = useState<string | null>(null);
   if (!modelo) return null;
-  const globais = pastas.filter((p) => !p.editavel && p.modelos.includes(modelo.id));
+  // hml-14d: as pastas do treino vêm do próprio treino (a tela não tem mais todos os treinos de cada pasta)
+  const globais = pastas.filter((p) => !p.editavel && modelo.pastas.includes(p.id));
   return (
     <PainelDeslizante aberto={aberto} aoMudar={aoMudar} lado="direita" titulo="Pastas do treino" descricao={`"${modelo.nome}" pode estar em várias pastas.`}>
       <div className="flex flex-col gap-1" data-folha-pastas={modelo.id}>
         {editaveis.length === 0 && <p className="text-[13px] text-texto-3">Você ainda não tem pastas.</p>}
         {editaveis.map((p) => {
-          const dentro = p.modelos.includes(modelo.id);
+          const dentro = modelo.pastas.includes(p.id);
           return (
             <button key={p.id} type="button" role="checkbox" aria-checked={dentro} disabled={indo === p.id}
               onClick={async () => {

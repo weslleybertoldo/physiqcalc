@@ -15,8 +15,8 @@ import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { adicionarAoModelo, ordenarModelo, prescreverModelo, tirarDoModelo } from "./api";
 import { camposEditados, colunasDaPrescricao, textoAlunos } from "./regras";
-import type { Catalogo, LinhaModelo, ModeloTela, QuemMexe } from "./tipos";
-import { CHAVE_CATALOGO, mensagemDoErro, useRecarregar } from "./useTreinos";
+import type { LinhaModelo, ModeloTela, QuemMexe } from "./tipos";
+import { linhaNoCache, mensagemDoErro, mudarLinhaNoCache, useRecarregar } from "./useTreinos";
 
 function ItemArrastavel({ id, children }: { id: string; children: (alca: React.ReactNode) => React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -129,18 +129,15 @@ export function DetalheModelo({
   const qc = useQueryClient();
   /**
    * Grava a prescrição do modelo — só a(s) coluna(s) do campo editado, com a tela atualizada na hora (o próximo campo digitado já
-   * parte do valor novo). true = gravou (a folha "Editar" fecha).
+   * parte do valor novo). true = gravou (a folha "Editar" fecha). hml-14d: o cache é o da página de Meus treinos (e o do treino
+   * aberto por id), que traz as linhas só dos treinos à vista.
    */
   const prescrever = async (ex: ExercicioEditor, p: PrescricaoEditavel): Promise<boolean> => {
     const editado = camposEditados(ex, p);
     if (!Object.keys(editado).length) return true;
-    const chave = [CHAVE_CATALOGO, q.meuId];
-    const doCache = qc.getQueryData<Catalogo>(chave)?.linhas.find((l) => l.grupo_id === modelo.id && l.exercicio_id === ex.exercicio_id);
-    const antes = doCache ?? linhas.find((l) => l.exercicio_id === ex.exercicio_id) ?? { num_series: null };
+    const antes = linhaNoCache(qc, modelo.id, ex.exercicio_id) ?? linhas.find((l) => l.exercicio_id === ex.exercicio_id) ?? { num_series: null };
     const colunas = colunasDaPrescricao(antes, editado);
-    qc.setQueryData<Catalogo>(chave, (c) =>
-      c ? { ...c, linhas: c.linhas.map((l) => (l.grupo_id === modelo.id && l.exercicio_id === ex.exercicio_id ? { ...l, ...colunas } : l)) } : c,
-    );
+    mudarLinhaNoCache(qc, modelo.id, ex.exercicio_id, colunas);
     try {
       await prescreverModelo(modelo.id, ex.exercicio_id!, colunas);
       return true;

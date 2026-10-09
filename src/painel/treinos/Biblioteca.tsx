@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Layers, Lock, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -8,19 +9,24 @@ import { Botao, BotaoIcone } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { Segmentado } from "@/ui/premium/Segmentado";
-import { excluirExercicio, excluirMusculo } from "./api";
+import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
+import { excluirExercicio, excluirMusculo, listarExercicios } from "./api";
 import { FolhaExercicio } from "./FolhaExercicio";
-import { classificado, donoAoCriar, ehGlobal, ehMeu, filtrarExercicios, linhaDaBiblioteca, podeCriar, podeEditar, type EscopoBiblioteca } from "./regras";
-import type { ExercicioCatalogo, QuemMexe } from "./tipos";
-import { mensagemDoErro, useCatalogo, useRecarregar } from "./useTreinos";
+import { classificado, donoAoCriar, ehGlobal, ehMeu, filtrosDaBiblioteca, linhaDaBiblioteca, podeCriar, podeEditar, type EscopoBiblioteca } from "./regras";
+import type { ExercicioCatalogo, FiltrosExercicios, QuemMexe } from "./tipos";
+import { CHAVE_EXERCICIOS, mensagemDoErro, useMusculos, useRecarregar, useTermoComEspera } from "./useTreinos";
 
 /**
  * Painel › Treinos › Biblioteca (C43, W9): a GLOBAL do Physiq (os 81 com GIF, só leitura para o profissional) + a PRÓPRIA (GIF/
  * imagem, subgrupo, dica, grupo muscular, movimento e equipamento). O exercício próprio com movimento e equipamento entra na troca
  * por equivalente do app dos alunos do profissional (o app sincroniza os globais + os do professor dele). O master muda a global.
  * Estado na URL: ?aba=biblioteca&b=global|minha (o ?b= dos links antigos).
+ * hml-14d (B21 · D24): a lista vem do banco em páginas de 20 ("1–20 de N", `?pagina=`) — a RPC exercicios_da_lista com o escopo, o
+ * grupo da tela (os músculos dele), a busca (nome, músculo, subgrupo, variação e os rótulos de movimento/equipamento, sem acento,
+ * 300 ms) e as contagens do topo (Global/Minha); antes a tela lia a tabela inteira (até 1000) e filtrava no navegador.
  */
 export function Biblioteca({
   q,
@@ -35,11 +41,27 @@ export function Biblioteca({
   pedidoNovo: boolean;
   aoAtenderPedido: () => void;
 }) {
-  const catalogo = useCatalogo(q);
   const recarregar = useRecarregar();
   const escopo: EscopoBiblioteca = q.master ? "global" : params.get("b") === "minha" ? "minha" : "global";
   const [grupo, setGrupo] = useState("todos");
   const [busca, setBusca] = useState("");
+  const termo = useTermoComEspera(busca);
+  const filtros: FiltrosExercicios = useMemo(() => ({ escopo, ...filtrosDaBiblioteca(termo, grupo) }), [escopo, termo, grupo]);
+  const [totalLido, setTotalLido] = useState<number | null>(null);
+  const { pagina, irPara } = usePaginaNaUrl({ filtro: filtros, total: totalLido });
+  const lista = useQuery({
+    queryKey: [CHAVE_EXERCICIOS, q.meuId, "biblioteca", filtros, pagina],
+    queryFn: () => listarExercicios(filtros, pagina),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    retry: 1,
+    networkMode: "online",
+  });
+  const totalDaResposta = lista.data && !lista.isPlaceholderData ? lista.data.total : null;
+  useEffect(() => {
+    if (totalDaResposta !== null) setTotalLido(totalDaResposta);
+  }, [totalDaResposta]);
+  const musculos = useMusculos(q);
   const [aberto, setAberto] = useState<{ ex: ExercicioCatalogo | null; ler: boolean } | null>(null);
   const [musculosAberto, setMusculosAberto] = useState(false);
   const criar = podeCriar(q);
@@ -64,22 +86,22 @@ export function Biblioteca({
     setParams(n, { replace: true });
   }
 
-  const todos = useMemo(() => catalogo.data?.exercicios ?? [], [catalogo.data]);
-  const lista = useMemo(() => filtrarExercicios(todos, escopo, q.meuId, grupo, busca), [todos, escopo, q.meuId, grupo, busca]);
-  const nGlobal = todos.filter(ehGlobal).length;
-  const nMinha = todos.filter((e) => ehMeu(e, q.meuId)).length;
+  const itens: ExercicioCatalogo[] = lista.data?.itens ?? [];
+  const total = lista.data?.total ?? 0;
+  const nGlobal = lista.data?.totalGlobal ?? 0;
+  const nMinha = lista.data?.totalMeu ?? 0;
   const musculosDoEscopo = useMemo(
-    () => (catalogo.data?.musculos ?? []).filter((m) => (escopo === "global" ? ehGlobal(m) : ehMeu(m, q.meuId))),
-    [catalogo.data, escopo, q.meuId],
+    () => (musculos.data ?? []).filter((m) => (escopo === "global" ? ehGlobal(m) : ehMeu(m, q.meuId))),
+    [musculos.data, escopo, q.meuId],
   );
   // o grupo muscular do exercício novo/editado: os globais + os meus (o master, os globais)
-  const musculosParaForm = useMemo(() => (catalogo.data?.musculos ?? []).filter((m) => ehGlobal(m) || ehMeu(m, q.meuId)), [catalogo.data, q.meuId]);
+  const musculosParaForm = useMemo(() => (musculos.data ?? []).filter((m) => ehGlobal(m) || ehMeu(m, q.meuId)), [musculos.data, q.meuId]);
 
-  if (catalogo.isLoading) {
+  if (lista.isLoading) {
     return <Cartao className="flex flex-col gap-2 p-5" data-biblioteca="carregando">{[0, 1, 2, 3, 4, 5].map((i) => <Esqueleto key={i} className="h-[58px] w-full" />)}</Cartao>;
   }
-  if (catalogo.error || !catalogo.data) {
-    return <EstadoErro titulo="Não deu para abrir a biblioteca" texto={mensagemDoErro(catalogo.error)} aoTentar={() => void catalogo.refetch()} />;
+  if (lista.error || !lista.data) {
+    return <EstadoErro titulo="Não deu para abrir a biblioteca" texto={mensagemDoErro(lista.error)} aoTentar={() => void lista.refetch()} />;
   }
 
   const excluir = async (e: ExercicioCatalogo) => {
@@ -94,7 +116,7 @@ export function Biblioteca({
   };
 
   return (
-    <div className="flex flex-col gap-3.5" data-biblioteca={escopo} data-biblioteca-total={lista.length}>
+    <div className="flex flex-col gap-3.5" data-biblioteca={escopo} data-biblioteca-total={total}>
       <div className="flex flex-wrap items-center gap-2.5">
         {!q.master && (
           <Segmentado
@@ -131,42 +153,45 @@ export function Biblioteca({
       <Cartao className="px-[18px] py-4">
         <CabecalhoCartao
           titulo={escopo === "global" ? "Exercícios do Physiq" : "Meus exercícios"}
-          extra={<Chip tom="t" data-chip-total-exercicios>{lista.length} {lista.length === 1 ? "EXERCÍCIO" : "EXERCÍCIOS"}</Chip>}
+          extra={<Chip tom="t" data-chip-total-exercicios>{total} {total === 1 ? "EXERCÍCIO" : "EXERCÍCIOS"}</Chip>}
           acao={podeEditarAqui ? <Botao tamanho="sm" variante="v" icone={Plus} onClick={() => setAberto({ ex: null, ler: false })} data-btn-criar-exercicio>Novo exercício</Botao> : undefined}
         />
-        {lista.length === 0 ? (
+        {total === 0 ? (
           <EstadoVazio
             icone={Layers}
-            titulo={escopo === "minha" && !busca && grupo === "todos" ? "Nenhum exercício seu ainda" : "Nenhum exercício"}
-            texto={escopo === "minha" && !busca && grupo === "todos" ? "Crie o primeiro com o GIF, o movimento e o equipamento." : "Mude a busca ou o grupo."}
+            titulo={escopo === "minha" && !termo && grupo === "todos" ? "Nenhum exercício seu ainda" : "Nenhum exercício"}
+            texto={escopo === "minha" && !termo && grupo === "todos" ? "Crie o primeiro com o GIF, o movimento e o equipamento." : "Mude a busca ou o grupo."}
             className="border-0 bg-transparent py-6 shadow-none"
           />
         ) : (
-          <ul className="grid gap-x-6 lg:grid-cols-2" data-biblioteca-lista-painel={lista.length}>
-            {lista.map((e) => {
-              const editavel = podeEditar(e, q);
-              return (
-                <li key={e.id} className="flex items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-[9px]" data-exercicio-biblioteca={e.id} data-exercicio-biblioteca-nome={e.nome}>
-                  <button type="button" onClick={() => setAberto({ ex: e, ler: !editavel })} className="flex min-w-0 flex-1 items-center gap-3 text-left" data-exercicio-abrir>
-                    <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} className="h-[42px] w-[46px] rounded-[11px]" />
-                    <span className="min-w-0 flex-1">
-                      <b className="block truncate text-[13.5px] font-semibold text-texto" title={e.nome}>{e.nome}</b>
-                      <span className="mt-0.5 block truncate text-[11.5px] text-texto-3" data-exercicio-classificacao={classificado(e) ? "1" : "0"}>{linhaDaBiblioteca(e)}</span>
-                    </span>
-                  </button>
-                  {classificado(e) && <ArrowLeftRight aria-label="Entra na troca por equivalente" className="h-3.5 w-3.5 flex-none text-violeta-3" />}
-                  {editavel ? (
-                    <span className="flex flex-none items-center gap-1 text-texto-3">
-                      <BotaoIcone icone={Pencil} rotulo={`Editar ${e.nome}`} onClick={() => setAberto({ ex: e, ler: false })} tamanho={30} data-exercicio-editar-bib />
-                      <BotaoIcone icone={Trash2} rotulo={`Excluir ${e.nome}`} onClick={() => void excluir(e)} tamanho={30} data-exercicio-excluir-bib />
-                    </span>
-                  ) : (
-                    <Lock aria-label="Global — só leitura" className="h-3.5 w-3.5 flex-none text-texto-3" data-exercicio-global />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <ul className="grid gap-x-6 lg:grid-cols-2" data-biblioteca-lista-painel={itens.length} data-lista="biblioteca" data-atualizando={lista.isFetching ? "1" : "0"}>
+              {itens.map((e) => {
+                const editavel = podeEditar(e, q);
+                return (
+                  <li key={e.id} className="flex items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-[9px]" data-item data-exercicio-biblioteca={e.id} data-exercicio-biblioteca-nome={e.nome}>
+                    <button type="button" onClick={() => setAberto({ ex: e, ler: !editavel })} className="flex min-w-0 flex-1 items-center gap-3 text-left" data-exercicio-abrir>
+                      <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} className="h-[42px] w-[46px] rounded-[11px]" />
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-[13.5px] font-semibold text-texto" title={e.nome}>{e.nome}</b>
+                        <span className="mt-0.5 block truncate text-[11.5px] text-texto-3" data-exercicio-classificacao={classificado(e) ? "1" : "0"}>{linhaDaBiblioteca(e)}</span>
+                      </span>
+                    </button>
+                    {classificado(e) && <ArrowLeftRight aria-label="Entra na troca por equivalente" className="h-3.5 w-3.5 flex-none text-violeta-3" />}
+                    {editavel ? (
+                      <span className="flex flex-none items-center gap-1 text-texto-3">
+                        <BotaoIcone icone={Pencil} rotulo={`Editar ${e.nome}`} onClick={() => setAberto({ ex: e, ler: false })} tamanho={30} data-exercicio-editar-bib />
+                        <BotaoIcone icone={Trash2} rotulo={`Excluir ${e.nome}`} onClick={() => void excluir(e)} tamanho={30} data-exercicio-excluir-bib />
+                      </span>
+                    ) : (
+                      <Lock aria-label="Global — só leitura" className="h-3.5 w-3.5 flex-none text-texto-3" data-exercicio-global />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <Paginacao nome="biblioteca" pagina={pagina} total={total} aoMudar={irPara} carregando={lista.isFetching} className="border-t border-[rgba(255,255,255,.06)]" />
+          </>
         )}
       </Cartao>
 

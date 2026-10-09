@@ -12,10 +12,11 @@ import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { useMes } from "./estilo";
-import { SeletorAluno, SeletorMes } from "./pecas";
+import { SeletorMes } from "./pecas";
 import { resumoDoMes } from "./regras";
-import type { QuemMexe } from "./tipos";
-import { mensagemDoErro, useAlunosDaLista } from "./useTreinos";
+import { SeletorAlunoTreino } from "./SeletorAlunoTreino";
+import type { AlunoDaLista, QuemMexe } from "./tipos";
+import { mensagemDoErro } from "./useTreinos";
 
 const kg = (n: unknown, casas = 1) => (n == null || n === "" || !Number.isFinite(Number(n)) ? "—" : `${Number(n).toFixed(casas).replace(".", ",")}`);
 
@@ -87,15 +88,16 @@ function Semana({ s, aberta, aoAlternar }: { s: SemanaAgrupada; aberta: boolean;
  * Painel › Treinos › Relatório (C45): o relatório mensal de um aluno (dados e composição, treinos no mês, volume, média por
  * semana e cada semana com os dias e as séries) e a exportação em PDF e Excel — o MESMO gerador da aba Treino do perfil do aluno
  * (src/treino/editor/relatorio.ts, W15), que é o do Relatório antigo com a marca Physiq.
+ * hml-14d (B19 · D26): o aluno sai do SeletorAlunoTreino (busca no banco, 20 por vez) — antes um <select> com a lista inteira.
  */
 export function Relatorio({ q }: { q: QuemMexe }) {
   const m = useMes();
-  const alunos = useAlunosDaLista(q);
-  const [aluno, setAluno] = useState("");
+  const [escolhido, setEscolhido] = useState<AlunoDaLista | null>(null);
   const [aberta, setAberta] = useState<number | null>(null);
   const [gerando, setGerando] = useState<null | "pdf" | "excel">(null);
-  const nome = alunos.data?.find((a) => a.id === aluno)?.nome ?? "";
-  const email = alunos.data?.find((a) => a.id === aluno)?.email ?? "";
+  const aluno = escolhido?.id ?? "";
+  const nome = escolhido?.nome ?? "";
+  const email = escolhido?.email ?? "";
   const dados = useQuery({
     queryKey: ["painel-treinos-relatorio", aluno, m.ano, m.mes],
     queryFn: async () => {
@@ -146,7 +148,7 @@ export function Relatorio({ q }: { q: QuemMexe }) {
         }
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <SeletorAluno alunos={alunos.data ?? []} valor={aluno} aoMudar={(id) => { setAluno(id); setAberta(null); }} todos="Escolha o aluno" />
+        <SeletorAlunoTreino contexto="relatorio" q={q} valor={escolhido} aoMudar={(a) => { setEscolhido(a); setAberta(null); }} />
         <SeletorMes {...m} />
       </div>
 

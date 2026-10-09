@@ -5,7 +5,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
-import { periodoDoVolumeValido, respostaDoResolver } from "./regras.ts";
+import { fatiar, filtrarPorNome, listaQuemRecebe, paginaPedida, periodoDoVolumeValido, respostaDoResolver } from "./regras.ts";
 // hml-14 (H-51 item 5): log em JSON sem dado pessoal (_shared/log.ts) — por enquanto só o resolver_sem_acesso (os console.error
 // de antes ficam para o resto do H-48)
 const log = criarLog("admin-semana-treinos", { avisar: avisarErro });
@@ -432,7 +432,8 @@ const okJson = (payload: unknown, origin: string | null) =>
   new Response(JSON.stringify(payload), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
 
 // Physiq W15: ações que só leem (o dono da conta sem papel de personal também usa — requireAdmin com leitura)
-const ACOES_LEITURA = new Set(["get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno", "quemRecebe"]);
+// hml-14d (D25): + quemRecebeLista (a lista do "Quem recebe" com página e busca, como o quemRecebe)
+const ACOES_LEITURA = new Set(["get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno", "quemRecebe", "quemRecebeLista"]);
 
 Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
@@ -481,6 +482,24 @@ Deno.serve(async (req) => {
         todasAsPaginas<{ grupo_id: string; user_id: string }>((de, ate) =>
           adminQ.from("tb_grupos_treino_perfis").select("grupo_id, user_id").in("grupo_id", grupos).in("user_id", lote).order("id").range(de, ate)));
       return okJson({ perfis }, origin);
+    }
+    if (action === "quemRecebeLista") {
+      // hml-14d (B19/B21 · D25, P5): o "Quem recebe" de UM modelo com a página e a busca no servidor (antes o painel baixava até 2000
+      // alunos de 100 em 100 e escondia a busca até 6). O escopo é o do quemRecebe (os alunos da lista de quem chama), lido inteiro
+      // (teto natural: os alunos de 1 profissional); quem recebe primeiro, depois o nome; busca sem acento em nome e e-mail; 20 por
+      // página, com o total, quantos recebem e quantos alunos há (o chip "N DE M"). Marcar/desmarcar e "Aplicar a quem recebe"
+      // continuam nas ações de sempre (usarTreino, tirarTreino, quemRecebe + aplicarModelo).
+      const grupo = body?.grupo;
+      if (!ehUuid(grupo)) return jsonErr("missing_grupo", 400, origin);
+      const adminL = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
+      const contas = await contasOndeSouDono(adminL, user.id);
+      const extra = contas.length ? `,conta_id.in.(${contas.join(",")})` : "";
+      const alunos = await todasAsPaginas<{ id: string; nome: string | null; email: string | null; foto_url: string | null }>((de, ate) =>
+        adminL.from("physiq_profiles").select("id, nome, email, foto_url").or(`professor_id.eq.${user.id},id.eq.${user.id}${extra}`).order("id").range(de, ate));
+      const recebem = await emLotes(alunos.map((a) => a.id), 150, (lote) =>
+        todasAsPaginas<{ user_id: string }>((de, ate) =>
+          adminL.from("tb_grupos_treino_perfis").select("user_id").eq("grupo_id", grupo).in("user_id", lote).order("id").range(de, ate)));
+      return okJson(listaQuemRecebe(alunos, new Set(recebem.map((r) => r.user_id)), body?.q, paginaPedida(body?.pagina) ?? 1), origin);
     }
     const userId = body?.userId;
     if (!userId || typeof userId !== "string") return jsonErr("missing_userId", 400, origin);
@@ -1050,7 +1069,12 @@ Deno.serve(async (req) => {
       // dos exercícios e das pastas deles (150 modelos × os exercícios de cada um passam de 1000)
       const lista = await todasAsPaginas<any>((de, ate) => admin.from("tb_grupos_treino").select("id, nome, professor_id")
         .or(`professor_id.is.null,professor_id.eq.${user.id}`).order("nome").order("id").range(de, ate));
-      const ids = lista.map((g) => g.id as string);
+      // hml-14d (B19/B21): com `pagina` (a folha "Modelos" do editor) — a busca pelo nome (sem acento) e a página de 20 aqui, e os
+      // exercícios, as pastas e o "já é do aluno" só dos 20; a resposta ganha o `total`. Sem `pagina`: a lista inteira, como antes.
+      const pagina = paginaPedida(body?.pagina);
+      const daPagina = pagina === null ? null : fatiar(filtrarPorNome(lista, body?.busca), pagina);
+      const alvo = daPagina ? daPagina.itens : lista;
+      const ids = alvo.map((g) => g.id as string);
       const [exs, pastas, disp] = await Promise.all([
         emLotes(ids, 150, (lote) => todasAsPaginas<any>((de, ate) =>
           admin.from("tb_grupos_exercicios").select("grupo_id").in("grupo_id", lote).order("id").range(de, ate))),
@@ -1065,12 +1089,11 @@ Deno.serve(async (req) => {
         const nome = r.tb_pastas_treino?.nome;
         if (nome) pastasDe.set(r.grupo_id, [...(pastasDe.get(r.grupo_id) ?? []), nome]);
       });
-      return okJson({
-        modelos: lista.map((g) => ({
-          id: g.id, nome: g.nome, global: g.professor_id === null, meu: g.professor_id === user.id,
-          exercicios: nEx.get(g.id) ?? 0, pastas: pastasDe.get(g.id) ?? [], ja_tem: disp.catalogo.has(g.id),
-        })),
-      }, origin);
+      const modelos = alvo.map((g) => ({
+        id: g.id, nome: g.nome, global: g.professor_id === null, meu: g.professor_id === user.id,
+        exercicios: nEx.get(g.id) ?? 0, pastas: pastasDe.get(g.id) ?? [], ja_tem: disp.catalogo.has(g.id),
+      }));
+      return okJson(daPagina ? { modelos, total: daPagina.total } : { modelos }, origin);
     }
 
     if (action === "novoTreino") {

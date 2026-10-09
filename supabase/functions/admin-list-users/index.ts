@@ -4,6 +4,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { todasAsPaginas } from "../_shared/paginas.ts";
+import { filtrosDaBusca } from "./busca.ts";
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 const log = criarLog("admin-list-users", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
@@ -146,9 +147,13 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
 
 // Lista de alunos com escopo por papel + paginação (SaaS 12/09/2026). Desde 18/09/2026 a lista do professor
 // (e a do Admin do master) traz também o PRÓPRIO perfil dele.
-// body opcional: { limit (1..100, padrão 20), offset, q (nome/email/user_code), professorId (só master), semProfessor (só master), todos (só master: sem paginar) }
+// body opcional: { limit (1..100, padrão 20), offset, q (nome/email/user_code), professorId (só master), semProfessor (só master), todos (só master: sem paginar),
+// ordem ("nome" — hml-14d) }
 // Contrato aditivo: `users` continua; `total/limit/offset` são novos. Sem body (bundle antigo) → professor recebe os dele
 // e o master recebe TODOS (como antes), paginados em 100 só se `limit` vier.
+// hml-14d (B19 · D22b, D27): `q` sem acento ("jose" acha "José": imatch com as variantes de cada letra — busca.ts); `ordem: "nome"`
+// (o seletor do Histórico/Relatório do painel) = nome + id; sem `ordem`, a de sempre (mais novo primeiro) com o desempate pelo id.
+// A resposta não muda ({ users, total, limit, offset }).
 Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
@@ -166,9 +171,10 @@ Deno.serve(async (req) => {
     const professorId: string | null = master ? (typeof body?.professorId === "string" ? body.professorId : null) : user.id;
     const semProfessor = master && body?.semProfessor === true;
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } });
-    let q = admin.from("physiq_profiles")
-      .select("id, nome, email, user_code, plano_nome, plano_expiracao, status, admin_locked, foto_url, created_at, professor_id, mensalidade_valor", { count: "exact" })
-      .order("created_at", { ascending: false })
+    const sel = admin.from("physiq_profiles")
+      .select("id, nome, email, user_code, plano_nome, plano_expiracao, status, admin_locked, foto_url, created_at, professor_id, mensalidade_valor", { count: "exact" });
+    // hml-14d (D27): ordem estável — sem o desempate pelo id, alunos com o mesmo created_at pulavam ou repetiam entre as páginas
+    let q = (body?.ordem === "nome" ? sel.order("nome").order("id") : sel.order("created_at", { ascending: false }).order("id"))
       .range(offset, offset + limit - 1);
     if (semProfessor) {
       // fila "Sem professor" = alunos sem vínculo; professores/master têm perfil próprio (professor_id NULL) e ficam de fora.
@@ -192,10 +198,9 @@ Deno.serve(async (req) => {
       }
     }
     if (busca) {
-      const seguro = busca.replace(/[%,()]/g, " ");
-      const partes = [`nome.ilike.%${seguro}%`, `email.ilike.%${seguro}%`];
-      if (/^\d+$/.test(seguro)) partes.push(`user_code.eq.${Number(seguro)}`);
-      q = q.or(partes.join(","));
+      // hml-14d (D22b): nome e e-mail sem acento, termo escapado (o que a pessoa digita nunca vira operador do filtro nem da regex)
+      const partes = filtrosDaBusca(busca);
+      if (partes.length) q = q.or(partes.join(","));
     }
     const { data, error, count, status } = await q;
     if (error) {

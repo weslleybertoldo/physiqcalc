@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Bookmark, Check, FolderClosed, Plus, Search, Timer, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clampSeries } from "@/lib/seriesPadrao";
@@ -8,8 +8,10 @@ import { formatarDescanso } from "@/treino/prescricao";
 import { Botao } from "@/ui/premium/Botao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
-import { carregarBiblioteca, carregarModelos } from "./api";
+import { filtrosDaBiblioteca, termoDaBusca } from "@/painel/treinos/regras";
+import { carregarModelos, exerciciosDaLista, type FiltrosDaBiblioteca } from "./api";
 import { mensagemDoErro } from "./useEditorTreino";
 import {
   DESCANSO_ATALHOS,
@@ -24,15 +26,24 @@ import {
   textoCargaCampo,
   textoDescansoCampo,
 } from "./regras";
-import { blocoDoGrupoMuscular } from "@/lib/gruposMusculares";
 import type { ExercicioBiblioteca, ExercicioEditor, PrescricaoEditavel, TreinoEditor } from "./tipos";
 
-const normalizar = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+/** O termo digitado depois de 300 ms sem tecla nova (a busca vai ao banco, não a cada letra). */
+function useTermoDaFolha(busca: string): string {
+  const [termo, setTermo] = useState(() => termoDaBusca(busca));
+  useEffect(() => {
+    const t = setTimeout(() => setTermo(termoDaBusca(busca)), 300);
+    return () => clearTimeout(t);
+  }, [busca]);
+  return termo;
+}
 
-/** Em qual grupo da tela 7 o exercício cai (Peito, Costas, Pernas, Ombros, Braços…). */
-function grupoDoExercicio(grupoMuscular: string): string {
-  const bloco = blocoDoGrupoMuscular(grupoMuscular || "");
-  return GRUPOS_VOLUME.find((g) => (g.blocos as readonly string[]).includes(bloco))?.chave ?? "outros";
+/** hml-14d (B21): a página de uma lista dentro da folha — no estado da folha (não no endereço): filtro novo = página 1. */
+function usePaginaDaFolha(filtro: unknown) {
+  const assinatura = JSON.stringify(filtro ?? null);
+  const [estado, setEstado] = useState({ assinatura, pagina: 1 });
+  const pagina = estado.assinatura === assinatura ? estado.pagina : 1;
+  return { pagina, irPara: (n: number) => setEstado({ assinatura, pagina: Math.max(1, Math.floor(n)) }), voltar: () => setEstado({ assinatura, pagina: 1 }) };
 }
 
 // ───────────────────────── Adicionar exercício da biblioteca ─────────────────────────
@@ -51,27 +62,34 @@ export function FolhaBiblioteca({
   aoEscolher: (ex: ExercicioBiblioteca) => void;
 }) {
   const [busca, setBusca] = useState("");
+  const termo = useTermoDaFolha(busca);
   const [grupo, setGrupo] = useState<string>("todos");
+  // hml-14d (B21 · D24): a biblioteca que o aluno enxerga (os globais + os do professor dele; sem professor, só os globais) em
+  // páginas de 20 do banco — a busca (nome, músculo, subgrupo, variação e os rótulos de movimento/equipamento, sem acento) e o
+  // grupo no banco (RPC exercicios_da_lista); antes a tabela inteira, sem `range`, filtrada no navegador.
+  const filtros: FiltrosDaBiblioteca = useMemo(
+    () => ({ ...(professorDoAluno ? { professor: professorDoAluno } : { escopo: "global" as const }), ...filtrosDaBiblioteca(termo, grupo) }),
+    [professorDoAluno, termo, grupo],
+  );
+  const { pagina, irPara, voltar } = usePaginaDaFolha(filtros);
   const q = useQuery({
-    queryKey: ["treino-biblioteca", professorDoAluno],
-    queryFn: () => carregarBiblioteca(professorDoAluno),
+    queryKey: ["treino-biblioteca", professorDoAluno, filtros, pagina],
+    queryFn: () => exerciciosDaLista<ExercicioBiblioteca>(filtros, pagina),
     enabled: aberto,
     staleTime: 10 * 60_000,
+    placeholderData: keepPreviousData,
   });
   useEffect(() => {
     if (!aberto) {
       setBusca("");
       setGrupo("todos");
+      voltar();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fechou: volta ao começo (busca, grupo e página 1)
   }, [aberto]);
   const noTreino = useMemo(() => new Set((treino?.exercicios ?? []).map((e) => e.exercicio_id).filter(Boolean)), [treino]);
-  const lista = useMemo(() => {
-    const termo = normalizar(busca.trim());
-    return (q.data ?? []).filter(
-      (e) => (grupo === "todos" || grupoDoExercicio(e.grupo_muscular) === grupo) && (!termo || normalizar(`${e.nome} ${e.grupo_muscular} ${e.subgrupo ?? ""}`).includes(termo)),
-    );
-  }, [q.data, busca, grupo]);
-  const comGif = (q.data ?? []).filter((e) => e.imagem_url).length;
+  const lista = q.data?.itens ?? [];
+  const total = q.data?.total ?? 0;
 
   return (
     <PainelDeslizante
@@ -79,7 +97,7 @@ export function FolhaBiblioteca({
       aoMudar={aoMudar}
       lado="direita"
       titulo="Adicionar exercício"
-      descricao={treino ? `No treino ${treino.rotulo}. ${q.data ? `${q.data.length} na biblioteca · ${comGif} com GIF.` : ""}` : undefined}
+      descricao={treino ? `No treino ${treino.rotulo}. ${q.data ? `${q.data.totalEscopo} na biblioteca · ${q.data.comGif} com GIF.` : ""}` : undefined}
       className="w-[min(480px,94vw)]"
     >
       <div data-folha-biblioteca className="flex flex-col gap-3">
@@ -89,7 +107,7 @@ export function FolhaBiblioteca({
             autoFocus
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome ou músculo"
+            placeholder="Buscar por nome, músculo ou equipamento"
             className="min-w-0 flex-1 bg-transparent text-texto outline-none placeholder:text-texto-3"
             data-biblioteca-busca
           />
@@ -103,6 +121,7 @@ export function FolhaBiblioteca({
               aria-checked={grupo === g.chave}
               onClick={() => setGrupo(g.chave)}
               className={cn("pq-chip h-7 cursor-pointer px-3 text-[11.5px] tracking-normal", grupo === g.chave ? "pq-chip-t" : "pq-chip-g")}
+              data-biblioteca-grupo={g.chave}
             >
               {g.nome}
             </button>
@@ -112,38 +131,41 @@ export function FolhaBiblioteca({
           <div className="flex flex-col gap-2">{[0, 1, 2, 3].map((i) => <Esqueleto key={i} className="h-[58px] w-full" />)}</div>
         ) : q.error ? (
           <EstadoErro titulo="Não deu para abrir a biblioteca" texto={mensagemDoErro(q.error)} aoTentar={() => void q.refetch()} />
-        ) : lista.length === 0 ? (
+        ) : total === 0 ? (
           <EstadoVazio titulo="Nenhum exercício" texto="Mude a busca ou o grupo." />
         ) : (
-          <ul className="flex flex-col" data-biblioteca-lista>
-            {lista.map((e) => {
-              const ja = noTreino.has(e.id);
-              return (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    disabled={ja}
-                    onClick={() => aoEscolher(e)}
-                    className="flex w-full items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-2 text-left disabled:opacity-60"
-                    data-biblioteca-item={e.nome}
-                  >
-                    <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} className="h-11 w-[50px] rounded-xl" semPlay />
-                    <span className="min-w-0 flex-1">
-                      <b className="block truncate text-[13.5px] font-semibold text-texto">{e.nome}</b>
-                      <span className="block truncate text-[11.5px] text-texto-3">{subtituloDoExercicio(e)}</span>
-                    </span>
-                    {ja ? (
-                      <Chip tom="g" icone={Check}>NO TREINO</Chip>
-                    ) : (
-                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[10px] border border-linha-2 text-violeta-3">
-                        <Plus aria-hidden className="h-4 w-4" />
+          <>
+            <ul className="flex flex-col" data-biblioteca-lista data-lista="folha-biblioteca" data-atualizando={q.isFetching ? "1" : "0"}>
+              {lista.map((e) => {
+                const ja = noTreino.has(e.id);
+                return (
+                  <li key={e.id} data-item>
+                    <button
+                      type="button"
+                      disabled={ja}
+                      onClick={() => aoEscolher(e)}
+                      className="flex w-full items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-2 text-left disabled:opacity-60"
+                      data-biblioteca-item={e.nome}
+                    >
+                      <MiniaturaGif url={e.imagem_url} exercicioId={e.id} nome={e.nome} className="h-11 w-[50px] rounded-xl" semPlay />
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-[13.5px] font-semibold text-texto">{e.nome}</b>
+                        <span className="block truncate text-[11.5px] text-texto-3">{subtituloDoExercicio(e)}</span>
                       </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                      {ja ? (
+                        <Chip tom="g" icone={Check}>NO TREINO</Chip>
+                      ) : (
+                        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[10px] border border-linha-2 text-violeta-3">
+                          <Plus aria-hidden className="h-4 w-4" />
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <Paginacao nome="folha-biblioteca" pagina={pagina} total={total} aoMudar={irPara} carregando={q.isFetching} />
+          </>
         )}
       </div>
     </PainelDeslizante>
@@ -170,9 +192,24 @@ export function FolhaModelos({
 }) {
   const [nome, setNome] = useState("");
   const [enviando, setEnviando] = useState<string | null>(null);
-  const q = useQuery({ queryKey: ["treino-modelos", treinoUserId], queryFn: () => carregarModelos(treinoUserId), enabled: aberto, staleTime: 30_000 });
+  const [busca, setBusca] = useState("");
+  const termo = useTermoDaFolha(busca);
+  // hml-14d (B19/B21): os modelos em páginas de 20 com a busca pelo nome (sem acento) na função — antes a lista inteira, sem busca
+  const { pagina, irPara, voltar } = usePaginaDaFolha({ termo });
+  const q = useQuery({
+    queryKey: ["treino-modelos", treinoUserId, termo, pagina],
+    queryFn: () => carregarModelos(treinoUserId, pagina, termo),
+    enabled: aberto,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
   useEffect(() => {
-    if (!aberto) setNome("");
+    if (!aberto) {
+      setNome("");
+      setBusca("");
+      voltar();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fechou: volta ao começo (busca e página 1)
   }, [aberto]);
   const criar = async () => {
     if (!nome.trim()) return;
@@ -181,11 +218,12 @@ export function FolhaModelos({
     setEnviando(null);
     if (r) aoMudar(false);
   };
-  const lista = q.data ?? [];
+  const lista = q.data?.modelos ?? [];
+  const total = q.data?.total ?? 0;
   const pastas = lista.filter((m) => m.pastas.length > 0);
   const soltos = lista.filter((m) => m.pastas.length === 0);
   const linha = (m: (typeof lista)[number]) => (
-    <li key={m.id} className="flex items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-2.5" data-modelo={m.nome}>
+    <li key={m.id} className="flex items-center gap-3 border-t border-[rgba(255,255,255,.06)] py-2.5" data-item data-modelo={m.nome}>
       <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-linha bg-superficie text-violeta-3">
         <Bookmark aria-hidden className="h-4 w-4" />
       </span>
@@ -243,14 +281,29 @@ export function FolhaModelos({
             </Botao>
           </div>
         </div>
+        <label className="flex h-10 items-center gap-2 rounded-xl border border-linha bg-superficie px-3 text-[13px] text-texto-2">
+          <Search aria-hidden className="h-4 w-4 text-texto-3" />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar modelo pelo nome"
+            aria-label="Buscar modelo"
+            className="min-w-0 flex-1 bg-transparent text-texto outline-none placeholder:text-texto-3"
+            data-folha-modelos-busca
+          />
+        </label>
         {q.isLoading ? (
           <div className="flex flex-col gap-2">{[0, 1, 2].map((i) => <Esqueleto key={i} className="h-[52px] w-full" />)}</div>
         ) : q.error ? (
           <EstadoErro titulo="Não deu para abrir os modelos" texto={mensagemDoErro(q.error)} aoTentar={() => void q.refetch()} />
-        ) : lista.length === 0 ? (
-          <EstadoVazio titulo="Nenhum modelo ainda" texto="Os treinos que você monta em Painel › Treinos aparecem aqui." />
+        ) : total === 0 ? (
+          termo ? (
+            <EstadoVazio titulo="Nenhum modelo com essa busca" texto="Mude a busca." />
+          ) : (
+            <EstadoVazio titulo="Nenhum modelo ainda" texto="Os treinos que você monta em Painel › Treinos aparecem aqui." />
+          )
         ) : (
-          <>
+          <div className="flex flex-col gap-4" data-lista="folha-modelos" data-atualizando={q.isFetching ? "1" : "0"}>
             {pastas.length > 0 && (
               <div>
                 <span className="pq-eyebrow flex items-center gap-1.5"><FolderClosed aria-hidden className="h-3.5 w-3.5" />Nas pastas</span>
@@ -263,7 +316,8 @@ export function FolhaModelos({
                 <ul className="mt-1.5">{soltos.map(linha)}</ul>
               </div>
             )}
-          </>
+            <Paginacao nome="folha-modelos" pagina={pagina} total={total} aoMudar={irPara} carregando={q.isFetching} />
+          </div>
         )}
       </div>
     </PainelDeslizante>

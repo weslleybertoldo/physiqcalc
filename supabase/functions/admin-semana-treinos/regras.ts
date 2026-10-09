@@ -41,3 +41,68 @@ export function periodoDoVolumeValido(inicio: unknown, fim: unknown): boolean {
   if (de === null || ate === null || de > ate) return false;
   return (ate - de) / 86_400_000 + 1 <= VOLUME_PRATICADO_MAX_DIAS;
 }
+
+// ───────────────────────── hml-14d (B19/B21 · D25): página e busca das listas do painel ─────────────────────────
+
+/** O tamanho da página das listas do painel (o POR_PAGINA de src/lib/paginacao.ts). */
+export const POR_PAGINA = 20;
+
+/**
+ * A página pedida no corpo: sem `pagina` (ou nula) → null, o caminho de hoje (a lista inteira, a resposta de antes); com
+ * `pagina` → um inteiro ≥ 1 (o que não for número inteiro positivo vira 1).
+ */
+export function paginaPedida(v: unknown): number | null {
+  if (v === undefined || v === null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
+/** Sem acento, minúsculo e com os espaços juntos (o normalizar das telas). */
+export function semAcento(t: unknown): string {
+  return String(t ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/** A página `pagina` (a 1ª é 1) da lista e o total dela. */
+export function fatiar<T>(lista: readonly T[], pagina: number, porPagina = POR_PAGINA): { itens: T[]; total: number } {
+  const de = (Math.max(1, Math.floor(pagina)) - 1) * porPagina;
+  return { itens: lista.slice(de, de + porPagina), total: lista.length };
+}
+
+/** Os modelos cujo nome contém o termo, sem caixa e sem acento (termo vazio = todos), na ordem em que vieram. */
+export function filtrarPorNome<T extends { nome?: string | null }>(lista: readonly T[], termo: unknown): T[] {
+  const t = semAcento(termo);
+  return t ? lista.filter((m) => semAcento(m.nome).includes(t)) : [...lista];
+}
+
+export interface AlunoQuemRecebe {
+  id: string;
+  nome: string;
+  email: string;
+  foto_url: string | null;
+  recebe: boolean;
+}
+
+/**
+ * hml-14d (D25, P5): a lista do "Quem recebe" de um modelo — os alunos de quem chama, marcados quando recebem; quem recebe
+ * primeiro, depois o nome (pt-BR) e o id (ordem estável entre as páginas); a busca sem acento no nome e no e-mail; a página de 20.
+ * `total_recebem`/`total_alunos` = o chip "N DE M" (sem a busca). O nome é o de antes na tela (nome, senão o e-mail, senão "Aluno").
+ */
+export function listaQuemRecebe(
+  perfis: readonly { id: string; nome?: string | null; email?: string | null; foto_url?: string | null }[],
+  recebem: ReadonlySet<string>,
+  termo: unknown,
+  pagina: number,
+): { itens: AlunoQuemRecebe[]; total: number; total_recebem: number; total_alunos: number } {
+  const vistos = new Set<string>();
+  const alunos: AlunoQuemRecebe[] = [];
+  for (const p of perfis) {
+    if (vistos.has(p.id)) continue;
+    vistos.add(p.id);
+    alunos.push({ id: p.id, nome: (p.nome || p.email || "").trim() || "Aluno", email: p.email || "", foto_url: p.foto_url ?? null, recebe: recebem.has(p.id) });
+  }
+  const t = semAcento(termo);
+  const filtrados = t ? alunos.filter((a) => semAcento(`${a.nome} ${a.email}`).includes(t)) : alunos;
+  filtrados.sort((a, b) => Number(b.recebe) - Number(a.recebe) || a.nome.localeCompare(b.nome, "pt-BR") || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const { itens, total } = fatiar(filtrados, pagina);
+  return { itens, total, total_recebem: alunos.filter((a) => a.recebe).length, total_alunos: alunos.length };
+}

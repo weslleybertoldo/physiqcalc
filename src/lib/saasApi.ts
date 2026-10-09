@@ -102,5 +102,7 @@ export interface ListaAlunos {
 
 // ─────────────────────────── atalhos por edge ───────────────────────────
 
-export const listarAlunos = (payload: { limit?: number; offset?: number; q?: string; professorId?: string | null; semProfessor?: boolean } = {}) =>
+/** A lista de alunos do Treino (admin-list-users). hml-14d (D22b, D27): `q` acha sem acento; `ordem: "nome"` = em ordem de nome (o
+ * seletor de aluno do Histórico/Relatório); sem `ordem`, o mais novo primeiro (como antes). */
+export const listarAlunos = (payload: { limit?: number; offset?: number; q?: string; professorId?: string | null; semProfessor?: boolean; ordem?: "nome" } = {}) =>
   invokeEdge<ListaAlunos>("admin-list-users", payload);
