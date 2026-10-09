@@ -15,12 +15,14 @@ aluno_anotacoes (p_offset), exames_do_aluno (20 DATAS) e minha_agenda_lista (p_t
   P5  app › Pagamentos: "Ver todos (N)" de pagamentos e de recibos → folha em páginas de 20 (aluno_historico), os 41 aparecem, fecha = 1
   P6  app › Agenda: "Próximas" com as 20 primeiras + "Ver todas (N)" → folha em páginas (minha_agenda_lista), os 41 aparecem
   P7  Pré-consulta (nutri-legado, massa da 14b): os números do topo = os da preconsulta_numeros = o banco; nenhum pedido de 1000 respostas
-  P8  Dashboard (nutri-legado): o número das fotos sem reação pelo HEAD (contarDiario) e nenhum pedido do diário com limit 1000
+  P8  Dashboard (nutri-legado): o número das fotos sem reação pelo HEAD (contarDiario) e nenhum pedido do diário de 7 dias com limit 1000
+      (o diario7 saiu — D36; o "Diário de hoje" da W24, só o dia de hoje, fica)
 """
 from __future__ import annotations
 
 import dataclasses
 import re
+from datetime import datetime, timezone
 
 import telas as T
 from telas import POR_PAGINA, Caso14d, Lista
@@ -113,7 +115,15 @@ def clicar(caso, sel: str, timeout: float = 60) -> bool:
     if not caso.esperar(lambda: b.count() > 0 and b.is_visible(), timeout):
         return False
     b.scroll_into_view_if_needed()
-    b.click()
+    try:
+        b.click(timeout=15000)
+    except Exception:  # noqa: BLE001
+        # no celular, com a página mais larga que 390 px (a aba Financeiro do aluno: 427, igual no front antigo) o navegador afasta o
+        # zoom e o clique do Playwright erra o alvo ("<outro elemento> intercepts pointer events"); a largura é provada à parte
+        # (largura_ok) — aqui o clique vai pelo próprio botão. No computador, o erro vale.
+        if (caso.pg.viewport_size or {}).get("width", 9999) > 400:
+            raise
+        b.evaluate("(e) => e.click()")
     return True
 
 
@@ -333,13 +343,24 @@ def p7(o, nav, R, desktop: bool) -> None:
         grandes = [e for e in rede.eventos if e["nome"] == "respostas_preconsulta" and (e["limite"] or 0) >= 1000]
         o.ok(not grandes, f"{t} nenhum pedido de respostas_preconsulta com limit 1000 ({len(grandes)}; a listarRespostas saiu)")
         if desktop:
+            desde = len(rede.eventos)
             caso.ir("/painel/pre-consulta?aba=formularios")
             titulo = f"{(R.massa or {}).get('marca', '')} · formulário"
             f = caso.pg.locator(f'[data-formulario-titulo="{titulo}"]').first
             if o.ok(caso.esperar(lambda: f.count() > 0, 60), f"{t} o formulário da massa na aba Formulários"):
-                o.ok(f.get_attribute("data-formulario-respostas") == str(T.MASSA) and f.get_attribute("data-formulario-novas") == str(T.MASSA),
-                     f"{t} o formulário com '{f.get_attribute('data-formulario-respostas')} respostas · {f.get_attribute('data-formulario-novas')} novas' "
-                     f"(o por_formulario da RPC; esperado 41 · 41)")
+                # a lista dos formulários chega antes dos números (enquanto carregam, a tela mostra "…" e os atributos ficam 0 · 0): espera
+                # a preconsulta_numeros desta abertura responder e os 2 atributos assentarem, e lê os 2 de uma vez
+                caso.esperar(lambda: any(e["nome"] == "preconsulta_numeros" and e.get("numeros") for e in rede.eventos[desde:]), 30)
+                lidos: dict = {}
+
+                def assentou() -> bool:
+                    r, n = f.evaluate("(e) => [e.getAttribute('data-formulario-respostas'), e.getAttribute('data-formulario-novas')]")
+                    lidos.update(respostas=r, novas=n)
+                    return r == str(T.MASSA) and n == str(T.MASSA)
+
+                caso.esperar(assentou, 20)
+                o.ok(lidos.get("respostas") == str(T.MASSA) and lidos.get("novas") == str(T.MASSA),
+                     f"{t} o formulário com '{lidos.get('respostas')} respostas · {lidos.get('novas')} novas' (o por_formulario da RPC; esperado 41 · 41)")
             grandes = [e for e in rede.eventos if e["nome"] == "respostas_preconsulta" and (e["limite"] or 0) >= 1000]
             o.ok(not grandes, f"{t} nas 2 abas: nenhum pedido de 1000 respostas ({len(grandes)})")
         else:
@@ -347,6 +368,20 @@ def p7(o, nav, R, desktop: bool) -> None:
         o.linha(f"   print: {caso.print('preconsulta' + ('' if desktop else '_390px'))}")
     finally:
         caso.fim()
+
+
+def horas_desde(e: dict) -> float | None:
+    """O começo da janela de um pedido ao diário (data_hora=gte.<instante>) em horas antes de agora."""
+    for k, v in e.get("query_pares") or []:
+        if k == "data_hora" and str(v).startswith("gte."):
+            try:
+                inicio = datetime.fromisoformat(str(v)[4:].replace("Z", "+00:00"))
+            except ValueError:
+                return None
+            if inicio.tzinfo is None:
+                inicio = inicio.replace(tzinfo=timezone.utc)
+            return (datetime.now(timezone.utc) - inicio).total_seconds() / 3600
+    return None
 
 
 def p8(o, nav, R, desktop: bool) -> None:
@@ -360,9 +395,13 @@ def p8(o, nav, R, desktop: bool) -> None:
         heads = [e for e in rede.eventos if e["nome"] == "diario_alimentar" and e["metodo"] == "HEAD"
                  and any(k == "reacao_nutri" and str(v).startswith("is.null") for k, v in e.get("query_pares") or [])]
         grandes = [e for e in rede.eventos if e["nome"] == "diario_alimentar" and e["metodo"] == "GET" and (e["limite"] or 0) >= 1000]
+        # D36 tirou só o diario7 (a lista de 7 dias, até 1000, que contava as fotos sem reação); o "Diário de hoje" da W24
+        # (useDiarioDaConta(conta, você, 1): as miniaturas e a atividade do dia — useDashboard.ts:142) fica: a janela é o dia de hoje
+        hoje = [e for e in grandes if (h := horas_desde(e)) is not None and h <= 26]
         o.ok(bool(heads), f"{t} o número das fotos sem reação vem do HEAD (contarDiario, reacao_nutri=is.null): {len(heads)} pedido(s) "
                           f"(content-range {heads[-1]['content_range'] if heads else '—'})")
-        o.ok(not grandes, f"{t} nenhum pedido do diário com limit 1000 (o diario7 saiu): {len(grandes)}")
+        o.ok(len(grandes) == len(hoje), f"{t} nenhum pedido do diário de 7 dias com limit 1000 (o diario7 saiu): {len(grandes) - len(hoje)} "
+                                        f"(o 'Diário de hoje' da W24, só o dia de hoje: {len(hoje)} pedido(s) — fica, D36)")
         o.linha(f"   print: {caso.print('dashboard')}")
     finally:
         caso.fim()

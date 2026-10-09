@@ -197,9 +197,10 @@ JS_LISTA = r"""([nomes, seletorNome]) => {
       rotulo: rot ? rot.textContent.replace(/\s+/g, ' ').trim() : null,
       anterior: botao('[data-pagina-anterior]'), proxima: botao('[data-pagina-proxima]'),
       textos: itens.map((e) => (e.innerText || '').replace(/\s+/g, ' ').trim()),
-      // o id da linha: o valor do data-item ou o 1º atributo de id conhecido (na linha ou num filho) — hml-14d
+      // o id da linha: o valor do data-item ou o 1º atributo de id conhecido (na linha ou num filho) — hml-14d. O `data-item` sem
+      // valor do JSX sai "true" no DOM: não é id (antes, toda linha dos pedidos de exame virava o mesmo "true")
       ids: itens.map((e) => {
-        const v = e.getAttribute('data-item'); if (v) return v;
+        const v = e.getAttribute('data-item'); if (v && v !== 'true') return v;
         for (const a of ['data-grupo-data', 'data-pedido', 'data-agendamento', 'data-anotacao', 'data-cobranca', 'data-recibo', 'data-lancamento',
                          'data-modelo', 'data-exercicio-biblioteca']) {
           if (e.getAttribute(a)) return e.getAttribute(a);

@@ -12,11 +12,15 @@ RPC exercicios_da_lista do Treino (a Biblioteca do master).
   M5  Alunos: 20 por página, ?pagina=, a marca da 14b (41 + o gêmeo) até a última página, o Zé Último por CPF, por telefone e "ze ultimo"
       (sem acento), "Marcar todos" = a página (só a seleção na tela: nenhuma ação em lote)
   M6  Sem conta: "1–N de N" com N = o banco (17 no staging: uma página, sem setas)
-  M7  Biblioteca do master: os globais do Treino ("1–20 de 144"), páginas, a busca e ?pagina= (os "dos professores" não têm prova de tela:
-      o master de teste não é master no Treino — P9)
+  M7  Biblioteca do master: a página antiga do Calc fica atrás da guarda do papel do TREINO (src/layouts/MasterLayout.tsx: o role do JWT
+      do Treino) e o master de teste não é master no Treino (o espelho do staging nunca dá master lá — hml-02/H-04, P9): no staging, a
+      guarda (cai no /painel, nenhum pedido à exercicios_da_lista) e a RPC da página com a sessão do Treino dele (os globais em páginas
+      de 20 com o total do banco; "dos professores" vira global + os meus, sem nenhum de professor). A lista na tela: Vitest
+      (BibliotecaPage.test.tsx) + a prova viva dele em produção
 """
 from __future__ import annotations
 
+import math
 import re
 
 import telas as T
@@ -159,17 +163,27 @@ def m5(o, nav, R, desktop: bool) -> None:
         if okm:
             paginas, _ = T.ate_a_ultima(o, caso, rede, R, ALUNOS, sm["nome"], Nm, sm, t)
             T.conferir_massa_nas_paginas(o, paginas, ALUNOS, t)
-        # o Zé por CPF, por telefone e sem acento (a coluna busca: nome, apelido, e-mail, tags e os dígitos ≥ 3)
-        for rot, termo in (("CPF", ze.get("cpf")), ("telefone", ze.get("telefone")), ("sem acento", "ze ultimo")):
+        # o Zé por CPF, por telefone e sem acento (a coluna busca: nome, apelido, e-mail, tags e os dígitos ≥ 3). A tela guarda a página
+        # anterior até a resposta nova chegar (keepPreviousData): espera o pedido COM o termo responder e a tela mostrar o total dele —
+        # antes, a página 3 da marca (o Zé e o gêmeo, já com "1–20 de 42") passava pela espera e o CPF "achava" 42
+        mesmo_tel = bool(gemeo) and str(gemeo.get("telefone") or "") == str(ze.get("telefone") or "")
+        for rot, termo, esperado, quem in (
+                ("CPF", ze.get("cpf"), 1, "só o Zé (o gêmeo tem outro CPF)"),
+                ("telefone", ze.get("telefone"), 2 if mesmo_tel else 1, "o Zé e o gêmeo (o mesmo telefone)" if mesmo_tel else "só o Zé"),
+                ("sem acento", "ze ultimo", 2 if gemeo else 1, "o Zé e o gêmeo (o mesmo nome)" if gemeo else "só o Zé")):
             if not termo:
                 o.ok(False, f"{t} o {rot} do Zé no estado da massa")
                 continue
+            desde = len(rede.eventos)
             busca.fill(str(termo))
-            okz, sz = T.esperar_lista(caso, ALUNOS, lambda e: any("Último" in x or "Ultimo" in x for x in e["textos"]) and e["pagina"] == 1, 30)
+            ev = pedido_da_busca(caso, rede, desde, str(termo))
+            n = ev.get("total") if ev else None
+            okz, sz = T.esperar_lista(caso, ALUNOS, lambda e: isinstance(n, int) and e["total"] == n and e["pagina"] == 1
+                                      and len(e["textos"]) == min(POR_PAGINA, n) and any("Último" in x or "Ultimo" in x for x in e["textos"]), 30)
             mostra = {"CPF": "o CPF de teste", "telefone": "o telefone de teste (só dígitos)"}.get(rot, repr(termo))
-            o.ok(okz, f"{t} acha o Zé Último por {rot} ({mostra} → '{sz.get('rotulo')}')")
+            o.ok(okz, f"{t} acha o Zé Último por {rot} ({mostra} → '{sz.get('rotulo')}'; o pedido com o termo: {T.descr(ev) or 'nenhum'})")
+            o.ok(okz and sz.get("total") == esperado, f"{t} o {rot} acha {quem}: {sz.get('total')} (esperado {esperado}, o banco)")
             if rot == "CPF":
-                o.ok(okz and sz.get("total") == 1, f"{t} o CPF acha só o Zé (o gêmeo tem outro CPF): {sz.get('total')}")
                 o.linha(f"   print: {caso.print('master_alunos_cpf')}")
         # "Marcar todos" = a página (20), só a seleção na tela
         busca.fill(marca)
@@ -187,6 +201,19 @@ def m5(o, nav, R, desktop: bool) -> None:
         busca.fill("")
     finally:
         caso.fim()
+
+
+def pedido_da_busca(caso, rede, desde: int, termo: str, timeout: float = 30) -> dict | None:
+    """O pedido alunos do master-contas com filtros.busca = o termo, já respondido (depois de `desde`)."""
+    achado: list = []
+
+    def veio() -> bool:
+        achado[:] = [e for e in rede.eventos[desde:] if e["nome"] == "master-contas" and e.get("acao") == "alunos" and e["status"] < 300
+                     and str(((e.get("corpo") or {}).get("filtros") or {}).get("busca") or "") == termo]
+        return bool(achado)
+
+    caso.esperar(veio, timeout)
+    return achado[-1] if achado else None
 
 
 def m6(o, nav, R, desktop: bool) -> None:
@@ -218,6 +245,93 @@ def m6(o, nav, R, desktop: bool) -> None:
         caso.fim()
 
 
+# a sessão do Treino que a troca de token gravou (supabase-js: sb-<host>-auth-token): o papel do JWT, o id e o token — o token só vai
+# para a RPC abaixo (nunca para a saída)
+JS_SESSAO_TREINO = r"""() => {
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i) || '';
+    if (!/^sb-.+-auth-token$/.test(k)) continue;
+    try {
+      const s = JSON.parse(localStorage.getItem(k) || 'null');
+      if (s && s.user && s.access_token) return { role: String((s.user.app_metadata || {}).role || ''), id: s.user.id, token: s.access_token };
+    } catch (e) { /* outra chave */ }
+  }
+  return null;
+}"""
+
+
+def rpc_biblioteca(R, token: str, filtros: dict, offset: int) -> tuple[int, dict]:
+    """A RPC da página (exercicios_da_lista do Treino, SECURITY INVOKER) com a sessão do Treino do master de teste — só leitura."""
+    sch = R.B5.ESTADO.get("schema") or "staging"
+    st, r, _ = R.C.http("POST", f"{R.C.TREINO_URL}/rest/v1/rpc/exercicios_da_lista",
+                        {"p_filtros": filtros, "p_offset": offset, "p_limite": POR_PAGINA},
+                        {"apikey": R.C.anon(R.C.TREINO_REF), "Authorization": f"Bearer {token}", "Content-Profile": sch, "Accept-Profile": sch})
+    return st, (r if isinstance(r, dict) else {})
+
+
+def m7(o, nav, R, desktop: bool) -> None:
+    """Master › Biblioteca (B21 · D24). A página é a antiga do Calc, atrás da guarda do papel do TREINO (src/layouts/MasterLayout.tsx:13 —
+    useAuth().isMaster = o role do JWT do Treino); o espelho do staging nunca dá master no Treino (hml-02/H-04,
+    supabase/functions/_shared/espelho/regras.ts:177-180) e o master de teste é master SÓ no staging.profiles do principal (P9). Então,
+    no staging: (1) a guarda segura a página (cai no /painel, nenhum pedido à exercicios_da_lista, nada da lista na tela); (2) a RPC da
+    página com a sessão do Treino dele: os globais em páginas de 20 com o total do banco e o "dos professores" virando global + os meus
+    (total_professores 0, nenhum exercício de professor) — a decisão "vazia para quem não é master no Treino". A lista na tela
+    (Paginacao, ?pagina=, a busca e o switch): Vitest (src/pages/master/BibliotecaPage.test.tsx) + a prova viva dele em produção."""
+    t = f"[M7 master-biblioteca{'' if desktop else ' 390px'}]"
+    caso, rede = entrar(R, nav, "m7_biblioteca", BIBLIOTECA, desktop)
+    try:
+        sessao: dict = {}
+
+        def assentou() -> bool:
+            sessao.clear()
+            sessao.update(caso.pg.evaluate(JS_SESSAO_TREINO) or {})
+            return (bool(sessao) and not caso.caminho().startswith("/master/biblioteca")) or caso.tem('[data-lista="master-biblioteca"]')
+
+        caso.esperar(assentou, 90)
+        caso.pg.wait_for_timeout(2000)  # o que a página pediria já teria saído
+        try:
+            sessao.update(caso.pg.evaluate(JS_SESSAO_TREINO) or {})
+        except Exception:  # noqa: BLE001 — navegando
+            pass
+        caminho, papel = caso.caminho(), sessao.get("role")
+        lista = caso.tem('[data-lista="master-biblioteca"]') or caso.tem('[data-pagina="master-biblioteca"]')
+        pedidos = [e for e in rede.eventos if e["nome"] == "exercicios_da_lista"]
+        o.ok(bool(sessao) and papel not in ("master", "admin"),
+             f"{t} o master de teste NÃO é master no Treino (o papel do JWT do Treino: {papel or 'nenhum'}; P9 — master só no staging.profiles)")
+        o.ok(caminho.startswith("/painel") and not lista,
+             f"{t} a guarda do papel do Treino segura a página: /master/biblioteca → {caminho} (a lista não aparece)")
+        o.ok(not pedidos, f"{t} nenhum pedido à exercicios_da_lista (nada da Biblioteca do master é lido): {len(pedidos)}")
+        o.linha(f"   print: {caso.print('master_biblioteca_guarda' + ('' if desktop else '_390px'))}")
+        if not desktop or not sessao.get("token"):
+            return
+        # (2) a RPC da página com a sessão do Treino dele (o mesmo p_filtros da BibliotecaPage: escopo, q e codigos)
+        globais = (R.parte("treino").get("contagens") or {}).get("exercicios_globais")
+        st1, r1 = rpc_biblioteca(R, sessao["token"], {"escopo": "global", "q": "", "codigos": []}, 0)
+        N = r1.get("total")
+        itens1 = r1.get("itens") or []
+        o.ok(st1 == 200 and r1.get("ok") is True and isinstance(N, int) and N == r1.get("total_global") and (globais is None or N == globais)
+             and len(itens1) == min(POR_PAGINA, N) and all(x.get("professor_id") is None for x in itens1),
+             f"{t} a RPC (escopo global, p_offset 0, p_limite 20) com a sessão dele: {len(itens1)} item(ns), total {N} = total_global "
+             f"{r1.get('total_global')} = o banco ({globais}), todos globais (HTTP {st1})")
+        if isinstance(N, int) and N > POR_PAGINA:
+            off = (math.ceil(N / POR_PAGINA) - 1) * POR_PAGINA
+            st2, r2 = rpc_biblioteca(R, sessao["token"], {"escopo": "global", "q": "", "codigos": []}, off)
+            o.ok(st2 == 200 and len(r2.get("itens") or []) == N - off and r2.get("total") == N,
+                 f"{t} a última página da RPC (p_offset {off}): {len(r2.get('itens') or [])} item(ns) (esperado {N - off}), total {r2.get('total')}")
+        st3, r3 = rpc_biblioteca(R, sessao["token"], {"escopo": "professores", "q": "", "codigos": []}, 0)
+        itens3 = r3.get("itens") or []
+        outros = [x for x in itens3 if x.get("professor_id") not in (None, sessao.get("id"))]
+        o.ok(st3 == 200 and r3.get("total_professores") == 0 and not outros
+             and r3.get("total") == (r3.get("total_global") or 0) + (r3.get("total_meu") or 0),
+             f"{t} 'dos professores' para quem não é master no Treino vira global + os meus: total_professores {r3.get('total_professores')}, "
+             f"total {r3.get('total')} = {r3.get('total_global')} globais + {r3.get('total_meu')} meus, {len(outros)} de outro professor "
+             f"(a tela mostra a lista vazia) (HTTP {st3})")
+        o.linha(f"   {t} a lista na tela (1–20 de N, Próxima, ?pagina=, a busca e o switch): o Vitest (BibliotecaPage.test.tsx) e a prova "
+                f"viva dele em produção (o master dele é master nos 2 bancos)")
+    finally:
+        caso.fim()
+
+
 CASOS = {
     "M1": Caso14d("M1", "Master › Contas", "master", m1),
     "M2": Caso14d("M2", "Master › Financeiro", "master", m2),
@@ -225,5 +339,5 @@ CASOS = {
     "M4": Caso14d("M4", "Master › App do aluno", "master", m4),
     "M5": Caso14d("M5", "Master › Alunos", "master", m5),
     "M6": Caso14d("M6", "Master › Sem conta", "master", m6),
-    "M7": Caso14d("M7", "Master › Biblioteca", "master", generico(BIBLIOTECA)),
+    "M7": Caso14d("M7", "Master › Biblioteca", "master", m7),
 }
