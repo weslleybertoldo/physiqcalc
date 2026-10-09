@@ -5,7 +5,8 @@ name: CI do PR
 # SEM filtro de caminho de propósito: check obrigatório que não roda fica "Expected" e trava o PR.
 # NÃO pôr [skip ci]/[skip actions] nos commits da branch (o GitHub não roda este workflow e o PR trava). PR sem release (só E2E,
 # doc): o marcador vai só no título do squash — gh pr merge <n> --squash --subject "<título> [skip actions] (#<n>)".
-# PR travado por um commit com marcador: gh workflow run ci-pr.yml --ref <branch> (roda o check na mesma ponta).
+# PR travado por um commit com marcador: commit novo SEM o marcador na branch (git commit --allow-empty -m "rodar o check" + push).
+# O workflow_dispatch roda o check na mesma ponta, mas NÃO destrava o PR (provado na hml-13, PR #160) — serve só para conferir uma branch.
 on:
   pull_request:
     branches: [main]

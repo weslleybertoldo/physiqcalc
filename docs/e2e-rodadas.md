@@ -13,7 +13,9 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 ## Rotina do fim de cada worktree (staging, antes do merge)
 
-1. **Sempre** (só leitura, ~3 min): `python3 e2e/w07/api.py api` · `python3 e2e/w10/api.py` · `python3 e2e/w25/api.py`. Mexeu em
+1. **Sempre** (só leitura, ~3 min): `python3 e2e/w10/api.py` · `python3 e2e/w07/api.py api` (hoje cai: a conta `excluir1` foi
+   excluída na hml-09 — recriar na fase 6) · `python3 e2e/w25/api.py` (lê a massa do DIA: rodar antes o `massa.py` da w25, senão os
+   casos com "hoje"/"há N dias" falham). Mexeu em
    migration: `python3 e2e/hml01/banco.py --schema staging` (e `--schema public` depois de aplicar em produção).
 2. **Da família que a worktree tocou** (criam massa no staging e limpam): `h5` (cadastro/agenda) · `w11` (diário/dieta) · `w15`
    (treinos do admin) · `w16` (nutri/membros) · `w18` (clínicos/anexos) · `w20` (agenda) · `w21` (pré-consulta) · `w23` (modelos) ·
@@ -27,6 +29,13 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 08/10 21:06 | hml-13 | `93c6c1b` | `e2e/w25/api.py` | staging | 23/30 | as 7 = massa de outro dia ("hoje", "há N dias"); rodar o `massa.py` antes |
+| 08/10 21:05 | hml-13 | `93c6c1b` | `e2e/w10/api.py` | staging | 22/22 | |
+| 08/10 21:04 | hml-13 | `93c6c1b` | `e2e/w07/api.py api` | staging | caiu | a conta `excluir1` não existe (excluída na hml-09) |
+| 08/10 21:03 | hml-13 | `d3d6f6e` | `e2e/w26/prod.py --canal msedge` | produção | 21/21 | SÓ LEITURA (H-68): 0 escrita tentada, contagens iguais |
+| 08/10 20:50 | hml-13 | `c0105a1` | check `checar-pr` (PR #160, escape do `[skip ci]`) | GitHub | pass | `workflow_dispatch` não destrava; commit novo sem marcador destrava |
+| 08/10 20:36 | hml-13 | `86f2721` | check `checar-pr` (PR #159, negativo) | GitHub | fail em Tipos | merge recusado (`BLOCKED`) — o esperado |
+| 08/10 20:33 | hml-13 | `93c6c1b` | check `checar-pr` (PR #158) | GitHub | pass | lint, tipos, definer 75/0, `node --test` 33/33, Vitest 279 arquivos |
 | 08/10 ~19:10 | hml-12 | `c0fc1b0` | `e2e/hml12/telas.py --base prod --canal msedge` | produção | 10/10 | + guarda no JS real (19 marcas) |
 | 08/10 ~19:08 | hml-12 | `c0fc1b0` | `e2e/hml12/banco.py --schema public` | produção | 10/10 | |
 | 08/10 ~18:00 | hml-12 | `35d0048` | `e2e/hml12/telas.py --base staging --canal msedge` | staging | 113/113 | |
