@@ -843,7 +843,11 @@ def provar_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int, st
         o.ok(ok and prox["rotulo"] == rotulo(P, Nm) and len(prox["textos"]) == exp and na_pagina(prox["url"], P, L.chave),
              f"{t} L5 página {P}: '{prox.get('rotulo')}' (esperado '{rotulo(P, Nm)}'), {len(prox.get('textos') or [])} linha(s), {prox.get('url')}")
         ev = esperar_pedido(caso, rede, L, desde, P)
-        o.ok(pedido_ok(ev, Nm, exp), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
+        if ev is None and ok and P <= 2:
+            # a página 2 já foi pedida no L2/L3: o React Query devolve do cache (mesma chave) — o pedido dela já foi provado
+            R.aviso(f"{t} L5 a página {P} veio do cache da tela (o pedido dela foi provado no L2)")
+        else:
+            o.ok(pedido_ok(ev, Nm, exp), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
         if not ok:
             caso.diagnostico()
             return
@@ -922,7 +926,11 @@ def provar_sem_massa(o, caso, rede: Rede, R: Rodada, L: Lista, nome: str, N: int
         o.ok(ok and atual["rotulo"] == rotulo(P, N) and len(atual["textos"]) == POR_PAGINA and na_pagina(atual["url"], P, L.chave),
              f"{t} L5 página {P}: '{atual.get('rotulo')}', {len(atual.get('textos') or [])} linhas, {atual.get('url')}")
         ev = esperar_pedido(caso, rede, L, desde, P)
-        o.ok(pedido_ok(ev, N, POR_PAGINA), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
+        if ev is None and ok and P <= 2:
+            # a página 2 já foi pedida no L2/L3: o React Query devolve do cache (mesma chave) — o pedido dela já foi provado
+            R.aviso(f"{t} L5 a página {P} veio do cache da tela (o pedido dela foi provado no L2)")
+        else:
+            o.ok(pedido_ok(ev, N, POR_PAGINA), f"{t} L5 o pedido da página {P}: {descr(ev) or nao_veio(rede, L, desde)}")
         if not ok:
             caso.diagnostico()
             return
