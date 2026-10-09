@@ -163,7 +163,7 @@ def prova(manter: bool) -> None:
             p.check(ok, "P6 '+' criou o treino novo do aluno")
             for nome in ("Supino Reto com Barra", "Tríceps Pulley"):
                 d.pg.locator("[data-treino-adicionar]").click()
-                d.esperar(lambda: d.pg.locator("[data-biblioteca-item]").count() > 20, 60)
+                d.esperar(lambda: d.pg.locator("[data-biblioteca-item]").count() > 0, 60)  # hml-14d (D39): a folha mostra 20 por página
                 d.pg.locator("[data-biblioteca-busca]").fill(nome.lower())
                 d.pg.wait_for_timeout(500)
                 d.pg.locator(f'[data-biblioteca-item="{nome}"]').first.click()

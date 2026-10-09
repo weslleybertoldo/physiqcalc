@@ -75,6 +75,16 @@ def abrir_aba(c, rotulo: str) -> None:
     c.pg.wait_for_timeout(500)
 
 
+def total_lista(c, nome: str) -> int | None:
+    """hml-14d (D39): a folha da biblioteca vem em páginas de 20 do banco — o total é o data-total da <Paginacao nome=…>."""
+    loc = c.pg.locator(f'[data-paginacao="{nome}"]')
+    try:
+        v = loc.first.get_attribute("data-total", timeout=2000) if loc.count() else None
+    except Exception:  # noqa: BLE001 — a folha abrindo
+        return None
+    return int(v) if v and v.isdigit() else None
+
+
 def arrastar(c, de: str, para: str) -> None:
     """dnd-kit (PointerSensor, 4 px para começar): pega a alça de `de` e solta em cima da linha `para`."""
     alca = linha(c, de).locator("[data-exercicio-arrastar]")
@@ -178,8 +188,13 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
         # ── adicionar da biblioteca e tirar ──
         c.pg.locator("[data-treino-adicionar]").click()
         p.check(c.esperar(lambda: c.tem("[data-folha-biblioteca]"), 20), "a biblioteca abre")
-        c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 20, 30)
-        p.check(c.pg.locator("[data-biblioteca-item]").count() >= 81, f"81 exercícios na biblioteca ({c.pg.locator('[data-biblioteca-item]').count()})")
+        # hml-14d (D39): a folha vem em páginas de 20 do banco — o total da paginação contra a contagem do banco (os globais + os do
+        # professor do aluno; o "81" da W15 cresceu)
+        c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 0, 30)
+        n_bib = B.sql_treino(f"""select count(*)::int as n from {S}.tb_exercicios where professor_id is null
+                                   or professor_id = (select professor_id from {S}.physiq_profiles where id = '{rafael}')""")[0]["n"]
+        c.esperar(lambda: total_lista(c, "folha-biblioteca") == n_bib, 30)
+        p.check(total_lista(c, "folha-biblioteca") == n_bib, f"os {n_bib} exercícios na biblioteca (banco) → total {total_lista(c, 'folha-biblioteca')}, {c.pg.locator('[data-biblioteca-item]').count()} na 1ª página")
         c.pg.locator("[data-biblioteca-busca]").fill("rosca direta")
         c.pg.wait_for_timeout(400)
         c.print("biblioteca")
@@ -196,7 +211,7 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
         p.check(c.esperar(lambda: c.tem('[data-exercicio-nome="Puxada Frontal Aberta"]'), 20), "aba B abre com a Puxada")
         p.check(c.tem("[data-treino-compartilhado]"), "B avisa que é compartilhado")
         c.pg.locator("[data-treino-adicionar]").click()
-        c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 20, 30)
+        c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 0, 30)  # hml-14d (D39): a folha mostra 20 por página
         c.pg.locator("[data-biblioteca-busca]").fill("crucifixo invertido")
         c.pg.wait_for_timeout(400)
         c.pg.locator('[data-biblioteca-item="Crucifixo Invertido com Halteres"]').first.click()

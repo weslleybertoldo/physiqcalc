@@ -20,6 +20,7 @@ Uso: python3 e2e/w23/telas.py --base http://localhost:5173 --prefixo local   (st
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import re
 import subprocess
@@ -110,6 +111,55 @@ def entrar_treinos(nav, base: str, prefixo: str, nome: str, conta: str, rota: st
     return c
 
 
+# hml-14d (D39): as listas do Treino vêm em páginas de 20 do banco — o número é o data-total da <Paginacao nome=…> (1 página =
+# só o rótulo; vazia = sem paginação) e o item que precisa estar à vista é achado pela busca da lista.
+def total_lista(c, nome: str) -> int | None:
+    loc = c.pg.locator(f'[data-paginacao="{nome}"]')
+    try:
+        v = loc.first.get_attribute("data-total", timeout=2000) if loc.count() else None
+    except Exception:  # noqa: BLE001 — navegando
+        return None
+    return int(v) if v and v.isdigit() else None
+
+
+def escolher_aluno_treino(c, raiz: str, nome: str, treino_id: str) -> bool:
+    """hml-14d (D39): o seletor de aluno do Treino (no lugar do <select data-seletor-aluno>) busca no banco enquanto digita:
+    digita parte do nome no campo e clica na opção do aluno (data-opcao-aluno-treino = o id do Treino)."""
+    sel = f'[data-seletor-aluno-treino="{raiz}"]'
+    campo = c.pg.locator(f"{sel} [data-seletor-aluno-treino-busca], {sel}[data-seletor-aluno-treino-busca]")
+    if not c.esperar(lambda: campo.count() > 0 and campo.first.is_visible(), 10):
+        if c.pg.locator(sel).count():  # combobox que abre com clique: a raiz primeiro (o campo pode abrir numa camada fora dela)
+            c.pg.locator(sel).first.click()
+        campo = c.pg.locator(f"{sel} [data-seletor-aluno-treino-busca], [data-seletor-aluno-treino-busca]")
+        if not c.esperar(lambda: campo.count() > 0 and campo.first.is_visible(), 15):
+            return False
+    campo.first.click()
+    campo.first.fill(nome)
+    opcao = c.pg.locator(f'[data-opcao-aluno-treino="{treino_id}"]')
+    if not c.esperar(lambda: opcao.count() > 0 and opcao.first.is_visible(), 30):
+        return False
+    opcao.first.click()
+    return True
+
+
+def linhas_do_mes(c, mes: str) -> bool:
+    """hml-14d (D39): as linhas do Histórico já são as do mês pedido ("2026-09") — a lista do mês de antes fica na tela até a
+    página nova chegar."""
+    datas = c.pg.locator("[data-historico-linha]").evaluate_all("els => els.map((e) => e.getAttribute('data-historico-linha') || '')")
+    return bool(datas) and all(d.startswith(mes) for d in datas)
+
+
+def historico_completo(c) -> int:
+    """hml-14d (D39): o número do 'Todo o histórico' — o data-historico-completo de hoje ou, com a folha em páginas de 20, o
+    data-total da paginação dela (historico-aluno): vale o maior."""
+    loc = c.pg.locator("[data-historico-completo]")
+    try:
+        v = (loc.first.get_attribute("data-historico-completo", timeout=2000) or "") if loc.count() else ""
+    except Exception:  # noqa: BLE001 — a folha abrindo
+        v = ""
+    return max(int(v) if v.isdigit() else 0, total_lista(c, "historico-aluno") or 0)
+
+
 # ───────────────────────── Meus treinos ─────────────────────────
 
 def caso_meus_treinos(nav, base: str, prefixo: str, m: dict) -> None:
@@ -133,7 +183,13 @@ def caso_meus_treinos(nav, base: str, prefixo: str, m: dict) -> None:
         p.check(c.pg.locator("[data-modelo-detalhe] [data-miniatura]").count() >= 5, "M5 miniatura do GIF em cada exercício (tela 8)")
         vals = {k: linha(c, "Supino Reto com Barra").locator(f'[data-campo-input="{k}"]').input_value() for k in ("series", "reps", "descanso", "carga")}
         p.check(vals == {"series": "4", "reps": "10", "descanso": "60 s", "carga": "60 kg"}, f"M6 a prescrição do modelo nos campos (4 × 10 · 60 s · 60 kg) → {vals}")
-        p.check(c.pg.locator("[data-modelo-adicionar]").inner_text().strip() == "Adicionar exercício da biblioteca (81 com GIF)", "M7 'Adicionar exercício da biblioteca (81 com GIF)'")
+        # hml-14d (D39): o "N com GIF" sai do banco (não do catálogo inteiro no navegador) — compara com a contagem do banco (os
+        # globais + os do Lucas com GIF; o "81" da W23 cresceu com a biblioteca)
+        lucas = m["lucas"]
+        n_gif = B.sql_treino(f"""select count(*)::int as n from {S}.tb_exercicios where nullif(imagem_url, '') is not null
+                                   and (professor_id is null or professor_id = '{lucas}')""")[0]["n"]
+        txt = c.pg.locator("[data-modelo-adicionar]").inner_text().strip()
+        p.check(txt == f"Adicionar exercício da biblioteca ({n_gif} com GIF)", f"M7 'Adicionar exercício da biblioteca ({n_gif} com GIF)' — o número do banco ({txt!r})")
         sem_toasts(c)
         c.print("tela8_meus_treinos")
 
@@ -158,7 +214,7 @@ def caso_meus_treinos(nav, base: str, prefixo: str, m: dict) -> None:
         # ── adicionar da biblioteca e tirar (no C) ──
         p.check(abrir_aba_modelo(c, B.TREINO_C), "M13 aba C abre")
         c.pg.locator("[data-modelo-adicionar]").click()
-        c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 20, 40)
+        c.esperar(lambda: c.pg.locator("[data-biblioteca-item]").count() > 0, 40)  # hml-14d (D39): a folha mostra 20 por página
         c.pg.locator("[data-biblioteca-busca]").fill("extensora")
         c.pg.wait_for_timeout(600)
         c.pg.locator('[data-biblioteca-item="Cadeira Extensora"]').first.click()
@@ -239,6 +295,8 @@ def caso_pastas(nav, base: str, prefixo: str, m: dict) -> None:
         ok = B.esperar(lambda: not B.sql_treino(f"select 1 from {S}.tb_pastas_treino where nome = 'Pasta Teste W23' and professor_id = '{lucas}'"), 30, 2)
         ficou = B.sql_treino(f"select 1 from {S}.tb_grupos_treino where id = '{gid}'")
         p.check(bool(ok) and bool(ficou), "P5 Excluir a pasta: a pasta sai e o treino FICA")
+        # hml-14d (D39): Meus treinos vem em páginas de 20 do banco (a massa da 14d põe 41 treinos do Lucas) — acha pela busca
+        c.pg.locator("[data-busca-modelos]").fill("D · Ombros e abdômen W23")
         c.esperar(lambda: c.tem(f'[data-modelo="{gid}"]'), 20)
         c.pg.locator(f'[data-modelo="{gid}"]').click()
         c.esperar(lambda: c.pg.locator("[data-modelo-detalhe]").get_attribute("data-modelo-nome") == "D · Ombros e abdômen W23", 20)
@@ -272,10 +330,15 @@ def caso_biblioteca(nav, base: str, prefixo: str, m: dict) -> None:
     B.saude_ok("Biblioteca")
     c = entrar_treinos(nav, base, prefixo, "biblioteca", "w13-dono", "/painel/treinos?aba=biblioteca")
     try:
-        ok = c.esperar(lambda: c.pg.locator("[data-exercicio-biblioteca]").count() >= 81, 120)
-        p.check(ok and c.pg.locator("[data-chip-total-exercicios]").inner_text().strip() == "81 EXERCÍCIOS", "B1 Biblioteca › Global: os 81 exercícios do Physiq")
-        p.check(c.pg.locator("[data-exercicio-global]").count() >= 81 and c.pg.locator("[data-exercicio-editar-bib]").count() == 0, "B2 a Global é só leitura para o personal (cadeado)")
-        p.check(c.pg.locator('[data-exercicio-biblioteca] [data-exercicio-classificacao="1"]').count() >= 81, "B3 cada exercício com grupo · movimento · equipamento (W9)")
+        # hml-14d (D39): a Biblioteca vem em páginas de 20 do banco — o total (paginação e chip) contra a contagem do banco (o "81"
+        # da W23 cresceu); cadeado e classificação: todos os da página
+        n_global = B.sql_treino(f"select count(*)::int as n from {S}.tb_exercicios where professor_id is null")[0]["n"]
+        ok = c.esperar(lambda: c.pg.locator("[data-exercicio-biblioteca]").count() > 0 and total_lista(c, "biblioteca") == n_global, 120)
+        n_pag = c.pg.locator("[data-exercicio-biblioteca]").count()
+        chip = c.pg.locator("[data-chip-total-exercicios]").inner_text().strip() if ok else ""
+        p.check(ok and chip == f"{n_global} EXERCÍCIOS", f"B1 Biblioteca › Global: os {n_global} exercícios do Physiq (banco) → paginação {total_lista(c, 'biblioteca')}, chip {chip!r}")
+        p.check(0 < n_pag == c.pg.locator("[data-exercicio-global]").count() and c.pg.locator("[data-exercicio-editar-bib]").count() == 0, "B2 a Global é só leitura para o personal (cadeado)")
+        p.check(0 < n_pag == c.pg.locator('[data-exercicio-biblioteca] [data-exercicio-classificacao="1"]').count(), "B3 cada exercício com grupo · movimento · equipamento (W9)")
         sem_toasts(c)
         c.print("tela8_biblioteca_global")
         # Minha → Novo exercício próprio (GIF, movimento e equipamento)
@@ -299,6 +362,8 @@ def caso_biblioteca(nav, base: str, prefixo: str, m: dict) -> None:
                 and reg["grupo_muscular"] == "Bíceps / Braquial", f"B4 exercício próprio criado (professor = Lucas, rosca martelo · kettlebell) → {reg and {k: reg[k] for k in ('grupo_muscular', 'padrao_movimento', 'equipamento')}}")
         ok = B.esperar(lambda: (B.sql_treino(f"select imagem_url from {S}.tb_exercicios where nome = $n${B.PROPRIO}$n$") or [{}])[0].get("imagem_url"), 40, 2)
         p.check(bool(ok) and "exercicios-staging" in str(ok), f"B5 o GIF subiu no bucket do staging ({str(ok)[:90]})")
+        # hml-14d (D39): a Minha vem em páginas de 20 do banco (os 41 da massa da 14d vêm antes dele) — acha pela busca
+        c.pg.locator("[data-biblioteca-busca-painel]").fill(B.PROPRIO)
         ok = c.esperar(lambda: c.tem(f'[data-exercicio-biblioteca-nome="{B.PROPRIO}"]'), 30)
         linha_txt = c.pg.locator(f'[data-exercicio-biblioteca-nome="{B.PROPRIO}"]').inner_text() if ok else ""
         p.check(ok and "Rosca martelo" in linha_txt and "Kettlebell" in linha_txt, f"B6 na lista Minha com grupo · movimento · equipamento ({linha_txt.splitlines()[-1:] if linha_txt else ''})")
@@ -342,14 +407,26 @@ def caso_historico_relatorio(nav, base: str, prefixo: str, m: dict) -> None:
         ok = c.esperar(lambda: c.tem("[data-historico-painel]") and not c.tem("[data-historico-painel] .animate-pulse"), 120)
         p.check(ok, "H1 aba Histórico abre no mês de hoje")
         c.pg.locator("[data-historico-painel] [data-mes-anterior]").click()
-        ok = c.esperar(lambda: c.pg.locator("[data-historico-linha]").count() >= 10, 60)
-        n = c.pg.locator("[data-historico-linha]").count()
+        # hml-14d (D39): o mês vem em páginas de 20 do banco — o número é o data-total da paginação (não as linhas da página),
+        # lido quando as linhas já são do mês anterior (o mês de hoje, com a massa da 14d, fica na tela até a página nova chegar)
+        mes = (B.B5.hoje().replace(day=1) - dt.timedelta(days=1)).strftime("%Y-%m")
+        ok = c.esperar(lambda: linhas_do_mes(c, mes) and (total_lista(c, "historico-mes") or 0) >= 10, 60)
+        n = total_lista(c, "historico-mes") or 0
         p.check(ok, f"H2 setembro: os treinos feitos pelos alunos do Lucas (≥ 10 do Rafael) → {n}")
         txt = c.pg.locator("[data-historico-lista-painel]").inner_text()
         p.check("Rafael Moura" in txt, "H3 cada linha com o aluno, o treino, a duração e os exercícios")
-        c.pg.locator("[data-historico-painel] [data-seletor-aluno]").select_option(rafael)
-        c.pg.wait_for_timeout(500)
-        p.check(c.pg.locator("[data-historico-linha]").count() == n, "H4 filtro do aluno: só o Rafael (todos eram dele)")
+        # hml-14d (D39): o <select> saiu — o seletor do Treino busca no banco (parte do nome) e o filtro vai ao servidor
+        # (historicoMes com o userId): "só o Rafael" = o total da resposta e o data-total da paginação iguais aos de antes
+        srv = None
+        try:
+            with c.pg.expect_response(lambda r: "/functions/v1/admin-relatorio" in r.url and b"historicoMes" in (r.request.post_data_buffer or b"")
+                                      and rafael.encode() in (r.request.post_data_buffer or b""), timeout=60_000) as resp:
+                escolher_aluno_treino(c, "historico", "Rafael", rafael)
+            srv = (resp.value.json() or {}).get("total")
+        except Exception as e:  # noqa: BLE001 — o pedido com o aluno não saiu
+            print("   filtro do aluno:", e)
+        ok = srv == n and c.esperar(lambda: total_lista(c, "historico-mes") == n and linhas_do_mes(c, mes), 20)
+        p.check(ok, f"H4 filtro do aluno: só o Rafael (todos eram dele) → servidor {srv}, tela {total_lista(c, 'historico-mes')} de {n}")
         c.pg.locator('[data-historico-linha="2026-09-24"]').first.click()
         ok = c.esperar(lambda: c.pg.locator("[data-historico-detalhe-painel] li").count() >= 3, 40)
         p.check(ok and "kg ×" in c.pg.locator("[data-historico-detalhe-painel]").inner_text(), "H5 tocar abre o treino feito com as séries (kg × reps)")
@@ -358,8 +435,9 @@ def caso_historico_relatorio(nav, base: str, prefixo: str, m: dict) -> None:
         c.pg.keyboard.press("Escape")
         c.pg.wait_for_timeout(500)
         c.pg.locator("[data-historico-completo-abrir]").click()
-        ok = c.esperar(lambda: c.tem("[data-historico-completo]") and int(c.pg.locator("[data-historico-completo]").get_attribute("data-historico-completo") or 0) >= 10, 60)
-        p.check(ok, "H6 'Todo o histórico' do Rafael (por mês)")
+        # hml-14d (D39): a folha vem em páginas de 20 — vale o atributo de hoje ou o data-total da paginação dela (historico-aluno)
+        ok = c.esperar(lambda: historico_completo(c) >= 10, 60)
+        p.check(ok, f"H6 'Todo o histórico' do Rafael (por mês) → {historico_completo(c)}")
         c.pg.keyboard.press("Escape")
         c.pg.wait_for_timeout(500)
         sem_toasts(c)
@@ -372,9 +450,9 @@ def caso_historico_relatorio(nav, base: str, prefixo: str, m: dict) -> None:
     try:
         ok = c.esperar(lambda: c.tem("[data-relatorio-painel]"), 120)
         p.check(ok and c.pg.locator("[data-relatorio-painel]").get_attribute("data-relatorio-painel") == "sem-aluno", "R1 aba Relatório: escolha um aluno")
-        c.pg.locator("[data-relatorio-painel] [data-seletor-aluno]").select_option(rafael)
+        escolheu = escolher_aluno_treino(c, "relatorio", "Rafael", rafael)  # hml-14d (D39): o seletor do Treino no lugar do <select>
         c.pg.locator("[data-relatorio-painel] [data-mes-anterior]").click()
-        ok = c.esperar(lambda: c.tem("[data-relatorio-resumo]") and int(c.pg.locator("[data-relatorio-resumo]").get_attribute("data-relatorio-resumo") or 0) >= 10, 90)
+        ok = escolheu and c.esperar(lambda: c.tem("[data-relatorio-resumo]") and int(c.pg.locator("[data-relatorio-resumo]").get_attribute("data-relatorio-resumo") or 0) >= 10, 90)
         p.check(ok, f"R2 setembro do Rafael: treinos no mês ≥ 10 ({c.pg.locator('[data-relatorio-resumo]').get_attribute('data-relatorio-resumo') if ok else '?'})")
         p.check(c.tem("[data-relatorio-perfil]") and c.pg.locator("[data-relatorio-semana]").count() >= 4, "R3 dados do aluno e as semanas do mês")
         c.pg.locator('[data-relatorio-semana="4"] button').first.click()

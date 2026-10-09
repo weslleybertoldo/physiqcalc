@@ -502,7 +502,10 @@ def caso_dono(nav):
     autor = c.pg.locator(f'[data-formulario="{fm["camila"]["id"]}"] [data-formulario-autor]')
     p.check(autor.count() == 1 and "Camila Rocha" in autor.inner_text(), "[dono] vê o formulário da Camila, com o autor")
     p.check(c.pg.locator(f'[data-formulario="{fm["bruno"]["id"]}"]').count() == 1, "[dono] e o do Bruno (a equipe)")
-    p.check(c.pg.locator(f'[data-formulario="{fm["camila"]["id"]}"]').get_attribute("data-formulario-respostas") == "0",
+    # hml-14d (D35): as contagens por formulário vêm da preconsulta_numeros (saiu a leitura das 1000 respostas) — o "0" só vale
+    # lido depois que os números chegaram (o resumo do topo sai do "carregando"; antes disso o 0 é o padrão da tela)
+    numeros = c.esperar(lambda: c.tem("[data-resumo-preconsulta][data-novas]"), 30)
+    p.check(numeros and c.pg.locator(f'[data-formulario="{fm["camila"]["id"]}"]').get_attribute("data-formulario-respostas") == "0",
             "[dono] NEGATIVO: a contagem do formulário da Camila não mostra respostas para ele (não lê — regra da W18)")
     p.check(c.pg.locator(f'[data-formulario="{fm["camila"]["id"]}"] [data-respostas-com-a-nutri]').count() == 1
             and c.pg.locator(f'[data-formulario="{fm["bruno"]["id"]}"] [data-respostas-com-a-nutri]').count() == 0,

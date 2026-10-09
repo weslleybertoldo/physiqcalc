@@ -204,6 +204,10 @@ def caso_master(nav, base, pref):
                 f"receita comparada com o MESMO período do mês anterior ({txt[:80]})")
         c.print("tela6_master_visao_geral")
         c.ir("/master/contas")
+        # hml-14d (D39): Contas em páginas de 20 — as legadas de teste pela busca da lista (no banco, 300 ms), não pela 1ª página
+        if c.esperar(lambda: c.tem("[data-busca-contas]"), 40):
+            c.pg.locator("[data-busca-contas]").fill("W28")
+            c.pg.wait_for_timeout(800)
         p.check(c.esperar(lambda: "W28 Calc" in c.texto() or "W28 Nutri" in c.texto(), 40), "Contas lista as legadas de teste")
         p.check("Cobrança legada até a virada" not in c.texto(), "sem 'Cobrança legada até a virada'")
         c.print("tela6_master_contas")
