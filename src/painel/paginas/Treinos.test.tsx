@@ -29,6 +29,8 @@ const h = vi.hoisted(() => ({
   aplicar: vi.fn(),
   prescrever: vi.fn(),
   criarModelo: vi.fn(),
+  // hml-17 (H-39): o treino aberto do Histórico (a função admin-relatorio › historicoTreino)
+  detalhe: vi.fn(),
 }));
 vi.mock("@/ui/casca/treinoDaPagina", () => ({ useTreinoDaPagina: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
@@ -58,6 +60,8 @@ vi.mock("@/painel/treinos/api", async (orig) => ({
   prescreverModelo: h.prescrever,
   criarModelo: h.criarModelo,
 }));
+
+vi.mock("@/treino/editor/api", async (orig) => ({ ...(await orig<typeof import("@/treino/editor/api")>()), carregarTreinoDoHistorico: h.detalhe }));
 
 import Treinos from "./Treinos";
 
@@ -180,7 +184,7 @@ beforeEach(() => {
     { id: "a2", nome: "Marina Alves", email: "marina@x.com", foto_url: null },
   ];
   h.perfis = [{ grupo_id: "g1", user_id: "a1" }];
-  for (const f of [h.pagina, h.porId, h.pastas, h.musculos, h.exercicios, h.recebe, h.recebeLista, h.buscarAlunos, h.historicoMes, h.historicoCompleto, h.dar, h.tirar, h.aplicar, h.prescrever, h.criarModelo]) f.mockReset();
+  for (const f of [h.pagina, h.porId, h.pastas, h.musculos, h.exercicios, h.recebe, h.recebeLista, h.buscarAlunos, h.historicoMes, h.historicoCompleto, h.dar, h.tirar, h.aplicar, h.prescrever, h.criarModelo, h.detalhe]) f.mockReset();
   h.pagina.mockImplementation(async (m: string | null, f: FiltrosModelos, p: number) => paginaFalsa(m, f, p));
   h.porId.mockImplementation(async (m: string | null, id: string) => porIdFalso(m, id));
   h.pastas.mockImplementation(async () => h.dados.pastas.filter(visivel));
@@ -223,6 +227,23 @@ describe("W23 — Painel › Treinos › Meus treinos (padrão da tela 8)", () =
     expect(h.pagina).toHaveBeenCalledWith("u-lucas", { q: "", pasta: null }, 1);
     expect(document.querySelector('[data-lista="modelos"]')?.querySelectorAll("[data-item]")).toHaveLength(2);
     expect(document.querySelector('[data-paginacao="modelos"] [data-paginacao-rotulo]')?.textContent).toBe("1–2 de 2");
+  });
+
+  it("hml-17 (H-39): a contagem da biblioteca falha → \"(— com GIF)\" com o aviso no title, nunca \"(0 com GIF)\"", async () => {
+    h.exercicios.mockImplementation(async (f: FiltrosExercicios, p: number, n?: number) => {
+      if (n === 1 && f.escopo === "visiveis") throw new Error("Failed to fetch");
+      return exerciciosFalsos(f, p, n);
+    });
+    montar("/painel/treinos?treino=g1");
+    const botao = await waitFor(() => {
+      const el = document.querySelector("[data-modelo-adicionar]") as HTMLElement | null;
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    await waitFor(() => expect(botao.textContent).toContain("Adicionar exercício da biblioteca (— com GIF)"));
+    expect(botao.textContent).not.toContain("(0 com GIF)");
+    expect(botao.hasAttribute("data-biblioteca-resumo-erro")).toBe(true);
+    expect(botao.getAttribute("title")).toBe("Não deu para contar os exercícios com GIF agora");
   });
 
   it("digitar a repetição no exercício sem prescrição grava no MODELO (as séries ficam sem — o aluno usa o padrão dele)", async () => {
@@ -487,6 +508,29 @@ describe("hml-14d (B19/B21 · D26) — Histórico com o seletor do Treino e o m�
       fireEvent.click(document.body.querySelector('[data-paginacao="historico-aluno"] [data-pagina-proxima]')!);
     });
     await waitFor(() => expect(h.historicoCompleto).toHaveBeenLastCalledWith("a1", 2));
+  });
+
+  it("hml-17 (H-39): o treino aberto falha → o erro com Tentar de novo (nunca \"Não achamos esse treino.\"); tocar refaz e mostra", async () => {
+    h.historicoMes.mockResolvedValue({ itens: [item(1)], total: 1 });
+    h.detalhe.mockRejectedValueOnce(new Error("Failed to fetch"));
+    montar("/painel/treinos?aba=historico");
+    fireEvent.click(await screen.findByText("Treino 1"));
+    await waitFor(() => expect(document.querySelector("[data-historico-detalhe-erro]")).not.toBeNull());
+    expect(screen.getByText("Não deu para abrir este treino")).toBeInTheDocument();
+    expect(screen.queryByText("Não achamos esse treino.")).toBeNull();
+    h.detalhe.mockResolvedValueOnce({ nome_treino: "Treino 1", iniciado_em: "", concluido_em: "", duracao_segundos: 60, exercicios_concluidos: [{ nome: "Agachamento livre", series_concluidas: 4 }] });
+    fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    expect(await screen.findByText("Agachamento livre")).toBeInTheDocument();
+    expect(document.querySelector("[data-historico-detalhe-erro]")).toBeNull();
+  });
+
+  it("hml-17 (controle): o treino aberto não existe (resposta vazia) → \"Não achamos esse treino.\", sem o erro", async () => {
+    h.historicoMes.mockResolvedValue({ itens: [item(1)], total: 1 });
+    h.detalhe.mockResolvedValueOnce(null);
+    montar("/painel/treinos?aba=historico");
+    fireEvent.click(await screen.findByText("Treino 1"));
+    expect(await screen.findByText("Não achamos esse treino.")).toBeInTheDocument();
+    expect(document.querySelector("[data-historico-detalhe-erro]")).toBeNull();
   });
 
   it("'Todos os alunos' volta ao mês de todos; erro do servidor → o estado de erro", async () => {

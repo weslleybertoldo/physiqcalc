@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Dumbbell, Plus, Trash2 } from "lucide-react";
+import { Dumbbell, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SemConexaoTreino } from "@/ui/casca/SemConexaoTreino";
@@ -23,6 +23,9 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const bib = useQuery({ queryKey: ["master-biblioteca-global"], queryFn: bibliotecaGlobal, enabled: Boolean(treino), staleTime: 300_000 });
+  // hml-17 (H-39): a biblioteca não veio — o aviso com "Tentar de novo" e os exercícios já escolhidos continuam escolhidos (antes
+  // apareciam como "Escolha o exercício", como se o treino estivesse sem eles)
+  const bibFalhou = bib.isError && !bib.data;
   useEffect(() => { setT(treino ? structuredClone(treino) : null); setErro(null); }, [treino]);
   if (!t) return null;
   const mudarGrupo = (i: number, g: Partial<TreinoPronto["grupos"][number]>) => setT({ ...t, grupos: t.grupos.map((x, k) => (k === i ? { ...x, ...g } : x)) });
@@ -63,6 +66,13 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
         <Campo rotulo="Divisão (texto)" dica="Ex.: A · B · C"><input className={INPUT} value={t.divisao} onChange={(e) => setT({ ...t, divisao: e.target.value })} maxLength={60} /></Campo>
         <div className="sm:col-span-3"><Campo rotulo="Descrição"><textarea className={TEXTAREA} value={t.descricao ?? ""} onChange={(e) => setT({ ...t, descricao: e.target.value })} maxLength={300} /></Campo></div>
       </div>
+      {bibFalhou && (
+        <p className="flex flex-wrap items-center gap-2 rounded-2xl border border-[rgba(244,63,94,.3)] px-3.5 py-2.5 text-[13px] font-medium text-rosa-3" role="alert"
+          data-treino-pronto-bib-erro>
+          Não deu para carregar a biblioteca de exercícios. Os exercícios já escolhidos continuam no treino.
+          <Botao tamanho="sm" icone={RefreshCw} onClick={() => void bib.refetch()} data-treino-pronto-bib-tentar>Tentar de novo</Botao>
+        </p>
+      )}
       {t.grupos.map((g, i) => (
         <div key={i} className="rounded-2xl border border-linha bg-superficie-3 p-3" data-grupo-pronto={g.letra}>
           <div className="mb-2 flex flex-wrap items-end gap-2">
@@ -87,6 +97,7 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
                 <select className={`${SELECT} h-9`} value={e.exercicio_id} aria-label="Exercício"
                   onChange={(ev) => mudarGrupo(i, { exercicios: g.exercicios.map((x, k) => (k === j ? { ...x, exercicio_id: ev.target.value } : x)) })}>
                   <option value="">Escolha o exercício</option>
+                  {bibFalhou && e.exercicio_id && <option value={e.exercicio_id}>{e.nome ?? "Exercício escolhido"} (a lista não carregou)</option>}
                   {(bib.data ?? []).map((b) => <option key={b.id} value={b.id}>{b.nome}{b.grupo_muscular ? ` · ${b.grupo_muscular}` : ""}</option>)}
                 </select>
                 <input className={`${INPUT} h-9`} inputMode="numeric" aria-label="Séries" value={e.series}

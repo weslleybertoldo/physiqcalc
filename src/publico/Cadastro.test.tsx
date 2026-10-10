@@ -162,3 +162,44 @@ describe("hml-12 — /c/: a idade mínima", () => {
     expect(document.body.textContent).not.toContain("16 anos ou mais");
   });
 });
+
+// hml-17 (H-39, H-70): sem resposta da função (a API fora), o /c/ dizia "Link de cadastro não encontrado · Este link não vale mais".
+// Agora: sem resposta → "Não deu para abrir o cadastro agora" + Tentar de novo; "não encontrado" só quando a função responde ok: false.
+describe("hml-17 — /c/: falha × link que não vale", () => {
+  const semResposta = () => ({ data: null, error: Object.assign(new Error("Failed to send a request to the Edge Function"), { name: "FunctionsFetchError" }) });
+  const respondeu = (corpo: Record<string, unknown>, status: number) => ({
+    data: null,
+    error: { context: new Response(JSON.stringify(corpo), { status, headers: { "Content-Type": "application/json" } }) },
+  });
+
+  it("a API caindo → o aviso com Tentar de novo (nunca \"Link de cadastro não encontrado\"); tocar refaz e abre o cadastro", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    h.invoke.mockResolvedValueOnce(semResposta());
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-cadastro-erro]")).not.toBeNull());
+    expect(screen.getByText("Não deu para abrir o cadastro agora")).toBeInTheDocument();
+    expect(screen.queryByText("Link de cadastro não encontrado")).toBeNull();
+    h.invoke.mockResolvedValueOnce({ data: { ok: true, profissional: "Lucas Ferreira", conta: "C" }, error: null });
+    fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    expect(await screen.findByText("Lucas Ferreira")).toBeInTheDocument();
+    expect(h.invoke).toHaveBeenCalledTimes(2);
+    expect(document.querySelector("[data-cadastro-erro]")).toBeNull();
+    aviso.mockRestore();
+  });
+
+  it("erro passageiro da função (o limite por IP, 429) → o mesmo aviso de falha, não \"não encontrado\"", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    h.invoke.mockResolvedValueOnce(respondeu({ ok: false, erro: "muitas_acoes" }, 429));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-cadastro-erro]")).not.toBeNull());
+    expect(screen.queryByText("Link de cadastro não encontrado")).toBeNull();
+    aviso.mockRestore();
+  });
+
+  it("controle: a função responde que o link não vale (404 link_nao_encontrado) → \"Link de cadastro não encontrado\", sem o aviso de falha", async () => {
+    h.invoke.mockResolvedValueOnce(respondeu({ ok: false, erro: "link_nao_encontrado" }, 404));
+    montar("NAO-EXISTE");
+    expect(await screen.findByText("Link de cadastro não encontrado")).toBeInTheDocument();
+    expect(document.querySelector("[data-cadastro-erro]")).toBeNull();
+  });
+});

@@ -11,8 +11,9 @@ import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { TabBar } from "@/ui/premium/TabBar";
 import { abaDaRota, abaDeAbertura, abasVisiveis } from "./catalogoAbas";
 
-/** Faixas do topo da aba de abertura, na ordem da spec (a da mensalidade primeiro). */
-const ORDEM_AVISOS = ["FaixaMensalidade"];
+/** Faixas do topo da aba de abertura, na ordem da spec (hml-17: a "não deu para carregar a sua conta" antes de todas; depois a da
+ *  mensalidade). */
+const ORDEM_AVISOS = ["FaixaContaNaoCarregou", "FaixaMensalidade"];
 
 /**
  * As faixas do topo (src/app-aluno/avisos/<Aviso>.tsx — a da mensalidade, W6/C85). A casca é a dona delas: o Início (W12) as

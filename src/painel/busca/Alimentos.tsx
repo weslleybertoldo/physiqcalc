@@ -5,11 +5,13 @@ import { useConta } from "@/nucleo/conta";
 import { useSessao } from "@/nucleo/sessao";
 import { GrupoBusca, ItemBusca } from "@/ui/premium/Busca";
 import { MAX_RESULTADOS, useTermoComEspera } from "./_comum";
+import { ErroNaBusca } from "./_ErroNaBusca";
 
 /**
  * Busca global (Ctrl K — NF10, W25): os ALIMENTOS da TACO e os seus (a MESMA consulta de Dietas › Alimentos — listarAlimentosDoPainel,
  * W24 —, carregada só na hora da busca para a casca continuar leve). Só para conta com o módulo Nutrição. Cada resultado abre
  * Dietas › Alimentos.
+ * hml-17 (H-39): a busca falhou → a linha "Não deu para buscar alimentos agora" (tocar refaz), nunca o grupo sumindo calado.
  */
 export default function BuscaAlimentos({ termo, fechar }: { termo: string; fechar: () => void }) {
   const { conta } = useConta();
@@ -31,6 +33,7 @@ export default function BuscaAlimentos({ termo, fechar }: { termo: string; fecha
     staleTime: 60_000,
     retry: 0,
   });
+  if (ligado && r.isError && !r.data) return <ErroNaBusca titulo="Alimentos" oque="alimentos" termo={termo} tentar={() => void r.refetch()} />;
   const itens = ligado ? r.data ?? [] : [];
   if (!itens.length) return null;
   return (

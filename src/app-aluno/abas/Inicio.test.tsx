@@ -366,6 +366,50 @@ describe("aba Início (W12 — tela 1)", () => {
   });
 });
 
+describe("hml-17 (H-39): o card Seu peso com uma parte falhando", () => {
+  const semPesos = (falhas: { treino: string | null; principal: string | null }) => {
+    evolucao([]);
+    h.ev = { ...h.ev!, falhas };
+  };
+
+  it("pronto, série vazia e a parte do Treino falhou → o aviso de erro com Tentar (NUNCA \"Aparece depois…\")", async () => {
+    semPesos({ treino: "erro", principal: null });
+    abrir();
+    await waitFor(() => expect(card("data-card-peso")).not.toBeNull());
+    expect(card("data-card-peso")?.getAttribute("data-card-peso")).toBe("erro");
+    expect(screen.queryByText("Aparece depois da sua primeira avaliação.")).toBeNull();
+    expect(screen.getByText("Não deu para carregar agora.")).toBeInTheDocument();
+    fireEvent.click(card("data-card-peso-tentar")!);
+    expect(h.ev!.recarregar).toHaveBeenCalledTimes(1);
+  });
+
+  it("série vazia e o principal sem conexão → \"sem-internet\" (a mesma regra, outro motivo)", async () => {
+    semPesos({ treino: null, principal: "sem-conexao" });
+    abrir();
+    await waitFor(() => expect(card("data-card-peso")).not.toBeNull());
+    expect(card("data-card-peso")?.getAttribute("data-card-peso")).toBe("sem-internet");
+  });
+
+  it("com o peso e uma parte falhando → os dados + o ícone de aviso (data-card-peso-parcial)", async () => {
+    evolucao();
+    h.ev = { ...h.ev!, falhas: { treino: "erro", principal: null } };
+    abrir();
+    await waitFor(() => expect(card('data-card-peso="dados"')).not.toBeNull());
+    expect(card('data-card-peso="dados"')?.getAttribute("data-card-peso-parcial")).toBe("treino");
+    expect(card("data-card-peso-aviso")).not.toBeNull();
+    expect(card('data-card-peso="dados"')?.textContent).toContain("84,2 kg");
+  });
+
+  it("controle: sem falha nenhuma e sem pesagem → \"vazio\" (Aparece depois…), sem o ícone de aviso", async () => {
+    semPesos({ treino: null, principal: null });
+    abrir();
+    await waitFor(() => expect(card("data-card-peso")).not.toBeNull());
+    expect(card("data-card-peso")?.getAttribute("data-card-peso")).toBe("vazio");
+    expect(screen.getByText("Aparece depois da sua primeira avaliação.")).toBeInTheDocument();
+    expect(card("data-card-peso-parcial")).toBeNull();
+  });
+});
+
 describe("H5 — N-48: o atalho do diário no Início (pendência da W12)", () => {
   it("com nutricionista e o diário ligado: 'Foto pro diário' abre a folha do diário da aba Dieta; tocar no card abre a Dieta", async () => {
     abrir();

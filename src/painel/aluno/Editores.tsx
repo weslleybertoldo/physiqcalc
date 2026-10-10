@@ -250,7 +250,9 @@ export default function Editores({ alunoId }: { alunoId: string }) {
         </div>
       )}
       {p && acessoDieta === "editar" && (
-        <PlanoDialog open={novoPlano} onOpenChange={setNovoPlano} pacienteId={p.paciente_id} ultimoCalculo={calculosQ.data?.[0] ?? null} onCriado={() => void planosQ.refetch()} />
+        <PlanoDialog open={novoPlano} onOpenChange={setNovoPlano} pacienteId={p.paciente_id} ultimoCalculo={calculosQ.data?.[0] ?? null} onCriado={() => void planosQ.refetch()}
+          // hml-17 (H-39): sem a leitura dos cálculos, a nova prescrição diz que não deu para ler (nunca "Sem cálculo registrado")
+          calculoFalhou={calculosQ.isError && !calculosQ.data ? { aoTentar: () => void calculosQ.refetch() } : null} />
       )}
     </div>
   );

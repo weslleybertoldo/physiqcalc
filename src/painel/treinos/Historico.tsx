@@ -129,6 +129,11 @@ export function Historico({ q }: { q: QuemMexe }) {
         descricao={aberto ? `${aberto.data.split("-").reverse().join("/")}${aberto.duracaoSegundos ? ` · ${formatDuracao(aberto.duracaoSegundos)}` : ""}${aberto.academia ? ` · ${aberto.academia}` : ""}` : undefined}>
         {det.isLoading ? (
           <Esqueleto className="h-[200px] w-full" />
+        ) : det.isError && !det.data ? (
+          // hml-17 (H-39): a leitura falhou — o aviso com "Tentar de novo" ("Não achamos" fica só para o treino que não existe)
+          <div data-historico-detalhe-erro>
+            <EstadoErro titulo="Não deu para abrir este treino" aoTentar={() => void det.refetch()} />
+          </div>
         ) : !det.data ? (
           <p className="text-[13px] text-texto-3">Não achamos esse treino.</p>
         ) : (

@@ -12,7 +12,7 @@ import type { ModoRecebimento } from "@/financeiro/tipos";
 import { TopoPagina } from "@/ui/casca/topo";
 import { Botao } from "@/ui/premium/Botao";
 import { Chip } from "@/ui/premium/Chip";
-import { EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
+import { EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
 import { OpcoesPilula, SecaoForm, type OpcaoPilula } from "./pecas/Form";
 
 interface ContaRecebimento {
@@ -28,6 +28,8 @@ interface ContaRecebimento {
  * ligada; o aluno anexa o comprovante e você confirma), "não cobrar pelo app" ou Mercado Pago (só quando o master libera
  * para a conta) — e o "bloquear o app do aluno com mensalidade vencida". Embaixo, os comprovantes aguardando a sua
  * confirmação (é por aqui que a conta que ainda não tem a página Financeiro nova confere os Pix). Só o dono.
+ * hml-17 (H-39): a leitura dos comprovantes falhou → o aviso com "Tentar de novo" e o contador "—" (antes, "0" e "Nenhum comprovante
+ * aguardando." com Pix esperando a confirmação).
  */
 export default function Recebimento() {
   const { conta, situacao } = useConta();
@@ -58,6 +60,7 @@ export default function Recebimento() {
     return <div data-config-aba="recebimento" data-estado-aba="vazio"><EstadoVazio titulo="Nenhuma conta ativa" texto="O recebimento aparece aqui quando você faz parte de uma conta de profissional." /></div>;
   }
   const c = consulta.data;
+  const pendentesFalhou = pendentes.isError && !pendentes.data;
   const mpLiberado = master || c?.recebimento_modo === "mercadopago";
   const opcoes: OpcaoPilula<ModoRecebimento>[] = [
     { valor: "pix_manual", rotulo: "Pix na sua chave", dica: "O aluno paga pelo banco dele e anexa o comprovante; você confirma", icone: QrCode },
@@ -134,10 +137,18 @@ export default function Recebimento() {
       )}
 
       <SecaoForm titulo="Comprovantes aguardando a sua confirmação" marca="recebimento-pendentes"
-        extra={<Chip tom={(pendentes.data?.pendentes.length ?? 0) > 0 ? "c" : "g"}>{pendentes.data?.pendentes.length ?? 0}</Chip>}
+        extra={
+          <Chip tom={(pendentes.data?.pendentes.length ?? 0) > 0 ? "c" : "g"} data-recebimento-pendentes-contador>
+            {pendentesFalhou ? "—" : pendentes.data?.pendentes.length ?? 0}
+          </Chip>
+        }
         descricao="O aluno pagou o Pix na sua chave e anexou o comprovante. Confira o valor antes de confirmar.">
         {pendentes.isLoading ? (
           <Esqueleto className="h-[92px] w-full rounded-2xl" />
+        ) : pendentesFalhou ? (
+          <div data-recebimento-pendentes-erro>
+            <EstadoErro titulo="Não deu para carregar os comprovantes" aoTentar={() => void pendentes.refetch()} />
+          </div>
         ) : !(pendentes.data?.pendentes.length) ? (
           <p className="text-[13px] text-texto-2" data-recebimento-sem-pendentes>Nenhum comprovante aguardando.</p>
         ) : (

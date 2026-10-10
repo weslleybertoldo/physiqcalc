@@ -7,7 +7,7 @@ import { MensagemForm } from "@/entrada/pecas/Campo";
 import { faixaDeIdade, idadeDe } from "@/painel/aluno/dados/regras";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
-import { EstadoVazio } from "@/ui/premium/Estados";
+import { EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { decidirPendente, ErroAlunos, listarPendentes, type CadastroPendente } from "./api";
 import { formatarTelefone, mensagemErroAlunos, type ListaAlunos } from "./regras";
@@ -24,6 +24,7 @@ function dataCurta(iso: string | null | undefined): string {
  * hml-12 (H-30): a regra dos menores pela data de nascimento do cadastro — 16 ou 17 anos: a dica de registrar o consentimento do
  * responsável na ficha depois de aprovar; menor de 16: não dá para aprovar (o gatilho do banco recusaria, e a função alunos devolveria
  * 500). SÓ no build de staging até a virada (a condição do Vite direto aqui).
+ * hml-17 (H-39): a leitura falhou → o aviso com "Tentar de novo" (antes, depois de ~21 s de "Carregando…", "Nada esperando").
  */
 export function Pendentes({ aberto, aoMudar, lista, aoMudou }: { aberto: boolean; aoMudar: (a: boolean) => void; lista: ListaAlunos; aoMudou: () => void }) {
   const celular = useIsMobile();
@@ -48,12 +49,17 @@ export function Pendentes({ aberto, aoMudar, lista, aoMudou }: { aberto: boolean
   };
 
   const itens = q.data ?? [];
+  const falhou = q.isError && !q.data;
   return (
     <PainelDeslizante aberto={aberto} aoMudar={aoMudar} lado={celular ? "baixo" : "direita"} titulo="Cadastros pendentes"
       descricao="Quem se cadastrou pelo seu link de cadastro. Aprovar põe a pessoa na lista de alunos (dentro do limite do plano).">
-      <div className="flex flex-col pt-1" data-pendentes={itens.length}>
+      <div className="flex flex-col pt-1" data-pendentes={falhou ? "erro" : itens.length}>
         {q.isLoading ? (
           <p className="text-[13px] text-texto-3">Carregando…</p>
+        ) : falhou ? (
+          <div data-pendentes-erro>
+            <EstadoErro titulo="Não deu para carregar os cadastros pendentes" aoTentar={() => void q.refetch()} />
+          </div>
         ) : itens.length === 0 ? (
           <EstadoVazio icone={Inbox} titulo="Nada esperando" texto="Os cadastros feitos pelo seu link aparecem aqui para você aprovar." />
         ) : (

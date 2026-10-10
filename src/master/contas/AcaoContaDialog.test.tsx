@@ -60,6 +60,25 @@ describe("Master › Mudar plano — W28: sai do preço e das regras de hoje", (
     await waitFor(() => expect(document.querySelector("[data-aviso-sai-do-legado]")?.textContent).toMatch(/\(R\$\s?59,90\/mês, a partir do próximo pagamento\)/));
     expect(h.planos).toHaveBeenCalled();
   });
+  it("hml-17 (H-39): a tabela de preços falhou → o aviso diz que não deu para carregar o preço + Tentar; o Confirmar continua", async () => {
+    h.planos.mockRejectedValueOnce(new Error("Failed to fetch"));
+    montar(conta());
+    await waitFor(() => expect(document.querySelector("[data-acao-conta-tabela-erro]")).not.toBeNull());
+    expect(screen.getByText(/Não deu para carregar o preço da tabela nova\./)).toBeInTheDocument();
+    fireEvent.change(document.querySelector("[data-campo-plano]") as HTMLSelectElement, { target: { value: "treino_nutricao" } });
+    expect((document.querySelector("[data-acao-confirmar]") as HTMLButtonElement).disabled).toBe(false);
+    // tocar refaz: o preço da tabela nova aparece e o aviso de falha sai
+    fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    await waitFor(() => expect(document.querySelector("[data-aviso-sai-do-legado]")?.textContent).toMatch(/\(R\$\s?59,90\/mês, a partir do próximo pagamento\)/));
+    expect(document.querySelector("[data-acao-conta-tabela-erro]")).toBeNull();
+    expect(h.planos).toHaveBeenCalledTimes(2);
+  });
+  it("hml-17 (controle): a tabela veio → sem o aviso de falha", async () => {
+    montar(conta());
+    await screen.findByText(/Esta conta tem o preço e as regras de hoje\./);
+    await waitFor(() => expect(h.planos).toHaveBeenCalled());
+    expect(document.querySelector("[data-acao-conta-tabela-erro]")).toBeNull();
+  });
   it("sem regras_legadas (conta nova ou já fora do legado): sem o aviso e sem buscar a tabela", () => {
     montar(conta({ origem: "nova", regras_legadas: false, valor_travado: null, tolerancia_dias: 0 }));
     expect(screen.getByText("Mudar plano ou faixa")).toBeInTheDocument();

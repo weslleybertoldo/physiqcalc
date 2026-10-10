@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
-import { CheckCircle2, KeyRound, MessageCircle } from "lucide-react";
+import { CheckCircle2, CircleAlert, KeyRound, MessageCircle, RefreshCw } from "lucide-react";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { lerProfPendente, limparProfPendente } from "@/lib/profPendente";
 import { MENSAGEM_VINCULO, normalizarCodigo } from "@/nucleo/situacao";
@@ -26,20 +26,28 @@ async function abrirWhatsapp(url: string): Promise<void> {
  * "Meus profissionais" (tela 5, `.grp` + `.pro`): nome, papel e o botão de conversa (abre o WhatsApp — P24; sem número
  * cadastrado, sem botão). Sem profissional (pedido dele, 29/09): o campo "Tenho um código do meu profissional" — o mesmo
  * vínculo das Boas-vindas (vincular-aluno; o link ?prof= já preenche).
+ * hml-17 (H-39): a leitura falhou (sem dado) → o aviso com "Tentar de novo" no lugar da lista — NUNCA o campo do código (com a
+ * API caindo, a aluna com 2 profissionais lia "Você ainda não está com um profissional"). O código só aparece com o perfil
+ * carregado e 0 profissionais (vazio de verdade).
  */
 export function MeusProfissionais({
   profissionais,
   carregando,
   aoVincular,
+  erro = null,
 }: {
   profissionais: ProfissionalDoAluno[] | null;
   carregando: boolean;
   aoVincular: () => void;
+  /** a leitura falhou sem dado: o título do aviso e o "Tentar de novo" */
+  erro?: { titulo: string; aoTentar: () => void } | null;
 }) {
   return (
     <GrupoLista titulo="Meus profissionais" className="mt-0">
-      <div data-perfil-profissionais={profissionais?.length ?? ""}>
-        {carregando && !profissionais ? (
+      <div data-perfil-profissionais={erro && !profissionais ? "erro" : (profissionais?.length ?? "")}>
+        {erro && !profissionais ? (
+          <AvisoPerfilErro titulo={erro.titulo} aoTentar={erro.aoTentar} />
+        ) : carregando && !profissionais ? (
           <div className="flex h-[52px] items-center gap-3">
             <Esqueleto className="h-[38px] w-[38px] rounded-full" />
             <div className="flex flex-1 flex-col gap-1.5">
@@ -77,6 +85,26 @@ export function MeusProfissionais({
         )}
       </div>
     </GrupoLista>
+  );
+}
+
+/** hml-17 (H-39): o aviso compacto do Perfil quando a leitura falhou — "Confira a internet e tente de novo." + Tentar de novo. */
+export function AvisoPerfilErro({ titulo, aoTentar }: { titulo: string; aoTentar: () => void }) {
+  return (
+    <div className="flex items-start gap-3 py-3" role="alert" data-perfil-erro data-estado="erro">
+      <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[10px] bg-superficie text-rosa-3">
+        <CircleAlert aria-hidden className="h-4 w-4" strokeWidth={1.75} />
+      </span>
+      <div className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-texto-2">
+        <b className="block text-[13.5px] font-medium text-texto">{titulo}</b>
+        <span className="block">Confira a internet e tente de novo.</span>
+        <div className="mt-2">
+          <Botao type="button" variante="g" tamanho="sm" icone={RefreshCw} onClick={aoTentar} data-perfil-erro-tentar>
+            Tentar de novo
+          </Botao>
+        </div>
+      </div>
+    </div>
   );
 }
 

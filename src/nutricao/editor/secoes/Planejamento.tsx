@@ -44,6 +44,11 @@ function ModelosPlano({ aberto, aoMudar, pacienteId, aoUsar }: { aberto: boolean
         </DialogHeader>
         {q.isLoading ? (
           <Esqueleto className="h-24 w-full" />
+        ) : q.isError && !q.data ? (
+          // hml-17 (H-39): a leitura dos ★ falhou — o aviso com "Tentar de novo", nunca "Nenhum plano ★ ainda"
+          <div data-modelos-plano-erro>
+            <EstadoErro titulo="Não deu para carregar os planos ★" aoTentar={() => void q.refetch()} />
+          </div>
         ) : lista.length === 0 ? (
           <p className="py-4 text-[13px] text-texto-3" data-modelos-plano-vazio>Nenhum plano ★ ainda. No menu ⋮ de um plano, use "Salvar como modelo ★".</p>
         ) : (
@@ -288,6 +293,8 @@ export default function Planejamento({ objetivo, onMudou }: { objetivo?: string 
             onOpenChange={setModalNovo}
             pacienteId={p.id}
             ultimoCalculo={ultimoCalculo}
+            // hml-17 (H-39): sem a leitura dos cálculos, a nova prescrição diz que não deu para ler (nunca "Sem cálculo registrado")
+            calculoFalhou={calculosQ.isError && !calculosQ.data ? { aoTentar: () => void calculosQ.refetch() } : null}
             onCriado={(plano) => {
               void atualizarLista();
               abrir(plano.id);

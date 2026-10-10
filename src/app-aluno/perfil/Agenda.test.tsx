@@ -3,19 +3,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ agenda: [] as Array<Record<string, unknown>>, lista: vi.fn() }));
+const h = vi.hoisted(() => ({ agenda: [] as Array<Record<string, unknown>>, lista: vi.fn(), regras: vi.fn() }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u1", email: "aluno@teste.com" } }) }));
 vi.mock("./pecas/api", async (orig) => ({
   ...(await orig<typeof import("./pecas/api")>()),
   minhaAgenda: async () => h.agenda,
   minhaAgendaLista: (...a: unknown[]) => h.lista(...a),
 }));
-vi.mock("./agenda/api", async (orig) => ({ ...(await orig<typeof import("./agenda/api")>()), minhasRegrasAgenda: async () => [] }));
+vi.mock("./agenda/api", async (orig) => ({ ...(await orig<typeof import("./agenda/api")>()), minhasRegrasAgenda: () => h.regras() }));
 
 import Agenda from "./Agenda";
 
+beforeEach(() => {
+  h.regras.mockReset().mockResolvedValue([]);
+});
+
 function montar() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter useTransitions={false} initialEntries={["/perfil/agenda"]}><Agenda /></MemoryRouter>
@@ -109,5 +113,41 @@ describe("Perfil › Agenda — Próximas: as 20 primeiras + 'Ver todas (N)' em 
     await waitFor(() => expect(linha("f00")).not.toBeNull());
     expect(document.querySelectorAll('[data-agenda-lista="proximas"] [data-agendamento]')).toHaveLength(20);
     expect(document.querySelector('[data-ver-todos="agenda"]')).toBeNull();
+  });
+});
+
+// hml-17 (H-39): as regras dos profissionais (o pacote) falhando: o pacote e o "Marcar consulta" sumiam, sem consulta a tela dizia
+// "Nenhuma consulta marcada" e o Desistir perdia o aviso do pacote. Agora: o aviso com Tentar de novo e o Desistir escondido.
+describe("Perfil › Agenda — as regras (o pacote) não carregaram (hml-17)", () => {
+  it("com consulta: o aviso com Tentar de novo e SEM o Desistir; tocar refaz e o Desistir volta", async () => {
+    h.agenda = [consulta("c1", 3, { modulo: "nutricao", papel: "nutricionista" })];
+    h.regras.mockReset().mockRejectedValue(new Error("Failed to fetch"));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-agenda-regras-erro]")).not.toBeNull());
+    expect(linha("c1")).not.toBeNull();
+    expect(document.querySelector('[data-btn-desistir="c1"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("Nenhuma consulta marcada");
+    const antes = h.regras.mock.calls.length;
+    h.regras.mockReset().mockResolvedValue([]);
+    fireEvent.click(document.querySelector("[data-agenda-regras-tentar]") as HTMLButtonElement);
+    await waitFor(() => expect(document.querySelector("[data-agenda-regras-erro]")).toBeNull());
+    expect(document.querySelector('[data-btn-desistir="c1"]')).not.toBeNull();
+    expect(antes).toBe(2); // a consulta das regras tem retry: 1
+    expect(h.regras).toHaveBeenCalledTimes(1);
+  });
+
+  it("sem consulta e as regras falhando: só o aviso (nunca \"Nenhuma consulta marcada\")", async () => {
+    h.agenda = [];
+    h.regras.mockReset().mockRejectedValue(new Error("Failed to fetch"));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-agenda-regras-erro]")).not.toBeNull());
+    expect(document.body.textContent).not.toContain("Nenhuma consulta marcada");
+  });
+
+  it("controle: sem consulta e as regras carregadas (nenhum pacote) → \"Nenhuma consulta marcada\", sem aviso", async () => {
+    h.agenda = [];
+    montar();
+    await waitFor(() => expect(document.body.textContent).toContain("Nenhuma consulta marcada"));
+    expect(document.querySelector("[data-agenda-regras-erro]")).toBeNull();
   });
 });

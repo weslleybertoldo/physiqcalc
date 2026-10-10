@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, Scale, WifiOff } from "lucide-react";
+import { CircleAlert, RefreshCw, Scale, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { num, variacaoAbs } from "@/evolucao/formato";
 import { hojeSP, kpisDaSerie, periodoInicial, variacaoDaMetrica } from "@/evolucao/serie";
@@ -60,8 +60,13 @@ function Peso() {
 
   if (ev.fase === "carregando") return <EsqueletoPeso />;
 
-  if (ev.fase === "sem-conexao" || ev.fase === "erro" || !dados) {
-    const semRede = ev.fase === "sem-conexao";
+  // hml-17 (H-39): uma parte que falhou (o Treino ou o principal) — "vazio" ("Aparece depois…") só sem NENHUMA falha; sem o peso e
+  // com falha, o aviso de erro (antes a aluna com 6 avaliações lia "Aparece depois da sua primeira avaliação"); com o peso, os dados
+  // + o ícone de aviso
+  const parcial = ev.falhas.treino ? "treino" : ev.falhas.principal ? "principal" : null;
+  const motivoParcial = ev.falhas.treino ?? ev.falhas.principal;
+  if (ev.fase === "sem-conexao" || ev.fase === "erro" || !dados || (dados.kpi.valor === null && parcial)) {
+    const semRede = ev.fase === "sem-conexao" || (ev.fase === "pronto" && motivoParcial === "sem-conexao");
     return (
       <div className={CLASSE} data-card-peso={semRede ? "sem-internet" : "erro"}>
         <span className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-full border border-linha bg-superficie">
@@ -96,11 +101,15 @@ function Peso() {
   }
 
   return (
-    <button type="button" onClick={abrir} className={CLASSE} data-card-peso="dados" data-peso-valor={kpi.valor} data-peso-variacao={kpi.variacao ?? ""} data-peso-periodo={periodo}>
+    <button type="button" onClick={abrir} className={CLASSE} data-card-peso="dados" data-peso-valor={kpi.valor} data-peso-variacao={kpi.variacao ?? ""} data-peso-periodo={periodo}
+      data-card-peso-parcial={parcial ?? undefined}>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 text-[12px] text-texto-2">
           Seu peso
           {ev.deCache && <WifiOff aria-label="Sem conexão · o que foi aberto por último" className="h-3 w-3 text-ambar-3" strokeWidth={1.75} data-card-peso-cache />}
+          {parcial && (
+            <CircleAlert aria-label="Parte das suas avaliações não carregou agora" className="h-3 w-3 text-ambar-3" strokeWidth={1.75} data-card-peso-aviso />
+          )}
         </span>
         <b className="mt-0.5 block text-[21px] font-bold tracking-[-0.02em] text-texto tabular-nums">
           {num(kpi.valor, kpi.casas)} {kpi.unidade}

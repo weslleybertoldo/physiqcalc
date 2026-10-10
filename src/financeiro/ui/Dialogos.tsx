@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Check, Plus, Save, X } from "lucide-react";
+import { Check, Plus, RefreshCw, Save, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
@@ -148,17 +148,21 @@ export function DialogoRecusar({ cobranca, aoFechar, aoRecusar }: { cobranca: Co
   );
 }
 
-/** Registrar um lançamento (entrada/saída) ligado ao aluno — o "Registrar financeiro" do Nutri. */
+/** Registrar um lançamento (entrada/saída) ligado ao aluno — o "Registrar financeiro" do Nutri.
+ *  hml-17 (H-39): `categoriasFalhou` = a leitura das categorias falhou → o aviso com "Tentar de novo" embaixo do campo (antes o campo
+ *  só oferecia "Sem categoria" e o lançamento saía sem, sem a pessoa saber). */
 export function DialogoLancamento({
   aberto,
   aoFechar,
   categorias,
   aoSalvar,
+  categoriasFalhou = null,
 }: {
   aberto: boolean;
   aoFechar: () => void;
   categorias: Categoria[];
   aoSalvar: (d: { tipo: TipoLancamento; descricao: string; valor: number; data: string; metodo: MetodoLancamento; categoriaId: string | null; observacao: string | null }) => Promise<boolean>;
+  categoriasFalhou?: { aoTentar: () => void } | null;
 }) {
   const [tipo, setTipo] = useState<TipoLancamento>("entrada");
   const [descricao, setDescricao] = useState("");
@@ -209,6 +213,12 @@ export function DialogoLancamento({
           <option value="">Sem categoria</option>
           {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
         </CampoSelect>
+        {categoriasFalhou && categorias.length === 0 && (
+          <p className="-mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-rosa-3" role="alert" data-lancamento-categorias-erro>
+            Não deu para carregar as categorias. Sem elas, o lançamento sai sem categoria.
+            <Botao type="button" tamanho="sm" icone={RefreshCw} onClick={categoriasFalhou.aoTentar} data-lancamento-categorias-tentar>Tentar de novo</Botao>
+          </p>
+        )}
         <Campo rotulo="Observação" maxLength={500} value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" />
         {erro && <MensagemForm>{erro}</MensagemForm>}
         <Botao type="submit" variante="w" icone={Save} disabled={salvando} data-lancamento-salvar>{salvando ? "Salvando…" : "Salvar lançamento"}</Botao>
