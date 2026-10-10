@@ -1,7 +1,7 @@
 // Physiq W7 — conversa servidor → servidor com o Banco do Treino para "Exportar meus dados" e "Excluir minha conta" (W2 da loja: + as
 // ações da exclusão do profissional).
 // Chama a delete-my-account de lá em modo servidor (x-espelho-segredo com o SEGREDO_CONTA_TREINO — hml-16c, S3: o segredo desta
-// finalidade, que a delete-my-account confere pelo hash; até o F7, sem ele, o legado ESPELHO_SEGREDO; _shared/segredo-servidor.ts).
+// finalidade, que a delete-my-account confere pelo hash — _shared/segredo-servidor.ts; sem ele, treinoConfigurado() = false).
 // A delete-my-account tem verify_jwt = true: vai o anon do Treino (TREINO_ANON_KEY, público — é o do APK) no Authorization só
 // para passar pela borda do Supabase; quem autoriza é o segredo. O id do aluno no Treino sai do vínculo physiq_identidades lá —
 // daqui vai só o id do JWT.

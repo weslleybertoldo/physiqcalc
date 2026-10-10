@@ -7,9 +7,9 @@
 //                  ou telegram_recusou (status + description; nunca a URL, que leva o token).
 //   atenderPedido  a função erro-avisar: OPTIONS com o CORS de sempre (login-regras.origemPermitida); só POST; navegador =
 //                  Origin da lista, servidor (Treino) = x-espelho-segredo aceito por deps.segredo (hml-16c, S7: o hash na
-//                  lista SEGREDO_AVISO_ERRO_ACEITOS ou, até o F7, o legado; aceitou → log segredo_aceito com acao aviso_erro e
-//                  resultado lista | legado); x-schema public|staging; corpo ≤ 2 KB; 204 quando aceita. {"teste":"excecao"} só
-//                  com o segredo E no staging: lança dentro do try e o catch final chama log.excecao (a prova do D6: catch → aviso).
+//                  lista SEGREDO_AVISO_ERRO_ACEITOS; aceitou → log segredo_aceito com acao aviso_erro e resultado lista);
+//                  x-schema public|staging; corpo ≤ 2 KB; 204 quando aceita. {"teste":"excecao"} só com o segredo E no
+//                  staging: lança dentro do try e o catch final chama log.excecao (a prova do D6: catch → aviso).
 // Quem liga as peças de verdade: _shared/avisar-erro.ts (banco, Telegram e variáveis) e erro-avisar/index.ts.
 import {
   assinatura,
@@ -294,9 +294,9 @@ function schemaDaUrl(url: string): string | null {
 export interface DepsPedido {
   /**
    * O aceite do x-espelho-segredo que o Treino manda (hml-16c, S7): na função, segredoAceito(recebido, "SEGREDO_AVISO_ERRO") do
-   * _shared/segredo-servidor.ts. "lista" | "legado" = aceito (vai para o log); null = recusa (403 segredo_invalido).
+   * _shared/segredo-servidor.ts. "lista" = aceito (vai para o log); null = recusa (403 segredo_invalido).
    */
-  segredo(recebido: string): Promise<"lista" | "legado" | null>;
+  segredo(recebido: string): Promise<"lista" | null>;
   /** O caminho do aviso (criarAvisador(…).enviarAviso). Roda em segundo plano: o 204 não espera o Telegram. */
   enviar(erro: ErroParaAviso, schema: SchemaAviso): Promise<unknown>;
   /** O log da função, COM o aviso: o catch final chama log.excecao. */

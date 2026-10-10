@@ -11,16 +11,18 @@ import {
 import * as doTreino from "../../supabase/functions/_shared/segredo-servidor";
 
 // Homologação hml-16c (H-51) — o segredo entre os servidores, 1 por finalidade (_shared/segredo-servidor.ts, as 2 cópias). O
-// emissor manda SEGREDO_X (sem ele, até o F7, o legado ESPELHO_SEGREDO); o receptor aceita o sha256 na lista SEGREDO_X_ACEITOS
-// ("lista") ou o legado ("legado"); o resto recusa. Valores falsos, feitos aqui; nada vai à rede. No fim, a guarda nas fontes das
-// funções: cada receptor e cada emissor usa o nome da tabela do contrato (§1), o log segredo_aceito leva só a finalidade e o
-// resultado, e o legado e o comparador antigo não voltam fora da peça comum.
+// emissor manda SEGREDO_X (sem ele, nada); o receptor aceita só o sha256 na lista SEGREDO_X_ACEITOS ("lista"); o resto recusa. O
+// segredo único de antes (o legado, NOME_DO_LEGADO) saiu na hml-16c: no ambiente, não é aceito nem enviado. Valores falsos,
+// feitos aqui; nada vai à rede. No fim, a guarda nas fontes das funções: cada receptor e cada emissor usa o nome da tabela do
+// contrato (§1), o log segredo_aceito leva só a finalidade e o resultado, e o comparador antigo não volta.
 const raiz = resolve(__dirname, "../..");
 const ler = (rel: string) => readFileSync(resolve(raiz, rel), "utf-8");
 
 const NOVO = "N1".repeat(32); // 64 caracteres, como o token_urlsafe(48) do script
 const ANTERIOR = "A2".repeat(32);
 const TERCEIRO = "T3".repeat(32);
+/** O segredo único de antes (até a hml-16c, o mesmo valor em todos os canais): o nome só aparece aqui e na guarda. */
+const NOME_DO_LEGADO = "ESPELHO_SEGREDO";
 const LEGADO = "L4".repeat(32);
 const NOME = "SEGREDO_AVISO_ERRO";
 const LISTA = `${NOME}_ACEITOS`;
@@ -65,48 +67,45 @@ describe("receptor: segredoAceito", () => {
     expect(await segredoAceito(TERCEIRO, NOME, ler2)).toBeNull();
   });
 
-  it("legado ligado: o ESPELHO_SEGREDO passa como legado (com ou sem a lista); a lista vence quando os 2 valem", async () => {
-    expect(await segredoAceito(LEGADO, NOME, ambiente({ ESPELHO_SEGREDO: LEGADO }))).toBe("legado");
-    expect(await segredoAceito(LEGADO, NOME, ambiente({ ESPELHO_SEGREDO: LEGADO, [LISTA]: HASH_NOVO }))).toBe("legado");
-    expect(await segredoAceito(NOVO, NOME, ambiente({ ESPELHO_SEGREDO: LEGADO, [LISTA]: HASH_NOVO }))).toBe("lista");
-    const hashDoLegado = await hashHex(LEGADO);
-    expect(await segredoAceito(LEGADO, NOME, ambiente({ ESPELHO_SEGREDO: LEGADO, [LISTA]: hashDoLegado }))).toBe("lista");
+  it("o ESPELHO_SEGREDO no ambiente NÃO é aceito: o valor dele recusa, com ou sem a lista e de qualquer tamanho", async () => {
+    for (const antigo of [LEGADO, "c".repeat(MIN_SEGREDO), "c".repeat(MIN_SEGREDO + 1)]) {
+      expect(await segredoAceito(antigo, NOME, ambiente({ [NOME_DO_LEGADO]: antigo }))).toBeNull();
+      expect(await segredoAceito(antigo, NOME, ambiente({ [NOME_DO_LEGADO]: antigo, [LISTA]: HASH_NOVO }))).toBeNull();
+    }
+    // a lista segue valendo do lado dele
+    expect(await segredoAceito(NOVO, NOME, ambiente({ [NOME_DO_LEGADO]: LEGADO, [LISTA]: HASH_NOVO }))).toBe("lista");
   });
 
-  it("legado desligado (depois do F6): o valor antigo recusa; a lista segue valendo", async () => {
+  it("só a lista decide: o valor antigo passa apenas se o hash DELE estiver na lista, como qualquer outro valor", async () => {
+    const hashDoLegado = await hashHex(LEGADO);
+    expect(await segredoAceito(LEGADO, NOME, ambiente({ [LISTA]: hashDoLegado }))).toBe("lista");
     expect(await segredoAceito(LEGADO, NOME, ambiente({ [LISTA]: HASH_NOVO }))).toBeNull();
     expect(await segredoAceito(LEGADO, NOME, ambiente({}))).toBeNull();
-    expect(await segredoAceito(NOVO, NOME, ambiente({ [LISTA]: HASH_NOVO }))).toBe("lista");
   });
 
-  it("legado curto não vale, nem igual (o mínimo é MIN_SEGREDO)", async () => {
+  it("recebido curto → recusa, mesmo com o hash dele na lista (o mínimo é MIN_SEGREDO)", async () => {
     expect(MIN_SEGREDO).toBe(32);
-    expect(await segredoAceito("curto", NOME, ambiente({ ESPELHO_SEGREDO: "curto" }))).toBeNull();
-    const quase = "c".repeat(MIN_SEGREDO - 1);
-    expect(await segredoAceito(quase, NOME, ambiente({ ESPELHO_SEGREDO: quase }))).toBeNull();
-    const exato = "c".repeat(MIN_SEGREDO);
-    expect(await segredoAceito(exato, NOME, ambiente({ ESPELHO_SEGREDO: exato }))).toBe("legado");
-  });
-
-  it("recebido curto → recusa, mesmo com o hash dele na lista", async () => {
     const curto = "c".repeat(MIN_SEGREDO - 1);
     expect(await segredoAceito(curto, NOME, ambiente({ [LISTA]: await hashHex(curto) }))).toBeNull();
-    expect(await segredoAceito("abc", NOME, ambiente({ [LISTA]: await hashHex("abc"), ESPELHO_SEGREDO: "abc" }))).toBeNull();
+    expect(await segredoAceito("abc", NOME, ambiente({ [LISTA]: await hashHex("abc"), [NOME_DO_LEGADO]: "abc" }))).toBeNull();
+    const exato = "c".repeat(MIN_SEGREDO);
+    expect(await segredoAceito(exato, NOME, ambiente({ [LISTA]: await hashHex(exato) }))).toBe("lista");
   });
 
   it("recebido vazio, nulo ou ausente → recusa", async () => {
-    const tudo = ambiente({ [LISTA]: HASH_NOVO, ESPELHO_SEGREDO: LEGADO });
+    const tudo = ambiente({ [LISTA]: HASH_NOVO, [NOME_DO_LEGADO]: LEGADO });
     for (const vazio of ["", null, undefined]) expect(await segredoAceito(vazio, NOME, tudo)).toBeNull();
   });
 
-  it("errado → recusa: 1 caractere trocado, a mais ou a menos (na lista e no legado)", async () => {
-    const tudo = ambiente({ [LISTA]: HASH_NOVO, ESPELHO_SEGREDO: LEGADO });
+  it("errado → recusa: 1 caractere trocado, a mais ou a menos", async () => {
+    const tudo = ambiente({ [LISTA]: HASH_NOVO, [NOME_DO_LEGADO]: LEGADO });
     for (const valor of [NOVO, LEGADO]) {
       expect(await segredoAceito(`${valor.slice(0, -1)}x`, NOME, tudo)).toBeNull();
       expect(await segredoAceito(`${valor}x`, NOME, tudo)).toBeNull();
       expect(await segredoAceito(valor.slice(0, -1), NOME, tudo)).toBeNull();
       expect(await segredoAceito(` ${valor}`, NOME, tudo)).toBeNull();
     }
+    expect(await segredoAceito(LEGADO, NOME, tudo)).toBeNull();
   });
 
   it("o hash não serve de segredo: quem lê a lista do receptor não consegue chamar", async () => {
@@ -133,9 +132,10 @@ describe("receptor: segredoAceito", () => {
     expect(await segredoAceito(TERCEIRO, NOME, ler3)).toBeNull();
   });
 
-  it("lista vazia ou só com lixo, sem o legado → tudo recusa (falha fechada)", async () => {
+  it("lista vazia ou só com lixo → tudo recusa (falha fechada), mesmo com o ESPELHO_SEGREDO no ambiente", async () => {
     for (const lista of ["", " ", ",", "nada,de,hash"]) {
       expect(await segredoAceito(NOVO, NOME, ambiente({ [LISTA]: lista }))).toBeNull();
+      expect(await segredoAceito(LEGADO, NOME, ambiente({ [LISTA]: lista, [NOME_DO_LEGADO]: LEGADO }))).toBeNull();
     }
   });
 
@@ -145,7 +145,7 @@ describe("receptor: segredoAceito", () => {
     expect(await segredoAceito(NOVO, "SEGREDO_ESPELHO_RESUMO", ler2)).toBe("lista");
   });
 
-  it("o valor do emissor no ambiente do receptor não abre nada: só a lista (e o legado) contam", async () => {
+  it("o valor do emissor no ambiente do receptor não abre nada: só a lista conta", async () => {
     expect(await segredoAceito(NOVO, NOME, ambiente({ [NOME]: NOVO }))).toBeNull();
   });
 
@@ -158,19 +158,20 @@ describe("receptor: segredoAceito", () => {
 });
 
 describe("emissor: segredoParaEnviar", () => {
-  it("com o SEGREDO_X (≥ 32) → ele, mesmo com o legado", () => {
-    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: NOVO, ESPELHO_SEGREDO: LEGADO }))).toBe(NOVO);
+  it("com o SEGREDO_X (≥ 32) → ele (o ESPELHO_SEGREDO no ambiente não muda nada)", () => {
+    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: NOVO, [NOME_DO_LEGADO]: LEGADO }))).toBe(NOVO);
     expect(segredoParaEnviar(NOME, ambiente({ [NOME]: NOVO }))).toBe(NOVO);
   });
 
-  it("sem o SEGREDO_X → o legado (até o F7)", () => {
-    expect(segredoParaEnviar(NOME, ambiente({ ESPELHO_SEGREDO: LEGADO }))).toBe(LEGADO);
-    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: "", ESPELHO_SEGREDO: LEGADO }))).toBe(LEGADO);
+  it("o ESPELHO_SEGREDO no ambiente NÃO é enviado: sem o SEGREDO_X → \"\"", () => {
+    expect(segredoParaEnviar(NOME, ambiente({ [NOME_DO_LEGADO]: LEGADO }))).toBe("");
+    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: "", [NOME_DO_LEGADO]: LEGADO }))).toBe("");
   });
 
-  it("SEGREDO_X curto conta como ausente: cai no legado; sem legado válido → \"\"", () => {
-    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: "curto", ESPELHO_SEGREDO: LEGADO }))).toBe(LEGADO);
-    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: "curto", ESPELHO_SEGREDO: "curto" }))).toBe("");
+  it("SEGREDO_X curto conta como ausente → \"\" (com ou sem o ESPELHO_SEGREDO)", () => {
+    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: "curto" }))).toBe("");
+    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: "c".repeat(MIN_SEGREDO - 1), [NOME_DO_LEGADO]: LEGADO }))).toBe("");
+    expect(segredoParaEnviar(NOME, ambiente({ [NOME]: "c".repeat(MIN_SEGREDO) }))).toBe("c".repeat(MIN_SEGREDO));
   });
 
   it("sem nenhum → \"\" (o emissor para com o sem_configuracao / nao_configurada de sempre)", () => {
@@ -218,11 +219,13 @@ describe("as 2 cópias (cada banco publica só o _shared dele)", () => {
   });
 
   it("a do Treino responde igual", async () => {
-    const tudo = ambiente({ [LISTA]: `${HASH_NOVO},${HASH_ANTERIOR}`, ESPELHO_SEGREDO: LEGADO, [NOME]: NOVO });
+    const tudo = ambiente({ [LISTA]: `${HASH_NOVO},${HASH_ANTERIOR}`, [NOME_DO_LEGADO]: LEGADO, [NOME]: NOVO });
     for (const valor of [NOVO, ANTERIOR, LEGADO, TERCEIRO, "curto", ""]) {
       expect(await doTreino.segredoAceito(valor, NOME, tudo)).toBe(await segredoAceito(valor, NOME, tudo));
     }
     expect(doTreino.segredoParaEnviar(NOME, tudo)).toBe(NOVO);
+    expect(doTreino.segredoParaEnviar(NOME, ambiente({ [NOME_DO_LEGADO]: LEGADO }))).toBe("");
+    expect(await doTreino.segredoAceito(LEGADO, NOME, tudo)).toBeNull();
     expect(await doTreino.hashHex(NOVO)).toBe(HASH_NOVO);
   });
 
@@ -306,7 +309,7 @@ const linhasCom = (codigo: string, ...pedacos: Array<string | RegExp>) =>
   codigo.split("\n").filter((l) => pedacos.every((p) => (typeof p === "string" ? l.includes(p) : p.test(l)))).length;
 const arquivosCom = (...pedacos: Array<string | RegExp>) => FONTES.filter((f) => linhasCom(f.codigo, ...pedacos) > 0).map((f) => f.arquivo).sort();
 const logDoCanal = (c: Canal) => c.log ?? c.aceite;
-/** O log do aceite tem esta forma e nada mais: o código, o schema (quando a função já sabe), a finalidade e lista | legado. */
+/** O log do aceite tem esta forma e nada mais: o código, o schema (quando a função já sabe), a finalidade e o resultado (lista). */
 const formaDoLog = (finalidade: string) =>
   new RegExp(String.raw`\blog\.info\(\{ codigo: "segredo_aceito"(?:, schema(?:: currentSchema\(\))?)?, acao: "${finalidade}", resultado: [a-z]+ \}\);`);
 
@@ -371,8 +374,87 @@ describe("a guarda nas fontes: os 8 segredos do contrato (hml-16c §1) nos recep
     }
   });
 
-  it("o legado ESPELHO_SEGREDO só é lido pela peça comum (até o F7); o comparador antigo só ficou no push (PUSH_SEGREDO)", () => {
-    expect(arquivosCom("ESPELHO_SEGREDO")).toEqual([...PECA_COMUM].sort());
+  it("o comparador antigo só ficou no push (PUSH_SEGREDO)", () => {
     expect(arquivosCom("function segredoConfere(")).toEqual([`${P}/_shared/push-regras.ts`]);
+  });
+});
+
+// ───────────────────────── a guarda do legado (hml-16c, F7): o ESPELHO_SEGREDO não volta às funções ─────────────────────────
+
+/** Todos os arquivos das pastas das funções dos 2 projetos (qualquer extensão), com o texto INTEIRO (comentário também conta). */
+function arquivosDasFuncoes(): Array<{ arquivo: string; texto: string }> {
+  const saida: Array<{ arquivo: string; texto: string }> = [];
+  const andar = (rel: string) => {
+    for (const e of readdirSync(resolve(raiz, rel), { withFileTypes: true })) {
+      const caminho = `${rel}/${e.name}`;
+      if (e.isDirectory()) andar(caminho);
+      else saida.push({ arquivo: caminho, texto: ler(caminho) });
+    }
+  };
+  andar(P);
+  andar(T);
+  return saida.sort((a, b) => (a.arquivo < b.arquivo ? -1 : 1));
+}
+
+/** A guarda: os arquivos cujo texto cita o nome em qualquer lugar (código, comentário ou texto), em ordem. */
+function quemCita(nome: string, arquivos: Array<{ arquivo: string; texto: string }>): string[] {
+  return arquivos.filter((a) => a.texto.includes(nome)).map((a) => a.arquivo).sort();
+}
+
+describe("a guarda: o segredo único de antes (ESPELHO_SEGREDO) não aparece em supabase/functions nem em supabase-principal/functions", () => {
+  const TODOS = arquivosDasFuncoes();
+
+  it("controle negativo: a guarda acusa o arquivo falso que cita o nome (no código ou só no comentário) e só ele", () => {
+    const falsos = [
+      { arquivo: "falso/le-o-legado.ts", texto: `const antigo = Deno.env.get("${NOME_DO_LEGADO}") ?? "";\n` },
+      { arquivo: "falso/so-no-comentario.ts", texto: `// sem ele, cai no ${NOME_DO_LEGADO}\nexport const x = 1;\n` },
+      { arquivo: "falso/limpo.ts", texto: `const s = segredoParaEnviar("SEGREDO_AVISO_ERRO");\n` },
+    ];
+    expect(quemCita(NOME_DO_LEGADO, falsos)).toEqual(["falso/le-o-legado.ts", "falso/so-no-comentario.ts"]);
+    // no meio dos arquivos de verdade: só o falso aparece
+    expect(quemCita(NOME_DO_LEGADO, [...TODOS, falsos[1]])).toEqual(["falso/so-no-comentario.ts"]);
+  });
+
+  it("nenhum arquivo das funções dos 2 projetos cita o ESPELHO_SEGREDO (nem a peça comum, nem em comentário)", () => {
+    expect(TODOS.length).toBeGreaterThan(80); // o leitor achou as funções dos 2 projetos (91 arquivos na hml-16c)
+    expect(TODOS.map((a) => a.arquivo)).toEqual(expect.arrayContaining(PECA_COMUM));
+    expect(quemCita(NOME_DO_LEGADO, TODOS)).toEqual([]);
+  });
+});
+
+// ───────────────────────── o banco (S8): o espelho_disparar() que vale lê só o Vault da fila ─────────────────────────
+
+/** A versão que vale de uma função do banco principal: a da ÚLTIMA migração que a define (as migrações rodam em ordem de nome). */
+function ultimaDefinicao(funcao: string): { arquivo: string; corpo: string } {
+  const pasta = "supabase-principal/migrations";
+  const marca = `create or replace function {schema}.${funcao}(`;
+  const arquivos = readdirSync(resolve(raiz, pasta)).filter((a) => a.endsWith(".sql")).sort().reverse();
+  for (const a of arquivos) {
+    const t = ler(`${pasta}/${a}`);
+    const i = t.lastIndexOf(marca);
+    if (i < 0) continue;
+    const m = /\$[a-z_]*\$/.exec(t.slice(i));
+    if (!m) throw new Error(`${funcao}: corpo sem delimitador em ${a}`);
+    const ini = i + m.index;
+    return { arquivo: a, corpo: t.slice(i, t.indexOf(m[0], ini + m[0].length) + m[0].length) };
+  }
+  throw new Error(`${funcao} não definida`);
+}
+
+describe("o banco (S8): a versão que vale do {schema}.espelho_disparar() lê só o Vault da fila, sem a reserva do nome antigo", () => {
+  it("1 leitura do Vault, a do physiq_espelho_fila_segredo; SECURITY DEFINER com search_path vazio", () => {
+    const { arquivo, corpo } = ultimaDefinicao("espelho_disparar");
+    expect(arquivo >= "20261010040000").toBe(true); // a da F7 da hml-16c (ou uma mais nova)
+    const vaults = [...corpo.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(vaults).toEqual(["physiq_espelho_fila_segredo"]);
+    expect(corpo.match(/vault\./g)).toHaveLength(1);
+    expect(corpo).toMatch(/security definer set search_path = '' as \$\$/);
+  });
+
+  it("controle negativo: o corpo de antes (a 20261010010000, com a reserva) não passaria", () => {
+    const antes = ler("supabase-principal/migrations/20261010010000_hml16c_segredo_fila.sql");
+    const vaults = [...antes.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(vaults).toHaveLength(2);
+    expect(vaults[0]).toBe("physiq_espelho_fila_segredo");
   });
 });

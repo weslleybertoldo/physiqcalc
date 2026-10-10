@@ -51,8 +51,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // Physiq W7b: o banco principal fica sabendo quando o professor tira o aluno da lista (a matrícula de lá fica inativa e o aluno
 // vira aluno do app com 7 dias grátis — vincular-aluno em modo servidor, acao "desvincular"). Segredos PRINCIPAL_URL e
-// SEGREDO_REPASSE_VINCULO (hml-16c, S5: o que a vincular-aluno aceita; até o F7, sem ele, o legado ESPELHO_SEGREDO —
-// _shared/segredo-servidor.ts). Falhar aqui não desfaz o desvínculo no Treino (a W13 troca esta tela).
+// SEGREDO_REPASSE_VINCULO (hml-16c, S5: o que a vincular-aluno aceita — _shared/segredo-servidor.ts; sem ele,
+// principal_nao_configurado). Falhar aqui não desfaz o desvínculo no Treino (a W13 troca esta tela).
 const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
 const SEGREDO_REPASSE_VINCULO = segredoParaEnviar("SEGREDO_REPASSE_VINCULO");
 

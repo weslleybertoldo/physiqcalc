@@ -32,7 +32,7 @@ Uso (o bloco do banco é UMA query: begin … commit/rollback; tudo ou nada):
   --pasta <dir> (padrão ~/backups/physiq/2026-10-02-w1-conta-unica/<schema>)
 Idempotente: depois de aplicado, rodar de novo diz "já juntada" e não muda nada. No staging só contas de TESTE (P26).
 Sem segredo no repositório: PAT em ~/.pc-pat, Banco do Treino pelo ~/.pgpass, segredo da fila do espelho em
-~/.physiq-segredo-espelho-fila (hml-16c, S8; sem ele, o legado ~/.physiq-espelho-segredo até o F7).
+~/.physiq-segredo-espelho-fila (hml-16c, S8; sem ele, a chamada direta à espelho-enviar para com erro).
 """
 from __future__ import annotations
 
@@ -703,11 +703,13 @@ def contagem_geral(S: str) -> dict:
 
 def segredo_fila() -> str:
     """hml-16c (S8): o segredo da fila do espelho (o mesmo do Vault physiq_espelho_fila_segredo), que o
-    scripts/segredos/servidor.py espelho_fila gerar grava em ~/.physiq-segredo-espelho-fila. Sem ele, o legado."""
+    scripts/segredos/servidor.py espelho_fila gerar grava em ~/.physiq-segredo-espelho-fila. Sem ele (ou vazio): erro."""
     arquivo = Path.home() / ".physiq-segredo-espelho-fila"
-    if not arquivo.exists():
-        arquivo = Path.home() / ".physiq-espelho-segredo"  # hml-16c F1: reserva — sai no F7
-    return arquivo.read_text(encoding="utf-8").strip()
+    valor = arquivo.read_text(encoding="utf-8").strip() if arquivo.exists() else ""
+    if not valor:
+        raise RuntimeError("falta ~/.physiq-segredo-espelho-fila (S8, o segredo da fila do espelho): grave o valor do cofre › "
+                           "PhysiqCalc › \"Physiq — SEGREDO_ESPELHO_FILA (hml-16c)\" nesse arquivo (chmod 600)")
+    return valor
 
 
 def esperar_espelho(S: str, segundos: int = 120) -> dict:

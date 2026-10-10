@@ -6,7 +6,7 @@ trocar-token recusa o só-aluno, sessões do Treino encerradas) · E desativar/r
 (o 11º aluno de uma conta f10) · H /c/ público (captcha + pendente + aprovar) · I repasse do APK antigo (modo servidor).
 Pré-requisito: python3 e2e/w13/massa.py. Uso: python3 e2e/w13/api.py [--bloco A,B,...]
 Bloco I (hml-16c, S6): o SEGREDO_REPASSE_CONVITES do ambiente (cofre › PhysiqCalc › "Physiq — SEGREDO_REPASSE_CONVITES (hml-16c)");
-sem ele, o legado (reserva até o F7).
+sem ele, o I1 e o I3 saem ❌ (a alunos recusa).
 """
 from __future__ import annotations
 

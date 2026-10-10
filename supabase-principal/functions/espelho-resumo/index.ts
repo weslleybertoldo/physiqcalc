@@ -1,8 +1,8 @@
 // Physiq W2 — espelho-resumo (banco principal). Devolve o resumo do núcleo de uma pessoa (master?, contas em que é
 // membro e com quais papéis, matrículas de aluno e, se é personal, os alunos de treino dela) pra trocar-token aplicar
 // no Banco do Treino (spec §7.4). Só o servidor chama: autenticação pelo segredo da finalidade (hml-16c, S4) — a trocar-token
-// manda SEGREDO_ESPELHO_RESUMO; aqui fica só o hash, em SEGREDO_ESPELHO_RESUMO_ACEITOS (_shared/segredo-servidor.ts; até o F7,
-// também o legado ESPELHO_SEGREDO). Aceitou → log segredo_aceito (acao espelho_resumo, resultado lista | legado).
+// manda SEGREDO_ESPELHO_RESUMO; aqui fica só o hash, em SEGREDO_ESPELHO_RESUMO_ACEITOS (_shared/segredo-servidor.ts). Aceitou →
+// log segredo_aceito (acao espelho_resumo, resultado lista).
 //
 // POST, headers: x-espelho-segredo · x-schema: public|staging. Corpo: { principal_user_id }.
 // 200 → ResumoNucleo · 404 usuario_nao_encontrado · 401 segredo_invalido · 500 erro_interno.

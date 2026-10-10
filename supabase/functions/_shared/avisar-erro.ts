@@ -7,8 +7,8 @@
 //   import { avisarErro } from "../_shared/avisar-erro.ts";
 //   const log = criarLog("trocar-token", { avisar: avisarErro });
 // POST ${PRINCIPAL_URL}/functions/v1/erro-avisar com x-espelho-segredo e x-schema; 5 s; nunca derruba a função. Segredos:
-// PRINCIPAL_URL e SEGREDO_AVISO_ERRO (hml-16c, S7: o segredo desta finalidade, que a erro-avisar confere pelo hash; até o F7,
-// sem ele, o legado ESPELHO_SEGREDO — _shared/segredo-servidor.ts).
+// PRINCIPAL_URL e SEGREDO_AVISO_ERRO (hml-16c, S7: o segredo desta finalidade, que a erro-avisar confere pelo hash —
+// _shared/segredo-servidor.ts; sem ele, sem_configuracao e nenhum pedido).
 // Sem import de URL e com as variáveis lidas na hora (o Vitest importa este arquivo: src/lib/erroAvisarServidor.test.ts).
 import { assinatura, criarTrava, type ErroParaAviso, type SchemaAviso } from "./erros.ts";
 import { criarLog } from "./log.ts";

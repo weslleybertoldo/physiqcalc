@@ -18,8 +18,7 @@
 // verify_jwt = false (o erro pode acontecer antes do login). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions erro-avisar false
 // Segredos: TELEGRAM_BOT_TOKEN, ERROS_TELEGRAM_CHAT, ERROS_TELEGRAM_TOPICO (opcional), ERROS_AVISO_DESLIGADO (opcional),
-// SEGREDO_AVISO_ERRO_ACEITOS (até o F7, também o legado ESPELHO_SEGREDO) (+ os automáticos). Banco:
-// supabase-principal/migrations/20261008110000_hml10_avisos_erro.sql.
+// SEGREDO_AVISO_ERRO_ACEITOS (+ os automáticos). Banco: supabase-principal/migrations/20261008110000_hml10_avisos_erro.sql.
 import { avisarErro, enviarAviso } from "../_shared/avisar-erro.ts";
 import { atenderPedido } from "../_shared/erro-avisar-regras.ts";
 import { criarLog, emSegundoPlano } from "../_shared/log.ts";

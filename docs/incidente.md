@@ -50,9 +50,10 @@ O controlador é quem decide sobre o dado. É ele quem avisa a ANPD e as pessoas
   `gerar` → `aceitar` e publicar o receptor → `trocar` e publicar o emissor → `conferir` → `aceitar --so-atual` e publicar o
   receptor de novo (o valor anterior deixa de valer). Valor vazado: o mesmo caminho; para cortá-lo antes,
   `aceitar --so-atual --forcar` (o canal falha até o `trocar` e a publicação do emissor).
-- Até o fim da troca da hml-16c ainda existe o legado `ESPELHO_SEGREDO` (funções dos 2 projetos, Vault `physiq_espelho_segredo`,
-  `~/.physiq-espelho-segredo`), aceito pelos 8 receptores. Vazou: apagar nos 2 projetos e no Vault; o canal que ainda não
-  trocou para até trocar. Enquanto ele existe, a volta de um canal é o `tirar` (o emissor volta ao legado).
+- O segredo único de antes (`ESPELHO_SEGREDO`) foi APOSENTADO na hml-16c (10/10/2026): saiu das funções dos 2 projetos e do
+  Vault, os 8 receptores o recusam e o código não o conhece mais (guarda no Vitest). O item dele no cofre ficou marcado
+  🔴 APOSENTADO, só como histórico. Durante uma troca, a lista do receptor aceita o atual e o anterior até o
+  `aceitar --so-atual`: um emissor que ainda manda o anterior continua passando.
 
 | Segredo | Onde está | Como trocar |
 |---|---|---|

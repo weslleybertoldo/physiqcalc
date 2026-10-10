@@ -15,8 +15,8 @@
 // verify_jwt = false (o token é do outro banco). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions trocar-token false
 // NUNCA pelo workflow deploy-function.yml (ele liga o verify_jwt e a troca passa a responder 401 pra todo mundo).
-// Segredos: PRINCIPAL_URL, PRINCIPAL_ANON_KEY, SEGREDO_ESPELHO_RESUMO (hml-16c, S4: o que a espelho-resumo do principal aceita;
-// até o F7, sem ele, o legado ESPELHO_SEGREDO — _shared/segredo-servidor.ts) (+ os automáticos do Supabase).
+// Segredos: PRINCIPAL_URL, PRINCIPAL_ANON_KEY, SEGREDO_ESPELHO_RESUMO (hml-16c, S4: o que a espelho-resumo do principal aceita —
+// _shared/segredo-servidor.ts; sem ele, 500 nao_configurada) (+ os automáticos do Supabase).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32, D3): o login tem um prazo de 35 s (o front espera 40 s) e cada chamada para fora espera no máximo o tempo do
 // destino dentro dele — GoTrue do principal 5 s, espelho-resumo 8 s, GoTrue do Treino 10 s (generate_link, verify, getUserById e

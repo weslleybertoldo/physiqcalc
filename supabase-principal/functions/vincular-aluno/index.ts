@@ -21,11 +21,11 @@
 //   app com 7 dias grátis (desvincular_do_profissional).
 // verify_jwt = false (o modo servidor não tem JWT; o app é validado aqui no GET /auth/v1/user). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions vincular-aluno false
-// Segredos: SEGREDO_REPASSE_VINCULO_ACEITOS (até o F7, também o legado ESPELHO_SEGREDO), MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (cancelar a assinatura do app) (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
+// Segredos: SEGREDO_REPASSE_VINCULO_ACEITOS, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (cancelar a assinatura do app) (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
 // pelo espelho) — e a fila espelho_pendencias leva a mudança para quem já tem vínculo.
 // hml-16c (S5): as 2 entradas do modo servidor (o vínculo e o desvincular) aceitam o segredo da finalidade — a vincular-professor
 // e a admin-delete-user do Treino mandam SEGREDO_REPASSE_VINCULO; aqui fica só o hash, em SEGREDO_REPASSE_VINCULO_ACEITOS
-// (_shared/segredo-servidor.ts). Aceitou → log segredo_aceito (acao repasse_vinculo, resultado lista | legado).
+// (_shared/segredo-servidor.ts). Aceitou → log segredo_aceito (acao repasse_vinculo, resultado lista).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts; os catches que devolvem 500 avisam (log.excecao) com a resposta de antes.
 // hml-14 (H-32): o cancelamento da assinatura do app vai ao MP com o prazo do pedido e lança no erro do banco (o catch dele já
 // registra e responde falhas: 1, sem travar o vínculo); a prévia com erro do banco responde 500 (antes dizia "não é aluno do app").

@@ -8,8 +8,8 @@
 // o e-mail pelo Resend saindo de lá. O "link" continua daqui (o código do professor é o mesmo nos 2 bancos).
 // verify_jwt = true (chamada com o token do Treino do professor). Publicar:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions professor-convites true
-// Segredos: PRINCIPAL_URL, SEGREDO_REPASSE_CONVITES (hml-16c, S6: o que a alunos do principal aceita; até o F7, sem ele, o legado
-// ESPELHO_SEGREDO — _shared/segredo-servidor.ts), RESEND_* (não usados desde a W13).
+// Segredos: PRINCIPAL_URL, SEGREDO_REPASSE_CONVITES (hml-16c, S6: o que a alunos do principal aceita — _shared/segredo-servidor.ts;
+// sem ele, 500 sem_configuracao no repasse), RESEND_* (não usados desde a W13).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32): o repasse espera no máximo TEMPO_MS.principal (alunos: máx. medido 1,1 s; estourou → o 502
 // principal_indisponivel de sempre); erro do banco ao achar o professor lança → 500 (antes, 404 "nao_professor" calado).

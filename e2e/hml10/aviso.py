@@ -21,8 +21,8 @@ A prova de que a mensagem saiu são SÓ os logs da função (endpoint de logs da
 (com o message_id do Telegram), segurado ou telegram_recusou, achados pela assinatura — o 🔑 do aviso, calculado aqui do mesmo
 jeito do _shared/erros.ts. NUNCA getUpdates nem chamada nenhuma à API do Telegram (roubaria as mensagens da ponte).
 Segredo: SEGREDO_AVISO_ERRO (hml-16c, S7: o que as funções do Treino mandam) lido SÓ do ambiente (nunca de arquivo; nunca
-gravado nem impresso). No cofre B Code Segredos › PhysiqCalc: o item "Physiq — SEGREDO_AVISO_ERRO (hml-16c)". Sem ele, o
-ESPELHO_SEGREDO do ambiente (o legado; reserva até o F7). Sem nenhum, os casos que o usam saem ❌ e o resto roda.
+gravado nem impresso). No cofre B Code Segredos › PhysiqCalc: o item "Physiq — SEGREDO_AVISO_ERRO (hml-16c)". Sem ele, os
+casos que o usam saem ❌ e o resto roda.
 Cada execução põe uma marca nova (letras) na mensagem: a assinatura é nova e a trava de 10 min não segura o 1º envio. O
 excecao tem a mensagem fixa do servidor: repetido em menos de 10 min, o aviso sai "segurado" (vale: o caminho do catch chegou
 ao aviso).
@@ -201,7 +201,7 @@ def main() -> int:
     desconhecidos = [c for c in so if c not in CASOS]
     if desconhecidos:
         ap.error(f"caso desconhecido: {', '.join(desconhecidos)} (os casos: {', '.join(CASOS)})")
-    segredo = segredo_do_ambiente("SEGREDO_AVISO_ERRO", arquivo_legado=False)  # S7; sem ele, o ESPELHO_SEGREDO (F1, sai no F7)
+    segredo = segredo_do_ambiente("SEGREDO_AVISO_ERRO")  # S7 (hml-16c); sem ele, ""
     errado = secrets.token_hex(32)  # um segredo errado do mesmo tamanho, feito na hora (nunca um literal)
     while errado == segredo:
         errado = secrets.token_hex(32)
@@ -213,8 +213,7 @@ def main() -> int:
     def falta_segredo(caso: str) -> bool:
         if len(segredo) >= 32:
             return False
-        o.ok(False, f"{caso}: falta SEGREDO_AVISO_ERRO no ambiente (cofre: \"{ITEM_DO_COFRE}\"; até o F7 o ESPELHO_SEGREDO "
-                    "também serve) — caso não rodou")
+        o.ok(False, f"{caso}: falta SEGREDO_AVISO_ERRO no ambiente (cofre: \"{ITEM_DO_COFRE}\") — caso não rodou")
         return True
 
     def confere_aviso(rotulo: str, sig: str, desde: dt.datetime, esperado: set[str], texto: str) -> None:

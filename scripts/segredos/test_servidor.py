@@ -8,6 +8,7 @@ import contextlib
 import copy
 import io
 import os
+import re
 import sys
 import tempfile
 import textwrap
@@ -20,19 +21,13 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import servidor as S  # noqa: E402
 
-LEGADO_FALSO = S.valor_novo()
-
 
 class RemotoFalso:
     """Guarda os VALORES, mas devolve só o que a API de verdade devolve (o digest dos segredos; do Vault, só bate/tamanho)."""
 
-    def __init__(self, legado: bool = True) -> None:
+    def __init__(self) -> None:
         self.funcoes: dict[str, dict[str, str]] = {"principal": {}, "treino": {}}
         self.vault: dict[str, str] = {}
-        if legado:
-            for lado in self.funcoes:
-                self.funcoes[lado][S.LEGADO] = LEGADO_FALSO
-            self.vault[S.VAULT_LEGADO] = LEGADO_FALSO
         self.itens: dict[str, dict] = {}
         self.gravacoes: list[tuple] = []
 
@@ -60,10 +55,6 @@ class RemotoFalso:
     def vault_gravar(self, nome, valor):
         self.gravacoes.append(("VAULT", nome))
         self.vault[nome] = valor
-
-    def vault_apagar(self, nome):
-        self.gravacoes.append(("VAULT-DEL", nome))
-        self.vault.pop(nome, None)
 
     def cofre_ler(self, item):
         campos = copy.deepcopy(self.itens.get(item))
@@ -183,6 +174,7 @@ class Fluxos(Base):
         self.assertEqual(rc, 0, saida)
         self.assertIn("só o atual", saida)
         self.assertIn(S.sha8(atual), saida)
+        self.assertNotIn("legado", saida)  # o conferir não mostra mais as linhas do segredo de antes
 
     def test_trocar_sem_a_lista_para_sem_gravar(self):
         f = S.FINALIDADES["espelho_resumo"]
@@ -222,25 +214,55 @@ class Fluxos(Base):
         self.assertEqual(self.anterior(f), em_uso)  # o valor em uso continua no cofre
         self.assertEqual(self.rodar("conta_treino", "gerar", "--forcar")[0], 0)
 
-    def test_tirar_lista_e_tirar(self):
+    def test_tirar_lista(self):
         f = S.FINALIDADES["repasse_convites"]
         self.ciclo("repasse_convites")
-        rc, _ = self.rodar("repasse_convites", "tirar-lista")
-        self.assertEqual(rc, 1)
-        self.assertIn(f.lista, self.r.funcoes["principal"])
-        self.assertEqual(self.rodar("repasse_convites", "tirar")[0], 0)
-        self.assertNotIn(f.segredo, self.r.funcoes["treino"])
-        self.assertEqual(self.rodar("repasse_convites", "tirar-lista")[0], 0)
-        self.assertNotIn(f.lista, self.r.funcoes["principal"])
-        self.assertEqual(self.rodar("repasse_convites", "tirar")[0], 0)  # de novo: nada a fazer
-
-    def test_tirar_sem_legado_e_recusado(self):
-        self.r = RemotoFalso(legado=False)
-        self.ciclo("repasse_vinculo")
-        rc, saida = self.rodar("repasse_vinculo", "tirar")
+        rc, saida = self.rodar("repasse_convites", "tirar-lista")  # o emissor ainda manda: o canal pararia
         self.assertEqual(rc, 1, saida)
-        self.assertIn(S.FINALIDADES["repasse_vinculo"].segredo, self.r.funcoes["treino"])
-        self.assertEqual(self.rodar("repasse_vinculo", "tirar", "--forcar")[0], 0)
+        self.assertIn("Nada mudou", saida)
+        self.assertIn(f.lista, self.r.funcoes["principal"])
+        del self.r.funcoes["treino"][f.segredo]  # o emissor deixou de mandar (à mão: o script não apaga o SEGREDO_X)
+        rc, saida = self.rodar("repasse_convites", "tirar-lista")
+        self.assertEqual(rc, 0, saida)
+        self.assertNotIn(f.lista, self.r.funcoes["principal"])
+        self.assertIn("o receptor recusa tudo", saida)
+        self.assertEqual(self.rodar("repasse_convites", "tirar-lista")[0], 0)  # de novo: nada a fazer
+
+    def test_tirar_lista_forcar_corta_o_canal(self):
+        f = S.FINALIDADES["repasse_vinculo"]
+        self.ciclo("repasse_vinculo")
+        rc, saida = self.rodar("repasse_vinculo", "tirar-lista", "--forcar")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("o canal para", saida)
+        self.assertNotIn(f.lista, self.r.funcoes["principal"])
+        self.assertIn(f.segredo, self.r.funcoes["treino"])  # o emissor fica como está
+
+    def test_o_tirar_e_o_legado_sairam(self):
+        self.assertEqual(S.SUBCOMANDOS, ("gerar", "aceitar", "trocar", "tirar-lista", "conferir"))
+        self.assertEqual(set(S.ACOES), set(S.SUBCOMANDOS))
+        for nome in ("tirar", "legado_txt", "LEGADO", "VAULT_LEGADO", "sql_vault_apagar"):
+            self.assertFalse(hasattr(S, nome), nome)
+        self.assertFalse(hasattr(S.Remoto, "vault_apagar"))
+        self.assertIsNone(re.search(r"\btirar\b(?!-)", S.__doc__ or ""))  # o docstring só fala do tirar-lista
+        self.assertNotIn("legado", (S.__doc__ or "").lower())
+        erro = io.StringIO()
+        with contextlib.redirect_stderr(erro), self.assertRaises(SystemExit) as fim:
+            S.argumentos(["aviso_erro", "tirar"])
+        self.assertEqual(fim.exception.code, 2)
+        self.assertIn("tirar", erro.getvalue())
+
+    def test_conferir_sem_emissor_e_sem_lista(self):
+        self.rodar("espelho_resumo", "gerar")
+        rc, saida = self.rodar("espelho_resumo", "conferir")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("não existe (o emissor não manda nada: sem configuração)", saida)
+        self.assertIn("não existe (o receptor recusa tudo)", saida)
+        self.assertNotIn("legado", saida)
+        self.rodar("espelho_fila", "gerar")
+        rc, saida = self.rodar("espelho_fila", "conferir")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("não existe (o banco não chama a espelho-enviar: a fila espera)", saida)
+        self.assertNotIn("legado", saida)
 
     def test_conferir_acusa_emissor_diferente(self):
         f = S.FINALIDADES["espelho_nucleo"]
@@ -266,10 +288,10 @@ class Fluxos(Base):
         rc, saida = self.rodar("espelho_fila", "conferir")
         self.assertEqual(rc, 0, saida)
         self.assertIn("igual ao cofre", saida)
-        self.assertEqual(self.rodar("espelho_fila", "tirar-lista")[0], 1)  # o Vault novo ainda manda
-        self.assertEqual(self.rodar("espelho_fila", "tirar")[0], 0)
-        self.assertNotIn(f.vault, self.r.vault)
-        self.assertIn(S.VAULT_LEGADO, self.r.vault)
+        self.assertNotIn("legado", saida)
+        self.assertEqual(self.rodar("espelho_fila", "tirar-lista")[0], 1)  # o Vault ainda manda: o canal pararia
+        self.assertIn(f.lista, self.r.funcoes["principal"])
+        self.assertEqual(self.r.vault, {f.vault: atual})  # só o Vault da fila
 
     def test_erro_da_api_que_ecoa_o_valor_sai_limpo(self):
         self.rodar("aviso_erro", "gerar")
@@ -288,8 +310,11 @@ class Fluxos(Base):
         with mock.patch.object(S, "Remoto", side_effect=AssertionError("o dry-run criou o Remoto")):
             for chave in S.FINALIDADES:
                 for sub in S.SUBCOMANDOS:
-                    with contextlib.redirect_stdout(io.StringIO()):
+                    buf = io.StringIO()
+                    with contextlib.redirect_stdout(buf):
                         self.assertEqual(S.main([chave, sub, "--dry-run"]), 0)
+                    self.assertNotIn("legado", buf.getvalue(), f"{chave} {sub}")
+                    self.assertIsNone(re.search(r"\btirar\b(?!-)", buf.getvalue()), f"{chave} {sub}")
 
 
 MCP_FALSO = textwrap.dedent('''
@@ -338,7 +363,7 @@ class CofreRemotoFalso(S.Remoto):
     def __init__(self) -> None:
         super().__init__()
         self.f = RemotoFalso()
-        for nome in ("segredos", "gravar_segredo", "apagar_segredos", "vault_estado", "vault_existe", "vault_gravar", "vault_apagar"):
+        for nome in ("segredos", "gravar_segredo", "apagar_segredos", "vault_estado", "vault_existe", "vault_gravar"):
             setattr(self, nome, getattr(self.f, nome))
 
 

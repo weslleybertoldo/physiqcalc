@@ -12,11 +12,11 @@
 // 200 → { ok: true, ... } · 4xx → { ok: false, erro, ... } (limite_plano leva limite, em_uso, sou_dono e dono_nome)
 // verify_jwt = false (público e servidor não têm JWT de pessoa; o app é validado aqui no GET /auth/v1/user). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions alunos false
-// Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL, SEGREDO_REPASSE_CONVITES_ACEITOS (até o F7, também o legado ESPELHO_SEGREDO),
-// TURNSTILE_SECRET, MP_ACCESS_TOKEN_PROD/_TEST (+ os automáticos).
+// Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL, SEGREDO_REPASSE_CONVITES_ACEITOS, TURNSTILE_SECRET, MP_ACCESS_TOKEN_PROD/_TEST
+// (+ os automáticos).
 // hml-16c (S6): o repasse aceita o segredo da finalidade — a professor-convites do Treino manda SEGREDO_REPASSE_CONVITES; aqui fica
 // só o hash, em SEGREDO_REPASSE_CONVITES_ACEITOS (_shared/segredo-servidor.ts). Aceitou → log segredo_aceito (acao
-// repasse_convites, resultado lista | legado).
+// repasse_convites, resultado lista).
 // hml-10 (H-24, H-25, H-26): log em JSON pelo _shared/log.ts (do Resend e do captcha, só o status e os códigos — nunca o corpo);
 // sem reserva com valor de produção (sem RESEND_FROM ou, na produção, sem SITE_URL o e-mail do convite não sai: o mesmo
 // "sem_resend" de sempre, + log.erro); o catch final avisa (log.excecao) e devolve o mesmo 500.

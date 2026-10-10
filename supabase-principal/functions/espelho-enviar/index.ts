@@ -5,13 +5,12 @@
 //
 // POST, headers: x-espelho-segredo · x-schema: public|staging. Corpo: { limite?: 1..50 } (padrão 20).
 // Segredos por finalidade (hml-16c): RECEBE o S8 — o banco (espelho_disparar, pg_net) manda o do Vault; aqui fica só o hash, em
-// SEGREDO_ESPELHO_FILA_ACEITOS (_shared/segredo-servidor.ts; até o F7, também o legado ESPELHO_SEGREDO); aceitou → log
-// segredo_aceito (acao espelho_fila, resultado lista | legado). MANDA o S1 à espelho-nucleo: SEGREDO_ESPELHO_NUCLEO (sem ele,
-// até o F7, o legado; sem nenhum → 500 nao_configurada, antes de mexer na fila).
+// SEGREDO_ESPELHO_FILA_ACEITOS (_shared/segredo-servidor.ts); aceitou → log segredo_aceito (acao espelho_fila, resultado lista).
+// MANDA o S1 à espelho-nucleo: SEGREDO_ESPELHO_NUCLEO (sem ele → 500 nao_configurada, antes de mexer na fila).
 // Quem chama: os gatilhos/tarefas das próximas worktrees (W4 tarefa das 03:40, W5 membros) ou à mão.
 // verify_jwt = false. Publicar (a partir do physiqcalc):
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions espelho-enviar false
-// Segredos: SEGREDO_ESPELHO_FILA_ACEITOS, SEGREDO_ESPELHO_NUCLEO (até o F7, também o legado ESPELHO_SEGREDO), TREINO_URL.
+// Segredos: SEGREDO_ESPELHO_FILA_ACEITOS, SEGREDO_ESPELHO_NUCLEO, TREINO_URL.
 // hml-10 (H-24, H-26, H-48): log em JSON pelo _shared/log.ts; a espelho-nucleo que recusa vira o código espelho_nucleo_<status>
 // (sem o corpo dela — o mesmo texto vai para espelho_pendencias.erro); a resposta de erro leva só o código (sem a mensagem do
 // banco); cada pendência que falha avisa (log.excecao).

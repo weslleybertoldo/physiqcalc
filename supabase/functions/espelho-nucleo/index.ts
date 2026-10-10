@@ -4,8 +4,8 @@
 //
 // POST, headers: x-espelho-segredo · x-schema: public|staging. Corpo: { resumos: ResumoNucleo[] } (até 50).
 // Segredo da finalidade (hml-16c, S1): a espelho-enviar do principal manda SEGREDO_ESPELHO_NUCLEO; aqui fica só o hash, em
-// SEGREDO_ESPELHO_NUCLEO_ACEITOS (_shared/segredo-servidor.ts; até o F7, também o legado ESPELHO_SEGREDO). Aceitou → log
-// segredo_aceito (acao espelho_nucleo, resultado lista | legado).
+// SEGREDO_ESPELHO_NUCLEO_ACEITOS (_shared/segredo-servidor.ts). Aceitou → log segredo_aceito (acao espelho_nucleo, resultado
+// lista).
 // Quem ainda não tem vínculo (nunca entrou no Physiq) é pulado: a trocar-token aplica tudo no 1º login.
 // verify_jwt = false (autenticação pelo segredo da finalidade). Publicar:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions espelho-nucleo false
