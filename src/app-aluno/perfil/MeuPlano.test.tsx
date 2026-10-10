@@ -49,7 +49,7 @@ async function meuPlanoDoBuild(schema: "staging" | "public") {
 function montar(Tela: ComponentType) {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={["/perfil/meu-plano"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/perfil/meu-plano"]}>
         <Routes>
           <Route path="*" element={<Tela />} />
         </Routes>

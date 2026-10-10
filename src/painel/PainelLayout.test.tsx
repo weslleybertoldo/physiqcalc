@@ -74,7 +74,7 @@ function abrir(caminho: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[caminho]}>
+      <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
         <Routes>
           <Route path="/painel/*" element={<RotasPainel />} />
         </Routes>

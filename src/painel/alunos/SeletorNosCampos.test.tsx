@@ -37,7 +37,7 @@ const ZE = aluno({ id: "ze", nome: "Zé Último", email: null, telefone: "829888
 
 function montar(el: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={qc}><MemoryRouter useTransitions={false}>{el}</MemoryRouter></QueryClientProvider>);
 }
 const raiz = (campo: string) => document.querySelector(`[data-seletor-aluno="${campo}"]`);
 async function escolherNaBusca(campo: string, id: string) {

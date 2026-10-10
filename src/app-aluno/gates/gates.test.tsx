@@ -20,7 +20,7 @@ const sair = vi.fn(async () => {});
 const tentar = vi.fn();
 function montar(Gate: React.ComponentType<{ children: React.ReactNode }>, caminho = "/treino") {
   return render(
-    <MemoryRouter initialEntries={[caminho]}>
+    <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
       <Routes>
         <Route path="/boas-vindas" element={<div>tela boas-vindas</div>} />
         <Route path="*" element={<Gate><div>o app</div></Gate>} />

@@ -94,7 +94,7 @@ function montar(rota = "/painel/dietas") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[rota]}>
+      <MemoryRouter useTransitions={false} initialEntries={[rota]}>
         <Dietas />
         <Endereco />
       </MemoryRouter>

@@ -48,7 +48,7 @@ function abrir(no: React.ReactNode, caminho = "/painel") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[caminho]}>{no}<Endereco /></MemoryRouter>
+      <MemoryRouter useTransitions={false} initialEntries={[caminho]}>{no}<Endereco /></MemoryRouter>
     </QueryClientProvider>,
   );
 }

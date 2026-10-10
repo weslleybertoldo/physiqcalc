@@ -29,7 +29,7 @@ function Onde() {
 type Entrada = string | { pathname: string; state?: unknown; hash?: string };
 function abrir(entrada: Entrada, antes: Entrada[] = []) {
   return render(
-    <MemoryRouter initialEntries={[...antes, entrada]} initialIndex={antes.length}>
+    <MemoryRouter useTransitions={false} initialEntries={[...antes, entrada]} initialIndex={antes.length}>
       <Routes>
         {["/privacidade", "/termos", "/assinatura"].map((caminho) => (
           <Route key={caminho} path={caminho} element={<PaginaLegal />} />

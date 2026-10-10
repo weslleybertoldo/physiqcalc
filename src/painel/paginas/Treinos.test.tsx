@@ -163,7 +163,7 @@ function montar(rota = "/painel/treinos") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 1 } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[rota]}>
+      <MemoryRouter useTransitions={false} initialEntries={[rota]}>
         <Treinos />
         <Onde />
       </MemoryRouter>

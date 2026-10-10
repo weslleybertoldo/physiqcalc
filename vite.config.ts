@@ -78,6 +78,30 @@ function exigirSchemaDoBanco(env: Record<string, string>): Plugin {
   };
 }
 
+// hml-16d (H-79) — o bundle nunca leva teste nem o Vitest. Na vite 6 a exclusão absoluta com ** do import.meta.glob deixou de valer
+// (src/rotas/registro.ts): o build saiu com os *.test-*.js e com os testes dos globs eager DENTRO da entrada — tela preta ("Vitest
+// failed to access its internal state"). Vale em todo `vite build` (site, staging, APK, loja). Falhar aqui é seguro: a Vercel fica no
+// deploy anterior e o CI não solta APK nem AAB. (Comentário de linha de propósito: o padrão do glob tem "*" + "/" e fecharia um /** */.)
+const TESTE_DO_APP = /\/src\/.+\.(test|spec)\.[cm]?[jt]sx?$/;
+const DO_VITEST = /\/node_modules\/(vitest|@vitest)\//;
+function semTesteNoBundle(): Plugin {
+  return {
+    name: "physiq-sem-teste-no-bundle",
+    apply: "build",
+    generateBundle(_opcoes, bundle) {
+      const ruins: string[] = [];
+      for (const saida of Object.values(bundle)) {
+        if (saida.type !== "chunk") continue;
+        const modulo = Object.keys(saida.modules).find((id) => (TESTE_DO_APP.test(id) && !id.includes("/node_modules/")) || DO_VITEST.test(id));
+        if (modulo) ruins.push(`${saida.fileName} (${path.relative(process.cwd(), modulo)})`);
+      }
+      if (ruins.length > 0) {
+        this.error(`[physiq] teste ou Vitest dentro do bundle (hml-16d): ${ruins.slice(0, 5).join("; ")}${ruins.length > 5 ? ` e mais ${ruins.length - 5}` : ""}`);
+      }
+    },
+  };
+}
+
 /**
  * hml-10 (H-27) — o /health do site: o build grava health.json na raiz do dist/ (o vercel.json reescreve /health, /api/health e
  * /status para ele, sem cache). Só o que não é segredo (o repo é público): versão, commit, schema e canal do build. Nada de URL,
@@ -129,6 +153,7 @@ export default defineConfig(({ mode }) => {
     tailwindcss(),
     wasm(),
     exigirSchemaDoBanco(env),
+    semTesteNoBundle(),
     marcaDistribuicao(env.VITE_DISTRIBUICAO),
     arquivoDeSaude(env),
     VitePWA({

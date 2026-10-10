@@ -47,7 +47,7 @@ function montar(rota = "/master/biblioteca") {
     const l = useLocation();
     return <output data-endereco={l.search} />;
   }
-  return render(<QueryClientProvider client={qc}><MemoryRouter initialEntries={[rota]}><BibliotecaPage /><Endereco /></MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={qc}><MemoryRouter useTransitions={false} initialEntries={[rota]}><BibliotecaPage /><Endereco /></MemoryRouter></QueryClientProvider>);
 }
 const endereco = () => document.querySelector("[data-endereco]")?.getAttribute("data-endereco") ?? "";
 const rotulo = () => document.querySelector('[data-paginacao="master-biblioteca"] [data-paginacao-rotulo]')?.textContent;

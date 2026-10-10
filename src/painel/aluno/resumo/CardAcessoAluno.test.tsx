@@ -15,7 +15,7 @@ import CardAcessoAluno from "./CardAcessoAluno";
 // W8b — o card "Acesso do aluno" do Resumo (tela 7): o profissional cria o acesso ou uma senha nova (provisória).
 const abrir = () =>
   render(
-    <MemoryRouter>
+    <MemoryRouter useTransitions={false}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <CardAcessoAluno alunoId="t1" />
       </QueryClientProvider>

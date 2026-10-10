@@ -56,7 +56,7 @@ const NA_LOJA_NAO = /R\$|Assinar|Pix ou cartão|Atualizar para|verificar atualiz
 function montar(el: React.ReactNode, caminho = "/treino") {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={[caminho]}>
+      <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
         <Routes>
           <Route path="*" element={el} />
         </Routes>

@@ -18,7 +18,7 @@ import Privacidade from "./Privacidade";
 import { ESTADO_ABERTA_PELO_APP, FRASE_BACKUPS, SERVICOS_TERCEIROS, servicosDaVersao } from "./privacidade/textos";
 
 // Physiq W26 — as páginas públicas novas (C13, C63): /privacidade = /termos e /calculator, sem login, na marca Physiq.
-const abrir = (no: React.ReactNode, caminho: string) => render(<MemoryRouter initialEntries={[caminho]}>{no}</MemoryRouter>);
+const abrir = (no: React.ReactNode, caminho: string) => render(<MemoryRouter useTransitions={false} initialEntries={[caminho]}>{no}</MemoryRouter>);
 const servicosNaTela = () => [...document.querySelectorAll("[data-servico]")].map((s) => s.getAttribute("data-servico"));
 
 beforeEach(() => {
@@ -104,7 +104,7 @@ describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)"
 
   it("aberta por um link do app: o Voltar volta para a tela de onde veio; sem ele, vai para o início", () => {
     render(
-      <MemoryRouter initialEntries={["/perfil", { pathname: "/privacidade", state: ESTADO_ABERTA_PELO_APP }]} initialIndex={1}>
+      <MemoryRouter useTransitions={false} initialEntries={["/perfil", { pathname: "/privacidade", state: ESTADO_ABERTA_PELO_APP }]} initialIndex={1}>
         <Routes>
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/perfil" element={<div data-tela-perfil>perfil</div>} />

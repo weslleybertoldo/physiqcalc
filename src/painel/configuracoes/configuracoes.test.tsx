@@ -68,7 +68,7 @@ function montar(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <MemoryRouter useTransitions={false}>{ui}</MemoryRouter>
     </QueryClientProvider>,
   );
 }

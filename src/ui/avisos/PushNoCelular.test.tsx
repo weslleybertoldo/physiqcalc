@@ -43,7 +43,7 @@ function montar({ agenda = true }: { agenda?: boolean } = {}) {
   if (agenda) qc.setQueryData(["agenda-aluno", "u1"], [], { updatedAt: Date.now() - 5000 });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/inicio"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/inicio"]}>
         <PushNoCelular />
         <Routes>
           <Route path="*" element={<Onde />} />

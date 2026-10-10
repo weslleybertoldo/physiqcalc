@@ -10,7 +10,7 @@ import { LinksPrivacidade } from "./LinksPrivacidade";
 // W3 da loja — os links da política dentro do app: abrem a página pública na mesma janela e o "Voltar" dela volta para a tela do app
 function montar(inicio = "/perfil") {
   return render(
-    <MemoryRouter initialEntries={[inicio]}>
+    <MemoryRouter useTransitions={false} initialEntries={[inicio]}>
       <Routes>
         <Route path="/perfil" element={<div data-tela-perfil><LinksPrivacidade /></div>} />
         <Route path="/privacidade" element={<Privacidade />} />

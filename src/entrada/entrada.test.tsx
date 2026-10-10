@@ -37,7 +37,7 @@ const EMAIL = "conta@teste.com";
 const ERRO_CREDENCIAL = { erro: { status: 400, code: "invalid_credentials", message: "Invalid login credentials" } };
 // W7b: a opção "Treinar sem profissional" das Boas-vindas lê os planos do app (react-query)
 const abrir = (el: React.ReactNode) =>
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter useTransitions={false}>{el}</MemoryRouter></QueryClientProvider>);
 
 function preencher(senha = "senha-errada") {
   fireEvent.change(screen.getByPlaceholderText("voce@email.com"), { target: { value: EMAIL } });

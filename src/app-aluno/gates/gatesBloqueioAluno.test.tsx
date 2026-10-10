@@ -25,7 +25,7 @@ function OApp() {
 }
 function montar(caminho = "/treino") {
   return render(
-    <MemoryRouter initialEntries={[caminho]}>
+    <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
       <Routes>
         <Route path="*" element={<GateBloqueioAluno><OApp /></GateBloqueioAluno>} />
       </Routes>

@@ -59,7 +59,7 @@ function montar(el: ReactNode, rota: string) {
     const l = useLocation();
     return <output data-endereco={l.search} />;
   }
-  return render(<QueryClientProvider client={qc}><MemoryRouter initialEntries={[rota]}>{el}<Endereco /></MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={qc}><MemoryRouter useTransitions={false} initialEntries={[rota]}>{el}<Endereco /></MemoryRouter></QueryClientProvider>);
 }
 const endereco = () => document.querySelector("[data-endereco]")?.getAttribute("data-endereco") ?? "";
 const rotulo = (lista: string) => document.querySelector(`[data-paginacao="${lista}"] [data-paginacao-rotulo]`)?.textContent;

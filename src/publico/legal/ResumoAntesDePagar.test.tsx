@@ -9,7 +9,7 @@ import { VENDEDOR } from "./versao";
 // do texto, com o negrito, sem o bloco do outro público, e os links que abrem os documentos completos em outra aba.
 function abrir(tela: TelaQueVende) {
   render(
-    <MemoryRouter>
+    <MemoryRouter useTransitions={false}>
       <ResumoAntesDePagar tela={tela} />
     </MemoryRouter>,
   );

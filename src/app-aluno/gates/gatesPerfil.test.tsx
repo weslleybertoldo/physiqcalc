@@ -24,7 +24,7 @@ function OApp() {
 
 function montar(Gate: React.ComponentType<{ children: React.ReactNode }>, caminho: string) {
   return render(
-    <MemoryRouter initialEntries={[caminho]}>
+    <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
       <Routes>
         <Route path="*" element={<Gate><OApp /></Gate>} />
       </Routes>

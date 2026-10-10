@@ -22,7 +22,7 @@ let ua = ANDROID;
 
 function montar(caminho: string, state?: unknown) {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: caminho.split("?")[0], search: caminho.includes("?") ? `?${caminho.split("?")[1]}` : "", state }]}>
+    <MemoryRouter useTransitions={false} initialEntries={[{ pathname: caminho.split("?")[0], search: caminho.includes("?") ? `?${caminho.split("?")[1]}` : "", state }]}>
       <FaixaAbrirNoApp />
     </MemoryRouter>,
   );

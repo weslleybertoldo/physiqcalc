@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { LegalSituacao } from "@/nucleo/situacao";
 import { conta, situacao as fixture } from "@/test/fixturesNucleo";
 import { VERSAO_TEXTOS } from "../versao";
@@ -12,12 +12,12 @@ const h = vi.hoisted(() => ({
   situacao: null as unknown,
   online: true,
   plataforma: "site" as "site" | "app" | "loja",
-  aceitar: null as unknown as ReturnType<typeof vi.fn>,
-  recarregar: null as unknown as ReturnType<typeof vi.fn>,
-  sair: null as unknown as ReturnType<typeof vi.fn>,
-  avisar: null as unknown as ReturnType<typeof vi.fn>,
-  ultimoApk: null as unknown as ReturnType<typeof vi.fn>,
-  instalar: null as unknown as ReturnType<typeof vi.fn>,
+  aceitar: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  recarregar: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  sair: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  avisar: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  ultimoApk: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  instalar: null as unknown as Mock<(...a: unknown[]) => unknown>,
 }));
 
 vi.mock("@/nucleo/sessao", () => ({
@@ -54,7 +54,7 @@ function Onde() {
 
 function abrir(l: LegalSituacao, aoAceitar = vi.fn()) {
   render(
-    <MemoryRouter initialEntries={["/treino"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/treino"]}>
       <Routes>
         <Route path="/treino" element={<TelaDoAceite legal={l} aoAceitar={aoAceitar} />} />
         <Route path="*" element={null} />
@@ -240,7 +240,7 @@ describe("TelaDoAceite (hml-12)", () => {
     expect(el("[data-aceite-recarregar]")).toBeNull();
     expect(h.avisar).toHaveBeenCalledTimes(1);
     expect(h.avisar.mock.calls[0][0]).toMatchObject({ origem: "tela", lugar: "porta do aceite" });
-    expect(String(h.avisar.mock.calls[0][0].mensagem)).toContain("2026-01-01");
+    expect(String((h.avisar.mock.calls[0][0] as { mensagem?: unknown }).mensagem)).toContain("2026-01-01");
   });
 
   it("sem internet: a frase, sem chamar o banco; a rede caiu no meio: a mesma frase", async () => {

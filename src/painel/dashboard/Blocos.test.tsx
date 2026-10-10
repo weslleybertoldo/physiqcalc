@@ -21,7 +21,7 @@ const evento = (id: string, hora: string, modulo: EventoPainel["modulo"], tagId:
 
 function montar(eventos: EventoPainel[] | null, carregando = false) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter useTransitions={false}>
       <AgendaHoje eventos={eventos} carregando={carregando} erro={false} aoTentar={() => {}} hoje="2026-10-02" />
     </MemoryRouter>,
   );

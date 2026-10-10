@@ -21,7 +21,7 @@ function Onde() {
 }
 function montar(inicio = "/treino") {
   return render(
-    <MemoryRouter initialEntries={[inicio]}>
+    <MemoryRouter useTransitions={false} initialEntries={[inicio]}>
       <AbrirLinkDoApp />
       <Routes>
         <Route path="*" element={<Onde />} />
@@ -74,7 +74,7 @@ describe("H2 — abrir o app NA tela do link", () => {
       return <Onde />;
     }
     render(
-      <MemoryRouter initialEntries={["/"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/"]}>
         <AbrirLinkDoApp />
         <Routes>
           <Route path="/" element={<AberturaAtrasada />} />

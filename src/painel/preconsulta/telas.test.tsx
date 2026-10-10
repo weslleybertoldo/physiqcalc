@@ -67,7 +67,7 @@ function dados(p: { formularios?: FormularioPreconsulta[]; numeros?: NumerosPreC
 }
 function montar(el: React.ReactNode, rota = "/") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}><MemoryRouter initialEntries={[rota]}>{el}</MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={qc}><MemoryRouter useTransitions={false} initialEntries={[rota]}>{el}</MemoryRouter></QueryClientProvider>);
 }
 /** A aba Respostas como na página: os parâmetros são os do endereço (a página da lista também mora lá). */
 function RespostasNaRota({ ctx, d }: { ctx: ContextoPreConsulta; d: DadosPreConsulta }) {
