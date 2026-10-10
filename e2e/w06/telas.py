@@ -211,6 +211,7 @@ def caso_confirma(nav, a) -> None:
     ok = c.esperar(lambda: B.sql_principal(f"select bloquear_app_inadimplente as b from {S}.contas where id = '{m['conta_id']}'")[0]["b"] is False, 20, 1)
     p.check(ok, "e desliga de novo (a conta do Calc fica como estava: desligado)")
     c.pg.locator("[data-comprovante-pendente] [data-btn-confirmar-pix]").first.click()
+    p.check(c.confirmar_no_app(), "a confirmação do app (hml-18a) → Confirmar recebimento")
     p.check(c.esperar(lambda: c.tem("[data-recebimento-sem-pendentes]"), 60), "confirmado: nenhum comprovante aguardando")
     r = B.sql_principal(f"""select c.status, c.transacao_id is not null as lancou, p.mensalidade_pago_ate as ate, (p.mensalidade_pago_ate > '{antes}'::timestamptz) as andou
                              from {S}.cobrancas c join {S}.pacientes p on p.id = c.paciente_id where c.id = '{EST['pendente']['id']}'""")[0]
@@ -252,6 +253,7 @@ def caso_nutri(nav, a) -> None:
     p.check(len(n.trocas) == 0, f"sem troca de token do Treino ({len(n.trocas)})")
     n.print("painel_nutri_recebimento")
     n.pg.locator("[data-comprovante-pendente] [data-btn-confirmar-pix]").first.click()
+    p.check(n.confirmar_no_app(), "a confirmação do app (hml-18a) → Confirmar recebimento")
     p.check(n.esperar(lambda: n.tem("[data-recebimento-sem-pendentes]"), 60), "a nutri confirma")
     r = B.sql_principal(f"select status, pago_em is not null as pago from {S}.cobrancas where id = '{cob['id']}'")[0]
     p.check(r["status"] == "paga" and r["pago"], f"no banco: paga ({r})")

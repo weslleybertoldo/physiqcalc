@@ -519,13 +519,15 @@ if __name__ == "__main__":
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default=",".join(CASOS))
     ap.add_argument("--nutri", default="https://physiqnutri-staging.vercel.app")
+    # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo, nutri=a.nutri)
     subprocess.run([sys.executable, str(Path(__file__).parent / "massa.py")], check=True, stdout=subprocess.DEVNULL)
     ESTADO["massa"] = B.ler_json(B.SCRATCH / "massa_staging.json")
     t0 = time.time()
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
             print(f"\n══ caso {nome}", flush=True)
             try:

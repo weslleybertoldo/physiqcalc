@@ -324,6 +324,22 @@ class Caso:
         self.pg.on("dialog", lambda d: d.accept())
         ESTADO["caso"] = self
 
+    def confirmar_no_app(self, espera: float = 10.0) -> bool:
+        """hml-18a (H-40, B): a confirmação do APP (src/ui/premium/Confirmar.tsx, o AlertDialog com o verbo da ação) no lugar do
+        window.confirm. Antes o diálogo nativo era aceito sozinho (o page.on("dialog") acima); agora o teste toca no botão da ação
+        ([data-confirmar-ok]) e espera a janela sair. Chame logo depois do toque que pedia a confirmação. False = não apareceu."""
+        ok = self.pg.locator("[role=alertdialog][data-state=open] [data-confirmar-ok]").first
+        try:
+            ok.wait_for(state="visible", timeout=int(espera * 1000))
+        except Exception:  # noqa: BLE001
+            return False
+        ok.click()
+        try:
+            self.pg.locator("[role=alertdialog]").first.wait_for(state="detached", timeout=5000)
+        except Exception:  # noqa: BLE001
+            pass
+        return True
+
     def entrar(self, conta: str, rota: str, zerar: bool = True) -> dict:
         if zerar and schema() == "staging":
             zerar_limite_troca(conta)

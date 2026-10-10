@@ -348,7 +348,7 @@ def caso_biblioteca_master(nav, a) -> None:
             c.pg.locator("[data-input-busca-exercicio]").fill("W9 teste")
             c.pg.wait_for_timeout(700)
             c.pg.locator(f'[data-exercicio-linha="{r[0]["id"]}"] [data-btn-excluir-exercicio]').click()
-            c.pg.get_by_role("button", name="Excluir").last.click()
+            p.check(c.confirmar_no_app(), "excluir o global de teste: a confirmação do app (hml-18a) → Excluir")
             c.pg.wait_for_timeout(1500)
             p.check(not B.sql_treino(f"select 1 from staging.tb_exercicios where nome = '{nome_novo}'"), "o global de teste foi apagado")
     finally:

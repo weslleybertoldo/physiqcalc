@@ -221,6 +221,7 @@ def caso_meus_treinos(nav, base: str, prefixo: str, m: dict) -> None:
         ok = B.esperar(lambda: "Cadeira Extensora" in [r["nome"] for r in B.linhas_modelo(C)], 30, 2)
         p.check(bool(ok) and c.esperar(lambda: linha(c, "Cadeira Extensora").count() > 0, 20), "M14 biblioteca › Extensora entrou no C (tela e banco)")
         linha(c, "Cadeira Extensora").locator("[data-exercicio-remover]").click()
+        p.check(c.confirmar_no_app(), "M15 tirar: a confirmação do app (hml-18a) → Tirar")
         ok = B.esperar(lambda: "Cadeira Extensora" not in [r["nome"] for r in B.linhas_modelo(C)], 30, 2)
         p.check(bool(ok), "M15 tirar do treino: a Extensora saiu do C")
     finally:
@@ -245,13 +246,15 @@ def caso_quem_recebe(nav, base: str, prefixo: str, m: dict) -> None:
                 f"Q3 marcar dá o B ao Rafael (função) e ele leva a prescrição do modelo (4 × 10 · 90 s · 40 kg) → {pr}")
         c.esperar(lambda: c.pg.locator(f'[data-quem-recebe-aluno="{rafael}"]').get_attribute("data-recebe") == "1", 20)
         B.pausa(1.5)
-        c.pg.locator(f'[data-quem-recebe-aluno="{rafael}"]').click()  # tirar (confirmação aceita)
+        c.pg.locator(f'[data-quem-recebe-aluno="{rafael}"]').click()  # tirar
+        p.check(c.confirmar_no_app(), "Q4 tirar: a confirmação do app (hml-18a) → Tirar")
         ok = B.esperar(lambda: not B.recebe(Bg, rafael), 40, 2)
         p.check(bool(ok), "Q4 desmarcar tira o B do Rafael (sai da semana e das trocas — W15)")
         # Aplicar a quem recebe (A): o Supino Reto do Rafael (5 × 6) fica, o vazio entra
         p.check(abrir_aba_modelo(c, B.TREINO_A), "Q5 aba A")
         c.esperar(lambda: c.tem("[data-quem-recebe-aplicar]"), 30)
         c.pg.locator("[data-quem-recebe-aplicar]").click()
+        p.check(c.confirmar_no_app(), "Q5 aplicar: a confirmação do app (hml-18a) → Levar para N alunos")
         ok = B.esperar(lambda: len(B.prescricao_aluno(rafael, A)) == 5, 40, 2)
         pa = B.prescricao_aluno(rafael, A)
         s = pa.get("Supino Reto com Barra") or {}
@@ -292,6 +295,7 @@ def caso_pastas(nav, base: str, prefixo: str, m: dict) -> None:
         c.pg.keyboard.press("Escape")
         c.pg.wait_for_timeout(600)
         c.pg.locator("[data-pasta-excluir]").click()
+        p.check(c.confirmar_no_app(), "P5 excluir a pasta: a confirmação do app (hml-18a) → Excluir")
         ok = B.esperar(lambda: not B.sql_treino(f"select 1 from {S}.tb_pastas_treino where nome = 'Pasta Teste W23' and professor_id = '{lucas}'"), 30, 2)
         ficou = B.sql_treino(f"select 1 from {S}.tb_grupos_treino where id = '{gid}'")
         p.check(bool(ok) and bool(ficou), "P5 Excluir a pasta: a pasta sai e o treino FICA")
@@ -301,6 +305,7 @@ def caso_pastas(nav, base: str, prefixo: str, m: dict) -> None:
         c.pg.locator(f'[data-modelo="{gid}"]').click()
         c.esperar(lambda: c.pg.locator("[data-modelo-detalhe]").get_attribute("data-modelo-nome") == "D · Ombros e abdômen W23", 20)
         c.pg.locator("[data-modelo-excluir]").click()
+        p.check(c.confirmar_no_app(), "P6 excluir o treino: a confirmação do app (hml-18a) → Excluir")
         ok = B.esperar(lambda: not B.sql_treino(f"select 1 from {S}.tb_grupos_treino where id = '{gid}'"), 30, 2)
         p.check(bool(ok), "P6 Excluir o treino")
     finally:
@@ -573,13 +578,15 @@ def main() -> int:
     ap.add_argument("--base", default="http://localhost:5173")
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--so", default="", help="rodar só os casos (vírgula): meus,quem,pastas,global,biblioteca,historico,link,negativos,faixa")
+    # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     so = set(filter(None, a.so.split(",")))
     quer = lambda k: not so or k in so  # noqa: E731
     B.saude_ok("a massa")
     m = massa()
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
         try:
             if quer("meus"):
                 caso_meus_treinos(nav, a.base, a.prefixo, m)
