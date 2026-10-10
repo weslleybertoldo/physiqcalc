@@ -12,9 +12,10 @@ produção, o alvo dos pedidos e o SQL só leitura) e acrescenta:
               todo .truncate e [data-*-nome])
   · Aberturas as 60 da spec (personal, nutri, aluna, paciente) + as 11 do master (só no staging/local), com a rota final esperada
   · Rodada    o placar pelo Placar do e2e/w02/_comum.py (o fim() grava a rodada no e2e-rodadas.tsv) + a cópia da saída em hml18/agente/
-  · Master    no máximo 4 logins no contrato: a sessão da w27-master fica guardada (600, no TMPDIR) e a próxima rodada a reusa (o
-              access token vale 1 h; perto de vencer, o refresh — que não é login); no fim de cada rodada a sessão MAIS NOVA do
-              navegador volta para o arquivo (o app renova o refresh token). O logout dela é o --sair-master (no fim do contrato)
+  · Master    poucos logins (o teto do contrato: HML18_MASTER_MAX_LOGINS, padrão 4, contados em HML18_MASTER_REGISTRO, padrão
+              agente/master_logins.txt): a sessão da w27-master fica guardada (600, no TMPDIR) e a próxima rodada a reusa (o access
+              token vale 1 h; perto de vencer, o refresh — que não é login); no fim de cada rodada a sessão MAIS NOVA do navegador
+              volta para o arquivo (o app renova o refresh token). O logout dela é o --sair-master (no fim do contrato)
 Bases: local (o vite preview do build de STAGING em http://localhost:8080 — a porta que as funções aceitam) · staging · prod (SÓ
 LEITURA: a Guarda no navegador; as contas de teste de lá; nada de master nem de massa).
 Sem segredo nem dado pessoal na saída: só contagem, status, px, ms, classe e nome de atributo.
@@ -189,8 +190,10 @@ def conferir_build(R: Rodada, nav, base: str, producao: bool) -> bool:
 
 
 # ───────────────────────── logins (master: 1 por janela de 1 h) ─────────────────────────
+# o registro e o teto de logins da master são do contrato de cada agente (o do agente A: 4, em agente/master_logins.txt)
 ARQ_MASTER = TMP / "hml18_sessao_w27-master.json"
-REG_MASTER = SAIDA / "master_logins.txt"
+REG_MASTER = Path(os.environ.get("HML18_MASTER_REGISTRO") or (SAIDA / "master_logins.txt"))
+MAX_MASTER = int(os.environ.get("HML18_MASTER_MAX_LOGINS") or "4")
 
 
 def _refresh(sessao: dict) -> dict | None:
@@ -224,12 +227,12 @@ class Logins(B17.Logins):
             s = _refresh(s)
         if not s:
             n = len(REG_MASTER.read_text(encoding="utf-8").splitlines()) if REG_MASTER.exists() else 0
-            if n >= 4:
-                raise SystemExit("master: os 4 logins do contrato já foram usados — sem sessão guardada válida")
+            if n >= MAX_MASTER:
+                raise SystemExit(f"master: os {MAX_MASTER} logins do contrato já foram usados ({REG_MASTER}) — sem sessão guardada válida")
             s = B5.sessao(conta)
             REG_MASTER.parent.mkdir(parents=True, exist_ok=True)
             with REG_MASTER.open("a", encoding="utf-8") as f:
-                f.write(f"master login {n + 1}/4 {time.strftime('%H:%M:%S')} ({self.motivo})\n")
+                f.write(f"master login {n + 1}/{MAX_MASTER} {time.strftime('%H:%M:%S')} ({self.motivo})\n")
         self.guardar_master(s)
         self.por_conta[conta] = s
         self.master_usado = True
@@ -493,7 +496,7 @@ JS_TOCAVEIS = r"""() => {
   const transicao = {};
   for (const [k, s] of Object.entries(grupos)) { const els = [...document.querySelectorAll(s)].filter(e => e.getClientRects().length);
     transicao[k] = { total: els.length, com: els.filter(dur).length }; }
-  const cs = getComputedStyle(document.body), b0 = t.find(e => e.tagName === 'BUTTON');
+  const cs = getComputedStyle(document.body), b0 = t.find(e => e.tagName === 'BUTTON') || t[0];  // tela só com links: o 1º tocável
   return { total: t.length, fora: todos.length - t.length, ativo: t.length - sem.length, semAtivo, regras: bases.length,
     transicao_todos: t.filter(dur).length, transicao,
     touch: b0 ? getComputedStyle(b0).touchAction : '-', tap: b0 ? getComputedStyle(b0).webkitTapHighlightColor : '-',
