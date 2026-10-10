@@ -4,11 +4,12 @@
 //
 // Physiq W13 — os convites de ALUNO passaram para o banco principal (a lista nova do painel e o aceite no 1º login com aquele
 // e-mail, C7). Esta função fica no ar para o APK antigo (≤ 3.15, a lista antiga do Calc) e REPASSA email/list/revoke/resend para a
-// função alunos do principal (modo servidor, ESPELHO_SEGREDO) — com o LIMITE DA FAIXA da conta (C96, spec 6.4), o P7 e o e-mail
-// pelo Resend saindo de lá. O "link" continua daqui (o código do professor é o mesmo nos 2 bancos).
+// função alunos do principal (modo servidor, SEGREDO_REPASSE_CONVITES) — com o LIMITE DA FAIXA da conta (C96, spec 6.4), o P7 e
+// o e-mail pelo Resend saindo de lá. O "link" continua daqui (o código do professor é o mesmo nos 2 bancos).
 // verify_jwt = true (chamada com o token do Treino do professor). Publicar:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions professor-convites true
-// Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2), RESEND_* (não usados desde a W13).
+// Segredos: PRINCIPAL_URL, SEGREDO_REPASSE_CONVITES (hml-16c, S6: o que a alunos do principal aceita; até o F7, sem ele, o legado
+// ESPELHO_SEGREDO — _shared/segredo-servidor.ts), RESEND_* (não usados desde a W13).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32): o repasse espera no máximo TEMPO_MS.principal (alunos: máx. medido 1,1 s; estourou → o 502
 // principal_indisponivel de sempre); erro do banco ao achar o professor lança → 500 (antes, 404 "nao_professor" calado).
@@ -18,6 +19,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { TEMPO_MS, buscarComTempo, tempoEsgotado } from "../_shared/tempo.ts";
+import { segredoParaEnviar } from "../_shared/segredo-servidor.ts";
 
 const log = criarLog("professor-convites", { avisar: avisarErro });
 
@@ -59,7 +61,7 @@ function jsonErr(msg: string, status: number, origin: string | null) {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+const SEGREDO_REPASSE_CONVITES = segredoParaEnviar("SEGREDO_REPASSE_CONVITES");
 function adminClient() { return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: currentSchema() } }); }
 
 // ---- Physiq W13: repasse dos convites de aluno para o banco principal (função alunos, modo servidor) ----
@@ -83,7 +85,7 @@ function statusParaApkAntigo(status: unknown): "pendente" | "aceito" | "revogado
   return status === "aceito" ? "aceito" : status === "pendente" ? "pendente" : "revogado";
 }
 async function repassarAoPrincipal(treinoUserId: string, corpo: Record<string, unknown>): Promise<{ status: number; corpo: Record<string, unknown> }> {
-  if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return { status: 500, corpo: { ok: false, erro: "sem_configuracao" } };
+  if (!PRINCIPAL_URL || !SEGREDO_REPASSE_CONVITES) return { status: 500, corpo: { ok: false, erro: "sem_configuracao" } };
   const { data: v, error: ev } = await adminClient().from("physiq_identidades").select("principal_user_id").eq("treino_user_id", treinoUserId).maybeSingle();
   if (ev) throw ev; // o catch do pedido responde 500
   const principalId = (v as { principal_user_id?: string } | null)?.principal_user_id;
@@ -91,7 +93,7 @@ async function repassarAoPrincipal(treinoUserId: string, corpo: Record<string, u
   try {
     const r = await buscarComTempo(`${PRINCIPAL_URL}/functions/v1/alunos`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
+      headers: { "Content-Type": "application/json", "x-espelho-segredo": SEGREDO_REPASSE_CONVITES, "x-schema": currentSchema() },
       body: JSON.stringify({ acao: "repasse", principal_user_id: principalId, ...corpo }),
     }, TEMPO_MS.principal);
     // o tempo vale até ler o corpo: estourou no meio dele → o catch (502), não um "200 sem corpo" que viraria 400 internal

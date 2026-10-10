@@ -4,13 +4,14 @@
 //   tipo 'pessoa' → payload { principal_user_id }       tipo 'conta' → payload { conta_id } (todos os membros da conta)
 //
 // POST, headers: x-espelho-segredo · x-schema: public|staging. Corpo: { limite?: 1..50 } (padrão 20).
-// Segredo da fila (hml-16c, S8): o banco (espelho_disparar, pg_net) manda o do Vault; aqui fica só o hash, em
+// Segredos por finalidade (hml-16c): RECEBE o S8 — o banco (espelho_disparar, pg_net) manda o do Vault; aqui fica só o hash, em
 // SEGREDO_ESPELHO_FILA_ACEITOS (_shared/segredo-servidor.ts; até o F7, também o legado ESPELHO_SEGREDO); aceitou → log
-// segredo_aceito (acao espelho_fila, resultado lista | legado).
+// segredo_aceito (acao espelho_fila, resultado lista | legado). MANDA o S1 à espelho-nucleo: SEGREDO_ESPELHO_NUCLEO (sem ele,
+// até o F7, o legado; sem nenhum → 500 nao_configurada, antes de mexer na fila).
 // Quem chama: os gatilhos/tarefas das próximas worktrees (W4 tarefa das 03:40, W5 membros) ou à mão.
 // verify_jwt = false. Publicar (a partir do physiqcalc):
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions espelho-enviar false
-// Segredos: SEGREDO_ESPELHO_FILA_ACEITOS, ESPELHO_SEGREDO (o que vai à espelho-nucleo), TREINO_URL.
+// Segredos: SEGREDO_ESPELHO_FILA_ACEITOS, SEGREDO_ESPELHO_NUCLEO (até o F7, também o legado ESPELHO_SEGREDO), TREINO_URL.
 // hml-10 (H-24, H-26, H-48): log em JSON pelo _shared/log.ts; a espelho-nucleo que recusa vira o código espelho_nucleo_<status>
 // (sem o corpo dela — o mesmo texto vai para espelho_pendencias.erro); a resposta de erro leva só o código (sem a mensagem do
 // banco); cada pendência que falha avisa (log.excecao).
@@ -22,12 +23,12 @@ import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { resumoDaPessoa, type Resumo } from "../_shared/resumo.ts";
 import { MAX_TENTATIVAS_ESPELHO, proximaTentativaMs } from "../_shared/resumo-regras.ts";
-import { segredoAceito } from "../_shared/segredo-servidor.ts";
+import { segredoAceito, segredoParaEnviar } from "../_shared/segredo-servidor.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+const SEGREDO_ESPELHO_NUCLEO = segredoParaEnviar("SEGREDO_ESPELHO_NUCLEO");
 const TREINO_URL = (Deno.env.get("TREINO_URL") || "").replace(/\/+$/, "");
 const SCHEMAS = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
   const via = await segredoAceito(req.headers.get("x-espelho-segredo"), "SEGREDO_ESPELHO_FILA");
   if (!via) return json({ error: "segredo_invalido" }, 401);
   log.info({ codigo: "segredo_aceito", acao: "espelho_fila", resultado: via });
-  if (!TREINO_URL) return json({ error: "nao_configurada" }, 500);
+  if (!TREINO_URL || !SEGREDO_ESPELHO_NUCLEO) return json({ error: "nao_configurada" }, 500);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ error: "schema_invalido" }, 400);
   let corpo: { limite?: unknown } = {};
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
       if (resumos.length) {
         const resp = await buscarComTempo(`${TREINO_URL}/functions/v1/espelho-nucleo`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": schema },
+          headers: { "Content-Type": "application/json", "x-espelho-segredo": SEGREDO_ESPELHO_NUCLEO, "x-schema": schema },
           body: JSON.stringify({ resumos }),
         }, TEMPO_MS.espelhoNucleo);
         await resp.text(); // lê até o fim (a conexão fica livre; o tempo vale até aqui); o corpo não vai para o log nem para a fila

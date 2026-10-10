@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { TEMPO_MS, buscarComTempo } from "../_shared/tempo.ts";
+import { segredoParaEnviar } from "../_shared/segredo-servidor.ts";
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32): o aviso ao principal espera no máximo TEMPO_MS.principal (vincular-aluno: máx. medido 1,1 s; estourou → "erro",
 // o desvínculo do Treino continua valendo); o perfil é lido ANTES de apagar o login (erro → 500 e nada apagado); depois do login
@@ -50,12 +51,13 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // Physiq W7b: o banco principal fica sabendo quando o professor tira o aluno da lista (a matrícula de lá fica inativa e o aluno
 // vira aluno do app com 7 dias grátis — vincular-aluno em modo servidor, acao "desvincular"). Segredos PRINCIPAL_URL e
-// ESPELHO_SEGREDO (W2). Falhar aqui não desfaz o desvínculo no Treino (a W13 troca esta tela).
+// SEGREDO_REPASSE_VINCULO (hml-16c, S5: o que a vincular-aluno aceita; até o F7, sem ele, o legado ESPELHO_SEGREDO —
+// _shared/segredo-servidor.ts). Falhar aqui não desfaz o desvínculo no Treino (a W13 troca esta tela).
 const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+const SEGREDO_REPASSE_VINCULO = segredoParaEnviar("SEGREDO_REPASSE_VINCULO");
 
 async function avisarPrincipalDoDesvinculo(admin: SupabaseClient, alunoTreino: string, profTreino: string): Promise<string> {
-  if (!PRINCIPAL_URL || ESPELHO_SEGREDO.length < 32) return "principal_nao_configurado";
+  if (!PRINCIPAL_URL || !SEGREDO_REPASSE_VINCULO) return "principal_nao_configurado";
   try {
     // teto natural: até 2 linhas (os 2 ids; treino_user_id é único em physiq_identidades)
     const { data, error } = await admin.from("physiq_identidades").select("principal_user_id, treino_user_id")
@@ -67,7 +69,7 @@ async function avisarPrincipalDoDesvinculo(admin: SupabaseClient, alunoTreino: s
     if (!aluno || !prof) return "sem_vinculo";
     const r = await buscarComTempo(`${PRINCIPAL_URL}/functions/v1/vincular-aluno`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": currentSchema() },
+      headers: { "Content-Type": "application/json", "x-espelho-segredo": SEGREDO_REPASSE_VINCULO, "x-schema": currentSchema() },
       body: JSON.stringify({ acao: "desvincular", principal_user_id: aluno, profissional_principal_id: prof }),
     }, TEMPO_MS.principal);
     if (r.status !== 200) {

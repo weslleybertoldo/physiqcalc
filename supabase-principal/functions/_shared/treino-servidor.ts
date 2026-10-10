@@ -1,18 +1,21 @@
 // Physiq W7 — conversa servidor → servidor com o Banco do Treino para "Exportar meus dados" e "Excluir minha conta" (W2 da loja: + as
 // ações da exclusão do profissional).
-// Chama a delete-my-account de lá em modo servidor (x-espelho-segredo, o segredo da W2). A delete-my-account tem verify_jwt =
-// true: vai o anon do Treino (TREINO_ANON_KEY, público — é o do APK) no Authorization só para passar pela borda do Supabase;
-// quem autoriza é o segredo. O id do aluno no Treino sai do vínculo physiq_identidades lá — daqui vai só o id do JWT.
+// Chama a delete-my-account de lá em modo servidor (x-espelho-segredo com o SEGREDO_CONTA_TREINO — hml-16c, S3: o segredo desta
+// finalidade, que a delete-my-account confere pelo hash; até o F7, sem ele, o legado ESPELHO_SEGREDO; _shared/segredo-servidor.ts).
+// A delete-my-account tem verify_jwt = true: vai o anon do Treino (TREINO_ANON_KEY, público — é o do APK) no Authorization só
+// para passar pela borda do Supabase; quem autoriza é o segredo. O id do aluno no Treino sai do vínculo physiq_identidades lá —
+// daqui vai só o id do JWT.
 // hml-10 (H-24): recebe o log de quem chama; da resposta do Treino vai para o log só o código de erro, nunca o corpo.
 // hml-14 (H-32, D3): cada ação tem o seu tempo (TEMPO_DA_ACAO) e, com o prazo do pedido (`opcoes.prazo`), espera no máximo o que
 // falta dele; estourou → "indisponivel" (o caminho da rede fora: quem chama responde treino_indisponivel, nada novo na tela).
 import { lerRespostaTreino, type PassoTreino } from "./conta-aluno-regras.ts";
 import type { Log } from "./log.ts";
+import { segredoParaEnviar } from "./segredo-servidor.ts";
 import { TEMPO_MS, buscarComTempo, tempoEsgotado, type Prazo } from "./tempo.ts";
 
 const TREINO_URL = (Deno.env.get("TREINO_URL") || "").replace(/\/+$/, "");
 const TREINO_ANON_KEY = Deno.env.get("TREINO_ANON_KEY") || "";
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+const SEGREDO_CONTA_TREINO = segredoParaEnviar("SEGREDO_CONTA_TREINO");
 
 export interface RespostaTreino {
   passo: PassoTreino;
@@ -21,7 +24,7 @@ export interface RespostaTreino {
 }
 
 export function treinoConfigurado(): boolean {
-  return Boolean(TREINO_URL && TREINO_ANON_KEY && ESPELHO_SEGREDO.length >= 32);
+  return Boolean(TREINO_URL && TREINO_ANON_KEY && SEGREDO_CONTA_TREINO);
 }
 
 /** W2 da loja: conferir_profissional / excluir_profissional = a exclusão do profissional (só o caminho novo da excluir-minha-conta). */
@@ -64,7 +67,7 @@ export async function chamarTreino(
         "Content-Type": "application/json",
         Authorization: `Bearer ${TREINO_ANON_KEY}`,
         apikey: TREINO_ANON_KEY,
-        "x-espelho-segredo": ESPELHO_SEGREDO,
+        "x-espelho-segredo": SEGREDO_CONTA_TREINO,
         "x-schema": schema,
       },
       body: JSON.stringify({ modo: "servidor", acao, principal_user_id: principalUserId }),

@@ -573,10 +573,10 @@ describe("o caminho do aviso: trava na memória → registrar_aviso_erro → Tel
 
 // ───────────────────────── o aviso do Banco do Treino ─────────────────────────
 
-describe("o aviso do Treino: manda à erro-avisar do principal (segredo de sempre, nenhum novo)", () => {
+describe("o aviso do Treino: manda à erro-avisar do principal (hml-16c: SEGREDO_AVISO_ERRO; sem ele, até o F7, o legado)", () => {
   let env: Record<string, string>;
   beforeEach(() => {
-    env = { PRINCIPAL_URL: "https://principal.teste.invalid/", ESPELHO_SEGREDO: SEGREDO };
+    env = { PRINCIPAL_URL: "https://principal.teste.invalid/", SEGREDO_AVISO_ERRO: SEGREDO };
     vi.stubGlobal("Deno", { env: { get: (nome: string) => env[nome] } });
   });
 
@@ -631,14 +631,26 @@ describe("o aviso do Treino: manda à erro-avisar do principal (segredo de sempr
     expect(linhas("principal_recusou_aviso")).toMatchObject([{ status: 403 }]);
   });
 
+  it("sem o SEGREDO_AVISO_ERRO → manda o legado (até o F7), e o legado ainda vale no principal", async () => {
+    env = { PRINCIPAL_URL: "https://principal.teste.invalid/", ESPELHO_SEGREDO: LEGADO };
+    const chamadas: RequestInit[] = [];
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      chamadas.push(init);
+      return new Response(null, { status: 204 });
+    });
+    expect(await avisarDoTreino(erroDoTreino("t_legado"), "staging")).toBe("repassado");
+    expect(chamadas[0].headers).toMatchObject({ "x-espelho-segredo": LEGADO });
+  });
+
   it.each([
-    ["sem PRINCIPAL_URL", { PRINCIPAL_URL: "" }],
-    ["segredo curto", { ESPELHO_SEGREDO: "curto" }],
-  ])("%s → sem_configuracao, sem pedido", async (_nome, troca) => {
+    ["sem PRINCIPAL_URL", { PRINCIPAL_URL: "" }, "t_conf_url"],
+    ["SEGREDO_AVISO_ERRO curto e sem legado", { SEGREDO_AVISO_ERRO: "curto" }, "t_conf_seg"],
+    ["sem SEGREDO_AVISO_ERRO e o legado curto", { SEGREDO_AVISO_ERRO: "", ESPELHO_SEGREDO: "curto" }, "t_conf_legado"],
+  ])("%s → sem_configuracao, sem pedido", async (_nome, troca, codigo) => {
     Object.assign(env, troca);
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect(await avisarDoTreino(erroDoTreino(`t_conf_${"PRINCIPAL_URL" in troca ? "url" : "seg"}`), "staging")).toBe("sem_configuracao");
+    expect(await avisarDoTreino(erroDoTreino(codigo), "staging")).toBe("sem_configuracao");
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -680,8 +692,19 @@ describe("o aviso do Treino: manda à erro-avisar do principal (segredo de sempr
     const repassado = linhas("aviso_repassado")[0];
     expect(texto).toContain(`🔑 ${String(repassado.ref)}`);
     expect(tudoQueFoiProLog()).not.toContain("maria");
-    // hml-16c: o principal aceitou pelo hash na lista
+    // hml-16c: o principal aceitou pelo hash na lista (o Treino mandou o SEGREDO_AVISO_ERRO)
     expect(linhas("segredo_aceito")).toMatchObject([{ funcao: "erro-avisar", acao: "aviso_erro", resultado: "lista" }]);
     expect(tudoQueFoiProLog()).not.toContain(SEGREDO);
+  });
+
+  it("de ponta a ponta, o legado nos 2 sentidos (até o F7): o Treino sem SEGREDO_AVISO_ERRO manda o legado e o principal aceita", async () => {
+    env = { PRINCIPAL_URL: "https://principal.teste.invalid/", ESPELHO_SEGREDO: LEGADO };
+    const principal = montarDeps();
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) =>
+      atenderPedido(new Request(url, { method: init.method, headers: init.headers, body: init.body }), principal.deps),
+    );
+    expect(await avisarDoTreino(erroDoTreino("t_legado_2_sentidos"), "staging")).toBe("repassado");
+    expect(principal.enviados).toHaveLength(1);
+    expect(linhas("segredo_aceito")).toMatchObject([{ acao: "aviso_erro", resultado: "legado" }]);
   });
 });

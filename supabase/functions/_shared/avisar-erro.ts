@@ -6,11 +6,13 @@
 //   import { criarLog } from "../_shared/log.ts";
 //   import { avisarErro } from "../_shared/avisar-erro.ts";
 //   const log = criarLog("trocar-token", { avisar: avisarErro });
-// POST ${PRINCIPAL_URL}/functions/v1/erro-avisar com x-espelho-segredo e x-schema; 5 s; nunca derruba a função. Segredos: os
-// que o Treino já tem (PRINCIPAL_URL e ESPELHO_SEGREDO) — nenhum novo.
+// POST ${PRINCIPAL_URL}/functions/v1/erro-avisar com x-espelho-segredo e x-schema; 5 s; nunca derruba a função. Segredos:
+// PRINCIPAL_URL e SEGREDO_AVISO_ERRO (hml-16c, S7: o segredo desta finalidade, que a erro-avisar confere pelo hash; até o F7,
+// sem ele, o legado ESPELHO_SEGREDO — _shared/segredo-servidor.ts).
 // Sem import de URL e com as variáveis lidas na hora (o Vitest importa este arquivo: src/lib/erroAvisarServidor.test.ts).
 import { assinatura, criarTrava, type ErroParaAviso, type SchemaAviso } from "./erros.ts";
 import { criarLog } from "./log.ts";
+import { segredoParaEnviar } from "./segredo-servidor.ts";
 
 const trava = criarTrava();
 const log = criarLog("avisar-erro", { avisar: null }); // o aviso nunca avisa a si mesmo
@@ -51,8 +53,8 @@ export async function avisarErro(erro: ErroParaAviso, schema: SchemaAviso | null
       return "segurado";
     }
     const url = variavel("PRINCIPAL_URL").replace(/\/+$/, "");
-    const segredo = variavel("ESPELHO_SEGREDO");
-    if (!url || segredo.length < 32) {
+    const segredo = segredoParaEnviar("SEGREDO_AVISO_ERRO");
+    if (!url || !segredo) {
       log.aviso({ codigo: "aviso_sem_configuracao", schema: s, ref });
       return "sem_configuracao";
     }

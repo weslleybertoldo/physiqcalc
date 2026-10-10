@@ -7,7 +7,8 @@
 // Erros: 401 missing_auth | invalid_token · 403 conta_real_no_staging · 429 rate_limited · 502 treino_indisponivel · 500
 // Só age sobre o usuário do JWT (nenhum id vem do corpo). Nada é gravado.
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions exportar-meus-dados true
-// Segredos: TREINO_URL, TREINO_ANON_KEY, ESPELHO_SEGREDO (+ os automáticos).
+// Segredos: TREINO_URL, TREINO_ANON_KEY, SEGREDO_CONTA_TREINO (hml-16c, S3, pelo _shared/treino-servidor.ts; até o F7, sem ele, o
+// legado ESPELHO_SEGREDO) (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (da resposta do Treino, só o código); o catch final avisa (log.excecao) e
 // devolve o mesmo 500.
 // hml-14 (H-32, D3): o app chama pelo supabase-js — um prazo por pedido (o de usuário); a ida ao Treino espera no máximo o que falta
