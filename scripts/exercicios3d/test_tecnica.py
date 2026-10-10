@@ -637,3 +637,49 @@ def test_coxa_abducao_em_pe_cruzando_e_sentado():
     assert tc.coxa_abducao(sobe)[0] == pytest.approx(-5, abs=0.01)          # a pelve sobe 5° do lado esquerdo: a coxa fica 5° "fechada"
     assert tc.coxa_abducao(sentado_coxas(40, 25)) == pytest.approx([40, 25], abs=1e-6)
     assert "coxa_abducao" in tc.MEDIDAS
+
+
+def test_ombro_rotacao_externa_high_five_e_virado():
+    """Puxada atrás da nuca (lote 9): braço aberto a 90° com o cotovelo a 90°, antebraço pra frente = 0, pra cima = 90 (a "high five"),
+    pra trás = 180, pra baixo = −90 (rotação interna), nos 2 lados; braço aberto 45° pra baixo com o antebraço em pé = 90; o mesmo número
+    com o tronco inclinado e virado (é no referencial do tronco)."""
+    def braco_antebraco(j, L, d_braco, d_antebraco):
+        j = dict(j)
+        b, a = np.array(d_braco, float), np.array(d_antebraco, float)
+        j[L + "ForeArm"] = j[L + "Arm"] + 0.30 * b / np.linalg.norm(b)
+        j[L + "Hand"] = j[L + "ForeArm"] + 0.27 * a / np.linalg.norm(a)
+        return j
+
+    for antebraco, esperado in (((0, -1, 0), 0), ((0, 0, 1), 90), ((0, 1, 0), 180), ((0, 0, -1), -90), ((0, -1, 1), 45)):
+        j = braco_antebraco(braco_antebraco(em_pe(), "Left", (1, 0, 0), antebraco), "Right", (-1, 0, 0), antebraco)
+        assert tc.ombro_rotacao_externa(j) == pytest.approx([esperado, esperado], abs=1e-6)
+    j = braco_antebraco(braco_antebraco(em_pe(), "Left", (1, 0, -1), (0, 0, 1)), "Right", (-1, 0.2, -1), (0, 0.1, 1))
+    re = tc.ombro_rotacao_externa(j)
+    assert re[0] == pytest.approx(90, abs=1e-6)
+    assert re[1] == pytest.approx(tc.ombro_rotacao_externa(girar(j, 25, (1, 0, 0), (0, 0, 1.0)))[1], abs=1e-6)
+    assert tc.ombro_rotacao_externa(girar(girar(j, 25, (1, 0, 0), (0, 0, 1.0)), 70, (0, 0, 1))) == pytest.approx(re, abs=1e-6)
+    assert "ombro_rotacao_externa" in tc.MEDIDAS
+
+
+def test_tronco_giro_sentado_em_volta_do_proprio_eixo():
+    """Remada baixa unilateral na polia (lote 9): o tórax girando em volta do eixo do tronco com a pelve parada. De frente = 0; o tórax
+    virado 12° pra esquerda (o ombro esquerdo vai pra trás) = +12 e pra direita = −8; levar só a escápula esquerda pra frente (a cabeça
+    do úmero) não muda nada; o mesmo número com o boneco inteiro virado ou inclinado; sem as clavículas, nenhuma medida."""
+    j = com_claviculas(em_pe())
+    assert tc.tronco_giro(j) == pytest.approx([0], abs=1e-6)
+    torax = ("Spine1", "Neck", "LeftShoulder", "RightShoulder", "LeftArm", "RightArm")
+
+    def virar(j, graus):
+        g = girar({n: j[n] for n in torax}, graus, (0, 0, 1), j["Hips"])
+        return dict(j, **g)
+
+    assert tc.tronco_giro(virar(j, 12)) == pytest.approx([12], abs=1e-6)
+    assert tc.tronco_giro(virar(j, -8)) == pytest.approx([-8], abs=1e-6)
+    v = virar(j, 12)
+    assert v["LeftShoulder"][1] > j["LeftShoulder"][1]                     # + = o ombro esquerdo foi pra trás (+Y)
+    protraido = dict(v, LeftArm=v["LeftArm"] + np.array([0, -0.03, 0]))
+    assert tc.tronco_giro(protraido) == pytest.approx([12], abs=1e-6)
+    assert tc.tronco_giro(girar(virar(j, -8), 70, (0, 0, 1))) == pytest.approx([-8], abs=1e-6)
+    assert tc.tronco_giro(girar(virar(j, -8), 25, (1, 0, 0), (0, 0, 1.0))) == pytest.approx([-8], abs=1e-6)
+    assert tc.tronco_giro(em_pe()) == []
+    assert "tronco_giro" in tc.MEDIDAS
