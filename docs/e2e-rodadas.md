@@ -29,6 +29,34 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 10/10 02:21 | hml-16c | `c78e3bf` | `e2e/w04/espelho_fila.py --schema staging --dry-run` | staging | ok | F2: depois de publicar as 21 e da migração da fila nos 2 schemas (o cron chamou a `espelho-enviar` pelo pg_net: 200) |
+| 10/10 02:21 | hml-16c | `c78e3bf` | `e2e/hml10/aviso.py --schema staging --so segredo,treino` | staging | 4/4 | F2 (C8 pelo legado; log `segredo_aceito` `aviso_erro` `legado`) |
+| 10/10 02:20 | hml-16c | `c78e3bf` | `e2e/w13/repasse.py` | staging | caiu | F2 = base: sem a massa da w13 |
+| 10/10 02:19 | hml-16c | `c78e3bf` | `e2e/w07b/api.py removido` | staging | 7/7 | F2 (C6 pelo legado) |
+| 10/10 02:19 | hml-16c | `c78e3bf` | `e2e/w07/api.py api` | staging | caiu | F2 = base: 12 ✅ e cai na `excluir1` |
+| 10/10 02:18 | hml-16c | `c78e3bf` | `e2e/w03/pos_login_api.py --schema staging` | staging | 30/31 | F2: volta a rodar com o login pelo `cab_login`; a 1 = expectativa da W3 ("papel admin do master no Treino") anterior à hml-02 (H-04: no staging o papel vem só do resumo) → atualizar na fase 6; a ponte do Calc (C2) OK |
+| 10/10 02:17 | hml-16c | `c78e3bf` | `e2e/w16/api.py` | staging | 40/41 | F2; = base |
+| 10/10 02:17 | hml-16c | `c78e3bf` | `e2e/w02/trocar_token.py` | staging | 24/25 | F2; = base (C1, C4 e C9 pelo legado) |
+| 10/10 01:54 | hml-16c | `72304d7` | `e2e/w07/smoke_prod.py telas --versao 3.88 --canal msedge` | produção | 13/13 | F0 base |
+| 10/10 01:50 | hml-16d | `506fd77` | `e2e/hml14/telas.py --base prod --canal msedge --casos X1 --prefixo prod_16d_c` | produção | 20/22 | reteste com vaga no limite: o Histórico do mês 390 px ✅ (pedido 200); a Biblioteca 390 px ❌ (H-40, já era); os Modelos no desktop ❌ = a leitura pegou o esqueleto (o pedido voltou com 14, 200) — tempo do teste |
+| 10/10 01:20 | hml-16c | `72304d7` | `e2e/w04/espelho_fila.py --schema staging --dry-run` | staging | ok | F0 base: 3 pendentes (1 pessoa de teste), sem mudança |
+| 10/10 01:19 | hml-16c | `72304d7` | `e2e/hml10/aviso.py --schema staging --so segredo,treino` | staging | 4/4 | F0 base (C8 pelo legado) |
+| 10/10 01:18 | hml-16c | `72304d7` | `e2e/w13/repasse.py` | staging | caiu | F0 base: sem a massa da w13 (convite vazio) |
+| 10/10 01:18 | hml-16c | `72304d7` | `e2e/w07b/api.py removido` | staging | 7/7 | F0 base (C6) |
+| 10/10 01:17 | hml-16c | `72304d7` | `e2e/w07/api.py api` | staging | caiu | F0 base: 12 ✅ e cai na `excluir1` (excluída na hml-09) |
+| 10/10 01:17 | hml-16c | `72304d7` | `e2e/w03/pos_login_api.py --schema staging` | staging | caiu | F0 base: o 1º login REST do principal pede captcha desde a hml-05a (`captcha_failed`) |
+| 10/10 01:16 | hml-16c | `72304d7` | `e2e/w16/api.py` | staging | 40/41 | F0 base; = antes |
+| 10/10 01:15 | hml-16c | `72304d7` | `e2e/w02/trocar_token.py` | staging | 24/25 | F0 base; = antes (a 1 = dado da conta de teste) |
+| 10/10 00:52 | hml-16d | `506fd77` | `e2e/hml14/telas.py --base prod --canal msedge --prefixo prod_16d_b` (2ª rodada) | produção | interrompida 01:03 | a conta master já tinha gastado as 20 trocas de token/hora na 1ª rodada (limite por pessoa da `trocar-token`): "Sem conexão com o Treino — Muitas tentativas" |
+| 10/10 00:43 | hml-16d | `506fd77` | `e2e/hml14/telas.py --base prod --canal msedge --prefixo prod_16d` | produção | 97/99 | a Biblioteca do master a 390 px (já era) + o Histórico do mês a 390 px: a 21ª troca de token da master na hora (limite de 20/h), não defeito |
+| 10/10 00:43 | hml-16d | `506fd77` | `e2e/w26/prod.py --canal msedge` | produção | 21/21 | v3.88 no ar |
+| 10/10 00:42 | hml-16d | `506fd77` | `e2e/w07/smoke_prod.py telas --versao 3.88 --canal msedge` | produção | 13/13 | v3.88 no ar |
+| 10/10 00:06–00:39 | hml-16d | `ef5325f` | `e2e/hml14/telas.py --base staging --canal msedge --massa --prefixo staging_16d` | staging | 758/770 | as 12 = 390 px do H-40 (= referência 757/769 da hml-14d); paginação, `?pagina=`, Voltar e a busca OK com o React Router 7 |
+| 10/10 00:06 | hml-16d | `ef5325f` | `e2e/w26/telas.py --base staging --prefixo staging_16d --casos publicas` | staging | 9/9 | |
+| 10/10 00:02–00:06 | hml-16d | `ef5325f` | `e2e/h2/telas.py --base staging --prefixo staging_16d --schema staging` | staging | 49/50 | a conta "só Treino" para nos Termos novos do staging (hml-12) → atualizar a massa na fase 6 |
+| 09/10 23:52–00:02 | hml-16d | `ef5325f` | `e2e/w03/telas.py --base staging --prefixo staging_16d --schema staging` | staging | 15/28 | TESTE DESATUALIZADO: login pela API pede captcha desde a hml-05a + o aceite novo do staging (hml-12); sem erro de página → atualizar na fase 6 |
+| 09/10 23:52 | hml-16d | `ef5325f` | `e2e/w25/api.py` | staging | 23/30 | = rodadas anteriores (a massa do dia) |
+| 09/10 23:51 | hml-16d | `ef5325f` | `e2e/w10/api.py --schema staging` | staging | 22/22 | |
 | 09/10 18:36 | hml-16 | `03906a2` | `e2e/h3/emails.py` | staging | 55/57 | H-36 (R2): e-mails reais das 4 funções com a chave só de envio; as 2 = `convite-aluno` 409 `limite_plano` (massa: o plano de teste em 10/10) |
 | 09/10 18:28 | hml-16 | `03906a2` | `e2e/w26/prod.py --canal msedge` | produção | 21/21 | F7: depois da revogação do HS256 do principal |
 | 09/10 18:28 | hml-16 | `03906a2` | `e2e/w07/smoke_prod.py telas --versao 3.86 --canal msedge` | produção | 13/13 | F7 |
