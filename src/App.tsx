@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { PWAInstallProvider } from "@/hooks/usePWAInstall";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { BrowserRouter } from "react-router-dom";
@@ -23,6 +23,7 @@ import { BoasVindasNutri } from "@/ui/casca/BoasVindasNutri";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { FaixaAbrirNoApp } from "@/ui/casca/FaixaAbrirNoApp";
 import { MasterSoNoSite } from "@/ui/casca/MasterSoNoSite";
+import { criarClienteDeConsultas } from "@/integrations/consultas";
 
 // W1 (Physiq): as rotas agora são montadas pelas cascas novas (src/rotas/Rotas.tsx) — app do aluno
 // com 5 abas, site do profissional, master, entrada e páginas públicas — com as telas antigas como
@@ -35,25 +36,8 @@ import { MasterSoNoSite } from "@/ui/casca/MasterSoNoSite";
 // confere). A expressão fica AQUI, direto na condição, sem função no meio (src/publico/legal/guarda.test.ts confere).
 const PortaDoAceite = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/PortaDoAceite")) : null;
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 min — evita refetch desnecessário
-      gcTime: 1000 * 60 * 60 * 24, // 24h — cache offline
-      retry: 3,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
-      refetchOnReconnect: "always",
-      refetchOnWindowFocus: false,
-      networkMode: "offlineFirst",
-    },
-    mutations: {
-      // hml-06 (H-20): mutação não repete sozinha — o servidor pode ter feito e só a resposta se perdido (cobrança 2×); a
-      // que é idempotente pede no próprio useMutation (useAvisos.marcar)
-      retry: 0,
-      networkMode: "offlineFirst",
-    },
-  },
-});
+// hml-17 (H-53): a configuração mora em src/integrations/consultas.ts (o Vitest confere): retry 1 com 1 s (eram 3, até 4 s)
+const queryClient = criarClienteDeConsultas();
 
 // Link do profissional (?prof=PROF-NOME-SOBRENOME): guarda ANTES do login; depois do login o popup "confirmar o profissional"
 // (W7 — src/ui/avisos/AvisoVinculoPendente.tsx) mostra quem é e só então manda o código para o vincular-aluno. No APK, o link

@@ -14,10 +14,12 @@ export default function useContadorMensagens(): number | undefined {
   const { usuario } = useSessao();
   const contaId = conta?.id ?? "";
   const uid = usuario?.id ?? "";
+  // hml-17 (H-53): só com a conta ativa — antes ligava com o uid e a conta vazia (p_conta null) e repetia quando ela chegava (2 pedidos
+  // no 1º acesso)
   const q = useQuery({
     queryKey: CHAVES_MENSAGENS.resumo(contaId, uid),
     queryFn: () => buscarResumo(contaId || null),
-    enabled: Boolean(uid),
+    enabled: Boolean(uid && contaId),
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
     retry: 1,

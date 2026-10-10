@@ -20,6 +20,13 @@ import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 export const TEMPO_FUNCAO_MS = 25_000;
 
 /**
+ * hml-17 (H-53): quantas vezes a MAIS os 2 clientes repetem uma leitura (em 5xx, 429 e rede) — era 2. Com o `retry: 1` do React
+ * Query (src/integrations/consultas.ts), uma consulta com a API fora faz no máximo 2 × 2 = 4 pedidos e avisa em ~3 s (eram 12 e
+ * ~19 s). Cobre a falha passageira de 1–2 s (a espera da nova tentativa é 1 s).
+ */
+export const TENTATIVAS_LEITURA = 1;
+
+/**
  * As 45 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
  * STABLE pela migração 20261008200000; + as 5 das listas da hml-14b, STABLE pelas migrações 20261009010000 e 20261009040000; + as
  * 6 da hml-14d, STABLE pelas migrações 20261009050000 (Treino), 20261009070000 e 20261009080000; + as 3 do plano alimentar da

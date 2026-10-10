@@ -13,15 +13,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { conferirDadoLivre } from "@/nucleo/dadoLivre";
 import { DICA_REPETIDO, MENSAGEM_REPETIDO, camposDoErro, precisaConferir } from "@/nucleo/dadoRepetido";
-import { buscarAlunosDoSeletor, criarAluno, ErroAlunos, listarAlunos } from "@/painel/alunos/api";
-import { FILTROS_PADRAO, limiteAtingido, mensagemErroAlunos, type AlunoDoSeletor, type ListaAlunos, type ModuloAluno } from "@/painel/alunos/regras";
+import { buscarAlunosDoSeletor, criarAluno, ErroAlunos } from "@/painel/alunos/api";
+import { limiteAtingido, mensagemErroAlunos, type AlunoDoSeletor, type ListaAlunos, type ModuloAluno } from "@/painel/alunos/regras";
 import { SeletorDeAluno } from "@/painel/alunos/SeletorDeAluno";
+import { useResumoAlunos } from "@/painel/alunos/useResumoAlunos";
 import { useAlunoDoSeletor, useGuardarAlunoDoSeletor } from "@/painel/alunos/useSeletorDeAluno";
 import { CampoSelect, OpcoesPilula, type OpcaoPilula } from "@/painel/configuracoes/pecas/Form";
 import { BTN_PRI, BTN_SEC } from "@/nutricao/editor/ui/estilos";
 import { Botao } from "@/ui/premium/Botao";
 import { ligarAluno, type AlunoPreconsulta, type RespostaComFormulario } from "./dados";
-import { CHAVES_PRECONSULTA } from "./novas";
 import { TELEFONE_DIGITOS_MIN, apenasDigitos, contatoResposta, dadosAlunoDaResposta, sugerirAluno, textoSugestao, type Sugestao } from "./respostasUtil";
 
 interface Props {
@@ -207,7 +207,8 @@ function CadastrarDaResposta({ resposta, contaId, ocupado, aoVoltar, aoCriado }:
   aoCriado: (aluno: AlunoPreconsulta) => void;
 }) {
   const inicial = useMemo(() => dadosAlunoDaResposta(resposta), [resposta]);
-  const lista = useQuery({ queryKey: CHAVES_PRECONSULTA.listaAlunos(contaId), queryFn: () => listarAlunos(contaId, FILTROS_PADRAO, 0, 0), enabled: !!contaId, staleTime: 30_000, retry: 1 });
+  // hml-17 (H-53): a mesma consulta do número do menu e do Dashboard (useResumoAlunos — 1 pedido, não 3)
+  const lista = useResumoAlunos(contaId);
   const [nome, setNome] = useState(inicial.nome);
   const [email, setEmail] = useState(inicial.email);
   const [telefone, setTelefone] = useState(inicial.telefone);
