@@ -53,8 +53,10 @@ export function TabBar({ itens, className, rotulo = "Navegação principal" }: {
             <span className="whitespace-nowrap">{it.rotulo}</span>
           </>
         );
+        // hml-18a (H-40): o item encolhe no toque (a resposta do celular, que não tem hover) e a cor muda com transição. No Tailwind 4 o
+        // active:scale-* usa a propriedade `scale` (não `transform`): é ela que entra na transição
         const classe = cn(
-          "flex min-w-0 flex-1 flex-col items-center gap-1 text-[10.5px] font-semibold transition-colors",
+          "flex min-w-0 flex-1 flex-col items-center gap-1 text-[10.5px] font-semibold transition-[color,scale] duration-150 active:scale-[0.94]",
           it.ativo ? "text-texto" : "text-texto-3 hover:text-texto-2",
         );
         return it.para ? (
