@@ -7,12 +7,15 @@
 //   · modo app (JWT do Treino): só os APKs antigos (≤ 3.1) ainda chamam. Faz o de sempre e, quando liga um aluno pelo
 //     código e a pessoa já tem login no Physiq (physiq_identidades), repassa o vínculo ao principal (vincular-aluno, modo
 //     servidor) — a matrícula nasce lá e o espelho mantém o professor aqui;
-//   · modo servidor (x-espelho-segredo, chamado pelo pos-login do principal): devolve o que o Calc sabe da pessoa e o
+//   · modo servidor (x-espelho-segredo, chamado pelo pos-login do principal — hml-16c, S2: o pos-login manda SEGREDO_PONTE_CALC;
+//     aqui fica só o hash, em SEGREDO_PONTE_CALC_ACEITOS; aceitou → log segredo_aceito com acao ponte_calc e resultado
+//     lista | legado): devolve o que o Calc sabe da pessoa e o
 //     principal ainda não — professor do Calc, convite de professor do master pendente (consumido aqui, com o código novo)
 //     e aluno de um professor do Calc. O app novo (3.2+) não chama mais esta função: o código vai para o vincular-aluno.
 // verify_jwt = false desde a W3 (o modo servidor não tem JWT; o modo app valida o token aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions vincular-professor false   (FORCAR_VERIFY_JWT=1 na 1ª vez)
-// Segredos: PRINCIPAL_URL, ESPELHO_SEGREDO (W2).
+// Segredos: PRINCIPAL_URL, SEGREDO_PONTE_CALC_ACEITOS (recebe, S2 — _shared/segredo-servidor.ts, hml-16c; até o F7, também o
+// legado) e ESPELHO_SEGREDO (W2; o que vai à vincular-aluno).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32): o repasse ao principal espera no máximo TEMPO_MS.principal (vincular-aluno: máx. medido 1,1 s; estourou → o
 // principal_indisponivel de sempre); erro do banco lança (o catch responde 500 e avisa) — antes virava "não tem" calado; o
@@ -23,6 +26,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { TEMPO_MS, buscarComTempo, tempoEsgotado } from "../_shared/tempo.ts";
+import { segredoAceito } from "../_shared/segredo-servidor.ts";
 
 const log = criarLog("vincular-professor", { avisar: avisarErro });
 
@@ -70,14 +74,6 @@ function authAdmin() { return createClient(SUPABASE_URL, SERVICE_ROLE); }
 
 // ---- Physiq W3: repasse para o banco principal ----
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function segredoConfere(recebido: string | null | undefined, esperado: string | null | undefined): boolean {
-  const a = recebido || "";
-  const b = esperado || "";
-  if (b.length < 32 || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
 
 // o aluno ligado pelo APK antigo ganha a matrícula no principal (se já tem login lá); falha aqui não desfaz o vínculo
 type ClienteW3 = ReturnType<typeof adminClient>;
@@ -256,10 +252,12 @@ Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
-  // Physiq W3: modo servidor (pos-login do banco principal), autenticado pelo segredo do espelho
+  // Physiq W3: modo servidor (pos-login do banco principal), autenticado pelo segredo da ponte do Calc (S2, hml-16c)
   const segredo = req.headers.get("x-espelho-segredo");
   if (segredo) {
-    if (!segredoConfere(segredo, ESPELHO_SEGREDO)) return jsonErr("segredo_invalido", 401, origin);
+    const via = await segredoAceito(segredo, "SEGREDO_PONTE_CALC");
+    if (!via) return jsonErr("segredo_invalido", 401, origin);
+    log.info({ codigo: "segredo_aceito", schema: currentSchema(), acao: "ponte_calc", resultado: via });
     try {
       const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
       if (body.modo !== "servidor") return jsonErr("modo_invalido", 400, origin);

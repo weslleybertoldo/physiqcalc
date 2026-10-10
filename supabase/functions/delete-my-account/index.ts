@@ -6,7 +6,9 @@
 //     minha conta → excluir-minha-conta do principal, que chama o modo servidor abaixo) ou pela página /excluir-conta.
 //
 //   · modo servidor (Physiq W7, falha F4 — C88, R11, P19): chamado SÓ pelas funções exportar-meus-dados e excluir-minha-conta
-//     do banco principal, servidor → servidor. Cabeçalhos: x-espelho-segredo (ESPELHO_SEGREDO, o mesmo da W2) · x-schema ·
+//     do banco principal, servidor → servidor. Cabeçalhos: x-espelho-segredo (hml-16c, S3: o principal manda
+//     SEGREDO_CONTA_TREINO; aqui fica só o hash, em SEGREDO_CONTA_TREINO_ACEITOS — _shared/segredo-servidor.ts; aceitou → log
+//     segredo_aceito com acao conta_treino e resultado lista | legado) · x-schema ·
 //     Authorization: Bearer <anon do Treino> (o verify_jwt continua TRUE: a borda do Supabase exige um JWT do projeto e o
 //     anon serve; quem autoriza é o segredo). Corpo: { modo: "servidor", acao: "exportar" | "conferir" | "excluir",
 //     principal_user_id }. O id do Treino sai do vínculo physiq_identidades (nunca de um id mandado por alguém).
@@ -28,7 +30,7 @@
 //
 // Publicar: gh workflow run deploy-function.yml -f function=delete-my-account (verify_jwt true) ou
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions delete-my-account true
-// Segredos: ESPELHO_SEGREDO (W2) + os automáticos.
+// Segredos: SEGREDO_CONTA_TREINO_ACEITOS (até o F7, também o legado ESPELHO_SEGREDO) + os automáticos.
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32): quem chama (o treino-servidor.ts do principal) espera 15 s no exportar, 30 s ao conferir e 60 s ao excluir
 //   (máximo medido em 7 dias: 10 s); daqui não sai chamada para fora (só o banco e o Auth do próprio Treino) e o Storage não é
@@ -39,6 +41,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { segredoAceito } from "../_shared/segredo-servidor.ts";
 
 const log = criarLog("delete-my-account", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
@@ -80,22 +83,11 @@ function jsonErr(msg: string, status: number, origin: string | null) {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 
 // ───────────────────────── modo servidor (W7) ─────────────────────────
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACOES = ["exportar", "conferir", "excluir", "conferir_profissional", "excluir_profissional"];
-
-/** Comparação em tempo constante (o mesmo segredoConfere da vincular-professor/trocar-token). */
-function segredoConfere(recebido: string | null | undefined, esperado: string | null | undefined): boolean {
-  const a = recebido || "";
-  const b = esperado || "";
-  if (b.length < 32 || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
 
 function jsonServidor(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -114,7 +106,9 @@ function pegadaBloqueia(resposta: unknown): boolean {
 }
 
 async function modoServidor(req: Request): Promise<Response> {
-  if (!segredoConfere(req.headers.get("x-espelho-segredo"), ESPELHO_SEGREDO)) return jsonServidor({ ok: false, erro: "segredo_invalido" }, 401);
+  const via = await segredoAceito(req.headers.get("x-espelho-segredo"), "SEGREDO_CONTA_TREINO");
+  if (!via) return jsonServidor({ ok: false, erro: "segredo_invalido" }, 401);
+  log.info({ codigo: "segredo_aceito", schema: currentSchema(), acao: "conta_treino", resultado: via });
   let body: Record<string, unknown> = {};
   try {
     body = (await req.json()) as Record<string, unknown>;
