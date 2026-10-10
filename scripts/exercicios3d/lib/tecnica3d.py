@@ -672,3 +672,27 @@ def ombro_rotacao_externa(j):
 
 
 MEDIDAS.update({"ombro_rotacao_externa": ombro_rotacao_externa})
+
+
+# ── remada baixa unilateral na polia (lote 9, 10/10/2026): sentado, com a pelve parada no banco, o tórax gira um pouco em volta do eixo
+# do tronco junto da puxada de um braço só (ExRx, Cable One Arm Seated Row: "Pull cable attachment to side of torso, slightly twisting
+# through waist"; "Allow shoulder with stirrup to be pulled forward"). O ombros_nivel mede a linha das clavículas inclinando pro lado (em
+# pé) e o pelve_nivel a dos quadris: o giro em volta do eixo do tronco não aparece em nenhum dos 2.
+def tronco_giro(j):
+    """Giro do tórax em relação à pelve em volta do eixo do tronco (quadril → pescoço), graus: a linha das bases das clavículas (cabeça
+    dos ossos Shoulder, da esquerda pra direita) × a linha das articulações do quadril, as 2 no plano perpendicular ao eixo do tronco:
+    0 = tórax de frente pra onde a pelve aponta, + = o tórax virou pra ESQUERDA (o ombro esquerdo vai pra trás e o direito pra frente),
+    − = pra direita. Levar a escápula pra frente, pra trás, pra cima ou pra baixo não mexe nele (a base da clavícula é presa no tórax).
+    No referencial do próprio corpo: vale em pé, sentado ou inclinado. Sem as clavículas nas juntas (dicionários antigos dos testes),
+    devolve []."""
+    if "LeftShoulder" not in j or "RightShoulder" not in j:
+        return []
+    cima = _u(j["Neck"] - j["Hips"])
+    torax = j["RightShoulder"] - j["LeftShoulder"]
+    pelve = j["RightUpLeg"] - j["LeftUpLeg"]
+    torax = _u(torax - cima * (torax @ cima))
+    pelve = _u(pelve - cima * (pelve @ cima))
+    return [math.degrees(math.atan2(float(np.cross(pelve, torax) @ cima), float(torax @ pelve)))]
+
+
+MEDIDAS.update({"tronco_giro": tronco_giro})
