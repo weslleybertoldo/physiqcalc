@@ -1,0 +1,428 @@
+{
+  "uuid": "640a64bd-0491-4501-9e91-f99c725057a0",
+  "nome": "Pulldown com Braços Estendidos",
+  "cena": "pulldown_com_bracos_estendidos",
+  "grupo": "Dorsal / Rombóide",
+  "subgrupo": "Latíssimo do dorso (isolado) · redondo maior",
+  "padrao_movimento": "pulldown",
+  "equipamento": "polia",
+  "variacao": "em pé",
+  "alvos": [
+    "dorsal"
+  ],
+  "auxiliares": [
+    "costas",
+    "triceps",
+    "peitoral"
+  ],
+  "camera": {
+    "az": 125,
+    "el": 10,
+    "dist": 5.3,
+    "alvo": [
+      0,
+      -0.3,
+      1.15
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.9,
+    "alvo": [
+      0,
+      -0.3,
+      1.15
+    ]
+  },
+  "ida_s": 2.0,
+  "movimento": "Em pé, de frente para a polia alta e um pouco afastado dela, com os pés paralelos na largura do quadril, os joelhos levemente dobrados e o tronco inclinado à frente, dobrando no quadril com as costas retas, segura a barra reta da polia com as palmas viradas para a frente (pegada pronada fechada, com o polegar em volta da barra), as mãos quase na largura dos ombros. Começa com os braços quase esticados lá em cima, na frente da cabeça, e o cabo puxando a barra para cima e para a frente; com os cotovelos levemente dobrados e parados, desce a barra em arco pela frente do corpo, girando só no ombro, até as mãos encostarem de leve nas coxas; volta devagar pelo mesmo caminho até a barra passar de novo da altura da cabeça. O tronco, as pernas e os punhos (retos) não mexem; o cabo vai da roldana até o meio da barra, na frente do rosto e do peito.",
+  "cinesiologia": {
+    "plano": "sagital (extensão do ombro na puxada, flexão na volta), cadeia cinética aberta; a resistência vem pelo cabo, que puxa a barra para cima e para a frente, na direção da roldana alta à frente da pessoa. Monoarticular: só o ombro mexe (ExRx: Mechanics \"Isolated\", Force \"Pull\"; NSCA, Exercise Technique Manual for Resistance Training: o \"Straight-Arm Lat Pulldown (Machine)\" fica em \"Back (Single-Joint) Exercises\")",
+    "articulacoes": "ombro (extensão de ~155° a ~18° de flexão, medida no tronco, e volta), com o úmero sem girar; as escápulas acompanham o braço (sobem um pouco com ele lá em cima e descem com ele); cotovelo parado, levemente dobrado (~12°); punho reto; tronco inclinado ~20° à frente e parado; joelhos levemente dobrados (~15°) e pés chapados, parados (ExRx: \"With elbows fixed approximately 30°, pull cable attachment down until upper arms are to sides. Return attachment overhead\"; ACE, Crockford 2015: \"Back up and hinge forward at the hips, while also bending the knees slightly. Keeping the arms straight, engage the lats and press the bar down to the thighs\")",
+    "agonistas": "latíssimo do dorso (ExRx: Target \"Latissimus Dorsi\"). No pulldown de braços estendidos em pé, o dorsal e o tríceps foram os músculos com mais atividade (Muyor 2022: \"In the straight arm pulldown exercises at 100% and 150% biacromial widths, the greatest EMG activity appeared in the LD and TB muscles\"; \"the latissimus dorsi (≈18% MVIC), to perform the shoulder extension with an internal rotation of the humerus\"); no isométrico, o dorsal ativa mais com o braço entre 0° e 45° (Teixeira 2022: \"LD presented similar maximal myoelectric activation between exercises, with higher values between 0° and 45°\")",
+    "sinergistas": "redondo maior, cabeça longa do tríceps, porção esternal do peitoral maior, deltoide posterior, romboides, levantador da escápula e peitoral menor (ExRx: Synergists \"Pectoralis Major, Sternal\", \"Triceps, Long Head\", \"Teres Major\", \"Deltoid, Posterior\", \"Rhomboids\", \"Levator Scapulae\", \"Pectoralis Minor\"). No app: redondo maior em \"costas\", tríceps e peitoral em vermelho claro; o deltoide fica de fora (o app pinta o deltoide inteiro, e o anterior quase não trabalha: Muyor 2022, \"The AD showed the lowest EMG activity in the three evaluated exercises\")",
+    "estabilizadores": "o tríceps segura o cotovelo quase estendido (ExRx: Stabilizers \"Triceps Brachii\"; Muyor 2022: \"the triceps brachii (≈19% MVIC), to maintain the elbow join in extension\"); a porção clavicular do peitoral, o reto do abdome e os oblíquos firmam o tronco inclinado; os flexores do punho seguram a barra (ExRx: Stabilizers \"Pectoralis Major, Clavicular\", \"Rectus Abdominis\", \"Obliques\", \"Wrist Flexors\")",
+    "fases": "puxada concêntrica (a barra desce até as coxas) e volta excêntrica, devagar, até a barra passar da altura da cabeça (ACE, Straight Arm Pressdown: \"Slowly lift the hands back to the starting position to lower the weight\"; Muyor 2022: \"lower the bar until it reached the level of the navel (at the end of the concentric phase). Subsequently, in a controlled manner, the bar had to be raised to the height of the earlobe (at the end of the eccentric phase)\"; dica do app: \"Volte devagar até acima da cabeça\"). A cena desce em 2 s, o ritmo do Muyor 2022 (\"at a rhythm of 2 s for the eccentric phase and 2 s for the concentric phase\")"
+  },
+  "referencias": [
+    "ExRx.net — Cable Bent-over Pullover (\"Also known as Straight Arm Pulldown\"). https://exrx.net/WeightExercises/LatissimusDorsi/CBBentoverPullover (lido na cópia do Internet Archive de 24/08/2019; a animação CBStraightArmPullDown.gif na cópia de 2010; o site direto bloqueia a leitura automática)",
+    "American Council on Exercise (ACE) — Exercise Library: Straight Arm Pressdown. https://www.acefitness.org/resources/everyone/exercise-library/334/straight-arm-pressdown/",
+    "Crockford J. 4 Moves to Help You Master the Pull-up (\"Straight-arm Pull-downs\"). ACE Expert Articles, 28/07/2015. https://www.acefitness.org/resources/pros/expert-articles/5565/4-moves-to-help-you-master-the-pull-up/",
+    "NSCA — Exercise Technique Manual for Resistance Training, 4ª ed. (Human Kinetics, 2022): no sumário, \"3.21 Straight-Arm Lat Pulldown (Machine)\" em \"Back (Single-Joint) Exercises\" (só o sumário estava acessível: https://us.humankinetics.com/products/exercise-technique-manual-for-resistance-training-4th-edition-ebook-with-hkpropel-online-video)",
+    "Muyor JM, López-Miñarro PA, Alacid F. Comparison of Electromyographic Activity during Barbell Pullover and Straight Arm Pulldown Exercises. Appl Sci. 2022;12(21):11138. doi:10.3390/app122111138 (texto completo lido na cópia do Internet Archive)",
+    "Teixeira LFM, Gomes WA, da Silva JJ, Magalhaes RA, Marchetti PH. Differences Between Pullover and Pulldown Exercises on Maximal Isometric Force and Myoelectric Activity in Recreationally-Trained Men. Int J Exerc Sci. 2022;15(4):797-807 (PMC9362894)",
+    "Gentil P, Soares S, Bottaro M. Single vs. Multi-Joint Resistance Exercises: Effects on Muscle Strength and Hypertrophy. Asian J Sports Med. 2015;6(2):e24057. doi:10.5812/asjsm.24057 (PMC4592763) — lido: compara a puxada alta (multiarticular) com a rosca bíceps nos flexores do cotovelo de iniciantes (\"One group performed (n = 14) only MJ exercises involving the elbow flexors (lat. pull downs), while the other (n = 15) trained the elbow flexors muscles using only SJ exercises (biceps curls)\"); não estuda o pulldown de braços estendidos — a \"Base\" da dica do app não se apoia nele"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "o cabo passa na frente do rosto e do peito, sem encostar",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head"
+        ],
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "pedido do Weslley (\"cabo, engate e barra NUNCA passam por dentro da cabeça, do rosto, do cabelo, do peito nem dos braços\"); medido da pele"
+      },
+      {
+        "nome": "a barra e o gancho nunca encostam no tronco nem na cabeça",
+        "equipamento": "barra_polia",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head"
+        ],
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "pedido do Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "a barra e o gancho nunca entram nas coxas",
+        "equipamento": "barra_polia",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "pedido do Weslley (\"No fim a barra chega nas coxas: encosta de leve no máximo, sem entrar\"); medido da pele"
+      },
+      {
+        "nome": "fim: a barra chega nas coxas (os dedos ficam entre ela e as coxas)",
+        "equipamento": "barra_polia",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "t": 1.0,
+        "mm": [
+          10,
+          40
+        ],
+        "fonte": "ACE, Crockford 2015 (\"press the bar down to the thighs\"); dica do app (\"puxe a barra de cima até as coxas\"); pedido do Weslley (\"até a barra chegar nas coxas\"). Com a pegada pronada os dedos dão a volta por trás da barra e são eles que encostam nas coxas: a borracha fica a ~2 cm (a faixa é da cena)"
+      },
+      {
+        "nome": "a torre fica na frente dos pés, sem encostar",
+        "equipamento": "polia_torre",
+        "partes": [
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          300,
+          1500
+        ],
+        "fonte": "ExRx (\"Face high pulley\"); ACE, Crockford 2015 (\"Back up\"): a chapa da base da torre fica a ~0,4 m dos pés (medido: 403 mm; a faixa é da cena)"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "o cabo não entra no cabelo",
+        "equipamento": "polia_cabo",
+        "de": "cabelo",
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "pedido do Weslley (o cabo nunca passa por dentro da cabeça nem do cabelo)"
+      },
+      {
+        "nome": "a barra e o gancho não entram no cabelo",
+        "equipamento": "barra_polia",
+        "de": "cabelo",
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "pedido do Weslley (\"principalmente em cima, com a barra na frente da cabeça\")"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "RightHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o mesmo limite do corpo × corpo da checagem (PENETRA_MM)"
+      },
+      {
+        "nome": "fim: as mãos encostam de leve nas coxas",
+        "partes": [
+          "LeftHand",
+          "RightHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "t": 1.0,
+        "mm": [
+          -2,
+          10
+        ],
+        "fonte": "ACE, Crockford 2015 (\"press the bar down to the thighs\"); dica do app (\"até as coxas\"); pedido do Weslley (\"encosta de leve no máximo, sem entrar\")"
+      },
+      {
+        "nome": "lá em cima os braços passam do lado da cabeça sem entrar nela",
+        "partes": [
+          "LeftArm",
+          "RightArm",
+          "LeftForeArm",
+          "RightForeArm"
+        ],
+        "com": [
+          "Neck",
+          "Head"
+        ],
+        "cabelo": true,
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "ExRx (\"until shoulder is fully flexed (upper arms at sides of head)\"); o corpo não atravessa o próprio corpo (medido até o cabelo)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "começo: braços lá em cima, na frente da cabeça (ombro quase todo flexionado)",
+        "medida": "braco_frente",
+        "t": 0.0,
+        "graus": [
+          145,
+          165
+        ],
+        "fonte": "ExRx (\"bend over at hip until shoulder is fully flexed (upper arms at sides of head)\"; \"Return attachment overhead\"); dica do app (\"Volte devagar até acima da cabeça\"). Medida no tronco: a cena começa com 155°"
+      },
+      {
+        "nome": "fim: braços perto das laterais do tronco, a barra nas coxas",
+        "medida": "braco_frente",
+        "t": 1.0,
+        "graus": [
+          10,
+          25
+        ],
+        "fonte": "ExRx (\"pull cable attachment down until upper arms are to sides\"); ACE, Crockford 2015 (\"press the bar down to the thighs\"). Com o tronco inclinado as mãos param nas coxas com o braço ~18° à frente da linha do tronco (na vertical do mundo); a faixa é da cena"
+      },
+      {
+        "nome": "os braços descem pela frente, no plano sagital (paralelos)",
+        "medida": "braco_plano",
+        "t": [
+          0.0,
+          0.6
+        ],
+        "graus": [
+          75,
+          100
+        ],
+        "fonte": "ExRx (Mechanics \"Isolated\": só o ombro, em extensão — \"pull cable attachment down until upper arms are to sides\"); Muyor 2022 (\"shoulder extension\"). 90 = braço apontando pra frente; o braço fica 3° aberto"
+      },
+      {
+        "nome": "cotovelos sem abrir pro lado",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -3,
+          10
+        ],
+        "fonte": "ExRx (extensão do ombro no plano sagital); o braço fica 3° aberto, parado (a faixa é da cena)"
+      },
+      {
+        "nome": "cotovelos quase estendidos e parados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          5,
+          20
+        ],
+        "fonte": "dica do app (\"Braços quase estendidos\"; \"sem dobrar os cotovelos\"); ACE, Crockford 2015 (\"Keeping the arms straight\"); ACE, Straight Arm Pressdown (\"Keep the arms straight\"); Muyor 2022 (\"keeping their elbows extended\"); Teixeira 2022 (\"elbows fully extended\"). O ExRx fixa em ~30° (\"Fix elbows approximately 30° throughout exercise\"): a cena segue a dica e as outras fontes, com 12°"
+      },
+      {
+        "nome": "punho reto e firme",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ExRx (Stabilizers \"Wrist Flexors\": os flexores do punho só seguram a barra; o movimento é só do ombro, \"Isolated\")"
+      },
+      {
+        "nome": "pegada pronada: palmas sem virar pra dentro nem pra fora",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "Teixeira 2022 (\"The participants were instructed to maintain the pronated handgrip with elbows fully extended\"); ACE, Straight Arm Pressdown (\"use a straight bar attachment\")"
+      },
+      {
+        "nome": "começo: palmas pra frente (pegada pronada lá em cima)",
+        "medida": "palma_frente",
+        "t": 0.0,
+        "graus": [
+          0,
+          40
+        ],
+        "fonte": "Teixeira 2022 (\"pronated handgrip\"). 0 = palma virada pra frente do tronco"
+      },
+      {
+        "nome": "fim: palmas viradas pras coxas",
+        "medida": "palma_frente",
+        "t": 1.0,
+        "graus": [
+          130,
+          180
+        ],
+        "fonte": "Teixeira 2022 (\"pronated handgrip\"): embaixo a palma fica virada pro corpo. 180 = palma virada pro corpo"
+      },
+      {
+        "nome": "mãos quase na largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.8,
+          1.05
+        ],
+        "fonte": "ACE, Crockford 2015 (\"place the hands shoulder-width apart on the bar\"); Teixeira 2022 (\"a grip of 100% of the bi-acromial distance\"); Muyor 2022 (100% e 150% da largura biacromial, sem diferença: \"the width of the grip did not significantly influence the EMG activity\"). Na barra reta de 20\" a mão cabe inteira na borracha até 23,5 cm do meio: os centros das mãos ficam a 37 cm (ombros a 40 cm). Medida entre as bases dos dedos médios ÷ entre as articulações dos ombros"
+      },
+      {
+        "nome": "tronco inclinado à frente e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          15,
+          25
+        ],
+        "fonte": "ACE, Crockford 2015 (\"Back up and hinge forward at the hips\"); ExRx (\"bend over at hip\"; na animação o tronco fica parado). A cena usa 20° (as fontes vão do tronco na vertical — ACE, Straight Arm Pressdown: \"the hips straight, the back tall\"; Muyor 2022: \"the trunk in a vertical position\" — a ~35–40° na animação do ExRx)"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          10,
+          20
+        ],
+        "fonte": "ACE, Straight Arm Pressdown (\"the knees slightly bent\"); ACE, Crockford 2015 (\"while also bending the knees slightly\")"
+      },
+      {
+        "nome": "pés na largura do quadril",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.0,
+          1.6
+        ],
+        "fonte": "ACE, Straight Arm Pressdown (\"Stand with the feet hip-width apart\"): tornozelos a 0,28 m um do outro. O ExRx põe um pé um pouco atrás (\"Place one foot slightly back\"); a cena segue a ACE, com os pés paralelos"
+      },
+      {
+        "nome": "cabeça na linha do tronco",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -20,
+          5
+        ],
+        "fonte": "coluna neutra com o tronco inclinado (ACE, Crockford 2015: \"hinge forward at the hips\" — a dobra é no quadril, não no pescoço); o boneco em pé, no repouso, mede ~−11°"
+      }
+    ]
+  }
+}

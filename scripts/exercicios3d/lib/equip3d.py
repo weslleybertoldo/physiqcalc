@@ -5248,3 +5248,571 @@ def hack(nome="hack", angulo=45.0, encosto=None, gluteo=None, cabeceira=None, om
     raizes = {"estrutura": estr, "plataforma": pla, "carrinho": car, "encosto": enc, "ombreiras": omb}
     return Hack(raizes, D, pegs, raio_p, comp_p / 2)
 # ===== fim: Hack =====================================================================================================================
+
+
+# ===== Tornozeleira da polia ========================================================================================================
+# ── TORNOZELEIRA da polia (Coice de Glúteo na Polia, lote 8, 09/10/2026; serve também à Abdução e à Adução de Quadril na Polia) ──────
+# Tornozeleira de cabo (ankle cuff / ankle strap): a FAIXA acolchoada que abraça a perna logo acima dos maléolos, fechada por uma FITA
+# de nylon com velcro que passa num fecho de aço retangular, e a ARGOLA em D onde o mosquetão do cabo prende. É a peça do ExRx nos
+# exercícios de quadril no cabo ("Attach ankle cuff to low pulley. With cuff on one ankle, grasp ballet bar with both hands", Cable
+# Standing Hip Extension) e do ACE ("attaching a cuff securely around one ankle", Single-leg cable extension). Medidas de fabricante:
+# faixa de 4" de largura (Rogue Ankle Cuff Cable Attachment: "Length: 15"", "Width: 4"", "0.125” thick Foam Frame", "Adjustable from
+# 9" - 14" (circumference)", "secure it in place via the 1.5” wide nylon webbing strap (with hook-and-loop closure) and welded rectangle
+# D-ring"; BLK BOX Ankle Strap: 310 mm × 100 mm × 6 mm, "Neoprene", "reinforced D-rings") → faixa de 100 mm e 6 mm, fita do fecho de
+# 38 mm (1,5") e 1,5 mm, fecho retangular de aço de 4 mm; a argola é de aço maciço (Valor Fitness MB-9: "Built with a solid steel,
+# chrome-plated D-ring") — os fabricantes não dão a medida dela: arame de 6 mm, 38 mm por dentro na reta (a largura da fita) e 32 mm
+# da reta até o topo (escolha da fábrica). O mosquetão, a ponteira e a bola do cabo são os mesmos do puxador_polia(). Em vez de 4
+# argolas costuradas (Rogue: "4 welded-ring attachment points [...] located on the front, back, and each side"), a argola corre presa
+# na fita, numa presilha, em volta da faixa: fica sempre do lado do cabo e gira na presilha até apontar pra ele (a força do cabo passa
+# pelo eixo da canela, sem torcer a faixa), como o aro do puxador D — o mesmo efeito de prender o mosquetão na argola que está virada pro
+# cabo. A faixa fica PRESA na perna: a cena dá, a cada quadro, o centro dela no eixo da canela, o eixo da canela e a "frente" (que trava
+# o giro em volta da perna), tirados do osso da canela — ela não escorrega nem gira. A FAIXA tem a forma da perna: perfil_da_canela()
+# mede a pele com raios saindo do eixo da canela (fatias a cada 5 mm, 48 direções), fecha cada fatia pelo lado de fora (casca convexa:
+# a faixa passa por cima dos vãos da pele, como uma faixa de verdade) e a faixa nasce com o lado de dentro nessa forma — o neoprene
+# abraça a perna; sem perfil, sai redonda com `raio`. O fecho fica atrás (fecho = graus a partir da frente, em volta do eixo da canela):
+# a argola não pode passar por cima dele (a cena vira a "frente" pro cabo não sair por trás).
+# Uso numa cena (a canela parada em relação ao osso dela: a faixa fica rígida com ela):
+#   bvh = BVHTree.FromPolygons(...)                                   # pele do corpo no quadro de montagem (checagem3d._avaliar)
+#   perfil = e3.perfil_da_canela(bvh, centro, eixo, frente, pontos=pele) # pele = vértices da canela e do pé (a faixa passa por fora)
+#   tz = e3.tornozeleira_polia("tornozeleira", perfil=perfil)
+#   no pose(t): eng = tz.por(centro, eixo, frente, pol.direcao)        # centro/eixo/frente do osso da canela neste quadro
+#               pol.ligar(eng)
+#   Cena(pose, tz.equipamentos + ..., apoios=tz.apoios + ...)         # a faixa é APOIO (encosta na pele); argola e engate não encostam
+# As raízes (a checagem de rigidez é por raiz): "<nome>" = a FAIXA (neoprene, fita e fecho; APOIO: a pele encosta nela e afunda no
+# máximo o que a Cena deixar), origem no centro da faixa, X local = frente, Z local = eixo da canela (do tornozelo pro joelho);
+# "<nome>_argola" = a argola em D + a presilha (origem no eixo da reta da argola; X local ao longo da reta, Y local da reta pro topo, onde
+# o mosquetão passa); "<nome>_engate" = mosquetão + ponteira + bola do cabo (origem no topo da argola, Y local ao longo do cabo, como no
+# puxador_polia()). As 3 entram na Cena; argola e engate são equipamento (nada encosta neles).
+TORNOZELEIRA = (0.10, 0.006)        # faixa: largura (ao longo da perna) e espessura (m) — Rogue 4", BLK BOX 100 × 6 mm
+FITA_FECHO = (0.038, 0.0015)        # fita de nylon do fecho: largura e espessura (m) — Rogue 1,5"
+NEOPRENE = (0.035, 0.036, 0.04, 1)
+NYLON = (0.022, 0.022, 0.026, 1)
+
+
+def mat_neoprene():
+    return b3.material_liso("Neoprene", NEOPRENE, rug=0.8)
+
+
+def mat_nylon():
+    return b3.material_liso("Nylon", NYLON, rug=0.7)
+
+
+def _casca_polar(raios, angs, saida):
+    """Fecha uma fatia por fora: casca convexa dos pontos (raio, ângulo) em volta da origem, medida nos ângulos `saida`."""
+    import numpy as np
+    P = np.stack([raios * np.cos(angs), raios * np.sin(angs)], 1)
+    ordem = sorted(range(len(P)), key=lambda i: (P[i, 0], P[i, 1]))
+
+    def lado(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    baixo, cima = [], []
+    for i in ordem:
+        while len(baixo) >= 2 and lado(P[baixo[-2]], P[baixo[-1]], P[i]) <= 0:
+            baixo.pop()
+        baixo.append(i)
+    for i in reversed(ordem):
+        while len(cima) >= 2 and lado(P[cima[-2]], P[cima[-1]], P[i]) <= 0:
+            cima.pop()
+        cima.append(i)
+    casca = [P[i] for i in baixo[:-1] + cima[:-1]]
+    out = np.zeros(len(saida))
+    for j, a in enumerate(saida):
+        d = np.array([math.cos(a), math.sin(a)])
+        for k in range(len(casca)):                       # o raio que sai da origem cruza uma aresta só (a origem fica dentro)
+            p, q = casca[k], casca[(k + 1) % len(casca)]
+            e = q - p
+            den = d[0] * e[1] - d[1] * e[0]
+            if abs(den) < 1e-12:
+                continue
+            s = (p[0] * e[1] - p[1] * e[0]) / den             # origem + d·s = p + e·w
+            w = (p[0] * d[1] - p[1] * d[0]) / den
+            if s > 0 and -1e-9 <= w <= 1 + 1e-9:
+                out[j] = max(out[j], s)
+                break
+    return out
+
+
+def perfil_da_canela(bvh, centro, eixo, frente, largura=TORNOZELEIRA[0], n_ang=48, passo=0.005, folga=-0.0005, pontos=None):
+    """Forma do lado de dentro da faixa pra uma perna (ver o bloco acima): de cada ponto do eixo da canela (fatias a cada `passo` m, de
+    −largura/2 a +largura/2 em volta de `centro`), raios saem em `n_ang` direções no plano da fatia até a pele (`bvh`: a malha do corpo
+    no quadro de montagem); cada fatia vira casca convexa e soma `folga` (− = a faixa aperta a pele isso). `pontos` (N×3, mundo): os
+    vértices da pele da canela — entram na casca de cada fatia os que ficam a até `passo` dela (a faixa passa por fora de todos, também
+    entre as fatias). Ângulo 0 = `frente` (projetada ⟂ ao eixo), crescendo em volta do eixo (regra da mão direita). Devolve (alturas,
+    angulos, raios[altura][angulo]), m/rad."""
+    import numpy as np
+    C, z = Vector(centro), Vector(eixo).normalized()
+    x = Vector(frente) - z * Vector(frente).dot(z)
+    x.normalize()
+    y = z.cross(x)
+    n_alt = int(round(largura / passo)) + 1
+    alts = np.linspace(-largura / 2, largura / 2, n_alt)
+    angs = np.arange(n_ang) * (2 * math.pi / n_ang)
+    raios = np.zeros((n_alt, n_ang))
+    for k, h in enumerate(alts):
+        O = C + z * float(h)
+        for j, a in enumerate(angs):
+            loc, nor, idx, dist = bvh.ray_cast(O, x * math.cos(a) + y * math.sin(a), 0.25)
+            if loc is None:
+                raise ValueError("tornozeleira: o raio da fatia %.3f m, %.0f° não achou a pele" % (h, math.degrees(a)))
+            raios[k, j] = dist
+        r_k, a_k = raios[k], angs
+        if pontos is not None:
+            Q = np.asarray(pontos, dtype=float) - np.array(C)
+            hq = Q @ np.array(z)
+            X, Y = Q @ np.array(x), Q @ np.array(y)
+            sel = (np.abs(hq - h) <= passo) & (np.hypot(X, Y) < raios[k].max() + 0.02)    # só a perna da faixa
+            if sel.any():
+                r_k = np.concatenate([r_k, np.hypot(X[sel], Y[sel])])
+                a_k = np.concatenate([a_k, np.arctan2(Y[sel], X[sel])])
+        raios[k] = _casca_polar(r_k, a_k, angs)
+    return alts, angs, raios + folga
+
+
+def _faixa_loft(nome, alts, angs, raios, espessura, mat, pai, borda=4):
+    """Faixa fechada (um tubo achatado, com as bordas redondas) com o lado de dentro em raios[altura][angulo] e `espessura` m."""
+    import numpy as np
+    t = espessura
+    h0, h1 = float(alts[0]) + t / 2, float(alts[-1]) - t / 2
+    hs = [h0] + [float(h) for h in alts if h0 + 1e-6 < h < h1 - 1e-6] + [h1]
+    secao = [(0.0, h) for h in hs]
+    secao += [(t / 2 + t / 2 * math.cos(a), h1 + t / 2 * math.sin(a)) for a in (math.pi * (1 - i / borda) for i in range(1, borda))]
+    secao += [(t, h) for h in reversed(hs)]
+    secao += [(t / 2 + t / 2 * math.cos(a), h0 + t / 2 * math.sin(a)) for a in (-math.pi * i / borda for i in range(1, borda))]
+
+    def raio(h, j):
+        return float(np.interp(min(max(h, alts[0]), alts[-1]), alts, raios[:, j]))
+
+    verts = []
+    for j, a in enumerate(angs):
+        c, s = math.cos(a), math.sin(a)
+        for dr, h in secao:
+            r = raio(h, j) + dr
+            verts.append((r * c, r * s, h))
+    M, N = len(secao), len(angs)
+    faces = [(j * M + p, ((j + 1) % N) * M + p, ((j + 1) % N) * M + (p + 1) % M, j * M + (p + 1) % M)
+             for j in range(N) for p in range(M)]
+    me = bpy.data.meshes.new(nome)
+    me.from_pydata(verts, [], faces)
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    for pl in me.polygons:
+        pl.use_smooth = True
+    me.materials.append(mat)
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.parent = pai
+    return o
+
+
+def _aro_fechado(nome, pontos, raio, mat, pai=None, lados=12):
+    """Arame redondo de raio `raio` seguindo a linha FECHADA `pontos` (o _tubo_caminho, mas emendado no fim)."""
+    cu = bpy.data.curves.new(nome, "CURVE")
+    cu.dimensions = "3D"
+    cu.bevel_depth = raio
+    cu.bevel_resolution = max(1, lados // 4 - 1)
+    sp = cu.splines.new("POLY")
+    sp.points.add(len(pontos) - 1)
+    for p_, q in zip(sp.points, pontos):
+        p_.co = (q[0], q[1], q[2], 1.0)
+    sp.use_cyclic_u = True
+    ob_c = bpy.data.objects.new(nome + "_curva", cu)
+    bpy.context.scene.collection.objects.link(ob_c)
+    bpy.context.view_layer.update()
+    me = bpy.data.meshes.new_from_object(ob_c.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(ob_c, do_unlink=True)
+    bpy.data.curves.remove(cu)
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    for pl in me.polygons:
+        pl.use_smooth = True
+    me.materials.append(mat)
+    if pai is not None:
+        o.parent = pai
+    return o
+
+
+class Tornozeleira:
+    """Tornozeleira da polia pronta na cena (tornozeleira_polia()): raizes = [faixa, argola, engate]."""
+
+    def __init__(self, faixa, argola, engate, perfil, espessura, fita, apoio_argola, profundidade, comprimento, fecho):
+        self.faixa, self.argola, self.engate = faixa, argola, engate
+        self.raizes = [faixa, argola, engate]
+        self.equipamentos = [argola, engate]      # nada encosta neles (a checagem quer folga do corpo)
+        self.apoios = [faixa]                     # a faixa abraça a perna: encostar é o certo (afunda até o que a Cena deixar)
+        self.perfil = perfil                      # (alturas, angulos, raios do lado de dentro), referencial da faixa
+        self.espessura, self.fita = espessura, fita
+        self.apoio_argola = apoio_argola          # (raio da presilha, meio comprimento dela) — a reta da argola dentro dela
+        self.profundidade = profundidade          # da reta da argola até o topo (onde o mosquetão passa), m
+        self.comprimento = comprimento            # do topo da argola até onde o cabo começa (dentro da bola), m
+        self.fecho = fecho                        # ângulo do fecho em volta da canela (rad, 0 = frente)
+        self.angulo = 0.0                         # ângulo da argola em volta da canela no último por() (graus, 0 = frente)
+        self.ponto_argola = self.ponto_topo = self.ponto_engate = None
+
+    def raio_fita(self, ang):
+        """Raio do lado de fora da fita do fecho (no meio da faixa) no ângulo `ang` (rad), referencial da faixa."""
+        import numpy as np
+        alts, angs, raios = self.perfil
+        meio = np.array([np.interp(0.0, alts, raios[:, j]) for j in range(len(angs))])
+        a = ang % (2 * math.pi)
+        return float(np.interp(a, np.append(angs, 2 * math.pi), np.append(meio, meio[0]))) + self.espessura + self.fita
+
+    def _distancia(self, ang, folga=0.0005):
+        """Do eixo da canela até o eixo da reta da argola, com a presilha deitada na fita sem entrar nela (a faixa não é redonda)."""
+        rp, meia = self.apoio_argola
+        d = self.raio_fita(ang) + rp + folga
+        for _ in range(4):
+            falta = 0.0
+            for s in (-meia, -meia / 2, meia / 2, meia):
+                q = Vector((math.cos(ang), math.sin(ang))) * (d - rp) + Vector((-math.sin(ang), math.cos(ang))) * s
+                falta = max(falta, self.raio_fita(math.atan2(q.y, q.x)) + folga - q.length)
+            if falta <= 1e-5:
+                break
+            d += falta
+        return d
+
+    def por(self, centro, eixo, frente, direcao, voltas=6):
+        """Põe a tornozeleira no quadro e devolve onde o cabo começa (polia.ligar(engate)). centro = ponto do eixo da canela no meio da
+        faixa; eixo = ao longo da canela, do tornozelo pro joelho; frente = a frente da canela (trava o giro da faixa em volta da perna;
+        é projetada ⟂ ao eixo); direcao = polia.direcao (ponto → direção unitária do cabo, pra roldana). A faixa fica onde a cena mandou;
+        a argola corre em volta dela até o lado do cabo e gira na presilha até apontar pro cabo; o engate sai do topo dela na linha do
+        cabo."""
+        C, z = Vector(centro), Vector(eixo).normalized()
+        x = Vector(frente) - z * Vector(frente).dot(z)
+        x.normalize()
+        y = z.cross(x)
+        self.faixa.matrix_world = Matrix.Translation(C) @ Matrix((x, y, z)).transposed().to_4x4()
+        u = Vector(direcao(C))
+        for _ in range(voltas):
+            rho = u - z * u.dot(z)
+            if rho.length < 1e-6:
+                raise ValueError("tornozeleira: cabo ao longo da canela (%s)" % (tuple(u),))
+            rho.normalize()
+            ang = math.atan2(rho.dot(y), rho.dot(x))
+            A = C + rho * self._distancia(ang)
+            O = A + u * self.profundidade
+            u = Vector(direcao(O + u * self.comprimento))
+        rho = (u - z * u.dot(z)).normalized()
+        ang = math.atan2(rho.dot(y), rho.dot(x))
+        dif = abs((ang - self.fecho + math.pi) % (2 * math.pi) - math.pi)
+        if dif < math.radians(40):
+            raise ValueError("tornozeleira: a argola cai em cima do fecho (%.0f° dele): vire a frente da faixa" % math.degrees(dif))
+        A = C + rho * self._distancia(ang)
+        tau = z.cross(rho).normalized()            # eixo da reta da argola (tangente à faixa)
+        self.argola.matrix_world = Matrix.Translation(A) @ Matrix((tau, u, tau.cross(u))).transposed().to_4x4()
+        O = A + u * self.profundidade
+        self.engate.matrix_world = Matrix.Translation(O) @ Matrix((tau, u, tau.cross(u))).transposed().to_4x4()
+        self.angulo = math.degrees(ang)
+        self.ponto_argola, self.ponto_topo, self.ponto_engate = A, O, O + u * self.comprimento
+        return self.ponto_engate
+
+
+def tornozeleira_polia(nome="tornozeleira", perfil=None, raio=0.036, largura=TORNOZELEIRA[0], espessura=TORNOZELEIRA[1],
+                       fita=FITA_FECHO, fecho=180.0, arame=0.003, argola=(0.038, 0.032)):
+    """Tornozeleira da polia (ver o bloco acima): faixa de `largura` × `espessura` m com o lado de dentro no `perfil`
+    (perfil_da_canela(); None = redonda com `raio` m), fita do fecho = (largura, espessura) no meio da faixa, fecho de aço a `fecho` graus
+    da frente (180 = atrás), argola de arame de `arame` m de raio com argola = (vão da reta por dentro, da reta até o topo) m. Medidas da
+    Rogue Ankle Cuff e da BLK BOX Ankle Strap. Devolve uma Tornozeleira (raizes, equipamentos, apoios, por())."""
+    import numpy as np
+    if perfil is None:
+        alts = np.linspace(-largura / 2, largura / 2, 3)
+        angs = np.arange(48) * (2 * math.pi / 48)
+        perfil = (alts, angs, np.full((3, 48), raio))
+    alts, angs, raios = perfil
+
+    def raiz_nova(n):
+        r = bpy.data.objects.new(n, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    faixa, arg, eng = raiz_nova(nome), raiz_nova(nome + "_argola"), raiz_nova(nome + "_engate")
+    # faixa de neoprene (lado de dentro na forma da perna) + fita do fecho por cima, no meio da largura
+    _faixa_loft(nome + "_neoprene", alts, angs, raios, espessura, mat_neoprene(), faixa, borda=6)
+    larg_f, esp_f = fita
+    alts_f = np.linspace(-larg_f / 2, larg_f / 2, 5)
+    raios_f = np.array([[np.interp(h, alts, raios[:, j]) + espessura + 0.0002 for j in range(len(angs))] for h in alts_f])
+    _faixa_loft(nome + "_fita", alts_f, angs, raios_f, esp_f, mat_nylon(), faixa, borda=4)
+    # fecho: aro retangular de aço de 4 mm deitado na fita, atrás (a fita passa por dentro dele e volta por cima, com velcro)
+    af = math.radians(fecho)
+    j_f = int(round(af / (2 * math.pi) * len(angs))) % len(angs)
+    r_f = float(np.interp(0.0, alts, raios[:, j_f])) + espessura + esp_f + 0.0022
+    meio_h, meio_t = larg_f / 2 + 0.0045, 0.008
+    cantos = [(-meio_t, -meio_h), (meio_t, -meio_h), (meio_t, meio_h), (-meio_t, meio_h)]
+    pts = []
+    for k, (s, h) in enumerate(cantos):                       # retângulo com os cantos chanfrados, dobrado em volta da faixa
+        s2, h2 = cantos[(k + 1) % 4]
+        for f in (0.15, 0.85):
+            ss, hh = s + (s2 - s) * f, h + (h2 - h) * f
+            a = af + ss / r_f
+            pts.append((r_f * math.cos(a), r_f * math.sin(a), hh))
+    _aro_fechado(nome + "_fecho", pts, 0.002, mat_aco(), pai=faixa)
+    # argola em D (reta + 2 lados + meia-volta) e a presilha de nylon em volta da reta; origem no eixo da reta
+    vao, prof = argola
+    xa = vao / 2 + arame                                      # eixo dos lados da argola
+    yc = prof - xa                                            # onde começa a meia-volta (o topo fica em y = prof)
+    if yc < 0:
+        raise ValueError("tornozeleira: argola mais funda que larga")
+    d_pts = [(-xa, 0.0, 0.0), (xa, 0.0, 0.0), (xa, yc, 0.0)]
+    d_pts += [(xa * math.cos(a), yc + xa * math.sin(a), 0.0) for a in [math.pi * k / 12 for k in range(1, 12)]]
+    d_pts += [(-xa, yc, 0.0)]
+    _aro_fechado(nome + "_argola_d", d_pts, arame, mat_aco(), pai=arg)
+    rp = arame + esp_f
+    _cilindro(nome + "_presilha", rp, vao + 0.002, (0, 0, 0), (0, math.radians(90), 0), mat_nylon(), vertices=16, pai=arg)
+    # engate: mosquetão em volta do topo da argola (no plano ⟂ a ela ali), ponteira e bola do cabo — como no puxador_polia()
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.0035, major_segments=24, minor_segments=8,
+                                     location=(0, 0.012, 0), rotation=(0, math.radians(90), 0))
+    mosq = bpy.context.active_object
+    mosq.name = nome + "_mosquetao"
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    mosq.scale = (1.0, 1.6, 1.0)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.ops.object.shade_smooth()
+    mosq.data.materials.append(mat_aco())
+    mosq.parent = eng
+    _cilindro(nome + "_ponteira", 0.0045, 0.03, (0, 0.055, 0), (math.radians(-90), 0, 0), mat_aco(), vertices=16, pai=eng)
+    comprimento = 0.075                                       # do topo da argola até onde o cabo começa (dentro da bola)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.012, segments=16, ring_count=8, location=(0, comprimento + 0.007, 0))
+    bola = bpy.context.active_object
+    bola.name = nome + "_bola"
+    bpy.ops.object.shade_smooth()
+    bola.data.materials.append(mat_borracha())
+    bola.parent = eng
+    bpy.context.view_layer.update()
+    return Tornozeleira(faixa, arg, eng, (alts, angs, raios), espessura, esp_f, (rp, vao / 2 + 0.001), prof, comprimento, af)
+
+
+# ── BARRA DE APOIO das mãos na torre da polia (Coice de Glúteo na Polia, lote 8, 09/10/2026) ───────────────────────────────────────────
+# Barra horizontal na frente da torre, onde as 2 mãos seguram com os braços esticados: o "ballet bar" do ExRx ("grasp ballet bar with
+# both hands and step back with other foot. Elbows remain straight.", Cable Standing Hip Extension) e o "hold onto the handles or a secure
+# pole" do ACE (Single-leg cable extension). Barra de aço de 32 mm (1,25", a mesma da barra_fixa()) com ponteiras de borracha, presa na
+# frente da carenagem da pilha por 2 postes perto das bordas dela; fica na frente da roldana (folga pro carrinho subir e descer o trilho
+# sem bater nela) e os postes ficam por fora do carrinho e do pino de regulagem — o meio da barra fica livre pras mãos. A torre continua
+# a da polia() (sem mudar nada nela): os postes entram como filhos da raiz "<polia>_torre" (encostar na torre é encostar neles também) e
+# a barra é uma raiz própria "<nome>" (vazio no meio da barra, X local ao longo dela: checagem3d.Barra(raiz, raio, meia)).
+#   bar = e3.barra_apoio_polia("barra_apoio", pol, altura=1.0)
+#   Cena(..., pegadas=[("Left", ck.Barra(bar, 0.016, 0.30)), ("Right", ck.Barra(bar, 0.016, 0.30))])
+def barra_apoio_polia(nome, pol, altura=1.0, meia=0.30, raio=0.016, frente=0.09, postes=0.19, raio_poste=0.0125):
+    """Barra de apoio das mãos na torre da polia `pol` (ver o bloco acima): eixo a `altura` m do chão e `frente` m à frente do eixo da
+    roldana (pro lado da `frente` da polia), de −meia a +meia de lado; postes de `raio_poste` m a ±`postes` m do meio, da frente da
+    carenagem até a barra. Devolve a raiz da barra (vazio no meio, X local ao longo dela)."""
+    f = Vector(pol.frente)
+    f = Vector((f.x, f.y, 0.0)).normalized()
+    cima = Vector((0.0, 0.0, 1.0))
+    s = cima.cross(f)
+    if hasattr(pol, "eixo_giro"):                                 # PoliaGiratoria: o eixo da roldana (de frente) fica `raio` à frente do giro
+        base = pol.eixo_giro + f * pol.raio
+    else:
+        base = Vector(pol.centro)
+    O = Vector((base.x, base.y, 0.0))
+    pilha = bpy.data.objects.get(pol.torre.name[:-len("_torre")] + "_pilha")
+    if pilha is None:
+        raise ValueError("barra_apoio_polia: a polia não tem a carenagem da pilha (so_roldana?)")
+    df_face = max((pilha.matrix_world @ Vector(c) - O).dot(f) for c in pilha.bound_box)
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    C = O + f * frente + cima * altura
+    raiz.matrix_world = Matrix.Translation(C) @ Matrix((s, f, cima)).transposed().to_4x4()
+    rot = (0, math.radians(90), 0)
+    _em_aneis(_cilindro(nome + "_tubo", raio, 2 * meia, (0, 0, 0), rot, mat_aco(), vertices=32, pai=raiz))
+    for k in (-1, 1):
+        _cilindro(nome + "_ponta%+d" % k, raio + 0.002, 0.02, (k * (meia + 0.01), 0, 0), rot, mat_borracha(), vertices=32, pai=raiz)
+    for k in (-1, 1):                                             # postes (filhos da torre) e a chapa de cada um na carenagem
+        a = O + s * (k * postes) + f * (df_face + 0.006) + cima * altura
+        b = O + s * (k * postes) + f * frente + cima * altura
+        _em_aneis(tubo(pol.torre.name[:-len("_torre")] + "_poste_barra%+d" % k, a, b, raio_poste, mat_estrutura(), pai=pol.torre))
+        caixa(pol.torre.name[:-len("_torre")] + "_chapa_barra%+d" % k, O + s * (k * postes) + f * (df_face + 0.003) + cima * altura,
+              (0.06, 0.006, 0.08), mat_estrutura(), rot=(0, 0, math.atan2(f.x, -f.y)), pai=pol.torre, chanfro=0.002)
+    bpy.context.view_layer.update()
+    return raiz
+# ===== fim: Tornozeleira da polia ===================================================================================================
+
+
+# ===== Banco Scott ==================================================================================================================
+# ── BANCO SCOTT LIVRE (Rosca Scott com Halteres, lote 8, 09/10/2026; o MESMO banco serve à Rosca Scott com Barra) ─────────────────────
+# Banco de rosca Scott de peso livre, sem alavanca e sem pilha (o "preacher curl bench"): o ASSENTO (estofado afinando pra frente numa
+# coluna com a luva da regulagem de altura e o pino), a ALMOFADA DOS BRAÇOS inclinada (estofado grosso numa chapa de aço) — inteira ou com
+# o RECORTE do peito no meio da borda de cima, do jeito da almofada da máquina (rosca_scott(), acima) —, os 2 TUBOS LATERAIS que seguram
+# a almofada por fora e descem inclinados até a travessa da frente, a BASE no chão (travessa da frente, trilho do meio e travessa de trás,
+# com sapatas de borracha) e, opcional, os 2 GANCHOS da barra (o "suporte"). É o banco da "Dumbbell Preacher Curl" e da "Barbell Preacher
+# Curl" do ExRx ("Grasp dumbbell and sit on preacher bench. With arm bent and palm facing shoulder, place back of arm down on pad."; "Sit
+# on preacher bench placing back of arms on pad."; "Seat should be adjusted to allow armpit to rest near top of pad.") e o Precor Discovery
+# DBR0202 Preacher Curl Bench ("The oversized arm pad cushions both the chest area and arm area with extra thick padding for exerciser
+# comfort and stability."; "The tapered seat enhances entry and exit and features an intuitive, ratcheting seat adjustment for precise
+# exerciser fit."; "High-impact, polyurethane wear guards help protect the bench and bar from metal-on-metal contact"). Como as máquinas,
+# a cena monta o banco EM VOLTA do corpo: ela dá a face da almofada (encostada na parte de trás dos braços, a axila perto da borda de
+# cima), o recorte (o peito e a barriga no meio), o assento (embaixo do glúteo) e a frente da base (na frente dos pés); a peça liga tudo
+# com a estrutura. Os pés ficam no chão entre os 2 tubos, dos lados do trilho do meio; nada passa entre os joelhos.
+#   Rosca Scott com Halteres: um braço por vez (o outro descansa na almofada); Rosca Scott com Barra: os 2 braços, a barra passando por
+#   cima da almofada (os ganchos ficam por fora das mãos: x_suporte).
+# Medidas de banco de verdade: estofado da almofada de 65 mm (Precor DBR0202: "Total thickness is 2.5 inches (65 mm)"); banco de ~0,9 m de
+# altura e ~1,07 m de comprimento (Precor DBR0202: "Dimensions (L x W x H): 42 x 37 x 36 in / 107 x 94 x 91 cm"; Titan Preacher Curl Bench
+# V3: "Overall Height 35-in."); almofada de ~59 × 36 cm e assento de ~28 × 30 cm, estofados de 2", com o assento regulando de 16" a 20,5" do
+# chão (Titan V3: "Pad Dimensions 14-in x 23.25-in x 2-in.", "Bench Dimensions 11-in x 12-in x 2-in.", "Adjustable Seat 16-in – 20.5-in.");
+# os ganchos da barra a ~72 cm um do outro (Titan V3: "Rack Width 28.5-in."); tubo de 2 × 3" (Titan V3: "Frame Material 2 x 3-in. 11-Ga
+# Steel"). O ângulo, o comprimento e o recorte da almofada e a altura do assento saem do corpo na cena (como na máquina), não são números
+# fixos da peça. Coluna do assento, luva, pino, base, sapatas, os braços que prendem a almofada nos tubos e o desenho dos ganchos são
+# escolha da fábrica. Peças compridas em anéis (_em_aneis / _viga / _caixa_ao_longo): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO de quem senta):
+#   bs = e3.banco_scott("banco_scott", almofada=(y, z, angulo, comprimento, largura, espessura), recorte=(x, profundidade),
+#                       assento=(y_frente, y_tras, topo, largura, espessura, largura_frente), y_frente=..., suporte=(y, z))
+#   Cena(pose, [halter] + bs.equipamentos, ..., apoios=bs.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo), "<nome>_assento"
+# e "<nome>_almofada" (APOIO: encostar é o certo). Estofados com as quinas chanfradas (a medida da zona de apoio erra o sinal em quina
+# viva). bs.topo, bs.u e bs.n dão a face da almofada no mundo (meio da borda de cima, descendo pela face e a normal pros braços).
+class BancoScott:
+    """Banco Scott livre pronto na cena (banco_scott())."""
+
+    def __init__(self, raizes, topo, u, n, ganchos):
+        self.raizes = raizes                  # {"estrutura", "assento", "almofada"}
+        self.equipamentos = [raizes["estrutura"]]
+        self.apoios = [raizes["assento"], raizes["almofada"]]
+        self.topo = topo                      # meio (x = 0) da borda de cima da face da almofada, no mundo
+        self.u, self.n = u, n                 # descendo pela face (pra frente e pra baixo) e a normal dela (pros braços)
+        self.ganchos = ganchos                # {+1: centro da barra apoiada no gancho do lado +X, −1: do −X}; vazio sem suporte
+
+
+def banco_scott(nome="banco_scott", almofada=None, recorte=None, assento=None, y_frente=None, x_tubo=None, s_tubo=None, ang_tubo=None,
+                suporte=None, x_suporte=None, tubo=(0.05, 0.076), raio_barra=0.0145):
+    """Banco Scott livre (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y:
+      almofada  = (y, z, angulo, comprimento, largura, espessura): (y, z) = meio (x = 0) da BORDA DE CIMA da face da almofada (onde a
+                  parte de trás dos braços encosta; a axila fica perto dela), que desce pra frente (−Y) `angulo` graus da vertical por
+                  `comprimento` m; o estofado fica atrás da face (do lado de quem senta), com `espessura` m, numa chapa de aço (como a
+                  almofada da rosca_scott());
+      recorte   = None (almofada inteira) ou (x_dentro, profundidade): recorte do peito no meio da borda de cima, de |x| < x_dentro, que
+                  desce `profundidade` m pela face — a almofada vira um U: 2 abas por baixo dos braços e a base inteira embaixo;
+      assento   = (y_frente, y_tras, topo, largura, espessura[, largura_frente]): estofado do assento com o topo em `topo`, afinando até
+                  `largura_frente` na frente (padrão: sem afinar);
+      y_frente  = y da travessa da frente da base, no chão, na frente dos pés (None = onde o tubo lateral chega ao chão 12° mais em pé
+                  que a almofada); o tubo não pode ficar mais deitado que a almofada (passaria por ela);
+      x_tubo    = |x| dos 2 tubos laterais, que seguram a almofada por fora (None = encostados nos lados dela);
+      s_tubo    = onde o tubo lateral começa, ao longo da face, a partir da borda de cima (None = 2 cm: o tubo sobe até o alto da
+                  almofada; perto do `comprimento` = o tubo sai da parte de baixo dela e fica mais curto);
+      ang_tubo  = None: o tubo desce até a travessa da frente (como o Precor DBR0202), com um trilho no meio da base até a travessa de
+                  trás; graus da vertical: o tubo desce mais em pé até um trilho no chão de cada lado dos pés (|x| = x_tubo), que vai
+                  da travessa da frente até a de trás (sem o trilho do meio);
+      suporte   = None (sem ganchos) ou (y, z): centro de uma barra de raio `raio_barra` apoiada nos 2 ganchos (V de borracha num braço
+                  que sai do tubo lateral), em x = ±x_suporte (None = x_tubo);
+      tubo      = seção (m) do tubo lateral: largura (no X) e altura.
+    Devolve um BancoScott (raizes, equipamentos, apoios, topo, u, n, ganchos)."""
+    if almofada is None or assento is None:
+        raise ValueError("banco_scott: almofada e assento vêm da cena (o banco é montado em volta do corpo)")
+    y_top, z_top, ang, comp_a, larg_a, esp_a = almofada
+    y_f, y_t, topo, larg, esp = assento[:5]
+    larg_fr = assento[5] if len(assento) > 5 and assento[5] else larg
+    lt, at = tubo
+    x_t = larg_a / 2 + lt / 2 + 0.003 if x_tubo is None else x_tubo
+    x_s = x_t if x_suporte is None else x_suporte
+    if x_t - lt / 2 < larg_a / 2 - 0.001:
+        raise ValueError("banco_scott: o tubo lateral (x = %.3f) entra na almofada (meia largura %.3f)" % (x_t, larg_a / 2))
+    X = Vector((1.0, 0.0, 0.0))
+    a = math.radians(ang)
+    u = Vector((0.0, -math.sin(a), -math.cos(a)))           # descendo pela face da almofada (pra frente e pra baixo)
+    n = Vector((0.0, -math.cos(a), math.sin(a)))            # normal da face (pros braços: pra cima e pra frente)
+    rot_a = _rot_de(X, -u, n)                                # caixa: X local = X, Y local subindo pela face, Z local = n
+    topo_a = Vector((0.0, y_top, z_top))
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, ass, alm = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("almofada")
+    bpy.context.view_layer.update()
+    pecas = []                                               # peças da estrutura sem pai (presas na raiz no fim, sem sair do lugar)
+
+    # ── almofada dos braços: estofado inclinado (APOIO), inteiro ou em U, com a chapa de aço atrás ─────────────────────────────────
+    if recorte is None or recorte[1] <= 0.0:
+        pedacos = [("", 0, 0.0, larg_a / 2, 0.0, comp_a)]   # (sufixo, lado, |x| de dentro, |x| de fora, s0, s1) ao longo da face
+    else:
+        x_d, prof = recorte
+        if not 0.0 < x_d < larg_a / 2 - 0.04 or prof >= comp_a - 0.04:
+            raise ValueError("banco_scott: recorte %s não cabe na almofada (largura %.3f, comprimento %.3f)" % (recorte, larg_a, comp_a))
+        pedacos = [("_aba%+d" % s, s, x_d, larg_a / 2, 0.0, prof) for s in (1, -1)] + [("_base", 0, 0.0, larg_a / 2, prof, comp_a)]
+    for suf, s, x0, x1, s0, s1 in pedacos:
+        xc, largura = (s * (x0 + x1) / 2, x1 - x0) if s else (0.0, 2 * x1)
+        c_s = topo_a + u * ((s0 + s1) / 2) + X * xc
+        caixa(nome + "_almofada_estofado" + suf, c_s - n * (esp_a / 2), (largura, s1 - s0, esp_a), mat_estofado(), rot=rot_a,
+              pai=alm, chanfro=0.02)
+        _em_aneis(_reto(caixa(nome + "_almofada_chapa" + suf, c_s - n * (esp_a + 0.008), (largura - 0.02, s1 - s0 - 0.02, 0.016),
+                              mat_estrutura(), rot=rot_a, pai=estr, chanfro=0)), passo=0.06)
+    # ── os 2 tubos laterais: de perto da almofada (ao lado dela, atrás da face) até o chão — a travessa da frente ou o trilho lateral ─
+    z_trav = 0.038                                           # eixo das travessas do chão (em cima das sapatas de 8 mm)
+    s_t = 0.02 if s_tubo is None else s_tubo
+    T = topo_a + u * s_t - n * (esp_a + 0.016 - at / 2)     # topo do eixo do tubo (no plano x = ±x_tubo): a face da frente do tubo
+    z_pe = z_trav + 0.03                                     # fica um pouco atrás da face da almofada
+    if y_frente is None:
+        y_frente = T.y - (T.z - z_pe) * math.tan(math.radians(ang - 12.0))
+    y_pe = y_frente if ang_tubo is None else T.y - (T.z - z_pe) * math.tan(math.radians(ang_tubo))   # onde o tubo chega ao chão
+    if T.y - y_pe > (T.z - z_pe) * math.tan(a) + 1e-6:
+        raise ValueError("banco_scott: o tubo lateral (até y = %.3f) ficaria mais deitado que a almofada (%.1f°) e passaria por ela" % (
+            y_pe, ang))
+    if y_pe < y_frente - 1e-6:
+        raise ValueError("banco_scott: o pé do tubo lateral (y = %.3f) passa da travessa da frente (y = %.3f)" % (y_pe, y_frente))
+    d_t = (Vector((0.0, y_pe, z_pe)) - Vector((0.0, T.y, T.z))).normalized()   # descendo pelo tubo
+    for s in (1, -1):
+        Ts = Vector((s * x_t, T.y, T.z))
+        Fs = Vector((s * x_t, y_pe, z_pe))
+        pecas.append(_caixa_ao_longo(nome + "_tubo%+d" % s, Ts, Fs, lt, at, X, mat_estrutura()))
+        pecas.append(_reto(caixa(nome + "_tubo_tampa%+d" % s, Ts - d_t * 0.003, (lt + 0.004, at + 0.004, 0.006), mat_borracha(),
+                                 rot=_rot_de(X, X.cross(d_t), -d_t), chanfro=0)))
+        # 2 braços curtos prendendo a chapa da almofada no tubo (perto da borda de cima e da de baixo, ou em volta do topo do tubo)
+        braco_s = (0.06, comp_a - 0.06) if s_tubo is None else (max(0.06, s_t - 0.06), min(comp_a - 0.04, s_t + 0.02))
+        for k, sk in enumerate(braco_s):
+            P = topo_a + u * sk - n * (esp_a + 0.008) + X * (s * (larg_a / 2 - 0.03))
+            Q = Vector((0.0, T.y, T.z)) + d_t * max(0.0, (Vector((0.0, P.y, P.z)) - Vector((0.0, T.y, T.z))).dot(d_t))
+            pecas.append(_viga(nome + "_almofada_braco%+d%d" % (s, k), P, Vector((s * x_t, Q.y, Q.z)), 0.04, 0.03, mat_estrutura()))
+    # ── base no chão: travessa da frente, trilho do meio (ou os 2 trilhos laterais) até a travessa de trás (embaixo do assento) e
+    #    sapatas de borracha ───────────────────────────────────────────────────────────────────────────────────────────────────────
+    y_ass = (y_f + y_t) / 2
+    x_tras = 0.20 if ang_tubo is None else x_t + 0.04
+    _viga(nome + "_base_frente", (-(x_t + 0.05), y_frente, z_trav), (x_t + 0.05, y_frente, z_trav), 0.08, 0.06, mat_estrutura(), pai=estr)
+    if ang_tubo is None:
+        _viga(nome + "_base_meio", (0.0, y_frente + 0.04, z_trav - 0.005), (0.0, y_ass - 0.04, z_trav - 0.005), 0.06, 0.05,
+              mat_estrutura(), pai=estr)
+    else:
+        for s in (1, -1):
+            _viga(nome + "_base_trilho%+d" % s, (s * x_t, y_frente + 0.04, z_trav), (s * x_t, y_ass - 0.04, z_trav), 0.06, 0.06,
+                  mat_estrutura(), pai=estr)
+    _viga(nome + "_base_tras", (-x_tras, y_ass, z_trav), (x_tras, y_ass, z_trav), 0.08, 0.06, mat_estrutura(), pai=estr)
+    for s in (1, -1):
+        for k, (x, y) in enumerate(((s * (x_t + 0.02), y_frente), (s * (x_tras - 0.03), y_ass))):
+            caixa(nome + "_sapata%+d%d" % (s, k), (x, y, 0.004), (0.09, 0.09, 0.008), mat_borracha(), pai=estr, chanfro=0.002)
+    # ── assento: estofado (APOIO) afinando pra frente, a chapa embaixo dele, a coluna com a luva da regulagem e o pino ────────────────
+    prof_a = y_t - y_f
+    est = caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, prof_a, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    chapa = caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.04, prof_a - 0.04, 0.024), mat_estrutura(), pai=estr, chanfro=0)
+    if larg_fr < larg:
+        _afinar(est, prof_a / 2, -prof_a / 2, larg_fr / larg)
+        _afinar(chapa, prof_a / 2 - 0.02, -prof_a / 2 + 0.02, max(0.3, (larg_fr - 0.04) / (larg - 0.04)))
+    _em_aneis(_reto(chapa), passo=0.06)
+    z_luva = min(0.30, z_chapa - 0.12)
+    _viga(nome + "_coluna_assento", (0, y_ass, z_trav + 0.03), (0, y_ass, z_chapa - 0.012), 0.06, 0.06, mat_estrutura(), pai=estr)
+    _viga(nome + "_luva", (0, y_ass, z_trav + 0.03), (0, y_ass, z_luva), 0.08, 0.08, mat_estrutura(), pai=estr)
+    _cilindro(nome + "_pino", 0.008, 0.07, (0.06, y_ass, z_luva - 0.04), (0, math.radians(90), 0), mat_aco(), pai=estr)
+    _cilindro(nome + "_pino_botao", 0.016, 0.02, (0.10, y_ass, z_luva - 0.04), (0, math.radians(90), 0), mat_borracha(), pai=estr)
+    # ── ganchos da barra (opcional): um V de borracha embaixo da barra apoiada, num braço que sai do tubo lateral ────────────────────
+    ganchos = {}
+    if suporte is not None:
+        ys, zs = suporte
+        for s in (1, -1):
+            C = Vector((s * x_s, ys, zs))
+            ganchos[s] = C
+            for k, lado_v in enumerate((1, -1)):              # as 2 abas do V, a 40° da horizontal, abrindo pra cima
+                v = Vector((0.0, lado_v * math.cos(math.radians(40.0)), math.sin(math.radians(40.0))))
+                nv = Vector((0.0, -v.z, v.y)) * lado_v           # normal da aba, pro lado da barra
+                c_v = C + v * 0.012 - nv * (raio_barra + 0.006)
+                pecas.append(_reto(caixa(nome + "_gancho_v%+d%d" % (s, k), c_v, (0.04, 0.06, 0.012), mat_borracha(),
+                                         rot=_rot_de(X, v, X.cross(v)), chanfro=0)))
+            corpo = C - Vector((0.0, 0.0, raio_barra + 0.03))    # corpo do gancho, embaixo do V
+            pecas.append(_reto(caixa(nome + "_gancho_corpo%+d" % s, corpo, (0.04, 0.05, 0.03), mat_estrutura(), chanfro=0)))
+            Q = Vector((0.0, T.y, T.z)) + d_t * max(0.0, (Vector((0.0, corpo.y, corpo.z)) - Vector((0.0, T.y, T.z))).dot(d_t))
+            pecas.append(_viga(nome + "_gancho_braco%+d" % s, Vector((s * x_t, Q.y, Q.z)), corpo, 0.04, 0.03, mat_estrutura()))
+    _prender(pecas, estr)
+    bpy.context.view_layer.update()
+    return BancoScott({"estrutura": estr, "assento": ass, "almofada": alm}, topo_a, u, n, ganchos)
+# ===== fim: Banco Scott =============================================================================================================

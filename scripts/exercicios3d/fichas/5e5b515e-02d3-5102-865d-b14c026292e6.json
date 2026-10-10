@@ -1,0 +1,523 @@
+{
+ "uuid": "5e5b515e-02d3-5102-865d-b14c026292e6",
+ "nome": "Agachamento Frontal com Barra",
+ "cena": "agachamento_frontal_com_barra",
+ "grupo": "Quadríceps",
+ "subgrupo": "Quadríceps · glúteo máximo · core (estabilização)",
+ "padrao_movimento": "agachamento",
+ "equipamento": "barra",
+ "variacao": "frontal",
+ "alvos": [
+  "quadriceps",
+  "gluteo"
+ ],
+ "auxiliares": [
+  "adutores",
+  "posterior",
+  "lombar",
+  "abdomen",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 42,
+  "el": 8,
+  "dist": 4.4,
+  "alvo": [
+   0,
+   -0.05,
+   0.9
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.0,
+  "alvo": [
+   0,
+   -0.05,
+   0.92
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Em pé, com a barra apoiada na frente dos ombros, em cima dos deltoides e perto das clavículas (sem encostar no pescoço), segurando na pegada de clean: mãos um pouco mais abertas que os ombros (cerca de 1 punho por fora deles), os dedos embaixo da barra, a mão virada pra fora e o punho dobrado pra trás (a palma olhando pra cima), o polegar do mesmo lado dos dedos, solto, sem dar a volta, e os cotovelos à frente, altos e mais juntos que os ombros; pés na largura dos ombros, com as pontas pra frente ou um pouco pra fora. Desce empurrando o quadril pra trás e dobrando os joelhos ao mesmo tempo, com o tronco bem mais em pé que no agachamento com a barra nas costas, as costas retas, a cabeça olhando pra frente, os cotovelos altos, os joelhos na direção dos pés e os calcanhares no chão, até as coxas passarem um pouco da paralela; sobe estendendo o quadril e os joelhos ao mesmo tempo até ficar em pé. A barra não sai do lugar nos ombros e o peso fica distribuído entre o calcanhar e a planta do pé.",
+ "cinesiologia": {
+  "plano": "sagital, cadeia cinética fechada; os braços ficam parados no rack, com a barra apoiada nos deltoides",
+  "articulacoes": "quadril (flexão na descida e extensão na subida), joelho (flexão até ~117° embaixo e extensão), tornozelo (dorsiflexão na descida e flexão plantar na subida); coluna neutra e parada (o tronco inclina inteiro no quadril); ombros (flexão), cotovelos (flexão) e punhos (extensão) quase parados, segurando a barra no rack (os cotovelos sobem um pouco na descida pra ficarem altos com o tronco inclinado)",
+  "agonistas": "quadríceps — vasto lateral, vasto medial, vasto intermédio e reto femoral — na extensão do joelho (ExRx: alvo \"Quadriceps\"); glúteo máximo na extensão do quadril (ExRx: sinergista \"Gluteus Maximus\")",
+  "sinergistas": "glúteo máximo, adutor magno e sóleo (ExRx: Synergists); isquiotibiais e gastrocnêmio como estabilizadores dinâmicos (ExRx: Dynamic Stabilizers)",
+  "estabilizadores": "eretores da espinha (tronco em pé e coluna neutra), reto do abdome e oblíquos (ExRx: Antagonist Stabilizers) — o core que segura o tronco com a barra na frente —; no rack, deltoide anterior e lateral, supraespinal, peitoral maior (parte clavicular), coracobraquial, trapézio, levantador da escápula e serrátil anterior (ExRx: Stabilizers)",
+  "fases": "descida excêntrica até as coxas passarem um pouco da paralela e subida concêntrica até ficar em pé"
+ },
+ "referencias": [
+  "NSCA — Basics of Strength and Conditioning Manual (2012), cap. 4, 1b. Barbell Front Squat, pp. 50–51, https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (cópia do Internet Archive de 05/01/2024): \"Exercise Objective: Develop the quadriceps, thigh adductors, gluteals, and hamstrings\"; \"This exercise is great for athletes who have problems keeping erect during back squats. If an erect position is not maintained during this lift, the bar will roll forward.\"; Start Position: \"Place the bar comfortably on the front of the shoulders in one of two positions:\" — \"Clean Style: Place hands on the bar slightly wider than shoulder-width and rotate elbows up so they are high in front of the bar (Figure 4-49)\" e \"Cross-Arm Style: Cross arms in front of shoulders and place hands on top of the bar with elbows high in front (Figure 4-50)\"; \"Align hips vertically with shoulders\"; \"position the feet so they are shoulder-width apart with toes pointed straight ahead in a comfortable foot position (Figure 4-52)\"; Procedure: \"Focus head and eyes straight ahead, take a deep breath to fill the chest with air, and engage the core\"; \"In a slow, controlled motion, simultaneously push hips back, flex knees, and allow the torso to come forward slightly\"; \"Distribute bodyweight from the balls of the feet to the heels\"; \"Drive through the floor (keeping the weight back on the heels), and extend hips and knees\"; \"Raise hips and shoulders simultaneously to keep back flat and head neutral\"; \"Exhale near the top of the squat and fully extend knees and hips to return to start position\"; Coaching Points: \"Keep knees pointed out, aligned with feet, and behind toes throughout entire lift\". As fotos da sequência (Figures 4-51 Lift-Off, 4-52 Start Position e 4-53 Bottom Squat Position) são na pegada de clean. Do agachamento com a barra nas costas, no mesmo manual (1a): \"Never flex the spine (i.e., round forward) during a squat\"; \"Proper depth is achieved when mid-thigh is parallel to the floor\"; \"The torso should be held between 35 and 45° from vertical\" (com a barra nas costas)",
+  "ExRx.net — Front Squat (Weight Exercises › Olympic Lifts, o estilo do levantamento olímpico), https://exrx.net/WeightExercises/OlympicLifts/FrontSquat (cópia do Internet Archive de 2026; o site responde 403 direto): \"Grasp barbell from rack or clean barbell from floor with overhand open grip, slightly wider than shoulder width. Position barbell chest high with back arched. Place bar in front of shoulders with elbows placed forward as high as possible and finger under bar to each side. Position heels hip width or slightly wider with feet angled outward.\"; \"Descend until knees and hips are fully bent or until thighs are just past parallel to floor. Knees travel outward in direction of toes. Extend knees and hips until legs are straight.\"; \"Keep head forward, chin in, back straight and feet flat on floor; equal distribution of weight through forefoot and heel.\"; Force (Articulation), Static: \"Spine (Thoracic, Lumbar) Extension\", \"Shoulder Flexion\", \"Scapula & Clavicle Elevation, Upward Rotation\"",
+  "ExRx.net — Barbell Front Squat (Weight Exercises › Quadriceps, o estilo de musculação), https://exrx.net/WeightExercises/Quadriceps/BBFrontSquat (cópia do Internet Archive de 06/02/2026): \"From rack with barbell upper chest height, position bar in front of shoulders. Cross arms and place hands on top of barbell with upper arms parallel to floor.\" (a outra pegada, de braços cruzados); \"Squat down by bending hips back while allowing knees to bend forward, keeping back straight and knees pointed same direction as feet. Descend until thighs are just past parallel. Extend knees and hips until legs are straight.\"; \"Keep head facing forward, back straight and feet flat on floor with equal distribution of weight through forefoot and heel. Knees should point same direction as feet throughout movement.\"; músculos: Target \"Quadriceps\"; Synergists \"Gluteus Maximus\", \"Adductor Magnus\", \"Soleus\"; Dynamic Stabilizers \"Hamstrings\", \"Gastrocnemius\"; Stabilizers \"Erector Spinae\", \"Deltoid, Anterior\", \"Deltoid, Lateral\", \"Supraspinatus\", \"Pectoralis Major, Clavicular\", \"Coracobrachialis\", \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\", \"Trapezius, Lower\", \"Serratus Anterior\"; Antagonist Stabilizers \"Rectus Abdominis\", \"Obliques\"",
+  "ACE — Front Squat to Overhead Press (Exercise Library), https://www.acefitness.org/acefit/exercise-library-details/0/315/: \"Grip the bar with hands approximately shoulder-width apart and dip under the bar to bring it off the rack and step backwards and let it rest across the front of the shoulders so that the palms are facing the ceiling and the elbows are pointed straight ahead. Keep the back straight while squatting down, holding the weight on the front of the shoulders.\"",
+  "Gullett JC, Tillman MD, Gutierrez GM, Chow JW. A biomechanical comparison of back and front squats in healthy trained individuals. J Strength Cond Res. 2009;23(1):284-292. doi:10.1519/JSC.0b013e31818546bb (resumo no PubMed 19002072 e o texto numa cópia pública): \"The front squat (Figure 2) involves the lifter positioning the barbell across the anterior deltoids and clavicles and fully flexing the elbows to position the upper arms parallel to the floor (5,9). The descending and ascending motions are much the same as in the back squat.\" (5 = Baechle e Earle, Essentials of Strength Training and Conditioning, 2ª ed.); no agachamento com a barra nas costas, \"allowing the hips and knees to slowly flex until the thighs are parallel to the floor\" com \"emphasis on keeping the back flat, the heels on the floor, and the knees aligned over the feet\"; \"(using a stance approximately shoulder width apart)\"; \"Subjects lifted nearly 90% of their body mass during the back squat (61.8 ± 18.6 kg) and almost 70% of their body mass during the front squat (48.5 ± 14.1 kg).\"; resumo: \"The front squat was as effective as the back squat in terms of overall muscle recruitment, with significantly less compressive forces and extensor moments.\"",
+  "Diggin D, O'Regan C, Whelan N, Daly S, McLoughlin V, McNamara L, Reilly A. A biomechanical analysis of front versus back squat: injury implications. ISBS 2011 (Portuguese Journal of Sport Sciences 11, Suppl. 2:643-646), https://ojs.ub.uni-konstanz.de/cpa/article/view/4916: \"Stance width was standardised at 107(±10) % of biacromial breadth.\"; \"Results showed that the back squat exhibited a significantly greater trunk lean than the front squat throughout (p < 0.05) with no differences occurring in knee joint kinematics.\"; \"the front squat allows for a more upright posture throughout\"; tronco = \"the angle between hip and mid-axilla with the vertical\"; na figura 3, no meio do movimento (embaixo), ~27° no frontal e ~43° com a barra nas costas; \"the movement achieving a maximum flexion angle of 91° for both techniques\" (ângulo relativo do joelho)",
+  "Yavuz HU, Erdağ D, Amca AM, Aritan S. Kinematic and EMG activities during front and back squat variations in maximum loads. J Sports Sci. 2015;33(10):1058-1066. doi:10.1080/02640414.2014.984240 — lido só o resumo (PubMed 25630691): \"the electromyographic activity of vastus medialis was found to be greater in the front squat compared to the back squat during the ascending phase\"; \"Compared to the front squat version, back squat exhibited significantly greater trunk lean, with no differences occurring in the knee joint kinematics throughout the movement.\"",
+  "Sinclair J, Atkins S, Vincent H, Richards JD. Modelling Muscle Force Distributions during the Front and Back Squat in Trained Lifters. Central European Journal of Sport Sciences and Medicine 2016;14(2):13-20. doi:10.18276/cej.2016.2-02: \"The front squat requires the lifter to place the barbell in an anterior position aligned with the clavicular ridge. When the clean grip is adopted the elbows are flexed and the shoulders are and internally rotated. This allows the upper arm segments to be positioned parallel to the ground\"; \"the back squat was associated with significantly (p < 0.05) greater flexion of the trunk\"; na figura 1 (frontal, pico): quadril ~96°, joelho ~116°, dorsiflexão do tornozelo ~23°",
+  "Cejudo A. Predicting the Clean Movement Technique in CrossFit® Athletes Using an Optimal Upper-Limb Range of Motion: A Prospective Cohort Study. Int J Environ Res Public Health. 2022;19(19):12985 (PMC9564783): \"correct execution\" = \"received the barbell in the front squat position on the front of the shoulders with the elbows pointing forward, the upper arm almost parallel to the floor (≥80° shoulder flexion) and a relaxed grip\"; \"the grip of the barbell should be done with the hands and fingers and be half a fist width to one fist width from the shoulder, and the elbows should be no more than shoulder width apart\"; \"The optimal upper-limb ROM profile that predicted correct CPCM performance was ... 153° in elbow flexion, 99° in elbow pronation and 92° in wrist extension\"; erros: \"the small and ring fingers pop off the bar, and the barbell lands on an anterior area of the deltoid muscle, possibly even on the sternum\"; tabela 2 (extensão PASSIVA do punho, medida com inclinômetro com o cotovelo esticado — \"extension (WE) with elbow extension at 0°\"): 92,88 ± 4,70° no grupo que fez o clean certo × 83,33 ± 6,77° no que errou — é a amplitude, não o ângulo do punho no rack (o artigo não dá esse)",
+  "de Leva P. Adjustments to Zatsiorsky-Seluyanov's segment inertia parameters. J Biomech. 1996;29(9):1223-1230, tabela 4 (homens): frações de massa e posição do centro de massa de cada segmento — usadas na conta do centro de massa (corpo + barra) da cena",
+  "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — amplitude normal do punho pelos valores da AAOS (flexão 80°, extensão 70°, desvio radial 20°, ulnar 30°), a tabela do lib/limites.py da fábrica: base da regra nova do desvio do punho (tecnica3d.punho_desvio)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "tecnica_padrao": {
+   "ponta_pe": [
+    0,
+    20
+   ],
+   "coluna": [
+    0,
+    10
+   ]
+  },
+  "zonas": [
+   {
+    "nome": "barra apoiada na frente dos ombros (deltoides e clavículas)",
+    "equipamento": "barra",
+    "partes": [
+     "LeftArm",
+     "RightArm",
+     "Spine2",
+     "Neck"
+    ],
+    "mm": [
+     -4,
+     5
+    ],
+    "fonte": "Gullett et al. 2009 (\"positioning the barbell across the anterior deltoids and clavicles\"); Sinclair et al. 2016 (\"aligned with the clavicular ridge\"); NSCA (\"Place the bar comfortably on the front of the shoulders\"); ACE (\"let it rest across the front of the shoulders\"). No boneco a pele da frente do ombro, em cima do deltoide, é do osso LeftArm/RightArm e a das clavículas e do peito, do Spine2 (o osso Shoulder não é dono de nenhum vértice da pele); o Neck entra só pra a medida ter a pele inteira em volta da barra (a medida de zona erra o sinal perto da borda de um pedaço aberto da malha) — o pescoço tem a regra dele abaixo. A barra é apoio dos ombros (encostar é o certo), como no agachamento com a barra nas costas"
+   },
+   {
+    "nome": "barra longe do pescoço, da garganta, do queixo e do rosto",
+    "equipamento": "barra",
+    "partes": [
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     8,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra apoiada na frente dos ombros nunca entra no pescoço, na garganta, no queixo nem no rosto); Cejudo 2022 (barra no lugar certo: \"on the front of the shoulders\"); ExRx olímpico (\"Keep head forward, chin in\")"
+   },
+   {
+    "nome": "mão esquerda na barra (dedos embaixo dela, encostando), sem entrar",
+    "equipamento": "barra",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "ExRx, Front Squat (\"overhand open grip\"; \"finger under bar to each side\"); Cejudo 2022 (\"the grip of the barbell should be done with the hands and fingers\"; \"a relaxed grip\"). Pegada aberta (o polegar não dá a volta): a regra da mão fechada em volta da barra (checagem3d.quadro, 200° de volta) não vale; aqui a mão inteira — palma, dedos e polegar — encosta e não entra, e a cena mede à parte palma, dedos e polegar × barra"
+   },
+   {
+    "nome": "mão direita na barra (dedos embaixo dela, encostando), sem entrar",
+    "equipamento": "barra",
+    "partes": [
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos não entram nos ombros, no pescoço, na cabeça nem no peito",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "LeftArm",
+     "RightArm",
+     "Neck",
+     "Head",
+     "Spine2",
+     "Spine1"
+    ],
+    "cabelo": true,
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "pedido do Weslley (a mão fica perto do ombro e do pescoço no rack: encostar pode, entrar não)"
+   },
+   {
+    "nome": "antebraços não entram no peito, no pescoço nem na cabeça",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Spine2",
+     "Spine1",
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo)"
+   },
+   {
+    "nome": "um braço não entra no outro",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "com": [
+     "RightArm",
+     "RightForeArm",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo); Cejudo 2022 (\"the elbows should be no more than shoulder width apart\": os cotovelos ficam mais juntos que os ombros, sem se atravessar)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "coxas um pouco abaixo da paralela embaixo",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": 1.0,
+    "graus": [
+     -6,
+     2
+    ],
+    "fonte": "ExRx, Barbell Front Squat e Front Squat (\"Descend until thighs are just past parallel\"); Gullett 2009 (\"until the thighs are parallel to the floor\"); NSCA, agachamento com a barra nas costas (\"Proper depth is achieved when mid-thigh is parallel to the floor\"). Medida: coxa (quadril → joelho) × horizontal, − = joelho acima do quadril"
+   },
+   {
+    "nome": "pernas esticadas em pé",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"fully extend knees and hips to return to start position\"); ExRx (\"Extend knees and hips until legs are straight\")"
+   },
+   {
+    "nome": "joelho dobrado ~116° embaixo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     105,
+     125
+    ],
+    "fonte": "Sinclair et al. 2016 (figura 1: pico de ~116° no frontal); Diggin et al. 2011 (coxa paralela)"
+   },
+   {
+    "nome": "joelho e quadril dobram juntos (no meio da descida)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.5,
+    "graus": [
+     45,
+     75
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"simultaneously push hips back, flex knees\"; \"Raise hips and shoulders simultaneously\")"
+   },
+   {
+    "nome": "quadril e joelho dobram juntos (no meio da descida)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 0.5,
+    "graus": [
+     40,
+     80
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "tronco em pé no começo (quadril embaixo dos ombros)",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"Align hips vertically with shoulders\")"
+   },
+   {
+    "nome": "tronco bem mais em pé que com a barra nas costas, embaixo",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     22,
+     32
+    ],
+    "fonte": "Diggin et al. 2011 (figura 3: ~27° no frontal × ~43° com a barra nas costas, no meio do movimento; \"the front squat allows for a more upright posture throughout\"); Yavuz et al. 2015 e Sinclair et al. 2016 (mais inclinação com a barra nas costas); NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"allow the torso to come forward slightly\"; com a barra nas costas: \"between 35 and 45° from vertical\"). Medida: quadril → base do pescoço × vertical"
+   },
+   {
+    "nome": "tronco nunca passa da inclinação de baixo",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     32
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "costas retas (coluna neutra)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"Raise hips and shoulders simultaneously to keep back flat\"; no agachamento com a barra nas costas: \"Never flex the spine (i.e., round forward) during a squat\"); ExRx (\"keeping back straight\")"
+   },
+   {
+    "nome": "cabeça olhando pra frente",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     25
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"Focus head and eyes straight ahead\"; \"head neutral\"); ExRx (\"Keep head facing forward\"; olímpico: \"Keep head forward, chin in\"). Medida: cabeça × tronco, ~−11° no boneco em pé em repouso; o pescoço volta 90% da inclinação do tronco"
+   },
+   {
+    "nome": "joelho em cima da linha do pé, sem entrar (dobrando)",
+    "medida": "joelho_plano_pe",
+    "t": [
+     0.3,
+     1.0
+    ],
+    "mm": [
+     -15,
+     20
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"Keep knees pointed out, aligned with feet\"); ExRx (\"knees pointed same direction as feet\"; olímpico: \"Knees travel outward in direction of toes\"). Medida: centro do joelho × plano vertical do pé (tornozelo → base dos dedos), − = joelho entrando (valgo); em pé, com a perna quase esticada, o joelho fica entre o quadril e o tornozelo"
+   },
+   {
+    "nome": "joelho não passa da ponta dos pés",
+    "medida": "joelho_alem_dos_dedos",
+    "t": "todos",
+    "mm": [
+     -300,
+     0
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"Keep knees pointed out, aligned with feet, and behind toes throughout entire lift\"). Medida: centro do joelho × ponta dos dedos, ao longo do pé (+ = passou)"
+   },
+   {
+    "nome": "pés na largura dos ombros",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     1.8,
+     2.3
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"shoulder-width apart\"); Gullett 2009 (\"a stance approximately shoulder width apart\"); Diggin et al. 2011 (\"107(±10) % of biacromial breadth\"). No boneco: tornozelos a 0,43 m (os ombros a 0,40 m), 2,0 × os 0,21 m entre as articulações do quadril (tecnica3d.pes_largura)"
+   },
+   {
+    "nome": "calcanhares no chão e canela inclinada embaixo (dorsiflexão do tornozelo)",
+    "medida": "tornozelo",
+    "t": 1.0,
+    "graus": [
+     95,
+     108
+    ],
+    "fonte": "Sinclair et al. 2016 (figura 1: dorsiflexão de pico ~23° no frontal); ExRx (\"allowing knees to bend forward\"; \"feet flat on floor\"); Gullett 2009 (\"the heels on the floor\"). Medida da fábrica: canela × pé, ~76° em pé; +23° = ~99°"
+   },
+   {
+    "nome": "pegada um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.3,
+     2.0
+    ],
+    "fonte": "NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"Place hands on the bar slightly wider than shoulder-width\"); ExRx olímpico (\"slightly wider than shoulder width\"); Cejudo 2022 (\"half a fist width to one fist width from the shoulder\")"
+   },
+   {
+    "nome": "braço quase paralelo ao chão (≥ 80° de flexão do ombro)",
+    "medida": "braco_elevacao",
+    "t": "todos",
+    "graus": [
+     80,
+     110
+    ],
+    "fonte": "Cejudo 2022 (\"the upper arm almost parallel to the floor (≥80° shoulder flexion)\"); Gullett 2009 (\"to position the upper arms parallel to the floor\"); ExRx olímpico (\"elbows placed forward as high as possible\"); NSCA, Basics of Strength and Conditioning Manual (2012), 1b. Barbell Front Squat (\"rotate elbows up so they are high in front of the bar\"). Medida: braço × eixo do tronco (90 = na horizontal do tronco); na descida os cotovelos sobem 15% da inclinação do tronco (\"elbows high\")"
+   },
+   {
+    "nome": "cotovelos apontando pra frente",
+    "medida": "braco_plano",
+    "t": "todos",
+    "graus": [
+     80,
+     125
+    ],
+    "fonte": "ACE (\"the elbows are pointed straight ahead\"); Cejudo 2022 (\"the elbows pointing forward\"). Medida: braço visto de cima do tronco, 90 = pra frente, > 90 = pra frente e um pouco pro meio"
+   },
+   {
+    "nome": "cotovelos mais juntos que os ombros",
+    "medida": "cotovelos_largura",
+    "t": "todos",
+    "faixa": [
+     0.3,
+     1.0
+    ],
+    "fonte": "Cejudo 2022 (\"the elbows should be no more than shoulder width apart\"). Medida: distância entre os cotovelos ÷ entre os ombros"
+   },
+   {
+    "nome": "cotovelos bem dobrados (rack)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     120,
+     150
+    ],
+    "fonte": "Gullett 2009 (\"fully flexing the elbows\"); Cejudo 2022 (\"153° in elbow flexion\")"
+   },
+   {
+    "nome": "palmas viradas pra cima",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     0,
+     50
+    ],
+    "fonte": "ACE (\"so that the palms are facing the ceiling\"). Medida: palma × vertical, 0 = pra cima. Com o punho bem estendido e a mão virada pra fora (os dedos passam por baixo da barra na diagonal), a palma olha pra cima e um pouco pra trás (35–44° medidos): até 50° ela ainda olha bem mais pro teto que pro lado"
+   },
+   {
+    "nome": "punho estendido no rack (dedos embaixo da barra)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -92,
+     -60
+    ],
+    "fonte": "ExRx olímpico (\"finger under bar to each side\"); Cejudo 2022 (\"92° in wrist extension\" no perfil de quem recebe a barra certo; extensão PASSIVA medida com o cotovelo esticado: 92,9 ± 4,7° em quem faz certo × 83,3 ± 6,8° em quem erra) — o teto. O piso de 60°: com a barra nos deltoides e o braço a ≥ 80° do tronco, os dedos só ficam embaixo da barra com o punho bem dobrado pra trás (na 1ª montagem, com a mão atravessando a barra em ângulo reto, o punho dobrava de LADO, 86°, e a extensão marcava de −53° a 0°: errado). A faixa foi conferida e mantida. Medida: − = extensão"
+   },
+   {
+    "nome": "punho sem dobrar de lado (desvio radial/ulnar)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "Amplitude normal do punho, valores da AAOS (Norkin & White, Measurement of Joint Motion — a tabela do limites.py da fábrica): desvio radial 20°, ulnar 30°. Medida (tecnica3d.punho_desvio, nova): antebraço × 3º metacarpo no plano da palma, + = pro lado do polegar (radial)"
+   }
+  ],
+  "limites_juntas": {
+   "punhoE": [
+    0,
+    92
+   ],
+   "punhoD": [
+    0,
+    92
+   ]
+  },
+  "limites_juntas_fonte": "Punhos no rack da pegada de clean: a mão vira pra cima com os dedos embaixo da barra e o punho fica bem estendido — Cejudo 2022 (IJERPH 19:12985): quem faz o rack certo (\"on the front of the shoulders with the elbows pointing forward, the upper arm almost parallel to the floor (≥80° shoulder flexion) and a relaxed grip\") tem \"92° in wrist extension\" e \"153° in elbow flexion\" de amplitude; ACE (\"the palms are facing the ceiling\"); ExRx olímpico (\"finger under bar\"); Gullett 2009 (a flexibilidade do punho é o limite do frontal: \"special bars that allow for proper alignment of the elbows (parallel to the floor) without the need for significant flexibility in the wrists or shoulders\"). O teto de 55° do limites.py é pra mão segurando peso SEM dobrar o punho e o de 70° (AAOS, Norkin & White) é a extensão ativa medida sem carga; aqui o punho fica quase parado no rack (~75–80°, quase só extensão: o desvio é medido à parte, até 20°), dentro dos 92° de Cejudo. O cotovelo fica no teto normal (150°, AAOS)"
+ }
+}
