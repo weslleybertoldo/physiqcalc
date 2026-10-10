@@ -9,6 +9,8 @@
 - Ordem das entregas (decisão dele, 10/10): **1) Planos do aluno → 2) migração do Yuri → 3) InfinitePay (W1) → 4) Mercado Pago do
   personal (W2)**. W1/W2 = `~/Desktop/Physiq - InfinitePay/Physiq - InfinitePay e Mercado Pago do personal - desenho aprovado - 2026-10-10.md`
   ("Acredito que ele é complemento"): os planos dizem **quanto e por quanto tempo**; W1/W2 dizem **para onde vai o dinheiro**.
+- **Atualização 10/10 ~19h20:** a migração do Yuri ficou **pausada** (ele: *"deixa pausado essa task. Vamos seguir somente com as
+  que passei"*) → ordem de agora: **Planos → W1 InfinitePay → W2 MP do personal**; a migração (parte 5) volta quando ele pedir.
 - Próximos passos: `dev:spec-review` deste desenho e do W1/W2 contra o código e o banco atuais → `superpowers:writing-plans` →
   foto do plano → **OK dele antes de começar** → esteira pessoal (local → link → staging → OK → produção).
 
@@ -27,8 +29,9 @@
 ## 2. Como é hoje (conferido no código da `main` v3.94 e no esquema, 10/10)
 
 - `planos_aluno` (`supabase-principal/migrations/20260929030000_w02_nucleo.sql`): `conta_id`, `nome` (único na conta), `valor`,
-  `ativo` — **sem duração nem formas**. Hoje só os 2 planos do app "sem profissional" usam (`src/app-aluno/sozinho/regras.ts`); o
-  profissional **não tem tela de planos**: põe um valor de mensalidade em cada aluno.
+  `ativo` — **sem duração nem formas**. Usam hoje: os 2 planos do app "sem profissional" e ~3 planos de personal criados só com
+  **nome** (a virada do Calc, `scripts/virada/02_pagamentos_alunos.py:300`, e o `plano_novo` do `prof_definir`); o profissional **não
+  tem tela de planos**: põe um valor de mensalidade em cada aluno (corrigido pelo spec-review, B1).
 - `pacientes` (`…w06_financeiro_aluno.sql`): `plano_aluno_id`, `mensalidade_valor`, `cobranca_pausada`, `mensalidade_desde`,
   `mensalidade_pago_ate` (calculado por gatilho), `financeiro_migrado_em`.
 - `cobrancas`: `tipo` mensalidade/avulsa, `status` aberta/paga/cancelada/aguardando_confirmacao, `valor`, `vencimento`, `mes_ref`,
@@ -108,7 +111,7 @@ o pagamento aluno → profissional continua (é serviço do profissional; não l
 
 ### 4.4 Casos e erros
 Troca de plano no meio do período (vale no próximo pagamento) · valor do plano muda (só quem segue o plano) · plano desativado com
-alunos · pagamento menor que o devido (não dá baixa, avisa o personal — como hoje no MP) · assinatura automática ligada e o personal
+alunos · pagamento menor que o devido (hoje NÃO existe conferência de valor no MP — ver 7.I1) · assinatura automática ligada e o personal
 troca a forma para à vista (cancelar a assinatura antes, avisando o aluno) · aluno sem plano (mensalidade de hoje, tudo igual).
 
 ### 4.5 Testes
@@ -126,3 +129,44 @@ profissional dentro da equipe (é da conta) · taxa da plataforma · mudar o MP 
 3. Os 2 planos do app "sem profissional" em `planos_aluno` continuam idênticos com os padrões novos?
 4. Cartão parcelado no MP: `installments` + `issuer_id`, quem paga os juros (configuração da conta MP) e o valor mínimo por parcela.
 5. Onde a W1/W2 grava provedor/`order_nsu`/`transaction_nsu` na cobrança sem colidir com as colunas novas daqui.
+
+## 7. Ajustes do `dev:spec-review` (10/10/2026 — valem POR CIMA das seções 3 e 4)
+
+Relatório completo: `~/projetos/physiqcalc-scratch/migracao-yuri/spec-review-planos-e-recebimento.md` (veredito: **pronto com ajustes**).
+
+- **B1 — modo de hoje intacto.** Nome do campo novo: **`pacientes.plano_modalidade`** (`avista` | `cartao_parcelado` | `mensal`; "forma"
+  já é o trilho em `cobrancas.forma`). **Modalidade nula = modo de hoje**: nada recalcula, o `mensalidade_valor` digitado manda, e o
+  `prof_definir` continua aceitando `plano_novo`/`valor` (APK antigo). Só quem o personal passar para um plano novo ganha modalidade.
+  Plano sem valor ou sem meses aparece em Planos como **"completar"** e não é oferecido na ficha.
+- **B2 — os 2 planos do app ficam iguais.** Plano de **1 mês** aceita a cobrança automática (com `meses = 1`, à vista = mês a mês); a
+  conta do app (`contas.origem = 'app'`) fica **fora** da regra "mudar o valor do plano vale para quem está nele" (lá a matrícula
+  guarda o valor, W7b).
+- **I1 — valor da cobrança automática.** Toda mudança do valor do próximo pagamento com assinatura `authorized` faz o `PUT
+  /preapproval` (molde do `aluno_app_plano`); falhou → aviso ao dono. Conferência de valor pago só onde ele vem de fora (W1).
+- **I2 — "pago até" da migração (quando voltar).** Semente por aluno, só servidor (ex.: `pacientes.cobertura_inicial_ate`), no molde
+  do `app_teste_ate`.
+- **I3 — a função viva é a da w07b** (`mensalidade_recalcular` em `…w07b…sql:503-555`, com o teste grátis do app); partir dela.
+- **I4 — tela do aluno = Pagamentos** (`Pagamentos.tsx`, já liberada na loja), não `MeuPlano.tsx` (que é o plano do app sozinho).
+- **I5 — trava no banco.** Gatilho-guarda (molde `pacientes_guard_vinculos`) nas colunas de cobrança de `pacientes`
+  (`mensalidade_valor`, `mensalidade_pago_ate`, `plano_aluno_id`, `plano_modalidade`, `plano_valor_negociado`, `cobranca_pausada`) e nas
+  novas de `cobrancas` (`meses_cobertos`, `parcelas_total`): só `service_role`/master; a **avulsa** gravada direto pelo site antigo do Nutri
+  continua. `planos_aluno` passa a só leitura para o app (gravação pela edge, só o dono).
+- **I6 — cartão parcelado.** `CartaoPagamento.tsx` ganha `maxInstallments` por prop (padrão 1 — o pagamento do plano do personal ao
+  Weslley continua 1×); `DadosCartao` leva `installments`; o servidor confere `1 ≤ installments ≤ max_parcelas_cartao` e só na
+  modalidade `cartao_parcelado`. Juros: no parcelado comum paga o comprador; "sem juros" é configuração da conta MP do vendedor; o app
+  mostra o total que o Brick calcula. Valor mínimo por parcela: testar no sandbox antes de liberar parcelas em plano barato.
+- **Menores:** `cobrancas.plano_aluno_id` já existe (não criar); manter só `ativo` (sem `desativado_em`); evitar o nome
+  `planos_do_aluno` (já é do plano alimentar); nome de plano é único também entre os desativados (a tela avisa); parcela = `round(valor
+  ÷ meses, 2)` e o total mostrado é parcela × meses (o personal pode digitar a parcela); textos "/mês" mudam conforme a modalidade
+  (Mensalidades, CartaoPagamento, WhatsApp, `descricaoMensalidade`, espelho no Treino); quem põe o aluno no plano = **dono da conta e
+  master** (como `podeMexerNaMensalidade` hoje); estado **"renovar"** = modalidade do período todo + `vence_em_breve`/`vencida`; o sandbox
+  do MP não paga Pix nem assina com cartão (usar `simular_aprovacao` no staging).
+- **Respostas da seção 6:** (1) reaproveitar `mensalidade_valor`/`mensalidade_desde` — sim, recalculando num BEFORE UPDATE de
+  `pacientes` e só com modalidade; (2) `parcelas_total` gravada na cobrança e `parcela_num` calculada no `mensalidade_recalcular` (junto do
+  `cobre_de/cobre_ate`); (3) ver B2; (4) ver I6; (5) a W1/W2 usa colunas com prefixo próprio em `cobrancas`, sem colidir.
+- **Pedido da LINUX 1 (hml-18b):** no `FinanceiroDoAluno.tsx`, trocar o import estático do `pdfDoRecibo` por import no clique (molde
+  do `dietaPdf`) e avisar quando cair na main.
+- **Regras novas de tela (hml-18a):** `useConfirmar()` de `src/ui/premium/Confirmar.tsx` no lugar de `window.confirm`
+  (`semDialogoNativo.test.ts`); grade sempre com `grid-cols-1` + breakpoint (`larguraCelular.test.ts`).
+- **Pergunta em aberto para ele (P-A):** plano mês a mês com a cobrança automática — depois da última parcela, continua cobrando (o
+  plano renova) ou para e o aluno renova?
