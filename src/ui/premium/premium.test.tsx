@@ -9,8 +9,19 @@ import { fotoDaRefeicao, fotoDoTreino } from "./fotos";
 import { TabBar } from "./TabBar";
 import { Anel } from "./Anel";
 import { EstadoErro, EstadoVazio } from "./Estados";
+import { Kpi } from "./Kpi";
 
 describe("componentes premium", () => {
+  it("hml-18a (H-40): o valor do KPI encolhe só no celular (clamp com a tela) e fica com os 30 px a partir do sm — sem corte com '…'", () => {
+    render(<Kpi icone={House} titulo="Recebido no mês" valor="R$ 123.456,78" />);
+    const v = document.querySelector("[data-kpi-valor]") as HTMLElement;
+    expect(v.textContent).toBe("R$ 123.456,78");
+    expect(v.className).toContain("text-[clamp(1.125rem,5vw,1.875rem)]");
+    expect(v.className).toContain("sm:text-[30px]");
+    expect(v.className).not.toContain("truncate");
+    expect(v.className).not.toMatch(/(^|\s)text-\[30px\]/);
+  });
+
   it("curva suave passa pelos pontos (Catmull-Rom → Bézier, igual ao gerador)", () => {
     const d = caminhoSuave([[0, 10], [10, 0], [20, 10]]);
     expect(d.startsWith("M0.0,10.0 C")).toBe(true);
