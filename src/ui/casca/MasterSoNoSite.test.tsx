@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 // hml-08 (H-22) — o painel master fica só no site: no app, a conta master sai deste aparelho (logout local) e vê "Conta master:
 // use o site"; no site, e para quem não é master, passa direto.
@@ -9,8 +9,8 @@ const h = vi.hoisted(() => ({
   usuario: null as null | { id: string; email: string },
   situacao: null as null | { master: boolean },
   isMaster: false,
-  sair: null as unknown as ReturnType<typeof vi.fn>,
-  abrir: null as unknown as ReturnType<typeof vi.fn>,
+  sair: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  abrir: null as unknown as Mock<(...a: unknown[]) => unknown>,
 }));
 
 vi.mock("@/lib/plataforma", () => ({ BUILD_DO_APP: false, masterNesteAparelho: () => h.site }));

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, type NavigateFunction } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { LegalSituacao, Situacao } from "@/nucleo/situacao";
 import { situacao as fixture } from "@/test/fixturesNucleo";
 
@@ -13,9 +13,9 @@ const h = vi.hoisted(() => ({
   situacao: null as unknown,
   carregando: false,
   online: true,
-  aceitar: null as unknown as ReturnType<typeof vi.fn>,
-  recarregar: null as unknown as ReturnType<typeof vi.fn>,
-  sair: null as unknown as ReturnType<typeof vi.fn>,
+  aceitar: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  recarregar: null as unknown as Mock<(...a: unknown[]) => unknown>,
+  sair: null as unknown as Mock<(...a: unknown[]) => unknown>,
   avisoMontou: 0,
   navegar: null as unknown as NavigateFunction,
 }));
