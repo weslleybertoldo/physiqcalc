@@ -11,6 +11,8 @@ e conferir que nada saiu do esperado.
 
 Uso: python3 e2e/w04/espelho_fila.py --schema staging --dry-run [--json ~/backups/physiq/2026-09-29-w04/fila-staging.json]
 E-mails de contas reais aparecem mascarados no relatório.
+Segredos (hml-16c): a espelho-resumo com o SEGREDO_ESPELHO_RESUMO do ambiente (S4, o que a trocar-token manda); a
+espelho-enviar com o da fila (S8, ~/.physiq-segredo-espelho-fila). Sem eles, o legado (reserva até o F7).
 """
 from __future__ import annotations
 
@@ -20,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "w02"))
-from _comum import PRINCIPAL_URL, espelho_segredo, http, sql_principal, sql_treino  # noqa: E402
+from _comum import PRINCIPAL_URL, http, segredo_do_ambiente, segredo_fila, sql_principal, sql_treino  # noqa: E402
 
 MAX = "2999-12-31"
 
@@ -37,7 +39,7 @@ def mascarar(email: str | None) -> str:
 
 def resumo(schema: str, uid: str) -> dict | None:
     st, r, _ = http("POST", f"{PRINCIPAL_URL}/functions/v1/espelho-resumo", {"principal_user_id": uid},
-                    {"x-espelho-segredo": espelho_segredo(), "x-schema": schema})
+                    {"x-espelho-segredo": segredo_do_ambiente("SEGREDO_ESPELHO_RESUMO"), "x-schema": schema})  # S4
     return r if st == 200 else None
 
 
@@ -225,7 +227,7 @@ def main() -> int:
     if a.processar:
         for rodada in range(1, 6):
             st, r, _ = http("POST", f"{PRINCIPAL_URL}/functions/v1/espelho-enviar", {"limite": 50},
-                            {"x-espelho-segredo": espelho_segredo(), "x-schema": a.schema}, timeout=180)
+                            {"x-espelho-segredo": segredo_fila(), "x-schema": a.schema}, timeout=180)  # S8
             print(f"rodada {rodada}: HTTP {st} → {json.dumps(r, ensure_ascii=False)[:1500]}")
             if st != 200 or not (r or {}).get("processadas"):
                 break

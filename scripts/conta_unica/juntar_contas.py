@@ -31,7 +31,8 @@ Uso (o bloco do banco é UMA query: begin … commit/rollback; tudo ou nada):
   … --desfazer <pasta do backup> [--sim]   volta as colunas que a junção mudou (só nas linhas que ela mexeu); sem --sim = prévia
   --pasta <dir> (padrão ~/backups/physiq/2026-10-02-w1-conta-unica/<schema>)
 Idempotente: depois de aplicado, rodar de novo diz "já juntada" e não muda nada. No staging só contas de TESTE (P26).
-Sem segredo no repositório: PAT em ~/.pc-pat, Banco do Treino pelo ~/.pgpass, segredo do espelho em ~/.physiq-espelho-segredo.
+Sem segredo no repositório: PAT em ~/.pc-pat, Banco do Treino pelo ~/.pgpass, segredo da fila do espelho em
+~/.physiq-segredo-espelho-fila (hml-16c, S8; sem ele, o legado ~/.physiq-espelho-segredo até o F7).
 """
 from __future__ import annotations
 
@@ -700,6 +701,15 @@ def contagem_geral(S: str) -> dict:
 
 # ───────────────────────── espelho ─────────────────────────
 
+def segredo_fila() -> str:
+    """hml-16c (S8): o segredo da fila do espelho (o mesmo do Vault physiq_espelho_fila_segredo), que o
+    scripts/segredos/servidor.py espelho_fila gerar grava em ~/.physiq-segredo-espelho-fila. Sem ele, o legado."""
+    arquivo = Path.home() / ".physiq-segredo-espelho-fila"
+    if not arquivo.exists():
+        arquivo = Path.home() / ".physiq-espelho-segredo"  # hml-16c F1: reserva — sai no F7
+    return arquivo.read_text(encoding="utf-8").strip()
+
+
 def esperar_espelho(S: str, segundos: int = 120) -> dict:
     """Espera a fila do espelho do schema esvaziar (o espelho_disparar() já chamou a espelho-enviar); se não andar, chama direto."""
     t0 = time.time()
@@ -709,7 +719,7 @@ def esperar_espelho(S: str, segundos: int = 120) -> dict:
         if not pend:
             break
         if time.time() - t0 > 45 and not chamou:
-            segredo = Path.home().joinpath(".physiq-espelho-segredo").read_text(encoding="utf-8").strip()
+            segredo = segredo_fila()
             st, r = http("POST", f"{PRINCIPAL_URL}/functions/v1/espelho-enviar", {"limite": 50},
                          {"x-espelho-segredo": segredo, "x-schema": S}, timeout=120)
             chamou = True

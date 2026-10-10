@@ -31,8 +31,8 @@ ESTADO, CONTAS = B7.ESTADO, B7.CONTAS
 API_P, API_T, PRINCIPAL_REF, PRINCIPAL_URL, TREINO_REF, TREINO_URL = B7.API_P, B7.API_T, B7.PRINCIPAL_REF, B7.PRINCIPAL_URL, B7.TREINO_REF, B7.TREINO_URL
 Caso, anon, http, service, sql_principal, sql_treino, senha_de, sessao, funcao, rpc, uid, treino_id = (
     B7.Caso, B7.anon, B7.http, B7.service, B7.sql_principal, B7.sql_treino, B7.senha_de, B7.sessao, B7.funcao, B7.rpc, B7.uid, B7.treino_id)
-garantir_usuario, trocar_token, processar_espelho, espelho_segredo, saude_treino, token, esquecer_token = (
-    B7.garantir_usuario, B7.trocar_token, B7.processar_espelho, B7.espelho_segredo, B7.saude_treino, B7.token, B7.esquecer_token)
+garantir_usuario, trocar_token, processar_espelho, segredo_fila, saude_treino, token, esquecer_token = (
+    B7.garantir_usuario, B7.trocar_token, B7.processar_espelho, B7.segredo_fila, B7.saude_treino, B7.token, B7.esquecer_token)
 
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "w07b"
 B5.PRINTS = PRINTS

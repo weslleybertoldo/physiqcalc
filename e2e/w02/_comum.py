@@ -1,5 +1,6 @@
 """Physiq W2 — utilitários dos testes de ponta a ponta (sem segredo no repo: chaves pela Management API com ~/.pc-pat,
-senhas das contas de teste em ~/.physiq-teste-<nome>, segredo do espelho em ~/.physiq-espelho-segredo)."""
+senhas das contas de teste em ~/.physiq-teste-<nome>; segredos entre servidores (hml-16c): o da fila do espelho em
+~/.physiq-segredo-espelho-fila e os outros só pelo ambiente — o legado ~/.physiq-espelho-segredo é a reserva até o F7)."""
 import json
 import os
 import subprocess
@@ -142,7 +143,37 @@ def login_principal(nome: str, email: str) -> dict:
 
 
 def espelho_segredo() -> str:
+    """O segredo único de antes (ESPELHO_SEGREDO). hml-16c: só a reserva das 2 de baixo — sai no F7."""
     return Path.home().joinpath(".physiq-espelho-segredo").read_text(encoding="utf-8").strip()
+
+
+# hml-16c (H-51): 1 segredo por finalidade (scripts/segredos/servidor.py). Nos E2E, o S8 (a fila do espelho → espelho-enviar)
+# tem cópia local; o S4 (espelho-resumo), o S6 (alunos, repasse) e o S7 (erro-avisar) vêm SÓ do ambiente, na variável com o
+# nome do segredo do emissor (valor no cofre › PhysiqCalc › "Physiq — <nome> (hml-16c)"). Sem eles, o legado (até o F6 ele
+# ainda vale nos receptores); a reserva sai no F7.
+ARQUIVO_FILA = ".physiq-segredo-espelho-fila"
+
+
+def segredo_fila() -> str:
+    """S8: o segredo da fila do espelho (o mesmo do Vault physiq_espelho_fila_segredo), em ~/.physiq-segredo-espelho-fila
+    (600; quem grava é o  servidor.py espelho_fila gerar). Sem o arquivo, o legado ~/.physiq-espelho-segredo."""
+    arquivo = Path.home() / ARQUIVO_FILA
+    if arquivo.exists():
+        return arquivo.read_text(encoding="utf-8").strip()
+    return espelho_segredo()  # hml-16c F1: reserva — sai no F7
+
+
+def segredo_do_ambiente(nome: str, *, arquivo_legado: bool = True) -> str:
+    """S4/S6/S7: a variável de ambiente `nome` (o segredo do emissor, ex.: SEGREDO_REPASSE_CONVITES). Sem ela, o legado: o
+    ESPELHO_SEGREDO do ambiente e, com arquivo_legado, o ~/.physiq-espelho-segredo (sem o arquivo, o erro de sempre). Com
+    arquivo_legado=False e nada no ambiente: "" (quem chama decide)."""
+    valor = os.environ.get(nome, "").strip()
+    if valor:
+        return valor
+    valor = os.environ.get("ESPELHO_SEGREDO", "").strip()  # hml-16c F1: reserva — sai no F7
+    if valor or not arquivo_legado:
+        return valor
+    return espelho_segredo()  # hml-16c F1: reserva — sai no F7
 
 
 class Placar:

@@ -20,8 +20,9 @@ Em public só rodam os casos que não mandam aviso (+ o valido com --p6).
 A prova de que a mensagem saiu são SÓ os logs da função (endpoint de logs da Management API, _logs_supabase.py): aviso_enviado
 (com o message_id do Telegram), segurado ou telegram_recusou, achados pela assinatura — o 🔑 do aviso, calculado aqui do mesmo
 jeito do _shared/erros.ts. NUNCA getUpdates nem chamada nenhuma à API do Telegram (roubaria as mensagens da ponte).
-Segredo: ESPELHO_SEGREDO lido SÓ do ambiente (nunca de arquivo; nunca gravado nem impresso). No cofre B Code Segredos: o item
-"Physiq — ESPELHO_SEGREDO (troca de token e espelho entre os 2 bancos)". Sem ele, os casos que o usam saem ❌ e o resto roda.
+Segredo: SEGREDO_AVISO_ERRO (hml-16c, S7: o que as funções do Treino mandam) lido SÓ do ambiente (nunca de arquivo; nunca
+gravado nem impresso). No cofre B Code Segredos › PhysiqCalc: o item "Physiq — SEGREDO_AVISO_ERRO (hml-16c)". Sem ele, o
+ESPELHO_SEGREDO do ambiente (o legado; reserva até o F7). Sem nenhum, os casos que o usam saem ❌ e o resto roda.
 Cada execução põe uma marca nova (letras) na mensagem: a assinatura é nova e a trava de 10 min não segura o 1º envio. O
 excecao tem a mensagem fixa do servidor: repetido em menos de 10 min, o aviso sai "segurado" (vale: o caminho do catch chegou
 ao aviso).
@@ -34,7 +35,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import os
 import re
 import secrets
 import sys
@@ -46,14 +46,14 @@ AQUI = Path(__file__).resolve().parent
 REPO = AQUI.parents[1]  # a worktree onde este arquivo está
 sys.path.insert(0, str(AQUI.parent / "w02"))
 sys.path.insert(0, str(AQUI))
-from _comum import PRINCIPAL_REF, PRINCIPAL_URL, http  # noqa: E402  (e2e/w02/_comum.py)
+from _comum import PRINCIPAL_REF, PRINCIPAL_URL, http, segredo_do_ambiente  # noqa: E402  (e2e/w02/_comum.py)
 from _logs_supabase import LogsFora, Saida, agora, consulta  # noqa: E402
 
 URL = f"{PRINCIPAL_URL}/functions/v1/erro-avisar"
 ORIGEM = {"staging": "https://physiqcalc-staging.vercel.app", "public": "https://physiqcalc.com.br"}
 ORIGEM_ESTRANHA = "https://site-estranho.example"
 CASOS = ("options", "origem", "grande", "valido", "segredo", "treino", "excecao")
-ITEM_DO_COFRE = "Physiq — ESPELHO_SEGREDO (troca de token e espelho entre os 2 bancos)"
+ITEM_DO_COFRE = "Physiq — SEGREDO_AVISO_ERRO (hml-16c)"
 ROTA, LUGAR = "/erro-teste", "sonda do aviso"
 # o que o servidor manda ao aviso no {"teste":"excecao"} (log.excecao: "<name> · <msg>", erro-avisar-regras.ts)
 MSG_EXCECAO = "Error · teste_hml10: erro de propósito na erro-avisar (prova do catch → aviso)"
@@ -201,7 +201,7 @@ def main() -> int:
     desconhecidos = [c for c in so if c not in CASOS]
     if desconhecidos:
         ap.error(f"caso desconhecido: {', '.join(desconhecidos)} (os casos: {', '.join(CASOS)})")
-    segredo = os.environ.get("ESPELHO_SEGREDO", "").strip()
+    segredo = segredo_do_ambiente("SEGREDO_AVISO_ERRO", arquivo_legado=False)  # S7; sem ele, o ESPELHO_SEGREDO (F1, sai no F7)
     errado = secrets.token_hex(32)  # um segredo errado do mesmo tamanho, feito na hora (nunca um literal)
     while errado == segredo:
         errado = secrets.token_hex(32)
@@ -213,7 +213,8 @@ def main() -> int:
     def falta_segredo(caso: str) -> bool:
         if len(segredo) >= 32:
             return False
-        o.ok(False, f"{caso}: falta ESPELHO_SEGREDO no ambiente (cofre: \"{ITEM_DO_COFRE}\") — caso não rodou")
+        o.ok(False, f"{caso}: falta SEGREDO_AVISO_ERRO no ambiente (cofre: \"{ITEM_DO_COFRE}\"; até o F7 o ESPELHO_SEGREDO "
+                    "também serve) — caso não rodou")
         return True
 
     def confere_aviso(rotulo: str, sig: str, desde: dt.datetime, esperado: set[str], texto: str) -> None:

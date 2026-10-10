@@ -27,9 +27,10 @@ from _comum import (  # noqa: E402,F401
     Placar,
     anon,
     cab_login,
-    espelho_segredo,
     exec_treino,
     http,
+    segredo_do_ambiente,
+    segredo_fila,
     senha,
     service,
     sql_principal,
@@ -167,7 +168,7 @@ def processar_espelho(rodadas: int = 6) -> list[dict]:
     saida: list[dict] = []
     for _ in range(rodadas):
         st, r, _ = http("POST", f"{PRINCIPAL_URL}/functions/v1/espelho-enviar", {"limite": 50},
-                        {"x-espelho-segredo": espelho_segredo(), "x-schema": schema()}, timeout=120)
+                        {"x-espelho-segredo": segredo_fila(), "x-schema": schema()}, timeout=120)  # S8 (hml-16c)
         assert st == 200, (st, r)
         res = (r or {}).get("resultados", []) if isinstance(r, dict) else []
         saida.extend(res)
