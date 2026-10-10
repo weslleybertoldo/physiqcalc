@@ -637,3 +637,25 @@ def test_coxa_abducao_em_pe_cruzando_e_sentado():
     assert tc.coxa_abducao(sobe)[0] == pytest.approx(-5, abs=0.01)          # a pelve sobe 5° do lado esquerdo: a coxa fica 5° "fechada"
     assert tc.coxa_abducao(sentado_coxas(40, 25)) == pytest.approx([40, 25], abs=1e-6)
     assert "coxa_abducao" in tc.MEDIDAS
+
+
+def test_ombro_rotacao_externa_high_five_e_virado():
+    """Puxada atrás da nuca (lote 9): braço aberto a 90° com o cotovelo a 90°, antebraço pra frente = 0, pra cima = 90 (a "high five"),
+    pra trás = 180, pra baixo = −90 (rotação interna), nos 2 lados; braço aberto 45° pra baixo com o antebraço em pé = 90; o mesmo número
+    com o tronco inclinado e virado (é no referencial do tronco)."""
+    def braco_antebraco(j, L, d_braco, d_antebraco):
+        j = dict(j)
+        b, a = np.array(d_braco, float), np.array(d_antebraco, float)
+        j[L + "ForeArm"] = j[L + "Arm"] + 0.30 * b / np.linalg.norm(b)
+        j[L + "Hand"] = j[L + "ForeArm"] + 0.27 * a / np.linalg.norm(a)
+        return j
+
+    for antebraco, esperado in (((0, -1, 0), 0), ((0, 0, 1), 90), ((0, 1, 0), 180), ((0, 0, -1), -90), ((0, -1, 1), 45)):
+        j = braco_antebraco(braco_antebraco(em_pe(), "Left", (1, 0, 0), antebraco), "Right", (-1, 0, 0), antebraco)
+        assert tc.ombro_rotacao_externa(j) == pytest.approx([esperado, esperado], abs=1e-6)
+    j = braco_antebraco(braco_antebraco(em_pe(), "Left", (1, 0, -1), (0, 0, 1)), "Right", (-1, 0.2, -1), (0, 0.1, 1))
+    re = tc.ombro_rotacao_externa(j)
+    assert re[0] == pytest.approx(90, abs=1e-6)
+    assert re[1] == pytest.approx(tc.ombro_rotacao_externa(girar(j, 25, (1, 0, 0), (0, 0, 1.0)))[1], abs=1e-6)
+    assert tc.ombro_rotacao_externa(girar(girar(j, 25, (1, 0, 0), (0, 0, 1.0)), 70, (0, 0, 1))) == pytest.approx(re, abs=1e-6)
+    assert "ombro_rotacao_externa" in tc.MEDIDAS

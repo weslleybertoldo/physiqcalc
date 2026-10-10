@@ -1,0 +1,505 @@
+{
+ "uuid": "ef103d6d-b2cf-58d1-b6c7-02bd9b38874b",
+ "nome": "Puxada Atrás da Nuca",
+ "cena": "puxada_atras_da_nuca",
+ "grupo": "Dorsal / Bíceps",
+ "subgrupo": "Latíssimo do dorso · redondo maior · trapézio inferior",
+ "padrao_movimento": "puxada_vertical",
+ "equipamento": "polia",
+ "variacao": "pegada aberta, atrás da nuca",
+ "alvos": [
+  "dorsal"
+ ],
+ "auxiliares": [
+  "costas",
+  "trapezio",
+  "biceps",
+  "antebraco"
+ ],
+ "camera": {
+  "az": 150,
+  "el": 12,
+  "dist": 5.4,
+  "alvo": [
+   0.0,
+   -0.1,
+   1.1
+  ]
+ },
+ "camera_vistas": {
+  "dist": 5.2,
+  "alvo": [
+   0.0,
+   -0.15,
+   1.15
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na estação de puxada, de frente pra torre, com as coxas presas embaixo dos rolos, os joelhos dobrados e os pés chapados no chão, o tronco em pé (um pouco pra frente) e a cabeça um pouco dobrada pra frente, pra deixar o caminho da barra livre atrás dela. Segura a barra longa com as mãos bem mais abertas que os ombros (umas 2 vezes a largura dos ombros, já nas pontas dobradas da barra), as palmas viradas pra frente (pegada pronada) e o polegar em volta da barra; começa com os braços esticados pra cima, a barra em cima da linha da nuca, e os ombros soltos. Desce as escápulas e puxa a barra por trás da cabeça até a nuca, quase encostando, levando os cotovelos pra baixo pelos lados, embaixo das mãos, e aproximando as escápulas; o tronco e a cabeça não mexem. Volta devagar até esticar os braços, deixando as escápulas subirem um pouco no fim. O cabo desce da roldana alta até o meio da barra, atrás da cabeça. Cuidado com o ombro: com a barra atrás da cabeça o ombro fica aberto pro lado e girado pra fora (a posição \"high five\"), que pode causar ou piorar instabilidade e impacto no ombro — quem tem dor, instabilidade ou lesão no ombro (ou dor no pescoço) deve fazer a Puxada Frontal, que as fontes recomendam no lugar; se fizer esta, a barra para na nuca, sem descer às costas e sem jogar os cotovelos pra trás.",
+ "cinesiologia": {
+  "plano": "frontal: com as mãos bem abertas e a barra atrás da cabeça o braço desce pelo lado do corpo (adução do ombro), girado pra fora e um pouco atrás do plano do tronco (abdução horizontal, pra barra passar atrás da cabeça); flexão do cotovelo no sagital; cadeia cinética aberta — a barra desce presa ao cabo da roldana alta, que puxa pra cima",
+  "articulacoes": "ombro (adução na puxada, com o braço girado pra fora — rotação externa — e um pouco atrás do tronco; abdução na volta), cotovelo (flexão na puxada e extensão na volta, sem travar) e cintura escapular (depressão e retração das escápulas na puxada; elevação no fim da volta); pescoço dobrado um pouco pra frente e parado, tronco parado, punho reto, quadril, joelhos e pés parados (Bodybuilding.com: \"bring the bar down until it touches the back of your neck by drawing the shoulders and the upper arms down and back\"; \"The upper torso should remain stationary and only the arms should move.\"; Sperandei 2009: \"The external rotation combined with abduction (Figure 1) places the shoulder joint in a risk position\" e \"horizontal abduction, which is needed to avoid the contact between the exercise bar and the head of the practitioner\")",
+  "agonistas": "latíssimo do dorso (ExRx, Cable Rear Pulldown: Target \"Latissimus Dorsi\"). EMG: atrás da nuca o latíssimo ativa igual à puxada pela frente e à do triângulo (Sperandei 2009, 24 homens treinados, 80% de 1RM: \"For LD, there was no difference between techniques.\"), ou menos que a pegada larga pela frente (Signorile 2002: \"During the concentric phase, NrmsEMG results for the LD included WGA > WGP, SG, CG.\"; WGP = pegada larga atrás da nuca); o bíceps trabalha mais atrás da nuca (Sperandei 2009: \"BB exhibited BNL higher than V-bar/FNL and V-bar higher than FNL in both concentric and eccentric phases.\") e o peitoral maior menos (Sperandei 2009: \"During the concentric phase, PM value showed the FNL to be significantly higher than V-bar/BNL and V-bar higher than BNL.\"). As fontes discordam no deltoide posterior: Sperandei 2009 achou mais atrás da nuca (\"PD presented BNL higher than FNL/V-bar\"), Signorile 2002 achou menos (\"For the PD: CG, WGA, SG > WGP.\")",
+  "sinergistas": "redondo maior, peitoral maior (parte do esterno), peitoral menor, romboides, levantador da escápula, trapézio inferior e os flexores do cotovelo — braquial, braquiorradial e bíceps braquial (ExRx, Cable Rear Pulldown: Synergists \"Brachialis\", \"Brachioradialis\", \"Biceps Brachii\", \"Teres Major\", \"Pectoralis Major, Sternal\", \"Pectoralis Minor\", \"Rhomboids\", \"Levator Scapulae\", \"Trapezius, Lower\")",
+  "estabilizadores": "cabeça longa do tríceps (ExRx, Cable Rear Pulldown: Dynamic Stabilizers \"Triceps, Long Head\"; Signorile 2002: \"For the TLH: WGA > WGP, SG, CG and WGP > CG, SG.\"); os flexores do antebraço seguram a barra; as coxas presas embaixo dos rolos ancoram o corpo (Bodybuilding.com: \"These pads will prevent your body from being raised by the resistance attached to the bar.\")",
+  "fases": "puxada concêntrica: a barra desce por trás da cabeça até a nuca, com os ombros e os braços indo pra baixo e pra trás (Bodybuilding.com: \"As you breathe out, bring the bar down until it touches the back of your neck by drawing the shoulders and the upper arms down and back.\"); volta excêntrica e devagar até os braços esticarem (Bodybuilding.com: \"slowly raise the bar back to the starting position when your arms are fully extended and the lats are fully stretched\"; ExRx: \"Return until arms and shoulders are fully extended.\")"
+ },
+ "referencias": [
+  "ExRx.net — Cable Rear Pulldown (https://exrx.net/WeightExercises/LatissimusDorsi/CBRearPulldown, cópia do Internet Archive de 30/06/2022 — o site respondeu 403 —, lida em 10/10/2026): Preparation \"Grasp cable bar with wide grip. Sit with thighs under supports.\"; Execution \"Pull cable bar down behind neck. Return until arms and shoulders are fully extended. Repeat.\"; Comments \"Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Latissimus Dorsi\", Synergists \"Brachialis\", \"Brachioradialis\", \"Biceps Brachii\", \"Teres Major\", \"Pectoralis Major, Sternal\", \"Pectoralis Minor\", \"Rhomboids\", \"Levator Scapulae\", \"Trapezius, Lower\", Dynamic Stabilizers \"Triceps, Long Head\"; o \"too wide\" leva a Common Resistance Training Mistakes (https://exrx.net/Kinesiology/Errors): \"Recommended grip width for wide grip exercises\" = \"elbow width, when elbow is same height/plane as shoulders\"",
+  "Bodybuilding.com — Wide-Grip Pulldown Behind The Neck (o nome em inglês do catálogo; https://www.bodybuilding.com/exercises/detail/view/name/wide-grip-pulldown-behind-the-neck, cópia do Internet Archive de 10/06/2017, lida em 10/10/2026): \"Sit down on a pull-down machine with a wide bar attached to the top pulley. Make sure that you adjust the knee pad of the machine to fit your height. These pads will prevent your body from being raised by the resistance attached to the bar.\"; \"Grab the bar with the palms facing forward using the prescribed grip.\"; \"As you have both arms extended in front of you holding the bar at the chosen grip width, bring your torso and head forward. Think of an imaginary line from the center of the bar down to the back of your neck. This is your starting position.\"; \"As you breathe out, bring the bar down until it touches the back of your neck by drawing the shoulders and the upper arms down and back.\"; \"The upper torso should remain stationary and only the arms should move.\"; \"After a second on the contracted position squeezing your shoulder blades together, slowly raise the bar back to the starting position when your arms are fully extended and the lats are fully stretched.\"; \"Caution: Performing this exercise can be hard on the rotator cuffs and if not properly executed can cause an injury to occur. Also, if you already have rotator cuff issues, I advise you to stick to the front pull-down version.\"; \"Variations: You can also performing this exercise by bring the bar down and touching your chest. This variation is safer and not as hard on the rotator cuffs.\"",
+  "Signorile JF, Zink AJ, Szwed SP. A comparative electromyographical investigation of muscle utilization patterns using various hand positions during the lat pull-down. J Strength Cond Res. 2002;16(4):539-546 (resumo do PubMed, PMID 12423182, lido em 10/10/2026; a frase do método vem do texto completo, citada na ficha da Puxada Frontal Aberta): \"Four different common variations of the lat pull-down were used: close grip (CG), supinated grip (SG), wide grip anterior (WGA), and wide grip posterior (WGP).\"; \"Both WGA and WGP were performed with a pronated handgrip, and the distance between the hands was equal to the distance from the outside of a closed fist to the seventh cervical vertebra (C7).\"; \"During the concentric phase, NrmsEMG results for the LD included WGA > WGP, SG, CG. For the TLH: WGA > WGP, SG, CG and WGP > CG, SG. For the PD: CG, WGA, SG > WGP. For the PM: CG, WGA, SG > WGP. During the eccentric phase, the LD produced the following patterns: WGA > WGP, SG, CG and WGP > CG.\"",
+  "Sperandei S, Barros MA, Silveira-Júnior PC, Oliveira CG. Electromyographic analysis of three different types of lat pull-down. J Strength Cond Res. 2009;23(7):2033-2038. doi:10.1519/JSC.0b013e3181b8d30a (texto completo na cópia do Internet Archive de 23/11/2019 da página da revista, lido em 10/10/2026): \"Recently, the behind-the-neck lat pull-down (BNL) exercise has been criticized because of its potential risk to the shoulder joint\"; \"The external rotation combined with abduction (Figure 1) places the shoulder joint in a risk position because it minimizes the stabilization capacity of the rotator cuff and places the glenohumeral ligaments under great stress\"; \"This situation is worsened by horizontal abduction, which is needed to avoid the contact between the exercise bar and the head of the practitioner.\"; \"the hand grip was marked on the bar, allowing a between-hands distance equal to 1.6 times the biacromial distance\"; \"For LD, there was no difference between techniques.\"; \"Because there is a theoretical risk associated with BNL, although there is no strong evidence of a relationship between BNL and shoulder injury, as shown by cohort studies, it appears that BNL is unnecessary and should be avoided\"; \"So far, this risk is only theoretical, but it does exist.\"; \"we concluded that FNL is the better choice, whereas BNL is not a good lat pull-down technique and should be avoided\" (FNL = pela frente do pescoço); \"To those who want to use BNL, we recommend the use of a V-bar, which reduces the risks of BNL\"",
+  "Kolber MJ, Beekhuizen KS, Cheng MS, Hellman MA. Shoulder injuries attributed to resistance training: a brief review. J Strength Cond Res. 2010;24(6):1696-1704. doi:10.1519/JSC.0b013e3181dc4330 (texto completo, acesso livre na página da revista, cópia do Internet Archive de 28/09/2025, lido em 10/10/2026): \"Unfavorable positions assumed during common exercises such as bench press, behind the neck pull-downs, military presses, and chest flies may predispose the RT population to anterior shoulder instability\"; \"Upper extremity RT places the shoulder in the high-five position (required during exercises such as the behind the neck military press and pull-downs) under heavy loads creating anterior capsular overload leading to anterior instability and impingement\"; \"the authors suggested an association between behind the neck latissimus pull-downs, and both rotator cuff injuries and anterior shoulder instability\"; figura 1: \"The high-five position. Position places the arm in end-range external rotation with abduction.\"; \"Moreover, avoiding the end-range “high-five” position through exercise modifications (Figures 7A, B) may prevent the development of anterior shoulder instability and pain. This may additionally be achieved through the selection of exercises that require bringing the bar to the front of the torso (latissimus pull-downs or barbell presses to the front) instead of behind the neck.\"",
+  "Ronai P. The Lat Pulldown. ACSM's Health & Fitness Journal. 2019;23(2):24-30. doi:10.1249/FIT.0000000000000469 (coluna \"Do It Right\", acesso livre, cópia do Internet Archive de 10/07/2024, lida em 10/10/2026): \"It has been suggested that performing overhead exercises when the shoulder is in the “high five” position (the shoulders in 90 degrees of abduction and 90 degrees of external rotation) is associated with and can precipitate and/or worsen discomfort and symptoms related to anterior shoulder instability and impingement\"; \"The “high five” position occurs when the bar is pulled down behind the head or if the arms and elbows are kept in the frontal plane when pulling the bar down in the front of the head.\"; \"It has been stated that performing overhead exercises with a forward head or hyperextended cervical spine (neck) can exacerbate symptoms of discomfort in clients with discogenic-related neck pain\"",
+  "Snarr RL, Eckert RM, Abbott P. A Comparative Analysis and Technique of the Lat Pull-down. Strength Cond J (NSCA). 2015;37(5):21-25. doi:10.1519/SSC.0000000000000173 (texto na cópia do Internet Archive de 11/09/2025 da página da revista, lido em 10/10/2026): o ajuste da máquina (descrito pra puxada pela frente) \"Adjust the knee pad (if necessary) so that knees are secured at an approximate 90° knee bend.\" e \"keep the feet flat on the floor\"; \"Although previous techniques of the LP consisted of pulling the bar behind-the-neck, a more modern and safer way to perform the exercise uses a pull in front of the body\"; \"Pulling the bar behind-the-head puts the glenohumeral joint in a comprised position (i.e., externally rotated, abducted, and horizontally abducted) increasing the risk of shoulder injury\"; \"Chronic use of the behind-the-head LP increases the likelihood of developing anterior instability (AI) in the shoulder joint\"; \"individuals' may still benefit from using multiple variations of the LP while avoiding the behind-the-neck pull-down\"",
+  "Weber A, Fanning M. Rehabilitation to performance of the shoulder for the tactical athlete. NSCA TSAC Report, Issue 80 (2026) (PDF em nsca.com, lido em 10/10/2026): \"The latissimus dorsi exercise should be performed in front of the neck while avoiding full extension of arms to avoid excessive shearing forces at the glenoid\"; \"Additionally, the intent of avoiding the “pull-down” behind the neck is to avoid excessive stress at the anterior glenohumeral ligament complex\"",
+  "National Federation of Professional Trainers (NFPT) — 12 Common Exercise Form Mistakes (https://nfpt.com/12-common-exercise-form-mistakes/, \"Posted August 9th, 2025\", lido em 10/10/2026): \"Lat Pull\" — Red flag: \"Bringing the bar behind the neck\"; \"Pulling the bar behind the neck can create shoulder impingement.\"",
+  "Prinold JA, Bull AM. Scapula kinematics of pull-up techniques: Avoiding impingement risk with training changes. J Sci Med Sport. 2016;19(8):629-635. doi:10.1016/j.jsams.2015.08.002 (texto completo no PMC, PMC4916995, lido em 10/10/2026) — barra fixa com a pegada larga PELA FRENTE (o estudo não tem a técnica atrás da cabeça): \"during wide pull-ups 90° of arm abduction with 45° external rotation was observed (Fig. 2c). This position has been shown to give significantly smaller sub-acromial spaces than other abduction positions\"",
+  "Amplitude normal (AAOS, por Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — a mesma fonte do limites.py): rotação externa do ombro 0–90°; flexão do pescoço 0–45°",
+  "Medidas da máquina e da barra: as da Puxada Frontal Aberta (a mesma estação e a mesma barra, sem mudar nada) — Legend Fitness 905 Lat Pulldown (\"Knee rollers are fully upholstered and adjust to user height.\", \"48” W\", \"90” H\"); Gym Gear Pro Series Lat Pulldown / Low Row (\"functional part uses a 50*100 rectangular tube\", \"L 189 x W 122 x H 223 cm\"); Titan Fitness Lat Tower (\"Overall Height 87-in.\", \"Lat Bar Width 48-in.\", \"Lat Bar Diameter 1-in.\"); Eleiko Lat Pull Down Bar (\"The 25-degree bend allows for comfortable and effective hand positioning and a full range of motion.\", \"25 mm grip on a 1200 mm bar\")"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: a puxada é de cabo (a barra solta, presa só ao cabo, sem alavanca girando em volta de um eixo); a regulagem certa é a do assento e dos rolos — os rolos firmes em cima das coxas (Bodybuilding.com: \"adjust the knee pad of the machine to fit your height\"; ExRx: \"Sit with thighs under supports.\")",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "puxada_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Bodybuilding.com (\"Sit down on a pull-down machine\"); ExRx (\"Sit with thighs under supports.\")"
+   },
+   {
+    "nome": "coxas presas embaixo dos rolos (encostando em cima)",
+    "equipamento": "puxada_rolos",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx (\"Sit with thighs under supports.\"); Bodybuilding.com (\"These pads will prevent your body from being raised by the resistance attached to the bar.\")"
+   },
+   {
+    "nome": "fim: a barra chega atrás da nuca, quase encostando",
+    "equipamento": "barra_puxada",
+    "partes": [
+     "Neck",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "t": 1.0,
+    "mm": [
+     5,
+     40
+    ],
+    "fonte": "ExRx (\"Pull cable bar down behind neck.\"); Bodybuilding.com (\"bring the bar down until it touches the back of your neck\"). O peso nunca entra no corpo (regra da fábrica): a barra para a poucos mm da pele da nuca — e não desce às costas (Kolber 2010: \"avoiding the end-range “high-five” position\")"
+   },
+   {
+    "nome": "a barra e o engate nunca encostam na cabeça (passam atrás dela)",
+    "equipamento": "barra_puxada",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "Sperandei 2009 (a abdução horizontal \"is needed to avoid the contact between the exercise bar and the head of the practitioner\"); Weslley (o equipamento nunca entra no corpo)"
+   },
+   {
+    "nome": "o cabo passa atrás da cabeça e das costas, sem encostar",
+    "equipamento": "puxada_polia_cabo",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "pedido do Weslley (\"Cabo, engate e barra NUNCA passam por dentro da cabeça, do cabelo, da nuca, do pescoço, das costas nem dos braços\"); medido da pele"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "o cabo não entra no cabelo",
+    "equipamento": "puxada_polia_cabo",
+    "de": "cabelo",
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "pedido do Weslley (o cabo nunca passa por dentro da cabeça nem do cabelo)"
+   },
+   {
+    "nome": "a barra e o engate não entram no cabelo",
+    "equipamento": "barra_puxada",
+    "de": "cabelo",
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "pedido do Weslley (a barra nunca passa por dentro da cabeça nem do cabelo)"
+   },
+   {
+    "nome": "a barra não encosta na estrutura",
+    "equipamento": "barra_puxada",
+    "de": "puxada_estrutura",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica)"
+   },
+   {
+    "nome": "o cabo não encosta na estrutura",
+    "equipamento": "puxada_polia_cabo",
+    "de": "puxada_estrutura",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica): o cabo sai da roldana, embaixo do braço de cima"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "braço e mão esquerdos não entram na cabeça (braços acima da cabeça no começo)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "braço e mão direitos não entram na cabeça (braços acima da cabeça no começo)",
+    "partes": [
+     "RightArm",
+     "RightForeArm",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tronco em pé, no máximo um pouco pra frente, parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "Bodybuilding.com (\"bring your torso and head forward\"; \"The upper torso should remain stationary and only the arms should move.\"). A medida não tem sinal: o tronco fica ~5° pra FRENTE (com a barra atrás da cabeça, o tronco pra trás jogaria a cabeça no caminho dela)"
+   },
+   {
+    "nome": "cabeça um pouco dobrada pra frente (a barra passa atrás), sem forçar o pescoço",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -35,
+     -18
+    ],
+    "fonte": "Bodybuilding.com (\"bring your torso and head forward\"); Ronai 2019 (\"performing overhead exercises with a forward head or hyperextended cervical spine (neck) can exacerbate symptoms of discomfort in clients with discogenic-related neck pain\") — por isso só um pouco: o pescoço ~15° além do repouso (o boneco em pé mede ~−11°; com mais 5° da cabeça no alto, o rosto fica ~20° mais baixo), menos da metade dos 45° da flexão normal do pescoço (AAOS)"
+   },
+   {
+    "nome": "braços esticados no começo, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     2,
+     15
+    ],
+    "fonte": "ExRx (\"Return until arms and shoulders are fully extended.\"); Bodybuilding.com (\"when your arms are fully extended\")"
+   },
+   {
+    "nome": "braços acima da cabeça no começo",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     140,
+     175
+    ],
+    "fonte": "Bodybuilding.com (\"As you have both arms extended ... Think of an imaginary line from the center of the bar down to the back of your neck\"): a barra em cima da nuca, os braços esticados pra cima e abertos (pegada larga)"
+   },
+   {
+    "nome": "ombros subidos (soltos) no começo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": 0.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx (\"Return until arms and shoulders are fully extended.\"). Medida: a clavícula (base do pescoço → articulação do ombro) × a horizontal; menor = ombro mais alto"
+   },
+   {
+    "nome": "escápulas descidas na puxada (ombros longe das orelhas)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": [
+     0.35,
+     1.0
+    ],
+    "graus": [
+     22,
+     40
+    ],
+    "fonte": "Bodybuilding.com (\"by drawing the shoulders and the upper arms down and back\")"
+   },
+   {
+    "nome": "escápulas pra trás no fim",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -45,
+     -8
+    ],
+    "fonte": "Bodybuilding.com (\"squeezing your shoulder blades together\"; \"drawing the shoulders and the upper arms down and back\"). Medida: articulação do ombro à frente (+) ou atrás (−) da base do pescoço, no eixo do tórax"
+   },
+   {
+    "nome": "cotovelos dobrados no fim (barra na nuca)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     100,
+     145
+    ],
+    "fonte": "ExRx (\"Pull cable bar down behind neck.\"); Bodybuilding.com (\"until it touches the back of your neck\"): com a pegada larga e a barra na nuca, a mão fica pouco acima do ombro e o cotovelo bem dobrado"
+   },
+   {
+    "nome": "fim: cotovelos embaixo, apontando pro chão (o braço desce do ombro)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "t": 1.0,
+    "graus": [
+     20,
+     75
+    ],
+    "fonte": "Bodybuilding.com (\"drawing the shoulders and the upper arms down and back\"). Medida: o braço (ombro → cotovelo) × a horizontal; + = cotovelo abaixo do ombro"
+   },
+   {
+    "nome": "fim: o antebraço sobe do cotovelo até a mão (cotovelo embaixo da barra)",
+    "medida": "inclinacao",
+    "segmento": [
+     "ForeArm",
+     "Hand"
+    ],
+    "t": 1.0,
+    "graus": [
+     -90,
+     -50
+    ],
+    "fonte": "Bodybuilding.com (\"The forearms should do no other work except for holding the bar\"): o cotovelo fica embaixo da mão e o antebraço quase em pé. Medida: o antebraço (cotovelo → punho) × a horizontal; − = punho acima do cotovelo"
+   },
+   {
+    "nome": "cotovelos no plano do corpo, só um pouco atrás (sem jogar pra trás)",
+    "medida": "braco_plano",
+    "t": [
+     0.5,
+     1.0
+    ],
+    "graus": [
+     -30,
+     5
+    ],
+    "fonte": "Sperandei 2009 (\"This situation is worsened by horizontal abduction, which is needed to avoid the contact between the exercise bar and the head of the practitioner.\"); Snarr 2015 (\"externally rotated, abducted, and horizontally abducted\"); Kolber 2010 (\"avoiding the end-range “high-five” position\"): só o que a cabeça pede. Medida: pra onde o braço aponta visto de cima do tronco; 0 = pro lado, − = atrás do plano do tronco"
+   },
+   {
+    "nome": "no meio da puxada (braço aberto ~90°) o ombro fica na \"high five\", sem passar dela",
+    "medida": "ombro_rotacao_externa",
+    "t": [
+     0.4,
+     0.6
+    ],
+    "graus": [
+     60,
+     95
+    ],
+    "fonte": "Ronai 2019 (\"the shoulders in 90 degrees of abduction and 90 degrees of external rotation\"; \"The “high five” position occurs when the bar is pulled down behind the head\"); Kolber 2010 (\"Position places the arm in end-range external rotation with abduction.\"; \"avoiding the end-range “high-five” position\"); amplitude normal da rotação externa 0–90° (AAOS, medida com o braço aberto a 90°). Medida (tecnica3d.ombro_rotacao_externa): o antebraço girado em volta do braço, 0 = pra frente, 90 = em pé; vale no meio do movimento (t de 0,4 a 0,6), com o braço aberto entre ~80° e ~100° — é onde a \"high five\" acontece e onde o número bate com o goniômetro (com o braço mais baixo e atrás do tronco ele passa de 90 mesmo com o antebraço em pé: no fim, com o braço aberto ~26°, marca ~100°)"
+   },
+   {
+    "nome": "pegada aberta (umas 2 vezes a largura dos ombros)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.9,
+     2.5
+    ],
+    "fonte": "Signorile 2002 (\"the distance between the hands was equal to the distance from the outside of a closed fist to the seventh cervical vertebra (C7)\" — ~0,85 m no boneco; o meio das mãos fica a ~0,89 m); ExRx (\"Grasp cable bar with wide grip\"; \"Range of motion will be compromised if grip is too wide.\"; a largura que o ExRx recomenda pras pegadas largas é \"elbow width, when elbow is same height/plane as shoulders\" — no meio da puxada, com os cotovelos na altura dos ombros, os antebraços ficam em pé). A medida é a distância entre as bases dos dedos médios ÷ a distância entre as articulações dos ombros"
+   },
+   {
+    "nome": "pegada pronada (palma pra frente)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     0,
+     85
+    ],
+    "fonte": "Bodybuilding.com (\"Grab the bar with the palms facing forward\"). Medida: palma × frente do tronco"
+   },
+   {
+    "nome": "punho reto (sem dobrar pra frente nem pra trás)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "Bodybuilding.com (\"The forearms should do no other work except for holding the bar\"); Eleiko (a dobra de 25° dá \"comfortable and effective hand positioning\"). Medida: flexão (+) / extensão (−) do punho"
+   },
+   {
+    "nome": "punho no máximo um pouco desviado de lado (ponta dobrada da barra)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "amplitude normal do desvio do punho: radial 0–20°, ulnar 0–30° (AAOS, por Norkin & White — a mesma fonte do limites.py). Medida: + = pro lado do polegar, − = pro lado do dedo mínimo"
+   },
+   {
+    "nome": "joelhos dobrados (coxas deitadas, canelas em pé)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ExRx (\"Sit with thighs under supports.\"); Bodybuilding.com (\"adjust the knee pad of the machine to fit your height\"); Snarr 2015, o ajuste da mesma máquina (\"Adjust the knee pad (if necessary) so that knees are secured at an approximate 90° knee bend.\"; \"keep the feet flat on the floor\")"
+   }
+  ]
+ }
+}

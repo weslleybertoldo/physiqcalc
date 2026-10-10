@@ -642,3 +642,33 @@ def coxa_abducao(j):
 
 
 MEDIDAS.update({"coxa_abducao": coxa_abducao})
+
+
+# ── puxada atrás da nuca (lote 9, 10/10/2026): com a barra atrás da cabeça o ombro fica aberto pro lado e girado pra fora, a posição "high
+# five" (Ronai P. The Lat Pulldown. ACSM's Health & Fitness Journal 2019;23(2):24-30: "the shoulders in 90 degrees of abduction and 90
+# degrees of external rotation"; "The “high five” position occurs when the bar is pulled down behind the head"), e Kolber 2010 manda
+# evitar o fim dela ("avoiding the end-range “high-five” position"). As medidas braco_* dizem pra onde o braço aponta, não quanto ele
+# girou em volta de si mesmo: aqui é o giro, como o goniômetro mede a rotação do ombro (braço aberto, cotovelo dobrado; amplitude normal
+# de rotação externa 0–90°, AAOS — Norkin & White, a mesma fonte do limites.py).
+def ombro_rotacao_externa(j):
+    """Rotação externa (+) / interna (−) de cada ombro, graus [E, D]: o antebraço (cotovelo → punho) girado em volta do braço (ombro →
+    cotovelo), como no goniômetro com o braço aberto e o cotovelo dobrado: 0 = antebraço apontando pra frente do tronco, 90 = pra cima
+    (a "high five" com o braço aberto a 90°), 180 = pra trás, −90 = pra baixo (rotação interna). O 0 é a frente do tronco no plano
+    perpendicular ao braço e o 90 é o cima do tronco nesse plano, no referencial do tronco (inclinado ou virado, o número é o mesmo).
+    Bate com o goniômetro com o braço aberto perto de 90° no plano do corpo (a "high five": antebraço em pé = 90, com o braço no plano
+    do tronco ou um pouco atrás); com o braço mais baixo e atrás do tronco o número passa de 90 mesmo com o antebraço em pé (o giro
+    medido no tronco muda com a direção do braço — o paradoxo de Codman). Perde o sentido com o braço apontando pra frente ou pendurado
+    colado ao tronco (o plano de referência some) e com o cotovelo esticado (o antebraço quase na linha do braço)."""
+    cima, lado, frente = eixos_tronco(j)
+    out = []
+    for L, _ in LADOS:
+        h = _u(j[L + "ForeArm"] - j[L + "Arm"])
+        f = j[L + "Hand"] - j[L + "ForeArm"]
+        f = f - h * (f @ h)
+        a = _u(frente - h * (frente @ h))
+        c = _u(cima - h * (cima @ h) - a * (cima @ a))
+        out.append(math.degrees(math.atan2(float(f @ c), float(f @ a))))
+    return out
+
+
+MEDIDAS.update({"ombro_rotacao_externa": ombro_rotacao_externa})
