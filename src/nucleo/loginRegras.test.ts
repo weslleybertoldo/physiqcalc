@@ -7,7 +7,6 @@ import {
   emailDeTeste,
   faixaDoPlanoCalc,
   origemPermitida,
-  segredoConfere,
   senhaAleatoria,
   type ProfessorCalc,
 } from "../../supabase-principal/functions/_shared/login-regras";
@@ -42,12 +41,6 @@ describe("sessão (igual à trocar-token)", () => {
     }
     expect(emailDeTeste("rafa@gmail.com")).toBe(false);
     expect(emailDeTeste("aluno.teste.claude@physiqnutri.app")).toBe(true);
-  });
-  it("segredo do espelho em tempo constante; curto sempre recusa", () => {
-    const s = "a".repeat(40);
-    expect(segredoConfere(s, s)).toBe(true);
-    expect(segredoConfere("b".repeat(40), s)).toBe(false);
-    expect(segredoConfere("abc", "abc")).toBe(false);
   });
 });
 

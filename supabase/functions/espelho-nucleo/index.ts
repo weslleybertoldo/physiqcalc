@@ -2,22 +2,25 @@
 // de quem mudou (membro entrou/saiu/mudou de papel, aluno trocou de responsável ou foi bloqueado, conta pagou/venceu/
 // foi isenta ou suspensa) e aplica no espelho do Treino — a mesma regra da trocar-token (spec §8.3).
 //
-// POST, headers: x-espelho-segredo: <ESPELHO_SEGREDO> · x-schema: public|staging. Corpo: { resumos: ResumoNucleo[] } (até 50).
+// POST, headers: x-espelho-segredo · x-schema: public|staging. Corpo: { resumos: ResumoNucleo[] } (até 50).
+// Segredo da finalidade (hml-16c, S1): a espelho-enviar do principal manda SEGREDO_ESPELHO_NUCLEO; aqui fica só o hash, em
+// SEGREDO_ESPELHO_NUCLEO_ACEITOS (_shared/segredo-servidor.ts; até o F7, também o legado ESPELHO_SEGREDO). Aceitou → log
+// segredo_aceito (acao espelho_nucleo, resultado lista | legado).
 // Quem ainda não tem vínculo (nunca entrou no Physiq) é pulado: a trocar-token aplica tudo no 1º login.
-// verify_jwt = false (autenticação pelo segredo compartilhado). Publicar:
+// verify_jwt = false (autenticação pelo segredo da finalidade). Publicar:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions espelho-nucleo false
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { aplicarResumo } from "../_shared/espelho/aplicar.ts";
-import { segredoConfere, type ResumoNucleo } from "../_shared/espelho/regras.ts";
+import type { ResumoNucleo } from "../_shared/espelho/regras.ts";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
+import { segredoAceito } from "../_shared/segredo-servidor.ts";
 
 const log = criarLog("espelho-nucleo", { avisar: avisarErro });
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 const SCHEMAS = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -25,7 +28,9 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "metodo" }, 405);
-  if (!segredoConfere(req.headers.get("x-espelho-segredo"), ESPELHO_SEGREDO)) return json({ error: "segredo_invalido" }, 401);
+  const via = await segredoAceito(req.headers.get("x-espelho-segredo"), "SEGREDO_ESPELHO_NUCLEO");
+  if (!via) return json({ error: "segredo_invalido" }, 401);
+  log.info({ codigo: "segredo_aceito", acao: "espelho_nucleo", resultado: via });
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ error: "schema_invalido" }, 400);
   let corpo: { resumos?: unknown } = {};

@@ -30,7 +30,9 @@ quando, quem decidiu, a saída (ou até quando) e onde está no código. "Dono" 
 ## As 17 funções com `verify_jwt=false`
 
 Conferido em 08/10/2026 na lista publicada dos 2 projetos (Management API, só leitura): são estas 17, e nenhuma outra.
-"Segredo entre servidores" é o cabeçalho `x-espelho-segredo` (`ESPELHO_SEGREDO`).
+"Segredo entre servidores" é o cabeçalho `x-espelho-segredo`, com um segredo por finalidade (hml-16c, H-51): quem manda
+guarda o valor e quem recebe confere pelo sha256 numa lista própria (`<SEGREDO>_ACEITOS`). Os 8 e como trocar:
+[incidente.md](incidente.md) › "Segredo exposto". Até o fim da troca da hml-16c, o `ESPELHO_SEGREDO` de antes ainda vale.
 
 | Banco | Função | Quem chama | O que confere quem chama | Desde |
 |---|---|---|---|---|

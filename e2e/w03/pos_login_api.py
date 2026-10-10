@@ -23,7 +23,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "w02"))
-from _comum import PRINCIPAL_REF, TREINO_REF, Placar, anon, http, senha, sql_principal, sql_treino  # noqa: E402
+from _comum import PRINCIPAL_REF, TREINO_REF, Placar, anon, cab_login, http, senha, sql_principal, sql_treino  # noqa: E402
 
 API_P = "https://api-principal.physiqcalc.com.br"
 API_T = "https://api.physiqcalc.com.br"
@@ -37,7 +37,9 @@ def kv(nome: str) -> dict:
 
 
 def login(email: str, senha_: str) -> dict:
-    st, s, _ = http("POST", f"{API_P}/auth/v1/token?grant_type=password", {"email": email, "password": senha_}, {"apikey": anon(PRINCIPAL_REF)})
+    # W28: o captcha global do Auth do principal recusa o login REST com a chave pública (captcha_failed) — o de teste vai como
+    # servidor pelo cab_login do _comum (o mesmo do w05/_base.py)
+    st, s, _ = http("POST", f"{API_P}/auth/v1/token?grant_type=password", {"email": email, "password": senha_}, cab_login(API_P, anon(PRINCIPAL_REF)))
     assert st == 200, (email, st, s)
     return s
 

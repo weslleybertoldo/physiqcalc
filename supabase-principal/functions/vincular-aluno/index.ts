@@ -21,22 +21,25 @@
 //   app com 7 dias grátis (desvincular_do_profissional).
 // verify_jwt = false (o modo servidor não tem JWT; o app é validado aqui no GET /auth/v1/user). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions vincular-aluno false
-// Segredos: ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (cancelar a assinatura do app) (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
+// Segredos: SEGREDO_REPASSE_VINCULO_ACEITOS (até o F7, também o legado ESPELHO_SEGREDO), MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (cancelar a assinatura do app) (+ os automáticos). Depois do vínculo o app refaz a troca de token (o Treino recebe o professor
 // pelo espelho) — e a fila espelho_pendencias leva a mudança para quem já tem vínculo.
+// hml-16c (S5): as 2 entradas do modo servidor (o vínculo e o desvincular) aceitam o segredo da finalidade — a vincular-professor
+// e a admin-delete-user do Treino mandam SEGREDO_REPASSE_VINCULO; aqui fica só o hash, em SEGREDO_REPASSE_VINCULO_ACEITOS
+// (_shared/segredo-servidor.ts). Aceitou → log segredo_aceito (acao repasse_vinculo, resultado lista | legado).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts; os catches que devolvem 500 avisam (log.excecao) com a resposta de antes.
 // hml-14 (H-32): o cancelamento da assinatura do app vai ao MP com o prazo do pedido e lança no erro do banco (o catch dele já
 // registra e responde falhas: 1, sem travar o vínculo); a prévia com erro do banco responde 500 (antes dizia "não é aluno do app").
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
-import { emailConfirmado, emailDeTeste, origemPermitida, segredoConfere } from "../_shared/login-regras.ts";
+import { emailConfirmado, emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
+import { segredoAceito } from "../_shared/segredo-servidor.ts";
 import { credencialDoSchema, type Schema } from "../_shared/cobranca-mp.ts";
 import { appDaPessoa, cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
 const SCHEMAS = ["public", "staging"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const log = criarLog("vincular-aluno", { avisar: avisarErro });
@@ -83,7 +86,9 @@ Deno.serve(async (req) => {
 
   // W7b — modo servidor: o profissional tirou o aluno da lista no painel antigo (admin-delete-user do Treino)
   if (corpo.acao === "desvincular") {
-    if (!segredoConfere(req.headers.get("x-espelho-segredo"), ESPELHO_SEGREDO)) return json({ ok: false, erro: "segredo_invalido" }, 401, origin);
+    const via = await segredoAceito(req.headers.get("x-espelho-segredo"), "SEGREDO_REPASSE_VINCULO");
+    if (!via) return json({ ok: false, erro: "segredo_invalido" }, 401, origin);
+    log.info({ codigo: "segredo_aceito", schema, acao: "repasse_vinculo", resultado: via });
     const aluno = typeof corpo.principal_user_id === "string" ? corpo.principal_user_id : "";
     const prof = typeof corpo.profissional_principal_id === "string" ? corpo.profissional_principal_id : "";
     if (!UUID.test(aluno) || !UUID.test(prof)) return json({ ok: false, erro: "parametros_invalidos" }, 400, origin);
@@ -103,7 +108,9 @@ Deno.serve(async (req) => {
   let userId: string;
   const segredo = req.headers.get("x-espelho-segredo");
   if (segredo) {
-    if (!segredoConfere(segredo, ESPELHO_SEGREDO)) return json({ ok: false, erro: "segredo_invalido" }, 401, origin);
+    const via = await segredoAceito(segredo, "SEGREDO_REPASSE_VINCULO");
+    if (!via) return json({ ok: false, erro: "segredo_invalido" }, 401, origin);
+    log.info({ codigo: "segredo_aceito", schema, acao: "repasse_vinculo", resultado: via });
     const id = typeof corpo.principal_user_id === "string" ? corpo.principal_user_id : "";
     if (!UUID.test(id)) return json({ ok: false, erro: "principal_user_id_invalido" }, 400, origin);
     userId = id;

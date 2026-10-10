@@ -31,6 +31,15 @@ const semComentarios = (texto: string) =>
 
 const CHAVE_DE_ASSINATURA = /secrets\.(KEYSTORE_|KEY_ALIAS|KEY_PASSWORD|PLAY_UPLOAD_)/;
 
+/** hml-16c (H-45): o passo-guarda do check da branch é o ÚNICO lugar sem environment que cita as chaves — só confere que vêm vazias. */
+const GUARDA = "- name: Guarda — nenhuma chave real no check da branch (H-45)";
+function semGuarda(job: string): string {
+  const i = job.indexOf(GUARDA);
+  if (i < 0) return job;
+  const fim = job.indexOf("- name:", i + GUARDA.length);
+  return job.slice(0, i) + (fim < 0 ? "" : job.slice(fim));
+}
+
 describe("hml-16b (H-45): segredos do GitHub por environment", () => {
   it("as chaves de assinatura só aparecem em job com o environment delas", () => {
     const esperado: Record<string, Record<string, string>> = {
@@ -41,7 +50,7 @@ describe("hml-16b (H-45): segredos do GitHub por environment", () => {
     };
     for (const [arquivo, comChave] of Object.entries(esperado)) {
       for (const [nome, job] of Object.entries(jobs(arquivo))) {
-        const codigo = semComentarios(job);
+        const codigo = semComentarios(semGuarda(job));
         if (comChave[nome]) {
           expect(codigo, `${arquivo} › ${nome}`).toMatch(CHAVE_DE_ASSINATURA);
           expect(codigo, `${arquivo} › ${nome}`).toMatch(new RegExp(`^ {4}environment: ${comChave[nome]}$`, "m"));
@@ -53,8 +62,13 @@ describe("hml-16b (H-45): segredos do GitHub por environment", () => {
   });
 
   it("o PAT do PowerSync só chega ao job do PowerSync, no environment powersync", () => {
-    for (const arquivo of [".github/workflows/build-apk.yml", ".github/workflows/build-apk-check.yml", ".github/workflows/ci-pr.yml"]) {
+    for (const arquivo of [".github/workflows/build-apk.yml", ".github/workflows/ci-pr.yml"]) {
       expect(ler(arquivo), arquivo).not.toContain("POWERSYNC_PAT");
+    }
+    const check = ".github/workflows/build-apk-check.yml";
+    expect(ler(check).slice(0, ler(check).indexOf("\njobs:\n")), check).not.toContain("POWERSYNC_PAT");
+    for (const [nome, job] of Object.entries(jobs(check))) {
+      expect(semGuarda(job), `${check} › ${nome}`).not.toContain("POWERSYNC_PAT");
     }
     const keepAlive = jobs(".github/workflows/keep-alive.yml");
     for (const [nome, job] of Object.entries(keepAlive)) {
@@ -86,6 +100,25 @@ describe("hml-16b (H-45): segredos do GitHub por environment", () => {
     expect(check["apk-aparelho"]).toContain("retention-days: 1\n");
     expect(check["apk-aparelho"]).toContain('bash scripts/ci/apk-assinatura.sh site "$APK"');
     expect(ler(".github/workflows/build-apk-check.yml")).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}chave_real:\n[\s\S]*?type: boolean\n {8}default: false/);
+  });
+
+  it("hml-16c: o check da branch falha se uma chave real chegar nele (guarda no 1º passo dos 2 jobs sem environment)", () => {
+    const check = jobs(".github/workflows/build-apk-check.yml");
+    for (const nome of ["build", "aab-loja"]) {
+      const job = check[nome];
+      const i = job.indexOf(GUARDA);
+      expect(i, `${nome}: tem a guarda`).toBeGreaterThan(-1);
+      expect(job.slice(0, i), `${nome}: a guarda é o 1º passo`).not.toContain("- name:");
+      expect(job, `${nome}: sem environment`).not.toMatch(/^ {4}environment:/m);
+      const passo = job.slice(i, job.indexOf("- name:", i + GUARDA.length));
+      for (const segredo of ["KEYSTORE_BASE64", "PLAY_UPLOAD_KEYSTORE_BASE64", "POWERSYNC_PAT"]) {
+        expect(passo, `${nome}: confere ${segredo}`).toContain(`\${{ secrets.${segredo} }}`);
+      }
+      expect(passo).toContain('if [ -n "$CHAVE_APK" ] || [ -n "$CHAVE_UPLOAD" ] || [ -n "$PAT_POWERSYNC" ]; then');
+      expect(passo).toContain("exit 1");
+      expect(passo, `${nome}: nunca imprime o valor`).not.toMatch(/echo[^\n]*\$(CHAVE_APK|CHAVE_UPLOAD|PAT_POWERSYNC)/);
+    }
+    expect(jobs(".github/workflows/build-apk-check.yml")["apk-aparelho"], "o apk-aparelho usa a chave real: sem a guarda").not.toContain(GUARDA);
   });
 
   it("a chave do APK do site só existe no disco durante o Gradle (depois do npm ci, dos testes e do build)", () => {

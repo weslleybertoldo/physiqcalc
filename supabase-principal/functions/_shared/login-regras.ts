@@ -166,16 +166,6 @@ export function hojeSaoPaulo(agora: Date = new Date()): string {
   return agora.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 }
 
-/** Comparação de segredo em tempo constante (ESPELHO_SEGREDO). Segredo curto = sempre recusa. */
-export function segredoConfere(recebido: string | null | undefined, esperado: string | null | undefined): boolean {
-  const a = recebido || "";
-  const b = esperado || "";
-  if (b.length < 32 || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
 /** Origens aceitas pelas funções do login (o site do Physiq, o staging, o APK e o dev local). */
 export function origemPermitida(origin: string | null): boolean {
   if (!origin) return false;

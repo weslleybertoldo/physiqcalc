@@ -35,7 +35,7 @@ PRINCIPAL_REF, PRINCIPAL_URL, TREINO_REF, TREINO_URL = B5.PRINCIPAL_REF, B5.PRIN
 Caso, anon, exec_treino, http, p, service = B5.Caso, B5.anon, B5.exec_treino, B5.http, B5.p, B5.service
 sql_principal, sql_treino, senha_de, sessao, funcao, rpc, uid, treino_id = (
     B5.sql_principal, B5.sql_treino, B5.senha_de, B5.sessao, B5.funcao, B5.rpc, B5.uid, B5.treino_id)
-garantir_usuario, trocar_token, processar_espelho, espelho_segredo = B5.garantir_usuario, B5.trocar_token, B5.processar_espelho, B5.espelho_segredo
+garantir_usuario, trocar_token, processar_espelho, segredo_fila = B5.garantir_usuario, B5.trocar_token, B5.processar_espelho, B5.segredo_fila
 
 # 29/09 ~18:30: o pooler de sessão (Supavisor, porta 5432) do Treino passou a devolver "Failed to connect to database: timeout"
 # por minutos, com o banco saudável (Management API em < 1 s, 15 de 60 conexões) — o SQL do Treino dos testes da W7 vai pela

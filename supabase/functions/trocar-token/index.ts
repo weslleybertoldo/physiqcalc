@@ -15,7 +15,8 @@
 // verify_jwt = false (o token é do outro banco). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions trocar-token false
 // NUNCA pelo workflow deploy-function.yml (ele liga o verify_jwt e a troca passa a responder 401 pra todo mundo).
-// Segredos: PRINCIPAL_URL, PRINCIPAL_ANON_KEY, ESPELHO_SEGREDO (+ os automáticos do Supabase).
+// Segredos: PRINCIPAL_URL, PRINCIPAL_ANON_KEY, SEGREDO_ESPELHO_RESUMO (hml-16c, S4: o que a espelho-resumo do principal aceita;
+// até o F7, sem ele, o legado ESPELHO_SEGREDO — _shared/segredo-servidor.ts) (+ os automáticos do Supabase).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32, D3): o login tem um prazo de 35 s (o front espera 40 s) e cada chamada para fora espera no máximo o tempo do
 // destino dentro dele — GoTrue do principal 5 s, espelho-resumo 8 s, GoTrue do Treino 10 s (generate_link, verify, getUserById e
@@ -39,6 +40,7 @@ import {
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
+import { segredoParaEnviar } from "../_shared/segredo-servidor.ts";
 
 const log = criarLog("trocar-token", { avisar: avisarErro });
 
@@ -50,7 +52,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const PRINCIPAL_URL = (Deno.env.get("PRINCIPAL_URL") || "").replace(/\/+$/, "");
 const PRINCIPAL_ANON_KEY = Deno.env.get("PRINCIPAL_ANON_KEY") || "";
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+const SEGREDO_ESPELHO_RESUMO = segredoParaEnviar("SEGREDO_ESPELHO_RESUMO");
 
 const SCHEMAS = ["public", "staging"];
 const ALLOWED_ORIGINS = new Set([
@@ -101,7 +103,7 @@ async function usuarioDoPrincipal(token: string, p: Prazo): Promise<{ user: Usua
 async function resumoDoPrincipal(principalUserId: string, schema: string, p: Prazo): Promise<ResumoNucleo | null> {
   const r = await buscarComTempo(`${PRINCIPAL_URL}/functions/v1/espelho-resumo`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": schema },
+    headers: { "Content-Type": "application/json", "x-espelho-segredo": SEGREDO_ESPELHO_RESUMO, "x-schema": schema },
     body: JSON.stringify({ principal_user_id: principalUserId }),
   }, Math.min(TEMPO_MS.principal, p.restante()));
   if (r.status !== 200) {
@@ -194,7 +196,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return erro("metodo", 405, origin);
   const p = prazo(ORCAMENTO_LOGIN_MS); // hml-14 (H-32, D3): o prazo do login inteiro (todas as chamadas para fora)
-  if (!PRINCIPAL_URL || !PRINCIPAL_ANON_KEY || ESPELHO_SEGREDO.length < 32) return erro("nao_configurada", 500, origin);
+  if (!PRINCIPAL_URL || !PRINCIPAL_ANON_KEY || !SEGREDO_ESPELHO_RESUMO) return erro("nao_configurada", 500, origin);
 
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
   if (!freioPorIp(ip)) return erro("rate_limited", 429, origin);

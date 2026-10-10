@@ -5,6 +5,8 @@ Blocos: A lista + P1 + número = tela · B cadastrar · C convidar + aceite no 1
 trocar-token recusa o só-aluno, sessões do Treino encerradas) · E desativar/reativar/remover · F atribuir em lote · G limite da faixa
 (o 11º aluno de uma conta f10) · H /c/ público (captcha + pendente + aprovar) · I repasse do APK antigo (modo servidor).
 Pré-requisito: python3 e2e/w13/massa.py. Uso: python3 e2e/w13/api.py [--bloco A,B,...]
+Bloco I (hml-16c, S6): o SEGREDO_REPASSE_CONVITES do ambiente (cofre › PhysiqCalc › "Physiq — SEGREDO_REPASSE_CONVITES (hml-16c)");
+sem ele, o legado (reserva até o F7).
 """
 from __future__ import annotations
 
@@ -256,7 +258,7 @@ def bloco_h() -> None:
 
 def bloco_i() -> None:
     B.saude_ok("I — repasse")
-    seg = B.B5.espelho_segredo()
+    seg = B.B5.segredo_do_ambiente("SEGREDO_REPASSE_CONVITES")  # S6 (hml-16c): o que a professor-convites do Treino manda
     st, r, _ = B.http("POST", f"{B.API_P}/functions/v1/alunos", {"acao": "repasse", "principal_user_id": B.uid("w13-dono"), "repasse": "convites"},
                       {"x-espelho-segredo": seg, "x-schema": S, "apikey": B.anon(B.PRINCIPAL_REF)})
     p.check(st == 200 and isinstance(r, dict) and r.get("ok") and isinstance(r.get("convites"), list), f"I1 repasse (modo servidor) lista os convites do personal → {st}")

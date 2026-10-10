@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _comum import (  # noqa: E402
-    PRINCIPAL_URL, TREINO_REF, TREINO_URL, Placar, anon, espelho_segredo, exec_treino, http, login_principal,
+    PRINCIPAL_URL, TREINO_REF, TREINO_URL, Placar, anon, exec_treino, http, login_principal, segredo_fila,
     sql_principal, sql_treino,
 )
 
@@ -134,7 +134,7 @@ def main() -> int:
     sql_principal(f"update staging.contas set situacao = 'ativa', vence_em = '{vence}' where id = '{CONTA}'; "
                   f"select staging.espelho_enfileirar('conta', jsonb_build_object('conta_id', '{CONTA}'::text))")
     st, r, _ = http("POST", "https://hkxvtsbwctxkrqzkkdoz.supabase.co/functions/v1/espelho-enviar", {},
-                    {"x-espelho-segredo": espelho_segredo(), "x-schema": SCHEMA})
+                    {"x-espelho-segredo": segredo_fila(), "x-schema": SCHEMA})  # S8 (hml-16c)
     p.check(st == 200 and r.get("processadas", 0) >= 1 and all(x.get("resultado") == "feito" for x in r.get("resultados", [])),
             f"8. espelho-enviar processou a fila → {st} {r}")
     prof2 = sql_treino(f"select nucleo_acesso_ate::text, acesso_liberado_ate::text from staging.physiq_professores where id = '{pers_treino}'")

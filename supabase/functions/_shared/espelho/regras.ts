@@ -333,13 +333,3 @@ export function acessoProfessorOk(p: { status?: string | null; nucleo_acesso_ate
 
 /** Data de "sem limite" usada pelo espelho (conta isenta). */
 export const ACESSO_SEM_LIMITE = DATA_MAXIMA;
-
-/** Comparação de segredo em tempo constante (ESPELHO_SEGREDO). Segredo curto = sempre recusa. */
-export function segredoConfere(recebido: string | null | undefined, esperado: string | null | undefined): boolean {
-  const a = recebido || "";
-  const b = esperado || "";
-  if (b.length < 32 || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}

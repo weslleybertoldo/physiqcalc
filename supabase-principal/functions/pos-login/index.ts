@@ -18,7 +18,8 @@
 // Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging · 429 rate_limited · 500
 // verify_jwt = false (validado aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pos-login false
-// Segredos: TREINO_URL, ESPELHO_SEGREDO, MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (W7b) (+ os automáticos).
+// Segredos: TREINO_URL, SEGREDO_PONTE_CALC (hml-16c, S2: o que a vincular-professor do Treino aceita; até o F7, sem ele, o legado
+// ESPELHO_SEGREDO — _shared/segredo-servidor.ts), MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (W7b) (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (da vincular-professor do Treino, só o status e o código do erro — nunca o
 // corpo); o catch final avisa (log.excecao) e devolve o mesmo 500.
 // hml-14 (H-32): a ida ao Treino espera no máximo TEMPO_MS.treino e as idas ao MP têm o prazo do pedido; erro do banco na ponte do
@@ -44,12 +45,13 @@ import {
 import { credencialDoSchema, type Schema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado, contaDoApp } from "../_shared/app-sem-profissional.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo } from "../_shared/tempo.ts";
+import { segredoParaEnviar } from "../_shared/segredo-servidor.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const TREINO_URL = (Deno.env.get("TREINO_URL") || "").replace(/\/+$/, "");
-const ESPELHO_SEGREDO = Deno.env.get("ESPELHO_SEGREDO") || "";
+const SEGREDO_PONTE_CALC = segredoParaEnviar("SEGREDO_PONTE_CALC");
 const SCHEMAS = ["public", "staging"];
 const log = criarLog("pos-login", { avisar: avisarErro });
 
@@ -95,11 +97,11 @@ function codigoDoTreino(texto: string): unknown {
 }
 
 async function perguntarAoTreino(schema: string, corpo: Record<string, unknown>): Promise<LegadoTreino | null> {
-  if (!TREINO_URL || ESPELHO_SEGREDO.length < 32) return null;
+  if (!TREINO_URL || !SEGREDO_PONTE_CALC) return null;
   // estourou (até ler o corpo) → lança: o catch da ponte do Calc registra e o login segue
   const r = await buscarComTempo(`${TREINO_URL}/functions/v1/vincular-professor`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-espelho-segredo": ESPELHO_SEGREDO, "x-schema": schema },
+    headers: { "Content-Type": "application/json", "x-espelho-segredo": SEGREDO_PONTE_CALC, "x-schema": schema },
     body: JSON.stringify({ modo: "servidor", ...corpo }),
   }, TEMPO_MS.treino);
   if (r.status !== 200) {
