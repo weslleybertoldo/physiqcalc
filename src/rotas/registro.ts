@@ -90,7 +90,7 @@ export function slug(nome: string): string {
 }
 
 // hml-16d: as exclusões de teste são RELATIVAS ("!**/*.test.tsx"). A vite 6 resolve a exclusão a partir da pasta do padrão
-// positivo, então o antigo "!/src/**/*.test.tsx" deixava de excluir: os testes entravam no bundle e o app abria em tela
+// positivo, então a antiga exclusão absoluta (a partir de /src) deixava de excluir: os testes entravam no bundle e o app abria em tela
 // preta ("Vitest failed to access its internal state"). A guarda `semTesteNoBundle()` do vite.config.ts derruba o build se voltar.
 export const registro = {
   entrada: montarGrupo(import.meta.glob(["/src/entrada/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
