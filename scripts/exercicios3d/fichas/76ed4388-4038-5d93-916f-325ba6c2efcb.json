@@ -1,0 +1,303 @@
+{
+ "uuid": "76ed4388-4038-5d93-916f-325ba6c2efcb",
+ "nome": "Desenvolvimento com Barra",
+ "cena": "desenvolvimento_com_barra",
+ "grupo": "Deltóide",
+ "subgrupo": "Deltoide anterior/lateral · tríceps",
+ "padrao_movimento": "desenvolvimento",
+ "equipamento": "barra",
+ "variacao": "sentado, pela frente",
+ "alvos": [
+  "deltoide"
+ ],
+ "auxiliares": [
+  "triceps",
+  "trapezio"
+ ],
+ "camera": {
+  "az": 55,
+  "el": 8,
+  "dist": 4.2,
+  "alvo": [
+   0,
+   -0.05,
+   1.02
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado no banco com o encosto quase em pé, com o glúteo no assento, as costas e a cabeça no encosto e os pés chapados no chão, segura a barra com as palmas viradas para a frente (pegada pronada) e as mãos um pouco mais abertas que os ombros, com a barra na frente do queixo e os cotovelos à frente do corpo, embaixo da barra; empurra a barra para cima, passando reto na frente do rosto, até estender os cotovelos com a barra em cima da cabeça, sem arquear a lombar nem tirar o glúteo do banco; desce devagar pelo mesmo caminho até a altura do queixo.",
+ "cinesiologia": {
+  "plano": "entre o frontal e o sagital (o braço sobe à frente e ao lado, com os cotovelos à frente do tronco), cadeia cinética aberta",
+  "articulacoes": "ombro (flexão e abdução na subida, extensão e adução na descida), cotovelo (extensão na subida, flexão na descida) e escápula (rotação para cima na subida)",
+  "agonistas": "deltoide anterior",
+  "sinergistas": "deltoide lateral, supraespinal, tríceps braquial, trapézio médio e inferior e serrátil anterior (digitações inferiores)",
+  "estabilizadores": "trapézio superior e levantador da escápula; cabeça longa do tríceps como estabilizador dinâmico",
+  "fases": "subida concêntrica, descida excêntrica"
+ },
+ "referencias": [
+  "ExRx.net — Barbell Shoulder Press (Weight Exercises › Front Delt), https://exrx.net/WeightExercises/DeltoidAnterior/BBShoulderPress (hoje é conteúdo pago do site; lida a cópia do Internet Archive de 11/12/2019): \"Grasp barbell with slightly wider than shoulder width overhand grip from rack. Position bar near upper chest.\"; \"Press bar upward until arms are extended overhead. Return to upper chest and repeat.\"; \"Set barbell on forward rack slightly below shoulder height so bar may be more easily mounted and racked. Position seat so bar does not hit uprights but close enough to easily mount and rack. Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Deltoid, Anterior\"; Synergists \"Deltoid, Lateral\", \"Supraspinatus\", \"Triceps Brachii\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\"; Dynamic Stabilizers \"Triceps, Long Head\"; Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\". A animação da página (2010) é sentado num banco de desenvolvimento com o encosto quase em pé, a barra descendo na frente do rosto",
+  "ExRx.net — Barbell Military Press, https://exrx.net/WeightExercises/DeltoidAnterior/BBMilitaryPress (lida em 10/10/2026 pelo leitor r.jina.ai; o site responde 403 direto) — o EM PÉ: \"Grasp barbell from rack or clean barbell from floor with overhand grip, slightly wider than shoulder width. Position bar in front of neck.\"; \"Press bar upward until arms are extended overhead. Lower to front of neck and repeat.\"; \"Feet may be positioned shoulder width apart or one foot in front of other with forward leg slightly bent (as shown).\"; \"Also known as Overhead Press.\". E o Barbell Seated Military Press (https://exrx.net/WeightExercises/DeltoidAnterior/BBSeatedMilitaryPress, sentado sem encosto): \"Position bar near upper chest.\"; \"Grip is slightly narrower than shoulder press. Torso is postured more upright than traditional Military Press.\"",
+  "NSCA — Basics of Strength and Conditioning Manual (2012), https://www.nsca.com/uploadedFiles/NSCA/Resources/PDF/Publications/basics_of_strength_and_conditioning_manual.pdf: cap. 3, os 5 pontos de apoio de quem treina sentado ou deitado no banco — \"1. Head in neutral position on bench or back pad\", \"2. Shoulders and upper back set evenly on bench or back pad\", \"3. Buttocks on bench or seat\", \"4. Right foot flat on floor\", \"5. Left foot flat on floor\"; cap. 4, 3b. Barbell Standing behind the Neck Shoulder Press (o do manual é em pé, atrás da nuca: \"This lift may also be performed from the front of the shoulders\"): \"Place hands evenly on the bar, slightly wider than shoulder-width, with a pronated grip\"; \"At the top of the lift, the bar should be slightly behind the ears with elbows completely extended and in line with the shoulders, hips, and heels\"; Coaching Points: \"Keep elbows directly under hands throughout the entire lift\", \"Engage the core to avoid arching the back to complete the lift\"",
+  "NSCA — Essentials of Strength Training and Conditioning (4ª ed., cap. 15, Shoulder Press), lido no resumo de estudo do CSCS da Achievable (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-5; o livro não foi lido): \"Barbell shoulder press\"; \"Major muscles involved: Anterior and medial deltoids, triceps brachii\"; \"Sit down on a vertical shoulder press bench and lean back so your body is in the five-point body contact position.\"; \"Grasp the bar with a closed, pronated grip.\"; \"Use a grip slightly wider than shoulder-width.\"; \"Allow the elbows to slowly flex to lower the bar.\"; \"Keep the wrists stiff and the forearms parallel to each other.\"; \"Extend the neck slightly so the bar can pass the face as it’s lowered to touch the clavicles and anterior deltoids.\"; \"Push the bar upward until the elbows are fully extended.\"; \"Extend the neck slightly so the bar can pass the face as it’s raised.\"; \"Don’t arch the back or rise off the seat.\"",
+  "ACE — Seated Shoulder Press (Exercise Library; equipamento: \"Barbell, Bench\"), https://www.acefitness.org/resources/everyone/exercise-library/43/seated-shoulder-press/: \"Sit in a shoulder-press bench and rack, and keep the back straight while gripping the bar with the hands a little wider than shoulder-width apart. Take the bar out of the rack and slowly lower to the front of the shoulders, stopping when the bar is about chin-height. Press the feet into the floor, squeeze the stomach muscles, and keep the elbows pointed forward while pressing the bar directly overhead. Slowly lower the bar to chin-height and repeat for the desired number of repetitions.\"",
+  "ACE — Standing Shoulder Press (Exercise Library; equipamento: \"Barbell\"), https://www.acefitness.org/resources/everyone/exercise-library/71/standing-shoulder-press/ — o em pé: \"Grip the bar with the hands about shoulder-width apart and the palm facing the ceiling.\"; \"letting it rest across the top of the shoulders so that the palms are facing the ceiling and the elbows are pointed straight ahead. Step back, keeping the back straight and tall and press the barbell directly overhead.\"",
+  "Saeterbakken AH, Fimland MS. Effects of body position and loading modality on muscle activity and strength in shoulder presses. J Strength Cond Res. 2013;27(7):1824-1831. doi:10.1519/JSC.0b013e318276b873 — lido só o resumo (PubMed 23096062): \"this study sought to compare electromyogram activity (EMG) and one-repetition maximum (1-RM) in barbell and dumbbell shoulder presses performed seated and standing\"; deltoide anterior \"~11% lower for seated barbell versus dumbbell (p = 0.038)\"; \"In conclusion, the exercise with the greatest stability requirement (standing and dumbbells) demonstrated the highest neuromuscular activity of the deltoid muscles, although this was the exercise with the lowest 1-RM strength.\" (compara os 2: não diz qual é o exercício-padrão)",
+  "Paoli A, Marcolin G, Petrone N. Influence of different ranges of motion on selective recruitment of shoulder muscles in the sitting military press: an electromyographic study. J Strength Cond Res. 2010;24(6):1578-1583. doi:10.1519/JSC.0b013e3181d756ea — lido só o resumo (PubMed 20508462): \"Six experienced lifters performed 3 sets of 10 repetitions, each one with a different ROM: the first one with a final elbow angle of 90 degrees (R1); the second with 135 degrees (R2), and the last one with a final elbow angle of 180 degrees (R3).\"; \"the use of the widest ROM increased the EMG activity of all the muscles selected with respect to the closest one\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "costas apoiadas no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Basics (\"Shoulders and upper back set evenly on bench or back pad\"); NSCA, Essentials no resumo do CSCS (\"lean back so your body is in the five-point body contact position\"; \"Don’t arch the back or rise off the seat\")"
+   },
+   {
+    "nome": "glúteo e coxas apoiados no assento",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Basics (\"Buttocks on bench or seat\"); NSCA, Essentials no resumo do CSCS (idem)"
+   },
+   {
+    "nome": "cabeça apoiada no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Basics (\"Head in neutral position on bench or back pad\"); NSCA, Essentials no resumo do CSCS (\"Extend the neck slightly so the bar can pass the face\")"
+   },
+   {
+    "nome": "barra nunca encosta no rosto, no queixo, no pescoço nem na cabeça",
+    "equipamento": "barra",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra nunca entra no queixo, no nariz, no rosto, na cabeça nem no pescoço); NSCA, Essentials no resumo do CSCS (\"Extend the neck slightly so the bar can pass the face\")"
+   },
+   {
+    "nome": "barra na frente do queixo, perto dele, embaixo",
+    "equipamento": "barra",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     10,
+     30
+    ],
+    "t": 0.0,
+    "fonte": "ACE, Seated Shoulder Press (\"slowly lower to the front of the shoulders, stopping when the bar is about chin-height\"). O ExRx (\"near upper chest\") e a NSCA (\"to touch the clavicles and anterior deltoids\") descem mais: no boneco (braço de 25,4 cm) a barra nas clavículas deixa o braço pendurado com o cotovelo a 138–141°, o antebraço 34–39° deitado e o punho dobrado 55–82° (sonda de 10/10/2026)"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "barra longe do cabelo",
+    "equipamento": "barra",
+    "de": "cabelo",
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra nunca entra na cabeça)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos longe do rosto, da cabeça, do pescoço e dos ombros",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "Head",
+     "Neck",
+     "LeftArm",
+     "RightArm",
+     "Spine2"
+    ],
+    "cabelo": true,
+    "mm": [
+     5,
+     5000
+    ],
+    "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo; mão × ombro/rosto medida à parte)"
+   },
+   {
+    "nome": "antebraços não entram no peito, no pescoço nem na cabeça",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Spine2",
+     "Spine1",
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços estendidos acima da cabeça em cima",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx, Barbell Shoulder Press (\"Press bar upward until arms are extended overhead\"); NSCA, Essentials no resumo do CSCS (\"Push the bar upward until the elbows are fully extended\"); Paoli 2010 (a maior amplitude, com o cotovelo chegando a 180°, aumentou a atividade de todos os músculos medidos)"
+   },
+   {
+    "nome": "braços acima da cabeça em cima",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     150,
+     180
+    ],
+    "fonte": "ExRx, Barbell Shoulder Press (\"until arms are extended overhead\"); ACE (\"pressing the bar directly overhead\")"
+   },
+   {
+    "nome": "cotovelo dobrado embaixo, barra na altura do queixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     120,
+     145
+    ],
+    "fonte": "ACE, Seated Shoulder Press (\"stopping when the bar is about chin-height\")"
+   },
+   {
+    "nome": "cotovelos à frente do corpo embaixo",
+    "medida": "braco_plano",
+    "t": 0.0,
+    "graus": [
+     30,
+     75
+    ],
+    "fonte": "ACE, Seated Shoulder Press (\"keep the elbows pointed forward while pressing the bar\"); ACE, Standing Shoulder Press (\"the elbows are pointed straight ahead\"). Medida: o braço visto de cima do tronco, 0 = pro lado, 90 = pra frente"
+   },
+   {
+    "nome": "antebraço em pé embaixo (cotovelo embaixo da mão)",
+    "medida": "antebraco_vertical",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NSCA, Basics (\"Keep elbows directly under hands throughout the entire lift\"); NSCA, Essentials no resumo do CSCS (\"Keep the wrists stiff and the forearms parallel to each other\")"
+   },
+   {
+    "nome": "antebraço quase em pé o movimento todo",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "NSCA, Basics (idem). No meio da subida, quando a barra passa da testa, o cotovelo sai um pouco pra frente e pro lado da mão (a barra tem que passar na frente do rosto e o braço do boneco é curto, 25,4 cm): até ~18° na sonda do rascunho (10/10/2026), com a barra voltando pra cima da cabeça só na metade de cima"
+   },
+   {
+    "nome": "pegada um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.3,
+     1.7
+    ],
+    "fonte": "ExRx, Barbell Shoulder Press (\"slightly wider than shoulder width overhand grip\"; \"Range of motion will be compromised if grip is too wide\"); NSCA (\"slightly wider than shoulder-width\"); ACE (\"a little wider than shoulder-width apart\"). Medida: entre as mãos ÷ entre as articulações dos ombros (0,40 m no boneco)"
+   },
+   {
+    "nome": "punho firme, pouco estendido",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -40,
+     5
+    ],
+    "fonte": "NSCA, Essentials no resumo do CSCS (\"Keep the wrists stiff\"). Medida: − = estendido (a mão pra trás)"
+   },
+   {
+    "nome": "punho sem desvio de lado",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "amplitude normal do punho (limites.py: desvio radial 20°, AAOS) com a pegada pronada"
+   },
+   {
+    "nome": "tronco apoiado no encosto, sem arquear",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA, Essentials no resumo do CSCS (\"Don’t arch the back or rise off the seat\"); NSCA, Basics (\"Engage the core to avoid arching the back to complete the lift\"). Medida: quadril → base do pescoço × vertical (encosto a 85°)"
+   }
+  ]
+ }
+}
