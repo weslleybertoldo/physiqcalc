@@ -1,0 +1,500 @@
+{
+  "uuid": "5be8bb3e-992c-47be-adc2-cee8328cb48f",
+  "nome": "Coice de Glúteo na Polia",
+  "cena": "coice_de_gluteo_na_polia",
+  "grupo": "Glúteo",
+  "subgrupo": "Glúteo máximo (extensão de quadril isolada)",
+  "padrao_movimento": "coice_gluteo",
+  "equipamento": "polia",
+  "variacao": "polia baixa",
+  "alvos": [
+    "gluteo"
+  ],
+  "auxiliares": [
+    "posterior"
+  ],
+  "camera": {
+    "az": 80,
+    "el": 8,
+    "dist": 3.9,
+    "alvo": [
+      0.05,
+      -0.2,
+      0.83
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.6,
+    "alvo": [
+      0.05,
+      -0.3,
+      0.9
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, de frente para a polia baixa, com a tornozeleira presa no tornozelo esquerdo e no cabo. As duas mãos seguram a barra de apoio da torre, na largura dos ombros, com os cotovelos esticados, e o tronco fica levemente inclinado para a frente e parado, com a coluna neutra e a cabeça alinhada com ele. O peso fica em cima do pé direito, chapado no chão, com o joelho levemente dobrado. Começa com a perna esquerda quase esticada, pendurada um pouco à frente do corpo, com o pé um pouco fora do chão. Sem dobrar o joelho, estende o quadril e leva a perna para trás até o fim da amplitude, sem arquear a lombar, sem girar a pelve e sem jogar o tronco; volta devagar pelo mesmo caminho até a perna voltar para a frente do corpo. O cabo vai da polia, embaixo e à frente, até a argola da tornozeleira, sem encostar nas pernas.",
+  "cinesiologia": {
+    "plano": "sagital (extensão do quadril na ida, flexão na volta), de uma perna só, cadeia cinética aberta; só o quadril mexe (ExRx, Cable Standing Hip Extension: \"Mechanics: Isolated\"; \"Pull cable attachment back by extending hip.\"). A resistência vem pelo cabo da polia baixa, que puxa o tornozelo para a frente",
+    "articulacoes": "quadril da perna que trabalha: de ~21° de flexão (a perna pendurada ~11° à frente da vertical, com o tronco inclinado 15°) a ~17° de extensão, contados da posição em pé (coxa × linha do tronco) — a extensão normal do quadril é 17,0 ± 3,9° (AAOS, tabela 1 de Wichman 2021), e o ACE manda ir \"until you cannot lift your leg anymore, all while keeping an erect torso\"; joelho dela parado e quase esticado, ~10° (ExRx: \"Attached leg is straight\"), tornozelo parado; quadril de apoio parado, com o tronco inclinado ~15° em cima dele (dica do app: \"Tronco levemente inclinado e apoiado\"), joelho de apoio parado a ~6° e o pé chapado (ACE: \"athletic-ready stance\"); coluna neutra e pelve parada (dica do app: \"estenda o quadril para trás sem arquear a lombar\"); cotovelos esticados (ExRx: \"Elbows remain straight.\")",
+    "agonistas": "glúteo máximo (ExRx, Cable Standing Hip Extension: Target \"Gluteus Maximus\"; ACE: \"continue to isolate the gluteus maximus\"). Na NSCA, o coice (\"kickbacks\") é extensão de quadril \"horizontal\", que trabalha o glúteo máximo encurtado, no fim da extensão (Hodge, NSCA PTQ 10.4: \"These movements will train the upper and lower subdivisions of the glute maximus in the shortened position, which is at the top when locked out\")",
+    "sinergistas": "isquiotibiais (ExRx, Cable Standing Hip Extension: Synergists \"Hamstrings\")",
+    "estabilizadores": "eretores da espinha, oblíquos, quadrado lombar, glúteo médio e glúteo mínimo (ExRx, Cable Standing Hip Extension: Stabilizers \"Erector Spinae\", \"Obliques\", \"Quadratus Lumborum\", \"Gluteus Medius\", \"Gluteus Minimus\"); reto do abdome como estabilizador antagonista (\"Antagonist Stabilizers: Rectus Abdominis\")",
+    "fases": "concêntrica: o quadril estende e leva a perna para trás (ExRx: \"Pull cable attachment back by extending hip.\"; ACE: \"Slowly raise the heel by initiating the movement from the glutes\"); excêntrica: a perna volta devagar (dica do app: \"volte controlado\"; ExRx: \"Return leg to original position.\"; ACE: \"Return to starting position and repeat.\")"
+  },
+  "referencias": [
+    "ExRx.net — Cable Standing Hip Extension. https://exrx.net/WeightExercises/GluteusMaximus/CBStandingHipExtension (lido na cópia do Internet Archive de 20/04/2025; o site direto bloqueia a leitura automática): \"Attach ankle cuff to low pulley. With cuff on one ankle, grasp ballet bar with both hands and step back with other foot. Elbows remain straight. Attached leg is straight and foot is slightly off floor.\" \"Pull cable attachment back by extending hip. Return leg to original position. Repeat. Continue with opposite leg.\" Classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Push\"; \"Also see Cable Bent-over Hip Extension for more bent over posture.\"",
+    "ExRx.net — Cable Bent-over Hip Extension. https://exrx.net/WeightExercises/GluteusMaximus/CBBentOverHipExtension (cópia do Internet Archive de 30/06/2022): \"step far back with other foot. Arms remain extended to support body leaning forward. Leg with ankle cuff attached in slightly bent with foot off floor.\" — a versão com o tronco mais inclinado; o comentário compara com a em pé \"with body upright\".",
+    "ExRx.net — Cable Glute Kickback. https://exrx.net/WeightExercises/GluteusMaximus/CBGluteKickback (cópia do Internet Archive de 26/04/2025): \"Leg with ankle cuff attached is flexed at hip and knee.\" \"Pull cable attachment back by extending hip and knee.\" (\"Mechanics: Compound\": estende quadril E joelho — não é a do catálogo, que é a extensão de quadril isolada).",
+    "American Council on Exercise (ACE) — Martin M. 8 Butt-toning Moves (ACE Expert Articles), exercício 5, Single-leg cable extension. https://www.acefitness.org/resources/pros/expert-articles/6355/8-butt-toning-moves/: \"Begin by lowering the cable to the lowest pin and attaching a cuff securely around one ankle. Stand facing the anchor in an athletic-ready stance and hold onto the handles or a secure pole. Slowly raise the heel by initiating the movement from the glutes and continue to isolate the gluteus maximus until you cannot lift your leg anymore, all while keeping an erect torso. Return to starting position and repeat.\"",
+    "Hodge A. Program Design Considerations for Optimal Strength and Hypertrophy of the Glute Muscles. NSCA Personal Training Quarterly 10.4 (2023), p. 16–22. https://www.nsca.com/contentassets/f921c5b3fe4142db964a943d3554b324/ptq-10.4.4-program-design-considerations-for-optimal-strength-hypertophy-glute-mucsles.pdf: \"HORIZONTAL HIP EXTENSION EXERCISES These movements will train the upper and lower subdivisions of the glute maximus in the shortened position, which is at the top when locked out (e.g., hip thrusts, frog pumps, back extensions, kickbacks, glute bridges).\" (O manual de técnica da NSCA não descreve a extensão de quadril em pé no cabo.)",
+    "Wichman D, Rasio JP, Looney A, Nho SJ. Physical Examination of the Hip. Sports Health. 2021;13(2):149-153. doi:10.1177/1941738120953418, tabela 1 (\"Normative values for hip range of motion according to standards published by the American Academy of Orthopaedic Surgeons\"): \"Extension 17.0 ± 3.9\" graus, \"As variation from the neutral, midline position\" (lido na cópia do Internet Archive de 15/03/2025).",
+    "Winter DA. Biomechanics and Motor Control of Human Movement, 4ª ed. (2009) — massas e centros de massa dos segmentos (tabela de Dempster), no arquivo BSP_DempsterWinter do laboratório BMC (Duarte M., https://github.com/BMClab/BMC): coxa 0,100 (CM a 0,433 do quadril), perna 0,0465 (0,433), pé 0,0145 (0,5), braço 0,028 (0,436), antebraço 0,016 (0,430), mão 0,006 (0,506), tronco 0,497 (0,5 do trocânter ao ombro), cabeça e pescoço 0,081 — usados pra pôr o centro de massa em cima do pé de apoio.",
+    "Tornozeleira — Rogue Ankle Cuff Cable Attachment (https://www.roguefitness.com/rogue-ankle-cuff-cable-attatchment-pair, cópia do Internet Archive de 20/12/2025): \"Length: 15\"\", \"Width: 4\"\", \"0.125” thick Foam Frame\", \"Adjustable from 9\" - 14\" (circumference)\", \"Simply attach the cuff around the leg just above the ankle and secure it in place via the 1.5” wide nylon webbing strap (with hook-and-loop closure) and welded rectangle D-ring.\"; BLK BOX Synthetic Ankle Strap (https://www.blkboxfitness.com/en-us/products/blk-box-ankle-strap-cable-attachment): \"310mm\", \"100mm\", \"6mm\", \"Neoprene\"; Valor Fitness MB-9 (https://valorfitness.com/products/ankle-strap-cable-machine-attachment-mb-9): \"Built with a solid steel, chrome-plated D-ring\"."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "pe_fora_do_chao": [
+      "E"
+    ],
+    "pe_fora_do_chao_fonte": "ExRx, Cable Standing Hip Extension (\"Attached leg is straight and foot is slightly off floor.\"): o pé esquerdo, o da tornozeleira, fica fora do chão o movimento todo (regra alturas abaixo); o direito segue chapado",
+    "pe_no_ar": [
+      "E"
+    ],
+    "pe_no_ar_fonte": "o pé esquerdo MEXE fora do chão (vai pra trás com a perna): sem a regra do pé escorregando nele (checagem3d, lote 8); o direito continua com todas — planta e calcanhar no chão e sem escorregar",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base de um pé só: as regras padrão (tecnica3d.PADRAO_PES_NO_CHAO) são pros 2 pés no chão, e aqui o pé esquerdo sai do chão e vai pra trás, então largura dos pés, um pé à frente do outro, os 2 pés virados igual e o joelho na direção do pé não servem. As que valem estão abaixo: a coluna neutra (a dica pede \"sem arquear a lombar\") e as do pé de apoio (lado D).",
+    "zonas": [
+      {
+        "nome": "a faixa da tornozeleira encosta na canela, sem entrar mais que o neoprene cede",
+        "equipamento": "tornozeleira",
+        "partes": [
+          "LeftLeg"
+        ],
+        "mm": [
+          -2,
+          1
+        ],
+        "fonte": "Rogue Ankle Cuff (\"attach the cuff around the leg just above the ankle\"); medido da pele até a faixa (APOIO): a faixa nasce na forma da canela e aperta 0,5 mm; −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM)"
+      },
+      {
+        "nome": "o cabo passa longe da perna de apoio",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          80,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); medido da pele (a cena fica a ≥ 15 cm; a faixa é da cena)"
+      },
+      {
+        "nome": "o cabo não encosta na perna que trabalha",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "mm": [
+          40,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); medido da pele: o cabo começa na bola, ~10 cm na frente da canela, e vai pra frente (a cena fica a ≥ 7 cm; a faixa é da cena)"
+      },
+      {
+        "nome": "o cabo passa longe do tronco, dos braços e das mãos",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder",
+          "LeftArm",
+          "RightArm",
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          300,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); medido da pele (a cena fica a ≥ 60 cm)"
+      },
+      {
+        "nome": "a argola não encosta no corpo",
+        "equipamento": "tornozeleira_argola",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase",
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          4,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele: a argola fica em cima da fita do fecho, 6 mm de neoprene acima da pele"
+      },
+      {
+        "nome": "o mosquetão e a bola do cabo não encostam no corpo",
+        "equipamento": "tornozeleira_engate",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase",
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "as mãos não encostam na torre nem nos postes da barra (só na barra)",
+        "equipamento": "polia_torre",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (a checagem ignora o que fica dentro da mão: aqui a mão × o resto da torre, medido à parte); medido da pele até a carenagem, o trilho e os postes da barra"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "a argola fica em cima da fita, sem entrar na faixa",
+        "equipamento": "tornozeleira_argola",
+        "de": "tornozeleira",
+        "mm": [
+          0.1,
+          50
+        ],
+        "fonte": "peça × peça (a presilha da argola deita na fita do fecho com 0,5 mm de folga)"
+      },
+      {
+        "nome": "o mosquetão e a bola não encostam na faixa",
+        "equipamento": "tornozeleira_engate",
+        "de": "tornozeleira",
+        "mm": [
+          5,
+          500
+        ],
+        "fonte": "peça × peça"
+      },
+      {
+        "nome": "o cabo não encosta na faixa",
+        "equipamento": "polia_cabo",
+        "de": "tornozeleira",
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "peça × peça"
+      }
+    ],
+    "alturas": [
+      {
+        "nome": "o pé que trabalha fica fora do chão",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "ExRx, Cable Standing Hip Extension (\"Attached leg is straight and foot is slightly off floor.\"); a pele mais baixa do pé esquerdo acima do chão"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "a perna que trabalha não entra na de apoio",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "com": [
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "tronco levemente inclinado e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          13,
+          17
+        ],
+        "fonte": "dica do app (\"Tronco levemente inclinado e apoiado\"); entre o tronco em pé do ExRx (Cable Standing Hip Extension, \"with body upright\" no comentário do Bent-over) e do ACE (\"keeping an erect torso\") e o \"leaning forward\" do Cable Bent-over Hip Extension. A cena fica a 15°; parado (ACE: \"without moving your upper body\", Hip extension and abductions)"
+      },
+      {
+        "nome": "coluna neutra (sem arquear a lombar)",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          8
+        ],
+        "fonte": "dica do app (\"estenda o quadril para trás sem arquear a lombar\"); ACE (\"all while keeping an erect torso\")"
+      },
+      {
+        "nome": "cabeça na linha do tronco",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -20,
+          -2
+        ],
+        "fonte": "a cabeça não mexe em relação ao tronco: o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+      },
+      {
+        "nome": "ombros nivelados",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -4,
+          4
+        ],
+        "fonte": "ACE (\"keeping an erect torso\"): o tronco não tomba pro lado"
+      },
+      {
+        "nome": "pelve nivelada e parada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "dica do app (\"sem arquear a lombar\"); ACE (\"without moving your upper body\"). A cena deixa o lado que trabalha 2° mais alto, parado, pro pé passar fora do chão (ExRx: \"foot is slightly off floor\")"
+      },
+      {
+        "nome": "começo: perna pendurada um pouco à frente da linha do tronco",
+        "medida": "quadril_sinal",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          20,
+          32
+        ],
+        "fonte": "ExRx (\"Attached leg is straight and foot is slightly off floor\"; \"Return leg to original position\"): o cabo puxa o tornozelo pra frente. 0 = coxa na linha do tronco; com o tronco inclinado 15°, a perna quase em pé mede ~26 (a cena)"
+      },
+      {
+        "nome": "fim: quadril estendido até o fim da amplitude normal",
+        "medida": "quadril_sinal",
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          -16,
+          -8
+        ],
+        "fonte": "ACE (\"until you cannot lift your leg anymore, all while keeping an erect torso\"); extensão normal do quadril 17,0 ± 3,9° (AAOS, Wichman 2021, tabela 1). O boneco em pé, no repouso, mede +5: −12 (a cena) = 17° de extensão; a faixa é 13° a 21°"
+      },
+      {
+        "nome": "o quadril não passa da extensão normal",
+        "medida": "quadril_sinal",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          -16,
+          32
+        ],
+        "fonte": "AAOS (Wichman 2021): 17,0 ± 3,9° de extensão; passar disso é arquear a lombar (dica do app)"
+      },
+      {
+        "nome": "quadril de apoio parado (é ele que inclina o tronco)",
+        "medida": "quadril_sinal",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          14,
+          25
+        ],
+        "fonte": "dica do app (\"Tronco levemente inclinado\"); a cena fica a ~20"
+      },
+      {
+        "nome": "joelho que trabalha quase esticado e parado",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          5,
+          15
+        ],
+        "fonte": "ExRx, Cable Standing Hip Extension (\"Attached leg is straight\"; \"Pull cable attachment back by extending hip\": só o quadril); dobrar e esticar o joelho é o Cable Glute Kickback (\"extending hip and knee\"). A cena fica a 10°"
+      },
+      {
+        "nome": "joelho de apoio levemente dobrado e parado",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          3,
+          12
+        ],
+        "fonte": "ACE (\"Stand facing the anchor in an athletic-ready stance\"). A cena fica a 6°"
+      },
+      {
+        "nome": "cotovelos esticados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ExRx, Cable Standing Hip Extension (\"Elbows remain straight.\"); Cable Bent-over Hip Extension (\"Arms remain extended to support body\")"
+      },
+      {
+        "nome": "punhos retos",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "mão fechada na barra com o punho na linha do antebraço (a cena fica a ~2°)"
+      },
+      {
+        "nome": "pé de apoio pra frente (a pelve não gira em cima dele)",
+        "medida": "ponta_pe",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          -8,
+          12
+        ],
+        "fonte": "dica do app (\"sem arquear a lombar\"); ACE (\"without moving your upper body\"): com o pé chapado, girar a pelve muda o ângulo do pé em relação a ela. A cena fica a ~−1°"
+      },
+      {
+        "nome": "tornozelo que trabalha parado",
+        "medida": "tornozelo",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          82,
+          92
+        ],
+        "fonte": "só o quadril mexe (ExRx: \"Mechanics: Isolated\"); a cena deixa o pé flexionado 10° (ponta pra canela), parado"
+      },
+      {
+        "nome": "pegada pronada (palma pra baixo) na barra",
+        "medida": "palma_cima",
+        "t": "todos",
+        "graus": [
+          120,
+          180
+        ],
+        "fonte": "ExRx, Cable Standing Hip Extension (\"grasp ballet bar with both hands\"); ACE (\"hold onto the handles or a secure pole\")"
+      },
+      {
+        "nome": "mãos na largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.8,
+          1.2
+        ],
+        "fonte": "mãos na largura dos ombros na barra de apoio (a cena dá 0,9)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,325 @@
+{
+  "uuid": "2ba6fa20-612a-5271-9513-e04bcd7fcbca",
+  "nome": "Agachamento Sumô com Barra",
+  "cena": "agachamento_sumo_com_barra",
+  "grupo": "Quadríceps / Glúteo",
+  "subgrupo": "Adutores · glúteo máximo · quadríceps",
+  "padrao_movimento": "agachamento",
+  "equipamento": "barra",
+  "variacao": "sumô, base aberta",
+  "alvos": [
+    "adutores",
+    "gluteo",
+    "quadriceps"
+  ],
+  "auxiliares": [
+    "posterior",
+    "panturrilha",
+    "lombar"
+  ],
+  "camera": {
+    "az": 30,
+    "el": 8,
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.05,
+      0.8
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.4,
+    "alvo": [
+      0,
+      -0.05,
+      0.8
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, com a barra apoiada nas costas em cima do trapézio (perto da base do pescoço, sem encostar nele) e as mãos fechadas na barra por fora dos ombros, com o polegar dando a volta; os pés bem mais afastados que os ombros e as pontas viradas uns 45° pra fora. Desce dobrando o quadril e os joelhos ao mesmo tempo, com o quadril indo um pouco pra trás, o tronco inclinando até uns 35° da vertical com a coluna neutra e os joelhos indo na direção das pontas dos pés (sem passar da base dos dedos), até as coxas ficarem paralelas ao chão, com o peso no meio do pé e os calcanhares no chão; sobe empurrando o chão, estendendo o quadril e os joelhos juntos e apertando o glúteo até ficar em pé.",
+  "cinesiologia": {
+    "plano": "sagital, com o quadril aberto (abdução e rotação externa: pés e joelhos virados pra fora); cadeia cinética fechada",
+    "articulacoes": "quadril (flexão na descida e extensão na subida, mantendo a abertura e a rotação pra fora), joelho (flexão/extensão) e tornozelo (dorsiflexão/flexão plantar); ombros, cotovelos e punhos parados, segurando a barra nas costas",
+    "agonistas": "adutores da coxa (adutor magno e adutor longo), glúteo máximo e quadríceps (vasto lateral, vasto medial, vasto intermédio e reto femoral)",
+    "sinergistas": "sóleo",
+    "estabilizadores": "isquiotibiais e gastrocnêmio (estabilizadores dinâmicos do joelho), eretores da espinha (o tronco firme com a barra nas costas), reto abdominal e oblíquos",
+    "fases": "descida excêntrica, subida concêntrica"
+  },
+  "referencias": [
+    "Sands WA, Wurth JJ, Hewit JK. The National Strength and Conditioning Association's (NSCA) Basics of Strength and Conditioning Manual. NSCA; 2012. Cap. 4, Strength Lifting Day, \"1a. Barbell Back Squat\", pp. 48-50. https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (cópia do Internet Archive de 05/01/2024): \"Exercise Objective: Develop the quadriceps, thigh adductors, gluteus maximus, and hamstrings\"; Grip Position: \"All athletes should grip the bar with a closed, pronated grip\", \"Taller athletes' grip will vary from medium to wide\" (erros: \"Gripping the plates and not the bar\", \"Gripping the bar with an open grip\"); Bar Placement: \"High Bar Squat: The bar sits on top of the trapezius muscles near the base of the neck (increases force at the knees)\"; Head and Eye Position: \"Head and eyes are positioned forward\", \"keeping the cervical spine in line with the body helps maintain bodyweight distribution throughout the squat\" (erro: \"Tilting head backward can shift weight to the heels of the feet\"); Foot Position: \"Wide stance – works adductor, gluteus, and outer quadriceps\", \"Keep heels on the floor\", \"Point toes out slightly from neutral to 30°\", \"The angle of the foot position makes no difference as long as you are comfortable with the stance\"; Torso: \"The torso should be held between 35 and 45° from vertical\", \"Less than 35°, you are too upright\", \"More than 45°, you are leaning too far forward\", \"Back should be kept flat and straight\"; Descent: \"Push hips back\", \"Simultaneously flex knees while pushing hips back\", \"Distribute bodyweight from the balls of the feet to the heels\", \"Keep knees behind the balls of the feet\", \"Keep shins as vertical as possible by sitting back into the squat\", \"Proper depth is achieved when mid-thigh is parallel to the floor\"; Ascent: \"Drive feet into the floor\", \"Simultaneously raise hips and shoulders\", \"Stand erect and back into the start position\"; \"Technique will vary based on differences in stance widths, the use of heel blocks, and positioning of the bar (high or low) on the back.\"",
+    "ACE — Back Squat (Exercise Library), https://www.acefitness.org/resources/everyone/exercise-library/11/back-squat/ : \"Dip under the bar to put it behind the neck across the top of the back, and grip the bar with the hands wider than shoulder-width apart. Lift the chest up and squeeze the shoulder blades together to keep the straight back throughout the entire movement.\"; \"Sit back into hips and keep the back straight and the chest up\"; \"From the bottom of the squat, press feet into the ground and push hips forward to return to the top of the standing position.\"",
+    "Antoian F. 5 Variations of the Body-weight Squat. American Council on Exercise (ACE), Expert Articles, 2016. https://www.acefitness.org/resources/pros/expert-articles/5875/5-variations-of-the-body-weight-squat/ — Barbell Squat: \"a loaded barbell resting comfortably on top of the traps, just below the back of the neck\", \"until the thighs are parallel to the floor\", \"keep the feet flat on the floor, the core engaged and the back as straight as possible\", \"try to keep the knees in line with the ankles while in the squat position and do not let the knee cross in front of the foot\", \"keep the eyes looking forward\"; Dumbbell Sumo Squat (a base do sumô): \"Stand with the feet wider than the hips and the toes pointed out to the sides about 45 degrees\", \"particularly effective for focusing on the muscles of the inner thighs\".",
+    "ExRx.net — Barbell Squat (Weight Exercises › Quadriceps), https://exrx.net/WeightExercises/Quadriceps/BBSquat (cópia do Internet Archive): \"position bar high on back of shoulders and grasp barbell to sides\"; \"Squat down by bending hips back while allowing knees to bend forward, keeping back straight and knees pointed same direction as feet.\"; \"Keep head facing forward, back straight and feet flat on floor with equal distribution of weight throughout forefoot and heel. Knees should point same direction as feet throughout movement.\"; músculos: alvo quadríceps; sinergistas glúteo máximo, adutor magno e sóleo; estabilizadores dinâmicos isquiotibiais e gastrocnêmio; estabilizador eretores da espinha; estabilizadores antagonistas reto abdominal e oblíquos.",
+    "ExRx.net — Squat Variations (Kinesiology), https://exrx.net/Kinesiology/SquatVariations (cópia do Internet Archive): \"The high bar squat rests the bar at the top of the trapezius muscle (just below the process of the C7 vertebra)\"; \"The hips typically travel back further with the torso bent forward on power lift type squat unless the stance is substantially wide, as in a sumo stance. However, a wide stance requires greater hip torque (requiring greater strength through hip abduction) while reducing both knee and spinal torque.\"; \"An Excessively wide stance may cause the adductor muscles to reach the end of their extensibility early.\"",
+    "ExRx.net — Squat Analysis (Kinesiology), https://exrx.net/Kinesiology/Squats (cópia do Internet Archive): \"A wider stance increases Hip Adductor involvement but does not appear to alter Quadriceps or Biceps Femoris involvement (McCaw and Melrose 1999). The Gluteus Maximus involvement increases with a wider stance, but only at heavier load\"; \"Torso must be angled more forward to maintain the center of gravity over feet\"; Signorile 1995: \"Extreme outward toe point greatly reduces stability\".",
+    "Escamilla RF, Fleisig GS, Lowry TM, Barrentine SW, Andrews JR. A three-dimensional biomechanical analysis of the squat during varying stance widths. Med Sci Sports Exerc. 2001;33(6):984-998 (resumo, PubMed 11404665): base larga (WS) = \"169 +/- 12% SW\" (da largura dos ombros); \"the shanks were 5-9 degrees more vertical and the feet were turned out 6 degrees more during the WS\"; \"No significant differences occurred in trunk positions.\"",
+    "Paoli A, Marcolin G, Petrone N. The effect of stance width on the electromyographical activity of eight superficial thigh muscles during back squat with different bar loads. J Strength Cond Res. 2009;23(1):246-250 (resumo, PubMed 19130646): \"there was a higher electrical activity of this muscle [gluteus maximus] when back squats were performed at the maximum stance widths at 0 and 70% 1RM\"; \"These findings suggest that a large width is necessary for a greater activation of the gluteus maximus during back squats.\"",
+    "McCaw ST, Melrose DR. Stance width and bar load effects on leg muscle activity during the parallel squat. Med Sci Sports Exerc. 1999;31(3):428-436 (resumo, PubMed 10188748): bases \"shoulder width, narrow (75% shoulder width), and wide (140% shoulder width)\"; \"stance width does not cause isolation within the quadriceps but does influence muscle activity on the medial thigh and buttocks\".",
+    "Coratella G, Tornatore G, Caccavale F, Longo S, Esposito F, Cè E. The Activation of Gluteal, Thigh, and Lower Back Muscles in Different Squat Variations Performed by Competitive Bodybuilders. Int J Environ Res Public Health. 2021;18(2):772 (PMC7831128): \"In sumo-BS, the bar was placed over the shoulder, and the participants were required to descent until the thighs were parallel to the ground, with a two-fold feet stance compared to the previous exercises.\"; \"In external-rotated-sumo-BS, the participants received the same instructions as for sumo-BS, with the exception of the feet that were rotated externally.\"; \"both sumo-BS and external-rotated-sumo-BS showed greater vastus lateralis and adductor longus activation compared to all other exercises\"; \"larger stance and feet external rotation increased the adductor longus activation\".",
+    "Lorenzetti S, Ostermann M, Zeidler F, et al. How to squat? Effects of various stance widths, foot placement angles and level of experience on knee, hip and trunk motion and loading. BMC Sports Sci Med Rehabil. 2018;10:14 (PMC6050697): base larga (WS) = \"twice the distance between the anterior superior iliac spines\", pés a 0°, 21° e 42°; instruções: \"Place the bar (barbell) on the trapezius muscle\", \"Keep the heel and second toe aligned.\", \"Keep your back straight throughout the movements.\", \"at least bringing your thigh parallel to the floor\"; \"Only position WS-0° displayed a knee valgus for all three groups, while in the experienced group, the position WS-21° additionally showed a knee valgus.\"; \"In general, other studies have recommended that an increased foot angle is used in combination with an increased stance width\"; \"different stance widths have been found to influence the motion and joint loading of hip and knee but not the trunk motion\".",
+    "Lahti J, Hegyi A, Vigotsky AD, Ahtiainen JP. Effects of barbell back squat stance width on sagittal and frontal hip and knee kinetics. Scand J Med Sci Sports. 2019;29(1):44-54 (resumo, PubMed 30230052): \"wide- (WIDE, 1.5× greater trochanter width) and narrow-stance (NARROW, 1× greater trochanter width) barbell back squats to femur parallel depth\"; \"Knee flexion angle was statistically greater in NARROW than WIDE\"; \"Hip-to-knee extension NJM ratios and knee adduction NJMs were statistically greater in WIDE than NARROW\".",
+    "Rusin J, DeBell R. Anthropometrical considerations for customizing the squat pattern. NSCA Personal Training Quarterly (PTQ) 5.4. https://www.nsca.com/contentassets/65ff7dabfee140d4876c556ddb748fef/ptq-5.4.1-anthropometrical-considerations-for-customizing-the-squat-pattern.pdf : uma das bases comuns é \"Wide foot stance with increased foot abduction angle\"; \"it is recommended that athlete comfort dictates the combination of width and toe out taken in the squat stance, as long as known biomechanical faults (knees collapsing in, lumbar flexion, heels elevating) are not present\"; \"If ankle mobility is limited, a wider stance may be necessary to prevent the center of mass from being too far behind the base of support\"."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base do sumô de propósito: pés bem mais afastados que os ombros e pontas viradas ~45° pra fora (ACE: \"the toes pointed out to the sides about 45 degrees\"; NSCA PTQ 5.4: \"Wide foot stance with increased foot abduction angle\"; Lorenzetti 2018: com a base larga e o pé a 0° ou 21° o joelho entrou — valgo —, a 42° não), então as faixas padrão de largura (até 2,6×) e de ponta do pé (até 30°, a da NSCA pro agachamento de costas em geral: \"Point toes out slightly from neutral to 30°\" — e ela mesma diz que \"The angle of the foot position makes no difference as long as you are comfortable with the stance\") não servem; e com a base larga e a perna dobrada o joelho_valgo padrão (joelho × reta quadril → tornozelo) passa de +20 cm sem erro nenhum (o joelho vai pra fora, em cima do pé). As outras regras padrão (os dois pés virados igual, um pé não à frente do outro e coluna neutra) estão abaixo, mais estreitas, e o joelho na direção do pé é medido no referencial do próprio pé (tecnica3d.joelho_plano_pe e joelho_alem_dos_dedos, as do Agachamento Sumô com Halteres).",
+    "zonas": [
+      {
+        "nome": "barra apoiada em cima do trapézio",
+        "equipamento": "barra",
+        "partes": [
+          "Spine2",
+          "LeftShoulder",
+          "RightShoulder"
+        ],
+        "mm": [
+          -4,
+          5
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"High Bar Squat: The bar sits on top of the trapezius muscles near the base of the neck\"); ExRx — Squat Variations (\"rests the bar at the top of the trapezius muscle\"); ACE (\"across the top of the back\"). Medida: barra × pele do trapézio e dos ombros, −4 a 5 mm (a zona do Agachamento Livre com Barra)"
+      },
+      {
+        "nome": "a barra não encosta no pescoço",
+        "equipamento": "barra",
+        "partes": [
+          "Neck"
+        ],
+        "mm": [
+          10,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (a barra nunca entra no pescoço); ACE (\"just below the back of the neck\")"
+      },
+      {
+        "nome": "a barra não encosta na cabeça",
+        "equipamento": "barra",
+        "partes": [
+          "Head"
+        ],
+        "mm": [
+          10,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (a barra nunca entra na cabeça, nem com a cabeça olhando à frente embaixo)"
+      },
+      {
+        "nome": "a barra e as anilhas longe das pernas e da cintura",
+        "equipamento": "barra",
+        "partes": [
+          "Hips",
+          "Spine",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          50,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (as anilhas não batem em nada): com a base larga os joelhos vão pra fora, na direção das anilhas"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "antebraços não encostam no tronco",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "pedido do Weslley (os cotovelos não entram no tronco)"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "a barra não encosta no cabelo",
+        "equipamento": "barra",
+        "de": "cabelo",
+        "mm": [
+          10,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (a barra nunca entra na cabeça)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "coxas paralelas ao chão embaixo",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "t": 1.0,
+        "graus": [
+          -5,
+          8
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Proper depth is achieved when mid-thigh is parallel to the floor\"); ACE (\"until the thighs are parallel to the floor\"); Coratella et al. 2021 (sumô: \"until the thighs were parallel to the ground\")"
+      },
+      {
+        "nome": "joelhos esticados em pé, sem travar",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": 0.0,
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Stand erect and back into the start position\"); ExRx (\"Extend knees and hips until legs are straight\")"
+      },
+      {
+        "nome": "tronco ereto em pé",
+        "medida": "tronco",
+        "t": 0.0,
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Stand erect\")"
+      },
+      {
+        "nome": "pés bem afastados (base de sumô)",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          3.3,
+          3.7
+        ],
+        "fonte": "Escamilla et al. 2001 (base larga = \"169 +/- 12% SW\"); Coratella et al. 2021 (\"a two-fold feet stance\"); NSCA (\"Wide stance – works adductor, gluteus, and outer quadriceps\"). No boneco: tornozelos a 0,74 m = 1,85 × os 0,40 m entre os ombros e 3,5 × os 0,21 m entre as articulações do quadril (a medida: distância entre os tornozelos ÷ entre as articulações do quadril, tecnica3d.pes_largura) — a base do Agachamento Sumô com Halteres"
+      },
+      {
+        "nome": "pontas dos pés ~45° pra fora",
+        "medida": "ponta_pe",
+        "t": "todos",
+        "graus": [
+          40,
+          50
+        ],
+        "fonte": "ACE (\"the toes pointed out to the sides about 45 degrees\"); NSCA PTQ 5.4 (\"Wide foot stance with increased foot abduction angle\"); Lorenzetti et al. 2018 (base larga com o pé a 42°: sem o joelho entrar)"
+      },
+      {
+        "nome": "os dois pés virados igual",
+        "medida": "ponta_pe_diferenca",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "regra padrão da fábrica (tecnica3d), mais estreita"
+      },
+      {
+        "nome": "um pé não fica à frente do outro",
+        "medida": "pes_alinhados",
+        "t": "todos",
+        "mm": [
+          0,
+          20
+        ],
+        "fonte": "regra padrão da fábrica (tecnica3d), mais estreita"
+      },
+      {
+        "nome": "joelho em cima da linha do pé, sem entrar nem abrir (dobrando)",
+        "medida": "joelho_plano_pe",
+        "t": [
+          0.4,
+          1.0
+        ],
+        "mm": [
+          -15,
+          15
+        ],
+        "fonte": "ExRx — Barbell Squat (\"Knees should point same direction as feet throughout movement\"); NSCA PTQ 5.4 (\"knees collapsing in\" é erro); dica do Agachamento Sumô (\"desça mantendo os joelhos alinhados com os pés\"). Medida: centro do joelho × plano vertical do pé (tornozelo → base dos dedos), − = joelho entrando (valgo). Em pé, com a perna quase esticada, o joelho fica entre o quadril e o tornozelo (não alcança o plano do pé)"
+      },
+      {
+        "nome": "joelho atrás da base dos dedos",
+        "medida": "joelho_alem_dos_dedos",
+        "t": "todos",
+        "mm": [
+          -300,
+          -53
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Keep knees behind the balls of the feet\"); ACE (\"do not let the knee cross in front of the foot\"). Medida: centro do joelho × ponta dos dedos, ao longo do pé (+ = passou); a base dos dedos (cabeça do osso ToeBase) fica 53 mm atrás da ponta, então ≤ −53 mm = o centro do joelho atrás dela"
+      },
+      {
+        "nome": "canela quase em pé embaixo",
+        "medida": "inclinacao",
+        "segmento": [
+          "Leg",
+          "Foot"
+        ],
+        "t": 1.0,
+        "graus": [
+          68,
+          85
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Keep shins as vertical as possible by sitting back into the squat\"); Escamilla et al. 2001 (\"the shanks were 5-9 degrees more vertical ... during the WS\")"
+      },
+      {
+        "nome": "tronco embaixo entre 35 e 45° da vertical",
+        "medida": "tronco",
+        "t": 1.0,
+        "graus": [
+          35,
+          45
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"The torso should be held between 35 and 45° from vertical\", \"Less than 35°, you are too upright\"); ExRx — Squat Variations (com a base de sumô o quadril não vai tão pra trás com o tronco à frente: fica no mais em pé da faixa); Escamilla et al. 2001 (\"No significant differences occurred in trunk positions\" entre as bases)"
+      },
+      {
+        "nome": "tronco nunca passa de 45°",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          45
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"More than 45°, you are leaning too far forward\")"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          10
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Back should be kept flat and straight\"); ExRx (\"keeping back straight\"); ACE (\"keep the straight back throughout the entire movement\")"
+      },
+      {
+        "nome": "cabeça olhando à frente, sem cair nem jogar pra trás",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          25
+        ],
+        "fonte": "NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Head and eyes are positioned forward\"; erro: \"Tilting head backward\"); ExRx (\"Keep head facing forward\"). Medida: cabeça × tronco no plano sagital (o boneco em pé, no repouso, mede ~−11°; + = levantada)"
+      },
+      {
+        "nome": "mãos por fora dos ombros na barra",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.6
+        ],
+        "fonte": "ACE (\"grip the bar with the hands wider than shoulder-width apart\"); NSCA, Basics of Strength and Conditioning Manual, 1a. Barbell Back Squat (\"Taller athletes' grip will vary from medium to wide\")"
+      }
+    ]
+  }
+}

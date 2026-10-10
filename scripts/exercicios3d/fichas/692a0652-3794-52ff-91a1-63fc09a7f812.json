@@ -1,0 +1,617 @@
+{
+  "uuid": "692a0652-3794-52ff-91a1-63fc09a7f812",
+  "nome": "Adução de Quadril na Polia",
+  "cena": "aducao_de_quadril_na_polia",
+  "grupo": "Adutores da Coxa",
+  "subgrupo": "Adutores (longo · curto · magno)",
+  "padrao_movimento": "aducao_quadril",
+  "equipamento": "polia",
+  "variacao": "em pé",
+  "alvos": [
+    "adutores"
+  ],
+  "auxiliares": [],
+  "camera": {
+    "az": 12,
+    "el": 7,
+    "dist": 4.8,
+    "alvo": [
+      -0.25,
+      -0.1,
+      0.85
+    ]
+  },
+  "camera_vistas": {
+    "dist": 5.0,
+    "alvo": [
+      -0.22,
+      -0.1,
+      0.9
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, de lado para a polia baixa, com o lado direito virado para ela, e a tornozeleira presa no tornozelo direito — o de dentro, o mais perto da polia — e no cabo. A mão direita segura a barra de apoio da torre, com o braço quase esticado para o lado, e a mão esquerda fica na cintura. O peso fica todo no pé esquerdo, chapado no chão, com o joelho levemente dobrado; o tronco fica reto e parado, a pelve nivelada e a cabeça alinhada com o tronco. Começa com a perna direita quase esticada e aberta para o lado da torre, uns 30°, puxada pelo cabo, com o pé fora do chão. Sem dobrar o joelho e com a ponta do pé para a frente, fecha a perna, trazendo o lado de dentro do pé para o meio e levando a perna um pouco para a frente, até a coxa encostar na da perna de apoio, com o pé à frente do pé de apoio; volta devagar pelo mesmo caminho até a perna ficar aberta de novo, sem inclinar o tronco nem subir o quadril. O cabo vai da polia, embaixo e ao lado, até a argola da tornozeleira, sem encostar nas pernas.",
+  "cinesiologia": {
+    "plano": "frontal (adução do quadril na ida, abdução na volta), de uma perna só, cadeia cinética aberta; só o quadril mexe (ExRx, Cable Hip Adduction: \"Mechanics: Isolated\"; \"Move near leg just in front of far leg\"). A perna vem um pouco pra frente no fim, pra passar na frente da de apoio (os adutores também dobram o quadril no começo do movimento — ExRx, Adductors (Hip): Movement \"Flexion (initial)\"). A resistência vem pelo cabo da polia baixa, que puxa o tornozelo pra fora, na direção da polia (ExRx, Cable Hip Adduction: \"Stand on far foot and allow near leg to be Pulled toward low pulley.\"; ACE, Standing Hip Adduction: \"the weight should be pulling right leg away from the body\")",
+    "articulacoes": "quadril da perna que trabalha: de ~30° de abdução (aberta pro lado da torre, no plano do corpo) a ~6° — a perna fechada, com a coxa encostando na de apoio — e ~20° de flexão (a coxa 25° à frente da linha do tronco; o boneco em pé mede +5), o pé na frente do pé de apoio. A abdução normal é 33,0 ± 4,8° e a adução 13,8 ± 6,3° (AAOS, tabela 1 de Wichman 2021), medidas a partir da posição neutra (\"adducted by bringing the limb toward the midline, above the contralateral leg\"). O cruzamento do fim do ExRx e do ACE (a perna de dentro passando pra frente e pra dentro da de apoio, \"directly in front of the left foot\") não cabe no boneco sem as coxas entrarem uma na outra: no boneco as coxas (musculosas) ficam a 9 mm uma da outra por dentro, no repouso; com o peso no pé de apoio a coxa de apoio fica ~8° fechada e, com a coxa que trabalha passando de ~+6° (25° à frente), uma entra na outra 10 a 20 cm abaixo da virilha — medido: +2° → 23 mm, −3° → 26 a 29 mm, −7° → 30 mm, com a coxa de 20° a 38° à frente (mais à frente quase não muda); no corpo de verdade a pele e o músculo de dentro das coxas cedem. Joelho dela parado e quase esticado (~5°; Physitrack, Cable machine hip adduction (supported): \"Your leg should remain straight\") e tornozelo parado, a coxa sem girar (a rótula e a ponta do pé pra frente; ACE, Standing Hip Adduction: \"bringing the inside of the right foot closer to the center of the body\"). Quadril de apoio parado (a pelve vai pro lado do pé de apoio até o centro de massa ficar em cima dele), joelho de apoio levemente dobrado, ~6° (ACE, Standing Hip Adduction: \"Keep the back straight and the left knee slightly bent\"), e o pé chapado. Tronco reto, pelve nivelada e parada (Physitrack, Cable machine hip adduction (supported): \"Keeping your back straight and your hips level\"; \"Ensure you do not lean your body or hitch your hip.\"). Ombro, cotovelo e punho parados nos 2 braços: a mão direita fechada na barra de apoio (ExRx, Cable Hip Adduction: \"grasp ballet bar\"; Physitrack, Cable machine hip adduction (supported): \"Stand up straight holding on to a stick or pole to assist with balance.\"), a esquerda na cintura (a animação do ExRx e as fotos do ACE)",
+    "agonistas": "adutor longo, adutor curto e adutor magno (o catálogo; ExRx, Cable Hip Adduction: Target \"Adductors, Hip\"; ExRx, Adductors (Hip): Heads \"Adductor Brevis\", \"Adductor Longus\", \"Adductor Magnus\" e Movement \"Adduction\"). No estudo de EMG de Serner et al. 2014 (resumo), o adutor longo foi o músculo medido nos 8 exercícios de adução, e a adução com elástico ficou entre os de alta intensidade (\"The Copenhagen Adduction and the hip adduction with an elastic band are dynamic high-intensity exercises\")",
+    "sinergistas": "pectíneo, grácil e as fibras de baixo do glúteo máximo (ExRx, Cable Hip Adduction: Synergists \"Pectineus\", \"Gracilis\", \"Gluteus Maximus, Lower Fibers\"). No app não há auxiliar marcado: o pectíneo e o grácil ficam na parte de dentro da coxa, dentro do grupo dos adutores do mapa (já marcado como alvo, como na Cadeira Adutora), e o \"glúteo\" do mapa pinta também o glúteo médio, que é abdutor (o contrário deste movimento)",
+    "estabilizadores": "adutores do quadril do outro lado (ExRx, Cable Hip Adduction: Stabilizers \"Adductors, Hip (opposite)\"), na perna de apoio; a mão na barra só dá equilíbrio (Physitrack, Cable machine hip adduction (supported): \"holding on to a stick or pole to assist with balance\")",
+    "fases": "concêntrica: a perna fecha, vindo pro meio e um pouco pra frente até encostar na de apoio (ExRx, Cable Hip Adduction: \"Move near leg just in front of far leg\"; Physitrack, Cable machine hip adduction: \"Move your inner leg across towards your standing leg.\"); excêntrica: volta devagar até ficar aberta pro lado da torre (ACE, Standing Hip Adduction: \"When the right foot is directly in front of the left foot, pause for one second before slowly lowering the weight, allowing it to pull the right leg away from the body.\"; Physitrack, Cable machine hip adduction: \"slowly, under control, return it back to the starting position\")"
+  },
+  "referencias": [
+    "ExRx.net — Cable Hip Adduction. https://exrx.net/WeightExercises/HipAdductors/CBHipAdduction (lido na cópia do Internet Archive de 20/05/2026; o site direto bloqueia a leitura automática): Preparation \"Stand in front of low pulley facing to one side. Attach cable cuff to near ankle. Step out away from stack with wide stance and grasp ballet bar. Stand on far foot and allow near leg to be Pulled toward low pulley.\"; Execution \"Move near leg just in front of far leg by abduction hip. Return and repeat. Turn around and continue with opposite leg.\" (o \"abduction\" está assim na página: o movimento é a adução); Comments \"Notice cable pulley in use is out of view to left. Exerciser is holding on to ballet bar above opposite cable pulley, not in use.\"; classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; músculos: Target \"Adductors, Hip\", Synergists \"Pectineus\", \"Gracilis\", \"Gluteus Maximus, Lower Fibers\", Stabilizers \"Adductors, Hip (opposite)\". A animação da página (CBHipAdduction.gif, © 2011 ExRx.net, vista de frente): a perna da tornozeleira começa bem aberta pro lado da polia, a mão de longe segura a barra da outra torre com o braço esticado pro lado e a de perto fica na cintura; no fim a perna de perto cruza na frente da de longe. Aqui a estação tem uma torre só: a mão de perto segura a barra de apoio dela (como na Physitrack com apoio e na Abdução de Quadril na Polia) e a de longe vai na cintura.",
+    "ExRx.net — Adductors (Hip). https://exrx.net/Muscles/Adductors (cópia do Internet Archive de 20/05/2026): Heads \"Adductor Brevis\", \"Adductor Longus\", \"Adductor Magnus\"; Movement (Hip) \"Adduction\", \"Transverse Adduction\", \"Flexion (initial)\", \"Extension\", \"External Rotation (during adduction)\"; Related Muscles \"Pectineus\", \"Gracilis\".",
+    "American Council on Exercise (ACE) — Exercise Library, Standing Hip Adduction (https://www.acefitness.org/resources/everyone/exercise-library/104/standing-hip-adduction/, lido em 09/10/2026): \"Place a cable pulley at the lowest position with a cuff attachment. Position the cuff just above the ankle on the right foot, take three to four steps to the left, and stand so that the right side of the body is the closest to the machine (the weight should be pulling right leg away from the body.) Keep the back straight and the left knee slightly bent while bringing the inside of the right foot closer to the center of the body. When the right foot is directly in front of the left foot, pause for one second before slowly lowering the weight, allowing it to pull the right leg away from the body.\" As 2 fotos da página (104-1 e 104-2): as 2 mãos na cintura, a perna da tornozeleira começa aberta uns 25° pro lado da polia e termina com o pé na frente do outro.",
+    "Physitrack (plataforma de exercícios de fisioterapia), 3 versões da adução no cabo, lidas em 09/10/2026: \"Cable machine hip adduction\" (https://us.physitrack.com/home-exercise-video/cable-machine-hip-adduction): \"With the cable attached at the lower position, attach the cuff to your inner ankle.\" \"Take the strain of the weight and stand sideways to the machine.\" \"Balance on your outer leg.\" \"Move your inner leg across towards your standing leg.\" \"Cross your leg over by a few degrees and slowly, under control, return it back to the starting position.\"; \"Cable hip adduction (Hip adduction strengthening, with cable (low), to side, standing)\" (https://us.physitrack.com/home-exercise-video/cable-hip-adduction): o mesmo passo a passo; \"Cable machine hip adduction (supported)\" (https://au.physitrack.com/home-exercise-video/cable-machine-hip-adduction-%2528supported%2529): \"Stand up straight holding on to a stick or pole to assist with balance.\" \"Stand with your legs hips width apart and some slight tension in the band.\" \"Keeping your back straight and your hips level, lift your leg in and across your body.\" \"Ensure you do not lean your body or hitch your hip.\" \"Your leg should remain straight and move directly out to the side.\" \"In a controlled manner, return to starting position and repeat.\" No vídeo da versão com apoio, a mão de perto segura o bastão na altura da cintura, a outra fica na cintura e a perna sai de uns 20° aberta até cruzar na frente da outra.",
+    "Serner A, Jakobsen MD, Andersen LL, Hölmich P, Sundstrup E, Thorborg K. EMG evaluation of hip adduction exercises for soccer players: implications for exercise selection in prevention and treatment of groin injuries. Br J Sports Med. 2014;48(14):1108-1114. doi:10.1136/bjsports-2012-091746 — a \"Base\" da dica da Cadeira Adutora. Só o resumo foi lido (Europe PMC, PMID 23511698; o texto completo é fechado — \"Subscription required\" — e a cópia do Internet Archive só tem o resumo): \"Muscle activity using surface electromyography (sEMG) was measured bilaterally for the adductor longus during eight hip adduction strengthening exercises\"; \"There were large differences in peak nEMG of the adductor longus between the exercises, with values ranging from 14% to 108% nEMG (p<0.0001).\"; \"The Copenhagen Adduction and the hip adduction with an elastic band are dynamic high-intensity exercises, which can easily be performed at any training facility\". O resumo não diz a posição do exercício com elástico — não usado pra técnica.",
+    "Wichman D, Rasio JP, Looney A, Nho SJ. Physical Examination of the Hip. Sports Health. 2021;13(2):149-153. doi:10.1177/1941738120953418, tabela 1 (\"Normative values for hip range of motion according to standards published by the American Academy of Orthopaedic Surgeons\"; lida na cópia do Internet Archive de 15/03/2025 do PMC8167346): \"Abduction 33.0 ± 4.8\", \"Adduction 13.8 ± 6.3\" graus, \"As variation from the neutral, midline position\"; \"Abduction and adduction are both measured with the hips and knees in a neutral extended position. The leg is abducted by moving the limb away from the body and adducted by bringing the limb toward the midline, above the contralateral leg.\"",
+    "Winter DA. Biomechanics and Motor Control of Human Movement, 4ª ed. (2009) — massas e centros de massa dos segmentos (tabela de Dempster), no arquivo BSP_DempsterWinter do laboratório BMC (Duarte M., https://github.com/BMClab/BMC/blob/master/data/BSP_DempsterWinter.txt, lido em 09/10/2026): mão 0,006 (CM a 0,506), antebraço 0,016 (0,43), braço 0,028 (0,436), pé 0,0145 (0,5), perna 0,0465 (0,433), coxa 0,1 (0,433), cabeça e pescoço 0,081, tronco 0,497 (0,5) — os mesmos do Coice de Glúteo na Polia: usados pra pôr o centro de massa em cima do pé de apoio.",
+    "NSCA: não achei texto da NSCA sobre a adução em pé no cabo aberto em nenhuma fonte que deu pra ler (como na Cadeira Adutora e na Abdução de Quadril na Polia) — não usado.",
+    "Tornozeleira e barra de apoio: as peças do Coice de Glúteo na Polia (equip3d.tornozeleira_polia e barra_apoio_polia, lote 8), com as medidas de fabricante citadas no bloco delas (Rogue Ankle Cuff, BLK BOX Ankle Strap, Valor Fitness MB-9); a barra de apoio é a \"ballet bar\" do ExRx. A polia baixa é a polia() da fábrica, com o garfo que gira (gira=True)."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "pe_fora_do_chao": [
+      "D"
+    ],
+    "pe_fora_do_chao_fonte": "ExRx, Cable Hip Adduction (\"Stand on far foot\"); Physitrack, Cable machine hip adduction (\"Balance on your outer leg.\"): o pé direito, o da tornozeleira, fica fora do chão o movimento todo (regra alturas abaixo); o esquerdo segue chapado",
+    "pe_no_ar": [
+      "D"
+    ],
+    "pe_no_ar_fonte": "o pé direito MEXE fora do chão (vem do lado da torre pro meio com a perna): sem a regra do pé escorregando nele (checagem3d, lote 8); o esquerdo continua com todas — planta e calcanhar no chão e sem escorregar",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base de um pé só: as regras padrão (tecnica3d.PADRAO_PES_NO_CHAO) são pros 2 pés no chão, e aqui o pé direito sai do chão e anda da lateral pro meio, então largura dos pés, um pé à frente do outro, os 2 pés virados igual e o joelho na direção do pé não servem. As que valem estão abaixo: a coluna neutra, a ponta do pé de apoio pra frente e as da perna que trabalha.",
+    "zonas": [
+      {
+        "nome": "a faixa da tornozeleira encosta na canela, sem entrar mais que o neoprene cede",
+        "equipamento": "tornozeleira",
+        "partes": [
+          "RightLeg"
+        ],
+        "mm": [
+          -2,
+          1
+        ],
+        "fonte": "ACE, Standing Hip Adduction (\"Position the cuff just above the ankle\"); medido da pele até a faixa (APOIO): a faixa nasce na forma da canela e aperta 0,5 mm; −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM)"
+      },
+      {
+        "nome": "o cabo passa longe da perna de apoio",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); a polia fica do lado da perna que trabalha e o cabo vai pro lado de fora; medido da pele (a cena fica a ≥ 30 cm)"
+      },
+      {
+        "nome": "o cabo não encosta na perna que trabalha",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          40,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); medido da pele: o cabo começa na bola, ~10 cm pro lado de fora da canela, e vai pra polia (a cena fica a ≥ 6 cm)"
+      },
+      {
+        "nome": "o cabo passa longe do tronco, dos braços e das mãos",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder",
+          "LeftArm",
+          "RightArm",
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          300,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro do corpo); medido da pele (a cena fica a ≥ 70 cm)"
+      },
+      {
+        "nome": "a argola não encosta no corpo",
+        "equipamento": "tornozeleira_argola",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase",
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          4,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele: a argola fica em cima da fita do fecho, 6 mm de neoprene acima da pele"
+      },
+      {
+        "nome": "o mosquetão e a bola do cabo não encostam no corpo",
+        "equipamento": "tornozeleira_engate",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase",
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          8,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "a mão direita não encosta na torre nem nos postes da barra (só na barra)",
+        "equipamento": "polia_torre",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (a checagem ignora o que fica dentro da mão: aqui a mão × o resto da torre, medido à parte); medido da pele até a carenagem, o trilho e os postes da barra"
+      },
+      {
+        "nome": "a perna aberta não encosta na torre",
+        "equipamento": "polia_torre",
+        "partes": [
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "pedido do lote (\"No começo, aberta, a perna não encosta na torre\"); medido da pele até a base, o carrinho e a carenagem"
+      },
+      {
+        "nome": "a perna aberta não encosta na roldana",
+        "equipamento": "polia_roldana",
+        "partes": [
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "pedido do lote (\"No começo, aberta, a perna não encosta na torre\"); medido da pele até o garfo e a roldana que gira"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "a argola fica em cima da fita, sem entrar na faixa",
+        "equipamento": "tornozeleira_argola",
+        "de": "tornozeleira",
+        "mm": [
+          0.1,
+          50
+        ],
+        "fonte": "peça × peça (a presilha da argola deita na fita do fecho com 0,5 mm de folga)"
+      },
+      {
+        "nome": "o mosquetão e a bola não encostam na faixa",
+        "equipamento": "tornozeleira_engate",
+        "de": "tornozeleira",
+        "mm": [
+          5,
+          500
+        ],
+        "fonte": "peça × peça"
+      },
+      {
+        "nome": "o cabo não encosta na faixa",
+        "equipamento": "polia_cabo",
+        "de": "tornozeleira",
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "peça × peça"
+      },
+      {
+        "nome": "o cabo não encosta na barra de apoio",
+        "equipamento": "polia_cabo",
+        "de": "barra_apoio",
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "peça × peça"
+      },
+      {
+        "nome": "o mosquetão e a bola não batem na roldana nem no garfo",
+        "equipamento": "tornozeleira_engate",
+        "de": "polia_roldana",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "peça × peça: no começo, com a perna aberta, o engate fica mais perto da roldana"
+      },
+      {
+        "nome": "o mosquetão e a bola não batem na torre",
+        "equipamento": "tornozeleira_engate",
+        "de": "polia_torre",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "peça × peça"
+      }
+    ],
+    "alturas": [
+      {
+        "nome": "o pé que trabalha fica fora do chão",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"Stand on far foot\"); Physitrack, Cable machine hip adduction (\"Balance on your outer leg.\"): a pele mais baixa do pé direito acima do chão (a cena fica a ≥ 4 cm)"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "a perna que trabalha fecha até encostar na de apoio, sem entrar nela",
+        "partes": [
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM). No fim a coxa encosta na de apoio (o cruzamento do ExRx/ACE não cabe no boneco: ver a cinesiologia)"
+      },
+      {
+        "nome": "mão esquerda apoiada na cintura",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1"
+        ],
+        "mm": [
+          -2,
+          3
+        ],
+        "fonte": "animação do ExRx (Cable Hip Adduction) e fotos do ACE (Standing Hip Adduction): a mão livre na cintura; −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM) e 3 mm = o vão máximo de mão encostando da checagem (ENCOSTO_MAX)"
+      },
+      {
+        "nome": "antebraço esquerdo não entra no tronco",
+        "partes": [
+          "LeftForeArm"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "começo: a perna aberta pro lado da torre, ~30°",
+        "medida": "coxa_abducao",
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          26,
+          34
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"allow near leg to be Pulled toward low pulley\"); ACE, Standing Hip Adduction (\"the weight should be pulling right leg away from the body\"; na foto, uns 25°); abdução normal 33,0 ± 4,8° (AAOS, Wichman 2021, tabela 1). tecnica3d.coxa_abducao: 0 = coxa no plano sagital da pelve; a cena começa a 30"
+      },
+      {
+        "nome": "começo: a perna no plano do corpo",
+        "medida": "quadril_sinal",
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"Stand in front of low pulley facing to one side\"): a polia fica do lado e o cabo puxa a perna pro lado, no plano do corpo. O boneco em pé mede +5, a cena começa a 6"
+      },
+      {
+        "nome": "fim: a perna fechada até encostar na de apoio",
+        "medida": "coxa_abducao",
+        "lado": "D",
+        "t": 1.0,
+        "graus": [
+          3,
+          9
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"Move near leg just in front of far leg\"); ACE, Standing Hip Adduction (\"bringing the inside of the right foot closer to the center of the body\"); Physitrack, Cable machine hip adduction (\"Move your inner leg across towards your standing leg.\"). O cruzamento até o pé ficar bem na frente do outro não cabe no boneco: no boneco as coxas (musculosas) ficam a 9 mm uma da outra por dentro, no repouso; com o peso no pé de apoio a coxa de apoio fica ~8° fechada e, com a coxa que trabalha passando de ~+6° (25° à frente), uma entra na outra 10 a 20 cm abaixo da virilha — medido: +2° → 23 mm, −3° → 26 a 29 mm, −7° → 30 mm, com a coxa de 20° a 38° à frente (mais à frente quase não muda). A cena para a 6°, com a coxa encostando na de apoio"
+      },
+      {
+        "nome": "fim: a perna um pouco à frente, passando na frente da de apoio",
+        "medida": "quadril_sinal",
+        "lado": "D",
+        "t": 1.0,
+        "graus": [
+          18,
+          30
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"just in front of far leg\"); ACE, Standing Hip Adduction (\"When the right foot is directly in front of the left foot\"); ExRx, Adductors (Hip): Movement \"Flexion (initial)\". O boneco em pé mede +5; a cena termina a 25 (o pé ~36 cm à frente do de apoio)"
+      },
+      {
+        "nome": "a perna não passa da amplitude normal do quadril",
+        "medida": "coxa_abducao",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          -14,
+          38
+        ],
+        "fonte": "AAOS (Wichman 2021, tabela 1): abdução 33,0 ± 4,8° e adução 13,8 ± 6,3°, a partir da posição neutra"
+      },
+      {
+        "nome": "joelho que trabalha quase esticado e parado",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "Physitrack, Cable machine hip adduction (supported) (\"Your leg should remain straight\"); só o quadril mexe (ExRx, Cable Hip Adduction: \"Mechanics: Isolated\"). A cena fica a 5°"
+      },
+      {
+        "nome": "ponta do pé que trabalha pra frente (a coxa não gira)",
+        "medida": "ponta_pe",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          -10,
+          12
+        ],
+        "fonte": "ACE, Standing Hip Adduction (\"bringing the inside of the right foot closer to the center of the body\": o lado de dentro do pé vem na frente, a ponta pra frente); a coxa vai e volta sem girar em volta dela mesma (a rótula pra frente). Com a perna aberta e o pé inclinado, a direção do pé vista de cima muda uns graus sem a coxa girar (a cena vai de +6 a −5)"
+      },
+      {
+        "nome": "tornozelo que trabalha parado",
+        "medida": "tornozelo",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          70,
+          84
+        ],
+        "fonte": "só o quadril mexe (ExRx, Cable Hip Adduction: \"Mechanics: Isolated\"); o tornozelo fica no neutro do boneco em pé (~76°, tecnica3d.tornozelo)"
+      },
+      {
+        "nome": "perna de apoio parada",
+        "medida": "coxa_abducao",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          -12,
+          -4
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"Stand on far foot\"): a pelve vai pro lado do pé de apoio até o centro de massa ficar em cima dele (Winter 2009, Dempster; 2 cm pra dentro do eixo do pé, com a mão na barra ajudando no equilíbrio — Physitrack, Cable machine hip adduction (supported): \"to assist with balance\") e o quadril de apoio fica um pouco fechado (aduzido), parado; a cena fica a ~−8"
+      },
+      {
+        "nome": "joelho de apoio levemente dobrado e parado",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          3,
+          12
+        ],
+        "fonte": "ACE, Standing Hip Adduction (\"Keep the back straight and the left knee slightly bent\" — o joelho da perna de apoio). A cena fica a 6°"
+      },
+      {
+        "nome": "pé de apoio pra frente (a pelve não gira em cima dele)",
+        "medida": "ponta_pe",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          -8,
+          12
+        ],
+        "fonte": "Physitrack, Cable machine hip adduction (supported) (\"Ensure you do not lean your body or hitch your hip.\"): com o pé chapado, girar a pelve muda o ângulo do pé em relação a ela. A cena fica a ~−1°"
+      },
+      {
+        "nome": "tronco reto e parado (sem inclinar)",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "ACE, Standing Hip Adduction (\"Keep the back straight\"); Physitrack, Cable machine hip adduction (supported) (\"Stand up straight\"; \"Ensure you do not lean your body\"); dica da Abdução de Quadril na Polia, o mesmo aparelho (\"tronco reto segurando o apoio\")"
+      },
+      {
+        "nome": "tronco sem tombar pro lado (ombros nivelados)",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "Physitrack, Cable machine hip adduction (supported) (\"Ensure you do not lean your body or hitch your hip.\")"
+      },
+      {
+        "nome": "pelve nivelada e parada (o quadril não sobe nem cai)",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ],
+        "fonte": "Physitrack, Cable machine hip adduction (supported) (\"Keeping your back straight and your hips level\"; \"Ensure you do not lean your body or hitch your hip.\")"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          8
+        ],
+        "fonte": "ACE, Standing Hip Adduction (\"Keep the back straight\"); Physitrack, Cable machine hip adduction (supported) (\"Keeping your back straight\")"
+      },
+      {
+        "nome": "cabeça na linha do tronco",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -20,
+          -2
+        ],
+        "fonte": "a cabeça não mexe em relação ao tronco: o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+      },
+      {
+        "nome": "cotovelo da mão na barra quase esticado",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          5,
+          25
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"grasp ballet bar\"; na animação, o braço que segura vai esticado pro lado até a barra); Physitrack, Cable machine hip adduction (supported) (\"holding on to a stick or pole\"). A cena fica a 15°"
+      },
+      {
+        "nome": "punho reto na barra",
+        "medida": "flexao",
+        "junta": "Hand",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "mão fechada na barra com o punho na linha do antebraço (a cena fica a ~2°)"
+      },
+      {
+        "nome": "pegada pronada (palma pra baixo) na barra",
+        "medida": "palma_cima",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          110,
+          180
+        ],
+        "fonte": "ExRx, Cable Hip Adduction (\"grasp ballet bar\"): a mão por cima da barra, fechada em volta dela"
+      }
+    ]
+  }
+}

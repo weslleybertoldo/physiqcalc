@@ -596,3 +596,49 @@ def joelho_alem_dos_dedos(j):
 
 MEDIDAS.update({"joelho_plano_pe": joelho_plano_pe, "joelho_alem_dos_dedos": joelho_alem_dos_dedos})
 UNIDADE.update({"joelho_plano_pe": "mm", "joelho_alem_dos_dedos": "mm"})
+
+
+# ── agachamento frontal com barra (lote 8, 09/10/2026): no rack da pegada de clean o punho dobra muito pra trás, e o
+# punho_flexao (a dobra no plano da mão) não vê o punho dobrando de LADO — na 1ª montagem o antebraço chegava no punho quase
+# paralelo à barra, com a mão atravessando a barra: o punho ficava ~86° desviado pro lado do polegar enquanto o punho_flexao
+# marcava de −53° a 0°. A amplitude normal é desvio radial 20° e ulnar 30° (limites.py: Norkin & White, valores da AAOS).
+def punho_desvio(j):
+    """Desvio do punho COM SINAL, graus [E, D]: antebraço (cotovelo → punho) × 3º metacarpo (punho → base do dedo médio),
+    no plano da palma: 0 = mão na linha do antebraço, + = a mão dobra pro lado do polegar (desvio radial), − = pro lado do
+    dedo mínimo (ulnar). A flexão/extensão não conta (é o punho_flexao). Só usa a mão e o antebraço."""
+    out = []
+    for L, _ in LADOS:
+        a = _u(j[L + "Hand"] - j[L + "ForeArm"])
+        d = _u(j[L + "HandMiddle1"] - j[L + "Hand"])
+        p = _palma(j, L)
+        r = j[L + "HandIndex1"] - j[L + "HandPinky1"]              # pro lado do polegar
+        r = _u(r - d * (r @ d))
+        aq = a - p * (a @ p)
+        out.append(math.degrees(math.atan2(float(-(aq @ r)), float(aq @ d))))
+    return out
+
+
+MEDIDAS.update({"punho_desvio": punho_desvio})
+
+
+# ── abdução de quadril na polia (lote 8, 09/10/2026): em pé, a perna de fora abre pro lado, longe da polia, com o tronco e a pelve
+# parados (ExRx, Cable Hip Abduction: "Move leg to opposite side of low pulley by abduction hip"; Physitrack: "Keeping your back straight
+# and your hips level, lift your leg out away from your body"). O coxa_abertura mede a coxa vista de cima (sentado, coxa deitada) e em pé
+# perde o sentido; o quadril_sinal só vê o plano sagital do tronco. Aqui é a coxa pra fora do plano sagital da PELVE, como o goniômetro
+# mede a abdução (braço fixo na linha entre as espinhas ilíacas; Norkin & White): serve também à adução (a perna cruzando na frente da
+# outra dá −).
+def coxa_abducao(j):
+    """Abdução (+) / adução (−) do quadril, graus [E, D]: coxa (articulação do quadril → centro do joelho) pra fora do plano que passa
+    pela articulação do quadril perpendicular à linha das articulações do quadril (o plano sagital da pelve): 0 = coxa nesse plano
+    (apontando pro chão, pra frente ou pra trás), + = aberta pro lado, − = cruzando pra dentro, na frente ou atrás da outra perna. Usa só a
+    linha dos quadris (a pelve subindo de um lado muda o número, como no goniômetro): vale em pé, deitado ou sentado — sentado, com a coxa
+    deitada aberta 40° pro lado, dá 40, como o coxa_abertura. O boneco em pé, no repouso, mede ~+4,5 (as pernas um pouco abertas)."""
+    lado = _u(j["RightUpLeg"] - j["LeftUpLeg"])
+    out = []
+    for L, s in LADOS:
+        c = _u(j[L + "Leg"] - j[L + "UpLeg"])
+        out.append(math.degrees(math.asin(max(-1.0, min(1.0, float(c @ (s * lado)))))))
+    return out
+
+
+MEDIDAS.update({"coxa_abducao": coxa_abducao})

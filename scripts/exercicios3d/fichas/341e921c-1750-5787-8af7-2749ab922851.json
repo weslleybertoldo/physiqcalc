@@ -1,0 +1,60 @@
+{
+  "uuid": "341e921c-1750-5787-8af7-2749ab922851",
+  "nome": "Remada Curvada Supinada com Barra",
+  "cena": "remada_curvada_supinada_com_barra",
+  "grupo": "Dorsal / Rombóide",
+  "subgrupo": "Latíssimo do dorso · romboides · bíceps · trapézio médio",
+  "padrao_movimento": "remada",
+  "equipamento": "barra",
+  "variacao": "pegada supinada",
+  "alvos": ["dorsal", "trapezio"],
+  "auxiliares": ["costas", "biceps", "deltoide", "antebraco", "lombar"],
+  "camera": {"az": 125, "el": 15, "dist": 4.2, "alvo": [0, -0.05, 0.75]},
+  "camera_vistas": {"dist": 4.0, "alvo": [0, -0.05, 0.75]},
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés na largura do quadril e as pontas para a frente, os joelhos levemente dobrados e o tronco inclinado à frente (cerca de 60°, entre 45° e a horizontal) com a coluna neutra, segura a barra por baixo, com as palmas viradas para a frente (pegada supinada), um pouco mais aberta que os ombros, com os braços estendidos e a barra pendurada embaixo dos ombros; puxa a barra até a cintura levando os cotovelos para trás, junto do corpo, e aproximando as escápulas, com o tronco e as pernas parados; desce estendendo os cotovelos até os braços ficarem estendidos e os ombros descerem.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética aberta",
+    "articulacoes": "ombro (extensão na subida, flexão na descida, com os cotovelos junto do corpo), cotovelo (flexão na subida, extensão na descida) e escápulas (retração na subida, protração na descida); quadril, joelhos e coluna parados (isometria)",
+    "agonistas": "latíssimo do dorso e redondo maior (extensão do ombro), trapézio médio e romboides (retração das escápulas)",
+    "sinergistas": "deltoide posterior, trapézio inferior, infraespinal e redondo menor, peitoral maior (parte esternal), braquial, braquiorradial e bíceps braquial (a pegada supinada pede mais do bíceps)",
+    "estabilizadores": "eretores da espinha, glúteo máximo, isquiotibiais, adutor magno e quadríceps (tronco inclinado e joelhos parados), reto do abdome e oblíquos; cabeça longa do tríceps",
+    "fases": "subida concêntrica, descida excêntrica"
+  },
+  "referencias": [
+    "ExRx.net. Barbell Underhand Bent-over Row. https://exrx.net/WeightExercises/BackGeneral/BBUnderhandBentOverRow",
+    "ExRx.net. Barbell Bent-over Row. https://exrx.net/WeightExercises/BackGeneral/BBBentOverRow",
+    "ExRx.net. Questions & Answers: Rows (Pendlay Row). https://exrx.net/Questions/Rows",
+    "National Strength and Conditioning Association. Basics of Strength and Conditioning Manual (2012), cap. 4, Bent-Over Row.",
+    "American Council on Exercise. Exercise Library: Bent-over Row. https://www.acefitness.org/resources/everyone/exercise-library/12/bent-over-row/",
+    "Catalyst Athletics. Exercise Library: Reverse-Grip Bent Row. https://catalystathletics.com/exercise/875/Reverse-Grip-Bent-Row/",
+    "University of Sussex Sport. Level Six: Bent Over Barbell Row. https://www.sussex.ac.uk/sport/documents/bent-over-barbell-row.pdf",
+    "Fenwick CM, Brown SH, McGill SM. Comparison of different rowing exercises: trunk muscle activation and lumbar spine motion, load, and stiffness. J Strength Cond Res. 2009;23(2):350-358.",
+    "Lehman GJ, Buchan DD, Lundy A, Myers N, Nalborczyk A. Variations in muscle activation levels during traditional latissimus dorsi weight training exercises: an experimental study. Dyn Med. 2004;3:4.",
+    "International Weightlifting Federation. Equipment: discs (\"The diameter of the largest discs: 450 mm with a tolerance of ± 1 mm\")."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": {"ponta_pe": [-5, 15], "coluna": [0, 10]},
+    "zonas": [
+      {"nome": "barra chega na cintura no fim", "equipamento": "barra", "partes": ["Hips", "Spine", "Spine1"], "mm": [3, 25], "t": 1.0, "fonte": "ExRx, Barbell Underhand Bent-over Row (\"Pull bar to waist\"); Catalyst Athletics, Reverse-Grip Bent Row (\"Pull the bar to the abdomen\")"}
+    ],
+    "angulos": [
+      {"nome": "tronco inclinado entre 45° e a horizontal", "medida": "tronco", "t": "todos", "graus": [45, 90], "fonte": "ExRx, Barbell Underhand Bent-over Row (\"Torso may be kept horizontal for strict execution\"); Catalyst Athletics, Reverse-Grip Bent Row (\"from horizontal to closer to 45-degrees\")"},
+      {"nome": "tronco parado (sem dar tranco)", "medida": "tronco", "t": "todos", "graus": [58, 62], "fonte": "University of Sussex Sport, Bent Over Barbell Row (\"The body should stay in the same position throughout the movement\"); ExRx, Rows (\"popping the torso upward each rep\" é a forma errada)"},
+      {"nome": "joelhos levemente dobrados, parados", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [20, 35], "fonte": "ExRx, Barbell Underhand Bent-over Row (\"Bend knees slightly\"); NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"knees slightly flexed\"); ACE, Bent-over Row (\"a slight bend in the knees\")"},
+      {"nome": "braços estendidos embaixo", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 15], "fonte": "ExRx, Barbell Underhand Bent-over Row (\"Return until arms are extended\"); Catalyst Athletics (\"Lower the bar to full elbow extension\"); ACE (\"until the elbows are completely straight\")"},
+      {"nome": "barra pendurada embaixo dos ombros", "medida": "antebraco_vertical", "t": 0.0, "graus": [0, 12], "fonte": "University of Sussex Sport, Bent Over Barbell Row (\"Have the arms extend directly below the shoulders\"); Catalyst Athletics (\"letting the bar hang at arms’ length\")"},
+      {"nome": "cotovelo dobrado em cima", "medida": "flexao", "junta": "ForeArm", "t": 1.0, "graus": [100, 135], "fonte": "ExRx, Barbell Underhand Bent-over Row (\"Pull bar to waist\"): o cotovelo dobra o que precisa pra barra chegar na cintura"},
+      {"nome": "cotovelos junto do corpo", "medida": "cotovelo_tronco", "t": "todos", "graus": [-5, 25], "fonte": "ExRx, Barbell Bent-over Row (\"A shoulder width or underhand grip can increase lat involvement by emphasizing shoulder extension over transverse extension\"); Weslley, 04/10/2026 (cotovelo perto do corpo nas remadas)"},
+      {"nome": "cotovelo passa da linha do tronco no fim (extensão do ombro até 60°)", "medida": "braco_frente", "t": 1.0, "graus": [-60, -30], "fonte": "ExRx, Barbell Underhand Bent-over Row (\"Pull bar to waist\"); extensão do ombro de 0 a 60° (Norkin & White, valores da AAOS)"},
+      {"nome": "escápulas soltas embaixo (ombros descem pro chão)", "medida": "escapula_frente", "t": 0.0, "mm": [12, 40], "fonte": "ExRx, Barbell Underhand Bent-over Row (\"shoulders are stretched downward\"); Catalyst Athletics (\"allow the shoulder blades to protract\")"},
+      {"nome": "escápulas pra trás em cima", "medida": "escapula_frente", "t": 1.0, "mm": [-40, -12], "fonte": "Catalyst Athletics, Reverse-Grip Bent Row (\"squeezing your shoulder blades back together\"); NSCA, Bent-Over Row (\"squeeze shoulder blades together\")"},
+      {"nome": "pegada supinada (palmas pra frente; a pronada passaria de 100°)", "medida": "palma_frente", "t": "todos", "graus": [40, 85], "fonte": "ExRx, Barbell Underhand Bent-over Row (\"Grasp bar with underhand grip\"); Catalyst Athletics (\"with the palms facing forward\")"},
+      {"nome": "pegada um pouco mais aberta que os ombros", "medida": "pegada_largura", "t": "todos", "faixa": [1.0, 1.5], "fonte": "Catalyst Athletics, Reverse-Grip Bent Row (\"clean-width grip\"); ExRx, Barbell Bent-over Row (\"A shoulder width or underhand grip\")"},
+      {"nome": "pés na largura do quadril", "medida": "pes_largura", "t": "todos", "faixa": [0.9, 1.4], "fonte": "NSCA, Basics of Strength and Conditioning Manual, Bent-Over Row (\"place feet hip-width apart with toes pointed straight ahead\")"},
+      {"nome": "joelho em cima do pé", "medida": "joelho_plano_pe", "t": "todos", "mm": [-20, 25], "fonte": "joelho na direção do pé (regra padrão do tecnica3d: Escamilla, Med Sci Sports Exerc 2001; Schoenfeld, J Strength Cond Res 2010)"},
+      {"nome": "cabeça na linha da coluna (sem olhar pra cima)", "medida": "cabeca_tronco", "t": "todos", "graus": [-15, 15], "fonte": "University of Sussex Sport, Bent Over Barbell Row (\"Look out for: ... spinal alignment, head looking up\"). O boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"}
+    ]
+  }
+}

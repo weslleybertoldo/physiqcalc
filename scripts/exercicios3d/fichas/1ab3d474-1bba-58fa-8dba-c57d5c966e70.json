@@ -1,0 +1,488 @@
+{
+ "uuid": "1ab3d474-1bba-58fa-8dba-c57d5c966e70",
+ "nome": "Rosca Scott com Barra",
+ "cena": "rosca_scott_com_barra",
+ "grupo": "Bíceps",
+ "subgrupo": "Bíceps braquial (cabeça curta) · braquial",
+ "padrao_movimento": "rosca_scott",
+ "equipamento": "barra",
+ "variacao": "banco Scott",
+ "alvos": [
+  "biceps"
+ ],
+ "auxiliares": [
+  "antebraco"
+ ],
+ "camera": {
+  "az": 45,
+  "el": 12,
+  "dist": 3.0,
+  "alvo": [
+   0.0,
+   -0.25,
+   0.85
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.1,
+  "alvo": [
+   0.0,
+   -0.2,
+   0.85
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado no banco Scott, com os pés chapados no chão e o tronco quase em pé, apoia a parte de trás dos 2 braços na almofada inclinada, com as axilas perto da borda de cima e os ombros dobrados uns 50°, e segura a barra com as palmas viradas pra cima (pegada supinada), as mãos na largura dos ombros e os punhos retos. Começa com os cotovelos quase esticados, sem travar, e sobe a barra na direção dos ombros dobrando só os cotovelos, até o antebraço chegar perto da vertical, com a barra passando na frente do rosto sem encostar nele; depois desce devagar até os braços ficarem quase esticados de novo, sem tirar os braços da almofada e sem impulso.",
+ "cinesiologia": {
+  "plano": "sagital (flexão e extensão dos cotovelos), com os 2 braços parados na almofada à frente do tronco (os ombros dobrados ~50°); os 2 braços juntos, na mesma barra",
+  "articulacoes": "cotovelos (flexão na subida, de ~15° até ~127°, com o antebraço a ~8° da vertical em cima; extensão na descida, até quase esticar, sem travar), com os antebraços supinados e os punhos retos; ombros parados, dobrados ~50° com os braços na almofada, e as escápulas um pouco pra trás e pra baixo; tronco parado, ~4° à frente, com a cabeça na linha dele; quadril (~79°) e joelhos (~75°) parados, sentado, com os pés chapados no chão",
+  "agonistas": "braquial e bíceps braquial — o catálogo do app põe \"Bíceps braquial (cabeça curta) · braquial\"; a ExRx põe o braquial como alvo da Barbell Preacher Curl (\"Target Brachialis\") e o bíceps como sinergista (\"Synergists Biceps Brachii, Brachioradialis\"), e diz que a cabeça longa trabalha mais que a curta (\"The long head (lateral head) of Biceps Brachii is activated significantly more than short head (medial head)\"); NSCA, na rosca com barra: \"Biceps brachii, brachialis, brachioradialis\". Contração concêntrica na subida e excêntrica na descida",
+  "sinergistas": "braquiorradial (ExRx: \"Brachioradialis\"); Yessis inclui o pronador redondo com carga alta (\"The pronator teres comes into play when the resistance is sufficiently great\")",
+  "estabilizadores": "flexores do punho (ExRx: \"Wrist Flexors\"), que seguram os punhos retos na barra",
+  "fases": "concêntrica (dobra os cotovelos levando a barra pros ombros, até o antebraço chegar perto da vertical, a barra na frente do rosto) e excêntrica (desce devagar até quase esticar os braços, sem travar e sem impulso)"
+ },
+ "referencias": [
+  "ExRx.net — Barbell Preacher Curl (https://exrx.net/WeightExercises/Brachialis/BBPreacherCurl, lido na cópia do Internet Archive de 02/02/2026; o site responde 403 direto): classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Sit on preacher bench placing back of arms on pad. Grasp curl bar with shoulder width underhand grip.\"; Execution: \"Raise bar until forearms are vertical. Lower barbell until arms are fully extended. Repeat.\"; Comments: \"Seat should be adjusted to allow armpit to rest near top of pad. Back of upper arm should remain on pad throughout movement. The long head (lateral head) of Biceps Brachii is activated significantly more than short head (medial head) of Biceps Brachii since short head enters into active insufficiency as it continues to contract. Also known as Scott Curl.\"; músculos: Target \"Brachialis\", Synergists \"Biceps Brachii\", \"Brachioradialis\", Stabilizers \"Wrist Flexors\". A \"curl bar\" da ExRx é a barra W (a peça dela é do lote 13): aqui vai a barra reta, a da Nunes et al. 2020. O GIF animado da página (BBPreacherCurl.gif, \"© 2012 ExRx.net\", cópia de 16/09/2019) mostra sentado no banco Scott, os 2 braços na almofada, a barra descendo até os braços quase esticados, depois da borda de baixo da almofada, e subindo até a frente do rosto",
+  "Pinto RS, Gomes N, Radaelli R, Botton CE, Brown LE, Bottaro M. Effect of range of motion on muscle strength and thickness. J Strength Cond Res. 2012;26(8):2140-2145 (a revista da NSCA; PDF completo lido em 09/10/2026): a rosca Scott com barra dos 2 braços — \"a bilateral mode preacher curl exercise with the radioulnar joint supinated using a curling bar. During the test, subjects were seated with both feet on the floor. The height of the preacher curl bench was adjusted for each subject so the trunk was straight, whereas the back of the arm and the axillae were rested on the pad.\"; \"the FULL group performed elbow flexion with full (0° to 130° of elbow flexion – 0° full elbow extension) ROM, whereas the PART group performed partial (50° to 100°) ROM\"",
+  "Nunes JP, Jacinto JL, Ribeiro AS, et al. Placing Greater Torque at Shorter or Longer Muscle Lengths? Effects of Cable vs. Barbell Preacher Curl Training on Muscular Strength and Hypertrophy in Young Adults. Int J Environ Res Public Health. 2020;17(16):5859. doi:10.3390/ijerph17165859 (texto completo e figura 1, PMC7460162, lidos em 09/10/2026): \"The preacher curl exercises (Ipiranga, Fitness Line, Presidente Prudente, Brazil) were performed in 3 sets of 8–12 repetitions, in the maximum range of motion\"; \"For both groups, participants were instructed to hold the straight handle (or the bar) with hands supinated and shoulder-width apart.\"; no teste: \"The elbow was supported on a padded shelf with the shoulder flexed at an angle of 60°, similar to the preacher bench.\" A figura 1 (BAR) mostra a rosca Scott sentado, com barra reta e anilhas, os 2 braços na almofada",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2, lido em 09/10/2026; não tem a rosca Scott — a rosca com barra é a mais perto): Barbell biceps curl — \"Major muscles involved: Biceps brachii, brachialis, brachioradialis\"; \"Grasp the bar with a closed, supinated grip (shoulder-width).\"; \"Flex your elbows to raise the bar toward your anterior deltoids.\"; \"Keep your torso and upper arms stationary.\"; \"Lower the bar until your elbows fully extend.\"",
+  "American Council on Exercise — Seated Biceps Curl, Exercise Library (https://www.acefitness.org/resources/everyone/exercise-library/184/seated-biceps-curl/, \"Equipment: Weight Machines / Selectorized\", lido em 09/10/2026 — a rosca Scott na máquina; a Exercise Library do ACE não tem a rosca Scott com barra): \"Sit in the machine, placing your arms over the incline pad.\"; \"Grasp the handles firmly with a full grip (thumbs clasped around the handles) and maintain a neutral wrist position (wrists aligned with your forearms).\"; \"Your elbows should be extended, but not fully locked.\"; \"Stiffen (“brace”) your abdominal muscles to stabilize your spine, and attempt to avoid movement in your low back throughout the exercise.\"; \"Align your head with your spine, and depress and retract your scapulae (pull shoulders back and down)\"; \"stopping when your arms are extended, but not locked and the backs of your forearms make light contact with the incline pad\"",
+  "Yessis M (Dr. Yessis SportLab) — Preacher Curl (https://doctoryessis.com/2013/01/01/preacher-curl/, lido em 09/10/2026; ele prefere o banco em pé e a barra W): \"Adjust the pad height so that you have a fairly erect position.\"; \"Hold an E-Z curl bar (or dumbbells) with a supinated (palms up) grip. The arms should be fairly straight but have a slight bend in the elbows.\"; \"Raise the bar at a moderate rate of speed until the forearms are vertical or slightly beyond.\"; \"Be sure to keep the upper arms in contact with the bench at all times.\"; \"you should not completely straighten the arm in the down position. This is especially important when you use heavy weights.\"; \"The biceps brachii, brachialis, brachioradialis, and the pronator teres muscles are involved.\"",
+  "Oliveira LF, Matta TT, Alves DS, Garcia MAC, Vieira TMM. Effect of the shoulder position on the biceps brachii EMG in different dumbbell curls. J Sports Sci Med. 2009;8(1):24-29 (a rosca Scott com halter; PDF completo no site da revista): \"seated with trunk in vertical position and right shoulder flexed at 50°\"; \"in DPC the shoulder is flexed and, thus, the biceps long head is initially shortened\"",
+  "Attarieh P, Nunes JP, Khani S, et al. Comparison Between Shoulder Flexed and Extended Positions in Elbow Flexion Resistance Training on Regional Hypertrophy and Maximum Strength: Preacher versus Bayesian Cable Curls. Eur J Sport Sci. 2025;25(4):e12279 (texto completo, PMC11906226, lido em 09/10/2026): \"Preacher (PREA; shoulder flexed 50°) and Bayesian (BAYE; shoulder extended 50°) biceps curls during the 10°–140° range of motion\"",
+  "Banco Scott — o mesmo da Rosca Scott com Halteres (equip3d.banco_scott; medidas: Precor Discovery DBR0202 Preacher Curl Bench, \"Total thickness is 2.5 inches (65 mm).\", e os 2 suportes da barra em V nos tubos da frente na foto da ficha técnica; Titan Fitness Preacher Curl Bench V3, \"Pad Dimensions\" \"14-in x 23.25-in x 2-in.\", \"Rack Width\" \"28.5-in.\", \"Adjustable Seat\" \"16-in – 20.5-in.\"). Barra curta de rosca de 1,25 m com eixo de 29 mm (a e3.barra da Rosca Direta com Barra)",
+  "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — valores de referência da AAOS (a mesma fonte do limites.py; punho: desvio radial 20° e ulnar 30°)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "parte de trás dos 2 braços apoiada na almofada",
+    "equipamento": "banco_scott_almofada",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     -10,
+     3
+    ],
+    "fonte": "ExRx — Barbell Preacher Curl (\"placing back of arms on pad\"; \"Back of upper arm should remain on pad throughout movement\"); Pinto et al. 2012 (\"the back of the arm and the axillae were rested on the pad\")"
+   },
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "banco_scott_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Barbell Preacher Curl (\"Sit on preacher bench\"); Pinto et al. 2012 (\"subjects were seated with both feet on the floor\")"
+   },
+   {
+    "nome": "mãos longe da estrutura do banco (tubos e ganchos)",
+    "equipamento": "banco_scott_estrutura",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "peça × corpo: a checagem do peso × corpo não olha as mãos; as mãos na barra não encostam nos ganchos nem nos tubos"
+   },
+   {
+    "nome": "peito e barriga sem entrar na almofada (ficam no recorte do meio)",
+    "equipamento": "banco_scott_almofada",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -3,
+     5000
+    ],
+    "fonte": "regra da fábrica: o corpo encosta no apoio sem afundar nele; Precor DBR0202 (\"The oversized arm pad cushions both the chest area and arm area\")"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "a barra não encosta na almofada",
+    "equipamento": "barra",
+    "de": "banco_scott_almofada",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "Weslley (o peso nunca entra no equipamento); embaixo, com os braços quase esticados, a barra passa depois da borda de baixo da almofada"
+   },
+   {
+    "nome": "a barra não encosta na estrutura do banco (tubos e ganchos)",
+    "equipamento": "banco_scott_estrutura",
+    "de": "barra",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "peça × peça (lição dos lotes anteriores): embaixo a barra passa por cima dos ganchos (medida da estrutura até a barra: a mesma folga, ~4× mais rápida que da barra, com as anilhas grandes, até as 32 peças da estrutura)"
+   },
+   {
+    "nome": "a barra fica longe do cabelo em cima",
+    "equipamento": "barra",
+    "de": "cabelo",
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "Weslley (o peso nunca entra no corpo): o cabelo é uma malha à parte, fora do peso × corpo da checagem; em cima a barra passa na frente do rosto e para longe dele (Rosca Scott na Máquina: 4,5 cm)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços sem entrar no tronco, na cabeça nem nas pernas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "mãos e antebraços não encostam na cabeça (nem no cabelo) em cima",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "Weslley (o peso nunca entra no corpo); ExRx — Barbell Preacher Curl (\"Raise bar until forearms are vertical\"): em cima a barra e as mãos ficam na frente do rosto e dos ombros"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelos quase esticados embaixo, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     8,
+     22
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"Your elbows should be extended, but not fully locked\"); Yessis (\"fairly straight but have a slight bend in the elbows\"; \"you should not completely straighten the arm in the down position\"); ExRx — Barbell Preacher Curl (\"Lower barbell until arms are fully extended\"); Attarieh et al. 2025 (\"10°–140° range of motion\")"
+   },
+   {
+    "nome": "cotovelos dobrados em cima",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     120,
+     145
+    ],
+    "fonte": "ExRx — Barbell Preacher Curl (\"Raise bar until forearms are vertical\"); Pinto et al. 2012 (\"full (0° to 130° of elbow flexion\"); Attarieh et al. 2025 (\"10°–140°\")"
+   },
+   {
+    "nome": "antebraços perto da vertical em cima",
+    "medida": "antebraco_vertical",
+    "t": 1.0,
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx — Barbell Preacher Curl (\"Raise bar until forearms are vertical\"); Yessis (\"until the forearms are vertical or slightly beyond\"): a barra passa na frente do rosto e para a 4,5 cm dele um pouco antes da vertical"
+   },
+   {
+    "nome": "cotovelos nunca travam nem passam da flexão máxima",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     8,
+     145
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"extended, but not fully locked\"); limites.py"
+   },
+   {
+    "nome": "braços parados na almofada, ~50° à frente do tronco",
+    "medida": "braco_frente",
+    "t": "todos",
+    "graus": [
+     45,
+     55
+    ],
+    "fonte": "Oliveira et al. 2009 (\"right shoulder flexed at 50°\"); Attarieh et al. 2025 (\"Preacher (PREA; shoulder flexed 50°)\"); NSCA (Achievable CSCS) — Barbell biceps curl (\"Keep your torso and upper arms stationary\")"
+   },
+   {
+    "nome": "braços paralelos, cotovelos na largura dos ombros",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -6,
+     6
+    ],
+    "fonte": "os 2 braços apoiados na almofada, no plano sagital do tronco (ExRx — Barbell Preacher Curl: \"placing back of arms on pad\")"
+   },
+   {
+    "nome": "mãos na largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.35
+    ],
+    "fonte": "ExRx — Barbell Preacher Curl (\"shoulder width underhand grip\"); Nunes et al. 2020 (\"hands supinated and shoulder-width apart\"); NSCA (Achievable CSCS) — Barbell biceps curl (\"closed, supinated grip (shoulder-width)\"); tecnica3d: ~1,2 = mãos na largura dos ombros"
+   },
+   {
+    "nome": "pegada supinada (palmas pra cima, sem virar pro meio)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -25,
+     25
+    ],
+    "fonte": "ExRx — Barbell Preacher Curl (\"underhand grip\"); Pinto et al. 2012 (\"with the radioulnar joint supinated\"); NSCA (Achievable CSCS) — Barbell biceps curl (\"closed, supinated grip\")"
+   },
+   {
+    "nome": "punhos retos",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"maintain a neutral wrist position (wrists aligned with your forearms)\")"
+   },
+   {
+    "nome": "punhos sem dobrar de lado na barra reta",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"wrists aligned with your forearms\"); Norkin & White/AAOS (desvio radial 20°, ulnar 30°): com a barra reta o antebraço, um pouco aberto (ângulo de carregamento), chega na mão com poucos graus de desvio"
+   },
+   {
+    "nome": "tronco parado, quase em pé",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "Pinto et al. 2012 (\"the trunk was straight\"); Oliveira et al. 2009 (\"seated with trunk in vertical position\"); Yessis (\"a fairly erect position\")"
+   },
+   {
+    "nome": "coluna neutra, sem curvar",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"attempt to avoid movement in your low back throughout the exercise\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Biceps Curl (\"Align your head with your spine\")"
+   },
+   {
+    "nome": "sentado, quadril dobrado ~79° (tronco quase em pé, coxas descendo pro joelho)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     72,
+     86
+    ],
+    "fonte": "sentado no banco Scott com o assento acima dos joelhos (Titan V3: \"Adjustable Seat 16-in – 20.5-in.\"); a medida da fábrica é coxa × prolongamento do tronco pra baixo"
+   },
+   {
+    "nome": "joelhos a ~75°, canelas em pé e pés chapados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     67,
+     83
+    ],
+    "fonte": "Pinto et al. 2012 (\"seated with both feet on the floor\"); os pés não mexem (regra pés_no_chao da fábrica)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}

@@ -672,6 +672,8 @@ def completa(bon, cena, checagens, t, rotulo, estado):
     posicoes_das_juntas(rig)
     na_ponta = tuple(checagens.get("pe_na_ponta", ()))   # pé de trás do afundo: calcanhar levantado de propósito
     fora = tuple(checagens.get("pe_fora_do_chao", ()))   # pé em cima do banco (remada unilateral): sem regra do chão
+    no_ar = tuple(checagens.get("pe_no_ar", ()))         # pé que MEXE fora do chão (coice na polia, lote 8): sem a regra do pé
+                                                         # escorregando (o pe_fora_do_chao só tira a do chão); sem a chave, nada muda
     apoio_pe = _apoio_dos_pes(na_ponta)
     itens = {}
     for nome, (med, f) in (("juntas", juntas(rig, checagens.get("limites_juntas"))),
@@ -714,6 +716,8 @@ def completa(bon, cena, checagens, t, rotulo, estado):
         tz = {k: ossos[P + apoio_pe[k]] for k in ("LeftFoot", "RightFoot")}
         if checagens.get("pes_no_chao", True):
             for k, p in tz.items():
+                if ("E" if k == "LeftFoot" else "D") in no_ar:
+                    continue
                 d = np.linalg.norm((p - estado["tornozelos"][k])[:2]) * 1000
                 if d > ESCORREGA_MM:
                     r["falhas"].append("pé %s escorregou %.1f mm" % (k, d))
