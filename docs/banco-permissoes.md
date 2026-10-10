@@ -24,6 +24,18 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
 - Função de gatilho não precisa de `EXECUTE` de ninguém.
 - Função `SECURITY DEFINER` sempre com `search_path` fixo (`''` com os nomes completos, ou o schema dela).
 
+## Principal: o plano alimentar do aluno no painel (hml-17, H-38)
+- O painel lê o plano pelas RPCs `planos_do_aluno(p_aluno)`, `plano_alimentar(p_plano)` e `planos_favoritos()` (`SECURITY
+  DEFINER`, do app com o login da pessoa). Elas conferem `eh_master() or pode_ver_aluno(<o aluno do plano>)` — a mesma regra das
+  policies de leitura de planos, refeições e itens — e montam o plano com os alimentos de verdade pela interna
+  `plano_alimentar_json(p_plano)` (sem `EXECUTE` para `anon` e `authenticated`; só roda dentro das 3).
+- Por quê: quem vê o aluno (dono, personal, nutri que herdou o aluno) nem sempre lê o alimento próprio da nutri que montou o plano
+  (o RLS de `alimentos` só deixa a TACO, os próprios e, ao aluno, os da nutri dele). Lido direto das tabelas, o item vinha sem o
+  alimento e o total caía (1.894 → 1.540 kcal no staging). O RLS de `alimentos` e de `medidas_caseiras` **não abriu**: o alimento da
+  nutri sai só junto do plano que a pessoa já vê (a lista e a busca de alimentos seguem iguais).
+- Sem login → erro `sem_login`; quem não vê → `[]` / `null` (a mesma resposta do RLS, sem dizer se existe). As gravações do editor
+  seguem pelas tabelas (RLS). Prova: `python3 e2e/hml17/api.py --schema staging|public`.
+
 ## Treino: quem lê os treinos montados
 - `tb_grupos_treino` e `tb_grupos_exercicios` (`physiq_pode_ler_grupo`): o master; o professor dono; qualquer profissional,
   se o grupo é do catálogo global do master (`professor_id` vazio); e o aluno que recebe o grupo (`tb_grupos_treino_perfis`).
