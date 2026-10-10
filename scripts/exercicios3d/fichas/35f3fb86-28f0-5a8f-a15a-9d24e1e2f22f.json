@@ -1,0 +1,409 @@
+{
+ "uuid": "35f3fb86-28f0-5a8f-a15a-9d24e1e2f22f",
+ "nome": "Supino Fechado com Barra",
+ "cena": "supino_fechado_com_barra",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral médio · tríceps (ênfase) · deltoide anterior",
+ "padrao_movimento": "supino_reto",
+ "equipamento": "barra",
+ "variacao": "pegada fechada",
+ "alvos": [
+  "triceps",
+  "peitoral"
+ ],
+ "auxiliares": [
+  "deltoide"
+ ],
+ "camera": {
+  "az": 25,
+  "el": 28,
+  "dist": 3.5,
+  "alvo": [
+   0.0,
+   0.25,
+   0.7
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.3,
+  "alvo": [
+   0.0,
+   0.1,
+   0.7
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado de costas no banco reto, com a cabeça, as costas e o glúteo apoiados e os pés chapados no chão, segura a barra com as palmas viradas para os pés (pegada pronada) e as mãos na largura dos ombros — bem mais perto uma da outra que no supino comum, sem se encostar —, os punhos firmes e as escápulas para trás e para baixo; começa com os braços quase esticados e a barra em cima dos ombros. Desce a barra devagar, para baixo e um pouco para os pés, com os cotovelos fechados perto das costelas, apontando para os pés, até a barra encostar de leve na parte de baixo do peito (mais embaixo que no supino comum), com os antebraços quase em pé embaixo dela; empurra a barra de volta para cima dos ombros até os cotovelos quase esticarem, sem travar.",
+ "cinesiologia": {
+  "plano": "sagital, sobretudo: extensão do cotovelo com flexão do ombro na subida (o braço sobe rente às costelas, da lateral do tronco para a vertical); cadeia cinética aberta. A barra vai em linha reta de cima das articulações dos ombros até a parte de baixo do esterno (197 mm pros pés da articulação do ombro, 130 mm pros pés da parte mais saliente do peitoral), descendo 450 mm e andando 197 mm pros pés",
+  "articulacoes": "cotovelo (extensão na subida, de ~134° de flexão embaixo até ~10°, sem travar; flexão na descida) e ombro (flexão na subida, extensão na descida; embaixo o braço fica a ~17° do tronco, vista de cima do peito, e o cotovelo ~103 mm abaixo do topo do banco); antebraço em pronação (~80°, a palma pros pés com o cotovelo fechado) e quase em pé embaixo (~10° da vertical); punho firme, um pouco estendido (~14°); escápulas retraídas e deprimidas, paradas no banco; quadril, joelhos e tornozelos parados, com os pés chapados no chão",
+  "agonistas": "tríceps braquial (ExRx, Barbell Close Grip Bench Press: Target \"Triceps Brachii\" — o ExRx põe o exercício no diretório do tríceps; ACE: Target Body Part \"Arms, Chest\") e peitoral maior (o catálogo do app põe o exercício no grupo Peitoral, \"Peitoral médio · tríceps (ênfase) · deltoide anterior\")",
+  "sinergistas": "deltoide anterior, peitoral maior (porções esternal e clavicular) e coracobraquial (ExRx: Synergists \"Deltoid, Anterior\", \"Pectoralis Major, Sternal\", \"Pectoralis Major, Clavicular\", \"Coracobrachialis\"); com a pegada fechada o tríceps trabalha mais e a porção esternal do peitoral menos que no supino comum (Lehman 2005: \"moving from wide to narrower grip widths increased triceps activity and decreased the sternoclavicular portion of the pectoralis major\"; Barnett et al. 1995: a porção clavicular do peitoral e a cabeça longa do tríceps \"more active with a narrow hand spacing\")",
+  "estabilizadores": "bíceps braquial (ExRx: Dynamic Stabilizers \"Biceps Brachii\")",
+  "fases": "descida excêntrica até a barra encostar de leve no peito (ExRx: \"Lower weight to chest with elbows close to body.\") e subida concêntrica até os braços quase esticarem (\"Push barbell back up until arms are straight.\")"
+ },
+ "referencias": [
+  "ExRx.net — Barbell Close Grip Bench Press (https://exrx.net/WeightExercises/Triceps/BBCloseGripBenchPress, lido na cópia do Internet Archive de 22/03/2026; o site responde 403 direto): fica no diretório do TRÍCEPS (\"ExRx.net > Directory > Triceps > Exercise\"); classificação \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Lie on bench and grasp barbell from rack with shoulder width grip.\"; Execution: \"Lower weight to chest with elbows close to body. Push barbell back up until arms are straight. Repeat.\"; Comments: \"Grip can be slightly narrower than shoulder width but not too close. Too close of grip can decrease range of motion, may tend to hyper-adduct wrist joint, and unnecessarily decrease stability of bar. Also see Bench Press Analysis.\"; músculos: Target \"Triceps Brachii\"; Synergists \"Deltoid, Anterior\", \"Pectoralis Major, Sternal\", \"Pectoralis Major, Clavicular\", \"Coracobrachialis\"; Dynamic Stabilizers \"Biceps Brachii\"",
+  "ExRx.net — Bench Press Analyses (https://exrx.net/Kinesiology/BenchPress, cópia do Internet Archive de 01/02/2025): \"Close Grip Bench Press, targeting the triceps, can be performed at a grip around 1 biacromial width or slightly narrower.\"; \"Hand spacing of 2 biacromial width increases shoulder abduction above 75°, whereas hand spacing <1.5 biacromial width maintains shoulder abduction below 45° (Fees 1998).\"; \"In contrast, Barnett (1995) reported that Close Grip Smith Bench Press increases activation of the Triceps and clavicular head of the Pectoralis Major (upper chest). Lahman (2005) found that Close Grip Bench Press increased triceps activity 210% from that experienced during the wide grip bench press.\"; \"In contrast, positioning the upper arms closer to the body in the lower position is thought to increase the load on the Anterior Deltoid, clavicular head of the Pectoralis Major (upper chest), and Triceps while decreasing involvement of the sternal head of the Pectoralis Major.\"; \"The bar travels nearly 25% further with a shoulder width grip (biacromial width) as compared to a grip twice the width.\"; \"Some individuals who lack adequate shoulder flexibility ... may either need to (a) stop just short of the bar making contact onto the chest or (b) tuck their elbows in slightly while bringing the bar slightly lower on the chest.\"; \"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\" (supino comum); \"Coach Rippetoe (2015), author of Starting Strength, suggests a 70º upper arm position with the forearms vertical at the lowest bench press position.\"; \"As the barbell is raise, it is positioned over the shoulders in the path of a J.\"; \"Lie on bench so eye level is just in front of the racked bar.\"; \"With elbows extended, pull barbell so it is balanced directly over shoulder joint before proceeding with the exercise.\"; \"Keep the scapula back and down.\"; \"For general strength training, the lower back forms a natural arch when the head, upper back, and hips are in contact with the bench. Placing the feet apart on the floor creates a more stable base of support.\"; \"Grip the bar with an opposing thumb grip so that the barbell does not slide out of the hand onto the body.\"",
+  "ACE — Close-grip Bench Press (https://www.acefitness.org/resources/everyone/exercise-library/311/close-grip-bench-press/, lido em 10/10/2026; na lista \"Arm Exercises\"): \"Target Body Part: Arms, Chest\"; \"Equipment: Barbell\"; \"Lie face up on a barbell bench, then reach up and grip the bar with the hands directly in line with the shoulders and the elbows pointed towards the feet. Unrack the bar and bring it towards the chest by bending the elbows and keeping them close to the ribs. Push the feet into the floor, and press the hips into the bench as the bar is pushed away from the chest to return to the starting position.\"",
+  "NSCA — Basics of Strength and Conditioning Manual (Sands, Wurth e Hewit), https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (cópia do Internet Archive de 12/02/2022) — o manual não tem o supino fechado; vale o supino com barra comum, mesma técnica fora a largura da pegada. Cap. 3, p. 27: \"The three main handgrip widths are common, wide, and narrow. For most exercises, the hands are placed at approximately shoulder-width\"; \"The athlete should position the body to achieve a five-point body contact position: 1. Head in neutral position on bench or back pad 2. Shoulders and upper back set evenly on bench or back pad 3. Buttocks on bench or seat 4. Right foot flat on floor 5. Left foot flat on floor\"; cap. 4, 4a. Barbell Bench Press, pp. 53–54: \"Grasp the bar evenly with a closed, pronated grip with hands slightly wider than shoulder-width\" (a comum); \"Lift the bar from the hooks and position it directly above shoulders with elbows fully extended\"; \"Lower the bar slowly and under control, allowing it to touch the chest\"; \"Keep wrists rigid and directly above elbows\"; \"The movement of the bar should be down and slightly forward, and up and slightly back\"; \"Wrists should be in line with elbows with thumbs wrapped around the bar throughout the entire lift\"; \"The lower back should remain in contact with the bench throughout the entire lift (do not arch the back or raise the chest to meet the bar)\"; \"Avoid bouncing the bar off the chest\"",
+  "Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. Int J Environ Res Public Health. 2021;18(12):6444 (texto inteiro, PMC8296276): pegada fechada = \"The distance between the arm pits was measured and defined as narrow grip (i.e., distance between index fingers).\"; \"The lift started with fully extended elbows. The barbell was lowered to lightly touch the chest (no bouncing was allowed) before being elevated back to the starting position. The head, shoulders, and buttocks had to be in contact with the bench during the entire lift.\"; \"lower triceps brachii activity was observed using a wide grip compared to the other grip widths\"; \"a closer grip (i.e., <1.5 biacromial width) produces less stress for the acromioclavicular joint, decreases the angles of shoulder abduction, and thereby reduces the risk of injuries\"; \"Barnett and colleagues [] and Mausehund et al. [] demonstrated greater pectoralis major activity (clavicular part) using a narrow grip compared to a wide grip.\"",
+  "Larsen S, Gomo O, van den Tillaar R. A Biomechanical Analysis of Wide, Medium, and Narrow Grip Width Effects on Kinematics, Horizontal Kinetics, and Muscle Activity on the Sticking Region in Recreationally Trained Males During 1-RM Bench Pressing. Front Sports Act Living. 2021;2:637066 (texto inteiro, PMC7862765): \"wide as 1.7 times bi-acromial distance (0.71 ± 0.06 m), narrow as the bi-acromial distance (0.40 ± 0.04 m), and medium as 1.4 times bi-acromial distance (0.56 ± 0.04 m)\"; \"the narrow grip width had a significantly lower shoulder abduction angle than the medium and wide grip widths in all events\"; \"the only difference in muscle activity between the three grip widths was found in the medial triceps brachii, which was lower in the wide grip condition\"",
+  "Lehman GJ. The influence of grip width and forearm pronation/supination on upper-body myoelectric activity during the flat bench press. J Strength Cond Res. 2005;19(3):587-591 — lido só o resumo (PubMed 16095407): \"moving from wide to narrower grip widths increased triceps activity and decreased the sternoclavicular portion of the pectoralis major\"",
+  "Barnett C, Kippers V, Turner P. Effects of Variations of the Bench Press Exercise on the EMG Activity of Five Shoulder Muscles. J Strength Cond Res. 1995;9(4):222-227 — lido só o resumo (página da revista na cópia do Internet Archive de 11/02/2015): \"Six male weight trainers performed presses under four conditions of trunk inclination and two of hand spacing\"; \"The clavicular head of the pectoralis major was more active with a narrow hand spacing.\"; \"The long head of the triceps brachii was more active during the decline and flat bench presses than the other two conditions, and was also more active with a narrow hand spacing.\"",
+  "Green CM, Comfort P. The affect of grip width on bench press performance and risk of injury. Strength Cond J. 2007;29(5):10-14 — NÃO lido (pago): só o que o ExRx, Bench Press Analyses, cita dele (\"The main premise of the paper argues that a bench press grip of greater than 1.5 times the biacromial width places the shoulders in a vulnerable position (Green 2007).\")",
+  "Rippetoe M. The Close-Grip Bench. Starting Strength (https://startingstrength.com/training/the-close-grip-bench, cópia do Internet Archive de 14/06/2021): \"The two most obvious things a narrower grip does to the bench press is 1.) slightly increase the ROM, and 2.) shorten the moment arm against the shoulder joint by decreasing the distance between the glenohumeral joint and the hand.\"; \"In terms of muscle mass, much of the pec contribution is reduced, most of the delt function is retained, and the triceps actually work over a longer ROM.\"",
+  "International Powerlifting Federation — Technical Rules Book (edição de janeiro de 2026, cópia em https://benchpresschampion.com/REGLEMENTS/IPF2026.pdf): barra \"Distance between the collar faces is not to exceed 1.32 m or be less than 1.31 m.\", \"Diameter of the bar is not to exceed 29 mm or be less than 28 mm.\"; anilhas \"The diameter of the largest discs shall not be more than 45 cm.\"; banco \"Width - not less than 29 cm and not exceeding 32cm.\", \"Height - not less than 42 cm and not exceeding 45 cm\" (o e3.banco: 30 cm de largura e topo a 44 cm)",
+  "Catálogo do app (scripts/conteudo/novos_61.json): grupo \"Peitoral\", subgrupo \"Peitoral médio · tríceps (ênfase) · deltoide anterior\", variação \"pegada fechada\" (sem dica no app)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "cabeça apoiada no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Head in neutral position on bench or back pad\"); Saeterbakken et al. 2021 (\"The head, shoulders, and buttocks had to be in contact with the bench during the entire lift\")"
+   },
+   {
+    "nome": "costas (escápulas) apoiadas no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Shoulders and upper back set evenly on bench or back pad\"); Saeterbakken et al. 2021 (idem)"
+   },
+   {
+    "nome": "glúteo apoiado no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Buttocks on bench or seat\"); ACE — Close-grip Bench Press (\"press the hips into the bench\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM. Com a pegada fechada as mãos ficam em cima da borda do peito e o antebraço desce rente às costelas"
+   },
+   {
+    "nome": "as 2 mãos perto uma da outra sem se encostar",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     20,
+     2000
+    ],
+    "fonte": "ExRx — Barbell Close Grip Bench Press (\"Grip can be slightly narrower than shoulder width but not too close\"); pedido do exercício: as 2 mãos não se encostam"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "barra e anilhas longe do banco",
+    "equipamento": "barra",
+    "de": "banco",
+    "t": "todos",
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "pedido do exercício: as anilhas não batem no banco"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços quase esticados em cima, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ExRx — Barbell Close Grip Bench Press (\"Push barbell back up until arms are straight\"); Saeterbakken et al. 2021 (\"The lift started with fully extended elbows\"); sem travar o cotovelo (~10°), como no Supino Reto com Barra"
+   },
+   {
+    "nome": "barra em cima dos ombros em cima",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra, pegada comum), p. 53 (\"position it directly above shoulders with elbows fully extended\"); ExRx — Bench Press Analyses (\"pull barbell so it is balanced directly over shoulder joint\")"
+   },
+   {
+    "nome": "pegada na largura dos ombros (bem mais fechada que no supino comum)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.95,
+     1.2
+    ],
+    "fonte": "ExRx — Barbell Close Grip Bench Press (\"grasp barbell from rack with shoulder width grip\"; \"Grip can be slightly narrower than shoulder width but not too close\"); ExRx — Bench Press Analyses (\"Close Grip Bench Press, targeting the triceps, can be performed at a grip around 1 biacromial width or slightly narrower.\"); ACE — Close-grip Bench Press (\"the hands directly in line with the shoulders\"); Larsen, Gomo e van den Tillaar 2021 (pegada fechada = a distância biacromial, 0,40 ± 0,04 m). A medida daqui divide a distância entre as bases dos dedos médios pela distância entre as articulações dos ombros (391 mm no boneco deitado, menor que a biacromial, de acrômio a acrômio): 1,06 = 41,5 cm entre as mãos, com o vão de cada mão 10% por fora da articulação do ombro"
+   },
+   {
+    "nome": "cotovelos fechados perto do tronco embaixo",
+    "medida": "braco_abertura",
+    "t": 1.0,
+    "graus": [
+     10,
+     35
+    ],
+    "fonte": "ExRx — Barbell Close Grip Bench Press (\"elbows close to body\"); ACE — Close-grip Bench Press (\"the elbows pointed towards the feet\"; \"keeping them close to the ribs\"); ExRx — Bench Press Analyses (\"hand spacing <1.5 biacromial width maintains shoulder abduction below 45° (Fees 1998)\"). No supino comum a faixa é 45–70°"
+   },
+   {
+    "nome": "antebraço em pé embaixo",
+    "medida": "antebraco_vertical",
+    "t": 1.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra, pegada comum), p. 53 (\"Keep wrists rigid and directly above elbows\"); ExRx — Bench Press Analyses (\"forearms vertical at the lowest bench press position\", Rippetoe)"
+   },
+   {
+    "nome": "antebraço quase em pé o movimento todo",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra, pegada comum) (\"Wrists should be in line with elbows\"); folga no meio do caminho, onde a barra anda pros pés e o antebraço deita um pouco (a mesma do Supino Reto com Barra)"
+   },
+   {
+    "nome": "cotovelo bem dobrado embaixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     110,
+     145
+    ],
+    "fonte": "ExRx — Barbell Close Grip Bench Press (\"Lower weight to chest\"); Rippetoe, The Close-Grip Bench (\"slightly increase the ROM\"): com a barra no peito e o antebraço em pé o cotovelo dobra ~134°"
+   },
+   {
+    "nome": "pegada pronada (palmas pros pés, não neutra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra, pegada comum), p. 53 (\"Grasp the bar evenly with a closed, pronated grip\"); ExRx — Barbell Close Grip Bench Press (\"Lie on bench and grasp barbell\") — 0 = palma pros pés (ou pra cabeça), 90 = palmas uma pra outra (neutra)"
+   },
+   {
+    "nome": "palma de frente pros pés (nem pro teto nem pro peito)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     45,
+     120
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra, pegada comum), p. 53 (\"closed, pronated grip\"; \"Keep wrists rigid\"): deitado, a frente do tronco é o teto; 90 = palma pros pés. A mão acompanha o antebraço com o punho firme e, no meio do caminho, o antebraço deita pra cabeça (a barra vai em linha reta de cima dos ombros até a parte de baixo do peito, \"down and slightly forward\"): a palma inclina pro teto até ~50°; abaixo de 45° ela já estaria virando pro teto"
+   },
+   {
+    "nome": "punho firme, quase reto, sem dobrar pra trás",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra, pegada comum), p. 53 (\"Keep wrists rigid and directly above elbows\"; \"Wrists should be in line with elbows with thumbs wrapped around the bar throughout the entire lift\")"
+   },
+   {
+    "nome": "punho sem dobrar demais pro lado do dedo mínimo",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -20,
+     15
+    ],
+    "fonte": "ExRx — Barbell Close Grip Bench Press (\"Too close of grip ... may tend to hyper-adduct wrist joint\" — a adução do punho é o desvio pro lado do dedo mínimo); amplitude normal do punho, desvio radial 0–20° e ulnar 0–30° (AAOS, Norkin & White — a fonte do lib/limites.py; tecnica3d.punho_desvio: + = pro lado do polegar)"
+   },
+   {
+    "nome": "tronco deitado no banco reto",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "ExRx — Barbell Close Grip Bench Press (\"Lie on bench\"); ACE — Close-grip Bench Press (\"Lie face up on a barbell bench\")"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra, pegada comum), p. 53 (\"do not arch the back or raise the chest to meet the bar\"); ExRx — Bench Press Analyses (\"For general strength training, the lower back forms a natural arch when the head, upper back, and hips are in contact with the bench.\")"
+   },
+   {
+    "nome": "quadril quase esticado (coxas na linha do banco)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "deitado com os pés no chão a coxa fica quase na linha do tronco (medida da fábrica: coxa × prolongamento do tronco pra baixo)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     75,
+     100
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Right foot flat on floor\", \"Left foot flat on floor\"); ACE — Close-grip Bench Press (\"Push the feet into the floor\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e pra baixo, paradas no banco",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"Keep the scapula back and down.\")"
+   },
+   {
+    "nome": "cabeça apoiada, na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Head in neutral position on bench or back pad\"); deitado, o pescoço estende ~16° até a cabeça encostar no banco (dt.deitar)"
+   }
+  ]
+ }
+}
