@@ -421,3 +421,40 @@ describe("a guarda: o segredo único de antes (ESPELHO_SEGREDO) não aparece em 
     expect(quemCita(NOME_DO_LEGADO, TODOS)).toEqual([]);
   });
 });
+
+// ───────────────────────── o banco (S8): o espelho_disparar() que vale lê só o Vault da fila ─────────────────────────
+
+/** A versão que vale de uma função do banco principal: a da ÚLTIMA migração que a define (as migrações rodam em ordem de nome). */
+function ultimaDefinicao(funcao: string): { arquivo: string; corpo: string } {
+  const pasta = "supabase-principal/migrations";
+  const marca = `create or replace function {schema}.${funcao}(`;
+  const arquivos = readdirSync(resolve(raiz, pasta)).filter((a) => a.endsWith(".sql")).sort().reverse();
+  for (const a of arquivos) {
+    const t = ler(`${pasta}/${a}`);
+    const i = t.lastIndexOf(marca);
+    if (i < 0) continue;
+    const m = /\$[a-z_]*\$/.exec(t.slice(i));
+    if (!m) throw new Error(`${funcao}: corpo sem delimitador em ${a}`);
+    const ini = i + m.index;
+    return { arquivo: a, corpo: t.slice(i, t.indexOf(m[0], ini + m[0].length) + m[0].length) };
+  }
+  throw new Error(`${funcao} não definida`);
+}
+
+describe("o banco (S8): a versão que vale do {schema}.espelho_disparar() lê só o Vault da fila, sem a reserva do nome antigo", () => {
+  it("1 leitura do Vault, a do physiq_espelho_fila_segredo; SECURITY DEFINER com search_path vazio", () => {
+    const { arquivo, corpo } = ultimaDefinicao("espelho_disparar");
+    expect(arquivo >= "20261010040000").toBe(true); // a da F7 da hml-16c (ou uma mais nova)
+    const vaults = [...corpo.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(vaults).toEqual(["physiq_espelho_fila_segredo"]);
+    expect(corpo.match(/vault\./g)).toHaveLength(1);
+    expect(corpo).toMatch(/security definer set search_path = '' as \$\$/);
+  });
+
+  it("controle negativo: o corpo de antes (a 20261010010000, com a reserva) não passaria", () => {
+    const antes = ler("supabase-principal/migrations/20261010010000_hml16c_segredo_fila.sql");
+    const vaults = [...antes.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(vaults).toHaveLength(2);
+    expect(vaults[0]).toBe("physiq_espelho_fila_segredo");
+  });
+});
