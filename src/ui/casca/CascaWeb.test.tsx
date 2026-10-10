@@ -9,7 +9,7 @@ import { animarPeloEstado } from "@/test/animacao";
 // na tela até terminar (shell.py: 1ª mudança 114–116 ms). O "depois da pintura" (rAF + setTimeout) tem o teste dele.
 
 const h = vi.hoisted(() => ({ pendentes: [] as (() => void)[] }));
-vi.mock("./depoisDaPintura", () => ({ depoisDaPintura: (fn: () => void) => h.pendentes.push(fn) }));
+vi.mock("@/ui/premium/depoisDaPintura", () => ({ depoisDaPintura: (fn: () => void) => h.pendentes.push(fn) }));
 vi.mock("@/ui/premium/useAvisos", () => ({ useAvisos: () => ({ avisos: [], naoLidos: 0, marcarLidos: () => {}, carregando: false }) }));
 
 // o Popper do Radix (menu do usuário) mede com ResizeObserver, que o jsdom não tem

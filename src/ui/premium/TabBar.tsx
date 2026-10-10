@@ -1,6 +1,8 @@
+import { useEffect, useState, type MouseEvent } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { depoisDaPintura } from "./depoisDaPintura";
 
 export interface ItemTabBar {
   id: string;
@@ -20,6 +22,31 @@ export interface ItemTabBar {
  * ícone. Rótulo sempre inteiro (sem reticências): a largura de cada aba é dividida por igual.
  */
 export function TabBar({ itens, className, rotulo = "Navegação principal" }: { itens: ItemTabBar[]; className?: string; rotulo?: string }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // hml-18a (H-40, E): o toque numa aba marca a aba NA HORA (a 1ª mudança na tela) e a página nova vem depois da pintura — com
+  // useTransitions={false}, o render da página nova ia no mesmo toque e a tela ficava parada até ele acabar (~100 ms nas abas mais
+  // pesadas, no notebook). A marca "pendente" vale até a página mudar (e, por garantia, 1,5 s).
+  const [pendente, setPendente] = useState<string | null>(null);
+  const [caminhoVisto, setCaminhoVisto] = useState(pathname);
+  if (pathname !== caminhoVisto) {
+    setCaminhoVisto(pathname);
+    setPendente(null);
+  }
+  useEffect(() => {
+    if (!pendente) return;
+    const t = window.setTimeout(() => setPendente(null), 1500);
+    return () => window.clearTimeout(t);
+  }, [pendente]);
+  const tocar = (e: MouseEvent<HTMLAnchorElement>, it: ItemTabBar) => {
+    it.aoTocar?.();
+    // a aba aberta, Ctrl/⌘/Shift/Alt (nova aba/janela) ou outro botão: o Link segue sozinho
+    if (!it.para || it.ativo || e.defaultPrevented || e.button !== 0 || e.metaKey || e.altKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    setPendente(it.id);
+    const para = it.para;
+    depoisDaPintura(() => navigate(para));
+  };
   return (
     <nav
       aria-label={rotulo}
@@ -31,12 +58,14 @@ export function TabBar({ itens, className, rotulo = "Navegação principal" }: {
       style={{ bottom: "calc(26px + env(safe-area-inset-bottom, 0px))" }}
     >
       {itens.map((it) => {
+        // a marca visual: a aba tocada (pendente) já marcada; o aria-current segue a página aberta de verdade
+        const marcado = pendente ? it.id === pendente : !!it.ativo;
         const conteudo = (
           <>
             <span
               className={cn(
                 "relative flex h-[30px] w-[46px] items-center justify-center rounded-[12px] border border-transparent transition-colors",
-                it.ativo && "border-linha-2 bg-superficie-2",
+                marcado && "border-linha-2 bg-superficie-2",
               )}
             >
               <it.icone aria-hidden className="h-[21px] w-[21px]" strokeWidth={1.75} />
@@ -57,10 +86,18 @@ export function TabBar({ itens, className, rotulo = "Navegação principal" }: {
         // active:scale-* usa a propriedade `scale` (não `transform`): é ela que entra na transição
         const classe = cn(
           "flex min-w-0 flex-1 flex-col items-center gap-1 text-[10.5px] font-semibold transition-[color,scale] duration-150 active:scale-[0.94]",
-          it.ativo ? "text-texto" : "text-texto-3 hover:text-texto-2",
+          marcado ? "text-texto" : "text-texto-3 hover:text-texto-2",
         );
         return it.para ? (
-          <Link key={it.id} to={it.para} data-aba={it.id} aria-current={it.ativo ? "page" : undefined} className={classe} onClick={it.aoTocar}>
+          <Link
+            key={it.id}
+            to={it.para}
+            data-aba={it.id}
+            data-pendente={pendente === it.id ? "" : undefined}
+            aria-current={it.ativo ? "page" : undefined}
+            className={classe}
+            onClick={(e) => tocar(e, it)}
+          >
             {conteudo}
           </Link>
         ) : (
