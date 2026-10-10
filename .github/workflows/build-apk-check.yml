@@ -35,6 +35,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # hml-16c (H-45): a chave real NUNCA chega no check da branch. As chaves moram só nos environments ("assinatura", só da
+      # main; "assinatura-aparelho", com a aprovação do dono). Num job sem environment, o secrets.X só enxerga o repo: vazio = ok;
+      # com valor = alguém pôs a chave de volta no repo → falha (o valor nunca aparece: o GitHub mascara e o passo não imprime).
+      - name: Guarda — nenhuma chave real no check da branch (H-45)
+        env:
+          CHAVE_APK: ${{ secrets.KEYSTORE_BASE64 }}
+          CHAVE_UPLOAD: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          PAT_POWERSYNC: ${{ secrets.POWERSYNC_PAT }}
+        run: |
+          if [ -n "$CHAVE_APK" ] || [ -n "$CHAVE_UPLOAD" ] || [ -n "$PAT_POWERSYNC" ]; then
+            echo "::error::chave de assinatura ou PAT do PowerSync visível no check da branch (está no repo, fora do environment): tire do repo"
+            exit 1
+          fi
+          echo "ok: nenhuma chave real no check da branch"
+
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -180,6 +195,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # hml-16c (H-45): a chave real NUNCA chega no check da branch. As chaves moram só nos environments ("assinatura", só da
+      # main; "assinatura-aparelho", com a aprovação do dono). Num job sem environment, o secrets.X só enxerga o repo: vazio = ok;
+      # com valor = alguém pôs a chave de volta no repo → falha (o valor nunca aparece: o GitHub mascara e o passo não imprime).
+      - name: Guarda — nenhuma chave real no check da branch (H-45)
+        env:
+          CHAVE_APK: ${{ secrets.KEYSTORE_BASE64 }}
+          CHAVE_UPLOAD: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          PAT_POWERSYNC: ${{ secrets.POWERSYNC_PAT }}
+        run: |
+          if [ -n "$CHAVE_APK" ] || [ -n "$CHAVE_UPLOAD" ] || [ -n "$PAT_POWERSYNC" ]; then
+            echo "::error::chave de assinatura ou PAT do PowerSync visível no check da branch (está no repo, fora do environment): tire do repo"
+            exit 1
+          fi
+          echo "ok: nenhuma chave real no check da branch"
+
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
