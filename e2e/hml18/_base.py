@@ -17,7 +17,9 @@ produção, o alvo dos pedidos e o SQL só leitura) e acrescenta:
               token vale 1 h; perto de vencer, o refresh — que não é login); no fim de cada rodada a sessão MAIS NOVA do navegador
               volta para o arquivo (o app renova o refresh token). O logout dela é o --sair-master (no fim do contrato)
 Bases: local (o vite preview do build de STAGING em http://localhost:8080 — a porta que as funções aceitam) · staging · prod (SÓ
-LEITURA: a Guarda no navegador; as contas de teste de lá; nada de master nem de massa).
+LEITURA: a Guarda no navegador; as contas de teste de lá; nada de master nem de massa) · localprod (hml-18b, F2: o vite preview de um
+build LOCAL com a configuração de PRODUÇÃO — dist-prod — em http://localhost:8080; vale como a produção: as contas de teste de lá e a
+Guarda, SÓ LEITURA).
 Sem segredo nem dado pessoal na saída: só contagem, status, px, ms, classe e nome de atributo.
 """
 from __future__ import annotations
@@ -48,7 +50,10 @@ PRINTS = SCRATCH / "prints" / "hml18"
 C.SAIDA = SAIDA
 TMP = Path(os.environ.get("TMPDIR") or (SCRATCH / "hml" / "hml18" / "tmp"))
 
-BASES = {"local": "http://localhost:8080", "staging": "https://physiqcalc-staging.vercel.app", "prod": "https://physiqcalc.com.br"}
+BASES = {"local": "http://localhost:8080", "staging": "https://physiqcalc-staging.vercel.app", "prod": "https://physiqcalc.com.br",
+         "localprod": "http://localhost:8080"}
+# hml-18b (F2): o build local com a configuração de produção fala com o banco de PRODUÇÃO — é produção para as contas e para a Guarda
+BASES_DE_PRODUCAO = {"prod", "localprod"}
 HOSTS_DE_PRODUCAO = {"physiqcalc.com.br", "www.physiqcalc.com.br"}
 API_HOSTS = (B17.API_P_HOST, B17.API_T_HOST)
 LARGURAS = {390: 844, 360: 780}
@@ -144,9 +149,9 @@ def resolver_base(nome: str) -> tuple[str, str, bool]:
     """(url, prefixo dos prints, produção?)"""
     url = BASES.get(nome, nome).rstrip("/")
     host = urlparse(url).hostname or ""
-    producao = host in HOSTS_DE_PRODUCAO
-    if nome == "prod" and not producao:
+    if nome == "prod" and host not in HOSTS_DE_PRODUCAO:
         raise SystemExit("--base prod precisa ser a produção")
+    producao = host in HOSTS_DE_PRODUCAO or nome in BASES_DE_PRODUCAO
     prefixo = nome if nome in BASES else ("local" if host in ("localhost", "127.0.0.1") else "url")
     B17.usar_schema("public" if producao else "staging")
     return url, prefixo, producao
