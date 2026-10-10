@@ -19,20 +19,23 @@ Finalidade             emissor (manda o valor)                          receptor
   S8 espelho_fila      banco principal: {public,staging}.espelho_disparar() (pg_net) lê o Vault physiq_espelho_fila_segredo;
                        cópia local dos E2E ~/.physiq-segredo-espelho-fila (600)  →  principal: espelho-enviar
 
-Subcomandos, na ordem de uma troca (gerar → aceitar → publicar o receptor → trocar → publicar o emissor → conferir):
+A troca de um segredo, em ordem — sem reserva, o canal fica de pé em todos os passos porque a lista do receptor aceita o que
+o emissor manda (o anterior até o fim, o atual desde o começo):
+  gerar → aceitar (a lista com 2 hashes: o atual e o anterior) → publicar o receptor → trocar → publicar o emissor →
+  conferir → aceitar --so-atual (o anterior deixa de valer) → publicar o receptor.
+
+Subcomandos:
   gerar        valor novo (64 caracteres) → cofre (o atual vira o extra "anterior") → lido de volta igual; no S8 também a cópia
                local. Trava: o emissor já manda um SEGREDO_X que não é o atual do cofre (gerar de novo perderia o valor em uso).
   aceitar      receptor: SEGREDO_X_ACEITOS = sha256(atual)[,sha256(anterior)] → confere o digest. --so-atual: só o atual (o fim
                da troca). Trava: a lista nova deixaria de fora o que o emissor manda hoje.
   trocar       emissor: SEGREDO_X = atual (S8: o Vault physiq_espelho_fila_segredo) → confere. Antes: a lista do receptor tem de
                aceitar o atual; senão para sem gravar (esta trava não tem --forcar).
-  tirar        emissor: apaga o SEGREDO_X (S8: o Vault novo) → o emissor volta ao legado. Trava: o legado já saiu (o emissor
-               pararia).
-  tirar-lista  receptor: apaga a SEGREDO_X_ACEITOS. Trava: o emissor ainda manda o SEGREDO_X (o receptor passaria a recusar).
+  tirar-lista  receptor: apaga a SEGREDO_X_ACEITOS → o receptor recusa tudo (o canal para). Trava: o emissor ainda manda o
+               SEGREDO_X (S8: o Vault existe).
   conferir     o emissor manda o atual? a lista do receptor aceita o atual? Sai 1 se algo não bate.
-Legado (vale até o F6 da hml-16c; sai do código no F7): ESPELHO_SEGREDO nas funções dos 2 projetos e o Vault
-physiq_espelho_segredo. Depois de mudar um segredo das funções, publicar de novo quem o lê (o segredo é lido no boot do
-isolate): scripts/deploy_function.sh <ref> <pasta> <slug> <verify_jwt>.
+Depois de mudar um segredo das funções, publicar de novo quem o lê (o segredo é lido no boot do isolate):
+scripts/deploy_function.sh <ref> <pasta> <slug> <verify_jwt>.
 
 Credenciais: PAT em ~/.pc-pat (Management API; exige User-Agent). Cofre pelo MCP local (JSON-RPC por stdio): PHYSIQ_COFRE_NODE
 (padrão ~/.local/node/bin/node) e PHYSIQ_COFRE_MCP (padrão ~/projetos/b-code-segredos/mcp/dist/index.mjs).
@@ -59,14 +62,12 @@ API = "https://api.supabase.com"
 UA = "physiq-unificado/1.0 (segredos/servidor)"
 PROJETO_COFRE = "PhysiqCalc"
 EXTRA_ANTERIOR = "anterior"
-LEGADO = "ESPELHO_SEGREDO"  # o segredo único de antes, nas funções dos 2 projetos (hml-16c: sai no F7)
-VAULT_LEGADO = "physiq_espelho_segredo"  # o mesmo, no Vault do principal: a reserva do espelho_disparar() até o F7
 FORMATO = re.compile(r"[A-Za-z0-9_-]{32,}")  # o que o gerar cria (token_urlsafe, 64): ≥ 32 como o _shared/segredo-servidor.ts
 HEX64 = re.compile(r"[0-9a-f]{64}")
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 NOME_VAULT = re.compile(r"[a-z_]+")
 TEMPO_COFRE = 90  # segundos por chamada ao MCP do cofre
-SUBCOMANDOS = ("gerar", "aceitar", "trocar", "tirar", "tirar-lista", "conferir")
+SUBCOMANDOS = ("gerar", "aceitar", "trocar", "tirar-lista", "conferir")
 DESCRICAO_VAULT = "Physiq hml-16c (S8): segredo da fila do espelho; o pg_net manda na espelho-enviar (scripts/segredos/servidor.py)"
 TREZE_DO_TREINO = (
     "admin-avaliacoes", "admin-delete-user", "admin-list-users", "admin-semana-treinos", "admin-update-user", "delete-my-account",
@@ -81,7 +82,7 @@ class Finalidade:
     segredo: str  # o nome do segredo do EMISSOR (no S8, o nome lógico: o emissor é o Vault); a lista é <segredo>_ACEITOS
     emissor: str  # "principal" | "treino"
     receptor: str
-    manda: tuple[str, ...]  # funções que mandam (publicar de novo depois do trocar/tirar)
+    manda: tuple[str, ...]  # funções que mandam (publicar de novo depois do trocar)
     confere: tuple[str, ...]  # funções que conferem (publicar de novo depois do aceitar/tirar-lista)
     vault: str | None = None  # S8: o emissor é o banco, pelo Vault do principal
     arquivo: str | None = None  # S8: a cópia local dos E2E (em ~)
@@ -212,10 +213,6 @@ def sql_vault_atualizar(id_: str, valor: str) -> str:
     if not UUID.fullmatch(id_) or not FORMATO.fullmatch(valor):
         raise ValueError("id ou valor fora do formato")
     return f"select vault.update_secret({_lit(id_)}::uuid, {_lit(valor)})"
-
-
-def sql_vault_apagar(nome: str) -> str:
-    return f"delete from vault.secrets where name = '{_vault_nome(nome)}'"
 
 
 # ───────────────────────── nunca mostrar valor ─────────────────────────
@@ -403,9 +400,6 @@ class Remoto:
         else:
             self.sql(sql_vault_criar(valor, nome))
 
-    def vault_apagar(self, nome: str) -> None:
-        self.sql(sql_vault_apagar(nome))
-
     # ── cofre ──
     def _mcp(self) -> _McpCofre:
         if self._cofre is None:
@@ -456,10 +450,6 @@ def emissor_txt(f: Finalidade) -> str:
     return f"{f.segredo} nas funções do {onde(f.emissor)}"
 
 
-def legado_txt(f: Finalidade) -> str:
-    return f"Vault {VAULT_LEGADO}" if f.vault else f"{LEGADO} nas funções do {ROTULOS[f.emissor]}"
-
-
 def nota_do_item(f: Finalidade) -> str:
     return (f"hml-16c (H-51) {f.numero} {f.chave}: quem manda = {emissor_txt(f)}; quem confere = {', '.join(f.confere)} "
             f"({ROTULOS[f.receptor]}), pela lista {f.lista} (só o sha256). Gerado e trocado por scripts/segredos/servidor.py; "
@@ -486,7 +476,7 @@ def do_cofre(f: Finalidade, r: Remoto) -> tuple[str, str | None]:
 
 
 def emissor_manda(f: Finalidade, r: Remoto, hashes: list[str]) -> tuple[bool, str | None]:
-    """O que o emissor manda HOJE: (tem o segredo novo?, qual dos hashes ele manda — None se nenhum)."""
+    """O que o emissor manda HOJE: (tem o SEGREDO_X — no S8, o Vault?, qual dos hashes ele manda — None se nenhum)."""
     if f.vault:
         existe, bate, _ = r.vault_estado(f.vault, hashes)
         return existe, next((h for h, b in zip(hashes, bate) if b), None)
@@ -595,32 +585,8 @@ def trocar(f: Finalidade, r: Remoto, a: argparse.Namespace) -> int:
         certo = ok(d == h, f"emissor {onde(f.emissor)}: {f.segredo} = atual (sha8 {sha8(atual)}, {len(atual)} caracteres)"
                            + (" · digest confere" if d == h else " · o digest NÃO confere"))
         depois(f"publicar de novo o emissor (isolates novos): {publicar(f.emissor, f.manda)}")
-    depois(f"volta:  python3 scripts/segredos/servidor.py {f.chave} tirar  (o emissor volta ao legado enquanto ele existir)")
-    return 0 if certo else 1
-
-
-def tirar(f: Finalidade, r: Remoto, a: argparse.Namespace) -> int:
-    seg = None if f.vault else r.segredos(f.emissor)
-    legado = r.vault_existe(VAULT_LEGADO) if f.vault else LEGADO in (seg or {})
-    if not legado:
-        if not a.forcar:
-            ok(False, f"o legado ({legado_txt(f)}) já não existe: sem o segredo novo o emissor para (sem configuração). "
-                      "--forcar apaga mesmo assim. Nada mudou.")
-            return 1
-        nota(f"sem o legado ({legado_txt(f)}): o emissor vai parar (--forcar)")
-    if f.vault:
-        if not r.vault_existe(f.vault):
-            ok(True, f"o Vault {f.vault} já não existe: o banco manda o legado ({VAULT_LEGADO})")
-            return 0
-        r.vault_apagar(f.vault)
-        certo = ok(not r.vault_existe(f.vault), f"emissor: Vault {f.vault} apagado → o espelho_disparar() volta ao {VAULT_LEGADO}")
-        return 0 if certo else 1
-    if f.segredo not in (seg or {}):
-        ok(True, f"{f.segredo} já não existe no {onde(f.emissor)}: o emissor manda o legado")
-        return 0
-    r.apagar_segredos(f.emissor, [f.segredo])
-    certo = ok(f.segredo not in r.segredos(f.emissor), f"emissor {onde(f.emissor)}: {f.segredo} apagado → volta ao {LEGADO}")
-    depois(f"publicar de novo o emissor (isolates novos): {publicar(f.emissor, f.manda)}")
+    depois(f"depois:  python3 scripts/segredos/servidor.py {f.chave} conferir  e, no fim da troca,  aceitar --so-atual  e "
+           "publicar o receptor (o anterior deixa de valer)")
     return 0 if certo else 1
 
 
@@ -628,15 +594,15 @@ def tirar_lista(f: Finalidade, r: Remoto, a: argparse.Namespace) -> int:
     manda = r.vault_existe(f.vault) if f.vault else f.segredo in r.segredos(f.emissor)
     if manda:
         if not a.forcar:
-            ok(False, f"o emissor ainda manda o segredo novo ({emissor_txt(f)}): sem a lista o receptor passa a recusá-lo. "
-                      "Rode  tirar  antes; --forcar passa. Nada mudou.")
+            ok(False, f"o emissor ainda manda o segredo ({emissor_txt(f)}): sem a lista o receptor passa a recusá-lo e o canal "
+                      "para. --forcar passa. Nada mudou.")
             return 1
-        nota("o emissor ainda manda o segredo novo: o receptor vai recusá-lo (--forcar)")
+        nota("o emissor ainda manda o segredo: o receptor vai recusá-lo e o canal para (--forcar)")
     if f.lista not in r.segredos(f.receptor):
         ok(True, f"{f.lista} já não existe no {onde(f.receptor)}")
         return 0
     r.apagar_segredos(f.receptor, [f.lista])
-    certo = ok(f.lista not in r.segredos(f.receptor), f"receptor {onde(f.receptor)}: {f.lista} apagada → aceita só o legado")
+    certo = ok(f.lista not in r.segredos(f.receptor), f"receptor {onde(f.receptor)}: {f.lista} apagada → o receptor recusa tudo")
     depois(f"publicar de novo o receptor (isolates novos): {publicar(f.receptor, f.confere)}")
     return 0 if certo else 1
 
@@ -650,8 +616,8 @@ def conferir(f: Finalidade, r: Remoto, a: argparse.Namespace) -> int:
         existe, bate, tam = r.vault_estado(f.vault, [h])
         e_ok = ok(existe and bate[0] and tam == len(atual), f"emissor: Vault {f.vault} ({onde(f.emissor)}) "
                   + (f"igual ao atual, tamanho {tam}" if existe and bate[0] else
-                     ("não existe (o banco manda o legado)" if not existe else f"DIFERENTE do atual, tamanho {tam}")))
-        nota(f"legado: Vault {VAULT_LEGADO} {'existe' if r.vault_existe(VAULT_LEGADO) else 'não existe'}")
+                     ("não existe (o banco não chama a espelho-enviar: a fila espera)" if not existe
+                      else f"DIFERENTE do atual, tamanho {tam}")))
         if f.arquivo:
             nota(f"cópia local ~/{f.arquivo} (E2E): {estado_arquivo(Path.home() / f.arquivo, atual)}")
     else:
@@ -660,20 +626,19 @@ def conferir(f: Finalidade, r: Remoto, a: argparse.Namespace) -> int:
         if d == h:
             estado = "= sha256(atual)"
         elif d is None:
-            estado = "não existe (o emissor manda o legado)"
+            estado = "não existe (o emissor não manda nada: sem configuração)"
         else:
             estado = f"digest {d[:8]} ≠ sha256(atual) {h[:8]}" + (" (é o anterior)" if anterior and d == sha256_hex(anterior) else "")
         e_ok = ok(d == h, f"emissor {onde(f.emissor)}: {f.segredo} {estado}")
-        nota(f"legado: {LEGADO} no {ROTULOS[f.emissor]} {'existe' if LEGADO in seg else 'não existe'}")
     d = r.segredos(f.receptor).get(f.lista)
     formas = formas_da_lista(atual, anterior)
     r_ok = ok(d in formas, f"receptor {onde(f.receptor)}: {f.lista} "
               + (f"aceita o atual ({formas[d]})" if d in formas else
-                 ("não existe (o receptor aceita só o legado)" if d is None else f"digest {d[:8]} não é de uma lista com o atual")))
+                 ("não existe (o receptor recusa tudo)" if d is None else f"digest {d[:8]} não é de uma lista com o atual")))
     return 0 if e_ok and r_ok else 1
 
 
-ACOES = {"gerar": gerar, "aceitar": aceitar, "trocar": trocar, "tirar": tirar, "tirar-lista": tirar_lista, "conferir": conferir}
+ACOES = {"gerar": gerar, "aceitar": aceitar, "trocar": trocar, "tirar-lista": tirar_lista, "conferir": conferir}
 
 
 # ───────────────────────── --dry-run: só o plano ─────────────────────────
@@ -738,33 +703,25 @@ def plano(f: Finalidade, a: argparse.Namespace) -> list[str]:
                 f"GET /v1/projects/{ee}/secrets → digest de {f.segredo} = sha256(atual)",
                 f"→ depois: publicar de novo {', '.join(f.manda)} ({ROTULOS[f.emissor]})",
             ]
-        passos.append(f"volta: servidor.py {f.chave} tirar")
-    elif s == "tirar":
-        passos = [f"trava: o legado ({legado_txt(f)}) tem de existir — sem ele o emissor para{trava}"]
-        if f.vault:
-            passos += [f"SQL no principal: delete from vault.secrets where name = '{f.vault}' → conferir que saiu",
-                       f"→ o espelho_disparar() volta a ler o {VAULT_LEGADO}"]
-        else:
-            passos += [f"DELETE /v1/projects/{ee}/secrets [\"{f.segredo}\"] → GET: {f.segredo} não existe mais",
-                       f"→ depois: publicar de novo {', '.join(f.manda)} ({ROTULOS[f.emissor]}): volta ao {LEGADO}"]
+        passos.append(f"→ depois: servidor.py {f.chave} conferir → aceitar --so-atual → publicar de novo {', '.join(f.confere)} "
+                      f"({ROTULOS[f.receptor]})")
     elif s == "tirar-lista":
         manda = f"Vault {f.vault} existe" if f.vault else f"{f.segredo} existe no {ROTULOS[f.emissor]}"
         passos = [
-            f"trava: o emissor não pode estar mandando o segredo novo ({manda} = recusa){trava}",
+            f"trava: o emissor não pode estar mandando o segredo ({manda} = recusa){trava}",
             f"DELETE /v1/projects/{re_}/secrets [\"{f.lista}\"] → GET: {f.lista} não existe mais",
-            f"→ depois: publicar de novo {', '.join(f.confere)} ({ROTULOS[f.receptor]}): aceita só o legado",
+            f"→ depois: publicar de novo {', '.join(f.confere)} ({ROTULOS[f.receptor]}): recusa tudo (o canal para)",
         ]
     else:  # conferir
         passos = [
             ler + " → mostra os sha8",
-            ("emissor: " + get_e + " = sha256(atual) + o tamanho" if f.vault else f"emissor: {get_e} = sha256(atual)")
-            + (f"; o legado {legado_txt(f)} existe?"),
+            ("emissor: " + get_e + " = sha256(atual) + o tamanho" if f.vault else f"emissor: {get_e} = sha256(atual)"),
             f"receptor: GET /v1/projects/{re_}/secrets → digest de {f.lista} = o de \"h(atual)\" ou \"h(atual),h(anterior)\"",
         ]
         if f.arquivo:
             passos.append(f"cópia local ~/{f.arquivo}: igual ao cofre? (só aviso; não conta na saída)")
         passos.append("sai 1 se o emissor ou o receptor não bate")
-    linhas += [f"  {i}. {p}" if not p.startswith(("→", "volta")) else f"     {p}" for i, p in enumerate(passos, start=1)]
+    linhas += [f"  {i}. {p}" if not p.startswith("→") else f"     {p}" for i, p in enumerate(passos, start=1)]
     return linhas
 
 
@@ -777,7 +734,7 @@ def argumentos(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("subcomando", choices=SUBCOMANDOS, help="o passo (lista acima)")
     ap.add_argument("--dry-run", action="store_true", help="só o plano: nada remoto (nem leitura) e nada gravado")
     ap.add_argument("--so-atual", action="store_true", help="aceitar: a lista só com o atual (o fim de uma troca)")
-    ap.add_argument("--forcar", action="store_true", help="passa a trava do gerar, aceitar, tirar e tirar-lista (nunca a do trocar)")
+    ap.add_argument("--forcar", action="store_true", help="passa a trava do gerar, aceitar e tirar-lista (nunca a do trocar)")
     a = ap.parse_args(argv)
     if a.so_atual and a.subcomando != "aceitar":
         ap.error("--so-atual só vale no aceitar")
