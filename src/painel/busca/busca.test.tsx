@@ -40,7 +40,7 @@ function montar(el: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/painel"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/painel"]}>
         <Routes>
           <Route path="*" element={<><Command shouldFilter={false}><Command.List>{el}</Command.List></Command><Onde /></>} />
         </Routes>

@@ -66,7 +66,7 @@ const COM_NUMERO = { nome: "Rafael Lima", dados_profissionais: { whatsapp_e164: 
 
 function montar(el: ReactNode = <Mensagens />) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={qc}><MemoryRouter useTransitions={false}>{el}</MemoryRouter></QueryClientProvider>);
 }
 
 beforeEach(() => {

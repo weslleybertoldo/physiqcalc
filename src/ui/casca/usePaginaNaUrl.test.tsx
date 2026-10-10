@@ -18,7 +18,7 @@ function Sonda({ opcoes }: { opcoes?: Opcoes }) {
 
 const montar = (endereco: string, opcoes?: Opcoes) => {
   const tela = (o?: Opcoes) => (
-    <MemoryRouter initialEntries={[endereco]}>
+    <MemoryRouter useTransitions={false} initialEntries={[endereco]}>
       <Sonda opcoes={o} />
     </MemoryRouter>
   );
@@ -103,7 +103,7 @@ describe("usePaginaNaUrl (hml-14b, D13)", () => {
       );
     }
     const tela = (q: string) => (
-      <MemoryRouter initialEntries={["/x?q=a&pagina=3"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/x?q=a&pagina=3"]}>
         <Tela q={q} />
       </MemoryRouter>
     );

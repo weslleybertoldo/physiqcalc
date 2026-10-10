@@ -138,7 +138,7 @@ function TelaLancamentos() {
 
 function montar(el: React.ReactNode, endereco = "/") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}><MemoryRouter initialEntries={[endereco]}>{el}<Endereco /></MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={qc}><MemoryRouter useTransitions={false} initialEntries={[endereco]}>{el}<Endereco /></MemoryRouter></QueryClientProvider>);
 }
 const atributo = (sel: string, nome: string) => document.querySelector(sel)?.getAttribute(nome) ?? null;
 const proxima = (lista: string) => fireEvent.click(document.querySelector(`[data-paginacao="${lista}"] [data-pagina-proxima]`)!);

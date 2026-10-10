@@ -64,7 +64,7 @@ function montar(reduzido = false, rota = "/perfil") {
   );
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[rota]}>{tela}</MemoryRouter>
+      <MemoryRouter useTransitions={false} initialEntries={[rota]}>{tela}</MemoryRouter>
     </QueryClientProvider>,
   );
 }

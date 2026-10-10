@@ -33,7 +33,7 @@ function Onde() {
 
 function montar(caminho: string) {
   return render(
-    <MemoryRouter initialEntries={[caminho]}>
+    <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
       <BoasVindasNutri />
       <Onde />
     </MemoryRouter>,
@@ -173,7 +173,7 @@ describe("W28 — tela 'O PhysiqNutri agora é o Physiq'", () => {
 describe("W28 — Página não encontrada para quem veio do Nutri", () => {
   function rotas(caminho: string) {
     return render(
-      <MemoryRouter initialEntries={[caminho]}>
+      <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
         <Routes>
           <Route path="/" element={<div>início</div>} />
           <Route path="*" element={<NaoEncontrada />} />
@@ -197,7 +197,7 @@ describe("W28 — Página não encontrada para quem veio do Nutri", () => {
   it("no próprio '/' não faz laço", () => {
     marcar();
     render(
-      <MemoryRouter initialEntries={["/"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/"]}>
         <NaoEncontrada />
       </MemoryRouter>,
     );

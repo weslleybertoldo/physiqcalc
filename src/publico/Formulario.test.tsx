@@ -34,7 +34,7 @@ function montar(slug = "abcd2345") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/f/${slug}`]}>
+      <MemoryRouter useTransitions={false} initialEntries={[`/f/${slug}`]}>
         <Routes>
           <Route path="/f/:slug" element={<Formulario />} />
         </Routes>
@@ -116,7 +116,7 @@ describe("/f/:slug — hml-12: o consentimento de saúde só no staging", () => 
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={["/f/abcd2345"]}>
+        <MemoryRouter useTransitions={false} initialEntries={["/f/abcd2345"]}>
           <Routes>
             <Route path="/f/:slug" element={<Tela />} />
           </Routes>

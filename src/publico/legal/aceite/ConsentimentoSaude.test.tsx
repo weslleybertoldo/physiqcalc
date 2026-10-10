@@ -30,7 +30,7 @@ function Controlado({ variante, profissional, novaAba, aoMudar }: {
   );
 }
 
-const abrir = (el: React.ReactNode) => render(<MemoryRouter>{el}</MemoryRouter>);
+const abrir = (el: React.ReactNode) => render(<MemoryRouter useTransitions={false}>{el}</MemoryRouter>);
 const bloco = () => document.querySelector("[data-consentimento-saude]") as HTMLElement;
 const caixa = () => document.querySelector("[data-consentimento-saude-caixa]") as HTMLInputElement;
 

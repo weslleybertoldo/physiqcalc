@@ -95,7 +95,7 @@ function montar() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/painel"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/painel"]}>
         <Dashboard />
       </MemoryRouter>
     </QueryClientProvider>,

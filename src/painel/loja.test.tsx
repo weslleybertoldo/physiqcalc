@@ -53,7 +53,7 @@ const NA_LOJA_NAO = /R\$|Pague|Pagar|Pix|cartão|Cobrança automática|Escolha o
 function montar(el: React.ReactNode, caminho = "/painel/configuracoes/plano") {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={[caminho]}>{el}</MemoryRouter>
+      <MemoryRouter useTransitions={false} initialEntries={[caminho]}>{el}</MemoryRouter>
     </QueryClientProvider>,
   );
 }

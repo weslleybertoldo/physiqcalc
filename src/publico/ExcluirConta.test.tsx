@@ -35,7 +35,7 @@ function Espiao() {
 }
 const abrir = (state?: unknown) =>
   render(
-    <MemoryRouter initialEntries={[{ pathname: ROTA_EXCLUIR_CONTA, state }]}>
+    <MemoryRouter useTransitions={false} initialEntries={[{ pathname: ROTA_EXCLUIR_CONTA, state }]}>
       <Routes>
         <Route path={ROTA_EXCLUIR_CONTA} element={<ExcluirConta />} />
         <Route path="*" element={<Espiao />} />

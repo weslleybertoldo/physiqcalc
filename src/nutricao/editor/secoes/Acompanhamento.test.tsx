@@ -61,7 +61,7 @@ globalThis.ResizeObserver = globalThis.ResizeObserver ?? (ObservadorFalso as unk
 
 const montar = (url: string) =>
   render(
-    <MemoryRouter initialEntries={[url]}>
+    <MemoryRouter useTransitions={false} initialEntries={[url]}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <PacienteProvider value={{ paciente: { id: "p1", nome: "Rafael Moura", nascimento: null, genero: null }, recarregar: async () => {}, podeEditar: true }}>
           <Acompanhamento />

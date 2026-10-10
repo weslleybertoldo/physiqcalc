@@ -58,7 +58,7 @@ const PLANOS = {
 const abrir = (el: React.ReactNode) =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter>{el}</MemoryRouter>
+      <MemoryRouter useTransitions={false}>{el}</MemoryRouter>
     </QueryClientProvider>,
   );
 

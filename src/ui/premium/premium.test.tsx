@@ -67,7 +67,7 @@ describe("componentes premium", () => {
 
   it("barra de abas: rótulo inteiro, aba ativa marcada", () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter useTransitions={false}>
         <TabBar itens={[{ id: "inicio", rotulo: "Início", icone: House, para: "/", ativo: true }, { id: "treino", rotulo: "Treino", icone: Dumbbell, para: "/treino" }]} />
       </MemoryRouter>,
     );

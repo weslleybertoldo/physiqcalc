@@ -166,7 +166,7 @@ function abrir() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="*" element={<Onde />} />

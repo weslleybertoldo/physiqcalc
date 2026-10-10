@@ -54,7 +54,7 @@ function Onde() {
 
 function abrir(l: LegalSituacao, aoAceitar = vi.fn()) {
   render(
-    <MemoryRouter initialEntries={["/treino"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/treino"]}>
       <Routes>
         <Route path="/treino" element={<TelaDoAceite legal={l} aoAceitar={aoAceitar} />} />
         <Route path="*" element={null} />

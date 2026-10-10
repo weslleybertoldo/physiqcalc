@@ -81,7 +81,7 @@ function Local() {
 }
 const montar = (url = "/painel/alunos/p1/financeiro", compacto = false) =>
   render(
-    <MemoryRouter initialEntries={[url]}>
+    <MemoryRouter useTransitions={false} initialEntries={[url]}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <Routes>
           <Route path="*" element={<><FinanceiroDoAluno alunoId="p1" compacto={compacto} /><Local /></>} />

@@ -13,7 +13,7 @@ vi.mock("@/nucleo/vinculo", async (orig) => ({ ...(await orig<typeof import("@/n
 import AvisoVinculoPendente from "./AvisoVinculoPendente";
 
 const CAMILA = { nome: "Camila Rocha", foto_url: null, tipo_perfil: "nutricionista", papeis: ["nutricionista"] };
-const montar = () => render(<MemoryRouter><AvisoVinculoPendente /></MemoryRouter>);
+const montar = () => render(<MemoryRouter useTransitions={false}><AvisoVinculoPendente /></MemoryRouter>);
 
 beforeEach(() => {
   localStorage.clear();

@@ -52,7 +52,7 @@ import FaixaMensagensDesligadas from "@/painel/gates/FaixaMensagensDesligadas";
 
 const montar = (ui: React.ReactNode) =>
   render(
-    <MemoryRouter>
+    <MemoryRouter useTransitions={false}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>
     </MemoryRouter>,
   );

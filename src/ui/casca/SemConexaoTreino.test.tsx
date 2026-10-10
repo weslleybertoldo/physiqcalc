@@ -19,7 +19,7 @@ const tentar = vi.fn();
 
 function montarBiblioteca() {
   return render(
-    <MemoryRouter initialEntries={["/master/biblioteca"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/master/biblioteca"]}>
       <PaginaMaster id="biblioteca" />
     </MemoryRouter>,
   );

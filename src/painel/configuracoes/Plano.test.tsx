@@ -49,7 +49,7 @@ function montar(Tela: ComponentType = Plano) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/painel/configuracoes/plano"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/painel/configuracoes/plano"]}>
         <Tela />
       </MemoryRouter>
     </QueryClientProvider>,

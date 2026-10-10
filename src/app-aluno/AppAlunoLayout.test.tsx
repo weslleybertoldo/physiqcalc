@@ -34,7 +34,7 @@ import AppAlunoLayout from "./AppAlunoLayout";
 
 function abrir(caminho: string) {
   return render(
-    <MemoryRouter initialEntries={[caminho]}>
+    <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
       <Routes>
         <Route element={<AppAlunoLayout />}>
           <Route path="/" element={<div>conteúdo início</div>} />

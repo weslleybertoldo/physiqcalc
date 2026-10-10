@@ -30,7 +30,7 @@ function Onde() {
 
 function arvore() {
   return (
-    <MemoryRouter initialEntries={["/painel"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/painel"]}>
       <MasterSoNoSite>
         <div data-testid="app">o app</div>
       </MasterSoNoSite>

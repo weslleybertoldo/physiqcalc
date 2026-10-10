@@ -48,7 +48,7 @@ const status = (m: MatriculaPagamentos[]): StatusAluno => ({ ok: true, ambiente:
 const montar = () =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={["/perfil/pagamentos"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/perfil/pagamentos"]}>
         <Routes>
           <Route path="*" element={<Pagamentos />} />
         </Routes>

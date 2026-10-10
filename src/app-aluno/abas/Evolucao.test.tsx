@@ -72,7 +72,7 @@ const PRINCIPAL: PartePrincipal = {
 
 function montar() {
   return render(
-    <MemoryRouter initialEntries={["/evolucao"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/evolucao"]}>
       <Evolucao />
     </MemoryRouter>,
   );

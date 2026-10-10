@@ -50,7 +50,7 @@ function montar(endereco = "/painel/alunos") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[endereco]}>
+      <MemoryRouter useTransitions={false} initialEntries={[endereco]}>
         <Alunos />
         <Endereco />
       </MemoryRouter>

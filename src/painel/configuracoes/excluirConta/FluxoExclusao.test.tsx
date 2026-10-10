@@ -67,7 +67,7 @@ function Espiao() {
 }
 const montar = () =>
   render(
-    <MemoryRouter initialEntries={["/painel/configuracoes/excluir-conta"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/painel/configuracoes/excluir-conta"]}>
       <Routes>
         <Route path="/painel/configuracoes/excluir-conta" element={<FluxoExclusao />} />
         <Route path="/excluir-conta" element={<Espiao />} />

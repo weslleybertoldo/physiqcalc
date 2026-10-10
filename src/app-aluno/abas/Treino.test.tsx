@@ -97,7 +97,7 @@ function comTreino() {
 
 function abrir() {
   return render(
-    <MemoryRouter initialEntries={["/treino"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/treino"]}>
       <Treino />
     </MemoryRouter>,
   );

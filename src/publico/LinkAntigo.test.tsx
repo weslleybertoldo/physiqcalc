@@ -43,7 +43,7 @@ describe("W14 (F1) + W24 — /p/:codigo abre o diário do Physiq", () => {
   });
   it("vai para o /d/<código> DENTRO do Physiq (sem sair para o site antigo)", () => {
     render(
-      <MemoryRouter initialEntries={["/p/ABC"]}>
+      <MemoryRouter useTransitions={false} initialEntries={["/p/ABC"]}>
         <Routes>
           <Route path="/p/:codigo" element={<LinkAntigo />} />
           <Route path="/d/:codigo" element={<p data-testid="diario">diário</p>} />

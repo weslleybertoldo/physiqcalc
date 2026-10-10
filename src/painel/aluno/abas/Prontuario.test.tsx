@@ -53,7 +53,7 @@ function Local() {
 
 const montar = (ui: React.ReactNode, url = "/painel/alunos/p1/prontuario") =>
   render(
-    <MemoryRouter initialEntries={[url]}>
+    <MemoryRouter useTransitions={false} initialEntries={[url]}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <Routes>
           <Route path="*" element={<>{ui}<Local /></>} />

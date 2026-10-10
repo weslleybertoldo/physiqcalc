@@ -101,7 +101,7 @@ function abrir(caminho: string, RotasDoTeste: typeof Rotas = Rotas) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[caminho]}>
+      <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
         <RotasDoTeste />
         <Onde />
       </MemoryRouter>
@@ -449,7 +449,7 @@ describe("páginas públicas (sem login)", () => {
     render(
       <ErrorBoundary>
         <QueryClientProvider client={qc}>
-          <MemoryRouter initialEntries={["/erro-teste"]}>
+          <MemoryRouter useTransitions={false} initialEntries={["/erro-teste"]}>
             <Rotas />
           </MemoryRouter>
         </QueryClientProvider>

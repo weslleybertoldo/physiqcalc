@@ -21,7 +21,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 function montar(el: React.ReactNode, caminho = "/painel/alunos") {
-  return render(<MemoryRouter initialEntries={[caminho]}>{el}</MemoryRouter>);
+  return render(<MemoryRouter useTransitions={false} initialEntries={[caminho]}>{el}</MemoryRouter>);
 }
 const pagina = <div>página do painel</div>;
 

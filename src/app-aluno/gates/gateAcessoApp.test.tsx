@@ -18,7 +18,7 @@ function OApp() {
 }
 const montar = (caminho = "/") =>
   render(
-    <MemoryRouter initialEntries={[caminho]}>
+    <MemoryRouter useTransitions={false} initialEntries={[caminho]}>
       <Routes>
         <Route path="*" element={<GateAcessoApp><OApp /></GateAcessoApp>} />
       </Routes>

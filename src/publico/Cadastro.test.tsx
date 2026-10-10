@@ -15,7 +15,7 @@ function montar(codigo = "PROF-LUCAS-FERREIRA") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/c/${codigo}`]}>
+      <MemoryRouter useTransitions={false} initialEntries={[`/c/${codigo}`]}>
         <Routes>
           <Route path="/c/:codigo" element={<Cadastro />} />
         </Routes>

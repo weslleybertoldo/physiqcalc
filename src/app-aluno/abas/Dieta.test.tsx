@@ -91,7 +91,7 @@ function montar(rota = "/dieta") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[rota]}>
+      <MemoryRouter useTransitions={false} initialEntries={[rota]}>
         <Routes>
           <Route path="/dieta" element={<><Dieta /><Local /></>} />
         </Routes>

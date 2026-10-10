@@ -19,7 +19,7 @@ function Onde() {
 }
 function entrar(caminho: string, state?: unknown) {
   const r = render(
-    <MemoryRouter initialEntries={[{ pathname: caminho, state }]}>
+    <MemoryRouter useTransitions={false} initialEntries={[{ pathname: caminho, state }]}>
       <Routes>
         <Route path="/entrar" element={<RotaEntrada nome="Entrar" />} />
         <Route path="/entrar/email" element={<RotaEntrada nome="EntrarEmail" />} />

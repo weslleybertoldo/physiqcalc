@@ -62,7 +62,7 @@ function Onde() {
 
 /** Como o App.tsx monta: as rotas como filhos e os avisos globais à parte. */
 const arvore = (rota: string, rotas: ReactNode = <div data-testid="app">o app</div>) => (
-  <MemoryRouter initialEntries={[rota]}>
+  <MemoryRouter useTransitions={false} initialEntries={[rota]}>
     <PortaDoAceite avisos={<AvisoFalso />}>{rotas}</PortaDoAceite>
     <Onde />
   </MemoryRouter>

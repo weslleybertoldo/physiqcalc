@@ -13,7 +13,7 @@ import ErroDeTeste from "./ErroDeTeste";
 
 function abrir() {
   return render(
-    <MemoryRouter initialEntries={["/erro-teste"]}>
+    <MemoryRouter useTransitions={false} initialEntries={["/erro-teste"]}>
       <ErrorBoundary>
         <ErroDeTeste />
       </ErrorBoundary>
