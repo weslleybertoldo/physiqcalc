@@ -51,6 +51,8 @@ BASES = {"local": "http://localhost:8080", "staging": "https://physiqcalc-stagin
 HOSTS_DE_PRODUCAO = {"physiqcalc.com.br", "www.physiqcalc.com.br"}
 API_HOSTS = (B17.API_P_HOST, B17.API_T_HOST)
 LARGURAS = {390: 844, 360: 780}
+# produção: os nomes das listas saem borrados nos prints
+BORRAR_LISTAS = "[data-lista] [data-item], [data-lista] [data-item] *"
 
 B5.CONTAS.setdefault("w7-paciente", ("w7.paciente.teste.claude@physiqnutri.app", B5.senha_de("w7-paciente")))
 B5.CONTAS.setdefault("w7b-prod", ("w7b.prod.teste.claude@physiqnutri.app", B5.senha_de("w7b-prod")))
