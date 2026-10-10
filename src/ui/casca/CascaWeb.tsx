@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { flushSync } from "react-dom";
+import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { DropdownMenu } from "radix-ui";
 import { Ellipsis, Menu, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -14,6 +13,7 @@ import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { Sino } from "@/ui/premium/Sino";
 import { RESERVA_TABBAR, TabBar } from "@/ui/premium/TabBar";
 import { BlocoTitulo } from "./topo";
+import { depoisDaPintura } from "./depoisDaPintura";
 import { TopoCtx } from "./topoContexto";
 import { LimiteDeErro } from "./LimiteDeErro";
 import type { Modulo } from "./dadosCasca";
@@ -54,12 +54,15 @@ export interface UsuarioCasca {
 
 const COR_PONTO: Record<Modulo, string> = { treino: "var(--p-violeta)", nutricao: "var(--p-verde)" };
 
-function ItemMenu({ item, aoNavegar }: { item: ItemNav; aoNavegar?: () => void }) {
+/** O toque num item do menu: recebe o clique e o destino (a folha "Mais" fecha e troca de página depois da pintura). */
+type AoNavegar = (e: MouseEvent<HTMLAnchorElement>, para: string) => void;
+
+function ItemMenu({ item, aoNavegar }: { item: ItemNav; aoNavegar?: AoNavegar }) {
   const Icone = item.icone;
   return (
     <Link
       to={item.para}
-      onClick={aoNavegar}
+      onClick={aoNavegar ? (e) => aoNavegar(e, item.para) : undefined}
       data-nav={item.para}
       aria-current={item.ativo ? "page" : undefined}
       className={cn(
@@ -169,7 +172,7 @@ function ConteudoMenu({
   rodapeMenu?: ReactNode;
   usuario: UsuarioCasca;
   acoesUsuario: AcaoUsuario[];
-  aoNavegar?: () => void;
+  aoNavegar?: AoNavegar;
   celular?: boolean;
 }) {
   return (
@@ -246,6 +249,16 @@ export function CascaWeb({
   const maisAtivo = Boolean(ativo && !barra.includes(ativo));
 
   const fecharBusca = () => setBuscaAberta(false);
+  // hml-18a (H-40, E): o toque num item da folha "Mais" fecha a folha no próprio toque (a 1ª mudança na tela) e só troca de página
+  // depois da pintura — no mesmo toque, o render da página nova (ex.: a Agenda, ~100 ms) segurava até a folha começar a fechar.
+  // Com tecla (Ctrl/⌘/Shift/Alt) ou outro botão, o Link segue sozinho (nova aba/janela).
+  const navegarDaFolha: AoNavegar = (e, para) => {
+    setMaisAberto(false);
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.altKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    const aqui = `${window.location.pathname}${window.location.search}` === para; // como o Link: a mesma página substitui
+    depoisDaPintura(() => navigate(para, { replace: aqui }));
+  };
 
   return (
     <TopoCtx.Provider value={ctx}>
@@ -310,16 +323,15 @@ export function CascaWeb({
             rodapeMenu={rodapeMenu}
             usuario={usuario}
             acoesUsuario={acoesUsuario.map((a) => ({ ...a, aoTocar: () => { setMaisAberto(false); a.aoTocar(); } }))}
-            // hml-18a (H-40, E): a folha começa a fechar no próprio toque, antes do render da página nova (que pode ser pesada,
-            // ex.: a Agenda) — senão o 1º sinal na tela esperava a página inteira
-            aoNavegar={() => flushSync(() => setMaisAberto(false))}
+            aoNavegar={navegarDaFolha}
           />
         </PainelDeslizante>
 
         <PaletaBusca aberto={buscaAberta} aoMudar={(v) => (v ? setBuscaAberta(true) : fecharBusca())} termo={termo} aoMudarTermo={setTermo}>
           <GrupoBusca titulo="Ir para">
             {todos.map((i) => (
-              <ItemBusca key={i.id} icone={i.icone} rotulo={i.rotulo} aoEscolher={() => { fecharBusca(); navigate(i.para); }} />
+              // a busca também: começa a fechar na escolha e a página nova vem depois da pintura (como a folha "Mais")
+              <ItemBusca key={i.id} icone={i.icone} rotulo={i.rotulo} aoEscolher={() => { fecharBusca(); depoisDaPintura(() => navigate(i.para)); }} />
             ))}
           </GrupoBusca>
           {fontesBusca?.(termo, fecharBusca)}
