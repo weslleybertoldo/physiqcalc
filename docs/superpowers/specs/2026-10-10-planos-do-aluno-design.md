@@ -81,6 +81,8 @@ cobrança pausada** até o Yuri conferir o "pago até" de cada um.
 | InfinitePay (W1) | PIX ou cartão | o aluno escolhe até 12× na página da InfinitePay (pela doc, não dá para travar o "até X") | PIX ou cartão | — (a API não tem) |
 | Mercado Pago (o do Weslley hoje; o do personal na W2) | PIX ou cartão 1× | até X (o plano manda) | PIX ou cartão | sim (`preapproval`) |
 A tela de planos e a ficha do aluno só oferecem o que a conta consegue receber; o app do aluno idem.
+**P-B (respondida por ele, 10/10 ~20h25, "1"):** nas contas **InfinitePay**, "à vista" e "cartão parcelado" viram **uma modalidade só,
+"pagar o período todo"** (o aluno escolhe Pix ou cartão até 12× na página da InfinitePay).
 
 ## 4. Proposta técnica (para o `dev:spec-review` confirmar)
 
@@ -164,9 +166,9 @@ Relatório completo: `~/projetos/physiqcalc-scratch/migracao-yuri/spec-review-pl
 - **Respostas da seção 6:** (1) reaproveitar `mensalidade_valor`/`mensalidade_desde` — sim, recalculando num BEFORE UPDATE de
   `pacientes` e só com modalidade; (2) `parcelas_total` gravada na cobrança e `parcela_num` calculada no `mensalidade_recalcular` (junto do
   `cobre_de/cobre_ate`); (3) ver B2; (4) ver I6; (5) a W1/W2 usa colunas com prefixo próprio em `cobrancas`, sem colidir.
-- **Pedido da LINUX 1 (hml-18b):** no `FinanceiroDoAluno.tsx`, trocar o import estático do `pdfDoRecibo` por import no clique (molde
-  do `dietaPdf`) e avisar quando cair na main.
+- ~~Pedido da LINUX 1 (hml-18b) sobre o import do `pdfDoRecibo`~~ — **retirado por ela** (10/10): o `FinanceiroDoAluno.tsx` importa de
+  `painel/financeiro/pdfRecibo.ts`, que já faz `import("./reciboPdf")`; nada a trocar.
 - **Regras novas de tela (hml-18a):** `useConfirmar()` de `src/ui/premium/Confirmar.tsx` no lugar de `window.confirm`
   (`semDialogoNativo.test.ts`); grade sempre com `grid-cols-1` + breakpoint (`larguraCelular.test.ts`).
-- **Pergunta em aberto para ele (P-A):** plano mês a mês com a cobrança automática — depois da última parcela, continua cobrando (o
-  plano renova) ou para e o aluno renova?
+- **P-A (respondida por ele, 10/10 ~20h20, "1"):** plano mês a mês com a cobrança automática ligada → depois da última parcela o
+  plano **renova sozinho** e continua cobrando (o aluno ligou a automática para não precisar lembrar).
