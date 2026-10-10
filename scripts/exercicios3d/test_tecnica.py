@@ -611,3 +611,29 @@ def test_punho_desvio_com_sinal_no_rack_do_agachamento_frontal():
     assert tc.punho_desvio(dobrar_punho(j, -60)) == pytest.approx([0, 0], abs=1e-6)
     assert tc.punho_desvio(girar(desviar(j, 15), 70, (0, 0, 1))) == pytest.approx([15, 15], abs=1e-6)
     assert "punho_desvio" in tc.MEDIDAS
+
+
+def test_coxa_abducao_em_pe_cruzando_e_sentado():
+    """Abdução de quadril na polia (lote 8): coxa pendurada na linha do quadril = 0; aberta 38° pro lado = +38 nos 2 lados, com ou sem
+    a coxa à frente (flexão não conta); cruzando 9° na frente da outra perna = −9; a pelve subindo do lado que trabalha muda o número
+    (é a linha dos quadris); sentado com a coxa deitada aberta 40° dá 40 (como o coxa_abertura); o mesmo número com o boneco virado."""
+    def perna(j, L, abd, flex=0.0):
+        s = 1 if L == "Left" else -1
+        a, f = math.radians(abd), math.radians(flex)
+        d = np.array([s * math.sin(a), -math.cos(a) * math.sin(f), -math.cos(a) * math.cos(f)])
+        return dict(j, **{L + "Leg": j[L + "UpLeg"] + 0.42 * d})
+
+    j = perna(perna(em_pe(), "Left", 0), "Right", 0)
+    assert tc.coxa_abducao(j) == pytest.approx([0, 0], abs=1e-6)
+    j = perna(perna(em_pe(), "Left", 38), "Right", 38, flex=20)
+    assert tc.coxa_abducao(j) == pytest.approx([38, 38], abs=1e-6)
+    assert tc.quadril_sinal(j)[1] == pytest.approx(20, abs=1e-6)
+    j = perna(perna(em_pe(), "Left", -9, flex=20), "Right", 0)
+    assert tc.coxa_abducao(j) == pytest.approx([-9, 0], abs=1e-6)
+    assert tc.coxa_abducao(girar(j, 70, (0, 0, 1))) == pytest.approx([-9, 0], abs=1e-6)
+    sobe = dict(perna(perna(em_pe(), "Left", 0), "Right", 0))
+    sobe["LeftUpLeg"] = sobe["LeftUpLeg"] + np.array([0, 0, 0.18 * math.tan(math.radians(5))])
+    sobe["LeftLeg"] = sobe["LeftUpLeg"] + np.array([0, 0, -0.42])
+    assert tc.coxa_abducao(sobe)[0] == pytest.approx(-5, abs=0.01)          # a pelve sobe 5° do lado esquerdo: a coxa fica 5° "fechada"
+    assert tc.coxa_abducao(sentado_coxas(40, 25)) == pytest.approx([40, 25], abs=1e-6)
+    assert "coxa_abducao" in tc.MEDIDAS

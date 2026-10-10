@@ -619,3 +619,26 @@ def punho_desvio(j):
 
 
 MEDIDAS.update({"punho_desvio": punho_desvio})
+
+
+# ── abdução de quadril na polia (lote 8, 09/10/2026): em pé, a perna de fora abre pro lado, longe da polia, com o tronco e a pelve
+# parados (ExRx, Cable Hip Abduction: "Move leg to opposite side of low pulley by abduction hip"; Physitrack: "Keeping your back straight
+# and your hips level, lift your leg out away from your body"). O coxa_abertura mede a coxa vista de cima (sentado, coxa deitada) e em pé
+# perde o sentido; o quadril_sinal só vê o plano sagital do tronco. Aqui é a coxa pra fora do plano sagital da PELVE, como o goniômetro
+# mede a abdução (braço fixo na linha entre as espinhas ilíacas; Norkin & White): serve também à adução (a perna cruzando na frente da
+# outra dá −).
+def coxa_abducao(j):
+    """Abdução (+) / adução (−) do quadril, graus [E, D]: coxa (articulação do quadril → centro do joelho) pra fora do plano que passa
+    pela articulação do quadril perpendicular à linha das articulações do quadril (o plano sagital da pelve): 0 = coxa nesse plano
+    (apontando pro chão, pra frente ou pra trás), + = aberta pro lado, − = cruzando pra dentro, na frente ou atrás da outra perna. Usa só a
+    linha dos quadris (a pelve subindo de um lado muda o número, como no goniômetro): vale em pé, deitado ou sentado — sentado, com a coxa
+    deitada aberta 40° pro lado, dá 40, como o coxa_abertura. O boneco em pé, no repouso, mede ~+4,5 (as pernas um pouco abertas)."""
+    lado = _u(j["RightUpLeg"] - j["LeftUpLeg"])
+    out = []
+    for L, s in LADOS:
+        c = _u(j[L + "Leg"] - j[L + "UpLeg"])
+        out.append(math.degrees(math.asin(max(-1.0, min(1.0, float(c @ (s * lado)))))))
+    return out
+
+
+MEDIDAS.update({"coxa_abducao": coxa_abducao})
