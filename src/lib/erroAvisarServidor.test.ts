@@ -14,13 +14,20 @@ import { assinatura, montarAviso, type ErroParaAviso, type SchemaAviso } from ".
 import { criarLog } from "../../supabase-principal/functions/_shared/log";
 import { avisarErro as avisarDoTreino } from "../../supabase/functions/_shared/avisar-erro";
 import { criarLog as criarLogDoTreino } from "../../supabase/functions/_shared/log";
+import { hashHex, segredoAceito } from "../../supabase-principal/functions/_shared/segredo-servidor";
 // Token falso montado aqui: o literal no formato de token do Telegram dispara o secret scanning do GitHub.
 const TOKEN_TELEGRAM_FALSO = ["1234567890", "AA" + "Hk3j4k5l6m7n8o9p0qRsTuVwXyZ12345"].join(":");
 
 // Homologação hml-10 (H-26, D4 e D6) — o aviso de erro no servidor, com peças falsas (nada vai à rede): a função erro-avisar
 // (atenderPedido), o caminho do aviso (criarAvisador: trava na memória → registrar_aviso_erro → Telegram) e o aviso do Banco do
 // Treino (que manda à erro-avisar do principal).
+// hml-16c (H-51, S7): o Treino manda SEGREDO_AVISO_ERRO; o principal guarda só o hash dele (SEGREDO_AVISO_ERRO_ACEITOS, até 2) e,
+// até o F7, ainda aceita o legado ESPELHO_SEGREDO (_shared/segredo-servidor.ts). Valores falsos, feitos aqui.
 const SEGREDO = "a1".repeat(32);
+const ANTERIOR = "b2".repeat(32); // o valor anterior, durante uma troca
+const LEGADO = "c3".repeat(32);
+let HASH = "";
+let HASH_ANTERIOR = "";
 const TOKEN = TOKEN_TELEGRAM_FALSO;
 const STAGING = "https://physiqcalc-staging.vercel.app";
 const URL_FUNCAO = "https://principal.teste.invalid/functions/v1/erro-avisar";
@@ -32,8 +39,10 @@ const tudoQueFoiProLog = () => saidas.map((s) => s.texto).join("\n");
 
 // o jsdom 20 do Vitest não tem AbortSignal.timeout (o Deno tem): só para o fetch falso do Treino receber um sinal
 const semTimeout = typeof (AbortSignal as unknown as { timeout?: unknown }).timeout !== "function";
-beforeAll(() => {
+beforeAll(async () => {
   if (semTimeout) Object.defineProperty(AbortSignal, "timeout", { configurable: true, writable: true, value: () => new AbortController().signal });
+  HASH = await hashHex(SEGREDO);
+  HASH_ANTERIOR = await hashHex(ANTERIOR);
 });
 afterAll(() => {
   if (semTimeout) delete (AbortSignal as unknown as { timeout?: unknown }).timeout;
@@ -75,12 +84,17 @@ function pedido(o: {
   return new Request(o.url ?? URL_FUNCAO, { method: metodo, headers, body });
 }
 
-function montarDeps(segredo = SEGREDO) {
+/**
+ * As peças falsas da erro-avisar. O ambiente do principal (o leitor do segredoAceito): sem nada, a lista com o hash do SEGREDO
+ * (o que o Treino manda) e o legado (até o F7) — como fica do F4 ao F6 da hml-16c.
+ */
+function montarDeps(ambiente?: Record<string, string>) {
+  const env = ambiente ?? { SEGREDO_AVISO_ERRO_ACEITOS: HASH, ESPELHO_SEGREDO: LEGADO };
   const enviados: Array<{ erro: ErroParaAviso; schema: SchemaAviso }> = [];
   const avisos: Array<{ erro: ErroParaAviso; schema: SchemaAviso | null }> = [];
   const pendentes: Promise<unknown>[] = [];
   const deps: DepsPedido = {
-    segredo,
+    segredo: (recebido) => segredoAceito(recebido, "SEGREDO_AVISO_ERRO", (nome) => env[nome]),
     enviar: async (erro, schema) => {
       enviados.push({ erro, schema });
       return "enviado";
@@ -162,11 +176,13 @@ describe("erro-avisar: quem pode mandar", () => {
     const r = await atenderPedido(pedido({ origin: STAGING, segredo: "x".repeat(64), schema: "staging", corpo: ERRO_DA_TELA }), deps);
     expect(r.status).toBe(403);
     expect(await r.json()).toEqual({ ok: false, erro: "segredo_invalido" });
-    const curto = montarDeps("curto");
+    // curto: nem com o hash dele na lista nem como legado
+    const curto = montarDeps({ SEGREDO_AVISO_ERRO_ACEITOS: await hashHex("curto"), ESPELHO_SEGREDO: "curto" });
     const r2 = await atenderPedido(pedido({ segredo: "curto", corpo: { origem: "servidor", funcao: "x" } }), curto.deps);
     expect(r2.status).toBe(403);
     expect(enviados).toHaveLength(0);
     expect(curto.enviados).toHaveLength(0);
+    expect(linhas("segredo_aceito")).toHaveLength(0);
   });
 
   it("x-schema fora de public|staging → 400; sem x-schema vale o ?schema= e, sem nada, public", async () => {
@@ -177,6 +193,56 @@ describe("erro-avisar: quem pode mandar", () => {
     expect((await atenderPedido(pedido({ origin: STAGING, url: `${URL_FUNCAO}?schema=staging`, corpo: ERRO_DA_TELA }), deps)).status).toBe(204);
     expect((await atenderPedido(pedido({ origin: STAGING, corpo: ERRO_DA_TELA }), deps)).status).toBe(204);
     expect(enviados.map((e) => e.schema)).toEqual(["staging", "staging", "public"]);
+  });
+});
+
+describe("erro-avisar (hml-16c, S7): o segredo do Treino — o hash na lista SEGREDO_AVISO_ERRO_ACEITOS e, até o F7, o legado", () => {
+  const DO_TREINO = { origem: "servidor", funcao: "trocar-token", codigo: "excecao" };
+  const mandar = (deps: DepsPedido, segredo: string) => atenderPedido(pedido({ segredo, schema: "staging", corpo: DO_TREINO }), deps);
+  const aceitos = () => linhas("segredo_aceito");
+
+  it("o valor da lista → 204 e o log segredo_aceito (acao aviso_erro, resultado lista) — nunca o valor nem o hash", async () => {
+    const { deps, enviados } = montarDeps();
+    expect((await mandar(deps, SEGREDO)).status).toBe(204);
+    expect(enviados).toHaveLength(1);
+    expect(aceitos()).toEqual([{ nivel: "info", funcao: "erro-avisar", codigo: "segredo_aceito", acao: "aviso_erro", resultado: "lista" }]);
+    expect(tudoQueFoiProLog()).not.toContain(SEGREDO);
+    expect(tudoQueFoiProLog()).not.toContain(HASH);
+  });
+
+  it("o legado (até o F7) → 204, com resultado legado no log", async () => {
+    const { deps, enviados } = montarDeps();
+    expect((await mandar(deps, LEGADO)).status).toBe(204);
+    expect(enviados).toHaveLength(1);
+    expect(aceitos()).toMatchObject([{ codigo: "segredo_aceito", acao: "aviso_erro", resultado: "legado" }]);
+    expect(tudoQueFoiProLog()).not.toContain(LEGADO);
+  });
+
+  it("2 hashes na lista (o atual e o anterior, durante a troca) → os 2 passam; um 3º valor recusa (403)", async () => {
+    const { deps, enviados } = montarDeps({ SEGREDO_AVISO_ERRO_ACEITOS: `${HASH},${HASH_ANTERIOR}` });
+    expect((await mandar(deps, SEGREDO)).status).toBe(204);
+    expect((await mandar(deps, ANTERIOR)).status).toBe(204);
+    const r = await mandar(deps, "d4".repeat(32));
+    expect(r.status).toBe(403);
+    expect(await r.json()).toEqual({ ok: false, erro: "segredo_invalido" });
+    expect(enviados).toHaveLength(2);
+    expect(aceitos().map((l) => l.resultado)).toEqual(["lista", "lista"]);
+  });
+
+  it("sem o legado (depois do F6): o legado recusa e a lista segue valendo", async () => {
+    const { deps, enviados } = montarDeps({ SEGREDO_AVISO_ERRO_ACEITOS: HASH });
+    expect((await mandar(deps, LEGADO)).status).toBe(403);
+    expect((await mandar(deps, SEGREDO)).status).toBe(204);
+    expect(enviados).toHaveLength(1);
+  });
+
+  it("sem lista e sem legado (nada configurado) → tudo recusa (falha fechada); quem lê a lista não chama com o hash", async () => {
+    const vazio = montarDeps({});
+    expect((await mandar(vazio.deps, SEGREDO)).status).toBe(403);
+    expect((await mandar(vazio.deps, LEGADO)).status).toBe(403);
+    const { deps } = montarDeps({ SEGREDO_AVISO_ERRO_ACEITOS: HASH });
+    expect((await mandar(deps, HASH)).status).toBe(403);
+    expect(aceitos()).toHaveLength(0);
   });
 });
 
@@ -614,5 +680,8 @@ describe("o aviso do Treino: manda à erro-avisar do principal (segredo de sempr
     const repassado = linhas("aviso_repassado")[0];
     expect(texto).toContain(`🔑 ${String(repassado.ref)}`);
     expect(tudoQueFoiProLog()).not.toContain("maria");
+    // hml-16c: o principal aceitou pelo hash na lista
+    expect(linhas("segredo_aceito")).toMatchObject([{ funcao: "erro-avisar", acao: "aviso_erro", resultado: "lista" }]);
+    expect(tudoQueFoiProLog()).not.toContain(SEGREDO);
   });
 });

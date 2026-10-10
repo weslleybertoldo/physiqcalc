@@ -4,10 +4,13 @@
 //   tipo 'pessoa' → payload { principal_user_id }       tipo 'conta' → payload { conta_id } (todos os membros da conta)
 //
 // POST, headers: x-espelho-segredo · x-schema: public|staging. Corpo: { limite?: 1..50 } (padrão 20).
+// Segredo da fila (hml-16c, S8): o banco (espelho_disparar, pg_net) manda o do Vault; aqui fica só o hash, em
+// SEGREDO_ESPELHO_FILA_ACEITOS (_shared/segredo-servidor.ts; até o F7, também o legado ESPELHO_SEGREDO); aceitou → log
+// segredo_aceito (acao espelho_fila, resultado lista | legado).
 // Quem chama: os gatilhos/tarefas das próximas worktrees (W4 tarefa das 03:40, W5 membros) ou à mão.
 // verify_jwt = false. Publicar (a partir do physiqcalc):
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions espelho-enviar false
-// Segredos: ESPELHO_SEGREDO, TREINO_URL.
+// Segredos: SEGREDO_ESPELHO_FILA_ACEITOS, ESPELHO_SEGREDO (o que vai à espelho-nucleo), TREINO_URL.
 // hml-10 (H-24, H-26, H-48): log em JSON pelo _shared/log.ts; a espelho-nucleo que recusa vira o código espelho_nucleo_<status>
 // (sem o corpo dela — o mesmo texto vai para espelho_pendencias.erro); a resposta de erro leva só o código (sem a mensagem do
 // banco); cada pendência que falha avisa (log.excecao).
@@ -18,7 +21,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { resumoDaPessoa, type Resumo } from "../_shared/resumo.ts";
-import { MAX_TENTATIVAS_ESPELHO, proximaTentativaMs, segredoConfere } from "../_shared/resumo-regras.ts";
+import { MAX_TENTATIVAS_ESPELHO, proximaTentativaMs } from "../_shared/resumo-regras.ts";
+import { segredoAceito } from "../_shared/segredo-servidor.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -36,7 +40,9 @@ interface Pendencia { id: number; tipo: "pessoa" | "conta"; payload: Record<stri
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "metodo" }, 405);
   const lote = prazo(ORCAMENTO_MS.loteEspelho); // hml-14 (H-32): o lote inteiro (ninguém espera; a sobra vai para a próxima rodada)
-  if (!segredoConfere(req.headers.get("x-espelho-segredo"), ESPELHO_SEGREDO)) return json({ error: "segredo_invalido" }, 401);
+  const via = await segredoAceito(req.headers.get("x-espelho-segredo"), "SEGREDO_ESPELHO_FILA");
+  if (!via) return json({ error: "segredo_invalido" }, 401);
+  log.info({ codigo: "segredo_aceito", acao: "espelho_fila", resultado: via });
   if (!TREINO_URL) return json({ error: "nao_configurada" }, 500);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return json({ error: "schema_invalido" }, 400);
