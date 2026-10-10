@@ -31,6 +31,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro } from "@/ui/premium/Estados";
 import { KpiCompacto } from "@/ui/premium/Kpi";
 import { TopoPagina } from "@/ui/casca/topo";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { acaoCobranca, buscarStatusCobranca, ErroCobranca, type FaturaConta, type StatusCobranca } from "./api";
 import { CartaoPagamento, type DadosCartao } from "./CartaoPagamento";
 import { EscolhaPlano, type Escolha } from "./EscolhaPlano";
@@ -86,6 +87,10 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
   const [confirmarCancelar, setConfirmarCancelar] = useState(false);
   // W28: confirmação antes de trocar de plano numa conta com o preço e as regras de hoje
   const [confirmarTroca, setConfirmarTroca] = useState<{ quando: "mudar" | "pagar"; seguir: () => void } | null>(null);
+  // hml-18a (H-40, D): a folha do cartão e a confirmação da troca ficam montadas e fecham pelo `aberto`; enquanto saem, mostram o
+  // que estava aberto (antes a folha do cartão sumia seca com o pai, e o texto da troca mudava no meio da saída)
+  const cartaoVisto = useUltimoValor(cartao);
+  const trocaVista = useUltimoValor(confirmarTroca);
 
   // a escolha começa no plano da conta (teste: Treino + Nutrição 1–10)
   useEffect(() => {
@@ -407,17 +412,17 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
       </div>
 
       <ConfirmarPerigo aberto={Boolean(confirmarTroca)} aoMudar={(a) => !a && setConfirmarTroca(null)} titulo="Trocar de plano?"
-        texto={textoSaiDoLegado(precoDeHoje, valorMes, confirmarTroca?.quando ?? "mudar")} rotulo="Trocar de plano"
+        texto={textoSaiDoLegado(precoDeHoje, valorMes, trocaVista?.quando ?? "mudar")} rotulo="Trocar de plano"
         aoConfirmar={() => {
           const seguir = confirmarTroca?.seguir;
           setConfirmarTroca(null);
           seguir?.();
         }} data-confirmar-sai-do-legado />
 
-      {cartao && valor !== null && !ehLoja && (
-        <CartaoPagamento aberto aoMudar={(v) => !v && setCartao(null)} modo={cartao}
-          valor={cartao === "assinar" ? (valorMes ?? 0) : valor} email={email}
-          descricao={`${NOME_PLANO[escolha.plano]} · ${NOME_FAIXA[escolha.faixa]}${cartao === "assinar" ? (primeira ? ` · 1ª cobrança em ${dataBR(primeira)}` : " · 1ª cobrança hoje") : escolha.meses === 12 ? " · 12 meses" : " · 1 mês"}`}
+      {cartaoVisto && valor !== null && !ehLoja && (
+        <CartaoPagamento aberto={cartao !== null} aoMudar={(v) => !v && setCartao(null)} modo={cartaoVisto}
+          valor={cartaoVisto === "assinar" ? (valorMes ?? 0) : valor} email={email}
+          descricao={`${NOME_PLANO[escolha.plano]} · ${NOME_FAIXA[escolha.faixa]}${cartaoVisto === "assinar" ? (primeira ? ` · 1ª cobrança em ${dataBR(primeira)}` : " · 1ª cobrança hoje") : escolha.meses === 12 ? " · 12 meses" : " · 1 mês"}`}
           aoEnviar={pagarCartao} />
       )}
     </div>

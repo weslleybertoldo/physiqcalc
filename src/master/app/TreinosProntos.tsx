@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dumbbell, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,17 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
   // hml-17 (H-39): a biblioteca não veio — o aviso com "Tentar de novo" e os exercícios já escolhidos continuam escolhidos (antes
   // apareciam como "Escolha o exercício", como se o treino estivesse sem eles)
   const bibFalhou = bib.isError && !bib.data;
-  useEffect(() => { setT(treino ? structuredClone(treino) : null); setErro(null); }, [treino]);
+  // hml-18a (H-40, D): a janela fica montada e fecha pelo `aberta` (antes sumia seca: o treino null desmontava tudo); enquanto sai,
+  // mostra a cópia que estava aberta. A cópia nasce no mesmo render em que o treino chega (sem 1 quadro do anterior) e reabrir
+  // começa de novo do treino da lista
+  const [de, setDe] = useState<TreinoPronto | null>(null);
+  if (treino !== de) {
+    setDe(treino);
+    if (treino) {
+      setT(structuredClone(treino));
+      setErro(null);
+    }
+  }
   if (!t) return null;
   const mudarGrupo = (i: number, g: Partial<TreinoPronto["grupos"][number]>) => setT({ ...t, grupos: t.grupos.map((x, k) => (k === i ? { ...x, ...g } : x)) });
 
@@ -47,7 +57,7 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
   }
 
   return (
-    <Janela aberta aoMudar={(a) => !a && aoFechar()} titulo={t.id ? "Editar treino pronto" : "Novo treino pronto"} largura="sm:max-w-3xl" data-janela-treino-pronto
+    <Janela aberta={treino !== null} aoMudar={(a) => !a && aoFechar()} titulo={t.id ? "Editar treino pronto" : "Novo treino pronto"} largura="sm:max-w-3xl" data-janela-treino-pronto
       descricao="O aluno sem profissional escolhe e o treino vira dele (cópia). Mudar aqui vale para quem escolher depois."
       rodape={(
         <>

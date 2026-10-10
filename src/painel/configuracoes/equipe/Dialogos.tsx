@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { CampoSelect, OpcoesPilula, type OpcaoPilula } from "../pecas/Form";
 import { alterarPapeisMembro, convidarMembro, ErroEquipe, removerMembro, type ResultadoConvite } from "./api";
 import {
@@ -124,7 +125,10 @@ export function DialogoConvidar({
   );
 }
 
-/** Mudar os papéis de um membro (os papéis que o plano permite; o dono continua dono). */
+/**
+ * Mudar os papéis de um membro (os papéis que o plano permite; o dono continua dono). hml-18a (H-40, D): a folha fica montada e
+ * fecha pelo `aberto` (antes sumia seca com o `membro` null); enquanto sai, mostra o membro que fechou (`useUltimoValor`).
+ */
 export function DialogoPapeis({
   membro,
   equipe,
@@ -141,26 +145,27 @@ export function DialogoPapeis({
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
+  const visto = useUltimoValor(membro);
   useEffect(() => {
     if (!membro) return;
     setPapeis(membro.papeis.filter((p): p is PapelModulo => p === "personal" || p === "nutricionista"));
     setErro("");
   }, [membro]);
 
-  if (!membro) return null;
-  const saiTreino = membro.papeis.includes("personal") && !papeis.includes("personal") && membro.alunos_treino > 0;
-  const saiNutri = membro.papeis.includes("nutricionista") && !papeis.includes("nutricionista") && membro.alunos_nutricao > 0;
+  if (!visto) return null; // nunca abriu: nada a mostrar nem a animar
+  const saiTreino = visto.papeis.includes("personal") && !papeis.includes("personal") && visto.alunos_treino > 0;
+  const saiNutri = visto.papeis.includes("nutricionista") && !papeis.includes("nutricionista") && visto.alunos_nutricao > 0;
   const aviso = saiTreino || saiNutri
-    ? textoAlunosAfetados({ alunos_treino: saiTreino ? membro.alunos_treino : 0, alunos_nutricao: saiNutri ? membro.alunos_nutricao : 0 })
+    ? textoAlunosAfetados({ alunos_treino: saiTreino ? visto.alunos_treino : 0, alunos_nutricao: saiNutri ? visto.alunos_nutricao : 0 })
     : null;
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault();
-    if (!membro.dono && !papeis.length) return setErro(mensagemErroEquipe("papeis_invalidos"));
+    if (!visto.dono && !papeis.length) return setErro(mensagemErroEquipe("papeis_invalidos"));
     setSalvando(true);
     setErro("");
     try {
-      const r = await alterarPapeisMembro(membro.id, membro.dono ? ["dono", ...papeis] : papeis);
+      const r = await alterarPapeisMembro(visto.id, visto.dono ? ["dono", ...papeis] : papeis);
       const soltos = (r.alunos_sem_treino || 0) + (r.alunos_sem_nutricao || 0);
       aoSalvar(soltos ? `Papéis salvos. ${soltos === 1 ? "1 aluno ficou" : `${soltos} alunos ficaram`} sem responsável.` : "Papéis salvos.");
     } catch (err) {
@@ -171,9 +176,9 @@ export function DialogoPapeis({
   };
 
   return (
-    <PainelDeslizante aberto aoMudar={aoMudar} lado={celular ? "baixo" : "direita"} titulo={`Papéis de ${membro.nome}`}
-      descricao={membro.dono ? "Você continua dono da conta. Os papéis de módulo decidem o que você atende." : "O papel decide o que a pessoa atende e o que ela vê."}>
-      <form onSubmit={salvar} className="flex flex-col gap-4 pt-2" data-form-papeis={membro.id}>
+    <PainelDeslizante aberto={Boolean(membro)} aoMudar={aoMudar} lado={celular ? "baixo" : "direita"} titulo={`Papéis de ${visto.nome}`}
+      descricao={visto.dono ? "Você continua dono da conta. Os papéis de módulo decidem o que você atende." : "O papel decide o que a pessoa atende e o que ela vê."}>
+      <form onSubmit={salvar} className="flex flex-col gap-4 pt-2" data-form-papeis={visto.id}>
         <OpcoesPilula nome="papeis-membro" rotulo="Papéis" varias colunas={1} opcoes={opcoesDoPlano(equipe.papeis_do_plano)} valores={papeis} aoMudar={(v) => { setPapeis(v); setErro(""); }} />
         {aviso && (
           <div className="flex items-start gap-2.5 rounded-2xl border border-ambar/30 px-3.5 py-3 text-[13px] text-texto" style={{ background: "linear-gradient(90deg, var(--p-chip-a-fundo), transparent)" }} data-papeis-aviso>
@@ -188,7 +193,10 @@ export function DialogoPapeis({
   );
 }
 
-/** Remover da equipe: perde o acesso na hora; os alunos dele ficam sem responsável ou vão para quem o dono escolher. */
+/**
+ * Remover da equipe: perde o acesso na hora; os alunos dele ficam sem responsável ou vão para quem o dono escolher. hml-18a (H-40,
+ * D): a folha fica montada e fecha pelo `aberto`; enquanto sai, mostra o membro que fechou (`useUltimoValor`).
+ */
 export function DialogoRemover({
   membro,
   equipe,
@@ -206,25 +214,27 @@ export function DialogoRemover({
   const [erro, setErro] = useState("");
   const [removendo, setRemovendo] = useState(false);
 
+  const visto = useUltimoValor(membro);
   useEffect(() => {
+    if (!membro) return; // abriu (de novo): começa limpo; fechando, as escolhas ficam até a folha sair
     setNovoPersonal("");
     setNovoNutri("");
     setErro("");
   }, [membro]);
 
-  if (!membro) return null;
-  const afetados = textoAlunosAfetados(membro);
-  const paraTreino = membro.alunos_treino > 0 ? sucessoresPossiveis(equipe.membros, membro, "personal") : [];
-  const paraNutri = membro.alunos_nutricao > 0 ? sucessoresPossiveis(equipe.membros, membro, "nutricionista") : [];
+  if (!visto) return null; // nunca abriu: nada a mostrar nem a animar
+  const afetados = textoAlunosAfetados(visto);
+  const paraTreino = visto.alunos_treino > 0 ? sucessoresPossiveis(equipe.membros, visto, "personal") : [];
+  const paraNutri = visto.alunos_nutricao > 0 ? sucessoresPossiveis(equipe.membros, visto, "nutricionista") : [];
 
   const remover = async () => {
     setRemovendo(true);
     setErro("");
     try {
-      const r = await removerMembro(membro.id, novoPersonal || null, novoNutri || null);
+      const r = await removerMembro(visto.id, novoPersonal || null, novoNutri || null);
       const total = (r.alunos_treino || 0) + (r.alunos_nutricao || 0);
       const destino = novoPersonal || novoNutri ? "passaram para quem você escolheu" : "ficaram sem responsável";
-      aoRemover(total ? `${membro.nome} saiu da equipe. ${total === 1 ? "1 aluno" : `${total} alunos`} ${destino}.` : `${membro.nome} saiu da equipe.`);
+      aoRemover(total ? `${visto.nome} saiu da equipe. ${total === 1 ? "1 aluno" : `${total} alunos`} ${destino}.` : `${visto.nome} saiu da equipe.`);
     } catch (err) {
       setErro(mensagemErroEquipe(err instanceof ErroEquipe ? err.codigo : null));
     } finally {
@@ -233,9 +243,9 @@ export function DialogoRemover({
   };
 
   return (
-    <PainelDeslizante aberto aoMudar={aoMudar} lado={celular ? "baixo" : "direita"} titulo={`Remover ${membro.nome}?`}
+    <PainelDeslizante aberto={Boolean(membro)} aoMudar={aoMudar} lado={celular ? "baixo" : "direita"} titulo={`Remover ${visto.nome}?`}
       descricao="A pessoa perde o acesso à conta na hora — no painel e no Treino. Nada é apagado: alunos, treinos e dietas ficam na conta.">
-      <div className="flex flex-col gap-4 pt-2" data-dialogo-remover={membro.id}>
+      <div className="flex flex-col gap-4 pt-2" data-dialogo-remover={visto.id}>
         {afetados ? (
           <div className="flex items-start gap-2.5 rounded-2xl border border-ambar/30 px-3.5 py-3 text-[13px] text-texto" style={{ background: "linear-gradient(90deg, var(--p-chip-a-fundo), transparent)" }} data-remover-afetados>
             <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />

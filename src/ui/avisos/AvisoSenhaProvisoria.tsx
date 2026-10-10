@@ -8,6 +8,7 @@ import { adiarNestaSessao, idDaSessao, precisaCriarSenha, salvarMinhaSenha } fro
 import { validarNovaSenha } from "@/painel/configuracoes/perfil/regras";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Marca } from "@/ui/premium/Marca";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
 
 /**
  * "Crie a sua senha" (W8b — regra dele: "quando ele logar aparece a opção de atualizar, primeira página assim que ele loga depois
@@ -23,7 +24,10 @@ export default function AvisoSenhaProvisoria() {
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const idSessao = idDaSessao(sessao);
-  if (!usuario || fechado === idSessao || !precisaCriarSenha({ usuario, sessao })) return null;
+  const visivel = !!usuario && fechado !== idSessao && precisaCriarSenha({ usuario, sessao });
+  // hml-18a (H-40, D): a tela entra e SAI esmaecendo (200 ms) — antes sumia seca no "Agora não" e depois de salvar
+  const saida = useSaidaAnimada<HTMLDivElement>(visivel);
+  if (!usuario || !saida.montado) return null;
   const nome = String((usuario.user_metadata as Record<string, unknown> | undefined)?.full_name ?? "").trim().split(/\s+/)[0];
 
   const depois = () => {
@@ -47,8 +51,8 @@ export default function AvisoSenhaProvisoria() {
   // camada fixa por cima do app (z 48: acima da barra e do cabeçalho; abaixo das janelas z 50 — se outra janela global estiver
   // aberta, ela fica por cima e a pessoa resolve primeiro; sem disputar o foco com o Radix delas)
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="titulo-senha-provisoria" data-aviso-senha-provisoria
-      className="fixed inset-0 z-[48] overflow-y-auto bg-tela text-texto outline-none">
+    <div ref={saida.ref} role="dialog" aria-modal="true" aria-labelledby="titulo-senha-provisoria" data-aviso-senha-provisoria data-state={saida.estado}
+      className="fixed inset-0 z-[48] overflow-y-auto bg-tela text-texto outline-none duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards">
       <div aria-hidden className="pq-halo-app pointer-events-none fixed inset-0 -z-10" />
       <div className="relative mx-auto flex min-h-full w-full max-w-[440px] flex-col px-5 pb-8 pt-[max(22px,env(safe-area-inset-top,0px))]">
         <header className="flex h-11 items-center">

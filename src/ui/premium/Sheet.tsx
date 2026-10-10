@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 /**
  * Painel deslizante (Sheet) do visual premium: de baixo no celular (com a alça) ou da direita no
  * computador. Fundo da tela, linha clara, raio grande e o X no canto — mesmo padrão dos cartões.
+ * hml-18a (H-40, D): o ritmo da Skill-wbs-navegacao — o fundo esmaece em 200 ms; a folha entra em 300 ms (ease-out) e sai em
+ * 200 ms (ease-in), nos 3 lados (antes, os 150 ms padrão do tw-animate-css nos 2 sentidos).
  */
 export function PainelDeslizante({
   aberto,
@@ -31,12 +33,12 @@ export function PainelDeslizante({
       <Dialog.Portal>
         <Dialog.Overlay
           data-painel-fundo
-          className="fixed inset-0 z-50 bg-black/55 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
+          className="fixed inset-0 z-50 bg-black/55 duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
         />
         <Dialog.Content
           data-painel={lado}
           className={cn(
-            "fixed z-50 flex flex-col border border-linha-2 bg-tela text-texto shadow-[0_-20px_60px_-20px_rgba(0,0,0,.8)] outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+            "fixed z-50 flex flex-col border border-linha-2 bg-tela text-texto shadow-[0_-20px_60px_-20px_rgba(0,0,0,.8)] outline-none data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=closed]:ease-in data-[state=open]:animate-in data-[state=open]:duration-300 data-[state=open]:ease-out",
             lado === "baixo" &&
               "inset-x-0 bottom-0 max-h-[88vh] rounded-t-[28px] pb-[env(safe-area-inset-bottom)] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
             lado === "direita" &&

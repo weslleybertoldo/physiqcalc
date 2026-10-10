@@ -10,6 +10,7 @@ import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Esqueleto } from "@/ui/premium/Estados";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { ErroMensagens, salvarConfig } from "./api";
 import {
   DISPAROS, HORARIOS, LIMITE_TEXTO, VARIAVEIS_VALIDAS, erroTexto, mesmaConfig, previa, quantosLigados, resumoCard, textoDoMomento,
@@ -40,6 +41,8 @@ export default function Automaticas({ d, conectado }: { d: DadosMensagens; conec
   const celular = useIsMobile();
   const [cfg, setCfg] = useState<ConfigWhatsapp | null>(null);
   const [editando, setEditando] = useState<Momento | null>(null);
+  // hml-18a (H-40, D): a folha do texto fica montada e fecha pelo `aberto`; enquanto sai, mostra o momento que fechou
+  const editandoVisto = useUltimoValor(editando);
   const [salvando, setSalvando] = useState(false);
   const carregou = d.perfil.data !== undefined;
   const base = useRef<ConfigWhatsapp | null>(null);
@@ -65,7 +68,7 @@ export default function Automaticas({ d, conectado }: { d: DadosMensagens; conec
   const tocado = !mesmaConfig(cfg, base.current ?? d.config);
   const ligados = quantosLigados(cfg);
   const desligado = !conectado;
-  const disparoEditando = DISPAROS.find((x) => x.chave === editando) ?? null;
+  const disparoEditando = DISPAROS.find((x) => x.chave === editandoVisto) ?? null;
   const erroDeAlgum = DISPAROS.map((x) => erroTexto(cfg.textos[x.chave] ?? "")).find(Boolean) ?? null;
   const alcance = d.resumo.data?.alcance ?? null;
 
@@ -160,7 +163,7 @@ export default function Automaticas({ d, conectado }: { d: DadosMensagens; conec
       </div>
 
       {disparoEditando && (
-        <TextoDialog disparo={disparoEditando} texto={textoDoMomento(cfg, disparoEditando.chave)} lado={celular ? "baixo" : "direita"}
+        <TextoDialog aberto={editando !== null} disparo={disparoEditando} texto={textoDoMomento(cfg, disparoEditando.chave)} lado={celular ? "baixo" : "direita"}
           aoMudar={(texto) => mudar({ textos: { ...cfg.textos, [disparoEditando.chave]: texto } })} aoFechar={() => setEditando(null)} />
       )}
     </Cartao>
@@ -168,12 +171,12 @@ export default function Automaticas({ d, conectado }: { d: DadosMensagens; conec
 }
 
 /** O texto de um momento: o padrão (o mesmo do banco e do site antigo) ou o do profissional, com as variáveis e a prévia. */
-function TextoDialog({ disparo, texto, aoMudar, aoFechar, lado }: { disparo: Disparo; texto: string; aoMudar: (t: string) => void; aoFechar: () => void; lado: "baixo" | "direita" }) {
+function TextoDialog({ aberto, disparo, texto, aoMudar, aoFechar, lado }: { aberto: boolean; disparo: Disparo; texto: string; aoMudar: (t: string) => void; aoFechar: () => void; lado: "baixo" | "direita" }) {
   const erro = erroTexto(texto);
   const ehPadrao = texto.trim() === disparo.padrao;
   const inserir = (v: string) => aoMudar(`${texto}${texto && !texto.endsWith(" ") ? " " : ""}${v}`);
   return (
-    <PainelDeslizante aberto aoMudar={(a) => !a && aoFechar()} titulo={disparo.titulo} descricao={disparo.descricao} lado={lado}
+    <PainelDeslizante aberto={aberto} aoMudar={(a) => !a && aoFechar()} titulo={disparo.titulo} descricao={disparo.descricao} lado={lado}
       rodape={
         <div className="flex items-center justify-between gap-2">
           <button type="button" className={cn(BTN_TEXTO, ehPadrao && "opacity-40")} disabled={ehPadrao} onClick={() => aoMudar(disparo.padrao)} data-btn-texto-padrao>

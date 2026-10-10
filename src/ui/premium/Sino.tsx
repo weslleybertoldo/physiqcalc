@@ -35,7 +35,10 @@ function Linha({ aviso, aoAbrir }: { aviso: AvisoSino; aoAbrir: (a: AvisoSino) =
   );
 }
 
-/** Sino de avisos (NF9) do topo do painel e do Início do app: ponto rosa quando há aviso não lido. */
+/**
+ * Sino de avisos (NF9) do topo do painel e do Início do app: ponto rosa quando há aviso não lido. hml-18a (H-40, D): a lista sai como
+ * entra (fade + zoom-95, 150 ms, a partir do sino) — antes sumia no mesmo quadro (7–17 ms), sem passar por data-state=closed.
+ */
 export function Sino({ className, tamanho }: { className?: string; tamanho?: number }) {
   const { avisos, naoLidos, marcarLidos, carregando } = useAvisos();
   const [aberto, setAberto] = useState(false);
@@ -66,7 +69,7 @@ export function Sino({ className, tamanho }: { className?: string; tamanho?: num
           sideOffset={8}
           collisionPadding={16}
           data-sino-lista
-          className="z-50 w-[min(360px,calc(100vw-32px))] rounded-[20px] border border-linha-2 bg-tela p-2 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          className="z-50 w-[min(360px,calc(100vw-32px))] origin-(--radix-popover-content-transform-origin) rounded-[20px] border border-linha-2 bg-tela p-2 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         >
           <div className="flex items-center justify-between px-2 pb-1 pt-1.5">
             <span className="text-[14px] font-semibold text-texto">Avisos</span>

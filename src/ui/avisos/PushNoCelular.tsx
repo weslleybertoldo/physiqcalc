@@ -132,10 +132,10 @@ export default function PushNoCelular() {
     }
   };
 
-  if (!pedir) return null;
+  // hml-18a (H-40, D): a folha fica montada (fechada, não desenha nada) e fecha pelo `aberto` — antes sumia seca no "Agora não"
   return (
     <PainelDeslizante
-      aberto
+      aberto={pedir}
       lado={celular ? "baixo" : "direita"}
       aoMudar={(aberto) => {
         if (!aberto && !ativando) agoraNao();

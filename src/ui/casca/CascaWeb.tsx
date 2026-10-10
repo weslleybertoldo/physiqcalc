@@ -6,7 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/ui/premium/Avatar";
 import { BotaoIcone } from "@/ui/premium/Botao";
-import { useAtalhoBusca } from "@/ui/premium/atalhos";
+import { useAtalhoBusca, useTermoDaBusca } from "@/ui/premium/atalhos";
 import { BuscaGatilho, GrupoBusca, ItemBusca, PaletaBusca } from "@/ui/premium/Busca";
 import { Marca } from "@/ui/premium/Marca";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
@@ -130,7 +130,8 @@ function MenuUsuario({ usuario, acoes, lista }: { usuario: UsuarioCasca; acoes: 
             side="top"
             align="end"
             sideOffset={8}
-            className="z-50 min-w-[220px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+            // hml-18a (H-40, D): o menu sai como entra (fade + zoom-95, 150 ms, a partir do botão) — antes sumia seco
+            className="z-50 min-w-[220px] origin-(--radix-dropdown-menu-content-transform-origin) rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
           >
             {acoes.map((a) => (
               <DropdownMenu.Item
@@ -229,7 +230,8 @@ export function CascaWeb({
   const [proprio, setProprio] = useState(false);
   const ctx = useMemo(() => ({ alvoTitulo, alvoAcoes, definirProprio: setProprio }), [alvoTitulo, alvoAcoes]);
   const [buscaAberta, setBuscaAberta] = useState(false);
-  const [termo, setTermo] = useState("");
+  // hml-18a (H-40, D): o termo só volta a "" depois da saída da janela (a lista não pisca vazia enquanto ela esmaece)
+  const [termo, setTermo] = useTermoDaBusca(buscaAberta);
   const [maisAberto, setMaisAberto] = useState(false);
   const abrirBusca = useCallback(() => setBuscaAberta(true), []);
   useAtalhoBusca(abrirBusca);
@@ -242,10 +244,7 @@ export function CascaWeb({
   const barra = ativo && !primeiros.includes(ativo) && candidatos.includes(ativo) ? [...primeiros.slice(0, 3), ativo] : primeiros;
   const maisAtivo = Boolean(ativo && !barra.includes(ativo));
 
-  const fecharBusca = () => {
-    setBuscaAberta(false);
-    setTermo("");
-  };
+  const fecharBusca = () => setBuscaAberta(false);
 
   return (
     <TopoCtx.Provider value={ctx}>

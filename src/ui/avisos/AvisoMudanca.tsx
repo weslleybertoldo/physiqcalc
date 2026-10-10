@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSessao } from "@/nucleo/sessao";
 import { useVeioDoNutri } from "@/ui/casca/veioDoNutri";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { Marca } from "@/ui/premium/Marca";
 
 /** O que mudou, por público (os textos do título e do parágrafo vêm de app_config.aviso_mudanca — o master edita). */
@@ -33,8 +34,11 @@ export default function AvisoMudanca() {
   const celular = useIsMobile();
   const veioDoNutri = useVeioDoNutri();
   const [fechado, setFechado] = useState(false);
-  const aviso = situacao?.aviso_mudanca;
-  if (!aviso || !aviso.ativo || aviso.visto || fechado || !aviso.titulo || veioDoNutri) return null;
+  const atual = situacao?.aviso_mudanca;
+  const mostrar = !!atual && atual.ativo && !atual.visto && !fechado && !!atual.titulo && !veioDoNutri;
+  // hml-18a (H-40, D): a folha fica montada e fecha pelo `aberto` (antes sumia seca no "Entendi"); enquanto sai, o texto continua
+  const aviso = useUltimoValor(mostrar ? atual : null);
+  if (!aviso) return null;
   const pontos = PONTOS[aviso.publico] ?? PONTOS.calc;
   const fechar = () => {
     setFechado(true);
@@ -42,7 +46,7 @@ export default function AvisoMudanca() {
   };
   return (
     <PainelDeslizante
-      aberto
+      aberto={mostrar}
       lado={celular ? "baixo" : "direita"}
       aoMudar={(aberto) => {
         if (!aberto) fechar();

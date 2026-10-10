@@ -1,13 +1,17 @@
 import { X, Download } from "lucide-react";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
 
 const PWAInstallBanner = () => {
   const { canInstall, dismissed, promptInstall, dismiss } = usePWAInstall();
+  // hml-18a (H-40, D): a faixa sobe (300 ms, ease-out) e DESCE ao sair (200 ms, ease-in) — antes sumia seca no X e no Instalar
+  const saida = useSaidaAnimada<HTMLDivElement>(canInstall && !dismissed);
 
-  if (!canInstall || dismissed) return null;
+  if (!saida.montado) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-secondary border-t border-muted-foreground/30 px-5 py-3 flex items-center justify-between gap-4 animate-slide-up">
+    <div ref={saida.ref} data-state={saida.estado} data-faixa-instalar
+      className="fixed bottom-0 left-0 right-0 z-50 bg-secondary border-t border-muted-foreground/30 px-5 py-3 flex items-center justify-between gap-4 data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-300 data-[state=open]:ease-out data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 data-[state=closed]:ease-in data-[state=closed]:fill-mode-forwards">
       <div className="flex items-center gap-3 min-w-0">
         <Download size={18} className="text-primary shrink-0" />
         <p className="text-sm text-foreground font-body truncate">

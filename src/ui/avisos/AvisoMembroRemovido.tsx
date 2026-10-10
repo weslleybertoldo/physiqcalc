@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { principal } from "@/integrations/principal/client";
 import { useSessao } from "@/nucleo/sessao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { CHAVE_AVISOS } from "@/ui/premium/useAvisos";
 
 interface AvisoRemovido {
@@ -42,8 +43,10 @@ export default function AvisoMembroRemovido() {
       return (data?.[0] as AvisoRemovido | undefined) ?? null;
     },
   });
-  const aviso = q.data;
-  if (!aviso || fechado) return null;
+  const mostrar = !!q.data && !fechado;
+  // hml-18a (H-40, D): a folha fica montada e fecha pelo `aberto` (antes sumia seca no "Entendi"); enquanto sai, o texto continua
+  const aviso = useUltimoValor(mostrar ? q.data : null);
+  if (!aviso) return null;
   const fechar = () => {
     setFechado(true);
     void principal
@@ -54,7 +57,7 @@ export default function AvisoMembroRemovido() {
   };
   return (
     <PainelDeslizante
-      aberto
+      aberto={mostrar}
       lado={celular ? "baixo" : "direita"}
       aoMudar={(aberto) => {
         if (!aberto) fechar();

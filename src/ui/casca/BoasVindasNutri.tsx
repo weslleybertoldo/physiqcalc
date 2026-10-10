@@ -12,6 +12,7 @@ import { useSessao } from "@/nucleo/sessao";
 import { Botao } from "@/ui/premium/Botao";
 import { Marca } from "@/ui/premium/Marca";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { ehPaginaDoPaciente, mostraInstalarApp, useVeioDoNutri } from "./veioDoNutri";
 
 const TITULO = "O PhysiqNutri agora é o Physiq";
@@ -29,9 +30,11 @@ export function BoasVindasNutri() {
   const veio = useVeioDoNutri();
   const { pathname } = useLocation();
   const [saibaMais, setSaibaMais] = useState(false);
-  if (!veio) return null;
-  if (ehPaginaDoPaciente(pathname) && !saibaMais) return <FaixaNutri aoSaberMais={() => setSaibaMais(true)} />;
-  return <FolhaNutri />;
+  // hml-18a (H-40, D): a folha fica montada e fecha pelo `aberto` (antes sumia seca ao continuar/fechar)
+  const jaVeio = useUltimoValor(veio || null);
+  if (!jaVeio) return null;
+  if (ehPaginaDoPaciente(pathname) && !saibaMais) return veio ? <FaixaNutri aoSaberMais={() => setSaibaMais(true)} /> : null;
+  return <FolhaNutri aberto={veio} />;
 }
 
 function FaixaNutri({ aoSaberMais }: { aoSaberMais: () => void }) {
@@ -77,7 +80,7 @@ function Ponto({ icone: Icone, children }: { icone: LucideIcon; children: ReactN
   );
 }
 
-function FolhaNutri() {
+function FolhaNutri({ aberto }: { aberto: boolean }) {
   const { pronto, usuario } = useSessao();
   const location = useLocation();
   const navigate = useNavigate();
@@ -107,10 +110,10 @@ function FolhaNutri() {
 
   return (
     <PainelDeslizante
-      aberto
+      aberto={aberto}
       lado={celular ? "baixo" : "direita"}
-      aoMudar={(aberto) => {
-        if (!aberto) fecharBoasVindasNutri();
+      aoMudar={(v) => {
+        if (!v) fecharBoasVindasNutri();
       }}
       titulo={TITULO}
       descricao="O PhysiqNutri e o PhysiqCalc viraram um app só: o Physiq."

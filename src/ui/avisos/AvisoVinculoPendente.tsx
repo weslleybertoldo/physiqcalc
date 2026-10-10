@@ -4,6 +4,7 @@ import { lerProfPendente, limparProfPendente } from "@/lib/profPendente";
 import { useSessao } from "@/nucleo/sessao";
 import { EVENTO_PROF_PENDENTE } from "@/nucleo/vinculo";
 import { ConfirmarVinculo } from "@/ui/vinculo/ConfirmarVinculo";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 
 /**
  * Link do profissional (?prof=PROF-NOME-SOBRENOME) — W7, palavra dele (29/09 ~18:05): "quando o app abrir aparece o popup e
@@ -25,11 +26,15 @@ export default function AvisoVinculoPendente() {
     };
   }, []);
 
-  if (!usuario || !situacao || !codigo) return null;
+  const mostrar = !!usuario && !!situacao && !!codigo;
+  // hml-18a (H-40, D): o popup fica montado e fecha pelo `aberto` (antes sumia seco no Confirmar/Cancelar); enquanto sai, o código
+  // continua o mesmo
+  const visto = useUltimoValor(mostrar ? codigo : null);
+  if (!visto) return null;
   return (
     <ConfirmarVinculo
-      codigo={codigo}
-      aberto
+      codigo={visto}
+      aberto={mostrar}
       aoFechar={(fim, r) => {
         limparProfPendente();
         setCodigo(null);
