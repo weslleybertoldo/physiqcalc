@@ -89,25 +89,28 @@ export function slug(nome: string): string {
     .toLowerCase();
 }
 
+// hml-16d: as exclusões de teste são RELATIVAS ("!**/*.test.tsx"). A vite 6 resolve a exclusão a partir da pasta do padrão
+// positivo, então o antigo "!/src/**/*.test.tsx" deixava de excluir: os testes entravam no bundle e o app abria em tela
+// preta ("Vitest failed to access its internal state"). A guarda `semTesteNoBundle()` do vite.config.ts derruba o build se voltar.
 export const registro = {
-  entrada: montarGrupo(import.meta.glob(["/src/entrada/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  onboarding: montarGrupo(import.meta.glob(["/src/entrada/onboarding/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  avisosGlobais: montarGrupo(import.meta.glob(["/src/ui/avisos/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  abasApp: montarGrupo(import.meta.glob(["/src/app-aluno/abas/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  perfilApp: montarGrupo(import.meta.glob(["/src/app-aluno/perfil/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  inicioApp: montarGrupo(import.meta.glob(["/src/app-aluno/inicio/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  avisosApp: montarGrupo(import.meta.glob(["/src/app-aluno/avisos/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  paginasPainel: montarGrupo(import.meta.glob(["/src/painel/paginas/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  abasAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/abas/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  resumoAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/resumo/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  kpisAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/kpis/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
-  abasConfig: montarGrupo(import.meta.glob(["/src/painel/configuracoes/*.tsx", "!/src/painel/configuracoes/ConfiguracoesLayout.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
+  entrada: montarGrupo(import.meta.glob(["/src/entrada/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  onboarding: montarGrupo(import.meta.glob(["/src/entrada/onboarding/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  avisosGlobais: montarGrupo(import.meta.glob(["/src/ui/avisos/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  abasApp: montarGrupo(import.meta.glob(["/src/app-aluno/abas/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  perfilApp: montarGrupo(import.meta.glob(["/src/app-aluno/perfil/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  inicioApp: montarGrupo(import.meta.glob(["/src/app-aluno/inicio/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  avisosApp: montarGrupo(import.meta.glob(["/src/app-aluno/avisos/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  paginasPainel: montarGrupo(import.meta.glob(["/src/painel/paginas/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  abasAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/abas/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  resumoAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/resumo/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  kpisAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/kpis/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
+  abasConfig: montarGrupo(import.meta.glob(["/src/painel/configuracoes/*.tsx", "!/src/painel/configuracoes/ConfiguracoesLayout.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
   // hml-08 (H-22): o master é só do site — no build do app (VITE_APP_NATIVO=1) as páginas dele nem entram no bundle
   // (src/lib/plataforma.ts; a expressão fica aqui, direto na condição, para o Rollup cortar o glob)
-  paginasMaster: import.meta.env.VITE_APP_NATIVO === "1" ? ({} as Grupo) : montarGrupo(import.meta.glob(["/src/master/paginas/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
+  paginasMaster: import.meta.env.VITE_APP_NATIVO === "1" ? ({} as Grupo) : montarGrupo(import.meta.glob(["/src/master/paginas/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
   // hml-10 (D5): a página de teste das telas de erro (ErroDeTeste.tsx) fica de fora — o glob a poria em /erro-de-teste em todo build,
   // produção inclusive; a rota /erro-teste é do Rotas.tsx, só no build de staging
-  publico: montarGrupo(import.meta.glob(["/src/publico/*.tsx", "!/src/publico/PublicoLayout.tsx", "!/src/publico/ErroDeTeste.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"])),
+  publico: montarGrupo(import.meta.glob(["/src/publico/*.tsx", "!/src/publico/PublicoLayout.tsx", "!/src/publico/ErroDeTeste.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"])),
   cabecalhoAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/Cabecalho.tsx"])),
   editoresAluno: montarGrupo(import.meta.glob(["/src/painel/aluno/Editores.tsx"])),
 };
@@ -142,8 +145,8 @@ function montarGates(mapa: Record<string, unknown>): { nome: string; Gate: Gate 
   );
 }
 
-export const gatesApp = montarGates(import.meta.glob(["/src/app-aluno/gates/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"], { eager: true }));
-export const gatesPainel = montarGates(import.meta.glob(["/src/painel/gates/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"], { eager: true }));
+export const gatesApp = montarGates(import.meta.glob(["/src/app-aluno/gates/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"], { eager: true }));
+export const gatesPainel = montarGates(import.meta.glob(["/src/painel/gates/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"], { eager: true }));
 
 // ───────────────────────── contadores do menu e fontes da busca (pequenos: carregados junto) ─────────────────────────
 
@@ -160,8 +163,8 @@ function montarPadrao<T>(mapa: Record<string, unknown>): Record<string, T> {
   return saida;
 }
 
-export const contadoresPainel = montarPadrao<UseContador>(import.meta.glob(["/src/painel/contadores/*.ts", "!/src/**/*.test.ts"], { eager: true }));
-export const fontesBusca = montarPadrao<FonteBusca>(import.meta.glob(["/src/painel/busca/*.tsx", "!/src/**/*.test.tsx", "!/src/**/*.spec.tsx"], { eager: true }));
+export const contadoresPainel = montarPadrao<UseContador>(import.meta.glob(["/src/painel/contadores/*.ts", "!**/*.test.ts"], { eager: true }));
+export const fontesBusca = montarPadrao<FonteBusca>(import.meta.glob(["/src/painel/busca/*.tsx", "!**/*.test.tsx", "!**/*.spec.tsx"], { eager: true }));
 
 // ───────────────────────── rotas por convenção ─────────────────────────
 
