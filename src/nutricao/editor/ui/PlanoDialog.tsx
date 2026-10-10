@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/nutricao/editor/ui/contexto";
@@ -41,9 +42,14 @@ interface Props {
   plano?: PlanoRow | null;
   onCriado?: (p: Plano) => void;
   onEditado?: (p: PlanoRow) => void;
+  /**
+   * hml-17 (H-39): a leitura dos cálculos energéticos falhou (sem dado) — o texto da origem diz que não deu para ler o último
+   * cálculo (com "Tentar de novo"), nunca "Sem cálculo energético registrado". A meta continua em branco, como sem cálculo.
+   */
+  calculoFalhou?: { aoTentar: () => void } | null;
 }
 
-export default function PlanoDialog({ open, onOpenChange, pacienteId, ultimoCalculo, plano, onCriado, onEditado }: Props) {
+export default function PlanoDialog({ open, onOpenChange, pacienteId, ultimoCalculo, plano, onCriado, onEditado, calculoFalhou = null }: Props) {
   const { user } = useAuth();
   const editando = !!plano;
   const [erroGeral, setErroGeral] = useState<string | null>(null);
@@ -86,12 +92,15 @@ export default function PlanoDialog({ open, onOpenChange, pacienteId, ultimoCalc
     }
   };
 
-  const origem = editando ? "plano" : ultimoCalculo ? "vet" : "sem";
+  const falhouCalculo = !editando && !ultimoCalculo && !!calculoFalhou;
+  const origem = editando ? "plano" : ultimoCalculo ? "vet" : falhouCalculo ? "erro" : "sem";
   const textoOrigem = editando
     ? "Dados gravados neste plano — altere o que precisar."
     : ultimoCalculo
       ? `Meta pré-preenchida pelo VET do cálculo energético de ${format(new Date(ultimoCalculo.data), "dd/MM/yyyy")} (${rotuloFormula(ultimoCalculo.formula)}: ${fmtKcal(ultimoCalculo.vet)} kcal) — altere se quiser.`
-      : "Sem cálculo energético registrado — informe a meta calórica ou deixe em branco.";
+      : falhouCalculo
+        ? "Não deu para ler o último cálculo energético — informe a meta calórica, deixe em branco ou tente de novo."
+        : "Sem cálculo energético registrado — informe a meta calórica ou deixe em branco.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,7 +119,14 @@ export default function PlanoDialog({ open, onOpenChange, pacienteId, ultimoCalc
           <Campo rotulo="Meta calórica (kcal/dia)" erro={errors.kcal_alvo?.message} dica={kcal !== null && kcal > 0 ? `${fmtKcal(kcal)} kcal por dia` : "opcional"}>
             <input inputMode="numeric" placeholder="ex.: 2000" className={INPUT} {...register("kcal_alvo")} data-campo-kcal-alvo />
           </Campo>
-          <p className="text-[11px] text-texto-3 font-body" data-origem-alvo={origem}>{textoOrigem}</p>
+          <p className={falhouCalculo ? "text-[11px] text-rosa-3 font-body" : "text-[11px] text-texto-3 font-body"} data-origem-alvo={origem}>
+            {textoOrigem}
+          </p>
+          {falhouCalculo && calculoFalhou && (
+            <button type="button" className={`${BTN_SEC} inline-flex items-center gap-1.5`} onClick={calculoFalhou.aoTentar} data-calculo-erro>
+              <RefreshCw aria-hidden className="h-3.5 w-3.5" /> Tentar de novo
+            </button>
+          )}
           <Campo rotulo="Observações" erro={errors.observacao?.message}>
             <textarea className={TEXTAREA} rows={3} maxLength={OBSERVACAO_MAX} placeholder="orientações gerais do plano (aparecem no PDF)" {...register("observacao")} data-campo-observacao-plano />
           </Campo>

@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { Botao } from "@/ui/premium/Botao";
 import { Chip } from "@/ui/premium/Chip";
+import { EstadoErro } from "@/ui/premium/Estados";
 import { Segmentado } from "@/ui/premium/Segmentado";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { CampoSelect, OpcoesPilula, type OpcaoPilula } from "@/painel/configuracoes/pecas/Form";
@@ -260,6 +261,8 @@ function Convidar({ lista, aoMudou }: { lista: ListaAlunos; aoMudou: () => void 
   const opcoes = useMemo(() => opcoesModulos(lista), [lista]);
   const convites = useQuery({ queryKey: ["alunos-convites", lista.conta.id], queryFn: () => listarConvites(lista.conta.id), staleTime: 15_000 });
   const pendentes = (convites.data ?? []).filter((c) => c.status === "pendente");
+  // hml-17 (H-39): a leitura dos convites falhou → o aviso com "Tentar de novo" e o contador "—" (antes, "0" e "Nenhum convite esperando.")
+  const convitesFalhou = convites.isError && !convites.data;
   // o mesmo responsável vale para os módulos do convite (o aceite põe ele nos dois)
   const candidatos = lista.responsaveis.filter((r) => modulos.every((m) => r.papeis.includes(m === "treino" ? "personal" : "nutricionista")));
   useEffect(() => {
@@ -332,13 +335,17 @@ function Convidar({ lista, aoMudou }: { lista: ListaAlunos; aoMudou: () => void 
         )}
         <Botao type="submit" variante="w" icone={Send} disabled={indo} data-convite-enviar>{indo ? "Enviando…" : "Enviar convite"}</Botao>
       </form>
-      <div className="flex flex-col" data-convites-pendentes={pendentes.length}>
+      <div className="flex flex-col" data-convites-pendentes={convitesFalhou ? "erro" : pendentes.length}>
         <div className="mb-1.5 flex items-center gap-2">
           <span className="pq-eyebrow">Convites pendentes</span>
-          <Chip tom="g">{pendentes.length}</Chip>
+          <Chip tom="g" data-convites-contador>{convitesFalhou ? "—" : pendentes.length}</Chip>
         </div>
         {convites.isLoading ? (
           <p className="text-[13px] text-texto-3">Carregando…</p>
+        ) : convitesFalhou ? (
+          <div data-convites-erro>
+            <EstadoErro titulo="Não deu para carregar os convites" aoTentar={() => void convites.refetch()} className="px-4 py-5" />
+          </div>
         ) : pendentes.length === 0 ? (
           <p className="text-[13px] text-texto-3">Nenhum convite esperando.</p>
         ) : (

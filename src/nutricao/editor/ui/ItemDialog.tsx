@@ -109,7 +109,7 @@ export default function ItemDialog({ open, onOpenChange, refeicao, item, ordem, 
     setErroGeral(null);
     try {
       if (item) {
-        onSalvo(refeicao.id, await atualizarItem(item.id, reg), "editado");
+        onSalvo(refeicao.id, await atualizarItem(item.id, reg, item.alimento), "editado");
         toast.success("Alimento atualizado");
       } else {
         onSalvo(refeicao.id, await criarItem(refeicao.id, alimento.id, reg, ordem), "criado");

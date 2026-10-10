@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, CalendarDays, CalendarPlus, Check, Dumbbell, Package, RefreshCw, Repeat, Salad, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, CalendarPlus, Check, CircleAlert, Dumbbell, Package, RefreshCw, Repeat, Salad, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -176,6 +176,9 @@ function FolhaProximas({ aberta, uid, aoFechar, acoesDe }: { aberta: boolean; ui
  * dos últimos 3 meses, com o status na voz do aluno; a consulta que o profissional marcou pede a resposta do aluno: CONFIRMAR,
  * REAGENDAR (1 slot; nº de vezes e janela pelas regras do profissional, com a mensagem clara) ou DESISTIR (com o aviso do que
  * perde). Com pacote: quantas restam (1 por mês) e "Marcar consulta". Todas as matrículas (P7); precisa de internet.
+ * hml-17 (H-39): as regras dos profissionais (o pacote) que falharam viram um aviso com "Tentar de novo" — antes o pacote e o
+ * "Marcar consulta" sumiam, sem consulta a tela dizia "Nenhuma consulta marcada" e o Desistir perdia o aviso do pacote. Sem as
+ * regras, o Desistir fica escondido (ele avisa o que se perde do pacote).
  */
 export default function Agenda() {
   const { usuario } = useSessao();
@@ -205,7 +208,9 @@ export default function Agenda() {
     const p = profs.find((x) => x.profissional_id === c.profissional_id);
     const outrasNoMes = todasProximas.filter((x) => x.id !== c.id && x.profissional_id === c.profissional_id && !x.dia_inteiro
       && (x.mes_referencia ?? "").slice(0, 7) === (c.mes_referencia ?? "").slice(0, 7)).length;
-    return { regras: normalizarRegras(c.regras ?? p?.regras), pacote: p?.pacote ?? null, profissional: c.profissional ?? p?.profissional ?? null, outrasNoMes };
+    const regras = normalizarRegras(c.regras ?? p?.regras);
+    // hml-17 (H-39): sem as regras dos profissionais (o pacote ainda não veio ou falhou), o Desistir fica escondido
+    return { regras: regrasQ.data ? regras : { ...regras, desistencia: false }, pacote: p?.pacote ?? null, profissional: c.profissional ?? p?.profissional ?? null, outrasNoMes };
   };
   const atualizar = () => {
     void qc.invalidateQueries({ queryKey: ["agenda-aluno", uid] });
@@ -229,7 +234,24 @@ export default function Agenda() {
       aoReagendar={() => setFolha({ tipo: "reagendar", consulta: a })} aoDesistir={() => setFolha({ tipo: "desistir", consulta: a })} />
   );
   const consultaDaFolha = folha && folha.tipo !== "marcar" ? folha.consulta : null;
-  const nadaAinda = proximos.length === 0 && anteriores.length === 0 && comPacote.length === 0;
+  const semConsultas = proximos.length === 0 && anteriores.length === 0;
+  // hml-17 (H-39): "Nenhuma consulta marcada" só com as regras carregadas (sem elas não dá para dizer que não há pacote)
+  const regrasFalhou = regrasQ.isError && !regrasQ.data;
+  const nadaAinda = !!regrasQ.data && semConsultas && comPacote.length === 0;
+  const avisoRegras = regrasFalhou ? (
+    <Cartao className="flex items-start gap-3 px-4 py-3.5" role="alert" data-agenda-regras-erro data-estado="erro">
+      <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[10px] bg-superficie text-rosa-3">
+        <CircleAlert aria-hidden className="h-4 w-4" strokeWidth={1.75} />
+      </span>
+      <div className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-texto-2">
+        <b className="block text-[13.5px] font-medium text-texto">Não deu para carregar os pacotes e as regras das consultas</b>
+        <span className="block">Confira a internet e tente de novo.</span>
+        <div className="mt-2">
+          <Botao variante="g" tamanho="sm" icone={RefreshCw} onClick={() => void regrasQ.refetch()} data-agenda-regras-tentar>Tentar de novo</Botao>
+        </div>
+      </div>
+    </Cartao>
+  ) : null;
 
   return (
     <div data-pagina-agenda data-proximos={todasProximas.length} data-anteriores={anteriores.length} data-pendentes={pendentes.length} className={CLASSE_PAGINA_APP}>
@@ -242,10 +264,15 @@ export default function Agenda() {
         <EstadoCarregando linhas={3} rotulo="Carregando a agenda" />
       ) : q.isError ? (
         <EstadoErro aoTentar={() => void q.refetch()} />
+      ) : regrasQ.isLoading && semConsultas ? (
+        <EstadoCarregando linhas={3} rotulo="Carregando a agenda" />
+      ) : regrasFalhou && semConsultas ? (
+        avisoRegras
       ) : nadaAinda ? (
         <EstadoVazio icone={CalendarDays} titulo="Nenhuma consulta marcada" texto="As consultas que o seu profissional marcar aparecem aqui, para você confirmar." />
       ) : (
         <>
+          {avisoRegras}
           {destaque ? (
             <Cartao brilho className="px-4 py-3.5" data-agenda-confirmar={destaque.id}>
               <div className="flex items-center gap-3.5">

@@ -8,7 +8,7 @@ import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
-import { EstadoCarregando, EstadoVazio } from "@/ui/premium/Estados";
+import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import {
   APELIDO_MAX, EMAIL_MAX, FORM_VAZIO, MENSAGEM, NOME_MAX, OBSERVACOES_MAX, dadosDoCadastro, formatarCPF, problemaDoCadastro,
   type FormCadastro,
@@ -32,12 +32,16 @@ function textoDepois(f: FormCadastro): string {
   return "Depois é só esperar o contato do profissional.";
 }
 
-/** O erro da função alunos: o código. */
+/** O erro da função alunos: o código. `respondeu` = a função respondeu com o erro dela (o corpo trouxe `erro`); false = sem resposta
+ *  (rede, tempo esgotado, a API fora). */
 class ErroCadastro extends Error {
-  constructor(public codigo: string) {
+  constructor(public codigo: string, public respondeu = false) {
     super(codigo);
   }
 }
+
+/** hml-17 (H-39, H-70): erros da função que são de agora, não do link (o limite por IP e a falha do servidor) — o link pode valer. */
+const ERROS_PASSAGEIROS = new Set(["muitas_acoes", "muitos_cadastros", "erro_interno"]);
 
 async function chamar<T>(corpo: Record<string, unknown>): Promise<T> {
   const { data, error } = await principal.functions.invoke("alunos", { body: corpo });
@@ -49,9 +53,25 @@ async function chamar<T>(corpo: Record<string, unknown>): Promise<T> {
     } catch {
       c = null;
     }
-    throw new ErroCadastro(String(c?.erro ?? "erro_interno"));
+    throw new ErroCadastro(String(c?.erro ?? "erro_interno"), typeof c?.erro === "string");
   }
   return data as T;
+}
+
+/**
+ * hml-17 (H-39, H-70): o que o link diz. A função respondeu que o link não vale (ok: false — 404 link_nao_encontrado e afins) → a
+ * resposta { ok: false } (a tela diz "Link de cadastro não encontrado"); sem resposta (rede, a API fora, tempo) ou erro passageiro
+ * (limite por IP, falha do servidor) → a consulta FALHA e a tela diz "Não deu para abrir o cadastro agora" com Tentar de novo —
+ * antes qualquer falha virava "Este link não vale mais".
+ */
+async function infoDoLink(codigo: string): Promise<InfoLink> {
+  try {
+    return await chamar<InfoLink>({ acao: "cadastro_info", codigo });
+  } catch (e) {
+    if (e instanceof ErroCadastro && e.respondeu && !ERROS_PASSAGEIROS.has(e.codigo)) return { ok: false, erro: e.codigo };
+    console.warn("[cadastro] cadastro_info:", e instanceof ErroCadastro ? e.codigo : (e as Error)?.name);
+    throw e;
+  }
 }
 
 /**
@@ -66,7 +86,7 @@ export default function Cadastro() {
   const { codigo = "" } = useParams();
   const info = useQuery({
     queryKey: ["cadastro-link", codigo],
-    queryFn: () => chamar<InfoLink>({ acao: "cadastro_info", codigo }),
+    queryFn: () => infoDoLink(codigo),
     retry: false,
     staleTime: Infinity,
   });
@@ -107,7 +127,16 @@ export default function Cadastro() {
   );
 
   if (info.isLoading) return casca(<EstadoCarregando linhas={2} rotulo="Abrindo o cadastro" />);
-  if (!info.data?.ok) {
+  // hml-17 (H-39, H-70): a consulta falhou (sem resposta da função) → o aviso com Tentar de novo, nunca "link não vale mais"
+  if (info.isError || !info.data) {
+    return casca(
+      <div data-cadastro-erro>
+        <EstadoErro titulo="Não deu para abrir o cadastro agora" aoTentar={() => void info.refetch()} />
+      </div>,
+    );
+  }
+  // "não encontrado" SÓ quando a função respondeu que o link não vale (ok: false)
+  if (!info.data.ok) {
     return casca(
       <EstadoVazio icone={LinkIcon} titulo="Link de cadastro não encontrado" texto="Este link não vale mais. Peça outro ao seu profissional." />,
     );

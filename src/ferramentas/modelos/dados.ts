@@ -5,7 +5,8 @@
 // nos planos, só os alunos da conta ativa. `Promise.allSettled` por fonte: uma que falhar não derruba a tela (o erro vai em
 // `erros[tipo]`). Tirar o ★ é o mesmo UPDATE da tela dona (RLS: só o autor).
 import { principal } from "@/integrations/principal/client";
-import { totaisDoPlano, type ItemCalc } from "@/nutricao/editor/lib/dietaUtil";
+import { totaisDoPlano } from "@/nutricao/editor/lib/dietaUtil";
+import { listarPlanosFavoritos } from "@/nutricao/editor/lib/planos";
 import { calcularReceita, type IngredienteCalc } from "@/nutricao/editor/lib/receitasUtil";
 import { carregarCatalogo } from "@/painel/treinos/api";
 import { montarModelos, type FonteTreino, type FontesModelos, type ModeloItem, type TipoModelo } from "./regras";
@@ -31,16 +32,11 @@ async function favoritosDe<T>(nome: string, colunas: string, uid: string, coluna
   return (data ?? []) as T[];
 }
 
+// as receitas ★ são só as da pessoa (o RLS de receitas e alimentos de quem é a autora basta)
 const ALIMENTO = "alimento:alimentos(id, nome, fonte, grupo, energia_kcal, proteina_g, carboidrato_g, lipidio_g, fibra_g, sodio_mg, medidas_caseiras(*))";
+/** Os planos ★ que a Ferramentas › Modelos lista (o limite de antes da hml-17). */
+const MAX_PLANOS = 300;
 
-type PlanoBruto = {
-  id: string;
-  titulo: string;
-  updated_at: string | null;
-  paciente_id: string;
-  paciente: { id: string; nome: string; conta_id: string | null } | null;
-  refeicoes: { itens: ItemCalc[] | null }[] | null;
-};
 type ReceitaBruta = { id: string; nome: string; updated_at: string | null; porcoes: number; rendimento_g: number | null; ingredientes: IngredienteCalc[] | null };
 
 /** Os treinos das pastas que a pessoa vê no Painel › Treinos (as dela e as do catálogo global, só leitura). */
@@ -77,29 +73,20 @@ export async function listarModelos(q: QuemListaModelos): Promise<ResultadoModel
     { tipo: "anamnese", rodar: async () => { fontes.anamneses = await favoritosDe("modelos_anamnese", "id, updated_at, titulo, perguntas", uid); } },
     {
       tipo: "plano",
+      // hml-17 (H-38): os ★ vêm da planos_favoritos (o banco monta o plano com os alimentos de verdade — lidos direto, o RLS de
+      // alimentos tirava o alimento de outra nutri e a kcal do ★ caía); aqui ficam só os da pessoa e os alunos da conta ativa,
+      // do mais recente para o mais antigo (o filtro de antes)
       rodar: async () => {
-        const { data, error } = await principal
-          .from("planos_alimentares")
-          .select(`id, titulo, updated_at, paciente_id, paciente:pacientes!inner(id, nome, conta_id), refeicoes(itens:itens_refeicao(quantidade_g, medida_caseira_id, quantidade_medida, ${ALIMENTO}))`)
-          .eq("favorito", true)
-          .is("deleted_at", null)
-          .eq("nutricionista_id", uid)
-          .eq("paciente.conta_id", contaId)
-          .order("updated_at", { ascending: false })
-          .limit(300);
-        falhou(error);
-        fontes.planos = ((data ?? []) as unknown as PlanoBruto[]).map((p) => {
-          const refeicoes = (p.refeicoes ?? []).map((r) => ({ itens: r.itens ?? [] }));
-          return {
-            id: p.id,
-            updated_at: p.updated_at,
-            titulo: p.titulo,
-            paciente_id: p.paciente_id,
-            paciente_nome: p.paciente?.nome ?? null,
-            kcal: totaisDoPlano(refeicoes).energia_kcal,
-            refeicoes: refeicoes.length,
-          };
-        });
+        const planos = (await listarPlanosFavoritos()).filter((p) => p.nutricionista_id === uid && p.paciente?.conta_id === contaId);
+        fontes.planos = planos.slice(0, MAX_PLANOS).map((p) => ({
+          id: p.id,
+          updated_at: p.updated_at,
+          titulo: p.titulo,
+          paciente_id: p.paciente_id,
+          paciente_nome: p.paciente?.nome ?? null,
+          kcal: totaisDoPlano(p.refeicoes).energia_kcal,
+          refeicoes: p.refeicoes.length,
+        }));
       },
     },
     { tipo: "orientacao", rodar: async () => { fontes.orientacoes = await favoritosDe("modelos_orientacao", "id, updated_at, titulo, conteudo", uid); } },

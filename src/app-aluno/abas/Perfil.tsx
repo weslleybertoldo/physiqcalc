@@ -9,7 +9,7 @@ import { usePerfilReduzido } from "@/app-aluno/gates/pecas/modoReduzido";
 import { meuPerfilAluno, minhaAgenda } from "@/app-aluno/perfil/pecas/api";
 import { CartaoAluno } from "@/app-aluno/perfil/pecas/CartaoAluno";
 import { aplicarLembreteNoAparelho, lerLembrete } from "@/app-aluno/perfil/pecas/lembrete";
-import { MeusProfissionais } from "@/app-aluno/perfil/pecas/MeusProfissionais";
+import { AvisoPerfilErro, MeusProfissionais } from "@/app-aluno/perfil/pecas/MeusProfissionais";
 import { chipDePagamentos, diaCurto, inicioDaAgenda, linhaDoAluno, proximosAgendamentos, valorDoLembrete } from "@/app-aluno/perfil/pecas/regras";
 import { RodapePerfil } from "@/app-aluno/perfil/pecas/RodapePerfil";
 import { SheetExcluir } from "@/app-aluno/perfil/pecas/SheetExcluir";
@@ -69,6 +69,14 @@ export default function Perfil() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só na abertura da aba
   }, [temTreino]);
 
+  // hml-17 (H-39): a leitura que falhou sem dado vira aviso com "Tentar de novo" (refaz as 2) — nunca "sem profissional" (o campo
+  // do código) nem a Agenda "Nenhuma" (com a API caindo, a aluna com 2 profissionais e consulta marcada lia as 2 coisas, sem aviso)
+  const erroPerfil = perfil.isError && !perfil.data;
+  const erroAgenda = agenda.isError && !agenda.data;
+  const tentarDeNovo = () => {
+    void perfil.refetch();
+    void agenda.refetch();
+  };
   const nome = perfil.data?.nome || situacao?.nome || usuario?.email?.split("@")[0] || "Você";
   const foto = perfil.data?.foto_url ?? situacao?.foto_url ?? null;
   const linha = linhaDoAluno(perfil.data?.aluno_desde, perfil.data?.objetivo);
@@ -99,17 +107,28 @@ export default function Perfil() {
           <MeusProfissionais
             profissionais={perfil.data?.profissionais ?? null}
             carregando={perfil.isLoading}
+            erro={erroPerfil ? { titulo: erroAgenda ? "Não deu para carregar os seus profissionais e a sua agenda" : "Não deu para carregar os seus profissionais", aoTentar: tentarDeNovo } : null}
             aoVincular={() => {
               void qc.invalidateQueries({ queryKey: ["perfil-aluno", uid] });
               void qc.invalidateQueries({ queryKey: ["agenda-aluno", uid] });
               void qc.invalidateQueries({ queryKey: ["plano-app"] });
             }}
           />
+          {/* hml-17: só a agenda falhou (os profissionais vieram) — o mesmo aviso, só dela */}
+          {!erroPerfil && erroAgenda && (
+            <Cartao className="px-3.5 py-0.5">
+              <AvisoPerfilErro titulo="Não deu para carregar a sua agenda" aoTentar={tentarDeNovo} />
+            </Cartao>
+          )}
           {/* W7b: aluno sem profissional — Meu plano, Treinos prontos e (Treino + Alimentação) os pratos prontos */}
           <GrupoDoApp />
           <GrupoLista>
             <ItemLista icone={CalendarDays} rotulo="Agenda" para="/perfil/agenda"
-              valor={<span data-perfil-agenda-valor>{agenda.isLoading ? "…" : proxima ? diaCurto(proxima.inicio) : "Nenhuma"}</span>} />
+              valor={
+                <span data-perfil-agenda-valor data-agenda-erro={erroAgenda || undefined}>
+                  {agenda.isLoading ? "…" : erroAgenda ? "—" : proxima ? diaCurto(proxima.inicio) : "Nenhuma"}
+                </span>
+              } />
             <ItemLista icone={Receipt} rotulo="Pagamentos" para="/perfil/pagamentos"
               valor={chipPag ? <Chip tom={chipPag.tom} data-perfil-pagamentos-chip>{chipPag.texto}</Chip> : undefined} />
             {temTreino && (

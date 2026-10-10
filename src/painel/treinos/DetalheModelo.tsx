@@ -76,7 +76,8 @@ export function DetalheModelo({
   /** as linhas do modelo no banco (a prescrição gravada, para saber o que mudou) */
   linhas: LinhaModelo[];
   q: QuemMexe;
-  comGif: number;
+  /** hml-17 (H-39): null = a contagem da biblioteca não veio ("— com GIF") */
+  comGif: number | null;
   /** "Quem recebe" já carregou (antes disso o chip de alunos não aparece — 0 enquanto carrega enganaria) */
   alunosProntos: boolean;
   aoAbrir: (id: string) => void;
@@ -253,9 +254,11 @@ export function DetalheModelo({
           onClick={() => setFolha("biblioteca")}
           className="mt-2.5 flex h-[42px] w-full items-center justify-center gap-2 rounded-[13px] border-[1.5px] border-dashed border-[rgba(167,139,250,.4)] bg-[rgba(139,92,246,.05)] text-[13px] font-semibold text-violeta-3 transition-colors hover:bg-[rgba(139,92,246,.1)]"
           data-modelo-adicionar
+          data-biblioteca-resumo-erro={comGif === null || undefined}
+          title={comGif === null ? "Não deu para contar os exercícios com GIF agora" : undefined}
         >
           <Plus aria-hidden className="h-4 w-4" />
-          Adicionar exercício da biblioteca ({comGif} com GIF)
+          Adicionar exercício da biblioteca ({comGif ?? "—"} com GIF)
         </button>
       )}
       <p className="mt-3 text-[12px] leading-relaxed text-texto-3" data-modelo-explica>

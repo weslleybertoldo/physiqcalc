@@ -19,6 +19,11 @@ const h = vi.hoisted(() => ({
   profissional: null as null | Record<string, unknown>,
   // hml-09 (D6): a cópia do treino no aparelho (o SQLite do PowerSync — o de verdade não abre no jsdom)
   apagar: vi.fn(async () => {}),
+  // hml-17 (H-39): a API caindo (a leitura do perfil e/ou da agenda falha) e quantas vezes cada uma foi pedida
+  falhaPerfil: false,
+  falhaAgenda: false,
+  pedidosPerfil: 0,
+  pedidosAgenda: 0,
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/lib/powersync/PowerSyncProvider", () => ({ apagarBancoLocal: () => h.apagar() }));
@@ -27,8 +32,16 @@ vi.mock("@/app-aluno/perfil/pecas/api", async (orig) => {
   const real = await orig<typeof import("@/app-aluno/perfil/pecas/api")>();
   return {
     ...real,
-    meuPerfilAluno: async () => h.perfil,
-    minhaAgenda: async () => h.agenda,
+    meuPerfilAluno: async () => {
+      h.pedidosPerfil += 1;
+      if (h.falhaPerfil) throw new Error("Failed to fetch");
+      return h.perfil;
+    },
+    minhaAgenda: async () => {
+      h.pedidosAgenda += 1;
+      if (h.falhaAgenda) throw new Error("Failed to fetch");
+      return h.agenda;
+    },
     conferirExclusao: async () => {
       if (h.erroConferencia) throw new real.ErroPerfil(h.erroConferencia);
       return h.conferencia;
@@ -54,7 +67,7 @@ import Perfil from "./Perfil";
 import { PerfilReduzido } from "@/app-aluno/gates/pecas/PerfilReduzido";
 
 function montar(reduzido = false, rota = "/perfil") {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
   const tela = reduzido ? (
     <PerfilReduzido motivo="bloqueio-master" titulo="Acesso pausado" mensagem="Regularize com o Lucas.">
       <Perfil />
@@ -95,6 +108,10 @@ beforeEach(() => {
   h.previa.mockReset();
   h.profissional = null;
   h.apagar.mockReset();
+  h.falhaPerfil = false;
+  h.falhaAgenda = false;
+  h.pedidosPerfil = 0;
+  h.pedidosAgenda = 0;
   sair.mockClear();
 });
 
@@ -271,6 +288,50 @@ describe("aba Perfil (tela 5)", () => {
     expect(screen.getByText(/o que você registrou para os alunos de uma equipe fica com a conta da equipe/i)).toBeInTheDocument();
     expect(document.querySelector("[data-excluir-fluxo-profissional]")).not.toBeNull();
     expect(h.excluir).not.toHaveBeenCalled();
+  });
+
+  it("hml-17 (H-39): perfil e agenda falham → 1 aviso com Tentar de novo, SEM o campo do código e a Agenda \"—\"; Tentar refaz as 2", async () => {
+    h.falhaPerfil = true;
+    h.falhaAgenda = true;
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-perfil-erro]")).not.toBeNull());
+    expect(screen.getByText("Não deu para carregar os seus profissionais e a sua agenda")).toBeInTheDocument();
+    expect(document.querySelector("[data-perfil-codigo]")).toBeNull();
+    expect(screen.queryByText(/ainda não está com um profissional/)).toBeNull();
+    expect(document.querySelector("[data-perfil-profissionais]")?.getAttribute("data-perfil-profissionais")).toBe("erro");
+    const agenda = document.querySelector("[data-perfil-agenda-valor]") as HTMLElement;
+    expect(agenda.textContent).toBe("—");
+    expect(agenda.hasAttribute("data-agenda-erro")).toBe(true);
+    expect(screen.queryByText("Nenhuma")).toBeNull();
+    // a API voltou: Tentar de novo refaz as 2 leituras e mostra os profissionais e a data
+    const [antesPerfil, antesAgenda] = [h.pedidosPerfil, h.pedidosAgenda];
+    h.falhaPerfil = false;
+    h.falhaAgenda = false;
+    fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    expect(await screen.findByText("Lucas Ferreira")).toBeInTheDocument();
+    expect(await screen.findByText("sáb, 18/07")).toBeInTheDocument();
+    expect(h.pedidosPerfil).toBeGreaterThan(antesPerfil);
+    expect(h.pedidosAgenda).toBeGreaterThan(antesAgenda);
+    expect(document.querySelector("[data-perfil-erro]")).toBeNull();
+  });
+
+  it("hml-17: só a agenda falha → os profissionais aparecem, o aviso é só da agenda e ela mostra \"—\"", async () => {
+    h.falhaAgenda = true;
+    montar();
+    expect(await screen.findByText("Lucas Ferreira")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector("[data-perfil-erro]")).not.toBeNull());
+    expect(screen.getByText("Não deu para carregar a sua agenda")).toBeInTheDocument();
+    expect((document.querySelector("[data-perfil-agenda-valor]") as HTMLElement).textContent).toBe("—");
+  });
+
+  it("hml-17 (controle): perfil carregado com 0 profissionais → o campo do código aparece (vazio de verdade), sem aviso", async () => {
+    h.perfil = { ...h.perfil, profissionais: [] };
+    h.agenda = [];
+    montar();
+    expect(await screen.findByText("Tenho um código do meu profissional")).toBeInTheDocument();
+    expect(document.querySelector("[data-perfil-codigo]")).not.toBeNull();
+    expect(document.querySelector("[data-perfil-erro]")).toBeNull();
+    await waitFor(() => expect((document.querySelector("[data-perfil-agenda-valor]") as HTMLElement).textContent).toBe("Nenhuma"));
   });
 
   it("W2 da loja: /perfil?excluir=1 (a página /excluir-conta) abre direto o Excluir minha conta", async () => {

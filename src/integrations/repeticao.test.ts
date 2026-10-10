@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RPC_QUE_GRAVAM, RPC_SO_LEITURA, TEMPO_FUNCAO_MS, criarFetchResiliente, podeRepetir } from "./repeticao";
+import { RPC_QUE_GRAVAM, RPC_SO_LEITURA, TEMPO_FUNCAO_MS, TENTATIVAS_LEITURA, criarFetchResiliente, podeRepetir } from "./repeticao";
 
 // Homologação hml-06 (H-20) — o fetch dos 2 clientes só repete leitura (a pagamentos-aluno cobrava o cartão de novo quando o
 // cliente repetia o POST de uma resposta perdida).
@@ -48,8 +48,8 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 42 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
-    expect(RPC_SO_LEITURA.size).toBe(42);
+  it("as 45 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
+    expect(RPC_SO_LEITURA.size).toBe(45);
     expect(RPC_QUE_GRAVAM.size).toBe(40);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
@@ -74,6 +74,12 @@ describe("podeRepetir", () => {
       expect(podeRepetir(`${T}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     }
     for (const nome of ["preconsulta_numeros", "minha_agenda_lista", "exames_do_aluno", "financeiro_totais_do_aluno"]) {
+      expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
+    }
+  });
+
+  it("hml-17: as 3 RPCs do plano alimentar (STABLE) repetem pelo cliente do principal", () => {
+    for (const nome of ["planos_do_aluno", "plano_alimentar", "planos_favoritos"]) {
       expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     }
   });
@@ -306,8 +312,54 @@ describe("hml-10 (D5): a resposta final ≥ 500 de uma função vira aviso", () 
 
   it("os 2 clientes dizem de qual banco são (o aviso diz \"(Treino)\" quando é de lá)", () => {
     const ler = (arquivo: string) => readFileSync(resolve(__dirname, arquivo), "utf-8");
-    expect(ler("principal/client.ts")).toMatch(/criarFetchResiliente\(2, 15000, undefined, \{ banco: "principal" \}\)/);
-    expect(ler("supabase/client.ts")).toMatch(/criarFetchResiliente\(2, 15000, undefined, \{ banco: "treino" \}\)/);
+    expect(ler("principal/client.ts")).toMatch(/criarFetchResiliente\(TENTATIVAS_LEITURA, 15000, undefined, \{ banco: "principal" \}\)/);
+    expect(ler("supabase/client.ts")).toMatch(/criarFetchResiliente\(TENTATIVAS_LEITURA, 15000, undefined, \{ banco: "treino" \}\)/);
+  });
+});
+
+describe("hml-17 (H-53): 1 nova tentativa nas leituras dos 2 clientes (eram 2)", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  async function chamar(respostas: Array<number | "rede">, url: string, init?: RequestInit) {
+    const fila = [...respostas];
+    const base = vi.fn(async () => {
+      const r = fila.length > 1 ? fila.shift()! : fila[0];
+      if (r === "rede") throw new TypeError("Failed to fetch");
+      return new Response("{}", { status: r });
+    });
+    const resultado = criarFetchResiliente(TENTATIVAS_LEITURA, 15000, base as unknown as typeof fetch)(url, init).then(
+      (r) => ({ status: r.status, erro: null as unknown }),
+      (e) => ({ status: 0, erro: e as unknown }),
+    );
+    await vi.runAllTimersAsync();
+    return { ...(await resultado), chamadas: base.mock.calls.length };
+  }
+
+  it("TENTATIVAS_LEITURA = 1 e os 2 clientes usam a constante (nenhum número escrito no lugar)", () => {
+    expect(TENTATIVAS_LEITURA).toBe(1);
+    const ler = (arquivo: string) => readFileSync(resolve(__dirname, arquivo), "utf-8");
+    for (const arquivo of ["principal/client.ts", "supabase/client.ts"]) {
+      expect(ler(arquivo), arquivo).toMatch(/criarFetchResiliente\(TENTATIVAS_LEITURA,/);
+      expect(ler(arquivo), arquivo).not.toMatch(/criarFetchResiliente\(\d/);
+    }
+  });
+
+  it("GET com a rede caída: 2 chamadas e rejeita (antes 3); 5xx até o fim: 2 e devolve o último", async () => {
+    const rede = await chamar(["rede"], `${P}/rest/v1/contas`);
+    expect([rede.chamadas, rede.erro instanceof TypeError]).toEqual([2, true]);
+    expect(await chamar([503], `${P}/rest/v1/contas`)).toMatchObject({ status: 503, chamadas: 2 });
+  });
+
+  it("a RPC nova de leitura (planos_do_aluno) repete 1 vez: 503 → 200 = 2 chamadas", async () => {
+    expect(await chamar([503, 200], `${P}/rest/v1/rpc/planos_do_aluno`, { method: "POST" })).toMatchObject({ status: 200, chamadas: 2 });
+  });
+
+  it("controle: função e RPC que grava vão 1 vez; 401/403 não repetem", async () => {
+    expect(await chamar(["rede"], `${P}/functions/v1/pagamentos-aluno`, { method: "POST", body: "{}" })).toMatchObject({ chamadas: 1 });
+    expect(await chamar([503, 200], `${P}/rest/v1/rpc/diario_enviar`, { method: "POST", body: "{}" })).toMatchObject({ status: 503, chamadas: 1 });
+    expect(await chamar([401, 200], `${P}/rest/v1/contas`)).toMatchObject({ status: 401, chamadas: 1 });
+    expect(await chamar([403, 200], `${P}/rest/v1/rpc/planos_do_aluno`, { method: "POST" })).toMatchObject({ status: 403, chamadas: 1 });
   });
 });
 

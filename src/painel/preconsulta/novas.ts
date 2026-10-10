@@ -15,7 +15,6 @@ export const CHAVES_PRECONSULTA = {
   modelos: (uid: string) => ["preconsulta", "modelos", uid] as const,
   questionarios: (uid: string) => ["preconsulta", "questionarios", uid] as const,
   equipe: (conta: string) => ["preconsulta", "equipe", conta] as const,
-  listaAlunos: (conta: string) => ["preconsulta", "lista-alunos", conta] as const,
   novas: (conta: string, uid: string) => [...CHAVE_NOVAS, conta, uid] as const,
 };
 

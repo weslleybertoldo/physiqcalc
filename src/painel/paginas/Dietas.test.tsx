@@ -324,12 +324,39 @@ describe("W24 — Painel › Dietas › Diário (N-18)", () => {
     expect(endereco()).toContain("aluno=p9");
   }, 15_000);
 
-  it("hml-14b: erro do banco = o estado de erro (nunca \"Nenhuma foto\")", async () => {
+  it("hml-14b: erro do banco = o estado de erro (nunca \"Nenhuma foto\"); hml-17 (H-61): o texto é fixo, sem a frase do banco", async () => {
     h.diarioPagina.mockRejectedValue(new Error("canceling statement due to statement timeout"));
     montar("/painel/dietas?aba=diario");
-    expect(await screen.findByText(/Não foi possível carregar o diário: canceling statement/)).toBeInTheDocument();
+    expect(await screen.findByText("Não deu para carregar o diário")).toBeInTheDocument();
+    expect(screen.queryByText(/canceling statement/)).toBeNull();
     expect(screen.queryByText("Nenhuma foto no diário")).toBeNull();
   });
+
+  it("hml-17 (H-39): a lista de alunos do filtro falha → o aviso com Tentar de novo (nunca \"Aluno sem fotos no período\"); tocar refaz", async () => {
+    const ZE = { id: "p9", nome: "Zé Último", apelido: null, link_codigo: "zzz9999999", foto_url: null };
+    h.diarioPagina.mockResolvedValue({ itens: [reg("d1")], total: 1, porDia: {} });
+    h.alunosDiario.mockRejectedValueOnce(new Error("Failed to fetch"));
+    montar("/painel/dietas?aba=diario&aluno=p9");
+    await achar("[data-diario-alunos-erro]");
+    expect(screen.getByText(/Não deu para carregar a lista de alunos do filtro/)).toBeInTheDocument();
+    const opcoes = () => [...document.querySelectorAll("[data-campo-aluno] option")].map((o) => o.textContent);
+    expect(opcoes()).toContain("Não deu para carregar os alunos");
+    expect(opcoes()).not.toContain("Aluno sem fotos no período");
+    expect(document.querySelector("[data-btn-copiar-link]")?.getAttribute("title")).toMatch(/lista de alunos não carregou/);
+    h.alunosDiario.mockResolvedValueOnce([RAFAEL, ZE]);
+    fireEvent.click(document.querySelector("[data-diario-alunos-tentar]")!);
+    await waitFor(() => expect(opcoes()).toEqual(["Todos os alunos", "Rafael Moura", "Zé Último"]), { timeout: 4000 });
+    expect(document.querySelector("[data-diario-alunos-erro]")).toBeNull();
+  }, 15_000);
+
+  it("hml-17 (controle): a lista veio e o aluno do endereço não tem foto no período → \"Aluno sem fotos no período\", sem aviso", async () => {
+    h.diarioPagina.mockResolvedValue({ itens: [], total: 0, porDia: {} });
+    h.alunosDiario.mockResolvedValue([RAFAEL]);
+    montar("/painel/dietas?aba=diario&aluno=p9");
+    await waitFor(() => expect([...document.querySelectorAll("[data-campo-aluno] option")].map((o) => o.textContent)).toContain("Aluno sem fotos no período"),
+      { timeout: 4000 });
+    expect(document.querySelector("[data-diario-alunos-erro]")).toBeNull();
+  }, 15_000);
 
   it("personal (ou dono sem papel de nutricionista) não lê o diário — nem consulta", async () => {
     h.conta = { id: "c1", nome: "Consultoria Ferreira", papeis: ["personal"], modulos: ["treino", "nutricao"] };

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RELEASES_API, TEMPO_RELEASE_MS, ultimoApk } from "./apkRelease";
+import { ErroRelease, RELEASES_API, TEMPO_RELEASE_MS, ultimoApk, ultimoApkOuErro } from "./apkRelease";
 
 const resposta = (body: unknown, ok = true) => ({ ok, json: async () => body }) as unknown as Response;
 
@@ -25,6 +25,24 @@ describe("ultimoApk", () => {
   it("null quando o fetch lança (sem rede)", async () => {
     const f = vi.fn().mockRejectedValue(new Error("offline"));
     await expect(ultimoApk(f as unknown as typeof fetch)).resolves.toBeNull();
+  });
+});
+
+describe("hml-17 (H-39): ultimoApkOuErro distingue a falha de \"sem release\"", () => {
+  it("falha de rede → lança ErroRelease(rede); HTTP não-ok (rate limit) → lança ErroRelease(http, status)", async () => {
+    await expect(ultimoApkOuErro(vi.fn().mockRejectedValue(new TypeError("Failed to fetch")) as unknown as typeof fetch)).rejects.toMatchObject({
+      name: "ErroRelease", motivo: "rede",
+    });
+    const erro = await ultimoApkOuErro(vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({}) }) as unknown as typeof fetch).catch((e) => e);
+    expect(erro).toBeInstanceOf(ErroRelease);
+    expect(erro).toMatchObject({ motivo: "http", status: 403 });
+  });
+
+  it("controle: release sem .apk → null (não é falha); com .apk → a versão", async () => {
+    const semApk = vi.fn().mockResolvedValue(resposta({ tag_name: "v2.119", assets: [{ name: "notas.txt", browser_download_url: "x" }] }));
+    await expect(ultimoApkOuErro(semApk as unknown as typeof fetch)).resolves.toBeNull();
+    const comApk = vi.fn().mockResolvedValue(resposta({ tag_name: "v3.9", assets: [{ name: "Physiq-v3.9.apk", browser_download_url: "https://gh/z.apk" }] }));
+    await expect(ultimoApkOuErro(comApk as unknown as typeof fetch)).resolves.toEqual({ version: "3.9", url: "https://gh/z.apk" });
   });
 });
 

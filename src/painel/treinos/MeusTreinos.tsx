@@ -72,7 +72,8 @@ export function MeusTreinos({
     staleTime: 5 * 60_000,
     networkMode: "online",
   });
-  const comGif = resumoBiblioteca.data?.comGif ?? 0;
+  // hml-17 (H-39): a contagem falhou → null (o botão mostra "— com GIF", nunca "0 com GIF")
+  const comGif = resumoBiblioteca.isError && !resumoBiblioteca.data ? null : resumoBiblioteca.data?.comGif ?? 0;
 
   useEffect(() => {
     if (pedidoNovo) {

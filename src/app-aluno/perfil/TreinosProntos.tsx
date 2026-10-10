@@ -70,7 +70,7 @@ export default function TreinosProntos() {
     queryFn: buscarTreinosProntos,
     enabled: !!userId,
     staleTime: 5 * 60_000,
-    retry: 2,
+    retry: 1, // hml-17 (H-53): 1 nova tentativa, como o padrão (era 2)
     initialData: catalogoGuardado() ?? undefined,
     initialDataUpdatedAt: 0,
   });

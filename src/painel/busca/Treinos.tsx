@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useConta } from "@/nucleo/conta";
 import { GrupoBusca, ItemBusca } from "@/ui/premium/Busca";
 import { MAX_RESULTADOS, useTermoComEspera } from "./_comum";
+import { ErroNaBusca } from "./_ErroNaBusca";
 
 interface TreinoAchado {
   id: string;
@@ -20,6 +21,7 @@ const literal = (t: string) => t.replace(/[\\%_]/g, (c) => `\\${c}`);
  * Busca global (Ctrl K — NF10, W25): os TREINOS-MODELO que você vê no Painel › Treinos (os seus + os globais do Physiq — o mesmo
  * escopo da aba Meus treinos, W23), no Banco do Treino com a sua sessão do Treino. Só para conta com o módulo Treino e quem tem a
  * sessão do Treino (personal, dono, master). Cada resultado abre o treino em Treinos › Meus treinos.
+ * hml-17 (H-39): a busca falhou → a linha "Não deu para buscar treinos agora" (tocar refaz), nunca o grupo sumindo calado.
  */
 export default function BuscaTreinos({ termo, fechar }: { termo: string; fechar: () => void }) {
   const { conta } = useConta();
@@ -37,13 +39,17 @@ export default function BuscaTreinos({ termo, fechar }: { termo: string; fechar:
         .ilike("nome", `%${literal(q)}%`)
         .order("nome")
         .limit(MAX_RESULTADOS);
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.warn("[busca] treinos:", error.code ?? "", error.message);
+        throw new Error("Não deu para buscar os treinos agora.");
+      }
       return (data ?? []) as unknown as TreinoAchado[];
     },
     enabled: ligado,
     staleTime: 30_000,
     retry: 0,
   });
+  if (ligado && r.isError && !r.data) return <ErroNaBusca titulo="Treinos" oque="treinos" termo={termo} tentar={() => void r.refetch()} />;
   const itens = ligado ? r.data ?? [] : [];
   if (!itens.length) return null;
   return (

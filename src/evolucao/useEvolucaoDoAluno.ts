@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { principalConfigurado } from "@/integrations/principal/client";
-import { useSessao } from "@/nucleo/sessao";
+import { useSessao, type EstadoTreino } from "@/nucleo/sessao";
 import type { Situacao } from "@/nucleo/situacao";
 import { useOnline } from "@/ui/premium/useOnline";
 import { guardarCache, lerCache } from "./cache";
@@ -42,18 +42,39 @@ export function personalDaSituacao(s: Situacao | null | undefined): { id: string
   return m?.personal ? { id: m.personal.id, nome: m.personal.nome } : null;
 }
 
+/** Sem a sessão do Banco do Treino, a parte do Treino da Evolução: fora (o aluno não tem Treino), aguardando (a troca de token
+ *  ou a situação ainda chegando) ou falhou (a troca falhou, ou não há situação e a busca dela falhou). */
+export type TreinoSemSessao = "fora" | "aguardando" | "falhou";
+
+/**
+ * hml-17 (H-39): a parte do Treino é ESPERADA quando a situação diz que o aluno tem Treino (`modulos_aluno`) ou quando não há
+ * situação (não dá para dizer que não tem). Antes, sem a sessão do Treino, ela contava como "nada" (sucesso vazio): com a API
+ * caindo, o Início dizia "Seu peso · Aparece depois da sua primeira avaliação" para quem tem 6 avaliações no Treino.
+ */
+export function treinoSemSessao(s: { situacao: Situacao | null; erroSituacao: boolean; troca: EstadoTreino }): TreinoSemSessao {
+  if (s.situacao) {
+    if (!(s.situacao.modulos_aluno ?? []).includes("treino")) return "fora";
+    // "desnecessario" aqui é o instante antes de a troca começar; "pronto" sem a sessão é ela chegando ao useAuth
+    return s.troca === "erro" ? "falhou" : "aguardando";
+  }
+  return s.erroSituacao ? "falhou" : "aguardando";
+}
+
 /**
  * A Evolução do aluno logado (W10): busca as 2 partes em paralelo (Treino pelo REST, principal pela minha_evolucao()),
  * mostra o que já foi aberto enquanto chega (e sem internet), guarda no aparelho e busca de novo quando a internet volta.
  * Uma parte que falha não derruba a outra: a tela avisa só daquela.
+ * hml-17 (H-39): sem a sessão do Treino, a parte dele segue o treinoSemSessao — aguardando = a fase fica "carregando" (ou o
+ * que o aparelho guardou) até a troca terminar; falhou = falhas.treino e entra no "falhou tudo".
  */
 export function useEvolucaoDoAluno(): EstadoEvolucao {
-  const { usuario, situacao } = useSessao();
+  const { usuario, situacao, erroSituacao = false, treino: troca } = useSessao();
   const { user } = useAuth();
   const online = useOnline();
   const uid = usuario?.id ?? null;
   const treinoId = user?.id ?? null;
   const querPrincipal = !!uid && principalConfigurado;
+  const semSessao = treinoId ? null : treinoSemSessao({ situacao, erroSituacao, troca: troca?.estado ?? "desnecessario" });
   const [e, setE] = useState<Interno>(INICIAL);
   const geracao = useRef(0);
 
@@ -72,12 +93,19 @@ export function useEvolucaoDoAluno(): EstadoEvolucao {
         principal: cache?.principal ?? null,
         deCache: !!cache,
         salvoEm: cache?.salvoEm ?? null,
-        falhas: { treino: treinoId ? "sem-conexao" : null, principal: querPrincipal ? "sem-conexao" : null },
+        falhas: { treino: treinoId || (semSessao && semSessao !== "fora") ? "sem-conexao" : null, principal: querPrincipal ? "sem-conexao" : null },
       });
       return;
     }
+    // a parte do Treino ainda vem (a troca de token ou a situação chegando): espera — esta função roda de novo quando a sessão do
+    // Treino chegar (treinoId) ou a troca falhar (semSessao)
+    if (semSessao === "aguardando") return;
     const [t, p] = await Promise.allSettled([
-      treinoId ? carregarTreino(treinoId) : Promise.resolve(null),
+      treinoId
+        ? carregarTreino(treinoId)
+        : semSessao === "falhou"
+          ? Promise.reject(new Error("sem a sessão do Banco do Treino"))
+          : Promise.resolve(null),
       querPrincipal ? carregarPrincipal() : Promise.resolve(null),
     ]);
     if (g !== geracao.current) return;
@@ -96,7 +124,7 @@ export function useEvolucaoDoAluno(): EstadoEvolucao {
       falhas: { treino: t.status === "rejected" ? motivo : null, principal: p.status === "rejected" ? motivo : null },
     });
     if (t.status === "fulfilled" || p.status === "fulfilled") void guardarCache(uid, { treino, principal });
-  }, [uid, treinoId, querPrincipal]);
+  }, [uid, treinoId, querPrincipal, semSessao]);
 
   useEffect(() => {
     void carregar();

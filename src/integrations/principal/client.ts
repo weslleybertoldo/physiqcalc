@@ -10,7 +10,7 @@
 // Google traz ?code= e só este cliente (que guardou o code_verifier) troca pela sessão — o cliente do Treino, em fluxo
 // implícito, ignora o retorno. Sem internet, o principal não tem cache (dieta e painel são online — decisão 9A).
 import { createClient } from "@supabase/supabase-js";
-import { criarFetchResiliente } from "../repeticao";
+import { criarFetchResiliente, TENTATIVAS_LEITURA } from "../repeticao";
 import type { Database } from "./types";
 
 type Env = Record<string, string | boolean | undefined>;
@@ -44,13 +44,14 @@ export const principalConfigurado = Boolean(URL_PRINCIPAL && ANON_PRINCIPAL);
 // Sem as variáveis, o cliente nasce apontando pra um endereço inválido: nada quebra ao importar e cada chamada falha
 // com erro de rede (a tela trata). Nunca cai no banco do Treino por engano.
 // Fetch com timeout e nova tentativa (o mesmo do cliente do Treino) — hml-06 (H-20): só o que é leitura repete
-// (src/integrations/repeticao.ts); POST de tabela, RPC que grava, função, auth e upload vão uma vez só.
+// (src/integrations/repeticao.ts); POST de tabela, RPC que grava, função, auth e upload vão uma vez só. hml-17 (H-53): 1 nova
+// tentativa na leitura (TENTATIVAS_LEITURA; eram 2).
 export const principal = createClient<Database>(
   URL_PRINCIPAL || "https://principal-nao-configurado.invalid",
   ANON_PRINCIPAL || "principal-nao-configurado",
   {
     global: {
-      fetch: criarFetchResiliente(2, 15000, undefined, { banco: "principal" }),
+      fetch: criarFetchResiliente(TENTATIVAS_LEITURA, 15000, undefined, { banco: "principal" }),
       headers: { "x-schema": PRINCIPAL_SCHEMA },
     },
     db: { schema: PRINCIPAL_SCHEMA as "public" },

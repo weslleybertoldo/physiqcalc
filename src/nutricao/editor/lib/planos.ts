@@ -9,6 +9,12 @@ import { REFEICOES_PADRAO, TITULO_MAX, ordenarItens, ordenarRefeicoes, type Regi
 // dela; refeições e itens seguem o plano; master vê tudo). Exclusão do PLANO é SOFT (deleted_at → Lixeira, W32);
 // refeição e item saem de verdade. O item traz o alimento (W8) aninhado com as medidas caseiras — é dele que saem
 // as kcal. A busca de alimentos do editor reusa `listarAlimentos` da W8.
+// hml-17 (H-38): a LEITURA do plano vem das RPCs planos_do_aluno · plano_alimentar · planos_favoritos (migração
+// 20261010100000_hml17_planos_do_aluno.sql): o banco confere quem vê o aluno e monta o plano com os alimentos de verdade — lido
+// direto das tabelas, o RLS de `alimentos` tirava o alimento próprio da nutri de quem vê o aluno sem ser a autora (personal,
+// dono, nutri que herdou) e o mesmo plano somava menos kcal. O JSON é o mesmo do select de antes (o montarPlano não mudou).
+// As GRAVAÇÕES seguem nas tabelas (RLS de hoje): o item salvo volta com o embed do RLS e, se ele vier sem o alimento, fica o
+// alimento que o editor já tinha (atualizarItem/salvarSubstitutos).
 
 export type PlanoRow = Database["public"]["Tables"]["planos_alimentares"]["Row"];
 export type RefeicaoRow = Database["public"]["Tables"]["refeicoes"]["Row"];
@@ -21,11 +27,23 @@ export type Refeicao = RefeicaoRow & { itens: Item[] };
 export type Plano = PlanoRow & { refeicoes: Refeicao[] };
 
 const ALIMENTO = "alimento:alimentos(id, nome, fonte, grupo, energia_kcal, proteina_g, carboidrato_g, lipidio_g, fibra_g, sodio_mg, medidas_caseiras(*))";
+/** O item das GRAVAÇÕES (insert/update devolvem a linha com o embed, sob o RLS de quem grava). */
 const SELECT_ITEM = `*, ${ALIMENTO}, receita:receitas(id, nome)`;
-const SELECT_PLANO = `*, refeicoes(*, itens:itens_refeicao(${SELECT_ITEM}))`;
 
 const falhou = (error: { message: string } | null): void => {
   if (error) throw new Error(error.message);
+};
+
+/** hml-17 (H-61 nos arquivos tocados): os textos das leituras do plano — a frase crua do banco não vai para a tela. */
+export const ERRO_LER_PLANOS = "Não deu para carregar os planos alimentares agora. Tente de novo.";
+export const ERRO_LER_PLANO = "Não deu para abrir o plano alimentar agora. Tente de novo.";
+export const ERRO_LER_MODELOS = "Não deu para carregar os planos ★ agora. Tente de novo.";
+
+/** Erro de leitura: o texto fixo para a tela e o código (com a mensagem do banco) só no console. */
+const falhouLeitura = (error: { message: string; code?: string } | null, texto: string): void => {
+  if (!error) return;
+  console.warn("[planos] leitura:", error.code ?? "", error.message);
+  throw new Error(texto);
 };
 
 type AlimentoBruto = Omit<AlimentoDoPlano, "medidas_caseiras"> & { medidas_caseiras: MedidaCaseira[] | null };
@@ -40,38 +58,31 @@ const montarItem = (i: ItemBruto): Item => ({
 const montarRefeicao = (r: RefeicaoBruta): Refeicao => ({ ...r, itens: ordenarItens((r.itens ?? []).map(montarItem)) });
 const montarPlano = (p: PlanoBruto): Plano => ({ ...p, refeicoes: ordenarRefeicoes((p.refeicoes ?? []).map(montarRefeicao)) });
 
-// ---- Planos ----
-/** Planos do paciente (mais recente primeiro), já com refeições, itens e alimentos — a lista mostra kcal/macros. */
+// ---- Planos (leitura pelas RPCs da hml-17) ----
+/** Planos do paciente (mais recente primeiro), já com refeições, itens e alimentos — a lista mostra kcal/macros. Quem não vê o
+ *  aluno recebe [] (como o RLS). */
 export async function listarPlanos(pacienteId: string): Promise<Plano[]> {
-  const { data, error } = await supabase
-    .from("planos_alimentares")
-    .select(SELECT_PLANO)
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return ((data ?? []) as unknown as PlanoBruto[]).map(montarPlano);
+  const { data, error } = await supabase.rpc("planos_do_aluno" as never, { p_aluno: pacienteId } as never);
+  falhouLeitura(error, ERRO_LER_PLANOS);
+  return (Array.isArray(data) ? (data as unknown as PlanoBruto[]) : []).map(montarPlano);
 }
 
-export type PlanoFavorito = Plano & { paciente: { id: string; nome: string } | null };
-type PlanoFavoritoBruto = PlanoBruto & { paciente?: { id: string; nome: string } | null };
+export type PlanoFavorito = Plano & { paciente: { id: string; nome: string; conta_id?: string | null } | null };
+type PlanoFavoritoBruto = PlanoBruto & { paciente?: { id: string; nome: string; conta_id?: string | null } | null };
 
-/** Planos FAVORITOS da nutricionista, de todos os pacientes (tela Meus favoritos, W29) — com o paciente embutido pro resumo/deep link. */
+/** Planos FAVORITOS (★) que a pessoa vê, de todos os pacientes (o "Usar um modelo ★" e a Ferramentas › Modelos), do mais recente
+ *  para o mais antigo — com o paciente {id, nome, conta_id} pro resumo/deep link. */
 export async function listarPlanosFavoritos(): Promise<PlanoFavorito[]> {
-  const { data, error } = await supabase
-    .from("planos_alimentares")
-    .select(`${SELECT_PLANO}, paciente:pacientes(id, nome)`)
-    .eq("favorito", true)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false });
-  falhou(error);
-  return ((data ?? []) as unknown as PlanoFavoritoBruto[]).map((p) => ({ ...montarPlano(p), paciente: p.paciente ?? null }));
+  const { data, error } = await supabase.rpc("planos_favoritos" as never);
+  falhouLeitura(error, ERRO_LER_MODELOS);
+  return (Array.isArray(data) ? (data as unknown as PlanoFavoritoBruto[]) : []).map((p) => ({ ...montarPlano(p), paciente: p.paciente ?? null }));
 }
 
+/** Um plano vivo; não existe, na lixeira ou a pessoa não vê → null. */
 export async function buscarPlano(id: string): Promise<Plano | null> {
-  const { data, error } = await supabase.from("planos_alimentares").select(SELECT_PLANO).eq("id", id).is("deleted_at", null).maybeSingle();
-  falhou(error);
-  return data ? montarPlano(data as unknown as PlanoBruto) : null;
+  const { data, error } = await supabase.rpc("plano_alimentar" as never, { p_plano: id } as never);
+  falhouLeitura(error, ERRO_LER_PLANO);
+  return data && typeof data === "object" && !Array.isArray(data) ? montarPlano(data as unknown as PlanoBruto) : null;
 }
 
 const colunasPlano = (r: RegistroPlano) => ({ titulo: r.titulo, kcal_alvo: r.kcal_alvo, observacao: r.observacao });
@@ -215,16 +226,25 @@ export async function criarItensEmLote(linhas: LinhaItemNovo[]): Promise<Item[]>
   return ordenarItens(((data ?? []) as unknown as ItemBruto[]).map(montarItem));
 }
 
-export async function atualizarItem(id: string, r: RegistroItem): Promise<Item> {
-  const { data, error } = await supabase.from("itens_refeicao").update(colunasItem(r)).eq("id", id).select(SELECT_ITEM).single();
-  falhou(error);
-  return montarItem(data as unknown as ItemBruto);
+/**
+ * hml-17 (H-38): o item que a gravação devolve vem com o embed do RLS — para quem não é a autora do alimento (personal, dono,
+ * nutri que herdou o aluno) o alimento vem null. O editor já tinha o alimento (o plano veio da RPC): fica ele, se for o mesmo.
+ */
+export function manterAlimento(salvo: Item, alimentoAtual: AlimentoDoPlano | null | undefined): Item {
+  if (salvo.alimento || !alimentoAtual || alimentoAtual.id !== salvo.alimento_id) return salvo;
+  return { ...salvo, alimento: alimentoAtual };
 }
 
-export async function salvarSubstitutos(id: string, substitutos: Substituto[]): Promise<Item> {
+export async function atualizarItem(id: string, r: RegistroItem, alimentoAtual?: AlimentoDoPlano | null): Promise<Item> {
+  const { data, error } = await supabase.from("itens_refeicao").update(colunasItem(r)).eq("id", id).select(SELECT_ITEM).single();
+  falhou(error);
+  return manterAlimento(montarItem(data as unknown as ItemBruto), alimentoAtual);
+}
+
+export async function salvarSubstitutos(id: string, substitutos: Substituto[], alimentoAtual?: AlimentoDoPlano | null): Promise<Item> {
   const { data, error } = await supabase.from("itens_refeicao").update({ substitutos: substitutos as unknown as Json }).eq("id", id).select(SELECT_ITEM).single();
   falhou(error);
-  return montarItem(data as unknown as ItemBruto);
+  return manterAlimento(montarItem(data as unknown as ItemBruto), alimentoAtual);
 }
 
 export async function excluirItem(id: string): Promise<void> {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Copy, ImageOff, Trash2 } from "lucide-react";
+import { Camera, Copy, ImageOff, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { enderecoDoDiario } from "@/nucleo/siteAntigoNutri";
@@ -105,6 +105,9 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
   }, [itens, q.data]);
   const codigoAluno = alunos.find((p) => p.id === alunoId)?.link_codigo ?? "";
   const alunoForaDaLista = !!alunoId && !alunos.some((p) => p.id === alunoId);
+  // hml-17 (H-39): a lista de alunos do filtro não veio — o aviso com "Tentar de novo" (antes, "Aluno sem fotos no período" e o
+  // "Copiar link" desligado sem dizer por quê)
+  const alunosFalhou = alunosQ.isError && !alunosQ.data;
   const { urls, renovar } = useMiniaturas(itens);
 
   const setFiltro = useCallback(
@@ -190,7 +193,9 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
             {alunos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
-            {alunoForaDaLista && <option value={alunoId}>{alunosQ.isPending ? "Carregando…" : "Aluno sem fotos no período"}</option>}
+            {alunoForaDaLista && (
+              <option value={alunoId}>{alunosFalhou ? "Não deu para carregar os alunos" : alunosQ.isPending ? "Carregando…" : "Aluno sem fotos no período"}</option>
+            )}
           </Filtro>
           <button
             type="button"
@@ -203,15 +208,25 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
             Só não reagidas <span className="tabular-nums opacity-80">({naoReagidas})</span>
           </button>
           <AcaoLinha icone={Copy} className="h-9" onClick={() => void copiarLink()} disabled={!codigoAluno}
-            title={codigoAluno ? "Copiar o link público do diário deste aluno" : "Escolha um aluno com foto no período para copiar o link"} data-btn-copiar-link>
+            title={codigoAluno ? "Copiar o link público do diário deste aluno"
+              : alunosFalhou ? "A lista de alunos não carregou: tente de novo para copiar o link" : "Escolha um aluno com foto no período para copiar o link"}
+            data-btn-copiar-link>
             Copiar link do diário
           </AcaoLinha>
         </div>
         <p className="mt-2.5 text-[12.5px] text-texto-2" data-contagem-diario={total}>{contagemTexto}</p>
+        {alunosFalhou && (
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-rosa-3" role="alert" data-diario-alunos-erro>
+            Não deu para carregar a lista de alunos do filtro.
+            <button type="button" onClick={() => void alunosQ.refetch()} className="pq-botao pq-botao-g pq-botao-sm inline-flex items-center gap-1.5" data-diario-alunos-tentar>
+              <RefreshCw aria-hidden className="h-3.5 w-3.5" /> Tentar de novo
+            </button>
+          </p>
+        )}
       </Cartao>
 
       {q.error ? (
-        <EstadoErro texto={`Não foi possível carregar o diário: ${(q.error as Error).message}`} aoTentar={() => void q.refetch()} />
+        <EstadoErro titulo="Não deu para carregar o diário" aoTentar={() => void q.refetch()} />
       ) : q.isLoading ? (
         <EstadoCarregando linhas={3} rotulo="Carregando o diário" />
       ) : total === 0 && semFiltro ? (

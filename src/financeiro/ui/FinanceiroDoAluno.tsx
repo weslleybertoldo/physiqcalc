@@ -451,6 +451,8 @@ function CartaoLancamentosERecibos({ d, compacto, reciboAvulso, aoFecharReciboAv
         ) : null}
       </Cartao>
       <DialogoLancamento aberto={novoLanc} aoFechar={() => setNovoLanc(false)} categorias={categorias.data ?? []}
+        // hml-17 (H-39): as categorias não vieram — o diálogo avisa e oferece "Tentar de novo" (nunca só "Sem categoria", calado)
+        categoriasFalhou={categorias.isError && !categorias.data ? { aoTentar: () => void categorias.refetch() } : null}
         aoSalvar={async (x) => {
           try {
             await criarLancamento({ uid, contaId: d.aluno.conta_id, pacienteId: pid, ...x });

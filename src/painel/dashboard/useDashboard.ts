@@ -19,9 +19,8 @@ import { useConta } from "@/nucleo/conta";
 import { useSessao } from "@/nucleo/sessao";
 import { hojeSP } from "@/financeiro/regras";
 import { numerosDaAgenda } from "@/agenda/regras";
-import { listarAlunos } from "@/painel/alunos/api";
 import { useNovosPorMes } from "@/painel/alunos/novosPorMes";
-import { FILTROS_PADRAO } from "@/painel/alunos/regras";
+import { useResumoAlunos } from "@/painel/alunos/useResumoAlunos";
 import { listarAgendamentos, listarAlunosDaAgenda, listarTags } from "@/painel/agenda/dados";
 import { CHAVES_AGENDA } from "@/painel/agenda/useAgenda";
 import { paraEvento, type EventoPainel } from "@/painel/agenda/visao";
@@ -42,7 +41,6 @@ export const CHAVES_DASHBOARD = {
   tudo: ["painel-dashboard"] as const,
   principal: (conta: string, uid: string) => ["painel-dashboard", "principal", conta, uid] as const,
   treino: (conta: string, uid: string) => ["painel-dashboard", "treino", conta, uid] as const,
-  alunos: (conta: string) => ["painel-dashboard", "alunos", conta] as const,
   agenda: (uid: string, conta: string, de: string) => ["painel-dashboard", "agenda", uid, conta, de] as const,
   respostas: (conta: string, uid: string, de: string) => ["painel-dashboard", "respostas", conta, uid, de] as const,
 };
@@ -79,11 +77,8 @@ export function useDashboard() {
   const hoje = hojeSP();
 
   // ── Alunos ──
-  const alunosQ = useQuery({
-    queryKey: CHAVES_DASHBOARD.alunos(contaId),
-    queryFn: () => listarAlunos(contaId, FILTROS_PADRAO, 0, 0),
-    enabled: pronto, staleTime: 60_000, retry: 1,
-  });
+  // hml-17 (H-53): a mesma consulta do número do menu (useResumoAlunos) — antes, 2 pedidos idênticos com chaves diferentes
+  const alunosQ = useResumoAlunos(pronto ? contaId : null);
   const novosQ = useNovosPorMes(pronto ? contaId : null);
 
   // ── as 2 leituras novas ──

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Minus, Plus } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Minus, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SERIES_PADRAO_MAX, SERIES_PADRAO_MIN, clampSeries } from "@/lib/seriesPadrao";
@@ -20,8 +20,9 @@ import { mensagemDoErro, useAcoesEditor, useDadosEditor, useVolumeDoAluno } from
 
 // ───────────────────────── barras de séries por grupo (card do Resumo e aba) ─────────────────────────
 
-/** "Séries por semana, por grupo" (tela 7): nome, barra violeta e o nº — o mesmo desenho no card e na aba. */
-export function BarrasVolume({ grupos, maximo = 5, feitos }: { grupos: VolumeGrupo[]; maximo?: number; feitos?: Map<string, number> }) {
+/** "Séries por semana, por grupo" (tela 7): nome, barra violeta e o nº — o mesmo desenho no card e na aba.
+ *  hml-17 (H-39): `feitoFalhou` = a leitura do feito na semana falhou → "feito —" (nunca "feito 0", que diz que o aluno não treinou). */
+export function BarrasVolume({ grupos, maximo = 5, feitos, feitoFalhou = false }: { grupos: VolumeGrupo[]; maximo?: number; feitos?: Map<string, number>; feitoFalhou?: boolean }) {
   const lista = grupos.slice(0, maximo);
   const topo = Math.max(1, ...lista.map((g) => g.total), 20);
   return (
@@ -36,7 +37,11 @@ export function BarrasVolume({ grupos, maximo = 5, feitos }: { grupos: VolumeGru
             />
           </span>
           <b className="w-7 flex-none text-right font-semibold tabular-nums text-texto">{textoSeriesVolume(g.total)}</b>
-          {feitos && <span className="w-[62px] flex-none text-right text-[11.5px] tabular-nums text-texto-3" data-volume-feito={g.chave}>feito {textoSeriesVolume(feitos.get(g.chave) ?? 0)}</span>}
+          {feitos && (
+            <span className="w-[62px] flex-none text-right text-[11.5px] tabular-nums text-texto-3" data-volume-feito={g.chave}>
+              feito {feitoFalhou ? "—" : textoSeriesVolume(feitos.get(g.chave) ?? 0)}
+            </span>
+          )}
         </div>
       ))}
     </div>
@@ -153,6 +158,8 @@ export function VolumeDoAluno({ treinoUserId, leituraAluno }: { treinoUserId: st
   });
   const grupos = useMemo(() => volumePorGrupo(volume.data ?? []), [volume.data]);
   const feitos = useMemo(() => new Map(volumePorGrupo(calcularVolumePraticado(praticado.data ?? [])).map((g) => [g.chave, g.total])), [praticado.data]);
+  // hml-17 (H-39): o feito da semana não veio — "feito —" e o aviso com "Tentar de novo" (antes, "feito 0" em cada grupo)
+  const feitoFalhou = !leituraAluno && praticado.isError && !praticado.data;
   return (
     <Cartao className="px-[18px] py-4" data-volume-aluno>
       <CabecalhoCartao titulo="Volume semanal" extra={<Chip tom="g">SÉRIES POR GRUPO</Chip>} />
@@ -166,7 +173,15 @@ export function VolumeDoAluno({ treinoUserId, leituraAluno }: { treinoUserId: st
       ) : grupos.length === 0 ? (
         <p className="text-[12.5px] text-texto-3" data-volume-vazio>Monte a semana do aluno para ver o volume.</p>
       ) : (
-        <BarrasVolume grupos={grupos} maximo={grupos.length} feitos={leituraAluno ? undefined : feitos} />
+        <>
+          <BarrasVolume grupos={grupos} maximo={grupos.length} feitos={leituraAluno ? undefined : feitos} feitoFalhou={feitoFalhou} />
+          {feitoFalhou && (
+            <p className="mt-3 flex flex-wrap items-center gap-2 text-[12px] font-medium text-rosa-3" role="alert" data-volume-feito-erro>
+              Não deu para carregar o feito nesta semana.
+              <Botao tamanho="sm" icone={RefreshCw} onClick={() => void praticado.refetch()} data-volume-feito-tentar>Tentar de novo</Botao>
+            </p>
+          )}
+        </>
       )}
     </Cartao>
   );
@@ -244,6 +259,11 @@ export function HistoricoDoAluno({ treinoUserId }: { treinoUserId: string }) {
       <PainelDeslizante aberto={!!aberto} aoMudar={(a) => !a && setAberto(null)} lado="direita" titulo={aberto?.nomeTreino ?? "Treino"} descricao={aberto ? `${aberto.data.split("-").reverse().join("/")}${aberto.duracaoSegundos ? ` · ${formatDuracao(aberto.duracaoSegundos)}` : ""}` : undefined}>
         {det.isLoading ? (
           <Esqueleto className="h-[200px] w-full" />
+        ) : det.isError && !det.data ? (
+          // hml-17 (H-39): a leitura falhou — o aviso com "Tentar de novo" ("Não achamos" fica só para o treino que não existe)
+          <div data-historico-detalhe-erro>
+            <EstadoErro titulo="Não deu para abrir este treino" aoTentar={() => void det.refetch()} />
+          </div>
         ) : !det.data ? (
           <p className="text-[13px] text-texto-3">Não achamos esse treino.</p>
         ) : (

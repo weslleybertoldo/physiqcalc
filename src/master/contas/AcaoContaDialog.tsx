@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { textoSaiDoLegado } from "@/nucleo/cobranca/regras";
 import { Botao } from "@/ui/premium/Botao";
@@ -144,6 +145,13 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
           data-aviso-sai-do-legado>
           <b className="text-texto">Esta conta tem o preço e as regras de hoje.</b>{" "}
           {textoSaiDoLegado(conta.valor_travado ?? conta.valor_mensal, precoTabela, "mudar")}
+          {/* hml-17 (H-39): a tabela de preços não veio — diz que falhou (antes o preço novo só sumia do aviso); o Confirmar continua */}
+          {tabela.isError && !tabela.data && (
+            <span className="mt-2 flex flex-wrap items-center gap-2 font-medium text-rosa-3" role="alert" data-acao-conta-tabela-erro>
+              Não deu para carregar o preço da tabela nova.
+              <Botao tamanho="sm" icone={RefreshCw} onClick={() => void tabela.refetch()} data-acao-conta-tabela-tentar>Tentar de novo</Botao>
+            </span>
+          )}
         </p>
       )}
       {acao === "plano" && (

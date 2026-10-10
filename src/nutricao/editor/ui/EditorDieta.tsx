@@ -20,8 +20,8 @@ import {
   percentuaisMacros, situacaoAlvo, textoItens, textoRefeicoes, totaisDoPlano, totaisDosItens, type SituacaoAlvo,
 } from "@/nutricao/editor/lib/dietaUtil";
 import {
-  copiarParaSemanaToda, duplicarPlano, excluirItem, excluirPlano, excluirRefeicao, favoritarPlano, salvarOrdemRefeicoes, type Item, type Plano, type PlanoRow,
-  type Refeicao, type RefeicaoRow,
+  copiarParaSemanaToda, duplicarPlano, excluirItem, excluirPlano, excluirRefeicao, favoritarPlano, manterAlimento, salvarOrdemRefeicoes, type Item, type Plano,
+  type PlanoRow, type Refeicao, type RefeicaoRow,
 } from "@/nutricao/editor/lib/planos";
 import {
   DIAS_SEMANA, copiarDiaParaSemana, diaDeHoje, diasDaRefeicaoNova, moverRefeicaoNoDia, refeicoesDoDiaDaSemana, textoDiasRefeicao, variaPorDia,
@@ -184,10 +184,16 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
       setAberta(r.id);
     } else trocarRefeicao(r.id, (x) => ({ ...x, ...r, itens: x.itens }));
   };
+  // hml-17 (H-38): o item salvo volta com o embed do RLS de quem grava — sem o alimento para quem não é a autora dele; fica o que o
+  // editor já tinha (o plano veio da RPC com todos os alimentos), nunca "Alimento removido" depois de salvar
   const onItemSalvo = (refeicaoId: string, item: Item, modo: "criado" | "editado") =>
-    trocarRefeicao(refeicaoId, (r) => ({ ...r, itens: ordenarItens(modo === "criado" ? [...r.itens, item] : r.itens.map((i) => (i.id === item.id ? item : i))) }));
+    trocarRefeicao(refeicaoId, (r) => ({
+      ...r,
+      itens: ordenarItens(modo === "criado" ? [...r.itens, item] : r.itens.map((i) => (i.id === item.id ? manterAlimento(item, i.alimento) : i))),
+    }));
   const onItensDeReceita = (refeicaoId: string, novos: Item[]) => trocarRefeicao(refeicaoId, (r) => ({ ...r, itens: ordenarItens([...r.itens, ...novos]) }));
-  const onSubstitutosSalvos = (item: Item) => trocarRefeicao(item.refeicao_id, (r) => ({ ...r, itens: r.itens.map((i) => (i.id === item.id ? item : i)) }));
+  const onSubstitutosSalvos = (item: Item) =>
+    trocarRefeicao(item.refeicao_id, (r) => ({ ...r, itens: r.itens.map((i) => (i.id === item.id ? manterAlimento(item, i.alimento) : i)) }));
   const onPlanoEditado = (row: PlanoRow) => trocar((p) => ({ ...p, ...row }));
 
   /** H5 (N-61): Subir/Descer refeição — troca com a vizinha do dia aberto; grava só as ordens que mudaram; se o banco recusar, volta. */
@@ -271,7 +277,7 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
       </Cartao>
     );
   }
-  if (q.error) return <EstadoErro titulo="Não deu para abrir o plano" texto={q.error instanceof Error ? q.error.message : undefined} aoTentar={() => void q.refetch()} className={className} />;
+  if (q.error) return <EstadoErro titulo="Não deu para abrir o plano" aoTentar={() => void q.refetch()} className={className} />;
   if (!plano) {
     return <EstadoVazio icone={Utensils} titulo="Plano não encontrado" texto="Ele pode ter sido excluído ou pertencer a outro aluno." className={className} />;
   }

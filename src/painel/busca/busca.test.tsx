@@ -82,6 +82,30 @@ describe("busca global (Ctrl K — NF10, W25): alunos, treinos e alimentos", () 
     expect(h.alimentos.mock.calls[0][0]).toMatchObject({ q: "arroz" });
     expect(screen.getByTestId("onde").textContent).toBe("/painel/dietas?aba=alimentos");
   });
+  it("hml-17 (H-39): a fonte falhou → 1 linha \"Não deu para buscar … agora\" em cada grupo (nunca o grupo sumindo); tocar refaz", { timeout: 20_000 }, async () => {
+    h.listar.mockRejectedValueOnce(new Error("Failed to fetch"));
+    h.treinos.mockResolvedValueOnce({ data: null, error: { message: "fetch failed", code: "" } });
+    h.alimentos.mockRejectedValueOnce(new Error("Failed to fetch"));
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    montar(<><BuscaAlunos termo="ab" fechar={() => {}} /><BuscaTreinos termo="ab" fechar={() => {}} /><BuscaAlimentos termo="ab" fechar={() => {}} /></>);
+    await waitFor(() => expect(document.querySelectorAll("[data-busca-erro]")).toHaveLength(3), { timeout: 10_000 });
+    expect([...document.querySelectorAll("[data-busca-erro]")].map((e) => e.getAttribute("data-busca-erro")).sort()).toEqual(["alimentos", "alunos", "treinos"]);
+    expect(screen.getByText("Não deu para buscar alunos agora — tocar para tentar de novo")).toBeInTheDocument();
+    // tocar refaz: a busca dos alunos volta com o resultado
+    fireEvent.click(screen.getByText("Não deu para buscar alunos agora — tocar para tentar de novo"));
+    expect(await screen.findByText("Rafael Moura")).toBeInTheDocument();
+    expect(h.listar).toHaveBeenCalledTimes(2);
+    expect(document.querySelector('[data-busca-erro="alunos"]')).toBeNull();
+    aviso.mockRestore();
+  });
+  it("hml-17 (controle): sem resultado de verdade → o grupo some (a paleta diz \"Nada encontrado.\"), sem linha de erro", async () => {
+    h.listar.mockResolvedValueOnce({ total: 0, itens: [] });
+    montar(<BuscaAlunos termo="zz" fechar={() => {}} />);
+    await waitFor(() => expect(h.listar).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.querySelector("[data-busca-erro]")).toBeNull();
+    expect(screen.queryByText("Rafael Moura")).toBeNull();
+  });
   it("módulos: conta só de Treino não busca alimentos; só de Nutrição não busca treinos", async () => {
     h.modulos = ["treino"];
     montar(<BuscaAlimentos termo="arroz" fechar={() => {}} />);

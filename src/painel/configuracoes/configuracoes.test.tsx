@@ -25,7 +25,13 @@ vi.mock("@/nucleo/sessao", () => ({
   useSessao: () => ({ usuario: { id: "u1", email: "dono@teste.com", user_metadata: { full_name: "Dono" }, identities: [{ provider: "google" }] }, recarregarSituacao: vi.fn(async () => null) }),
 }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: null, isStaff: false }) }));
-vi.mock("@/lib/apkRelease", () => ({ ultimoApk: vi.fn(async () => ({ version: "9.1", url: "https://x/Physiq-v9.1.apk" })), baixarNoNavegador: vi.fn(), RELEASES_PAGE: "https://x" }));
+vi.mock("@/lib/apkRelease", () => ({
+  ultimoApk: vi.fn(async () => ({ version: "9.1", url: "https://x/Physiq-v9.1.apk" })),
+  // hml-17 (H-39): o Aplicativo verifica a release pela que distingue a falha (Aplicativo.test.tsx)
+  ultimoApkOuErro: vi.fn(async () => ({ version: "9.1", url: "https://x/Physiq-v9.1.apk" })),
+  baixarNoNavegador: vi.fn(),
+  RELEASES_PAGE: "https://x",
+}));
 vi.mock("@/integrations/principal/client", () => {
   const cadeia = (resultado: () => unknown) => {
     const c: Record<string, unknown> = {};

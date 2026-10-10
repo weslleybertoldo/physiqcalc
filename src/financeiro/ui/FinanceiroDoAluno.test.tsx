@@ -14,6 +14,8 @@ const h = vi.hoisted(() => ({
   lancamentos: vi.fn(),
   recibos: vi.fn(),
   financeiro: null as unknown,
+  // hml-17 (H-39): as categorias do diálogo de lançamento (garantirCategorias)
+  categorias: vi.fn(),
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-dono" } }) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabase: { functions: { invoke: vi.fn(async () => ({ error: null })) } } }));
@@ -38,7 +40,7 @@ vi.mock("../api", async (orig) => ({
 vi.mock("../lancamentos", async (orig) => ({
   ...(await orig<typeof import("../lancamentos")>()),
   paginaLancamentosDoAluno: (...a: unknown[]) => h.lancamentos(...a),
-  garantirCategorias: async () => [],
+  garantirCategorias: (...a: unknown[]) => h.categorias(...a),
 }));
 vi.mock("../recibos", async (orig) => ({ ...(await orig<typeof import("../recibos")>()), paginaRecibosDoAluno: (...a: unknown[]) => h.recibos(...a) }));
 
@@ -102,6 +104,8 @@ beforeEach(() => {
   h.recibos.mockImplementation(async (_pid: string, p: number) => pagina(RECIBOS, p));
   h.totais.mockReset();
   h.totais.mockResolvedValue({ recebido: 1938.37, gasto: 760.52, total: 41, primeira: LANCAMENTOS[40].data, ultima: LANCAMENTOS[0].data });
+  h.categorias.mockReset();
+  h.categorias.mockResolvedValue([]);
 });
 
 describe("Financeiro do aluno — os 3 'Ver todos' em páginas do banco (hml-14d, P7)", () => {
@@ -173,5 +177,32 @@ describe("Financeiro do aluno — os 3 'Ver todos' em páginas do banco (hml-14d
     montar();
     await waitFor(() => expect(screen.getByText("Não deu para abrir os lançamentos")).toBeInTheDocument(), { timeout: 5000 });
     expect(document.querySelector("[data-cartao-lancamentos] [data-lancamento]")).toBeNull();
+  });
+});
+
+describe("Financeiro do aluno — as categorias do lançamento (hml-17, H-39)", () => {
+  const opcoes = () => [...document.querySelectorAll("[data-lancamento-categoria] option")].map((o) => o.textContent);
+
+  it("as categorias não vieram → o diálogo avisa com Tentar de novo (nunca só \"Sem categoria\", calado); tocar refaz e mostra", async () => {
+    h.categorias.mockRejectedValueOnce(new Error("Failed to fetch"));
+    montar();
+    await waitFor(() => expect(h.categorias).toHaveBeenCalled());
+    fireEvent.click(document.querySelector("[data-btn-novo-lancamento]")!);
+    await waitFor(() => expect(document.querySelector("[data-lancamento-categorias-erro]")).not.toBeNull());
+    expect(screen.getByText(/Não deu para carregar as categorias/)).toBeInTheDocument();
+    h.categorias.mockResolvedValueOnce([{ id: "cat1", nome: "Consulta" }]);
+    fireEvent.click(document.querySelector("[data-lancamento-categorias-tentar]")!);
+    await waitFor(() => expect(opcoes()).toEqual(["Sem categoria", "Consulta"]));
+    expect(document.querySelector("[data-lancamento-categorias-erro]")).toBeNull();
+    expect(h.categorias).toHaveBeenCalledTimes(2);
+  });
+
+  it("controle: as categorias vieram → o diálogo as oferece, sem aviso", async () => {
+    h.categorias.mockResolvedValue([{ id: "cat1", nome: "Consulta" }]);
+    montar();
+    await waitFor(() => expect(h.categorias).toHaveBeenCalled());
+    fireEvent.click(document.querySelector("[data-btn-novo-lancamento]")!);
+    await waitFor(() => expect(opcoes()).toEqual(["Sem categoria", "Consulta"]));
+    expect(document.querySelector("[data-lancamento-categorias-erro]")).toBeNull();
   });
 });
