@@ -11,12 +11,15 @@ import { BTN_LINK, BTN_PRI, BTN_SEC, Campo, INPUT, SELECT } from "@/nutricao/edi
 import { TEXTAREA_CONTEUDO } from "@/nutricao/editor/ui/ModelosDialog";
 import { dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { atualizarTextoDocumento, criarDocumento, type Documento, type ModeloDocumento } from "@/nutricao/prontuario/lib/documentos";
-import { baixarPDFDocumento } from "@/nutricao/prontuario/lib/documentoPdf";
+import { sobDemanda } from "@/lib/sobDemanda";
 import {
   CID_MAX, DIAS_MAX, TEXTO_DOCUMENTO_MAX, TITULO_DOCUMENTO_MAX, aplicarTagsDocumento, dadosDoForm, formInicialDocumento, formParaRegistroDocumento, formatarCPF,
   formatarDataDocumento, infoTipo, modeloInicialDoTipo, modelosDoTipo, normalizarConteudo, tagsDoTipo, temTagPendente, validarDocumento,
   type DadosProfissionais, type FormDocumento, type TipoDocumento,
 } from "@/nutricao/prontuario/lib/documentosUtil";
+
+// hml-18b (H-54, F): o PDF do documento (jsPDF) só no "Emitir e baixar PDF" — o "Salvando..." do botão cobre a espera do pedaço
+const PDF_DOCUMENTO = sobDemanda(() => import("@/nutricao/prontuario/lib/documentoPdf"));
 
 // Modal do documento do paciente (referência: atestado/receituário com as tags *|NOME_PACIENTE|*, *|CPF_PACIENTE|*, *|DATA_HOJE|*,
 // *|CARIMBO|*). NOVO: o tipo vem do botão ("Novo atestado" / "Novo receituário" / "Nova declaração"); modelo (favoritos do
@@ -133,6 +136,7 @@ export default function DocumentoDialog({ open, onOpenChange, tipo, documento, p
       const d = await criarDocumento(user.id, paciente.id, formParaRegistroDocumento(tipo, f, textoFinal));
       onSalvo(d);
       try {
+        const { baixarPDFDocumento } = await PDF_DOCUMENTO.obter();
         const nome = baixarPDFDocumento({
           tipo,
           titulo: d.titulo,

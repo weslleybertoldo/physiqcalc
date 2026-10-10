@@ -1,7 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Exames.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, ClipboardList, FileDown, FlaskConical, PenLine, Plus, Star, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ClipboardList, FileDown, FlaskConical, Loader2, PenLine, Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -18,7 +18,6 @@ import {
   dadosProfissionais, excluirPedido, excluirResultado, garantirCatalogoExames, nomeDaNutricionista, paginaDeExames, paginaPedidosDoPaciente, type PedidoExame,
   type ResultadoExame,
 } from "@/nutricao/prontuario/lib/exames";
-import { baixarPDFPedido } from "@/nutricao/prontuario/lib/examesPdf";
 import {
   agruparResultadosPorData, formatarDataExame, lerExames, situacaoDoResultado, textoContagemPedidos, textoContagemResultados, textoReferencia, textoResumoData,
   textoValor,
@@ -26,6 +25,10 @@ import {
 import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Paginacao } from "@/ui/premium/Paginacao";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF do pedido de exames (jsPDF) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_PEDIDO = sobDemanda(() => import("@/nutricao/prontuario/lib/examesPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-[rgba(244,63,94,.35)] bg-transparent px-2.5 text-[11.5px] font-semibold text-rosa-3 transition-colors hover:bg-[rgba(244,63,94,.08)] disabled:opacity-40";
@@ -122,13 +125,18 @@ export default function Exames() {
     await qc.invalidateQueries({ queryKey: ["exames-catalogo"] });
   };
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdfPedido = (ped: PedidoExame) => {
-    try {
-      const nome = baixarPDFPedido({ paciente: p.nome, pedido: ped, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(ped.id, async () => {
+      try {
+        const { baixarPDFPedido } = await PDF_PEDIDO.obter();
+        const nome = baixarPDFPedido({ paciente: p.nome, pedido: ped, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const excluir = async () => {
@@ -208,8 +216,8 @@ export default function Exames() {
                       <button type="button" onClick={() => alternarDetalhe(ped.id)} className={BTN_MINI} aria-expanded={aberto} data-leitura data-btn-ver-pedido>
                         {aberto ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberto ? "Fechar" : "Ver"}
                       </button>
-                      <button type="button" onClick={() => pdfPedido(ped)} className={BTN_MINI} data-leitura data-btn-pdf-pedido>
-                        <FileDown size={12} aria-hidden="true" /> PDF
+                      <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdfPedido(ped)} className={BTN_MINI} data-leitura data-btn-pdf-pedido aria-busy={pdfAcao.ocupado === ped.id || undefined} data-gerando-pdf={pdfAcao.ocupado === ped.id ? "1" : undefined}>
+                        {pdfAcao.ocupado === ped.id ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
                       </button>
                       <button type="button" onClick={() => setModalPedido({ aberto: true, pedido: ped })} className={BTN_MINI} data-btn-editar-pedido>
                         <PenLine size={12} aria-hidden="true" /> Editar

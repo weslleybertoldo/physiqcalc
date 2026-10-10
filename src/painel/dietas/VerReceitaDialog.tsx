@@ -1,4 +1,4 @@
-import { FileDown, Pencil, Star } from "lucide-react";
+import { FileDown, Loader2, Pencil, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fmtQtd } from "@/nutricao/editor/lib/alimentosUtil";
 import { fmtKcal } from "@/nutricao/editor/lib/energeticoUtil";
@@ -19,12 +19,14 @@ interface Props {
   grupoNome: string | null;
   podeEditar: boolean;
   onPdf: (r: Receita) => void;
+  /** hml-18b: o PDF está saindo (o botão gira enquanto o pedaço do PDF chega) */
+  gerandoPdf?: boolean;
   onEditar: (r: Receita) => void;
 }
 
 const SECAO = "text-[11px] font-semibold uppercase tracking-[0.12em] text-texto-3";
 
-export default function VerReceitaDialog({ open, onOpenChange, receita, grupoNome, podeEditar, onPdf, onEditar }: Props) {
+export default function VerReceitaDialog({ open, onOpenChange, receita, grupoNome, podeEditar, onPdf, gerandoPdf = false, onEditar }: Props) {
   const calc = receita ? calcularReceita({ porcoes: Number(receita.porcoes), rendimento_g: receita.rendimento_g === null ? null : Number(receita.rendimento_g) }, receita.ingredientes) : null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,8 +105,16 @@ export default function VerReceitaDialog({ open, onOpenChange, receita, grupoNom
                   <Pencil aria-hidden /> Editar
                 </button>
               )}
-              <button type="button" className={BTN_PRI} onClick={() => onPdf(receita)} data-btn-pdf-receita-modal>
-                <FileDown aria-hidden /> PDF
+              <button
+                type="button"
+                className={BTN_PRI}
+                disabled={gerandoPdf}
+                aria-busy={gerandoPdf || undefined}
+                data-gerando-pdf={gerandoPdf ? "1" : undefined}
+                onClick={() => onPdf(receita)}
+                data-btn-pdf-receita-modal
+              >
+                {gerandoPdf ? <Loader2 aria-hidden className="animate-spin" /> : <FileDown aria-hidden />} PDF
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/FarmacoNutrientes.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Eye, FileDown, FlaskConical, HeartPulse, Pause, Pencil, Pill, Play, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Eye, FileDown, FlaskConical, HeartPulse, Loader2, Pause, Pencil, Pill, Play, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -17,13 +17,16 @@ import {
   alternarAtivo, dadosProfissionais, excluirAnalise, excluirMedicamento, listarAnalises, listarBase, listarMedicamentosDoPaciente, nomeDaNutricionista,
   type AnaliseFarmaco, type Medicamento,
 } from "@/nutricao/prontuario/lib/farmaco";
-import { baixarPDFFarmaco } from "@/nutricao/prontuario/lib/farmacoPdf";
 import {
   cruzar, formatarDataHoraAnalise, gravidadeMaximaCruzamento, inserirRegistro, interacoesDoMedicamento, lerInteracoesJson, lerMedicamentosJson, ordenarAnalises,
   ordenarMedicamentos, resumoCruzamento, textoAnalise, textoContagemAnalises, textoContagemMedicamentos, textoDetalheMedicamento, textoInteracoesMedicamento,
   totalInteracoes, gravidadeMaxima,
 } from "@/nutricao/prontuario/lib/farmacoUtil";
 import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF da análise fármaco-nutriente (jsPDF + autotable) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_FARMACO = sobDemanda(() => import("@/nutricao/prontuario/lib/farmacoPdf"));
 
 const CARD = "pq-cartao min-w-0 space-y-3 px-[18px] py-4";
 const TITULO = "flex items-center gap-1.5 font-body text-[15px] font-semibold normal-case tracking-[-0.01em] text-texto";
@@ -136,20 +139,25 @@ export default function FarmacoNutrientes() {
       toast.success("Análise excluída");
     }, "Não foi possível excluir a análise");
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = (a: AnaliseFarmaco) => {
-    try {
-      const nome = baixarPDFFarmaco({
-        paciente: p.nome,
-        nascimento: p.nascimento,
-        nutricionista: perfilQ.data?.nome ?? null,
-        profissional: perfilQ.data?.profissional ?? null,
-        emitidoEm: new Date(),
-        analise: { titulo: a.titulo, data: a.data, medicamentos: lerMedicamentosJson(a.medicamentos), interacoes: lerInteracoesJson(a.interacoes), parecer: a.parecer },
-      });
-      toast.success("PDF gerado", { description: nome });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(a.id, async () => {
+      try {
+        const { baixarPDFFarmaco } = await PDF_FARMACO.obter();
+        const nome = baixarPDFFarmaco({
+          paciente: p.nome,
+          nascimento: p.nascimento,
+          nutricionista: perfilQ.data?.nome ?? null,
+          profissional: perfilQ.data?.profissional ?? null,
+          emitidoEm: new Date(),
+          analise: { titulo: a.titulo, data: a.data, medicamentos: lerMedicamentosJson(a.medicamentos), interacoes: lerInteracoesJson(a.interacoes), parecer: a.parecer },
+        });
+        toast.success("PDF gerado", { description: nome });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const abrirNovoMedicamento = () => setModalMed({ aberto: true, medicamento: null });
@@ -344,8 +352,8 @@ export default function FarmacoNutrientes() {
                         <button type="button" onClick={() => setModalAnalise({ aberto: true, modo: "ver", analise: a })} className={BTN_MINI} data-leitura data-btn-ver-analise>
                           <Eye size={12} aria-hidden="true" /> Ver
                         </button>
-                        <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-analise>
-                          <FileDown size={12} aria-hidden="true" /> PDF
+                        <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-analise aria-busy={pdfAcao.ocupado === a.id || undefined} data-gerando-pdf={pdfAcao.ocupado === a.id ? "1" : undefined}>
+                          {pdfAcao.ocupado === a.id ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
                         </button>
                         <button type="button" onClick={() => setModalAnalise({ aberto: true, modo: "editar", analise: a })} className={BTN_MINI} data-btn-editar-analise>
                           <Pencil size={12} aria-hidden="true" /> Editar

@@ -1,6 +1,6 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/CalculoEnergetico.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, FileDown, Flame, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, FileDown, Flame, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -13,12 +13,15 @@ import { nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 import { listarAntropometrias, type Antropometria } from "@/nutricao/editor/lib/antropometrias";
 import { rotuloSexo } from "@/nutricao/editor/lib/antropometriaUtil";
 import { excluirCalculo, listarCalculos, type CalculoEnergetico as Calculo } from "@/nutricao/editor/lib/calculosEnergeticos";
-import { baixarPDFEnergetico } from "@/nutricao/editor/lib/energeticoPdf";
 import {
   FORMULA_PADRAO, ehFormula, fmtAjuste, fmtKcal, fmtNum, formatarDataHoraCalculo, gastoAtividade, gastoAtividades, inserirOrdenado, lerAtividades,
   resumoCalculo, rotuloFator, rotuloFormula, rotuloObjetivo, textoContagem, type Formula,
 } from "@/nutricao/editor/lib/energeticoUtil";
 import { usePaciente } from "@/nutricao/editor/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF do cálculo energético (jsPDF) só no clique — antes a aba Dieta do aluno baixava o pedaço do PDF ao abrir
+const PDF_ENERGETICO = sobDemanda(() => import("@/nutricao/editor/lib/energeticoPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-[rgba(244,63,94,.35)] bg-transparent px-2.5 text-[11.5px] font-semibold text-rosa-3 transition-colors hover:bg-[rgba(244,63,94,.08)] disabled:opacity-40";
@@ -129,31 +132,36 @@ export default function CalculoEnergetico() {
 
   const alternar = (id: string) => setAbertos((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = (c: Calculo) => {
-    try {
-      const nome = baixarPDFEnergetico({
-        paciente: p.nome,
-        nutricionista: nomeNutri,
-        data: new Date(c.data),
-        formula: c.formula,
-        peso: c.peso,
-        altura: c.altura,
-        idade: c.idade,
-        sexo: c.sexo,
-        massa_magra: c.massa_magra,
-        fator_atividade: c.fator_atividade,
-        atividades: c.atividades,
-        tmb: c.tmb,
-        get: c.get,
-        ajuste_kcal: c.ajuste_kcal,
-        vet: c.vet,
-        objetivo: c.objetivo,
-        observacao: c.observacao,
-      });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(c.id, async () => {
+      try {
+        const { baixarPDFEnergetico } = await PDF_ENERGETICO.obter();
+        const nome = baixarPDFEnergetico({
+          paciente: p.nome,
+          nutricionista: nomeNutri,
+          data: new Date(c.data),
+          formula: c.formula,
+          peso: c.peso,
+          altura: c.altura,
+          idade: c.idade,
+          sexo: c.sexo,
+          massa_magra: c.massa_magra,
+          fator_atividade: c.fator_atividade,
+          atividades: c.atividades,
+          tmb: c.tmb,
+          get: c.get,
+          ajuste_kcal: c.ajuste_kcal,
+          vet: c.vet,
+          objetivo: c.objetivo,
+          observacao: c.observacao,
+        });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const excluir = async () => {
@@ -248,8 +256,8 @@ export default function CalculoEnergetico() {
                       <button type="button" onClick={() => abrirEdicao(c)} className={BTN_MINI} data-btn-editar-calculo>
                         <Pencil size={12} /> Editar
                       </button>
-                      <button type="button" onClick={() => pdf(c)} className={BTN_MINI} data-leitura data-btn-pdf-calculo>
-                        <FileDown size={12} /> PDF
+                      <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdf(c)} className={BTN_MINI} data-leitura data-btn-pdf-calculo aria-busy={pdfAcao.ocupado === c.id || undefined} data-gerando-pdf={pdfAcao.ocupado === c.id ? "1" : undefined}>
+                        {pdfAcao.ocupado === c.id ? <Loader2 size={12} className="animate-spin" /> : <FileDown size={12} />} PDF
                       </button>
                       <button type="button" onClick={() => setParaExcluir(c)} className={BTN_MINI_PERIGO} data-btn-excluir-calculo>
                         <Trash2 size={12} /> Excluir

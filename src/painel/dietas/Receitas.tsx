@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChefHat, Copy, Eye, FileDown, FolderOpen, Pencil, Search, Star, Trash2 } from "lucide-react";
+import { ChefHat, Copy, Eye, FileDown, FolderOpen, Loader2, Pencil, Search, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
 import { cn } from "@/lib/utils";
 import {
   alternarFavorita, dadosProfissionais, duplicarReceita, excluirReceita, listarGrupos, listarReceitasPagina, nomeDaNutricionista, nomesParaCopia, type FiltrosReceitas,
@@ -19,8 +20,10 @@ import GruposDialog from "./GruposDialog";
 import { AcaoLinha, CampoBusca, ConfirmarExclusao, Filtro } from "./pecas";
 import ReceitaDialog from "./ReceitaDialog";
 import { CHAVE_GRUPOS_RECEITA, CHAVE_RECEITAS } from "./regras";
-import { baixarPDFReceita } from "./receitasPdf";
 import VerReceitaDialog from "./VerReceitaDialog";
+
+// hml-18b (H-54, F): o PDF da receita (jsPDF + autotable) só no clique — antes a aba Receitas baixava o pedaço do PDF ao abrir
+const PDF_RECEITA = sobDemanda(() => import("./receitasPdf"));
 
 // Physiq W24 — Painel › Dietas › Receitas (N-17): porta da tela "Receitas culinárias" do PhysiqNutri (src/pages/consultorio/Receitas.tsx)
 // no visual premium — as receitas CALCULADAS pelos ingredientes (TACO + os seus): "N receitas · N favoritas", busca sem acento, filtro
@@ -77,6 +80,7 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
   const carregando = receitasQ.isLoading || gruposQ.isLoading;
 
   const [salvando, setSalvando] = useState(false);
+  const pdfAcao = useAcaoSobDemanda();
   const [modalReceita, setModalReceita] = useState<{ aberto: boolean; receita: Receita | null }>({ aberto: false, receita: null });
   const [ver, setVer] = useState<{ aberto: boolean; receita: Receita | null }>({ aberto: false, receita: null });
   const [modalGrupos, setModalGrupos] = useState(false);
@@ -149,26 +153,30 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
     }, "Não foi possível excluir a receita");
   };
   const pdf = (r: Receita) => {
-    try {
-      const nome = baixarPDFReceita({
-        nutricionista: perfilQ.data?.nome ?? null,
-        profissional: perfilQ.data?.profissional ?? null,
-        emitidoEm: new Date(),
-        receita: {
-          nome: r.nome,
-          grupo: nomeDoGrupo(r.grupo_id),
-          porcoes: Number(r.porcoes),
-          rendimento_g: r.rendimento_g === null ? null : Number(r.rendimento_g),
-          tempo_preparo_min: r.tempo_preparo_min,
-          modo_preparo: r.modo_preparo ?? "",
-          observacao: r.observacao ?? "",
-          ingredientes: r.ingredientes,
-        },
-      });
-      toast.success("PDF gerado", { description: nome });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão "PDF" gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(r.id, async () => {
+      try {
+        const { baixarPDFReceita } = await PDF_RECEITA.obter();
+        const nome = baixarPDFReceita({
+          nutricionista: perfilQ.data?.nome ?? null,
+          profissional: perfilQ.data?.profissional ?? null,
+          emitidoEm: new Date(),
+          receita: {
+            nome: r.nome,
+            grupo: nomeDoGrupo(r.grupo_id),
+            porcoes: Number(r.porcoes),
+            rendimento_g: r.rendimento_g === null ? null : Number(r.rendimento_g),
+            tempo_preparo_min: r.tempo_preparo_min,
+            modo_preparo: r.modo_preparo ?? "",
+            observacao: r.observacao ?? "",
+            ingredientes: r.ingredientes,
+          },
+        });
+        toast.success("PDF gerado", { description: nome });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
   const abrirEdicao = (r: Receita) => {
     setVer({ aberto: false, receita: null });
@@ -269,7 +277,17 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <AcaoLinha icone={Eye} onClick={() => setVer({ aberto: true, receita: r })} data-btn-ver-receita>Ver</AcaoLinha>
-                    <AcaoLinha icone={FileDown} onClick={() => pdf(r)} data-btn-pdf-receita>PDF</AcaoLinha>
+                    <AcaoLinha
+                      icone={pdfAcao.ocupado === r.id ? Loader2 : FileDown}
+                      className={pdfAcao.ocupado === r.id ? "[&_svg]:animate-spin" : undefined}
+                      aria-busy={pdfAcao.ocupado === r.id || undefined}
+                      data-gerando-pdf={pdfAcao.ocupado === r.id ? "1" : undefined}
+                      disabled={pdfAcao.ocupado !== null}
+                      onClick={() => pdf(r)}
+                      data-btn-pdf-receita
+                    >
+                      PDF
+                    </AcaoLinha>
                     {ctx.souNutri && (
                       <>
                         <AcaoLinha icone={Pencil} onClick={() => abrirEdicao(r)} data-btn-editar-receita>Editar</AcaoLinha>
@@ -305,6 +323,7 @@ export function Receitas({ ctx, params, setParams, pedidoNovo, aoAtenderPedido }
         grupoNome={ver.receita ? nomeDoGrupo(ver.receita.grupo_id) : null}
         podeEditar={ctx.souNutri}
         onPdf={pdf}
+        gerandoPdf={pdfAcao.ocupado !== null}
         onEditar={abrirEdicao}
       />
       <GruposDialog open={modalGrupos} onOpenChange={setModalGrupos} nutricionistaId={uid} grupos={grupos} porGrupo={porGrupo} onMudou={invalidar} />

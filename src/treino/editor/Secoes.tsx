@@ -16,7 +16,7 @@ import { Segmentado } from "@/ui/premium/Segmentado";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { carregarHistoricoMes, carregarPlanoParaPdf, carregarTreinoDoHistorico, carregarVolumePraticado, type ItemHistorico } from "./api";
 import { diasAte, padraoDoAluno, textoDataCurta, textoSeriesVolume, volumePorGrupo, type VolumeGrupo } from "./regras";
-import { MESES } from "./relatorio";
+import { MESES } from "@/lib/meses";
 import { mensagemDoErro, useAcoesEditor, useDadosEditor, useVolumeDoAluno } from "./useEditorTreino";
 
 // ───────────────────────── barras de séries por grupo (card do Resumo e aba) ─────────────────────────

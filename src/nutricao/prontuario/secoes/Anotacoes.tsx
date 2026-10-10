@@ -5,7 +5,7 @@
 // clínico não recebe as "Só nutricionistas" (o banco filtra). Só o autor edita e exclui a própria anotação (o master também).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronDown, ChevronUp, FileDown, FolderOpen, Lock, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronUp, FileDown, FolderOpen, Loader2, Lock, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -18,7 +18,7 @@ import Blocos from "@/nutricao/editor/ui/Blocos";
 import { BTN_PERIGO, BTN_PRI, BTN_SEC, DESCRICAO_JANELA, TITULO_JANELA } from "@/nutricao/editor/ui/estilos";
 import { ROTULO_PAPEL, ROTULO_VISIBILIDADE, papelDaAnotacao, textoAnotacoes, type PapelAutor, type Visibilidade } from "@/nutricao/prontuario/lib/acesso";
 import { chaveAnotacoes, excluirAnotacao, listarAnotacoes, useAnotacoesPagina, type Anotacao } from "@/nutricao/prontuario/lib/anotacoes";
-import { baixarPDFProntuario } from "@/nutricao/prontuario/lib/prontuarioPdf";
+import { sobDemanda } from "@/lib/sobDemanda";
 import AnotacaoDialog from "@/nutricao/prontuario/ui/AnotacaoDialog";
 import { useAbrirPeloParametro, useAuth, useProntuario } from "@/nutricao/prontuario/ui/contexto";
 import type { PerfilAluno } from "@/painel/aluno/dados/tipos";
@@ -27,6 +27,9 @@ import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Chip, type TomChip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
+
+// hml-18b (H-54, F): o PDF do prontuário (jsPDF) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_PRONTUARIO = sobDemanda(() => import("@/nutricao/prontuario/lib/prontuarioPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-[rgba(244,63,94,.35)] bg-transparent px-2.5 text-[11.5px] font-semibold text-rosa-3 transition-colors hover:bg-[rgba(244,63,94,.08)] disabled:opacity-40";
@@ -87,6 +90,7 @@ export default function Anotacoes({ alunoId, perfil }: Props) {
       const emissor = user ? await nomeDaNutricionista(user.id) : null;
       // o PDF do prontuário leva TODAS as anotações que você vê (não só a página)
       const todas = (await qc.fetchQuery({ queryKey: chaveAnotacoes(alunoId), queryFn: () => listarAnotacoes(alunoId), staleTime: 20_000 })).anotacoes;
+      const { baixarPDFProntuario } = await PDF_PRONTUARIO.obter();
       const nome = baixarPDFProntuario({
         paciente: p.nome,
         nascimento: p.nascimento,
@@ -151,8 +155,10 @@ export default function Anotacoes({ alunoId, perfil }: Props) {
               disabled={total === 0 || gerando}
               title={total === 0 ? "Sem anotações para gerar o PDF" : "PDF com todas as anotações que você vê"}
               data-btn-pdf-prontuario
+              aria-busy={gerando || undefined}
+              data-gerando-pdf={gerando ? "1" : undefined}
             >
-              <FileDown size={14} /> PDF do prontuário
+              {gerando ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} PDF do prontuário
             </button>
             <button type="button" onClick={abrirNova} className={BTN_PRI} data-btn-nova-anotacao>
               <Plus size={14} /> Nova anotação

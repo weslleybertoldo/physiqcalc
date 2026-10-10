@@ -1,6 +1,6 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Anamnese.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, FileDown, ListChecks, NotebookPen, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, FileDown, ListChecks, Loader2, NotebookPen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -11,9 +11,12 @@ import AnamneseDialog from "@/nutricao/prontuario/ui/AnamneseDialog";
 import ModelosDialog from "@/nutricao/prontuario/ui/ModelosAnamneseDialog";
 import { useAuth } from "@/nutricao/prontuario/ui/contexto";
 import { excluirAnamnese, garantirModelos, listarAnamneses, listarModelos, nomeDaNutricionista, type Anamnese, type ModeloAnamnese } from "@/nutricao/prontuario/lib/anamneses";
-import { baixarPDFAnamnese } from "@/nutricao/prontuario/lib/anamnesePdf";
 import { formatarDataHoraAnamnese, inserirOrdenada, lerConteudo, textoContagem, textoRespondidas } from "@/nutricao/prontuario/lib/anamneseUtil";
 import { useAbrirPeloParametro, usePaciente, useProntuario } from "@/nutricao/prontuario/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF da anamnese (jsPDF) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_ANAMNESE = sobDemanda(() => import("@/nutricao/prontuario/lib/anamnesePdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-[rgba(244,63,94,.35)] bg-transparent px-2.5 text-[11.5px] font-semibold text-rosa-3 transition-colors hover:bg-[rgba(244,63,94,.08)] disabled:opacity-40";
@@ -74,20 +77,25 @@ export default function Anamnese() {
 
   const alternar = (id: string) => setAbertas((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = (a: Anamnese) => {
-    try {
-      const nome = baixarPDFAnamnese({
-        titulo: a.titulo,
-        data: new Date(a.data),
-        paciente: p.nome,
-        nutricionista: nomeNutri,
-        conteudo: lerConteudo(a.conteudo),
-        textoLivre: a.texto_livre,
-      });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(a.id, async () => {
+      try {
+        const { baixarPDFAnamnese } = await PDF_ANAMNESE.obter();
+        const nome = baixarPDFAnamnese({
+          titulo: a.titulo,
+          data: new Date(a.data),
+          paciente: p.nome,
+          nutricionista: nomeNutri,
+          conteudo: lerConteudo(a.conteudo),
+          textoLivre: a.texto_livre,
+        });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const excluir = async () => {
@@ -174,8 +182,8 @@ export default function Anamnese() {
                       <button type="button" onClick={() => abrirEdicao(a)} className={BTN_MINI} data-btn-editar-anamnese>
                         <Pencil size={12} /> Editar
                       </button>
-                      <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-anamnese>
-                        <FileDown size={12} /> PDF
+                      <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-anamnese aria-busy={pdfAcao.ocupado === a.id || undefined} data-gerando-pdf={pdfAcao.ocupado === a.id ? "1" : undefined}>
+                        {pdfAcao.ocupado === a.id ? <Loader2 size={12} className="animate-spin" /> : <FileDown size={12} />} PDF
                       </button>
                       <button type="button" onClick={() => setParaExcluir(a)} className={BTN_MINI_PERIGO} data-btn-excluir-anamnese>
                         <Trash2 size={12} /> Excluir

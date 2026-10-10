@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { CalendarClock, ChevronRight, Dumbbell, History, MapPin, Timer } from "lucide-react";
 import { formatDuracao } from "@/lib/treinoResumo";
 import { carregarTreinoDoHistorico, type ItemHistorico } from "@/treino/editor/api";
-import { MESES } from "@/treino/editor/relatorio";
+import { MESES } from "@/lib/meses";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";

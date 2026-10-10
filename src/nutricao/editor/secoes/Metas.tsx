@@ -1,7 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Metas.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CircleDashed, Eye, EyeOff, FileDown, Minus, Pause, PenLine, Play, Plus, Star, Target, Trash2 } from "lucide-react";
+import { Check, CircleDashed, Eye, EyeOff, FileDown, Loader2, Minus, Pause, PenLine, Play, Plus, Star, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -12,7 +12,6 @@ import MetaDialog from "@/nutricao/editor/ui/MetaDialog";
 import ModelosMetaDialog from "@/nutricao/editor/ui/ModelosMetaDialog";
 import { useAuth } from "@/nutricao/editor/ui/contexto";
 import { alternarAtiva, excluirMeta, garantirModelosMeta, listarMetasDoPaciente, listarModelosMeta, nomeDaNutricionista, type Meta } from "@/nutricao/editor/lib/metas";
-import { baixarPDFMetas } from "@/nutricao/editor/lib/metasPdf";
 import {
   DIAS_SEMANA, contarAtivas, diasParaAttr, filtrarMetas, inserirMeta, normalizarDias, ordenarMetas, textoContagemMetas, textoDias, textoInicio, textoPausadas,
 } from "@/nutricao/editor/lib/metasUtil";
@@ -22,6 +21,10 @@ import { diasDaMeta, resumoDaMeta, useMetasConcluidas } from "@/nutricao/editor/
 import { diaDaSemana } from "@/nutricao/app/metasUtil";
 import { hojeSP, rotuloDoDia } from "@/nutricao/app/dia";
 import { cn } from "@/lib/utils";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF das metas (jsPDF + autotable) só no clique — antes a aba Dieta do aluno baixava o pedaço do PDF ao abrir
+const PDF_METAS = sobDemanda(() => import("@/nutricao/editor/lib/metasPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PRI = "inline-flex items-center gap-1 border border-verde/50 text-verde-3 font-semibold text-[10px] uppercase tracking-wider px-2.5 py-1 hover:bg-[rgba(16,185,129,.08)] transition-colors disabled:opacity-40";
@@ -139,15 +142,20 @@ export default function Metas() {
     }
   };
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = () => {
     const lista = metas.filter((m) => m.ativa);
     if (!lista.length) return;
-    try {
-      const nome = baixarPDFMetas({ paciente: p.nome, metas: lista, nutricionista: nomeNutri, emitidoEm: new Date() });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar("metas", async () => {
+      try {
+        const { baixarPDFMetas } = await PDF_METAS.obter();
+        const nome = baixarPDFMetas({ paciente: p.nome, metas: lista, nutricionista: nomeNutri, emitidoEm: new Date() });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const excluir = async () => {
@@ -187,8 +195,8 @@ export default function Metas() {
             <button type="button" onClick={() => setModelosAberto(true)} className={BTN_SEC} disabled={carregando} data-btn-modelos-meta>
               <Star className="h-3.5 w-3.5" aria-hidden="true" /> Modelos
             </button>
-            <button type="button" onClick={pdf} className={BTN_SEC} disabled={carregando || ativas === 0} title={ativas === 0 ? "Nenhuma meta ativa pra imprimir" : "PDF com as metas ativas"} data-leitura data-btn-pdf-metas>
-              <FileDown className="h-3.5 w-3.5" aria-hidden="true" /> PDF das metas
+            <button type="button" onClick={pdf} className={BTN_SEC} disabled={carregando || ativas === 0 || pdfAcao.ocupado !== null} title={ativas === 0 ? "Nenhuma meta ativa pra imprimir" : "PDF com as metas ativas"} data-leitura data-btn-pdf-metas aria-busy={pdfAcao.ocupado === "metas" || undefined} data-gerando-pdf={pdfAcao.ocupado === "metas" ? "1" : undefined}>
+              {pdfAcao.ocupado === "metas" ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" aria-hidden="true" />} PDF das metas
             </button>
             <button type="button" onClick={() => setModal({ aberto: true, meta: null })} className={BTN_PRI} disabled={carregando} data-btn-nova-meta>
               <Plus size={12} aria-hidden="true" /> Nova meta

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DropdownMenu } from "radix-ui";
-import { Ban, FileDown, LockOpen, MoreVertical, PauseCircle, RotateCcw, TriangleAlert, UserRound, UserX, X } from "lucide-react";
+import { Ban, FileDown, Loader2, LockOpen, MoreVertical, PauseCircle, RotateCcw, TriangleAlert, UserRound, UserX, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { generateAdminPDF, type AdminProfile } from "@/lib/generateAdminPDF";
+import type { AdminProfile, Avaliacao } from "@/lib/generateAdminPDF";
+import { sobDemanda } from "@/lib/sobDemanda";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MensagemForm } from "@/entrada/pecas/Campo";
 import { Botao } from "@/ui/premium/Botao";
@@ -30,6 +31,10 @@ function ItemMenu({ icone: Icone, rotulo, aoEscolher, perigo, marca }: { icone: 
   );
 }
 
+// hml-18b (H-54, F): o PDF do aluno (jsPDF + autotable) só no clique — antes a lista e o perfil do aluno baixavam o pedaço do PDF ao
+// abrir. Abrir o menu ⋮ já começa a baixar (o 1º "Gerar PDF" não espera o pedaço inteiro).
+const PDF_DO_ALUNO = sobDemanda(() => import("@/lib/generateAdminPDF"));
+
 /**
  * Menu ⋮ de um aluno na lista (C31 + N-10): Abrir, Gerar PDF, Bloquear acesso (F5: o app fecha de verdade), Desativar/Reativar e
  * Remover da lista. As ações que mudam o acesso pedem confirmação; o servidor confere a regra (dono, responsável ou master) e o
@@ -39,6 +44,7 @@ export function AcoesAluno({ aluno, eu, aoMudar }: { aluno: AlunoLinha; eu: List
   const navigate = useNavigate();
   const pode = acoesDoAluno(aluno, eu);
   const [confirmar, setConfirmar] = useState<Confirmar | null>(null);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
 
   const direta = async (acao: AcaoAluno, ok: string) => {
     try {
@@ -51,22 +57,41 @@ export function AcoesAluno({ aluno, eu, aoMudar }: { aluno: AlunoLinha; eu: List
   };
 
   const gerarPdf = async () => {
-    if (!aluno.treino_user_id) return;
-    const { data, error } = await supabase.functions.invoke("admin-get-user", { body: { userId: aluno.treino_user_id } });
-    const d = data as { profile?: AdminProfile; avaliacoes?: Parameters<typeof generateAdminPDF>[1] } | null;
-    if (error || !d?.profile) {
-      toast.error("Não deu para carregar os dados do aluno para o PDF.");
-      return;
+    if (!aluno.treino_user_id || gerandoPdf) return;
+    // o botão ⋮ gira enquanto o pedaço do PDF chega e os dados vêm (o menu já fechou)
+    setGerandoPdf(true);
+    try {
+      const [{ generateAdminPDF }, { data, error }] = await Promise.all([
+        PDF_DO_ALUNO.obter(),
+        supabase.functions.invoke("admin-get-user", { body: { userId: aluno.treino_user_id } }),
+      ]);
+      const d = data as { profile?: AdminProfile; avaliacoes?: Avaliacao[] } | null;
+      if (error || !d?.profile) {
+        toast.error("Não deu para carregar os dados do aluno para o PDF.");
+        return;
+      }
+      await generateAdminPDF(d.profile, d.avaliacoes ?? []);
+    } catch {
+      toast.error("Não deu para gerar o PDF agora. Confira a internet e tente de novo.");
+    } finally {
+      setGerandoPdf(false);
     }
-    generateAdminPDF(d.profile, d.avaliacoes ?? []);
   };
 
   return (
     <>
-      <DropdownMenu.Root>
+      <DropdownMenu.Root onOpenChange={(aberto) => aberto && pode.pdf && PDF_DO_ALUNO.aquecer()}>
         <DropdownMenu.Trigger asChild>
-          <button type="button" className="pq-ibtn flex-none" style={{ width: 36, height: 36, borderRadius: 12 }} aria-label={`Ações de ${aluno.nome}`} data-menu-aluno={aluno.id}>
-            <MoreVertical aria-hidden />
+          <button
+            type="button"
+            className="pq-ibtn flex-none"
+            style={{ width: 36, height: 36, borderRadius: 12 }}
+            aria-label={gerandoPdf ? `Gerando o PDF de ${aluno.nome}` : `Ações de ${aluno.nome}`}
+            aria-busy={gerandoPdf || undefined}
+            data-menu-aluno={aluno.id}
+            data-gerando-pdf={gerandoPdf ? "1" : undefined}
+          >
+            {gerandoPdf ? <Loader2 aria-hidden className="animate-spin" /> : <MoreVertical aria-hidden />}
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>

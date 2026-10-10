@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { lazy, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, PencilRuler, Salad } from "lucide-react";
@@ -7,21 +7,33 @@ import { planoAtivo } from "@/nutricao/app/dia";
 import { ultimosDias } from "@/nutricao/editor/lib/adesao";
 import { SECOES_DIETA, acessoDaDieta, secaoDaUrl, type SecaoDieta } from "@/nutricao/editor/lib/acesso";
 import { usePlanosDoAluno } from "@/nutricao/editor/lib/consultas";
-import Acompanhamento from "@/nutricao/editor/secoes/Acompanhamento";
-import CalculoEnergetico from "@/nutricao/editor/secoes/CalculoEnergetico";
-import Manipulados from "@/nutricao/editor/secoes/Manipulados";
-import Metas from "@/nutricao/editor/secoes/Metas";
-import Orientacoes from "@/nutricao/editor/secoes/Orientacoes";
 import Planejamento from "@/nutricao/editor/secoes/Planejamento";
-import Suplementos from "@/nutricao/editor/secoes/Suplementos";
 import { ConcluidasDoPeriodo } from "@/nutricao/editor/ui/ConcluidasDoPeriodo";
 import { PacienteProvider } from "@/nutricao/editor/ui/contexto";
 import { cn } from "@/lib/utils";
 import { SomenteLeitura } from "@/nutricao/editor/ui/SomenteLeitura";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { EstadoCarregando, EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
+import { Carregavel } from "@/ui/casca/Carregavel";
+
+// hml-18b (H-54, F): a Dieta em pedaços (o molde do Prontuário) — o Plano (a seção que abre) fica junto; as outras seções vêm quando a
+// pessoa abre. O gráfico do Acompanhamento (recharts, ~390 KB) deixa de vir com a aba.
+const Acompanhamento = lazy(() => import("@/nutricao/editor/secoes/Acompanhamento"));
+const CalculoEnergetico = lazy(() => import("@/nutricao/editor/secoes/CalculoEnergetico"));
+const Manipulados = lazy(() => import("@/nutricao/editor/secoes/Manipulados"));
+const Metas = lazy(() => import("@/nutricao/editor/secoes/Metas"));
+const Orientacoes = lazy(() => import("@/nutricao/editor/secoes/Orientacoes"));
+const Suplementos = lazy(() => import("@/nutricao/editor/secoes/Suplementos"));
 
 function Secao({ secao }: { secao: SecaoDieta }) {
+  return (
+    <Carregavel nome={`dieta ${secao}`} esqueleto={<EstadoCarregando linhas={4} rotulo="Abrindo a seção" />}>
+      <SecaoPreguicosa secao={secao} />
+    </Carregavel>
+  );
+}
+
+function SecaoPreguicosa({ secao }: { secao: SecaoDieta }) {
   switch (secao) {
     case "acompanhamento":
       return <Acompanhamento />;

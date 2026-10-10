@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp, FileCheck, FileDown, FileText, PenLine, Pill, Plus, Stethoscope, Tags, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, FileCheck, FileDown, FileText, Loader2, PenLine, Pill, Plus, Stethoscope, Tags, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -13,12 +13,15 @@ import DocumentoDialog from "@/nutricao/prontuario/ui/DocumentoDialog";
 import ModelosDocumentoDialog from "@/nutricao/prontuario/ui/ModelosDocumentoDialog";
 import { useAuth } from "@/nutricao/prontuario/ui/contexto";
 import { dadosProfissionais, excluirDocumento, garantirModelosDocumento, listarDocumentosDoPaciente, nomeDaNutricionista, type Documento } from "@/nutricao/prontuario/lib/documentos";
-import { baixarPDFDocumento } from "@/nutricao/prontuario/lib/documentoPdf";
 import {
   FILTROS, TIPOS_DOCUMENTO, contarPorTipo, ehTipoDocumento, filtrarDocumentos, formatarDataDocumento, infoTipo, inserirDocumento, rotuloTipo, textoContagemDocumentos,
   textoDias, type DadosDocumento, type FiltroTipo, type TipoDocumento,
 } from "@/nutricao/prontuario/lib/documentosUtil";
 import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF do documento (jsPDF) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_DOCUMENTO = sobDemanda(() => import("@/nutricao/prontuario/lib/documentoPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PRI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-verde/40 bg-[rgba(16,185,129,.1)] px-2.5 text-[11.5px] font-semibold text-verde-3 transition-colors hover:bg-[rgba(16,185,129,.16)] disabled:cursor-not-allowed disabled:opacity-40";
@@ -90,23 +93,28 @@ export default function Documentos() {
     await qc.invalidateQueries({ queryKey: ["modelos-documento"] });
   };
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = (d: Documento) => {
-    try {
-      const nome = baixarPDFDocumento({
-        tipo: tipoDe(d),
-        titulo: d.titulo,
-        texto: d.texto,
-        data: d.data,
-        paciente: p.nome,
-        cpf: p.cpf,
-        nutricionista: nomeNutri,
-        profissional,
-        emitidoEm: new Date(),
-      });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(d.id, async () => {
+      try {
+        const { baixarPDFDocumento } = await PDF_DOCUMENTO.obter();
+        const nome = baixarPDFDocumento({
+          tipo: tipoDe(d),
+          titulo: d.titulo,
+          texto: d.texto,
+          data: d.data,
+          paciente: p.nome,
+          cpf: p.cpf,
+          nutricionista: nomeNutri,
+          profissional,
+          emitidoEm: new Date(),
+        });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const excluir = async () => {
@@ -224,8 +232,8 @@ export default function Documentos() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" onClick={() => pdf(d)} className={BTN_MINI_PRI} data-leitura data-btn-pdf-documento>
-                        <FileDown size={12} aria-hidden="true" /> PDF
+                      <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdf(d)} className={BTN_MINI_PRI} data-leitura data-btn-pdf-documento aria-busy={pdfAcao.ocupado === d.id || undefined} data-gerando-pdf={pdfAcao.ocupado === d.id ? "1" : undefined}>
+                        {pdfAcao.ocupado === d.id ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
                       </button>
                       <button type="button" onClick={() => alternar(d.id)} className={BTN_MINI} data-leitura data-btn-ver-documento>
                         {aberto ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberto ? "Ocultar" : "Ver"}

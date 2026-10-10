@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ClipboardCheck, Eye, FileDown, Pencil, Ruler, Trash2 } from "lucide-react";
+import { ClipboardCheck, Eye, FileDown, Loader2, Pencil, Ruler, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { dataLonga } from "@/evolucao/formato";
 import type { Avaliacao } from "@/evolucao/tipos";
@@ -20,7 +20,7 @@ import { autorNoPainel, composicaoDepoisDeExcluir, numerosDoHistorico, podeExclu
  * aluno), "PDF" o da antropometria (o do Nutri) e "Excluir" sai do histórico do aluno (o personal exclui a física, a nutri a
  * antropometria — a antropometria vai para a Lixeira, como no site antigo).
  */
-export function HistoricoAvaliacoes({ alunoId, avaliacoes, perm, nomeAluno, linhasTreino, treinoUserId, aoVer, aoPdf, aoEditar, aoExcluiu }: {
+export function HistoricoAvaliacoes({ alunoId, avaliacoes, perm, nomeAluno, linhasTreino, treinoUserId, aoVer, aoPdf, gerandoPdf = null, aoEditar, aoExcluiu }: {
   /** o id da rota do aluno (confere no Treino se a avaliação já saiu) */
   alunoId: string;
   avaliacoes: Avaliacao[];
@@ -31,6 +31,8 @@ export function HistoricoAvaliacoes({ alunoId, avaliacoes, perm, nomeAluno, linh
   treinoUserId: string | null;
   aoVer: (av: Avaliacao) => void;
   aoPdf: (av: Avaliacao) => void;
+  /** hml-18b: a avaliação cujo PDF está saindo (o botão gira enquanto o pedaço do PDF chega) */
+  gerandoPdf?: string | null;
   /** editar a antropometria (o formulário do Nutri) — só para quem muda a nutrição */
   aoEditar?: (av: Avaliacao) => void;
   aoExcluiu: () => void;
@@ -90,7 +92,21 @@ export function HistoricoAvaliacoes({ alunoId, avaliacoes, perm, nomeAluno, linh
                 {/* hml-18a (H-40): os botões quebram de linha no celular (era flex-none: +32 px a 360) */}
                 <div className="flex flex-wrap items-center justify-end gap-1.5">
                   <Botao variante="g" tamanho="sm" icone={Eye} onClick={() => aoVer(av)} data-avaliacao-ver={av.id}>Ver</Botao>
-                  {!treino && <Botao variante="g" tamanho="sm" icone={FileDown} onClick={() => aoPdf(av)} data-avaliacao-pdf={av.id}>PDF</Botao>}
+                  {!treino && (
+                    <Botao
+                      variante="g"
+                      tamanho="sm"
+                      icone={gerandoPdf === av.id ? Loader2 : FileDown}
+                      className={gerandoPdf === av.id ? "[&_svg]:animate-spin" : undefined}
+                      aria-busy={gerandoPdf === av.id || undefined}
+                      data-gerando-pdf={gerandoPdf === av.id ? "1" : undefined}
+                      disabled={gerandoPdf !== null}
+                      onClick={() => aoPdf(av)}
+                      data-avaliacao-pdf={av.id}
+                    >
+                      PDF
+                    </Botao>
+                  )}
                   {!treino && aoEditar && excluivel && (
                     <Botao variante="g" tamanho="sm" icone={Pencil} onClick={() => aoEditar(av)} data-avaliacao-editar={av.id}>Editar</Botao>
                   )}
