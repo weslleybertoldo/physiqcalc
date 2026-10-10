@@ -181,7 +181,7 @@ export default function Perfil() {
   return (
     <div data-config-aba="perfil" className="flex flex-col gap-3.5">
       <TopoPagina titulo="Perfil" subtitulo="Como os seus alunos e a equipe te veem" />
-      <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
         <SecaoForm brilho titulo="Seus dados" extra={form.tipo ? <Chip tom={form.tipo === "personal" ? "t" : form.tipo === "outra_area" ? "g" : "n"}>{TIPOS_PERFIL.find((t) => t.id === form.tipo)?.rotulo.toUpperCase()}</Chip> : undefined} marca="perfil-dados">
           <form onSubmit={salvar} className="flex flex-col gap-4" data-form-perfil>
             <div className="flex items-center gap-4">
@@ -208,14 +208,14 @@ export default function Perfil() {
               <Campo rotulo="Sua área (opcional)" value={form.areaOutra} onChange={(e) => mudar({ areaOutra: e.target.value })}
                 placeholder="Ex.: educação física, medicina, enfermagem" maxLength={AREA_OUTRA_MAX} data-perfil-area-outra />
             )}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Campo rotulo={`${rotuloRegistro(form.tipo)} (opcional)`} value={form.registro} onChange={(e) => mudar({ registro: e.target.value })}
                 placeholder={form.tipo === "personal" ? "CREF 000000-G/UF" : form.tipo === "outra_area" ? "Número do conselho" : "CRN 0000/UF"} maxLength={30} data-perfil-registro />
               <Campo rotulo="WhatsApp" inputMode="tel" value={form.whatsapp} onChange={(e) => mudar({ whatsapp: mascararTelefoneBR(e.target.value) })}
                 placeholder="(11) 99999-8888" dica={e164 ? `Será salvo como ${e164}` : undefined} data-perfil-whatsapp />
             </div>
             <Campo rotulo="Endereço" value={form.endereco} onChange={(e) => mudar({ endereco: e.target.value })} placeholder="Rua, número, bairro" maxLength={160} data-perfil-endereco />
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_120px]">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_120px]">
               <Campo rotulo="Cidade" value={form.cidade} onChange={(e) => mudar({ cidade: e.target.value })} maxLength={80} data-perfil-cidade />
               <CampoSelect rotulo="UF" value={form.uf} onChange={(e) => mudar({ uf: e.target.value })} data-perfil-uf>
                 <option value="">—</option>

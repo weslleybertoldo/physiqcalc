@@ -557,11 +557,13 @@ def main() -> int:
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
     ap.add_argument("--dev", action="store_true", help="o local é o dev server (sem service worker)")
+    # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     B.ESTADO["schema"] = "staging"
     ESTADO.update(prefixo=a.prefixo, dev=a.dev)
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
             print(f"\n── {nome} ──", flush=True)
             if not B.saude_treino():

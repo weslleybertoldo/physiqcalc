@@ -6,6 +6,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
 
 const h = vi.hoisted(() => ({
@@ -16,6 +17,7 @@ const h = vi.hoisted(() => ({
   financeiro: null as unknown,
   // hml-17 (H-39): as categorias do diálogo de lançamento (garantirCategorias)
   categorias: vi.fn(),
+  agir: vi.fn(async () => null),
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-dono" } }) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabase: { functions: { invoke: vi.fn(async () => ({ error: null })) } } }));
@@ -30,7 +32,7 @@ vi.mock("@/painel/financeiro/useFinanceiro", () => ({
 vi.mock("./TagsDoAluno", () => ({ TagsDoAluno: () => null }));
 vi.mock("./useFinanceiroDoAluno", async (orig) => ({
   ...(await orig<typeof import("./useFinanceiroDoAluno")>()),
-  useFinanceiroDoAluno: () => ({ data: h.financeiro, isLoading: false, isError: false, error: null, refetch: vi.fn(), recarregar: vi.fn(async () => {}), agir: vi.fn(async () => null) }),
+  useFinanceiroDoAluno: () => ({ data: h.financeiro, isLoading: false, isError: false, error: null, refetch: vi.fn(), recarregar: vi.fn(async () => {}), agir: h.agir }),
 }));
 vi.mock("../api", async (orig) => ({
   ...(await orig<typeof import("../api")>()),
@@ -85,9 +87,11 @@ const montar = (url = "/painel/alunos/p1/financeiro", compacto = false) =>
   render(
     <MemoryRouter useTransitions={false} initialEntries={[url]}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <Routes>
-          <Route path="*" element={<><FinanceiroDoAluno alunoId="p1" compacto={compacto} /><Local /></>} />
-        </Routes>
+        <ProvedorConfirmar>
+          <Routes>
+            <Route path="*" element={<><FinanceiroDoAluno alunoId="p1" compacto={compacto} /><Local /></>} />
+          </Routes>
+        </ProvedorConfirmar>
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -106,6 +110,7 @@ beforeEach(() => {
   h.totais.mockResolvedValue({ recebido: 1938.37, gasto: 760.52, total: 41, primeira: LANCAMENTOS[40].data, ultima: LANCAMENTOS[0].data });
   h.categorias.mockReset();
   h.categorias.mockResolvedValue([]);
+  h.agir.mockClear();
 });
 
 describe("Financeiro do aluno — os 3 'Ver todos' em páginas do banco (hml-14d, P7)", () => {
@@ -204,5 +209,29 @@ describe("Financeiro do aluno — as categorias do lançamento (hml-17, H-39)", 
     fireEvent.click(document.querySelector("[data-btn-novo-lancamento]")!);
     await waitFor(() => expect(opcoes()).toEqual(["Sem categoria", "Consulta"]));
     expect(document.querySelector("[data-lancamento-categorias-erro]")).toBeNull();
+  });
+});
+
+describe("Financeiro do aluno — cancelar uma cobrança (hml-18a: a confirmação do app, não a do navegador)", () => {
+  it("o X da cobrança aberta abre a confirmação do app: Voltar não cancela; Cancelar cobrança chama prof_cobranca_cancelar", async () => {
+    h.financeiro = { ...financeiro(), cobrancas: [{ ...cobranca(0), status: "aberta", descricao: "Avaliação extra" }] };
+    montar();
+    const botao = await waitFor(() => {
+      const b = document.querySelector('[data-acao-cobranca="cancelar"]');
+      if (!b) throw new Error("sem o botão de cancelar");
+      return b as HTMLElement;
+    });
+    fireEvent.click(botao);
+    let dialogo = await screen.findByRole("alertdialog");
+    expect(dialogo).toHaveTextContent('Cancelar "Avaliação extra"?');
+    expect(dialogo.querySelector("[data-confirmar-ok]")).toHaveTextContent("Cancelar cobrança");
+    expect(dialogo.querySelector("[data-confirmar-cancelar]")).toHaveTextContent("Voltar");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-cancelar]")!);
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(h.agir).not.toHaveBeenCalled();
+    fireEvent.click(document.querySelector('[data-acao-cobranca="cancelar"]')!);
+    dialogo = await screen.findByRole("alertdialog");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
+    await waitFor(() => expect(h.agir).toHaveBeenCalledWith("prof_cobranca_cancelar", { cobranca_id: "c0" }, "Cobrança cancelada."));
   });
 });

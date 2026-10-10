@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { usePowerSync } from "@powersync/react";
 import { chaveTreino } from "@/lib/seriesPadrao";
 import { Botao } from "@/ui/premium/Botao";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { carregarAnotacao } from "../anotacoes";
 import { fotoDoSlot } from "../foto";
 import { cargaDaLinha, formatarCarga, linhaDoExercicio, observacaoDoTreino, prescricaoDoExercicio, type Prescricao, type PrescricaoTreino } from "../prescricao";
@@ -52,6 +53,7 @@ export interface PropsSlot {
 
 export function TreinoDoSlot(p: PropsSlot) {
   const db = usePowerSync();
+  const confirmar = useConfirmar();
   const { slot, userId } = p;
   const grupo = slot.grupo!;
   const grupoKey = chaveTreino(slot.grupoPessoal ? null : grupo.id, slot.grupoPessoal ? grupo.id : null);
@@ -140,7 +142,7 @@ export function TreinoDoSlot(p: PropsSlot) {
 
   const restaurar = async (r: ItemRemovidoDia) => {
     const pergunta = r.escopo === "dia" ? `Restaurar "${r.nome}" em ${p.dateLabel}?` : `Restaurar "${r.nome}" nos próximos treinos de ${grupo.nome}?`;
-    if (!window.confirm(pergunta)) return;
+    if (!(await confirmar({ titulo: pergunta, rotuloConfirmar: "Restaurar" }))) return;
     try {
       await restaurarExercicio(db, { userId, origemId: r.exercicio_id, grupoId: grupo.id, slotIdx: slot.slot_idx, dateKey: p.dateKey }, r.escopo);
       toast.success(`Restaurado: ${r.nome}`);

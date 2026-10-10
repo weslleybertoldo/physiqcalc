@@ -186,7 +186,8 @@ def caso_pix_calc(nav) -> None:
         c.pg.locator(f'[data-comprovante-pendente="{cid}"]').scroll_into_view_if_needed()
         c.pg.wait_for_timeout(500)
         c.print("pix_calc_aguardando")
-        c.pg.locator(f'[data-comprovante-pendente="{cid}"] [data-btn-confirmar-pix]').click()  # o window.confirm é aceito pelo Caso
+        c.pg.locator(f'[data-comprovante-pendente="{cid}"] [data-btn-confirmar-pix]').click()
+        p.check(c.confirmar_no_app(), "[pix_calc] a confirmação do app (hml-18a) → Confirmar recebimento")
         sumiu = c.esperar(lambda: not c.tem(f'[data-comprovante-pendente="{cid}"]'), 60)
         db = B.sql_principal(f"select status, transacao_id is not null as lancou, confirmado_por::text as quem from {S}.cobrancas where id = '{cid}'")[0]
         p.check(sumiu and db["status"] == "paga" and db["lancou"] and db["quem"] == B.uid("prof2"),

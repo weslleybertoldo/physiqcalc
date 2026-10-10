@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Salad, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,8 @@ import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { buscarAlimentos, ErroMaster, pratosProntos, salvarPrato } from "../api";
 import { Campo, INPUT, Janela, SELECT, TEXTAREA } from "../pecas/ui";
 import { textoErro } from "../regras";
@@ -23,12 +25,17 @@ const kcalDoPrato = (p: Pick<Prato, "itens">) => Math.round(p.itens.reduce((s, i
 function BuscaTaco({ aoEscolher }: { aoEscolher: (a: { id: string; nome: string; energia_kcal: number | null }) => void }) {
   const [termo, setTermo] = useState("");
   const q = useQuery({ queryKey: ["master-taco", termo], queryFn: () => buscarAlimentos(termo), enabled: termo.trim().length >= 2, staleTime: 60_000 });
+  const achados = termo.trim().length >= 2 ? (q.data?.alimentos ?? []) : [];
+  // hml-18a (H-40, D): a lista entra e SAI esmaecendo (200 ms) — antes sumia seca ao escolher; enquanto sai, mostra os achados de antes
+  const vistos = useUltimoValor(achados.length ? achados : null);
+  const saida = useSaidaAnimada<HTMLDivElement>(achados.length > 0);
   return (
     <div className="relative">
       <input className={INPUT} value={termo} onChange={(e) => setTermo(e.target.value)} placeholder="Buscar alimento na TACO (ex.: arroz)" data-busca-taco />
-      {termo.trim().length >= 2 && (q.data?.alimentos ?? []).length > 0 && (
-        <div className="absolute inset-x-0 top-11 z-10 max-h-56 overflow-y-auto rounded-xl border border-linha-2 bg-tela p-1 shadow-xl">
-          {(q.data?.alimentos ?? []).map((a) => (
+      {saida.montado && vistos && (
+        <div ref={saida.ref} data-state={saida.estado} data-lista-taco
+          className="absolute inset-x-0 top-11 z-10 max-h-56 overflow-y-auto rounded-xl border border-linha-2 bg-tela p-1 shadow-xl duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards">
+          {vistos.map((a) => (
             <button key={a.id} type="button" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-superficie-3"
               onClick={() => { aoEscolher(a); setTermo(""); }} data-opcao-taco={a.nome}>
               <span className="min-w-0 flex-1 truncate">{a.nome}</span>
@@ -45,7 +52,16 @@ function EditorPrato({ prato, aoFechar, aoSalvo }: { prato: Prato | null; aoFech
   const [p, setP] = useState<Prato | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  useEffect(() => { setP(prato ? structuredClone(prato) : null); setErro(null); }, [prato]);
+  // hml-18a (H-40, D): a janela fica montada e fecha pelo `aberta` (antes sumia seca: o prato null desmontava tudo); enquanto sai,
+  // mostra a cópia que estava aberta. A cópia nasce no mesmo render em que o prato chega e reabrir começa de novo do prato da lista
+  const [de, setDe] = useState<Prato | null>(null);
+  if (prato !== de) {
+    setDe(prato);
+    if (prato) {
+      setP(structuredClone(prato));
+      setErro(null);
+    }
+  }
   if (!p) return null;
   const mudarItem = (i: number, v: Partial<ItemPrato>) => setP({ ...p, itens: p.itens.map((x, k) => (k === i ? { ...x, ...v } : x)) });
 
@@ -67,7 +83,7 @@ function EditorPrato({ prato, aoFechar, aoSalvo }: { prato: Prato | null; aoFech
   }
 
   return (
-    <Janela aberta aoMudar={(a) => !a && aoFechar()} titulo={p.id ? "Editar prato pronto" : "Novo prato pronto"} largura="sm:max-w-2xl" data-janela-prato
+    <Janela aberta={prato !== null} aoMudar={(a) => !a && aoFechar()} titulo={p.id ? "Editar prato pronto" : "Novo prato pronto"} largura="sm:max-w-2xl" data-janela-prato
       descricao="Aparece na aba Dieta do aluno sem profissional (plano Treino + Alimentação), pelo objetivo dele. kcal e macros vêm da TACO."
       rodape={(
         <>
@@ -75,7 +91,7 @@ function EditorPrato({ prato, aoFechar, aoSalvo }: { prato: Prato | null; aoFech
           <Botao tamanho="sm" variante="w" onClick={() => void salvar()} disabled={ocupado} data-salvar-prato>{ocupado ? "Salvando…" : "Salvar prato"}</Botao>
         </>
       )}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Campo rotulo="Nome"><input className={INPUT} value={p.nome} onChange={(e) => setP({ ...p, nome: e.target.value })} maxLength={120} data-campo-nome-prato /></Campo>
         <Campo rotulo="Refeição">
           <select className={SELECT} value={p.refeicao} onChange={(e) => setP({ ...p, refeicao: e.target.value as Prato["refeicao"] })}>{REFEICOES.map((r) => <option key={r.id} value={r.id}>{r.rotulo}</option>)}</select>
@@ -127,11 +143,11 @@ export function PratosProntos() {
   return (
     <div className="flex flex-col gap-3" data-pratos-prontos={lista.length}>
       <div className="flex items-center gap-2">
-        <p className="flex-1 text-[12.5px] text-texto-3">{lista.filter((p) => p.ativo).length} no catálogo · o arquivo scripts/conteudo/pratos_prontos.json continua valendo para recarregar.</p>
+        <p className="min-w-0 flex-1 break-words text-[12.5px] text-texto-3">{lista.filter((p) => p.ativo).length} no catálogo · o arquivo scripts/conteudo/pratos_prontos.json continua valendo para recarregar.</p>
         <Botao tamanho="sm" variante="w" icone={Plus} onClick={() => setEditar(novo)} data-novo-prato>Novo prato</Botao>
       </div>
       {lista.length === 0 ? <EstadoVazio icone={Salad} titulo="Nenhum prato pronto" /> : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {lista.map((p) => (
             <Cartao key={p.id} className={cn("flex flex-col gap-2 p-4", !p.ativo && "opacity-60")} data-prato={p.codigo}>
               <div className="flex flex-wrap gap-1.5">

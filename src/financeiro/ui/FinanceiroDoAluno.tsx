@@ -13,6 +13,7 @@ import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { buscarCobrancasDoAluno, buscarTotaisDoAluno, ErroFinanceiro } from "../api";
 import { criarLancamento, garantirCategorias, paginaLancamentosDoAluno, rotuloMetodoLancamento, valorComSinal, type Lancamento } from "../lancamentos";
 import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, paginaRecibosDoAluno, podeEmitirRecibo, type Recibo } from "../recibos";
@@ -71,7 +72,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
 
   if (f.isLoading) {
     return (
-      <div className="grid gap-3.5 xl:grid-cols-3" data-financeiro-carregando>
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-3" data-financeiro-carregando>
         {[0, 1, 2].map((i) => <Cartao key={i} className="h-[260px] p-5"><Esqueleto className="h-full w-full" /></Cartao>)}
       </div>
     );
@@ -85,7 +86,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
 
   return (
     <div className="flex flex-col gap-3.5" data-financeiro-aluno={d.aluno.paciente_id}>
-      <div className={compacto ? "grid gap-3.5" : "grid gap-3.5 md:grid-cols-2 xl:grid-cols-3"}>
+      <div className={compacto ? "grid grid-cols-1 gap-3.5" : "grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3"}>
         <CartaoMensalidade d={d} agir={f.agir} />
         <CartaoCobrancas d={d} alunoId={alunoId} compacto={compacto} agir={f.agir} aoVerComprovante={setComprovante} aoRegistrar={(c) => setRegistrar({ cobranca: c })}
           aoNovaCobranca={() => setNovaCobranca(true)} aoRegistrarMensalidade={() => setRegistrar({ cobranca: null })} />
@@ -96,7 +97,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
             aoMudou={() => void f.recarregar()} />
         </div>
       </div>
-      <div className={compacto ? "grid gap-3.5" : "grid gap-3.5 xl:grid-cols-2"}>
+      <div className={compacto ? "grid grid-cols-1 gap-3.5" : "grid grid-cols-1 gap-3.5 xl:grid-cols-2"}>
         <CartaoLancamentosERecibos d={d} compacto={compacto} reciboAvulso={reciboAvulso} aoFecharReciboAvulso={() => setReciboAvulso(false)} aoAbrirReciboAvulso={() => setReciboAvulso(true)} />
       </div>
 
@@ -112,6 +113,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
 
 function CartaoMensalidade({ d, agir }: { d: FinanceiroProfissional; agir: ReturnType<typeof useFinanceiroDoAluno>["agir"] }) {
   const m = d.mensalidade;
+  const confirmar = useConfirmar();
   const [plano, setPlano] = useState(m?.plano_id ?? "");
   const [planoNovo, setPlanoNovo] = useState("");
   const [valor, setValor] = useState(m ? valorNoCampo(m.valor) : "");
@@ -167,7 +169,8 @@ function CartaoMensalidade({ d, agir }: { d: FinanceiroProfissional; agir: Retur
           {m && (m.pausada ? (
             <Botao icone={Play} onClick={() => void agir("prof_pausar", { aluno: d.aluno.paciente_id, pausar: false }, "Cobrança reativada.")} data-mensalidade-reativar>Reativar cobrança</Botao>
           ) : (
-            <Botao icone={Pause} onClick={() => { if (window.confirm("Parar a cobrança pelo app? O aluno deixa de ver a pendência e o Pagar.")) void agir("prof_pausar", { aluno: d.aluno.paciente_id, pausar: true }, "Cobrança parada."); }} data-mensalidade-parar>Não cobrar pelo app</Botao>
+            <Botao icone={Pause} onClick={() => void confirmar({ titulo: "Parar a cobrança pelo app?", descricao: "O aluno deixa de ver a pendência e o Pagar.", rotuloConfirmar: "Parar" })
+              .then((sim) => { if (sim) void agir("prof_pausar", { aluno: d.aluno.paciente_id, pausar: true }, "Cobrança parada."); })} data-mensalidade-parar>Não cobrar pelo app</Botao>
           ))}
         </div>
       </form>
@@ -210,6 +213,7 @@ function CartaoCobrancas({ d, alunoId, compacto, agir, aoVerComprovante, aoRegis
   aoRegistrarMensalidade: () => void;
 }) {
   const [params] = useSearchParams();
+  const confirmar = useConfirmar();
   const [todas, setTodas] = useState(() => abertaPeloEndereco(params, "pagina_cobrancas", compacto));
   const lista = ordenarCobrancas(d.cobrancas);
   const dono = d.permissoes.mensalidade;
@@ -229,11 +233,15 @@ function CartaoCobrancas({ d, alunoId, compacto, agir, aoVerComprovante, aoRegis
       {c.comprovante && <IconeAcao icone={Eye} rotulo="Ver o comprovante" onClick={() => aoVerComprovante(c.id)} marca="ver" />}
       {c.status === "aberta" && <IconeAcao icone={Banknote} rotulo="Registrar pago por fora" onClick={() => aoRegistrar(c)} marca="pago-por-fora" />}
       {c.status === "aberta" && <IconeAcao icone={Ban} rotulo="Cancelar a cobrança" perigo marca="cancelar"
-        onClick={() => { if (window.confirm(`Cancelar "${c.descricao}"?`)) void agir("prof_cobranca_cancelar", { cobranca_id: c.id }, "Cobrança cancelada."); }} />}
+        onClick={() => void confirmar({ titulo: `Cancelar "${c.descricao}"?`, rotuloConfirmar: "Cancelar cobrança", rotuloCancelar: "Voltar", perigo: true })
+          .then((sim) => { if (sim) void agir("prof_cobranca_cancelar", { cobranca_id: c.id }, "Cobrança cancelada."); })} />}
       {dono && c.status === "paga" && c.forma === "mp" && c.mp && <IconeAcao icone={Undo2} rotulo="Estornar no Mercado Pago" perigo marca="estornar"
-        onClick={() => { if (window.confirm(`Estornar ${reais(c.valor)} no Mercado Pago? O dinheiro volta para o aluno.`)) void agir("prof_reembolsar", { cobranca_id: c.id }, "Estorno pedido ao Mercado Pago."); }} />}
+        onClick={() => void confirmar({ titulo: `Estornar ${reais(c.valor)} no Mercado Pago?`, descricao: "O dinheiro volta para o aluno.", rotuloConfirmar: "Estornar", perigo: true })
+          .then((sim) => { if (sim) void agir("prof_reembolsar", { cobranca_id: c.id }, "Estorno pedido ao Mercado Pago."); })} />}
       {dono && c.status === "paga" && c.forma === "manual" && c.tipo === "mensalidade" && <IconeAcao icone={Trash2} rotulo="Remover o pagamento por fora" perigo marca="remover"
-        onClick={() => { if (window.confirm(`Remover este pagamento de ${reais(c.valor)}? Sem outra cobertura, o aluno volta a ficar pendente.`)) void agir("prof_remover", { cobranca_id: c.id }, "Pagamento removido."); }} />}
+        onClick={() => void confirmar({ titulo: `Remover este pagamento de ${reais(c.valor)}?`, descricao: "Sem outra cobertura, o aluno volta a ficar pendente.",
+          rotuloConfirmar: "Remover", perigo: true })
+          .then((sim) => { if (sim) void agir("prof_remover", { cobranca_id: c.id }, "Pagamento removido."); })} />}
     </span>
   );
   return (
@@ -281,6 +289,7 @@ function CartaoCobrancas({ d, alunoId, compacto, agir, aoVerComprovante, aoRegis
 
 function CartaoAssinatura({ d, agir }: { d: FinanceiroProfissional; agir: ReturnType<typeof useFinanceiroDoAluno>["agir"] }) {
   const a = d.assinatura!;
+  const confirmar = useConfirmar();
   const ativa = ["authorized", "pending", "paused"].includes(a.status);
   return (
     <Cartao className="flex items-center gap-3 p-4" data-cartao-assinatura={a.status}>
@@ -290,7 +299,9 @@ function CartaoAssinatura({ d, agir }: { d: FinanceiroProfissional; agir: Return
         {reais(a.valor)}/mês no cartão{a.proximo_vencimento && ativa ? ` · próxima ${dataBR(a.proximo_vencimento)}` : ""}
       </span>
       {ativa && d.permissoes.mensalidade && (
-        <Botao tamanho="sm" onClick={() => { if (window.confirm("Cancelar a cobrança automática deste aluno? Ela para na hora.")) void agir("prof_cancelar_assinatura", { aluno: d.aluno.paciente_id }, "Cobrança automática cancelada."); }} data-btn-cancelar-assinatura>Cancelar</Botao>
+        <Botao tamanho="sm" onClick={() => void confirmar({ titulo: "Cancelar a cobrança automática deste aluno?", descricao: "Ela para na hora.",
+          rotuloConfirmar: "Cancelar cobrança", rotuloCancelar: "Voltar", perigo: true })
+          .then((sim) => { if (sim) void agir("prof_cancelar_assinatura", { aluno: d.aluno.paciente_id }, "Cobrança automática cancelada."); })} data-btn-cancelar-assinatura>Cancelar</Botao>
       )}
     </Cartao>
   );
@@ -305,6 +316,7 @@ function CartaoLancamentosERecibos({ d, compacto, reciboAvulso, aoFecharReciboAv
 }) {
   const { usuario } = useSessao();
   const uid = usuario?.id ?? "";
+  const confirmar = useConfirmar();
   // W19: o recibo, os modelos ★ e o PDF são os do Painel › Financeiro (o do Nutri: emitir e baixar o PDF, marca Physiq)
   const fin = useFinanceiroConta({ categorias: false });
   const qc = useQueryClient();
@@ -430,8 +442,9 @@ function CartaoLancamentosERecibos({ d, compacto, reciboAvulso, aoFecharReciboAv
                 </span>
                 <IconeAcao icone={FileDown} rotulo="Baixar o PDF" onClick={() => void pdf(r)} marca="pdf-recibo" />
                 <IconeAcao icone={Trash2} rotulo="Excluir o recibo" perigo marca="excluir-recibo" onClick={() => {
-                  if (!window.confirm(`Mandar o recibo nº ${formatarNumeroRecibo(r.numero)} para a lixeira? O número não é reaproveitado.`)) return;
-                  void excluirRecibo(r.id).then(recarregar).catch(() => toast.error("Não deu para excluir."));
+                  void confirmar({ titulo: `Mandar o recibo nº ${formatarNumeroRecibo(r.numero)} para a lixeira?`, descricao: "O número não é reaproveitado.",
+                    rotuloConfirmar: "Mandar para a lixeira", perigo: true })
+                    .then((sim) => { if (sim) void excluirRecibo(r.id).then(recarregar).catch(() => toast.error("Não deu para excluir.")); });
                 }} />
               </div>
             ))}

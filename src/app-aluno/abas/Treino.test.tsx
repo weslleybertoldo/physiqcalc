@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 
 // A aba Treino nova (W8) sobre um SQLite falso do PowerSync: a mesma leitura que a tela faz, sem rede.
 const h = vi.hoisted(() => {
@@ -97,9 +98,11 @@ function comTreino() {
 
 function abrir() {
   return render(
-    <MemoryRouter useTransitions={false} initialEntries={["/treino"]}>
-      <Treino />
-    </MemoryRouter>,
+    <ProvedorConfirmar>
+      <MemoryRouter useTransitions={false} initialEntries={["/treino"]}>
+        <Treino />
+      </MemoryRouter>
+    </ProvedorConfirmar>,
   );
 }
 
@@ -159,6 +162,27 @@ describe("aba Treino (tela 2)", () => {
     expect(painel.querySelectorAll("[data-serie-ok]")).toHaveLength(2); // S1 feita, S2 e S3 com OK
     fireEvent.click(painel.querySelector('[data-acao-exercicio="trocar"]')!);
     expect(await screen.findByTestId("modal-trocar")).toBeInTheDocument();
+  });
+
+  it("hml-18a: tirar o treino do dia pede a confirmação do app — Cancelar não apaga as séries; Tirar do dia apaga", async () => {
+    comTreino();
+    h.db.execute.mockClear();
+    abrir();
+    // as séries DESTE dia (a limpeza das antigas, "data_treino < ?", roda sozinha ao abrir)
+    const apagou = () => h.db.execute.mock.calls.some((c: unknown[]) => String(c[0]).startsWith("DELETE FROM tb_treino_series WHERE user_id = ? AND data_treino = ? AND slot_idx = ?"));
+    fireEvent.click(await screen.findByRole("button", { name: "Opções do treino" }));
+    fireEvent.click(await screen.findByText("Tirar este treino do dia"));
+    let dialogo = await screen.findByRole("alertdialog");
+    expect(dialogo).toHaveTextContent('Tirar "Peito e Tríceps"');
+    expect(dialogo.querySelector("[data-confirmar-ok]")).toHaveTextContent("Tirar do dia");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-cancelar]")!);
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(apagou()).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Opções do treino" }));
+    fireEvent.click(await screen.findByText("Tirar este treino do dia"));
+    dialogo = await screen.findByRole("alertdialog");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
+    await waitFor(() => expect(apagou()).toBe(true));
   });
 
   it("aluno sem profissional num dia sem treino: \"Montar o meu\" e \"Usar um treino pronto\"", async () => {

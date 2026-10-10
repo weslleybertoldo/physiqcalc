@@ -12,6 +12,7 @@ import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { Segmentado } from "@/ui/premium/Segmentado";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { excluirExercicio, excluirMusculo, listarExercicios } from "./api";
 import { FolhaExercicio } from "./FolhaExercicio";
@@ -42,6 +43,7 @@ export function Biblioteca({
   aoAtenderPedido: () => void;
 }) {
   const recarregar = useRecarregar();
+  const confirmar = useConfirmar();
   const escopo: EscopoBiblioteca = q.master ? "global" : params.get("b") === "minha" ? "minha" : "global";
   const [grupo, setGrupo] = useState("todos");
   const [busca, setBusca] = useState("");
@@ -105,7 +107,9 @@ export function Biblioteca({
   }
 
   const excluir = async (e: ExercicioCatalogo) => {
-    if (!window.confirm(`Excluir "${e.nome}" da biblioteca?\n\nEle sai dos treinos em que está e o histórico de séries feitas com ele também é apagado. Isso não tem volta.`)) return;
+    if (!(await confirmar({ titulo: `Excluir "${e.nome}" da biblioteca?`,
+      descricao: "Ele sai dos treinos em que está e o histórico de séries feitas com ele também é apagado. Isso não tem volta.",
+      rotuloConfirmar: "Excluir", perigo: true }))) return;
     try {
       await excluirExercicio(e.id);
       await recarregar.catalogo();
@@ -165,7 +169,7 @@ export function Biblioteca({
           />
         ) : (
           <>
-            <ul className="grid gap-x-6 lg:grid-cols-2" data-biblioteca-lista-painel={itens.length} data-lista="biblioteca" data-atualizando={lista.isFetching ? "1" : "0"}>
+            <ul className="grid grid-cols-1 gap-x-6 lg:grid-cols-2" data-biblioteca-lista-painel={itens.length} data-lista="biblioteca" data-atualizando={lista.isFetching ? "1" : "0"}>
               {itens.map((e) => {
                 const editavel = podeEditar(e, q);
                 return (
@@ -214,7 +218,7 @@ export function Biblioteca({
         editavel={(m) => podeEditar(m, q)}
         titulo={escopo === "global" ? "Grupos musculares do Physiq" : "Meus grupos musculares"}
         aoExcluir={async (id, nome) => {
-          if (!window.confirm(`Excluir o grupo "${nome}"? Os exercícios dele não mudam.`)) return;
+          if (!(await confirmar({ titulo: `Excluir o grupo "${nome}"?`, descricao: "Os exercícios dele não mudam.", rotuloConfirmar: "Excluir", perigo: true }))) return;
           try {
             await excluirMusculo(id);
             await recarregar.catalogo();

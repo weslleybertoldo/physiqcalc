@@ -5,6 +5,7 @@ import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useSessao } from "@/nucleo/sessao";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
@@ -113,11 +114,14 @@ const App = () => {
           <PowerSyncProvider>
           <PWAInstallProvider>
             <TooltipProvider>
-              <Sonner />
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
-              <PWAInstallBanner />
+              {/* hml-18a (H-40): a confirmação do app (useConfirmar) no lugar do window.confirm — um provedor só, fora das rotas */}
+              <ProvedorConfirmar>
+                <Sonner />
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+                <PWAInstallBanner />
+              </ProvedorConfirmar>
             </TooltipProvider>
           </PWAInstallProvider>
           </PowerSyncProvider>

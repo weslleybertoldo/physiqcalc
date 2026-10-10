@@ -41,7 +41,11 @@ export function Kpi({
         </span>
         {titulo}
       </div>
-      <div className="mt-3 text-[30px] font-bold tabular-nums tracking-[-0.035em] text-texto">{valor}</div>
+      {/* hml-18a (H-40, A): no celular o valor encolhe com a tela (5vw: 18 px a 360, 19,5 px a 390 — "R$ 123.456,78" cabe no cartão da
+          grade de 2 colunas) e volta aos 30 px a partir do sm; nunca é cortado com "…" */}
+      <div className="mt-3 text-[clamp(1.125rem,5vw,1.875rem)] font-bold tabular-nums tracking-[-0.035em] text-texto sm:text-[30px]" data-kpi-valor>
+        {valor}
+      </div>
       {detalhe && <div className="mt-1 flex items-center gap-1.5 text-xs text-texto-2">{detalhe}</div>}
       {serie && serie.length > 1 && (
         <div className="absolute right-3.5 top-[50px]">

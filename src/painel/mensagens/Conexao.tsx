@@ -54,7 +54,7 @@ export default function Conexao({ d, a, agora }: { d: DadosMensagens; a: AcoesCo
         extra={<Chip tom={TOM_SITUACAO[situacao]} data-status-conexao={inst?.status ?? "desconectado"}>{ROTULO_STATUS[inst?.status ?? "desconectado"].toUpperCase()}</Chip>}
         acao={<Link to={ROTA_PERFIL} className={LINK} data-link-configuracoes><Settings aria-hidden className="h-3.5 w-3.5" /> {d.temNumero ? "Alterar o número" : "Cadastrar o número"}</Link>} />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_236px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_236px]">
         <div className="flex min-w-0 flex-col gap-4">
           <div className="rounded-2xl border border-linha bg-superficie px-4 py-3">
             <div className="text-[11.5px] font-medium text-texto-3">Seu WhatsApp</div>

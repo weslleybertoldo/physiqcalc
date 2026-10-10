@@ -5,6 +5,7 @@ import { SheetSom } from "@/app-aluno/perfil/pecas/SheetSom";
 import { Anel } from "@/ui/premium/Anel";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
 import { formatarDescanso } from "../prescricao";
 import { useDescanso, type OpcoesDescanso } from "../useDescanso";
 
@@ -26,7 +27,9 @@ export function CartaoDescanso(props: OpcoesDescanso) {
   const [ajustes, setAjustes] = useState(false);
   const [som, setSom] = useState<SomDescanso>(lerSomDescanso);
   const [folhaSom, setFolhaSom] = useState(false);
-  if (!props.ativo) return null;
+  // hml-18a (H-40, D): o card entra e SAI esmaecendo (200 ms) — antes sumia seco no Pular/Fechar e no fim do descanso
+  const saida = useSaidaAnimada<HTMLDivElement>(props.ativo);
+  if (!saida.montado) return null;
 
   const pct = d.duracao > 0 ? d.segundos / d.duracao : 0;
   const texto = d.acabou ? "Hora de treinar!" : d.pausado ? "Descanso pausado" : "Descanso";
@@ -35,11 +38,13 @@ export function CartaoDescanso(props: OpcoesDescanso) {
   return (
     <>
       <div
+        ref={saida.ref}
         role="timer"
         aria-live="off"
         aria-label={`Descanso: ${relogio(d.segundos)}`}
         data-descanso={d.acabou ? "acabou" : d.pausado ? "pausado" : "correndo"}
-        className="fixed inset-x-[14px] z-40 mx-auto flex max-w-[532px] items-center gap-3 rounded-[24px] py-3 pl-3.5 pr-3"
+        data-state={saida.estado}
+        className="fixed inset-x-[14px] z-40 mx-auto flex max-w-[532px] items-center gap-3 rounded-[24px] py-3 pl-3.5 pr-3 duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards"
         style={{
           bottom: "calc(var(--casca-reserva-baixo, 16px) - 2px)",
           background: "rgba(28,24,40,.82)",

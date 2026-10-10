@@ -43,16 +43,19 @@ function AlertDialogOverlay({
 }
 
 // Physiq: `w-full max-w-lg` sem variante `sm:` — as telas passam `max-w-sm` e o tailwind-merge troca.
+// hml-18a: `aoTocarFora` = o toque no fundo (o AlertDialog do Radix não fecha por fora; o confirmar() do app fecha como Cancelar).
 function AlertDialogContent({
   className,
   size = "default",
+  aoTocarFora,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm"
+  aoTocarFora?: () => void
 }) {
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay />
+      <AlertDialogOverlay onClick={aoTocarFora} />
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         data-size={size}

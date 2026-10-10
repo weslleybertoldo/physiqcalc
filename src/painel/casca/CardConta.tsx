@@ -41,7 +41,8 @@ export function CardConta({ conta, contas, trocarConta }: { conta: ContaCasca; c
         <DropdownMenu.Content
           align="start"
           sideOffset={6}
-          className="z-50 w-[240px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)]"
+          // hml-18a (H-40, D): entra e sai (fade + zoom-95, 150 ms) — antes abria e fechava sem animação nenhuma
+          className="z-50 w-[240px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] origin-(--radix-dropdown-menu-content-transform-origin) data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         >
           <DropdownMenu.Label className="px-2.5 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-texto-4">Suas contas</DropdownMenu.Label>
           {contas.map((c) => (

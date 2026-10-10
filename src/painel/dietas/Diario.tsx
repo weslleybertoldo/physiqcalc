@@ -243,7 +243,7 @@ export function Diario({ ctx, params, setParams }: { ctx: ContextoDietas; params
           {grupos.map((g) => (
             <section key={g.chave} className="flex flex-col gap-2.5" data-dia={g.chave} data-dia-total={g.total}>
               <h2 className="pq-eyebrow px-1" data-dia-titulo>{g.titulo}</h2>
-              <ul className="grid gap-3 lg:grid-cols-2">
+              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {g.itens.map((r) => (
                   <li key={r.id} data-item>
                     <Cartao className="flex gap-3.5 p-3" data-registro={r.id} data-reagido={r.reacao_nutri ? "1" : "0"} data-registro-paciente={r.paciente_id}>

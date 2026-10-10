@@ -29,6 +29,44 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 10/10 07:41 | hml-17 | `3c9183a` | `e2e/w07/smoke_prod.py telas --versao 3.92 --canal msedge` | produção | 13/13 |  |
+| 10/10 07:40 | hml-17 | `3c9183a` | `e2e/w26/prod.py` | produção | 21/21 |  |
+| 10/10 07:40 | hml-17 | `3c9183a` | `e2e/hml17/telas.py --base prod --canal msedge` | produção | 21/23 | P3: a conta de controle `w7b-prod` está com o teste grátis vencido; P5: o roteiro de produção não tem a conta master (os 2 passaram no local e no staging) |
+| 10/10 07:27 | hml-17 | `3c9183a` | `e2e/hml17/api.py --schema public` | produção | 12/13 | R3: o papel só leitura do SQL não executa a montadora interna `plano_alimentar_json` (grant só para `authenticated`, por desenho); passou no staging |
+| 10/10 07:26 | hml-17 | `0112792` | `e2e/hml17/telas.py --base staging --canal msedge --casos P1` | staging | 9/9 |  |
+| 10/10 07:25 | hml-17 | `0112792` | `e2e/hml17/telas.py --base staging --canal msedge --casos P1` | staging | 8/9 | o mesmo P1 'fresco', antes da folga |
+| 10/10 07:24 | hml-17 | `0112792` | `e2e/hml17/telas.py --base staging --canal msedge --casos P1` | staging | 9/9 |  |
+| 10/10 07:23 | hml-17 | `0112792` | `e2e/hml17/telas.py --base staging --canal msedge` | staging | 48/49 | o P1 'fresco' (aberto a frio com a API caindo) 6,0–6,4 s × limite 6 s: carga do app pelo CDN → folga de 2 s só no 'fresco' fora do local (`3c9183a`) |
+| 10/10 07:17 | hml-17 | `0112792` | `e2e/hml17/api.py --schema staging` | staging | 32/32 | os 3 perfis com 1.894 kcal; quem não vê recebe `[]`/`null`; sem login 401 |
+| 10/10 07:03 | hml-17 | `8fcc07b` | `e2e/hml17/telas.py --base local --canal msedge --casos P4,P5,N1,N2,N3` | local | 21/21 |  |
+| 10/10 07:00 | hml-17 | `8fcc07b` | `e2e/hml17/telas.py --base local --canal msedge --casos T1,P1,P2,P3` | local | 33/33 |  |
+| 10/10 06:52 | hml-17 | `01969da` | `e2e/hml17/telas.py --base local --canal msedge --casos P4,P5,N1,N2,N3` | local | 21/21 |  |
+| 10/10 06:48 | hml-17 | `01969da` | `e2e/hml17/telas.py --base local --canal msedge --casos T1,P1,P2,P3` | local | 33/33 |  |
+| 10/10 06:46 | hml-17 | `01969da` | `e2e/hml17/telas.py --base local --canal msedge --casos N2` | local | 6/6 |  |
+| 10/10 06:44 | hml-17 | `01969da` | `e2e/hml17/telas.py --base local --canal msedge --casos N1,N2,N3` | local | 12/13 | N2 refeito em seguida (6/6) |
+| 10/10 06:41 | hml-17 | `01969da` | `e2e/hml17/telas.py --base local --canal msedge --casos P4,P5` | local | 12/12 |  |
+| 10/10 06:40 | hml-17 | `01969da` | `e2e/hml17/telas.py --base local --canal msedge --casos P1,P2,P3` | local | 14/14 |  |
+| 10/10 06:38 | hml-17 | `01969da` | `e2e/hml17/telas.py --base local --canal msedge --casos T1` | local | 20/20 |  |
+| 10/10 05:56 | hml-17 | `9313a50` | `e2e/hml17/api.py --schema staging` | staging | 32/32 | os 3 perfis com 1.894 kcal; quem não vê recebe `[]`/`null`; sem login 401 |
+| 10/10 04:45 | hml-16c | `3be482b` | `e2e/w07/smoke_prod.py telas --versao 3.90 --canal msedge` | produção | 13/13 | F7 (sem o legado) |
+| 10/10 04:44 | hml-16c | `3be482b` | `e2e/w07b/api.py removido` | staging | 7/7 | F7 (sem o legado) |
+| 10/10 04:41 | hml-16c | `3be482b` | `e2e/w03/pos_login_api.py --schema staging` | staging | 30/31 | F7 (sem o legado); = base |
+| 10/10 04:40 | hml-16c | `3be482b` | `e2e/w16/api.py` | staging | 40/41 | F7 (sem o legado); = base |
+| 10/10 04:39 | hml-16c | `3be482b` | `e2e/w02/trocar_token.py` | staging | 24/25 | F7 (sem o legado); = base |
+| 10/10 04:22 | hml-16c | `4adacdf` | `e2e/w03/pos_login_api.py --schema staging` | staging | 30/31 | F7 (sem o legado); = base |
+| 10/10 03:38 | hml-16c | `4316ae0` | `e2e/w07b/api.py removido` | staging | 7/7 | F6 (o legado fora do ar 03:30) |
+| 10/10 03:36 | hml-16c | `4316ae0` | `e2e/w03/pos_login_api.py --schema staging` | staging | 30/31 | F6 (o legado fora do ar 03:30); = base |
+| 10/10 03:36 | hml-16c | `4316ae0` | `e2e/w16/api.py` | staging | 40/41 | F6 (o legado fora do ar 03:30); = base |
+| 10/10 03:34 | hml-16c | `4316ae0` | `e2e/w02/trocar_token.py` | staging | 24/25 | F6 (o legado fora do ar 03:30); = base |
+| 10/10 03:16 | hml-16c | `4316ae0` | `e2e/w07/smoke_prod.py telas --versao 3.90 --canal msedge` | produção | 13/13 | F5 (8 segredos novos) |
+| 10/10 03:15 | hml-16c | `4316ae0` | `e2e/w16/api.py` | staging | 40/41 | F5 (8 segredos novos); = base |
+| 10/10 03:13 | hml-16c | `4316ae0` | `e2e/w02/trocar_token.py` | staging | 24/25 | F5 (8 segredos novos); = base |
+| 10/10 03:11 | hml-16c | `4316ae0` | `e2e/w03/pos_login_api.py --schema staging` | staging | 30/31 | F5 (8 segredos novos); = base |
+| 10/10 03:09 | hml-16c | `4316ae0` | `e2e/w07b/api.py removido` | staging | 7/7 | F5 (8 segredos novos) |
+| 10/10 03:03 | hml-16c | `4316ae0` | `e2e/w02/trocar_token.py` | staging | 24/25 | F5 (8 segredos novos); = base |
+| 10/10 02:57 | hml-16c | `4316ae0` | `e2e/w03/pos_login_api.py --schema staging` | staging | 30/31 | F5 (8 segredos novos); = base |
+| 10/10 02:56 | hml-16c | `4316ae0` | `e2e/w16/api.py` | staging | 40/41 | F5 (8 segredos novos); = base |
+| 10/10 02:43 | hml-16c | `4316ae0` | `e2e/w02/trocar_token.py` | staging | 24/25 | F5 (8 segredos novos); = base |
 | 10/10 02:21 | hml-16c | `c78e3bf` | `e2e/w04/espelho_fila.py --schema staging --dry-run` | staging | ok | F2: depois de publicar as 21 e da migração da fila nos 2 schemas (o cron chamou a `espelho-enviar` pelo pg_net: 200) |
 | 10/10 02:21 | hml-16c | `c78e3bf` | `e2e/hml10/aviso.py --schema staging --so segredo,treino` | staging | 4/4 | F2 (C8 pelo legado; log `segredo_aceito` `aviso_erro` `legado`) |
 | 10/10 02:20 | hml-16c | `c78e3bf` | `e2e/w13/repasse.py` | staging | caiu | F2 = base: sem a massa da w13 |

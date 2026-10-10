@@ -94,9 +94,9 @@ export default function Recebimento() {
     <div data-config-aba="recebimento" className="flex flex-col gap-3.5">
       <TopoPagina titulo="Recebimento" subtitulo={`${conta.nome} · como os alunos pagam`} />
       {consulta.isLoading || !c ? (
-        <div className="grid gap-3.5 lg:grid-cols-2"><Esqueleto className="h-[260px] rounded-[22px]" /><Esqueleto className="h-[260px] rounded-[22px]" /></div>
+        <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2"><Esqueleto className="h-[260px] rounded-[22px]" /><Esqueleto className="h-[260px] rounded-[22px]" /></div>
       ) : (
-        <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
           <SecaoForm brilho titulo="Como seus alunos pagam" marca="recebimento-modo"
             extra={<Chip tom={c.recebimento_modo === "mercadopago" ? "c" : c.recebimento_modo === "nenhum" ? "g" : "n"}>{c.recebimento_modo === "mercadopago" ? "MERCADO PAGO" : c.recebimento_modo === "nenhum" ? "POR FORA" : "PIX NA CHAVE"}</Chip>}
             descricao="Vale para todos os alunos da conta, na tela Pagamentos do app (e para os pacientes do Nutri, que passam a ter o Pagar).">
@@ -152,7 +152,7 @@ export default function Recebimento() {
         ) : !(pendentes.data?.pendentes.length) ? (
           <p className="text-[13px] text-texto-2" data-recebimento-sem-pendentes>Nenhum comprovante aguardando.</p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {pendentes.data.pendentes.map((p) => (
               <div key={p.id} className="flex flex-col gap-1.5">
                 <ComprovantePixCard item={p} onResolvido={() => void qc.invalidateQueries({ queryKey: ["financeiro-resumo-conta", conta.id] })} />

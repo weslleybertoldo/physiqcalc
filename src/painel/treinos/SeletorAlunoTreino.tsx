@@ -9,6 +9,7 @@ import { useId, useRef, useState, type FocusEvent, type KeyboardEvent, type Mous
 import { Check, Search, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/ui/premium/Avatar";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
 import { CLASSE_CAMPO } from "./estilo";
 import { textoMaisAlunosTreino } from "./regras";
 import type { AlunoDaLista, QuemMexe } from "./tipos";
@@ -40,6 +41,8 @@ export function SeletorAlunoTreino({
   const idLista = useId();
   const raiz = useRef<HTMLDivElement>(null);
   const busca = useBuscaDeAlunosTreino({ q, termo, ligada: aberta });
+  // hml-18a (H-40, D): a lista entra e SAI esmaecendo (200 ms) — antes sumia seca ao escolher; enquanto sai, mostra o que mostrava
+  const saidaLista = useSaidaAnimada<HTMLDivElement>(aberta);
   const r = busca.resultado;
   const itens = r?.itens ?? [];
   // as opções que as setas percorrem: "Todos os alunos" (se houver) + os alunos achados
@@ -105,9 +108,9 @@ export function SeletorAlunoTreino({
         />
       </div>
 
-      {aberta && (
-        <div id={idLista} role="listbox" aria-label="Alunos" onMouseDown={segurarFoco}
-          className="absolute inset-x-0 top-full z-30 mt-1 max-h-[300px] overflow-y-auto rounded-2xl border border-linha bg-tela shadow-[0_18px_40px_rgba(0,0,0,.45)]"
+      {saidaLista.montado && (
+        <div ref={saidaLista.ref} id={idLista} role="listbox" aria-label="Alunos" onMouseDown={segurarFoco} data-state={saidaLista.estado}
+          className="absolute inset-x-0 top-full z-30 mt-1 max-h-[300px] overflow-y-auto rounded-2xl border border-linha bg-tela shadow-[0_18px_40px_rgba(0,0,0,.45)] duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards"
           data-seletor-aluno-treino-lista data-buscando={busca.buscando ? "1" : "0"} data-termo={r?.termo ?? ""}>
           {todos && (
             <button id={idOpcao(0)} type="button" role="option" aria-selected={!valor} onMouseDown={segurarFoco} onClick={() => escolher(null)}

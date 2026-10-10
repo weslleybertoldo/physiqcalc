@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Command } from "cmdk";
+import { useState } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { animarPeloEstado, terminarSaida } from "@/test/animacao";
 
 const h = vi.hoisted(() => ({
   modulos: ["treino", "nutricao"] as string[],
@@ -31,6 +33,8 @@ import BuscaAlimentos from "./Alimentos";
 import BuscaAlunos from "./Alunos";
 import BuscaTreinos from "./Treinos";
 import { termoDaBusca } from "./_comum";
+import { GrupoBusca, ItemBusca, PaletaBusca } from "@/ui/premium/Busca";
+import { SAIDA_BUSCA_MS, useTermoDaBusca } from "@/ui/premium/atalhos";
 
 function Onde() {
   return <span data-testid="onde">{useLocation().pathname + useLocation().search}</span>;
@@ -116,5 +120,75 @@ describe("busca global (Ctrl K — NF10, W25): alunos, treinos e alimentos", () 
     await new Promise((r) => setTimeout(r, 450));
     expect(h.treinos).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByText("Treino A — Peito")).toBeNull());
+  });
+});
+
+// hml-18a (H-40, D): a paleta (a mesma do topo do painel e do Início do app) entra e SAI animada — antes sumia em 48–120 ms, sem
+// passar por data-state=closed, e o termo era limpo no mesmo clique (a lista piscava vazia saindo).
+function PaletaDeTeste() {
+  const [aberta, setAberta] = useState(true);
+  const [termo, setTermo] = useTermoDaBusca(aberta);
+  return (
+    <>
+      <button type="button" onClick={() => setAberta(true)}>abrir de novo</button>
+      <PaletaBusca aberto={aberta} aoMudar={setAberta} termo={termo} aoMudarTermo={setTermo}>
+        <GrupoBusca titulo="Alunos">
+          {termo ? <ItemBusca rotulo={`Rafael (${termo})`} aoEscolher={() => setAberta(false)} /> : null}
+        </GrupoBusca>
+      </PaletaBusca>
+      <span data-testid="termo">{termo}</span>
+    </>
+  );
+}
+
+const paleta = () => document.querySelector("[data-paleta-busca]");
+const campo = () => document.querySelector("[data-paleta-busca] input") as HTMLInputElement;
+
+describe("paleta da busca (hml-18a, H-40 D): sai animada e o termo só some depois", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("ao fechar, a janela fica com data-state=closed antes de sair e o termo (e o resultado) continuam até a saída acabar", async () => {
+    animarPeloEstado();
+    render(<PaletaDeTeste />);
+    fireEvent.change(campo(), { target: { value: "rafa" } });
+    expect(await screen.findByText("Rafael (rafa)")).toBeInTheDocument();
+    const janela = paleta();
+    expect(janela?.getAttribute("data-state")).toBe("open");
+    fireEvent.keyDown(campo(), { key: "Escape" });
+    // saindo: ainda na tela, fechada, com o mesmo termo e o mesmo resultado (não pisca vazia)
+    expect(janela?.isConnected).toBe(true);
+    expect(janela?.getAttribute("data-state")).toBe("closed");
+    expect(screen.getByTestId("termo").textContent).toBe("rafa");
+    expect(screen.getByText("Rafael (rafa)")).toBeInTheDocument();
+    terminarSaida(janela, document.querySelector(".bg-black\\/55"));
+    expect(paleta()).toBeNull();
+    // o termo volta a "" só depois do tempo da saída
+    await waitFor(() => expect(screen.getByTestId("termo").textContent).toBe(""), { timeout: SAIDA_BUSCA_MS * 5 });
+  });
+
+  it("as classes: fundo e janela com a saída espelhada da entrada, em 200 ms", () => {
+    render(<PaletaDeTeste />);
+    const janela = paleta()!.className;
+    for (const c of ["duration-200", "data-[state=closed]:animate-out", "data-[state=closed]:fade-out-0", "data-[state=closed]:zoom-out-95"]) expect(janela).toContain(c);
+    const fundo = document.querySelector(".bg-black\\/55")!.className;
+    for (const c of ["duration-200", "data-[state=closed]:animate-out", "data-[state=closed]:fade-out-0"]) expect(fundo).toContain(c);
+  });
+
+  it("abrir de novo logo depois (no meio da saída) funciona e já começa limpo", async () => {
+    animarPeloEstado();
+    render(<PaletaDeTeste />);
+    fireEvent.change(campo(), { target: { value: "rafa" } });
+    await screen.findByText("Rafael (rafa)");
+    fireEvent.keyDown(campo(), { key: "Escape" });
+    expect(paleta()?.getAttribute("data-state")).toBe("closed");
+    fireEvent.click(screen.getByText("abrir de novo"));
+    expect(paleta()?.getAttribute("data-state")).toBe("open");
+    expect(screen.getByTestId("termo").textContent).toBe("");
+    expect(campo().value).toBe("");
+    fireEvent.change(campo(), { target: { value: "ana" } });
+    expect(await screen.findByText("Rafael (ana)")).toBeInTheDocument();
   });
 });

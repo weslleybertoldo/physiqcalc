@@ -202,7 +202,8 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
         ok = B.esperar(lambda: "Rosca Direta com Barra" in ordem(A), 30, 1.5)
         p.check(bool(ok), "adicionar: Rosca Direta entrou no treino A (direto, só do Rafael)")
         p.check(c.esperar(lambda: c.tem('[data-exercicio-nome="Rosca Direta com Barra"]'), 20), "a linha nova aparece no editor")
-        linha(c, "Rosca Direta com Barra").locator("[data-exercicio-remover]").click()  # o confirm é aceito pelo Caso
+        linha(c, "Rosca Direta com Barra").locator("[data-exercicio-remover]").click()
+        p.check(c.confirmar_no_app(), "tirar: a confirmação do app (hml-18a) → Tirar")
         ok = B.esperar(lambda: "Rosca Direta com Barra" not in ordem(A), 30, 1.5)
         p.check(bool(ok), "tirar: a Rosca saiu do treino A")
 
@@ -251,6 +252,7 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
         c.pg.locator(f'[data-treino-aba][data-treino-rotulo$="{nome_modelo}"]').first.click()
         c.pg.wait_for_timeout(500)
         c.pg.locator("[data-treino-tirar]").click()
+        p.check(c.confirmar_no_app(), "Tirar do aluno: a confirmação do app (hml-18a)")
         ok = c.esperar(lambda: c.pg.locator(f'[data-treino-aba][data-treino-rotulo$="{nome_modelo}"]').count() == 0, 30)
         p.check(ok, f"Tirar do aluno: '{nome_modelo}' saiu")
         c.pg.locator("[data-treino-novo]").click()
@@ -265,6 +267,7 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
             c.pg.locator(novo).first.click()
             p.check(c.esperar(lambda: c.tem("[data-treino-sem-exercicios]"), 10), "treino novo sem exercícios")
             c.pg.locator("[data-treino-tirar]").click()
+            p.check(c.confirmar_no_app(), "Tirar do aluno (treino novo): a confirmação do app (hml-18a)")
             p.check(c.esperar(lambda: not c.tem(novo), 30), "o treino novo sai do aluno (Tirar do aluno)")
     finally:
         c.fim()
@@ -313,6 +316,7 @@ def caso_semana_series(nav, base: str, prefixo: str, m: dict, rota: str) -> None
         c.esperar(lambda: c.tem("[data-series-padrao]"), 20)
         c.pg.get_by_role("button", name="Mais uma série").click()
         c.pg.locator("[data-series-aplicar]").click()
+        p.check(c.confirmar_no_app(), "Padrão para todos: a confirmação do app (hml-18a) → Aplicar em todos")
         sup = B.exercicio_id("Supino Reto com Barra")
         ok = B.esperar(lambda: (lambda x: bool(x) and x["num_series"] == 4 and x["reps_alvo"] == "10" and x["carga"] == 60.0)(presc(rafael, m["A"], sup)) and config(rafael)["series_padrao_qtd"] == 4, 30, 1.5)
         p.check(bool(ok), "Padrão 4 para todos: séries 4 e a prescrição (10 reps, 60 kg) fica")
@@ -419,6 +423,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:5173")
     ap.add_argument("--prefixo", default="local")
+    # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     B.saude_ok("a massa")
     r = subprocess.run([sys.executable, str(Path(__file__).parent / "massa.py")], capture_output=True, text=True)
@@ -428,7 +434,7 @@ def main() -> int:
     rota = rota_do("Rafael Moura", conta)
     rota_sem_login = rota_do("João Pedro", conta)
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
         try:
             caso_editor(nav, a.base, a.prefixo, m, rota)
             time.sleep(3)

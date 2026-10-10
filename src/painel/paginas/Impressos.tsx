@@ -102,7 +102,7 @@ export default function Impressos() {
       <TopoPagina titulo="Impressos" subtitulo={<span data-subtitulo-impressos>Impressos para o seu consultório · {textoContagem(IMPRESSOS.length, nCategorias)}</span>} />
 
       <Cartao className="p-4">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-texto-4">Nome no cabeçalho</span>
             <input
@@ -145,7 +145,7 @@ export default function Impressos() {
         <EstadoVazio icone={Search} titulo="Nenhum impresso com esse nome" texto="Mude a busca ou a categoria."
           acao={<Botao tamanho="sm" onClick={() => { setBuscaLocal(""); setFiltro({ q: "", cat: "" }); }} data-btn-limpar-busca>Limpar busca</Botao>} />
       ) : (
-        <ul className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3" data-lista-impressos>
+        <ul className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3" data-lista-impressos>
           {filtrados.map((i) => {
             const c = infoCategoria(i.categoria);
             const esteGerando = gerando === i.id;

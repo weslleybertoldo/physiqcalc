@@ -10,6 +10,19 @@ export function Esqueleto({ className, style }: { className?: string; style?: Re
   return <div aria-hidden className={cn("animate-pulse rounded-xl bg-superficie-2", className)} style={style} />;
 }
 
+/**
+ * hml-18a (H-40, E): o cartão-esqueleto no lugar de um cartão que ainda carrega — o mesmo tamanho (passe a altura/colunas do
+ * cartão de verdade em `className`), para nada aparecer do nada nem empurrar a tela (antes: `return null` enquanto carregava).
+ */
+export function CartaoCarregando({ className, rotulo = "Carregando" }: { className?: string; rotulo?: string }) {
+  return (
+    <Cartao role="status" aria-busy="true" aria-label={rotulo} data-estado="carregando" className={cn("flex flex-col gap-3 px-[18px] py-4", className)}>
+      <Esqueleto className="h-4 w-2/5" />
+      <Esqueleto className="min-h-8 w-full flex-1" />
+    </Cartao>
+  );
+}
+
 /** Carregando: cartões-esqueleto no formato da tela (nada de texto "Carregando..." solto). */
 export function EstadoCarregando({ linhas = 3, className, rotulo = "Carregando" }: { linhas?: number; className?: string; rotulo?: string }) {
   return (

@@ -60,7 +60,7 @@ export default function Conta() {
   return (
     <div data-config-aba="conta" className="flex flex-col gap-3.5">
       <TopoPagina titulo="Conta" subtitulo={`${conta.nome} · ${ORIGEM[conta.origem] ?? ""}`} />
-      <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
         <SecaoForm brilho titulo="Nome da conta" marca="conta-nome"
           descricao="É o nome que aparece no card do topo do menu, para a equipe e nos e-mails de convite.">
           <form onSubmit={salvar} className="flex flex-col gap-4" data-form-conta>

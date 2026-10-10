@@ -133,7 +133,7 @@ export function LinhaExercicioEditor({
   aoRemover: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 border-t border-[rgba(255,255,255,.06)] py-[9px]" data-exercicio-editor={ex.chave} data-exercicio-nome={ex.nome}>
+    <div className="flex flex-wrap items-center gap-2 border-t border-[rgba(255,255,255,.06)] py-[9px] sm:flex-nowrap" data-exercicio-editor={ex.chave} data-exercicio-nome={ex.nome}>
       <span className="flex w-3.5 flex-none justify-center text-[#52525B]">
         {!somenteLeitura && !listaFixa ? alca : <GripVertical aria-hidden className="h-4 w-4 opacity-30" />}
       </span>
@@ -142,7 +142,8 @@ export function LinhaExercicioEditor({
         <b className="block truncate text-[13.5px] font-semibold text-texto" title={ex.nome}>{ex.nome}</b>
         <span className="mt-0.5 block truncate text-[11.5px] text-texto-3" title={ex.subtitulo}>{ex.subtitulo}</span>
       </div>
-      <div className="flex flex-none items-end gap-[7px]">
+      {/* hml-18a (H-40): no celular os 4 campos descem para uma 2ª linha, abaixo do nome (os ícones ficam na 1ª) */}
+      <div className="order-last flex w-full flex-none items-end justify-end gap-[7px] sm:order-none sm:w-auto">
         <CampoPrescricao campo="series" ex={ex} somenteLeitura={somenteLeitura} vazio="3" aoSalvar={aoPrescrever} />
         <CampoPrescricao campo="reps" ex={ex} somenteLeitura={somenteLeitura || ex.corrida} vazio="—" aoSalvar={aoPrescrever} />
         <CampoPrescricao campo="descanso" ex={ex} somenteLeitura={somenteLeitura} vazio={textoDescansoCampo(descansoPadrao)} aoSalvar={aoPrescrever} />

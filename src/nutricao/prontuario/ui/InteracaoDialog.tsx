@@ -85,7 +85,7 @@ export default function InteracaoDialog({ open, onOpenChange, nutricionistaId, i
         </DialogHeader>
 
         <form onSubmit={salvar} className="space-y-3" noValidate data-form-interacao>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="Medicamento (genérico)">
               <input className={INPUT} value={form.medicamento} maxLength={MEDICAMENTO_MAX} onChange={(e) => campo("medicamento", e.target.value)} placeholder="ex.: Metformina" data-campo-medicamento-base />
             </Campo>
@@ -96,7 +96,7 @@ export default function InteracaoDialog({ open, onOpenChange, nutricionistaId, i
           <Campo rotulo="Sinônimos e marcas" dica="separados por vírgula · opcional">
             <input className={INPUT} value={form.sinonimos} onChange={(e) => campo("sinonimos", e.target.value)} placeholder="ex.: Glifage, Glucoformin" data-campo-sinonimos />
           </Campo>
-          <div className="grid sm:grid-cols-[1fr_11rem] gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_11rem] gap-3">
             <Campo rotulo="Nutriente ou alimento">
               <input className={INPUT} value={form.nutriente} maxLength={NUTRIENTE_MAX} onChange={(e) => campo("nutriente", e.target.value)} placeholder="ex.: Vitamina B12" data-campo-nutriente />
             </Campo>

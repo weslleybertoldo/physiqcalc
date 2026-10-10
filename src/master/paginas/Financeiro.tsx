@@ -65,7 +65,7 @@ export default function Financeiro() {
         { valor: "em_dia", rotulo: "Em dia", numero: r.em_dia },
       ]} />
 
-      <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
         <Cartao className="px-4 pb-2 pt-3">
           {q.isLoading ? <EstadoCarregando linhas={6} />
             : q.isError ? <EstadoErro texto={textoErro(q.error instanceof ErroMaster ? q.error.codigo : "erro_interno")} aoTentar={() => void q.refetch()} />

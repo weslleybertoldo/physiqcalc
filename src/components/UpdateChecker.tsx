@@ -3,6 +3,7 @@ import { Download, X } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { criarFetchResiliente } from "@/integrations/repeticao";
 import { downloadAndInstall } from "@/lib/apkUpdater";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
 
 /** Espera a abertura assentar antes de perguntar ao GitHub se há APK novo. */
 export const ATRASO_CHECK_UPDATE_MS = 5000;
@@ -86,10 +87,13 @@ const UpdateChecker = () => {
     return () => clearTimeout(t);
   }, []);
 
-  if (!update || dismissed) return null;
+  // hml-18a (H-40, D): o aviso entra e SAI esmaecendo (200 ms) — antes sumia seco no X
+  const saida = useSaidaAnimada<HTMLDivElement>(Boolean(update) && !dismissed);
+  if (!update || !saida.montado) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md">
+    <div ref={saida.ref} data-state={saida.estado} data-aviso-atualizacao
+      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards">
       <div className="bg-card border border-primary/50 rounded-xl p-4 shadow-lg">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">

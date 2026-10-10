@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dumbbell, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,17 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
   // hml-17 (H-39): a biblioteca não veio — o aviso com "Tentar de novo" e os exercícios já escolhidos continuam escolhidos (antes
   // apareciam como "Escolha o exercício", como se o treino estivesse sem eles)
   const bibFalhou = bib.isError && !bib.data;
-  useEffect(() => { setT(treino ? structuredClone(treino) : null); setErro(null); }, [treino]);
+  // hml-18a (H-40, D): a janela fica montada e fecha pelo `aberta` (antes sumia seca: o treino null desmontava tudo); enquanto sai,
+  // mostra a cópia que estava aberta. A cópia nasce no mesmo render em que o treino chega (sem 1 quadro do anterior) e reabrir
+  // começa de novo do treino da lista
+  const [de, setDe] = useState<TreinoPronto | null>(null);
+  if (treino !== de) {
+    setDe(treino);
+    if (treino) {
+      setT(structuredClone(treino));
+      setErro(null);
+    }
+  }
   if (!t) return null;
   const mudarGrupo = (i: number, g: Partial<TreinoPronto["grupos"][number]>) => setT({ ...t, grupos: t.grupos.map((x, k) => (k === i ? { ...x, ...g } : x)) });
 
@@ -47,7 +57,7 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
   }
 
   return (
-    <Janela aberta aoMudar={(a) => !a && aoFechar()} titulo={t.id ? "Editar treino pronto" : "Novo treino pronto"} largura="sm:max-w-3xl" data-janela-treino-pronto
+    <Janela aberta={treino !== null} aoMudar={(a) => !a && aoFechar()} titulo={t.id ? "Editar treino pronto" : "Novo treino pronto"} largura="sm:max-w-3xl" data-janela-treino-pronto
       descricao="O aluno sem profissional escolhe e o treino vira dele (cópia). Mudar aqui vale para quem escolher depois."
       rodape={(
         <>
@@ -55,7 +65,7 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
           <Botao tamanho="sm" variante="w" onClick={() => void salvar()} disabled={ocupado} data-salvar-treino-pronto>{ocupado ? "Salvando…" : "Salvar treino"}</Botao>
         </>
       )}>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="sm:col-span-3"><Campo rotulo="Nome"><input className={INPUT} value={t.nome} onChange={(e) => setT({ ...t, nome: e.target.value })} maxLength={80} data-campo-nome-treino /></Campo></div>
         <Campo rotulo="Objetivo">
           <select className={SELECT} value={t.objetivo} onChange={(e) => setT({ ...t, objetivo: e.target.value as TreinoPronto["objetivo"] })}>{OBJETIVOS.map((o) => <option key={o} value={o}>{ROTULO_OBJETIVO[o]}</option>)}</select>
@@ -148,11 +158,11 @@ export function TreinosProntos() {
   return (
     <div className="flex flex-col gap-3" data-treinos-prontos={lista.length}>
       <div className="flex items-center gap-2">
-        <p className="flex-1 text-[12.5px] text-texto-3">{lista.filter((t) => t.ativo).length} no catálogo · o arquivo scripts/conteudo/treinos_prontos.json continua valendo para recarregar.</p>
+        <p className="min-w-0 flex-1 break-words text-[12.5px] text-texto-3">{lista.filter((t) => t.ativo).length} no catálogo · o arquivo scripts/conteudo/treinos_prontos.json continua valendo para recarregar.</p>
         <Botao tamanho="sm" variante="w" icone={Plus} onClick={() => setEditar(treinoNovo())} data-novo-treino-pronto>Novo treino</Botao>
       </div>
       {lista.length === 0 ? <EstadoVazio icone={Dumbbell} titulo="Nenhum treino pronto" /> : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {lista.map((t) => (
             <Cartao key={t.id} className={cn("flex flex-col gap-2 p-4", !t.ativo && "opacity-60")} data-treino-pronto={t.codigo}>
               <div className="flex flex-wrap gap-1.5">

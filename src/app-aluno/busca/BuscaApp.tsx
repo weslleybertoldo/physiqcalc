@@ -8,6 +8,7 @@ import { useDieta } from "@/nutricao/app/useDieta";
 import { SheetFicha } from "@/treino/ui/SheetFicha";
 import type { Exercicio } from "@/treino/tipos";
 import { GrupoBusca, ItemBusca, PaletaBusca } from "@/ui/premium/Busca";
+import { useTermoDaBusca } from "@/ui/premium/atalhos";
 import { useOQueOAlunoTem } from "@/app-aluno/inicio/pecas/dados";
 import { alimentosDaBusca, combina, destinoDoAlimento, exerciciosDaBusca, MINIMO_BUSCA, palavrasSemAcento, type ExercicioDaBusca, type LinhaExercicioBusca } from "./regras";
 
@@ -80,14 +81,12 @@ export function BuscaApp({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v: bo
   const navigate = useNavigate();
   const tem = useOQueOAlunoTem();
   const { user } = useAuth();
-  const [termo, setTermo] = useState("");
+  // hml-18a (H-40, D): o termo só volta a "" depois da saída da janela (a lista não pisca vazia enquanto ela esmaece)
+  const [termo, setTermo] = useTermoDaBusca(aberto);
   const [ficha, setFicha] = useState<Exercicio | null>(null);
   const [buscando, setBuscando] = useState(false);
   const curto = termo.trim().length < MINIMO_BUSCA;
-  const fechar = () => {
-    aoMudar(false);
-    setTermo("");
-  };
+  const fechar = () => aoMudar(false);
   const placeholder = tem.treino && tem.comNutricionista ? "Buscar exercício ou alimento" : tem.treino ? "Buscar exercício do seu treino" : "Buscar alimento da sua dieta";
 
   return (

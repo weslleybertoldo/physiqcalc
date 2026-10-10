@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { DropdownMenu } from "radix-ui";
 import { Ellipsis, Menu, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -6,8 +6,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/ui/premium/Avatar";
 import { BotaoIcone } from "@/ui/premium/Botao";
-import { useAtalhoBusca } from "@/ui/premium/atalhos";
+import { useAtalhoBusca, useTermoDaBusca } from "@/ui/premium/atalhos";
 import { BuscaGatilho, GrupoBusca, ItemBusca, PaletaBusca } from "@/ui/premium/Busca";
+import { depoisDaPintura } from "@/ui/premium/depoisDaPintura";
 import { Marca } from "@/ui/premium/Marca";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { Sino } from "@/ui/premium/Sino";
@@ -53,12 +54,15 @@ export interface UsuarioCasca {
 
 const COR_PONTO: Record<Modulo, string> = { treino: "var(--p-violeta)", nutricao: "var(--p-verde)" };
 
-function ItemMenu({ item, aoNavegar }: { item: ItemNav; aoNavegar?: () => void }) {
+/** O toque num item do menu: recebe o clique e o destino (a folha "Mais" fecha e troca de página depois da pintura). */
+type AoNavegar = (e: MouseEvent<HTMLAnchorElement>, para: string) => void;
+
+function ItemMenu({ item, aoNavegar }: { item: ItemNav; aoNavegar?: AoNavegar }) {
   const Icone = item.icone;
   return (
     <Link
       to={item.para}
-      onClick={aoNavegar}
+      onClick={aoNavegar ? (e) => aoNavegar(e, item.para) : undefined}
       data-nav={item.para}
       aria-current={item.ativo ? "page" : undefined}
       className={cn(
@@ -130,7 +134,8 @@ function MenuUsuario({ usuario, acoes, lista }: { usuario: UsuarioCasca; acoes: 
             side="top"
             align="end"
             sideOffset={8}
-            className="z-50 min-w-[220px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+            // hml-18a (H-40, D): o menu sai como entra (fade + zoom-95, 150 ms, a partir do botão) — antes sumia seco
+            className="z-50 min-w-[220px] origin-(--radix-dropdown-menu-content-transform-origin) rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
           >
             {acoes.map((a) => (
               <DropdownMenu.Item
@@ -167,7 +172,7 @@ function ConteudoMenu({
   rodapeMenu?: ReactNode;
   usuario: UsuarioCasca;
   acoesUsuario: AcaoUsuario[];
-  aoNavegar?: () => void;
+  aoNavegar?: AoNavegar;
   celular?: boolean;
 }) {
   return (
@@ -229,7 +234,8 @@ export function CascaWeb({
   const [proprio, setProprio] = useState(false);
   const ctx = useMemo(() => ({ alvoTitulo, alvoAcoes, definirProprio: setProprio }), [alvoTitulo, alvoAcoes]);
   const [buscaAberta, setBuscaAberta] = useState(false);
-  const [termo, setTermo] = useState("");
+  // hml-18a (H-40, D): o termo só volta a "" depois da saída da janela (a lista não pisca vazia enquanto ela esmaece)
+  const [termo, setTermo] = useTermoDaBusca(buscaAberta);
   const [maisAberto, setMaisAberto] = useState(false);
   const abrirBusca = useCallback(() => setBuscaAberta(true), []);
   useAtalhoBusca(abrirBusca);
@@ -242,9 +248,16 @@ export function CascaWeb({
   const barra = ativo && !primeiros.includes(ativo) && candidatos.includes(ativo) ? [...primeiros.slice(0, 3), ativo] : primeiros;
   const maisAtivo = Boolean(ativo && !barra.includes(ativo));
 
-  const fecharBusca = () => {
-    setBuscaAberta(false);
-    setTermo("");
+  const fecharBusca = () => setBuscaAberta(false);
+  // hml-18a (H-40, E): o toque num item da folha "Mais" fecha a folha no próprio toque (a 1ª mudança na tela) e só troca de página
+  // depois da pintura — no mesmo toque, o render da página nova (ex.: a Agenda, ~100 ms) segurava até a folha começar a fechar.
+  // Com tecla (Ctrl/⌘/Shift/Alt) ou outro botão, o Link segue sozinho (nova aba/janela).
+  const navegarDaFolha: AoNavegar = (e, para) => {
+    setMaisAberto(false);
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.altKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    const aqui = `${window.location.pathname}${window.location.search}` === para; // como o Link: a mesma página substitui
+    depoisDaPintura(() => navigate(para, { replace: aqui }));
   };
 
   return (
@@ -263,7 +276,7 @@ export function CascaWeb({
         <div className="flex min-w-0 flex-col">
           <header
             data-topo
-            className="sticky top-0 z-30 flex items-center gap-3 border-b border-linha bg-[var(--p-vidro)] px-4 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:px-[30px] lg:pb-0 lg:pt-[26px] lg:backdrop-blur-none"
+            className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-linha bg-[var(--p-vidro)] px-4 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:px-[30px] lg:pb-0 lg:pt-[26px] lg:backdrop-blur-none"
           >
             <Link to="/" className="flex-none lg:hidden" aria-label="Physiq — início">
               <Marca tamanho={30} soIcone />
@@ -275,7 +288,13 @@ export function CascaWeb({
             <BuscaGatilho className="hidden md:flex" aoAbrir={abrirBusca} />
             <BotaoIcone className="md:hidden" icone={Search} rotulo="Buscar" onClick={abrirBusca} />
             <Sino />
-            <div ref={setAlvoAcoes} className="flex flex-none items-center gap-2.5 empty:hidden" />
+            {/* hml-18a (H-40): no celular os botões da página descem para uma 2ª linha do topo, com o texto (antes empurravam a
+                página para fora da tela e o título sumia) */}
+            <div
+              ref={setAlvoAcoes}
+              className="flex min-w-0 flex-none items-center gap-2.5 empty:hidden max-lg:order-last max-lg:basis-full max-lg:flex-wrap max-lg:justify-end"
+              data-acoes-topo
+            />
           </header>
 
           <main
@@ -304,14 +323,15 @@ export function CascaWeb({
             rodapeMenu={rodapeMenu}
             usuario={usuario}
             acoesUsuario={acoesUsuario.map((a) => ({ ...a, aoTocar: () => { setMaisAberto(false); a.aoTocar(); } }))}
-            aoNavegar={() => setMaisAberto(false)}
+            aoNavegar={navegarDaFolha}
           />
         </PainelDeslizante>
 
         <PaletaBusca aberto={buscaAberta} aoMudar={(v) => (v ? setBuscaAberta(true) : fecharBusca())} termo={termo} aoMudarTermo={setTermo}>
           <GrupoBusca titulo="Ir para">
             {todos.map((i) => (
-              <ItemBusca key={i.id} icone={i.icone} rotulo={i.rotulo} aoEscolher={() => { fecharBusca(); navigate(i.para); }} />
+              // a busca também: começa a fechar na escolha e a página nova vem depois da pintura (como a folha "Mais")
+              <ItemBusca key={i.id} icone={i.icone} rotulo={i.rotulo} aoEscolher={() => { fecharBusca(); depoisDaPintura(() => navigate(i.para)); }} />
             ))}
           </GrupoBusca>
           {fontesBusca?.(termo, fecharBusca)}

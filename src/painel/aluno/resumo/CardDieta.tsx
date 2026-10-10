@@ -10,7 +10,8 @@ import type { PlanoAlimentar } from "@/nutricao/app/tipos";
 import { Anel } from "@/ui/premium/Anel";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
-import { Esqueleto } from "@/ui/premium/Estados";
+import { CartaoCarregando, Esqueleto } from "@/ui/premium/Estados";
+import { useConta } from "@/nucleo/conta";
 import { usePerfilAluno } from "../dados/usePerfilAluno";
 
 function Moldura({ alunoId, extra, children }: { alunoId: string; extra?: React.ReactNode; children: React.ReactNode }) {
@@ -32,6 +33,7 @@ function Moldura({ alunoId, extra, children }: { alunoId: string; extra?: React.
  * do acompanhamento (✓ por dia) e os do app do aluno (lição da W10: número = tela). Só para aluno com o módulo Nutrição.
  */
 export default function CardDieta({ alunoId }: { alunoId: string }) {
+  const { conta, ehMaster } = useConta();
   const perfilQ = usePerfilAluno(alunoId);
   const perfil = perfilQ.data;
   const temNutricao = !!perfil && perfil.modulos.includes("nutricao") && perfil.conta_modulos.includes("nutricao");
@@ -42,7 +44,10 @@ export default function CardDieta({ alunoId }: { alunoId: string }) {
   const adesao = useMemo(() => (ativo ? adesaoDoPeriodo(ativo.refeicoes, concluidasQ.data ?? [], dias) : null), [ativo, concluidasQ.data, dias]);
   const kcalHoje = useMemo(() => (ativo ? totaisDoPlano(refeicoesDoDia(ativo as unknown as PlanoAlimentar, hojeSP())).energia_kcal : null), [ativo]);
 
-  if (!perfil || !temNutricao) return null;
+  // hml-18a (H-40, E): enquanto o perfil chega, o cartão-esqueleto do mesmo tamanho — só se a conta tem Nutrição (o card é só para
+  // aluno com Nutrição: na conta sem o módulo ele nunca aparece, e o esqueleto seria um pulo novo)
+  if (!perfil) return perfilQ.isLoading && (ehMaster || !!conta?.modulos?.includes("nutricao")) ? <CartaoCarregando className="min-h-[240px]" rotulo="Carregando a dieta" /> : null;
+  if (!temNutricao) return null;
   const nutri = perfil.nutricionista?.nome?.split(" ")[0] ?? null;
   const carregando = planosQ.isLoading || concluidasQ.isLoading;
   return (

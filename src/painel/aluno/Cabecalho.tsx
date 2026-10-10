@@ -127,7 +127,7 @@ function AcoesDoCabecalho({ perfil, alunoId, aoEditar }: { perfil: PerfilAluno; 
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={6}
-            className="z-50 w-[250px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)]"
+            className="z-50 w-[250px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] origin-(--radix-dropdown-menu-content-transform-origin) data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
             data-menu-perfil-aberto>
             {perfil.pode_editar && <ItemMenu icone={Pencil} rotulo="Editar dados" marca="editar" aoEscolher={aoEditar} />}
             <ItemMenu icone={FileDown} rotulo={gerando === "dados" ? "Gerando o PDF…" : "Gerar PDF · Dados & Evolução"} marca="pdf-dados"

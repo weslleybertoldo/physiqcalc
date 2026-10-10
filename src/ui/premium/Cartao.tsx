@@ -11,7 +11,10 @@ export const Cartao = forwardRef<HTMLDivElement, CartaoProps>(function Cartao({ 
   return <div ref={ref} data-cartao={brilho ? "brilho" : ""} className={cn("pq-cartao", brilho && "pq-brilho", className)} {...props} />;
 });
 
-/** Cabeçalho de cartão do site (`.bh`): título, chip opcional e ação à direita. */
+/**
+ * Cabeçalho de cartão do site (`.bh`): título, chip opcional e ação à direita. hml-18a (H-40): no celular, quando não cabe, a ação
+ * desce de linha (à direita) e o título ganha "…" — antes a ação empurrava o cartão para fora da tela (ex.: a legenda da Agenda).
+ */
 export function CabecalhoCartao({
   titulo,
   extra,
@@ -24,10 +27,10 @@ export function CabecalhoCartao({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-3 flex items-center gap-2.5", className)}>
-      <h3 className="font-body text-[15px] font-semibold normal-case tracking-[-0.01em] text-texto">{titulo}</h3>
+    <div className={cn("mb-3 flex flex-wrap items-center gap-2.5", className)}>
+      <h3 className="min-w-0 truncate font-body text-[15px] font-semibold normal-case tracking-[-0.01em] text-texto">{titulo}</h3>
       {extra}
-      {acao && <div className="ml-auto flex items-center gap-2">{acao}</div>}
+      {acao && <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{acao}</div>}
     </div>
   );
 }

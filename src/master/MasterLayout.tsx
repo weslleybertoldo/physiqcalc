@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { tela } from "@/rotas/registro";
+import { usePreCarga } from "@/rotas/usePreCarga";
 import { lembrarArea } from "@/ui/casca/area";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { Carregavel } from "@/ui/casca/Carregavel";
@@ -9,6 +10,7 @@ import { CascaWeb, type AcaoUsuario, type ItemNav } from "@/ui/casca/CascaWeb";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { NaoEncontrada } from "@/ui/casca/NaoEncontrada";
 import { SemConexaoTreino } from "@/ui/casca/SemConexaoTreino";
+import { TransicaoDePagina } from "@/ui/casca/TransicaoDePagina";
 import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 import MasterLayoutAntigo from "@/layouts/MasterLayout";
 import { MENU_MASTER, itemMasterAtivo, type ItemMenuMaster } from "./menu";
@@ -33,6 +35,8 @@ export default function MasterLayout() {
   const { signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  // hml-18a (H-40, E): depois do 1º render do master, no ocioso, as páginas do master (a troca não espera o pedaço chegar)
+  usePreCarga("master", { ligado: !dados.carregando && !!dados.usuario && dados.ehMaster });
 
   if (dados.carregando) return <CarregandoTela />;
   if (!dados.usuario) return <Navigate to="/entrar" replace state={{ de: location.pathname + location.search }} />;
@@ -70,7 +74,9 @@ export default function MasterLayout() {
       acoesUsuario={acoes}
       tituloPadrao={atual ? `Master · ${atual.rotulo}` : "Master"}
     >
-      <Outlet />
+      <TransicaoDePagina>
+        <Outlet />
+      </TransicaoDePagina>
     </CascaWeb>
   );
 }

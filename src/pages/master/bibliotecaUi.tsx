@@ -4,10 +4,7 @@
 import { useCallback, useEffect, useState, type HTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 
 // Peças compartilhadas da área MASTER (SaaS 12/09/2026). Só estilo/utilidades — nada de regra de negócio.
 
@@ -117,35 +114,17 @@ export function useDebounce<T>(value: T, ms = 300): T {
 }
 
 interface ConfirmOpts { titulo: string; descricao?: ReactNode; confirmar?: string; perigo?: boolean }
-/** `const { confirmar, dialogo } = useConfirmacao(); if (!(await confirmar({...}))) return;` — renderize `{dialogo}` na página. */
+/**
+ * `const { confirmar, dialogo } = useConfirmacao(); if (!(await confirmar({...}))) return;` — hml-18a: agora é a confirmação comum do
+ * app (src/ui/premium/Confirmar.tsx, provedor único no App); o `dialogo` ficou vazio (a página ainda o renderiza: não faz mal).
+ */
 export function useConfirmacao() {
-  const [estado, setEstado] = useState<{ opts: ConfirmOpts; resolve: (v: boolean) => void } | null>(null);
-  const confirmar = useCallback((opts: ConfirmOpts) => new Promise<boolean>((resolve) => setEstado({ opts, resolve })), []);
-  const fechar = (v: boolean) => {
-    estado?.resolve(v);
-    setEstado(null);
-  };
-  const dialogo = (
-    <AlertDialog open={!!estado} onOpenChange={(o) => { if (!o) fechar(false); }}>
-      <AlertDialogContent className={DIALOG_CONTENT} data-dialogo-confirmacao>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-heading text-foreground">{estado?.opts.titulo}</AlertDialogTitle>
-          {estado?.opts.descricao && <AlertDialogDescription className="font-body">{estado.opts.descricao}</AlertDialogDescription>}
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="border-muted-foreground/30 text-foreground">Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => fechar(true)}
-            className={estado?.opts.perigo ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-primary text-primary-foreground hover:bg-primary/90"}
-            data-btn-confirmar
-          >
-            {estado?.opts.confirmar ?? "Confirmar"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+  const pedir = useConfirmar();
+  const confirmar = useCallback(
+    (opts: ConfirmOpts) => pedir({ titulo: opts.titulo, descricao: opts.descricao, rotuloConfirmar: opts.confirmar ?? "Confirmar", perigo: opts.perigo }),
+    [pedir],
   );
-  return { confirmar, dialogo };
+  return { confirmar, dialogo: null };
 }
 
 // ─────────────────────────── componentes ───────────────────────────

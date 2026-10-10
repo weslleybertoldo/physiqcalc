@@ -278,6 +278,7 @@ def caso_fotos(nav) -> None:
         alvo = t(f"select id::text from {S}.physiq_registros_fotos where user_id = '{m['tid']}' and mes_ref = '{mes}-01' and tipo = 'frente'")
         if alvo:
             c.pg.locator(f"[data-foto-excluir='treino:{alvo[0]['id']}']").first.click()
+            p.check(c.confirmar_no_app(), "excluir a foto: a confirmação do app (hml-18a) → Excluir")
             ok = c.esperar(lambda: t(f"select count(*)::int n from {S}.physiq_registros_fotos where id = '{alvo[0]['id']}'")[0]["n"] == 0, 30)
             p.check(ok, "e exclui")
     finally:
@@ -362,6 +363,8 @@ if __name__ == "__main__":
     ap.add_argument("--base", required=True)
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default="personal,nutri,resumo,app,fotos,excluir,negativos")
+    # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo)
     B.saude_ok(f"avaliação — telas ({a.prefixo})")
@@ -371,7 +374,7 @@ if __name__ == "__main__":
     t0 = time.time()
     try:
         with sync_playwright() as pw:
-            nav = pw.chromium.launch(args=["--no-sandbox"])
+            nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
             for nome in a.casos.split(","):
                 if nome == "resumo":
                     data = t(f"select proxima_avaliacao::text d from {S}.physiq_profiles where id = '{m['tid']}'")[0]["d"]

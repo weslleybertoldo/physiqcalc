@@ -97,7 +97,7 @@ export default function VisaoGeral() {
         ) : [0, 1, 2, 3].map((i) => <Cartao key={i} className="h-[132px] p-4"><Esqueleto className="h-full w-full" /></Cartao>)}
       </div>
 
-      <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <Cartao className="flex flex-col px-[18px] pb-3 pt-4" data-cartao-atencao-master data-atencao-total={atencao.length}>
           <CabecalhoCartao titulo="Precisam de atenção" acao={atencao.length ? <Chip tom="r" data-atencao-contador>{atencao.length}</Chip> : undefined} />
           {!d ? <div className="flex flex-col gap-2">{[0, 1, 2].map((i) => <Esqueleto key={i} className="h-[46px] w-full" />)}</div>
@@ -124,7 +124,7 @@ export default function VisaoGeral() {
             )}
         </Cartao>
 
-        <div className="grid gap-3.5">
+        <div className="grid grid-cols-1 gap-3.5">
           <Cartao className="px-[18px] pb-4 pt-4" data-cartao-situacoes>
             <CabecalhoCartao titulo="Contas por situação" acao={<Link to="/master/contas" className="text-[12.5px] font-semibold text-violeta-3">Ver contas</Link>} />
             <div className="flex flex-col divide-y divide-linha-3" data-lista-situacoes>

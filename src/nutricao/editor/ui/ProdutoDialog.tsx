@@ -86,7 +86,7 @@ export default function ProdutoDialog({ open, onOpenChange, nutricionistaId, pro
           <Campo rotulo="Nome" dica={`${form.nome.length}/${NOME_MAX}`}>
             <input className={INPUT} value={form.nome} maxLength={NOME_MAX} onChange={(e) => campo("nome", e.target.value)} placeholder="ex.: Whey Protein" data-campo-nome-produto />
           </Campo>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="Marca" dica="opcional">
               <input className={INPUT} value={form.marca} maxLength={TEXTO_MAX} onChange={(e) => campo("marca", e.target.value)} placeholder="ex.: Growth" data-campo-marca />
             </Campo>
@@ -98,7 +98,7 @@ export default function ProdutoDialog({ open, onOpenChange, nutricionistaId, pro
               </select>
             </Campo>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="Apresentação" dica="opcional · ex.: pote 1 kg, cápsula 500 mg">
               <input className={INPUT} value={form.apresentacao} maxLength={TEXTO_MAX} onChange={(e) => campo("apresentacao", e.target.value)} placeholder="ex.: pote 1 kg" data-campo-apresentacao />
             </Campo>

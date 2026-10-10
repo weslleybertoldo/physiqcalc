@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { gatesApp, listar } from "@/rotas/registro";
+import { usePreCarga } from "@/rotas/usePreCarga";
 import { cn } from "@/lib/utils";
 import { lembrarArea, ultimaArea } from "@/ui/casca/area";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
@@ -8,6 +9,7 @@ import { Carregavel } from "@/ui/casca/Carregavel";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { ComGates } from "@/ui/casca/Gates";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
+import { TransicaoDePagina } from "@/ui/casca/TransicaoDePagina";
 import { TabBar } from "@/ui/premium/TabBar";
 import { abaDaRota, abaDeAbertura, abasVisiveis } from "./catalogoAbas";
 
@@ -58,6 +60,10 @@ export default function AppAlunoLayout() {
     if (dados.usuario && location.pathname !== "/") lembrarArea("aluno");
   }, [dados.usuario, location.pathname]);
 
+  // hml-18a (H-40, E): depois do 1º render do app, no ocioso, as 5 abas, os itens do Perfil e os cards do Início (a troca de aba não
+  // espera o pedaço chegar)
+  usePreCarga("app", { ligado: !dados.carregando && !!dados.usuario && !vaiProPainel });
+
   // as telas antigas com `fixed bottom-*` (descanso, "instalar", atualização) sobem acima da barra
   useEffect(() => {
     const raiz = document.documentElement;
@@ -88,7 +94,9 @@ export default function AppAlunoLayout() {
           style={mostrarBarra ? ({ "--reserva-abas": RESERVA } as CSSProperties) : undefined}
         >
           <LimiteDeErro nome={`aba ${abaAtual ?? location.pathname}`}>
-            <Outlet />
+            <TransicaoDePagina>
+              <Outlet />
+            </TransicaoDePagina>
           </LimiteDeErro>
         </div>
       </ComGates>

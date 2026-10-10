@@ -9,6 +9,8 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { colocarNaPasta, criarModelo, criarPasta, excluirModelo, excluirPasta, listarExercicios, renomearModelo, renomearPasta } from "./api";
 import { DetalheModelo } from "./DetalheModelo";
@@ -43,6 +45,7 @@ export function MeusTreinos({
   aoAtenderPedido: () => void;
 }) {
   const recarregar = useRecarregar();
+  const confirmar = useConfirmar();
   const [busca, setBusca] = useState("");
   const termo = useTermoComEspera(busca);
   const [folha, setFolha] = useState<Folha>(null);
@@ -96,7 +99,7 @@ export function MeusTreinos({
 
   if (t.pagina.isLoading) {
     return (
-      <div className="grid gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos="carregando">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos="carregando">
         <Cartao className="flex flex-col gap-2 p-4">{[0, 1, 2, 3, 4].map((i) => <Esqueleto key={i} className="h-12 w-full" />)}</Cartao>
         <Cartao className="flex flex-col gap-3 p-5"><Esqueleto className="h-8 w-1/2" />{[0, 1, 2, 3].map((i) => <Esqueleto key={i} className="h-14 w-full" />)}</Cartao>
       </div>
@@ -140,9 +143,9 @@ export function MeusTreinos({
   };
   const excluirTreino = async (m: ModeloTela) => {
     const aviso = m.alunos > 0
-      ? `\n\n${textoAlunos(m.alunos)} ${m.alunos === 1 ? "recebe" : "recebem"} este treino: ele sai do app ${m.alunos === 1 ? "dele" : "deles"} e os dias da semana com ele ficam sem treino.`
-      : "";
-    if (!window.confirm(`Excluir o treino "${m.nome}"?${aviso}`)) return;
+      ? `${textoAlunos(m.alunos)} ${m.alunos === 1 ? "recebe" : "recebem"} este treino: ele sai do app ${m.alunos === 1 ? "dele" : "deles"} e os dias da semana com ele ficam sem treino.`
+      : undefined;
+    if (!(await confirmar({ titulo: `Excluir o treino "${m.nome}"?`, descricao: aviso, rotuloConfirmar: "Excluir", perigo: true }))) return;
     try {
       await excluirModelo(m.id);
       await recarregar.tudo();
@@ -153,7 +156,8 @@ export function MeusTreinos({
     }
   };
   const excluirPastaAberta = async (p: PastaTela) => {
-    if (!window.confirm(`Excluir a pasta "${p.nome}"? Os treinos dela NÃO são excluídos — voltam para a lista.`)) return;
+    if (!(await confirmar({ titulo: `Excluir a pasta "${p.nome}"?`, descricao: "Os treinos dela NÃO são excluídos — voltam para a lista.",
+      rotuloConfirmar: "Excluir", perigo: true }))) return;
     try {
       await excluirPasta(p.id);
       await recarregar.catalogo();
@@ -171,7 +175,7 @@ export function MeusTreinos({
   const buscando = !!(termo || busca.trim());
 
   return (
-    <div className="grid items-start gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos={t.totalGeral}>
+    <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos={t.totalGeral}>
       {/* ── esquerda: pastas e treinos ── */}
       <Cartao className="flex min-w-0 flex-col px-3.5 py-3.5" data-lista-modelos>
         <label className="mb-3 flex h-9 items-center gap-2 rounded-xl border border-linha bg-superficie px-3 text-[13px] text-texto-2">
@@ -416,7 +420,7 @@ function FolhaNovoTreino({
 function FolhaPastasDoTreino({
   aberto,
   aoMudar,
-  modelo,
+  modelo: modeloAberto,
   pastas,
   editaveis,
   aoAlternar,
@@ -431,6 +435,8 @@ function FolhaPastasDoTreino({
   aoNovaPasta?: () => void;
 }) {
   const [indo, setIndo] = useState<string | null>(null);
+  // hml-18a (H-40, D): enquanto a folha sai, o treino de antes (antes ela sumia seca com o modelo null)
+  const modelo = useUltimoValor(modeloAberto);
   if (!modelo) return null;
   // hml-14d: as pastas do treino vêm do próprio treino (a tela não tem mais todos os treinos de cada pasta)
   const globais = pastas.filter((p) => !p.editavel && modelo.pastas.includes(p.id));

@@ -15,6 +15,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { Tabela, TabelaCabeca, TabelaCelula, TabelaCorpo, TabelaLinha, TabelaTitulo } from "@/ui/premium/Tabela";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { MoverAlunosDialog } from "../alunos/MoverAlunosDialog";
 import { bloquearAluno, ErroMaster, listarAlunos, semConta } from "../api";
 import { useAtrasado } from "../pecas/lista";
@@ -45,6 +46,8 @@ export default function Alunos() {
   const [selecao, setSelecao] = useState<Set<string>>(new Set());
   const [mover, setMover] = useState(false);
   const [senha, setSenha] = useState<Aluno | null>(null);
+  // hml-18a (H-40, D): a folha da senha fica montada e fecha pelo `aberto`; enquanto sai, mostra o aluno que fechou
+  const senhaVista = useUltimoValor(senha);
   // a busca vai ao endereço quando a pessoa para de digitar (e daí ao banco); a seleção continua (marcar de buscas diferentes)
   useEffect(() => {
     if (digitada === termo) return;
@@ -236,9 +239,9 @@ export default function Alunos() {
       <MoverAlunosDialog aberta={mover} aoMudar={setMover} contas={contas} contaAtual={conta || null}
         pacientes={modo === "sem_conta" ? [] : [...selecao]} usuarios={modo === "sem_conta" ? [...selecao] : []}
         aoMovido={() => { setSelecao(new Set()); void lista.refetch(); void pessoas.refetch(); }} />
-      {senha && (
-        <SheetSenhaAluno aberto criar={false} pacienteId={senha.paciente_id} nome={senha.nome} emailCadastro={senha.email} emailLogin={senha.email}
-          aoFechar={() => setSenha(null)} aoSalvar={() => void lista.refetch()} />
+      {senhaVista && (
+        <SheetSenhaAluno aberto={senha !== null} criar={false} pacienteId={senhaVista.paciente_id} nome={senhaVista.nome} emailCadastro={senhaVista.email}
+          emailLogin={senhaVista.email} aoFechar={() => setSenha(null)} aoSalvar={() => void lista.refetch()} />
       )}
     </div>
   );

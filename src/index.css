@@ -227,6 +227,23 @@
   textarea::placeholder {
     color: oklch(0.714 0.019 261.3); /* #9CA3AF, o gray-400 que o Tailwind 3 usava */
   }
+
+  /* hml-18a (H-40, C) — o toque no celular: sem o atraso do duplo toque (touch-action), sem "puxar" a página inteira no fim da
+     rolagem (overscroll), sem o quadrado azul do toque (tap-highlight) e com resposta visível em TODO tocável no :active (no WebView
+     não há hover). Fica na camada base: os utilitários das telas continuam mandando (as alças de arrastar
+     têm touch-none e ficam de fora). Sem bloco prefers-reduced-motion (Skill-wbs-navegacao, princípio 6). */
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+  :where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"], summary, label[for]) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent; /* a pré-base do Tailwind 4 já põe no html; aqui fica explícito no tocável */
+  }
+  /* (numa linha só: um espaço entre o :where(…) e o :not(…) viraria "descendente") */
+  :where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"], summary, label[for]):not(:disabled):not([aria-disabled="true"]):not(.touch-none):active {
+    opacity: 0.72;
+  }
 }
 
 @utility input-underline {

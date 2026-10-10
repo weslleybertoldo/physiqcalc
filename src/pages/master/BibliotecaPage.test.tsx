@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,7 +48,8 @@ function montar(rota = "/master/biblioteca") {
     const l = useLocation();
     return <output data-endereco={l.search} />;
   }
-  return render(<QueryClientProvider client={qc}><MemoryRouter useTransitions={false} initialEntries={[rota]}><BibliotecaPage /><Endereco /></MemoryRouter></QueryClientProvider>);
+  // hml-18a: a confirmação (useConfirmacao) é a comum do app — o provedor fica no App, aqui em volta da página
+  return render(<QueryClientProvider client={qc}><ProvedorConfirmar><MemoryRouter useTransitions={false} initialEntries={[rota]}><BibliotecaPage /><Endereco /></MemoryRouter></ProvedorConfirmar></QueryClientProvider>);
 }
 const endereco = () => document.querySelector("[data-endereco]")?.getAttribute("data-endereco") ?? "";
 const rotulo = () => document.querySelector('[data-paginacao="master-biblioteca"] [data-paginacao-rotulo]')?.textContent;

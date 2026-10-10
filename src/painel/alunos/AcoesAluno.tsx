@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MensagemForm } from "@/entrada/pecas/Campo";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { acaoNoAluno, ErroAlunos, type AcaoAluno } from "./api";
 import { acoesDoAluno, mensagemErroAlunos, rotaDoAluno, type AlunoLinha, type ListaAlunos } from "./regras";
 
@@ -72,7 +73,8 @@ export function AcoesAluno({ aluno, eu, aoMudar }: { aluno: AlunoLinha; eu: List
           <DropdownMenu.Content
             align="end"
             sideOffset={6}
-            className="z-50 w-[230px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)]"
+            // hml-18a (H-40, D): entra e sai (fade + zoom-95, 150 ms) — antes abria e fechava sem animação nenhuma
+            className="z-50 w-[230px] rounded-2xl border border-linha-2 bg-tela p-1.5 text-texto shadow-[0_24px_60px_-20px_rgba(0,0,0,.85)] origin-(--radix-dropdown-menu-content-transform-origin) data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
             data-menu-aluno-aberto={aluno.id}
           >
             <ItemMenu icone={UserRound} rotulo="Abrir" marca="abrir" aoEscolher={() => navigate(rotaDoAluno(aluno))} />
@@ -114,23 +116,29 @@ function explicacao(acao: Confirmar, a: AlunoLinha, eu: ListaAlunos["eu"]): stri
     : "A matrícula sai da lista e fica guardada na Lixeira. A conta e o treino do aluno continuam dele — ele pode voltar pelo seu link.";
 }
 
+/**
+ * A confirmação das ações que mudam o acesso (bloquear, desativar, remover). hml-18a (H-40, D): o painel fica montado e fecha pelo
+ * `aberto` (antes o pai o desmontava: sumia seco); enquanto sai, o texto continua o da ação que fechou (`useUltimoValor`).
+ */
 export function ConfirmarAcao({ aluno, eu, acao, aoFechar, aoFeito }: { aluno: AlunoLinha; eu: ListaAlunos["eu"]; acao: Confirmar | null; aoFechar: () => void; aoFeito: () => void }) {
   const celular = useIsMobile();
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
   const [indo, setIndo] = useState(false);
+  const vista = useUltimoValor(acao);
   useEffect(() => {
+    if (!acao) return; // abriu (de novo): começa limpo; fechando, o texto fica até a folha sair
     setMensagem("");
     setErro("");
   }, [acao]);
-  if (!acao) return null;
-  const t = TEXTOS[acao];
+  if (!vista) return null; // nunca abriu: nada a mostrar nem a animar
+  const t = TEXTOS[vista];
   const Icone = t.icone;
   const ir = async () => {
     setIndo(true);
     setErro("");
     try {
-      const r = await acaoNoAluno(acao, aluno.id, acao === "bloquear" ? mensagem.trim() || null : null);
+      const r = await acaoNoAluno(vista, aluno.id, vista === "bloquear" ? mensagem.trim() || null : null);
       toast.success(r.so_responsavel ? `Você deixou de acompanhar ${aluno.nome}.` : t.ok(aluno.nome));
       aoFechar();
       aoFeito();
@@ -141,14 +149,14 @@ export function ConfirmarAcao({ aluno, eu, acao, aoFechar, aoFeito }: { aluno: A
     }
   };
   return (
-    <PainelDeslizante aberto aoMudar={(a) => !a && aoFechar()} lado={celular ? "baixo" : "direita"} titulo={t.titulo(aluno.nome)}>
-      <div className="flex flex-col gap-4 pt-2" data-confirmar-acao={acao}>
+    <PainelDeslizante aberto={Boolean(acao)} aoMudar={(a) => !a && aoFechar()} lado={celular ? "baixo" : "direita"} titulo={t.titulo(aluno.nome)}>
+      <div className="flex flex-col gap-4 pt-2" data-confirmar-acao={vista}>
         <div className="flex items-start gap-2.5 rounded-2xl border border-ambar/30 px-3.5 py-3 text-[13px] leading-relaxed text-texto"
           style={{ background: "linear-gradient(90deg, var(--p-chip-a-fundo), transparent)" }}>
           <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />
-          <span>{explicacao(acao, aluno, eu)}</span>
+          <span>{explicacao(vista, aluno, eu)}</span>
         </div>
-        {acao === "bloquear" && (
+        {vista === "bloquear" && (
           <label className="flex flex-col gap-1.5">
             <span className="text-[12.5px] font-semibold text-texto-2">Mensagem para o aluno (opcional)</span>
             <textarea
@@ -163,7 +171,7 @@ export function ConfirmarAcao({ aluno, eu, acao, aoFechar, aoFeito }: { aluno: A
         )}
         {erro && <MensagemForm data-acao-erro>{erro}</MensagemForm>}
         <div className="flex gap-2">
-          <button type="button" className={`pq-botao ${acao === "remover" ? "pq-botao-g border-rosa/40 text-rosa-3" : "pq-botao-w"}`} onClick={() => void ir()} disabled={indo} data-confirmar-ok>
+          <button type="button" className={`pq-botao ${vista === "remover" ? "pq-botao-g border-rosa/40 text-rosa-3" : "pq-botao-w"}`} onClick={() => void ir()} disabled={indo} data-confirmar-ok>
             <Icone aria-hidden /> {indo ? "Um instante…" : t.botao}
           </button>
           <Botao icone={X} onClick={aoFechar}>Cancelar</Botao>

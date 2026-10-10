@@ -396,10 +396,12 @@ def main() -> int:
     ap.add_argument("--base", required=True)
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default=",".join(CASOS))
+    # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     a.base = a.base.rstrip("/")
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
         try:
             for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
                 print(f"\n== {nome}", flush=True)

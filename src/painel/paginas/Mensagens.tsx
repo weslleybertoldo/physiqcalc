@@ -56,7 +56,7 @@ export default function Mensagens() {
 
       <ResumoMensagens resumo={d.resumo.data} config={d.config} carregando={d.resumo.isLoading || d.perfil.isLoading} conectado={conectado} />
 
-      <div className="grid items-start gap-3.5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-3">
         <Conexao d={d} a={a} agora={agora} />
         <Automaticas d={d} conectado={conectado} />
       </div>

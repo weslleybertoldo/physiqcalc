@@ -39,7 +39,7 @@ export default function ResumoAgenda({ eventos, carregando, aoAbrir, aoVerHoje }
     return (
       <div className="flex flex-col gap-3.5" data-resumo-agenda="carregando">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <Cartao key={i} className="h-[132px] p-4"><Esqueleto className="h-full w-full" /></Cartao>)}</div>
-        <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"><Cartao className="h-[330px] p-5"><Esqueleto className="h-full w-full" /></Cartao><Cartao className="h-[330px] p-5"><Esqueleto className="h-full w-full" /></Cartao></div>
+        <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"><Cartao className="h-[330px] p-5"><Esqueleto className="h-full w-full" /></Cartao><Cartao className="h-[330px] p-5"><Esqueleto className="h-full w-full" /></Cartao></div>
       </div>
     );
   }
@@ -59,7 +59,7 @@ export default function ResumoAgenda({ eventos, carregando, aoAbrir, aoVerHoje }
           detalhe={<span>nas últimas 8 semanas</span>} />
       </div>
 
-      <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Cartao className="flex flex-col px-[22px] pb-4 pt-[18px]" data-cartao-consultas-semana>
           <CabecalhoCartao titulo="Consultas por semana"
             extra={<Chip tom="g" className="h-[22px] text-[10.5px]">ÚLTIMAS 8 SEMANAS</Chip>}

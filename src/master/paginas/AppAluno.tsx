@@ -10,6 +10,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { Tabela, TabelaCabeca, TabelaCelula, TabelaCorpo, TabelaLinha, TabelaTitulo } from "@/ui/premium/Tabela";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { alunosDoApp, ErroMaster } from "../api";
 import { PratosProntos } from "../app/PratosProntos";
 import { TreinosProntos } from "../app/TreinosProntos";
@@ -34,6 +35,8 @@ function AlunosDoApp() {
     buscar: (n) => alunosDoApp(n, termo),
   });
   const [senha, setSenha] = useState<AlunoDoApp | null>(null);
+  // hml-18a (H-40, D): a folha da senha fica montada e fecha pelo `aberto`; enquanto sai, mostra o aluno que fechou
+  const senhaVista = useUltimoValor(senha);
   const lista = q.data?.alunos ?? [];
   return (
     <div className="flex flex-col gap-3">
@@ -46,9 +49,9 @@ function AlunosDoApp() {
             ? <EstadoVazio icone={Users} titulo="Nenhum aluno com essa busca" texto="Confira o nome, o e-mail ou os números do CPF e do telefone." />
             : <EstadoVazio icone={Users} titulo="Nenhum aluno no app ainda" texto="Quem entra em “Treinar sem profissional” aparece aqui." />)
             : <TabelaDoApp lista={lista} pagina={pagina} total={total} irPara={irPara} carregando={q.isFetching} aoSenha={setSenha} />}
-      {senha && (
-        <SheetSenhaAluno aberto criar={false} pacienteId={senha.paciente_id} nome={senha.nome} emailCadastro={senha.email} emailLogin={senha.email}
-          aoFechar={() => setSenha(null)} aoSalvar={() => void q.refetch()} />
+      {senhaVista && (
+        <SheetSenhaAluno aberto={senha !== null} criar={false} pacienteId={senhaVista.paciente_id} nome={senhaVista.nome} emailCadastro={senhaVista.email}
+          emailLogin={senhaVista.email} aoFechar={() => setSenha(null)} aoSalvar={() => void q.refetch()} />
       )}
     </div>
   );

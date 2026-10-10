@@ -25,7 +25,11 @@ export function BuscaGatilho({ aoAbrir, texto = "Buscar aluno, treino ou aliment
   );
 }
 
-/** Paleta da busca global (NF10): janela com o campo e os grupos de resultados (cmdk). */
+/**
+ * Paleta da busca global (NF10): janela com o campo e os grupos de resultados (cmdk). hml-18a (H-40, D): fundo e janela entram e
+ * SAEM em 200 ms (fade; a janela com zoom-95) — antes sumiam em 48–120 ms, sem passar por data-state=closed. Quem abre limpa o
+ * termo só depois da saída (`useTermoDaBusca`, src/ui/premium/atalhos.ts).
+ */
 export function PaletaBusca({
   aberto,
   aoMudar,
@@ -47,10 +51,10 @@ export function PaletaBusca({
   return (
     <Dialog.Root open={aberto} onOpenChange={aoMudar}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55 duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
         <Dialog.Content
           data-paleta-busca
-          className="fixed left-1/2 top-[12vh] z-50 w-[min(640px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-[22px] border border-linha-2 bg-tela text-texto shadow-[0_30px_80px_-20px_rgba(0,0,0,.85)] outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          className="fixed left-1/2 top-[12vh] z-50 w-[min(640px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-[22px] border border-linha-2 bg-tela text-texto shadow-[0_30px_80px_-20px_rgba(0,0,0,.85)] outline-none duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         >
           <Dialog.Title className="sr-only">Busca</Dialog.Title>
           <Dialog.Description className="sr-only">Digite para buscar e use as setas para escolher.</Dialog.Description>

@@ -308,6 +308,17 @@
     stroke-width: 2.2;
     flex: none;
   }
+  /* hml-18a (H-40): o chip que é botão ou link encolhe um pouco no toque */
+  &:is(button, a[href]) {
+    transition:
+      transform 0.15s ease-out,
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+  &:is(button, a[href]):not(:disabled):active {
+    transform: scale(0.97);
+  }
 }
 @utility pq-chip-t {
   background: var(--p-chip-t-fundo);
@@ -356,15 +367,16 @@
   transition:
     filter 0.15s ease,
     background-color 0.15s ease,
-    transform 0.1s ease;
+    transform 0.15s ease-out;
   & svg {
     width: 17px;
     height: 17px;
     stroke-width: 2.2;
     flex: none;
   }
+  /* hml-18a (H-40): o toque afunda e encolhe um pouco (a resposta que o celular precisa — não há hover) */
   &:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: translateY(1px) scale(0.98);
   }
   &:disabled {
     opacity: 0.5;
@@ -415,9 +427,15 @@
   border: 1px solid var(--p-linha);
   position: relative;
   color: var(--p-forte);
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease-out;
   &:hover:not(:disabled) {
     background: var(--p-superficie-2);
+  }
+  /* hml-18a (H-40): o botão de ícone (sino, busca, voltar) encolhe no toque */
+  &:active:not(:disabled) {
+    transform: scale(0.94);
   }
   & svg {
     width: 20px;
@@ -445,5 +463,15 @@
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+  /* hml-18a (H-40): as abas de página e os chips da rolagem lateral encolhem um pouco no toque (150 ms); a cor da aba que fica
+     ativa muda em 200 ms (o indicador da aba ativa da Skill-wbs-navegacao, princípio 5 — nada de trocar a classe seco) */
+  & > :is(a[href], button):not(:disabled) {
+    transition-property: color, background-color, border-color, opacity, transform;
+    transition-duration: 0.2s, 0.2s, 0.2s, 0.15s, 0.15s;
+    transition-timing-function: ease-out;
+  }
+  & > :is(a[href], button):not(:disabled):active {
+    transform: scale(0.97);
   }
 }

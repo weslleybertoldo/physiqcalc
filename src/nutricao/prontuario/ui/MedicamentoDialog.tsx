@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BTN_PRI, BTN_SEC, Campo, INPUT, TEXTAREA } from "@/nutricao/editor/ui/estilos";
 import BadgeGravidade from "@/nutricao/prontuario/ui/BadgeGravidade";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { atualizarMedicamento, criarMedicamento, type Interacao, type Medicamento } from "@/nutricao/prontuario/lib/farmaco";
 import {
   MEDICAMENTO_MAX, POSOLOGIAS_RAPIDAS, TEXTO_MAX, aplicarChip, chipAtivo, formDoMedicamento, formInicialMedicamento, hojeISO, interacoesDoMedicamento,
@@ -61,6 +63,10 @@ export default function MedicamentoDialog({ open, onOpenChange, nutricionistaId,
     () => (sugestoesAbertas ? sugerirMedicamentos(base, form.medicamento).filter((n) => normalizarMedicamento(n) !== normalizarMedicamento(form.medicamento)) : []),
     [sugestoesAbertas, base, form.medicamento],
   );
+  // hml-18a (H-40, D): a lista de sugestões entra e SAI esmaecendo (200 ms) — antes sumia seca ao escolher; enquanto sai, mostra
+  // as sugestões de antes
+  const sugestoesVistas = useUltimoValor(sugestoes.length ? sugestoes : null);
+  const saidaSugestoes = useSaidaAnimada<HTMLUListElement>(sugestoes.length > 0);
 
   const escolher = (nome: string) => {
     const primeira = interacoesDoMedicamento(nome, base)[0];
@@ -125,9 +131,11 @@ export default function MedicamentoDialog({ open, onOpenChange, nutricionistaId,
                 placeholder="ex.: Metformina"
                 data-campo-medicamento
               />
-              {sugestoes.length > 0 && (
-                <ul className="absolute z-10 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-tela border border-linha-2 shadow-md" data-lista-sugestoes>
-                  {sugestoes.map((nome) => (
+              {saidaSugestoes.montado && sugestoesVistas && (
+                <ul ref={saidaSugestoes.ref} data-state={saidaSugestoes.estado}
+                  className="absolute z-10 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-tela border border-linha-2 shadow-md duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards"
+                  data-lista-sugestoes>
+                  {sugestoesVistas.map((nome) => (
                     <li key={nome}>
                       <button
                         type="button"
@@ -161,7 +169,7 @@ export default function MedicamentoDialog({ open, onOpenChange, nutricionistaId,
             )}
           </Campo>
 
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="Dose" dica="opcional">
               <input className={INPUT} value={form.dose} maxLength={TEXTO_MAX} onChange={(e) => campo("dose", e.target.value)} placeholder="ex.: 850 mg" data-campo-dose-medicamento />
             </Campo>

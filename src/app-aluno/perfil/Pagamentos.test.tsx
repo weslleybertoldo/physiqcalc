@@ -6,8 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CobrancaVista, MatriculaPagamentos, ReciboVista, StatusAluno } from "@/financeiro/tipos";
+import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 
-const h = vi.hoisted(() => ({ status: vi.fn(), historico: vi.fn() }));
+const h = vi.hoisted(() => ({ status: vi.fn(), historico: vi.fn(), acao: vi.fn() }));
 vi.mock("@/lib/distribuicao", () => ({ ehLoja: false, DISTRIBUICAO: "site" }));
 vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => false, getPlatform: () => "web" }, registerPlugin: () => ({}) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase: {} }));
@@ -16,6 +17,7 @@ vi.mock("@/financeiro/api", async (orig) => ({
   ...(await orig<typeof import("@/financeiro/api")>()),
   buscarStatusAluno: () => h.status(),
   buscarHistoricoDoAluno: (...a: unknown[]) => h.historico(...a),
+  acaoFinanceiro: (...a: unknown[]) => h.acao(...a),
   invalidarResumo: () => {},
 }));
 vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: () => null, initMercadoPago: () => {} }));
@@ -48,11 +50,13 @@ const status = (m: MatriculaPagamentos[]): StatusAluno => ({ ok: true, ambiente:
 const montar = () =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter useTransitions={false} initialEntries={["/perfil/pagamentos"]}>
-        <Routes>
-          <Route path="*" element={<Pagamentos />} />
-        </Routes>
-      </MemoryRouter>
+      <ProvedorConfirmar>
+        <MemoryRouter useTransitions={false} initialEntries={["/perfil/pagamentos"]}>
+          <Routes>
+            <Route path="*" element={<Pagamentos />} />
+          </Routes>
+        </MemoryRouter>
+      </ProvedorConfirmar>
     </QueryClientProvider>,
   );
 const folha = (tipo: string) => document.body.querySelector(`[data-folha-todos="${tipo}"]`) as HTMLElement | null;
@@ -60,6 +64,8 @@ const folha = (tipo: string) => document.body.querySelector(`[data-folha-todos="
 beforeEach(() => {
   h.status.mockReset();
   h.historico.mockReset();
+  h.acao.mockReset();
+  h.acao.mockResolvedValue({});
   h.status.mockResolvedValue(status([matricula()]));
   h.historico.mockImplementation(async (_p: string, tipo: "cobrancas" | "recibos", pagina: number) => {
     const todas = tipo === "cobrancas" ? COBRANCAS : RECIBOS;
@@ -165,5 +171,25 @@ describe("Perfil › Pagamentos — Ver todos (hml-14d, P7)", () => {
     expect(document.querySelector('[data-ver-todos="pagamentos"]')?.textContent).toBe("Ver todos (3)");
     expect(document.querySelector('[data-ver-todos="recibos"]')).toBeNull();
     expect(screen.getAllByText(/Recibo nº/)).toHaveLength(2);
+  });
+});
+
+describe("Perfil › Pagamentos — cancelar a cobrança automática (hml-18a: a confirmação do app)", () => {
+  it("Cancelar abre a confirmação do app: Voltar não cancela; Cancelar cobrança chama aluno_mp_cancelar", async () => {
+    const assinatura = { id: "a1", status: "authorized" as const, valor: 249, proximo_vencimento: null, sandbox: false, simulada: true, init_point: null };
+    h.status.mockResolvedValue(status([matricula({ assinatura })]));
+    montar();
+    const cartao = (await screen.findByText("Cobrança automática ligada")).closest("[data-assinatura-aluno]") as HTMLElement;
+    fireEvent.click(within(cartao).getByRole("button", { name: "Cancelar" }));
+    let dialogo = await screen.findByRole("alertdialog");
+    expect(dialogo).toHaveTextContent("Cancelar a cobrança automática?");
+    expect(dialogo.querySelector("[data-confirmar-ok]")).toHaveTextContent("Cancelar cobrança");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-cancelar]")!);
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(h.acao).not.toHaveBeenCalled();
+    fireEvent.click(within(cartao).getByRole("button", { name: "Cancelar" }));
+    dialogo = await screen.findByRole("alertdialog");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
+    await waitFor(() => expect(h.acao).toHaveBeenCalledWith("aluno_mp_cancelar", { paciente_id: "p1" }));
   });
 });

@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { perfil } from "@/test/fixturesPerfilAluno";
 import { chaveData, datasDaSemana } from "@/treino/datas";
+import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 import type { DadosEditor } from "./tipos";
 
 const h = vi.hoisted(() => ({
@@ -94,7 +95,9 @@ function dados(o: Partial<DadosEditor> = {}): DadosEditor {
 const montar = (ui: React.ReactNode) =>
   render(
     <MemoryRouter useTransitions={false}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ProvedorConfirmar>{ui}</ProvedorConfirmar>
+      </QueryClientProvider>
     </MemoryRouter>,
   );
 
@@ -127,6 +130,23 @@ describe("W15 — editor do treino (tela 8, lado esquerdo)", () => {
     expect((within(supino).getByLabelText(/reps de Supino Reto/) as HTMLInputElement).value).toBe("10");
     expect((within(supino).getByLabelText(/descanso de Supino Reto/) as HTMLInputElement).value).toBe("60 s");
     expect((within(supino).getByLabelText(/carga de Supino Reto/) as HTMLInputElement).value).toBe("60 kg");
+  });
+
+  it("hml-18a: tirar o exercício pede a confirmação do app — Cancelar não tira; Tirar tira", async () => {
+    h.removerExercicio.mockResolvedValue({ ok: true });
+    montar(<EditorTreino treinoUserId="t1" nomeAluno="Rafael" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Tirar Supino Reto com Barra do treino" }));
+    let dialogo = await screen.findByRole("alertdialog");
+    expect(dialogo).toHaveTextContent('Tirar "Supino Reto com Barra" do treino A · Peito e tríceps de Rafael?');
+    expect(dialogo.querySelector("[data-confirmar-ok]")).toHaveTextContent("Tirar");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-cancelar]")!);
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(h.removerExercicio).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Tirar Supino Reto com Barra do treino" }));
+    dialogo = await screen.findByRole("alertdialog");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
+    await waitFor(() => expect(h.removerExercicio).toHaveBeenCalledTimes(1));
+    expect(h.removerExercicio.mock.calls[0][0]).toBe("t1");
   });
 
   it("digitar a prescrição grava nas colunas que o app lê (e só aquele exercício)", async () => {

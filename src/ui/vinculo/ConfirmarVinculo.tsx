@@ -87,6 +87,8 @@ export function ConfirmarVinculo({
       titulo="Confirmar o profissional"
       descricao={codigo ? `Código ${codigo}` : undefined}
       rodape={
+        // hml-18a (H-40, E): enquanto a prévia do código chega, o rodapé fica vazio de propósito — ainda não se sabe quais botões
+        // valem (Confirmar, Fechar ou Tentar de novo) e o corpo já mostra o esqueleto; botão errado na tela seria pior que o vazio
         carregando ? null : podeConfirmar ? (
           <div className="flex gap-2">
             <Botao className="flex-1" onClick={() => aoFechar("cancelou")} disabled={confirmando} data-vinculo-cancelar>Cancelar</Botao>

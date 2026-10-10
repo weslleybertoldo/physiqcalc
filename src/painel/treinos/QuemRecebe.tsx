@@ -10,6 +10,7 @@ import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { aplicarModeloNoAluno, carregarQuemRecebe, carregarQuemRecebeLista, darModelo, tirarModelo } from "./api";
 import { textoAlunos } from "./regras";
@@ -27,6 +28,7 @@ import { CHAVE_RECEBE_LISTA, mensagemDoErro, useRecarregar, useTermoComEspera } 
 export function QuemRecebe({ modelo, q }: { modelo: ModeloTela; q: QuemMexe }) {
   const qc = useQueryClient();
   const recarregar = useRecarregar();
+  const confirmar = useConfirmar();
   const [busca, setBusca] = useState("");
   const termo = useTermoComEspera(busca);
   const [indo, setIndo] = useState<string | null>(null);
@@ -70,7 +72,8 @@ export function QuemRecebe({ modelo, q }: { modelo: ModeloTela; q: QuemMexe }) {
   const alternar = async (a: AlunoQuemRecebe) => {
     if (!podeMexer || indo) return;
     const tirar = a.recebe;
-    if (tirar && !window.confirm(`Tirar "${modelo.nome}" de ${a.nome}? Ele sai da semana do aluno e das trocas de hoje em diante (o treino continua aqui).`)) return;
+    if (tirar && !(await confirmar({ titulo: `Tirar "${modelo.nome}" de ${a.nome}?`,
+      descricao: "Ele sai da semana do aluno e das trocas de hoje em diante (o treino continua aqui).", rotuloConfirmar: "Tirar", perigo: true }))) return;
     setIndo(a.id);
     marcarLocal(a.id, !tirar);
     try {
@@ -92,7 +95,10 @@ export function QuemRecebe({ modelo, q }: { modelo: ModeloTela; q: QuemMexe }) {
 
   const aplicar = async () => {
     if (!quantos) return;
-    if (!window.confirm(`Levar a prescrição do modelo para ${textoAlunos(quantos).toLowerCase()} que ${quantos === 1 ? "recebe" : "recebem"} "${modelo.nome}"? Só entra onde o aluno ainda não tem séries, repetições, descanso ou carga dele.`)) return;
+    // confirma 1 vez e depois leva aluno por aluno (o laço abaixo não muda)
+    if (!(await confirmar({ titulo: `Levar a prescrição do modelo para ${textoAlunos(quantos).toLowerCase()} que ${quantos === 1 ? "recebe" : "recebem"} "${modelo.nome}"?`,
+      descricao: "Só entra onde o aluno ainda não tem séries, repetições, descanso ou carga dele.",
+      rotuloConfirmar: `Levar para ${textoAlunos(quantos).toLowerCase()}` }))) return;
     setAplicando(true);
     let total = 0;
     let falhas = 0;

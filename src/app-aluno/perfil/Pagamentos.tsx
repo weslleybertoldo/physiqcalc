@@ -33,6 +33,7 @@ import { EstadoCarregando, EstadoErro, EstadoSemInternet, EstadoVazio } from "@/
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useOnline } from "@/ui/premium/useOnline";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { PagarMercadoPago } from "./pagamentos/PagarMercadoPago";
 import { PagarPixManual, type AlvoPagamento } from "./pagamentos/PagarPixManual";
 
@@ -167,13 +168,15 @@ function SecaoMatricula({
   const pagarNoApp = !lojaApp && podePagarPeloApp(m.conta.modo, !!m.chave);
   const profissional = m.conta.profissional || "seu profissional";
   const [cancelando, setCancelando] = useState(false);
+  const confirmar = useConfirmar();
   // hml-14d (B21 · D31 · P7): os cartões seguem com as 24 de sempre; "Ver todos (N)" abre a lista inteira do banco em páginas de 20
   // (N = o total da matrícula; a função de antes não manda o total: fica o que veio)
   const totalCobrancas = m.total_cobrancas ?? m.cobrancas.length;
   const totalRecibos = m.total_recibos ?? m.recibos.length;
 
   const cancelarAssinatura = async () => {
-    if (!window.confirm("Cancelar a cobrança automática? Ela para na hora.")) return;
+    if (!(await confirmar({ titulo: "Cancelar a cobrança automática?", descricao: "Ela para na hora.", rotuloConfirmar: "Cancelar cobrança",
+      rotuloCancelar: "Voltar", perigo: true }))) return;
     setCancelando(true);
     try {
       await acaoFinanceiro("aluno_mp_cancelar", { paciente_id: m.paciente_id });

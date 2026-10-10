@@ -6,6 +6,7 @@ import { principal } from "@/integrations/principal/client";
 import { formatarChavePix, rotuloPixTipo } from "@/lib/pixChave";
 import { Botao } from "@/ui/premium/Botao";
 import { Esqueleto } from "@/ui/premium/Estados";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import RecebimentoPixDialog, { COLUNAS_CHAVE, type ChaveRecebimento } from "@/components/admin/RecebimentoPixDialog";
 
 interface Props {
@@ -25,6 +26,7 @@ export default function RecebimentosLista({ contaId, membroId, podeEditar }: Pro
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const confirmar = useConfirmar();
   const [dialogo, setDialogo] = useState<{ aberto: boolean; item: ChaveRecebimento | null }>({ aberto: false, item: null });
 
   const carregar = useCallback(async () => {
@@ -63,7 +65,7 @@ export default function RecebimentosLista({ contaId, membroId, podeEditar }: Pro
   };
 
   const excluir = async (c: ChaveRecebimento) => {
-    if (!window.confirm(`Excluir a chave ${formatarChavePix(c.tipo, c.chave)}?`)) return;
+    if (!(await confirmar({ titulo: `Excluir a chave ${formatarChavePix(c.tipo, c.chave)}?`, rotuloConfirmar: "Excluir", perigo: true }))) return;
     setOcupado(c.id);
     const { error } = await principal.from("recebimento_chaves").delete().eq("id", c.id);
     setOcupado(null);

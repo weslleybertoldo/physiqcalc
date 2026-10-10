@@ -13,6 +13,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { Segmentado } from "@/ui/premium/Segmentado";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { carregarHistoricoMes, carregarPlanoParaPdf, carregarTreinoDoHistorico, carregarVolumePraticado, type ItemHistorico } from "./api";
 import { diasAte, padraoDoAluno, textoDataCurta, textoSeriesVolume, volumePorGrupo, type VolumeGrupo } from "./regras";
 import { MESES } from "./relatorio";
@@ -56,6 +57,7 @@ export function SeriesETroca({ treinoUserId, somenteLeitura }: { treinoUserId: s
   const acoes = useAcoesEditor(treinoUserId);
   const d = dados.data;
   const [n, setN] = useState<number | null>(null);
+  const confirmar = useConfirmar();
   if (!d) return <Cartao className="p-5"><Esqueleto className="h-[200px] w-full" /></Cartao>;
   const modo = d.config?.series_modo === "padrao" ? "padrao" : "personalizada";
   const padrao = padraoDoAluno(d);
@@ -92,7 +94,9 @@ export function SeriesETroca({ treinoUserId, somenteLeitura }: { treinoUserId: s
                 variante="w"
                 className="ml-auto"
                 onClick={async () => {
-                  if (!window.confirm(`${qtd} ${qtd === 1 ? "série" : "séries"} em TODOS os exercícios do aluno? Os números próprios de cada exercício saem (repetições, descanso, carga e observações ficam).`)) return;
+                  if (!(await confirmar({ titulo: `${qtd} ${qtd === 1 ? "série" : "séries"} em TODOS os exercícios do aluno?`,
+                    descricao: "Os números próprios de cada exercício saem (repetições, descanso, carga e observações ficam).",
+                    rotuloConfirmar: "Aplicar em todos", perigo: true }))) return;
                   await acoes.aplicarPadrao(qtd);
                   setN(null);
                 }}

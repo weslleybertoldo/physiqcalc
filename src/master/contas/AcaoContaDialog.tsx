@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { textoSaiDoLegado } from "@/nucleo/cobranca/regras";
 import { Botao } from "@/ui/premium/Botao";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { acaoConta, cancelarAssinatura, ErroMaster, planos, reenviarAviso, registrarPagamento } from "../api";
 import { Campo, INPUT, Janela, SELECT, TEXTAREA } from "../pecas/ui";
 import { FAIXAS, PLANOS, ROTULO_FAIXA, ROTULO_PLANO, dataCurta, faixaCabe, moeda, somarDias, textoErro, type AcaoMaster } from "../regras";
@@ -42,13 +43,16 @@ const DESCRICAO: Partial<Record<AcaoMaster, string>> = {
 };
 
 /** Janela de uma ação do master numa conta (W27: C56, C58, N-74/R18). A regra é do banco; aqui só o formulário. */
-export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
+export function AcaoContaDialog({ conta, acao: acaoAberta, aoFechar, aoFeito }: {
   conta: ContaLinha | null;
   acao: AcaoMaster | null;
   aoFechar: () => void;
   aoFeito: (msg: string) => void;
 }) {
-  const aberta = Boolean(conta && acao && acao !== "mover_alunos");
+  // hml-18a (H-40, D): a janela fica montada e fecha pelo `aberta`; enquanto sai, mostra a ação que fechou (antes sumia seca com a
+  // ação null). O formulário recomeça a cada abertura (o efeito olha a ação ABERTA)
+  const acao = useUltimoValor(acaoAberta);
+  const aberta = Boolean(conta && acaoAberta && acaoAberta !== "mover_alunos");
   const [plano, setPlano] = useState<PlanoConta>("treino_nutricao");
   const [faixa, setFaixa] = useState<Faixa>("f10");
   const [data, setData] = useState("");
@@ -64,17 +68,17 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
   const tabela = useQuery({ queryKey: ["master", "planos"], queryFn: planos, enabled: saiDoLegado, staleTime: 15_000 });
 
   useEffect(() => {
-    if (!conta || !acao) return;
+    if (!conta || !acaoAberta) return;
     setPlano(conta.plano);
     setFaixa(conta.faixa);
     const base = conta.vence_em && conta.vence_em > hoje ? conta.vence_em : hoje;
-    setData(acao === "liberar" ? somarDias(base, 7) : conta.vence_em ?? somarDias(hoje, 30));
-    setTexto(acao === "bloquear_alunos" ? "O acesso dos alunos está pausado. Fale com o seu profissional." : "");
+    setData(acaoAberta === "liberar" ? somarDias(base, 7) : conta.vence_em ?? somarDias(hoje, 30));
+    setTexto(acaoAberta === "bloquear_alunos" ? "O acesso dos alunos está pausado. Fale com o seu profissional." : "");
     setValor(conta.valor_mensal ? String(conta.valor_mensal).replace(".", ",") : "");
     setMeses("1");
     setPagoEm(hoje);
     setErro(null);
-  }, [conta, acao, hoje]);
+  }, [conta, acaoAberta, hoje]);
 
   if (!conta || !acao) return null;
   const cabe = faixaCabe(faixa, conta.alunos_ativos);
@@ -155,7 +159,7 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
         </p>
       )}
       {acao === "plano" && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo rotulo="Plano">
             <select className={SELECT} value={plano} onChange={(e) => setPlano(e.target.value as PlanoConta)} data-campo-plano>
               {PLANOS.map((p) => <option key={p} value={p}>{ROTULO_PLANO[p]}</option>)}
@@ -189,7 +193,7 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
         </Campo>
       )}
       {acao === "registrar_pagamento" && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Campo rotulo="Valor (R$)" dica={conta.valor_mensal ? `Mensal: ${moeda(conta.valor_mensal)}` : undefined}>
             <input className={INPUT} inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} data-campo-valor />
           </Campo>

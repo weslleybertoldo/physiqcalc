@@ -170,7 +170,7 @@ export default function Mensalidades({ f, focarComprovantes }: { f: FinanceiroCo
             ) : pendentes.length === 0 ? (
               <p className="text-[13px] text-texto-2" data-comprovantes-vazio>Nenhum comprovante aguardando.</p>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {pendentes.map((p) => <ComprovantePixCard key={p.id} item={p} onResolvido={recarregar} />)}
               </div>
             )}

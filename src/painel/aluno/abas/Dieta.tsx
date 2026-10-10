@@ -18,7 +18,8 @@ import { ConcluidasDoPeriodo } from "@/nutricao/editor/ui/ConcluidasDoPeriodo";
 import { PacienteProvider } from "@/nutricao/editor/ui/contexto";
 import { cn } from "@/lib/utils";
 import { SomenteLeitura } from "@/nutricao/editor/ui/SomenteLeitura";
-import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
+import { EstadoCarregando, EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
 
 function Secao({ secao }: { secao: SecaoDieta }) {
   switch (secao) {
@@ -44,7 +45,15 @@ function AdesaoDoPlano({ pacienteId }: { pacienteId: string }) {
   const planos = usePlanosDoAluno(pacienteId);
   const ativo = useMemo(() => planoAtivo(planos.data ?? []), [planos.data]);
   const dias = useMemo(() => ultimosDias(7), []);
-  if (planos.isLoading) return null;
+  // hml-18a (H-40, E): o cartão das refeições marcadas, do mesmo tamanho, enquanto os planos chegam (antes: nada, e ele aparecia do nada)
+  if (planos.isLoading) {
+    return (
+      <Cartao className="min-w-0 px-[18px] py-4" data-card-carregando="concluidas" data-estado="carregando" aria-busy="true">
+        <CabecalhoCartao titulo="Refeições marcadas nos últimos 7 dias" />
+        <Esqueleto className="h-32 w-full" />
+      </Cartao>
+    );
+  }
   return <ConcluidasDoPeriodo pacienteId={pacienteId} refeicoes={ativo ? ativo.refeicoes : null} dias={dias} titulo="Refeições marcadas nos últimos 7 dias" />;
 }
 

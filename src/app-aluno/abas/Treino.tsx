@@ -12,6 +12,8 @@ import { CLASSE_PAGINA_APP, TituloApp } from "@/app-aluno/perfil/pecas/TopoItem"
 import { lembrarArea } from "@/ui/casca/area";
 import { BotaoIcone } from "@/ui/premium/Botao";
 import { EstadoCarregando } from "@/ui/premium/Estados";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
+import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
 import { formatarCronometro, iniciarTreinoSeParado } from "@/treino/cronometro";
 import { chaveData, rotuloDiaCurto } from "@/treino/datas";
 import { chipDoSlot, letrasDaSemana } from "@/treino/letras";
@@ -68,6 +70,7 @@ function TreinoAberto({ userId }: { userId: string }) {
   const { user, isStaff } = useAuth();
   const { situacao } = useSessao();
   const t = useTreinoDoDia(userId);
+  const confirmar = useConfirmar();
   const [params, setParams] = useSearchParams();
   const verHistorico = params.get("ver") === "historico";
 
@@ -154,6 +157,8 @@ function TreinoAberto({ userId }: { userId: string }) {
     io.observe(el);
     return () => io.disconnect();
   }, [cron.estado, verHistorico]);
+  // hml-18a (H-40, D): a pílula flutuante entra e SAI esmaecendo (200 ms) — antes sumia seca ao voltar ao topo
+  const saidaPilula = useSaidaAnimada<HTMLButtonElement>(pilulaForaDaTela && Boolean(cron.estado));
 
   const aoConcluirSerie = useCallback(
     (slot: DiaSlot, a: { nome: string; numero: number; exercicioId: string; ultima: boolean; depois: string | null; descanso: number | null }) => {
@@ -295,7 +300,9 @@ function TreinoAberto({ userId }: { userId: string }) {
             aoTrocarTreino={() => setAlterar({ modo: "trocar", slot_idx: slot.slot_idx })}
             aoAdicionarTreino={() => setAlterar({ modo: "adicionar", slot_idx: -1 })}
             aoTirarDoDia={() => {
-              if (window.confirm(`Tirar "${slot.grupo!.nome}" de ${dateLabel}? As séries deste treino no dia são apagadas.`)) void t.removerTreinoDoDia(slot.override_id, slot.slot_idx);
+              void confirmar({ titulo: `Tirar "${slot.grupo!.nome}" de ${dateLabel}?`, descricao: "As séries deste treino no dia são apagadas.",
+                rotuloConfirmar: "Tirar do dia", perigo: true })
+                .then((sim) => { if (sim) void t.removerTreinoDoDia(slot.override_id, slot.slot_idx); });
             }}
             aoAcademia={() => setAcademiaAberta(true)}
             aoCompartilharConcluido={() => void compartilharConcluido(slot)}
@@ -379,11 +386,11 @@ function TreinoAberto({ userId }: { userId: string }) {
         aoMudarTempo={(seg) => t.setDescansoPadrao(seg)}
       />
 
-      {pilulaForaDaTela && cron.estado &&
+      {saidaPilula.montado &&
         createPortal(
-          <button type="button" data-pilula-flutuante onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          <button ref={saidaPilula.ref} type="button" data-pilula-flutuante data-state={saidaPilula.estado} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             aria-label={`Treino em andamento: ${formatarCronometro(cron.segundos)} — toque para voltar ao topo`}
-            className="pq-chip pq-chip-r fixed left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] z-50 h-[30px] -translate-x-1/2 px-3 text-[12.5px] tabular-nums shadow-lg"
+            className="pq-chip pq-chip-r fixed left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] z-50 h-[30px] -translate-x-1/2 px-3 text-[12.5px] tabular-nums shadow-lg duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards"
             style={{ background: "linear-gradient(var(--p-chip-r-fundo), var(--p-chip-r-fundo)), var(--p-fundo)" }}>
             <i aria-hidden className="h-[7px] w-[7px] animate-pulse rounded-full bg-rosa" style={{ boxShadow: "0 0 8px var(--p-rosa)" }} />
             {formatarCronometro(cron.segundos)}
