@@ -1,0 +1,806 @@
+{
+ "uuid": "c641aa70-d871-5b01-9eec-dba2bf17addd",
+ "nome": "Remada Baixa Unilateral na Polia",
+ "cena": "remada_baixa_unilateral_na_polia",
+ "grupo": "Dorsal / Rombóide",
+ "subgrupo": "Latíssimo do dorso · romboides · trapézio médio (unilateral)",
+ "padrao_movimento": "remada",
+ "equipamento": "polia",
+ "variacao": "unilateral, sentado",
+ "alvos": [
+  "dorsal",
+  "trapezio"
+ ],
+ "auxiliares": [
+  "costas",
+  "deltoide",
+  "biceps",
+  "antebraco",
+  "lombar",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 120,
+  "el": 12,
+  "dist": 4.0,
+  "alvo": [
+   0.0,
+   -0.5,
+   0.7
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.4,
+  "alvo": [
+   0.0,
+   -0.55,
+   0.75
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado no banco comprido da remada baixa, de frente para a polia, com o tronco ereto (coluna neutra), as solas dos pés chapadas nas chapas inclinadas do apoio, os pés um pouco mais abertos que o quadril, as pernas paralelas e os joelhos levemente dobrados. Segura o puxador da polia baixa com a mão esquerda, em pegada neutra (palma virada para o meio do corpo, polegar para cima e em volta do pegador) e punho reto; a mão direita fica apoiada em cima da coxa direita, parada. Começa com o braço esquerdo esticado para a frente e um pouco para baixo, sem travar o cotovelo, a mão na frente do corpo, acima dos joelhos, e o ombro esquerdo levado para a frente (escápula aberta), com o tronco um pouco virado para a direita. Puxa o puxador até o lado do abdômen dobrando o cotovelo e levando-o para trás, junto do corpo, até a linha das costas, fechando a escápula (ombro para trás e um pouco para baixo) e girando o tronco um pouco para a esquerda; volta devagar até o braço esticar, deixando o ombro ir para a frente. O quadril e as pernas não mexem e as costas não inclinam; o cabo passa por cima dos pés até a roldana baixa na frente das chapas, que gira acompanhando o cabo. Depois troca de lado.",
+ "cinesiologia": {
+  "plano": "sagital (extensão do ombro com flexão do cotovelo, o braço passando junto do corpo) com um pouco de transverso (o tórax girando em volta do eixo do tronco e a escápula indo pra frente e pra trás); cadeia cinética aberta, sentado com apoio de 3 pontos (os 2 pés nas chapas e o glúteo no banco: Ronai 2019, \"both feet against machine foot plates and the buttocks on a bench\") e a mão livre na coxa",
+  "articulacoes": "ombro esquerdo (extensão na ida, do braço ~20° abaixo da horizontal até o cotovelo ~24° atrás da linha do tronco, na linha das costas; flexão na volta), cotovelo esquerdo (flexão na ida, de ~9° até ~120°; extensão na volta, sem travar), escápula esquerda (retração e um pouco de depressão na ida — o ombro vai pra trás —, protração na volta — o ombro vai pra frente), coluna torácica e lombar (o tórax gira ~14° em volta do eixo do tronco: de ~8° pra direita no começo a ~6° pra esquerda no fim, com a pelve parada no banco); punho esquerdo reto e parado; quadril a ~93°, joelhos a ~30° e tornozelos parados, com os pés nas chapas; braço direito parado com a mão na coxa (o ombro e o cotovelo só acompanham o giro do tórax)",
+  "agonistas": "músculos das costas do lado que puxa — latíssimo do dorso, redondo maior, trapézio médio e romboides (NSCA, Low-pulley seated row: \"Major muscles involved : Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; ExRx, Cable One Arm Seated Row: Target \"Back, General\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "trapézio inferior, deltoide posterior, infraespinhal, redondo menor, braquial, braquiorradial, peitoral maior (porção esternal) e eretores da espinha (ExRx, Cable One Arm Seated Row: Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\", \"Erector Spinae\"; Comments: \"If low back is kept still, Erector Spinae acts as synergist muscle\")",
+  "estabilizadores": "bíceps braquial e cabeça longa do tríceps (ExRx: Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"); oblíquos, isquiotibiais, glúteo máximo e adutor magno seguram a pelve e o tronco (ExRx: Stabilizers \"Obliques\", \"Hamstrings\", \"Gluteus Maximus\", \"Adductor Magnus\"); com um braço só o oblíquo externo trabalha mais que na remada com os 2 (Saeterbakken 2015, remada sentada no cabo entre os 3 exercícios medidos: \"unilateral performance of exercises activated the external oblique more than bilateral performance, regardless of exercise\") e os eretores e o multífido seguram a coluna (Ronai 2019: \"The erector spinae multifidus and abdominal muscles provide spine stability\")",
+  "fases": "concêntrica (puxa o puxador até o lado do tronco levando o ombro pra trás e girando um pouco a cintura — ExRx: \"Pull cable attachment to side of torso, slightly twisting through waist. Pull shoulder back and push chest forward during contraction.\"; NSCA: \"without jerking your torso\") e excêntrica (volta devagar até o braço esticar e o ombro ir pra frente — ExRx: \"Return until arm is extended and shoulder is stretched forward.\"; Ronai 2019: \"lower the handlebar with control, don't drop it\"); depois o outro braço (ExRx: \"Continue with opposite arm.\")"
+ },
+ "referencias": [
+  "ExRx.net — Cable One Arm Seated Row (https://exrx.net/WeightExercises/BackGeneral/CBOneArmRow, lido na cópia do Internet Archive de 04/03/2021, a mais nova guardada; o site responde 403 direto): \"Utility: Basic or Auxiliary\", \"Mechanics: Compound\", \"Force: Pull\"; Preparation: \"Sit slightly forward on platform or secured bench in order to grasp cable stirrup with one hand. Position hips back with knees slightly bent. Allow shoulder with stirrup to be pulled forward.\"; Execution: \"Pull cable attachment to side of torso, slightly twisting through waist. Pull shoulder back and push chest forward during contraction. Return until arm is extended and shoulder is stretched forward. Repeat. Continue with opposite arm.\"; Comments: \"It is optional to bend lower back forward during stretch and pull it upright during contraction. If low back is kept still, Erector Spinae acts as synergist muscle. Also see Cable One Arm Twisting Seated Row.\"; músculos: Target \"Back, General\"; Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\", \"Erector Spinae\"; Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"; Stabilizers \"Obliques\", \"Hamstrings\", \"Gluteus Maximus\", \"Adductor Magnus\". A animação da página (CBOneArmRow.gif, © 2010 ExRx.net, cópia do Internet Archive de 07/02/2020), vista quadro a quadro: puxador D numa mão só, a outra mão apoiada na coxa, o tronco girando junto (o ombro do puxador vai pra frente na volta e pra trás na puxada) e a mão terminando do lado da cintura, com o cotovelo atrás do tronco",
+  "ExRx.net — Cable One Arm Twisting Seated Row (https://exrx.net/WeightExercises/BackGeneral/CBOneArmTwistingRow, cópia do Internet Archive de 31/05/2023): \"Bend forward and grasp cable stirrup with one hand.\" / \"Allow shoulder with stirrup to be pulled forward with forward bend and twist through waist.\" / \"Pull cable attachment to side, extending and twisting through waist.\" — é a OUTRA variação, com o tronco dobrando pra frente e girando bem; a remada daqui é a de cima, com o tronco em pé e o giro pequeno (\"slightly\")",
+  "O exercício do catálogo (fonte_en \"Seated One-arm Cable Pulley Rows\", Bodybuilding.com; texto lido no free-exercise-db, https://github.com/yuhonas/free-exercise-db, exercises/Seated_One-arm_Cable_Pulley_Rows.json, em 10/10/2026 — a página da Bodybuilding.com hoje só abre por script): \"place your feet on the front platform or crossbar provided making sure that your knees are slightly bent and not locked\"; \"grab the single handle attachment with your left arm using a palms-down grip\"; \"The right arm can be kept by the waist.\"; \"Keeping the torso stationary, pull the handles back towards your torso while keeping the arms close to it as you rotate the wrist, so that by the time your hand is by your abdominals it is in a neutral position (palms facing the torso).\"; nas 2 fotos a mão livre fica em cima da coxa. Diferenças daqui: a pegada é neutra o movimento todo (Ronai 2019; NSCA \"neutral or pronated\"; a animação do ExRx) e o tórax gira um pouco (ExRx)",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15.3 \"Exercise list part 2\" (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2, lido em 10/10/2026): Low-pulley seated row (machine) — \"Major muscles involved : Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; \"Sit on the pad with your feet on the supports and your legs parallel.\"; \"Grasp the handles with a closed grip (neutral or pronated).\"; \"Sit upright with your knees slightly flexed and your arms fully extended.\"; \"Pull the handles toward your abdomen without jerking your torso.\"; \"Keep a slight bend in your knees and maintain an upright torso.\"; \"Extend your elbows to return to the starting position.\"; \"Maintain the same posture throughout.\" — a NSCA não traz a variação de um braço só nessa lista",
+  "ACE — Seated Row (https://www.acefitness.org/resources/everyone/exercise-library/48/seated-row/, lido em 10/10/2026): \"Use a seated pulley cable machine and a narrow handle, and place the feet on the floor with knees bent and maintain a straight back. Hold the handle and lift the chest while slowly pulling the elbows backwards close to the rib cage until the handle touches the front of the stomach.\"; ACE — Single Arm Row (https://www.acefitness.org/resources/everyone/exercise-library/337/single-arm-row/, lido em 10/10/2026): \"Stand with the feet hip-width apart.\" / \"Attach a single handle to the cable pulley and press feet into the floor while pulling the cable back towards the body with the left hand.\" — a remada de um braço no cabo da ACE é EM PÉ; sentada, a ACE só tem a de 2 mãos",
+  "Ronai P. Do It Right: The Seated Cable Row Exercise. ACSM's Health & Fitness Journal. 2019;23(4):32-37. doi:10.1249/FIT.0000000000000492 (texto lido na cópia do Internet Archive de 25/07/2024 da página da revista, em 10/10/2026): \"Because the seated cable row exercise uses a three-point base of support (both feet against machine foot plates and the buttocks on a bench)\"; \"Feet are placed firmly in a shoulder width position against the foot plates with the knees comfortably flexed. Handlebars are grasped below shoulder height with a narrower than shoulder width, closed, neutral (midpronated) grip. Elbows are fully extended, roughly parallel with the ground, and the handlebar remains just above the knees/legs.\"; \"The head and the neck stay directly aligned above the shoulders, torso, and hips\"; \"The torso remains perpendicular/vertical with the floor.\"; \"retracting the scapulae\"; \"To prevent excessive stress on anterior shoulder joint structures, the upper arm and elbows should not pass behind the back of the rib cage\"; \"lower the handlebar with control, don't drop it\"; erros comuns: \"rounding the upper back\", \"keeping the elbows bent or flared outward\", \"failing to fully extend the elbows between repetitions\", \"hyperextending/locking the knees\"; \"The erector spinae multifidus and abdominal muscles provide spine stability during the entire barbell seated cable row exercise\" — o artigo cita o Saeterbakken 2015 (abaixo)",
+  "Saeterbakken A, Andersen V, Brudeseth A, Lund H, Fimland MS. The Effect of Performing Bi- and Unilateral Row Exercises on Core Muscle Activation. Int J Sports Med. 2015;36(11):900-5. doi:10.1055/s-0034-1398646 (resumo no PubMed, PMID 26134664, lido em 10/10/2026): \"The purpose of the study was to compare core muscle activation in 3 different row exercises (free-weight bent-over row, seated cable row and machine row) performed unilaterally and bilaterally, at matched effort levels.\"; \"unilateral performance of exercises activated the external oblique more than bilateral performance, regardless of exercise\"; \"generally bilateral performance of exercises provided higher erector spinae and multifidus EMG activity compared to unilateral performance\"",
+  "Medidas do equipamento (as da Remada Baixa na Polia, mesmo banco e mesma polia, lidas em 08/10/2026): Legend Fitness 906 Seated Row (\"The deep 38.25-inch seat allows users of all heights to find a comfortable starting position\"); Valor Fitness BD-71 Low Row Foot Plate (\"The solid plate sits at a 30 degree angle.\"); Ironmaster Low Row Foot Plate (\"Large foot plates measure 15 cm x 23 cm / 6 in x 9 in.\"); Gymleco 210 Seated Row (\"One handle included\", \"Large footplate\"); Skelcore Power Series Cable Low Row (a roldana na torre acima dos apoios dos pés); o puxador D do equip3d.puxador_polia: Synergee Single D Handle (\"Handle Diameter: 25mm\", \"Diameter: 5.7\\\" x 5.7\\\"\")"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "sentado no banco com as solas nas chapas inclinadas do apoio, a ~27 cm do chão (ExRx, Cable One Arm Seated Row: \"Sit slightly forward on platform or secured bench\"; NSCA: \"Sit on the pad with your feet on the supports\"; Ronai 2019: \"both feet against machine foot plates\"); as regras de pé no chão (planta a 0 ± 5 mm) e as de técnica com os pés no chão (ponta do pé e largura medidas no plano do chão) não servem: quem confere os pés são as zonas do calcanhar e da planta nas chapas em todo quadro, a largura dos pés e o joelho na direção do pé abaixo (as pernas não mexem), como na Remada Baixa na Polia",
+  "eixos_motivo": "sem regra de eixo × junta: na remada no cabo não há alavanca; o cabo sai da roldana baixa e o puxador é seguro pela mão",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "remada_baixa_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Low-pulley seated row (\"Sit on the pad\"); Ronai 2019 (\"the buttocks on a bench\")"
+   },
+   {
+    "nome": "calcanhar esquerdo chapado na chapa",
+    "equipamento": "remada_baixa_apoio",
+    "partes": [
+     "LeftFoot"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "Ronai 2019 (\"Feet are placed firmly in a shoulder width position against the foot plates\"); NSCA (\"your feet on the supports\")"
+   },
+   {
+    "nome": "calcanhar direito chapado na chapa",
+    "equipamento": "remada_baixa_apoio",
+    "partes": [
+     "RightFoot"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "planta e dedos do pé esquerdo na chapa",
+    "equipamento": "remada_baixa_apoio",
+    "partes": [
+     "LeftToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "idem (o pé inteiro firme na chapa)"
+   },
+   {
+    "nome": "planta e dedos do pé direito na chapa",
+    "equipamento": "remada_baixa_apoio",
+    "partes": [
+     "RightToeBase"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "canelas sem encostar nas chapas",
+    "equipamento": "remada_baixa_apoio",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     3,
+     1000000
+    ],
+    "fonte": "só os pés encostam no apoio (ExRx: \"Sit slightly forward on platform or secured bench\")"
+   },
+   {
+    "nome": "o cabo passa por cima dos pés e das pernas sem encostar",
+    "equipamento": "polia_cabo",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "pedido do Weslley (cabo e puxador NUNCA passam por dentro das pernas, dos joelhos, dos pés nem do tronco); medido da pele"
+   },
+   {
+    "nome": "o cabo longe do tronco e da cabeça",
+    "equipamento": "polia_cabo",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     50,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "o cabo não encosta no braço que puxa",
+    "equipamento": "polia_cabo",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "idem: o cabo sai do mosquetão, na frente da mão, e vai pra roldana"
+   },
+   {
+    "nome": "o cabo longe do braço livre",
+    "equipamento": "polia_cabo",
+    "partes": [
+     "RightArm",
+     "RightForeArm",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     100,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "o aro do puxador passa em volta dos dedos sem entrar na mão",
+    "equipamento": "puxador_alca",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "mm": [
+     1,
+     5000
+    ],
+    "fonte": "regra da fábrica (o equipamento nunca entra no corpo; a checagem ignora o que fica dentro da mão, então o aro × a mão é medido aqui), como na Elevação Lateral na Polia"
+   },
+   {
+    "nome": "o aro do puxador não encosta no antebraço, nas coxas nem no tronco",
+    "equipamento": "puxador_alca",
+    "partes": [
+     "LeftForeArm",
+     "LeftArm",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "pedido do Weslley (o puxador NUNCA passa por dentro das pernas, dos joelhos nem do tronco)"
+   },
+   {
+    "nome": "o mosquetão e a bola do cabo longe do corpo",
+    "equipamento": "puxador_engate",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase",
+     "LeftForeArm",
+     "LeftArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "o pegador fica longe das coxas e do tronco",
+    "equipamento": "puxador_pegador",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mão e antebraço esquerdos sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "mão direita apoiada em cima da coxa direita",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "RightUpLeg"
+    ],
+    "mm": [
+     -3,
+     2
+    ],
+    "fonte": "a mão livre fica na coxa: animação do ExRx (Cable One Arm Seated Row) e o exercício do catálogo (Bodybuilding.com, Seated One-arm Cable Pulley Rows: \"The right arm can be kept by the waist\"; nas fotos a mão livre fica em cima da coxa); a palma encosta sem entrar (afunda ~1 mm)"
+   },
+   {
+    "nome": "fim: a mão chega do lado do abdômen",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1"
+    ],
+    "t": 1.0,
+    "mm": [
+     30,
+     90
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"Pull cable attachment to side of torso\"); o exercício do catálogo (\"by the time your hand is by your abdominals\"). Medido da pele da mão até a pele da barriga (Hips, Spine e Spine1): a mão para na frente do lado do abdômen, sem encostar — com o antebraço na linha do cabo e o cotovelo na linha das costas (Ronai 2019: \"the upper arm and elbows should not pass behind the back of the rib cage\"), ela não chega mais perto (a faixa é da cena)"
+   },
+   {
+    "nome": "antebraço direito sem entrar no corpo",
+    "partes": [
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); o braço × tronco fica com a regra de sempre (corpo × corpo, fora o vinco da axila)"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "cabo × assento",
+    "equipamento": "polia_cabo",
+    "de": "remada_baixa_assento",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica)"
+   },
+   {
+    "nome": "cabo × chapas dos pés",
+    "equipamento": "polia_cabo",
+    "de": "remada_baixa_apoio",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "o cabo passa por cima dos pés (regra da fábrica)"
+   },
+   {
+    "nome": "cabo × estrutura do banco",
+    "equipamento": "polia_cabo",
+    "de": "remada_baixa_estrutura",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "cabo × aro do puxador (o cabo sai do mosquetão sem passar pelo aro)",
+    "equipamento": "polia_cabo",
+    "de": "puxador_alca",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica)"
+   },
+   {
+    "nome": "puxador × chapas dos pés",
+    "equipamento": "puxador_alca",
+    "de": "remada_baixa_apoio",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "puxador × torre da polia",
+    "equipamento": "puxador_alca",
+    "de": "polia_torre",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "estrutura do banco × torre da polia",
+    "equipamento": "remada_baixa_estrutura",
+    "de": "polia_torre",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica): a base da polia fica na frente das chapas, sem encostar na estrutura delas"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "começo: braço esticado, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "E",
+    "t": 0.0,
+    "graus": [
+     3,
+     15
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"Return until arm is extended\"); NSCA (\"your arms fully extended\"); Ronai 2019 (\"Elbows are fully extended\"; erro comum: \"failing to fully extend the elbows between repetitions\")"
+   },
+   {
+    "nome": "começo: braço um pouco abaixo da horizontal (a mão abaixo do ombro, acima dos joelhos)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "lado": "E",
+    "t": 0.0,
+    "graus": [
+     10,
+     28
+    ],
+    "fonte": "Ronai 2019 (\"Handlebars are grasped below shoulder height\"; \"Elbows are fully extended, roughly parallel with the ground, and the handlebar remains just above the knees/legs\"). Medida: + = cotovelo abaixo do ombro"
+   },
+   {
+    "nome": "começo: ombro esquerdo levado pra frente (escápula aberta)",
+    "medida": "escapula_frente",
+    "lado": "E",
+    "t": 0.0,
+    "mm": [
+     10,
+     45
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"Allow shoulder with stirrup to be pulled forward\"; \"Return until arm is extended and shoulder is stretched forward\")"
+   },
+   {
+    "nome": "fim: ombro esquerdo pra trás (escápula fechada)",
+    "medida": "escapula_frente",
+    "lado": "E",
+    "t": 1.0,
+    "mm": [
+     -35,
+     -3
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"Pull shoulder back and push chest forward during contraction\"); Ronai 2019 (\"retracting the scapulae\")"
+   },
+   {
+    "nome": "a escápula do braço livre fica parada",
+    "medida": "escapula_frente",
+    "lado": "D",
+    "t": "todos",
+    "mm": [
+     -5,
+     15
+    ],
+    "fonte": "só o lado que puxa mexe a escápula (ExRx: \"Allow shoulder with stirrup to be pulled forward\" — o ombro do puxador)"
+   },
+   {
+    "nome": "fim: cotovelo dobrado",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "E",
+    "t": 1.0,
+    "graus": [
+     100,
+     135
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"Pull cable attachment to side of torso\"); NSCA (\"Pull the handles toward your abdomen\")"
+   },
+   {
+    "nome": "fim: cotovelo atrás, na linha das costas (sem passar muito dela)",
+    "medida": "braco_frente",
+    "lado": "E",
+    "t": 1.0,
+    "graus": [
+     -35,
+     -15
+    ],
+    "fonte": "ExRx (\"Pull shoulder back\"); ACE, Seated Row (\"pulling the elbows backwards close to the rib cage\"); Ronai 2019 (\"the upper arm and elbows should not pass behind the back of the rib cage\"): com −25° o centro do cotovelo fica na linha das costas"
+   },
+   {
+    "nome": "cotovelo junto do corpo (não abre pro lado)",
+    "medida": "cotovelo_tronco",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     -15,
+     20
+    ],
+    "fonte": "o exercício do catálogo (Bodybuilding.com, Seated One-arm Cable Pulley Rows: \"keeping the arms close to it\"); ACE, Seated Row (\"close to the rib cage\"); Ronai 2019 (erro comum: \"keeping the elbows bent or flared outward\")"
+   },
+   {
+    "nome": "pegada neutra (palma pro meio do corpo, polegar pra cima)",
+    "medida": "palma_dentro",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     55,
+     95
+    ],
+    "fonte": "Ronai 2019 (\"closed, neutral (midpronated) grip\"); NSCA (\"Grasp the handles with a closed grip (neutral or pronated)\"); a animação do ExRx (puxador D com o pegador em pé)"
+   },
+   {
+    "nome": "punho reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "regra da fábrica (punho reto na pegada, a mão na linha do antebraço); o aro do puxador gira em volta do pegador até o plano do cabo"
+   },
+   {
+    "nome": "mão livre apoiada na coxa: punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "a mão livre descansa na coxa (animação do ExRx; Bodybuilding.com: \"The right arm can be kept by the waist\"), com o antebraço deitado em cima dela: o punho quase não dobra"
+   },
+   {
+    "nome": "braço livre: cotovelo dobrado, o antebraço em cima da coxa",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     80,
+     115
+    ]
+   },
+   {
+    "nome": "tronco em pé (sem inclinar pra frente nem pra trás)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "NSCA (\"Sit upright\"; \"maintain an upright torso\"); Ronai 2019 (\"The torso remains perpendicular/vertical with the floor\"); o ExRx deixa opcional dobrar a lombar na volta (\"It is optional to bend lower back forward during stretch\"): aqui ela fica parada"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "a dica da Remada Baixa na Polia (\"Coluna neutra\"); ACE (\"maintain a straight back\"); Ronai 2019 (erro comum: \"rounding the upper back\")"
+   },
+   {
+    "nome": "começo: o tórax um pouco virado pra direita (o ombro esquerdo à frente)",
+    "medida": "tronco_giro",
+    "t": 0.0,
+    "graus": [
+     -14,
+     -4
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"Allow shoulder with stirrup to be pulled forward\"; \"Pull cable attachment to side of torso, slightly twisting through waist\"). Medida (tecnica3d.tronco_giro): o tórax × a pelve em volta do eixo do tronco, + = virado pra esquerda"
+   },
+   {
+    "nome": "fim: o tórax um pouco virado pra esquerda (o ombro esquerdo pra trás)",
+    "medida": "tronco_giro",
+    "t": 1.0,
+    "graus": [
+     2,
+     10
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"slightly twisting through waist. Pull shoulder back\")"
+   },
+   {
+    "nome": "o tórax gira pouco (\"slightly\"), sem virar o corpo",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -14,
+     10
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"slightly twisting through waist\"); a dica da Remada Baixa na Polia (\"tronco quase fixo\"); o ExRx tem o giro grande como OUTRA variação (Cable One Arm Twisting Seated Row)"
+   },
+   {
+    "nome": "ombros sem inclinar pro lado",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "pelve nivelada e parada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "quadril parado (sentado, ~90°)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     85,
+     100
+    ],
+    "fonte": "NSCA (\"Sit upright\"); a medida da fábrica é coxa × prolongamento do tronco pra baixo"
+   },
+   {
+    "nome": "joelhos levemente dobrados e parados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     20,
+     40
+    ],
+    "fonte": "ExRx, Cable One Arm Seated Row (\"Position hips back with knees slightly bent\"); NSCA (\"Keep a slight bend in your knees\"); Ronai 2019 (erro comum: \"hyperextending/locking the knees\")"
+   },
+   {
+    "nome": "pés um pouco mais abertos que o quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.2,
+     2.0
+    ],
+    "fonte": "Ronai 2019 (\"Feet are placed firmly in a shoulder width position against the foot plates\"); NSCA (\"your legs parallel\"). Medida: distância entre os tornozelos de lado a lado ÷ entre as articulações do quadril"
+   },
+   {
+    "nome": "joelho na direção do pé",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     -20,
+     40
+    ],
+    "fonte": "NSCA (\"your legs parallel\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "Ronai 2019 (\"The head and the neck stay directly aligned above the shoulders, torso, and hips\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}

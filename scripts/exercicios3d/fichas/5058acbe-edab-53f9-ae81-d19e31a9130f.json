@@ -1,0 +1,376 @@
+{
+ "uuid": "5058acbe-edab-53f9-ae81-d19e31a9130f",
+ "nome": "Supino Reto no Smith",
+ "cena": "supino_reto_no_smith",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral médio (esternal) · tríceps · deltoide anterior",
+ "padrao_movimento": "supino_reto",
+ "equipamento": "smith",
+ "variacao": "banco reto",
+ "alvos": [
+  "peitoral"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "triceps"
+ ],
+ "camera": {
+  "az": 20,
+  "el": 22,
+  "dist": 4.4,
+  "alvo": [
+   0.0,
+   0.3,
+   0.75
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.6,
+  "alvo": [
+   0.0,
+   0.15,
+   0.8
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "No Smith a barra corre presa nos dois trilhos verticais da máquina e só sobe e desce. Deitado de costas no banco reto, colocado embaixo da barra com o peito embaixo dela, com a cabeça, as costas e o glúteo apoiados no banco e os pés chapados no chão, segura a barra com as palmas viradas para os pés (pegada pronada), bem mais aberta que os ombros, com as escápulas para trás e para baixo e os punhos firmes, as mãos um pouco viradas para fora (a barra baixa na palma); destrava a barra girando-a para trás e começa com os braços quase esticados e a barra em cima do peito. Desce a barra devagar, em linha reta, até encostar de leve no peito, na linha dos mamilos, com os cotovelos abertos a cerca de 60° do tronco, os antebraços em pé embaixo da barra e os cotovelos um pouco abaixo do banco; empurra a barra de volta pela mesma linha até os cotovelos quase esticarem, sem travar. Como o Smith não deixa a barra sair da linha, ela fica em cima do mesmo ponto do peito o tempo todo — no supino com barra livre ela volta para cima dos ombros.",
+ "cinesiologia": {
+  "plano": "transverso e sagital: adução horizontal e flexão do ombro com extensão do cotovelo (o braço vai do lado do tronco para cima); cadeia cinética aberta. A barra guiada só anda na vertical, numa linha parada em cima da linha dos mamilos (92 mm pros pés da articulação do ombro): em cima os braços ficam um pouco inclinados para os pés (~11° da vertical), e não em pé em cima dos ombros como no supino com barra livre",
+  "articulacoes": "ombro (adução horizontal e flexão na subida, abdução horizontal e extensão na descida — embaixo o cotovelo fica ~74 mm abaixo do topo do banco) e cotovelo (extensão na subida, de ~131° de flexão até ~10°, sem travar; flexão na descida); punho firme, um pouco estendido (~14°) e com a mão um pouco virada para fora — a mão gira em volta da barra junto com o antebraço; escápulas retraídas e deprimidas (para trás e para baixo), paradas no banco; quadril, joelhos e tornozelos parados, com os pés chapados no chão",
+  "agonistas": "peitoral maior, porção esternal (ExRx, Smith Bench Press: Target \"Pectoralis Major, Sternal\")",
+  "sinergistas": "peitoral maior (porção clavicular), deltoide anterior e tríceps braquial (ExRx, Smith Bench Press: Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\"); no Smith e no supino com barra livre o peitoral maior e o deltoide anterior trabalham igual (Saeterbakken, van den Tillaar e Fimland 2011: \"Electrical activity in the pectoralis major and anterior deltoid did not differ during the lifts\")",
+  "estabilizadores": "bíceps braquial, cabeça curta (ExRx, Smith Bench Press: Dynamic Stabilizers \"Biceps Brachii, Short Head\"); a barra guiada tira parte do equilíbrio: o bíceps trabalha menos que na barra livre (Saeterbakken 2011: \"Electrical activity in the biceps brachii increased with stability requirements (i.e. Smith machine <barbell <dumbbells...)\") e o deltoide medial também (Schick et al. 2010: \"greater activation of the medial deltoid on the free weight bench press than on the Smith machine bench press\")",
+  "fases": "descida excêntrica até a barra encostar de leve no peito (ExRx: \"Lower weight to chest.\") e subida concêntrica até os cotovelos quase esticarem (\"Press bar until arms are extended.\"), a barra sempre na mesma linha vertical"
+ },
+ "referencias": [
+  "ExRx.net — Smith Bench Press (https://exrx.net/WeightExercises/PectoralSternal/SMBenchPress, lido na cópia do Internet Archive de 05/01/2024; o site responde 403 direto): classificação \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Lie supine on bench with chest under bar. Grasp bar with wide oblique overhand grip. Disengage bar by rotating bar back.\"; Execution: \"Lower weight to chest. Press bar until arms are extended. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide. Also see Bench Press Analysis.\"; músculos: Target \"Pectoralis Major, Sternal\"; Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\"; Dynamic Stabilizers \"Biceps Brachii, Short Head\"",
+  "ExRx.net — Barbell Bench Press (https://exrx.net/WeightExercises/PectoralSternal/BBBenchPress, cópia do Internet Archive de 04/09/2026) — a barra livre, pra comparar: \"Lie supine on bench. Dismount barbell from rack over upper chest using wide oblique overhand grip.\"; \"Lower weight to chest. Press bar upward until arms are extended. Repeat.\"",
+  "ExRx.net — Bench Press Analyses (https://exrx.net/Kinesiology/BenchPress, cópia do Internet Archive de 01/02/2025): \"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\"; \"Coach Rippetoe (2015), author of Starting Strength, suggests a 70º upper arm position with the forearms vertical at the lowest bench press position.\"; \"As the barbell is raise, it is positioned over the shoulders in the path of a J.\" (barra livre); \"Keep the scapula back and down.\"; \"For general strength training, the lower back forms a natural arch when the head, upper back, and hips are in contact with the bench. Placing the feet apart on the floor creates a more stable base of support.\"; \"Grip the bar with an opposing thumb grip so that the barbell does not slide out of the hand onto the body.\"; \"This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar.\"; \"For most fitness goals including general muscular strength and development, a standard bench press grip of 1.5 to 1.7 times the biacromial width can be used\"; seção Dumbbell & Smith: \"The average load of the Dumbbell Bench Press is approximately 17% less than a barbell bench press and 14% less than a Smith Bench Press. Electrical activity in the Pectoralis Major and Anterior Deltoid did not differ during the lifts.\"; sobre Green 2007: \"The main premise of the paper argues that a bench press grip of greater than 1.5 times the biacromial width places the shoulders in a vulnerable position (Green 2007).\"",
+  "NSCA — Basics of Strength and Conditioning Manual (Sands, Wurth e Hewit), https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (cópia do Internet Archive de 26/05/2024) — é o supino com barra LIVRE (o manual não tem o do Smith): cap. 3, p. 28: \"The athlete should position the body to achieve a five-point body contact position: 1. Head in neutral position on bench or back pad 2. Shoulders and upper back set evenly on bench or back pad 3. Buttocks on bench or seat 4. Right foot flat on floor 5. Left foot flat on floor\"; cap. 4, 4a. Barbell Bench Press, pp. 53–54: \"Grasp the bar evenly with a closed, pronated grip with hands slightly wider than shoulder-width\"; \"Lower the bar slowly and under control, allowing it to touch the chest\"; \"Keep wrists rigid and directly above elbows\"; \"Drive the weight explosively off the chest by extending elbows\"; \"Wrists should be in line with elbows with thumbs wrapped around the bar throughout the entire lift\"; \"The lower back should remain in contact with the bench throughout the entire lift (do not arch the back or raise the chest to meet the bar)\"; \"Avoid bouncing the bar off the chest\"; \"The movement of the bar should be down and slightly forward, and up and slightly back\" (barra livre; no Smith a barra só anda na vertical)",
+  "ACE — Chest Press (https://www.acefitness.org/resources/everyone/exercise-library/5/chest-press/, equipamento \"Barbell, Bench\", lido em 10/10/2026): \"Lie face up on a flat bench, and grip a barbell with the hands slightly wider than shoulder-width. Press the feet into the ground and the hips into the bench while lifting the bar off the rack. Slowly lower the bar to the chest by allowing the elbows to bend out to the side. Stop when the elbows are just below the bench, and press feet into the floor to press the weight straight up to return to the starting position.\"",
+  "Physitrack — Smith machine bench press (https://us.physitrack.com/home-exercise-video/smith-machine-bench-press, lido em 10/10/2026): \"Lie on your back on a bench under a Smith machine. Your chest is under the bar. Grasp the bar with your palms facing down (i.e. overhand grip) slightly wider than shoulder-width, and your elbows straight. Unlock the bar.\"; \"Lower the bar under control until your upper arms are horizontal or slightly lower. Push the bar back to the starting position.\" (aqui a barra desce até o peito, como mandam o ExRx, a NSCA, a ACE e Saeterbakken 2021: o braço passa da horizontal — ver as checagens)",
+  "Cotterman ML, Darby LA, Skelly WA. Comparison of muscle force production using the Smith machine and free weights for bench press and squat exercises. J Strength Cond Res. 2005;19(1):169-176. doi:10.1519/14433.1 — lido só o resumo (PubMed 15705030): \"The Smith machine (SM) (vertical motion of bar on fixed path; fixed-form exercise) and free weights (FWs) (free-form path) are commonly used strength training modes.\"; \"the bench 1RM was greater for FWs than the SM\"",
+  "Schick EE, Coburn JW, Brown LE, Judelson DA, Khamoui AV, Tran TT, Uribe BP. A comparison of muscle activation between a Smith machine and free weight bench press. J Strength Cond Res. 2010;24(3):779-784. doi:10.1519/JSC.0b013e3181cc2237 — lido só o resumo (PubMed 20093960; o texto inteiro é pago): \"Results indicated greater activation of the medial deltoid on the free weight bench press than on the Smith machine bench press.\"",
+  "Saeterbakken AH, van den Tillaar R, Fimland MS. A comparison of muscle activity and 1-RM strength of three chest-press exercises with different stability requirements. J Sports Sci. 2011;29(5):533-538. doi:10.1080/02640414.2010.543916 — lido só o resumo (PubMed 21225489; o texto inteiro é pago): \"The barbell load was ∼3% higher than that for the Smith machine\"; \"Electrical activity in the pectoralis major and anterior deltoid did not differ during the lifts. Electrical activity in the biceps brachii increased with stability requirements (i.e. Smith machine <barbell <dumbbells...)\"",
+  "Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. Int J Environ Res Public Health. 2021;18(12):6444 (texto inteiro, PMC8296276; barra livre): \"The lift started with fully extended elbows. The barbell was lowered to lightly touch the chest (no bouncing was allowed) before being elevated back to the starting position. The head, shoulders, and buttocks had to be in contact with the bench during the entire lift. The width of the feet was self-selected but was measured and controlled before each attempt.\"",
+  "Green CM, Comfort P. The affect of grip width on bench press performance and risk of injury. Strength Cond J. 2007;29(5):10-14 — NÃO lido (pago; o registro de Salford e o da revista não abriram): só o que o ExRx, Bench Press Analyses, cita dele (acima)",
+  "Medidas da máquina: as do e3.smith (Agachamento no Smith, lote 4) — barra de 30 mm na pegada, trilhos a ±0,75 m, carrinhos de 16 cm, anilha de Ø 450 mm, travas 3 cm abaixo do carrinho no fim do curso; as fontes (Titan Fitness Smith Machine, Precor DPL0802, Gym Gear Elite Series) estão na ficha do Agachamento no Smith e no bloco SMITH do lib/equip3d.py (não relidas aqui); o banco é o e3.banco do Supino Reto com Barra (topo a 0,44 m)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "cabeça apoiada no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 28 (\"Head in neutral position on bench or back pad\"); Saeterbakken 2021 (\"The head, shoulders, and buttocks had to be in contact with the bench during the entire lift\")"
+   },
+   {
+    "nome": "costas (escápulas) apoiadas no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 28 (\"Shoulders and upper back set evenly on bench or back pad\"); Saeterbakken 2021 (idem)"
+   },
+   {
+    "nome": "glúteo apoiado no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 28 (\"Buttocks on bench or seat\"); ACE — Chest Press (\"Press the feet into the ground and the hips into the bench\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "estrutura do Smith (base, colunas, trilhos, pinos, travas) longe do banco",
+    "equipamento": "smith_estrutura",
+    "de": "banco",
+    "t": 0.0,
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "pedido do exercício: a estrutura do Smith não encosta no banco (as 2 ficam paradas: basta o 1º quadro)"
+   },
+   {
+    "nome": "barra do Smith (carrinhos, ganchos, luvas e anilhas) longe do banco",
+    "equipamento": "smith_barra",
+    "de": "banco",
+    "t": "todos",
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "pedido do exercício: as anilhas não batem no banco"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços quase esticados em cima, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ExRx — Smith Bench Press (\"Press bar until arms are extended\"); Saeterbakken 2021 (\"The lift started with fully extended elbows\"); sem travar o cotovelo (~10°), como no Supino Reto com Barra"
+   },
+   {
+    "nome": "em cima a barra fica em cima do peito (o braço um pouco inclinado pros pés), não em cima do ombro",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     70,
+     85
+    ],
+    "fonte": "ExRx — Smith Bench Press (\"Lie supine on bench with chest under bar\"); Cotterman 2005 (\"vertical motion of bar on fixed path\"): a barra só anda na vertical, então em cima ela fica em cima do mesmo ponto do peito em que encosta; medida da fábrica: braço × eixo do tronco, 90 = braço em pé (o Supino Reto com Barra, livre, fica em 88)"
+   },
+   {
+    "nome": "cotovelo bem dobrado embaixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     105,
+     140
+    ],
+    "fonte": "ACE — Chest Press (\"Stop when the elbows are just below the bench\"); ExRx — Smith Bench Press (\"Lower weight to chest\"): com a barra no peito e o antebraço em pé o cotovelo dobra ~131° e fica ~74 mm abaixo do topo do banco"
+   },
+   {
+    "nome": "cotovelo a 45–70° do tronco embaixo",
+    "medida": "braco_abertura",
+    "t": 1.0,
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\")"
+   },
+   {
+    "nome": "antebraço na vertical embaixo",
+    "medida": "antebraco_vertical",
+    "t": 1.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"a 70º upper arm position with the forearms vertical at the lowest bench press position\", Rippetoe); NSCA — Basics of Strength and Conditioning Manual (supino com barra livre) (\"Keep wrists rigid and directly above elbows\")"
+   },
+   {
+    "nome": "antebraço quase em pé o movimento todo",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "ExRx — Bench Press Analyses (idem); em cima, com a barra em cima do peito e o braço quase esticado, o antebraço deita um pouco pros pés"
+   },
+   {
+    "nome": "pegada aberta, ~1,5–1,7 vez a largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     2.0
+    ],
+    "fonte": "ExRx — Smith Bench Press (\"Grasp bar with wide oblique overhand grip\"; \"Range of motion will be compromised if grip is too wide\"); ExRx — Bench Press Analyses (\"a standard bench press grip of 1.5 to 1.7 times the biacromial width\"). A medida daqui divide pela distância entre as articulações dos ombros, menor que a biacromial: por isso a faixa fica acima de 1,5–1,7 (a mesma do Supino Reto com Barra)"
+   },
+   {
+    "nome": "pegada pronada (palmas pros pés, não neutra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra livre) (\"Grasp the bar evenly with a closed, pronated grip\"); Physitrack — Smith machine bench press (\"palms facing down (i.e. overhand grip)\"): 0 = palma pros pés (ou pra cabeça), 90 = palmas uma pra outra (neutra)"
+   },
+   {
+    "nome": "palma de frente pros pés (nem pro teto nem pro peito)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     60,
+     120
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra livre) (\"closed, pronated grip\"): deitado, a frente do tronco é o teto; 90 = palma pros pés"
+   },
+   {
+    "nome": "punho firme, quase reto, sem dobrar pra trás",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "NSCA — Basics of Strength and Conditioning Manual (supino com barra livre) (\"Keep wrists rigid and directly above elbows\"; \"Wrists should be in line with elbows\"); ExRx — Bench Press Analyses (\"This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar.\")"
+   },
+   {
+    "nome": "punho sem desviar demais pro lado",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "amplitude normal do punho, desvio radial 0–20° e ulnar 0–30° (valores da AAOS, Norkin & White — os do lib/limites.py; tecnica3d.punho_desvio: + = pro lado do polegar); ExRx — Bench Press Analyses (\"Position the wrists directly under the bar by turning the wrists out slightly so bar is placed on lower outer portion of palm\"): a mão fica girada 6° pra fora; com ela ⟂ à barra, em cima, o punho desviava 24°/21° pro lado do polegar"
+   },
+   {
+    "nome": "tronco deitado no banco reto",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "ExRx — Smith Bench Press (\"Lie supine on bench\")"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"For general strength training, the lower back forms a natural arch when the head, upper back, and hips are in contact with the bench.\"); NSCA — Basics of Strength and Conditioning Manual (supino com barra livre) (\"do not arch the back or raise the chest to meet the bar\")"
+   },
+   {
+    "nome": "quadril quase esticado (coxas na linha do banco)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "deitado com os pés no chão a coxa fica quase na linha do tronco (a medida da fábrica é coxa × prolongamento do tronco pra baixo)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     75,
+     100
+    ],
+    "fonte": "NSCA — Basics, p. 28 (\"Right foot flat on floor\", \"Left foot flat on floor\"); ExRx — Bench Press Analyses (\"Placing the feet apart on the floor creates a more stable base of support.\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e pra baixo, paradas no banco",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"Keep the scapula back and down.\")"
+   },
+   {
+    "nome": "cabeça apoiada, na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA — Basics, p. 28 (\"Head in neutral position on bench or back pad\"); deitado, o pescoço estende ~16° até a cabeça encostar no banco (dt.deitar)"
+   }
+  ]
+ }
+}

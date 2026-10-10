@@ -1,0 +1,505 @@
+{
+ "uuid": "d15af9c4-3439-462f-a95b-4139e6627a82",
+ "nome": "Puxada Frontal",
+ "cena": "puxada_frontal",
+ "grupo": "Costas",
+ "subgrupo": "Latíssimo do dorso · trapézio inferior · bíceps",
+ "padrao_movimento": "puxada_vertical",
+ "equipamento": "polia",
+ "variacao": "pegada aberta",
+ "alvos": [
+  "dorsal"
+ ],
+ "auxiliares": [
+  "trapezio",
+  "biceps",
+  "costas",
+  "antebraco"
+ ],
+ "camera": {
+  "az": 160,
+  "el": 12,
+  "dist": 5.6,
+  "alvo": [
+   0.0,
+   -0.2,
+   1.1
+  ]
+ },
+ "camera_vistas": {
+  "dist": 5.2,
+  "alvo": [
+   0.0,
+   -0.25,
+   1.15
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na estação de puxada, de frente pra torre, com as coxas presas embaixo dos rolos, os joelhos dobrados e os pés chapados no chão, o tronco um pouco inclinado pra trás (uns 15°), o peito aberto e a cabeça na linha do tronco. Segura a barra longa com as mãos um pouco mais abertas que os ombros (pegada média: a distância entre os meios das mãos é 1,5 vez a largura dos ombros, ainda na parte reta da barra, antes das pontas dobradas), as palmas viradas pra frente (pegada pronada) e o polegar em volta da barra; começa com os braços esticados pra cima e um pouco pra frente, na direção da roldana, abertos num V, e os ombros soltos. Primeiro desce as escápulas e então puxa a barra pela frente do rosto até a parte alta do peito, quase encostando, levando os cotovelos pra baixo e um pouco pra trás até ficarem perto dos lados do tronco, e aproximando as escápulas (peito aberto). O tronco não mexe nem joga pra trás na puxada. Volta controlando até os braços quase esticarem, deixando as escápulas subirem um pouco no fim. O cabo desce da roldana alta até o meio da barra, entre as mãos, na frente do rosto.",
+ "cinesiologia": {
+  "plano": "frontal e sagital ao mesmo tempo: com as mãos um pouco mais abertas que os ombros o braço desce pelo lado e pela frente (adução e extensão do ombro, entre a pegada aberta, mais no plano frontal, e a fechada, mais no sagital); flexão do cotovelo no sagital; cadeia cinética aberta — a barra desce presa ao cabo da roldana alta, que puxa pra cima",
+  "articulacoes": "ombro (adução e extensão na puxada; abdução e flexão na volta), cotovelo (flexão na puxada e extensão na volta, sem travar) e cintura escapular (depressão e retração das escápulas no começo e durante a puxada; elevação no fim da volta); punho reto, tronco inclinado e parado, quadril, joelhos e pés parados (NFPT: \"The primary joint movements that occur during the exercise are shoulder adduction (lats and the teres major), scapular retraction and depression (middle and lower trapezius and rhomboids), shoulder extension (lats and teres major), and elbow flexion (brachialis, biceps brachii, and brachioradialis)\")",
+  "agonistas": "latíssimo do dorso (ExRx: Target \"Latissimus Dorsi\"; NSCA: \"Major muscles involved: Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"). EMG da pegada média: o latíssimo ativa igual nas 3 larguras pronadas (Andersen 2014: \"There was similar EMG activation between grip widths for latissimus, trapezius, or infraspinatus\"), com uma tendência a mais latíssimo que na fechada na volta (\"tendencies for medium greater than narrow for latissimus, and medium greater than wide for biceps (both p = 0.08)\", na fase excêntrica); igual na pronada a 150% e na supinada a 100% da largura biacromial (Lehman 2004: \"The level of forearm supination had no influence on latissimus dorsi activity during the pulldown exercise.\"); e igual a 150% e a 100% (Lee & Lim 2017, Tabela 3, pronada: latíssimo 0,358 a 150% e 0,360 a 100%; \"그립너비 100%와 150%에서는 유의한 차이가 나타나지 않았으며\" — sem diferença entre 100% e 150%)",
+  "sinergistas": "redondo maior, trapézio médio e inferior, romboides, deltoide posterior, infraespinal, redondo menor, coracobraquial, levantador da escápula, peitoral menor e os flexores do cotovelo — braquial, braquiorradial e bíceps braquial (ExRx: Synergists \"Brachialis\", \"Brachioradialis\", \"Biceps Brachii\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Coracobrachialis\", \"Rhomboids\", \"Levator Scapulae\", \"Trapezius, Lower\", \"Trapezius, Middle\", \"Pectoralis Minor\"; NFPT: \"The predominant muscle groups involved also include the teres major, middle and lower trapezius, rhomboids, posterior deltoid, brachialis, biceps brachii, and brachioradialis.\"); na pegada média o bíceps trabalha mais que na fechada na puxada (Andersen 2014: \"Analyzing the concentric phase separately revealed greater biceps brachii activation using the medium vs. narrow grip (p = 0.03).\") e o trapézio médio mais que na pegada de metade da largura dos ombros (Lee & Lim 2017: \"Middle trapezius showed higher muscle activities in 150% grip width than those of 50% grip width.\"); o peitoral maior ajuda MENOS que nas pegadas mais fechadas (Lee & Lim 2017: \"Pectoralis major and rectus abdominis showed higher muscle activities in 50% and 100% grip width than those of 150% grip width.\")",
+  "estabilizadores": "cabeça longa do tríceps (ExRx: Dynamic Stabilizers \"Triceps, Long Head\"); abdominais firmes seguram o tronco (ACE: \"Stiffen (“brace”) your abdominal muscles to stabilize your spine\"); os flexores do antebraço seguram a barra; as coxas presas embaixo dos rolos ancoram o corpo (ACE: \"anchoring your lower extremity by adjusting the thigh pad to fit firmly against the top of your thighs\")",
+  "fases": "puxada concêntrica: começa descendo as escápulas e segue com os cotovelos indo pra baixo e pra trás (ACE: \"initiate the downward pull by first depressing (lower) your scapulae, then pulling the bar downward towards the top or mid-section of your chest\"; NFPT: \"Pull the bar downward with the elbows moving down and back and the chest up and out as the bar is lowered.\"); volta excêntrica e controlada até os braços quase esticarem, com as escápulas subindo um pouco no fim (ACE: \"slowly return to your starting position by allowing the bar to move upwards until your elbows are fully extended, then allow your scapule to rise slightly\"; dica do app: \"volte controlando até os braços quase estendidos\")"
+ },
+ "referencias": [
+  "ExRx.net — Cable Pulldown (https://exrx.net/WeightExercises/LatissimusDorsi/CBFrontPulldown, cópia do Internet Archive de 25/01/2026 — o site respondeu 403 —, lida em 10/10/2026): Preparation \"Grasp cable bar with wide grip. Sit with thighs under supports.\"; Execution \"Pull down cable bar to upper chest. Return until arms and shoulders are fully extended. Repeat.\"; Comments \"Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Latissimus Dorsi\", Synergists \"Brachialis\", \"Brachioradialis\", \"Biceps Brachii\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Coracobrachialis\", \"Rhomboids\", \"Levator Scapulae\", \"Trapezius, Lower\", \"Trapezius, Middle\", \"Pectoralis Minor\", Dynamic Stabilizers \"Triceps, Long Head\" (o ExRx não dá a largura em números: \"wide grip\")",
+  "American Council on Exercise (ACE) — Exercise Library: Seated Lat Pulldown (https://www.acefitness.org/resources/everyone/exercise-library/158/seated-lat-pulldown/, lido em 10/10/2026): \"Sit in the machine, anchoring your lower extremity by adjusting the thigh pad to fit firmly against the top of your thighs.\"; \"Stiffen (“brace”) your abdominal muscles to stabilize your spine\"; \"Reach up to grasp the bar, firmly gripping the bar with both hands. While your arms are extended overhead, depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"Lean back slightly (no more than a 30 degree angle), using your legs to support your body (low back).\"; \"Maintain your head aligned with your spine.\"; \"initiate the downward pull by first depressing (lower) your scapulae, then pulling the bar downward towards the top or mid-section of your chest. Attempt to pull in a motion that drives your elbows directly down towards the floor, bringing your elbows towards the sides of your torso. Avoid any additional backwards lean during the pull movement.\"; \"Continue pulling until the bar nears or touches your chest, or more importantly, you observe your elbows no longer moving downward, but now beginning to move backwards.\"; \"slowly return to your starting position by allowing the bar to move upwards until your elbows are fully extended, then allow your scapule to rise slightly.\" (a ficha do ACE não fixa a largura da pegada)",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15.2 \"Exercise list part 1\" (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-1, lido em 10/10/2026): Lat pulldown (machine) — \"Major muscles involved: Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; \"Grasp the bar with a closed, pronated grip (wider than shoulder-width)\"; \"Sit with your thighs under the pads, feet flat, and torso slightly leaned back\"; \"Fully extend your elbows\"; \"Pull the bar down to your upper chest\"; \"Maintain your torso position without jerking\"; \"Touch the bar to your clavicle/upper chest\"; \"Allow your elbows to extend back to the starting position\"",
+  "National Federation of Professional Trainers (NFPT) — Proper Form for a Lat Pulldown (https://nfpt.com/proper-form-for-a-lat-pulldown/, \"Posted August 9th, 2025\", lido em 10/10/2026): \"The predominant muscle groups involved also include the teres major, middle and lower trapezius, rhomboids, posterior deltoid, brachialis, biceps brachii, and brachioradialis.\"; \"The primary joint movements that occur during the exercise are shoulder adduction (lats and the teres major), scapular retraction and depression (middle and lower trapezius and rhomboids), shoulder extension (lats and teres major), and elbow flexion (brachialis, biceps brachii, and brachioradialis)\"; \"Grasping the bar with a closed, pronated grip. Note: if the bar is entirely straight, use a grip that is wider than shoulder-width and spaced evenly on the bar.\"; \"Sit on the seat with legs bent and thighs under the thigh pads. Keep the feet flat on the floor (adjust the seat height accordingly).\"; \"Lean slightly backward and extend the neck to create a clear path for the bar to pass by the face as it’s pulled downward.\"; \"Pull the bar downward with the elbows moving down and back and the chest up and out as the bar is lowered.\"; \"Maintain the same torso position and do not use momentum.\"; \"Continue pulling the bar down and toward the body until it lightly touches the clavicles. The torso should still be leaning back slightly.\"; \"Slowly and in a controlled fashion, guide the bar back up to the starting position.\"; Common Errors: \"Hands too close together or too far apart on the bar\", \"Leaning the torso too far back\", \"Pulling the bar to the hips and not the clavicle\"",
+  "Andersen V, Fimland MS, Wiik E, Skoglund A, Saeterbakken AH. Effects of grip width on muscle strength and activation in the lat pull-down. J Strength Cond Res. 2014;28(4):1135-1142. doi:10.1097/JSC.0000000000000232 (resumo do PubMed, PMID 24662157, lido em 10/10/2026): \"The aim of the study was to compare 6 repetition maximum (6RM) load and electromyographic (EMG) activity in the lat pull-down using 3 different pronated grip widths.\"; \"Fifteen men performed 6RM in the lat pull-down with narrow, medium, and wide grips (1, 1.5, and 2 times the biacromial distance) in a randomized and counterbalanced order.\"; \"The 6RM strengths with narrow (80.3 ± 7.2 kg) and medium grip (80 ± 7.1 kg) were higher than wide grip (77.3 ± 6.3 kg; p = 0.02).\"; \"There was similar EMG activation between grip widths for latissimus, trapezius, or infraspinatus, but a tendency for biceps brachii activation to be greater for medium vs. narrow (p = 0.09), when the entire movement was analyzed.\"; \"Analyzing the concentric phase separately revealed greater biceps brachii activation using the medium vs. narrow grip (p = 0.03).\"; \"In the eccentric phase, there was greater activation using wide vs. narrow grip for latissimus and infraspinatus (p ≤ 0.04), and tendencies for medium greater than narrow for latissimus, and medium greater than wide for biceps (both p = 0.08), was observed.\"; \"Collectively, a medium grip may have some minor advantages over small and wide grips; however, athletes and others engaged in resistance training can generally expect similar muscle activation which in turn should result in similar hypertrophy gains with a grip width that is 1-2 times the biacromial distance.\" (o texto completo não estava aberto: o resumo não diz entre que pontos das mãos mediram a largura — a fábrica põe o MEIO de cada mão a 0,75 × a largura biacromial do meio da barra, como a Fechada fez com 1 ×)",
+  "Lehman GJ, Buchan DD, Lundy A, Myers N, Nalborczyk A. Variations in muscle activation levels during traditional latissimus dorsi weight training exercises: An experimental study. Dynamic Medicine. 2004;3:4. doi:10.1186/1476-5918-3-4 (texto completo no PMC, PMC449729, lido em 10/10/2026): \"Wide grip pull down (WGP): From a seated position with the thighs restricted, subjects used an overhand grip on a straight pull down bar at 150% of the bi acromial distance (BAD).\"; \"Reverse grip pull down (RGP): From a seated position with thighs fixed subjects used an underhand grip on a straight bar at 100% BAD.\"; as 2 puxadas medidas paradas, num ponto só (\"The weight was pulled into an isometric position with the arms at 90 degrees of shoulder flexion and elbow flexion.\"); \"The level of forearm supination had no influence on latissimus dorsi activity during the pulldown exercise. Biceps brachii muscle activity was the same across exercises.\"; Tabela 1 (%MVC): latíssimo 26,23 na pronada a 150% e 22,37 na supinada a 100%, bíceps 15,20 e 19,89; \"The wide grip lat pulldown had a siginificantly higher ratio than the reverse grip lat pulldown\" (a razão latíssimo:bíceps); \"these changes are small and may have no weight training significance\" — a pronada \"wide grip\" do Lehman (150% BAD) é a largura da pegada MÉDIA do Andersen 2014",
+  "Lee Y, Lim B-O. Effects of grip width and hand orientation on muscle activities of upper body during the lat pull-down. Korean J Sport Sci. 2017;28(3):556-565. doi:10.24985/kjss.2017.28.3.556 (texto completo, https://kjss.sports.re.kr/assets/pdf/421/journal-28-3-556.pdf, lido em 10/10/2026): \"The grip widths were normalized for each individual by using their biacromial diameter (100%), and then set the grip width 50% of biacromial diameter and 150% of biacromial diameter.\"; Fig. 1 \"A: 150% pronation\"; Tabela 1 (8 homens): \"Height (cm) 172.5±4.0\", \"Biacromial width(cm) 40.3±3.0\"; postura: \"대퇴부가 바닥과 수평이 되도록 무릎 고정대의 높이를 조절\" (o rolo regulado com a coxa paralela ao chão), \"바(bar)를 잡을 때는 팔꿈치를 약간 굽힌 상태에서 시작하였다\" (começa com o cotovelo um pouco dobrado), \"어깨뼈의 하강(depression)과 뒤쪽당김(retraction) 상태를 유지\", \"바가 턱 아래로 내려와 복장뼈(sternum) 직전까지 오게 한 후 천천히 원위치로 돌아가게 하였다\" (a barra desce abaixo do queixo até logo antes do esterno e volta devagar); Tabela 3 (pronada): latíssimo 0,358 a 150% e 0,360 a 100%, trapézio médio 0,542 a 150%, bíceps 0,193 a 150%; Tabela 4: peitoral maior 0,272 a 150% e 0,354 a 100%; \"Middle trapezius showed higher muscle activities in 150% grip width than those of 50% grip width.\"; \"Pectoralis major and rectus abdominis showed higher muscle activities in 50% and 100% grip width than those of 150% grip width.\"; \"그립너비 100%와 150%에서는 유의한 차이가 나타나지 않았으며\" (latíssimo: sem diferença entre 100% e 150%)",
+  "Lusk SJ, Hale BD, Russell DM. Grip width and forearm orientation effects on muscle activity during the lat pull-down. J Strength Cond Res. 2010;24(7):1895-1900. doi:10.1519/JSC.0b013e3181ddb0ab (resumo do PubMed, PMID 20543740, lido em 10/10/2026): \"a pronated grip elicited greater LD activity than a supinated grip (p < 0.05), but had no influence of grip type on the MT and BB muscles\"; \"an anterior LPD with pronated grip is recommended for maximally activating the LD, irrespective of the grip width (carrying width or biacromial diameter)\" (larguras do Lusk: a de carregar e 1 × a biacromial; ele não testou 1,5 ×)",
+  "Medidas da máquina e da barra: as da Puxada Frontal Aberta (a mesma estação e a mesma barra, sem mudar nada) — Legend Fitness 905 Lat Pulldown (\"Knee rollers are fully upholstered and adjust to user height.\", \"48” W\", \"90” H\"); Gym Gear Pro Series Lat Pulldown / Low Row (\"functional part uses a 50*100 rectangular tube\", \"L 189 x W 122 x H 223 cm\"); Titan Fitness Lat Tower (\"Overall Height 87-in.\", \"Lat Bar Width 48-in.\"); Gym Gear 48” Standard Grip Lat Pulldown Bar (\"Size 48”\", \"the rubber grip handles provide maximum user comfort\"); Eleiko Lat Pull Down Bar 25mm (\"The 25-degree bend allows for comfortable and effective hand positioning and a full range of motion.\")",
+  "Dica do app (scripts/gifs_catalogo/catalogo.py, \"Puxada Alta na Polia\", renomeada pra \"Puxada Frontal\" em scripts/conteudo/nomes_81.py): \"Sentado com as coxas travadas, pegada pronada um pouco mais aberta que os ombros. Puxe a barra até a parte alta do peito levando os cotovelos para baixo e para trás, peito aberto, e volte controlando até os braços quase estendidos.\" / \"Base: a puxada na polia alta ativa fortemente o latíssimo do dorso; pegada pronada média gera ativação igual ou maior que a aberta/supinada (Andersen et al., 2014; Lehman et al., 2004).\" — a Base bate no \"igual\" (Andersen 2014: latíssimo parecido nas 3 larguras pronadas; Lehman 2004: a pronada a 150% e a supinada a 100% sem diferença no latíssimo), mas o \"ou maior\" não aparece pro latíssimo: só uma tendência (p = 0,08) da média sobre a FECHADA na fase excêntrica; o Andersen não testou a supinada e o Lehman não testou a pronada aberta (a \"wide grip\" dele é a de 150%, a média). O catálogo põe a variação \"pegada aberta\"; o 3D segue a dica e as fontes na largura (1,5 × a largura biacromial)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: a puxada é de cabo (a barra solta, presa só ao cabo, sem alavanca girando em volta de um eixo); a regulagem certa é a do assento e dos rolos — os pés chapados com as coxas deitadas (NFPT: \"Keep the feet flat on the floor (adjust the seat height accordingly)\") e os rolos firmes em cima das coxas (ACE: \"adjusting the thigh pad to fit firmly against the top of your thighs\")",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "puxada_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Lat pulldown (machine) (\"Sit with your thighs under the pads, feet flat\"); NFPT — Proper Form for a Lat Pulldown (\"Sit on the seat with legs bent and thighs under the thigh pads\")"
+   },
+   {
+    "nome": "coxas presas embaixo dos rolos (encostando em cima)",
+    "equipamento": "puxada_rolos",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"adjusting the thigh pad to fit firmly against the top of your thighs\"); ExRx — Cable Pulldown (\"Sit with thighs under supports.\")"
+   },
+   {
+    "nome": "fim: a barra chega na parte alta do peito, quase encostando",
+    "equipamento": "barra_puxada",
+    "partes": [
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "t": 1.0,
+    "mm": [
+     5,
+     45
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"Continue pulling until the bar nears or touches your chest\"); NSCA (Achievable CSCS) — Lat pulldown (machine) (\"Pull the bar down to your upper chest\"; \"Touch the bar to your clavicle/upper chest\"); NFPT — Proper Form for a Lat Pulldown (\"until it lightly touches the clavicles\"); ExRx — Cable Pulldown (\"Pull down cable bar to upper chest\"); Lee & Lim 2017 (a barra desce \"복장뼈(sternum) 직전까지\", até logo antes do esterno); dica do app (\"Puxe a barra até a parte alta do peito\"). O peso nunca entra no corpo (regra da fábrica): a barra para a ~1 cm da pele"
+   },
+   {
+    "nome": "a barra e o engate nunca encostam na cabeça nem no pescoço (passam pela frente do rosto)",
+    "equipamento": "barra_puxada",
+    "partes": [
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "NFPT — Proper Form for a Lat Pulldown (\"create a clear path for the bar to pass by the face as it’s pulled downward\"); Weslley (o equipamento nunca entra no corpo)"
+   },
+   {
+    "nome": "o cabo passa na frente do rosto e do peito, sem encostar",
+    "equipamento": "puxada_polia_cabo",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "pedido do Weslley (\"cabo, engate e barra NUNCA passam por dentro da cabeça, do rosto, do cabelo ou do peito\"); medido da pele"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "o cabo não entra no cabelo",
+    "equipamento": "puxada_polia_cabo",
+    "de": "cabelo",
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "pedido do Weslley (o cabo nunca passa por dentro da cabeça nem do cabelo)"
+   },
+   {
+    "nome": "a barra e o engate não entram no cabelo",
+    "equipamento": "barra_puxada",
+    "de": "cabelo",
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "pedido do Weslley (a barra nunca passa por dentro da cabeça nem do cabelo)"
+   },
+   {
+    "nome": "a barra não encosta na estrutura",
+    "equipamento": "barra_puxada",
+    "de": "puxada_estrutura",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica)"
+   },
+   {
+    "nome": "o cabo não encosta na estrutura",
+    "equipamento": "puxada_polia_cabo",
+    "de": "puxada_estrutura",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica): o cabo sai da roldana, embaixo do braço de cima"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "braço e mão esquerdos não entram na cabeça (braços acima da cabeça no começo)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "braço e mão direitos não entram na cabeça (braços acima da cabeça no começo)",
+    "partes": [
+     "RightArm",
+     "RightForeArm",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tronco um pouco inclinado pra trás e parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     10,
+     20
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"Lean back slightly (no more than a 30 degree angle)\"; \"Avoid any additional backwards lean during the pull movement\"); NSCA (Achievable CSCS) — Lat pulldown (machine) (\"torso slightly leaned back\"; \"Maintain your torso position without jerking\"); NFPT — Proper Form for a Lat Pulldown (\"Maintain the same torso position and do not use momentum\"; erro comum: \"Leaning the torso too far back\")"
+   },
+   {
+    "nome": "braços esticados no começo, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     2,
+     15
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Lat pulldown (machine) (\"Fully extend your elbows\"); ExRx — Cable Pulldown (\"Return until arms and shoulders are fully extended\"); Lee & Lim 2017 (\"팔꿈치를 약간 굽힌 상태에서 시작\", começa com o cotovelo um pouco dobrado); dica do app (\"volte controlando até os braços quase estendidos\")"
+   },
+   {
+    "nome": "braços acima da cabeça no começo",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     125,
+     165
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"While your arms are extended overhead\"); ExRx — Cable Pulldown (\"Return until arms and shoulders are fully extended\"). Medida no referencial do tronco: com o tronco 15° pra trás e os braços indo pra barra, que fica em cima do ponto do fim (o cabo quase vertical), o braço fica ~20° à frente da vertical — 180° seria o braço na linha do tronco"
+   },
+   {
+    "nome": "começo: os braços sobem num V um pouco aberto (mãos um pouco mais abertas que os ombros)",
+    "medida": "cotovelo_tronco",
+    "t": 0.0,
+    "graus": [
+     5,
+     30
+    ],
+    "fonte": "Andersen 2014 (\"medium ... grips (... 1.5 ... times the biacromial distance)\"); dica do app (\"pegada pronada um pouco mais aberta que os ombros\"). Medida: o braço (ombro → cotovelo) pra fora do plano sagital do tronco; na pegada fechada (1 ×) os braços sobem quase paralelos (~2°), na média abrem um pouco"
+   },
+   {
+    "nome": "ombros subidos (soltos) no começo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": 0.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx — Cable Pulldown (\"Return until arms and shoulders are fully extended\"); ACE — Seated Lat Pulldown (\"then allow your scapule to rise slightly\"). Medida: a clavícula (base do pescoço → articulação do ombro) × a horizontal; menor = ombro mais alto"
+   },
+   {
+    "nome": "escápulas descidas na puxada (ombros longe das orelhas)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": [
+     0.35,
+     1.0
+    ],
+    "graus": [
+     22,
+     40
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise\"; \"initiate the downward pull by first depressing (lower) your scapulae\"); Lee & Lim 2017 (\"어깨뼈의 하강(depression)과 뒤쪽당김(retraction) 상태를 유지\")"
+   },
+   {
+    "nome": "escápulas pra trás no fim (peito aberto)",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -40,
+     -8
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"depress and retract your scapulae (pull shoulders back and down)\"); NFPT — Proper Form for a Lat Pulldown (\"the chest up and out as the bar is lowered\"); dica do app (\"peito aberto\"). Medida: articulação do ombro à frente (+) ou atrás (−) da base do pescoço, no eixo do tórax"
+   },
+   {
+    "nome": "cotovelos dobrados no fim (barra na parte alta do peito)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     115,
+     145
+    ],
+    "fonte": "NSCA (Achievable CSCS) — Lat pulldown (machine) (\"Pull the bar down to your upper chest\"); ACE — Seated Lat Pulldown (\"you observe your elbows no longer moving downward, but now beginning to move backwards\"). Na mesma estação o cotovelo fica em ~112° na pegada aberta (2 ×) e em ~137° na fechada (1 ×); o teto é a amplitude normal do cotovelo (0–150°, AAOS, por Norkin & White — o limites.py)"
+   },
+   {
+    "nome": "fim: cotovelos embaixo, apontando pro chão (o braço desce do ombro)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "t": 1.0,
+    "graus": [
+     50,
+     90
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"drives your elbows directly down towards the floor\"); dica do app (\"levando os cotovelos para baixo e para trás\"). Medida: o braço (ombro → cotovelo) × a horizontal; + = cotovelo abaixo do ombro"
+   },
+   {
+    "nome": "fim: cotovelos pra trás, do lado do tronco",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -40,
+     -5
+    ],
+    "fonte": "dica do app (\"levando os cotovelos para baixo e para trás\"); NFPT — Proper Form for a Lat Pulldown (\"Pull the bar downward with the elbows moving down and back\"); ACE — Seated Lat Pulldown (\"bringing your elbows towards the sides of your torso\"). Medida no referencial do tronco (inclinado 15° pra trás): − = cotovelo atrás da linha do tronco"
+   },
+   {
+    "nome": "fim: cotovelos perto dos lados do tronco (sem abrir pros lados)",
+    "medida": "cotovelo_tronco",
+    "t": 1.0,
+    "graus": [
+     5,
+     35
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"bringing your elbows towards the sides of your torso\"). Medida: o braço pra fora do plano sagital do tronco; 0 = rente ao corpo, 90 = aberto em T"
+   },
+   {
+    "nome": "pegada média (mãos um pouco mais abertas que os ombros, ~1,5 × a largura dos ombros)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.3,
+     1.7
+    ],
+    "fonte": "Andersen 2014 (\"narrow, medium, and wide grips (1, 1.5, and 2 times the biacromial distance)\"); Lehman 2004 (\"an overhand grip on a straight pull down bar at 150% of the bi acromial distance (BAD)\"); Lee & Lim 2017 (\"A: 150% pronation\"); NSCA (Achievable CSCS) — Lat pulldown (machine) (\"wider than shoulder-width\"); dica do app (\"um pouco mais aberta que os ombros\"). No boneco a largura biacromial (40,3/172,5 da altura, Lee & Lim 2017) dá a mesma distância das articulações dos ombros; a medida é a distância entre as bases dos dedos médios ÷ a distância entre as articulações dos ombros (as escápulas subindo e descendo mudam um pouco o divisor). Na mesma estação a Fechada fica em ~0,9–1,0 e a Aberta em ~2,1–2,3"
+   },
+   {
+    "nome": "pegada pronada (palma pra frente, o dorso da mão pro rosto)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     0,
+     85
+    ],
+    "fonte": "Andersen 2014 (\"3 different pronated grip widths\"); NSCA (Achievable CSCS) — Lat pulldown (machine) (\"a closed, pronated grip\"); dica do app (\"pegada pronada\"). Medida: palma × frente do tronco; 0 = palma pra frente, 180 = virada pro corpo (supinada)"
+   },
+   {
+    "nome": "punho reto (sem dobrar pra frente nem pra trás)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "a mão fecha na borracha com o punho na linha do antebraço (Eleiko: a barra dá \"comfortable and effective hand positioning\"). Medida: flexão (+) / extensão (−) do punho"
+   },
+   {
+    "nome": "punho no máximo um pouco desviado de lado",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "amplitude normal do desvio ulnar do punho: 0–30° (AAOS, por Norkin & White — a mesma fonte do limites.py); com a barra reta e os cotovelos abrindo pros lados no meio da puxada, o punho desvia um pouco, longe do fim da amplitude"
+   },
+   {
+    "nome": "punho desviado de lado no máximo um pouco (barra reta)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -25,
+     18
+    ],
+    "fonte": "amplitude normal do punho pela AAOS (Norkin & White, Measurement of Joint Motion — a tabela do limites.py): desvio radial 20°, ulnar 30°. Na barra reta, com as mãos um pouco mais abertas que os ombros, o punho desvia pro lado do polegar com os braços esticados em V no começo (o motivo das pontas dobradas das barras de puxada — Eleiko: \"The 25-degree bend allows for comfortable and effective hand positioning\") e pro lado do dedo mínimo no meio da puxada, com os cotovelos abertos; a faixa para antes do fim da amplitude radial. Medida (tecnica3d.punho_desvio): antebraço × 3º metacarpo no plano da palma, + = pro lado do polegar (radial)"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -25,
+     10
+    ],
+    "fonte": "ACE — Seated Lat Pulldown (\"Maintain your head aligned with your spine.\")"
+   },
+   {
+    "nome": "joelhos dobrados (coxas deitadas, canelas em pé)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "NFPT — Proper Form for a Lat Pulldown (\"Sit on the seat with legs bent and thighs under the thigh pads\"); Lee & Lim 2017 (\"대퇴부가 바닥과 수평이 되도록\", a coxa paralela ao chão)"
+   }
+  ]
+ }
+}
