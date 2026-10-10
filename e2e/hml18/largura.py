@@ -9,6 +9,9 @@ Por abertura:
   · a barra de baixo ([data-tabbar]) dentro da tela (a base ≤ a altura visível, a direita ≤ a largura) — antes ficava fora em 7;
   · --nomes-longos: depois da medida normal, +40 caracteres com espaço em todo .truncate e [data-*-nome] (_base.JS_NOMES_LONGOS) e
     a mesma conta a 360 e a 390 (passa_px 0 e a barra dentro).
+  · --kpi-longo (hml-18a, o achado do agente A): nas telas com número (Kpi, [data-kpi-valor]), o valor vira "R$ 123.456,78" e, a 360 e
+    a 390, ele CABE no cartão (sem corte: scrollWidth ≤ largura da caixa) e passa_px 0; a 1280 o valor volta aos 30 px (o mesmo de
+    antes a partir do sm). Print a_kpi_longo (o Financeiro do personal, 360).
 Prints (§5 da spec): prints/hml18/<base>_<caso>_<largura>.png — a_agenda (360 e 390), a_dashboard (360 e 390), a_editor, a_biblioteca,
 a_topo_mensagens, a_topo_calculadora, a_fin_aluno e, com --nomes-longos, a_nomes_longos_alunos e a_nomes_longos_biblioteca (360); e
 a_depois_* (360) das outras telas que passavam (Avaliação, Histórico, Equipe, Financeiro, master e Treinos prontos do master).
@@ -44,6 +47,15 @@ PRINTS = {
     ("master", "/master"): ("a_depois_master", (360,)),
     ("master", "/master/app-do-aluno?aba=treinos"): ("a_depois_master_treinos_prontos", (360,)),
 }
+VALOR_LONGO = "R$\u00a0123.456,78"
+JS_KPI_LONGO = r"""([valor]) => { const vs = [...document.querySelectorAll('[data-kpi] > [data-kpi-valor]')].filter((e) => e.getClientRects().length);
+  for (const v of vs) v.textContent = valor; return vs.length; }"""
+JS_KPI_CABE = r"""() => [...document.querySelectorAll('[data-kpi] > [data-kpi-valor]')].filter((e) => e.getClientRects().length).map((v) => {
+  const c = v.closest('[data-kpi]') || v.parentElement; const cr = c.getBoundingClientRect(); const cs = getComputedStyle(c);
+  const dentro = cr.right - parseFloat(cs.paddingRight || '0');
+  return { cabe: v.scrollWidth <= v.clientWidth + 1 && v.getBoundingClientRect().left + v.scrollWidth <= dentro + 1,
+    fonte: getComputedStyle(v).fontSize, w: Math.round(v.scrollWidth), caixa: Math.round(v.clientWidth) }; })"""
+PRINTS_KPI_LONGO = {("personal", "/painel/financeiro"): "a_kpi_longo"}
 PRINTS_NOMES_LONGOS = {("personal", "/painel/alunos"): "a_nomes_longos_alunos", ("personal", "/painel/treinos?aba=biblioteca"): "a_nomes_longos_biblioteca"}
 BORRAR = "[data-lista] [data-item], [data-lista] [data-item] *"
 
@@ -110,6 +122,29 @@ def medir_abertura(R: B.Rodada, cel: B.Celular, papel: str, ab: dict, rota: str,
         barras = [x["barra"] for x in (nl[360], nl[390]) if x.get("barra")]
         if barras:
             R.ok(all(b["dentro"] for b in barras), f"{rot} nomes longos: a barra de baixo dentro da tela")
+    # só o número do Kpi (src/ui/premium/Kpi.tsx): o CardsMetricas da Evolução usa data-kpi-valor como atributo com valor, no cartão
+    if a.kpi_longo and cel.pg.locator("[data-kpi] > [data-kpi-valor]").count():
+        n = cel.pg.evaluate(JS_KPI_LONGO, [VALOR_LONGO])
+        kl = {}
+        for largura in (360, 390):
+            cel.tamanho(largura)
+            cel.pg.wait_for_timeout(700)
+            kl[largura] = {"m": cel.pg.evaluate(B.JS_LARGURA), "v": cel.pg.evaluate(JS_KPI_CABE)}
+            caso_kl = PRINTS_KPI_LONGO.get((papel, ab["rota"]))
+            if caso_kl and largura == 360:
+                R.linha(f"   print: {cel.print(ctx['prefixo'], caso_kl, borrar)}")
+        for largura in (360, 390):
+            vs = kl[largura]["v"]
+            fora = [x for x in vs if not x["cabe"]]
+            fontes = sorted({x["fonte"] for x in vs})
+            R.ok(kl[largura]["m"]["passa"] == 0 and vs and not fora,
+                 f"{rot} KPI com \"R$ 123.456,78\" a {largura}: {len(vs) - len(fora)}/{len(vs)} valores cabem no cartão (fonte {'/'.join(fontes)}; "
+                 f"maior {max(x['w'] for x in vs)} px na caixa de {min(x['caixa'] for x in vs)}) · passa_px {kl[largura]['m']['passa']}")
+        cel.pg.set_viewport_size({"width": 1280, "height": 800})
+        cel.pg.wait_for_timeout(700)
+        grandes = cel.pg.evaluate("() => [...new Set([...document.querySelectorAll('[data-kpi] > [data-kpi-valor]')].filter((e) => e.getClientRects().length).map((v) => getComputedStyle(v).fontSize))]")
+        R.ok(grandes == ["30px"], f"{rot} KPI no computador (1280): o valor com os mesmos 30 px de antes ({'/'.join(grandes) or '—'}; {n} números)")
+        cel.tamanho(390)
     ctx["placar"].append((papel, ab["rota"], m390["passa"], m360["passa"]))
 
 
@@ -137,6 +172,7 @@ def main() -> int:
     ap.add_argument("--canal", default="msedge", choices=("msedge", "chromium", "chrome"))
     ap.add_argument("--contas", default=",".join(B.PAPEIS), help=f"papéis: {','.join(B.PAPEIS)}")
     ap.add_argument("--nomes-longos", action="store_true", help="também com +40 caracteres em todo .truncate e [data-*-nome]")
+    ap.add_argument("--kpi-longo", action="store_true", help="também com o valor \"R$ 123.456,78\" em todo número (Kpi) a 360 e 390")
     ap.add_argument("--sair-master", action="store_true", help="no fim, o logout da sessão guardada da master")
     a = ap.parse_args()
     base, prefixo, producao = B.resolver_base(a.base)
@@ -147,10 +183,11 @@ def main() -> int:
     contas = B.CONTAS_DA_BASE["prod" if producao else "staging"]
     if producao and "master" in papeis:
         papeis.remove("master")  # na produção nenhuma conta de teste é master (prova viva dele)
-    nome = f"largura_{prefixo}" + ("_nomes_longos" if a.nomes_longos else "") + ("" if set(papeis) == set(B.PAPEIS) else "_" + "_".join(papeis))
+    nome = f"largura_{prefixo}" + ("_nomes_longos" if a.nomes_longos else "") + ("_kpi_longo" if a.kpi_longo else "") \
+        + ("" if set(papeis) == set(B.PAPEIS) else "_" + "_".join(papeis))
     R = B.Rodada(nome)
     R.linha(f"base {base} · {'PRODUÇÃO, só leitura (a Guarda)' if producao else 'schema staging'} · canal {a.canal} · papéis {', '.join(papeis)}"
-            f"{' · nomes longos' if a.nomes_longos else ''}")
+            f"{' · nomes longos' if a.nomes_longos else ''}{' · KPI com valor longo' if a.kpi_longo else ''}")
     L = B.Logins(f"largura.py {nome}")
     ctx = {"base": base, "prefixo": prefixo, "producao": producao, "contas": contas, "logins": L, "aluna": "", "placar": [],
            "guarda": B.B17.Guarda() if producao else None}
