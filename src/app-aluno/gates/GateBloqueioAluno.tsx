@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useQuery } from "@powersync/react";
 import { PauseCircle, RefreshCw, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useStatusDoEspelho } from "@/lib/powersync/espelho";
 import { useSessao } from "@/nucleo/sessao";
 import { useOnline } from "@/ui/premium/useOnline";
 import { PerfilReduzido } from "./pecas/PerfilReduzido";
@@ -13,7 +13,8 @@ import { TEXTO_BLOQUEIO_PROFISSIONAL, TITULO_BLOQUEIO_PROFISSIONAL, bloqueioDoPr
 /**
  * Trava do app: o profissional bloqueou o acesso do aluno (W13, falha F5 — R10, spec 9: "Acesso pausado pelo seu profissional").
  * Lê a situação do banco principal e o espelho do Treino pelo PowerSync (vale sem internet depois da 1ª sincronização — ver
- * ./pecas/bloqueioAluno.ts). O Perfil continua abrindo, reduzido a Sair, Exportar e Excluir (spec 9). Diferente da trava do
+ * ./pecas/bloqueioAluno.ts). hml-18b (H-54, F): o espelho chega pelo contexto do provedor do banco local (src/lib/powersync/espelho.ts)
+ * — esta trava carrega junto com a entrada e não importa o PowerSync. O Perfil continua abrindo, reduzido a Sair, Exportar e Excluir (spec 9). Diferente da trava do
  * master (GateBloqueioMaster, que vem antes) e da do inadimplente (GatePagamentoPendente, que abre Pagamentos e, desde a hml-11,
  * o Perfil reduzido).
  */
@@ -23,8 +24,8 @@ export default function GateBloqueioAluno({ children }: { children: ReactNode })
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const online = useOnline();
-  const { data } = useQuery<{ status: string | null }>("SELECT status FROM physiq_profiles WHERE id = ?", [user?.id ?? ""]);
-  const statusTreino = user?.id ? (data?.[0]?.status ?? null) : null;
+  const espelho = useStatusDoEspelho();
+  const statusTreino = user?.id ? espelho : null;
   // o espelho do aparelho diz "bloqueado" e o principal não: com internet, confere a situação no servidor uma vez
   const [confirmado, setConfirmado] = useState(false);
   const conferindo = useRef(false);

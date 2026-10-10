@@ -308,6 +308,10 @@ export default defineConfig(({ mode }) => {
         // cada chunk nomeado recebe SÓ os arquivos daquela lib; o resto o Rollup agrupa sozinho
         // por quem usa (o que só a rota lazy usa vai junto com ela).
         manualChunks(id: string) {
+          // hml-18b (H-54, F): o ajudante do import() do Vite (\0vite/preload-helper.js) vai junto com o react-vendor, que a entrada
+          // já carrega. Solto, o Rollup o punha no 1º pedaço manual que faz import() — o powersync — e a entrada voltava a
+          // pré-carregar o PowerSync inteiro (o import() do provedor no AppAlunoLayout não adiantava)
+          if (id.includes("vite/preload-helper")) return "react-vendor";
           if (!id.includes("node_modules/")) return undefined;
           if (/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler|@remix-run\/router)\//.test(id)) return "react-vendor";
           // utilitários minúsculos usados pela abertura E por libs pesadas (ex.: clsx = cva + recharts):

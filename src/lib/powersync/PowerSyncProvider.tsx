@@ -1,9 +1,10 @@
-import { PowerSyncContext } from "@powersync/react";
+import { PowerSyncContext, useQuery } from "@powersync/react";
 import { PowerSyncDatabase } from "@powersync/web";
 import { ReactNode, useEffect, useRef, useCallback } from "react";
 import { AppSchema } from "./schema";
 import { connector, POWERSYNC_LIGADO } from "./connector";
 import { useAuth } from "@/hooks/useAuth";
+import { EspelhoDoPerfilContexto } from "./espelho";
 
 // Cria o banco SQLite local — singleton, criado uma vez
 const powerSyncDb = new PowerSyncDatabase({
@@ -76,6 +77,21 @@ async function limparBancoSemSync(): Promise<void> {
   await apagarBancoLocal();
 }
 
+/**
+ * hml-18b (H-54, F): o status do perfil no espelho do Treino (physiq_profiles), para a trava do app (GateBloqueioAluno, que carrega
+ * junto com a entrada e não importa o PowerSync) — a mesma consulta que a trava fazia. Vale sem internet depois da 1ª sincronização.
+ */
+function EspelhoDoPerfil({ userId, children }: { userId: string | null; children: ReactNode }) {
+  const { data } = useQuery<{ status: string | null }>("SELECT status FROM physiq_profiles WHERE id = ?", [userId ?? ""]);
+  const status = userId ? (data?.[0]?.status ?? null) : null;
+  return <EspelhoDoPerfilContexto.Provider value={status}>{children}</EspelhoDoPerfilContexto.Provider>;
+}
+
+/**
+ * O banco local do app do aluno. hml-18b (H-54, F): sai da entrada — o AppAlunoLayout carrega este módulo por import() (o público, o
+ * painel e o master não baixam mais o PowerSync, o worker nem o wasm do SQLite) e mostra um esqueleto até ele chegar; nenhum hook do
+ * PowerSync roda antes de o provedor existir (risco 8 da spec).
+ */
 export function PowerSyncProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -159,7 +175,7 @@ export function PowerSyncProvider({ children }: { children: ReactNode }) {
 
   return (
     <PowerSyncContext.Provider value={powerSyncDb}>
-      {children}
+      <EspelhoDoPerfil userId={userId}>{children}</EspelhoDoPerfil>
     </PowerSyncContext.Provider>
   );
 }

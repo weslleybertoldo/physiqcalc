@@ -1,5 +1,7 @@
-import { useEffect, type CSSProperties } from "react";
+import { lazy, useEffect, type CSSProperties } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { sobDemanda } from "@/lib/sobDemanda";
 import { gatesApp, listar } from "@/rotas/registro";
 import { usePreCarga } from "@/rotas/usePreCarga";
 import { cn } from "@/lib/utils";
@@ -10,8 +12,27 @@ import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { ComGates } from "@/ui/casca/Gates";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { TransicaoDePagina } from "@/ui/casca/TransicaoDePagina";
+import { EstadoCarregando } from "@/ui/premium/Estados";
 import { TabBar } from "@/ui/premium/TabBar";
 import { abaDaRota, abaDeAbertura, abasVisiveis } from "./catalogoAbas";
+
+/**
+ * hml-18b (H-54, F) — o banco local do treino (PowerSync: ~270 KB + o worker + o wasm do SQLite) num pedaço próprio, carregado só
+ * aqui, no app do aluno (antes vinha na entrada de TODA página, inclusive as públicas e o painel). O provedor fica em volta das
+ * travas e das abas: nenhum hook do PowerSync roda antes de ele existir (risco 8 da spec) — enquanto chega, o conteúdo mostra um
+ * esqueleto e a barra de abas já aparece.
+ */
+const BANCO_LOCAL = sobDemanda(() => import("@/lib/powersync/PowerSyncProvider"));
+const ProvedorBancoLocal = lazy(() => BANCO_LOCAL.obter().then((m) => ({ default: m.PowerSyncProvider })));
+
+/** O lugar do conteúdo enquanto o banco local chega (o mesmo recuo das abas). */
+function EsqueletoBancoLocal() {
+  return (
+    <div className="mx-auto max-w-3xl px-4 pt-[max(14px,env(safe-area-inset-top,0px))] sm:px-8" data-banco-local="carregando">
+      <EstadoCarregando linhas={4} rotulo="Abrindo o app" />
+    </div>
+  );
+}
 
 /** Faixas do topo da aba de abertura, na ordem da spec (hml-17: a "não deu para carregar a sua conta" antes de todas; depois a da
  *  mensalidade). */
@@ -48,6 +69,7 @@ const RESERVA = "calc(66px + 26px + 12px + env(safe-area-inset-bottom, 0px))";
  */
 export default function AppAlunoLayout() {
   const dados = useDadosCasca();
+  const { user } = useAuth();
   const location = useLocation();
   const abas = abasVisiveis(dados.modulosAluno);
   const abertura = abaDeAbertura(dados.modulosAluno);
@@ -59,6 +81,13 @@ export default function AppAlunoLayout() {
   useEffect(() => {
     if (dados.usuario && location.pathname !== "/") lembrarArea("aluno");
   }, [dados.usuario, location.pathname]);
+
+  // hml-18b (H-54, F): o banco local começa a baixar já no 1º render, junto com a sessão — só com login e para quem fica no app (quem
+  // abre o "/" vindo do painel espera os dados dizerem se vai para lá; quem não tem login vai para a /entrar sem baixar nada)
+  const esperarArea = dados.carregando && location.pathname === "/" && ultimaArea() !== "aluno";
+  useEffect(() => {
+    if (user && !vaiProPainel && !esperarArea) BANCO_LOCAL.aquecer();
+  }, [user, vaiProPainel, esperarArea]);
 
   // hml-18a (H-40, E): depois do 1º render do app, no ocioso, as 5 abas, os itens do Perfil e os cards do Início (a troca de aba não
   // espera o pedaço chegar)
@@ -86,20 +115,24 @@ export default function AppAlunoLayout() {
   return (
     <div data-casca-app className="relative isolate min-h-screen text-texto">
       <div aria-hidden className="pq-halo-app pointer-events-none fixed inset-0 -z-10" />
-      <ComGates gates={gatesApp}>
-        {avisosNoAlto && <AvisosDoTopo className="mx-auto max-w-3xl px-4 pt-[max(14px,env(safe-area-inset-top,0px))] sm:px-8" />}
-        <div
-          data-aba-conteudo={abaAtual ?? ""}
-          className={mostrarBarra ? "pb-[var(--reserva-abas)]" : undefined}
-          style={mostrarBarra ? ({ "--reserva-abas": RESERVA } as CSSProperties) : undefined}
-        >
-          <LimiteDeErro nome={`aba ${abaAtual ?? location.pathname}`}>
-            <TransicaoDePagina>
-              <Outlet />
-            </TransicaoDePagina>
-          </LimiteDeErro>
-        </div>
-      </ComGates>
+      <Carregavel nome="banco local do app" esqueleto={<EsqueletoBancoLocal />}>
+        <ProvedorBancoLocal>
+          <ComGates gates={gatesApp}>
+            {avisosNoAlto && <AvisosDoTopo className="mx-auto max-w-3xl px-4 pt-[max(14px,env(safe-area-inset-top,0px))] sm:px-8" />}
+            <div
+              data-aba-conteudo={abaAtual ?? ""}
+              className={mostrarBarra ? "pb-[var(--reserva-abas)]" : undefined}
+              style={mostrarBarra ? ({ "--reserva-abas": RESERVA } as CSSProperties) : undefined}
+            >
+              <LimiteDeErro nome={`aba ${abaAtual ?? location.pathname}`}>
+                <TransicaoDePagina>
+                  <Outlet />
+                </TransicaoDePagina>
+              </LimiteDeErro>
+            </div>
+          </ComGates>
+        </ProvedorBancoLocal>
+      </Carregavel>
       {mostrarBarra && (
         <TabBar
           rotulo="Abas do app"

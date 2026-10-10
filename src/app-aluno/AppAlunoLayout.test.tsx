@@ -12,6 +12,11 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@/ui/casca/dadosCasca", () => ({ useDadosCasca: () => h.dados }));
+vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: h.dados.usuario }) }));
+// hml-18b (H-54, F): o banco local (PowerSync) vem por import() no app do aluno — aqui, um provedor falso que só conta que montou
+vi.mock("@/lib/powersync/PowerSyncProvider", () => ({
+  PowerSyncProvider: ({ children }: { children: ReactNode }) => <div data-testid="banco-local">{children}</div>,
+}));
 vi.mock("@/rotas/registro", async () => {
   const { lazy } = await import("react");
   const FaixaMensalidade = lazy(async () => ({ default: () => <div data-testid="faixa">Sua mensalidade vence em 3 dias</div> }));
@@ -82,5 +87,15 @@ describe("casca do app: travas e faixas registradas", () => {
     expect(screen.queryByText("conteúdo evolução")).toBeNull();
     // a barra de abas continua (a trava decide o conteúdo, não a navegação)
     expect(document.querySelector("[data-tabbar]")).not.toBeNull();
+  });
+
+  it("hml-18b (H-54): o banco local (PowerSync, por import()) envolve as travas e as abas; a barra de abas fica fora dele", async () => {
+    abrir("/treino");
+    const banco = await screen.findByTestId("banco-local");
+    expect(banco).toContainElement(screen.getByTestId("faixa-gate"));
+    expect(banco).toContainElement(await screen.findByText("conteúdo treino"));
+    const barra = document.querySelector("[data-tabbar]");
+    expect(barra).not.toBeNull();
+    expect(banco.contains(barra)).toBe(false);
   });
 });
