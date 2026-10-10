@@ -161,7 +161,7 @@ export default function MedicamentoDialog({ open, onOpenChange, nutricionistaId,
             )}
           </Campo>
 
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="Dose" dica="opcional">
               <input className={INPUT} value={form.dose} maxLength={TEXTO_MAX} onChange={(e) => campo("dose", e.target.value)} placeholder="ex.: 850 mg" data-campo-dose-medicamento />
             </Campo>

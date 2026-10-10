@@ -83,7 +83,7 @@ export default function Planos() {
         <>
           <Cartao className="px-[18px] pb-4 pt-4" data-tabela-precos>
             <CabecalhoCartao titulo="Tabela de preços" extra={<Chip tom="g">anual = 10 mensalidades</Chip>} />
-            <div className="grid gap-3 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
               {PLANOS.map((pl) => (
                 <div key={pl} className="rounded-2xl border border-linha bg-superficie-3 p-3.5" data-coluna-plano={pl}>
                   <div className="mb-2.5 flex items-center gap-2">
@@ -111,10 +111,10 @@ export default function Planos() {
             </div>
           </Cartao>
 
-          <div className="grid gap-3.5 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-2">
             <Cartao className="px-[18px] pb-4 pt-4" data-cartao-teste>
               <CabecalhoCartao titulo="Teste grátis e regras" />
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Campo rotulo="Dias de teste"><input className={INPUT} inputMode="numeric" value={testeDias} onChange={(e) => setTesteDias(e.target.value)} data-campo-teste-dias /></Campo>
                 <Campo rotulo="Alunos no teste"><input className={INPUT} inputMode="numeric" value={testeMax} onChange={(e) => setTesteMax(e.target.value)} data-campo-teste-max /></Campo>
                 <Campo rotulo="Dias grátis do app"><input className={INPUT} inputMode="numeric" value={appDias} onChange={(e) => setAppDias(e.target.value)} data-campo-app-dias /></Campo>
@@ -156,7 +156,7 @@ export default function Planos() {
             <Botao tamanho="sm" variante="w" onClick={() => void guardarPreco()} disabled={ocupado || !(numero(mensal) > 0)} data-salvar-preco>Salvar preço</Botao>
           </>
         )}>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo rotulo="Mensal (R$)"><input className={INPUT} inputMode="decimal" value={mensal} onChange={(e) => setMensal(e.target.value)} data-campo-mensal /></Campo>
           <Campo rotulo="Anual (R$)" dica={numero(mensal) > 0 ? `10 mensalidades = ${moeda(numero(mensal) * 10)}` : undefined}>
             <input className={INPUT} inputMode="decimal" value={anual} onChange={(e) => setAnual(e.target.value)} data-campo-anual />

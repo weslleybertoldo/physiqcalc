@@ -69,7 +69,7 @@ export default function Resumo({ f, irPara }: { f: FinanceiroConta; irPara: (aba
     return (
       <div className="flex flex-col gap-3.5" data-aba-financeiro-conteudo="resumo" data-estado="carregando">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <Cartao key={i} className="h-[132px] p-4"><Esqueleto className="h-full w-full" /></Cartao>)}</div>
-        <div className="grid gap-3.5 xl:grid-cols-3"><Cartao className="h-[380px] p-5 xl:col-span-2"><Esqueleto className="h-full w-full" /></Cartao><Cartao className="h-[380px] p-5"><Esqueleto className="h-full w-full" /></Cartao></div>
+        <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-3"><Cartao className="h-[380px] p-5 xl:col-span-2"><Esqueleto className="h-full w-full" /></Cartao><Cartao className="h-[380px] p-5"><Esqueleto className="h-full w-full" /></Cartao></div>
       </div>
     );
   }
@@ -97,12 +97,12 @@ export default function Resumo({ f, irPara }: { f: FinanceiroConta; irPara: (aba
           detalhe={<span>{k.vencido.qtd ? `${k.vencido.qtd} ${k.vencido.qtd === 1 ? "cobrança vencida" : "cobranças vencidas"}` : "nada vencido"}</span>} />
       </div>
 
-      <div className="grid gap-3.5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-3">
         <GraficoReceita className="xl:col-span-2" recs={calc.recs} hoje={hoje} recebidoMes={k.recebidoMes} previstoMes={k.previstoMes} />
         <CobrancasDoMes fatias={calc.fatias} hoje={hoje} aoVer={() => irPara("mensalidades")} />
       </div>
 
-      <div className="grid gap-3.5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-3">
         <Atencao itens={calc.atencao} aoAbrir={(i) => irPara("mensalidades", i.chip === "PIX" ? { ver: "comprovantes" } : {})} />
         <Recentes itens={recentes} carregando={recentesQ.isLoading} aoVerTodos={() => irPara("lancamentos")} />
         <PorCategoria barras={calc.barras} mes={mes} />

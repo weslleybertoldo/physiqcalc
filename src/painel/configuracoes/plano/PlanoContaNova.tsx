@@ -273,7 +273,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
           aoGerarOutro={() => { setPixNovo(null); gerarPix(); }} />
       )}
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="flex flex-col gap-4 xl:col-span-2">
           {podePagar && !ehLoja && (
             <Cartao className="p-5" data-cartao-escolha>

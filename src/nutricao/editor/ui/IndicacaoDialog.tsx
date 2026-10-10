@@ -200,7 +200,7 @@ export default function IndicacaoDialog({ open, onOpenChange, nutricionistaId, p
           )}
 
           {/* ---- posologia ---- */}
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="Dose" dica={form.produto?.dose_padrao ? `dose padrão do produto: ${form.produto.dose_padrao}` : undefined}>
               <input className={INPUT} value={form.dose} maxLength={DOSE_MAX} onChange={(e) => campo("dose", e.target.value)} placeholder="ex.: 30 g" data-campo-dose />
             </Campo>

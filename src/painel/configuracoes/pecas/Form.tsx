@@ -97,7 +97,7 @@ export function OpcoesPilula<T extends string>({
   return (
     <fieldset className="flex flex-col gap-1.5" data-opcoes={nome}>
       <legend className="mb-1.5 text-[12.5px] font-semibold text-texto-2">{rotulo}</legend>
-      <div className={cn("grid gap-2", colunas === 2 && "sm:grid-cols-2")}>
+      <div className={cn("grid grid-cols-1 gap-2", colunas === 2 && "sm:grid-cols-2")}>
         {opcoes.map((o) => {
           const ativa = valores.includes(o.valor);
           const Icone = o.icone;

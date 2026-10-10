@@ -50,7 +50,7 @@ export function FormExercicioBiblioteca({
       <p className="text-[12px] leading-snug text-texto-3">
         No app do aluno, o "Trocar" sugere primeiro os exercícios com o mesmo movimento e músculo, em outro equipamento.
       </p>
-      <div className="grid gap-2.5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className="pq-eyebrow">Movimento</span>
           <select value={valor.padrao_movimento ?? ""} onChange={(e) => mudar({ padrao_movimento: e.target.value || null })} className={CAMPO} data-campo-movimento>

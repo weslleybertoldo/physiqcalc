@@ -263,7 +263,7 @@ export function CascaWeb({
         <div className="flex min-w-0 flex-col">
           <header
             data-topo
-            className="sticky top-0 z-30 flex items-center gap-3 border-b border-linha bg-[var(--p-vidro)] px-4 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:px-[30px] lg:pb-0 lg:pt-[26px] lg:backdrop-blur-none"
+            className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-linha bg-[var(--p-vidro)] px-4 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:px-[30px] lg:pb-0 lg:pt-[26px] lg:backdrop-blur-none"
           >
             <Link to="/" className="flex-none lg:hidden" aria-label="Physiq — início">
               <Marca tamanho={30} soIcone />
@@ -275,7 +275,13 @@ export function CascaWeb({
             <BuscaGatilho className="hidden md:flex" aoAbrir={abrirBusca} />
             <BotaoIcone className="md:hidden" icone={Search} rotulo="Buscar" onClick={abrirBusca} />
             <Sino />
-            <div ref={setAlvoAcoes} className="flex flex-none items-center gap-2.5 empty:hidden" />
+            {/* hml-18a (H-40): no celular os botões da página descem para uma 2ª linha do topo, com o texto (antes empurravam a
+                página para fora da tela e o título sumia) */}
+            <div
+              ref={setAlvoAcoes}
+              className="flex min-w-0 flex-none items-center gap-2.5 empty:hidden max-lg:order-last max-lg:basis-full max-lg:flex-wrap max-lg:justify-end"
+              data-acoes-topo
+            />
           </header>
 
           <main

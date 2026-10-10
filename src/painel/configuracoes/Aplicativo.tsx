@@ -67,7 +67,7 @@ export default function Aplicativo() {
   return (
     <div data-config-aba="aplicativo" className="flex flex-col gap-3.5">
       <TopoPagina titulo="Aplicativo" subtitulo="O Physiq no celular" />
-      <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
         <SecaoForm brilho titulo="Aplicativo Android" marca="app-android"
           extra={!nativo || naoVerificou ? undefined : temNova ? <Chip tom="a">ATUALIZAÇÃO</Chip> : ultima ? <Chip tom="n" icone={Check}>EM DIA</Chip> : undefined}
           descricao="O mesmo app dos alunos, com o treino funcionando sem internet. Instala direto pelo arquivo (fora da loja) e avisa quando sai versão nova.">

@@ -85,7 +85,7 @@ export default function Convite() {
   return (
     <div data-config-aba="convite" className="flex flex-col gap-3.5">
       <TopoPagina titulo="Convite" subtitulo={`Seu link de aluno na ${conta.nome}`} />
-      <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
         <SecaoForm brilho titulo="Seu link de convite" marca="convite-link" extra={<ChipsPapeis papeis={conta.papeis} />}
           descricao={textoDoLink(conta.papeis, conta.nome)}>
           <div className="flex flex-col gap-4">

@@ -55,12 +55,12 @@ export function SeletorPlano({
     <fieldset className="flex flex-col gap-1.5">
       <legend className="mb-1.5 text-[12.5px] font-semibold text-texto-2">{rotulo}</legend>
       {carregando && !planos.length ? (
-        <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <Esqueleto className="h-[76px] w-full rounded-2xl" />
           <Esqueleto className="h-[76px] w-full rounded-2xl" />
         </div>
       ) : (
-        <div className="grid gap-2" role="radiogroup" aria-label={rotulo}>
+        <div className="grid grid-cols-1 gap-2" role="radiogroup" aria-label={rotulo}>
           {planos.map((p) => {
             const ativo = valor === p.codigo;
             const comAlimentacao = p.modulos.includes("nutricao");

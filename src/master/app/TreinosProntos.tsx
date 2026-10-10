@@ -55,7 +55,7 @@ function EditorTreino({ treino, aoFechar, aoSalvo }: { treino: TreinoPronto | nu
           <Botao tamanho="sm" variante="w" onClick={() => void salvar()} disabled={ocupado} data-salvar-treino-pronto>{ocupado ? "Salvando…" : "Salvar treino"}</Botao>
         </>
       )}>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="sm:col-span-3"><Campo rotulo="Nome"><input className={INPUT} value={t.nome} onChange={(e) => setT({ ...t, nome: e.target.value })} maxLength={80} data-campo-nome-treino /></Campo></div>
         <Campo rotulo="Objetivo">
           <select className={SELECT} value={t.objetivo} onChange={(e) => setT({ ...t, objetivo: e.target.value as TreinoPronto["objetivo"] })}>{OBJETIVOS.map((o) => <option key={o} value={o}>{ROTULO_OBJETIVO[o]}</option>)}</select>
@@ -148,11 +148,11 @@ export function TreinosProntos() {
   return (
     <div className="flex flex-col gap-3" data-treinos-prontos={lista.length}>
       <div className="flex items-center gap-2">
-        <p className="flex-1 text-[12.5px] text-texto-3">{lista.filter((t) => t.ativo).length} no catálogo · o arquivo scripts/conteudo/treinos_prontos.json continua valendo para recarregar.</p>
+        <p className="min-w-0 flex-1 break-words text-[12.5px] text-texto-3">{lista.filter((t) => t.ativo).length} no catálogo · o arquivo scripts/conteudo/treinos_prontos.json continua valendo para recarregar.</p>
         <Botao tamanho="sm" variante="w" icone={Plus} onClick={() => setEditar(treinoNovo())} data-novo-treino-pronto>Novo treino</Botao>
       </div>
       {lista.length === 0 ? <EstadoVazio icone={Dumbbell} titulo="Nenhum treino pronto" /> : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {lista.map((t) => (
             <Cartao key={t.id} className={cn("flex flex-col gap-2 p-4", !t.ativo && "opacity-60")} data-treino-pronto={t.codigo}>
               <div className="flex flex-wrap gap-1.5">

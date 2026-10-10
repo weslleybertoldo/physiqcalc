@@ -75,7 +75,7 @@ function EditorPrato({ prato, aoFechar, aoSalvo }: { prato: Prato | null; aoFech
           <Botao tamanho="sm" variante="w" onClick={() => void salvar()} disabled={ocupado} data-salvar-prato>{ocupado ? "Salvando…" : "Salvar prato"}</Botao>
         </>
       )}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Campo rotulo="Nome"><input className={INPUT} value={p.nome} onChange={(e) => setP({ ...p, nome: e.target.value })} maxLength={120} data-campo-nome-prato /></Campo>
         <Campo rotulo="Refeição">
           <select className={SELECT} value={p.refeicao} onChange={(e) => setP({ ...p, refeicao: e.target.value as Prato["refeicao"] })}>{REFEICOES.map((r) => <option key={r.id} value={r.id}>{r.rotulo}</option>)}</select>
@@ -127,11 +127,11 @@ export function PratosProntos() {
   return (
     <div className="flex flex-col gap-3" data-pratos-prontos={lista.length}>
       <div className="flex items-center gap-2">
-        <p className="flex-1 text-[12.5px] text-texto-3">{lista.filter((p) => p.ativo).length} no catálogo · o arquivo scripts/conteudo/pratos_prontos.json continua valendo para recarregar.</p>
+        <p className="min-w-0 flex-1 break-words text-[12.5px] text-texto-3">{lista.filter((p) => p.ativo).length} no catálogo · o arquivo scripts/conteudo/pratos_prontos.json continua valendo para recarregar.</p>
         <Botao tamanho="sm" variante="w" icone={Plus} onClick={() => setEditar(novo)} data-novo-prato>Novo prato</Botao>
       </div>
       {lista.length === 0 ? <EstadoVazio icone={Salad} titulo="Nenhum prato pronto" /> : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {lista.map((p) => (
             <Cartao key={p.id} className={cn("flex flex-col gap-2 p-4", !p.ativo && "opacity-60")} data-prato={p.codigo}>
               <div className="flex flex-wrap gap-1.5">

@@ -165,7 +165,7 @@ export function Biblioteca({
           />
         ) : (
           <>
-            <ul className="grid gap-x-6 lg:grid-cols-2" data-biblioteca-lista-painel={itens.length} data-lista="biblioteca" data-atualizando={lista.isFetching ? "1" : "0"}>
+            <ul className="grid grid-cols-1 gap-x-6 lg:grid-cols-2" data-biblioteca-lista-painel={itens.length} data-lista="biblioteca" data-atualizando={lista.isFetching ? "1" : "0"}>
               {itens.map((e) => {
                 const editavel = podeEditar(e, q);
                 return (

@@ -82,7 +82,7 @@ export function NovaContaDialog({ aberta, aoMudar, aoCriada }: { aberta: boolean
             <Botao tamanho="sm" variante="w" onClick={() => { aoCriada(pronto.contaId); aoMudar(false); }} data-nova-conta-abrir>Abrir a conta</Botao>
           </>
         )}>
-        <div className="grid gap-2 text-[13.5px]" data-nova-conta-resumo>
+        <div className="grid grid-cols-1 gap-2 text-[13.5px]" data-nova-conta-resumo>
           <p><span className="text-texto-3">E-mail:</span> <b>{pronto.email}</b></p>
           {pronto.senha ? <p><span className="text-texto-3">Senha provisória:</span> <b className="font-mono">{pronto.senha}</b></p>
             : <p className="text-texto-2">Entra com o Google neste e-mail (ou com a senha que já tinha).</p>}
@@ -103,7 +103,7 @@ export function NovaContaDialog({ aberta, aoMudar, aoCriada }: { aberta: boolean
           <Botao tamanho="sm" variante="w" onClick={() => void criar()} disabled={!valido || ocupado} data-nova-conta-criar>{ocupado ? "Criando…" : "Criar conta"}</Botao>
         </>
       )}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Campo rotulo="Nome do profissional"><input className={INPUT} value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} data-campo-nome /></Campo>
         <Campo rotulo="E-mail"><input className={INPUT} type="email" value={email} onChange={(e) => setEmail(e.target.value)} data-campo-email /></Campo>
         <Campo rotulo="Nome da conta" dica="Vazio = o nome do profissional."><input className={INPUT} value={nomeConta} onChange={(e) => setNomeConta(e.target.value)} maxLength={80} data-campo-nome-conta /></Campo>

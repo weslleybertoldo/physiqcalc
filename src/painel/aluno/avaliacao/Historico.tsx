@@ -87,7 +87,8 @@ export function HistoricoAvaliacoes({ alunoId, avaliacoes, perm, nomeAluno, linh
                   </div>
                   <div className="mt-0.5 text-[12.5px] text-texto-3" data-avaliacao-numeros>{numerosDoHistorico(av)}</div>
                 </div>
-                <div className="flex flex-none items-center gap-1.5">
+                {/* hml-18a (H-40): os botões quebram de linha no celular (era flex-none: +32 px a 360) */}
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
                   <Botao variante="g" tamanho="sm" icone={Eye} onClick={() => aoVer(av)} data-avaliacao-ver={av.id}>Ver</Botao>
                   {!treino && <Botao variante="g" tamanho="sm" icone={FileDown} onClick={() => aoPdf(av)} data-avaliacao-pdf={av.id}>PDF</Botao>}
                   {!treino && aoEditar && excluivel && (

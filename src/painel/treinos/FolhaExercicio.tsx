@@ -177,7 +177,7 @@ export function FolhaExercicio({
           {tentou && erroNome && <span className="text-[12px] text-rosa-3">{erroNome}</span>}
         </label>
 
-        <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto]">
           <label className="flex min-w-0 flex-col gap-1.5">
             <span className="pq-eyebrow">Grupo muscular</span>
             <select value={grupo} onChange={(e) => setGrupo(e.target.value)} disabled={somenteLeitura} className={cn(CLASSE_CAMPO, "[color-scheme:dark]", tentou && !grupo && "border-rosa")} data-campo-grupo>

@@ -84,7 +84,7 @@ export default function Dashboard() {
         <KpiAdesao m={d.adesao} carregando={d.principalQ.isLoading || (d.treinoLigado && d.treinoQ.isLoading)} />
       </div>
 
-      <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {d.financeiro ? (
           <GraficoReceita recs={d.financeiro.recs} hoje={d.hoje} recebidoMes={d.financeiro.k.recebidoMes} previstoMes={d.financeiro.k.previstoMes}
             extra={<RecibosDoMes n={d.recibosMes} hoje={d.hoje} carregando={d.recibosQ.isLoading} erro={d.recibosQ.isError} />} />
@@ -98,7 +98,7 @@ export default function Dashboard() {
           aoTentar={() => void d.agendaQ.refetch()} hoje={d.hoje} />
       </div>
 
-      <div className={`grid gap-3.5 ${comDiario ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>
+      <div className={`grid grid-cols-1 gap-3.5 ${comDiario ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>
         <Atencao itens={d.atencao} carregando={carregandoAtencao} avisos={aviso} vazio={vazioAtencao} />
         {comDiario && (
           <DiarioHoje registros={d.diario.registros} urls={urls} carregando={d.diario.q.isLoading} erro={d.diario.q.isError}

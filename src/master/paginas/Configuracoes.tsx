@@ -76,12 +76,12 @@ export default function Configuracoes() {
       <TopoPagina titulo="Configurações" subtitulo="Regras do Physiq e o aviso de mudança"
         acoes={<Botao variante="w" icone={Check} disabled={!mudou || ocupado} onClick={() => void salvar()} data-salvar-aviso>Salvar aviso</Botao>} />
       {q.isLoading ? <EstadoCarregando linhas={6} /> : q.isError ? <EstadoErro aoTentar={() => void q.refetch()} /> : d && (
-        <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
           <Cartao className="px-[18px] pb-4 pt-4" data-cartao-regras>
             <CabecalhoCartao titulo="Resumo das regras" extra={<Chip tom="g" icone={ShieldCheck}>Só leitura</Chip>} />
             <dl className="flex flex-col divide-y divide-linha-3">
               {regras.map(([t, v]) => (
-                <div key={t} className="grid gap-1 py-2.5 sm:grid-cols-[170px_minmax(0,1fr)]" data-regra={t}>
+                <div key={t} className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-[170px_minmax(0,1fr)]" data-regra={t}>
                   <dt className="text-[12.5px] font-semibold text-texto-2">{t}</dt>
                   <dd className="text-[13px] text-texto">{v}</dd>
                 </div>

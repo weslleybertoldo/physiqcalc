@@ -71,7 +71,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
 
   if (f.isLoading) {
     return (
-      <div className="grid gap-3.5 xl:grid-cols-3" data-financeiro-carregando>
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-3" data-financeiro-carregando>
         {[0, 1, 2].map((i) => <Cartao key={i} className="h-[260px] p-5"><Esqueleto className="h-full w-full" /></Cartao>)}
       </div>
     );
@@ -85,7 +85,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
 
   return (
     <div className="flex flex-col gap-3.5" data-financeiro-aluno={d.aluno.paciente_id}>
-      <div className={compacto ? "grid gap-3.5" : "grid gap-3.5 md:grid-cols-2 xl:grid-cols-3"}>
+      <div className={compacto ? "grid grid-cols-1 gap-3.5" : "grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3"}>
         <CartaoMensalidade d={d} agir={f.agir} />
         <CartaoCobrancas d={d} alunoId={alunoId} compacto={compacto} agir={f.agir} aoVerComprovante={setComprovante} aoRegistrar={(c) => setRegistrar({ cobranca: c })}
           aoNovaCobranca={() => setNovaCobranca(true)} aoRegistrarMensalidade={() => setRegistrar({ cobranca: null })} />
@@ -96,7 +96,7 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
             aoMudou={() => void f.recarregar()} />
         </div>
       </div>
-      <div className={compacto ? "grid gap-3.5" : "grid gap-3.5 xl:grid-cols-2"}>
+      <div className={compacto ? "grid grid-cols-1 gap-3.5" : "grid grid-cols-1 gap-3.5 xl:grid-cols-2"}>
         <CartaoLancamentosERecibos d={d} compacto={compacto} reciboAvulso={reciboAvulso} aoFecharReciboAvulso={() => setReciboAvulso(false)} aoAbrirReciboAvulso={() => setReciboAvulso(true)} />
       </div>
 

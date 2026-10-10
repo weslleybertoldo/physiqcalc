@@ -155,7 +155,7 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
         </p>
       )}
       {acao === "plano" && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo rotulo="Plano">
             <select className={SELECT} value={plano} onChange={(e) => setPlano(e.target.value as PlanoConta)} data-campo-plano>
               {PLANOS.map((p) => <option key={p} value={p}>{ROTULO_PLANO[p]}</option>)}
@@ -189,7 +189,7 @@ export function AcaoContaDialog({ conta, acao, aoFechar, aoFeito }: {
         </Campo>
       )}
       {acao === "registrar_pagamento" && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Campo rotulo="Valor (R$)" dica={conta.valor_mensal ? `Mensal: ${moeda(conta.valor_mensal)}` : undefined}>
             <input className={INPUT} inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} data-campo-valor />
           </Campo>

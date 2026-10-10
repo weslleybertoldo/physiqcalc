@@ -249,11 +249,11 @@ export function CalculadoraFerramenta({ cabecalho }: { cabecalho?: (acoes: React
       </div>
 
       {aba === "comp" ? (
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col gap-4">
             <Cartao brilho className="p-4 sm:p-5" data-cartao-dados>
               <CabecalhoCartao titulo="Dados da pessoa" extra={<Chip tom="t" icone={Activity}>TMB</Chip>} />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Campo rotulo="Nome" tipo="text" valor={nome} aoMudar={setNome} placeholder="Nome da pessoa" data-campo-nome />
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-texto-4">Sexo</span>
@@ -355,7 +355,7 @@ export function CalculadoraFerramenta({ cabecalho }: { cabecalho?: (acoes: React
               Preencha os dados de antes e os de agora. Nada é salvo no servidor: fica neste aparelho por 24 horas.
             </p>
           </Cartao>
-          <div className="grid items-start gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             {(["ref", "novo"] as const).map((lado) => {
               const d = lado === "ref" ? refD : novo;
               const mudar = (patch: Partial<RefData & NovoData>) => (lado === "ref" ? setRefD({ ...refD, ...patch }) : setNovo({ ...novo, ...patch }));
@@ -363,7 +363,7 @@ export function CalculadoraFerramenta({ cabecalho }: { cabecalho?: (acoes: React
               return (
                 <Cartao key={lado} brilho={lado === "novo"} className="p-4 sm:p-5" data-lado={lado}>
                   <CabecalhoCartao titulo={lado === "ref" ? "Antes · referência" : "Agora"} extra={<Chip tom={lado === "ref" ? "g" : "t"}>{lado === "ref" ? "ANTES" : "AGORA"}</Chip>} />
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {lado === "ref" && <Campo rotulo="Nome" tipo="text" valor={refD.nome} aoMudar={(v) => setRefD({ ...refD, nome: v })} placeholder="ex.: Lucas" data-campo-ref-nome />}
                     <Campo rotulo="Data (opcional)" tipo="date" valor={d.data} aoMudar={(v) => mudar({ data: v })} data-campo-data={lado} />
                   </div>

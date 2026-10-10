@@ -96,7 +96,7 @@ export function MeusTreinos({
 
   if (t.pagina.isLoading) {
     return (
-      <div className="grid gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos="carregando">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos="carregando">
         <Cartao className="flex flex-col gap-2 p-4">{[0, 1, 2, 3, 4].map((i) => <Esqueleto key={i} className="h-12 w-full" />)}</Cartao>
         <Cartao className="flex flex-col gap-3 p-5"><Esqueleto className="h-8 w-1/2" />{[0, 1, 2, 3].map((i) => <Esqueleto key={i} className="h-14 w-full" />)}</Cartao>
       </div>
@@ -171,7 +171,7 @@ export function MeusTreinos({
   const buscando = !!(termo || busca.trim());
 
   return (
-    <div className="grid items-start gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos={t.totalGeral}>
+    <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[320px_minmax(0,1fr)]" data-meus-treinos={t.totalGeral}>
       {/* ── esquerda: pastas e treinos ── */}
       <Cartao className="flex min-w-0 flex-col px-3.5 py-3.5" data-lista-modelos>
         <label className="mb-3 flex h-9 items-center gap-2 rounded-xl border border-linha bg-superficie px-3 text-[13px] text-texto-2">

@@ -144,7 +144,7 @@ export function PagarMercadoPago({
       <PainelDeslizante aberto={!!alvo && !cartao} aoMudar={(a) => !a && aoFechar()} titulo={titulo} descricao={`${reais(valor)} · Mercado Pago`} lado="baixo">
         <div className="flex flex-col gap-4" data-pagar-mp>
           {!pix ? (
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <Botao variante="w" icone={QrCode} className="w-full" disabled={gerando} onClick={() => void gerarPix()} data-mp-gerar-pix>
                 {gerando ? "Gerando o Pix…" : `Pagar ${reais(valor)} com Pix`}
               </Botao>

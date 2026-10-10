@@ -54,7 +54,7 @@ export function EscolhaPlano({
   const precoMes = (plano: PlanoConta, faixa: Faixa) => precoDoPlano(precos, plano, faixa, 1, valorTravado);
   return (
     <div className="flex flex-col gap-4" data-escolha-plano>
-      <div className="grid gap-2.5 sm:grid-cols-3" role="radiogroup" aria-label="Plano">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3" role="radiogroup" aria-label="Plano">
         {PLANOS.map((plano) => {
           const ativo = escolha.plano === plano;
           const valor = precoDoPlano(precos, plano, escolha.faixa, escolha.meses, valorTravado);
