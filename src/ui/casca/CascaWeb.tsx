@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { DropdownMenu } from "radix-ui";
 import { Ellipsis, Menu, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -309,7 +310,9 @@ export function CascaWeb({
             rodapeMenu={rodapeMenu}
             usuario={usuario}
             acoesUsuario={acoesUsuario.map((a) => ({ ...a, aoTocar: () => { setMaisAberto(false); a.aoTocar(); } }))}
-            aoNavegar={() => setMaisAberto(false)}
+            // hml-18a (H-40, E): a folha começa a fechar no próprio toque, antes do render da página nova (que pode ser pesada,
+            // ex.: a Agenda) — senão o 1º sinal na tela esperava a página inteira
+            aoNavegar={() => flushSync(() => setMaisAberto(false))}
           />
         </PainelDeslizante>
 

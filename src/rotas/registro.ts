@@ -1,4 +1,4 @@
-import { lazy, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
+import { createElement, lazy, useState, type ComponentType, type ReactNode } from "react";
 
 /**
  * Registro por convenção (spec 11.1, regra 2). Cada worktree só cria os arquivos dela nas pastas
@@ -46,7 +46,7 @@ export interface ItemRegistro {
   nome: string;
   caminho: string;
   carregar: Carregador;
-  Componente: LazyExoticComponent<ComponenteQualquer>;
+  Componente: ComponenteQualquer;
 }
 
 export type Grupo = Record<string, ItemRegistro>;
@@ -57,14 +57,36 @@ export function nomeDoArquivo(caminho: string): string {
   return base.replace(/\.(tsx|ts)$/, "");
 }
 
+/**
+ * hml-18a (H-40, E) — a tela registrada (preguiçosa) que abre SEM a espera do Suspense quando o pedaço já chegou. O `lazy()` do React
+ * suspende na 1ª vez que a tela aparece mesmo com o módulo já baixado pela pré-carga (src/rotas/usePreCarga.ts), e o React segura a
+ * troca do esqueleto pelo conteúdo por ~300 ms (o "fallback throttle" do Suspense) — medido no local: o app só chamava o 1º fetch de
+ * cada página ~350 ms depois do toque, com o pedaço já baixado e o processador livre. Com o módulo já carregado, a tela renderiza
+ * direto. A escolha é feita na montagem e não muda depois: se o pedaço chega no meio, a tela não remonta (nem perde o estado).
+ */
+function telaRegistrada(nome: string, carregar: Carregador): Pick<ItemRegistro, "carregar" | "Componente"> {
+  let pronta: ComponenteQualquer | null = null;
+  const carregarELembrar: Carregador = () =>
+    carregar().then((m) => {
+      pronta = m.default;
+      return m;
+    });
+  const Preguicosa = lazy(carregarELembrar);
+  function Tela(props: Record<string, unknown>) {
+    const [Direta] = useState<ComponenteQualquer | null>(() => pronta);
+    return createElement(Direta ?? Preguicosa, props);
+  }
+  Tela.displayName = `Tela(${nome})`;
+  return { carregar: carregarELembrar, Componente: Tela };
+}
+
 /** Monta o grupo a partir do mapa do `import.meta.glob` (preguiçoso). */
 export function montarGrupo(mapa: Record<string, () => Promise<unknown>>): Grupo {
   const grupo: Grupo = {};
   for (const [caminho, carregar] of Object.entries(mapa)) {
     const nome = nomeDoArquivo(caminho);
     if (nome.startsWith("_") || /\.(test|spec)$/.test(nome)) continue;
-    const c = carregar as Carregador;
-    grupo[nome] = { nome, caminho, carregar: c, Componente: lazy(c) };
+    grupo[nome] = { nome, caminho, ...telaRegistrada(nome, carregar as Carregador) };
   }
   return grupo;
 }
@@ -118,7 +140,7 @@ export const registro = {
 export type NomeGrupo = keyof typeof registro;
 
 /** Componente registrado (ou null se a worktree dele ainda não entrou). */
-export function tela(grupo: NomeGrupo, nome: string): LazyExoticComponent<ComponenteQualquer> | null {
+export function tela(grupo: NomeGrupo, nome: string): ComponenteQualquer | null {
   return registro[grupo][nome]?.Componente ?? null;
 }
 

@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createElement, Suspense, useEffect } from "react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { existe, listar, montarGrupo, nomeDoArquivo, ordenar, registro, rotasDaEntrada, rotasDaPaginaPublica, slug, tela } from "./registro";
 
@@ -20,6 +22,31 @@ describe("registro por convenção (spec 11.1)", () => {
     });
     expect(Object.keys(g)).toEqual(["Treino"]);
     expect(g.Treino.caminho).toBe("/src/x/Treino.tsx");
+  });
+
+  it("hml-18a: a tela já baixada (a pré-carga) abre direto, sem suspender — nada de esqueleto nem da espera de ~300 ms do Suspense", async () => {
+    const g = montarGrupo({ "/src/x/Treinos.tsx": () => Promise.resolve({ default: () => createElement("p", null, "a página") }) });
+    await g.Treinos.carregar();
+    render(createElement(Suspense, { fallback: createElement("p", null, "esqueleto") }, createElement(g.Treinos.Componente)));
+    expect(screen.getByText("a página")).toBeInTheDocument(); // já no 1º render
+    expect(screen.queryByText("esqueleto")).toBeNull();
+  });
+
+  it("hml-18a: a tela ainda não baixada suspende (o esqueleto) e aparece quando o pedaço chega; depois não remonta", async () => {
+    let soltar!: () => void;
+    const chegou = new Promise<void>((r) => { soltar = r; });
+    let montagens = 0;
+    function Pagina() {
+      useEffect(() => { montagens += 1; }, []);
+      return createElement("p", null, "a página");
+    }
+    const g = montarGrupo({ "/src/x/Agenda.tsx": () => chegou.then(() => ({ default: Pagina })) });
+    const r = render(createElement(Suspense, { fallback: createElement("p", null, "esqueleto") }, createElement(g.Agenda.Componente)));
+    expect(screen.getByText("esqueleto")).toBeInTheDocument();
+    await act(async () => { soltar(); });
+    expect(await screen.findByText("a página")).toBeInTheDocument();
+    r.rerender(createElement(Suspense, { fallback: createElement("p", null, "esqueleto") }, createElement(g.Agenda.Componente, { outra: 1 })));
+    expect(montagens).toBe(1); // o pedaço chegou no meio: a tela continua a mesma (não troca de componente)
   });
 
   it("ordena pela ordem conhecida; desconhecidos no fim, em ordem alfabética", () => {
