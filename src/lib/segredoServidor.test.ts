@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -12,7 +12,9 @@ import * as doTreino from "../../supabase/functions/_shared/segredo-servidor";
 
 // Homologação hml-16c (H-51) — o segredo entre os servidores, 1 por finalidade (_shared/segredo-servidor.ts, as 2 cópias). O
 // emissor manda SEGREDO_X (sem ele, até o F7, o legado ESPELHO_SEGREDO); o receptor aceita o sha256 na lista SEGREDO_X_ACEITOS
-// ("lista") ou o legado ("legado"); o resto recusa. Valores falsos, feitos aqui; nada vai à rede.
+// ("lista") ou o legado ("legado"); o resto recusa. Valores falsos, feitos aqui; nada vai à rede. No fim, a guarda nas fontes das
+// funções: cada receptor e cada emissor usa o nome da tabela do contrato (§1), o log segredo_aceito leva só a finalidade e o
+// resultado, e o legado e o comparador antigo não voltam fora da peça comum.
 const raiz = resolve(__dirname, "../..");
 const ler = (rel: string) => readFileSync(resolve(raiz, rel), "utf-8");
 
@@ -231,5 +233,146 @@ describe("as 2 cópias (cada banco publica só o _shared dele)", () => {
       expect(fonte).not.toMatch(/\bDeno\.env\b/);
       expect(fonte).not.toMatch(/\bconsole\b/);
     }
+  });
+});
+
+// ───────────────────────── a guarda nas fontes das funções (contrato hml-16c §1) ─────────────────────────
+
+const P = "supabase-principal/functions";
+const T = "supabase/functions";
+const PECA_COMUM = [`${T}/_shared/segredo-servidor.ts`, `${P}/_shared/segredo-servidor.ts`];
+
+interface Canal {
+  /** O segredo do EMISSOR (a lista do receptor é `${nome}_ACEITOS`). */
+  nome: string;
+  /** A finalidade (o nome do script): vai no `acao` do log segredo_aceito. */
+  finalidade: string;
+  /** Onde o receptor aceita (segredoAceito com o nome) → quantas entradas aceitam. */
+  aceite: Record<string, number>;
+  /** Onde o x-espelho-segredo é lido e o log segredo_aceito sai → quantos logs (sem isto: o mesmo arquivo do aceite). */
+  log?: Record<string, number>;
+  /** Quem manda (segredoParaEnviar com o nome). O S8 sai do banco (espelho_disparar, pg_net): nenhum arquivo daqui. */
+  emissores: string[];
+}
+
+const CANAIS: Canal[] = [
+  { nome: "SEGREDO_ESPELHO_NUCLEO", finalidade: "espelho_nucleo", aceite: { [`${T}/espelho-nucleo/index.ts`]: 1 }, emissores: [`${P}/espelho-enviar/index.ts`] },
+  { nome: "SEGREDO_PONTE_CALC", finalidade: "ponte_calc", aceite: { [`${T}/vincular-professor/index.ts`]: 1 }, emissores: [`${P}/pos-login/index.ts`] },
+  { nome: "SEGREDO_CONTA_TREINO", finalidade: "conta_treino", aceite: { [`${T}/delete-my-account/index.ts`]: 1 }, emissores: [`${P}/_shared/treino-servidor.ts`] },
+  { nome: "SEGREDO_ESPELHO_RESUMO", finalidade: "espelho_resumo", aceite: { [`${P}/espelho-resumo/index.ts`]: 1 }, emissores: [`${T}/trocar-token/index.ts`] },
+  {
+    nome: "SEGREDO_REPASSE_VINCULO",
+    finalidade: "repasse_vinculo",
+    aceite: { [`${P}/vincular-aluno/index.ts`]: 2 }, // o vínculo e o desvincular
+    emissores: [`${T}/admin-delete-user/index.ts`, `${T}/vincular-professor/index.ts`],
+  },
+  { nome: "SEGREDO_REPASSE_CONVITES", finalidade: "repasse_convites", aceite: { [`${P}/alunos/index.ts`]: 1 }, emissores: [`${T}/professor-convites/index.ts`] },
+  {
+    nome: "SEGREDO_AVISO_ERRO",
+    finalidade: "aviso_erro",
+    aceite: { [`${P}/erro-avisar/index.ts`]: 1 }, // a função liga o segredoAceito ao atenderPedido (DepsPedido.segredo)
+    log: { [`${P}/_shared/erro-avisar-regras.ts`]: 1 },
+    emissores: [`${T}/_shared/avisar-erro.ts`],
+  },
+  { nome: "SEGREDO_ESPELHO_FILA", finalidade: "espelho_fila", aceite: { [`${P}/espelho-enviar/index.ts`]: 1 }, emissores: [] },
+];
+
+/** O código sem comentário: sem as linhas de bloco (as que começam com /* ou *) e sem o // de fim de linha (fora de URL). */
+function semComentario(fonte: string): string {
+  return fonte
+    .split("\n")
+    .map((linha) => (/^\s*(\/\*|\*)/.test(linha) ? "" : linha.replace(/(?<![:\\])\/\/.*$/, "")))
+    .join("\n");
+}
+
+/** Todos os .ts das funções dos 2 projetos, com o código sem comentário. */
+function fontesDasFuncoes(): Array<{ arquivo: string; codigo: string }> {
+  const saida: Array<{ arquivo: string; codigo: string }> = [];
+  const andar = (rel: string) => {
+    for (const e of readdirSync(resolve(raiz, rel), { withFileTypes: true })) {
+      const caminho = `${rel}/${e.name}`;
+      if (e.isDirectory()) andar(caminho);
+      else if (e.name.endsWith(".ts")) saida.push({ arquivo: caminho, codigo: semComentario(ler(caminho)) });
+    }
+  };
+  andar(P);
+  andar(T);
+  return saida.sort((a, b) => (a.arquivo < b.arquivo ? -1 : 1));
+}
+
+const FONTES = fontesDasFuncoes();
+const codigoDe = (arquivo: string) => FONTES.find((f) => f.arquivo === arquivo)?.codigo ?? "";
+const linhasCom = (codigo: string, ...pedacos: Array<string | RegExp>) =>
+  codigo.split("\n").filter((l) => pedacos.every((p) => (typeof p === "string" ? l.includes(p) : p.test(l)))).length;
+const arquivosCom = (...pedacos: Array<string | RegExp>) => FONTES.filter((f) => linhasCom(f.codigo, ...pedacos) > 0).map((f) => f.arquivo).sort();
+const logDoCanal = (c: Canal) => c.log ?? c.aceite;
+/** O log do aceite tem esta forma e nada mais: o código, o schema (quando a função já sabe), a finalidade e lista | legado. */
+const formaDoLog = (finalidade: string) =>
+  new RegExp(String.raw`\blog\.info\(\{ codigo: "segredo_aceito"(?:, schema(?:: currentSchema\(\))?)?, acao: "${finalidade}", resultado: [a-z]+ \}\);`);
+
+describe("a guarda nas fontes: os 8 segredos do contrato (hml-16c §1) nos receptores e nos emissores", () => {
+  it("8 nomes e 8 finalidades, sem repetir; a finalidade é o nome sem o SEGREDO_, em minúsculas", () => {
+    expect(new Set(CANAIS.map((c) => c.nome)).size).toBe(8);
+    expect(new Set(CANAIS.map((c) => c.finalidade)).size).toBe(8);
+    for (const c of CANAIS) expect(c.finalidade).toBe(c.nome.replace(/^SEGREDO_/, "").toLowerCase());
+    expect(FONTES.length).toBeGreaterThan(40); // o leitor achou as funções dos 2 projetos
+  });
+
+  it.each(CANAIS)("$nome: o receptor aceita com este nome e loga a finalidade ($finalidade), só onde a tabela diz", (c) => {
+    for (const [arquivo, n] of Object.entries(c.aceite)) {
+      expect(linhasCom(codigoDe(arquivo), "segredoAceito(", `"${c.nome}"`), arquivo).toBe(n);
+    }
+    for (const [arquivo, n] of Object.entries(logDoCanal(c))) {
+      expect(linhasCom(codigoDe(arquivo), formaDoLog(c.finalidade)), arquivo).toBe(n);
+    }
+    expect(arquivosCom("segredoAceito(", `"${c.nome}"`)).toEqual(Object.keys(c.aceite).sort());
+    expect(arquivosCom(`acao: "${c.finalidade}"`, "segredo_aceito")).toEqual(Object.keys(logDoCanal(c)).sort());
+  });
+
+  it.each(CANAIS)("$nome: o emissor manda este nome (1 vez em cada), e só ele", (c) => {
+    for (const arquivo of c.emissores) expect(linhasCom(codigoDe(arquivo), `segredoParaEnviar("${c.nome}")`), arquivo).toBe(1);
+    expect(arquivosCom(`segredoParaEnviar("${c.nome}")`)).toEqual([...c.emissores].sort());
+  });
+
+  it("todo log segredo_aceito tem a forma certa (nunca o valor nem o hash) e são 9 (o S5 tem 2 entradas)", () => {
+    const todos = FONTES.reduce((n, f) => n + linhasCom(f.codigo, '"segredo_aceito"'), 0);
+    const certos = CANAIS.reduce((n, c) => n + FONTES.reduce((m, f) => m + linhasCom(f.codigo, formaDoLog(c.finalidade)), 0), 0);
+    expect(todos).toBe(9);
+    expect(certos).toBe(9);
+  });
+
+  it("quem lê o x-espelho-segredo é um receptor da tabela; quem o manda, um emissor da tabela", () => {
+    const leitores = [...new Set(CANAIS.flatMap((c) => Object.keys(logDoCanal(c))))].sort();
+    expect(arquivosCom('headers.get("x-espelho-segredo")')).toEqual(leitores);
+    const emissores = [...new Set(CANAIS.flatMap((c) => c.emissores))].sort();
+    expect(arquivosCom('"x-espelho-segredo":')).toEqual(emissores);
+  });
+
+  it("todo aceite espera a resposta (sem o await, a Promise seria 'verdadeira' e aceitaria qualquer valor)", () => {
+    const chamadas = FONTES.filter((f) => !PECA_COMUM.includes(f.arquivo)).flatMap((f) =>
+      f.codigo.split("\n").filter((l) => l.includes("segredoAceito(")).map((l) => `${f.arquivo}: ${l.trim()}`),
+    );
+    expect(chamadas).toHaveLength(9);
+    // a erro-avisar passa a função adiante (DepsPedido.segredo) e o atenderPedido é quem espera
+    const semAwait = chamadas.filter((c) => !c.includes("await segredoAceito(") && !c.includes("=> segredoAceito(recebido, "));
+    expect(semAwait).toEqual([]);
+    expect(linhasCom(codigoDe(`${P}/_shared/erro-avisar-regras.ts`), "const aceito = await deps.segredo(segredo);")).toBe(1);
+    expect(linhasCom(codigoDe(`${P}/erro-avisar/index.ts`), "=> segredoAceito(recebido, ")).toBe(1);
+  });
+
+  it("quem usa a peça comum importa dela o que usa (o tsc do app não lê as index.ts das funções)", () => {
+    const usam = FONTES.filter((f) => !PECA_COMUM.includes(f.arquivo) && /\bsegredo(?:Aceito|ParaEnviar)\(/.test(f.codigo));
+    expect(usam.length).toBe(14);
+    for (const f of usam) {
+      const importados = /import \{([^}]*)\} from "(?:\.\.\/_shared|\.)\/segredo-servidor\.ts";/.exec(f.codigo)?.[1] ?? "";
+      for (const nome of ["segredoAceito", "segredoParaEnviar"]) {
+        if (new RegExp(String.raw`\b${nome}\(`).test(f.codigo)) expect(importados, `${f.arquivo}: ${nome}`).toMatch(new RegExp(String.raw`\b${nome}\b`));
+      }
+    }
+  });
+
+  it("o legado ESPELHO_SEGREDO só é lido pela peça comum (até o F7); o comparador antigo só ficou no push (PUSH_SEGREDO)", () => {
+    expect(arquivosCom("ESPELHO_SEGREDO")).toEqual([...PECA_COMUM].sort());
+    expect(arquivosCom("function segredoConfere(")).toEqual([`${P}/_shared/push-regras.ts`]);
   });
 });

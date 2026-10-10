@@ -13,7 +13,6 @@ import {
   escolherMatriculaTreino,
   linhasEspelhoMembros,
   papelTreino,
-  segredoConfere,
   sexoTreino,
   statusDoPerfil,
   treinoVisivelPelaConta,
@@ -276,16 +275,6 @@ describe("linhas do physiq_espelho_membros", () => {
       { conta_id: "c1", papeis: ["dono", "personal"], ativo: true },
       { conta_id: "c2", papeis: ["personal"], ativo: false },
     ]);
-  });
-});
-
-describe("segredo do espelho em tempo constante", () => {
-  const s = "a".repeat(64);
-  it("igual → true; diferente, vazio ou segredo curto → false", () => {
-    expect(segredoConfere(s, s)).toBe(true);
-    expect(segredoConfere("b".repeat(64), s)).toBe(false);
-    expect(segredoConfere("", s)).toBe(false);
-    expect(segredoConfere("curto", "curto")).toBe(false);
   });
 });
 

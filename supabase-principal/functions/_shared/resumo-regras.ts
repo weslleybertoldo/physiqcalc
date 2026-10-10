@@ -150,13 +150,3 @@ export function proximaTentativaMs(tentativas: number): number {
 }
 
 export const MAX_TENTATIVAS_ESPELHO = 5;
-
-/** Comparação de segredo em tempo constante (ESPELHO_SEGREDO). Segredo curto = sempre recusa. */
-export function segredoConfere(recebido: string | null | undefined, esperado: string | null | undefined): boolean {
-  const a = recebido || "";
-  const b = esperado || "";
-  if (b.length < 32 || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
