@@ -42,12 +42,28 @@ O controlador é quem decide sobre o dado. É ele quem avisa a ANPD e as pessoas
 
 - Valor novo no cofre (projeto PhysiqCalc). Nunca no chat, em commit, em print ou em log.
 - Os segredos das funções ficam em Supabase › Edge Functions › Secrets de cada projeto (ou pela Management API). Valem sem
-  deploy.
-- Segredo que mora em mais de um lugar: trocar todos na mesma hora. Enquanto um está velho, a ponte entre eles falha.
+  deploy, mas a função que já está de pé segue com o valor antigo por alguns minutos: publicar de novo para valer na hora.
+- Segredos entre servidores (cabeçalho `x-espelho-segredo`, as 8 primeiras linhas da tabela): 1 por finalidade. Quem manda
+  guarda o valor; quem recebe guarda só o sha256 dele, na lista `<SEGREDO>_ACEITOS` (até 2: o atual e o anterior). O valor
+  fica no cofre › PhysiqCalc › `Physiq — <SEGREDO> (hml-16c)`. Cada um troca sozinho, sem derrubar o canal, com
+  `python3 scripts/segredos/servidor.py <finalidade> <passo>` (mostra só sha8 e tamanho; `--dry-run` mostra o plano):
+  `gerar` → `aceitar` e publicar o receptor → `trocar` e publicar o emissor → `conferir` → `aceitar --so-atual` e publicar o
+  receptor de novo (o valor anterior deixa de valer). Valor vazado: o mesmo caminho; para cortá-lo antes,
+  `aceitar --so-atual --forcar` (o canal falha até o `trocar` e a publicação do emissor).
+- Até o fim da troca da hml-16c ainda existe o legado `ESPELHO_SEGREDO` (funções dos 2 projetos, Vault `physiq_espelho_segredo`,
+  `~/.physiq-espelho-segredo`), aceito pelos 8 receptores. Vazou: apagar nos 2 projetos e no Vault; o canal que ainda não
+  trocou para até trocar. Enquanto ele existe, a volta de um canal é o `tirar` (o emissor volta ao legado).
 
 | Segredo | Onde está | Como trocar |
 |---|---|---|
-| `ESPELHO_SEGREDO` | funções do principal e do Treino; Vault do principal (`physiq_espelho_segredo`); `~/.physiq-espelho-segredo` | valor novo (32+ caracteres) nos 2 projetos e no Vault (`python3 e2e/w04/vault_espelho.py`, que lê o arquivo). Fora de sincronia, falham o espelho entre os bancos, a troca de token e a exclusão de conta |
+| `SEGREDO_ESPELHO_NUCLEO` | principal (manda: `espelho-enviar`); a lista no Treino (`espelho-nucleo`) | `servidor.py espelho_nucleo`. Fora de sincronia, o acesso novo dos profissionais não chega ao Treino (a pendência para depois de 5 falhas e só volta no próximo login) |
+| `SEGREDO_PONTE_CALC` | principal (`pos-login`); a lista no Treino (`vincular-professor`, modo servidor) | `servidor.py ponte_calc`. Fora de sincronia, a ponte do Calc no login não roda (o login segue) |
+| `SEGREDO_CONTA_TREINO` | principal (`excluir-minha-conta`, `exportar-meus-dados`); a lista no Treino (`delete-my-account`, modo servidor) | `servidor.py conta_treino`. Fora de sincronia, exportar e excluir a conta não alcançam o Treino |
+| `SEGREDO_ESPELHO_RESUMO` | Treino (`trocar-token`); a lista no principal (`espelho-resumo`) | `servidor.py espelho_resumo`. Fora de sincronia, o login do app no Treino falha: trocar por último e voltar na hora se algo falhar |
+| `SEGREDO_REPASSE_VINCULO` | Treino (`vincular-professor` no modo app, `admin-delete-user`); a lista no principal (`vincular-aluno`) | `servidor.py repasse_vinculo`. Fora de sincronia, falham o vínculo pelo código dos APKs até a 3.1 e o desvínculo pelo painel antigo |
+| `SEGREDO_REPASSE_CONVITES` | Treino (`professor-convites`); a lista no principal (`alunos`, `acao: repasse`) | `servidor.py repasse_convites`. Fora de sincronia, falham os convites dos APKs até a 3.15 |
+| `SEGREDO_AVISO_ERRO` | Treino (as 13 funções que avisam erro, pelo `_shared/avisar-erro.ts`); a lista no principal (`erro-avisar`) | `servidor.py aviso_erro`. Fora de sincronia, os avisos de erro do Treino não chegam (as funções seguem) |
+| fila do espelho (Vault `physiq_espelho_fila_segredo`; no cofre, `SEGREDO_ESPELHO_FILA`) | banco principal (`espelho_disparar()`, pelo `pg_net`); a lista `SEGREDO_ESPELHO_FILA_ACEITOS` no principal (`espelho-enviar`); `~/.physiq-segredo-espelho-fila` (E2E) | `servidor.py espelho_fila` (grava o Vault e o arquivo). Fora de sincronia, a fila do espelho só espera (a tarefa tenta de novo a cada 10 min) |
 | `PUSH_SEGREDO` | função `push-enviar`; Vault (`physiq_push_segredo`); `~/.physiq-push-segredo` | trocar o arquivo e rodar `python3 e2e/w20c/segredos_push.py` (grava a função e o Vault) |
 | `FCM_SERVICE_ACCOUNT` | função `push-enviar`; `~/.physiq-firebase/fcm-envio.json` | chave nova da conta de serviço `fcm-envio@physiq-br` no Google Cloud, apagar a antiga e rodar o mesmo `segredos_push.py` |
 | `PROXY_SEGREDO` | funções `entrar-senha` e `alunos`; Worker `physiq-principal-api`; Vault (`physiq_proxy_segredo`); `~/.physiq-proxy-segredo` | os 3 juntos: o segredo das funções, o `deploy.sh` do Worker (grava a partir do arquivo) e o Vault. Fora de sincronia, todo mundo conta como um IP só nos limites do login e das páginas públicas |
