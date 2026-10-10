@@ -11,8 +11,8 @@ e conferir que nada saiu do esperado.
 
 Uso: python3 e2e/w04/espelho_fila.py --schema staging --dry-run [--json ~/backups/physiq/2026-09-29-w04/fila-staging.json]
 E-mails de contas reais aparecem mascarados no relatório.
-Segredos (hml-16c): a espelho-resumo com o SEGREDO_ESPELHO_RESUMO do ambiente (S4, o que a trocar-token manda); a
-espelho-enviar com o da fila (S8, ~/.physiq-segredo-espelho-fila). Sem eles, o legado (reserva até o F7).
+Segredos (hml-16c): a espelho-resumo com o SEGREDO_ESPELHO_RESUMO do ambiente (S4, o que a trocar-token manda; sem ele, a
+espelho-resumo recusa); a espelho-enviar com o da fila (S8, ~/.physiq-segredo-espelho-fila; sem ele, o _comum para com erro).
 """
 from __future__ import annotations
 
