@@ -9,7 +9,7 @@ import PacoteDialog, { type ResponsavelPacote } from "@/painel/agenda/PacoteDial
 import { CHAVES_AGENDA } from "@/painel/agenda/useAgenda";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
-import { Esqueleto } from "@/ui/premium/Estados";
+import { CartaoCarregando, Esqueleto } from "@/ui/premium/Estados";
 import { useAvaliacaoDoAluno } from "../avaliacao/useAvaliacaoDoAluno";
 import { usePerfilAluno } from "../dados/usePerfilAluno";
 
@@ -70,7 +70,8 @@ export default function CardProximosCompromissos({ alunoId }: { alunoId: string 
     return out.sort((a, b) => a.ordem.localeCompare(b.ordem)).slice(0, 4);
   }, [comp.data, ev.dados, hoje, p?.personal?.nome]);
 
-  if (!p) return null;
+  // hml-18a (H-40, E): enquanto o perfil chega, o cartão-esqueleto do mesmo tamanho (antes: nada, e o card aparecia do nada)
+  if (!p) return perfil.isLoading ? <CartaoCarregando className="min-h-[240px]" rotulo="Carregando os próximos compromissos" /> : null;
 
   const eu = p.eu;
   const responsaveis: ResponsavelPacote[] = [];

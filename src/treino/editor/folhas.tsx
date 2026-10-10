@@ -10,6 +10,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { filtrosDaBiblioteca, termoDaBusca } from "@/painel/treinos/regras";
 import { carregarModelos, exerciciosDaLista, type FiltrosDaBiblioteca } from "./api";
 import { mensagemDoErro } from "./useEditorTreino";
@@ -329,7 +330,7 @@ export function FolhaModelos({
 export function FolhaEditarExercicio({
   aberto,
   aoMudar,
-  ex,
+  ex: exAberto,
   descansoPadrao,
   listaFixa,
   aoSalvar,
@@ -348,6 +349,10 @@ export function FolhaEditarExercicio({
   const [descanso, setDescanso] = useState("");
   const [carga, setCarga] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  // hml-18a (H-40): enquanto a folha sai, o exercício de antes (antes ela sumia seca com o ex null); e o Salvar mostra "Salvando…"
+  // desligado enquanto grava (o G barato da spec: nada de toque duplo nem espera em silêncio)
+  const ex = useUltimoValor(exAberto);
+  const [salvando, setSalvando] = useState(false);
   useEffect(() => {
     if (!ex || !aberto) return;
     setSeries(ex.series);
@@ -363,8 +368,14 @@ export function FolhaEditarExercicio({
   const valido = r.ok && d.ok && c.ok;
   const previa = valido ? linhaDoAluno({ series, reps: r.valor, descanso: d.valor, carga: c.valor, corrida: ex.corrida }, descansoPadrao) : null;
   const salvar = async (p: PrescricaoEditavel) => {
-    const ok = await aoSalvar(p);
-    if (ok) aoMudar(false);
+    if (salvando) return;
+    setSalvando(true);
+    try {
+      const ok = await aoSalvar(p);
+      if (ok) aoMudar(false);
+    } finally {
+      setSalvando(false);
+    }
   };
   const campo = (rotulo: string, ajuda: string, valor: string, setValor: (v: string) => void, dado: string, placeholder: string, erroCampo?: string) => (
     <label className="flex flex-col gap-1.5">
@@ -399,6 +410,7 @@ export function FolhaEditarExercicio({
             variante="g"
             className="ml-auto"
             onClick={() => void salvar({ series, reps: null, descanso: null, carga: null })}
+            disabled={salvando}
             data-editar-limpar
           >
             Limpar
@@ -406,14 +418,15 @@ export function FolhaEditarExercicio({
           <Botao
             tamanho="sm"
             variante="w"
-            disabled={!valido}
+            disabled={!valido || salvando}
             onClick={() => {
               if (!r.ok || !d.ok || !c.ok) return setErro("Confira os campos");
               void salvar({ series, reps: r.valor, descanso: d.valor, carga: c.valor });
             }}
             data-editar-salvar
+            data-salvando={salvando ? "1" : "0"}
           >
-            Salvar
+            {salvando ? "Salvando…" : "Salvar"}
           </Botao>
         </div>
       }

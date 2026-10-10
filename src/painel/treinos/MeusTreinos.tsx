@@ -9,6 +9,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { colocarNaPasta, criarModelo, criarPasta, excluirModelo, excluirPasta, listarExercicios, renomearModelo, renomearPasta } from "./api";
@@ -419,7 +420,7 @@ function FolhaNovoTreino({
 function FolhaPastasDoTreino({
   aberto,
   aoMudar,
-  modelo,
+  modelo: modeloAberto,
   pastas,
   editaveis,
   aoAlternar,
@@ -434,6 +435,8 @@ function FolhaPastasDoTreino({
   aoNovaPasta?: () => void;
 }) {
   const [indo, setIndo] = useState<string | null>(null);
+  // hml-18a (H-40, D): enquanto a folha sai, o treino de antes (antes ela sumia seca com o modelo null)
+  const modelo = useUltimoValor(modeloAberto);
   if (!modelo) return null;
   // hml-14d: as pastas do treino vêm do próprio treino (a tela não tem mais todos os treinos de cada pasta)
   const globais = pastas.filter((p) => !p.editavel && modelo.pastas.includes(p.id));

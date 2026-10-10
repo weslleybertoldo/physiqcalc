@@ -464,10 +464,11 @@
   &::-webkit-scrollbar {
     display: none;
   }
-  /* hml-18a (H-40): as abas de página e os chips da rolagem lateral encolhem um pouco no toque (com a transição da cor) */
+  /* hml-18a (H-40): as abas de página e os chips da rolagem lateral encolhem um pouco no toque (150 ms); a cor da aba que fica
+     ativa muda em 200 ms (o indicador da aba ativa da Skill-wbs-navegacao, princípio 5 — nada de trocar a classe seco) */
   & > :is(a[href], button):not(:disabled) {
     transition-property: color, background-color, border-color, opacity, transform;
-    transition-duration: 0.15s;
+    transition-duration: 0.2s, 0.2s, 0.2s, 0.15s, 0.15s;
     transition-timing-function: ease-out;
   }
   & > :is(a[href], button):not(:disabled):active {

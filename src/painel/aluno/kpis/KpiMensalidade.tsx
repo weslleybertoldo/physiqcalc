@@ -1,6 +1,7 @@
 import { Clock, TrendingUp, TriangleAlert } from "lucide-react";
 import { dataBR, estadoDaMensalidade, reaisCurto } from "@/financeiro/regras";
 import { useFinanceiroDoAluno } from "@/financeiro/ui/useFinanceiroDoAluno";
+import { useConta } from "@/nucleo/conta";
 import { KpiCompacto } from "@/ui/premium/Kpi";
 
 /**
@@ -8,9 +9,21 @@ import { KpiCompacto } from "@/ui/premium/Kpi";
  * conta — P6); sem mensalidade, "sem cobrança".
  */
 export default function KpiMensalidade({ alunoId }: { alunoId: string }) {
+  const { ehDono, ehMaster } = useConta();
   const f = useFinanceiroDoAluno(alunoId);
   const d = f.data;
-  if (!d || !d.permissoes.mensalidade) return null;
+  // hml-18a (H-40, E): enquanto o financeiro chega, o número com o esqueleto no lugar do valor (o mesmo tamanho) — só para quem vê a
+  // mensalidade (o dono da conta ou o master); para os outros ele nunca aparece
+  if (!d) {
+    return f.isLoading && (ehDono || ehMaster) ? (
+      <span data-kpi-mensalidade="carregando" aria-busy="true">
+        <KpiCompacto rotulo="Mensalidade" tomDetalhe="neutro"
+          valor={<span className="inline-block h-[22px] w-20 animate-pulse rounded-lg bg-superficie-2 align-middle" />}
+          detalhe={<span className="inline-block h-3 w-24 animate-pulse rounded bg-superficie-2" />} />
+      </span>
+    ) : null;
+  }
+  if (!d.permissoes.mensalidade) return null;
   const m = d.mensalidade;
   if (!m) return <KpiCompacto rotulo="Mensalidade" valor="—" detalhe="sem cobrança" tomDetalhe="neutro" />;
   const aguardando = d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao");

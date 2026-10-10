@@ -4,6 +4,8 @@ import type { LucideIcon } from "lucide-react";
 import { acessoDoProntuario } from "@/nutricao/prontuario/lib/acesso";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
+import { CartaoCarregando } from "@/ui/premium/Estados";
+import { useConta } from "@/nucleo/conta";
 import { ATALHOS_FLUXO, rotaDoAtalho } from "../dados/regras";
 import { usePerfilAluno } from "../dados/usePerfilAluno";
 
@@ -25,9 +27,14 @@ const ICONE: Record<string, LucideIcon> = {
  * dona do paciente sem conta); o personal e o dono sem papel de nutri não veem (os atalhos são da consulta, da anamnese, do plano…).
  */
 export default function CardFluxoConsulta({ alunoId }: { alunoId: string }) {
+  const { conta, ehMaster } = useConta();
   const q = usePerfilAluno(alunoId);
   const p = q.data;
-  if (!p || !p.conta_modulos.includes("nutricao") || !p.modulos.includes("nutricao")) return null;
+  // hml-18a (H-40, E): enquanto o perfil chega, o cartão-esqueleto do mesmo tamanho — só para quem vai ver o card (o master ou a
+  // nutri de uma conta com Nutrição); para o personal ele nunca aparece, e o esqueleto seria um pulo novo
+  const podeVer = ehMaster || (!!conta?.modulos?.includes("nutricao") && !!conta?.papeis?.includes("nutricionista"));
+  if (!p) return q.isLoading && podeVer ? <CartaoCarregando className="min-h-[170px] md:col-span-2 xl:col-span-3" rotulo="Carregando o fluxo de consulta" /> : null;
+  if (!p.conta_modulos.includes("nutricao") || !p.modulos.includes("nutricao")) return null;
   if (!acessoDoProntuario(p).clinico) return null;
   const rotaAluno = `/painel/alunos/${encodeURIComponent(alunoId)}`;
 

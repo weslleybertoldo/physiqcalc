@@ -4,12 +4,14 @@ import { LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { masterNesteAparelho } from "@/lib/plataforma";
 import { contadoresPainel, fontesBusca, gatesPainel } from "@/rotas/registro";
+import { usePreCarga } from "@/rotas/usePreCarga";
 import { lembrarArea } from "@/ui/casca/area";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { CascaWeb, type AcaoUsuario, type ItemNav, type SecaoNav } from "@/ui/casca/CascaWeb";
 import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { ComGates } from "@/ui/casca/Gates";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
+import { TransicaoDePagina } from "@/ui/casca/TransicaoDePagina";
 import { CardConta } from "./casca/CardConta";
 import { CardPlano } from "./casca/CardPlano";
 import { MENU_PAINEL, estadoDoItem, itemAtivo, modulosDaConta } from "./menu";
@@ -39,11 +41,18 @@ export default function PainelLayout() {
     if (dados.usuario && dados.ehProfissional) lembrarArea("painel");
   }, [dados.usuario, dados.ehProfissional]);
 
+  const modulos = modulosDaConta(dados.conta?.modulos);
+  // hml-18a (H-40, E): depois do 1º render do painel, no ocioso, as páginas do menu desta conta, as abas do aluno, os cards do
+  // Resumo e as abas das Configurações — a troca de página não espera o pedaço chegar
+  usePreCarga("painel", {
+    ligado: !dados.carregando && !!dados.usuario && dados.ehProfissional,
+    paginas: MENU_PAINEL.filter((i) => i.arquivo && estadoDoItem(i, modulos) !== null).map((i) => i.arquivo as string),
+  });
+
   if (dados.carregando) return <CarregandoTela />;
   if (!dados.usuario) return <Navigate to="/entrar" replace state={{ de: location.pathname + location.search }} />;
   if (!dados.ehProfissional) return <Navigate to="/" replace />;
 
-  const modulos = modulosDaConta(dados.conta?.modulos);
   const nav = (grupo: "principal" | "ferramentas"): ItemNav[] =>
     MENU_PAINEL.filter((i) => i.grupo === grupo && estadoDoItem(i, modulos) !== null).map((i) => ({
       id: i.id,
@@ -92,7 +101,9 @@ export default function PainelLayout() {
       }
     >
       <ComGates gates={gatesPainel}>
-        <Outlet />
+        <TransicaoDePagina>
+          <Outlet />
+        </TransicaoDePagina>
       </ComGates>
     </CascaWeb>
   );
