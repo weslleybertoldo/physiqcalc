@@ -1,0 +1,521 @@
+{
+ "uuid": "5bc43163-854c-5450-a4c3-5cc06abda164",
+ "nome": "Barra Fixa Supinada",
+ "cena": "barra_fixa_supinada",
+ "grupo": "Dorsal / Bíceps",
+ "subgrupo": "Latíssimo do dorso · bíceps braquial · redondo maior",
+ "padrao_movimento": "puxada_vertical",
+ "equipamento": "peso_corporal",
+ "variacao": "pegada supinada",
+ "alvos": [
+  "dorsal"
+ ],
+ "auxiliares": [
+  "biceps",
+  "costas",
+  "trapezio",
+  "antebraco",
+  "peitoral"
+ ],
+ "camera": {
+  "az": 110,
+  "el": 10,
+  "dist": 5.8,
+  "alvo": [
+   0,
+   0.05,
+   1.25
+  ]
+ },
+ "camera_vistas": {
+  "dist": 5.0,
+  "alvo": [
+   0,
+   0.05,
+   1.3
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Pendurado na barra fixa com as palmas viradas pra você (pegada supinada) e as mãos na largura dos ombros, o polegar em volta da barra, braços estendidos acima da cabeça, corpo e pernas retos e soltos, sem cruzar os tornozelos, e os pés fora do chão. Primeiro desce as escápulas, tirando os ombros de perto das orelhas, e então puxa o corpo pra cima dobrando os cotovelos, que descem pela frente do corpo até ficarem embaixo dos ombros, junto do tronco, até o queixo passar da barra, com o peito chegando perto dela e a cabeça voltando pra linha do tronco; o rosto passa logo atrás da barra e, no fim da subida, o corpo inteiro, reto, inclina pra trás (as pernas vão à frente), sem balançar nem dar impulso. O antebraço fica virado com a palma pro corpo o tempo todo e o punho quase reto. Desce devagar até estender de novo os braços e os ombros.",
+ "cinesiologia": {
+  "plano": "sagital, principalmente: com a pegada supinada na largura dos ombros os braços descem pela frente do corpo (extensão do ombro) e o cotovelo dobra no mesmo plano (ACE — Technique Series: Chin-ups (ProSource, fev/2016): \"the specific joint actions include elbow flexion and shoulder extension in the sagittal plane\"); cadeia cinética fechada — as mãos ficam paradas na barra e quem sobe é o corpo",
+  "articulacoes": "ombro (extensão na subida, com o braço girado pra fora — ACE — Technique Series: Chin-ups (ProSource, fev/2016): \"the supinated grip of the chin-up places the shoulder in an externally rotated position\" —; flexão na descida), cotovelo (flexão na subida, até bem dobrado em cima, e extensão na descida), antebraço supinado o movimento todo (ACE — Technique Series: Chin-ups (ProSource, fev/2016): \"placing the radius and ulna bones of the forearm in their natural, parallel position\"), cintura escapular (descida das escápulas no começo e retração na subida — menor que na pegada pronada, Prinold 2016 —; elevação na volta até o pendurado); o corpo fica reto (quadril e joelhos quase parados) e inclina pra trás no fim da subida — pendurado parado, o centro de massa fica embaixo da barra, e o peito chega perto dela",
+  "agonistas": "latíssimo do dorso (ExRx — Chin-up: Target \"Latissimus Dorsi\"; 117–130% da contração isométrica máxima nas 3 barras, Youdas 2010)",
+  "sinergistas": "braquial, braquiorradial, redondo maior, deltoide posterior, romboides, levantador da escápula, trapézio inferior e médio, peitoral maior (parte esternal) e peitoral menor (ExRx — Chin-up: Synergists \"Brachialis\", \"Brachioradialis\", \"Teres Major\", \"Deltoid, Posterior\", \"Rhomboids\", \"Levator Scapulae\", \"Trapezius, Lower\", \"Trapezius, Middle\", \"Pectoralis Major, Sternal\", \"Pectoralis Minor\"); o bíceps braquial flexiona o cotovelo e trabalha o movimento todo (ACE — Technique Series: Chin-ups (ProSource, fev/2016): \"The primary muscles involved in the chin-up are the biceps brachii, brachialis, brachioradialis, latissimus dorsi, teres major, posterior deltoid\"). Bíceps × barra pronada: no EMG o bíceps e o peitoral maior ativaram mais na supinada (Youdas 2010: \"The pectoralis major and biceps brachii had significantly higher EMG activation during the chin-up than during the pull-up, whereas the lower trapezius was significantly more active during the pull-up\"); Dickie 2017 não viu diferença entre as pegadas na repetição inteira (\"similar despite varying hand orientations\") e o modelo musculoesquelético de Urbanczyk 2020 deu o contrário (\"Brachialis and biceps brachii showed a comparative decrease in muscle activity in the reverse pull-up\") — a resposta não é unânime",
+  "estabilizadores": "bíceps braquial e cabeça longa do tríceps, que cruzam o ombro e o cotovelo (ExRx — Chin-up: Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"); o manguito rotador trabalha mais que nas pegadas pronadas (Urbanczyk 2020: \"reverse pull-ups displayed higher proportional rotator cuff activation\"; infraespinal 71–79% da contração máxima, Youdas 2010); estabilizadores da coluna seguram o corpo reto (ACE — Technique Series: Chin-ups (ProSource, fev/2016): \"the deep spinal stabilizers, including the transverse abdominis, lumbar multifidus and thoracolumbar fascia\"; eretores da espinha 39–41% e oblíquo externo 31–35%, Youdas 2010); os flexores do antebraço seguram a barra",
+  "fases": "subida concêntrica: começa pelas escápulas (trapézio inferior e peitoral maior chegam ao pico primeiro) e termina com bíceps e latíssimo (Youdas 2010: \"pull-ups and chin-ups were initiated by the lower trapezius and pectoralis major and completed with biceps brachii and latissimus dorsi recruitment\"); descida excêntrica e devagar até estender os cotovelos e os ombros (ExRx — Chin-up: \"Lower body until arms and shoulders are fully extended.\"; ACE — Technique Series: Chin-ups (ProSource, fev/2016): \"At the top, pause briefly before slowly lowering back to the starting position. Do not simply drop back down\")"
+ },
+ "referencias": [
+  "ExRx.net — Chin-up (https://exrx.net/WeightExercises/LatissimusDorsi/BWUnderhandChinup, lido na cópia do Internet Archive de 20/02/2026 — o site bloqueia o acesso direto): Preparation \"Step up and grasp bar with underhand shoulder width grip.\"; Execution \"Pull body up until elbows are to sides. Lower body until arms and shoulders are fully extended. Repeat.\"; músculos: Target \"Latissimus Dorsi\"; Synergists \"Brachialis\", \"Brachioradialis\", \"Teres Major\", \"Deltoid, Posterior\", \"Rhomboids\", \"Levator Scapulae\", \"Trapezius, Lower\", \"Trapezius, Middle\", \"Pectoralis Major, Sternal\", \"Pectoralis Minor\"; Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"",
+  "American Council on Exercise (ACE) — McCall P. ACE Technique Series: Chin-ups. ProSource, fevereiro de 2016 (https://www.acefitness.org/continuing-education/prosource/february-2016/5799/ace-technique-series-chin-ups/, lido em 10/10/2026): \"The primary movement pattern of the chin-up is pulling from an overhead position, and the specific joint actions include elbow flexion and shoulder extension in the sagittal plane.\"; \"The movement involves hanging from a horizontal bar (usually at an overhead height) and using a supinated (underhand) grip while pulling the body toward the bar so that the elbows move past the rib cage until the chin elevates above the bar.\"; \"Reach up and grab the bar with both hands, using a palms-up grip.\"; \"Keep the spine long, lift the chest and brace the abdominals\"; \"Think about lifting the chest to the bar by pulling the elbows past the rib cage.\"; \"At the top, pause briefly before slowly lowering back to the starting position. Do not simply drop back down\"; \"the supinated grip of the chin-up places the shoulder in an externally rotated position, while also placing the radius and ulna bones of the forearm in their natural, parallel position\"; \"One of the most common mistakes is using momentum to help move the body above the bar.\" (o artigo não fala da largura da pegada nem das escápulas; cita cruzar os tornozelos como um jeito de não balançar — \"Crossing the feet at the ankles and squeezing the legs together is another way to create stiffness\" —, e o 3D deixa as pernas retas e paralelas, como a NFPT e a Barra Fixa)",
+  "National Federation of Professional Trainers (NFPT) — Nimblett I. How to Do a Chin-up (10/08/2025). https://nfpt.com/how-to-do-a-chinup/ (lido em 10/10/2026): \"Grab the bar with an supine or underhand grip (palms facing you). Start with arms extended in front of you, keep your torso and legs straight while sticking your chest out. Always keep your shoulders down, away from ears.\"; \"pull your torso up until your collarbone is around the level of the bar (at least chin over bar if you lack shoulder mobility). Keep the elbows close to your body.\"; \"slowly lower your torso back to the starting position. Always go all the way down; no 3/4 reps. Most importantly, never use momentum (body swinging).\"",
+  "Youdas JW, Amundson CL, Cicero KS, Hahn JJ, Harezlak DT, Hollman JH. Surface electromyographic activation patterns and elbow joint motion during a pull-up, chin-up, or perfect-pullup rotational exercise. J Strength Cond Res. 2010;24(12):3404-3414. doi:10.1519/JSC.0b013e3181f1598c (só o RESUMO; o texto completo é pago): \"latissimus dorsi (117-130%), biceps brachii (78-96%), infraspinatus (71-79%), lower trapezius (45-56%), pectoralis major (44-57%), erector spinae (39-41%), and external oblique (31-35%)\"; \"The pectoralis major and biceps brachii had significantly higher EMG activation during the chin-up than during the pull-up, whereas the lower trapezius was significantly more active during the pull-up.\"; \"The mean absolute elbow joint range of motion was 93.4 ± 14.6°, 100.6 ± 14.5°, and 99.8 ± 11.7° for the pull-up, chin-up, and rotational exercise\"; \"pull-ups and chin-ups were initiated by the lower trapezius and pectoralis major and completed with biceps brachii and latissimus dorsi recruitment\"",
+  "Dickie JA, Faulkner JA, Barnes MJ, Lark SD. Electromyographic analysis of muscle activation during pull-up variations. J Electromyogr Kinesiol. 2017;32:30-36. doi:10.1016/j.jelekin.2016.11.004 (só o RESUMO): \"supinated grip, pronated grip, neutral grip and rope pull-up exercises\"; \"EMGPEAK and EMGARV of the shoulder-arm-forearm complex during complete repetitions of pull-up variants are similar despite varying hand orientations\"; \"The concentric phases of each pull-up variation resulted in significantly greater EMGARV of the brachioradialis, biceps brachii, and pectoralis major in comparison to the eccentric phases\"",
+  "Prinold JA, Bull AM. Scapula kinematics of pull-up techniques: Avoiding impingement risk with training changes. J Sci Med Sport. 2016;19(8):629-635. doi:10.1016/j.jsams.2015.08.002 (texto completo, Europe PMC PMC4916995) — o chin-up é o 'reverse': \"'reverse' with posterior facing palms and hands approximately shoulder-width apart\"; \"front, wide and reverse pull-ups have ranges of 22°, 10° and 17°, respectively\" (pro/retração da escápula); \"More ScT retraction towards the top of the front pull-up, compared to the reverse pull-up, is expected because the humerus plane is more coronal during front pull-ups\"; \"There is a significantly larger range of GH internal/external rotation in the reverse technique, starting in a position of quite extreme external rotation.\"; \"The significant deviation of the humerus from the plane of the scapula during reverse pull-ups (up to 42°)\" (no laboratório as pernas ficavam dobradas pra trás, \"keeping legs to the posterior at 90° to the thorax\": o 3D segue a NFPT, pernas retas)",
+  "Urbanczyk CA, Prinold JAI, Reilly P, Bull AMJ. Avoiding high-risk rotator cuff loading: Muscle force during three pull-up techniques. Scand J Med Sci Sports. 2020;30(11):2205-2214. doi:10.1111/sms.13780 (texto completo, CC BY, repositório Spiral do Imperial College): \"(2) reverse pull-ups with supinated grip at shoulder width\"; \"reverse pull-ups displayed higher proportional rotator cuff activation (P < .01)\"; \"The current data indicate increased muscle activity in the reverse pull-up for pectoralis major, serratus anterior, and supraspinatus, compared with the front and wide pull-ups. Brachialis and biceps brachii showed a comparative decrease in muscle activity in the reverse pull-up\"; \"In contrast to the results here, Youdas et al\" (ref. 4) \"found the reverse grip more effective at activating biceps brachii, compared to a front grip.\"",
+  "Lee Y, Lim B-O. Effects of grip width and hand orientation on muscle activities of upper body during the lat pull-down. Korean J Sport Sci. 2017;28(3):556-565. doi:10.24985/kjss.2017.28.3.556 (texto completo, https://kjss.sports.re.kr/assets/pdf/421/journal-28-3-556.pdf): Tabela 1 (8 homens), altura 172,5 ± 4,0 cm e largura biacromial 40,3 ± 3,0 cm — a largura biacromial do boneco sai da altura dele nessa proporção, como na Puxada Frontal Supinada",
+  "Barra fixa: a mesma peça da Barra Fixa (equip3d.barra_fixa), barra de 32 mm — TITAN Fitness, TITAN Series 1.25\" Single Pull-Up Bar (\"Overall Diameter 1.25-in.\"), https://titan.fitness/products/titan-series-1-25-in-single-pull-up-bar (lido na cópia do Internet Archive de 21/12/2025)",
+  "Duarte M. Body segment parameters (BMClab, UFABC) — tabela de Dempster adaptada por Winter (2009): massa e centro de cada segmento, usada pro centro de massa ficar embaixo da barra (o mesmo da Barra Fixa; conferido na tabela https://raw.githubusercontent.com/BMClab/BMC/master/data/BSP_DempsterWinter.txt: Trunk 0,497/0,5, Head neck 0,081/1, Upper arm 0,028/0,436, Forearm 0,016/0,43, Hand 0,006/0,506, Thigh 0,1/0,433, Leg 0,0465/0,433, Foot 0,0145/0,5). https://github.com/BMClab/BMC/blob/master/notebooks/BodySegmentParameters.ipynb",
+  "Dica: este exercício não tem dica no catálogo do app; a da Barra Fixa (scripts/gifs_catalogo/catalogo.py) é \"Pendure com os braços estendidos e puxe até o queixo passar a barra, iniciando pelas escápulas. Desça completo sem balançar.\" (Base: \"barra fixa/chin-up geram ativação muito alta de dorsal e bíceps (Youdas et al., 2010)\") — o 3D segue o mesmo jeito"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "zonas": [
+   {
+    "nome": "a barra nunca encosta na cabeça nem no pescoço (o rosto passa logo atrás dela)",
+    "equipamento": "barra_fixa",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "Weslley (peso e equipamento nunca entram no corpo); ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"Think about lifting the chest to the bar\"): passa perto, sem encostar"
+   },
+   {
+    "nome": "em cima o peito e o pescoço ficam perto da barra, sem encostar",
+    "equipamento": "barra_fixa",
+    "partes": [
+     "Neck",
+     "Spine2"
+    ],
+    "t": 1.0,
+    "mm": [
+     5,
+     70
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"Think about lifting the chest to the bar by pulling the elbows past the rib cage\"); NFPT — How to Do a Chin-up (\"pull your torso up until your collarbone is around the level of the bar (at least chin over bar if you lack shoulder mobility)\")"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "em cima o queixo passa da barra (a pele mais baixa da cabeça acima do topo da barra)",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "barra_fixa_barra",
+    "t": 1.0,
+    "mm": [
+     0,
+     60
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"until the chin elevates above the bar\"); NFPT — How to Do a Chin-up (\"at least chin over bar\")"
+   },
+   {
+    "nome": "pés fora do chão o movimento todo",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     30,
+     3000
+    ],
+    "fonte": "pendurado na barra, sem apoiar os pés (ACE — Technique Series: Chin-ups (ProSource, fev/2016): \"to lift the body from a stationary hanging position\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "braço e mão esquerdos não entram na cabeça (braço acima da cabeça embaixo)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "braço e mão direitos não entram na cabeça (braço acima da cabeça embaixo)",
+    "partes": [
+     "RightArm",
+     "RightForeArm",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "antebraços e mãos não entram no tronco (em cima a mão fica na frente do peito)",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -2,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "as 2 mãos não se encostam",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     100,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); com a pegada na largura dos ombros sobra um palmo e pouco entre as mãos"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "corpo pendurado reto embaixo",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "NFPT — How to Do a Chin-up (\"keep your torso and legs straight\"); ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"hanging from a horizontal bar\")"
+   },
+   {
+    "nome": "corpo reto inclinado pra trás no fim da subida, sem passar de 30° (o peito vai pra barra sem balançar)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "NFPT — How to Do a Chin-up (\"never use momentum (body swinging)\"; \"keep your torso and legs straight\"); ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"Think about lifting the chest to the bar\"; \"One of the most common mistakes is using momentum\"). Pendurado parado, o centro de massa fica embaixo da barra (Dempster/Winter): com a barra na frente do peito e o ombro ~18 cm atrás da mão (o cotovelo do boneco não passa de ~138° sem o antebraço entrar no bíceps), o corpo reto inclina ~27° em cima — mais que na Barra Fixa (19°), porque a mão fica em cima do ombro e não do lado"
+   },
+   {
+    "nome": "braços estendidos embaixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Chin-up (\"Lower body until arms and shoulders are fully extended.\"); NFPT — How to Do a Chin-up (\"Always go all the way down; no 3/4 reps\")"
+   },
+   {
+    "nome": "braços acima da cabeça embaixo",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     150,
+     180
+    ],
+    "fonte": "ExRx — Chin-up (\"Lower body until arms and shoulders are fully extended.\"); ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"pulling from an overhead position\")"
+   },
+   {
+    "nome": "ombros subidos no pendurado (escápula elevada)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": 0.0,
+    "graus": [
+     -10,
+     14
+    ],
+    "fonte": "ExRx — Chin-up (\"Lower body until arms and shoulders are fully extended.\"); Youdas 2010 (a subida começa pelo trapézio inferior: \"initiated by the lower trapezius\") — o mesmo da Barra Fixa e da dica dela (\"iniciando pelas escápulas\")"
+   },
+   {
+    "nome": "escápulas descidas na subida (ombros longe das orelhas)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": [
+     0.35,
+     1.0
+    ],
+    "graus": [
+     22,
+     42
+    ],
+    "fonte": "NFPT — How to Do a Chin-up (\"Always keep your shoulders down, away from ears.\"); Youdas 2010 (\"initiated by the lower trapezius\")"
+   },
+   {
+    "nome": "escápulas um pouco pra trás em cima (menos que na pegada pronada)",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -40,
+     -5
+    ],
+    "fonte": "Prinold 2016 (\"More ScT retraction towards the top of the front pull-up, compared to the reverse pull-up\"; amplitude de pro/retração de 22° na pronada e 17° na supinada)"
+   },
+   {
+    "nome": "cotovelos bem dobrados em cima (queixo acima da barra)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     125,
+     150
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"until the chin elevates above the bar\"); o teto é a amplitude normal do cotovelo (0–150°, AAOS, por Norkin & White — o limites.py)"
+   },
+   {
+    "nome": "em cima os cotovelos ficam embaixo dos ombros, junto do tronco",
+    "medida": "cotovelo_tronco",
+    "t": 1.0,
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx — Chin-up (\"Pull body up until elbows are to sides.\"); NFPT — How to Do a Chin-up (\"Keep the elbows close to your body.\")"
+   },
+   {
+    "nome": "em cima os cotovelos passam do lado das costelas (nem bem à frente nem atrás do tronco)",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -25,
+     25
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"so that the elbows move past the rib cage\"); ExRx — Chin-up (\"until elbows are to sides\")"
+   },
+   {
+    "nome": "na subida os cotovelos descem pela frente do corpo, sem abrir pros lados",
+    "medida": "cotovelo_tronco",
+    "t": [
+     0.1,
+     0.9
+    ],
+    "graus": [
+     -5,
+     25
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"the specific joint actions include elbow flexion and shoulder extension in the sagittal plane\"); Prinold 2016 (o úmero sai do plano da escápula pra frente na supinada: \"deviation of the humerus from the plane of the scapula during reverse pull-ups (up to 42°)\"). Medida: o braço pra fora do plano sagital do tronco; 0 = no plano sagital, 90 = aberto em T (na Barra Fixa pronada e aberta, ~60–65° no meio da subida)"
+   },
+   {
+    "nome": "o braço sobe e desce pela frente do corpo (plano sagital), não pelo lado como na pronada aberta",
+    "medida": "braco_plano",
+    "t": [
+     0.25,
+     0.75
+    ],
+    "graus": [
+     50,
+     100
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"shoulder extension in the sagittal plane\"); Prinold 2016 (\"the humerus plane is more coronal during front pull-ups\"). Medida: pra onde o braço levantado aponta, visto de cima do tronco: 0 = pro lado, 90 = pra frente (na Barra Fixa pronada, ~26° no meio da subida)"
+   },
+   {
+    "nome": "pegada na largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.85,
+     1.15
+    ],
+    "fonte": "ExRx — Chin-up (\"underhand shoulder width grip\"); Prinold 2016 (\"hands approximately shoulder-width apart\"); Urbanczyk 2020 (\"supinated grip at shoulder width\"). No boneco a largura biacromial (40,3/172,5 da altura, Lee & Lim 2017) dá a mesma distância das articulações dos ombros"
+   },
+   {
+    "nome": "pegada supinada (palma virada pro corpo, o dorso da mão pra frente)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     95,
+     180
+    ],
+    "fonte": "ExRx — Chin-up (\"underhand\"); ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"using a palms-up grip\"); NFPT — How to Do a Chin-up (\"supine or underhand grip (palms facing you)\"). Medida: palma × frente do tronco; 0 = palma pra frente (pronada), 180 = virada pro corpo"
+   },
+   {
+    "nome": "punho quase reto (sem dobrar pra frente nem pra trás)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"placing the radius and ulna bones of the forearm in their natural, parallel position\"): a mão fecha na barra com o punho na linha do antebraço. Medida: flexão (+) / extensão (−) do punho"
+   },
+   {
+    "nome": "punho no máximo um pouco desviado de lado",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "amplitude normal do punho (AAOS, por Norkin & White — a mesma fonte do limites.py): desvio radial 0–20°, ulnar 0–30°. Medida: ângulo total mão × antebraço (desvio + flexão/extensão)"
+   },
+   {
+    "nome": "punho sem desviar de lado além do normal (desvio radial até 20°, ulnar até 30°)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "amplitude normal do punho (AAOS, por Norkin & White — a mesma fonte do limites.py). Na pegada supinada o polegar fica do lado de fora: o cotovelo mais aberto que a mão desvia o punho pro lado do polegar (radial, + aqui) — por isso os cotovelos descem quase embaixo das mãos. Medida: desvio com sinal (+ = radial)"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -25,
+     10
+    ],
+    "fonte": "ACE — Technique Series: Chin-ups (ProSource, fev/2016) (\"Keep the spine long\")"
+   },
+   {
+    "nome": "pernas estendidas",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NFPT — How to Do a Chin-up (\"keep your torso and legs straight\")"
+   },
+   {
+    "nome": "quadril quase reto (corpo sem dobrar)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "NFPT — How to Do a Chin-up (\"keep your torso and legs straight\")"
+   },
+   {
+    "nome": "pernas paralelas, sem cruzar os tornozelos",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     2.2
+    ],
+    "fonte": "NFPT — How to Do a Chin-up (\"keep your torso and legs straight\"), como na Barra Fixa"
+   }
+  ]
+ }
+}
