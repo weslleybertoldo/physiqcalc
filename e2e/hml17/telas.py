@@ -64,6 +64,9 @@ HOSTS_DE_PRODUCAO = {"physiqcalc.com.br", "www.physiqcalc.com.br"}
 CASOS = ("T1", "P1", "P2", "P3", "P4", "P5", "N1", "N2", "N3")
 KCAL = 1894
 LIMITE_AVISO_S = 6.0
+# Abertura a frio fora do local (P1 "fresco"): o pacote do app vem do CDN antes da 1ª consulta. Medido no staging em 10/10:
+# "fresco" 6,0–6,4 s × "depois" (app já aberto) 4,7–4,8 s — a diferença é a carga, não a espera do aviso.
+FOLGA_CARGA_FRIA_S = 2.0
 JANELA_S = 40.0
 MAX_POR_ALVO = 4
 MAX_PEDIDOS = 70
@@ -289,7 +292,8 @@ def caso_p1(o, nav, R: Rodada, forma: str) -> None:
             t.cair_api()
             t.entrar(R.L, aluna, "/perfil")
         s = primeiro_aviso(t, "[data-perfil-erro]", 30)
-        o.ok(s is not None and s <= LIMITE_AVISO_S, f"P1 ({forma}) /perfil com a API caindo: o aviso em {s} s (≤ {LIMITE_AVISO_S:g} s)")
+        limite = LIMITE_AVISO_S + (FOLGA_CARGA_FRIA_S if forma == "fresco" and R.prefixo != "local" else 0)
+        o.ok(s is not None and s <= limite, f"P1 ({forma}) /perfil com a API caindo: o aviso em {s} s (≤ {limite:g} s)")
         t.pg.wait_for_timeout(1500)
         agenda = t.texto("[data-perfil-agenda-valor]")
         codigo = t.n("[data-perfil-codigo]")
