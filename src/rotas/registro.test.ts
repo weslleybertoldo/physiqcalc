@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { existe, listar, montarGrupo, nomeDoArquivo, ordenar, registro, rotasDaEntrada, rotasDaPaginaPublica, slug, tela } from "./registro";
 
@@ -55,5 +58,17 @@ describe("registro por convenção (spec 11.1)", () => {
     expect(existe("publico", "ErroDeTeste")).toBe(false);
     expect(tela("paginasPainel", "NaoExiste")).toBeNull();
     expect(listar("resumoAluno")).toEqual(expect.any(Array));
+  });
+});
+
+// hml-16d (H-79): na vite 6 a exclusão "!/src/**/*.test.tsx" deixou de excluir (o glob roda a partir da pasta do padrão positivo):
+// os testes entravam no bundle e os dos globs eager rodavam na abertura (tela preta). As exclusões ficam relativas ("!**/…").
+describe("hml-16d — exclusões do glob do registro", () => {
+  const fonte = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "registro.ts"), "utf8");
+  it("nenhuma exclusão absoluta com ** ('!/src/**/…')", () => {
+    expect(fonte).not.toMatch(/"!\/src\/\*\*\//);
+  });
+  it("os testes ficam de fora pelo padrão relativo", () => {
+    expect(fonte).toMatch(/"!\*\*\/\*\.test\.tsx"/);
   });
 });
