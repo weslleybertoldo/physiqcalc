@@ -3,8 +3,9 @@
 // durante uma troca, o anterior) — quem lê o ambiente de um projeto leva só o que aquele projeto MANDA. O cabeçalho continua
 // x-espelho-segredo (a presença dele escolhe o modo servidor em 4 funções).
 //
-// Até o F7 da hml-16c o legado ESPELHO_SEGREDO vale nos 2 sentidos: o emissor sem SEGREDO_X manda o legado; o receptor aceita
-// o legado.
+// É o único caminho: o segredo único de antes (o mesmo valor para todos os canais) saiu na hml-16c e não tem reserva. Emissor
+// sem SEGREDO_X não manda nada (o sem_configuracao / nao_configurada de sempre); receptor sem a lista recusa tudo (falha
+// fechada). Trocar um segredo (gerar → aceitar → trocar → conferir → aceitar --so-atual): scripts/segredos/servidor.py.
 //
 // CÓPIA IDÊNTICA em supabase/functions/_shared/segredo-servidor.ts (Treino) e supabase-principal/functions/_shared/
 // segredo-servidor.ts (principal): cada banco publica só o _shared dele. src/lib/segredoServidor.test.ts confere byte a byte.
@@ -20,14 +21,12 @@
 /** Quem lê uma variável do ambiente (o padrão é o da função; o Vitest passa um falso). */
 export type LerAmbiente = (nome: string) => string | undefined;
 
-/** Como o receptor aceitou: pela lista de hashes (o segredo da finalidade) ou pelo legado (até o F7). */
-export type ViaSegredo = "lista" | "legado";
+/** Como o receptor aceitou: pela lista de hashes (o segredo da finalidade) — o único jeito; vai no log segredo_aceito. */
+export type ViaSegredo = "lista";
 
-/** Tamanho mínimo de um segredo: o recebido, o SEGREDO_X e o legado (menor = como se não existisse; recebido menor = recusa). */
+/** Tamanho mínimo de um segredo: o recebido e o SEGREDO_X (menor = como se não existisse; recebido menor = recusa). */
 export const MIN_SEGREDO = 32;
 
-/** O segredo único de antes (o legado): sai do código no F7 da hml-16c. */
-const LEGADO = "ESPELHO_SEGREDO";
 /** A lista guarda até 2 hashes: o atual e o anterior (durante a troca). */
 const MAX_ACEITOS = 2;
 const HEX_64 = /^[0-9a-f]{64}$/;
@@ -82,17 +81,17 @@ export async function hashHex(texto: string): Promise<string> {
 }
 
 /**
- * Emissor: o valor de SEGREDO_X (≥ MIN_SEGREDO); sem ele, só durante a troca, o legado ESPELHO_SEGREDO (≥ MIN_SEGREDO); sem
- * nenhum, "" — o emissor para com o sem_configuracao / nao_configurada de sempre.
+ * Emissor: o valor de SEGREDO_X (≥ MIN_SEGREDO); sem ele (ou menor), "" — o emissor para com o sem_configuracao /
+ * nao_configurada de sempre.
  */
 export function segredoParaEnviar(nome: string, ler: LerAmbiente = lerDaFuncao): string {
-  return segredoDe(nome, ler) || segredoDe(LEGADO, ler);
+  return segredoDe(nome, ler);
 }
 
 /**
- * Receptor: "lista" se o sha256 do recebido está em `${nome}_ACEITOS`; "legado" se o recebido é o ESPELHO_SEGREDO
- * (≥ MIN_SEGREDO); null = recusa — recebido ausente ou menor que MIN_SEGREDO, lista vazia ou inválida sem o legado, nada bate.
- * Comparações em tempo constante (a lista inteira é comparada). Nunca lança: qualquer falha recusa (falha fechada).
+ * Receptor: "lista" se o sha256 do recebido está em `${nome}_ACEITOS`; null = recusa — recebido ausente ou menor que
+ * MIN_SEGREDO, lista vazia ou inválida, nada bate. Comparação em tempo constante (a lista inteira é comparada). Nunca lança:
+ * qualquer falha recusa (falha fechada).
  */
 export async function segredoAceito(
   recebido: string | null | undefined,
@@ -103,14 +102,11 @@ export async function segredoAceito(
     const valor = typeof recebido === "string" ? recebido : "";
     if (valor.length < MIN_SEGREDO) return null;
     const aceitos = hashesAceitos(variavel(`${nome}_ACEITOS`, ler));
-    if (aceitos.length) {
-      const hash = await hashHex(valor);
-      let bate = false;
-      for (const aceito of aceitos) bate = iguais(hash, aceito) || bate;
-      if (bate) return "lista";
-    }
-    const legado = segredoDe(LEGADO, ler);
-    return legado && iguais(valor, legado) ? "legado" : null;
+    if (!aceitos.length) return null;
+    const hash = await hashHex(valor);
+    let bate = false;
+    for (const aceito of aceitos) bate = iguais(hash, aceito) || bate;
+    return bate ? "lista" : null;
   } catch {
     return null;
   }
