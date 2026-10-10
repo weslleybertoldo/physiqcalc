@@ -6,6 +6,7 @@ import { agruparPorBloco, combinaBusca, getBloco, nomeDoBloco, type BlocoMuscula
 import { cn } from "@/lib/utils";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { MiniaturaGif } from "./MiniaturaGif";
 
 interface ExercicioLista {
@@ -39,6 +40,7 @@ export function SheetMeuTreino({
   aoFechar: (criadoId: string | null) => void;
 }) {
   const db = usePowerSync();
+  const confirmar = useConfirmar();
   const [nome, setNome] = useState("");
   const [globais, setGlobais] = useState<ExercicioLista[]>([]);
   const [pessoais, setPessoais] = useState<ExercicioLista[]>([]);
@@ -120,7 +122,7 @@ export function SheetMeuTreino({
   };
 
   const apagarExercicio = async (id: string) => {
-    if (!window.confirm("Apagar este exercício seu?")) return;
+    if (!(await confirmar({ titulo: "Apagar este exercício seu?", rotuloConfirmar: "Apagar", perigo: true }))) return;
     try {
       await db.execute("DELETE FROM tb_exercicios_usuario WHERE id = ? AND user_id = ?", [id, userId]);
       setEscolhidos((antes) => antes.filter((s) => !(s.id === id && s.pessoal)));

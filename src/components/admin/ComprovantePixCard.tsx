@@ -9,6 +9,7 @@ import { CaixaMarcar, DialogoRecusar } from "@/financeiro/ui/Dialogos";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 
 /**
  * Comprovante de Pix na chave da conta aguardando a confirmação do profissional (C98). W6: lê e grava a cobrança unificada do
@@ -36,6 +37,7 @@ const ComprovantePixCard = ({ item, onResolvido }: Props) => {
   const [busy, setBusy] = useState(false);
   const [vendo, setVendo] = useState(false);
   const [recusando, setRecusando] = useState(false);
+  const pedirConfirmacao = useConfirmar();
   const [lancar, setLancar] = useState(true);
   const titulo = item.aluno ? item.aluno.nome || item.aluno.email || "Aluno" : null;
   const referente = item.tipo === "mensalidade" ? `Mensalidade · ${nomeDoMes(item.mes_ref ?? item.vencimento, "0000")}` : item.descricao;
@@ -47,7 +49,7 @@ const ComprovantePixCard = ({ item, onResolvido }: Props) => {
   };
 
   const confirmar = async () => {
-    if (!window.confirm(`Confirmar o recebimento de ${reais(item.valor)} (${referente})?`)) return;
+    if (!(await pedirConfirmacao({ titulo: `Confirmar o recebimento de ${reais(item.valor)} (${referente})?`, rotuloConfirmar: "Confirmar recebimento" }))) return;
     setBusy(true);
     try {
       await acaoFinanceiro("prof_confirmar", { cobranca_id: item.id, lancar });

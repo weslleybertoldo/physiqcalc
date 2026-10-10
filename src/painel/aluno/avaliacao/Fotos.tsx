@@ -14,6 +14,7 @@ import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { excluirFotoMensal, subirFotoMensal } from "./avaliacaoApi";
 import { mensagemDoErro } from "./mensagens";
 import { autorNoPainel, type PermissoesAvaliacao } from "./regras";
@@ -134,6 +135,7 @@ export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacie
 }) {
   const celular = useIsMobile();
   const { user } = useAuth();
+  const confirmar = useConfirmar();
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [novaNutri, setNovaNutri] = useState(false);
@@ -173,7 +175,7 @@ export function SheetFotos({ aberto, aoMudar, sessoes, perm, treinoUserId, pacie
   };
 
   const excluir = async (f: Foto) => {
-    if (!window.confirm(`Excluir a foto "${ROTULO_POSICAO[f.posicao]}" de ${f.data.split("-").reverse().join("/")}?`)) return;
+    if (!(await confirmar({ titulo: `Excluir a foto "${ROTULO_POSICAO[f.posicao]}" de ${f.data.split("-").reverse().join("/")}?`, rotuloConfirmar: "Excluir", perigo: true }))) return;
     setOcupado(f.id);
     try {
       const id = idDaLinha(f);

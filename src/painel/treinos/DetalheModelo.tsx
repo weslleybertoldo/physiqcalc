@@ -13,6 +13,7 @@ import type { ExercicioEditor, PrescricaoEditavel, TreinoEditor } from "@/treino
 import { Botao, BotaoIcone } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { adicionarAoModelo, ordenarModelo, prescreverModelo, tirarDoModelo } from "./api";
 import { camposEditados, colunasDaPrescricao, textoAlunos } from "./regras";
 import type { LinhaModelo, ModeloTela, QuemMexe } from "./tipos";
@@ -87,6 +88,7 @@ export function DetalheModelo({
   aoPastas: () => void;
 }) {
   const recarregar = useRecarregar();
+  const confirmar = useConfirmar();
   const [folha, setFolha] = useState<null | "biblioteca">(null);
   const [editando, setEditando] = useState<ExercicioEditor | null>(null);
   const [ordemLocal, setOrdemLocal] = useState<string[] | null>(null);
@@ -150,8 +152,8 @@ export function DetalheModelo({
   };
 
   const remover = async (ex: ExercicioEditor) => {
-    const aviso = modelo.alunos > 0 ? `\n\n${textoAlunos(modelo.alunos)} recebe${modelo.alunos === 1 ? "" : "m"} este treino: o exercício sai do app ${modelo.alunos === 1 ? "dele" : "deles"} também.` : "";
-    if (!window.confirm(`Tirar "${ex.nome}" do treino ${modelo.nome}?${aviso}`)) return;
+    const aviso = modelo.alunos > 0 ? `${textoAlunos(modelo.alunos)} recebe${modelo.alunos === 1 ? "" : "m"} este treino: o exercício sai do app ${modelo.alunos === 1 ? "dele" : "deles"} também.` : undefined;
+    if (!(await confirmar({ titulo: `Tirar "${ex.nome}" do treino ${modelo.nome}?`, descricao: aviso, rotuloConfirmar: "Tirar", perigo: true }))) return;
     setEditando(null);
     try {
       await tirarDoModelo(modelo.id, ex.exercicio_id!);

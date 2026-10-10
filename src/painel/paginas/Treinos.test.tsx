@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AlunoDaLista, Catalogo, ExercicioCatalogo, FiltrosExercicios, FiltrosModelos, PerfilRecebe } from "@/painel/treinos/tipos";
+import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 
 // hml-14d (B21): o "banco" falso faz o que as RPCs e as funções fazem — página de 20, total, busca sem acento, pasta e escopo —
 // para a tela ser provada com a página que vem de fora (nenhuma lista inteira desce)
@@ -29,6 +30,7 @@ const h = vi.hoisted(() => ({
   aplicar: vi.fn(),
   prescrever: vi.fn(),
   criarModelo: vi.fn(),
+  excluirModelo: vi.fn(),
   // hml-17 (H-39): o treino aberto do Histórico (a função admin-relatorio › historicoTreino)
   detalhe: vi.fn(),
 }));
@@ -59,6 +61,7 @@ vi.mock("@/painel/treinos/api", async (orig) => ({
   aplicarModeloNoAluno: h.aplicar,
   prescreverModelo: h.prescrever,
   criarModelo: h.criarModelo,
+  excluirModelo: h.excluirModelo,
 }));
 
 vi.mock("@/treino/editor/api", async (orig) => ({ ...(await orig<typeof import("@/treino/editor/api")>()), carregarTreinoDoHistorico: h.detalhe }));
@@ -167,10 +170,12 @@ function montar(rota = "/painel/treinos") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 1 } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter useTransitions={false} initialEntries={[rota]}>
-        <Treinos />
-        <Onde />
-      </MemoryRouter>
+      <ProvedorConfirmar>
+        <MemoryRouter useTransitions={false} initialEntries={[rota]}>
+          <Treinos />
+          <Onde />
+        </MemoryRouter>
+      </ProvedorConfirmar>
     </QueryClientProvider>,
   );
 }
@@ -184,7 +189,7 @@ beforeEach(() => {
     { id: "a2", nome: "Marina Alves", email: "marina@x.com", foto_url: null },
   ];
   h.perfis = [{ grupo_id: "g1", user_id: "a1" }];
-  for (const f of [h.pagina, h.porId, h.pastas, h.musculos, h.exercicios, h.recebe, h.recebeLista, h.buscarAlunos, h.historicoMes, h.historicoCompleto, h.dar, h.tirar, h.aplicar, h.prescrever, h.criarModelo, h.detalhe]) f.mockReset();
+  for (const f of [h.pagina, h.porId, h.pastas, h.musculos, h.exercicios, h.recebe, h.recebeLista, h.buscarAlunos, h.historicoMes, h.historicoCompleto, h.dar, h.tirar, h.aplicar, h.prescrever, h.criarModelo, h.excluirModelo, h.detalhe]) f.mockReset();
   h.pagina.mockImplementation(async (m: string | null, f: FiltrosModelos, p: number) => paginaFalsa(m, f, p));
   h.porId.mockImplementation(async (m: string | null, id: string) => porIdFalso(m, id));
   h.pastas.mockImplementation(async () => h.dados.pastas.filter(visivel));
@@ -194,8 +199,17 @@ beforeEach(() => {
   h.recebeLista.mockImplementation(async (g: string, b: string, p: number) => recebeListaFalsa(g, b, p));
   h.dar.mockResolvedValue({ ok: true, prescricao_do_modelo: 1 });
   h.prescrever.mockResolvedValue(undefined);
-  vi.spyOn(window, "confirm").mockReturnValue(true);
+  h.excluirModelo.mockResolvedValue(undefined);
 });
+
+/** hml-18a: a confirmação do app (AlertDialog) — confere o rótulo da ação e responde (ok = o botão da ação; cancelar = Cancelar). */
+async function responderNoDialogo(resposta: "ok" | "cancelar", rotulo: string) {
+  const dialogo = await screen.findByRole("alertdialog");
+  const ok = dialogo.querySelector("[data-confirmar-ok]") as HTMLElement;
+  expect(ok).toHaveTextContent(rotulo);
+  fireEvent.click(resposta === "ok" ? ok : (dialogo.querySelector("[data-confirmar-cancelar]") as HTMLElement));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+}
 
 describe("W23 — Painel › Treinos › Meus treinos (padrão da tela 8)", () => {
   it("lista o meu e o global; abre o 1º com abas, chips, exercícios com SÉRIES/REPS/DESCANSO/CARGA do modelo e a biblioteca", async () => {
@@ -288,9 +302,10 @@ describe("W23 — Painel › Treinos › Meus treinos (padrão da tela 8)", () =
     expect(document.querySelector("[data-quem-recebe-busca]")).not.toBeNull();
     fireEvent.click(marina);
     await waitFor(() => expect(h.dar).toHaveBeenCalledWith("a2", "g1"));
-    // tirar pede confirmação e chama a ação da W15
+    // tirar pede confirmação (hml-18a: a do app, não a do navegador) e chama a ação da W15
     h.tirar.mockResolvedValue({ ok: true });
     fireEvent.click(document.querySelector('[data-quem-recebe-aluno="a1"]')!);
+    await responderNoDialogo("ok", "Tirar");
     await waitFor(() => expect(h.tirar).toHaveBeenCalledWith("a1", "g1"));
   });
 
@@ -298,9 +313,38 @@ describe("W23 — Painel › Treinos › Meus treinos (padrão da tela 8)", () =
     h.aplicar.mockResolvedValue({ ok: true, preenchidos: 1 });
     montar("/painel/treinos?treino=g1");
     fireEvent.click(await screen.findByRole("button", { name: /Aplicar a quem recebe/ }));
+    await responderNoDialogo("ok", "Levar para 1 aluno");
     await waitFor(() => expect(h.aplicar).toHaveBeenCalledTimes(1));
     expect(h.aplicar).toHaveBeenCalledWith("a1", "g1");
     expect(h.recebe).toHaveBeenCalledWith(["g1"]);
+  });
+
+  it("hml-18a: tirar de quem recebe pede a confirmação do app — Cancelar não tira; Tirar tira (nenhum diálogo do navegador)", async () => {
+    const nativo = vi.spyOn(window, "confirm");
+    h.tirar.mockResolvedValue({ ok: true });
+    montar("/painel/treinos?treino=g1");
+    await screen.findByText("Rafael Moura");
+    fireEvent.click(document.querySelector('[data-quem-recebe-aluno="a1"]')!);
+    await responderNoDialogo("cancelar", "Tirar");
+    expect(h.tirar).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-quem-recebe-aluno="a1"]')!.getAttribute("data-recebe")).toBe("1");
+    fireEvent.click(document.querySelector('[data-quem-recebe-aluno="a1"]')!);
+    await responderNoDialogo("ok", "Tirar");
+    await waitFor(() => expect(h.tirar).toHaveBeenCalledWith("a1", "g1"));
+    expect(nativo).not.toHaveBeenCalled();
+    nativo.mockRestore();
+  });
+
+  it("hml-18a: excluir o treino pede a confirmação do app — Cancelar não exclui; Excluir exclui", async () => {
+    montar("/painel/treinos?treino=g1");
+    const excluir = await screen.findByRole("button", { name: "Excluir o treino" });
+    fireEvent.click(excluir);
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent('Excluir o treino "Peito e tríceps"?');
+    await responderNoDialogo("cancelar", "Excluir");
+    expect(h.excluirModelo).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Excluir o treino" }));
+    await responderNoDialogo("ok", "Excluir");
+    await waitFor(() => expect(h.excluirModelo).toHaveBeenCalledWith("g1"));
   });
 
   it("pasta aberta: os treinos dela viram as abas (A/B/C do programa)", async () => {

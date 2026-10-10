@@ -4,6 +4,7 @@ import { usePowerSync } from "@powersync/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import type { GrupoTreino } from "../tipos";
 import { SheetMeuTreino } from "./SheetMeuTreino";
 
@@ -35,10 +36,11 @@ export function SheetAlterarTreino({
   aoTreinoPronto?: () => void;
 }) {
   const db = usePowerSync();
+  const confirmar = useConfirmar();
   const [editor, setEditor] = useState<{ id: string; nome: string } | "novo" | null>(null);
 
   const apagar = async (g: GrupoTreino) => {
-    if (!window.confirm(`Apagar o treino "${g.nome}"? Não dá para desfazer.`)) return;
+    if (!(await confirmar({ titulo: `Apagar o treino "${g.nome}"?`, descricao: "Não dá para desfazer.", rotuloConfirmar: "Apagar", perigo: true }))) return;
     try {
       await db.execute("DELETE FROM tb_grupos_exercicios_usuario WHERE grupo_usuario_id = ? AND user_id = ?", [g.id, userId]);
       await db.execute("DELETE FROM tb_grupos_treino_usuario WHERE id = ? AND user_id = ?", [g.id, userId]);

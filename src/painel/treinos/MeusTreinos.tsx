@@ -9,6 +9,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { colocarNaPasta, criarModelo, criarPasta, excluirModelo, excluirPasta, listarExercicios, renomearModelo, renomearPasta } from "./api";
 import { DetalheModelo } from "./DetalheModelo";
@@ -43,6 +44,7 @@ export function MeusTreinos({
   aoAtenderPedido: () => void;
 }) {
   const recarregar = useRecarregar();
+  const confirmar = useConfirmar();
   const [busca, setBusca] = useState("");
   const termo = useTermoComEspera(busca);
   const [folha, setFolha] = useState<Folha>(null);
@@ -140,9 +142,9 @@ export function MeusTreinos({
   };
   const excluirTreino = async (m: ModeloTela) => {
     const aviso = m.alunos > 0
-      ? `\n\n${textoAlunos(m.alunos)} ${m.alunos === 1 ? "recebe" : "recebem"} este treino: ele sai do app ${m.alunos === 1 ? "dele" : "deles"} e os dias da semana com ele ficam sem treino.`
-      : "";
-    if (!window.confirm(`Excluir o treino "${m.nome}"?${aviso}`)) return;
+      ? `${textoAlunos(m.alunos)} ${m.alunos === 1 ? "recebe" : "recebem"} este treino: ele sai do app ${m.alunos === 1 ? "dele" : "deles"} e os dias da semana com ele ficam sem treino.`
+      : undefined;
+    if (!(await confirmar({ titulo: `Excluir o treino "${m.nome}"?`, descricao: aviso, rotuloConfirmar: "Excluir", perigo: true }))) return;
     try {
       await excluirModelo(m.id);
       await recarregar.tudo();
@@ -153,7 +155,8 @@ export function MeusTreinos({
     }
   };
   const excluirPastaAberta = async (p: PastaTela) => {
-    if (!window.confirm(`Excluir a pasta "${p.nome}"? Os treinos dela NÃO são excluídos — voltam para a lista.`)) return;
+    if (!(await confirmar({ titulo: `Excluir a pasta "${p.nome}"?`, descricao: "Os treinos dela NÃO são excluídos — voltam para a lista.",
+      rotuloConfirmar: "Excluir", perigo: true }))) return;
     try {
       await excluirPasta(p.id);
       await recarregar.catalogo();

@@ -12,6 +12,7 @@ import { CLASSE_PAGINA_APP, TituloApp } from "@/app-aluno/perfil/pecas/TopoItem"
 import { lembrarArea } from "@/ui/casca/area";
 import { BotaoIcone } from "@/ui/premium/Botao";
 import { EstadoCarregando } from "@/ui/premium/Estados";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { formatarCronometro, iniciarTreinoSeParado } from "@/treino/cronometro";
 import { chaveData, rotuloDiaCurto } from "@/treino/datas";
 import { chipDoSlot, letrasDaSemana } from "@/treino/letras";
@@ -68,6 +69,7 @@ function TreinoAberto({ userId }: { userId: string }) {
   const { user, isStaff } = useAuth();
   const { situacao } = useSessao();
   const t = useTreinoDoDia(userId);
+  const confirmar = useConfirmar();
   const [params, setParams] = useSearchParams();
   const verHistorico = params.get("ver") === "historico";
 
@@ -295,7 +297,9 @@ function TreinoAberto({ userId }: { userId: string }) {
             aoTrocarTreino={() => setAlterar({ modo: "trocar", slot_idx: slot.slot_idx })}
             aoAdicionarTreino={() => setAlterar({ modo: "adicionar", slot_idx: -1 })}
             aoTirarDoDia={() => {
-              if (window.confirm(`Tirar "${slot.grupo!.nome}" de ${dateLabel}? As séries deste treino no dia são apagadas.`)) void t.removerTreinoDoDia(slot.override_id, slot.slot_idx);
+              void confirmar({ titulo: `Tirar "${slot.grupo!.nome}" de ${dateLabel}?`, descricao: "As séries deste treino no dia são apagadas.",
+                rotuloConfirmar: "Tirar do dia", perigo: true })
+                .then((sim) => { if (sim) void t.removerTreinoDoDia(slot.override_id, slot.slot_idx); });
             }}
             aoAcademia={() => setAcademiaAberta(true)}
             aoCompartilharConcluido={() => void compartilharConcluido(slot)}

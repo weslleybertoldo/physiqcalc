@@ -9,6 +9,7 @@ import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoVazio } from "@/ui/premium/Estados";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { FolhaBiblioteca, FolhaDescanso, FolhaEditarExercicio, FolhaModelos } from "./folhas";
 import { LinhaExercicioEditor } from "./LinhaExercicioEditor";
 import { descansoDoAluno, temAlternado, textoDescansoCampo } from "./regras";
@@ -153,6 +154,7 @@ function CorpoEditor({
 }) {
   const [folha, setFolha] = useState<null | "biblioteca" | "modelos" | "novo" | "descanso">(null);
   const [editando, setEditando] = useState<ExercicioEditor | null>(null);
+  const confirmar = useConfirmar();
   const [obs, setObs] = useState(treino?.observacao ?? "");
   const obsFocada = useRef(false);
   useEffect(() => {
@@ -170,10 +172,11 @@ function CorpoEditor({
     const nova = arrayMove(treino.exercicios, de, para).map((x) => x.exercicio_id!).filter(Boolean);
     void acoes.ordenar(treino, nova);
   };
-  const remover = (ex: ExercicioEditor) => {
+  const remover = async (ex: ExercicioEditor) => {
     if (!treino) return;
-    const aviso = treino.listaDireta ? "" : "\n\nEste treino é compartilhado: o aluno passa a ter uma cópia só dele (os outros continuam com o de antes).";
-    if (!window.confirm(`Tirar "${ex.nome}" do treino ${treino.rotulo}${nomeAluno ? ` de ${nomeAluno}` : ""}?${aviso}`)) return;
+    const aviso = treino.listaDireta ? undefined : "Este treino é compartilhado: o aluno passa a ter uma cópia só dele (os outros continuam com o de antes).";
+    if (!(await confirmar({ titulo: `Tirar "${ex.nome}" do treino ${treino.rotulo}${nomeAluno ? ` de ${nomeAluno}` : ""}?`, descricao: aviso,
+      rotuloConfirmar: "Tirar", perigo: true }))) return;
     setEditando(null);
     void acoes.remover(treino, ex);
   };
@@ -260,7 +263,7 @@ function CorpoEditor({
                   listaFixa={listaFixa}
                   aoPrescrever={(p) => void acoes.prescrever(treino, ex, p)}
                   aoEditar={() => setEditando(ex)}
-                  aoRemover={() => remover(ex)}
+                  aoRemover={() => void remover(ex)}
                 />
               ))
             ) : (
@@ -277,7 +280,7 @@ function CorpoEditor({
                           alca={alca}
                           aoPrescrever={(p) => void acoes.prescrever(treino, ex, p)}
                           aoEditar={() => setEditando(ex)}
-                          aoRemover={() => remover(ex)}
+                          aoRemover={() => void remover(ex)}
                         />
                       )}
                     </ItemArrastavel>
@@ -341,7 +344,9 @@ function CorpoEditor({
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm(`Tirar "${treino.nome}" do aluno? Ele sai da semana; o treino continua em Painel › Treinos.`)) void acoes.tirar(treino);
+                  void confirmar({ titulo: `Tirar "${treino.nome}" do aluno?`, descricao: "Ele sai da semana; o treino continua em Painel › Treinos.",
+                    rotuloConfirmar: "Tirar do aluno", perigo: true })
+                    .then((sim) => { if (sim) void acoes.tirar(treino); });
                 }}
                 className="ml-auto flex items-center gap-1 text-[11.5px] font-medium text-texto-3 hover:text-rosa-3"
                 data-treino-tirar
@@ -382,7 +387,7 @@ function CorpoEditor({
             descansoPadrao={descansoPadrao}
             listaFixa={listaFixa}
             aoSalvar={(p) => (treino && editando ? acoes.prescrever(treino, editando, p) : Promise.resolve(null))}
-            aoRemover={() => editando && remover(editando)}
+            aoRemover={() => { if (editando) void remover(editando); }}
           />
           <FolhaDescanso
             aberto={folha === "descanso"}
