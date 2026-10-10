@@ -1,0 +1,792 @@
+[
+ {
+  "id": "00000000-0000-4000-8000-000000000001",
+  "metodo": "alimentos",
+  "titulo": "Plano de teste hml-17",
+  "favorito": true,
+  "kcal_alvo": 1900.0,
+  "refeicoes": [
+   {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "nome": "Café da manhã",
+    "itens": [
+     {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "ordem": 0,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000004",
+       "nome": "Alimento próprio 1",
+       "fonte": "proprio",
+       "grupo": "Próprios",
+       "fibra_g": 0.0,
+       "sodio_mg": 0.0,
+       "lipidio_g": 9.48,
+       "proteina_g": 13.29,
+       "energia_kcal": 145.7,
+       "carboidrato_g": 0.61,
+       "medidas_caseiras": [
+        {
+         "id": "00000000-0000-4000-8000-000000000005",
+         "ordem": 0,
+         "gramas": 50.0,
+         "descricao": "1 unidade",
+         "created_at": "2026-10-07T03:38:49.497004+00:00",
+         "alimento_id": "00000000-0000-4000-8000-000000000004"
+        }
+       ]
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000004",
+      "refeicao_id": "00000000-0000-4000-8000-000000000002",
+      "substitutos": [],
+      "quantidade_g": 100.0,
+      "medida_caseira_id": "00000000-0000-4000-8000-000000000005",
+      "quantidade_medida": 2.0
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "ordem": 1,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000007",
+       "nome": "Pão, trigo, forma, integral",
+       "fonte": "taco",
+       "grupo": "Cereais e derivados",
+       "fibra_g": 6.88,
+       "sodio_mg": 506.1,
+       "lipidio_g": 3.65,
+       "proteina_g": 9.43,
+       "energia_kcal": 253.19,
+       "carboidrato_g": 49.94,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000007",
+      "refeicao_id": "00000000-0000-4000-8000-000000000002",
+      "substitutos": [
+       {
+        "nome": "Tapioca, com manteiga",
+        "alimento_id": "00000000-0000-4000-8000-000000000008",
+        "quantidade_g": 36.4
+       },
+       {
+        "nome": "Aveia, flocos, crua",
+        "alimento_id": "00000000-0000-4000-8000-000000000009",
+        "quantidade_g": 32.1
+       }
+      ],
+      "quantidade_g": 50.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "ordem": 2,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000011",
+       "nome": "Mamão, Papaia, cru",
+       "fonte": "taco",
+       "grupo": "Frutas e derivados",
+       "fibra_g": 1.04,
+       "sodio_mg": 1.63,
+       "lipidio_g": 0.12,
+       "proteina_g": 0.46,
+       "energia_kcal": 40.16,
+       "carboidrato_g": 10.44,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000011",
+      "refeicao_id": "00000000-0000-4000-8000-000000000002",
+      "substitutos": [
+       {
+        "nome": "Morango, cru",
+        "alimento_id": "00000000-0000-4000-8000-000000000012",
+        "quantidade_g": 199.8
+       },
+       {
+        "nome": "Banana, prata, crua",
+        "alimento_id": "00000000-0000-4000-8000-000000000013",
+        "quantidade_g": 61.3
+       }
+      ],
+      "quantidade_g": 150.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000014",
+      "ordem": 3,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000015",
+       "nome": "Café, infusão 10%",
+       "fonte": "taco",
+       "grupo": "Bebidas (alcoólicas e não alcoólicas)",
+       "fibra_g": null,
+       "sodio_mg": 1.03,
+       "lipidio_g": 0.07,
+       "proteina_g": 0.71,
+       "energia_kcal": 9.07,
+       "carboidrato_g": 1.48,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000015",
+      "refeicao_id": "00000000-0000-4000-8000-000000000002",
+      "substitutos": [],
+      "quantidade_g": 100.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     }
+    ],
+    "ordem": 0,
+    "horario": "07:00:00",
+    "plano_id": "00000000-0000-4000-8000-000000000001",
+    "created_at": "2026-10-07T03:38:57.433274+00:00",
+    "observacao": null,
+    "updated_at": "2026-10-07T03:38:57.433274+00:00",
+    "dias_semana": []
+   },
+   {
+    "id": "00000000-0000-4000-8000-000000000016",
+    "nome": "Lanche da manhã",
+    "itens": [
+     {
+      "id": "00000000-0000-4000-8000-000000000017",
+      "ordem": 0,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000018",
+       "nome": "Iogurte, natural, desnatado",
+       "fonte": "taco",
+       "grupo": "Leite e derivados",
+       "fibra_g": null,
+       "sodio_mg": 59.64,
+       "lipidio_g": 0.32,
+       "proteina_g": 3.83,
+       "energia_kcal": 41.49,
+       "carboidrato_g": 5.77,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000018",
+      "refeicao_id": "00000000-0000-4000-8000-000000000016",
+      "substitutos": [],
+      "quantidade_g": 170.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000019",
+      "ordem": 1,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000009",
+       "nome": "Aveia, flocos, crua",
+       "fonte": "taco",
+       "grupo": "Cereais e derivados",
+       "fibra_g": 9.13,
+       "sodio_mg": 4.63,
+       "lipidio_g": 8.5,
+       "proteina_g": 13.92,
+       "energia_kcal": 393.82,
+       "carboidrato_g": 66.64,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000009",
+      "refeicao_id": "00000000-0000-4000-8000-000000000016",
+      "substitutos": [],
+      "quantidade_g": 30.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000020",
+      "ordem": 2,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000012",
+       "nome": "Morango, cru",
+       "fonte": "taco",
+       "grupo": "Frutas e derivados",
+       "fibra_g": 1.72,
+       "sodio_mg": 0.0,
+       "lipidio_g": 0.31,
+       "proteina_g": 0.89,
+       "energia_kcal": 30.15,
+       "carboidrato_g": 6.82,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000012",
+      "refeicao_id": "00000000-0000-4000-8000-000000000016",
+      "substitutos": [],
+      "quantidade_g": 100.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000021",
+      "ordem": 3,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000022",
+       "nome": "Castanha-do-Brasil, crua",
+       "fonte": "taco",
+       "grupo": "Nozes e sementes",
+       "fibra_g": 7.93,
+       "sodio_mg": 0.65,
+       "lipidio_g": 63.46,
+       "proteina_g": 14.54,
+       "energia_kcal": 642.96,
+       "carboidrato_g": 15.08,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000022",
+      "refeicao_id": "00000000-0000-4000-8000-000000000016",
+      "substitutos": [],
+      "quantidade_g": 10.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     }
+    ],
+    "ordem": 1,
+    "horario": "10:00:00",
+    "plano_id": "00000000-0000-4000-8000-000000000001",
+    "created_at": "2026-10-07T03:38:57.433274+00:00",
+    "observacao": null,
+    "updated_at": "2026-10-07T03:38:57.433274+00:00",
+    "dias_semana": []
+   },
+   {
+    "id": "00000000-0000-4000-8000-000000000023",
+    "nome": "Almoço",
+    "itens": [
+     {
+      "id": "00000000-0000-4000-8000-000000000024",
+      "ordem": 0,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000025",
+       "nome": "Frango, peito, sem pele, grelhado",
+       "fonte": "taco",
+       "grupo": "Carnes e derivados",
+       "fibra_g": null,
+       "sodio_mg": 50.25,
+       "lipidio_g": 2.48,
+       "proteina_g": 32.03,
+       "energia_kcal": 159.19,
+       "carboidrato_g": 0.0,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000025",
+      "refeicao_id": "00000000-0000-4000-8000-000000000023",
+      "substitutos": [
+       {
+        "nome": "Carne, bovina, patinho, sem gordura, grelhado",
+        "alimento_id": "00000000-0000-4000-8000-000000000026",
+        "quantidade_g": 87.1
+       },
+       {
+        "nome": "Merluza, filé, assado",
+        "alimento_id": "00000000-0000-4000-8000-000000000027",
+        "quantidade_g": 156.7
+       }
+      ],
+      "quantidade_g": 120.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000028",
+      "ordem": 1,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000029",
+       "nome": "Arroz, integral, cozido",
+       "fonte": "taco",
+       "grupo": "Cereais e derivados",
+       "fibra_g": 2.75,
+       "sodio_mg": 1.24,
+       "lipidio_g": 1.0,
+       "proteina_g": 2.59,
+       "energia_kcal": 123.53,
+       "carboidrato_g": 25.81,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000029",
+      "refeicao_id": "00000000-0000-4000-8000-000000000023",
+      "substitutos": [
+       {
+        "nome": "Batata, doce, cozida",
+        "alimento_id": "00000000-0000-4000-8000-000000000030",
+        "quantidade_g": 193.1
+       },
+       {
+        "nome": "Mandioca, cozida",
+        "alimento_id": "00000000-0000-4000-8000-000000000031",
+        "quantidade_g": 118.2
+       }
+      ],
+      "quantidade_g": 120.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000032",
+      "ordem": 2,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000033",
+       "nome": "Feijão, carioca, cozido",
+       "fonte": "taco",
+       "grupo": "Leguminosas e derivados",
+       "fibra_g": 8.51,
+       "sodio_mg": 1.76,
+       "lipidio_g": 0.54,
+       "proteina_g": 4.78,
+       "energia_kcal": 76.42,
+       "carboidrato_g": 13.59,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000033",
+      "refeicao_id": "00000000-0000-4000-8000-000000000023",
+      "substitutos": [],
+      "quantidade_g": 90.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000034",
+      "ordem": 3,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000035",
+       "nome": "Brócolis, cozido",
+       "fonte": "taco",
+       "grupo": "Verduras, hortaliças e derivados",
+       "fibra_g": 3.42,
+       "sodio_mg": 2.12,
+       "lipidio_g": 0.46,
+       "proteina_g": 2.13,
+       "energia_kcal": 24.64,
+       "carboidrato_g": 4.37,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000035",
+      "refeicao_id": "00000000-0000-4000-8000-000000000023",
+      "substitutos": [],
+      "quantidade_g": 80.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000036",
+      "ordem": 4,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000037",
+       "nome": "Alface, crespa, crua",
+       "fonte": "taco",
+       "grupo": "Verduras, hortaliças e derivados",
+       "fibra_g": 1.83,
+       "sodio_mg": 3.38,
+       "lipidio_g": 0.16,
+       "proteina_g": 1.35,
+       "energia_kcal": 10.68,
+       "carboidrato_g": 1.7,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000037",
+      "refeicao_id": "00000000-0000-4000-8000-000000000023",
+      "substitutos": [],
+      "quantidade_g": 30.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000038",
+      "ordem": 5,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000039",
+       "nome": "Tomate, com semente, cru",
+       "fonte": "taco",
+       "grupo": "Verduras, hortaliças e derivados",
+       "fibra_g": 1.17,
+       "sodio_mg": 1.02,
+       "lipidio_g": 0.17,
+       "proteina_g": 1.1,
+       "energia_kcal": 15.34,
+       "carboidrato_g": 3.14,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000039",
+      "refeicao_id": "00000000-0000-4000-8000-000000000023",
+      "substitutos": [],
+      "quantidade_g": 60.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000040",
+      "ordem": 6,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000041",
+       "nome": "Azeite, de oliva, extra virgem",
+       "fonte": "taco",
+       "grupo": "Gorduras e óleos",
+       "fibra_g": null,
+       "sodio_mg": null,
+       "lipidio_g": 100.0,
+       "proteina_g": null,
+       "energia_kcal": 884.0,
+       "carboidrato_g": null,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000041",
+      "refeicao_id": "00000000-0000-4000-8000-000000000023",
+      "substitutos": [],
+      "quantidade_g": 5.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     }
+    ],
+    "ordem": 2,
+    "horario": "12:30:00",
+    "plano_id": "00000000-0000-4000-8000-000000000001",
+    "created_at": "2026-10-07T03:38:57.433274+00:00",
+    "observacao": null,
+    "updated_at": "2026-10-07T03:38:57.433274+00:00",
+    "dias_semana": []
+   },
+   {
+    "id": "00000000-0000-4000-8000-000000000042",
+    "nome": "Lanche pré-treino",
+    "itens": [
+     {
+      "id": "00000000-0000-4000-8000-000000000043",
+      "ordem": 0,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000013",
+       "nome": "Banana, prata, crua",
+       "fonte": "taco",
+       "grupo": "Frutas e derivados",
+       "fibra_g": 2.04,
+       "sodio_mg": 0.0,
+       "lipidio_g": 0.07,
+       "proteina_g": 1.27,
+       "energia_kcal": 98.25,
+       "carboidrato_g": 25.96,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000013",
+      "refeicao_id": "00000000-0000-4000-8000-000000000042",
+      "substitutos": [],
+      "quantidade_g": 100.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000044",
+      "ordem": 1,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000045",
+       "nome": "Alimento próprio 2",
+       "fonte": "proprio",
+       "grupo": "Próprios",
+       "fibra_g": 8.0,
+       "sodio_mg": 0.0,
+       "lipidio_g": 50.0,
+       "proteina_g": 25.0,
+       "energia_kcal": 588.0,
+       "carboidrato_g": 20.0,
+       "medidas_caseiras": [
+        {
+         "id": "00000000-0000-4000-8000-000000000046",
+         "ordem": 0,
+         "gramas": 15.0,
+         "descricao": "1 colher de sopa",
+         "created_at": "2026-10-07T03:38:55.954319+00:00",
+         "alimento_id": "00000000-0000-4000-8000-000000000045"
+        }
+       ]
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000045",
+      "refeicao_id": "00000000-0000-4000-8000-000000000042",
+      "substitutos": [],
+      "quantidade_g": 15.0,
+      "medida_caseira_id": "00000000-0000-4000-8000-000000000046",
+      "quantidade_medida": 1.0
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000047",
+      "ordem": 2,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000048",
+       "nome": "Alimento próprio 3",
+       "fonte": "proprio",
+       "grupo": "Próprios",
+       "fibra_g": 0.0,
+       "sodio_mg": 0.0,
+       "lipidio_g": 6.0,
+       "proteina_g": 80.0,
+       "energia_kcal": 400.0,
+       "carboidrato_g": 8.0,
+       "medidas_caseiras": [
+        {
+         "id": "00000000-0000-4000-8000-000000000049",
+         "ordem": 0,
+         "gramas": 30.0,
+         "descricao": "1 scoop",
+         "created_at": "2026-10-07T03:38:52.351331+00:00",
+         "alimento_id": "00000000-0000-4000-8000-000000000048"
+        }
+       ]
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000048",
+      "refeicao_id": "00000000-0000-4000-8000-000000000042",
+      "substitutos": [],
+      "quantidade_g": 30.0,
+      "medida_caseira_id": "00000000-0000-4000-8000-000000000049",
+      "quantidade_medida": 1.0
+     }
+    ],
+    "ordem": 3,
+    "horario": "16:30:00",
+    "plano_id": "00000000-0000-4000-8000-000000000001",
+    "created_at": "2026-10-07T03:38:57.433274+00:00",
+    "observacao": null,
+    "updated_at": "2026-10-07T03:38:57.433274+00:00",
+    "dias_semana": []
+   },
+   {
+    "id": "00000000-0000-4000-8000-000000000050",
+    "nome": "Jantar pós-treino",
+    "itens": [
+     {
+      "id": "00000000-0000-4000-8000-000000000051",
+      "ordem": 0,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000026",
+       "nome": "Carne, bovina, patinho, sem gordura, grelhado",
+       "fonte": "taco",
+       "grupo": "Carnes e derivados",
+       "fibra_g": null,
+       "sodio_mg": 60.29,
+       "lipidio_g": 7.31,
+       "proteina_g": 35.9,
+       "energia_kcal": 219.26,
+       "carboidrato_g": 0.0,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000026",
+      "refeicao_id": "00000000-0000-4000-8000-000000000050",
+      "substitutos": [
+       {
+        "nome": "Frango, peito, sem pele, grelhado",
+        "alimento_id": "00000000-0000-4000-8000-000000000025",
+        "quantidade_g": 165.3
+       },
+       {
+        "nome": "Merluza, filé, assado",
+        "alimento_id": "00000000-0000-4000-8000-000000000027",
+        "quantidade_g": 215.8
+       }
+      ],
+      "quantidade_g": 120.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000052",
+      "ordem": 1,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000030",
+       "nome": "Batata, doce, cozida",
+       "fonte": "taco",
+       "grupo": "Verduras, hortaliças e derivados",
+       "fibra_g": 2.21,
+       "sodio_mg": 2.7,
+       "lipidio_g": 0.09,
+       "proteina_g": 0.64,
+       "energia_kcal": 76.76,
+       "carboidrato_g": 18.42,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000030",
+      "refeicao_id": "00000000-0000-4000-8000-000000000050",
+      "substitutos": [
+       {
+        "nome": "Mandioca, cozida",
+        "alimento_id": "00000000-0000-4000-8000-000000000031",
+        "quantidade_g": 122.5
+       },
+       {
+        "nome": "Arroz, integral, cozido",
+        "alimento_id": "00000000-0000-4000-8000-000000000029",
+        "quantidade_g": 124.3
+       }
+      ],
+      "quantidade_g": 200.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000053",
+      "ordem": 2,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000054",
+       "nome": "Cenoura, cozida",
+       "fonte": "taco",
+       "grupo": "Verduras, hortaliças e derivados",
+       "fibra_g": 2.63,
+       "sodio_mg": 7.88,
+       "lipidio_g": 0.22,
+       "proteina_g": 0.85,
+       "energia_kcal": 29.86,
+       "carboidrato_g": 6.69,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000054",
+      "refeicao_id": "00000000-0000-4000-8000-000000000050",
+      "substitutos": [],
+      "quantidade_g": 60.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000055",
+      "ordem": 3,
+      "receita": null,
+      "alimento": {
+       "id": "00000000-0000-4000-8000-000000000041",
+       "nome": "Azeite, de oliva, extra virgem",
+       "fonte": "taco",
+       "grupo": "Gorduras e óleos",
+       "fibra_g": null,
+       "sodio_mg": null,
+       "lipidio_g": 100.0,
+       "proteina_g": null,
+       "energia_kcal": 884.0,
+       "carboidrato_g": null,
+       "medidas_caseiras": []
+      },
+      "created_at": "2026-10-07T03:38:57.433274+00:00",
+      "observacao": null,
+      "receita_id": null,
+      "updated_at": "2026-10-07T03:38:57.433274+00:00",
+      "alimento_id": "00000000-0000-4000-8000-000000000041",
+      "refeicao_id": "00000000-0000-4000-8000-000000000050",
+      "substitutos": [],
+      "quantidade_g": 5.0,
+      "medida_caseira_id": null,
+      "quantidade_medida": null
+     }
+    ],
+    "ordem": 4,
+    "horario": "20:30:00",
+    "plano_id": "00000000-0000-4000-8000-000000000001",
+    "created_at": "2026-10-07T03:38:57.433274+00:00",
+    "observacao": null,
+    "updated_at": "2026-10-07T03:38:57.433274+00:00",
+    "dias_semana": []
+   }
+  ],
+  "created_at": "2026-09-25T18:00:00+00:00",
+  "deleted_at": null,
+  "observacao": null,
+  "updated_at": "2026-10-07T03:38:57.433274+00:00",
+  "paciente_id": "00000000-0000-4000-8000-000000000056",
+  "nutricionista_id": "00000000-0000-4000-8000-000000000057",
+  "calculo_energetico_id": null
+ }
+]

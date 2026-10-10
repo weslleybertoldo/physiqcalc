@@ -48,8 +48,8 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 42 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
-    expect(RPC_SO_LEITURA.size).toBe(42);
+  it("as 45 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
+    expect(RPC_SO_LEITURA.size).toBe(45);
     expect(RPC_QUE_GRAVAM.size).toBe(40);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
@@ -74,6 +74,12 @@ describe("podeRepetir", () => {
       expect(podeRepetir(`${T}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     }
     for (const nome of ["preconsulta_numeros", "minha_agenda_lista", "exames_do_aluno", "financeiro_totais_do_aluno"]) {
+      expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
+    }
+  });
+
+  it("hml-17: as 3 RPCs do plano alimentar (STABLE) repetem pelo cliente do principal", () => {
+    for (const nome of ["planos_do_aluno", "plano_alimentar", "planos_favoritos"]) {
       expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     }
   });

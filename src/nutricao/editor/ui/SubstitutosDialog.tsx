@@ -70,7 +70,7 @@ export default function SubstitutosDialog({ open, onOpenChange, item, onSalvo, s
     if (!item) return;
     setSalvando(true);
     try {
-      onSalvo(await salvarSubstitutos(item.id, lista));
+      onSalvo(await salvarSubstitutos(item.id, lista, item.alimento));
       toast.success(lista.length ? `${lista.length} substituto${lista.length > 1 ? "s" : ""} salvo${lista.length > 1 ? "s" : ""}` : "Substituições removidas");
       onOpenChange(false);
     } catch (e) {

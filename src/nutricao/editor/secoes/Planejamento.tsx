@@ -149,7 +149,7 @@ export default function Planejamento({ objetivo, onMudou }: { objetivo?: string 
   };
 
   if (planosQ.isLoading) return <Esqueleto className="h-[420px] w-full rounded-[22px]" />;
-  if (planosQ.error) return <EstadoErro titulo="Não deu para abrir os planos" texto={planosQ.error instanceof Error ? planosQ.error.message : undefined} aoTentar={() => void planosQ.refetch()} />;
+  if (planosQ.error) return <EstadoErro titulo="Não deu para abrir os planos" aoTentar={() => void planosQ.refetch()} />;
 
   return (
     <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]" data-secao-planejamento data-planos={planos.length}>
