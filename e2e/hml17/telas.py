@@ -30,8 +30,13 @@ api(-principal).physiqcalc.com.br/(rest|functions|storage); o /auth/ passa. "Fre
           (src/master/contas/AcaoContaDialog.test.tsx)
 
 Bases: --base local (o vite preview do build de STAGING em http://localhost:8080 — a porta que as funções aceitam; outra: --base
-http://localhost:5173) · staging (https://physiqcalc-staging.vercel.app) · prod (recusado aqui: a produção tem as contas e a Guarda do
-e2e/w26/prod.py — fica para a sessão principal, §5 da spec). Antes de qualquer conta, a guarda do build (a faixa "Ambiente de teste").
+http://localhost:5173) · staging (https://physiqcalc-staging.vercel.app) · prod (https://physiqcalc.com.br, SÓ LEITURA — §5 da spec: as
+contas de teste de lá — teste@teste.com (aluno), w7b-prod (aluno do app), admin.teste (personal + dono, conta só de Treino) —, a Guarda
+no navegador (_base.Guarda: nenhuma escrita sai), as contagens das linhas dessas contas iguais antes e depois e os nomes das listas
+borrados nos prints; casos P1 (fresco), P2, P3, P4 (Pendentes e a busca: alunos e treinos), P5 (o /c/ do admin com a API caindo — o
+pedido nem sai do navegador; o normal NÃO roda na produção: a função alunos conta o cadastro_info no limite por IP — e o Recebimento)
+e N2; o H-38 na produção é por API e SQL: e2e/hml17/api.py --schema public). Antes de qualquer conta, a guarda do build (a faixa
+"Ambiente de teste" no staging e no local; sem ela na produção).
 O aceite dos textos (hml-12) e o aviso "o Physiq mudou" fecham como nos E2E de sempre (fechar_avisos; o aceite só cresce, staging).
 Prints: ~/projetos/physiqcalc-scratch/hml/hml17/prints/<base>/<base>_<caso>_<largura>.png. Saída: hml/hml17/agente/telas_<base>.txt
 (só contagens, status e as kcal das contas de TESTE). Logout local das sessões que o teste abriu no fim.
@@ -63,17 +68,33 @@ JANELA_S = 40.0
 MAX_POR_ALVO = 4
 MAX_PEDIDOS = 70
 FORA_DO_LIMITE = {"fn:trocar-token"}  # a regra de 2 tentativas da W5 (sem_treino.py) — §1.5 item 3 da spec, ⚪ fora daqui
+CASOS_PROD = ("P1", "P2", "P3", "P4", "P5", "N2")
+# as contas de TESTE de cada base (chaves das CONTAS da W5); profissionais = quantos o Perfil da aluna mostra; busca = os grupos da
+# busca global da conta do dono (a do admin de produção é só de Treino: sem Alimentos)
+CONTAS_DA_BASE = {
+    "staging": {"aluna": "w5p-aluna", "app": "w7b-sozinho", "dono": "w5p-personal", "profissionais": 2, "busca": ["alimentos", "alunos", "treinos"]},
+    "prod": {"aluna": "aluno-calc", "app": "w7b-prod", "dono": "master", "profissionais": 1, "busca": ["alunos", "treinos"]},
+}
+B5.CONTAS.setdefault("w7b-prod", ("w7b.prod.teste.claude@physiqnutri.app", B5.senha_de("w7b-prod")))
+BORRAR = "[data-lista] [data-item], [data-lista] [data-item] *"
 
 
 class Rodada:
-    def __init__(self, o, base: str, prefixo: str) -> None:
-        self.o, self.base, self.prefixo = o, base, prefixo
+    def __init__(self, o, base: str, prefixo: str, producao: bool = False) -> None:
+        self.o, self.base, self.prefixo, self.producao = o, base, prefixo, producao
         self.L = B.Logins()
         self.prints = B.PRINTS_RAIZ / prefixo
         self.aluna = ""
         self.provas: list[str] = []
+        self.contas = CONTAS_DA_BASE["prod" if producao else "staging"]
+        self.guarda = B.Guarda() if producao else None
+
+    def tela(self, nav, nome: str, desktop: bool) -> B.Tela:
+        return B.Tela(nav, self.base, self.prefixo, nome, desktop=desktop, guarda=self.guarda)
 
     def print(self, t: B.Tela, caso: str, borrar: str | None = None) -> str:
+        if self.producao and borrar is None:
+            borrar = BORRAR  # produção: as listas com nomes de alunos saem borradas
         caminho = t.print(self.prints, f"{self.prefixo}_{caso}", borrar)
         self.provas.append(caminho)
         self.o.linha(f"   print: {caminho}")
@@ -114,7 +135,7 @@ def esperar_quieto(t: B.Tela, minimo: float = 8, quieto: float = 4, maximo: floa
 
 
 def entrar_normal(R: Rodada, nav, conta: str, rota: str, desktop: bool, nome: str) -> B.Tela:
-    t = B.Tela(nav, R.base, R.prefixo, nome, desktop=desktop)
+    t = R.tela(nav, nome, desktop)
     t.entrar(R.L, conta, rota)
     t.caso.fechar_avisos()
     return t
@@ -129,10 +150,12 @@ def primeiro_aviso(t: B.Tela, seletor: str, timeout: float) -> float | None:
 
 # ───────────────────────── antes de tudo: o build ─────────────────────────
 def conferir_build(o, nav, R: Rodada) -> bool:
-    t = B.Tela(nav, R.base, R.prefixo, "build", desktop=False)
+    t = R.tela(nav, "build", False)
     try:
         t.ir("/entrar")
         abriu = t.esperar(lambda: t.tem("[data-entrar-google]") or t.tem("[data-entrada-staging]"), 60)
+        if R.producao:
+            return o.ok(abriu and not t.tem("[data-entrada-staging]"), "o build é o de produção (a /entrar sem a faixa 'Ambiente de teste')")
         tem = t.esperar(lambda: t.tem("[data-entrada-staging]"), 30)
         return o.ok(abriu and tem, "o build é o de staging (a faixa 'Ambiente de teste' na /entrar) — senão nada roda com conta")
     finally:
@@ -253,17 +276,18 @@ def caso_t1_aluna(o, nav, R: Rodada) -> None:
 # ───────────────────────── H-39 (aluna) ─────────────────────────
 def caso_p1(o, nav, R: Rodada, forma: str) -> None:
     """Perfil com a API caindo: forma "fresco" (a API já fora na 1ª abertura) ou "depois" (abriu normal antes)."""
-    t = B.Tela(nav, R.base, R.prefixo, f"p1-{forma}", desktop=False)
+    t = R.tela(nav, f"p1-{forma}", False)
+    aluna, n_prof = R.contas["aluna"], R.contas["profissionais"]
     try:
         if forma == "depois":
-            t.entrar(R.L, "w5p-aluna", "/perfil")
+            t.entrar(R.L, aluna, "/perfil")
             t.caso.fechar_avisos()
-            t.esperar(lambda: t.n("[data-profissional]") >= 2, 40)
+            t.esperar(lambda: t.n("[data-profissional]") >= n_prof, 40)
             t.cair_api()
             t.ir("/perfil")
         else:
             t.cair_api()
-            t.entrar(R.L, "w5p-aluna", "/perfil")
+            t.entrar(R.L, aluna, "/perfil")
         s = primeiro_aviso(t, "[data-perfil-erro]", 30)
         o.ok(s is not None and s <= LIMITE_AVISO_S, f"P1 ({forma}) /perfil com a API caindo: o aviso em {s} s (≤ {LIMITE_AVISO_S:g} s)")
         t.pg.wait_for_timeout(1500)
@@ -275,20 +299,20 @@ def caso_p1(o, nav, R: Rodada, forma: str) -> None:
             R.print(t, "h39_perfil_falha")
         t.voltar_api()
         t.clicar("[data-perfil-erro-tentar]")
-        voltou = t.esperar(lambda: t.n("[data-profissional]") >= 2 and t.texto("[data-perfil-agenda-valor]") not in ("—", "…", ""), 30)
-        o.ok(voltou, f"P1 ({forma}): a API voltou + Tentar de novo → {t.n('[data-profissional]')} profissionais e a Agenda "
+        voltou = t.esperar(lambda: t.n("[data-profissional]") >= n_prof and t.texto("[data-perfil-agenda-valor]") not in ("—", "…", ""), 30)
+        o.ok(voltou, f"P1 ({forma}): a API voltou + Tentar de novo → {t.n('[data-profissional]')} profissional(is) (≥ {n_prof}) e a Agenda "
                      f"\"{t.texto('[data-perfil-agenda-valor]')}\"")
         if forma == "fresco":
-            R.print(t, "h39_perfil_volta")
+            R.print(t, "h39_perfil_normal" if R.producao else "h39_perfil_volta")
     finally:
         t.fim()
 
 
 def caso_p2(o, nav, R: Rodada) -> None:
-    t = B.Tela(nav, R.base, R.prefixo, "p2-inicio", desktop=False)
+    t = R.tela(nav, "p2-inicio", False)
     try:
         t.cair_api()
-        t.entrar(R.L, "w5p-aluna", "/")
+        t.entrar(R.L, R.contas["aluna"], "/")
         faixa = primeiro_aviso(t, "[data-faixa-conta-erro]", 30)
         o.ok(faixa is not None, f"P2 / fresco com a API caindo: a faixa \"Não deu para carregar a sua conta\" ({faixa} s)")
         peso = t.esperar(lambda: (t.attr("[data-card-peso]", "data-card-peso") or [""])[0] in ("erro", "sem-internet", "vazio"), 30)
@@ -299,19 +323,24 @@ def caso_p2(o, nav, R: Rodada) -> None:
         R.print(t, "h39_inicio_falha")
         t.voltar_api()
         t.clicar("[data-faixa-conta-tentar]")
-        voltou = t.esperar(lambda: (t.attr("[data-card-peso]", "data-card-peso") or [""])[0] == "dados", 60)
+        # na produção a conta de teste pode não ter pesagem: lá "vazio" (sem falha nenhuma) também vale; no staging a aluna tem 8
+        validos = ("dados", "vazio") if R.producao else ("dados",)
+        voltou = t.esperar(lambda: (t.attr("[data-card-peso]", "data-card-peso") or [""])[0] in validos, 60)
         o.ok(voltou and not t.tem("[data-faixa-conta-erro]"),
-             f"P2: a API voltou + Tentar (a faixa) → o peso com os dados ({(t.attr('[data-card-peso]', 'data-peso-valor') or ['?'])[0]} kg) e sem a faixa")
-        R.print(t, "h39_inicio_volta")
+             f"P2: a API voltou + Tentar (a faixa) → o peso \"{(t.attr('[data-card-peso]', 'data-card-peso') or ['?'])[0]}\" "
+             f"({(t.attr('[data-card-peso]', 'data-peso-valor') or ['—'])[0]} kg) e sem a faixa")
+        if not R.producao:
+            R.print(t, "h39_inicio_volta")
     finally:
         t.fim()
 
 
 def caso_p3(o, nav, R: Rodada) -> None:
-    t = entrar_normal(R, nav, "w7b-sozinho", "/perfil", False, "p3-controle")
+    conta = R.contas["app"]
+    t = entrar_normal(R, nav, conta, "/perfil", False, "p3-controle")
     try:
         ok = t.esperar(lambda: t.tem("[data-perfil-codigo]"), 40)
-        o.ok(ok and not t.tem("[data-perfil-erro]"), "P3 controle: w7b-sozinho (sem profissional) /perfil normal → o campo do código continua, sem aviso")
+        o.ok(ok and not t.tem("[data-perfil-erro]"), f"P3 controle: {conta} (sem profissional) /perfil normal → o campo do código continua, sem aviso")
         R.print(t, "h39_controle")
     finally:
         t.fim()
@@ -323,7 +352,7 @@ def esperar_sessao_treino(t: B.Tela, timeout: float = 40) -> bool:
 
 
 def caso_p4(o, nav, R: Rodada) -> None:
-    t = entrar_normal(R, nav, "w5p-personal", "/painel/alunos", True, "p4-pendentes")
+    t = entrar_normal(R, nav, R.contas["dono"], "/painel/alunos", True, "p4-pendentes")
     try:
         t.esperar(lambda: t.tem("[data-abrir-pendentes]"), 45)
         esperar_sessao_treino(t)
@@ -340,9 +369,10 @@ def caso_p4(o, nav, R: Rodada) -> None:
         t.pg.keyboard.press("Control+k")
         t.pg.wait_for_timeout(800)
         t.pg.keyboard.type("ab", delay=120)
-        tres = t.esperar(lambda: t.n("[data-busca-erro]") >= 3, 30)
+        esperados = R.contas["busca"]
+        tres = t.esperar(lambda: t.n("[data-busca-erro]") >= len(esperados), 30)
         quais = sorted(x or "" for x in t.attr("[data-busca-erro]", "data-busca-erro"))
-        o.ok(tres and quais == ["alimentos", "alunos", "treinos"], f"P4 a busca \"ab\" com a API caindo: {len(quais)} linhas de erro ({quais})")
+        o.ok(tres and quais == esperados, f"P4 a busca \"ab\" com a API caindo: {len(quais)} linhas de erro ({quais}; esperado {esperados})")
         R.print(t, "h39_busca")
         t.voltar_api()
         for qual in ("alunos", "treinos", "alimentos"):
@@ -350,7 +380,7 @@ def caso_p4(o, nav, R: Rodada) -> None:
             if loc.count():
                 loc.first.click()
                 t.pg.wait_for_timeout(400)
-        voltou = t.esperar(lambda: t.n("[data-busca-erro]") == 0 and t.n("[cmdk-item]") > 3, 30)
+        voltou = t.esperar(lambda: t.n("[data-busca-erro]") == 0 and t.n("[cmdk-item]") > 1, 30)
         o.ok(voltou, f"P4 a API voltou + tocar nas linhas → os resultados ({t.n('[cmdk-item]')} itens na paleta, {t.n('[data-busca-erro]')} erro)")
     finally:
         t.fim()
@@ -364,10 +394,11 @@ def codigo_de_teste(conta: str) -> str | None:
 
 def caso_p5(o, nav, R: Rodada) -> None:
     # visitante /c/<código> com a API caindo
-    codigo = codigo_de_teste("w5p-personal")
-    if not o.ok(bool(codigo), "P5 o código de cadastro da conta de teste (w5p-personal) existe no staging"):
+    dono = R.contas["dono"]
+    codigo = codigo_de_teste(dono)
+    if not o.ok(bool(codigo), f"P5 o código de cadastro da conta de teste ({dono}) existe no {B.schema()}"):
         return
-    t = B.Tela(nav, R.base, R.prefixo, "p5-cadastro", desktop=False)
+    t = R.tela(nav, "p5-cadastro", False)
     try:
         t.cair_api()
         t.ir(f"/c/{urllib.parse.quote(codigo)}")
@@ -375,14 +406,15 @@ def caso_p5(o, nav, R: Rodada) -> None:
         o.ok(s is not None and "Não deu para abrir o cadastro agora" in t.texto() and "não vale mais" not in t.texto(),
              f"P5 /c/<código de teste> com a API caindo → \"Não deu para abrir o cadastro agora\" + Tentar ({s} s), nunca \"este link não vale mais\"")
         R.print(t, "h39_cadastro")
-        t.voltar_api()
-        t.ir("/c/HML17-NAO-EXISTE-0000")
-        achou = t.esperar(lambda: "Link de cadastro não encontrado" in t.texto(), 40)
-        o.ok(achou and not t.tem("[data-cadastro-erro]"), "P5 controle (API no ar): um código que não existe → \"Link de cadastro não encontrado\" (o H-70 certo no caso certo)")
+        if not R.producao:  # o cadastro_info conta no limite por IP (grava): na produção só o caso com a API caindo
+            t.voltar_api()
+            t.ir("/c/HML17-NAO-EXISTE-0000")
+            achou = t.esperar(lambda: "Link de cadastro não encontrado" in t.texto(), 40)
+            o.ok(achou and not t.tem("[data-cadastro-erro]"), "P5 controle (API no ar): um código que não existe → \"Link de cadastro não encontrado\" (o H-70 certo no caso certo)")
     finally:
         t.fim()
     # dono: Configurações › Recebimento com a API caindo
-    t = entrar_normal(R, nav, "w5p-personal", "/painel/configuracoes/recebimento", True, "p5-recebimento")
+    t = entrar_normal(R, nav, dono, "/painel/configuracoes/recebimento", True, "p5-recebimento")
     try:
         t.esperar(lambda: t.tem("[data-recebimento-pendentes-contador]") or t.tem("[data-recebimento-sem-pendentes]"), 45)
         t.cair_api()
@@ -395,8 +427,10 @@ def caso_p5(o, nav, R: Rodada) -> None:
         R.print(t, "h39_recebimento")
     finally:
         t.fim()
-    # aluna: /perfil/agenda com a API caindo
-    t = entrar_normal(R, nav, "w5p-aluna", "/perfil/agenda", False, "p5-agenda")
+    # aluna: /perfil/agenda com a API caindo (staging e local)
+    if R.producao:
+        return
+    t = entrar_normal(R, nav, R.contas["aluna"], "/perfil/agenda", False, "p5-agenda")
     try:
         t.esperar(lambda: t.tem("[data-pagina-agenda]"), 45)
         t.cair_api()
@@ -413,7 +447,7 @@ def caso_p5(o, nav, R: Rodada) -> None:
 
 # ───────────────────────── H-53 ─────────────────────────
 def caso_n1(o, nav, R: Rodada) -> None:
-    t = B.Tela(nav, R.base, R.prefixo, "n1-repetidos", desktop=True)
+    t = R.tela(nav, "n1-repetidos", True)
     try:
         t.entrar(R.L, "w5p-personal", "/painel")
         esperar_quieto(t)
@@ -431,9 +465,9 @@ def caso_n1(o, nav, R: Rodada) -> None:
 
 
 def caso_n2(o, nav, R: Rodada) -> None:
-    t = B.Tela(nav, R.base, R.prefixo, "n2-painel-caindo", desktop=True)
+    t = R.tela(nav, "n2-painel-caindo", True)
     try:
-        t.entrar(R.L, "w5p-personal", "/painel")
+        t.entrar(R.L, R.contas["dono"], "/painel")
         t.caso.fechar_avisos()
         esperar_quieto(t)
         t.cair_api()
@@ -482,23 +516,52 @@ def caso_n3(o, nav, R: Rodada) -> None:
             t.fim()
 
 
+# ───────────────────────── produção: as linhas das contas de teste (SÓ LEITURA) ─────────────────────────
+def contagens_prod(R: Rodada) -> dict | None:
+    """As linhas das contas de TESTE que as telas poderiam mexer (aceites, avisos, cadastros pendentes, eventos da conta, matrículas,
+    aparelhos do push, agendamentos) — iguais antes e depois prova que nada foi gravado (SQL só leitura)."""
+    emails = ", ".join(B.txt(B5.CONTAS[c][0].lower()) for c in (R.contas["aluna"], R.contas["app"], R.contas["dono"]))
+    try:
+        return B.ler(f"""
+          with u as (select id from auth.users where lower(email) in ({emails})),
+               k as (select distinct conta_id from public.conta_membros where user_id in (select id from u))
+          select (select count(*) from public.aceites where user_id in (select id from u))::int as aceites,
+                 (select count(*) from public.avisos where destino_user_id in (select id from u))::int as avisos,
+                 (select count(*) from public.cadastros_pendentes where conta_id in (select conta_id from k))::int as cadastros_pendentes,
+                 (select count(*) from public.conta_eventos where conta_id in (select conta_id from k))::int as conta_eventos,
+                 (select count(*) from public.pacientes where conta_id in (select conta_id from k) or user_id in (select id from u))::int as pacientes,
+                 (select count(*) from public.push_aparelhos where user_id in (select id from u))::int as push_aparelhos,
+                 (select count(*) from public.agendamentos a join public.pacientes p on p.id = a.paciente_id
+                   where p.conta_id in (select conta_id from k) or p.user_id in (select id from u))::int as agendamentos""")[0]
+    except Exception as e:  # noqa: BLE001
+        R.o.linha(f"   contagens do banco (só leitura): {type(e).__name__}: {str(e)[:160]}")
+        return None
+
+
 # ───────────────────────── main ─────────────────────────
 def main() -> int:
     ap = argparse.ArgumentParser(description="hml-17 — E2E de tela (H-38, H-39, H-53; casos no topo)")
-    ap.add_argument("--base", required=True, help="local (http://localhost:8080) | staging | <url> (ex.: http://localhost:5173)")
+    ap.add_argument("--base", required=True, help="local (http://localhost:8080) | staging | prod (SÓ LEITURA) | <url> (ex.: http://localhost:5173)")
     ap.add_argument("--canal", default="msedge", choices=("msedge", "chromium", "chrome"))
-    ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--casos", default=None, help=f"padrão: {','.join(CASOS)} (na produção: {','.join(CASOS_PROD)})")
     a = ap.parse_args()
     base = BASES.get(a.base, a.base).rstrip("/")
     host = urllib.parse.urlparse(base).hostname or ""
-    if a.base == "prod" or host in HOSTS_DE_PRODUCAO:
-        raise SystemExit("produção: recusado aqui (as contas e a Guarda do e2e/w26/prod.py — §5 da spec; a sessão principal roda no F7)")
+    producao = host in HOSTS_DE_PRODUCAO
+    if a.base == "prod" and not producao:
+        raise SystemExit("--base prod precisa ser a produção")
     prefixo = a.base if a.base in BASES else ("local" if host in ("localhost", "127.0.0.1") else "url")
-    casos = {c.strip().upper() for c in a.casos.split(",") if c.strip()}
-    B.usar_schema("staging")
+    validos = CASOS_PROD if producao else CASOS
+    casos = {c.strip().upper() for c in (a.casos or ",".join(validos)).split(",") if c.strip()}
+    fora = sorted(casos - set(validos))
+    if fora:
+        raise SystemExit(f"casos fora desta base: {fora} (válidos: {', '.join(validos)})")
+    B.usar_schema("public" if producao else "staging")
     o = C.Saida(f"telas_{prefixo}")
-    R = Rodada(o, base, prefixo)
-    o.linha(f"base {base} · schema staging · canal {a.canal} · casos {', '.join(c for c in CASOS if c in casos)}")
+    R = Rodada(o, base, prefixo, producao)
+    o.linha(f"base {base} · {'PRODUÇÃO, só leitura (a Guarda no navegador)' if producao else 'schema staging'} · canal {a.canal} · casos "
+            f"{', '.join(c for c in validos if c in casos)}")
+    antes = contagens_prod(R) if producao else None
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     with sync_playwright() as pw:
@@ -535,7 +598,8 @@ def main() -> int:
             if not ok_build["v"]:
                 o.ok(False, "parei antes dos casos com conta: o build não é o de staging")
             else:
-                R.aluna = B.matricula_da_aluna()
+                if not producao:
+                    R.aluna = B.matricula_da_aluna()
                 if "T1" in casos:
                     kcal: dict[str, int | None] = {}
 
@@ -568,6 +632,10 @@ def main() -> int:
                     rodar(caso_n3)
         finally:
             R.L.fechar(o)
+    if producao:
+        depois = contagens_prod(R)
+        o.linha(f"   escritas bloqueadas pelo navegador: {R.guarda.bloqueadas if R.guarda else []}")
+        o.ok(antes is not None and antes == depois, f"SÓ LEITURA: as linhas das contas de teste iguais antes e depois ({antes} → {depois})")
     graves = [x for bom, x in B5.p.itens if not bom]
     o.ok(not graves, f"sem erro de página ({graves[:2]})")
     o.linha(f"\nprints ({len(R.provas)}): {R.prints}")

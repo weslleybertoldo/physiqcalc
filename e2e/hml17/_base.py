@@ -89,7 +89,9 @@ class Logins:
         if conta in self.por_conta:
             return self.por_conta[conta]
         email = B5.CONTAS[conta][0]
-        if not C.eh_email_de_teste(email):
+        # *.teste.claude@physiqnutri.app (P26) ou as de teste da produção (teste@teste.com, admin.teste.claude@physiqcalc.app — a regra
+        # do B5); nunca as contas demo da Play (revisao.*)
+        if not (C.eh_email_de_teste(email) or B5.email_de_teste(email)) or "revisao" in email.lower():
             raise SystemExit(f"não é conta de teste: {conta}")
         s = B5.sessao(conta)
         self.sessoes.guardar("principal", s["access_token"], f"{conta} (login do teste)")
@@ -210,13 +212,66 @@ def acao_do_corpo(req) -> str | None:
         return None
 
 
+def rpcs_de_leitura() -> set[str]:
+    """As RPCs que só leem (RPC_SO_LEITURA de src/integrations/repeticao.ts — o repeticao.test.ts confere que toda RPC do front está
+    decidida): qualquer outra é tratada como escrita pela Guarda."""
+    texto = (REPO / "src" / "integrations" / "repeticao.ts").read_text(encoding="utf-8")
+    bloco = texto.split("export const RPC_SO_LEITURA", 1)[1].split("]);", 1)[0]
+    return set(re.findall(r'"([a-z0-9_]+)"', bloco))
+
+
+LEITURAS_PAGAMENTOS = {"prof_resumo", "prof_aluno", "prof_aluno_cobrancas", "aluno_status", "aluno_historico"}
+LEITURAS_SEMANA = {"get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno", "quemRecebe",
+                   "quemRecebeLista", "modelos"}
+
+
+class Guarda:
+    """PRODUÇÃO SÓ LEITURA (o molde do e2e/w26/prod.py e do e2e/hml14/telas.py): o navegador bloqueia toda escrita das telas —
+    POST/PATCH/PUT/DELETE em tabela, RPC fora da lista de leitura, Storage que não é o "sign", e nas funções as ações que gravam
+    (pagamentos-aluno fora das leituras, admin-semana-treinos fora das leituras, admin-delete-user, admin-update-user, admin-tags que
+    não lista). O resto segue (fallback: a queda da API, quando ligada, vem antes e aborta)."""
+
+    def __init__(self) -> None:
+        self.bloqueadas: list[str] = []
+        self.leitura = rpcs_de_leitura()
+
+    def escrita(self, req) -> bool:
+        u, m = req.url, req.method
+        if urlparse(u).hostname not in (API_P_HOST, API_T_HOST) or m in ("GET", "HEAD", "OPTIONS"):
+            return False
+        tipo, nome = alvo(u)
+        acao = acao_do_corpo(req)
+        if tipo == "tab":
+            return True
+        if tipo == "rpc":
+            return nome not in self.leitura
+        if tipo == "storage":
+            return nome != "sign"
+        if tipo == "fn":
+            return (nome == "pagamentos-aluno" and acao not in LEITURAS_PAGAMENTOS) or nome in ("admin-delete-user", "admin-update-user") \
+                or (nome == "admin-semana-treinos" and acao not in LEITURAS_SEMANA) \
+                or (nome == "admin-tags" and not str(acao or "").lower().startswith(("list", "get")))
+        return False
+
+    def instalar(self, ctx) -> None:
+        def rota(route, req) -> None:
+            if self.escrita(req):
+                self.bloqueadas.append(f"{req.method} {alvo(req.url)[0]}:{alvo(req.url)[1]}")
+                route.abort()
+                return
+            route.fallback()
+        ctx.route(re.compile(r"https://api(-principal)?\.physiqcalc\.com\.br/"), rota)
+
+
 class Tela:
     """Um contexto limpo do navegador (o Caso da W5: painel 1280 × 883 ou celular 390 × 844), com a sessão da conta de TESTE
-    ANTES do 1º documento, a queda da API sob comando e os pedidos contados por alvo."""
+    ANTES do 1º documento, a queda da API sob comando e os pedidos contados por alvo (com a Guarda, na produção)."""
 
-    def __init__(self, nav, base: str, prefixo: str, nome: str, desktop: bool = True) -> None:
+    def __init__(self, nav, base: str, prefixo: str, nome: str, desktop: bool = True, guarda: Guarda | None = None) -> None:
         self.caso = B5.Caso(nav, base, prefixo, nome, desktop=desktop)
         self.pg, self.ctx, self.base, self.nome = self.caso.pg, self.caso.ctx, base, nome
+        if guarda:
+            guarda.instalar(self.ctx)
         self.largura = 1280 if desktop else 390
         self.pedidos: list[dict] = []
         self.t0 = time.time()
