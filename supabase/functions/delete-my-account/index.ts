@@ -8,7 +8,7 @@
 //   · modo servidor (Physiq W7, falha F4 — C88, R11, P19): chamado SÓ pelas funções exportar-meus-dados e excluir-minha-conta
 //     do banco principal, servidor → servidor. Cabeçalhos: x-espelho-segredo (hml-16c, S3: o principal manda
 //     SEGREDO_CONTA_TREINO; aqui fica só o hash, em SEGREDO_CONTA_TREINO_ACEITOS — _shared/segredo-servidor.ts; aceitou → log
-//     segredo_aceito com acao conta_treino e resultado lista | legado) · x-schema ·
+//     segredo_aceito com acao conta_treino e resultado lista) · x-schema ·
 //     Authorization: Bearer <anon do Treino> (o verify_jwt continua TRUE: a borda do Supabase exige um JWT do projeto e o
 //     anon serve; quem autoriza é o segredo). Corpo: { modo: "servidor", acao: "exportar" | "conferir" | "excluir",
 //     principal_user_id }. O id do Treino sai do vínculo physiq_identidades (nunca de um id mandado por alguém).
@@ -30,7 +30,7 @@
 //
 // Publicar: gh workflow run deploy-function.yml -f function=delete-my-account (verify_jwt true) ou
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions delete-my-account true
-// Segredos: SEGREDO_CONTA_TREINO_ACEITOS (até o F7, também o legado ESPELHO_SEGREDO) + os automáticos.
+// Segredos: SEGREDO_CONTA_TREINO_ACEITOS + os automáticos.
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32): quem chama (o treino-servidor.ts do principal) espera 15 s no exportar, 30 s ao conferir e 60 s ao excluir
 //   (máximo medido em 7 dias: 10 s); daqui não sai chamada para fora (só o banco e o Auth do próprio Treino) e o Storage não é

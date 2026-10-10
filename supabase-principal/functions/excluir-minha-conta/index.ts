@@ -28,9 +28,8 @@
 // confirmacao: "EXCLUIR" } → _shared/exclusao-profissional.ts (a ordem e as recusas em _shared/exclusao-profissional-regras.ts).
 // Sem o campo — o site de produção de hoje e todo APK antigo —, tudo abaixo segue IGUAL (403 "profissional" e o fluxo do aluno).
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions excluir-minha-conta true
-// Segredos: TREINO_URL, TREINO_ANON_KEY, SEGREDO_CONTA_TREINO (hml-16c, S3, pelo _shared/treino-servidor.ts; até o F7, sem ele,
-// o legado ESPELHO_SEGREDO), MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (o caminho novo cancela a cobrança automática) (+ os
-// automáticos).
+// Segredos: TREINO_URL, TREINO_ANON_KEY, SEGREDO_CONTA_TREINO (hml-16c, S3, pelo _shared/treino-servidor.ts), MP_ACCESS_TOKEN_PROD /
+// MP_ACCESS_TOKEN_TEST (o caminho novo cancela a cobrança automática) (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (o mesmo log vai para o caminho do profissional e para a conversa com o
 // Treino — o aviso de erro diz esta função); o catch final avisa (log.excecao) e devolve o mesmo 500.
 // hml-14 (H-32): um prazo por pedido limita as chamadas ao Treino (orcamentoDoPedido); a foto do Perfil sai INTEIRA (todas as

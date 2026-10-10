@@ -18,8 +18,8 @@
 // Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging · 429 rate_limited · 500
 // verify_jwt = false (validado aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pos-login false
-// Segredos: TREINO_URL, SEGREDO_PONTE_CALC (hml-16c, S2: o que a vincular-professor do Treino aceita; até o F7, sem ele, o legado
-// ESPELHO_SEGREDO — _shared/segredo-servidor.ts), MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (W7b) (+ os automáticos).
+// Segredos: TREINO_URL, SEGREDO_PONTE_CALC (hml-16c, S2: o que a vincular-professor do Treino aceita — _shared/segredo-servidor.ts;
+// sem ele, a ponte do Calc não roda e o login segue), MP_ACCESS_TOKEN_PROD / MP_ACCESS_TOKEN_TEST (W7b) (+ os automáticos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (da vincular-professor do Treino, só o status e o código do erro — nunca o
 // corpo); o catch final avisa (log.excecao) e devolve o mesmo 500.
 // hml-14 (H-32): a ida ao Treino espera no máximo TEMPO_MS.treino e as idas ao MP têm o prazo do pedido; erro do banco na ponte do

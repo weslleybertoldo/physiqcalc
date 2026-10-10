@@ -374,8 +374,50 @@ describe("a guarda nas fontes: os 8 segredos do contrato (hml-16c §1) nos recep
     }
   });
 
-  it("nenhum código das funções lê o ESPELHO_SEGREDO (nem a peça comum); o comparador antigo só ficou no push (PUSH_SEGREDO)", () => {
-    expect(arquivosCom(NOME_DO_LEGADO)).toEqual([]);
+  it("o comparador antigo só ficou no push (PUSH_SEGREDO)", () => {
     expect(arquivosCom("function segredoConfere(")).toEqual([`${P}/_shared/push-regras.ts`]);
+  });
+});
+
+// ───────────────────────── a guarda do legado (hml-16c, F7): o ESPELHO_SEGREDO não volta às funções ─────────────────────────
+
+/** Todos os arquivos das pastas das funções dos 2 projetos (qualquer extensão), com o texto INTEIRO (comentário também conta). */
+function arquivosDasFuncoes(): Array<{ arquivo: string; texto: string }> {
+  const saida: Array<{ arquivo: string; texto: string }> = [];
+  const andar = (rel: string) => {
+    for (const e of readdirSync(resolve(raiz, rel), { withFileTypes: true })) {
+      const caminho = `${rel}/${e.name}`;
+      if (e.isDirectory()) andar(caminho);
+      else saida.push({ arquivo: caminho, texto: ler(caminho) });
+    }
+  };
+  andar(P);
+  andar(T);
+  return saida.sort((a, b) => (a.arquivo < b.arquivo ? -1 : 1));
+}
+
+/** A guarda: os arquivos cujo texto cita o nome em qualquer lugar (código, comentário ou texto), em ordem. */
+function quemCita(nome: string, arquivos: Array<{ arquivo: string; texto: string }>): string[] {
+  return arquivos.filter((a) => a.texto.includes(nome)).map((a) => a.arquivo).sort();
+}
+
+describe("a guarda: o segredo único de antes (ESPELHO_SEGREDO) não aparece em supabase/functions nem em supabase-principal/functions", () => {
+  const TODOS = arquivosDasFuncoes();
+
+  it("controle negativo: a guarda acusa o arquivo falso que cita o nome (no código ou só no comentário) e só ele", () => {
+    const falsos = [
+      { arquivo: "falso/le-o-legado.ts", texto: `const antigo = Deno.env.get("${NOME_DO_LEGADO}") ?? "";\n` },
+      { arquivo: "falso/so-no-comentario.ts", texto: `// sem ele, cai no ${NOME_DO_LEGADO}\nexport const x = 1;\n` },
+      { arquivo: "falso/limpo.ts", texto: `const s = segredoParaEnviar("SEGREDO_AVISO_ERRO");\n` },
+    ];
+    expect(quemCita(NOME_DO_LEGADO, falsos)).toEqual(["falso/le-o-legado.ts", "falso/so-no-comentario.ts"]);
+    // no meio dos arquivos de verdade: só o falso aparece
+    expect(quemCita(NOME_DO_LEGADO, [...TODOS, falsos[1]])).toEqual(["falso/so-no-comentario.ts"]);
+  });
+
+  it("nenhum arquivo das funções dos 2 projetos cita o ESPELHO_SEGREDO (nem a peça comum, nem em comentário)", () => {
+    expect(TODOS.length).toBeGreaterThan(80); // o leitor achou as funções dos 2 projetos (91 arquivos na hml-16c)
+    expect(TODOS.map((a) => a.arquivo)).toEqual(expect.arrayContaining(PECA_COMUM));
+    expect(quemCita(NOME_DO_LEGADO, TODOS)).toEqual([]);
   });
 });

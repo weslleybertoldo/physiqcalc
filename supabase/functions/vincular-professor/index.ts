@@ -9,13 +9,13 @@
 //     servidor) — a matrícula nasce lá e o espelho mantém o professor aqui;
 //   · modo servidor (x-espelho-segredo, chamado pelo pos-login do principal — hml-16c, S2: o pos-login manda SEGREDO_PONTE_CALC;
 //     aqui fica só o hash, em SEGREDO_PONTE_CALC_ACEITOS; aceitou → log segredo_aceito com acao ponte_calc e resultado
-//     lista | legado): devolve o que o Calc sabe da pessoa e o
+//     lista): devolve o que o Calc sabe da pessoa e o
 //     principal ainda não — professor do Calc, convite de professor do master pendente (consumido aqui, com o código novo)
 //     e aluno de um professor do Calc. O app novo (3.2+) não chama mais esta função: o código vai para o vincular-aluno.
 // verify_jwt = false desde a W3 (o modo servidor não tem JWT; o modo app valida o token aqui). PUBLICAR SÓ ASSIM:
 //   scripts/deploy_function.sh uxwpwdbbnlticxgtzcsb supabase/functions vincular-professor false   (FORCAR_VERIFY_JWT=1 na 1ª vez)
 // Segredos: PRINCIPAL_URL, SEGREDO_PONTE_CALC_ACEITOS (recebe, S2) e SEGREDO_REPASSE_VINCULO (manda à vincular-aluno, S5) —
-// _shared/segredo-servidor.ts (hml-16c); até o F7, também o legado ESPELHO_SEGREDO nos 2 sentidos.
+// _shared/segredo-servidor.ts (hml-16c).
 // hml-10 (H-24 e H-26): log em JSON sem dado pessoal (_shared/log.ts); log.erro e log.excecao avisam o Weslley pelo principal.
 // hml-14 (H-32): o repasse ao principal espera no máximo TEMPO_MS.principal (vincular-aluno: máx. medido 1,1 s; estourou → o
 // principal_indisponivel de sempre); erro do banco lança (o catch responde 500 e avisa) — antes virava "não tem" calado; o
