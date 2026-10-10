@@ -1,0 +1,504 @@
+{
+ "uuid": "6bd27737-c782-5e16-8fdc-002e16c8d452",
+ "nome": "Remada Invertida",
+ "cena": "remada_invertida",
+ "grupo": "Dorsal / Rombóide",
+ "subgrupo": "Latíssimo do dorso · romboides · trapézio médio · bíceps",
+ "padrao_movimento": "remada",
+ "equipamento": "peso_corporal",
+ "variacao": "corpo embaixo da barra",
+ "alvos": [
+  "dorsal",
+  "trapezio"
+ ],
+ "auxiliares": [
+  "costas",
+  "deltoide",
+  "biceps",
+  "antebraco",
+  "lombar",
+  "gluteo",
+  "posterior"
+ ],
+ "camera": {
+  "az": 45,
+  "el": 18,
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   -0.3,
+   0.42
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   -0.25,
+   0.45
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado de costas embaixo da barra do Smith, presa no gancho numa altura baixa (mais ou menos a do quadril), segura a barra com as mãos um pouco mais abertas que os ombros e as palmas viradas para os pés (pegada pronada). Só os calcanhares ficam no chão: o corpo fica reto dos calcanhares aos ombros — joelhos esticados, quadril alinhado, sem cair nem subir, abdômen e glúteos firmes e a cabeça na linha da coluna —, quase deitado, com os braços estendidos e os ombros soltos para a frente, e a parte de baixo do peito passa embaixo da barra. Puxa o peito em direção à barra dobrando os cotovelos, que vão para trás, na direção do chão, perto do corpo, e aproximando as escápulas, com o peito aberto, até o peito chegar quase na barra; desce devagar até esticar os braços de novo. As mãos e os calcanhares não saem do lugar: o corpo, reto como uma prancha, sobe e desce girando nos calcanhares.",
+ "cinesiologia": {
+  "plano": "sagital (extensão do ombro e flexão do cotovelo), com o braço um pouco aberto pro lado; cadeia cinética fechada — as mãos ficam paradas na barra e os calcanhares no chão, e o corpo, reto, gira em volta dos calcanhares (de ~14° a ~32° do chão)",
+  "articulacoes": "ombro (extensão na subida: o braço sai ~60° à frente da linha do tronco e termina ~28° atrás dela, aberto ~13–27° pro lado, com o cotovelo embaixo da mão; flexão na descida); cotovelo (flexão de ~10° a ~132° na subida — o peito chega a ~2 cm da barra —, extensão na descida); escápulas (retração na subida, protração na descida); punho reto em cima e um pouco desviado pro lado do polegar embaixo (~10°: a mão fecha ao longo da barra e o antebraço vem do ombro, mais pra dentro que a pegada); coluna, quadril e joelhos parados e estendidos (o corpo reto); tornozelos neutros, com só o calcanhar no chão",
+  "agonistas": "latíssimo do dorso, trapézio médio e romboides (ExRx: alvo \"Back, General\"); na remada invertida na barra do Smith o latíssimo, o trapézio médio e o deltoide posterior chegam a ~99% da contração voluntária máxima (Snarr e Esco 2013, tabela 2); a remada invertida teve a maior ativação do latíssimo e da parte de cima das costas das 3 remadas de Fenwick 2009 (latíssimo 64,8% e eretor torácico 90,9% da contração máxima na subida)",
+  "sinergistas": "trapézio médio e inferior, romboides, latíssimo do dorso, redondo maior, deltoide posterior, infraespinal, redondo menor, braquial, braquiorradial e peitoral maior (porção esternal) (ExRx); bíceps braquial ~77% da contração máxima na barra do Smith (Snarr e Esco 2013); bíceps, latíssimo, trapézio inferior e deltoide posterior acima de 61% (Youdas 2016)",
+  "estabilizadores": "bíceps braquial e cabeça longa do tríceps (estabilizadores dinâmicos); eretores da espinha, isquiotibiais e glúteo máximo seguram o corpo reto; reto do abdome e oblíquos como estabilizadores antagonistas (ExRx). Fenwick 2009: a remada invertida teve a maior ativação dos extensores do quadril e a menor carga na lombar das 3 remadas (glúteo máximo 19,2%, bíceps femoral 25,7% da contração máxima)",
+  "fases": "subida concêntrica puxando o peito até a barra e descida excêntrica, devagar, até esticar os braços (Snarr e Esco 2013: \"the body was lowered slowly back to the starting position\"; ExRx: \"Return until arms are extended and shoulders are stretched forward\")"
+ },
+ "referencias": [
+  "ExRx.net — Inverted Row (https://exrx.net/WeightExercises/BackGeneral/BWSupineRow, lido na cópia do Internet Archive de 13/09/2026; o site responde 403 direto): classificação \"Utility: Basic or Auxiliary\", \"Mechanics: Compound\", \"Force: Pull\"; Preparation: \"Lay on back under fixed horizontal bar. Grasp bar with wide overhand grip.\"; Execution: \"Keeping body straight, pull body up to bar. Pull shoulders back at top of movement with chest high. Return until arms are extended and shoulders are stretched forward. Repeat.\"; Comments: \"Fixed bar should be just high enough to allow arm to fully extend.\"; \"Also known as Body Row or Supine Row.\"; Easier: \"Resistance can be reduced by using higher bar and positioning feet further back. Other easier variations include sitting and bending at hips or bending at knee with feet flat on floor.\"; Harder: \"This movement can be made more challenging by positioning body in more horizontal position at height of movement. This can be achieved by lowering bar and positioning feet further forward so lower chest is positioned under bar. After progressing to lowest position possible, just short of body contacting floor, back of heels can be placed on elevated surface.\"; músculos: alvo \"Back, General\"; sinergistas \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\"; estabilizadores dinâmicos \"Biceps Brachii\", \"Triceps, Long Head\"; estabilizadores \"Erector Spinae\", \"Hamstrings\", \"Gluteus Maximus\"; estabilizadores antagonistas \"Rectus Abdominis\", \"Obliques\". A versão padrão é a de corpo reto com os calcanhares no chão: dobrar os joelhos com os pés chapados é a variação mais fácil e o calcanhar em cima de um apoio, a mais difícil.",
+  "NSCA — Personal Training Quarterly 10.2 (2023), \"Progressive Strategies for Teaching Fundamental Resistance Training Movement Patterns\" (https://www.nsca.com/contentassets/3d09f06f0b4c4f6fbd8cc382ed1f3d4a/ptq-10.2.1-progressive-strategies-for-teaching-fundamental-resistance-training-movement-patterns.pdf), figura 5: \"Inverted row (C and D): The client hangs under a low bar with a grossly horizontal body position then pulls body to the top position before returning to the bottom position.\"; \"the inverted row (Figures 5c and 5d), requires the client to control trunk and lower body movements\". O artigo de técnica que ele cita (Ronai P, Scibek E. The inverted row. Strength Cond J. 2014;36(4):94-97, coluna Exercise Technique da NSCA) é pago: lido só o resumo (\"THIS ARTICLE PROVIDES A DETAILED DESCRIPTION AND FIGURES OF THE PROPER EXERCISE TECHNIQUE FOR AN INVERTED ROW\").",
+  "Snarr RL, Esco MR. Comparison of Electromyographic Activity When Performing an Inverted Row With and Without a Suspension Device. J Exerc Physiol Online (JEPonline). 2013;16(6):51-58 (PDF da ASEP, https://www.asep.org/asep/asep/JEPonlineDecember2013_Snarr_Esco.pdf): \"The IR is typically performed using a standard fixed-position barbell on a squat rack or smith machine with the exerciser in a supine position directly beneath the bar with the feet on the floor and hands placed on the bar with a pronated grip.\"; no estudo: \"a Smith machine bar and suspension handles were both set at approximately hip height for each subject\"; \"a supine bridge directly below the bar (or handles) with the arms fully extended and hands pronated and grasping the bar (or handles). The spine was to be kept rigid to create a plank-like posture with knees bent to 90°. The feet were placed flat on the floor. Each subject then began the exercise by pulling the body upwards towards the bar or handles until the chest reached the level of the hands. To complete the repetition, the body was lowered slowly back to the starting position.\"; tabela 2 (barra do Smith): latíssimo do dorso 99,3 ± 53,3%, trapézio médio 98,6 ± 35,6%, deltoide posterior 98,6 ± 26,8% e bíceps braquial 76,7 ± 19,1% da contração voluntária máxima; limitação: \"only one version of the IR was performed during this investigation (e.g., knees placed at 90° with feet flat on the floor), which required a minimal load\" — \"Future research should examine an IR with increased loads (e.g., legs fully extended or feet placed on a bench)\".",
+  "Fenwick CMJ, Brown SHM, McGill SM. Comparison of different rowing exercises: trunk muscle activation and lumbar spine motion, load, and stiffness. J Strength Cond Res. 2009;23(5):1408-1417. doi:10.1519/JSC.0b013e3181b07334 (PMID 19620925; texto completo grátis no site da revista, lido na cópia do Internet Archive de 10/02/2026). A revista publicou o MESMO artigo também em 2009;23(2):350-358 (doi:10.1519/JSC.0b013e3181942019, PMID 19197209): os 2 registros estão no PubMed e no site da revista, sem nota ligando um ao outro; vale a de agosto — a do texto completo, a que o Snarr e Esco 2013 citam e a do resumo que a Remada Baixa na Polia cita (\"The 3 rowing exercises investigated are the inverted row, standing bent-over row, and the standing 1-armed cable row\"; a de março diz \"were\"). Resumo: \"The inverted row elicited the highest activation of the latissimus dorsi muscles, upper back, and hip extensor muscles. The lower activation of the lumbar erector spinae muscles during the inverted row corresponded to the lower-spine load measured.\"; a variação deles é com alças em correntes e joelhos dobrados (\"The lengths of the chains were set so that when the participants pulled themselves up, their upper body was horizontal to the ground. Participants were instructed to grab the handles with a pronated grip and to lower themselves underneath it. Participants were told to keep their knees bent at 90°, to keep their body “tight,” and pull themselves up while using the knees as the fulcrum\"); resultados: latíssimo 64,8% da contração máxima na subida e 44,1% na descida, eretor torácico 90,9%, glúteo máximo 19,2%, glúteo médio 19,9%, bíceps femoral 25,7%; discussão: \"most participants appeared to over compensate for this torque by hiking their lumbar spine well into the extension range of motion capacity\" (o certo é a coluna neutra).",
+  "Youdas JW, Keith JM, Nonn DE, Squires AC, Hollman JH. Activation of Spinal Stabilizers and Shoulder Complex Muscles During an Inverted Row Using a Portable Pull-up Device and Body Weight Resistance. J Strength Cond Res. 2016;30(7):1933-1941 (lido só o resumo, PubMed 26422610): \"Four muscles (BB, LD, LT, and PD) demonstrated very high (>61% MVIC) EMG activation during all 4 exercise conditions. Three muscles (UT, MT, and LM) demonstrated high (41-60% MVIC) activation, whereas 2 muscles (LTh and RA) demonstrated moderate (21-40% MVIC) activation.\"",
+  "American Council on Exercise (ACE) — TRX Back Row (https://www.acefitness.org/resources/everyone/exercise-library/84/trx-reg-back-row/, lido em 10/10/2026; a biblioteca do ACE não tem a remada invertida na barra — a remada suspensa é a mesma puxada do corpo inclinado, com alças): \"Stiffen your torso by contracting your core/abdominal muscles (\"bracing\"), and retracting and depressing your scapulae (pull your shoulder blades down and back).\"; \"Keep your wrists neutral (straight, not bent) with palms facing inward.\"; \"Keep your head and spine aligned, and avoiding any sagging in the low back.\"; \"Upward Phase: Exhale and slowly flex (bend) your elbows by pulling your entire body towards your hands. Your elbows should move towards your sides and remain close to your body while your wrists should stay in the neutral position (think about pulling your elbows closer to your ribs). Maintain a stiff torso aligning your head and spine, and avoid any sagging or aching in your low back or hips.\"; \"Downward Phase: While maintaining your rigid torso, inhale and slowly lower your body back towards your starting position, extending (straightening) your elbows without your shoulders rolling forward.\" Na alça o ACE segura a escápula retraída embaixo; na barra valeu o ExRx (\"shoulders are stretched forward\" embaixo).",
+  "Smith: a peça do Agachamento no Smith (lote 4; bloco SMITH do equip3d.py), com a barra de 30 mm (Titan Smith Machine: \"Barbell Shaft Diameter: 30mm\") e os ganchos que engatam nos pinos a cada 10 cm (Precor DPL0802: \"16 Hook positions at 4 in / 10 cm spacing\"); aqui a barra fica PARADA (curso de 0), na altura de um pino, sem anilha.",
+  "Amplitude normal das juntas: Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry (valores da AAOS; a referência do limites.py)."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados no chão (pés_largura 0,8–2,6, ponta do pé, os dois pés virados igual, joelho na direção do pé, coluna até 20°) foram feitas pra quem está em pé: aqui o corpo está deitado de costas, só com os calcanhares no chão e a ponta dos pés pra cima, e a ponta_pe (tornozelo → base dos dedos visto de cima) e o joelho_valgo perdem o sentido. As que valem estão abaixo, mais estreitas: pés mais ou menos na largura do quadril, um não fica à frente do outro, joelhos esticados, quadril na reta ombro → tornozelo, coluna neutra (até 8°), cabeça na linha da coluna, pelve e ombros nivelados. O pé no chão é a planta (a pele mais baixa do pé = o calcanhar) e o tornozelo não pode escorregar entre os quadros, como sempre; o calcanhar no chão e o resto do corpo fora dele estão nas alturas.",
+  "zonas": [
+   {
+    "nome": "em cima o peito chega na barra, sem encostar",
+    "equipamento": "smith_barra",
+    "partes": [
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "t": 1.0,
+    "mm": [
+     8,
+     25
+    ],
+    "fonte": "ExRx (\"pull body up to bar\"; \"Pull shoulders back at top of movement with chest high\"); Snarr e Esco 2013 (\"until the chest reached the level of the hands\"). Medido da barra até a pele; 3 mm é a folga mínima de peso × corpo da checagem"
+   },
+   {
+    "nome": "a barra nunca chega perto do pescoço nem do rosto",
+    "equipamento": "smith_barra",
+    "partes": [
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     60,
+     5000
+    ],
+    "fonte": "Weslley (peso e equipamento nunca entram no corpo): a barra passa no peito, longe do pescoço e do rosto"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "calcanhar esquerdo encostando no chão",
+    "partes": [
+     "LeftFoot"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -2.0,
+     1.5
+    ],
+    "fonte": "ExRx (o calcanhar no chão é a versão padrão: \"back of heels can be placed on elevated surface\" é a mais difícil); o corpo gira em cima do calcanhar, que encosta sem afundar mais que ~2 mm"
+   },
+   {
+    "nome": "calcanhar direito encostando no chão",
+    "partes": [
+     "RightFoot"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -2.0,
+     1.5
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "o resto do corpo fora do chão (só os calcanhares encostam)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     8,
+     5000
+    ],
+    "fonte": "ExRx (\"Fixed bar should be just high enough to allow arm to fully extend\"; \"just short of body contacting floor\"): embaixo, com os braços estendidos, a barriga da perna passa ~1,5 cm acima do chão"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços não entram no tronco (em cima a mão fica do lado do peito)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "mãos longe da cabeça",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     30,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "corpo quase deitado embaixo (reta ombro → tornozelo × chão)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "Foot"
+    ],
+    "t": 0.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "NSCA PTQ 10.2 (\"The client hangs under a low bar with a grossly horizontal body position\"); ExRx (\"Fixed bar should be just high enough to allow arm to fully extend\"); Snarr e Esco 2013 (barra do Smith \"at approximately hip height\"). Com a barra no pino de 0,90 m (o mais baixo em que o corpo, de braço esticado, não encosta no chão) o corpo fica a ~13° do chão"
+   },
+   {
+    "nome": "corpo mais inclinado em cima, com o peito na barra",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "Foot"
+    ],
+    "t": 1.0,
+    "graus": [
+     22,
+     40
+    ],
+    "fonte": "ExRx (\"Keeping body straight, pull body up to bar\"): o corpo reto gira nos calcanhares até o peito chegar na barra"
+   },
+   {
+    "nome": "corpo reto: quadril na reta ombro → tornozelo, sem cair nem subir",
+    "medida": "quadril_linha_ombro_tornozelo",
+    "t": "todos",
+    "mm": [
+     -25,
+     25
+    ],
+    "fonte": "ExRx (\"Keeping body straight\"); ACE, TRX Back Row (\"avoiding any sagging in the low back\"; \"avoid any sagging or aching in your low back or hips\"); NSCA PTQ 10.2 (\"requires the client to control trunk and lower body movements\"). O número muda ±16 mm porque a escápula leva o ombro (a ponta da reta) pra frente embaixo e pra trás em cima; o quadril não mexe em relação ao tronco"
+   },
+   {
+    "nome": "quadril estendido, sem dobrar",
+    "medida": "quadril_sinal",
+    "t": "todos",
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "ExRx (\"Keeping body straight\"); Snarr e Esco 2013 (\"The spine was to be kept rigid to create a plank-like posture\")"
+   },
+   {
+    "nome": "joelho, quadril e cabeça em linha reta",
+    "medida": "linha_joelho_quadril_cabeca",
+    "t": "todos",
+    "graus": [
+     -4,
+     5
+    ],
+    "fonte": "ExRx (\"Keeping body straight\"); ACE, TRX Back Row (\"Maintain a stiff torso aligning your head and spine\")"
+   },
+   {
+    "nome": "joelhos esticados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "ExRx (\"Keeping body straight\"; \"bending at knee with feet flat on floor\" é a variação mais fácil). Fenwick 2009 e Snarr e Esco 2013 estudaram a de joelhos a 90°, a mais fácil"
+   },
+   {
+    "nome": "coluna neutra (sem arquear a lombar)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "ACE, TRX Back Row (\"avoiding any sagging in the low back\"); Snarr e Esco 2013 (\"The spine was to be kept rigid\"); Fenwick 2009 (o erro comum é \"hiking their lumbar spine well into the extension range\")"
+   },
+   {
+    "nome": "cabeça na linha da coluna",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -18,
+     -4
+    ],
+    "fonte": "ACE, TRX Back Row (\"Keep your head and spine aligned\"; \"aligning your head and spine\"). O boneco em pé, no repouso, mede ~−11°"
+   },
+   {
+    "nome": "braços estendidos embaixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx (\"Return until arms are extended\"); Snarr e Esco 2013 (\"with the arms fully extended\")"
+   },
+   {
+    "nome": "cotovelos bem dobrados em cima (peito na barra)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     120,
+     145
+    ],
+    "fonte": "ExRx (\"pull body up to bar\"); Snarr e Esco 2013 (\"until the chest reached the level of the hands\"): com o peito na barra a mão fica na altura do peito, perto do ombro, e o cotovelo quase todo dobrado (~132°; com o peito a 1 cm da barra ia a 136–139° e o antebraço entrava 5–8 mm no bíceps do boneco musculoso)"
+   },
+   {
+    "nome": "cotovelo passa da linha do tronco em cima (vai pra trás, pro chão)",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -50,
+     -15
+    ],
+    "fonte": "ExRx (\"Pull shoulders back at top of movement with chest high\"); ACE, TRX Back Row (\"think about pulling your elbows closer to your ribs\")"
+   },
+   {
+    "nome": "cotovelos perto do corpo, um pouco pra fora (sem abrir em T)",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     35
+    ],
+    "fonte": "ACE, TRX Back Row (\"Your elbows should move towards your sides and remain close to your body\"); Weslley, 04/10/2026 (remada: cotovelo perto do corpo). Com a pegada um pouco mais aberta que os ombros o cotovelo fica embaixo da mão, ~22° aberto em cima"
+   },
+   {
+    "nome": "pegada um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.3,
+     1.65
+    ],
+    "fonte": "ExRx (\"Grasp bar with wide overhand grip\"). A medida divide pela distância entre as cabeças do úmero (no boneco ~1,2 = mãos na largura dos ombros)"
+   },
+   {
+    "nome": "pegada pronada embaixo: palmas viradas pros pés (não pra cabeça)",
+    "medida": "palma_frente",
+    "t": 0.0,
+    "graus": [
+     95,
+     130
+    ],
+    "fonte": "ExRx (\"wide overhand grip\"); Snarr e Esco 2013 (\"hands placed on the bar with a pronated grip\"). Embaixo o antebraço sobe inclinado pros pés e a palma pronada olha pros pés e um pouco pro chão: ~110° da frente do tronco (a supinada, virada pra cabeça, dá ~70°)"
+   },
+   {
+    "nome": "pegada pronada em cima: palmas viradas pros pés (não pra cabeça)",
+    "medida": "palma_frente",
+    "t": 1.0,
+    "graus": [
+     40,
+     80
+    ],
+    "fonte": "ExRx (\"wide overhand grip\"); Snarr e Esco 2013 (\"pronated grip\"). Em cima o antebraço fica em pé e a palma pronada olha pros pés: ~60° da frente do tronco, que aponta pro teto e pros pés (a supinada dá ~120°)"
+   },
+   {
+    "nome": "punho reto: sem dobrar pra frente nem pra trás",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -12,
+     12
+    ],
+    "fonte": "ACE, TRX Back Row (\"Keep your wrists neutral (straight, not bent)\")"
+   },
+   {
+    "nome": "punho quase reto (o pouco que desvia embaixo é pro lado do polegar)",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     18
+    ],
+    "fonte": "ACE, TRX Back Row (\"Keep your wrists neutral (straight, not bent)\"). Embaixo a mão fecha ao longo da barra e o antebraço vem do ombro, mais pra dentro que a pegada: o punho desvia ~10° pro lado do polegar (amplitude normal do desvio radial: 20°, Norkin & White); em cima o antebraço fica embaixo da mão e o punho volta a 0°"
+   },
+   {
+    "nome": "escápulas soltas pra frente embaixo",
+    "medida": "escapula_frente",
+    "t": 0.0,
+    "mm": [
+     12,
+     40
+    ],
+    "fonte": "ExRx (\"Return until arms are extended and shoulders are stretched forward\")"
+   },
+   {
+    "nome": "escápulas aproximadas em cima",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -45,
+     -10
+    ],
+    "fonte": "ExRx (\"Pull shoulders back at top of movement with chest high\"); ACE, TRX Back Row (\"retracting and depressing your scapulae (pull your shoulder blades down and back)\")"
+   },
+   {
+    "nome": "pés mais ou menos na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     0.9,
+     1.6
+    ],
+    "fonte": "ExRx não dá a largura dos pés; ficou a do quadril. No boneco os pés ficam a ~1,35 × a distância entre os quadris: mais juntos que isso a parte de dentro de uma coxa entra na outra (o boneco musculoso não amassa)"
+   },
+   {
+    "nome": "um pé não fica à frente do outro",
+    "medida": "pes_alinhados",
+    "t": "todos",
+    "mm": [
+     0,
+     20
+    ]
+   },
+   {
+    "nome": "tornozelo neutro, a ponta do pé pra cima",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     68,
+     90
+    ],
+    "fonte": "o boneco em pé, com o pé chapado, mede ~76° (canela × pé): o pé fica como em pé, só que deitado"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -5,
+     5
+    ]
+   }
+  ]
+ }
+}
