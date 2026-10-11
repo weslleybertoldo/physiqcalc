@@ -22,6 +22,10 @@ TREINO (regras_treino(): as ações foto_* e os leitores do admin-avaliacoes/reg
 link assinado no Storage do Treino; a sessão do Treino da conta de teste pela MESMA troca do app (trocar-token: guardada e contada no
 registro de logins); rest_avaliacao na contagem (antropometrias e fotos_evolucao no principal, physiq_registros_fotos no Treino) e a
 aluno_avisar_avaliacao como RPC que grava (saiu do front); o estado guarda as linhas do Treino e os avisos; o mês sentinela 2000-01.
+hml-19d: o Financeiro — funcao_fin()/preflight_fin() (a função financeiro, como a tela chama); regras_fin() (a lista fechada e os leitores
+de _shared/financeiro-gravar-regras.ts, pelo node, como as outras); rest_financeiro (transacoes, categorias_financeiras, modelos_recibo,
+recibos) e rest_pacientes (as tags) na contagem; o estado guarda as linhas de cada dono (a semente de outra conta de teste, as da N1), o
+que a rodada marcou como excluído para semear (volta no fim) e as tags originais da aluna; o registro de logins passa a ser o da 19d.
 Sem segredo nem dado pessoal na saída: chaves pela Management API, senhas em ~/.physiq-teste-<nome> (600); das respostas só saem
 status, códigos, contagens e tempos.
 """
@@ -54,6 +58,7 @@ MEDICAO = SCRATCH / "medicao"
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml19" / "a"
 PRINTS_B = PRINTS.parent / "b"  # hml-19b: b_editor, b_receita, b_alimento, b_app_marcar, b_semente_erro, b_app_erro
 PRINTS_C = PRINTS.parent / "c"  # hml-19c: c_foto_mensal, c_antropometria, c_foto_evolucao, c_foto_erro
+PRINTS_D = PRINTS.parent / "d"  # hml-19d: d_lancamentos, d_recibo, d_categorias, d_aluno, d_erro (e d_semente)
 ESTADO_ARQ = SCRATCH / "agente" / "e2e_estado.json"
 MARCA = "hml19 e2e"
 PRINCIPAL_REF = B17.PRINCIPAL_REF
@@ -126,8 +131,9 @@ def nova_rodada() -> str:
 ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # hml-19b: o registro da etapa 2 DESTA W (o da 19a, logins_etapa2.txt, fica como estava); começa com os 3 logins da sessão principal
 # às 07:48 (o smoke da nutricao v2, já da 19b). hml-19c (decisão G): o registro passa a ser o logins_etapa2_19c.txt (o da 19b fica);
-# a troca do Treino (trocar-token) também entra nele — abre uma sessão nova no Auth do Treino
-REG_LOGINS = SCRATCH / "agente" / "logins_etapa2_19c.txt"
+# a troca do Treino (trocar-token) também entra nele — abre uma sessão nova no Auth do Treino. hml-19d (decisão G): o registro passa a
+# ser o logins_etapa2_19d.txt (o da 19c fica)
+REG_LOGINS = SCRATCH / "agente" / "logins_etapa2_19d.txt"
 MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
@@ -533,6 +539,8 @@ TABELAS = tabelas_do_prontuario()
 TABELAS_DIETA = tabelas_da_dieta()
 TABELAS_AVALIACAO = tabelas_da_avaliacao()
 TABELAS_AVALIACAO_TREINO = {"physiq_registros_fotos"}  # hml-19c: a foto mensal (banco do Treino)
+# hml-19d: as 4 tabelas do Financeiro (as de TABELAS_FINANCEIRO do servidor, menos pacientes — o PATCH das tags conta à parte)
+TABELAS_FINANCEIRO = {"transacoes", "categorias_financeiras", "modelos_recibo", "recibos"}
 # hml-19b: as RPCs que o app do aluno chamava direto (o código antigo, o ANTES) — gravam, mesmo depois de saírem do RPC_QUE_GRAVAM
 RPCS_DO_APP = {"paciente_marcar_refeicao", "aluno_marcar_meta", "diario_enviar"}
 # hml-19c: o aviso "avaliação nova" — saiu do front (vai pela nutricao), mas o ANTES chama direto: grava
@@ -550,6 +558,10 @@ def classificar(p: dict) -> str | None:
         if m in ("POST", "PATCH", "PUT", "DELETE"):
             if nome in TABELAS_AVALIACAO or nome in TABELAS_AVALIACAO_TREINO:  # hml-19c: a Avaliação (os 2 bancos)
                 return "rest_avaliacao"
+            if nome in TABELAS_FINANCEIRO:  # hml-19d: as 4 tabelas do Financeiro
+                return "rest_financeiro"
+            if nome == "pacientes":  # hml-19d: as tags do aluno (antes, o PATCH em pacientes saía do navegador)
+                return "rest_pacientes"
             return "rest_prontuario" if nome in TABELAS else "rest_dieta" if nome in TABELAS_DIETA else "rest_outras"
         return "get_profiles" if (m == "GET" and nome == "profiles") else None
     if tipo == "rpc":
@@ -683,9 +695,25 @@ class Estado:
             self.d["storage"].append([bucket, caminho])
             self.salvar()
 
+    def linha_fin(self, tabela: str, id_: object, dono: object) -> None:
+        """hml-19d: uma linha do Financeiro que a rodada criou, com o DONO (a semente pode ser de outra conta de teste; a N1 cria a dela)."""
+        lista = self.d.setdefault("fin", [])
+        if tabela in TABELAS_FINANCEIRO and C.eh_uuid(id_) and C.eh_uuid(dono) and [tabela, id_, dono] not in lista:
+            lista.append([tabela, id_, dono])
+            self.salvar()
+
+    def restaurar(self, tabela: str, id_: object, dono: object) -> None:
+        """hml-19d: uma linha VIVA da conta de teste que a rodada marcou como excluída para provar a semente (volta no fim)."""
+        lista = self.d.setdefault("restaurar", [])
+        if tabela in TABELAS_FINANCEIRO and C.eh_uuid(id_) and C.eh_uuid(dono) and [tabela, id_, dono] not in lista:
+            lista.append([tabela, id_, dono])
+            self.salvar()
+
     def vazio(self) -> bool:
-        # hml-19c: as linhas do Treino e os avisos também (as rodadas de antes não têm as 2 chaves)
-        return not (self.d["linhas"] or self.d["storage"] or self.d.get("n8") or self.d.get("treino") or self.d.get("avisos"))
+        # hml-19c: as linhas do Treino e os avisos também (as rodadas de antes não têm as 2 chaves); hml-19d: as do Financeiro, as que
+        # voltam da Lixeira e as tags originais da aluna
+        return not (self.d["linhas"] or self.d["storage"] or self.d.get("n8") or self.d.get("treino") or self.d.get("avisos")
+                    or self.d.get("fin") or self.d.get("restaurar") or self.d.get("tags_originais") is not None)
 
     def apagar(self) -> None:
         if ESTADO_ARQ.exists():
@@ -795,3 +823,137 @@ def sql_apagar_avisos(s: str, destino: str, ids: list[str]) -> str:
         raise SystemExit("nenhum aviso da rodada para apagar")
     return (f"delete from {s}.avisos where destino_user_id = {C.txt(C.uuid_ok(destino))} and tipo = 'avaliacao_nova' "
             f"and id = any(array[{', '.join(C.txt(i) for i in validos)}]::uuid[])")
+
+
+# ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+# hml-19d (H-41 · jeito 2, 11/10/2026) — o Financeiro pela função financeiro (Painel › Financeiro e o Financeiro do aluno)
+# ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+FUNCAO_FIN = f"{API_P}/functions/v1/financeiro"
+REGRAS_FIN_TS = REPO / "supabase-principal" / "functions" / "_shared" / "financeiro-gravar-regras.ts"
+# a marca do número do recibo (a RPC troca pelo número real) — o --seco confere que é a do servidor
+MARCA_NUMERO_RECIBO = "\u0001NUMERO_RECIBO\u0001"
+
+
+def funcao_fin(token: str | None, acao: str | None, corpo: dict | None = None, *, origem: str | None = None, schema_: str | None = None,
+               sem_auth: bool = False, timeout: int = 60) -> tuple[int, dict, dict, float]:
+    """POST na financeiro como a tela chama (apikey + Bearer + x-schema + Origin) → (status, corpo JSON, cabeçalhos, ms). acao None = sem a
+    chave (o corpo vai como veio)."""
+    corpo = dict(corpo or {})
+    if acao is not None:
+        corpo["acao"] = acao
+    cab = {"apikey": B5.anon(PRINCIPAL_REF), "x-schema": schema_ or schema(), "Origin": origem or BASES["staging"]}
+    if not sem_auth:
+        cab["Authorization"] = f"Bearer {token}"
+    t0 = time.time()
+    st, r, h = B5.http("POST", FUNCAO_FIN, corpo, cab, timeout=timeout)
+    return st, (r if isinstance(r, dict) else {}), h or {}, round((time.time() - t0) * 1000)
+
+
+def preflight_fin(origem: str) -> tuple[int, dict]:
+    """O OPTIONS da financeiro (o CORS da porta-pessoa: fora da lista → o padrão https://physiqcalc.com.br)."""
+    cab = {"Origin": origem, "Access-Control-Request-Method": "POST",
+           "Access-Control-Request-Headers": "authorization, apikey, content-type, x-schema, x-client-info"}
+    st, _r, h = B5.http("OPTIONS", FUNCAO_FIN, None, cab, timeout=60)
+    return st, h or {}
+
+
+_JS_REGRAS_FIN = r"""
+import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+const m = await import(pathToFileURL(process.argv[1]).href);
+const e = JSON.parse(readFileSync(0, "utf8"));
+const saida = {
+  acoes: Object.fromEntries(m.ACOES_DO_FINANCEIRO.map((a) => [a, { tabela: m.ACOES_FINANCEIRO[a].tabela, operacao: m.ACOES_FINANCEIRO[a].operacao,
+    rpc: m.ACOES_FINANCEIRO[a].rpc ?? null }])),
+  tabelas: [...m.TABELAS_FINANCEIRO], rpcs: [...m.RPCS_DO_FINANCEIRO], status: m.STATUS_DO_ERRO_FINANCEIRO,
+  categorias: [...m.CATEGORIAS_PADRAO], titulo_modelo: m.TITULO_MODELO_PADRAO, conteudo: m.CONTEUDO_MODELO_PADRAO, conteudo_nutri: m.CONTEUDO_MODELO_PADRAO_NUTRI,
+  marca: m.MARCA_NUMERO_RECIBO, volta: { transacao: m.VOLTA_TRANSACAO, recibo: m.VOLTA_RECIBO, categoria: m.VOLTA_CATEGORIA, modelo: m.VOLTA_MODELO_RECIBO },
+  limites: { descricao: m.DESCRICAO_MAX, categoria: m.CATEGORIA_NOME_MAX, titulo: m.TITULO_MODELO_MAX, tag: m.TAG_MAX },
+  numeros: Object.fromEntries((e.numeros ?? []).map((n) => [String(n), m.numeroDoRecibo(n)])),
+  modelos: (e.papeis ?? []).map((p) => m.modeloPadraoDoRecibo(p)),
+  conferidos: [],
+};
+for (const [acao, corpo] of e.pedidos ?? []) {
+  let r;
+  switch (acao) {
+    case "padroes_garantir": r = m.lerPadroes(corpo); break;
+    case "recibo_emitir": r = m.lerReciboEmitir(corpo); break;
+    case "recibo_excluir": r = m.lerReciboExcluir(corpo); break;
+    case "tags_salvar": r = m.lerTags(corpo); break;
+    default: r = m.montarGravacaoFinanceiro(acao, corpo, e.userId, new Date(0));
+  }
+  saida.conferidos.push({ acao, conhecida: m.acaoDoFinanceiro(acao) !== null, ok: r.ok === true, erro: r.erro ?? null, campo: r.campo ?? null,
+    valores: r.valores ?? r.recibo ?? null, tags: r.tags ?? null, status: r.ok === true ? 200 : m.statusDoErroFinanceiro(r.erro) });
+}
+console.log(JSON.stringify(saida));
+"""
+
+
+def regras_fin(pedidos: list[tuple[str, dict]] | None = None, user_id: str = "33333333-3333-4333-8333-333333333333",
+               papeis: list[list[str]] | None = None, numeros: list[int] | None = None) -> dict:
+    """hml-19d: as regras da financeiro (as ações, as tabelas, as RPCs, os status, os textos da semente, a marca, os selects de volta) e,
+    para cada (acao, corpo), o que o servidor faria — do próprio TS (node, sem rede). `papeis` → o modelo da semente de cada um;
+    `numeros` → o número do recibo como o servidor escreve."""
+    r = subprocess.run(["node", "--experimental-strip-types", "--no-warnings", "--input-type=module", "-e", _JS_REGRAS_FIN, str(REGRAS_FIN_TS)],
+                       input=json.dumps({"pedidos": pedidos or [], "userId": user_id, "papeis": papeis or [], "numeros": numeros or []}),
+                       capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        raise RuntimeError(f"node (regras da financeiro): {r.stderr.strip()[:400]}")
+    return json.loads(r.stdout)
+
+
+# a ordem do DELETE da massa do Financeiro (as FKs entre as 4 são "set null": a ordem só deixa a leitura do log fácil)
+ORDEM_LIMPEZA_FIN = ("recibos", "transacoes", "categorias_financeiras", "modelos_recibo")
+# a coluna de texto onde a rodada põe a marca, em cada tabela do Financeiro (a semente não tem marca: sai pelos ids do estado)
+COLUNAS_MARCA_FIN = {"transacoes": "descricao", "recibos": "descricao", "categorias_financeiras": "nome", "modelos_recibo": "titulo"}
+
+
+def sql_apagar_linhas_fin(s: str, linhas: list[list[str]]) -> list[str]:
+    """O DELETE da massa do Financeiro (só no staging, só os ids da rodada E de cada dono de TESTE): 1 comando por tabela e dono, na ordem."""
+    if s != "staging":
+        raise SystemExit("a massa só existe no staging — nada a apagar em outro schema")
+    por: dict[tuple[str, str], list[str]] = {}
+    for tabela, id_, dono in linhas:
+        if tabela in TABELAS_FINANCEIRO and C.eh_uuid(id_) and C.eh_uuid(dono):
+            por.setdefault((tabela, dono), []).append(id_)
+    ordem = sorted(por.items(), key=lambda x: (ORDEM_LIMPEZA_FIN.index(x[0][0]), x[0][1]))
+    return [f"delete from {s}.{tabela} where nutricionista_id = '{C.uuid_ok(dono)}' and id = any(array[{', '.join(C.txt(i) for i in ids)}]::uuid[])"
+            for (tabela, dono), ids in ordem]
+
+
+def sql_restaurar_fin(s: str, linhas: list[list[str]]) -> list[str]:
+    """As linhas da conta de teste que a rodada marcou como excluídas para semear voltam a ficar vivas (só no staging, só os ids anotados)."""
+    if s != "staging":
+        raise SystemExit("a massa só existe no staging — nada a restaurar em outro schema")
+    por: dict[tuple[str, str], list[str]] = {}
+    for tabela, id_, dono in linhas:
+        if tabela in TABELAS_FINANCEIRO and C.eh_uuid(id_) and C.eh_uuid(dono):
+            por.setdefault((tabela, dono), []).append(id_)
+    return [f"update {s}.{tabela} set deleted_at = null where nutricionista_id = '{C.uuid_ok(dono)}' and deleted_at is not null "
+            f"and id = any(array[{', '.join(C.txt(i) for i in ids)}]::uuid[])" for (tabela, dono), ids in sorted(por.items())]
+
+
+def sql_contar_marca_fin(s: str, rodada: str | None = None) -> str:
+    """Só contagem (SQL só leitura): as linhas com a marca da hml-19 em cada tabela do Financeiro (vivas e na Lixeira)."""
+    marca = f"{MARCA} {rodada}" if rodada else MARCA
+    assert set(COLUNAS_MARCA_FIN) == TABELAS_FINANCEIRO, sorted(TABELAS_FINANCEIRO ^ set(COLUNAS_MARCA_FIN))
+    partes = [f"(select count(*) from {s}.{t} where {c} like {C.txt('%' + marca.replace(' ', '%') + '%')})::int as {t}"
+              for t, c in sorted(COLUNAS_MARCA_FIN.items())]
+    return "select " + ", ".join(partes)
+
+
+def sql_vivos_fin(s: str, dono: str) -> str:
+    """Só contagem: as categorias e os modelos VIVOS da pessoa (o que a semente olha)."""
+    d = C.txt(C.uuid_ok(dono))
+    return (f"select (select count(*) from {s}.categorias_financeiras where nutricionista_id = {d} and deleted_at is null)::int as categorias, "
+            f"(select count(*) from {s}.modelos_recibo where nutricionista_id = {d} and deleted_at is null)::int as modelos")
+
+
+# as colunas de cobrança do aluno (a guarda da W-P) — a foto antes × depois das tags
+COLUNAS_COBRANCA = ("mensalidade_valor", "mensalidade_pago_ate", "plano_aluno_id", "plano_modalidade", "plano_valor_negociado", "cobranca_pausada")
+
+
+def sql_foto_cobranca(s: str, pac: str) -> str:
+    """Só leitura: as tags e as colunas de cobrança do aluno (como texto: a comparação antes × depois é exata)."""
+    cols = ", ".join(f"{c}::text as {c}" for c in COLUNAS_COBRANCA)
+    return f"select tags, {cols} from {s}.pacientes where id = {C.txt(C.uuid_ok(pac))}"

@@ -32,8 +32,10 @@ pelo link assinado, o balde do limite por IP e o link público) — os casos em 
 rodada da área que caiu).
 hml-19c: --area avaliacao (a Avaliação: a foto mensal pela admin-avaliacoes do Treino, no mês sentinela; a antropometria, a foto de
 evolução pelo link assinado e o aviso pela nutricao — P, N1–N9) — os casos em api_avaliacao.py; o --limpar desfaz a rodada dela.
+hml-19d: --area financeiro (o Financeiro pela função financeiro: a semente, movimentação, recibo, categoria, modelo e as tags da aluna —
+P, N1–N9) — os casos em api_financeiro.py; o --limpar desfaz a rodada dela (as linhas de cada dono, a semente devolvida, as tags).
 
-Uso: python3 e2e/hml19/api.py --area prontuario|dieta|aluno|avaliacao [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
+Uso: python3 e2e/hml19/api.py --area prontuario|dieta|aluno|avaliacao|financeiro [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
   --seco    sem rede, sem login, sem banco: monta TODOS os pedidos da rodada e confere cada um contra as regras do servidor (o próprio
             _shared/nutricao-regras.ts, pelo node) + N3/N4/N5 nas regras + o SQL da limpeza
   --limpar  só desfaz uma rodada que caiu no meio (pelo arquivo de estado)
@@ -56,6 +58,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import api_avaliacao as AA  # noqa: E402
 import api_dieta as AD  # noqa: E402
+import api_financeiro as AF  # noqa: E402
 
 C = B.C
 CASOS = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "LX")
@@ -595,10 +598,11 @@ def seco_execucao(o) -> None:
          f"o SIGTERM vira SystemExit e o finally (a limpeza) roda (saída {r2.returncode})")
 
 
-CASOS_DA_AREA = {"prontuario": CASOS, "dieta": AD.CASOS_DIETA, "aluno": AD.CASOS_ALUNO, "avaliacao": AA.CASOS_AVALIACAO}
+CASOS_DA_AREA = {"prontuario": CASOS, "dieta": AD.CASOS_DIETA, "aluno": AD.CASOS_ALUNO, "avaliacao": AA.CASOS_AVALIACAO,
+                 "financeiro": AF.CASOS_FINANCEIRO}
 # o módulo de cada área (o seco, o so_leitura e o limpar de cada uma)
-SECO = {"dieta": AD.seco, "aluno": AD.seco, "avaliacao": AA.seco}
-SO_LEITURA = {"dieta": AD.so_leitura, "aluno": AD.so_leitura, "avaliacao": AA.so_leitura}
+SECO = {"dieta": AD.seco, "aluno": AD.seco, "avaliacao": AA.seco, "financeiro": AF.seco}
+SO_LEITURA = {"dieta": AD.so_leitura, "aluno": AD.so_leitura, "avaliacao": AA.so_leitura, "financeiro": AF.so_leitura}
 
 
 def rodar_prontuario(o, L, estado: B.Estado, rodada: str, casos: list[str]) -> None:
@@ -623,12 +627,15 @@ def limpar_da_area(o, estado: B.Estado, L, s: str) -> None:
         AD.limpar(o, estado, L, s)
     elif area == "avaliacao":
         AA.limpar(o, estado, L, s)
+    elif area == "financeiro":
+        AF.limpar(o, estado, L, s)
     else:
         limpar(o, estado, L, s)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-19a/19b/19c — E2E de servidor da nutricao e da foto mensal (casos no topo, em api_dieta.py e em api_avaliacao.py)")
+    ap = argparse.ArgumentParser(description="hml-19a/19b/19c/19d — E2E de servidor da nutricao, da foto mensal e da financeiro (casos no topo, em api_dieta.py, "
+                                             "api_avaliacao.py e api_financeiro.py)")
     ap.add_argument("--area", required=True, choices=tuple(CASOS_DA_AREA))
     ap.add_argument("--base", default="staging", choices=("staging", "prod"))
     ap.add_argument("--casos", default=None, help="padrão: todos os da área")
@@ -675,6 +682,8 @@ def main() -> int:
                     rodar_prontuario(o, L, estado, rodada, casos)
                 elif a.area == "avaliacao":
                     AA.rodar(o, L, estado, rodada, casos)
+                elif a.area == "financeiro":
+                    AF.rodar(o, L, estado, rodada, casos)
                 else:
                     AD.rodar(o, L, estado, rodada, a.area, casos)
             finally:

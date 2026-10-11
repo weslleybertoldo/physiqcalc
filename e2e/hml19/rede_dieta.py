@@ -338,7 +338,8 @@ def seco(o) -> None:
         {"metodo": "GET", "tipo": "tab", "nome": "planos_alimentares", "url": f"{P}/rest/v1/planos_alimentares?select=*"},
     ]
     c = B.contar(antes)
-    o.ok(c == {"rest_dieta": 2, "rpc_grava": 1, "rest_outras": 1}, f"a classificação do ANTES (rest na Dieta, a RPC do app): {dict(c)}")
+    # hml-19d: o PATCH em pacientes passou a contar à parte (rest_pacientes — as tags do aluno, do Financeiro); segue sendo gravação de fora da Dieta
+    o.ok(c == {"rest_dieta": 2, "rpc_grava": 1, "rest_pacientes": 1}, f"a classificação do ANTES (rest na Dieta, a RPC do app): {dict(c)}")
     depois = [
         {"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "plano_criar", "url": f"{P}/functions/v1/nutricao"},
         {"metodo": "POST", "tipo": "rpc", "nome": "plano_alimentar", "url": f"{P}/rest/v1/rpc/plano_alimentar"},

@@ -35,12 +35,12 @@ ESCRITA_RPC = re.compile(r"/rest/v1/rpc/(lixeira_restaurar|lixeira_apagar|aluno_
                          r"registrar|aceitar|excluir|apagar|atualizar|enviar)")
 ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # hml-19a (risco 2 da spec hml-19 §8): a nutricao (jeito 2 — as gravações da nutrição pelo servidor) grava em TODA ação: o POST nela
-# é escrita, como o POST em tabela. Teste: python3 e2e/hml19/guarda_teste.py.
-ESCRITA_FUNCAO = re.compile(r"/functions/v1/nutricao(?:[/?#]|$)")
+# é escrita, como o POST em tabela. hml-19d (decisão I): a financeiro também. Teste: python3 e2e/hml19/guarda_teste.py.
+ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro)(?:[/?#]|$)")
 
 
 def eh_escrita(metodo: str, url: str) -> bool:
-    """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e no Storage (fora o link de leitura)."""
+    """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e na financeiro e no Storage (fora o link de leitura)."""
     return metodo in ("POST", "PATCH", "PUT", "DELETE") and bool(
         ESCRITA_TABELA.search(url) or ESCRITA_RPC.search(url) or ESCRITA_FUNCAO.search(url)
         or ("/storage/v1/object/" in url and "/storage/v1/object/sign/" not in url))

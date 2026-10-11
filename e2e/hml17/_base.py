@@ -242,7 +242,8 @@ FUNCOES_CONHECIDAS = {
 # navegador, é gravação.
 # hml-19c (11/10, depois do merge da W1 InfinitePay da LINUX 3): o infinitepay-webhook-aluno (o aviso de pagamento da InfinitePay,
 # chamado pelo servidor dela) processa cobrança — se um dia sair do navegador, é gravação.
-FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno"}
+# hml-19d (decisão I): a financeiro (jeito 2 do Financeiro: as gravações pelo servidor) grava em TODA ação, como a nutricao.
+FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno", "financeiro"}
 
 
 def funcao_grava(nome: str, acao: str | None) -> bool:
@@ -262,7 +263,7 @@ class Guarda:
     POST/PATCH/PUT/DELETE em tabela, RPC fora da lista de leitura, Storage que não é o "sign", e nas funções as ações que gravam
     (pagamentos-aluno fora das leituras, admin-semana-treinos fora das leituras, admin-delete-user, admin-update-user, admin-tags que
     não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava; hml-19c: a admin-avaliacoes fora
-    da "list"). O resto segue (fallback: a
+    da "list"; hml-19d: a financeiro inteira). O resto segue (fallback: a
     queda da API, quando ligada, vem antes e aborta). Teste: python3 e2e/hml19/guarda_teste.py."""
 
     def __init__(self) -> None:
