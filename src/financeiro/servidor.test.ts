@@ -331,6 +331,40 @@ describe("W1b (C1) — o pagamento do Mercado Pago é DESTA cobrança (pagamento
     expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", C)), { ...c, mp_payment_id: null }, ctx)).toBe(false);
     expect(pagamentoEDaCobranca(null, c, ctx)).toBe(false);
   });
+  it("I1 da revisão: o Calc COPIADO pelo script 05 para a matrícula sem treino_user_id (a conta do app) passa pela origem 'migrado_calc'", () => {
+    const semTreino = { ...ctx, treinoUserId: null };
+    const copiada = { ...c, origem: "migrado_calc" };
+    // passa: o Pix e o cartão do Calc "sem professor" (as 4 linhas MP do public na matrícula da conta do app)
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), copiada, semTreino)).toBe(true);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}::aluno:mensal`), copiada, semTreino)).toBe(true);
+    // não passa: a mesma referência numa linha que o script não copiou (o caso de antes continua: sem treino_user_id e sem a origem)
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), { ...c, origem: "app" }, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), { ...c, origem: null }, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), { ...c, origem: "webhook_calc" }, semTreino)).toBe(false);
+    // não passa, nem copiada: o professor do Calc, outro schema, o plano da conta, outra cobrança, sem referência, lixo, outro id
+    expect(pagamentoEDaCobranca(pay(`staging:${T}::plano_professor:mensal`), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`public:${T}:2026-07-01`), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "mensal")), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "recorrente")), copiada, { ...semTreino, preapproval: "pre-1", preapprovals: ["pre-1"] })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", OUTRO)), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay("qualquer coisa"), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`, 999), copiada, semTreino)).toBe(false);
+    // com treino_user_id na matrícula, a origem não abre nada: o Calc tem de ser do MESMO aluno do Treino
+    expect(pagamentoEDaCobranca(pay(`staging:${OUTRO}::aluno:mensal`), copiada, ctx)).toBe(false);
+  });
+  it("I1 da revisão: a automática que o SERVIDOR gravou na própria linha passa (a de aluno_assinaturas pode ter sido trocada pelo aluno_mp_assinar)", () => {
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(true);
+    expect(pagamentoEDaCobranca(pay(`staging:${OUTRO}::aluno:mensal`), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(true);
+    // não passa: outra automática na linha, o pagamento sem automática, a linha sem automática, a referência do plano ou do Nutri
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: "pre-8" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: "pre-7" }, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: null }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "recorrente")), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`physiqnutri:staging:${U}`), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    // a referência nova decide sozinha: outra cobrança não passa nem com a automática gravada na linha
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", OUTRO)), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+  });
 });
 
 describe("W1b (C1) — estornar, cancelar, detalhar e aplicar SÓ o pagamento desta cobrança (guarda de fonte)", () => {

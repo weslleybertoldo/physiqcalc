@@ -85,14 +85,19 @@ export function lerReferenciaCalc(ref: string | null | undefined): RefCalc | nul
  * Vale a referência que o NOSSO código gravou no pedido ao MP (o app não a escreve):
  *   · a nova (referenciaAluno) — com a cobrança, só ESTA; sem ela, só a recorrente da MESMA matrícula (a mensal da automática, que a
  *     mp-webhook-aluno grava numa linha nova) — e decide sozinha;
- *   · a antiga do Calc (lerReferenciaCalc — as "migrado_calc"): o aluno do Treino desta matrícula, no mesmo schema;
- *   · sem referência que decida: a automática desta matrícula (`preapprovals` = aluno_assinaturas, só o servidor grava).
+ *   · a antiga do Calc (lerReferenciaCalc — as "migrado_calc"): o aluno do Treino desta matrícula, no mesmo schema; na matrícula SEM
+ *     treino_user_id, só a linha que o script 05 da virada copiou (origem "migrado_calc" — I1 da revisão da W1b);
+ *   · sem referência que decida: a automática desta matrícula (`preapprovals` = aluno_assinaturas, só o servidor grava) ou a que o
+ *     servidor gravou na própria linha (`c.mp_preapproval_id`).
  * Outra referência nossa (o plano da conta `physiq:<schema>:conta:…`, o Nutri antigo `physiqnutri…`) e o professor do Calc nunca passam.
  * `preapproval` = preapprovalDoPagamento(pay) (cobranca-regras.ts), calculado por quem chama.
+ * A origem e o mp_preapproval_id da linha do MP são do servidor: depois da guarda do banco o app não põe mp_payment_id em linha nenhuma
+ * (INSERT) nem mexe na origem, no aluno ou na conta de uma linha do MP (UPDATE); as linhas MP de antes dela foram todas gravadas pelo
+ * servidor ou pela virada (c1-verificacao, só leitura: criado_por nulo nas 7 do public).
  */
 export function pagamentoEDaCobranca(
   pay: { id?: unknown; external_reference?: string | null } | null | undefined,
-  c: { id: string; paciente_id: string; mp_payment_id: string | null },
+  c: { id: string; paciente_id: string; mp_payment_id: string | null; origem?: string | null; mp_preapproval_id?: string | null },
   ctx: { schema: Schema; treinoUserId: string | null; preapproval: string | null; preapprovals: readonly string[] },
 ): boolean {
   if (pay?.id === undefined || pay.id === null || !c.mp_payment_id || String(pay.id) !== String(c.mp_payment_id)) return false;
@@ -105,9 +110,15 @@ export function pagamentoEDaCobranca(
   const calc = lerReferenciaCalc(pay.external_reference);
   if (calc) {
     if (calc.contexto !== "aluno" || calc.schema !== ctx.schema) return false;
-    if (!!ctx.treinoUserId && calc.treinoUserId === ctx.treinoUserId) return true;
+    if (ctx.treinoUserId) {
+      if (calc.treinoUserId === ctx.treinoUserId) return true;
+    } else if (c.origem === "migrado_calc") {
+      // I1: o script 05 (W7b, scripts/virada/05_alunos_do_app.py) COPIOU o Calc "sem professor" para a matrícula da conta do app, que o
+      // matricular_no_app cria sem treino_user_id (e nenhum código do servidor preenche depois)
+      return true;
+    }
   }
-  return !!ctx.preapproval && ctx.preapprovals.includes(ctx.preapproval);
+  return !!ctx.preapproval && (ctx.preapprovals.includes(ctx.preapproval) || c.mp_preapproval_id === ctx.preapproval);
 }
 
 // ───────────────────────── Mercado Pago → cobrança ─────────────────────────
