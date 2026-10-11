@@ -21,6 +21,7 @@ import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados"
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { TEXTO_CONVITE_ALUNO } from "@/painel/configuracoes/equipe/regras";
 import { atribuirAlunos, ErroAlunos, listarAlunos, paginaDaExportacao } from "@/painel/alunos/api";
+import { consultaListaAlunos, filtrosDaUrl } from "@/painel/alunos/consultas";
 import { LinhaAluno } from "@/painel/alunos/Linha";
 import { NovoAluno } from "@/painel/alunos/NovoAluno";
 import { useMeuLink } from "@/painel/alunos/meuLink";
@@ -107,17 +108,6 @@ function baixar(nome: string, conteudo: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-function filtrosDaUrl(sp: URLSearchParams): FiltrosAlunos {
-  const sit = sp.get("situacao") as SituacaoFiltro | null;
-  return {
-    ...FILTROS_PADRAO,
-    situacao: sit && SITUACOES.some((s) => s.valor === sit) ? sit : FILTROS_PADRAO.situacao,
-    responsavel: sp.get("responsavel") ?? "",
-    // hml-14b (D15): a busca também fica no endereço (abrir um aluno e voltar mantém a busca e a página)
-    q: (sp.get("q") ?? "").trim(),
-  };
-}
-
 /**
  * Painel › Alunos (W13 — spec 4.4, telas 6 e 7): a lista da conta ativa, busca, filtros de situação, módulo, responsável, tag e
  * pagamento, selos, exportar CSV, Pendentes do link /c/, Novo aluno (cadastrar, convidar, link e código) e o menu ⋮ de cada aluno
@@ -179,13 +169,11 @@ export default function Alunos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só os filtros mudam o endereço
   }, [filtroNoEndereco]);
 
+  // hml-18b (H-54, F): a mesma consulta da pré-busca (src/painel/alunos/consultas.ts)
   const q = useQuery({
-    queryKey: ["alunos", conta?.id, filtros, pagina],
-    queryFn: () => listarAlunos(conta!.id, filtros, deslocamento(pagina), POR_PAGINA),
+    ...consultaListaAlunos(conta?.id, filtros, pagina),
     enabled: Boolean(conta?.id),
     placeholderData: keepPreviousData,
-    staleTime: 20_000,
-    retry: 1,
   });
   const lista = q.data ?? null;
   useEffect(() => {

@@ -153,6 +153,18 @@ describe("GateSessaoTreino", () => {
     montar(GateSessaoTreino, "/perfil/pagamentos");
     expect(screen.getByText("o app")).toBeInTheDocument();
   });
+  it("hml-18b (H-54): enquanto a troca não chega, o lugar da aba com o TÍTULO (o h1 do LCP) e o esqueleto — sem a tela cheia", () => {
+    h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true, modulos_aluno: ["treino"] }), treino: { estado: "trocando", erro: null } };
+    h.auth.user = null;
+    const r = montar(GateSessaoTreino, "/treino");
+    expect(screen.getByRole("heading", { level: 1, name: "Treino" })).toBeInTheDocument();
+    expect(document.querySelector("[data-espera-sessao-treino]")?.getAttribute("data-espera-sessao-treino")).toBe("treino");
+    expect(document.querySelector("[data-carregando-tela]")).toBeNull();
+    r.unmount();
+    montar(GateSessaoTreino, "/evolucao");
+    expect(screen.getByRole("heading", { level: 1, name: "Evolução" })).toBeInTheDocument();
+    expect(screen.getByText(/Abrindo sua evolução/)).toBeInTheDocument();
+  });
   it("W5: limite de tentativas → 'Muitas tentativas' e o 'Tentar de novo' é da pessoa", () => {
     h.sessao = { ...h.sessao, situacao: situacao({ precisa_treino: true, modulos_aluno: ["treino"] }), treino: { estado: "erro", erro: "limite" } };
     h.auth.user = null;

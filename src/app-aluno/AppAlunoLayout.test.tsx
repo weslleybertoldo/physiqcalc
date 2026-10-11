@@ -24,6 +24,8 @@ vi.mock("@/rotas/registro", async () => {
     // W8/W10: as abas Treino e Evolução novas existem (a TreinosPage e o UserDashboard saíram); as outras ainda não
     existe: (grupo: string, nome: string) => grupo === "abasApp" && (nome === "Treino" || nome === "Evolucao" || (h.comInicio && nome === "Inicio")),
     tela: () => null,
+    // hml-18b: a casca aquece a aba do endereço (e os cards do Início) — aqui, sem telas registradas
+    registro: { abasApp: {}, inicioApp: {} },
     listar: (grupo: string) => (grupo === "avisosApp" ? [{ nome: "FaixaMensalidade", caminho: "x", carregar: async () => ({ default: () => null }), Componente: FaixaMensalidade }] : []),
     gatesApp: [
       {

@@ -34,7 +34,7 @@ export function Kpi({
 }) {
   const t = TOM[tom];
   return (
-    <Cartao className={cn("h-[132px] overflow-hidden px-4 pb-3 pt-4", className)} data-kpi={titulo}>
+    <Cartao className={cn("@container h-[132px] overflow-hidden px-4 pb-3 pt-4", className)} data-kpi={titulo}>
       <div className="flex items-center gap-2 text-[12.5px] font-medium text-texto-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-[9px]" style={{ background: t.fundo, color: t.texto }}>
           <Icone aria-hidden className="h-[15px] w-[15px]" strokeWidth={1.75} />
@@ -47,8 +47,11 @@ export function Kpi({
         {valor}
       </div>
       {detalhe && <div className="mt-1 flex items-center gap-1.5 text-xs text-texto-2">{detalhe}</div>}
+      {/* hml-18b (H-85): a linha de tendência (92 px à direita) só quando o cartão tem largura para ela E o valor — no cartão estreito
+          da grade de 2 colunas do celular (158–173 px a 360/390) um valor longo ("R$ 123.456,78") passava POR BAIXO dela. A partir de
+          15rem de cartão (tablet e computador) ela volta como antes. */}
       {serie && serie.length > 1 && (
-        <div className="absolute right-3.5 top-[50px]">
+        <div className="absolute right-3.5 top-[50px] hidden @min-[15rem]:block" data-kpi-linha>
           <Sparkline valores={serie} cor={t.linha} />
         </div>
       )}

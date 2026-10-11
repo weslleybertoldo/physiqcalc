@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ registro: {} as Record<string, Record<string, { nome: string; caminho: string; carregar: () => Promise<unknown>; Componente: unknown }>> }));
 vi.mock("./registro", () => ({ registro: h.registro }));
 
-import { filaDaPreCarga, NAO_PRECARREGAR, podePreCarregar, usePreCarga } from "./usePreCarga";
+import type { ItemRegistro } from "./registro";
+import { filaDaPreCarga, NAO_PRECARREGAR, podePreCarregar, useAquecerTelaDoEndereco, usePreCarga } from "./usePreCarga";
 
 const chamados: string[] = [];
 function grupo(nome: string, telas: string[]) {
@@ -130,5 +131,49 @@ describe("usePreCarga (hml-18a): a pré-carga das telas da área", () => {
     r.unmount();
     while (ociosos.length) await proximoOcioso();
     expect(chamados).toHaveLength(1);
+  });
+
+  it("hml-18b: aoCarregar roda DEPOIS que o pedaço de cada tela chega (a pré-busca da 1ª dobra), com a tela que chegou", async () => {
+    const vistos: string[] = [];
+    renderHook(() => usePreCarga("painel", { paginas: ["Dashboard", "Alunos"], aoCarregar: (item) => vistos.push(`${item.caminho}|${chamados.length}`) }));
+    await proximoOcioso();
+    await waitFor(() => expect(vistos).toHaveLength(1));
+    await waitFor(() => expect(ociosos).toHaveLength(1));
+    await proximoOcioso();
+    await waitFor(() => expect(vistos).toHaveLength(2));
+    // cada um depois do carregar dele (o número de carregados já conta a tela)
+    expect(vistos).toEqual(["/src/paginasPainel/Dashboard.tsx|1", "/src/paginasPainel/Alunos.tsx|2"]);
+  });
+
+  it("hml-18b: o pedaço que falhou (sem rede) não chama aoCarregar e a fila segue", async () => {
+    h.registro.paginasPainel.Dashboard.carregar = vi.fn(async () => {
+      throw new Error("sem rede");
+    });
+    const vistos: string[] = [];
+    renderHook(() => usePreCarga("painel", { paginas: ["Dashboard", "Alunos"], aoCarregar: (item) => vistos.push(item.nome) }));
+    await proximoOcioso();
+    await waitFor(() => expect(ociosos).toHaveLength(1));
+    await proximoOcioso();
+    await waitFor(() => expect(vistos).toEqual(["Alunos"]));
+  });
+});
+
+describe("useAquecerTelaDoEndereco (hml-18b): a tela do endereço baixa junto com a sessão", () => {
+  it("com sessão: carrega na hora (sem esperar o ocioso nem a economia de dados), 1 vez; sem sessão, nada", async () => {
+    conexao({ saveData: true }); // é a tela que a pessoa está abrindo: a economia de dados não segura
+    const item = h.registro.paginasPainel.Dashboard as unknown as ItemRegistro;
+    const r = renderHook(({ ligado }) => useAquecerTelaDoEndereco([item, undefined], ligado), { initialProps: { ligado: false } });
+    expect(chamados).toEqual([]);
+    r.rerender({ ligado: true });
+    await waitFor(() => expect(chamados).toEqual(["paginasPainel/Dashboard"]));
+    r.rerender({ ligado: true });
+    expect(chamados).toHaveLength(1);
+    expect(ociosos).toHaveLength(0);
+  });
+
+  it("nos testes (MODE test) não baixa nada (as telas de verdade não entram no fundo de outros testes)", () => {
+    vi.stubEnv("MODE", "test");
+    renderHook(() => useAquecerTelaDoEndereco([h.registro.abasApp.Inicio, h.registro.inicioApp.CardPeso] as unknown as ItemRegistro[], true));
+    expect(chamados).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { registro, type ItemRegistro, type NomeGrupo } from "./registro";
 
 /**
@@ -11,6 +11,7 @@ import { registro, type ItemRegistro, type NomeGrupo } from "./registro";
  *   master  as páginas do master
  *
  * Não pré-carrega com o "economia de dados" do aparelho (`navigator.connection.saveData`) nem em 2G (`effectiveType` 2g/slow-2g).
+ * hml-18b (H-54, F): `aoCarregar` roda quando o pedaço de cada tela chega — a PRÉ-BUSCA da 1ª dobra (src/painel/preBusca.ts).
  * Rota pesada nunca entra (`NAO_PRECARREGAR`): a Dieta e o Prontuário do aluno trazem os gráficos (charts, ~390 KB) — abrem quando a
  * pessoa toca. Os módulos pesados de verdade (pdf, xlsx, motor, heic2any) são `import()` na ação e não são chamados aqui; até a
  * hml-18b, as páginas que ainda importam o pdf no topo o trazem junto, como já trazem ao abrir.
@@ -82,8 +83,14 @@ const quandoOcioso: Ocioso = (fn) => {
  * Liga a pré-carga da área. `ligado` = a casca já mostrou a área (a sessão chegou); `paginas` = os arquivos das páginas do menu da
  * conta (painel). Roda uma vez por área/menu: cada tela entra 1 vez (o import() do navegador guarda o módulo).
  */
-export function usePreCarga(area: AreaPreCarga, { ligado = true, paginas }: { ligado?: boolean; paginas?: readonly string[] | null } = {}): void {
+export function usePreCarga(
+  area: AreaPreCarga,
+  { ligado = true, paginas, aoCarregar }: { ligado?: boolean; paginas?: readonly string[] | null; aoCarregar?: (item: ItemRegistro) => void } = {},
+): void {
   const chavePaginas = paginas ? paginas.join("|") : "";
+  // o mais novo (a sessão/conta pode mudar no meio da fila; a fila não recomeça por isso)
+  const aoCarregarRef = useRef(aoCarregar);
+  aoCarregarRef.current = aoCarregar;
   useEffect(() => {
     // nos testes (Vitest, MODE "test") a pré-carga não roda: ela importaria as telas de verdade no fundo de qualquer teste que monte a
     // casca (o usePreCarga.test liga com vi.stubEnv). No build, o Vite troca o MODE pelo valor e a linha some.
@@ -96,6 +103,9 @@ export function usePreCarga(area: AreaPreCarga, { ligado = true, paginas }: { li
       if (!item || !vivo) return;
       item
         .carregar()
+        .then(() => {
+          if (vivo) aoCarregarRef.current?.(item);
+        })
         .catch(() => undefined) // sem rede agora: a tela carrega quando a pessoa abrir
         .finally(() => {
           if (vivo) cancelar = quandoOcioso(proximo);
@@ -107,4 +117,20 @@ export function usePreCarga(area: AreaPreCarga, { ligado = true, paginas }: { li
       cancelar();
     };
   }, [area, ligado, chavePaginas]);
+}
+
+/**
+ * hml-18b (H-54, F) — o pedaço da tela que o ENDEREÇO abre começa a baixar no 1º render da casca, junto com a sessão (e não depois dela,
+ * como na abertura fria antes). Pronto quando a sessão chega, a tela monta direto (o `telaRegistrada` do registro): sem o esqueleto do
+ * Suspense e sem o título da página entrando depois e empurrando o conteúdo (o CLS de 0,08 do Dashboard, medido). Não depende do
+ * "economia de dados": é a tela que a pessoa está abrindo. `ligado` = tem sessão (quem vai para a /entrar não baixa nada).
+ */
+export function useAquecerTelaDoEndereco(itens: readonly (ItemRegistro | undefined)[], ligado: boolean): void {
+  const chave = itens.map((i) => i?.caminho ?? "").join("|");
+  const itensRef = useRef(itens);
+  itensRef.current = itens;
+  useEffect(() => {
+    if (!ligado || import.meta.env.MODE === "test") return;
+    for (const item of itensRef.current) item?.carregar().catch(() => undefined);
+  }, [chave, ligado]);
 }

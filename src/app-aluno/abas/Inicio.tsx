@@ -7,7 +7,7 @@ import { useSessao } from "@/nucleo/sessao";
 import { ehProfissional } from "@/nucleo/situacao";
 import { AvisosDoTopo } from "@/app-aluno/AppAlunoLayout";
 import { BuscaApp } from "@/app-aluno/busca/BuscaApp";
-import { usePerfilDoAluno } from "@/app-aluno/inicio/pecas/dados";
+import { useOQueOAlunoTem, usePerfilDoAluno } from "@/app-aluno/inicio/pecas/dados";
 import { primeiroNome, saudacao } from "@/app-aluno/inicio/pecas/regras";
 import { CLASSE_PAGINA_APP } from "@/app-aluno/perfil/pecas/TopoItem";
 import { listar, type ItemRegistro } from "@/rotas/registro";
@@ -25,6 +25,20 @@ import { Sino } from "@/ui/premium/Sino";
  * aluno). Card novo de outra worktree entra no fim, numa linha só dele.
  */
 const LINHAS: string[][] = [["CardTreinoHoje"], ["CardDietaHoje", "CardMetasHoje"], ["CardProximaConsulta"], ["CardPeso"]];
+
+/**
+ * hml-18b (H-54, F): quem aparece para quem — a MESMA regra da 1ª linha de cada card (useOQueOAlunoTem: módulos e situação, já
+ * carregados quando o Início monta), decidida ANTES de o pedaço do card chegar. Antes o Início reservava o lugar (o esqueleto) de todos
+ * e o card sem módulo devolvia null depois: os de baixo subiam (CLS 0,19 no Início do paciente, medido). Card novo: aparece.
+ */
+type OQueTem = ReturnType<typeof useOQueOAlunoTem>;
+const APARECE: Record<string, (t: OQueTem) => boolean> = {
+  CardTreinoHoje: (t) => t.treino,
+  CardDietaHoje: (t) => t.nutricao,
+  CardMetasHoje: (t) => t.comNutricionista,
+  CardProximaConsulta: (t) => !t.semProfissional,
+  CardPeso: (t) => !t.semProfissional,
+};
 
 /** O espaço de cada card enquanto o arquivo dele chega (o esqueleto no formato do card). */
 const ESQUELETO: Record<string, string> = {
@@ -113,7 +127,8 @@ function Linha({ itens }: { itens: ItemRegistro[] }) {
  */
 export default function Inicio() {
   const [busca, setBusca] = useState(false);
-  const linhas = linhasDosCards(listar("inicioApp"));
+  const tem = useOQueOAlunoTem();
+  const linhas = linhasDosCards(listar("inicioApp").filter((i) => APARECE[i.nome]?.(tem) ?? true));
   return (
     <div className={cn(CLASSE_PAGINA_APP, "gap-3")} data-aba-inicio>
       <Topo aoBuscar={() => setBusca(true)} />

@@ -292,6 +292,18 @@ describe("aba Início (W12 — tela 1)", () => {
     expect(card("data-card-metas-hoje")).not.toBeNull();
   });
 
+  it("hml-18b (H-54): só Nutrição — o card do treino nem RESERVA lugar (sem o esqueleto de 212 px que sumia e fazia a página pular)", async () => {
+    h.modulos = ["nutricao"];
+    h.situacao = { master: false, contas: [], matriculas: [matricula(["nutricao"])], modulos_aluno: ["nutricao"] };
+    h.authUser = null;
+    abrir();
+    // logo na montagem (os pedaços dos cards ainda chegando): nenhum lugar do hero do treino
+    expect(document.querySelector(".h-\\[212px\\]")).toBeNull();
+    await waitFor(() => expect(card("data-dieta-hoje-kcal")).not.toBeNull(), { timeout: 4000 });
+    expect(document.querySelector(".h-\\[212px\\]")).toBeNull();
+    expect(card("data-card-treino-hoje")).toBeNull();
+  });
+
   it("sem profissional (W7b, Treino + Alimentação): o treino pronto, os pratos prontos; sem metas, consulta nem peso", async () => {
     h.modulos = ["treino", "nutricao"];
     h.situacao = { master: false, contas: [], matriculas: [matricula(["treino", "nutricao"], { app: true, app_plano: "app_treino_alimentacao" })], modulos_aluno: ["treino", "nutricao"] };

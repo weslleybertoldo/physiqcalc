@@ -22,6 +22,18 @@ describe("componentes premium", () => {
     expect(v.className).not.toMatch(/(^|\s)text-\[30px\]/);
   });
 
+  it("hml-18b (H-85): a linha de tendência só aparece com o cartão largo (consulta de contêiner, 15rem) — no estreito ela some e o valor longo não passa por baixo", () => {
+    render(<Kpi icone={House} titulo="Recebido no mês" valor="R$ 123.456,78" serie={[1, 3, 2, 5]} />);
+    const cartao = document.querySelector("[data-kpi]") as HTMLElement;
+    const linha = document.querySelector("[data-kpi-linha]") as HTMLElement;
+    expect(cartao.className).toContain("@container");
+    expect(linha.className).toContain("hidden");
+    expect(linha.className).toContain("@min-[15rem]:block");
+    // sem série (ou com 1 ponto), nem a linha
+    render(<Kpi icone={House} titulo="Sem série" valor="12" serie={[4]} />);
+    expect(document.querySelectorAll("[data-kpi-linha]")).toHaveLength(1);
+  });
+
   it("curva suave passa pelos pontos (Catmull-Rom → Bézier, igual ao gerador)", () => {
     const d = caminhoSuave([[0, 10], [10, 0], [20, 10]]);
     expect(d.startsWith("M0.0,10.0 C")).toBe(true);
