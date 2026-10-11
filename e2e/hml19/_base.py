@@ -17,6 +17,11 @@ documento e os pedidos anotados por alvo, o SQL só leitura) e junta:
 hml-19b: as 19 tabelas da Dieta (rest_dieta na contagem), as 3 RPCs que o app do aluno chamava direto (paciente_marcar_refeicao,
 aluno_marcar_meta, diario_enviar — rpc_grava, mesmo fora do RPC_QUE_GRAVAM de hoje), as regras da Dieta e do app lidas do mesmo TS
 (regras(): acoes_dieta, acoes_aluno, tabelas_dieta e o servidor de cada pedido) e o bucket do diário.
+hml-19c: a Avaliação — a 4ª lista da nutricao (regras(): acoes_avaliacao, tabelas_avaliacao) e a foto mensal pela admin-avaliacoes do
+TREINO (regras_treino(): as ações foto_* e os leitores do admin-avaliacoes/regras.ts, do mesmo jeito, pelo node); funcao_treino() e o
+link assinado no Storage do Treino; a sessão do Treino da conta de teste pela MESMA troca do app (trocar-token: guardada e contada no
+registro de logins); rest_avaliacao na contagem (antropometrias e fotos_evolucao no principal, physiq_registros_fotos no Treino) e a
+aluno_avisar_avaliacao como RPC que grava (saiu do front); o estado guarda as linhas do Treino e os avisos; o mês sentinela 2000-01.
 Sem segredo nem dado pessoal na saída: chaves pela Management API, senhas em ~/.physiq-teste-<nome> (600); das respostas só saem
 status, códigos, contagens e tempos.
 """
@@ -48,6 +53,7 @@ C.SAIDA = SCRATCH / "agente"
 MEDICAO = SCRATCH / "medicao"
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml19" / "a"
 PRINTS_B = PRINTS.parent / "b"  # hml-19b: b_editor, b_receita, b_alimento, b_app_marcar, b_semente_erro, b_app_erro
+PRINTS_C = PRINTS.parent / "c"  # hml-19c: c_foto_mensal, c_antropometria, c_foto_evolucao, c_foto_erro
 ESTADO_ARQ = SCRATCH / "agente" / "e2e_estado.json"
 MARCA = "hml19 e2e"
 PRINCIPAL_REF = B17.PRINCIPAL_REF
@@ -58,10 +64,19 @@ BASES = {"local": "http://localhost:8080", "staging": "https://physiqcalc-stagin
 SCHEMA_DA_BASE = {"local": "staging", "staging": "staging", "prod": "public"}
 ORIGEM_FORA = "https://exemplo-fora-da-lista.example"
 ORIGEM_PADRAO = "https://physiqcalc.com.br"
+# hml-19c: a função do Treino da foto mensal (o domínio próprio do Treino, a chave anon do Treino, a sessão do Treino da pessoa)
+TREINO_REF = C.TREINO_REF
+API_T_HOST = B17.API_T_HOST
+API_T = f"https://{API_T_HOST}"
+FUNCAO_TREINO = f"{API_T}/functions/v1/admin-avaliacoes"
+ORIGEM_PADRAO_TREINO = "https://physiqcalc.vercel.app"  # o padrão do CORS da admin-avaliacoes (corsHeaders de hoje)
+MES_SENTINELA = "2000-01"  # decisão H: o mês da foto mensal de teste (nenhuma foto real usa); a linha vai com mes_ref 2000-01-01
+TEMPO_TREINO_S = 45  # decisão J: a admin-avaliacoes é lenta (p50 3,5 s; fria até ~10 s) — o teto da tela (adminAvaliacoes: 45 s)
 
 P_CONTA = "w5p-nutri"     # a nutricionista de TESTE (P): a nutri responsável pela w5p-aluna
 A_CONTA = "w5p-aluna"     # hml-19b: a aluna de TESTE (o app: marcar refeição/meta e a foto do diário)
 N1_CONTA = "w13-dono"     # o profissional de OUTRA conta (N1)
+PERSONAL_CONTA = "w5p-personal"  # hml-19c: a personal de TESTE (dono + personal da w5p-aluna): a foto mensal, no Treino
 PROD_CONTA = "nutri-legado"  # produção, SÓ LEITURA: nutri.teste.claude@physiqnutri.app
 
 REGRAS_TS = REPO / "supabase-principal" / "functions" / "_shared" / "nutricao-regras.ts"
@@ -110,8 +125,9 @@ def nova_rodada() -> str:
 # agente/logins_etapa2.txt); renovar pelo refresh token NÃO é login. O arquivo das sessões é 600 e fica no TMPDIR da W (fora do repo).
 ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # hml-19b: o registro da etapa 2 DESTA W (o da 19a, logins_etapa2.txt, fica como estava); começa com os 3 logins da sessão principal
-# às 07:48 (o smoke da nutricao v2, já da 19b)
-REG_LOGINS = SCRATCH / "agente" / "logins_etapa2_19b.txt"
+# às 07:48 (o smoke da nutricao v2, já da 19b). hml-19c (decisão G): o registro passa a ser o logins_etapa2_19c.txt (o da 19b fica);
+# a troca do Treino (trocar-token) também entra nele — abre uma sessão nova no Auth do Treino
+REG_LOGINS = SCRATCH / "agente" / "logins_etapa2_19c.txt"
 MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
@@ -121,6 +137,24 @@ def _refresh(sessao: dict) -> dict | None:
     st, s, _ = B5.http("POST", f"{API_P}/auth/v1/token?grant_type=refresh_token", {"refresh_token": sessao.get("refresh_token", "")},
                        B5.cab_login(API_P, B5.anon(PRINCIPAL_REF)))
     return s if st == 200 and isinstance(s, dict) and s.get("access_token") else None
+
+
+def _refresh_treino(sessao: dict) -> dict | None:
+    """hml-19c: renova a sessão do TREINO pelo refresh token do Treino (não é login); o id do usuário do Treino fica."""
+    st, s, _ = B5.http("POST", f"{API_T}/auth/v1/token?grant_type=refresh_token", {"refresh_token": sessao.get("refresh_token", "")},
+                       {"apikey": B5.anon(TREINO_REF), "Content-Type": "application/json"})
+    if not (st == 200 and isinstance(s, dict) and s.get("access_token")):
+        return None
+    return {"access_token": s["access_token"], "refresh_token": s.get("refresh_token"), "expires_at": s.get("expires_at"),
+            "treino_user_id": (s.get("user") or {}).get("id") or sessao.get("treino_user_id")}
+
+
+def trocar_token(token_principal: str) -> tuple[int, dict]:
+    """hml-19c: a troca que o app faz (src/nucleo/trocaToken.ts): o login do principal vira uma sessão do Treino. SEM zerar o limite
+    da troca (o B5.zerar_limite_troca grava no banco do Treino): com a sessão guardada, a troca acontece 1 vez por conta."""
+    st, r, _h = B5.http("POST", f"{API_T}/functions/v1/trocar-token", {}, {"Authorization": f"Bearer {token_principal}", "x-schema": schema(),
+                        "Origin": BASES["staging"]}, timeout=60)
+    return st, (r if isinstance(r, dict) else {})
 
 
 class Sessoes:
@@ -172,6 +206,36 @@ class Sessoes:
     def uid(self, conta: str) -> str:
         return (self.sessao(conta).get("user") or {}).get("id") or ""
 
+    def sessao_treino(self, conta: str) -> dict:
+        """hml-19c: a sessão do TREINO da conta de teste, pela MESMA troca do app (trocar-token), guardada como "treino:<conta>": vale
+        enquanto o access token tiver folga; perto de vencer, o refresh do Treino; sem nada, a troca (CONTADA no registro de logins)."""
+        chave = f"treino:{conta}"
+        s = self.d.get(chave)
+        if s and int(s.get("expires_at") or 0) - time.time() < FOLGA_S:
+            s = _refresh_treino(s)
+        if not s:
+            n = self.logins_feitos()
+            if n >= MAX_LOGINS:
+                raise SystemExit(f"os {MAX_LOGINS} logins da etapa 2 já foram usados ({REG_LOGINS}) — sem sessão do Treino guardada de {conta}")
+            st, r = trocar_token(self.token(conta))
+            if st != 200 or not r.get("access_token"):
+                raise SystemExit(f"a troca de token (Treino) de {conta} → {st} {r.get('error') or r.get('erro') or ''}")
+            s = {"access_token": r["access_token"], "refresh_token": r.get("refresh_token"), "expires_at": r.get("expires_at"),
+                 "treino_user_id": r.get("treino_user_id")}
+            REG_LOGINS.parent.mkdir(parents=True, exist_ok=True)
+            with REG_LOGINS.open("a", encoding="utf-8") as f:
+                f.write(f"login {n + 1}/{MAX_LOGINS} {conta} (Treino: trocar-token) {time.strftime('%H:%M:%S')} ({self.motivo})\n")
+        if self.d.get(chave) is not s:
+            self.d[chave] = s
+            self._salvar()
+        return s
+
+    def token_treino(self, conta: str) -> str:
+        return self.sessao_treino(conta)["access_token"]
+
+    def uid_treino(self, conta: str) -> str:
+        return str(self.sessao_treino(conta).get("treino_user_id") or "")
+
     def fechar(self, o) -> None:
         """As sessões FICAM para o próximo script (o logout local de todas é o sair, no fim da etapa 2)."""
 
@@ -193,10 +257,11 @@ class Sessoes:
         (para tentar de novo), e o arquivo só some com todas fora."""
         restam: dict = {}
         for conta, s in list(self.d.items()):
+            banco = "treino" if conta.startswith("treino:") else "principal"  # hml-19c: a sessão do Treino sai no Auth do Treino
             if int(s.get("expires_at") or 0) - time.time() < 120:
-                s = _refresh(s) or s
+                s = (_refresh_treino(s) if banco == "treino" else _refresh(s)) or s
             try:
-                st: object = C.sair_local(s.get("access_token", ""), "principal")
+                st: object = C.sair_local(s.get("access_token", ""), banco)
             except Exception as e:  # noqa: BLE001
                 st = type(e).__name__
             if not o.ok(st in (200, 204), f"logout (scope=local) da sessão guardada de {conta} ({st})", parar=False):
@@ -261,6 +326,74 @@ def bucket_do_diario(s: str | None = None) -> str:
     return "diario-staging" if (s or schema()) == "staging" else "diario"
 
 
+# ───────────────────────── hml-19c: a Avaliação (a admin-avaliacoes do Treino e o bucket da evolução) ─────────────────────────
+def bucket_da_evolucao(s: str | None = None) -> str:
+    """O bucket das fotos de evolução do ambiente (principal; staging = evolucao-staging)."""
+    return "evolucao-staging" if (s or schema()) == "staging" else "evolucao"
+
+
+def bucket_dos_registros(s: str | None = None) -> str:
+    """O bucket das fotos mensais do ambiente (Treino; staging = registros-staging)."""
+    return "registros-staging" if (s or schema()) == "staging" else "registros"
+
+
+def funcao_treino(token: str | None, action: str | None, corpo: dict | None = None, *, origem: str | None = None, schema_: str | None = None,
+                  sem_auth: bool = False, timeout: int = TEMPO_TREINO_S) -> tuple[int, dict, dict, float]:
+    """POST na admin-avaliacoes (Treino) como a tela chama (o adminAvaliacoes() do avaliacaoApi.ts: a chave anon do Treino, o Bearer
+    do Treino e o x-schema; 1 tentativa, até 45 s) → (status, corpo JSON, cabeçalhos, ms). action None = sem a chave; schema_="" = sem
+    o cabeçalho x-schema."""
+    corpo = dict(corpo or {})
+    if action is not None:
+        corpo["action"] = action
+    cab = {"apikey": B5.anon(TREINO_REF), "Origin": origem or BASES["staging"]}
+    x = schema() if schema_ is None else schema_
+    if x:
+        cab["x-schema"] = x
+    if not sem_auth:
+        cab["Authorization"] = f"Bearer {token}"
+    t0 = time.time()
+    st, r, h = B5.http("POST", FUNCAO_TREINO, corpo, cab, timeout=timeout)
+    return st, (r if isinstance(r, dict) else {}), h or {}, round((time.time() - t0) * 1000)
+
+
+def preflight_treino(origem: str) -> tuple[int, dict]:
+    """O OPTIONS da admin-avaliacoes (o CORS dela: fora da lista → o padrão https://physiqcalc.vercel.app)."""
+    cab = {"Origin": origem, "Access-Control-Request-Method": "POST",
+           "Access-Control-Request-Headers": "authorization, apikey, content-type, x-schema"}
+    st, _r, h = B5.http("OPTIONS", FUNCAO_TREINO, None, cab, timeout=60)
+    return st, h or {}
+
+
+def subir_no_link_treino(bucket: str, caminho: str, token_link: str, conteudo: bytes, mime: str, token_pessoa: str, upsert: bool = True) -> int:
+    """O PUT no link assinado do Storage do TREINO (o uploadToSignedUrl da tela, com o "trocar": x-upsert)."""
+    cab = {"apikey": B5.anon(TREINO_REF), "Authorization": f"Bearer {token_pessoa}", "Content-Type": mime, "x-upsert": "true" if upsert else "false"}
+    st, _r, _h = B5.http("PUT", f"{API_T}/storage/v1/object/upload/sign/{bucket}/{caminho}?token={token_link}", conteudo, cab, timeout=60)
+    return st
+
+
+def remover_do_storage_treino(bucket: str, caminhos: list[str], token_pessoa: str) -> tuple[int, int]:
+    """Remove objetos do Storage do TREINO como a pessoa (a personal do aluno) — o desfazer da massa da foto mensal."""
+    if not caminhos:
+        return 200, 0
+    cab = {"apikey": B5.anon(TREINO_REF), "Authorization": f"Bearer {token_pessoa}"}
+    st, r, _h = B5.http("DELETE", f"{API_T}/storage/v1/object/{bucket}", {"prefixes": caminhos}, cab, timeout=60)
+    return st, len(r) if isinstance(r, list) else 0
+
+
+def ler_treino(sql: str) -> list[dict]:
+    """SQL SÓ LEITURA no banco do Treino (read_only: o Postgres recusa qualquer escrita na transação)."""
+    return C.ler(TREINO_REF, sql)
+
+
+def jpeg_sintetico(lado: int = 16, tom: int = 128) -> bytes:
+    """Uma imagem JPEG pequena gerada aqui (nunca foto real): `lado`×`lado`, cinza — a foto mensal e a foto de evolução de teste."""
+    import io  # noqa: PLC0415
+    from PIL import Image  # noqa: PLC0415
+    buf = io.BytesIO()
+    Image.new("RGB", (lado, lado), (tom, tom, tom)).save(buf, "JPEG", quality=80)
+    return buf.getvalue()
+
+
 # ───────────────────────── as regras do servidor, lidas do TS (sem rede) ─────────────────────────
 _JS_REGRAS = r"""
 import { readFileSync } from "node:fs";
@@ -271,7 +404,10 @@ const saida = { acoes: Object.fromEntries(m.ACOES_NUTRICAO.map((a) => [a, { tabe
   tabelas: [...m.TABELAS_PRONTUARIO], conferidos: [],
   // hml-19b: a Dieta e o app do aluno (as listas à parte; o despacho moduloDoPedido)
   acoes_dieta: Object.fromEntries((m.ACOES_DA_DIETA ?? []).map((a) => [a, { tabela: m.ACOES_DIETA[a].tabela, operacao: m.ACOES_DIETA[a].operacao }])),
-  acoes_aluno: [...(m.ACOES_DO_ALUNO ?? [])], tabelas_dieta: [...(m.TABELAS_DIETA ?? [])] };
+  acoes_aluno: [...(m.ACOES_DO_ALUNO ?? [])], tabelas_dieta: [...(m.TABELAS_DIETA ?? [])],
+  // hml-19c: a Avaliação (a 4ª lista)
+  acoes_avaliacao: Object.fromEntries((m.ACOES_DA_AVALIACAO ?? []).map((a) => [a, { tabela: m.ACOES_AVALIACAO[a].tabela, operacao: m.ACOES_AVALIACAO[a].operacao }])),
+  tabelas_avaliacao: [...(m.TABELAS_AVALIACAO ?? [])] };
 const dieta = (acao, corpo) => {
   switch (acao) {
     case "padroes_garantir": return m.secaoDoPadraoDaDieta(corpo.secao) ? { ok: true } : { ok: false, erro: "secao_invalida" };
@@ -295,11 +431,21 @@ const aluno = (acao, corpo) => {
     default: return m.lerEnvioDoDiario(corpo);
   }
 };
+const avaliacao = (acao, corpo) => {
+  switch (acao) {
+    case "foto_evolucao_preparar": return m.lerPedidoDeFotoEvolucao(corpo);
+    case "foto_evolucao_registrar": return m.lerRegistroDeFotoEvolucao(corpo, e.userId);
+    case "foto_evolucao_excluir": return m.ehUuid(corpo.id) ? { ok: true } : { ok: false, erro: "dados_invalidos", campo: "id" };
+    case "avaliacao_avisar": return m.ehUuid(corpo.alunoId) ? { ok: true } : { ok: false, erro: "dados_invalidos", campo: "aluno_id" };
+    default: return m.montarGravacaoAvaliacao(acao, corpo, e.userId, new Date(0));
+  }
+};
 for (const [acao, corpo] of e.pedidos ?? []) {
   let r;
   const mod = m.moduloDoPedido ? m.moduloDoPedido({ ...corpo, acao }) : null;
   if (mod && mod.modulo === "dieta") r = dieta(acao, corpo);
   else if (mod && mod.modulo === "aluno") r = aluno(acao, corpo);
+  else if (mod && mod.modulo === "avaliacao") r = avaliacao(acao, corpo);
   else if (acao === "padroes_garantir") r = m.secaoDoPadrao(corpo.secao) ? { ok: true } : { ok: false, erro: "secao_invalida" };
   else if (acao === "anexo_preparar") r = m.lerPedidoDeAnexo(corpo);
   else if (acao === "anexo_registrar") r = m.lerRegistroDeAnexo(corpo, e.userId);
@@ -319,6 +465,37 @@ def regras(pedidos: list[tuple[str, dict]] | None = None, user_id: str = "333333
                        input=json.dumps({"pedidos": pedidos or [], "userId": user_id}), capture_output=True, text=True, timeout=60)
     if r.returncode != 0:
         raise RuntimeError(f"node (regras): {r.stderr.strip()[:400]}")
+    return json.loads(r.stdout)
+
+
+# hml-19c: as regras da admin-avaliacoes do TREINO (supabase/functions/admin-avaliacoes/regras.ts), do mesmo jeito (node, sem rede)
+REGRAS_TREINO_TS = REPO / "supabase" / "functions" / "admin-avaliacoes" / "regras.ts"
+_JS_REGRAS_TREINO = r"""
+import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+const m = await import(pathToFileURL(process.argv[1]).href);
+const e = JSON.parse(readFileSync(0, "utf8"));
+const saida = { acoes_foto: [...m.ACOES_FOTO], acoes_de_antes: [...m.ACOES_DE_ANTES], acoes_que_gravam: [...m.ACOES_QUE_GRAVAM],
+  tipos: [...m.TIPOS_FOTO], status: m.STATUS_FOTO, conferidos: [] };
+for (const [action, corpo] of e.pedidos ?? []) {
+  let r;
+  if (action === "foto_preparar" || action === "foto_salvar") r = m.lerPedidoDeFoto(corpo);
+  else if (action === "foto_excluir") r = m.lerExclusaoDeFoto(corpo);
+  else r = m.ACOES_DE_ANTES.includes(action) ? { ok: true } : { ok: false, erro: "invalid_action" };
+  saida.conferidos.push({ action, ok: r.ok === true, erro: r.erro ?? null, caminho: r.caminho ?? null, grava: m.ACOES_QUE_GRAVAM.has(action),
+    status: r.ok === true ? 200 : m.statusDaFoto(r.erro) });
+}
+console.log(JSON.stringify(saida));
+"""
+
+
+def regras_treino(pedidos: list[tuple[str, dict]] | None = None) -> dict:
+    """hml-19c: as regras da admin-avaliacoes (as ações da foto, as que gravam, os tipos, os status) e, para cada (action, corpo), o
+    que o servidor faria — do próprio TS."""
+    r = subprocess.run(["node", "--experimental-strip-types", "--no-warnings", "--input-type=module", "-e", _JS_REGRAS_TREINO, str(REGRAS_TREINO_TS)],
+                       input=json.dumps({"pedidos": pedidos or []}), capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        raise RuntimeError(f"node (regras do Treino): {r.stderr.strip()[:400]}")
     return json.loads(r.stdout)
 
 
@@ -342,11 +519,24 @@ def tabelas_da_dieta() -> set[str]:
     return set(re.findall(r'"([a-z_]+)"', bloco))
 
 
+def tabelas_da_avaliacao() -> set[str]:
+    """hml-19c: as 2 tabelas da Avaliação no principal (TABELAS_AVALIACAO do servidor: antropometrias, fotos_evolucao)."""
+    texto = REGRAS_TS.read_text(encoding="utf-8")
+    if "export const TABELAS_AVALIACAO = [" not in texto:
+        return set()
+    bloco = texto.split("export const TABELAS_AVALIACAO = [", 1)[1].split("] as const;", 1)[0]
+    return set(re.findall(r'"([a-z_]+)"', bloco))
+
+
 TABELAS = tabelas_do_prontuario()
 TABELAS_DIETA = tabelas_da_dieta()
+TABELAS_AVALIACAO = tabelas_da_avaliacao()
+TABELAS_AVALIACAO_TREINO = {"physiq_registros_fotos"}  # hml-19c: a foto mensal (banco do Treino)
 # hml-19b: as RPCs que o app do aluno chamava direto (o código antigo, o ANTES) — gravam, mesmo depois de saírem do RPC_QUE_GRAVAM
 RPCS_DO_APP = {"paciente_marcar_refeicao", "aluno_marcar_meta", "diario_enviar"}
-RPC_GRAVA = rpcs_que_gravam() | RPCS_DO_APP
+# hml-19c: o aviso "avaliação nova" — saiu do front (vai pela nutricao), mas o ANTES chama direto: grava
+RPCS_DA_AVALIACAO = {"aluno_avisar_avaliacao"}
+RPC_GRAVA = rpcs_que_gravam() | RPCS_DO_APP | RPCS_DA_AVALIACAO
 
 
 # ───────────────────────── a guarda que CONTA (por tela e por ação) ─────────────────────────
@@ -357,6 +547,8 @@ def classificar(p: dict) -> str | None:
         return None
     if tipo == "tab":
         if m in ("POST", "PATCH", "PUT", "DELETE"):
+            if nome in TABELAS_AVALIACAO or nome in TABELAS_AVALIACAO_TREINO:  # hml-19c: a Avaliação (os 2 bancos)
+                return "rest_avaliacao"
             return "rest_prontuario" if nome in TABELAS else "rest_dieta" if nome in TABELAS_DIETA else "rest_outras"
         return "get_profiles" if (m == "GET" and nome == "profiles") else None
     if tipo == "rpc":
@@ -467,8 +659,22 @@ class Estado:
         C.json_arquivo(ESTADO_ARQ, self.d)
 
     def linha(self, tabela: str, id_: object) -> None:
-        if tabela in (TABELAS | TABELAS_DIETA) and C.eh_uuid(id_) and [tabela, id_] not in self.d["linhas"]:
+        if tabela in (TABELAS | TABELAS_DIETA | TABELAS_AVALIACAO) and C.eh_uuid(id_) and [tabela, id_] not in self.d["linhas"]:
             self.d["linhas"].append([tabela, id_])
+            self.salvar()
+
+    def linha_treino(self, tabela: str, id_: object) -> None:
+        """hml-19c: uma linha no banco do TREINO (a foto mensal) — sai pela função ou, no --limpar, por SQL (só o aluno e o mês sentinela)."""
+        lista = self.d.setdefault("treino", [])
+        if tabela in TABELAS_AVALIACAO_TREINO and C.eh_uuid(id_) and [tabela, id_] not in lista:
+            lista.append([tabela, id_])
+            self.salvar()
+
+    def aviso(self, id_: object) -> None:
+        """hml-19c: um aviso "avaliação nova" que a rodada pôs no sino da aluna de TESTE (sai no fim, por id)."""
+        lista = self.d.setdefault("avisos", [])
+        if C.eh_uuid(id_) and id_ not in lista:
+            lista.append(id_)
             self.salvar()
 
     def objeto(self, bucket: str, caminho: str) -> None:
@@ -477,7 +683,8 @@ class Estado:
             self.salvar()
 
     def vazio(self) -> bool:
-        return not (self.d["linhas"] or self.d["storage"] or self.d.get("n8"))
+        # hml-19c: as linhas do Treino e os avisos também (as rodadas de antes não têm as 2 chaves)
+        return not (self.d["linhas"] or self.d["storage"] or self.d.get("n8") or self.d.get("treino") or self.d.get("avisos"))
 
     def apagar(self) -> None:
         if ESTADO_ARQ.exists():
@@ -507,7 +714,7 @@ def sql_apagar_linhas(s: str, linhas: list[list[str]], dono: str) -> list[str]:
     C.uuid_ok(dono)
     por: dict[str, list[str]] = {}
     for tabela, id_ in linhas:
-        if (tabela in TABELAS or (tabela in TABELAS_DIETA and tabela not in DIETA_SEM_DONO)) and C.eh_uuid(id_):
+        if (tabela in TABELAS or tabela in TABELAS_AVALIACAO or (tabela in TABELAS_DIETA and tabela not in DIETA_SEM_DONO)) and C.eh_uuid(id_):
             por.setdefault(tabela, []).append(id_)
     return [f"delete from {s}.{tabela} where nutricionista_id = '{dono}' and id = any(array[{', '.join(C.txt(i) for i in ids)}]::uuid[])"
             for tabela, ids in sorted(por.items(), key=lambda x: _ordem_do_delete(x[0]))]
@@ -545,3 +752,45 @@ def sql_contar_marca_dieta(s: str, rodada: str | None = None) -> str:
     partes = [f"(select count(*) from {s}.{t} where {c} like {C.txt('%' + marca.replace(' ', '%') + '%')})::int as {t}"
               for t, c in sorted(COLUNAS_MARCA_DIETA.items())]
     return "select " + ", ".join(partes)
+
+
+# ───────────────────────── hml-19c: a limpeza e a conferência da Avaliação (só contagem) ─────────────────────────
+COLUNAS_MARCA_AVALIACAO = {"antropometrias": "observacao", "fotos_evolucao": "observacao"}
+
+
+def sql_contar_marca_avaliacao(s: str, rodada: str | None = None) -> str:
+    """Só contagem (SQL só leitura): as linhas com a marca da hml-19 nas 2 tabelas da Avaliação do principal (vivas e na Lixeira)."""
+    marca = f"{MARCA} {rodada}" if rodada else MARCA
+    assert set(COLUNAS_MARCA_AVALIACAO) == TABELAS_AVALIACAO, sorted(TABELAS_AVALIACAO ^ set(COLUNAS_MARCA_AVALIACAO))
+    partes = [f"(select count(*) from {s}.{t} where {c} like {C.txt('%' + marca.replace(' ', '%') + '%')})::int as {t}"
+              for t, c in sorted(COLUNAS_MARCA_AVALIACAO.items())]
+    return "select " + ", ".join(partes)
+
+
+def sql_contar_sentinela(s: str, aluno: str) -> str:
+    """Só contagem (SQL só leitura, banco do Treino): as fotos mensais do aluno de TESTE no mês sentinela, no schema `s`."""
+    assert s in ("public", "staging"), s
+    return (f"select count(*)::int as n from {s}.physiq_registros_fotos where user_id = {C.txt(C.uuid_ok(aluno))} "
+            f"and mes_ref = {C.txt(MES_SENTINELA + '-01')}::date")
+
+
+def sql_apagar_fotos_treino(s: str, aluno: str, ids: list[str]) -> str:
+    """O DELETE da foto mensal da rodada (só no staging, só o aluno de TESTE, só o mês sentinela, só os ids da rodada)."""
+    if s != "staging":
+        raise SystemExit("a massa só existe no staging — nada a apagar em outro schema")
+    validos = [i for i in ids if C.eh_uuid(i)]
+    if not validos:
+        raise SystemExit("nenhum id da rodada para apagar")
+    return (f"delete from {s}.physiq_registros_fotos where user_id = {C.txt(C.uuid_ok(aluno))} and mes_ref = {C.txt(MES_SENTINELA + '-01')}::date "
+            f"and id = any(array[{', '.join(C.txt(i) for i in validos)}]::uuid[])")
+
+
+def sql_apagar_avisos(s: str, destino: str, ids: list[str]) -> str:
+    """O DELETE dos avisos "avaliação nova" que a rodada pôs no sino da aluna de TESTE (só no staging, só os ids da rodada)."""
+    if s != "staging":
+        raise SystemExit("a massa só existe no staging — nada a apagar em outro schema")
+    validos = [i for i in ids if C.eh_uuid(i)]
+    if not validos:
+        raise SystemExit("nenhum aviso da rodada para apagar")
+    return (f"delete from {s}.avisos where destino_user_id = {C.txt(C.uuid_ok(destino))} and tipo = 'avaliacao_nova' "
+            f"and id = any(array[{', '.join(C.txt(i) for i in validos)}]::uuid[])")

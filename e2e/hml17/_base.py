@@ -244,19 +244,23 @@ FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila"}
 
 
 def funcao_grava(nome: str, acao: str | None) -> bool:
-    """A chamada à função grava? Desconhecida e a nutricao: sempre; as de antes: pela regra de antes (a ação decide nas 3 mistas)."""
+    """A chamada à função grava? Desconhecida e a nutricao: sempre; as de antes: pela regra de antes (a ação decide nas 4 mistas).
+    hml-19c (decisão K): a admin-avaliacoes só LÊ na "list" — create, update, proxima, delete e as foto_* (a foto mensal pelo servidor)
+    gravam (antes, a Guarda deixava passar todas as ações dela)."""
     if nome in FUNCOES_QUE_SEMPRE_GRAVAM or nome not in FUNCOES_CONHECIDAS:
         return True
     return (nome == "pagamentos-aluno" and acao not in LEITURAS_PAGAMENTOS) or nome in ("admin-delete-user", "admin-update-user") \
         or (nome == "admin-semana-treinos" and acao not in LEITURAS_SEMANA) \
-        or (nome == "admin-tags" and not str(acao or "").lower().startswith(("list", "get")))
+        or (nome == "admin-tags" and not str(acao or "").lower().startswith(("list", "get"))) \
+        or (nome == "admin-avaliacoes" and acao != "list")
 
 
 class Guarda:
     """PRODUÇÃO SÓ LEITURA (o molde do e2e/w26/prod.py e do e2e/hml14/telas.py): o navegador bloqueia toda escrita das telas —
     POST/PATCH/PUT/DELETE em tabela, RPC fora da lista de leitura, Storage que não é o "sign", e nas funções as ações que gravam
     (pagamentos-aluno fora das leituras, admin-semana-treinos fora das leituras, admin-delete-user, admin-update-user, admin-tags que
-    não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava). O resto segue (fallback: a
+    não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava; hml-19c: a admin-avaliacoes fora
+    da "list"). O resto segue (fallback: a
     queda da API, quando ligada, vem antes e aborta). Teste: python3 e2e/hml19/guarda_teste.py."""
 
     def __init__(self) -> None:
