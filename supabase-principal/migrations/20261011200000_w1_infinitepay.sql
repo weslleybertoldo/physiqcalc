@@ -452,3 +452,77 @@ drop trigger if exists trg_contas_encerrada_sem_integracao on {schema}.contas;
 create trigger trg_contas_encerrada_sem_integracao after update of situacao on {schema}.contas
   for each row when (new.situacao = 'cancelada' and old.situacao is distinct from 'cancelada')
   execute function {schema}.contas_encerrada_sem_integracao();
+
+-- ============================================================================================================
+-- 13–14. O PRAZO DE 72 H E A RODADA (spec-review W1-B1 e "gravar primeiro e conferir depois") — Task 6 do plano, no FIM deste mesmo
+--        arquivo (UMA migration — revisão I2).
+-- ============================================================================================================
+--   {schema}.infinitepay_fechar_vencidas(p_paciente)  a tentativa vencida SEM aviso pendente sai: mensalidade → cancelada e fora do
+--                                                      histórico (deleted_at: é tentativa, não cobrança); avulsa → volta a aberta. A
+--                                                      InfiniteTag fica (ip_handle e o link em infinitepay_links): uma baixa atrasada
+--                                                      confere com a do link. A
+--                                                      pagamentos-aluno chama por aluno (aluno_status, aluno_ip_link, prof_aluno); a
+--                                                      rodada, para todos.
+--   {schema}.infinitepay_rodada()                     a cada 15 min (pg_cron): fecha as vencidas e reenvia pelo pg_net ao webhook
+--                                                      PÚBLICO (…/infinitepay-webhook-aluno?schema={schema}&origem=rodada) até 20 avisos
+--                                                      prontos que não deu para conferir — ele confere tudo de novo no payment_check
+--                                                      (nenhum segredo novo: o webhook não confia no corpo de ninguém). Os avisos
+--                                                      "não pago" também voltam (I1: reagendados até a 24ª). Sem pg_net, só fecha.
+-- Só a service_role e o pg_cron: nada para public/anon/authenticated. Testes: python3 e2e/w1/sql_w1.py --so m2
+
+create or replace function {schema}.infinitepay_fechar_vencidas(p_paciente uuid default null) returns integer
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  v_m integer;
+  v_a integer;
+begin
+  update {schema}.cobrancas c set status = 'cancelada', deleted_at = now()
+   where c.forma = 'infinitepay' and c.status = 'aguardando_confirmacao' and c.tipo = 'mensalidade' and c.deleted_at is null
+     and c.ip_expira_em is not null and c.ip_expira_em < now()
+     and (p_paciente is null or c.paciente_id = p_paciente)
+     and not exists (select 1 from {schema}.infinitepay_avisos v where v.cobranca_id = c.id and v.conferido_em is null);
+  get diagnostics v_m = row_count;
+  update {schema}.cobrancas c set status = 'aberta', forma = null, metodo = null, ip_link_url = null, ip_expira_em = null
+   where c.forma = 'infinitepay' and c.status = 'aguardando_confirmacao' and c.tipo = 'avulsa' and c.deleted_at is null
+     and c.ip_expira_em is not null and c.ip_expira_em < now()
+     and (p_paciente is null or c.paciente_id = p_paciente)
+     and not exists (select 1 from {schema}.infinitepay_avisos v where v.cobranca_id = c.id and v.conferido_em is null);
+  get diagnostics v_a = row_count;
+  return v_m + v_a;
+end;
+$$;
+
+create or replace function {schema}.infinitepay_rodada() returns jsonb
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  v_fechadas integer;
+  v_n integer := 0;
+  r record;
+begin
+  v_fechadas := {schema}.infinitepay_fechar_vencidas(null);
+  if exists (select 1 from pg_extension where extname = 'pg_net') then
+    for r in
+      update {schema}.infinitepay_avisos v set proxima_em = now() + interval '15 minutes'
+       where v.id in (select a.id from {schema}.infinitepay_avisos a
+                       where a.conferido_em is null and a.tentativas < 24 and a.proxima_em <= now()
+                       order by a.proxima_em limit 20 for update skip locked)
+      returning v.pedido, v.transaction_nsu, v.slug
+    loop
+      perform net.http_post(
+        url := 'https://hkxvtsbwctxkrqzkkdoz.supabase.co/functions/v1/infinitepay-webhook-aluno?schema={schema}&origem=rodada',
+        body := jsonb_build_object('order_nsu', r.pedido, 'transaction_nsu', r.transaction_nsu, 'invoice_slug', nullif(r.slug, '')),
+        headers := jsonb_build_object('Content-Type', 'application/json'),
+        timeout_milliseconds := 20000);
+      v_n := v_n + 1;
+    end loop;
+  end if;
+  return jsonb_build_object('fechadas', v_fechadas, 'reenviados', v_n);
+end;
+$$;
+
+-- só o servidor executa (os default privileges do Supabase dão EXECUTE a toda função nova)
+revoke all on function {schema}.infinitepay_fechar_vencidas(uuid), {schema}.infinitepay_rodada() from public, anon, authenticated;
+grant execute on function {schema}.infinitepay_fechar_vencidas(uuid), {schema}.infinitepay_rodada() to service_role;
+
+-- a cada 15 min (o mesmo nome ATUALIZA o job)
+select cron.schedule('infinitepay-rodada-{schema}', '*/15 * * * *', $$select {schema}.infinitepay_rodada()$$);
