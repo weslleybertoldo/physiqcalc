@@ -277,4 +277,12 @@ describe("W1 — a baixa da InfinitePay só depois do payment_check (guarda de f
     const salvar = f.slice(f.indexOf('acao === "prof_plano_salvar"'), f.indexOf('acao === "prof_plano_ativo"'));
     expect(salvar).toContain("modalidadesPermitidasNoPlano(conta.modo");
   });
+  it("nada da InfinitePay vai ao log: InfiniteTag, url, recibo, NSU, slug", () => {
+    for (const rel of ["infinitepay-webhook-aluno/index.ts", "_shared/infinitepay-baixa.ts", "_shared/infinitepay.ts", "pagamentos-aluno/index.ts"]) {
+      const f = ler(rel);
+      for (const m of f.matchAll(/\blog\.(?:info|aviso|erro|excecao)\s*\(([\s\S]*?)\);/g)) {
+        expect(m[1], `${rel}: ${m[1].slice(0, 80)}`).not.toMatch(/\b(handle|ip_handle|url|recibo|recibo_url|transaction_nsu|nsu|slug)\b/);
+      }
+    }
+  });
 });
