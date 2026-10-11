@@ -30,7 +30,7 @@ const recusa = (status: number, erro: string) => ({
   data: null,
   error: { name: "FunctionsHttpError", context: new Response(JSON.stringify({ ok: false, erro }), { status, headers: { "Content-Type": "application/json" } }) },
 });
-const corpos = () => h.invoke.mock.calls.map(([nome, o]) => ({ nome, ...(o as { body: Record<string, unknown> }).body }));
+const corpos = (): Array<Record<string, unknown>> => h.invoke.mock.calls.map(([nome, o]) => ({ nome, ...(o as { body: Record<string, unknown> }).body }));
 
 beforeEach(() => {
   h.rpc.mockReset();
