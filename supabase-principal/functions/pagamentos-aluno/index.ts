@@ -1055,7 +1055,8 @@ Deno.serve(async (req) => {
           payer_email: souOAluno && emailPagador && !/x{3,}/i.test(emailPagador) ? emailPagador : null,
           payer_nome: souOAluno ? pay.card?.cardholder?.name ?? null : null,
           banco_pagador: souOAluno ? pay.point_of_interaction?.transaction_data?.bank_info?.payer?.long_name ?? null : null,
-          e2e_id: pay.point_of_interaction?.transaction_data?.e2e_id ?? null, card_last4: pay.card?.last_four_digits ?? null,
+          // o e2e_id do Pix começa com o ISPB do banco de quem pagou: também só para o aluno (a conciliação usa o mp_payment_id)
+          e2e_id: souOAluno ? pay.point_of_interaction?.transaction_data?.e2e_id ?? null : null, card_last4: pay.card?.last_four_digits ?? null,
           mp_payment_id: c.mp_payment_id,
         },
       }, 200, origin);

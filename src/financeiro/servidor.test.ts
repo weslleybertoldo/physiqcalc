@@ -188,5 +188,6 @@ it("hml-19 (H-55): o detalhe do pagamento no MP s√≥ mostra e-mail, nome no cart√
   expect(trecho).toMatch(/payer_email: souOAluno && /);
   expect(trecho).toMatch(/payer_nome: souOAluno \?/);
   expect(trecho).toMatch(/banco_pagador: souOAluno \?/);
+  expect(trecho).toMatch(/e2e_id: souOAluno \?/);
   expect(trecho).toMatch(/card_last4: pay\.card\?\.last_four_digits/);
 });
