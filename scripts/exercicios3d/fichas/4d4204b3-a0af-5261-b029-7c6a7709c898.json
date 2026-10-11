@@ -1,0 +1,355 @@
+{
+ "uuid": "4d4204b3-a0af-5261-b029-7c6a7709c898",
+ "nome": "Desenvolvimento no Smith",
+ "cena": "desenvolvimento_no_smith",
+ "grupo": "Deltóide",
+ "subgrupo": "Deltoide anterior/lateral · tríceps",
+ "padrao_movimento": "desenvolvimento",
+ "equipamento": "smith",
+ "variacao": "sentado, pela frente",
+ "alvos": [
+  "deltoide"
+ ],
+ "auxiliares": [
+  "triceps",
+  "trapezio"
+ ],
+ "camera": {
+  "az": 55,
+  "el": 8,
+  "dist": 4.4,
+  "alvo": [
+   0.0,
+   -0.05,
+   1.05
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.6,
+  "alvo": [
+   0.0,
+   0.0,
+   1.0
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "No Smith a barra corre presa nos dois trilhos verticais da máquina e só sobe e desce. Sentado no banco com o encosto quase em pé, colocado embaixo da barra de modo que ela passe logo na frente da ponta do nariz, com o glúteo no assento, as costas e a cabeça apoiadas no encosto e os pés chapados no chão, segura a barra com as palmas viradas para a frente (pegada pronada), as mãos um pouco mais abertas que os ombros e os punhos firmes, e destrava a barra girando-a para trás. Com a barra na altura do queixo e os cotovelos à frente do corpo, embaixo da barra, empurra a barra para cima, reto, passando na frente do rosto e da testa, até os braços quase esticarem em cima, com a barra um pouco à frente da cabeça; desce devagar pela mesma linha até a altura do queixo, sem arquear a lombar nem tirar o glúteo do banco. Como o Smith não deixa a barra sair da linha, ela fica o tempo todo na frente do rosto — no desenvolvimento com a barra livre ela volta para cima da cabeça.",
+ "cinesiologia": {
+  "plano": "entre o frontal e o sagital (o braço sobe à frente e ao lado, com os cotovelos à frente do tronco), cadeia cinética aberta; a barra guiada só anda na vertical, numa linha parada 29 mm na frente da ponta do nariz e 134 mm na frente da linha dos ombros: em cima o braço fica ~16° inclinado para a frente da vertical (ombro → mão), e não em cima da cabeça como no desenvolvimento com a barra livre",
+  "articulacoes": "ombro (flexão e abdução na subida, extensão e adução na descida), cotovelo (extensão na subida, de ~136° de flexão até ~6°; flexão na descida) e escápula (rotação para cima na subida); punho firme, um pouco estendido (a mão gira em volta da barra junto com o antebraço); tronco, cabeça, quadril, joelhos e tornozelos parados, com o glúteo, as costas e a cabeça no banco e os pés chapados no chão",
+  "agonistas": "deltoide anterior (ExRx, Smith Shoulder Press: Target \"Deltoid, Anterior\")",
+  "sinergistas": "peitoral maior (porção clavicular), tríceps braquial, deltoide lateral, trapézio médio e inferior e serrátil anterior (digitações inferiores) (ExRx, Smith Shoulder Press: Synergists \"Pectoralis Major, Clavicular\", \"Triceps Brachii\", \"Deltoid, Lateral\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\")",
+  "estabilizadores": "cabeça longa do tríceps e bíceps braquial como estabilizadores dinâmicos; trapézio superior e levantador da escápula (ExRx, Smith Shoulder Press: Dynamic Stabilizers \"Triceps, Long Head\", \"Biceps Brachii\"; Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\"); a barra guiada tira parte do equilíbrio (StrengthLog: \"completely fixed bar path, which lessens the requirements of stabilization and balance\")",
+  "fases": "subida concêntrica até os braços quase esticarem (ExRx: \"Press bar upward until arms are extended overhead\") e descida excêntrica até a barra na altura do queixo (Bodybuilding.com: \"lower the barbell until it is level with your chin\"), sempre na mesma linha vertical"
+ },
+ "referencias": [
+  "ExRx.net — Smith Shoulder Press (Weight Exercises › Front Delt), https://exrx.net/WeightExercises/DeltoidAnterior/SMShoulderPress (lido nas cópias do Internet Archive de 12/12/2019 e 05/01/2024; o site responde 403 direto): classificação \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Sit on bench with bar positioned in front of shoulders. Grasp bar with wide overhand grip. Disengage bar by rotating bar back.\"; Execution: \"Press bar upward until arms are extended overhead. Lower bar to front of shoulders and repeat.\"; Comments (2024): \"Pull head back slightly so bar does not make contact with head. Range of motion will be compromised if grip is too wide.\" (na cópia de 2019: \"Pull head back slightly so bar does not head.\"); músculos: Target \"Deltoid, Anterior\"; Synergists \"Pectoralis Major, Clavicular\", \"Triceps Brachii\", \"Deltoid, Lateral\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\"; Dynamic Stabilizers \"Triceps, Long Head\", \"Biceps Brachii\"; Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\"",
+  "Bodybuilding.com — Smith Machine Overhead Shoulder Press (Exercise Database; o nome do fonte_en do catálogo), https://www.bodybuilding.com/exercises/smith-machine-overhead-shoulder-press (a página saiu do ar: lida nas cópias do Internet Archive de 19/11/2019 e 20/01/2022): \"To begin, place a flat bench (or preferably one with back support) underneath a smith machine. Position the barbell at a height so that when seated on the flat bench, the arms must be almost fully extended to reach the barbell.\"; \"Once you have the correct height, sit slightly in behind the barbell so that there is an imaginary straight line from the tip of your nose to the barbell. Your feet should be stationary. Grab the barbell with the palms facing forward, unlock it and lift it up so that your arms are fully extended. This is the starting position.\"; \"Slowly begin to lower the barbell until it is level with your chin while inhaling.\"; \"Then lift the barbell back to the starting position using your shoulders while exhaling.\"",
+  "StrengthLog — Seated Smith Machine Shoulder Press, https://www.strengthlog.com/seated-smith-machine-shoulder-press/ (lido em 10/10/2026): \"Sit on a bench, unrack a barbell and lower it to the starting position at the top of your chest.\"; \"Press the bar up to straight arms, while exhaling.\"; \"Smith machine shoulder press differs from a free barbell press primarily by its completely fixed bar path, which lessens the requirements of stabilization and balance.\"; músculos: \"Primary muscles worked: Front Deltoid\"; \"Secondary muscles worked: Triceps\", \"Lateral Deltoid\" (a barra no alto do peito, como o ExRx e a NSCA da barra livre: ver a regra do cotovelo embaixo)",
+  "NSCA — Basics of Strength and Conditioning Manual (2012), https://www.nsca.com/uploadedFiles/NSCA/Resources/PDF/Publications/basics_of_strength_and_conditioning_manual.pdf (o texto salvo no rascunho do Desenvolvimento com Barra; o manual não tem o do Smith): cap. 3, os 5 pontos de apoio de quem treina sentado ou deitado no banco — \"1. Head in neutral position on bench or back pad\", \"2. Shoulders and upper back set evenly on bench or back pad\", \"3. Buttocks on bench or seat\", \"4. Right foot flat on floor\", \"5. Left foot flat on floor\"; cap. 4, 3b. Barbell Standing behind the Neck Shoulder Press (em pé, atrás da nuca: \"This lift may also be performed from the front of the shoulders\"): \"Place hands evenly on the bar, slightly wider than shoulder-width, with a pronated grip\"; Coaching Points: \"Keep elbows directly under hands throughout the entire lift\", \"Engage the core to avoid arching the back to complete the lift\"",
+  "NSCA — Essentials of Strength Training and Conditioning (4ª ed., cap. 15), lido no resumo de estudo do CSCS da Achievable (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-5; o livro não foi lido; só tem o \"Barbell shoulder press\" e o \"Machine shoulder press\", não o do Smith): \"Barbell shoulder press\"; \"Major muscles involved: Anterior and medial deltoids, triceps brachii\"; \"Sit down on a vertical shoulder press bench and lean back so your body is in the five-point body contact position.\"; \"Grasp the bar with a closed, pronated grip.\"; \"Use a grip slightly wider than shoulder-width.\"; \"Keep the wrists stiff and the forearms parallel to each other.\"; \"Extend the neck slightly so the bar can pass the face as it’s lowered to touch the clavicles and anterior deltoids.\"; \"Push the bar upward until the elbows are fully extended.\"; \"Don’t arch the back or rise off the seat.\"",
+  "ACE — Seated Shoulder Press (Exercise Library; equipamento: \"Barbell, Bench\"; a lista de equipamentos da biblioteca da ACE não tem Smith), https://www.acefitness.org/resources/everyone/exercise-library/43/seated-shoulder-press/ (o texto salvo no rascunho do Desenvolvimento com Barra): \"Sit in a shoulder-press bench and rack, and keep the back straight while gripping the bar with the hands a little wider than shoulder-width apart. Take the bar out of the rack and slowly lower to the front of the shoulders, stopping when the bar is about chin-height. Press the feet into the floor, squeeze the stomach muscles, and keep the elbows pointed forward while pressing the bar directly overhead. Slowly lower the bar to chin-height and repeat for the desired number of repetitions.\"",
+  "Paoli A, Marcolin G, Petrone N. Influence of different ranges of motion on selective recruitment of shoulder muscles in the sitting military press: an electromyographic study. J Strength Cond Res. 2010;24(6):1578-1583. doi:10.1519/JSC.0b013e3181d756ea — texto inteiro lido (PDF do repositório da Universidade de Pádua, cópia do Internet Archive): o \"sitting military press\" do estudo é com HALTERES, não com barra nem no Smith — \"we decided to focus our attention on the EMG activation of shoulder and arm muscles during the execution of the sitting military press with dumbbells\"; legenda da figura 1: \"Each subject performed the exercise with dumbbells and with palms forward.\"; resumo: \"Six experienced lifters performed 3 sets of 10 repetitions, each one with a different ROM: the first one with a final elbow angle of 90° (R1); the second with 135° (R2), and the last one with a final elbow angle of 180° (R3).\"; \"the use of the widest ROM increased the EMG activity of all the muscles selected with respect to the closest one\"",
+  "Saeterbakken AH, Fimland MS. Effects of body position and loading modality on muscle activity and strength in shoulder presses. J Strength Cond Res. 2013;27(7):1824-1831. doi:10.1519/JSC.0b013e318276b873 — texto inteiro lido (a página da LWW, cópia do Internet Archive de 06/12/2022): barra LIVRE e halteres (excluídos os que \"were not familiar with shoulder press exercises using free weights\"; nada de Smith); \"On audio command, the participants lowered the weights so that the center of the barbell or dumbbells was at the level of the acromion.\"; \"The barbell was lifted in front of the face.\"; \"The elbows were maintained in the frontal plane at all time.\"; \"Grip width of the barbell or dumbbells was self-selected.\"; \"The concentric phase ended when the elbows were fully extended\"; \"The barbell or dumbbells were pressed straight up\"; \"A standard bench (75° upward angle) was used in the seated tests with the gluteus and upper torso in contact with the bench. The legs were placed shoulder wide with a 90° angle at the knees\"; resumo: \"For deltoid anterior: ~11% lower for seated barbell versus dumbbell (p = 0.038)\"; \"In conclusion, the exercise with the greatest stability requirement (standing and dumbbells) demonstrated the highest neuromuscular activity of the deltoid muscles, although this was the exercise with the lowest 1-RM strength.\"",
+  "Cotterman ML, Darby LA, Skelly WA. Comparison of muscle force production using the Smith machine and free weights for bench press and squat exercises. J Strength Cond Res. 2005;19(1):169-176. doi:10.1519/14433.1 — lido só o resumo (PubMed 15705030; é do supino e do agachamento, não do desenvolvimento): \"The Smith machine (SM) (vertical motion of bar on fixed path; fixed-form exercise) and free weights (FWs) (free-form path) are commonly used strength training modes.\"; \"the bench 1RM was greater for FWs than the SM\"",
+  "Travas e ganchos do Smith: Titan Fitness, Smith Machine (https://titan.fitness/products/smith-machine, lido em 10/10/2026): \"Just twist to rack and unrack the bar.\"; \"With built-in safety catches, you can go all-out on bench presses, shoulder presses, or lunges without holding back.\"; \"Two adjustable safety catches\"; \"Barbell Shaft Diameter\" \"30mm\"; ExRx, Smith Shoulder Press (acima): \"Disengage bar by rotating bar back.\"; Basic-Fit, Smith Machine Safety Information (https://www.basic-fit.com/en-fr/smith-machine-safety-information, lido em 10/10/2026): \"For Smith Machines: ALWAYS set both adjustable stops to the same height when using this machine.\"; \"Visually ensure lifting bar catch rods are fully engaged and seated in the hooks before releasing the load and exiting the machine.\" — nenhuma fonte lida diz a altura da trava neste exercício: a da fábrica (e3.smith) fica 3 cm abaixo do carrinho com a barra no ponto mais baixo do curso, as 2 na mesma altura",
+  "Medidas da máquina: as do e3.smith (Agachamento no Smith, lote 4) — barra de 30 mm na pegada, trilhos a ±0,75 m, carrinhos de 16 cm, anilha de Ø 450 mm, travas 3 cm abaixo do carrinho no fim do curso; as fontes (Titan Fitness Smith Machine, Precor DPL0802, Gym Gear Elite Series) estão na ficha do Agachamento no Smith e no bloco SMITH do lib/equip3d.py; o banco é o e3.banco_inclinado do Desenvolvimento com Barra (encosto a 85°, assento a 0,44 m)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "costas apoiadas no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Basics (\"Shoulders and upper back set evenly on bench or back pad\"); NSCA, Essentials no resumo do CSCS (\"lean back so your body is in the five-point body contact position\"; \"Don’t arch the back or rise off the seat\")"
+   },
+   {
+    "nome": "glúteo e coxas apoiados no assento",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Basics (\"Buttocks on bench or seat\"); Saeterbakken e Fimland 2013 (\"with the gluteus and upper torso in contact with the bench\")"
+   },
+   {
+    "nome": "cabeça apoiada no encosto",
+    "equipamento": "banco",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Basics (\"Head in neutral position on bench or back pad\"); ExRx, Smith Shoulder Press (\"Pull head back slightly so bar does not make contact with head\")"
+   },
+   {
+    "nome": "barra nunca encosta no rosto, no queixo, no nariz, no pescoço nem na cabeça",
+    "equipamento": "smith_barra",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra nunca entra no nariz, no queixo, no rosto, na cabeça nem no pescoço); ExRx, Smith Shoulder Press (\"Pull head back slightly so bar does not make contact with head\"); Bodybuilding.com (\"an imaginary straight line from the tip of your nose to the barbell\"): a linha da barra passa a 14 mm da ponta do nariz"
+   },
+   {
+    "nome": "barra na frente do queixo, perto dele, embaixo",
+    "equipamento": "smith_barra",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     10,
+     35
+    ],
+    "t": 0.0,
+    "fonte": "Bodybuilding.com (\"lower the barbell until it is level with your chin\"); ACE, Seated Shoulder Press (\"stopping when the bar is about chin-height\")"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "barra longe do cabelo",
+    "equipamento": "smith_barra",
+    "de": "cabelo",
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra nunca entra na cabeça nem no cabelo)"
+   },
+   {
+    "nome": "estrutura do Smith (base, colunas, trilhos, pinos, travas) longe do banco",
+    "equipamento": "smith_estrutura",
+    "de": "banco",
+    "t": 0.0,
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do exercício: a estrutura do Smith não encosta no banco e o banco não atravessa a base nem as colunas (as 2 ficam paradas: basta o 1º quadro)"
+   },
+   {
+    "nome": "barra do Smith (carrinhos, ganchos, luvas e anilhas) longe do banco",
+    "equipamento": "smith_barra",
+    "de": "banco",
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do exercício: as anilhas não batem no banco"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos longe do rosto, da cabeça, do pescoço e dos ombros",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "Head",
+     "Neck",
+     "LeftArm",
+     "RightArm",
+     "Spine2"
+    ],
+    "cabelo": true,
+    "mm": [
+     5,
+     5000
+    ],
+    "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo; mão × rosto e ombro medida à parte)"
+   },
+   {
+    "nome": "antebraços não entram no peito, no pescoço nem na cabeça",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Spine2",
+     "Spine1",
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços estendidos em cima",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx, Smith Shoulder Press (\"Press bar upward until arms are extended overhead\"); Bodybuilding.com, Smith Machine Overhead Shoulder Press (\"lift it up so that your arms are fully extended\"); NSCA, Essentials no resumo do CSCS (\"Push the bar upward until the elbows are fully extended\"); Paoli 2010 (com halteres: a maior amplitude, com o cotovelo chegando a 180°, aumentou a atividade de todos os músculos medidos)"
+   },
+   {
+    "nome": "braços acima da cabeça em cima, um pouco à frente dela (a barra fica na linha do nariz)",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     145,
+     170
+    ],
+    "fonte": "ExRx, Smith Shoulder Press (\"until arms are extended overhead\"); Bodybuilding.com (\"sit slightly in behind the barbell so that there is an imaginary straight line from the tip of your nose to the barbell\"); Cotterman 2005 (\"vertical motion of bar on fixed path\"): no Smith a barra não volta pra cima da cabeça, então em cima o braço fica um pouco à frente (no Desenvolvimento com Barra, livre, 164/163°). Medida da fábrica: braço × eixo do tronco, 180 = braço na linha do tronco"
+   },
+   {
+    "nome": "cotovelo dobrado embaixo, barra na altura do queixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     120,
+     145
+    ],
+    "fonte": "Bodybuilding.com (\"Slowly begin to lower the barbell until it is level with your chin\"); ACE, Seated Shoulder Press (\"stopping when the bar is about chin-height\"). O ExRx (\"Lower bar to front of shoulders\"), a StrengthLog (\"top of your chest\") e a NSCA da barra livre (\"to touch the clavicles and anterior deltoids\") descem mais: no boneco (braço de 25,4 cm) a barra nas clavículas deixa o cotovelo a 138–141°, o antebraço 34–39° deitado e o punho dobrado 55–82° (sonda do Desenvolvimento com Barra, 10/10/2026)"
+   },
+   {
+    "nome": "cotovelos à frente do corpo embaixo",
+    "medida": "braco_plano",
+    "t": 0.0,
+    "graus": [
+     30,
+     75
+    ],
+    "fonte": "ACE, Seated Shoulder Press (\"keep the elbows pointed forward while pressing the bar\"). Medida: o braço visto de cima do tronco, 0 = pro lado, 90 = pra frente"
+   },
+   {
+    "nome": "antebraço em pé embaixo (cotovelo embaixo da barra)",
+    "medida": "antebraco_vertical",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NSCA, Basics (\"Keep elbows directly under hands throughout the entire lift\"); NSCA, Essentials no resumo do CSCS (\"Keep the wrists stiff and the forearms parallel to each other\")"
+   },
+   {
+    "nome": "antebraço quase em pé o movimento todo",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "NSCA, Basics (idem). Em cima, com a barra na linha do nariz (Bodybuilding.com) e o braço quase esticado, o antebraço deita um pouco pra frente junto com o braço (~15°)"
+   },
+   {
+    "nome": "pegada um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.3,
+     1.7
+    ],
+    "fonte": "ExRx, Smith Shoulder Press (\"Grasp bar with wide overhand grip\"; \"Range of motion will be compromised if grip is too wide\"); NSCA (\"slightly wider than shoulder-width\"); ACE (\"a little wider than shoulder-width apart\"). Medida: entre as mãos ÷ entre as articulações dos ombros (0,40 m no boneco); a do Desenvolvimento com Barra"
+   },
+   {
+    "nome": "pegada pronada (palma pra frente, não neutra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "ExRx, Smith Shoulder Press (\"overhand grip\"); Bodybuilding.com (\"Grab the barbell with the palms facing forward\"); NSCA, Essentials no resumo do CSCS (\"Grasp the bar with a closed, pronated grip\"): 0 = palma pra frente, 90 = palmas uma pra outra (neutra)"
+   },
+   {
+    "nome": "punho firme, pouco estendido",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -40,
+     5
+    ],
+    "fonte": "NSCA, Essentials no resumo do CSCS (\"Keep the wrists stiff\"). Medida: − = estendido (a mão pra trás)"
+   },
+   {
+    "nome": "punho sem desvio de lado",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "amplitude normal do punho (limites.py: desvio radial 20°, AAOS — Norkin & White) com a pegada pronada"
+   },
+   {
+    "nome": "tronco apoiado no encosto, sem arquear",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA, Essentials no resumo do CSCS (\"Don’t arch the back or rise off the seat\"); NSCA, Basics (\"Engage the core to avoid arching the back to complete the lift\"). Medida: quadril → base do pescoço × vertical (encosto a 85°)"
+   },
+   {
+    "nome": "cabeça apoiada no encosto, na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA, Basics (\"Head in neutral position on bench or back pad\"); ExRx, Smith Shoulder Press (\"Pull head back slightly so bar does not make contact with head\"): a cabeça fica no encosto, com o pescoço estendido 14° até a nuca encostar (dt.inclinar)"
+   }
+  ]
+ }
+}
