@@ -123,6 +123,12 @@ describe("Configurações › Recebimento — W1 (jeito 2 e InfinitePay)", () =>
     expect(h.aba.fechar).toHaveBeenCalled();
     fireEvent.click(document.querySelector("[data-infinitepay-ativar]")!);
     expect(h.externo).toHaveBeenCalledWith(ATIVAR);
+    // a 390 o rótulo longo quebra a linha dentro do cartão, com os 44 px do toque (o pq-botao sozinho é nowrap com 44 px fixos — passava
+    // da borda em 11/10; a medida de verdade é a do e2e/w1/telas.py, a 390)
+    for (const b of ["[data-infinitepay-testar]", "[data-infinitepay-ativar]"]) {
+      const classes = document.querySelector(b)?.className.split(/\s+/) ?? [];
+      expect(classes).toEqual(expect.arrayContaining(["whitespace-normal", "h-auto", "min-h-[44px]"]));
+    }
   });
   it("sair do Mercado Pago com automática: pede o OK do app e manda cancelar_automaticas", async () => {
     h.ler.mockResolvedValue(REC({ mp_liberado: true, conta: { ...REC().conta, modo: "mercadopago" } }));

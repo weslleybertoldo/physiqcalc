@@ -22,6 +22,9 @@ import { OpcoesPilula, SecaoForm, type OpcaoPilula } from "./pecas/Form";
 
 const TAG_RUIM = "Cole a sua InfiniteTag sem o $ (só letras, números, ponto, traço ou _).";
 const ERROS_DO_CAMPO = new Set(["infinitetag_invalida", "infinitepay_recusou", "infinitepay_checkout_desligado", "sem_infinitetag"]);
+/** O botão de rótulo longo (o "Testar" e o "Ativar"): o pq-botao é nowrap com 44 px fixos e, a 390, passava da borda do cartão (11/10).
+ *  Aqui a linha quebra dentro da caixa e a altura mínima de 44 px do toque fica (o min-h-[44px] + py-2 das listas do app). */
+const BOTAO_LONGO = "h-auto min-h-[44px] self-start whitespace-normal py-2 text-left";
 
 /**
  * Configurações › Recebimento (spec 4.6 — W6; C51, N-24, R15, R16, P13): como os alunos pagam — Pix na sua chave, InfinitePay (W1: a
@@ -159,11 +162,11 @@ export default function Recebimento() {
                   <p className="text-[12px] text-texto-2">É o nome da sua conta no app da InfinitePay (começa com $). O dinheiro cai direto lá, sem taxa do Physiq.</p>
                   {erroTag && <MensagemForm data-infinitetag-erro>{erroTag}</MensagemForm>}
                   {ativar && (
-                    <Botao variante="g" icone={ExternalLink} className="self-start" onClick={() => void abrirLinkExterno(ativar)} data-infinitepay-ativar>
+                    <Botao variante="g" icone={ExternalLink} className={BOTAO_LONGO} onClick={() => void abrirLinkExterno(ativar)} data-infinitepay-ativar>
                       Ativar o checkout externo na InfinitePay
                     </Botao>
                   )}
-                  <Botao variante="g" icone={ExternalLink} className="self-start" disabled={testando} onClick={() => void testar()} data-infinitepay-testar>
+                  <Botao variante="g" icone={ExternalLink} className={BOTAO_LONGO} disabled={testando} onClick={() => void testar()} data-infinitepay-testar>
                     {testando ? "Abrindo…" : "Testar (abre a sua página, sem cobrar)"}
                   </Botao>
                 </div>

@@ -4,9 +4,10 @@
 Passos (em ordem; a massa é a conta do prof2 — "Rafael Lima" — com o aluno2):
   1 recebimento   o dono em Configurações › Recebimento: a tela NÃO pede nada ao banco (nenhuma chamada a /rest/v1/recebimento_chaves nem
                   /rest/v1/contas — o jeito 2 medido na rede, nos passos 1 e 2); chave Pix: adicionar, ligar, excluir (com a confirmação
-                  do app) e a chave que estava ligada antes, ligada de novo
+                  do app) e a chave que estava ligada antes, ligada de novo; no print a 390, cada botão da tela dentro do cartão
   2 infinitepay   escolher InfinitePay, colar a InfiniteTag de teste com $, "Testar" abre uma aba da InfinitePay (a url é conferida; a aba é
-                  fechada sem pagar), "Salvar a forma" → o chip INFINITEPAY
+                  fechada sem pagar), "Salvar a forma" → o chip INFINITEPAY; no print a 390, cada botão dentro do cartão (o "Testar"
+                  passou da borda em 11/10)
   3 planos        Financeiro › Planos: "Período todo (Pix ou cartão até 12×)" no plano com à vista e cartão parcelado (P-B), uma vez só no
                   cartão; no painel do plano (Editar, sem salvar) o à vista com esse nome e o cartão parcelado "não aceita"
   4 app_pagar     o aluno em Pagamentos: "Pagar R$ 10,00" → a folha da InfinitePay → a aba da InfinitePay (conferida e fechada) →
@@ -40,7 +41,8 @@ GET do webhook — sem elas, não começa); a InfiniteTag de teste em ~/.physiq-
 Uso: python3 e2e/w1/telas.py --base local|staging|prod [--loja] [--porta 5173] [--canal msedge] [--sinal ARQ] [--seco | --limpar]
   --seco    nada vai ao banco nem à API (a rede deste processo só fala com o build servido; no Edge, os pedidos à API e à InfinitePay são
             barrados): o roteiro contra o código (cada data-* dos seletores e cada texto esperado), as funções puras, as contas e a
-            InfiniteTag (sem login), a porta no CORS, o build servido (health.json: schema e canal) e a /entrar no Edge
+            InfiniteTag (sem login), a porta no CORS, o build servido (health.json: schema e canal), a /entrar no Edge e, com o CSS do
+            build, a checagem do botão dentro do cartão a 390 (o "Testar" e o "Ativar" do Recebimento quebram a linha)
   --limpar  só desfaz uma rodada que caiu no meio (pelos 2 arquivos de estado)
   --sinal   o arquivo-sinal da trava do banco do staging (dividido entre sessões): sem ele a rodada não começa; se ele sumir no meio, a
             rodada para ANTES do próximo passo, desfaz a massa e sai com 3
@@ -456,6 +458,34 @@ JS_A_VISTA = r"""(e) => {
 }"""
 
 
+# Cada botão da tela DENTRO do cartão (a 390): a caixa do botão fica dentro da caixa mais perto dele — o cartão ([data-cartao]) ou uma
+# caixa com borda dos 2 lados (a da InfinitePay, o item da chave Pix) — e o rótulo não passa da borda do próprio botão. Em 11/10 o "Testar
+# (abre a sua página, sem cobrar)" passou da borda do cartão a 390 (o pq-botao é nowrap com 44 px fixos) e a medida da largura da página não
+# pegou: o botão não passava da TELA. → a lista do que passa (vazia = tudo dentro).
+JS_BOTOES_FORA = r"""(raiz) => {
+  const fora = [];
+  for (const b of raiz.querySelectorAll('button, [role=button], a.pq-botao')) {
+    const r = b.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue;
+    let c = b.parentElement;
+    while (c && c !== raiz && !c.hasAttribute('data-cartao')) {
+      const s = getComputedStyle(c);
+      if (parseFloat(s.borderLeftWidth) > 0 && parseFloat(s.borderRightWidth) > 0) break;
+      c = c.parentElement;
+    }
+    const k = (c || raiz).getBoundingClientRect();
+    const passa = Math.max(k.left - r.left, r.right - k.right, k.top - r.top, r.bottom - k.bottom);
+    const rotulo = b.scrollWidth - b.clientWidth;
+    if (passa > 0.5 || rotulo > 1) {
+      const nome = b.getAttributeNames().find((n) => n.startsWith('data-') && n !== 'data-state') || (b.textContent || '').trim().slice(0, 40);
+      fora.push(passa > 0.5 ? nome + ' passa ' + passa.toFixed(1) + ' px da caixa' : nome + ': o rótulo passa ' + rotulo + ' px da borda do botão');
+    }
+  }
+  return fora;
+}"""
+RAIZ_RECEBIMENTO = "[data-config-aba='recebimento']"
+
+
 def enquadrar(pg, alvo: str) -> str | None:
     """Rola o alvo para o MEIO da tela antes do print (o do e2e/hml18/largura.py) → None se ele ficou à vista, senão o que está por cima.
     O scroll_into_view_if_needed não servia: ele só rola quando o alvo está fora da tela — o que já está nela, por baixo da barra de baixo
@@ -483,6 +513,54 @@ def enquadramento_no_edge(R, nav) -> None:
     finally:
         ctx.close()
     R.ok(por_cima is None, f"seco: o print põe o alvo à vista, fora de baixo da barra de baixo do celular ({por_cima or 'à vista'})")
+
+
+def botoes_no_edge(R, nav, base: str) -> None:
+    """--seco: a checagem do botão dentro do cartão (JS_BOTOES_FORA) com o CSS do BUILD SERVIDO, a 390 × 844, numa página de mentira com a
+    caixa da InfiniteTag do Recebimento na mesma largura (o px-4 do painel, o cartão p-5 e a caixa px-3.5): o botão de rótulo longo como era
+    em 11/10 (só o pq-botao: nowrap e 44 px) passa da caixa e é pego; com as classes do BOTAO_LONGO do Recebimento.tsx, o "Testar" e o
+    "Ativar" quebram a linha dentro da caixa, com a altura mínima de 44 px do toque; o rótulo que passa da borda do próprio botão (w-full)
+    também é pego. O "Ativar" só aparece com o erro do checkout desligado — a rodada com banco não chega nele."""
+    m = re.search(r'const BOTAO_LONGO = "([^"]+)"', (REPO / "src" / "painel" / "configuracoes" / "Recebimento.tsx").read_text(encoding="utf-8"))
+    if not m:
+        R.ok(False, "seco: o BOTAO_LONGO (as classes do botão de rótulo longo) não está no Recebimento.tsx")
+        return
+    try:
+        with urllib.request.urlopen(base + "/", timeout=15) as r:
+            estilos = re.findall(r'<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"', r.read().decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        R.ok(False, f"seco: o index.html do build servido não abriu ({type(e).__name__}: {str(e)[:160]})")
+        return
+    icone = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor'><path d='M15 3h6v6M10 14 21 3'/></svg>"
+    testar, ativar = "Testar (abre a sua página, sem cobrar)", "Ativar o checkout externo na InfinitePay"
+    botoes = (("data-antes", "self-start", testar), ("data-testar", m.group(1), testar), ("data-ativar", m.group(1), ativar),
+              ("data-largo", "w-full", ativar))
+    pagina = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
+              + "".join(f"<link rel='stylesheet' href='{x}'>" for x in estilos)
+              + "</head><body><div id='raiz' class='px-4 pt-4'><div data-cartao class='pq-cartao p-5'>"
+              + "<div class='flex flex-col gap-2 rounded-2xl border border-linha bg-superficie px-3.5 py-3'>"
+              + "".join(f"<button type='button' class='pq-botao pq-botao-g {c}' {a}>{icone}{t}</button>" for a, c, t in botoes)
+              + "</div></div></div></body></html>")
+    ctx = nav.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, service_workers="block")
+    try:
+        ctx.route(base + "/__w1_botoes", lambda route, _req=None: route.fulfill(status=200, content_type="text/html; charset=utf-8", body=pagina))
+        pg = ctx.new_page()
+        pg.goto(base + "/__w1_botoes", wait_until="load", timeout=60_000)
+        pg.evaluate("document.fonts.ready.then(() => true)")
+        fora = pg.locator("#raiz").evaluate(JS_BOTOES_FORA)
+        alturas = dict(pg.evaluate("[...document.querySelectorAll('button')].map((b) => [b.getAttributeNames().find((n) => n.startsWith('data-')), "
+                                   "Math.round(b.getBoundingClientRect().height)])"))
+    except Exception as e:  # noqa: BLE001
+        R.ok(False, f"seco: a página dos botões a 390 não abriu ({type(e).__name__}: {str(e)[:160]})")
+        return
+    finally:
+        ctx.close()
+    pegos = {x.split(" ")[0].rstrip(":") for x in fora}
+    R.ok(bool(estilos) and pegos == {"data-antes", "data-largo"},
+         f"seco: a 390, com o CSS do build ({len(estilos)} folha(s)), o botão nowrap que passa do cartão e o rótulo que passa do botão são pegos; o "
+         f"'Testar' e o 'Ativar' com o BOTAO_LONGO ficam dentro ({'; '.join(fora) or 'nada pego'})")
+    R.ok(all(alturas.get(a, 0) >= 44 for a in ("data-testar", "data-ativar")) and alturas.get("data-ativar", 0) > 44,
+         f"seco: o 'Testar' e o 'Ativar' quebram a linha e ficam com pelo menos 44 px de altura (o toque) (alturas {alturas})")
 
 
 class Tela(B.Celular):
@@ -539,9 +617,16 @@ class Tela(B.Celular):
     def toasts(self) -> str:
         return self.textos("[data-sonner-toast]")
 
-    def foto(self, nome: str, alvo: str | None = None, borrar: str | None = None) -> str:
+    def foto(self, nome: str, alvo: str | None = None, borrar: str | None = None, botoes: str | None = None) -> str:
         """O print em <pasta>/<nome>.png com o elemento à vista; antes, a medida: nada passa da largura (scrollWidth da página).
-        borrar: o seletor do que sai borrado (a InfiniteTag; na produção, as listas e as chaves)."""
+        borrar: o seletor do que sai borrado (a InfiniteTag; na produção, as listas e as chaves).
+        botoes: a raiz da tela em que cada botão fica dentro do cartão — conferido a 390 (JS_BOTOES_FORA)."""
+        fora = None
+        if botoes and self.largura == 390:
+            try:
+                fora = self.pg.locator(botoes).first.evaluate(JS_BOTOES_FORA, timeout=5000)
+            except Exception as e:  # noqa: BLE001 — a raiz sumiu no meio
+                fora = [f"a raiz {botoes} sumiu ({type(e).__name__})"]
         if alvo:
             enquadrar(self.pg, alvo)
         if borrar:
@@ -576,16 +661,18 @@ class Tela(B.Celular):
         vista = "" if not alvo else ("; o alvo à vista" if por_cima is None else f"; o alvo por baixo de {por_cima}")
         self.R.ok(passa is not None and passa <= 0 and por_cima is None,
                   f"   print {arq.name} ({self.largura} px): nada passa da largura (passa {passa} px{raizes}){vista}")
+        if fora is not None:
+            self.R.ok(not fora, f"   print {arq.name}: cada botão da tela dentro do cartão ({'; '.join(fora)[:300] or 'todos dentro'})")
         CTX["prints"].append(str(arq))
         return str(arq)
 
-    def fotos(self, nome: str, alvo: str | None = None, borrar: str | None = None) -> None:
+    def fotos(self, nome: str, alvo: str | None = None, borrar: str | None = None, botoes: str | None = None) -> None:
         """A mesma tela no computador (1280: <nome>.png) e no celular (390: <nome>-390.png); volta para a largura de antes."""
         antes = self.largura
         for largura, sufixo in ((1280, ""), (390, "-390")):
             if self.largura != largura:
                 self.largura_(largura)
-            self.foto(nome + sufixo, alvo, borrar)
+            self.foto(nome + sufixo, alvo, borrar, botoes)
         if self.largura != antes:
             self.largura_(antes)
 
@@ -723,7 +810,7 @@ def passo_recebimento(R) -> None:
          f"1. ligar: a chave nova ligada e só ela — 1 por conta ({t.toasts()[:90]!r})")
     ligadas = [x["id"] for x in API.sql(f"select id::text as id from {S}.recebimento_chaves where conta_id = '{conta}' and ativa")]
     R.ok(ligadas == [nova["id"]], f"no banco: só a chave nova ligada ({len(ligadas)} ligada(s))")
-    t.fotos("1_recebimento", item)
+    t.fotos("1_recebimento", item, botoes=RAIZ_RECEBIMENTO)
     t.pg.locator(item).locator("[data-btn-excluir-recebimento]").first.click()
     R.ok(confirmar_no_app(t), "1. excluir: a confirmação do app (hml-18a) → Excluir")
     R.ok(t.esperar(lambda: t.pg.locator(item).count() == 0, 30), f"1. excluída: a chave some da lista ({t.toasts()[:90]!r})")
@@ -763,7 +850,7 @@ def passo_infinitepay(R) -> None:
                      left join {S}.recebimento_integracoes i on i.conta_id = c.id and i.provedor = 'infinitepay' where c.id = '{CTX['conta']}'""")
     R.ok(bool(co) and co["modo"] == "infinitepay" and co["handle"] == tag,
          f"no banco: a conta na InfinitePay com a InfiniteTag de teste (forma {co and co['modo']})")
-    t.fotos("2_recebimento_infinitepay", "[data-recebimento-infinitepay]", borrar="[data-infinitetag]")
+    t.fotos("2_recebimento_infinitepay", "[data-recebimento-infinitepay]", borrar="[data-infinitetag]", botoes=RAIZ_RECEBIMENTO)
     R.ok(CTX.get("rede") == [], f"2. jeito 2 (passos 1 e 2): nenhuma chamada do navegador a recebimento_chaves/contas ({CTX.get('rede')})")
 
 
@@ -981,7 +1068,7 @@ def rodada_prod(R, a, base: str) -> int:
                 R.ok(tem_ip, "p1. o master vê a InfinitePay (a flag desligada não segura o master)")
             else:
                 R.linha("   (a conta de teste não é master na produção — hml-02/H-04: o que vale é a flag esconder a opção dos personais)")
-            t.fotos("p1_recebimento", "[data-secao='recebimento-modo']", borrar=borrar_prod)
+            t.fotos("p1_recebimento", "[data-secao='recebimento-modo']", borrar=borrar_prod, botoes=RAIZ_RECEBIMENTO)
             if master:
                 t.ir("/master/integracoes")
                 R.ok(t.esperar(lambda: t.tem("[data-kpi='InfinitePay']"), 60), "p2. master › Integrações: o KPI InfinitePay")
@@ -1157,6 +1244,7 @@ def seco(R, a, base: str, producao: bool) -> int:
                 R.linha(f"   a /entrar não abriu: {type(e).__name__}: {str(e)[:160]}")
             ctx.close()
             enquadramento_no_edge(R, nav)
+            botoes_no_edge(R, nav, base)
         finally:
             nav.close()
     R.ok(entrou and faixa == (not producao),
