@@ -1,0 +1,282 @@
+{
+ "uuid": "c50963bf-1d9d-5b0c-a888-929c7c942a23",
+ "nome": "Bom Dia com Barra",
+ "cena": "bom_dia_com_barra",
+ "grupo": "Posterior de Coxa",
+ "subgrupo": "Isquiotibiais · eretores da espinha · glúteo máximo",
+ "padrao_movimento": "terra_stiff",
+ "equipamento": "barra",
+ "variacao": "bom dia",
+ "alvos": [
+  "posterior",
+  "lombar",
+  "gluteo"
+ ],
+ "auxiliares": [
+  "adutores",
+  "trapezio",
+  "abdomen",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 120,
+  "el": 10,
+  "dist": 4.5,
+  "alvo": [
+   0,
+   0.05,
+   0.85
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.4,
+  "alvo": [
+   0,
+   0.05,
+   0.85
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Em pé, com a barra apoiada nas costas em cima do trapézio (na base do pescoço, sem encostar nele) e as mãos fechadas na barra um pouco mais abertas que os ombros, com o polegar dando a volta; escápulas juntas, peito alto e a cabeça um pouco levantada, na linha da coluna; os pés na largura dos ombros, com as pontas um pouco pra fora, e os joelhos levemente dobrados (uns 20°). Leva o quadril pra trás e inclina o tronco à frente com a coluna neutra — a barra vai junto com o tronco —, com os joelhos no mesmo ângulo e os pés chapados no chão (o peso vai do meio do pé um pouco pra trás, rumo aos calcanhares), até o tronco chegar perto da horizontal ou até sentir o posterior da coxa alongar, sem arredondar a lombar; volta estendendo o quadril até ficar em pé, apertando o glúteo no fim, devagar e sem tranco. Cuidado com a lombar: com a barra nas costas e o tronco quase deitado, a lombar trabalha muito (por quilo de barra, os eretores fazem mais força do que no Stiff) e arredondar a lombar embaixo aumenta o risco de lesão — é um exercício pra quem já domina o movimento de levar o quadril pra trás (nível intermediário a avançado): comece com carga bem leve e aumente aos poucos, e desça só até o alongamento do posterior da coxa, sem a lombar arredondar. Quem tem histórico de problema na lombar pode ter que evitar este exercício; o Stiff, com a barra nas mãos perto do corpo, trabalha os mesmos músculos com menos carga na coluna.",
+ "cinesiologia": {
+  "plano": "sagital, cadeia cinética fechada",
+  "articulacoes": "quadril (flexão na descida, extensão na subida); joelhos levemente dobrados (~20°) e quase parados; tornozelos indo um pouco pra flexão plantar embaixo (a canela vai pra trás com o quadril); coluna neutra (isometria); ombros, cotovelos e punhos parados, segurando a barra nas costas",
+  "agonistas": "isquiotibiais (semitendíneo, semimembranáceo e bíceps femoral) e glúteo máximo na extensão do quadril",
+  "sinergistas": "adutor magno",
+  "estabilizadores": "eretores da espinha (isometria forte: o peso nas costas fica longe do quadril), reto abdominal e oblíquos, trapézio e romboides (escápulas juntas fazendo o apoio da barra) e latíssimo do dorso",
+  "fases": "descida excêntrica (o quadril vai pra trás), subida concêntrica"
+ },
+ "referencias": [
+  "free-exercise-db (domínio público), Good Morning — o \"fonte_en\" do catálogo. https://github.com/yuhonas/free-exercise-db/blob/main/exercises/Good_Morning.json (lido em 11/10/2026): \"Begin with a bar on a rack at shoulder height. Rack the bar across the rear of your shoulders as you would a power squat, not on top of your shoulders. Keep your back tight, shoulder blades pinched together, and your knees slightly bent. Step back from the rack.\"; \"Begin by bending at the hips, moving them back as you bend over to near parallel. Keep your back arched and your cervical spine in proper alignment.\"; \"Reverse the motion by extending through the hips with your glutes and hamstrings. Continue until you have returned to the starting position.\"; \"level\": \"intermediate\"; músculos: primary hamstrings; secondary abdominals, glutes, lower back. (A foto 1.jpg do mesmo item mostra a barra na base do pescoço, o quadril bem atrás dos calcanhares e os joelhos dobrados — observação nossa.)",
+  "ExRx.net — Barbell Good-morning (Weight Exercises › Hamstrings), https://exrx.net/WeightExercises/Hamstrings/BBGoodMorning (cópia do Internet Archive de 22/01/2026 — o site responde 403 —, lida em 11/10/2026): Preparation \"Position barbell on back of shoulders and grasp bar to sides.\"; Execution \"Keeping back straight, bend hips to lower torso forward until parallel to floor. Raise torso until hips are extended. Repeat.\"; Comments \"Begin with very light weight and add additional weight gradually to allow adequate adaptation. Throughout lift, keep back and knees straight. Do not lower weight beyond mild stretch through hamstrings. Full range of motion will vary from person to person depending on flexibility. Also see Bent Knee Goodmorning emphasizing Glutes.\"; músculos: Target \"Hamstrings\"; Synergists \"Gluteus Maximus\", \"Adductor Magnus\"; Stabilizers \"Erector Spinae\"; Antagonist Stabilizers \"Rectus Abdominis\", \"Obliques\".",
+  "ExRx.net — Barbell Bent-knee Good-morning (Weight Exercises › Glute), https://exrx.net/WeightExercises/GluteusMaximus/BBBentKneeGoodMorning (cópia do Internet Archive de 16/12/2024, lida em 11/10/2026): Execution \"Keeping back straight, bend hips to lower torso forward until parallel to floor. Bend knees slightly during descent. Raise torso until hips are extended. Repeat.\"; Comments \"Begin with very light weight and add additional weight gradually to allow adequate adaptation. Throughout lift, keep back straight. Knees will have to bend more with those with less hamstring flexibility. Knees can be kept bent throughout movement.\"",
+  "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4), https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-4 (lido em 11/10/2026): \"Major muscles involved: Gluteus maximus, semimembranosus, semitendinosus, biceps femoris, erector spinae\"; Starting position: \"Grasp the bar with a closed, pronated grip.\", \"Step under the bar and position the feet parallel to each other.\", \"Place the bar in a balanced position on the upper back and shoulders above the posterior deltoids at the base of the neck (using a handgrip only slightly wider than shoulder-width).\", \"Lift the elbows up to create a “shelf” for the bar using the upper back and shoulder muscles.\", \"Hold the chest up and out.\", \"Tilt the head slightly up.\", \"Position the feet shoulder-width apart (or wider), even with each other, with the toes pointed slightly outward.\"; Downward movement phase: \"Begin the exercise by slowly permitting the hips to flex. The buttocks should move straight back during the descent.\", \"Maintain a neutral spine and a high elbow position; don’t round the upper back during the descent.\", \"Keep the knees slightly flexed and the feet flat on the floor during the descent.\", \"Continue the downward movement until the torso is approximately parallel to the floor.\"; Upward movement phase: \"Raise the bar by extending the hips.\", \"Keep the back neutral and the knees slightly flexed during the ascent.\", \"Continue extending the hips to reach the starting position.\"",
+  "Ross S, Comfort P, McMahon JJ. The Good Morning – Exercise Technique and Exercise Selection Principles. Strength Cond J. 2024;46(3):378-382. doi:10.1519/SSC.0000000000000802 (manuscrito aceito, CC BY-NC-ND, https://research.edgehill.ac.uk/ws/portalfiles/portal/72320955/Exercise_Technique_-_The_Good_Morning_SCJ_Accepted.pdf, lido em 11/10/2026): \"position the barbell across the upper trapezius (FIGURE 1.1) in a high bar position (8, 16) or across the approximate level of the spine of the scapula in a low bar position\"; \"The hands should be placed equidistant from the center of the barbell.\"; \"To create the ‘T position’, the scapulae should be retracted and depressed, and the hands rotated backwards towards the floor. The elbows should be slightly abducted from the torso and pointing towards the ground.\"; \"feet approximately hip-width apart and facing forwards or slightly externally rotated\"; \"Hip flexion during the good morning should be performed through a hip hinge action in which the lifter pushes the pelvis backwards. As they start to flex the hip, the torso moves forward towards a parallel (or near parallel, depending on the individual’s range of motion) position relative to the ground\"; \"There should be a slight flexion of the knee (~20°), similar to that of a RDL.\"; \"the cue from the coach should be to maintain the same knee joint angle throughout the lift and minimise any increase in flexion angle as the lifter descends through the eccentric phase.\"; \"Given that the knee is flexed, the shin should be slightly forward as the ankle moves into a more dorsiflexed position from the upright position.\"; \"The eccentric phase ends when the lifter can no longer flex the hips due to tension in the hamstrings\"; \"During the eccentric phase, the lifter’s bodyweight should shift posteriorly from the mid-foot in upright position, towards the heels at the end of the eccentric phase.\"; \"Maintaining the slightly flexed knee joint position as the hips move backwards and the torso leans forward allows the ground reaction force vector to remain positioned in front of the knee joint center, thus creating a knee flexor torque.\"; \"the lifter should be encouraged to maintain as neutral a spine position as possible\"; \"a completely neutral spinal curvature is likely to be unattainable\"; \"the lifter should maintain a neutral spine and a relatively fixed angle knee joint angle as the hips move forward and the torso returns to an upright standing position, with the lifter’s bodyweight shifting from the rear of the feet to mid-foot. At the top of the movement, the lifter should be cued to focus on contraction of the gluteal muscles.\"; \"As the barbell is positioned on the upper trapezius in the good morning, the barbell is displaced anteriorly to the foot in the sagittal plane. In contrast, in the RDL the center of mass of the barbell remains approximately over the mid-foot.\"; \"The good morning is often programmed as exercise to target the spinal erectors, gluteal, and hamstring muscles.\"; erector spinae por kg de barra \"significantly higher (p ≤0.05; d = 3.05) in the good morning (9.43 ± 2.21 N.kg-1) than in the RDL (4.61 ± 0.32 N.kg-1)\".",
+  "Vigotsky AD, Harper EN, Ryan DR, Contreras B. Effects of load on good morning kinematics and EMG activity. PeerJ. 2015;3:e708. doi:10.7717/peerj.708 (texto completo no PMC, PMC4304869, lido em 11/10/2026): \"The GM is performed by placing a barbell on one’s upper trapezius, slightly higher than the barbell positioning in a back squat, with feet about shoulder width apart, and bending forward from the hips until the trunk is approximately parallel with the floor, followed by hip extension to return to starting position\"; \"The barbell was placed on participants’ upper trapezius, slightly above the level of the acromion (high bar position)\"; \"All participants were experienced with the GM\"; \"If a participant reported pain, discomfort, or failed to perform the movement correctly, that participant was excluded.\"; \"Knee flexion increased with load on all trials.\"; Tabela 2 (no fundo, 50/60/70/80/90% 1RM): \"Lumbar flexion (°) 27.5 / 27.2 / 25.0 / 25.0 / 25.0\", \"Hip flexion (°) 75.0 / 75.3 / 75.7 / 75.8 / 74.7\", \"Knee flexion (°) 17.1 / 19.1 / 20.1 / 23.1 / 24.8\", \"Ankle plantar flexion (°) 121.1 / 120.3 / 120.2 / 119.7 / 119.5\"; \"We have shown that the spine does not remain neutral during the GM exercise and in fact moves through flexion and extension.\"",
+  "McAllister MJ, Hammond KG, Schilling BK, Ferreria LC, Reed JP, Weiss LW. Muscle activation during various hamstring exercises. J Strength Cond Res. 2014;28(6):1573-1580 (texto completo, lido em 11/10/2026) — o good morning é um dos 4 exercícios medidos, a 85% de 1RM: \"The good morning exercise was initiated from 180° hip extension (upright position) with a York Olympic barbell (20 kg) rested on the superior aspect of the trapezius. Eccentric hip flexion was performed until the torso was parallel with the floor (approximately 90° hip flexion). Concentric hip extension completed the lift until each subject returned to an upright position.\"; o RDL \"was mechanically similar to the good morning, with the difference being the resting position of the barbell.\"",
+  "NASM Exercise Library — Good Mornings, https://www.nasm.org/resource-center/exercise-library/good-mornings (lido em 11/10/2026): \"This challenging exercise is ideal for intermediate to advanced exercisers seeking improved hip hinging mechanics and posterior chain development.\"; \"Position your grip slightly wider than shoulder-width apart with the barbell secure on your shoulders.\"; \"Hinge at the hips by pushing them backward while maintaining a neutral spine and only slight knee bend.\"; \"Lower your torso forward until you feel adequate hamstring stretch and posterior chain tension.\"; erros: \"Excessive spinal flexion or rounding the lower back, which removes stability and increases injury risk\", \"Bending the knees excessively, which converts movement into a squat variation\", \"Jerky movements or excessive momentum, which reduces posterior chain tension\", \"Using excessive weight that compromises spinal position or hip hinging mechanics\"; \"typically reaching 45-90 degrees of forward lean\"; músculos: primários \"Hamstring Group\", \"Glutes\"; secundários \"Erector Spinae, Adductors, Trapezius\".",
+  "Gould C (CSCS). Barbell Good Mornings: Is The Risk Worth It? DrJohnRusin.com, 02/02/2022, https://drjohnrusin.com/barbell-good-mornings-is-the-risk-worth-it/ (lido em 11/10/2026): \"the primary risk of barbell good mornings stems from the fact that they can impose a boatload of shear force onto the spine\"; \"it’s tough to avoid rounding at the lumbar spine at the bottom of the movement\"; \"while another 3 may have to stay away due to previous back issues. Of the 12 individuals left, 8 might find that their technique breaks down when they go heavy, in which case they should stick to light-to-moderate loads.\"; o RDL é quase igual \"albeit with an anterior load that reduces shear force and mitigates the risk of buckling under a bar\".",
+  "Amplitude normal do tornozelo: Alazzawi S et al. World J Orthop 2017;8(1):21-29, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°), a do lib/tecnica3d.py (medida tornozelo: o boneco em pé mede ~76°; 0–50° de flexão plantar = ~76° a ~26°).",
+  "Barra nas costas, mãos, escápulas e polegar novo: os do Agachamento Sumô com Barra (lote 8; ficha 2ba6fa20-…) e do Afundo com Barra (lote 11): BARRA_NO_TRAPEZIO, GRIP_X, RETRAI e a postura fixa POLEGAR_VOLTA do Agachamento no Smith."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "barra apoiada em cima do trapézio",
+    "equipamento": "barra",
+    "partes": [
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -4,
+     5
+    ],
+    "fonte": "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Place the bar in a balanced position on the upper back and shoulders above the posterior deltoids at the base of the neck\"); Vigotsky et al. 2015 (\"upper trapezius, slightly above the level of the acromion (high bar position)\"); McAllister et al. 2014 (\"rested on the superior aspect of the trapezius\"); Ross, Comfort e McMahon 2024 (Strength Cond J, NSCA) (\"across the upper trapezius ... in a high bar position\"). Medida: barra × pele do trapézio e dos ombros, −4 a 5 mm (a zona do Agachamento Sumô com Barra)"
+   },
+   {
+    "nome": "a barra não encosta no pescoço",
+    "equipamento": "barra",
+    "partes": [
+     "Neck"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra nunca entra no pescoço, nem com o tronco deitado)"
+   },
+   {
+    "nome": "a barra não encosta na cabeça",
+    "equipamento": "barra",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra nunca entra na cabeça: com o tronco à frente a cabeça fica perto dela)"
+   },
+   {
+    "nome": "a barra e as anilhas longe das pernas e da cintura",
+    "equipamento": "barra",
+    "partes": [
+     "Hips",
+     "Spine",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "mm": [
+     50,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (as anilhas não batem no corpo)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "antebraços não encostam no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "pedido do Weslley (os cotovelos não entram no tronco)"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "a barra não encosta no cabelo",
+    "equipamento": "barra",
+    "de": "cabelo",
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (a barra nunca entra na cabeça nem no cabelo)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tronco em pé no começo",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "McAllister et al. 2014 (\"initiated from 180° hip extension (upright position)\"); NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Continue extending the hips to reach the starting position.\"); ExRx (\"Raise torso until hips are extended.\")"
+   },
+   {
+    "nome": "tronco perto da horizontal embaixo",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     70,
+     90
+    ],
+    "fonte": "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Continue the downward movement until the torso is approximately parallel to the floor.\"); free-exercise-db (\"bend over to near parallel\"); ExRx (\"lower torso forward until parallel to floor\"; \"Do not lower weight beyond mild stretch through hamstrings. Full range of motion will vary from person to person depending on flexibility.\"); Ross, Comfort e McMahon 2024 (Strength Cond J, NSCA) (\"towards a parallel (or near parallel, depending on the individual’s range of motion) position\"); NASM (\"45-90 degrees of forward lean\"). Com a coluna neutra, 75° da vertical já põe o quadril (coxa × tronco) a ~106°"
+   },
+   {
+    "nome": "joelhos levemente dobrados (~20°) e quase parados, o movimento todo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     15,
+     25
+    ],
+    "fonte": "Ross, Comfort e McMahon 2024 (Strength Cond J, NSCA) (\"There should be a slight flexion of the knee (~20°), similar to that of a RDL.\"; \"maintain the same knee joint angle throughout the lift\"); NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Keep the knees slightly flexed ... during the descent\"; \"Keep the back neutral and the knees slightly flexed during the ascent.\"); Vigotsky et al. 2015 (no fundo, \"Knee flexion (°) 17.1 / 19.1 / 20.1 / 23.1 / 24.8\"); NASM (\"only slight knee bend\"; erro: \"Bending the knees excessively\")"
+   },
+   {
+    "nome": "joelhos já dobrados em pé (o mesmo ângulo de embaixo)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     15,
+     21
+    ],
+    "fonte": "free-exercise-db (\"Keep your back tight, shoulder blades pinched together, and your knees slightly bent.\"); Ross, Comfort e McMahon 2024 (Strength Cond J, NSCA) (\"minimise any increase in flexion angle as the lifter descends\")"
+   },
+   {
+    "nome": "pés na largura dos ombros",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     2.2
+    ],
+    "fonte": "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Position the feet shoulder-width apart (or wider)\"); Vigotsky et al. 2015 (\"with feet about shoulder width apart\"). No boneco: tornozelos a 0,39 m (as cabeças do úmero ficam a 0,40 m) = 1,8 × a distância entre as articulações do quadril (tecnica3d.pes_largura)"
+   },
+   {
+    "nome": "pontas dos pés um pouco pra fora",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"with the toes pointed slightly outward\"); Ross, Comfort e McMahon 2024 (Strength Cond J, NSCA) (\"facing forwards or slightly externally rotated\")"
+   },
+   {
+    "nome": "os dois pés virados igual",
+    "medida": "ponta_pe_diferenca",
+    "t": "todos",
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "regra padrão da fábrica (tecnica3d), mais estreita"
+   },
+   {
+    "nome": "um pé não fica à frente do outro",
+    "medida": "pes_alinhados",
+    "t": "todos",
+    "mm": [
+     0,
+     20
+    ],
+    "fonte": "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Step under the bar and position the feet parallel to each other.\"; \"even with each other\")"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Maintain a neutral spine and a high elbow position; don’t round the upper back during the descent.\"; \"Keep the back neutral\"); Ross, Comfort e McMahon 2024 (Strength Cond J, NSCA) (\"maintain as neutral a spine position as possible\"); NASM (\"maintaining a neutral spine throughout the movement\"; erro: \"rounding the lower back\"); ExRx (\"Keeping back straight\"). A pelve e o tronco giram juntos: a curva da coluna não muda"
+   },
+   {
+    "nome": "cabeça na linha da coluna, um pouco levantada",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     10
+    ],
+    "fonte": "free-exercise-db (\"Keep your back arched and your cervical spine in proper alignment.\"); NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do preparatório do CSCS da Achievable, 15.5 Exercise list part 4) (\"Tilt the head slightly up.\"). Medida: cabeça × tronco no plano sagital (o boneco em pé, no repouso, mede ~−11°; + = levantada); levantar mais aproxima a nuca da barra com o tronco deitado"
+   },
+   {
+    "nome": "mãos na barra por fora dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.6,
+     2.1
+    ],
+    "fonte": "NSCA, Essentials of Strength Training and Conditioning, Good morning (pelo resumo do CSCS da Achievable) (\"using a handgrip only slightly wider than shoulder-width\"; \"Grasp the bar with a closed, pronated grip.\"); NASM (\"Position your grip slightly wider than shoulder-width apart\"); Ross, Comfort e McMahon 2024 (\"The hands should be placed equidistant from the center of the barbell.\"). No boneco: o meio das mãos a 0,76 m (~1,9 × os 0,40 m entre as cabeças do úmero), a borda de dentro da mão ~8 cm por fora do deltoide — a mais fechada que o boneco faz sem o braço entrar no tronco nem o antebraço no bíceps (com 0,72 m, cotovelo a 141°, entravam 11 mm)"
+   },
+   {
+    "nome": "tornozelo dentro da amplitude normal (a canela vai pra trás embaixo)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     26,
+     96
+    ],
+    "fonte": "Alazzawi et al. 2017 (flexão plantar 0–50°, dorsiflexão 0–20°; no boneco ~26° a ~96°); Vigotsky et al. 2015 (Tabela 2: \"Ankle plantar flexion (°) 121.1 ... 119.5\" no fundo do movimento)"
+   }
+  ]
+ }
+}
