@@ -1,5 +1,5 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Manipulados.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Beaker, ChevronDown, ChevronUp, Copy, FileDown, Loader2, PenLine, Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,16 +38,35 @@ export default function Manipulados() {
   const [nomeNutri, setNomeNutri] = useState<string | null>(null);
   const [profissional, setProfissional] = useState<DadosProfissionais | null>(null);
 
+  // hml-19b (H-81): o efeito depende do id (estável), não do objeto da pessoa
   useEffect(() => {
-    if (!user) return;
-    void nomeDaNutricionista(user.id).then(setNomeNutri);
-    void dadosProfissionais(user.id).then(setProfissional);
-  }, [user]);
+    if (!uid) return;
+    void nomeDaNutricionista(uid).then(setNomeNutri);
+    void dadosProfissionais(uid).then(setProfissional);
+  }, [uid]);
 
   const chave = useMemo(() => ["formulas-paciente", p.id], [p.id]);
   const formulasQ = useQuery({ queryKey: chave, queryFn: () => listarFormulasDoPaciente(p.id) });
-  // H5 (item 10): quem só lê não cria os modelos padrão (gravar é da nutri — RLS da W3)
-  const modelosQ = useQuery({ queryKey: ["modelos-formula", uid, podeEditar], queryFn: () => (podeEditar ? garantirModelosFormula(uid!) : listarModelosFormula()), enabled: !!uid });
+  // H5 (item 10): quem só lê não cria os modelos padrão (gravar é da nutri — RLS da W3).
+  // hml-19b (H-81): os 3 modelos padrão do 1º acesso são 1 chamada por abertura ao servidor (padroes_garantir: grava 1 vez só, com trava)
+  // e só para quem pode editar; as releituras (os modelos mudaram) e quem só lê pegam a lista. Sem nova tentativa sozinha: o erro mostra
+  // o "Tentar de novo".
+  const modelosPedido = useRef(false);
+  const modelosQ = useQuery({
+    queryKey: ["modelos-formula", uid, podeEditar],
+    queryFn: async () => {
+      if (!podeEditar || modelosPedido.current) return listarModelosFormula();
+      modelosPedido.current = true;
+      try {
+        return await garantirModelosFormula(uid!);
+      } catch (e) {
+        modelosPedido.current = false; // o "Tentar de novo" pede de novo
+        throw e;
+      }
+    },
+    enabled: !!uid,
+    retry: false,
+  });
 
   const formulas = useMemo(() => ordenarFormulas(formulasQ.data ?? []), [formulasQ.data]);
   const modelos = useMemo(() => modelosQ.data ?? [], [modelosQ.data]);
@@ -148,12 +167,19 @@ export default function Manipulados() {
   };
 
   const alternarDetalhe = (id: string) => setAbertas((a) => ({ ...a, [id]: !a[id] }));
+  // hml-19b: o aviso de erro relê só o que falhou (os modelos voltam a pedir o padrão, se foram eles)
+  const tentarDeNovo = () => {
+    for (const q of [formulasQ, modelosQ]) if (q.error) void q.refetch();
+  };
 
   return (
     <div className="space-y-4" data-secao-manipulados data-atualizando={atualizando ? "1" : "0"} data-salvando-formula={salvando}>
       {erro && (
         <p role="alert" className="text-sm text-rosa-3 font-body" data-erro-formulas>
-          Não foi possível carregar as fórmulas: {erro instanceof Error ? erro.message : "erro"}
+          Não foi possível carregar as fórmulas: {erro instanceof Error ? erro.message : "erro"}{" "}
+          <button type="button" onClick={tentarDeNovo} className={BTN_MINI} data-btn-tentar-formulas>
+            Tentar de novo
+          </button>
         </p>
       )}
 

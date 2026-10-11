@@ -1,5 +1,5 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Metas.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CircleDashed, Eye, EyeOff, FileDown, Loader2, Minus, Pause, PenLine, Play, Plus, Star, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -85,15 +85,34 @@ export default function Metas() {
   const qc = useQueryClient();
   const [nomeNutri, setNomeNutri] = useState<string | null>(null);
 
+  // hml-19b (H-81): o efeito depende do id (estável), não do objeto da pessoa
   useEffect(() => {
-    if (!user) return;
-    void nomeDaNutricionista(user.id).then(setNomeNutri);
-  }, [user]);
+    if (!uid) return;
+    void nomeDaNutricionista(uid).then(setNomeNutri);
+  }, [uid]);
 
   const chave = useMemo(() => ["metas-paciente", p.id], [p.id]);
   const metasQ = useQuery({ queryKey: chave, queryFn: () => listarMetasDoPaciente(p.id) });
-  // H5 (item 10): quem só lê (o dono sem papel de nutri) não cria os modelos padrão — só lê os que existem (gravar é da nutri: RLS da W3)
-  const modelosQ = useQuery({ queryKey: ["modelos-meta", uid, podeEditar], queryFn: () => (podeEditar ? garantirModelosMeta(uid!) : listarModelosMeta()), enabled: !!uid });
+  // H5 (item 10): quem só lê (o dono sem papel de nutri) não cria os modelos padrão — só lê os que existem (gravar é da nutri: RLS da W3).
+  // hml-19b (H-81): os 5 modelos padrão do 1º acesso são 1 chamada por abertura ao servidor (padroes_garantir: grava 1 vez só, com trava)
+  // e só para quem pode editar; as releituras (os modelos mudaram) e quem só lê pegam a lista. Sem nova tentativa sozinha: o erro mostra
+  // o "Tentar de novo".
+  const modelosPedido = useRef(false);
+  const modelosQ = useQuery({
+    queryKey: ["modelos-meta", uid, podeEditar],
+    queryFn: async () => {
+      if (!podeEditar || modelosPedido.current) return listarModelosMeta();
+      modelosPedido.current = true;
+      try {
+        return await garantirModelosMeta(uid!);
+      } catch (e) {
+        modelosPedido.current = false; // o "Tentar de novo" pede de novo
+        throw e;
+      }
+    },
+    enabled: !!uid,
+    retry: false,
+  });
 
   const metas = useMemo(() => ordenarMetas(metasQ.data ?? []), [metasQ.data]);
   // H5 (N-40): os ✓ que o aluno marcou no app (metas_concluidas) nos últimos 7 dias — a nutri vê em cada meta
@@ -115,6 +134,10 @@ export default function Metas() {
   const [paraExcluir, setParaExcluir] = useState<Meta | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [salvando, setSalvando] = useState(0); // gravações otimistas em andamento (o E2E espera voltar a 0)
+  // hml-19b: o aviso de erro relê só o que falhou (os modelos voltam a pedir o padrão, se foram eles)
+  const tentarDeNovo = () => {
+    for (const q of [metasQ, modelosQ]) if (q.error) void q.refetch();
+  };
 
   const onSalvo = (m: Meta) => {
     qc.setQueryData<Meta[]>(chave, (old) => inserirMeta(old ?? [], m));
@@ -179,7 +202,10 @@ export default function Metas() {
     <div className="space-y-4" data-secao-metas data-atualizando={atualizando ? "1" : "0"} data-salvando-meta={salvando}>
       {erro && (
         <p role="alert" className="text-sm text-rosa-3 font-body" data-erro-metas>
-          Não foi possível carregar as metas: {erro instanceof Error ? erro.message : "erro"}
+          Não foi possível carregar as metas: {erro instanceof Error ? erro.message : "erro"}{" "}
+          <button type="button" onClick={tentarDeNovo} className={BTN_MINI} data-btn-tentar-metas>
+            Tentar de novo
+          </button>
         </p>
       )}
 

@@ -4,7 +4,8 @@
 //   · .storage.from(…).upload( · .remove( · .update( · .move( · .copy(                     (Storage — o PUT no link assinado,
 //     uploadToSignedUrl, é o caminho certo e passa);
 //   · .rpc("<uma das RPC_QUE_GRAVAM>")                                                     (src/integrations/repeticao.ts).
-// Cada sub-worktree põe as pastas dela em AREAS, com a base (o que ainda grava direto e está aceito) — aqui, 0.
+// Cada sub-worktree põe as pastas dela em AREAS, com a base (o que ainda grava direto e está aceito) — aqui, 0. hml-19b: a Dieta, as
+// Dietas e o app do aluno (menos o que é de outra W: antropometrias.ts, da hml-19c, e o link público /d/:codigo, decisão 13).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -14,10 +15,16 @@ import { semComentarios } from "../../scripts/ci/checar-funcoes.mjs";
 
 const RAIZ = resolve(__dirname, "../..");
 
-/** As áreas migradas para o jeito 2 e o que ainda pode gravar direto em cada uma (a base só diminui). */
-const AREAS: Record<string, { pastas: string[]; base: number }> = {
+/** As áreas migradas para o jeito 2 e o que ainda pode gravar direto em cada uma (a base só diminui); `fora` = arquivos de outra W. */
+const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[] }> = {
   // hml-19a: o Prontuário (as 18 tabelas e o bucket de anexos — a Pré-consulta usa as mesmas libs)
   prontuario: { pastas: ["src/nutricao/prontuario"], base: 0 },
+  // hml-19b: a Dieta (as libs do editor), as Dietas (alimentos, receitas, diário da nutri) e o app do aluno (✓ e a foto do diário)
+  dieta: {
+    pastas: ["src/nutricao/editor/lib", "src/painel/dietas", "src/nutricao/app"],
+    base: 0,
+    fora: ["src/nutricao/editor/lib/antropometrias.ts", "src/painel/dietas/publico.ts"],
+  },
 };
 
 const GRAVA_TABELA = /\.(insert|update|upsert|delete)\(/;
@@ -86,10 +93,17 @@ describe("hml-19a — o detector acha o que procura (controle positivo)", () => 
 });
 
 describe("hml-19a — as áreas migradas não gravam direto (base 0)", () => {
-  it.each(Object.entries(AREAS))("%s: nenhuma gravação direta nas pastas da área", (_area, { pastas, base }) => {
-    const achados = pastas.flatMap(fontesDa).flatMap((arq) => gravacoesDiretas(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
+  it.each(Object.entries(AREAS))("%s: nenhuma gravação direta nas pastas da área", (_area, { pastas, base, fora = [] }) => {
+    const fontes = pastas.flatMap(fontesDa).filter((arq) => !fora.includes(relative(RAIZ, arq)));
+    const achados = fontes.flatMap((arq) => gravacoesDiretas(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
     expect(achados.length, achados.join("\n")).toBe(base);
     // e a área tem código de verdade (a guarda não passa por não achar arquivo)
-    expect(pastas.flatMap(fontesDa).length).toBeGreaterThan(30);
+    expect(fontes.length).toBeGreaterThan(30);
+  });
+
+  it("hml-19b: os arquivos de fora existem e ainda gravam direto (a guarda não esconde nada além deles)", () => {
+    for (const [area, { fora = [] }] of Object.entries(AREAS)) {
+      for (const rel of fora) expect(gravacoesDiretas(readFileSync(resolve(RAIZ, rel), "utf-8")).length, `${area}: ${rel}`).toBeGreaterThan(0);
+    }
   });
 });

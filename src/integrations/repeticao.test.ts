@@ -48,9 +48,10 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 45 de leitura repetem; as 40 que gravam não; os 2 conjuntos não se cruzam", () => {
+  it("as 45 de leitura repetem; as 38 que gravam não; os 2 conjuntos não se cruzam", () => {
     expect(RPC_SO_LEITURA.size).toBe(45);
-    expect(RPC_QUE_GRAVAM.size).toBe(40);
+    // hml-19b: a paciente_marcar_refeicao e a aluno_marcar_meta saíram do front (o app marca pela função nutricao) — eram 40
+    expect(RPC_QUE_GRAVAM.size).toBe(38);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
     expect([...RPC_SO_LEITURA].filter((n) => RPC_QUE_GRAVAM.has(n))).toEqual([]);

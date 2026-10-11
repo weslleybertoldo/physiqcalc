@@ -1,5 +1,5 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Orientacoes.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, FileDown, ListChecks, Loader2, Pencil, Plus, ScrollText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,8 +28,13 @@ const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border
 export default function Orientacoes() {
   const { paciente: p, recarregar, podeEditar } = usePaciente();
   const { user } = useAuth();
+  // hml-19b (H-81): os efeitos dependem do id (estável), não do objeto da pessoa
+  const uid = user?.id ?? null;
   const [lista, setLista] = useState<Orientacao[] | null>(null);
   const [modelos, setModelos] = useState<ModeloOrientacao[]>([]);
+  const [erroModelos, setErroModelos] = useState(false);
+  /** o padrão do 1º acesso já foi pedido nesta abertura (1 chamada só — mesmo com renders, efeitos repetidos ou o modo estrito) */
+  const padraoPedido = useRef(false);
   const [erro, setErro] = useState<string | null>(null);
   const [nomeNutri, setNomeNutri] = useState<string | null>(null);
   const [modal, setModal] = useState<{ aberto: boolean; orientacao: Orientacao | null }>({ aberto: false, orientacao: null });
@@ -48,14 +53,20 @@ export default function Orientacoes() {
     }
   }, [p.id]);
 
+  // H5 (item 10): quem só lê não cria os modelos padrão (gravar é da nutri — RLS da W3).
+  // hml-19b (H-81): o padrão do 1º acesso é 1 chamada por abertura ao servidor (padroes_garantir: grava 1 vez só, com trava) e só para
+  // quem pode editar; depois dela (e para quem só lê) é a lista. Falhou → 1 aviso com "Tentar de novo" (antes: um toast a cada volta).
   const carregarModelos = useCallback(async () => {
+    const garantir = !!uid && podeEditar && !padraoPedido.current;
+    if (garantir) padraoPedido.current = true;
     try {
-      // H5 (item 10): quem só lê não cria os modelos padrão (gravar é da nutri — RLS da W3)
-      setModelos(user && podeEditar ? await garantirModelos(user.id) : await listarModelos());
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível carregar os modelos");
+      setModelos(garantir && uid ? await garantirModelos(uid) : await listarModelos());
+      setErroModelos(false);
+    } catch {
+      if (garantir) padraoPedido.current = false; // o "Tentar de novo" pede de novo
+      setErroModelos(true);
     }
-  }, [user, podeEditar]);
+  }, [uid, podeEditar]);
 
   useEffect(() => {
     void carregar();
@@ -63,9 +74,9 @@ export default function Orientacoes() {
   }, [carregar, carregarModelos]);
 
   useEffect(() => {
-    if (!user) return;
-    void nomeDaNutricionista(user.id).then(setNomeNutri);
-  }, [user]);
+    if (!uid) return;
+    void nomeDaNutricionista(uid).then(setNomeNutri);
+  }, [uid]);
 
   const abrirNova = () => setModal({ aberto: true, orientacao: null });
   const abrirEdicao = (o: Orientacao) => setModal({ aberto: true, orientacao: o });
@@ -144,6 +155,14 @@ export default function Orientacoes() {
         </header>
 
         {erro && <p role="alert" className="text-sm text-rosa-3 font-body">{erro}</p>}
+        {erroModelos && (
+          <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-rosa-3 font-body" data-aviso-modelos>
+            <span>Não foi possível carregar os modelos de orientação.</span>
+            <button type="button" onClick={() => void carregarModelos()} className={BTN_MINI} data-btn-tentar-modelos>
+              Tentar de novo
+            </button>
+          </div>
+        )}
 
         {lista !== null && !erro && itens.length === 0 && (
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-orientacoes-vazio>
