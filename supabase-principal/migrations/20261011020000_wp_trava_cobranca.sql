@@ -2,7 +2,7 @@
 -- pacientes.mensalidade_valor/mensalidade_pago_ate/plano_aluno_id/cobranca_pausada (a policy "pacientes: editar pela conta" inclui o
 -- personal e a nutri responsáveis) e INSERT/UPDATE em cobrancas — com meses_cobertos, uma linha "paga" inserida pela API valeria N meses.
 -- Agora: essas colunas só mudam pelo servidor (pagamentos-aluno, service_role) ou pelo master; a AVULSA que o site antigo do Nutri grava
--- direto continua (só as colunas de período ficam no padrão). planos_aluno vira só leitura para o app (a gravação é da função, só o dono).
+-- direto continua (só as colunas de período ficam no padrão). planos_aluno vira só leitura para o app e só para o dono (a gravação é da função, só o dono).
 --
 -- Aplicar (depois da 20261011010000; backup ANTES):
 --   python3 scripts/apply_migration_principal.py supabase-principal/migrations/20261011020000_wp_trava_cobranca.sql --so staging
@@ -60,5 +60,11 @@ drop trigger if exists trg_cobrancas_guard_periodo on {schema}.cobrancas;
 create trigger trg_cobrancas_guard_periodo before insert or update on {schema}.cobrancas
   for each row execute function {schema}.cobrancas_guard_periodo();
 
--- planos_aluno: os membros leem e o master edita (policies de hoje); a escrita do dono passa a ser só pela pagamentos-aluno
+-- planos_aluno: a escrita do dono passa a ser só pela pagamentos-aluno; o master edita (policy de hoje)
 drop policy if exists "planos_aluno: dono edita" on {schema}.planos_aluno;
+-- e só o dono LÊ os planos (com o valor) — decisão do Weslley 10/10/2026 (ponto 1: "só o dono vê os planos e valores", igual à
+-- mensalidade, que os outros profissionais da conta já não veem). A leitura dos membros sai; o aluno continua vendo o nome do plano
+-- pela financeiro_do_aluno() (security definer) e o painel lê pela pagamentos-aluno (service_role).
+drop policy if exists "planos_aluno: membros leem" on {schema}.planos_aluno;
+drop policy if exists "planos_aluno: dono lê" on {schema}.planos_aluno;
+create policy "planos_aluno: dono lê" on {schema}.planos_aluno for select to authenticated using ({schema}.sou_dono(conta_id));
