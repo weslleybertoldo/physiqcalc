@@ -3,10 +3,11 @@
 // comprovante pelo link assinado (o servidor escolhe o caminho no Storage).
 import { principal } from "@/integrations/principal/client";
 import type { Pagina } from "@/lib/paginacao";
+import type { PixTipo } from "@/lib/pixChave";
 import type { PlanoSalvar } from "./planos";
 import type {
-  AlunoResumo, CobrancaVista, FinanceiroProfissional, MensalidadesDaConta, PlanoSalvo, PlanosDaConta, ReciboVista, ResumoConta, ResumoMatricula,
-  StatusAluno, TotaisDoAluno,
+  AlunoResumo, ChaveRecebimento, CobrancaVista, FinanceiroProfissional, MensalidadesDaConta, ModoRecebimento, PlanoSalvo, PlanosDaConta,
+  RecebimentoDaConta, ReciboVista, ResumoConta, ResumoMatricula, StatusAluno, TotaisDoAluno,
 } from "./tipos";
 
 export class ErroFinanceiro extends Error {
@@ -197,3 +198,25 @@ export const buscarPlanosDaConta = (contaId: string) => acaoFinanceiro<PlanosDaC
 export const salvarPlano = (contaId: string, plano: { id?: string } & PlanoSalvar) =>
   acaoFinanceiro<PlanoSalvo>("prof_plano_salvar", { conta_id: contaId, ...plano });
 export const ativarPlano = (contaId: string, id: string, ativo: boolean) => acaoFinanceiro<{ ok: true }>("prof_plano_ativo", { conta_id: contaId, id, ativo });
+
+// ───────────────────────── W1 — Recebimento pela função (jeito 2) e a InfinitePay ─────────────────────────
+// A tela não fala mais com o banco: tudo pela pagamentos-aluno, que grava COMO A PESSOA (o RLS segue valendo).
+
+export const buscarRecebimento = (contaId: string) => acaoFinanceiro<RecebimentoDaConta>("prof_recebimento", { conta_id: contaId });
+export const salvarRecebimento = (contaId: string, p: { modo?: ModoRecebimento; bloquear?: boolean; handle?: string | null; cancelar_automaticas?: boolean }) =>
+  acaoFinanceiro<RecebimentoDaConta>("prof_recebimento_salvar", { conta_id: contaId, ...p });
+export const testarInfinitePay = (contaId: string, handle?: string) =>
+  acaoFinanceiro<{ ok: true; url: string }>("prof_ip_testar", { conta_id: contaId, ...(handle ? { handle } : {}) });
+export const salvarChavePix = (contaId: string, c: { id?: string; tipo: PixTipo; chave: string; favorecido: string | null; banco: string | null }) =>
+  acaoFinanceiro<{ ok: true; chave: ChaveRecebimento }>("prof_chave_salvar", { conta_id: contaId, ...c });
+export const ligarChavePix = (contaId: string, id: string, ligar: boolean) => acaoFinanceiro<{ ok: true }>("prof_chave_ligar", { conta_id: contaId, id, ligar });
+export const excluirChavePix = (contaId: string, id: string) => acaoFinanceiro<{ ok: true }>("prof_chave_excluir", { conta_id: contaId, id });
+
+/** O aluno: o link da página da InfinitePay (o mesmo enquanto a tentativa vale), a volta da página e a conferência. */
+export const abrirLinkDaInfinitePay = (pacienteId: string, cobrancaId?: string) =>
+  acaoFinanceiro<{ ok: true; url: string; cobranca: CobrancaVista; reutilizado: boolean }>("aluno_ip_link",
+    { paciente_id: pacienteId, ...(cobrancaId ? { cobranca_id: cobrancaId } : {}) });
+export const voltaDaInfinitePay = (q: Record<string, string>) =>
+  acaoFinanceiro<{ ok: true; paga: boolean; resultado: string; cobranca: CobrancaVista }>("aluno_ip_volta", q);
+export const conferirInfinitePay = (cobrancaId: string) =>
+  acaoFinanceiro<{ ok: true; paga: boolean; resultado: string; cobranca: CobrancaVista }>("aluno_ip_conferir", { cobranca_id: cobrancaId });

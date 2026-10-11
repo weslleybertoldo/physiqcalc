@@ -1,11 +1,12 @@
 // Physiq W6 — tipos da cobrança aluno → profissional (respostas da função pagamentos-aluno e do financeiro_do_aluno() do banco
 // principal — supabase-principal/functions/pagamentos-aluno e a migração 20260929150000_w06_financeiro_aluno.sql).
+import type { PixTipo } from "@/lib/pixChave";
 import type { Modalidade, Parcela, PlanoDoAluno } from "./planos";
 
 export type StatusCobranca = "aberta" | "paga" | "cancelada" | "aguardando_confirmacao";
 export type TipoCobranca = "mensalidade" | "avulsa";
-export type FormaCobranca = "pix_manual" | "mp" | "manual";
-export type ModoRecebimento = "pix_manual" | "nenhum" | "mercadopago";
+export type FormaCobranca = "pix_manual" | "mp" | "manual" | "infinitepay";
+export type ModoRecebimento = "pix_manual" | "nenhum" | "mercadopago" | "infinitepay";
 
 export interface CobrancaVista {
   id: string;
@@ -37,6 +38,12 @@ export interface CobrancaVista {
   criado_por: string | null;
   confirmado_em: string | null;
   created_at: string;
+  /** W1 — a InfinitePay: o link da tentativa viva (só aguardando), o prazo (72 h), o recibo, as parcelas e o meio (ausentes na função de antes) */
+  ip_link?: string | null;
+  ip_expira_em?: string | null;
+  ip_recibo_url?: string | null;
+  ip_parcelas?: number | null;
+  ip_meio?: "pix" | "credit_card" | null;
 }
 
 export interface MensalidadeVista {
@@ -242,4 +249,32 @@ export interface TotaisDoAluno {
   total: number;
   primeira: string | null;
   ultima: string | null;
+}
+
+/** W1 — uma chave Pix da conta (prof_recebimento, prof_chave_salvar). */
+export interface ChaveRecebimento {
+  id: string;
+  conta_id: string;
+  membro_id: string | null;
+  tipo: PixTipo;
+  chave: string;
+  favorecido: string | null;
+  banco: string | null;
+  ativa: boolean;
+  criado_em: string;
+}
+
+/** W1 — Configurações › Recebimento numa chamada (prof_recebimento / prof_recebimento_salvar). */
+export interface RecebimentoDaConta {
+  ok: true;
+  master: boolean;
+  pode_editar: boolean;
+  conta: { id: string; nome: string; origem: string; modo: ModoRecebimento; bloquear: boolean };
+  chaves: ChaveRecebimento[];
+  mp_liberado: boolean;
+  infinitepay: { disponivel: boolean; handle: string | null; status: "ativa" | "erro" | null; testado_em: string | null };
+  /** só no salvar: o link de R$ 1,00 da InfiniteTag nova, quantas automáticas do MP foram desligadas e quantas o MP recusou (MENOR 6) */
+  link_teste?: string | null;
+  automaticas_canceladas?: number;
+  automaticas_falhas?: number;
 }

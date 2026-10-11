@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { calcCobertura } from "../../supabase/functions/mp-payments/cobertura";
 import {
+  CHIP_COBRANCA,
+  MENSAGEM_ERRO_FINANCEIRO,
   chipDaMensalidade,
   coberturaMensalidade,
   dataBR,
@@ -11,6 +13,7 @@ import {
   inadimplente,
   lerValor,
   linhaDaCobranca,
+  mensagemDoRecebimento,
   mensagemErroFinanceiro,
   nomeDoMes,
   ordenarCobrancas,
@@ -244,5 +247,47 @@ describe("linhas das cobranças (telas 5 e 7)", () => {
     expect(mensagemErroFinanceiro("sem_chave_pix")).toBe("Seu profissional ainda não cadastrou a chave Pix.");
     expect(mensagemErroFinanceiro("xyz", "padrão")).toBe("padrão");
     expect(mensagemErroFinanceiro(null)).toBe("Não deu certo agora. Tente de novo.");
+  });
+});
+
+describe("W1 — a InfinitePay nas regras da tela", () => {
+  const cob = (x: Partial<CobrancaVista> = {}): CobrancaVista => ({
+    id: "c1", paciente_id: "p1", tipo: "mensalidade", descricao: "Mensalidade · Outubro/2026", valor: 100, vencimento: "2026-10-10", status: "aberta",
+    forma: null, metodo: null, mes_ref: "2026-10-01", pago_em: null, enviado_em: null, cobre_de: null, cobre_ate: null, comprovante: false,
+    comprovante_pdf: false, recusado_motivo: null, recusado_em: null, reembolsado_em: null, mp_status: null, mp: false, mp_simulado: false,
+    transacao_id: null, pix_qr: null, pix_copia_cola: null, pix_expira_em: null, criado_por: null, confirmado_em: null, created_at: "2026-10-10T12:00:00Z", ...x,
+  });
+  it("o aluno paga pelo app (Pix ou cartão), sem chave Pix", () => {
+    expect(podePagarPeloApp("infinitepay", false)).toBe(true);
+    expect(formasDePagar("infinitepay", false)).toBe("Pix ou cartão");
+  });
+  it("o rótulo da forma: Pix, cartão em N× ou só InfinitePay", () => {
+    expect(rotuloDaForma({ forma: "infinitepay", metodo: "pix", ip_meio: "pix" })).toBe("Pix (InfinitePay)");
+    expect(rotuloDaForma({ forma: "infinitepay", metodo: "cartao", ip_meio: "credit_card", ip_parcelas: 3 })).toBe("Cartão em 3× (InfinitePay)");
+    expect(rotuloDaForma({ forma: "infinitepay", metodo: "cartao", ip_meio: "credit_card", ip_parcelas: 1 })).toBe("Cartão (InfinitePay)");
+    expect(rotuloDaForma({ forma: "infinitepay", metodo: null })).toBe("InfinitePay");
+  });
+  it("aguardando na InfinitePay: PROCESSANDO e o detalhe sem 'comprovante'", () => {
+    const c = cob({ status: "aguardando_confirmacao", forma: "infinitepay" });
+    expect(situacaoDaCobranca(c)).toBe("aguardando_ip");
+    expect(CHIP_COBRANCA.aguardando_ip.texto).toBe("PROCESSANDO");
+    expect(linhaDaCobranca(c).detalhe).toBe("InfinitePay · aguardando a confirmação");
+  });
+  it("as frases dos códigos novos", () => {
+    for (const k of ["modo_nao_infinitepay", "infinitepay_nao_ligada", "infinitepay_indisponivel", "infinitepay_recusou",
+                     "infinitepay_checkout_desligado", "infinitetag_invalida", "sem_infinitetag", "infinitepay_em_teste", "automaticas_ativas",
+                     "mp_so_master", "w1_indisponivel", "chave_inexistente", "volta_invalida", "em_uso", "conta_invalida"]) {
+      expect(MENSAGEM_ERRO_FINANCEIRO[k], k).toBeTruthy();
+    }
+  });
+  it("Configurações › Recebimento: as frases da tela onde a global fala de outra coisa (do aluno, da mensalidade, dos planos); o resto igual", () => {
+    expect(mensagemDoRecebimento("sem_permissao")).toBe("Você não tem permissão para mudar o recebimento desta conta.");
+    expect(mensagemDoRecebimento("so_o_dono")).toBe("Só o dono da conta muda o recebimento.");
+    expect(mensagemDoRecebimento("conta_do_app")).toBe("O recebimento da conta do app é do Physiq.");
+    expect(mensagemDoRecebimento("nada_para_salvar")).toBe("Nada mudou para salvar.");
+    expect(mensagemDoRecebimento("em_uso")).toBe(MENSAGEM_ERRO_FINANCEIRO.em_uso);
+    expect(mensagemDoRecebimento("rate_limited")).toBe(MENSAGEM_ERRO_FINANCEIRO.rate_limited);
+    expect(mensagemDoRecebimento("xyz", "padrão")).toBe("padrão");
+    expect(mensagemDoRecebimento(null)).toBe("Não deu certo agora. Tente de novo.");
   });
 });
