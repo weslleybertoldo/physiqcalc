@@ -732,3 +732,21 @@ def pelve_giro(j):
 
 
 MEDIDAS.update({"pelve_giro": pelve_giro})
+
+
+# ── abdominal infra (lote 12, 11/10/2026): deitado de costas, as coxas começam NA VERTICAL e passam dela pro lado da cabeça
+# quando a pelve enrola pra trás e sai do chão (free-exercise-db, Reverse Crunch: "thighs are perpendicular to the floor" / "move
+# your legs towards the torso"; ACE, Reverse Crunch: "raising your knees directly above your hips" e, na volta, "ensuring that your
+# knees don't move past your hips"). O "quadril" do checagem3d e o quadril_sinal medem a coxa contra a linha quadril → pescoço, que
+# inclina quando a pelve sobe; a "inclinacao" da ficha não diz se o joelho foi pro lado da cabeça ou dos pés.
+def coxa_vertical(j):
+    """Coxa (quadril → joelho) × a vertical do mundo, no plano que vai dos pés à cabeça, graus [E, D]: 0 = coxa em pé, com o
+    joelho bem em cima do quadril; + = o joelho passou pro lado da cabeça (90 = coxa deitada apontando pra cabeça); − = pro lado
+    dos pés. O lado da cabeça é a linha quadril → pescoço vista de cima: vale com o boneco deitado no chão (de costas, com a pelve
+    no chão ou levantada), não em pé (aí essa linha some)."""
+    cab = _u(_chao(j["Neck"] - j["Hips"]))
+    return [math.degrees(math.atan2(float((j[L + "Leg"] - j[L + "UpLeg"]) @ cab), float((j[L + "Leg"] - j[L + "UpLeg"])[2])))
+            for L, _ in LADOS]
+
+
+MEDIDAS.update({"coxa_vertical": coxa_vertical})

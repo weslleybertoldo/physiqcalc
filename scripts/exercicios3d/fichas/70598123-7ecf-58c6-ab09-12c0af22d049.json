@@ -1,0 +1,568 @@
+{
+ "uuid": "70598123-7ecf-58c6-ab09-12c0af22d049",
+ "nome": "Abdominal Infra",
+ "cena": "abdominal_infra",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal (porção inferior) · flexores do quadril",
+ "padrao_movimento": "abdominal_infra",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado no chão",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "quadriceps",
+  "tensor",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 78,
+  "el": 10,
+  "dist": 3.5,
+  "alvo": [
+   0,
+   0.12,
+   0.44
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.2,
+  "alvo": [
+   0,
+   0.05,
+   0.4
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Deitado de costas no colchonete, com os braços ao lado do tronco e as palmas apoiadas no chão — parados o tempo todo —, levanta as pernas até as coxas ficarem na vertical, com os joelhos dobrados a 90° e os pés juntos no ar, a lombar encostada no colchonete; soltando o ar, contrai o abdômen e enrola a pelve pra trás, levando o quadril em direção às costelas: o glúteo e o sacro saem do chão e a coluna enrola de baixo pra cima — a lombar sai inteira e a parte de baixo das costas começa a sair —, com os joelhos no mesmo ângulo vindo na direção do peito, sem jogar as pernas; a parte de cima das costas, os ombros e a cabeça ficam apoiados; desce devagar, desenrolando a coluna, até a pelve voltar ao colchonete e as coxas pararem de novo na vertical, sem os pés encostarem no chão.",
+ "cinesiologia": {
+  "plano": "sagital (flexão da coluna de baixo pra cima, com a pelve enrolando pra trás — retroversão), com as pernas no ar",
+  "articulacoes": "coluna lombar e parte de baixo da torácica (flexão: a pelve enrola pra trás e sai do chão e a coluna desgruda do colchonete de baixo pra cima, da lombar até o fim do tórax); quadril quase parado (as coxas vão junto com a pelve e dobram só ~5° a mais em cima); joelhos parados a 90°; parte de cima das costas, ombros, cabeça e braços parados no colchonete",
+  "agonistas": "reto do abdome (ExRx, Lying Leg-Hip Raise — o reverse crunch do ExRx: \"Target: Rectus Abdominis\"; King 2018: \"RA (prime mover)\"; free-exercise-db: \"primaryMuscles\": \"abdominals\"; ACE: \"Target Body Part: Abs\"). A \"porção inferior\" do reto do abdome do catálogo é controversa — a favor: Willett 2001 (\"The reverse curl resulted in the greatest amount of lower rectus activity\") e Sarti 1996 (retroversão da pelve × curl-up: \"For persons who have a high level of activity, PT is more strenuous than CU on lower RA. Among incorrect performers, either exercise indistinctly activates the muscle portions\"); contra: Lehman & McGill 2001 (\"No differences in muscle activity were found between the upper and lower portions of the rectus abdominis muscle within and between exercises\"), Clark 2003, com o reverse curl up entre os 6 (\"There were no significant differences (p > 0.05) between the EMG activity of the URA and LRA during any exercise\") e o estudo da ACE de 2001 (\"the upper and lower rectus abdominus act as a sheath, or one large muscle group\"); o ExRx manda ver o \"Lower Ab Myth\". Por isso o alvo pintado é o abdômen inteiro, como na Elevação de Pernas do mesmo padrão. A retroversão da pelve aumenta o reto do abdome em cima e embaixo (Workman 2008: \"The Janda sit-up and the posterior tilt were significantly greater ... than the anterior tilt for the URA and LRA muscles\")",
+  "sinergistas": "oblíquos (ExRx: sinergistas; no estudo da ACE de 2001 o reverse crunch deu 240% do crunch nos oblíquos, 3º lugar, e 109% no reto do abdome; Willett 2001: \"the v-sit and reverse curl exercises resulted in the greatest amount of external oblique activity\") e os flexores do quadril — iliopsoas, tensor da fáscia lata, pectíneo, sartório, adutores longo e curto (ExRx: \"Synergists: Iliopsoas, Tensor Fasciae Latae, Pectineus, Sartorius, Adductor Longus, Adductor Brevis, Obliques\"; ACE: \"contract your abdominal, core and hip flexor muscles\"); os flexores do quadril seguram as pernas levantadas (Andersson 1997: \"The hip flexors were highly activated only in exercises involving hip flexion, either lifting the whole upper body or the legs\"). O app pinta o reto femoral (quadríceps), o tensor e os oblíquos; o iliopsoas não tem malha própria",
+  "estabilizadores": "reto femoral e quadríceps (ExRx: \"Dynamic Stabilizers: Rectus Femoris\"; \"Stabilizers: Quadriceps\": seguram o joelho a 90°); os braços apertam o chão pra equilibrar (ACE: \"Use your arms and hands to assist with maintaining your balance\"), sem sair do lugar (free-exercise-db: \"Your arms should be stationary for the entire exercise\")",
+  "fases": "subida concêntrica soltando o ar (ACE: \"Exhale, contract your abdominal, core and hip flexor muscles and slowly raise your hips off the mat\"), pausa curta em cima (ACE: \"Hold this position briefly\"; free-exercise-db: \"Hold the contraction for a second\"), descida excêntrica e controlada puxando o ar (ACE: \"Gently inhale and lower your spine back towards the mat in a controlled fashion\"). O free-exercise-db inverte a respiração (\"While inhaling, move your legs towards the torso\"); a cena segue as 2 fontes da ACE"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público) — Reverse Crunch. https://github.com/yuhonas/free-exercise-db (exercises/Reverse_Crunch.json)",
+  "American Council on Exercise (ACE) — Reverse Crunch (Exercise Library nº 76). https://www.acefitness.org/resources/everyone/exercise-library/76/reverse-crunch/",
+  "Anders M. New Study Puts the Crunch on Ineffective Ab Exercises. ACE FitnessMatters, maio/junho de 2001, p. 9-11 (estudo da San Diego State University para a ACE). https://www.acefitness.org/getfit/studies/BestWorstAbExercises.pdf",
+  "ExRx.net — Lying Leg-Hip Raise (Rectus Abdominis). https://exrx.net/WeightExercises/RectusAbdominis/BWLyingLegHipRaise (lido na cópia do Internet Archive de 07/06/2023)",
+  "Willett GM, Hyde JE, Uhrlaub MB, Wendel CL, Karst GM. Relative activity of abdominal muscles during commonly prescribed strengthening exercises. J Strength Cond Res. 2001;15(4):480-485 (resumo no PubMed, 11726260).",
+  "Sarti MA, Monfort M, Fuster MA, Villaplana LA. Muscle activity in upper and lower rectus abdominus during abdominal exercises. Arch Phys Med Rehabil. 1996;77(12):1293-1297 (resumo no PubMed, 8976314).",
+  "Lehman GJ, McGill SM. Quantification of the differences in electromyographic activity magnitude between the upper and lower portions of the rectus abdominis muscle during selected trunk exercises. Phys Ther. 2001;81(5):1096-1101 (resumo no PubMed, 11319934).",
+  "Clark KM, Holt LE, Sinyard J. Electromyographic comparison of the upper and lower rectus abdominis during abdominal exercises. J Strength Cond Res. 2003;17(3):475-483 (resumo no PubMed, 12930172).",
+  "King AC. The effect of movement and load on the dynamic coupling of abdominal electromyography. Neurosci Lett. 2018;675:64-67 (resumo no PubMed, 29604407).",
+  "Workman JC, Docherty D, Parfrey KC, Behm DG. Influence of pelvis position on the activation of abdominal and hip flexor muscles. J Strength Cond Res. 2008;22(5):1563-1569 (resumo no PubMed, 18714231).",
+  "Andersson EA, Nilsson J, Ma Z, Thorstensson A. Abdominal and hip flexor muscle activation during various training exercises. Eur J Appl Physiol Occup Physiol. 1997;75(2):115-123 (resumo no PubMed, 9118976)."
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "os pés ficam no ar o movimento todo: começam com as coxas na vertical e as canelas paralelas ao chão (free-exercise-db, Reverse Crunch (o fonte_en do catálogo): \"Move your legs up so that your thighs are perpendicular to the floor and feet are together and parallel to the floor. This is the starting position.\"; ACE, Reverse Crunch: \"slowly lift your feet off the floor, raising your knees directly above your hips\") e voltam pra lá, sem encostar no chão (ACE, Reverse Crunch: \"return to a position directly above your hips\"); só a versão mais fácil do ExRx encosta os calcanhares (\"allow heels to make contact with floor each repetition\")",
+  "limites_juntas": {
+   "quadrilE": [
+    0,
+    135
+   ],
+   "quadrilD": [
+    0,
+    135
+   ]
+  },
+  "limites_juntas_motivo": "o \"quadril\" da checagem mede a coxa contra a linha quadril → pescoço, e aqui essa linha inclina junto com a coluna que enrola: em cima a lombar e o fim do tórax dobram ~50° (medida coluna) e a coxa passa ~65° da vertical (foto da ACE em cima: ~65–70°; free-exercise-db: \"move your legs towards the torso ... At the end of this movement your knees will be touching your chest\"), o que dá ~133° nessa medida. A flexão do quadril de verdade — coxa × pelve — vai de ~85° embaixo a ~90° em cima, dentro dos 120° da AAOS (Norkin & White, a referência do limites.py). Os 130° do limites.py já dão 10° pra pelve que inclina com o tronco no agachamento; aqui a soma vem da coluna inteira",
+  "zonas": [
+   {
+    "nome": "escápulas, ombros e parte de cima das costas apoiados no colchonete (o movimento todo)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE, Reverse Crunch (\"rolling your spine up ... continue to curl-up until your spine cannot roll any further\": a coluna enrola de baixo pra cima, a partir da pelve — \"your hips and pelvis should move towards your rib cage\"). Nenhum texto diz o que fica no chão: nas fotos do free-exercise-db e da ACE a parte de cima das costas, os ombros e a cabeça ficam apoiados"
+   },
+   {
+    "nome": "cabeça apoiada (o cabelo da nuca no colchonete)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     8
+    ],
+    "fonte": "fotos do free-exercise-db e da ACE (a cabeça apoiada embaixo e em cima). Medido na pele: o cabelo da nuca encosta no colchonete e a pele fica uns 3 mm acima dele, embaixo do cabelo"
+   },
+   {
+    "nome": "sacro e glúteo apoiados embaixo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips"
+    ],
+    "t": 0.0,
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE, Reverse Crunch (\"Continue rolling out until your spine and pelvis (hips) contact the mat\")"
+   },
+   {
+    "nome": "lombar encostada no colchonete embaixo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine"
+    ],
+    "t": 0.0,
+    "mm": [
+     -20,
+     5
+    ],
+    "fonte": "ACE, estudo de 2001 (\"Lie flat on the floor with your lower back pressed to the ground\"); ACE, Reverse Crunch (\"until your spine and pelvis (hips) contact the mat\"). Deitado relaxado o boneco tem a curva natural da lombar (~2,4 cm de vão); embaixo a pelve já vem 12° pra trás e a lombar encosta"
+   },
+   {
+    "nome": "começo da subida: a lombar ainda encostada no colchonete (a pelve sai primeiro)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine"
+    ],
+    "t": [
+     0.14,
+     0.19
+    ],
+    "mm": [
+     -20,
+     7
+    ],
+    "fonte": "ACE, Reverse Crunch (\"slowly raise your hips off the mat, rolling your spine up\"; \"your hips and pelvis should move towards your rib cage\"): a coluna desgruda de baixo pra cima — primeiro o sacro, depois a lombar, por último o fim do tórax"
+   },
+   {
+    "nome": "meio da subida: o fim do tórax ainda no colchonete (sai por último)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine1"
+    ],
+    "t": [
+     0.45,
+     0.55
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE, Reverse Crunch (\"rolling your spine up ... continue to curl-up until your spine cannot roll any further\")"
+   },
+   {
+    "nome": "palmas no colchonete, paradas (o movimento todo)",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"Lie down on the floor with your legs fully extended and arms to the side of your torso with the palms on the floor. Your arms should be stationary for the entire exercise.\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "pés juntos (encostando, sem entrar um no outro)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "com": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -2,
+     10
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"feet are together\"). O estudo da ACE de 2001 cruza os tornozelos (\"Crossing your feet at the ankles\"); a ficha da ACE não fala"
+   },
+   {
+    "nome": "braços e mãos longe do quadril e das pernas",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "mm": [
+     5,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica): a pelve sobe e o glúteo passa por dentro das mãos"
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     5,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "costas e glúteo sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado), como no abdominal supra"
+   },
+   {
+    "nome": "cabeça sem atravessar o colchonete",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "braços e mãos sem atravessar o colchonete",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "começo da subida: o glúteo e o sacro já saíram do chão (a pelve sai primeiro)",
+    "partes": [
+     "Hips"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.14,
+     0.19
+    ],
+    "mm": [
+     20,
+     60
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"roll your pelvis backwards and you raise your hips off the floor\"); ACE, Reverse Crunch (\"the emphasis of the movement should be on pulling your pelvis upwards towards your rib cage\")"
+   },
+   {
+    "nome": "glúteo e sacro fora do chão em cima (a pelve enrolou e subiu)",
+    "partes": [
+     "Hips"
+    ],
+    "acima_de": "chao",
+    "t": 1.0,
+    "mm": [
+     100,
+     220
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"roll your pelvis backwards and you raise your hips off the floor\"); ACE, Reverse Crunch (\"slowly raise your hips off the mat\"). Nenhuma fonte dá quanto: medido na cena (~15 cm de pele do glúteo acima do colchonete em cima), entre a foto da ACE (a lombar sai até o meio das costas) e a do free-exercise-db (quase de ponta-cabeça, só os ombros no chão)"
+   },
+   {
+    "nome": "lombar inteira fora do colchonete em cima",
+    "partes": [
+     "Spine"
+    ],
+    "acima_de": "chao",
+    "t": 1.0,
+    "mm": [
+     40,
+     200
+    ],
+    "fonte": "ACE, Reverse Crunch (\"rolling your spine up ... continue to curl-up until your spine cannot roll any further\")"
+   },
+   {
+    "nome": "parte de baixo do tórax começando a sair do colchonete em cima (a coluna enrola até o fim do tórax)",
+    "partes": [
+     "Spine1"
+    ],
+    "acima_de": "chao",
+    "t": 1.0,
+    "mm": [
+     15,
+     60
+    ],
+    "fonte": "ACE, Reverse Crunch (\"until your spine cannot roll any further\"), com a parte de cima das costas no chão (fotos)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelhos a 90° o movimento todo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"thighs are perpendicular to the floor and feet are together and parallel to the floor\"); ACE, Reverse Crunch (\"maintaining a 90 degree bend in the knees\"; \"Avoid any change in the angle of your knees during the roll-up\"); ExRx (\"keep knees fully flexed, so as not to throw weight of lower legs over head\")"
+   },
+   {
+    "nome": "coxas na vertical embaixo",
+    "medida": "coxa_vertical",
+    "t": 0.0,
+    "graus": [
+     -4,
+     4
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"Move your legs up so that your thighs are perpendicular to the floor\"); ACE, Reverse Crunch (\"raising your knees directly above your hips\")"
+   },
+   {
+    "nome": "joelhos nunca passam do quadril pro lado dos pés",
+    "medida": "coxa_vertical",
+    "t": "todos",
+    "graus": [
+     -4,
+     90
+    ],
+    "fonte": "ACE, Reverse Crunch (\"control your leg movement ensuring that your knees don't move past your hips, but instead return to a position directly above your hips\")"
+   },
+   {
+    "nome": "coxas passam da vertical, na direção do peito, em cima",
+    "medida": "coxa_vertical",
+    "t": 1.0,
+    "graus": [
+     58,
+     72
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"move your legs towards the torso as you roll your pelvis backwards ... At the end of this movement your knees will be touching your chest\"); ACE, Reverse Crunch (\"as if trying to bring your knees towards your head\"); na foto da ACE em cima a coxa fica ~65–70° além da vertical (no free-exercise-db, ~90°, com o quadril bem mais alto). Joelho × tronco em cima: ~17 cm"
+   },
+   {
+    "nome": "deitado embaixo (tronco no chão)",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"Lie down on the floor\"); ACE, Reverse Crunch (\"Lie in a supine (on your back) position on a mat\")"
+   },
+   {
+    "nome": "tórax deitado embaixo",
+    "medida": "torax_chao",
+    "t": 0.0,
+    "graus": [
+     -3,
+     8
+    ]
+   },
+   {
+    "nome": "a parte de cima das costas não sobe: o tórax fica deitado em cima (o fim dele um pouco acima do alto)",
+    "medida": "torax_chao",
+    "t": 1.0,
+    "graus": [
+     -12,
+     0
+    ],
+    "fonte": "fotos do free-exercise-db e da ACE (a parte de cima das costas, os ombros e a cabeça ficam no colchonete); a medida dá − quando a parte de baixo do tórax fica mais alta que a de cima"
+   },
+   {
+    "nome": "coluna quase reta embaixo (lombar achatada)",
+    "medida": "coluna",
+    "t": 0.0,
+    "graus": [
+     0,
+     12
+    ]
+   },
+   {
+    "nome": "coluna enrolada em cima (lombar e fim do tórax)",
+    "medida": "coluna",
+    "t": 1.0,
+    "graus": [
+     40,
+     60
+    ],
+    "fonte": "ACE, Reverse Crunch (\"rolling your spine up ... continue to curl-up until your spine cannot roll any further\"); ExRx (\"Continue to raise knees toward shoulders by flexing waist, raising hips from board\"; \"Rectus Abdominis and Obliques dynamically contract only if actual waist flexion occurs\")"
+   },
+   {
+    "nome": "braços ao lado do tronco (o movimento todo)",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     5,
+     25
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"arms to the side of your torso with the palms on the floor\"). A ACE abre os braços pros lados (\"arms spread out to your sides with your palms facing down\") e o estudo de 2001 aceita as 2 (\"Put your hands beside your head or extend them out flat to your sides\"): fica a do fonte_en"
+   },
+   {
+    "nome": "cotovelos pouco dobrados, abertos pra fora",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     40
+    ],
+    "fonte": "free-exercise-db, Reverse Crunch (o fonte_en do catálogo) (\"arms to the side of your torso with the palms on the floor\"; nas fotos dele os braços ficam quase estendidos embaixo e dobram um pouco em cima). O cotovelo fica dobrado ~33° e aberto pra fora: com o braço esticado colado no corpo e a mão em cima do colchonete, o braço deste boneco (ombro e dorsal largos) entrava 9 mm no dorsal embaixo e 15 mm no meio da subida (a lateral do tronco engorda quando a lombar dobra) — o mesmo jeito do abdominal completo (cotovelo 28°)"
+   }
+  ]
+ }
+}

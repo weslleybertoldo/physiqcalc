@@ -718,3 +718,28 @@ def test_pelve_giro_no_chao_em_pe_deitado_e_virando():
     so_torax = dict(sentado)                                        # só o tórax gira: a pelve continua em 0
     so_torax.update({k: v for k, v in girar(sentado, 30, (0, 0, 1)).items() if k in ("LeftShoulder", "RightShoulder", "Neck")})
     assert tc.pelve_giro(so_torax)[0] == pytest.approx(0, abs=1e-6)
+
+
+def test_coxa_vertical_deitado_com_a_pelve_no_chao_e_levantada():
+    """Abdominal infra (lote 12): deitado de costas (cabeça pra +Y), a coxa em pé mede 0, inclinada 30° pro lado da cabeça +30 e 20°
+    pro lado dos pés −20, nos 2 lados; abrir a coxa pro lado não muda; com a pelve levantada (quadril mais alto que o pescoço) e o
+    corpo virado no chão, o número é o mesmo."""
+    deitado = girar(em_pe(), -90, (1, 0, 0), pivo=(0, 0, 0.95))
+
+    def coxa(j, graus, abre=0.0):
+        j = dict(j)
+        for L, s in (("Left", 1), ("Right", -1)):
+            a = math.radians(graus)
+            j[L + "Leg"] = j[L + "UpLeg"] + 0.45 * np.array((s * math.sin(math.radians(abre)), math.sin(a), math.cos(a)))
+        return j
+
+    assert tc.coxa_vertical(coxa(deitado, 0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.coxa_vertical(coxa(deitado, 30)) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_vertical(coxa(deitado, -20)) == pytest.approx([-20, -20], abs=1e-6)
+    assert tc.coxa_vertical(coxa(deitado, 30, abre=10)) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_vertical(deitado)[0] == pytest.approx(-87.5, abs=0.1)     # pernas esticadas no chão, pros pés
+    alto = dict(coxa(deitado, 65), Hips=deitado["Hips"] + np.array((0, 0.05, 0.20)))  # pelve 20 cm acima do chão
+    assert tc.coxa_vertical(alto) == pytest.approx([65, 65], abs=1e-6)
+    virado = girar(coxa(deitado, 40), 90, (0, 0, 1))                # o corpo inteiro virado no chão
+    assert tc.coxa_vertical(virado) == pytest.approx([40, 40], abs=1e-6)
+    assert "coxa_vertical" in tc.MEDIDAS
