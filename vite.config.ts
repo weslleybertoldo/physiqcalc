@@ -300,6 +300,9 @@ export default defineConfig(({ mode }) => {
     include: [],
   },
   build: {
+    // hml-18b (H-54, F): dist/.vite/manifest.json — o fecho estático de cada pedaço, que a guarda de chunks lê no CI
+    // (scripts/ci/checar-chunks.mjs: nenhuma tela com pdf, xlsx, motor, heic2any ou powersync sem ser na ação)
+    manifest: true,
     rollupOptions: {
       output: {
         // Função (não objeto): o objeto puxava dependências COMPARTILHADAS pro chunk manual —
