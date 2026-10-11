@@ -1,0 +1,637 @@
+{
+ "uuid": "e3f6467b-0c68-5db9-bbc1-f7ae9a73e407",
+ "nome": "Mergulho no Banco",
+ "cena": "mergulho_no_banco",
+ "grupo": "Tríceps",
+ "subgrupo": "Tríceps · deltoide anterior · peitoral inferior",
+ "padrao_movimento": "mergulho",
+ "equipamento": "peso_corporal",
+ "variacao": "no banco",
+ "alvos": [
+  "triceps"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "peitoral"
+ ],
+ "camera": {
+  "az": 80,
+  "el": 10,
+  "dist": 3.4,
+  "alvo": [
+   0,
+   -0.05,
+   0.53
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0,
+   -0.05,
+   0.5
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "De costas para um banco reto, apoia as mãos na borda dele, atrás do corpo e ao lado do quadril, na largura dos ombros, com as palmas no estofado e os dedos para a frente, pendurados na borda; estica as pernas para a frente com os calcanhares no chão e os pés perto um do outro, tira o glúteo do banco e fica com os braços estendidos, sem travar, o tronco quase em pé e os ombros baixos (sem encolher). Dobra os cotovelos levando-os para trás, junto do corpo (sem abrir para os lados), e desce o corpo rente ao banco, sem encostar, com o tronco em pé e a cabeça neutra, até os cotovelos ficarem em cerca de 90° e o braço paralelo ao chão, sem passar disso; empurra o banco e estica os cotovelos até os braços ficarem estendidos de novo, sem travar. As mãos e os calcanhares não saem do lugar: quem sobe e desce é o corpo.",
+ "cinesiologia": {
+  "plano": "sagital: flexão e extensão do cotovelo e extensão/flexão do ombro com os braços atrás do corpo; cadeia cinética fechada — as mãos ficam paradas no banco e os calcanhares no chão, e o corpo sobe e desce rente à borda do banco",
+  "articulacoes": "cotovelo (flexão de ~15° em cima a ~90° embaixo na descida, extensão na subida); ombro (extensão de ~40° a ~80° na descida, com o braço chegando à horizontal: no banco o tronco quase não inclina e a profundidade sai quase toda do ombro — McKenzie 2022); punho estendido com a mão espalmada (~95° em cima, ~80° embaixo); escápulas baixadas; quadril dobrando de ~45° a ~80° com os joelhos esticados e os calcanhares parados no chão; coluna neutra",
+  "agonistas": "tríceps braquial (ExRx: alvo; free-exercise-db: primário; no estudo da ACE — Boehler et al. 2011 — o mergulho no banco ativou o tríceps a 87% do triangle push-up, o exercício de maior ativação entre os 8 comparados: \"You can quickly and effectively tone and strengthen the triceps using triangle push-ups, triceps kickbacks and dips.\")",
+  "sinergistas": "deltoide anterior, peitoral maior (porções esternal e clavicular), peitoral menor, romboides, levantador da escápula, latíssimo do dorso e coracobraquial (ExRx); peito e ombros como secundários (free-exercise-db)",
+  "estabilizadores": "trapézio inferior; bíceps braquial como estabilizador dinâmico (ExRx); o contato dos pés com o chão dá estabilidade e tira parte da carga (McKenzie 2022)",
+  "fases": "descida excêntrica controlada (free-exercise-db: \"Slowly lower your body as you inhale\"), subida concêntrica até os braços estendidos, sem travar (NASM)"
+ },
+ "referencias": [
+  "American Council on Exercise (ACE) — Boehler B, Porcari JP, Kline D, Hendrix CR, Foster C, Anders M. ACE-sponsored Research: Best Triceps Exercises. ACE Certified News, agosto de 2011. https://www.acefitness.org/certifiednewsarticle/1562/ace-sponsored-research-best-triceps-exercises/ (lido em 11/10/2026; é o \"Boehler et al., 2011\" e o mergulho medido é NO BANCO): \"For the study, dips were performed using a low bench, but just about any sturdy chair or ledge can be used. Begin by placing your hands on either side of your hips so your palms are resting on the bench and your fingers are hanging over the edge. With your feet together, extend your legs out in front of you.\"; \"Carefully move your buttocks off the bench, while leaving your hands in place. Lower your hips toward the floor until your upper arms are parallel to the floor. Push back up using your hands rather than your legs, and repeat.\"; tabela 1 (EMG do tríceps em % do triangle push-up): \"Dips 87 ± 19.87\".",
+  "ExRx.net — Bench Dip (heels on floor). https://exrx.net/WeightExercises/Triceps/BWBenchDipFloor (lido na cópia do Internet Archive de 23/06/2026): \"Sit on side of bench. Place hands on edge of bench. Position feet away from bench. Straighten arms, slide rear end off of edge of bench, and rest heels on floor with legs straight.\"; \"Lower body by bending arms until slight stretch is felt in chest or shoulder, or rear end touches floor. Raise your body and repeat.\"; \"Bending knees or placing feet on elevated surface can make movement easier.\"; músculos: alvo Triceps Brachii; sinergistas Deltoid, Anterior; Pectoralis Major, Sternal; Pectoralis Major, Clavicular; Pectoralis Minor; Rhomboids; Levator Scapulae; Latissimus Dorsi; Coracobrachialis; estabilizador dinâmico Biceps Brachii; estabilizador Trapezius, Lower. Na versão com os pés em outro banco (ExRx — Bench Dip, cópia de 25/06/2025): \"position heels on adjacent bench with legs straight\".",
+  "free-exercise-db (yuhonas, domínio público) — Bench Dips (o fonte_en do catálogo). https://github.com/yuhonas/free-exercise-db (exercises/Bench_Dips.json, lido em 11/10/2026): \"With the bench perpendicular to your body, and while looking away from it, hold on to the bench on its edge with the hands fully extended, separated at shoulder width. The legs will be extended forward, bent at the waist and perpendicular to your torso.\"; \"Slowly lower your body as you inhale by bending at the elbows until you lower yourself far enough to where there is an angle slightly smaller than 90 degrees between the upper arm and the forearm. Tip: Keep the elbows as close as possible throughout the movement. Forearms should always be pointing down.\"; \"Using your triceps to bring your torso up again, lift yourself back to the starting position.\"; primaryMuscles triceps, secondaryMuscles chest e shoulders. As 2 fotos mostram os pés numa caixa (observação).",
+  "National Academy of Sports Medicine (NASM) — Bench Dips. https://www.nasm.org/resource-center/exercise-library/bench-dips (lido em 11/10/2026): \"Position yourself facing away from a bench with your hands gripping the edge of the bench behind your body. Extend your legs forward with heels on the ground or feet elevated on another bench for increased difficulty.\"; \"Lower your body downward by bending your elbows, descending until your elbows bend to approximately 90 degrees.\"; \"Press your body upward by extending your elbows, returning to the starting position. Maintain continuous tension in the triceps and avoid locking out your elbows at the top.\"; erros: \"Allowing the shoulders to shrug, which reduces triceps engagement and increases shoulder stress\", \"Excessive forward lean, which shifts emphasis to chest and shoulders\", \"Excessive elbow flare, which increases shoulder stress and reduces triceps focus\"; \"keep elbows pointing straight back (not flaring out) to maximize triceps engagement. Minimize forward lean and maintain upright torso positioning for focused triceps work.\" (a lista de músculos da página é de outro exercício — glúteos, quadríceps — e não foi usada).",
+  "Catalyst Athletics — Bench Dip. https://www.catalystathletics.com/exercise/546/Bench-Dip (lido em 11/10/2026): \"Place your hands on a bench behind you with the fingers forward and your legs straight in front of you and heels on the floor. Keeping your trunk upright, lower yourself as far as possible, then press back up to the top.\"; \"Because you’re unable to lean forward much at all, it emphasizes the shoulders and triceps more than the chest.\"",
+  "McKenzie A, Crowley-McHattan Z, Meir R, Whitting J, Volschenk W. Bench, Bar, and Ring Dips: Do Kinematics and Muscle Activity Differ? Int J Environ Res Public Health. 2022;19(20):13211. https://doi.org/10.3390/ijerph192013211 (texto completo do PMC9603242): \"A “Side Load Farmers Walk Handle” bar (Iron Edge, Victoria, Australia) was used at the height typical for a bench dip.\" (o \"banco\" do estudo é uma barra na altura do banco); \"No coaching cues were provided at any point\"; \"Shoulder extension (p = 0.008, d = 1.06) was significantly greater, with anterior thoracic lean (p < 0.001, d = 3.46) and elbow flexion (p = 0.026, d = 1.38) being significantly less during the bench dip compared to the and bar dip.\"; \"The bench dip also had the largest shoulder extension ROM, which was on average 88.13° (±8.86°), representing 101.35% (±6.49%) of the maximal ROM test. This much larger ROM is likely due to the smaller amount of anterior thoracic lean (12.61° ± 6.49°)\"; \"In the bar dip, the thorax can anteriorly lean, which aids the depth of the movement while reducing the total proportion of depth arising from shoulder extension.\"; deslocamento vertical da pelve no banco 318,18 ± 85,60 mm; repetição \"bench = 2.17 ± 0.40 s\"; \"The bench dip required relatively high muscle activity of the TB compared to other muscles\"; \"the bench dip should not be part of regular strength training or rehabilitation protocols\".",
+  "McKenzie AK, Crowley-McHattan ZJ, Meir R, Whitting JW, Volschenk W. Glenohumeral Extension and the Dip: Considerations for the Strength and Conditioning Professional. Strength Cond J. 2021;43(1):93-100 — lido na seção 2.2 da tese aberta do autor (McKenzie AK, A Neuromechanical Investigation of the Dip in Males, Southern Cross University, 2021, doi:10.25918/thesis.195), \"an amended* version of the manuscript\": o mergulho no banco é \"a dip variation involving a weightlifting bench where the exerciser places their feet on the ground and their hands on a weightlifting bench. the participant then lowers their torso to the ground in front of the bench\"; recomendações: \"1. Movement depth: Consider limiting the movement depth\" e \"6. Coaching Cues: “Engage core, depress shoulder blades and maintain a neutral head position”\".",
+  "American Council on Exercise (ACE). Follow-up Q and A: Dangerous Dips. ACE Certified News, setembro de 2011. https://www.acefitness.org/certifiednewsarticle/1657/follow-up-q-and-a-dangerous-dips/ : \"Although the traditional bench-dip exercise scored among the top three in eliciting muscle activity\"; \"Dips also push the glenohumeral joint beyond the normal anatomical range of shoulder extension, stretching the joint capsule and reducing its ability stabilize and produce force, again rendering it more prone to injury.\"",
+  "Polovinets O, Wolf A, Wollstein R. Force transmission through the wrist during performance of push-ups on a hyperextended and a neutral wrist. J Hand Ther. 2018;31(3):322-330. doi:10.1016/j.jht.2017.04.005 — lido só o resumo (PubMed, PMID 28684196): \"Push-ups are used ubiquitously to evaluate and strengthen the upper body. They are usually performed in 1 of 2 main ways: with the wrist in hyperextension and with the wrist in a neutral position.\"",
+  "Amplitude normal das juntas: Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry (valores da AAOS; a referência do limites.py): extensão do punho 0–70°. Tornozelo: Alazzawi S et al., World J Orthop 2017;8(1):21-29, tabela 5 (flexão dorsal 0–20°, flexão plantar 0–50°) — a referência do tecnica3d.tornozelo. Ombro: \"Extension – 0-60°\" (apostila de goniometria da CSJM University, a mesma da ficha do Mergulho nas Paralelas).",
+  "Banco: o e3.banco reto da fábrica (o dos supinos: topo a 44 cm, estofado de 30 cm de largura), atravessado atrás da pessoa; altura e largura dentro da faixa do IPF citada na ficha do Supino Reto na Máquina Deitado (\"Height - not less than 42 cm and not exceeding 45 cm\"). ACE: \"a low bench\"; ExRx: \"Bench height should allow for full range of motion.\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados no chão (ponta do pé, largura, alinhamento, joelho na direção do pé, coluna até 20°) foram feitas pra quem está em pé. Aqui as pernas ficam esticadas pra frente e só o CALCANHAR encosta no chão (ExRx: \"rest heels on floor with legs straight\"; Catalyst: \"heels on the floor\"): o pé fica com a ponta pra cima, então a ponta_pe (tornozelo → base dos dedos visto de cima) perde o sentido e o pes_largura não serve aos pés perto um do outro da ACE. A planta (o vértice mais baixo do pé) é o calcanhar e continua medida no chão (0 ± 5 mm), e o tornozelo não pode andar entre os quadros (o pé fica parado, girando só no tornozelo). As que valem estão abaixo: pés sem um à frente do outro e perto um do outro, joelhos esticados, tornozelo na amplitude normal, coluna neutra (até 8°), pelve e ombros nivelados.",
+  "limites_juntas": {
+   "punhoE": [
+    0,
+    97
+   ],
+   "punhoD": [
+    0,
+    97
+   ]
+  },
+  "limites_juntas_fonte": "Punhos das mãos espalmadas no banco, sem segurar peso: com a palma no estofado e os dedos pra frente pendurados na borda (ACE — Boehler et al. 2011: \"your palms are resting on the bench and your fingers are hanging over the edge\"; Catalyst: \"with the fingers forward\") e as mãos ATRÁS do corpo, o antebraço fica quase em pé e o punho, estendido ~80° embaixo e ~95° em cima (em cima o ombro fica um pouco à frente das mãos e o antebraço deita uns 12° pra trás). É o jeito \"with the wrist in hyperextension\" da flexão de braço (Polovinets et al. 2018), como a Flexão de Braço (lote 7, teto de 92°). O teto de 55° do limites.py é pra mão segurando peso sem dobrar o punho e o de 70° (AAOS, Norkin & White) é a extensão ativa sem carga; aqui o peso do corpo estende o punho além dela. Pra o punho não passar disso em cima, o tronco fica ~15° reclinado e o cotovelo solto a ~15° (com o tronco em pé e o braço travado o punho passaria de 115°).",
+  "zonas": [
+   {
+    "nome": "palma da mão esquerda apoiada no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "LeftHand"
+    ],
+    "mm": [
+     -3,
+     1
+    ],
+    "fonte": "ACE — Boehler et al. 2011 (\"your palms are resting on the bench and your fingers are hanging over the edge\"); pedido: palma encostando, sem afundar mais que ~1–3 mm"
+   },
+   {
+    "nome": "dedo indicador da mão esquerda pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão esquerda pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão esquerda pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão esquerda pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "polegar da mão esquerda deitado em cima do estofado",
+    "equipamento": "banco",
+    "partes": [
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "palma da mão direita apoiada no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "RightHand"
+    ],
+    "mm": [
+     -3,
+     1
+    ],
+    "fonte": "ACE — Boehler et al. 2011 (\"your palms are resting on the bench and your fingers are hanging over the edge\"); pedido: palma encostando, sem afundar mais que ~1–3 mm"
+   },
+   {
+    "nome": "dedo indicador da mão direita pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão direita pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão direita pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão direita pendurado na borda, encostando no estofado",
+    "equipamento": "banco",
+    "partes": [
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "polegar da mão direita deitado em cima do estofado",
+    "equipamento": "banco",
+    "partes": [
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "mm": [
+     -3,
+     1.5
+    ]
+   },
+   {
+    "nome": "costas, glúteo e coxas não encostam no banco (descem rente, à frente da borda)",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     5,
+     1000000000000000.0
+    ],
+    "fonte": "ACE — Boehler et al. 2011 (\"Carefully move your buttocks off the bench, while leaving your hands in place\"); ExRx — Bench Dip (heels on floor) (\"slide rear end off of edge of bench\"); McKenzie (tese, 2021) (\"lowers their torso to the ground in front of the bench\")"
+   },
+   {
+    "nome": "antebraços não entram no banco",
+    "equipamento": "banco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "mm": [
+     -3,
+     1000000000000000.0
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o equipamento); a pele do punho, no pé da mão, encosta junto com a palma"
+   },
+   {
+    "nome": "braços, cabeça, pernas e pés longe do banco",
+    "equipamento": "banco",
+    "partes": [
+     "LeftArm",
+     "RightArm",
+     "Neck",
+     "Head",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ]
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pernas e coxas fora do chão (só os calcanhares encostam)",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "ExRx — Bench Dip (heels on floor) (\"rest heels on floor with legs straight\"); Catalyst Athletics — Bench Dip (\"your legs straight in front of you and heels on the floor\")"
+   },
+   {
+    "nome": "glúteo longe do chão embaixo (a descida para no cotovelo a ~90°, antes de o glúteo chegar no chão)",
+    "partes": [
+     "Hips"
+    ],
+    "acima_de": "chao",
+    "t": 1.0,
+    "mm": [
+     120,
+     350
+    ],
+    "fonte": "NASM — Bench Dips (\"descending until your elbows bend to approximately 90 degrees\"); o ExRx deixa ir mais fundo (\"until slight stretch is felt in chest or shoulder, or rear end touches floor\"), o que aqui não vale (ver a profundidade nos ângulos)"
+   },
+   {
+    "nome": "tronco e cabeça longe do chão",
+    "partes": [
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     250,
+     5000
+    ]
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos não encostam no quadril nem nas coxas (ficam por fora, ao lado do quadril)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     15,
+     2000
+    ],
+    "fonte": "ACE — Boehler et al. 2011 (\"placing your hands on either side of your hips\")"
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     5,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços estendidos em cima, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     8,
+     20
+    ],
+    "fonte": "ExRx — Bench Dip (heels on floor) (\"Straighten arms\"); free-exercise-db — Bench Dips (\"with the hands fully extended\"); NASM — Bench Dips (\"avoid locking out your elbows at the top\")"
+   },
+   {
+    "nome": "cotovelos a ~90° embaixo (sem passar)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "NASM — Bench Dips (\"descending until your elbows bend to approximately 90 degrees\"); free-exercise-db — Bench Dips (\"an angle slightly smaller than 90 degrees between the upper arm and the forearm\"); McKenzie (tese, 2021) (\"Consider limiting the movement depth\"). Sem instrução o cotovelo vai a ~107° (McKenzie 2022, gráfico da Figura 3): não é o que mostramos"
+   },
+   {
+    "nome": "braço paralelo ao chão embaixo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "t": 1.0,
+    "graus": [
+     -3,
+     12
+    ],
+    "fonte": "ACE — Boehler et al. 2011 (\"Lower your hips toward the floor until your upper arms are parallel to the floor\")"
+   },
+   {
+    "nome": "cotovelos pra trás, junto do corpo (sem abrir pro lado)",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -5,
+     15
+    ],
+    "fonte": "free-exercise-db — Bench Dips (\"Keep the elbows as close as possible throughout the movement\"); NASM — Bench Dips (\"keep elbows pointing straight back (not flaring out)\"; erro: \"Excessive elbow flare\")"
+   },
+   {
+    "nome": "antebraço apontando pra baixo, quase em pé",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "free-exercise-db — Bench Dips (\"Forearms should always be pointing down.\")"
+   },
+   {
+    "nome": "extensão do ombro embaixo (braço atrás do tronco), abaixo da do mergulho no banco sem instrução",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -88,
+     -72
+    ],
+    "fonte": "McKenzie et al. 2022 (\"The bench dip also had the largest shoulder extension ROM, which was on average 88.13° (±8.86°), representing 101.35% (±6.49%) of the maximal ROM test\"); Catalyst Athletics — Bench Dip (\"Because you’re unable to lean forward much at all, it emphasizes the shoulders and triceps more than the chest.\"); ACE — Dangerous Dips 2011 (\"Dips also push the glenohumeral joint beyond the normal anatomical range of shoulder extension\"). Com o banco atrás o tronco não inclina e a descida sai quase toda do ombro: com o cotovelo a 90° e o braço na horizontal o ombro fica a ~80° de extensão"
+   },
+   {
+    "nome": "tronco quase em pé (sem inclinar pra frente)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     18
+    ],
+    "fonte": "Catalyst Athletics — Bench Dip (\"Keeping your trunk upright, lower yourself\"); NASM — Bench Dips (\"Minimize forward lean and maintain upright torso positioning\"; erro: \"Excessive forward lean\"); sem instrução o tórax inclina 12,61° ± 6,49° pra frente (McKenzie 2022). Na cena: ~15° pra TRÁS em cima (ver o motivo do punho) e ~4° pra frente embaixo"
+   },
+   {
+    "nome": "tronco em pé embaixo",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "NASM — Bench Dips (\"maintain upright torso positioning\"); Catalyst Athletics — Bench Dip (\"Keeping your trunk upright\")"
+   },
+   {
+    "nome": "ombros baixados (sem encolher)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": "todos",
+    "graus": [
+     18,
+     35
+    ],
+    "fonte": "NASM — Bench Dips (erro: \"Allowing the shoulders to shrug, which reduces triceps engagement and increases shoulder stress\"); McKenzie (tese, 2021) (\"Engage core, depress shoulder blades and maintain a neutral head position\"). Linha do ombro caída como no repouso (no encolhimento ela fica na horizontal)"
+   },
+   {
+    "nome": "mãos na largura dos ombros, por fora do quadril",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.05,
+     1.35
+    ],
+    "fonte": "free-exercise-db — Bench Dips (\"separated at shoulder width\"); ACE — Boehler et al. 2011 (\"placing your hands on either side of your hips\"). A medida divide pela distância entre as cabeças do úmero (no boneco ~1,2 = mãos na largura dos ombros)"
+   },
+   {
+    "nome": "palmas viradas pro banco",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     165,
+     180
+    ],
+    "fonte": "ACE — Boehler et al. 2011 (\"your palms are resting on the bench and your fingers are hanging over the edge\")"
+   },
+   {
+    "nome": "quadril dobrado com as pernas pra frente",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     35,
+     95
+    ],
+    "fonte": "free-exercise-db — Bench Dips (\"The legs will be extended forward, bent at the waist\"); com os calcanhares no chão a perna desce até o chão e o quadril dobra menos que os 90° do texto (que é o dos pés numa caixa, nas fotos do free-exercise-db)"
+   },
+   {
+    "nome": "pernas esticadas",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "ExRx — Bench Dip (heels on floor) (\"rest heels on floor with legs straight\"); Catalyst Athletics — Bench Dip (\"your legs straight in front of you\")"
+   },
+   {
+    "nome": "um pé não fica à frente do outro",
+    "medida": "pes_alinhados",
+    "t": "todos",
+    "mm": [
+     0,
+     15
+    ]
+   },
+   {
+    "nome": "pés perto um do outro (o mais junto que as coxas do boneco deixam)",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     0.5,
+     1.6
+    ],
+    "fonte": "ACE — Boehler et al. 2011 (\"With your feet together, extend your legs out in front of you\"). No boneco musculoso, com o quadril dobrado, a parte de dentro de uma coxa entra na outra se os pés chegam mais perto (ele não amassa): os pés ficam o mais junto que der sem uma coxa entrar na outra (a Flexão de Braço, lote 7, fez o mesmo)"
+   },
+   {
+    "nome": "tornozelos na amplitude normal (calcanhar no chão, ponta pra cima)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     56,
+     92
+    ],
+    "fonte": "Alazzawi S et al., World J Orthop 2017;8(1):21-29, tabela 5 (flexão dorsal 0–20°, flexão plantar 0–50° — a referência do tecnica3d.tornozelo: o boneco em pé mede ~76°, ~96° = 20° de flexão dorsal). O pé fica parado com o calcanhar no chão e a canela deita ~14° na descida: de ~5° de flexão dorsal em cima a ~10° de flexão plantar embaixo"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "McKenzie (tese, 2021) (\"Engage core, depress shoulder blades and maintain a neutral head position\")"
+   },
+   {
+    "nome": "cabeça neutra, na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -24,
+     -4
+    ],
+    "fonte": "McKenzie (tese, 2021) (\"maintain a neutral head position\"). O boneco em pé, no repouso, mede ~−11°; com o tronco reclinado em cima o pescoço dobra metade do reclinado e o olhar fica perto da horizontal, como nas fotos do free-exercise-db"
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   }
+  ]
+ }
+}
