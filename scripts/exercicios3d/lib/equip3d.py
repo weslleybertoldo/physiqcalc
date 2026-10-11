@@ -1455,7 +1455,7 @@ def _rot_de(x, y, z):
 
 
 def leg_press_45(nome="leg_press", angulo=45.0, plataforma=None, trilhos=(0.26, 0.30, 0.025), curso=(-0.30, 0.0),
-                 assento=None, encosto=None, lombar=None, pegadores=None, anilhas=False):
+                 assento=None, encosto=None, lombar=None, pegadores=None, anilhas=False, trilho_baixo=None, chassi_baixo=None):
     """Leg press 45° (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
       angulo     = ângulo do trilho com o chão (graus): o carrinho sobe na direção D = (0, −cos, sen);
       plataforma = (centro, largura, altura, espessura): centro da FACE da plataforma (onde as solas encostam), ⟂ a D; largura
@@ -1474,7 +1474,13 @@ def leg_press_45(nome="leg_press", angulo=45.0, plataforma=None, trilhos=(0.26, 
       pegadores  = (centros, eixos, comprimento, raio): {s: centro} e {s: eixo} de cada pegador de borracha (s = +1 lado +X),
                    em cima de um poste que desce até a base;
       anilhas    = True põe uma anilha de 20 kg em cada suporte de baixo do carrinho (padrão: sem anilha, a visão das pernas e dos
-                   pés fica livre).
+                   pés fica livre);
+      trilho_baixo = None ou a ponta de baixo dos trilhos (m ao longo de D a partir da montagem): None = 13 cm abaixo da luva no
+                   fim do curso, como sempre; a Panturrilha no Leg Press (curso de poucos cm, trava logo abaixo dele) estende os
+                   trilhos até onde eles chegam no Leg Press 45°, como numa máquina de verdade;
+      chassi_baixo = None ou a altura da travessa de baixo do carrinho (m ao longo de E a partir do centro da plataforma, atrás
+                   da chapa): None = logo acima das luvas, como sempre; a Panturrilha no Leg Press, com os trilhos mais abaixo da
+                   plataforma, sobe a travessa pra trás da parte de baixo da chapa (os calcanhares descem por baixo dela).
     Devolve um LegPress (raizes, equipamentos, apoios, pegadores, mover())."""
     a = math.radians(angulo)
     D = Vector((0.0, -math.cos(a), math.sin(a)))              # ao longo do trilho, subindo
@@ -1520,7 +1526,7 @@ def leg_press_45(nome="leg_press", angulo=45.0, plataforma=None, trilhos=(0.26, 
         pecas.append(_viga(nome + "_chassi_diag%+d" % s, c_p + X * (s * x_t) + D * (atras + 0.05) + E * (topo_e - 0.10),
                            eixo_s + D * (atras + L_luva - 0.03) + E * (raio_t + 0.035), 0.05, 0.05, mat_estrutura()))
     # travessas do chassi (de um lado ao outro, atrás da chapa): embaixo (nas luvas) e em cima
-    for k, e_ in enumerate((-recuo + raio_t + 0.05, alt_p / 2 - 0.09)):
+    for k, e_ in enumerate((-recuo + raio_t + 0.05 if chassi_baixo is None else chassi_baixo, alt_p / 2 - 0.09)):
         pecas.append(_em_aneis(_reto(caixa(nome + "_chassi_trav%d" % k, c_p + D * (atras + 0.03) + E * e_,
                                            (2 * (x_t + 0.03), 0.06, 0.06), mat_estrutura(), rot=rot_p, chanfro=0)), passo=0.06))
     # suportes de anilha: 2 de cada lado, pra fora (±X), na altura da luva e mais acima; colar de encosto da anilha na base
@@ -1549,6 +1555,8 @@ def leg_press_45(nome="leg_press", angulo=45.0, plataforma=None, trilhos=(0.26, 
 
     # ── trilhos (parados) e as travas: barras redondas paralelas a D, das travas (embaixo do curso) até o pórtico ──────────────
     d_baixo = d0 + atras - 0.13                               # ponta de baixo do trilho (ao longo de D, a partir da montagem)
+    if trilho_baixo is not None:                              # trilho mais comprido que o curso (Panturrilha no Leg Press)
+        d_baixo = trilho_baixo
     d_cima = d1 + atras + L_luva + 0.28                       # ponta de cima (passa da luva no topo do curso)
     pts = {}
     for s in (1, -1):
