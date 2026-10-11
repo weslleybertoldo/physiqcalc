@@ -115,12 +115,12 @@ def limpar() -> None:
         B.sql_treino(f"delete from public.physiq_espelho_membros where treino_user_id = '{t}'")
         B.sql_treino(f"delete from public.physiq_professores where id = '{t}'")
         B.sql_treino(f"delete from public.physiq_identidades where treino_user_id = '{t}'")
-        st, _, _ = B.http("DELETE", f"{B.B5.TREINO_URL}/auth/v1/admin/users/{t}", None, {"apikey": spt, "Authorization": f"Bearer {spt}"})
+        st, _, _ = B.http("DELETE", f"{B.B5.TREINO_URL}/auth/v1/admin/users/{t}", None, B.cab_servico(spt))
         B.sql_treino(f"delete from public.physiq_profiles where id = '{t}'")
         print("Treino: usuário descartável apagado", t, st)
     spp = B.service(B.PRINCIPAL_REF)
     for u in up:
-        st, _, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/auth/v1/admin/users/{u}", None, {"apikey": spp, "Authorization": f"Bearer {spp}"})
+        st, _, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/auth/v1/admin/users/{u}", None, B.cab_servico(spp))
         q(f"delete from public.profiles where id = '{u}'")
         print("principal: usuário descartável apagado", u, st)
 
