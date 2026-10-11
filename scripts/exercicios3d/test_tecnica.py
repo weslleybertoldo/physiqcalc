@@ -685,6 +685,23 @@ def test_tronco_giro_sentado_em_volta_do_proprio_eixo():
     assert "tronco_giro" in tc.MEDIDAS
 
 
+def test_coluna_sinal_arqueada_negativa_e_enrolada_positiva():
+    """Abdominal na polia (lote 12): a coluna reta = 0; a torácica 30° à frente da lombar (enrolada) = +30 e 12° pra trás (arqueada
+    pelo peso do cabo, no começo) = −12 — o `coluna` dá 30 e 12, sem sinal. O mesmo número com o boneco inclinado 45° pra frente
+    (ajoelhado na polia), deitado ou virado."""
+    j = em_pe()
+    assert tc.coluna_sinal(j) == pytest.approx([0], abs=1e-6)
+    enrolada = dict(j, Neck=girar({"n": j["Neck"]}, 30, (1, 0, 0), j["Spine1"])["n"])
+    arqueada = dict(j, Neck=girar({"n": j["Neck"]}, -12, (1, 0, 0), j["Spine1"])["n"])
+    assert tc.coluna_sinal(enrolada) == pytest.approx([30], abs=1e-6)
+    assert tc.coluna_sinal(arqueada) == pytest.approx([-12], abs=1e-6)
+    assert tc.coluna(arqueada)[0] == pytest.approx(12, abs=1e-6)
+    assert tc.coluna_sinal(girar(arqueada, 45, (1, 0, 0), (0, 0, 0.95))) == pytest.approx([-12], abs=1e-6)
+    assert tc.coluna_sinal(girar(enrolada, -90, (1, 0, 0))) == pytest.approx([30], abs=1e-6)
+    assert tc.coluna_sinal(girar(enrolada, 60, (0, 0, 1))) == pytest.approx([30], abs=1e-6)
+    assert "coluna_sinal" in tc.MEDIDAS
+
+
 def test_pelve_giro_no_chao_em_pe_deitado_e_virando():
     """Abdominal russo (lote 12): a pelve parada no chão mede 0 em pé, curvada ou deitada; virando pra esquerda (em volta da vertical)
     dá +, pra direita −; o tórax girando sozinho (tronco_giro) não mexe nela."""

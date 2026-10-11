@@ -698,6 +698,25 @@ def tronco_giro(j):
 MEDIDAS.update({"tronco_giro": tronco_giro})
 
 
+# ── abdominal na polia (lote 12, 11/10/2026): ajoelhado na polia alta, o peso do cabo arqueia a lombar no começo (free-exercise-db,
+# Cable Crunch: "allow the weight to hyperextend the lower back"; ExRx, Cable Kneeling Crunch: "allowing resistance on cable pulley to
+# lift torso upward so spine is hyperextended") e depois a coluna enrola. O `coluna` (lombar × torácica) não tem sinal: a coluna 10°
+# arqueada e 10° enrolada dão o mesmo número.
+def coluna_sinal(j):
+    """Curvatura da coluna COM SINAL, graus: a torácica (Spine1 → pescoço) em relação à lombar (quadril → Spine1), as 2 no plano
+    sagital do tronco (o lado vem da linha dos ombros): + = flexão (a torácica enrola pra frente), − = extensão (a coluna arqueada pra
+    trás). Sem o sinal, é o `coluna`. No referencial do tronco: vale em pé, ajoelhado com o tronco inclinado ou deitado."""
+    _, lado, _ = eixos_tronco(j)
+    a = j["Spine1"] - j["Hips"]
+    b = j["Neck"] - j["Spine1"]
+    a = _u(a - lado * (a @ lado))
+    b = _u(b - lado * (b @ lado))
+    return [math.degrees(math.atan2(float(np.cross(a, b) @ -lado), float(a @ b)))]
+
+
+MEDIDAS.update({"coluna_sinal": coluna_sinal})
+
+
 # ── abdominal russo (lote 12, 11/10/2026): sentado no colchonete, o TRONCO gira pros lados e a pelve fica parada — o glúteo não gira
 # no chão junto com o tronco (free-exercise-db, Russian Twist: "Twist your torso to the right side"; NASM, Russian Twist: "Rotate your
 # torso to one side"). O tronco_giro mede o tórax EM RELAÇÃO à pelve e o pelve_nivel a pelve inclinando de lado: a pelve inteira girando
