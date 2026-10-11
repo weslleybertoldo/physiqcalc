@@ -29,6 +29,21 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 04:09 | hml-19a | `9afbf44` | `e2e/h5/telas.py --base http://localhost:8080 --prefixo local --canal msedge` | local | 62/64 | o caso prontuario passou inteiro; as 2 falhas não são da 19a: o /c/ do cadastro (o estado do staging) e o editor da Dieta, que caiu num IndexError do script antes de abrir a tela (o Rafael sem plano vivo no staging) |
+| 11/10 04:03 | hml-19a | `9afbf44` | `e2e/h5/api.py` | staging | 25/26 | a falha é do cadastro /c/ (função alunos, fora da 19a): "e-mail e CPF que já existem" voltou cadastro_repetido |
+| 11/10 04:01 | hml-19a | `9afbf44` | `e2e/hml19/api.py --area prontuario --casos LX` | staging | 7/7 | a Lixeira (W26) com o excluir pela nutricao |
+| 11/10 04:00 | hml-19a | `66b992c` | `e2e/w26/api.py` | staging | 1/6 | ambiente: as contas de teste da W24 com a senha velha nesta máquina e sem o backup de 01/10; a parte da Lixeira que a 19a toca está no caso LX |
+| 11/10 03:56 | hml-19a | `66b992c` | `e2e/w18/telas.py --base http://localhost:8080 --prefixo local --canal msedge` | local | 52/52 |  |
+| 11/10 03:53 | hml-19a | `66b992c` | `e2e/w18/api.py` | staging | 81/81 |  |
+| 11/10 03:25 | hml-19a | `66b992c` | `e2e/w25/api.py` | staging | 23/30 | = base (hml-13, hml-15b, hml-16d): a massa do dia não rodou (o w25/massa.py para: o Carlos tem login no principal) |
+| 11/10 03:24 | hml-19a | `66b992c` | `e2e/w10/api.py` | staging | 22/22 |  |
+| 11/10 03:23 | hml-19a | `66b992c` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 |  |
+| 11/10 03:21 | hml-19a | `6269a9c` | `e2e/hml19/laco.py --base local --canal msedge --normal` | local | 18/18 |  |
+| 11/10 03:19 | hml-19a | `6269a9c` | `e2e/hml19/laco.py --base local --canal msedge` | local | 21/21 | a nutricao barrada: 1 garantir por seção e o aviso "Tentar de novo" |
+| 11/10 03:16 | hml-19a | `6269a9c` | `e2e/hml19/rede.py --base local --canal msedge` | local | 18/18 | depois: 0 rest de gravação nas tabelas do Prontuário |
+| 11/10 03:15 | hml-19a | `6269a9c` | `e2e/hml19/rede.py --base staging --canal msedge --casos anexo` | staging | 7/7 | antes (o código antigo): o anexo |
+| 11/10 03:13 | hml-19a | `7027ff5` | `e2e/hml19/rede.py --base staging --canal msedge` | staging | 11/14 | antes: 1 erro do script (corrigido em 6269a9c), as duplicatas do H-81 na conta de teste e o 429 do teto por IP que o laço do código antigo causou |
+| 11/10 03:10 | hml-19a | `8a0ba22` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 120/120 |  |
 | 11/10 03:01 | W-P | `addbaa7` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | só leitura, com as migrations 010000–030000 da W-P no staging |
 | 11/10 03:01 | W-P | `addbaa7` | `e2e/w10/api.py` | staging | 22/22 | |
 | 11/10 02:58 | W-P | `addbaa7` | `e2e/wp/telas.py --base staging --canal msedge` | staging | 125/125 | o deploy do `addbaa7` no `physiqcalc-staging.vercel.app` (health 3.96 · `addbaa7` · schema staging) com a `pagamentos-aluno` v39: o mesmo roteiro do local (painel do dono, app do aluno, o membro sem Planos, o plano de 1 mês); o Brick do MP carregou; 26 prints em `prints/wp/staging/`, nenhum passa da largura; a massa desfeita (foto conferida) |
