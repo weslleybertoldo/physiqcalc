@@ -344,7 +344,8 @@ def main() -> int:
         o = C.Saida(f"rede_{a.area}_seco" if dieta else "rede_seco")
         (RD.seco if dieta else seco)(o)
         return o.fim()
-    o = C.Saida(f"rede_{a.area}_{a.base}" if dieta else f"rede_{a.base}" + ("_limpar" if a.limpar else ""))
+    # hml-19c: nas áreas em módulo, o --limpar sai em rede_<área>_limpar (antes levava o --base padrão, "local", e cobria a cópia da rodada local)
+    o = C.Saida(f"rede_{a.area}_" + ("limpar" if a.limpar else a.base) if dieta else f"rede_{a.base}" + ("_limpar" if a.limpar else ""))
     try:
         if a.limpar:
             s = B.usar_base("staging")

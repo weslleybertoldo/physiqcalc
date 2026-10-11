@@ -29,6 +29,9 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 17:25 | hml-19c | `8a911bb` | `e2e/hml19/api.py --area avaliacao --base staging --limpar` | staging | 2/2 | F8: nada pendente; conferência só leitura 0/0 (2 bancos, 2 schemas, 4 buckets, avisos) |
+| 11/10 17:24 | hml-19c | `8a911bb` | `e2e/w17/avaliacao_telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19c --canal msedge` | staging | 63/63 | F8: a aba Avaliação inteira no staging com o código novo (o local deu 64/64) |
+| 11/10 17:20 | hml-19c | `8a911bb` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge --prefixo staging2` | staging | 21/21 | F8, o DEPOIS no staging: cada ação só pelas funções, 0 gravação direta; prints staging2_c_* + a folha |
 | 11/10 13:43 | hml-19c | `106fc83` | `e2e/w17/avaliacao_telas.py --base http://localhost:8080 --prefixo local19c --canal msedge` | local | 64/64 | regressão: a aba Avaliação inteira no código novo (a foto do mês pelas foto_*, a antropometria pela nutricao) |
 | 11/10 13:39 | hml-19c | `106fc83` | `e2e/hml19/rede.py --area avaliacao --base local --canal msedge` | local | 21/21 | o DEPOIS: cada ação só pelas funções (0 rest/Storage/RPC direto); prints local_c_* |
 | 11/10 13:27 | hml-19c | `106fc83` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge --casos antropometria` | staging | 6/6 | o antes (881480d), de novo para o print do Histórico |
