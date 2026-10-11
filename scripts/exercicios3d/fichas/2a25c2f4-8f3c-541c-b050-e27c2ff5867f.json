@@ -1,0 +1,497 @@
+{
+ "uuid": "2a25c2f4-8f3c-541c-b050-e27c2ff5867f",
+ "nome": "Ponte de Glúteo",
+ "cena": "ponte_de_gluteo",
+ "grupo": "Glúteo",
+ "subgrupo": "Glúteo máximo · isquiotibiais",
+ "padrao_movimento": "elevacao_pelvica",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado no chão",
+ "alvos": [
+  "gluteo"
+ ],
+ "auxiliares": [
+  "posterior"
+ ],
+ "camera": {
+  "az": 78,
+  "el": 10,
+  "dist": 2.9,
+  "alvo": [
+   0,
+   0.06,
+   0.19
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.2,
+  "alvo": [
+   0,
+   0.05,
+   0.22
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado de costas no colchonete, com os joelhos dobrados e os pés chapados no colchonete, afastados na largura do quadril e com as pontas pra frente, os braços estendidos ao lado do corpo com as palmas das mãos apoiadas no colchonete e a cabeça apoiada; começa com o glúteo e as costas encostados no colchonete. Soltando o ar, contrai o glúteo e empurra o chão com os pés, sobretudo pelos calcanhares — os pés ficam chapados e parados —, e sobe o quadril: o tronco e a pelve sobem juntos, como um bloco, sem arquear a lombar, até os ombros, o quadril e os joelhos ficarem numa linha reta, inclinada, com os joelhos a cerca de 90°; em cima fica apoiado nos ombros e na parte de cima das costas, com a cabeça e os braços no colchonete, sem subir o quadril além dessa linha. Segura 1 segundo em cima e desce devagar, puxando o ar, até o glúteo encostar de novo no colchonete.",
+ "cinesiologia": {
+  "plano": "sagital (extensão do quadril), cadeia cinética fechada, com os pés e a parte de cima das costas apoiados no chão",
+  "articulacoes": "quadril (extensão na subida, de ~57° de flexão até o neutro, com a coxa na linha do tronco; flexão na descida) e joelho (estende um pouco na subida, de ~112° a ~90°, com os pés parados); coluna neutra e parada — o tronco e a pelve como um segmento só, rolando sobre a parte de cima das costas; tornozelos com os pés chapados; pescoço dobrando aos poucos pra cabeça continuar apoiada; ombros e cotovelos: as mãos ficam paradas no colchonete, o cotovelo estica um pouco e a escápula desce quando o apoio passa pra ela",
+  "agonistas": "glúteo máximo (free-exercise-db: primário \"glutes\"; ExRx, Suspended Hip Bridge e Barbell Hip Thrust: \"Target: Gluteus Maximus\")",
+  "sinergistas": "isquiotibiais (free-exercise-db: secundário \"hamstrings\"). Com o joelho dobrado eles ajudam pouco a estender o quadril e trabalham mais segurando o joelho (ExRx, Suspended Hip Bridge: \"Hamstring enters active insufficiency as hip is raised since knee is flexed ... However, it is used more to stabilize knees in fixed flexed position\"); quanto mais perto do glúteo ficam os pés, mais glúteo e menos isquiotibial (Colonna 2025: \"as knee flexion increases ... gluteal muscle activation increases, and Ham activation decreases\")",
+  "estabilizadores": "eretores da espinha (ExRx: \"Stabilizers: Erector Spinae\") e o abdômen — reto do abdome e oblíquos — segurando a coluna neutra e a pelve sem anteversão (ExRx: \"Antagonist Stabilizers: Rectus Abdominis, Obliques\"; ACE: \"Maintaining your abdominal contraction helps avoid excessive arching in your low back\"). O joelho fica parado por isquiotibiais e quadríceps: no começo da subida ele pede torque flexor e, conforme o quadril sobe, o torque cai e pode virar extensor com os pés perto (Colonna 2025, citando Biscarini: \"a knee flexion torque is always required at the start of the concentric phase\" / \"transitioning to a knee extension torque in the group of subjects studied for TPd < 1.0 m\"; aqui os pés ficam a ~1 m do apoio das costas)",
+  "fases": "subida concêntrica soltando o ar, com 1 s parado em cima (free-exercise-db: \"Breathe out as you perform this part of the motion and hold at the top for a second\"); descida excêntrica e devagar, puxando o ar (free-exercise-db: \"Slowly go back to the starting position as you breathe in\"; ACE: \"Inhale and slowly lower yourself back towards your starting position\")"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público) — Butt Lift (Bridge) (o fonte_en do catálogo). https://github.com/yuhonas/free-exercise-db (exercises/Butt_Lift_Bridge.json)",
+  "American Council on Exercise (ACE) — Glute Bridge (nº 49). https://www.acefitness.org/resources/everyone/exercise-library/49/glute-bridge/",
+  "ACE — Glute Bridge (nº 66), Hip Bridge (nº 318) e Glute Bridge Single Leg Progression (nº 145). https://www.acefitness.org/resources/everyone/exercise-library/66/glute-bridge/ · .../318/hip-bridge/ · .../145/glute-bridge-single-leg-progression/",
+  "Colonna S, D'Alessandro A, Tarozzi R, Casacci F. Supine Bridge Exercise: A Narrative Review of the Literature (Part I). Cureus. 2025;17(3):e80349 (PMC11981018)",
+  "ExRx.net — Suspended Hip Bridge (cópia do Internet Archive de 02/03/2021) e Barbell Hip Thrust (cópia de 03/04/2026). https://exrx.net/WeightExercises/GluteusMaximus/STHipBridge · https://exrx.net/WeightExercises/GluteusMaximus/BBHipThrust",
+  "University of Sussex (Sport) — Glute Bridge (folheto). https://www.sussex.ac.uk/sport/documents/glute-bridge.pdf",
+  "Contreras B, Cronin J, Schoenfeld B. Barbell Hip Thrust. Strength Cond J. 2011;33(5):58-61 (o hip thrust, pra comparar: joelho a 90° em cima, com a canela vertical e o tronco paralelo ao chão)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pes_no_chao_motivo": "pés chapados e parados: o calcanhar não sai do chão nem escorrega (free-exercise-db: \"Pushing mainly with your heels\"; ACE nº 49: \"press your heels into the floor for more stability\"). Tirar a ponta do pé do chão é variação (Colonna 2025, citando Yoo: \"when bridging is performed by lifting the heels off the ground\" ...)",
+  "chao_mm": 12,
+  "chao_mm_motivo": "os pés ficam chapados em cima do colchonete de 12 mm (ACE nº 49: \"Lie supine (on your back) on an exercise mat or the floor in a bent-knee position with your feet flat on the floor\"), então a planta é medida no topo dele",
+  "zonas": [
+   {
+    "nome": "glúteo e sacro apoiados no colchonete embaixo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips"
+    ],
+    "t": 0.0,
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "free-exercise-db, Butt Lift (Bridge) (\"Lie flat on the floor on your back\"; \"Slowly go back to the starting position\"); ACE nº 318 (\"Slowly lower the tailbone back to the floor\"); ExRx, Suspended Hip Bridge (\"Lower hips until hips and back make contact with mat\")"
+   },
+   {
+    "nome": "costas apoiadas embaixo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "t": 0.0,
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE nº 49 (\"Lie supine (on your back) on an exercise mat or the floor\")"
+   },
+   {
+    "nome": "parte de cima das costas apoiada o movimento todo (em cima, entre as escápulas)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Colonna 2025 (\"while maintaining the upper spine in contact with the ground\"; o apoio \"in the interscapular area, approximately at the T3 level\"); ACE nº 66 (\"Rest on the shoulders and the upper back\")"
+   },
+   {
+    "nome": "cabeça apoiada (o cabelo da nuca no colchonete)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     8
+    ],
+    "fonte": "Universidade de Sussex (Sport), Glute Bridge (\"Lying on your back hands by your side, head on the floor\"; o folheto é de uma variação com mini band e as pontas dos pés pra cima); nas fotos da ACE nº 49 e do free-exercise-db a cabeça fica apoiada embaixo e em cima (observação). Medido na pele: o cabelo da nuca encosta no colchonete e a pele fica uns 1–3 mm acima dele"
+   },
+   {
+    "nome": "mãos espalmadas no colchonete, paradas",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "free-exercise-db, Butt Lift (Bridge) (\"with the hands by your side\"); ExRx, Suspended Hip Bridge (\"Place arms off to sides\"); fotos da ACE nº 49 e do free-exercise-db: palmas no colchonete do lado do quadril"
+   },
+   {
+    "nome": "braços apoiados no colchonete",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm"
+    ],
+    "mm": [
+     -20,
+     5
+    ],
+    "fonte": "free-exercise-db, Butt Lift (Bridge) (\"with the hands by your side\"); fotos da ACE nº 49 e do free-exercise-db. Em cima o braço estica e o antebraço sobe até ~4 mm do colchonete: a mão fica parada e a articulação do ombro anda pra cabeça quando o tronco inclina"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "antebraços e mãos sem entrar no tronco, no quadril nem nas coxas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     5,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "costas, glúteo e ombros sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado), como no abdominal supra"
+   },
+   {
+    "nome": "cabeça e pescoço sem atravessar o colchonete",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "braços e mãos sem atravessar o colchonete",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "glúteo fora do chão em cima",
+    "partes": [
+     "Hips"
+    ],
+    "acima_de": "chao",
+    "t": 1.0,
+    "mm": [
+     100,
+     2000
+    ],
+    "fonte": "free-exercise-db, Butt Lift (Bridge) (\"lift your hips off the floor\"); Colonna 2025 (\"the pelvis is lifted from the floor until it reaches the neutral angular position of the hip\")"
+   },
+   {
+    "nome": "lombar e meio das costas fora do chão em cima (o apoio passou pras escápulas)",
+    "partes": [
+     "Spine",
+     "Spine1"
+    ],
+    "acima_de": "chao",
+    "t": 1.0,
+    "mm": [
+     30,
+     2000
+    ],
+    "fonte": "Colonna 2025 (o apoio das costas \"in the interscapular area, approximately at the T3 level\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "quadril neutro em cima: a coxa na linha do tronco (ombros, quadril e joelhos em linha reta)",
+    "medida": "quadril_sinal",
+    "t": 1.0,
+    "graus": [
+     -3,
+     4
+    ],
+    "fonte": "Colonna 2025 (\"until it reaches the neutral angular position of the hip\"); ACE nº 66 (\"keeping the body in a straight line from the knees to the head\"); Universidade de Sussex (\"Push the hips up until the knees, hips and shoulders are aligned\"). 0 = a coxa alinhada com a linha quadril → pescoço (com 4,6°, o valor do boneco em pé, a linha ombro → quadril → joelho ficava dobrada ~8°; com 0 ela dobra ~3°)"
+   },
+   {
+    "nome": "o quadril não passa da linha do tronco em nenhum quadro",
+    "medida": "quadril_sinal",
+    "t": "todos",
+    "graus": [
+     -4,
+     62
+    ],
+    "fonte": "ACE nº 49 (\"Avoid pushing your hips too high as this generally increases the amount of hyperextension (arching) in your low back\"); Colonna 2025 (o neutro, \"to avoid lumbar hyperextension\")"
+   },
+   {
+    "nome": "quadril dobrado embaixo (glúteo no chão, pés chapados)",
+    "medida": "quadril_sinal",
+    "t": 0.0,
+    "graus": [
+     50,
+     64
+    ],
+    "fonte": "free-exercise-db, Butt Lift (Bridge) (\"Lie flat on the floor on your back ... and your knees bent\"); ACE nº 49 (\"in a bent-knee position with your feet flat on the floor\")"
+   },
+   {
+    "nome": "joelho a ~90° em cima",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "fotos da ACE nº 49 e do free-exercise-db (~90° em cima); Colonna 2025 (a ponte com o joelho a 90° é a posição de referência dos estudos: \"the traditional SLB position with 90° knee flexion\"); Contreras 2011, no hip thrust (\"a 90° angle at the knee joint ... at the top portion of the movement\"). A distância dos pés sai disso"
+   },
+   {
+    "nome": "joelho mais dobrado embaixo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     104,
+     118
+    ],
+    "fonte": "os pés ficam parados: a distância deles até o glúteo define o joelho embaixo (Colonna 2025: \"The distance between the feet and the gluteal contact with the floor influences the initial flexion of the joints involved\"); na foto de baixo da ACE nº 49 o joelho fica a ~110–115° (observação)"
+   },
+   {
+    "nome": "canela inclinada em cima (o tornozelo à frente do joelho)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Leg",
+     "Foot"
+    ],
+    "t": 1.0,
+    "graus": [
+     56,
+     70
+    ],
+    "fonte": "com os ombros no chão a coxa sobe ~26° em cima e, com o joelho a 90°, a canela fica ~26° da vertical — no hip thrust ela fica vertical (Contreras 2011: \"vertical tibia\"); nas fotos da ACE nº 49 e do free-exercise-db o tornozelo fica à frente do joelho em cima (observação)"
+   },
+   {
+    "nome": "deitado embaixo",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     86,
+     94
+    ],
+    "fonte": "free-exercise-db, Butt Lift (Bridge) (\"Lie flat on the floor on your back\")"
+   },
+   {
+    "nome": "tronco inclinado em cima, com os ombros no chão",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     108,
+     122
+    ],
+    "fonte": "Colonna 2025 (\"During traditional SBE, the shoulders are typically supported on the floor at the same level as the feet\"); ACE nº 66 (\"Rest on the shoulders and the upper back\"). Linha quadril → pescoço contra a vertical (90 = deitado): fica ~26° abaixo da horizontal, do lado da cabeça (na foto da ACE nº 49, ~25°); no hip thrust o tronco fica paralelo ao chão"
+   },
+   {
+    "nome": "coluna neutra e parada (tronco e pelve como um bloco)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "Colonna 2025 (\"it is recommended [12] to globally stabilize the spine in the neutral position, so the trunk is considered as a single segment\"); ExRx, Barbell Hip Thrust (\"Movement should occur through hip with torso rigid. Avoid chest arching upward and anterior pelvic tilt, both producing spinal hyperextension\"); free-exercise-db (\"keeping your back straight\")"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     0.9,
+     1.4
+    ],
+    "fonte": "ACE nº 49 (\"Place your feet hip-width apart with the toes facing away from you\"); ACE nº 318 e nº 145 (\"hip-width apart\"); Colonna 2025 (\"the feet placed on the ground at hip-width apart\"). O free-exercise-db diz \"around shoulder width\" e o folheto da Universidade de Sussex \"shoulder width apart\": ficou a largura do quadril, de 3 fichas da ACE e da revisão"
+   },
+   {
+    "nome": "pontas dos pés pra frente",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     -5,
+     10
+    ],
+    "fonte": "ACE nº 49 (\"with the toes facing away from you\")"
+   },
+   {
+    "nome": "braços ao lado do corpo, o cotovelo só um pouco dobrado",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     50
+    ],
+    "fonte": "free-exercise-db, Butt Lift (Bridge) (\"with the hands by your side\"). As mãos ficam paradas e a articulação do ombro anda ~4 cm pra cabeça quando o tronco inclina (ela fica ~12 cm acima das costas): o cotovelo, dobrado embaixo (~43°), estica em cima (~16°) — na foto de baixo do free-exercise-db o cotovelo também fica dobrado e estica em cima (observação)"
+   },
+   {
+    "nome": "palmas pra baixo",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     165,
+     180
+    ],
+    "fonte": "fotos da ACE nº 49 e do free-exercise-db (palmas no colchonete; observação); a ACE nº 145, outra variação, põe as palmas pra cima (\"palms rotated up to face the ceiling\")"
+   },
+   {
+    "nome": "cabeça apoiada em cima, com o queixo um pouco pro peito",
+    "medida": "cabeca_tronco",
+    "t": 1.0,
+    "graus": [
+     -50,
+     -32
+    ],
+    "fonte": "a cabeça continua no colchonete em cima (fotos da ACE nº 49 e do free-exercise-db): com o tronco inclinado ~26°, o pescoço dobra (o queixo vem pro peito) — no boneco em pé a medida dá −11°"
+   },
+   {
+    "nome": "a pelve não inclina de lado",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "o tronco não torce",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -6,
+     6
+    ]
+   }
+  ]
+ }
+}
