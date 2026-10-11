@@ -1606,6 +1606,93 @@ gcw -m "feat(planos): o aluno paga o valor do plano — parcela n de N, cartão 
 
 ---
 
+### Task 8b: Fila das cobranças automáticas + os 3 pontos decididos (Weslley, 10/10/2026 ~22h)
+
+Decisões dele (respostas "1", "2" e "1"): **ponto 1** — só o dono vê os planos e os valores, igual à mensalidade (os outros
+profissionais da conta não veem); **ponto 2** — a troca do valor das cobranças automáticas vai para uma **fila em segundo plano,
+tentando de novo de hora em hora** (antes: um PUT por aluno dentro do pedido do dono; com muitos alunos os últimos caíam por tempo e
+cada falha virava um aviso); **ponto 3** — o MP aceitou o valor novo e a gravação da cópia no nosso banco falhou → **não avisar o dono**:
+o erro vai para a aba Bugs e a cópia se corrige sozinha.
+
+**Files:**
+- Modify: `supabase-principal/functions/pagamentos-aluno/index.ts` (prof_planos só dono/master; I1 em lote → fila; I1 de 1 aluno: falhou → fila; ponto 3)
+- Modify: `supabase-principal/functions/_shared/planos-automatica.ts` (regras puras da fila) + `src/financeiro/planosAutomatica.test.ts`
+- Create: `supabase-principal/migrations/20261011030000_wp_fila_automaticas.sql` (número RESERVADO no quadro)
+- Create: `supabase-principal/functions/automaticas-fila/index.ts` (verify_jwt **false**, no molde da `espelho-enviar` + `{schema}.espelho_disparar()` da `20261010010000_hml16c_segredo_fila.sql`)
+- Create: `e2e/wp/sql_fila.py` (banco, blocos desfeitos, como o `sql_planos.py`)
+- Modify, se preciso: `scripts/segredos/servidor.py` (o segredo novo `automaticas_fila`, no molde do `espelho_fila`)
+- Já feito (commit `aec7f1b`): a 20261011020000 troca a policy "planos_aluno: membros leem" por "planos_aluno: dono lê" (ponto 1 no banco).
+
+- [ ] **Step 0: Ponto 1 no servidor** — `prof_planos` só para master/dono: depois do `contaDosPlanos(body.conta_id, false)`,
+  `if (!conta.papel.master && !conta.papel.dono) falhar("so_o_dono", 403);` (o master continua lendo a conta do app). Nenhum outro
+  retorno novo das Tasks 7/8 pode mostrar plano/valor/modalidade/parcela a quem não `podeMexerNaMensalidade` (conferir `prof_aluno`,
+  `prof_resumo`, `prof_definir`).
+
+- [ ] **Step 1: Ponto 3** — no `sincronizarAutomatica`, PUT do MP deu certo e o update do espelho (`aluno_assinaturas`) falhou → NÃO
+  lançar: registrar com `log.erro({ codigo: "espelho_valor_assinatura_falhou", schema, acao, ref })` (conferir que o `log.erro` cai na
+  aba Bugs; se não cair, usar o caminho que cai) e devolver o corpo do MP (conta como `atualizada`, sem aviso ao dono). Conferir que o
+  `conferirAssinatura` (o `prof_aluno` chama) regrava o `valor` a partir do MP; se não regravar, acrescentar.
+
+- [ ] **Step 2: Regras puras + testes (TDD)** em `planos-automatica.ts`: `proximaTentativaEm(agora, tentativas)` (+1 hora),
+  `MAX_TENTATIVAS = 24` (1 dia), `destinoDoResultado(resultado, tentativas)` → `feito` (atualizada | igual | sem_automatica) |
+  `de_novo` (falhou, < 24) | `desistiu` (falhou na 24ª), `textoDoAvisoDaFila(nomes)` ("Não deu para mudar o valor da cobrança automática
+  de: Ana, Bia. Confira no financeiro de cada aluno." — até 5 nomes + "e mais N"). Testes primeiro em `src/financeiro/planosAutomatica.test.ts`.
+
+- [ ] **Step 3: Migration `20261011030000_wp_fila_automaticas.sql`** (idempotente; staging + public; cabeçalho no padrão das outras):
+  - `{schema}.automaticas_fila`: `id bigint generated always as identity primary key`, `paciente_id uuid not null references
+    {schema}.pacientes(id) on delete cascade`, `conta_id uuid`, `motivo text not null check (motivo in ('plano','aluno'))`,
+    `tentativas integer not null default 0`, `proxima_em timestamptz not null default now()`, `feito_em timestamptz`, `resultado text`,
+    `erro text`, `avisado_em timestamptz`, `criado_em timestamptz not null default now()`. Índice único parcial `(paciente_id) where
+    feito_em is null` (uma pendência por aluno) e índice `(proxima_em) where feito_em is null`. RLS ligado SEM policy para
+    `anon`/`authenticated` + `revoke all` deles (só `service_role` e as funções definer). **O valor NÃO fica na fila**: quem processa
+    usa o `mensalidade_valor` atual do aluno (o último valor ganha).
+  - `{schema}.automaticas_enfileirar(p_pacientes uuid[], p_motivo text) returns integer` (security definer, `search_path = ''`, só
+    `service_role` executa): para cada aluno, já há pendente → `tentativas = 0, proxima_em = now(), motivo = p_motivo`; senão insere
+    (com o `conta_id` do aluno). Devolve quantos ficaram pendentes.
+  - `{schema}.automaticas_disparar() returns bigint` (security definer, `search_path = ''`, só `service_role` executa), no MOLDE da
+    `{schema}.espelho_disparar()`: só chama se há pendente pronta (`feito_em is null and tentativas < 24 and proxima_em <= now()`), se o
+    `pg_net` existe e se o segredo `physiq_automaticas_fila_segredo` está no Vault; `net.http_post` para a função `automaticas-fila`
+    (a URL montada do mesmo jeito que a `espelho_disparar` monta a da `espelho-enviar`) com o header `x-fila-segredo` e o corpo
+    `{"schema": "{schema}"}`.
+  - pg_cron de hora em hora: `select cron.schedule('automaticas-fila-{schema}', '7 * * * *', $$select {schema}.automaticas_disparar()$$);`
+    (o mesmo nome ATUALIZA o job).
+
+- [ ] **Step 4: Função `automaticas-fila`** (Deno, verify_jwt false):
+  - confere `x-fila-segredo` contra a env `SEGREDO_AUTOMATICAS_FILA` (lista de aceitos separada por vírgula, como a espelho-enviar);
+    sem/errado → 401 (log sem o segredo). Schema só `staging` | `public` (outro → 400). Cliente `service_role` nesse schema.
+  - pega até 50 pendentes prontas (ordem `proxima_em`), 5 por vez: `carregarMatricula`, assinatura mais recente,
+    `novoValorDaAutomatica(a, Number(m.mensalidade_valor), put)` com o MESMO PUT da pagamentos-aluno — extrair para `_shared/` o que for
+    preciso (credencial do MP da conta, `mpFetch`, `espelhoAssinaturaAluno`, o ponto 3) em vez de duplicar regra.
+  - destino pelo `destinoDoResultado`: `feito` → `feito_em = now(), resultado`; `de_novo` → `tentativas + 1, proxima_em = +1h, erro`;
+    `desistiu` → `feito_em = now(), resultado = 'desistiu'` + `log.erro` + entra no aviso.
+  - aviso ao dono: **1 só por conta por rodada**, com `textoDoAvisoDaFila` (só as que desistiram), marcando `avisado_em`.
+  - sobrou pendente pronta (mais de 50) → `rpc("automaticas_disparar")` no fim.
+
+- [ ] **Step 5: A pagamentos-aluno usa a fila**:
+  - `sincronizarAutomaticasDoPlano` (o dono mudou valor/meses/parcela do plano): no lugar do laço, `rpc("automaticas_enfileirar",
+    { p_pacientes: ids, p_motivo: "plano" })` + `rpc("automaticas_disparar")` (o pg_net manda depois do commit) e devolve
+    `{ enfileiradas: n }` (a tela da Task 10 diz "As cobranças automáticas dos alunos vão ser atualizadas em instantes").
+  - `sincronizarAutomatica` de 1 aluno (prof_definir): continua na hora (1 PUT); `falhou` → enfileira (`motivo 'aluno'`) em vez do aviso.
+  - schema sem a migration (o `public` antes da Task 20): a rpc devolve "function … does not exist" → cair no comportamento de antes
+    (laço/aviso), sem quebrar.
+
+- [ ] **Step 6: Testes do banco** (`e2e/wp/sql_fila.py`, staging, blocos desfeitos — roda na Task 9 depois de aplicar): enfileirar 2× o
+  mesmo aluno = 1 pendente com `tentativas = 0`; `automaticas_disparar()` sem pendente pronta = null; `authenticated` não lê a fila
+  (`set local role authenticated` → 0 linhas/erro de permissão); o job `automaticas-fila-staging` existe no `cron.job`.
+
+- [ ] **Step 7: Rodar** `npx vitest run src/financeiro src/painel/financeiro src/app-aluno/perfil` + as guardas que leem as funções +
+  `npm run tipos` + `deno check` da `pagamentos-aluno` e da `automaticas-fila` (só erro NOVO conta). Commit(s) com o autor do Weslley.
+
+- [ ] **Step 8 (fica para a Task 9, com a trava da LINUX 1, publicar só depois das 01:00):** reaplicar a 20261011020000 no staging
+  (policy "dono lê"), aplicar a 20261011030000 no staging, criar o segredo (cofre B Code Segredos › PhysiqCalc "Physiq — fila das
+  automáticas (W-P)" + Vault `physiq_automaticas_fila_segredo` + env `SEGREDO_AUTOMATICAS_FILA`), publicar a `automaticas-fila`
+  (`scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions automaticas-fila false`) junto com as 2 de sempre e
+  acrescentar ao `e2e/wp/api.py`: mudar o valor de um plano com aluno em automática simulada → `enfileiradas ≥ 1` → chamar a
+  `automaticas-fila` com o segredo → a pendência fica `feito_em` com `resultado = sem_automatica`; sem o segredo → 401. No `public`:
+  Task 20 (m1 → m2 → m3, backup antes).
+
+---
+
 ### Task 9: Publicar as 2 funções e provar o servidor no staging
 
 **Files:**
