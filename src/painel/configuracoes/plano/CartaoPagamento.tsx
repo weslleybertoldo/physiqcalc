@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { CardPayment } from "@mercadopago/sdk-react";
 import { CreditCard, Repeat } from "lucide-react";
 import { MP_PUBLIC_KEY, ensureMpInit } from "@/components/pagamentos/mpInit";
@@ -43,6 +43,20 @@ export function CartaoPagamento({
   }, [aberto]);
   const Icone = modo === "assinar" ? Repeat : CreditCard;
   const parcelas = modo === "assinar" ? 1 : Math.max(1, Math.min(12, maxParcelas));
+  // O CardPayment reinicia o Brick sempre que uma destas props muda de identidade (o useEffect dele): ficam as mesmas entre os renders.
+  // Fechar o painel re-renderiza durante a saída; a reinicialização atrasada (200 ms) não achava mais o container ("Could not find the
+  // Brick container ID") e o erro sem dono ia para o aviso de erro do app (E2E de tela da W-P). Valor e parcelas trocam pela key.
+  const initialization = useMemo(() => ({ amount: valor, payer: { email } }), [valor, email]);
+  const customization = useMemo(() => ({
+    paymentMethods: { maxInstallments: parcelas },
+    visual: { style: { theme: "dark" as const, customVariables: { baseColor: "#8B5CF6", formBackgroundColor: "#0f0f12", borderRadiusLarge: "16px" } } },
+  }), [parcelas]);
+  const enviar = useRef(aoEnviar);
+  useEffect(() => {
+    enviar.current = aoEnviar;
+  }, [aoEnviar]);
+  const aoSubmeter = useCallback((form: unknown) => enviar.current(form as DadosCartao), []);
+  const aoErro = useCallback((e: unknown) => console.error("[Brick] erro", e), []);
   return (
     <PainelDeslizante
       aberto={aberto}
@@ -65,13 +79,10 @@ export function CartaoPagamento({
           <div className="overflow-hidden rounded-2xl" data-brick-mp>
             <CardPayment
               key={`${modo}-${valor}-${parcelas}`}
-              initialization={{ amount: valor, payer: { email } }}
-              customization={{
-                paymentMethods: { maxInstallments: parcelas },
-                visual: { style: { theme: "dark", customVariables: { baseColor: "#8B5CF6", formBackgroundColor: "#0f0f12", borderRadiusLarge: "16px" } } },
-              }}
-              onSubmit={(form) => aoEnviar(form as unknown as DadosCartao)}
-              onError={(e) => console.error("[Brick] erro", e)}
+              initialization={initialization}
+              customization={customization}
+              onSubmit={aoSubmeter}
+              onError={aoErro}
             />
           </div>
         ) : (
