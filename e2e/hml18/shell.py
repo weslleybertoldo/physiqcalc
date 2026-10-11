@@ -250,10 +250,17 @@ def metas_da_spec(R: B.Rodada, cel: B.Celular, ctx: dict, rotulo: str) -> None:
     R.ok(len(pa) == 3 and med(pa, "ultima") <= 700,
          f"[personal · {rotulo}] Painel → Alunos até estável: mediana {round(med(pa, 'ultima'))} ms de 3 ({', '.join(str(round(x['ultima'])) for x in pa)}) "
          "(meta ≤ 700; era 664)")
-    R.ok(len(at) == 3 and 0 <= med(at, "pedido1") <= 150,
-         f"[personal · {rotulo}] Alunos → Treinos: o 1º pedido de dados sai na mediana {round(med(at, 'pedido1'))} ms depois do toque "
+    # hml-18b (H-54, F): com a PRÉ-BUSCA da 18b a 1ª dobra da Treinos (modelos_da_lista e as pastas) já está no cache antes do toque — aí
+    # não há o que pedir e o "1º pedido" passa a ser a função quemRecebe, que sai na montagem, depois de pintar a lista do cache. A meta da
+    # 18a (a troca não espera o pedaço) vale se a 1ª dobra veio do cache OU se o 1º pedido saiu em ≤ 150 ms (os números crus ficam no texto)
+    def dobra_do_cache(x: dict) -> bool:
+        return not any(("modelos_da_lista" in p or "tb_pastas_treino" in p) for p in (x.get("primeiros") or []))
+    do_cache = [dobra_do_cache(x) for x in at]
+    R.ok(len(at) == 3 and all(c or 0 <= x["pedido1"] <= 150 for c, x in zip(do_cache, at)),
+         f"[personal · {rotulo}] Alunos → Treinos: a 1ª dobra (modelos_da_lista e pastas) veio da pré-busca em {sum(do_cache)} de {len(at)}; "
+         f"o 1º pedido de dados sai na mediana {round(med(at, 'pedido1'))} ms depois do toque "
          f"({', '.join(str(x['pedido1']) for x in at)}; o app chama o fetch em {', '.join(str(x['fetch1']) for x in at)} ms; tarefas longas "
-         f"{', '.join(str(x.get('longas', 0)) for x in at)} ms) (meta ≤ 150; era 430–450)")
+         f"{', '.join(str(x.get('longas', 0)) for x in at)} ms) (meta: a 1ª dobra do cache ou o 1º pedido ≤ 150; era 430–450)")
 
 
 def nav_painel(R: B.Rodada, nav, ctx: dict) -> None:
