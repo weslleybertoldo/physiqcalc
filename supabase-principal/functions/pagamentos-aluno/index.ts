@@ -21,6 +21,9 @@
 //   detalhe_mp        { cobranca_id }                        dados reais da transação no MP (comprovante em PDF) — aluno ou profissional
 //   simular_aprovacao { cobranca_id }                        SÓ STAGING (o Pix do sandbox não se paga)
 //  PROFISSIONAL (dono da conta, responsável pelo aluno ou master — quem vê o quê: spec 4.1 e P6):
+//   prof_planos       { conta_id }                          W-P: os planos da conta (completo, parcela, quantos alunos) e o modo
+//   prof_plano_salvar { conta_id, id?, nome, meses, valor, modalidades, max_parcelas_cartao?, valor_parcela_mensal? }  só o dono
+//   prof_plano_ativo  { conta_id, id, ativo }               W-P: desativar/reativar (quem já está no plano continua)
 //   prof_resumo       { conta_id }                          alunos da conta com mensalidade e selos + comprovantes aguardando
 //                     { conta_id, pagina, pagina_sem?, busca? }   hml-14b: a página da tela Mensalidades (20 com mensalidade + 20
 //                                                            sem, a busca, o total e os números da conta — mensalidades.ts)
@@ -79,6 +82,7 @@ import {
 } from "../_shared/financeiro-regras.ts";
 import {
   COLUNAS_COBRANCA,
+  COLUNAS_PLANO,
   aplicarPagamentoMp,
   avisar,
   carregarMatricula,
@@ -89,6 +93,11 @@ import {
   type Cobranca,
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
+import {
+  MODALIDADES, aceitaAutomatica, descricaoDoPagamento, ehModalidade, maxParcelasDoCartao, modalidadesDaConta, modalidadesOferecidas,
+  parcelaMensal, parcelasValidas, planoCompleto, proximaParcela, retratoDoPlano, validarPlano, type Modalidade, type Parcela, type PlanoDoAluno,
+} from "../_shared/planos-regras.ts";
+import { novoValorDaAutomatica, type ResultadoValor } from "../_shared/planos-automatica.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
@@ -103,6 +112,9 @@ const PIX_HORAS = 72;
 // pelo Mercado Pago; a cobertura nova começa no fim da atual (a régua do Calc)
 const JANELA_ADIANTAR_MS = 7 * 86_400_000;
 const log = criarLog("pagamentos-aluno", { avisar: avisarErro });
+// W-P: a função é uma só para public e staging — o que é dos planos só liga no schema que já tem a migration (o molde do
+// COLUNAS_MATRICULA_W6). Guardado 60 s por schema nesta instância.
+const PLANOS_NO_SCHEMA = new Map<Schema, { tem: boolean; em: number }>();
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -285,6 +297,81 @@ Deno.serve(async (req) => {
 
   const exigirMensalidade = (p: PapelNaMatricula) => {
     if (!podeMexerNaMensalidade(p)) falhar("so_o_dono", 403);
+  };
+
+  const schemaTemPlanos = async (): Promise<boolean> => {
+    const guardado = PLANOS_NO_SCHEMA.get(schema);
+    if (guardado && Date.now() - guardado.em < 60_000) return guardado.tem;
+    const { error } = await db.from("planos_aluno").select("meses").limit(1);
+    if (error && !/column|coluna|does not exist|42703|PGRST20/i.test(`${error.code ?? ""} ${error.message ?? ""}`)) throw error;
+    PLANOS_NO_SCHEMA.set(schema, { tem: !error, em: Date.now() });
+    return !error;
+  };
+  /** A matrícula veio com as colunas da W-P (o schema tem a migration)? */
+  const temPlanos = (m: Matricula) => m.plano_modalidade !== undefined;
+
+  /** Papel de quem chama na CONTA (a tela de Planos): master, dono, membro. */
+  const papelNaConta = async (contaId: string) => {
+    if (ehMaster) return { master: true, dono: true, membro: true };
+    const { data, error } = await db.from("conta_membros").select("papeis").eq("conta_id", contaId).eq("user_id", user.id).eq("status", "ativo").maybeSingle();
+    if (error) throw error;
+    const papeis = ((data as { papeis: string[] } | null)?.papeis ?? []) as string[];
+    return { master: false, dono: papeis.includes("dono"), membro: !!data };
+  };
+
+  /** A conta da tela de Planos: o modo de receber e se é a conta do app (os 2 planos do app são do master — B2). */
+  const contaDosPlanos = async (contaId: unknown, exigirDono: boolean) => {
+    if (!ehUuidFin(contaId)) falhar("conta_invalida");
+    if (!(await schemaTemPlanos())) falhar("planos_indisponivel", 409);
+    const papel = await papelNaConta(String(contaId));
+    if (!papel.membro) falhar("sem_permissao", 403);
+    if (exigirDono && !papel.master && !papel.dono) falhar("so_o_dono", 403);
+    const { data, error } = await db.from("contas").select("id, recebimento_modo, origem").eq("id", String(contaId)).maybeSingle();
+    if (error) throw error;
+    if (!data) falhar("conta_invalida", 404);
+    const c = data as { id: string; recebimento_modo: string | null; origem: string | null };
+    if (exigirDono && c.origem === "app") falhar("conta_do_app", 403);
+    return { id: c.id, modo: c.recebimento_modo ?? "pix_manual", app: c.origem === "app", papel };
+  };
+
+  /** I1: o valor do próximo pagamento mudou e a automática está ligada → PUT no MP; falhou → aviso ao dono. */
+  const sincronizarAutomatica = async (m: Matricula): Promise<ResultadoValor> => {
+    const a = await assinaturaDe(m.id);
+    const r = await novoValorDaAutomatica(a, Number(m.mensalidade_valor), async (id, corpo) => {
+      const { status: st, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(id)}`,
+        { method: "PUT", body: JSON.stringify(corpo) }, { prazo: prazoDoPedido });
+      if (st < 300 && pre?.id) {
+        const { error } = await db.from("aluno_assinaturas").update({
+          ...espelhoAssinaturaAluno(pre, { ...(a!.payload ?? {}), valor_trocado_em: new Date().toISOString() }),
+          valor: corpo.auto_recurring.transaction_amount,
+        }).eq("id", a!.id);
+        if (error) throw error;
+      }
+      return { status: st, body: pre };
+    });
+    if (r === "falhou") {
+      log.erro({ codigo: "mp_valor_assinatura_falhou", schema, acao, ref: a?.id ?? m.id });
+      await avisar(db, recebedor(m), "geral", `Não deu para mudar o valor da cobrança automática de ${m.nome}. Confira no financeiro do aluno.`,
+        linkDoAlunoNoPainel(m), log, schema);
+    }
+    return r;
+  };
+
+  /** I1 em lote: quem segue o plano (sem negociado) depois que o dono mudou o valor/meses/parcela — o gatilho já mudou o valor. */
+  const sincronizarAutomaticasDoPlano = async (planoId: string) => {
+    const { data, error } = await db.from("pacientes").select("id").eq("plano_aluno_id", planoId).not("plano_modalidade", "is", null)
+      .is("plano_valor_negociado", null).is("deleted_at", null).limit(200);
+    if (error) throw error;
+    let atualizadas = 0;
+    let falharam = 0;
+    for (const { id } of (data ?? []) as Array<{ id: string }>) {
+      const m = await carregarMatricula(db, id);
+      if (!m) continue;
+      const r = await sincronizarAutomatica(m);
+      if (r === "atualizada") atualizadas++;
+      if (r === "falhou") falharam++;
+    }
+    return { atualizadas, falharam };
   };
 
   const chaveAtiva = async (contaId: string | null) => {
@@ -865,6 +952,61 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════ PROFISSIONAL ════════════════════════════
+    if (acao === "prof_planos") {
+      const conta = await contaDosPlanos(body.conta_id, false);
+      const { data, error } = await db.from("planos_aluno").select(COLUNAS_PLANO).eq("conta_id", conta.id).order("ativo", { ascending: false }).order("nome");
+      if (error) throw error;
+      const planos = (data ?? []) as unknown as PlanoDoAluno[];
+      const alunos = await Promise.all(planos.map(async (pl) => {
+        const { count, error: ec } = await db.from("pacientes").select("id", { count: "exact", head: true }).eq("plano_aluno_id", pl.id).is("deleted_at", null);
+        if (ec) throw ec;
+        return count ?? 0;
+      }));
+      return json({
+        ok: true, modo: conta.modo, app: conta.app, pode_editar: (conta.papel.master || conta.papel.dono) && !conta.app,
+        modalidades_da_conta: modalidadesDaConta(conta.modo),
+        planos: planos.map((pl, i) => ({ ...pl, completo: planoCompleto(pl), parcela: parcelaMensal(pl), alunos: alunos[i] })),
+      }, 200, origin);
+    }
+
+    if (acao === "prof_plano_salvar") {
+      const conta = await contaDosPlanos(body.conta_id, true);
+      const v = validarPlano(body, modalidadesDaConta(conta.modo));
+      if (!v.ok) return falhar(v.erro);
+      const plano = v.plano;
+      const id = ehUuidFin(body.id) ? String(body.id) : null;
+      if (id) {
+        // não tira uma modalidade que tem aluno nela (o personal passa os alunos para outra antes)
+        const removidas = MODALIDADES.filter((x) => !plano.modalidades.includes(x));
+        if (removidas.length) {
+          const { count, error } = await db.from("pacientes").select("id", { count: "exact", head: true }).eq("plano_aluno_id", id)
+            .eq("conta_id", conta.id).in("plano_modalidade", removidas).is("deleted_at", null);
+          if (error) throw error;
+          if ((count ?? 0) > 0) falhar("modalidade_em_uso", 409, { alunos: count });
+        }
+      }
+      const { data: salvo, error } = id
+        ? await db.from("planos_aluno").update(plano).eq("id", id).eq("conta_id", conta.id).select(COLUNAS_PLANO).maybeSingle()
+        : await db.from("planos_aluno").insert({ ...plano, conta_id: conta.id }).select(COLUNAS_PLANO).single();
+      if (error) {
+        if (String(error.code) === "23505") falhar("nome_repetido", 409);
+        throw error;
+      }
+      if (!salvo) falhar("plano_invalido", 404);
+      const automaticas = id ? await sincronizarAutomaticasDoPlano(id) : { atualizadas: 0, falharam: 0 };
+      return json({ ok: true, plano: salvo, automaticas }, 200, origin);
+    }
+
+    if (acao === "prof_plano_ativo") {
+      const conta = await contaDosPlanos(body.conta_id, true);
+      if (!ehUuidFin(body.id)) falhar("plano_invalido");
+      const { data, error } = await db.from("planos_aluno").update({ ativo: body.ativo === true }).eq("id", String(body.id)).eq("conta_id", conta.id)
+        .select(COLUNAS_PLANO).maybeSingle();
+      if (error) throw error;
+      if (!data) falhar("plano_invalido", 404);
+      return json({ ok: true, plano: data }, 200, origin);
+    }
+
     if (acao === "prof_resumo") {
       if (!ehUuidFin(body.conta_id)) falhar("conta_invalida");
       const contaId = String(body.conta_id);
