@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Clock, Download, FileText, QrCode, ReceiptText, RefreshCw, Repeat, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Clock, Download, ExternalLink, FileText, QrCode, ReceiptText, RefreshCw, Repeat, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { acaoFinanceiro, buscarHistoricoDoAluno, buscarStatusAluno, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
+import { abrirLinkExterno, fecharPagina } from "@/financeiro/abrirPagamento";
+import {
+  acaoFinanceiro, buscarHistoricoDoAluno, buscarStatusAluno, conferirInfinitePay, ErroFinanceiro, invalidarResumo, voltaDaInfinitePay,
+} from "@/financeiro/api";
+import { lerPedidoDoLink } from "@/financeiro/infinitepay";
 import { baixarComprovantePdf, baixarReciboPdf, type DetalheMp } from "@/financeiro/pdf";
 import { precisaRenovar, sufixoDoValor } from "@/financeiro/planos";
 import {
@@ -36,12 +40,18 @@ import { Paginacao } from "@/ui/premium/Paginacao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useOnline } from "@/ui/premium/useOnline";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
+import { PagarInfinitePay } from "./pagamentos/PagarInfinitePay";
 import { PagarMercadoPago } from "./pagamentos/PagarMercadoPago";
 import { PagarPixManual, type AlvoPagamento } from "./pagamentos/PagarPixManual";
 
 const CHAVE = ["pagamentos-aluno"] as const;
 /** hml-14d (B21 · P7): o que a folha "Ver todos" mostra — as cobranças ou os recibos de uma matrícula. */
 type Todos = { m: MatriculaPagamentos; tipo: "cobrancas" | "recibos" } | null;
+/** W1: o que a volta da página da InfinitePay traz na busca — SÓ isso vai à função (nunca a busca inteira: o corpo leva a `acao`). */
+const CHAVES_DA_VOLTA = ["order_nsu", "transaction_nsu", "slug", "invoice_slug", "receipt_url", "capture_method"] as const;
+/** W1: com a folha de pagar fechada, a tela confere a tentativa da InfinitePay a cada 30 s, até 10 min depois de abrir ou voltar à página. */
+const CONFERIR_IP_MS = 30_000;
+const CONFERIR_IP_POR_MS = 10 * 60_000;
 
 /**
  * Perfil › Pagamentos (spec 4.3, tela 5; C23, C98–C100, N-54, R16): a mensalidade (plano, valor, situação e Pagar), as
@@ -52,6 +62,9 @@ type Todos = { m: MatriculaPagamentos; tipo: "cobrancas" | "recibos" } | null;
  * situação e o histórico, sem preço e sem Pagar/Assinar (nem pelo ?pagar=); a cobrança automática que já existe ainda dá para
  * cancelar (é o que libera o "Excluir minha conta"). O que o aluno paga ao PROFISSIONAL (Pix com comprovante e o Mercado Pago da
  * conta dele) continua igual.
+ * W1: na conta que recebe pela InfinitePay, o Pagar abre a página dela (PagarInfinitePay); a volta (?order_nsu=) confere na hora; a
+ * tentativa viva vira "Continuar o pagamento" (e "Continuar" na avulsa), com o cartão "em andamento" fora do histórico; com a folha
+ * fechada, a tela confere de novo a cada 30 s; o recibo da InfinitePay no detalhe. Na loja é igual (o serviço do profissional).
  */
 export default function Pagamentos() {
   const navigate = useNavigate();
@@ -99,6 +112,67 @@ export default function Pagamentos() {
   const voltar = () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
   const dados = consulta.data;
 
+  // W1: a volta da página da InfinitePay (o redirect traz order_nsu, transaction_nsu, slug, receipt_url, capture_method; no APK pelo App
+  // Link): confere na hora e limpa a busca
+  const pedidoIp = params.get("order_nsu");
+  useEffect(() => {
+    if (!pedidoIp) return;
+    const q: Record<string, string> = {};
+    for (const k of CHAVES_DA_VOLTA) {
+      const v = params.get(k);
+      if (v) q[k] = v;
+    }
+    setParams((a) => {
+      const n = new URLSearchParams(a);
+      for (const k of CHAVES_DA_VOLTA) n.delete(k);
+      return n;
+    }, { replace: true });
+    void fecharPagina();
+    // sem o NSU, confere a cobrança do pedido (I4: o order_nsu é `<cobranca_id>-<n>`)
+    const cobrancaDoPedido = lerPedidoDoLink(q.order_nsu)?.cobranca;
+    if (!q.transaction_nsu && !cobrancaDoPedido) return;
+    (q.transaction_nsu ? voltaDaInfinitePay(q) : conferirInfinitePay(cobrancaDoPedido!))
+      .then((r) => {
+        void recarregar();
+        if (r.paga) toast.success("Pagamento confirmado!");
+        else toast.info("Recebemos a volta da InfinitePay. A confirmação aparece aqui em instantes.");
+      })
+      .catch(() => toast.info("Não deu para conferir agora. Toque em Atualizar daqui a pouco."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando chega a volta
+  }, [pedidoIp]);
+
+  // W1: com a tentativa da InfinitePay aguardando e a folha de pagar fechada (aberta, ela mesma confere a cada 5 s), a tela confere de
+  // novo a cada 30 s com a página visível, até 10 min depois de abrir ou voltar à página — da tela não gasta tentativa (I3) e o servidor
+  // pergunta à InfinitePay no máximo 1 vez a cada 30 s. Quem decide é o `paga` e o status (nunca o `resultado`): pago ou saiu → atualiza.
+  const tentativasIp = (dados?.matriculas ?? [])
+    .flatMap((m) => (ehLoja && m.conta.app ? [] : m.cobrancas.filter((c) => c.forma === "infinitepay" && c.status === "aguardando_confirmacao")))
+    .slice(0, 4).map((c) => c.id).join(",");
+  const folhaAberta = !!pagar;
+  useEffect(() => {
+    if (!tentativasIp || folhaAberta) return;
+    let vivo = true;
+    let desde = Date.now();
+    const t = setInterval(() => {
+      if (document.visibilityState !== "visible" || Date.now() - desde >= CONFERIR_IP_POR_MS) return;
+      void Promise.allSettled(tentativasIp.split(",").map((id) => conferirInfinitePay(id))).then((rs) => {
+        const feitas = rs.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+        if (!vivo || !feitas.some((r) => r.paga || r.cobranca.status !== "aguardando_confirmacao")) return;
+        if (feitas.some((r) => r.paga)) toast.success("Pagamento confirmado!");
+        void recarregar();
+      });
+    }, CONFERIR_IP_MS);
+    const aoVoltar = () => {
+      if (document.visibilityState === "visible") desde = Date.now();
+    };
+    document.addEventListener("visibilitychange", aoVoltar);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", aoVoltar);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- as tentativas abertas e a folha (o recarregar é sempre o mesmo pedido)
+  }, [tentativasIp, folhaAberta]);
+
   return (
     <div data-pagina-pagamentos className="mx-auto flex w-full max-w-[560px] flex-col gap-3 px-[18px] pb-8 pt-[max(14px,env(safe-area-inset-top,0px))]">
       <div className="mt-1 flex items-center gap-3">
@@ -126,6 +200,8 @@ export default function Pagamentos() {
       {pagar && (pagar.m.conta.modo === "mercadopago" ? (
         <PagarMercadoPago matricula={pagar.m} alvo={pagar.alvo} simulacao={!!dados?.simulacao} aoFechar={() => setPagar(null)}
           aoPago={() => { setPagar(null); void recarregar(); }} />
+      ) : pagar.m.conta.modo === "infinitepay" ? (
+        <PagarInfinitePay matricula={pagar.m} alvo={pagar.alvo} aoFechar={() => setPagar(null)} aoPago={() => { setPagar(null); void recarregar(); }} />
       ) : (
         <PagarPixManual matricula={pagar.m} alvo={pagar.alvo} aoFechar={() => setPagar(null)}
           aoEnviado={() => { setPagar(null); void recarregar(); }} />
@@ -163,7 +239,10 @@ function SecaoMatricula({
   const cobrancas = ordenarCobrancas(m.cobrancas);
   const aguardando = cobrancas.find((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao" && c.forma === "pix_manual") ?? null;
   const abertas = cobrancas.filter((c) => c.tipo === "avulsa" && (c.status === "aberta" || c.status === "aguardando_confirmacao"));
-  const historico = cobrancas.filter((c) => !abertas.includes(c) && c !== aguardando && !(c.forma === "mp" && c.status === "aguardando_confirmacao"));
+  // W1: a tentativa viva da mensalidade na InfinitePay — "Continuar o pagamento" e o cartão "em andamento" (fora do histórico)
+  const ipAberta = cobrancas.find((c) => c.forma === "infinitepay" && c.status === "aguardando_confirmacao" && c.tipo === "mensalidade") ?? null;
+  const historico = cobrancas.filter((c) => !abertas.includes(c) && c !== aguardando
+    && !(c.status === "aguardando_confirmacao" && (c.forma === "mp" || c.forma === "infinitepay")));
   const recusa = recusaVigente(m.cobrancas);
   // W1 da loja: a conta do app na versão da Google Play (sem pagar pelo app até a W6)
   const lojaApp = ehLoja && !!m.conta.app;
@@ -195,12 +274,23 @@ function SecaoMatricula({
     <section className="flex flex-col gap-3" data-matricula-pagamentos={m.paciente_id}>
       {varias && <div className="pq-eyebrow mt-2">{m.conta.nome ?? "Seu profissional"}</div>}
       {m.mensalidade ? (
-        <CartaoMensalidade m={m} aguardando={!!aguardando} pagarNoApp={pagarNoApp} aoPagar={aoPagar} />
+        <CartaoMensalidade m={m} aguardando={!!aguardando} pagarNoApp={pagarNoApp} aoPagar={aoPagar} ipAberta={ipAberta} />
       ) : !m.cobrancas.length ? (
         <Cartao className="px-4 py-3.5 text-[13px] text-texto-2" data-sem-mensalidade>
           Nenhuma cobrança com {profissional} por enquanto. Quando houver, ela aparece aqui.
         </Cartao>
       ) : null}
+
+      {/* a conta do app na loja não mostra preço (W1 da loja) */}
+      {ipAberta && !lojaApp && (
+        <Cartao className="flex items-center gap-3 px-4 py-3" data-pagamento-ip={ipAberta.id}>
+          <Clock aria-hidden className="h-4 w-4 flex-none text-ciano-3" />
+          <span className="min-w-0 flex-1 text-[12.5px] text-texto-2">
+            <b className="block text-[13.5px] font-semibold text-texto">Pagamento na InfinitePay em andamento</b>
+            {reais(ipAberta.valor)}{ipAberta.ip_expira_em ? ` · a página vale até ${dataHoraBR(ipAberta.ip_expira_em)}` : ""}
+          </span>
+        </Cartao>
+      )}
 
       {m.assinatura && ["authorized", "pending"].includes(m.assinatura.status) && (
         <Cartao className="flex items-center gap-3 px-4 py-3" data-assinatura-aluno={m.assinatura.status}>
@@ -243,6 +333,8 @@ function SecaoMatricula({
             <LinhaCobranca key={c.id} cobranca={c} hoje={hoje} aoTocar={() => aoAbrir(c)}
               acoes={c.status === "aberta" && pagarNoApp ? (
                 <Botao tamanho="sm" variante="w" onClick={() => aoPagar({ tipo: "avulsa", cobranca: c })} data-pagar-cobranca={c.id}>Pagar</Botao>
+              ) : c.forma === "infinitepay" && c.status === "aguardando_confirmacao" && pagarNoApp ? (
+                <Botao tamanho="sm" variante="w" onClick={() => aoPagar({ tipo: "avulsa", cobranca: c })} data-continuar-cobranca={c.id}>Continuar</Botao>
               ) : null} />
           ))}
           {!pagarNoApp && !lojaApp && abertas.some((c) => c.status === "aberta") && (
@@ -359,7 +451,14 @@ function FolhaTodos({ todos, hoje, aoFechar, aoAbrir, aoAbrirRecibo }: {
   );
 }
 
-function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: MatriculaPagamentos; aguardando: boolean; pagarNoApp: boolean; aoPagar: (a: AlvoPagamento) => void }) {
+function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar, ipAberta }: {
+  m: MatriculaPagamentos;
+  aguardando: boolean;
+  pagarNoApp: boolean;
+  aoPagar: (a: AlvoPagamento) => void;
+  /** W1: a tentativa viva da InfinitePay — o Pagar vira "Continuar o pagamento" */
+  ipAberta: CobrancaVista | null;
+}) {
   const navigate = useNavigate();
   const ms = m.mensalidade!;
   const e = estadoDaMensalidade({ valor: ms.valor, pausada: ms.pausada, pago_ate: ms.pago_ate, desde: ms.desde, aguardando, teste_ate: ms.teste_ate ?? null });
@@ -414,7 +513,7 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
         <div className="flex flex-wrap gap-2">
           {precisaPagar && !aguardando && (
             <Botao variante="w" icone={renovar ? RefreshCw : QrCode} onClick={() => aoPagar({ tipo: "mensalidade" })} data-pagar-mensalidade data-renovar={renovar ? "1" : undefined}>
-              {e.situacao === "teste" ? `Assinar · ${reais(ms.valor)}/mês` : renovar ? `Renovar plano · ${reais(ms.valor)}` : `Pagar ${reais(ms.valor)}`}
+              {ipAberta ? "Continuar o pagamento" : e.situacao === "teste" ? `Assinar · ${reais(ms.valor)}/mês` : renovar ? `Renovar plano · ${reais(ms.valor)}` : `Pagar ${reais(ms.valor)}`}
             </Botao>
           )}
           {!precisaPagar && !aguardando && m.conta.modo === "pix_manual" && (
@@ -470,6 +569,7 @@ function DetalheCobranca({ item, aoFechar, aoVerComprovante }: { item: { m: Matr
           </dl>
           <div className="flex flex-col gap-2">
             {c.comprovante && <Botao variante="g" icone={FileText} className="w-full" onClick={() => aoVerComprovante(c.id)} data-detalhe-ver-comprovante>Ver comprovante anexado</Botao>}
+            {c.ip_recibo_url && <Botao variante="g" icone={ExternalLink} className="w-full" onClick={() => void abrirLinkExterno(c.ip_recibo_url)} data-recibo-infinitepay>Ver o recibo da InfinitePay</Botao>}
             {c.status === "paga" && <Botao variante="w" icone={Download} className="w-full" disabled={baixando} onClick={() => void baixar()} data-baixar-comprovante>{baixando ? "Gerando…" : "Baixar comprovante (PDF)"}</Botao>}
           </div>
         </div>
