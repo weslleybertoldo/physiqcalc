@@ -29,7 +29,9 @@
 //                                                            sem, a busca, o total e os números da conta — mensalidades.ts)
 //   prof_aluno        { aluno }                             o Financeiro de um aluno (aluno = id da matrícula ou do Treino)
 //   prof_aluno_cobrancas { aluno, pagina }                  hml-14d: o "Ver todas" das cobranças do aluno — 20 por página + o total
-//   prof_definir      { aluno, plano_aluno_id?, plano_novo?, valor }   plano e valor (valor vazio = sem mensalidade)
+//   prof_definir      { aluno, plano_aluno_id?, plano_novo?, valor }   modo de hoje: plano só com nome e valor (o APK antigo manda assim)
+//                     { aluno, plano_aluno_id, plano_modalidade, plano_valor_negociado?, inicio?, cancelar_automatica? }   W-P:
+//                     plano com período (o valor sai do plano); plano_modalidade: null volta ao modo de hoje
 //   prof_pausar       { aluno, pausar }                     "não cobrar pelo app" / reativar
 //   prof_confirmar    { cobranca_id, lancar? }              confirma o Pix com comprovante (lancar = entrada no financeiro)
 //   prof_recusar      { cobranca_id, motivo }               recusa (o aluno vê o motivo)
@@ -374,6 +376,25 @@ Deno.serve(async (req) => {
     return { atualizadas, falharam };
   };
 
+  /** Trocar para o período todo desliga a automática (§4.4) — com o OK de quem troca; o aluno é avisado. */
+  const cancelarAutomatica = async (m: Matricula, a: NonNullable<Awaited<ReturnType<typeof assinaturaDe>>>) => {
+    if (a.mp_preapproval_id && !simulado(a.mp_preapproval_id)) {
+      const { status: sc, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {
+        method: "PUT", body: JSON.stringify({ status: "cancelled" }),
+      }, { prazo: prazoDoPedido });
+      if (sc >= 300 || !pre?.id) {
+        log.erro({ codigo: "mp_cancelar_assinatura_falhou", schema, acao, ref: a.id, status: sc, externo: codigosDoMp(pre) });
+        falhar("mp_error", 502, { status_mp: sc });
+      }
+      const { error } = await db.from("aluno_assinaturas").update(espelhoAssinaturaAluno(pre!, { ...(a.payload ?? {}), cancelada_por: user.id, motivo: "plano_periodo" })).eq("id", a.id);
+      if (error) throw error;
+    } else {
+      const { error } = await db.from("aluno_assinaturas").update({ status: "cancelled" }).eq("id", a.id);
+      if (error) throw error;
+    }
+    await avisar(db, m.user_id, "geral", "Seu plano mudou: a cobrança automática no cartão foi desligada. Veja em Pagamentos.", "/perfil/pagamentos", log, schema);
+  };
+
   const chaveAtiva = async (contaId: string | null) => {
     if (!contaId) return null;
     const { data, error } = await db.from("recebimento_chaves").select("id, tipo, chave, favorecido, banco").eq("conta_id", contaId).eq("ativa", true).maybeSingle();
@@ -499,6 +520,9 @@ Deno.serve(async (req) => {
           // W7b: aluno sem profissional — o teste grátis do app e o código do plano (Treino · Treino + Alimentação)
           teste_ate: ehDoApp(m) ? m.app_teste_ate ?? null : null, plano_codigo: ehDoApp(m) ? m.plano?.codigo ?? null : null }
       : null;
+
+  /** W-P: a mensalidade que o prof_definir devolve (a Task 8 do plano troca por mensalidadeVista + a parcela do mês a mês). */
+  const mensalidadeComPlano = async (m: Matricula) => mensalidadeVista(m);
 
   const assinaturaVista = (a: Awaited<ReturnType<typeof assinaturaDe>>) =>
     a ? { id: a.id, status: a.status, valor: a.valor === null ? null : Number(a.valor), proximo_vencimento: a.proximo_vencimento,
@@ -1126,6 +1150,47 @@ Deno.serve(async (req) => {
       const { m, p } = await matriculaDoPainel(body.aluno);
       exigirMensalidade(p);
       if (!m.conta_id) falhar("sem_conta");
+      if ("plano_modalidade" in body && body.plano_modalidade !== null) {
+        // W-P: aluno num plano com período — plano, modalidade, valor negociado e 1º vencimento (o valor sai do plano, pelo gatilho)
+        if (!temPlanos(m)) falhar("planos_indisponivel", 409);
+        if (ehDoApp(m)) falhar("conta_do_app", 403);
+        if (!ehModalidade(body.plano_modalidade)) falhar("modalidade_invalida");
+        const modalidade = body.plano_modalidade as Modalidade;
+        if (!ehUuidFin(body.plano_aluno_id)) falhar("plano_invalido");
+        const planoId = String(body.plano_aluno_id);
+        const { data: pl, error: ep } = await db.from("planos_aluno").select(COLUNAS_PLANO).eq("id", planoId).eq("conta_id", m.conta_id!).maybeSingle();
+        if (ep) throw ep;
+        if (!pl) falhar("plano_invalido");
+        const plano = pl as unknown as PlanoDoAluno;
+        // plano novo: só ativo, completo e numa modalidade que a conta recebe; quem já está no plano (mesmo desativado) continua
+        const ofertas = m.plano_aluno_id === planoId ? (planoCompleto(plano) ? plano.modalidades : []) : modalidadesOferecidas(plano, m.conta?.recebimento_modo);
+        if (!ofertas.includes(modalidade)) falhar("modalidade_indisponivel");
+        const vazio = body.plano_valor_negociado === null || body.plano_valor_negociado === "" || body.plano_valor_negociado === undefined;
+        const negociado = vazio ? null : valorValido(body.plano_valor_negociado);
+        if (!vazio && negociado === null) falhar("valor_invalido");
+        const a = await assinaturaDe(m.id);
+        if (a && ["authorized", "pending", "paused"].includes(a.status) && !aceitaAutomatica(modalidade, plano.meses)) {
+          if (body.cancelar_automatica !== true) falhar("automatica_ativa", 409);
+          await cancelarAutomatica(m, a);
+        }
+        const patch: Record<string, unknown> = { plano_aluno_id: planoId, plano_modalidade: modalidade, plano_valor_negociado: negociado };
+        // 1º vencimento de quem nunca pagou (padrão hoje); quem já pagou segue a régua dele ("vale a partir do próximo pagamento").
+        // Só data que existe: "2026-13-45" faria o toISOString lançar (500) e "2026-02-30" viraria 02/03 — as duas ficam em hoje
+        if (!m.mensalidade_pago_ate) {
+          const meioDia = (dia: string) => new Date(`${dia}T12:00:00Z`);
+          const existe = (dia: string) => !Number.isNaN(meioDia(dia).getTime()) && meioDia(dia).toISOString().startsWith(dia);
+          const inicio = typeof body.inicio === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.inicio) && existe(body.inicio) ? body.inicio : hoje;
+          patch.mensalidade_desde = meioDia(inicio).toISOString();
+        }
+        const { error } = await db.from("pacientes").update(patch).eq("id", m.id);
+        if (error) throw error;
+        const atual = (await carregarMatricula(db, m.id))!;
+        const automatica = await sincronizarAutomatica(atual);
+        return json({ ok: true, mensalidade: await mensalidadeComPlano(atual), automatica }, 200, origin);
+      }
+      // modo de hoje (B1): plano só com nome e o valor digitado. O APK antigo não manda plano_modalidade — quem está num plano com
+      // período só muda pela tela nova
+      if (m.plano_modalidade && !("plano_modalidade" in body)) falhar("aluno_em_plano_novo", 409);
       let planoId: string | null = ehUuidFin(body.plano_aluno_id) ? String(body.plano_aluno_id) : null;
       const planoNovo = textoCurto(body.plano_novo, 80);
       if (planoNovo) {
@@ -1145,11 +1210,15 @@ Deno.serve(async (req) => {
       const valor = vazio ? null : valorValido(body.valor);
       if (!vazio && valor === null) falhar("valor_invalido");
       const patch: Record<string, unknown> = { plano_aluno_id: planoId, mensalidade_valor: valor };
+      if (temPlanos(m)) Object.assign(patch, { plano_modalidade: null, plano_valor_negociado: null });
       // 1º vencimento de quem nunca pagou = hoje (quem já tinha histórico segue na régua dele)
       if (valor && !m.mensalidade_desde && !m.mensalidade_pago_ate) patch.mensalidade_desde = new Date().toISOString();
       const { error } = await db.from("pacientes").update(patch).eq("id", m.id);
       if (error) throw error;
-      return json({ ok: true, mensalidade: mensalidadeVista((await carregarMatricula(db, m.id))!) }, 200, origin);
+      const atual = (await carregarMatricula(db, m.id))!;
+      // I1 também no modo de hoje: o valor digitado mudou com a automática ligada → o MP passa a cobrar o novo
+      const automatica = await sincronizarAutomatica(atual);
+      return json({ ok: true, mensalidade: await mensalidadeComPlano(atual), automatica }, 200, origin);
     }
 
     if (acao === "prof_pausar") {
