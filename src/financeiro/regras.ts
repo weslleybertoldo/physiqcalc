@@ -219,6 +219,8 @@ export interface Faixa {
 /**
  * "Sua mensalidade vence em 3 dias · R$ 249,00 · Pix ou cartão · Pagar" — de 7 dias antes até pagar; vencida fica vermelha
  * (spec 4.3). Cobrança avulsa (Nutri) entra do mesmo jeito. O mais urgente primeiro; aguardando a confirmação não mostra.
+ * W-P: no plano do período todo (à vista ou cartão parcelado) a faixa fala do plano ("Seu plano vence em 3 dias"); no mês a mês
+ * e no modo de hoje, da mensalidade.
  */
 export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora: Date = new Date()): Faixa | null {
   const hoje = hojeSP(agora);
@@ -242,7 +244,7 @@ export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora:
     } else if (e.situacao === "vence_em_breve" || e.situacao === "vencida" || e.situacao === "pendente") {
       candidatas.push({
         tom: e.situacao === "vence_em_breve" ? "a" : "r",
-        titulo: `Sua mensalidade ${textoDoVencimento(e)}`,
+        titulo: r.modalidade === "avista" || r.modalidade === "cartao_parcelado" ? `Seu plano ${textoDoVencimento(e)}` : `Sua mensalidade ${textoDoVencimento(e)}`,
         subtitulo: `${reais(e.valor)} · ${formas}`,
         podePagar: pagar,
         alvo: { tipo: "mensalidade" },
