@@ -3,6 +3,8 @@
 // desconhecida, coluna fora da lista, dono no corpo, uuid ruim, texto/JSON acima do teto, anexo fora da pasta, o status de cada erro.
 // hml-19b: os blocos do fim — a Dieta, as Dietas e o app do aluno (as listas novas, o despacho entre os 3 módulos, as RPCs atômicas, o
 // registro do dia, o diário e os padrões de Manipulados/Metas/Orientações). Os blocos da 19a acima não mudam.
+// hml-19c: os blocos do fim — a Avaliação (a 4ª lista: antropometria, fotos de evolução pelo link assinado e o aviso "avaliação nova",
+// o despacho ao módulo novo e as listas da tela iguais às do servidor). Os blocos da 19a e da 19b não mudam.
 import { describe, expect, it } from "vitest";
 import {
   ACOES, ACOES_NUTRICAO, ANEXO_MAX_BYTES, ANEXO_MIMES, LIMITE_CORPO, PADROES, STATUS_DO_ERRO, TABELAS_PRONTUARIO, acaoDoPedido, bucketDosAnexos,
@@ -30,6 +32,14 @@ import { PERGUNTAS_PADRAO, TITULO_MODELO_PADRAO } from "@/nutricao/prontuario/li
 import { MODELOS_PADRAO } from "@/nutricao/prontuario/lib/documentosUtil";
 import { CATALOGO_PADRAO, NOME_EXAME_MAX } from "@/nutricao/prontuario/lib/examesUtil";
 import { MIMES_PERMITIDOS, TAMANHO_MAX, nomeSeguro as nomeSeguroDaTela } from "@/nutricao/editor/lib/anexosUtil";
+import {
+  ACOES_AVALIACAO, ACOES_DA_AVALIACAO, C_ANTROPOMETRIA, C_FOTO_EVOLUCAO, ERROS_DO_AVISO, FOTO_EVOLUCAO_MAX_BYTES, FOTO_EVOLUCAO_MIMES,
+  POSICOES_FOTO_EVOLUCAO, PROTOCOLOS_ANTROPOMETRIA, SEXOS_ANTROPOMETRIA, TABELAS_AVALIACAO, acaoDaAvaliacao, bucketDaEvolucao,
+  lerPedidoDeFotoEvolucao, lerRegistroDeFotoEvolucao, montarGravacaoAvaliacao, type AcaoAvaliacao,
+} from "../../supabase-principal/functions/_shared/nutricao-regras";
+import { OBSERVACAO_MAX, PROTOCOLOS, SEXOS, formNovo, formParaRegistro } from "@/nutricao/editor/lib/antropometriaUtil";
+import { FOTO_TAMANHO_MAX as FOTO_EVOLUCAO_DA_TELA, MIMES_FOTO, OBSERVACAO_FOTO_MAX, POSICOES } from "@/nutricao/editor/lib/evolucaoUtil";
+import { montarPath } from "@/nutricao/editor/lib/anexosUtil";
 
 const EU = "33333333-3333-4333-8333-333333333333";
 const OUTRA = "44444444-4444-4444-8444-444444444444";
@@ -715,5 +725,189 @@ describe("hml-19b — os padrões de Manipulados, Metas e Orientações: os text
     expect(itensPadraoDaDieta("formula")).toHaveLength(3);
     expect(itensPadraoDaDieta("meta")).toHaveLength(5);
     for (const s of SECOES_PADRAO_DIETA) for (const item of itensPadraoDaDieta(s)) expect(item, s).not.toHaveProperty("nutricionista_id");
+  });
+});
+
+// ═════════════════════════════ hml-19c — a Avaliação (antropometria, fotos de evolução, aviso) ═════════════════════════════
+/** Um registro de antropometria como a tela monta hoje (formParaRegistro do modal: a data com a hora, os números, as medidas). */
+const REGISTRO_ANTRO = formParaRegistro({
+  ...formNovo({ genero: "feminino", nascimento: "1990-05-01" }, "pollock3", new Date("2026-10-11T13:00:00.000Z")),
+  peso: "63,5", altura: "165", circunferencias: { cintura: "70", quadril: "98" }, dobras: { triceps: "12", suprailiaca: "15", coxa: "20" },
+  observacao: "  inicio  ",
+});
+const ESPECIAIS_AVALIACAO: AcaoAvaliacao[] = ["foto_evolucao_preparar", "foto_evolucao_registrar", "foto_evolucao_excluir", "avaliacao_avisar"];
+
+describe("hml-19c — a lista fechada da Avaliação (a 4ª da função)", () => {
+  it("8 ações: antropometria (3), foto de evolução (4) e o aviso; 4 especiais; as 4 listas não se cruzam", () => {
+    expect(ACOES_DA_AVALIACAO.sort()).toEqual([
+      "antropometria_criar", "antropometria_editar", "antropometria_excluir", "avaliacao_avisar", "foto_evolucao_editar", "foto_evolucao_excluir",
+      "foto_evolucao_preparar", "foto_evolucao_registrar",
+    ]);
+    for (const a of ESPECIAIS_AVALIACAO) expect(ACOES_AVALIACAO[a].operacao, a).toBe("especial");
+    const todas = [...ACOES_NUTRICAO, ...ACOES_DA_DIETA, ...ACOES_DO_ALUNO, ...ACOES_DA_AVALIACAO];
+    expect(new Set(todas).size).toBe(todas.length);
+  });
+
+  it("as 2 tabelas da spec §1.4 (principal) aparecem; o aviso é a RPC de hoje", () => {
+    const usadas = new Set(ACOES_DA_AVALIACAO.map((a) => ACOES_AVALIACAO[a].tabela).filter(Boolean));
+    expect(usadas).toEqual(new Set(TABELAS_AVALIACAO));
+    expect(ACOES_AVALIACAO.avaliacao_avisar.rpc).toBe("aluno_avisar_avaliacao");
+  });
+
+  it("ação desconhecida → null; a especial não passa pelo CRUD; o CRUD da Avaliação não aceita ação de outra lista", () => {
+    for (const v of ["", "antropometria_apagar", "ANTROPOMETRIA_CRIAR", "toString", "__proto__", "constructor", null, 1, {}]) {
+      expect(acaoDaAvaliacao(v), String(v)).toBeNull();
+    }
+    for (const a of ESPECIAIS_AVALIACAO) expect(montarGravacaoAvaliacao(a, {}, EU), a).toEqual({ ok: false, erro: "acao_invalida" });
+    expect(montarGravacaoAvaliacao("anamnese_criar", {}, EU)).toEqual({ ok: false, erro: "acao_invalida" });
+    expect(montarGravacaoAvaliacao("avaliacao_integrada_criar", {}, EU)).toEqual({ ok: false, erro: "acao_invalida" });
+  });
+
+  it("o despacho: as da Avaliação vão ao módulo novo; as de antes seguem nos seus (a avaliação 360 é do Prontuário)", () => {
+    for (const acao of ACOES_DA_AVALIACAO) expect(moduloDoPedido({ acao }), acao).toEqual({ modulo: "avaliacao", acao });
+    expect(moduloDoPedido({ acao: "avaliacao_integrada_criar" })).toEqual({ modulo: "prontuario", acao: "avaliacao_integrada_criar" });
+    expect(moduloDoPedido({ acao: "plano_criar" })).toEqual({ modulo: "dieta", acao: "plano_criar" });
+    expect(moduloDoPedido({ acao: "aluno_marcar_meta" })).toEqual({ modulo: "aluno", acao: "aluno_marcar_meta" });
+    for (const acao of ["avaliacao_apagar", "foto_preparar", "foto_salvar", "__proto__", null]) expect(moduloDoPedido({ acao }), String(acao)).toBeNull();
+  });
+});
+
+describe("hml-19c — positivo: a gravação da antropometria e da foto de evolução", () => {
+  it("as colunas aceitas são as que a tela grava hoje (o colunas(r) de antropometrias.ts = as chaves do registro do modal)", () => {
+    expect(Object.keys(C_ANTROPOMETRIA).sort()).toEqual(Object.keys(REGISTRO_ANTRO).sort());
+    expect(Object.keys(REGISTRO_ANTRO)).toHaveLength(10);
+  });
+
+  it("antropometria_criar: o aluno, as 10 colunas e o dono = quem chama", () => {
+    expect(montarGravacaoAvaliacao("antropometria_criar", { paciente_id: P, ...REGISTRO_ANTRO }, EU)).toEqual({
+      ok: true, tabela: "antropometrias", operacao: "inserir", valores: { paciente_id: P, ...REGISTRO_ANTRO, nutricionista_id: EU },
+    });
+    // o mínimo: o aluno e a data (o resto tem o padrão do banco)
+    expect(montarGravacaoAvaliacao("antropometria_criar", { paciente_id: P, data: ISO }, EU)).toEqual({
+      ok: true, tabela: "antropometrias", operacao: "inserir", valores: { paciente_id: P, data: ISO, nutricionista_id: EU },
+    });
+  });
+
+  it("antropometria_editar e _excluir; foto_evolucao_editar (posição, data e observação)", () => {
+    expect(montarGravacaoAvaliacao("antropometria_editar", { id: ID.toUpperCase(), ...REGISTRO_ANTRO }, EU)).toEqual({
+      ok: true, tabela: "antropometrias", operacao: "editar", id: ID, valores: { ...REGISTRO_ANTRO },
+    });
+    expect(montarGravacaoAvaliacao("antropometria_excluir", { id: ID }, EU, AGORA)).toEqual({
+      ok: true, tabela: "antropometrias", operacao: "excluir_suave", id: ID, valores: { deleted_at: AGORA.toISOString() },
+    });
+    expect(montarGravacaoAvaliacao("foto_evolucao_editar", { id: ID, posicao: "lado_d", data: "2026-10-01", observacao: null }, EU)).toEqual({
+      ok: true, tabela: "fotos_evolucao", operacao: "editar", id: ID, valores: { posicao: "lado_d", data: "2026-10-01", observacao: null },
+    });
+    expect(montarGravacaoAvaliacao("foto_evolucao_editar", { id: ID, observacao: "início" }, EU)).toMatchObject({ ok: true, valores: { observacao: "início" } });
+  });
+
+  it("as listas da tela são as do servidor (uma fonte só): protocolos, sexos, posições, tipos e tamanho da foto, os tetos", () => {
+    expect([...PROTOCOLOS_ANTROPOMETRIA].sort()).toEqual(PROTOCOLOS.map((p) => p.valor).sort());
+    expect([...SEXOS_ANTROPOMETRIA].sort()).toEqual(SEXOS.map((s) => s.valor).sort());
+    expect([...POSICOES_FOTO_EVOLUCAO]).toEqual(POSICOES.map((p) => p.valor));
+    expect([...FOTO_EVOLUCAO_MIMES].sort()).toEqual(Object.keys(MIMES_FOTO).sort());
+    expect(FOTO_EVOLUCAO_MAX_BYTES).toBe(FOTO_EVOLUCAO_DA_TELA);
+    // o teto do servidor fica ACIMA do que a tela aceita (a observação da antropometria até 4000; a da foto até 300)
+    expect(valorDoCampo(C_ANTROPOMETRIA.observacao, "x".repeat(OBSERVACAO_MAX)).ok).toBe(true);
+    expect(valorDoCampo(C_FOTO_EVOLUCAO.observacao, "x".repeat(OBSERVACAO_FOTO_MAX)).ok).toBe(true);
+    expect(bucketDaEvolucao("staging")).toBe("evolucao-staging");
+    expect(bucketDaEvolucao("public")).toBe("evolucao");
+  });
+});
+
+describe("hml-19c — negativo: o corpo não manda no dono nem nas colunas (Avaliação)", () => {
+  it("nutricionista_id, deleted_at, id, conta_id e created_at no corpo são ignorados (o dono é quem chama)", () => {
+    const g = montarGravacaoAvaliacao("antropometria_criar", {
+      paciente_id: P, data: ISO, nutricionista_id: OUTRA, deleted_at: ISO, id: ID, conta_id: OUTRA, created_at: ISO,
+    }, EU);
+    expect(g).toEqual({ ok: true, tabela: "antropometrias", operacao: "inserir", valores: { paciente_id: P, data: ISO, nutricionista_id: EU } });
+  });
+
+  it("editar não troca o aluno, o dono, o caminho da foto nem a Lixeira; só colunas de fora = nada a mudar", () => {
+    expect(montarGravacaoAvaliacao("antropometria_editar", { id: ID, peso: 70, paciente_id: OUTRA, nutricionista_id: OUTRA, deleted_at: null }, EU))
+      .toEqual({ ok: true, tabela: "antropometrias", operacao: "editar", id: ID, valores: { peso: 70 } });
+    expect(montarGravacaoAvaliacao("foto_evolucao_editar", { id: ID, path: `${OUTRA}/${P}/x.jpg`, paciente_id: OUTRA, tamanho: 1 }, EU))
+      .toEqual({ ok: false, erro: "dados_invalidos", campo: "nada_a_mudar" });
+  });
+
+  it("uuid ruim, opção fora, forma errada, texto acima do teto e obrigatório faltando → dados_invalidos", () => {
+    const criar = (extra: Record<string, unknown>) => montarGravacaoAvaliacao("antropometria_criar", { paciente_id: P, data: ISO, ...extra }, EU);
+    expect(montarGravacaoAvaliacao("antropometria_criar", { paciente_id: "x", data: ISO }, EU)).toMatchObject({ ok: false, erro: "dados_invalidos", campo: "paciente_id" });
+    expect(montarGravacaoAvaliacao("antropometria_criar", { data: ISO }, EU)).toMatchObject({ ok: false, campo: "paciente_id" });
+    expect(montarGravacaoAvaliacao("antropometria_criar", { paciente_id: P }, EU)).toMatchObject({ ok: false, campo: "data" });
+    expect(criar({ sexo: "outro" })).toMatchObject({ ok: false, campo: "sexo" });
+    expect(criar({ sexo: null })).toMatchObject({ ok: true });
+    expect(criar({ protocolo: "jp7" })).toMatchObject({ ok: false, campo: "protocolo" });
+    expect(criar({ protocolo: null })).toMatchObject({ ok: false, campo: "protocolo" });
+    expect(criar({ circunferencias: [70] })).toMatchObject({ ok: false, campo: "circunferencias" });
+    expect(criar({ resultados: "x".repeat(10) })).toMatchObject({ ok: false, campo: "resultados" });
+    expect(criar({ dobras: { triceps: "x".repeat(100_001) } })).toMatchObject({ ok: false, campo: "dobras" });
+    expect(criar({ peso: "63,5" })).toMatchObject({ ok: false, campo: "peso" });
+    expect(criar({ idade: 30.5 })).toMatchObject({ ok: false, campo: "idade" });
+    expect(criar({ observacao: "x".repeat(20_001) })).toMatchObject({ ok: false, campo: "observacao" });
+    expect(criar({ data: "11/10/2026" })).toMatchObject({ ok: false, campo: "data" });
+    expect(montarGravacaoAvaliacao("antropometria_editar", { id: "x", peso: 70 }, EU)).toMatchObject({ ok: false, campo: "id" });
+    expect(montarGravacaoAvaliacao("antropometria_excluir", { id: 7 }, EU)).toMatchObject({ ok: false, campo: "id" });
+    expect(montarGravacaoAvaliacao("foto_evolucao_editar", { id: ID, posicao: "lateral" }, EU)).toMatchObject({ ok: false, campo: "posicao" });
+    expect(montarGravacaoAvaliacao("foto_evolucao_editar", { id: ID, data: "2026-13-01" }, EU)).toMatchObject({ ok: false, campo: "data" });
+    expect(montarGravacaoAvaliacao("foto_evolucao_editar", { id: ID, observacao: "x".repeat(2_001) }, EU)).toMatchObject({ ok: false, campo: "observacao" });
+    expect(montarGravacaoAvaliacao("antropometria_criar", { paciente_id: P, data: ISO }, "nao-e-uuid")).toMatchObject({ ok: false, campo: "user" });
+  });
+});
+
+describe("hml-19c — as fotos de evolução: o caminho é do servidor, o arquivo pelo link assinado", () => {
+  const MEU = caminhoDoAnexo(EU, P, "Minha Foto (frente).JPG", ID);
+  const PEDIDO = { paciente_id: P, nome: "Minha Foto (frente).JPG", tipo: "image/jpeg", tamanho: 1234 };
+
+  it("o caminho <quem chama>/<aluno>/<uuid>-<nome seguro> é o MESMO do montarPath da tela de hoje", () => {
+    expect(MEU).toBe(montarPath(EU, P, "Minha Foto (frente).JPG", ID));
+    expect(caminhoDoAnexo(EU, P, "a.webp", ID)).toBe(montarPath(EU, P, "a.webp", ID));
+  });
+
+  it("preparar: o aluno, o nome, o tipo (só JPEG/PNG/WebP, como o bucket) e até 10 MB", () => {
+    expect(lerPedidoDeFotoEvolucao({ ...PEDIDO, tipo: "IMAGE/JPEG" })).toEqual({ ok: true, pacienteId: P, nome: PEDIDO.nome, mime: "image/jpeg", tamanho: 1234 });
+    for (const tipo of ["application/pdf", "image/heic", "image/gif", "", null]) expect(lerPedidoDeFotoEvolucao({ ...PEDIDO, tipo }), String(tipo)).toEqual({ ok: false, erro: "tipo_invalido" });
+    expect(lerPedidoDeFotoEvolucao({ ...PEDIDO, tamanho: FOTO_EVOLUCAO_DA_TELA })).toMatchObject({ ok: true });
+    expect(lerPedidoDeFotoEvolucao({ ...PEDIDO, tamanho: FOTO_EVOLUCAO_DA_TELA + 1 })).toEqual({ ok: false, erro: "arquivo_grande" });
+    for (const tamanho of [0, -1, 1.5, "10", null]) expect(lerPedidoDeFotoEvolucao({ ...PEDIDO, tamanho }), String(tamanho)).toMatchObject({ ok: false, campo: "tamanho" });
+    expect(lerPedidoDeFotoEvolucao({ ...PEDIDO, nome: "  " })).toMatchObject({ ok: false, campo: "nome" });
+    expect(lerPedidoDeFotoEvolucao({ ...PEDIDO, paciente_id: "x" })).toMatchObject({ ok: false, campo: "paciente_id" });
+  });
+
+  it("registrar: o caminho de quem chama + posição, data (obrigatórias) e observação; o dono e o tamanho não vêm do corpo", () => {
+    const corpo = { ...PEDIDO, caminho: MEU, posicao: "frente", data: "2026-10-11", observacao: "início", nutricionista_id: OUTRA, path: "x", tamanho: 1234 };
+    expect(lerRegistroDeFotoEvolucao(corpo, EU)).toEqual({
+      ok: true, pacienteId: P, caminho: MEU, mime: "image/jpeg", tamanho: 1234, valores: { posicao: "frente", data: "2026-10-11", observacao: "início" },
+    });
+    expect(lerRegistroDeFotoEvolucao({ ...corpo, posicao: undefined }, EU)).toMatchObject({ ok: false, campo: "posicao" });
+    expect(lerRegistroDeFotoEvolucao({ ...corpo, data: undefined }, EU)).toMatchObject({ ok: false, campo: "data" });
+    expect(lerRegistroDeFotoEvolucao({ ...corpo, posicao: "lado" }, EU)).toMatchObject({ ok: false, campo: "posicao" });
+  });
+
+  it("N9: registrar com o caminho de outra pasta (outra pessoa, outro aluno, fora do formato) → fora_da_pasta", () => {
+    const corpo = { ...PEDIDO, posicao: "frente", data: "2026-10-11" };
+    for (const caminho of [
+      caminhoDoAnexo(OUTRA, P, "a.jpg", ID), caminhoDoAnexo(EU, OUTRA, "a.jpg", ID), `${EU}/${P}/foto.jpg`, `${EU}/${P}/../${OUTRA}/${ID}-a.jpg`,
+      `${MEU}/extra`, `/${MEU}`, null, 42,
+    ]) {
+      expect(lerRegistroDeFotoEvolucao({ ...corpo, caminho }, EU), String(caminho)).toEqual({ ok: false, erro: "fora_da_pasta" });
+    }
+    // o caminho é de quem CHAMA: o mesmo caminho, chamado por outra pessoa, é de outra pasta
+    expect(lerRegistroDeFotoEvolucao({ ...corpo, caminho: MEU }, OUTRA)).toEqual({ ok: false, erro: "fora_da_pasta" });
+  });
+});
+
+describe("hml-19c — o aviso 'avaliação nova': os códigos da RPC de hoje", () => {
+  it("os códigos que a w14_matricula_da_rota devolve passam como estão; o resto é a tradução do banco", () => {
+    for (const code of ERROS_DO_AVISO) expect(erroDaRpc({ code: "P0001", message: code }, ERROS_DO_AVISO), code).toEqual({ erro: code, inesperado: false });
+    expect(erroDaRpc({ code: "P0001", message: "outra coisa" }, ERROS_DO_AVISO)).toEqual({ erro: "erro_interno", inesperado: true });
+    expect(erroDaRpc({ code: "42501", message: "x" }, ERROS_DO_AVISO)).toEqual({ erro: "sem_acesso", inesperado: false });
+  });
+
+  it("STATUS: aluno_inexistente 404; sem_acesso 403; sem_login 401; arquivo_nao_encontrado (a foto não chegou) 400", () => {
+    expect(statusDoErro("aluno_inexistente")).toBe(404);
+    expect(statusDoErro("sem_acesso")).toBe(403);
+    expect(statusDoErro("sem_login")).toBe(401);
+    expect(statusDoErro("arquivo_nao_encontrado")).toBe(400);
   });
 });
