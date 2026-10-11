@@ -17,12 +17,12 @@ const FUNCOES_DIR = resolve(__dirname, "../../supabase-principal/functions");
 const ler = (rel: string) => readFileSync(resolve(FUNCOES_DIR, rel), "utf-8");
 
 /** As publicadas desta W no principal: as 20, as 2 master que vão pela master-porta e a erro-avisar (nova) — e a automaticas-fila
- *  (W-P, Task 8b), que segue o mesmo contrato. */
+ *  (W-P, Task 8b) e a infinitepay-webhook-aluno (W1), que seguem o mesmo contrato. */
 const FUNCOES = [
   "agenda-avisar", "aluno-enviar", "alunos", "convites", "cobranca-conta", "entrar-senha", "espelho-enviar", "espelho-resumo",
   "excluir-minha-conta", "exportar-meus-dados", "master-contas", "mp-webhook", "mp-webhook-aluno", "mp-webhook-conta",
   "pagamentos-aluno", "pos-login", "push-enviar", "vincular-aluno", "whatsapp-agente", "whatsapp-conectar",
-  "master-financeiro", "master-planos", "erro-avisar", "automaticas-fila",
+  "master-financeiro", "master-planos", "erro-avisar", "automaticas-fila", "infinitepay-webhook-aluno",
   "nutricao", // hml-19a: o jeito 2 da nutrição, pela porta-pessoa (o log e o catch final moram lá, como nas master-*)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];

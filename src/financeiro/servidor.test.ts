@@ -228,4 +228,18 @@ describe("W1 — a baixa da InfinitePay só depois do payment_check (guarda de f
     const aplicar = b.slice(b.indexOf("async function aplicar("), b.indexOf("async function avisarPago("));
     expect(aplicar.lastIndexOf("avisarUmaVez(")).toBeLessThan(aplicar.lastIndexOf("await fechar(db, a, resultadoDaDecisao(d));"));
   });
+  it("o webhook só registra o aviso: não grava cobrança nem diz 'paga'; responde 200/429/413/400 (nunca 5xx)", () => {
+    const w = ler("infinitepay-webhook-aluno/index.ts");
+    expect(w).not.toMatch(/from\("cobrancas"\)\s*\.\s*(update|insert|upsert|delete)/);
+    expect(w).not.toMatch(/"paga"/);
+    expect(w).toContain("emSegundoPlano(");
+    expect(w).not.toMatch(/responder\(5\d\d/);
+  });
+  it("I6: o IP pelo ipDoPedido (nunca o cabeçalho de encaminhamento cru), o corpo com teto e o pedido do LINK (I4)", () => {
+    const w = ler("infinitepay-webhook-aluno/index.ts");
+    expect(w).toContain("ipDoPedido(req.headers, null)");
+    expect(w).not.toMatch(/x-forwarded-for/i);
+    expect(w).toContain("IP_LIMITE_CORPO");
+    expect(w).toContain("linkDoPedido(db, aviso.pedido)");
+  });
 });
