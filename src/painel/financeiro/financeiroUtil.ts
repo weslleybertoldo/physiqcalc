@@ -132,12 +132,16 @@ export function filtrosParaURL(f: FiltrosFinanceiro, hoje: Date = new Date()): R
 /** As chaves de filtro que esta tela põe na URL (a página guarda as outras — ?aba=). */
 export const CHAVES_FILTRO_URL = ["de", "ate", "tipo", "categoria", "forma", "q"] as const;
 // ---- As abas da página (?aba=) ----
-export type IdAba = "resumo" | "mensalidades" | "lancamentos" | "recibos" | "categorias";
-export const IDS_ABA: IdAba[] = ["resumo", "mensalidades", "lancamentos", "recibos", "categorias"];
-/** ?aba= escolhe a aba; sem ela, um link antigo do Financeiro do Nutri (?de=&ate=&tipo=…) abre direto em Lançamentos. */
-export function abaDaUrl(sp: { get(nome: string): string | null; has(nome: string): boolean }): IdAba {
+export type IdAba = "resumo" | "mensalidades" | "planos" | "lancamentos" | "recibos" | "categorias";
+export const IDS_ABA: IdAba[] = ["resumo", "mensalidades", "planos", "lancamentos", "recibos", "categorias"];
+/** W-P (decisão do Weslley 10/10, ponto 1): as abas só do dono da conta e do master — os planos e os valores, como a mensalidade. */
+export const ABAS_DO_DONO: readonly IdAba[] = ["planos"];
+export const abaVisivel = (id: IdAba, donoOuMaster: boolean): boolean => donoOuMaster || !ABAS_DO_DONO.includes(id);
+/** ?aba= escolhe a aba (a do dono, só para o dono e o master); sem ela, um link antigo do Financeiro do Nutri (?de=&ate=&tipo=…)
+ *  abre direto em Lançamentos. */
+export function abaDaUrl(sp: { get(nome: string): string | null; has(nome: string): boolean }, donoOuMaster = true): IdAba {
   const a = sp.get("aba");
-  if (IDS_ABA.includes(a as IdAba)) return a as IdAba;
+  if (IDS_ABA.includes(a as IdAba) && abaVisivel(a as IdAba, donoOuMaster)) return a as IdAba;
   return CHAVES_FILTRO_URL.some((k) => sp.has(k)) ? "lancamentos" : "resumo";
 }
 export const filtrosAtivos = (f: { tipo: string; categoria: string; metodo?: string; q: string }): boolean => !!f.tipo || !!f.categoria || !!f.metodo || !!f.q.trim();

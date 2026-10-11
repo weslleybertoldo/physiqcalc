@@ -1,7 +1,7 @@
 // Physiq W6 — regras PURAS da cobrança aluno → profissional na tela (spec §4.3, §4.5, §9; R15, R16, A13). Sem rede e sem
 // banco: testadas em src/financeiro/regras.test.ts. A régua da mensalidade é a do Calc (src/lib/cobertura.ts, a mesma do
 // banco — mensalidade_recalcular): cada pagamento cobre 1 mês; "em dia" = a cobertura passa de agora.
-import type { CobrancaVista, ModoRecebimento, ResumoMatricula } from "./tipos";
+import type { CobrancaVista, ModoRecebimento, PlanoSalvo, ResumoMatricula } from "./tipos";
 
 // ───────────────────────── datas (relógio de São Paulo) ─────────────────────────
 
@@ -420,8 +420,42 @@ export const MENSAGEM_ERRO_FINANCEIRO: Record<string, string> = {
   rate_limited: "Muitas tentativas. Tente em alguns minutos.",
   conta_real_no_staging: "Este é o ambiente de teste: só contas de teste entram.",
   nao_e_do_app: "Esta mensalidade não é do plano do app.",
+  // W-P — os planos do aluno (aba Planos e a ficha do aluno)
+  nome_invalido: "Dê um nome ao plano (até 80 letras).",
+  meses_invalido: "A duração vai de 1 a 24 meses.",
+  modalidades_invalidas: "Marque pelo menos uma forma de pagar.",
+  modalidade_da_conta: "Essa forma de pagar não é aceita pelo seu recebimento.",
+  parcelas_invalidas: "Escolha de 2 a 12 parcelas.",
+  parcela_sem_mensal: "A parcela é só do mês a mês.",
+  parcela_invalida: "Parcela inválida.",
+  nome_repetido: "Já existe um plano com esse nome (mesmo desativado).",
+  modalidade_em_uso: "Há alunos nessa forma de pagar. Passe-os para outra antes de tirar.",
+  modalidade_indisponivel: "Essa forma de pagar não está neste plano.",
+  modalidade_invalida: "Escolha como o aluno vai pagar.",
+  modalidade_sem_automatica: "A cobrança automática é só no mês a mês.",
+  automatica_ativa: "O aluno tem a cobrança automática ligada.",
+  aluno_em_plano_novo: "Este aluno está num plano com período. Atualize o app para mudar.",
+  planos_indisponivel: "Os planos ainda não chegaram a este ambiente.",
+  conta_do_app: "Os planos do app são do Physiq.",
 };
 
 export function mensagemErroFinanceiro(codigo: string | null | undefined, padrao = "Não deu certo agora. Tente de novo."): string {
   return (codigo && MENSAGEM_ERRO_FINANCEIRO[codigo]) || padrao;
+}
+
+/**
+ * W-P — a frase depois de salvar um plano, pelo que o prof_plano_salvar diz das cobranças automáticas de quem segue o plano: a fila da
+ * Task 8b (decisão do Weslley 10/10, ponto 2 — `{ enfileiradas }`) ou a troca na hora da função de antes (`{ atualizadas, falharam }`;
+ * ela pode seguir publicada por um tempo e o schema sem a fila cai nela). Nada mudou nas automáticas → null.
+ */
+export function avisoDasAutomaticas(r: Partial<PlanoSalvo> | null | undefined): string | null {
+  const a: NonNullable<PlanoSalvo["automaticas"]> = r?.automaticas ?? {};
+  if ((Number(r?.enfileiradas ?? a.enfileiradas) || 0) > 0) return "As cobranças automáticas dos alunos vão ser atualizadas em instantes.";
+  const falharam = Number(a.falharam) || 0;
+  if (falharam > 0) {
+    return falharam === 1
+      ? "Não deu para mudar a cobrança automática de 1 aluno. Confira no financeiro dele."
+      : `Não deu para mudar a cobrança automática de ${falharam} alunos. Confira no financeiro de cada um.`;
+  }
+  return (Number(a.atualizadas) || 0) > 0 ? "As cobranças automáticas dos alunos já estão com o valor novo." : null;
 }

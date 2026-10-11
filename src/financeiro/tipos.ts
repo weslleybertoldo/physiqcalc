@@ -1,5 +1,6 @@
 // Physiq W6 — tipos da cobrança aluno → profissional (respostas da função pagamentos-aluno e do financeiro_do_aluno() do banco
 // principal — supabase-principal/functions/pagamentos-aluno e a migração 20260929150000_w06_financeiro_aluno.sql).
+import type { Modalidade, Parcela, PlanoDoAluno } from "./planos";
 
 export type StatusCobranca = "aberta" | "paga" | "cancelada" | "aguardando_confirmacao";
 export type TipoCobranca = "mensalidade" | "avulsa";
@@ -49,6 +50,37 @@ export interface MensalidadeVista {
   /** W7b — aluno sem profissional (conta do app): fim do teste grátis e o código do plano (app_treino · app_treino_alimentacao) */
   teste_ate?: string | null;
   plano_codigo?: string | null;
+  /** W-P — plano com período (nulo = modo de hoje) */
+  modalidade?: Modalidade | null;
+  meses?: number;
+  negociado?: number | null;
+  max_parcelas?: number;
+  automatica?: boolean;
+  parcela?: Parcela | null;
+}
+
+/** W-P — um plano na aba Planos (prof_planos). */
+export type PlanoNaLista = PlanoDoAluno & { completo: boolean; parcela: number | null; alunos: number };
+
+export interface PlanosDaConta {
+  ok: true;
+  modo: ModoRecebimento;
+  app: boolean;
+  pode_editar: boolean;
+  modalidades_da_conta: Modalidade[];
+  planos: PlanoNaLista[];
+}
+
+/**
+ * W-P — a resposta do prof_plano_salvar: o plano gravado e o que houve com as cobranças automáticas de quem segue o plano. Task 8b
+ * (decisão do Weslley 10/10, ponto 2): elas vão para uma fila (`{ enfileiradas }`); a função de antes (ainda publicada por um tempo,
+ * e o schema sem a fila) troca na hora (`{ atualizadas, falharam }`). A tela aceita os 2 (avisoDasAutomaticas, regras.ts).
+ */
+export interface PlanoSalvo {
+  ok: true;
+  plano?: PlanoDoAluno;
+  automaticas?: { enfileiradas?: number; atualizadas?: number; falharam?: number } | null;
+  enfileiradas?: number;
 }
 
 export interface AssinaturaVista {
@@ -125,8 +157,8 @@ export interface FinanceiroProfissional {
     tem_login: boolean;
   };
   permissoes: { master: boolean; dono: boolean; responsavel: boolean; mensalidade: boolean };
-  conta: { id: string | null; nome: string | null; modo: ModoRecebimento; bloquear: boolean; origem: string | null; chave: ChavePix | null };
-  planos: Array<{ id: string; nome: string; valor: number | null; ativo: boolean }>;
+  conta: { id: string | null; nome: string | null; modo: ModoRecebimento; bloquear: boolean; origem: string | null; chave: ChavePix | null; modalidades?: Modalidade[] };
+  planos: Array<{ id: string; nome: string; valor: number | null; ativo: boolean } & Partial<Omit<PlanoDoAluno, "id" | "nome" | "valor" | "ativo">>>;
   mensalidade: MensalidadeVista | null;
   assinatura: AssinaturaVista | null;
   cobrancas: CobrancaVista[];
@@ -145,6 +177,9 @@ export interface AlunoResumo {
   desde: string | null;
   aguardando: string | null;
   abertas: number;
+  /** W-P — plano com período (só o dono e o master veem; nulo = modo de hoje) */
+  modalidade?: Modalidade | null;
+  meses?: number;
 }
 
 export type PendenteResumo = CobrancaVista & { aluno: { paciente_id: string; treino_user_id: string | null; nome: string | null; email: string | null } };
@@ -194,6 +229,9 @@ export interface ResumoMatricula {
   app?: boolean;
   teste_ate?: string | null;
   plano_codigo?: string | null;
+  /** W-P — plano com período (nulo = modo de hoje) */
+  modalidade?: Modalidade | null;
+  plano_meses?: number | null;
 }
 
 /** hml-14d (B21 · D31): "Recebido" e "Gasto com o aluno" somados no banco (financeiro_totais_do_aluno), quantos lançamentos o aluno

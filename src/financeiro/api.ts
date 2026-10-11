@@ -3,8 +3,10 @@
 // comprovante pelo link assinado (o servidor escolhe o caminho no Storage).
 import { principal } from "@/integrations/principal/client";
 import type { Pagina } from "@/lib/paginacao";
+import type { PlanoSalvar } from "./planos";
 import type {
-  AlunoResumo, CobrancaVista, FinanceiroProfissional, MensalidadesDaConta, ReciboVista, ResumoConta, ResumoMatricula, StatusAluno, TotaisDoAluno,
+  AlunoResumo, CobrancaVista, FinanceiroProfissional, MensalidadesDaConta, PlanoSalvo, PlanosDaConta, ReciboVista, ResumoConta, ResumoMatricula,
+  StatusAluno, TotaisDoAluno,
 } from "./tipos";
 
 export class ErroFinanceiro extends Error {
@@ -187,3 +189,11 @@ export function badgesDoResumo(r: Pick<ResumoConta, "alunos">, agora = new Date(
   }
   return { badgesData, aguardando };
 }
+
+// ───────────────────────── W-P — a aba Planos (prof_planos · prof_plano_salvar · prof_plano_ativo) ─────────────────────────
+// Só o dono e o master leem (403 so_o_dono — decisão do Weslley 10/10, ponto 1) e gravam; a conta do app não grava (conta_do_app).
+
+export const buscarPlanosDaConta = (contaId: string) => acaoFinanceiro<PlanosDaConta>("prof_planos", { conta_id: contaId });
+export const salvarPlano = (contaId: string, plano: { id?: string } & PlanoSalvar) =>
+  acaoFinanceiro<PlanoSalvo>("prof_plano_salvar", { conta_id: contaId, ...plano });
+export const ativarPlano = (contaId: string, id: string, ativo: boolean) => acaoFinanceiro<{ ok: true }>("prof_plano_ativo", { conta_id: contaId, id, ativo });
