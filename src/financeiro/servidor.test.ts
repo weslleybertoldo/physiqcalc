@@ -191,3 +191,41 @@ it("hml-19 (H-55): o detalhe do pagamento no MP só mostra e-mail, nome no cart�
   expect(trecho).toMatch(/e2e_id: souOAluno \?/);
   expect(trecho).toMatch(/card_last4: pay\.card\?\.last_four_digits/);
 });
+
+describe("W1 — a baixa da InfinitePay só depois do payment_check (guarda de fonte)", () => {
+  const FUNCOES = resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions");
+  const ler = (rel: string) => readFileSync(resolve(FUNCOES, rel), "utf8");
+  it("conferirAviso chama o payment_check (a tag e o pedido do LINK) antes de aplicar; 'paga' só no 'baixar'; nenhuma cobrança nasce aqui (C1)", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const conferir = b.slice(b.indexOf("export async function conferirAviso"), b.indexOf("export async function conferirAvisosPendentes"));
+    expect(conferir).toContain("conferirPagamento(link.handle, link.pedido");
+    expect(conferir.indexOf("conferirPagamento(")).toBeLessThan(conferir.indexOf("aplicar("));
+    expect(b.match(/status: "paga"/g)?.length).toBe(1);
+    expect(b).not.toMatch(/from\("cobrancas"\)\s*\.\s*(insert|upsert)/);
+    const aplicar = b.slice(b.indexOf("async function aplicar("), b.indexOf("async function avisarPago("));
+    expect(aplicar).toContain("conf: ConferenciaIp");
+    expect(aplicar).not.toMatch(/ip_transaction_nsu: a\.transaction_nsu/); // o NSU gravado sai do nsuDaBaixa
+  });
+  it("I4: o link nasce com o pedidoDoLink (<cobranca_id>-<n>) — o webhook e a volta recusam o id puro da cobrança", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const novo = b.slice(b.indexOf("export async function novoLink"), b.indexOf("export async function registrarAviso"));
+    expect(novo).toContain("const pedido = pedidoDoLink(cobrancaId, n);");
+    expect(novo).toContain(".insert({ pedido, cobranca_id: cobrancaId, n, handle, centavos })");
+  });
+  it("só pelo pedido SÓ na tentativa ainda NÃO paga: numa cobrança já paga o NSU do pedido daria 'ja_feito' de qualquer link (revisão da 1b)", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const pp = b.slice(b.indexOf("export async function conferirPeloPedido"), b.indexOf("export async function fecharVencidas"));
+    const pega = pp.indexOf('.eq("status", "aguardando_confirmacao")');
+    expect(pega).toBeGreaterThan(-1);
+    expect(pega).toBeLessThan(pp.indexOf("conferirPagamento("));
+    expect(pp).not.toMatch(/\.(in|neq)\("status"/);
+  });
+  it("o 'desistiu' avisa o personal ANTES de fechar (fechado antes, o próprio aviso contava no teto de 1 por 24 h e o sino calava)", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const sem = b.slice(b.indexOf("async function semBaixa("), b.indexOf("async function fechar("));
+    expect(sem.indexOf("avisarUmaVez(")).toBeGreaterThan(-1);
+    expect(sem.indexOf("avisarUmaVez(")).toBeLessThan(sem.indexOf('fechar(db, a, "desistiu"'));
+    const aplicar = b.slice(b.indexOf("async function aplicar("), b.indexOf("async function avisarPago("));
+    expect(aplicar.lastIndexOf("avisarUmaVez(")).toBeLessThan(aplicar.lastIndexOf("await fechar(db, a, resultadoDaDecisao(d));"));
+  });
+});
