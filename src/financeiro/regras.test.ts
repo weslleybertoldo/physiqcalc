@@ -249,6 +249,10 @@ describe("linhas das cobranças (telas 5 e 7)", () => {
     expect(mensagemErroFinanceiro("xyz", "padrão")).toBe("padrão");
     expect(mensagemErroFinanceiro(null)).toBe("Não deu certo agora. Tente de novo.");
   });
+  it("W1b (revisão M2): o 409 cobranca_de_outro_pagamento é permanente — frase própria, nunca o 'Tente de novo'", () => {
+    expect(mensagemErroFinanceiro("cobranca_de_outro_pagamento")).toBe("Esse pagamento do Mercado Pago não é desta cobrança. Fale com o suporte.");
+    expect(mensagemErroFinanceiro("cobranca_de_outro_pagamento", "padrão")).not.toMatch(/tente de novo|padrão/i);
+  });
 });
 
 describe("W1 — a InfinitePay nas regras da tela", () => {

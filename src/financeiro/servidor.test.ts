@@ -18,6 +18,7 @@ import {
   mesPorExtenso,
   mesRefDe,
   mpEmAberto,
+  pagamentoEDaCobranca,
   podeMexerNaCobranca,
   podeMexerNaMensalidade,
   podeVerCobranca,
@@ -284,5 +285,157 @@ describe("W1 — a baixa da InfinitePay só depois do payment_check (guarda de f
         expect(m[1], `${rel}: ${m[1].slice(0, 80)}`).not.toMatch(/\b(handle|ip_handle|url|recibo|recibo_url|transaction_nsu|nsu|slug)\b/);
       }
     }
+  });
+});
+
+describe("W1b (C1) — o pagamento do Mercado Pago é DESTA cobrança (pagamentoEDaCobranca)", () => {
+  const T = "33333333-4444-4555-8666-777777777777"; // o aluno no Treino (as cobranças "migrado_calc")
+  const OUTRO = "dddddddd-eeee-4fff-8aaa-bbbbbbbbbbbb";
+  const c = { id: C, paciente_id: P, mp_payment_id: "123456" };
+  const ctx = { schema: "staging" as const, treinoUserId: T, preapproval: null as string | null, preapprovals: [] as string[] };
+  const pay = (external_reference: string | null, id: unknown = 123456) => ({ id, external_reference });
+  it("passa: a referência desta cobrança, a recorrente da MESMA matrícula, o Calc antigo do mesmo aluno e a automática da matrícula", () => {
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", C)), c, ctx)).toBe(true);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "mensalidade", C)), c, ctx)).toBe(true);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", C), "123456"), c, ctx)).toBe(true); // o id em texto
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "recorrente")), c, ctx)).toBe(true);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-09-01:aluno:mensal`), c, ctx)).toBe(true);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}::aluno:mensal`), c, ctx)).toBe(true);
+    expect(pagamentoEDaCobranca(pay(null), c, { ...ctx, preapproval: "pre-1", preapprovals: ["pre-0", "pre-1"] })).toBe(true);
+    // o Calc de outro aluno do Treino, mas a automática É desta matrícula (aluno_assinaturas, só o servidor grava)
+    expect(pagamentoEDaCobranca(pay(`staging:${OUTRO}::aluno:mensal`), c, { ...ctx, preapproval: "pre-1", preapprovals: ["pre-1"] })).toBe(true);
+  });
+  it("não passa: o pagamento do PLANO da conta (o ataque do C1), outra cobrança, outro aluno, outro schema e a referência sem a cobrança", () => {
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "mensal")), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "anual", P)), c, ctx)).toBe(false);
+    // a automática do plano: nem com o preapproval dela na lista da matrícula (a referência diz que não é de aluno)
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "recorrente")), c, { ...ctx, preapproval: "pre-1", preapprovals: ["pre-1"] })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`physiqnutri:staging:${U}`), c, { ...ctx, preapproval: "pre-1", preapprovals: ["pre-1"] })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", OUTRO)), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", OUTRO, "avulsa", C)), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", OUTRO, "recorrente")), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("public", P, "avulsa", C)), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "mensalidade")), c, ctx)).toBe(false);
+  });
+  it("não passa: o Calc do professor, o Calc de outro aluno ou de outro schema, sem referência nem automática da matrícula, outro id", () => {
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-09-01:plano_professor:mensal`), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-09-01:plano_professor:mensal`), c, { ...ctx, preapproval: "pre-1", preapprovals: ["pre-1"] })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${OUTRO}::aluno:mensal`), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`public:${T}::aluno:mensal`), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}::aluno:mensal`), c, { ...ctx, treinoUserId: null })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay("qualquer coisa"), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), c, { ...ctx, preapproval: "pre-9", preapprovals: ["pre-1"] })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", C), 999), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", C), null), c, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", C)), { ...c, mp_payment_id: null }, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(null, c, ctx)).toBe(false);
+  });
+  it("I1 da revisão: o Calc COPIADO pelo script 05 para a matrícula sem treino_user_id (a conta do app) passa pela origem 'migrado_calc'", () => {
+    const semTreino = { ...ctx, treinoUserId: null };
+    const copiada = { ...c, origem: "migrado_calc" };
+    // passa: o Pix e o cartão do Calc "sem professor" (as 4 linhas MP do public na matrícula da conta do app)
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), copiada, semTreino)).toBe(true);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}::aluno:mensal`), copiada, semTreino)).toBe(true);
+    // não passa: a mesma referência numa linha que o script não copiou (o caso de antes continua: sem treino_user_id e sem a origem)
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), { ...c, origem: "app" }, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), { ...c, origem: null }, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`), { ...c, origem: "webhook_calc" }, semTreino)).toBe(false);
+    // não passa, nem copiada: o professor do Calc, outro schema, o plano da conta, outra cobrança, sem referência, lixo, outro id
+    expect(pagamentoEDaCobranca(pay(`staging:${T}::plano_professor:mensal`), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`public:${T}:2026-07-01`), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "mensal")), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "recorrente")), copiada, { ...semTreino, preapproval: "pre-1", preapprovals: ["pre-1"] })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", OUTRO)), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay("qualquer coisa"), copiada, semTreino)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`staging:${T}:2026-07-01`, 999), copiada, semTreino)).toBe(false);
+    // com treino_user_id na matrícula, a origem não abre nada: o Calc tem de ser do MESMO aluno do Treino
+    expect(pagamentoEDaCobranca(pay(`staging:${OUTRO}::aluno:mensal`), copiada, ctx)).toBe(false);
+  });
+  it("I1 da revisão: a automática que o SERVIDOR gravou na própria linha passa (a de aluno_assinaturas pode ter sido trocada pelo aluno_mp_assinar)", () => {
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(true);
+    expect(pagamentoEDaCobranca(pay(`staging:${OUTRO}::aluno:mensal`), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(true);
+    // não passa: outra automática na linha, o pagamento sem automática, a linha sem automática, a referência do plano ou do Nutri
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: "pre-8" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: "pre-7" }, ctx)).toBe(false);
+    expect(pagamentoEDaCobranca(pay(null), { ...c, mp_preapproval_id: null }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(referenciaConta("staging", C, "recorrente")), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    expect(pagamentoEDaCobranca(pay(`physiqnutri:staging:${U}`), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+    // a referência nova decide sozinha: outra cobrança não passa nem com a automática gravada na linha
+    expect(pagamentoEDaCobranca(pay(referenciaAluno("staging", P, "avulsa", OUTRO)), { ...c, mp_preapproval_id: "pre-7" }, { ...ctx, preapproval: "pre-7" })).toBe(false);
+  });
+});
+
+describe("W1b (C1) — estornar, cancelar, detalhar e aplicar SÓ o pagamento desta cobrança (guarda de fonte)", () => {
+  const f = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
+  const bloco = (acao: string) => {
+    const i = f.indexOf(`acao === "${acao}"`);
+    return f.slice(i, f.indexOf("\n    if (acao === ", i + 1));
+  };
+  it("toda ida ao MP com o id de um pagamento passa pela conferência: o pagamentoDaLinha e o cancelarNoMp, ou o prof_reembolsar já conferido", () => {
+    const de = f.indexOf("const pagamentoDaLinha = async");
+    const ate = f.indexOf("const conferir = async");
+    const reembolso = f.indexOf('acao === "prof_reembolsar"');
+    const conferido = f.indexOf("exigirDaCobranca(", reembolso);
+    const fim = f.indexOf('acao === "prof_comprovante"');
+    expect(de).toBeGreaterThan(-1);
+    expect(de).toBeLessThan(ate);
+    const idas = [...f.matchAll(/`\/v1\/payments\/\$\{/g)].map((m) => m.index!);
+    expect(idas.length).toBeGreaterThanOrEqual(4);
+    for (const i of idas) {
+      const noAjudante = i > de && i < ate;
+      const noReembolsoConferido = conferido > reembolso && i > conferido && i < fim;
+      expect(noAjudante || noReembolsoConferido, f.slice(i - 120, i + 60)).toBe(true);
+    }
+  });
+  it("o ajudante lê o pagamento com a credencial do schema e decide pelo pagamentoEDaCobranca; o diferente é 409 cobranca_de_outro_pagamento e vai ao log", () => {
+    const ajud = f.slice(f.indexOf("const pagamentoDaLinha = async"), f.indexOf("const conferir = async"));
+    expect(ajud).toContain("pagamentoEDaCobranca(");
+    expect(ajud).toContain("treinoUserId: m.treino_user_id");
+    expect(ajud).toMatch(/falhar\("cobranca_de_outro_pagamento", 409\)/);
+    expect(ajud).toMatch(/log\.erro\(\{ codigo: "cobranca_de_outro_pagamento"/);
+    // o cancelarNoMp só dá o PUT no pagamento conferido desta cobrança
+    const cancelar = ajud.slice(ajud.indexOf("const cancelarNoMp = async"));
+    expect(cancelar.indexOf("daCobranca")).toBeGreaterThan(-1);
+    expect(cancelar.indexOf("daCobranca")).toBeLessThan(cancelar.indexOf('"cancelled"'));
+  });
+  it("prof_reembolsar: confere ANTES do /refunds; o MP sem resposta não estorna (502)", () => {
+    const b = bloco("prof_reembolsar");
+    expect(b.indexOf("pagamentoDaLinha(c, m)")).toBeGreaterThan(-1);
+    expect(b.indexOf("pagamentoDaLinha(c, m)")).toBeLessThan(b.indexOf("exigirDaCobranca("));
+    expect(b.indexOf("exigirDaCobranca(")).toBeLessThan(b.indexOf("/refunds"));
+    const semResposta = b.slice(b.indexOf("if (!conferido.pay) {"), b.indexOf("\n      }", b.indexOf("if (!conferido.pay) {")));
+    expect(semResposta).toContain('falhar("mp_error", 502');
+  });
+  it("prof_cobranca_cancelar: o PUT só pelo cancelarNoMp; o pagamento de outra coisa é 409 e a linha não muda", () => {
+    const b = bloco("prof_cobranca_cancelar");
+    expect(b).toContain("const { m, p } = await matriculaDoPainel(c.paciente_id);");
+    expect(b).toContain("cancelarNoMp(c, m)");
+    expect(b.indexOf('falhar("cobranca_de_outro_pagamento", 409)')).toBeGreaterThan(-1);
+    expect(b.indexOf('falhar("cobranca_de_outro_pagamento", 409)')).toBeLessThan(b.indexOf('update({ status: "cancelada" })'));
+    expect(b).not.toContain("mpFetch(");
+  });
+  it("detalhe_mp: o pagamento passa pelo pagamentoDaLinha e o de outra coisa é 409 antes de devolver qualquer dado", () => {
+    const b = bloco("detalhe_mp");
+    expect(b).toContain("pagamentoDaLinha<");
+    expect(b.indexOf("exigirDaCobranca(")).toBeGreaterThan(-1);
+    expect(b.indexOf("exigirDaCobranca(")).toBeLessThan(b.indexOf("mp: {"));
+    expect(b).not.toContain("mpFetch(");
+  });
+  it("conferir (aluno_status, prof_aluno, aluno_mp_conferir) não aplica nem lança: o pagamento de outra coisa só vai ao log (o aluno_status não cai)", () => {
+    const conf = f.slice(f.indexOf("const conferir = async"), f.indexOf("const conferirAssinatura = async"));
+    expect(conf).toContain("pagamentoDaLinha(c, m)");
+    expect(conf.indexOf("daCobranca")).toBeLessThan(conf.indexOf("aplicarPagamentoMp("));
+    expect(conf).not.toContain("exigirDaCobranca(");
+    expect(conf).not.toContain("mpFetch(");
+  });
+  it("aluno_mp_pix e simular_aprovacao: o Pix antigo só é cancelado no MP pelo cancelarNoMp", () => {
+    const pix = f.slice(f.indexOf('acao === "aluno_mp_pix" || acao === "aluno_mp_cartao"'), f.indexOf('acao === "aluno_mp_assinar"'));
+    expect(pix).toContain("cancelarNoMp(atual, m)");
+    expect(pix).not.toMatch(/JSON\.stringify\(\{ status: "cancelled" \}\)/);   // o PUT no MP; o mp_status "cancelled" da LINHA continua
+    const sim = bloco("simular_aprovacao");
+    expect(sim).toContain("cancelarNoMp(c, m!)");
+    expect(sim).not.toContain("mpFetch(");
   });
 });

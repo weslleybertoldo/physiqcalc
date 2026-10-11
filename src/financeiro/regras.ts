@@ -456,6 +456,8 @@ export const MENSAGEM_ERRO_FINANCEIRO: Record<string, string> = {
   nao_manual: "Só dá para remover pagamento registrado por fora.",
   nao_reembolsavel: "Esse pagamento não pode ser estornado.",
   sem_transacao_mp: "Só pagamento pelo Mercado Pago é estornado por aqui.",
+  // W1b (C1): o pagamento do MP gravado na linha não é desta cobrança — o estorno, o cancelamento e o detalhe dão 409 (é permanente)
+  cobranca_de_outro_pagamento: "Esse pagamento do Mercado Pago não é desta cobrança. Fale com o suporte.",
   sem_assinatura: "Não há cobrança automática ativa.",
   rate_limited: "Muitas tentativas. Tente em alguns minutos.",
   conta_real_no_staging: "Este é o ambiente de teste: só contas de teste entram.",
