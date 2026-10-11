@@ -195,6 +195,15 @@ it("hml-19 (H-55): o detalhe do pagamento no MP só mostra e-mail, nome no cart�
 describe("W1 — a baixa da InfinitePay só depois do payment_check (guarda de fonte)", () => {
   const FUNCOES = resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions");
   const ler = (rel: string) => readFileSync(resolve(FUNCOES, rel), "utf8");
+  it("jeito 2: o Recebimento grava COMO A PESSOA (dbPessoa) — recebimento_chaves e contas nunca com o service_role", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    expect(f).toContain("createClient(SUPABASE_URL, ANON,");
+    expect(f).not.toMatch(/\bdb\.from\("recebimento_chaves"\)\s*\.\s*(insert|update|upsert|delete)/);
+    expect(f).not.toMatch(/\bdb\.from\("contas"\)\s*\.\s*(insert|update|upsert|delete)/);
+    expect(f).toMatch(/dbPessoa\.from\("recebimento_chaves"\)\s*\.\s*insert/);
+    expect(f).toMatch(/dbPessoa\.rpc\("recebimento_infinitepay_salvar"/);
+    expect(f).toMatch(/dbPessoa\.rpc\("recebimento_chave_ligar"/);
+  });
   it("conferirAviso chama o payment_check (a tag e o pedido do LINK) antes de aplicar; 'paga' só no 'baixar'; nenhuma cobrança nasce aqui (C1)", () => {
     const b = ler("_shared/infinitepay-baixa.ts");
     const conferir = b.slice(b.indexOf("export async function conferirAviso"), b.indexOf("export async function conferirAvisosPendentes"));
