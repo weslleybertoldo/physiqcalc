@@ -304,7 +304,8 @@ def preparar() -> None:
     pac, conta = m["id"], m["conta"]
     sql(f"select {S}.mensalidade_recalcular('{pac}')")
     t0 = um("select clock_timestamp()::text as t0")["t0"]
-    est = {"t0": t0, "paciente": pac, "conta": conta, "aluno_uid": m["aluno_uid"], "dono_uid": m["dono_uid"], **foto(pac, conta)}
+    # o id da conta vai em "conta_id": a foto tem a chave "conta" (forma e bloqueio) e cobriria o id
+    est = {"t0": t0, "paciente": pac, "conta_id": conta, "aluno_uid": m["aluno_uid"], "dono_uid": m["dono_uid"], **foto(pac, conta)}
     ESTADO_ARQ.parent.mkdir(parents=True, exist_ok=True)
     ESTADO_ARQ.write_text(json.dumps(est, ensure_ascii=False, indent=1), encoding="utf-8")
     ESTADO_ARQ.chmod(0o600)
@@ -322,8 +323,16 @@ def preparar() -> None:
         rodada_do_staging(False)   # MENOR 12: parada durante o --local (volta no desfazer)
 
 
+def conta_do_estado(est: dict) -> str:
+    """O id da conta da rodada. O estado gravado antes da correção de 11/10 não tem o "conta_id" (a foto da conta, "conta", cobria o
+    id): aí ele vem da matrícula (a rodada não troca a conta do aluno)."""
+    if est.get("conta_id"):
+        return est["conta_id"]
+    return um(f"select conta_id::text as c from {S}.pacientes where id = {lit(est['paciente'])}")["c"]
+
+
 def limpar(est: dict) -> None:
-    pac, conta, t0 = est["paciente"], est["conta"], lit(est["t0"])
+    pac, conta, t0 = est["paciente"], conta_do_estado(est), lit(est["t0"])
     sql(f"delete from {S}.cobrancas where paciente_id = '{pac}' and created_at >= {t0}::timestamptz")   # a caixa sai junto (cascade)
     sql(f"""delete from {S}.avisos where destino_user_id in ('{est['aluno_uid']}', '{est['dono_uid']}') and criado_em >= {t0}::timestamptz""")
     sql(f"delete from {S}.recebimento_chaves where chave like 'w1e2e%@teste.com'")
@@ -359,7 +368,7 @@ def desfazer(est: dict) -> None:
     print("\n── desfazer: sai o que a rodada criou e a matrícula, a conta e a flag voltam à foto de antes")
     try:
         limpar(est)
-        agora = foto(est["paciente"], est["conta"])
+        agora = foto(est["paciente"], conta_do_estado(est))
         sobra = um(f"""select (select count(*) from {S}.cobrancas where paciente_id = '{est['paciente']}' and created_at >= {lit(est['t0'])}::timestamptz)::int as cobrancas,
                               (select count(*) from {S}.planos_aluno where nome like {lit(PREFIXO + ' %')})::int as planos,
                               (select count(*) from {S}.recebimento_chaves where chave like 'w1e2e%@teste.com')::int as chaves""")

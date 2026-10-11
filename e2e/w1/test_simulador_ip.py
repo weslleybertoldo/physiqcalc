@@ -161,6 +161,12 @@ class ApiPecasPurasTest(unittest.TestCase):
         self.assertEqual(set(API.FUNCOES), set(API.CASOS_STAGING) | set(API.CASOS_LOCAL))
         self.assertTrue(API.PRECISAM_DA_TAG <= set(API.CASOS_STAGING))
 
+    def test_conta_do_estado_pelo_id_que_a_foto_nao_cobre(self) -> None:
+        # a 1ª rodada de 11/10 quebrou no desfazer: {"conta": <id>, **foto} — a foto tem "conta" (forma e bloqueio) e cobria o id
+        est = {"paciente": "p1", "conta_id": "c1", "conta": {"modo": "pix_manual", "bloquear": False}}
+        with mock.patch.object(API, "um", side_effect=AssertionError("não devia ir ao banco")):
+            self.assertEqual(API.conta_do_estado(est), "c1")
+
     def test_lit(self) -> None:
         self.assertEqual(API.lit(None), "null")
         self.assertEqual(API.lit("a'b"), "'a''b'")
