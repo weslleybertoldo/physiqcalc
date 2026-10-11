@@ -79,6 +79,37 @@ export function lerReferenciaCalc(ref: string | null | undefined): RefCalc | nul
   };
 }
 
+/**
+ * W1b (C1 da revisão da W2) — o pagamento do Mercado Pago é DESTA cobrança? O mp_payment_id da linha não basta: antes da guarda do
+ * banco (20261011220000_w1b_guarda_cobrancas_mp.sql) o app gravava qualquer id, e o mesmo token do Physiq estorna o plano do personal.
+ * Vale a referência que o NOSSO código gravou no pedido ao MP (o app não a escreve):
+ *   · a nova (referenciaAluno) — com a cobrança, só ESTA; sem ela, só a recorrente da MESMA matrícula (a mensal da automática, que a
+ *     mp-webhook-aluno grava numa linha nova) — e decide sozinha;
+ *   · a antiga do Calc (lerReferenciaCalc — as "migrado_calc"): o aluno do Treino desta matrícula, no mesmo schema;
+ *   · sem referência que decida: a automática desta matrícula (`preapprovals` = aluno_assinaturas, só o servidor grava).
+ * Outra referência nossa (o plano da conta `physiq:<schema>:conta:…`, o Nutri antigo `physiqnutri…`) e o professor do Calc nunca passam.
+ * `preapproval` = preapprovalDoPagamento(pay) (cobranca-regras.ts), calculado por quem chama.
+ */
+export function pagamentoEDaCobranca(
+  pay: { id?: unknown; external_reference?: string | null } | null | undefined,
+  c: { id: string; paciente_id: string; mp_payment_id: string | null },
+  ctx: { schema: Schema; treinoUserId: string | null; preapproval: string | null; preapprovals: readonly string[] },
+): boolean {
+  if (pay?.id === undefined || pay.id === null || !c.mp_payment_id || String(pay.id) !== String(c.mp_payment_id)) return false;
+  const ref = lerReferenciaAluno(pay.external_reference);
+  if (ref) {
+    if (ref.schema !== ctx.schema || ref.pacienteId !== c.paciente_id) return false;
+    return ref.cobrancaId ? ref.cobrancaId === c.id : ref.tipo === "recorrente";
+  }
+  if (String(pay.external_reference ?? "").startsWith("physiq")) return false;
+  const calc = lerReferenciaCalc(pay.external_reference);
+  if (calc) {
+    if (calc.contexto !== "aluno" || calc.schema !== ctx.schema) return false;
+    if (!!ctx.treinoUserId && calc.treinoUserId === ctx.treinoUserId) return true;
+  }
+  return !!ctx.preapproval && ctx.preapprovals.includes(ctx.preapproval);
+}
+
 // ───────────────────────── Mercado Pago → cobrança ─────────────────────────
 
 /** Status do pagamento no MP → o da cobrança (nada do MP fica "aberta": a trava e o WhatsApp do Nutri só olham "aberta"). */

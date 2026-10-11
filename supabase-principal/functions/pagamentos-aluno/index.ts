@@ -81,11 +81,16 @@
 // das automáticas em lote vai para a fila {schema}.automaticas_fila (automaticas_enfileirar + automaticas_disparar: o pg_net chama a
 // automaticas-fila depois do commit; ela tenta de hora em hora e, na 24ª falha, avisa o dono); ponto 3 — o MP aceitou e o espelho
 // não gravou → não avisa o dono (_shared/planos-automatica-mp.ts). O schema sem a fila (a rpc não existe) faz como antes.
+// W1b (C1 da revisão da W2, 11/10/2026): o estorno, o cancelamento, o detalhe e a conferência pelo MP só valem para o pagamento DESTA
+// cobrança (pagamentoDaLinha → pagamentoEDaCobranca: a referência que o nosso código gravou no pedido, o Calc antigo do mesmo aluno ou a
+// automática da matrícula). O de outra coisa: prof_reembolsar, prof_cobranca_cancelar, detalhe_mp e simular_aprovacao → 409
+// cobranca_de_outro_pagamento, sem ir ao MP; a conferência e o Pix antigo do aluno_mp_pix só vão ao log (o aluno_status não cai). A 1ª
+// camada é a guarda do banco (20261011220000: o app não grava mais o MP da cobrança). Só lê o que já existe: vale com e sem a migration.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog, emSegundoPlano } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
-import { codigosDoMp, erroDeCartao, hojeSP, recusaDoSandbox, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
+import { codigosDoMp, erroDeCartao, hojeSP, preapprovalDoPagamento, recusaDoSandbox, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
 import { credencialDoSchema, mpFetch, tokenMp } from "../_shared/cobranca-mp.ts";
 import {
   COMPROVANTE_MAX_BYTES,
@@ -98,8 +103,10 @@ import {
   ehMetodoPorFora,
   ehUuidFin,
   extensaoComprovante,
+  lerReferenciaAluno,
   mesRefDe,
   mpEmAberto,
+  pagamentoEDaCobranca,
   podeMexerNaCobranca,
   podeMexerNaMensalidade,
   podeVerCobranca,
@@ -604,12 +611,60 @@ Deno.serve(async (req) => {
     return (r?.nome || "").trim() || r?.email || null;
   };
 
-  /** confere no MP uma cobrança que ainda pode mudar (webhook atrasado/perdido) */
-  const conferir = async (c: Cobranca, m?: Matricula): Promise<Cobranca> => {
+  /** W1b: as automáticas da matrícula (aluno_assinaturas — só o servidor grava): o pagamento delas sem a referência nova vale por elas. */
+  const preapprovalsDe = async (pacienteId: string): Promise<string[]> => {
+    const { data, error } = await db.from("aluno_assinaturas").select("mp_preapproval_id").eq("paciente_id", pacienteId).not("mp_preapproval_id", "is", null);
+    if (error) throw error;
+    return ((data ?? []) as Array<{ mp_preapproval_id: string | null }>).map((a) => a.mp_preapproval_id).filter((x): x is string => !!x);
+  };
+
+  // ── W1b (C1): TODA ida ao MP com o id do pagamento da linha passa por aqui (servidor.test.ts confere na fonte) ──
+
+  /** O pagamento desta linha no MP (GET com a credencial do schema) e se ele é DESTA cobrança (pagamentoEDaCobranca). pay null = o MP
+   *  não respondeu 200 (fora do ar, ou 404 de um pagamento de outra conta do MP): quem chama decide. */
+  const pagamentoDaLinha = async <T extends PagamentoMp = PagamentoMp>(c: Cobranca, m: Matricula): Promise<{ status: number; pay: T | null; daCobranca: boolean }> => {
+    const { status, body: pay } = await mpFetch<T>(credencial, `/v1/payments/${encodeURIComponent(String(c.mp_payment_id))}`, {}, { prazo: prazoDoPedido });
+    if (status !== 200 || !pay?.id) return { status, pay: null, daCobranca: false };
+    const preapproval = preapprovalDoPagamento(pay);
+    // a automática da matrícula só pesa sem a referência nova (essa decide sozinha)
+    const preapprovals = preapproval && !lerReferenciaAluno(pay.external_reference) ? await preapprovalsDe(c.paciente_id) : [];
+    return { status, pay, daCobranca: pagamentoEDaCobranca(pay, c, { schema, treinoUserId: m.treino_user_id, preapproval, preapprovals }) };
+  };
+
+  /** O pagamento da linha é de outra coisa: o rastro do C1 (ou um erro do master) vai ao log e avisa — só o id da cobrança. */
+  const outroPagamento = (c: Cobranca) => log.erro({ codigo: "cobranca_de_outro_pagamento", schema, acao, ref: c.id });
+
+  /** prof_reembolsar, detalhe_mp: o pagamento de outra coisa é 409 (nada vai ao MP nem sai na resposta). */
+  const exigirDaCobranca = (r: { daCobranca: boolean }, c: Cobranca) => {
+    if (r.daCobranca) return;
+    outroPagamento(c);
+    falhar("cobranca_de_outro_pagamento", 409);
+  };
+
+  /** Fecha no MP o pagamento pendente desta linha — só o DESTA cobrança (o PUT de sempre; a resposta dele não muda nada aqui). "outro":
+   *  nada foi ao MP (quem chama decide); "sem_resposta": o MP não respondeu ao GET (segue só com a linha, como quando o PUT falhava). */
+  const cancelarNoMp = async (c: Cobranca, m: Matricula): Promise<"cancelado" | "outro" | "sem_resposta"> => {
+    const r = await pagamentoDaLinha(c, m);
+    if (!r.pay) return "sem_resposta";
+    if (!r.daCobranca) {
+      outroPagamento(c);
+      return "outro";
+    }
+    await mpFetch(credencial, `/v1/payments/${encodeURIComponent(String(c.mp_payment_id))}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: prazoDoPedido });
+    return "cancelado";
+  };
+
+  /** confere no MP uma cobrança que ainda pode mudar (webhook atrasado/perdido). W1b: o pagamento de outra coisa não é aplicado — só
+   *  vai ao log (sem lançar: o aluno_status e o prof_aluno não caem). */
+  const conferir = async (c: Cobranca, m: Matricula): Promise<Cobranca> => {
     if (!c.mp_payment_id || simulado(c.mp_payment_id) || c.forma !== "mp" || !mpEmAberto(c.mp_status) || c.status !== "aguardando_confirmacao") return c;
-    const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(c.mp_payment_id)}`, {}, { prazo: prazoDoPedido });
-    if (st !== 200 || !pay?.id) return c;
-    await aplicarPagamentoMp(db, c, pay, m, log, schema);
+    const r = await pagamentoDaLinha(c, m);
+    if (!r.pay) return c;
+    if (!r.daCobranca) {
+      outroPagamento(c);
+      return c;
+    }
+    await aplicarPagamentoMp(db, c, r.pay, m, log, schema);
     return await buscarCobranca(c.id);
   };
 
@@ -1052,9 +1107,8 @@ Deno.serve(async (req) => {
             return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);
           }
           if (atual.status === "aguardando_confirmacao" && (!alvo.avulsa || atual.id !== alvo.avulsa.id)) {
-            if (atual.mp_payment_id && !simulado(atual.mp_payment_id)) {
-              await mpFetch(credencial, `/v1/payments/${encodeURIComponent(atual.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: prazoDoPedido });
-            }
+            // W1b: no MP, só o Pix DESTA cobrança é fechado (o de outra coisa só vai ao log); a linha fecha de todo jeito
+            if (atual.mp_payment_id && !simulado(atual.mp_payment_id)) await cancelarNoMp(atual, m);
             const { error: erroFechar } = atual.tipo === "avulsa"
               ? await db.from("cobrancas").update({ status: "aberta", forma: null, mp_status: "cancelled", mp_payment_id: null, pix_qr: null, pix_copia_cola: null, pix_expira_em: null }).eq("id", atual.id)
               : await db.from("cobrancas").update({ status: "cancelada", mp_status: "cancelled" }).eq("id", atual.id);
@@ -1242,9 +1296,8 @@ Deno.serve(async (req) => {
         exigirMensalidade(r.p);
       }
       if (c.forma !== "mp" || c.status !== "aguardando_confirmacao") falhar("nao_pendente");
-      if (c.mp_payment_id && !simulado(c.mp_payment_id)) {
-        await mpFetch(credencial, `/v1/payments/${encodeURIComponent(c.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: prazoDoPedido });
-      }
+      // W1b: o Pix do sandbox só é fechado no MP se for DESTA cobrança; o de outra coisa é 409 e a linha não vira paga
+      if (c.mp_payment_id && !simulado(c.mp_payment_id) && (await cancelarNoMp(c, m!)) === "outro") falhar("cobranca_de_outro_pagamento", 409);
       const { error: erroPaga } = await db.from("cobrancas").update({ status: "paga", mp_status: "approved", pago_em: new Date().toISOString(), metodo: c.metodo ?? "pix" }).eq("id", c.id);
       if (erroPaga) throw erroPaga;
       await avisar(db, m!.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos", log, schema);
@@ -1260,8 +1313,11 @@ Deno.serve(async (req) => {
         if (!podeVerCobranca(r.p, c)) falhar("not_found", 404);
       }
       if (!c.mp_payment_id || simulado(c.mp_payment_id)) return json({ ok: true, mp: null }, 200, origin);
-      const { status: st, body: pay } = await mpFetch<PagamentoMpDetalhe>(credencial, `/v1/payments/${encodeURIComponent(c.mp_payment_id)}`, {}, { prazo: prazoDoPedido });
-      if (st !== 200 || !pay) return json({ ok: true, mp: null }, 200, origin);
+      // W1b: só o pagamento DESTA cobrança; o de outra coisa é 409 sem nenhum dado dele (a tela do aluno já trata: Pagamentos.tsx, .catch)
+      const conferido = await pagamentoDaLinha<PagamentoMpDetalhe & PagamentoMp>(c, m!);
+      if (!conferido.pay) return json({ ok: true, mp: null }, 200, origin);
+      exigirDaCobranca(conferido, c);
+      const pay = conferido.pay;
       const emailPagador = pay.payer?.email || null;
       // hml-19 (H-55): o profissional vê o final do cartão e a data; e-mail, nome no cartão e banco de quem pagou só o próprio aluno
       const souOAluno = m!.user_id === user.id;
@@ -1871,11 +1927,12 @@ Deno.serve(async (req) => {
 
     if (acao === "prof_cobranca_cancelar") {
       const c = await buscarCobranca(body.cobranca_id);
-      const { p } = await matriculaDoPainel(c.paciente_id);
+      const { m, p } = await matriculaDoPainel(c.paciente_id);
       if (!podeMexerNaCobranca(p, c)) falhar("sem_permissao", 403);
       if (c.tipo !== "avulsa" || !["aberta", "aguardando_confirmacao"].includes(c.status)) falhar("cobranca_nao_aberta");
-      if (c.forma === "mp" && c.mp_payment_id && !simulado(c.mp_payment_id)) {
-        await mpFetch(credencial, `/v1/payments/${encodeURIComponent(c.mp_payment_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: prazoDoPedido });
+      // W1b: no MP, só o pagamento DESTA cobrança; o de outra coisa é 409 e a linha fica (o MP sem resposta: só a linha, como antes)
+      if (c.forma === "mp" && c.mp_payment_id && !simulado(c.mp_payment_id) && (await cancelarNoMp(c, m)) === "outro") {
+        falhar("cobranca_de_outro_pagamento", 409);
       }
       const { error } = await db.from("cobrancas").update({ status: "cancelada" }).eq("id", c.id);
       if (error) throw error;
@@ -1896,6 +1953,14 @@ Deno.serve(async (req) => {
         if (erroReembolso) throw erroReembolso;
         return json({ ok: true, simulado: true }, 200, origin);
       }
+      // W1b (C1): só estorna o pagamento DESTA cobrança — o id da linha não basta (antes da guarda do banco o app gravava qualquer um, e o
+      // mesmo token estorna o plano do personal). O MP sem resposta: não estorna o que não conferiu
+      const conferido = await pagamentoDaLinha(c, m);
+      if (!conferido.pay) {
+        log.erro({ codigo: "mp_reembolso_sem_conferir", schema, acao, ref: c.id, status: conferido.status });
+        falhar("mp_error", 502, { status_mp: conferido.status });
+      }
+      exigirDaCobranca(conferido, c);
       const { status: st, body: ref } = await mpFetch<{ id?: number | string }>(credencial, `/v1/payments/${encodeURIComponent(mpId)}/refunds`, {
         method: "POST", body: JSON.stringify({}),
       }, { prazo: prazoDoPedido });
