@@ -29,6 +29,12 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 02:22 | W-P | `7753ec5` | `e2e/wp/telas.py --base local --loja --canal msedge` | local | 125/125 | o build da loja (`build:loja`, health.json `play`) no `vite preview` :8080: o aluno pagando o profissional igual ao site; 26 prints em `prints/wp/local/loja/`, nenhum passa da largura; a massa desfeita (foto conferida) |
+| 11/10 02:16 | W-P | `7753ec5` | `e2e/wp/telas.py --base local --canal msedge` | local | 125/125 | painel do dono (Planos, ficha, Mensalidades, aviso das automáticas, cartão parcelado), app do aluno (período, parcela 4 de 12, Renovar, faixa "Seu plano vence em 3 dias", Mercado Pago até 3×, o plano de 1 mês falando de mensalidade) e o membro sem a aba Planos; 26 prints em `prints/wp/local/`, nenhum passa da largura; a massa desfeita (foto conferida) |
+| 11/10 02:01 | W-P | `e65291c` + `8e66855` | `e2e/wp/telas.py --base local --loja --canal msedge` | local | 111/111 | antes do passo do plano de 1 mês (o "Renovar plano" dele: corrigido em `7753ec5`) |
+| 11/10 01:57 | W-P | `e65291c` + `8e66855` | `e2e/wp/telas.py --base local --canal msedge` | local | 111/111 | idem |
+| 11/10 01:47 | W-P | `2d0d0e7` | `e2e/wp/telas.py --base local --canal msedge` | local | 109/111 | (1) a faixa leu o resumo guardado no aparelho (10 min, desenho da W6) de antes do pagamento por fora: o E2E limpa o guardado antes de abrir; (2) erro sem dono do Brick do Mercado Pago ao fechar o cartão ("Could not find the Brick container ID"): corrigido em `8e66855` |
+| 11/10 01:41 | W-P | `2d0d0e7` | `e2e/wp/telas.py --base local --canal msedge` | local | 16/26 | o painel do `prof2` travado: o teste grátis do plano do profissional da conta de TESTE acabou em 02/10 — o E2E passou a liberar só durante a rodada e devolver no fim |
 | 10/10 07:41 | hml-17 | `3c9183a` | `e2e/w07/smoke_prod.py telas --versao 3.92 --canal msedge` | produção | 13/13 |  |
 | 10/10 07:40 | hml-17 | `3c9183a` | `e2e/w26/prod.py` | produção | 21/21 |  |
 | 10/10 07:40 | hml-17 | `3c9183a` | `e2e/hml17/telas.py --base prod --canal msedge` | produção | 21/23 | P3: a conta de controle `w7b-prod` está com o teste grátis vencido; P5: o roteiro de produção não tem a conta master (os 2 passaram no local e no staging) |
