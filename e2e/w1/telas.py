@@ -135,7 +135,7 @@ TEXTOS_NO_CODIGO = (
     ("Recebimento: ${ROTULO_RECEBIMENTO[modo]}.", "src/master/paginas/Integracoes.tsx"),
 )
 # os data-* que não moram no src/ (vêm das bibliotecas: o sonner e o Radix)
-ATRIBUTOS_DE_FORA = {"data-sonner-toast", "data-state"}
+ATRIBUTOS_DE_FORA = {"data-sonner-toast", "data-sonner-toaster", "data-state", "data-alvo"}  # data-alvo: a página de mentira do --seco
 
 # Jeito 2 medido: as 2 tabelas do Recebimento na API REST (o \b separa "contas" de "conta_membros")
 REST_DO_RECEBIMENTO = re.compile(r"/rest/v1/(recebimento_chaves|contas)\b")
@@ -442,6 +442,49 @@ def pagina_da_conta(conta: str) -> int:
 
 # ───────────────────────── o navegador ─────────────────────────
 
+# O alvo do print à vista: o meio da parte dele que está na tela é ele mesmo (ou um filho) — não a barra de baixo do celular
+# ([data-tabbar], fixa), o topo do app ou outra coisa por cima. Um aviso do sonner por cima não conta (é a prova do passo e some sozinho).
+# → None (à vista) ou o que está por cima / 'fora da tela'.
+JS_A_VISTA = r"""(e) => {
+  const r = e.getBoundingClientRect();
+  const x0 = Math.max(r.left, 0), x1 = Math.min(r.right, innerWidth), y0 = Math.max(r.top, 0), y1 = Math.min(r.bottom, innerHeight);
+  if (x1 - x0 < 1 || y1 - y0 < 1) return 'fora da tela';
+  const p = document.elementFromPoint((x0 + x1) / 2, (y0 + y1) / 2);
+  if (!p || p === e || e.contains(p) || p.closest('[data-sonner-toaster]')) return null;
+  if (p.closest('[data-tabbar]')) return 'a barra de baixo [data-tabbar]';
+  return p.tagName.toLowerCase() + '[' + [...p.attributes].map(a => a.name).filter(n => n.startsWith('data-')).slice(0, 2).join(',') + ']';
+}"""
+
+
+def enquadrar(pg, alvo: str) -> str | None:
+    """Rola o alvo para o MEIO da tela antes do print (o do e2e/hml18/largura.py) → None se ele ficou à vista, senão o que está por cima.
+    O scroll_into_view_if_needed não servia: ele só rola quando o alvo está fora da tela — o que já está nela, por baixo da barra de baixo
+    fixa do celular, ficava lá (o 8_master_integracoes-390 de 11/10)."""
+    loc = pg.locator(alvo).first
+    try:
+        loc.evaluate("e => e.scrollIntoView({ block: 'center', inline: 'nearest' })", timeout=5000)
+        pg.wait_for_timeout(150)
+        return loc.evaluate(JS_A_VISTA, timeout=5000)
+    except Exception as e:  # noqa: BLE001 — o alvo sumiu no meio
+        return f"o alvo sumiu ({type(e).__name__})"
+
+
+def enquadramento_no_edge(R, nav) -> None:
+    """--seco: uma página de mentira a 390 × 844 com a barra de baixo fixa (120 px) e o alvo JÁ dentro da tela, mas por baixo dela (o caso do
+    8_master_integracoes-390 de 11/10: na volta de 1280 para 390 a linha da conta caiu atrás da barra e o scroll "se precisar" não rolou)."""
+    ctx = nav.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    try:
+        pg = ctx.new_page()
+        pg.set_content("<meta name='viewport' content='width=device-width, initial-scale=1'><body style='margin:0'>"
+                       "<div style='height:760px'></div><div data-alvo style='height:60px'>o alvo</div><div style='height:1500px'></div>"
+                       "<nav data-tabbar style='position:fixed;left:0;right:0;bottom:0;height:120px;background:#111'><a href='#'>Início</a></nav>"
+                       "</body>")
+        por_cima = enquadrar(pg, "[data-alvo]")
+    finally:
+        ctx.close()
+    R.ok(por_cima is None, f"seco: o print põe o alvo à vista, fora de baixo da barra de baixo do celular ({por_cima or 'à vista'})")
+
+
 class Tela(B.Celular):
     """O Celular da hml-18 (o Edge em modo celular, a sessão antes do 1º documento, o `legal` desligado só no navegador, o diálogo
     nativo contado) com o print de nome fixo e a medida da largura (o molde do e2e/wp/telas.py). A 1280 o painel abre no layout de
@@ -500,10 +543,7 @@ class Tela(B.Celular):
         """O print em <pasta>/<nome>.png com o elemento à vista; antes, a medida: nada passa da largura (scrollWidth da página).
         borrar: o seletor do que sai borrado (a InfiniteTag; na produção, as listas e as chaves)."""
         if alvo:
-            try:
-                self.pg.locator(alvo).first.scroll_into_view_if_needed(timeout=5000)
-            except Exception:  # noqa: BLE001
-                pass
+            enquadrar(self.pg, alvo)
         if borrar:
             try:
                 self.pg.add_style_tag(content=f"{borrar} {{ filter: blur(7px) !important; }}")
@@ -514,6 +554,12 @@ class Tela(B.Celular):
             m = self.pg.evaluate(B.JS_LARGURA)
         except Exception as e:  # noqa: BLE001
             m = {"passa": None, "raizes": [type(e).__name__]}
+        por_cima = None
+        if alvo:
+            try:
+                por_cima = self.pg.locator(alvo).first.evaluate(JS_A_VISTA, timeout=5000)
+            except Exception as e:  # noqa: BLE001
+                por_cima = f"o alvo sumiu ({type(e).__name__})"
         pasta: Path = CTX["pasta"]
         pasta.mkdir(parents=True, exist_ok=True)
         arq = pasta / f"{nome}.png"
@@ -527,7 +573,9 @@ class Tela(B.Celular):
                 self.pg.wait_for_timeout(1500)
         passa = m.get("passa")
         raizes = "; " + ", ".join(m.get("raizes") or [])[:220] if passa else ""
-        self.R.ok(passa is not None and passa <= 0, f"   print {arq.name} ({self.largura} px): nada passa da largura (passa {passa} px{raizes})")
+        vista = "" if not alvo else ("; o alvo à vista" if por_cima is None else f"; o alvo por baixo de {por_cima}")
+        self.R.ok(passa is not None and passa <= 0 and por_cima is None,
+                  f"   print {arq.name} ({self.largura} px): nada passa da largura (passa {passa} px{raizes}){vista}")
         CTX["prints"].append(str(arq))
         return str(arq)
 
@@ -1108,6 +1156,7 @@ def seco(R, a, base: str, producao: bool) -> int:
             except Exception as e:  # noqa: BLE001
                 R.linha(f"   a /entrar não abriu: {type(e).__name__}: {str(e)[:160]}")
             ctx.close()
+            enquadramento_no_edge(R, nav)
         finally:
             nav.close()
     R.ok(entrou and faixa == (not producao),

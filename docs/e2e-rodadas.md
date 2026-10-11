@@ -38,6 +38,17 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 | 11/10 10:21 | hml-19b | `da9824d` | `e2e/hml19/api.py --area aluno --base staging` | staging | 27/27 | F7 (balde do IP: o app 0 → 0; o link público 0 → 1) |
 | 11/10 10:20 | hml-19b | `da9824d` | `e2e/hml19/api.py --area dieta --base staging` | staging | 102/102 | F7 |
 | 11/10 10:17 | hml-19b | `da9824d` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 124/124 | F7 (o staging serve da9824d) |
+| 11/10 10:09 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 82/82 | com o `telas.py` deste commit (o alvo do print no meio da tela + "o alvo à vista"); os 15 prints conferidos; achado ABERTO: a 390, o botão "Testar (abre a sua página, sem cobrar)" do Recebimento passa da borda do cartão (o `pq-botao` tem `nowrap` e 44 px) — correção e nova rodada na janela das 13:00; 3 links de verdade na InfinitePay (Testar e Salvar de R$ 1,00 + o do aluno de R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 10:06 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --seco` | local | 20/20 | com o `telas.py` deste commit; nada gravado |
+| 11/10 10:06 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 35/35 | com o `telas.py` deste commit; os 4 prints conferidos; 1 link de verdade na InfinitePay (o do aluno, R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 10:03 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 18/18 | o teste novo do enquadramento passa com o `scrollIntoView` no meio da tela |
+| 11/10 10:03 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 17/18 | esperado: o teste novo do enquadramento falha com o scroll de antes (o alvo por baixo da barra de baixo `[data-tabbar]`) |
+| 11/10 10:03 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 18/18 | erro do teste novo: a página de mentira sem a `meta viewport` não reproduzia o caso — refeito |
+| 11/10 10:02 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 17/18 | erro do script: `data-alvo` e `data-sonner-toaster` fora da lista dos atributos que não moram no `src/` — corrigido |
+| 11/10 10:00 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 35/35 | os 4 prints conferidos; 1 link de verdade na InfinitePay (o do aluno, R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 09:58 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 17/17 | nada gravado |
+| 11/10 09:57 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 82/82 | os prints conferidos: o `8_master_integracoes-390` saiu com a linha da conta por baixo da barra de baixo do celular (erro do script: o scroll "se precisar" não rola o alvo que já está na tela) — corrigido neste commit e refeito às 10:09; 3 links de verdade na InfinitePay, nenhum pago; tudo voltou à foto |
+| 11/10 09:53 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --seco` | local | 19/19 | nada gravado |
 | 11/10 09:49 | W1 | `f324f98` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 |  |
 | 11/10 09:48 | W1 | `f324f98` | `e2e/w06/api.py --casos pix,porfora,acesso` | staging | 31/31 | o modo de hoje sem regressão |
 | 11/10 09:47 | W1 | `f324f98` | `e2e/wp/api.py --casos planos,periodo,mensal` | staging | 33/33 | a W-P sem regressão; a massa desfeita |
