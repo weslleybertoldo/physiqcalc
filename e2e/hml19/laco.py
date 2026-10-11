@@ -48,13 +48,23 @@ SELETORES = {
 }
 
 
+def _funcao(chave: str) -> tuple[str, str | None]:
+    """'fn:nome(acao)' → (nome, acao)."""
+    m = re.fullmatch(r"fn:([^()]+)(?:\((.*)\))?", chave)
+    return (m.group(1), m.group(2)) if m else (chave[3:], None)
+
+
 def medir(cont, barradas: int, secao: str) -> dict:
+    """As outras funções: as que GRAVAM (a regra da Guarda: a nutricao sempre, as de antes pela ação) não podem aparecer; as de
+    leitura (ex.: a treino-leitura das avaliações) contam à parte — ≤ 2 na seção aberta, senão é laço."""
+    outras = {k: v for k, v in cont.items() if k.startswith("fn:") and k != "fn:nutricao(padroes_garantir)"}
     return {
         "padroes_garantir": cont.get("fn:nutricao(padroes_garantir)", 0),
         "barradas": barradas,
         "get_profiles": cont.get("get_profiles", 0),
         "rest_gravacao": cont.get("rest_prontuario", 0) + cont.get("rest_outras", 0),
-        "outras_funcoes": {k: v for k, v in cont.items() if k.startswith("fn:") and k != "fn:nutricao(padroes_garantir)"},
+        "outras_funcoes": {k: v for k, v in outras.items() if B.B17.funcao_grava(*_funcao(k))},
+        "funcoes_leitura": {k: v for k, v in outras.items() if not B.B17.funcao_grava(*_funcao(k))},
         "secao": secao,
     }
 
@@ -65,7 +75,8 @@ def conferir(o, base: str, m: dict, normal: bool, aviso: bool | None) -> None:
     o.ok(m["padroes_garantir"] <= limite_garantir, f"[{base}] {s}: padroes_garantir {m['padroes_garantir']} (≤ {limite_garantir})")
     o.ok(m["get_profiles"] <= 2, f"[{base}] {s}: GET profiles {m['get_profiles']} (≤ 2 — antes ~21/s em Questionários e Exames)")
     o.ok(m["rest_gravacao"] == 0, f"[{base}] {s}: 0 gravação em tabela ({m['rest_gravacao']})")
-    o.ok(not m["outras_funcoes"], f"[{base}] {s}: nenhuma outra ação de função ({m['outras_funcoes']})")
+    o.ok(not m["outras_funcoes"] and sum(m["funcoes_leitura"].values()) <= 2,
+         f"[{base}] {s}: nenhuma outra função que grava ({m['outras_funcoes']}) e as de leitura sem laço (≤ 2: {m['funcoes_leitura']})")
     if not normal and s in SEMEIA:
         o.ok(m["barradas"] == 1 and aviso, f"[{base}] {s}: a semente barrada 1 vez e o aviso com \"Tentar de novo\" na tela ({m['barradas']}, {aviso})")
 
