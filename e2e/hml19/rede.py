@@ -33,7 +33,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 
 C = B.C
-CASOS = ("anamnese", "pedido", "anexo", "modelos")
+# os modelos logo depois da anamnese: a Anamnese do código antigo (o staging, o ANTES) fica em laço de leitura enquanto aberta —
+# sair cedo dela poupa o banco (o staging divide a máquina com a produção, H-80)
+CASOS = ("anamnese", "modelos", "pedido", "anexo")
 PLANILHA = B.MEDICAO / "rede_hml19a.tsv"
 ESPERADO_DEPOIS = {
     "anamnese": {"fn:nutricao(anamnese_criar)": 1},
@@ -258,7 +260,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
                     t0 = time.time()
                     ok_tela = {"anamnese": acao_anamnese, "pedido": acao_pedido}[caso](t, marca) if caso != "anexo" else acao_anexo(t, f"hml19-e2e-{rodada}.txt")
                     ms = round((time.time() - t0) * 1000)
-                    esperar_quieto(t)
+                    esperar_quieto(t, teto=4 if base == "staging" else 15)  # o código antigo nunca fica quieto (o laço de leitura)
                     cont = B.contar(t.pedidos)
                     conferir(o, base, caso, cont, ok_tela, ms)
                     linha_planilha(base, caso, cont, ms, commit)
