@@ -8,9 +8,11 @@
 // e "atualizada". O espelho se corrige sozinho: o conferirAssinatura da pagamentos-aluno (prof_aluno, aluno_status) e a fila
 // (assinaturaComoNoMp) regravam status e valor a partir do MP.
 // Do MP, só o status e os códigos (codigosDoMp) saem daqui para o log de quem chama — nunca o corpo.
+// W2 (MENOR 2 da revisão): a credencial é a de CADA assinatura (CredencialMp — a do MP do Physiq ou a da conta do personal, escolhida por
+// quem chama: credencialDaAssinatura do _shared/mp-conta.ts). O ContextoMp daqui fica com o nome; o da W2 é o ContextoMpConta.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { codigosDoMp, type AssinaturaMp } from "./cobranca-regras.ts";
-import { mpFetch, type Credencial } from "./cobranca-mp.ts";
+import { mpFetch, type CredencialMp } from "./cobranca-mp.ts";
 import { espelhoAssinaturaAluno } from "./financeiro-mp.ts";
 import type { Schema } from "./financeiro-regras.ts";
 import type { ExternoLog, Log } from "./log.ts";
@@ -49,7 +51,7 @@ const simulada = (a: AssinaturaParaValor) => !a.mp_preapproval_id || a.mp_preapp
  */
 export async function trocarValorDaAutomatica(
   db: SupabaseClient,
-  credencial: Credencial,
+  credencial: CredencialMp,
   a: AssinaturaDoAluno | null,
   valor: number,
   ctx: ContextoMp,
@@ -86,7 +88,7 @@ export async function trocarValorDaAutomatica(
  */
 export async function assinaturaComoNoMp(
   db: SupabaseClient,
-  credencial: Credencial,
+  credencial: CredencialMp,
   a: AssinaturaDoAluno | null,
   ctx: ContextoMp,
 ): Promise<AssinaturaDoAluno | null> {

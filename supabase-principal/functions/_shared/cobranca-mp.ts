@@ -1,6 +1,9 @@
 // Physiq W4 — o que a cobranca-conta e a mp-webhook-conta fazem igual (Mercado Pago + banco): buscar no MP com a credencial
 // certa do ambiente, gravar o status da fatura e aplicar o pagamento aprovado UMA vez (aplicar_pagamento_conta, SQL),
 // registrar a cobrança mensal da assinatura. O aviso do MP nunca é a verdade: sempre se busca o recurso de novo na API.
+// W2 (Mercado Pago do personal): a credencial também pode ser a DA CONTA do personal (CredencialConta — o token já decifrado, só em
+// memória); o tokenMp lê o ambiente sem o global Deno no topo (o Vitest importa este arquivo pelo _shared/mp-conta.ts) e a base da API só
+// muda para o simulador local (MP_API_BASE em http://127.0.0.1:<porta>). Para a credencial do Physiq ("prod" | "test") nada mudou.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import {
   modoConfere,
@@ -21,8 +24,24 @@ export function credencialDoSchema(schema: Schema): Credencial {
   return schema === "staging" ? "test" : "prod";
 }
 
-export function tokenMp(c: Credencial): string {
-  return (c === "test" ? Deno.env.get("MP_ACCESS_TOKEN_TEST") : Deno.env.get("MP_ACCESS_TOKEN_PROD")) || "";
+/** W2 — o MP DA CONTA do personal (OAuth): o token já decifrado (só em memória, nunca no log) e de quem ele é (o collector). */
+export interface CredencialConta { tipo: "conta"; schema: Schema; contaId: string; collectorId: number; token: string }
+export type CredencialMp = Credencial | CredencialConta;
+type ComDeno = { Deno?: { env: { get: (n: string) => string | undefined } } };
+const ambiente = (n: string) => (globalThis as ComDeno).Deno?.env.get(n);
+
+export function tokenMp(c: CredencialMp): string {
+  if (typeof c !== "string") return c.token;
+  return (c === "test" ? ambiente("MP_ACCESS_TOKEN_TEST") : ambiente("MP_ACCESS_TOKEN_PROD")) || "";
+}
+/** O schema de uma credencial (o log e o modoConfere): a da conta diz o dela; prod → public; test → staging. */
+export function schemaDaCredencialMp(c: CredencialMp): Schema {
+  return typeof c === "string" ? (c === "prod" ? "public" : "staging") : c.schema;
+}
+/** W2: só o SIMULADOR local troca a base (MP_API_BASE = http://127.0.0.1:<porta>); publicada, a do MP. */
+export function baseDoMp(): string {
+  const b = ambiente("MP_API_BASE") ?? "";
+  return /^http:\/\/127\.0\.0\.1:\d{2,5}$/.test(b) ? b : MP_API;
 }
 
 export interface RespostaMp<T> {
@@ -46,9 +65,10 @@ const MINIMO_REPETIR_MS = 2_000;
  * máximo `min(TEMPO_MS.mp, o que falta do prazo)`; nova tentativa só com ≥ 2 s sobrando. Tempo esgotado ou rede → 599 (o
  * `mpTransitorio` já trata: MpIndisponivel → 500, e o MP manda o aviso de novo). Sem `opcoes.prazo`, o prazo é o desta chamada
  * (ORCAMENTO_MS.usuario) — quem faz várias chamadas no mesmo pedido passa o prazo do pedido.
+ * W2: `c` pode ser a credencial da conta do personal (o token dela no Authorization); a base é a do baseDoMp (o simulador só em 127.0.0.1).
  */
 export async function mpFetch<T = Record<string, unknown>>(
-  c: Credencial,
+  c: CredencialMp,
   caminho: string,
   init: RequestInit = {},
   opcoes: OpcoesMp = {},
@@ -68,7 +88,7 @@ export async function mpFetch<T = Record<string, unknown>>(
     if (ms < MINIMO_TENTATIVA_MS) break;
     try {
       const res = await buscarComTempo(
-        `${MP_API}${caminho}`,
+        `${baseDoMp()}${caminho}`,
         {
           ...init,
           headers: {
