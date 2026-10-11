@@ -182,7 +182,12 @@ def montar(bon):
     # polia alta de frente pro corpo (a torre fica na frente da pessoa, em −Y): a saída do cabo (atrás da roldana, que
     # dá a volta por trás e por baixo dela) fica RECUO_CABO à frente da barra do começo
     raio_rold = 0.045
-    pol = e3.polia("polia", x=0.0, y=c0.y - RECUO_CABO + raio_rold, altura=POLIA_Z, frente=(0, 1, 0), alto=ALTO)
+    # no_plano=True (conserto de 11/10/2026): no começo da descida a barra anda pro lado da torre e o engate passa até 3,4 mm
+    # pra trás do eixo da roldana (a saída do cabo fica 4,5 cm atrás dele). Sem isso, a conta da saída virava o plano pro
+    # engate e a saída PULAVA pro outro lado da roldana, o do corpo, de k04 a k08 (o cabo passaria por dentro dela e dobrava
+    # 6–7° no gancho da barra). Com no_plano a saída fica sempre atrás da roldana, no plano dela (a barra fica no meio, em
+    # x = 0: o cabo não sai do plano), e o cabo desce de 4,1° (começo) a 2,9° (k07) e 12,6° (fim) da vertical
+    pol = e3.polia("polia", x=0.0, y=c0.y - RECUO_CABO + raio_rold, altura=POLIA_Z, frente=(0, 1, 0), alto=ALTO, no_plano=True)
 
     # pontos do corpo pra medir as folgas (o corpo de baixo não mexe; braços fora)
     tronco_pts = _malha(bon, TRONCO)
