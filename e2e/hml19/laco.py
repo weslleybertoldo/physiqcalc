@@ -182,6 +182,9 @@ def abrir_aba(t, o, base: str, pac: str, aba: str, navegar: bool = True) -> None
     if aba == "dieta":
         ok = t.esperar(lambda: t.tem("[data-aba-dieta-aluno]") and t.attr("[data-aba-dieta-aluno]", "data-acesso-dieta") == ["editar"], 60)
         o.ok(ok, f"[{base}] a Dieta da aluna abre e a nutri de teste edita ({R.commit_medido(base)})", parar=True)
+        # a seção que abre com a aba (o Plano) lê o nome da nutri uns segundos depois: espera a rede acalmar, senão essa leitura cai na
+        # conta da 1ª seção medida (11/10 08:28: Manipulados com 3 GET profiles = 2 dela + 1 do Plano; diagnóstico: só 2 dela em 35 s)
+        R.esperar_quieto(t, 2, 15)
     else:
         o.ok(t.esperar(lambda: t.tem("[data-aba-prontuario-aluno]"), 60) and t.n('[data-prontuario-editar="1"]') == 1,
              f"[{base}] o Prontuário da aluna abre e a nutri de teste muda o clínico ({R.commit_medido(base)})", parar=True)

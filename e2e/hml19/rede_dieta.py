@@ -73,6 +73,35 @@ class LacoNaTela(Exception):
     """A tela entrou em laço (H-90): o navegador fecha na hora e o caso para."""
 
 
+class Cronometro:
+    """A duração de cada pedido à API durante o caso (requestfinished: timing.responseEnd do Chromium), para separar o tempo da
+    função do tempo da tela — o resumo vai à saída: a soma por alvo e os 4 mais lentos (início relativo ao zerar, em ms)."""
+
+    def __init__(self, pg) -> None:
+        self.t0 = time.time()
+        self.itens: list[tuple[int, str, int]] = []
+        pg.on("requestfinished", self._fim)
+
+    def zerar(self) -> None:
+        self.t0, self.itens = time.time(), []
+
+    def _fim(self, req) -> None:
+        try:
+            if req.method == "OPTIONS" or "physiqcalc.com.br" not in req.url:
+                return
+            tipo, nome = B.B17.alvo(req.url)
+            acao = B.B17.acao_do_corpo(req) if tipo == "fn" else None
+            dur = round(float(req.timing.get("responseEnd") or 0))
+            inicio = round((float(req.timing.get("startTime") or 0) / 1000 - self.t0) * 1000) if req.timing.get("startTime") else -1
+            self.itens.append((inicio, f"{req.method} {tipo}:{nome}" + (f"({acao})" if acao else ""), dur))
+        except Exception:  # noqa: BLE001 — a página fechou no meio
+            pass
+
+    def resumo(self) -> str:
+        lentos = sorted(self.itens, key=lambda x: -x[2])[:4]
+        return " · ".join(f"{alvo} {dur} ms (+{ini} ms)" for ini, alvo, dur in lentos)
+
+
 def fase_do_codigo(base: str, commit: str) -> str:
     """antes = o código antigo da Dieta (a gravação direta); depois = o jeito 2 da Dieta (o planos.ts do commit medido chama o
     plano_criar da nutricao). Commit desconhecido aqui → antes (as conferências do antes acusam se não for)."""
@@ -366,6 +395,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
             try:
                 t = B.B17.Tela(nav, B.BASES[base], f"hml19b_{base}", "rede_dieta", guarda=guarda)
                 B.LegalDesligado().instalar(t.ctx)
+                crono = Cronometro(t.pg)
                 try:
                     t.entrar(L, B.P_CONTA, rota_dieta(pac))
                     ok = esperar_vigiando(t, o, f"[{base}] Dieta da aluna", lambda: t.tem("[data-secao-planejamento]") and t.attr("[data-aba-dieta-aluno]", "data-acesso-dieta") == ["editar"], 60)
@@ -374,6 +404,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                     o.ok(not abrir, f"[{base}] Dieta › Plano abre: 0 gravação ao abrir ({abrir})")
                     for caso in [c for c in casos if c in ("prescricao", "item", "duplicar")]:
                         t.zerar_pedidos()
+                        crono.zerar()
                         if caso == "prescricao":
                             ok_tela, ms, ids["plano"] = acao_prescricao(t, titulo)
                         elif caso == "item":
@@ -392,6 +423,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                         cont = B.contar(t.pedidos)
                         conferir(o, base, caso, cont, ok_tela, ms, fase)
                         linha_planilha(base, caso, cont, ms, commit)
+                        o.linha(f"   {caso}: os pedidos mais lentos — {crono.resumo()}")
                         if caso in PRINT_DO_CASO:
                             print_b(t, rotulo, PRINT_DO_CASO[caso], o)
                     for caso, aba in (("receita", "receitas"), ("alimento", "alimentos")):
@@ -405,12 +437,14 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                         if base == "prod":
                             continue
                         t.zerar_pedidos()
+                        crono.zerar()
                         nome = f"{B.MARCA} {rodada} rede {caso}"
                         ok_tela, ms = acao_receita(t, nome) if caso == "receita" else acao_alimento(t, nome)
                         R.esperar_quieto(t, teto=4 if fase == "antes" else 15)
                         cont = B.contar(t.pedidos)
                         conferir(o, base, caso, cont, ok_tela, ms, fase)
                         linha_planilha(base, caso, cont, ms, commit)
+                        o.linha(f"   {caso}: os pedidos mais lentos — {crono.resumo()}")
                         print_b(t, rotulo, PRINT_DO_CASO[caso], o)
                     if guarda:
                         o.ok(not guarda.bloqueadas, f"[prod] a Guarda não barrou nada ao abrir as telas da Dieta ({guarda.bloqueadas})")
