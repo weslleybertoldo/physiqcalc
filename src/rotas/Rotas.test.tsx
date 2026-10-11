@@ -57,6 +57,9 @@ vi.mock("@/integrations/principal/client", () => ({
   principal: { auth: { getSession: async () => ({ data: { session: null } }) }, from: vi.fn() },
 }));
 // W8: a aba Treino é a nova (src/app-aluno/abas/Treino.tsx, pelo registro) — a TreinosPage saiu
+// hml-18b (H-54): o app do aluno carrega o banco local (PowerSync) por import() — aqui, um provedor que só repassa (o de verdade abre o
+// SQLite num Worker, que o jsdom não tem)
+vi.mock("@/lib/powersync/PowerSyncProvider", () => ({ PowerSyncProvider: ({ children }: { children: unknown }) => children }));
 vi.mock("@/app-aluno/abas/Treino", () => h.marcador("aba-treino"));
 // W10: a aba Evolução é a nova (src/app-aluno/abas/Evolucao.tsx, pelo registro) — o UserDashboard saiu
 vi.mock("@/app-aluno/abas/Evolucao", () => h.marcador("aba-evolucao"));

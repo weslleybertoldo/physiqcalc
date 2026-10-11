@@ -17,6 +17,9 @@ const CONSULTA = /const\s+(\{[^}]*\}|[A-Za-z_$][\w$]*)\s*=\s*useQuery(?:<[^>]*>)
 type Motivo = `NEUTRO: ${string}` | `LOCAL: ${string}`;
 /** arquivo → consulta (o nome da variável; a desestruturação sem espaços) → motivo. */
 const BASE: Record<string, Record<string, Motivo>> = {
+  // hml-18b (H-54): a consulta do espelho do perfil saiu da trava GateBloqueioAluno (que carrega com a entrada) para o provedor do
+  // banco local (que só carrega no app do aluno) — a mesma consulta e o mesmo motivo
+  "src/lib/powersync/PowerSyncProvider.tsx": { "{data}": "LOCAL: o SQLite do aparelho; a situação do servidor cobre em parte" },
   "src/nutricao/editor/secoes/Planejamento.tsx": { nomeQ: "NEUTRO: o nome da nutricionista no PDF (a falha vira o PDF sem o nome)" },
   "src/nutricao/editor/secoes/Suplementos.tsx": { perfilQ: "NEUTRO: o nome e o CRN no PDF" },
   "src/nutricao/prontuario/secoes/AvaliacaoIntegrada.tsx": { perfilQ: "NEUTRO: o nome e o CRN no PDF" },
@@ -36,7 +39,6 @@ const BASE: Record<string, Record<string, Motivo>> = {
   "src/painel/preconsulta/LigarAlunoDialog.tsx": { sugestaoQ: "NEUTRO: só a sugestão de aluno some; a busca manual segue" },
   "src/ui/avisos/AvisoMembroRemovido.tsx": { q: "NEUTRO: o aviso só aparece com o dado (a função devolve null na falha)" },
   "src/app-aluno/busca/BuscaApp.tsx": { "{data,isLoading}": "LOCAL: lê o SQLite do aparelho (PowerSync)" },
-  "src/app-aluno/gates/GateBloqueioAluno.tsx": { "{data}": "LOCAL: o SQLite do aparelho; a situação do servidor cobre em parte" },
   "src/components/treinos/SeletorAcademia.tsx": {
     "{data:academias}": "LOCAL: o SQLite do aparelho — tocar num equipamento com a lista sem carregar regrava a lista só com ele: ⚪ no parecer",
   },
