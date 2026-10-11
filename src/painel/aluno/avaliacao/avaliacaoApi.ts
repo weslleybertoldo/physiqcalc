@@ -8,10 +8,13 @@
  *   · antropometria e fotos de evolução (nutricionista responsável ou dono-nutri — formulário do Nutri) → banco principal, pelas
  *     libs portadas do Nutri (RLS da nutrição: W3, W16 e W17);
  *   · o aviso "avaliação nova" no sino do aluno (NF9) → aluno_avisar_avaliacao.
+ * hml-19c (H-41 · jeito 2): a foto mensal deixa de gravar direto no bucket e na tabela — vai pela admin-avaliacoes (as ações
+ * foto_preparar → o arquivo sobe no link assinado que o servidor deu → foto_salvar; foto_excluir), com o MESMO adminAvaliacoes() de
+ * hoje (1 tentativa, 45 s); o aviso "avaliação nova" vai pela função nutricao (avaliacao_avisar). As assinaturas não mudam.
  */
-import { principal } from "@/integrations/principal/client";
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
-import { BUCKET_REGISTROS, comprimirImagem, type TipoFoto } from "@/lib/registrosFotos";
+import { comprimirImagem, type TipoFoto } from "@/lib/registrosFotos";
+import { acaoNutricao } from "@/nutricao/servidor";
 import { carregarTreinoDoPainel } from "./fontes";
 
 export class ErroAvaliacao extends Error {
@@ -111,33 +114,34 @@ export async function salvarProximaAvaliacao(treinoUserId: string, data: string 
   return r?.proxima_avaliacao ? String(r.proxima_avaliacao).slice(0, 10) : null;
 }
 
-/** Fotos mensais do Calc (C36): sobe (ou troca) a foto da posição no mês e grava a linha (a mesma regra da aba Registros antiga). */
+/**
+ * Fotos mensais do Calc (C36): sobe (ou troca) a foto da posição no mês e grava a linha (a mesma regra da aba Registros antiga).
+ * hml-19c: pela admin-avaliacoes — foto_preparar (o caminho <aluno>/<aaaa-mm>/<tipo>.jpg é do servidor, e o link assinado já vem com
+ * o "trocar") → o arquivo sobe direto no Storage do Treino (uploadToSignedUrl) → foto_salvar (o servidor confere que o arquivo chegou
+ * naquele caminho e grava a linha). 3 pedidos; o erro vira ErroAvaliacao com o código (a tela mostra a frase de mensagens.ts).
+ */
 export async function subirFotoMensal(treinoUserId: string, mes: string, tipo: TipoFoto, arquivo: File): Promise<void> {
   if (!online()) throw new ErroAvaliacao("sem_internet");
   if (!/^\d{4}-\d{2}$/.test(mes)) throw new ErroAvaliacao("mes_invalido");
   const blob = await comprimirImagem(arquivo);
-  const caminho = `${treinoUserId}/${mes}/${tipo}.jpg`;
-  const up = await supabase.storage.from(BUCKET_REGISTROS).upload(caminho, blob, { upsert: true, contentType: "image/jpeg" });
-  if (up.error) throw new ErroAvaliacao(up.error.message);
-  const { error } = await supabase
-    .from("physiq_registros_fotos")
-    .upsert({ user_id: treinoUserId, mes_ref: `${mes}-01`, tipo, storage_path: caminho, updated_at: new Date().toISOString() }, { onConflict: "user_id,mes_ref,tipo" });
-  if (error) throw new ErroAvaliacao(error.message);
+  const link = await adminAvaliacoes<{ bucket: string; caminho: string; token: string }>({ action: "foto_preparar", userId: treinoUserId, mes, tipo });
+  const up = await supabase.storage.from(link.bucket).uploadToSignedUrl(link.caminho, link.token, blob, { upsert: true, contentType: "image/jpeg" });
+  if (up.error) throw new ErroAvaliacao("upload_falhou");
+  await adminAvaliacoes({ action: "foto_salvar", userId: treinoUserId, mes, tipo, caminho: link.caminho });
 }
 
+/** hml-19c: pela admin-avaliacoes (foto_excluir) — a linha sai e DEPOIS o arquivo; o caminho é lido da linha no servidor (não vai daqui). */
 export async function excluirFotoMensal(foto: { id: string; caminho: string }): Promise<void> {
-  if (!online()) throw new ErroAvaliacao("sem_internet");
-  const { error } = await supabase.from("physiq_registros_fotos").delete().eq("id", foto.id);
-  if (error) throw new ErroAvaliacao(error.message);
-  await supabase.storage.from(BUCKET_REGISTROS).remove([foto.caminho]);
+  await adminAvaliacoes({ action: "foto_excluir", fotoId: foto.id });
 }
 
-/** O aviso "avaliação nova" no sino do aluno (NF9) — não repete o não lido dos últimos 10 minutos. Falhar não desfaz nada. */
+/**
+ * O aviso "avaliação nova" no sino do aluno (NF9) — não repete o não lido dos últimos 10 minutos. Falhar não desfaz nada.
+ * hml-19c: pela função nutricao (avaliacao_avisar: a RPC aluno_avisar_avaliacao de hoje, chamada no servidor como a pessoa).
+ */
 export async function avisarAvaliacaoNova(alunoIdDaRota: string): Promise<{ avisado: boolean; semLogin: boolean }> {
   try {
-    const { data, error } = await principal.rpc("aluno_avisar_avaliacao" as never, { p_aluno: alunoIdDaRota } as never);
-    if (error) return { avisado: false, semLogin: false };
-    const r = (data ?? {}) as { avisado?: boolean; sem_login?: boolean };
+    const r = await acaoNutricao<{ avisado?: boolean; sem_login?: boolean }>("avaliacao_avisar", { alunoId: alunoIdDaRota });
     return { avisado: !!r.avisado, semLogin: !!r.sem_login };
   } catch {
     return { avisado: false, semLogin: false };

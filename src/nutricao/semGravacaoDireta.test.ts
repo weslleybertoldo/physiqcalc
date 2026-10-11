@@ -23,7 +23,7 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[] }>
   dieta: {
     pastas: ["src/nutricao/editor/lib", "src/painel/dietas", "src/nutricao/app"],
     base: 0,
-    fora: ["src/nutricao/editor/lib/antropometrias.ts", "src/painel/dietas/publico.ts"],
+    fora: ["src/painel/dietas/publico.ts"],
   },
 };
 
