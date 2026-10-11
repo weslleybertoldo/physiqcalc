@@ -356,12 +356,13 @@ def main() -> int:
     ap.add_argument("--base", required=True)
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))  # hml-19a: o Edge, como os outros E2E de tela
     a = ap.parse_args()
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo)
     M.update(json.loads((B.SCRATCH / "massa_staging.json").read_text()))
     t0 = time.time()
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
         for nome in [x for x in a.casos.split(",") if x]:
             fn = CASOS[nome]
             B.saude_ok(f"o caso {nome}")
@@ -373,7 +374,7 @@ def main() -> int:
                 except Exception as e:  # noqa: BLE001
                     if "Target crashed" in str(e) or "Target page, context or browser has been closed" in str(e):
                         print("   o navegador caiu — 2ª tentativa", flush=True)
-                        nav = pw.chromium.launch(args=["--no-sandbox"])
+                        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
                         continue
                     p.check(False, f"[{nome}] exceção: {str(e)[:300]}")
                     break

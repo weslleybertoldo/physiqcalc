@@ -272,13 +272,14 @@ def main() -> int:
     ap.add_argument("--base", required=True)
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))  # hml-19a: o Edge, como os outros E2E de tela
     a = ap.parse_args()
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo)
     ESTADO["massa"] = B.ler_json(B.SCRATCH / "massa_staging.json")
     assert ESTADO["massa"].get("paciente"), "rode antes: python3 e2e/w18/massa.py"
     t0 = time.time()
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
         for nome in a.casos.split(","):
             print(f"\n— caso {nome}", flush=True)
             B.saude_ok(nome)

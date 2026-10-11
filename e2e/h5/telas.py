@@ -519,10 +519,11 @@ def main() -> int:
     ap.add_argument("--base", default="http://localhost:8080")
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))  # hml-19a: o Edge, como os outros E2E de tela
     a = ap.parse_args()
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo)
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
             print(f"\n── {nome} ──", flush=True)
             B.saude_ok(nome)
