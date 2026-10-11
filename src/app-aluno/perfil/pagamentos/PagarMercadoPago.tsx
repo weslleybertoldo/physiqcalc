@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Copy, CreditCard, FlaskConical, Loader2, QrCode, RefreshCw, Repeat, TimerOff } from "lucide-react";
 import { toast } from "sonner";
 import { acaoFinanceiro, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
-import { dataHoraBR, mensagemErroFinanceiro, reais } from "@/financeiro/regras";
+import { dataHoraBR, mensagemErroFinanceiro, reais, tituloDoPagar } from "@/financeiro/regras";
 import type { CobrancaVista, MatriculaPagamentos } from "@/financeiro/tipos";
 import { CartaoPagamento, type DadosCartao } from "@/painel/configuracoes/plano/CartaoPagamento";
 import { useSessao } from "@/nucleo/sessao";
@@ -17,7 +17,8 @@ const INTERVALO_MS = 5000;
  * 5 s e no "Já paguei"), cartão à vista (Brick — o número do cartão nunca passa pelo nosso servidor) e, na mensalidade, a
  * cobrança automática mensal no cartão. No staging, "Simular aprovação" (o Pix do sandbox não se paga).
  * W-P: no plano em cartão parcelado, o cartão vai até o máximo de parcelas do plano (I6 — o servidor confere as `installments`); a
- * automática só aparece onde a modalidade aceita (B2: mês a mês, plano de 1 mês e o modo de hoje).
+ * automática só aparece onde a modalidade aceita (B2: mês a mês, plano de 1 mês e o modo de hoje); no período todo o título é
+ * "Pagar o plano" (tituloDoPagar).
  */
 export function PagarMercadoPago({
   matricula,
@@ -137,7 +138,7 @@ export function PagarMercadoPago({
     }
   };
 
-  const titulo = alvo?.tipo === "avulsa" ? alvo.cobranca.descricao : "Pagar a mensalidade";
+  const titulo = alvo?.tipo === "avulsa" ? alvo.cobranca.descricao : tituloDoPagar(matricula.mensalidade);
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(pix?.pix_copia_cola ?? "");

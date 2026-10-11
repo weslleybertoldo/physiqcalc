@@ -194,6 +194,14 @@ describe("faixa do topo (tela 1; A13)", () => {
     expect(faixaDoAluno([{ ...base, pago_ate: "2026-10-12T12:00:00Z", modalidade: "avista", plano_meses: 12 }], agora)!.titulo).toBe("Seu plano vence em 2 dias");
     expect(faixaDoAluno([{ ...base, pago_ate: "2026-10-12T12:00:00Z", modalidade: "mensal", plano_meses: 12 }], agora)!.titulo).toBe("Sua mensalidade vence em 2 dias");
   });
+  it("W-P: o plano de 1 mês fala da mensalidade (igual ao '/mês' da tela); 'Seu plano' só no período todo com mais de 1 mês", () => {
+    const titulo = (p: Partial<ResumoMatricula>) => faixaDoAluno([resumo({ pago_ate: "2026-10-02T15:00:00Z", ...p })], AGORA)!.titulo;
+    expect(titulo({ modalidade: "avista", plano_meses: 1 })).toBe("Sua mensalidade vence em 3 dias");
+    expect(titulo({ modalidade: "cartao_parcelado", plano_meses: 1 })).toBe("Sua mensalidade vence em 3 dias");
+    expect(titulo({ modalidade: "cartao_parcelado", plano_meses: 6 })).toBe("Seu plano vence em 3 dias");
+    expect(titulo({ modalidade: "mensal", plano_meses: 1 })).toBe("Sua mensalidade vence em 3 dias");
+    expect(titulo({ modalidade: null, plano_meses: null })).toBe("Sua mensalidade vence em 3 dias");
+  });
 });
 
 describe("linhas das cobranças (telas 5 e 7)", () => {

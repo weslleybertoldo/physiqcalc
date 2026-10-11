@@ -3,6 +3,8 @@
 // folha; tocar num item abre o detalhe por cima e voltar mantém a página. A função falsa responde à página pedida sobre 41 itens.
 // W-P: o plano com período no cartão da mensalidade (Plano · /ano · parcela n de N · Renovar) e o Mercado Pago com o plano (o cartão
 // parcelado até o máximo do plano manda as parcelas; a automática só onde a modalidade aceita) — o Brick falso guarda o que recebeu.
+// O título do painel de pagar: "Pagar o plano" / "Renovar o plano" no período todo; no mês a mês, no plano de 1 mês e no modo de
+// hoje, "Pagar a mensalidade" / "Adiantar a mensalidade" como sempre.
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -268,5 +270,31 @@ describe("Perfil › Pagamentos — Mercado Pago com o plano (W-P: I6 e B2)", ()
     expect(brick.customization.paymentMethods.maxInstallments).toBe(1);
     await act(() => brick.onSubmit({ token: "tok", payment_method_id: "visa", issuer_id: "25" }));
     expect(h.acao).toHaveBeenCalledWith("aluno_mp_cartao", { paciente_id: "p1", card_token: "tok", payment_method_id: "visa", issuer_id: "25", installments: 1 });
+  });
+});
+
+describe("Perfil › Pagamentos — o título do painel de pagar (W-P: no período todo, o plano)", () => {
+  const MES_A_MES = { valor: 83.33, modalidade: "mensal" as const, automatica: true, parcela: { num: 4, total: 12 } };
+  const UM_MES = { valor: 249, plano: "Mensal", meses: 1, automatica: true };
+  const MODO_DE_HOJE = { valor: 249, plano_id: null, plano: null, modalidade: null, meses: 1, automatica: true };
+  const EM_DIA = { pago_ate: dia(20), desde: dia(-10), coberta: true };
+  it.each([
+    { caso: "Pix · período todo", m: PLANO(), botao: "[data-pagar-mensalidade]", titulo: "Pagar o plano" },
+    { caso: "Pix · período todo em dia, adiantar", m: PLANO(EM_DIA), botao: "[data-adiantar-mensalidade]", titulo: "Renovar o plano" },
+    { caso: "Pix · mês a mês", m: PLANO(MES_A_MES), botao: "[data-pagar-mensalidade]", titulo: "Pagar a mensalidade" },
+    { caso: "Pix · mês a mês em dia, adiantar", m: PLANO({ ...MES_A_MES, ...EM_DIA }), botao: "[data-adiantar-mensalidade]", titulo: "Adiantar a mensalidade" },
+    { caso: "Pix · plano de 1 mês", m: PLANO(UM_MES), botao: "[data-pagar-mensalidade]", titulo: "Pagar a mensalidade" },
+    { caso: "Pix · plano de 1 mês em dia, adiantar", m: PLANO({ ...UM_MES, ...EM_DIA }), botao: "[data-adiantar-mensalidade]", titulo: "Adiantar a mensalidade" },
+    { caso: "Pix · modo de hoje", m: PLANO(MODO_DE_HOJE), botao: "[data-pagar-mensalidade]", titulo: "Pagar a mensalidade" },
+    { caso: "Mercado Pago · cartão parcelado", m: PLANO_MP({ modalidade: "cartao_parcelado", max_parcelas: 3 }), botao: "[data-pagar-mensalidade]", titulo: "Pagar o plano" },
+    { caso: "Mercado Pago · mês a mês", m: PLANO_MP(MES_A_MES), botao: "[data-pagar-mensalidade]", titulo: "Pagar a mensalidade" },
+    { caso: "Mercado Pago · plano de 1 mês", m: PLANO_MP(UM_MES), botao: "[data-pagar-mensalidade]", titulo: "Pagar a mensalidade" },
+  ])("$caso → $titulo", async ({ m, botao, titulo }) => {
+    h.status.mockResolvedValue(status([m]));
+    montar();
+    await waitFor(() => expect(document.querySelector(botao)).not.toBeNull());
+    fireEvent.click(document.querySelector(botao)!);
+    const painel = await screen.findByRole("dialog");
+    expect(within(painel).getByRole("heading").textContent).toBe(titulo);
   });
 });

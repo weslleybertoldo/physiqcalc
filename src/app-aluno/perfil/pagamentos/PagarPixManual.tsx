@@ -3,7 +3,7 @@ import { Camera, Check, Copy, FileText, Loader2, Paperclip, QrCode, Send, Upload
 import { toast } from "sonner";
 import { acaoFinanceiro, ErroFinanceiro, invalidarResumo, subirComprovante } from "@/financeiro/api";
 import { payloadPix, qrDoPix } from "@/financeiro/pix";
-import { mensagemErroFinanceiro, reais } from "@/financeiro/regras";
+import { mensagemErroFinanceiro, reais, tituloDoPagar } from "@/financeiro/regras";
 import type { CobrancaVista, MatriculaPagamentos } from "@/financeiro/tipos";
 import { rotuloTipoChave } from "@/lib/pixBrCode";
 import { Botao } from "@/ui/premium/Botao";
@@ -15,6 +15,7 @@ export type AlvoPagamento = { tipo: "mensalidade"; adiantar?: boolean } | { tipo
  * Pagar por Pix na chave ativa da conta (C98; R16 para pacientes do Nutri): 1 · o QR/"copia e cola" com o valor, gerado no
  * aparelho (sem Mercado Pago); 2 · o comprovante (foto, print ou PDF até 5 MB) — obrigatório; "Já paguei" avisa o profissional,
  * que confere e confirma. Trocar o comprovante de um aviso pendente usa o mesmo caminho (o servidor não empilha).
+ * W-P: no plano do período todo o título fala do plano ("Pagar o plano" / "Renovar o plano" — tituloDoPagar).
  */
 export function PagarPixManual({
   matricula,
@@ -96,7 +97,7 @@ export function PagarPixManual({
     }
   };
 
-  const titulo = alvo?.tipo === "avulsa" ? alvo.cobranca.descricao : alvo?.tipo === "mensalidade" && alvo.adiantar ? "Adiantar a mensalidade" : "Pagar a mensalidade";
+  const titulo = alvo?.tipo === "avulsa" ? alvo.cobranca.descricao : tituloDoPagar(matricula.mensalidade, alvo?.tipo === "mensalidade" && alvo.adiantar);
 
   return (
     <PainelDeslizante aberto={!!alvo} aoMudar={(a) => !a && aoFechar()} titulo={titulo} descricao={`${reais(valor)} · Pix na chave de ${profissional}`} lado="baixo">

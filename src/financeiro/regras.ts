@@ -2,6 +2,7 @@
 // banco: testadas em src/financeiro/regras.test.ts. A régua da mensalidade é a do Calc (src/lib/cobertura.ts, a mesma do
 // banco — mensalidade_recalcular): cada pagamento cobre 1 mês; "em dia" = a cobertura passa de agora.
 import type { CobrancaVista, ModoRecebimento, PlanoSalvo, ResumoMatricula } from "./tipos";
+import type { Modalidade } from "./planos";
 
 // ───────────────────────── datas (relógio de São Paulo) ─────────────────────────
 
@@ -202,6 +203,24 @@ export function formasDePagar(modo: ModoRecebimento, temChave: boolean): string 
   return "combine com seu profissional";
 }
 
+// ───────────────────────── o plano do período todo (W-P) ─────────────────────────
+
+/**
+ * W-P: o plano do período todo — à vista ou cartão parcelado com mais de 1 mês (cada pagamento cobre o período inteiro). Nele a
+ * faixa do topo e o painel de pagar falam do plano; no mês a mês, no plano de 1 mês (o "/mês" da tela — B2) e no modo de hoje, da
+ * mensalidade.
+ */
+export function ehPeriodoTodo(modalidade: Modalidade | null | undefined, meses: number | null | undefined): boolean {
+  return (modalidade === "avista" || modalidade === "cartao_parcelado") && (Number(meses) || 1) > 1;
+}
+
+/** Título do painel de pagar a mensalidade (Pix na chave e Mercado Pago): "Pagar a mensalidade" / "Adiantar a mensalidade"; no
+ *  período todo, "Pagar o plano" / "Renovar o plano". */
+export function tituloDoPagar(m: { modalidade?: Modalidade | null; meses?: number | null } | null | undefined, adiantar = false): string {
+  if (ehPeriodoTodo(m?.modalidade, m?.meses)) return adiantar ? "Renovar o plano" : "Pagar o plano";
+  return adiantar ? "Adiantar a mensalidade" : "Pagar a mensalidade";
+}
+
 // ───────────────────────── faixa do topo (Início / aba de abertura — tela 1; A13) ─────────────────────────
 
 export interface Faixa {
@@ -219,8 +238,8 @@ export interface Faixa {
 /**
  * "Sua mensalidade vence em 3 dias · R$ 249,00 · Pix ou cartão · Pagar" — de 7 dias antes até pagar; vencida fica vermelha
  * (spec 4.3). Cobrança avulsa (Nutri) entra do mesmo jeito. O mais urgente primeiro; aguardando a confirmação não mostra.
- * W-P: no plano do período todo (à vista ou cartão parcelado) a faixa fala do plano ("Seu plano vence em 3 dias"); no mês a mês
- * e no modo de hoje, da mensalidade.
+ * W-P: no plano do período todo (ehPeriodoTodo) a faixa fala do plano ("Seu plano vence em 3 dias"); no mês a mês, no plano de
+ * 1 mês e no modo de hoje, da mensalidade.
  */
 export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora: Date = new Date()): Faixa | null {
   const hoje = hojeSP(agora);
@@ -244,7 +263,7 @@ export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora:
     } else if (e.situacao === "vence_em_breve" || e.situacao === "vencida" || e.situacao === "pendente") {
       candidatas.push({
         tom: e.situacao === "vence_em_breve" ? "a" : "r",
-        titulo: r.modalidade === "avista" || r.modalidade === "cartao_parcelado" ? `Seu plano ${textoDoVencimento(e)}` : `Sua mensalidade ${textoDoVencimento(e)}`,
+        titulo: ehPeriodoTodo(r.modalidade, r.plano_meses) ? `Seu plano ${textoDoVencimento(e)}` : `Sua mensalidade ${textoDoVencimento(e)}`,
         subtitulo: `${reais(e.valor)} · ${formas}`,
         podePagar: pagar,
         alvo: { tipo: "mensalidade" },
