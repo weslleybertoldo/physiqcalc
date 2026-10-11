@@ -24,13 +24,17 @@ Casos (a ordem é sempre esta):
   LX  a Lixeira (W26) com o excluir pela função: a anamnese excluída pela nutricao aparece na lixeira_da_conta, volta com o
       lixeira_restaurar e, excluída de novo, sai de vez com o lixeira_apagar (as RPCs da tela da Lixeira, como a nutri de teste)
 Produção (--base prod --so-leitura): OPTIONS (CORS), sem login → 401, x-schema inválido → 400, ação desconhecida → 400 — nada grava.
+hml-19b: --area dieta (a Dieta e as Dietas: P, N1–N8) e --area aluno (o app: P, N1, N9 — o ✓ da refeição e da meta, a foto do diário
+pelo link assinado, o balde do limite por IP e o link público) — os casos em api_dieta.py; o estado guarda a área (o --limpar desfaz a
+rodada da área que caiu).
 
-Uso: python3 e2e/hml19/api.py --area prontuario [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
+Uso: python3 e2e/hml19/api.py --area prontuario|dieta|aluno [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
   --seco    sem rede, sem login, sem banco: monta TODOS os pedidos da rodada e confere cada um contra as regras do servidor (o próprio
             _shared/nutricao-regras.ts, pelo node) + N3/N4/N5 nas regras + o SQL da limpeza
   --limpar  só desfaz uma rodada que caiu no meio (pelo arquivo de estado)
   --sair    o logout (scope=local) das sessões de TESTE guardadas entre os scripts (_base.Sessoes) — no fim da etapa 2
-Antes de rodar no staging: a nutricao publicada e a migration 20261011100000 aplicada no staging; ~/.pc-pat; as senhas de TESTE.
+Antes de rodar no staging: a nutricao publicada e a migration 20261011100000 aplicada no staging (a Dieta e o app: também a
+20261011110000 da hml-19b); ~/.pc-pat; as senhas de TESTE.
 """
 from __future__ import annotations
 
@@ -45,6 +49,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
+import api_dieta as AD  # noqa: E402
 
 C = B.C
 CASOS = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "LX")
@@ -547,23 +552,50 @@ def producao(o, L) -> None:
     o.ok(st == 400 and r.get("erro") == "acao_invalida", f"prod N3: ação desconhecida → 400 acao_invalida ({st})")
 
 
+CASOS_DA_AREA = {"prontuario": CASOS, "dieta": AD.CASOS_DIETA, "aluno": AD.CASOS_ALUNO}
+
+
+def rodar_prontuario(o, L, estado: B.Estado, rodada: str, casos: list[str]) -> None:
+    R = Rodada(o, L, estado, rodada)
+    o.linha(f"rodada {rodada} · schema {R.s} · aluna (matrícula) {R.pac[:8]}… · casos {','.join(casos)}")
+    for nome, f in (("P", caso_p), ("N1", caso_n1), ("N4", caso_n4_n5), ("N8", caso_n8), ("N9", caso_n9), ("LX", caso_lixeira)):
+        if nome in casos or (nome == "N4" and "N5" in casos):
+            f(R)
+    if {"N2", "N3", "N6"} & set(casos):
+        caso_n2_n3_n6(R)
+    if "N7" in casos:
+        for ok, texto in caso_n7():
+            o.ok(ok, texto)
+    tempos = {k: f"{min(v)}–{max(v)} ms (n={len(v)})" for k, v in sorted(R.tempos.items())}
+    o.linha(f"tempos por ação: {tempos}")
+
+
+def limpar_da_area(o, estado: B.Estado, L, s: str) -> None:
+    """O --limpar desfaz a rodada da área que está no estado (a da hml-19a não tinha área: o Prontuário)."""
+    if (estado.d.get("area") or "prontuario") in ("dieta", "aluno"):
+        AD.limpar(o, estado, L, s)
+    else:
+        limpar(o, estado, L, s)
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-19a — E2E de servidor da nutricao (casos no topo)")
-    ap.add_argument("--area", required=True, choices=("prontuario",))
+    ap = argparse.ArgumentParser(description="hml-19a/19b — E2E de servidor da nutricao (casos no topo e em api_dieta.py)")
+    ap.add_argument("--area", required=True, choices=tuple(CASOS_DA_AREA))
     ap.add_argument("--base", default="staging", choices=("staging", "prod"))
-    ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--casos", default=None, help="padrão: todos os da área")
     modo = ap.add_mutually_exclusive_group()
     modo.add_argument("--seco", action="store_true")
     modo.add_argument("--limpar", action="store_true")
     modo.add_argument("--so-leitura", action="store_true")
     modo.add_argument("--sair", action="store_true")
     a = ap.parse_args()
-    casos = [c.strip() for c in a.casos.split(",") if c.strip()]
-    if any(c not in CASOS for c in casos):
-        raise SystemExit(f"caso desconhecido (os casos: {', '.join(CASOS)})")
+    validos = CASOS_DA_AREA[a.area]
+    casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
+    if any(c not in validos for c in casos):
+        raise SystemExit(f"caso desconhecido na área {a.area} (os casos: {', '.join(validos)})")
     if a.seco:
         o = C.Saida(f"api_{a.area}_seco")
-        seco(o, a.area)
+        (seco if a.area == "prontuario" else AD.seco)(o, a.area)
         return o.fim()  # o --seco não vai ao e2e-rodadas (não é prova contra uma base)
     if a.sair:
         o = C.Saida("sessoes_sair")
@@ -577,31 +609,23 @@ def main() -> int:
     try:
         B.exigir_saude(o, "o api.py")
         if a.base == "prod":
-            producao(o, L)
+            (producao if a.area == "prontuario" else AD.producao)(o, L)
         elif a.limpar:
-            limpar(o, B.Estado.ler(), L, s)
+            limpar_da_area(o, B.Estado.ler(), L, s)
         else:
             pendente = B.Estado.ler()
             if not pendente.vazio():
-                o.ok(False, "há uma rodada que caiu no meio: rode --limpar antes", parar=True)
+                o.ok(False, f"há uma rodada que caiu no meio (área {pendente.d.get('area') or 'prontuario'}): rode --limpar antes", parar=True)
             rodada = B.nova_rodada()
-            estado = B.Estado({"rodada": rodada, "schema": s, "linhas": [], "storage": [], "n8": None})
+            estado = B.Estado({"rodada": rodada, "schema": s, "area": a.area, "linhas": [], "storage": [], "n8": None})
             estado.salvar()
-            R = Rodada(o, L, estado, rodada)
-            o.linha(f"rodada {rodada} · schema {s} · aluna (matrícula) {R.pac[:8]}… · casos {','.join(casos)}")
             try:
-                for nome, f in (("P", caso_p), ("N1", caso_n1), ("N4", caso_n4_n5), ("N8", caso_n8), ("N9", caso_n9), ("LX", caso_lixeira)):
-                    if nome in casos or (nome == "N4" and "N5" in casos):
-                        f(R)
-                if {"N2", "N3", "N6"} & set(casos):
-                    caso_n2_n3_n6(R)
-                if "N7" in casos:
-                    for ok, texto in caso_n7():
-                        o.ok(ok, texto)
-                tempos = {k: f"{min(v)}–{max(v)} ms (n={len(v)})" for k, v in sorted(R.tempos.items())}
-                o.linha(f"tempos por ação: {tempos}")
+                if a.area == "prontuario":
+                    rodar_prontuario(o, L, estado, rodada, casos)
+                else:
+                    AD.rodar(o, L, estado, rodada, a.area, casos)
             finally:
-                limpar(o, estado, L, s)
+                limpar_da_area(o, estado, L, s)
     except (Exception, SystemExit) as e:  # noqa: BLE001
         o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
     finally:

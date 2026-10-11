@@ -14,6 +14,9 @@ documento e os pedidos anotados por alvo, o SQL só leitura) e junta:
   · Estado                o que a rodada criou (ids, caminhos no Storage, os modelos mexidos no N8), num arquivo: o --limpar desfaz
                           uma rodada que caiu no meio;
   · a massa               "hml19 e2e …" só nas contas de TESTE, só no schema staging.
+hml-19b: as 19 tabelas da Dieta (rest_dieta na contagem), as 3 RPCs que o app do aluno chamava direto (paciente_marcar_refeicao,
+aluno_marcar_meta, diario_enviar — rpc_grava, mesmo fora do RPC_QUE_GRAVAM de hoje), as regras da Dieta e do app lidas do mesmo TS
+(regras(): acoes_dieta, acoes_aluno, tabelas_dieta e o servidor de cada pedido) e o bucket do diário.
 Sem segredo nem dado pessoal na saída: chaves pela Management API, senhas em ~/.physiq-teste-<nome> (600); das respostas só saem
 status, códigos, contagens e tempos.
 """
@@ -44,6 +47,7 @@ SCRATCH = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml19"
 C.SAIDA = SCRATCH / "agente"
 MEDICAO = SCRATCH / "medicao"
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml19" / "a"
+PRINTS_B = PRINTS.parent / "b"  # hml-19b: b_editor, b_receita, b_alimento, b_app_marcar, b_semente_erro, b_app_erro
 ESTADO_ARQ = SCRATCH / "agente" / "e2e_estado.json"
 MARCA = "hml19 e2e"
 PRINCIPAL_REF = B17.PRINCIPAL_REF
@@ -56,6 +60,7 @@ ORIGEM_FORA = "https://exemplo-fora-da-lista.example"
 ORIGEM_PADRAO = "https://physiqcalc.com.br"
 
 P_CONTA = "w5p-nutri"     # a nutricionista de TESTE (P): a nutri responsável pela w5p-aluna
+A_CONTA = "w5p-aluna"     # hml-19b: a aluna de TESTE (o app: marcar refeição/meta e a foto do diário)
 N1_CONTA = "w13-dono"     # o profissional de OUTRA conta (N1)
 PROD_CONTA = "nutri-legado"  # produção, SÓ LEITURA: nutri.teste.claude@physiqnutri.app
 
@@ -221,6 +226,11 @@ def bucket_dos_anexos(s: str | None = None) -> str:
     return "anexos-staging" if (s or schema()) == "staging" else "anexos"
 
 
+def bucket_do_diario(s: str | None = None) -> str:
+    """hml-19b: o bucket das fotos do diário do ambiente (staging = diario-staging)."""
+    return "diario-staging" if (s or schema()) == "staging" else "diario"
+
+
 # ───────────────────────── as regras do servidor, lidas do TS (sem rede) ─────────────────────────
 _JS_REGRAS = r"""
 import { readFileSync } from "node:fs";
@@ -228,16 +238,46 @@ import { pathToFileURL } from "node:url";
 const m = await import(pathToFileURL(process.argv[1]).href);
 const e = JSON.parse(readFileSync(0, "utf8"));
 const saida = { acoes: Object.fromEntries(m.ACOES_NUTRICAO.map((a) => [a, { tabela: m.ACOES[a].tabela, operacao: m.ACOES[a].operacao }])),
-  tabelas: [...m.TABELAS_PRONTUARIO], conferidos: [] };
+  tabelas: [...m.TABELAS_PRONTUARIO], conferidos: [],
+  // hml-19b: a Dieta e o app do aluno (as listas à parte; o despacho moduloDoPedido)
+  acoes_dieta: Object.fromEntries((m.ACOES_DA_DIETA ?? []).map((a) => [a, { tabela: m.ACOES_DIETA[a].tabela, operacao: m.ACOES_DIETA[a].operacao }])),
+  acoes_aluno: [...(m.ACOES_DO_ALUNO ?? [])], tabelas_dieta: [...(m.TABELAS_DIETA ?? [])] };
+const dieta = (acao, corpo) => {
+  switch (acao) {
+    case "padroes_garantir": return m.secaoDoPadraoDaDieta(corpo.secao) ? { ok: true } : { ok: false, erro: "secao_invalida" };
+    case "plano_criar": return m.lerPlanoNovo(corpo);
+    case "plano_duplicar": return m.lerDuplicarPlano(corpo);
+    case "plano_copiar_semana": return m.lerCopiarSemana(corpo);
+    case "dieta_ordenar": return m.lerOrdenar(corpo);
+    case "receita_salvar": return m.lerReceita(corpo);
+    case "alimento_salvar": return m.lerAlimento(corpo);
+    case "registro_diario_salvar": return m.lerRegistroDiario(corpo, e.userId);
+    case "diario_reagir": return m.lerReacao(corpo, new Date(0));
+    case "grupo_receita_excluir": case "diario_excluir": return m.ehUuid(corpo.id) ? { ok: true } : { ok: false, erro: "dados_invalidos", campo: "id" };
+    default: return m.montarGravacaoDieta(acao, corpo, e.userId, new Date(0));
+  }
+};
+const aluno = (acao, corpo) => {
+  switch (acao) {
+    case "aluno_marcar_refeicao": return m.lerMarcacao(corpo, "refeicao_id");
+    case "aluno_marcar_meta": return m.lerMarcacao(corpo, "meta_id");
+    case "aluno_diario_preparar": return m.lerPedidoDeFotoDoDiario(corpo);
+    default: return m.lerEnvioDoDiario(corpo);
+  }
+};
 for (const [acao, corpo] of e.pedidos ?? []) {
   let r;
-  if (acao === "padroes_garantir") r = m.secaoDoPadrao(corpo.secao) ? { ok: true } : { ok: false, erro: "secao_invalida" };
+  const mod = m.moduloDoPedido ? m.moduloDoPedido({ ...corpo, acao }) : null;
+  if (mod && mod.modulo === "dieta") r = dieta(acao, corpo);
+  else if (mod && mod.modulo === "aluno") r = aluno(acao, corpo);
+  else if (acao === "padroes_garantir") r = m.secaoDoPadrao(corpo.secao) ? { ok: true } : { ok: false, erro: "secao_invalida" };
   else if (acao === "anexo_preparar") r = m.lerPedidoDeAnexo(corpo);
   else if (acao === "anexo_registrar") r = m.lerRegistroDeAnexo(corpo, e.userId);
   else if (acao === "anexo_excluir") r = m.ehUuid(corpo.id) ? { ok: true } : { ok: false, erro: "dados_invalidos", campo: "id" };
   else if (acao === "registro_gestacional_salvar") r = m.lerRegistroGestacional(corpo, e.userId);
   else r = m.montarGravacao(acao, corpo, e.userId, new Date(0));
-  saida.conferidos.push({ acao, ok: r.ok === true, erro: r.erro ?? null, campo: r.campo ?? null, valores: r.valores ?? null, linhas: r.linhas ?? null });
+  saida.conferidos.push({ acao, modulo: mod ? mod.modulo : null, ok: r.ok === true, erro: r.erro ?? null, campo: r.campo ?? null, valores: r.valores ?? null,
+    linhas: r.linhas ?? null, r });
 }
 console.log(JSON.stringify(saida));
 """
@@ -264,8 +304,19 @@ def rpcs_que_gravam() -> set[str]:
     return set(re.findall(r'"([a-z0-9_]+)"', bloco))
 
 
+def tabelas_da_dieta() -> set[str]:
+    texto = REGRAS_TS.read_text(encoding="utf-8")
+    if "export const TABELAS_DIETA = [" not in texto:
+        return set()
+    bloco = texto.split("export const TABELAS_DIETA = [", 1)[1].split("] as const;", 1)[0]
+    return set(re.findall(r'"([a-z_]+)"', bloco))
+
+
 TABELAS = tabelas_do_prontuario()
-RPC_GRAVA = rpcs_que_gravam()
+TABELAS_DIETA = tabelas_da_dieta()
+# hml-19b: as RPCs que o app do aluno chamava direto (o código antigo, o ANTES) — gravam, mesmo depois de saírem do RPC_QUE_GRAVAM
+RPCS_DO_APP = {"paciente_marcar_refeicao", "aluno_marcar_meta", "diario_enviar"}
+RPC_GRAVA = rpcs_que_gravam() | RPCS_DO_APP
 
 
 # ───────────────────────── a guarda que CONTA (por tela e por ação) ─────────────────────────
@@ -276,7 +327,7 @@ def classificar(p: dict) -> str | None:
         return None
     if tipo == "tab":
         if m in ("POST", "PATCH", "PUT", "DELETE"):
-            return "rest_prontuario" if nome in TABELAS else "rest_outras"
+            return "rest_prontuario" if nome in TABELAS else "rest_dieta" if nome in TABELAS_DIETA else "rest_outras"
         return "get_profiles" if (m == "GET" and nome == "profiles") else None
     if tipo == "rpc":
         return "rpc_grava" if nome in RPC_GRAVA else None
@@ -386,7 +437,7 @@ class Estado:
         C.json_arquivo(ESTADO_ARQ, self.d)
 
     def linha(self, tabela: str, id_: object) -> None:
-        if tabela in TABELAS and C.eh_uuid(id_) and [tabela, id_] not in self.d["linhas"]:
+        if tabela in (TABELAS | TABELAS_DIETA) and C.eh_uuid(id_) and [tabela, id_] not in self.d["linhas"]:
             self.d["linhas"].append([tabela, id_])
             self.salvar()
 
@@ -403,17 +454,33 @@ class Estado:
             ESTADO_ARQ.unlink()
 
 
+# hml-19b: as filhas da Dieta não têm dono nem Lixeira — saem com o pai (o plano, o alimento, a receita) em cascata
+DIETA_SEM_DONO = {"refeicoes", "itens_refeicao", "medidas_caseiras", "ingredientes_receita"}
+# a ordem do DELETE da Dieta (as FKs do staging, catálogo de 11/10): quem aponta para outra sai antes — o item e o ingrediente apontam
+# para o alimento SEM cascata (então o plano e a receita saem antes do alimento); o resto é cascata ou "set null"
+ORDEM_LIMPEZA_DIETA = (
+    "diario_alimentar", "registros_diarios", "indicacoes_produto", "formulas_manipuladas", "metas", "orientacoes", "planos_alimentares",
+    "calculos_energeticos", "receitas", "grupos_receita", "alimentos", "produtos", "modelos_formula", "modelos_meta", "modelos_orientacao",
+)
+
+
+def _ordem_do_delete(tabela: str) -> tuple[int, str]:
+    return (ORDEM_LIMPEZA_DIETA.index(tabela) if tabela in ORDEM_LIMPEZA_DIETA else -1, tabela)
+
+
 def sql_apagar_linhas(s: str, linhas: list[list[str]], dono: str) -> list[str]:
-    """O DELETE da massa da rodada (só no staging, só os ids da rodada E do dono de TESTE): 1 comando por tabela."""
+    """O DELETE da massa da rodada (só no staging, só os ids da rodada E do dono de TESTE): 1 comando por tabela. hml-19b: as tabelas
+    da Dieta com dono entram do mesmo jeito, na ordem das FKs (ORDEM_LIMPEZA_DIETA, depois das do Prontuário); as filhas (sem dono)
+    ficam de fora — saem com o pai em cascata."""
     if s != "staging":
         raise SystemExit("a massa só existe no staging — nada a apagar em outro schema")
     C.uuid_ok(dono)
     por: dict[str, list[str]] = {}
     for tabela, id_ in linhas:
-        if tabela in TABELAS and C.eh_uuid(id_):
+        if (tabela in TABELAS or (tabela in TABELAS_DIETA and tabela not in DIETA_SEM_DONO)) and C.eh_uuid(id_):
             por.setdefault(tabela, []).append(id_)
     return [f"delete from {s}.{tabela} where nutricionista_id = '{dono}' and id = any(array[{', '.join(C.txt(i) for i in ids)}]::uuid[])"
-            for tabela, ids in sorted(por.items())]
+            for tabela, ids in sorted(por.items(), key=lambda x: _ordem_do_delete(x[0]))]
 
 
 def sql_contar_marca(s: str, rodada: str | None = None) -> str:
@@ -428,4 +495,23 @@ def sql_contar_marca(s: str, rodada: str | None = None) -> str:
     }
     assert set(colunas) == TABELAS, sorted(TABELAS ^ set(colunas))
     partes = [f"(select count(*) from {s}.{t} where {c} like {C.txt('%' + marca.replace(' ', '%') + '%')})::int as {t}" for t, c in sorted(colunas.items())]
+    return "select " + ", ".join(partes)
+
+
+# ───────────────────────── hml-19b: a marca nas tabelas da Dieta (só contagem) ─────────────────────────
+# a coluna de texto onde a rodada põe a marca, em cada tabela da Dieta com dono (as filhas saem com o pai)
+COLUNAS_MARCA_DIETA = {
+    "planos_alimentares": "titulo", "registros_diarios": "observacao", "calculos_energeticos": "observacao", "produtos": "nome",
+    "indicacoes_produto": "produto_nome", "formulas_manipuladas": "titulo", "modelos_formula": "titulo", "metas": "titulo",
+    "modelos_meta": "titulo", "orientacoes": "titulo", "modelos_orientacao": "titulo", "alimentos": "nome", "receitas": "nome",
+    "grupos_receita": "nome", "diario_alimentar": "comentario",
+}
+
+
+def sql_contar_marca_dieta(s: str, rodada: str | None = None) -> str:
+    """Só contagem (SQL só leitura): as linhas com a marca da hml-19 em cada tabela da Dieta com dono (vivas e na Lixeira)."""
+    marca = f"{MARCA} {rodada}" if rodada else MARCA
+    assert set(COLUNAS_MARCA_DIETA) == TABELAS_DIETA - DIETA_SEM_DONO, sorted((TABELAS_DIETA - DIETA_SEM_DONO) ^ set(COLUNAS_MARCA_DIETA))
+    partes = [f"(select count(*) from {s}.{t} where {c} like {C.txt('%' + marca.replace(' ', '%') + '%')})::int as {t}"
+              for t, c in sorted(COLUNAS_MARCA_DIETA.items())]
     return "select " + ", ".join(partes)
