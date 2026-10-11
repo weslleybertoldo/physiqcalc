@@ -1,6 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/examesUtil.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { format, isValid, parseISO } from "date-fns";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
+import { CATALOGO_EXAMES_PADRAO, type ExamePadrao } from "../../../../supabase-principal/functions/_shared/nutricao-padroes";
 
 // Regras PURAS dos exames laboratoriais (W18): catálogo (12 exames padrão de texto próprio), números pt-BR, situação do
 // resultado frente à referência, agrupamento por data, pedidos (lista de nomes), validação, formulário ⇄ registro, datas
@@ -78,21 +79,10 @@ export function textoValor(valor: number | null | undefined, valorTexto: string 
 export const situacaoDoResultado = (r: { valor: number | null; ref_min: number | null; ref_max: number | null }): Situacao => situacaoResultado(r.valor, r.ref_min, r.ref_max);
 
 // ---- Catálogo padrão (texto próprio do PhysiqNutri; faixas usuais de laboratório, editáveis por ela) ----
-export type ExamePadrao = { nome: string; unidade: string; ref_min: number | null; ref_max: number | null; referencia_texto: string };
-export const CATALOGO_PADRAO: ExamePadrao[] = [
-  { nome: "Glicemia de jejum", unidade: "mg/dL", ref_min: 70, ref_max: 99, referencia_texto: "" },
-  { nome: "Hemoglobina glicada", unidade: "%", ref_min: null, ref_max: 5.6, referencia_texto: "" },
-  { nome: "Colesterol total", unidade: "mg/dL", ref_min: null, ref_max: 190, referencia_texto: "" },
-  { nome: "HDL", unidade: "mg/dL", ref_min: 40, ref_max: null, referencia_texto: "" },
-  { nome: "LDL", unidade: "mg/dL", ref_min: null, ref_max: 130, referencia_texto: "" },
-  { nome: "Triglicerídeos", unidade: "mg/dL", ref_min: null, ref_max: 150, referencia_texto: "" },
-  { nome: "TSH", unidade: "mUI/L", ref_min: 0.4, ref_max: 4, referencia_texto: "" },
-  { nome: "Vitamina D (25-OH)", unidade: "ng/mL", ref_min: 30, ref_max: 100, referencia_texto: "" },
-  { nome: "Vitamina B12", unidade: "pg/mL", ref_min: 200, ref_max: 900, referencia_texto: "" },
-  { nome: "Ferritina", unidade: "ng/mL", ref_min: 30, ref_max: 300, referencia_texto: "" },
-  { nome: "Hemoglobina", unidade: "g/dL", ref_min: 12, ref_max: 16, referencia_texto: "" },
-  { nome: "Creatinina", unidade: "mg/dL", ref_min: 0.6, ref_max: 1.2, referencia_texto: "" },
-];
+// hml-19a (H-81): mora em supabase-principal/functions/_shared/nutricao-padroes.ts — a semente nasce no servidor (função
+// nutricao › padroes_garantir); aqui o reexport, com os nomes de sempre.
+export type { ExamePadrao };
+export const CATALOGO_PADRAO: ExamePadrao[] = CATALOGO_EXAMES_PADRAO;
 /** Favoritos primeiro; dentro de cada grupo, ordem alfabética do nome. */
 export const ordenarCatalogo = <T extends { favorito: boolean; nome: string }>(lista: T[]): T[] =>
   [...lista].sort((a, b) => Number(b.favorito) - Number(a.favorito) || a.nome.localeCompare(b.nome, "pt-BR"));

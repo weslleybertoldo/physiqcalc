@@ -34,6 +34,16 @@ DOWNLOADS = B.SCRATCH / "downloads"
 ESCRITA_RPC = re.compile(r"/rest/v1/rpc/(lixeira_restaurar|lixeira_apagar|aluno_remover|marcar_aviso|marcar|salvar|criar|"
                          r"registrar|aceitar|excluir|apagar|atualizar|enviar)")
 ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
+# hml-19a (risco 2 da spec hml-19 §8): a nutricao (jeito 2 — as gravações da nutrição pelo servidor) grava em TODA ação: o POST nela
+# é escrita, como o POST em tabela. Teste: python3 e2e/hml19/guarda_teste.py.
+ESCRITA_FUNCAO = re.compile(r"/functions/v1/nutricao(?:[/?#]|$)")
+
+
+def eh_escrita(metodo: str, url: str) -> bool:
+    """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e no Storage (fora o link de leitura)."""
+    return metodo in ("POST", "PATCH", "PUT", "DELETE") and bool(
+        ESCRITA_TABELA.search(url) or ESCRITA_RPC.search(url) or ESCRITA_FUNCAO.search(url)
+        or ("/storage/v1/object/" in url and "/storage/v1/object/sign/" not in url))
 
 
 def ler(sql: str) -> list:
@@ -59,10 +69,7 @@ class Guarda:
     def instalar(self, ctx) -> None:
         def rota(route, request) -> None:
             u, m = request.url, request.method
-            escrita = m in ("POST", "PATCH", "PUT", "DELETE") and (
-                ESCRITA_TABELA.search(u) or ESCRITA_RPC.search(u)
-                or ("/storage/v1/object/" in u and "/storage/v1/object/sign/" not in u))
-            if escrita:
+            if eh_escrita(m, u):
                 self.bloqueadas.append(f"{m} {u.split('?')[0]}")
                 route.abort()
                 return

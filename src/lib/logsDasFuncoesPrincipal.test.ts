@@ -23,11 +23,15 @@ const FUNCOES = [
   "excluir-minha-conta", "exportar-meus-dados", "master-contas", "mp-webhook", "mp-webhook-aluno", "mp-webhook-conta",
   "pagamentos-aluno", "pos-login", "push-enviar", "vincular-aluno", "whatsapp-agente", "whatsapp-conectar",
   "master-financeiro", "master-planos", "erro-avisar", "automaticas-fila",
+  "nutricao", // hml-19a: o jeito 2 da nutrição, pela porta-pessoa (o log e o catch final moram lá, como nas master-*)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
+/** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts. */
+const PESSOA = ["nutricao"];
 /** Onde mora o catch final: na index.ts, menos nas 3 master-* (servir, da master-porta) e na erro-avisar (atenderPedido). */
 const CATCH_FINAL: Record<string, string> = {
   ...Object.fromEntries(MASTER.map((f) => [f, "_shared/master-porta.ts"])),
+  ...Object.fromEntries(PESSOA.map((f) => [f, "_shared/porta-pessoa.ts"])),
   "erro-avisar": "_shared/erro-avisar-regras.ts",
 };
 const LOG = "_shared/log.ts";
@@ -128,12 +132,15 @@ describe("hml-10: os detectores acham o que procuram (controle positivo)", () =>
 describe("hml-10 (D2/D6): as funções do principal desta W", () => {
   const todos = [...new Set(FUNCOES.flatMap(arquivosDa))].sort();
 
-  it("o fecho dos imports pega as 24 funções e os _shared que escreviam no console (fora o log.ts)", () => {
+  it(`o fecho dos imports pega as ${FUNCOES.length} funções e os _shared que escreviam no console (fora o log.ts)`, () => {
     for (const f of FUNCOES) expect(todos, f).toContain(`${f}/index.ts`);
     for (const s of ["app-sem-profissional", "exclusao-profissional", "treino-servidor", "financeiro-mp", "master-porta",
       "avisar-erro", "erro-avisar-regras", "erros"]) {
       expect(todos).toContain(`_shared/${s}.ts`);
     }
+    // hml-19a: a porta das funções jeito 2 (e as regras/padrões da nutricao) entram no fecho e passam pelas mesmas guardas
+    for (const s of ["porta-pessoa", "nutricao-regras", "nutricao-padroes"]) expect(todos).toContain(`_shared/${s}.ts`);
+    expect(todos).toContain("nutricao/prontuario.ts");
     expect(todos).not.toContain(LOG);
   });
 
@@ -159,13 +166,20 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     expect(bloco, rel).toContain("log.excecao(");
   });
 
-  it.each(FUNCOES.filter((f) => !MASTER.includes(f)))("%s: o log tem o nome da função e avisa (avisarErro)", (funcao) => {
+  it.each(FUNCOES.filter((f) => !MASTER.includes(f) && !PESSOA.includes(f)))("%s: o log tem o nome da função e avisa (avisarErro)", (funcao) => {
     expect(ler(`${funcao}/index.ts`)).toContain(`criarLog("${funcao}", { avisar: avisarErro })`);
   });
 
   it("as 3 master: o log nasce na master-porta com o nome que cada uma passa ao servir", () => {
     expect(ler("_shared/master-porta.ts")).toContain("criarLog(nome, { avisar: avisarErro })");
     for (const f of MASTER) expect(ler(`${f}/index.ts`)).toContain(`servir("${f}", `);
+  });
+
+  it("hml-19a: a nutricao — o log nasce na porta-pessoa com o nome que ela passa ao servirComoPessoa; sem service role", () => {
+    const porta = ler("_shared/porta-pessoa.ts");
+    expect(porta).toContain("criarLog(nome, { avisar: avisarErro })");
+    expect(porta).not.toMatch(/SERVICE_ROLE|service_role/);
+    for (const f of PESSOA) expect(ler(`${f}/index.ts`)).toContain(`servirComoPessoa("${f}", `);
   });
 });
 
