@@ -1,6 +1,8 @@
 // Physiq hml-19a (H-41 · H-81 · jeito 2) — as regras PURAS da função nutricao (supabase-principal/functions/_shared/nutricao-regras.ts):
 // as mesmas que rodam na borda (Deno). Positivo: cada ação conhecida monta a gravação certa, com o dono = quem chama. Negativo: ação
 // desconhecida, coluna fora da lista, dono no corpo, uuid ruim, texto/JSON acima do teto, anexo fora da pasta, o status de cada erro.
+// hml-19b: os blocos do fim — a Dieta, as Dietas e o app do aluno (as listas novas, o despacho entre os 3 módulos, as RPCs atômicas, o
+// registro do dia, o diário e os padrões de Manipulados/Metas/Orientações). Os blocos da 19a acima não mudam.
 import { describe, expect, it } from "vitest";
 import {
   ACOES, ACOES_NUTRICAO, ANEXO_MAX_BYTES, ANEXO_MIMES, LIMITE_CORPO, PADROES, STATUS_DO_ERRO, TABELAS_PRONTUARIO, acaoDoPedido, bucketDosAnexos,
@@ -8,8 +10,22 @@ import {
   secaoDoPadrao, statusDoErro, valorDoCampo, type AcaoNutricao,
 } from "../../supabase-principal/functions/_shared/nutricao-regras";
 import {
+  ACOES_ALUNO, ACOES_DA_DIETA, ACOES_DIETA, ACOES_DO_ALUNO, COMENTARIO_NUTRI_MAX, DIARIO_MAX_BYTES, DIARIO_MIMES, ERROS_DA_MARCACAO, ERROS_DO_DIARIO,
+  PADROES_DIETA, RPCS_DA_DIETA, TABELAS_DIETA, TABELAS_DIETA_SEM_DONO, TABELAS_QUE_ORDENAM, acaoDaDieta, acaoDoAluno, bucketDoDiario, caminhoDoDiario,
+  caminhoDoDiarioValido, erroDaRpc, lerAlimento, lerCopiarSemana, lerDuplicarPlano, lerEnvioDoDiario, lerMarcacao, lerOrdenar, lerPedidoDeFotoDoDiario,
+  lerPlanoNovo, lerReacao, lerReceita, lerRegistroDiario, montarGravacaoDieta, moduloDoPedido, secaoDoPadraoDaDieta, temDono, type AcaoDieta,
+} from "../../supabase-principal/functions/_shared/nutricao-regras";
+import {
   CATALOGO_EXAMES_PADRAO, MODELOS_DOCUMENTO_PADRAO, PERGUNTAS_ANAMNESE_PADRAO, SECOES_PADRAO, TITULO_ANAMNESE_PADRAO, itensPadrao,
 } from "../../supabase-principal/functions/_shared/nutricao-padroes";
+import {
+  CONTEUDO_ORIENTACAO_PADRAO, MODELOS_FORMULA_PADRAO, MODELOS_META_PADRAO, SECOES_PADRAO_DIETA, TITULO_ORIENTACAO_PADRAO, itensPadraoDaDieta,
+} from "../../supabase-principal/functions/_shared/nutricao-padroes";
+import { MODELOS_PADRAO as METAS_PADRAO, normalizarDias } from "@/nutricao/editor/lib/metasUtil";
+import { MODELOS_PADRAO as FORMULAS_PADRAO, normalizarAtivos } from "@/nutricao/editor/lib/manipuladosUtil";
+import { CONTEUDO_MODELO_PADRAO, TITULO_MODELO_PADRAO as TITULO_ORIENTACAO_DA_TELA } from "@/nutricao/editor/lib/orientacoesUtil";
+import { FOTO_TAMANHO_MAX, MIMES_DIARIO, REACOES, nomeObjeto } from "@/nutricao/app/diarioUtil";
+import { COMENTARIO_NUTRI_MAX as COMENTARIO_NUTRI_DA_TELA } from "@/painel/dietas/diarioPainel";
 import { PERGUNTAS_PADRAO, TITULO_MODELO_PADRAO } from "@/nutricao/prontuario/lib/anamneseUtil";
 import { MODELOS_PADRAO } from "@/nutricao/prontuario/lib/documentosUtil";
 import { CATALOGO_PADRAO, NOME_EXAME_MAX } from "@/nutricao/prontuario/lib/examesUtil";
@@ -334,5 +350,370 @@ describe("hml-19a — os erros: status e tradução do banco (o erro do banco nu
     expect(erroDoBanco({ code: "", message: "TimeoutError: Signal timed out." })).toEqual({ erro: "tempo_esgotado", inesperado: true });
     expect(erroDoBanco({ code: "57014", message: "canceling statement due to statement timeout" })).toEqual({ erro: "erro_interno", inesperado: true });
     expect(erroDoBanco(null)).toEqual({ erro: "erro_interno", inesperado: true });
+  });
+});
+
+// ═════════════════════════════ hml-19b — a Dieta, as Dietas e o app do aluno ═════════════════════════════
+const PLANO = "55555555-5555-4555-8555-555555555555";
+const REF = "66666666-6666-4666-8666-666666666666";
+const ALI = "77777777-7777-4777-8777-777777777777";
+
+/** Um corpo válido e mínimo de cada ação declarativa da Dieta (o que as libs da tela mandam). */
+const EXEMPLOS_DIETA: Partial<Record<AcaoDieta, Record<string, unknown>>> = {
+  plano_editar: { id: ID, titulo: "Plano", kcal_alvo: 1800, observacao: null, favorito: true },
+  plano_excluir: { id: ID },
+  refeicao_criar: { plano_id: PLANO, nome: "Almoço", horario: "12:30", observacao: null, ordem: 2, dias_semana: [1, 3] },
+  refeicao_editar: { id: ID, nome: "Almoço", horario: null, observacao: "leve" },
+  refeicao_excluir: { id: ID },
+  item_criar: { refeicao_id: REF, alimento_id: ALI, ordem: 0, quantidade_g: 50, medida_caseira_id: null, quantidade_medida: null, observacao: null },
+  itens_criar: { linhas: [{ refeicao_id: REF, alimento_id: ALI, receita_id: ID, ordem: 3, quantidade_g: 40, medida_caseira_id: null, quantidade_medida: null, observacao: null }] },
+  item_editar: { id: ID, quantidade_g: 60, medida_caseira_id: null, quantidade_medida: null, observacao: "x" },
+  item_excluir: { id: ID },
+  registro_diario_editar: { id: ID, data: "2026-10-11", agua_ml: 1500, sintomas: ["azia"], observacao: null },
+  registro_diario_excluir: { id: ID },
+  calculo_energetico_criar: {
+    paciente_id: P, data: ISO, formula: "mifflin", peso: 70, altura: 170, idade: 30, sexo: "f", massa_magra: null, fator_atividade: 1.55, atividades: [],
+    tmb: 1400, get: 2170, ajuste_kcal: -300, vet: 1870, objetivo: "perder", observacao: null,
+  },
+  calculo_energetico_editar: { id: ID, vet: 1900 },
+  calculo_energetico_excluir: { id: ID },
+  produto_criar: { nome: "Whey", marca: "", categoria: "suplemento", apresentacao: "", dose_padrao: "30 g", modo_uso: "", link: "", observacao: "", favorito: false },
+  produto_editar: { id: ID, favorito: true },
+  produto_excluir: { id: ID },
+  indicacao_criar: {
+    paciente_id: P, produto_id: null, produto_nome: "Creatina", produto_marca: "", produto_apresentacao: "", produto_categoria: "suplemento", dose: "3 g",
+    horario: "", duracao: "", inicio: "2026-10-11", observacao: "", ordem: 2,
+  },
+  indicacao_editar: { id: ID, ativa: true, ordem: 4 },
+  indicacao_excluir: { id: ID },
+  modelo_formula_criar: { titulo: "F", ativos: [{ ativo: "x", dose: "1", unidade: "mg" }], posologia: "", quantidade: "", observacao: "", favorito: true },
+  modelo_formula_editar: { id: ID, favorito: false },
+  modelo_formula_excluir: { id: ID },
+  formula_criar: { paciente_id: P, modelo_id: null, titulo: "F", ativos: [], posologia: "", quantidade: "", observacao: "" },
+  formula_editar: { id: ID, titulo: "F2" },
+  formula_excluir: { id: ID },
+  modelo_meta_criar: { titulo: "M", descricao: "", dias_semana: [1, 2, 3, 4, 5, 6, 7], favorito: false },
+  modelo_meta_editar: { id: ID, dias_semana: [6, 7] },
+  modelo_meta_excluir: { id: ID },
+  meta_criar: { paciente_id: P, modelo_id: null, titulo: "Água", descricao: "", dias_semana: [1], ativa: true },
+  meta_editar: { id: ID, ativa: false },
+  meta_excluir: { id: ID },
+  modelo_orientacao_criar: { titulo: "O", conteudo: "## x", favorito: false },
+  modelo_orientacao_editar: { id: ID, conteudo: "y" },
+  modelo_orientacao_excluir: { id: ID },
+  orientacao_criar: { paciente_id: P, modelo_id: null, titulo: "O", conteudo: "z" },
+  orientacao_editar: { id: ID, titulo: "O", conteudo: "w" },
+  orientacao_excluir: { id: ID },
+  alimento_excluir: { id: ID },
+  receita_editar: { id: ID, favorita: true },
+  receita_excluir: { id: ID },
+  grupo_receita_criar: { nome: "Lanches" },
+  grupo_receita_editar: { id: ID, nome: "Lanches 2" },
+};
+const ESPECIAIS_DIETA: AcaoDieta[] = [
+  "plano_criar", "plano_duplicar", "plano_copiar_semana", "dieta_ordenar", "registro_diario_salvar", "alimento_salvar", "receita_salvar", "grupo_receita_excluir",
+  "diario_reagir", "diario_excluir",
+];
+const DECLARATIVAS_DIETA = ACOES_DA_DIETA.filter((a) => !ESPECIAIS_DIETA.includes(a));
+
+describe("hml-19b — a lista fechada da Dieta e do app do aluno", () => {
+  it("53 ações da Dieta (43 declarativas + 10 especiais) e 4 do app do aluno; as 3 listas não se cruzam", () => {
+    expect(ACOES_DA_DIETA).toHaveLength(53);
+    expect(DECLARATIVAS_DIETA).toHaveLength(43);
+    for (const a of ESPECIAIS_DIETA) expect(ACOES_DIETA[a].operacao, a).toBe("especial");
+    expect(ACOES_DO_ALUNO.sort()).toEqual(["aluno_diario_enviar", "aluno_diario_preparar", "aluno_marcar_meta", "aluno_marcar_refeicao"]);
+    const todas = [...ACOES_NUTRICAO, ...ACOES_DA_DIETA, ...ACOES_DO_ALUNO];
+    expect(new Set(todas).size).toBe(todas.length);
+  });
+
+  it("as 19 tabelas da spec §1.3 aparecem (as 2 filhas de RPC — medidas e ingredientes — pelo `tambem`); só as 4 filhas não têm dono", () => {
+    const usadas = new Set<string>();
+    for (const a of ACOES_DA_DIETA) {
+      const d = ACOES_DIETA[a] as { tabela: string | null; tambem?: readonly string[] };
+      if (d.tabela) usadas.add(d.tabela);
+      for (const t of d.tambem ?? []) usadas.add(t);
+    }
+    expect(usadas).toEqual(new Set(TABELAS_DIETA));
+    expect(TABELAS_DIETA).toHaveLength(19);
+    expect(TABELAS_DIETA.filter((t) => !temDono(t)).sort()).toEqual([...TABELAS_DIETA_SEM_DONO].sort());
+  });
+
+  it("as 7 RPCs atômicas da migration são as das ações especiais (nenhuma a mais, nenhuma a menos)", () => {
+    const rpcs = new Set(ACOES_DA_DIETA.map((a) => (ACOES_DIETA[a] as { rpc?: string }).rpc).filter(Boolean));
+    expect(rpcs).toEqual(new Set(RPCS_DA_DIETA));
+  });
+
+  it("ação desconhecida → null / acao_invalida; a especial não passa pelo CRUD", () => {
+    for (const v of ["", "plano_apagar_tudo", "PLANO_CRIAR", "toString", "__proto__", "constructor", null, 1, {}]) {
+      expect(acaoDaDieta(v), String(v)).toBeNull();
+      expect(acaoDoAluno(v), String(v)).toBeNull();
+    }
+    expect(montarGravacaoDieta("anamnese_criar", {}, EU)).toEqual({ ok: false, erro: "acao_invalida" });
+    expect(montarGravacaoDieta("receita_salvar", {}, EU)).toEqual({ ok: false, erro: "acao_invalida" });
+  });
+});
+
+describe("hml-19b — o despacho entre os 3 módulos da função (o do Prontuário não muda)", () => {
+  it("cada ação vai ao seu módulo; os padrões da Dieta vão à Dieta e os do Prontuário (e seção ruim) seguem no Prontuário", () => {
+    expect(moduloDoPedido({ acao: "anamnese_criar" })).toEqual({ modulo: "prontuario", acao: "anamnese_criar" });
+    for (const secao of ["anamnese", "documento", "exame", "financeiro", undefined]) {
+      expect(moduloDoPedido({ acao: "padroes_garantir", secao }), String(secao)).toEqual({ modulo: "prontuario", acao: "padroes_garantir" });
+    }
+    for (const secao of ["formula", "meta", "orientacao"]) {
+      expect(moduloDoPedido({ acao: "padroes_garantir", secao }), secao).toEqual({ modulo: "dieta", acao: "padroes_garantir" });
+    }
+    expect(moduloDoPedido({ acao: "plano_criar" })).toEqual({ modulo: "dieta", acao: "plano_criar" });
+    expect(moduloDoPedido({ acao: "aluno_marcar_refeicao" })).toEqual({ modulo: "aluno", acao: "aluno_marcar_refeicao" });
+    for (const acao of ["", "apagar_tudo", "__proto__", null, 7]) expect(moduloDoPedido({ acao }), String(acao)).toBeNull();
+  });
+});
+
+describe("hml-19b — positivo: a gravação de cada ação declarativa da Dieta", () => {
+  it.each(DECLARATIVAS_DIETA)("%s: monta a gravação na tabela certa (o dono é quem chama, onde a tabela tem dono)", (acao) => {
+    const corpo = EXEMPLOS_DIETA[acao];
+    expect(corpo, `falta o exemplo de ${acao}`).toBeTruthy();
+    const g = montarGravacaoDieta(acao, { acao, ...corpo }, EU, AGORA);
+    expect(g.ok, JSON.stringify(g)).toBe(true);
+    if (g.ok === false) return;
+    const def = ACOES_DIETA[acao] as { tabela: string; operacao: string };
+    expect(g.tabela).toBe(def.tabela);
+    expect(g.operacao).toBe(def.operacao);
+    if (g.operacao === "inserir") {
+      expect(g.valores.nutricionista_id).toBe(temDono(g.tabela) ? EU : undefined);
+      expect(g.valores).not.toHaveProperty("acao");
+    }
+    if (g.operacao === "inserir_lote") for (const l of g.linhas) expect(l).not.toHaveProperty("nutricionista_id");
+    if (g.operacao === "editar" || g.operacao === "excluir_suave" || g.operacao === "excluir") expect(g.id).toBe(ID);
+    if (g.operacao === "editar") {
+      expect(g.valores).not.toHaveProperty("id");
+      expect(g.valores).not.toHaveProperty("nutricionista_id");
+    }
+  });
+
+  it("o que volta: o item com o alimento e a receita; a receita com os ingredientes (o select de hoje); o resto, a linha", () => {
+    const item = montarGravacaoDieta("item_criar", EXEMPLOS_DIETA.item_criar!, EU, AGORA);
+    expect(item.ok && item.operacao === "inserir" && item.volta).toMatch(/^\*, alimento:alimentos\(.*medidas_caseiras\(\*\)\), receita:receitas\(id, nome\)$/);
+    const fav = montarGravacaoDieta("receita_editar", EXEMPLOS_DIETA.receita_editar!, EU, AGORA);
+    expect(fav.ok && fav.operacao === "editar" && fav.volta).toMatch(/^\*, ingredientes:ingredientes_receita\(\*, alimento:alimentos\(/);
+    const meta = montarGravacaoDieta("meta_criar", EXEMPLOS_DIETA.meta_criar!, EU, AGORA);
+    expect(meta.ok && meta.operacao === "inserir" && meta.volta).toBe("*");
+  });
+
+  it("o servidor põe: a indicação nasce ativa; o deleted_at do excluir; refeição e item SEM dono (seguem o plano)", () => {
+    const ind = montarGravacaoDieta("indicacao_criar", { ...EXEMPLOS_DIETA.indicacao_criar, ativa: false }, EU, AGORA);
+    expect(ind.ok && ind.operacao === "inserir" && ind.valores.ativa).toBe(true);
+    expect(montarGravacaoDieta("formula_excluir", { id: ID.toUpperCase() }, EU, AGORA)).toEqual({
+      ok: true, tabela: "formulas_manipuladas", operacao: "excluir_suave", id: ID, valores: { deleted_at: AGORA.toISOString() }, vivos: false,
+    });
+    expect(montarGravacaoDieta("refeicao_criar", EXEMPLOS_DIETA.refeicao_criar!, EU, AGORA)).toEqual({
+      ok: true, tabela: "refeicoes", operacao: "inserir", volta: "*",
+      valores: { plano_id: PLANO, ordem: 2, nome: "Almoço", horario: "12:30", observacao: null, dias_semana: [1, 3] },
+    });
+    expect(montarGravacaoDieta("item_excluir", { id: ID }, EU, AGORA)).toEqual({ ok: true, tabela: "itens_refeicao", operacao: "excluir", id: ID });
+  });
+
+  it("vivos: receita, grupo e alimento só mexem no que está fora da Lixeira (o filtro que a lib já fazia)", () => {
+    for (const a of ["receita_editar", "receita_excluir", "grupo_receita_editar", "alimento_excluir"] as AcaoDieta[]) {
+      const g = montarGravacaoDieta(a, EXEMPLOS_DIETA[a]!, EU, AGORA);
+      expect(g.ok && (g.operacao === "editar" || g.operacao === "excluir_suave") && g.vivos, a).toBe(true);
+    }
+    const plano = montarGravacaoDieta("plano_excluir", { id: ID }, EU, AGORA);
+    expect(plano.ok && plano.operacao === "excluir_suave" && plano.vivos).toBe(false);
+  });
+});
+
+describe("hml-19b — negativo: o corpo não manda no dono nem nas colunas (Dieta)", () => {
+  it("nutricionista_id, deleted_at, id, conta_id e created_at no corpo são ignorados (o dono é quem chama)", () => {
+    const g = montarGravacaoDieta("orientacao_criar", {
+      ...EXEMPLOS_DIETA.orientacao_criar, nutricionista_id: OUTRA, deleted_at: "2026-01-01T00:00:00Z", id: ID, conta_id: OUTRA, created_at: ISO,
+    }, EU, AGORA);
+    expect(g.ok).toBe(true);
+    if (g.ok === false || g.operacao !== "inserir") return;
+    expect(g.valores.nutricionista_id).toBe(EU);
+    for (const c of ["deleted_at", "id", "conta_id", "created_at"]) expect(g.valores, c).not.toHaveProperty(c);
+    // o item "Da receita" em lote: o dono que viesse na linha cai (itens não têm dono)
+    const lote = montarGravacaoDieta("itens_criar", { linhas: [{ ...(EXEMPLOS_DIETA.itens_criar!.linhas as object[])[0], nutricionista_id: OUTRA }] }, EU, AGORA);
+    expect(lote.ok && lote.operacao === "inserir_lote" && lote.linhas[0]).not.toHaveProperty("nutricionista_id");
+  });
+
+  it("editar não troca o dono, o aluno, o plano da refeição nem a Lixeira; só colunas de fora = nada a mudar", () => {
+    expect(montarGravacaoDieta("meta_editar", { id: ID, titulo: "x", nutricionista_id: OUTRA, paciente_id: P, deleted_at: null }, EU, AGORA))
+      .toMatchObject({ ok: true, valores: { titulo: "x" } });
+    expect(montarGravacaoDieta("refeicao_editar", { id: ID, plano_id: PLANO, ordem: 9 }, EU, AGORA)).toMatchObject({ ok: false, erro: "dados_invalidos", campo: "nada_a_mudar" });
+  });
+
+  it("uuid ruim, dias fora de 1–7, ordem negativa, texto acima do teto, lote vazio/grande → dados_invalidos", () => {
+    expect(montarGravacaoDieta("meta_criar", { ...EXEMPLOS_DIETA.meta_criar, paciente_id: "x" }, EU)).toMatchObject({ ok: false, campo: "paciente_id" });
+    expect(montarGravacaoDieta("meta_criar", { ...EXEMPLOS_DIETA.meta_criar, dias_semana: [0, 8] }, EU)).toMatchObject({ ok: false, campo: "dias_semana" });
+    expect(montarGravacaoDieta("modelo_meta_editar", { id: ID, dias_semana: [1.5] }, EU)).toMatchObject({ ok: false, campo: "dias_semana" });
+    expect(montarGravacaoDieta("refeicao_criar", { ...EXEMPLOS_DIETA.refeicao_criar, ordem: -1 }, EU)).toMatchObject({ ok: false, campo: "ordem" });
+    expect(montarGravacaoDieta("orientacao_editar", { id: ID, conteudo: "a".repeat(50_001) }, EU)).toMatchObject({ ok: false, campo: "conteudo" });
+    expect(montarGravacaoDieta("item_excluir", { id: "1; drop table itens_refeicao" }, EU)).toMatchObject({ ok: false, campo: "id" });
+    expect(montarGravacaoDieta("itens_criar", { linhas: [] }, EU)).toMatchObject({ ok: false, campo: "linhas" });
+    expect(montarGravacaoDieta("itens_criar", { linhas: Array.from({ length: 201 }, () => (EXEMPLOS_DIETA.itens_criar!.linhas as object[])[0]) }, EU)).toMatchObject({ ok: false, campo: "linhas" });
+    expect(montarGravacaoDieta("itens_criar", { linhas: [{ refeicao_id: REF, alimento_id: ALI, quantidade_g: 1 }] }, EU)).toMatchObject({ ok: false, campo: "ordem" });
+    expect(montarGravacaoDieta("plano_excluir", { id: ID }, "nao-e-uuid")).toMatchObject({ ok: false, erro: "dados_invalidos" });
+  });
+});
+
+describe("hml-19b — as ações especiais: o corpo das RPCs atômicas, do registro do dia e do diário", () => {
+  const REFEICOES = [{ nome: "Café da manhã", horario: "07:00", ordem: 0 }, { nome: "Ceia", horario: "22:00", ordem: 5 }];
+
+  it("plano_criar: o aluno, as colunas do plano e as refeições (até 30); o dono e o método não vêm do corpo", () => {
+    expect(lerPlanoNovo({ paciente_id: P, titulo: "Plano", kcal_alvo: 1800, observacao: null, calculo_energetico_id: null, refeicoes: REFEICOES, nutricionista_id: OUTRA, metodo: "x" }))
+      .toEqual({ ok: true, pacienteId: P, plano: { titulo: "Plano", kcal_alvo: 1800, observacao: null, calculo_energetico_id: null }, refeicoes: REFEICOES });
+    expect(lerPlanoNovo({ paciente_id: P, titulo: "Plano", refeicoes: Array.from({ length: 31 }, () => REFEICOES[0]) })).toMatchObject({ ok: false, campo: "refeicoes" });
+    expect(lerPlanoNovo({ paciente_id: P, titulo: "Plano", refeicoes: [{ nome: "x" }] })).toMatchObject({ ok: false, campo: "ordem" });
+    expect(lerPlanoNovo({ paciente_id: P, refeicoes: [] })).toMatchObject({ ok: false, campo: "titulo" });
+  });
+
+  it("plano_duplicar: o plano e o título; com paciente = usar modelo ★", () => {
+    expect(lerDuplicarPlano({ plano_id: PLANO, titulo: "Plano (cópia)", nutricionista_id: OUTRA })).toEqual({ ok: true, planoId: PLANO, pacienteId: null, titulo: "Plano (cópia)" });
+    expect(lerDuplicarPlano({ plano_id: PLANO, titulo: "Plano", paciente_id: P })).toEqual({ ok: true, planoId: PLANO, pacienteId: P, titulo: "Plano" });
+    expect(lerDuplicarPlano({ plano_id: PLANO, titulo: "   " })).toMatchObject({ ok: false, campo: "titulo" });
+    expect(lerDuplicarPlano({ plano_id: "x", titulo: "a" })).toMatchObject({ ok: false, campo: "plano_id" });
+  });
+
+  it("plano_copiar_semana e dieta_ordenar: listas de ids sem repetição; a tabela numa lista fechada", () => {
+    expect(lerCopiarSemana({ para_todos: [ID], para_apagar: [REF] })).toEqual({ ok: true, paraTodos: [ID], paraApagar: [REF] });
+    expect(lerCopiarSemana({ para_todos: [], para_apagar: [] })).toMatchObject({ ok: false, campo: "nada_a_mudar" });
+    expect(lerCopiarSemana({ para_todos: [ID], para_apagar: [ID] })).toMatchObject({ ok: false, campo: "para_apagar" });
+    expect(lerCopiarSemana({ para_todos: [ID, ID] })).toMatchObject({ ok: false, campo: "para_todos" });
+    expect(TABELAS_QUE_ORDENAM).toEqual(["refeicoes", "indicacoes_produto"]);
+    expect(lerOrdenar({ tabela: "refeicoes", ordens: [{ id: ID, ordem: 1 }, { id: REF, ordem: 2 }] })).toEqual({ ok: true, tabela: "refeicoes", ids: [ID, REF], ordens: [1, 2] });
+    expect(lerOrdenar({ tabela: "planos_alimentares", ordens: [{ id: ID, ordem: 1 }] })).toMatchObject({ ok: false, campo: "tabela" });
+    expect(lerOrdenar({ tabela: "refeicoes", ordens: [] })).toMatchObject({ ok: false, campo: "ordens" });
+    expect(lerOrdenar({ tabela: "refeicoes", ordens: [{ id: ID, ordem: 1 }, { id: ID, ordem: 2 }] })).toMatchObject({ ok: false, campo: "ordens" });
+    expect(lerOrdenar({ tabela: "refeicoes", ordens: [{ id: ID, ordem: -1 }] })).toMatchObject({ ok: false, campo: "ordem" });
+  });
+
+  it("receita_salvar e alimento_salvar: criar (o nome é obrigatório) ou editar pelo id; as colunas de fora caem", () => {
+    const ing = { alimento_id: ALI, quantidade_g: 50, medida_caseira_id: null, quantidade_medida: null, ordem: 0, observacao: "" };
+    expect(lerReceita({ receita: { nome: "Bolo", porcoes: 8, nutricionista_id: OUTRA }, ingredientes: [ing] }))
+      .toEqual({ ok: true, id: null, receita: { nome: "Bolo", porcoes: 8 }, ingredientes: [ing] });
+    expect(lerReceita({ id: ID, receita: { favorita: true }, ingredientes: [] })).toEqual({ ok: true, id: ID, receita: { favorita: true }, ingredientes: [] });
+    expect(lerReceita({ receita: { porcoes: 1 }, ingredientes: [] })).toMatchObject({ ok: false, campo: "nome" });
+    expect(lerReceita({ id: "x", receita: { nome: "a" }, ingredientes: [] })).toMatchObject({ ok: false, campo: "id" });
+    expect(lerReceita({ receita: { nome: "a" }, ingredientes: Array.from({ length: 101 }, () => ing) })).toMatchObject({ ok: false, campo: "ingredientes" });
+    const med = { descricao: "colher", gramas: 10, ordem: 0 };
+    expect(lerAlimento({ alimento: { nome: "Granola", porcao_g: 40, nutrientes: { ferro_mg: 1 }, fonte: "taco", nutricionista_id: OUTRA }, medidas: [med] }))
+      .toEqual({ ok: true, id: null, alimento: { nome: "Granola", porcao_g: 40, nutrientes: { ferro_mg: 1 } }, medidas: [med] });
+    expect(lerAlimento({ id: ID, alimento: { nome: "G" }, medidas: [{ descricao: "x", gramas: 1 }] })).toMatchObject({ ok: false, campo: "ordem" });
+    expect(lerAlimento({ alimento: [], medidas: [] })).toMatchObject({ ok: false, campo: "alimento" });
+  });
+
+  it("registro_diario_salvar: o aluno e o dia à parte; o dono vem de quem chama", () => {
+    expect(lerRegistroDiario({ paciente_id: P, data: "2026-10-11", agua_ml: 2000, sintomas: [], observacao: null, nutricionista_id: OUTRA }, EU))
+      .toEqual({ ok: true, pacienteId: P, dia: "2026-10-11", valores: { data: "2026-10-11", agua_ml: 2000, sintomas: [], observacao: null } });
+    expect(lerRegistroDiario({ paciente_id: P }, EU)).toMatchObject({ ok: false, campo: "data" });
+    expect(lerRegistroDiario({ paciente_id: P, data: "2026-10-11", agua_ml: 1.5 }, EU)).toMatchObject({ ok: false, campo: "agua_ml" });
+  });
+
+  it("diario_reagir: a reação, o comentário aparado (até 300, o teto da tela) e o agora do SERVIDOR; sem reação tira tudo", () => {
+    expect(COMENTARIO_NUTRI_MAX).toBe(COMENTARIO_NUTRI_DA_TELA);
+    expect([...["otimo", "bom", "atencao", "evitar"]]).toEqual(REACOES.map((r) => r.valor));
+    expect(lerReacao({ id: ID, reacao: "otimo", comentario: `  ${"a".repeat(400)} ` }, AGORA)).toEqual({
+      ok: true, id: ID, valores: { reacao_nutri: "otimo", comentario_nutri: "a".repeat(300), reagido_em: AGORA.toISOString() },
+    });
+    expect(lerReacao({ id: ID, reacao: null, comentario: "x" }, AGORA)).toEqual({ ok: true, id: ID, valores: { reacao_nutri: null, comentario_nutri: "", reagido_em: null } });
+    expect(lerReacao({ id: ID, reacao: "amei" }, AGORA)).toMatchObject({ ok: false, campo: "reacao" });
+    expect(lerReacao({ id: ID, reacao: "bom", comentario: "a".repeat(2001) }, AGORA)).toMatchObject({ ok: false, campo: "comentario" });
+  });
+});
+
+describe("hml-19b — o app do aluno: marcar e a foto do diário pelo link assinado", () => {
+  const NUTRI = "88888888-8888-4888-8888-888888888888";
+  const MEU = caminhoDoDiario(NUTRI, P, "image/jpeg", ID);
+
+  it("marcar: o id, o dia e o ✓ (todos obrigatórios)", () => {
+    expect(lerMarcacao({ refeicao_id: REF, data: "2026-10-11", concluida: true }, "refeicao_id")).toEqual({ ok: true, id: REF, dia: "2026-10-11", concluida: true });
+    expect(lerMarcacao({ meta_id: ID, data: "2026-10-11", concluida: false, paciente_id: OUTRA }, "meta_id")).toEqual({ ok: true, id: ID, dia: "2026-10-11", concluida: false });
+    expect(lerMarcacao({ refeicao_id: REF, data: "2026-10-11" }, "refeicao_id")).toMatchObject({ ok: false, campo: "concluida" });
+    expect(lerMarcacao({ refeicao_id: REF, data: "11/10/2026", concluida: true }, "refeicao_id")).toMatchObject({ ok: false, campo: "data" });
+    expect(ACOES_ALUNO.aluno_marcar_refeicao.rpc).toBe("paciente_marcar_refeicao");
+    expect(ACOES_ALUNO.aluno_marcar_meta.rpc).toBe("aluno_marcar_meta");
+    expect(ACOES_ALUNO.aluno_diario_enviar.rpc).toBe("diario_enviar");
+  });
+
+  it("o caminho <nutri>/<aluno>/<uuid>.<ext> montado no servidor é o MESMO formato do app (nomeObjeto); os tipos e o tamanho são os do app", () => {
+    expect(MEU).toBe(nomeObjeto(NUTRI, P, "image/jpeg", ID));
+    expect(caminhoDoDiario(NUTRI, P, "image/heic", ID)).toBe(nomeObjeto(NUTRI, P, "image/heic", ID));
+    expect({ ...DIARIO_MIMES }).toEqual(MIMES_DIARIO);
+    expect(DIARIO_MAX_BYTES).toBe(FOTO_TAMANHO_MAX);
+    expect(bucketDoDiario("staging")).toBe("diario-staging");
+    expect(bucketDoDiario("public")).toBe("diario");
+  });
+
+  it("preparar: a matrícula, o tipo (só imagem do diário) e até 10 MB", () => {
+    expect(lerPedidoDeFotoDoDiario({ paciente_id: P, nutricionista_id: NUTRI, tipo: "image/JPEG", tamanho: 1234 })).toEqual({
+      ok: true, pacienteId: P, nutriId: NUTRI, mime: "image/jpeg", tamanho: 1234,
+    });
+    expect(lerPedidoDeFotoDoDiario({ paciente_id: P, nutricionista_id: NUTRI, tipo: "application/pdf", tamanho: 10 })).toEqual({ ok: false, erro: "tipo_invalido" });
+    expect(lerPedidoDeFotoDoDiario({ paciente_id: P, nutricionista_id: NUTRI, tipo: "image/png", tamanho: FOTO_TAMANHO_MAX + 1 })).toEqual({ ok: false, erro: "arquivo_grande" });
+    expect(lerPedidoDeFotoDoDiario({ paciente_id: P, nutricionista_id: "x", tipo: "image/png", tamanho: 1 })).toMatchObject({ ok: false, campo: "nutricionista_id" });
+  });
+
+  it("N9: registrar a foto com o caminho de outra pasta (outra nutri, outro aluno, fora do formato) → fora_da_pasta", () => {
+    const corpo = { paciente_id: P, nutricionista_id: NUTRI, tipo: "image/jpeg", tamanho: 10, codigo: " ABC123 ", refeicao: "almoco", comentario: "  oi ", data_hora: ISO };
+    expect(lerEnvioDoDiario({ ...corpo, caminho: MEU })).toEqual({
+      ok: true, pacienteId: P, nutriId: NUTRI, mime: "image/jpeg", tamanho: 10, caminho: MEU, codigo: "abc123", refeicao: "almoco", comentario: "oi", dataHora: ISO,
+    });
+    for (const caminho of [
+      caminhoDoDiario(OUTRA, P, "image/jpeg", ID), caminhoDoDiario(NUTRI, OUTRA, "image/jpeg", ID), `${NUTRI}/${P}/foto.jpg`, `${NUTRI}/${P}/../${OUTRA}/${ID}.jpg`,
+      `${MEU}/extra`, `/${MEU}`, `${NUTRI}/${P}/${ID}.exe`, null, 42,
+    ]) {
+      expect(lerEnvioDoDiario({ ...corpo, caminho }), String(caminho)).toEqual({ ok: false, erro: "fora_da_pasta" });
+    }
+    expect(caminhoDoDiarioValido(MEU, NUTRI, P)).toBe(true);
+    expect(lerEnvioDoDiario({ ...corpo, caminho: MEU, codigo: "  " })).toMatchObject({ ok: false, campo: "codigo" });
+  });
+});
+
+describe("hml-19b — os erros das RPCs: o código de propósito vai à tela; o resto é a tradução do banco", () => {
+  it("os códigos que o app já traduz passam como estão (sem aviso ao Weslley)", () => {
+    for (const code of ERROS_DA_MARCACAO) expect(erroDaRpc({ code: "22023", message: code }, ERROS_DA_MARCACAO), code).toEqual({ erro: code, inesperado: false });
+    for (const code of ERROS_DO_DIARIO) expect(erroDaRpc({ code: "P0001", message: code }, ERROS_DO_DIARIO), code).toEqual({ erro: code, inesperado: false });
+    expect(erroDaRpc({ code: "P0002", message: "nao_encontrado" }, ["nao_encontrado"])).toEqual({ erro: "nao_encontrado", inesperado: false });
+  });
+
+  it("fora da lista: a tradução de sempre (o RLS 42501 = sem_acesso; o P0001 desconhecido = erro_interno com aviso)", () => {
+    expect(erroDaRpc({ code: "42501", message: "sem_acesso" }, ERROS_DA_MARCACAO)).toEqual({ erro: "sem_acesso", inesperado: false });
+    expect(erroDaRpc({ code: "22023", message: "dados_invalidos" }, [])).toEqual({ erro: "dados_invalidos", inesperado: false });
+    expect(erroDaRpc({ code: "P0001", message: "outra coisa" }, ERROS_DO_DIARIO)).toEqual({ erro: "erro_interno", inesperado: true });
+    expect(erroDaRpc({ code: "P0002", message: "nao_encontrado" }, [])).toEqual({ erro: "erro_interno", inesperado: true });
+  });
+
+  it("STATUS: o diário desligado/link/código = 403; muitos envios = 429; os outros do app = 400", () => {
+    for (const e of ["codigo_invalido", "diario_desligado", "link_desligado"]) expect(statusDoErro(e), e).toBe(403);
+    expect(statusDoErro("muitos_envios")).toBe(429);
+    for (const e of ["sem_alimentos", "meta_pausada", "fora_do_dia", "data_invalida", "refeicao_invalida", "arquivo_nao_encontrado"]) expect(statusDoErro(e), e).toBe(400);
+    expect(STATUS_DO_ERRO.sem_acesso).toBe(403);
+  });
+});
+
+describe("hml-19b — os padrões de Manipulados, Metas e Orientações: os textos de hoje, no servidor", () => {
+  it("as 3 seções da Dieta, a tabela e a ordem da lista (as do Prontuário seguem à parte)", () => {
+    expect(Object.keys(PADROES_DIETA).sort()).toEqual([...SECOES_PADRAO_DIETA].sort());
+    for (const s of SECOES_PADRAO_DIETA) expect(secaoDoPadraoDaDieta(s)).toBe(s);
+    for (const s of ["anamnese", "documento", "exame", "", "x", null]) expect(secaoDoPadraoDaDieta(s), String(s)).toBeNull();
+    expect(PADROES_DIETA.meta).toEqual({ tabela: "modelos_meta", ordem: "titulo" });
+  });
+
+  it("os textos movidos são os MESMOS que a tela usa (uma fonte só)", () => {
+    expect(METAS_PADRAO).toBe(MODELOS_META_PADRAO);
+    expect(FORMULAS_PADRAO).toBe(MODELOS_FORMULA_PADRAO);
+    expect(TITULO_ORIENTACAO_DA_TELA).toBe(TITULO_ORIENTACAO_PADRAO);
+    expect(CONTEUDO_MODELO_PADRAO).toBe(CONTEUDO_ORIENTACAO_PADRAO);
+  });
+
+  it("os itens da RPC = exatamente o que as libs gravavam no 1º acesso (título aparado, ativos e dias normalizados, favoritos, sem dono)", () => {
+    expect(itensPadraoDaDieta("formula")).toEqual(MODELOS_FORMULA_PADRAO.map((m) => ({
+      titulo: m.titulo.trim(), ativos: normalizarAtivos(m.ativos), posologia: m.posologia, quantidade: m.quantidade, observacao: m.observacao, favorito: true,
+    })));
+    expect(itensPadraoDaDieta("meta")).toEqual(MODELOS_META_PADRAO.map((m) => ({ titulo: m.titulo.trim(), descricao: m.descricao, dias_semana: normalizarDias(m.dias_semana), favorito: true })));
+    expect(itensPadraoDaDieta("orientacao")).toEqual([{ titulo: "Orientações gerais (padrão)", conteudo: CONTEUDO_ORIENTACAO_PADRAO, favorito: true }]);
+    expect(itensPadraoDaDieta("formula")).toHaveLength(3);
+    expect(itensPadraoDaDieta("meta")).toHaveLength(5);
+    for (const s of SECOES_PADRAO_DIETA) for (const item of itensPadraoDaDieta(s)) expect(item, s).not.toHaveProperty("nutricionista_id");
   });
 });

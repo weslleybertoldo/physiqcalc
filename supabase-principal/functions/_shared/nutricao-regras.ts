@@ -40,7 +40,9 @@ export type Campo =
   | { tipo: "booleano" }
   | { tipo: "opcao"; valores: readonly string[] }
   | { tipo: "textos"; maxItens: number; maxItem: number }
-  | { tipo: "json"; forma: "lista" | "objeto"; maxBytes: number };
+  | { tipo: "json"; forma: "lista" | "objeto"; maxBytes: number }
+  /** hml-19b: lista de inteiros entre min e max (os dias da semana, smallint[]) */
+  | { tipo: "inteiros"; maxItens: number; min: number; max: number };
 export type Campos = Readonly<Record<string, Campo>>;
 
 const uuid: Campo = { tipo: "uuid" };
@@ -100,6 +102,8 @@ export function valorDoCampo(campo: Campo, v: unknown): { ok: true; valor: unkno
       }
       return tamanho <= campo.maxBytes ? ok(v) : fora;
     }
+    case "inteiros":
+      return Array.isArray(v) && v.length <= campo.maxItens && v.every((x) => Number.isInteger(x) && x >= campo.min && x <= campo.max) ? ok([...v]) : fora;
   }
 }
 
@@ -451,6 +455,9 @@ export const STATUS_DO_ERRO: Record<string, number> = {
   storage_falhou: 502,
   tempo_esgotado: 504,
   // 400: acao_invalida, dados_invalidos, schema_invalido, secao_invalida, tipo_invalido, arquivo_grande, anexo_nao_enviado
+  // hml-19b — os códigos das RPCs do app do aluno que a tela já traduz (ERROS_DA_MARCACAO, ERROS_DO_DIARIO): os de fora daqui são 400
+  codigo_invalido: 403, diario_desligado: 403, link_desligado: 403,
+  muitos_envios: 429,
 };
 
 export function statusDoErro(erro: unknown): number {
@@ -470,4 +477,494 @@ export function erroDoBanco(e: { code?: unknown; message?: unknown } | null | un
   if (code === "PGRST301" || code === "PGRST302" || code === "PGRST303") return { erro: "sem_login", inesperado: false };
   if (/^(TimeoutError|AbortError)\b/.test(msg)) return { erro: "tempo_esgotado", inesperado: true };
   return { erro: "erro_interno", inesperado: true };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// hml-19b (H-41 · jeito 2, 11/10/2026) — a Dieta (Painel › Aluno › Dieta), as Dietas (Painel › Dietas) e o app do aluno (spec hml-19
+// §1.3, §2.3). O MESMO desenho do Prontuário, em listas à parte (as do Prontuário não mudam):
+//   · ACOES_DIETA: o CRUD declarativo das 19 tabelas (inserir · inserir_lote · editar · excluir_suave · excluir — o DELETE físico de
+//     refeição e item, como hoje) com as colunas de cada ação; o dono (nutricionista_id = quem chama) nas 15 tabelas que têm dono;
+//     `vivos` = a ação só mexe no que está fora da Lixeira (o filtro que a lib de hoje já fazia); `volta` = o select que a tela recebe;
+//   · o que precisa ser TUDO OU NADA vai pelas RPCs INVOKER da migration 20261011110000_hml19b_dieta_atomicas.sql (RPCS_DA_DIETA);
+//     o registro do dia (registros_diarios: o índice único é PARCIAL) é um upsert à mão no servidor, como o gestacional da 19a;
+//   · os padrões de Manipulados, Metas e Orientações: padroes_garantir { secao: formula | meta | orientacao } — a RPC da 19a (já aceita
+//     as 6 seções), pelo módulo da Dieta (as 3 seções do Prontuário seguem no prontuario.ts, sem mudança);
+//   · ACOES_ALUNO: o app do aluno chama as MESMAS RPCs de hoje (paciente_marcar_refeicao, aluno_marcar_meta, diario_enviar) como a
+//     pessoa; a foto do diário sobe pelo link assinado (caminho montado aqui) e o registro confere o arquivo naquele caminho.
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+/** As 19 tabelas da Dieta, das Dietas e do diário (spec §1.3). */
+export const TABELAS_DIETA = [
+  "planos_alimentares", "refeicoes", "itens_refeicao", "registros_diarios", "calculos_energeticos", "produtos", "indicacoes_produto",
+  "formulas_manipuladas", "modelos_formula", "metas", "modelos_meta", "orientacoes", "modelos_orientacao", "alimentos", "medidas_caseiras",
+  "receitas", "ingredientes_receita", "grupos_receita", "diario_alimentar",
+] as const;
+export type TabelaDieta = (typeof TABELAS_DIETA)[number];
+/** As 4 "filhas": sem dono e sem Lixeira (seguem o pai pelo RLS). Nas outras 15, o inserir põe nutricionista_id = quem chama. */
+export const TABELAS_DIETA_SEM_DONO: readonly TabelaDieta[] = ["refeicoes", "itens_refeicao", "medidas_caseiras", "ingredientes_receita"];
+export const temDono = (t: TabelaDieta): boolean => !TABELAS_DIETA_SEM_DONO.includes(t);
+
+/** O que a gravação devolve (o MESMO select das libs de hoje): o alimento com as medidas; o item com o alimento e a receita; a receita
+ *  com os ingredientes (e o alimento de cada um). O embed segue o RLS de quem grava, como hoje. */
+export const VOLTA_ALIMENTO = "*, medidas_caseiras(*)";
+const ALIMENTO_EMBUTIDO = "alimento:alimentos(id, nome, fonte, grupo, energia_kcal, proteina_g, carboidrato_g, lipidio_g, fibra_g, sodio_mg, medidas_caseiras(*))";
+export const VOLTA_ITEM = `*, ${ALIMENTO_EMBUTIDO}, receita:receitas(id, nome)`;
+export const VOLTA_RECEITA = `*, ingredientes:ingredientes_receita(*, ${ALIMENTO_EMBUTIDO})`;
+
+/** As RPCs da Dieta (INVOKER, migration 20261011110000_hml19b_dieta_atomicas.sql): só o que é tudo ou nada. */
+export const RPCS_DA_DIETA = [
+  "dieta_criar_plano", "dieta_duplicar_plano", "dieta_salvar_receita", "dieta_salvar_alimento", "dieta_ordenar", "dieta_excluir_grupo_receita",
+  "dieta_copiar_semana",
+] as const;
+export type RpcDaDieta = (typeof RPCS_DA_DIETA)[number];
+
+interface DietaInserir { tabela: TabelaDieta; operacao: "inserir"; campos: Campos; obrigatorios: readonly string[]; fixos?: Fixos; volta?: string }
+interface DietaLote { tabela: TabelaDieta; operacao: "inserir_lote"; campos: Campos; obrigatorios: readonly string[]; maxLinhas: number; volta?: string }
+interface DietaEditar { tabela: TabelaDieta; operacao: "editar"; campos: Campos; vivos?: boolean; volta?: string }
+interface DietaExcluirSuave { tabela: TabelaDieta; operacao: "excluir_suave"; vivos?: boolean }
+interface DietaExcluir { tabela: TabelaDieta; operacao: "excluir" }
+interface DietaEspecial { tabela: TabelaDieta | null; operacao: "especial"; rpc?: RpcDaDieta; tambem?: readonly TabelaDieta[] }
+export type DefinicaoAcaoDieta = DietaInserir | DietaLote | DietaEditar | DietaExcluirSuave | DietaExcluir | DietaEspecial;
+
+// as colunas de cada entidade da Dieta (os tetos ficam ACIMA dos da tela; o limite fino é o check do banco)
+const DIAS_SEMANA: Campo = { tipo: "inteiros", maxItens: 7, min: 1, max: 7 };
+const ORDEM: Campo = { tipo: "numero", inteiro: true, min: 0, max: 100_000 };
+const HORA: Campo = texto(20, true); // refeicoes.horario (time): "07:00" ou nulo — o banco confere o formato
+const LISTA_PEQUENA: Campo = { tipo: "json", forma: "lista", maxBytes: 100_000 }; // ativos da fórmula, substitutos do item
+
+const C_PLANO: Campos = { titulo: texto(TITULO), kcal_alvo: numeroNulo, observacao: texto(MEDIO, true), favorito: booleano };
+const C_REFEICAO: Campos = { nome: texto(TITULO), horario: HORA, observacao: texto(CURTO, true), dias_semana: DIAS_SEMANA };
+const C_ITEM: Campos = { quantidade_g: numero, medida_caseira_id: uuidNulo, quantidade_medida: numeroNulo, observacao: texto(CURTO, true) };
+const C_ITEM_NOVO: Campos = { refeicao_id: uuid, alimento_id: uuid, receita_id: uuidNulo, ordem: ORDEM, ...C_ITEM };
+const OBRIGATORIOS_ITEM = ["refeicao_id", "alimento_id", "quantidade_g", "ordem"] as const;
+export const C_REGISTRO_DIARIO: Campos = {
+  data, agua_ml: { tipo: "numero", inteiro: true, min: 0, max: 100_000 }, sintomas: lista, observacao: texto(CURTO, true),
+};
+const C_CALCULO: Campos = {
+  data: instante, formula: texto(TITULO), peso: numeroNulo, altura: numeroNulo, idade: inteiroNulo, sexo: texto(TITULO, true), massa_magra: numeroNulo,
+  fator_atividade: numero, atividades: lista, tmb: numeroNulo, get: numeroNulo, ajuste_kcal: numero, vet: numeroNulo, objetivo: texto(TITULO),
+  observacao: texto(MEDIO, true),
+};
+const C_PRODUTO: Campos = {
+  nome: texto(TITULO), marca: texto(TITULO), categoria: texto(TITULO), apresentacao: texto(TITULO), dose_padrao: texto(TITULO), modo_uso: texto(CURTO),
+  link: texto(CURTO), observacao: texto(CURTO), favorito: booleano,
+};
+const C_INDICACAO: Campos = {
+  dose: texto(TITULO), horario: texto(CURTO), duracao: texto(CURTO), inicio: data, observacao: texto(CURTO), ativa: booleano, ordem: ORDEM,
+};
+const C_INDICACAO_NOVA: Campos = {
+  paciente_id: uuid, produto_id: uuidNulo, produto_nome: texto(TITULO), produto_marca: texto(CURTO), produto_apresentacao: texto(CURTO),
+  produto_categoria: texto(TITULO), dose: texto(TITULO), horario: texto(CURTO), duracao: texto(CURTO), inicio: data, observacao: texto(CURTO), ordem: ORDEM,
+};
+const C_MODELO_FORMULA: Campos = {
+  titulo: texto(TITULO), ativos: LISTA_PEQUENA, posologia: texto(CURTO), quantidade: texto(TITULO), observacao: texto(CURTO), favorito: booleano,
+};
+const C_FORMULA: Campos = { titulo: texto(TITULO), ativos: LISTA_PEQUENA, posologia: texto(CURTO), quantidade: texto(TITULO), observacao: texto(CURTO) };
+const C_MODELO_META: Campos = { titulo: texto(TITULO), descricao: texto(CURTO), dias_semana: DIAS_SEMANA, favorito: booleano };
+const C_META: Campos = { titulo: texto(TITULO), descricao: texto(CURTO), dias_semana: DIAS_SEMANA, ativa: booleano };
+const C_MODELO_ORIENTACAO: Campos = { titulo: texto(TITULO), conteudo: texto(LONGO), favorito: booleano };
+const C_ORIENTACAO: Campos = { titulo: texto(TITULO), conteudo: texto(LONGO) };
+/** O alimento próprio e as medidas caseiras (a RPC dieta_salvar_alimento). */
+export const C_ALIMENTO: Campos = {
+  nome: texto(TITULO), grupo: texto(TITULO, true), porcao_g: numero, energia_kcal: numeroNulo, proteina_g: numeroNulo, carboidrato_g: numeroNulo,
+  lipidio_g: numeroNulo, fibra_g: numeroNulo, sodio_mg: numeroNulo, marca: texto(TITULO, true), nutrientes: objeto,
+};
+export const C_MEDIDA: Campos = { descricao: texto(TITULO), gramas: numero, ordem: ORDEM };
+/** A receita e os ingredientes (a RPC dieta_salvar_receita; a ordem do ingrediente é a posição na lista, como hoje). */
+export const C_RECEITA: Campos = {
+  nome: texto(TITULO), grupo_id: uuidNulo, porcoes: numero, rendimento_g: numeroNulo, tempo_preparo_min: inteiroNulo, modo_preparo: texto(MEDIO),
+  observacao: texto(CURTO), favorita: booleano,
+};
+export const C_INGREDIENTE: Campos = {
+  alimento_id: uuid, quantidade_g: numero, medida_caseira_id: uuidNulo, quantidade_medida: numeroNulo, ordem: ORDEM, observacao: texto(CURTO),
+};
+
+/** As ações da Dieta e das Dietas: a lista fechada (as do Prontuário ficam em ACOES; as do app do aluno, em ACOES_ALUNO). */
+export const ACOES_DIETA = {
+  // Plano: criar (o plano + as refeições padrão) e duplicar/usar modelo ★ numa chamada só (RPC); título/meta/★/excluir pela tabela
+  plano_criar: { tabela: "planos_alimentares", operacao: "especial", rpc: "dieta_criar_plano", tambem: ["refeicoes"] },
+  plano_editar: { tabela: "planos_alimentares", operacao: "editar", campos: C_PLANO },
+  plano_excluir: { tabela: "planos_alimentares", operacao: "excluir_suave" },
+  plano_duplicar: { tabela: "planos_alimentares", operacao: "especial", rpc: "dieta_duplicar_plano", tambem: ["refeicoes", "itens_refeicao"] },
+  plano_copiar_semana: { tabela: "refeicoes", operacao: "especial", rpc: "dieta_copiar_semana" },
+  // Subir/descer (refeições do plano, indicações do aluno): 1 chamada no lugar de N em paralelo
+  dieta_ordenar: { tabela: null, operacao: "especial", rpc: "dieta_ordenar", tambem: ["refeicoes", "indicacoes_produto"] },
+  // Refeições e itens (o excluir é físico, como hoje: a refeição leva os itens e as marcações do aluno em cascata)
+  refeicao_criar: { tabela: "refeicoes", operacao: "inserir", campos: { plano_id: uuid, ordem: ORDEM, ...C_REFEICAO }, obrigatorios: ["plano_id", "nome", "ordem"] },
+  refeicao_editar: { tabela: "refeicoes", operacao: "editar", campos: C_REFEICAO },
+  refeicao_excluir: { tabela: "refeicoes", operacao: "excluir" },
+  item_criar: { tabela: "itens_refeicao", operacao: "inserir", campos: C_ITEM_NOVO, obrigatorios: OBRIGATORIOS_ITEM, volta: VOLTA_ITEM },
+  itens_criar: { tabela: "itens_refeicao", operacao: "inserir_lote", campos: C_ITEM_NOVO, obrigatorios: OBRIGATORIOS_ITEM, maxLinhas: 200, volta: VOLTA_ITEM },
+  item_editar: { tabela: "itens_refeicao", operacao: "editar", campos: { ...C_ITEM, substitutos: LISTA_PEQUENA }, volta: VOLTA_ITEM },
+  item_excluir: { tabela: "itens_refeicao", operacao: "excluir" },
+  // Acompanhamento (1 registro vivo por aluno/dia: salvar = editar o do dia ou inserir — o índice único é parcial)
+  registro_diario_salvar: { tabela: "registros_diarios", operacao: "especial" },
+  registro_diario_editar: { tabela: "registros_diarios", operacao: "editar", campos: C_REGISTRO_DIARIO },
+  registro_diario_excluir: { tabela: "registros_diarios", operacao: "excluir_suave" },
+  // Cálculo energético (os valores calculados na tela; aqui a forma)
+  calculo_energetico_criar: { tabela: "calculos_energeticos", operacao: "inserir", campos: { paciente_id: uuid, ...C_CALCULO }, obrigatorios: ["paciente_id"] },
+  calculo_energetico_editar: { tabela: "calculos_energeticos", operacao: "editar", campos: C_CALCULO },
+  calculo_energetico_excluir: { tabela: "calculos_energeticos", operacao: "excluir_suave" },
+  // Suplementos: o catálogo (produtos) e as indicações do aluno (a CÓPIA do produto; nasce ativa)
+  produto_criar: { tabela: "produtos", operacao: "inserir", campos: C_PRODUTO, obrigatorios: ["nome"] },
+  produto_editar: { tabela: "produtos", operacao: "editar", campos: C_PRODUTO },
+  produto_excluir: { tabela: "produtos", operacao: "excluir_suave" },
+  indicacao_criar: {
+    tabela: "indicacoes_produto", operacao: "inserir", campos: C_INDICACAO_NOVA, obrigatorios: ["paciente_id", "produto_nome", "dose"],
+    fixos: () => ({ ativa: true }),
+  },
+  indicacao_editar: { tabela: "indicacoes_produto", operacao: "editar", campos: C_INDICACAO },
+  indicacao_excluir: { tabela: "indicacoes_produto", operacao: "excluir_suave" },
+  // Manipulados: os modelos e as fórmulas do aluno (a fórmula guarda a PRÓPRIA cópia do modelo)
+  modelo_formula_criar: { tabela: "modelos_formula", operacao: "inserir", campos: C_MODELO_FORMULA, obrigatorios: ["titulo"] },
+  modelo_formula_editar: { tabela: "modelos_formula", operacao: "editar", campos: C_MODELO_FORMULA },
+  modelo_formula_excluir: { tabela: "modelos_formula", operacao: "excluir_suave" },
+  formula_criar: { tabela: "formulas_manipuladas", operacao: "inserir", campos: { paciente_id: uuid, modelo_id: uuidNulo, ...C_FORMULA }, obrigatorios: ["paciente_id", "titulo"] },
+  formula_editar: { tabela: "formulas_manipuladas", operacao: "editar", campos: C_FORMULA },
+  formula_excluir: { tabela: "formulas_manipuladas", operacao: "excluir_suave" },
+  // Metas
+  modelo_meta_criar: { tabela: "modelos_meta", operacao: "inserir", campos: C_MODELO_META, obrigatorios: ["titulo"] },
+  modelo_meta_editar: { tabela: "modelos_meta", operacao: "editar", campos: C_MODELO_META },
+  modelo_meta_excluir: { tabela: "modelos_meta", operacao: "excluir_suave" },
+  meta_criar: { tabela: "metas", operacao: "inserir", campos: { paciente_id: uuid, modelo_id: uuidNulo, ...C_META }, obrigatorios: ["paciente_id", "titulo", "dias_semana"] },
+  meta_editar: { tabela: "metas", operacao: "editar", campos: C_META },
+  meta_excluir: { tabela: "metas", operacao: "excluir_suave" },
+  // Orientações
+  modelo_orientacao_criar: { tabela: "modelos_orientacao", operacao: "inserir", campos: C_MODELO_ORIENTACAO, obrigatorios: ["titulo"] },
+  modelo_orientacao_editar: { tabela: "modelos_orientacao", operacao: "editar", campos: C_MODELO_ORIENTACAO },
+  modelo_orientacao_excluir: { tabela: "modelos_orientacao", operacao: "excluir_suave" },
+  orientacao_criar: { tabela: "orientacoes", operacao: "inserir", campos: { paciente_id: uuid, modelo_id: uuidNulo, ...C_ORIENTACAO }, obrigatorios: ["paciente_id", "titulo"] },
+  orientacao_editar: { tabela: "orientacoes", operacao: "editar", campos: C_ORIENTACAO },
+  orientacao_excluir: { tabela: "orientacoes", operacao: "excluir_suave" },
+  // Dietas › Alimentos: o alimento e as medidas numa chamada só (editar TROCA as medidas — o mesmo efeito de hoje)
+  alimento_salvar: { tabela: "alimentos", operacao: "especial", rpc: "dieta_salvar_alimento", tambem: ["medidas_caseiras"] },
+  alimento_excluir: { tabela: "alimentos", operacao: "excluir_suave", vivos: true },
+  // Dietas › Receitas e grupos
+  receita_salvar: { tabela: "receitas", operacao: "especial", rpc: "dieta_salvar_receita", tambem: ["ingredientes_receita"] },
+  receita_editar: { tabela: "receitas", operacao: "editar", campos: { favorita: booleano }, vivos: true, volta: VOLTA_RECEITA },
+  receita_excluir: { tabela: "receitas", operacao: "excluir_suave", vivos: true },
+  grupo_receita_criar: { tabela: "grupos_receita", operacao: "inserir", campos: { nome: texto(TITULO) }, obrigatorios: ["nome"] },
+  grupo_receita_editar: { tabela: "grupos_receita", operacao: "editar", campos: { nome: texto(TITULO) }, vivos: true },
+  grupo_receita_excluir: { tabela: "grupos_receita", operacao: "especial", rpc: "dieta_excluir_grupo_receita", tambem: ["receitas"] },
+  // Dietas › Diário: a reação da nutri (o "agora" é do servidor) e o excluir (a linha à Lixeira e DEPOIS a foto, como os anexos)
+  diario_reagir: { tabela: "diario_alimentar", operacao: "especial" },
+  diario_excluir: { tabela: "diario_alimentar", operacao: "especial" },
+} as const satisfies Record<string, DefinicaoAcaoDieta>;
+
+export type AcaoDieta = keyof typeof ACOES_DIETA;
+export const ACOES_DA_DIETA = Object.keys(ACOES_DIETA) as AcaoDieta[];
+
+/** A ação da Dieta, se está na lista fechada; senão null. */
+export function acaoDaDieta(v: unknown): AcaoDieta | null {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(ACOES_DIETA, v) ? (v as AcaoDieta) : null;
+}
+
+export type GravacaoDieta =
+  | { ok: true; tabela: TabelaDieta; operacao: "inserir"; valores: Record<string, unknown>; volta: string }
+  | { ok: true; tabela: TabelaDieta; operacao: "inserir_lote"; linhas: Array<Record<string, unknown>>; volta: string }
+  | { ok: true; tabela: TabelaDieta; operacao: "editar"; id: string; valores: Record<string, unknown>; vivos: boolean; volta: string }
+  | { ok: true; tabela: TabelaDieta; operacao: "excluir_suave"; id: string; valores: { deleted_at: string }; vivos: boolean }
+  | { ok: true; tabela: TabelaDieta; operacao: "excluir"; id: string }
+  | { ok: false; erro: "acao_invalida" | "dados_invalidos"; campo?: string };
+
+/**
+ * Monta a gravação de uma ação declarativa da Dieta: confere o corpo pela lista da ação e põe o dono (nutricionista_id = `userId`) no
+ * inserir das tabelas que têm dono. Ação especial (RPC, registro do dia, diário) não passa por aqui → acao_invalida.
+ */
+export function montarGravacaoDieta(acao: string, corpo: Record<string, unknown>, userId: string, agora: Date = new Date()): GravacaoDieta {
+  const nome = acaoDaDieta(acao);
+  if (!nome) return { ok: false, erro: "acao_invalida" };
+  const def: DefinicaoAcaoDieta = ACOES_DIETA[nome];
+  if (!ehUuid(userId)) return { ok: false, erro: "dados_invalidos", campo: "user" };
+  switch (def.operacao) {
+    case "inserir": {
+      const r = lerCampos(corpo, def.campos, def.obrigatorios);
+      if (r.ok === false) return r;
+      const dono = temDono(def.tabela) ? { nutricionista_id: userId } : {};
+      return { ok: true, tabela: def.tabela, operacao: "inserir", valores: { ...r.valores, ...(def.fixos?.(agora) ?? {}), ...dono }, volta: def.volta ?? "*" };
+    }
+    case "inserir_lote": {
+      const brutas = corpo.linhas;
+      if (!Array.isArray(brutas) || brutas.length < 1 || brutas.length > def.maxLinhas) return { ok: false, erro: "dados_invalidos", campo: "linhas" };
+      const dono = temDono(def.tabela) ? { nutricionista_id: userId } : {};
+      const linhas: Array<Record<string, unknown>> = [];
+      for (const bruta of brutas) {
+        if (!bruta || typeof bruta !== "object" || Array.isArray(bruta)) return { ok: false, erro: "dados_invalidos", campo: "linhas" };
+        const l = lerCampos(bruta as Record<string, unknown>, def.campos, def.obrigatorios);
+        if (l.ok === false) return l;
+        linhas.push({ ...l.valores, ...dono });
+      }
+      return { ok: true, tabela: def.tabela, operacao: "inserir_lote", linhas, volta: def.volta ?? "*" };
+    }
+    case "editar": {
+      if (!ehUuid(corpo.id)) return { ok: false, erro: "dados_invalidos", campo: "id" };
+      const r = lerCampos(corpo, def.campos);
+      if (r.ok === false) return r;
+      if (Object.keys(r.valores).length === 0) return { ok: false, erro: "dados_invalidos", campo: "nada_a_mudar" };
+      return { ok: true, tabela: def.tabela, operacao: "editar", id: corpo.id.toLowerCase(), valores: r.valores, vivos: def.vivos === true, volta: def.volta ?? "*" };
+    }
+    case "excluir_suave":
+      if (!ehUuid(corpo.id)) return { ok: false, erro: "dados_invalidos", campo: "id" };
+      return {
+        ok: true, tabela: def.tabela, operacao: "excluir_suave", id: corpo.id.toLowerCase(), valores: { deleted_at: agora.toISOString() }, vivos: def.vivos === true,
+      };
+    case "excluir":
+      if (!ehUuid(corpo.id)) return { ok: false, erro: "dados_invalidos", campo: "id" };
+      return { ok: true, tabela: def.tabela, operacao: "excluir", id: corpo.id.toLowerCase() };
+    case "especial":
+      return { ok: false, erro: "acao_invalida" };
+  }
+}
+
+type Recusa<E extends string = "dados_invalidos"> = { ok: false; erro: E; campo?: string };
+const recusada = (campo: string): Recusa => ({ ok: false, erro: "dados_invalidos", campo });
+const ehObjeto = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+/** Uma lista de objetos, cada um conferido pelos campos (null = a lista ou um item fora da forma; o nome do campo vai no erro). */
+function lerLista(v: unknown, max: number, campos: Campos, obrigatorios: readonly string[], nome: string):
+  | { ok: true; linhas: Array<Record<string, unknown>> }
+  | Recusa {
+  if (!Array.isArray(v) || v.length > max) return recusada(nome);
+  const linhas: Array<Record<string, unknown>> = [];
+  for (const bruta of v) {
+    if (!ehObjeto(bruta)) return recusada(nome);
+    const l = lerCampos(bruta, campos, obrigatorios);
+    if (l.ok === false) return l;
+    linhas.push(l.valores);
+  }
+  return { ok: true, linhas };
+}
+
+/** Uma lista de uuids sem repetição (até `max`); ausente = vazia. */
+function lerIds(v: unknown, max: number): string[] | null {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.length > max || !v.every(ehUuid)) return null;
+  const ids = v.map((x) => x.toLowerCase());
+  return new Set(ids).size === ids.length ? ids : null;
+}
+
+/** plano_criar { paciente_id, titulo, kcal_alvo, observacao, calculo_energetico_id, refeicoes: [{ nome, horario, ordem }] } (até 30). */
+export function lerPlanoNovo(corpo: Record<string, unknown>):
+  | { ok: true; pacienteId: string; plano: Record<string, unknown>; refeicoes: Array<Record<string, unknown>> }
+  | Recusa {
+  const r = lerCampos(corpo, { paciente_id: uuid, calculo_energetico_id: uuidNulo, titulo: texto(TITULO), kcal_alvo: numeroNulo, observacao: texto(MEDIO, true) },
+    ["paciente_id", "titulo"]);
+  if (r.ok === false) return r;
+  const refs = lerLista(corpo.refeicoes, 30, { nome: texto(TITULO), horario: HORA, ordem: ORDEM }, ["nome", "ordem"], "refeicoes");
+  if (refs.ok === false) return refs;
+  const { paciente_id, ...plano } = r.valores;
+  return { ok: true, pacienteId: String(paciente_id), plano, refeicoes: refs.linhas };
+}
+
+/** plano_duplicar { plano_id, titulo, paciente_id? } — sem paciente: "Duplicar" (o mesmo aluno); com: "Usar modelo ★". */
+export function lerDuplicarPlano(corpo: Record<string, unknown>): { ok: true; planoId: string; pacienteId: string | null; titulo: string } | Recusa {
+  const r = lerCampos(corpo, { plano_id: uuid, paciente_id: uuidNulo, titulo: texto(TITULO) }, ["plano_id", "titulo"]);
+  if (r.ok === false) return r;
+  const titulo = String(r.valores.titulo);
+  if (!titulo.trim()) return recusada("titulo");
+  return { ok: true, planoId: String(r.valores.plano_id), pacienteId: typeof r.valores.paciente_id === "string" ? r.valores.paciente_id : null, titulo };
+}
+
+/** plano_copiar_semana { para_todos, para_apagar } — ids de refeições (até 200 cada), sem repetição e sem o mesmo id nas 2. */
+export function lerCopiarSemana(corpo: Record<string, unknown>): { ok: true; paraTodos: string[]; paraApagar: string[] } | Recusa {
+  const paraTodos = lerIds(corpo.para_todos, 200);
+  if (!paraTodos) return recusada("para_todos");
+  const paraApagar = lerIds(corpo.para_apagar, 200);
+  if (!paraApagar) return recusada("para_apagar");
+  if (!paraTodos.length && !paraApagar.length) return recusada("nada_a_mudar");
+  if (paraTodos.some((id) => paraApagar.includes(id))) return recusada("para_apagar");
+  return { ok: true, paraTodos, paraApagar };
+}
+
+/** As tabelas que o dieta_ordenar aceita (a mesma lista fechada da RPC). */
+export const TABELAS_QUE_ORDENAM = ["refeicoes", "indicacoes_produto"] as const;
+/** dieta_ordenar { tabela, ordens: [{ id, ordem }] } (1 a 200, sem id repetido): só as que mudaram, como a tela manda hoje. */
+export function lerOrdenar(corpo: Record<string, unknown>):
+  | { ok: true; tabela: (typeof TABELAS_QUE_ORDENAM)[number]; ids: string[]; ordens: number[] }
+  | Recusa {
+  const tabela = corpo.tabela;
+  if (typeof tabela !== "string" || !(TABELAS_QUE_ORDENAM as readonly string[]).includes(tabela)) return recusada("tabela");
+  const l = lerLista(corpo.ordens, 200, { id: uuid, ordem: ORDEM }, ["id", "ordem"], "ordens");
+  if (l.ok === false) return l;
+  if (!l.linhas.length) return recusada("ordens");
+  const ids = l.linhas.map((x) => String(x.id));
+  if (new Set(ids).size !== ids.length) return recusada("ordens");
+  return { ok: true, tabela: tabela as (typeof TABELAS_QUE_ORDENAM)[number], ids, ordens: l.linhas.map((x) => Number(x.ordem)) };
+}
+
+/** receita_salvar { id?, receita: {…}, ingredientes: [...] } (até 100): sem id cria; com id edita a viva e TROCA os ingredientes. */
+export function lerReceita(corpo: Record<string, unknown>):
+  | { ok: true; id: string | null; receita: Record<string, unknown>; ingredientes: Array<Record<string, unknown>> }
+  | Recusa {
+  const id = corpo.id === undefined || corpo.id === null ? null : ehUuid(corpo.id) ? corpo.id.toLowerCase() : undefined;
+  if (id === undefined) return recusada("id");
+  if (!ehObjeto(corpo.receita)) return recusada("receita");
+  const r = lerCampos(corpo.receita, C_RECEITA, id ? [] : ["nome"]);
+  if (r.ok === false) return r;
+  const ing = lerLista(corpo.ingredientes, 100, C_INGREDIENTE, ["alimento_id", "quantidade_g"], "ingredientes");
+  if (ing.ok === false) return ing;
+  return { ok: true, id, receita: r.valores, ingredientes: ing.linhas };
+}
+
+/** alimento_salvar { id?, alimento: {…}, medidas: [...] } (até 50): sem id cria o próprio; com id edita e TROCA as medidas. */
+export function lerAlimento(corpo: Record<string, unknown>):
+  | { ok: true; id: string | null; alimento: Record<string, unknown>; medidas: Array<Record<string, unknown>> }
+  | Recusa {
+  const id = corpo.id === undefined || corpo.id === null ? null : ehUuid(corpo.id) ? corpo.id.toLowerCase() : undefined;
+  if (id === undefined) return recusada("id");
+  if (!ehObjeto(corpo.alimento)) return recusada("alimento");
+  const a = lerCampos(corpo.alimento, C_ALIMENTO, id ? [] : ["nome"]);
+  if (a.ok === false) return a;
+  const m = lerLista(corpo.medidas, 50, C_MEDIDA, ["descricao", "gramas", "ordem"], "medidas");
+  if (m.ok === false) return m;
+  return { ok: true, id, alimento: a.valores, medidas: m.linhas };
+}
+
+/** registro_diario_salvar { paciente_id, data, agua_ml, sintomas, observacao }: o do dia vira edição; sem ele, insere. */
+export function lerRegistroDiario(corpo: Record<string, unknown>, userId: string):
+  | { ok: true; pacienteId: string; dia: string; valores: Record<string, unknown> }
+  | Recusa {
+  const r = lerCampos(corpo, { paciente_id: uuid, ...C_REGISTRO_DIARIO }, ["paciente_id", "data"]);
+  if (r.ok === false) return r;
+  if (!ehUuid(userId)) return recusada("user");
+  const { paciente_id, ...valores } = r.valores;
+  return { ok: true, pacienteId: String(paciente_id), dia: String(valores.data), valores };
+}
+
+/** As reações da nutri ao diário (o check do banco) e o teto do comentário dela (o COMENTARIO_NUTRI_MAX da tela). */
+export const REACOES_DIARIO = ["otimo", "bom", "atencao", "evitar"] as const;
+export const COMENTARIO_NUTRI_MAX = 300;
+/** diario_reagir { id, reacao, comentario }: reação → a reação, o comentário (aparado, até 300) e o agora do SERVIDOR; null → tira tudo. */
+export function lerReacao(corpo: Record<string, unknown>, agora: Date = new Date()): { ok: true; id: string; valores: Record<string, unknown> } | Recusa {
+  if (!ehUuid(corpo.id)) return recusada("id");
+  const reacao = corpo.reacao;
+  if (reacao !== null && reacao !== undefined && !(typeof reacao === "string" && (REACOES_DIARIO as readonly string[]).includes(reacao))) return recusada("reacao");
+  const comentario = corpo.comentario;
+  if (comentario !== undefined && comentario !== null && (typeof comentario !== "string" || comentario.length > CURTO)) return recusada("comentario");
+  const valores = typeof reacao === "string"
+    ? { reacao_nutri: reacao, comentario_nutri: (typeof comentario === "string" ? comentario : "").trim().slice(0, COMENTARIO_NUTRI_MAX), reagido_em: agora.toISOString() }
+    : { reacao_nutri: null, comentario_nutri: "", reagido_em: null };
+  return { ok: true, id: corpo.id.toLowerCase(), valores };
+}
+
+// ───────────────────────── os padrões da Dieta (H-81, decisão C da hml-19b) ─────────────────────────
+/** As 3 seções da Dieta que a função semeia (a RPC da 19a já aceita), a tabela e a ordem da lista (a mesma das libs da tela). */
+export const PADROES_DIETA: Record<"formula" | "meta" | "orientacao", { tabela: TabelaDieta; ordem: string }> = {
+  formula: { tabela: "modelos_formula", ordem: "titulo" },
+  meta: { tabela: "modelos_meta", ordem: "titulo" },
+  orientacao: { tabela: "modelos_orientacao", ordem: "titulo" },
+};
+export type SecaoDoPadraoDaDieta = keyof typeof PADROES_DIETA;
+export function secaoDoPadraoDaDieta(v: unknown): SecaoDoPadraoDaDieta | null {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(PADROES_DIETA, v) ? (v as SecaoDoPadraoDaDieta) : null;
+}
+
+// ───────────────────────── o app do aluno (decisão 14): as MESMAS RPCs de hoje, como a pessoa ─────────────────────────
+export const ACOES_ALUNO = {
+  aluno_marcar_refeicao: { rpc: "paciente_marcar_refeicao", id: "refeicao_id" },
+  aluno_marcar_meta: { rpc: "aluno_marcar_meta", id: "meta_id" },
+  aluno_diario_preparar: { rpc: null, id: null },
+  aluno_diario_enviar: { rpc: "diario_enviar", id: null },
+} as const;
+export type AcaoAluno = keyof typeof ACOES_ALUNO;
+export const ACOES_DO_ALUNO = Object.keys(ACOES_ALUNO) as AcaoAluno[];
+export function acaoDoAluno(v: unknown): AcaoAluno | null {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(ACOES_ALUNO, v) ? (v as AcaoAluno) : null;
+}
+
+/** Os códigos que as RPCs do app devolvem (raise exception '<código>') e a tela do app já traduz — vão à tela como o código. */
+export const ERROS_DA_MARCACAO = ["data_invalida", "sem_alimentos", "meta_pausada", "fora_do_dia"] as const;
+export const ERROS_DO_DIARIO = [
+  "codigo_invalido", "diario_desligado", "link_desligado", "refeicao_invalida", "path_invalido", "arquivo_nao_encontrado", "arquivo_invalido",
+  "data_invalida", "muitos_envios",
+] as const;
+/** O código das RPCs da Dieta que não é erro do banco (raise exception 'nao_encontrado' using errcode 'P0002'). */
+export const ERROS_DAS_RPCS_DA_DIETA = ["nao_encontrado"] as const;
+
+/** O erro de uma RPC: a mensagem é um dos `conhecidos` (raise exception '<código>') → ele, sem aviso; senão, a tradução do banco. */
+export function erroDaRpc(e: { code?: unknown; message?: unknown } | null | undefined, conhecidos: readonly string[]): { erro: string; inesperado: boolean } {
+  const msg = typeof e?.message === "string" ? e.message.trim() : "";
+  if (msg && conhecidos.includes(msg)) return { erro: msg, inesperado: false };
+  return erroDoBanco(e);
+}
+
+/** aluno_marcar_refeicao { refeicao_id, data, concluida } · aluno_marcar_meta { meta_id, data, concluida }. */
+export function lerMarcacao(corpo: Record<string, unknown>, campoId: "refeicao_id" | "meta_id"): { ok: true; id: string; dia: string; concluida: boolean } | Recusa {
+  const r = lerCampos(corpo, { [campoId]: uuid, data, concluida: booleano }, [campoId, "data", "concluida"]);
+  if (r.ok === false) return r;
+  return { ok: true, id: String(r.valores[campoId]), dia: String(r.valores.data), concluida: r.valores.concluida === true };
+}
+
+/** As fotos do diário (o allowed_mime_types do bucket e o FOTO_TAMANHO_MAX da tela): tipo → extensão do arquivo. */
+export const DIARIO_MIMES: Readonly<Record<string, string>> = {
+  "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic", "image/heif": "heif",
+};
+export const DIARIO_MAX_BYTES = 10 * 1024 * 1024;
+/** O bucket do ambiente (hml-02b: no staging, o "-staging"). */
+export function bucketDoDiario(schema: "public" | "staging"): string {
+  return schema === "staging" ? "diario-staging" : "diario";
+}
+/** O caminho da foto, montado NO SERVIDOR: <nutricionista>/<aluno>/<uuid>.<ext> — o formato que a policy do Storage e a diario_enviar exigem. */
+export function caminhoDoDiario(nutriId: string, pacienteId: string, mime: string, id: string): string {
+  return `${nutriId.toLowerCase()}/${pacienteId.toLowerCase()}/${id.toLowerCase()}.${DIARIO_MIMES[mime] ?? "jpg"}`;
+}
+const ARQUIVO_DO_DIARIO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|heic|heif)$/;
+/** O caminho é de uma foto daquele aluno, na pasta da nutri dele, no formato do caminhoDoDiario? (N9: outra pasta → recusa) */
+export function caminhoDoDiarioValido(caminho: unknown, nutriId: string, pacienteId: string): caminho is string {
+  if (typeof caminho !== "string" || caminho.length > 200) return false;
+  const partes = caminho.split("/");
+  return partes.length === 3 && partes[0] === nutriId.toLowerCase() && partes[1] === pacienteId.toLowerCase() && ARQUIVO_DO_DIARIO.test(partes[2]);
+}
+
+/** aluno_diario_preparar { paciente_id, nutricionista_id, tipo, tamanho }: a matrícula (o aluno e a nutri dele), o tipo e até 10 MB. */
+export function lerPedidoDeFotoDoDiario(corpo: Record<string, unknown>):
+  | { ok: true; pacienteId: string; nutriId: string; mime: string; tamanho: number }
+  | Recusa<"dados_invalidos" | "tipo_invalido" | "arquivo_grande"> {
+  if (!ehUuid(corpo.paciente_id)) return recusada("paciente_id");
+  if (!ehUuid(corpo.nutricionista_id)) return recusada("nutricionista_id");
+  const mime = typeof corpo.tipo === "string" ? corpo.tipo.trim().toLowerCase() : "";
+  if (!Object.prototype.hasOwnProperty.call(DIARIO_MIMES, mime)) return { ok: false, erro: "tipo_invalido" };
+  const tamanho = corpo.tamanho;
+  if (typeof tamanho !== "number" || !Number.isInteger(tamanho) || tamanho <= 0) return recusada("tamanho");
+  if (tamanho > DIARIO_MAX_BYTES) return { ok: false, erro: "arquivo_grande" };
+  return { ok: true, pacienteId: corpo.paciente_id.toLowerCase(), nutriId: corpo.nutricionista_id.toLowerCase(), mime, tamanho };
+}
+
+/** aluno_diario_enviar { …o pedido, caminho, codigo, refeicao, comentario, data_hora }: o caminho tem de ser da pasta daquela matrícula. */
+export function lerEnvioDoDiario(corpo: Record<string, unknown>):
+  | { ok: true; pacienteId: string; nutriId: string; mime: string; tamanho: number; caminho: string; codigo: string; refeicao: string; comentario: string; dataHora: string }
+  | Recusa<"dados_invalidos" | "tipo_invalido" | "arquivo_grande" | "fora_da_pasta"> {
+  const p = lerPedidoDeFotoDoDiario(corpo);
+  if (p.ok === false) return p;
+  if (!caminhoDoDiarioValido(corpo.caminho, p.nutriId, p.pacienteId)) return { ok: false, erro: "fora_da_pasta" };
+  const r = lerCampos(corpo, { codigo: texto(100), refeicao: texto(40), comentario: texto(CURTO), data_hora: instante }, ["codigo", "refeicao", "data_hora"]);
+  if (r.ok === false) return r;
+  const codigo = String(r.valores.codigo).trim().toLowerCase();
+  if (!codigo) return recusada("codigo");
+  return {
+    ok: true, pacienteId: p.pacienteId, nutriId: p.nutriId, mime: p.mime, tamanho: p.tamanho, caminho: corpo.caminho as string, codigo,
+    refeicao: String(r.valores.refeicao), comentario: typeof r.valores.comentario === "string" ? r.valores.comentario.trim() : "", dataHora: String(r.valores.data_hora),
+  };
+}
+
+// ───────────────────────── o despacho: qual módulo da função atende o pedido ─────────────────────────
+export type PedidoNutricao =
+  | { modulo: "prontuario"; acao: AcaoNutricao }
+  | { modulo: "dieta"; acao: AcaoDieta | "padroes_garantir" }
+  | { modulo: "aluno"; acao: AcaoAluno };
+
+/**
+ * O módulo e a ação do pedido (null = acao_invalida). Os padrões das 3 seções da Dieta (fórmula, meta, orientação) vão ao módulo da
+ * Dieta; os do Prontuário — e qualquer outra seção, que lá vira secao_invalida como antes — seguem no prontuario.ts, sem mudança.
+ */
+export function moduloDoPedido(corpo: Record<string, unknown>): PedidoNutricao | null {
+  const v = corpo.acao;
+  if (v === "padroes_garantir" && secaoDoPadraoDaDieta(corpo.secao)) return { modulo: "dieta", acao: "padroes_garantir" };
+  const prontuario = acaoDoPedido(v);
+  if (prontuario) return { modulo: "prontuario", acao: prontuario };
+  const dieta = acaoDaDieta(v);
+  if (dieta) return { modulo: "dieta", acao: dieta };
+  const aluno = acaoDoAluno(v);
+  if (aluno) return { modulo: "aluno", acao: aluno };
+  return null;
 }
