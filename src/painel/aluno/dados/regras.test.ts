@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { CobrancaVista, FinanceiroProfissional } from "@/financeiro/tipos";
 import {
-  AJUSTES, ajustesVisiveis, alturaEmMetros, ATALHOS_FLUXO, cadastroParaTreino, corpoDoAluno, faixaDeIdade, formDoPerfil, idadeDe,
-  linhaDoCabecalho, linhaDoPerfil, linkLigado, MENSAGEM_MENOR_DE_16, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, rotaDoAtalho, textoDoLink, validarCPF,
-  validarForm, whatsappDoAluno,
+  AJUSTES, ajustesVisiveis, alturaEmMetros, ATALHOS_FLUXO, bloqueadoPorPagamento, cadastroParaTreino, corpoDoAluno, faixaDeIdade, formDoPerfil, idadeDe,
+  linhaDoCabecalho, linhaDoPerfil, linkLigado, MENSAGEM_MENOR_DE_16, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, resumoDaTrava, rotaDoAtalho,
+  textoDoLink, validarCPF, validarForm, whatsappDoAluno,
 } from "./regras";
 import { perfil } from "@/test/fixturesPerfilAluno";
 
@@ -129,5 +130,57 @@ describe("W14 — as ações da W13 no perfil", () => {
   it("o perfil vira a linha da lista (mesmas ações e confirmações)", () => {
     const l = linhaDoPerfil(perfil({ bloqueado: true }));
     expect(l).toMatchObject({ id: "p1", rota_id: "p1", nome: "Rafael Moura", bloqueado: true, ativo: true, tem_login: true, pagamento: null });
+  });
+});
+
+describe("W1 — a trava do painel com a tentativa da InfinitePay (espelho da financeiro_do_aluno)", () => {
+  // as fábricas (o arquivo não tinha): o molde da Task 13 — uma cobrança e o Financeiro do aluno visto pelo dono, na conta InfinitePay que
+  // bloqueia o inadimplente, com a mensalidade vencida desde 01/10
+  const cob = (x: Partial<CobrancaVista> = {}): CobrancaVista => ({
+    id: "c1", paciente_id: "p1", tipo: "mensalidade", descricao: "Mensalidade · Outubro/2026", valor: 100, vencimento: "2026-10-10", status: "aberta",
+    forma: null, metodo: null, mes_ref: "2026-10-01", pago_em: null, enviado_em: null, cobre_de: null, cobre_ate: null, comprovante: false,
+    comprovante_pdf: false, recusado_motivo: null, recusado_em: null, reembolsado_em: null, mp_status: null, mp: false, mp_simulado: false,
+    transacao_id: null, pix_qr: null, pix_copia_cola: null, pix_expira_em: null, criado_por: null, confirmado_em: null, created_at: "2026-10-10T12:00:00Z", ...x,
+  });
+  const fp = (x: Partial<FinanceiroProfissional> = {}): FinanceiroProfissional => ({
+    ok: true, ambiente: "staging", simulacao: true, hoje: "2026-10-11", agora: "2026-10-11T12:00:00Z",
+    aluno: { paciente_id: "p1", treino_user_id: "t1", nome: "Rafael Moura", email: "r@teste.com", cpf: null, foto_url: null, ativo: true, tags: [], conta_id: "c1",
+      conta_nome: "Conta", tem_login: true },
+    permissoes: { master: false, dono: true, responsavel: true, mensalidade: true },
+    conta: { id: "c1", nome: "Conta", modo: "infinitepay", bloquear: true, origem: "nova", chave: null },
+    planos: [], mensalidade: { valor: 100, plano_id: null, plano: "Mensal", pausada: false, pago_ate: "2026-10-01T15:00:00Z", desde: "2026-08-01T15:00:00Z", coberta: false },
+    assinatura: null, cobrancas: [], ...x,
+  });
+
+  it("tentativa viva = aguardando; vencida = não, e a avulsa vencida volta às abertas", () => {
+    const agora = new Date("2026-10-11T12:00:00Z");
+    const base = fp();
+    const viva = { ...base, cobrancas: [cob({ tipo: "mensalidade", status: "aguardando_confirmacao", forma: "infinitepay", ip_expira_em: "2026-10-12T12:00:00Z" })] };
+    expect(resumoDaTrava(viva, agora)!.aguardando).toBe(true);
+    const vencida = { ...base, cobrancas: [cob({ tipo: "mensalidade", status: "aguardando_confirmacao", forma: "infinitepay", ip_expira_em: "2026-10-11T11:00:00Z" }),
+      cob({ id: "a1", tipo: "avulsa", status: "aguardando_confirmacao", forma: "infinitepay", ip_expira_em: "2026-10-11T11:00:00Z" })] };
+    const r = resumoDaTrava(vencida, agora)!;
+    expect(r.aguardando).toBe(false);
+    expect(r.abertas.map((a) => a.id)).toEqual(["a1"]);
+    expect(r.aguardando_avulsas).toBe(0);
+  });
+
+  it("a avulsa viva conta como aguardando; o Pix com comprovante (sem prazo) segue como sempre", () => {
+    const agora = new Date("2026-10-11T12:00:00Z");
+    const r = resumoDaTrava(fp({ cobrancas: [
+      cob({ id: "a1", tipo: "avulsa", status: "aguardando_confirmacao", forma: "infinitepay", ip_expira_em: "2026-10-12T12:00:00Z" }),
+      cob({ id: "x1", tipo: "avulsa", status: "aguardando_confirmacao", forma: "pix_manual" }),
+      cob({ id: "m1", tipo: "mensalidade", status: "aguardando_confirmacao", forma: "pix_manual" }),
+    ] }), agora)!;
+    expect(r.aguardando).toBe(true);
+    expect(r.aguardando_avulsas).toBe(2);
+    expect(r.abertas).toEqual([]);
+  });
+
+  it("o selo BLOQUEADO (pagamento) usa o mesmo agora: tentativa viva segura a trava; vencida, a mensalidade vencida trava", () => {
+    const tentativa = fp({ cobrancas: [cob({ status: "aguardando_confirmacao", forma: "infinitepay", ip_expira_em: "2026-10-11T11:00:00Z" })] });
+    expect(bloqueadoPorPagamento(tentativa, true, new Date("2026-10-11T12:00:00Z"))).toBe(true);
+    // o mesmo Financeiro, 2 dias antes (a tentativa ainda valia): sem selo
+    expect(bloqueadoPorPagamento(tentativa, true, new Date("2026-10-09T12:00:00Z"))).toBe(false);
   });
 });

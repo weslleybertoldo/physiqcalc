@@ -152,6 +152,45 @@ describe("Painel › Financeiro › Planos (W-P)", () => {
   });
 });
 
+describe("W1 — P-B (decisão do Weslley 10/10, '1'): na conta InfinitePay, à vista e cartão parcelado = 'Período todo'", () => {
+  const vezes = (texto: string | null | undefined, trecho: string) => (texto ?? "").split(trecho).length - 1;
+  // o data-plano-modalidade é a caixa de marcar (sem texto): o nome da forma está no <label> dela
+  const rotulo = (x: string) => document.querySelector(`[data-plano-modalidade="${x}"]`)!.closest("label")!.textContent;
+
+  it("W1 (P-B): conta na InfinitePay — 'Período todo (Pix ou cartão até 12×)' no lugar de à vista; o cartão parcelado desligado no novo plano", async () => {
+    h.planos.mockResolvedValue(resposta({ modo: "infinitepay", modalidades_da_conta: ["avista", "mensal"] }));
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-plano-card="pl1"]')).not.toBeNull());
+    expect(document.querySelector('[data-plano-card="pl1"]')!.textContent).toContain("Período todo (Pix ou cartão até 12×)");
+    fireEvent.click(document.querySelector("[data-novo-plano]")!);
+    await waitFor(() => expect(document.querySelector('[data-plano-modalidade="avista"]')).not.toBeNull());
+    expect(rotulo("avista")).toContain("Período todo");
+    expect((document.querySelector('[data-plano-modalidade="cartao_parcelado"]') as HTMLInputElement).disabled).toBe(true);
+    // a linha que a conta não aceita fica com o nome de sempre: "Período todo" aparece 1 vez só no formulário
+    expect(rotulo("cartao_parcelado")).toBe("Cartão parcelado (o seu recebimento não aceita)");
+    expect(vezes(document.querySelector("[data-form-plano]")!.textContent, "Período todo")).toBe(1);
+  });
+
+  it("plano com à vista e cartão parcelado: 1 chip só de 'Período todo' na InfinitePay; no Mercado Pago, 'Cartão parcelado até 6×' como sempre", async () => {
+    const COM_CARTAO = { ...ANUAL, modalidades: ["avista", "cartao_parcelado", "mensal"], max_parcelas_cartao: 6 };
+    h.planos.mockResolvedValue(resposta({ modo: "infinitepay", modalidades_da_conta: ["avista", "mensal"], planos: [COM_CARTAO] }));
+    const { unmount } = montar();
+    await waitFor(() => expect(document.querySelector('[data-plano-card="pl1"]')).not.toBeNull());
+    const naInfinitePay = document.querySelector('[data-plano-card="pl1"]')!.textContent;
+    expect(vezes(naInfinitePay, "Período todo (Pix ou cartão até 12×)")).toBe(1);
+    expect(naInfinitePay).toContain("Mês a mês");
+    expect(naInfinitePay).not.toContain("até 6×");
+    unmount();
+    h.planos.mockResolvedValue(resposta({ modo: "mercadopago", modalidades_da_conta: ["avista", "cartao_parcelado", "mensal"], planos: [COM_CARTAO] }));
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-plano-card="pl1"]')).not.toBeNull());
+    const noMercadoPago = document.querySelector('[data-plano-card="pl1"]')!.textContent;
+    expect(noMercadoPago).toContain("À vista");
+    expect(noMercadoPago).toContain("Cartão parcelado até 6×");
+    expect(noMercadoPago).not.toContain("Período todo");
+  });
+});
+
 describe("W-P — o aviso das cobranças automáticas depois de salvar (ponto 2: os 2 formatos)", () => {
   it("a fila da Task 8b ({ enfileiradas }) e a troca na hora da função de antes ({ atualizadas, falharam })", () => {
     const fila = "As cobranças automáticas dos alunos vão ser atualizadas em instantes.";
