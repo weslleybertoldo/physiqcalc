@@ -21,6 +21,17 @@
 > - **Sandbox do MP:** recusa a credencial `TEST-` da conta real desde 11/10 ~02:47 (`~/projetos/physiqcalc-scratch/w1b/diagnostico-sandbox-mp.md`)
 >   → os testes de pagamento do MP passam a ser com USUÁRIOS DE TESTE (Task 1).
 
+> **Task 0b feita (11/10 19:05–19:35, LINUX 3) — `scripts/segredos/mp_conta.py` (`537c5d3`; 31 testes novos + os 20 do `servidor.py`):**
+> - **Item do MP** ("Mercado Pago — PhysiqCalc", tipo token, 12 campos com valor — só nomes, tipos e tamanhos): `valor` = chave pública de
+>   PRODUÇÃO (44) · `url` (endereço) · `notas` (texto de 2146 que repete as credenciais) · `User ID` (9) · `Nº aplicação / Client ID`
+>   (16 dígitos, = o número no token) · `Access Token` = token de PRODUÇÃO (74) · **`Client Secret` (32)** · `Public Key` = chave
+>   pública de TESTE (41) · `Access Token` = token de TESTE (71, o mesmo nome) · `Comprador de teste` (e-mail, 42) · `Cartões de teste`
+>   (19) · `Webhook` (endereço, 64 — NÃO é a assinatura secreta).
+> - **Client Secret no cofre: SIM** → o **passo 5 da W2-a sai do FIM**; `~/.physiq-mp-oauth.json` (600) gravado (`oauth local` ✅). O token
+>   de produção está no item → a Task 1 cria o par de usuários de teste (`usuarios-teste criar --seco` ✅: "criaria 2"; nada criado aqui).
+> - Itens da W2 no cofre: nenhum ainda (usuários de teste, aplicação de teste). Funções: `MP_CLIENT_ID`/`MP_CLIENT_SECRET` ainda não
+>   existem (`oauth conferir` ❌, o esperado — a Task 14 copia; `oauth copiar --seco` levaria só os 2, sem `_STAGING`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** em **Configurações › Recebimento** o dono da conta escolhe **"Mercado Pago (sua conta)"**, toca em **"Conectar com o Mercado
