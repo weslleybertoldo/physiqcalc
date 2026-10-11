@@ -2,42 +2,34 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { principal } from "@/integrations/principal/client";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
+import { ErroFinanceiro, salvarChavePix } from "@/financeiro/api";
+import { mensagemDoRecebimento } from "@/financeiro/regras";
+import type { ChaveRecebimento } from "@/financeiro/tipos";
 import { PIX_TIPOS, normalizarChavePix, validarChavePix, type PixTipo } from "@/lib/pixChave";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 
-/** Chave Pix de recebimento da conta (recebimento_chaves no banco principal — W6; vinha do physiq_recebimentos do Calc). */
-export interface ChaveRecebimento {
-  id: string;
-  conta_id: string;
-  membro_id: string | null;
-  tipo: PixTipo;
-  chave: string;
-  favorecido: string | null;
-  banco: string | null;
-  ativa: boolean;
-  criado_em: string;
-}
-
-export const COLUNAS_CHAVE = "id, conta_id, membro_id, tipo, chave, favorecido, banco, ativa, criado_em";
+/** Chave Pix de recebimento da conta (recebimento_chaves no banco principal — W6; vinha do physiq_recebimentos do Calc). W1: o tipo mora
+ *  em @/financeiro/tipos (a resposta do prof_recebimento) e as colunas no servidor (_shared/pix-chave-regras.ts › COLUNAS_CHAVE). */
+export type { ChaveRecebimento } from "@/financeiro/tipos";
 
 interface Props {
   aberto: boolean;
   onFechar: () => void;
   contaId: string;
-  membroId: string | null;
   /** null = chave nova; com item = editar. */
   item: ChaveRecebimento | null;
-  /** Sem nenhuma chave ligada, a nova já nasce ligada. */
-  ativarAoCriar: boolean;
   onSalvo: (salva: ChaveRecebimento) => void;
 }
 
-/** Popup "Adicionar" / "Editar" chave Pix (pedido 13/09/2026): tipo, chave, favorecido e banco. */
-export default function RecebimentoPixDialog({ aberto, onFechar, contaId, membroId, item, ativarAoCriar, onSalvo }: Props) {
+/**
+ * Popup "Adicionar" / "Editar" chave Pix (pedido 13/09/2026): tipo, chave, favorecido e banco. W1 (jeito 2): grava pela pagamentos-aluno
+ * (prof_chave_salvar), como a pessoa — o servidor decide quem cadastrou e se a nova nasce ligada (sem nenhuma ligada, nasce ligada). A tela
+ * valida e normaliza na hora (a resposta rápida); o servidor valida de novo.
+ */
+export default function RecebimentoPixDialog({ aberto, onFechar, contaId, item, onSalvo }: Props) {
   const celular = useIsMobile();
   const [tipo, setTipo] = useState<PixTipo | "">("");
   const [chave, setChave] = useState("");
@@ -63,17 +55,18 @@ export default function RecebimentoPixDialog({ aberto, onFechar, contaId, membro
     if (problema) return setErro(problema);
     const dados = { tipo: tipo as PixTipo, chave: normalizarChavePix(tipo as PixTipo, chave), favorecido: favorecido.trim() || null, banco: banco.trim() || null };
     setSalvando(true);
-    const { data, error } = item
-      ? await principal.from("recebimento_chaves").update(dados).eq("id", item.id).select(COLUNAS_CHAVE).single()
-      : await principal.from("recebimento_chaves").insert({ conta_id: contaId, membro_id: membroId, ...dados, ativa: ativarAoCriar }).select(COLUNAS_CHAVE).single();
-    setSalvando(false);
-    if (error || !data) {
-      console.error("[Recebimento] salvar chave:", error);
-      return setErro("Não deu para salvar a chave agora. Tente de novo.");
+    try {
+      const r = await salvarChavePix(contaId, { ...(item ? { id: item.id } : {}), ...dados });
+      toast.success(item ? "Chave atualizada." : r.chave.ativa ? "Chave salva e ligada." : "Chave salva.");
+      onSalvo(r.chave);
+      onFechar();
+    } catch (e) {
+      const erro = e instanceof ErroFinanceiro ? e : null;
+      setErro(erro?.codigo === "chave_invalida" && typeof erro.extra.mensagem === "string" ? erro.extra.mensagem
+        : mensagemDoRecebimento(erro?.codigo ?? null, "Não deu para salvar a chave agora. Tente de novo."));
+    } finally {
+      setSalvando(false);
     }
-    toast.success(item ? "Chave atualizada." : ativarAoCriar ? "Chave salva e ligada." : "Chave salva.");
-    onSalvo(data as unknown as ChaveRecebimento);
-    onFechar();
   };
 
   return (
