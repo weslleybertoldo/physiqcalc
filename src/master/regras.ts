@@ -16,7 +16,10 @@ export const ROTULO_SITUACAO: Record<Situacao, string> = {
 export const TOM_SITUACAO: Record<Situacao, TomChip> = { teste: "c", ativa: "n", vencida: "r", isenta: "g", suspensa: "a", cancelada: "g" };
 export const ROTULO_MODULO: Record<ModuloConta, string> = { treino: "Treino", nutricao: "Nutrição" };
 export const TOM_MODULO: Record<ModuloConta, TomChip> = { treino: "t", nutricao: "n" };
-export const ROTULO_RECEBIMENTO: Record<string, string> = { pix_manual: "Pix manual", nenhum: "Não cobra pelo app", mercadopago: "Mercado Pago" };
+/** W1: + a InfinitePay (o master vê e desliga; quem liga é o dono, em Configurações › Recebimento). */
+export const ROTULO_RECEBIMENTO: Record<string, string> = {
+  pix_manual: "Pix manual", nenhum: "Não cobra pelo app", mercadopago: "Mercado Pago", infinitepay: "InfinitePay",
+};
 export const PLANOS: PlanoConta[] = ["treino", "nutricao", "treino_nutricao"];
 export const FAIXAS: Faixa[] = ["f10", "f30", "f100", "livre"];
 

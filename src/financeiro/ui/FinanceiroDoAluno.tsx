@@ -12,6 +12,7 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro } from "@/ui/premium/Estados";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
+import { abrirLinkExterno } from "../abrirPagamento";
 import { buscarCobrancasDoAluno, buscarTotaisDoAluno, ErroFinanceiro } from "../api";
 import { criarLancamento, garantirCategorias, paginaLancamentosDoAluno, rotuloMetodoLancamento, valorComSinal, type Lancamento } from "../lancamentos";
 import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, paginaRecibosDoAluno, podeEmitirRecibo, type Recibo } from "../recibos";
@@ -20,7 +21,7 @@ import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
 import ReciboDialog from "@/painel/financeiro/ReciboDialog";
 import { useFinanceiroConta } from "@/painel/financeiro/useFinanceiro";
 import { precisaRenovar, sufixoDoValor } from "../planos";
-import { chipDaMensalidade, dataBR, ehPeriodoTodo, estadoDaMensalidade, hojeSP, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
+import { chipDaMensalidade, dataBR, ehPeriodoTodo, estadoDaMensalidade, hojeSP, mensagemErroFinanceiro, mensalidadeAguardando, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
 import { ComprovanteVisor } from "./ComprovanteVisor";
 import { DialogoLancamento, DialogoNovaCobranca, DialogoRegistrar } from "./Dialogos";
@@ -33,7 +34,7 @@ import { chaveFinanceiroDoAluno, useFinanceiroDoAluno, usePaginaDoAluno } from "
 const COBRANCAS_NO_CARTAO = 8;
 const RECIBOS_NO_CARTAO = 12;
 
-const MODO_TEXTO: Record<string, string> = { pix_manual: "Pix na chave da conta, com comprovante", mercadopago: "Mercado Pago (Pix e cartão, automático)", nenhum: "Não cobra pelo app (por fora)" };
+const MODO_TEXTO: Record<string, string> = { pix_manual: "Pix na chave da conta, com comprovante", mercadopago: "Mercado Pago (Pix e cartão, automático)", infinitepay: "InfinitePay (Pix e cartão, confirmação automática)", nenhum: "Não cobra pelo app (por fora)" };
 
 function IconeAcao({ icone: Icone, rotulo, onClick, perigo, marca }: { icone: typeof Eye; rotulo: string; onClick: () => void; perigo?: boolean; marca?: string }) {
   return (
@@ -124,7 +125,8 @@ function CartaoMensalidade({ d, agir }: { d: FinanceiroProfissional; agir: Retur
       </Cartao>
     );
   }
-  const e = estadoDaMensalidade(m ? { valor: m.valor, pausada: m.pausada, pago_ate: m.pago_ate, desde: m.desde, aguardando: d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao") } : null);
+  // W1-B1: a tentativa da InfinitePay vencida não deixa a mensalidade "aguardando" (a regra do servidor — mensalidadeAguardando)
+  const e = estadoDaMensalidade(m ? { valor: m.valor, pausada: m.pausada, pago_ate: m.pago_ate, desde: m.desde, aguardando: mensalidadeAguardando(d.cobrancas) } : null);
   const chip = chipDaMensalidade(e);
   return (
     <Cartao brilho className="flex flex-col p-5" data-cartao-mensalidade={e.situacao}>
@@ -196,10 +198,12 @@ function CartaoCobrancas({ d, alunoId, compacto, agir, aoVerComprovante, aoRegis
   const acoesDe = (c: CobrancaVista) => (
     <span className="flex flex-none items-center gap-1">
       {c.comprovante && <IconeAcao icone={Eye} rotulo="Ver o comprovante" onClick={() => aoVerComprovante(c.id)} marca="ver" />}
-      {c.status === "aberta" && <IconeAcao icone={Banknote} rotulo="Registrar pago por fora" onClick={() => aoRegistrar(c)} marca="pago-por-fora" />}
+      {/* W1: também na avulsa esperando a InfinitePay (o aluno diz que pagou e a confirmação não veio — o prof_registrar aceita) */}
+      {(c.status === "aberta" || (c.tipo === "avulsa" && c.status === "aguardando_confirmacao" && c.forma === "infinitepay")) && <IconeAcao icone={Banknote} rotulo="Registrar pago por fora" onClick={() => aoRegistrar(c)} marca="pago-por-fora" />}
       {c.status === "aberta" && <IconeAcao icone={Ban} rotulo="Cancelar a cobrança" perigo marca="cancelar"
         onClick={() => void confirmar({ titulo: `Cancelar "${c.descricao}"?`, rotuloConfirmar: "Cancelar cobrança", rotuloCancelar: "Voltar", perigo: true })
           .then((sim) => { if (sim) void agir("prof_cobranca_cancelar", { cobranca_id: c.id }, "Cobrança cancelada."); })} />}
+      {c.ip_recibo_url && <IconeAcao icone={ReceiptText} rotulo="Recibo da InfinitePay" onClick={() => void abrirLinkExterno(c.ip_recibo_url)} marca="recibo-ip" />}
       {dono && c.status === "paga" && c.forma === "mp" && c.mp && <IconeAcao icone={Undo2} rotulo="Estornar no Mercado Pago" perigo marca="estornar"
         onClick={() => void confirmar({ titulo: `Estornar ${reais(c.valor)} no Mercado Pago?`, descricao: "O dinheiro volta para o aluno.", rotuloConfirmar: "Estornar", perigo: true })
           .then((sim) => { if (sim) void agir("prof_reembolsar", { cobranca_id: c.id }, "Estorno pedido ao Mercado Pago."); })} />}

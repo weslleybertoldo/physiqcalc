@@ -151,6 +151,18 @@ describe("perfil do aluno no painel (tela 7)", () => {
     const c = montar(<KpiMensalidade alunoId="t1" />);
     expect(c.container).toBeEmptyDOMElement();
   });
+  it("W1-B1: KPI Mensalidade — a tentativa da InfinitePay vencida (antes da rodada de 15 min) não deixa 'aguardando'; a viva, sim", () => {
+    const tentativa = (expira: string) => cobranca({ id: "ip1", status: "aguardando_confirmacao", forma: "infinitepay", comprovante: false, pago_em: null, ip_expira_em: expira });
+    const mensalidade = { valor: 249, plano_id: null, plano: null, pausada: false, pago_ate: dia(-2), desde: null, coberta: false };
+    const conta = { id: "c1", nome: "Lucas", modo: "infinitepay" as const, bloquear: false, origem: "nova", chave: null };
+    h.financeiro = financeiro({ conta, mensalidade, cobrancas: [tentativa(dia(-0.05))] });
+    const a = montar(<KpiMensalidade alunoId="t1" />);
+    expect(document.querySelector("[data-kpi-mensalidade='vencida']")).not.toBeNull();
+    a.unmount();
+    h.financeiro = financeiro({ conta, mensalidade, cobrancas: [tentativa(dia(1))] });
+    montar(<KpiMensalidade alunoId="t1" />);
+    expect(document.querySelector("[data-kpi-mensalidade='aguardando']")).not.toBeNull();
+  });
   it("card Financeiro: 'R$ 249/MÊS', 'Emitir recibo' e a cobrança em aberto antes das pagas com ✓", () => {
     h.financeiro = financeiro({
       cobrancas: [

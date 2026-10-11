@@ -1,18 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Plus, QrCode, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { principal } from "@/integrations/principal/client";
+import { ErroFinanceiro, excluirChavePix, ligarChavePix } from "@/financeiro/api";
+import { mensagemDoRecebimento } from "@/financeiro/regras";
+import type { ChaveRecebimento } from "@/financeiro/tipos";
 import { formatarChavePix, rotuloPixTipo } from "@/lib/pixChave";
 import { Botao } from "@/ui/premium/Botao";
-import { Esqueleto } from "@/ui/premium/Estados";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
-import RecebimentoPixDialog, { COLUNAS_CHAVE, type ChaveRecebimento } from "@/components/admin/RecebimentoPixDialog";
+import RecebimentoPixDialog from "@/components/admin/RecebimentoPixDialog";
 
 interface Props {
   contaId: string;
-  membroId: string | null;
+  chaves: ChaveRecebimento[];
   podeEditar: boolean;
+  /** a tela relê o prof_recebimento (W1: a lista não lê mais o banco) */
+  aoMudar: () => void;
 }
 
 export const NENHUMA_ATIVA = "Nenhuma chave ligada — o aluno não vê chave nem consegue anexar comprovante (útil se você cobra por fora).";
@@ -20,68 +23,46 @@ export const NENHUMA_ATIVA = "Nenhuma chave ligada — o aluno não vê chave ne
 /**
  * Chaves Pix da conta (C51 — pedido 13/09/2026): cada uma com o switch ligar/desligar e SÓ 1 ligada por conta; é a ligada que o
  * aluno vê em Perfil › Pagamentos. W6: mora no banco principal (recebimento_chaves; o dono e o membro dono da chave editam).
+ * W1 (jeito 2): as gravações vão pela pagamentos-aluno (prof_chave_salvar/ligar/excluir), como a pessoa; quem lê é a tela
+ * (prof_recebimento), que recebe o aoMudar para reler.
  */
-export default function RecebimentosLista({ contaId, membroId, podeEditar }: Props) {
-  const [chaves, setChaves] = useState<ChaveRecebimento[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+export default function RecebimentosLista({ contaId, chaves, podeEditar, aoMudar }: Props) {
   const [ocupado, setOcupado] = useState<string | null>(null);
   const confirmar = useConfirmar();
   const [dialogo, setDialogo] = useState<{ aberto: boolean; item: ChaveRecebimento | null }>({ aberto: false, item: null });
-
-  const carregar = useCallback(async () => {
-    const { data, error } = await principal.from("recebimento_chaves").select(COLUNAS_CHAVE).eq("conta_id", contaId).order("criado_em");
-    if (error) {
-      console.error("[Recebimento] chaves:", error);
-      setErro("Não deu para carregar as chaves.");
-    } else {
-      setChaves((data ?? []) as unknown as ChaveRecebimento[]);
-      setErro(null);
-    }
-    setCarregando(false);
-  }, [contaId]);
-  useEffect(() => { void carregar(); }, [carregar]);
 
   const algumaAtiva = chaves.some((c) => c.ativa);
 
   const alternar = async (c: ChaveRecebimento, ligar: boolean) => {
     setOcupado(c.id);
     try {
-      if (ligar) {
-        // só 1 ligada por conta (índice único): desliga as outras antes
-        const { error: e1 } = await principal.from("recebimento_chaves").update({ ativa: false }).eq("conta_id", contaId).eq("ativa", true).neq("id", c.id);
-        if (e1) throw e1;
-      }
-      const { error } = await principal.from("recebimento_chaves").update({ ativa: ligar }).eq("id", c.id);
-      if (error) throw error;
+      // só 1 ligada por conta: o servidor desliga as outras numa transação
+      await ligarChavePix(contaId, c.id, ligar);
       toast.success(`Chave ${ligar ? "ligada" : "desligada"}.`);
     } catch (e) {
-      console.error("[Recebimento] alternar:", e);
-      toast.error("Não deu para mudar a chave agora.");
+      toast.error(mensagemDoRecebimento(e instanceof ErroFinanceiro ? e.codigo : null, "Não deu para mudar a chave agora."));
     } finally {
       setOcupado(null);
-      await carregar();
+      aoMudar();
     }
   };
 
   const excluir = async (c: ChaveRecebimento) => {
     if (!(await confirmar({ titulo: `Excluir a chave ${formatarChavePix(c.tipo, c.chave)}?`, rotuloConfirmar: "Excluir", perigo: true }))) return;
     setOcupado(c.id);
-    const { error } = await principal.from("recebimento_chaves").delete().eq("id", c.id);
-    setOcupado(null);
-    if (error) {
-      toast.error("Não deu para excluir a chave.");
-      return;
+    try {
+      await excluirChavePix(contaId, c.id);
+      toast.success("Chave excluída.");
+    } catch (e) {
+      toast.error(mensagemDoRecebimento(e instanceof ErroFinanceiro ? e.codigo : null, "Não deu para excluir a chave agora."));
+    } finally {
+      setOcupado(null);
+      aoMudar();
     }
-    toast.success("Chave excluída.");
-    await carregar();
   };
-
-  if (carregando) return <Esqueleto className="h-[92px] w-full rounded-2xl" />;
 
   return (
     <div className="flex flex-col gap-2.5" data-recebimentos-lista>
-      {erro && <p className="text-[13px] text-rosa-3">{erro}</p>}
       {chaves.length === 0 && <p className="text-[13px] text-texto-2" data-recebimentos-vazio>Nenhuma chave cadastrada. Adicione a sua chave Pix para os alunos pagarem pelo app.</p>}
       {chaves.map((c) => (
         <div key={c.id} className="flex items-center gap-3 rounded-2xl border border-linha bg-superficie px-3.5 py-3" data-recebimento-item={c.tipo} data-recebimento-ativo={c.ativa || undefined}>
@@ -104,8 +85,8 @@ export default function RecebimentosLista({ contaId, membroId, podeEditar }: Pro
       {podeEditar && (
         <Botao icone={Plus} className="self-start" onClick={() => setDialogo({ aberto: true, item: null })} data-btn-adicionar-recebimento>Adicionar chave Pix</Botao>
       )}
-      <RecebimentoPixDialog aberto={dialogo.aberto} item={dialogo.item} contaId={contaId} membroId={membroId} ativarAoCriar={!algumaAtiva}
-        onFechar={() => setDialogo({ aberto: false, item: null })} onSalvo={() => void carregar()} />
+      <RecebimentoPixDialog aberto={dialogo.aberto} item={dialogo.item} contaId={contaId}
+        onFechar={() => setDialogo({ aberto: false, item: null })} onSalvo={aoMudar} />
     </div>
   );
 }

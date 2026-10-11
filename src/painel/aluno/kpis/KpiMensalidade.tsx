@@ -1,5 +1,5 @@
 import { Clock, TrendingUp, TriangleAlert } from "lucide-react";
-import { dataBR, estadoDaMensalidade, reaisCurto } from "@/financeiro/regras";
+import { dataBR, estadoDaMensalidade, mensalidadeAguardando, reaisCurto } from "@/financeiro/regras";
 import { useFinanceiroDoAluno } from "@/financeiro/ui/useFinanceiroDoAluno";
 import { useConta } from "@/nucleo/conta";
 import { KpiCompacto } from "@/ui/premium/Kpi";
@@ -26,8 +26,8 @@ export default function KpiMensalidade({ alunoId }: { alunoId: string }) {
   if (!d.permissoes.mensalidade) return null;
   const m = d.mensalidade;
   if (!m) return <KpiCompacto rotulo="Mensalidade" valor="—" detalhe="sem cobrança" tomDetalhe="neutro" />;
-  const aguardando = d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao");
-  const e = estadoDaMensalidade({ valor: m.valor, pausada: m.pausada, pago_ate: m.pago_ate, desde: m.desde, aguardando });
+  // W1-B1: a tentativa da InfinitePay vencida não deixa a mensalidade "aguardando" (a regra do servidor, a mesma do cartão)
+  const e = estadoDaMensalidade({ valor: m.valor, pausada: m.pausada, pago_ate: m.pago_ate, desde: m.desde, aguardando: mensalidadeAguardando(d.cobrancas) });
   const detalhe =
     e.situacao === "pausada" ? { t: "cobrança parada", tom: "neutro" as const, i: undefined }
       : e.situacao === "aguardando" ? { t: "comprovante p/ conferir", tom: "ambar" as const, i: Clock }

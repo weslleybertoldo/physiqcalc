@@ -191,3 +191,98 @@ it("hml-19 (H-55): o detalhe do pagamento no MP só mostra e-mail, nome no cart�
   expect(trecho).toMatch(/e2e_id: souOAluno \?/);
   expect(trecho).toMatch(/card_last4: pay\.card\?\.last_four_digits/);
 });
+
+describe("W1 — a baixa da InfinitePay só depois do payment_check (guarda de fonte)", () => {
+  const FUNCOES = resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions");
+  const ler = (rel: string) => readFileSync(resolve(FUNCOES, rel), "utf8");
+  it("jeito 2: o Recebimento grava COMO A PESSOA (dbPessoa) — recebimento_chaves e contas nunca com o service_role", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    expect(f).toContain("createClient(SUPABASE_URL, ANON,");
+    expect(f).not.toMatch(/\bdb\.from\("recebimento_chaves"\)\s*\.\s*(insert|update|upsert|delete)/);
+    expect(f).not.toMatch(/\bdb\.from\("contas"\)\s*\.\s*(insert|update|upsert|delete)/);
+    expect(f).toMatch(/dbPessoa\.from\("recebimento_chaves"\)\s*\.\s*insert/);
+    expect(f).toMatch(/dbPessoa\.rpc\("recebimento_infinitepay_salvar"/);
+    expect(f).toMatch(/dbPessoa\.rpc\("recebimento_chave_ligar"/);
+  });
+  it("conferirAviso chama o payment_check (a tag e o pedido do LINK) antes de aplicar; 'paga' só no 'baixar'; nenhuma cobrança nasce aqui (C1)", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const conferir = b.slice(b.indexOf("export async function conferirAviso"), b.indexOf("export async function conferirAvisosPendentes"));
+    expect(conferir).toContain("conferirPagamento(link.handle, link.pedido");
+    expect(conferir.indexOf("conferirPagamento(")).toBeLessThan(conferir.indexOf("aplicar("));
+    expect(b.match(/status: "paga"/g)?.length).toBe(1);
+    expect(b).not.toMatch(/from\("cobrancas"\)\s*\.\s*(insert|upsert)/);
+    const aplicar = b.slice(b.indexOf("async function aplicar("), b.indexOf("async function avisarPago("));
+    expect(aplicar).toContain("conf: ConferenciaIp");
+    expect(aplicar).not.toMatch(/ip_transaction_nsu: a\.transaction_nsu/); // o NSU gravado sai do nsuDaBaixa
+  });
+  it("I4: o link nasce com o pedidoDoLink (<cobranca_id>-<n>) — o webhook e a volta recusam o id puro da cobrança", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const novo = b.slice(b.indexOf("export async function novoLink"), b.indexOf("export async function registrarAviso"));
+    expect(novo).toContain("const pedido = pedidoDoLink(cobrancaId, n);");
+    expect(novo).toContain(".insert({ pedido, cobranca_id: cobrancaId, n, handle, centavos })");
+  });
+  it("só pelo pedido SÓ na tentativa ainda NÃO paga: numa cobrança já paga o NSU do pedido daria 'ja_feito' de qualquer link (revisão da 1b)", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const pp = b.slice(b.indexOf("export async function conferirPeloPedido"), b.indexOf("export async function fecharVencidas"));
+    const pega = pp.indexOf('.eq("status", "aguardando_confirmacao")');
+    expect(pega).toBeGreaterThan(-1);
+    expect(pega).toBeLessThan(pp.indexOf("conferirPagamento("));
+    expect(pp).not.toMatch(/\.(in|neq)\("status"/);
+  });
+  it("o 'desistiu' avisa o personal ANTES de fechar (fechado antes, o próprio aviso contava no teto de 1 por 24 h e o sino calava)", () => {
+    const b = ler("_shared/infinitepay-baixa.ts");
+    const sem = b.slice(b.indexOf("async function semBaixa("), b.indexOf("async function fechar("));
+    expect(sem.indexOf("avisarUmaVez(")).toBeGreaterThan(-1);
+    expect(sem.indexOf("avisarUmaVez(")).toBeLessThan(sem.indexOf('fechar(db, a, "desistiu"'));
+    const aplicar = b.slice(b.indexOf("async function aplicar("), b.indexOf("async function avisarPago("));
+    expect(aplicar.lastIndexOf("avisarUmaVez(")).toBeLessThan(aplicar.lastIndexOf("await fechar(db, a, resultadoDaDecisao(d));"));
+  });
+  it("o webhook só registra o aviso: não grava cobrança nem diz 'paga'; responde 200/429/413/400 (nunca 5xx)", () => {
+    const w = ler("infinitepay-webhook-aluno/index.ts");
+    expect(w).not.toMatch(/from\("cobrancas"\)\s*\.\s*(update|insert|upsert|delete)/);
+    expect(w).not.toMatch(/"paga"/);
+    expect(w).toContain("emSegundoPlano(");
+    expect(w).not.toMatch(/responder\(5\d\d/);
+  });
+  it("I6: o IP pelo ipDoPedido (nunca o cabeçalho de encaminhamento cru), o corpo com teto e o pedido do LINK (I4)", () => {
+    const w = ler("infinitepay-webhook-aluno/index.ts");
+    expect(w).toContain("ipDoPedido(req.headers, null)");
+    expect(w).not.toMatch(/x-forwarded-for/i);
+    expect(w).toContain("IP_LIMITE_CORPO");
+    expect(w).toContain("linkDoPedido(db, aviso.pedido)");
+  });
+  it("o aluno_ip_link cria um pedido por link (I4) e desfaz a tentativa quando a InfinitePay não cria o link; a conferência usa a caixa", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const link = f.slice(f.indexOf('acao === "aluno_ip_link"'), f.indexOf('acao === "aluno_ip_volta"'));
+    expect(link).toContain("novoLink(db, linha.id, handle");
+    expect(link).toContain("desfazerTentativa(linha, pedido)");
+    const ip = f.slice(f.indexOf("W1 — O ALUNO PAGA PELA INFINITEPAY"), f.indexOf("════ PROFISSIONAL ════"));
+    expect(ip).not.toMatch(/status: "paga"/);
+    expect(ip).toContain('conferirAviso(db, reg.id, ctxIp(), "tela")');
+  });
+  it("I3: o aluno_status e o prof_aluno conferem em 2º plano, como a tela (sem gastar tentativa); I2: só na conta InfinitePay", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const cuidar = f.slice(f.indexOf("const cuidarDaInfinitePay"), f.indexOf("const ehTentativaIp"));
+    expect(cuidar).toContain('emSegundoPlano(conferirAvisosPendentes(db, { pacienteId: m.id }, ctx, 2, "tela")');
+    const status = f.slice(f.indexOf('acao === "aluno_status"'), f.indexOf("matriculas.push("));
+    expect(status).toMatch(/recebimento_modo === "infinitepay" \|\| cobs0\.some\(ehTentativaIp\)\) await cuidarDaInfinitePay/);
+  });
+  it("I5: o prof_registrar da mensalidade usa a tentativa da InfinitePay aguardando (a mesma linha), em vez de criar outra", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const reg = f.slice(f.indexOf('acao === "prof_registrar"'), f.indexOf('acao === "prof_remover"'));
+    expect(reg).toMatch(/\.eq\("forma", "infinitepay"\)[\s\S]*\.update\(linhaManual\)/);
+  });
+  it("P-B: o prof_plano_salvar valida com modalidadesPermitidasNoPlano (o plano antigo não trava o personal)", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const salvar = f.slice(f.indexOf('acao === "prof_plano_salvar"'), f.indexOf('acao === "prof_plano_ativo"'));
+    expect(salvar).toContain("modalidadesPermitidasNoPlano(conta.modo");
+  });
+  it("nada da InfinitePay vai ao log: InfiniteTag, url, recibo, NSU, slug", () => {
+    for (const rel of ["infinitepay-webhook-aluno/index.ts", "_shared/infinitepay-baixa.ts", "_shared/infinitepay.ts", "pagamentos-aluno/index.ts"]) {
+      const f = ler(rel);
+      for (const m of f.matchAll(/\blog\.(?:info|aviso|erro|excecao)\s*\(([\s\S]*?)\);/g)) {
+        expect(m[1], `${rel}: ${m[1].slice(0, 80)}`).not.toMatch(/\b(handle|ip_handle|url|recibo|recibo_url|transaction_nsu|nsu|slug)\b/);
+      }
+    }
+  });
+});

@@ -28,7 +28,7 @@ export interface ContaLinha {
    */
   regras_legadas?: boolean;
   isenta_motivo: string | null;
-  recebimento_modo: "pix_manual" | "nenhum" | "mercadopago";
+  recebimento_modo: "pix_manual" | "nenhum" | "mercadopago" | "infinitepay";
   bloquear_app_inadimplente: boolean;
   alunos_bloqueados_em: string | null;
   alunos_bloqueados_msg: string | null;
@@ -44,6 +44,8 @@ export interface ContaLinha {
   legado_nutri: { teste_ate: string | null; pago_ate: string | null; isento: boolean } | null;
   ultima_fatura: { id: string; valor: number; status: string; forma: string | null; tipo: string; criado_em: string; pago_em: string | null; cobre_ate: string | null } | null;
   chave_pix: { tipo: string; chave: string; favorecido: string | null; banco: string | null } | null;
+  /** W1: a InfinitePay da conta (a InfiniteTag) — pode não vir (servidor antigo) */
+  infinitepay?: { handle: string | null; status: string | null; testado_em: string | null } | null;
 }
 
 export interface Membro {

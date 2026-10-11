@@ -29,7 +29,22 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 11:54 | W1 | `9ca1da5` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | Task 20, com o `9ca1da5` no staging (a migration da W1 sem mudança: o dry-run deu no-op) |
+| 11/10 11:53 | W1 | `9ca1da5` | `e2e/w10/api.py` | staging | 22/22 | Task 20; só leitura |
+| 11/10 11:52 | W1 | `9ca1da5` | `e2e/wp/api.py --casos planos,periodo` | staging | 26/26 | Task 20: a W-P sem regressão; a massa desfeita |
+| 11/10 11:51 | W1 | `9ca1da5` | `e2e/w1/api.py --casos recebimento,link,forjado --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | staging | 31/31 | Task 20: as funções no ar (`pagamentos-aluno` v40, `infinitepay-webhook-aluno` v1) e a API de verdade da InfinitePay, sem cobrar; o webhook respondeu "registrado" em 333 ms; 1 link de verdade (o do aluno, R$ 10,00, reaproveitado no 2º toque), nenhum pago; tudo voltou à foto |
+| 11/10 11:47 | W1 | `9ca1da5` | `e2e/w1/telas.py --base staging --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | staging | 85/85 | Task 20: o site do staging com o `9ca1da5` (v3.99); os 15 prints conferidos: a 390 o "Testar" quebra a linha dentro do cartão, e a frase "Ainda não chegou…" sai dentro da folha, sem nada por cima do "Conferir pagamento"; a InfiniteTag borrada; 3 links de verdade (Testar e Salvar de R$ 1,00 + o do aluno de R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 11:44 | W1 | `9ca1da5` | `e2e/w1/telas.py --base staging --seco` | staging | 22/22 | o health do staging com o `9ca1da5`; nada gravado |
+| 11/10 11:31 | W1 | `bb043fb` | `e2e/w1/telas.py --base local --loja --seco` | local | 21/21 | depois do rebase na main (`c1dbffe`); nada gravado |
+| 11/10 11:31 | W1 | `bb043fb` | `e2e/w1/telas.py --base local --seco` | local | 23/23 | depois do rebase na main (`c1dbffe`); nada gravado |
+| 11/10 11:30 | W1 | `bb043fb` | `e2e/w1/api.py --seco` | staging | 7/7 | depois do rebase na main (`c1dbffe`); nada gravado |
+| 11/10 11:08 | W1 | `3225e93` | `e2e/w1/telas.py --base local --loja --seco` | local | 21/21 | com o conserto da frase do "Conferir pagamento" dentro da folha; nada gravado |
+| 11/10 11:08 | W1 | `3225e93` | `e2e/w1/telas.py --base local --seco` | local | 23/23 | com o conserto da frase do "Conferir pagamento" dentro da folha; nada gravado |
+| 11/10 11:01 | W1 | `9a34478` | `e2e/w1/telas.py --base local --seco` | local | 23/23 | a checagem nova do botão livre (o toast por cima do "Conferir pagamento" é pego); nada gravado |
+| 11/10 10:58 | W1 | `18a40e1` | `e2e/w1/telas.py --base local --seco` | local | 22/22 | com a InfiniteTag mascarada também no print da falha; nada gravado |
+| 11/10 10:57 | W1 | `18a40e1` | `e2e/w1/api.py --seco` | staging | 7/7 | o placar troca a InfiniteTag por `<InfiniteTag>` em toda mensagem (conferido com uma tag inventada); nada gravado |
 | 11/10 10:57 | hml-19b | `da9824d` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 76/79 | F7: as MESMAS 3 de antes (a prescrição do Treino; [atalhos] expectativa velha; o site antigo não abriu) |
+| 11/10 10:46 | W1 | `29d6906` | `e2e/w1/telas.py --base local --seco` | local | 22/22 | com o conserto do "Testar"/"Ativar" a 390 e o autoteste do botão dentro do cartão com o CSS do build; nada gravado |
 | 11/10 10:46 | hml-19b | `da9824d` | `e2e/w11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 75/79 | F7: as MESMAS 4 de antes ([so_nutricao] ×3: o app abre no Início desde a W12; o site antigo não abriu) |
 | 11/10 10:36 | hml-19b | `da9824d` | `e2e/w24/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 60/60 | F7: o Diário das Dietas pela tela (reagir pela nutricao, o aviso no sino), Alimentos, Receitas, o /d/; harness da9824d |
 | 11/10 10:30 | hml-19b | `da9824d` | `e2e/w24/api.py` | staging | 47/47 | F7, com a massa da W24 inteira (o harness da9824d: a sb_secret_ só no apikey) |
@@ -38,6 +53,29 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 | 11/10 10:21 | hml-19b | `da9824d` | `e2e/hml19/api.py --area aluno --base staging` | staging | 27/27 | F7 (balde do IP: o app 0 → 0; o link público 0 → 1) |
 | 11/10 10:20 | hml-19b | `da9824d` | `e2e/hml19/api.py --area dieta --base staging` | staging | 102/102 | F7 |
 | 11/10 10:17 | hml-19b | `da9824d` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 124/124 | F7 (o staging serve da9824d) |
+| 11/10 10:09 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 82/82 | com o `telas.py` deste commit (o alvo do print no meio da tela + "o alvo à vista"); os 15 prints conferidos; achado ABERTO: a 390, o botão "Testar (abre a sua página, sem cobrar)" do Recebimento passa da borda do cartão (o `pq-botao` tem `nowrap` e 44 px) — correção e nova rodada na janela das 13:00; 3 links de verdade na InfinitePay (Testar e Salvar de R$ 1,00 + o do aluno de R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 10:06 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --seco` | local | 20/20 | com o `telas.py` deste commit; nada gravado |
+| 11/10 10:06 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 35/35 | com o `telas.py` deste commit; os 4 prints conferidos; 1 link de verdade na InfinitePay (o do aluno, R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 10:03 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 18/18 | o teste novo do enquadramento passa com o `scrollIntoView` no meio da tela |
+| 11/10 10:03 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 17/18 | esperado: o teste novo do enquadramento falha com o scroll de antes (o alvo por baixo da barra de baixo `[data-tabbar]`) |
+| 11/10 10:03 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 18/18 | erro do teste novo: a página de mentira sem a `meta viewport` não reproduzia o caso — refeito |
+| 11/10 10:02 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 17/18 | erro do script: `data-alvo` e `data-sonner-toaster` fora da lista dos atributos que não moram no `src/` — corrigido |
+| 11/10 10:00 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 35/35 | os 4 prints conferidos; 1 link de verdade na InfinitePay (o do aluno, R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 09:58 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --loja --seco` | local | 17/17 | nada gravado |
+| 11/10 09:57 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 82/82 | os prints conferidos: o `8_master_integracoes-390` saiu com a linha da conta por baixo da barra de baixo do celular (erro do script: o scroll "se precisar" não rola o alvo que já está na tela) — corrigido neste commit e refeito às 10:09; 3 links de verdade na InfinitePay, nenhum pago; tudo voltou à foto |
+| 11/10 09:53 | W1 | `8b8041d` | `e2e/w1/telas.py --base local --seco` | local | 19/19 | nada gravado |
+| 11/10 09:49 | W1 | `f324f98` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 |  |
+| 11/10 09:48 | W1 | `f324f98` | `e2e/w06/api.py --casos pix,porfora,acesso` | staging | 31/31 | o modo de hoje sem regressão |
+| 11/10 09:47 | W1 | `f324f98` | `e2e/wp/api.py --casos planos,periodo,mensal` | staging | 33/33 | a W-P sem regressão; a massa desfeita |
+| 11/10 09:46 | W1 | `f324f98` | `e2e/w1/sql_w1.py` | staging | 11/11 | nada ficou gravado |
+| 11/10 09:46 | W1 | `f324f98` | `e2e/w1/api.py --local --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 23/23 | os 11 casos da baixa: as 2 funções no Deno local + o simulador, contra o banco do staging; a rodada de 15 min do staging parada e devolvida; tudo voltou à foto |
+| 11/10 09:40 | W1 | `f324f98` | `e2e/w1/api.py --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | staging | 51/51 | as 2 funções publicadas e a API de verdade da InfinitePay (sem cobrar): 7 links de verdade criados (aparecem na conta InfinitePay do Weslley; nenhum pago); tudo voltou à foto |
+| 11/10 09:38 | W1 | `f324f98` | `e2e/w1/api.py --seco --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | staging | 6/6 | nada gravado |
+| 11/10 09:37 | W1 | `f324f98` | `e2e/w06/smoke_prod.py` | produção | 17/18 | só leitura: o 1 é o antigo e conhecido (o seletor da tela antiga do Financeiro "até a W19"), não é das funções; a `pagamentos-aluno` v40 respondeu 200 |
+| 11/10 09:34 | W1 | `f324f98` | `e2e/w10/api.py --schema public` | produção | 2/2 | só leitura |
+| 11/10 09:34 | W1 | `f324f98` | `e2e/w10/api.py` | staging | 22/22 | só leitura |
+| 11/10 09:33 | W1 | `f324f98` | `POST infinitepay-webhook-aluno?schema=public` (pedido `<uuid>-1`) | produção | 400 `schema_sem_w1` | esperado, logo depois de publicar `infinitepay-webhook-aluno` v1 (09:33:07, verify_jwt false) e `pagamentos-aluno` v40 (09:33:14, verify_jwt true): sem a W1 no `public`, a parte nova fica desligada lá |
+| 11/10 09:32 | W1 | `f324f98` | `e2e/w1/api.py --casos recebimento --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | staging | 2/10 | esperado, antes de publicar: a `pagamentos-aluno` v39 → 400 `acao_invalida`; o desfazer voltou à foto |
 | 11/10 09:17 | hml-19b | `6d81237` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19b --casos secoes --canal msedge` | staging | 17/18 | o antes do [atalhos]: a MESMA falha no código antigo |
 | 11/10 09:12 | hml-19b | `6d81237` | `e2e/w17/envio_telas.py --base http://localhost:8080 --prefixo local19b` | local | 20/20 |  |
 | 11/10 09:11 | hml-19b | `6d81237` | `e2e/w17/envio_api.py` | staging | 19/19 |  |
@@ -54,6 +92,8 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 | 11/10 08:39 | hml-19b | `6d81237` | `e2e/w24/api.py` | staging | 23 ✅ + 1 ❌, parou | o /d/ (A1–A7) e o envio anônimo pela diario_enviar nova (B1–B3) ok; o ❌ C4 e a parada (IndexError) são da foto da w18-nutri2 que a massa não subiu (acima) |
 | 11/10 08:36 | hml-19b | `93dbd4a` | `e2e/hml19/laco.py --base local --canal msedge` | local | 40/40 | a nutricao barrada: Manipulados/Metas/Orientações 1 garantir + o aviso; o app: a marca volta + o texto fixo |
 | 11/10 08:30 | hml-19b | `93dbd4a` | `e2e/hml19/laco.py --base local --canal msedge` | local | 22/23 | a guarda do laço fechou em Manipulados com 3 GET profiles — a leitura atrasada do Plano (diagnóstico: só 2 dela); ajuste em 6d81237 |
+| 11/10 08:30 | W1 | `f4d6c20` | `e2e/w1/telas.py --base local --loja --seco` | local | 17/17 | só a montagem (nada gravado) |
+| 11/10 08:30 | W1 | `f4d6c20` | `e2e/w1/telas.py --base local --seco` | local | 19/19 | só a montagem (nada gravado) |
 | 11/10 08:26 | hml-19b | `93dbd4a` | `e2e/hml19/rede.py --area dieta --base local --canal msedge --casos prescricao,item,duplicar --prefixo local2` | local | 14/14 | os tempos de novo, com o cronômetro por pedido: 1415 / 1326 / 1725 ms |
 | 11/10 08:24 | hml-19b | `93dbd4a` | `e2e/hml19/rede.py --area dieta --base local --canal msedge` | local | 27/27 | o DEPOIS: 1 chamada da nutricao por ação, 0 rest; item 4180 ms e duplicar 9709 ms nesta rodada (a função fria) |
 | 11/10 08:10 | hml-19b | `93dbd4a` | `e2e/hml19/rede.py --area dieta --base staging --canal msedge` | staging | 21/21 | o ANTES (o staging serve 276f75b): rest_dieta 1–8 por ação; o app pela RPC direta |
@@ -64,6 +104,18 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 | 11/10 07:50 | hml-19b | `081bb61` | `e2e/hml19/api.py --area dieta --base staging --so-leitura` | staging | 1/3 | sessão principal: barrado pela rodada que caiu (o incidente do --so-leitura no staging, que rodava a bateria — corrigido em 93dbd4a) |
 | 11/10 07:48 | hml-19b | `081bb61` | `e2e/hml19/api.py --area dieta --base prod --so-leitura` | produção | 6/6 | sessão principal, idem |
 | 11/10 07:48 | hml-19b | `081bb61` | `e2e/hml19/api.py --area prontuario --base prod --so-leitura` | produção | 5/5 | sessão principal, logo depois de publicar a nutricao v2 (só leitura) |
+| 11/10 07:19 | W1 | `dde5190` | `e2e/w1/api.py --local --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 23/23 | com a correção do desfazer (`08d297f`) |
+| 11/10 07:13 | W1 | `dde5190` | `e2e/w1/api.py --limpar` | staging | 1/1 | desfez a rodada de 07:12 |
+| 11/10 07:12 | W1 | `dde5190` | `e2e/w1/api.py --local --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | local | 22/23 | os casos passaram; o desfazer quebrou (erro do script: a foto da conta cobria o id da conta) — corrigido em `08d297f`; o `--limpar` desfez |
+| 11/10 06:58 | W1 | `fef9b73` | `e2e/w1/api.py --seco --local` | local | 10/10 | nada gravado |
+| 11/10 06:34 | W1 | `fefea01` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | com a migration da W1 inteira no staging |
+| 11/10 06:33 | W1 | `fefea01` | `e2e/w1/sql_w1.py --so-catalogo --schema staging` | staging | 6/6 |  |
+| 11/10 06:33 | W1 | `fefea01` | `e2e/w1/sql_w1.py` | staging | 11/11 | nada ficou gravado |
+| 11/10 06:32 | W1 | `77d1f60` | `e2e/w06/sql_cobertura.py` | staging | 11/11 |  |
+| 11/10 06:32 | W1 | `77d1f60` | `e2e/wp/sql_planos.py` | staging | 9/9 |  |
+| 11/10 06:31 | W1 | `77d1f60` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 |  |
+| 11/10 06:31 | W1 | `77d1f60` | `e2e/w1/sql_w1.py --so-catalogo --schema staging` | staging | 4/6 | antes da 2ª parte (m2) da migration no staging; 6/6 às 06:33 |
+| 11/10 06:31 | W1 | `77d1f60` | `e2e/w1/sql_w1.py --so m1` | staging | 9/9 | a 1ª parte (m1) da migration |
 | 11/10 05:01 | hml-19a | `f9d0917` | `e2e/h5/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 61/63 | F7 (o staging serve 3c539af): o caso prontuario passou inteiro; as 2 falhas são as mesmas do local e não são da 19a: o /c/ do cadastro e o IndexError do script no editor (o Rafael sem plano vivo no staging) |
 | 11/10 04:54 | hml-19a | `f9d0917` | `e2e/w18/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 52/52 | F7 |
 | 11/10 04:49 | hml-19a | `f9d0917` | `e2e/hml19/laco.py --base staging --canal msedge --prefixo staging2 --normal` | staging | 18/18 | F7 |

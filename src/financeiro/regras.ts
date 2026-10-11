@@ -3,6 +3,7 @@
 // banco — mensalidade_recalcular): cada pagamento cobre 1 mês; "em dia" = a cobertura passa de agora.
 import type { CobrancaVista, ModoRecebimento, PlanoSalvo, ResumoMatricula } from "./tipos";
 import type { Modalidade } from "./planos";
+import { tentativaViva } from "./infinitepay";
 
 // ───────────────────────── datas (relógio de São Paulo) ─────────────────────────
 
@@ -127,6 +128,15 @@ export function estadoDaMensalidade(m: DadosMensalidade | null | undefined, agor
   return { situacao: "pendente", vence: null, dias: null, valor, coberta };
 }
 
+/**
+ * W1-B1 — o "aguardando" da mensalidade no painel (o cartão e o KPI da ficha), com a regra da financeiro_do_aluno no servidor e do
+ * resumoDaTrava: uma cobrança da mensalidade esperando a confirmação; a tentativa da InfinitePay só enquanto vale (`ip_expira_em` no
+ * futuro, 72 h). Vencida, não segura a mensalidade, mesmo antes de a rodada de 15 min (ou o prof_aluno) fechá-la.
+ */
+export function mensalidadeAguardando(cobrancas: readonly Pick<CobrancaVista, "tipo" | "status" | "forma" | "ip_expira_em">[], agora: Date = new Date()): boolean {
+  return cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao" && (c.forma !== "infinitepay" || tentativaViva(c, agora)));
+}
+
 /** A mensalidade está pendente (o "!" e o aviso do Calc: tem valor e a cobertura não vale agora). */
 export function mensalidadePendente(e: EstadoMensalidade): boolean {
   return e.situacao === "vencida" || e.situacao === "pendente";
@@ -192,13 +202,13 @@ export function travaDoInadimplente(r: ResumoMatricula, agora: Date = new Date()
   return r.bloquear_inadimplente && inadimplente(r, agora);
 }
 
-/** O aluno consegue pagar pelo app? (Pix na chave com comprovante — R16 — ou Mercado Pago nas contas liberadas) */
+/** O aluno consegue pagar pelo app? (Pix na chave com comprovante — R16 —, Mercado Pago nas contas liberadas ou InfinitePay — W1) */
 export function podePagarPeloApp(modo: ModoRecebimento, temChave: boolean): boolean {
-  return modo === "mercadopago" || (modo === "pix_manual" && temChave);
+  return modo === "mercadopago" || modo === "infinitepay" || (modo === "pix_manual" && temChave);
 }
 
 export function formasDePagar(modo: ModoRecebimento, temChave: boolean): string {
-  if (modo === "mercadopago") return "Pix ou cartão";
+  if (modo === "mercadopago" || modo === "infinitepay") return "Pix ou cartão";
   if (modo === "pix_manual" && temChave) return "Pix";
   return "combine com seu profissional";
 }
@@ -303,19 +313,26 @@ export const ROTULO_METODO: Record<string, string> = {
   outro: "Outro",
 };
 
-/** "Pix" · "Cartão" · "Pix (Mercado Pago)" · "Por fora · Dinheiro" */
-export function rotuloDaForma(c: Pick<CobrancaVista, "forma" | "metodo">): string {
+/** "Pix" · "Cartão" · "Pix (Mercado Pago)" · "Pix (InfinitePay)" · "Cartão em 3× (InfinitePay)" · "Por fora · Dinheiro" */
+export function rotuloDaForma(c: Pick<CobrancaVista, "forma" | "metodo" | "ip_meio" | "ip_parcelas">): string {
   if (c.forma === "pix_manual") return "Pix";
   if (c.forma === "mp") return c.metodo === "pix" ? "Pix (Mercado Pago)" : "Cartão";
+  if (c.forma === "infinitepay") {
+    const meio = c.ip_meio ?? (c.metodo === "pix" ? "pix" : c.metodo === "cartao" ? "credit_card" : null);
+    if (meio === "pix") return "Pix (InfinitePay)";
+    if (meio === "credit_card") return c.ip_parcelas && c.ip_parcelas > 1 ? `Cartão em ${c.ip_parcelas}× (InfinitePay)` : "Cartão (InfinitePay)";
+    return "InfinitePay";
+  }
   if (c.forma === "manual") return `Por fora · ${ROTULO_METODO[c.metodo ?? ""] ?? c.metodo ?? "manual"}`;
   return "";
 }
 
-export type SituacaoCobranca = "a_vencer" | "vencida" | "paga" | "aguardando" | "aguardando_mp" | "recusada" | "reembolsada" | "cancelada";
+/** aguardando_ip (W1) = a tentativa da InfinitePay esperando a confirmação (sem comprovante). */
+export type SituacaoCobranca = "a_vencer" | "vencida" | "paga" | "aguardando" | "aguardando_mp" | "aguardando_ip" | "recusada" | "reembolsada" | "cancelada";
 
 export function situacaoDaCobranca(c: CobrancaVista, hoje: string = hojeSP()): SituacaoCobranca {
   if (c.status === "paga") return "paga";
-  if (c.status === "aguardando_confirmacao") return c.forma === "mp" ? "aguardando_mp" : "aguardando";
+  if (c.status === "aguardando_confirmacao") return c.forma === "mp" ? "aguardando_mp" : c.forma === "infinitepay" ? "aguardando_ip" : "aguardando";
   if (c.status === "cancelada") return c.reembolsado_em ? "reembolsada" : c.recusado_em ? "recusada" : "cancelada";
   return avulsaVencida(c, hoje) ? "vencida" : "a_vencer";
 }
@@ -326,6 +343,7 @@ export const CHIP_COBRANCA: Record<SituacaoCobranca, { texto: string; tom: TomCh
   paga: { texto: "PAGO", tom: "n" },
   aguardando: { texto: "AGUARDANDO", tom: "c" },
   aguardando_mp: { texto: "PROCESSANDO", tom: "c" },
+  aguardando_ip: { texto: "PROCESSANDO", tom: "c" },
   recusada: { texto: "RECUSADO", tom: "r" },
   reembolsada: { texto: "ESTORNADO", tom: "g" },
   cancelada: { texto: "CANCELADO", tom: "g" },
@@ -340,6 +358,7 @@ export function linhaDaCobranca(c: CobrancaVista, hoje: string = hojeSP()): { ti
   if (s === "paga") detalhe = [forma, c.pago_em ? `pago em ${dataBR(c.pago_em)}` : "pago"].filter(Boolean).join(" · ");
   else if (s === "aguardando") detalhe = `Comprovante enviado${c.enviado_em ? ` em ${dataBR(c.enviado_em)}` : ""}`;
   else if (s === "aguardando_mp") detalhe = `${forma} · aguardando o Mercado Pago`;
+  else if (s === "aguardando_ip") detalhe = "InfinitePay · aguardando a confirmação";
   else if (s === "recusada") detalhe = `Recusado${c.recusado_motivo ? `: ${c.recusado_motivo}` : ""}`;
   else if (s === "reembolsada") detalhe = `${forma} · estornado em ${dataBR(c.reembolsado_em)}`;
   else if (s === "cancelada") detalhe = "Cancelada";
@@ -458,10 +477,41 @@ export const MENSAGEM_ERRO_FINANCEIRO: Record<string, string> = {
   aluno_em_plano_novo: "Este aluno está num plano com período. Atualize o app para mudar.",
   planos_indisponivel: "Os planos ainda não chegaram a este ambiente.",
   conta_do_app: "Os planos do app são do Physiq.",
+  // W1 — a InfinitePay e o Recebimento pela função
+  modo_nao_infinitepay: "Seu profissional não recebe pela InfinitePay.",
+  infinitepay_nao_ligada: "Seu profissional ainda não terminou de ligar a InfinitePay.",
+  infinitepay_indisponivel: "A InfinitePay não respondeu agora. Tente de novo em instantes.",
+  infinitepay_recusou: "A InfinitePay não aceitou agora. Confira a InfiniteTag no app da InfinitePay e tente de novo.",
+  // sondado em 11/10: a InfiniteTag que não existe e o checkout externo desligado dão a MESMA resposta. A frase diz as 2 coisas, e a tela
+  // mostra junto o botão de ativar, com o link que a InfinitePay mandou
+  infinitepay_checkout_desligado: "Confira a InfiniteTag e ative o checkout externo na InfinitePay.",
+  infinitetag_invalida: "Essa InfiniteTag não parece certa: use só letras, números, ponto, traço ou _ (sem o $).",
+  sem_infinitetag: "Cole a sua InfiniteTag e salve antes de escolher a InfinitePay.",
+  infinitepay_em_teste: "A InfinitePay ainda está em teste. Logo ela aparece para você.",
+  automaticas_ativas: "Há alunos com cobrança automática no cartão pelo Mercado Pago.",
+  mp_so_master: "O Mercado Pago só é ligado pelo master.",
+  w1_indisponivel: "A InfinitePay ainda não chegou a este ambiente.",
+  chave_inexistente: "Essa chave não existe mais. Atualize a página.",
+  volta_invalida: "Não deu para ler a volta da InfinitePay. Toque em Conferir pagamento.",
+  em_uso: "Troque a forma de receber antes de tirar a InfiniteTag.",
+  conta_invalida: "Conta não encontrada.",
 };
 
 export function mensagemErroFinanceiro(codigo: string | null | undefined, padrao = "Não deu certo agora. Tente de novo."): string {
   return (codigo && MENSAGEM_ERRO_FINANCEIRO[codigo]) || padrao;
+}
+
+/** W1 — Configurações › Recebimento (a tela, a lista e o diálogo das chaves Pix): os códigos cuja frase global fala de outra coisa (do
+ *  aluno, da mensalidade, dos planos) e o que só o prof_recebimento_salvar devolve. O resto é a frase global. */
+const FRASE_DO_RECEBIMENTO: Record<string, string> = {
+  sem_permissao: "Você não tem permissão para mudar o recebimento desta conta.",
+  so_o_dono: "Só o dono da conta muda o recebimento.",
+  conta_do_app: "O recebimento da conta do app é do Physiq.",
+  nada_para_salvar: "Nada mudou para salvar.",
+};
+
+export function mensagemDoRecebimento(codigo: string | null | undefined, padrao?: string): string {
+  return (codigo && FRASE_DO_RECEBIMENTO[codigo]) || mensagemErroFinanceiro(codigo, padrao);
 }
 
 /**
