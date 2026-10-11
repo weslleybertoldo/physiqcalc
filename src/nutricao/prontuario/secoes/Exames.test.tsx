@@ -45,7 +45,11 @@ function consultaPedidos(): unknown {
 
 vi.mock("@/painel/aluno/dados/api", () => ({ ErroPerfil: class extends Error {}, buscarPerfilAluno: h.perfil, buscarDadosTreino: vi.fn() }));
 vi.mock("@/nutricao/editor/lib/banco", () => ({
-  supabase: { rpc: h.rpc, from: (t: string) => (t === "pedidos_exame" ? consultaPedidos() : cadeia()), storage: { from: () => cadeia() } },
+  // hml-19a: as gravações e o catálogo padrão do 1º acesso vão pela função nutricao (functions.invoke)
+  supabase: {
+    rpc: h.rpc, from: (t: string) => (t === "pedidos_exame" ? consultaPedidos() : cadeia()), storage: { from: () => cadeia() },
+    functions: { invoke: async () => ({ data: { ok: true, criados: 0, lista: [] }, error: null }) },
+  },
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: h.usuario, treino: { estado: "desnecessario", erro: null } }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

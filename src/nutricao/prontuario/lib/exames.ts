@@ -2,13 +2,16 @@
 import { deslocamento, intervalo, paginar, POR_PAGINA, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
-import { CATALOGO_PADRAO, ordenarCatalogo, type RegistroExameCatalogo, type RegistroPedido, type RegistroResultado } from "@/nutricao/prontuario/lib/examesUtil";
+import { type RegistroExameCatalogo, type RegistroPedido, type RegistroResultado } from "@/nutricao/prontuario/lib/examesUtil";
+import { acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso às tabelas `exames_catalogo`, `pedidos_exame` e `resultados_exame` (RLS: a nutricionista só vê os dela; master vê tudo;
 // criar pedido/resultado exige enxergar o paciente). Exclusão é SOFT nas três (deleted_at → Lixeira, W32). O pedido guarda os
 // NOMES dos exames (text[]) e o resultado guarda unidade + referência COPIADAS do catálogo na hora do lançamento — mudar ou
 // excluir o item do catálogo depois não mexe no histórico (padrão das W15–W17). O banco mexe em `pacientes.updated_at` a cada
 // pedido/resultado (trigger). `exames` chega como lista de textos pelo PostgREST; a tela lê com `lerExames` (tolerante).
+// hml-19a (H-41 · H-81 · jeito 2): as gravações vão pela função nutricao (os resultados da mesma data: 1 chamada com o lote); o
+// catálogo padrão do 1º acesso nasce no servidor (padroes_garantir: 1 chamada, 1 vez só). Mesmas assinaturas; leituras aqui.
 
 export type ExameCatalogo = Database["public"]["Tables"]["exames_catalogo"]["Row"];
 type ExameCatalogoUpdate = Database["public"]["Tables"]["exames_catalogo"]["Update"];
@@ -33,42 +36,20 @@ export async function listarCatalogoExames(): Promise<ExameCatalogo[]> {
   return (data ?? []) as ExameCatalogo[];
 }
 
-/** Lista o catálogo; sem nenhum item, cria os 12 padrão favoritos — 1º acesso à seção (padrão `garantirModelos` das W10–W17). */
+/**
+ * Lista o catálogo; sem nenhum item próprio, o servidor cria os 12 padrão favoritos — 1º acesso à seção. hml-19a (H-81): 1 chamada
+ * à função (padroes_garantir), que grava 1 vez só (trava por pessoa) e devolve o catálogo (a mesma ordem do listar).
+ */
 export async function garantirCatalogoExames(nutricionistaId: string): Promise<ExameCatalogo[]> {
-  const lista = await listarCatalogoExames();
-  if (lista.length) return lista;
-  const { data, error } = await supabase
-    .from("exames_catalogo")
-    .insert(CATALOGO_PADRAO.map((e) => ({
-      nutricionista_id: nutricionistaId,
-      nome: e.nome,
-      unidade: e.unidade,
-      ref_min: e.ref_min,
-      ref_max: e.ref_max,
-      referencia_texto: e.referencia_texto,
-      favorito: true,
-    })))
-    .select("*");
-  falhou(error);
-  return ordenarCatalogo((data ?? []) as ExameCatalogo[]);
+  const r = await acaoNutricao<{ lista: ExameCatalogo[] }>("padroes_garantir", { secao: "exame" });
+  return Array.isArray(r.lista) ? r.lista : [];
 }
 
 export async function criarExameCatalogo(nutricionistaId: string, r: RegistroExameCatalogo): Promise<ExameCatalogo> {
-  const { data, error } = await supabase
-    .from("exames_catalogo")
-    .insert({
-      nutricionista_id: nutricionistaId,
-      nome: r.nome,
-      unidade: r.unidade,
-      ref_min: r.ref_min,
-      ref_max: r.ref_max,
-      referencia_texto: r.referencia_texto,
-      favorito: r.favorito,
-    })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as ExameCatalogo;
+  const res = await acaoNutricao<{ linha: ExameCatalogo }>("exame_catalogo_criar", {
+    nome: r.nome, unidade: r.unidade, ref_min: r.ref_min, ref_max: r.ref_max, referencia_texto: r.referencia_texto, favorito: r.favorito,
+  });
+  return res.linha;
 }
 
 export async function atualizarExameCatalogo(id: string, patch: Partial<RegistroExameCatalogo>): Promise<ExameCatalogo> {
@@ -79,15 +60,13 @@ export async function atualizarExameCatalogo(id: string, patch: Partial<Registro
   if (patch.ref_max !== undefined) dados.ref_max = patch.ref_max;
   if (patch.referencia_texto !== undefined) dados.referencia_texto = patch.referencia_texto;
   if (patch.favorito !== undefined) dados.favorito = patch.favorito;
-  const { data, error } = await supabase.from("exames_catalogo").update(dados).eq("id", id).select("*").single();
-  falhou(error);
-  return data as ExameCatalogo;
+  const r = await acaoNutricao<{ linha: ExameCatalogo }>("exame_catalogo_editar", { id, ...dados });
+  return r.linha;
 }
 
-/** Soft delete — pedidos e resultados já guardam a própria cópia e não dependem do catálogo. */
+/** Soft delete — pedidos e resultados já guardam a própria cópia e não dependem do catálogo. 0 linha → nao_encontrado. */
 export async function excluirExameCatalogo(id: string): Promise<void> {
-  const { error } = await supabase.from("exames_catalogo").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("exame_catalogo_excluir", { id });
 }
 
 // ---- Pedidos do paciente ----
@@ -112,13 +91,8 @@ export function paginaPedidosDoPaciente(pacienteId: string, pagina: number): Pro
 }
 
 export async function criarPedido(nutricionistaId: string, pacienteId: string, r: RegistroPedido): Promise<PedidoExame> {
-  const { data, error } = await supabase
-    .from("pedidos_exame")
-    .insert({ nutricionista_id: nutricionistaId, paciente_id: pacienteId, data: r.data, exames: r.exames, observacao: r.observacao })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as PedidoExame;
+  const res = await acaoNutricao<{ linha: PedidoExame }>("pedido_exame_criar", { paciente_id: pacienteId, data: r.data, exames: r.exames, observacao: r.observacao });
+  return res.linha;
 }
 
 /** Data, exames e/ou observação. */
@@ -127,15 +101,13 @@ export async function atualizarPedido(id: string, patch: Partial<RegistroPedido>
   if (patch.data !== undefined) dados.data = patch.data;
   if (patch.exames !== undefined) dados.exames = patch.exames;
   if (patch.observacao !== undefined) dados.observacao = patch.observacao;
-  const { data, error } = await supabase.from("pedidos_exame").update(dados).eq("id", id).select("*").single();
-  falhou(error);
-  return data as PedidoExame;
+  const r = await acaoNutricao<{ linha: PedidoExame }>("pedido_exame_editar", { id, ...dados });
+  return r.linha;
 }
 
-/** Soft delete (Lixeira, W32). */
+/** Soft delete (Lixeira, W32); 0 linha → nao_encontrado. */
 export async function excluirPedido(id: string): Promise<void> {
-  const { error } = await supabase.from("pedidos_exame").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("pedido_exame_excluir", { id });
 }
 
 // ---- Resultados do paciente ----
@@ -204,26 +176,18 @@ export async function paginaDeExames(pacienteId: string, exame: string, pagina: 
   };
 }
 
-/** Lançamento em LOTE: 1 insert com todas as linhas da mesma data (cada uma já com unidade/referência copiadas). */
+/** Lançamento em LOTE: 1 chamada com todas as linhas da mesma data (cada uma já com unidade/referência copiadas). */
 export async function criarResultados(nutricionistaId: string, pacienteId: string, data: string, linhas: RegistroResultado[]): Promise<ResultadoExame[]> {
   if (!linhas.length) return [];
-  const { data: criados, error } = await supabase
-    .from("resultados_exame")
-    .insert(linhas.map((l) => ({
-      nutricionista_id: nutricionistaId,
-      paciente_id: pacienteId,
-      data,
-      exame: l.exame,
-      valor: l.valor,
-      valor_texto: l.valor_texto,
-      unidade: l.unidade,
-      ref_min: l.ref_min,
-      ref_max: l.ref_max,
+  const r = await acaoNutricao<{ linhas: ResultadoExame[] }>("resultados_exame_criar", {
+    paciente_id: pacienteId,
+    data,
+    linhas: linhas.map((l) => ({
+      exame: l.exame, valor: l.valor, valor_texto: l.valor_texto, unidade: l.unidade, ref_min: l.ref_min, ref_max: l.ref_max,
       referencia_texto: l.referencia_texto,
-    })))
-    .select("*");
-  falhou(error);
-  return (criados ?? []) as ResultadoExame[];
+    })),
+  });
+  return Array.isArray(r.linhas) ? r.linhas : [];
 }
 
 export type PatchResultado = Partial<RegistroResultado & { data: string; observacao: string }>;
@@ -240,15 +204,13 @@ export async function atualizarResultado(id: string, patch: PatchResultado): Pro
   if (patch.referencia_texto !== undefined) dados.referencia_texto = patch.referencia_texto;
   if (patch.data !== undefined) dados.data = patch.data;
   if (patch.observacao !== undefined) dados.observacao = patch.observacao;
-  const { data, error } = await supabase.from("resultados_exame").update(dados).eq("id", id).select("*").single();
-  falhou(error);
-  return data as ResultadoExame;
+  const r = await acaoNutricao<{ linha: ResultadoExame }>("resultado_exame_editar", { id, ...dados });
+  return r.linha;
 }
 
-/** Soft delete (Lixeira, W32). */
+/** Soft delete (Lixeira, W32); 0 linha → nao_encontrado. */
 export async function excluirResultado(id: string): Promise<void> {
-  const { error } = await supabase.from("resultados_exame").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("resultado_exame_excluir", { id });
 }
 
 /** Nome da nutricionista (assinatura do PDF) — mesma consulta das orientações (W10). */

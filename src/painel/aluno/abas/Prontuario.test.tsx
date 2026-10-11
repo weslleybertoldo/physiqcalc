@@ -30,6 +30,8 @@ vi.mock("@/nutricao/editor/lib/banco", () => ({
       return cadeia();
     },
     storage: { from: () => cadeia() },
+    // hml-19a: as gravações e os padrões do 1º acesso vão pela função nutricao (functions.invoke)
+    functions: { invoke: async () => ({ data: { ok: true, criados: 0, lista: [] }, error: null }) },
   },
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: h.usuario, treino: { estado: "desnecessario", erro: null } }) }));

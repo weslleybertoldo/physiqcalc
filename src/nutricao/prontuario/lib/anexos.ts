@@ -2,12 +2,17 @@
 import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
-import { NOME_MAX, mimeDoArquivo, montarPath, normalizarDescricao } from "@/nutricao/editor/lib/anexosUtil";
+import { NOME_MAX, mimeDoArquivo, normalizarDescricao } from "@/nutricao/editor/lib/anexosUtil";
+import { ErroNutricao, acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso aos anexos (W14): o ARQUIVO fica no bucket privado `anexos` do Storage (path <nutri>/<paciente>/<uuid>-<nome>) e
 // os METADADOS na tabela `anexos` (RLS: a nutricionista só vê os dela; master vê tudo; criar exige enxergar o paciente).
 // Baixar/ver = URL assinada de curta duração (a sessão dela passa pela RLS do Storage). Excluir = remove o objeto de
 // verdade e faz soft delete na tabela (deleted_at → Lixeira, W32).
+// hml-19a (H-41 · jeito 2): ENVIAR = a função nutricao dá o link assinado (anexo_preparar: o caminho é montado NO SERVIDOR) → o
+// arquivo sobe direto nele (uploadToSignedUrl) → anexo_registrar (o servidor confere que o arquivo chegou naquele caminho e grava a
+// linha; se a linha falhar, ele mesmo tira o arquivo). Descrição e exclusão também pela função (excluir: a linha vai à Lixeira e
+// depois o arquivo sai). O "ver/baixar" (URL assinada de leitura) segue aqui.
 
 export type Anexo = Database["public"]["Tables"]["anexos"]["Row"];
 export const BUCKET_ANEXOS = bucketDoAmbiente("anexos");
@@ -28,30 +33,22 @@ export async function listarAnexosDoPaciente(pacienteId: string): Promise<Anexo[
   return (data ?? []) as Anexo[];
 }
 
-/** Sobe o arquivo no bucket e grava a linha; se a linha falhar, apaga o objeto pra não deixar órfão. */
+/**
+ * Envia 1 arquivo: o link assinado vem do servidor (o caminho é dele), o arquivo sobe direto no Storage e o servidor registra a
+ * linha. 3 pedidos (preparar → subir → registrar); o que falha vira ErroNutricao com a frase fixa.
+ */
 export async function enviarAnexo(nutricionistaId: string, pacienteId: string, arquivo: File, descricao?: string): Promise<Anexo> {
   const mime = mimeDoArquivo(arquivo.name, arquivo.type);
-  const path = montarPath(nutricionistaId, pacienteId, arquivo.name);
-  const up = await supabase.storage.from(BUCKET_ANEXOS).upload(path, arquivo, { contentType: mime, upsert: false, cacheControl: "3600" });
-  if (up.error) throw new Error(up.error.message);
-  const { data, error } = await supabase
-    .from("anexos")
-    .insert({
-      nutricionista_id: nutricionistaId,
-      paciente_id: pacienteId,
-      nome: arquivo.name.trim().slice(0, NOME_MAX) || "arquivo",
-      path,
-      tamanho: arquivo.size,
-      mime,
-      descricao: normalizarDescricao(descricao) || null,
-    })
-    .select("*")
-    .single();
-  if (error) {
-    await supabase.storage.from(BUCKET_ANEXOS).remove([path]);
-    throw new Error(error.message);
-  }
-  return data as Anexo;
+  const nome = arquivo.name.trim().slice(0, NOME_MAX) || "arquivo";
+  const link = await acaoNutricao<{ bucket: string; caminho: string; token: string }>("anexo_preparar", {
+    paciente_id: pacienteId, nome, tipo: mime, tamanho: arquivo.size,
+  });
+  const up = await supabase.storage.from(link.bucket).uploadToSignedUrl(link.caminho, link.token, arquivo, { contentType: mime, cacheControl: "3600" });
+  if (up.error) throw new ErroNutricao("upload_falhou");
+  const r = await acaoNutricao<{ linha: Anexo }>("anexo_registrar", {
+    paciente_id: pacienteId, caminho: link.caminho, nome, tipo: mime, tamanho: arquivo.size, descricao: normalizarDescricao(descricao) || null,
+  });
+  return r.linha;
 }
 
 /** URL assinada (padrão 60 s). Com `download` o navegador baixa com o nome original; sem, abre inline (imagem/PDF no modal). */
@@ -63,20 +60,11 @@ export async function urlAssinada(anexo: Pick<Anexo, "path" | "nome">, segundos 
 }
 
 export async function atualizarDescricao(id: string, descricao: string): Promise<Anexo> {
-  const { data, error } = await supabase
-    .from("anexos")
-    .update({ descricao: normalizarDescricao(descricao) || null })
-    .eq("id", id)
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Anexo;
+  const r = await acaoNutricao<{ linha: Anexo }>("anexo_editar", { id, descricao: normalizarDescricao(descricao) || null });
+  return r.linha;
 }
 
-/** Remove o objeto do bucket de verdade e faz soft delete na tabela. */
+/** Soft delete na tabela (Lixeira, W32) e o objeto sai do bucket — os 2 no servidor (o caminho é lido lá, não vem daqui). */
 export async function excluirAnexo(anexo: Pick<Anexo, "id" | "path">): Promise<void> {
-  const { error: e1 } = await supabase.storage.from(BUCKET_ANEXOS).remove([anexo.path]);
-  if (e1) throw new Error(e1.message);
-  const { error } = await supabase.from("anexos").update({ deleted_at: new Date().toISOString() }).eq("id", anexo.id);
-  falhou(error);
+  await acaoNutricao("anexo_excluir", { id: anexo.id });
 }

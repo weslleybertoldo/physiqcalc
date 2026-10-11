@@ -2,11 +2,14 @@
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { gestacaoParaBanco, registroParaBanco, type FormGestacao, type FormRegistroGestacional } from "@/nutricao/editor/lib/gestacionalUtil";
+import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 
 // Acesso do Acompanhamento gestacional (W25): as tabelas novas `gestacoes` (1 ATIVA por paciente — índice único parcial) e
 // `registros_gestacionais` (1 registro VIVO por gestação/dia — índice único parcial; upsert MANUAL como na W23). RLS: a
 // nutricionista só vê as dela; master vê tudo; exclusão SOFT → Lixeira (W32). A leitura da seção dona (antropometrias da
 // W6, pra sugerir peso/altura pré-gestacionais) e os dados do perfil pro PDF são reexportados pra tela ter uma porta só.
+// hml-19a (H-41 · jeito 2): as gravações vão pela função nutricao; o "upsert" do dia é 1 chamada (o servidor lê o vivo do dia, edita
+// ou insere, e trata a corrida do índice único parcial). Mesmas assinaturas; leituras seguem pelo banco.
 
 export { listarAntropometrias, type Antropometria } from "@/nutricao/editor/lib/antropometrias";
 export { nomeDaNutricionista } from "@/nutricao/prontuario/lib/anamneses";
@@ -40,36 +43,29 @@ export async function listarGestacoes(pacienteId: string): Promise<Gestacao[]> {
 
 export const gestacaoAtiva = (lista: Gestacao[]): Gestacao | null => lista.find((g) => g.encerrada_em === null) ?? null;
 
-/** Inicia o acompanhamento: grava DPP e IMC pré calculados. Já existe uma ativa (índice parcial, 23505) → erro legível. */
+/** Inicia o acompanhamento: grava DPP e IMC pré calculados. Já existe uma ativa (índice parcial: conflito) → erro legível. */
 export async function iniciarGestacao(nutricionistaId: string, pacienteId: string, f: FormGestacao): Promise<Gestacao> {
-  const { data, error } = await supabase
-    .from(T_GESTACOES)
-    .insert({ nutricionista_id: nutricionistaId, paciente_id: pacienteId, ...gestacaoParaBanco(f) })
-    .select("*")
-    .single();
-  if (error && error.code === "23505") throw new Error(MSG_GESTACAO_ATIVA);
-  falhou(error);
-  return data as Gestacao;
+  const r = await acaoNutricao<{ linha: Gestacao }>("gestacao_criar", { paciente_id: pacienteId, ...gestacaoParaBanco(f) })
+    .catch((e) => comFraseDoCodigo(e, { conflito: MSG_GESTACAO_ATIVA }));
+  return r.linha;
 }
 
 /** Edita os dados da gestação (recalcula DPP e IMC pré a partir do formulário). */
 export async function atualizarGestacao(id: string, f: FormGestacao): Promise<Gestacao> {
-  const { data, error } = await supabase.from(T_GESTACOES).update(gestacaoParaBanco(f)).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Gestacao;
+  const r = await acaoNutricao<{ linha: Gestacao }>("gestacao_editar", { id, ...gestacaoParaBanco(f) })
+    .catch((e) => comFraseDoCodigo(e, { conflito: MSG_GESTACAO_ATIVA }));
+  return r.linha;
 }
 
-/** Encerra (parto/encerramento): a gestação sai de ativa e a paciente pode iniciar outra. */
+/** Encerra (parto/encerramento): a gestação sai de ativa e a paciente pode iniciar outra (a hora é a do servidor). */
 export async function encerrarGestacao(id: string): Promise<Gestacao> {
-  const { data, error } = await supabase.from(T_GESTACOES).update({ encerrada_em: new Date().toISOString() }).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Gestacao;
+  const r = await acaoNutricao<{ linha: Gestacao }>("gestacao_encerrar", { id });
+  return r.linha;
 }
 
 /** Exclusão SOFT da gestação (os registros dela ficam no banco, também fora das listas vivas por `gestacao_id`). */
 export async function excluirGestacao(id: string): Promise<void> {
-  const { error } = await supabase.from(T_GESTACOES).update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("gestacao_excluir", { id });
 }
 
 // ---- Registros (pesagens) ----
@@ -87,50 +83,28 @@ export async function listarRegistrosDoPaciente(pacienteId: string): Promise<Reg
   return (data ?? []) as RegistroGestacional[];
 }
 
-async function registroVivoDoDia(gestacaoId: string, dia: string): Promise<RegistroGestacional | null> {
-  const { data, error } = await supabase
-    .from(T_REGISTROS)
-    .select("*")
-    .eq("gestacao_id", gestacaoId)
-    .eq("data", dia)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  falhou(error);
-  return (data as RegistroGestacional | null) ?? null;
-}
-
-/** Upsert MANUAL pelo dia: já existe registro vivo naquele dia da gestação → atualiza; senão insere. Devolve a linha e se foi criada. */
+/**
+ * Upsert pelo dia: já existe registro vivo naquele dia da gestação → atualiza; senão insere. Devolve a linha e se foi criada.
+ * hml-19a: 1 chamada (registro_gestacional_salvar) — o servidor lê o vivo do dia e trata a corrida (23505 do índice único parcial
+ * → relê e edita); antes eram de 2 a 4 pedidos daqui.
+ */
 export async function salvarRegistro(
   nutricionistaId: string,
   gestacao: { id: string; paciente_id: string },
   f: FormRegistroGestacional,
 ): Promise<{ registro: RegistroGestacional; criado: boolean }> {
-  const existente = await registroVivoDoDia(gestacao.id, f.data);
-  if (existente) return { registro: await atualizarRegistro(existente.id, f), criado: false };
-  const { data, error } = await supabase
-    .from(T_REGISTROS)
-    .insert({ nutricionista_id: nutricionistaId, gestacao_id: gestacao.id, paciente_id: gestacao.paciente_id, ...registroParaBanco(f) })
-    .select("*")
-    .single();
-  if (error && error.code === "23505") {
-    // corrida: o dia foi registrado no meio do caminho (índice único parcial) → vira atualização
-    const denovo = await registroVivoDoDia(gestacao.id, f.data);
-    if (denovo) return { registro: await atualizarRegistro(denovo.id, f), criado: false };
-  }
-  falhou(error);
-  return { registro: data as RegistroGestacional, criado: true };
+  const r = await acaoNutricao<{ registro: RegistroGestacional; criado: boolean }>("registro_gestacional_salvar", {
+    gestacao_id: gestacao.id, paciente_id: gestacao.paciente_id, ...registroParaBanco(f),
+  });
+  return { registro: r.registro, criado: r.criado === true };
 }
 
 export async function atualizarRegistro(id: string, f: FormRegistroGestacional): Promise<RegistroGestacional> {
-  const { data, error } = await supabase.from(T_REGISTROS).update(registroParaBanco(f)).eq("id", id).select("*").single();
-  falhou(error);
-  return data as RegistroGestacional;
+  const r = await acaoNutricao<{ linha: RegistroGestacional }>("registro_gestacional_editar", { id, ...registroParaBanco(f) });
+  return r.linha;
 }
 
 /** Exclusão SOFT (o índice único só conta vivos, então o dia pode ser registrado de novo). */
 export async function excluirRegistro(id: string): Promise<void> {
-  const { error } = await supabase.from(T_REGISTROS).update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("registro_gestacional_excluir", { id });
 }
