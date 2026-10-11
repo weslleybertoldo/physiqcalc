@@ -646,7 +646,8 @@ def main() -> int:
     modo_exec = modo_da_execucao(a.base, a.so_leitura, a.limpar)
     s = B.usar_base(a.base)
     o = C.Saida(f"api_{a.area}_{a.base}" + {"limpar": "_limpar", "so_leitura": "_so_leitura"}.get(modo_exec, ""))
-    L = B.Sessoes(f"api {a.area} {a.base}" + {"limpar": " --limpar", "so_leitura": " --so-leitura"}.get(modo_exec, ""))
+    # o motivo termina na base (o prod_f8.py conta os logins da produção pelas linhas que terminam em "prod)")
+    L = B.Sessoes(f"api {a.area}" + {"limpar": " --limpar", "so_leitura": " --so-leitura"}.get(modo_exec, "") + f" {a.base}")
     try:
         B.exigir_saude(o, "o api.py")
         if modo_exec == "so_leitura":
