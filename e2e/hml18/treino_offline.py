@@ -10,6 +10,9 @@ O build de staging não tem PowerSync (src/lib/powersync/instancia.ts): a prova 
   4. de volta ao Treino: o treino do dia continua na tela (o mesmo título, os mesmos grupos e o mesmo número de exercícios) e o aviso
      "Sem internet · o treino fica salvo no aparelho" aparece;
   5. nenhuma escrita sai: a Guarda conta 0 tentativas (POST/PATCH/PUT/DELETE em tabela, RPC que grava, função que grava, Storage).
+F2b (com a rede de volta, na mesma sessão; só estado da tela e do aparelho — nada grava):
+  H-83  a folha "Trocar exercício" SAI mostrando o exercício (o "Sai …" e as opções) — antes saía vazia;
+  H-84  o card do descanso (estado guardado no aparelho, pausado) fica no body: na troca de página ele não anda com a página.
 Teto do contrato: 4 logins da aluna de produção (registro em hml/hml18/agente/prod_aluna_logins_18b.txt). Logout local no fim.
 Saída: hml/hml18/agente/treino_offline_<base>.txt. Sem dado pessoal: só contagem, ms, KB e "igual/diferente" (o título vira um resumo).
 Uso: python3 e2e/hml18/treino_offline.py --base localprod --canal msedge
@@ -44,6 +47,42 @@ JS_TREINO = r"""() => {
     sync: s ? s.getAttribute('data-sync') : null, online: navigator.onLine };
 }"""
 # os pedaços do banco local que a página baixou (o PowerSync, o worker e o wasm) — e se a ENTRADA (index.html) os traz
+# H-83: o Esc DENTRO da página (o molde do JS_SAIDA da 18a: o relógio do Playwright, ida e volta, passa dos 200 ms da saída) e, a cada
+# quadro até a folha sair do DOM, se ela continuou com o "Sai …" e com todas as opções (antes saía vazia)
+JS_FOLHA_ESC = r"""() => new Promise((ok) => {
+  const f = document.querySelector('[data-trocar-exercicio]'); const d = f && (f.closest('[role=dialog]') || f);
+  if (!d) return ok(null);
+  const n0 = f.querySelectorAll('[data-trocar-opcao]').length; const t0 = performance.now();
+  let minOpcoes = n0, quadros = 0, semSai = 0, viuFechado = false, ultimo = 0, anima = '-';
+  const olhar = () => {
+    if (d.isConnected) {
+      quadros++; ultimo = performance.now() - t0;
+      if (d.getAttribute('data-state') === 'closed') { viuFechado = true; if (anima === '-') anima = getComputedStyle(d).animationName; }
+      const ff = d.querySelector('[data-trocar-exercicio]');
+      minOpcoes = Math.min(minOpcoes, ff ? ff.querySelectorAll('[data-trocar-opcao]').length : 0);
+      if (!d.querySelector('[data-trocar-sai]')) semSai++;
+    }
+    if (!d.isConnected || performance.now() - t0 > 2000) return ok({ ms: Math.round(ultimo), quadros, n0, minOpcoes, semSai, viuFechado, anima });
+    requestAnimationFrame(olhar); };
+  (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  requestAnimationFrame(olhar);
+})"""
+JS_FOLHA_SAINDO = r"""() => { const f = document.querySelector('[data-trocar-exercicio]'); const d = f && (f.closest('[role=dialog]') || f);
+  return { existe: !!f, estado: d ? d.getAttribute('data-state') : null, opcoes: f ? f.querySelectorAll('[data-trocar-opcao]').length : 0,
+    sai: !!document.querySelector('[data-trocar-sai]') }; }"""
+# H-84: o card do descanso — quem é o pai e onde está a base dele na tela
+JS_CARD = r"""() => { const c = document.querySelector('[data-descanso]'); if (!c) return null; const r = c.getBoundingClientRect();
+  return { pai: c.parentElement === document.body ? 'body' : (c.parentElement ? c.parentElement.tagName.toLowerCase() : '-'),
+    naPagina: !!c.closest('[data-pagina]'), base: Math.round(r.bottom), topo: Math.round(r.top), alturaTela: innerHeight }; }"""
+# o 1º quadro em que o card aparece depois do toque (a página nova ainda entrando: o transform dela anotado junto)
+JS_CARD_PRIMEIRO = r"""() => new Promise((ok) => { const t0 = performance.now(); const olhar = () => {
+  const c = document.querySelector('[data-descanso]'); const pg = document.querySelector('[data-pagina]');
+  if (c) { const r = c.getBoundingClientRect(); return ok({ ms: Math.round(performance.now() - t0),
+    pai: c.parentElement === document.body ? 'body' : (c.parentElement ? c.parentElement.tagName.toLowerCase() : '-'), naPagina: !!c.closest('[data-pagina]'),
+    base: Math.round(r.bottom), topo: Math.round(r.top), alturaTela: innerHeight, transformPagina: pg ? getComputedStyle(pg).transform : '-' }); }
+  if (performance.now() - t0 > 3000) return ok(null); requestAnimationFrame(olhar); }; olhar(); })"""
+DESCANSO_PAUSADO = {"ativo": True, "pausedRemaining": 75, "isPaused": True, "duracao": 90, "exercicioNome": "Teste E2E hml-18b",
+                    "numeroSerie": 1, "serieId": "e2e-hml18b"}
 JS_SYNC = r"""() => performance.getEntriesByType('resource').map((r) => r.name.split('/').pop().split('?')[0])
   .filter((n) => /^(powersync|WASQLiteDB|SharedSync|wa-sqlite|IDBBatchAtomicVFS)/.test(n))"""
 
@@ -94,6 +133,54 @@ def tocar_aba(cel: B.Celular, rota: str) -> bool:
         return False
     link.click(timeout=8000)
     return cel.esperar(lambda: cel.caminho() == rota, 10)
+
+
+def f2b(R: B.Rodada, cel: B.Celular, dia: str | None) -> None:
+    """F2b — H-83 (a folha Trocar sai com o conteúdo) e H-84 (o card do descanso no body). Só estado da tela e do aparelho."""
+    import json  # noqa: PLC0415
+
+    # H-83: abre a linha de um exercício, toca em Trocar, a folha abre; Esc; aos ~100 ms ela ainda mostra o exercício
+    if dia:
+        escolher_dia_com_treino(cel, dia)
+    linha = cel.pg.locator("[data-exercicio-abrir]")
+    if not linha.count():
+        R.ok(False, "H-83: nenhuma linha de exercício para abrir")
+    else:
+        linha.first.click(timeout=8000)
+        trocar = cel.pg.locator('[data-acao-exercicio="trocar"]')
+        if not cel.esperar(lambda: trocar.count() > 0 and trocar.first.is_visible(), 6):
+            R.ok(False, "H-83: o botão Trocar não apareceu na linha aberta")
+        else:
+            trocar.first.click(timeout=8000)
+            aberta = cel.esperar(lambda: cel.pg.evaluate(JS_FOLHA_SAINDO)["opcoes"] > 0, 15)
+            cel.pg.wait_for_timeout(600)  # a entrada da folha (300 ms) acaba
+            s = cel.pg.evaluate(JS_FOLHA_ESC) or {}
+            R.linha(f"   H-83: a saída da folha Trocar, quadro a quadro: {s}")
+            sumiu = cel.esperar(lambda: not cel.pg.evaluate(JS_FOLHA_SAINDO)["existe"], 3, passo=0.1)
+            R.ok(aberta and s.get("viuFechado") and s.get("ms", 0) >= 150 and s.get("minOpcoes") == s.get("n0") and s.get("n0", 0) > 0
+                 and s.get("semSai") == 0 and sumiu,
+                 f"H-83: a folha Trocar SAI com o conteúdo — ficou {s.get('ms')} ms na tela depois do Esc (data-state closed: "
+                 f"{'sim' if s.get('viuFechado') else 'NÃO'}; animação {s.get('anima')}), com o \"Sai …\" em todos os {s.get('quadros')} quadros "
+                 f"({'sim' if s.get('semSai') == 0 else 'NÃO: faltou em ' + str(s.get('semSai'))}) e as {s.get('n0')} opções até o fim "
+                 f"(mínimo {s.get('minOpcoes')}); depois saiu do DOM ({'sim' if sumiu else 'NÃO'})")
+    # H-84: o descanso guardado no aparelho (pausado) — o Treino monta o card; na volta para o Treino, a página entra animada
+    cel.pg.evaluate("(s) => localStorage.setItem('physiq_rest_timer', JSON.stringify({ ...s, startedAt: Date.now() }))", DESCANSO_PAUSADO)
+    try:
+        tocar_aba(cel, "/")
+        cel.pg.wait_for_timeout(700)
+        cel.pg.locator('[data-tabbar] a[href="/treino"]').first.click(timeout=8000)
+        durante = cel.pg.evaluate(JS_CARD_PRIMEIRO)
+        cel.pg.wait_for_timeout(900)
+        depois = cel.pg.evaluate(JS_CARD)
+        R.linha(f"   H-84: card do descanso — durante a entrada da página {json.dumps(durante)} · depois {json.dumps(depois)}")
+        R.ok(bool(durante and depois) and durante["pai"] == "body" and not durante["naPagina"] and abs(durante["base"] - depois["base"]) <= 1
+             and depois["base"] <= depois["alturaTela"],
+             f"H-84: o card do descanso fica no body (fora da página) e não anda na troca de página (base {durante['base'] if durante else '—'} "
+             f"→ {depois['base'] if depois else '—'} px; tela {depois['alturaTela'] if depois else '—'})")
+    finally:
+        cel.pg.evaluate("() => localStorage.removeItem('physiq_rest_timer')")
+        tocar_aba(cel, "/")
+        cel.pg.wait_for_timeout(500)
 
 
 def main() -> int:
@@ -188,6 +275,7 @@ def main() -> int:
                 R.ok(not erros_sync, f"nenhum erro do banco local na página ({len(erros_sync)})")
                 cel.ctx.set_offline(False)
                 cel.pg.wait_for_timeout(1500)
+                f2b(R, cel, dia)
             finally:
                 try:
                     cel.ctx.set_offline(False)
