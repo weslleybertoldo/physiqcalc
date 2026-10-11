@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { acoesDaConta, chaveMascarada, dataCurta, faixaCabe, linhaAlunos, linhaVencimento, moeda, receitaDoMes, somarDias, textoErro, textoUltimoAcesso } from "./regras";
+import {
+  ROTULO_RECEBIMENTO, acoesDaConta, chaveMascarada, dataCurta, faixaCabe, linhaAlunos, linhaVencimento, moeda, receitaDoMes, somarDias, textoErro, textoUltimoAcesso,
+} from "./regras";
 import type { ContaLinha, VisaoGeral } from "./tipos";
 
 function conta(c: Partial<ContaLinha> = {}): ContaLinha {
@@ -65,6 +67,9 @@ describe("painel master — textos", () => {
     expect(textoErro("so_master")).toBe("Só o master pode fazer isto.");
     expect(textoErro("cobranca_legada")).toContain("ainda é a antiga");
     expect(textoErro("xyz")).toBe("Não deu certo agora. Tente de novo.");
+  });
+  it("W1: o rótulo da InfinitePay", () => {
+    expect(ROTULO_RECEBIMENTO.infinitepay).toBe("InfinitePay");
   });
 });
 
