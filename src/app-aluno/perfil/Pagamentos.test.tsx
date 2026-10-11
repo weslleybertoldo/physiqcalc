@@ -1,14 +1,17 @@
 // Physiq hml-14d (B21 · D31 · P7): Perfil › Pagamentos — os cartões continuam com as 24 de sempre e "Ver todos (N)" abre a folha com
 // a lista inteira em páginas de 20 do banco (aluno_historico), "1–20 de N"; a página é da folha (fechar volta à 1); o erro aparece na
 // folha; tocar num item abre o detalhe por cima e voltar mantém a página. A função falsa responde à página pedida sobre 41 itens.
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+// W-P: o plano com período no cartão da mensalidade (Plano · /ano · parcela n de N · Renovar) e o Mercado Pago com o plano (o cartão
+// parcelado até o máximo do plano manda as parcelas; a automática só onde a modalidade aceita) — o Brick falso guarda o que recebeu.
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CobrancaVista, MatriculaPagamentos, ReciboVista, StatusAluno } from "@/financeiro/tipos";
 import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 
-const h = vi.hoisted(() => ({ status: vi.fn(), historico: vi.fn(), acao: vi.fn() }));
+type BrickFalso = { customization: { paymentMethods: { maxInstallments: number } }; onSubmit: (form: unknown) => Promise<void> };
+const h = vi.hoisted(() => ({ status: vi.fn(), historico: vi.fn(), acao: vi.fn(), brick: [] as BrickFalso[] }));
 vi.mock("@/lib/distribuicao", () => ({ ehLoja: false, DISTRIBUICAO: "site" }));
 vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => false, getPlatform: () => "web" }, registerPlugin: () => ({}) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase: {} }));
@@ -20,7 +23,8 @@ vi.mock("@/financeiro/api", async (orig) => ({
   acaoFinanceiro: (...a: unknown[]) => h.acao(...a),
   invalidarResumo: () => {},
 }));
-vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: () => null, initMercadoPago: () => {} }));
+vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: (p: BrickFalso) => { h.brick.push(p); return null; }, initMercadoPago: () => {} }));
+vi.mock("@/components/pagamentos/mpInit", () => ({ MP_PUBLIC_KEY: "TEST-chave", ensureMpInit: () => {} }));
 
 import Pagamentos from "./Pagamentos";
 
@@ -66,6 +70,7 @@ beforeEach(() => {
   h.historico.mockReset();
   h.acao.mockReset();
   h.acao.mockResolvedValue({});
+  h.brick.length = 0;
   h.status.mockResolvedValue(status([matricula()]));
   h.historico.mockImplementation(async (_p: string, tipo: "cobrancas" | "recibos", pagina: number) => {
     const todas = tipo === "cobrancas" ? COBRANCAS : RECIBOS;
@@ -191,5 +196,77 @@ describe("Perfil › Pagamentos — cancelar a cobrança automática (hml-18a: a
     dialogo = await screen.findByRole("alertdialog");
     fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
     await waitFor(() => expect(h.acao).toHaveBeenCalledWith("aluno_mp_cancelar", { paciente_id: "p1" }));
+  });
+});
+
+const PLANO = (x: Partial<NonNullable<MatriculaPagamentos["mensalidade"]>> = {}) => matricula({
+  conta: { id: "c1", nome: "Consultoria", modo: "pix_manual", bloquear: false, profissional: "Lucas Ferreira" },
+  chave: { tipo: "email", chave: "lucas@teste.com", favorecido: "Lucas", banco: null },
+  mensalidade: { valor: 1000, plano_id: "pl1", plano: "Anual", pausada: false, pago_ate: null, desde: dia(-1), coberta: false,
+    modalidade: "avista", meses: 12, negociado: null, max_parcelas: 1, automatica: false, parcela: null, ...x },
+});
+
+describe("Perfil › Pagamentos — plano com período (W-P)", () => {
+  it("período todo: 'Plano · Anual', '/ano' e Pagar o valor todo", async () => {
+    h.status.mockResolvedValue(status([PLANO()]));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-mensalidade-aluno]")).not.toBeNull());
+    const cartao = document.querySelector("[data-mensalidade-aluno]")!;
+    expect(cartao.textContent).toContain("Plano · Anual");
+    expect(cartao.textContent).toContain("/ano");
+    expect(document.querySelector("[data-pagar-mensalidade]")!.textContent).toBe("Pagar R$ 1.000,00");
+  });
+  it("mês a mês: '/mês' e 'parcela 4 de 12'", async () => {
+    h.status.mockResolvedValue(status([PLANO({ valor: 83.33, modalidade: "mensal", automatica: true, parcela: { num: 4, total: 12 } })]));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-mensalidade-aluno]")).not.toBeNull());
+    expect(document.querySelector("[data-linha-mensalidade]")!.textContent).toContain("parcela 4 de 12");
+    expect(document.querySelector("[data-mensalidade-aluno]")!.textContent).toContain("/mês");
+  });
+  it("período todo já pago e vencendo: 'Renovar plano'", async () => {
+    h.status.mockResolvedValue(status([PLANO({ pago_ate: dia(3), desde: dia(-360), coberta: true })]));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-pagar-mensalidade]")!.textContent).toBe("Renovar plano · R$ 1.000,00");
+  });
+});
+
+/** O plano numa conta do Mercado Pago (Pix ou cartão; sem chave Pix). */
+const PLANO_MP = (x: Partial<NonNullable<MatriculaPagamentos["mensalidade"]>> = {}) =>
+  ({ ...PLANO(x), conta: { id: "c1", nome: "Consultoria", modo: "mercadopago" as const, bloquear: false, profissional: "Lucas Ferreira" }, chave: null });
+
+/** Pagar da mensalidade → o Mercado Pago abre; devolve o botão do cartão. */
+async function abrirPagarMp() {
+  montar();
+  await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")).not.toBeNull());
+  fireEvent.click(document.querySelector("[data-pagar-mensalidade]")!);
+  await waitFor(() => expect(document.body.querySelector("[data-mp-cartao]")).not.toBeNull());
+  return document.body.querySelector("[data-mp-cartao]") as HTMLElement;
+}
+
+describe("Perfil › Pagamentos — Mercado Pago com o plano (W-P: I6 e B2)", () => {
+  it("cartão parcelado: 'Pagar com cartão (até 3×)', sem a automática, e o pagamento manda as parcelas escolhidas", async () => {
+    h.status.mockResolvedValue(status([PLANO_MP({ modalidade: "cartao_parcelado", max_parcelas: 3 })]));
+    const cartao = await abrirPagarMp();
+    expect(cartao.textContent).toBe("Pagar com cartão (até 3×)");
+    expect(document.body.querySelector("[data-mp-assinar]")).toBeNull();
+    fireEvent.click(cartao);
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(0));
+    const brick = h.brick.at(-1)!;
+    expect(brick.customization.paymentMethods.maxInstallments).toBe(3);
+    await act(() => brick.onSubmit({ token: "tok", payment_method_id: "master", issuer_id: "24", installments: 3 }));
+    expect(h.acao).toHaveBeenCalledWith("aluno_mp_cartao", { paciente_id: "p1", card_token: "tok", payment_method_id: "master", issuer_id: "24", installments: 3 });
+  });
+  it("mês a mês: a automática continua e o cartão é 1× (manda installments 1)", async () => {
+    h.status.mockResolvedValue(status([PLANO_MP({ valor: 83.33, modalidade: "mensal", automatica: true, parcela: { num: 4, total: 12 } })]));
+    const cartao = await abrirPagarMp();
+    expect(cartao.textContent).toBe("Pagar com cartão");
+    expect(document.body.querySelector("[data-mp-assinar]")).not.toBeNull();
+    fireEvent.click(cartao);
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(0));
+    const brick = h.brick.at(-1)!;
+    expect(brick.customization.paymentMethods.maxInstallments).toBe(1);
+    await act(() => brick.onSubmit({ token: "tok", payment_method_id: "visa", issuer_id: "25" }));
+    expect(h.acao).toHaveBeenCalledWith("aluno_mp_cartao", { paciente_id: "p1", card_token: "tok", payment_method_id: "visa", issuer_id: "25", installments: 1 });
   });
 });
