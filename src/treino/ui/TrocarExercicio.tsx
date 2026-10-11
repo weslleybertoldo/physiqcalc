@@ -6,6 +6,7 @@ import { agruparPorBloco, combinaBusca, getBloco, nomeDoBloco } from "@/lib/grup
 import { cn } from "@/lib/utils";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
+import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { descricaoCurta, lerEquipamentos, montarGruposTroca, rotuloEquipamento, rotuloPadrao, type ExercicioEquivalencia, type OpcaoTroca } from "../equivalencia";
 import type { InfoSubstituicao } from "../tipos";
 import { JaEstaNoTreino, restaurarTroca, trocarExercicio, type EscopoTroca } from "../troca";
@@ -49,7 +50,7 @@ const chave = (e: { id: string; isPessoal?: boolean }) => `${e.isPessoal ? "p" :
  * SQLite do PowerSync (sem internet também). Substitui o ModalTrocarExercicio antigo.
  */
 export function TrocarExercicio({
-  alvo,
+  alvo: alvoAberto,
   aoFechar,
   aoEquipamentos,
 }: {
@@ -69,9 +70,12 @@ export function TrocarExercicio({
   const [bloco, setBloco] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
-  const idAberto = alvo ? `${alvo.exercicio.id}|${alvo.origemId}|${alvo.slotIdx}|${alvo.dateKey}` : null;
+  // hml-18b (H-83): enquanto a folha SAI, ela continua mostrando o exercício que estava aberto (antes saía vazia: o pai zera o alvo ao
+  // fechar) — o mesmo do useUltimoValor das outras folhas da 18a. O que reinicia a cada abertura segue o alvo de verdade (alvoAberto).
+  const alvo = useUltimoValor(alvoAberto);
+  const idAberto = alvoAberto ? `${alvoAberto.exercicio.id}|${alvoAberto.origemId}|${alvoAberto.slotIdx}|${alvoAberto.dateKey}` : null;
   useEffect(() => {
-    if (!alvo) return;
+    if (!alvoAberto) return;
     let vivo = true;
     setCarregado(false);
     setSelecionado(null);
@@ -87,9 +91,9 @@ export function TrocarExercicio({
           ),
           db.getAll<ItemCatalogo>(
             "SELECT id, nome, grupo_muscular, tipo, padrao_movimento, equipamento, variacao FROM tb_exercicios_usuario WHERE user_id = ? ORDER BY nome",
-            [alvo.userId],
+            [alvoAberto.userId],
           ),
-          alvo.academia ? db.getAll<{ equipamentos: unknown }>("SELECT equipamentos FROM tb_academias WHERE id = ?", [alvo.academia.id]) : Promise.resolve([]),
+          alvoAberto.academia ? db.getAll<{ equipamentos: unknown }>("SELECT equipamentos FROM tb_academias WHERE id = ?", [alvoAberto.academia.id]) : Promise.resolve([]),
         ]);
         if (!vivo) return;
         setCatalogo([...(globais || []), ...(proprios || []).map((e) => ({ ...e, subgrupo: null, imagem_url: null, isPessoal: true }))]);
@@ -284,7 +288,7 @@ export function TrocarExercicio({
 
   return (
     <PainelDeslizante
-      aberto={!!alvo}
+      aberto={!!alvoAberto}
       aoMudar={(v) => !v && !salvando && aoFechar(false)}
       titulo="Trocar exercício"
       descricao={<span data-trocar-sai>Sai {alvo.exercicio.nome} · {alvo.grupoNome}</span>}

@@ -8,6 +8,7 @@ import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useSaidaAnimada } from "@/ui/premium/useSaidaAnimada";
 import { formatarDescanso } from "../prescricao";
 import { useDescanso, type OpcoesDescanso } from "../useDescanso";
+import { createPortal } from "react-dom";
 
 const RAPIDOS = [30, 45, 60, 90, 120, 180];
 
@@ -37,43 +38,48 @@ export function CartaoDescanso(props: OpcoesDescanso) {
 
   return (
     <>
-      <div
-        ref={saida.ref}
-        role="timer"
-        aria-live="off"
-        aria-label={`Descanso: ${relogio(d.segundos)}`}
-        data-descanso={d.acabou ? "acabou" : d.pausado ? "pausado" : "correndo"}
-        data-state={saida.estado}
-        className="fixed inset-x-[14px] z-40 mx-auto flex max-w-[532px] items-center gap-3 rounded-[24px] py-3 pl-3.5 pr-3 duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards"
-        style={{
-          bottom: "calc(var(--casca-reserva-baixo, 16px) - 2px)",
-          background: "rgba(28,24,40,.82)",
-          backdropFilter: "blur(22px)",
-          WebkitBackdropFilter: "blur(22px)",
-          border: "1px solid rgba(167,139,250,.35)",
-          boxShadow: "0 20px 50px -12px rgba(0,0,0,.95), 0 0 40px -10px rgba(139,92,246,.55)",
-        }}
-      >
-        <button type="button" onClick={() => setAjustes(true)} aria-label="Ajustes do descanso" data-descanso-ajustes className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <Anel pct={pct} tamanho={58} espessura={6} cor="#A78BFA" gradiente={["#C4B5FD", "#7C3AED"]} trilho="rgba(255,255,255,.08)" rotulo={`${d.segundos} segundos de descanso`}>
-            <span className={`text-[14px] font-bold tabular-nums text-white ${d.acabou ? "animate-pulse" : ""}`} data-descanso-tempo>{relogio(d.segundos)}</span>
-          </Anel>
-          <span className="min-w-0 flex-1">
-            <b className="block text-[14px] font-semibold text-white">{texto}</b>
-            <span className="line-clamp-2 text-[12px] leading-snug text-[#A1A1AA]" data-descanso-depois>{depois}</span>
-          </span>
-        </button>
-        {!d.acabou && (
-          <button type="button" onClick={d.menos15} className="pq-botao pq-botao-g pq-botao-sm flex-none tabular-nums" data-descanso-menos15>
-            −15 s
+      {/* hml-18b (H-84): o cartão vai para o body (portal, como o sino): na troca de página a transição anima a página (transform) e
+          um `fixed` dentro dela passava a andar junto, preso na página — no body ele fica no lugar, acima da barra de abas */}
+      {createPortal(
+        <div
+          ref={saida.ref}
+          role="timer"
+          aria-live="off"
+          aria-label={`Descanso: ${relogio(d.segundos)}`}
+          data-descanso={d.acabou ? "acabou" : d.pausado ? "pausado" : "correndo"}
+          data-state={saida.estado}
+          className="fixed inset-x-[14px] z-40 mx-auto flex max-w-[532px] items-center gap-3 rounded-[24px] py-3 pl-3.5 pr-3 duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards"
+          style={{
+            bottom: "calc(var(--casca-reserva-baixo, 16px) - 2px)",
+            background: "rgba(28,24,40,.82)",
+            backdropFilter: "blur(22px)",
+            WebkitBackdropFilter: "blur(22px)",
+            border: "1px solid rgba(167,139,250,.35)",
+            boxShadow: "0 20px 50px -12px rgba(0,0,0,.95), 0 0 40px -10px rgba(139,92,246,.55)",
+          }}
+        >
+          <button type="button" onClick={() => setAjustes(true)} aria-label="Ajustes do descanso" data-descanso-ajustes className="flex min-w-0 flex-1 items-center gap-3 text-left">
+            <Anel pct={pct} tamanho={58} espessura={6} cor="#A78BFA" gradiente={["#C4B5FD", "#7C3AED"]} trilho="rgba(255,255,255,.08)" rotulo={`${d.segundos} segundos de descanso`}>
+              <span className={`text-[14px] font-bold tabular-nums text-white ${d.acabou ? "animate-pulse" : ""}`} data-descanso-tempo>{relogio(d.segundos)}</span>
+            </Anel>
+            <span className="min-w-0 flex-1">
+              <b className="block text-[14px] font-semibold text-white">{texto}</b>
+              <span className="line-clamp-2 text-[12px] leading-snug text-[#A1A1AA]" data-descanso-depois>{depois}</span>
+            </span>
           </button>
-        )}
-        <button type="button" onClick={d.pular} className="pq-botao pq-botao-w pq-botao-sm flex-none" data-descanso-pular
-          style={{ background: "#FAFAFA", color: "#09090B" }}>
-          {d.acabou ? <X aria-hidden /> : <SkipForward aria-hidden />}
-          {d.acabou ? "Fechar" : "Pular"}
-        </button>
-      </div>
+          {!d.acabou && (
+            <button type="button" onClick={d.menos15} className="pq-botao pq-botao-g pq-botao-sm flex-none tabular-nums" data-descanso-menos15>
+              −15 s
+            </button>
+          )}
+          <button type="button" onClick={d.pular} className="pq-botao pq-botao-w pq-botao-sm flex-none" data-descanso-pular
+            style={{ background: "#FAFAFA", color: "#09090B" }}>
+            {d.acabou ? <X aria-hidden /> : <SkipForward aria-hidden />}
+            {d.acabou ? "Fechar" : "Pular"}
+          </button>
+        </div>,
+        document.body,
+      )}
 
       <PainelDeslizante aberto={ajustes} aoMudar={setAjustes} titulo="Descanso" descricao={`${props.exercicioNome} — série ${props.numeroSerie}`}>
         <div className="flex flex-col gap-4 pt-1" data-ajustes-descanso>

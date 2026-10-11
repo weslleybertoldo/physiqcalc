@@ -41,6 +41,18 @@ afterEach(() => {
 });
 
 describe("card do descanso (tela 2)", () => {
+  it("hml-18b (H-84): o card vai para o body (portal, como o sino) — fora da página, que anima na troca de página", () => {
+    render(
+      <div data-pagina="treino">
+        <CartaoDescanso ativo exercicioNome="Crucifixo com halteres" numeroSerie={2} duracaoSegundos={45} serieId="ex1-2-1" aoFechar={() => {}} aoMudarTempo={() => {}} />
+      </div>,
+    );
+    const card = document.querySelector("[data-descanso]");
+    expect(card).not.toBeNull();
+    expect(card?.parentElement).toBe(document.body);
+    expect(card?.closest("[data-pagina]")).toBeNull();
+  });
+
   it('mostra o anel com a contagem, "Depois: série 3 do crucifixo", −15 s e Pular; arma o descanso no aparelho', () => {
     abrir();
     expect(screen.getByText("Descanso")).toBeInTheDocument();
