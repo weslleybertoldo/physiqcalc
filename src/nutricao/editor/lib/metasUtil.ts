@@ -1,6 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/metasUtil.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { format, isValid, parseISO } from "date-fns";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
+import { MODELOS_META_PADRAO } from "../../../../supabase-principal/functions/_shared/nutricao-padroes";
 
 // Regras PURAS da prescrição de metas (W16): dias da semana (ISO — 1 = segunda … 7 = domingo), atalhos, texto dos dias,
 // normalização, validação, ordenação/filtro/contagem, 5 modelos padrão, modelos ★, formulário ⇄ registro e nome do PDF.
@@ -101,33 +102,9 @@ export const textoPausadas = (n: number): string => (n === 0 ? "nenhuma pausada"
 
 // ---- Modelos padrão (texto próprio do PhysiqNutri, não copiado de nenhuma referência) ----
 export type ModeloPadraoMeta = { titulo: string; descricao: string; dias_semana: number[] };
-export const MODELOS_PADRAO: ModeloPadraoMeta[] = [
-  {
-    titulo: "Beber 2 litros de água",
-    descricao: "Distribua ao longo do dia: um copo grande ao acordar, um em cada refeição e uma garrafa de 500 ml nos intervalos.",
-    dias_semana: TODOS_OS_DIAS,
-  },
-  {
-    titulo: "Caminhar 30 minutos",
-    descricao: "Em ritmo confortável, de preferência ao ar livre. Pode dividir em duas caminhadas de 15 minutos.",
-    dias_semana: [1, 3, 5],
-  },
-  {
-    titulo: "Dormir de 7 a 8 horas",
-    descricao: "Deite e levante em horários parecidos todos os dias e evite telas na última hora antes de dormir.",
-    dias_semana: TODOS_OS_DIAS,
-  },
-  {
-    titulo: "Comer 3 porções de frutas",
-    descricao: "Uma porção é uma fruta média ou uma fatia grande. Varie as cores ao longo da semana.",
-    dias_semana: TODOS_OS_DIAS,
-  },
-  {
-    titulo: "Sem refrigerante e doces",
-    descricao: "Troque por água com gás, chá sem açúcar e frutas. No fim de semana, com moderação.",
-    dias_semana: SEG_A_SEX,
-  },
-];
+// hml-19b (H-81): os 5 moram em supabase-principal/functions/_shared/nutricao-padroes.ts — a semente nasce no servidor (função
+// nutricao › padroes_garantir { secao: "meta" }, 1 vez só); aqui os MESMOS, reexportados (uma fonte só).
+export const MODELOS_PADRAO: ModeloPadraoMeta[] = MODELOS_META_PADRAO;
 
 // ---- Modelos ----
 /** Favoritos primeiro; dentro de cada grupo, ordem alfabética do título. */

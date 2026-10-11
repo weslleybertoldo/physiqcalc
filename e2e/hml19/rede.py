@@ -19,7 +19,9 @@ Antes ou depois vem do CÓDIGO medido, não da base: depois = o commit medido te
 depois do push da hml-19a); antes = o código antigo (o staging até o push).
 Prints: ~/projetos/physiqcalc-scratch/prints/hml19/a/<prefixo>_a_anamnese.png e <prefixo>_a_anexo.png (+ a cópia de 900 px para conferir);
 o prefixo é a base, ou o --prefixo (o depois no staging: staging2, para não cobrir os staging_* do antes).
-Uso: python3 e2e/hml19/rede.py --base staging|local|prod --canal msedge [--prefixo staging2] [--casos anamnese,pedido,anexo,modelos] [--seco | --limpar]
+hml-19b: --area dieta — as ações típicas da Dieta, das Dietas e do app (prescricao, item, duplicar, receita, alimento, app_marcar) em
+rede_dieta.py, na planilha medicao/rede_hml19b.tsv e nos prints prints/hml19/b/<prefixo>_b_*.png.
+Uso: python3 e2e/hml19/rede.py [--area prontuario|dieta] --base staging|local|prod --canal msedge [--prefixo staging2] [--casos …] [--seco | --limpar]
   --seco  sem rede e sem navegador: confere que os seletores existem no código das telas e que a classificação acerta pedidos de
           exemplo (antes e depois)
 """
@@ -79,7 +81,7 @@ def fase_do_codigo(base: str, commit: str) -> str:
     return "depois" if r.returncode == 0 else "antes"
 
 
-GRAVACOES = ("rest_prontuario", "rest_outras", "rpc_grava", "storage_grava")
+GRAVACOES = ("rest_prontuario", "rest_dieta", "rest_outras", "rpc_grava", "storage_grava")  # hml-19b: o rest nas 19 tabelas da Dieta
 
 
 def so_gravacoes(cont) -> dict:
@@ -256,6 +258,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
     s = B.usar_base(base)
     L = B.Sessoes(f"rede {base}")
     rodada = B.nova_rodada()
+    dono = ""
     commit = commit_medido(base)
     fase = fase_do_codigo(base, commit)
     rotulo = prefixo or base
@@ -306,38 +309,50 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                 L.do_navegador(B.P_CONTA, t.pg)
                 t.fim()
                 nav.close()
-        if s == "staging":
-            limpar_massa(o, s, dono, L.token(B.P_CONTA), rodada)
     finally:
+        # hml-19b: a limpeza no finally (com o corte que vira SystemExit, ela roda mesmo com o processo cortado)
+        if s == "staging" and dono:
+            limpar_massa(o, s, dono, L.token(B.P_CONTA), rodada)
         L.fechar(o)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-19a — a rede das ações típicas do Prontuário (antes × depois)")
+    ap = argparse.ArgumentParser(description="hml-19a/19b — a rede das ações típicas do Prontuário e da Dieta (antes × depois)")
+    ap.add_argument("--area", default="prontuario", choices=("prontuario", "dieta"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
-    ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--casos", default=None, help="padrão: todos os da área")
     ap.add_argument("--prefixo", default=None, help="o prefixo dos prints (padrão: a base; o depois no staging: staging2)")
     modo = ap.add_mutually_exclusive_group()
     modo.add_argument("--seco", action="store_true")
     modo.add_argument("--limpar", action="store_true")
     a = ap.parse_args()
-    casos = [c.strip() for c in a.casos.split(",") if c.strip()]
-    if any(c not in CASOS for c in casos):
-        raise SystemExit(f"caso desconhecido (os casos: {', '.join(CASOS)})")
+    B.corte_vira_saida()  # o SIGTERM/SIGINT vira SystemExit: a limpeza do finally roda mesmo com o processo cortado
+    dieta = a.area == "dieta"
+    if dieta:
+        import rede_dieta as RD  # noqa: PLC0415 — a área da hml-19b (importa este módulo; aqui, só quando pedida)
+    validos = RD.CASOS if dieta else CASOS
+    casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
+    if any(c not in validos for c in casos):
+        raise SystemExit(f"caso desconhecido na área {a.area} (os casos: {', '.join(validos)})")
     if a.seco:
-        o = C.Saida("rede_seco")
-        seco(o)
+        o = C.Saida(f"rede_{a.area}_seco" if dieta else "rede_seco")
+        (RD.seco if dieta else seco)(o)
         return o.fim()
-    o = C.Saida(f"rede_{a.base}" + ("_limpar" if a.limpar else ""))
+    o = C.Saida(f"rede_{a.area}_{a.base}" if dieta else f"rede_{a.base}" + ("_limpar" if a.limpar else ""))
     try:
         if a.limpar:
             s = B.usar_base("staging")
             L = B.Sessoes("rede --limpar")
             try:
-                limpar_massa(o, s, L.uid(B.P_CONTA), L.token(B.P_CONTA))
+                if dieta:
+                    RD.limpar_massa(o, s, L.uid(B.P_CONTA))
+                else:
+                    limpar_massa(o, s, L.uid(B.P_CONTA), L.token(B.P_CONTA))
             finally:
                 L.fechar(o)
+        elif dieta:
+            RD.rodar(o, a.base, casos, a.canal, a.prefixo)
         else:
             rodar(o, a.base, casos, a.canal, a.prefixo)
     except (Exception, SystemExit) as e:  # noqa: BLE001

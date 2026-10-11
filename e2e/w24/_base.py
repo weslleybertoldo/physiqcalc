@@ -91,12 +91,26 @@ def rpc_anon(funcao: str, args: dict) -> tuple[int, object]:
     return st, r
 
 
-def subir_foto(caminho: str, arquivo: Path, token: str | None = None) -> int:
-    """Sobe a foto no bucket "diario" (no staging, "diario-staging") como o anônimo (token None) ou como a pessoa (o upload do app/link — sem upsert)."""
+def cab_servico(chave: str) -> dict:
+    """A chave de serviço nos cabeçalhos (hml-19b, 11/10/2026): a nova (sb_secret_) vai SÓ no apikey — o gateway troca pela identidade de
+    serviço; o Authorization precisa ser JWT, e com ela no Bearer o Storage/Auth recusa (a massa da W24 parava na foto da w18-nutri2).
+    A legada (JWT) segue no apikey e no Bearer, como antes."""
+    return {"apikey": chave} if chave.startswith("sb_secret_") else {"apikey": chave, "Authorization": f"Bearer {chave}"}
+
+
+def cab_do_token(token: str | None) -> dict:
+    """apikey + Authorization de quem chama: o anônimo (None), a pessoa (o token do login de teste: Bearer) ou a chave de serviço."""
+    if token and token.startswith("sb_secret_"):
+        return cab_servico(token)
     a = anon(PRINCIPAL_REF)
+    return {"apikey": a, "Authorization": f"Bearer {token or a}"}
+
+
+def subir_foto(caminho: str, arquivo: Path, token: str | None = None) -> int:
+    """Sobe a foto no bucket "diario" (no staging, "diario-staging") como o anônimo (token None), como a pessoa (o upload do app/link — sem
+    upsert) ou com a chave de serviço (a massa: a foto da época da nutri anterior)."""
     req = urllib.request.Request(f"{PRINCIPAL_URL}/storage/v1/object/{bucket_do_ambiente('diario')}/{caminho}", data=arquivo.read_bytes(), method="POST",
-                                 headers={"Authorization": f"Bearer {token or a}", "apikey": a, "Content-Type": "image/jpeg", "x-upsert": "false",
-                                          "User-Agent": "physiq-e2e-w24"})
+                                 headers={**cab_do_token(token), "Content-Type": "image/jpeg", "x-upsert": "false", "User-Agent": "physiq-e2e-w24"})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             return r.status
@@ -110,7 +124,7 @@ def apagar_fotos(caminhos: list[str], bucket: str | None = None) -> int:
         return 200
     sp = service(PRINCIPAL_REF)
     st, _, _ = http("DELETE", f"{PRINCIPAL_URL}/storage/v1/object/{bucket or bucket_do_ambiente('diario')}", {"prefixes": caminhos},
-                    {"apikey": sp, "Authorization": f"Bearer {sp}"}, timeout=90)
+                    cab_servico(sp), timeout=90)
     return st
 
 

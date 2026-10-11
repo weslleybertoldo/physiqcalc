@@ -191,7 +191,7 @@ def limpar() -> None:
         q(f"delete from {S}.contas where id in ({cs})")
     sp = B.service(B.PRINCIPAL_REF)
     for u in ids:
-        st, _, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/auth/v1/admin/users/{u}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
+        st, _, _ = B.http("DELETE", f"{B.PRINCIPAL_URL}/auth/v1/admin/users/{u}", None, B.cab_servico(sp))
         print("login apagado:", u, st)
 
 

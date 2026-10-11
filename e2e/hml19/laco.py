@@ -11,8 +11,13 @@ Padrão (H-81): a nutricao BARRADA no navegador (route.abort): a semente falha e
 --normal: a nutricao passa (o uso de verdade): os mesmos limites e os prints <base>_a_exames.png, _a_questionarios.png, _a_documentos.png
 (e a cópia de 900 px de cada um, para conferir). Nada grava com a nutricao barrada; no --normal, o garantir só grava se a nutri de teste
 não tiver o padrão (a tela faria o mesmo ao abrir).
-Seções da hml-19a: anamnese, questionarios, exames, documentos (Manipulados, Metas e Orientações entram na hml-19b).
-Uso: python3 e2e/hml19/laco.py --base local --canal msedge [--prefixo staging2] [--segundos 30] [--secoes anamnese,questionarios,exames,documentos] [--normal | --antes | --seco]
+Seções da hml-19a: anamnese, questionarios, exames, documentos. hml-19b: manipulados, metas, orientacoes (a aba Dieta da aluna, pelo
+botão da seção; o aviso de cada uma: [data-erro-formulas], [data-erro-metas], [data-aviso-modelos] com o "Tentar de novo"; o print
+prints/hml19/b/<prefixo>_b_semente_erro.png com Metas barrada) e app (a aluna no app › Dieta com a nutricao barrada: "Feito" na refeição
+da vez → a marca VOLTA e aparece o texto fixo "Sem conexão. Marque de novo quando a internet voltar."; 1 chamada barrada, 0 RPC direta;
+o print b_app_erro). Nas seções da Dieta, a guarda do laço (contrato F, H-90): > 2 GET profiles ou > 1 semente → o navegador fecha NA
+HORA e o resto da medida fica de fora (anotar no progresso).
+Uso: python3 e2e/hml19/laco.py --base local --canal msedge [--prefixo staging2] [--segundos 30] [--secoes anamnese,…,orientacoes,app] [--normal | --antes | --seco]
   --prefixo  o prefixo dos prints (padrão: a base; o depois no staging: staging2, para não cobrir os staging_* do antes)
   --antes o ANTES no staging (o código antigo): só mede e tira os prints staging_a_* (as seções abertas `--segundos`, 8 por padrão — o
           laço de leitura do código antigo pesa no banco; a Anamnese com os modelos barrados no navegador mostra o erro de antes)
@@ -30,21 +35,33 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import rede as R  # noqa: E402
+import rede_dieta as RD  # noqa: E402
 
 C = B.C
-SECOES = ("anamnese", "questionarios", "exames", "documentos")
+SECOES = ("anamnese", "questionarios", "exames", "documentos", "manipulados", "metas", "orientacoes", "app")
+DIETA = ("manipulados", "metas", "orientacoes")  # hml-19b: as seções da aba Dieta (o botão [data-secao-dieta-botao] tem o mesmo id)
 RAIZ = {"anamnese": "[data-secao-anamnese]", "questionarios": "[data-secao-questionarios]", "exames": "[data-secao-exames]",
-        "documentos": "[data-secao-documentos]"}
+        "documentos": "[data-secao-documentos]", "manipulados": "[data-secao-manipulados]", "metas": "[data-secao-metas]",
+        "orientacoes": "[data-secao-orientacoes]"}
 # o aviso com "Tentar de novo" de cada seção que semeia (com a nutricao barrada)
 AVISO = {"anamnese": "[data-aviso-modelos] [data-btn-tentar-modelos]", "exames": "[data-erro-exames] [data-btn-tentar-exames]",
-         "documentos": "[data-erro-documentos] [data-btn-tentar-documentos]"}
-SEMEIA = {"anamnese", "exames", "documentos"}
+         "documentos": "[data-erro-documentos] [data-btn-tentar-documentos]", "manipulados": "[data-erro-formulas] [data-btn-tentar-formulas]",
+         "metas": "[data-erro-metas] [data-btn-tentar-metas]", "orientacoes": "[data-aviso-modelos] [data-btn-tentar-modelos]"}
+SEMEIA = {"anamnese", "exames", "documentos", "manipulados", "metas", "orientacoes"}
+TEXTO_APP_SEM_REDE = "Sem conexão. Marque de novo quando a internet voltar."
 SELETORES = {
     "src/nutricao/prontuario/secoes/Anamnese.tsx": ["data-secao-anamnese", "data-aviso-modelos", "data-btn-tentar-modelos"],
     "src/nutricao/prontuario/secoes/Questionarios.tsx": ["data-secao-questionarios"],
     "src/nutricao/prontuario/secoes/Exames.tsx": ["data-secao-exames", "data-erro-exames", "data-btn-tentar-exames"],
     "src/nutricao/prontuario/secoes/Documentos.tsx": ["data-secao-documentos", "data-erro-documentos", "data-btn-tentar-documentos"],
     "src/painel/aluno/abas/Prontuario.tsx": ["data-secao-prontuario-botao"],
+    "src/painel/aluno/abas/Dieta.tsx": ["data-aba-dieta-aluno", "data-acesso-dieta", "data-secao-dieta-botao"],
+    "src/nutricao/editor/secoes/Manipulados.tsx": ["data-secao-manipulados", "data-erro-formulas", "data-btn-tentar-formulas"],
+    "src/nutricao/editor/secoes/Metas.tsx": ["data-secao-metas", "data-erro-metas", "data-btn-tentar-metas"],
+    "src/nutricao/editor/secoes/Orientacoes.tsx": ["data-secao-orientacoes", "data-aviso-modelos", "data-btn-tentar-modelos"],
+    "src/nutricao/editor/lib/acesso.ts": ['id: "manipulados"', 'id: "metas"', 'id: "orientacoes"'],
+    "src/nutricao/app/refeicaoConcluidaUtil.ts": [TEXTO_APP_SEM_REDE],
+    "src/nutricao/app/useDieta.ts": ["retry: 0"],
 }
 
 
@@ -62,7 +79,7 @@ def medir(cont, barradas: int, secao: str) -> dict:
         "padroes_garantir": cont.get("fn:nutricao(padroes_garantir)", 0),
         "barradas": barradas,
         "get_profiles": cont.get("get_profiles", 0),
-        "rest_gravacao": cont.get("rest_prontuario", 0) + cont.get("rest_outras", 0),
+        "rest_gravacao": cont.get("rest_prontuario", 0) + cont.get("rest_dieta", 0) + cont.get("rest_outras", 0),
         "outras_funcoes": {k: v for k, v in outras.items() if B.B17.funcao_grava(*_funcao(k))},
         "funcoes_leitura": {k: v for k, v in outras.items() if not B.B17.funcao_grava(*_funcao(k))},
         "secao": secao,
@@ -94,6 +111,13 @@ def seco(o) -> None:
             {"metodo": "GET", "tipo": "tab", "nome": "profiles", "url": f"{B.API_P}/rest/v1/profiles"}]
     m = medir(B.contar(novo), 1, "anamnese")
     o.ok(m["padroes_garantir"] == 1 and m["get_profiles"] == 1 and m["rest_gravacao"] == 0, "a contagem do depois: 1 garantir, 1 GET profiles, 0 gravação")
+    # hml-19b: a semente antiga de Manipulados (POST direto) conta como gravação; a seção da Dieta usa o mesmo aviso/raiz da lista
+    semente_antiga = [{"metodo": "POST", "tipo": "tab", "nome": "modelos_formula", "url": f"{B.API_P}/rest/v1/modelos_formula"}] * 3
+    m = medir(B.contar(semente_antiga), 0, "manipulados")
+    o.ok(m["rest_gravacao"] == 3, "a contagem pega a semente antiga de Manipulados (POST direto em modelos_formula = rest_dieta)")
+    o.ok(set(DIETA) <= SEMEIA and all(s in AVISO and s in RAIZ for s in DIETA), "Manipulados, Metas e Orientações: raiz, aviso e semente decididos")
+    app = [{"metodo": "POST", "tipo": "rpc", "nome": "paciente_marcar_refeicao", "url": f"{B.API_P}/rest/v1/rpc/paciente_marcar_refeicao"}]
+    o.ok(B.contar(app).get("rpc_grava") == 1, "o app de antes (a RPC direta paciente_marcar_refeicao) conta como RPC que grava")
 
 
 class BarrarModelosAntigos:
@@ -121,26 +145,83 @@ def rodar_antes(o, secoes: list[str], segundos: float, canal: str | None) -> Non
         pac = B.B17.matricula_da_aluna()
         with sync_playwright() as pw:
             nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
-            for s in secoes:
-                t = B.B17.Tela(nav, B.BASES["staging"], "hml19_staging", f"antes_{s}")
-                B.LegalDesligado().instalar(t.ctx)
-                barrar = BarrarModelosAntigos() if s == "anamnese" else None
-                if barrar:
-                    barrar.instalar(t.ctx)
-                try:
-                    t.entrar(L, B.P_CONTA, R.rota(pac, s))
-                    aberta = t.esperar(lambda: t.tem(RAIZ[s]), 60)
-                    t.zerar_pedidos()
-                    t.pg.wait_for_timeout(int(segundos * 1000))
-                    m = medir(B.contar(t.pedidos), barrar.barradas if barrar else 0, s)
-                    o.ok(aberta, f"[antes] {s} abriu no staging ({R.commit_medido('staging')}): {segundos:.0f} s → {m}")
-                    R.print_reduzido(t, "staging", "a_anamnese_erro" if s == "anamnese" else f"a_{s}", o)
-                finally:
-                    L.do_navegador(B.P_CONTA, t.pg)
-                    t.fim()
-            nav.close()
+            try:
+                for s in [x for x in secoes if x != "app"]:  # o app de antes chama a RPC direto: não há o que barrar na nutricao
+                    t = B.B17.Tela(nav, B.BASES["staging"], "hml19_staging", f"antes_{s}")
+                    B.LegalDesligado().instalar(t.ctx)
+                    barrar = BarrarModelosAntigos() if s == "anamnese" else None
+                    if barrar:
+                        barrar.instalar(t.ctx)
+                    try:
+                        t.entrar(L, B.P_CONTA, f"{RD.rota_dieta(pac)}?secao={s}" if s in DIETA else R.rota(pac, s))
+                        aberta = t.esperar(lambda: t.tem(RAIZ[s]), 60)
+                        t.zerar_pedidos()
+                        esperar_secao(t, o, "antes", s, segundos)
+                        m = medir(B.contar(t.pedidos), barrar.barradas if barrar else 0, s)
+                        o.ok(aberta, f"[antes] {s} abriu no staging ({R.commit_medido('staging')}): {segundos:.0f} s → {m}")
+                        if s in DIETA:
+                            RD.print_b(t, "staging", f"b_{s}", o)
+                        else:
+                            R.print_reduzido(t, "staging", "a_anamnese_erro" if s == "anamnese" else f"a_{s}", o)
+                    finally:
+                        L.do_navegador(B.P_CONTA, t.pg)
+                        t.fim()
+            finally:
+                nav.close()
+    except RD.LacoNaTela as e:
+        o.linha(f"   [antes] o navegador fechou por laço em {e} (anotar no progresso; a medida desta seção fica de fora)")
     finally:
         L.fechar(o)
+
+
+def abrir_aba(t, o, base: str, pac: str, aba: str, navegar: bool = True) -> None:
+    """Prontuário ou Dieta da aluna (navegar = o app recarrega na rota da aba); a nutri de teste tem de poder mudar (senão a semente
+    nem roda)."""
+    if navegar:
+        t.ir(RD.rota_dieta(pac) if aba == "dieta" else R.rota(pac))
+    if aba == "dieta":
+        ok = t.esperar(lambda: t.tem("[data-aba-dieta-aluno]") and t.attr("[data-aba-dieta-aluno]", "data-acesso-dieta") == ["editar"], 60)
+        o.ok(ok, f"[{base}] a Dieta da aluna abre e a nutri de teste edita ({R.commit_medido(base)})", parar=True)
+        # a seção que abre com a aba (o Plano) lê o nome da nutri uns segundos depois: espera a rede acalmar, senão essa leitura cai na
+        # conta da 1ª seção medida (11/10 08:28: Manipulados com 3 GET profiles = 2 dela + 1 do Plano; diagnóstico: só 2 dela em 35 s)
+        R.esperar_quieto(t, 2, 15)
+    else:
+        o.ok(t.esperar(lambda: t.tem("[data-aba-prontuario-aluno]"), 60) and t.n('[data-prontuario-editar="1"]') == 1,
+             f"[{base}] o Prontuário da aluna abre e a nutri de teste muda o clínico ({R.commit_medido(base)})", parar=True)
+
+
+def esperar_secao(t, o, base: str, s: str, segundos: float) -> None:
+    """A seção fica aberta `segundos`; nas da Dieta, com a guarda do laço (RD.vigiar: > 2 GET profiles ou > 1 semente → LacoNaTela)."""
+    t0 = time.time()
+    while time.time() - t0 < segundos:
+        if s in DIETA:
+            RD.vigiar(t, o, f"[{base}] {s}")
+        t.pg.wait_for_timeout(500)
+
+
+def caso_app_erro(o, nav, L, base: str, prefixo: str | None) -> None:
+    """O app com a nutricao barrada: "Feito" na refeição da vez → a marca VOLTA, o texto fixo aparece; 1 chamada barrada, 0 RPC direta."""
+    barrar = B.BarrarNutricao()
+    t = B.B17.Tela(nav, B.BASES[base], f"hml19b_{base}", "laco_app", desktop=False)
+    B.LegalDesligado().instalar(t.ctx)
+    barrar.instalar(t.ctx)
+    try:
+        t.entrar(L, B.A_CONTA, "/dieta")
+        ok = t.esperar(lambda: t.tem('[data-aba-dieta="plano"]') and RD.refeicao_da_vez(t) is not None, 60)
+        if not o.ok(ok, f"[{base}] app: a Dieta da aluna abre com a refeição da vez (o botão Feito)"):
+            return
+        rid = RD.refeicao_da_vez(t)
+        t.zerar_pedidos()
+        t.clicar(f'[data-refeicao="{rid}"] [data-refeicao-marcar="feito"]')
+        ok = t.esperar(lambda: TEXTO_APP_SEM_REDE in t.texto("body") and t.attr(f'[data-refeicao="{rid}"]', "data-refeicao-estado") == ["agora"], 20)
+        RD.print_b(t, prefixo or base, "b_app_erro", o)
+        cont = B.contar(t.pedidos)
+        o.ok(ok, f"[{base}] app: com a nutricao falhando, a marca VOLTA e aparece \"{TEXTO_APP_SEM_REDE}\"")
+        o.ok(dict(barrar.barradas) == {"aluno_marcar_refeicao": 1} and cont.get("rpc_grava", 0) == 0 and cont.get("rest_dieta", 0) == 0,
+             f"[{base}] app: 1 chamada (aluno_marcar_refeicao, barrada), 0 RPC direta, 0 rest ({dict(barrar.barradas)}, {R.so_gravacoes(cont)})")
+    finally:
+        L.do_navegador(B.A_CONTA, t.pg)
+        t.fim()
 
 
 def rodar(o, base: str, secoes: list[str], segundos: float, normal: bool, canal: str | None, prefixo: str | None = None) -> None:
@@ -153,37 +234,53 @@ def rodar(o, base: str, secoes: list[str], segundos: float, normal: bool, canal:
         pac = B.B17.matricula_da_aluna()
         barrar = None if normal else B.BarrarNutricao()
         guarda = B.B17.Guarda() if base == "prod" else None
+        painel = [s for s in secoes if s != "app"]
         with sync_playwright() as pw:
             nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
-            t = B.B17.Tela(nav, B.BASES[base], f"hml19_{base}", "laco", guarda=guarda)
-            B.LegalDesligado().instalar(t.ctx)
             try:
-                if barrar:
-                    barrar.instalar(t.ctx)
-                t.entrar(L, B.P_CONTA, R.rota(pac))
-                o.ok(t.esperar(lambda: t.tem("[data-aba-prontuario-aluno]"), 60) and t.n('[data-prontuario-editar="1"]') == 1,
-                     f"[{base}] o Prontuário da aluna abre e a nutri de teste muda o clínico ({R.commit_medido(base)})", parar=True)
-                for s in secoes:
-                    antes = sum(barrar.barradas.values()) if barrar else 0
-                    t.zerar_pedidos()
-                    t.pg.locator(f'[data-secao-prontuario-botao="{s}"]').first.click()
-                    t.esperar(lambda: t.tem(RAIZ[s]), 45)
-                    t0 = time.time()
-                    while time.time() - t0 < segundos:
-                        t.pg.wait_for_timeout(500)
-                    aviso = t.tem(AVISO[s]) if s in AVISO else None
-                    barradas = (sum(barrar.barradas.values()) - antes) if barrar else 0
-                    m = medir(B.contar(t.pedidos), barradas, s)
-                    o.linha(f"   {s}: {m}")
-                    conferir(o, base, m, normal, aviso)
-                    if normal and s in ("exames", "questionarios", "documentos"):
-                        R.print_reduzido(t, prefixo or base, f"a_{s}", o)
-                    if not normal and s == "anamnese":
-                        R.print_reduzido(t, prefixo or base, "a_anamnese_erro", o)
+                if painel:
+                    t = B.B17.Tela(nav, B.BASES[base], f"hml19_{base}", "laco", guarda=guarda)
+                    B.LegalDesligado().instalar(t.ctx)
+                    try:
+                        if barrar:
+                            barrar.instalar(t.ctx)
+                        aba = "dieta" if painel[0] in DIETA else "prontuario"
+                        t.entrar(L, B.P_CONTA, RD.rota_dieta(pac) if aba == "dieta" else R.rota(pac))
+                        abrir_aba(t, o, base, pac, aba, navegar=False)
+                        for s in painel:
+                            precisa = "dieta" if s in DIETA else "prontuario"
+                            if precisa != aba:
+                                abrir_aba(t, o, base, pac, precisa)
+                                aba = precisa
+                            antes = sum(barrar.barradas.values()) if barrar else 0
+                            t.zerar_pedidos()
+                            botao = f'[data-secao-dieta-botao="{s}"]' if s in DIETA else f'[data-secao-prontuario-botao="{s}"]'
+                            t.pg.locator(botao).first.click()
+                            t.esperar(lambda: t.tem(RAIZ[s]), 45)
+                            esperar_secao(t, o, base, s, segundos)
+                            aviso = t.tem(AVISO[s]) if s in AVISO else None
+                            barradas = (sum(barrar.barradas.values()) - antes) if barrar else 0
+                            m = medir(B.contar(t.pedidos), barradas, s)
+                            o.linha(f"   {s}: {m}")
+                            conferir(o, base, m, normal, aviso)
+                            if normal and s in ("exames", "questionarios", "documentos"):
+                                R.print_reduzido(t, prefixo or base, f"a_{s}", o)
+                            if not normal and s == "anamnese":
+                                R.print_reduzido(t, prefixo or base, "a_anamnese_erro", o)
+                            if not normal and s == "metas":
+                                RD.print_b(t, prefixo or base, "b_semente_erro", o)
+                    finally:
+                        L.do_navegador(B.P_CONTA, t.pg)
+                        t.fim()
+                if "app" in secoes:
+                    if normal or base == "prod":
+                        o.linha("   app: só com a nutricao barrada e fora da produção (pulado)")
+                    else:
+                        caso_app_erro(o, nav, L, base, prefixo)
             finally:
-                L.do_navegador(B.P_CONTA, t.pg)
-                t.fim()
                 nav.close()
+    except RD.LacoNaTela as e:
+        o.linha(f"   o navegador fechou por laço em {e} (anotar no progresso; o resto da medida fica de fora)")
     finally:
         L.fechar(o)
 
@@ -200,6 +297,7 @@ def main() -> int:
     modo.add_argument("--antes", action="store_true")
     modo.add_argument("--seco", action="store_true")
     a = ap.parse_args()
+    B.corte_vira_saida()  # o SIGTERM/SIGINT vira SystemExit: o navegador fecha pelo finally mesmo com o processo cortado
     secoes = [s.strip() for s in a.secoes.split(",") if s.strip()]
     if any(s not in SECOES for s in secoes):
         raise SystemExit(f"seção desconhecida (as seções: {', '.join(SECOES)})")

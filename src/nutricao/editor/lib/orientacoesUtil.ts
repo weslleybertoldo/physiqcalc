@@ -1,5 +1,6 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/orientacoesUtil.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { format } from "date-fns";
+import { CONTEUDO_ORIENTACAO_PADRAO, TITULO_ORIENTACAO_PADRAO } from "../../../../supabase-principal/functions/_shared/nutricao-padroes";
 
 // Regras puras das orientações nutricionais (W10) — modelos (texto reaproveitável) e orientações do paciente
 // (título + conteúdo em markdown SIMPLES). Nada de rede aqui; testado no vitest.
@@ -11,35 +12,11 @@ import { format } from "date-fns";
 export const TITULO_MAX = 120;
 export const CONTEUDO_MAX = 20000;
 
-export const TITULO_MODELO_PADRAO = "Orientações gerais (padrão)";
+// hml-19b (H-81): o modelo padrão mora em supabase-principal/functions/_shared/nutricao-padroes.ts — a semente nasce no servidor
+// (função nutricao › padroes_garantir { secao: "orientacao" }, 1 vez só); aqui o MESMO texto, reexportado (uma fonte só).
+export const TITULO_MODELO_PADRAO = TITULO_ORIENTACAO_PADRAO;
 /** Texto próprio do PhysiqNutri (não copiado de nenhuma referência): 8 tópicos do dia a dia. */
-export const CONTEUDO_MODELO_PADRAO = [
-  "## Hidratação",
-  "Beba água ao longo de todo o dia, sem esperar a sede: deixe uma garrafa por perto e dê preferência à água pura. Sucos, refrigerantes e bebidas adoçadas não substituem a água.",
-  "",
-  "## Mastigação e ritmo das refeições",
-  "Sente-se para comer, sem pressa e longe de telas. Mastigue bem cada porção e faça pausas entre as garfadas — a sensação de saciedade leva alguns minutos para chegar.",
-  "",
-  "## Horários",
-  "Procure fazer as refeições em horários parecidos todos os dias e evite ficar mais de 4 horas sem comer. Pular refeições costuma aumentar a fome e a vontade de beliscar depois.",
-  "",
-  "## Vegetais e frutas",
-  "- Inclua verduras e legumes no almoço e no jantar, ocupando pelo menos metade do prato.",
-  "- Varie as cores ao longo da semana: cada cor traz nutrientes diferentes.",
-  "- Prefira a fruta inteira ao suco.",
-  "",
-  "## Ultraprocessados",
-  "Reduza embutidos, salgadinhos, biscoitos recheados, refrigerantes e refeições prontas. Quando for consumir, leia o rótulo e prefira listas de ingredientes curtas.",
-  "",
-  "## Sono",
-  "Dormir bem faz parte do tratamento: tente manter de 7 a 9 horas por noite, com horários regulares. Evite refeições muito pesadas e cafeína perto da hora de dormir.",
-  "",
-  "## Atividade física",
-  "Movimente-se todos os dias, mesmo que em caminhadas curtas. Combine com a nutricionista a alimentação em torno dos treinos.",
-  "",
-  "## Registro do diário alimentar",
-  "Anote (ou fotografe) o que comer e beber, com horário, e leve o registro para a próxima consulta. **Não existe registro errado**: ele serve para ajustarmos o plano juntos.",
-].join("\n");
+export const CONTEUDO_MODELO_PADRAO = CONTEUDO_ORIENTACAO_PADRAO;
 
 export type Trecho = { texto: string; negrito: boolean };
 export type Bloco =

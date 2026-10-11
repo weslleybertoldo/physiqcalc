@@ -1,6 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/manipuladosUtil.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { format, isValid, parseISO } from "date-fns";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
+import { MODELOS_FORMULA_PADRAO } from "../../../../supabase-principal/functions/_shared/nutricao-padroes";
 
 // Regras PURAS da prescrição de manipulados (W17): ativos {ativo, dose, unidade} guardados em jsonb (leitura tolerante),
 // normalização, validação, ordenação/contagem, 3 modelos padrão, modelos ★, formulário ⇄ registro, datas e nomes dos PDFs.
@@ -111,35 +112,9 @@ export const textoContagemFormulas = (n: number): string => (n === 0 ? "Nenhuma 
 
 // ---- Modelos padrão (texto próprio do PhysiqNutri, não copiado de nenhuma referência) ----
 export type ModeloPadraoFormula = { titulo: string; ativos: Ativo[]; posologia: string; quantidade: string; observacao: string };
-export const MODELOS_PADRAO: ModeloPadraoFormula[] = [
-  {
-    titulo: "Magnésio + vitamina B6",
-    ativos: [
-      { ativo: "Magnésio dimalato", dose: "300", unidade: "mg" },
-      { ativo: "Piridoxina (B6)", dose: "50", unidade: "mg" },
-    ],
-    posologia: "Tomar 1 cápsula à noite",
-    quantidade: "30 cápsulas",
-    observacao: "",
-  },
-  {
-    titulo: "Vitamina D3 2000 UI",
-    ativos: [{ ativo: "Colecalciferol", dose: "2000", unidade: "UI" }],
-    posologia: "Tomar 1 cápsula ao dia, junto com uma refeição com gordura",
-    quantidade: "60 cápsulas",
-    observacao: "",
-  },
-  {
-    titulo: "Ômega 3 concentrado",
-    ativos: [
-      { ativo: "EPA", dose: "600", unidade: "mg" },
-      { ativo: "DHA", dose: "400", unidade: "mg" },
-    ],
-    posologia: "Tomar 1 cápsula 2x ao dia, após o almoço e o jantar",
-    quantidade: "60 cápsulas",
-    observacao: "",
-  },
-];
+// hml-19b (H-81): os 3 moram em supabase-principal/functions/_shared/nutricao-padroes.ts — a semente nasce no servidor (função
+// nutricao › padroes_garantir { secao: "formula" }, 1 vez só); aqui os MESMOS, reexportados (uma fonte só).
+export const MODELOS_PADRAO: ModeloPadraoFormula[] = MODELOS_FORMULA_PADRAO;
 
 // ---- Modelos ----
 /** Favoritos primeiro; dentro de cada grupo, ordem alfabética do título. */

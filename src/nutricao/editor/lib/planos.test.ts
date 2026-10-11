@@ -5,11 +5,13 @@ import fixture from "./__fixtures__/planoStagingHml17.json";
 // plano com os alimentos de verdade para quem vê o aluno — lido direto das tabelas, o RLS de alimentos tirava o alimento próprio
 // da nutri de quem não é a autora e o mesmo plano somava 1.540 kcal em vez de 1.894. A fixture é o plano de TESTE do staging
 // (w5p-aluna, 5 refeições, 22 itens, 3 alimentos próprios da nutri), anonimizado (uuids falsos, nomes próprios trocados).
-const h = vi.hoisted(() => ({ rpc: vi.fn(), consultas: [] as { tabela: string; chamadas: unknown[][] }[], respostas: [] as unknown[] }));
+// hml-19b: as gravações passam pela função nutricao (functions.invoke) — o teste delas falsifica a invoke.
+const h = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn(), consultas: [] as { tabela: string; chamadas: unknown[][] }[], respostas: [] as unknown[] }));
 vi.mock("@/integrations/principal/client", () => ({
   PRINCIPAL_SCHEMA: "staging",
   principal: {
     rpc: h.rpc,
+    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
     from: (tabela: string) => {
       const registro = { tabela, chamadas: [] as unknown[][] };
       h.consultas.push(registro);
@@ -42,6 +44,7 @@ const ERRO_DO_BANCO = { message: 'permission denied for function planos_do_aluno
 let avisos: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   h.rpc.mockReset();
+  h.invoke.mockReset();
   h.consultas.length = 0;
   h.respostas.length = 0;
   avisos = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -122,17 +125,20 @@ describe("planos.ts › gravação do item não troca o alimento por null (hml-1
 
   it("atualizarItem: o embed do RLS volta sem o alimento → fica o alimento que o editor tinha", async () => {
     const antes = item();
-    h.respostas.push({ data: { ...antes, quantidade_g: 50, alimento: null }, error: null });
+    h.invoke.mockResolvedValueOnce({ data: { ok: true, linha: { ...antes, quantidade_g: 50, alimento: null } }, error: null });
     const salvo = await atualizarItem(antes.id, { quantidade_g: 50, medida_caseira_id: null, quantidade_medida: null, observacao: null }, antes.alimento);
-    expect(h.consultas[0].tabela).toBe("itens_refeicao");
+    // hml-19b: pela função nutricao (nada direto na tabela)
+    expect(h.invoke).toHaveBeenCalledWith("nutricao", { body: expect.objectContaining({ acao: "item_editar", id: antes.id, quantidade_g: 50 }) });
+    expect(h.consultas).toEqual([]);
     expect(salvo.quantidade_g).toBe(50);
     expect(salvo.alimento).toEqual(antes.alimento);
   });
 
   it("salvarSubstitutos: idem (o alimento atual fica)", async () => {
     const antes = item();
-    h.respostas.push({ data: { ...antes, substitutos: [], alimento: null }, error: null });
+    h.invoke.mockResolvedValueOnce({ data: { ok: true, linha: { ...antes, substitutos: [], alimento: null } }, error: null });
     const salvo = await salvarSubstitutos(antes.id, [], antes.alimento);
+    expect(h.invoke).toHaveBeenCalledWith("nutricao", { body: { id: antes.id, substitutos: [], acao: "item_editar" } });
     expect(salvo.alimento).toEqual(antes.alimento);
   });
 

@@ -33,6 +33,7 @@ import PlanoDialog from "./PlanoDialog";
 import ReceitaNoPlanoDialog from "./ReceitaNoPlanoDialog";
 import RefeicaoDialog from "./RefeicaoDialog";
 import SubstitutosDialog from "./SubstitutosDialog";
+import { useAuth } from "./contexto";
 import { BTN_PERIGO, BTN_SEC, DESCRICAO_JANELA, JANELA, TITULO_JANELA } from "./estilos";
 
 /** As colunas da tabela da refeição (tela 8); sem mouse (celular), a última cresce pra lixeira caber à vista ao lado das trocas. */
@@ -151,6 +152,8 @@ export interface EditorDietaProps {
  */
 export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitura = false, onMudou, onTrocarPlano, noApp, className }: EditorDietaProps) {
   const qc = useQueryClient();
+  // hml-19b: quem está logado (a cópia do "Duplicar" é dela — antes ia o id da AUTORA do plano e o RLS recusava quem não era a autora)
+  const { user } = useAuth();
   const q = usePlano(planoId);
   const plano = q.data ?? null;
   const [dia, setDia] = useState<number>(() => diaDeHoje());
@@ -355,7 +358,7 @@ export function EditorDieta({ planoId, paciente, nomeNutricionista, somenteLeitu
                 <DropdownMenuItem
                   onSelect={() =>
                     void rodar(async () => {
-                      const copiaPlano = await duplicarPlano(plano.nutricionista_id, plano);
+                      const copiaPlano = await duplicarPlano(user?.id ?? "", plano);
                       await qc.invalidateQueries({ queryKey: ["dieta-planos", paciente.id] });
                       onMudou?.();
                       onTrocarPlano?.(copiaPlano.id);

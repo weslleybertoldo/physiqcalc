@@ -126,6 +126,11 @@ export function textoErroRpc(e: unknown): string {
   if (m.includes("diario_desligado") || m.includes("link_desligado")) return TEXTO_DIARIO_DESLIGADO;
   if (m.includes("muitos_envios")) return "Muitos envios em pouco tempo — tente de novo em alguns minutos.";
   if (m.includes("arquivo_nao_encontrado") || m.includes("path_invalido") || m.includes("arquivo_invalido")) return "A foto não subiu. Tente de novo.";
+  // hml-19b: os códigos da função nutricao no envio pelo app (a pasta recusada, o caminho fora da pasta, o tipo e o tamanho)
+  if (m.includes("sem_acesso")) return "O envio de fotos não está liberado agora. Fale com a sua nutricionista.";
+  if (m.includes("fora_da_pasta")) return "A foto não subiu. Tente de novo.";
+  if (m.includes("tipo_invalido")) return "Formato não aceito. Envie JPG, PNG, WebP ou HEIC.";
+  if (m.includes("arquivo_grande")) return `A foto passa de ${FOTO_TAMANHO_MAX_ROTULO}. Envie uma menor.`;
   if (m.includes("data_invalida")) return "A data e hora não podem estar no futuro.";
   if (m.includes("refeicao_invalida")) return "Escolha a refeição.";
   if (m.includes("row-level security") || m.includes("violates") || m.includes("policy") || m.includes("unauthorized")) return "O envio de fotos não está liberado agora. Fale com a sua nutricionista.";

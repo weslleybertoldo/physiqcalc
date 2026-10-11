@@ -87,6 +87,12 @@ describe("arquivo e envio", () => {
     expect(textoErroRpc(new Error("new row violates row-level security policy"))).toMatch(/não está liberado/);
     expect(textoErroRpc(new Error("Failed to fetch"))).toMatch(/Sem conexão/);
     expect(textoErroRpc(new Error("?"))).toBe("Não foi possível enviar a foto. Tente de novo.");
+    // hml-19b: os códigos da função nutricao no envio pelo app
+    expect(textoErroRpc(new Error("sem_acesso"))).toMatch(/não está liberado/);
+    expect(textoErroRpc(new Error("fora_da_pasta"))).toMatch(/não subiu/);
+    expect(textoErroRpc(new Error("tipo_invalido"))).toMatch(/Formato não aceito/);
+    expect(textoErroRpc(new Error("arquivo_grande"))).toMatch(/passa de 10 MB/);
+    expect(textoErroRpc(new Error("diario_desligado"))).toMatch(/desligado pelo seu profissional/);
   });
   it("datetime-local ⇄ ISO", () => {
     const d = new Date(2026, 8, 20, 12, 40);

@@ -5,26 +5,48 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { matricula, situacao } from "@/test/fixturesNucleo";
 import type { DadosDieta, ItemDaRefeicao, PlanoAlimentar, RefeicaoDoPlano } from "@/nutricao/app/tipos";
 
-const h = vi.hoisted(() => ({
-  sessao: {} as Record<string, unknown>,
-  dados: {} as Record<string, unknown>,
-  chamadas: [] as string[],
-  marcar: vi.fn(),
-  meta: vi.fn(),
-  pratos: vi.fn(),
-}));
+// hml-19b (decisão 14): o ✓ da refeição e da meta passa pela função nutricao — o marcarRefeicao/marcarMeta de VERDADE chamam a
+// functions.invoke, e a invoke falsa leva aos mesmos h.marcar/h.meta (o "banco" do teste); a recusa volta como a da função
+// ({ ok: false, erro }), com o código. As leituras (minha_dieta, URLs) seguem falsificadas como antes.
+const h = vi.hoisted(() => {
+  const h = {
+    sessao: {} as Record<string, unknown>,
+    dados: {} as Record<string, unknown>,
+    chamadas: [] as string[],
+    marcar: vi.fn(),
+    meta: vi.fn(),
+    pratos: vi.fn(),
+    toastErro: vi.fn(),
+    invocar: async (nome: string, o: { body: Record<string, unknown> }) => {
+      const b = o.body;
+      const f = b.acao === "aluno_marcar_refeicao" ? h.marcar : b.acao === "aluno_marcar_meta" ? h.meta : null;
+      if (nome !== "nutricao" || !f) throw new Error(`chamada inesperada: ${nome} ${String(b.acao)}`);
+      try {
+        return { data: { ok: true, concluida: await f(b.refeicao_id ?? b.meta_id, b.data, b.concluida) }, error: null };
+      } catch (e) {
+        const corpo = JSON.stringify({ ok: false, erro: (e as Error).message });
+        return { data: null, error: { name: "FunctionsHttpError", context: new Response(corpo, { status: 400, headers: { "Content-Type": "application/json" } }) } };
+      }
+    },
+  };
+  return h;
+});
 
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
-vi.mock("@/integrations/principal/client", () => ({ principalConfigurado: true, principal: {} }));
-vi.mock("@/nutricao/app/pacienteApp", () => ({
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), info: vi.fn(), error: (...a: unknown[]) => h.toastErro(...a) } }));
+vi.mock("@/integrations/principal/client", () => ({
+  principalConfigurado: true,
+  PRINCIPAL_SCHEMA: "public",
+  principal: { functions: { invoke: (nome: string, o: { body: Record<string, unknown> }) => h.invocar(nome, o) } },
+}));
+vi.mock("@/nutricao/app/pacienteApp", async (orig) => ({
+  ...(await orig<typeof import("@/nutricao/app/pacienteApp")>()),
   minhaDieta: async (dia: string) => {
     h.chamadas.push(dia);
     if (navigator.onLine === false) throw new Error("sem_internet");
     const d = (h.dados[dia] ?? h.dados.padrao) as DadosDieta;
     return { ...d, dia };
   },
-  marcarRefeicao: (...a: unknown[]) => h.marcar(...a),
-  marcarMeta: (...a: unknown[]) => h.meta(...a),
   urlsDoDiario: async (regs: { id: string }[]) => Object.fromEntries(regs.map((r) => [r.id, `https://fotos/${r.id}.jpg`])),
   enviarFotoDiario: vi.fn(),
 }));
@@ -117,6 +139,7 @@ beforeEach(() => {
     return concluida;
   };
   h.marcar.mockReset().mockImplementation(gravar("refeicoes_concluidas"));
+  h.toastErro.mockReset();
   h.meta.mockReset().mockImplementation(gravar("metas_concluidas"));
   h.pratos.mockReset();
   h.sessao = {
@@ -173,12 +196,14 @@ describe("aba Dieta (W11 — tela 3)", () => {
   });
 
   it("se o banco recusa, a marcação volta atrás", async () => {
+    // hml-19b: a recusa vem da função nutricao ({ ok: false, erro: "sem_alimentos" }) e a tela mostra o texto fixo do código
     h.marcar.mockReset().mockRejectedValue(new Error("sem_alimentos"));
     montar();
     await pronto();
     fireEvent.click(screen.getByRole("button", { name: "Marcar Almoço como feita" }));
     await waitFor(() => expect(h.marcar).toHaveBeenCalled());
     await waitFor(() => expect(document.querySelector('[data-refeicao="almoco"]')!.getAttribute("data-refeicao-estado")).toBe("agora"));
+    await waitFor(() => expect(h.toastErro).toHaveBeenCalledWith("Essa refeição ainda não tem alimentos."));
   });
 
   it("o ✓ zera no dia seguinte (fuso de São Paulo): às 00:00 a aba busca o dia novo e nada vem marcado", async () => {

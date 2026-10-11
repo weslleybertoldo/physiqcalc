@@ -1,11 +1,15 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/acompanhamento.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { supabase } from "@/nutricao/editor/lib/banco";
-import type { Database, Json } from "@/nutricao/editor/lib/banco";
+import type { Database } from "@/nutricao/editor/lib/banco";
+import { acaoNutricao } from "@/nutricao/servidor";
 import { registroParaBanco, type FormRegistro } from "@/nutricao/editor/lib/acompanhamentoUtil";
 
 // Acesso do Acompanhamento (W23): a tabela nova `registros_diarios` (RLS: a nutricionista só vê os dela; master vê tudo;
 // 1 registro VIVO por paciente/dia — índice único parcial; exclusão SOFT → Lixeira, W32) + as leituras das seções donas
 // (planos da W9, antropometrias da W6, cálculos da W7), reexportadas pra tela ter uma porta só.
+// hml-19b (H-41 · jeito 2): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama e as
+// mesmas assinaturas. O "registrar dia" vira 1 chamada: o servidor edita o vivo do dia ou insere (o índice único é PARCIAL — o
+// on_conflict do PostgREST não o acha —, então o upsert é à mão lá, com a corrida 23505 virando edição, como aqui antes).
 
 export { listarPlanos, type Plano } from "@/nutricao/editor/lib/planos";
 export { listarAntropometrias, type Antropometria } from "@/nutricao/editor/lib/antropometrias";
@@ -21,7 +25,7 @@ const falhou = (error: { message: string } | null): void => {
 
 const colunas = (f: FormRegistro) => {
   const r = registroParaBanco(f);
-  return { data: r.data, agua_ml: r.agua_ml, sintomas: r.sintomas as unknown as Json, observacao: r.observacao };
+  return { data: r.data, agua_ml: r.agua_ml, sintomas: r.sintomas, observacao: r.observacao };
 };
 
 /**
@@ -61,46 +65,18 @@ export async function contarRegistrosDoDia(pacienteId: string, dia: string): Pro
   return count;
 }
 
-async function registroVivoDoDia(pacienteId: string, dia: string): Promise<RegistroDiario | null> {
-  const { data, error } = await supabase
-    .from(TABELA)
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .eq("data", dia)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  falhou(error);
-  return (data as RegistroDiario | null) ?? null;
-}
-
-/** Upsert MANUAL pelo dia: já existe registro vivo naquele dia → atualiza; senão insere. Devolve a linha e se foi criada. */
+/** Upsert pelo dia (no servidor): já existe registro vivo naquele dia → atualiza; senão insere. Devolve a linha e se foi criada. */
 export async function salvarRegistro(nutricionistaId: string, pacienteId: string, f: FormRegistro): Promise<{ registro: RegistroDiario; criado: boolean }> {
-  const existente = await registroVivoDoDia(pacienteId, f.data);
-  if (existente) return { registro: await atualizarRegistro(existente.id, f), criado: false };
-  const { data, error } = await supabase
-    .from(TABELA)
-    .insert({ nutricionista_id: nutricionistaId, paciente_id: pacienteId, ...colunas(f) })
-    .select("*")
-    .single();
-  if (error && error.code === "23505") {
-    // corrida: o dia foi registrado no meio do caminho (índice único parcial) → vira atualização
-    const denovo = await registroVivoDoDia(pacienteId, f.data);
-    if (denovo) return { registro: await atualizarRegistro(denovo.id, f), criado: false };
-  }
-  falhou(error);
-  return { registro: data as RegistroDiario, criado: true };
+  const r = await acaoNutricao<{ registro: RegistroDiario; criado: boolean }>("registro_diario_salvar", { paciente_id: pacienteId, ...colunas(f) });
+  return { registro: r.registro, criado: r.criado === true };
 }
 
 export async function atualizarRegistro(id: string, f: FormRegistro): Promise<RegistroDiario> {
-  const { data, error } = await supabase.from(TABELA).update(colunas(f)).eq("id", id).select("*").single();
-  falhou(error);
-  return data as RegistroDiario;
+  const { linha } = await acaoNutricao<{ linha: RegistroDiario }>("registro_diario_editar", { id, ...colunas(f) });
+  return linha;
 }
 
 /** Exclusão SOFT (o índice único só conta vivos, então o dia pode ser registrado de novo). */
 export async function excluirRegistro(id: string): Promise<void> {
-  const { error } = await supabase.from(TABELA).update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("registro_diario_excluir", { id });
 }

@@ -1,6 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/planos.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { supabase } from "@/nutricao/editor/lib/banco";
-import type { Database, Json } from "@/nutricao/editor/lib/banco";
+import type { Database } from "@/nutricao/editor/lib/banco";
+import { acaoNutricao } from "@/nutricao/servidor";
 import { listarAlimentos, type Alimento, type MedidaCaseira } from "@/nutricao/editor/lib/alimentos";
 import { ordenarMedidas } from "@/nutricao/editor/lib/alimentosUtil";
 import { REFEICOES_PADRAO, TITULO_MAX, ordenarItens, ordenarRefeicoes, type RegistroItem, type RegistroPlano, type RegistroRefeicao, type Substituto } from "@/nutricao/editor/lib/dietaUtil";
@@ -13,8 +14,12 @@ import { REFEICOES_PADRAO, TITULO_MAX, ordenarItens, ordenarRefeicoes, type Regi
 // 20261010100000_hml17_planos_do_aluno.sql): o banco confere quem vê o aluno e monta o plano com os alimentos de verdade — lido
 // direto das tabelas, o RLS de `alimentos` tirava o alimento próprio da nutri de quem vê o aluno sem ser a autora (personal,
 // dono, nutri que herdou) e o mesmo plano somava menos kcal. O JSON é o mesmo do select de antes (o montarPlano não mudou).
-// As GRAVAÇÕES seguem nas tabelas (RLS de hoje): o item salvo volta com o embed do RLS e, se ele vier sem o alimento, fica o
-// alimento que o editor já tinha (atualizarItem/salvarSubstitutos).
+// hml-19b (H-41 · jeito 2): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama, e as
+// assinaturas não mudam (as telas não mudam). A nova prescrição, o duplicar/usar modelo ★, o subir/descer e o "copiar pra semana toda"
+// viram 1 chamada cada (RPCs tudo-ou-nada no servidor). O dono é SEMPRE quem chama: o 1º argumento de criarPlano/duplicarPlano/
+// usarPlanoModelo fica só por compatibilidade (o servidor não lê — corrige o duplicar do editor com o id da autora). O item salvo
+// volta com o embed do RLS de quem grava e, se ele vier sem o alimento, fica o alimento que o editor já tinha
+// (atualizarItem/salvarSubstitutos).
 
 export type PlanoRow = Database["public"]["Tables"]["planos_alimentares"]["Row"];
 export type RefeicaoRow = Database["public"]["Tables"]["refeicoes"]["Row"];
@@ -25,14 +30,6 @@ export type AlimentoDoPlano = Pick<Alimento, "id" | "nome" | "fonte" | "grupo" |
 export type Item = ItemRow & { alimento: AlimentoDoPlano | null; receita?: { id: string; nome: string } | null };
 export type Refeicao = RefeicaoRow & { itens: Item[] };
 export type Plano = PlanoRow & { refeicoes: Refeicao[] };
-
-const ALIMENTO = "alimento:alimentos(id, nome, fonte, grupo, energia_kcal, proteina_g, carboidrato_g, lipidio_g, fibra_g, sodio_mg, medidas_caseiras(*))";
-/** O item das GRAVAÇÕES (insert/update devolvem a linha com o embed, sob o RLS de quem grava). */
-const SELECT_ITEM = `*, ${ALIMENTO}, receita:receitas(id, nome)`;
-
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
 
 /** hml-17 (H-61 nos arquivos tocados): os textos das leituras do plano — a frase crua do banco não vai para a tela. */
 export const ERRO_LER_PLANOS = "Não deu para carregar os planos alimentares agora. Tente de novo.";
@@ -87,117 +84,64 @@ export async function buscarPlano(id: string): Promise<Plano | null> {
 
 const colunasPlano = (r: RegistroPlano) => ({ titulo: r.titulo, kcal_alvo: r.kcal_alvo, observacao: r.observacao });
 
-/** Cria o plano já com as refeições padrão (Café da manhã 07:00 … Ceia 22:00). */
+/** Cria o plano já com as refeições padrão (Café da manhã 07:00 … Ceia 22:00) — 1 chamada (antes: plano + refeições em série). */
 export async function criarPlano(nutricionistaId: string, pacienteId: string, r: RegistroPlano, calculoEnergeticoId: string | null): Promise<Plano> {
-  const { data, error } = await supabase
-    .from("planos_alimentares")
-    .insert({ nutricionista_id: nutricionistaId, paciente_id: pacienteId, metodo: "alimentos", calculo_energetico_id: calculoEnergeticoId, ...colunasPlano(r) })
-    .select("*")
-    .single();
-  falhou(error);
-  const plano = data as PlanoRow;
-  const { data: refs, error: erroRef } = await supabase
-    .from("refeicoes")
-    .insert(REFEICOES_PADRAO.map((x, i) => ({ plano_id: plano.id, nome: x.nome, horario: x.horario, ordem: i })))
-    .select("*");
-  falhou(erroRef);
-  return montarPlano({ ...plano, refeicoes: ((refs ?? []) as RefeicaoRow[]).map((x) => ({ ...x, itens: [] })) });
+  const resp = await acaoNutricao<{ plano: PlanoRow; refeicoes: RefeicaoRow[] }>("plano_criar", {
+    paciente_id: pacienteId,
+    calculo_energetico_id: calculoEnergeticoId,
+    ...colunasPlano(r),
+    refeicoes: REFEICOES_PADRAO.map((x, i) => ({ nome: x.nome, horario: x.horario, ordem: i })),
+  });
+  return montarPlano({ ...resp.plano, refeicoes: (resp.refeicoes ?? []).map((x) => ({ ...x, itens: [] })) });
 }
 
 export async function atualizarPlano(id: string, r: RegistroPlano): Promise<PlanoRow> {
-  const { data, error } = await supabase.from("planos_alimentares").update(colunasPlano(r)).eq("id", id).select("*").single();
-  falhou(error);
-  return data as PlanoRow;
+  const { linha } = await acaoNutricao<{ linha: PlanoRow }>("plano_editar", { id, ...colunasPlano(r) });
+  return linha;
 }
 
 export async function favoritarPlano(id: string, favorito: boolean): Promise<PlanoRow> {
-  const { data, error } = await supabase.from("planos_alimentares").update({ favorito }).eq("id", id).select("*").single();
-  falhou(error);
-  return data as PlanoRow;
+  const { linha } = await acaoNutricao<{ linha: PlanoRow }>("plano_editar", { id, favorito });
+  return linha;
 }
 
 export async function excluirPlano(id: string): Promise<void> {
-  const { error } = await supabase.from("planos_alimentares").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("plano_excluir", { id });
 }
 
-/** Cópia completa (plano + refeições + itens com substitutos); o título ganha " (cópia)". Devolve a cópia carregada. */
+/**
+ * Cópia completa (plano + refeições + itens com substitutos) do plano `p`, no MESMO aluno; o título ganha " (cópia)". 1 chamada (antes:
+ * 1 + R + R' em série, sem transação). A cópia é de QUEM CHAMA (o servidor põe o dono; `nutricionistaId` não vai). Devolve a cópia montada.
+ */
 export async function duplicarPlano(nutricionistaId: string, p: Plano): Promise<Plano> {
-  const { data, error } = await supabase
-    .from("planos_alimentares")
-    .insert({
-      nutricionista_id: nutricionistaId,
-      paciente_id: p.paciente_id,
-      metodo: p.metodo,
-      kcal_alvo: p.kcal_alvo,
-      calculo_energetico_id: p.calculo_energetico_id,
-      observacao: p.observacao,
-      titulo: `${p.titulo} (cópia)`.slice(0, TITULO_MAX),
-    })
-    .select("*")
-    .single();
-  falhou(error);
-  const novo = data as PlanoRow;
-  for (const r of ordenarRefeicoes(p.refeicoes)) {
-    const { data: ref, error: erroRef } = await supabase
-      .from("refeicoes")
-      .insert({ plano_id: novo.id, nome: r.nome, horario: r.horario, ordem: r.ordem, observacao: r.observacao, dias_semana: r.dias_semana ?? [] })
-      .select("*")
-      .single();
-    falhou(erroRef);
-    const itens = ordenarItens(r.itens);
-    if (itens.length) {
-      const { error: erroItens } = await supabase.from("itens_refeicao").insert(
-        itens.map((i) => ({
-          refeicao_id: (ref as RefeicaoRow).id,
-          alimento_id: i.alimento_id,
-          quantidade_g: i.quantidade_g,
-          medida_caseira_id: i.medida_caseira_id,
-          quantidade_medida: i.quantidade_medida,
-          ordem: i.ordem,
-          substitutos: i.substitutos,
-          observacao: i.observacao,
-        })),
-      );
-      falhou(erroItens);
-    }
-  }
-  const completo = await buscarPlano(novo.id);
-  if (!completo) throw new Error("Não foi possível carregar a cópia do plano");
-  return completo;
+  const { plano } = await acaoNutricao<{ plano: PlanoBruto }>("plano_duplicar", { plano_id: p.id, titulo: `${p.titulo} (cópia)`.slice(0, TITULO_MAX) });
+  return montarPlano(plano);
 }
 
 // ---- Refeições ----
 export async function criarRefeicao(planoId: string, r: RegistroRefeicao, ordem: number): Promise<Refeicao> {
-  const { data, error } = await supabase
-    .from("refeicoes")
-    .insert({ plano_id: planoId, nome: r.nome, horario: r.horario, observacao: r.observacao, ordem, ...(r.dias_semana ? { dias_semana: r.dias_semana } : {}) })
-    .select("*")
-    .single();
-  falhou(error);
-  return { ...(data as RefeicaoRow), itens: [] };
+  const { linha } = await acaoNutricao<{ linha: RefeicaoRow }>("refeicao_criar", {
+    plano_id: planoId, nome: r.nome, horario: r.horario, observacao: r.observacao, ordem, ...(r.dias_semana ? { dias_semana: r.dias_semana } : {}),
+  });
+  return { ...linha, itens: [] };
 }
 
 export async function atualizarRefeicao(id: string, r: RegistroRefeicao): Promise<RefeicaoRow> {
-  const { data, error } = await supabase
-    .from("refeicoes")
-    .update({ nome: r.nome, horario: r.horario, observacao: r.observacao, ...(r.dias_semana ? { dias_semana: r.dias_semana } : {}) })
-    .eq("id", id)
-    .select("*")
-    .single();
-  falhou(error);
-  return data as RefeicaoRow;
+  const { linha } = await acaoNutricao<{ linha: RefeicaoRow }>("refeicao_editar", {
+    id, nome: r.nome, horario: r.horario, observacao: r.observacao, ...(r.dias_semana ? { dias_semana: r.dias_semana } : {}),
+  });
+  return linha;
 }
 
 /** Apaga a refeição e os itens dela (de verdade — a lixeira guarda o plano, não a refeição). */
 export async function excluirRefeicao(id: string): Promise<void> {
-  const { error } = await supabase.from("refeicoes").delete().eq("id", id);
-  falhou(error);
+  await acaoNutricao("refeicao_excluir", { id });
 }
 
+/** As ordens que mudaram (subir/descer), numa chamada só e tudo ou nada (antes: N updates em paralelo). */
 export async function salvarOrdemRefeicoes(ordens: { id: string; ordem: number }[]): Promise<void> {
-  const resultados = await Promise.all(ordens.map((o) => supabase.from("refeicoes").update({ ordem: o.ordem }).eq("id", o.id)));
-  for (const r of resultados) falhou(r.error);
+  if (!ordens.length) return;
+  await acaoNutricao("dieta_ordenar", { tabela: "refeicoes", ordens: ordens.map((o) => ({ id: o.id, ordem: o.ordem })) });
 }
 
 // ---- Itens ----
@@ -209,21 +153,15 @@ const colunasItem = (r: RegistroItem) => ({
 });
 
 export async function criarItem(refeicaoId: string, alimentoId: string, r: RegistroItem, ordem: number): Promise<Item> {
-  const { data, error } = await supabase
-    .from("itens_refeicao")
-    .insert({ refeicao_id: refeicaoId, alimento_id: alimentoId, ordem, ...colunasItem(r) })
-    .select(SELECT_ITEM)
-    .single();
-  falhou(error);
-  return montarItem(data as unknown as ItemBruto);
+  const { linha } = await acaoNutricao<{ linha: ItemBruto }>("item_criar", { refeicao_id: refeicaoId, alimento_id: alimentoId, ordem, ...colunasItem(r) });
+  return montarItem(linha);
 }
 
 export type LinhaItemNovo = RegistroItem & { refeicao_id: string; alimento_id: string; receita_id: string | null; ordem: number };
-/** Vários itens de uma vez (MESMAS chaves em todos — o PostgREST exige); devolve já com o alimento. Atalho 'Da receita' da W28. */
+/** Vários itens de uma vez (MESMAS chaves em todos); devolve já com o alimento. Atalho 'Da receita' da W28. */
 export async function criarItensEmLote(linhas: LinhaItemNovo[]): Promise<Item[]> {
-  const { data, error } = await supabase.from("itens_refeicao").insert(linhas).select(SELECT_ITEM);
-  falhou(error);
-  return ordenarItens(((data ?? []) as unknown as ItemBruto[]).map(montarItem));
+  const { linhas: salvas } = await acaoNutricao<{ linhas: ItemBruto[] }>("itens_criar", { linhas });
+  return ordenarItens((salvas ?? []).map(montarItem));
 }
 
 /**
@@ -236,20 +174,17 @@ export function manterAlimento(salvo: Item, alimentoAtual: AlimentoDoPlano | nul
 }
 
 export async function atualizarItem(id: string, r: RegistroItem, alimentoAtual?: AlimentoDoPlano | null): Promise<Item> {
-  const { data, error } = await supabase.from("itens_refeicao").update(colunasItem(r)).eq("id", id).select(SELECT_ITEM).single();
-  falhou(error);
-  return manterAlimento(montarItem(data as unknown as ItemBruto), alimentoAtual);
+  const { linha } = await acaoNutricao<{ linha: ItemBruto }>("item_editar", { id, ...colunasItem(r) });
+  return manterAlimento(montarItem(linha), alimentoAtual);
 }
 
 export async function salvarSubstitutos(id: string, substitutos: Substituto[], alimentoAtual?: AlimentoDoPlano | null): Promise<Item> {
-  const { data, error } = await supabase.from("itens_refeicao").update({ substitutos: substitutos as unknown as Json }).eq("id", id).select(SELECT_ITEM).single();
-  falhou(error);
-  return manterAlimento(montarItem(data as unknown as ItemBruto), alimentoAtual);
+  const { linha } = await acaoNutricao<{ linha: ItemBruto }>("item_editar", { id, substitutos });
+  return manterAlimento(montarItem(linha), alimentoAtual);
 }
 
 export async function excluirItem(id: string): Promise<void> {
-  const { error } = await supabase.from("itens_refeicao").delete().eq("id", id);
-  falhou(error);
+  await acaoNutricao("item_excluir", { id });
 }
 
 /** Busca de alimentos do editor (TACO + próprios), até `limit` resultados — reusa a consulta da tela Meus alimentos. */
@@ -260,22 +195,15 @@ export async function buscarAlimentosDoPlano(q: string, limit = 12): Promise<Ali
 
 // ---- Physiq W16: plano por dia da semana (NF3) e cópia de um plano-modelo ----
 
-/** "Copiar pra semana toda": as refeições do dia passam a valer todos os dias e as que eram só de outros dias saem. */
+/** "Copiar pra semana toda": as refeições do dia passam a valer todos os dias e as que eram só de outros dias saem — juntos, numa chamada. */
 export async function copiarParaSemanaToda(paraTodosOsDias: string[], paraApagar: string[]): Promise<void> {
-  if (paraTodosOsDias.length) {
-    const { error } = await supabase.from("refeicoes").update({ dias_semana: [] }).in("id", paraTodosOsDias);
-    falhou(error);
-  }
-  if (paraApagar.length) {
-    const { error } = await supabase.from("refeicoes").delete().in("id", paraApagar);
-    falhou(error);
-  }
+  if (!paraTodosOsDias.length && !paraApagar.length) return;
+  await acaoNutricao("plano_copiar_semana", { para_todos: paraTodosOsDias, para_apagar: paraApagar });
 }
 
-/** Usa um plano (★ modelo, de outro paciente) neste paciente: cópia completa com o título do modelo. */
+/** Usa um plano (★ modelo, de outro paciente) neste paciente: cópia completa com o título do modelo, sem o cálculo — 1 chamada (antes: a
+ *  cópia + o título em série). A cópia é de quem chama. */
 export async function usarPlanoModelo(nutricionistaId: string, pacienteId: string, modelo: Plano): Promise<Plano> {
-  const copia = await duplicarPlano(nutricionistaId, { ...modelo, paciente_id: pacienteId, favorito: false, calculo_energetico_id: null });
-  const { data, error } = await supabase.from("planos_alimentares").update({ titulo: modelo.titulo.slice(0, TITULO_MAX) }).eq("id", copia.id).select("*").single();
-  falhou(error);
-  return { ...copia, ...(data as PlanoRow) };
+  const { plano } = await acaoNutricao<{ plano: PlanoBruto }>("plano_duplicar", { plano_id: modelo.id, paciente_id: pacienteId, titulo: modelo.titulo.slice(0, TITULO_MAX) });
+  return montarPlano(plano);
 }

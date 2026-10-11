@@ -6,10 +6,13 @@
 //     desvio 14): os toast.error(e.message) de hoje mostram esse texto sem mudar a tela;
 //   · o cliente é o do principal pela porta das libs (@/nutricao/editor/lib/banco): a sessão de quem está logado vai no Bearer e o
 //     schema do ambiente no x-schema (os testes que já falsificam o banco falsificam a função junto).
+// hml-19b: a mesma porta serve a Dieta, as Dietas e o app do aluno (as 3 listas fechadas da função: AcaoDaFuncao).
 import { supabase } from "@/nutricao/editor/lib/banco";
-import type { AcaoNutricao } from "../../supabase-principal/functions/_shared/nutricao-regras";
+import type { AcaoAluno, AcaoDieta, AcaoNutricao } from "../../supabase-principal/functions/_shared/nutricao-regras";
 
-export type { AcaoNutricao };
+export type { AcaoAluno, AcaoDieta, AcaoNutricao };
+/** Toda ação da função nutricao: o Prontuário (hml-19a), a Dieta e as Dietas, e o app do aluno (hml-19b). */
+export type AcaoDaFuncao = AcaoNutricao | AcaoDieta | AcaoAluno;
 
 /** A frase de cada código de erro da nutricao (STATUS_DO_ERRO de _shared/nutricao-regras.ts) e dos que nascem aqui. */
 export const MENSAGEM_ERRO_NUTRICAO: Record<string, string> = {
@@ -33,6 +36,19 @@ export const MENSAGEM_ERRO_NUTRICAO: Record<string, string> = {
   muitas_acoes: "Muitas ações seguidas. Espere um pouco e tente de novo.",
   tempo_esgotado: "O servidor demorou para responder. Tente de novo.",
   erro_interno: "Não deu certo agora. Tente de novo.",
+  // hml-19b — os códigos das RPCs do app do aluno (o app mostra o texto dele: refeicaoConcluidaUtil, metasUtil, diarioUtil — os mesmos)
+  sem_alimentos: "Essa refeição ainda não tem alimentos.",
+  data_invalida: "Confira a data e a hora do celular.",
+  meta_pausada: "Essa meta está pausada pela sua nutricionista.",
+  fora_do_dia: "Essa meta não vale para hoje.",
+  codigo_invalido: "O envio de fotos não está liberado agora. Fale com a sua nutricionista.",
+  diario_desligado: "O envio de fotos está desligado pelo seu profissional.",
+  link_desligado: "O envio de fotos está desligado pelo seu profissional.",
+  refeicao_invalida: "Escolha a refeição.",
+  path_invalido: "A foto não subiu. Tente de novo.",
+  arquivo_nao_encontrado: "A foto não subiu. Tente de novo.",
+  arquivo_invalido: "A foto não subiu. Tente de novo.",
+  muitos_envios: "Muitos envios em pouco tempo — tente de novo em alguns minutos.",
 };
 
 export function mensagemErroNutricao(codigo: string | null | undefined, padrao = "Não deu certo agora. Tente de novo."): string {
@@ -71,7 +87,7 @@ const ehFalhaDeRede = (erro: unknown): boolean => (erro as { name?: unknown })?.
  * Chama UMA ação da nutricao; erro vira ErroNutricao com o código da função (a tela mostra a frase fixa). A ação vai por último no
  * corpo: nenhum campo do corpo troca a ação.
  */
-export async function acaoNutricao<T = Record<string, unknown>>(acao: AcaoNutricao, corpo: Record<string, unknown> = {}): Promise<T> {
+export async function acaoNutricao<T = Record<string, unknown>>(acao: AcaoDaFuncao, corpo: Record<string, unknown> = {}): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) throw new ErroNutricao("sem_internet");
   const { data, error } = await supabase.functions.invoke("nutricao", { body: { ...corpo, acao } });
   if (error) {

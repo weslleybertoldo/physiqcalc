@@ -29,6 +29,41 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 10:57 | hml-19b | `da9824d` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 76/79 | F7: as MESMAS 3 de antes (a prescrição do Treino; [atalhos] expectativa velha; o site antigo não abriu) |
+| 11/10 10:46 | hml-19b | `da9824d` | `e2e/w11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 75/79 | F7: as MESMAS 4 de antes ([so_nutricao] ×3: o app abre no Início desde a W12; o site antigo não abriu) |
+| 11/10 10:36 | hml-19b | `da9824d` | `e2e/w24/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 60/60 | F7: o Diário das Dietas pela tela (reagir pela nutricao, o aviso no sino), Alimentos, Receitas, o /d/; harness da9824d |
+| 11/10 10:30 | hml-19b | `da9824d` | `e2e/w24/api.py` | staging | 47/47 | F7, com a massa da W24 inteira (o harness da9824d: a sb_secret_ só no apikey) |
+| 11/10 10:26 | hml-19b | `da9824d` | `e2e/hml19/laco.py --base staging --canal msedge --prefixo staging2` | staging | 40/40 | F7: a nutricao barrada nas 7 seções + o app (a marca volta + o texto fixo) |
+| 11/10 10:22 | hml-19b | `da9824d` | `e2e/hml19/rede.py --area dieta --base staging --canal msedge --prefixo staging2` | staging | 27/27 | F7, o DEPOIS no staging: 1 chamada da nutricao por ação, 0 gravação direta |
+| 11/10 10:21 | hml-19b | `da9824d` | `e2e/hml19/api.py --area aluno --base staging` | staging | 27/27 | F7 (balde do IP: o app 0 → 0; o link público 0 → 1) |
+| 11/10 10:20 | hml-19b | `da9824d` | `e2e/hml19/api.py --area dieta --base staging` | staging | 102/102 | F7 |
+| 11/10 10:17 | hml-19b | `da9824d` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 124/124 | F7 (o staging serve da9824d) |
+| 11/10 09:17 | hml-19b | `6d81237` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19b --casos secoes --canal msedge` | staging | 17/18 | o antes do [atalhos]: a MESMA falha no código antigo |
+| 11/10 09:12 | hml-19b | `6d81237` | `e2e/w17/envio_telas.py --base http://localhost:8080 --prefixo local19b` | local | 20/20 |  |
+| 11/10 09:11 | hml-19b | `6d81237` | `e2e/w17/envio_api.py` | staging | 19/19 |  |
+| 11/10 09:10 | hml-19b | `6d81237` | `e2e/w11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19b --casos so_nutricao` | staging | 5/8 | o antes do [so_nutricao]: as MESMAS 3 falhas no código antigo |
+| 11/10 09:06 | hml-19b | `6d81237` | `e2e/w25/api.py` | staging | 23/30 | a mesma base da 19a: as 7 falhas são da massa do dia (aniversário, 'há N dias', o Carlos duplicado, o treino de hoje) |
+| 11/10 09:05 | hml-19b | `6d81237` | `e2e/w10/api.py` | staging | 22/22 |  |
+| 11/10 09:05 | hml-19b | `6d81237` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | mexeu em migration |
+| 11/10 09:04 | hml-19b | `6d81237` | `e2e/hml17/api.py --schema staging` | staging | 32/32 |  |
+| 11/10 09:04 | hml-19b | `6d81237` | `e2e/w11/telas.py --base http://localhost:8080 --prefixo local19b` | local | 79/83 | as 4 falhas não são da 19b: [so_nutricao] ×3 (o app abre no Início desde a W12; iguais no código antigo) e o site antigo não abriu |
+| 11/10 08:56 | hml-19b | `6d81237` | `e2e/w11/api.py` | staging | 34/34 |  |
+| 11/10 08:52 | hml-19b | `6d81237` | `e2e/w16/telas.py --base http://localhost:8080 --prefixo local19b --canal msedge` | local | 76/79 | as 3 falhas não são da 19b: a prescrição do Treino; [atalhos] espera 'Registrar consulta' no site antigo (igual no código antigo); o site antigo não abriu |
+| 11/10 08:44 | hml-19b | `6d81237` | `e2e/w16/api.py` | staging | 40/41 | a falha é do Treino (a prescrição do treino A do Rafael, treino-leitura), não da Dieta |
+| 11/10 08:40 | hml-19b | `6d81237` | `e2e/w24/telas.py --base http://localhost:8080 --prefixo local19b` | local | não rodou | ele chama a massa da W24 primeiro, que para no passo 3: o harness manda a chave de serviço (hoje sb_secret_, não JWT) como Bearer no Storage → recusada (do script da W24, não da 19b) |
+| 11/10 08:39 | hml-19b | `6d81237` | `e2e/w24/api.py` | staging | 23 ✅ + 1 ❌, parou | o /d/ (A1–A7) e o envio anônimo pela diario_enviar nova (B1–B3) ok; o ❌ C4 e a parada (IndexError) são da foto da w18-nutri2 que a massa não subiu (acima) |
+| 11/10 08:36 | hml-19b | `93dbd4a` | `e2e/hml19/laco.py --base local --canal msedge` | local | 40/40 | a nutricao barrada: Manipulados/Metas/Orientações 1 garantir + o aviso; o app: a marca volta + o texto fixo |
+| 11/10 08:30 | hml-19b | `93dbd4a` | `e2e/hml19/laco.py --base local --canal msedge` | local | 22/23 | a guarda do laço fechou em Manipulados com 3 GET profiles — a leitura atrasada do Plano (diagnóstico: só 2 dela); ajuste em 6d81237 |
+| 11/10 08:26 | hml-19b | `93dbd4a` | `e2e/hml19/rede.py --area dieta --base local --canal msedge --casos prescricao,item,duplicar --prefixo local2` | local | 14/14 | os tempos de novo, com o cronômetro por pedido: 1415 / 1326 / 1725 ms |
+| 11/10 08:24 | hml-19b | `93dbd4a` | `e2e/hml19/rede.py --area dieta --base local --canal msedge` | local | 27/27 | o DEPOIS: 1 chamada da nutricao por ação, 0 rest; item 4180 ms e duplicar 9709 ms nesta rodada (a função fria) |
+| 11/10 08:10 | hml-19b | `93dbd4a` | `e2e/hml19/rede.py --area dieta --base staging --canal msedge` | staging | 21/21 | o ANTES (o staging serve 276f75b): rest_dieta 1–8 por ação; o app pela RPC direta |
+| 11/10 08:01 | hml-19b | `93dbd4a` | `e2e/hml19/api.py --area aluno --base staging` | staging | 27/27 | o app: ✓ refeição/meta, foto pelo link assinado, o balde do IP (app 0 → 0; link público 0 → 1), N9 |
+| 11/10 08:00 | hml-19b | `93dbd4a` | `e2e/hml19/api.py --area dieta --base staging` | staging | 102/102 | as 53 ações da Dieta; N1–N8 (N8: dieta_ordenar e padroes_garantir juntos) |
+| 11/10 07:58 | hml-19b | `93dbd4a` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 124/124 | decisão E: a nutricao v2 contra o Prontuário que a produção usa |
+| 11/10 07:51 | hml-19b | `081bb61` | `e2e/hml19/api.py --area prontuario --base staging --limpar` | staging | 3/3 | sessão principal: a limpeza da rodada cortada (0 linha / 0 arquivo) |
+| 11/10 07:50 | hml-19b | `081bb61` | `e2e/hml19/api.py --area dieta --base staging --so-leitura` | staging | 1/3 | sessão principal: barrado pela rodada que caiu (o incidente do --so-leitura no staging, que rodava a bateria — corrigido em 93dbd4a) |
+| 11/10 07:48 | hml-19b | `081bb61` | `e2e/hml19/api.py --area dieta --base prod --so-leitura` | produção | 6/6 | sessão principal, idem |
+| 11/10 07:48 | hml-19b | `081bb61` | `e2e/hml19/api.py --area prontuario --base prod --so-leitura` | produção | 5/5 | sessão principal, logo depois de publicar a nutricao v2 (só leitura) |
 | 11/10 05:01 | hml-19a | `f9d0917` | `e2e/h5/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 61/63 | F7 (o staging serve 3c539af): o caso prontuario passou inteiro; as 2 falhas são as mesmas do local e não são da 19a: o /c/ do cadastro e o IndexError do script no editor (o Rafael sem plano vivo no staging) |
 | 11/10 04:54 | hml-19a | `f9d0917` | `e2e/w18/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 52/52 | F7 |
 | 11/10 04:49 | hml-19a | `f9d0917` | `e2e/hml19/laco.py --base staging --canal msedge --prefixo staging2 --normal` | staging | 18/18 | F7 |
