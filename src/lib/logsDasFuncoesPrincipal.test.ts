@@ -17,17 +17,18 @@ const FUNCOES_DIR = resolve(__dirname, "../../supabase-principal/functions");
 const ler = (rel: string) => readFileSync(resolve(FUNCOES_DIR, rel), "utf-8");
 
 /** As publicadas desta W no principal: as 20, as 2 master que vão pela master-porta e a erro-avisar (nova) — e a automaticas-fila
- *  (W-P, Task 8b) e a infinitepay-webhook-aluno (W1), que seguem o mesmo contrato. */
+ *  (W-P, Task 8b) e a infinitepay-webhook-aluno (W1), que seguem o mesmo contrato; e as 2 do jeito 2 (nutricao, financeiro). */
 const FUNCOES = [
   "agenda-avisar", "aluno-enviar", "alunos", "convites", "cobranca-conta", "entrar-senha", "espelho-enviar", "espelho-resumo",
   "excluir-minha-conta", "exportar-meus-dados", "master-contas", "mp-webhook", "mp-webhook-aluno", "mp-webhook-conta",
   "pagamentos-aluno", "pos-login", "push-enviar", "vincular-aluno", "whatsapp-agente", "whatsapp-conectar",
   "master-financeiro", "master-planos", "erro-avisar", "automaticas-fila", "infinitepay-webhook-aluno",
   "nutricao", // hml-19a: o jeito 2 da nutrição, pela porta-pessoa (o log e o catch final moram lá, como nas master-*)
+  "financeiro", // hml-19d: o jeito 2 do Financeiro, pela mesma porta-pessoa
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
-/** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts. */
-const PESSOA = ["nutricao"];
+/** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro). */
+const PESSOA = ["nutricao", "financeiro"];
 /** Onde mora o catch final: na index.ts, menos nas 3 master-* (servir, da master-porta) e na erro-avisar (atenderPedido). */
 const CATCH_FINAL: Record<string, string> = {
   ...Object.fromEntries(MASTER.map((f) => [f, "_shared/master-porta.ts"])),
@@ -141,6 +142,8 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     // hml-19a: a porta das funções jeito 2 (e as regras/padrões da nutricao) entram no fecho e passam pelas mesmas guardas
     for (const s of ["porta-pessoa", "nutricao-regras", "nutricao-padroes"]) expect(todos).toContain(`_shared/${s}.ts`);
     expect(todos).toContain("nutricao/prontuario.ts");
+    // hml-19d: as regras da financeiro também
+    expect(todos).toContain("_shared/financeiro-gravar-regras.ts");
     expect(todos).not.toContain(LOG);
   });
 
