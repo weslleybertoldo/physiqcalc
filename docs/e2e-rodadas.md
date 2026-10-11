@@ -29,7 +29,22 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 11:54 | W1 | `9ca1da5` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | Task 20, com o `9ca1da5` no staging (a migration da W1 sem mudança: o dry-run deu no-op) |
+| 11/10 11:53 | W1 | `9ca1da5` | `e2e/w10/api.py` | staging | 22/22 | Task 20; só leitura |
+| 11/10 11:52 | W1 | `9ca1da5` | `e2e/wp/api.py --casos planos,periodo` | staging | 26/26 | Task 20: a W-P sem regressão; a massa desfeita |
+| 11/10 11:51 | W1 | `9ca1da5` | `e2e/w1/api.py --casos recebimento,link,forjado --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | staging | 31/31 | Task 20: as funções no ar (`pagamentos-aluno` v40, `infinitepay-webhook-aluno` v1) e a API de verdade da InfinitePay, sem cobrar; o webhook respondeu "registrado" em 333 ms; 1 link de verdade (o do aluno, R$ 10,00, reaproveitado no 2º toque), nenhum pago; tudo voltou à foto |
+| 11/10 11:47 | W1 | `9ca1da5` | `e2e/w1/telas.py --base staging --sinal ~/…/w1/TRAVA-BANCO-STAGING-OK` | staging | 85/85 | Task 20: o site do staging com o `9ca1da5` (v3.99); os 15 prints conferidos: a 390 o "Testar" quebra a linha dentro do cartão, e a frase "Ainda não chegou…" sai dentro da folha, sem nada por cima do "Conferir pagamento"; a InfiniteTag borrada; 3 links de verdade (Testar e Salvar de R$ 1,00 + o do aluno de R$ 10,00), nenhum pago; tudo voltou à foto |
+| 11/10 11:44 | W1 | `9ca1da5` | `e2e/w1/telas.py --base staging --seco` | staging | 22/22 | o health do staging com o `9ca1da5`; nada gravado |
+| 11/10 11:31 | W1 | `bb043fb` | `e2e/w1/telas.py --base local --loja --seco` | local | 21/21 | depois do rebase na main (`c1dbffe`); nada gravado |
+| 11/10 11:31 | W1 | `bb043fb` | `e2e/w1/telas.py --base local --seco` | local | 23/23 | depois do rebase na main (`c1dbffe`); nada gravado |
+| 11/10 11:30 | W1 | `bb043fb` | `e2e/w1/api.py --seco` | staging | 7/7 | depois do rebase na main (`c1dbffe`); nada gravado |
+| 11/10 11:08 | W1 | `3225e93` | `e2e/w1/telas.py --base local --loja --seco` | local | 21/21 | com o conserto da frase do "Conferir pagamento" dentro da folha; nada gravado |
+| 11/10 11:08 | W1 | `3225e93` | `e2e/w1/telas.py --base local --seco` | local | 23/23 | com o conserto da frase do "Conferir pagamento" dentro da folha; nada gravado |
+| 11/10 11:01 | W1 | `9a34478` | `e2e/w1/telas.py --base local --seco` | local | 23/23 | a checagem nova do botão livre (o toast por cima do "Conferir pagamento" é pego); nada gravado |
+| 11/10 10:58 | W1 | `18a40e1` | `e2e/w1/telas.py --base local --seco` | local | 22/22 | com a InfiniteTag mascarada também no print da falha; nada gravado |
+| 11/10 10:57 | W1 | `18a40e1` | `e2e/w1/api.py --seco` | staging | 7/7 | o placar troca a InfiniteTag por `<InfiniteTag>` em toda mensagem (conferido com uma tag inventada); nada gravado |
 | 11/10 10:57 | hml-19b | `da9824d` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 76/79 | F7: as MESMAS 3 de antes (a prescrição do Treino; [atalhos] expectativa velha; o site antigo não abriu) |
+| 11/10 10:46 | W1 | `29d6906` | `e2e/w1/telas.py --base local --seco` | local | 22/22 | com o conserto do "Testar"/"Ativar" a 390 e o autoteste do botão dentro do cartão com o CSS do build; nada gravado |
 | 11/10 10:46 | hml-19b | `da9824d` | `e2e/w11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 75/79 | F7: as MESMAS 4 de antes ([so_nutricao] ×3: o app abre no Início desde a W12; o site antigo não abriu) |
 | 11/10 10:36 | hml-19b | `da9824d` | `e2e/w24/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 60/60 | F7: o Diário das Dietas pela tela (reagir pela nutricao, o aviso no sino), Alimentos, Receitas, o /d/; harness da9824d |
 | 11/10 10:30 | hml-19b | `da9824d` | `e2e/w24/api.py` | staging | 47/47 | F7, com a massa da W24 inteira (o harness da9824d: a sb_secret_ só no apikey) |
