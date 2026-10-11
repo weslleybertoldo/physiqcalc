@@ -73,18 +73,34 @@ export function retratoDoPlano(m: { plano_modalidade?: Modalidade | null; plano?
   return { meses_cobertos: mesesCobertos(m.plano_modalidade, meses), parcelas_total: parcelasTotal(m.plano_modalidade, meses) };
 }
 
-/** Modalidades que a forma de receber da conta consegue cobrar (desenho 3.6). A W1 e a W2 acrescentam os modos novos aqui. */
+/** Modalidades que a forma de receber da conta consegue cobrar (desenho 3.6). W1 (P-B "1"): na InfinitePay o período todo (Pix ou
+ *  cartão — as parcelas, a página dela escolhe) e o mês a mês; o "cartão parcelado" não é oferecido (é o mesmo período todo). */
 export function modalidadesDaConta(modo: string | null | undefined): Modalidade[] {
   if (modo === "mercadopago") return ["avista", "cartao_parcelado", "mensal"];
-  if (modo === "pix_manual" || modo === "nenhum") return ["avista", "mensal"];
+  if (modo === "pix_manual" || modo === "nenhum" || modo === "infinitepay") return ["avista", "mensal"];
   return [];
 }
 
-/** Na ficha do aluno: as modalidades do plano que a conta consegue receber (plano incompleto ou desativado: nenhuma). */
+/** Na ficha do aluno: as modalidades do plano que a conta consegue receber (plano incompleto ou desativado: nenhuma). Na InfinitePay o
+ *  "cartão parcelado" do plano vira o período todo (P-B: a mesma cobertura e o mesmo valor). */
 export function modalidadesOferecidas(p: ValoresDoPlano & { modalidades: Modalidade[]; ativo: boolean }, modo: string | null | undefined): Modalidade[] {
   if (!p.ativo || !planoCompleto(p)) return [];
   const daConta = modalidadesDaConta(modo);
-  return p.modalidades.filter((x) => daConta.includes(x));
+  const doPlano: Modalidade[] = modo === "infinitepay" ? p.modalidades.map((x) => (x === "cartao_parcelado" ? "avista" : x)) : p.modalidades;
+  return MODALIDADES.filter((x) => doPlano.includes(x) && daConta.includes(x));
+}
+
+/** O que o prof_plano_salvar aceita: o que a conta recebe hoje + o que o plano JÁ tem (quem troca de forma de receber não fica travado
+ *  num plano com aluno numa modalidade que a forma nova não oferece — modalidade_em_uso). Plano novo: só o que a conta recebe. */
+export function modalidadesPermitidasNoPlano(modo: string | null | undefined, atuais: readonly unknown[]): Modalidade[] {
+  const daConta = modalidadesDaConta(modo);
+  return MODALIDADES.filter((x) => daConta.includes(x) || atuais.includes(x));
+}
+
+/** O nome da modalidade na tela: na InfinitePay, à vista e cartão parcelado são "Período todo (Pix ou cartão até 12×)" (P-B "1"). */
+export function rotuloDaModalidade(m: Modalidade, modo: string | null | undefined): string {
+  if (modo === "infinitepay" && (m === "avista" || m === "cartao_parcelado")) return "Período todo (Pix ou cartão até 12×)";
+  return ROTULO_MODALIDADE[m];
 }
 
 /** Cobrança automática no cartão (assinatura do MP): mês a mês, plano de 1 mês (à vista = mês a mês — B2) e o modo de hoje. */
