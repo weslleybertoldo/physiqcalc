@@ -6,13 +6,15 @@
 //  ALUNO (a própria matrícula — pacientes.user_id = quem chama):
 //   aluno_status                     mensalidade, chave Pix ativa, assinatura, cobranças e recibos (confere no MP o que ainda muda)
 //                                    hml-14d: + total_cobrancas e total_recibos por matrícula (o "Ver todos (N)"; só chaves novas)
+//                                    W-P: a mensalidade + modalidade, meses, negociado, max_parcelas, automatica e parcela (n de N)
 //   aluno_historico   { paciente_id, tipo: "cobrancas"|"recibos", pagina }   hml-14d: o "Ver todos" — 20 por página + o total
 //   aluno_upload      { paciente_id, tipo }                 URL assinada para subir o comprovante (o servidor escolhe o caminho)
 //   aluno_avisar_pix  { paciente_id, comprovante_path, cobranca_id? }   "Já paguei": Pix na chave da conta com comprovante
 //   aluno_comprovante { cobranca_id }                       URL assinada (5 min) do comprovante anexado
 //   aluno_mp_pix      { paciente_id, cobranca_id? }         Pix do Mercado Pago (contas liberadas pelo master — C99)
-//   aluno_mp_cartao   { paciente_id, cobranca_id?, card_token, payment_method_id, issuer_id }
-//   aluno_mp_assinar  { paciente_id, card_token }            cobrança automática mensal no cartão
+//   aluno_mp_cartao   { paciente_id, cobranca_id?, card_token, payment_method_id, issuer_id, installments? }   W-P (I6): mais de
+//                                                            1 parcela só no cartão parcelado, até o máximo do plano
+//   aluno_mp_assinar  { paciente_id, card_token }            cobrança automática mensal no cartão (W-P: não no período todo)
 //   aluno_mp_cancelar { paciente_id }                        cancela a própria assinatura
 //   aluno_mp_conferir { cobranca_id }                        a tela confere o Pix do MP a cada 5 s e no "Já paguei"
 //   aluno_app_plano   { paciente_id, plano }                 W7b — aluno sem profissional troca o plano do app (Treino ·
@@ -202,7 +204,9 @@ interface LinhaAlunoResumo {
   cobranca_pausada: boolean;
   mensalidade_pago_ate: string | null;
   mensalidade_desde: string | null;
-  plano: { nome: string } | null;
+  /** W-P — ausente no schema sem a migration */
+  plano_modalidade?: string | null;
+  plano: { nome: string; meses?: number } | null;
 }
 
 Deno.serve(async (req) => {
@@ -518,11 +522,32 @@ Deno.serve(async (req) => {
       ? { valor: Number(m.mensalidade_valor), plano_id: m.plano_aluno_id, plano: m.plano?.nome ?? null, pausada: m.cobranca_pausada,
           pago_ate: m.mensalidade_pago_ate, desde: m.mensalidade_desde, coberta: coberto(m.mensalidade_pago_ate),
           // W7b: aluno sem profissional — o teste grátis do app e o código do plano (Treino · Treino + Alimentação)
-          teste_ate: ehDoApp(m) ? m.app_teste_ate ?? null : null, plano_codigo: ehDoApp(m) ? m.plano?.codigo ?? null : null }
+          teste_ate: ehDoApp(m) ? m.app_teste_ate ?? null : null, plano_codigo: ehDoApp(m) ? m.plano?.codigo ?? null : null,
+          // W-P: o plano com período (no modo de hoje: modalidade nula, 1 mês, 1 parcela, automática liberada)
+          modalidade: m.plano_modalidade ?? null, meses: m.plano_modalidade ? m.plano?.meses ?? 1 : 1,
+          negociado: m.plano_valor_negociado ?? null,
+          max_parcelas: maxParcelasDoCartao(m.plano_modalidade ?? null, m.plano?.max_parcelas_cartao ?? null),
+          automatica: aceitaAutomatica(m.plano_modalidade ?? null, m.plano?.meses ?? 1) }
       : null;
 
-  /** W-P: a mensalidade que o prof_definir devolve (a Task 8 do plano troca por mensalidadeVista + a parcela do mês a mês). */
-  const mensalidadeComPlano = async (m: Matricula) => mensalidadeVista(m);
+  /** A próxima parcela do mês a mês ("parcela 4 de 12"): a última mensalidade paga na régua do mensalidade_recalcular (parcela_num é o
+   *  cache do banco) — a mesma ordem (pago_em, created_at, id) e o mesmo recomeço: um pagamento fora do mês a mês no meio volta a 1. */
+  const parcelaDe = async (m: Matricula): Promise<Parcela | null> => {
+    if (m.plano_modalidade !== "mensal" || !m.plano_aluno_id) return null;
+    const total = m.plano?.meses ?? 1;
+    const { data, error } = await db.from("cobrancas").select("parcela_num, parcelas_total, plano_aluno_id").eq("paciente_id", m.id)
+      .eq("tipo", "mensalidade").eq("status", "paga").is("deleted_at", null).not("pago_em", "is", null)
+      .order("pago_em", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1);
+    if (error) throw error;
+    const u = ((data ?? []) as Array<{ parcela_num: number | null; parcelas_total: number | null; plano_aluno_id: string | null }>)[0];
+    return proximaParcela(u ? { num: u.parcela_num, total: u.parcelas_total, plano: u.plano_aluno_id } : null, m.plano_aluno_id, total);
+  };
+
+  /** A mensalidade com a próxima parcela do mês a mês — aluno_status (o próprio aluno), prof_aluno e prof_definir (só o dono). */
+  const mensalidadeComPlano = async (m: Matricula) => {
+    const v = mensalidadeVista(m);
+    return v ? { ...v, parcela: await parcelaDe(m) } : null;
+  };
 
   const assinaturaVista = (a: Awaited<ReturnType<typeof assinaturaDe>>) =>
     a ? { id: a.id, status: a.status, valor: a.valor === null ? null : Number(a.valor), proximo_vencimento: a.proximo_vencimento,
@@ -556,6 +581,14 @@ Deno.serve(async (req) => {
     if (!tokenMp(credencial)) falhar("mp_nao_configurado", 500);
   };
 
+  /** O que a linha da mensalidade grava do plano (descrição + retrato) — MP, Pix manual e pagamento por fora. `reescrever`: a linha já
+   *  existe (o comprovante novo do Pix pendente passa ao valor de agora) — o retrato vai junto, inclusive o padrão do modo de hoje. */
+  const linhaDoPlano = async (m: Matricula, mesRef: string, reescrever = false) => ({
+    descricao: descricaoDoPagamento(m.plano?.nome ?? null, m.plano_modalidade ?? null, m.plano?.meses ?? 1, mesRef, await parcelaDe(m)),
+    ...(reescrever && temPlanos(m) ? { meses_cobertos: 1, parcelas_total: null } : {}),
+    ...retratoDoPlano(m),
+  });
+
   /** cria (ou prepara) a linha da cobrança que o MP vai pagar */
   const linhaParaMp = async (m: Matricula, alvo: Awaited<ReturnType<typeof alvoDoPagamento>>, metodo: "pix" | "cartao", expira: Date | null): Promise<Cobranca> => {
     if (alvo.avulsa) {
@@ -570,7 +603,7 @@ Deno.serve(async (req) => {
     if (!dono) falhar("sem_profissional");
     const { data, error } = await db.from("cobrancas").insert({
       paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: null, tipo: "mensalidade",
-      descricao: descricaoMensalidade(m.plano?.nome ?? null, alvo.mesRef), valor: alvo.valor, vencimento: alvo.vencimento, mes_ref: alvo.mesRef,
+      ...(await linhaDoPlano(m, alvo.mesRef)), valor: alvo.valor, vencimento: alvo.vencimento, mes_ref: alvo.mesRef,
       status: "aguardando_confirmacao", forma: "mp", metodo, mp_status: "pending", plano_aluno_id: m.plano_aluno_id, origem: "app",
       pix_expira_em: expira ? expira.toISOString() : null,
     }).select(COLUNAS_COBRANCA).single();
@@ -619,7 +652,7 @@ Deno.serve(async (req) => {
           conta: { id: atual.conta_id, nome: atual.conta?.nome ?? null, modo, bloquear: atual.conta?.bloquear_app_inadimplente ?? false,
                    profissional: ehDoApp(atual) ? "Physiq" : await nomeDe(dono), app: ehDoApp(atual) },
           chave: chave ? { tipo: chave.tipo, chave: chave.chave, favorecido: chave.favorecido, banco: chave.banco } : null,
-          mensalidade: mensalidadeVista(atual),
+          mensalidade: await mensalidadeComPlano(atual),
           assinatura: assinaturaVista(assinatura),
           cobrancas: cobs.map((c) => vista(c, c.id === pixAberto?.id)),
           recibos: await recibosDe(atual.id),
@@ -698,8 +731,12 @@ Deno.serve(async (req) => {
         if (ep) throw ep; // sem ler o pendente, criaria um 2º aviso
         const pendente = ((pend ?? []) as unknown as Cobranca[])[0];
         if (pendente) {
-          const { data, error } = await db.from("cobrancas").update({ comprovante_path: caminho, valor: alvo.valor, enviado_em: agora })
-            .eq("id", pendente.id).select(COLUNAS_COBRANCA).single();
+          // W-P: o pendente passa ao valor de agora e, junto, à descrição e ao retrato de agora (o dono pode ter trocado o plano ou a
+          // modalidade depois do 1º aviso: o valor de um com o período do outro cobriria errado). Sem a migration: igual a antes.
+          const { data, error } = await db.from("cobrancas").update({
+            comprovante_path: caminho, valor: alvo.valor, enviado_em: agora,
+            ...(temPlanos(m) ? await linhaDoPlano(m, pendente.mes_ref ?? alvo.mesRef, true) : {}),
+          }).eq("id", pendente.id).select(COLUNAS_COBRANCA).single();
           if (error) throw error;
           c = data as unknown as Cobranca;
           atualizado = true;
@@ -708,7 +745,7 @@ Deno.serve(async (req) => {
           if (!dono) falhar("sem_profissional");
           const { data, error } = await db.from("cobrancas").insert({
             paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: null, tipo: "mensalidade",
-            descricao: descricaoMensalidade(m.plano?.nome ?? null, alvo.mesRef), valor: alvo.valor, vencimento: alvo.vencimento,
+            ...(await linhaDoPlano(m, alvo.mesRef)), valor: alvo.valor, vencimento: alvo.vencimento,
             mes_ref: alvo.mesRef, status: "aguardando_confirmacao", forma: "pix_manual", metodo: "pix", comprovante_path: caminho,
             enviado_em: agora, plano_aluno_id: m.plano_aluno_id, origem: "app",
           }).select(COLUNAS_COBRANCA).single();
@@ -736,6 +773,11 @@ Deno.serve(async (req) => {
       const m = await minhaMatricula(body.paciente_id);
       exigirMp(m);
       const alvo = await alvoDoPagamento(m, body.cobranca_id);
+      // I6: parcelas só no cartão parcelado, até o máximo do plano (a avulsa e o modo de hoje: 1×)
+      const parcelas = body.installments === undefined ? 1 : body.installments;
+      if (acao === "aluno_mp_cartao" && !parcelasValidas(parcelas, alvo.avulsa ? null : m.plano_modalidade ?? null, m.plano?.max_parcelas_cartao ?? null)) {
+        falhar("parcelas_invalidas");
+      }
       const assinatura = await assinaturaDe(m.id);
       if (!alvo.avulsa && assinatura?.status === "authorized") falhar("cartao_ativo");
       const metodo = acao === "aluno_mp_pix" ? "pix" : "cartao";
@@ -799,7 +841,7 @@ Deno.serve(async (req) => {
         return erro("missing_card_token", 400, origin);
       }
       const pedido: Record<string, unknown> = {
-        transaction_amount: alvo.valor, token: cardToken, description: linha.descricao.slice(0, 120), installments: 1, payer: { email: pagador },
+        transaction_amount: alvo.valor, token: cardToken, description: linha.descricao.slice(0, 120), installments: Number(parcelas), payer: { email: pagador },
         external_reference: referencia, notification_url: notificacao,
       };
       if (typeof body.payment_method_id === "string" && body.payment_method_id) pedido.payment_method_id = body.payment_method_id;
@@ -823,6 +865,8 @@ Deno.serve(async (req) => {
       const m = await minhaMatricula(body.paciente_id);
       exigirMp(m);
       if (!m.mensalidade_valor || m.cobranca_pausada) falhar("sem_mensalidade");
+      // W-P (B2): automática no mês a mês, no plano de 1 mês e no modo de hoje; no período todo, não (P-A "1": sem data de fim — renova)
+      if (!aceitaAutomatica(m.plano_modalidade ?? null, m.plano?.meses ?? 1)) falhar("modalidade_sem_automatica");
       const cardToken = typeof body.card_token === "string" ? body.card_token : "";
       const checkout = body.checkout === true;
       if (!cardToken && !checkout) falhar("missing_card_token");
@@ -1049,11 +1093,13 @@ Deno.serve(async (req) => {
       const papeis = ((membro as { papeis: string[] } | null)?.papeis ?? []) as string[];
       if (!ehMaster && !papeis.length) falhar("sem_permissao", 403);
       const dono = ehMaster || papeis.includes("dono");
+      // W-P: a modalidade e os meses do plano (o "/mês" da lista vira "/ano" ou " por N meses") — só no schema com a migration
+      const wp = await schemaTemPlanos();
       // hml-14 (H-32, D9): os alunos da conta em páginas de 1000 (o PostgREST corta calado em 1000) com ordem estável (nome, id);
       // as cobranças em lotes de 150 alunos (o .in() com centenas de uuid estoura a URL). Erro em qualquer leitura lança (500) —
       // antes a leitura das cobranças com erro fazia a tela dizer "nenhum Pix a conferir" e zerar as abertas.
       const alunosDaConta = (de: number, ate: number) => {
-        let q = db.from("pacientes").select("id, treino_user_id, nome, email, ativo, personal_id, nutricionista_id, mensalidade_valor, cobranca_pausada, mensalidade_pago_ate, mensalidade_desde, plano:planos_aluno(nome)")
+        let q = db.from("pacientes").select(`id, treino_user_id, nome, email, ativo, personal_id, nutricionista_id, mensalidade_valor, cobranca_pausada, mensalidade_pago_ate, mensalidade_desde${wp ? ", plano_modalidade, plano:planos_aluno(nome, meses)" : ", plano:planos_aluno(nome)"}`)
           .eq("conta_id", contaId).is("deleted_at", null);
         if (!dono) q = q.or(`personal_id.eq.${user.id},nutricionista_id.eq.${user.id}`);
         return q.order("nome").order("id").range(de, ate);
@@ -1083,6 +1129,8 @@ Deno.serve(async (req) => {
         paciente_id: a.id, treino_user_id: a.treino_user_id, nome: a.nome, email: a.email, ativo: a.ativo,
         mensalidade_valor: dono && a.mensalidade_valor !== null ? Number(a.mensalidade_valor) : null,
         plano: dono ? (a.plano?.nome ?? null) : null, pausada: dono ? a.cobranca_pausada : false,
+        // W-P: só o dono (e o master) vê o plano com período, como o valor (decisão do Weslley 10/10, ponto 1); modo de hoje = 1 mês
+        modalidade: dono ? (a.plano_modalidade ?? null) : null, meses: dono && a.plano_modalidade ? (a.plano?.meses ?? 1) : 1,
         pago_ate: dono ? a.mensalidade_pago_ate : null, desde: dono ? a.mensalidade_desde : null,
         aguardando: pendentes.find((c) => c.paciente_id === a.id)?.id ?? null,
         abertas: abertas.filter((c) => c.paciente_id === a.id).length,
@@ -1111,8 +1159,10 @@ Deno.serve(async (req) => {
       const assinatura = veMensalidade && m.conta?.recebimento_modo === "mercadopago" ? await conferirAssinatura(m.id) : await assinaturaDe(m.id);
       const atual = (await carregarMatricula(db, m.id)) ?? m;
       cobs = (await cobrancasDe(m.id, 72)).filter((c) => podeVerCobranca(p, c));
+      // W-P: os planos completos (meses, modalidades, parcelas) para a ficha — no schema sem a migration, as colunas de antes
+      const wp = await schemaTemPlanos();
       const { data: planos, error: erroPlanos } = atual.conta_id
-        ? await db.from("planos_aluno").select("id, nome, valor, ativo").eq("conta_id", atual.conta_id).order("nome")
+        ? await db.from("planos_aluno").select(wp ? COLUNAS_PLANO : "id, nome, valor, ativo").eq("conta_id", atual.conta_id).order("nome")
         : { data: [], error: null };
       if (erroPlanos) throw erroPlanos; // hml-14: o erro virava "nenhum plano" no Financeiro do aluno
       const chave = await chaveAtiva(atual.conta_id);
@@ -1123,9 +1173,10 @@ Deno.serve(async (req) => {
         permissoes: { master: p.master, dono: p.dono, responsavel: p.responsavel, mensalidade: veMensalidade },
         conta: { id: atual.conta_id, nome: atual.conta?.nome ?? null, modo: atual.conta?.recebimento_modo ?? "pix_manual",
                  bloquear: atual.conta?.bloquear_app_inadimplente ?? false, origem: atual.conta?.origem ?? null,
+                 modalidades: wp ? modalidadesDaConta(atual.conta?.recebimento_modo) : [],
                  chave: chave ? { tipo: chave.tipo, chave: chave.chave, favorecido: chave.favorecido, banco: chave.banco } : null },
         planos: veMensalidade ? planos ?? [] : [],
-        mensalidade: veMensalidade ? mensalidadeVista(atual) : null,
+        mensalidade: veMensalidade ? await mensalidadeComPlano(atual) : null,
         assinatura: veMensalidade ? assinaturaVista(assinatura) : null,
         cobrancas: cobs.map((c) => vista(c)),
       }, 200, origin);
@@ -1287,7 +1338,7 @@ Deno.serve(async (req) => {
         const mes = mesRefDe(dia);
         const { data, error } = await db.from("cobrancas").insert({
           paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: user.id, tipo: "mensalidade",
-          descricao: descricaoMensalidade(m.plano?.nome ?? null, mes), valor, vencimento: dia, mes_ref: mes, status: "paga",
+          ...(await linhaDoPlano(m, mes)), valor, vencimento: dia, mes_ref: mes, status: "paga",
           forma: "manual", metodo, pago_em: pagoEm, confirmado_por: user.id, confirmado_em: new Date().toISOString(),
           plano_aluno_id: m.plano_aluno_id, origem: "app",
         }).select(COLUNAS_COBRANCA).single();
