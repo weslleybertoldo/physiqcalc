@@ -124,3 +124,9 @@ describe("validarPlano (tela de Planos → servidor)", () => {
     expect(validarPlano({ nome: "X", meses: 6, valor: 10, modalidades: ["avista"], valor_parcela_mensal: 5 }, TODAS)).toEqual({ ok: false, erro: "parcela_sem_mensal" });
   });
 });
+
+describe("P-A (decisão dele, 10/10/2026: '1')", () => {
+  it("depois da última parcela o plano renova: a contagem volta a 1 e a automática segue sem data de fim", () => {
+    expect(proximaParcela({ num: 12, total: 12, plano: "p1" }, "p1", 12)).toEqual({ num: 1, total: 12 });
+  });
+});

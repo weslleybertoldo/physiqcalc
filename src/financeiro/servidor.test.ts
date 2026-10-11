@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { lerReferencia as lerReferenciaConta, referenciaConta } from "../../supabase-principal/functions/_shared/cobranca-regras";
 import {
@@ -170,4 +173,10 @@ describe("W-P: a matrícula carrega o plano com período", () => {
     const m = { plano_modalidade: "mensal", plano: { id: "p", nome: "Anual", meses: 12 } } as Pick<Matricula, "plano_modalidade" | "plano">;
     expect(retratoServidor(m)).toEqual({ meses_cobertos: 1, parcelas_total: 12 });
   });
+});
+
+it("P-A '1': a assinatura do aluno não manda data de fim (renova)", () => {
+  // Caminho pelo fileURLToPath, como nos outros testes de fonte: o Vite reescreve o new URL("…", import.meta.url) e o arquivo não abre.
+  const fonte = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
+  expect(fonte).not.toMatch(/end_date/);
 });
