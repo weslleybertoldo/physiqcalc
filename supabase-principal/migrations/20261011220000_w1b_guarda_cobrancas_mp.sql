@@ -9,7 +9,9 @@
 --   · INSERT: forma 'mp' vira nula; mp_payment_id, mp_status, mp_preapproval_id, pix_qr, pix_copia_cola, pix_expira_em e reembolsado_em
 --     ficam nulos (a linha nasce comum, sem MP — o resto grava como antes);
 --   · UPDATE: forma não entra nem sai de 'mp'; mp_* e pix_* ficam como estavam; na linha do MP (old.forma = 'mp') o status e o
---     reembolsado_em também (a situação dela vem do MP, pela função).
+--     reembolsado_em também (a situação dela vem do MP, pela função) e — revisão da W1b, M1 — de quem ela é: paciente_id, conta_id, tipo,
+--     criado_por, nutricionista_id e origem (o aviso do MP acha a cobrança por id + paciente_id; a conferência do servidor lê a origem
+--     "migrado_calc"; a policy de UPDATE só olha conta e quem criou, e quem criou levava a linha paga para o aluno de outra conta).
 -- Quem grava o MP continua igual: a pagamentos-aluno, a mp-webhook-aluno e as migrações (service_role/postgres: current_user não é
 -- authenticated) e o master. O app só LÊ cobrancas (src/painel/financeiro/dados.ts:400; o resto vai pela pagamentos-aluno); o dbPessoa
 -- da W1 não toca em cobrancas; as 2 funções SQL que gravam (mensalidade_recalcular, infinitepay_fechar_vencidas) são SECURITY DEFINER;
@@ -36,7 +38,7 @@ declare
 begin
   select string_agg(c.nome, ', ') into v_falta
     from unnest(array['forma', 'status', 'mp_payment_id', 'mp_status', 'mp_preapproval_id', 'pix_qr', 'pix_copia_cola', 'pix_expira_em',
-                      'reembolsado_em']) as c(nome)
+                      'reembolsado_em', 'paciente_id', 'conta_id', 'tipo', 'criado_por', 'nutricionista_id', 'origem']) as c(nome)
    where not exists (select 1 from pg_attribute a where a.attrelid = '{schema}.cobrancas'::regclass and a.attname = c.nome
                         and a.attnum > 0 and not a.attisdropped);
   if v_falta is not null then
@@ -61,6 +63,9 @@ begin
       if old.forma = 'mp' then
         new.status := old.status;               -- a situação da linha do MP vem do MP (pela função), não do app
         new.reembolsado_em := old.reembolsado_em;
+        -- de quem é a linha do MP também não muda pelo app (M1)
+        new.paciente_id := old.paciente_id; new.conta_id := old.conta_id; new.tipo := old.tipo;
+        new.criado_por := old.criado_por; new.nutricionista_id := old.nutricionista_id; new.origem := old.origem;
       end if;
       new.mp_payment_id := old.mp_payment_id; new.mp_status := old.mp_status; new.mp_preapproval_id := old.mp_preapproval_id;
       new.pix_qr := old.pix_qr; new.pix_copia_cola := old.pix_copia_cola; new.pix_expira_em := old.pix_expira_em;
