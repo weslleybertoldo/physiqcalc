@@ -4,6 +4,7 @@ import { chaveDia, dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
 import { normalizarConteudo } from "@/nutricao/editor/lib/orientacoesUtil";
 import { CARIMBO_PLACEHOLDER, formatarCPF, formatarDataRecibo, temTagPendente, type Tag } from "@/financeiro/recibos";
+import { MODELOS_DOCUMENTO_PADRAO } from "../../../../supabase-principal/functions/_shared/nutricao-padroes";
 
 // Regras PURAS dos documentos do paciente (W15 — atestados, receituários e declarações): tipos, tags do modelo
 // (`*|NOME_PACIENTE|*`…), 3 modelos padrão, título padrão, ordenação/filtro/contagem, validação, formulário ⇄ registro e
@@ -90,49 +91,10 @@ export const dadosExemploDocumento = (nomeNutricionista: string | null | undefin
 });
 
 // ---- Modelos padrão (texto próprio do PhysiqNutri, não copiado de nenhuma referência) ----
+// hml-19a (H-81): moram em supabase-principal/functions/_shared/nutricao-padroes.ts — a semente nasce no servidor (função
+// nutricao › padroes_garantir); aqui o reexport, com os nomes de sempre.
 export type ModeloPadrao = { tipo: TipoDocumento; titulo: string; conteudo: string };
-export const MODELOS_PADRAO: ModeloPadrao[] = [
-  {
-    tipo: "atestado",
-    titulo: "Atestado padrão",
-    conteudo: [
-      "Atesto, para os devidos fins, que *|NOME_PACIENTE|*, CPF *|CPF_PACIENTE|*, esteve sob atendimento nutricional nesta data, necessitando de *|DIAS_AFASTAMENTO|* de afastamento de suas atividades.",
-      "",
-      "CID: *|CID|*",
-      "",
-      "*|DATA_HOJE|*",
-      "",
-      "*|NOME_NUTRICIONISTA|*",
-      "*|CARIMBO|*",
-    ].join("\n"),
-  },
-  {
-    tipo: "receituario",
-    titulo: "Receituário padrão",
-    conteudo: [
-      "Paciente: *|NOME_PACIENTE|*",
-      "CPF: *|CPF_PACIENTE|*",
-      "Data: *|DATA_HOJE|*",
-      "",
-      "Prescrição:",
-      "",
-      "*|NOME_NUTRICIONISTA|*",
-      "*|CARIMBO|*",
-    ].join("\n"),
-  },
-  {
-    tipo: "declaracao",
-    titulo: "Declaração de comparecimento",
-    conteudo: [
-      "Declaro, para os devidos fins, que *|NOME_PACIENTE|*, CPF *|CPF_PACIENTE|*, compareceu a atendimento nutricional nesta data.",
-      "",
-      "*|DATA_HOJE|*",
-      "",
-      "*|NOME_NUTRICIONISTA|*",
-      "*|CARIMBO|*",
-    ].join("\n"),
-  },
-];
+export const MODELOS_PADRAO: ModeloPadrao[] = MODELOS_DOCUMENTO_PADRAO;
 
 /** "Atestado 19/09/2026" — título sugerido pro documento novo. */
 export const tituloPadrao = (tipo: TipoDocumento, hoje: Date = new Date()): string => `${infoTipo(tipo).rotulo} ${format(hoje, "dd/MM/yyyy")}`;

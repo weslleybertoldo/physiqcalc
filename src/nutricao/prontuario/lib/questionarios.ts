@@ -2,6 +2,7 @@
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { copiaDeQuestionario, type RegistroAplicacao, type RegistroQuestionario } from "@/nutricao/prontuario/lib/questionariosUtil";
+import { acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso às tabelas `questionarios` e `respostas_questionario` (RLS: os do SISTEMA — nutricionista_id null — todas leem e
 // ninguém edita/apaga, só duplica; os PRÓPRIOS só a dona; master vê tudo; criar aplicação exige enxergar o paciente). Exclusão
@@ -9,6 +10,8 @@ import { copiaDeQuestionario, type RegistroAplicacao, type RegistroQuestionario 
 // hora — mudar ou excluir o questionário depois não mexe no histórico (padrão das W15–W18). Pontuação/faixa/nível são
 // calculados pelo app (questionariosUtil) ao criar e ao editar. O banco mexe em `pacientes.updated_at` a cada aplicação
 // (trigger). jsonb chega como JSON pelo PostgREST; a tela lê com `lerPerguntas`/`lerFaixas`/`lerRespostas` (tolerantes).
+// hml-19a (H-41 · jeito 2): as gravações vão pela função nutricao (a pontuação/faixa/nível seguem calculados aqui — o servidor
+// confere a forma). Também a Pré-consulta › "importar como questionário" (src/painel/preconsulta/dados.ts). Leituras aqui.
 
 export type Questionario = Database["public"]["Tables"]["questionarios"]["Row"];
 type QuestionarioUpdate = Database["public"]["Tables"]["questionarios"]["Update"];
@@ -28,13 +31,10 @@ export async function listarQuestionarios(): Promise<Questionario[]> {
 }
 
 export async function criarQuestionario(nutricionistaId: string, r: RegistroQuestionario): Promise<Questionario> {
-  const { data, error } = await supabase
-    .from("questionarios")
-    .insert({ nutricionista_id: nutricionistaId, titulo: r.titulo, descricao: r.descricao, perguntas: r.perguntas, faixas: r.faixas, favorito: r.favorito })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Questionario;
+  const res = await acaoNutricao<{ linha: Questionario }>("questionario_criar", {
+    titulo: r.titulo, descricao: r.descricao, perguntas: r.perguntas, faixas: r.faixas, favorito: r.favorito,
+  });
+  return res.linha;
 }
 
 /** Só os PRÓPRIOS (a RLS barra os do sistema — 0 linhas). */
@@ -45,15 +45,13 @@ export async function atualizarQuestionario(id: string, patch: Partial<RegistroQ
   if (patch.perguntas !== undefined) dados.perguntas = patch.perguntas;
   if (patch.faixas !== undefined) dados.faixas = patch.faixas;
   if (patch.favorito !== undefined) dados.favorito = patch.favorito;
-  const { data, error } = await supabase.from("questionarios").update(dados).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Questionario;
+  const r = await acaoNutricao<{ linha: Questionario }>("questionario_editar", { id, ...dados });
+  return r.linha;
 }
 
-/** Soft delete (só próprios) — as aplicações já feitas guardam a própria cópia e continuam. */
+/** Soft delete (só próprios) — as aplicações já feitas guardam a própria cópia e continuam. 0 linha (do sistema) → nao_encontrado. */
 export async function excluirQuestionario(id: string): Promise<void> {
-  const { error } = await supabase.from("questionarios").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("questionario_excluir", { id });
 }
 
 /** Cópia PRÓPRIA e editável de qualquer questionário (inclusive um do sistema): '<título> (cópia)'. */
@@ -74,26 +72,20 @@ export async function listarAplicacoesDoPaciente(pacienteId: string): Promise<Ap
 }
 
 export async function criarAplicacao(nutricionistaId: string, pacienteId: string, r: RegistroAplicacao): Promise<Aplicacao> {
-  const { data, error } = await supabase
-    .from("respostas_questionario")
-    .insert({
-      nutricionista_id: nutricionistaId,
-      paciente_id: pacienteId,
-      questionario_id: r.questionario_id,
-      titulo: r.titulo,
-      perguntas: r.perguntas,
-      faixas: r.faixas,
-      respostas: r.respostas,
-      pontuacao: r.pontuacao,
-      faixa: r.faixa,
-      nivel: r.nivel,
-      data: r.data,
-      observacao: r.observacao,
-    })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Aplicacao;
+  const res = await acaoNutricao<{ linha: Aplicacao }>("aplicacao_criar", {
+    paciente_id: pacienteId,
+    questionario_id: r.questionario_id,
+    titulo: r.titulo,
+    perguntas: r.perguntas,
+    faixas: r.faixas,
+    respostas: r.respostas,
+    pontuacao: r.pontuacao,
+    faixa: r.faixa,
+    nivel: r.nivel,
+    data: r.data,
+    observacao: r.observacao,
+  });
+  return res.linha;
 }
 
 export type PatchAplicacao = Partial<Pick<RegistroAplicacao, "respostas" | "pontuacao" | "faixa" | "nivel" | "data" | "observacao">>;
@@ -107,15 +99,13 @@ export async function atualizarAplicacao(id: string, patch: PatchAplicacao): Pro
   if (patch.nivel !== undefined) dados.nivel = patch.nivel;
   if (patch.data !== undefined) dados.data = patch.data;
   if (patch.observacao !== undefined) dados.observacao = patch.observacao;
-  const { data, error } = await supabase.from("respostas_questionario").update(dados).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Aplicacao;
+  const r = await acaoNutricao<{ linha: Aplicacao }>("aplicacao_editar", { id, ...dados });
+  return r.linha;
 }
 
-/** Soft delete (Lixeira, W32). */
+/** Soft delete (Lixeira, W32); 0 linha → nao_encontrado. */
 export async function excluirAplicacao(id: string): Promise<void> {
-  const { error } = await supabase.from("respostas_questionario").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("aplicacao_excluir", { id });
 }
 
 /** Nome da nutricionista (assinatura do PDF) — mesma consulta das orientações (W10). */

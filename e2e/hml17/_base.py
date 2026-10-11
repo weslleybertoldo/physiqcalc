@@ -223,13 +223,41 @@ def rpcs_de_leitura() -> set[str]:
 LEITURAS_PAGAMENTOS = {"prof_resumo", "prof_aluno", "prof_aluno_cobrancas", "aluno_status", "aluno_historico"}
 LEITURAS_SEMANA = {"get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno", "quemRecebe",
                    "quemRecebeLista", "modelos"}
+# hml-19a (risco 2 da spec hml-19 §8): função que a Guarda NÃO conhece é gravação (barrada na produção) — uma função nova do jeito 2
+# não passa calada por um E2E "só leitura". As que existiam em 11/10/2026 (os 2 projetos) seguem a regra de antes, logo abaixo; a
+# nutricao (jeito 2: as gravações da nutrição pelo servidor) grava em TODA ação. Função nova: entra numa das 2 listas, decidida.
+FUNCOES_CONHECIDAS = {
+    # principal (supabase-principal/functions)
+    "agenda-avisar", "aluno-enviar", "alunos", "cobranca-conta", "convites", "entrar-senha", "erro-avisar", "espelho-enviar",
+    "espelho-resumo", "excluir-minha-conta", "exportar-meus-dados", "master-contas", "master-financeiro", "master-planos", "mp-assinar",
+    "mp-webhook", "mp-webhook-aluno", "mp-webhook-conta", "pagamentos-aluno", "pos-login", "push-enviar", "vincular-aluno",
+    "whatsapp-agente", "whatsapp-conectar",
+    # Treino (supabase/functions)
+    "admin-avaliacoes", "admin-delete-user", "admin-get-overrides", "admin-get-user", "admin-get-workout-plan", "admin-list-users",
+    "admin-relatorio", "admin-semana-treinos", "admin-tags", "admin-update-user", "delete-my-account", "espelho-nucleo",
+    "master-professores", "mp-payments", "painel-resumo-treino", "professor-convites", "treino-leitura", "trocar-token",
+    "vincular-professor",
+}
+# a automaticas-fila (W-P, 11/10/2026: a fila das cobranças automáticas, chamada só pelo pg_cron) processa cobrança: se um dia sair do
+# navegador, é gravação.
+FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila"}
+
+
+def funcao_grava(nome: str, acao: str | None) -> bool:
+    """A chamada à função grava? Desconhecida e a nutricao: sempre; as de antes: pela regra de antes (a ação decide nas 3 mistas)."""
+    if nome in FUNCOES_QUE_SEMPRE_GRAVAM or nome not in FUNCOES_CONHECIDAS:
+        return True
+    return (nome == "pagamentos-aluno" and acao not in LEITURAS_PAGAMENTOS) or nome in ("admin-delete-user", "admin-update-user") \
+        or (nome == "admin-semana-treinos" and acao not in LEITURAS_SEMANA) \
+        or (nome == "admin-tags" and not str(acao or "").lower().startswith(("list", "get")))
 
 
 class Guarda:
     """PRODUÇÃO SÓ LEITURA (o molde do e2e/w26/prod.py e do e2e/hml14/telas.py): o navegador bloqueia toda escrita das telas —
     POST/PATCH/PUT/DELETE em tabela, RPC fora da lista de leitura, Storage que não é o "sign", e nas funções as ações que gravam
     (pagamentos-aluno fora das leituras, admin-semana-treinos fora das leituras, admin-delete-user, admin-update-user, admin-tags que
-    não lista). O resto segue (fallback: a queda da API, quando ligada, vem antes e aborta)."""
+    não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava). O resto segue (fallback: a
+    queda da API, quando ligada, vem antes e aborta). Teste: python3 e2e/hml19/guarda_teste.py."""
 
     def __init__(self) -> None:
         self.bloqueadas: list[str] = []
@@ -248,9 +276,7 @@ class Guarda:
         if tipo == "storage":
             return nome != "sign"
         if tipo == "fn":
-            return (nome == "pagamentos-aluno" and acao not in LEITURAS_PAGAMENTOS) or nome in ("admin-delete-user", "admin-update-user") \
-                or (nome == "admin-semana-treinos" and acao not in LEITURAS_SEMANA) \
-                or (nome == "admin-tags" and not str(acao or "").lower().startswith(("list", "get")))
+            return funcao_grava(nome, acao)
         return False
 
     def instalar(self, ctx) -> None:

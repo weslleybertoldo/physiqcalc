@@ -4,12 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   rpc: vi.fn(),
+  invoke: vi.fn(),
   consultas: [] as Array<{ tabela: string; filtros: unknown[][]; ordem: Array<[string, boolean]>; range: [number, number] | null; contar: boolean }>,
   linhas: [] as Array<Record<string, unknown>>,
 }));
 vi.mock("@/nutricao/editor/lib/banco", () => ({
   supabase: {
     rpc: (...a: unknown[]) => h.rpc(...a),
+    // hml-19a: as gravações vão pela função nutricao
+    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
     from: (tabela: string) => {
       const c = { tabela, filtros: [] as unknown[][], ordem: [] as Array<[string, boolean]>, range: null as [number, number] | null, contar: false };
       h.consultas.push(c);
@@ -30,10 +33,11 @@ vi.mock("@/nutricao/editor/lib/banco", () => ({
   },
 }));
 
-import { listarResultadosDoPaciente, paginaDeExames, paginaPedidosDoPaciente } from "./exames";
+import { criarResultados, garantirCatalogoExames, listarResultadosDoPaciente, paginaDeExames, paginaPedidosDoPaciente } from "./exames";
 
 beforeEach(() => {
   h.rpc.mockReset();
+  h.invoke.mockReset();
   h.consultas = [];
   h.linhas = [];
 });
@@ -82,5 +86,28 @@ describe("exames por página (hml-14d, D32)", () => {
     expect(p3).toEqual({ itens: [{ id: "p40" }], total: 41 });
     expect(h.consultas[0]).toMatchObject({ tabela: "pedidos_exame", range: [40, 59], contar: true });
     expect(h.consultas[0].ordem).toEqual([["data", false], ["created_at", false], ["id", false]]);
+  });
+});
+
+describe("hml-19a (H-41 · H-81): exames gravam pela nutricao", () => {
+  it("resultados da mesma data: 1 chamada com o lote (o dono não vai no corpo); lote vazio não chama", async () => {
+    h.invoke.mockResolvedValue({ data: { ok: true, linhas: [{ id: "r1" }, { id: "r2" }] }, error: null });
+    const linhas = [
+      { exame: "TSH", valor: 2.1, valor_texto: "", unidade: "mUI/L", ref_min: 0.4, ref_max: 4, referencia_texto: "" },
+      { exame: "HDL", valor: 50, valor_texto: "", unidade: "mg/dL", ref_min: 40, ref_max: null, referencia_texto: "" },
+    ];
+    expect(await criarResultados("u2", "p1", "2026-10-11", linhas)).toEqual([{ id: "r1" }, { id: "r2" }]);
+    expect(h.invoke).toHaveBeenCalledTimes(1);
+    expect(h.invoke).toHaveBeenCalledWith("nutricao", { body: { acao: "resultados_exame_criar", paciente_id: "p1", data: "2026-10-11", linhas } });
+    expect(await criarResultados("u2", "p1", "2026-10-11", [])).toEqual([]);
+    expect(h.invoke).toHaveBeenCalledTimes(1);
+    expect(h.consultas).toHaveLength(0); // nenhuma ida direta às tabelas
+  });
+
+  it("o catálogo padrão do 1º acesso: 1 chamada (padroes_garantir · exame) que devolve a lista", async () => {
+    h.invoke.mockResolvedValue({ data: { ok: true, criados: 12, lista: [{ id: "c1", nome: "TSH" }] }, error: null });
+    expect(await garantirCatalogoExames("u2")).toEqual([{ id: "c1", nome: "TSH" }]);
+    expect(h.invoke).toHaveBeenCalledWith("nutricao", { body: { acao: "padroes_garantir", secao: "exame" } });
+    expect(h.consultas).toHaveLength(0);
   });
 });

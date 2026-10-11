@@ -1,26 +1,15 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/anamneseUtil.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { format } from "date-fns";
 import { chaveDia, combinarDataHora, formatarHora } from "@/nutricao/editor/lib/agendaUtil";
+import { PERGUNTAS_ANAMNESE_PADRAO, TITULO_ANAMNESE_PADRAO } from "../../../../supabase-principal/functions/_shared/nutricao-padroes";
 
 // Regras puras da anamnese (W5) — modelos (lista de perguntas) e anamneses (perguntas + respostas + texto livre).
 // Nada de rede aqui; testado no vitest.
 
-export const TITULO_MODELO_PADRAO = "Anamnese geral (padrão)";
-export const PERGUNTAS_PADRAO: string[] = [
-  "Queixa principal / motivo da consulta",
-  "Objetivo com o acompanhamento nutricional",
-  "Histórico de saúde (doenças atuais e anteriores, cirurgias)",
-  "Histórico familiar (diabetes, hipertensão, obesidade, dislipidemia)",
-  "Medicamentos e suplementos em uso",
-  "Alergias e intolerâncias alimentares",
-  "Funcionamento intestinal",
-  "Sono (horas por noite e qualidade)",
-  "Atividade física (tipo, frequência e duração)",
-  "Consumo de água por dia",
-  "Bebida alcoólica e tabagismo",
-  "Rotina alimentar (horários, refeições e onde costuma comer)",
-  "Preferências e aversões alimentares",
-];
+// hml-19a (H-81): o modelo padrão mora em supabase-principal/functions/_shared/nutricao-padroes.ts — a semente agora nasce no
+// servidor (função nutricao › padroes_garantir); aqui o reexport, com os nomes de sempre.
+export const TITULO_MODELO_PADRAO = TITULO_ANAMNESE_PADRAO;
+export const PERGUNTAS_PADRAO: string[] = PERGUNTAS_ANAMNESE_PADRAO;
 
 export const PERGUNTAS_MAX = 60;
 export const PERGUNTA_MAX = 300;

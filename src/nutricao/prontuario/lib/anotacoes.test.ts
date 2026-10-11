@@ -1,20 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ rpc: vi.fn(), insert: vi.fn(), update: vi.fn() }));
+// hml-19a (H-41 · jeito 2): escrever passa pela função nutricao (functions.invoke) — gravar direto na tabela quebra o teste.
+const h = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn() }));
 vi.mock("@/nutricao/editor/lib/banco", () => ({
   supabase: {
     rpc: h.rpc,
-    from: () => ({
-      insert: (v: unknown) => h.insert(v),
-      update: (v: unknown) => ({ eq: (_c: string, id: string) => ({ select: () => h.update(v, id) }) }),
-    }),
+    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
+    from: (t: string) => {
+      throw new Error(`gravação direta na tabela ${t}`);
+    },
   },
 }));
+const recusa = (status: number, erro: string) => ({
+  data: null,
+  error: { name: "FunctionsHttpError", context: new Response(JSON.stringify({ ok: false, erro }), { status, headers: { "Content-Type": "application/json" } }) },
+});
 
 import { atualizarAnotacao, criarAnotacao, excluirAnotacao, listarAnotacoes, mensagemDoErro } from "./anotacoes";
 
 beforeEach(() => {
-  for (const f of Object.values(h)) f.mockReset();
+  h.rpc.mockReset();
+  h.invoke.mockReset();
 });
 
 describe("W18 — anotações da equipe (dados)", () => {
@@ -46,23 +52,32 @@ describe("W18 — anotações da equipe (dados)", () => {
     );
   });
 
-  it("grava a visibilidade e o papel junto (o banco confere — restritiva da W18)", async () => {
-    h.insert.mockResolvedValue({ error: null });
+  it("grava a visibilidade e o papel junto pela nutricao (o banco confere — restritiva da W18); o autor é quem chama (o servidor põe)", async () => {
+    h.invoke.mockResolvedValue({ data: { ok: true, linha: { id: "a1" } }, error: null });
     await criarAnotacao("u1", "p1", "personal", { data: "2026-07-16", hora: "10:30", texto: "  Técnica boa.  ", visibilidade: "equipe" });
-    const linha = h.insert.mock.calls[0][0];
-    expect(linha).toMatchObject({ nutricionista_id: "u1", paciente_id: "p1", visibilidade: "equipe", autor_papel: "personal", texto: "Técnica boa." });
-    expect(new Date(linha.data).getHours()).toBe(10);
+    expect(h.invoke).toHaveBeenCalledTimes(1);
+    const [funcao, { body }] = h.invoke.mock.calls[0] as [string, { body: Record<string, unknown> }];
+    expect(funcao).toBe("nutricao");
+    expect(body).toMatchObject({ acao: "anotacao_criar", paciente_id: "p1", visibilidade: "equipe", autor_papel: "personal", texto: "Técnica boa." });
+    expect(body).not.toHaveProperty("nutricionista_id");
+    expect(new Date(String(body.data)).getHours()).toBe(10);
   });
 
   it("editar/excluir: 0 linhas (não é o autor) vira aviso; o resto passa", async () => {
-    h.update.mockResolvedValueOnce({ data: [], error: null });
+    h.invoke.mockResolvedValueOnce(recusa(404, "nao_encontrado"));
     await expect(atualizarAnotacao("a9", "nutricionista", { data: "2026-07-16", hora: "10:30", texto: "x", visibilidade: "nutricionistas" })).rejects.toThrow(
       "Só quem escreveu a anotação pode mudar.",
     );
-    h.update.mockResolvedValueOnce({ data: [{ id: "a1" }], error: null });
+    h.invoke.mockResolvedValueOnce({ data: { ok: true }, error: null });
     await expect(excluirAnotacao("a1")).resolves.toBeUndefined();
-    expect(h.update.mock.calls[1][0]).toHaveProperty("deleted_at");
-    expect(h.update.mock.calls[1][1]).toBe("a1");
+    expect((h.invoke.mock.calls[1][1] as { body: unknown }).body).toEqual({ id: "a1", acao: "anotacao_excluir" });
+  });
+
+  it("o RLS recusando (papel ou visibilidade que a pessoa não tem) → a frase de antes, não a do banco", async () => {
+    h.invoke.mockResolvedValueOnce(recusa(403, "sem_acesso"));
+    await expect(criarAnotacao("u1", "p1", "personal", { data: "2026-07-16", hora: "10:30", texto: "x", visibilidade: "nutricionistas" })).rejects.toThrow(
+      "Você não pode gravar essa anotação para este aluno.",
+    );
   });
 });
 

@@ -1,5 +1,5 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Documentos.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ChevronDown, ChevronUp, FileCheck, FileDown, FileText, Loader2, PenLine, Pill, Plus, Stethoscope, Tags, Trash2 } from "lucide-react";
@@ -12,12 +12,14 @@ import { BTN_PERIGO, BTN_PRI, BTN_SEC } from "@/nutricao/editor/ui/estilos";
 import DocumentoDialog from "@/nutricao/prontuario/ui/DocumentoDialog";
 import ModelosDocumentoDialog from "@/nutricao/prontuario/ui/ModelosDocumentoDialog";
 import { useAuth } from "@/nutricao/prontuario/ui/contexto";
-import { dadosProfissionais, excluirDocumento, garantirModelosDocumento, listarDocumentosDoPaciente, nomeDaNutricionista, type Documento } from "@/nutricao/prontuario/lib/documentos";
+import {
+  dadosProfissionais, excluirDocumento, garantirModelosDocumento, listarDocumentosDoPaciente, listarModelosDocumento, nomeDaNutricionista, type Documento,
+} from "@/nutricao/prontuario/lib/documentos";
 import {
   FILTROS, TIPOS_DOCUMENTO, contarPorTipo, ehTipoDocumento, filtrarDocumentos, formatarDataDocumento, infoTipo, inserirDocumento, rotuloTipo, textoContagemDocumentos,
   textoDias, type DadosDocumento, type FiltroTipo, type TipoDocumento,
 } from "@/nutricao/prontuario/lib/documentosUtil";
-import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { usePaciente, useProntuario } from "@/nutricao/prontuario/ui/contexto";
 import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
 
 // hml-18b (H-54, F): o PDF do documento (jsPDF) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
@@ -46,19 +48,39 @@ const tipoDe = (d: Documento): TipoDocumento => (ehTipoDocumento(d.tipo) ? d.tip
 // texto FINAL — o PDF reproduz o que está gravado.
 export default function Documentos() {
   const { paciente: p, recarregar } = usePaciente();
+  const { acesso } = useProntuario();
   const { user } = useAuth();
   const uid = user?.id;
   const qc = useQueryClient();
   const [nomeNutri, setNomeNutri] = useState<string | null>(null);
 
+  // hml-19a (H-81): o efeito depende do id (estável), não do objeto da pessoa (que nascia novo a cada render)
   useEffect(() => {
-    if (!user) return;
-    void nomeDaNutricionista(user.id).then(setNomeNutri);
-  }, [user]);
+    if (!uid) return;
+    void nomeDaNutricionista(uid).then(setNomeNutri);
+  }, [uid]);
 
   const chave = useMemo(() => ["documentos-paciente", p.id], [p.id]);
   const documentosQ = useQuery({ queryKey: chave, queryFn: () => listarDocumentosDoPaciente(p.id) });
-  const modelosQ = useQuery({ queryKey: ["modelos-documento", uid], queryFn: () => garantirModelosDocumento(uid!), enabled: !!uid });
+  // hml-19a (H-81): os 3 modelos padrão do 1º acesso são 1 chamada por abertura ao servidor (padroes_garantir: grava 1 vez só, com
+  // trava) e só para quem muda o clínico; as releituras (os modelos mudaram) e quem só lê pegam a lista. Sem nova tentativa sozinha:
+  // o erro mostra o "Tentar de novo".
+  const modelosPedido = useRef(false);
+  const modelosQ = useQuery({
+    queryKey: ["modelos-documento", uid],
+    queryFn: async () => {
+      if (!acesso.editarClinico || modelosPedido.current) return listarModelosDocumento();
+      modelosPedido.current = true;
+      try {
+        return await garantirModelosDocumento(uid!);
+      } catch (e) {
+        modelosPedido.current = false;
+        throw e;
+      }
+    },
+    enabled: !!uid,
+    retry: false,
+  });
   const profQ = useQuery({ queryKey: ["dados-profissionais", uid], queryFn: () => dadosProfissionais(uid!), enabled: !!uid });
 
   const documentos = useMemo(() => documentosQ.data ?? [], [documentosQ.data]);
@@ -82,6 +104,10 @@ export default function Documentos() {
   const [excluindo, setExcluindo] = useState(false);
 
   const alternar = (id: string) => setAbertos((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
+  // hml-19a: o aviso de erro relê só o que falhou (os modelos voltam a pedir o padrão, se foram eles)
+  const tentarDeNovo = () => {
+    for (const q of [documentosQ, modelosQ]) if (q.error) void q.refetch();
+  };
   const abrirNovo = (tipo: TipoDocumento) => setModal({ aberto: true, tipo, documento: null });
   const abrirEdicao = (d: Documento) => setModal({ aberto: true, tipo: tipoDe(d), documento: d });
 
@@ -146,7 +172,10 @@ export default function Documentos() {
     <div className="space-y-4" data-secao-documentos data-atualizando={atualizando ? "1" : "0"}>
       {erro && (
         <p role="alert" className="text-sm text-rosa-3 font-body" data-erro-documentos>
-          Não foi possível carregar os documentos: {erro instanceof Error ? erro.message : "erro"}
+          Não foi possível carregar os documentos: {erro instanceof Error ? erro.message : "erro"}{" "}
+          <button type="button" onClick={tentarDeNovo} className={BTN_MINI} data-btn-tentar-documentos>
+            Tentar de novo
+          </button>
         </p>
       )}
 

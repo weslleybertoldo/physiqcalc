@@ -1,7 +1,12 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/anamneses.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
+// hml-19a (H-41 · H-81 · jeito 2): as GRAVAÇÕES saem do navegador e vão pela função nutricao (src/nutricao/servidor.ts) — a mesma
+// assinatura de antes (as telas não mudam); o dono vem da sessão no servidor (o nutricionistaId que a tela passa não vai mais). O
+// "garantir" dos modelos (o padrão do 1º acesso) é 1 chamada só ao servidor (padroes_garantir): a semente nasce lá, 1 vez. Leituras
+// seguem pelo banco (H-42 = etapa 2).
 import { supabase } from "@/nutricao/editor/lib/banco";
-import type { Database, Json } from "@/nutricao/editor/lib/banco";
-import { PERGUNTAS_PADRAO, TITULO_MODELO_PADRAO, lerPerguntas, temModeloProprio, tituloCopia, type RegistroAnamnese } from "@/nutricao/prontuario/lib/anamneseUtil";
+import type { Database } from "@/nutricao/editor/lib/banco";
+import { lerPerguntas, tituloCopia, type RegistroAnamnese } from "@/nutricao/prontuario/lib/anamneseUtil";
+import { acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso às tabelas `modelos_anamnese` e `anamneses` (RLS: a nutricionista vê os modelos DO SISTEMA — nutricionista_id NULL,
 // só leitura — e os dela; anamneses só as dela; master vê tudo).
@@ -27,11 +32,13 @@ export async function listarModelos(): Promise<ModeloAnamnese[]> {
   return (data ?? []) as ModeloAnamnese[];
 }
 
-/** Lista os modelos (do sistema + próprios); sem nenhum PRÓPRIO, cria o "Anamnese geral (padrão)" — a versão curta (1º acesso à seção). */
+/**
+ * Lista os modelos (do sistema + próprios); sem nenhum PRÓPRIO, o servidor cria o "Anamnese geral (padrão)" — a versão curta (1º
+ * acesso à seção). hml-19a (H-81): 1 chamada à função (padroes_garantir), que grava 1 vez só (trava por pessoa) e devolve a lista.
+ */
 export async function garantirModelos(nutricionistaId: string): Promise<ModeloAnamnese[]> {
-  const lista = await listarModelos();
-  if (temModeloProprio(lista, nutricionistaId)) return lista;
-  return [...lista, await criarModelo(nutricionistaId, { titulo: TITULO_MODELO_PADRAO, perguntas: PERGUNTAS_PADRAO, favorito: true })];
+  const r = await acaoNutricao<{ lista: ModeloAnamnese[] }>("padroes_garantir", { secao: "anamnese" });
+  return Array.isArray(r.lista) ? r.lista : [];
 }
 
 /** "Duplicar": cópia PRÓPRIA (editável) de um modelo — do sistema ou de outro seu. */
@@ -42,28 +49,22 @@ export async function duplicarModelo(nutricionistaId: string, m: ModeloAnamnese)
 export type DadosModelo = { titulo: string; perguntas: string[]; favorito: boolean };
 
 export async function criarModelo(nutricionistaId: string, d: DadosModelo): Promise<ModeloAnamnese> {
-  const { data, error } = await supabase
-    .from("modelos_anamnese")
-    .insert({ nutricionista_id: nutricionistaId, titulo: d.titulo.trim(), perguntas: d.perguntas as unknown as Json, favorito: d.favorito })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as ModeloAnamnese;
+  const r = await acaoNutricao<{ linha: ModeloAnamnese }>("modelo_anamnese_criar", { titulo: d.titulo.trim(), perguntas: d.perguntas, favorito: d.favorito });
+  return r.linha;
 }
 
 export async function atualizarModelo(id: string, patch: Partial<DadosModelo>): Promise<ModeloAnamnese> {
   const dados: ModeloUpdate = {};
   if (patch.titulo !== undefined) dados.titulo = patch.titulo.trim();
-  if (patch.perguntas !== undefined) dados.perguntas = patch.perguntas as unknown as Json;
+  if (patch.perguntas !== undefined) dados.perguntas = patch.perguntas;
   if (patch.favorito !== undefined) dados.favorito = patch.favorito;
-  const { data, error } = await supabase.from("modelos_anamnese").update(dados).eq("id", id).select("*").single();
-  falhou(error);
-  return data as ModeloAnamnese;
+  const r = await acaoNutricao<{ linha: ModeloAnamnese }>("modelo_anamnese_editar", { id, ...dados });
+  return r.linha;
 }
 
+/** Exclusão SOFT (Lixeira, W32); 0 linha (não é dela) → erro nao_encontrado (antes a tela dizia "excluído" calada). */
 export async function excluirModelo(id: string): Promise<void> {
-  const { error } = await supabase.from("modelos_anamnese").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("modelo_anamnese_excluir", { id });
 }
 
 // ---- Anamneses ----
@@ -79,38 +80,27 @@ export async function listarAnamneses(pacienteId: string): Promise<Anamnese[]> {
   return (data ?? []) as Anamnese[];
 }
 
+/** Também a Pré-consulta › "importar como anamnese" (src/painel/preconsulta/dados.ts) — a mesma ação. */
 export async function criarAnamnese(nutricionistaId: string, pacienteId: string, modeloId: string | null, r: RegistroAnamnese): Promise<Anamnese> {
-  const { data, error } = await supabase
-    .from("anamneses")
-    .insert({
-      nutricionista_id: nutricionistaId,
-      paciente_id: pacienteId,
-      modelo_id: modeloId,
-      titulo: r.titulo,
-      data: r.data,
-      conteudo: r.conteudo as unknown as Json,
-      texto_livre: r.texto_livre,
-    })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Anamnese;
+  const res = await acaoNutricao<{ linha: Anamnese }>("anamnese_criar", {
+    paciente_id: pacienteId,
+    modelo_id: modeloId,
+    titulo: r.titulo,
+    data: r.data,
+    conteudo: r.conteudo,
+    texto_livre: r.texto_livre,
+  });
+  return res.linha;
 }
 
 export async function atualizarAnamnese(id: string, r: RegistroAnamnese): Promise<Anamnese> {
-  const { data, error } = await supabase
-    .from("anamneses")
-    .update({ titulo: r.titulo, data: r.data, conteudo: r.conteudo as unknown as Json, texto_livre: r.texto_livre })
-    .eq("id", id)
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Anamnese;
+  const res = await acaoNutricao<{ linha: Anamnese }>("anamnese_editar", { id, titulo: r.titulo, data: r.data, conteudo: r.conteudo, texto_livre: r.texto_livre });
+  return res.linha;
 }
 
+/** Exclusão SOFT (Lixeira, W32); 0 linha → nao_encontrado. */
 export async function excluirAnamnese(id: string): Promise<void> {
-  const { error } = await supabase.from("anamneses").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("anamnese_excluir", { id });
 }
 
 /** Nome da nutricionista (cabeçalho do PDF). */

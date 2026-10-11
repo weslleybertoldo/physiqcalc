@@ -1,5 +1,5 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Exames.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, ClipboardList, FileDown, FlaskConical, Loader2, PenLine, Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -15,14 +15,14 @@ import SituacaoBadge from "@/nutricao/prontuario/ui/SituacaoBadge";
 import { useAuth } from "@/nutricao/prontuario/ui/contexto";
 import type { DadosProfissionais } from "@/nutricao/prontuario/lib/documentosUtil";
 import {
-  dadosProfissionais, excluirPedido, excluirResultado, garantirCatalogoExames, nomeDaNutricionista, paginaDeExames, paginaPedidosDoPaciente, type PedidoExame,
-  type ResultadoExame,
+  dadosProfissionais, excluirPedido, excluirResultado, garantirCatalogoExames, listarCatalogoExames, nomeDaNutricionista, paginaDeExames, paginaPedidosDoPaciente,
+  type PedidoExame, type ResultadoExame,
 } from "@/nutricao/prontuario/lib/exames";
 import {
   agruparResultadosPorData, formatarDataExame, lerExames, situacaoDoResultado, textoContagemPedidos, textoContagemResultados, textoReferencia, textoResumoData,
   textoValor,
 } from "@/nutricao/prontuario/lib/examesUtil";
-import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { usePaciente, useProntuario } from "@/nutricao/prontuario/ui/contexto";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Paginacao } from "@/ui/premium/Paginacao";
 import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
@@ -44,17 +44,20 @@ type Alvo = { tipo: "pedido"; item: PedidoExame } | { tipo: "resultado"; item: R
 // Excluir (soft) por linha. Pedido e resultado guardam a própria cópia do catálogo.
 export default function Exames() {
   const { paciente: p, recarregar } = usePaciente();
+  const { acesso } = useProntuario();
   const { user } = useAuth();
   const uid = user?.id;
   const qc = useQueryClient();
   const [nomeNutri, setNomeNutri] = useState<string | null>(null);
   const [profissional, setProfissional] = useState<DadosProfissionais | null>(null);
 
+  // hml-19a (laço de leitura, spec hml-19 §1.11): o efeito depende do id (estável), não do objeto da pessoa — antes eram ~20 GET
+  // profiles por segundo enquanto a seção ficava aberta
   useEffect(() => {
-    if (!user) return;
-    void nomeDaNutricionista(user.id).then(setNomeNutri);
-    void dadosProfissionais(user.id).then(setProfissional);
-  }, [user]);
+    if (!uid) return;
+    void nomeDaNutricionista(uid).then(setNomeNutri);
+    void dadosProfissionais(uid).then(setProfissional);
+  }, [uid]);
 
   const chavePedidos = useMemo(() => ["pedidos-exame", p.id], [p.id]);
   const chaveResultados = useMemo(() => ["resultados-exame", p.id], [p.id]);
@@ -69,7 +72,25 @@ export default function Exames() {
   const resultadosQ = useQuery({
     queryKey: [...chaveResultados, filtro, paginaExames], queryFn: () => paginaDeExames(p.id, filtro, paginaExames), placeholderData: keepPreviousData,
   });
-  const catalogoQ = useQuery({ queryKey: ["exames-catalogo", uid], queryFn: () => garantirCatalogoExames(uid!), enabled: !!uid });
+  // hml-19a (H-81): o catálogo padrão do 1º acesso é 1 chamada por abertura ao servidor (padroes_garantir: grava 1 vez só, com trava) e
+  // só para quem muda o clínico; as releituras (o catálogo mudou, a rede voltou) e quem só lê pegam a lista. Sem nova tentativa
+  // sozinha: o erro mostra o "Tentar de novo".
+  const catalogoPedido = useRef(false);
+  const catalogoQ = useQuery({
+    queryKey: ["exames-catalogo", uid],
+    queryFn: async () => {
+      if (!acesso.editarClinico || catalogoPedido.current) return listarCatalogoExames();
+      catalogoPedido.current = true;
+      try {
+        return await garantirCatalogoExames(uid!);
+      } catch (e) {
+        catalogoPedido.current = false;
+        throw e;
+      }
+    },
+    enabled: !!uid,
+    retry: false,
+  });
   const totalPedidosDaResposta = pedidosQ.data && !pedidosQ.isPlaceholderData ? pedidosQ.data.total : null;
   const totalDatasDaResposta = resultadosQ.data && !resultadosQ.isPlaceholderData ? resultadosQ.data.totalDatas : null;
   useEffect(() => {
@@ -165,13 +186,20 @@ export default function Exames() {
   };
 
   const alternarDetalhe = (id: string) => setAbertos((a) => ({ ...a, [id]: !a[id] }));
+  // hml-19a: o aviso de erro relê só o que falhou (o catálogo volta a pedir o padrão, se foi ele)
+  const tentarDeNovo = () => {
+    for (const q of [pedidosQ, resultadosQ, catalogoQ]) if (q.error) void q.refetch();
+  };
   const linhaFora = (s: string): string => (s === "acima" ? "bg-[rgba(244,63,94,.05)]" : s === "abaixo" ? "bg-orange-500/5" : "");
 
   return (
     <div className="space-y-4" data-secao-exames data-atualizando={atualizando ? "1" : "0"} data-salvando-exame={salvando}>
       {erro && (
         <p role="alert" className="text-sm text-rosa-3 font-body" data-erro-exames>
-          Não foi possível carregar os exames: {erro instanceof Error ? erro.message : "erro"}
+          Não foi possível carregar os exames: {erro instanceof Error ? erro.message : "erro"}{" "}
+          <button type="button" onClick={tentarDeNovo} className={BTN_MINI} data-btn-tentar-exames>
+            Tentar de novo
+          </button>
         </p>
       )}
 

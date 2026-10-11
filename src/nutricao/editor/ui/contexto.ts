@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useSessao } from "@/nucleo/sessao";
 
@@ -32,10 +32,17 @@ export function usePaciente(): PacienteCtx {
   return ctx;
 }
 
-/** A pessoa logada no banco principal (o `user.id` é o que o site antigo gravava em nutricionista_id). */
+/**
+ * A pessoa logada no banco principal (o `user.id` é o que o site antigo gravava em nutricionista_id).
+ * hml-19a (H-81): devolve o MESMO objeto entre renders enquanto a pessoa é a mesma (useMemo por id e e-mail). Antes nascia um objeto
+ * novo a cada render, e todo useEffect/useCallback com [user] rodava de novo a cada render: o laço da Anamnese (227 POST em ~10 s),
+ * o de Questionários (976 GET em 45 s) e o de Exames (917), e o das seções da Dieta que usam o mesmo useAuth.
+ */
 export function useAuth(): { user: { id: string; email?: string | null } | null } {
   const { usuario } = useSessao();
-  return { user: usuario ? { id: usuario.id, email: usuario.email ?? null } : null };
+  const id = usuario?.id ?? null;
+  const email = usuario?.email ?? null;
+  return useMemo(() => ({ user: id ? { id, email } : null }), [id, email]);
 }
 
 /**

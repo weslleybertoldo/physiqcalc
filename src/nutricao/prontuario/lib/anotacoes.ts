@@ -3,10 +3,13 @@
 // nela até a W28: o que ele grava nasce "Só nutricionistas"). Ler = função aluno_anotacoes (a regra da visibilidade + o nome, a
 // foto e o papel de quem escreveu — o personal não lê o perfil da nutri pela RLS); escrever = REST pela RLS (políticas da W2 + a
 // restritiva da W18: "Só nutricionistas" só quem vê o clínico, e o papel gravado é o de verdade).
+// hml-19a (H-41 · jeito 2): escrever = a função nutricao (src/nutricao/servidor.ts), com a sessão de quem escreve — o RLS de antes
+// decide do mesmo jeito (a função grava como a pessoa); o autor é quem está logado (o servidor põe), as frases de antes ficam.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { deslocamento, POR_PAGINA } from "@/lib/paginacao";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import { formParaRegistro, type FormRegistro } from "@/nutricao/editor/lib/prontuarioUtil";
+import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 import type { PapelAutor, Visibilidade } from "./acesso";
 
 export interface Anotacao {
@@ -115,33 +118,22 @@ export function useAnotacoesPagina(alunoId: string, pagina: number) {
   });
 }
 
+/** O RLS recusou (o papel ou a visibilidade que a pessoa não tem, ou o aluno que ela não acompanha). */
+const SEM_ACESSO = "Você não pode gravar essa anotação para este aluno.";
+
 export async function criarAnotacao(autorId: string, pacienteId: string, papel: PapelAutor, f: FormAnotacao): Promise<void> {
   const reg = formParaRegistro(f);
-  const { error } = await supabase.from("registros_prontuario").insert({
-    nutricionista_id: autorId,
-    paciente_id: pacienteId,
-    data: reg.data,
-    texto: reg.texto,
-    visibilidade: f.visibilidade,
-    autor_papel: papel,
-  });
-  falhou(error);
+  await acaoNutricao("anotacao_criar", { paciente_id: pacienteId, data: reg.data, texto: reg.texto, visibilidade: f.visibilidade, autor_papel: papel })
+    .catch((e) => comFraseDoCodigo(e, { sem_acesso: SEM_ACESSO }));
 }
 
 export async function atualizarAnotacao(id: string, papel: PapelAutor, f: FormAnotacao): Promise<void> {
   const reg = formParaRegistro(f);
-  const { data, error } = await supabase
-    .from("registros_prontuario")
-    .update({ data: reg.data, texto: reg.texto, visibilidade: f.visibilidade, autor_papel: papel })
-    .eq("id", id)
-    .select("id");
-  falhou(error);
-  if (!data || data.length === 0) throw new Error("Só quem escreveu a anotação pode mudar.");
+  await acaoNutricao("anotacao_editar", { id, data: reg.data, texto: reg.texto, visibilidade: f.visibilidade, autor_papel: papel })
+    .catch((e) => comFraseDoCodigo(e, { nao_encontrado: "Só quem escreveu a anotação pode mudar.", sem_acesso: SEM_ACESSO }));
 }
 
 /** Exclusão SOFT (Lixeira), como no site antigo. */
 export async function excluirAnotacao(id: string): Promise<void> {
-  const { data, error } = await supabase.from("registros_prontuario").update({ deleted_at: new Date().toISOString() }).eq("id", id).select("id");
-  falhou(error);
-  if (!data || data.length === 0) throw new Error("Só quem escreveu a anotação pode excluir.");
+  await acaoNutricao("anotacao_excluir", { id }).catch((e) => comFraseDoCodigo(e, { nao_encontrado: "Só quem escreveu a anotação pode excluir." }));
 }
