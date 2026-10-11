@@ -180,3 +180,13 @@ it("P-A '1': a assinatura do aluno não manda data de fim (renova)", () => {
   const fonte = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
   expect(fonte).not.toMatch(/end_date/);
 });
+
+it("hml-19 (H-55): o detalhe do pagamento no MP só mostra e-mail, nome no cartão e banco de quem pagou ao próprio aluno", () => {
+  const fonte = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
+  const trecho = fonte.slice(fonte.indexOf('acao === "detalhe_mp"'), fonte.indexOf("PROFISSIONAL ═"));
+  expect(trecho).toMatch(/const souOAluno = m!\.user_id === user\.id;/);
+  expect(trecho).toMatch(/payer_email: souOAluno && /);
+  expect(trecho).toMatch(/payer_nome: souOAluno \?/);
+  expect(trecho).toMatch(/banco_pagador: souOAluno \?/);
+  expect(trecho).toMatch(/card_last4: pay\.card\?\.last_four_digits/);
+});

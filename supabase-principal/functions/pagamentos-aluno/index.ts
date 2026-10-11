@@ -1045,13 +1045,16 @@ Deno.serve(async (req) => {
       const { status: st, body: pay } = await mpFetch<PagamentoMpDetalhe>(credencial, `/v1/payments/${encodeURIComponent(c.mp_payment_id)}`, {}, { prazo: prazoDoPedido });
       if (st !== 200 || !pay) return json({ ok: true, mp: null }, 200, origin);
       const emailPagador = pay.payer?.email || null;
+      // hml-19 (H-55): o profissional vê o final do cartão e a data; e-mail, nome no cartão e banco de quem pagou só o próprio aluno
+      const souOAluno = m!.user_id === user.id;
       return json({
         ok: true,
         mp: {
           status: pay.status ?? null, status_detail: pay.status_detail ?? null, date_approved: pay.date_approved ?? null,
           payment_method: pay.payment_method_id ?? null, payment_type: pay.payment_type_id ?? null,
-          payer_email: emailPagador && !/x{3,}/i.test(emailPagador) ? emailPagador : null, payer_nome: pay.card?.cardholder?.name ?? null,
-          banco_pagador: pay.point_of_interaction?.transaction_data?.bank_info?.payer?.long_name ?? null,
+          payer_email: souOAluno && emailPagador && !/x{3,}/i.test(emailPagador) ? emailPagador : null,
+          payer_nome: souOAluno ? pay.card?.cardholder?.name ?? null : null,
+          banco_pagador: souOAluno ? pay.point_of_interaction?.transaction_data?.bank_info?.payer?.long_name ?? null : null,
           e2e_id: pay.point_of_interaction?.transaction_data?.e2e_id ?? null, card_last4: pay.card?.last_four_digits ?? null,
           mp_payment_id: c.mp_payment_id,
         },
