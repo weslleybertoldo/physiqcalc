@@ -12,7 +12,8 @@ Padrão (H-81): a nutricao BARRADA no navegador (route.abort): a semente falha e
 (e a cópia de 900 px de cada um, para conferir). Nada grava com a nutricao barrada; no --normal, o garantir só grava se a nutri de teste
 não tiver o padrão (a tela faria o mesmo ao abrir).
 Seções da hml-19a: anamnese, questionarios, exames, documentos (Manipulados, Metas e Orientações entram na hml-19b).
-Uso: python3 e2e/hml19/laco.py --base local --canal msedge [--segundos 30] [--secoes anamnese,questionarios,exames,documentos] [--normal | --antes | --seco]
+Uso: python3 e2e/hml19/laco.py --base local --canal msedge [--prefixo staging2] [--segundos 30] [--secoes anamnese,questionarios,exames,documentos] [--normal | --antes | --seco]
+  --prefixo  o prefixo dos prints (padrão: a base; o depois no staging: staging2, para não cobrir os staging_* do antes)
   --antes o ANTES no staging (o código antigo): só mede e tira os prints staging_a_* (as seções abertas `--segundos`, 8 por padrão — o
           laço de leitura do código antigo pesa no banco; a Anamnese com os modelos barrados no navegador mostra o erro de antes)
   --seco  sem rede e sem navegador: os seletores existem no código e a contagem acerta pedidos de exemplo
@@ -131,7 +132,7 @@ def rodar_antes(o, secoes: list[str], segundos: float, canal: str | None) -> Non
         L.fechar(o)
 
 
-def rodar(o, base: str, secoes: list[str], segundos: float, normal: bool, canal: str | None) -> None:
+def rodar(o, base: str, secoes: list[str], segundos: float, normal: bool, canal: str | None, prefixo: str | None = None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     B.usar_base(base)
@@ -165,9 +166,9 @@ def rodar(o, base: str, secoes: list[str], segundos: float, normal: bool, canal:
                     o.linha(f"   {s}: {m}")
                     conferir(o, base, m, normal, aviso)
                     if normal and s in ("exames", "questionarios", "documentos"):
-                        R.print_reduzido(t, base, f"a_{s}", o)
+                        R.print_reduzido(t, prefixo or base, f"a_{s}", o)
                     if not normal and s == "anamnese":
-                        R.print_reduzido(t, base, "a_anamnese_erro", o)
+                        R.print_reduzido(t, prefixo or base, "a_anamnese_erro", o)
             finally:
                 L.do_navegador(B.P_CONTA, t.pg)
                 t.fim()
@@ -182,6 +183,7 @@ def main() -> int:
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--segundos", type=float, default=None, help="30 (8 no --antes)")
     ap.add_argument("--secoes", default=",".join(SECOES))
+    ap.add_argument("--prefixo", default=None, help="o prefixo dos prints (padrão: a base; o depois no staging: staging2)")
     modo = ap.add_mutually_exclusive_group()
     modo.add_argument("--normal", action="store_true")
     modo.add_argument("--antes", action="store_true")
@@ -202,7 +204,7 @@ def main() -> int:
         if a.antes:
             rodar_antes(o, secoes, segundos, a.canal)
         else:
-            rodar(o, a.base, secoes, segundos, a.normal, a.canal)
+            rodar(o, a.base, secoes, segundos, a.normal, a.canal, a.prefixo)
     except (Exception, SystemExit) as e:  # noqa: BLE001
         o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
     C.C2.registrar_rodada(o.oks, o.oks + o.falhas)

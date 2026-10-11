@@ -15,8 +15,11 @@ Produção (--base prod): SÓ abre as telas com a Guarda (nada grava; a nutricao
 padroes_garantir das seções que semeiam (≤ 1 por seção, barrado).
 Massa: "hml19 e2e <rodada>" (título da anamnese, observação do pedido, nome do arquivo) só no staging e só da nutri de TESTE; sai no fim
 (o --limpar desfaz uma rodada que caiu: as linhas pela marca, o arquivo pelo Storage como a dona).
-Prints: ~/projetos/physiqcalc-scratch/prints/hml19/a/<base>_a_anamnese.png e <base>_a_anexo.png (+ a cópia de 900 px para conferir).
-Uso: python3 e2e/hml19/rede.py --base staging|local|prod --canal msedge [--casos anamnese,pedido,anexo,modelos] [--seco | --limpar]
+Antes ou depois vem do CÓDIGO medido, não da base: depois = o commit medido tem o src/nutricao/servidor.ts (o local sempre; o staging
+depois do push da hml-19a); antes = o código antigo (o staging até o push).
+Prints: ~/projetos/physiqcalc-scratch/prints/hml19/a/<prefixo>_a_anamnese.png e <prefixo>_a_anexo.png (+ a cópia de 900 px para conferir);
+o prefixo é a base, ou o --prefixo (o depois no staging: staging2, para não cobrir os staging_* do antes).
+Uso: python3 e2e/hml19/rede.py --base staging|local|prod --canal msedge [--prefixo staging2] [--casos anamnese,pedido,anexo,modelos] [--seco | --limpar]
   --seco  sem rede e sem navegador: confere que os seletores existem no código das telas e que a classificação acerta pedidos de
           exemplo (antes e depois)
 """
@@ -65,6 +68,15 @@ def commit_medido(base: str) -> str:
         return r.stdout.strip() or "?"
     st, r, _h = B.B5.http("GET", f"{B.BASES[base]}/health.json", None, {}, timeout=30)
     return str(r.get("commit")) if st == 200 and isinstance(r, dict) else "?"
+
+
+def fase_do_codigo(base: str, commit: str) -> str:
+    """antes = o código antigo (a gravação direta do navegador); depois = o jeito 2 do Prontuário (o commit medido tem o
+    src/nutricao/servidor.ts). Commit desconhecido aqui → antes (as conferências do antes acusam se não for)."""
+    if base == "local":
+        return "depois"
+    r = subprocess.run(["git", "-C", str(B.REPO), "cat-file", "-e", f"{commit}:src/nutricao/servidor.ts"], capture_output=True, timeout=10)
+    return "depois" if r.returncode == 0 else "antes"
 
 
 GRAVACOES = ("rest_prontuario", "rest_outras", "rpc_grava", "storage_grava")
@@ -139,7 +151,7 @@ def padroes_proprios(s: str, dono: str) -> int:
                      "and titulo = 'Anamnese geral (padrão)' and deleted_at is null")[0]["n"]
 
 
-def caso_modelos(t, o, base: str, s: str, dono: str, antes: int) -> None:
+def caso_modelos(t, o, base: str, s: str, dono: str, antes: int, rotulo: str) -> None:
     """a_anamnese: o diálogo Modelos com os modelos da pessoa; abrir a Anamnese NÃO cria outro "Anamnese geral (padrão)" (o H-81). A
     nutri de teste tem duplicatas que o laço antigo deixou no staging: a conferência é "não aumenta", não "1 só"."""
     t.clicar("[data-btn-modelos]")
@@ -149,7 +161,7 @@ def caso_modelos(t, o, base: str, s: str, dono: str, antes: int) -> None:
     depois = padroes_proprios(s, dono)
     o.ok(ok and depois == antes and na_tela == depois,
          f"[{base}] modelos: abrir a Anamnese não criou outro 'Anamnese geral (padrão)' (próprios vivos {antes} → {depois}; na tela {na_tela})")
-    print_reduzido(t, base, "a_anamnese", o)
+    print_reduzido(t, rotulo, "a_anamnese", o)
     t.pg.keyboard.press("Escape")
 
 
@@ -180,10 +192,10 @@ def linha_planilha(base: str, caso: str, cont, ms: int, commit: str) -> None:
                                           cont.get("rpc_grava", 0), cont.get("storage_grava", 0), cont.get("storage_link_assinado", 0), funcoes, ms)) + "\n")
 
 
-def conferir(o, base: str, caso: str, cont, ok_tela: bool, ms: int) -> None:
+def conferir(o, base: str, caso: str, cont, ok_tela: bool, ms: int, fase: str) -> None:
     o.ok(ok_tela, f"[{base}] {caso}: a ação terminou na tela ({ms} ms)")
     gravacoes = so_gravacoes(cont)
-    if base == "staging":
+    if fase == "antes":
         o.ok(cont.get("rest_prontuario", 0) + cont.get("storage_grava", 0) >= 1 or caso == "modelos",
              f"[antes] {caso}: a gravação ia direto do navegador ({gravacoes})")
         return
@@ -238,13 +250,15 @@ def seco(o) -> None:
     o.ok(B.TABELAS == set(B.regras()["tabelas"]) and len(B.TABELAS) == 18, "as 18 tabelas do Prontuário (as mesmas do servidor)")
 
 
-def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
+def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None = None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     s = B.usar_base(base)
     L = B.Sessoes(f"rede {base}")
     rodada = B.nova_rodada()
     commit = commit_medido(base)
+    fase = fase_do_codigo(base, commit)
+    rotulo = prefixo or base
     if base == "prod":  # produção: só abre cada seção 1 vez (nada grava)
         casos = [c for c in ("anamnese", "pedido", "anexo") if c in casos] or ["anamnese"]
     try:
@@ -260,7 +274,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
             try:
                 t.entrar(L, B.P_CONTA, rota(pac))
                 ok = t.esperar(lambda: t.tem("[data-aba-prontuario-aluno]"), 60)
-                o.ok(ok and t.n('[data-prontuario-editar="1"]') == 1, f"[{base}] o Prontuário da aluna abre e a nutri de teste muda o clínico ({commit})",
+                o.ok(ok and t.n('[data-prontuario-editar="1"]') == 1, f"[{base}] o Prontuário da aluna abre e a nutri de teste muda o clínico ({commit}: o {fase})",
                      parar=True)
                 for caso in casos:
                     secao = {"anamnese": "anamnese", "modelos": "anamnese", "pedido": "exames", "anexo": "anexos"}[caso]
@@ -272,19 +286,19 @@ def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
                          f"[{base}] {secao} abre: 0 gravação ao abrir além de ≤ 1 padroes_garantir ({abrir})")
                     if base == "prod" or caso == "modelos":
                         if caso == "modelos" and base != "prod":
-                            caso_modelos(t, o, base, s, dono, padroes_antes)
+                            caso_modelos(t, o, base, s, dono, padroes_antes, rotulo)
                         continue
                     t.zerar_pedidos()
                     marca = f"{B.MARCA} {rodada} rede {caso}"
                     t0 = time.time()
                     ok_tela = {"anamnese": acao_anamnese, "pedido": acao_pedido}[caso](t, marca) if caso != "anexo" else acao_anexo(t, f"hml19-e2e-{rodada}.txt")
                     ms = round((time.time() - t0) * 1000)
-                    esperar_quieto(t, teto=4 if base == "staging" else 15)  # o código antigo nunca fica quieto (o laço de leitura)
+                    esperar_quieto(t, teto=4 if fase == "antes" else 15)  # o código antigo nunca fica quieto (o laço de leitura)
                     cont = B.contar(t.pedidos)
-                    conferir(o, base, caso, cont, ok_tela, ms)
+                    conferir(o, base, caso, cont, ok_tela, ms, fase)
                     linha_planilha(base, caso, cont, ms, commit)
                     if caso == "anexo":
-                        print_reduzido(t, base, "a_anexo", o)
+                        print_reduzido(t, rotulo, "a_anexo", o)
                 if guarda:
                     o.ok(all("nutricao" in b or "padroes" in b for b in guarda.bloqueadas) and len(guarda.bloqueadas) <= 2,
                          f"[prod] a Guarda barrou só o padroes_garantir das seções que semeiam ({guarda.bloqueadas})")
@@ -303,6 +317,7 @@ def main() -> int:
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--prefixo", default=None, help="o prefixo dos prints (padrão: a base; o depois no staging: staging2)")
     modo = ap.add_mutually_exclusive_group()
     modo.add_argument("--seco", action="store_true")
     modo.add_argument("--limpar", action="store_true")
@@ -324,7 +339,7 @@ def main() -> int:
             finally:
                 L.fechar(o)
         else:
-            rodar(o, a.base, casos, a.canal)
+            rodar(o, a.base, casos, a.canal, a.prefixo)
     except (Exception, SystemExit) as e:  # noqa: BLE001
         o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
     if not a.limpar:
