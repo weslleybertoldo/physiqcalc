@@ -17,7 +17,6 @@ import { criarLancamento, garantirCategorias, paginaLancamentosDoAluno, rotuloMe
 import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, paginaRecibosDoAluno, podeEmitirRecibo, type Recibo } from "../recibos";
 import { LANCAMENTOS_VISIVEIS, rotaDosLancamentosDoAluno } from "@/painel/aluno/dados/regras";
 import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
-import { pdfDoRecibo } from "@/painel/financeiro/pdfRecibo";
 import ReciboDialog from "@/painel/financeiro/ReciboDialog";
 import { useFinanceiroConta } from "@/painel/financeiro/useFinanceiro";
 import { precisaRenovar, sufixoDoValor } from "../planos";
@@ -324,6 +323,8 @@ function CartaoLancamentosERecibos({ d, compacto, reciboAvulso, aoFecharReciboAv
   };
   const pdf = async (r: { numero: number; valor: number | string; data: string; descricao: string; texto: string; nutricionista_id: string }) => {
     try {
+      // hml-18b (velocidade): o módulo do recibo em PDF só é baixado no clique, não com a ficha do aluno
+      const { pdfDoRecibo } = await import("@/painel/financeiro/pdfRecibo");
       await pdfDoRecibo(fin, { ...r, valor: Number(r.valor) }, d.aluno.nome);
     } catch {
       toast.error("Não deu para gerar o PDF agora.");

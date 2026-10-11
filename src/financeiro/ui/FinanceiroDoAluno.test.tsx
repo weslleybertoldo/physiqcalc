@@ -5,6 +5,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
@@ -18,6 +19,8 @@ const h = vi.hoisted(() => ({
   // hml-17 (H-39): as categorias do diálogo de lançamento (garantirCategorias)
   categorias: vi.fn(),
   agir: vi.fn(async () => null),
+  // hml-18b: o recibo em PDF (carregado só no clique — import() dentro do handler)
+  pdf: vi.fn<(...a: unknown[]) => Promise<void>>(async () => undefined),
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-dono" } }) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabase: { functions: { invoke: vi.fn(async () => ({ error: null })) } } }));
@@ -25,7 +28,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/components/admin/ComprovantePixCard", () => ({ default: () => null }));
 vi.mock("@/painel/financeiro/ModelosReciboDialog", () => ({ default: () => null }));
 vi.mock("@/painel/financeiro/ReciboDialog", () => ({ default: () => null }));
-vi.mock("@/painel/financeiro/pdfRecibo", () => ({ pdfDoRecibo: vi.fn() }));
+vi.mock("@/painel/financeiro/pdfRecibo", () => ({ pdfDoRecibo: (...a: unknown[]) => h.pdf(...a) }));
 vi.mock("@/painel/financeiro/useFinanceiro", () => ({
   useFinanceiroConta: () => ({ modelos: { data: [] }, ultimo: { data: 0 }, nomeProfissional: "Lucas", padrao: null, recarregar: vi.fn(async () => {}) }),
 }));
@@ -111,6 +114,9 @@ beforeEach(() => {
   h.categorias.mockReset();
   h.categorias.mockResolvedValue([]);
   h.agir.mockClear();
+  h.pdf.mockReset();
+  h.pdf.mockResolvedValue(undefined);
+  vi.mocked(toast.error).mockClear();
 });
 
 describe("Financeiro do aluno — os 3 'Ver todos' em páginas do banco (hml-14d, P7)", () => {
@@ -158,6 +164,17 @@ describe("Financeiro do aluno — os 3 'Ver todos' em páginas do banco (hml-14d
     fireEvent.click(document.querySelector('[data-ver-todos="recibos-aluno"]')!);
     await waitFor(() => expect(itens("aluno-recibos")).toHaveLength(20));
     expect(document.querySelector('[data-paginacao="aluno-recibos"]')?.getAttribute("data-total")).toBe("41");
+  });
+
+  it("o PDF do recibo (carregado só no clique, hml-18b): gera com o recibo e o nome do aluno; falhou → o aviso de sempre", async () => {
+    montar();
+    await waitFor(() => expect(document.querySelectorAll("[data-cartao-recibos] [data-recibo]")).toHaveLength(12));
+    const botao = () => document.querySelector('[data-cartao-recibos] [data-recibo="41"] [data-acao-cobranca="pdf-recibo"]')!;
+    fireEvent.click(botao());
+    await waitFor(() => expect(h.pdf).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ numero: 41, valor: 50, descricao: "Recibo 41" }), "Rafael Moura"));
+    h.pdf.mockRejectedValueOnce(new Error("jsPDF"));
+    fireEvent.click(botao());
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Não deu para gerar o PDF agora."));
   });
 
   it("o endereço com ?pagina_recibos=3 já abre a lista na 3ª (o 41º aparece)", async () => {
