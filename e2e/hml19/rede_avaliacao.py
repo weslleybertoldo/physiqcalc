@@ -206,18 +206,25 @@ class BarrarGravacaoDaFoto:
         ctx.route(re.compile(r"https://api\.physiqcalc\.com\.br/(functions/v1/admin-avaliacoes|storage/v1/object/registros)"), rota)
 
 
-def acao_foto_erro(t) -> tuple[bool, int, int]:
-    """Sobe com a gravação barrada: 1 aviso (toast) com a frase fixa e nenhum toast em laço por 4 s. Devolve (ok, ms, nº de toasts)."""
+def acao_foto_erro(t, fotografar=None) -> tuple[bool, int, int]:
+    """Sobe com a gravação barrada: 1 aviso (toast) com a frase fixa e nenhum toast em laço — o MAIOR número de toasts com a frase ao
+    mesmo tempo, olhado a cada 200 ms por 5 s depois do 1º, tem de ser 1 (o toast some sozinho em ~4 s). `fotografar` tira o print
+    com o aviso na tela. Devolve (ok, ms até o aviso, o maior nº de toasts iguais)."""
     if not abrir_fotos(t):
         return False, 0, 0
     t.pg.locator("[data-fotos-mes]").first.fill(B.MES_SENTINELA)
+    toasts = t.pg.locator("[data-sonner-toast]").filter(has_text=TEXTO_ERRO)
     t0 = time.time()
     t.pg.set_input_files('[data-foto-mensal-input="frente"]', files=[arquivo_jpeg("foto-erro.jpg")])
-    viu = t.esperar(lambda: TEXTO_ERRO in t.texto("[data-sonner-toaster]"), 60)
+    viu = t.esperar(lambda: toasts.count() >= 1, 60)
     ms = round((time.time() - t0) * 1000)
-    t.pg.wait_for_timeout(4000)
-    n = t.pg.locator("[data-sonner-toast]").filter(has_text=TEXTO_ERRO).count()
-    return viu and n == 1 and not t.tem(f'[data-sheet-fotos] [data-fotos-sessao="{SESSAO_SENTINELA}"]'), ms, n
+    if viu and fotografar:
+        fotografar()
+    maximo, fim = toasts.count(), time.time() + 5
+    while time.time() < fim:
+        maximo = max(maximo, toasts.count())
+        t.pg.wait_for_timeout(200)
+    return viu and maximo == 1 and not t.tem(f'[data-sheet-fotos] [data-fotos-sessao="{SESSAO_SENTINELA}"]'), ms, maximo
 
 
 # ───────────────────────── a conferência, a planilha, os prints ─────────────────────────
@@ -391,11 +398,11 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                         if barrar:
                             barrar.instalar(t.ctx)
                             t.zerar_pedidos()
-                            ok_tela, ms, n = acao_foto_erro(t)
+                            ok_tela, ms, n = acao_foto_erro(t, lambda: print_c(t, rotulo, PRINT_DO_CASO["foto_erro"], o))
                             cont = B.contar(t.pedidos)
-                            o.ok(ok_tela and barrar.barradas, f"[{base}] foto_erro: 1 aviso com a frase fixa, sem toast em laço ({n} toast; barrou {barrar.barradas})")
+                            o.ok(ok_tela and len(barrar.barradas) == 1,
+                                 f"[{base}] foto_erro: 1 aviso com a frase fixa, sem toast em laço e 1 tentativa só (no máx. {n} toast igual; barrou {barrar.barradas})")
                             conferir(o, base, "foto_erro", cont, ok_tela, ms, fase)
-                            print_c(t, rotulo, PRINT_DO_CASO["foto_erro"], o)
                     finally:
                         L.do_navegador(PERSONAL_TELA, t.pg)
                         t.fim()
@@ -423,6 +430,11 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                             cont = B.contar(t.pedidos)
                             conferir(o, base, caso, cont, ok_tela, ms, fase)
                             linha_planilha(base, caso, cont, ms, commit)
+                            if caso == "antropometria" and achar_id():  # o print mostra o HISTÓRICO com a antropometria de teste
+                                try:
+                                    t.pg.locator(f'[data-avaliacao-item$="{achar_id()}"]').first.scroll_into_view_if_needed(timeout=5000)
+                                except Exception:  # noqa: BLE001 — sem rolar, o print sai mesmo assim
+                                    pass
                             print_c(t, rotulo, PRINT_DO_CASO[caso], o)
                     finally:
                         L.do_navegador(B.P_CONTA, t.pg)
