@@ -67,6 +67,15 @@ def commit_medido(base: str) -> str:
     return str(r.get("commit")) if st == 200 and isinstance(r, dict) else "?"
 
 
+GRAVACOES = ("rest_prontuario", "rest_outras", "rpc_grava", "storage_grava")
+
+
+def so_gravacoes(cont) -> dict:
+    """Do que a guarda contou, só o que GRAVA: rest, RPC que grava, Storage (o link assinado à parte) e a nutricao (todas as ações dela
+    gravam). As funções de leitura (treino-leitura, pos-login…) e os GET não entram."""
+    return {k: v for k, v in cont.items() if k in GRAVACOES or k == "storage_link_assinado" or k.startswith("fn:nutricao")}
+
+
 def rota(pac: str, secao: str = "anotacoes") -> str:
     return f"/painel/alunos/{pac}/prontuario?secao={secao}"
 
@@ -124,13 +133,22 @@ def acao_anexo(t, marca_arquivo: str) -> bool:
                      and marca_arquivo in t.texto("[data-lista-anexos]"), 40)
 
 
-def caso_modelos(t, o, base: str) -> None:
-    """a_anamnese: o diálogo Modelos com 1 só "Anamnese geral (padrão)" próprio (o H-81 não duplica)."""
+def padroes_proprios(s: str, dono: str) -> int:
+    """Quantos "Anamnese geral (padrão)" PRÓPRIOS e vivos a pessoa tem (SQL só leitura)."""
+    return B.B17.ler(f"select count(*)::int as n from {s}.modelos_anamnese where nutricionista_id = {C.txt(C.uuid_ok(dono))} "
+                     "and titulo = 'Anamnese geral (padrão)' and deleted_at is null")[0]["n"]
+
+
+def caso_modelos(t, o, base: str, s: str, dono: str, antes: int) -> None:
+    """a_anamnese: o diálogo Modelos com os modelos da pessoa; abrir a Anamnese NÃO cria outro "Anamnese geral (padrão)" (o H-81). A
+    nutri de teste tem duplicatas que o laço antigo deixou no staging: a conferência é "não aumenta", não "1 só"."""
     t.clicar("[data-btn-modelos]")
     ok = t.esperar(lambda: t.n("[data-lista-modelos] [data-modelo]") > 0, 20)
-    proprios = t.pg.evaluate("""() => [...document.querySelectorAll('[data-lista-modelos] [data-modelo][data-modelo-origem="proprio"] [data-modelo-titulo]')]
+    na_tela = t.pg.evaluate("""() => [...document.querySelectorAll('[data-lista-modelos] [data-modelo][data-modelo-origem="proprio"] [data-modelo-titulo]')]
                                  .map((e) => e.textContent.trim()).filter((x) => x === 'Anamnese geral (padrão)').length""")
-    o.ok(ok and proprios == 1, f"[{base}] modelos: 1 só 'Anamnese geral (padrão)' próprio ({proprios})")
+    depois = padroes_proprios(s, dono)
+    o.ok(ok and depois == antes and na_tela == depois,
+         f"[{base}] modelos: abrir a Anamnese não criou outro 'Anamnese geral (padrão)' (próprios vivos {antes} → {depois}; na tela {na_tela})")
     print_reduzido(t, base, "a_anamnese", o)
     t.pg.keyboard.press("Escape")
 
@@ -164,12 +182,12 @@ def linha_planilha(base: str, caso: str, cont, ms: int, commit: str) -> None:
 
 def conferir(o, base: str, caso: str, cont, ok_tela: bool, ms: int) -> None:
     o.ok(ok_tela, f"[{base}] {caso}: a ação terminou na tela ({ms} ms)")
-    gravacoes = {k: v for k, v in cont.items() if k != "get_profiles"}
+    gravacoes = so_gravacoes(cont)
     if base == "staging":
         o.ok(cont.get("rest_prontuario", 0) + cont.get("storage_grava", 0) >= 1 or caso == "modelos",
              f"[antes] {caso}: a gravação ia direto do navegador ({gravacoes})")
         return
-    fn = {k: v for k, v in gravacoes.items() if k.startswith("fn:") or k == "storage_link_assinado"}
+    fn = {k: v for k, v in gravacoes.items() if k.startswith("fn:nutricao") or k == "storage_link_assinado"}
     o.ok(cont.get("rest_prontuario", 0) == 0 and cont.get("storage_grava", 0) == 0 and cont.get("rpc_grava", 0) == 0,
          f"[depois] {caso}: 0 rest de gravação no Prontuário, 0 Storage fora do link assinado, 0 RPC que grava ({gravacoes})")
     o.ok(fn == ESPERADO_DEPOIS[caso], f"[depois] {caso}: só as chamadas esperadas da nutricao ({fn} × {ESPERADO_DEPOIS[caso]})")
@@ -233,6 +251,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
         B.exigir_saude(o, "o rede.py")
         pac = B.B17.matricula_da_aluna()
         dono = L.uid(B.P_CONTA)
+        padroes_antes = padroes_proprios(s, dono) if base != "prod" else 0
         guarda = B.B17.Guarda() if base == "prod" else None
         with sync_playwright() as pw:
             nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
@@ -247,13 +266,13 @@ def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
                     secao = {"anamnese": "anamnese", "modelos": "anamnese", "pedido": "exames", "anexo": "anexos"}[caso]
                     t.zerar_pedidos()
                     aberta = abrir_secao(t, secao)
-                    abrir = B.contar(t.pedidos)
-                    gravou_ao_abrir = {k: v for k, v in abrir.items() if k != "get_profiles" and k != "fn:nutricao(padroes_garantir)"}
+                    abrir = so_gravacoes(B.contar(t.pedidos))
+                    gravou_ao_abrir = {k: v for k, v in abrir.items() if k != "fn:nutricao(padroes_garantir)"}
                     o.ok(aberta and not gravou_ao_abrir and abrir.get("fn:nutricao(padroes_garantir)", 0) <= 1,
-                         f"[{base}] {secao} abre: 0 gravação ao abrir além de ≤ 1 padroes_garantir ({dict(abrir)})")
+                         f"[{base}] {secao} abre: 0 gravação ao abrir além de ≤ 1 padroes_garantir ({abrir})")
                     if base == "prod" or caso == "modelos":
                         if caso == "modelos" and base != "prod":
-                            caso_modelos(t, o, base)
+                            caso_modelos(t, o, base, s, dono, padroes_antes)
                         continue
                     t.zerar_pedidos()
                     marca = f"{B.MARCA} {rodada} rede {caso}"
