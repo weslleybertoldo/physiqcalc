@@ -320,6 +320,10 @@ export function proximaConferenciaEm(agora: Date, tentativas: number): string {
 const reais = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
 const comoPagou = (m: MeioIp | null, parcelas: number | null) =>
   m === "pix" ? "Pix" : m === "credit_card" ? (parcelas && parcelas > 1 ? `cartão em ${parcelas}×` : "cartão") : "pagamento";
+/** O aluno nos avisos de "confira" ao personal: só o 1º nome, até 20 caracteres. Assim a frase inteira cabe nos 160 do sino com qualquer
+ *  nome e qualquer valor (com o nome inteiro, 36 caracteres cortavam o textoNsuNovo em "registre o " e o textoOutroPagamento perdia o
+ *  ponto). O link do aviso abre o aluno certo. */
+const primeiroNome = (nome: string) => (String(nome ?? "").trim().split(/\s+/)[0] ?? "").slice(0, 20) || "seu aluno";
 
 export function textoPagoAoAluno(c: number): string {
   return `Pagamento confirmado · ${reais(c)}`;
@@ -328,23 +332,23 @@ export function textoPagoAoPersonal(nome: string, c: number, m: MeioIp | null, p
   return `Pagamento confirmado · ${nome} · ${reais(c)} (${comoPagou(m, parcelas)} na InfinitePay)`.slice(0, 160);
 }
 export function textoOutroPagamento(nome: string, c: number): string {
-  return `A InfinitePay avisou outro pagamento de ${nome} (${reais(c)}). Confira no app dela: se entraram 2, registre o 2º à mão ou devolva um.`.slice(0, 160);
+  return `A InfinitePay avisou outro pagamento de ${primeiroNome(nome)} (${reais(c)}). Confira no app dela: se entraram 2, registre o 2º à mão ou devolva um.`.slice(0, 160);
 }
 export function textoNsuNovo(nome: string, c: number): string {
-  return `A InfinitePay confirmou de novo o pagamento de ${nome} (${reais(c)}), que já estava baixado. Só se o app dela mostrar 2, registre o 2º à mão.`.slice(0, 160);
+  return `A InfinitePay confirmou de novo o pagamento de ${primeiroNome(nome)} (${reais(c)}), que já estava baixado. Só se o app dela mostrar 2, registre o 2º à mão.`.slice(0, 160);
 }
 export function textoNsuRepetido(nome: string): string {
-  return `Um pagamento de ${nome} pela InfinitePay apareceu em 2 cobranças. Confira no app dela e ajuste o financeiro do aluno.`.slice(0, 160);
+  return `Um pagamento de ${primeiroNome(nome)} pela InfinitePay apareceu em 2 cobranças. Confira no app dela e ajuste o financeiro do aluno.`.slice(0, 160);
 }
 export function textoCheckoutDesligado(nome: string): string {
-  return `Não conseguimos confirmar um pagamento de ${nome}: o checkout externo da sua InfinitePay está desligado. Ligue de novo no app dela.`.slice(0, 160);
+  return `Não conseguimos confirmar um pagamento de ${primeiroNome(nome)}: o checkout externo da sua InfinitePay está desligado. Ligue de novo no app dela.`.slice(0, 160);
 }
 export function textoJaPagoPorFora(nome: string, c: number): string {
-  return `A InfinitePay confirmou ${reais(c)} de ${nome}, que você já tinha registrado. Se foram 2 pagamentos, devolva um pelo app da InfinitePay.`.slice(0, 160);
+  return `A InfinitePay confirmou ${reais(c)} de ${primeiroNome(nome)}, que você já tinha registrado. Se foram 2 pagamentos, devolva um pelo app da InfinitePay.`.slice(0, 160);
 }
 export function textoValorDiferente(nome: string): string {
-  return `Um pagamento de ${nome} pela InfinitePay veio com valor diferente. Confira no app da InfinitePay.`.slice(0, 160);
+  return `Um pagamento de ${primeiroNome(nome)} pela InfinitePay veio com valor diferente. Confira no app da InfinitePay.`.slice(0, 160);
 }
 export function textoSemConfirmacao(nome: string): string {
-  return `Não conseguimos confirmar um pagamento de ${nome} pela InfinitePay. Confira no app da InfinitePay e registre à mão se recebeu.`.slice(0, 160);
+  return `Não conseguimos confirmar um pagamento de ${primeiroNome(nome)} pela InfinitePay. Confira no app da InfinitePay e registre à mão se recebeu.`.slice(0, 160);
 }

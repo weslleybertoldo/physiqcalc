@@ -5,8 +5,9 @@ import {
   IP_AVISOS_POR_COBRANCA, IP_LIMITE_CORPO, IP_MAX_TENTATIVAS, IP_PRAZO_HORAS, IP_URL_MAX, avisoNoPrazo, centavos, corpoDoLink,
   corpoDoPaymentCheck, decidirBaixa, depoisDaConferencia, descricaoDoLink, deveReabrir, ehNsuDoPedido, expiraEm, lerAvisoDoWebhook, lerLink,
   lerPaymentCheck, lerPedidoDoLink, lerVolta, mesmoNsu, metodoDoMeio, normalizarHandle, nsuDaBaixa, nsuDoPedido, pedidoDoLink,
-  podeReaproveitar, proximaConferenciaEm, resultadoDaDecisao, tentativaViva, textoCheckoutDesligado, textoNsuNovo, textoOutroPagamento,
-  textoPagoAoPersonal, urlDaInfinitePay, urlDeVolta, urlDoWebhook, type ConferenciaIp,
+  podeReaproveitar, proximaConferenciaEm, resultadoDaDecisao, tentativaViva, textoCheckoutDesligado, textoJaPagoPorFora, textoNsuNovo,
+  textoNsuRepetido, textoOutroPagamento, textoPagoAoPersonal, textoSemConfirmacao, textoValorDiferente, urlDaInfinitePay, urlDeVolta,
+  urlDoWebhook, type ConferenciaIp,
 } from "./infinitepay";
 
 const PEDIDO = "11111111-2222-4333-8444-555555555555";
@@ -196,11 +197,40 @@ describe("a tentativa (W1-B1: 72 h e o mesmo link enquanto vale)", () => {
     expect(textoPagoAoPersonal("Ana Souza", 100000, "credit_card", 3)).toBe("Pagamento confirmado · Ana Souza · R$ 1000,00 (cartão em 3× na InfinitePay)");
     expect(textoPagoAoPersonal("Ana Souza", 4990, "pix", 1)).toBe("Pagamento confirmado · Ana Souza · R$ 49,90 (Pix na InfinitePay)");
   });
-  it("C1: os avisos de 'confira' ao personal (sem baixa) dizem quem e quanto", () => {
+  it("C1: os avisos de 'confira' ao personal (sem baixa) dizem quem (o 1º nome) e quanto", () => {
     expect(textoOutroPagamento("Ana Souza", 100000))
-      .toBe("A InfinitePay avisou outro pagamento de Ana Souza (R$ 1000,00). Confira no app dela: se entraram 2, registre o 2º à mão ou devolva um.");
+      .toBe("A InfinitePay avisou outro pagamento de Ana (R$ 1000,00). Confira no app dela: se entraram 2, registre o 2º à mão ou devolva um.");
     expect(textoNsuNovo("Ana Souza", 4990)).toContain("já estava baixado");
     expect(textoCheckoutDesligado("Ana Souza")).toContain("checkout externo");
+  });
+  it("o nome longo não corta a frase: os avisos de 'confira' levam só o 1º nome (até 20 caracteres) e cabem inteiros nos 160", () => {
+    const NOME_40 = "Ana Beatriz Cavalcanti de Albuquerque Sá";
+    const MAIOR = 9_999_999_999; // R$ 99.999.999,99: o maior valor que a cobrança aceita
+    expect(NOME_40).toHaveLength(40);
+    const confira = (nome: string) => [
+      textoOutroPagamento(nome, MAIOR), textoNsuNovo(nome, MAIOR), textoNsuRepetido(nome), textoCheckoutDesligado(nome),
+      textoJaPagoPorFora(nome, MAIOR), textoValorDiferente(nome), textoSemConfirmacao(nome),
+    ];
+    for (const t of confira(NOME_40)) {
+      expect(t.length).toBeLessThanOrEqual(160);
+      expect(t.endsWith(".")).toBe(true);
+      expect(t).toMatch(/ de Ana[ :,]/);
+      expect(t).not.toContain("Beatriz");
+    }
+    expect(textoNsuNovo(NOME_40, MAIOR)).toBe("A InfinitePay confirmou de novo o pagamento de Ana (R$ 99999999,99), que já estava baixado. Só se o app dela mostrar 2, registre o 2º à mão.");
+    expect(textoOutroPagamento(NOME_40, MAIOR)).toBe("A InfinitePay avisou outro pagamento de Ana (R$ 99999999,99). Confira no app dela: se entraram 2, registre o 2º à mão ou devolva um.");
+    // um nome só, sem espaço, com 40 letras: vai até 20 e a frase continua inteira
+    for (const t of confira("B".repeat(40))) {
+      expect(t.length).toBeLessThanOrEqual(160);
+      expect(t.endsWith(".")).toBe(true);
+      expect(t).toContain(` ${"B".repeat(20)}`);
+      expect(t).not.toContain("B".repeat(21));
+    }
+    // sem nome: "seu aluno" (nunca "de  (R$ …)")
+    expect(textoSemConfirmacao("  ")).toBe("Não conseguimos confirmar um pagamento de seu aluno pela InfinitePay. Confira no app da InfinitePay e registre à mão se recebeu.");
+    // o "pagamento confirmado" segue com o nome inteiro: com 40 caracteres ainda cabe inteiro
+    expect(textoPagoAoPersonal(NOME_40, MAIOR, "credit_card", 12))
+      .toBe(`Pagamento confirmado · ${NOME_40} · R$ 99999999,99 (cartão em 12× na InfinitePay)`);
   });
 });
 
