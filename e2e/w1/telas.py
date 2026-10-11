@@ -11,8 +11,8 @@ Passos (em ordem; a massa é a conta do prof2 — "Rafael Lima" — com o aluno2
   3 planos        Financeiro › Planos: "Período todo (Pix ou cartão até 12×)" no plano com à vista e cartão parcelado (P-B), uma vez só no
                   cartão; no painel do plano (Editar, sem salvar) o à vista com esse nome e o cartão parcelado "não aceita"
   4 app_pagar     o aluno em Pagamentos: "Pagar R$ 10,00" → a folha da InfinitePay → a aba da InfinitePay (conferida e fechada) →
-                  "Aguardando a confirmação"; "Conferir pagamento" → "Ainda não chegou…" (a API de verdade: não pago); fora da folha,
-                  "Continuar o pagamento" e o cartão "em andamento"
+                  "Aguardando a confirmação"; "Conferir pagamento" → "Ainda não chegou…" DENTRO da folha, acima do botão, e nada por
+                  cima dele — nem toast (a API de verdade: não pago); fora da folha, "Continuar o pagamento" e o cartão "em andamento"
   5 app_volta     a volta da página (/perfil/pagamentos?order_nsu=<o pedido do link, <id>-1>&transaction_nsu=…): "Recebemos a volta…" e a
                   busca limpa (no banco: o aviso da volta na caixa, não pago)
   6 app_pago      a tentativa marcada paga NO BANCO (o resultado da baixa — o caminho da baixa é provado no api.py --local): "Pix
@@ -42,7 +42,8 @@ Uso: python3 e2e/w1/telas.py --base local|staging|prod [--loja] [--porta 5173] [
   --seco    nada vai ao banco nem à API (a rede deste processo só fala com o build servido; no Edge, os pedidos à API e à InfinitePay são
             barrados): o roteiro contra o código (cada data-* dos seletores e cada texto esperado), as funções puras, as contas e a
             InfiniteTag (sem login), a porta no CORS, o build servido (health.json: schema e canal), a /entrar no Edge e, com o CSS do
-            build, a checagem do botão dentro do cartão a 390 (o "Testar" e o "Ativar" do Recebimento quebram a linha)
+            build, a checagem do botão dentro do cartão a 390 (o "Testar" e o "Ativar" do Recebimento quebram a linha) e a do botão
+            livre (o toast por cima do botão de baixo da folha é pego)
   --limpar  só desfaz uma rodada que caiu no meio (pelos 2 arquivos de estado)
   --sinal   o arquivo-sinal da trava do banco do staging (dividido entre sessões): sem ele a rodada não começa; se ele sumir no meio, a
             rodada para ANTES do próximo passo, desfaz a massa e sai com 3
@@ -486,6 +487,20 @@ JS_BOTOES_FORA = r"""(raiz) => {
 RAIZ_RECEBIMENTO = "[data-config-aba='recebimento']"
 # o que mostra a InfiniteTag na tela (o campo do Recebimento e a da conta no master): borrado em TODO print — também no da falha
 BORRAR_TAG = "[data-infinitetag], [data-infinitetag-da-conta]"
+# O botão LIVRE: nenhum aviso (toast) por cima dele e o meio dele é ele mesmo — sem a folga do JS_A_VISTA para o sonner. Em 11/10 o "Ainda
+# não chegou…" saía em toast por cima do "Conferir pagamento" que ele mandava apertar. → None (livre) ou o que está por cima.
+JS_NADA_POR_CIMA = r"""(e) => {
+  const r = e.getBoundingClientRect();
+  for (const t of document.querySelectorAll('[data-sonner-toast]')) {
+    const q = t.getBoundingClientRect();
+    if (q.width > 0 && q.height > 0 && q.left < r.right && r.left < q.right && q.top < r.bottom && r.top < q.bottom)
+      return 'o aviso (toast) "' + (t.textContent || '').trim().slice(0, 60) + '"';
+  }
+  const x0 = Math.max(r.left, 0), x1 = Math.min(r.right, innerWidth), y0 = Math.max(r.top, 0), y1 = Math.min(r.bottom, innerHeight);
+  if (x1 - x0 < 1 || y1 - y0 < 1) return 'fora da tela';
+  const p = document.elementFromPoint((x0 + x1) / 2, (y0 + y1) / 2);
+  return !p || p === e || e.contains(p) ? null : p.tagName.toLowerCase();
+}"""
 
 
 def enquadrar(pg, alvo: str) -> str | None:
@@ -515,6 +530,26 @@ def enquadramento_no_edge(R, nav) -> None:
     finally:
         ctx.close()
     R.ok(por_cima is None, f"seco: o print põe o alvo à vista, fora de baixo da barra de baixo do celular ({por_cima or 'à vista'})")
+
+
+def nada_por_cima_no_edge(R, nav) -> None:
+    """--seco: a checagem do botão livre (JS_NADA_POR_CIMA) numa página de mentira a 390 × 844 — o caso do 4_app_aguardando de 11/10: o
+    aviso (toast) embaixo da tela, por cima do botão de baixo da folha, é pego; sem ele, o botão fica livre."""
+    ctx = nav.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    try:
+        pg = ctx.new_page()
+        pg.set_content("<meta name='viewport' content='width=device-width, initial-scale=1'><body style='margin:0'>"
+                       "<div style='position:fixed;left:0;right:0;bottom:0;height:260px;background:#111'>"
+                       "<button id='conferir' style='position:absolute;left:20px;right:20px;bottom:60px;height:44px'>Conferir pagamento</button></div>"
+                       "<ol><li data-sonner-toast style='position:fixed;left:16px;right:16px;bottom:40px;height:90px;background:#222;color:#fff'>"
+                       "Ainda não chegou a confirmação da InfinitePay</li></ol></body>")
+        com = pg.locator("#conferir").evaluate(JS_NADA_POR_CIMA)
+        pg.evaluate("document.querySelector('li').remove()")
+        sem = pg.locator("#conferir").evaluate(JS_NADA_POR_CIMA)
+    finally:
+        ctx.close()
+    R.ok(bool(com) and "toast" in str(com) and sem is None,
+         f"seco: o aviso (toast) por cima do botão de baixo da folha é pego ({com}); sem ele, o botão fica livre ({sem or 'livre'})")
 
 
 def botoes_no_edge(R, nav, base: str) -> None:
@@ -915,7 +950,14 @@ def passo_app_pagar(R) -> None:
     R.ok(lc == {"forma": "infinitepay", "status": "aguardando_confirmacao", "valor": valor_da_mensalidade(), "pedido": f"{c}-1"},
          f"no banco: a tentativa (InfinitePay, aguardando, {valor}) e o link 1 com o pedido <id>-1 ({lc and {k: lc[k] for k in ('forma', 'status', 'valor')}})")
     t.clicar("[data-ip-conferir]")
-    R.ok(t.esperar(lambda: AINDA_NAO in t.toasts(), 30), f"4. 'Conferir pagamento' → '{AINDA_NAO}…' (a API de verdade: não pago) ({t.toasts()[:100]!r})")
+    R.ok(t.esperar(lambda: AINDA_NAO in t.texto("[data-ip-aguardando] [data-ip-aviso]"), 30),
+         f"4. 'Conferir pagamento' → '{AINDA_NAO}…' na folha, acima do botão (a API de verdade: não pago) "
+         f"({t.texto('[data-ip-aviso]')[:100]!r} · toasts {t.toasts()[:60]!r})")
+    try:
+        por_cima = t.pg.locator("[data-ip-conferir]").first.evaluate(JS_NADA_POR_CIMA, timeout=5000)
+    except Exception as e:  # noqa: BLE001
+        por_cima = f"o botão sumiu ({type(e).__name__})"
+    R.ok(por_cima is None, f"4. nada por cima do 'Conferir pagamento' — nem aviso (toast) ({por_cima or 'livre'})")
     t.foto("4_app_aguardando", "[data-ip-aguardando]")
     R.ok(t.fechar_painel(), "4. a folha fecha")
     # a lista de Pagamentos é a do aluno_status (a folha não a relê): o aluno que volta à tela vê a tentativa aberta
@@ -1250,6 +1292,7 @@ def seco(R, a, base: str, producao: bool) -> int:
                 R.linha(f"   a /entrar não abriu: {type(e).__name__}: {str(e)[:160]}")
             ctx.close()
             enquadramento_no_edge(R, nav)
+            nada_por_cima_no_edge(R, nav)
             botoes_no_edge(R, nav, base)
         finally:
             nav.close()

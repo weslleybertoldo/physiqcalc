@@ -27,6 +27,13 @@ const MAT = (cobrancas: CobrancaVista[] = []) => ({
 }) as unknown as MatriculaPagamentos;
 const aoPago = vi.fn();
 const montar = (m = MAT()) => render(<PagarInfinitePay matricula={m} alvo={{ tipo: "mensalidade" }} aoFechar={() => {}} aoPago={aoPago} />);
+/** A frase das ações da folha sai DENTRO dela, acima do botão (11/10: o toast cobria o "Conferir pagamento" que ele mandava apertar). */
+const aviso = () => document.querySelector("[data-ip-aviso]");
+const acima = (botao: string) => !!aviso() && !!(aviso()!.compareDocumentPosition(document.querySelector(botao)!) & Node.DOCUMENT_POSITION_FOLLOWING);
+const semToastDaFolha = () => {
+  expect(h.toast.info).not.toHaveBeenCalled();
+  expect(h.toast.error).not.toHaveBeenCalled();
+};
 
 beforeEach(() => {
   for (const f of [h.link, h.conferir, h.abrir, h.aba.ir, h.aba.fechar, aoPago, h.toast.success, h.toast.error, h.toast.info]) f.mockReset();
@@ -42,29 +49,52 @@ describe("Pagar pela InfinitePay (W1)", () => {
     expect(h.link).toHaveBeenCalledWith("p1", undefined);
     expect(document.querySelector('[data-ip-aguardando="t1"]')?.textContent).toContain("Aguardando a confirmação da InfinitePay");
   });
-  it("a InfinitePay fora do ar ou recusando: fecha a aba e diz ao aluno, sem culpar a InfiniteTag", async () => {
+  it("a InfinitePay fora do ar ou recusando: fecha a aba e diz ao aluno na folha, acima do Pagar, sem culpar a InfiniteTag", async () => {
     h.link.mockRejectedValueOnce(new ErroFinanceiro("infinitepay_recusou"));
     montar();
     fireEvent.click(document.querySelector("[data-ip-pagar]")!);
-    await waitFor(() => expect(h.toast.error).toHaveBeenCalledWith("Não deu para abrir o pagamento agora. Avise o seu profissional."));
+    await waitFor(() => expect(aviso()?.textContent).toBe("Não deu para abrir o pagamento agora. Avise o seu profissional."));
+    expect(acima("[data-ip-pagar]")).toBe(true);
+    expect(aviso()?.getAttribute("role")).toBe("alert");
     expect(h.aba.fechar).toHaveBeenCalled();
+    semToastDaFolha();
   });
-  it("Conferir pagamento: pago → 'Pagamento confirmado!' e fecha; ainda não → a frase de esperar", async () => {
+  it("Conferir pagamento: ainda não → a frase de esperar na folha, acima do botão (nenhum toast por cima); pago → 'Pagamento confirmado!' e fecha", async () => {
     montar(MAT([TENTATIVA]));
     await waitFor(() => expect(document.querySelector("[data-ip-conferir]")).not.toBeNull());
+    expect(aviso()).toBeNull();
     fireEvent.click(document.querySelector("[data-ip-conferir]")!);
-    await waitFor(() => expect(h.toast.info).toHaveBeenCalled());
+    await waitFor(() => expect(aviso()?.textContent).toBe("Ainda não chegou a confirmação da InfinitePay. Se você já pagou, espere um pouco e confira de novo."));
+    expect(acima("[data-ip-conferir]")).toBe(true);
+    semToastDaFolha();
     h.conferir.mockResolvedValueOnce({ ok: true, paga: true, resultado: "baixar", cobranca: { ...TENTATIVA, status: "paga" } });
     fireEvent.click(document.querySelector("[data-ip-conferir]")!);
     await waitFor(() => expect(aoPago).toHaveBeenCalled());
     expect(h.toast.success).toHaveBeenCalledWith("Pagamento confirmado!");
   });
-  it("a tentativa venceu (o servidor devolve 'cancelada'): volta ao 'Pagar' (MENOR 14 da revisão)", async () => {
+  it("Conferir pagamento sem internet: 'Não deu para conferir agora.' na folha; o toque seguinte limpa a frase antes de conferir", async () => {
+    h.conferir.mockRejectedValueOnce(new Error("Failed to fetch"));
+    montar(MAT([TENTATIVA]));
+    await waitFor(() => expect(document.querySelector("[data-ip-conferir]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-ip-conferir]")!);
+    await waitFor(() => expect(aviso()?.textContent).toBe("Não deu para conferir agora."));
+    let soltar: (v: unknown) => void = () => {};
+    h.conferir.mockImplementationOnce(() => new Promise((ok) => { soltar = ok; }));
+    fireEvent.click(document.querySelector("[data-ip-conferir]")!);
+    await waitFor(() => expect(aviso()).toBeNull());
+    soltar({ ok: true, paga: false, resultado: "nao_pago_pedido", cobranca: TENTATIVA });
+    await waitFor(() => expect(aviso()?.textContent).toContain("Ainda não chegou a confirmação da InfinitePay"));
+    semToastDaFolha();
+  });
+  it("a tentativa venceu (o servidor devolve 'cancelada'): volta ao 'Pagar' com a frase na folha, acima dele (MENOR 14 da revisão)", async () => {
     h.conferir.mockResolvedValueOnce({ ok: true, paga: false, resultado: "em_andamento", cobranca: { ...TENTATIVA, status: "cancelada" } });
     montar(MAT([TENTATIVA]));
     await waitFor(() => expect(document.querySelector("[data-ip-conferir]")).not.toBeNull());
     fireEvent.click(document.querySelector("[data-ip-conferir]")!);
     await waitFor(() => expect(document.querySelector("[data-ip-pagar]")).not.toBeNull());
+    expect(aviso()?.textContent).toBe("Essa página de pagamento venceu. Toque em Pagar para abrir outra.");
+    expect(acima("[data-ip-pagar]")).toBe(true);
+    semToastDaFolha();
   });
   it("a tentativa que já existe abre direto em 'aguardando', com 'Abrir a página de novo'; a aba visível de novo confere", async () => {
     montar(MAT([TENTATIVA]));
