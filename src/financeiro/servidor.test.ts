@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { lerReferencia as lerReferenciaConta, referenciaConta } from "../../supabase-principal/functions/_shared/cobranca-regras";
 import {
@@ -160,4 +163,31 @@ describe("quem vê e quem mexe (spec 4.1 — P6)", () => {
     expect(podeVerCobranca(n, minha)).toBe(false);
     expect(podeMexerNaMensalidade(n)).toBe(false);
   });
+});
+
+import { retratoDoPlano as retratoServidor } from "../../supabase-principal/functions/_shared/planos-regras";
+import type { Matricula } from "../../supabase-principal/functions/_shared/financeiro-mp";
+
+describe("W-P: a matrícula carrega o plano com período", () => {
+  it("o retrato sai da matrícula como o servidor a carrega", () => {
+    const m = { plano_modalidade: "mensal", plano: { id: "p", nome: "Anual", meses: 12 } } as Pick<Matricula, "plano_modalidade" | "plano">;
+    expect(retratoServidor(m)).toEqual({ meses_cobertos: 1, parcelas_total: 12 });
+  });
+});
+
+it("P-A '1': a assinatura do aluno não manda data de fim (renova)", () => {
+  // Caminho pelo fileURLToPath, como nos outros testes de fonte: o Vite reescreve o new URL("…", import.meta.url) e o arquivo não abre.
+  const fonte = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
+  expect(fonte).not.toMatch(/end_date/);
+});
+
+it("hml-19 (H-55): o detalhe do pagamento no MP só mostra e-mail, nome no cartão e banco de quem pagou ao próprio aluno", () => {
+  const fonte = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
+  const trecho = fonte.slice(fonte.indexOf('acao === "detalhe_mp"'), fonte.indexOf("PROFISSIONAL ═"));
+  expect(trecho).toMatch(/const souOAluno = m!\.user_id === user\.id;/);
+  expect(trecho).toMatch(/payer_email: souOAluno && /);
+  expect(trecho).toMatch(/payer_nome: souOAluno \?/);
+  expect(trecho).toMatch(/banco_pagador: souOAluno \?/);
+  expect(trecho).toMatch(/e2e_id: souOAluno \?/);
+  expect(trecho).toMatch(/card_last4: pay\.card\?\.last_four_digits/);
 });

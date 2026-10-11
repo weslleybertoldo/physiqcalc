@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown, ChevronUp, CircleCheck, Clock, Receipt, Search, Users, Wallet } from "lucide-react";
 import ComprovantePixCard, { BadgePagamento } from "@/components/admin/ComprovantePixCard";
 import { badgeDoAluno, ErroFinanceiro } from "@/financeiro/api";
+import { ehModalidade, sufixoDoValor } from "@/financeiro/planos";
 import { mensagemErroFinanceiro, reais } from "@/financeiro/regras";
 import type { AlunoResumo } from "@/financeiro/tipos";
 import { Avatar } from "@/ui/premium/Avatar";
@@ -202,7 +203,8 @@ function LinhaAluno({ a, selo, aoCobranca, aoComprovante, semValor }: {
         <p className="truncate text-[12px] text-texto-3">{a.email}</p>
         {!semValor && (
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] font-semibold tabular-nums text-texto">{reais(Number(a.mensalidade_valor))}/mês</span>
+            {/* W-P: "/mês" no modo de hoje (modalidade nula) e no mês a mês; "/ano" ou " por N meses" no plano de período */}
+            <span className="text-[12px] font-semibold tabular-nums text-texto">{reais(Number(a.mensalidade_valor))}{sufixoDoValor(ehModalidade(a.modalidade) ? a.modalidade : null, a.meses)}</span>
             {a.plano && <Chip tom="t" className="h-[22px] text-[10.5px]">{a.plano.toUpperCase()}</Chip>}
             {selo ? <BadgePagamento badge={selo} /> : <Chip tom="g" className="h-[22px] text-[10.5px]" data-cobranca-parada>COBRANÇA PARADA</Chip>}
             {a.aguardando && (

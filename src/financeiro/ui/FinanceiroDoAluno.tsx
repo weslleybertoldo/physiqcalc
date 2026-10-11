@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDownCircle, ArrowUpCircle, Ban, Banknote, Eye, FileDown, Pause, Play, Plus, ReceiptText, Repeat, Save, Settings2, Tags, Trash2, Undo2, Wallet } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Ban, Banknote, Eye, FileDown, Pause, Play, Plus, ReceiptText, Repeat, Settings2, Tags, Trash2, Undo2, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
-import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
 import { useSessao } from "@/nucleo/sessao";
 import { supabase } from "@/integrations/supabase/client";
 import ComprovantePixCard from "@/components/admin/ComprovantePixCard";
@@ -19,14 +17,15 @@ import { criarLancamento, garantirCategorias, paginaLancamentosDoAluno, rotuloMe
 import { excluirRecibo, formatarDataRecibo, formatarNumeroRecibo, paginaRecibosDoAluno, podeEmitirRecibo, type Recibo } from "../recibos";
 import { LANCAMENTOS_VISIVEIS, rotaDosLancamentosDoAluno } from "@/painel/aluno/dados/regras";
 import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
-import { pdfDoRecibo } from "@/painel/financeiro/pdfRecibo";
 import ReciboDialog from "@/painel/financeiro/ReciboDialog";
 import { useFinanceiroConta } from "@/painel/financeiro/useFinanceiro";
-import { chipDaMensalidade, dataBR, estadoDaMensalidade, hojeSP, lerValor, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
+import { precisaRenovar, sufixoDoValor } from "../planos";
+import { chipDaMensalidade, dataBR, ehPeriodoTodo, estadoDaMensalidade, hojeSP, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
 import { ComprovanteVisor } from "./ComprovanteVisor";
 import { DialogoLancamento, DialogoNovaCobranca, DialogoRegistrar } from "./Dialogos";
 import { LinhaCobranca } from "./LinhaCobranca";
+import { FormPlanoDoAluno } from "./PlanoDoAluno";
 import { TagsDoAluno } from "./TagsDoAluno";
 import { chaveFinanceiroDoAluno, useFinanceiroDoAluno, usePaginaDoAluno } from "./useFinanceiroDoAluno";
 
@@ -114,16 +113,9 @@ export function FinanceiroDoAluno({ alunoId, compacto = false }: { alunoId: stri
 function CartaoMensalidade({ d, agir }: { d: FinanceiroProfissional; agir: ReturnType<typeof useFinanceiroDoAluno>["agir"] }) {
   const m = d.mensalidade;
   const confirmar = useConfirmar();
-  const [plano, setPlano] = useState(m?.plano_id ?? "");
-  const [planoNovo, setPlanoNovo] = useState("");
-  const [valor, setValor] = useState(m ? valorNoCampo(m.valor) : "");
-  const [erro, setErro] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  useEffect(() => {
-    setPlano(d.mensalidade?.plano_id ?? "");
-    setValor(d.mensalidade ? valorNoCampo(d.mensalidade.valor) : "");
-  }, [d.mensalidade]);
 
+  // W-P (decisão do Weslley 10/10, ponto 1): plano, valor, modalidade e parcela são só do dono e do master — o mesmo aviso da
+  // mensalidade de sempre, sem o formulário do plano (o prof_aluno também não manda os planos nem a mensalidade para os outros)
   if (!d.permissoes.mensalidade) {
     return (
       <Cartao brilho className="p-5" data-cartao-mensalidade="sem-permissao">
@@ -134,59 +126,32 @@ function CartaoMensalidade({ d, agir }: { d: FinanceiroProfissional; agir: Retur
   }
   const e = estadoDaMensalidade(m ? { valor: m.valor, pausada: m.pausada, pago_ate: m.pago_ate, desde: m.desde, aguardando: d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao") } : null);
   const chip = chipDaMensalidade(e);
-  const salvar = async (ev: FormEvent) => {
-    ev.preventDefault();
-    const v = valor.trim() ? lerValor(valor) : null;
-    if (valor.trim() && !v) return setErro("Valor inválido.");
-    if (plano === "__novo__" && !planoNovo.trim()) return setErro("Dê um nome ao plano novo.");
-    setSalvando(true);
-    setErro("");
-    const r = await agir("prof_definir", {
-      aluno: d.aluno.paciente_id, valor: v, ...(plano === "__novo__" ? { plano_novo: planoNovo.trim() } : { plano_aluno_id: plano || null }),
-    }, "Plano e mensalidade salvos.");
-    setSalvando(false);
-    if (r) {
-      setPlanoNovo("");
-      espelharNoTreino(d.aluno.treino_user_id, plano === "__novo__" ? planoNovo.trim() : d.planos.find((p) => p.id === plano)?.nome ?? null, v);
-    }
-  };
   return (
     <Cartao brilho className="flex flex-col p-5" data-cartao-mensalidade={e.situacao}>
-      <CabecalhoCartao titulo="Mensalidade" extra={m ? <Chip tom="g">{reaisCurto(m.valor)}/MÊS</Chip> : undefined} className="mb-2" />
+      <CabecalhoCartao titulo="Mensalidade" extra={m ? <Chip tom="g">{reaisCurto(m.valor)}{sufixoDoValor(m.modalidade ?? null, m.meses).toUpperCase()}</Chip> : undefined} className="mb-2" />
       {/* a situação numa linha própria: "Aguardando confirmação" não cabe no cabeçalho do cartão estreito */}
       <div className="mb-3.5"><Chip tom={chip.tom} data-chip-mensalidade>{chip.texto}</Chip></div>
-      <form onSubmit={salvar} className="flex flex-col gap-3" data-form-mensalidade>
-        <CampoSelect rotulo="Plano do aluno" value={plano} onChange={(ev) => { setPlano(ev.target.value); setErro(""); }} data-mensalidade-plano>
-          <option value="">Sem plano</option>
-          {d.planos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-          <option value="__novo__">+ Criar novo plano…</option>
-        </CampoSelect>
-        {plano === "__novo__" && <Campo rotulo="Nome do plano novo" maxLength={80} value={planoNovo} onChange={(ev) => setPlanoNovo(ev.target.value)} placeholder="Ex.: Consultoria mensal" data-mensalidade-plano-novo />}
-        <Campo rotulo="Mensalidade (R$)" inputMode="decimal" value={valor} onChange={(ev) => { setValor(ev.target.value); setErro(""); }} placeholder="Vazio = sem cobrança" data-mensalidade-valor />
-        {erro && <MensagemForm>{erro}</MensagemForm>}
-        <div className="flex flex-wrap gap-2">
-          <Botao type="submit" variante="w" icone={Save} disabled={salvando} data-mensalidade-salvar>{salvando ? "Salvando…" : "Salvar"}</Botao>
-          {m && (m.pausada ? (
+      <FormPlanoDoAluno d={d} agir={agir} aoSalvo={(planoNome, valor) => espelharNoTreino(d.aluno.treino_user_id, planoNome, valor)} />
+      {m && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {m.pausada ? (
             <Botao icone={Play} onClick={() => void agir("prof_pausar", { aluno: d.aluno.paciente_id, pausar: false }, "Cobrança reativada.")} data-mensalidade-reativar>Reativar cobrança</Botao>
           ) : (
             <Botao icone={Pause} onClick={() => void confirmar({ titulo: "Parar a cobrança pelo app?", descricao: "O aluno deixa de ver a pendência e o Pagar.", rotuloConfirmar: "Parar" })
               .then((sim) => { if (sim) void agir("prof_pausar", { aluno: d.aluno.paciente_id, pausar: true }, "Cobrança parada."); })} data-mensalidade-parar>Não cobrar pelo app</Botao>
-          ))}
+          )}
         </div>
-      </form>
+      )}
       <div className="mt-4 border-t border-linha pt-3 text-[12.5px] text-texto-2" data-mensalidade-situacao>
         {m ? <p><b className="font-semibold text-texto">{textoDoVencimento(e).replace(/^./, (x) => x.toUpperCase())}</b>{e.coberta && m.pago_ate && e.situacao !== "em_dia" ? ` · coberto até ${dataBR(m.pago_ate)}` : ""}</p> : <p>Sem mensalidade: o aluno não vê cobrança mensal.</p>}
+        {m?.parcela && <p className="mt-1.5" data-mensalidade-parcela>Próximo pagamento: parcela {m.parcela.num} de {m.parcela.total}</p>}
+        {/* só no plano do período todo: o de 1 mês (à vista = mês a mês, B2) fala de mensalidade */}
+        {m && ehPeriodoTodo(m.modalidade ?? null, m.meses) && precisaRenovar(m.modalidade ?? null, e.situacao, m.pago_ate) && <p className="mt-1.5 font-semibold text-ambar-3" data-mensalidade-renovar>Hora de renovar o plano</p>}
         <p className="mt-1.5 flex items-start gap-1.5"><Wallet aria-hidden className="mt-[2px] h-3.5 w-3.5 flex-none" /> <span className="min-w-0 break-words">{MODO_TEXTO[d.conta.modo] ?? d.conta.modo}{d.conta.modo === "pix_manual" && d.conta.chave ? ` · ${d.conta.chave.chave}` : d.conta.modo === "pix_manual" ? " · sem chave ativa" : ""}</span></p>
         {d.permissoes.dono && <Link to="/painel/configuracoes/recebimento" className="mt-1.5 inline-flex items-center gap-1.5 font-semibold text-violeta-3" data-link-recebimento><Settings2 aria-hidden className="h-3.5 w-3.5" /> Configurar o recebimento</Link>}
       </div>
     </Cartao>
   );
-}
-
-/** 99.9 → "99,90" (o campo mostra o valor com os centavos, como o aluno vê). */
-function valorNoCampo(v: number | string): string {
-  const n = Number(v);
-  return Number.isFinite(n) ? n.toFixed(2).replace(".", ",") : String(v);
 }
 
 /** Mantém o plano e o valor também no Banco do Treino (a lista antiga de alunos e o cabeçalho leem de lá até a W13/W14). */
@@ -359,6 +324,8 @@ function CartaoLancamentosERecibos({ d, compacto, reciboAvulso, aoFecharReciboAv
   };
   const pdf = async (r: { numero: number; valor: number | string; data: string; descricao: string; texto: string; nutricionista_id: string }) => {
     try {
+      // hml-18b (velocidade): o módulo do recibo em PDF só é baixado no clique, não com a ficha do aluno
+      const { pdfDoRecibo } = await import("@/painel/financeiro/pdfRecibo");
       await pdfDoRecibo(fin, { ...r, valor: Number(r.valor) }, d.aluno.nome);
     } catch {
       toast.error("Não deu para gerar o PDF agora.");

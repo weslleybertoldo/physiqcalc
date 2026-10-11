@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { CardPayment } from "@mercadopago/sdk-react";
 import { CreditCard, Repeat } from "lucide-react";
 import { MP_PUBLIC_KEY, ensureMpInit } from "@/components/pagamentos/mpInit";
@@ -9,11 +9,13 @@ export interface DadosCartao {
   token?: string;
   payment_method_id?: string;
   issuer_id?: string | number;
+  installments?: number;
 }
 
 /**
  * Cartão pelo Card Payment Brick do Mercado Pago (o número do cartão nunca passa pelo nosso servidor — só o token), num
- * painel deslizante do visual premium, tema escuro. Serve o cartão à vista e a cobrança automática (assinatura mensal).
+ * painel deslizante do visual premium, tema escuro. Serve o cartão à vista (W-P I6: em até N parcelas no cartão parcelado)
+ * e a cobrança automática (assinatura mensal, sempre 1×).
  */
 export function CartaoPagamento({
   aberto,
@@ -23,6 +25,7 @@ export function CartaoPagamento({
   email,
   descricao,
   aoEnviar,
+  maxParcelas = 1,
 }: {
   aberto: boolean;
   aoMudar: (v: boolean) => void;
@@ -32,11 +35,28 @@ export function CartaoPagamento({
   descricao: string;
   /** deve LANÇAR em erro — o Brick mostra a falha */
   aoEnviar: (dados: DadosCartao) => Promise<void>;
+  /** W-P (I6): até quantas parcelas (cartão parcelado); padrão 1 */
+  maxParcelas?: number;
 }) {
   useEffect(() => {
     if (aberto) ensureMpInit();
   }, [aberto]);
   const Icone = modo === "assinar" ? Repeat : CreditCard;
+  const parcelas = modo === "assinar" ? 1 : Math.max(1, Math.min(12, maxParcelas));
+  // O CardPayment reinicia o Brick sempre que uma destas props muda de identidade (o useEffect dele): ficam as mesmas entre os renders.
+  // Fechar o painel re-renderiza durante a saída; a reinicialização atrasada (200 ms) não achava mais o container ("Could not find the
+  // Brick container ID") e o erro sem dono ia para o aviso de erro do app (E2E de tela da W-P). Valor e parcelas trocam pela key.
+  const initialization = useMemo(() => ({ amount: valor, payer: { email } }), [valor, email]);
+  const customization = useMemo(() => ({
+    paymentMethods: { maxInstallments: parcelas },
+    visual: { style: { theme: "dark" as const, customVariables: { baseColor: "#8B5CF6", formBackgroundColor: "#0f0f12", borderRadiusLarge: "16px" } } },
+  }), [parcelas]);
+  const enviar = useRef(aoEnviar);
+  useEffect(() => {
+    enviar.current = aoEnviar;
+  }, [aoEnviar]);
+  const aoSubmeter = useCallback((form: unknown) => enviar.current(form as DadosCartao), []);
+  const aoErro = useCallback((e: unknown) => console.error("[Brick] erro", e), []);
   return (
     <PainelDeslizante
       aberto={aberto}
@@ -51,21 +71,18 @@ export function CartaoPagamento({
             <Icone aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.8} />
           </span>
           <span className="min-w-0 flex-1 text-[13px] text-texto-2">
-            {modo === "assinar" ? "Todo mês, no mesmo dia" : "Pagamento único"}
+            {modo === "assinar" ? "Todo mês, no mesmo dia" : parcelas > 1 ? `Em até ${parcelas}× no cartão` : "Pagamento único"}
             <b className="block text-[17px] font-bold tabular-nums tracking-[-0.02em] text-texto">{reais(valor)}{modo === "assinar" ? "/mês" : ""}</b>
           </span>
         </div>
         {MP_PUBLIC_KEY ? (
           <div className="overflow-hidden rounded-2xl" data-brick-mp>
             <CardPayment
-              key={`${modo}-${valor}`}
-              initialization={{ amount: valor, payer: { email } }}
-              customization={{
-                paymentMethods: { maxInstallments: 1 },
-                visual: { style: { theme: "dark", customVariables: { baseColor: "#8B5CF6", formBackgroundColor: "#0f0f12", borderRadiusLarge: "16px" } } },
-              }}
-              onSubmit={(form) => aoEnviar(form as unknown as DadosCartao)}
-              onError={(e) => console.error("[Brick] erro", e)}
+              key={`${modo}-${valor}-${parcelas}`}
+              initialization={initialization}
+              customization={customization}
+              onSubmit={aoSubmeter}
+              onError={aoErro}
             />
           </div>
         ) : (

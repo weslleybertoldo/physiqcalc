@@ -1,7 +1,8 @@
 // Physiq W6 — regras PURAS da cobrança aluno → profissional na tela (spec §4.3, §4.5, §9; R15, R16, A13). Sem rede e sem
 // banco: testadas em src/financeiro/regras.test.ts. A régua da mensalidade é a do Calc (src/lib/cobertura.ts, a mesma do
 // banco — mensalidade_recalcular): cada pagamento cobre 1 mês; "em dia" = a cobertura passa de agora.
-import type { CobrancaVista, ModoRecebimento, ResumoMatricula } from "./tipos";
+import type { CobrancaVista, ModoRecebimento, PlanoSalvo, ResumoMatricula } from "./tipos";
+import type { Modalidade } from "./planos";
 
 // ───────────────────────── datas (relógio de São Paulo) ─────────────────────────
 
@@ -202,6 +203,24 @@ export function formasDePagar(modo: ModoRecebimento, temChave: boolean): string 
   return "combine com seu profissional";
 }
 
+// ───────────────────────── o plano do período todo (W-P) ─────────────────────────
+
+/**
+ * W-P: o plano do período todo — à vista ou cartão parcelado com mais de 1 mês (cada pagamento cobre o período inteiro). Nele a
+ * faixa do topo e o painel de pagar falam do plano; no mês a mês, no plano de 1 mês (o "/mês" da tela — B2) e no modo de hoje, da
+ * mensalidade.
+ */
+export function ehPeriodoTodo(modalidade: Modalidade | null | undefined, meses: number | null | undefined): boolean {
+  return (modalidade === "avista" || modalidade === "cartao_parcelado") && (Number(meses) || 1) > 1;
+}
+
+/** Título do painel de pagar a mensalidade (Pix na chave e Mercado Pago): "Pagar a mensalidade" / "Adiantar a mensalidade"; no
+ *  período todo, "Pagar o plano" / "Renovar o plano". */
+export function tituloDoPagar(m: { modalidade?: Modalidade | null; meses?: number | null } | null | undefined, adiantar = false): string {
+  if (ehPeriodoTodo(m?.modalidade, m?.meses)) return adiantar ? "Renovar o plano" : "Pagar o plano";
+  return adiantar ? "Adiantar a mensalidade" : "Pagar a mensalidade";
+}
+
 // ───────────────────────── faixa do topo (Início / aba de abertura — tela 1; A13) ─────────────────────────
 
 export interface Faixa {
@@ -219,6 +238,8 @@ export interface Faixa {
 /**
  * "Sua mensalidade vence em 3 dias · R$ 249,00 · Pix ou cartão · Pagar" — de 7 dias antes até pagar; vencida fica vermelha
  * (spec 4.3). Cobrança avulsa (Nutri) entra do mesmo jeito. O mais urgente primeiro; aguardando a confirmação não mostra.
+ * W-P: no plano do período todo (ehPeriodoTodo) a faixa fala do plano ("Seu plano vence em 3 dias"); no mês a mês, no plano de
+ * 1 mês e no modo de hoje, da mensalidade.
  */
 export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora: Date = new Date()): Faixa | null {
   const hoje = hojeSP(agora);
@@ -242,7 +263,7 @@ export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora:
     } else if (e.situacao === "vence_em_breve" || e.situacao === "vencida" || e.situacao === "pendente") {
       candidatas.push({
         tom: e.situacao === "vence_em_breve" ? "a" : "r",
-        titulo: `Sua mensalidade ${textoDoVencimento(e)}`,
+        titulo: ehPeriodoTodo(r.modalidade, r.plano_meses) ? `Seu plano ${textoDoVencimento(e)}` : `Sua mensalidade ${textoDoVencimento(e)}`,
         subtitulo: `${reais(e.valor)} · ${formas}`,
         podePagar: pagar,
         alvo: { tipo: "mensalidade" },
@@ -420,8 +441,42 @@ export const MENSAGEM_ERRO_FINANCEIRO: Record<string, string> = {
   rate_limited: "Muitas tentativas. Tente em alguns minutos.",
   conta_real_no_staging: "Este é o ambiente de teste: só contas de teste entram.",
   nao_e_do_app: "Esta mensalidade não é do plano do app.",
+  // W-P — os planos do aluno (aba Planos e a ficha do aluno)
+  nome_invalido: "Dê um nome ao plano (até 80 letras).",
+  meses_invalido: "A duração vai de 1 a 24 meses.",
+  modalidades_invalidas: "Marque pelo menos uma forma de pagar.",
+  modalidade_da_conta: "Essa forma de pagar não é aceita pelo seu recebimento.",
+  parcelas_invalidas: "Escolha de 2 a 12 parcelas.",
+  parcela_sem_mensal: "A parcela é só do mês a mês.",
+  parcela_invalida: "Parcela inválida.",
+  nome_repetido: "Já existe um plano com esse nome (mesmo desativado).",
+  modalidade_em_uso: "Há alunos nessa forma de pagar. Passe-os para outra antes de tirar.",
+  modalidade_indisponivel: "Essa forma de pagar não está neste plano.",
+  modalidade_invalida: "Escolha como o aluno vai pagar.",
+  modalidade_sem_automatica: "A cobrança automática é só no mês a mês.",
+  automatica_ativa: "O aluno tem a cobrança automática ligada.",
+  aluno_em_plano_novo: "Este aluno está num plano com período. Atualize o app para mudar.",
+  planos_indisponivel: "Os planos ainda não chegaram a este ambiente.",
+  conta_do_app: "Os planos do app são do Physiq.",
 };
 
 export function mensagemErroFinanceiro(codigo: string | null | undefined, padrao = "Não deu certo agora. Tente de novo."): string {
   return (codigo && MENSAGEM_ERRO_FINANCEIRO[codigo]) || padrao;
+}
+
+/**
+ * W-P — a frase depois de salvar um plano, pelo que o prof_plano_salvar diz das cobranças automáticas de quem segue o plano: a fila da
+ * Task 8b (decisão do Weslley 10/10, ponto 2 — `{ enfileiradas }`) ou a troca na hora da função de antes (`{ atualizadas, falharam }`;
+ * ela pode seguir publicada por um tempo e o schema sem a fila cai nela). Nada mudou nas automáticas → null.
+ */
+export function avisoDasAutomaticas(r: Partial<PlanoSalvo> | null | undefined): string | null {
+  const a: NonNullable<PlanoSalvo["automaticas"]> = r?.automaticas ?? {};
+  if ((Number(r?.enfileiradas ?? a.enfileiradas) || 0) > 0) return "As cobranças automáticas dos alunos vão ser atualizadas em instantes.";
+  const falharam = Number(a.falharam) || 0;
+  if (falharam > 0) {
+    return falharam === 1
+      ? "Não deu para mudar a cobrança automática de 1 aluno. Confira no financeiro dele."
+      : `Não deu para mudar a cobrança automática de ${falharam} alunos. Confira no financeiro de cada um.`;
+  }
+  return (Number(a.atualizadas) || 0) > 0 ? "As cobranças automáticas dos alunos já estão com o valor novo." : null;
 }

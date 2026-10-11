@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, LayoutDashboard, Plus, ReceiptText, Tags, Users, Wallet } from "lucide-react";
+import { ArrowLeftRight, Layers, LayoutDashboard, Plus, ReceiptText, Tags, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TopoPagina } from "@/ui/casca/topo";
 import { Botao } from "@/ui/premium/Botao";
 import { EstadoVazio } from "@/ui/premium/Estados";
 import AbaCategorias, { CategoriasDialog } from "@/painel/financeiro/Categorias";
-import { abaDaUrl, type IdAba } from "@/painel/financeiro/financeiroUtil";
+import { abaDaUrl, abaVisivel, type IdAba } from "@/painel/financeiro/financeiroUtil";
 import Lancamentos from "@/painel/financeiro/Lancamentos";
 import Mensalidades from "@/painel/financeiro/Mensalidades";
 import MovimentacaoDialog from "@/painel/financeiro/MovimentacaoDialog";
+import Planos from "@/painel/financeiro/Planos";
 import Recibos from "@/painel/financeiro/Recibos";
 import Resumo from "@/painel/financeiro/Resumo";
 import { useFinanceiroConta, useResumoDaConta } from "@/painel/financeiro/useFinanceiro";
@@ -19,6 +20,7 @@ import { useFinanceiroConta, useResumoDaConta } from "@/painel/financeiro/useFin
 const ABAS: { id: IdAba; rotulo: string; icone: LucideIcon }[] = [
   { id: "resumo", rotulo: "Resumo", icone: LayoutDashboard },
   { id: "mensalidades", rotulo: "Mensalidades", icone: Users },
+  { id: "planos", rotulo: "Planos", icone: Layers },
   { id: "lancamentos", rotulo: "Lançamentos", icone: ArrowLeftRight },
   { id: "recibos", rotulo: "Recibos", icone: ReceiptText },
   { id: "categorias", rotulo: "Categorias", icone: Tags },
@@ -29,15 +31,19 @@ const ABAS: { id: IdAba; rotulo: string; icone: LucideIcon }[] = [
  * aberto, vencido, "Receita" e "Cobranças do mês"), Mensalidades (o que a tela "Cobrança" do Calc fazia: comprovantes Pix para
  * confirmar ou recusar), Lançamentos (o Financeiro do Nutri: entradas e saídas por categoria e forma, período, estorno), Recibos (modelos
  * ★ e numeração) e Categorias. Quem vê o quê (4.1, P6): o dono vê e edita tudo da conta; cada profissional, o que é dele.
+ * W-P: Planos (os planos que a conta oferece aos alunos) — só para o dono e o master, como a mensalidade (decisão do Weslley 10/10,
+ * ponto 1): o mesmo `dono` do prof_resumo que esconde a mensalidade de quem não é dono (o servidor conta o master), e o papel de dono
+ * da conta ativa para a aba aparecer sem esperar o resumo. Para os outros a aba não aparece e o ?aba=planos abre o Resumo.
  */
 export default function Financeiro() {
   const f = useFinanceiroConta();
   const qc = useQueryClient();
   const [sp, setSp] = useSearchParams();
-  const aba = abaDaUrl(sp);
+  const resumo = useResumoDaConta(f);
+  const donoOuMaster = f.dono || resumo.data?.dono === true;
+  const aba = abaDaUrl(sp, donoOuMaster);
   const [nova, setNova] = useState(false);
   const [categoriasAberto, setCategoriasAberto] = useState(false);
-  const resumo = useResumoDaConta(f);
   const comprovantes = resumo.data?.pendentes.length ?? 0;
 
   const irPara = (id: IdAba, extra: Record<string, string> = {}) => {
@@ -64,7 +70,7 @@ export default function Financeiro() {
         acoes={<Botao variante="w" icone={Plus} onClick={() => setNova(true)} data-nova-movimentacao>Nova movimentação</Botao>} />
 
       <nav aria-label="Abas do financeiro" data-abas-financeiro className="pq-sem-barra flex gap-1 overflow-x-auto border-b border-linha">
-        {ABAS.map((a) => {
+        {ABAS.filter((a) => abaVisivel(a.id, donoOuMaster)).map((a) => {
           const ativa = a.id === aba;
           const Icone = a.icone;
           return (
@@ -94,6 +100,7 @@ export default function Financeiro() {
       <div className="mt-4 min-w-0">
         {aba === "resumo" && <Resumo f={f} irPara={irPara} />}
         {aba === "mensalidades" && <Mensalidades f={f} focarComprovantes={sp.get("ver") === "comprovantes"} />}
+        {aba === "planos" && <Planos f={f} />}
         {aba === "lancamentos" && <Lancamentos f={f} params={sp} setParams={setSp} aoNova={() => setNova(true)} />}
         {aba === "recibos" && <Recibos f={f} />}
         {aba === "categorias" && (

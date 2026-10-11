@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Copy, CreditCard, FlaskConical, Loader2, QrCode, RefreshCw, Repeat, TimerOff } from "lucide-react";
 import { toast } from "sonner";
 import { acaoFinanceiro, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
-import { dataHoraBR, mensagemErroFinanceiro, reais } from "@/financeiro/regras";
+import { dataHoraBR, mensagemErroFinanceiro, reais, tituloDoPagar } from "@/financeiro/regras";
 import type { CobrancaVista, MatriculaPagamentos } from "@/financeiro/tipos";
 import { CartaoPagamento, type DadosCartao } from "@/painel/configuracoes/plano/CartaoPagamento";
 import { useSessao } from "@/nucleo/sessao";
@@ -16,6 +16,9 @@ const INTERVALO_MS = 5000;
  * Pagar pelo Mercado Pago (as contas liberadas pelo master — C99): Pix do MP (QR e copia e cola de 72 h; a tela confere a cada
  * 5 s e no "Já paguei"), cartão à vista (Brick — o número do cartão nunca passa pelo nosso servidor) e, na mensalidade, a
  * cobrança automática mensal no cartão. No staging, "Simular aprovação" (o Pix do sandbox não se paga).
+ * W-P: no plano em cartão parcelado, o cartão vai até o máximo de parcelas do plano (I6 — o servidor confere as `installments`); a
+ * automática só aparece onde a modalidade aceita (B2: mês a mês, plano de 1 mês e o modo de hoje); no período todo o título é
+ * "Pagar o plano" (tituloDoPagar).
  */
 export function PagarMercadoPago({
   matricula,
@@ -38,6 +41,9 @@ export function PagarMercadoPago({
   const avisou = useRef(false);
   const valor = alvo?.tipo === "avulsa" ? Number(alvo.cobranca.valor) : Number(matricula.mensalidade?.valor ?? 0);
   const corpoAlvo = { paciente_id: matricula.paciente_id, ...(alvo?.tipo === "avulsa" ? { cobranca_id: alvo.cobranca.id } : {}) };
+  // W-P: o cartão parcelado vai até o máximo do plano (I6); a automática só onde a modalidade aceita (B2)
+  const maxParcelas = alvo?.tipo === "mensalidade" ? matricula.mensalidade?.max_parcelas ?? 1 : 1;
+  const podeAutomatica = alvo?.tipo === "mensalidade" && (matricula.mensalidade?.automatica ?? true);
   const vencido = !!pix?.pix_expira_em && new Date(pix.pix_expira_em).getTime() < Date.now();
 
   useEffect(() => {
@@ -115,7 +121,10 @@ export function PagarMercadoPago({
         aoPago();
         return;
       }
-      const r = await acaoFinanceiro<{ status: string }>("aluno_mp_cartao", { ...corpoAlvo, card_token: d.token, payment_method_id: d.payment_method_id, issuer_id: d.issuer_id });
+      const r = await acaoFinanceiro<{ status: string }>("aluno_mp_cartao", {
+        ...corpoAlvo, card_token: d.token, payment_method_id: d.payment_method_id, issuer_id: d.issuer_id,
+        installments: Number(d.installments) || 1,
+      });
       setCartao(null);
       if (r.status === "paga") pago("Pagamento aprovado!");
       else if (r.status === "cancelada" || r.status === "aberta") toast.error("Pagamento recusado pelo cartão.");
@@ -129,7 +138,7 @@ export function PagarMercadoPago({
     }
   };
 
-  const titulo = alvo?.tipo === "avulsa" ? alvo.cobranca.descricao : "Pagar a mensalidade";
+  const titulo = alvo?.tipo === "avulsa" ? alvo.cobranca.descricao : tituloDoPagar(matricula.mensalidade);
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(pix?.pix_copia_cola ?? "");
@@ -148,8 +157,10 @@ export function PagarMercadoPago({
               <Botao variante="w" icone={QrCode} className="w-full" disabled={gerando} onClick={() => void gerarPix()} data-mp-gerar-pix>
                 {gerando ? "Gerando o Pix…" : `Pagar ${reais(valor)} com Pix`}
               </Botao>
-              <Botao variante="g" icone={CreditCard} className="w-full" onClick={() => setCartao("avista")} data-mp-cartao>Pagar com cartão</Botao>
-              {alvo?.tipo === "mensalidade" && !matricula.assinatura?.status?.match(/authorized/) && (
+              <Botao variante="g" icone={CreditCard} className="w-full" onClick={() => setCartao("avista")} data-mp-cartao>
+                {maxParcelas > 1 ? `Pagar com cartão (até ${maxParcelas}×)` : "Pagar com cartão"}
+              </Botao>
+              {podeAutomatica && !matricula.assinatura?.status?.match(/authorized/) && (
                 <Botao variante="g" icone={Repeat} className="w-full" onClick={() => setCartao("assinar")} data-mp-assinar>Cobrança automática todo mês</Botao>
               )}
             </div>
@@ -186,8 +197,9 @@ export function PagarMercadoPago({
         modo={cartao === "assinar" ? "assinar" : "avista"}
         valor={valor}
         email={usuario?.email ?? ""}
-        descricao={cartao === "assinar" ? "Todo mês no mesmo dia, até você cancelar." : "Pagamento único no cartão."}
+        descricao={cartao === "assinar" ? "Todo mês no mesmo dia, até você cancelar." : maxParcelas > 1 ? `À vista ou em até ${maxParcelas}× no cartão.` : "Pagamento único no cartão."}
         aoEnviar={pagarCartao}
+        maxParcelas={cartao === "assinar" ? 1 : maxParcelas}
       />
     </>
   );

@@ -5,6 +5,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
@@ -18,6 +19,8 @@ const h = vi.hoisted(() => ({
   // hml-17 (H-39): as categorias do diálogo de lançamento (garantirCategorias)
   categorias: vi.fn(),
   agir: vi.fn(async () => null),
+  // hml-18b: o recibo em PDF (carregado só no clique — import() dentro do handler)
+  pdf: vi.fn<(...a: unknown[]) => Promise<void>>(async () => undefined),
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-dono" } }) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabase: { functions: { invoke: vi.fn(async () => ({ error: null })) } } }));
@@ -25,7 +28,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/components/admin/ComprovantePixCard", () => ({ default: () => null }));
 vi.mock("@/painel/financeiro/ModelosReciboDialog", () => ({ default: () => null }));
 vi.mock("@/painel/financeiro/ReciboDialog", () => ({ default: () => null }));
-vi.mock("@/painel/financeiro/pdfRecibo", () => ({ pdfDoRecibo: vi.fn() }));
+vi.mock("@/painel/financeiro/pdfRecibo", () => ({ pdfDoRecibo: (...a: unknown[]) => h.pdf(...a) }));
 vi.mock("@/painel/financeiro/useFinanceiro", () => ({
   useFinanceiroConta: () => ({ modelos: { data: [] }, ultimo: { data: 0 }, nomeProfissional: "Lucas", padrao: null, recarregar: vi.fn(async () => {}) }),
 }));
@@ -111,6 +114,9 @@ beforeEach(() => {
   h.categorias.mockReset();
   h.categorias.mockResolvedValue([]);
   h.agir.mockClear();
+  h.pdf.mockReset();
+  h.pdf.mockResolvedValue(undefined);
+  vi.mocked(toast.error).mockClear();
 });
 
 describe("Financeiro do aluno — os 3 'Ver todos' em páginas do banco (hml-14d, P7)", () => {
@@ -158,6 +164,17 @@ describe("Financeiro do aluno — os 3 'Ver todos' em páginas do banco (hml-14d
     fireEvent.click(document.querySelector('[data-ver-todos="recibos-aluno"]')!);
     await waitFor(() => expect(itens("aluno-recibos")).toHaveLength(20));
     expect(document.querySelector('[data-paginacao="aluno-recibos"]')?.getAttribute("data-total")).toBe("41");
+  });
+
+  it("o PDF do recibo (carregado só no clique, hml-18b): gera com o recibo e o nome do aluno; falhou → o aviso de sempre", async () => {
+    montar();
+    await waitFor(() => expect(document.querySelectorAll("[data-cartao-recibos] [data-recibo]")).toHaveLength(12));
+    const botao = () => document.querySelector('[data-cartao-recibos] [data-recibo="41"] [data-acao-cobranca="pdf-recibo"]')!;
+    fireEvent.click(botao());
+    await waitFor(() => expect(h.pdf).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ numero: 41, valor: 50, descricao: "Recibo 41" }), "Rafael Moura"));
+    h.pdf.mockRejectedValueOnce(new Error("jsPDF"));
+    fireEvent.click(botao());
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Não deu para gerar o PDF agora."));
   });
 
   it("o endereço com ?pagina_recibos=3 já abre a lista na 3ª (o 41º aparece)", async () => {
@@ -209,6 +226,56 @@ describe("Financeiro do aluno — as categorias do lançamento (hml-17, H-39)", 
     fireEvent.click(document.querySelector("[data-btn-novo-lancamento]")!);
     await waitFor(() => expect(opcoes()).toEqual(["Sem categoria", "Consulta"]));
     expect(document.querySelector("[data-lancamento-categorias-erro]")).toBeNull();
+  });
+});
+
+describe("Financeiro do aluno — o plano no cartão da mensalidade (W-P)", () => {
+  const ANUAL = { id: "pl1", nome: "Anual", valor: 1000, ativo: true, meses: 12, modalidades: ["avista", "mensal"] as ("avista" | "mensal")[],
+    max_parcelas_cartao: null, valor_parcela_mensal: null };
+  const noPlano = (x: Partial<NonNullable<FinanceiroProfissional["mensalidade"]>>): NonNullable<FinanceiroProfissional["mensalidade"]> => ({
+    valor: 1000, plano_id: "pl1", plano: "Anual", pausada: false, pago_ate: `${diaSP(3)}T15:00:00.000Z`, desde: `${diaSP(-362)}T15:00:00.000Z`, coberta: true,
+    modalidade: "avista", meses: 12, negociado: null, parcela: null, ...x,
+  });
+
+  it("dono, à vista anual vencendo: R$ 1.000/ANO, o formulário no plano e 'Hora de renovar o plano'", async () => {
+    h.financeiro = { ...financeiro(), planos: [ANUAL], mensalidade: noPlano({}) };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-form-mensalidade]")).not.toBeNull());
+    const cartao = document.querySelector("[data-cartao-mensalidade]")!;
+    expect(cartao.textContent).toContain("R$ 1.000/ANO");
+    expect(document.querySelector("[data-form-mensalidade]")!.getAttribute("data-modo-plano")).toBe("periodo");
+    expect((document.querySelector("[data-mensalidade-modalidade]") as HTMLSelectElement).value).toBe("avista");
+    expect(document.querySelector("[data-mensalidade-renovar]")?.textContent).toBe("Hora de renovar o plano");
+    expect(document.querySelector("[data-mensalidade-parcela]")).toBeNull();
+  });
+
+  it("dono, mês a mês: R$ 83,33/MÊS e 'parcela 4 de 12' (sem renovar)", async () => {
+    h.financeiro = { ...financeiro(), planos: [ANUAL], mensalidade: noPlano({ valor: 83.33, modalidade: "mensal", pago_ate: `${diaSP(20)}T15:00:00.000Z`, parcela: { num: 4, total: 12 } }) };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-mensalidade-parcela]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.textContent).toContain("R$ 83,33/MÊS");
+    expect(document.querySelector("[data-mensalidade-parcela]")!.textContent).toBe("Próximo pagamento: parcela 4 de 12");
+    expect(document.querySelector("[data-mensalidade-renovar]")).toBeNull();
+  });
+
+  it("dono, plano de 1 mês à vista vencendo: R$ 249/MÊS, sem 'Hora de renovar o plano' (fala de mensalidade — E2E de tela)", async () => {
+    const MENSAL = { ...ANUAL, id: "pl2", nome: "Mensal", valor: 249, meses: 1, modalidades: ["avista"] as ("avista" | "mensal")[] };
+    h.financeiro = { ...financeiro(), planos: [MENSAL], mensalidade: noPlano({ valor: 249, plano_id: "pl2", plano: "Mensal", meses: 1, desde: `${diaSP(-27)}T15:00:00.000Z` }) };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-form-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.textContent).toContain("R$ 249/MÊS");
+    expect(document.querySelector("[data-mensalidade-renovar]")).toBeNull();
+  });
+
+  it("quem não é dono nem master não vê o plano (nem o valor, a forma de pagar ou a parcela) — o aviso de sempre", async () => {
+    h.financeiro = { ...financeiro(), permissoes: { master: false, dono: false, responsavel: true, mensalidade: false }, planos: [ANUAL],
+      mensalidade: noPlano({ modalidade: "mensal", parcela: { num: 4, total: 12 } }) };
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-cartao-mensalidade="sem-permissao"]')).not.toBeNull());
+    for (const marca of ["[data-form-mensalidade]", "[data-mensalidade-plano]", "[data-mensalidade-modalidade]", "[data-mensalidade-parcela]", "[data-link-planos]"]) {
+      expect(document.querySelector(marca)).toBeNull();
+    }
+    expect(document.querySelector("[data-cartao-mensalidade]")!.textContent).not.toMatch(/Anual|1\.000|parcela/);
   });
 });
 

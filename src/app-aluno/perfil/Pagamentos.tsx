@@ -5,10 +5,12 @@ import { AlertTriangle, ArrowLeft, Clock, Download, FileText, QrCode, ReceiptTex
 import { toast } from "sonner";
 import { acaoFinanceiro, buscarHistoricoDoAluno, buscarStatusAluno, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
 import { baixarComprovantePdf, baixarReciboPdf, type DetalheMp } from "@/financeiro/pdf";
+import { precisaRenovar, sufixoDoValor } from "@/financeiro/planos";
 import {
   chipDaMensalidade,
   dataBR,
   dataHoraBR,
+  ehPeriodoTodo,
   estadoDaMensalidade,
   formasDePagar,
   hojeSP,
@@ -369,14 +371,22 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
   // W1 da loja: a conta do app na versão da Google Play — o plano e a situação, sem preço nem forma de pagar
   const lojaApp = ehLoja && doApp;
   const formas = pagarNoApp ? formasDePagar(m.conta.modo, !!m.chave) : `combine com ${m.conta.profissional ?? "seu profissional"}`;
+  // W-P: plano com período — o valor é o do pagamento na modalidade ("/ano", " por 6 meses" ou "/mês" + "parcela 4 de 12")
+  const modalidade = ms.modalidade ?? null;
+  const sufixo = sufixoDoValor(modalidade, ms.meses);
+  // "Renovar plano" só no plano do período todo; o de 1 mês (à vista = mês a mês, B2) fala de mensalidade — o "Pagar" de sempre
+  const renovar = ehPeriodoTodo(modalidade, ms.meses) && precisaRenovar(modalidade, e.situacao, ms.pago_ate);
+  const parcela = ms.parcela ? ` · parcela ${ms.parcela.num} de ${ms.parcela.total}` : "";
+  // adiantar paga o próximo pagamento da modalidade: o período todo ou a próxima parcela (no modo de hoje, o próximo mês)
+  const adiantar = sufixo !== "/mês" ? "Adiantar a renovação" : ms.parcela ? "Adiantar a próxima parcela" : "Adiantar o próximo mês";
   const quando = e.coberta ? `Pago até ${dataBR(e.vence)}` : textoDoVencimento(e).replace(/^./, (x) => x.toUpperCase());
   const linha = e.situacao === "pausada"
     ? doApp ? "Sem cobrança." : "Seu profissional parou a cobrança pelo app."
     : lojaApp
       ? e.situacao === "teste" ? `Grátis até ${dataBR(e.vence)}` : quando
       : e.situacao === "teste"
-        ? `Grátis até ${dataBR(e.vence)} · depois ${reais(ms.valor)}/mês · ${formas}`
-        : `${quando} · ${formas}`;
+        ? `Grátis até ${dataBR(e.vence)} · depois ${reais(ms.valor)}${sufixo} · ${formas}`
+        : `${quando}${parcela} · ${formas}`;
   return (
     <Cartao brilho className="flex flex-col gap-3 px-4 py-4" data-mensalidade-aluno={e.situacao}>
       {/* o chip vai para a linha de baixo quando não cabe ao lado do valor ("Aguardando confirmação") */}
@@ -392,8 +402,8 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
             </>
           ) : (
             <>
-              <div className="truncate text-[12px] font-medium text-texto-2">{doApp ? "Plano do app" : "Mensalidade"}{ms.plano ? ` · ${ms.plano}` : ""}</div>
-              <b className="block whitespace-nowrap text-[24px] font-bold tabular-nums tracking-[-0.03em] text-texto">{reais(ms.valor)}<span className="ml-1 text-[13px] font-medium text-texto-2">/mês</span></b>
+              <div className="truncate text-[12px] font-medium text-texto-2">{doApp ? "Plano do app" : modalidade ? "Plano" : "Mensalidade"}{ms.plano ? ` · ${ms.plano}` : ""}</div>
+              <b className="block whitespace-nowrap text-[24px] font-bold tabular-nums tracking-[-0.03em] text-texto">{reais(ms.valor)}<span className="ml-1 text-[13px] font-medium text-texto-2">{sufixo}</span></b>
             </>
           )}
         </div>
@@ -403,12 +413,12 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
       {e.situacao !== "pausada" && pagarNoApp && !automatica && (
         <div className="flex flex-wrap gap-2">
           {precisaPagar && !aguardando && (
-            <Botao variante="w" icone={QrCode} onClick={() => aoPagar({ tipo: "mensalidade" })} data-pagar-mensalidade>
-              {e.situacao === "teste" ? `Assinar · ${reais(ms.valor)}/mês` : `Pagar ${reais(ms.valor)}`}
+            <Botao variante="w" icone={renovar ? RefreshCw : QrCode} onClick={() => aoPagar({ tipo: "mensalidade" })} data-pagar-mensalidade data-renovar={renovar ? "1" : undefined}>
+              {e.situacao === "teste" ? `Assinar · ${reais(ms.valor)}/mês` : renovar ? `Renovar plano · ${reais(ms.valor)}` : `Pagar ${reais(ms.valor)}`}
             </Botao>
           )}
           {!precisaPagar && !aguardando && m.conta.modo === "pix_manual" && (
-            <Botao variante="g" onClick={() => aoPagar({ tipo: "mensalidade", adiantar: true })} data-adiantar-mensalidade>Adiantar o próximo mês</Botao>
+            <Botao variante="g" onClick={() => aoPagar({ tipo: "mensalidade", adiantar: true })} data-adiantar-mensalidade>{adiantar}</Botao>
           )}
         </div>
       )}

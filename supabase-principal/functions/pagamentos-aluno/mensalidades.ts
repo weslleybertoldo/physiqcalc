@@ -20,6 +20,9 @@ export interface AlunoDoResumo {
   desde: string | null;
   aguardando: string | null;
   abertas: number;
+  /** W-P: a modalidade do plano (nula = modo de hoje) e os meses — o "/mês" da lista vira "/ano" ou " por N meses" */
+  modalidade?: string | null;
+  meses?: number;
 }
 
 /** `pagina` fora de 1, 2, 3… */

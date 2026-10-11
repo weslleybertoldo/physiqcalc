@@ -8,6 +8,7 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0
 import type { AssinaturaMp, PagamentoMp } from "./cobranca-regras.ts";
 import { cobrancaDoStatusMp, descricaoMensalidade, diaSP, mesRefDe, mpEmAberto, type Schema } from "./financeiro-regras.ts";
 import type { Log } from "./log.ts";
+import { retratoDoPlano, type Modalidade } from "./planos-regras.ts";
 
 export const COLUNAS_COBRANCA =
   "id, paciente_id, conta_id, nutricionista_id, criado_por, tipo, descricao, valor, vencimento, status, forma, metodo, mes_ref, " +
@@ -76,11 +77,26 @@ export interface Matricula {
   app_teste_de?: string | null;
   app_teste_ate?: string | null;
   objetivo_app?: string | null;
+  /** W-P — a modalidade do aluno no plano (nula = o modo de hoje) e o valor negociado; ausentes no schema sem a migration */
+  plano_modalidade?: Modalidade | null;
+  plano_valor_negociado?: number | null;
   conta: { id: string; nome: string; dono_id: string | null; recebimento_modo: string; bloquear_app_inadimplente: boolean; origem: string } | null;
-  plano: { id: string; nome: string; codigo?: string | null } | null;
+  plano: { id: string; nome: string; codigo?: string | null; valor?: number | null; meses?: number; modalidades?: Modalidade[];
+           max_parcelas_cartao?: number | null; valor_parcela_mensal?: number | null } | null;
 }
 
+/** As colunas do plano com período (W-P) — prof_planos, prof_aluno e a ficha. */
+export const COLUNAS_PLANO = "id, nome, valor, ativo, meses, modalidades, max_parcelas_cartao, valor_parcela_mensal";
+
 export const COLUNAS_MATRICULA =
+  "id, conta_id, user_id, treino_user_id, nome, email, cpf, foto_url, ativo, tags, personal_id, nutricionista_id, plano_aluno_id, " +
+  "mensalidade_valor, cobranca_pausada, mensalidade_desde, mensalidade_pago_ate, deleted_at, app_teste_de, app_teste_ate, objetivo_app, " +
+  "plano_modalidade, plano_valor_negociado, " +
+  "conta:contas(id, nome, dono_id, recebimento_modo, bloquear_app_inadimplente, origem), " +
+  "plano:planos_aluno(id, nome, codigo, valor, meses, modalidades, max_parcelas_cartao, valor_parcela_mensal)";
+
+/** As colunas de antes da W-P (o schema que ainda não recebeu a migration dos planos). */
+const COLUNAS_MATRICULA_W7B =
   "id, conta_id, user_id, treino_user_id, nome, email, cpf, foto_url, ativo, tags, personal_id, nutricionista_id, plano_aluno_id, " +
   "mensalidade_valor, cobranca_pausada, mensalidade_desde, mensalidade_pago_ate, deleted_at, app_teste_de, app_teste_ate, objetivo_app, " +
   "conta:contas(id, nome, dono_id, recebimento_modo, bloquear_app_inadimplente, origem), plano:planos_aluno(id, nome, codigo)";
@@ -96,16 +112,22 @@ export function ehDoApp(m: Pick<Matricula, "conta"> | null | undefined): boolean
   return m?.conta?.origem === "app";
 }
 
+const COLUNA_AUSENTE = /column|coluna|does not exist|42703|PGRST20/i;
+
 export async function carregarMatricula(db: SupabaseClient, id: string): Promise<Matricula | null> {
-  const { data, error } = await db.from("pacientes").select(COLUNAS_MATRICULA).eq("id", id).maybeSingle();
-  if (error && /column|coluna|does not exist|42703|PGRST20/i.test(`${error.code ?? ""} ${error.message ?? ""}`)) {
-    // schema ainda sem a migração da W7b: as colunas de antes (a função é publicada uma vez para public e staging)
-    const r = await db.from("pacientes").select(COLUNAS_MATRICULA_W6).eq("id", id).maybeSingle();
-    if (r.error) throw r.error;
-    return (r.data as unknown as Matricula | null) ?? null;
+  // a função é publicada uma vez para public e staging: o schema sem a migration da W-P (ou da W7b) lê as colunas de antes
+  let faltou: unknown = null;
+  for (const colunas of [COLUNAS_MATRICULA, COLUNAS_MATRICULA_W7B, COLUNAS_MATRICULA_W6]) {
+    const { data, error } = await db.from("pacientes").select(colunas).eq("id", id).maybeSingle();
+    if (error && COLUNA_AUSENTE.test(`${error.code ?? ""} ${error.message ?? ""}`)) {
+      faltou = error;
+      continue;
+    }
+    if (error) throw error;
+    return (data as unknown as Matricula | null) ?? null;
   }
-  if (error) throw error;
-  return (data as unknown as Matricula | null) ?? null;
+  // nem as colunas da W6 serviram: o erro do banco, como antes do laço (o log diz a coluna que faltou)
+  throw faltou ?? new Error("pacientes: nenhuma lista de colunas serviu");
 }
 
 /** Quem recebe a cobrança da mensalidade (o dono da conta; sem conta, o responsável). */
@@ -113,6 +135,7 @@ export function recebedor(m: Matricula): string | null {
   return m.conta?.dono_id ?? m.personal_id ?? m.nutricionista_id ?? null;
 }
 
+/** Grava o aviso no sino. Devolve se gravou (Task 8b: a fila só marca avisado_em quando o aviso entrou); quem não usa, ignora. */
 export async function avisar(
   db: SupabaseClient,
   destino: string | null | undefined,
@@ -121,11 +144,12 @@ export async function avisar(
   link: string | null,
   log: Log,
   schema: Schema,
-): Promise<void> {
-  if (!destino) return;
+): Promise<boolean> {
+  if (!destino) return false;
   const { error } = await db.from("avisos").insert({ destino_user_id: destino, tipo, titulo: titulo.slice(0, 160), link });
   // o título (nome, valor, motivo) fica só no sino: no log, o tipo e o erro do banco
   if (error) log.excecao(error, { codigo: "aviso_do_sino_falhou", schema, acao: tipo });
+  return !error;
 }
 
 const reais = (v: number) => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
@@ -219,7 +243,7 @@ export async function registrarPagamentoAvulsoDoMp(
       descricao: descricaoMensalidade(m.plano?.nome ?? null, mes), valor, vencimento: dia, mes_ref: mes,
       status: "aguardando_confirmacao", forma: "mp", metodo: pay.payment_method_id === "pix" ? "pix" : "cartao",
       mp_payment_id: mpId, mp_status: "pending", mp_preapproval_id: extra.preapprovalId ?? null,
-      plano_aluno_id: m.plano_aluno_id, origem: extra.origem,
+      plano_aluno_id: m.plano_aluno_id, origem: extra.origem, ...retratoDoPlano(m),
     }).select(colunas).maybeSingle();
     if (error && !String(error.message || "").includes("duplicate")) throw error;
     linha = nova;

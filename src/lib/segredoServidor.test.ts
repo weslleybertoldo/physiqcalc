@@ -254,7 +254,8 @@ interface Canal {
   aceite: Record<string, number>;
   /** Onde o x-espelho-segredo é lido e o log segredo_aceito sai → quantos logs (sem isto: o mesmo arquivo do aceite). */
   log?: Record<string, number>;
-  /** Quem manda (segredoParaEnviar com o nome). O S8 sai do banco (espelho_disparar, pg_net): nenhum arquivo daqui. */
+  /** Quem manda (segredoParaEnviar com o nome). O S8 e o S9 saem do banco (espelho_disparar e automaticas_disparar, pg_net): nenhum
+   *  arquivo daqui. */
   emissores: string[];
 }
 
@@ -278,6 +279,8 @@ const CANAIS: Canal[] = [
     emissores: [`${T}/_shared/avisar-erro.ts`],
   },
   { nome: "SEGREDO_ESPELHO_FILA", finalidade: "espelho_fila", aceite: { [`${P}/espelho-enviar/index.ts`]: 1 }, emissores: [] },
+  // W-P Task 8b: a fila das cobranças automáticas — o banco manda (automaticas_disparar, Vault physiq_automaticas_fila_segredo)
+  { nome: "SEGREDO_AUTOMATICAS_FILA", finalidade: "automaticas_fila", aceite: { [`${P}/automaticas-fila/index.ts`]: 1 }, emissores: [] },
 ];
 
 /** O código sem comentário: sem as linhas de bloco (as que começam com /* ou *) e sem o // de fim de linha (fora de URL). */
@@ -313,10 +316,10 @@ const logDoCanal = (c: Canal) => c.log ?? c.aceite;
 const formaDoLog = (finalidade: string) =>
   new RegExp(String.raw`\blog\.info\(\{ codigo: "segredo_aceito"(?:, schema(?:: currentSchema\(\))?)?, acao: "${finalidade}", resultado: [a-z]+ \}\);`);
 
-describe("a guarda nas fontes: os 8 segredos do contrato (hml-16c §1) nos receptores e nos emissores", () => {
-  it("8 nomes e 8 finalidades, sem repetir; a finalidade é o nome sem o SEGREDO_, em minúsculas", () => {
-    expect(new Set(CANAIS.map((c) => c.nome)).size).toBe(8);
-    expect(new Set(CANAIS.map((c) => c.finalidade)).size).toBe(8);
+describe("a guarda nas fontes: os 9 segredos do contrato (hml-16c §1 + o S9 da W-P) nos receptores e nos emissores", () => {
+  it("9 nomes e 9 finalidades, sem repetir; a finalidade é o nome sem o SEGREDO_, em minúsculas", () => {
+    expect(new Set(CANAIS.map((c) => c.nome)).size).toBe(9);
+    expect(new Set(CANAIS.map((c) => c.finalidade)).size).toBe(9);
     for (const c of CANAIS) expect(c.finalidade).toBe(c.nome.replace(/^SEGREDO_/, "").toLowerCase());
     expect(FONTES.length).toBeGreaterThan(40); // o leitor achou as funções dos 2 projetos
   });
@@ -337,11 +340,11 @@ describe("a guarda nas fontes: os 8 segredos do contrato (hml-16c §1) nos recep
     expect(arquivosCom(`segredoParaEnviar("${c.nome}")`)).toEqual([...c.emissores].sort());
   });
 
-  it("todo log segredo_aceito tem a forma certa (nunca o valor nem o hash) e são 9 (o S5 tem 2 entradas)", () => {
+  it("todo log segredo_aceito tem a forma certa (nunca o valor nem o hash) e são 10 (o S5 tem 2 entradas)", () => {
     const todos = FONTES.reduce((n, f) => n + linhasCom(f.codigo, '"segredo_aceito"'), 0);
     const certos = CANAIS.reduce((n, c) => n + FONTES.reduce((m, f) => m + linhasCom(f.codigo, formaDoLog(c.finalidade)), 0), 0);
-    expect(todos).toBe(9);
-    expect(certos).toBe(9);
+    expect(todos).toBe(10);
+    expect(certos).toBe(10);
   });
 
   it("quem lê o x-espelho-segredo é um receptor da tabela; quem o manda, um emissor da tabela", () => {
@@ -355,7 +358,7 @@ describe("a guarda nas fontes: os 8 segredos do contrato (hml-16c §1) nos recep
     const chamadas = FONTES.filter((f) => !PECA_COMUM.includes(f.arquivo)).flatMap((f) =>
       f.codigo.split("\n").filter((l) => l.includes("segredoAceito(")).map((l) => `${f.arquivo}: ${l.trim()}`),
     );
-    expect(chamadas).toHaveLength(9);
+    expect(chamadas).toHaveLength(10);
     // a erro-avisar passa a função adiante (DepsPedido.segredo) e o atenderPedido é quem espera
     const semAwait = chamadas.filter((c) => !c.includes("await segredoAceito(") && !c.includes("=> segredoAceito(recebido, "));
     expect(semAwait).toEqual([]);
@@ -365,7 +368,7 @@ describe("a guarda nas fontes: os 8 segredos do contrato (hml-16c §1) nos recep
 
   it("quem usa a peça comum importa dela o que usa (o tsc do app não lê as index.ts das funções)", () => {
     const usam = FONTES.filter((f) => !PECA_COMUM.includes(f.arquivo) && /\bsegredo(?:Aceito|ParaEnviar)\(/.test(f.codigo));
-    expect(usam.length).toBe(14);
+    expect(usam.length).toBe(15);
     for (const f of usam) {
       const importados = /import \{([^}]*)\} from "(?:\.\.\/_shared|\.)\/segredo-servidor\.ts";/.exec(f.codigo)?.[1] ?? "";
       for (const nome of ["segredoAceito", "segredoParaEnviar"]) {
@@ -449,6 +452,17 @@ describe("o banco (S8): a versão que vale do {schema}.espelho_disparar() lê s�
     expect(vaults).toEqual(["physiq_espelho_fila_segredo"]);
     expect(corpo.match(/vault\./g)).toHaveLength(1);
     expect(corpo).toMatch(/security definer set search_path = '' as \$\$/);
+  });
+
+  it("S9 (W-P Task 8b): o {schema}.automaticas_disparar() lê só o Vault da fila das automáticas e manda o x-espelho-segredo", () => {
+    const { arquivo, corpo } = ultimaDefinicao("automaticas_disparar");
+    expect(arquivo >= "20261011030000").toBe(true);
+    const vaults = [...corpo.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(vaults).toEqual(["physiq_automaticas_fila_segredo"]);
+    expect(corpo.match(/vault\./g)).toHaveLength(1);
+    expect(corpo).toMatch(/security definer set search_path = '' as \$\$/);
+    expect(corpo).toContain("'x-espelho-segredo', v_segredo");
+    expect(corpo).toContain("/functions/v1/automaticas-fila'");
   });
 
   it("controle negativo: o corpo de antes (a 20261010010000, com a reserva) não passaria", () => {
