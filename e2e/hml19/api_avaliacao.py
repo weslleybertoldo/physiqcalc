@@ -178,16 +178,18 @@ class RodadaAvaliacao:
         self.tempos: dict[str, list[int]] = {}
 
     def treino(self) -> None:
-        """As sessões do Treino (a personal e a outra conta) e o aluno da foto mensal: o usuário do Treino da w5p-aluna, cujo professor é a
-        personal de teste no staging do Treino (conferido por SQL só leitura; sem o vínculo, PARA — não cria vínculo)."""
+        """As sessões do Treino (a personal e a outra conta) e o aluno da foto mensal: o aluno de TESTE da personal de teste no staging do
+        Treino (professor_id = ela, e-mail de teste no Auth do Treino — SQL só leitura; sem ele, PARA: não cria vínculo nem conta). Etapa 2
+        (11/10): a matrícula da w5p-aluna não tem usuário do Treino; a w5p-personal tem 1 aluno de teste só no Treino — é ele. O aviso
+        segue na w5p-aluna (o usuário dela no principal)."""
         self.tt, self.ut = self.L.token_treino(B.PERSONAL_CONTA), self.L.uid_treino(B.PERSONAL_CONTA)
-        mat = B.B17.ler(f"select treino_user_id::text as t, user_id::text as u from {self.s}.pacientes where id = {C.txt(self.pac)}")
-        self.aluno = (mat[0]["t"] if mat else "") or ""
+        mat = B.B17.ler(f"select user_id::text as u from {self.s}.pacientes where id = {C.txt(self.pac)}")
         self.aluna_user = (mat[0]["u"] if mat else "") or ""
-        vinculo = B.ler_treino(f"select count(*)::int as n from {self.s}.physiq_profiles where id = {C.txt(C.uuid_ok(self.aluno))} "
-                               f"and professor_id = {C.txt(C.uuid_ok(self.ut))}") if C.eh_uuid(self.aluno) and C.eh_uuid(self.ut) else [{"n": 0}]
-        self.o.ok(vinculo[0]["n"] == 1, "a aluna de teste tem o usuário do Treino com a personal de teste como professora (staging) — a massa existe",
-                  parar=True)
+        alunos = B.ler_treino(f"select p.id::text as id from {self.s}.physiq_profiles p join auth.users u on u.id = p.id "
+                              f"where p.professor_id = {C.txt(C.uuid_ok(self.ut))} and lower(u.email) like '%.teste.claude@physiqnutri.app' "
+                              f"order by p.id limit 1") if C.eh_uuid(self.ut) else []
+        self.aluno = alunos[0]["id"] if alunos else ""
+        self.o.ok(C.eh_uuid(self.aluno), f"a personal de teste tem um aluno de TESTE no Treino (staging; e-mail de teste) — {self.aluno[:8]}…", parar=True)
 
     def chamar(self, token: str, acao: str, corpo: dict) -> tuple[int, dict]:
         st, r, _h, ms = B.funcao(token, acao, corpo)
@@ -448,10 +450,9 @@ def limpar(o, estado: B.Estado, L, s: str) -> None:
         estado.apagar()
         return
     dono = L.uid(B.P_CONTA)
-    aluno = ""
+    aluno = estado.d.get("aluno_treino") or ""  # a conferência do mês sentinela roda SEMPRE (mesmo com a foto já tirada pela função)
     if estado.d.get("treino") or any(b.startswith("registros") for b, _c in estado.d["storage"]):
         tt = L.token_treino(B.PERSONAL_CONTA)
-        aluno = estado.d.get("aluno_treino") or ""
         for _t, id_ in list(estado.d.get("treino") or []):
             st, _r, _h, _ms = B.funcao_treino(tt, "foto_excluir", {"fotoId": id_})
             if st != 200 and C.eh_uuid(aluno):

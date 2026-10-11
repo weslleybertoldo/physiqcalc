@@ -240,7 +240,9 @@ FUNCOES_CONHECIDAS = {
 }
 # a automaticas-fila (W-P, 11/10/2026: a fila das cobranças automáticas, chamada só pelo pg_cron) processa cobrança: se um dia sair do
 # navegador, é gravação.
-FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila"}
+# hml-19c (11/10, depois do merge da W1 InfinitePay da LINUX 3): o infinitepay-webhook-aluno (o aviso de pagamento da InfinitePay,
+# chamado pelo servidor dela) processa cobrança — se um dia sair do navegador, é gravação.
+FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno"}
 
 
 def funcao_grava(nome: str, acao: str | None) -> bool:
@@ -314,7 +316,10 @@ class Tela:
         if u.hostname not in (API_P_HOST, API_T_HOST) or req.method == "OPTIONS":
             return
         tipo, nome = alvo(req.url)
-        corpo = req.post_data or ""
+        try:
+            corpo = req.post_data or ""
+        except UnicodeDecodeError:  # hml-19c: corpo binário (a foto subindo no Storage) — não é o JSON de uma ação; antes, o erro aqui
+            corpo = ""              # derrubava o ouvinte do Playwright no meio do pedido (e o pedido nem era contado)
         self.pedidos.append({"t": round(time.time() - self.t0, 2), "host": "P" if u.hostname == API_P_HOST else "T", "metodo": req.method,
                              "tipo": tipo, "nome": nome, "acao": acao_do_corpo(req) if tipo == "fn" else None, "url": req.url,
                              "corpo": corpo, "chave": hashlib.sha1((u.query + "|" + corpo).encode()).hexdigest()[:8], "caida": self.caida})

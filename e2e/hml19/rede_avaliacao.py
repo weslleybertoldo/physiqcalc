@@ -1,8 +1,8 @@
 """Physiq hml-19c (H-41 · jeito 2, 11/10/2026) — a REDE de cada ação típica da Avaliação (Perfil do aluno › Avaliação), no navegador (Edge),
 antes × depois (o rede.py chama: --area avaliacao).
 
-Com a personal de TESTE (w5p-personal: a foto mensal, no Treino) e a nutri de TESTE (w5p-nutri: antropometria e foto de evolução, no
-principal) na Avaliação da w5p-aluna, cada caso faz a ação de verdade na tela e a guarda que CONTA (_base.classificar) separa os pedidos
+Com a personal de TESTE (a foto mensal, no Treino) e a nutri de TESTE (w5p-nutri: antropometria e foto de evolução, no principal na
+w5p-aluna), cada caso faz a ação de verdade na tela e a guarda que CONTA (_base.classificar) separa os pedidos
 da ação: rest de gravação nas tabelas da Avaliação (rest_avaliacao: antropometrias e fotos_evolucao no principal, physiq_registros_fotos
 no Treino), RPC que grava (a aluno_avisar_avaliacao do código antigo conta), cada ação da nutricao e da admin-avaliacoes, Storage (o PUT
 no link assinado à parte) — e o tempo da ação (do arquivo escolhido / do salvar até a tela mostrar o resultado).
@@ -25,6 +25,10 @@ evolução (principal), só no staging e só das contas de TESTE; sai no fim (os
 SQL só das contas de teste; os avisos "avaliação nova" da rodada) e a conferência é por SQL só leitura (só contagem: 0 linha / 0 arquivo).
 Produção: este E2E NÃO roda (não há aluno de TESTE com Avaliação na produção — a prova viva é dele).
 Prints: ~/projetos/physiqcalc-scratch/prints/hml19/c/<prefixo>_c_<caso>.png (+ a cópia de 900 px para conferir).
+Etapa 2 (11/10): a foto mensal pela TELA precisa de um aluno que abra no painel com os 2 vínculos (a matrícula no principal e o usuário do
+Treino com a personal como professora) — a w5p-aluna não tem usuário do Treino e o aluno de teste da w5p-personal só existe no Treino.
+Os casos da foto mensal usam a massa da W10 (as contas de TESTE do w17/avaliacao_telas): w7-personal (dono + personal) e o Diego
+(w10-aluno); a antropometria e a foto de evolução seguem com a w5p-nutri na w5p-aluna.
 """
 from __future__ import annotations
 
@@ -36,6 +40,13 @@ import rede as R
 
 C = B.C
 CASOS = ("foto_mensal", "foto_mensal_excluir", "antropometria", "foto_evolucao", "foto_erro")
+# a personal e o aluno da TELA da foto mensal (a massa da W10, as contas de TESTE do w17): o Diego tem a matrícula e o usuário do Treino
+PERSONAL_TELA = "w7-personal"
+EMAIL_ALUNO_TELA = "w10.aluno.teste.claude@physiqnutri.app"
+try:
+    B.B5.CONTAS.setdefault(PERSONAL_TELA, ("w7.personal.teste.claude@physiqnutri.app", B.B5.senha_de(PERSONAL_TELA)))
+except Exception:  # noqa: BLE001 — sem a senha guardada nesta máquina, os casos da foto mensal param no login (o --seco segue)
+    pass
 PLANILHA = B.MEDICAO / "rede_hml19c.tsv"
 SESSAO_SENTINELA = f"treino:{B.MES_SENTINELA}-01"
 ESPERADO_DEPOIS = {
@@ -53,7 +64,8 @@ SELETORES = {
     "src/painel/aluno/avaliacao/Fotos.tsx": ["data-avaliacao-fotos-gerenciar", "data-sheet-fotos", "data-fotos-mes", "data-foto-mensal-input",
                                              "data-foto-mensal-subir", "data-fotos-sessao", "data-foto-item", "data-foto-excluir", "data-fotos-nova-nutri"],
     "src/painel/aluno/avaliacao/Historico.tsx": ["data-avaliacao-lista", "data-avaliacao-item", "data-avaliacao-origem"],
-    "src/nutricao/avaliacao/AntropometriaDialog.tsx": ["data-modal-antropometria", "data-campo-peso", "data-campo-observacao", "data-btn-salvar-antropometria"],
+    "src/nutricao/avaliacao/AntropometriaDialog.tsx": ["data-modal-antropometria", "data-campo-protocolo", "data-campo-peso", "data-campo-observacao",
+                                                       "data-btn-salvar-antropometria"],
     "src/nutricao/avaliacao/FotoDialog.tsx": ["data-modal-foto", "data-input-foto", "data-campo-observacao-foto", "data-btn-salvar-foto"],
     "src/ui/premium/Confirmar.tsx": ["data-confirmar-ok"],
 }
@@ -77,6 +89,21 @@ def so_gravacoes(cont) -> dict:
 
 def rota_avaliacao(pac: str) -> str:
     return f"/painel/alunos/{pac}/avaliacao"
+
+
+def matricula_do_aluno_da_tela(s: str) -> str:
+    """A matrícula do aluno da tela da foto mensal (o Diego, w10-aluno), por SQL só leitura: 1 viva."""
+    r = B.B17.ler(f"select p.id::text as id from {s}.pacientes p join auth.users u on u.id = p.user_id "
+                  f"where lower(u.email) = {C.txt(EMAIL_ALUNO_TELA)} and p.deleted_at is null order by p.created_at limit 2")
+    if len(r) != 1:
+        raise SystemExit(f"o aluno da tela da foto mensal tem de ter 1 matrícula viva no {s} (achei {len(r)})")
+    return C.uuid_ok(r[0]["id"])
+
+
+def aluno_treino_da_tela(s: str) -> str:
+    """O usuário do Treino do aluno da tela (a 1ª pasta do caminho da foto mensal)."""
+    r = B.B17.ler(f"select treino_user_id::text as t from {s}.pacientes where id = {C.txt(matricula_do_aluno_da_tela(s))}")
+    return (r[0]["t"] if r else "") or ""
 
 
 def aba_pronta(t) -> bool:
@@ -132,6 +159,8 @@ def acao_antropometria(t, marca: str, achar_id) -> tuple[bool, int]:
         t.clicar('[data-avaliacao-nova="antropometria"]')
     if not t.esperar(lambda: t.tem('[data-modal-antropometria="nova"]'), 15):
         return False, 0
+    # o modal abre com o protocolo da última antropometria do aluno (as dobras dele ficam obrigatórias): "nenhum" = só as medidas
+    t.pg.locator("[data-campo-protocolo]").first.select_option("nenhum")
     t.pg.locator("[data-campo-peso]").first.fill("70,4")
     t.pg.locator("[data-campo-observacao]").first.fill(marca)
     t0 = time.time()
@@ -241,15 +270,16 @@ def limpar_massa(o, s: str, L, rodada: str | None = None, desde: str | None = No
     if s != "staging":
         return
     pac = B.B17.matricula_da_aluna()
-    mat = B.B17.ler(f"select treino_user_id::text as t, user_id::text as u from {s}.pacientes where id = {C.txt(pac)}")
-    aluno, aluna_user = (mat[0]["t"], mat[0]["u"]) if mat else ("", "")
+    mat = B.B17.ler(f"select user_id::text as u from {s}.pacientes where id = {C.txt(pac)}")
+    aluna_user = (mat[0]["u"] if mat else "") or ""
+    aluno = aluno_treino_da_tela(s)  # a foto mensal da tela é a do Diego (a massa da W10)
     if C.eh_uuid(aluno):
         fotos = B.ler_treino(f"select id::text as id, storage_path as p from {s}.physiq_registros_fotos where user_id = {C.txt(aluno)} "
                              f"and mes_ref = {C.txt(B.MES_SENTINELA + '-01')}::date")
         objetos = [x["name"] for x in B.ler_treino(f"select name from storage.objects where bucket_id = {C.txt(B.bucket_dos_registros(s))} "
                                                      f"and name like {C.txt(aluno + '/' + B.MES_SENTINELA + '/%')}")]
         if objetos:
-            st, n = B.remover_do_storage_treino(B.bucket_dos_registros(s), objetos, L.token_treino(B.PERSONAL_CONTA))
+            st, n = B.remover_do_storage_treino(B.bucket_dos_registros(s), objetos, L.token_treino(PERSONAL_TELA))
             o.ok(st == 200, f"limpeza: {len(objetos)} arquivo(s) do mês sentinela tirados do bucket do Treino como a personal ({st}, {n})")
         if fotos:
             C.C2.sql_mgmt(B.TREINO_REF, B.sql_apagar_fotos_treino(s, aluno, [x["id"] for x in fotos]))
@@ -333,6 +363,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
     try:
         B.exigir_saude(o, "o rede.py --area avaliacao")
         pac = B.B17.matricula_da_aluna()
+        pac_tela = matricula_do_aluno_da_tela(s)
         desde = B.B17.ler("select now()::text as t")[0]["t"]
         dono = L.uid(B.P_CONTA)
         limpar_massa(o, s, L, None, None)  # o mês sentinela começa vazio (uma rodada anterior que caiu não atrapalha)
@@ -345,7 +376,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                     B.LegalDesligado().instalar(t.ctx)
                     barrar = BarrarGravacaoDaFoto() if "foto_erro" in casos else None
                     try:
-                        t.entrar(L, B.PERSONAL_CONTA, rota_avaliacao(pac))
+                        t.entrar(L, PERSONAL_TELA, rota_avaliacao(pac_tela))
                         ok = t.esperar(lambda: aba_pronta(t) and "fisica" in (t.attr("[data-aba-avaliacao]", "data-avaliacao-permissoes") or [""])[0], 90)
                         o.ok(ok, f"[{base}] a Avaliação da aluna abre para a personal de teste com a avaliação física ({commit}: o {fase})", parar=True)
                         for caso in [c for c in ("foto_mensal", "foto_mensal_excluir") if c in casos]:
@@ -366,7 +397,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                             conferir(o, base, "foto_erro", cont, ok_tela, ms, fase)
                             print_c(t, rotulo, PRINT_DO_CASO["foto_erro"], o)
                     finally:
-                        L.do_navegador(B.PERSONAL_CONTA, t.pg)
+                        L.do_navegador(PERSONAL_TELA, t.pg)
                         t.fim()
                 # a nutri: a antropometria e a foto de evolução (o principal)
                 if {"antropometria", "foto_evolucao"} & set(casos):

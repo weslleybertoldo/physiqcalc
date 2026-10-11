@@ -214,10 +214,11 @@ class Sessoes:
         if s and int(s.get("expires_at") or 0) - time.time() < FOLGA_S:
             s = _refresh_treino(s)
         if not s:
+            tok = self.token(conta)  # o login do principal antes (ele mesmo entra no registro): o número da troca vem depois dele
             n = self.logins_feitos()
             if n >= MAX_LOGINS:
                 raise SystemExit(f"os {MAX_LOGINS} logins da etapa 2 já foram usados ({REG_LOGINS}) — sem sessão do Treino guardada de {conta}")
-            st, r = trocar_token(self.token(conta))
+            st, r = trocar_token(tok)
             if st != 200 or not r.get("access_token"):
                 raise SystemExit(f"a troca de token (Treino) de {conta} → {st} {r.get('error') or r.get('erro') or ''}")
             s = {"access_token": r["access_token"], "refresh_token": r.get("refresh_token"), "expires_at": r.get("expires_at"),
