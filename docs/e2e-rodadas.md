@@ -29,6 +29,13 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 05:01 | hml-19a | `f9d0917` | `e2e/h5/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 61/63 | F7 (o staging serve 3c539af): o caso prontuario passou inteiro; as 2 falhas são as mesmas do local e não são da 19a: o /c/ do cadastro e o IndexError do script no editor (o Rafael sem plano vivo no staging) |
+| 11/10 04:54 | hml-19a | `f9d0917` | `e2e/w18/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 52/52 | F7 |
+| 11/10 04:49 | hml-19a | `f9d0917` | `e2e/hml19/laco.py --base staging --canal msedge --prefixo staging2 --normal` | staging | 18/18 | F7 |
+| 11/10 04:44 | hml-19a | `f4a2cbb` | `e2e/hml19/laco.py --base staging --canal msedge --prefixo staging2 --normal` | staging | 17/18 | erro do script, corrigido em f9d0917: contava a treino-leitura (função de leitura) como outra ação |
+| 11/10 04:42 | hml-19a | `f4a2cbb` | `e2e/hml19/laco.py --base staging --canal msedge --prefixo staging2` | staging | 21/21 | F7: a nutricao barrada |
+| 11/10 04:38 | hml-19a | `f4a2cbb` | `e2e/hml19/rede.py --base staging --canal msedge --prefixo staging2` | staging | 18/18 | F7, o depois no staging: 0 rest de gravação nas tabelas do Prontuário |
+| 11/10 04:36 | hml-19a | `f4a2cbb` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 124/124 | F7 (o staging serve 3c539af) |
 | 11/10 04:09 | hml-19a | `9afbf44` | `e2e/h5/telas.py --base http://localhost:8080 --prefixo local --canal msedge` | local | 62/64 | o caso prontuario passou inteiro; as 2 falhas não são da 19a: o /c/ do cadastro (o estado do staging) e o editor da Dieta, que caiu num IndexError do script antes de abrir a tela (o Rafael sem plano vivo no staging) |
 | 11/10 04:03 | hml-19a | `9afbf44` | `e2e/h5/api.py` | staging | 25/26 | a falha é do cadastro /c/ (função alunos, fora da 19a): "e-mail e CPF que já existem" voltou cadastro_repetido |
 | 11/10 04:01 | hml-19a | `9afbf44` | `e2e/hml19/api.py --area prontuario --casos LX` | staging | 7/7 | a Lixeira (W26) com o excluir pela nutricao |
