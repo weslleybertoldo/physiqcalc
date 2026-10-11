@@ -188,15 +188,23 @@ class Sessoes:
             self._salvar()
 
     def sair(self, o) -> None:
-        """O logout (scope=local) de cada sessão guardada e o arquivo apagado — no fim da etapa 2."""
+        """O logout (scope=local) de cada sessão guardada — no fim da etapa 2. hml-19b: com o access token vencido o logout volta 403 e
+        a sessão fica viva no servidor (11/10 09:17: 3 de 4) — antes do logout, o refresh (não é login); a que falhar FICA no arquivo
+        (para tentar de novo), e o arquivo só some com todas fora."""
+        restam: dict = {}
         for conta, s in list(self.d.items()):
+            if int(s.get("expires_at") or 0) - time.time() < 120:
+                s = _refresh(s) or s
             try:
                 st: object = C.sair_local(s.get("access_token", ""), "principal")
             except Exception as e:  # noqa: BLE001
                 st = type(e).__name__
-            o.ok(st in (200, 204), f"logout (scope=local) da sessão guardada de {conta} ({st})", parar=False)
-        self.d = {}
-        if ARQ_SESSOES.exists():
+            if not o.ok(st in (200, 204), f"logout (scope=local) da sessão guardada de {conta} ({st})", parar=False):
+                restam[conta] = s
+        self.d = restam
+        if restam:
+            self._salvar()
+        elif ARQ_SESSOES.exists():
             ARQ_SESSOES.unlink()
 
 
