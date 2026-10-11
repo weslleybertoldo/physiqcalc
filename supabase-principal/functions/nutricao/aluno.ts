@@ -7,9 +7,10 @@
 //                          do bucket: aluno vivo da nutri, diário ligado, o próprio login) + createSignedUploadUrl como a pessoa
 //                          → { bucket, caminho, token }; o app sobe com uploadToSignedUrl
 //   aluno_diario_enviar    o caminho tem de ser da pasta daquela matrícula (N9) e o arquivo tem de ESTAR lá (list com search, como o
-//                          anexo_registrar da 19a); depois a diario_enviar de hoje (o código do link confere o aluno e a pasta de novo).
-//                          Falhou → tenta tirar o arquivo (o aluno não pode apagar no bucket: sobra o órfão — log arquivo_orfao, sem o
-//                          caminho; spec §1.11 item 5)
+//                          anexo_registrar da 19a); depois a diario_enviar de hoje (o código do link confere o aluno e a pasta de novo;
+//                          a migration 20261011110000, seção 9, tira o aluno DONO do limite por IP — aqui o IP seria o da função, comum
+//                          a todos; o limite por aluno segue). Falhou → tenta tirar o arquivo (o aluno não pode apagar no bucket: sobra o
+//                          órfão — log arquivo_orfao, sem o caminho; spec §1.11 item 5)
 // Os códigos que as RPCs devolvem de propósito (sem_alimentos, meta_pausada, diario_desligado, muitos_envios…) vão ao app como estão: a
 // tela do app já tem o texto de cada um (refeicaoConcluidaUtil, metasUtil, diarioUtil).
 import type { ContextoPessoa } from "../_shared/porta-pessoa.ts";

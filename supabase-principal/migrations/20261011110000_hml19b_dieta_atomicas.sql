@@ -1,5 +1,6 @@
 -- Physiq hml-19b (H-41 · jeito 2 · 11/10/2026) — as gravações da Dieta que precisam ser TUDO OU NADA viram RPCs (banco principal,
--- staging + public). Idempotente; só 7 funções novas (nenhuma tabela, coluna, policy, grant de tabela ou dado muda).
+-- staging + public). Idempotente; 7 funções novas + a troca do corpo da diario_enviar (seção 9: o aluno dono do código não conta no
+-- limite POR IP — decisão da sessão principal) — nenhuma tabela, coluna, policy, grant ou dado muda.
 --
 -- O porquê: a Dieta (Painel › Aluno › Dieta) e as Dietas (Painel › Dietas) gravavam do navegador em vários pedidos em série, sem
 -- transação — a nova prescrição (plano + 6 refeições), o duplicar/usar modelo ★ (1 + R + R' pedidos), a receita (receita + ingredientes;
@@ -38,7 +39,7 @@
 --   Grants: o logado (a função chama como a pessoa) e o servidor — revoke de public e anon (docs/banco-permissoes.md).
 --
 -- Ordem: staging = depois de publicar a nutricao com o dieta.ts e ANTES do push do front; produção = ANTES do merge. O front antigo
--- não chama nada daqui (não quebra).
+-- não chama nada daqui (não quebra) e a diario_enviar segue servindo o link público e o app antigo do mesmo jeito (seção 9).
 -- Aplicar (backup ANTES em produção — scripts/backup/backup_principal.py):
 --   python3 scripts/apply_migration_principal.py supabase-principal/migrations/20261011110000_hml19b_dieta_atomicas.sql --so staging
 --   python3 scripts/apply_migration_principal.py supabase-principal/migrations/20261011110000_hml19b_dieta_atomicas.sql --so public
@@ -438,6 +439,174 @@ begin
     if sqlerrm <> 'dados_invalidos' then raise; end if;
   end;
   perform set_config('request.jwt.claims', '', true);
+end
+$$;
+
+-- ============================================================================================================
+-- 9. O diário pelo app: o aluno DONO do código não conta no limite POR IP (decisão da sessão principal, 11/10/2026)
+-- ============================================================================================================
+-- Por quê: o app do aluno passa a mandar a foto pela função nutricao (aluno_diario_enviar → esta diario_enviar, como a pessoa). Lá o
+-- banco vê o IP da FUNÇÃO, comum a todos os alunos: com o limite por IP da hml-05c (30 envios/h por IP), um aluno sozinho esgotaria em
+-- 1 h o balde de todos (muitos_envios para os outros até a hora virar) — um furo criado pelo jeito 2, fechado aqui.
+-- A mudança é UMA: o limite por IP passa a valer só para quem NÃO é o próprio aluno dono do código (auth.uid() nulo — o link público
+-- /d/:codigo, que fica IGUAL (decisão 13) — ou outro login); o limite POR ALUNO (30 fotos na última hora) segue para todos. Para isso o
+-- limite_publico sai do começo e vem depois de achar o aluno do código (código inválido: o limite antes do 'codigo_invalido', a mesma
+-- ordem de hoje). O resto é o corpo de HOJE (pg_get_functiondef do banco vivo, 11/10/2026, md5 conferido): mesma assinatura, SECURITY
+-- DEFINER, search_path e grants (CREATE OR REPLACE não mexe nos grants). O staging usa o bucket diario-staging e a produção o diario:
+-- por isso os 2 corpos inteiros, escolhidos pelo {schema}. A reversa devolve os 2 corpos de hoje byte a byte.
+do $hml19b_diario$
+begin
+  if '{schema}' = 'staging' then
+    execute $diario_staging$CREATE OR REPLACE FUNCTION staging.diario_enviar(p_codigo text, p_path text, p_mime text, p_tamanho bigint, p_refeicao text, p_comentario text, p_data_hora timestamp with time zone)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'staging', 'public'
+AS $function$
+declare
+  pac record;
+  v_path text := trim(coalesce(p_path, ''));
+  v_data timestamptz := coalesce(p_data_hora, now());
+  v_comentario text := left(trim(coalesce(p_comentario, '')), 500);
+  v_mime text := lower(trim(coalesce(p_mime, '')));
+  v_qtd integer;
+  v_id uuid;
+begin
+  select id, nutricionista_id, user_id, config into pac
+    from pacientes
+   where link_codigo = lower(trim(coalesce(p_codigo, '')))
+     and ativo
+     and deleted_at is null
+   limit 1;
+  if not found then
+    perform staging.limite_publico('diario_enviar', 30, 'muitos_envios');  -- hml-05c: limite por IP
+    raise exception using errcode = 'P0001', message = 'codigo_invalido';
+  end if;
+  -- hml-19b: o limite por IP (hml-05c) conta quem NÃO é o próprio aluno dono do código — o link público e outro login, como antes;
+  -- o aluno no app envia pela função nutricao, onde o IP é o da função (comum a todos): ele fica só no limite por aluno, abaixo
+  if auth.uid() is null or pac.user_id is distinct from auth.uid() then
+    perform staging.limite_publico('diario_enviar', 30, 'muitos_envios');  -- hml-05c: limite por IP
+  end if;
+  -- W14 (R12, spec 9): diário desligado pelo profissional recusa (no app e no link); pelo link (sem ser o próprio aluno
+  -- logado) também precisa do "envio de fotos pelo link" ligado
+  if not staging.w14_ajuste(pac.config, 'diario_alimentar', true) then
+    raise exception using errcode = 'P0001', message = 'diario_desligado';
+  end if;
+  if (auth.uid() is null or pac.user_id is distinct from auth.uid()) and not staging.w14_ajuste(pac.config, 'acesso_link', true) then
+    raise exception using errcode = 'P0001', message = 'link_desligado';
+  end if;
+  if p_refeicao is null or p_refeicao not in ('cafe_manha', 'lanche_manha', 'almoco', 'lanche_tarde', 'jantar', 'ceia', 'outro') then
+    raise exception using errcode = 'P0001', message = 'refeicao_invalida';
+  end if;
+  if v_path !~ ('^' || pac.nutricionista_id::text || '/' || pac.id::text || '/[0-9a-f-]{36}\.[a-z0-9]{2,5}$') then
+    raise exception using errcode = 'P0001', message = 'path_invalido';
+  end if;
+  if not exists (select 1 from storage.objects o where o.bucket_id = 'diario-staging' and o.name = v_path) then
+    raise exception using errcode = 'P0001', message = 'arquivo_nao_encontrado';
+  end if;
+  if v_mime = '' or v_mime not like 'image/%' or p_tamanho is null or p_tamanho <= 0 or p_tamanho > 10485760 then
+    raise exception using errcode = 'P0001', message = 'arquivo_invalido';
+  end if;
+  if v_data > now() + interval '5 minutes' then
+    raise exception using errcode = 'P0001', message = 'data_invalida';
+  end if;
+  select count(*) into v_qtd
+    from diario_alimentar
+   where paciente_id = pac.id
+     and created_at > now() - interval '1 hour';
+  if v_qtd >= 30 then
+    raise exception using errcode = 'P0001', message = 'muitos_envios';
+  end if;
+  insert into diario_alimentar (nutricionista_id, paciente_id, data_hora, refeicao, path, mime, tamanho, comentario)
+  values (pac.nutricionista_id, pac.id, v_data, p_refeicao, v_path, v_mime, p_tamanho, v_comentario)
+  returning id into v_id;
+  return jsonb_build_object('id', v_id, 'data_hora', v_data);
+end;
+$function$
+$diario_staging$;
+  else
+    execute $diario_public$CREATE OR REPLACE FUNCTION public.diario_enviar(p_codigo text, p_path text, p_mime text, p_tamanho bigint, p_refeicao text, p_comentario text, p_data_hora timestamp with time zone)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'public'
+AS $function$
+declare
+  pac record;
+  v_path text := trim(coalesce(p_path, ''));
+  v_data timestamptz := coalesce(p_data_hora, now());
+  v_comentario text := left(trim(coalesce(p_comentario, '')), 500);
+  v_mime text := lower(trim(coalesce(p_mime, '')));
+  v_qtd integer;
+  v_id uuid;
+begin
+  select id, nutricionista_id, user_id, config into pac
+    from pacientes
+   where link_codigo = lower(trim(coalesce(p_codigo, '')))
+     and ativo
+     and deleted_at is null
+   limit 1;
+  if not found then
+    perform public.limite_publico('diario_enviar', 30, 'muitos_envios');  -- hml-05c: limite por IP
+    raise exception using errcode = 'P0001', message = 'codigo_invalido';
+  end if;
+  -- hml-19b: o limite por IP (hml-05c) conta quem NÃO é o próprio aluno dono do código — o link público e outro login, como antes;
+  -- o aluno no app envia pela função nutricao, onde o IP é o da função (comum a todos): ele fica só no limite por aluno, abaixo
+  if auth.uid() is null or pac.user_id is distinct from auth.uid() then
+    perform public.limite_publico('diario_enviar', 30, 'muitos_envios');  -- hml-05c: limite por IP
+  end if;
+  -- W14 (R12, spec 9): diário desligado pelo profissional recusa (no app e no link); pelo link (sem ser o próprio aluno
+  -- logado) também precisa do "envio de fotos pelo link" ligado
+  if not public.w14_ajuste(pac.config, 'diario_alimentar', true) then
+    raise exception using errcode = 'P0001', message = 'diario_desligado';
+  end if;
+  if (auth.uid() is null or pac.user_id is distinct from auth.uid()) and not public.w14_ajuste(pac.config, 'acesso_link', true) then
+    raise exception using errcode = 'P0001', message = 'link_desligado';
+  end if;
+  if p_refeicao is null or p_refeicao not in ('cafe_manha', 'lanche_manha', 'almoco', 'lanche_tarde', 'jantar', 'ceia', 'outro') then
+    raise exception using errcode = 'P0001', message = 'refeicao_invalida';
+  end if;
+  if v_path !~ ('^' || pac.nutricionista_id::text || '/' || pac.id::text || '/[0-9a-f-]{36}\.[a-z0-9]{2,5}$') then
+    raise exception using errcode = 'P0001', message = 'path_invalido';
+  end if;
+  if not exists (select 1 from storage.objects o where o.bucket_id = 'diario' and o.name = v_path) then
+    raise exception using errcode = 'P0001', message = 'arquivo_nao_encontrado';
+  end if;
+  if v_mime = '' or v_mime not like 'image/%' or p_tamanho is null or p_tamanho <= 0 or p_tamanho > 10485760 then
+    raise exception using errcode = 'P0001', message = 'arquivo_invalido';
+  end if;
+  if v_data > now() + interval '5 minutes' then
+    raise exception using errcode = 'P0001', message = 'data_invalida';
+  end if;
+  select count(*) into v_qtd
+    from diario_alimentar
+   where paciente_id = pac.id
+     and created_at > now() - interval '1 hour';
+  if v_qtd >= 30 then
+    raise exception using errcode = 'P0001', message = 'muitos_envios';
+  end if;
+  insert into diario_alimentar (nutricionista_id, paciente_id, data_hora, refeicao, path, mime, tamanho, comentario)
+  values (pac.nutricionista_id, pac.id, v_data, p_refeicao, v_path, v_mime, p_tamanho, v_comentario)
+  returning id into v_id;
+  return jsonb_build_object('id', v_id, 'data_hora', v_data);
+end;
+$function$
+$diario_public$;
+  end if;
+end
+$hml19b_diario$;
+
+-- conferência da troca: continua definer, com search_path, chamável pelo visitante (o link público) e pelo logado; a regra nova no corpo
+do $$
+declare
+  v_f text := '{schema}.diario_enviar(text, text, text, bigint, text, text, timestamptz)';
+begin
+  if (select not p.prosecdef or p.proconfig is null or position('hml-19b' in p.prosrc) = 0 from pg_catalog.pg_proc p where p.oid = v_f::regprocedure) then
+    raise exception 'hml-19b: % tem de seguir SECURITY DEFINER, com search_path e com a regra do aluno dono', v_f;
+  end if;
+  if not has_function_privilege('anon', v_f, 'EXECUTE') or not has_function_privilege('authenticated', v_f, 'EXECUTE') then
+    raise exception 'hml-19b: % perdeu o EXECUTE do visitante ou do logado (o link público e o app usam)', v_f;
+  end if;
 end
 $$;
 
