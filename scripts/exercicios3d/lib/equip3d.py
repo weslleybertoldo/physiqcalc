@@ -1756,7 +1756,7 @@ def _tubo_oco(nome, centro, raio_ext, raio_int, altura, mat, vertices=32, pai=No
 
 def smith(nome="smith", y=0.0, z=1.40, curso=(0.90, 1.50), x_trilho=0.75, raio_trilho=0.016, altura=2.18, fundo=1.37,
           barra=(2.21, 0.015, 0.3175, 0.0245), anilha=(0.225, 0.054), coluna=(0.16, 0.05, 0.10),
-          carrinho=(0.0375, 0.0195, 0.16)):
+          carrinho=(0.0375, 0.0195, 0.16), trava=0.03):
     """Smith (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
       y, z      = linha da barra: os 2 trilhos ficam em (±x_trilho, y) e o eixo da barra, ao longo do X e centrado em x = 0, na
                   altura z;
@@ -1768,7 +1768,11 @@ def smith(nome="smith", y=0.0, z=1.40, curso=(0.90, 1.50), x_trilho=0.75, raio_t
                   (comprimento e raio) em cada ponta;
       anilha    = None ou (raio, espessura): uma anilha em cada luva, encostada no colar;
       coluna    = (recuo, x, y): a coluna (tubo retangular x × y) fica atrás do trilho, com o centro `recuo` m atrás dele (+Y);
-      carrinho  = (raio_ext, raio_int, altura): a luva dos rolamentos que abraça o trilho (raio_int > raio do trilho: folga).
+      carrinho  = (raio_ext, raio_int, altura): a luva dos rolamentos que abraça o trilho (raio_int > raio do trilho: folga);
+      trava     = folga (m) do fundo do carrinho até o topo das travas com a barra em z_min — padrão 3 cm, o de sempre (lote 11,
+                  Supino Inclinado no Smith: a trava logo abaixo do carrinho embaixo, a barra apoiada nela fica o mais perto do
+                  peito sem encostar, a regulagem de Trebs et al. 2010: "set so the bar was positioned as close to the chest as
+                  possible without contacting the chest").
     Devolve um Smith (raizes, equipamentos, apoios, barra, raio, meia, mover())."""
     comp_b, raio_b, luva_b, raio_luva = barra
     recuo, cx, cy = coluna
@@ -1823,7 +1827,7 @@ def smith(nome="smith", y=0.0, z=1.40, curso=(0.90, 1.50), x_trilho=0.75, raio_t
             _cilindro(nome + "_pino%+d_%02d" % (s, k), 0.008, 0.026, (s * x_trilho, face_col - 0.012, zp), rot_y90, mat_aco(),
                       vertices=16, pai=estr)
     # ── travas de segurança: colar no trilho 3 cm abaixo do carrinho com a barra no fim do curso, preso na coluna ──────────────
-    z_trava = curso[0] - alt_c / 2 - 0.03 - 0.025               # centro do colar (5 cm de altura)
+    z_trava = curso[0] - alt_c / 2 - trava - 0.025              # centro do colar (5 cm de altura); trava = 0,03 por padrão
     for s in (1, -1):
         x = s * x_trilho
         _tubo_oco(nome + "_trava%+d" % s, (x, y, z_trava), r_int + 0.012, r_int, 0.05, mat_estrutura(), pai=estr)

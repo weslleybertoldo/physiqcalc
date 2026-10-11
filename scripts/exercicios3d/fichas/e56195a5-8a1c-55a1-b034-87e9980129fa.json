@@ -1,0 +1,458 @@
+{
+  "uuid": "e56195a5-8a1c-55a1-b034-87e9980129fa",
+  "nome": "Supino Inclinado no Smith",
+  "cena": "supino_inclinado_no_smith",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral superior (porção clavicular) · deltoide anterior · tríceps",
+  "padrao_movimento": "supino_inclinado",
+  "equipamento": "smith",
+  "variacao": "banco inclinado",
+  "alvos": [
+    "peitoral"
+  ],
+  "auxiliares": [
+    "deltoide",
+    "triceps"
+  ],
+  "camera": {
+    "az": 35,
+    "el": 20,
+    "dist": 4.8,
+    "alvo": [
+      0.0,
+      0.15,
+      0.74
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.6,
+    "alvo": [
+      0.0,
+      0.15,
+      0.9
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "No Smith a barra corre presa nos dois trilhos verticais da máquina e só sobe e desce. Sentado no banco inclinado a cerca de 45° (44°), colocado embaixo da barra de modo que ela desça na parte de cima do peito, com o glúteo no assento, as costas e a cabeça apoiadas no encosto e os pés chapados no chão, segura a barra com as palmas viradas para os pés (pegada pronada), bem mais aberta que os ombros, com as escápulas para trás e para baixo e os punhos firmes, as mãos um pouco viradas para fora; destrava a barra girando-a para trás e começa com os braços quase esticados e a barra em cima da parte de cima do peito. Desce a barra devagar, em linha reta, até encostar de leve na parte de cima do peito, logo abaixo das clavículas, com os cotovelos abertos a cerca de 45–50° do tronco e mais baixos que os ombros; empurra a barra de volta pela mesma linha até os cotovelos quase esticarem, sem travar. Como o Smith não deixa a barra sair da linha, ela fica em cima do mesmo ponto do peito o tempo todo — no supino inclinado com barra livre ela volta para cima dos ombros. A trava de segurança fica logo abaixo do fim do curso, onde a barra apoiada nela ficaria bem perto do peito, sem encostar.",
+  "cinesiologia": {
+    "plano": "oblíquo, entre o transverso e o sagital: flexão com adução horizontal do ombro e extensão do cotovelo na subida; cadeia cinética aberta. A barra guiada só anda na vertical, numa linha parada em cima da parte de cima do peito (115 mm pros pés da articulação do ombro): em cima os braços ficam um pouco inclinados para os pés e para fora (~20° da vertical, do ombro à mão), e não em cima dos ombros como no supino inclinado com barra livre",
+    "articulacoes": "ombro (flexão e adução horizontal na subida, extensão e abdução horizontal na descida — embaixo o cotovelo fica atrás do plano do tronco, mais baixo que o ombro) e cotovelo (extensão na subida, de ~137° de flexão até ~10°, sem travar; flexão na descida); punho firme, um pouco estendido (~14°) e com a mão um pouco virada para fora — a mão gira em volta da barra junto com o antebraço; escápulas retraídas e deprimidas (para trás e para baixo), paradas no encosto; quadril, joelhos e tornozelos parados, com os pés chapados no chão",
+    "agonistas": "peitoral maior, porção clavicular (ExRx, Smith Incline Bench Press: Target \"Pectoralis Major, Clavicular\")",
+    "sinergistas": "peitoral maior (porção esternal), deltoide anterior, tríceps braquial e coracobraquial (ExRx, Smith Incline Bench Press: Synergists \"Pectoralis Major, Sternal\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\"); no Smith, com o banco a 44° a porção clavicular trabalha mais que no banco reto e que a 28°, e a esternal menos que no banco reto (Trebs 2010: \"Activation of the clavicular head of the pectoralis major was significantly greater at 44° compared to 0° [...] and at 44° compared to 28°\"; \"Activation of the sternocostal head of the pectoralis major was significantly greater at 0° compared to 28° [...], at 0° compared to 44°\"); o deltoide anterior trabalha mais que no banco reto em todos os ângulos inclinados (\"Activation of the anterior deltoid was significantly greater at 28° compared to 0° [...], at 44° compared to 0°\")",
+    "estabilizadores": "bíceps braquial, cabeça curta (ExRx, Smith Incline Bench Press: Dynamic Stabilizers \"Biceps Brachii, Short Head\"); a barra guiada tira parte do equilíbrio (Bodybuilding.com: \"The bar moves on a track making it easier to control\"; Trebs 2010: \"it would seem the balance requirements when performing the bench press exercise on a Smith machine, in comparison to free weights, would be reduced\"): no supino reto o bíceps trabalha menos que na barra livre (Saeterbakken 2011: \"Electrical activity in the biceps brachii increased with stability requirements (i.e. Smith machine <barbell <dumbbells...)\") e o deltoide medial também (Schick et al. 2010: \"greater activation of the medial deltoid on the free weight bench press than on the Smith machine bench press\")",
+    "fases": "descida excêntrica, inspirando, até a barra encostar de leve na parte de cima do peito (ExRx: \"Lower weight to upper chest.\"; Bodybuilding.com: \"As you breathe in, come down slowly until you feel the bar on your upper chest.\") e subida concêntrica, soltando o ar, até os cotovelos quase esticarem (ExRx: \"Press bar until arms are extended.\"; Bodybuilding.com: \"bring the bar back to the starting position as you breathe out\"), a barra sempre na mesma linha vertical"
+  },
+  "referencias": [
+    "ExRx.net — Smith Incline Bench Press (Weight Exercises › Upper Chest), https://exrx.net/WeightExercises/PectoralClavicular/SMInclineBenchPress (lido nas cópias do Internet Archive de 26/04/2025 e de 11/03/2016, a da animação; o site responde 403 direto): classificação \"Utility: Basic or Auxiliary\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Lie supine on incline bench with upper chest under bar. Grasp bar with wide oblique overhand grip. Disengage bar by rotating bar back.\"; Execution: \"Lower weight to upper chest. Press bar until arms are extended. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide. Also see Bench Press Analysis.\"; músculos (2025): Target \"Pectoralis Major, Clavicular\"; Synergists \"Pectoralis Major, Sternal\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\"; Dynamic Stabilizers \"Biceps Brachii, Short Head\". A ficha não diz o ângulo do banco",
+    "Bodybuilding.com — Smith Machine Incline Bench Press (Exercise Database; o nome do fonte_en do catálogo), https://www.bodybuilding.com/exercises/smith-machine-incline-bench-press (a página saiu do ar: lida na cópia do Internet Archive de 10/10/2024; as mesmas instruções estão na lista aberta free-exercise-db, exercises/Smith_Machine_Incline_Bench_Press.json, domínio público): \"The Smith machine incline bench press is a machine-based movement targeting the chest, particularly the upper chest. The Smith machine mimics a barbell but provides more stability.\"; \"Place an incline bench underneath the smith machine. Place the barbell at a height that you can reach when lying down and your arms are almost fully extended. Once the weight you need is selected, lie down on the incline bench and make sure your upper chest is aligned with the barbell. Using a pronated grip (palms facing forward) that is wider than shoulder width, unlock the bar from the rack and hold it straight over you with your arms locked. This will be your starting position.\"; \"As you breathe in, come down slowly until you feel the bar on your upper chest.\"; \"After a second pause, bring the bar back to the starting position as you breathe out and push the bar using your chest muscles.\"; Benefits: \"The bar moves on a track making it easier to control\"; Variations: \"Same as the Barbell Incline Bench Press but with a Smith Machine.\". Não diz o ângulo do banco; aqui os cotovelos param ~10° antes de esticar (\"Press bar until arms are extended\", ExRx), como nos outros supinos da fábrica",
+    "Trebs AA, Brandenburg JP, Pitney WA. An electromyography analysis of 3 muscles surrounding the shoulder joint during the performance of a chest press exercise at several angles. J Strength Cond Res. 2010;24(7):1925-1930. doi:10.1519/JSC.0b013e3181ddfae7 — texto inteiro lido (a página da LWW, cópia do Internet Archive de 16/07/2025): o supino a 0, 28, 44 e 56° NA MÁQUINA SMITH — \"All testing sets (days 1 and 2) were completed using a Smith machine (without counterweight, Samson Equipment, Las Cruces, NM, USA), and as a result, the bar traveled vertically over the chest (in line with the nipple).\"; travas: \"All 1RM attempts were concentric-only muscle actions and started from the safety stops on the Smith machine, which were set so the bar was positioned as close to the chest as possible without contacting the chest.\"; \"used a closed, pronated grip\"; \"For a 1RM lift to be considered valid, subjects had to achieve full extension at the elbow joints.\"; resultados: \"Activation of the clavicular head of the pectoralis major was significantly greater at 44° compared to 0° (p = 0.010), at 56° compared to 0° (p = 0.013), and at 44° compared to 28° (p = 0.003).\"; discussão: \"the clavicular head of the pectoralis major experienced significantly heightened activity levels at bench angles of 44 and 56°, but not 28°, above horizontal\"; \"these findings indicate that a small increase in bench angle (e.g., less than 40°) has minimal influence on the activation of clavicular head\"; conclusão: \"With respect to the clavicular head, a bench angle of 44° seemed ideal.\"; Practical Applications: \"an inclined position of approximately 44° is required to effectively recruit the clavicular head (commonly referred to as the upper part of pectoralis major) and the anterior deltoid.\" (aqui a barra encosta no alto do peito, como mandam o ExRx e o Bodybuilding.com, e não na linha dos mamilos do protocolo do estudo)",
+    "Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM. Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise. Int J Environ Res Public Health. 2020;17(19):7339 (texto inteiro, PMC7579505; barra LIVRE): \"An inclination of 30° produces greater activation of the upper portion of the pectoralis major.\"; discussão: \"However, Trebs et al. [8] found that the clavicular head of the pectoralis major experienced significantly heightened activity levels at bench angles of 44° and 56° but not at 28° (above horizontal); this contrasts with the finding of the current study.\"; \"We agree with Lauver et al. [5], who reported that these differences might be explained by Trebs et al. [8] using a Smith machine. In our study, like in that performed by Lauver et al. [5], we used a free-weight barbell to conduct the bench press exercise.\" — o 30° dos outros 3 inclinados da fábrica (barra livre e halteres) vem daqui; no Smith vale o estudo do Smith (Trebs: 44°)",
+    "Lauver JD, Cayot TE, Scheuermann BW. Influence of bench angle on upper extremity muscular activation during bench press exercise. Eur J Sport Sci. 2016;16(3):309-316. doi:10.1080/17461391.2015.1022605 — lido só o resumo (PubMed 25799093; o texto é pago): \"a free-weight barbell bench press performed at 0°, 30°, 45° and -15° bench angles\"; \"a bench incline angle of 30° or 45° resulted in greater muscular activation during certain time points\"",
+    "ExRx.net — Bench Press Analyses (https://exrx.net/Kinesiology/BenchPress, cópia do Internet Archive de 01/02/2025): \"Keep the scapula back and down.\"; \"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso and can be customized according to individual goals and body mechanics.\"; \"a standard bench press grip of 1.5 to 1.7 times the biacromial width\"; \"Position the wrists directly under the bar by turning the wrists out slightly so bar is placed on lower outer portion of palm. This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar.\"; \"allowing for a mild stretch at the lowest position which would require the elbows to travel lower than the shoulders.\"; \"the lower back forms a natural arch when the head, upper back, and hips are in contact with the bench. Placing the feet apart on the floor creates a more stable base of support.\"; Incline/Decline: \"Trebbs (2010) found that the clavicular head of the Pectoralis Major (upper chest) was most active at a 44º incline, over the 0º (flat bench), and incline bench presses of 28º, and 56º. In contrast, Barnett (1995) reported that the clavicular head of the Pectoralis Major was no more active during the Smith Incline Bench Press than the flat Smith Bench Press\" (o inclinado de Barnett era a 40°, segundo Trebs: \"40° above horizontal by Barnett et al.\")",
+    "NSCA — Basics of Strength and Conditioning Manual (Sands, Wurth e Hewit), https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (o texto salvo pelo Supino Reto no Smith, cópia do Internet Archive de 26/05/2024; o manual não tem o do Smith): cap. 3, p. 28, os 5 pontos de apoio — \"1. Head in neutral position on bench or back pad 2. Shoulders and upper back set evenly on bench or back pad 3. Buttocks on bench or seat 4. Right foot flat on floor 5. Left foot flat on floor\"; cap. 4, 4b. Barbell Incline Bench Press, p. 54 (barra LIVRE): \"Exercise Objective: Develop strength in the upper pectorals, shoulders, and triceps\"; \"Lie flat on the inclined bench in a five-point body contact position with eyes directly under the bar\"; \"Grasp the bar evenly with a closed, pronated grip with hands slightly wider than shoulder-width\"; \"Lower the bar slowly and under control, allowing it to touch the top of the chest\"; \"Keep wrists rigid and directly above elbows\"; \"Take a deep breath to fill the chest with air and engage the core to prevent the back from arching\"; \"The movement of the bar should be down and slightly forward, and up and slightly back\" (barra livre: no Smith ela só anda na vertical). O manual não diz o ângulo do banco",
+    "ACE — Incline Chest Press (Exercise Library, com halteres; a biblioteca da ACE não tem o supino inclinado com barra nem o do Smith), https://www.acefitness.org/resources/everyone/exercise-library/25/incline-chest-press/ (o texto salvo pelo Supino Inclinado com Halteres, lido em 11/10/2026): \"lie supine (on your back) on an incline bench angled between 45 and 60 degrees with your feet placed firmly on the floor\"; \"Depress and retract your scapulae (pull shoulders down and back) to make firm contact with the bench. Your head, shoulders, butt and feet should make contact with the bench and floor/riser throughout the exercise.\"; \"Keep the elbows under your wrists, and either close to your sides (emphasizes more triceps) or flared out from the body (emphasizes more pectorals).\"",
+    "Cotterman ML, Darby LA, Skelly WA. Comparison of muscle force production using the Smith machine and free weights for bench press and squat exercises. J Strength Cond Res. 2005;19(1):169-176. doi:10.1519/14433.1 — lido só o resumo (PubMed 15705030): \"The Smith machine (SM) (vertical motion of bar on fixed path; fixed-form exercise) and free weights (FWs) (free-form path) are commonly used strength training modes.\"",
+    "Schick EE, Coburn JW, Brown LE, Judelson DA, Khamoui AV, Tran TT, Uribe BP. A comparison of muscle activation between a Smith machine and free weight bench press. J Strength Cond Res. 2010;24(3):779-784. doi:10.1519/JSC.0b013e3181cc2237 — lido só o resumo (PubMed 20093960; supino reto): \"Results indicated greater activation of the medial deltoid on the free weight bench press than on the Smith machine bench press.\"",
+    "Saeterbakken AH, van den Tillaar R, Fimland MS. A comparison of muscle activity and 1-RM strength of three chest-press exercises with different stability requirements. J Sports Sci. 2011;29(5):533-538. doi:10.1080/02640414.2010.543916 — lido só o resumo (PubMed 21225489; supino reto): \"Electrical activity in the pectoralis major and anterior deltoid did not differ during the lifts. Electrical activity in the biceps brachii increased with stability requirements (i.e. Smith machine <barbell <dumbbells...)\"",
+    "Medidas da máquina: as do e3.smith (Agachamento no Smith, lote 4) — barra de 30 mm na pegada, trilhos a ±0,75 m, carrinhos de 16 cm, anilha de Ø 450 mm; as fontes (Titan Fitness Smith Machine, Precor DPL0802, Gym Gear Elite Series) estão na ficha do Agachamento no Smith e no bloco SMITH do lib/equip3d.py (não relidas aqui). As travas: parâmetro novo trava= do e3.smith (lote 11; padrão 3 cm = o de sempre) — aqui 1 cm abaixo do carrinho no fim do curso: com a barra embaixo a tampa do carrinho fica 4,0 mm acima da trava e a barra apoiada nela ficaria 3,0 mm acima da pele do peito, a regulagem de Trebs 2010 (\"set so the bar was positioned as close to the chest as possible without contacting the chest\"). O banco é o e3.banco_inclinado do Supino Inclinado com Barra (assento a 0,44 m), com o encosto a 44°"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "costas apoiadas no encosto",
+        "equipamento": "banco",
+        "partes": [
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          -20,
+          3
+        ],
+        "fonte": "NSCA — Basics, p. 28 (\"Shoulders and upper back set evenly on bench or back pad\"); ACE — Incline Chest Press (\"Your head, shoulders, butt and feet should make contact with the bench and floor/riser throughout the exercise\")"
+      },
+      {
+        "nome": "glúteo apoiado no assento",
+        "equipamento": "banco",
+        "partes": [
+          "Hips"
+        ],
+        "mm": [
+          -20,
+          3
+        ],
+        "fonte": "NSCA — Basics, p. 28 (\"Buttocks on bench or seat\"); ACE — Incline Chest Press (idem)"
+      },
+      {
+        "nome": "cabeça apoiada no encosto",
+        "equipamento": "banco",
+        "partes": [
+          "Head"
+        ],
+        "mm": [
+          -20,
+          3
+        ],
+        "fonte": "NSCA — Basics, p. 28 (\"Head in neutral position on bench or back pad\"); ACE — Incline Chest Press (idem)"
+      },
+      {
+        "nome": "barra encosta de leve no alto do peito embaixo",
+        "equipamento": "smith_barra",
+        "partes": [
+          "Spine2",
+          "Spine1"
+        ],
+        "mm": [
+          3,
+          12
+        ],
+        "t": 1.0,
+        "fonte": "ExRx — Smith Incline Bench Press (\"Lower weight to upper chest\"); Bodybuilding.com (\"come down slowly until you feel the bar on your upper chest\"); NSCA — 4b. Barbell Incline Bench Press (\"allowing it to touch the top of the chest\"). Encostar de leve = os 7 mm do Supino Inclinado com Barra (a checagem cobra ≥ 3 mm do equipamento)"
+      },
+      {
+        "nome": "barra nunca encosta no rosto, no queixo nem no pescoço",
+        "equipamento": "smith_barra",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          20,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (a barra nunca entra no pescoço, no queixo, no rosto nem no cabelo): a linha da barra fica em cima do alto do peito (ExRx: \"upper chest under bar\"), longe do rosto"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "mãos e antebraços sem entrar no corpo",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3",
+          "LeftForeArm",
+          "RightForeArm"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          2000
+        ],
+        "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+      },
+      {
+        "nome": "mãos longe do rosto, do queixo e da cabeça",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Head",
+          "Neck"
+        ],
+        "cabelo": true,
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo; mão × queixo medida à parte)"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "barra longe do cabelo",
+        "equipamento": "smith_barra",
+        "de": "cabelo",
+        "mm": [
+          20,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (a barra nunca entra na cabeça nem no cabelo)"
+      },
+      {
+        "nome": "estrutura do Smith (base, colunas, travessa, trilhos, pinos, travas) longe do banco",
+        "equipamento": "smith_estrutura",
+        "de": "banco",
+        "t": 0.0,
+        "mm": [
+          3,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do exercício: a estrutura do Smith não encosta no banco e o banco não atravessa a base, a travessa nem as colunas (as 2 ficam paradas: basta o 1º quadro)"
+      },
+      {
+        "nome": "barra do Smith (carrinhos, ganchos, luvas e anilhas) longe do banco",
+        "equipamento": "smith_barra",
+        "de": "banco",
+        "t": "todos",
+        "mm": [
+          3,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do exercício: as anilhas não batem no banco"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "braços quase esticados em cima, sem travar",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          5,
+          20
+        ],
+        "fonte": "ExRx — Smith Incline Bench Press (\"Press bar until arms are extended\"); Bodybuilding.com (\"your arms are almost fully extended\"); sem travar o cotovelo (~10°), como no Supino Inclinado com Barra e no Supino Reto no Smith"
+      },
+      {
+        "nome": "em cima a barra fica em cima do alto do peito (o braço inclinado pros pés), não em cima do ombro",
+        "medida": "braco_elevacao",
+        "t": 0.0,
+        "graus": [
+          105,
+          127
+        ],
+        "fonte": "ExRx — Smith Incline Bench Press (\"Lie supine on incline bench with upper chest under bar\"); Bodybuilding.com (\"make sure your upper chest is aligned with the barbell\"); Cotterman 2005 (\"vertical motion of bar on fixed path\"): a barra só anda na vertical, então em cima ela fica em cima do mesmo ponto do peito em que encosta. Medida da fábrica: braço × eixo do tronco; com o tronco a 44° o braço em pé daria ~134°"
+      },
+      {
+        "nome": "cotovelo bem dobrado embaixo",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 1.0,
+        "graus": [
+          120,
+          140
+        ],
+        "fonte": "ExRx — Smith Incline Bench Press (\"Lower weight to upper chest\"); Bodybuilding.com (\"until you feel the bar on your upper chest\"): com a barra no alto do peito o cotovelo dobra ~137° (o Supino Inclinado com Barra, 139°)"
+      },
+      {
+        "nome": "cotovelo a 45–70° do tronco embaixo",
+        "medida": "braco_abertura",
+        "t": 1.0,
+        "graus": [
+          45,
+          70
+        ],
+        "fonte": "ExRx — Bench Press Analyses (\"a 45º to 70º angle between the shoulder and torso\")"
+      },
+      {
+        "nome": "cotovelo mais baixo que o ombro embaixo (atrás do plano do tronco)",
+        "medida": "braco_frente",
+        "t": 1.0,
+        "graus": [
+          -65,
+          -10
+        ],
+        "fonte": "ExRx — Bench Press Analyses (\"allowing for a mild stretch at the lowest position which would require the elbows to travel lower than the shoulders\")"
+      },
+      {
+        "nome": "antebraço o mais em pé que o braço deixa embaixo",
+        "medida": "antebraco_vertical",
+        "t": 1.0,
+        "graus": [
+          0,
+          24
+        ],
+        "fonte": "NSCA — 4b. Barbell Incline Bench Press (\"Keep wrists rigid and directly above elbows\"); ACE — Incline Chest Press (\"Keep the elbows under your wrists\"). O braço curto do boneco (0,254 m) não deixa o antebraço em pé com o cotovelo a 45°+ do tronco e a barra no alto do peito: com o banco a 44° ele fica ~21–22° deitado, o punho um pouco mais pros pés que o cotovelo (sondas de 11/10/2026: a pegada mais aberta e o punho mais estendido não melhoram; com o antebraço em pé o cotovelo ficaria a ~30–35° do tronco). No Supino Inclinado com Barra, a 30°, 15°"
+      },
+      {
+        "nome": "antebraço quase em pé o movimento todo",
+        "medida": "antebraco_vertical",
+        "t": "todos",
+        "graus": [
+          0,
+          25
+        ],
+        "fonte": "NSCA — 4b. Barbell Incline Bench Press (\"Keep wrists rigid and directly above elbows\"); em cima, com a barra em cima do alto do peito e o braço quase esticado, o antebraço deita um pouco pra fora junto com o braço"
+      },
+      {
+        "nome": "pegada aberta, ~1,5–1,7 vez a largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.0
+        ],
+        "fonte": "ExRx — Smith Incline Bench Press (\"Grasp bar with wide oblique overhand grip\"; \"Range of motion will be compromised if grip is too wide\"); Bodybuilding.com (\"wider than shoulder width\"); ExRx — Bench Press Analyses (\"a standard bench press grip of 1.5 to 1.7 times the biacromial width\"). A medida daqui divide pela distância entre as articulações dos ombros, menor que a biacromial: por isso a faixa fica acima de 1,5–1,7 (a mesma do Supino Reto no Smith)"
+      },
+      {
+        "nome": "pegada pronada (palmas pros pés, não neutra)",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "Bodybuilding.com (\"Using a pronated grip (palms facing forward)\"); ExRx — Smith Incline Bench Press (\"overhand grip\"); NSCA (\"closed, pronated grip\"): 0 = palma pros pés, 90 = palmas uma pra outra (neutra)"
+      },
+      {
+        "nome": "palma de frente pros pés (nem pro teto nem pro chão)",
+        "medida": "palma_cima",
+        "t": "todos",
+        "graus": [
+          50,
+          130
+        ],
+        "fonte": "Bodybuilding.com (\"pronated grip (palms facing forward)\"): sentado no banco inclinado a palma fica de frente pros pés, de pé (90 = de lado ou de frente; 0 = pro teto, 180 = pro chão)"
+      },
+      {
+        "nome": "punho firme, um pouco estendido",
+        "medida": "punho_flexao",
+        "t": "todos",
+        "graus": [
+          -30,
+          0
+        ],
+        "fonte": "NSCA — 4b. Barbell Incline Bench Press (\"Keep wrists rigid\"); ExRx — Bench Press Analyses (\"This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar\"). Medida: − = estendido (a mão pra trás)"
+      },
+      {
+        "nome": "punho sem desviar demais pro lado",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -30,
+          20
+        ],
+        "fonte": "amplitude normal do punho, desvio radial 0–20° e ulnar 0–30° (valores da AAOS, Norkin & White — os do lib/limites.py; tecnica3d.punho_desvio: + = pro lado do polegar); ExRx — Bench Press Analyses (\"turning the wrists out slightly\")"
+      },
+      {
+        "nome": "tronco no encosto a ~44° do chão",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          40,
+          52
+        ],
+        "fonte": "Trebs 2010 (\"With respect to the clavicular head, a bench angle of 44° seemed ideal\", no Smith). Medida: quadril → base do pescoço × vertical (46° = tronco a 44° do chão)"
+      },
+      {
+        "nome": "coluna neutra, sem arquear",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "NSCA — 4b. Barbell Incline Bench Press (\"engage the core to prevent the back from arching\"); ACE — Incline Chest Press (\"maintain a neutral spine\")"
+      },
+      {
+        "nome": "joelhos a ~90°, pés chapados no chão",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          75,
+          100
+        ],
+        "fonte": "NSCA — Basics, p. 28 (\"Right foot flat on floor\", \"Left foot flat on floor\"); ExRx — Bench Press Analyses (\"Placing the feet apart on the floor creates a more stable base of support.\")"
+      },
+      {
+        "nome": "pelve nivelada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ]
+      },
+      {
+        "nome": "tronco sem girar (ombros nivelados)",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ]
+      },
+      {
+        "nome": "escápulas pra trás e pra baixo, paradas no encosto",
+        "medida": "escapula_frente",
+        "t": "todos",
+        "mm": [
+          -25,
+          0
+        ],
+        "fonte": "ExRx — Bench Press Analyses (\"Keep the scapula back and down.\"); ACE — Incline Chest Press (\"Depress and retract your scapulae (pull shoulders down and back)\")"
+      },
+      {
+        "nome": "cabeça apoiada no encosto, na linha do tronco",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "NSCA — Basics, p. 28 (\"Head in neutral position on bench or back pad\"); sentado no encosto, o pescoço estende ~14° até a cabeça encostar (dt.inclinar)"
+      }
+    ]
+  }
+}
