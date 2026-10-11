@@ -302,7 +302,7 @@ function CartaoLancamentosERecibos({ d, compacto, reciboAvulso, aoFecharReciboAv
     chave: "pagina_recibos", compacto, queryKey: ["financeiro-recibos", pid], ler: (pagina) => paginaRecibosDoAluno(pid, pagina), ativo: !!uid,
   });
   const totaisQ = useQuery({ queryKey: ["financeiro-totais-aluno", pid], queryFn: () => buscarTotaisDoAluno(pid), enabled: !!uid, staleTime: 30_000, retry: 1 });
-  const categorias = useQuery({ queryKey: ["financeiro-categorias", uid], queryFn: () => garantirCategorias(uid), enabled: !!uid });
+  const categorias = useQuery({ queryKey: ["financeiro-categorias", uid], queryFn: () => garantirCategorias(uid, d.aluno.conta_id), enabled: !!uid });
   const [novoLanc, setNovoLanc] = useState(false);
   const [reciboDe, setReciboDe] = useState<Lancamento | null>(null);
   const [modelosAberto, setModelosAberto] = useState(false);

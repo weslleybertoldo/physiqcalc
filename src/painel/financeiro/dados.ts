@@ -1,23 +1,28 @@
 // Physiq W19 — acesso a dados do Painel › Financeiro no banco principal (a porta de src/lib/financeiro.ts e src/lib/recibos.ts do
 // PhysiqNutri, main ca9f66f, para a CONTA ATIVA). Quem vê o quê (spec 4.1, P6) é a RLS de hoje: cada profissional os seus; o dono
 // da conta, os da conta inteira (políticas "dono da conta"). O filtro daqui só RECORTA a conta ativa: as linhas da conta + as do
-// próprio profissional sem conta (o site antigo do Nutri grava sem conta_id até a W28) — o master não vê as de todo mundo.
+// próprio profissional sem conta (as antigas: o site do Nutri — fora do ar desde 02/10 — e a semente do Financeiro do aluno até a
+// hml-19d gravavam sem conta_id) — o master não vê as de todo mundo.
 // Exclusão é SOFT (deleted_at → Lixeira). O número do recibo vem do gatilho do banco (sequencial por profissional, nunca volta).
 // hml-14b (B21 · D14): Lançamentos e Recibos chegam por PÁGINA (20) do banco, com o total, os totais e a busca calculados lá
 // (financeiro_lancamentos, financeiro_resumo_periodo e financeiro_recibos — a migration 20261009010000, com as mesmas regras e o
 // mesmo "quem vê o quê" de antes); o Resumo e o Dashboard recebem o recebido já somado por dia.
+// hml-19d (H-41 · jeito 2): as GRAVAÇÕES (movimentações, categorias, modelos, recibos e as sementes do 1º acesso) saem do navegador e vão
+// pela função financeiro (src/financeiro/gravar.ts), com as MESMAS assinaturas e a mesma volta (o select de hoje mora no servidor:
+// _shared/financeiro-gravar-regras.ts VOLTA_*). As leituras seguem aqui. O recibo emitido e o excluído viram 1 chamada (antes, 2 a 3
+// pedidos sem transação); o erro chega com o texto fixo do código (o nome repetido da categoria segue com a frase de hoje).
 import { principal } from "@/integrations/principal/client";
 import { POR_PAGINA, deslocamento, intervalo, type Pagina } from "@/lib/paginacao";
-import { CATEGORIAS_PADRAO, ordenarCategorias, type RegistroMovimentacao, type Totais } from "./financeiroUtil";
-import { TITULO_MODELO_PADRAO, aplicarTags, ordenarModelosRecibo, type DadosTags } from "@/financeiro/recibos";
+import { normalizarConteudo } from "@/nutricao/editor/lib/orientacoesUtil";
+import { garantirPadroesFinanceiro, gravarFinanceiro } from "@/financeiro/gravar";
+import { ordenarCategorias, type RegistroMovimentacao, type Totais } from "./financeiroUtil";
+import { aplicarTags, ordenarModelosRecibo, type DadosTags } from "@/financeiro/recibos";
 import type { CobrancaDoDia, EntradaDoDia, RecebidoDoPeriodo } from "./resumo";
 import type { RegistroRecibo } from "./recibosUtil";
 
-const falhou = (error: { message: string; code?: string } | null, amigavel?: Record<string, string>): void => {
-  if (!error) return;
-  throw new Error((error.code && amigavel?.[error.code]) || error.message);
+const falhou = (error: { message: string; code?: string } | null): void => {
+  if (error) throw new Error(error.message);
 };
-const ERROS_CATEGORIA = { "23505": "Já existe uma categoria com esse nome" };
 
 /** O recorte da conta ativa (PostgREST `or`): as linhas da conta + as minhas sem conta. */
 export const recorteDaConta = (contaId: string, uid: string): string => `conta_id.eq.${contaId},and(conta_id.is.null,nutricionista_id.eq.${uid})`;
@@ -62,10 +67,6 @@ export interface Transacao {
   categoria: { nome: string } | null;
   paciente: { nome: string; cpf?: string | null } | null;
 }
-
-const SELECT_TX =
-  "id, nutricionista_id, conta_id, paciente_id, tipo, descricao, valor, data, metodo, observacao, estornada, recibo_id, categoria_id, created_at, " +
-  "categoria:categorias_financeiras(nome), paciente:pacientes(nome, cpf)";
 
 /** Os filtros de Lançamentos que vão ao banco (o período vai à parte): vazio = sem filtro. */
 export interface FiltrosLancamentos {
@@ -141,29 +142,26 @@ const colunas = (r: RegistroMovimentacao) => ({
   observacao: r.observacao,
 });
 
+/** A movimentação nova (o dono é quem chama, no servidor — o `uid` fica só por compatibilidade), com a categoria e o aluno de volta. */
 export async function criarTransacao(uid: string, contaId: string, r: RegistroMovimentacao): Promise<Transacao> {
-  const { data, error } = await principal.from("transacoes").insert({ ...colunas(r), nutricionista_id: uid, conta_id: contaId }).select(SELECT_TX).single();
-  falhou(error);
-  return data as unknown as Transacao;
+  const { linha } = await gravarFinanceiro<{ linha: Transacao }>("transacao_criar", { ...colunas(r), conta_id: contaId });
+  return linha;
 }
 
 export async function atualizarTransacao(id: string, r: RegistroMovimentacao): Promise<Transacao> {
-  const { data, error } = await principal.from("transacoes").update(colunas(r)).eq("id", id).select(SELECT_TX).single();
-  falhou(error);
-  return data as unknown as Transacao;
+  const { linha } = await gravarFinanceiro<{ linha: Transacao }>("transacao_editar", { id, ...colunas(r) });
+  return linha;
 }
 
 /** Estornar (true) tira a movimentação dos totais sem apagar; desfazer (false) volta. */
 export async function marcarEstorno(id: string, estornada: boolean): Promise<Transacao> {
-  const { data, error } = await principal.from("transacoes").update({ estornada }).eq("id", id).select(SELECT_TX).single();
-  falhou(error);
-  return data as unknown as Transacao;
+  const { linha } = await gravarFinanceiro<{ linha: Transacao }>("transacao_estornar", { id, estornada });
+  return linha;
 }
 
-/** Soft delete (Lixeira). */
+/** Soft delete (Lixeira; 0 linha → nao_encontrado — antes dizia "excluída" calado). */
 export async function excluirTransacao(id: string): Promise<void> {
-  const { error } = await principal.from("transacoes").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await gravarFinanceiro("transacao_excluir", { id });
 }
 
 // ───────────────────────── categorias (de cada profissional) ─────────────────────────
@@ -181,33 +179,35 @@ export async function listarCategorias(uid: string): Promise<CategoriaFinanceira
   return ordenarCategorias((data ?? []) as CategoriaFinanceira[]);
 }
 
-/** Lista as categorias; sem nenhuma, cria as 6 padrão (1º acesso). Duas abas ao mesmo tempo: a 2ª bate no índice único e relê. */
+/**
+ * Lista as categorias; sem nenhuma, a função semeia as 6 padrão (1º acesso — financeiro › padroes_garantir: 1 chamada, com a conta e com
+ * trava no servidor; junto, o "Recibo padrão" se faltar). A semente que falha não derruba a tela: relê, como antes.
+ */
 export async function garantirCategorias(uid: string, contaId: string | null): Promise<CategoriaFinanceira[]> {
   const lista = await listarCategorias(uid);
   if (lista.length) return lista;
-  const { data, error } = await principal.from("categorias_financeiras")
-    .insert(CATEGORIAS_PADRAO.map((nome) => ({ nutricionista_id: uid, conta_id: contaId, nome }))).select("id, nome, nutricionista_id");
-  if (error) return listarCategorias(uid);
-  return ordenarCategorias((data ?? []) as CategoriaFinanceira[]);
+  try {
+    const r = await garantirPadroesFinanceiro(contaId);
+    return ordenarCategorias(r.categorias.map(({ id, nome, nutricionista_id }) => ({ id, nome, nutricionista_id })));
+  } catch {
+    return listarCategorias(uid);
+  }
 }
 
+/** O nome repetido (sem caixa) entre as vivas → "Já existe uma categoria com esse nome" (o código nome_repetido da função). */
 export async function criarCategoria(uid: string, contaId: string | null, nome: string): Promise<CategoriaFinanceira> {
-  const { data, error } = await principal.from("categorias_financeiras").insert({ nutricionista_id: uid, conta_id: contaId, nome: nome.trim() })
-    .select("id, nome, nutricionista_id").single();
-  falhou(error, ERROS_CATEGORIA);
-  return data as CategoriaFinanceira;
+  const { linha } = await gravarFinanceiro<{ linha: CategoriaFinanceira }>("categoria_criar", { conta_id: contaId, nome: nome.trim() });
+  return linha;
 }
 
 export async function renomearCategoria(id: string, nome: string): Promise<CategoriaFinanceira> {
-  const { data, error } = await principal.from("categorias_financeiras").update({ nome: nome.trim() }).eq("id", id).select("id, nome, nutricionista_id").single();
-  falhou(error, ERROS_CATEGORIA);
-  return data as CategoriaFinanceira;
+  const { linha } = await gravarFinanceiro<{ linha: CategoriaFinanceira }>("categoria_renomear", { id, nome: nome.trim() });
+  return linha;
 }
 
 /** Soft delete — as movimentações antigas continuam com a categoria (pelo id). */
 export async function excluirCategoria(id: string): Promise<void> {
-  const { error } = await principal.from("categorias_financeiras").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await gravarFinanceiro("categoria_excluir", { id });
 }
 
 // ───────────────────────── recibos e modelos ─────────────────────────
@@ -235,10 +235,6 @@ export interface Recibo {
   paciente: { nome: string; cpf?: string | null } | null;
   transacao: { descricao: string; data: string } | null;
 }
-
-// duas FKs ligam recibos ↔ transacoes (recibos.transacao_id e transacoes.recibo_id): o `!recibos_transacao_id_fkey` escolhe a certa
-const SELECT_RECIBO = "id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at, " +
-  "paciente:pacientes(nome, cpf), transacao:transacoes!recibos_transacao_id_fkey(descricao, data)";
 
 /** Uma página de recibos + o total e a SOMA dos valores de todos os que passam na busca. */
 export interface PaginaRecibos extends Pagina<Recibo> {
@@ -276,21 +272,25 @@ export async function listarModelosRecibo(uid: string): Promise<ModeloRecibo[]> 
   return ordenarModelosRecibo((data ?? []) as ModeloRecibo[]);
 }
 
-/** Lista os modelos; sem nenhum, cria o "Recibo padrão" favorito (o texto do papel — o do Nutri para a nutricionista). */
-export async function garantirModelosRecibo(uid: string, contaId: string | null, conteudoPadrao: string): Promise<ModeloRecibo[]> {
+/**
+ * Lista os modelos; sem nenhum, a função semeia o "Recibo padrão" favorito (financeiro › padroes_garantir — o texto pelo papel da pessoa
+ * NA conta, escolhido no servidor: o do Nutri para a nutricionista, o mesmo do padraoDoRecibo da tela; o `conteudoPadrao` fica só por
+ * compatibilidade). 1 chamada, com a conta e com trava; junto, as 6 categorias se faltarem.
+ */
+export async function garantirModelosRecibo(uid: string, contaId: string | null, _conteudoPadrao: string): Promise<ModeloRecibo[]> {
   const lista = await listarModelosRecibo(uid);
   if (lista.length) return lista;
-  return [await criarModeloRecibo(uid, contaId, { titulo: TITULO_MODELO_PADRAO, conteudo: conteudoPadrao, favorito: true })];
+  const r = await garantirPadroesFinanceiro(contaId);
+  return ordenarModelosRecibo(r.modelos.map(({ id, nutricionista_id, titulo, conteudo, favorito }) => ({ id, nutricionista_id, titulo, conteudo, favorito })));
 }
 
 export type DadosModeloRecibo = { titulo: string; conteudo: string; favorito: boolean };
 
 export async function criarModeloRecibo(uid: string, contaId: string | null, d: DadosModeloRecibo): Promise<ModeloRecibo> {
-  const { data, error } = await principal.from("modelos_recibo")
-    .insert({ nutricionista_id: uid, conta_id: contaId, titulo: d.titulo.trim(), conteudo: d.conteudo, favorito: d.favorito })
-    .select("id, nutricionista_id, titulo, conteudo, favorito").single();
-  falhou(error);
-  return data as ModeloRecibo;
+  const { linha } = await gravarFinanceiro<{ linha: ModeloRecibo }>("modelo_recibo_criar", {
+    conta_id: contaId, titulo: d.titulo.trim(), conteudo: d.conteudo, favorito: d.favorito,
+  });
+  return linha;
 }
 
 export async function atualizarModeloRecibo(id: string, patch: Partial<DadosModeloRecibo>): Promise<ModeloRecibo> {
@@ -298,20 +298,20 @@ export async function atualizarModeloRecibo(id: string, patch: Partial<DadosMode
   if (patch.titulo !== undefined) dados.titulo = patch.titulo.trim();
   if (patch.conteudo !== undefined) dados.conteudo = patch.conteudo;
   if (patch.favorito !== undefined) dados.favorito = patch.favorito;
-  const { data, error } = await principal.from("modelos_recibo").update(dados).eq("id", id).select("id, nutricionista_id, titulo, conteudo, favorito").single();
-  falhou(error);
-  return data as ModeloRecibo;
+  const { linha } = await gravarFinanceiro<{ linha: ModeloRecibo }>("modelo_recibo_editar", { id, ...dados });
+  return linha;
 }
 
 /** Soft delete — os recibos já emitidos guardam o texto final e não dependem do modelo. */
 export async function excluirModeloRecibo(id: string): Promise<void> {
-  const { error } = await principal.from("modelos_recibo").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await gravarFinanceiro("modelo_recibo_excluir", { id });
 }
 
 /**
- * Emite o recibo como o site antigo: o número vem do gatilho; quando nasce de uma movimentação, ela passa a apontar para ele
- * (transacoes.recibo_id); se o número real saiu diferente do previsto e o modelo usa o número, o texto é regravado com o certo.
+ * Emite o recibo numa chamada só (financeiro › recibo_emitir; antes, 2 a 3 pedidos sem transação): o número vem do gatilho; quando nasce de
+ * uma movimentação, ela passa a apontar para ele (transacoes.recibo_id); o texto é o de hoje (as tags aplicadas e o normalizarConteudo do
+ * formParaRegistro) com a MARCA no lugar do número — o servidor põe o número REAL, e o texto salvo sai igual ao que a tela montava com
+ * o número certo. Um texto que não vem do modelo (outro caminho) vai como está.
  */
 export async function emitirRecibo(p: {
   uid: string;
@@ -323,31 +323,18 @@ export async function emitirRecibo(p: {
   dadosTags: DadosTags;
   numeroPrevisto: number;
 }): Promise<Recibo> {
-  const { data, error } = await principal.from("recibos").insert({
-    nutricionista_id: p.uid, conta_id: p.contaId, paciente_id: p.pacienteId, transacao_id: p.transacaoId, modelo_id: p.registro.modelo_id,
-    valor: p.registro.valor, data: p.registro.data, descricao: p.registro.descricao, texto: p.registro.texto,
-  }).select(SELECT_RECIBO).single();
-  falhou(error);
-  let recibo = data as unknown as Recibo;
-  if (p.transacaoId) {
-    const { error: e2 } = await principal.from("transacoes").update({ recibo_id: recibo.id }).eq("id", p.transacaoId);
-    falhou(e2);
-  }
-  if (recibo.numero !== p.numeroPrevisto && p.conteudoModelo.includes("*|NUMERO_RECIBO|*")) {
-    const texto = aplicarTags(p.conteudoModelo, { ...p.dadosTags, numero: recibo.numero });
-    const { data: d2, error: e3 } = await principal.from("recibos").update({ texto }).eq("id", recibo.id).select(SELECT_RECIBO).single();
-    falhou(e3);
-    recibo = d2 as unknown as Recibo;
-  }
-  return recibo;
+  const doModelo = normalizarConteudo(aplicarTags(p.conteudoModelo, { ...p.dadosTags, numero: p.numeroPrevisto }));
+  const texto = p.registro.texto === doModelo ? normalizarConteudo(aplicarTags(p.conteudoModelo, p.dadosTags, { numeroNoServidor: true })) : p.registro.texto;
+  const { linha } = await gravarFinanceiro<{ linha: Recibo }>("recibo_emitir", {
+    conta_id: p.contaId, paciente_id: p.pacienteId, transacao_id: p.transacaoId, modelo_id: p.registro.modelo_id, valor: p.registro.valor,
+    data: p.registro.data, descricao: p.registro.descricao, texto,
+  });
+  return linha;
 }
 
-/** Soft delete; a movimentação de origem volta a ficar sem recibo (pode ganhar outro). */
+/** Soft delete; a movimentação de origem volta a ficar sem recibo (pode ganhar outro) — juntos (financeiro › recibo_excluir; antes, 2 pedidos). */
 export async function excluirRecibo(id: string): Promise<void> {
-  const { error } = await principal.from("recibos").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
-  const { error: e2 } = await principal.from("transacoes").update({ recibo_id: null }).eq("recibo_id", id);
-  falhou(e2);
+  await gravarFinanceiro("recibo_excluir", { id });
 }
 
 // ───────────────────────── o aluno do recibo, nomes e cobranças (o resumo) ─────────────────────────

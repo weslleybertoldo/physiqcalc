@@ -1,12 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Plus, Tag, X } from "lucide-react";
 import { toast } from "sonner";
-import { principal } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
+import { gravarFinanceiro } from "../gravar";
 
 interface TagTreino {
   id: string;
@@ -17,7 +17,9 @@ interface TagTreino {
 /**
  * Tags do aluno (C47 — estavam no popup "Cobrança" do Calc). A matrícula no banco principal guarda os nomes (a fonte da
  * verdade desde a W3); para o aluno do Calc, o catálogo e a marcação continuam também no Banco do Treino (a lista antiga de
- * alunos filtra por lá até a W13) — as 2 pontas são gravadas juntas.
+ * alunos filtra por lá até a W13) — as 2 pontas são gravadas juntas. hml-19d (H-41 · jeito 2): a do principal (pacientes.tags) vai pela
+ * função financeiro › tags_salvar, com a sessão de quem está logado (só as tags; o gatilho da W-P segura as colunas de cobrança); a do
+ * Treino segue pela admin-tags.
  */
 export function TagsDoAluno({ pacienteId, treinoUserId, tags, podeEditar, aoMudou }: {
   pacienteId: string;
@@ -55,8 +57,7 @@ export function TagsDoAluno({ pacienteId, treinoUserId, tags, podeEditar, aoMudo
     const anterior = marcadas;
     setMarcadas(nomes);
     try {
-      const { error } = await principal.from("pacientes").update({ tags: nomes }).eq("id", pacienteId);
-      if (error) throw error;
+      await gravarFinanceiro("tags_salvar", { paciente_id: pacienteId, tags: nomes });
       if (comTreino && catalogo) {
         const ids: string[] = [];
         for (const nome of nomes) {
