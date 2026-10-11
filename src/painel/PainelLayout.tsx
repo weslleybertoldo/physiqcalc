@@ -4,7 +4,7 @@ import { LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { masterNesteAparelho } from "@/lib/plataforma";
 import { contadoresPainel, fontesBusca, gatesPainel } from "@/rotas/registro";
-import { usePreCarga } from "@/rotas/usePreCarga";
+import { useAquecerTelaDoEndereco, usePreCarga } from "@/rotas/usePreCarga";
 import { lembrarArea } from "@/ui/casca/area";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
 import { CascaWeb, type AcaoUsuario, type ItemNav, type SecaoNav } from "@/ui/casca/CascaWeb";
@@ -12,6 +12,10 @@ import { useDadosCasca } from "@/ui/casca/dadosCasca";
 import { ComGates } from "@/ui/casca/Gates";
 import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { TransicaoDePagina } from "@/ui/casca/TransicaoDePagina";
+import { useQueryClient } from "@tanstack/react-query";
+import { useConta } from "@/nucleo/conta";
+import { registro } from "@/rotas/registro";
+import { preBuscar } from "./preBusca";
 import { CardConta } from "./casca/CardConta";
 import { CardPlano } from "./casca/CardPlano";
 import { MENU_PAINEL, estadoDoItem, itemAtivo, modulosDaConta } from "./menu";
@@ -32,7 +36,9 @@ function useContadoresRegistrados(): Record<string, number | undefined> {
  */
 export default function PainelLayout() {
   const dados = useDadosCasca();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const qc = useQueryClient();
+  const { conta } = useConta();
   const location = useLocation();
   const navigate = useNavigate();
   const contadores = useContadoresRegistrados();
@@ -44,10 +50,15 @@ export default function PainelLayout() {
   const modulos = modulosDaConta(dados.conta?.modulos);
   // hml-18a (H-40, E): depois do 1º render do painel, no ocioso, as páginas do menu desta conta, as abas do aluno, os cards do
   // Resumo e as abas das Configurações — a troca de página não espera o pedaço chegar
+  // hml-18b (H-54, F): quando o pedaço de uma página chega, a pré-busca da 1ª dobra dela (src/painel/preBusca.ts: Alunos e Treinos)
   usePreCarga("painel", {
     ligado: !dados.carregando && !!dados.usuario && dados.ehProfissional,
     paginas: MENU_PAINEL.filter((i) => i.arquivo && estadoDoItem(i, modulos) !== null).map((i) => i.arquivo as string),
+    aoCarregar: (item) => void preBuscar(item, { qc, contaId: conta?.id ?? null, meuIdTreino: user?.id ?? null }),
   });
+  // hml-18b (H-54, F): a página do endereço começa a baixar já, junto com a sessão (a página monta direto: sem o título entrando depois)
+  const daUrl = MENU_PAINEL.find((i) => i.arquivo && (location.pathname === i.rota || location.pathname === `${i.rota}/`));
+  useAquecerTelaDoEndereco([daUrl?.arquivo ? registro.paginasPainel[daUrl.arquivo] : undefined], !!dados.usuario);
 
   if (dados.carregando) return <CarregandoTela />;
   if (!dados.usuario) return <Navigate to="/entrar" replace state={{ de: location.pathname + location.search }} />;

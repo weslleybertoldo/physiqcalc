@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, Baby, ClipboardList, FileDown, Flag, Pencil, Plus, Scale, Trash2, TrendingUp } from "lucide-react";
+import { AlertTriangle, Baby, ClipboardList, FileDown, Flag, Loader2, Pencil, Plus, Scale, Trash2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -16,13 +16,16 @@ import {
   dadosProfissionais, encerrarGestacao, excluirGestacao, excluirRegistro, gestacaoAtiva, listarAntropometrias, listarGestacoes, listarRegistrosDoPaciente,
   nomeDaNutricionista, type Gestacao, type RegistroGestacional,
 } from "@/nutricao/prontuario/lib/gestacional";
-import { baixarPDFGestacional } from "@/nutricao/prontuario/lib/gestacionalPdf";
 import {
   TICKS_SEMANAS, alertaPA, classificarIMCPre, dadosGrafico, faixaTotal, fmtData, fmtFaixa, fmtGanho, fmtKg, fmtPeso, ganhoFinal, ganhoRecomendado, hojeISO,
   inserirRegistro, ordenarRegistros, rotuloSituacao, semanaGestacional, serieGanho, textoContagemRegistros, textoIMCPre, textoPA, textoSemana,
   textoSemanaTrimestre, type PontoGanho, type SituacaoGanho,
 } from "@/nutricao/editor/lib/gestacionalUtil";
 import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF do acompanhamento gestacional (jsPDF) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_GESTACIONAL = sobDemanda(() => import("@/nutricao/prontuario/lib/gestacionalPdf"));
 
 const CARD = "pq-cartao min-w-0 space-y-3 px-[18px] py-4";
 const TITULO = "flex items-center gap-1.5 font-body text-[15px] font-semibold normal-case tracking-[-0.01em] text-texto";
@@ -136,22 +139,27 @@ export default function Gestacional() {
       toast.success("Acompanhamento excluído");
     }, "Não foi possível excluir o acompanhamento");
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = () => {
     if (!ativa) return;
-    try {
-      const nome = baixarPDFGestacional({
-        paciente: p.nome,
-        nascimento: p.nascimento,
-        nutricionista: perfilQ.data?.nome ?? null,
-        profissional: perfilQ.data?.profissional ?? null,
-        emitidoEm: new Date(),
-        gestacao: ativa,
-        serie,
-      });
-      toast.success("PDF gerado", { description: nome });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar("gestacional", async () => {
+      try {
+        const { baixarPDFGestacional } = await PDF_GESTACIONAL.obter();
+        const nome = baixarPDFGestacional({
+          paciente: p.nome,
+          nascimento: p.nascimento,
+          nutricionista: perfilQ.data?.nome ?? null,
+          profissional: perfilQ.data?.profissional ?? null,
+          emitidoEm: new Date(),
+          gestacao: ativa,
+          serie,
+        });
+        toast.success("PDF gerado", { description: nome });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   return (
@@ -192,8 +200,8 @@ export default function Gestacional() {
                 <button type="button" onClick={() => setModalGestacao({ aberto: true, gestacao: ativa })} className={BTN_MINI} disabled={ocupado} data-btn-editar-gestacao>
                   <Pencil size={12} aria-hidden="true" /> Editar dados
                 </button>
-                <button type="button" onClick={pdf} className={BTN_MINI} data-leitura data-btn-pdf-gestacional>
-                  <FileDown size={12} aria-hidden="true" /> PDF
+                <button type="button" disabled={pdfAcao.ocupado !== null} onClick={pdf} className={BTN_MINI} data-leitura data-btn-pdf-gestacional aria-busy={pdfAcao.ocupado === "gestacional" || undefined} data-gerando-pdf={pdfAcao.ocupado === "gestacional" ? "1" : undefined}>
+                  {pdfAcao.ocupado === "gestacional" ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
                 </button>
                 <button type="button" onClick={() => setParaEncerrar(true)} className={BTN_MINI_PERIGO} disabled={ocupado} data-btn-encerrar-gestacao>
                   <Flag size={12} aria-hidden="true" /> Encerrar

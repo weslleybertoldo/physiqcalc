@@ -1,7 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/AvaliacaoIntegrada.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, ClipboardList, FileDown, FolderOpen, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, ClipboardList, FileDown, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -15,7 +15,6 @@ import {
   dadosProfissionais, excluirAvaliacao, listarAnamneses, listarAntropometrias, listarAplicacoesDoPaciente, listarAvaliacoes, listarResultadosDoPaciente,
   nomeDaNutricionista, regerarSintese, type AvaliacaoIntegrada as Avaliacao,
 } from "@/nutricao/prontuario/lib/avaliacaoIntegrada";
-import { baixarPDFAvaliacao } from "@/nutricao/prontuario/lib/avaliacaoIntegradaPdf";
 import {
   FONTES, alertas, contarFontes, detalheFonte, fmtDataFonte, formatarDataHoraAvaliacao, inserirAvaliacao, lerFontes, lerSintese, montarSintese,
   paresAntropometria, resumoAvaliacao, resumoFontes, textoContagemAvaliacoes, type Alerta, type ChaveFonte, type Sintese,
@@ -23,6 +22,10 @@ import {
 import { textoSituacaoCurto } from "@/nutricao/prontuario/lib/examesUtil";
 import { formatarPontos, textoNivel } from "@/nutricao/prontuario/lib/questionariosUtil";
 import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF da avaliação integrada (jsPDF) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_AVALIACAO = sobDemanda(() => import("@/nutricao/prontuario/lib/avaliacaoIntegradaPdf"));
 
 const CARD = "pq-cartao min-w-0 space-y-3 px-[18px] py-4";
 const TITULO = "flex items-center gap-1.5 font-body text-[15px] font-semibold normal-case tracking-[-0.01em] text-texto";
@@ -130,20 +133,25 @@ export default function AvaliacaoIntegrada() {
     }
   };
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = (a: Avaliacao) => {
-    try {
-      const nome = baixarPDFAvaliacao({
-        paciente: p.nome,
-        nascimento: p.nascimento,
-        nutricionista: perfilQ.data?.nome ?? null,
-        profissional: perfilQ.data?.profissional ?? null,
-        emitidoEm: new Date(),
-        avaliacao: { titulo: a.titulo, data: a.data, sintese: lerSintese(a.sintese), texto: a.texto },
-      });
-      toast.success("PDF gerado", { description: nome });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(a.id, async () => {
+      try {
+        const { baixarPDFAvaliacao } = await PDF_AVALIACAO.obter();
+        const nome = baixarPDFAvaliacao({
+          paciente: p.nome,
+          nascimento: p.nascimento,
+          nutricionista: perfilQ.data?.nome ?? null,
+          profissional: perfilQ.data?.profissional ?? null,
+          emitidoEm: new Date(),
+          avaliacao: { titulo: a.titulo, data: a.data, sintese: lerSintese(a.sintese), texto: a.texto },
+        });
+        toast.success("PDF gerado", { description: nome });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   return (
@@ -215,6 +223,7 @@ export default function AvaliacaoIntegrada() {
                 onEditar={() => setModal({ aberto: true, avaliacao: a })}
                 onRegerar={() => setParaRegerar(a)}
                 onPdf={() => pdf(a)}
+                gerandoPdf={pdfAcao.ocupado === a.id}
                 onExcluir={() => setParaExcluir(a)}
               />
             ))}
@@ -279,10 +288,12 @@ interface ItemProps {
   onEditar: () => void;
   onRegerar: () => void;
   onPdf: () => void;
+  /** hml-18b: o PDF desta avaliação está saindo (o botão gira enquanto o pedaço do PDF chega) */
+  gerandoPdf?: boolean;
   onExcluir: () => void;
 }
 
-function ItemAvaliacao({ a, aberta, ocupado, onVer, onEditar, onRegerar, onPdf, onExcluir }: ItemProps) {
+function ItemAvaliacao({ a, aberta, ocupado, onVer, onEditar, onRegerar, onPdf, gerandoPdf = false, onExcluir }: ItemProps) {
   const sintese = useMemo(() => lerSintese(a.sintese), [a.sintese]);
   const fontes = useMemo(() => lerFontes(a.fontes), [a.fontes]);
   const al = useMemo(() => alertas(sintese), [sintese]);
@@ -311,8 +322,8 @@ function ItemAvaliacao({ a, aberta, ocupado, onVer, onEditar, onRegerar, onPdf, 
           <button type="button" onClick={onRegerar} className={BTN_MINI} disabled={ocupado} title="Refazer a síntese com as fontes de agora (o parecer fica)" data-btn-regerar-avaliacao>
             <RefreshCw size={12} aria-hidden="true" /> Regerar síntese
           </button>
-          <button type="button" onClick={onPdf} className={BTN_MINI} data-leitura data-btn-pdf-avaliacao>
-            <FileDown size={12} aria-hidden="true" /> PDF
+          <button type="button" onClick={onPdf} className={BTN_MINI} disabled={gerandoPdf} aria-busy={gerandoPdf || undefined} data-gerando-pdf={gerandoPdf ? "1" : undefined} data-leitura data-btn-pdf-avaliacao>
+            {gerandoPdf ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
           </button>
           <button type="button" onClick={onExcluir} className={BTN_MINI_PERIGO} disabled={ocupado} data-btn-excluir-avaliacao>
             <Trash2 size={12} aria-hidden="true" /> Excluir

@@ -50,10 +50,14 @@ PRINTS = {
 VALOR_LONGO = "R$\u00a0123.456,78"
 JS_KPI_LONGO = r"""([valor]) => { const vs = [...document.querySelectorAll('[data-kpi] > [data-kpi-valor]')].filter((e) => e.getClientRects().length);
   for (const v of vs) v.textContent = valor; return vs.length; }"""
+# hml-18b (H-85): também a LINHA de tendência ([data-kpi-linha], 92 px à direita) — o texto do valor não pode passar por baixo dela
 JS_KPI_CABE = r"""() => [...document.querySelectorAll('[data-kpi] > [data-kpi-valor]')].filter((e) => e.getClientRects().length).map((v) => {
   const c = v.closest('[data-kpi]') || v.parentElement; const cr = c.getBoundingClientRect(); const cs = getComputedStyle(c);
   const dentro = cr.right - parseFloat(cs.paddingRight || '0');
-  return { cabe: v.scrollWidth <= v.clientWidth + 1 && v.getBoundingClientRect().left + v.scrollWidth <= dentro + 1,
+  const linha = c.querySelector('[data-kpi-linha]'); const lr = linha && linha.getClientRects().length ? linha.getBoundingClientRect() : null;
+  const rg = document.createRange(); rg.selectNodeContents(v); const tr = rg.getBoundingClientRect();
+  const sobrepoe = !!lr && tr.width > 0 && tr.right > lr.left + 1 && tr.left < lr.right - 1 && tr.bottom > lr.top + 1 && tr.top < lr.bottom - 1;
+  return { cabe: v.scrollWidth <= v.clientWidth + 1 && v.getBoundingClientRect().left + v.scrollWidth <= dentro + 1, sobrepoe, linha: !!lr,
     fonte: getComputedStyle(v).fontSize, w: Math.round(v.scrollWidth), caixa: Math.round(v.clientWidth) }; })"""
 PRINTS_KPI_LONGO = {("personal", "/painel/financeiro"): "a_kpi_longo"}
 PRINTS_NOMES_LONGOS = {("personal", "/painel/alunos"): "a_nomes_longos_alunos", ("personal", "/painel/treinos?aba=biblioteca"): "a_nomes_longos_biblioteca"}
@@ -136,10 +140,12 @@ def medir_abertura(R: B.Rodada, cel: B.Celular, papel: str, ab: dict, rota: str,
         for largura in (360, 390):
             vs = kl[largura]["v"]
             fora = [x for x in vs if not x["cabe"]]
+            sob = [x for x in vs if x.get("sobrepoe")]
             fontes = sorted({x["fonte"] for x in vs})
-            R.ok(kl[largura]["m"]["passa"] == 0 and vs and not fora,
+            R.ok(kl[largura]["m"]["passa"] == 0 and vs and not fora and not sob,
                  f"{rot} KPI com \"R$ 123.456,78\" a {largura}: {len(vs) - len(fora)}/{len(vs)} valores cabem no cartão (fonte {'/'.join(fontes)}; "
-                 f"maior {max(x['w'] for x in vs)} px na caixa de {min(x['caixa'] for x in vs)}) · passa_px {kl[largura]['m']['passa']}")
+                 f"maior {max(x['w'] for x in vs)} px na caixa de {min(x['caixa'] for x in vs)}) · {len(sob)} passando por baixo da linha de "
+                 f"tendência (H-85; {sum(1 for x in vs if x.get('linha'))} com a linha à vista) · passa_px {kl[largura]['m']['passa']}")
         cel.pg.set_viewport_size({"width": 1280, "height": 800})
         cel.pg.wait_for_timeout(700)
         grandes = cel.pg.evaluate("() => [...new Set([...document.querySelectorAll('[data-kpi] > [data-kpi-valor]')].filter((e) => e.getClientRects().length).map((v) => getComputedStyle(v).fontSize))]")

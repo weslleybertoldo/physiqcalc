@@ -1,7 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Manipulados.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Beaker, ChevronDown, ChevronUp, Copy, FileDown, PenLine, Plus, Star, Trash2 } from "lucide-react";
+import { Beaker, ChevronDown, ChevronUp, Copy, FileDown, Loader2, PenLine, Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -15,9 +15,12 @@ import type { DadosProfissionais } from "@/nutricao/editor/lib/profissional";
 import {
   dadosProfissionais, duplicarFormula, excluirFormula, garantirModelosFormula, listarModelosFormula, listarFormulasDoPaciente, nomeDaNutricionista, salvarComoModelo, type Formula,
 } from "@/nutricao/editor/lib/manipulados";
-import { baixarPDFFormula, baixarPDFFormulas } from "@/nutricao/editor/lib/manipuladosPdf";
 import { contarAtivos, inserirFormula, lerAtivos, ordenarFormulas, textoAtivo, textoContagemAtivos, textoContagemFormulas, textoPrescritaEm } from "@/nutricao/editor/lib/manipuladosUtil";
 import { useAbrirPeloParametro, usePaciente } from "@/nutricao/editor/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF das fórmulas (jsPDF + autotable) só no clique — antes a aba Dieta do aluno baixava o pedaço do PDF ao abrir
+const PDF_MANIPULADOS = sobDemanda(() => import("@/nutricao/editor/lib/manipuladosPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PRI = "inline-flex items-center gap-1 border border-verde/50 text-verde-3 font-semibold text-[10px] uppercase tracking-wider px-2.5 py-1 hover:bg-[rgba(16,185,129,.08)] transition-colors disabled:opacity-40";
@@ -70,22 +73,31 @@ export default function Manipulados() {
     await qc.invalidateQueries({ queryKey: ["modelos-formula"] });
   };
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdfUma = (f: Formula) => {
-    try {
-      const nome = baixarPDFFormula({ paciente: p.nome, formula: f, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(f.id, async () => {
+      try {
+        const { baixarPDFFormula } = await PDF_MANIPULADOS.obter();
+        const nome = baixarPDFFormula({ paciente: p.nome, formula: f, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
   const pdfGlobal = () => {
     if (!formulas.length) return;
-    try {
-      const nome = baixarPDFFormulas({ paciente: p.nome, formulas, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar("todas", async () => {
+      try {
+        const { baixarPDFFormulas } = await PDF_MANIPULADOS.obter();
+        const nome = baixarPDFFormulas({ paciente: p.nome, formulas, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   /** Cópia com a data de hoje (mesmo título/ativos/posologia/quantidade/observação e modelo de origem). */
@@ -157,8 +169,8 @@ export default function Manipulados() {
             <button type="button" onClick={() => setModelosAberto(true)} className={BTN_SEC} disabled={carregando} data-btn-modelos-formula>
               <Star className="h-3.5 w-3.5" aria-hidden="true" /> Modelos
             </button>
-            <button type="button" onClick={pdfGlobal} className={BTN_SEC} disabled={carregando || formulas.length === 0} title={formulas.length === 0 ? "Nenhuma fórmula pra imprimir" : "PDF com todas as fórmulas, uma por página"} data-leitura data-btn-pdf-global>
-              <FileDown className="h-3.5 w-3.5" aria-hidden="true" /> PDF global
+            <button type="button" onClick={pdfGlobal} className={BTN_SEC} disabled={carregando || formulas.length === 0 || pdfAcao.ocupado !== null} title={formulas.length === 0 ? "Nenhuma fórmula pra imprimir" : "PDF com todas as fórmulas, uma por página"} data-leitura data-btn-pdf-global aria-busy={pdfAcao.ocupado === "todas" || undefined} data-gerando-pdf={pdfAcao.ocupado === "todas" ? "1" : undefined}>
+              {pdfAcao.ocupado === "todas" ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" aria-hidden="true" />} PDF global
             </button>
             <button type="button" onClick={() => setModal({ aberto: true, formula: null })} className={BTN_PRI} disabled={carregando} data-btn-nova-formula>
               <Plus size={12} aria-hidden="true" /> Nova fórmula
@@ -196,8 +208,8 @@ export default function Manipulados() {
                       <button type="button" onClick={() => alternarDetalhe(f.id)} className={BTN_MINI} aria-expanded={aberta} data-leitura data-btn-ver-formula>
                         {aberta ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberta ? "Fechar" : "Ver"}
                       </button>
-                      <button type="button" onClick={() => pdfUma(f)} className={BTN_MINI} data-leitura data-btn-pdf-formula>
-                        <FileDown size={12} aria-hidden="true" /> PDF
+                      <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdfUma(f)} className={BTN_MINI} data-leitura data-btn-pdf-formula aria-busy={pdfAcao.ocupado === f.id || undefined} data-gerando-pdf={pdfAcao.ocupado === f.id ? "1" : undefined}>
+                        {pdfAcao.ocupado === f.id ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
                       </button>
                       <button type="button" onClick={() => void duplicar(f)} className={BTN_MINI} data-btn-duplicar-formula>
                         <Copy size={12} aria-hidden="true" /> Duplicar

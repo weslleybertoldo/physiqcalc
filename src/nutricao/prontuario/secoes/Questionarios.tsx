@@ -1,7 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Questionarios.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, ClipboardCheck, FileDown, ListChecks, PenLine, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ClipboardCheck, FileDown, ListChecks, Loader2, PenLine, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -14,12 +14,15 @@ import QuestionariosDialog from "@/nutricao/prontuario/ui/QuestionariosDialog";
 import { useAuth } from "@/nutricao/prontuario/ui/contexto";
 import type { DadosProfissionais } from "@/nutricao/prontuario/lib/documentosUtil";
 import { dadosProfissionais, excluirAplicacao, listarAplicacoesDoPaciente, listarQuestionarios, nomeDaNutricionista, type Aplicacao } from "@/nutricao/prontuario/lib/questionarios";
-import { baixarPDFAplicacao } from "@/nutricao/prontuario/lib/questionariosPdf";
 import {
   contarRespondidas, filtrarPorQuestionario, formatarDataQuestionario, formatarPontos, inserirAplicacao, lerNivel, lerPerguntas, lerRespostas, ordenarAplicacoes, pontuacaoMaxima,
   pontuarPergunta, textoContagemAplicacoes, textoPontuacao, textoResposta, textoRespondidas, titulosAplicados,
 } from "@/nutricao/prontuario/lib/questionariosUtil";
 import { usePaciente } from "@/nutricao/prontuario/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF do questionário (jsPDF + autotable) só no clique — antes o Prontuário do aluno baixava o pedaço do PDF ao abrir
+const PDF_QUESTIONARIO = sobDemanda(() => import("@/nutricao/prontuario/lib/questionariosPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-[rgba(244,63,94,.35)] bg-transparent px-2.5 text-[11.5px] font-semibold text-rosa-3 transition-colors hover:bg-[rgba(244,63,94,.08)] disabled:opacity-40";
@@ -79,13 +82,18 @@ export default function Questionarios() {
     await qc.invalidateQueries({ queryKey: ["questionarios"] });
   };
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = (a: Aplicacao) => {
-    try {
-      const nome = baixarPDFAplicacao({ paciente: p.nome, aplicacao: a, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(a.id, async () => {
+      try {
+        const { baixarPDFAplicacao } = await PDF_QUESTIONARIO.obter();
+        const nome = baixarPDFAplicacao({ paciente: p.nome, aplicacao: a, nutricionista: nomeNutri, profissional, emitidoEm: new Date() });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const excluir = async () => {
@@ -190,8 +198,8 @@ export default function Questionarios() {
                       <button type="button" onClick={() => alternarDetalhe(a.id)} className={BTN_MINI} aria-expanded={aberto} data-leitura data-btn-ver-aplicacao>
                         {aberto ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />} {aberto ? "Fechar" : "Ver"}
                       </button>
-                      <button type="button" onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-aplicacao>
-                        <FileDown size={12} aria-hidden="true" /> PDF
+                      <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdf(a)} className={BTN_MINI} data-leitura data-btn-pdf-aplicacao aria-busy={pdfAcao.ocupado === a.id || undefined} data-gerando-pdf={pdfAcao.ocupado === a.id ? "1" : undefined}>
+                        {pdfAcao.ocupado === a.id ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
                       </button>
                       <button type="button" onClick={() => setModalAplicacao({ aberto: true, aplicacao: a })} className={BTN_MINI} data-btn-editar-aplicacao>
                         <PenLine size={12} aria-hidden="true" /> Editar

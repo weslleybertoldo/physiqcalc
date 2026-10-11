@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MESES } from "@/treino/editor/relatorio";
+import { MESES } from "@/lib/meses";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { CLASSE_CAMPO } from "./estilo";

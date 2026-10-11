@@ -13,7 +13,8 @@ const h = vi.hoisted(() => ({
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => h.auth }));
 vi.mock("@/ui/premium/useOnline", () => ({ useOnline: () => h.online }));
-vi.mock("@powersync/react", () => ({ useQuery: () => ({ data: h.statusTreino ? [{ status: h.statusTreino }] : [], isLoading: false }) }));
+// hml-18b: o espelho do Treino chega pelo contexto do provedor do banco local (a trava não importa mais o PowerSync)
+vi.mock("@/lib/powersync/espelho", () => ({ useStatusDoEspelho: () => h.statusTreino }));
 
 import GateBloqueioAluno from "./GateBloqueioAluno";
 import { usePerfilReduzido } from "./pecas/modoReduzido";

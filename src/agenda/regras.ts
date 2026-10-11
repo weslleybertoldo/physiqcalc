@@ -116,10 +116,15 @@ const FUSO = "America/Sao_Paulo";
 export const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"] as const;
 export const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"] as const;
 
+// hml-18b (H-86): o formatador do fuso é criado UMA vez. Um Intl.DateTimeFormat novo a cada chamada custava ~218 ms de CPU ao abrir a
+// Agenda (medido no perfil: o diaSP roda para cada evento × cada dia da grade) — eram as tarefas longas de 377–525 ms do parecer.
+let formatoSP: Intl.DateTimeFormat | null = null;
+const formatadorSP = (): Intl.DateTimeFormat => (formatoSP ??= new Intl.DateTimeFormat("en-CA", { timeZone: FUSO }));
+
 /** "2026-10-01" do instante em São Paulo. */
 export function diaSP(d: Date | string): string {
   const x = typeof d === "string" ? new Date(d) : d;
-  return Number.isNaN(x.getTime()) ? "" : new Intl.DateTimeFormat("en-CA", { timeZone: FUSO }).format(x);
+  return Number.isNaN(x.getTime()) ? "" : formatadorSP().format(x);
 }
 export const hojeSP = (agora: Date = new Date()): string => diaSP(agora);
 /** "2026-10" → o 1º dia do mês ("2026-10-01"). */

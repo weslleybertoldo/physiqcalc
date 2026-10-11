@@ -1,7 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Suplementos.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, FileDown, Flag, Package, Pencil, Pill, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, FileDown, Flag, Loader2, Package, Pencil, Pill, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -14,12 +14,15 @@ import { useAuth } from "@/nutricao/editor/ui/contexto";
 import {
   alternarAtiva, dadosProfissionais, excluirIndicacao, listarIndicacoesDoPaciente, listarProdutos, nomeDaNutricionista, salvarOrdem, type Indicacao, type Produto,
 } from "@/nutricao/editor/lib/suplementos";
-import { baixarPDFSuplementos } from "@/nutricao/editor/lib/suplementosPdf";
 import {
   fmtData, inserirIndicacao, moverIndicacao, mudancasDeOrdem, proximaOrdem, rotuloCategoria, separarIndicacoes, textoContagemIndicacoes, textoEncerradas, textoPosologia,
   textoProduto,
 } from "@/nutricao/editor/lib/suplementosUtil";
 import { usePaciente } from "@/nutricao/editor/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF dos suplementos (jsPDF) só no clique — antes a aba Dieta do aluno baixava o pedaço do PDF ao abrir
+const PDF_SUPLEMENTOS = sobDemanda(() => import("@/nutricao/editor/lib/suplementosPdf"));
 
 const CARD = "pq-cartao min-w-0 space-y-3 px-[18px] py-4";
 const TITULO = "flex items-center gap-1.5 font-body text-[15px] font-semibold normal-case tracking-[-0.01em] text-texto";
@@ -127,20 +130,25 @@ export default function Suplementos() {
       toast.success("Indicação excluída");
     }, "Não foi possível excluir a indicação");
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = () => {
-    try {
-      const nome = baixarPDFSuplementos({
-        paciente: p.nome,
-        nascimento: p.nascimento,
-        nutricionista: perfilQ.data?.nome ?? null,
-        profissional: perfilQ.data?.profissional ?? null,
-        emitidoEm: new Date(),
-        ativas,
-      });
-      toast.success("PDF gerado", { description: nome });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar("suplementos", async () => {
+      try {
+        const { baixarPDFSuplementos } = await PDF_SUPLEMENTOS.obter();
+        const nome = baixarPDFSuplementos({
+          paciente: p.nome,
+          nascimento: p.nascimento,
+          nutricionista: perfilQ.data?.nome ?? null,
+          profissional: perfilQ.data?.profissional ?? null,
+          emitidoEm: new Date(),
+          ativas,
+        });
+        toast.success("PDF gerado", { description: nome });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const abrirNova = () => setModalIndicacao({ aberto: true, indicacao: null });
@@ -197,8 +205,8 @@ export default function Suplementos() {
               <button type="button" onClick={() => setCatalogoAberto(true)} className={BTN_MINI} data-btn-meus-produtos>
                 <Package size={12} aria-hidden="true" /> Meus produtos
               </button>
-              <button type="button" onClick={pdf} className={BTN_MINI} disabled={!ativas.length} data-leitura data-btn-pdf-suplementos>
-                <FileDown size={12} aria-hidden="true" /> PDF
+              <button type="button" onClick={pdf} className={BTN_MINI} disabled={!ativas.length || pdfAcao.ocupado !== null} data-leitura data-btn-pdf-suplementos aria-busy={pdfAcao.ocupado === "suplementos" || undefined} data-gerando-pdf={pdfAcao.ocupado === "suplementos" ? "1" : undefined}>
+                {pdfAcao.ocupado === "suplementos" ? <Loader2 size={12} aria-hidden className="animate-spin" /> : <FileDown size={12} aria-hidden="true" />} PDF
               </button>
             </div>
           </header>

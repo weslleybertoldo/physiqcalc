@@ -14,9 +14,9 @@ import { SheetAvaliacoes } from "@/evolucao/ui/SheetAvaliacoes";
 import { SheetComparar } from "@/evolucao/ui/SheetComparar";
 import { SheetComposicao } from "@/evolucao/ui/SheetComposicao";
 import AntropometriaDialog from "@/nutricao/avaliacao/AntropometriaDialog";
-import { baixarPDFAntropometria } from "@/nutricao/avaliacao/antropometriaPdf";
 import type { Antropometria } from "@/nutricao/editor/lib/antropometrias";
 import { ehProtocolo, type Protocolo } from "@/nutricao/editor/lib/antropometriaUtil";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
 import { useTreinoDoAlunoPainel } from "@/treino/editor/useTreinoDoAlunoPainel";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
@@ -30,6 +30,9 @@ import { HistoricoAvaliacoes } from "../avaliacao/Historico";
 import { aberturaDoParametro, permissoesDaAvaliacao, podeRegistrar, type TipoRegistro } from "../avaliacao/regras";
 import { useAvaliacaoDoAluno } from "../avaliacao/useAvaliacaoDoAluno";
 import { mensagemErroPerfil } from "../dados/regras";
+
+// hml-18b (H-54, F): o PDF da antropometria (jsPDF) só no clique — antes a aba baixava o pedaço do PDF ao abrir
+const PDF_ANTROPOMETRIA = sobDemanda(() => import("@/nutricao/avaliacao/antropometriaPdf"));
 
 type PeriodoTela = Exclude<Periodo, "tudo">;
 const PERIODOS: { valor: PeriodoTela; rotulo: string }[] = [
@@ -71,6 +74,7 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
   const [editarAntropo, setEditarAntropo] = useState<Antropometria | null>(null);
   const [folha, setFolha] = useState<"tabela" | "comparar" | "fotos" | null>(null);
   const [ver, setVer] = useState<Avaliacao | null>(null);
+  const pdfAcao = useAcaoSobDemanda();
 
   const podeMudarTreino = treinoEst.tipo === "ok" && !treinoEst.somenteLeitura;
   const perm = useMemo(() => (p ? permissoesDaAvaliacao(p, podeMudarTreino) : { fisica: false, antropometria: false }), [p, podeMudarTreino]);
@@ -132,25 +136,29 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
   const pdf = (av: Avaliacao) => {
     const a = brutaDe(av);
     if (!a || !p) return;
-    try {
-      const nome = baixarPDFAntropometria({
-        paciente: p.nome,
-        nutricionista: a.autor_nome ?? null,
-        data: new Date(`${a.data}T12:00:00`),
-        peso: a.peso === null ? null : Number(a.peso),
-        altura: a.altura === null ? null : Number(a.altura),
-        sexo: a.sexo,
-        idade: a.idade,
-        protocolo: a.protocolo ?? "nenhum",
-        circunferencias: a.circunferencias,
-        dobras: a.dobras,
-        resultados: a.resultados,
-        observacao: a.observacao ?? null,
-      });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão "PDF" gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(av.id, async () => {
+      try {
+        const { baixarPDFAntropometria } = await PDF_ANTROPOMETRIA.obter();
+        const nome = baixarPDFAntropometria({
+          paciente: p.nome,
+          nutricionista: a.autor_nome ?? null,
+          data: new Date(`${a.data}T12:00:00`),
+          peso: a.peso === null ? null : Number(a.peso),
+          altura: a.altura === null ? null : Number(a.altura),
+          sexo: a.sexo,
+          idade: a.idade,
+          protocolo: a.protocolo ?? "nenhum",
+          circunferencias: a.circunferencias,
+          dobras: a.dobras,
+          resultados: a.resultados,
+          observacao: a.observacao ?? null,
+        });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const editar = async (av: Avaliacao) => {
@@ -274,6 +282,7 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
           treinoUserId={perm.fisica ? treinoUserId : null}
           aoVer={(av) => setVer(av)}
           aoPdf={pdf}
+          gerandoPdf={pdfAcao.ocupado}
           aoEditar={perm.antropometria ? (av) => void editar(av) : undefined}
           aoExcluiu={() => void ev.recarregar()}
         />

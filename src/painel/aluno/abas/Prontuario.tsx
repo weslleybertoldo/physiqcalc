@@ -1,25 +1,38 @@
-import { useMemo } from "react";
+import { lazy, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SECOES_PRONTUARIO, acessoDoProntuario, secaoDaUrl, type SecaoProntuario } from "@/nutricao/prontuario/lib/acesso";
-import Anamnese from "@/nutricao/prontuario/secoes/Anamnese";
-import Anexos from "@/nutricao/prontuario/secoes/Anexos";
 import Anotacoes from "@/nutricao/prontuario/secoes/Anotacoes";
-import AvaliacaoIntegrada from "@/nutricao/prontuario/secoes/AvaliacaoIntegrada";
-import Consultas from "@/nutricao/prontuario/secoes/Consultas";
-import Documentos from "@/nutricao/prontuario/secoes/Documentos";
-import Exames from "@/nutricao/prontuario/secoes/Exames";
-import FarmacoNutrientes from "@/nutricao/prontuario/secoes/FarmacoNutrientes";
-import Gestacional from "@/nutricao/prontuario/secoes/Gestacional";
-import Questionarios from "@/nutricao/prontuario/secoes/Questionarios";
 import { ProntuarioProvider } from "@/nutricao/prontuario/ui/contexto";
 import { chavePerfilAluno, usePerfilAluno } from "@/painel/aluno/dados/usePerfilAluno";
 import { SomenteLeitura } from "@/nutricao/editor/ui/SomenteLeitura";
+import { Carregavel } from "@/ui/casca/Carregavel";
 import { EstadoCarregando, EstadoErro } from "@/ui/premium/Estados";
 
+// hml-18b (H-54, F): o Prontuário em pedaços — cada seção clínica num pedaço próprio, baixado quando a pessoa abre a seção (antes as 10
+// vinham juntas: 278 KB de código + o PDF + o gráfico da Gestacional). A Anotações (a seção que abre) fica junto: sem degrau a mais.
+const Anamnese = lazy(() => import("@/nutricao/prontuario/secoes/Anamnese"));
+const Anexos = lazy(() => import("@/nutricao/prontuario/secoes/Anexos"));
+const AvaliacaoIntegrada = lazy(() => import("@/nutricao/prontuario/secoes/AvaliacaoIntegrada"));
+const Consultas = lazy(() => import("@/nutricao/prontuario/secoes/Consultas"));
+const Documentos = lazy(() => import("@/nutricao/prontuario/secoes/Documentos"));
+const Exames = lazy(() => import("@/nutricao/prontuario/secoes/Exames"));
+const FarmacoNutrientes = lazy(() => import("@/nutricao/prontuario/secoes/FarmacoNutrientes"));
+// o gráfico (recharts, ~390 KB) só com esta seção aberta
+const Gestacional = lazy(() => import("@/nutricao/prontuario/secoes/Gestacional"));
+const Questionarios = lazy(() => import("@/nutricao/prontuario/secoes/Questionarios"));
+
 function SecaoClinica({ secao }: { secao: SecaoProntuario }) {
+  return (
+    <Carregavel nome={`prontuário ${secao}`} esqueleto={<EstadoCarregando linhas={4} rotulo="Abrindo a seção" />}>
+      <SecaoClinicaPreguicosa secao={secao} />
+    </Carregavel>
+  );
+}
+
+function SecaoClinicaPreguicosa({ secao }: { secao: SecaoProntuario }) {
   switch (secao) {
     case "consultas":
       return <Consultas />;

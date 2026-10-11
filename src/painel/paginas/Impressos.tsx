@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Download, ExternalLink, Eye, Printer, Search } from "lucide-react";
+import { Download, ExternalLink, Eye, Loader2, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSessao } from "@/nucleo/sessao";
@@ -12,11 +12,14 @@ import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoVazio } from "@/ui/premium/Estados";
-import { abrirImpresso, baixarImpresso } from "@/ferramentas/impressos/impressosPdf";
+import { sobDemanda } from "@/lib/sobDemanda";
 import {
   CATEGORIAS, ID_CODIGO_ETICA, IMPRESSOS, LINK_CFN, cabecalhoPadrao, categoriaDaURL, categoriasComItens, contarPorCategoria, filtrarImpressos, infoCategoria,
   textoContagem, textoPaginas, type Impresso,
 } from "@/ferramentas/impressos/impressosUtil";
+
+// hml-18b (H-54, F): o PDF dos impressos (jsPDF + autotable) só no clique — antes a página baixava o pedaço do PDF ao abrir
+const IMPRESSOS_PDF = sobDemanda(() => import("@/ferramentas/impressos/impressosPdf"));
 
 const CLASSE_CAMPO =
   "h-11 w-full rounded-[14px] border border-linha-2 bg-superficie px-3.5 text-[14px] text-texto outline-none placeholder:text-texto-4 focus:border-verde/60";
@@ -73,6 +76,7 @@ export default function Impressos() {
     setGerando(i.id);
     await new Promise((r) => setTimeout(r, 0)); // deixa o "Gerando…" aparecer antes do trabalho síncrono do jsPDF
     try {
+      const { abrirImpresso, baixarImpresso } = await IMPRESSOS_PDF.obter();
       const ctx = cabecalhoPadrao(nome, new Date());
       if (modo === "baixar") {
         const arquivo = baixarImpresso(i.id, ctx);
@@ -163,7 +167,17 @@ export default function Impressos() {
                   <p className="text-[11.5px] text-texto-4" data-impresso-paginas-texto>{textoPaginas(i.paginas)} · PDF A4</p>
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     <Botao tamanho="sm" icone={Eye} disabled={gerando !== null} onClick={() => void gerar(i, "abrir")} data-btn-visualizar>Visualizar</Botao>
-                    <Botao tamanho="sm" variante="w" icone={Download} disabled={gerando !== null} onClick={() => void gerar(i, "baixar")} data-btn-baixar>
+                    <Botao
+                      tamanho="sm"
+                      variante="w"
+                      icone={esteGerando ? Loader2 : Download}
+                      className={esteGerando ? "[&_svg]:animate-spin" : undefined}
+                      aria-busy={esteGerando || undefined}
+                      data-gerando-pdf={esteGerando ? "1" : undefined}
+                      disabled={gerando !== null}
+                      onClick={() => void gerar(i, "baixar")}
+                      data-btn-baixar
+                    >
                       {esteGerando ? "Gerando…" : "Baixar"}
                     </Botao>
                     {i.id === ID_CODIGO_ETICA && (

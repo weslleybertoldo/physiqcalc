@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { perfil } from "@/test/fixturesPerfilAluno";
 
 type Linha = Record<string, unknown>;
@@ -86,6 +86,11 @@ const montar = (url = "/painel/alunos/p1/prontuario?secao=exames") =>
 const datasNaTela = () => [...document.querySelectorAll('[data-lista="exames"] [data-item]')].map((e) => e.getAttribute("data-grupo-data"));
 const pedidosNaTela = () => [...document.querySelectorAll('[data-lista="pedidos-exame"] [data-item]')].map((e) => e.getAttribute("data-pedido"));
 const chamadas = () => h.rpc.mock.calls.filter((c) => c[0] === "exames_do_aluno").map((c) => c[1] as Record<string, unknown>);
+
+// hml-18b (H-54, F): a seção é um pedaço próprio (lazy no Prontuário); o 1º teste não paga a transformação do módulo dentro do waitFor
+beforeAll(async () => {
+  await import("./Exames");
+}, 60_000);
 
 beforeEach(() => {
   h.perfil.mockReset();

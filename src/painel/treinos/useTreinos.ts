@@ -60,16 +60,40 @@ export function useTermoComEspera(busca: string, espera = ESPERA_BUSCA): string 
   return termo;
 }
 
-/** As pastas que a pessoa vê (inteiras — 2 por profissional hoje). */
-export function usePastas(q: QuemMexe, habilitado = true) {
-  return useQuery({
-    queryKey: [CHAVE_PASTAS, q.meuId],
-    queryFn: () => carregarPastas(q.meuId),
-    enabled: habilitado,
+/**
+ * hml-18b (H-54, F · H-82) — a 1ª dobra de Meus treinos (a página de modelos e as pastas) num lugar só: a tela e a PRÉ-BUSCA
+ * (src/painel/preBusca.ts) usam a MESMA chave, a mesma função e o mesmo staleTime (30 s). Com a página no cache antes do toque, as 2
+ * chamadas da admin-semana-treinos (quemRecebe e quemRecebeLista — já em paralelo entre si) saem na montagem da tela, sem esperar a
+ * modelos_da_lista chegar (era a cascata do H-82: ~0,9–1,6 s depois do toque).
+ */
+export function consultaPastas(meuId: string | null) {
+  return {
+    queryKey: [CHAVE_PASTAS, meuId] as const,
+    queryFn: () => carregarPastas(meuId),
     staleTime: 30_000,
     retry: naoRepetir,
-    networkMode: "online",
-  });
+    networkMode: "online" as const,
+  };
+}
+
+export function consultaPaginaDeModelos(meuId: string | null, filtros: FiltrosModelos, pagina: number) {
+  return {
+    queryKey: [CHAVE_MODELOS, meuId, "pagina", filtros.q, filtros.pasta ?? "", pagina] as const,
+    queryFn: () => carregarPaginaDeModelos(meuId, filtros, pagina),
+    staleTime: 30_000,
+    retry: naoRepetir,
+    networkMode: "online" as const,
+  };
+}
+
+/** A pré-busca de Meus treinos (o endereço sem filtro: página 1, sem pasta) — no cache antes do toque. */
+export async function preBuscarTreinos(qc: QueryClient, meuId: string): Promise<void> {
+  await Promise.all([qc.prefetchQuery(consultaPaginaDeModelos(meuId, { q: "", pasta: null }, 1)), qc.prefetchQuery(consultaPastas(meuId))]);
+}
+
+/** As pastas que a pessoa vê (inteiras — 2 por profissional hoje). */
+export function usePastas(q: QuemMexe, habilitado = true) {
+  return useQuery({ ...consultaPastas(q.meuId), enabled: habilitado });
 }
 
 /** Os grupos musculares (globais e meus): o formulário do exercício e a folha "Grupos musculares" da Biblioteca. */
@@ -102,14 +126,7 @@ export function useQuemRecebe(q: QuemMexe, grupos: string[], habilitado = true) 
  * só dos treinos à vista. Os modelos saem do montarModelos de hoje, na ordem do banco.
  */
 export function useTreinosDaTela(q: QuemMexe, filtros: FiltrosModelos, pagina: number, treinoId: string | null) {
-  const paginaQ = useQuery({
-    queryKey: [CHAVE_MODELOS, q.meuId, "pagina", filtros.q, filtros.pasta ?? "", pagina],
-    queryFn: () => carregarPaginaDeModelos(q.meuId, filtros, pagina),
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
-    retry: naoRepetir,
-    networkMode: "online",
-  });
+  const paginaQ = useQuery({ ...consultaPaginaDeModelos(q.meuId, filtros, pagina), placeholderData: keepPreviousData });
   const pastasQ = usePastas(q);
   const idsDaPagina = useMemo(() => (paginaQ.data?.itens ?? []).map((m) => m.id), [paginaQ.data]);
   const foraDaPagina = !!treinoId && !!paginaQ.data && !idsDaPagina.includes(treinoId);

@@ -10,9 +10,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useSessao } from "@/nucleo/sessao";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
-// @powersync/tanstack-react-query instalado — hooks (useQuery, useSuspenseQuery)
-// ficam disponíveis sem provider adicional (v1.x expõe só hooks)
+// hml-18b (H-54, F): o PowerSyncProvider (o banco local do treino) saiu daqui — o app do aluno o carrega por import()
+// (src/app-aluno/AppAlunoLayout.tsx); o público, o painel e o master não baixam mais o PowerSync
 import { setupDeepLinkListener } from "@/lib/capacitorAuth";
 import { capturarProfDaUrl, capturarProfDoDeepLink } from "@/lib/profPendente";
 import { capturarDestinoDaUrl, capturarLinkDoApp } from "@/lib/linksDoApp";
@@ -111,7 +110,6 @@ const App = () => {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <PowerSyncProvider>
           <PWAInstallProvider>
             <TooltipProvider>
               {/* hml-18a (H-40): a confirmação do app (useConfirmar) no lugar do window.confirm — um provedor só, fora das rotas */}
@@ -124,7 +122,6 @@ const App = () => {
               </ProvedorConfirmar>
             </TooltipProvider>
           </PWAInstallProvider>
-          </PowerSyncProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

@@ -1,7 +1,8 @@
 name: CI do PR
 
 # hml-13 (H-31): todo PR para a main passa por aqui ANTES do merge — lint, tipos, SECURITY DEFINER nas migrations novas, testes
-# dos Workers e dos scripts de CI (node --test) e o Vitest. O ruleset "main protegida" exige o check "checar-pr" (app GitHub Actions).
+# dos Workers e dos scripts de CI (node --test), o Vitest e (hml-18b) o build com a guarda de chunks. O ruleset "main protegida" exige
+# o check "checar-pr" (app GitHub Actions).
 # SEM filtro de caminho de propósito: check obrigatório que não roda fica "Expected" e trava o PR.
 # NÃO pôr [skip ci]/[skip actions] nos commits da branch (o GitHub não roda este workflow e o PR trava). PR sem release (só E2E,
 # doc): o marcador vai só no título do squash — gh pr merge <n> --squash --subject "<título> [skip actions] (#<n>)".
@@ -59,3 +60,12 @@ jobs:
       - name: Vitest
         if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: npm test
+
+      # hml-18b (H-54): o build sem env (sem banco: passa no exigirSchemaDoBanco do vite.config.ts) e a guarda de chunks — nenhuma tela
+      # do registro nem a entrada com pdf, xlsx, motor, heic2any ou powersync no fecho estático (o powersync só no app do aluno; o
+      # charts só na lista fechada). O manifest vem do build.manifest do vite.config.ts.
+      - name: Build e chunks
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: |
+          npx vite build
+          node scripts/ci/checar-chunks.mjs dist

@@ -4,7 +4,8 @@ import { CircleAlert, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessao } from "@/nucleo/sessao";
 import { MENSAGEM_TROCA, retentavel } from "@/nucleo/trocaToken";
-import { CarregandoTela } from "@/ui/casca/CarregandoTela";
+import { CLASSE_PAGINA_APP, TituloApp } from "@/app-aluno/perfil/pecas/TopoItem";
+import { EstadoCarregando, Esqueleto } from "@/ui/premium/Estados";
 import { TelaTrava } from "./pecas/TelaTrava";
 
 /**
@@ -13,6 +14,28 @@ import { TelaTrava } from "./pecas/TelaTrava";
  */
 function precisaDoTreinoAqui(pathname: string): boolean {
   return pathname.startsWith("/treino") || pathname.startsWith("/evolucao");
+}
+
+/**
+ * hml-18b (H-54, F): enquanto a troca de token do Treino não chega, o lugar da aba com o TÍTULO (o h1 da página, no mesmo lugar dele) e
+ * o esqueleto — antes era a tela cheia "Abrindo seu treino": o h1 (o maior texto, o LCP) só pintava depois da troca (~6 s no staging).
+ */
+function EsperaDaAba({ pathname }: { pathname: string }) {
+  const treino = pathname.startsWith("/treino");
+  return (
+    <div className={CLASSE_PAGINA_APP} data-espera-sessao-treino={treino ? "treino" : "evolucao"}>
+      <div className="mt-1 flex min-h-10 items-center justify-between gap-2">
+        <TituloApp>{treino ? "Treino" : "Evolução"}</TituloApp>
+        {treino && (
+          <div className="flex items-center gap-2" aria-hidden>
+            <Esqueleto className="h-10 w-10 rounded-[14px]" />
+            <Esqueleto className="h-10 w-10 rounded-[14px]" />
+          </div>
+        )}
+      </div>
+      <EstadoCarregando linhas={4} rotulo={treino ? "Abrindo seu treino" : "Abrindo sua evolução"} />
+    </div>
+  );
 }
 
 /**
@@ -28,7 +51,7 @@ export default function GateSessaoTreino({ children }: { children: ReactNode }) 
   const { user } = useAuth();
   const { pathname } = useLocation();
   if (!situacao?.precisa_treino || user || !precisaDoTreinoAqui(pathname)) return <>{children}</>;
-  if (treino.estado !== "erro" || !treino.erro) return <CarregandoTela texto="Abrindo seu treino" />;
+  if (treino.estado !== "erro" || !treino.erro) return <EsperaDaAba pathname={pathname} />;
   const podeTentar = retentavel(treino.erro) || treino.erro === "limite";
   return (
     <TelaTrava

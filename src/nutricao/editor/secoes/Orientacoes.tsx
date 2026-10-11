@@ -1,6 +1,6 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Orientacoes.tsx) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, FileDown, ListChecks, Pencil, Plus, ScrollText, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, FileDown, ListChecks, Loader2, Pencil, Plus, ScrollText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -12,9 +12,12 @@ import ModelosDialog from "@/nutricao/editor/ui/ModelosDialog";
 import OrientacaoDialog from "@/nutricao/editor/ui/OrientacaoDialog";
 import { useAuth } from "@/nutricao/editor/ui/contexto";
 import { excluirOrientacao, garantirModelos, listarModelos, listarOrientacoes, nomeDaNutricionista, type ModeloOrientacao, type Orientacao } from "@/nutricao/editor/lib/orientacoes";
-import { baixarPDFOrientacao } from "@/nutricao/editor/lib/orientacaoPdf";
 import { formatarDataOrientacao, inserirOrdenada, textoContagem, textoTopicos, topicosDoTexto } from "@/nutricao/editor/lib/orientacoesUtil";
 import { useAbrirPeloParametro, usePaciente } from "@/nutricao/editor/ui/contexto";
+import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
+
+// hml-18b (H-54, F): o PDF da orientação (jsPDF) só no clique — antes a aba Dieta do aluno baixava o pedaço do PDF ao abrir
+const PDF_ORIENTACAO = sobDemanda(() => import("@/nutricao/editor/lib/orientacaoPdf"));
 
 const BTN_MINI = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.04)] px-2.5 text-[11.5px] font-semibold text-texto-2 transition-colors hover:text-texto disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_MINI_PERIGO = "inline-flex h-7 items-center gap-1 rounded-[9px] border border-[rgba(244,63,94,.35)] bg-transparent px-2.5 text-[11.5px] font-semibold text-rosa-3 transition-colors hover:bg-[rgba(244,63,94,.08)] disabled:opacity-40";
@@ -75,19 +78,24 @@ export default function Orientacoes() {
 
   const alternar = (id: string) => setAbertas((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
 
+  const pdfAcao = useAcaoSobDemanda();
   const pdf = (o: Orientacao) => {
-    try {
-      const nome = baixarPDFOrientacao({
-        titulo: o.titulo,
-        data: new Date(o.created_at),
-        paciente: p.nome,
-        nutricionista: nomeNutri,
-        conteudo: o.conteudo ?? "",
-      });
-      toast.success(`PDF gerado: ${nome}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
-    }
+    // o botão gira enquanto o pedaço do PDF chega e o arquivo sai
+    void pdfAcao.rodar(o.id, async () => {
+      try {
+        const { baixarPDFOrientacao } = await PDF_ORIENTACAO.obter();
+        const nome = baixarPDFOrientacao({
+          titulo: o.titulo,
+          data: new Date(o.created_at),
+          paciente: p.nome,
+          nutricionista: nomeNutri,
+          conteudo: o.conteudo ?? "",
+        });
+        toast.success(`PDF gerado: ${nome}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+      }
+    });
   };
 
   const excluir = async () => {
@@ -174,8 +182,8 @@ export default function Orientacoes() {
                       <button type="button" onClick={() => abrirEdicao(o)} className={BTN_MINI} data-btn-editar-orientacao>
                         <Pencil size={12} /> Editar
                       </button>
-                      <button type="button" onClick={() => pdf(o)} className={BTN_MINI} data-leitura data-btn-pdf-orientacao>
-                        <FileDown size={12} /> PDF
+                      <button type="button" disabled={pdfAcao.ocupado !== null} onClick={() => pdf(o)} className={BTN_MINI} data-leitura data-btn-pdf-orientacao aria-busy={pdfAcao.ocupado === o.id || undefined} data-gerando-pdf={pdfAcao.ocupado === o.id ? "1" : undefined}>
+                        {pdfAcao.ocupado === o.id ? <Loader2 size={12} className="animate-spin" /> : <FileDown size={12} />} PDF
                       </button>
                       <button type="button" onClick={() => setParaExcluir(o)} className={BTN_MINI_PERIGO} data-btn-excluir-orientacao>
                         <Trash2 size={12} /> Excluir
