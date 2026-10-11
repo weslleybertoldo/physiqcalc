@@ -29,8 +29,8 @@
 # nós dos dedos (como no Tríceps Francês Unilateral na Polia Baixa e na Remada Baixa Unilateral na Polia), um pouco oblíquo, o aro gira em
 # volta dele até o plano do cabo e o mosquetão sai na linha do cabo (equip3d.Puxador.por); o aro leva o engate uns cm pro lado conforme
 # o antebraço gira e a roldana (fixa, sem o garfo que gira) fica no x que deixa o cabo até ~2° fora do plano dela; o cabo sai sempre por
-# trás da roldana, no plano dela (_PoliaNoPlano). Os dedos e o polegar ("volta") fecham uma vez, no começo, e a mão fica rígida no
-# pegador. Mão direita parada na cintura (a mão livre do Tríceps
+# trás da roldana, no plano dela (equip3d.polia(no_plano=True)). Os dedos e o polegar ("volta") fecham uma vez, no começo, e a mão fica
+# rígida no pegador. Mão direita parada na cintura (a mão livre do Tríceps
 # Francês Unilateral na Polia Baixa, pela função da Abdução de Quadril na Polia, que recebe o lado).
 import math
 import numpy as np
@@ -106,26 +106,6 @@ def _saida_no_plano(centro, frente, raio, p):
     a = math.atan2(vc, vf) + math.asin(raio / dist)
     n = frente * math.sin(a) - cima * math.cos(a)
     return centro + n * raio, n
-
-
-class _PoliaNoPlano(e3.Polia):
-    """A Polia da fábrica (equip3d.polia, sem o garfo que gira), com o cabo saindo sempre da roldana no plano dela: a Polia.tangente vira
-    o plano pro ponto do cabo e, com o engate quase embaixo da roldana — aqui no meio do movimento a mão vai ~9 cm pra frente e o engate
-    passa uns cm pra trás da linha em que o cabo desce —, a saída pulava pro outro lado da roldana (e o garfo que gira dava meia-volta). O
-    cabo vai reto da saída até o engate (o engate anda até ~2,5 cm pro lado do plano: o cabo fica até ~2° fora dele)."""
-
-    def tangente(self, p):
-        T, n = _saida_no_plano(self.centro, self.frente, self.raio, p)
-        return T, (Vector(p) - T).normalized(), n
-
-    def ligar(self, engate):
-        T, d, n = self.tangente(engate)
-        L = (Vector(engate) - T).length
-        y = (n - d * n.dot(d)).normalized()                    # Y local do cabo: ⟂ a ele, pro lado da normal da saída
-        R = Matrix((y.cross(d), y, d)).transposed()            # colunas: X, Y, Z = cabo (o cilindro fica a `raio` no Y local)
-        self.cabo.matrix_world = Matrix.Translation(T - y * self.raio) @ R.to_4x4() @ Matrix.Diagonal((1.0, 1.0, L, 1.0))
-        self.saida, self.comprimento = T, L
-        return L
 
 
 def pernas(bon):
@@ -272,8 +252,7 @@ def montar(bon):
         xs = [xc + k * 0.0005 for k in range(-120, 121)]
         xc = min(xs, key=lambda x_: max(abs(e.x - x_) / L for e, L in pts))
     lado_max = max(math.degrees(math.atan2(abs(e.x - xc), L)) for e, L in [engate_em(th, xc, yc) for th in amostras])
-    pol = e3.polia("polia", x=xc, y=yc, altura=POLIA_Z, frente=(0, 1, 0), alto=ALTO)
-    pol.__class__ = _PoliaNoPlano                # o cabo sai no plano da roldana (acima)
+    pol = e3.polia("polia", x=xc, y=yc, altura=POLIA_Z, frente=(0, 1, 0), alto=ALTO, no_plano=True)   # o cabo sai no plano da roldana
     print("POLIA roldana (%.3f %.3f %.3f) | engate do começo %.1f mm à frente do eixo | cabo até %.1f° fora do plano da roldana" % (
         xc, yc, POLIA_Z, (engate_em(th0, xc, yc)[0].y - yc) * 1000, lado_max))
     pux = e3.puxador_polia("puxador", raio=RAIO)

@@ -360,7 +360,7 @@ class Polia:
 
 
 def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.045, raio_cabo=0.003, alto=2.15,
-          gira=False, so_roldana=False):
+          gira=False, so_roldana=False, no_plano=False):
     """Estação de cabo de coluna única (ver o bloco acima): roldana com o eixo em (x, y, altura), virada pra `frente`
     (horizontal; padrão −Y), o cabo passando a `raio` m do eixo dela; trilho, carrinho, caixa da pilha de pesos e base
     ficam atrás da roldana. Devolve um Polia (raizes, direcao(), ligar()).
@@ -368,9 +368,14 @@ def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.04
     PoliaGiratoria (ver o bloco dela, no fim do arquivo); sem isso, nada muda.
     so_roldana=True (Puxada Frontal Aberta, lote 6, 08/10/2026): só a roldana (garfo, flanges, miolo e eixo) e o cabo que
     mexe — sem base, pilha, trilho, viga, carrinho nem o cabo parado: quem chama põe a estrutura em volta (a estação de
-    puxada, estacao_puxada(), no fim do arquivo, pendura a roldana no braço de cima); sem isso, nada muda."""
+    puxada, estacao_puxada(), no fim do arquivo, pendura a roldana no braço de cima); sem isso, nada muda.
+    no_plano=True (conserto do Tríceps Pulley Pegada Supinada, 11/10/2026): a saída do cabo fica sempre do mesmo lado da roldana,
+    no plano dela, mesmo com o engate passando pro outro lado da linha em que o cabo desce — devolve uma PoliaNoPlano (ver o
+    bloco dela, no fim do arquivo); sem isso, nada muda."""
     if gira and so_roldana:
         raise ValueError("polia: gira e so_roldana não andam juntos")
+    if gira and no_plano:
+        raise ValueError("polia: gira e no_plano não andam juntos (o garfo que gira vira a roldana pro cabo)")
     f = Vector(frente)
     f = Vector((f.x, f.y, 0.0)).normalized()
     cima = Vector((0.0, 0.0, 1.0))
@@ -427,6 +432,8 @@ def polia(nome="polia", x=0.0, y=1.45, altura=0.25, frente=(0, -1, 0), raio=0.04
         pol.ligar(P(0.6, 0, altura + 0.3))
         return pol
     pol = Polia(torre, cabo, P(0, 0, altura), raio, f)
+    if no_plano:                                              # saída do cabo sempre no plano da roldana (PoliaNoPlano)
+        pol = PoliaNoPlano(torre, cabo, P(0, 0, altura), raio, f)
     pol.ligar(P(0.6, 0, altura + 0.3))                        # pose de repouso (a cena põe o certo a cada quadro)
     return pol
 
@@ -5828,3 +5835,44 @@ def banco_scott(nome="banco_scott", almofada=None, recorte=None, assento=None, y
     bpy.context.view_layer.update()
     return BancoScott({"estrutura": estr, "assento": ass, "almofada": alm}, topo_a, u, n, ganchos)
 # ===== fim: Banco Scott =============================================================================================================
+
+
+# ===== Polia com a saída no plano da roldana ========================================================================================
+# polia(..., no_plano=True) (conserto do Tríceps Pulley Pegada Supinada, 11/10/2026; porte do _PoliaNoPlano do Tríceps Pulley
+# Unilateral, commit 5d9dc0b). A Polia.tangente acha a saída do cabo no plano vertical que passa pelo eixo da roldana e pelo ponto do
+# cabo — um plano que VIRA pro ponto. Com o engate quase embaixo da roldana alta (o cabo descendo quase na vertical) e a mão indo pra
+# frente no meio do movimento, o engate passa pro outro lado da linha em que o cabo desce, esse plano dá meia-volta e a saída PULA pro
+# outro lado da roldana (o cabo passaria por dentro dela; com o garfo que gira, a roldana daria meia-volta). Aqui a roldana é fixa e a
+# conta é feita no plano DELA (o da `frente`), com o ponto projetado nele: a saída fica sempre do lado da volta do cabo da polia() — ele
+# desce por trás da roldana (o lado oposto à `frente`, o do cabo do trilho) e dá a volta por baixo dela — e anda sem pular; o cabo vai
+# reto da saída até o engate (se o engate sai do plano, o cabo sai junto — a cena mantém o engate perto do plano, como no Unilateral,
+# até ~2°). Uso igual ao da Polia (direcao, ligar, saida, comprimento); o garfo que gira (gira=True) não usa isto. Sem no_plano (o
+# padrão) a polia() devolve a Polia de antes, idêntica.
+class PoliaNoPlano(Polia):
+    """Polia de roldana fixa (polia(..., no_plano=True)): a saída do cabo sempre no plano da roldana, do mesmo lado dela."""
+
+    def tangente(self, p):
+        """Saída do cabo (onde ele fica tangente à roldana), direção do cabo (da saída pra p, a reta de verdade) e a normal (eixo da
+        roldana → saída): a conta da Polia.tangente no plano VERTICAL da roldana (o da `frente`), com p projetado nele."""
+        cima = Vector((0.0, 0.0, 1.0))
+        v = Vector(p) - self.centro
+        vf, vc = v.dot(self.frente), v.dot(cima)
+        dist = math.hypot(vf, vc)
+        if dist <= self.raio * 1.01:
+            raise ValueError("polia: ponto %s dentro da roldana" % (tuple(p),))
+        a = math.atan2(vc, vf) + math.asin(self.raio / dist)
+        n = self.frente * math.sin(a) - cima * math.cos(a)
+        T = self.centro + n * self.raio
+        return T, (Vector(p) - T).normalized(), n
+
+    def ligar(self, engate):
+        """Cabo reto da saída da roldana até `engate` (mundo): gira e estica o objeto do cabo, com o Y local ⟂ ao cabo, pro lado da
+        normal da saída (com o engate fora do plano o cabo não fica ⟂ à normal). Devolve o comprimento do cabo reto (m)."""
+        T, d, n = self.tangente(engate)
+        L = (Vector(engate) - T).length
+        y = (n - d * n.dot(d)).normalized()                    # Y local do cabo: ⟂ a ele, pro lado da normal da saída
+        R = Matrix((y.cross(d), y, d)).transposed()            # colunas: X, Y, Z = cabo (o cilindro fica a `raio` no Y local)
+        self.cabo.matrix_world = Matrix.Translation(T - y * self.raio) @ R.to_4x4() @ Matrix.Diagonal((1.0, 1.0, L, 1.0))
+        self.saida, self.comprimento = T, L
+        return L
+# ===== fim: Polia com a saída no plano da roldana ===================================================================================
