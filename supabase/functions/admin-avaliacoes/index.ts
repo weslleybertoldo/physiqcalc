@@ -3,7 +3,11 @@ import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
-import { buscarComTempo, TEMPO_MS } from "../_shared/tempo.ts";
+import { buscarComTempo, ORCAMENTO_MS, prazo, TEMPO_MS, type Prazo } from "../_shared/tempo.ts";
+import {
+  ACOES_QUE_GRAVAM, bucketDosRegistros, caminhoDoAluno, ehAcaoFoto, erroDoBanco, erroDoStorage, foiTempo, lerExclusaoDeFoto, lerPedidoDeFoto,
+  mesRef, schemaDaFoto, statusDaFoto, type AcaoFoto,
+} from "./regras.ts";
 // hml-14 (H-51 item 2): log em JSON sem dado pessoal (_shared/log.ts) — por enquanto só o GoTrue que não responde (os
 // console.error de antes ficam para o resto do H-48)
 const log = criarLog("admin-avaliacoes", { avisar: avisarErro });
@@ -154,8 +158,151 @@ async function requireAdmin(req: Request, endpoint: string, maxCount = 60, windo
   return { user, error: null };
 }
 
-// hml-14 (H-51 item 2): as ações que GRAVAM (conferem a sessão no GoTrue); a list segue pelo JWKS
-const ACOES_QUE_GRAVAM = new Set(["create", "update", "proxima", "delete"]);
+// hml-14 (H-51 item 2): as ações que GRAVAM (conferem a sessão no GoTrue); a list segue pelo JWKS. hml-19c: a lista mora no
+// regras.ts (ACOES_QUE_GRAVAM: create, update, proxima, delete + as 3 da foto mensal) — testada no Vitest.
+
+// ───────────────────────── hml-19c (H-41 · jeito 2 · decisão 15): a foto mensal do Calc pela função, COMO A PESSOA ─────────────────────────
+// A tela (Perfil do aluno › Avaliação › Fotos) deixa de gravar direto no bucket e na tabela:
+//   foto_preparar { userId, mes, tipo }          o escopo → o caminho <aluno>/<aaaa-mm>/<tipo>.jpg montado AQUI (regras.ts) → o link
+//                                                assinado com upsert (o "Trocar" sobrescreve), criado com o token da pessoa: o Storage
+//                                                confere a policy do bucket dela antes de assinar → { ok, bucket, caminho, token }; o
+//                                                navegador sobe com uploadToSignedUrl
+//   foto_salvar { userId, mes, tipo, caminho }   o caminho devolvido tem de ser o deste aluno/mês/tipo → o arquivo EXISTE nele? (list)
+//                                                → upsert da linha (onConflict user_id,mes_ref,tipo: o índice único é inteiro) → { ok, foto }
+//   foto_excluir { fotoId }                      a linha lida como a pessoa → o escopo → DELETE da linha → o arquivo sai (só o caminho
+//                                                DESTE aluno); não saiu → log arquivo_orfao (sem o caminho) e a resposta segue ok
+// Tudo com o cliente "como a pessoa" (a chave anon do Treino + o Authorization do pedido, no schema do x-schema): o RLS de hoje
+// ("Staff gerencia registros dos seus alunos" e as policies do bucket) decide como antes — a função não muda quem pode, e nenhuma
+// chave secreta entra neste bloco. O escopo é a MESMA regra do alunoDoProfessor (W3), perguntada como a pessoa:
+// pode_ver_aluno_treino(aluno) = pode_ver_aluno_treino_por(aluno, auth.uid()). Antes do bloco: o MESMO requireAdmin das ações de antes
+// (sessão no GoTrue, papel, plano, freio). Recusa = { error: <código> } com o status do STATUS_FOTO (regras.ts), como as de antes.
+function respostaFoto(corpo: Record<string, unknown>, origin: string | null): Response {
+  return new Response(JSON.stringify(corpo), { headers: { "Content-Type": "application/json", ...corsHeaders(origin) } });
+}
+
+/** Recusa esperada (fora da forma, fora do escopo, a policy recusou, o arquivo não chegou): só o código ao log, como aviso. */
+function recusaFoto(acao: AcaoFoto, codigo: string, origin: string | null, ref: string | null = null): Response {
+  log.aviso({ codigo: "foto_recusada", schema: currentSchema(), acao, resultado: codigo.toLowerCase(), ref });
+  return jsonErr(codigo, statusDaFoto(codigo), origin);
+}
+
+/** O Storage recusou (a policy do bucket → forbidden, aviso) ou falhou (internal: avisa o Weslley com o status, sem o corpo). */
+function falhaStorageFoto(acao: AcaoFoto, e: unknown, origin: string | null): Response {
+  const codigo = erroDoStorage(e);
+  if (codigo === "forbidden") return recusaFoto(acao, codigo, origin);
+  const status = (e as { status?: unknown } | null)?.status;
+  log.erro({ codigo: foiTempo(e) ? "tempo_esgotado" : "storage_falhou", schema: currentSchema(), acao, status: typeof status === "number" ? status : 0 });
+  return jsonErr(codigo, statusDaFoto(codigo), origin);
+}
+
+/** O banco recusou (o RLS, 42501 → forbidden, aviso) ou falhou (internal: log.excecao — nome, código e mensagem limpa — e aviso). */
+function falhaBancoFoto(acao: AcaoFoto, e: unknown, origin: string | null): Response {
+  const codigo = erroDoBanco(e);
+  if (codigo === "forbidden") return recusaFoto(acao, codigo, origin);
+  log.excecao(e, { codigo: foiTempo(e) ? "tempo_esgotado" : "banco_falhou", schema: currentSchema(), acao });
+  return jsonErr(codigo, statusDaFoto(codigo), origin);
+}
+
+/** O cliente COMO A PESSOA (a chave anon + o Authorization do pedido, no schema do pedido); cada ida leva só o que sobra do prazo. */
+function clienteDaPessoa(auth: string, p: Prazo) {
+  return createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    db: { schema: currentSchema() },
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: { Authorization: auth },
+      fetch: (entrada: string | URL | Request, init?: RequestInit) => buscarComTempo(entrada, init ?? {}, Math.max(1, p.restante())),
+    },
+  });
+}
+
+type Pessoa = ReturnType<typeof clienteDaPessoa>;
+
+/** O MESMO escopo do alunoDoProfessor (a regra da W3), perguntado COMO A PESSOA: o próprio perfil e o master passam; o resto, o banco. */
+async function alunoNoEscopo(pessoa: Pessoa, user: any, alunoId: string): Promise<boolean> {
+  if (alunoId === user?.id) return true;
+  if (user?.papel === "master") return true;
+  const { data, error } = await pessoa.rpc("pode_ver_aluno_treino", { p_aluno: alunoId });
+  if (error) throw error;
+  return data === true;
+}
+
+async function prepararFoto(pessoa: Pessoa, user: any, corpo: unknown, origin: string | null): Promise<Response> {
+  const acao = "foto_preparar";
+  const p = lerPedidoDeFoto(corpo);
+  if (!p.ok) return recusaFoto(acao, p.erro, origin);
+  if (!(await alunoNoEscopo(pessoa, user, p.alunoId))) return recusaFoto(acao, "forbidden", origin, p.alunoId);
+  const bucket = bucketDosRegistros(currentSchema());
+  // o link sai COMO A PESSOA: o Storage confere a policy do bucket dela (o INSERT e, com o upsert, o UPDATE do "Trocar") antes de assinar
+  const { data, error } = await pessoa.storage.from(bucket).createSignedUploadUrl(p.caminho, { upsert: true });
+  if (error || !data?.token) return falhaStorageFoto(acao, error, origin);
+  return respostaFoto({ ok: true, bucket, caminho: p.caminho, token: data.token }, origin);
+}
+
+async function salvarFoto(pessoa: Pessoa, user: any, corpo: unknown, origin: string | null): Promise<Response> {
+  const acao = "foto_salvar";
+  const p = lerPedidoDeFoto(corpo);
+  if (!p.ok) return recusaFoto(acao, p.erro, origin);
+  if (!(await alunoNoEscopo(pessoa, user, p.alunoId))) return recusaFoto(acao, "forbidden", origin, p.alunoId);
+  // o arquivo chegou NAQUELE caminho? (o molde do anexo_registrar da hml-19a: list com search, como a pessoa)
+  const corte = p.caminho.lastIndexOf("/");
+  const pasta = p.caminho.slice(0, corte);
+  const arquivo = p.caminho.slice(corte + 1);
+  const { data: achados, error: el } = await pessoa.storage.from(bucketDosRegistros(currentSchema())).list(pasta, { search: arquivo, limit: 10 });
+  if (el) return falhaStorageFoto(acao, el, origin);
+  if (!(achados ?? []).some((f: { name?: string }) => f.name === arquivo)) return recusaFoto(acao, "arquivo_ausente", origin, p.alunoId);
+  const { data, error } = await pessoa.from("physiq_registros_fotos")
+    .upsert({ user_id: p.alunoId, mes_ref: mesRef(p.mes), tipo: p.tipo, storage_path: p.caminho, updated_at: new Date().toISOString() }, { onConflict: "user_id,mes_ref,tipo" })
+    .select("id, user_id, mes_ref, tipo, storage_path")
+    .single();
+  if (error) return falhaBancoFoto(acao, error, origin);
+  return respostaFoto({ ok: true, foto: data }, origin);
+}
+
+async function excluirFoto(pessoa: Pessoa, user: any, corpo: unknown, origin: string | null): Promise<Response> {
+  const acao = "foto_excluir";
+  const x = lerExclusaoDeFoto(corpo);
+  if (!x.ok) return recusaFoto(acao, x.erro, origin);
+  // a linha lida COMO A PESSOA (o RLS de hoje): não existe ou não é dela → a mesma resposta (forbidden, como o delete de antes)
+  const { data: linha, error: el } = await pessoa.from("physiq_registros_fotos").select("id, user_id, storage_path").eq("id", x.fotoId).maybeSingle();
+  if (el) return falhaBancoFoto(acao, el, origin);
+  const l = linha as { user_id?: unknown; storage_path?: unknown } | null;
+  if (!l || typeof l.user_id !== "string") return recusaFoto(acao, "forbidden", origin, x.fotoId);
+  if (!(await alunoNoEscopo(pessoa, user, l.user_id.toLowerCase()))) return recusaFoto(acao, "forbidden", origin, x.fotoId);
+  const { data: saiu, error: ed } = await pessoa.from("physiq_registros_fotos").delete().eq("id", x.fotoId).select("id");
+  if (ed) return falhaBancoFoto(acao, ed, origin);
+  if (!saiu?.length) return recusaFoto(acao, "forbidden", origin, x.fotoId);
+  // 1º a linha, DEPOIS o arquivo (decisão 8): se o remove falhar, sobra o arquivo (log), nunca a linha apontando para arquivo apagado.
+  // Só sai o caminho DESTE aluno (o da linha; um caminho de outro aluno não é tocado). Antes, o erro do remove era ignorado calado.
+  const caminho = l.storage_path;
+  if (!caminhoDoAluno(caminho, l.user_id)) {
+    log.aviso({ codigo: "arquivo_fora_da_pasta", schema: currentSchema(), acao, ref: x.fotoId });
+    return respostaFoto({ ok: true }, origin);
+  }
+  const { data: removidos, error: er } = await pessoa.storage.from(bucketDosRegistros(currentSchema())).remove([caminho]);
+  if (er || !removidos?.length) log.aviso({ codigo: "arquivo_orfao", schema: currentSchema(), acao, ref: x.fotoId });
+  return respostaFoto({ ok: true }, origin);
+}
+
+/** As 3 ações da foto: o erro inesperado vira 500 internal (como as de antes), com o log.excecao e o aviso ao Weslley. */
+async function atenderFoto(req: Request, user: any, body: any, origin: string | null): Promise<Response> {
+  const acao = body.action as AcaoFoto;
+  try {
+    const pessoa = clienteDaPessoa(req.headers.get("Authorization") ?? "", prazo(ORCAMENTO_MS.usuario));
+    switch (acao) {
+      case "foto_preparar":
+        return await prepararFoto(pessoa, user, body, origin);
+      case "foto_salvar":
+        return await salvarFoto(pessoa, user, body, origin);
+      case "foto_excluir":
+        return await excluirFoto(pessoa, user, body, origin);
+      default:
+        return jsonErr("invalid_action", 400, origin);
+    }
+  } catch (e) {
+    log.excecao(e, { codigo: foiTempo(e) ? "tempo_esgotado" : "excecao", schema: currentSchema(), acao });
+    return jsonErr("internal", 500, origin);
+  }
+}
 
 Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
@@ -165,8 +312,12 @@ Deno.serve(async (req) => {
   let body: any = null;
   let corpoOk = true;
   try { body = await req.json(); } catch { corpoOk = false; }
+  // hml-19c: a foto mensal exige o x-schema da lista (fora dela → 400, nunca cai na produção por engano); as ações de antes não mudam
+  const foto = corpoOk && ehAcaoFoto(body?.action);
+  if (foto && !schemaDaFoto(req.headers.get("x-schema"))) return jsonErr("schema_invalido", 400, origin);
   const { user, error: authErr } = await requireAdmin(req, "admin-avaliacoes", 60, 60, ACOES_QUE_GRAVAM.has(body?.action));
   if (authErr) return authErr;
+  if (foto) return await atenderFoto(req, user, body, origin);
   try {
     if (!corpoOk) throw new Error("corpo_invalido");
     const action = body?.action;
