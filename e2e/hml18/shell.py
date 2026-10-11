@@ -74,7 +74,11 @@ JS_NAV_ARMAR = r"""() => {
     window.__obsLongas.observe({ type: 'longtask', buffered: false }); } catch (e) {}
   const aoClicar = () => { if (!window.__r.t0) window.__r.t0 = performance.now(); };
   document.addEventListener('click', aoClicar, { capture: true, once: true });
-  window.__obs = new MutationObserver(() => { const r = window.__r; if (!r.t0) return; const a = performance.now() - r.t0;
+  // hml-18b: só a PÁGINA conta — o <head> fica de fora: a pré-carga da 18a continua no fundo depois do toque e cada pedaço põe um
+  // <link rel=modulepreload> no <head> (invisível); no staging/produção (rede de verdade) isso segurava o "estável" por 2–4 s (medido:
+  // a página parava em 0,4–0,7 s). O critério da spec (de antes da pré-carga) era o da tela.
+  window.__obs = new MutationObserver((ms) => { const r = window.__r; if (!r.t0) return; if (ms.every((m) => document.head.contains(m.target))) return;
+    const a = performance.now() - r.t0;
     if (r.mudou < 0) r.mudou = a; r.ultima = a; if (window.__barras.some((n) => !n.isConnected)) r.barraSumiu = 1; });
   window.__obs.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
   const olhar = () => { if (window.__g !== g) return; const r = window.__r;
