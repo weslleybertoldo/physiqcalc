@@ -10,6 +10,7 @@ import {
   chipDaMensalidade,
   dataBR,
   dataHoraBR,
+  ehPeriodoTodo,
   estadoDaMensalidade,
   formasDePagar,
   hojeSP,
@@ -373,7 +374,8 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar }: { m: Matricul
   // W-P: plano com período — o valor é o do pagamento na modalidade ("/ano", " por 6 meses" ou "/mês" + "parcela 4 de 12")
   const modalidade = ms.modalidade ?? null;
   const sufixo = sufixoDoValor(modalidade, ms.meses);
-  const renovar = precisaRenovar(modalidade, e.situacao, ms.pago_ate);
+  // "Renovar plano" só no plano do período todo; o de 1 mês (à vista = mês a mês, B2) fala de mensalidade — o "Pagar" de sempre
+  const renovar = ehPeriodoTodo(modalidade, ms.meses) && precisaRenovar(modalidade, e.situacao, ms.pago_ate);
   const parcela = ms.parcela ? ` · parcela ${ms.parcela.num} de ${ms.parcela.total}` : "";
   // adiantar paga o próximo pagamento da modalidade: o período todo ou a próxima parcela (no modo de hoje, o próximo mês)
   const adiantar = sufixo !== "/mês" ? "Adiantar a renovação" : ms.parcela ? "Adiantar a próxima parcela" : "Adiantar o próximo mês";

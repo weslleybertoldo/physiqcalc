@@ -20,7 +20,7 @@ import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
 import ReciboDialog from "@/painel/financeiro/ReciboDialog";
 import { useFinanceiroConta } from "@/painel/financeiro/useFinanceiro";
 import { precisaRenovar, sufixoDoValor } from "../planos";
-import { chipDaMensalidade, dataBR, estadoDaMensalidade, hojeSP, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
+import { chipDaMensalidade, dataBR, ehPeriodoTodo, estadoDaMensalidade, hojeSP, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
 import { ComprovanteVisor } from "./ComprovanteVisor";
 import { DialogoLancamento, DialogoNovaCobranca, DialogoRegistrar } from "./Dialogos";
@@ -145,7 +145,8 @@ function CartaoMensalidade({ d, agir }: { d: FinanceiroProfissional; agir: Retur
       <div className="mt-4 border-t border-linha pt-3 text-[12.5px] text-texto-2" data-mensalidade-situacao>
         {m ? <p><b className="font-semibold text-texto">{textoDoVencimento(e).replace(/^./, (x) => x.toUpperCase())}</b>{e.coberta && m.pago_ate && e.situacao !== "em_dia" ? ` · coberto até ${dataBR(m.pago_ate)}` : ""}</p> : <p>Sem mensalidade: o aluno não vê cobrança mensal.</p>}
         {m?.parcela && <p className="mt-1.5" data-mensalidade-parcela>Próximo pagamento: parcela {m.parcela.num} de {m.parcela.total}</p>}
-        {m && precisaRenovar(m.modalidade ?? null, e.situacao, m.pago_ate) && <p className="mt-1.5 font-semibold text-ambar-3" data-mensalidade-renovar>Hora de renovar o plano</p>}
+        {/* só no plano do período todo: o de 1 mês (à vista = mês a mês, B2) fala de mensalidade */}
+        {m && ehPeriodoTodo(m.modalidade ?? null, m.meses) && precisaRenovar(m.modalidade ?? null, e.situacao, m.pago_ate) && <p className="mt-1.5 font-semibold text-ambar-3" data-mensalidade-renovar>Hora de renovar o plano</p>}
         <p className="mt-1.5 flex items-start gap-1.5"><Wallet aria-hidden className="mt-[2px] h-3.5 w-3.5 flex-none" /> <span className="min-w-0 break-words">{MODO_TEXTO[d.conta.modo] ?? d.conta.modo}{d.conta.modo === "pix_manual" && d.conta.chave ? ` · ${d.conta.chave.chave}` : d.conta.modo === "pix_manual" ? " · sem chave ativa" : ""}</span></p>
         {d.permissoes.dono && <Link to="/painel/configuracoes/recebimento" className="mt-1.5 inline-flex items-center gap-1.5 font-semibold text-violeta-3" data-link-recebimento><Settings2 aria-hidden className="h-3.5 w-3.5" /> Configurar o recebimento</Link>}
       </div>

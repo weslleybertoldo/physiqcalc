@@ -258,6 +258,15 @@ describe("Financeiro do aluno — o plano no cartão da mensalidade (W-P)", () =
     expect(document.querySelector("[data-mensalidade-renovar]")).toBeNull();
   });
 
+  it("dono, plano de 1 mês à vista vencendo: R$ 249/MÊS, sem 'Hora de renovar o plano' (fala de mensalidade — E2E de tela)", async () => {
+    const MENSAL = { ...ANUAL, id: "pl2", nome: "Mensal", valor: 249, meses: 1, modalidades: ["avista"] as ("avista" | "mensal")[] };
+    h.financeiro = { ...financeiro(), planos: [MENSAL], mensalidade: noPlano({ valor: 249, plano_id: "pl2", plano: "Mensal", meses: 1, desde: `${diaSP(-27)}T15:00:00.000Z` }) };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-form-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.textContent).toContain("R$ 249/MÊS");
+    expect(document.querySelector("[data-mensalidade-renovar]")).toBeNull();
+  });
+
   it("quem não é dono nem master não vê o plano (nem o valor, a forma de pagar ou a parcela) — o aviso de sempre", async () => {
     h.financeiro = { ...financeiro(), permissoes: { master: false, dono: false, responsavel: true, mensalidade: false }, planos: [ANUAL],
       mensalidade: noPlano({ modalidade: "mensal", parcela: { num: 4, total: 12 } }) };

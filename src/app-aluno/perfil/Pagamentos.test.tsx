@@ -231,6 +231,13 @@ describe("Perfil › Pagamentos — plano com período (W-P)", () => {
     await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")).not.toBeNull());
     expect(document.querySelector("[data-pagar-mensalidade]")!.textContent).toBe("Renovar plano · R$ 1.000,00");
   });
+  it("plano de 1 mês já pago e vencendo: 'Pagar', sem o 'Renovar plano' (o plano de 1 mês fala de mensalidade — E2E de tela)", async () => {
+    h.status.mockResolvedValue(status([PLANO({ valor: 249, plano: "Mensal", meses: 1, pago_ate: dia(3), desde: dia(-30), coberta: true })]));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-pagar-mensalidade]")!.textContent).toBe("Pagar R$ 249,00");
+    expect(document.querySelector("[data-pagar-mensalidade]")!.getAttribute("data-renovar")).toBeNull();
+  });
 });
 
 /** O plano numa conta do Mercado Pago (Pix ou cartão; sem chave Pix). */
