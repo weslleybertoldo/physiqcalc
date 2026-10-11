@@ -22,6 +22,14 @@
 //                                                            cobrança automática no cartão passa para o valor novo
 //   detalhe_mp        { cobranca_id }                        dados reais da transação no MP (comprovante em PDF) — aluno ou profissional
 //   simular_aprovacao { cobranca_id }                        SÓ STAGING (o Pix do sandbox não se paga)
+//   aluno_ip_link     { paciente_id, cobranca_id? }         W1: o link da InfinitePay da mensalidade (ou da avulsa): reaproveita o da
+//                                                            tentativa viva (72 h, o mesmo valor e a mesma InfiniteTag); order_nsu = um
+//                                                            pedido por LINK, <cobranca_id>-<n> (infinitepay_links — I4); a InfinitePay
+//                                                            recusou ou caiu → a tentativa é desfeita (checkout desligado: 400 + ativar)
+//   aluno_ip_volta    { order_nsu, transaction_nsu, slug, receipt_url?, capture_method? }   W1: a volta da página — vira um aviso da
+//                                                            caixa e é conferido NA HORA, como a tela (I3: sem gastar tentativa)
+//   aluno_ip_conferir { cobranca_id }                        W1: confere o aviso pendente que já está na hora (sem gastar tentativa — I3);
+//                                                            sem NENHUM aviso, pergunta só pelo pedido (W1-B2, 1 vez a cada 30 s)
 //  PROFISSIONAL (dono da conta, responsável pelo aluno ou master — quem vê o quê: spec 4.1 e P6):
 //   prof_planos       { conta_id }                          W-P: os planos da conta (completo, parcela, quantos alunos) e o modo —
 //                                                            só o dono e o master (Task 8b, ponto 1: os outros da conta → 403 so_o_dono)
@@ -792,6 +800,80 @@ Deno.serve(async (req) => {
     if (error) throw error;
   };
 
+  // ───────────────────────── W1 — InfinitePay (aluno) ─────────────────────────
+
+  /** A conta do aluno recebe pela InfinitePay e tem a InfiniteTag ativa → a InfiniteTag de agora. (A flag é da tela do personal: o aluno
+   *  de uma conta já ligada paga sempre.) */
+  const exigirInfinitePay = async (m: Matricula): Promise<string> => {
+    if (m.conta?.recebimento_modo !== "infinitepay") falhar("modo_nao_infinitepay");
+    if (!(await schemaTemW1(db, schema))) falhar("w1_indisponivel", 409);
+    const i = await integracaoIp(m.conta_id!);
+    if (!i?.infinitepay_handle || i.status !== "ativa") falhar("infinitepay_nao_ligada", 409);
+    return i!.infinitepay_handle;
+  };
+
+  type Alvo = Awaited<ReturnType<typeof alvoDoPagamento>>;
+
+  /** A tentativa viva do alvo: a da avulsa é a própria avulsa; a da mensalidade, a mais nova aguardando na InfinitePay. */
+  const tentativaVivaDe = async (m: Matricula, alvo: Alvo): Promise<Cobranca | null> => {
+    let q = db.from("cobrancas").select(await colunasCobranca()).eq("paciente_id", m.id).eq("forma", "infinitepay")
+      .eq("status", "aguardando_confirmacao").is("deleted_at", null);
+    q = alvo.avulsa ? q.eq("id", alvo.avulsa.id) : q.eq("tipo", "mensalidade");
+    const { data, error } = await q.order("created_at", { ascending: false }).limit(1);
+    if (error) throw error;
+    return ((data ?? []) as unknown as Cobranca[])[0] ?? null;
+  };
+
+  /** A linha da tentativa: a avulsa vira a tentativa; a mensalidade nasce com o retrato da W-P (descrição, meses cobertos, "de N"). */
+  const linhaParaIp = async (m: Matricula, alvo: Alvo, handle: string): Promise<Cobranca> => {
+    const ip = { forma: "infinitepay", ip_handle: handle, ip_link_url: null, ip_expira_em: expiraEm(), ip_conferido_em: null };
+    if (alvo.avulsa) {
+      const { data, error } = await db.from("cobrancas").update({ status: "aguardando_confirmacao", metodo: null, recusado_motivo: null,
+        recusado_em: null, ...ip }).eq("id", alvo.avulsa.id).in("status", ["aberta", "aguardando_confirmacao"]).select(await colunasCobranca()).single();
+      if (error) throw error;
+      return data as unknown as Cobranca;
+    }
+    const dono = recebedor(m);
+    if (!dono) falhar("sem_profissional");
+    const { data, error } = await db.from("cobrancas").insert({
+      paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: null, tipo: "mensalidade",
+      ...(await linhaDoPlano(m, alvo.mesRef)), valor: alvo.valor, vencimento: alvo.vencimento, mes_ref: alvo.mesRef,
+      status: "aguardando_confirmacao", plano_aluno_id: m.plano_aluno_id, origem: "app", ...ip,
+    }).select(await colunasCobranca()).single();
+    if (error) throw error;
+    return data as unknown as Cobranca;
+  };
+
+  /** A InfinitePay não criou o link: o pedido dele sai, e a tentativa sai (mensalidade) ou a avulsa volta a aberta, sem rastro. */
+  const desfazerTentativa = async (c: Cobranca, pedido: string | null) => {
+    if (pedido) {
+      const { error: el } = await db.from("infinitepay_links").delete().eq("pedido", pedido);
+      if (el) throw el;
+    }
+    const { error } = c.tipo === "avulsa"
+      ? await db.from("cobrancas").update({ status: "aberta", forma: null, metodo: null, ip_handle: null, ip_link_url: null, ip_expira_em: null }).eq("id", c.id)
+      : await db.from("cobrancas").delete().eq("id", c.id);
+    if (error) throw error;
+  };
+
+  /** A tentativa de mensalidade que não serve mais (o valor ou a InfiniteTag mudou): sai do histórico. Paga depois, a baixa atrasada vale. */
+  const encerrarTentativa = async (c: Cobranca) => {
+    const { error } = await db.from("cobrancas").update({ status: "cancelada", deleted_at: new Date().toISOString() }).eq("id", c.id);
+    if (error) throw error;
+  };
+
+  /** aluno_status e prof_aluno — só na conta InfinitePay ou com tentativa dela aberta (I2). A tentativa vencida sai, e os avisos que já
+   *  estão na hora são conferidos EM 2º PLANO (I3): a resposta não espera, é como a tela (sem gastar tentativa) e o prazo é próprio,
+   *  porque roda depois da resposta. */
+  const cuidarDaInfinitePay = async (m: Matricula) => {
+    if (!(await schemaTemW1(db, schema))) return;
+    await fecharVencidas(db, m.id);
+    const ctx: ContextoIp = { schema, log, prazo: prazo(ORCAMENTO_MS.servidor), ip: { base: IP_BASE } };
+    emSegundoPlano(conferirAvisosPendentes(db, { pacienteId: m.id }, ctx, 2, "tela")
+      .catch((e) => log.excecao(e, { codigo: "ip_conferir_2o_plano", schema, acao })));
+  };
+  const ehTentativaIp = (c: Cobranca) => c.forma === "infinitepay" && c.status === "aguardando_confirmacao";
+
   try {
     // ════════════════════════════ ALUNO ════════════════════════════
     if (acao === "aluno_status") {
@@ -811,6 +893,9 @@ Deno.serve(async (req) => {
         // o que ainda pode mudar no MP (Pix pendente, assinatura) — funciona mesmo sem o aviso do webhook
         const cobs0 = await cobrancasDe(m.id);
         for (const c of cobs0.filter((x) => x.forma === "mp" && x.status === "aguardando_confirmacao").slice(0, 4)) await conferir(c, m);
+        // W1: a tentativa vencida sai (o cobs relido abaixo já a vê fechada) e os avisos na hora são conferidos em 2º plano (I3) — só
+        // na conta InfinitePay ou com a tentativa dela aberta (I2)
+        if (m.conta?.recebimento_modo === "infinitepay" || cobs0.some(ehTentativaIp)) await cuidarDaInfinitePay(m);
         const assinatura = m.conta?.recebimento_modo === "mercadopago" ? await conferirAssinatura(m.id) : await assinaturaDe(m.id);
         const atual = (await carregarMatricula(db, id)) ?? m;
         const cobs = await cobrancasDe(m.id);
@@ -1195,6 +1280,70 @@ Deno.serve(async (req) => {
       }, 200, origin);
     }
 
+    // ════════════════════════════ W1 — O ALUNO PAGA PELA INFINITEPAY ════════════════════════════
+    if (acao === "aluno_ip_link") {
+      const m = await minhaMatricula(body.paciente_id);
+      const handle = await exigirInfinitePay(m);
+      if (!permitido(`ip-link:${user.id}`, 10, 600_000)) falhar("rate_limited", 429);
+      await fecharVencidas(db, m.id);
+      const alvo = await alvoDoPagamento(m, body.cobranca_id);
+      // a avulsa com comprovante de Pix esperando o personal não vira tentativa da InfinitePay
+      if (alvo.avulsa && alvo.avulsa.status === "aguardando_confirmacao" && alvo.avulsa.forma !== "infinitepay") falhar("cobranca_nao_aberta");
+      const valor = centavos(alvo.valor);
+      if (!valor) falhar("sem_mensalidade");
+      const viva = await tentativaVivaDe(m, alvo);
+      if (viva && podeReaproveitar(viva, { centavos: valor!, handle }, new Date())) {
+        return json({ ok: true, url: viva.ip_link_url, cobranca: vista(viva), reutilizado: true }, 200, origin);
+      }
+      if (viva && !alvo.avulsa) await encerrarTentativa(viva);
+      const linha = await linhaParaIp(m, alvo, handle);
+      // I4: um order_nsu por link (<cobranca_id>-<n>), com a InfiniteTag e o preço DESTE link — a confirmação confere com os 2
+      let pedido: string | null = null;
+      let url: string;
+      try {
+        pedido = await novoLink(db, linha.id, handle, valor!);
+        url = await linkOuFalha({
+          handle, centavos: valor!, descricao: descricaoDoLink(linha.descricao), pedido,
+          volta: urlDeVolta(schema, origin), webhook: urlDoWebhook(SUPABASE_URL, schema),
+        }, linha.id);
+      } catch (e) {
+        await desfazerTentativa(linha, pedido);
+        throw e;
+      }
+      const { error: el } = await db.from("infinitepay_links").update({ url }).eq("pedido", pedido!);
+      if (el) throw el;
+      const { data: salva, error } = await db.from("cobrancas").update({ ip_link_url: url }).eq("id", linha.id).select(await colunasCobranca()).single();
+      if (error) throw error;
+      return json({ ok: true, url, cobranca: vista(salva as unknown as Cobranca), reutilizado: false }, 200, origin);
+    }
+
+    if (acao === "aluno_ip_volta") {
+      const aviso = lerVolta(body);
+      if (!aviso) falhar("volta_invalida");
+      // a função é uma só para public e staging: sem a migration no schema não há link nem caixa (era 500 com aviso de erro)
+      if (!(await schemaTemW1(db, schema))) falhar("w1_indisponivel", 409);
+      const c = await cobrancaComApagada(aviso!.cobranca);
+      await minhaMatricula(c.paciente_id); // só a própria
+      const link = await linkDoPedido(db, aviso!.pedido);
+      if (!link || link.cobranca_id !== c.id) falhar("cobranca_invalida");
+      const reg = await registrarAviso(db, link!, aviso!, "volta");
+      // a volta é da tela (I3): confere o aviso que está na hora, sem gastar tentativa; fora do prazo ou no teto (I6), só relê
+      const resultado = "ignorado" in reg ? `ignorado_${reg.ignorado}` : await conferirAviso(db, reg.id, ctxIp(), "tela");
+      const atual = await cobrancaComApagada(c.id);
+      return json({ ok: true, resultado, paga: atual.status === "paga", cobranca: vista(atual) }, 200, origin);
+    }
+
+    if (acao === "aluno_ip_conferir") {
+      const c = await cobrancaComApagada(body.cobranca_id);
+      await minhaMatricula(c.paciente_id);
+      if (!c.ip_handle) falhar("cobranca_invalida");
+      // I3: da tela — o aviso pendente que já está na hora, 1 por vez, sem gastar tentativa; sem NENHUM aviso, só pelo pedido (W1-B2)
+      let resultado: string = await conferirAvisosPendentes(db, { cobrancaId: c.id }, ctxIp(), 1, "tela");
+      if (resultado === "nenhum" && c.status === "aguardando_confirmacao") resultado = await conferirPeloPedido(db, c.id, ctxIp());
+      const atual = await cobrancaComApagada(c.id);
+      return json({ ok: true, resultado, paga: atual.status === "paga", cobranca: vista(atual) }, 200, origin);
+    }
+
     // ════════════════════════════ PROFISSIONAL ════════════════════════════
     // ════════════════════════════ W1 — CONFIGURAÇÕES › RECEBIMENTO (jeito 2) ════════════════════════════
     if (acao === "prof_recebimento") {
@@ -1361,7 +1510,15 @@ Deno.serve(async (req) => {
 
     if (acao === "prof_plano_salvar") {
       const conta = await contaDosPlanos(body.conta_id, true);
-      const v = validarPlano(body, modalidadesDaConta(conta.modo));
+      // W1 (P-B): o plano que já tem uma modalidade fica com ela, mesmo que a forma de receber de agora não a ofereça (quem passou do MP
+      // para a InfinitePay não fica travado num plano com aluno em "cartão parcelado"); plano novo só com o que a conta recebe
+      let atuais: unknown[] = [];
+      if (ehUuidFin(body.id)) {
+        const { data: pl, error: epl } = await db.from("planos_aluno").select("modalidades").eq("id", String(body.id)).eq("conta_id", conta.id).maybeSingle();
+        if (epl) throw epl;
+        atuais = (pl as { modalidades: string[] } | null)?.modalidades ?? [];
+      }
+      const v = validarPlano(body, modalidadesPermitidasNoPlano(conta.modo, atuais));
       if (!v.ok) return falhar(v.erro);
       const plano = v.plano;
       const id = ehUuidFin(body.id) ? String(body.id) : null;
@@ -1478,6 +1635,8 @@ Deno.serve(async (req) => {
       if (veMensalidade && m.conta?.recebimento_modo === "mercadopago") {
         for (const c of cobs.filter((x) => x.forma === "mp" && x.status === "aguardando_confirmacao").slice(0, 4)) await conferir(c, m);
       }
+      // W1: como no aluno_status — a vencida sai e a conferência vai em 2º plano (I3), só na conta InfinitePay ou com tentativa aberta (I2)
+      if (veMensalidade && (m.conta?.recebimento_modo === "infinitepay" || cobs.some(ehTentativaIp))) await cuidarDaInfinitePay(m);
       const assinatura = veMensalidade && m.conta?.recebimento_modo === "mercadopago" ? await conferirAssinatura(m.id) : await assinaturaDe(m.id);
       const atual = (await carregarMatricula(db, m.id)) ?? m;
       cobs = (await cobrancasDe(m.id, 72)).filter((c) => podeVerCobranca(p, c));
@@ -1659,12 +1818,21 @@ Deno.serve(async (req) => {
         const dono = recebedor(m);
         if (!dono) falhar("sem_profissional");
         const mes = mesRefDe(dia);
-        const { data, error } = await db.from("cobrancas").insert({
-          paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: user.id, tipo: "mensalidade",
-          ...(await linhaDoPlano(m, mes)), valor, vencimento: dia, mes_ref: mes, status: "paga",
-          forma: "manual", metodo, pago_em: pagoEm, confirmado_por: user.id, confirmado_em: new Date().toISOString(),
-          plano_aluno_id: m.plano_aluno_id, origem: "app",
-        }).select(COLUNAS_COBRANCA).single();
+        // W1 (I5): a tentativa da InfinitePay ainda aguardando vira ESTA linha (paga "por fora"). Se a confirmação dela chegar depois, é
+        // "já registrado à mão" (aviso ao personal — decidirBaixa), nunca um 2º período. O ip_handle e o link ficam (a conferência acha).
+        const linhaManual = {
+          ...(await linhaDoPlano(m, mes)), valor, vencimento: dia, mes_ref: mes, status: "paga", forma: "manual", metodo, pago_em: pagoEm,
+          confirmado_por: user.id, confirmado_em: new Date().toISOString(), plano_aluno_id: m.plano_aluno_id,
+        };
+        const { data: ips, error: eip } = await db.from("cobrancas").select("id").eq("paciente_id", m.id).eq("tipo", "mensalidade")
+          .eq("forma", "infinitepay").eq("status", "aguardando_confirmacao").is("deleted_at", null)
+          .order("created_at", { ascending: false }).limit(1);
+        if (eip) throw eip;
+        const ip = ((ips ?? []) as Array<{ id: string }>)[0];
+        const { data, error } = ip
+          ? await db.from("cobrancas").update(linhaManual).eq("id", ip.id).eq("status", "aguardando_confirmacao").select(COLUNAS_COBRANCA).single()
+          : await db.from("cobrancas").insert({ paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: user.id,
+              tipo: "mensalidade", ...linhaManual, origem: "app" }).select(COLUNAS_COBRANCA).single();
         if (error) throw error;
         c = data as unknown as Cobranca;
       }

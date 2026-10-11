@@ -251,4 +251,30 @@ describe("W1 — a baixa da InfinitePay só depois do payment_check (guarda de f
     expect(w).toContain("IP_LIMITE_CORPO");
     expect(w).toContain("linkDoPedido(db, aviso.pedido)");
   });
+  it("o aluno_ip_link cria um pedido por link (I4) e desfaz a tentativa quando a InfinitePay não cria o link; a conferência usa a caixa", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const link = f.slice(f.indexOf('acao === "aluno_ip_link"'), f.indexOf('acao === "aluno_ip_volta"'));
+    expect(link).toContain("novoLink(db, linha.id, handle");
+    expect(link).toContain("desfazerTentativa(linha, pedido)");
+    const ip = f.slice(f.indexOf("W1 — O ALUNO PAGA PELA INFINITEPAY"), f.indexOf("════ PROFISSIONAL ════"));
+    expect(ip).not.toMatch(/status: "paga"/);
+    expect(ip).toContain('conferirAviso(db, reg.id, ctxIp(), "tela")');
+  });
+  it("I3: o aluno_status e o prof_aluno conferem em 2º plano, como a tela (sem gastar tentativa); I2: só na conta InfinitePay", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const cuidar = f.slice(f.indexOf("const cuidarDaInfinitePay"), f.indexOf("const ehTentativaIp"));
+    expect(cuidar).toContain('emSegundoPlano(conferirAvisosPendentes(db, { pacienteId: m.id }, ctx, 2, "tela")');
+    const status = f.slice(f.indexOf('acao === "aluno_status"'), f.indexOf("matriculas.push("));
+    expect(status).toMatch(/recebimento_modo === "infinitepay" \|\| cobs0\.some\(ehTentativaIp\)\) await cuidarDaInfinitePay/);
+  });
+  it("I5: o prof_registrar da mensalidade usa a tentativa da InfinitePay aguardando (a mesma linha), em vez de criar outra", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const reg = f.slice(f.indexOf('acao === "prof_registrar"'), f.indexOf('acao === "prof_remover"'));
+    expect(reg).toMatch(/\.eq\("forma", "infinitepay"\)[\s\S]*\.update\(linhaManual\)/);
+  });
+  it("P-B: o prof_plano_salvar valida com modalidadesPermitidasNoPlano (o plano antigo não trava o personal)", () => {
+    const f = ler("pagamentos-aluno/index.ts");
+    const salvar = f.slice(f.indexOf('acao === "prof_plano_salvar"'), f.indexOf('acao === "prof_plano_ativo"'));
+    expect(salvar).toContain("modalidadesPermitidasNoPlano(conta.modo");
+  });
 });
