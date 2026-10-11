@@ -212,6 +212,47 @@ describe("Financeiro do aluno — as categorias do lançamento (hml-17, H-39)", 
   });
 });
 
+describe("Financeiro do aluno — o plano no cartão da mensalidade (W-P)", () => {
+  const ANUAL = { id: "pl1", nome: "Anual", valor: 1000, ativo: true, meses: 12, modalidades: ["avista", "mensal"] as ("avista" | "mensal")[],
+    max_parcelas_cartao: null, valor_parcela_mensal: null };
+  const noPlano = (x: Partial<NonNullable<FinanceiroProfissional["mensalidade"]>>): NonNullable<FinanceiroProfissional["mensalidade"]> => ({
+    valor: 1000, plano_id: "pl1", plano: "Anual", pausada: false, pago_ate: `${diaSP(3)}T15:00:00.000Z`, desde: `${diaSP(-362)}T15:00:00.000Z`, coberta: true,
+    modalidade: "avista", meses: 12, negociado: null, parcela: null, ...x,
+  });
+
+  it("dono, à vista anual vencendo: R$ 1.000/ANO, o formulário no plano e 'Hora de renovar o plano'", async () => {
+    h.financeiro = { ...financeiro(), planos: [ANUAL], mensalidade: noPlano({}) };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-form-mensalidade]")).not.toBeNull());
+    const cartao = document.querySelector("[data-cartao-mensalidade]")!;
+    expect(cartao.textContent).toContain("R$ 1.000/ANO");
+    expect(document.querySelector("[data-form-mensalidade]")!.getAttribute("data-modo-plano")).toBe("periodo");
+    expect((document.querySelector("[data-mensalidade-modalidade]") as HTMLSelectElement).value).toBe("avista");
+    expect(document.querySelector("[data-mensalidade-renovar]")?.textContent).toBe("Hora de renovar o plano");
+    expect(document.querySelector("[data-mensalidade-parcela]")).toBeNull();
+  });
+
+  it("dono, mês a mês: R$ 83,33/MÊS e 'parcela 4 de 12' (sem renovar)", async () => {
+    h.financeiro = { ...financeiro(), planos: [ANUAL], mensalidade: noPlano({ valor: 83.33, modalidade: "mensal", pago_ate: `${diaSP(20)}T15:00:00.000Z`, parcela: { num: 4, total: 12 } }) };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-mensalidade-parcela]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.textContent).toContain("R$ 83,33/MÊS");
+    expect(document.querySelector("[data-mensalidade-parcela]")!.textContent).toBe("Próximo pagamento: parcela 4 de 12");
+    expect(document.querySelector("[data-mensalidade-renovar]")).toBeNull();
+  });
+
+  it("quem não é dono nem master não vê o plano (nem o valor, a forma de pagar ou a parcela) — o aviso de sempre", async () => {
+    h.financeiro = { ...financeiro(), permissoes: { master: false, dono: false, responsavel: true, mensalidade: false }, planos: [ANUAL],
+      mensalidade: noPlano({ modalidade: "mensal", parcela: { num: 4, total: 12 } }) };
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-cartao-mensalidade="sem-permissao"]')).not.toBeNull());
+    for (const marca of ["[data-form-mensalidade]", "[data-mensalidade-plano]", "[data-mensalidade-modalidade]", "[data-mensalidade-parcela]", "[data-link-planos]"]) {
+      expect(document.querySelector(marca)).toBeNull();
+    }
+    expect(document.querySelector("[data-cartao-mensalidade]")!.textContent).not.toMatch(/Anual|1\.000|parcela/);
+  });
+});
+
 describe("Financeiro do aluno — cancelar uma cobrança (hml-18a: a confirmação do app, não a do navegador)", () => {
   it("o X da cobrança aberta abre a confirmação do app: Voltar não cancela; Cancelar cobrança chama prof_cobranca_cancelar", async () => {
     h.financeiro = { ...financeiro(), cobrancas: [{ ...cobranca(0), status: "aberta", descricao: "Avaliação extra" }] };
