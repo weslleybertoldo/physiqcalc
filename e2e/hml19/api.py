@@ -21,6 +21,8 @@ Casos (a ordem é sempre esta):
   N7  origem fora da lista → o CORS devolve o padrão (https://physiqcalc.com.br); a do staging volta igual
   N8  2 padroes_garantir ao MESMO tempo (a P sem modelo próprio de documento: os dela vão à Lixeira e voltam no fim) → 1 conjunto só
   N9  anexo registrado com caminho de outra pasta → 403 fora_da_pasta; o caminho certo sem o arquivo → 400 anexo_nao_enviado
+  LX  a Lixeira (W26) com o excluir pela função: a anamnese excluída pela nutricao aparece na lixeira_da_conta, volta com o
+      lixeira_restaurar e, excluída de novo, sai de vez com o lixeira_apagar (as RPCs da tela da Lixeira, como a nutri de teste)
 Produção (--base prod --so-leitura): OPTIONS (CORS), sem login → 401, x-schema inválido → 400, ação desconhecida → 400 — nada grava.
 
 Uso: python3 e2e/hml19/api.py --area prontuario [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
@@ -34,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import sys
 import threading
 import time
@@ -44,7 +47,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 
 C = B.C
-CASOS = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9")
+CASOS = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "LX")
 FALSO = "00000000-0000-4000-8000-0000000000aa"
 
 
@@ -476,6 +479,34 @@ def caso_n9(R: Rodada) -> None:
     o.ok(st == 400 and r.get("erro") == "anexo_nao_enviado", f"N9 o caminho certo sem o arquivo → 400 anexo_nao_enviado ({st})")
 
 
+def caso_lixeira(R: Rodada) -> None:
+    """LX: o excluir pela função manda a anamnese para a Lixeira de verdade (a lixeira_da_conta mostra), e as RPCs da Lixeira (W26)
+    restauram e apagam de vez o que a função excluiu."""
+    o, m = R.o, f"{B.MARCA} {R.rodada} lixeira"
+    conta = B.B17.ler(f"select conta_id::text as c from {R.s}.pacientes where id = {C.txt(R.pac)}")[0]["c"]
+    st, r = R.chamar(R.tp, "anamnese_criar", {"paciente_id": R.pac, "modelo_id": None, "titulo": m, "data": agora(), "conteudo": [], "texto_livre": None})
+    id_ = (r.get("linha") or {}).get("id")
+    if not o.ok(st == 200 and C.eh_uuid(id_), f"LX a anamnese da Lixeira criada ({st})"):
+        return
+    R.e.linha("anamneses", id_)
+
+    def na_lixeira() -> bool:
+        st_l, lx = B.B17.rpc(R.tp, "lixeira_da_conta", {"p_conta": conta, "p_tipo": "anamnese", "p_busca": R.rodada, "p_offset": 0, "p_limite": 20})
+        texto = json.dumps(lx) if isinstance(lx, (dict, list)) else str(lx)
+        return st_l == 200 and id_ in texto
+
+    st, _ = R.chamar(R.tp, "anamnese_excluir", {"id": id_})
+    o.ok(st == 200 and na_lixeira(), f"LX excluída pela nutricao → está na lixeira_da_conta ({st})")
+    st, rr = B.B17.rpc(R.tp, "lixeira_restaurar", {"p_tipo": "anamnese", "p_id": id_})
+    viva = (R.linha("anamneses", id_, "deleted_at is null as viva") or {}).get("viva")
+    o.ok(st == 200 and isinstance(rr, dict) and rr.get("ok") is True and viva, f"LX lixeira_restaurar → a anamnese volta viva ({st}, {C.resumo(rr)})")
+    st, _ = R.chamar(R.tp, "anamnese_excluir", {"id": id_})
+    st2, ra = B.B17.rpc(R.tp, "lixeira_apagar", {"p_tipo": "anamnese", "p_id": id_})
+    sumiu = not B.B17.ler(f"select 1 as x from {R.s}.anamneses where id = {C.txt(id_)}")
+    o.ok(st == 200 and st2 == 200 and isinstance(ra, dict) and ra.get("ok") is True and sumiu,
+         f"LX excluída de novo e apagada de vez pela Lixeira → a linha some ({st}, {st2}, {C.resumo(ra)})")
+
+
 def limpar(o, estado: B.Estado, L, s: str) -> None:
     """Desfaz o que a rodada criou (linhas por id, arquivos pelo Storage como a dona, o N8) e confere por SQL só leitura."""
     if estado.vazio():
@@ -559,7 +590,7 @@ def main() -> int:
             R = Rodada(o, L, estado, rodada)
             o.linha(f"rodada {rodada} · schema {s} · aluna (matrícula) {R.pac[:8]}… · casos {','.join(casos)}")
             try:
-                for nome, f in (("P", caso_p), ("N1", caso_n1), ("N4", caso_n4_n5), ("N8", caso_n8), ("N9", caso_n9)):
+                for nome, f in (("P", caso_p), ("N1", caso_n1), ("N4", caso_n4_n5), ("N8", caso_n8), ("N9", caso_n9), ("LX", caso_lixeira)):
                     if nome in casos or (nome == "N4" and "N5" in casos):
                         f(R)
                 if {"N2", "N3", "N6"} & set(casos):
