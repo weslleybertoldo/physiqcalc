@@ -1,5 +1,5 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/pages/paciente/secoes/Anamnese.tsx) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, FileDown, ListChecks, Loader2, NotebookPen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -27,8 +27,14 @@ export default function Anamnese() {
   const { paciente: p, recarregar } = usePaciente();
   const { acesso } = useProntuario();
   const { user } = useAuth();
+  // hml-19a (H-81): os efeitos dependem do id (estável), não do objeto da pessoa
+  const uid = user?.id ?? null;
+  const podeEditar = acesso.editarClinico;
   const [lista, setLista] = useState<Anamnese[] | null>(null);
   const [modelos, setModelos] = useState<ModeloAnamnese[]>([]);
+  const [erroModelos, setErroModelos] = useState(false);
+  /** o padrão do 1º acesso já foi pedido nesta abertura (1 chamada só — mesmo com renders, efeitos repetidos ou o modo estrito) */
+  const padraoPedido = useRef(false);
   const [erro, setErro] = useState<string | null>(null);
   const [nomeNutri, setNomeNutri] = useState<string | null>(null);
   const [modal, setModal] = useState<{ aberto: boolean; anamnese: Anamnese | null }>({ aberto: false, anamnese: null });
@@ -47,13 +53,19 @@ export default function Anamnese() {
     }
   }, [p.id]);
 
+  // hml-19a (H-81): o padrão do 1º acesso é 1 chamada por abertura ao servidor (padroes_garantir: grava 1 vez só, com trava) e só para
+  // quem muda o clínico; depois dela (e para quem só lê) é a lista. Falhou → 1 aviso com "Tentar de novo" (antes: toast a cada volta).
   const carregarModelos = useCallback(async () => {
+    const garantir = !!uid && podeEditar && !padraoPedido.current;
+    if (garantir) padraoPedido.current = true;
     try {
-      setModelos(user ? await garantirModelos(user.id) : await listarModelos());
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível carregar os modelos");
+      setModelos(garantir && uid ? await garantirModelos(uid) : await listarModelos());
+      setErroModelos(false);
+    } catch {
+      if (garantir) padraoPedido.current = false; // o "Tentar de novo" pede de novo
+      setErroModelos(true);
     }
-  }, [user]);
+  }, [uid, podeEditar]);
 
   useEffect(() => {
     void carregar();
@@ -61,9 +73,9 @@ export default function Anamnese() {
   }, [carregar, carregarModelos]);
 
   useEffect(() => {
-    if (!user) return;
-    void nomeDaNutricionista(user.id).then(setNomeNutri);
-  }, [user]);
+    if (!uid) return;
+    void nomeDaNutricionista(uid).then(setNomeNutri);
+  }, [uid]);
 
   const abrirNova = () => setModal({ aberto: true, anamnese: null });
   // o atalho "Anamnese" do Fluxo de consulta (W14) chega com ?nova=anamnese
@@ -144,6 +156,14 @@ export default function Anamnese() {
         </header>
 
         {erro && <p role="alert" className="text-sm text-rosa-3 font-body">{erro}</p>}
+        {erroModelos && (
+          <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-rosa-3 font-body" data-aviso-modelos>
+            <span>Não foi possível carregar os modelos de anamnese.</span>
+            <button type="button" onClick={() => void carregarModelos()} className={BTN_MINI} data-btn-tentar-modelos>
+              Tentar de novo
+            </button>
+          </div>
+        )}
 
         {lista !== null && !erro && itens.length === 0 && (
           <div className="rounded-2xl border border-dashed border-linha-2 p-6 text-center space-y-2" data-anamneses-vazio>

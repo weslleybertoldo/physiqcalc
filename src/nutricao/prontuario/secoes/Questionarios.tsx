@@ -42,11 +42,13 @@ export default function Questionarios() {
   const [nomeNutri, setNomeNutri] = useState<string | null>(null);
   const [profissional, setProfissional] = useState<DadosProfissionais | null>(null);
 
+  // hml-19a (laço de leitura, achado da spec hml-19 §1.11): o efeito depende do id (estável), não do objeto da pessoa — antes, com o
+  // useAuth() novo a cada render e o setProfissional(objeto novo), eram ~21 GET profiles por segundo enquanto a seção ficava aberta
   useEffect(() => {
-    if (!user) return;
-    void nomeDaNutricionista(user.id).then(setNomeNutri);
-    void dadosProfissionais(user.id).then(setProfissional);
-  }, [user]);
+    if (!uid) return;
+    void nomeDaNutricionista(uid).then(setNomeNutri);
+    void dadosProfissionais(uid).then(setProfissional);
+  }, [uid]);
 
   const chaveAplicacoes = useMemo(() => ["aplicacoes-questionario", p.id], [p.id]);
   const aplicacoesQ = useQuery({ queryKey: chaveAplicacoes, queryFn: () => listarAplicacoesDoPaciente(p.id) });
