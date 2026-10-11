@@ -49,16 +49,17 @@ export const RPC_SO_LEITURA = new Set<string>([
 ]);
 
 /**
- * As 38 VOLATILE que o front chama (+ as 2 da hml-12 que gravam o aceite e o consentimento do responsável): nunca repetem. hml-19b: a
+ * As 37 VOLATILE que o front chama (+ as 2 da hml-12 que gravam o aceite e o consentimento do responsável): nunca repetem. hml-19b: a
  * paciente_marcar_refeicao e a aluno_marcar_meta saíram do front (o app do aluno marca pela função nutricao, que chama as 2 lá); a
- * diario_enviar fica (o link público /d/:codigo segue chamando direto — decisão 13).
+ * diario_enviar fica (o link público /d/:codigo segue chamando direto — decisão 13). hml-19c: a aluno_avisar_avaliacao saiu do front
+ * (o aviso "avaliação nova" vai pela função nutricao, ação avaliacao_avisar, que chama a RPC lá).
  */
 export const RPC_QUE_GRAVAM = new Set<string>([
   // sem escrita direta no corpo, mas mexem no limite_publico / garantir_* / matricular_no_app (6)
   "agenda_garantir_tags", "aluno_acesso", "diario_link", "diario_listar", "entrar_sem_profissional", "preconsulta_formulario",
-  // gravam (32)
+  // gravam (31)
   "aceitar_no_acesso", "alterar_papeis_membro", "aluno_agenda_confirmar", "aluno_agenda_desistir", "aluno_agenda_marcar",
-  "aluno_agenda_reagendar", "aluno_avisar_avaliacao", "aluno_avisar_plano", "aluno_definir_pacote",
+  "aluno_agenda_reagendar", "aluno_avisar_plano", "aluno_definir_pacote",
   "aluno_novo_link", "aluno_responsavel_registrar", "aluno_salvar_ajustes", "aluno_salvar_dados", "criar_minha_conta",
   "diario_enviar", "garantir_meu_codigo", "lixeira_apagar", "lixeira_restaurar", "marcar_aviso_mudanca", "mensagens_aviso_fechar",
   "mensagens_ligar_para_todos", "minha_senha_definida", "mudar_objetivo_app", "paciente_criar_acesso",

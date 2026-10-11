@@ -6,6 +6,8 @@
 //   · .rpc("<uma das RPC_QUE_GRAVAM>")                                                     (src/integrations/repeticao.ts).
 // Cada sub-worktree põe as pastas dela em AREAS, com a base (o que ainda grava direto e está aceito) — aqui, 0. hml-19b: a Dieta, as
 // Dietas e o app do aluno (menos o que é de outra W: antropometrias.ts, da hml-19c, e o link público /d/:codigo, decisão 13).
+// hml-19c: a Avaliação — as fotos de evolução e os diálogos (src/nutricao/avaliacao), a aba do painel (a foto mensal do Treino e o
+// aviso, src/painel/aluno/avaliacao) e a lib da antropometria (um arquivo avulso, que saiu do `fora` da Dieta).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -15,8 +17,12 @@ import { semComentarios } from "../../scripts/ci/checar-funcoes.mjs";
 
 const RAIZ = resolve(__dirname, "../..");
 
-/** As áreas migradas para o jeito 2 e o que ainda pode gravar direto em cada uma (a base só diminui); `fora` = arquivos de outra W. */
-const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[] }> = {
+/**
+ * As áreas migradas para o jeito 2 e o que ainda pode gravar direto em cada uma (a base só diminui); `fora` = arquivos de outra W;
+ * `pastas` aceita pasta ou arquivo avulso; `minimo` = quantos arquivos a área tem de ter, no mínimo (a guarda não passa por não achar
+ * arquivo; o padrão é 31).
+ */
+const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; minimo?: number }> = {
   // hml-19a: o Prontuário (as 18 tabelas e o bucket de anexos — a Pré-consulta usa as mesmas libs)
   prontuario: { pastas: ["src/nutricao/prontuario"], base: 0 },
   // hml-19b: a Dieta (as libs do editor), as Dietas (alimentos, receitas, diário da nutri) e o app do aluno (✓ e a foto do diário)
@@ -24,6 +30,12 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[] }>
     pastas: ["src/nutricao/editor/lib", "src/painel/dietas", "src/nutricao/app"],
     base: 0,
     fora: ["src/painel/dietas/publico.ts"],
+  },
+  // hml-19c: a Avaliação (Perfil do aluno › Avaliação) — 16 arquivos hoje
+  avaliacao: {
+    pastas: ["src/nutricao/avaliacao", "src/painel/aluno/avaliacao", "src/nutricao/editor/lib/antropometrias.ts"],
+    base: 0,
+    minimo: 15,
   },
 };
 
@@ -53,6 +65,8 @@ export function gravacoesDiretas(fonte: string): string[] {
 
 function fontesDa(pasta: string): string[] {
   const saida: string[] = [];
+  // hml-19c: um arquivo avulso também vale (a lib da antropometria mora no editor da Dieta)
+  if (statSync(resolve(RAIZ, pasta)).isFile()) return [resolve(RAIZ, pasta)];
   const andar = (dir: string) => {
     for (const nome of readdirSync(dir)) {
       const cam = join(dir, nome);
@@ -93,12 +107,12 @@ describe("hml-19a — o detector acha o que procura (controle positivo)", () => 
 });
 
 describe("hml-19a — as áreas migradas não gravam direto (base 0)", () => {
-  it.each(Object.entries(AREAS))("%s: nenhuma gravação direta nas pastas da área", (_area, { pastas, base, fora = [] }) => {
+  it.each(Object.entries(AREAS))("%s: nenhuma gravação direta nas pastas da área", (_area, { pastas, base, fora = [], minimo = 31 }) => {
     const fontes = pastas.flatMap(fontesDa).filter((arq) => !fora.includes(relative(RAIZ, arq)));
     const achados = fontes.flatMap((arq) => gravacoesDiretas(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
     expect(achados.length, achados.join("\n")).toBe(base);
     // e a área tem código de verdade (a guarda não passa por não achar arquivo)
-    expect(fontes.length).toBeGreaterThan(30);
+    expect(fontes.length).toBeGreaterThanOrEqual(minimo);
   });
 
   it("hml-19b: os arquivos de fora existem e ainda gravam direto (a guarda não esconde nada além deles)", () => {
