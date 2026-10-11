@@ -15,12 +15,21 @@ Casos (staging):
   livre       o que o app faz hoje segue: a avulsa aberta sem forma (o molde do e2e/wp/api.py:722-727), paga no Pix manual, cancelada,
               apagada; a linha do Pix manual não vira do MP
   juntas      as 3 guardas juntas (W1, W1b, W-P): forma infinitepay, ip_handle, meses_cobertos e mp_payment_id no padrão
+  (revisão da W1b, 11/10)
+  mover       M1: na linha do MP paga, o dono troca o aluno (para o aluno-calc, de OUTRA conta de TESTE), o tipo e a origem e depois a
+              conta, quem criou e o responsável → nada disso muda (a descrição muda). Sem o M1, a 1ª troca passa (a policy de UPDATE só
+              olha a conta e quem criou) e a 2ª dá -1 (o WITH CHECK recusa)
+  upsert      M3: o upsert do PostgREST (Prefer: resolution=merge-duplicates = on conflict do update) do dono na linha do MP do servidor
+              → o MP fica como estava (o BEFORE INSERT zera o proposto e o BEFORE UPDATE devolve o velho); a descrição muda
+  responsavel M3: o membro que NÃO é dono (o prof1 de TESTE vira personal da conta do prof2 e responsável por uma matrícula sem login SÓ
+              dentro do bloco, que volta inteiro): o ataque do C1 pelo INSERT vira uma avulsa comum, e na linha do MP que ele criou não
+              troca o MP nem de quem ela é
 Sempre:
   catálogo    (só leitura; vale no public) o gatilho existe e está ligado, BEFORE INSERT OR UPDATE por linha; a função é security
-              invoker, com search_path vazio, sem EXECUTE para o app e o anon e com o MESMO corpo da migration; as 9 colunas existem;
+              invoker, com search_path vazio, sem EXECUTE para o app e o anon e com o MESMO corpo da migration; as 15 colunas existem;
               as 3 guardas de cobrancas estão lá; nenhum sinal do ataque (cobrança com o mp_payment_id de uma fatura do plano)
-  foto        (staging) a foto de antes — as cobranças da matrícula de TESTE e as 'teste_w1b' — é a mesma no fim: o desfazer apaga o que
-              sobrou (nada, os blocos voltam sozinhos) e confere
+  foto        (staging) a foto de antes — as cobranças da matrícula de TESTE, as 'teste_w1b', a matrícula do responsável e o prof1 na
+              conta do prof2 — é a mesma no fim: o desfazer apaga o que sobrou (nada, os blocos voltam sozinhos) e confere
 Uso: python3 e2e/w1b/sql_w1b.py [--casos forjado,linha_mp,…]   (staging: os casos + o catálogo + a foto)
      python3 e2e/w1b/sql_w1b.py --schema public                (só leitura: o catálogo e o sinal do ataque)
      python3 e2e/w1b/sql_w1b.py --seco [--schema …]            (monta os blocos e confere o formato e o tamanho: NADA vai ao banco)
@@ -48,12 +57,17 @@ p = Placar()
 S = "staging"
 DONO, ALUNO, MASTER = "prof2.teste.claude@physiqcalc.app", "aluno2.teste.claude@physiqcalc.app", "admin.teste.claude@physiqcalc.app"
 ORIGEM = "teste_w1b"
+RESP = "prof1.teste.claude@physiqcalc.app"   # o responsável que NÃO é dono: membro e responsável SÓ dentro do bloco (que volta inteiro)
+OUTRO_ALUNO = "teste@teste.com"              # o aluno-calc (TESTE), na conta do master de teste: o "outro aluno" do caso mover (M1)
+MARCA_RESP = "teste w1b responsável"         # o nome da matrícula sem login que o bloco do responsável cria (e que volta com ele)
 MIGRATION = Path(__file__).resolve().parents[2] / "supabase-principal/migrations/20261011220000_w1b_guarda_cobrancas_mp.sql"
-COLUNAS = ("forma", "status", "mp_payment_id", "mp_status", "mp_preapproval_id", "pix_qr", "pix_copia_cola", "pix_expira_em", "reembolsado_em")
+# as colunas que a guarda lê: as 9 do MP e (revisão, M1) as 6 de quem é a linha do MP
+COLUNAS = ("forma", "status", "mp_payment_id", "mp_status", "mp_preapproval_id", "pix_qr", "pix_copia_cola", "pix_expira_em", "reembolsado_em",
+           "paciente_id", "conta_id", "tipo", "criado_por", "nutricionista_id", "origem")
 MP_7 = "num_nonnulls(mp_payment_id, mp_status, mp_preapproval_id, pix_qr, pix_copia_cola, pix_expira_em, reembolsado_em)"
 # o RuntimeError do _comum.sql_mgmt corta a resposta de erro em 500 caracteres: o resultado de um bloco cabe com folga abaixo disto
 TETO_RESULTADO = 300
-CASOS = ("forjado", "linha_mp", "servidor", "livre", "juntas")
+CASOS = ("forjado", "linha_mp", "servidor", "livre", "juntas", "mover", "upsert", "responsavel")
 TIPO_BEFORE_INSERT_UPDATE_ROW = 1 | 2 | 4 | 16
 LOCAL = os.environ.get("PHYSIQ_SQL_LOCAL", "").strip()
 
@@ -109,12 +123,13 @@ VOLTA = "  perform set_config('role', 'postgres', true);\n  perform set_config('
 
 def bloco_sql(corpo: str) -> str:
     return f"""do $t$
-declare v_dono uuid; v_aluno uuid; v_master uuid; v_conta uuid; v_pac uuid; v_c uuid; v_c2 uuid; v_antes text; v_n integer;
-        v_res jsonb := '{{}}'::jsonb;
+declare v_dono uuid; v_aluno uuid; v_master uuid; v_resp uuid; v_conta uuid; v_pac uuid; v_c uuid; v_c2 uuid; v_pac2 uuid; v_conta2 uuid;
+        v_antes text; v_n integer; v_n2 integer; v_res jsonb := '{{}}'::jsonb;
 begin
   select u.id into v_dono from auth.users u where lower(u.email) = '{DONO}';
   select u.id into v_aluno from auth.users u where lower(u.email) = '{ALUNO}';
   select u.id into v_master from auth.users u where lower(u.email) = '{MASTER}';
+  select u.id into v_resp from auth.users u where lower(u.email) = '{RESP}';
   select c.id into v_conta from {S}.contas c where c.dono_id = v_dono and c.origem <> 'app' order by c.criado_em limit 1;
   select pa.id into v_pac from {S}.pacientes pa where pa.user_id = v_aluno and pa.conta_id = v_conta and pa.deleted_at is null limit 1;
   if v_conta is null or v_pac is null or v_master is null then
@@ -150,6 +165,50 @@ def do_servidor(var: str = "v_c", **troca: str) -> str:
 
 def foto_mp(var: str = "v_c") -> str:
     return f"(select md5(row({', '.join(COLUNAS)})::text) from {S}.cobrancas where id = {var})"
+
+
+def dentro(sql: str) -> str:
+    """Um nível a mais de recuo (o corpo de um if do bloco)."""
+    return "".join(f"  {linha}" if linha.strip() else linha for linha in sql.splitlines(keepends=True))
+
+
+def se_tem(var: str, falta: str, corpo: str) -> str:
+    """O caso só roda se a variável do bloco existir; senão o resultado diz o que falta (o caso fica ❌ com o motivo)."""
+    return (f"  if {var} is null then\n    v_res := jsonb_build_object('erro', '{falta}');\n  else\n" + dentro(corpo) + "  end if;\n")
+
+
+def outro_aluno() -> str:
+    """A matrícula do aluno-calc (TESTE) em OUTRA conta: para onde o caso mover (M1) tenta levar a linha do MP."""
+    return (f"  select pa.id, pa.conta_id into v_pac2, v_conta2 from {S}.pacientes pa join auth.users u on u.id = pa.user_id\n"
+            f"   where lower(u.email) = '{OUTRO_ALUNO}' and pa.conta_id is distinct from v_conta and pa.deleted_at is null\n"
+            "   order by pa.created_at limit 1;\n")
+
+
+def mover(autor_novo: str) -> str:
+    """O M1 pelo REST, como quem está logado: 1º o aluno, o tipo e a origem (a policy de UPDATE só olha a conta e quem criou: sem a
+    guarda a linha muda de aluno); 2º a conta, quem criou e o responsável (sem a guarda o WITH CHECK recusa: -1). v_n e v_n2 = linhas."""
+    return (f"""  update {S}.cobrancas set paciente_id = v_pac2, tipo = 'mensalidade', origem = 'migrado_calc', descricao = 'teste w1b movida'
+   where id = v_c;
+  get diagnostics v_n = row_count;
+  begin
+    update {S}.cobrancas set conta_id = v_conta2, criado_por = {autor_novo}, nutricionista_id = {autor_novo} where id = v_c;
+    get diagnostics v_n2 = row_count;
+  exception when insufficient_privilege then
+    v_n2 := -1;
+  end;
+""")
+
+
+def responsavel_na_conta() -> str:
+    """Só dentro do bloco (ele volta inteiro): o prof1 (TESTE) vira personal e nutricionista da conta do prof2 e responsável por uma
+    matrícula sem login (v_pac2) — o membro que NÃO é dono da policy "membro cria" (w02 :794)."""
+    return (f"""  update {S}.conta_membros set papeis = array['personal', 'nutricionista'], status = 'ativo' where conta_id = v_conta and user_id = v_resp;
+  if not found then
+    insert into {S}.conta_membros (conta_id, user_id, papeis, status) values (v_conta, v_resp, array['personal', 'nutricionista'], 'ativo');
+  end if;
+  insert into {S}.pacientes (conta_id, personal_id, nutricionista_id, nome) values (v_conta, v_resp, v_resp, '{MARCA_RESP}')
+  returning id into v_pac2;
+""")
 
 
 def blocos() -> dict[str, tuple[str, dict]]:
@@ -213,6 +272,43 @@ def blocos() -> dict[str, tuple[str, dict]]:
                 from {S}.cobrancas where id = v_c);
 """,
         {"forma": None, "ip": True, "meses": 1, "mp": 0})
+    # revisão da W1b (11/10): M1 e M3
+    b["mover"] = (
+        outro_aluno()
+        + se_tem("v_pac2", f"sem a matrícula de TESTE de {OUTRO_ALUNO} em outra conta",
+                 do_servidor(status="'paga'", mp_status="'approved'", pago_em="now()") + f"  v_antes := {foto_mp()};\n" + como("v_dono")
+                 + mover("v_aluno") + VOLTA
+                 + f"""  v_res := jsonb_build_object('linhas', v_n, 'linhas2', v_n2, 'mp_igual', {foto_mp()} = v_antes,
+                             'desc', (select descricao = 'teste w1b movida' from {S}.cobrancas where id = v_c));
+"""),
+        {"linhas": 1, "linhas2": 1, "mp_igual": True, "desc": True})
+    b["upsert"] = (
+        do_servidor() + f"  v_antes := {foto_mp()};\n" + como("v_dono")
+        + f"""  insert into {S}.cobrancas (id, paciente_id, conta_id, nutricionista_id, criado_por, descricao, valor, vencimento, tipo, status,
+                             forma, mp_payment_id, mp_status, reembolsado_em, origem)
+  values (v_c, v_pac, v_conta, v_dono, v_dono, 'teste w1b upsert', 10, current_date, 'avulsa', 'paga', 'mp', 'W1B-FORJADO', 'approved', now(),
+          '{ORIGEM}')
+  on conflict (id) do update set status = excluded.status, forma = excluded.forma, mp_payment_id = excluded.mp_payment_id,
+                             mp_status = excluded.mp_status, reembolsado_em = excluded.reembolsado_em, descricao = excluded.descricao;
+""" + VOLTA + f"""  v_res := jsonb_build_object('mp_igual', {foto_mp()} = v_antes,
+                             'desc', (select descricao = 'teste w1b upsert' from {S}.cobrancas where id = v_c));
+""",
+        {"mp_igual": True, "desc": True})
+    b["responsavel"] = (
+        se_tem("v_resp", f"sem a conta de TESTE {RESP}",
+               responsavel_na_conta() + como("v_resp") + forjada(paciente_id="v_pac2", nutricionista_id="v_resp", criado_por="v_resp") + VOLTA
+               + f"""  v_res := (select jsonb_build_object('forma', forma, 'mp', {MP_7}, 'status', status, 'desc', descricao = 'teste w1b forjada')
+                from {S}.cobrancas where id = v_c);
+""" + do_servidor("v_c2", paciente_id="v_pac2", nutricionista_id="v_resp", criado_por="v_resp", mp_payment_id="'W1B-REAL-RESP'")
+               + f"  v_antes := {foto_mp('v_c2')};\n" + como("v_resp")
+               + f"""  update {S}.cobrancas set mp_payment_id = 'W1B-FORJADO', status = 'paga', forma = 'pix_manual', mp_status = 'approved',
+         reembolsado_em = now(), paciente_id = v_pac, tipo = 'mensalidade', origem = 'migrado_calc', descricao = 'teste w1b editada'
+   where id = v_c2;
+  get diagnostics v_n = row_count;
+""" + VOLTA + f"""  v_res := v_res || jsonb_build_object('linhas', v_n, 'mp_igual', {foto_mp('v_c2')} = v_antes,
+                                     'desc2', (select descricao = 'teste w1b editada' from {S}.cobrancas where id = v_c2));
+"""),
+        {"forma": None, "mp": 0, "status": "paga", "desc": True, "linhas": 1, "mp_igual": True, "desc2": True})
     return b
 
 
@@ -223,6 +319,11 @@ TEXTOS = {
     "servidor": "o postgres, o service_role e o master gravam o MP",
     "livre": "o app segue: avulsa aberta, paga no Pix manual, cancelada e apagada; o Pix manual não vira do MP",
     "juntas": "as 3 guardas juntas (W1, W1b, W-P): forma, ip_handle, meses_cobertos e o MP no padrão",
+    "mover": "M1: na linha do MP paga o dono não troca o aluno (o de outra conta), o tipo, a origem, a conta, quem criou nem o responsável "
+             "(a descrição muda)",
+    "upsert": "M3: o upsert do PostgREST (on conflict do update) do dono na linha do MP não grava o MP (a descrição muda)",
+    "responsavel": "M3: o responsável que não é dono — o ataque do C1 pelo INSERT vira avulsa comum; na linha do MP que ele criou não troca "
+                   "o MP nem de quem ela é",
 }
 
 
@@ -297,16 +398,24 @@ def foto() -> dict:
                                                        || c.updated_at::text, ',' order by c.id), ''))
                           from {S}.cobrancas c join {S}.pacientes pa on pa.id = c.paciente_id join auth.users u on u.id = pa.user_id
                          where lower(u.email) = '{ALUNO}') as assinatura,
-                       (select count(*) from {S}.cobrancas where origem = '{ORIGEM}')::int as teste""")
+                       (select count(*) from {S}.cobrancas where origem = '{ORIGEM}')::int as teste,
+                       (select count(*) from {S}.pacientes where nome = '{MARCA_RESP}')::int as resp_matricula,
+                       (select md5(coalesce(string_agg(m.id::text || m.papeis::text || m.status, ',' order by m.id), ''))
+                          from {S}.conta_membros m join auth.users u on u.id = m.user_id join {S}.contas c on c.id = m.conta_id
+                          join auth.users d on d.id = c.dono_id
+                         where lower(u.email) = '{RESP}' and lower(d.email) = '{DONO}') as resp_membro""")
     return r[0]
 
 
 def desfazer(antes: dict) -> None:
-    """Os blocos voltam sozinhos (terminam com erro): o que sobrar com a origem de teste sai, e a foto tem que ser a mesma."""
+    """Os blocos voltam sozinhos (terminam com erro): o que sobrar com a origem de teste sai (e a matrícula sem login do responsável,
+    pela marca), e a foto tem que ser a mesma (o prof1 na conta do prof2 inclusive)."""
     escrever(f"delete from {S}.cobrancas where origem = '{ORIGEM}'")
+    escrever(f"delete from {S}.pacientes where nome = '{MARCA_RESP}' and user_id is null")
     depois = foto()
-    p.check(depois == antes and depois["teste"] == 0, f"[{S}] nada ficou gravado: a foto da matrícula de TESTE é a mesma ({antes['n']} → {depois['n']}, "
-                                                     f"'{ORIGEM}': {depois['teste']})")
+    p.check(depois == antes and depois["teste"] == 0 and depois["resp_matricula"] == 0,
+            f"[{S}] nada ficou gravado: a foto da matrícula de TESTE é a mesma ({antes['n']} → {depois['n']}, '{ORIGEM}': {depois['teste']}, "
+            f"matrícula do responsável: {depois['resp_matricula']}, o prof1 na conta do prof2 igual: {depois['resp_membro'] == antes['resp_membro']})")
 
 
 # ───────────────────────── seco e main ─────────────────────────
