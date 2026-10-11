@@ -1,0 +1,733 @@
+{
+  "uuid": "f9015660-324a-5a71-b905-8157ee6323ea",
+  "nome": "Afundo Reverso com Halteres",
+  "cena": "afundo_reverso_com_halteres",
+  "grupo": "Quadríceps",
+  "subgrupo": "Quadríceps · glúteo máximo · isquiotibiais",
+  "padrao_movimento": "afundo",
+  "equipamento": "halteres",
+  "variacao": "passo para trás",
+  "alvos": [
+    "quadriceps",
+    "gluteo"
+  ],
+  "auxiliares": [
+    "posterior",
+    "adutores",
+    "panturrilha",
+    "lombar"
+  ],
+  "camera": {
+    "az": 62,
+    "el": 8,
+    "dist": 4.7,
+    "alvo": [
+      0,
+      0.32,
+      0.78
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.7,
+    "alvo": [
+      0,
+      0.32,
+      0.8
+    ]
+  },
+  "ida_s": 6.0,
+  "movimento": "Em pé, ereto, com um halter em cada mão ao lado do corpo (braços esticados, palmas viradas para as coxas), ombros para trás e para baixo, olhando à frente, e os pés lado a lado na largura do quadril, com as pontas para a frente. Dá um passo longo para trás com uma perna: o calcanhar sai do chão primeiro, o pé passa no ar e pisa lá atrás com a ponta, o calcanhar levantado; o joelho da frente já vai dobrando enquanto o pé vai, e o pé da frente fica chapado e parado. Desce dobrando os dois joelhos, com o tronco ereto e o quadril descendo quase reto, até a coxa da frente ficar paralela ao chão e o joelho de trás quase encostar no chão, sem bater, com o joelho da frente em cima do tornozelo, na direção do pé, sem passar da ponta dele. Volta empurrando com a perna da frente e traz o pé de trás de volta para o lado do outro, até ficar em pé. Repete com a outra perna, alternando.",
+  "cinesiologia": {
+    "plano": "sagital, unilateral: cadeia cinética fechada na perna da frente (o pé chapado no chão a repetição inteira) e aberta na que anda no ar até pisar atrás",
+    "articulacoes": "perna da frente: quadril (flexão na descida, extensão na subida), joelho (flexão/extensão) e tornozelo (leve dorsiflexão embaixo); perna de trás: quadril vai para trás no passo e fica perto da posição neutra embaixo, joelho (flexão/extensão) e tornozelo com o calcanhar subindo (dedos dobrados no chão); ombros, cotovelos e punhos parados, segurando os halteres ao lado do corpo",
+    "agonistas": "quadríceps (vasto lateral, vasto medial, vasto intermédio e reto femoral) na extensão do joelho e glúteo máximo na extensão do quadril da perna da frente",
+    "sinergistas": "adutor magno e sóleo",
+    "estabilizadores": "isquiotibiais e gastrocnêmio (estabilizadores dinâmicos do joelho), glúteo médio e glúteo mínimo (pelve nivelada), eretores da espinha, quadrado lombar e oblíquos (tronco ereto) e trapézio superior e inferior e levantador da escápula (seguram os halteres com os ombros para baixo)",
+    "fases": "passo para trás (o pé sai do chão e pisa com a ponta lá atrás, o joelho da frente já dobrando), descida excêntrica até o joelho de trás quase tocar o chão, subida concêntrica empurrando com a perna da frente e o pé de trás volta para o lado do outro; depois a outra perna (o app mostra uma perna de cada vez, alternando)"
+  },
+  "referencias": [
+    "free-exercise-db (domínio público), Dumbbell Rear Lunge — o \"fonte_en\" do catálogo. https://github.com/yuhonas/free-exercise-db/blob/main/exercises/Dumbbell_Rear_Lunge.json (lido 11/10/2026): \"Stand with your torso upright holding two dumbbells in your hands by your sides. This will be your starting position.\"; \"Step backward with your right leg around two feet or so from the left foot and lower your upper body down, while keeping the torso upright and maintaining balance.\"; \"do not allow your knee to go forward beyond your toes as you come down\"; \"Make sure that you keep your front shin perpendicular to the ground. Keep the torso upright during the lunge; flexible hip flexors are important.\"; \"Push up and go back to the starting position as you exhale.\"; \"Now repeat with the opposite leg.\"; músculos: primary quadriceps; secondary calves, glutes, hamstrings.",
+    "ExRx.net — Dumbbell Rear Lunge (Weight Exercises › Quadriceps e › Gluteus Maximus), https://exrx.net/WeightExercises/Quadriceps/DBRearLunge (cópia do Internet Archive de 18/01/2025): Preparation \"Stand with dumbbells grasped to sides.\"; Execution \"Step back with one leg while bending supporting leg. Plant forefoot far back on floor. Lower body by flexing knee and hip of supporting leg until knee of rear leg is almost in contact with floor. Return to original standing position by extending hip and knee of forward supporting leg and return rear leg next to supporting leg. Repeat movement with opposite legs alternating between sides.\"; Comments \"Keep torso upright during lunge; flexible hip flexors are important. Forward knee should point same direction as foot throughout lunge. A long lunge emphasizes Gluteus Maximus; short lunge emphasizes Quadriceps.\"; músculos: alvo quadríceps (na pasta Glute, glúteo máximo); sinergistas glúteo máximo, adutor magno e sóleo; estabilizadores dinâmicos isquiotibiais e gastrocnêmio; estabilizadores eretores da espinha, trapézio superior e inferior, levantador da escápula, glúteo médio, glúteo mínimo, quadrado lombar e oblíquos. A animação (© 2011) alterna as pernas, com uma parada em pé entre uma e a outra.",
+    "Boyd J, Milton K. The undervalued lunge. NSCA Personal Training Quarterly. 2017;4(4):44-49. https://dxpprod.nsca.com/contentassets/24dd7222ed1b4caeb8a0a46b81bd11f3/ptq-4.4.9-the-undervalued-lunge.pdf : \"The feet should be about hip-width apart.\"; \"The distance between the front foot and back foot should be a length that is greater than a walking stride.\"; \"The torso should be straight and the abdominals should be tight.\"; \"The scapula should be retracted and depressed with the eyes looking forward.\"; \"The toes and knees of both legs should be pointing forward.\"; \"The back heel should be off the ground.\"; \"lower the hips until both knees are bent at about a 90-degree angle, if possible.\"; \"Make sure the front knee is directly above the ankle and not over the toe.\"; \"Push through the front heel to return to the starting position\"; tabela 1: \"The foot placement should be consistent throughout the lunge exercise.\"; \"the hips should move down and up in a straight line\"; tabela 3 (mais difícil): \"Alternating lunges that require an opposite step forward for each repetition are more challenging. The challenge is even greater in walking lunges forward and backward.\"; \"Holding weight with straight arms overhead, in front, or to the sides of the body can increase the lever length, making it more difficult.\" (figura 8: \"LUNGE WITH WEIGHT AT SIDES\"); músculos: \"primarily the gluteus maximus, hamstrings, quadriceps, and gastrocnemius/soleus (calves)\", \"the hamstrings and gastrocnemius function as dynamic stabilizers at the knee joint\".",
+    "American Council on Exercise (ACE) — Exercise Library, Reverse Lunge (nº 319, com barra), https://www.acefitness.org/resources/everyone/exercise-library/319/reverse-lunge/ (lido 11/10/2026): \"With the feet about hip-width apart, slowly step backwards with the left leg. After the left foot hits the ground push back into the right hip to slowly lower the left knee towards the floor while keeping the chest raised towards the ceiling. Press the right foot into the ground and think about pulling the right knee backwards while swinging the left leg forward to return to standing.\"",
+    "American Council on Exercise (ACE) — Exercise Library, Lunge (nº 363, com halteres), https://www.acefitness.org/resources/everyone/exercise-library/363/lunge/ : \"Stand with the feet hip-width apart and grip one dumbbell in each hand with the palms facing each other and the arms straight down by the side.\"",
+    "Rohmann R. Total-body Dumbbell Workout. ACE, 05/02/2014 (nº 3718), https://acefitness.org/education-and-resources/professional/expert-articles/3718/total-body-dumbbell-workout — Reverse Lunge with a Shoulder Press: \"Reach back with your right leg and bend your left knee to drop into a reverse lunge, still keeping your left shin vertical.\"; \"Repeat this pattern for 10 to 12 repetitions, alternating legs.\" (os halteres ficam na altura da cabeça: só o passo e a canela servem aqui).",
+    "Rohmann R. Strength Training Workout for Beginners. ACE, 24/09/2014 (nº 5047), https://www.acefitness.org/resources/pros/expert-articles/5047/strength-training-workout-for-beginners/ : \"You can do all reps on one leg and then switch or alternate legs.\"; \"Variations: Instead of stepping forward, try stepping backward in a reverse lunge.\"",
+    "Comfort P, Jones PA, Smith LC, Herrington L. Joint Kinetics and Kinematics During Common Lower Limb Rehabilitation Exercises. J Athl Train. 2015;50(10):1011-1018. doi:10.4085/1062-6050-50.9.05 (PMC4641539): afundo reverso — \"stepped back on the contralateral limb onto the second force plate, lunged down as far as possible, and returned to the start position. We required them to maintain balance and keep the selected test foot on the floor throughout the entire reverse lunge\"; \"Eccentric reverse lunge was defined as the time from foot contact of the contralateral limb to maximum knee flexion of the test limb\"; resultados: \"we observed no differences between lunges ( P > .05)\" (ângulos do joelho e do quadril), \"we noted no differences between lunge variations ( P = .70)\" (dorsiflexão), \"Hip-joint moments were greater during the forward lunge than during the reverse lunge ( P = .003)\"; \"No difference in the range of knee flexion was observed between lunges.\"",
+    "Park S, Chung C, Park J, et al. Comparative Analysis of Lunge Techniques: Forward, Reverse, Walking Lunge. ISBS Proceedings Archive (34th International Conference on Biomechanics in Sports, Tsukuba, 2016), https://ojs.ub.uni-konstanz.de/cpa/article/view/6941 (piloto com 4 pessoas; texto do PDF escaneado): \"At the point where the center of the body was at the lowest point, the leading leg's femoral muscles were directed to stay parallel to the floor in each lunge movement.\"; \"Therefore, it is assumed that the reverse lunge has a lower risk of knee injury than other lunge types have. Also, the reverse lunge can be regarded as an effective exercise technique to strengthen gluteus maximus.\"",
+    "Song Q, Ma M, Liu H, Wei X, Chen X. Effects of step lengths on biomechanical characteristics of lower extremity during split squat movement. Front Bioeng Biotechnol. 2023;11:1277493. doi:10.3389/fbioe.2023.1277493 (PMC10667687): perna \"measured from the greater trochanter to the lateral malleolus\"; \"lowering the body until the front thigh was parallel to the floor\"; \"The optimal step length for strength training in healthy adults appears to be more suitable when it is equal to the length of the individual lower extremity.\"",
+    "Stastny P, Lehnert M, Zaatar AM, Svoboda Z, Xaverova Z. Does the Dumbbell-Carrying Position Change the Muscle Activity in Split Squats and Walking Lunges? J Strength Cond Res. 2015;29(11):3177-3187 (PMC4640053): \"The step distance was equal to the leg length\"; \"The full range of the lunge was performed while the trunk was kept in an upright position\".",
+    "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29, tabela 5 (amplitude normal do tornozelo: flexão plantar 0–50°, dorsiflexão 0–20°) — a mesma referência do Agachamento Búlgaro com Halteres e da Subida no Banco com Halteres"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "pe_fora_do_chao": [
+      "E",
+      "D"
+    ],
+    "pe_fora_do_chao_fonte": "Os 2 pés saem do chão de propósito, um de cada vez: na 1ª metade (t de 0 a 0,5) o direito vem de lá de trás pelo ar e pousa ao lado do esquerdo; na 2ª (t de 0,5 a 1) o esquerdo vai pelo ar e pisa lá atrás (ExRx: \"Step back with one leg\" / \"return rear leg next to supporting leg\" / \"Repeat movement with opposite legs alternating between sides\"). A regra do pé no chão não serve em nenhum dos 2; no lugar dela, as alturas: o pé da frente chapado a metade inteira, o de trás com os dedos no chão quando está pisado (na ponta) e quando o calcanhar sobe pra sair, nenhum entrando no chão e o que anda passando no ar a pelo menos 15 mm do chão.",
+    "pe_no_ar": [
+      "E",
+      "D"
+    ],
+    "pe_no_ar_fonte": "Os 2 pés andam no ar (~0,97 m da base dos dedos de um lado a lado até lá atrás), então a regra do pé escorregando também não serve neles. Que cada pé não escorrega enquanto está parado (o da frente a metade inteira, o de trás pisado na ponta — NSCA: \"The foot placement should be consistent throughout the lunge exercise\") é medido no info da cena (osso parado × onde ele fica, em mm) e citado no relatório.",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Afundo com passo pra trás: em pé os pés ficam lado a lado, mas com o pé pisado lá atrás um fica ~0,9 m atrás do outro de propósito, então as regras padrão de base paralela (pes_largura no chão inteiro e pes_alinhados até 40 mm em todos os quadros) não servem. As outras (pontas dos pés, joelho na direção do pé e coluna neutra) estão abaixo com a fonte do afundo, junto com os pés lado a lado em pé, a passada com o pé pisado atrás e a largura de lado a lado — as regras do Afundo com Halteres e do Afundo com Barra.",
+    "zonas": [],
+    "contatos": [
+      {
+        "nome": "mãos e antebraços não encostam nas coxas nem no quadril",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3",
+          "LeftForeArm",
+          "RightForeArm"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "Hips"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "pedido do Weslley (nada entra no corpo); free-exercise-db — Dumbbell Rear Lunge (\"holding two dumbbells in your hands by your sides\": as mãos ao lado das coxas, sem encostar)"
+      }
+    ],
+    "alturas": [
+      {
+        "nome": "pé esquerdo (o da frente) chapado e parado enquanto a direita vai e volta: calcanhar e meio do pé no chão",
+        "partes": [
+          "LeftFoot"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.0,
+          0.5
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "Comfort et al. 2015 (\"keep the selected test foot on the floor throughout the entire reverse lunge\"); NSCA PTQ 4.4 (\"Push through the front heel to return to the starting position\"). Pele mais baixa do pé (osso Foot) 0 ± 5 mm, a tolerância do pé no chão da checagem"
+      },
+      {
+        "nome": "pé esquerdo (o da frente) chapado: dedos no chão",
+        "partes": [
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.0,
+          0.5
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "as mesmas; pele mais baixa dos dedos (osso ToeBase) 0 ± 5 mm"
+      },
+      {
+        "nome": "pé direito (o da frente) chapado e parado enquanto a esquerda vai e volta: calcanhar e meio do pé no chão",
+        "partes": [
+          "RightFoot"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.5,
+          1.0
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "as mesmas (Comfort et al. 2015; NSCA PTQ 4.4)"
+      },
+      {
+        "nome": "pé direito (o da frente) chapado: dedos no chão",
+        "partes": [
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.5,
+          1.0
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "as mesmas"
+      },
+      {
+        "nome": "pé direito pisado lá atrás na ponta: dedos no chão (t = 0 até a ponta sair do chão)",
+        "partes": [
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.0,
+          0.11879
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"Plant forefoot far back on floor\"); NSCA PTQ 4.4 (\"The back heel should be off the ground\"; \"The foot placement should be consistent throughout the lunge exercise\")"
+      },
+      {
+        "nome": "pé esquerdo pisado lá atrás na ponta: dedos no chão (da pisada até t = 1)",
+        "partes": [
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.88121,
+          1.0
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "as mesmas (ExRx — Dumbbell Rear Lunge; NSCA PTQ 4.4)"
+      },
+      {
+        "nome": "pé direito sai do chão pelo calcanhar: os dedos ficam no chão enquanto o calcanhar sobe/desce em pé",
+        "partes": [
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.4105,
+          0.5
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "a saída do pé do Afundo com Barra (o calcanhar sobe girando em volta da base dos dedos e só depois os dedos saem do chão); ExRx — Dumbbell Rear Lunge (\"return rear leg next to supporting leg\": na volta o pé pousa pela ponta e baixa o calcanhar)"
+      },
+      {
+        "nome": "pé esquerdo sai do chão pelo calcanhar: os dedos ficam no chão enquanto o calcanhar sobe",
+        "partes": [
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.5,
+          0.5895
+        ],
+        "mm": [
+          -5,
+          5
+        ],
+        "fonte": "a mesma"
+      },
+      {
+        "nome": "nenhum pé entra no chão (no ar, na ponta e chapado)",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -5,
+          1000
+        ],
+        "fonte": "pedido do Weslley (nada entra no chão); a mesma tolerância de 5 mm do pé no chão"
+      },
+      {
+        "nome": "pé direito passa no ar sem raspar a ponta no chão",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.18921,
+          0.31627
+        ],
+        "mm": [
+          15,
+          1000
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"Step back with one leg\"; \"Plant forefoot far back on floor\": o pé vai pelo ar e só pisa lá atrás); pedido do Weslley (movimento natural)"
+      },
+      {
+        "nome": "pé esquerdo passa no ar sem raspar a ponta no chão",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.68373,
+          0.81079
+        ],
+        "mm": [
+          15,
+          1000
+        ],
+        "fonte": "a mesma"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "coxa da frente paralela ao chão embaixo (t=0)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          -5,
+          8
+        ],
+        "fonte": "Song et al. 2023 (\"lowering the body until the front thigh was parallel to the floor\"); Park et al. 2016, afundo reverso (\"the leading leg's femoral muscles were directed to stay parallel to the floor\")"
+      },
+      {
+        "nome": "joelho da frente a ~90° embaixo (t=0)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          85,
+          110
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"lower the hips until both knees are bent at about a 90-degree angle, if possible\")"
+      },
+      {
+        "nome": "canela da frente quase vertical embaixo: joelho em cima do tornozelo (t=0)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Leg",
+          "Foot"
+        ],
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          78,
+          90
+        ],
+        "fonte": "free-exercise-db — Dumbbell Rear Lunge (\"Make sure that you keep your front shin perpendicular to the ground.\"); NSCA PTQ 4.4 (\"Make sure the front knee is directly above the ankle and not over the toe\"); ACE (Rohmann 2014) — Reverse Lunge with a Shoulder Press (\"still keeping your left shin vertical\"); Comfort et al. 2015 (sem diferença de dorsiflexão entre o afundo pra frente e o pra trás: \"we noted no differences between lunge variations ( P = .70)\")"
+      },
+      {
+        "nome": "joelho de trás a ~90° embaixo (t=0)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          80,
+          115
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"until both knees are bent at about a 90-degree angle\"); ExRx — Dumbbell Rear Lunge (\"until knee of rear leg is almost in contact with floor\")"
+      },
+      {
+        "nome": "coxa de trás quase vertical embaixo: joelho embaixo do quadril (t=0)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          72,
+          90
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"the hips should move down and up in a straight line\", com os 2 joelhos a ~90° e a coxa da frente paralela)"
+      },
+      {
+        "nome": "joelho de trás quase encostando no chão embaixo, sem bater (t=0)",
+        "medida": "joelho_altura",
+        "lado": "D",
+        "t": 0.0,
+        "mm": [
+          60,
+          110
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"until knee of rear leg is almost in contact with floor\"); ACE — Reverse Lunge (\"slowly lower the left knee towards the floor\"). Centro do joelho a 60–110 mm do chão = pele do joelho de ~3 a ~8 cm do chão (o info da cena mede a pele em todo quadro)"
+      },
+      {
+        "nome": "coxa da frente paralela ao chão embaixo (t=1)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "D",
+        "t": 1.0,
+        "graus": [
+          -5,
+          8
+        ],
+        "fonte": "Song et al. 2023 (\"lowering the body until the front thigh was parallel to the floor\"); Park et al. 2016, afundo reverso (\"the leading leg's femoral muscles were directed to stay parallel to the floor\")"
+      },
+      {
+        "nome": "joelho da frente a ~90° embaixo (t=1)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": 1.0,
+        "graus": [
+          85,
+          110
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"lower the hips until both knees are bent at about a 90-degree angle, if possible\")"
+      },
+      {
+        "nome": "canela da frente quase vertical embaixo: joelho em cima do tornozelo (t=1)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Leg",
+          "Foot"
+        ],
+        "lado": "D",
+        "t": 1.0,
+        "graus": [
+          78,
+          90
+        ],
+        "fonte": "free-exercise-db — Dumbbell Rear Lunge (\"Make sure that you keep your front shin perpendicular to the ground.\"); NSCA PTQ 4.4 (\"Make sure the front knee is directly above the ankle and not over the toe\"); ACE (Rohmann 2014) — Reverse Lunge with a Shoulder Press (\"still keeping your left shin vertical\"); Comfort et al. 2015 (sem diferença de dorsiflexão entre o afundo pra frente e o pra trás: \"we noted no differences between lunge variations ( P = .70)\")"
+      },
+      {
+        "nome": "joelho de trás a ~90° embaixo (t=1)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          80,
+          115
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"until both knees are bent at about a 90-degree angle\"); ExRx — Dumbbell Rear Lunge (\"until knee of rear leg is almost in contact with floor\")"
+      },
+      {
+        "nome": "coxa de trás quase vertical embaixo: joelho embaixo do quadril (t=1)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          72,
+          90
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"the hips should move down and up in a straight line\", com os 2 joelhos a ~90° e a coxa da frente paralela)"
+      },
+      {
+        "nome": "joelho de trás quase encostando no chão embaixo, sem bater (t=1)",
+        "medida": "joelho_altura",
+        "lado": "E",
+        "t": 1.0,
+        "mm": [
+          60,
+          110
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"until knee of rear leg is almost in contact with floor\"); ACE — Reverse Lunge (\"slowly lower the left knee towards the floor\"). Centro do joelho a 60–110 mm do chão = pele do joelho de ~3 a ~8 cm do chão (o info da cena mede a pele em todo quadro)"
+      },
+      {
+        "nome": "calcanhar direito levantado enquanto o pé está pisado lá atrás",
+        "medida": "inclinacao",
+        "segmento": [
+          "Foot",
+          "ToeBase"
+        ],
+        "lado": "D",
+        "t": [
+          0.0,
+          0.11879
+        ],
+        "graus": [
+          45,
+          90
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"The back heel should be off the ground.\"); ExRx — Dumbbell Rear Lunge (\"Plant forefoot far back on floor\"). Pé chapado = 16°; o pé pisa a ~40° do chão (56) e sobe até 81,5° embaixo (97,5)"
+      },
+      {
+        "nome": "calcanhar esquerdo levantado enquanto o pé está pisado lá atrás",
+        "medida": "inclinacao",
+        "segmento": [
+          "Foot",
+          "ToeBase"
+        ],
+        "lado": "E",
+        "t": [
+          0.88121,
+          1.0
+        ],
+        "graus": [
+          45,
+          90
+        ],
+        "fonte": "as mesmas (NSCA PTQ 4.4; ExRx — Dumbbell Rear Lunge)"
+      },
+      {
+        "nome": "joelhos esticados em pé, sem travar",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": 0.5,
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "free-exercise-db — Dumbbell Rear Lunge (\"Stand with your torso upright\"); ExRx — Dumbbell Rear Lunge (\"Return to original standing position\")"
+      },
+      {
+        "nome": "pés lado a lado em pé",
+        "medida": "pes_alinhados",
+        "t": 0.5,
+        "mm": [
+          0,
+          20
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"return rear leg next to supporting leg\"); free-exercise-db — Dumbbell Rear Lunge (\"Push up and go back to the starting position\")"
+      },
+      {
+        "nome": "passada longa com o pé direito pisado lá atrás",
+        "medida": "pes_alinhados",
+        "t": [
+          0.0,
+          0.11879
+        ],
+        "mm": [
+          700,
+          1000
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"Plant forefoot far back on floor\"); NSCA PTQ 4.4 (\"The distance between the front foot and back foot should be a length that is greater than a walking stride.\"); Song et al. 2023 (passo igual ao comprimento da perna, ~0,86 m no boneco); a passada do Afundo com Halteres e do Afundo com Barra"
+      },
+      {
+        "nome": "passada longa com o pé esquerdo pisado lá atrás",
+        "medida": "pes_alinhados",
+        "t": [
+          0.88121,
+          1.0
+        ],
+        "mm": [
+          700,
+          1000
+        ],
+        "fonte": "as mesmas"
+      },
+      {
+        "nome": "pés na largura do quadril (de lado a lado)",
+        "medida": "pes_base_lateral",
+        "t": "todos",
+        "faixa": [
+          0.9,
+          1.6
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"The feet should be about hip-width apart.\"); ACE — Reverse Lunge (\"With the feet about hip-width apart, slowly step backwards\")"
+      },
+      {
+        "nome": "joelho da frente atrás da ponta do pé (esquerdo, enquanto a direita anda)",
+        "medida": "joelho_alem_dos_dedos",
+        "lado": "E",
+        "t": [
+          0.0,
+          0.5
+        ],
+        "mm": [
+          -300,
+          -53
+        ],
+        "fonte": "free-exercise-db — Dumbbell Rear Lunge (\"do not allow your knee to go forward beyond your toes\"); NSCA PTQ 4.4 (\"not over the toe\"). Medida: centro do joelho × ponta dos dedos ao longo do pé (+ = passou); ≤ −53 mm = o centro do joelho atrás da base dos dedos"
+      },
+      {
+        "nome": "joelho da frente atrás da ponta do pé (direito, enquanto a esquerda anda)",
+        "medida": "joelho_alem_dos_dedos",
+        "lado": "D",
+        "t": [
+          0.5,
+          1.0
+        ],
+        "mm": [
+          -300,
+          -53
+        ],
+        "fonte": "as mesmas"
+      },
+      {
+        "nome": "tronco ereto",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          10
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"Keep torso upright during lunge\"); free-exercise-db — Dumbbell Rear Lunge (\"keeping the torso upright\"); NSCA PTQ 4.4 (\"The torso should be straight\")"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"While keeping the torso straight and abdominals tight\")"
+      },
+      {
+        "nome": "cabeça olhando à frente",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          25
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"The scapula should be retracted and depressed with the eyes looking forward.\"). Medida: cabeça × tronco no plano sagital (o boneco em pé, no repouso, mede ~−11°)"
+      },
+      {
+        "nome": "ombros nivelados, sem inclinar o tronco pro lado",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"Keep torso upright\"); free-exercise-db — Dumbbell Rear Lunge (\"maintaining balance\")"
+      },
+      {
+        "nome": "pelve nivelada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (glúteo médio e glúteo mínimo como estabilizadores)"
+      },
+      {
+        "nome": "joelhos na direção dos pés (sem entrar nem abrir)",
+        "medida": "joelho_valgo",
+        "t": "todos",
+        "mm": [
+          -20,
+          40
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"Forward knee should point same direction as foot throughout lunge.\"); NSCA PTQ 4.4 (\"In all cases of the lunge, the toes and knees (of the same leg) should point in the same direction.\")"
+      },
+      {
+        "nome": "joelho em cima do pé, de lado a lado",
+        "medida": "joelho_fora_do_pe",
+        "t": "todos",
+        "mm": [
+          -25,
+          30
+        ],
+        "fonte": "as mesmas (ExRx — Dumbbell Rear Lunge; NSCA PTQ 4.4)"
+      },
+      {
+        "nome": "pontas dos pés pra frente (os dois)",
+        "medida": "ponta_dedos",
+        "t": "todos",
+        "graus": [
+          -5,
+          10
+        ],
+        "fonte": "NSCA PTQ 4.4 (\"The toes and knees of both legs should be pointing forward.\"; \"Make sure the back foot and knee are pointed straight forward while performing a lunge.\"). Medido pelos dedos (com o calcanhar de trás levantado o ponta_pe padrão perde o sentido)"
+      },
+      {
+        "nome": "tornozelos dentro da amplitude normal (no chão, no ar e na ponta)",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          26,
+          96
+        ],
+        "fonte": "Alazzawi et al. 2017, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°). Ângulo canela × pé: o boneco em pé com o pé chapado mede 76°, então de 26° (50° de flexão plantar) a 96° (20° de dorsiflexão) — a medida do Agachamento Búlgaro e da Subida no Banco"
+      },
+      {
+        "nome": "cotovelos estendidos",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"Stand with dumbbells grasped to sides.\"); ACE — Lunge com halteres (\"the arms straight down by the side\"); NSCA PTQ 4.4 (\"Holding weight with straight arms ... to the sides of the body\")"
+      },
+      {
+        "nome": "braços pendurados ao lado do corpo",
+        "medida": "braco_elevacao",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "free-exercise-db — Dumbbell Rear Lunge (\"holding two dumbbells in your hands by your sides\"); ExRx — Dumbbell Rear Lunge (\"dumbbells grasped to sides\"). Os braços pendem na vertical, 14° abertos pro halter passar por fora da coxa (os da Subida no Banco com Halteres): com o tronco até 7° à frente embaixo ficam até ~17° em relação a ele"
+      },
+      {
+        "nome": "halteres ao lado do corpo, por fora das coxas",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          1.4,
+          1.9
+        ],
+        "fonte": "free-exercise-db — Dumbbell Rear Lunge (\"by your sides\"); NSCA PTQ 4.4, figura 8 (\"LUNGE WITH WEIGHT AT SIDES\")"
+      },
+      {
+        "nome": "palmas viradas pras coxas (pegada neutra)",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          70,
+          100
+        ],
+        "fonte": "ACE — Lunge com halteres (\"grip one dumbbell in each hand with the palms facing each other and the arms straight down by the side\")"
+      },
+      {
+        "nome": "punho reto",
+        "medida": "punho_flexao",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "ExRx — Dumbbell Rear Lunge (\"dumbbells grasped to sides\": o halter pende da mão com o punho reto)"
+      }
+    ]
+  }
+}
