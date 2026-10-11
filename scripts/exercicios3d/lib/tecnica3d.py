@@ -696,3 +696,20 @@ def tronco_giro(j):
 
 
 MEDIDAS.update({"tronco_giro": tronco_giro})
+
+
+# ── abdominal russo (lote 12, 11/10/2026): sentado no colchonete, o TRONCO gira pros lados e a pelve fica parada — o glúteo não gira
+# no chão junto com o tronco (free-exercise-db, Russian Twist: "Twist your torso to the right side"; NASM, Russian Twist: "Rotate your
+# torso to one side"). O tronco_giro mede o tórax EM RELAÇÃO à pelve e o pelve_nivel a pelve inclinando de lado: a pelve inteira girando
+# em volta da vertical (o glúteo girando no chão, levando o tórax junto) não aparece em nenhum dos 2.
+def pelve_giro(j):
+    """Giro da pelve em volta da vertical, visto de cima, graus: a linha das articulações do quadril (da esquerda pra direita), no plano
+    do chão, × o eixo −X do mundo (a esquerda → a direita de quem olha pra −Y, pra onde todo boneco da fábrica olha): 0 = pelve de frente
+    pra −Y, + = a pelve virou pra ESQUERDA (o quadril direito foi pra frente), − = pra direita, como o tronco_giro. Referencial do MUNDO:
+    é o "glúteo não gira no chão" de quem fica sentado ou deitado no mesmo lugar (em pé, inclinado pra frente ou deitado de costas, a
+    linha dos quadris continua no plano do chão e o número não muda)."""
+    d = _chao(j["RightUpLeg"] - j["LeftUpLeg"])
+    return [math.degrees(math.atan2(-float(d[1]), -float(d[0])))]
+
+
+MEDIDAS.update({"pelve_giro": pelve_giro})

@@ -683,3 +683,21 @@ def test_tronco_giro_sentado_em_volta_do_proprio_eixo():
     assert tc.tronco_giro(girar(virar(j, -8), 25, (1, 0, 0), (0, 0, 1.0))) == pytest.approx([-8], abs=1e-6)
     assert tc.tronco_giro(em_pe()) == []
     assert "tronco_giro" in tc.MEDIDAS
+
+
+def test_pelve_giro_no_chao_em_pe_deitado_e_virando():
+    """Abdominal russo (lote 12): a pelve parada no chão mede 0 em pé, curvada ou deitada; virando pra esquerda (em volta da vertical)
+    dá +, pra direita −; o tórax girando sozinho (tronco_giro) não mexe nela."""
+    j = em_pe()
+    assert tc.pelve_giro(j)[0] == pytest.approx(0, abs=1e-6)
+    deitado = girar(j, -90, (1, 0, 0), pivo=(0, 0, 0.95))          # deitado de costas (cabeça pra +Y): a linha dos quadris fica no X
+    assert tc.pelve_giro(deitado)[0] == pytest.approx(0, abs=1e-6)
+    sentado = girar(j, -40, (1, 0, 0), pivo=(0, 0, 0.95))          # tronco reclinado 40° pra trás
+    assert tc.pelve_giro(sentado)[0] == pytest.approx(0, abs=1e-6)
+    esq = girar(sentado, 25, (0, 0, 1))                            # o corpo inteiro vira pra esquerda (o quadril direito vai pra frente)
+    assert tc.pelve_giro(esq)[0] == pytest.approx(25, abs=1e-6)
+    assert esq["RightUpLeg"][1] < esq["LeftUpLeg"][1]
+    assert tc.pelve_giro(girar(sentado, -25, (0, 0, 1)))[0] == pytest.approx(-25, abs=1e-6)
+    so_torax = dict(sentado)                                        # só o tórax gira: a pelve continua em 0
+    so_torax.update({k: v for k, v in girar(sentado, 30, (0, 0, 1)).items() if k in ("LeftShoulder", "RightShoulder", "Neck")})
+    assert tc.pelve_giro(so_torax)[0] == pytest.approx(0, abs=1e-6)

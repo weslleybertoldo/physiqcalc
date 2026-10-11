@@ -1,0 +1,444 @@
+{
+ "uuid": "39a97320-2937-5686-9883-7ea42dbc0a89",
+ "nome": "Abdominal Russo",
+ "cena": "abdominal_russo",
+ "grupo": "Abdômen",
+ "subgrupo": "Oblíquos externo e interno · reto abdominal",
+ "padrao_movimento": "abdominal_obliquo",
+ "equipamento": "peso_corporal",
+ "variacao": "sentado, tronco inclinado",
+ "variacao_motivo": "a variação está vazia no catálogo (null em scripts/conteudo/novos_61.json, fonte_en \"Russian Twist\"); o plano dos lotes deduziu \"sentado, tronco inclinado\" e a fonte confirma: free-exercise-db (o fonte_en) \"Elevate your upper body so that it creates an imaginary V-shape with your thighs\"; NASM \"Sit on the floor with your knees bent\" e \"Lean backward slightly\"; ACE (V-twist) \"lean back at about a 45 degree angle\". O nome também é usado pra outros 2 exercícios (deitado com as costas numa bola suíça — ExRx e ACE \"Russian Twist\" — e em pé com bola medicinal — NSCA/Volt \"MB Russian Twist\"): o do catálogo é o sentado (o do fonte_en)",
+ "alvos": [
+  "obliquos"
+ ],
+ "auxiliares": [
+  "abdomen"
+ ],
+ "camera": {
+  "az": 330,
+  "el": 20,
+  "dist": 3.0,
+  "alvo": [
+   0,
+   -0.12,
+   0.38
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.0,
+  "alvo": [
+   0,
+   -0.15,
+   0.36
+  ]
+ },
+ "ida_s": 3.0,
+ "ida_s_motivo": "a ida do app (t de 0 a 1) é o giro de um lado até o outro (~80°, passando pelo meio): 3 s deixam o giro devagar e controlado (ACE, Seated Medicine Ball Trunk Rotations: \"slowly rotate your torso\"; NASM: \"smooth, continuous motion\" e, nos erros, \"Using excessive momentum\") e o ease do app faz a pausa curta em cada lado (free-exercise-db: \"Hold the contraction for a second\"; ACE: \"Pause briefly at the end range of motion\"): nos ~0,37 s do fim de cada ida e do começo da volta o tronco anda menos de 3° (~0,7 s quase parado em cada lado). É o mesmo tempo do Abdominal Oblíquo com Pés no Banco (3,0)",
+ "movimento": "Sentado no colchonete, com os joelhos dobrados a uns 90° e os pés chapados no chão, quase juntos e soltos (sem prender embaixo de nada), inclina o tronco pra trás até uns 40° da vertical — o \"V\" com as coxas —, com as costas retas, sem arredondar nem arquear a lombar, e fica parado nessa inclinação, equilibrado no glúteo. Os braços ficam quase esticados na frente do peito, com as palmas das mãos juntas. Soltando o ar, gira o tronco pra um lado até uns 40°, levando os ombros, os braços e a cabeça juntos — as mãos vão sempre alinhadas com o meio do peito —, segura um instante e gira devagar pro outro lado, passando pelo meio, alternando. Quem gira é o tronco: o quadril, as pernas e os pés ficam parados no chão, sem o glúteo girar nem escorregar.",
+ "cinesiologia": {
+  "plano": "transverso (rotação do tronco em volta do próprio eixo), com o tronco parado inclinado pra trás no plano sagital e a pelve e as pernas paradas",
+  "articulacoes": "coluna: rotação de ~40° pra cada lado em relação à pelve, quase toda na coluna torácica — mais na parte de cima (de ~T7 pra cima) que na de baixo — e um pouco na lombar (Wilke 2017: \"The upper half of the thoracic spine from T1-T2 to T6-T7 showed a higher range of motion than the lower thoracic spine from T7-T8 to T11-T12 in all loading planes\"); a inclinação do tronco fica parada, com a lombar um pouco achatada, sem arquear; quadril parado, com a coxa a ~95° do prolongamento do tronco (o \"V\"); joelhos parados a ~90° e pés chapados; ombros e cotovelos parados (braços quase esticados na frente do peito, palma com palma), girando junto com o tórax; a cabeça acompanha o tronco",
+  "agonistas": "oblíquos externo e interno (NASM: \"Obliquus Externus Abdominis -- primary mover for torso rotation and oblique contraction\" e \"Obliquus Internus Abdominis -- assists in torso rotation from opposite side\"; ExRx, no russian twist da bola suíça, que tem o mesmo giro: \"Target: Obliques\"). Girando pra esquerda trabalham o oblíquo externo direito e o interno esquerdo, e o contrário pro outro lado (Sugaya 2014: \"during trunk rotation, the EO acts contralaterally whereas the IO and TrA act ipsilaterally\"). O oblíquo externo só trabalha forte depois de ~20° de giro (Sugaya 2014: \"the muscle activity of the EO increased at trunk rotation angles of 20° or more\"; Torén 2001: \"the muscle effort required to twist the trunk was low up to about 20 degrees twisting angle, then the muscle effort needed to twist the trunk increased progressively\"), por isso o giro vai até ~40°",
+  "sinergistas": "reto abdominal e transverso do abdome (NASM: \"Secondary Muscles: Rectus Abdominis, Transverse Abdominis, Core Stabilizers\"); com o tronco inclinado pra trás o abdômen trabalha mais pra segurar a inclinação (ACE, Seated Medicine Ball Trunk Rotations, progressão com o tronco inclinado: \"This exercise variation increases the demands placed upon your abdominal muscles\")",
+  "estabilizadores": "a musculatura do tronco segura a inclinação parada e a lombar sem arquear (ACE, Seated Medicine Ball Trunk Rotations: \"Keep your core and abdominal muscles stiff to prevent any arching in your low back during the exercise\"; NASM, nos erros: \"Rounding the spine or losing postural alignment during rotation\"); o quadril, as pernas e os pés ficam parados no chão",
+  "fases": "giro pra um lado soltando o ar, com uma pausa curta no fim (free-exercise-db: \"Twist your torso to the right side until your arms are parallel with the floor while breathing out\" e \"Hold the contraction for a second\"; ACE, Seated Medicine Ball Trunk Rotations: \"exhale and slowly rotate your torso and the ball to one side\" e \"Pause briefly at the end range of motion\"); volta passando pelo meio e gira pro outro lado (ACE: \"inhale and then gently exhale while rotating completely to the opposite side. Repeat the movement back and forth\"), devagar e controlado (NASM: \"Rotate back through center and continue to the opposite side in a smooth, continuous motion\")"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público) — Russian Twist (o fonte_en do catálogo). https://github.com/yuhonas/free-exercise-db (exercises/Russian_Twist.json e as fotos Russian_Twist/0.jpg e 1.jpg)",
+  "American Council on Exercise (ACE) — Seated Medicine Ball Trunk Rotations. https://www.acefitness.org/resources/everyone/exercise-library/47/seated-medicine-ball-trunk-rotations/",
+  "American Council on Exercise (ACE) — V-twist. https://www.acefitness.org/resources/everyone/exercise-library/305/v-twist/",
+  "American Council on Exercise (ACE) — V Sit Partner Rotations. https://www.acefitness.org/resources/everyone/exercise-library/263/v-sit-partner-rotations/",
+  "American Council on Exercise (ACE) — Russian Twist (na bola suíça: outro exercício; citado só pela posição dos braços, \"Hold the arms out straight in front of the chest with the palms touching each other\"). https://www.acefitness.org/resources/everyone/exercise-library/65/russian-twist/",
+  "National Academy of Sports Medicine (NASM) — Russian Twist. https://www.nasm.org/resource-center/exercise-library/russian-twist",
+  "ExRx.net — Dumbbell Russian Twist (on stability ball), pasta Obliques (outro exercício: deitado na bola suíça; citado pelos músculos). https://exrx.net/WeightExercises/Obliques/DBRussianTwistBall (lido na cópia do Internet Archive de 16/03/2023)",
+  "Sugaya T, Abe Y, Sakamoto M. Ultrasound evaluation of muscle thickness changes in the external oblique, internal oblique, and transversus abdominis muscles considering the influence of posture and muscle contraction. J Phys Ther Sci. 2014;26(9):1399-1402. doi:10.1589/jpts.26.1399. https://pmc.ncbi.nlm.nih.gov/articles/PMC4175243/",
+  "Ichikawa K, Otsuka T, Abduh HAM, Kuruma H. Assessing validity of thoracic spine rotation range of motion measurement methods: comparison of magnetic resonance imaging and clinical measurements. J Phys Ther Sci. 2024;36(3):95-101. https://pmc.ncbi.nlm.nih.gov/articles/PMC10904216/",
+  "Wilke HJ, Herkommer A, Werner K, Liebsch C. In vitro analysis of the segmental flexibility of the thoracic spine. PLoS One. 2017;12(5):e0177823. https://pmc.ncbi.nlm.nih.gov/articles/PMC5433776/",
+  "Torén A. Muscle activity and range of motion during active trunk rotation in a sitting posture. Appl Ergon. 2001;32(6):583-591 (resumo no PubMed, 11703044)",
+  "Winter DA. Biomechanics and Motor Control of Human Movement, 4ª ed., 2009 (parâmetros dos segmentos de Dempster), pela tabela do BMClab (Duarte M., \"Body segment parameters\"): massa e centro de cada segmento pro centro de massa do equilíbrio (a mesma tabela da Barra Fixa)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pes_no_chao_motivo": "pés soltos, chapados no colchonete e parados: o free-exercise-db (o fonte_en) prende os pés (\"placing your feet either under something that will not move or by having a partner hold them\"), o que pede uma peça que a fábrica não tem; a ACE (\"Sit on a mat/floor with your knees bent, feet together, heels on the floor\") e a NASM (\"Sit on the floor with your knees bent and feet flat on the ground\") fazem sem prender — fica a que não pede peça. Os pés no ar (ACE, progressão 2: \"lifting your legs off the floor\"; ACE V-twist: \"Lift the feet off the ground\") são uma progressão mais difícil",
+  "chao_mm": 12,
+  "chao_mm_motivo": "os pés ficam chapados em cima do colchonete de 12 mm (ACE: \"Sit on a mat/floor\"), como no Abdominal Completo",
+  "tecnica_padrao": {
+   "pes_largura": [
+    0.35,
+    1.0
+   ]
+  },
+  "tecnica_padrao_motivo": "pés quase juntos (ACE, Seated Medicine Ball Trunk Rotations: \"feet together, heels on the floor\"; progressão 2: \"Keep your knees bent and feet together\"): os tornozelos ficam a ~0,5 × a distância entre as articulações do quadril (os pés a ~3 cm um do outro e a pele de dentro dos tornozelos quase encostando: com os pés mais juntos ela entrava uma na outra), abaixo do 0,8 da regra padrão (que pega pé colado em pé no chão)",
+  "zonas": [
+   {
+    "nome": "glúteo apoiado no colchonete",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "free-exercise-db (\"Elevate your upper body so that it creates an imaginary V-shape with your thighs\"); ACE V-twist (\"Sitting on top of the BOSU dome, lean back\"): sentado, o peso fica no glúteo (a pele do fim da coxa, junto do glúteo, conta junto)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos juntas: uma palma encosta na outra sem entrar",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "ACE, Russian Twist (bola suíça, a mesma posição dos braços: \"Hold the arms out straight in front of the chest with the palms touching each other\"); free-exercise-db (\"with the hands clasped\"); corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "braços e mãos sem bater nas pernas no giro",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "mm": [
+     20,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica); ACE, Seated Medicine Ball Trunk Rotations (\"keeping the ball close to your body and aligned with the middle of your torso\": as mãos giram junto com o tronco, por cima das coxas)"
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     20,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "glúteo, costas e coxas sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado), como no abdominal supra e no completo"
+   },
+   {
+    "nome": "costas fora do colchonete (sentado, só o glúteo apoia)",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     100,
+     2000
+    ],
+    "fonte": "free-exercise-db (\"Elevate your upper body\"); ACE V-twist (\"lean back at about a 45 degree angle\"): o tronco fica inclinado, longe do chão"
+   },
+   {
+    "nome": "braços e mãos longe do colchonete (não apoiam no chão no giro)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     150,
+     2000
+    ],
+    "fonte": "ACE, Seated Medicine Ball Trunk Rotations (\"The ball should not drop towards the floor\"; nas progressões, \"bring the elbow close to, but not to rest on the floor\"); free-exercise-db (\"Twist your torso ... until your arms are parallel with the floor\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelhos dobrados a ~90°, pés chapados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE V-twist (\"keep the knees bent about 90 degrees\"); free-exercise-db (\"Your legs should be bent at the knees\"; na foto do free-exercise-db o joelho fica a ~80° de flexão); ACE (\"Sit on a mat/floor with your knees bent\"). O Abdominal Completo termina sentado com o joelho a 100°: aqui ficou em 90° (ACE V-twist) — com 100° o centro de massa ficava mais perto da borda de trás do glúteo"
+   },
+   {
+    "nome": "tronco reclinado ~40–45° atrás da vertical (o V com as coxas)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     35,
+     50
+    ],
+    "fonte": "ACE V-twist (\"lean back at about a 45 degree angle\"); ACE, Seated Medicine Ball Trunk Rotations, progressão 1 (\"leaning back halfway to the floor\"); free-exercise-db (\"creates an imaginary V-shape with your thighs\"; na foto, ~30–37° da vertical). Medido da pelve à base do pescoço (0 = vertical)"
+   },
+   {
+    "nome": "tórax parado na inclinação (não sobe nem desce no giro)",
+    "medida": "torax_chao",
+    "t": "todos",
+    "graus": [
+     44,
+     56
+    ],
+    "fonte": "free-exercise-db (a inclinação do V é a \"starting position\" e só o tronco gira: \"Twist your torso\"); ACE, Seated Medicine Ball Trunk Rotations (\"Without leaning backwards, exhale and slowly rotate your torso\"). Medido da transição toracolombar à base do pescoço (90 = vertical): a cena fica em 48–50°"
+   },
+   {
+    "nome": "o V entre o tronco e as coxas",
+    "medida": "quadril_sinal",
+    "t": "todos",
+    "graus": [
+     85,
+     105
+    ],
+    "fonte": "free-exercise-db (\"Elevate your upper body so that it creates an imaginary V-shape with your thighs\"). Medida: coxa × prolongamento do tronco (90 = tronco perpendicular à coxa)"
+   },
+   {
+    "nome": "costas retas, sem arredondar nem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE V-twist (\"While maintaining a straight back, rotate the shoulders from side to side\"); ACE V Sit Partner Rotations (\"Keeping the back straight, rotate the shoulders\"); ACE, Seated Medicine Ball Trunk Rotations (\"prevent any arching in your low back\"); NASM, erros (\"Rounding the spine or losing postural alignment during rotation\"). A lombar fica um pouco achatada (a pelve reclina ~10° mais que o tórax)"
+   },
+   {
+    "nome": "tronco girado pra esquerda (t = 0)",
+    "medida": "tronco_giro",
+    "t": 0.0,
+    "graus": [
+     35,
+     45
+    ],
+    "fonte": "free-exercise-db (\"Twist your torso to the right side ... Now move to the opposite side\"); ACE, Seated Medicine Ball Trunk Rotations (\"rotate your torso and the ball to one side\"; \"Pause briefly at the end range of motion\"); NASM, erros (\"Failing to achieve adequate range of motion, which limits oblique engagement\"). Nenhuma fonte do exercício dá o número: o teto vem da rotação máxima do tronco sentado com as coxas presas, 48,3 ± 7,8° pra direita e 49,3 ± 8,5° pra esquerda (Sugaya 2014: \"The ROM at maximum trunk rotation was 48.3 (7.8)° in right rotation and 49.3 (8.5)° in left rotation\"), e da coluna torácica, 29,91 ± 6,57° na ressonância e 42,13 ± 12,05° no teste sentado (Ichikawa 2024); o piso, dos ~20° a partir dos quais o oblíquo externo trabalha forte (Sugaya 2014; Torén 2001). A cena gira o tórax ±40° em relação à pelve"
+   },
+   {
+    "nome": "tronco girado pra direita (t = 1)",
+    "medida": "tronco_giro",
+    "t": 1.0,
+    "graus": [
+     -45,
+     -35
+    ],
+    "fonte": "idem (free-exercise-db: \"Now move to the opposite side performing the same techniques you applied to the right side\"; ACE: \"rotating completely to the opposite side\")"
+   },
+   {
+    "nome": "de frente no meio do giro",
+    "medida": "tronco_giro",
+    "t": 0.5,
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "NASM (\"Rotate back through center and continue to the opposite side\")"
+   },
+   {
+    "nome": "a pelve não gira no chão: quem gira é o tronco",
+    "medida": "pelve_giro",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "free-exercise-db (\"Twist your torso\"); NASM (\"Rotate your torso to one side, moving the weight across your body in a controlled arc. Lead with your shoulders\"); ACE V-twist e V Sit Partner Rotations (\"rotate the shoulders\"). Nas fotos do free-exercise-db e da ACE as pernas e o quadril ficam no mesmo lugar nos 2 lados (nenhuma frase diz \"a pelve fica parada\" com todas as letras). Medida nova da fábrica (tecnica3d.pelve_giro, lote 12)"
+   },
+   {
+    "nome": "a pelve não inclina de lado",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "braços quase esticados na frente do peito (cotovelo solto, sem travar)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     15,
+     40
+    ],
+    "fonte": "free-exercise-db (\"Your arms should be fully extended in front of you perpendicular to your torso and with the hands clasped\"); ACE, Russian Twist (bola suíça, a mesma posição dos braços: \"Hold the arms out straight in front of the chest with the palms touching each other\"). A ACE (\"keeping the ball close to your body\") e a NASM (\"Hold a weight or medicine ball at chest level\") seguram a bola perto do peito com o cotovelo dobrado; aqui, palma com palma e com o cotovelo a ~95°, o punho dobrava 54–57° pra trás (limite da fábrica: 55°): com o braço quase esticado, e os dedos de uma mão dobrando ~15° pro lado da outra (as palmas encostam na base e nos dedos), ele fica em ~15°"
+   },
+   {
+    "nome": "cabeça acompanha o tronco, olhando pras mãos",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -32,
+     -14
+    ],
+    "fonte": "nenhuma frase das fontes fala da cabeça; nas fotos do free-exercise-db (foto 1) e da ACE a cabeça vira junto com o tronco (observação). Medida contra a linha pelve → pescoço (o boneco em pé, no repouso, mede ~−11°): o queixo fica um pouco pra dentro, ~10° além do repouso"
+   }
+  ]
+ }
+}
