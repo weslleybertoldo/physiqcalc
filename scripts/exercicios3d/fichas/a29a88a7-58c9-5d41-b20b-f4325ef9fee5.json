@@ -1,0 +1,272 @@
+{
+  "uuid": "a29a88a7-58c9-5d41-b20b-f4325ef9fee5",
+  "nome": "Encolhimento com Barra",
+  "cena": "encolhimento_com_barra",
+  "grupo": "Trapézio",
+  "subgrupo": "Trapézio superior · elevador da escápula",
+  "padrao_movimento": "encolhimento",
+  "equipamento": "barra",
+  "variacao": "em pé",
+  "alvos": [
+    "trapezio"
+  ],
+  "auxiliares": [],
+  "camera": {
+    "az": 35,
+    "el": 10,
+    "dist": 4.3,
+    "alvo": [
+      0,
+      0,
+      0.95
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés paralelos e afastados na largura dos ombros, os joelhos soltos e o tronco ereto, segura a barra por cima (pegada pronada: as palmas viradas para as coxas), com as mãos um pouco mais afastadas que a largura dos ombros, logo por fora das coxas, e os braços esticados, com a barra na frente das coxas, quase encostando nelas. Sobe só os ombros, reto, em direção às orelhas, o mais alto que conseguir (pelo menos até a linha dos ombros ficar na horizontal), sem dobrar os cotovelos e sem girar (rolar) os ombros para a frente ou para trás — a barra sobe junto, rente às coxas; segura 1 segundo em cima e desce devagar até os ombros voltarem embaixo. Os ombros ficam um pouco para trás (peito aberto) e a cabeça parada, alinhada com a coluna, olhando para a frente.",
+  "cinesiologia": {
+    "plano": "frontal (elevação e depressão da escápula), cadeia cinética aberta",
+    "articulacoes": "cintura escapular: elevação da escápula e da clavícula (articulação esternoclavicular) na subida e depressão na descida, com as escápulas um pouco para trás e paradas (sem rolar); ombros (glenoumeral), cotovelos (estendidos) e punhos (retos) parados; tronco, quadril, joelhos (soltos, ~7°) e pés parados",
+    "agonistas": "trapézio superior (ExRx: \"Target: Trapezius, Upper\"; Yessis: \"In the barbell shrug, only the uppermost portion of the trapezius is involved.\"; Ekstrom 2003: \"The unilateral shoulder shrug exercise was found to produce the greatest EMG activity in the upper trapezius.\")",
+    "sinergistas": "levantador da escápula e trapézio médio (ExRx: \"Synergists: Trapezius, Middle; Levator Scapulae\"); Yessis põe também o romboide entre os músculos do movimento (\"This includes the rhomboid, uppermost portion of the trapezius, and the levator scapulae\"; do levantador: \"Because of its direct line of pull it plays an important role in the shrug movement.\"). No mapa do app o levantador da escápula fica embaixo do trapézio, que fica vermelho (catálogo: \"Trapézio superior · elevador da escápula\")",
+    "estabilizadores": "eretores da espinha, que seguram o tronco ereto (ExRx: \"Stabilizers: Erector Spinae\"); flexores dos dedos e do punho seguram a barra (pegada)",
+    "fases": "subida concêntrica até o ombro mais alto que der, com 1 s de pausa em cima (free-exercise-db: \"hold the contraction for a second\"; Yessis: \"hold for one to two seconds\"), e descida excêntrica devagar (ACE: \"lowering slowly to the original starting position\"; free-exercise-db: \"Slowly return to the starting position\")"
+  },
+  "referencias": [
+    "Catálogo do app — scripts/conteudo/novos_61.json (o exercício é um dos 61 novos, sem dica no scripts/gifs_catalogo/catalogo.py): \"grupo_muscular\": \"Trapézio\", \"subgrupo\": \"Trapézio superior · elevador da escápula\", \"padrao_movimento\": \"encolhimento\", \"equipamento\": \"barra\", \"variacao\": null, \"fonte_en\": \"Barbell Shrug\" (a variação \"em pé\" sai do nome e do fonte_en, confirmada nas fontes abaixo)",
+    "free-exercise-db (yuhonas, domínio público) — Barbell Shrug (a de onde o catálogo tirou o fonte_en). https://github.com/yuhonas/free-exercise-db (exercises/Barbell_Shrug.json, lido em 11/10/2026): \"Stand up straight with your feet at shoulder width as you hold a barbell with both hands in front of you using a pronated grip (palms facing the thighs). Tip: Your hands should be a little wider than shoulder width apart. You can use wrist wraps for this exercise for a better grip. This will be your starting position.\"; \"Raise your shoulders up as far as you can go as you breathe out and hold the contraction for a second. Tip: Refrain from trying to lift the barbell by using your biceps.\"; \"Slowly return to the starting position as you breathe in.\"; \"primaryMuscles\": [\"traps\"]",
+    "ExRx.net — Barbell Shrug (Weight Exercises › Trapezius, Upper). https://exrx.net/WeightExercises/TrapeziusUpper/BBShrug (lido em 11/10/2026 na cópia do Internet Archive de 06/02/2026: https://web.archive.org/web/20260206131420/https://exrx.net/WeightExercises/TrapeziusUpper/BBShrug; o site responde 403 direto): Preparation \"Stand holding barbell with overhand or mixed grip; shoulder width or slightly wider.\"; Execution \"Elevate shoulders as high as possible. Lower and repeat.\"; Comments \"Since this movement becomes more difficult as full shoulder elevation is achieved, height criteria for shoulder elevation may be needed. For example, raising shoulders until slope of shoulders becomes horizontal may be considered adequate depending upon individual body structure and range of motion with lighter weight.\"; músculos: Target \"Trapezius, Upper\", Synergists \"Trapezius, Middle\", \"Levator Scapulae\", Stabilizers \"Erector Spinae\"",
+    "ExRx.net — Kinesiology › Exercise Errors, Shoulder Shrugs Errors (shoulder rolls). https://exrx.net/Kinesiology/Errors (cópia do Internet Archive de 04/08/2025, lida em 11/10/2026): \"Rolling (horizontal movement) is nonsensical\"; \"Bottom line: It's only necessary to raise and lower the shoulders during shrugs.\"",
+    "American Council on Exercise (ACE) — Shrug (Exercise Library nº 72, \"Equipment: Barbell\"). https://www.acefitness.org/resources/everyone/exercise-library/72/shrug/ (lido em 11/10/2026): \"Hold a barbell with a palms-down grip with the hands about shoulder-width apart. Keep the knees slightly bent, the hips straight, and the back tall, and raise the shoulders directly upwards to the ears as high as possible, lowering slowly to the original starting position. (Tip: grip the bar and think about pulling the hands apart from one another and focus on only raising/lowering the shoulders - DO NOT roll the shoulders.)\"",
+    "American Council on Exercise (ACE) — Standing Shrug (Exercise Library nº 75, com halteres). https://www.acefitness.org/resources/everyone/exercise-library/75/standing-shrug/ (lido em 11/10/2026): \"with your elbows fully extended\"; \"Your head and neck should be aligned with your spine.\"; \"Exhale and slowly shrug your shoulders upward, avoiding any shoulder rotation or elbow flexion (bending). Maintain an erect torso (no arching in your low back) and neutral wrist position (wrists held straight without any bending).\"",
+    "Yessis M. — The Barbbell Shrug (Dr. Yessis SportLab). https://doctoryessis.com/2013/01/01/the-barbbell-shrug/ (lido em 11/10/2026): \"Assume a standing position with the feet in line with one another and approximately shoulder-width apart. Your body should be erect with the lumbar spine in its neutral (slightly arched) position.\"; \"Your head should be directly above the shoulders in good spinal alignment and your vision focused directly in front.\"; \"Keep the shoulders back and the chest out as much as possible.\"; \"Hold a barbell with extended arms and with the hands slightly wider than hip-width apart. The bar should rest against your thighs.\"; \"Inhale and hold your breath as you raise the shoulders as high as possible.\"; \"There should be no bending in the elbow as you raise the shoulders.\"; \"After reaching the uppermost position, hold for one to two seconds to maximize the muscular contraction.\"; \"Exhale as you return the shoulders under control to the initial position.\"; \"It is important that you keep the head up and look directly in front as you execute the shrug.\"; \"The muscles involved in the shrug raise the scapula (and clavicle) directly upward with no rotation of the scapula.\"",
+    "National Strength and Conditioning Association. Basics of Strength and Conditioning Manual (2012), Barbell Hang Clean, p. 37 (a posição em pé com a barra nas coxas; a NSCA não tem o encolhimento isolado nesse manual nem no resumo do Essentials do CSCS da Achievable): \"Grasp the bar with a pronated grip slightly wider than shoulder-width with arms straight and elbows pointed out\"; \"Head remains in a neutral position looking forward throughout the entire lift\"; \"Stand erect with shoulders, hips, and knees in alignment and the bar held at arm’s length touching the top part of the thigh\"",
+    "Peeters I, Braeckevelt T, Palmans T, Van Tongel A, De Wilde L. Kinematic analysis of scapulothoracic movements in the shoulder girdle: a whole cadaver study. JSES Int. 2023;7(1):147-152 (online em 21/10/2022; texto completo PMC9937811, lido em 11/10/2026): \"Shrug caused a large clavicular elevation of 25° (SD 5°).\"",
+    "Ekstrom RA, Donatelli RA, Soderberg GL. Surface electromyographic analysis of exercises for the trapezius and serratus anterior muscles. J Orthop Sports Phys Ther. 2003;33(5):247-258 (resumo no PubMed, 12774999): \"The unilateral shoulder shrug exercise was found to produce the greatest EMG activity in the upper trapezius.\"",
+    "Pizzari T, Wickham J, Balster S, Ganderton C, Watson L. Modifying a shrug exercise can facilitate the upward rotator muscles of the scapula. Clin Biomech (Bristol). 2014;29(2):201-205 (resumo no PubMed, 24342452): \"the standard shrug exercise at 0° of shoulder abduction\"",
+    "Barra e anilhas: as do Levantamento Terra (ficha d716cf5f-1989-4364-887b-010ceffd4826, com as medidas da IPF e da IWF: eixo de 29 mm, 1,32 m entre as travas, anilhas de 45 cm); a barra longa com anilhas grandes é a das fotos das 3 fontes (free-exercise-db, ExRx, ACE)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "barra rente às coxas, sem encostar",
+        "equipamento": "barra",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          3,
+          20
+        ],
+        "fonte": "Yessis — The Barbbell Shrug (\"The bar should rest against your thighs.\"); free-exercise-db — Barbell Shrug (\"hold a barbell with both hands in front of you\"); NSCA, Basics of Strength and Conditioning Manual (2012), Barbell Hang Clean (a mesma posição em pé com a barra nas coxas) (\"the bar held at arm’s length touching the top part of the thigh\")"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "mãos e antebraços não entram nas coxas nem no tronco",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "ombros relaxados embaixo (linha do ombro caída)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Shoulder",
+          "Arm"
+        ],
+        "t": 0.0,
+        "graus": [
+          20,
+          32
+        ],
+        "fonte": "a mesma do Encolhimento com Halteres (o ombro parte do repouso, caído)"
+      },
+      {
+        "nome": "ombros encolhidos em cima: linha do ombro na horizontal",
+        "medida": "inclinacao",
+        "segmento": [
+          "Shoulder",
+          "Arm"
+        ],
+        "t": 1.0,
+        "graus": [
+          -4,
+          7
+        ],
+        "fonte": "ExRx — Barbell Shrug (\"Elevate shoulders as high as possible\"; \"raising shoulders until slope of shoulders becomes horizontal may be considered adequate\"); Peeters et al. 2023, JSES Int 7(1):147-152 (\"Shrug caused a large clavicular elevation of 25° (SD 5°)\")"
+      },
+      {
+        "nome": "cotovelos esticados e parados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "Yessis — The Barbbell Shrug (\"There should be no bending in the elbow as you raise the shoulders.\"); free-exercise-db — Barbell Shrug (\"Refrain from trying to lift the barbell by using your biceps.\"); ACE — Standing Shrug (halteres) (\"with your elbows fully extended\")"
+      },
+      {
+        "nome": "o ombro só sobe e desce, sem rolar pra frente nem pra trás",
+        "medida": "ombro_frente",
+        "t": "todos",
+        "mm": [
+          -8,
+          8
+        ],
+        "fonte": "ACE — Shrug (barra) (\"focus on only raising/lowering the shoulders - DO NOT roll the shoulders\"); ExRx — Exercise Errors, Shoulder Shrugs (\"Rolling (horizontal movement) is nonsensical\"); Yessis — The Barbbell Shrug (\"raise the scapula (and clavicle) directly upward\")"
+      },
+      {
+        "nome": "braços pendurados com a barra na frente das coxas",
+        "medida": "braco_frente",
+        "t": "todos",
+        "graus": [
+          5,
+          20
+        ],
+        "fonte": "free-exercise-db — Barbell Shrug (\"hold a barbell with both hands in front of you\"); Yessis — The Barbbell Shrug (\"The bar should rest against your thighs.\"): a barra na frente das coxas leva os braços um pouco à frente do tronco"
+      },
+      {
+        "nome": "braços perto do corpo, sem abrir pro lado",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -5,
+          20
+        ],
+        "fonte": "Pizzari et al. 2014, Clin Biomech 29(2):201-205 (\"the standard shrug exercise at 0° of shoulder abduction\")"
+      },
+      {
+        "nome": "pegada pronada (palmas viradas pras coxas)",
+        "medida": "palma_frente",
+        "t": "todos",
+        "graus": [
+          140,
+          180
+        ],
+        "fonte": "free-exercise-db — Barbell Shrug (\"using a pronated grip (palms facing the thighs)\"); ACE — Shrug (barra) (\"palms-down grip\"); ExRx — Barbell Shrug (\"overhand or mixed grip\")"
+      },
+      {
+        "nome": "pegada um pouco mais aberta que os ombros, mãos por fora das coxas",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          1.1,
+          1.6
+        ],
+        "fonte": "free-exercise-db — Barbell Shrug (\"Your hands should be a little wider than shoulder width apart\"); ExRx — Barbell Shrug (\"shoulder width or slightly wider\"); ACE — Shrug (barra) (\"the hands about shoulder-width apart\"); Yessis — The Barbbell Shrug (\"the hands slightly wider than hip-width apart\")"
+      },
+      {
+        "nome": "punho reto",
+        "medida": "punho_flexao",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "ACE — Standing Shrug (halteres) (\"neutral wrist position (wrists held straight without any bending)\")"
+      },
+      {
+        "nome": "punho sem dobrar de lado",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "ACE — Standing Shrug (halteres) (\"neutral wrist position (wrists held straight without any bending)\")"
+      },
+      {
+        "nome": "tronco ereto e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "ACE — Shrug (barra) (\"Keep the knees slightly bent, the hips straight, and the back tall\"); free-exercise-db — Barbell Shrug (\"Stand up straight\"); Yessis — The Barbbell Shrug (\"Your body should be erect\")"
+      },
+      {
+        "nome": "joelhos soltos",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          2,
+          12
+        ],
+        "fonte": "ACE — Shrug (barra) (\"Keep the knees slightly bent\")"
+      },
+      {
+        "nome": "pés na largura dos ombros",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.3
+        ],
+        "fonte": "free-exercise-db — Barbell Shrug (\"feet at shoulder width\"); Yessis — The Barbbell Shrug (\"approximately shoulder-width apart\")"
+      },
+      {
+        "nome": "cabeça parada, alinhada com a coluna, olhando à frente",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          5
+        ],
+        "fonte": "Yessis — The Barbbell Shrug (\"Your head should be directly above the shoulders in good spinal alignment and your vision focused directly in front.\"); ACE — Standing Shrug (halteres) (\"Your head and neck should be aligned with your spine.\")"
+      }
+    ]
+  }
+}
