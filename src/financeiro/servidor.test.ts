@@ -161,3 +161,13 @@ describe("quem vê e quem mexe (spec 4.1 — P6)", () => {
     expect(podeMexerNaMensalidade(n)).toBe(false);
   });
 });
+
+import { retratoDoPlano as retratoServidor } from "../../supabase-principal/functions/_shared/planos-regras";
+import type { Matricula } from "../../supabase-principal/functions/_shared/financeiro-mp";
+
+describe("W-P: a matrícula carrega o plano com período", () => {
+  it("o retrato sai da matrícula como o servidor a carrega", () => {
+    const m = { plano_modalidade: "mensal", plano: { id: "p", nome: "Anual", meses: 12 } } as Pick<Matricula, "plano_modalidade" | "plano">;
+    expect(retratoServidor(m)).toEqual({ meses_cobertos: 1, parcelas_total: 12 });
+  });
+});
