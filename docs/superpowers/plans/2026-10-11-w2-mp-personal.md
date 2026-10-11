@@ -32,6 +32,35 @@
 > - Itens da W2 no cofre: nenhum ainda (usuários de teste, aplicação de teste). Funções: `MP_CLIENT_ID`/`MP_CLIENT_SECRET` ainda não
 >   existem (`oauth conferir` ❌, o esperado — a Task 14 copia; `oauth copiar --seco` levaria só os 2, sem `_STAGING`).
 
+> **Task 1 feita (11/10 19:35–20:15, LINUX 3) — Prova da public_key: PAROU na autorização, sem code (`49ace9e`, `e2e/w2/prova_public_key.py`):**
+> - **Usuários de teste:** `usuarios-teste criar` ✅ — 1 vendedor + 1 comprador (MLB, ids de 10 dígitos) no cofre "… — usuários de teste
+>   (W2)" (gravados e lidos de volta) e em `~/.physiq-mp-{vendedor,comprador}-teste.json` (600). O `POST /users/test` NÃO devolve e-mail
+>   (só `nickname` e `password`).
+> - **O caminho medido** (Edge sem tela — o login do Mercado Livre recusa o user agent "Headless…" com "Hubo un error accediendo a esta
+>   pagina"; o script manda o user agent normal do mesmo Edge): `auth.mercadopago.com/authorization` → seletor "Seleccione el país" →
+>   Brasil → Confirmar (não é um link) → `auth.mercadopago.com.br/authorization` → `www.mercadopago.com.br/login/identification` (o
+>   APELIDO serve) → `login/challenges` ("Senha" ou "E-mail") → `password/validation` → **a senha passou, sem código de verificação e
+>   sem captcha** → `auth.mercadopago.com.br/authorization` **recusou: "O aplicativo não está pronto para se conectar a Mercado Pago"**
+>   (antes de qualquer consentimento; nenhum code — o `code` no pedido não chegou a ser medido).
+> - **A mesma tela** sem PKCE, sem `platform_id`, com um redirect NÃO cadastrado e até com um `client_id` INVENTADO (1 login, 4
+>   variantes): é o erro genérico da autorização e não diz o motivo. Leitura: o risco (3) — vendedor de teste × aplicação de conta real
+>   → **plano B do I6 no FIM** (Task 23). O PKCE não é a causa (a mesma recusa sem ele); se o MP aceita o `code_challenge` com o PKCE
+>   desligado no painel segue sem medida.
+> - **Client Secret do cofre: VÁLIDO** — `/oauth/token` com um code inventado: o do cofre → 400 `invalid_grant`; um falso → 400
+>   `invalid_client` (nenhum token criado).
+> - **A aplicação** (`GET /applications/<id>`, só leitura): `use_pkce: false`, `allow_flow: []`, `sandbox_mode: true`,
+>   `certification_status: not_certified`, `callback_urls` = só `https://www.mercadopago.com`, `active: true`, `blocked`/`disabled` false.
+> - **Decisão (Step 4):** `public_key` NÃO MEDIDA → o código segue com o Brick com a chave do vendedor + a decisão 14 (sem `public_key`,
+>   só Pix); **a Task 5 (P-C) NÃO entra agora** — fica pronta para o FIM, se a prova de lá mostrar que a chave falta. `auth_usado` =
+>   `auth.mercadopago.com` (o `.com` fecha a escolha de país; o `--auth-br` não foi preciso). `primeira_vale_depois_da_segunda` (MENOR 29),
+>   renovação e `live_mode`: sem medida → o bloco "MENOR 29" da Task 6 fica DESLIGADO (o padrão).
+> - **Extra — o token do vendedor de teste cria pagamento no sandbox? NÃO RODOU**: sem token do vendedor (o OAuth não chegou ao code).
+>   Nenhum pagamento criado; `~/.physiq-mp-vendedor-teste-oauth.json` não existe.
+> - **FIM (Task 23):** o passo 8 da W2-a (o integrador de teste + a aplicação de TESTE dele; o client só no staging,
+>   `MP_CLIENT_ID_STAGING`/`MP_CLIENT_SECRET_STAGING`, item "… — aplicação de teste (W2)") → a prova de novo com esse client (hoje ela lê
+>   `~/.physiq-mp-oauth.json`, que tem o client da aplicação REAL) e o mesmo vendedor de teste. Antes da flag, a prova de produção com a
+>   conta dele (Pergunta 2) mostra se a aplicação real conecta conta de verdade (o `allow_flow` vazio fica anotado, sem leitura).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** em **Configurações › Recebimento** o dono da conta escolhe **"Mercado Pago (sua conta)"**, toca em **"Conectar com o Mercado
