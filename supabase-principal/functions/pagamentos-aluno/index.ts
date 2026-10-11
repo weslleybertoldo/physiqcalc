@@ -23,8 +23,11 @@
 //   detalhe_mp        { cobranca_id }                        dados reais da transação no MP (comprovante em PDF) — aluno ou profissional
 //   simular_aprovacao { cobranca_id }                        SÓ STAGING (o Pix do sandbox não se paga)
 //  PROFISSIONAL (dono da conta, responsável pelo aluno ou master — quem vê o quê: spec 4.1 e P6):
-//   prof_planos       { conta_id }                          W-P: os planos da conta (completo, parcela, quantos alunos) e o modo
-//   prof_plano_salvar { conta_id, id?, nome, meses, valor, modalidades, max_parcelas_cartao?, valor_parcela_mensal? }  só o dono
+//   prof_planos       { conta_id }                          W-P: os planos da conta (completo, parcela, quantos alunos) e o modo —
+//                                                            só o dono e o master (Task 8b, ponto 1: os outros da conta → 403 so_o_dono)
+//   prof_plano_salvar { conta_id, id?, nome, meses, valor, modalidades, max_parcelas_cartao?, valor_parcela_mensal? }  só o dono —
+//                     Task 8b (ponto 2): as automáticas de quem segue o plano vão para a fila → { automaticas: { enfileiradas } }
+//                     (o schema sem a fila troca na hora, como antes → { automaticas: { atualizadas, falharam } })
 //   prof_plano_ativo  { conta_id, id, ativo }               W-P: desativar/reativar (quem já está no plano continua)
 //   prof_resumo       { conta_id }                          alunos da conta com mensalidade e selos + comprovantes aguardando
 //                     { conta_id, pagina, pagina_sem?, busca? }   hml-14b: a página da tela Mensalidades (20 com mensalidade + 20
@@ -33,7 +36,8 @@
 //   prof_aluno_cobrancas { aluno, pagina }                  hml-14d: o "Ver todas" das cobranças do aluno — 20 por página + o total
 //   prof_definir      { aluno, plano_aluno_id?, plano_novo?, valor }   modo de hoje: plano só com nome e valor (o APK antigo manda assim)
 //                     { aluno, plano_aluno_id, plano_modalidade, plano_valor_negociado?, inicio?, cancelar_automatica? }   W-P:
-//                     plano com período (o valor sai do plano); plano_modalidade: null volta ao modo de hoje
+//                     plano com período (o valor sai do plano); plano_modalidade: null volta ao modo de hoje. A automática troca
+//                     de valor na hora (1 PUT); o MP falhou → a fila tenta de hora em hora (automatica: "na_fila", sem aviso)
 //   prof_pausar       { aluno, pausar }                     "não cobrar pelo app" / reativar
 //   prof_confirmar    { cobranca_id, lancar? }              confirma o Pix com comprovante (lancar = entrada no financeiro)
 //   prof_recusar      { cobranca_id, motivo }               recusa (o aluno vê o motivo)
@@ -55,6 +59,10 @@
 // nas leituras que alimentam a resposta e nas gravações que mudam a cobrança; o prof_resumo lê os alunos da conta em páginas e
 // as cobranças em lotes de 150 alunos — a RESPOSTA não muda (o APK antigo usa). Antes o erro ou o corte calado de 1000 faziam a
 // tela dizer "nenhum Pix a conferir" e zerar as cobranças abertas.
+// W-P Task 8b (decisões do Weslley 10/10/2026): ponto 1 — os planos e os valores, só o dono e o master; ponto 2 — a troca do valor
+// das automáticas em lote vai para a fila {schema}.automaticas_fila (automaticas_enfileirar + automaticas_disparar: o pg_net chama a
+// automaticas-fila depois do commit; ela tenta de hora em hora e, na 24ª falha, avisa o dono); ponto 3 — o MP aceitou e o espelho
+// não gravou → não avisa o dono (_shared/planos-automatica-mp.ts). O schema sem a fila (a rpc não existe) faz como antes.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -101,7 +109,8 @@ import {
   MODALIDADES, aceitaAutomatica, descricaoDoPagamento, ehModalidade, maxParcelasDoCartao, modalidadesDaConta, modalidadesOferecidas,
   parcelaMensal, parcelasValidas, planoCompleto, proximaParcela, retratoDoPlano, validarPlano, type Modalidade, type Parcela, type PlanoDoAluno,
 } from "../_shared/planos-regras.ts";
-import { novoValorDaAutomatica, type ResultadoValor } from "../_shared/planos-automatica.ts";
+import { textoDoAvisoDaFila, type ResultadoValor } from "../_shared/planos-automatica.ts";
+import { trocarValorDaAutomatica } from "../_shared/planos-automatica-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
@@ -340,37 +349,67 @@ Deno.serve(async (req) => {
     return { id: c.id, modo: c.recebimento_modo ?? "pix_manual", app: c.origem === "app", papel };
   };
 
-  /** I1: o valor do próximo pagamento mudou e a automática está ligada → PUT no MP; falhou → aviso ao dono. */
-  const sincronizarAutomatica = async (m: Matricula): Promise<ResultadoValor> => {
-    const a = await assinaturaDe(m.id);
-    const r = await novoValorDaAutomatica(a, Number(m.mensalidade_valor), async (id, corpo) => {
-      const { status: st, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(id)}`,
-        { method: "PUT", body: JSON.stringify(corpo) }, { prazo: prazoDoPedido });
-      if (st < 300 && pre?.id) {
-        const { error } = await db.from("aluno_assinaturas").update({
-          ...espelhoAssinaturaAluno(pre, { ...(a!.payload ?? {}), valor_trocado_em: new Date().toISOString() }),
-          valor: corpo.auto_recurring.transaction_amount,
-        }).eq("id", a!.id);
-        if (error) throw error;
-      }
-      return { status: st, body: pre };
-    });
-    if (r === "falhou") {
-      log.erro({ codigo: "mp_valor_assinatura_falhou", schema, acao, ref: a?.id ?? m.id });
-      await avisar(db, recebedor(m), "geral", `Não deu para mudar o valor da cobrança automática de ${m.nome}. Confira no financeiro do aluno.`,
-        linkDoAlunoNoPainel(m), log, schema);
-    }
-    return r;
+  /** Task 8b: o schema ainda não tem a fila (o public antes da migration): a rpc não existe → o caminho de antes, sem quebrar. */
+  const semAFila = (e: { code?: unknown; message?: unknown } | null) =>
+    /^(PGRST202|42883)$/.test(String(e?.code ?? "")) || /could not find the function|function .* does not exist/i.test(String(e?.message ?? ""));
+
+  /** Task 8b (ponto 2): põe os alunos na fila das automáticas → quantos ficaram pendentes; null = o schema não tem a fila. */
+  const enfileirarAutomaticas = async (ids: string[], motivo: "plano" | "aluno"): Promise<number | null> => {
+    if (!ids.length) return 0;
+    const { data, error } = await db.rpc("automaticas_enfileirar", { p_pacientes: ids, p_motivo: motivo });
+    if (error && semAFila(error)) return null;
+    if (error) throw error;
+    return Number(data) || 0;
   };
 
-  /** I1 em lote: quem segue o plano (sem negociado) depois que o dono mudou o valor/meses/parcela — o gatilho já mudou o valor. */
+  /** A fila sai depois do commit (pg_net → automaticas-fila). Falhou: o pg_cron de hora em hora pega — só registra. */
+  const dispararAutomaticas = async () => {
+    const { error } = await db.rpc("automaticas_disparar");
+    if (error) log.excecao(error, { codigo: "automaticas_disparar_falhou", schema, acao });
+  };
+
+  /** I1: o valor do próximo pagamento mudou e a automática está ligada → PUT no MP, na hora (1 aluno; o ponto 3 está no
+   *  planos-automatica-mp.ts). Falhou → Task 8b (ponto 2): a fila tenta de hora em hora, sem aviso agora ("na_fila"); o schema sem a
+   *  fila (ou a fila que não gravou) → o aviso ao dono de antes. */
+  const sincronizarAutomatica = async (m: Matricula): Promise<ResultadoValor | "na_fila"> => {
+    const a = await assinaturaDe(m.id);
+    const t = await trocarValorDaAutomatica(db, credencial, a, Number(m.mensalidade_valor), { prazo: prazoDoPedido, log, schema, acao });
+    if (t.resultado !== "falhou") return t.resultado;
+    let naFila: number | null = null;
+    try {
+      naFila = await enfileirarAutomaticas([m.id], "aluno");
+    } catch (e) {
+      log.excecao(e, { codigo: "automaticas_enfileirar_falhou", schema, acao, ref: m.id });
+    }
+    if (naFila) {
+      log.aviso({ codigo: "mp_valor_assinatura_na_fila", schema, acao, ref: a?.id ?? m.id, status: t.status, externo: t.externo });
+      return "na_fila";
+    }
+    log.erro({ codigo: "mp_valor_assinatura_falhou", schema, acao, ref: a?.id ?? m.id, status: t.status, externo: t.externo });
+    await avisar(db, recebedor(m), "geral", textoDoAvisoDaFila([m.nome]), linkDoAlunoNoPainel(m), log, schema);
+    return "falhou";
+  };
+
+  /** I1 em lote: quem segue o plano (sem negociado) depois que o dono salvou o plano — o gatilho já mudou o valor de cada um. Task 8b
+   *  (ponto 2): só quem tem automática (a fila lê a assinatura mais recente de cada um) vai para a fila e o pg_net chama a
+   *  automaticas-fila depois do commit → { enfileiradas }. O schema sem a fila: a troca na hora de antes (até 200 alunos). */
   const sincronizarAutomaticasDoPlano = async (planoId: string) => {
-    const { data, error } = await db.from("pacientes").select("id").eq("plano_aluno_id", planoId).not("plano_modalidade", "is", null)
-      .is("plano_valor_negociado", null).is("deleted_at", null).limit(200);
-    if (error) throw error;
+    const ids = (await todasAsPaginas<{ id: string }>((de, ate) =>
+      db.from("pacientes").select("id").eq("plano_aluno_id", planoId).not("plano_modalidade", "is", null)
+        .is("plano_valor_negociado", null).is("deleted_at", null).order("id").range(de, ate))).map((r) => r.id);
+    const comAutomatica = await emLotes(ids, 150, async (lote) => {
+      const { data, error } = await db.from("aluno_assinaturas").select("paciente_id").in("paciente_id", lote).in("status", ["authorized", "pending", "paused"]);
+      if (error) throw error;
+      return ((data ?? []) as Array<{ paciente_id: string }>).map((r) => r.paciente_id);
+    });
+    const naFila = await enfileirarAutomaticas([...new Set(comAutomatica)], "plano");
+    if (naFila !== null) {
+      if (naFila > 0) await dispararAutomaticas();
+      return { enfileiradas: naFila };
+    }
     let atualizadas = 0;
     let falharam = 0;
-    for (const { id } of (data ?? []) as Array<{ id: string }>) {
+    for (const id of ids.slice(0, 200)) {
       const m = await carregarMatricula(db, id);
       if (!m) continue;
       const r = await sincronizarAutomatica(m);
@@ -1021,7 +1060,10 @@ Deno.serve(async (req) => {
 
     // ════════════════════════════ PROFISSIONAL ════════════════════════════
     if (acao === "prof_planos") {
+      // Task 8b (decisão do Weslley 10/10, ponto 1): os planos e os valores, só o dono — igual à mensalidade; o master continua lendo
+      // (inclusive a conta do app, que ele não grava por aqui)
       const conta = await contaDosPlanos(body.conta_id, false);
+      if (!conta.papel.master && !conta.papel.dono) falhar("so_o_dono", 403);
       const { data, error } = await db.from("planos_aluno").select(COLUNAS_PLANO).eq("conta_id", conta.id).order("ativo", { ascending: false }).order("nome");
       if (error) throw error;
       const planos = (data ?? []) as unknown as PlanoDoAluno[];
@@ -1061,7 +1103,7 @@ Deno.serve(async (req) => {
         throw error;
       }
       if (!salvo) falhar("plano_invalido", 404);
-      const automaticas = id ? await sincronizarAutomaticasDoPlano(id) : { atualizadas: 0, falharam: 0 };
+      const automaticas = id ? await sincronizarAutomaticasDoPlano(id) : { enfileiradas: 0 };
       return json({ ok: true, plano: salvo, automaticas }, 200, origin);
     }
 
@@ -1173,7 +1215,8 @@ Deno.serve(async (req) => {
         permissoes: { master: p.master, dono: p.dono, responsavel: p.responsavel, mensalidade: veMensalidade },
         conta: { id: atual.conta_id, nome: atual.conta?.nome ?? null, modo: atual.conta?.recebimento_modo ?? "pix_manual",
                  bloquear: atual.conta?.bloquear_app_inadimplente ?? false, origem: atual.conta?.origem ?? null,
-                 modalidades: wp ? modalidadesDaConta(atual.conta?.recebimento_modo) : [],
+                 // W-P: as modalidades que a conta recebe — como os planos, só para quem mexe na mensalidade (Task 8b, ponto 1)
+                 modalidades: wp && veMensalidade ? modalidadesDaConta(atual.conta?.recebimento_modo) : [],
                  chave: chave ? { tipo: chave.tipo, chave: chave.chave, favorecido: chave.favorecido, banco: chave.banco } : null },
         planos: veMensalidade ? planos ?? [] : [],
         mensalidade: veMensalidade ? await mensalidadeComPlano(atual) : null,
