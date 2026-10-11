@@ -32,6 +32,7 @@ import type { CobrancaVista, MatriculaPagamentos, ReciboVista } from "@/financei
 import { ComprovanteVisor } from "@/financeiro/ui/ComprovanteVisor";
 import { LinhaCobranca } from "@/financeiro/ui/LinhaCobranca";
 import { ehLoja } from "@/lib/distribuicao";
+import { CHAVES_DA_VOLTA } from "@/lib/linksDoApp";
 import { Botao, BotaoIcone } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
@@ -47,8 +48,8 @@ import { PagarPixManual, type AlvoPagamento } from "./pagamentos/PagarPixManual"
 const CHAVE = ["pagamentos-aluno"] as const;
 /** hml-14d (B21 · P7): o que a folha "Ver todos" mostra — as cobranças ou os recibos de uma matrícula. */
 type Todos = { m: MatriculaPagamentos; tipo: "cobrancas" | "recibos" } | null;
-/** W1: o que a volta da página da InfinitePay traz na busca — SÓ isso vai à função (nunca a busca inteira: o corpo leva a `acao`). */
-const CHAVES_DA_VOLTA = ["order_nsu", "transaction_nsu", "slug", "invoice_slug", "receipt_url", "capture_method"] as const;
+// W1: o que a volta da página da InfinitePay traz na busca (CHAVES_DA_VOLTA, de src/lib/linksDoApp.ts — as mesmas que o App Link deixa
+// passar no APK) — SÓ isso vai à função (nunca a busca inteira: o corpo leva a `acao`).
 /** W1: com a folha de pagar fechada, a tela confere a tentativa da InfinitePay a cada 30 s, até 10 min depois de abrir ou voltar à página. */
 const CONFERIR_IP_MS = 30_000;
 const CONFERIR_IP_POR_MS = 10 * 60_000;

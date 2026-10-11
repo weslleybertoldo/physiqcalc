@@ -23,11 +23,13 @@ vi.mock("@capacitor/app", () => ({
 }));
 
 import {
+  CHAVES_DA_VOLTA,
   EVENTO_LINK,
   HOST_APP_LINK,
   PACOTE_APK,
   PAGINA_BAIXAR_APP,
   PREFIXOS_DO_APP,
+  ROTA_DA_VOLTA,
   VALIDADE_DESTINO_MS,
   _zerarParaTestes,
   alvoDaFaixa,
@@ -44,6 +46,7 @@ import {
   rotaDoLink,
 } from "./linksDoApp";
 import { codigoDoDeepLink } from "./profPendente";
+import { urlDeVolta } from "@/financeiro/infinitepay";
 import { destinoDepoisDoLogin } from "@/nucleo/situacao";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -139,6 +142,100 @@ describe("H2 — o link do site vira a rota do app (rotaDoLink)", () => {
     expect(ehCaminhoDoApp("/painel")).toBe(false);
     expect(ehCaminhoDoApp("")).toBe(false);
     expect(ehCaminhoDoApp("perfil")).toBe(false);
+  });
+});
+
+describe("W1 — a volta da InfinitePay pelo App Link: até 2048 e só as chaves da volta (o resto como sempre)", () => {
+  const PEDIDO = "0b9f4c2e-6a1d-4f3b-9c8e-1d2e3f4a5b6c-1";
+  const RECIBO = "https://recibo.infinitepay.io/r/";
+  /** A volta como a InfinitePay manda (receipt_url, order_nsu, slug, capture_method e transaction_nsu), com a rota de `tamanho` caracteres. */
+  function volta(tamanho: number, extra: Record<string, string> = {}): { url: string; rota: string } {
+    const busca = (recibo: string) =>
+      new URLSearchParams({ receipt_url: recibo, order_nsu: PEDIDO, slug: "nfse-8c1d2e", capture_method: "credit_card", transaction_nsu: "4f1e9a7b-2c3d", ...extra }).toString();
+    const q = busca(RECIBO + "a".repeat(tamanho - `/perfil/pagamentos?${busca(RECIBO)}`.length));
+    return { url: `https://physiqcalc.com.br/perfil/pagamentos?${q}`, rota: `/perfil/pagamentos?${q}` };
+  }
+  const semAs = (rota: string, ...chaves: string[]) => {
+    const [caminho, busca] = rota.split("?");
+    const q = new URLSearchParams(busca);
+    for (const k of chaves) q.delete(k);
+    return `${caminho}?${q}`;
+  };
+  const chavesEValores = (rota: string) => [...new URLSearchParams(rota.slice(rota.indexOf("?") + 1))];
+
+  it("a volta é a página que o servidor dá à InfinitePay (urlDeVolta, no host das App Links) e as chaves são as que a tela de Pagamentos lê (o lerVolta)", () => {
+    expect(urlDeVolta("public", null)).toBe(`https://${HOST_APP_LINK}${ROTA_DA_VOLTA}`);
+    expect([...CHAVES_DA_VOLTA].sort()).toEqual(["capture_method", "invoice_slug", "order_nsu", "receipt_url", "slug", "transaction_nsu"]);
+  });
+  it("a volta de 900 caracteres (o recibo longo) chega inteira; 2048 é o teto", () => {
+    const v = volta(900);
+    expect(v.rota).toHaveLength(900);
+    expect(rotaDoLink(v.url)).toBe(v.rota);
+    expect(rotaDoLink(volta(2048).url)).toBe(volta(2048).rota);
+    expect(rotaDoLink(volta(2049).url)).toBeNull();
+  });
+  it("APK: o link da volta vira o destino inteiro e avisa a casca — as 5 chaves com os valores de origem", () => {
+    const v = volta(900);
+    const avisos: string[] = [];
+    const ouvir = (e: Event) => avisos.push((e as CustomEvent<string>).detail);
+    window.addEventListener(EVENTO_LINK, ouvir);
+    expect(receberLink(v.url)).toBe(true);
+    window.removeEventListener(EVENTO_LINK, ouvir);
+    expect(avisos).toEqual([v.rota]);
+    expect(destinoGuardado()).toBe(v.rota);
+    expect(chavesEValores(destinoGuardado()!)).toEqual(chavesEValores(v.url));
+    expect(new URLSearchParams(destinoGuardado()!.split("?")[1]).get("receipt_url")!.length).toBeGreaterThan(700);
+  });
+  it("passando de 500, só as chaves da volta seguem (a 1ª de cada, a que a tela lê); as de fora saem", () => {
+    const v = volta(900, { pagar: "mensalidade", lenc: "x1" });
+    expect(rotaDoLink(v.url)).toBe(semAs(v.rota, "pagar", "lenc"));
+    expect(rotaDoLink(`${volta(900).url}&order_nsu=0b9f4c2e-6a1d-4f3b-9c8e-1d2e3f4a5b6c-2`)).toBe(volta(900).rota);
+  });
+  it("até 500 nada muda: a volta curta e a do Mercado Pago seguem como sempre, com qualquer chave", () => {
+    expect(rotaDoLink(`https://physiqcalc.com.br/perfil/pagamentos?order_nsu=${PEDIDO}&transaction_nsu=1&x=1`)).toBe(`/perfil/pagamentos?order_nsu=${PEDIDO}&transaction_nsu=1&x=1`);
+    expect(rotaDoLink("https://physiqcalc.com.br/perfil/pagamentos?assinatura=ok")).toBe("/perfil/pagamentos?assinatura=ok");
+  });
+  it("rota estranha passando de 500 continua recusada: sem o order_nsu, fora de /perfil/pagamentos, outro host ou esquema", () => {
+    const longo = "a".repeat(600);
+    for (const url of [
+      `https://physiqcalc.com.br/perfil?x=${longo}`,
+      `https://physiqcalc.com.br/perfil/pagamentos?x=${longo}`,
+      `https://physiqcalc.com.br/perfil/pagamentos?receipt_url=${longo}&slug=s1`,
+      `https://physiqcalc.com.br/perfil/pagamentos?order_nsu=&receipt_url=${longo}`,
+      `https://physiqcalc.com.br/perfil/agenda?order_nsu=${PEDIDO}&receipt_url=${longo}`,
+      `https://physiqcalc.com.br/pagamentos?order_nsu=${PEDIDO}&receipt_url=${longo}`,
+      `https://physiqcalc.com.br/perfil/pagamentos/x?order_nsu=${PEDIDO}&receipt_url=${longo}`,
+      `https://physiqcalc.com.br/painel?order_nsu=${PEDIDO}&receipt_url=${longo}`,
+      `http://physiqcalc.com.br/perfil/pagamentos?order_nsu=${PEDIDO}&receipt_url=${longo}`,
+      `https://golpe.com/perfil/pagamentos?order_nsu=${PEDIDO}&receipt_url=${longo}`,
+    ]) {
+      expect(rotaDoLink(url), url.slice(0, 80)).toBeNull();
+    }
+  });
+  it("o destino guardado: a volta longa volta inteira; passando de 500 fora da forma da volta, não vale", () => {
+    const v = volta(900);
+    guardarDestino(v.rota);
+    expect(destinoGuardado()).toBe(v.rota);
+    esquecerDestino();
+    guardarDestino(`/perfil?x=${"a".repeat(600)}`);
+    expect(destinoGuardado()).toBeNull();
+    // gravado fora do rotaDoLink: com chave de fora, sem o order_nsu ou passando de 2048 → não vale
+    for (const rota of [`${v.rota}&pagar=mensalidade`, semAs(v.rota, "order_nsu"), volta(2049).rota]) {
+      localStorage.setItem("physiq_destino_do_link", JSON.stringify({ rota, em: Date.now() }));
+      expect(destinoGuardado(), rota.slice(0, 80)).toBeNull();
+    }
+  });
+  it("o site: a página da volta aberta pelo link guarda a volta inteira para depois de entrar", () => {
+    const v = volta(900);
+    window.history.replaceState(null, "", v.rota);
+    capturarDestinoDaUrl();
+    window.history.replaceState(null, "", "/");
+    expect(destinoGuardado()).toBe(v.rota);
+  });
+  it("a faixa 'Abrir no app' e o intent:// não mudam: passando de 500, a página sem a busca e a raiz, como sempre", () => {
+    const v = volta(900);
+    expect(intentDoApp(v.rota)).toContain("intent://physiqcalc.com.br/#Intent;");
+    expect(alvoDaFaixa({ pathname: "/perfil/pagamentos", search: v.rota.slice(v.rota.indexOf("?")), logado: true })).toBe("/perfil/pagamentos");
   });
 });
 
