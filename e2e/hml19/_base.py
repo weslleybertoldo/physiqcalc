@@ -80,6 +80,99 @@ def nova_rodada() -> str:
     return time.strftime("%m%d%H%M") + "-" + uuid.uuid4().hex[:4]
 
 
+# ───────────────────────── as sessões de TESTE guardadas entre os scripts ─────────────────────────
+# o contrato da etapa 2: reaproveitar a sessão entre os scripts e no máximo 10 logins (o registro de cada login de verdade fica em
+# agente/logins_etapa2.txt); renovar pelo refresh token NÃO é login. O arquivo das sessões é 600 e fica no TMPDIR da W (fora do repo).
+ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
+REG_LOGINS = SCRATCH / "agente" / "logins_etapa2.txt"
+MAX_LOGINS = 10
+FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
+
+
+def _refresh(sessao: dict) -> dict | None:
+    """Renova a sessão pelo refresh token (não é login). None = não deu (o refresh já foi usado ou venceu)."""
+    st, s, _ = B5.http("POST", f"{API_P}/auth/v1/token?grant_type=refresh_token", {"refresh_token": sessao.get("refresh_token", "")},
+                       B5.cab_login(API_P, B5.anon(PRINCIPAL_REF)))
+    return s if st == 200 and isinstance(s, dict) and s.get("access_token") else None
+
+
+class Sessoes:
+    """A interface dos Logins da hml-17 (sessao/token/uid/fechar), com a sessão de cada conta de TESTE guardada entre os scripts: vale
+    enquanto o access token tiver folga; perto de vencer, o refresh; sem nada, o login (contado, com teto). O fechar() NÃO sai (o próximo
+    script reaproveita); o logout local de todas é o sair(), no fim da etapa 2 (api.py --sair)."""
+
+    def __init__(self, motivo: str) -> None:
+        self.motivo = motivo
+        self.d: dict = {}
+        if ARQ_SESSOES.exists():
+            try:
+                self.d = json.loads(ARQ_SESSOES.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                self.d = {}
+
+    def _salvar(self) -> None:
+        ARQ_SESSOES.parent.mkdir(parents=True, exist_ok=True)
+        ARQ_SESSOES.write_text(json.dumps(self.d), encoding="utf-8")
+        ARQ_SESSOES.chmod(0o600)
+
+    @staticmethod
+    def logins_feitos() -> int:
+        return len(REG_LOGINS.read_text(encoding="utf-8").splitlines()) if REG_LOGINS.exists() else 0
+
+    def sessao(self, conta: str) -> dict:
+        email = B5.CONTAS[conta][0]
+        if not (C.eh_email_de_teste(email) or B5.email_de_teste(email)) or "revisao" in email.lower():
+            raise SystemExit(f"não é conta de teste: {conta}")
+        s = self.d.get(conta)
+        if s and int(s.get("expires_at") or 0) - time.time() < FOLGA_S:
+            s = _refresh(s)
+        if not s:
+            n = self.logins_feitos()
+            if n >= MAX_LOGINS:
+                raise SystemExit(f"os {MAX_LOGINS} logins da etapa 2 já foram usados ({REG_LOGINS}) — sem sessão guardada válida de {conta}")
+            s = B5.sessao(conta)
+            REG_LOGINS.parent.mkdir(parents=True, exist_ok=True)
+            with REG_LOGINS.open("a", encoding="utf-8") as f:
+                f.write(f"login {n + 1}/{MAX_LOGINS} {conta} {time.strftime('%H:%M:%S')} ({self.motivo})\n")
+        if self.d.get(conta) is not s:
+            self.d[conta] = s
+            self._salvar()
+        return s
+
+    def token(self, conta: str) -> str:
+        return self.sessao(conta)["access_token"]
+
+    def uid(self, conta: str) -> str:
+        return (self.sessao(conta).get("user") or {}).get("id") or ""
+
+    def fechar(self, o) -> None:
+        """As sessões FICAM para o próximo script (o logout local de todas é o sair, no fim da etapa 2)."""
+
+    def do_navegador(self, conta: str, pg) -> None:
+        """Se o app renovou a sessão no meio do teste, a mais nova volta para o arquivo (o refresh token antigo já não vale)."""
+        try:
+            v = pg.evaluate("() => localStorage.getItem('physiq-principal-auth')")
+            s = json.loads(v) if v else None
+        except Exception:  # noqa: BLE001
+            return
+        if isinstance(s, dict) and s.get("access_token") and s.get("refresh_token") \
+                and s.get("refresh_token") != (self.d.get(conta) or {}).get("refresh_token"):
+            self.d[conta] = s
+            self._salvar()
+
+    def sair(self, o) -> None:
+        """O logout (scope=local) de cada sessão guardada e o arquivo apagado — no fim da etapa 2."""
+        for conta, s in list(self.d.items()):
+            try:
+                st: object = C.sair_local(s.get("access_token", ""), "principal")
+            except Exception as e:  # noqa: BLE001
+                st = type(e).__name__
+            o.ok(st in (200, 204), f"logout (scope=local) da sessão guardada de {conta} ({st})", parar=False)
+        self.d = {}
+        if ARQ_SESSOES.exists():
+            ARQ_SESSOES.unlink()
+
+
 # ───────────────────────── a função como a tela chama ─────────────────────────
 def funcao(token: str | None, acao: str | None, corpo: dict | None = None, *, origem: str | None = None, schema_: str | None = None,
            sem_auth: bool = False, timeout: int = 60) -> tuple[int, dict, dict, float]:

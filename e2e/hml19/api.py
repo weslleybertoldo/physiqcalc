@@ -23,10 +23,11 @@ Casos (a ordem é sempre esta):
   N9  anexo registrado com caminho de outra pasta → 403 fora_da_pasta; o caminho certo sem o arquivo → 400 anexo_nao_enviado
 Produção (--base prod --so-leitura): OPTIONS (CORS), sem login → 401, x-schema inválido → 400, ação desconhecida → 400 — nada grava.
 
-Uso: python3 e2e/hml19/api.py --area prontuario [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura]
+Uso: python3 e2e/hml19/api.py --area prontuario [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
   --seco    sem rede, sem login, sem banco: monta TODOS os pedidos da rodada e confere cada um contra as regras do servidor (o próprio
             _shared/nutricao-regras.ts, pelo node) + N3/N4/N5 nas regras + o SQL da limpeza
   --limpar  só desfaz uma rodada que caiu no meio (pelo arquivo de estado)
+  --sair    o logout (scope=local) das sessões de TESTE guardadas entre os scripts (_base.Sessoes) — no fim da etapa 2
 Antes de rodar no staging: a nutricao publicada e a migration 20261011100000 aplicada no staging; ~/.pc-pat; as senhas de TESTE.
 """
 from __future__ import annotations
@@ -524,6 +525,7 @@ def main() -> int:
     modo.add_argument("--seco", action="store_true")
     modo.add_argument("--limpar", action="store_true")
     modo.add_argument("--so-leitura", action="store_true")
+    modo.add_argument("--sair", action="store_true")
     a = ap.parse_args()
     casos = [c.strip() for c in a.casos.split(",") if c.strip()]
     if any(c not in CASOS for c in casos):
@@ -532,11 +534,15 @@ def main() -> int:
         o = C.Saida(f"api_{a.area}_seco")
         seco(o, a.area)
         return o.fim()  # o --seco não vai ao e2e-rodadas (não é prova contra uma base)
+    if a.sair:
+        o = C.Saida("sessoes_sair")
+        B.Sessoes("sair").sair(o)
+        return o.fim()
     if a.base == "prod" and not a.so_leitura:
         raise SystemExit("produção só com --so-leitura")
     s = B.usar_base(a.base)
     o = C.Saida(f"api_{a.area}_{a.base}" + ("_limpar" if a.limpar else ""))
-    L = B.B17.Logins()
+    L = B.Sessoes(f"api {a.area} {a.base}" + (" --limpar" if a.limpar else ""))
     try:
         B.exigir_saude(o, "o api.py")
         if a.base == "prod":

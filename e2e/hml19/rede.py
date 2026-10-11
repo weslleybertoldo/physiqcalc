@@ -222,7 +222,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     s = B.usar_base(base)
-    L = B.B17.Logins()
+    L = B.Sessoes(f"rede {base}")
     rodada = B.nova_rodada()
     commit = commit_medido(base)
     if base == "prod":  # produção: só abre cada seção 1 vez (nada grava)
@@ -268,6 +268,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None) -> None:
                     o.ok(all("nutricao" in b or "padroes" in b for b in guarda.bloqueadas) and len(guarda.bloqueadas) <= 2,
                          f"[prod] a Guarda barrou só o padroes_garantir das seções que semeiam ({guarda.bloqueadas})")
             finally:
+                L.do_navegador(B.P_CONTA, t.pg)
                 t.fim()
                 nav.close()
         if s == "staging":
@@ -296,7 +297,7 @@ def main() -> int:
     try:
         if a.limpar:
             s = B.usar_base("staging")
-            L = B.B17.Logins()
+            L = B.Sessoes("rede --limpar")
             try:
                 limpar_massa(o, s, L.uid(B.P_CONTA), L.token(B.P_CONTA))
             finally:

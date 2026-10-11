@@ -12,12 +12,15 @@ Padrão (H-81): a nutricao BARRADA no navegador (route.abort): a semente falha e
 (e a cópia de 900 px de cada um, para conferir). Nada grava com a nutricao barrada; no --normal, o garantir só grava se a nutri de teste
 não tiver o padrão (a tela faria o mesmo ao abrir).
 Seções da hml-19a: anamnese, questionarios, exames, documentos (Manipulados, Metas e Orientações entram na hml-19b).
-Uso: python3 e2e/hml19/laco.py --base local --canal msedge [--segundos 30] [--secoes anamnese,questionarios,exames,documentos] [--normal | --seco]
+Uso: python3 e2e/hml19/laco.py --base local --canal msedge [--segundos 30] [--secoes anamnese,questionarios,exames,documentos] [--normal | --antes | --seco]
+  --antes o ANTES no staging (o código antigo): só mede e tira os prints staging_a_* (as seções abertas `--segundos`, 8 por padrão — o
+          laço de leitura do código antigo pesa no banco; a Anamnese com os modelos barrados no navegador mostra o erro de antes)
   --seco  sem rede e sem navegador: os seletores existem no código e a contagem acerta pedidos de exemplo
 """
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import time
 from pathlib import Path
@@ -81,11 +84,58 @@ def seco(o) -> None:
     o.ok(m["padroes_garantir"] == 1 and m["get_profiles"] == 1 and m["rest_gravacao"] == 0, "a contagem do depois: 1 garantir, 1 GET profiles, 0 gravação")
 
 
+class BarrarModelosAntigos:
+    """O ANTES (código antigo): a Anamnese lia e semeava os modelos direto em /rest/v1/modelos_anamnese — barrado aqui (route.abort),
+    para o print do erro de antes (o toast) ficar ao lado do aviso novo."""
+
+    def __init__(self) -> None:
+        self.barradas = 0
+
+    def instalar(self, ctx) -> None:
+        def rota(route, req) -> None:
+            self.barradas += 1
+            route.abort()
+        ctx.route(re.compile(r"https://api-principal\.physiqcalc\.com\.br/rest/v1/modelos_anamnese"), rota)
+
+
+def rodar_antes(o, secoes: list[str], segundos: float, canal: str | None) -> None:
+    """O ANTES no staging (o código antigo): só mede e tira os prints staging_a_* — nada é afirmado do comportamento antigo."""
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    B.usar_base("staging")
+    L = B.Sessoes("laco --antes")
+    try:
+        B.exigir_saude(o, "o laco.py --antes")
+        pac = B.B17.matricula_da_aluna()
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
+            for s in secoes:
+                t = B.B17.Tela(nav, B.BASES["staging"], "hml19_staging", f"antes_{s}")
+                B.LegalDesligado().instalar(t.ctx)
+                barrar = BarrarModelosAntigos() if s == "anamnese" else None
+                if barrar:
+                    barrar.instalar(t.ctx)
+                try:
+                    t.entrar(L, B.P_CONTA, R.rota(pac, s))
+                    aberta = t.esperar(lambda: t.tem(RAIZ[s]), 60)
+                    t.zerar_pedidos()
+                    t.pg.wait_for_timeout(int(segundos * 1000))
+                    m = medir(B.contar(t.pedidos), barrar.barradas if barrar else 0, s)
+                    o.ok(aberta, f"[antes] {s} abriu no staging ({R.commit_medido('staging')}): {segundos:.0f} s → {m}")
+                    R.print_reduzido(t, "staging", "a_anamnese_erro" if s == "anamnese" else f"a_{s}", o)
+                finally:
+                    L.do_navegador(B.P_CONTA, t.pg)
+                    t.fim()
+            nav.close()
+    finally:
+        L.fechar(o)
+
+
 def rodar(o, base: str, secoes: list[str], segundos: float, normal: bool, canal: str | None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     B.usar_base(base)
-    L = B.B17.Logins()
+    L = B.Sessoes(f"laco {base}" + (" --normal" if normal else ""))
     try:
         B.exigir_saude(o, "o laco.py")
         pac = B.B17.matricula_da_aluna()
@@ -119,6 +169,7 @@ def rodar(o, base: str, secoes: list[str], segundos: float, normal: bool, canal:
                     if not normal and s == "anamnese":
                         R.print_reduzido(t, base, "a_anamnese_erro", o)
             finally:
+                L.do_navegador(B.P_CONTA, t.pg)
                 t.fim()
                 nav.close()
     finally:
@@ -129,10 +180,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="hml-19a — H-81 e o laço de leitura: as seções abertas 30 s")
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
-    ap.add_argument("--segundos", type=float, default=30)
+    ap.add_argument("--segundos", type=float, default=None, help="30 (8 no --antes)")
     ap.add_argument("--secoes", default=",".join(SECOES))
     modo = ap.add_mutually_exclusive_group()
     modo.add_argument("--normal", action="store_true")
+    modo.add_argument("--antes", action="store_true")
     modo.add_argument("--seco", action="store_true")
     a = ap.parse_args()
     secoes = [s.strip() for s in a.secoes.split(",") if s.strip()]
@@ -142,9 +194,15 @@ def main() -> int:
         o = C.Saida("laco_seco")
         seco(o)
         return o.fim()
-    o = C.Saida(f"laco_{a.base}" + ("_normal" if a.normal else ""))
+    if a.antes and a.base != "staging":
+        raise SystemExit("--antes é o staging com o código antigo (--base staging)")
+    segundos = a.segundos if a.segundos is not None else (8 if a.antes else 30)
+    o = C.Saida(f"laco_{a.base}" + ("_normal" if a.normal else "_antes" if a.antes else ""))
     try:
-        rodar(o, a.base, secoes, a.segundos, a.normal, a.canal)
+        if a.antes:
+            rodar_antes(o, secoes, segundos, a.canal)
+        else:
+            rodar(o, a.base, secoes, segundos, a.normal, a.canal)
     except (Exception, SystemExit) as e:  # noqa: BLE001
         o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
     C.C2.registrar_rodada(o.oks, o.oks + o.falhas)
