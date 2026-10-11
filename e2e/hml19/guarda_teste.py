@@ -5,6 +5,7 @@ pedidos de mentira passam pela decisão de cada uma.
   e2e/hml17/_base.py  Guarda.escrita (a de todos os E2E da hml-17/18/19): a nutricao grava em TODA ação; função que a Guarda não
                       conhece = gravação; as que existiam seguem a regra de antes (pagamentos-aluno, admin-semana-treinos e admin-tags
                       pela ação; admin-delete-user e admin-update-user sempre); toda função das pastas do repo tem de estar decidida.
+                      hml-19c (decisão K): a admin-avaliacoes só lê na "list" — as de antes que gravam e as foto_* ficam barradas.
   e2e/w26/prod.py     eh_escrita: o POST na nutricao é escrita (como o POST em tabela); a leitura passa.
 Uso: python3 e2e/hml19/guarda_teste.py   (sai 1 se algum caso falhar)
 """
@@ -47,6 +48,8 @@ T = "https://api.physiqcalc.com.br"
 def casos_hml17(b) -> list[tuple]:
     g = b.Guarda()
     fn = lambda nome, acao=None, metodo="POST", host=P: g.escrita(Pedido(metodo, f"{host}/functions/v1/{nome}", {"acao": acao} if acao else {}))  # noqa: E731
+    # hml-19c: as funções do Treino mandam a ação em "action" (o corpo como a tela manda)
+    fnt = lambda nome, action=None, metodo="POST": g.escrita(Pedido(metodo, f"{T}/functions/v1/{nome}", {"action": action} if action else {}))  # noqa: E731
     saida = [
         # a nutricao: toda ação grava (inclusive a que só "garante" os padrões) — o preflight passa
         ("nutricao › anamnese_criar", fn("nutricao", "anamnese_criar"), True),
@@ -81,6 +84,23 @@ def casos_hml17(b) -> list[tuple]:
         ("admin-semana-treinos › salvar (grava)", fn("admin-semana-treinos", "salvar", host=T), True),
         ("admin-tags › list (leitura)", fn("admin-tags", "list", host=T), False),
         ("admin-tags › add (grava)", fn("admin-tags", "add", host=T), True),
+        # hml-19c (decisão K): a admin-avaliacoes só lê na "list"; as de antes que gravam e as foto_* ficam barradas na produção
+        ("admin-avaliacoes › list (leitura)", fnt("admin-avaliacoes", "list"), False),
+        ("admin-avaliacoes › create (grava)", fnt("admin-avaliacoes", "create"), True),
+        ("admin-avaliacoes › update (grava)", fnt("admin-avaliacoes", "update"), True),
+        ("admin-avaliacoes › proxima (grava)", fnt("admin-avaliacoes", "proxima"), True),
+        ("admin-avaliacoes › delete (grava)", fnt("admin-avaliacoes", "delete"), True),
+        ("admin-avaliacoes › foto_preparar (grava)", fnt("admin-avaliacoes", "foto_preparar"), True),
+        ("admin-avaliacoes › foto_salvar (grava)", fnt("admin-avaliacoes", "foto_salvar"), True),
+        ("admin-avaliacoes › foto_excluir (grava)", fnt("admin-avaliacoes", "foto_excluir"), True),
+        ("admin-avaliacoes › sem ação (na dúvida, grava)", fnt("admin-avaliacoes"), True),
+        ("admin-avaliacoes › OPTIONS (preflight)", fnt("admin-avaliacoes", "foto_salvar", "OPTIONS"), False),
+        ("nutricao › antropometria_criar (Avaliação)", fn("nutricao", "antropometria_criar"), True),
+        ("nutricao › foto_evolucao_preparar (Avaliação)", fn("nutricao", "foto_evolucao_preparar"), True),
+        ("nutricao › avaliacao_avisar (Avaliação)", fn("nutricao", "avaliacao_avisar"), True),
+        ("RPC aluno_avisar_avaliacao (saiu do front; grava)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/aluno_avisar_avaliacao", {})), True),
+        ("Storage: a foto mensal pelo link assinado do Treino (PUT)", g.escrita(Pedido("PUT", f"{T}/storage/v1/object/upload/sign/registros/a/2000-01/frente.jpg?token=x")), True),
+        ("Storage: o link de leitura da foto mensal (sign, Treino)", g.escrita(Pedido("POST", f"{T}/storage/v1/object/sign/registros/a/2000-01/frente.jpg", {})), False),
         # tabela, RPC e Storage (sem mudança)
         ("POST em tabela", g.escrita(Pedido("POST", f"{P}/rest/v1/anamneses")), True),
         ("PATCH em tabela", g.escrita(Pedido("PATCH", f"{P}/rest/v1/anexos?id=eq.x")), True),

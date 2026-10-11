@@ -6,8 +6,9 @@
 // erro_interno + aviso). As leituras seguem pela tela (H-42 = etapa 2 do jeito 2).
 // Módulos por área: prontuario.ts (hml-19a — as 18 tabelas do Prontuário, o bucket de anexos pelo link assinado e os padrões do 1º
 // acesso, H-81); dieta.ts (hml-19b — as 19 tabelas da Dieta e das Dietas, as RPCs atômicas e os padrões de Manipulados, Metas e
-// Orientações); aluno.ts (hml-19b — o app do aluno: marcar refeição/meta e a foto do diário pelo link assinado). A Avaliação (hml-19c)
-// entra como módulo novo, na mesma função. O despacho (moduloDoPedido, em _shared/nutricao-regras.ts) é a lista fechada das 3.
+// Orientações); aluno.ts (hml-19b — o app do aluno: marcar refeição/meta e a foto do diário pelo link assinado); avaliacao.ts (hml-19c —
+// a Avaliação do perfil do aluno: a antropometria, as fotos de evolução pelo link assinado e o aviso "avaliação nova"). O despacho
+// (moduloDoPedido, em _shared/nutricao-regras.ts) é a lista fechada das 4.
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, ... }
 // 200 → { ok: true, ... } (linha · linhas · lista · registro/criado · bucket/caminho/token) · 4xx/5xx → { ok: false, erro }.
@@ -15,10 +16,12 @@
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions nutricao true
 // Precisa no banco, no schema do pedido: a migration 20261011100000_hml19a_nutricao_padroes.sql (a RPC nutricao_garantir_padroes;
 // sem ela só o padroes_garantir falha — as outras ações usam as tabelas e as policies de hoje) e a 20261011110000_hml19b_dieta_atomicas.sql
-// (as 7 RPCs dieta_*; sem ela só as ações tudo-ou-nada da Dieta falham).
+// (as 7 RPCs dieta_*; sem ela só as ações tudo-ou-nada da Dieta falham). A Avaliação (hml-19c) não precisa de migration: as 2 tabelas,
+// as policies, o bucket evolucao e a RPC aluno_avisar_avaliacao de hoje.
 import { json, servirComoPessoa, type ContextoPessoa } from "../_shared/porta-pessoa.ts";
 import { moduloDoPedido, statusDoErro, type PedidoNutricao } from "../_shared/nutricao-regras.ts";
 import { atenderAluno } from "./aluno.ts";
+import { atenderAvaliacao } from "./avaliacao.ts";
 import { atenderDieta } from "./dieta.ts";
 import { atenderProntuario } from "./prontuario.ts";
 
@@ -31,6 +34,8 @@ function atender(c: ContextoPessoa, pedido: PedidoNutricao) {
       return atenderDieta(c, pedido.acao);
     case "aluno":
       return atenderAluno(c, pedido.acao);
+    case "avaliacao":
+      return atenderAvaliacao(c, pedido.acao);
   }
 }
 

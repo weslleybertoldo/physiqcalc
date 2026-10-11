@@ -72,6 +72,23 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
   hoje byte a byte). Os grants e as policies das 19 tabelas **ficam** nesta etapa (a função grava com a sessão da pessoa; os APKs
   antigos ainda gravam direto — `docs/desvios.md`, desvio 2).
 
+## Principal e Treino: a Avaliação pelas funções (hml-19c, H-41 · jeito 2)
+- **Principal:** `antropometrias`, `fotos_evolucao` (e o arquivo no bucket `evolucao`/`evolucao-staging`) não são mais gravadas do
+  navegador: a função `nutricao` (módulo `avaliacao.ts`) grava **como a pessoa**, com o dono vindo do `user` (nunca do corpo). A foto
+  sobe pelo link assinado (`createSignedUploadUrl` com a sessão da pessoa: a policy do bucket confere a 1ª pasta = quem chama, ou o
+  master); o registro confere o arquivo naquele caminho; excluir = a linha à Lixeira e **depois** o arquivo (falhou o remove → log
+  `arquivo_orfao`). O aviso "avaliação nova" chama a **mesma** `aluno_avisar_avaliacao` (definer, sem mudança de grant) pela função,
+  como a pessoa — ela saiu do navegador (e do `RPC_QUE_GRAVAM` do `src/integrations/repeticao.ts`).
+- **Treino:** a foto mensal (`physiq_registros_fotos` + o bucket `registros`/`registros-staging`) vai pela `admin-avaliacoes` (ações
+  `foto_preparar`, `foto_salvar`, `foto_excluir`) **como a pessoa** (a chave anon + o token de quem chama; nenhuma chave secreta nessas
+  3): o RLS "Staff gerencia registros dos seus alunos" e as policies do bucket decidem como antes. O escopo é a mesma regra da W3,
+  perguntada como a pessoa (`pode_ver_aluno_treino`, que já tinha EXECUTE para `authenticated`). As ações de antes da função
+  (`list`, `create`, `update`, `proxima`, `delete`) seguem com a `service_role`, sem mudança.
+- Atenção (catálogo, 11/10/2026): a policy `registros_professor_write` do Storage do Treino vale para os 2 buckets e lê o vínculo em
+  `public.physiq_profiles` **ou** `staging.physiq_profiles` — o vínculo da produção também decide no bucket do staging (e vice-versa).
+- Nenhuma migration: os grants e as policies das 3 tabelas e dos 2 buckets **ficam** nesta etapa (a função grava com a sessão da
+  pessoa; os APKs antigos ainda gravam direto — `docs/desvios.md`, desvio 2).
+
 ## Treino: quem lê os treinos montados
 - `tb_grupos_treino` e `tb_grupos_exercicios` (`physiq_pode_ler_grupo`): o master; o professor dono; qualquer profissional,
   se o grupo é do catálogo global do master (`professor_id` vazio); e o aluno que recebe o grupo (`tb_grupos_treino_perfis`).

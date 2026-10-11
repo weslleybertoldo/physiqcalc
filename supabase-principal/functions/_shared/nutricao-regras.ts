@@ -38,7 +38,8 @@ export type Campo =
   | { tipo: "instante" }
   | { tipo: "numero"; nulo?: boolean; inteiro?: boolean; min?: number; max?: number }
   | { tipo: "booleano" }
-  | { tipo: "opcao"; valores: readonly string[] }
+  /** hml-19c: `nulo` = a coluna aceita null (o sexo da antropometria); sem ele, como antes */
+  | { tipo: "opcao"; valores: readonly string[]; nulo?: boolean }
   | { tipo: "textos"; maxItens: number; maxItem: number }
   | { tipo: "json"; forma: "lista" | "objeto"; maxBytes: number }
   /** hml-19b: lista de inteiros entre min e max (os dias da semana, smallint[]) */
@@ -458,6 +459,8 @@ export const STATUS_DO_ERRO: Record<string, number> = {
   // hml-19b — os códigos das RPCs do app do aluno que a tela já traduz (ERROS_DA_MARCACAO, ERROS_DO_DIARIO): os de fora daqui são 400
   codigo_invalido: 403, diario_desligado: 403, link_desligado: 403,
   muitos_envios: 429,
+  // hml-19c — o aviso "avaliação nova" (ERROS_DO_AVISO): o aluno da rota que não existe (a w14_matricula_da_rota)
+  aluno_inexistente: 404,
 };
 
 export function statusDoErro(erro: unknown): number {
@@ -947,15 +950,159 @@ export function lerEnvioDoDiario(corpo: Record<string, unknown>):
   };
 }
 
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// hml-19c (H-41 · jeito 2, 11/10/2026) — a Avaliação (Perfil do aluno › Avaliação), a parte do banco principal (spec hml-19 §1.4,
+// §2.4 item 2). O MESMO desenho, em listas à parte (as do Prontuário, da Dieta e do app do aluno não mudam):
+//   · antropometria_criar | _editar | _excluir: o CRUD declarativo de `antropometrias` com as colunas que a tela grava hoje (o colunas(r)
+//     de src/nutricao/editor/lib/antropometrias.ts), com tipo e tamanho; o dono (nutricionista_id) = quem chama; excluir = a Lixeira;
+//   · as fotos de evolução: foto_evolucao_preparar (o caminho <quem chama>/<aluno>/<uuid>-<nome seguro> — o montarPath de hoje = o
+//     caminhoDoAnexo —, o tipo e o tamanho com os limites da tela e do bucket) → o navegador sobe no link assinado →
+//     foto_evolucao_registrar (o caminho de quem chama + posição, data e observação) · _editar (posição, data, observação) · _excluir;
+//   · avaliacao_avisar { alunoId }: a RPC aluno_avisar_avaliacao de hoje (definer), como a pessoa.
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+/** As 2 tabelas da Avaliação no principal (spec §1.4): a antropometria e as fotos de evolução (o arquivo fica no bucket evolucao). */
+export const TABELAS_AVALIACAO = ["antropometrias", "fotos_evolucao"] as const;
+export type TabelaAvaliacao = (typeof TABELAS_AVALIACAO)[number];
+
+/** Os protocolos de % de gordura e os sexos (os checks de `antropometrias` e o PROTOCOLOS/SEXOS da tela). */
+export const PROTOCOLOS_ANTROPOMETRIA = ["nenhum", "pollock3", "pollock7", "faulkner", "guedes"] as const;
+export const SEXOS_ANTROPOMETRIA = ["masculino", "feminino"] as const;
+/** As 4 posições da foto de evolução (o check de `fotos_evolucao` e o POSICOES da tela). */
+export const POSICOES_FOTO_EVOLUCAO = ["frente", "costas", "lado_d", "lado_e"] as const;
+
+/** Medidas e resultados da antropometria (jsonb objeto: {"cintura": 80.5, …}). */
+const MEDIDAS: Campo = { tipo: "json", forma: "objeto", maxBytes: 100_000 };
+/**
+ * As colunas que a tela grava hoje (o colunas(r) de antropometrias.ts: data, peso, altura, sexo, idade, protocolo, circunferências,
+ * dobras, resultados e observação), com tipo e tamanho. Os números ficam sem teto aqui: o limite fino é o check do banco (peso e altura
+ * entre 0 e 1000, idade entre 0 e 130 → dados_invalidos).
+ */
+export const C_ANTROPOMETRIA: Campos = {
+  data: instante, peso: numeroNulo, altura: numeroNulo, sexo: { tipo: "opcao", valores: SEXOS_ANTROPOMETRIA, nulo: true }, idade: inteiroNulo,
+  protocolo: opcao(PROTOCOLOS_ANTROPOMETRIA), circunferencias: MEDIDAS, dobras: MEDIDAS, resultados: MEDIDAS, observacao: texto(MEDIO, true),
+};
+/** Posição, data e observação da foto de evolução (a imagem não muda: para trocar, exclui e envia outra — a regra de hoje). */
+export const C_FOTO_EVOLUCAO: Campos = { posicao: opcao(POSICOES_FOTO_EVOLUCAO), data, observacao: texto(CURTO, true) };
+
+interface AvaliacaoInserir { tabela: TabelaAvaliacao; operacao: "inserir"; campos: Campos; obrigatorios: readonly string[] }
+interface AvaliacaoEditar { tabela: TabelaAvaliacao; operacao: "editar"; campos: Campos }
+interface AvaliacaoExcluirSuave { tabela: TabelaAvaliacao; operacao: "excluir_suave" }
+interface AvaliacaoEspecial { tabela: TabelaAvaliacao | null; operacao: "especial"; rpc?: "aluno_avisar_avaliacao" }
+export type DefinicaoAcaoAvaliacao = AvaliacaoInserir | AvaliacaoEditar | AvaliacaoExcluirSuave | AvaliacaoEspecial;
+
+/** As ações da Avaliação (as do Prontuário ficam em ACOES; as da Dieta em ACOES_DIETA; as do app do aluno em ACOES_ALUNO). */
+export const ACOES_AVALIACAO = {
+  // Antropometria (o excluir é a Lixeira — deleted_at —, como hoje)
+  antropometria_criar: { tabela: "antropometrias", operacao: "inserir", campos: { paciente_id: uuid, ...C_ANTROPOMETRIA }, obrigatorios: ["paciente_id", "data"] },
+  antropometria_editar: { tabela: "antropometrias", operacao: "editar", campos: C_ANTROPOMETRIA },
+  antropometria_excluir: { tabela: "antropometrias", operacao: "excluir_suave" },
+  // Fotos de evolução: o arquivo pelo link assinado (preparar → o navegador sobe → registrar); excluir = a linha à Lixeira e DEPOIS o arquivo
+  foto_evolucao_preparar: { tabela: "fotos_evolucao", operacao: "especial" },
+  foto_evolucao_registrar: { tabela: "fotos_evolucao", operacao: "especial" },
+  foto_evolucao_editar: { tabela: "fotos_evolucao", operacao: "editar", campos: C_FOTO_EVOLUCAO },
+  foto_evolucao_excluir: { tabela: "fotos_evolucao", operacao: "especial" },
+  // O aviso "avaliação nova" no sino do aluno (NF9): a RPC de hoje, como a pessoa
+  avaliacao_avisar: { tabela: null, operacao: "especial", rpc: "aluno_avisar_avaliacao" },
+} as const satisfies Record<string, DefinicaoAcaoAvaliacao>;
+
+export type AcaoAvaliacao = keyof typeof ACOES_AVALIACAO;
+export const ACOES_DA_AVALIACAO = Object.keys(ACOES_AVALIACAO) as AcaoAvaliacao[];
+
+/** A ação da Avaliação, se está na lista fechada; senão null. */
+export function acaoDaAvaliacao(v: unknown): AcaoAvaliacao | null {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(ACOES_AVALIACAO, v) ? (v as AcaoAvaliacao) : null;
+}
+
+export type GravacaoAvaliacao =
+  | { ok: true; tabela: TabelaAvaliacao; operacao: "inserir"; valores: Record<string, unknown> }
+  | { ok: true; tabela: TabelaAvaliacao; operacao: "editar"; id: string; valores: Record<string, unknown> }
+  | { ok: true; tabela: TabelaAvaliacao; operacao: "excluir_suave"; id: string; valores: { deleted_at: string } }
+  | { ok: false; erro: "acao_invalida" | "dados_invalidos"; campo?: string };
+
+/**
+ * Monta a gravação de uma ação declarativa da Avaliação: confere o corpo pela lista da ação e põe o dono (nutricionista_id = `userId`)
+ * no inserir. Ação especial (foto_evolucao_preparar/registrar/excluir, avaliacao_avisar) não passa por aqui → acao_invalida.
+ */
+export function montarGravacaoAvaliacao(acao: string, corpo: Record<string, unknown>, userId: string, agora: Date = new Date()): GravacaoAvaliacao {
+  const nome = acaoDaAvaliacao(acao);
+  if (!nome) return { ok: false, erro: "acao_invalida" };
+  const def: DefinicaoAcaoAvaliacao = ACOES_AVALIACAO[nome];
+  if (!ehUuid(userId)) return { ok: false, erro: "dados_invalidos", campo: "user" };
+  switch (def.operacao) {
+    case "inserir": {
+      const r = lerCampos(corpo, def.campos, def.obrigatorios);
+      if (r.ok === false) return r;
+      return { ok: true, tabela: def.tabela, operacao: "inserir", valores: { ...r.valores, nutricionista_id: userId } };
+    }
+    case "editar": {
+      if (!ehUuid(corpo.id)) return { ok: false, erro: "dados_invalidos", campo: "id" };
+      const r = lerCampos(corpo, def.campos);
+      if (r.ok === false) return r;
+      if (Object.keys(r.valores).length === 0) return { ok: false, erro: "dados_invalidos", campo: "nada_a_mudar" };
+      return { ok: true, tabela: def.tabela, operacao: "editar", id: corpo.id.toLowerCase(), valores: r.valores };
+    }
+    case "excluir_suave":
+      if (!ehUuid(corpo.id)) return { ok: false, erro: "dados_invalidos", campo: "id" };
+      return { ok: true, tabela: def.tabela, operacao: "excluir_suave", id: corpo.id.toLowerCase(), valores: { deleted_at: agora.toISOString() } };
+    case "especial":
+      return { ok: false, erro: "acao_invalida" };
+  }
+}
+
+/** As fotos de evolução: 10 MB e JPEG/PNG/WebP — o bucket evolucao (file_size_limit, allowed_mime_types) e o validarImagem da tela. */
+export const FOTO_EVOLUCAO_MAX_BYTES = 10 * 1024 * 1024;
+export const FOTO_EVOLUCAO_MIMES = ["image/jpeg", "image/png", "image/webp"] as const;
+/** O bucket do ambiente (hml-02b: no staging, o "-staging" — teste nunca cai no bucket da produção). */
+export function bucketDaEvolucao(schema: "public" | "staging"): string {
+  return schema === "staging" ? "evolucao-staging" : "evolucao";
+}
+
+/** foto_evolucao_preparar { paciente_id, nome, tipo, tamanho }: o aluno, o nome (para o caminho), o tipo (só imagem do bucket) e até 10 MB. */
+export function lerPedidoDeFotoEvolucao(corpo: Record<string, unknown>):
+  | { ok: true; pacienteId: string; nome: string; mime: string; tamanho: number }
+  | Recusa<"dados_invalidos" | "tipo_invalido" | "arquivo_grande"> {
+  if (!ehUuid(corpo.paciente_id)) return recusada("paciente_id");
+  const nome = typeof corpo.nome === "string" ? corpo.nome.trim() : "";
+  if (!nome || nome.length > ANEXO_NOME_MAX) return recusada("nome");
+  const mime = typeof corpo.tipo === "string" ? corpo.tipo.trim().toLowerCase() : "";
+  if (!(FOTO_EVOLUCAO_MIMES as readonly string[]).includes(mime)) return { ok: false, erro: "tipo_invalido" };
+  const tamanho = corpo.tamanho;
+  if (typeof tamanho !== "number" || !Number.isInteger(tamanho) || tamanho <= 0) return recusada("tamanho");
+  if (tamanho > FOTO_EVOLUCAO_MAX_BYTES) return { ok: false, erro: "arquivo_grande" };
+  return { ok: true, pacienteId: corpo.paciente_id.toLowerCase(), nome, mime, tamanho };
+}
+
+/**
+ * foto_evolucao_registrar { …o pedido, caminho, posicao, data, observacao }: o caminho tem de ser de quem chama, daquele aluno, no formato
+ * do caminhoDoAnexo (N9: outra pasta → fora_da_pasta); posição e data obrigatórias; observação até o teto. O dono e o caminho são do
+ * servidor; o tamanho que vale é o do arquivo que chegou (a função lê no Storage).
+ */
+export function lerRegistroDeFotoEvolucao(corpo: Record<string, unknown>, userId: string):
+  | { ok: true; pacienteId: string; caminho: string; mime: string; tamanho: number; valores: Record<string, unknown> }
+  | Recusa<"dados_invalidos" | "tipo_invalido" | "arquivo_grande" | "fora_da_pasta"> {
+  const p = lerPedidoDeFotoEvolucao(corpo);
+  if (p.ok === false) return p;
+  if (!ehUuid(userId) || !caminhoDeQuemChama(corpo.caminho, userId, p.pacienteId)) return { ok: false, erro: "fora_da_pasta" };
+  const r = lerCampos(corpo, C_FOTO_EVOLUCAO, ["posicao", "data"]);
+  if (r.ok === false) return r;
+  return { ok: true, pacienteId: p.pacienteId, caminho: corpo.caminho as string, mime: p.mime, tamanho: p.tamanho, valores: r.valores };
+}
+
+/** Os códigos que a w14_matricula_da_rota (dentro da aluno_avisar_avaliacao) devolve de propósito (raise exception '<código>'). */
+export const ERROS_DO_AVISO = ["sem_login", "sem_acesso", "aluno_inexistente"] as const;
+
 // ───────────────────────── o despacho: qual módulo da função atende o pedido ─────────────────────────
 export type PedidoNutricao =
   | { modulo: "prontuario"; acao: AcaoNutricao }
   | { modulo: "dieta"; acao: AcaoDieta | "padroes_garantir" }
-  | { modulo: "aluno"; acao: AcaoAluno };
+  | { modulo: "aluno"; acao: AcaoAluno }
+  | { modulo: "avaliacao"; acao: AcaoAvaliacao };
 
 /**
  * O módulo e a ação do pedido (null = acao_invalida). Os padrões das 3 seções da Dieta (fórmula, meta, orientação) vão ao módulo da
  * Dieta; os do Prontuário — e qualquer outra seção, que lá vira secao_invalida como antes — seguem no prontuario.ts, sem mudança.
+ * hml-19c: as da Avaliação vão ao avaliacao.ts (as 4 listas não se cruzam — o nutricaoServidor.test.ts confere).
  */
 export function moduloDoPedido(corpo: Record<string, unknown>): PedidoNutricao | null {
   const v = corpo.acao;
@@ -966,5 +1113,7 @@ export function moduloDoPedido(corpo: Record<string, unknown>): PedidoNutricao |
   if (dieta) return { modulo: "dieta", acao: dieta };
   const aluno = acaoDoAluno(v);
   if (aluno) return { modulo: "aluno", acao: aluno };
+  const avaliacao = acaoDaAvaliacao(v);
+  if (avaliacao) return { modulo: "avaliacao", acao: avaliacao };
   return null;
 }

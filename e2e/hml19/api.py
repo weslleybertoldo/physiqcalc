@@ -30,8 +30,10 @@ limpeza do `finally` roda mesmo com o processo cortado.
 hml-19b: --area dieta (a Dieta e as Dietas: P, N1–N8) e --area aluno (o app: P, N1, N9 — o ✓ da refeição e da meta, a foto do diário
 pelo link assinado, o balde do limite por IP e o link público) — os casos em api_dieta.py; o estado guarda a área (o --limpar desfaz a
 rodada da área que caiu).
+hml-19c: --area avaliacao (a Avaliação: a foto mensal pela admin-avaliacoes do Treino, no mês sentinela; a antropometria, a foto de
+evolução pelo link assinado e o aviso pela nutricao — P, N1–N9) — os casos em api_avaliacao.py; o --limpar desfaz a rodada dela.
 
-Uso: python3 e2e/hml19/api.py --area prontuario|dieta|aluno [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
+Uso: python3 e2e/hml19/api.py --area prontuario|dieta|aluno|avaliacao [--base staging|prod] [--casos P,N1,…,N9] [--seco | --limpar | --so-leitura | --sair]
   --seco    sem rede, sem login, sem banco: monta TODOS os pedidos da rodada e confere cada um contra as regras do servidor (o próprio
             _shared/nutricao-regras.ts, pelo node) + N3/N4/N5 nas regras + o SQL da limpeza
   --limpar  só desfaz uma rodada que caiu no meio (pelo arquivo de estado)
@@ -52,6 +54,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
+import api_avaliacao as AA  # noqa: E402
 import api_dieta as AD  # noqa: E402
 
 C = B.C
@@ -592,7 +595,10 @@ def seco_execucao(o) -> None:
          f"o SIGTERM vira SystemExit e o finally (a limpeza) roda (saída {r2.returncode})")
 
 
-CASOS_DA_AREA = {"prontuario": CASOS, "dieta": AD.CASOS_DIETA, "aluno": AD.CASOS_ALUNO}
+CASOS_DA_AREA = {"prontuario": CASOS, "dieta": AD.CASOS_DIETA, "aluno": AD.CASOS_ALUNO, "avaliacao": AA.CASOS_AVALIACAO}
+# o módulo de cada área (o seco, o so_leitura e o limpar de cada uma)
+SECO = {"dieta": AD.seco, "aluno": AD.seco, "avaliacao": AA.seco}
+SO_LEITURA = {"dieta": AD.so_leitura, "aluno": AD.so_leitura, "avaliacao": AA.so_leitura}
 
 
 def rodar_prontuario(o, L, estado: B.Estado, rodada: str, casos: list[str]) -> None:
@@ -612,14 +618,17 @@ def rodar_prontuario(o, L, estado: B.Estado, rodada: str, casos: list[str]) -> N
 
 def limpar_da_area(o, estado: B.Estado, L, s: str) -> None:
     """O --limpar desfaz a rodada da área que está no estado (a da hml-19a não tinha área: o Prontuário)."""
-    if (estado.d.get("area") or "prontuario") in ("dieta", "aluno"):
+    area = estado.d.get("area") or "prontuario"
+    if area in ("dieta", "aluno"):
         AD.limpar(o, estado, L, s)
+    elif area == "avaliacao":
+        AA.limpar(o, estado, L, s)
     else:
         limpar(o, estado, L, s)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-19a/19b — E2E de servidor da nutricao (casos no topo e em api_dieta.py)")
+    ap = argparse.ArgumentParser(description="hml-19a/19b/19c — E2E de servidor da nutricao e da foto mensal (casos no topo, em api_dieta.py e em api_avaliacao.py)")
     ap.add_argument("--area", required=True, choices=tuple(CASOS_DA_AREA))
     ap.add_argument("--base", default="staging", choices=("staging", "prod"))
     ap.add_argument("--casos", default=None, help="padrão: todos os da área")
@@ -636,7 +645,7 @@ def main() -> int:
         raise SystemExit(f"caso desconhecido na área {a.area} (os casos: {', '.join(validos)})")
     if a.seco:
         o = C.Saida(f"api_{a.area}_seco")
-        (seco if a.area == "prontuario" else AD.seco)(o, a.area)
+        SECO.get(a.area, seco)(o, a.area)
         seco_execucao(o)
         return o.fim()  # o --seco não vai ao e2e-rodadas (não é prova contra uma base)
     if a.sair:
@@ -646,11 +655,12 @@ def main() -> int:
     modo_exec = modo_da_execucao(a.base, a.so_leitura, a.limpar)
     s = B.usar_base(a.base)
     o = C.Saida(f"api_{a.area}_{a.base}" + {"limpar": "_limpar", "so_leitura": "_so_leitura"}.get(modo_exec, ""))
-    L = B.Sessoes(f"api {a.area} {a.base}" + {"limpar": " --limpar", "so_leitura": " --so-leitura"}.get(modo_exec, ""))
+    # o motivo termina na base (o prod_f8.py conta os logins da produção pelas linhas que terminam em "prod)")
+    L = B.Sessoes(f"api {a.area}" + {"limpar": " --limpar", "so_leitura": " --so-leitura"}.get(modo_exec, "") + f" {a.base}")
     try:
         B.exigir_saude(o, "o api.py")
         if modo_exec == "so_leitura":
-            (so_leitura if a.area == "prontuario" else AD.so_leitura)(o, L, a.base)
+            SO_LEITURA.get(a.area, so_leitura)(o, L, a.base)
         elif modo_exec == "limpar":
             limpar_da_area(o, B.Estado.ler(), L, s)
         else:
@@ -663,6 +673,8 @@ def main() -> int:
             try:
                 if a.area == "prontuario":
                     rodar_prontuario(o, L, estado, rodada, casos)
+                elif a.area == "avaliacao":
+                    AA.rodar(o, L, estado, rodada, casos)
                 else:
                     AD.rodar(o, L, estado, rodada, a.area, casos)
             finally:

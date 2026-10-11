@@ -2,9 +2,12 @@
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database, Json } from "@/nutricao/editor/lib/banco";
 import type { RegistroAntropometria } from "@/nutricao/editor/lib/antropometriaUtil";
+import { acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso à tabela `antropometrias` (RLS: a nutricionista só vê as dela; master vê tudo). Exclusão é SOFT
 // (deleted_at → Lixeira, W32). O banco mexe em `pacientes.updated_at` a cada avaliação (trigger genérico da W5).
+// hml-19c (H-41 · jeito 2): criar, editar e excluir vão pela função nutricao (antropometria_criar/_editar/_excluir) — as MESMAS
+// colunas (o colunas(r) abaixo), o dono = quem chama (no servidor), o erro com a frase fixa do código. A lista segue aqui.
 
 export type Antropometria = Database["public"]["Tables"]["antropometrias"]["Row"];
 
@@ -37,23 +40,17 @@ export async function listarAntropometrias(pacienteId: string): Promise<Antropom
   return (data ?? []) as Antropometria[];
 }
 
+/** `nutricionistaId` fica por compatibilidade (as telas não mudam): o dono é quem chama, no servidor. */
 export async function criarAntropometria(nutricionistaId: string, pacienteId: string, r: RegistroAntropometria): Promise<Antropometria> {
-  const { data, error } = await supabase
-    .from("antropometrias")
-    .insert({ nutricionista_id: nutricionistaId, paciente_id: pacienteId, ...colunas(r) })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Antropometria;
+  const res = await acaoNutricao<{ linha: Antropometria }>("antropometria_criar", { ...colunas(r), paciente_id: pacienteId });
+  return res.linha;
 }
 
 export async function atualizarAntropometria(id: string, r: RegistroAntropometria): Promise<Antropometria> {
-  const { data, error } = await supabase.from("antropometrias").update(colunas(r)).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Antropometria;
+  const res = await acaoNutricao<{ linha: Antropometria }>("antropometria_editar", { ...colunas(r), id });
+  return res.linha;
 }
 
 export async function excluirAntropometria(id: string): Promise<void> {
-  const { error } = await supabase.from("antropometrias").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("antropometria_excluir", { id });
 }

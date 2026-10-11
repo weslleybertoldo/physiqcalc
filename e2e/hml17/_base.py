@@ -240,23 +240,29 @@ FUNCOES_CONHECIDAS = {
 }
 # a automaticas-fila (W-P, 11/10/2026: a fila das cobranças automáticas, chamada só pelo pg_cron) processa cobrança: se um dia sair do
 # navegador, é gravação.
-FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila"}
+# hml-19c (11/10, depois do merge da W1 InfinitePay da LINUX 3): o infinitepay-webhook-aluno (o aviso de pagamento da InfinitePay,
+# chamado pelo servidor dela) processa cobrança — se um dia sair do navegador, é gravação.
+FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno"}
 
 
 def funcao_grava(nome: str, acao: str | None) -> bool:
-    """A chamada à função grava? Desconhecida e a nutricao: sempre; as de antes: pela regra de antes (a ação decide nas 3 mistas)."""
+    """A chamada à função grava? Desconhecida e a nutricao: sempre; as de antes: pela regra de antes (a ação decide nas 4 mistas).
+    hml-19c (decisão K): a admin-avaliacoes só LÊ na "list" — create, update, proxima, delete e as foto_* (a foto mensal pelo servidor)
+    gravam (antes, a Guarda deixava passar todas as ações dela)."""
     if nome in FUNCOES_QUE_SEMPRE_GRAVAM or nome not in FUNCOES_CONHECIDAS:
         return True
     return (nome == "pagamentos-aluno" and acao not in LEITURAS_PAGAMENTOS) or nome in ("admin-delete-user", "admin-update-user") \
         or (nome == "admin-semana-treinos" and acao not in LEITURAS_SEMANA) \
-        or (nome == "admin-tags" and not str(acao or "").lower().startswith(("list", "get")))
+        or (nome == "admin-tags" and not str(acao or "").lower().startswith(("list", "get"))) \
+        or (nome == "admin-avaliacoes" and acao != "list")
 
 
 class Guarda:
     """PRODUÇÃO SÓ LEITURA (o molde do e2e/w26/prod.py e do e2e/hml14/telas.py): o navegador bloqueia toda escrita das telas —
     POST/PATCH/PUT/DELETE em tabela, RPC fora da lista de leitura, Storage que não é o "sign", e nas funções as ações que gravam
     (pagamentos-aluno fora das leituras, admin-semana-treinos fora das leituras, admin-delete-user, admin-update-user, admin-tags que
-    não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava). O resto segue (fallback: a
+    não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava; hml-19c: a admin-avaliacoes fora
+    da "list"). O resto segue (fallback: a
     queda da API, quando ligada, vem antes e aborta). Teste: python3 e2e/hml19/guarda_teste.py."""
 
     def __init__(self) -> None:
@@ -310,7 +316,10 @@ class Tela:
         if u.hostname not in (API_P_HOST, API_T_HOST) or req.method == "OPTIONS":
             return
         tipo, nome = alvo(req.url)
-        corpo = req.post_data or ""
+        try:
+            corpo = req.post_data or ""
+        except UnicodeDecodeError:  # hml-19c: corpo binário (a foto subindo no Storage) — não é o JSON de uma ação; antes, o erro aqui
+            corpo = ""              # derrubava o ouvinte do Playwright no meio do pedido (e o pedido nem era contado)
         self.pedidos.append({"t": round(time.time() - self.t0, 2), "host": "P" if u.hostname == API_P_HOST else "T", "metodo": req.method,
                              "tipo": tipo, "nome": nome, "acao": acao_do_corpo(req) if tipo == "fn" else None, "url": req.url,
                              "corpo": corpo, "chave": hashlib.sha1((u.query + "|" + corpo).encode()).hexdigest()[:8], "caida": self.caida})

@@ -29,6 +29,27 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 17:25 | hml-19c | `8a911bb` | `e2e/hml19/api.py --area avaliacao --base staging --limpar` | staging | 2/2 | F8: nada pendente; conferência só leitura 0/0 (2 bancos, 2 schemas, 4 buckets, avisos) |
+| 11/10 17:24 | hml-19c | `8a911bb` | `e2e/w17/avaliacao_telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19c --canal msedge` | staging | 63/63 | F8: a aba Avaliação inteira no staging com o código novo (o local deu 64/64) |
+| 11/10 17:20 | hml-19c | `8a911bb` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge --prefixo staging2` | staging | 21/21 | F8, o DEPOIS no staging: cada ação só pelas funções, 0 gravação direta; prints staging2_c_* + a folha |
+| 11/10 13:43 | hml-19c | `106fc83` | `e2e/w17/avaliacao_telas.py --base http://localhost:8080 --prefixo local19c --canal msedge` | local | 64/64 | regressão: a aba Avaliação inteira no código novo (a foto do mês pelas foto_*, a antropometria pela nutricao) |
+| 11/10 13:39 | hml-19c | `106fc83` | `e2e/hml19/rede.py --area avaliacao --base local --canal msedge` | local | 21/21 | o DEPOIS: cada ação só pelas funções (0 rest/Storage/RPC direto); prints local_c_* |
+| 11/10 13:27 | hml-19c | `106fc83` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge --casos antropometria` | staging | 6/6 | o antes (881480d), de novo para o print do Histórico |
+| 11/10 13:26 | hml-19c | `106fc83` | `e2e/w25/api.py` | staging | 23/30 | a mesma base das hml-13/15b/16d/19a/19b (as 7 da massa do dia); nada da Avaliação |
+| 11/10 13:24 | hml-19c | `106fc83` | `e2e/w10/api.py` | staging | 22/22 | regressão |
+| 11/10 13:23 | hml-19c | `106fc83` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge --casos foto_erro` | staging | 6/6 | o antes: 1 aviso com a frase fixa, sem laço |
+| 11/10 13:22 | hml-19c | `106fc83` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge` | staging | 14/16 | o ANTES (881480d): a gravação ia direto em todas as ações; as 2 do foto_erro = o tempo da conta do E2E (corrigido: 6/6) |
+| 11/10 13:18 | hml-19c | `a483a96` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge` | staging | 7/14 | o antes, 1ª: erros do E2E (o gravador quebrava no corpo binário; o modal pedia as dobras) — corrigidos em 106fc83 |
+| 11/10 13:12 | hml-19c | `a483a96` | `e2e/hml19/api.py --area avaliacao --base staging` | staging | 42/42 | P e N1–N9 nas 2 funções (admin-avaliacoes v41, nutricao v3); o trocar = a mesma linha; limpeza 0/0 |
+| 11/10 13:09 | hml-19c | `a483a96` | `e2e/hml19/api.py --area avaliacao --base staging` | staging | 2/4 | parou na guarda do vínculo ANTES de gravar (a w5p-aluna sem usuário do Treino); nada gravou |
+| 11/10 13:08 | hml-19c | `a483a96` | `e2e/w17/avaliacao_api.py` | staging | 34/34 | decisão E: a avaliação física de hoje pela admin-avaliacoes v41 |
+| 11/10 13:06 | hml-19c | `a483a96` | `e2e/hml19/api.py --area aluno --base staging` | staging | 27/27 | decisão E (nutricao v3) |
+| 11/10 13:05 | hml-19c | `a483a96` | `e2e/hml19/api.py --area dieta --base staging` | staging | 102/102 | decisão E (nutricao v3) |
+| 11/10 13:02 | hml-19c | `a483a96` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 124/124 | decisão E (nutricao v3) |
+| 11/10 12:58 | hml-19c | `a483a96` | `e2e/hml19/api.py --area aluno --base prod --so-leitura` | produção | 6/6 | sessão principal: smoke só leitura depois de publicar |
+| 11/10 12:58 | hml-19c | `a483a96` | `e2e/hml19/api.py --area dieta --base prod --so-leitura` | produção | 6/6 | sessão principal: smoke só leitura depois de publicar |
+| 11/10 12:58 | hml-19c | `a483a96` | `e2e/hml19/api.py --area prontuario --base prod --so-leitura` | produção | 5/5 | sessão principal: smoke só leitura depois de publicar |
+| 11/10 12:58 | hml-19c | `a483a96` | `e2e/hml19/api.py --area avaliacao --base prod --so-leitura` | produção | 6/6 | sessão principal: smoke só leitura depois de publicar |
 | 11/10 11:54 | W1 | `9ca1da5` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | Task 20, com o `9ca1da5` no staging (a migration da W1 sem mudança: o dry-run deu no-op) |
 | 11/10 11:53 | W1 | `9ca1da5` | `e2e/w10/api.py` | staging | 22/22 | Task 20; só leitura |
 | 11/10 11:52 | W1 | `9ca1da5` | `e2e/wp/api.py --casos planos,periodo` | staging | 26/26 | Task 20: a W-P sem regressão; a massa desfeita |
