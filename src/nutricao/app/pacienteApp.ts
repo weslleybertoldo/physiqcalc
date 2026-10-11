@@ -4,10 +4,17 @@
 //   · ✓ das metas do dia (NF4): aluno_marcar_meta (nova, W11);
 //   · foto do diário: sobe no bucket privado "diario" e grava pela diario_enviar com o código do próprio aluno — o mesmo caminho do
 //     link público (W30 do Nutri); a foto do próprio aluno volta por URL assinada (P29).
+// hml-19b (H-41 · jeito 2 · decisão 14): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão do aluno —
+// as MESMAS RPCs de hoje, chamadas lá como a pessoa (aluno_marcar_refeicao, aluno_marcar_meta). A foto sobe pelo LINK ASSINADO que o
+// servidor dá (aluno_diario_preparar: o caminho <nutricionista>/<aluno>/<uuid>.<ext> é montado lá; o app sobe com uploadToSignedUrl) e
+// o registro vai pela aluno_diario_enviar (o servidor confere que o arquivo chegou naquele caminho e chama a diario_enviar). Mesmas
+// assinaturas; o erro chega com o CÓDIGO na mensagem, como antes (as telas traduzem: refeicaoConcluidaUtil, metasUtil, diarioUtil), e o
+// otimista do useDieta não muda. As leituras (minha_dieta, as URLs assinadas) seguem aqui.
 // Online (9A): sem internet nada é gravado e a tela avisa.
 import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { principal } from "@/integrations/principal/client";
-import { mimeDaFotoDiario, nomeObjeto, type Refeicao } from "./diarioUtil";
+import { ErroNutricao, acaoNutricao } from "@/nutricao/servidor";
+import { mimeDaFotoDiario, type Refeicao } from "./diarioUtil";
 import type { DadosDieta, MatriculaNutricao, RegistroDiario } from "./tipos";
 
 export const BUCKET_DIARIO = bucketDoAmbiente("diario");
@@ -21,6 +28,18 @@ function semInternet(): boolean {
 function erro(e: { message?: string } | null | undefined, padrao = "erro_interno"): Error {
   const m = e?.message ?? padrao;
   return new Error(/failed to fetch|network|load failed/i.test(m) ? "sem_internet" : m);
+}
+
+/**
+ * O erro de uma ação da nutricao no app: a mensagem passa a ser o CÓDIGO (as telas do app traduzem o código, como faziam com a mensagem
+ * da RPC); a rede que caiu vira sem_internet, como antes. O resto sobe como veio.
+ */
+function erroDoApp(e: unknown): Error {
+  if (e instanceof ErroNutricao) {
+    const codigo = e.codigo === "rede" ? "sem_internet" : e.codigo;
+    return new ErroNutricao(codigo, e.extra, codigo);
+  }
+  return e instanceof Error ? e : new Error("erro_interno");
 }
 
 const lista = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
@@ -65,43 +84,48 @@ export async function minhaDieta(dia: string): Promise<DadosDieta> {
 /** Marca (true) ou desmarca a refeição no dia; devolve o estado gravado. Erro com o código da função (a tela traduz). */
 export async function marcarRefeicao(refeicaoId: string, dia: string, concluida: boolean): Promise<boolean> {
   if (semInternet()) throw new Error("sem_internet");
-  const { data, error } = await principal.rpc("paciente_marcar_refeicao", { p_refeicao_id: refeicaoId, p_data: dia, p_concluida: concluida });
-  if (error) throw erro(error);
-  return Boolean(data);
+  const r = await acaoNutricao<{ concluida: boolean }>("aluno_marcar_refeicao", { refeicao_id: refeicaoId, data: dia, concluida }).catch((e) => {
+    throw erroDoApp(e);
+  });
+  return Boolean(r.concluida);
 }
 
 /** ✓ na meta do dia (NF4); devolve o estado gravado. */
 export async function marcarMeta(metaId: string, dia: string, concluida: boolean): Promise<boolean> {
   if (semInternet()) throw new Error("sem_internet");
-  const { data, error } = await principal.rpc("aluno_marcar_meta" as never, { p_meta_id: metaId, p_data: dia, p_concluida: concluida } as never);
-  if (error) throw erro(error);
-  return Boolean(data);
+  const r = await acaoNutricao<{ concluida: boolean }>("aluno_marcar_meta", { meta_id: metaId, data: dia, concluida }).catch((e) => {
+    throw erroDoApp(e);
+  });
+  return Boolean(r.concluida);
 }
 
 export type EnvioDiario = { refeicao: Refeicao; comentario: string; dataHoraIso: string };
 
-/** Foto do diário: sobe no bucket (pasta <nutricionista>/<paciente>/) e grava pela diario_enviar com o código do próprio aluno. */
+/**
+ * Foto do diário: o servidor dá o link assinado (o caminho <nutricionista>/<paciente>/<uuid>.<ext> é montado lá), o app sobe a foto
+ * nele e o servidor registra pela diario_enviar com o código do próprio aluno (conferindo que o arquivo chegou naquele caminho). Se o
+ * registro falha, o servidor tenta tirar o arquivo (o aluno não pode apagar: sobra o órfão, contado no log).
+ */
 export async function enviarFotoDiario(m: Pick<MatriculaNutricao, "id" | "link_codigo" | "nutricionista">, arquivo: File, form: EnvioDiario): Promise<{ id: string; data_hora: string }> {
   if (semInternet()) throw new Error("sem_internet");
   const mime = mimeDaFotoDiario(arquivo);
-  const path = nomeObjeto(m.nutricionista.id, m.id, mime);
-  const up = await principal.storage.from(BUCKET_DIARIO).upload(path, arquivo, { contentType: mime, upsert: false, cacheControl: "3600" });
-  if (up.error) throw erro(up.error);
-  const { data, error } = await principal.rpc("diario_enviar", {
-    p_codigo: m.link_codigo.trim().toLowerCase(),
-    p_path: path,
-    p_mime: mime,
-    p_tamanho: arquivo.size,
-    p_refeicao: form.refeicao,
-    p_comentario: form.comentario.trim(),
-    p_data_hora: form.dataHoraIso,
+  const pedido = { paciente_id: m.id, nutricionista_id: m.nutricionista.id, tipo: mime, tamanho: arquivo.size };
+  const link = await acaoNutricao<{ bucket: string; caminho: string; token: string }>("aluno_diario_preparar", pedido).catch((e) => {
+    throw erroDoApp(e);
   });
-  if (error) {
-    // melhor esforço (como o site antigo): o arquivo sem registro fica órfão só se a política não deixar apagar
-    await principal.storage.from(BUCKET_DIARIO).remove([path]).catch(() => undefined);
-    throw erro(error);
-  }
-  return data as unknown as { id: string; data_hora: string };
+  const up = await principal.storage.from(link.bucket).uploadToSignedUrl(link.caminho, link.token, arquivo, { contentType: mime, cacheControl: "3600" });
+  if (up.error) throw erro(up.error);
+  const r = await acaoNutricao<{ registro: { id: string; data_hora: string } }>("aluno_diario_enviar", {
+    ...pedido,
+    caminho: link.caminho,
+    codigo: m.link_codigo.trim().toLowerCase(),
+    refeicao: form.refeicao,
+    comentario: form.comentario.trim(),
+    data_hora: form.dataHoraIso,
+  }).catch((e) => {
+    throw erroDoApp(e);
+  });
+  return r.registro;
 }
 
 /** URLs assinadas das fotos do próprio diário, por id do registro (as que falharem ficam de fora: a tela usa a foto padrão). */
