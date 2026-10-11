@@ -214,6 +214,20 @@ def acao_erro(t, marca: str, fase: str, fotografar=None) -> tuple[bool, int, int
     return viu and maximo == 1 and erro_no_dialogo, ms, maximo
 
 
+def diagnostico(t, prefixo: str, caso: str, marca: str) -> str:
+    """Quando a espera da tela não fecha: o print <prefixo>_falha_<caso>.png e o que estava na tela (só contagens e o tipo de cada aviso —
+    nada de texto da pessoa)."""
+    try:
+        B.PRINTS_D.mkdir(parents=True, exist_ok=True)
+        t.pg.screenshot(path=str(B.PRINTS_D / f"{prefixo}_falha_{caso}.png"))
+    except Exception:  # noqa: BLE001
+        pass
+    linha = t.pg.locator("[data-transacao]", has_text=marca)
+    tipos = t.pg.evaluate("() => [...document.querySelectorAll('[data-sonner-toast]')].map((e) => e.getAttribute('data-type') || '?')")
+    return (f"modal movimentação {t.n('[data-modal-movimentacao]')} · modal recibo {t.n('[data-modal-recibo]')} · linhas da marca {linha.count()} · "
+            f"selo RECIBO {linha.first.locator('[data-badge-recibo]').count() if linha.count() else 0} · avisos {tipos}")
+
+
 # ───────────────────────── a conferência, a planilha, os prints ─────────────────────────
 def conferir(o, base: str, caso: str, cont, ok_tela: bool, ms: int, fase: str) -> None:
     o.ok(ok_tela, f"[{base}] {caso}: a ação terminou na tela ({ms} ms)")
@@ -429,6 +443,8 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                                 ok_tela, ms = acao_excluir_recibo(t, recibo_id) if recibo_id else (False, 0)
                             else:
                                 ok_tela, ms = acao_categoria(t, f"{marca} cat")
+                            if not ok_tela:
+                                o.linha(f"   diagnóstico [{caso}]: {diagnostico(t, rotulo, caso, f'{marca} movimentação')}")
                             R.esperar_quieto(t, teto=15)
                             cont = B.contar(t.pedidos)
                             conferir(o, base, caso, cont, ok_tela, ms, fase)
