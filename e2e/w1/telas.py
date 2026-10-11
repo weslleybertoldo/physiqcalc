@@ -31,7 +31,7 @@ o master sempre vê) — e Integrações só se a conta for master (na produçã
 (teste@teste.com) abre Pagamentos. As contas e senhas do e2e/w07/smoke_prod.py. Prints em …/prints/w1/prod/ (listas e chaves borradas).
 A página da InfinitePay nunca abre no navegador do teste: o pedido da aba a *.infinitepay.io recebe uma página vazia (só a url importa —
 conferida e nunca impressa, porque leva a InfiniteTag). A InfiniteTag de teste não vai para a saída (trocada por <InfiniteTag>) nem para os
-prints (borrada).
+prints (borrada em todos, também nos da falha). A saída do e2e/w1/api.py troca igual (o PlacarSemTag).
 Desfazer: o do e2e/w1/api.py (a foto da matrícula, da conta e da flag ANTES de mexer, em ~/projetos/physiqcalc-scratch/w1/api-estado.json)
 + as marcas desta rodada em …/w1/telas-estado.json (o plano do PROFISSIONAL da conta — o painel travado é liberado só durante a rodada — e o
 papel da w27-master); no fim, ou na próxima rodada / --limpar, tudo volta e é conferido campo a campo.
@@ -484,6 +484,8 @@ JS_BOTOES_FORA = r"""(raiz) => {
   return fora;
 }"""
 RAIZ_RECEBIMENTO = "[data-config-aba='recebimento']"
+# o que mostra a InfiniteTag na tela (o campo do Recebimento e a da conta no master): borrado em TODO print — também no da falha
+BORRAR_TAG = "[data-infinitetag], [data-infinitetag-da-conta]"
 
 
 def enquadrar(pg, alvo: str) -> str | None:
@@ -619,7 +621,7 @@ class Tela(B.Celular):
 
     def foto(self, nome: str, alvo: str | None = None, borrar: str | None = None, botoes: str | None = None) -> str:
         """O print em <pasta>/<nome>.png com o elemento à vista; antes, a medida: nada passa da largura (scrollWidth da página).
-        borrar: o seletor do que sai borrado (a InfiniteTag; na produção, as listas e as chaves).
+        borrar: o seletor do que sai borrado além da InfiniteTag (BORRAR_TAG, sempre): na produção, as listas e as chaves.
         botoes: a raiz da tela em que cada botão fica dentro do cartão — conferido a 390 (JS_BOTOES_FORA)."""
         fora = None
         if botoes and self.largura == 390:
@@ -629,11 +631,11 @@ class Tela(B.Celular):
                 fora = [f"a raiz {botoes} sumiu ({type(e).__name__})"]
         if alvo:
             enquadrar(self.pg, alvo)
-        if borrar:
-            try:
-                self.pg.add_style_tag(content=f"{borrar} {{ filter: blur(7px) !important; }}")
-            except Exception:  # noqa: BLE001
-                pass
+        borrar = f"{BORRAR_TAG}, {borrar}" if borrar else BORRAR_TAG
+        try:
+            self.pg.add_style_tag(content=f"{borrar} {{ filter: blur(7px) !important; }}")
+        except Exception:  # noqa: BLE001
+            pass
         self.pg.wait_for_timeout(700)
         try:
             m = self.pg.evaluate(B.JS_LARGURA)
@@ -680,6 +682,10 @@ class Tela(B.Celular):
         try:
             pasta: Path = CTX["pasta"] / "falhas"
             pasta.mkdir(parents=True, exist_ok=True)
+            try:  # a InfiniteTag sai borrada também no print da falha (a tela pode ter parado com ela à vista)
+                self.pg.add_style_tag(content=f"{BORRAR_TAG} {{ filter: blur(7px) !important; }}")
+            except Exception:  # noqa: BLE001
+                pass
             self.pg.screenshot(path=str(pasta / f"{nome}_{self.rotulo.replace(' ', '_')}.png"))
             self.R.linha(f"   diagnóstico [{self.rotulo}]: {self.caminho()} · erros de página {self.erros[-3:]}")
         except Exception:  # noqa: BLE001

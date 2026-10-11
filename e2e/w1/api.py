@@ -56,6 +56,7 @@ Precisa:
   · no --local, o ~/.deno/bin/deno. A InfiniteTag do --local é inventada (o simulador não confere a tag).
 No --local, a rodada de 15 min do staging fica PARADA e volta como estava no desfazer: ela chamaria a função publicada, que fala com
 a API de verdade, com a tag inventada (MENOR 12 da revisão).
+Saída sem a InfiniteTag de teste: o placar (PlacarSemTag) troca por <InfiniteTag> em toda mensagem — a linha do banco, os links, o erro.
 Uso: python3 e2e/w1/api.py [--local] [--casos …] [--sinal ARQ] [--seco | --limpar]
   --seco    só os logins, a montagem dos pedidos e as leituras (no --local, sobe e derruba os 3 processos e cutuca cada um: o webhook lê o
             banco e a pagamentos-aluno confere a sessão, sem ação) — nada é gravado
@@ -107,6 +108,29 @@ CTX: dict = {}
 
 # ───────────────────────── a base, o banco e as chamadas ─────────────────────────
 
+def sem_tag(texto: str) -> str:
+    """A InfiniteTag de teste é dado pessoal (do Weslley): nunca na saída — nem dentro da linha do banco, da url ou de um erro (o sem_tag
+    do telas.py). A tag é a da rodada (CTX["tag"])."""
+    tag = CTX.get("tag")
+    return re.sub(re.escape(tag), "<InfiniteTag>", texto, flags=re.I) if tag else texto
+
+
+class PlacarSemTag:
+    """O placar da W6 que troca a InfiniteTag de teste por <InfiniteTag> em TODA mensagem antes de imprimir e guardar (o molde do RodadaW1
+    do telas.py): a linha da tentativa vencida e a da avulsa aberta de novo (a coluna ip_handle), os links da avulsa (a coluna handle), o
+    erro que quebrou um caso (o SQL que falhou pode trazer a tag) e a diferença do desfazer (a integração da conta). O fim() repete as
+    falhas já trocadas."""
+
+    def __init__(self, placar) -> None:
+        self._placar = placar
+
+    def check(self, ok: object, texto: str) -> bool:
+        return self._placar.check(ok, sem_tag(str(texto)))
+
+    def __getattr__(self, nome: str):
+        return getattr(self._placar, nome)
+
+
 def carregar_base() -> None:
     global B, p
     if B is not None:
@@ -114,7 +138,7 @@ def carregar_base() -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "w06"))
     import _base  # noqa: PLC0415
 
-    B, p = _base, _base.p
+    B, p = _base, PlacarSemTag(_base.p)
     B.ESTADO["schema"] = S
 
 
@@ -911,8 +935,36 @@ def ambiente(casos: list[str]) -> None:
         p.check((Path.home() / ".deno" / "bin" / "deno").exists(), "o deno local (~/.deno/bin/deno)")
 
 
+class _PlacarFalso:
+    """Um placar que só guarda o texto (o autoteste do PlacarSemTag no --seco)."""
+
+    def __init__(self) -> None:
+        self.textos: list[str] = []
+
+    def check(self, ok: object, texto: str) -> bool:
+        self.textos.append(texto)
+        return bool(ok)
+
+
+def autoteste_sem_tag() -> None:
+    """--seco: o PlacarSemTag troca a InfiniteTag em toda mensagem — com uma tag inventada (a de verdade não passa por aqui): a linha da
+    tentativa vencida (dict), os links da avulsa (lista), o erro de SQL em maiúsculas, a url e o $; e o placar da rodada é ele."""
+    falso, antes = _PlacarFalso(), CTX.get("tag")
+    CTX["tag"] = "fulano.teste"
+    try:
+        sp = PlacarSemTag(falso)
+        sp.check(True, f"o aluno_status fechou a tentativa ({ {'status': 'cancelada', 'fora': True, 'h': 'fulano.teste'} })")
+        sp.check(True, f"pagar de novo: OUTRO link (200 {[{'n': 1, 'handle': 'fulano.teste'}, {'n': 2, 'handle': 'fulano.teste'}]})")
+        sp.check(False, "[avulsa] quebrou: RuntimeError('SQL HTTP 400: Key (handle)=(FULANO.TESTE)') https://checkout.infinitepay.io/fulano.teste?l=1 $fulano.teste")
+    finally:
+        CTX["tag"] = antes
+    p.check(isinstance(p, PlacarSemTag) and len(falso.textos) == 3 and all("fulano.teste" not in t.lower() and "<InfiniteTag>" in t for t in falso.textos),
+            "seco: o placar troca a InfiniteTag por <InfiniteTag> em toda mensagem — a linha do banco, os links, o erro, a url e o $")
+
+
 def seco(casos: list[str]) -> int:
     print("── seco: logins, leituras e (no --local) os 3 processos — nenhuma ação é chamada, nada é gravado")
+    autoteste_sem_tag()
     for conta in (DONO, ALUNO):
         try:
             p.check(bool(B.token(conta)), f"login da conta de TESTE {conta}")
