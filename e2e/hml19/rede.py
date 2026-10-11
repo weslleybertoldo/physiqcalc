@@ -23,7 +23,10 @@ hml-19b: --area dieta — as ações típicas da Dieta, das Dietas e do app (pre
 rede_dieta.py, na planilha medicao/rede_hml19b.tsv e nos prints prints/hml19/b/<prefixo>_b_*.png.
 hml-19c: --area avaliacao — as ações típicas da Avaliação (a foto mensal: subir, excluir e o erro; a antropometria; a foto de evolução) em
 rede_avaliacao.py, na planilha medicao/rede_hml19c.tsv e nos prints prints/hml19/c/<prefixo>_c_*.png (não roda na produção).
-Uso: python3 e2e/hml19/rede.py [--area prontuario|dieta|avaliacao] --base staging|local|prod --canal msedge [--prefixo staging2] [--casos …] [--seco | --limpar]
+hml-19d: --area financeiro — as ações típicas do Financeiro (a semente, nova movimentação, emitir e excluir recibo, as tags da aluna, nova
+categoria e o erro) em rede_financeiro.py, na planilha medicao/rede_hml19d.tsv e nos prints prints/hml19/d/<prefixo>_d_*.png (não roda na
+produção).
+Uso: python3 e2e/hml19/rede.py [--area prontuario|dieta|avaliacao|financeiro] --base staging|local|prod --canal msedge [--prefixo staging2] [--casos …] [--seco | --limpar]
   --seco  sem rede e sem navegador: confere que os seletores existem no código das telas e que a classificação acerta pedidos de
           exemplo (antes e depois)
 """
@@ -83,8 +86,9 @@ def fase_do_codigo(base: str, commit: str) -> str:
     return "depois" if r.returncode == 0 else "antes"
 
 
-# hml-19b: o rest nas 19 tabelas da Dieta; hml-19c: o rest nas tabelas da Avaliação (antropometrias, fotos_evolucao, physiq_registros_fotos)
-GRAVACOES = ("rest_prontuario", "rest_dieta", "rest_avaliacao", "rest_outras", "rpc_grava", "storage_grava")
+# hml-19b: o rest nas 19 tabelas da Dieta; hml-19c: o rest nas tabelas da Avaliação (antropometrias, fotos_evolucao, physiq_registros_fotos);
+# hml-19d: o rest nas 4 tabelas do Financeiro e o PATCH das tags (pacientes)
+GRAVACOES = ("rest_prontuario", "rest_dieta", "rest_avaliacao", "rest_financeiro", "rest_pacientes", "rest_outras", "rpc_grava", "storage_grava")
 
 
 def so_gravacoes(cont) -> dict:
@@ -320,8 +324,8 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-19a/19b/19c — a rede das ações típicas do Prontuário, da Dieta e da Avaliação (antes × depois)")
-    ap.add_argument("--area", default="prontuario", choices=("prontuario", "dieta", "avaliacao"))
+    ap = argparse.ArgumentParser(description="hml-19a/19b/19c/19d — a rede das ações típicas do Prontuário, da Dieta, da Avaliação e do Financeiro (antes × depois)")
+    ap.add_argument("--area", default="prontuario", choices=("prontuario", "dieta", "avaliacao", "financeiro"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--casos", default=None, help="padrão: todos os da área")
@@ -331,11 +335,14 @@ def main() -> int:
     modo.add_argument("--limpar", action="store_true")
     a = ap.parse_args()
     B.corte_vira_saida()  # o SIGTERM/SIGINT vira SystemExit: a limpeza do finally roda mesmo com o processo cortado
-    dieta = a.area in ("dieta", "avaliacao")  # as áreas em módulo à parte (hml-19b: rede_dieta.py; hml-19c: rede_avaliacao.py)
+    # as áreas em módulo à parte (hml-19b: rede_dieta.py; hml-19c: rede_avaliacao.py; hml-19d: rede_financeiro.py)
+    dieta = a.area in ("dieta", "avaliacao", "financeiro")
     if a.area == "dieta":
         import rede_dieta as RD  # noqa: PLC0415 — a área da hml-19b (importa este módulo; aqui, só quando pedida)
     elif a.area == "avaliacao":
         import rede_avaliacao as RD  # noqa: PLC0415 — a área da hml-19c (o mesmo jeito)
+    elif a.area == "financeiro":
+        import rede_financeiro as RD  # noqa: PLC0415 — a área da hml-19d (o mesmo jeito)
     validos = RD.CASOS if dieta else CASOS
     casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
     if any(c not in validos for c in casos):
@@ -351,7 +358,7 @@ def main() -> int:
             s = B.usar_base("staging")
             L = B.Sessoes("rede --limpar")
             try:
-                if a.area == "avaliacao":
+                if a.area in ("avaliacao", "financeiro"):
                     RD.limpar_massa(o, s, L)
                 elif dieta:
                     RD.limpar_massa(o, s, L.uid(B.P_CONTA))

@@ -18,7 +18,7 @@ Negativo:
   membro        Camila (nutricionista, não é dona): só os lançamentos e recibos dela; a mensalidade é do dono; nenhum comprovante.
   pix_calc      Bruno (2º personal) não vê o comprovante do João (é do dono); o aluno Rafael não abre o painel.
 
-Uso: python3 e2e/w19/telas.py --base http://localhost:5173 --prefixo local [--casos resumo,mensalidades,...]
+Uso: python3 e2e/w19/telas.py --base http://localhost:5173 --prefixo local [--casos resumo,mensalidades,...] [--canal msedge]
      (staging: --base https://physiqcalc-staging.vercel.app --prefixo staging). A massa: python3 e2e/w19/massa.py (antes).
 """
 from __future__ import annotations
@@ -95,6 +95,20 @@ def totais_30d_sql(conta: str, uid: str, so_do: str | None = None) -> dict:
 def attr(c, seletor: str, nome: str) -> str | None:
     loc = c.pg.locator(seletor)
     return loc.first.get_attribute(nome) if loc.count() else None
+
+
+def assentou(c) -> bool:
+    """hml-14b (D14): a página e os totais de Lançamentos vêm do banco — "0" quando não há nada a caminho."""
+    return c.tem('[data-pagina-financeiro][data-atualizando="0"]')
+
+
+def total_entradas(c) -> float:
+    return float(attr(c, "[data-total-entradas]", "data-total-entradas") or 0)
+
+
+def so_dinheiro(c) -> bool:
+    ms = [x.strip() for x in c.pg.locator("[data-transacao-metodo]").all_inner_texts()]
+    return bool(ms) and all(x == "Dinheiro" for x in ms)
 
 
 # ───────────────────────────────────────── casos ─────────────────────────────────────────
@@ -223,6 +237,8 @@ def caso_lancamentos(nav) -> None:
             "[lancamentos] o lançamento da Camila aparece para o dono com a categoria DELA e 'por Camila Rocha' (política da W19)")
     c.pg.locator("[data-filtro-forma]").select_option("dinheiro")
     c.esperar(lambda: "forma=dinheiro" in c.caminho(), 10)
+    # hml-14b (D14): o filtro vai ao banco — a página filtrada chega DEPOIS da URL (espera até 20 s antes de conferir)
+    c.esperar(lambda: so_dinheiro(c), 20)
     metodos = [x.strip() for x in c.pg.locator("[data-transacao-metodo]").all_inner_texts()]
     p.check(bool(metodos) and all(x == "Dinheiro" for x in metodos), f"[lancamentos] filtro pela forma (Dinheiro): {metodos}")
     c.pg.locator("[data-btn-limpar-filtros]").first.click()
@@ -246,11 +262,14 @@ def caso_lancamentos(nav) -> None:
     linha = c.pg.locator("[data-transacao]", has_text=DESCRICAO_E2E)
     ok = c.esperar(lambda: linha.count() == 1, 30)
     p.check(ok and linha.first.get_attribute("data-valor") == "210.00", "[lancamentos] nova movimentação (entrada de R$ 210 do Rafael, categoria Consulta) aparece na lista")
-    antes = float(attr(c, "[data-total-entradas]", "data-total-entradas") or 0)
+    c.esperar(lambda: assentou(c), 20)  # hml-14b (D14): os totais com a entrada nova já chegaram do banco
+    antes = total_entradas(c)
     linha.first.locator("[data-btn-estornar-transacao]").click()
     c.pg.locator("[data-btn-confirmar-estorno]").click()
     ok = c.esperar(lambda: linha.first.get_attribute("data-estornada") == "1", 20)
-    depois = float(attr(c, "[data-total-entradas]", "data-total-entradas") or 0)
+    # a linha troca na hora; os totais vêm do banco no recarregar seguinte (até 20 s)
+    c.esperar(lambda: abs((antes - total_entradas(c)) - 210) < 0.01, 20)
+    depois = total_entradas(c)
     p.check(ok and abs((antes - depois) - 210) < 0.01, f"[lancamentos] estornar tira dos totais sem apagar ({antes} → {depois})")
     linha.first.locator("[data-btn-estornar-transacao]").click()
     c.pg.locator("[data-btn-confirmar-estorno]").click()
@@ -440,13 +459,15 @@ def main() -> int:
     ap.add_argument("--base", required=True)
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default=",".join(CASOS))
+    # hml-19d: o Edge dos E2E de tela da homologação (o padrão segue o Chromium de antes)
+    ap.add_argument("--canal", default=None, help="msedge = o Edge")
     a = ap.parse_args()
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo)
     ESTADO["massa"] = B.ler_json(B.SCRATCH / "massa_staging.json")
     assert ESTADO["massa"].get("conta"), "rode antes: python3 e2e/w19/massa.py"
     t0 = time.time()
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"]) if a.canal else pw.chromium.launch(args=["--no-sandbox"])
         for nome in a.casos.split(","):
             print(f"\n— caso {nome}", flush=True)
             B.saude_ok(nome)

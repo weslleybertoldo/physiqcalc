@@ -29,6 +29,25 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 20:29 | hml-19d | `fed0f0d` | `e2e/w19/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19d --canal msedge --casos lancamentos,recibos,categorias,aluno_recibo,membro` | staging | 36/36 | F8: as telas da W19 com gravação no staging com o código novo (o local deu 36/36) |
+| 11/10 20:27 | hml-19d | `fed0f0d` | `e2e/w19/massa.py` | staging | 1/1 | F8: a massa da W19; `--limpar` às 20:29 (0 linha da massa, SQL só leitura) |
+| 11/10 20:26 | hml-19d | `fed0f0d` | `e2e/hml19/rede.py --area financeiro --base staging --canal msedge --casos movimentacao,recibo --prefixo staging2b` | staging | 9/9 | F8: 2ª amostra do tempo — movimentação 967 ms, recibo 1597 ms (a 1ª deu 6360, isolada) |
+| 11/10 20:24 | hml-19d | `fed0f0d` | `e2e/hml19/rede.py --area financeiro --base staging --canal msedge --prefixo staging2` | staging | 26/26 | F8, o DEPOIS no staging: cada ação = 1 chamada da `financeiro`, 0 gravação direta; prints staging2_d_* iguais aos local_d_* (o d_erro também) |
+| 11/10 20:14 | hml-19d | `e370f1e` | `e2e/wp/telas.py --base local --canal msedge` | local | 125/125 | regressão da W-P (só rodado, sem editar): planos, ficha do aluno, Mensalidades, app do aluno e membro no código novo; o desfazer dela confere (sobras 0) |
+| 11/10 20:07 | hml-19d | `e370f1e` | `e2e/w19/telas.py --base http://localhost:8080 --prefixo local19d --canal msedge --casos lancamentos` | local | 12/12 | com a espera nova do harness (o filtro e os totais vêm do banco desde a hml-14b): estornar → total −210 pela `transacao_estornar` |
+| 11/10 20:06 | hml-19d | `e370f1e` | `e2e/w19/massa.py` | staging | 1/1 | a massa de novo para a 2ª rodada do caso lancamentos; `--limpar` às 20:08 (0 linha da massa, SQL só leitura) |
+| 11/10 20:01 | hml-19d | `e370f1e` | `e2e/w19/telas.py --base http://localhost:8080 --prefixo local19d --canal msedge --casos lancamentos,recibos,categorias,aluno_recibo,membro` | local | 34/36 | as 2 do harness: "filtro pela forma" e "estornar tira dos totais" liam antes de o banco responder (D14 da hml-14b; o `Lancamentos.tsx` não mudou) |
+| 11/10 19:59 | hml-19d | `e370f1e` | `e2e/w19/massa.py` | staging | 1/1 | a massa da W19 (tx 23, cob 7, rec 3) |
+| 11/10 19:56 | hml-19d | `e370f1e` | `e2e/hml14/telas.py --base local --canal msedge --casos b19-movimentacao,b19-recibo,P1 --prefixo local_19d_b` | local | 115/115 | regressão (massa "HOMOLOG lista 19h50", 14b e aluno, limpa no fim) |
+| 11/10 19:52 | hml-19d | `e370f1e` | `e2e/hml14/telas.py --base local --canal msedge --casos lancamentos,recibos --prefixo local_19d` | local | 55/55 | regressão |
+| 11/10 19:49 | hml-19d | `e370f1e` | `e2e/w25/api.py` | staging | 23/30 | a mesma base das hml-13/15b/16d/19a/19b/19c (as 7 da massa do dia); nada do Financeiro |
+| 11/10 19:48 | hml-19d | `e370f1e` | `e2e/w10/api.py` | staging | 22/22 | regressão |
+| 11/10 19:47 | hml-19d | `e370f1e` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | com a migration 20261011120000 no staging |
+| 11/10 19:45 | hml-19d | `e370f1e` | `e2e/hml19/rede.py --area financeiro --base local --canal msedge` | local | 26/26 | o DEPOIS: cada ação = 1 chamada da `financeiro`, 0 `rest` nas 4 tabelas e no `pacientes`; prints local_d_* |
+| 11/10 19:41 | hml-19d | `e370f1e` | `e2e/hml19/rede.py --area financeiro --base staging --canal msedge --casos movimentacao,recibo --prefixo diag` | staging | 7/7 | o antes de novo, com o diagnóstico novo do harness: recibo 2 `rest` em 1267 ms |
+| 11/10 19:39 | hml-19d | `e370f1e` | `e2e/hml19/rede.py --area financeiro --base staging --canal msedge` | staging | 18/19 | o ANTES (7694e8a): a gravação ia direto em todas; a espera do recibo (do E2E) não fechou em 60 s — o recibo saiu certo |
+| 11/10 19:35 | hml-19d | `e370f1e` | `e2e/hml19/api.py --area financeiro --base staging` | staging | 47/47 | P e N1–N9 (financeiro v1 + a migration no staging); limpeza conferida |
+| 11/10 19:32 | hml-19d | `e370f1e` | `e2e/hml19/api.py --area financeiro --base prod --so-leitura` | produção | 5/5 | sessão principal: smoke só leitura depois de publicar |
 | 11/10 17:25 | hml-19c | `8a911bb` | `e2e/hml19/api.py --area avaliacao --base staging --limpar` | staging | 2/2 | F8: nada pendente; conferência só leitura 0/0 (2 bancos, 2 schemas, 4 buckets, avisos) |
 | 11/10 17:24 | hml-19c | `8a911bb` | `e2e/w17/avaliacao_telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19c --canal msedge` | staging | 63/63 | F8: a aba Avaliação inteira no staging com o código novo (o local deu 64/64) |
 | 11/10 17:20 | hml-19c | `8a911bb` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge --prefixo staging2` | staging | 21/21 | F8, o DEPOIS no staging: cada ação só pelas funções, 0 gravação direta; prints staging2_c_* + a folha |

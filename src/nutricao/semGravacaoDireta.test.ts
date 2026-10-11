@@ -8,6 +8,9 @@
 // Dietas e o app do aluno (menos o que é de outra W: antropometrias.ts, da hml-19c, e o link público /d/:codigo, decisão 13).
 // hml-19c: a Avaliação — as fotos de evolução e os diálogos (src/nutricao/avaliacao), a aba do painel (a foto mensal do Treino e o
 // aviso, src/painel/aluno/avaliacao) e a lib da antropometria (um arquivo avulso, que saiu do `fora` da Dieta).
+// hml-19d: o Financeiro (src/financeiro e src/painel/financeiro — as libs, os diálogos e as tags do aluno) grava pela função financeiro.
+// As pastas são divididas com a LINUX 3 (cobrança, Mercado Pago, InfinitePay, planos): nesta área só contam as gravações nas 4 tabelas
+// do Financeiro e em pacientes (as tags) — `tabelas`; e, no src/ inteiro, ninguém grava direto nas 4 tabelas.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -22,7 +25,7 @@ const RAIZ = resolve(__dirname, "../..");
  * `pastas` aceita pasta ou arquivo avulso; `minimo` = quantos arquivos a área tem de ter, no mínimo (a guarda não passa por não achar
  * arquivo; o padrão é 31).
  */
-const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; minimo?: number }> = {
+const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; minimo?: number; tabelas?: readonly string[] }> = {
   // hml-19a: o Prontuário (as 18 tabelas e o bucket de anexos — a Pré-consulta usa as mesmas libs)
   prontuario: { pastas: ["src/nutricao/prontuario"], base: 0 },
   // hml-19b: a Dieta (as libs do editor), as Dietas (alimentos, receitas, diário da nutri) e o app do aluno (✓ e a foto do diário)
@@ -37,7 +40,16 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
     base: 0,
     minimo: 15,
   },
+  // hml-19d: o Financeiro (as movimentações, as categorias, os modelos e os recibos; as sementes do 1º acesso; as tags do aluno) — só as
+  // gravações nestas tabelas contam (o resto das 2 pastas é da cobrança/LINUX 3)
+  financeiro: {
+    pastas: ["src/financeiro", "src/painel/financeiro"],
+    base: 0,
+    tabelas: ["transacoes", "recibos", "modelos_recibo", "categorias_financeiras", "pacientes"],
+  },
 };
+/** As 4 tabelas do Financeiro (hml-19d): ninguém no src/ grava direto nelas. */
+const TABELAS_DO_FINANCEIRO = ["transacoes", "recibos", "modelos_recibo", "categorias_financeiras"] as const;
 
 const GRAVA_TABELA = /\.(insert|update|upsert|delete)\(/;
 const GRAVA_STORAGE = /\.storage\s*\.from\(([^()]|\([^()]*\))*\)\s*\.(upload|remove|update|move|copy)\(/g;
@@ -46,20 +58,43 @@ const RPC = /\.rpc\(\s*["'`]([a-z0-9_]+)["'`]/g;
 
 const linhaDe = (texto: string, pos: number) => texto.slice(0, pos).split("\n").length;
 
-/** As gravações diretas de um código-fonte: "linha: o quê". */
-export function gravacoesDiretas(fonte: string): string[] {
+const TABELA_ESCRITA = /^\s*["'`]([a-z0-9_]+)["'`]\s*\)/;
+
+/**
+ * As gravações diretas de um código-fonte: "linha: o quê". `tabelas` (hml-19d): só as gravações nessas tabelas (ou num `.from(` cujo nome
+ * não está escrito — conta, por garantia); o Storage e as RPCs ficam de fora (a área é a das tabelas).
+ */
+export function gravacoesDiretas(fonte: string, tabelas?: readonly string[]): string[] {
   const texto: string = semComentarios(fonte);
   const achados: string[] = [];
-  for (const m of texto.matchAll(GRAVA_STORAGE)) achados.push(`${linhaDe(texto, m.index!)}: storage.${m[2]}`);
+  if (!tabelas) for (const m of texto.matchAll(GRAVA_STORAGE)) achados.push(`${linhaDe(texto, m.index!)}: storage.${m[2]}`);
   for (const m of texto.matchAll(FROM_DE_TABELA)) {
     // o encadeamento: do .from( até o fim da instrução (;) ou o próximo .from(
     const depois = texto.slice(m.index! + m[0].length, m.index! + m[0].length + 1500);
     const fim = depois.search(/;|\.from\(/);
     const cadeia = fim === -1 ? depois : depois.slice(0, fim);
     const w = GRAVA_TABELA.exec(cadeia);
-    if (w) achados.push(`${linhaDe(texto, m.index!)}: tabela.${w[1]}`);
+    if (!w) continue;
+    const nome = TABELA_ESCRITA.exec(depois)?.[1];
+    if (tabelas && nome && !tabelas.includes(nome)) continue;
+    achados.push(`${linhaDe(texto, m.index!)}: tabela.${w[1]}`);
   }
-  for (const m of texto.matchAll(RPC)) if (RPC_QUE_GRAVAM.has(m[1])) achados.push(`${linhaDe(texto, m.index!)}: rpc.${m[1]}`);
+  if (!tabelas) for (const m of texto.matchAll(RPC)) if (RPC_QUE_GRAVAM.has(m[1])) achados.push(`${linhaDe(texto, m.index!)}: rpc.${m[1]}`);
+  return achados;
+}
+
+/** hml-19d: só as gravações com o nome da tabela ESCRITO e numa das `tabelas` (a varredura do src/ inteiro): "linha: tabela.operação". */
+function gravacoesComONome(fonte: string, tabelas: readonly string[]): string[] {
+  const texto: string = semComentarios(fonte);
+  const achados: string[] = [];
+  for (const m of texto.matchAll(FROM_DE_TABELA)) {
+    const depois = texto.slice(m.index! + m[0].length, m.index! + m[0].length + 1500);
+    const nome = TABELA_ESCRITA.exec(depois)?.[1];
+    if (!nome || !tabelas.includes(nome)) continue;
+    const fim = depois.search(/;|\.from\(/);
+    const w = GRAVA_TABELA.exec(fim === -1 ? depois : depois.slice(0, fim));
+    if (w) achados.push(`${linhaDe(texto, m.index!)}: ${nome}.${w[1]}`);
+  }
   return achados;
 }
 
@@ -104,15 +139,37 @@ describe("hml-19a — o detector acha o que procura (controle positivo)", () => 
     ].join("\n");
     expect(gravacoesDiretas(fonte)).toEqual([]);
   });
+
+  it("hml-19d: com a lista de tabelas, só elas contam (o nome não escrito conta por garantia; o Storage e as RPCs não são da área)", () => {
+    const tabelas = AREAS.financeiro.tabelas!;
+    expect(gravacoesDiretas('await principal.from("transacoes").insert({ valor: 1 });', tabelas)).toEqual(["1: tabela.insert"]);
+    expect(gravacoesDiretas('const { error } = await principal.from("pacientes").update({ tags: nomes }).eq("id", id);', tabelas)).toEqual(["1: tabela.update"]);
+    expect(gravacoesDiretas('await principal.from("mp_contas").update({ ativo: false }).eq("id", id);', tabelas)).toEqual([]);
+    expect(gravacoesDiretas("await principal.from(TABELA).delete().eq(\"id\", id);", tabelas)).toEqual(["1: tabela.delete"]);
+    expect(gravacoesDiretas("await principal.storage.from(BUCKET).upload(path, arquivo);", tabelas)).toEqual([]);
+    expect(gravacoesDiretas('await principal.rpc("lixeira_apagar", { p_id: id });', tabelas)).toEqual([]);
+    // sem a lista, como antes
+    expect(gravacoesDiretas('await principal.from("mp_contas").update({ ativo: false });')).toEqual(["1: tabela.update"]);
+  });
 });
 
 describe("hml-19a — as áreas migradas não gravam direto (base 0)", () => {
-  it.each(Object.entries(AREAS))("%s: nenhuma gravação direta nas pastas da área", (_area, { pastas, base, fora = [], minimo = 31 }) => {
+  it.each(Object.entries(AREAS))("%s: nenhuma gravação direta nas pastas da área", (_area, { pastas, base, fora = [], minimo = 31, tabelas }) => {
     const fontes = pastas.flatMap(fontesDa).filter((arq) => !fora.includes(relative(RAIZ, arq)));
-    const achados = fontes.flatMap((arq) => gravacoesDiretas(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
+    const achados = fontes.flatMap((arq) => gravacoesDiretas(readFileSync(arq, "utf-8"), tabelas).map((a) => `${relative(RAIZ, arq)}:${a}`));
     expect(achados.length, achados.join("\n")).toBe(base);
     // e a área tem código de verdade (a guarda não passa por não achar arquivo)
     expect(fontes.length).toBeGreaterThanOrEqual(minimo);
+  });
+
+  it("hml-19d: ninguém no src/ inteiro grava direto nas 4 tabelas do Financeiro (transacoes, recibos, modelos_recibo, categorias)", () => {
+    const fontes = fontesDa("src");
+    const achados = fontes.flatMap((arq) => gravacoesComONome(readFileSync(arq, "utf-8"), TABELAS_DO_FINANCEIRO).map((a) => `${relative(RAIZ, arq)}:${a}`));
+    expect(achados, achados.join("\n")).toEqual([]);
+    expect(fontes.length).toBeGreaterThan(500);
+    // o detector acha o que procura
+    expect(gravacoesComONome('await principal.from("recibos").update({ deleted_at: x }).eq("id", id);', TABELAS_DO_FINANCEIRO)).toEqual(["1: recibos.update"]);
+    expect(gravacoesComONome('await principal.from(TABELA).insert({});', TABELAS_DO_FINANCEIRO)).toEqual([]);
   });
 
   it("hml-19b: os arquivos de fora existem e ainda gravam direto (a guarda não esconde nada além deles)", () => {

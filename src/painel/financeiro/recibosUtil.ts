@@ -7,20 +7,14 @@ import { chaveDia, dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { normalizarConteudo } from "@/nutricao/editor/lib/orientacoesUtil";
 import { CONTEUDO_MODELO_PADRAO, DESCRICAO_RECIBO_MAX, TAGS, type DadosTags } from "@/financeiro/recibos";
 import { parseValor, textoValor } from "./financeiroUtil";
+import { CONTEUDO_MODELO_PADRAO_NUTRI } from "../../../supabase-principal/functions/_shared/financeiro-gravar-regras";
 
 export type PapelProfissional = "dono" | "personal" | "nutricionista";
 
-/** O texto do modelo padrão do site antigo do Nutri (o mesmo de hoje para a nutricionista). */
-export const CONTEUDO_MODELO_PADRAO_NUTRI = [
-  "Recebi de *|NOME_PACIENTE|*, CPF *|NUMERO_DOCUMENTO_PACIENTE|*, a quantia de *|VALOR_CONSULTA|* (*|VALOR_POR_EXTENSO|*), referente a atendimento nutricional.",
-  "",
-  "Para maior clareza, firmo o presente recibo.",
-  "",
-  "*|DATA_HOJE|*",
-  "",
-  "*|NOME_NUTRICIONISTA|*",
-  "*|CARIMBO|*",
-].join("\n");
+/** O texto do modelo padrão do site antigo do Nutri (o mesmo de hoje para a nutricionista). hml-19d: mora em
+ *  supabase-principal/functions/_shared/financeiro-gravar-regras.ts (a semente nasce no servidor, que escolhe pelo papel com a mesma
+ *  regra do padraoDoRecibo abaixo) — reexportado daqui, idêntico. */
+export { CONTEUDO_MODELO_PADRAO_NUTRI };
 
 export interface PadraoRecibo {
   /** só nutricionista: tudo igual ao site antigo */

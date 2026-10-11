@@ -1,8 +1,14 @@
 // Physiq W6 — lançamentos do aluno (N-45): porte das regras e do acesso a dados do Financeiro do PhysiqNutri
 // (src/lib/financeiroUtil.ts e src/lib/financeiro.ts de lá) para o banco principal: entradas e saídas ligadas ao aluno,
 // categorias do profissional (as 6 padrão nascem no 1º uso) e totais (estornadas ficam fora). A W19 usa as mesmas peças.
+// hml-19d (H-41 · jeito 2): as gravações (a semente das categorias e o lançamento novo) vão pela função financeiro, com a sessão de quem
+// chama; a semente leva a CONTA do aluno (antes nascia sem conta) e a lista das 6 mora em
+// supabase-principal/functions/_shared/financeiro-gravar-regras.ts (reexportada daqui, idêntica). O estornarLancamento (sem quem
+// chamasse) saiu.
 import { principal } from "@/integrations/principal/client";
 import { paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
+import { CATEGORIAS_PADRAO } from "../../supabase-principal/functions/_shared/financeiro-gravar-regras";
+import { garantirPadroesFinanceiro, gravarFinanceiro } from "./gravar";
 
 export type TipoLancamento = "entrada" | "saida";
 export type MetodoLancamento = "pix" | "dinheiro" | "cartao_credito" | "cartao_debito" | "transferencia" | "boleto" | "outro";
@@ -18,8 +24,8 @@ export const METODOS_LANCAMENTO: { valor: MetodoLancamento; rotulo: string }[] =
 ];
 export const rotuloMetodoLancamento = (m: string | null | undefined): string => METODOS_LANCAMENTO.find((x) => x.valor === m)?.rotulo ?? (m ?? "");
 
-/** As 6 categorias que nascem no 1º acesso (as do Nutri). */
-export const CATEGORIAS_PADRAO = ["Consulta", "Retorno", "Plano alimentar", "Aluguel", "Material", "Outros"];
+/** As 6 categorias que nascem no 1º acesso (as do Nutri) — a lista do servidor. */
+export { CATEGORIAS_PADRAO };
 
 export interface Categoria {
   id: string;
@@ -78,18 +84,22 @@ const lerCategorias = async (uid: string): Promise<Categoria[]> => {
   return (data ?? []) as Categoria[];
 };
 
-export async function garantirCategorias(uid: string): Promise<Categoria[]> {
+/**
+ * As categorias do profissional; sem nenhuma, a função semeia as 6 padrão (financeiro › padroes_garantir: 1 chamada, com a conta do aluno
+ * e com trava no servidor — junto, o "Recibo padrão" se faltar).
+ */
+export async function garantirCategorias(uid: string, contaId: string | null): Promise<Categoria[]> {
   const lista = await lerCategorias(uid);
   if (lista.length) return lista;
-  const { data: novas, error } = await principal.from("categorias_financeiras").insert(CATEGORIAS_PADRAO.map((nome) => ({ nutricionista_id: uid, nome }))).select("id, nome");
-  if (error) {
-    // hml-14b (B14): o erro era ignorado e a tela ficava sem categoria nenhuma. Duas abas ao mesmo tempo: a 2ª bate no índice
-    // único (nome por profissional) e relê as que a 1ª criou; outro erro (sem nada para reler) vai para a tela.
+  try {
+    const r = await garantirPadroesFinanceiro(contaId);
+    return r.categorias.map(({ id, nome }) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  } catch (e) {
+    // hml-14b (B14): o erro não fica calado — relê (outra aba pode ter semeado) e, sem nada para reler, o erro vai para a tela
     const relidas = await lerCategorias(uid);
     if (relidas.length) return relidas;
-    throw new Error(error.message);
+    throw e;
   }
-  return ((novas ?? []) as Categoria[]).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
 export async function criarLancamento(p: {
@@ -104,14 +114,9 @@ export async function criarLancamento(p: {
   categoriaId: string | null;
   observacao: string | null;
 }): Promise<void> {
-  const { error } = await principal.from("transacoes").insert({
-    nutricionista_id: p.uid, conta_id: p.contaId, paciente_id: p.pacienteId, tipo: p.tipo, descricao: p.descricao.trim().slice(0, 160),
-    valor: p.valor, data: p.data, metodo: p.metodo, categoria_id: p.categoriaId, observacao: p.observacao?.trim() || null,
+  // hml-19d: pela função (financeiro › transacao_criar); o dono é quem chama, no servidor (o p.uid fica só por compatibilidade)
+  await gravarFinanceiro("transacao_criar", {
+    conta_id: p.contaId, paciente_id: p.pacienteId, tipo: p.tipo, descricao: p.descricao.trim().slice(0, 160), valor: p.valor, data: p.data,
+    metodo: p.metodo, categoria_id: p.categoriaId, observacao: p.observacao?.trim() || null,
   });
-  falhou(error);
-}
-
-export async function estornarLancamento(id: string, estornada: boolean): Promise<void> {
-  const { error } = await principal.from("transacoes").update({ estornada }).eq("id", id);
-  falhou(error);
 }

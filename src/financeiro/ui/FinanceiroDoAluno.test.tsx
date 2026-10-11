@@ -231,6 +231,13 @@ describe("Financeiro do aluno — as categorias do lançamento (hml-17, H-39)", 
     await waitFor(() => expect(opcoes()).toEqual(["Sem categoria", "Consulta"]));
     expect(document.querySelector("[data-lancamento-categorias-erro]")).toBeNull();
   });
+
+  it("hml-19d: a semente das categorias leva a CONTA do aluno (antes, nascia sem conta)", async () => {
+    h.categorias.mockResolvedValue([{ id: "cat1", nome: "Consulta" }]);
+    montar();
+    await waitFor(() => expect(h.categorias).toHaveBeenCalled());
+    expect(h.categorias).toHaveBeenCalledWith("u-dono", "c1");
+  });
 });
 
 describe("Financeiro do aluno — o plano no cartão da mensalidade (W-P)", () => {

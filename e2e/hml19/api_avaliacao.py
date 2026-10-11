@@ -163,7 +163,8 @@ def seco(o, area: str) -> None:
          "a conferência final: a marca nas 2 tabelas do principal e o mês sentinela no Treino (só leitura, os 2 schemas)")
     jpg = B.jpeg_sintetico()
     o.ok(jpg[:3] == b"\xff\xd8\xff" and len(jpg) < 2000, f"a imagem de teste é sintética e pequena (JPEG, {len(jpg)} bytes)")
-    o.ok(B.REG_LOGINS.name == "logins_etapa2_19c.txt", "o registro de logins desta W (decisão G): agente/logins_etapa2_19c.txt")
+    # hml-19d: o registro passou a ser o da W seguinte (logins_etapa2_19d.txt) — aqui, que é o de uma W da hml-19 a partir da 19c
+    o.ok(B.REG_LOGINS.name in ("logins_etapa2_19c.txt", "logins_etapa2_19d.txt"), f"o registro de logins da W (decisão G): agente/{B.REG_LOGINS.name}")
 
 
 # ───────────────────────── a rodada no staging ─────────────────────────

@@ -9,6 +9,7 @@ import { endOfMonth, endOfYear, format, isValid, parseISO, startOfDay, startOfMo
 import { chaveDia, dataValida } from "@/nutricao/editor/lib/agendaUtil";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
 import { arred } from "@/nutricao/editor/lib/antropometriaUtil";
+import { CATEGORIAS_PADRAO } from "../../../supabase-principal/functions/_shared/financeiro-gravar-regras";
 
 // ---- Tipo e método ----
 export type Tipo = "entrada" | "saida";
@@ -39,8 +40,9 @@ export const METODO_PADRAO: Metodo = "pix";
 export const ehMetodo = (v: unknown): v is Metodo => METODOS.some((m) => m.valor === v);
 export const rotuloMetodo = (m: string | null | undefined): string => METODOS.find((x) => x.valor === m)?.rotulo ?? (m ?? "");
 
-/** Nascem no 1º acesso do profissional (as do Nutri — src/financeiro/lancamentos.ts da W6 cria as mesmas). */
-export const CATEGORIAS_PADRAO = ["Consulta", "Retorno", "Plano alimentar", "Aluguel", "Material", "Outros"];
+/** Nascem no 1º acesso do profissional (as do Nutri). hml-19d: a semente nasce no servidor (função financeiro › padroes_garantir) e a
+ *  lista mora em supabase-principal/functions/_shared/financeiro-gravar-regras.ts — reexportada daqui, idêntica. */
+export { CATEGORIAS_PADRAO };
 export const CATEGORIA_NOME_MAX = 60;
 export const DESCRICAO_MAX = 160;
 export const OBSERVACAO_MAX = 2000;

@@ -89,6 +89,24 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
 - Nenhuma migration: os grants e as policies das 3 tabelas e dos 2 buckets **ficam** nesta etapa (a função grava com a sessão da
   pessoa; os APKs antigos ainda gravam direto — `docs/desvios.md`, desvio 2).
 
+## Principal: o Financeiro pela função `financeiro` (hml-19d, H-41 · jeito 2)
+- `transacoes`, `categorias_financeiras`, `modelos_recibo`, `recibos` e as tags do aluno (`pacientes.tags`) não são mais gravadas do
+  navegador (Painel › Financeiro e o Financeiro do aluno): a função NOVA `financeiro` (porta `_shared/porta-pessoa.ts`, `verify_jwt`
+  ligado) grava **como a pessoa**, com o dono vindo do `user` (nunca do corpo) e as colunas numa lista fechada
+  (`_shared/financeiro-gravar-regras.ts`). Nas tags, só a coluna `tags` (o gatilho `pacientes_guard_cobranca` da W-P segue segurando
+  as colunas de cobrança); a `admin-tags` do Treino segue chamada pela tela.
+- O que é **tudo ou nada / 1 vez só** vai por 3 RPCs **`SECURITY INVOKER`** (search_path fixo; o RLS de hoje vale dentro; o dono de
+  `auth.uid()`): `financeiro_garantir_padroes` (as 6 categorias e o "Recibo padrão" do 1º acesso, cada conjunto só se a pessoa não tem
+  nenhum vivo, sempre com a conta — e só numa conta em que ela trabalha, `sou_membro`; trava por pessoa), `financeiro_emitir_recibo`
+  (o recibo — o número segue vindo do gatilho `numerar_recibo` — + a movimentação ligada + o texto com o número real) e
+  `financeiro_excluir_recibo` (o recibo à Lixeira + a movimentação solta). Grants: `revoke all … from public, anon` + `grant execute
+  … to authenticated, service_role` (o 2º jeito da tabela acima). Sem login → `sem_login`; corpo fora da forma → `dados_invalidos`;
+  o que não existe ou o RLS esconde → `nao_encontrado` e **nada muda**; conta de outro nas sementes → `sem_acesso`.
+- Migração `20261011120000_hml19d_financeiro_atomicas.sql` (reversa em `supabase-principal/reversas/`). Não toca `cobrancas`,
+  `planos_aluno`, `contas`, `recebimento_chaves` nem as colunas de cobrança de `pacientes`. Os grants e as policies das 4 tabelas e
+  do `pacientes` **ficam** nesta etapa (a função grava com a sessão da pessoa; os APKs antigos ainda gravam direto —
+  `docs/desvios.md`, desvio 2).
+
 ## Treino: quem lê os treinos montados
 - `tb_grupos_treino` e `tb_grupos_exercicios` (`physiq_pode_ler_grupo`): o master; o professor dono; qualquer profissional,
   se o grupo é do catálogo global do master (`professor_id` vazio); e o aluno que recebe o grupo (`tb_grupos_treino_perfis`).

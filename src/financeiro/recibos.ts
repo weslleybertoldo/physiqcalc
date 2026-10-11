@@ -3,8 +3,17 @@
 // extenso em pt-BR, número com 4 dígitos (sequencial por profissional — gatilho numerar_recibo), modelo padrão, emitir a partir
 // de um lançamento. A W19 (Painel › Financeiro) usa estas mesmas peças. hml-14b: os modelos (garantir, salvar, excluir) e o último
 // número são lidos e gravados por src/painel/financeiro/dados.ts — as cópias daqui, sem uso, saíram.
+// hml-19d (H-41 · jeito 2): o título e o texto do modelo padrão moram em supabase-principal/functions/_shared/financeiro-gravar-regras.ts
+// (a semente nasce no servidor — função financeiro › padroes_garantir) e são reexportados daqui, idênticos; o excluirRecibo grava pela
+// função (o recibo à Lixeira e a movimentação solta numa transação); o aplicarTags ganhou a opção da MARCA do número (o emitirRecibo).
 import { principal } from "@/integrations/principal/client";
 import { paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
+import {
+  CONTEUDO_MODELO_PADRAO, MARCA_NUMERO_RECIBO, TITULO_MODELO_PADRAO,
+} from "../../supabase-principal/functions/_shared/financeiro-gravar-regras";
+import { gravarFinanceiro } from "./gravar";
+
+export { CONTEUDO_MODELO_PADRAO, MARCA_NUMERO_RECIBO, TITULO_MODELO_PADRAO };
 
 export const TITULO_MODELO_MAX = 120;
 export const CONTEUDO_MODELO_MAX = 8000;
@@ -25,19 +34,6 @@ export const TAGS: Tag[] = [
 ];
 const RE_TAG = /\*\|[A-Z_]+\|\*/g;
 
-export const TITULO_MODELO_PADRAO = "Recibo padrão";
-/** Texto próprio do Physiq (o do Nutri, sem "nutricional": vale para os 2 módulos). */
-export const CONTEUDO_MODELO_PADRAO = [
-  "Recebi de *|NOME_PACIENTE|*, CPF *|NUMERO_DOCUMENTO_PACIENTE|*, a quantia de *|VALOR_CONSULTA|* (*|VALOR_POR_EXTENSO|*), referente a atendimento.",
-  "",
-  "Para maior clareza, firmo o presente recibo.",
-  "",
-  "*|DATA_HOJE|*",
-  "",
-  "*|NOME_NUTRICIONISTA|*",
-  "*|CARIMBO|*",
-].join("\n");
-
 export type DadosTags = { nomePaciente: string; cpf: string | null | undefined; valor: number; data: string; numero: number; nomeProfissional: string | null | undefined };
 
 export const formatarNumeroRecibo = (n: number): string => String(Math.max(0, Math.trunc(Number(n) || 0))).padStart(4, "0");
@@ -56,14 +52,18 @@ export function formatarDataRecibo(dia: string): string {
 
 const fmtBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n).replace(/\u00a0/g, " ");
 
-export function aplicarTags(conteudo: string, d: DadosTags): string {
+/**
+ * As tags do modelo trocadas pelos dados. `numeroNoServidor` (hml-19d, o emitirRecibo): a tag do número vira a MARCA_NUMERO_RECIBO, que
+ * o servidor troca pelo número REAL que o gatilho der (formatado como o formatarNumeroRecibo) — o resto, igual.
+ */
+export function aplicarTags(conteudo: string, d: DadosTags, opcoes: { numeroNoServidor?: boolean } = {}): string {
   const valores: Record<string, string> = {
     "*|NOME_PACIENTE|*": (d.nomePaciente ?? "").trim() || "—",
     "*|NUMERO_DOCUMENTO_PACIENTE|*": formatarCPF(d.cpf),
     "*|VALOR_CONSULTA|*": fmtBRL(d.valor),
     "*|VALOR_POR_EXTENSO|*": valorPorExtenso(d.valor),
     "*|DATA_HOJE|*": formatarDataRecibo(d.data),
-    "*|NUMERO_RECIBO|*": formatarNumeroRecibo(d.numero),
+    "*|NUMERO_RECIBO|*": opcoes.numeroNoServidor ? MARCA_NUMERO_RECIBO : formatarNumeroRecibo(d.numero),
     "*|NOME_NUTRICIONISTA|*": (d.nomeProfissional ?? "").trim() || "Profissional",
     "*|CARIMBO|*": CARIMBO_PLACEHOLDER,
   };
@@ -166,10 +166,6 @@ export interface Recibo {
   created_at: string;
 }
 
-const falhou = (error: { message: string } | null) => {
-  if (error) throw new Error(error.message);
-};
-
 /**
  * hml-14d (B21 · D31): uma página (20) dos recibos do aluno, o número mais alto primeiro (desempate pelo id), e o total — o cartão
  * mostra os 12 primeiros e o "Ver todos (N)" abre as páginas (antes: todos de uma vez, cortados calados em 1000). Erro do banco lança.
@@ -188,9 +184,7 @@ export function paginaRecibosDoAluno(pacienteId: string, pagina: number): Promis
 // hml-14b (B14): o `emitirRecibo` duplicado que morava aqui (sem uso — a emissão é a de src/painel/financeiro/dados.ts, que confere
 // cada erro) saiu; ele ignorava o erro ao regravar o texto com o número certo.
 
+/** hml-19d: o recibo à Lixeira e a movimentação de origem solta, juntos (função financeiro › recibo_excluir; antes: 2 pedidos). */
 export async function excluirRecibo(id: string): Promise<void> {
-  const { error } = await principal.from("recibos").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
-  const { error: e2 } = await principal.from("transacoes").update({ recibo_id: null }).eq("recibo_id", id);
-  falhou(e2);
+  await gravarFinanceiro("recibo_excluir", { id });
 }
