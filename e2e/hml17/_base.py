@@ -238,7 +238,9 @@ FUNCOES_CONHECIDAS = {
     "master-professores", "mp-payments", "painel-resumo-treino", "professor-convites", "treino-leitura", "trocar-token",
     "vincular-professor",
 }
-FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao"}
+# a automaticas-fila (W-P, 11/10/2026: a fila das cobranças automáticas, chamada só pelo pg_cron) processa cobrança: se um dia sair do
+# navegador, é gravação.
+FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila"}
 
 
 def funcao_grava(nome: str, acao: str | None) -> bool:
