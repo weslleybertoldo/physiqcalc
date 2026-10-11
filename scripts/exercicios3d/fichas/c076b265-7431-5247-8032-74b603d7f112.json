@@ -1,0 +1,63 @@
+{
+  "uuid": "c076b265-7431-5247-8032-74b603d7f112",
+  "nome": "Supino Inclinado com Halteres",
+  "cena": "supino_inclinado_com_halteres",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral superior (porção clavicular) · deltoide anterior · tríceps",
+  "padrao_movimento": "supino_inclinado",
+  "equipamento": "halteres",
+  "variacao": "banco inclinado",
+  "alvos": ["peitoral"],
+  "auxiliares": ["deltoide", "triceps"],
+  "camera": {"az": 35, "el": 24, "dist": 4.5, "alvo": [0, 0.22, 0.66]},
+  "ida_s": 1.5,
+  "movimento": "Sentado no banco inclinado a 30°, com o glúteo no assento, as costas e a cabeça no encosto e os pés chapados no chão, segura um halter em cada mão com as palmas viradas para os pés e os dois halteres em linha, como uma barra, com os braços estendidos e os halteres em cima dos ombros, juntos sem encostar um no outro; desce os halteres até ficarem do lado da parte de cima do peito, onde a barra encostaria, com os antebraços quase em pé, os cotovelos a cerca de 45–70° do tronco e mais baixos que os ombros, e os punhos retos; empurra de volta, trazendo os halteres para dentro, até os braços quase esticarem em cima dos ombros, sem bater um halter no outro.",
+  "cinesiologia": {
+    "plano": "oblíquo, entre o transverso e o sagital (flexão com adução horizontal do ombro na subida), cadeia cinética aberta",
+    "articulacoes": "ombro (flexão e adução horizontal na subida, extensão e abdução horizontal na descida) e cotovelo (extensão na subida, flexão na descida); punho reto; escápulas paradas no encosto",
+    "agonistas": "peitoral maior (porção clavicular) (ExRx)",
+    "sinergistas": "peitoral maior (porção esternal), deltoide anterior, tríceps braquial e coracobraquial (ExRx); com halteres o peitoral e o deltoide anterior trabalham como na barra e o tríceps um pouco menos (Saeterbakken 2011)",
+    "estabilizadores": "bíceps braquial (cabeça curta) (ExRx) — com halteres ele trabalha mais que na barra (Saeterbakken 2011)",
+    "fases": "descida excêntrica (inspirando), subida concêntrica (soltando o ar) (ACE: \"Inhale and slowly lower the dumbbells\" / \"Exhale and gently press upwards\")"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Incline Bench Press. https://exrx.net/WeightExercises/PectoralClavicular/DBInclineBenchPress (lido na cópia do Internet Archive de 27/01/2026)",
+    "Bodybuilding.com — Incline Dumbbell Press (o fonte_en do catálogo). https://www.bodybuilding.com/exercises/incline-dumbbell-press (lido na cópia do Internet Archive de 10/12/2024)",
+    "American Council on Exercise (ACE) — Incline Chest Press. https://www.acefitness.org/resources/everyone/exercise-library/25/incline-chest-press/",
+    "Graham JF. Exercise Technique: Dumbbell Bench Press. Strength Cond J. 2000;22(4):71-72.",
+    "ExRx.net — Bench Press Analyses. https://exrx.net/Kinesiology/BenchPress (lido na cópia do Internet Archive de 01/02/2025)",
+    "Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM. Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise. Int J Environ Res Public Health. 2020;17(19):7339.",
+    "Lauver JD, Cayot TE, Scheuermann BW. Influence of bench angle on upper extremity muscular activation during bench press exercise. Eur J Sport Sci. 2016;16(3):309-316.",
+    "Trebs AA, Brandenburg JP, Pitney WA. An electromyography analysis of 3 muscles surrounding the shoulder joint during the performance of a chest press exercise at several angles. J Strength Cond Res. 2010;24(7):1925-1930.",
+    "Saeterbakken AH, van den Tillaar R, Fimland MS. A comparison of muscle activity and 1-RM strength of three chest-press exercises with different stability requirements. J Sports Sci. 2011;29(5):533-538."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no encosto", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3], "fonte": "ACE — Incline Chest Press (\"Your head, shoulders, butt and feet should make contact with the bench and floor/riser throughout the exercise\"); Graham 2000 (\"your head, shoulders, and buttocks evenly and firmly on the bench\")"},
+      {"nome": "glúteo apoiado no assento", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3], "fonte": "ACE (idem); Graham 2000 (idem)"},
+      {"nome": "cabeça apoiada no encosto", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3], "fonte": "ACE (idem); Rodríguez-Ridao 2020 (\"the participant’s head and back (thoracic area) were kept in contact with the bench\")"}
+    ],
+    "folgas": [
+      {"nome": "halteres sem bater um no outro", "equipamento": "halter_Left", "de": "halter_Right", "mm": [20, 5000], "fonte": "Graham 2000 (\"Bring the dumbbells together with control at the completion of the movement; do not bang the dumbbells together\"); em cima a cena deixa 4,5 cm entre as anilhas de dentro e 2,5 cm entre as pontas do eixo"},
+      {"nome": "halter esquerdo longe do banco", "equipamento": "halter_Left", "de": "banco", "mm": [30, 5000]},
+      {"nome": "halter direito longe do banco", "equipamento": "halter_Right", "de": "banco", "mm": [30, 5000]},
+      {"nome": "halter esquerdo longe do cabelo", "equipamento": "halter_Left", "de": "cabelo", "mm": [30, 5000]},
+      {"nome": "halter direito longe do cabelo", "equipamento": "halter_Right", "de": "cabelo", "mm": [30, 5000]}
+    ],
+    "angulos": [
+      {"nome": "tronco no encosto a ~30° do chão", "medida": "tronco", "t": "todos", "graus": [55, 66], "fonte": "Rodríguez-Ridao 2020 (\"An inclination of 30° produces greater activation of the upper portion of the pectoralis major\"); a medida é quadril → pescoço × vertical (60° = tronco a 30° do chão)"},
+      {"nome": "braços estendidos em cima, sem travar", "medida": "flexao", "junta": "ForeArm", "t": 0.0, "graus": [0, 20], "fonte": "Graham 2000 (\"Press the dumbbells upward until the elbows are fully extended but not locked\"); ExRx — Dumbbell Incline Bench Press (\"Press dumbbells up with elbows to sides until arms are extended\")"},
+      {"nome": "halteres em cima dos ombros em cima", "medida": "braco_elevacao", "t": 0.0, "graus": [108, 132], "fonte": "ExRx — Dumbbell Incline Bench Press (\"traveling inward over each shoulder at top\"); com o tronco a 30° o braço na vertical fica a ~120° do tronco"},
+      {"nome": "halteres juntos em cima", "medida": "pegada_largura", "t": 0.0, "faixa": [0.5, 0.9], "fonte": "Graham 2000 (\"Press the dumbbells upward and together with control\"); a cena deixa 4,5 cm entre as anilhas de dentro"},
+      {"nome": "cotovelo a 45–70° do tronco embaixo", "medida": "braco_abertura", "t": 1.0, "graus": [45, 70], "fonte": "ExRx — Bench Press Analyses (\"a 45º to 70º angle between the shoulder and torso\")"},
+      {"nome": "antebraço quase em pé embaixo", "medida": "antebraco_vertical", "t": 1.0, "graus": [0, 12], "fonte": "Graham 2000 (\"the forearms almost perpendicular to the floor\"); ACE — Incline Chest Press (\"Keep the elbows under your wrists\"); ExRx — Dumbbell Incline Bench Press (\"above upper arm between elbow and chest at bottom\": o punho um pouco pra dentro do cotovelo)"},
+      {"nome": "antebraço quase em pé o movimento todo", "medida": "antebraco_vertical", "t": "todos", "graus": [0, 15], "fonte": "Graham 2000 (\"Your wrists should remain firm and straight, the forearms almost perpendicular to the floor\")"},
+      {"nome": "cotovelo mais baixo que o ombro embaixo (braço atrás do plano do tronco)", "medida": "braco_frente", "t": 1.0, "graus": [-60, -10], "fonte": "ExRx — Bench Press Analyses (\"a mild stretch at the lowest position which would require the elbows to travel lower than the shoulders\"); ExRx — Dumbbell Incline Bench Press (\"until slight stretch is felt in chest or shoulder\")"},
+      {"nome": "halteres embaixo do lado da parte de cima do peito, onde a barra encostaria", "medida": "pegada_largura", "t": 1.0, "faixa": [1.4, 1.9], "fonte": "Graham 2000 (\"Dumbbells should be lowered to a lateral portion of your chest so that both handles are in line with one another; where a barbell would touch your chest\"); ExRx — Dumbbell Incline Bench Press (\"Lower weight to sides of upper chest\"); a barra do Supino Inclinado com Barra fica em 1,70 (Rodríguez-Ridao 2020: 150% da biacromial)"},
+      {"nome": "pegada pronada: palmas pros pés, não uma pra outra", "medida": "palma_dentro", "t": "todos", "graus": [-20, 20], "fonte": "ACE — Incline Chest Press (\"closed, pronated grip (palms facing forward, thumbs wrapped around the handle)\"); Bodybuilding.com — Incline Dumbbell Press (\"rotate your wrists forward so that the palms of your hands are facing away from you\")"},
+      {"nome": "punho reto (neutro)", "medida": "punho_flexao", "t": "todos", "graus": [-12, 12], "fonte": "ACE — Incline Chest Press (\"Maintain a neutral wrist position (avoid flexion / extension at the wrist joint)\"); Graham 2000 (\"Your wrists should remain firm and straight\")"},
+      {"nome": "punho sem dobrar de lado", "medida": "punho_desvio", "t": "todos", "graus": [-15, 15], "fonte": "Graham 2000 (idem)"}
+    ]
+  }
+}
