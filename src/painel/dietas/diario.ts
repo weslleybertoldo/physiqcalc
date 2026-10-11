@@ -8,15 +8,18 @@
 // (miniaturas) — a mesma regra desta aba. hml-14b (B21): a aba lê UMA página (20) do período no banco (listarDiarioPaginaComDias),
 // com o filtro de aluno e o "só não reagidas" no banco, as opções do filtro de aluno do banco (listarAlunosDoDiario) e as contagens
 // no banco (contarDiario) — nada de baixar o período e filtrar no navegador.
+// hml-19b (H-41 · jeito 2): reagir e excluir passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama e as
+// mesmas assinaturas: a reação leva o "agora" do servidor; o excluir põe a linha na Lixeira e DEPOIS tira a foto (o caminho vem da
+// linha no banco, não da tela). As frases de antes ficam. As leituras (e as URLs assinadas das fotos) seguem aqui.
 import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { principal } from "@/integrations/principal/client";
 import type { Database } from "@/integrations/principal/types";
 import { POR_PAGINA, deslocamento, paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
 import type { Reacao } from "@/nutricao/app/diarioUtil";
-import { COMENTARIO_NUTRI_MAX, chaveDia, type AlunoDoDiario } from "./diarioPainel";
+import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
+import { chaveDia, type AlunoDoDiario } from "./diarioPainel";
 
 export type RegistroDiarioRow = Database["public"]["Tables"]["diario_alimentar"]["Row"];
-type RegistroDiarioUpdate = Database["public"]["Tables"]["diario_alimentar"]["Update"];
 export type AlunoDoRegistro = AlunoDoDiario & { conta_id: string | null; nutricionista_id: string | null };
 export type RegistroDiarioNutri = RegistroDiarioRow & { paciente: AlunoDoRegistro | null };
 export const BUCKET_DIARIO = bucketDoAmbiente("diario");
@@ -159,29 +162,17 @@ export async function listarDiarioDaConta(contaId: string, uid: string, deIso: s
   return (data ?? []) as unknown as RegistroDiarioNutri[];
 }
 
-/** Reação + comentário (reacao null = tira a reação). UPDATE que a RLS não deixa devolve 0 linhas → erro amigável. */
+/** Reação + comentário (reacao null = tira a reação; o servidor apara o comentário e põe o agora). 0 linha → a frase de antes. */
 export async function reagir(id: string, reacao: Reacao | null, comentario: string): Promise<RegistroDiarioRow> {
-  const patch: RegistroDiarioUpdate = reacao
-    ? { reacao_nutri: reacao, comentario_nutri: comentario.trim().slice(0, COMENTARIO_NUTRI_MAX), reagido_em: new Date().toISOString() }
-    : { reacao_nutri: null, comentario_nutri: "", reagido_em: null };
-  const { data, error } = await principal.from("diario_alimentar").update(patch).eq("id", id).is("deleted_at", null).select("*").maybeSingle();
-  falhou(error);
-  if (!data) throw new Error("Você não pode reagir a esta foto (ou ela foi excluída).");
-  return data as RegistroDiarioRow;
+  const { linha } = await acaoNutricao<{ linha: RegistroDiarioRow }>("diario_reagir", { id, reacao, comentario })
+    .catch((e) => comFraseDoCodigo(e, { nao_encontrado: "Você não pode reagir a esta foto (ou ela foi excluída)." }));
+  return linha;
 }
 
-/** Soft delete (Lixeira) + remove a foto do bucket (melhor esforço: a linha já saiu da tela) — como o site antigo. */
+/** Soft delete (Lixeira) e depois a foto do bucket (no servidor; se o remove falhar, fica o arquivo, nunca a linha viva sem a foto). */
 export async function excluirRegistro(r: Pick<RegistroDiarioRow, "id" | "path">): Promise<void> {
-  const { data, error } = await principal
-    .from("diario_alimentar")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", r.id)
-    .is("deleted_at", null)
-    .select("id")
-    .maybeSingle();
-  falhou(error);
-  if (!data) throw new Error("Você não pode excluir esta foto (ou ela já foi excluída).");
-  await principal.storage.from(BUCKET_DIARIO).remove([r.path]).catch(() => undefined);
+  await acaoNutricao("diario_excluir", { id: r.id })
+    .catch((e) => comFraseDoCodigo(e, { nao_encontrado: "Você não pode excluir esta foto (ou ela já foi excluída)." }));
 }
 
 /** URL assinada de curta duração (a foto grande gera a própria ao abrir). */

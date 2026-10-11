@@ -1,17 +1,23 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/alimentos.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { acaoNutricao } from "@/nutricao/servidor";
+import { VOLTA_ALIMENTO } from "../../../../supabase-principal/functions/_shared/nutricao-regras";
 import { ordenarMedidas, palavrasBusca, type FiltrosAlimentos, type MedidaNova, type RegistroAlimento } from "@/nutricao/editor/lib/alimentosUtil";
 
 // Acesso às tabelas `alimentos` e `medidas_caseiras` (RLS: TACO é de todo mundo e só leitura; alimento próprio só da
 // dona; master vê tudo). Exclusão do alimento é SOFT (deleted_at → Lixeira, W32); as medidas seguem o alimento.
+// hml-19b (H-41 · jeito 2): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama e as
+// mesmas assinaturas: o alimento e as medidas vão juntos (1 chamada, tudo ou nada — antes 2 a 3 pedidos em série); editar TROCA as
+// medidas como hoje (o medida_caseira_id dos itens vira nulo, spec §1.11 item 4). O dono é quem chama (o servidor põe).
 
 export type AlimentoRow = Database["public"]["Tables"]["alimentos"]["Row"];
 export type MedidaCaseira = Database["public"]["Tables"]["medidas_caseiras"]["Row"];
 export type Alimento = AlimentoRow & { medidas_caseiras: MedidaCaseira[] };
 export type GrupoAlimentos = { grupo: string; total: number };
 
-const SELECT = "*, medidas_caseiras(*)";
+/** O alimento com as medidas — o MESMO select que o servidor devolve depois de gravar (uma fonte só). */
+const SELECT = VOLTA_ALIMENTO;
 
 const falhou = (error: { message: string } | null): void => {
   if (error) throw new Error(error.message);
@@ -65,37 +71,23 @@ export async function listarGrupos(): Promise<GrupoAlimentos[]> {
   return ((data ?? []) as { grupo: string; total: number }[]).map((g) => ({ grupo: g.grupo, total: Number(g.total) }));
 }
 
-async function gravarMedidas(alimentoId: string, medidas: MedidaNova[]): Promise<MedidaCaseira[]> {
-  if (!medidas.length) return [];
-  const { data, error } = await supabase
-    .from("medidas_caseiras")
-    .insert(medidas.map((m) => ({ alimento_id: alimentoId, descricao: m.descricao, gramas: m.gramas, ordem: m.ordem })))
-    .select("*");
-  falhou(error);
-  return ordenarMedidas((data ?? []) as MedidaCaseira[]);
-}
+const colunasMedidas = (medidas: MedidaNova[]) => medidas.map((m) => ({ descricao: m.descricao, gramas: m.gramas, ordem: m.ordem }));
 
 export async function criarAlimento(nutricionistaId: string, r: RegistroAlimento, medidas: MedidaNova[]): Promise<Alimento> {
-  const { data, error } = await supabase
-    .from("alimentos")
-    .insert({ ...colunas(r), fonte: "proprio", nutricionista_id: nutricionistaId })
-    .select("*")
-    .single();
-  falhou(error);
-  const a = data as AlimentoRow;
-  return { ...a, medidas_caseiras: await gravarMedidas(a.id, medidas) };
+  const { linha } = await acaoNutricao<{ linha: AlimentoRow & { medidas_caseiras?: MedidaCaseira[] | null } }>("alimento_salvar", {
+    alimento: colunas(r), medidas: colunasMedidas(medidas),
+  });
+  return comMedidas(linha);
 }
 
-/** Atualiza o alimento e TROCA as medidas caseiras pelas do formulário (apaga as antigas, grava as novas). */
+/** Atualiza o alimento e TROCA as medidas caseiras pelas do formulário (apaga as antigas, grava as novas) — juntos, numa chamada. */
 export async function atualizarAlimento(id: string, r: RegistroAlimento, medidas: MedidaNova[]): Promise<Alimento> {
-  const { data, error } = await supabase.from("alimentos").update(colunas(r)).eq("id", id).select("*").single();
-  falhou(error);
-  const { error: erroDel } = await supabase.from("medidas_caseiras").delete().eq("alimento_id", id);
-  falhou(erroDel);
-  return { ...(data as AlimentoRow), medidas_caseiras: await gravarMedidas(id, medidas) };
+  const { linha } = await acaoNutricao<{ linha: AlimentoRow & { medidas_caseiras?: MedidaCaseira[] | null } }>("alimento_salvar", {
+    id, alimento: colunas(r), medidas: colunasMedidas(medidas),
+  });
+  return comMedidas(linha);
 }
 
 export async function excluirAlimento(id: string): Promise<void> {
-  const { error } = await supabase.from("alimentos").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("alimento_excluir", { id });
 }

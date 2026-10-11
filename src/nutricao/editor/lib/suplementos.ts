@@ -1,6 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/suplementos.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { acaoNutricao } from "@/nutricao/servidor";
 import { edicaoParaBanco, indicacaoParaBanco, produtoParaBanco, type FormIndicacao, type FormProduto } from "@/nutricao/editor/lib/suplementosUtil";
 
 // Acesso da seção "Suplementos e produtos" (W26): `produtos` (catálogo da nutricionista — sem paciente) e `indicacoes_produto`
@@ -9,6 +10,9 @@ import { edicaoParaBanco, indicacaoParaBanco, produtoParaBanco, type FormIndicac
 // um produto, que ele seja dela. Exclusão SOFT nas duas (deleted_at → Lixeira, W32): excluir um produto do catálogo NÃO mexe nas
 // indicações já feitas (elas têm a própria cópia). `ordem` só vale entre as indicações ATIVAS. Os dados do perfil pro PDF são
 // reexportados pra tela ter uma porta só.
+// hml-19b (H-41 · jeito 2): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama e as
+// mesmas assinaturas (o dono é quem chama: o servidor põe; a indicação nasce ativa lá). O ▲▼ grava as ordens que mudaram numa chamada só,
+// tudo ou nada (antes: N updates em paralelo).
 
 export { nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 export { dadosProfissionais } from "@/nutricao/editor/lib/profissional";
@@ -38,32 +42,24 @@ export async function listarProdutos(): Promise<Produto[]> {
 }
 
 export async function criarProduto(nutricionistaId: string, f: FormProduto): Promise<Produto> {
-  const { data, error } = await supabase
-    .from(T_PRODUTOS)
-    .insert({ nutricionista_id: nutricionistaId, ...produtoParaBanco(f) })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Produto;
+  const { linha } = await acaoNutricao<{ linha: Produto }>("produto_criar", produtoParaBanco(f));
+  return linha;
 }
 
 /** Edita o produto do catálogo (as indicações já feitas mantêm a cópia antiga). */
 export async function atualizarProduto(id: string, f: FormProduto): Promise<Produto> {
-  const { data, error } = await supabase.from(T_PRODUTOS).update(produtoParaBanco(f)).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Produto;
+  const { linha } = await acaoNutricao<{ linha: Produto }>("produto_editar", { id, ...produtoParaBanco(f) });
+  return linha;
 }
 
 export async function alternarFavorito(id: string, favorito: boolean): Promise<Produto> {
-  const { data, error } = await supabase.from(T_PRODUTOS).update({ favorito }).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Produto;
+  const { linha } = await acaoNutricao<{ linha: Produto }>("produto_editar", { id, favorito });
+  return linha;
 }
 
 /** Exclusão SOFT do produto (as indicações continuam com a cópia; `produto_id` segue apontando pra linha). */
 export async function excluirProduto(id: string): Promise<void> {
-  const { error } = await supabase.from(T_PRODUTOS).update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("produto_excluir", { id });
 }
 
 // ---- Indicações do paciente ----
@@ -82,41 +78,33 @@ export async function listarIndicacoesDoPaciente(pacienteId: string): Promise<In
   return (data ?? []) as Indicacao[];
 }
 
-/** Cria a indicação copiando o produto escolhido (ou só o nome livre); `ordem` = próxima entre as ativas. */
+/** Cria a indicação copiando o produto escolhido (ou só o nome livre); `ordem` = próxima entre as ativas. Nasce ativa (o servidor põe). */
 export async function criarIndicacao(nutricionistaId: string, pacienteId: string, f: FormIndicacao, ordem: number): Promise<Indicacao> {
-  const { data, error } = await supabase
-    .from(T_INDICACOES)
-    .insert({ nutricionista_id: nutricionistaId, paciente_id: pacienteId, ordem, ativa: true, ...indicacaoParaBanco(f) })
-    .select("*")
-    .single();
-  falhou(error);
-  return data as Indicacao;
+  const { linha } = await acaoNutricao<{ linha: Indicacao }>("indicacao_criar", { paciente_id: pacienteId, ordem, ...indicacaoParaBanco(f) });
+  return linha;
 }
 
 /** Edita só posologia/início/observação — a cópia do produto é histórico e não muda. */
 export async function atualizarIndicacao(id: string, f: FormIndicacao): Promise<Indicacao> {
-  const { data, error } = await supabase.from(T_INDICACOES).update(edicaoParaBanco(f)).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Indicacao;
+  const { linha } = await acaoNutricao<{ linha: Indicacao }>("indicacao_editar", { id, ...edicaoParaBanco(f) });
+  return linha;
 }
 
 /** Encerrar (ativa = false) ou reativar (ativa = true, entrando no fim da lista com a `ordem` recebida). Reversível. */
 export async function alternarAtiva(id: string, ativa: boolean, ordem?: number): Promise<Indicacao> {
   const patch: { ativa: boolean; ordem?: number } = { ativa };
   if (ativa && typeof ordem === "number") patch.ordem = ordem;
-  const { data, error } = await supabase.from(T_INDICACOES).update(patch).eq("id", id).select("*").single();
-  falhou(error);
-  return data as Indicacao;
+  const { linha } = await acaoNutricao<{ linha: Indicacao }>("indicacao_editar", { id, ...patch });
+  return linha;
 }
 
-/** Grava a nova `ordem` só das que mudaram (▲▼). */
+/** Grava a nova `ordem` só das que mudaram (▲▼) — numa chamada só, tudo ou nada. */
 export async function salvarOrdem(mudancas: { id: string; ordem: number }[]): Promise<void> {
-  const resultados = await Promise.all(mudancas.map((m) => supabase.from(T_INDICACOES).update({ ordem: m.ordem }).eq("id", m.id)));
-  for (const r of resultados) falhou(r.error);
+  if (!mudancas.length) return;
+  await acaoNutricao("dieta_ordenar", { tabela: "indicacoes_produto", ordens: mudancas.map((m) => ({ id: m.id, ordem: m.ordem })) });
 }
 
 /** Exclusão SOFT (Lixeira, W32). */
 export async function excluirIndicacao(id: string): Promise<void> {
-  const { error } = await supabase.from(T_INDICACOES).update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  falhou(error);
+  await acaoNutricao("indicacao_excluir", { id });
 }
