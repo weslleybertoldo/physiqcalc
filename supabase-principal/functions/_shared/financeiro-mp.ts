@@ -135,6 +135,7 @@ export function recebedor(m: Matricula): string | null {
   return m.conta?.dono_id ?? m.personal_id ?? m.nutricionista_id ?? null;
 }
 
+/** Grava o aviso no sino. Devolve se gravou (Task 8b: a fila só marca avisado_em quando o aviso entrou); quem não usa, ignora. */
 export async function avisar(
   db: SupabaseClient,
   destino: string | null | undefined,
@@ -143,11 +144,12 @@ export async function avisar(
   link: string | null,
   log: Log,
   schema: Schema,
-): Promise<void> {
-  if (!destino) return;
+): Promise<boolean> {
+  if (!destino) return false;
   const { error } = await db.from("avisos").insert({ destino_user_id: destino, tipo, titulo: titulo.slice(0, 160), link });
   // o título (nome, valor, motivo) fica só no sino: no log, o tipo e o erro do banco
   if (error) log.excecao(error, { codigo: "aviso_do_sino_falhou", schema, acao: tipo });
+  return !error;
 }
 
 const reais = (v: number) => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;

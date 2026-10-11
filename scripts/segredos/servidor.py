@@ -3,10 +3,11 @@
 
 Uso:  python3 scripts/segredos/servidor.py <finalidade> <subcomando> [--dry-run] [--so-atual] [--forcar]
 
-Cada finalidade tem o seu segredo. Quem MANDA guarda o valor (SEGREDO_X nas funções; no S8, o Vault do banco principal); quem
+Cada finalidade tem o seu segredo. Quem MANDA guarda o valor (SEGREDO_X nas funções; no S8 e no S9, o Vault do banco principal); quem
 RECEBE guarda só o sha256 dele, na lista SEGREDO_X_ACEITOS ("h1" ou "h1,h2": o atual e, durante a troca, o anterior). O
-cabeçalho é sempre o x-espelho-segredo. O valor mora no cofre B Code Segredos › PhysiqCalc › "Physiq — SEGREDO_X (hml-16c)"
-(tipo token: campo valor; o de antes no extra "anterior", oculto). Na tela só aparecem ✅/❌, sha8 (8 hex do sha256) e tamanho.
+cabeçalho é sempre o x-espelho-segredo. O valor mora no cofre B Code Segredos › PhysiqCalc › "Physiq — SEGREDO_X (hml-16c)" (o S9:
+"Physiq — fila das automáticas (W-P)") (tipo token: campo valor; o de antes no extra "anterior", oculto). Na tela só aparecem ✅/❌,
+sha8 (8 hex do sha256) e tamanho.
 
 Finalidade             emissor (manda o valor)                          receptor (confere pela lista)
   S1 espelho_nucleo    principal: espelho-enviar                        Treino: espelho-nucleo
@@ -18,6 +19,9 @@ Finalidade             emissor (manda o valor)                          receptor
   S7 aviso_erro        Treino: as 13 funções do _shared/avisar-erro.ts  principal: erro-avisar
   S8 espelho_fila      banco principal: {public,staging}.espelho_disparar() (pg_net) lê o Vault physiq_espelho_fila_segredo;
                        cópia local dos E2E ~/.physiq-segredo-espelho-fila (600)  →  principal: espelho-enviar
+  S9 automaticas_fila  banco principal: {public,staging}.automaticas_disparar() (pg_net) lê o Vault
+                       physiq_automaticas_fila_segredo; cópia local dos E2E ~/.physiq-segredo-automaticas-fila (600)
+                       →  principal: automaticas-fila (W-P, Task 8b: a fila das cobranças automáticas)
 
 A troca de um segredo, em ordem — sem reserva, o canal fica de pé em todos os passos porque a lista do receptor aceita o que
 o emissor manda (o anterior até o fim, o atual desde o começo):
@@ -25,14 +29,14 @@ o emissor manda (o anterior até o fim, o atual desde o começo):
   conferir → aceitar --so-atual (o anterior deixa de valer) → publicar o receptor.
 
 Subcomandos:
-  gerar        valor novo (64 caracteres) → cofre (o atual vira o extra "anterior") → lido de volta igual; no S8 também a cópia
-               local. Trava: o emissor já manda um SEGREDO_X que não é o atual do cofre (gerar de novo perderia o valor em uso).
+  gerar        valor novo (64 caracteres) → cofre (o atual vira o extra "anterior") → lido de volta igual; no S8 e no S9 também a
+               cópia local. Trava: o emissor já manda um SEGREDO_X que não é o atual do cofre (gerar de novo perderia o valor em uso).
   aceitar      receptor: SEGREDO_X_ACEITOS = sha256(atual)[,sha256(anterior)] → confere o digest. --so-atual: só o atual (o fim
                da troca). Trava: a lista nova deixaria de fora o que o emissor manda hoje.
-  trocar       emissor: SEGREDO_X = atual (S8: o Vault physiq_espelho_fila_segredo) → confere. Antes: a lista do receptor tem de
+  trocar       emissor: SEGREDO_X = atual (S8 e S9: o Vault da fila) → confere. Antes: a lista do receptor tem de
                aceitar o atual; senão para sem gravar (esta trava não tem --forcar).
   tirar-lista  receptor: apaga a SEGREDO_X_ACEITOS → o receptor recusa tudo (o canal para). Trava: o emissor ainda manda o
-               SEGREDO_X (S8: o Vault existe).
+               SEGREDO_X (S8 e S9: o Vault existe).
   conferir     o emissor manda o atual? a lista do receptor aceita o atual? Sai 1 se algo não bate.
 Depois de mudar um segredo das funções, publicar de novo quem o lê (o segredo é lido no boot do isolate):
 scripts/deploy_function.sh <ref> <pasta> <slug> <verify_jwt>.
@@ -69,6 +73,8 @@ NOME_VAULT = re.compile(r"[a-z_]+")
 TEMPO_COFRE = 90  # segundos por chamada ao MCP do cofre
 SUBCOMANDOS = ("gerar", "aceitar", "trocar", "tirar-lista", "conferir")
 DESCRICAO_VAULT = "Physiq hml-16c (S8): segredo da fila do espelho; o pg_net manda na espelho-enviar (scripts/segredos/servidor.py)"
+DESCRICAO_VAULT_S9 = ("Physiq W-P (S9): segredo da fila das cobranças automáticas; o pg_net manda na automaticas-fila "
+                      "(scripts/segredos/servidor.py)")
 TREZE_DO_TREINO = (
     "admin-avaliacoes", "admin-delete-user", "admin-list-users", "admin-semana-treinos", "admin-update-user", "delete-my-account",
     "espelho-nucleo", "master-professores", "mp-payments", "mp-webhook", "professor-convites", "trocar-token", "vincular-professor",
@@ -79,13 +85,18 @@ TREZE_DO_TREINO = (
 class Finalidade:
     chave: str
     numero: str
-    segredo: str  # o nome do segredo do EMISSOR (no S8, o nome lógico: o emissor é o Vault); a lista é <segredo>_ACEITOS
+    segredo: str  # o nome do segredo do EMISSOR (no S8 e no S9, o nome lógico: o emissor é o Vault); a lista é <segredo>_ACEITOS
     emissor: str  # "principal" | "treino"
     receptor: str
     manda: tuple[str, ...]  # funções que mandam (publicar de novo depois do trocar)
     confere: tuple[str, ...]  # funções que conferem (publicar de novo depois do aceitar/tirar-lista)
-    vault: str | None = None  # S8: o emissor é o banco, pelo Vault do principal
-    arquivo: str | None = None  # S8: a cópia local dos E2E (em ~)
+    vault: str | None = None  # S8 e S9: o emissor é o banco, pelo Vault do principal
+    arquivo: str | None = None  # S8 e S9: a cópia local dos E2E (em ~)
+    disparo: str | None = None  # S8 e S9: a função do banco que manda pelo pg_net ({public,staging}.<disparo>())
+    ciclo: str | None = None  # S8 e S9: quando o pg_cron chama a função do banco
+    descricao_vault: str | None = None  # S8 e S9: a descrição do segredo no Vault
+    rotulo: str | None = None  # o nome do item no cofre, se não for o de sempre
+    origem: str = "hml-16c (H-51)"  # de onde a finalidade veio (vai na nota do item)
 
     @property
     def lista(self) -> str:
@@ -93,7 +104,7 @@ class Finalidade:
 
     @property
     def item(self) -> str:
-        return f"Physiq — {self.segredo} (hml-16c)"
+        return self.rotulo or f"Physiq — {self.segredo} (hml-16c)"
 
 
 FINALIDADES = {f.chave: f for f in (
@@ -107,7 +118,12 @@ FINALIDADES = {f.chave: f for f in (
     Finalidade("repasse_convites", "S6", "SEGREDO_REPASSE_CONVITES", "treino", "principal", ("professor-convites",), ("alunos",)),
     Finalidade("aviso_erro", "S7", "SEGREDO_AVISO_ERRO", "treino", "principal", TREZE_DO_TREINO, ("erro-avisar",)),
     Finalidade("espelho_fila", "S8", "SEGREDO_ESPELHO_FILA", "principal", "principal", (), ("espelho-enviar",),
-               vault="physiq_espelho_fila_segredo", arquivo=".physiq-segredo-espelho-fila"),
+               vault="physiq_espelho_fila_segredo", arquivo=".physiq-segredo-espelho-fila", disparo="espelho_disparar",
+               ciclo="pg_cron, ≤ 10 min", descricao_vault=DESCRICAO_VAULT),
+    Finalidade("automaticas_fila", "S9", "SEGREDO_AUTOMATICAS_FILA", "principal", "principal", (), ("automaticas-fila",),
+               vault="physiq_automaticas_fila_segredo", arquivo=".physiq-segredo-automaticas-fila", disparo="automaticas_disparar",
+               ciclo="pg_cron de hora em hora, no minuto 7", descricao_vault=DESCRICAO_VAULT_S9,
+               rotulo="Physiq — fila das automáticas (W-P)", origem="W-P (Task 8b)"),
 )}
 
 
@@ -203,10 +219,18 @@ def sql_vault_id(nome: str) -> str:
     return f"select id::text as id from vault.secrets where name = '{_vault_nome(nome)}'"
 
 
+def descricao_do_vault(nome: str) -> str:
+    """A descrição do segredo no Vault: a da finalidade dona dele (S8 ou S9); Vault sem finalidade → ValueError."""
+    for f in FINALIDADES.values():
+        if f.vault and f.vault == nome:
+            return f.descricao_vault or DESCRICAO_VAULT
+    raise ValueError("Vault sem finalidade")
+
+
 def sql_vault_criar(valor: str, nome: str) -> str:
     if not FORMATO.fullmatch(valor):
         raise ValueError("valor fora do formato")
-    return f"select vault.create_secret({_lit(valor)}, {_lit(_vault_nome(nome))}, {_lit(DESCRICAO_VAULT)})"
+    return f"select vault.create_secret({_lit(valor)}, {_lit(_vault_nome(nome))}, {_lit(descricao_do_vault(nome))})"
 
 
 def sql_vault_atualizar(id_: str, valor: str) -> str:
@@ -369,7 +393,7 @@ class Remoto:
         self.api("DELETE", f"/v1/projects/{REFS[lado]}/secrets", nomes)
 
     def sql(self, query: str) -> list:
-        """SQL no banco principal (o Vault do S8 é de lá)."""
+        """SQL no banco principal (o Vault do S8 e do S9 é de lá)."""
         r = self.api("POST", f"/v1/projects/{REFS['principal']}/database/query", {"query": query})
         if r is None:
             return []
@@ -377,7 +401,7 @@ class Remoto:
             raise Falha("database/query: resposta fora do formato")
         return r
 
-    # ── Vault do principal (S8) ──
+    # ── Vault do principal (S8 e S9) ──
     def vault_estado(self, nome: str, hashes: list[str]) -> tuple[bool, list[bool], int | None]:
         """(existe?, o sha256 do valor bate com cada hash?, tamanho) — o valor não sai do banco."""
         linhas = self.sql(sql_vault_estado(nome, hashes))
@@ -451,7 +475,7 @@ def emissor_txt(f: Finalidade) -> str:
 
 
 def nota_do_item(f: Finalidade) -> str:
-    return (f"hml-16c (H-51) {f.numero} {f.chave}: quem manda = {emissor_txt(f)}; quem confere = {', '.join(f.confere)} "
+    return (f"{f.origem} {f.numero} {f.chave}: quem manda = {emissor_txt(f)}; quem confere = {', '.join(f.confere)} "
             f"({ROTULOS[f.receptor]}), pela lista {f.lista} (só o sha256). Gerado e trocado por scripts/segredos/servidor.py; "
             "o valor de antes fica no extra \"anterior\".")
 
@@ -476,7 +500,7 @@ def do_cofre(f: Finalidade, r: Remoto) -> tuple[str, str | None]:
 
 
 def emissor_manda(f: Finalidade, r: Remoto, hashes: list[str]) -> tuple[bool, str | None]:
-    """O que o emissor manda HOJE: (tem o SEGREDO_X — no S8, o Vault?, qual dos hashes ele manda — None se nenhum)."""
+    """O que o emissor manda HOJE: (tem o SEGREDO_X — no S8 e no S9, o Vault?, qual dos hashes ele manda — None se nenhum)."""
     if f.vault:
         existe, bate, _ = r.vault_estado(f.vault, hashes)
         return existe, next((h for h, b in zip(hashes, bate) if b), None)
@@ -578,7 +602,7 @@ def trocar(f: Finalidade, r: Remoto, a: argparse.Namespace) -> int:
         certo = ok(existe and bate[0] and tam == len(atual),
                    f"emissor: Vault {f.vault} ({onde(f.emissor)}) = atual (sha8 {sha8(atual)})"
                    + (f" · igual, tamanho {tam}" if existe and bate[0] else f" · NÃO confere (existe={existe}, tamanho {tam})"))
-        depois("a próxima rodada da fila (pg_cron, ≤ 10 min) já manda o novo: log da espelho-enviar com via=lista")
+        depois(f"a próxima rodada da fila ({f.ciclo}) já manda o novo: log da {', '.join(f.confere)} com via=lista")
     else:
         r.gravar_segredo(f.emissor, f.segredo, atual)
         d = r.segredos(f.emissor).get(f.segredo)
@@ -616,7 +640,7 @@ def conferir(f: Finalidade, r: Remoto, a: argparse.Namespace) -> int:
         existe, bate, tam = r.vault_estado(f.vault, [h])
         e_ok = ok(existe and bate[0] and tam == len(atual), f"emissor: Vault {f.vault} ({onde(f.emissor)}) "
                   + (f"igual ao atual, tamanho {tam}" if existe and bate[0] else
-                     ("não existe (o banco não chama a espelho-enviar: a fila espera)" if not existe
+                     (f"não existe (o banco não chama a {', '.join(f.confere)}: a fila espera)" if not existe
                       else f"DIFERENTE do atual, tamanho {tam}")))
         if f.arquivo:
             nota(f"cópia local ~/{f.arquivo} (E2E): {estado_arquivo(Path.home() / f.arquivo, atual)}")
@@ -645,7 +669,7 @@ ACOES = {"gerar": gerar, "aceitar": aceitar, "trocar": trocar, "tirar-lista": ti
 
 
 def plano(f: Finalidade, a: argparse.Namespace) -> list[str]:
-    """O que o subcomando faria, passo a passo. NADA remoto (nem leitura) e nada gravado; só nomes, projetos e, no S8, o
+    """O que o subcomando faria, passo a passo. NADA remoto (nem leitura) e nada gravado; só nomes, projetos e, no S8 e no S9, o
     estado da cópia local."""
     s = a.subcomando
     re_, ee = REFS[f.receptor], REFS[f.emissor]
@@ -653,7 +677,7 @@ def plano(f: Finalidade, a: argparse.Namespace) -> list[str]:
     linhas = [
         f"== {f.numero} {f.chave} · {s} · DRY-RUN: só o plano — nada remoto (nem leitura) e nada gravado",
         f"   emissor:  {emissor_txt(f)} · manda: "
-        + (", ".join(f.manda) if f.manda else "o banco, {public,staging}.espelho_disparar() pelo pg_net"),
+        + (", ".join(f.manda) if f.manda else f"o banco, {{public,staging}}.{f.disparo}() pelo pg_net"),
         f"   receptor: {f.lista} (só hashes) nas funções do {onde(f.receptor)} · confere: {', '.join(f.confere)}",
         f"   cofre:    {PROJETO_COFRE} › \"{f.item}\" (token: campo valor; o de antes no extra \"{EXTRA_ANTERIOR}\")",
     ]
@@ -695,7 +719,7 @@ def plano(f: Finalidade, a: argparse.Namespace) -> list[str]:
                 f"SQL no principal: vault.update_secret(<id>, ‹atual›) se {f.vault} existe; senão "
                 f"vault.create_secret(‹atual›, '{f.vault}', '…')",
                 f"conferir: o sha256 do Vault = sha256(atual) e o tamanho (SQL que devolve só 'bate'/tamanho)",
-                "→ depois: a próxima rodada da fila (pg_cron, ≤ 10 min); log da espelho-enviar com via=lista",
+                f"→ depois: a próxima rodada da fila ({f.ciclo}); log da {', '.join(f.confere)} com via=lista",
             ]
         else:
             passos += [
@@ -730,7 +754,7 @@ def plano(f: Finalidade, a: argparse.Namespace) -> list[str]:
 
 def argumentos(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(prog="servidor.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("finalidade", choices=list(FINALIDADES), help="a finalidade (S1–S8, tabela acima)")
+    ap.add_argument("finalidade", choices=list(FINALIDADES), help="a finalidade (S1–S9, tabela acima)")
     ap.add_argument("subcomando", choices=SUBCOMANDOS, help="o passo (lista acima)")
     ap.add_argument("--dry-run", action="store_true", help="só o plano: nada remoto (nem leitura) e nada gravado")
     ap.add_argument("--so-atual", action="store_true", help="aceitar: a lista só com o atual (o fim de uma troca)")

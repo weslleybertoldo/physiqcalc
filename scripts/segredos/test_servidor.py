@@ -143,7 +143,12 @@ class RegrasPuras(unittest.TestCase):
         self.assertNotIn(a, estado)  # a conferência manda só o hash
         self.assertIn("sha256(convert_to(s.decrypted_secret, 'UTF8'))", estado)
         self.assertIn(f"'{a}'", S.sql_vault_criar(a, "physiq_espelho_fila_segredo"))
+        s9 = S.sql_vault_criar(a, "physiq_automaticas_fila_segredo")  # S9: a descrição dele, não a do S8
+        self.assertIn("automaticas-fila", s9)
+        self.assertNotIn("espelho-enviar", s9)
+        self.assertIn("espelho-enviar", S.sql_vault_criar(a, "physiq_espelho_fila_segredo"))
         for ruim in (lambda: S.sql_vault_criar("curto'; drop table x; --", "n"),
+                     lambda: S.sql_vault_criar(a, "physiq_sem_finalidade"),  # Vault que não é de uma finalidade
                      lambda: S.sql_vault_estado("n'; --", [S.sha256_hex(a)]),
                      lambda: S.sql_vault_estado("n", ["nao-e-hash"]),
                      lambda: S.sql_vault_atualizar("x", a)):
@@ -263,6 +268,10 @@ class Fluxos(Base):
         self.assertEqual(rc, 1, saida)
         self.assertIn("não existe (o banco não chama a espelho-enviar: a fila espera)", saida)
         self.assertNotIn("legado", saida)
+        self.rodar("automaticas_fila", "gerar")
+        rc, saida = self.rodar("automaticas_fila", "conferir")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("não existe (o banco não chama a automaticas-fila: a fila espera)", saida)
 
     def test_conferir_acusa_emissor_diferente(self):
         f = S.FINALIDADES["espelho_nucleo"]
@@ -292,6 +301,41 @@ class Fluxos(Base):
         self.assertEqual(self.rodar("espelho_fila", "tirar-lista")[0], 1)  # o Vault ainda manda: o canal pararia
         self.assertIn(f.lista, self.r.funcoes["principal"])
         self.assertEqual(self.r.vault, {f.vault: atual})  # só o Vault da fila
+
+    def test_s9_fila_das_automaticas_no_molde_do_s8(self):
+        f = S.FINALIDADES["automaticas_fila"]
+        self.assertEqual((f.numero, f.segredo, f.lista, f.vault, f.confere, f.manda, f.emissor, f.receptor),
+                         ("S9", "SEGREDO_AUTOMATICAS_FILA", "SEGREDO_AUTOMATICAS_FILA_ACEITOS", "physiq_automaticas_fila_segredo",
+                          ("automaticas-fila",), (), "principal", "principal"))
+        self.assertEqual(f.item, "Physiq — fila das automáticas (W-P)")
+        self.assertEqual(S.FINALIDADES["espelho_fila"].item, "Physiq — SEGREDO_ESPELHO_FILA (hml-16c)")  # o S8 não mudou
+        self.assertEqual(self.rodar("automaticas_fila", "gerar")[0], 0)
+        atual = self.valor(f)
+        self.assertIn("W-P (Task 8b) S9 automaticas_fila", self.r.itens[f.item]["notas"])
+        arq = Path(self.casa.name) / ".physiq-segredo-automaticas-fila"
+        self.assertEqual(arq.read_text(encoding="utf-8"), atual)
+        self.assertEqual(arq.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.rodar("automaticas_fila", "trocar")[0], 1)  # sem a lista
+        self.assertNotIn(f.vault, self.r.vault)
+        self.assertEqual(self.rodar("automaticas_fila", "aceitar")[0], 0)
+        self.assertEqual(self.r.funcoes["principal"][f.lista], S.sha256_hex(atual))
+        rc, saida = self.rodar("automaticas_fila", "trocar")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("pg_cron de hora em hora, no minuto 7", saida)
+        self.assertIn("log da automaticas-fila com via=lista", saida)
+        self.assertEqual(self.r.vault[f.vault], atual)
+        rc, saida = self.rodar("automaticas_fila", "conferir")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("igual ao cofre", saida)
+        self.assertEqual(self.rodar("automaticas_fila", "tirar-lista")[0], 1)  # o Vault ainda manda: o canal pararia
+        self.assertIn(f.lista, self.r.funcoes["principal"])
+        self.assertEqual(self.r.vault, {f.vault: atual})  # só o Vault da fila das automáticas (o do S8 nem foi tocado)
+        self.assertNotIn(S.FINALIDADES["espelho_fila"].item, self.r.itens)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(S.main(["automaticas_fila", "gerar", "--dry-run"]), 0)
+        self.assertIn("o banco, {public,staging}.automaticas_disparar() pelo pg_net", buf.getvalue())
+        self.assertIn('"Physiq — fila das automáticas (W-P)"', buf.getvalue())
 
     def test_erro_da_api_que_ecoa_o_valor_sai_limpo(self):
         self.rodar("aviso_erro", "gerar")

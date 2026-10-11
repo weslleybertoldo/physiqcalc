@@ -16,12 +16,13 @@ import { criarLog } from "../../supabase-principal/functions/_shared/log";
 const FUNCOES_DIR = resolve(__dirname, "../../supabase-principal/functions");
 const ler = (rel: string) => readFileSync(resolve(FUNCOES_DIR, rel), "utf-8");
 
-/** As publicadas desta W no principal: as 20, as 2 master que vão pela master-porta e a erro-avisar (nova). */
+/** As publicadas desta W no principal: as 20, as 2 master que vão pela master-porta e a erro-avisar (nova) — e a automaticas-fila
+ *  (W-P, Task 8b), que segue o mesmo contrato. */
 const FUNCOES = [
   "agenda-avisar", "aluno-enviar", "alunos", "convites", "cobranca-conta", "entrar-senha", "espelho-enviar", "espelho-resumo",
   "excluir-minha-conta", "exportar-meus-dados", "master-contas", "mp-webhook", "mp-webhook-aluno", "mp-webhook-conta",
   "pagamentos-aluno", "pos-login", "push-enviar", "vincular-aluno", "whatsapp-agente", "whatsapp-conectar",
-  "master-financeiro", "master-planos", "erro-avisar",
+  "master-financeiro", "master-planos", "erro-avisar", "automaticas-fila",
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
 /** Onde mora o catch final: na index.ts, menos nas 3 master-* (servir, da master-porta) e na erro-avisar (atenderPedido). */
@@ -127,7 +128,7 @@ describe("hml-10: os detectores acham o que procuram (controle positivo)", () =>
 describe("hml-10 (D2/D6): as funções do principal desta W", () => {
   const todos = [...new Set(FUNCOES.flatMap(arquivosDa))].sort();
 
-  it("o fecho dos imports pega as 23 funções e os _shared que escreviam no console (fora o log.ts)", () => {
+  it("o fecho dos imports pega as 24 funções e os _shared que escreviam no console (fora o log.ts)", () => {
     for (const f of FUNCOES) expect(todos, f).toContain(`${f}/index.ts`);
     for (const s of ["app-sem-profissional", "exclusao-profissional", "treino-servidor", "financeiro-mp", "master-porta",
       "avisar-erro", "erro-avisar-regras", "erros"]) {
