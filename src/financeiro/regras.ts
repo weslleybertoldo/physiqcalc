@@ -3,6 +3,7 @@
 // banco — mensalidade_recalcular): cada pagamento cobre 1 mês; "em dia" = a cobertura passa de agora.
 import type { CobrancaVista, ModoRecebimento, PlanoSalvo, ResumoMatricula } from "./tipos";
 import type { Modalidade } from "./planos";
+import { tentativaViva } from "./infinitepay";
 
 // ───────────────────────── datas (relógio de São Paulo) ─────────────────────────
 
@@ -125,6 +126,15 @@ export function estadoDaMensalidade(m: DadosMensalidade | null | undefined, agor
   if (!m.pago_ate && m.desde && dias !== null && dias >= 0) return { situacao: "vence_em_breve", vence, dias, valor, coberta };
   if (vence) return { situacao: "vencida", vence, dias, valor, coberta };
   return { situacao: "pendente", vence: null, dias: null, valor, coberta };
+}
+
+/**
+ * W1-B1 — o "aguardando" da mensalidade no painel (o cartão e o KPI da ficha), com a regra da financeiro_do_aluno no servidor e do
+ * resumoDaTrava: uma cobrança da mensalidade esperando a confirmação; a tentativa da InfinitePay só enquanto vale (`ip_expira_em` no
+ * futuro, 72 h). Vencida, não segura a mensalidade, mesmo antes de a rodada de 15 min (ou o prof_aluno) fechá-la.
+ */
+export function mensalidadeAguardando(cobrancas: readonly Pick<CobrancaVista, "tipo" | "status" | "forma" | "ip_expira_em">[], agora: Date = new Date()): boolean {
+  return cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao" && (c.forma !== "infinitepay" || tentativaViva(c, agora)));
 }
 
 /** A mensalidade está pendente (o "!" e o aviso do Calc: tem valor e a cobertura não vale agora). */

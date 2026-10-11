@@ -338,6 +338,25 @@ describe("W1 — a InfinitePay na ficha do aluno: a forma da conta, o recibo e o
     expect(h.abrirLink).toHaveBeenCalledWith(RECIBO);
   });
 
+  it("W1-B1: o cartão da mensalidade só diz 'aguardando' com a tentativa da InfinitePay VIVA — vencida (antes da rodada de 15 min), a mensalidade venceu", async () => {
+    const tentativa = (expiraEmMs: number): CobrancaVista => ({ ...cobranca(0), id: "m1", tipo: "mensalidade", descricao: "Mensalidade", status: "aguardando_confirmacao",
+      forma: "infinitepay", metodo: null, pago_em: null, ip_expira_em: new Date(Date.now() + expiraEmMs).toISOString() });
+    const mensalidade = { valor: 249, plano_id: null, plano: null, pausada: false, pago_ate: new Date(Date.now() - 2 * DIA).toISOString(), desde: null, coberta: false };
+    // venceu há 1 h: a regra do servidor (ip_expira_em no futuro) já não conta — o cartão mostra a mensalidade vencida
+    h.financeiro = { ...naInfinitePay([tentativa(-3_600_000)]), mensalidade };
+    const vencida = montar();
+    await waitFor(() => expect(document.querySelector("[data-chip-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.getAttribute("data-cartao-mensalidade")).toBe("vencida");
+    expect(document.querySelector("[data-chip-mensalidade]")!.textContent).toMatch(/^Venceu em \d{2}\/\d{2}$/);
+    vencida.unmount();
+    // vale mais 1 dia: aguardando a confirmação
+    h.financeiro = { ...naInfinitePay([tentativa(DIA)]), mensalidade };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-chip-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.getAttribute("data-cartao-mensalidade")).toBe("aguardando");
+    expect(document.querySelector("[data-chip-mensalidade]")!.textContent).toBe("Aguardando confirmação");
+  });
+
   it("a avulsa esperando a InfinitePay também tem o 'Registrar pago por fora' (a confirmação não veio) e grava com a cobrança; a mensalidade e o Pix com comprovante, não", async () => {
     const amanha = new Date(Date.now() + DIA).toISOString();
     const esperando = { status: "aguardando_confirmacao" as const, metodo: null, pago_em: null };

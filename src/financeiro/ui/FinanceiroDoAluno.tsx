@@ -21,7 +21,7 @@ import ModelosReciboDialog from "@/painel/financeiro/ModelosReciboDialog";
 import ReciboDialog from "@/painel/financeiro/ReciboDialog";
 import { useFinanceiroConta } from "@/painel/financeiro/useFinanceiro";
 import { precisaRenovar, sufixoDoValor } from "../planos";
-import { chipDaMensalidade, dataBR, ehPeriodoTodo, estadoDaMensalidade, hojeSP, mensagemErroFinanceiro, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
+import { chipDaMensalidade, dataBR, ehPeriodoTodo, estadoDaMensalidade, hojeSP, mensagemErroFinanceiro, mensalidadeAguardando, ordenarCobrancas, reais, reaisCurto, textoDoVencimento } from "../regras";
 import type { CobrancaVista, FinanceiroProfissional } from "../tipos";
 import { ComprovanteVisor } from "./ComprovanteVisor";
 import { DialogoLancamento, DialogoNovaCobranca, DialogoRegistrar } from "./Dialogos";
@@ -125,7 +125,8 @@ function CartaoMensalidade({ d, agir }: { d: FinanceiroProfissional; agir: Retur
       </Cartao>
     );
   }
-  const e = estadoDaMensalidade(m ? { valor: m.valor, pausada: m.pausada, pago_ate: m.pago_ate, desde: m.desde, aguardando: d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao") } : null);
+  // W1-B1: a tentativa da InfinitePay vencida não deixa a mensalidade "aguardando" (a regra do servidor — mensalidadeAguardando)
+  const e = estadoDaMensalidade(m ? { valor: m.valor, pausada: m.pausada, pago_ate: m.pago_ate, desde: m.desde, aguardando: mensalidadeAguardando(d.cobrancas) } : null);
   const chip = chipDaMensalidade(e);
   return (
     <Cartao brilho className="flex flex-col p-5" data-cartao-mensalidade={e.situacao}>

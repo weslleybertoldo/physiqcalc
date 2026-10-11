@@ -13,6 +13,7 @@ import {
   inadimplente,
   lerValor,
   linhaDaCobranca,
+  mensalidadeAguardando,
   mensagemDoRecebimento,
   mensagemErroFinanceiro,
   nomeDoMes,
@@ -272,6 +273,22 @@ describe("W1 — a InfinitePay nas regras da tela", () => {
     expect(situacaoDaCobranca(c)).toBe("aguardando_ip");
     expect(CHIP_COBRANCA.aguardando_ip.texto).toBe("PROCESSANDO");
     expect(linhaDaCobranca(c).detalhe).toBe("InfinitePay · aguardando a confirmação");
+  });
+  it("W1-B1: a mensalidade só fica 'aguardando' com a tentativa da InfinitePay VIVA (ip_expira_em no futuro) — a regra da financeiro_do_aluno", () => {
+    const agora = new Date("2026-10-11T12:00:00Z");
+    const viva = cob({ status: "aguardando_confirmacao", forma: "infinitepay", ip_expira_em: "2026-10-11T13:00:00Z" });
+    const vencida = { ...viva, ip_expira_em: "2026-10-11T11:00:00Z" };
+    expect(mensalidadeAguardando([viva], agora)).toBe(true);
+    // vencida (a rodada de 15 min ainda não fechou), no instante exato do prazo ou sem prazo: não segura a mensalidade
+    expect(mensalidadeAguardando([vencida], agora)).toBe(false);
+    expect(mensalidadeAguardando([{ ...viva, ip_expira_em: agora.toISOString() }], agora)).toBe(false);
+    expect(mensalidadeAguardando([{ ...viva, ip_expira_em: null }], agora)).toBe(false);
+    // o comprovante do Pix e o Mercado Pago aguardando seguram como antes; a avulsa e a já paga, não
+    expect(mensalidadeAguardando([vencida, cob({ status: "aguardando_confirmacao", forma: "pix_manual" })], agora)).toBe(true);
+    expect(mensalidadeAguardando([cob({ status: "aguardando_confirmacao", forma: "mp" })], agora)).toBe(true);
+    expect(mensalidadeAguardando([{ ...viva, tipo: "avulsa" }], agora)).toBe(false);
+    expect(mensalidadeAguardando([{ ...viva, status: "paga" }], agora)).toBe(false);
+    expect(mensalidadeAguardando([], agora)).toBe(false);
   });
   it("as frases dos códigos novos", () => {
     for (const k of ["modo_nao_infinitepay", "infinitepay_nao_ligada", "infinitepay_indisponivel", "infinitepay_recusou",
