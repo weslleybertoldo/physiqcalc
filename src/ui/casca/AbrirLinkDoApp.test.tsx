@@ -149,6 +149,22 @@ describe("H2 — abrir o app NA tela do link", () => {
     expect(onde()).toBe("/treino");
     expect(destinoGuardado()).toBeNull();
   });
+  it("W1: a volta da InfinitePay com o recibo longo (900 caracteres) abre Pagamentos com a busca inteira — a tela confere ao chegar", () => {
+    const busca = (recibo: string) => new URLSearchParams({ receipt_url: recibo, order_nsu: "0b9f4c2e-6a1d-4f3b-9c8e-1d2e3f4a5b6c-1", slug: "nfse-8c1d2e",
+      capture_method: "pix", transaction_nsu: "4f1e9a7b-2c3d" }).toString();
+    const recibo = "https://recibo.infinitepay.io/r/";
+    const q = busca(recibo + "a".repeat(900 - `/perfil/pagamentos?${busca(recibo)}`.length));
+    expect(`/perfil/pagamentos?${q}`).toHaveLength(900);
+    montar("/treino");
+    act(() => {
+      receberLink(`https://physiqcalc.com.br/perfil/pagamentos?${q}`);
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(onde()).toBe(`/perfil/pagamentos?${q}`);
+    expect(destinoGuardado()).toBeNull();
+  });
   it("o link do profissional (?prof=) e a volta do Google não trocam de tela", () => {
     montar("/treino");
     act(() => {

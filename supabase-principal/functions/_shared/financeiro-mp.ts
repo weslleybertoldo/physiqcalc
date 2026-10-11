@@ -16,6 +16,10 @@ export const COLUNAS_COBRANCA =
   "reembolsado_em, mp_payment_id, mp_status, mp_preapproval_id, pix_qr, pix_copia_cola, pix_expira_em, plano_aluno_id, origem, " +
   "transacao_id, created_at, updated_at, deleted_at";
 
+/** W1: + as colunas da InfinitePay — só no schema que já tem a 20261011200000 (a pagamentos-aluno escolhe pelo schemaTemW1). */
+export const COLUNAS_COBRANCA_IP = COLUNAS_COBRANCA + ", ip_handle, ip_link_url, ip_expira_em, ip_transaction_nsu, ip_slug, ip_recibo_url, " +
+  "ip_valor_pago, ip_parcelas, ip_meio, ip_conferido_em";
+
 export interface Cobranca {
   id: string;
   paciente_id: string;
@@ -52,6 +56,17 @@ export interface Cobranca {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  /** W1 — a tentativa e a baixa da InfinitePay (ausentes no schema sem a migration 20261011200000) */
+  ip_handle?: string | null;
+  ip_link_url?: string | null;
+  ip_expira_em?: string | null;
+  ip_transaction_nsu?: string | null;
+  ip_slug?: string | null;
+  ip_recibo_url?: string | null;
+  ip_valor_pago?: number | string | null;
+  ip_parcelas?: number | null;
+  ip_meio?: "pix" | "credit_card" | null;
+  ip_conferido_em?: string | null;
 }
 
 export interface Matricula {

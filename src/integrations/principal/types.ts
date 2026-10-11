@@ -1293,6 +1293,16 @@ export type Database = {
           enviado_em: string | null
           forma: string | null
           id: string
+          ip_conferido_em: string | null
+          ip_expira_em: string | null
+          ip_handle: string | null
+          ip_link_url: string | null
+          ip_meio: string | null
+          ip_parcelas: number | null
+          ip_recibo_url: string | null
+          ip_slug: string | null
+          ip_transaction_nsu: string | null
+          ip_valor_pago: number | null
           mes_ref: string | null
           meses_cobertos: number
           metodo: string | null
@@ -1334,6 +1344,16 @@ export type Database = {
           enviado_em?: string | null
           forma?: string | null
           id?: string
+          ip_conferido_em?: string | null
+          ip_expira_em?: string | null
+          ip_handle?: string | null
+          ip_link_url?: string | null
+          ip_meio?: string | null
+          ip_parcelas?: number | null
+          ip_recibo_url?: string | null
+          ip_slug?: string | null
+          ip_transaction_nsu?: string | null
+          ip_valor_pago?: number | null
           mes_ref?: string | null
           meses_cobertos?: number
           metodo?: string | null
@@ -1375,6 +1395,16 @@ export type Database = {
           enviado_em?: string | null
           forma?: string | null
           id?: string
+          ip_conferido_em?: string | null
+          ip_expira_em?: string | null
+          ip_handle?: string | null
+          ip_link_url?: string | null
+          ip_meio?: string | null
+          ip_parcelas?: number | null
+          ip_recibo_url?: string | null
+          ip_slug?: string | null
+          ip_transaction_nsu?: string | null
+          ip_valor_pago?: number | null
           mes_ref?: string | null
           meses_cobertos?: number
           metodo?: string | null
@@ -2361,6 +2391,110 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      infinitepay_avisos: {
+        Row: {
+          cobranca_id: string
+          conferido_em: string | null
+          id: number
+          meio: string | null
+          origem: string
+          pedido: string
+          proxima_em: string
+          recebido_em: string
+          recibo_url: string | null
+          resultado: string | null
+          slug: string
+          tentado_em: string | null
+          tentativas: number
+          transaction_nsu: string
+        }
+        Insert: {
+          cobranca_id: string
+          conferido_em?: string | null
+          id?: never
+          meio?: string | null
+          origem: string
+          pedido: string
+          proxima_em?: string
+          recebido_em?: string
+          recibo_url?: string | null
+          resultado?: string | null
+          slug?: string
+          tentado_em?: string | null
+          tentativas?: number
+          transaction_nsu: string
+        }
+        Update: {
+          cobranca_id?: string
+          conferido_em?: string | null
+          id?: never
+          meio?: string | null
+          origem?: string
+          pedido?: string
+          proxima_em?: string
+          recebido_em?: string
+          recibo_url?: string | null
+          resultado?: string | null
+          slug?: string
+          tentado_em?: string | null
+          tentativas?: number
+          transaction_nsu?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "infinitepay_avisos_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "infinitepay_avisos_pedido_fkey"
+            columns: ["pedido"]
+            isOneToOne: false
+            referencedRelation: "infinitepay_links"
+            referencedColumns: ["pedido"]
+          },
+        ]
+      }
+      infinitepay_links: {
+        Row: {
+          centavos: number
+          cobranca_id: string
+          criado_em: string
+          handle: string
+          n: number
+          pedido: string
+          url: string | null
+        }
+        Insert: {
+          centavos: number
+          cobranca_id: string
+          criado_em?: string
+          handle: string
+          n: number
+          pedido: string
+          url?: string | null
+        }
+        Update: {
+          centavos?: number
+          cobranca_id?: string
+          criado_em?: string
+          handle?: string
+          n?: number
+          pedido?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "infinitepay_links_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas"
             referencedColumns: ["id"]
           },
         ]
@@ -4033,6 +4167,50 @@ export type Database = {
           },
         ]
       }
+      recebimento_integracoes: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string | null
+          conta_id: string
+          criado_em: string
+          id: string
+          infinitepay_handle: string | null
+          provedor: string
+          status: string
+          testado_em: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          conta_id: string
+          criado_em?: string
+          id?: string
+          infinitepay_handle?: string | null
+          provedor: string
+          status?: string
+          testado_em?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          conta_id?: string
+          criado_em?: string
+          id?: string
+          infinitepay_handle?: string | null
+          provedor?: string
+          status?: string
+          testado_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimento_integracoes_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receitas: {
         Row: {
           created_at: string
@@ -5091,6 +5269,34 @@ export type Database = {
       diario_pasta_valida: { Args: { p_name: string }; Returns: boolean }
       diario_pode_apagar_foto: { Args: { p_path: string }; Returns: boolean }
       diario_pode_ler_foto: { Args: { p_path: string }; Returns: boolean }
+      dieta_copiar_semana: {
+        Args: { p_para_apagar: string[]; p_para_todos: string[] }
+        Returns: Json
+      }
+      dieta_criar_plano: {
+        Args: { p_paciente: string; p_plano: Json; p_refeicoes: Json }
+        Returns: Json
+      }
+      dieta_duplicar_plano: {
+        Args: { p_paciente?: string; p_plano: string; p_titulo: string }
+        Returns: string
+      }
+      dieta_excluir_grupo_receita: {
+        Args: { p_grupo: string }
+        Returns: number
+      }
+      dieta_ordenar: {
+        Args: { p_ids: string[]; p_ordens: number[]; p_tabela: string }
+        Returns: number
+      }
+      dieta_salvar_alimento: {
+        Args: { p_alimento: Json; p_medidas: Json }
+        Returns: string
+      }
+      dieta_salvar_receita: {
+        Args: { p_ingredientes: Json; p_receita: Json }
+        Returns: string
+      }
       eh_master: { Args: never; Returns: boolean }
       eh_paciente: { Args: never; Returns: boolean }
       email_de_teste: { Args: { p_email: string }; Returns: boolean }
@@ -5205,6 +5411,11 @@ export type Database = {
       }
       h4_instante: { Args: { p: string }; Returns: string }
       idade_em: { Args: { p_nascimento: string }; Returns: number }
+      infinitepay_fechar_vencidas: {
+        Args: { p_paciente?: string }
+        Returns: number
+      }
+      infinitepay_rodada: { Args: never; Returns: Json }
       ip_do_pedido_hash: { Args: never; Returns: string }
       legal_da_situacao: { Args: { p_uid: string }; Returns: Json }
       limite_publico: {
@@ -5396,6 +5607,10 @@ export type Database = {
       nome_da_pessoa: { Args: { p_user: string }; Returns: string }
       normalizar_cpf: { Args: { p: string }; Returns: string }
       normalizar_email: { Args: { p: string }; Returns: string }
+      nutricao_garantir_padroes: {
+        Args: { p_itens: Json; p_secao: string }
+        Returns: Json
+      }
       paciente_acesso: { Args: { p_paciente_id: string }; Returns: Json }
       paciente_conflitos: {
         Args: { p_cpf: string; p_email: string; p_id: string; p_user: string }
@@ -5531,6 +5746,18 @@ export type Database = {
       push_registrar: {
         Args: { p_plataforma?: string; p_token: string; p_versao?: string }
         Returns: Json
+      }
+      recebimento_chave_ligar: {
+        Args: { p_chave: string; p_conta: string; p_ligar: boolean }
+        Returns: Json
+      }
+      recebimento_infinitepay_salvar: {
+        Args: { p_conta: string; p_handle: string }
+        Returns: Json
+      }
+      recebimento_integracao_ativa: {
+        Args: { p_conta: string; p_provedor: string }
+        Returns: boolean
       }
       receitas_da_nutricionista: {
         Args: { p_filtros?: Json; p_limite?: number; p_offset?: number }

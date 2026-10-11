@@ -21,6 +21,8 @@ const h = vi.hoisted(() => ({
   agir: vi.fn(async () => null),
   // hml-18b: o recibo em PDF (carregado só no clique — import() dentro do handler)
   pdf: vi.fn<(...a: unknown[]) => Promise<void>>(async () => undefined),
+  // W1: o recibo da InfinitePay abre fora do app (abrirLinkExterno)
+  abrirLink: vi.fn(),
 }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-dono" } }) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabase: { functions: { invoke: vi.fn(async () => ({ error: null })) } } }));
@@ -48,6 +50,7 @@ vi.mock("../lancamentos", async (orig) => ({
   garantirCategorias: (...a: unknown[]) => h.categorias(...a),
 }));
 vi.mock("../recibos", async (orig) => ({ ...(await orig<typeof import("../recibos")>()), paginaRecibosDoAluno: (...a: unknown[]) => h.recibos(...a) }));
+vi.mock("@/financeiro/abrirPagamento", () => ({ abrirLinkExterno: (...a: unknown[]) => h.abrirLink(...a) }));
 
 import { FinanceiroDoAluno } from "./FinanceiroDoAluno";
 
@@ -116,6 +119,7 @@ beforeEach(() => {
   h.agir.mockClear();
   h.pdf.mockReset();
   h.pdf.mockResolvedValue(undefined);
+  h.abrirLink.mockReset();
   vi.mocked(toast.error).mockClear();
 });
 
@@ -267,6 +271,15 @@ describe("Financeiro do aluno — o plano no cartão da mensalidade (W-P)", () =
     expect(document.querySelector("[data-mensalidade-renovar]")).toBeNull();
   });
 
+  it("W1 (P-B): na conta InfinitePay, o 'Como o aluno paga' diz 'Período todo (Pix ou cartão até 12×)' no lugar de à vista", async () => {
+    const base = financeiro();
+    h.financeiro = { ...base, conta: { ...base.conta, modo: "infinitepay" }, planos: [ANUAL], mensalidade: noPlano({}) };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-mensalidade-modalidade]")).not.toBeNull());
+    expect([...document.querySelectorAll("[data-mensalidade-modalidade] option")].map((o) => o.textContent))
+      .toEqual(["Escolha…", "Período todo (Pix ou cartão até 12×)", "Mês a mês"]);
+  });
+
   it("quem não é dono nem master não vê o plano (nem o valor, a forma de pagar ou a parcela) — o aviso de sempre", async () => {
     h.financeiro = { ...financeiro(), permissoes: { master: false, dono: false, responsavel: true, mensalidade: false }, planos: [ANUAL],
       mensalidade: noPlano({ modalidade: "mensal", parcela: { num: 4, total: 12 } }) };
@@ -300,5 +313,67 @@ describe("Financeiro do aluno — cancelar uma cobrança (hml-18a: a confirmaç�
     dialogo = await screen.findByRole("alertdialog");
     fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
     await waitFor(() => expect(h.agir).toHaveBeenCalledWith("prof_cobranca_cancelar", { cobranca_id: "c0" }, "Cobrança cancelada."));
+  });
+});
+
+describe("W1 — a InfinitePay na ficha do aluno: a forma da conta, o recibo e o 'pago por fora' da avulsa esperando", () => {
+  const RECIBO = "https://recibo.infinitepay.io/r1";
+  const naInfinitePay = (cobrancas: CobrancaVista[]): FinanceiroProfissional => {
+    const base = financeiro();
+    return { ...base, conta: { ...base.conta, modo: "infinitepay" }, cobrancas };
+  };
+
+  it("W1: a forma 'InfinitePay' na ficha e o recibo da InfinitePay na cobrança paga por lá", async () => {
+    h.financeiro = naInfinitePay([
+      { ...cobranca(0), status: "paga", forma: "infinitepay", metodo: "pix", ip_meio: "pix", ip_recibo_url: RECIBO },
+      // paga por fora: sem recibo da InfinitePay
+      cobranca(1),
+    ]);
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-cobranca="c0"]')).not.toBeNull());
+    expect(document.querySelector("[data-mensalidade-situacao]")!.textContent).toContain("InfinitePay (Pix e cartão, confirmação automática)");
+    expect(document.querySelector('[data-cobranca="c0"] [data-cobranca-detalhe]')!.textContent).toMatch(/^Pix \(InfinitePay\) · pago em \d{2}\/\d{2}$/);
+    expect(document.querySelectorAll('[data-acao-cobranca="recibo-ip"]')).toHaveLength(1);
+    fireEvent.click(document.querySelector('[data-cobranca="c0"] [data-acao-cobranca="recibo-ip"]')!);
+    expect(h.abrirLink).toHaveBeenCalledWith(RECIBO);
+  });
+
+  it("W1-B1: o cartão da mensalidade só diz 'aguardando' com a tentativa da InfinitePay VIVA — vencida (antes da rodada de 15 min), a mensalidade venceu", async () => {
+    const tentativa = (expiraEmMs: number): CobrancaVista => ({ ...cobranca(0), id: "m1", tipo: "mensalidade", descricao: "Mensalidade", status: "aguardando_confirmacao",
+      forma: "infinitepay", metodo: null, pago_em: null, ip_expira_em: new Date(Date.now() + expiraEmMs).toISOString() });
+    const mensalidade = { valor: 249, plano_id: null, plano: null, pausada: false, pago_ate: new Date(Date.now() - 2 * DIA).toISOString(), desde: null, coberta: false };
+    // venceu há 1 h: a regra do servidor (ip_expira_em no futuro) já não conta — o cartão mostra a mensalidade vencida
+    h.financeiro = { ...naInfinitePay([tentativa(-3_600_000)]), mensalidade };
+    const vencida = montar();
+    await waitFor(() => expect(document.querySelector("[data-chip-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.getAttribute("data-cartao-mensalidade")).toBe("vencida");
+    expect(document.querySelector("[data-chip-mensalidade]")!.textContent).toMatch(/^Venceu em \d{2}\/\d{2}$/);
+    vencida.unmount();
+    // vale mais 1 dia: aguardando a confirmação
+    h.financeiro = { ...naInfinitePay([tentativa(DIA)]), mensalidade };
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-chip-mensalidade]")).not.toBeNull());
+    expect(document.querySelector("[data-cartao-mensalidade]")!.getAttribute("data-cartao-mensalidade")).toBe("aguardando");
+    expect(document.querySelector("[data-chip-mensalidade]")!.textContent).toBe("Aguardando confirmação");
+  });
+
+  it("a avulsa esperando a InfinitePay também tem o 'Registrar pago por fora' (a confirmação não veio) e grava com a cobrança; a mensalidade e o Pix com comprovante, não", async () => {
+    const amanha = new Date(Date.now() + DIA).toISOString();
+    const esperando = { status: "aguardando_confirmacao" as const, metodo: null, pago_em: null };
+    h.financeiro = naInfinitePay([
+      { ...cobranca(0), ...esperando, id: "a1", descricao: "Avaliação extra", forma: "infinitepay", ip_expira_em: amanha },
+      // a mensalidade esperando a InfinitePay é registrada pelo "Registrar pagamento" (a mesma linha — I5), não pela linha
+      { ...cobranca(1), ...esperando, id: "m1", tipo: "mensalidade", descricao: "Mensalidade", forma: "infinitepay", ip_expira_em: amanha },
+      { ...cobranca(2), ...esperando, id: "x1", descricao: "Pix com comprovante", forma: "pix_manual", comprovante: true },
+    ]);
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-cobranca="a1"]')).not.toBeNull());
+    expect(document.querySelector('[data-cobranca="a1"]')!.getAttribute("data-cobranca-situacao")).toBe("aguardando_ip");
+    expect(document.querySelector('[data-cobranca="m1"] [data-acao-cobranca="pago-por-fora"]')).toBeNull();
+    expect(document.querySelector('[data-cobranca="x1"] [data-acao-cobranca="pago-por-fora"]')).toBeNull();
+    fireEvent.click(document.querySelector('[data-cobranca="a1"] [data-acao-cobranca="pago-por-fora"]')!);
+    await waitFor(() => expect(document.querySelector("[data-form-registrar]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-registrar-salvar]")!);
+    await waitFor(() => expect(h.agir).toHaveBeenCalledWith("prof_registrar", expect.objectContaining({ aluno: "p1", cobranca_id: "a1" }), "Pagamento registrado."));
   });
 });

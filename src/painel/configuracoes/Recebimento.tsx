@@ -1,112 +1,182 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, CreditCard, Lock, QrCode, Save, Unlock } from "lucide-react";
+import { Ban, CreditCard, ExternalLink, Lock, QrCode, Save, Unlock, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { principal } from "@/integrations/principal/client";
 import { useConta } from "@/nucleo/conta";
 import RecebimentosLista from "@/components/admin/RecebimentosLista";
 import ComprovantePixCard from "@/components/admin/ComprovantePixCard";
-import { buscarResumoDaConta } from "@/financeiro/api";
-import type { ModoRecebimento } from "@/financeiro/tipos";
+import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
+import { abrirLinkExterno, abrirPagina, reservarAba } from "@/financeiro/abrirPagamento";
+import { buscarRecebimento, buscarResumoDaConta, ErroFinanceiro, salvarRecebimento, testarInfinitePay } from "@/financeiro/api";
+import { normalizarHandle } from "@/financeiro/infinitepay";
+import { ROTULO_MODO } from "@/financeiro/recebimento";
+import { mensagemDoRecebimento } from "@/financeiro/regras";
+import type { ModoRecebimento, RecebimentoDaConta } from "@/financeiro/tipos";
 import { TopoPagina } from "@/ui/casca/topo";
 import { Botao } from "@/ui/premium/Botao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoErro, EstadoVazio, Esqueleto } from "@/ui/premium/Estados";
+import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { OpcoesPilula, SecaoForm, type OpcaoPilula } from "./pecas/Form";
 
-interface ContaRecebimento {
-  id: string;
-  nome: string;
-  origem: string;
-  recebimento_modo: ModoRecebimento;
-  bloquear_app_inadimplente: boolean;
-}
+const TAG_RUIM = "Cole a sua InfiniteTag sem o $ (só letras, números, ponto, traço ou _).";
+const ERROS_DO_CAMPO = new Set(["infinitetag_invalida", "infinitepay_recusou", "infinitepay_checkout_desligado", "sem_infinitetag"]);
+/** O botão de rótulo longo (o "Testar" e o "Ativar"): o pq-botao é nowrap com 44 px fixos e, a 390, passava da borda do cartão (11/10).
+ *  Aqui a linha quebra dentro da caixa e a altura mínima de 44 px do toque fica (o min-h-[44px] + py-2 das listas do app). */
+const BOTAO_LONGO = "h-auto min-h-[44px] self-start whitespace-normal py-2 text-left";
 
 /**
- * Configurações › Recebimento (spec 4.6 — W6; C51, N-24, R15, R16, P13): como os alunos pagam — Pix na chave da conta (só uma
- * ligada; o aluno anexa o comprovante e você confirma), "não cobrar pelo app" ou Mercado Pago (só quando o master libera
- * para a conta) — e o "bloquear o app do aluno com mensalidade vencida". Embaixo, os comprovantes aguardando a sua
- * confirmação (é por aqui que a conta que ainda não tem a página Financeiro nova confere os Pix). Só o dono.
- * hml-17 (H-39): a leitura dos comprovantes falhou → o aviso com "Tentar de novo" e o contador "—" (antes, "0" e "Nenhum comprovante
- * aguardando." com Pix esperando a confirmação).
+ * Configurações › Recebimento (spec 4.6 — W6; C51, N-24, R15, R16, P13): como os alunos pagam — Pix na sua chave, InfinitePay (W1: a
+ * InfiniteTag; "Testar" abre a sua página com R$ 1,00, sem cobrar), "não cobrar pelo app" ou Mercado Pago (só quando o master libera) — e
+ * o "bloquear o app do aluno com pagamento vencido". Embaixo, os comprovantes aguardando a sua confirmação. Só o dono.
+ * W1 (jeito 2, combinado com a hml-19): a tela NÃO fala mais com o banco — lê e grava pela pagamentos-aluno (prof_recebimento,
+ * prof_recebimento_salvar, prof_ip_testar e, na lista, prof_chave_*), que grava como a pessoa (o RLS continua valendo).
+ * hml-17 (H-39): a leitura dos comprovantes falhou → o aviso com "Tentar de novo" e o contador "—".
  */
 export default function Recebimento() {
-  const { conta, situacao } = useConta();
+  const { conta } = useConta();
   const qc = useQueryClient();
-  const master = !!situacao?.master;
+  const confirmar = useConfirmar();
   const chave = ["recebimento-conta", conta?.id] as const;
-  const consulta = useQuery({
-    queryKey: chave,
-    enabled: !!conta?.id,
-    queryFn: async () => {
-      const { data, error } = await principal.from("contas").select("id, nome, origem, recebimento_modo, bloquear_app_inadimplente").eq("id", conta!.id).single();
-      if (error) throw error;
-      return data as unknown as ContaRecebimento;
-    },
-  });
+  const consulta = useQuery({ queryKey: chave, enabled: !!conta?.id, queryFn: () => buscarRecebimento(conta!.id) });
   const pendentes = useQuery({ queryKey: ["financeiro-resumo-conta", conta?.id], enabled: !!conta?.id, queryFn: () => buscarResumoDaConta(conta!.id) });
   const [modo, setModo] = useState<ModoRecebimento>("pix_manual");
+  const [tag, setTag] = useState("");
+  const [erroTag, setErroTag] = useState("");
+  /** o link de ativar o checkout externo que a InfinitePay mandou (só com o erro infinitepay_checkout_desligado) */
+  const [ativar, setAtivar] = useState<string | null>(null);
+  /** o bloqueio na hora do toque (como antes da W1); o servidor confirma e, se recusar, volta ao que está salvo */
   const [bloquear, setBloquear] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [testando, setTestando] = useState(false);
 
   useEffect(() => {
     if (!consulta.data) return;
-    setModo(consulta.data.recebimento_modo);
-    setBloquear(consulta.data.bloquear_app_inadimplente);
+    setModo(consulta.data.conta.modo);
+    setTag(consulta.data.infinitepay.handle ? `$${consulta.data.infinitepay.handle}` : "");
+    setBloquear(consulta.data.conta.bloquear);
   }, [consulta.data]);
 
   if (!conta) {
     return <div data-config-aba="recebimento" data-estado-aba="vazio"><EstadoVazio titulo="Nenhuma conta ativa" texto="O recebimento aparece aqui quando você faz parte de uma conta de profissional." /></div>;
   }
-  const c = consulta.data;
+  const r = consulta.data;
   const pendentesFalhou = pendentes.isError && !pendentes.data;
-  const mpLiberado = master || c?.recebimento_modo === "mercadopago";
   const opcoes: OpcaoPilula<ModoRecebimento>[] = [
     { valor: "pix_manual", rotulo: "Pix na sua chave", dica: "O aluno paga pelo banco dele e anexa o comprovante; você confirma", icone: QrCode },
+    ...(r && (r.infinitepay.disponivel || r.conta.modo === "infinitepay")
+      ? [{ valor: "infinitepay" as const, rotulo: "InfinitePay", icone: Wallet,
+           dica: "O aluno paga na página da InfinitePay (Pix ou cartão em até 12×) e a confirmação chega sozinha" }]
+      : []),
     { valor: "nenhum", rotulo: "Não cobrar pelo app", dica: "Você cobra por fora e registra o pagamento no financeiro do aluno", icone: Ban },
-    { valor: "mercadopago", rotulo: "Mercado Pago", dica: "Pix e cartão com confirmação automática", icone: CreditCard, desligada: !mpLiberado,
+    { valor: "mercadopago", rotulo: "Mercado Pago", dica: "Pix e cartão com confirmação automática", icone: CreditCard, desligada: !r?.mp_liberado,
       porque: "Só quando o master libera para a conta — fale com o suporte" },
   ];
 
-  const salvar = async (patch: Partial<Pick<ContaRecebimento, "recebimento_modo" | "bloquear_app_inadimplente">>, ok: string) => {
+  /** O erro embaixo do campo. O "checkout externo desligado" (ou a InfiniteTag que não existe — a InfinitePay responde igual) traz o
+   *  link de ativar. */
+  const erroDoCampo = (e: ErroFinanceiro) => {
+    setErroTag(mensagemDoRecebimento(e.codigo));
+    setAtivar(e.codigo === "infinitepay_checkout_desligado" && typeof e.extra.ativar === "string" ? e.extra.ativar : null);
+  };
+
+  const salvar = async (pedido: Parameters<typeof salvarRecebimento>[1], ok: string): Promise<void> => {
     setSalvando(true);
     try {
-      const { data, error } = await principal.from("contas").update(patch).eq("id", conta.id).select("recebimento_modo, bloquear_app_inadimplente");
-      if (error) throw error;
-      const linha = (data ?? [])[0] as Pick<ContaRecebimento, "recebimento_modo" | "bloquear_app_inadimplente"> | undefined;
-      if (!linha) throw new Error("sem permissão");
-      if (patch.recebimento_modo && linha.recebimento_modo !== patch.recebimento_modo) {
-        toast.error("O Mercado Pago só é ligado pelo master.");
-      } else {
-        toast.success(ok);
-      }
-      await qc.invalidateQueries({ queryKey: chave });
+      const res = await salvarRecebimento(conta.id, pedido);
+      qc.setQueryData(chave, res);
+      if (res.automaticas_falhas) toast.error(`${res.automaticas_falhas} cobrança(s) automática(s) não desligaram no Mercado Pago. Fale com o suporte.`);
+      else toast.success(ok);
     } catch (e) {
-      console.error("[Recebimento] salvar:", e);
-      toast.error("Não deu para salvar agora. Confira a internet e tente de novo.");
+      // o bloqueio mostrado na hora volta ao que está salvo
+      if (pedido.bloquear !== undefined) setBloquear(qc.getQueryData<RecebimentoDaConta>(chave)?.conta.bloquear ?? !pedido.bloquear);
+      const codigo = e instanceof ErroFinanceiro ? e.codigo : null;
+      if (codigo === "automaticas_ativas" && !pedido.cancelar_automaticas) {
+        const n = Number((e as ErroFinanceiro).extra.alunos) || 0;
+        const sim = await confirmar({
+          titulo: "Desligar as cobranças automáticas?", rotuloConfirmar: "Trocar e desligar", rotuloCancelar: "Voltar", perigo: true,
+          descricao: `${n === 1 ? "1 aluno paga" : `${n} alunos pagam`} no cartão todo mês pelo Mercado Pago. Trocar a forma de receber desliga essas cobranças e avisa cada aluno.`,
+        });
+        if (sim) {
+          setSalvando(false);
+          return salvar({ ...pedido, cancelar_automaticas: true }, ok);
+        }
+      } else if (codigo && ERROS_DO_CAMPO.has(codigo)) {
+        erroDoCampo(e as ErroFinanceiro);
+      } else {
+        toast.error(mensagemDoRecebimento(codigo, "Não deu para salvar agora. Confira a internet e tente de novo."));
+      }
     } finally {
       setSalvando(false);
     }
   };
 
+  const salvarForma = () => {
+    if (modo === "infinitepay") {
+      const h = normalizarHandle(tag);
+      if (!h) return setErroTag(TAG_RUIM);
+      return void salvar(h === r?.infinitepay.handle ? { modo } : { modo, handle: h }, "Pronto: seus alunos pagam pela InfinitePay.");
+    }
+    void salvar({ modo }, "Forma de recebimento salva.");
+  };
+
+  const testar = async () => {
+    const h = normalizarHandle(tag);
+    if (!h) return setErroTag(TAG_RUIM);
+    const aba = reservarAba(); // no toque: o navegador não bloqueia
+    setTestando(true);
+    try {
+      const { url } = await testarInfinitePay(conta.id, h);
+      await abrirPagina(url, aba);
+    } catch (e) {
+      aba?.fechar();
+      const codigo = e instanceof ErroFinanceiro ? e.codigo : null;
+      if (codigo && ERROS_DO_CAMPO.has(codigo)) erroDoCampo(e as ErroFinanceiro);
+      else toast.error(mensagemDoRecebimento(codigo, "Não deu para testar agora. Tente de novo."));
+    } finally {
+      setTestando(false);
+    }
+  };
+
+  const tagMudou = modo === "infinitepay" && normalizarHandle(tag) !== r?.infinitepay.handle;
   return (
     <div data-config-aba="recebimento" className="flex flex-col gap-3.5">
       <TopoPagina titulo="Recebimento" subtitulo={`${conta.nome} · como os alunos pagam`} />
-      {consulta.isLoading || !c ? (
+      {consulta.isLoading ? (
         <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2"><Esqueleto className="h-[260px] rounded-[22px]" /><Esqueleto className="h-[260px] rounded-[22px]" /></div>
+      ) : !r ? (
+        <EstadoErro titulo="Não deu para carregar o recebimento" aoTentar={() => void consulta.refetch()} />
       ) : (
         <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
           <SecaoForm brilho titulo="Como seus alunos pagam" marca="recebimento-modo"
-            extra={<Chip tom={c.recebimento_modo === "mercadopago" ? "c" : c.recebimento_modo === "nenhum" ? "g" : "n"}>{c.recebimento_modo === "mercadopago" ? "MERCADO PAGO" : c.recebimento_modo === "nenhum" ? "POR FORA" : "PIX NA CHAVE"}</Chip>}
-            descricao="Vale para todos os alunos da conta, na tela Pagamentos do app (e para os pacientes do Nutri, que passam a ter o Pagar).">
+            extra={<Chip tom={r.conta.modo === "nenhum" ? "g" : r.conta.modo === "pix_manual" ? "n" : "c"}>{ROTULO_MODO[r.conta.modo]}</Chip>}
+            descricao="Vale para todos os alunos da conta, na tela Pagamentos do app.">
             <div className="flex flex-col gap-4">
-              <OpcoesPilula nome="recebimento-modo" rotulo="Forma" colunas={1} opcoes={opcoes} valores={[modo]} aoMudar={(v) => setModo(v[0] ?? modo)} />
-              {c.recebimento_modo === "mercadopago" && modo !== "mercadopago" && !master && (
+              <OpcoesPilula nome="recebimento-modo" rotulo="Forma" colunas={1} opcoes={opcoes} valores={[modo]}
+                aoMudar={(v) => { setModo(v[0] ?? modo); setErroTag(""); setAtivar(null); }} />
+              {modo === "infinitepay" && (
+                <div className="flex flex-col gap-2 rounded-2xl border border-linha bg-superficie px-3.5 py-3" data-recebimento-infinitepay>
+                  <Campo rotulo="Sua InfiniteTag" value={tag} placeholder="$seunome" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                    onChange={(e) => { setTag(e.target.value); setErroTag(""); setAtivar(null); }} data-infinitetag />
+                  <p className="text-[12px] text-texto-2">É o nome da sua conta no app da InfinitePay (começa com $). O dinheiro cai direto lá, sem taxa do Physiq.</p>
+                  {erroTag && <MensagemForm data-infinitetag-erro>{erroTag}</MensagemForm>}
+                  {ativar && (
+                    <Botao variante="g" icone={ExternalLink} className={BOTAO_LONGO} onClick={() => void abrirLinkExterno(ativar)} data-infinitepay-ativar>
+                      Ativar o checkout externo na InfinitePay
+                    </Botao>
+                  )}
+                  <Botao variante="g" icone={ExternalLink} className={BOTAO_LONGO} disabled={testando} onClick={() => void testar()} data-infinitepay-testar>
+                    {testando ? "Abrindo…" : "Testar (abre a sua página, sem cobrar)"}
+                  </Botao>
+                </div>
+              )}
+              {r.conta.modo === "mercadopago" && modo !== "mercadopago" && !r.master && (
                 <p className="text-[12px] text-ambar-3">Saindo do Mercado Pago, voltar a ele depende do master.</p>
               )}
               <div className="flex flex-wrap items-center gap-2 border-t border-linha pt-4">
-                <Botao variante="w" icone={Save} disabled={salvando || modo === c.recebimento_modo} onClick={() => void salvar({ recebimento_modo: modo }, "Forma de recebimento salva.")} data-recebimento-salvar-modo>
+                <Botao variante="w" icone={Save} disabled={salvando || !r.pode_editar || (modo === r.conta.modo && !tagMudou)} onClick={salvarForma}
+                  data-recebimento-salvar-modo>
                   {salvando ? "Salvando…" : "Salvar a forma"}
                 </Botao>
               </div>
@@ -115,10 +185,10 @@ export default function Recebimento() {
 
           <div className="flex flex-col gap-3.5">
             <SecaoForm titulo="Chaves Pix" marca="recebimento-chaves" descricao="Só uma fica ligada por vez — é ela que o aluno vê.">
-              <RecebimentosLista contaId={conta.id} membroId={conta.membro_id ?? null} podeEditar />
+              <RecebimentosLista contaId={conta.id} chaves={r.chaves} podeEditar={r.pode_editar} aoMudar={() => void qc.invalidateQueries({ queryKey: chave })} />
             </SecaoForm>
             <SecaoForm titulo="Aluno com pagamento vencido" marca="recebimento-bloqueio"
-              extra={<Chip tom={c.bloquear_app_inadimplente ? "a" : "g"} icone={c.bloquear_app_inadimplente ? Lock : Unlock}>{c.bloquear_app_inadimplente ? "BLOQUEIA" : "SÓ AVISA"}</Chip>}
+              extra={<Chip tom={r.conta.bloquear ? "a" : "g"} icone={r.conta.bloquear ? Lock : Unlock}>{r.conta.bloquear ? "BLOQUEIA" : "SÓ AVISA"}</Chip>}
               descricao="Bloqueado, o app do aluno fecha e só Pagamentos abre, até ele pagar. Desligado, ele só recebe o aviso no topo do app.">
               <OpcoesPilula nome="recebimento-bloqueio" rotulo="Mensalidade ou cobrança vencida" colunas={1}
                 opcoes={[
@@ -128,8 +198,9 @@ export default function Recebimento() {
                 valores={[bloquear ? "sim" : "nao"]}
                 aoMudar={(v) => {
                   const novo = v[0] === "sim";
+                  if (novo === bloquear) return;
                   setBloquear(novo);
-                  void salvar({ bloquear_app_inadimplente: novo }, novo ? "Bloqueio do inadimplente ligado." : "Bloqueio do inadimplente desligado.");
+                  void salvar({ bloquear: novo }, novo ? "Bloqueio do inadimplente ligado." : "Bloqueio do inadimplente desligado.");
                 }} />
             </SecaoForm>
           </div>

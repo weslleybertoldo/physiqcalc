@@ -43,6 +43,17 @@ const CHAVE_DESTINO = "physiq_destino_do_link";
 const CHAVE_ABERTURA = "physiq_link_da_abertura";
 const MAX_ROTA = 500;
 
+/**
+ * W1 — a volta da página da InfinitePay: o redirect_url da pagamentos-aluno (urlDeVolta) é /perfil/pagamentos e a InfinitePay põe na
+ * busca o order_nsu, o transaction_nsu, o slug, o receipt_url e o capture_method — no APK ela chega pelo App Link e o receipt_url pode
+ * ser longo. É a ÚNICA rota que passa dos 500: até 2048 (o teto das urls da InfinitePay, IP_URL_MAX), com o order_nsu e só estas chaves
+ * (as de fora saem; repetida, vale a 1ª). São as que a tela de Pagamentos lê e manda à função — SÓ elas, nunca a busca inteira (o corpo
+ * leva a `acao`). Até 500, tudo como sempre.
+ */
+export const ROTA_DA_VOLTA = "/perfil/pagamentos";
+export const CHAVES_DA_VOLTA = ["order_nsu", "transaction_nsu", "slug", "invoice_slug", "receipt_url", "capture_method"] as const;
+const MAX_ROTA_DA_VOLTA = 2048;
+
 /** A página é do app do aluno (a raiz exata ou um dos prefixos — a mesma regra do `android:pathPrefix`). */
 export function ehCaminhoDoApp(caminho: string | null | undefined): boolean {
   if (!caminho || !caminho.startsWith("/")) return false;
@@ -51,18 +62,38 @@ export function ehCaminhoDoApp(caminho: string | null | undefined): boolean {
 }
 
 /** Rota interna segura (caminho do app + busca), sem esquema, host, # nem caractere de controle. */
-function rotaValida(rota: unknown): rota is string {
-  if (typeof rota !== "string" || rota.length > MAX_ROTA) return false;
+function rotaValida(rota: unknown, max = MAX_ROTA): rota is string {
+  if (typeof rota !== "string" || rota.length > max) return false;
   // eslint-disable-next-line no-control-regex
   if (!rota.startsWith("/") || rota.startsWith("//") || rota.includes("\\") || rota.includes("#") || /[\u0000-\u001f\u007f]/.test(rota)) return false;
   return ehCaminhoDoApp(rota.split("?")[0]);
+}
+
+/** W1: a volta dos pagamentos só com as chaves dela (a 1ª de cada, na ordem que veio) — null se não é a volta (outro caminho, sem order_nsu). */
+function voltaDosPagamentos(caminho: string, busca: URLSearchParams): string | null {
+  if (caminho !== ROTA_DA_VOLTA || !busca.get("order_nsu")) return null;
+  const q = new URLSearchParams();
+  for (const [k, v] of busca) {
+    if ((CHAVES_DA_VOLTA as readonly string[]).includes(k) && !q.has(k)) q.append(k, v);
+  }
+  const rota = `${caminho}?${q}`;
+  return rotaValida(rota, MAX_ROTA_DA_VOLTA) ? rota : null;
+}
+
+/** O destino que o app guarda e abre: a rota de sempre (até 500) ou a volta dos pagamentos na forma do rotaDoLink (até 2048). */
+function destinoValido(rota: unknown): rota is string {
+  if (rotaValida(rota)) return true;
+  if (typeof rota !== "string") return false;
+  const i = rota.indexOf("?");
+  return i > 0 && voltaDosPagamentos(rota.slice(0, i), new URLSearchParams(rota.slice(i + 1))) === rota;
 }
 
 /**
  * Link do site → rota do app: "https://physiqcalc.com.br/perfil/agenda?x=1" → "/perfil/agenda?x=1". null quando não é link
  * do site (outro host, http, o esquema do APK da volta do login), quando a página não é do app do aluno (painel, master,
  * entrada, públicas) e na raiz com ?prof= (o link do profissional só guarda o código — sem trocar de tela). O ?prof= sai da
- * rota (o profPendente já guardou) e o # nunca vai (o link "já logado" leva os tokens no #).
+ * rota (o profPendente já guardou) e o # nunca vai (o link "já logado" leva os tokens no #). Até 500 caracteres; acima, só a volta
+ * da InfinitePay (W1 — até 2048, só as chaves dela: ROTA_DA_VOLTA).
  */
 export function rotaDoLink(url: string | null | undefined): string | null {
   if (!url || typeof url !== "string") return null;
@@ -81,13 +112,14 @@ export function rotaDoLink(url: string | null | undefined): string | null {
   if (caminho === "/" && comProf) return null;
   const q = busca.toString();
   const rota = `${caminho}${q ? `?${q}` : ""}`;
-  return rotaValida(rota) ? rota : null;
+  if (rotaValida(rota)) return rota;
+  return voltaDosPagamentos(caminho, busca);
 }
 
 // ───────────────────────── o destino guardado ─────────────────────────
 
 export function guardarDestino(rota: string, agora: number = Date.now()): void {
-  if (!rotaValida(rota)) return;
+  if (!destinoValido(rota)) return;
   try {
     localStorage.setItem(CHAVE_DESTINO, JSON.stringify({ rota, em: agora }));
   } catch {
@@ -102,7 +134,7 @@ export function destinoGuardado(agora: number = Date.now()): string | null {
     if (!bruto) return null;
     const d = JSON.parse(bruto) as { rota?: unknown; em?: unknown };
     const em = typeof d?.em === "number" ? d.em : NaN;
-    if (!rotaValida(d?.rota) || !(agora - em >= 0 && agora - em <= VALIDADE_DESTINO_MS)) {
+    if (!destinoValido(d?.rota) || !(agora - em >= 0 && agora - em <= VALIDADE_DESTINO_MS)) {
       localStorage.removeItem(CHAVE_DESTINO);
       return null;
     }

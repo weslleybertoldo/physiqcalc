@@ -7,9 +7,9 @@ import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { ErroFinanceiro, salvarPlano } from "@/financeiro/api";
-import { MODALIDADES, parcelaMensal, ROTULO_MODALIDADE, validarPlano, type Modalidade } from "@/financeiro/planos";
+import { MODALIDADES, parcelaMensal, ROTULO_MODALIDADE, rotuloDaModalidade, validarPlano, type Modalidade } from "@/financeiro/planos";
 import { avisoDasAutomaticas, lerValor, mensagemErroFinanceiro, reais } from "@/financeiro/regras";
-import type { PlanoNaLista } from "@/financeiro/tipos";
+import type { ModoRecebimento, PlanoNaLista } from "@/financeiro/tipos";
 import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
@@ -17,12 +17,14 @@ import { PainelDeslizante } from "@/ui/premium/Sheet";
 const DURACOES = [1, 2, 3, 6, 12, 24];
 const noCampo = (v: number | null | undefined) => (v ? Number(v).toFixed(2).replace(".", ",") : "");
 
-/** Criar/editar um plano (W-P §3.1): as formas que o recebimento da conta não aceita aparecem desligadas. */
-export function PlanoDialog({ aberto, plano, contaId, modalidadesDaConta, aoFechar, aoSalvo }: {
+/** Criar/editar um plano (W-P §3.1): as formas que o recebimento da conta não aceita aparecem desligadas. W1 (P-B): na conta InfinitePay,
+ *  o à vista se chama "Período todo (Pix ou cartão até 12×)"; o cartão parcelado, que ela não aceita, fica com o nome de sempre. */
+export function PlanoDialog({ aberto, plano, contaId, modalidadesDaConta, modo, aoFechar, aoSalvo }: {
   aberto: boolean;
   plano: PlanoNaLista | null;
   contaId: string;
   modalidadesDaConta: Modalidade[];
+  modo: ModoRecebimento | null;
   aoFechar: () => void;
   aoSalvo: () => void;
 }) {
@@ -96,7 +98,8 @@ export function PlanoDialog({ aberto, plano, contaId, modalidadesDaConta, aoFech
               <label key={x} className="flex items-center gap-2 text-[13.5px] text-texto">
                 <input type="checkbox" className="h-4 w-4 accent-[#8B5CF6]" checked={modalidades.includes(x)} disabled={!pode && !modalidades.includes(x)}
                   onChange={() => alternar(x)} data-plano-modalidade={x} />
-                {ROTULO_MODALIDADE[x]}{!pode ? <span className="text-texto-3"> (o seu recebimento não aceita)</span> : null}
+                {/* a forma que a conta não aceita fica com o nome de sempre: "Período todo" não aparece 2 vezes, uma delas "não aceita" */}
+                {pode ? rotuloDaModalidade(x, modo) : ROTULO_MODALIDADE[x]}{!pode ? <span className="text-texto-3"> (o seu recebimento não aceita)</span> : null}
               </label>
             );
           })}

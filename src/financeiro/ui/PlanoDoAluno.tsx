@@ -6,7 +6,7 @@ import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { CampoSelect } from "@/painel/configuracoes/pecas/Form";
 import { Botao } from "@/ui/premium/Botao";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
-import { aceitaAutomatica, ehModalidade, modalidadesOferecidas, planoCompleto, ROTULO_MODALIDADE, valorDoPagamento, type Modalidade } from "../planos";
+import { aceitaAutomatica, ehModalidade, modalidadesOferecidas, planoCompleto, rotuloDaModalidade, valorDoPagamento, type Modalidade } from "../planos";
 import { hojeSP, lerValor, reais } from "../regras";
 import type { FinanceiroProfissional } from "../tipos";
 import type { useFinanceiroDoAluno } from "./useFinanceiroDoAluno";
@@ -59,7 +59,7 @@ export function FormPlanoDoAluno({ d, agir, aoSalvo }: { d: FinanceiroProfission
       if (d.assinatura && ["authorized", "pending", "paused"].includes(d.assinatura.status) && !aceitaAutomatica(modalidade, meses)) {
         if (!(await confirmar({
           titulo: "Desligar a cobrança automática?",
-          descricao: `${d.aluno.nome} paga no cartão todo mês. "${ROTULO_MODALIDADE[modalidade]}" não usa a cobrança automática: ela é cancelada e o aluno recebe um aviso.`,
+          descricao: `${d.aluno.nome} paga no cartão todo mês. "${rotuloDaModalidade(modalidade, d.conta.modo)}" não usa a cobrança automática: ela é cancelada e o aluno recebe um aviso.`,
           rotuloConfirmar: "Trocar e desligar", perigo: true,
         }))) return;
         cancelar = true;
@@ -96,7 +96,7 @@ export function FormPlanoDoAluno({ d, agir, aoSalvo }: { d: FinanceiroProfission
         <>
           <CampoSelect rotulo="Como o aluno paga" value={modalidade} onChange={(e) => { setModalidade(ehModalidade(e.target.value) ? e.target.value : ""); setErro(""); }} data-mensalidade-modalidade>
             <option value="">Escolha…</option>
-            {ofertas.map((x) => <option key={x} value={x}>{ROTULO_MODALIDADE[x]}</option>)}
+            {ofertas.map((x) => <option key={x} value={x}>{rotuloDaModalidade(x, d.conta.modo)}</option>)}
           </CampoSelect>
           <Campo rotulo="Valor negociado (R$, opcional)" inputMode="decimal" value={negociado} onChange={(e) => { setNegociado(e.target.value); setErro(""); }}
             placeholder="Vazio = o valor do plano" data-mensalidade-negociado />

@@ -3,8 +3,9 @@
  * ajustes (R12) com os textos novos (F1: "envio de fotos pelo link"), o link do diário e os 7 atalhos do "Fluxo de consulta".
  */
 import { rotuloObjetivo } from "@/app-aluno/sozinho/regras";
+import { tentativaViva } from "@/financeiro/infinitepay";
 import { travaDoInadimplente } from "@/financeiro/regras";
-import type { FinanceiroProfissional, ResumoMatricula } from "@/financeiro/tipos";
+import type { CobrancaVista, FinanceiroProfissional, ResumoMatricula } from "@/financeiro/tipos";
 import { formatarTelefone, type AlunoLinha } from "@/painel/alunos/regras";
 import { MENSAGEM_REPETIDO } from "@/nucleo/dadoRepetido";
 import type { AjustesAluno, ChaveAjuste, FormDadosAluno, Genero, ModuloAluno, PerfilAluno, PerfilTreinoAluno } from "./tipos";
@@ -427,9 +428,11 @@ export function rotaDoDiarioDoAluno(pacienteId: string): string {
  * que o painel já carrega (prof_aluno). null = quem olha não enxerga a mensalidade (P6: só o dono e o master) — sem ela o selo
  * mentiria, então não aparece.
  */
-export function resumoDaTrava(d: FinanceiroProfissional): ResumoMatricula | null {
+export function resumoDaTrava(d: FinanceiroProfissional, agora: Date = new Date()): ResumoMatricula | null {
   if (!d.permissoes.mensalidade) return null;
   const m = d.mensalidade;
+  // W1-B1 (o espelho da financeiro_do_aluno): a tentativa da InfinitePay só conta como "aguardando" enquanto vale; vencida, a avulsa volta às abertas
+  const vale = (c: CobrancaVista) => c.forma !== "infinitepay" || tentativaViva(c, agora);
   return {
     paciente_id: d.aluno.paciente_id,
     conta_id: d.aluno.conta_id,
@@ -443,10 +446,11 @@ export function resumoDaTrava(d: FinanceiroProfissional): ResumoMatricula | null
     pausada: !!m?.pausada,
     pago_ate: m?.pago_ate ?? null,
     desde: m?.desde ?? null,
-    aguardando: d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao"),
+    aguardando: d.cobrancas.some((c) => c.tipo === "mensalidade" && c.status === "aguardando_confirmacao" && vale(c)),
     assinatura_ativa: d.assinatura?.status === "authorized",
-    abertas: d.cobrancas.filter((c) => c.status === "aberta").map((c) => ({ id: c.id, descricao: c.descricao, valor: c.valor, vencimento: c.vencimento })),
-    aguardando_avulsas: d.cobrancas.filter((c) => c.tipo === "avulsa" && c.status === "aguardando_confirmacao").length,
+    abertas: d.cobrancas.filter((c) => c.status === "aberta" || (c.tipo === "avulsa" && c.status === "aguardando_confirmacao" && !vale(c)))
+      .map((c) => ({ id: c.id, descricao: c.descricao, valor: c.valor, vencimento: c.vencimento })),
+    aguardando_avulsas: d.cobrancas.filter((c) => c.tipo === "avulsa" && c.status === "aguardando_confirmacao" && vale(c)).length,
     app: d.conta.origem === "app",
     teste_ate: m?.teste_ate ?? null,
   };
@@ -455,7 +459,7 @@ export function resumoDaTrava(d: FinanceiroProfissional): ResumoMatricula | null
 /** N-64: o selo "BLOQUEADO (pagamento)" — o app deste aluno está fechado pela mensalidade (a trava da conta, sem mudar a regra). */
 export function bloqueadoPorPagamento(d: FinanceiroProfissional | null | undefined, ativo: boolean, agora: Date = new Date()): boolean {
   if (!d || !ativo) return false;
-  const r = resumoDaTrava(d);
+  const r = resumoDaTrava(d, agora);
   return !!r && travaDoInadimplente(r, agora);
 }
 

@@ -5,15 +5,22 @@
 // parcelado até o máximo do plano manda as parcelas; a automática só onde a modalidade aceita) — o Brick falso guarda o que recebeu.
 // O título do painel de pagar: "Pagar o plano" / "Renovar o plano" no período todo; no mês a mês, no plano de 1 mês e no modo de
 // hoje, "Pagar a mensalidade" / "Adiantar a mensalidade" como sempre.
+// W1: na conta InfinitePay o Pagar abre a folha dela; a tentativa viva vira "Continuar o pagamento" e o cartão "em andamento" (fora do
+// histórico); a volta da página (?order_nsu=…) confere na hora; a paga mostra "Pix (InfinitePay)" e o recibo; com a folha fechada, a tela
+// confere de novo a cada 30 s. A função, a abertura da página e o recibo são falsos.
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CobrancaVista, MatriculaPagamentos, ReciboVista, StatusAluno } from "@/financeiro/tipos";
 import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 
 type BrickFalso = { customization: { paymentMethods: { maxInstallments: number } }; onSubmit: (form: unknown) => Promise<void> };
-const h = vi.hoisted(() => ({ status: vi.fn(), historico: vi.fn(), acao: vi.fn(), brick: [] as BrickFalso[] }));
+const h = vi.hoisted(() => ({
+  status: vi.fn(), historico: vi.fn(), acao: vi.fn(), brick: [] as BrickFalso[],
+  volta: vi.fn(), conferir: vi.fn(), link: vi.fn(), abrir: vi.fn(), recibo: vi.fn(),
+}));
 vi.mock("@/lib/distribuicao", () => ({ ehLoja: false, DISTRIBUICAO: "site" }));
 vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => false, getPlatform: () => "web" }, registerPlugin: () => ({}) }));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase: {} }));
@@ -23,7 +30,16 @@ vi.mock("@/financeiro/api", async (orig) => ({
   buscarStatusAluno: () => h.status(),
   buscarHistoricoDoAluno: (...a: unknown[]) => h.historico(...a),
   acaoFinanceiro: (...a: unknown[]) => h.acao(...a),
+  voltaDaInfinitePay: (...a: unknown[]) => h.volta(...a),
+  conferirInfinitePay: (...a: unknown[]) => h.conferir(...a),
+  abrirLinkDaInfinitePay: (...a: unknown[]) => h.link(...a),
   invalidarResumo: () => {},
+}));
+vi.mock("@/financeiro/abrirPagamento", () => ({
+  reservarAba: () => null,
+  abrirPagina: (...a: unknown[]) => h.abrir(...a),
+  abrirLinkExterno: (...a: unknown[]) => h.recibo(...a),
+  fecharPagina: async () => {},
 }));
 vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: (p: BrickFalso) => { h.brick.push(p); return null; }, initMercadoPago: () => {} }));
 vi.mock("@/components/pagamentos/mpInit", () => ({ MP_PUBLIC_KEY: "TEST-chave", ensureMpInit: () => {} }));
@@ -53,11 +69,11 @@ function matricula(p: Partial<MatriculaPagamentos> = {}): MatriculaPagamentos {
 }
 const status = (m: MatriculaPagamentos[]): StatusAluno => ({ ok: true, ambiente: "staging", simulacao: true, hoje: dia(0).slice(0, 10), agora: dia(0), matriculas: m });
 
-const montar = () =>
+const montar = (rota?: string) =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ProvedorConfirmar>
-        <MemoryRouter useTransitions={false} initialEntries={["/perfil/pagamentos"]}>
+        <MemoryRouter useTransitions={false} initialEntries={[rota ?? "/perfil/pagamentos"]}>
           <Routes>
             <Route path="*" element={<Pagamentos />} />
           </Routes>
@@ -72,6 +88,8 @@ beforeEach(() => {
   h.historico.mockReset();
   h.acao.mockReset();
   h.acao.mockResolvedValue({});
+  for (const f of [h.volta, h.conferir, h.link, h.abrir, h.recibo]) f.mockReset();
+  h.conferir.mockResolvedValue({ ok: true, paga: false, resultado: "em_andamento", cobranca: { status: "aguardando_confirmacao" } });
   h.brick.length = 0;
   h.status.mockResolvedValue(status([matricula()]));
   h.historico.mockImplementation(async (_p: string, tipo: "cobrancas" | "recibos", pagina: number) => {
@@ -303,5 +321,97 @@ describe("Perfil › Pagamentos — o título do painel de pagar (W-P: no perío
     fireEvent.click(document.querySelector(botao)!);
     const painel = await screen.findByRole("dialog");
     expect(within(painel).getByRole("heading").textContent).toBe(titulo);
+  });
+});
+
+describe("Perfil › Pagamentos — InfinitePay (W1)", () => {
+  const IP = (x: Partial<MatriculaPagamentos> = {}) => matricula({
+    conta: { id: "c1", nome: "Consultoria", modo: "infinitepay", bloquear: false, profissional: "Lucas Ferreira" },
+    mensalidade: { valor: 100, plano_id: null, plano: null, pausada: false, pago_ate: null, desde: dia(-1), coberta: false }, cobrancas: [], ...x });
+  it("Pagar abre a folha da InfinitePay (não a do Pix na chave)", async () => {
+    h.status.mockResolvedValue(status([IP()]));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-pagar-mensalidade]")!);
+    await waitFor(() => expect(document.querySelector("[data-pagar-ip]")).not.toBeNull());
+    expect(document.querySelector("[data-pagar-mp]")).toBeNull();
+  });
+  it("com a tentativa viva: 'Continuar o pagamento' e o cartão 'em andamento'; ela não entra no histórico", async () => {
+    const t = { ...cobranca(1), id: "t1", status: "aguardando_confirmacao", forma: "infinitepay", ip_link: "https://checkout.infinitepay.com.br/x", ip_expira_em: dia(2) } as CobrancaVista;
+    h.status.mockResolvedValue(status([IP({ cobrancas: [t] })]));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")?.textContent).toBe("Continuar o pagamento"));
+    expect(document.querySelector('[data-pagamento-ip="t1"]')).not.toBeNull();
+    expect(document.querySelector('[data-historico-pagamentos] [data-cobranca="t1"]')).toBeNull();
+  });
+  it("a volta da página (?order_nsu=…) confere na hora e limpa a busca", async () => {
+    h.status.mockResolvedValue(status([IP()]));
+    h.volta.mockResolvedValue({ ok: true, paga: true, resultado: "baixar", cobranca: {} });
+    montar("/perfil/pagamentos?order_nsu=11111111-2222-4333-8444-555555555555-1&transaction_nsu=n1&slug=s1&capture_method=pix");
+    await waitFor(() => expect(h.volta).toHaveBeenCalledWith({ order_nsu: "11111111-2222-4333-8444-555555555555-1", transaction_nsu: "n1", slug: "s1", capture_method: "pix" }));
+  });
+  it("paga pela InfinitePay: 'Pix (InfinitePay)' e o recibo no detalhe", async () => {
+    const pg = { ...cobranca(1), id: "p9", forma: "infinitepay", metodo: "pix", ip_meio: "pix", ip_recibo_url: "https://recibo.infinitepay.io/r" } as CobrancaVista;
+    h.status.mockResolvedValue(status([IP({ cobrancas: [pg] })]));
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-cobranca="p9"]')?.textContent).toContain("Pix (InfinitePay)"));
+    fireEvent.click(document.querySelector('[data-cobranca="p9"] [data-cobranca-abrir]')!);
+    await waitFor(() => expect(document.querySelector("[data-recibo-infinitepay]")).not.toBeNull());
+  });
+
+  // ── além do plano (registrado no relatório da Task 16) ──
+  const viva = () => ({ ...cobranca(1), id: "t1", status: "aguardando_confirmacao", forma: "infinitepay", ip_link: "https://checkout.infinitepay.com.br/x",
+    ip_expira_em: dia(2) }) as CobrancaVista;
+  it("a volta só com o pedido (sem o NSU): confere a cobrança do pedido, sem a volta", async () => {
+    h.status.mockResolvedValue(status([IP()]));
+    montar("/perfil/pagamentos?order_nsu=11111111-2222-4333-8444-555555555555-2");
+    await waitFor(() => expect(h.conferir).toHaveBeenCalledWith("11111111-2222-4333-8444-555555555555"));
+    expect(h.volta).not.toHaveBeenCalled();
+  });
+  it("o recibo abre pelo abrirLinkExterno (só endereço da InfinitePay)", async () => {
+    const pg = { ...cobranca(1), id: "p9", forma: "infinitepay", metodo: "pix", ip_meio: "pix", ip_recibo_url: "https://recibo.infinitepay.io/r" } as CobrancaVista;
+    h.status.mockResolvedValue(status([IP({ cobrancas: [pg] })]));
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-cobranca="p9"] [data-cobranca-abrir]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-cobranca="p9"] [data-cobranca-abrir]')!);
+    await waitFor(() => expect(document.querySelector("[data-recibo-infinitepay]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-recibo-infinitepay]")!);
+    expect(h.recibo).toHaveBeenCalledWith("https://recibo.infinitepay.io/r");
+  });
+  it("a avulsa esperando a InfinitePay ganha 'Continuar', que abre a folha dela em 'aguardando'", async () => {
+    const av = { ...viva(), id: "a1", tipo: "avulsa", descricao: "Avaliação" } as CobrancaVista;
+    h.status.mockResolvedValue(status([IP({ cobrancas: [av] })]));
+    montar();
+    await waitFor(() => expect(document.querySelector('[data-continuar-cobranca="a1"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-continuar-cobranca="a1"]')!);
+    await waitFor(() => expect(document.querySelector('[data-ip-aguardando="a1"]')).not.toBeNull());
+  });
+  it("com a folha fechada e a tentativa viva, a tela confere de novo a cada 30 s; paga → 'Pagamento confirmado!' e atualiza", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const sucesso = vi.spyOn(toast, "success");
+    try {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      const t = viva();
+      h.status.mockResolvedValue(status([IP({ cobrancas: [t] })]));
+      h.conferir.mockResolvedValue({ ok: true, paga: false, resultado: "em_andamento", cobranca: t });
+      montar();
+      await waitFor(() => expect(document.querySelector('[data-pagamento-ip="t1"]')).not.toBeNull());
+      expect(h.conferir).not.toHaveBeenCalled();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(h.conferir).toHaveBeenCalledWith("t1");
+      expect(sucesso).not.toHaveBeenCalled();
+      h.conferir.mockResolvedValue({ ok: true, paga: true, resultado: "baixar", cobranca: { ...t, status: "paga" } });
+      h.status.mockResolvedValue(status([IP({ cobrancas: [{ ...t, status: "paga" }] })]));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      await waitFor(() => expect(document.querySelector('[data-pagamento-ip="t1"]')).toBeNull());
+      expect(sucesso).toHaveBeenCalledWith("Pagamento confirmado!");
+    } finally {
+      sucesso.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });

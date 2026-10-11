@@ -62,7 +62,7 @@ describe("formas da conta (§3.6) e cartão (B2, I6)", () => {
     expect(modalidadesDaConta("pix_manual")).toEqual(["avista", "mensal"]);
     expect(modalidadesDaConta("nenhum")).toEqual(["avista", "mensal"]);
     expect(modalidadesDaConta("mercadopago")).toEqual(TODAS);
-    expect(modalidadesDaConta("infinitepay")).toEqual([]);
+    expect(modalidadesDaConta("desconhecido")).toEqual([]);
     expect(modalidadesOferecidas(anual, "pix_manual")).toEqual(["avista", "mensal"]);
     expect(modalidadesOferecidas({ ...anual, ativo: false }, "mercadopago")).toEqual([]);
   });
@@ -128,5 +128,34 @@ describe("validarPlano (tela de Planos → servidor)", () => {
 describe("P-A (decisão dele, 10/10/2026: '1')", () => {
   it("depois da última parcela o plano renova: a contagem volta a 1 e a automática segue sem data de fim", () => {
     expect(proximaParcela({ num: 12, total: 12, plano: "p1" }, "p1", 12)).toEqual({ num: 1, total: 12 });
+  });
+});
+
+import { modalidadesPermitidasNoPlano, rotuloDaModalidade } from "./planos";
+
+describe("W1 — P-B (decisão dele 10/10/2026, '1'): na InfinitePay, à vista e cartão parcelado = 'período todo'", () => {
+  it("a conta InfinitePay recebe o período todo e o mês a mês", () => {
+    expect(modalidadesDaConta("infinitepay")).toEqual(["avista", "mensal"]);
+  });
+  it("o plano com cartão parcelado é oferecido como período todo (à vista) — a mesma cobertura; nos outros modos, como sempre", () => {
+    const soParcelado = { ...anual, modalidades: ["cartao_parcelado"] as Modalidade[] };
+    expect(modalidadesOferecidas(soParcelado, "infinitepay")).toEqual(["avista"]);
+    expect(modalidadesOferecidas(anual, "infinitepay")).toEqual(["avista", "mensal"]);
+    expect(modalidadesOferecidas(soParcelado, "mercadopago")).toEqual(["cartao_parcelado"]);
+    expect(modalidadesOferecidas(anual, "pix_manual")).toEqual(["avista", "mensal"]);
+  });
+  it("rótulo: 'Período todo (Pix ou cartão até 12×)' nas 2 na InfinitePay; o de sempre nos outros modos", () => {
+    expect(rotuloDaModalidade("avista", "infinitepay")).toBe("Período todo (Pix ou cartão até 12×)");
+    expect(rotuloDaModalidade("cartao_parcelado", "infinitepay")).toBe("Período todo (Pix ou cartão até 12×)");
+    expect(rotuloDaModalidade("mensal", "infinitepay")).toBe("Mês a mês");
+    expect(rotuloDaModalidade("avista", "mercadopago")).toBe("À vista");
+    expect(rotuloDaModalidade("cartao_parcelado", null)).toBe("Cartão parcelado");
+  });
+  it("salvar um plano que já tinha cartão parcelado não obriga a tirar; plano novo só com o que a conta recebe", () => {
+    expect(modalidadesPermitidasNoPlano("infinitepay", ["avista", "cartao_parcelado"])).toEqual(["avista", "cartao_parcelado", "mensal"]);
+    expect(modalidadesPermitidasNoPlano("infinitepay", [])).toEqual(["avista", "mensal"]);
+    expect(modalidadesPermitidasNoPlano("mercadopago", [])).toEqual(TODAS);
+    expect(validarPlano({ nome: "X", meses: 6, valor: 10, modalidades: ["cartao_parcelado"], max_parcelas_cartao: 3 },
+      modalidadesPermitidasNoPlano("infinitepay", []))).toEqual({ ok: false, erro: "modalidade_da_conta" });
   });
 });

@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layers, Lock, Pencil, Plus, Power } from "lucide-react";
 import { toast } from "sonner";
 import { ativarPlano, buscarPlanosDaConta, ErroFinanceiro } from "@/financeiro/api";
-import { nomeDoPeriodo, ROTULO_MODALIDADE, sufixoDoValor } from "@/financeiro/planos";
+import { nomeDoPeriodo, ROTULO_MODALIDADE, rotuloDaModalidade, sufixoDoValor } from "@/financeiro/planos";
 import { mensagemErroFinanceiro, reais } from "@/financeiro/regras";
 import type { PlanoNaLista } from "@/financeiro/tipos";
 import { Botao } from "@/ui/premium/Botao";
@@ -111,8 +111,9 @@ export default function Planos({ f }: { f: Pick<FinanceiroConta, "contaId"> }) {
                 <p className="text-[13px] text-texto-2">Falta o valor e a duração para oferecer este plano.</p>
               )}
               <div className="flex flex-wrap gap-1.5">
-                {pl.modalidades.map((x) => (
-                  <Chip key={x} tom="g">{ROTULO_MODALIDADE[x]}{x === "cartao_parcelado" && pl.max_parcelas_cartao ? ` até ${pl.max_parcelas_cartao}×` : ""}</Chip>
+                {/* W1 (P-B): os rótulos sem repetir — na InfinitePay, à vista e cartão parcelado dizem a mesma coisa ("Período todo") */}
+                {[...new Set(pl.modalidades.map((x) => rotuloDaModalidade(x, d.modo)))].map((rot) => (
+                  <Chip key={rot} tom="g">{rot}{rot === ROTULO_MODALIDADE.cartao_parcelado && pl.max_parcelas_cartao ? ` até ${pl.max_parcelas_cartao}×` : ""}</Chip>
                 ))}
               </div>
               <p className="text-[12px] text-texto-3" data-plano-alunos>{pl.alunos === 1 ? "1 aluno" : `${pl.alunos} alunos`}</p>
@@ -129,7 +130,7 @@ export default function Planos({ f }: { f: Pick<FinanceiroConta, "contaId"> }) {
         </div>
       )}
       <PlanoDialog aberto={editando !== null} plano={visto === "novo" ? null : visto} contaId={contaId} modalidadesDaConta={d.modalidades_da_conta}
-        aoFechar={() => setEditando(null)}
+        modo={d.modo ?? null} aoFechar={() => setEditando(null)}
         aoSalvo={() => {
           setEditando(null);
           recarregar();
