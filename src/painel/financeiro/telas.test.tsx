@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useSearchParams } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -323,6 +323,21 @@ describe("hml-14b — Mensalidades por página do servidor (B21)", () => {
     await waitFor(() => expect(sonda.busca).toBe("?pagina_mensalidades=2"));
     await waitFor(() => expect(document.querySelector('[data-cobranca-aluno="a20"]')).not.toBeNull());
     expect(h.pedidos.filter((p) => p.nome === "mensalidades").map((p) => p.pagina)).toEqual([1, 2]);
+  });
+
+  it("W-P: o valor do plano de período diz /ano (à vista de 12 meses) e o modo de hoje (modalidade nula) continua /mês", async () => {
+    h.mensalidades = (pagina) => resposta(pagina, {
+      total: 2,
+      alunos: [
+        alunoResumo(1, { mensalidade_valor: 1000, modalidade: "avista", meses: 12 }),
+        alunoResumo(2, { mensalidade_valor: 99.9, modalidade: null }),
+      ],
+    });
+    montar(<Mensalidades f={f} />);
+    await waitFor(() => expect(document.querySelectorAll('[data-lista="mensalidades"] [data-item]')).toHaveLength(2));
+    const linha = (id: string) => document.querySelector<HTMLElement>(`[data-cobranca-aluno="${id}"]`)!;
+    expect(within(linha("a1")).getByText("R$ 1.000,00/ano")).toBeInTheDocument();
+    expect(within(linha("a2")).getByText("R$ 99,90/mês")).toBeInTheDocument();
   });
 
   it("erro do servidor: só o aviso (sem 'Nenhum aluno' nem números zerados)", async () => {
