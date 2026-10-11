@@ -29,6 +29,15 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 11/10 10:57 | hml-19b | `da9824d` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2 --canal msedge` | staging | 76/79 | F7: as MESMAS 3 de antes (a prescrição do Treino; [atalhos] expectativa velha; o site antigo não abriu) |
+| 11/10 10:46 | hml-19b | `da9824d` | `e2e/w11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 75/79 | F7: as MESMAS 4 de antes ([so_nutricao] ×3: o app abre no Início desde a W12; o site antigo não abriu) |
+| 11/10 10:36 | hml-19b | `da9824d` | `e2e/w24/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging2` | staging | 60/60 | F7: o Diário das Dietas pela tela (reagir pela nutricao, o aviso no sino), Alimentos, Receitas, o /d/; harness da9824d |
+| 11/10 10:30 | hml-19b | `da9824d` | `e2e/w24/api.py` | staging | 47/47 | F7, com a massa da W24 inteira (o harness da9824d: a sb_secret_ só no apikey) |
+| 11/10 10:26 | hml-19b | `da9824d` | `e2e/hml19/laco.py --base staging --canal msedge --prefixo staging2` | staging | 40/40 | F7: a nutricao barrada nas 7 seções + o app (a marca volta + o texto fixo) |
+| 11/10 10:22 | hml-19b | `da9824d` | `e2e/hml19/rede.py --area dieta --base staging --canal msedge --prefixo staging2` | staging | 27/27 | F7, o DEPOIS no staging: 1 chamada da nutricao por ação, 0 gravação direta |
+| 11/10 10:21 | hml-19b | `da9824d` | `e2e/hml19/api.py --area aluno --base staging` | staging | 27/27 | F7 (balde do IP: o app 0 → 0; o link público 0 → 1) |
+| 11/10 10:20 | hml-19b | `da9824d` | `e2e/hml19/api.py --area dieta --base staging` | staging | 102/102 | F7 |
+| 11/10 10:17 | hml-19b | `da9824d` | `e2e/hml19/api.py --area prontuario --base staging` | staging | 124/124 | F7 (o staging serve da9824d) |
 | 11/10 09:17 | hml-19b | `6d81237` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19b --casos secoes --canal msedge` | staging | 17/18 | o antes do [atalhos]: a MESMA falha no código antigo |
 | 11/10 09:12 | hml-19b | `6d81237` | `e2e/w17/envio_telas.py --base http://localhost:8080 --prefixo local19b` | local | 20/20 |  |
 | 11/10 09:11 | hml-19b | `6d81237` | `e2e/w17/envio_api.py` | staging | 19/19 |  |
