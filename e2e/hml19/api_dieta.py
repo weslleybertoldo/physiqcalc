@@ -848,19 +848,24 @@ def limpar(o, estado: B.Estado, L, s: str) -> None:
     estado.apagar()
 
 
-def producao(o, L) -> None:
-    """Produção, SÓ LEITURA: nada grava (a função recusa antes de qualquer banco)."""
+def so_leitura(o, L, base: str = "prod") -> None:
+    """SÓ LEITURA (produção ou staging): nada grava — a função recusa antes de qualquer banco (CORS, sem login, x-schema inválido,
+    ação desconhecida), com as ações da Dieta e do app."""
     st1, h1 = B.preflight(B.ORIGEM_FORA)
-    o.ok(st1 in (200, 204) and B.cors(h1) == B.ORIGEM_PADRAO, f"prod N7: origem fora da lista → o CORS padrão ({st1})")
-    st, _r, _h, _ms = B.funcao(None, "plano_criar", {}, sem_auth=True, origem=B.BASES["prod"])
-    o.ok(st == 401, f"prod N2: sem login → 401 ({st})")
-    st, _r, _h, _ms = B.funcao(None, "aluno_marcar_refeicao", {}, sem_auth=True, origem=B.BASES["prod"])
-    o.ok(st == 401, f"prod N2: o app sem login → 401 ({st})")
-    token = L.token(B.PROD_CONTA)
-    st, r, _h, _ms = B.funcao(token, "plano_excluir", {"id": FALSO}, schema_="producao", origem=B.BASES["prod"])
-    o.ok(st == 400 and r.get("erro") == "schema_invalido", f"prod N6: x-schema inválido → 400 ({st})")
-    st, r, _h, _ms = B.funcao(token, "dieta_apagar_tudo", {}, origem=B.BASES["prod"])
-    o.ok(st == 400 and r.get("erro") == "acao_invalida", f"prod N3: ação desconhecida → 400 acao_invalida ({st})")
+    o.ok(st1 in (200, 204) and B.cors(h1) == B.ORIGEM_PADRAO, f"{base} N7: origem fora da lista → o CORS padrão ({st1})")
+    st, _r, _h, _ms = B.funcao(None, "plano_criar", {}, sem_auth=True, origem=B.BASES[base])
+    o.ok(st == 401, f"{base} N2: sem login → 401 ({st})")
+    st, _r, _h, _ms = B.funcao(None, "aluno_marcar_refeicao", {}, sem_auth=True, origem=B.BASES[base])
+    o.ok(st == 401, f"{base} N2: o app sem login → 401 ({st})")
+    token = L.token(B.PROD_CONTA if base == "prod" else B.P_CONTA)
+    st, r, _h, _ms = B.funcao(token, "plano_excluir", {"id": FALSO}, schema_="producao", origem=B.BASES[base])
+    o.ok(st == 400 and r.get("erro") == "schema_invalido", f"{base} N6: x-schema inválido → 400 ({st})")
+    st, r, _h, _ms = B.funcao(token, "dieta_apagar_tudo", {}, origem=B.BASES[base])
+    o.ok(st == 400 and r.get("erro") == "acao_invalida", f"{base} N3: ação desconhecida → 400 acao_invalida ({st})")
+
+
+def producao(o, L) -> None:
+    so_leitura(o, L, "prod")
 
 
 def rodar(o, L, estado: B.Estado, rodada: str, area: str, casos: list[str]) -> None:

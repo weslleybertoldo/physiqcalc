@@ -294,6 +294,7 @@ def main() -> int:
     modo.add_argument("--antes", action="store_true")
     modo.add_argument("--seco", action="store_true")
     a = ap.parse_args()
+    B.corte_vira_saida()  # o SIGTERM/SIGINT vira SystemExit: o navegador fecha pelo finally mesmo com o processo cortado
     secoes = [s.strip() for s in a.secoes.split(",") if s.strip()]
     if any(s not in SECOES for s in secoes):
         raise SystemExit(f"seção desconhecida (as seções: {', '.join(SECOES)})")

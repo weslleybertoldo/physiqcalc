@@ -258,6 +258,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
     s = B.usar_base(base)
     L = B.Sessoes(f"rede {base}")
     rodada = B.nova_rodada()
+    dono = ""
     commit = commit_medido(base)
     fase = fase_do_codigo(base, commit)
     rotulo = prefixo or base
@@ -308,9 +309,10 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                 L.do_navegador(B.P_CONTA, t.pg)
                 t.fim()
                 nav.close()
-        if s == "staging":
-            limpar_massa(o, s, dono, L.token(B.P_CONTA), rodada)
     finally:
+        # hml-19b: a limpeza no finally (com o corte que vira SystemExit, ela roda mesmo com o processo cortado)
+        if s == "staging" and dono:
+            limpar_massa(o, s, dono, L.token(B.P_CONTA), rodada)
         L.fechar(o)
 
 
@@ -325,6 +327,7 @@ def main() -> int:
     modo.add_argument("--seco", action="store_true")
     modo.add_argument("--limpar", action="store_true")
     a = ap.parse_args()
+    B.corte_vira_saida()  # o SIGTERM/SIGINT vira SystemExit: a limpeza do finally roda mesmo com o processo cortado
     dieta = a.area == "dieta"
     if dieta:
         import rede_dieta as RD  # noqa: PLC0415 — a área da hml-19b (importa este módulo; aqui, só quando pedida)

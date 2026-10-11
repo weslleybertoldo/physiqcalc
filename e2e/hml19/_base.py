@@ -68,6 +68,26 @@ REGRAS_TS = REPO / "supabase-principal" / "functions" / "_shared" / "nutricao-re
 PADROES_TS = REPO / "supabase-principal" / "functions" / "_shared" / "nutricao-padroes.ts"
 
 
+_CORTADO: list[str] = []
+
+
+def corte_vira_saida() -> None:
+    """SIGTERM/SIGINT (o `timeout`, o Ctrl+C, o fim da sessão) viram SystemExit: os `finally` da limpeza RODAM quando o processo é
+    cortado (antes, o SIGTERM matava na hora e a massa da rodada ficava no staging — o incidente de 11/10 07:50). Os sinais seguintes,
+    com a limpeza já em curso, são ignorados (só o SIGKILL interrompe a limpeza)."""
+    import signal  # noqa: PLC0415
+
+    def _cortado(sinal: int, _quadro: object) -> None:
+        if _CORTADO:
+            print(f"(sinal {signal.Signals(sinal).name} de novo: a limpeza já está rodando — ignorado)", flush=True)
+            return
+        _CORTADO.append(signal.Signals(sinal).name)
+        raise SystemExit(f"cortado pelo sinal {signal.Signals(sinal).name} — a limpeza roda agora (finally)")
+
+    for sinal in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sinal, _cortado)
+
+
 def usar_base(base: str) -> str:
     """local e staging = schema staging (a mesma função publicada atende os 2 schemas pelo x-schema); prod = public."""
     if base not in BASES:
@@ -89,7 +109,9 @@ def nova_rodada() -> str:
 # o contrato da etapa 2: reaproveitar a sessão entre os scripts e no máximo 10 logins (o registro de cada login de verdade fica em
 # agente/logins_etapa2.txt); renovar pelo refresh token NÃO é login. O arquivo das sessões é 600 e fica no TMPDIR da W (fora do repo).
 ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
-REG_LOGINS = SCRATCH / "agente" / "logins_etapa2.txt"
+# hml-19b: o registro da etapa 2 DESTA W (o da 19a, logins_etapa2.txt, fica como estava); começa com os 3 logins da sessão principal
+# às 07:48 (o smoke da nutricao v2, já da 19b)
+REG_LOGINS = SCRATCH / "agente" / "logins_etapa2_19b.txt"
 MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 

@@ -24,6 +24,9 @@ Casos (a ordem é sempre esta):
   LX  a Lixeira (W26) com o excluir pela função: a anamnese excluída pela nutricao aparece na lixeira_da_conta, volta com o
       lixeira_restaurar e, excluída de novo, sai de vez com o lixeira_apagar (as RPCs da tela da Lixeira, como a nutri de teste)
 Produção (--base prod --so-leitura): OPTIONS (CORS), sem login → 401, x-schema inválido → 400, ação desconhecida → 400 — nada grava.
+--so-leitura também com --base staging (hml-19b, depois do incidente de 11/10 07:50): as MESMAS 4 checagens que não gravam, no staging
+(antes, no staging o --so-leitura era ignorado e rodava a bateria inteira). SIGTERM/SIGINT (timeout, Ctrl+C) viram SystemExit: a
+limpeza do `finally` roda mesmo com o processo cortado.
 hml-19b: --area dieta (a Dieta e as Dietas: P, N1–N8) e --area aluno (o app: P, N1, N9 — o ✓ da refeição e da meta, a foto do diário
 pelo link assinado, o balde do limite por IP e o link público) — os casos em api_dieta.py; o estado guarda a área (o --limpar desfaz a
 rodada da área que caiu).
@@ -539,17 +542,54 @@ def limpar(o, estado: B.Estado, L, s: str) -> None:
     estado.apagar()
 
 
-def producao(o, L) -> None:
-    """Produção, SÓ LEITURA: nada grava (a função recusa antes de qualquer banco)."""
+def so_leitura(o, L, base: str = "prod") -> None:
+    """SÓ LEITURA (produção ou staging): nada grava — a função recusa antes de qualquer banco (CORS, sem login, x-schema inválido,
+    ação desconhecida). No staging, o token é o da nutri de TESTE (a sessão guardada); na produção, o da conta de teste da produção."""
     st1, h1 = B.preflight(B.ORIGEM_FORA)
-    o.ok(st1 in (200, 204) and B.cors(h1) == B.ORIGEM_PADRAO, f"prod N7: origem fora da lista → o CORS padrão ({st1})")
-    st, _r, _h, _ms = B.funcao(None, "anamnese_criar", {}, sem_auth=True, origem=B.BASES["prod"])
-    o.ok(st == 401, f"prod N2: sem login → 401 ({st})")
-    token = L.token(B.PROD_CONTA)
-    st, r, _h, _ms = B.funcao(token, "anamnese_excluir", {"id": FALSO}, schema_="producao", origem=B.BASES["prod"])
-    o.ok(st == 400 and r.get("erro") == "schema_invalido", f"prod N6: x-schema inválido → 400 ({st})")
-    st, r, _h, _ms = B.funcao(token, "apagar_tudo", {}, origem=B.BASES["prod"])
-    o.ok(st == 400 and r.get("erro") == "acao_invalida", f"prod N3: ação desconhecida → 400 acao_invalida ({st})")
+    o.ok(st1 in (200, 204) and B.cors(h1) == B.ORIGEM_PADRAO, f"{base} N7: origem fora da lista → o CORS padrão ({st1})")
+    st, _r, _h, _ms = B.funcao(None, "anamnese_criar", {}, sem_auth=True, origem=B.BASES[base])
+    o.ok(st == 401, f"{base} N2: sem login → 401 ({st})")
+    token = L.token(B.PROD_CONTA if base == "prod" else B.P_CONTA)
+    st, r, _h, _ms = B.funcao(token, "anamnese_excluir", {"id": FALSO}, schema_="producao", origem=B.BASES[base])
+    o.ok(st == 400 and r.get("erro") == "schema_invalido", f"{base} N6: x-schema inválido → 400 ({st})")
+    st, r, _h, _ms = B.funcao(token, "apagar_tudo", {}, origem=B.BASES[base])
+    o.ok(st == 400 and r.get("erro") == "acao_invalida", f"{base} N3: ação desconhecida → 400 acao_invalida ({st})")
+
+
+def producao(o, L) -> None:
+    so_leitura(o, L, "prod")
+
+
+def modo_da_execucao(base: str, so_leit: bool, limpar: bool) -> str:
+    """O que a execução faz: so_leitura (prod OU staging: só as 4 checagens que não gravam) · limpar · rodada (a bateria que GRAVA a
+    massa, só no staging). Produção sem --so-leitura → recusa."""
+    if so_leit:
+        return "so_leitura"
+    if base == "prod":
+        raise SystemExit("produção só com --so-leitura")
+    return "limpar" if limpar else "rodada"
+
+
+def seco_execucao(o) -> None:
+    """--seco: o --so-leitura no staging NÃO roda a bateria (o incidente de 11/10 07:50) e o corte vira SystemExit (a limpeza roda)."""
+    o.ok(modo_da_execucao("staging", True, False) == "so_leitura" and modo_da_execucao("prod", True, False) == "so_leitura"
+         and modo_da_execucao("staging", False, False) == "rodada" and modo_da_execucao("staging", False, True) == "limpar",
+         "o --so-leitura vale no staging e na produção (só as 4 checagens que não gravam); sem ele, no staging, a rodada ou o --limpar")
+    try:
+        modo_da_execucao("prod", False, False)
+        o.ok(False, "produção sem --so-leitura é recusada")
+    except SystemExit:
+        o.ok(True, "produção sem --so-leitura é recusada")
+    r = B.regras([("apagar_tudo", {}), ("dieta_apagar_tudo", {})])
+    o.ok(all(not x["ok"] and x["erro"] == "acao_invalida" and x["modulo"] is None for x in r["conferidos"]),
+         "as ações do --so-leitura são desconhecidas do servidor (recusa antes de qualquer banco)")
+    import signal  # noqa: PLC0415
+    import subprocess  # noqa: PLC0415
+    prova = ("import sys, signal, os, time; sys.path.insert(0, %r); import _base as B; B.corte_vira_saida()\n"
+             "try:\n    os.kill(os.getpid(), signal.SIGTERM); time.sleep(5)\nfinally:\n    print('LIMPEZA RODOU')") % str(B.AQUI)
+    r2 = subprocess.run([sys.executable, "-c", prova], capture_output=True, text=True, timeout=60)
+    o.ok("LIMPEZA RODOU" in r2.stdout and r2.returncode != 0 and signal.SIGTERM.name in r2.stderr,
+         f"o SIGTERM vira SystemExit e o finally (a limpeza) roda (saída {r2.returncode})")
 
 
 CASOS_DA_AREA = {"prontuario": CASOS, "dieta": AD.CASOS_DIETA, "aluno": AD.CASOS_ALUNO}
@@ -589,6 +629,7 @@ def main() -> int:
     modo.add_argument("--so-leitura", action="store_true")
     modo.add_argument("--sair", action="store_true")
     a = ap.parse_args()
+    B.corte_vira_saida()  # o SIGTERM/SIGINT vira SystemExit: o finally da limpeza roda mesmo com o processo cortado
     validos = CASOS_DA_AREA[a.area]
     casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
     if any(c not in validos for c in casos):
@@ -596,21 +637,21 @@ def main() -> int:
     if a.seco:
         o = C.Saida(f"api_{a.area}_seco")
         (seco if a.area == "prontuario" else AD.seco)(o, a.area)
+        seco_execucao(o)
         return o.fim()  # o --seco não vai ao e2e-rodadas (não é prova contra uma base)
     if a.sair:
         o = C.Saida("sessoes_sair")
         B.Sessoes("sair").sair(o)
         return o.fim()
-    if a.base == "prod" and not a.so_leitura:
-        raise SystemExit("produção só com --so-leitura")
+    modo_exec = modo_da_execucao(a.base, a.so_leitura, a.limpar)
     s = B.usar_base(a.base)
-    o = C.Saida(f"api_{a.area}_{a.base}" + ("_limpar" if a.limpar else ""))
-    L = B.Sessoes(f"api {a.area} {a.base}" + (" --limpar" if a.limpar else ""))
+    o = C.Saida(f"api_{a.area}_{a.base}" + {"limpar": "_limpar", "so_leitura": "_so_leitura"}.get(modo_exec, ""))
+    L = B.Sessoes(f"api {a.area} {a.base}" + {"limpar": " --limpar", "so_leitura": " --so-leitura"}.get(modo_exec, ""))
     try:
         B.exigir_saude(o, "o api.py")
-        if a.base == "prod":
-            (producao if a.area == "prontuario" else AD.producao)(o, L)
-        elif a.limpar:
+        if modo_exec == "so_leitura":
+            (so_leitura if a.area == "prontuario" else AD.so_leitura)(o, L, a.base)
+        elif modo_exec == "limpar":
             limpar_da_area(o, B.Estado.ler(), L, s)
         else:
             pendente = B.Estado.ler()
